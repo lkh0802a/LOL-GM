@@ -97,7 +97,7 @@ GitHub Actions runs the syntax/structure checks and production build on every pu
 
 The game is still pre-release. Legacy Artifact saves are intentionally not supported during the current core-state refactor.
 
-The active save schema is version 9 under the `lol-gm` browser-storage namespace. Breaking schema changes are allowed during this phase when they materially improve the long-term model.
+The active save schema is version 10 under the `lol-gm` browser-storage namespace. Breaking schema changes are allowed during this phase when they materially improve the long-term model.
 
 Once persistent user saves become a real product requirement, save migrations will become mandatory.
 
