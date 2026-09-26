@@ -39,17 +39,17 @@ const DRAFT_ORDER=[['B',0],['B',1],['B',0],['B',1],['B',0],['B',1],['P',0],['P',
 function runDraft(db, teamIds, rng, ctx){
   ctx=ctx||{used:[],byTeam:{}};
   const champs=Object.values(db.patch.champions);
-  const strengths={}; champs.forEach(c=>strengths[c.name]=champStrength(c));
+  const strengths={}; champs.forEach(c=>strengths[c.id]=champStrength(c));
   const vals=Object.values(strengths), mn=Math.min(...vals), mx=Math.max(...vals);
   if(ctx.forced){const f=ctx.forced;return {bans:f.bans,picks:f.picks,log:[],expl:[{t:0,title:'기록된 밴픽 재현',factors:[],result:''}]}}
   // 팀별 메타 인식값 V_hat = 패치 직후의 사전 추정(분석력에 따라 오차) + 대회 데이터 관찰(표본이 쌓일수록 비중 증가)
   const MS=db.metaStats||{}, G=db.metaGames||0;
   const vhat=teamIds.map(tid=>{const an=Math.min(1,db.teams[tid].coach.analysis/100+scrimAnalysisBonus(db.teams[tid])); const m={};
-    const nk=tid+'|'+db.patch.id+'|'+an; const NZ=VHAT_NOISE[nk]||(VHAT_NOISE[nk]=Object.fromEntries(champs.map(c=>[c.name,((hashStr(tid+db.patch.id+c.name)%2000)/1000-1)*0.35*(1.1-an)])));
-    champs.forEach(c=>{const noise=NZ[c.name];
-      let v=clamp((strengths[c.name]-mn)/(mx-mn||1)+noise,0,1);
-      const st=MS[c.name]; if(st&&G){const n=st.p+st.b, w=n/(n+18*(1.35-an)), wr=(st.w+2)/(st.p+4), obs=clamp(0.5+(wr-0.5)*2.2+(n/G)*0.5-0.1,0,1); v=v*(1-w)+obs*w}
-      m[c.name]=v}); return m});
+    const nk=tid+'|'+db.patch.id+'|'+an; const NZ=VHAT_NOISE[nk]||(VHAT_NOISE[nk]=Object.fromEntries(champs.map(c=>[c.id,((hashStr(tid+db.patch.id+c.id)%2000)/1000-1)*0.35*(1.1-an)])));
+    champs.forEach(c=>{const noise=NZ[c.id];
+      let v=clamp((strengths[c.id]-mn)/(mx-mn||1)+noise,0,1);
+      const st=MS[c.id]; if(st&&G){const n=st.p+st.b, w=n/(n+18*(1.35-an)), wr=(st.w+2)/(st.p+4), obs=clamp(0.5+(wr-0.5)*2.2+(n/G)*0.5-0.1,0,1); v=v*(1-w)+obs*w}
+      m[c.id]=v}); return m});
   const roster=teamIds.map(tid=>{const r={}; ROLES.forEach(role=>r[role]=starterFor(db,db.teams[tid],role)); return r});
   const taken=new Set(ctx.fearless?ctx.used:[]), bans=[[],[]], picks=[{},{}], expl=[];
   const mastery=(p,c)=>p.pool[c]?p.pool[c].mastery:25;
@@ -72,32 +72,32 @@ function runDraft(db, teamIds, rng, ctx){
   }
   // 후보 압축: 메타 인식 + 숙련도 상위 챔피언만 정밀 평가
   const SL={};
-  function shortlist(side,r){const k=side+r;if(SL[k])return SL[k].filter(c=>!taken.has(c.name)).slice(0,10);
-    const p=roster[side][r];SL[k]=byRole[r].map(c=>({c,q:vhat[side][c.name]*0.35+mastery(p,c.name)/200})).sort((a,b)=>b.q-a.q).map(x=>x.c);return SL[k].filter(c=>!taken.has(c.name)).slice(0,10)}
+  function shortlist(side,r){const k=side+r;if(SL[k])return SL[k].filter(c=>!taken.has(c.id)).slice(0,10);
+    const p=roster[side][r];SL[k]=byRole[r].map(c=>({c,q:vhat[side][c.id]*0.35+mastery(p,c.id)/200})).sort((a,b)=>b.q-a.q).map(x=>x.c);return SL[k].filter(c=>!taken.has(c.id)).slice(0,10)}
   const log=[];
   const fp=ctx.firstPick||0; // 선픽 팀(진영과 별개)
   for(const [kind,ord] of DRAFT_ORDER){ const side=ord===0?fp:1-fp;
     const tn=db.teams[teamIds[side]], noise=0.08*(1.1-tn.coach.draft/100);
     if(kind==='P'){
       const open=ROLES.filter(r=>!picks[side][r]), mine=Object.values(picks[side]).map(n=>db.patch.champions[n]); let best=null;
-      for(const r of open) for(const c of shortlist(side,r)){ if(taken.has(c.name)) continue;
-        const f=pickValue(side,r,c.name,mine); const v=f.total+(rng.next()-0.5)*noise*3.46; if(!best||v>best.v) best={v,r,c:c.name,f}; }
-      if(!best){ const r=open[0], c=champs.find(x=>!taken.has(x.name)); best={v:0,r,c:c.name,f:{total:0}}; }
+      for(const r of open) for(const c of shortlist(side,r)){ if(taken.has(c.id)) continue;
+        const f=pickValue(side,r,c.id,mine); const v=f.total+(rng.next()-0.5)*noise*3.46; if(!best||v>best.v) best={v,r,c:c.id,f}; }
+      if(!best){ const r=open[0], c=champs.find(x=>!taken.has(x.id)); best={v:0,r,c:c.id,f:{total:0}}; }
       picks[side][best.r]=best.c; taken.add(best.c);
       log.push({kind,side,champ:best.c,role:best.r,player:roster[side][best.r].name});
-      expl.push({t:0,title:`${tn.short} 픽: ${best.c} (${ROLE_KO[best.r]})`,factors:[['메타 인식',best.f.meta],['숙련도',best.f.mastery],['조합',best.f.comp],['상성',best.f.counter],['유연성',best.f.flex],['시리즈 경험',best.f.series||0]],utility:best.v,result:'PICK'});
+      expl.push({t:0,title:`${tn.short} 픽: ${db.patch.champions[best.c].name} (${ROLE_KO[best.r]})`,factors:[['메타 인식',best.f.meta],['숙련도',best.f.mastery],['조합',best.f.comp],['상성',best.f.counter],['유연성',best.f.flex],['시리즈 경험',best.f.series||0]],utility:best.v,result:'PICK'});
     } else {
       const opp=1-side, open=ROLES.filter(r=>!picks[opp][r]), mine=Object.values(picks[opp]).map(n=>db.patch.champions[n]); let best=null;
-      const avail={};ROLES.forEach(R=>avail[R]=byRole[R].filter(x=>!taken.has(x.name)).length);
+      const avail={};ROLES.forEach(R=>avail[R]=byRole[R].filter(x=>!taken.has(x.id)).length);
       const need={};ROLES.forEach(R=>need[R]=[0,1].filter(i=>!picks[i][R]).length);
       const safe=c=>c.roles.every(R=>avail[R]-1>=need[R]+1);
       const oh=ctx.byTeam[teamIds[opp]];
-      for(const r of open) for(const c of shortlist(opp,r)){ if(taken.has(c.name)||!safe(c)) continue;
-        const f=pickValue(opp,r,c.name,mine); f.reveal=oh&&oh.won.includes(c.name)?0.12:0; const v=f.total+f.reveal+(rng.next()-0.5)*noise*3.46; if(!best||v>best.v) best={v,r,c:c.name,f}; }
+      for(const r of open) for(const c of shortlist(opp,r)){ if(taken.has(c.id)||!safe(c)) continue;
+        const f=pickValue(opp,r,c.id,mine); f.reveal=oh&&oh.won.includes(c.id)?0.12:0; const v=f.total+f.reveal+(rng.next()-0.5)*noise*3.46; if(!best||v>best.v) best={v,r,c:c.id,f}; }
       if(!best) continue;
       bans[side].push(best.c); taken.add(best.c);
       log.push({kind,side,champ:best.c,role:best.r,player:roster[opp][best.r].name});
-      expl.push({t:0,title:`${tn.short} 밴: ${best.c} (상대 ${ROLE_KO[best.r]} ${roster[opp][best.r].name} 견제)`,factors:[['상대 픽 가치',best.f.total],['이전 세트 활약',best.f.reveal]],utility:best.v,result:'BAN'});
+      expl.push({t:0,title:`${tn.short} 밴: ${db.patch.champions[best.c].name} (상대 ${ROLE_KO[best.r]} ${roster[opp][best.r].name} 견제)`,factors:[['상대 픽 가치',best.f.total],['이전 세트 활약',best.f.reveal]],utility:best.v,result:'BAN'});
     }
   }
   return {bans,picks,log,expl};
