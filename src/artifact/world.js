@@ -22,7 +22,7 @@ function genPlayer(db,rng,o){
   const tend={};for(const t of TENDENCIES)tend[t]=Math.round(clamp(50+(bias.t[t]||0)+rng.normal(0,12),5,95));
   if(role==='TOP')tend.split_preference=Math.min(95,tend.split_preference+15);
   const champs=Object.values(db.patch.champions).filter(c=>c.roles.includes(role)).map(c=>c.id);
-  const sigIds=sig.map(x=>db.patch.champions[x]?x:championIdByName(db,x)).filter(Boolean);
+  const sigIds=sig.map(x=>db.patch.champions[x]?x:(championByName(db,x)?.id)).filter(Boolean);
   const mySig=sigIds.length?sigIds:champs.slice().sort(()=>rng.next()-0.5).slice(0,2);
   const pool={};
   const n=clamp(Math.round(9+(age-17)*0.7+rng.normal(0,2)),7,18), picks=[...mySig,...champs.filter(c=>!mySig.includes(c)).sort(()=>rng.next()-0.5).slice(0,n)];
@@ -202,7 +202,7 @@ function addRegion(db,rng,cfg){
 }
 function buildWorld(cfg){
   cfg=JSON.parse(JSON.stringify(cfg||defaultWorldConfig()));
-  const db={version:10,saveId:'save-'+Date.now().toString(36),manager:{id:'manager-human',teamId:null},worldDate:`${cfg.startYear||2027}-01-01`,coachPool:[],awards:[],hof:[],global:{decisions:[],power:{}},patch:buildPatch(),teams:{},players:{},regions:{},competitions:{},worldConfig:cfg,world:null,history:[],news:[],year:cfg.startYear||2027,configDirty:false,scout:{}};
+  const db={version:9,saveId:'save-'+Date.now().toString(36),manager:{id:'manager-human',teamId:null},worldDate:`${cfg.startYear||2027}-01-01`,coachPool:[],awards:[],hof:[],global:{decisions:[],power:{}},patch:buildPatch(),teams:{},players:{},regions:{},competitions:{},worldConfig:cfg,world:null,history:[],news:[],year:cfg.startYear||2027,configDirty:false,scout:{}};
   const rng=new RNG('world-v7','gen');
   initPatches(db);
   for(const r of cfg.regions) addRegion(db,rng,r);
@@ -283,7 +283,7 @@ function advanceStep(db){
         for(const div of R.div2?[1,2]:[1]){
           if(activeTeams(db,R.id,div).length<2)continue;
           const comp=leagueComp(db,R.id,div); db.competitions[comp.id]=comp;
-          const key=comp.id+'-'+st.split, s=newSeason(db,comp.id,w.year,`${w.seed}/${w.year}/${key}`,start);
+          const key=comp.id+'-'+st.split, s=newSeason(db,comp.id,w.year,`${w.seed}/${w.year}/${key}`,start,key);
           s.key=key;s.split=st.split;s.region=R.id;s.div=div;s.step=w.step;s.label=(R.splits||1)>1?SPLIT_NAME[st.split]:'';
           w.seasons[key]=s;any=true;
         }
@@ -322,7 +322,7 @@ function startInternational(db,id,start,taken=new Set()){
   if(teams.length<4)return false;
   teams.forEach(t=>taken.add(t));
   db.competitions[id]={id,name:it.name,short:it.short||id,teams,rules:{fearless:true},international:true,tier:it.tier||'top',stages:intlStages(it.format,teams,it.bo)};
-  const s=newSeason(db,id,w.year,`${w.seed}/${w.year}/${id}`,start);
+  const s=newSeason(db,id,w.year,`${w.seed}/${w.year}/${id}`,start,id);
   s.key=id;s.label='';s.step=w.step;w.seasons[id]=s;
   s.stagesInfo=db.competitions[id].stages.map(x=>x.name).join(' → ');
   news(db,`${it.name} 개막 — ${teams.length}팀 참가 (${INTL_FORMATS[it.format]||it.format})`);
