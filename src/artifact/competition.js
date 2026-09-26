@@ -79,10 +79,9 @@ function roundRobin(ids,legs){
   return out;
 }
 const STAGE_KO={round_robin:'풀리그',swiss:'스위스',single_elim:'싱글 엘리미네이션',double_elim:'더블 엘리미네이션'};
-function makeSeasonId(compId,year,seed){const tag=(hashStr(String(seed))>>>0).toString(36);return `season-${year}-${String(compId).toLowerCase()}-${tag}`}
-function newSeason(db,compId,year,seed,start){
-  const comp=db.competitions[compId], st0=comp.stages[0];
-  const s={id:makeSeasonId(compId,year,seed),comp:compId,year,seed,days:[],cur:0,stage:0,stageData:{},pstats:{},done:false,champion:null,runnerUp:null};
+function newSeason(db,compId,year,seed,start,instanceKey=compId){
+  const comp=db.competitions[compId], st0=comp.stages[0], id=`season_${year}_${instanceKey}`;
+  const s={id,comp:compId,year,seed,days:[],cur:0,stage:0,stageData:{},pstats:{},done:false,champion:null,runnerUp:null};
   const rng=new RNG(seed,'schedule');
   let order=st0.type==='round_robin'&&!st0.groups?comp.teams.slice().sort(()=>rng.next()-0.5):comp.teams.slice();
   if(st0.id==='playin'){const nx=comp.stages[1];order=comp.teams.filter(t=>!(nx.direct||[]).includes(t))}
@@ -90,8 +89,8 @@ function newSeason(db,compId,year,seed,start){
   addStageDays(db,s,0,order,start||`${year}-01-14`);
   return s;
 }
-function nextMid(s){return `${s.id}-m-${String(s.days.reduce((n,d)=>n+d.matches.length,0)).padStart(4,'0')}`}
-function pushDay(s,date,stage,label,pairs,bo){let n=s.days.reduce((a,d)=>a+d.matches.length,0),di=s.days.length;s.days.push({id:`${s.id}-d-${String(di).padStart(3,'0')}`,date,stage,label,matches:pairs.map(([a,b])=>({id:`${s.id}-m-${String(n++).padStart(4,'0')}`,seasonId:s.id,competitionId:s.comp,a,b,bo,res:null}))})}
+function nextMid(s){return `${s.id}_match_${s.days.reduce((n,d)=>n+d.matches.length,0)}`}
+function pushDay(s,date,stage,label,pairs,bo){let n=s.days.reduce((a,d)=>a+d.matches.length,0);s.days.push({date,stage,label,matches:pairs.map(([a,b])=>({id:`${s.id}_match_${n++}`,a,b,bo,res:null}))})}
 function addStageDays(db,s,idx,teams,date){
   const cfg=db.competitions[s.comp].stages[idx], gap=i=>cfg.dayGap?cfg.dayGap[i%cfg.dayGap.length]:3;
   if(cfg.type==='round_robin'){
