@@ -1,5 +1,5 @@
 // ===== LOL GM: UI =====
-const SAVE_VERSION=10;
+const SAVE_VERSION=9;
 const STORAGE_NS='lol-gm';
 const DIRECT_FILE_PREVIEW=location.protocol==='file:'||location.origin==='null';
 let SLOT=(()=>{try{return localStorage.getItem(STORAGE_NS+'-slot')||'1'}catch(e){return '1'}})();
@@ -43,7 +43,6 @@ function saveDB(){clearTimeout(saveTimer);saveTimer=setTimeout(async()=>{const s
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const teamOpts=(sel,div1)=>Object.values(DB.regions).flatMap(r=>(r.div2&&!div1?[1,2]:[1]).map(d=>`<optgroup label="${esc(d===2?divName(r):r.leagueName)}">${activeTeams(DB,r.id,d).map(t=>`<option value="${t.id}"${t.id===sel?' selected':''}>${esc(t.name)}</option>`).join('')}</optgroup>`)).join('');
-const cname=id=>championName(DB,id);
 const n1=v=>Number.isInteger(v)?v:v.toFixed(2);
 function freshInternalSeed(prefix='rng'){
   const a=new Uint32Array(2);try{crypto.getRandomValues(a);return `${prefix}-${a[0].toString(36)}${a[1].toString(36)}`}catch(e){return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`}
@@ -110,7 +109,7 @@ function renderResult(r){
 function renderDraft(r){
   const d=r.draft;
   return `<section><h3>밴픽</h3><div class="draft">${[0,1].map(i=>`<div class="dside ${i?'red':'blue'}">
-    <div class="bans">${d.bans[i].map(c=>`<span class="ban">${esc(cname(c))}</span>`).join('')}</div>
+    <div class="bans">${d.bans[i].map(c=>`<span class="ban">${esc(championLabel(DB,c))}</span>`).join('')}</div>
     ${ROLES.map(role=>{const ps=r.sides[i].ps.find(p=>p.role===role);return `<div class="pick"><span class="role">${ROLE_KO[role]}</span><b>${esc(ps.champ.name)}</b><span class="pn">${esc(ps.p.name)} · 숙련 ${ps.prof.mastery}</span></div>`}).join('')}
   </div>`).join('')}</div></section>`;
 }
@@ -194,7 +193,7 @@ function playerDetail(p){
   <div class="agroup"><h4>플레이 성향</h4>${TENDENCIES.map(t=>`<div class="arow"><span>${TEND_KO[t]}</span><span class="bar"><i style="width:${p.tend[t]}%"></i></span></div>`).join('')}
   <h4 style="margin-top:12px">성격</h4><div class="arow"><span>프로의식</span>${ovrTag(p.personality.professionalism)}</div><div class="arow"><span>야망</span>${ovrTag(p.personality.ambition)}</div></div></div>
   <h4>챔피언 폭</h4><div class="scroll"><table class="pool"><thead><tr><th>챔피언</th><th>숙련도</th><th>경험</th><th>상성 이해</th><th>자신감</th></tr></thead><tbody>
-  ${Object.entries(p.pool).sort((a,b)=>b[1].mastery-a[1].mastery).map(([c,v])=>`<tr><td>${esc(cname(c))}</td><td>${ovrTag(v.mastery)}</td><td class="num">${v.experience}</td><td class="num">${v.matchup_knowledge}</td><td class="num">${v.confidence}</td></tr>`).join('')}
+  ${Object.entries(p.pool).sort((a,b)=>b[1].mastery-a[1].mastery).map(([c,v])=>`<tr><td>${esc(c)}</td><td>${ovrTag(v.mastery)}</td><td class="num">${v.experience}</td><td class="num">${v.matchup_knowledge}</td><td class="num">${v.confidence}</td></tr>`).join('')}
   </tbody></table></div>
   ${p.career.length?`<h4 style="margin-top:14px">커리어</h4><div class="scroll"><table class="pool"><thead><tr><th>시즌</th><th>대회</th><th>팀</th><th>종합</th><th>경기</th><th>승률</th><th>KDA</th><th>POG</th></tr></thead><tbody>
   ${p.career.slice().reverse().map(c=>`<tr><td class="num">${c.year}</td><td>${esc(c.cname||c.comp)}</td><td>${esc(tshort(c.team))}</td><td class="num">${c.ovr||''}</td><td class="num">${c.g}</td><td class="num">${c.g?Math.round(c.w/c.g*100)+'%':''}</td><td class="num">${((c.k+c.a)/Math.max(1,c.d)).toFixed(2)}</td><td class="num">${c.mvp}</td></tr>`).join('')}
@@ -215,8 +214,8 @@ let PSET={role:'ALL',q:''};
 function noteText(n){
   if(n.type==='new')return `<b>신규 챔피언 ${esc(n.def.name)}</b> <small>${n.def.roles.map(r=>ROLE_KO[r]).join('/')} · ${esc(CLASS_KO[ARCH[n.def.arch][0]])}</small>`;
   if(n.type==='rule')return `<b>${esc(RULE_KO[n.key]||n.key)}</b> ${n.old} → ${n.v}`;
-  if(n.type==='kit')return `<b>${esc(n.c)}</b> ${KIT_KO[n.key]} ${n.d>0?'<span class="hi">▲</span>':'<span class="lo">▼</span>'} <small>${esc(n.why||'')}</small>`;
-  if(n.type==='base')return `<b>${esc(n.c)}</b> 기본 ${{ad:'공격력',hp:'체력',arm:'방어력',adg:'성장 공격력',hpg:'성장 체력'}[n.key]||n.key} ${n.d>0?'+':''}${Math.round(n.d*100)}% <small>${esc(n.why||'')}</small>`;
+  if(n.type==='kit')return `<b>${esc(championLabel(DB,n.c))}</b> ${KIT_KO[n.key]} ${n.d>0?'<span class="hi">▲</span>':'<span class="lo">▼</span>'} <small>${esc(n.why||'')}</small>`;
+  if(n.type==='base')return `<b>${esc(championLabel(DB,n.c))}</b> 기본 ${{ad:'공격력',hp:'체력',arm:'방어력',adg:'성장 공격력',hpg:'성장 체력'}[n.key]||n.key} ${n.d>0?'+':''}${Math.round(n.d*100)}% <small>${esc(n.why||'')}</small>`;
   return esc(n.text||'');
 }
 function viewPatch(){
@@ -353,7 +352,7 @@ function renderSeries(rec,big){
     <span class="gn">${g.n}세트</span>
     <span class="gside"><i class="dot blue"></i>${esc(tshort(g.blue))} <b>${g.kills[0]}</b> : <b>${g.kills[1]}</b> ${esc(tshort(g.red))}<i class="dot red"></i></span>
     <span class="gw">${esc(tshort(g.winner))} 승 · ${g.dur}</span>
-    ${g.picks?`<span class="gp">블루 ${g.picks[0].map(cname).map(esc).join(', ')}<br>레드 ${g.picks[1].map(cname).map(esc).join(', ')}</span>`:''}
+    ${g.picks?`<span class="gp">블루 ${g.picks[0].map(c=>esc(championLabel(DB,c))).join(', ')}<br>레드 ${g.picks[1].map(c=>esc(championLabel(DB,c))).join(', ')}</span>`:''}
     <span class="gm">${g.sideBy?`${esc(tshort(g.sideBy))} 선택권: ${esc(g.sideWhy||'')} · 선픽 ${esc(tshort(g.firstPick||g.blue))} · `:''}POG ${esc(pnm(g.mvp))}${g.mods&&(Math.abs(g.mods[g.blue]||0)+Math.abs(g.mods[g.red]||0))>0?` · 멘탈 보정 ${esc(tshort(g.blue))} ${fmtMod(g.mods[g.blue])} / ${esc(tshort(g.red))} ${fmtMod(g.mods[g.red])}`:''}</span>
   </button></li>`).join('')}</ol><p class="hint">세트를 누르면 전체 경기 기록이 열립니다.</p></section>
   <div class="gamedetail"></div>`;
@@ -527,7 +526,7 @@ function seasonTab(){
       ${top.map((r,i)=>{const p=DB.players[r.pid];return `<tr class="${p&&p.team===me?'mine':''}"><td class="num">${i+1}</td><td><span class="role">${p?ROLE_KO[p.role]:''}</span> <b>${esc(pnm(r.pid))}</b></td><td>${esc(p?tshort(p.team):'')}</td><td class="num">${r.g}</td><td class="num"><b>${r.kda.toFixed(2)}</b></td><td class="num">${(r.k/r.g).toFixed(1)}/${(r.d/r.g).toFixed(1)}/${(r.a/r.g).toFixed(1)}</td><td class="num">${(r.cs/r.min).toFixed(1)}</td><td class="num">${r.mvp}</td></tr>`}).join('')}
     </tbody></table></div></section>
     <section><h3>챔피언 픽 순위</h3><div class="scroll"><table><thead><tr><th>챔피언</th><th>픽</th><th>승률</th></tr></thead><tbody>
-      ${ctop.map(([c,[n,w]])=>`<tr><td><b>${esc(cname(c))}</b></td><td class="num">${n}</td><td class="num">${(w/n*100).toFixed(0)}%</td></tr>`).join('')}
+      ${ctop.map(([c,[n,w]])=>`<tr><td><b>${esc(c)}</b></td><td class="num">${n}</td><td class="num">${(w/n*100).toFixed(0)}%</td></tr>`).join('')}
     </tbody></table></div></section>`;
   }
   return `<section><h3>세계 현황</h3>${worldTable()}${DB.worldHype?`<p class="hint">세계 흥행 합계 ${DB.worldHype}. 지역 평균 흥행이 높을수록 새 지역 합류와 국제대회 신설 가능성이 올라갑니다.</p>`:''}</section>

@@ -85,7 +85,7 @@ function runDraft(db, teamIds, rng, ctx){
       if(!best){ const r=open[0], c=champs.find(x=>!taken.has(x.id)); best={v:0,r,c:c.id,f:{total:0}}; }
       picks[side][best.r]=best.c; taken.add(best.c);
       log.push({kind,side,champ:best.c,role:best.r,player:roster[side][best.r].name});
-      expl.push({t:0,title:`${tn.short} 픽: ${db.patch.champions[best.c].name} (${ROLE_KO[best.r]})`,factors:[['메타 인식',best.f.meta],['숙련도',best.f.mastery],['조합',best.f.comp],['상성',best.f.counter],['유연성',best.f.flex],['시리즈 경험',best.f.series||0]],utility:best.v,result:'PICK'});
+      expl.push({t:0,title:`${tn.short} 픽: ${championLabel(db,best.c)} (${ROLE_KO[best.r]})`,factors:[['메타 인식',best.f.meta],['숙련도',best.f.mastery],['조합',best.f.comp],['상성',best.f.counter],['유연성',best.f.flex],['시리즈 경험',best.f.series||0]],utility:best.v,result:'PICK'});
     } else {
       const opp=1-side, open=ROLES.filter(r=>!picks[opp][r]), mine=Object.values(picks[opp]).map(n=>db.patch.champions[n]); let best=null;
       const avail={};ROLES.forEach(R=>avail[R]=byRole[R].filter(x=>!taken.has(x.id)).length);
@@ -97,7 +97,7 @@ function runDraft(db, teamIds, rng, ctx){
       if(!best) continue;
       bans[side].push(best.c); taken.add(best.c);
       log.push({kind,side,champ:best.c,role:best.r,player:roster[opp][best.r].name});
-      expl.push({t:0,title:`${tn.short} 밴: ${db.patch.champions[best.c].name} (상대 ${ROLE_KO[best.r]} ${roster[opp][best.r].name} 견제)`,factors:[['상대 픽 가치',best.f.total],['이전 세트 활약',best.f.reveal]],utility:best.v,result:'BAN'});
+      expl.push({t:0,title:`${tn.short} 밴: ${championLabel(db,best.c)} (상대 ${ROLE_KO[best.r]} ${roster[opp][best.r].name} 견제)`,factors:[['상대 픽 가치',best.f.total],['이전 세트 활약',best.f.reveal]],utility:best.v,result:'BAN'});
     }
   }
   return {bans,picks,log,expl};
