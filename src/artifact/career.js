@@ -76,7 +76,14 @@ function initialPickCandidate(db,t,role,rng){
   if(prudent.length)return prudent[0].p;
   return candidates.sort((a,b)=>a.salary-b.salary||b.score-a.score)[0].p;
 }
-function normalizeInitialSalaryFloor(db,t){const team=teamRef(db,t),R=db.regions[team.region];if((team.division||1)!==1||!R.salaryFloor)return;const pay=payroll(db,team);if(pay<=0||pay>=R.salaryFloor)return;const k=R.salaryFloor/pay;for(const id of team.roster){const p=db.players[id];if(p&&p.contract)p.contract.salary=Math.round(p.contract.salary*k*10)/10}}
+function normalizeInitialSalaryFloor(db,t){
+  const team=teamRef(db,t),R=db.regions[team.region];if((team.division||1)!==1||!R.salaryFloor)return;
+  const pay=payroll(db,team);if(pay<=0||pay>=R.salaryFloor)return;
+  const k=R.salaryFloor/pay;
+  for(const id of team.roster){const p=db.players[id];if(p&&p.contract)p.contract.salary=Math.round(p.contract.salary*k*10)/10}
+  const gap=Math.round((R.salaryFloor-payroll(db,team))*10)/10;
+  if(gap>0&&team.roster.length){const p=db.players[team.roster[0]];p.contract.salary=Math.round((p.contract.salary+gap)*10)/10}
+}
 function autoBuildInitialSquad(db,t,rng,target=INITIAL_ROSTER_TARGET){
   const team=teamRef(db,t),limits=initialSquadLimits(db,team),want=Math.min(limits.max,Math.max(limits.min,target));
   for(const role of ROLES){if(team.roster.some(id=>db.players[id]&&db.players[id].role===role))continue;const p=initialPickCandidate(db,team,role,rng);if(!p)throw new Error(team.name+'의 '+ROLE_KO[role]+' 선수를 확보하지 못했습니다');const chk=initialSignCheck(db,p,team);signContract(db,p,team,chk.salary,rng.int(1,3))}
