@@ -93,6 +93,14 @@ Canonical migrated Artifact source lives in `src/artifact/`. The root `index.htm
 
 GitHub Actions runs the syntax/structure checks and production build on every push to `main`.
 
+## Save compatibility during Phase 1
+
+The game is still pre-release. Legacy Artifact saves are intentionally not supported during the current core-state refactor.
+
+The active save schema is version 9 under the `lol-gm` browser-storage namespace. Breaking schema changes are allowed during this phase when they materially improve the long-term model.
+
+Once persistent user saves become a real product requirement, save migrations will become mandatory.
+
 ## Development phases
 
 1. **Phase 0 — Artifact Migration & App Foundation:** migrate the existing prototype, preserve UI/UX parity, establish a runnable app and clean boundaries.
