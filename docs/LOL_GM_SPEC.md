@@ -1603,9 +1603,83 @@ Before substantial implementation:
 1. Read this file.
 2. Read `docs/DEVELOPMENT.md`.
 3. If importing Claude Artifact code, read `docs/ARTIFACT_INTEGRATION.md`.
-4. Identify the current phase.
-5. Implement primarily the current phase.
-6. Do not invent missing product rules when this specification already defines them.
-7. Do not implement later phases merely to make the prototype appear more complete.
-8. Do not make current-phase architectural decisions that block later phases.
-9. When existing code conflicts with this specification, explicitly identify the conflict before replacing meaningful working behavior.
+4. Inspect the latest relevant GitHub code before changing it.
+5. Identify the current phase.
+6. Implement primarily the current phase.
+7. Do not invent missing product rules when this specification already defines them.
+8. Do not implement later phases merely to make the prototype appear more complete.
+9. Do not make current-phase architectural decisions that block later phases.
+10. Treat work from ChatGPT and Claude as prior work in the same project, not disposable alternative implementations.
+11. When existing code conflicts with this specification, explicitly identify the conflict before replacing meaningful working behavior.
+
+---
+
+# 43. ChatGPT + Claude Collaborative Development Workflow
+
+LOL GM is a **single shared project jointly developed with ChatGPT and Claude**, not two separate implementations.
+
+The shared source of truth is:
+
+1. the latest code in this GitHub repository
+2. `docs/LOL_GM_SPEC.md`
+3. `docs/DEVELOPMENT.md`
+4. `docs/ARTIFACT_INTEGRATION.md` when Artifact/UI work is involved
+
+## Collaboration rules
+
+Before either AI starts meaningful work:
+
+- inspect the latest relevant repository code
+- read the relevant specification sections
+- identify the current development phase
+- preserve working behavior unless a requested/specification change requires replacement
+- check whether the other AI's previous work already solves part of the task
+
+After either AI finishes meaningful work:
+
+- leave the repository in a coherent, runnable state when possible
+- keep naming, types, routes and architectural boundaries consistent
+- update documentation when architecture or product rules materially change
+- avoid undocumented parallel implementations of the same system
+- make the next task understandable from the repository itself rather than relying only on chat history
+
+## Division of work is flexible
+
+ChatGPT and Claude are not permanently assigned separate layers.
+
+Either may work on UI, architecture, game systems, debugging, refactoring or documentation when appropriate. Work should be divided based on the current task and then integrated into the same codebase.
+
+Claude Artifact is primarily the initial UI/UX prototyping surface, but its approved result becomes part of the shared project after migration.
+
+## Handoff rule
+
+A handoff means continuing the same implementation, not recreating it.
+
+When one AI receives work produced by the other:
+
+1. inspect the existing implementation first
+2. preserve intentional design and working behavior
+3. identify concrete conflicts before replacing substantial code
+4. extend/refactor the existing implementation rather than starting a competing version
+5. commit or otherwise return changes to the same GitHub project
+
+## User role
+
+The user is the product/game director and final decision-maker.
+
+The user should be able to evaluate the game through a runnable test build and describe desired changes in product terms without needing to manually edit UI/UX or application code.
+
+The intended iteration loop is:
+
+`User direction → ChatGPT/Claude implementation → GitHub → runnable test build → user playtest/feedback → next shared iteration`
+
+## Conflict resolution
+
+If ChatGPT and Claude implementations or recommendations conflict:
+
+1. explicit latest user instruction wins
+2. then the latest canonical specification
+3. then existing intentional working behavior
+4. architectural preference alone is not sufficient reason for a destructive rewrite
+
+Do not silently choose incompatible interpretations of a major game rule. Surface the conflict for a product decision when the specification does not resolve it.
