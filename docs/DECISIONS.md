@@ -120,3 +120,18 @@ Evidence:
 - generated source and repository source blob hashes match
 
 The project advances to `PHASE_1_CORE_GAME`.
+
+
+## D-015 — No legacy save compatibility
+
+**Decision:** During the current pre-release Phase 1 refactor, legacy Artifact saves do not need to remain compatible.
+
+There are no user saves that must be preserved.
+
+Consequences:
+
+- Phase 1 starts a clean save schema at version 9.
+- old `lolfm-*` browser storage is not imported
+- old save migration helpers are removed rather than carried indefinitely
+- schema changes may invalidate current development saves when that produces a cleaner long-term model
+- once real user saves matter, explicit save migrations become mandatory again
