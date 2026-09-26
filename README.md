@@ -4,17 +4,32 @@ Mobile-first esports management simulation.
 
 ## Current stage
 
-**Phase 0 — Prototype Foundation**
+**Phase 0 — Artifact Migration & App Foundation**
 
-The repository is intentionally starting small. The first goal is to validate the mobile UI/UX and the core management flow before implementing the full simulation.
+An existing Claude Artifact prototype is the current UI/UX starting point. The immediate goal is to migrate that prototype into this repository as a real, runnable web application while preserving its approved mobile-first design and interaction flow.
+
+After the migration is stable, **GitHub becomes the primary development codebase**. Claude Artifact may still be used as an optional UI/UX experiment surface, but it is not the long-term source of truth.
 
 Target prototype flow:
 
 `New Game → League/Team Selection → Dashboard → Roster → Player Detail → Schedule → Draft → Match → Result → Standings`
 
+## Source of truth
+
+For implementation decisions, use this priority:
+
+1. latest explicit user direction
+2. `docs/LOL_GM_SPEC.md`
+3. `docs/DEVELOPMENT.md`
+4. `docs/ARTIFACT_INTEGRATION.md` for Artifact/UI migration work
+5. intentional working behavior already in the repository
+
+ChatGPT and Claude work on the **same implementation**. A handoff means continuing the existing code, not building an alternative version.
+
 ## Architecture principles
 
 - Mobile-first, smartphone portrait first.
+- Preserve approved Artifact UI/UX during migration unless a concrete technical or product reason requires change.
 - Keep UI/features separate from simulation/game-engine logic.
 - Stable IDs are used for entities; names are display data.
 - Teams, players, champions, leagues, tournaments, patches and rules should be data/config driven.
@@ -22,12 +37,14 @@ Target prototype flow:
 - Phase 1+ replaces mock state with real game state and simulation.
 - Do not implement fake buttons or placeholder features that look complete.
 - Human and AI clubs will ultimately follow the same core rules.
+- Do not force the user to manually edit code, CSS, Git files or project configuration when an AI can perform the task.
 
 ## Planned source layout
 
 ```text
 src/
 ├─ app/            # routes, app shell, navigation
+├─ artifact/       # temporary landing zone only when useful during migration
 ├─ components/     # reusable UI
 ├─ features/       # user-facing game features
 │  ├─ game/
@@ -49,14 +66,18 @@ src/
 ├─ stores/         # application/game state
 └─ utils/
 docs/
-└─ LOL_GM_SPEC.md
+├─ LOL_GM_SPEC.md
+├─ DEVELOPMENT.md
+├─ ARTIFACT_INTEGRATION.md
+├─ POST_ARTIFACT_ROADMAP.md
+└─ CORE_DOMAIN_MODEL.md
 ```
 
 The folders above are architectural boundaries, not a requirement to create empty directories.
 
 ## Development phases
 
-1. **Phase 0 — Prototype:** mobile UI/UX and navigation with explicit mock data.
+1. **Phase 0 — Artifact Migration & App Foundation:** migrate the existing prototype, preserve UI/UX parity, establish a runnable app and clean boundaries.
 2. **Phase 1 — Core Game:** real game state and the complete season gameplay loop.
 3. **Phase 2 — Management Simulation:** transfers, contracts, scouting, growth, training, scrims, reserves, facilities, finance and club AI.
 4. **Phase 3 — Living World:** worldwide leagues, internationals, patches, regional meta, new champions and long-term history.
@@ -64,6 +85,10 @@ The folders above are architectural boundaries, not a requirement to create empt
 
 ## Working rule for AI coding assistants
 
-Read `docs/LOL_GM_SPEC.md` before substantial implementation.
+Read `docs/LOL_GM_SPEC.md` and `docs/DEVELOPMENT.md` before substantial implementation.
+
+During the current migration, also read `docs/ARTIFACT_INTEGRATION.md`.
+
+After the Artifact is integrated, follow `docs/POST_ARTIFACT_ROADMAP.md` for the first playable core loop and `docs/CORE_DOMAIN_MODEL.md` for domain-boundary guidance.
 
 Work primarily on the current phase. Do not prematurely implement later-phase systems, but do not make architectural decisions that block them.
