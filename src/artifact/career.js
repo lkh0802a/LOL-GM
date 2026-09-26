@@ -8,6 +8,7 @@ function prepareFirstSeasonFreeAgency(db){
   for(const t of activeTeams(db)){
     t.reputation=Math.round(clamp(strength[t.id]*0.75+(t.fans||40)*0.25,25,95));
     t.initialStrength=strength[t.id];
+    t.initialPayrollBudget=Math.max(payroll(db,t)*1.1,0);
   }
   for(const R of Object.values(db.regions))for(const div of R.div2?[1,2]:[1]){
     const ts=activeTeams(db,R.id,div).slice().sort((a,b)=>(b.reputation||0)-(a.reputation||0)),n=ts.length;
@@ -29,7 +30,7 @@ function promotionStatus(db,t){
   return ['relegation','mixed'].includes(R.system)?'1부 승격 가능':'승격 없음';
 }
 function setupTeamsForManager(db){const root=managedTeam(db);if(!root)return [];return root.parent?[root]:[root,...reserveTeamsOf(db,root)]}
-function initialSalaryBudget(db,t){const team=teamRef(db,t),R=db.regions[team.region],floor=(team.division||1)===1?(R.salaryFloor||0):0;return Math.max(salaryBudget(db,team),floor)}
+function initialSalaryBudget(db,t){const team=teamRef(db,t),R=db.regions[team.region],floor=(team.division||1)===1?(R.salaryFloor||0):0;return Math.max(salaryBudget(db,team),team.initialPayrollBudget||0,floor)}
 function initialSalaryCeiling(db,t){const team=teamRef(db,t),R=db.regions[team.region],budget=initialSalaryBudget(db,team);return (team.division||1)===1&&R.salaryCap>0?Math.min(budget,R.salaryCap):budget}
 function initialSquadLimits(db,t){const team=teamRef(db,t),rules=rosterRulesForTeam(db,team),first=(team.division||1)===1&&!team.parent;return {min:first?rules.firstTeamMin:rules.reserveTeamMin,max:first?rules.firstTeamMax:rules.reserveTeamMax}}
 function initialSquadErrors(db,t){
@@ -65,7 +66,16 @@ function initialSignPlayer(db,pid,targetId,years=2){
 }
 function initialReleasePlayer(db,pid){const p=db.players[pid],allowed=new Set(setupTeamsForManager(db).map(t=>t.id));if(!p||!p.team||!allowed.has(p.team))return '초기 로스터에서 방출할 수 없는 선수입니다';removePlayerFromTeam(db,p);p.contract=null;p.faYears=0;return p.name+' 선수를 FA 풀로 되돌렸습니다'}
 function initialCandidateScore(db,p,t,rng){return playerOvr(p)+Math.max(0,(p.pot||playerOvr(p))-playerOvr(p))*0.22+(p.region===t.region?0.5:0)+rng.normal(0,1.2)}
-function initialPickCandidate(db,t,role,rng){const candidates=Object.values(db.players).filter(p=>!p.retired&&!p.team&&(!role||p.role===role)).filter(p=>initialSignCheck(db,p,t).ok).map(p=>({p,score:initialCandidateScore(db,p,t,rng)})).sort((a,b)=>b.score-a.score);return candidates.length?candidates[0].p:null}
+function initialPickCandidate(db,t,role,rng){
+  const team=teamRef(db,t),room=Math.max(0,initialSalaryCeiling(db,team)-payroll(db,team));
+  const slotsLeft=Math.max(1,INITIAL_ROSTER_TARGET-team.roster.length),softMax=room/slotsLeft*1.35;
+  const candidates=Object.values(db.players).filter(p=>!p.retired&&!p.team&&(!role||p.role===role)).map(p=>({p,chk:initialSignCheck(db,p,team)})).filter(x=>x.chk.ok)
+    .map(x=>({p:x.p,salary:x.chk.salary,score:initialCandidateScore(db,x.p,team,rng)-x.chk.salary*0.35}));
+  if(!candidates.length)return null;
+  const prudent=candidates.filter(x=>x.salary<=softMax+0.001).sort((a,b)=>b.score-a.score);
+  if(prudent.length)return prudent[0].p;
+  return candidates.sort((a,b)=>a.salary-b.salary||b.score-a.score)[0].p;
+}
 function normalizeInitialSalaryFloor(db,t){const team=teamRef(db,t),R=db.regions[team.region];if((team.division||1)!==1||!R.salaryFloor)return;const pay=payroll(db,team);if(pay<=0||pay>=R.salaryFloor)return;const k=R.salaryFloor/pay;for(const id of team.roster){const p=db.players[id];if(p&&p.contract)p.contract.salary=Math.round(p.contract.salary*k*10)/10}}
 function autoBuildInitialSquad(db,t,rng,target=INITIAL_ROSTER_TARGET){
   const team=teamRef(db,t),limits=initialSquadLimits(db,team),want=Math.min(limits.max,Math.max(limits.min,target));
