@@ -19,7 +19,7 @@ The player and AI clubs ultimately operate under the same core rules.
 
 # 1. Development Phases
 
-`CURRENT_PHASE = PHASE_0_ARTIFACT_INTEGRATION`
+`CURRENT_PHASE = PHASE_1_CORE_GAME`
 
 The full document describes the target game. **Do not shallowly implement the whole document at once.**
 
