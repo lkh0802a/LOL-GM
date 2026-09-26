@@ -143,34 +143,37 @@ Player generation, contracts, academy call-ups, transfers, releases, retirement 
 
 The smoke test creates the world, validates all roster/player links, moves a player between two teams, restores the player, and validates the relationship again.
 
-### P1 — Champion identity is still display-name based
+### DONE — Stable ChampionId
 
-Current structures commonly use champion names as keys:
+Champion display names are no longer durable keys.
 
-- `patch.champions[name]`
-- player champion pool keys
-- pick/ban sets
+Stable IDs now flow through:
+
+- patch champion registry
+- player champion mastery/pool
+- draft picks and bans
+- match state
 - champion statistics
+- balance patch targets
 
-Risk: rename/rework/localization can break historical references.
+UI resolves IDs back to display names. Smoke tests simulate a match and verify all draft/match champion references resolve to registered IDs.
 
-Next action: introduce stable `ChampionId` while retaining Korean/display names as presentation fields.
+### DONE — Stable match identity
 
-### P1 — Match IDs are only local to a season
+Match IDs are namespaced by stable season IDs rather than restarting at `m0`.
 
-Schedules currently generate IDs such as `m0`, `m1`.
+Each scheduled match also stores:
 
-Risk: there is no globally stable match identity for news/history/save references.
+- `seasonId`
+- `competitionId`
 
-Next action: generate stable match IDs containing season/competition identity or an opaque unique ID.
+Smoke tests verify match IDs are unique across the active world schedule and point back to the correct season/competition.
 
-### P1 — Season keys are reusable labels, not durable historical IDs
+### DONE — Stable SeasonId
 
-Examples such as `LCK-1` identify the current world's split instance but are not globally unique across years.
+Season objects now have durable IDs derived from year, competition identity and deterministic season seed.
 
-Risk: durable references become ambiguous once full raw history is preserved.
-
-Next action: add stable `SeasonId` / competition-instance IDs containing year and competition identity.
+Existing `world.seasons` lookup keys such as `LCK-1` remain temporary UI/runtime aliases, but durable cross-system references should use `season.id`.
 
 ### P1 — Competition definitions are overwritten in-place
 
@@ -198,13 +201,11 @@ Next action: refactor by vertical slice only. Do not perform a framework rewrite
 
 ## Recommended next implementation order
 
-1. stable champion IDs
-2. stable season and match IDs
-3. persistent match/result registry or durable season result index
-4. New Game → World creation contract cleanup
-5. calendar stop/decision model
-6. draft legality state machine
-7. first match-engine iteration tied to durable result/stat records
+1. persistent match/result registry or durable season result index
+2. New Game → World creation contract cleanup
+3. calendar stop/decision model
+4. draft legality state machine
+5. first match-engine iteration tied to durable result/stat records
 
 ## Non-goals
 
