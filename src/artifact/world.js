@@ -22,7 +22,7 @@ function genPlayer(db,rng,o){
   const tend={};for(const t of TENDENCIES)tend[t]=Math.round(clamp(50+(bias.t[t]||0)+rng.normal(0,12),5,95));
   if(role==='TOP')tend.split_preference=Math.min(95,tend.split_preference+15);
   const champs=Object.values(db.patch.champions).filter(c=>c.roles.includes(role)).map(c=>c.id);
-  const sigIds=sig.map(x=>db.patch.champions[x]?x:championIdByName(db,x)).filter(Boolean);
+  const sigIds=sig.map(x=>db.patch.champions[x]?x:(championByName(db,x)?.id)).filter(Boolean);
   const mySig=sigIds.length?sigIds:champs.slice().sort(()=>rng.next()-0.5).slice(0,2);
   const pool={};
   const n=clamp(Math.round(9+(age-17)*0.7+rng.normal(0,2)),7,18), picks=[...mySig,...champs.filter(c=>!mySig.includes(c)).sort(()=>rng.next()-0.5).slice(0,n)];
