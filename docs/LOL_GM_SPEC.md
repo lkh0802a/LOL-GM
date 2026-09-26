@@ -23,11 +23,13 @@ The player and AI clubs ultimately operate under the same core rules.
 
 The full document describes the target game. **Do not shallowly implement the whole document at once.**
 
-## Phase 0 — Claude Artifact Prototype & Integration
+## Phase 0 — Claude Artifact Migration & App Foundation
 
-Purpose: validate mobile UI/UX and the core management flow, then migrate the approved Claude Artifact into this repository.
+An existing Claude Artifact prototype is the current UI/UX starting point.
 
-Artifact is the UI starting point. GitHub is the long-term game codebase.
+Purpose: migrate that existing prototype into this repository now, preserve approved mobile UI/UX, establish a runnable application, and then make GitHub the primary development codebase.
+
+After stable migration, Artifact is optional for UI/UX experimentation; GitHub remains the long-term source of truth.
 
 Prototype flow:
 
@@ -42,9 +44,11 @@ Phase 0 rules:
 - navigation/buttons/tabs must actually work
 - do not pretend future simulation systems are complete
 - preserve approved Artifact visual design during migration
-- exported Artifact may initially land in `src/artifact/`
-- gradually separate presentation, state, domain logic and data
+- exported Artifact may initially land in `src/artifact/` when useful, but this is not mandatory
+- first establish a runnable build and visual/behavioral parity
+- gradually separate presentation, state, domain logic and data after parity
 - do not rewrite an approved Artifact from scratch without a concrete reason
+- after Phase 0 exit criteria in `docs/DEVELOPMENT.md` are met, continue with `docs/POST_ARTIFACT_ROADMAP.md`
 
 Read `docs/ARTIFACT_INTEGRATION.md`.
 
