@@ -12,18 +12,13 @@ function draftPrefs(db,tid,ctx,g,bestOf,rng){
   return {blue:0.03+noise(),red:noise(),first:0.05+noise(),last:0.02+0.03*t.coach.draft/100+0.05*fl+(g===bestOf?0.02:0)+noise(),fl};
 }
 function chooseSide(db,tid,opp,ctx,g,bestOf,rng){
-  const t=db.teams[tid], pref=(t.tactics&&t.tactics.side_pref)||'auto';
   const me=draftPrefs(db,tid,ctx,g,bestOf,rng), op=draftPrefs(db,opp,ctx,g,bestOf,rng);
   const bestSide=v=>v.blue>=v.red?'blue':'red', bestOrd=v=>v.first>=v.last?'first':'last', flip={blue:'red',red:'blue',first:'last',last:'first'};
-  // A: 내가 진영을 고름 → 상대가 픽 순서를 고름 / B: 내가 픽 순서를 고름 → 상대가 진영을 고름
+  // 선택권을 가진 팀은 현재 패치·코치·피어리스 상황을 보고 진영 또는 픽 순서 중 가치가 높은 쪽을 고른다.
+  const sA=bestSide(me), oA=flip[bestOrd(op)], vA=me[sA]+me[oA];
+  const oB=bestOrd(me), sB=flip[bestSide(op)], vB=me[sB]+me[oB];
   let side,order,chose;
-  if(pref==='blue'||pref==='red'){side=pref;order=flip[bestOrd(op)];chose='side'}
-  else if(pref==='first'||pref==='last'){order=pref;side=flip[bestSide(op)];chose='order'}
-  else{
-    const sA=bestSide(me), oA=flip[bestOrd(op)], vA=me[sA]+me[oA];
-    const oB=bestOrd(me), sB=flip[bestSide(op)], vB=me[sB]+me[oB];
-    if(vA>=vB){side=sA;order=oA;chose='side'}else{side=sB;order=oB;chose='order'}
-  }
+  if(vA>=vB){side=sA;order=oA;chose='side'}else{side=sB;order=oB;chose='order'}
   const why=chose==='side'?`진영 선택 → ${side==='blue'?'블루':'레드'} (상대가 ${order==='first'?'후픽':'선픽'} 선택)`:`픽 순서 선택 → ${order==='first'?'선픽':'후픽'}${order==='last'&&me.fl>0.3?' (피어리스로 줄어든 챔피언 폭 — 마지막 카운터픽)':''} (상대가 ${side==='blue'?'레드':'블루'} 선택)`;
   return {side,order,chose,why};
 }
