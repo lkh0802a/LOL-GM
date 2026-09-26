@@ -1,20 +1,23 @@
-// ===== 롤FM: UI =====
-let SLOT=(()=>{try{return localStorage.getItem('lolfm-slot')||'1'}catch(e){return '1'}})();
-const STORE_BASE='lolfm-db-v8-';
+// ===== LOL GM: UI =====
+const SAVE_VERSION=9;
+const STORAGE_NS='lol-gm';
+let SLOT=(()=>{try{return localStorage.getItem(STORAGE_NS+'-slot')||'1'}catch(e){return '1'}})();
+const STORE_BASE=STORAGE_NS+'-db-v'+SAVE_VERSION+'-';
 let STORE=STORE_BASE+SLOT;
 let DB=null, LAST=null, LASTSER=null, VIEW='season', SQUAD=null, OPEN_P=null, LOGMODE='major', SAVEFAIL=false, MSG='';
+// Phase 1부터 구버전 세이브 호환은 의도적으로 지원하지 않는다.
 // 저장: IndexedDB(용량 큼) 우선, 안 되면 localStorage
-function idb(){return new Promise((res,rej)=>{try{const r=indexedDB.open('lolfm',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}})}
+function idb(){return new Promise((res,rej)=>{try{const r=indexedDB.open(STORAGE_NS,1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}})}
 async function idbGet(k){const d=await idb();return new Promise((res,rej)=>{const q=d.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})}
 async function idbSet(k,v){const d=await idb();return new Promise((res,rej)=>{const tx=d.transaction('kv','readwrite');tx.objectStore('kv').put(v,k);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error)})}
 async function loadDB(){
-  try{const s=await idbGet(STORE);if(s){const d=unpackDB(s);if(d.version===8)return normalizeLegacyUIState(d)}}catch(e){}
-  try{const s=localStorage.getItem(STORE);if(s){const d=unpackDB(s);if(d.version===8)return normalizeLegacyUIState(d)}}catch(e){}
-  return normalizeLegacyUIState(buildWorld());
+  try{const s=await idbGet(STORE);if(s){const d=unpackDB(s);if(d.version===SAVE_VERSION)return d}}catch(e){}
+  try{const s=localStorage.getItem(STORE);if(s){const d=unpackDB(s);if(d.version===SAVE_VERSION)return d}}catch(e){}
+  return buildWorld();
 }
 let saveTimer=null;
-function saveDB(){clearTimeout(saveTimer);saveTimer=setTimeout(async()=>{const str=packDB(DB);
-  try{localStorage.setItem('lolfm-meta-'+SLOT,JSON.stringify({team:DB.world?DB.teams[DB.world.myTeam].name:'',year:DB.world?DB.world.year:''}))}catch(e){}
+function saveDB(){clearTimeout(saveTimer);saveTimer=setTimeout(async()=>{const str=packDB(DB),teamId=managedTeamId(DB);
+  try{localStorage.setItem(STORAGE_NS+'-meta-'+SLOT,JSON.stringify({team:teamId&&DB.teams[teamId]?DB.teams[teamId].name:'',year:DB.world?DB.world.year:''}))}catch(e){}
   try{await idbSet(STORE,str);SAVEFAIL=false;try{localStorage.removeItem(STORE)}catch(e){}}catch(e){try{localStorage.setItem(STORE,str);SAVEFAIL=false}catch(e2){SAVEFAIL=true}}},150)}
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -22,15 +25,6 @@ const teamOpts=(sel,div1)=>Object.values(DB.regions).flatMap(r=>(r.div2&&!div1?[
 const n1=v=>Number.isInteger(v)?v:v.toFixed(2);
 function freshInternalSeed(prefix='rng'){
   const a=new Uint32Array(2);try{crypto.getRandomValues(a);return `${prefix}-${a[0].toString(36)}${a[1].toString(36)}`}catch(e){return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`}
-}
-function normalizeLegacyUIState(d){
-  if(d&&d.worldConfig&&Array.isArray(d.worldConfig.internationals))d.worldConfig.internationals=d.worldConfig.internationals.filter(i=>!['MCC','WCC'].includes(i.id));
-  if(d&&!d.world&&d.worldConfig&&Array.isArray(d.worldConfig.regions)){
-    const canonical={KR:12,CN:16,EU:12,NA:10,AP:12,BR:10};
-    for(const r of d.worldConfig.regions)if(canonical[r.id])r.teams=canonical[r.id];
-  }
-  for(const t of Object.values((d&&d.teams)||{}))if(t.tactics){delete t.tactics.focus;delete t.tactics.side_pref;delete t.tactics.training_load;delete t.tactics.scrim}
-  return d;
 }
 function grpAvg(p,g,k=100){return Math.round(avg(ATTR_GROUPS[g].map(a=>obsAttr(DB,p,a,k))))}
 function ovrTag(v){return `<span class="num ${v>=80?'hi':v>=70?'mid':'lo'}">${v}</span>`}
@@ -46,7 +40,7 @@ function nav(){
 // ---------- 경기 ----------
 let SEL={blue:'HTG',red:'SBZ',bo:1,fearless:true};
 function viewMatch(){
-  const act=activeTeams(DB), own=DB.world&&DB.teams[DB.world.myTeam]?DB.world.myTeam:act[0].id;
+  const act=activeTeams(DB), own=DB.world&&DB.teams[managedTeamId(DB)]?managedTeamId(DB):act[0].id;
   SEL.blue=own;
   if(!DB.teams[SEL.red]||DB.teams[SEL.red].active===false||SEL.red===own)SEL.red=(act.find(t=>t.id!==own)||act[0]).id;
   const oppOpts=Object.values(DB.regions).flatMap(r=>(r.div2?[1,2]:[1]).map(d=>`<optgroup label="${esc(d===2?divName(r):r.leagueName)}">${activeTeams(DB,r.id,d).filter(t=>t.id!==own).map(t=>`<option value="${t.id}"${t.id===SEL.red?' selected':''}>${esc(t.name)}</option>`).join('')}</optgroup>`)).join('');
@@ -145,14 +139,14 @@ function financePanel(t){
 function financeTable(rid){
   const ts=activeTeams(DB,rid).sort((a,b)=>b.finance.cash-a.finance.cash);
   return `<div class="scroll"><table><thead><tr><th>구단</th><th>팬덤</th><th>보유 자금</th><th>연봉 총액</th><th>지난 시즌 순이익</th></tr></thead><tbody>
-  ${ts.map(t=>{const l=t.finance.history.slice(-1)[0];return `<tr class="${t.id===DB.world.myTeam?'mine':''}"><td><b>${esc(t.name)}</b></td><td class="num">${t.fans??'—'}</td><td class="num">${money(t.finance.cash)}</td><td class="num">${money(payroll(DB,t))}</td><td class="num ${l&&l.net<0?'lo':''}">${l?money(l.net):'—'}</td></tr>`}).join('')}
+  ${ts.map(t=>{const l=t.finance.history.slice(-1)[0];return `<tr class="${t.id===managedTeamId(DB)?'mine':''}"><td><b>${esc(t.name)}</b></td><td class="num">${t.fans??'—'}</td><td class="num">${money(t.finance.cash)}</td><td class="num">${money(payroll(DB,t))}</td><td class="num ${l&&l.net<0?'lo':''}">${l?money(l.net):'—'}</td></tr>`}).join('')}
   </tbody></table></div>`;
 }
 function potLabel(p){const r=p.pot-playerOvr(p);return r>=8?'높음':r>=3?'보통':'낮음'}
 function viewSquad(){
-  SQUAD=SQUAD&&DB.teams[SQUAD]&&DB.teams[SQUAD].active!==false?SQUAD:(DB.world?DB.world.myTeam:activeTeams(DB)[0].id);
+  SQUAD=SQUAD&&DB.teams[SQUAD]&&DB.teams[SQUAD].active!==false?SQUAD:(DB.world?managedTeamId(DB):activeTeams(DB)[0].id);
   const t=DB.teams[SQUAD], ps=t.roster.map(id=>DB.players[id]).sort((a,b)=>ROLES.indexOf(a.role)-ROLES.indexOf(b.role)||playerOvr(b)-playerOvr(a));
-  const mineOrg=DB.world&&(t.id===DB.world.myTeam||t.parent===DB.world.myTeam), kAvg=Math.round(avg(ps.map(p=>knowledge(DB,p))));
+  const mineOrg=DB.world&&(t.id===managedTeamId(DB)||t.parent===managedTeamId(DB)), kAvg=Math.round(avg(ps.map(p=>knowledge(DB,p))));
   const tr=t.training||defaultTraining();
   return `<section class="controls"><label>팀<select id="sq">${teamOpts(SQUAD)}</select></label></section>
   <section class="teamhead"><h2>${esc(t.name)}</h2><p>${t.formerNames&&t.formerNames.length?'전신 '+t.formerNames.map(esc).join(', ')+' · ':''}${esc(DB.regions[t.region].leagueName)} · 감독 ${esc(t.coach.name)} (밴픽 ${t.coach.draft} · 분석 ${t.coach.analysis} · 육성 ${t.coach.development}) · 운영 철학 ${PHIL_KO[t.philosophy]||'균형'} · 팬덤 ${t.fans??'—'} · 팀 호흡 ${Math.round(teamSynergy(t))}${t.goal?` · 구단주 목표: ${GOAL_KO[t.goal]}`:''}</p><p class="hint">훈련은 한정된 포인트를 어디에 배분할지 선택합니다. 주전을 자주 바꾸면 팀 호흡이 떨어집니다.</p></section>
@@ -163,10 +157,10 @@ function viewSquad(){
   <section><h3>훈련 배분 <small class="hint" id="trleft">남은 포인트 ${TRAIN_POINTS-Object.values(tr).reduce((x,y)=>x+y,0)} / ${TRAIN_POINTS}</small></h3><div class="tac">
     ${Object.keys(ATTR_GROUPS).map(g=>`<label><span>${GROUP_KO[g]}<output>${tr[g]}</output></span><input type="range" min="0" max="${TRAIN_POINTS}" value="${tr[g]}" data-tr="${g}"></label>`).join('')}
   </div><p class="hint">훈련 포인트는 총 ${TRAIN_POINTS}점입니다. 한 영역에 몰면 그 영역은 크게 오르지만 나머지는 덜 오르거나 떨어지고, 배분하지 않은 포인트는 버려집니다. 한 시즌에 영역별로 오를 수 있는 폭과, 잠재력보다 한참 높게 오르는 것에도 한계가 있습니다.</p>
-  <div class="fin"><div><span>훈련 시설</span><b>${t.facility||2} / 5단계</b><small>성장 ×${facilityMul(t).toFixed(2)} · 유지비 연 ${money(facilityUpkeep(DB,t))}</small></div>${DB.world&&t.id===DB.world.myTeam?`<div><span>증설</span>${(t.facility||2)<5?`<button class="ghost" id="facup">${t.facility+1||3}단계로 (${money(facilityCost(DB,t))})</button>`:'<b>최고 단계</b>'}<small id="facmsg"></small></div>`:''}</div></section>
+  <div class="fin"><div><span>훈련 시설</span><b>${t.facility||2} / 5단계</b><small>성장 ×${facilityMul(t).toFixed(2)} · 유지비 연 ${money(facilityUpkeep(DB,t))}</small></div>${DB.world&&t.id===managedTeamId(DB)?`<div><span>증설</span>${(t.facility||2)<5?`<button class="ghost" id="facup">${t.facility+1||3}단계로 (${money(facilityCost(DB,t))})</button>`:'<b>최고 단계</b>'}<small id="facmsg"></small></div>`:''}</div></section>
   <section><h3>로스터</h3><div class="scroll"><table class="roster"><thead><tr><th>포지션</th><th>선수</th><th>나이</th><th>종합</th><th>성장 여지</th><th>폼</th><th>피로</th><th>사기</th><th>연봉</th><th>계약</th>${Object.keys(ATTR_GROUPS).map(g=>`<th>${GROUP_KO[g]}</th>`).join('')}</tr></thead><tbody>
     ${ps.map(p=>`<tr data-p="${p.id}" tabindex="0" class="${OPEN_P===p.id?'open':''}"><td><span class="role">${ROLE_KO[p.role]}</span></td><td><b>${esc(p.name)}</b>${starterFor(DB,t,p.role)===p?'':' <small class="hint">후보</small>'}</td><td class="num">${p.age}</td><td>${ovrTag(obsOvr(DB,p))}${knowledge(DB,p)<100?'<small class="hint">?</small>':''}</td><td>${potText(p)}</td><td class="num">${pState(p).form>=3?'<span class="hi">▲</span>':p.form<=-3?'<span class="lo">▼</span>':'–'}</td><td class="num">${Math.round(p.fatigue)}</td><td class="num ${p.morale<35?'lo':''}">${Math.round(p.morale)}${p.wantsOut?' 이적요청':''}</td><td class="num">${p.contract?money(p.contract.salary):'—'}</td><td class="num">${p.contract?'~'+p.contract.until:'—'}</td>${Object.keys(ATTR_GROUPS).map(g=>`<td>${ovrTag(grpAvg(p,g,knowledge(DB,p)))}</td>`).join('')}</tr>`).join('')}
-  </tbody></table></div><p class="hint">선수를 누르면 세부 능력치, 챔피언 폭, 커리어가 열립니다.${mineOrg?'':` 스카우팅 정보 ${kAvg}% — 정보가 적을수록 실제와 다르게 보입니다.`}</p>${DB.world&&!mineOrg?`<div class="controls"><button class="ghost" id="scoutT">이 팀 집중 스카우팅 (${money(0.5*psOf(DB,DB.teams[DB.world.myTeam].region))})</button><span id="scmsg" class="hint"></span></div>`:''}</section>
+  </tbody></table></div><p class="hint">선수를 누르면 세부 능력치, 챔피언 폭, 커리어가 열립니다.${mineOrg?'':` 스카우팅 정보 ${kAvg}% — 정보가 적을수록 실제와 다르게 보입니다.`}</p>${DB.world&&!mineOrg?`<div class="controls"><button class="ghost" id="scoutT">이 팀 집중 스카우팅 (${money(0.5*psOf(DB,DB.teams[managedTeamId(DB)].region))})</button><span id="scmsg" class="hint"></span></div>`:''}</section>
   <div id="pdetail">${OPEN_P&&DB.players[OPEN_P]&&DB.players[OPEN_P].team===SQUAD?playerDetail(DB.players[OPEN_P]):''}</div>`;
 }
 function potText(p){const k=knowledge(DB,p),o=obsOvr(DB,p),up=Math.max(0,p.pot-playerOvr(p));if(k>=100)return potLabel(p);const w=Math.round((1-k/100)*14);return `${o+Math.max(0,up-w)}~${Math.min(99,o+up+w)}`}
@@ -186,7 +180,7 @@ function playerDetail(p){
 }
 function bindSquad(){
   $('#sq').onchange=e=>{SQUAD=e.target.value;OPEN_P=null;nav()};
-  if($('#scoutT'))$('#scoutT').onclick=()=>{const m=scoutPlayers(DB,DB.teams[SQUAD].roster,35,0.5*psOf(DB,DB.teams[DB.world.myTeam].region));saveDB();nav();$('#scmsg')&&($('#scmsg').textContent=m)};
+  if($('#scoutT'))$('#scoutT').onclick=()=>{const m=scoutPlayers(DB,DB.teams[SQUAD].roster,35,0.5*psOf(DB,DB.teams[managedTeamId(DB)].region));saveDB();nav();$('#scmsg')&&($('#scmsg').textContent=m)};
   document.querySelectorAll('[data-tac]').forEach(el=>el.oninput=el.onchange=e=>{const k=el.dataset.tac;DB.teams[SQUAD].tactics[k]=+el.value;if(el.previousElementSibling)el.previousElementSibling.querySelector('output').textContent=el.value;saveDB()});
   document.querySelectorAll('[data-tr]').forEach(el=>el.oninput=()=>{const t=DB.teams[SQUAD];t.training=t.training||defaultTraining();const k=el.dataset.tr;
     const others=Object.entries(t.training).filter(([g])=>g!==k).reduce((s,[,v])=>s+v,0), v=Math.min(+el.value,TRAIN_POINTS-others);
@@ -221,7 +215,7 @@ function bindPatch(){$('#prole').onchange=e=>{PSET.role=e.target.value;nav()};$(
 // ---------- 이적 시장 (직접 운영) ----------
 let MK={role:'ALL',scope:'region',tab:'fa'};
 function renderMarket(){
-  const w=DB.world,t=DB.teams[w.myTeam],R=DB.regions[t.region],pay=payroll(DB,t),budget=salaryBudget(DB,t);
+  const w=DB.world,t=DB.teams[managedTeamId(DB)],R=DB.regions[t.region],pay=payroll(DB,t),budget=salaryBudget(DB,t);
   const exp=t.roster.map(id=>DB.players[id]).filter(p=>p.contract&&p.contract.until<DB.year);
   const roster=t.roster.map(id=>DB.players[id]);
   const fas=Object.values(DB.players).filter(p=>!p.retired&&!p.team&&(MK.role==='ALL'||p.role===MK.role)&&(MK.scope==='all'||p.region===t.region)).sort((a,b)=>obsOvr(DB,b)-obsOvr(DB,a)).slice(0,25);
@@ -258,7 +252,7 @@ function bindMarket(){
   document.querySelectorAll('[data-release]').forEach(b=>b.onclick=()=>{if(confirm(`${DB.players[b.dataset.release].name} 선수를 방출할까요? 남은 계약이 있으면 해지금이 듭니다.`))act(mRelease(DB,b.dataset.release))});
   document.querySelectorAll('[data-offer]').forEach(b=>b.onclick=()=>{const id=b.dataset.offer;act(mOffer(DB,id,+document.querySelector(`[data-sal="${id}"]`).value,yrs(id)))});
   document.querySelectorAll('[data-bid]').forEach(b=>b.onclick=()=>{const id=b.dataset.bid;act(mTransfer(DB,id,+document.querySelector(`[data-fee="${id}"]`).value))});
-  document.querySelectorAll('[data-scout]').forEach(b=>b.onclick=()=>act(scoutPlayers(DB,[b.dataset.scout],40,0.1*psOf(DB,DB.teams[DB.world.myTeam].region))));
+  document.querySelectorAll('[data-scout]').forEach(b=>b.onclick=()=>act(scoutPlayers(DB,[b.dataset.scout],40,0.1*psOf(DB,DB.teams[managedTeamId(DB)].region))));
   document.querySelectorAll('[data-mk]').forEach(b=>b.onclick=()=>{MK.tab=b.dataset.mk;nav()});
   $('#mkrole').onchange=e=>{MK.role=e.target.value;nav()};$('#mkscope').onchange=e=>{MK.scope=e.target.value;nav()};
 }
@@ -302,7 +296,7 @@ function bindMC(){
 }
 
 // ---------- 데이터 ----------
-function slotMeta(n){try{return JSON.parse(localStorage.getItem('lolfm-meta-'+n)||'null')}catch(e){return null}}
+function slotMeta(n){try{return JSON.parse(localStorage.getItem(STORAGE_NS+'-meta-'+n)||'null')}catch(e){return null}}
 function viewData(){
   return `<section class="teamhead"><h2>저장 슬롯</h2><p>커리어를 3개까지 따로 저장할 수 있습니다. 진행 상황은 자동 저장됩니다.</p></section>
   <section class="cfgs">${['1','2','3'].map(n=>{const m=slotMeta(n);return `<div class="cfgcard compact ${n===SLOT?'cur':''}"><div class="cfghead"><b>슬롯 ${n}${n===SLOT?' · 사용 중':''}</b>${n===SLOT?'':`<button class="ghost sm2" data-slot="${n}">불러오기</button>`}</div><p class="hint">${m&&m.team?`${esc(m.team)} · ${m.year} 시즌`:'비어 있음 — 불러오면 새 세계를 만듭니다'}</p></div>`}).join('')}</section>
@@ -314,10 +308,10 @@ function viewData(){
 function bindData(){
   const msg=t=>$('#dmsg').textContent=t;
   document.querySelectorAll('[data-slot]').forEach(b=>b.onclick=async()=>{const str=packDB(DB);try{await idbSet(STORE,str)}catch(e){}
-    SLOT=b.dataset.slot;try{localStorage.setItem('lolfm-slot',SLOT)}catch(e){};STORE=STORE_BASE+SLOT;DB=await loadDB();LAST=null;LASTSER=null;MC.res=null;SSET.view=null;saveDB();VIEW='season';nav()});
+    SLOT=b.dataset.slot;try{localStorage.setItem(STORAGE_NS+'-slot',SLOT)}catch(e){};STORE=STORE_BASE+SLOT;DB=await loadDB();LAST=null;LASTSER=null;MC.res=null;SSET.view=null;saveDB();VIEW='season';nav()});
   $('#dshow').onclick=()=>{$('#djson').value=packDB(DB);msg('압축된 JSON입니다. 그대로 복사해 두면 됩니다.')};
   $('#dapply').onclick=()=>{try{const d=unpackDB($('#djson').value);if(!d.teams||!d.players||!d.patch||!d.regions)throw new Error('teams, players, patch, regions 항목이 필요합니다');
-    if(d.version!==8)throw new Error('이 버전(8)의 데이터가 아닙니다');DB=d;saveDB();LAST=null;LASTSER=null;MC.res=null;msg('적용했습니다.')}catch(e){msg('적용하지 못했습니다 — '+e.message)}};
+    if(d.version!==SAVE_VERSION)throw new Error(`이 세이브는 현재 버전(${SAVE_VERSION})과 호환되지 않습니다`);DB=d;saveDB();LAST=null;LASTSER=null;MC.res=null;msg('적용했습니다.')}catch(e){msg('적용하지 못했습니다 — '+e.message)}};
   $('#dcopy').onclick=()=>{const v=$('#djson').value||packDB(DB);navigator.clipboard&&navigator.clipboard.writeText(v).then(()=>msg('복사했습니다.'),()=>msg('복사 권한이 없습니다. JSON 열기 후 직접 선택해서 복사하세요.'))};
   $('#dreset').onclick=()=>{if(!confirm('이 슬롯의 커리어가 모두 지워집니다. 계속할까요?'))return;DB=buildWorld();saveDB();LAST=null;LASTSER=null;MC.res=null;VIEW='season';nav()};
 }
@@ -354,11 +348,11 @@ function bindSeries(root,rec){
 
 // ---------- 시즌 (월드) ----------
 let SSET={team:'HTG',seed:freshInternalSeed('world'),tab:'table',view:null};
-function mySeasonKey(){const w=DB.world,rid=DB.teams[w.myTeam].region;const ks=Object.values(w.seasons).filter(s=>s.region===rid).sort((a,b)=>(b.split||0)-(a.split||0));return ks.length?ks[0].key:null}
+function mySeasonKey(){const w=DB.world,rid=DB.teams[managedTeamId(DB)].region;const ks=Object.values(w.seasons).filter(s=>s.region===rid).sort((a,b)=>(b.split||0)-(a.split||0));return ks.length?ks[0].key:null}
 function curS(){const w=DB.world;if(!SSET.view||!w.seasons[SSET.view])SSET.view=mySeasonKey()||Object.keys(w.seasons)[0];return w.seasons[SSET.view]}
 function sName(s){return DB.competitions[s.comp].name+(s.label?' '+s.label:'')}
 function nextMine(){
-  const w=DB.world,me=w.myTeam;let best=null;
+  const w=DB.world,me=managedTeamId(DB);let best=null;
   for(const s of Object.values(w.seasons)){if(s.done)continue;for(const d of s.days.slice(s.cur)){const m=d.matches.find(m=>m.a===me||m.b===me);if(m){if(!best||d.date<best.d.date)best={s,d,m};break}}}
   return best;
 }
@@ -366,8 +360,8 @@ function phaseText(w){if(w.phase==='season'){const st=w.steps[w.step];return (st
 function viewSeason(){
   const w=DB.world;
   if(!w) return seasonSetup();
-  if(w.phase==='pick') return `<section class="teamhead"><h2>팀 선택</h2><p>${w.fired?'해임되었습니다. ':''}새로 맡을 팀을 고르세요. 세계와 기록은 그대로 이어집니다.</p></section><section class="controls"><label>팀<select id="pickteam">${teamOpts(w.myTeam,true)}</select></label><button class="primary" id="pickgo">이 팀으로 계속</button></section>`;
-  const me=w.myTeam, T=DB.teams[me], k=mySeasonKey(), lgS=k&&w.seasons[k];
+  if(w.phase==='pick') return `<section class="teamhead"><h2>팀 선택</h2><p>${w.fired?'해임되었습니다. ':''}새로 맡을 팀을 고르세요. 세계와 기록은 그대로 이어집니다.</p></section><section class="controls"><label>팀<select id="pickteam">${teamOpts(managedTeamId(DB),true)}</select></label><button class="primary" id="pickgo">이 팀으로 계속</button></section>`;
+  const me=managedTeamId(DB), T=DB.teams[me], k=mySeasonKey(), lgS=k&&w.seasons[k];
   const reg=lgS?standings(DB,lgS,'regular'):[], mine=reg.find(x=>x.tid===me), rank=reg.indexOf(mine)+1;
   const nx=nextMine(), nd=nextDate(DB);
   let right='';
@@ -386,7 +380,7 @@ function viewSeason(){
 }
 // 시즌을 챕터(단계)별로 묶어 보여준다: 1장 스프링 → 2장 퍼스트 스탠드 → 3장 MSI 기간 → …
 function chapters(w){
-  const cur=curS(), myR=DB.teams[w.myTeam].region, open=SSET.chap??w.step;
+  const cur=curS(), myR=DB.teams[managedTeamId(DB)].region, open=SSET.chap??w.step;
   return `<div class="chapters">${w.steps.map((st,i)=>{
     const ss=Object.values(w.seasons).filter(s=>stepOf(DB,s)===i).sort((a,b)=>(b.region===myR)-(a.region===myR)||(a.div||1)-(b.div||1)||(DB.competitions[a.comp].tier==='low')-(DB.competitions[b.comp].tier==='low'));
     const state=i<w.step||w.phase!=='season'?'done':i===w.step?'now':'next';
@@ -404,10 +398,10 @@ function controlsFor(w){
 }
 function renderReport(r){
   const nm=id=>DB.players[id]?DB.players[id].name:'?';
-  const mineT=DB.world.myTeam;
+  const mineT=managedTeamId(DB);
   const sig=r.signings.slice().sort((a,b)=>(b.team===mineT)-(a.team===mineT));
   return `<section class="report"><h3>${r.year} 오프시즌 리포트</h3>
-   ${r.myGoal?`<p class="${r.myGoal.ok?'hi':'lo'}"><b>구단주 목표 "${GOAL_KO[r.myGoal.goal]}" ${r.myGoal.ok?'달성':'미달'}</b>${!r.myGoal.ok?` — 구단주 인내심 ${DB.teams[DB.world.myTeam].owner.patience??0}`:''}</p>`:''}
+   ${r.myGoal?`<p class="${r.myGoal.ok?'hi':'lo'}"><b>구단주 목표 "${GOAL_KO[r.myGoal.goal]}" ${r.myGoal.ok?'달성':'미달'}</b>${!r.myGoal.ok?` — 구단주 인내심 ${DB.teams[managedTeamId(DB)].owner.patience??0}`:''}</p>`:''}
    ${DB.world.fired?'<p class="warn">해임되었습니다. 다른 팀을 골라 커리어를 이어가세요.</p>':''}
    ${(r.awards||[]).length?`<div class="rx"><h4>시상</h4>${r.awards.map(a=>`<p><b>${esc(a.comp)} ${esc(a.type)}</b> ${esc(nm(a.pid))} <small>${esc(tshort(DB.players[a.pid]&&DB.players[a.pid].team))}</small></p>`).join('')}</div>`:''}
    ${(r.hof||[]).length?`<div class="rx"><h4>명예의 전당 헌액</h4><p>${r.hof.map(id=>esc(nm(id))).join(', ')}</p></div>`:''}
@@ -474,7 +468,7 @@ function worldTable(){
 }
 function seasonTab(){
   const s=curS(); if(!s)return '<p class="empty">진행 중인 대회가 없습니다.</p>';
-  const comp=DB.competitions[s.comp], me=DB.world.myTeam;
+  const comp=DB.competitions[s.comp], me=managedTeamId(DB);
   if(SSET.tab==='table'){
     const sw=comp.stages.filter(x=>x.type==='swiss'&&s.stageData[x.id]).map(cfg=>{const sd=s.stageData[cfg.id];const rows=standings(DB,s,cfg.id);
       return `<section><h3>${esc(sName(s))} · ${esc(cfg.name)} <small class="hint">${sd.W}승 진출 · ${sd.L}패 탈락</small></h3><div class="scroll"><table class="stand"><thead><tr><th>팀</th><th>전적</th><th>상태</th></tr></thead><tbody>
@@ -567,9 +561,9 @@ function bindSetup(){
 function bindSeason(){
   const w=DB.world;
   if(!w)return bindSetup();
-  if(w.phase==='pick'){$('#pickgo').onclick=()=>{w.myTeam=$('#pickteam').value;w.fired=false;const t=DB.teams[w.myTeam];t.owner.patience=2;w.phase='preseason';SSET.view=null;saveDB();nav()};return}
+  if(w.phase==='pick'){$('#pickgo').onclick=()=>{setManagedTeam(DB,$('#pickteam').value);w.fired=false;const t=DB.teams[managedTeamId(DB)];t.owner.patience=2;w.phase='preseason';SSET.view=null;saveDB();nav()};return}
   document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{SSET.view=b.dataset.view;nav()});
-  document.querySelectorAll('[data-chap]').forEach(b=>b.onclick=()=>{const i=+b.dataset.chap;SSET.chap=(SSET.chap??w.step)===i?-1:i;const s=Object.values(w.seasons).find(x=>stepOf(DB,x)===i&&(x.region===DB.teams[w.myTeam].region||DB.competitions[x.comp].international));if(s)SSET.view=s.key;nav()});
+  document.querySelectorAll('[data-chap]').forEach(b=>b.onclick=()=>{const i=+b.dataset.chap;SSET.chap=(SSET.chap??w.step)===i?-1:i;const s=Object.values(w.seasons).find(x=>stepOf(DB,x)===i&&(x.region===DB.teams[managedTeamId(DB)].region||DB.competitions[x.comp].international));if(s)SSET.view=s.key;nav()});
   document.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>{SSET.tab=b.dataset.st;$('#stab').innerHTML=seasonTab();document.querySelectorAll('[data-st]').forEach(x=>x.setAttribute('aria-pressed',x===b));bindSeasonTab()});
   bindSeasonTab();
   if(w.phase==='offseason'){$('#soff').onclick=()=>{runOffseason(DB);saveDB();nav();window.scrollTo(0,0)};return}
@@ -579,14 +573,14 @@ function bindSeason(){
     if(w.manage==='manual')bindMarket();return;
   }
   if(w.phase==='preseason'){
-    if($('#snew'))$('#snew').onclick=()=>{SSET.view=null;if(DB.teams[w.myTeam].active===false)w.myTeam=activeTeams(DB,DB.teams[w.myTeam].region)[0].id;startWorldSeason(DB,w.myTeam,w.seed);saveDB();nav()};
-    $('#sreset').onclick=()=>{SSET.team=w.myTeam;w.picking=true;w.phase='pick';saveDB();nav()};
+    if($('#snew'))$('#snew').onclick=()=>{SSET.view=null;const current=managedTeamId(DB);if(DB.teams[current].active===false)setManagedTeam(DB,activeTeams(DB,DB.teams[current].region)[0].id);startWorldSeason(DB,managedTeamId(DB),freshInternalSeed('world'));saveDB();nav()};
+    $('#sreset').onclick=()=>{SSET.team=managedTeamId(DB);w.picking=true;w.phase='pick';saveDB();nav()};
     return;
   }
   const run=(stop)=>{document.querySelectorAll('.controls button').forEach(b=>b.disabled=true);let n=0;
     const step=()=>{for(let i=0;i<2;i++){const r=playWorldDay(DB);n++;if(!r||DB.world.phase!=='season'||stop(r))return fin()}$('#sprog').textContent=`${n}일 진행 · ${nextDate(DB)||''}`;setTimeout(step,0)};
     const fin=()=>{saveDB();nav()};step()};
-  const me=w.myTeam, st0=w.step;
+  const me=managedTeamId(DB), st0=w.step;
   $('#sday').onclick=()=>run(()=>true);
   $('#smine').onclick=()=>run(r=>r.played.some(x=>x.day.matches.some(m=>m.a===me||m.b===me)));
   $('#sstep').onclick=()=>run(()=>DB.world.step!==st0);
@@ -595,4 +589,4 @@ function bindSeason(){
 
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{VIEW=b.dataset.v;nav();window.scrollTo(0,0)});
 $('#main').innerHTML='<p class="empty">세계를 불러오는 중…</p>';
-loadDB().then(d=>{DB=migrateNames(d);migrateIntl(DB);migrateChamps(DB);migrateSplits(DB);nav()});
+loadDB().then(d=>{DB=d;nav()});
