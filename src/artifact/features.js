@@ -1,5 +1,4 @@
 // ===== 롤FM: 컨디션·폼·사기·팀 호흡 / 코칭스태프 / 시상·명예의 전당 / 구단주 목표 / 스폰서 =====
-const LOAD_KO={light:'가볍게',normal:'보통',hard:'강도 높게'}, SCRIM_KO={strong:'강팀 위주',balanced:'균형',closed:'비공개 위주'};
 const GOAL_KO={title:'리그 우승',final:'결승 진출',playoffs:'플레이오프 진출',top_half:'상위권 (중위 이상)',survive:'강등 피하기'};
 function pState(p){if(p.form===undefined){p.form=0;p.fatigue=10;p.morale=65}return p}
 // 경기력 보정: 폼(±), 피로(−), 사기(±)
@@ -21,14 +20,15 @@ function afterSeries(db,lines,rec){
     for(const id of t.roster){if(by[id])continue;const p=db.players[id];if(p){pState(p);p.morale=clamp(p.morale-1,0,100)}}
     t.synergy=clamp(teamSynergy(t)+0.4,0,100);}
 }
-// 매 경기일: 휴식·훈련 강도에 따른 피로 회복
+// 매 경기일: 기본 피로 회복. 훈련은 아래의 희소 포인트 배분으로만 관리한다
 function dailyRecovery(db){
   for(const t of Object.values(db.teams)){ if(t.active===false)continue;
-    const load=(t.tactics&&t.tactics.training_load)||'normal', rec={light:6,normal:4,hard:2}[load];
-    for(const id of t.roster){const p=db.players[id];if(!p)continue;pState(p);p.fatigue=Math.max(0,p.fatigue-rec);p.form*=0.98}}
+    const rec=4;
+    for(const id of t.roster){const p=db.players[id];if(!p)continue;pState(p);p.fatigue=Math.max(0,p.fatigue-rec);p.form*=0.98}
+  }
 }
-function trainingGrowthMul(t){const load=(t&&t.tactics&&t.tactics.training_load)||'normal';return {light:0.88,normal:1,hard:1.14}[load]}
-function scrimAnalysisBonus(t){const s=(t.tactics&&t.tactics.scrim)||'balanced';return {strong:0.1,balanced:0.04,closed:0}[s]}
+function trainingGrowthMul(t){return 1}
+function scrimAnalysisBonus(t){return 0}
 
 // ---- 코칭스태프 시장 ----
 function coachSalary(c,ps){return Math.round((1+((c.draft+c.analysis+c.development)/3-50)/12)*ps*10)/10}
