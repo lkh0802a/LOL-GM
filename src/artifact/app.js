@@ -8,9 +8,9 @@ function idb(){return new Promise((res,rej)=>{try{const r=indexedDB.open('lolfm'
 async function idbGet(k){const d=await idb();return new Promise((res,rej)=>{const q=d.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})}
 async function idbSet(k,v){const d=await idb();return new Promise((res,rej)=>{const tx=d.transaction('kv','readwrite');tx.objectStore('kv').put(v,k);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error)})}
 async function loadDB(){
-  try{const s=await idbGet(STORE);if(s){const d=unpackDB(s);if(d.version===8)return d}}catch(e){}
-  try{const s=localStorage.getItem(STORE);if(s){const d=unpackDB(s);if(d.version===8)return d}}catch(e){}
-  return buildWorld();
+  try{const s=await idbGet(STORE);if(s){const d=unpackDB(s);if(d.version===8)return normalizeLegacyUIState(d)}}catch(e){}
+  try{const s=localStorage.getItem(STORE);if(s){const d=unpackDB(s);if(d.version===8)return normalizeLegacyUIState(d)}}catch(e){}
+  return normalizeLegacyUIState(buildWorld());
 }
 let saveTimer=null;
 function saveDB(){clearTimeout(saveTimer);saveTimer=setTimeout(async()=>{const str=packDB(DB);
@@ -20,6 +20,14 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const teamOpts=(sel,div1)=>Object.values(DB.regions).flatMap(r=>(r.div2&&!div1?[1,2]:[1]).map(d=>`<optgroup label="${esc(d===2?divName(r):r.leagueName)}">${activeTeams(DB,r.id,d).map(t=>`<option value="${t.id}"${t.id===sel?' selected':''}>${esc(t.name)}</option>`).join('')}</optgroup>`)).join('');
 const n1=v=>Number.isInteger(v)?v:v.toFixed(2);
+function freshInternalSeed(prefix='rng'){
+  const a=new Uint32Array(2);try{crypto.getRandomValues(a);return `${prefix}-${a[0].toString(36)}${a[1].toString(36)}`}catch(e){return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`}
+}
+function normalizeLegacyUIState(d){
+  if(d&&d.worldConfig&&Array.isArray(d.worldConfig.internationals))d.worldConfig.internationals=d.worldConfig.internationals.filter(i=>!['MCC','WCC'].includes(i.id));
+  for(const t of Object.values((d&&d.teams)||{}))if(t.tactics){delete t.tactics.focus;delete t.tactics.side_pref;delete t.tactics.training_load;delete t.tactics.scrim}
+  return d;
+}
 function grpAvg(p,g,k=100){return Math.round(avg(ATTR_GROUPS[g].map(a=>obsAttr(DB,p,a,k))))}
 function ovrTag(v){return `<span class="num ${v>=80?'hi':v>=70?'mid':'lo'}">${v}</span>`}
 
@@ -32,25 +40,26 @@ function nav(){
 }
 
 // ---------- 경기 ----------
-let SEL={blue:'HTG',red:'SBZ',seed:'rift-001',bo:1,fearless:true};
+let SEL={blue:'HTG',red:'SBZ',bo:1,fearless:true};
 function viewMatch(){
-  const act=activeTeams(DB);if(!DB.teams[SEL.blue]||DB.teams[SEL.blue].active===false)SEL.blue=act[0].id;if(!DB.teams[SEL.red]||DB.teams[SEL.red].active===false)SEL.red=act[1].id;
-  return `<section class="controls">
-    <label>블루<select id="blue">${teamOpts(SEL.blue)}</select></label>
-    <label>레드<select id="red">${teamOpts(SEL.red)}</select></label>
+  const act=activeTeams(DB), own=DB.world&&DB.teams[DB.world.myTeam]?DB.world.myTeam:act[0].id;
+  SEL.blue=own;
+  if(!DB.teams[SEL.red]||DB.teams[SEL.red].active===false||SEL.red===own)SEL.red=(act.find(t=>t.id!==own)||act[0]).id;
+  const oppOpts=Object.values(DB.regions).flatMap(r=>(r.div2?[1,2]:[1]).map(d=>`<optgroup label="${esc(d===2?divName(r):r.leagueName)}">${activeTeams(DB,r.id,d).filter(t=>t.id!==own).map(t=>`<option value="${t.id}"${t.id===SEL.red?' selected':''}>${esc(t.name)}</option>`).join('')}</optgroup>`)).join('');
+  return `<section class="teamhead"><h2>스크림</h2><p>내 팀과 실제 구단을 골라 비공식 연습 경기를 진행합니다. 결과는 공식 전적·리그 순위에 반영되지 않습니다.</p></section>
+  <section class="controls">
+    <label>내 팀 <b>${esc(DB.teams[own].name)}</b></label>
+    <label>상대팀<select id="red">${oppOpts}</select></label>
     <label>형식<select id="bo">${[1,3,5].map(n=>`<option value="${n}"${SEL.bo===n?' selected':''}>${n===1?'단판':'Bo'+n}</option>`).join('')}</select></label>
-    <label>시드<span class="seedrow"><input id="seed" value="${esc(SEL.seed)}"><button class="ghost" id="reroll" title="새 시드" aria-label="새 시드">🎲</button></span></label>
-    <button class="primary" id="play">경기 시작</button>
+    <button class="primary" id="play">스크림 시작</button>
   </section>
-  <div id="result">${LASTSER?renderSeries(LASTSER,true):LAST?renderResult(LAST):`<p class="empty">두 팀과 시드를 고르고 경기를 시작하세요. 같은 시드는 항상 같은 경기를 만듭니다.</p>`}</div>`;
+  <div id="result">${LASTSER?renderSeries(LASTSER,true):LAST?renderResult(LAST):`<p class="empty">상대 팀과 형식을 고르고 스크림을 시작하세요. 같은 조건에서도 결과는 달라질 수 있습니다.</p>`}</div>`;
 }
 function bindMatch(){
-  $('#blue').onchange=e=>SEL.blue=e.target.value; $('#red').onchange=e=>SEL.red=e.target.value;
-  $('#seed').oninput=e=>SEL.seed=e.target.value;
-  $('#reroll').onclick=()=>{SEL.seed='rift-'+Math.random().toString(36).slice(2,8);$('#seed').value=SEL.seed};
+  $('#red').onchange=e=>SEL.red=e.target.value;
   $('#bo').onchange=e=>SEL.bo=+e.target.value;
-  $('#play').onclick=()=>{if(SEL.bo===1){LASTSER=null;LAST=simulateMatch(DB,SEL.blue,SEL.red,SEL.seed);$('#result').innerHTML=renderResult(LAST);bindResult()}
-    else{LAST=null;LASTSER=simulateSeries(DB,SEL.blue,SEL.red,SEL.bo,SEL.seed,{fearless:true,firstChoice:'coin'}).rec;$('#result').innerHTML=renderSeries(LASTSER,true);bindSeries($('#result'),LASTSER)}};
+  $('#play').onclick=()=>{const seed=freshInternalSeed('scrim');if(SEL.bo===1){LASTSER=null;LAST=simulateMatch(DB,SEL.blue,SEL.red,seed);$('#result').innerHTML=renderResult(LAST);bindResult()}
+    else{LAST=null;LASTSER=simulateSeries(DB,SEL.blue,SEL.red,SEL.bo,seed,{fearless:true,firstChoice:'coin',replay:true}).rec;$('#result').innerHTML=renderSeries(LASTSER,true);bindSeries($('#result'),LASTSER)}};
   if(LASTSER)bindSeries($('#result'),LASTSER);else if(LAST)bindResult();
 }
 let LIVE=null;
@@ -142,13 +151,9 @@ function viewSquad(){
   const mineOrg=DB.world&&(t.id===DB.world.myTeam||t.parent===DB.world.myTeam), kAvg=Math.round(avg(ps.map(p=>knowledge(DB,p))));
   const tr=t.training||defaultTraining();
   return `<section class="controls"><label>팀<select id="sq">${teamOpts(SQUAD)}</select></label></section>
-  <section class="teamhead"><h2>${esc(t.name)}</h2><p>${t.formerNames&&t.formerNames.length?'전신 '+t.formerNames.map(esc).join(', ')+' · ':''}${esc(DB.regions[t.region].leagueName)} · 감독 ${esc(t.coach.name)} (밴픽 ${t.coach.draft} · 분석 ${t.coach.analysis} · 육성 ${t.coach.development}) · 운영 철학 ${PHIL_KO[t.philosophy]||'균형'} · 팬덤 ${t.fans??'—'} · 팀 호흡 ${Math.round(teamSynergy(t))}${t.goal?` · 구단주 목표: ${GOAL_KO[t.goal]}`:''}</p><p class="hint">훈련 강도가 높으면 성장이 빠르지만 피로가 덜 풀리고, 스크림을 강팀 위주로 하면 메타 파악이 빨라집니다. 주전을 자주 바꾸면 팀 호흡이 떨어집니다.</p></section>
+  <section class="teamhead"><h2>${esc(t.name)}</h2><p>${t.formerNames&&t.formerNames.length?'전신 '+t.formerNames.map(esc).join(', ')+' · ':''}${esc(DB.regions[t.region].leagueName)} · 감독 ${esc(t.coach.name)} (밴픽 ${t.coach.draft} · 분석 ${t.coach.analysis} · 육성 ${t.coach.development}) · 운영 철학 ${PHIL_KO[t.philosophy]||'균형'} · 팬덤 ${t.fans??'—'} · 팀 호흡 ${Math.round(teamSynergy(t))}${t.goal?` · 구단주 목표: ${GOAL_KO[t.goal]}`:''}</p><p class="hint">훈련은 한정된 포인트를 어디에 배분할지 선택합니다. 주전을 자주 바꾸면 팀 호흡이 떨어집니다.</p></section>
   <section><h3>팀 전술</h3><div class="tac">
     ${Object.keys(TAC_KO).map(k=>`<label><span>${TAC_KO[k]}<output>${t.tactics[k]}</output></span><input type="range" min="0" max="100" value="${t.tactics[k]}" data-tac="${k}"></label>`).join('')}
-    <label><span>훈련 강도</span><select data-tac="training_load">${Object.entries(LOAD_KO).map(([k,l])=>`<option value="${k}"${(t.tactics.training_load||'normal')===k?' selected':''}>${l}</option>`).join('')}</select></label>
-    <label><span>스크림 상대</span><select data-tac="scrim">${Object.entries(SCRIM_KO).map(([k,l])=>`<option value="${k}"${(t.tactics.scrim||'balanced')===k?' selected':''}>${l}</option>`).join('')}</select></label>
-    <label><span>선택권 방침</span><select data-tac="side_pref">${[['auto','상황 판단'],['blue','진영: 블루'],['red','진영: 레드'],['first','픽 순서: 선픽'],['last','픽 순서: 후픽']].map(([k,l])=>`<option value="${k}"${(t.tactics.side_pref||'auto')===k?' selected':''}>${l}</option>`).join('')}</select></label>
-    <label><span>집중 라인</span><select data-tac="focus">${['balanced','top','mid','bot'].map(f=>`<option value="${f}"${t.tactics.focus===f?' selected':''}>${{balanced:'균형',top:'탑',mid:'미드',bot:'바텀'}[f]}</option>`).join('')}</select></label>
   </div></section>
   ${financePanel(t)}
   <section><h3>훈련 배분 <small class="hint" id="trleft">남은 포인트 ${TRAIN_POINTS-Object.values(tr).reduce((x,y)=>x+y,0)} / ${TRAIN_POINTS}</small></h3><div class="tac">
@@ -178,7 +183,7 @@ function playerDetail(p){
 function bindSquad(){
   $('#sq').onchange=e=>{SQUAD=e.target.value;OPEN_P=null;nav()};
   if($('#scoutT'))$('#scoutT').onclick=()=>{const m=scoutPlayers(DB,DB.teams[SQUAD].roster,35,0.5*psOf(DB,DB.teams[DB.world.myTeam].region));saveDB();nav();$('#scmsg')&&($('#scmsg').textContent=m)};
-  document.querySelectorAll('[data-tac]').forEach(el=>el.oninput=el.onchange=e=>{const k=el.dataset.tac;DB.teams[SQUAD].tactics[k]=['focus','side_pref','training_load','scrim'].includes(k)?el.value:+el.value;if(el.previousElementSibling)el.previousElementSibling.querySelector('output').textContent=el.value;saveDB()});
+  document.querySelectorAll('[data-tac]').forEach(el=>el.oninput=el.onchange=e=>{const k=el.dataset.tac;DB.teams[SQUAD].tactics[k]=+el.value;if(el.previousElementSibling)el.previousElementSibling.querySelector('output').textContent=el.value;saveDB()});
   document.querySelectorAll('[data-tr]').forEach(el=>el.oninput=()=>{const t=DB.teams[SQUAD];t.training=t.training||defaultTraining();const k=el.dataset.tr;
     const others=Object.entries(t.training).filter(([g])=>g!==k).reduce((s,[,v])=>s+v,0), v=Math.min(+el.value,TRAIN_POINTS-others);
     el.value=v;t.training[k]=v;el.previousElementSibling.querySelector('output').textContent=v;$('#trleft').textContent=`남은 포인트 ${TRAIN_POINTS-others-v} / ${TRAIN_POINTS}`;saveDB()});
@@ -255,14 +260,13 @@ function bindMarket(){
 }
 
 // ---------- 몬테카를로 ----------
-let MC={blue:'HTG',red:'SBZ',n:300,seed:'mc',res:null,running:false};
+let MC={blue:'HTG',red:'SBZ',n:300,res:null,running:false};
 function viewMC(){
   const act=activeTeams(DB);if(!DB.teams[MC.blue]||DB.teams[MC.blue].active===false)MC.blue=act[0].id;if(!DB.teams[MC.red]||DB.teams[MC.red].active===false)MC.red=act[1].id;
   return `<section class="controls">
     <label>블루<select id="mb">${teamOpts(MC.blue)}</select></label>
     <label>레드<select id="mr">${teamOpts(MC.red)}</select></label>
     <label>반복<select id="mn">${[100,300,1000].map(n=>`<option${n===MC.n?' selected':''}>${n}</option>`).join('')}</select></label>
-    <label>시드<input id="ms" value="${esc(MC.seed)}"></label>
     <button class="primary" id="mrun">시뮬레이션 실행</button>
   </section>
   <div id="mcout">${MC.res?renderMC(MC.res):'<p class="empty">같은 대진을 여러 번 돌려 승률과 경기 지표의 분포를 확인합니다. 전술이나 능력치를 바꾼 뒤 다시 돌려 비교해 보세요.</p>'}</div>`;
@@ -277,13 +281,13 @@ function renderMC(a){
   <section><h3>경기 시간 분포</h3><div class="hist">${bins.map((b,i)=>`<div><i style="height:${bm?b/bm*100:0}%"></i><span>${15+i*5}${i===7?'+':''}</span></div>`).join('')}</div></section>`;
 }
 function bindMC(){
-  $('#mb').onchange=e=>MC.blue=e.target.value;$('#mr').onchange=e=>MC.red=e.target.value;$('#mn').onchange=e=>MC.n=+e.target.value;$('#ms').oninput=e=>MC.seed=e.target.value;
+  $('#mb').onchange=e=>MC.blue=e.target.value;$('#mr').onchange=e=>MC.red=e.target.value;$('#mn').onchange=e=>MC.n=+e.target.value;
   $('#mrun').onclick=()=>{
     if(MC.running)return;MC.running=true;const btn=$('#mrun');
-    const acc={wins:0,time:0,gd15:0,fd:0,ft:0,fb:0,baron:[0,0],kills:[0,0],towers:[0,0],dragons:[0,0],fights:[0,0],n:0,times:[],blue:MC.blue,red:MC.red};
+    const baseSeed=freshInternalSeed('mc'), acc={wins:0,time:0,gd15:0,fd:0,ft:0,fb:0,baron:[0,0],kills:[0,0],towers:[0,0],dragons:[0,0],fights:[0,0],n:0,times:[],blue:MC.blue,red:MC.red};
     let i=0;const N=MC.n;
     const step=()=>{const end=Math.min(N,i+25);
-      for(;i<end;i++){const r=simulateMatch(DB,MC.blue,MC.red,MC.seed+'#'+i);acc.n++;if(r.winner===0)acc.wins++;acc.time+=r.duration;acc.times.push(r.duration);acc.gd15+=r.goldHist[14]??r.goldHist[r.goldHist.length-1];
+      for(;i<end;i++){const r=simulateMatch(DB,MC.blue,MC.red,baseSeed+'#'+i);acc.n++;if(r.winner===0)acc.wins++;acc.time+=r.duration;acc.times.push(r.duration);acc.gd15+=r.goldHist[14]??r.goldHist[r.goldHist.length-1];
         if(r.firsts.dragon===0)acc.fd++;if(r.firsts.tower===0)acc.ft++;if(r.firsts.blood===0)acc.fb++;
         for(const s of [0,1]){acc.baron[s]+=r.sides[s].barons>0?1:0;acc.kills[s]+=r.sides[s].kills;acc.towers[s]+=r.sides[s].towersTaken;acc.dragons[s]+=r.sides[s].dragons.length}
         for(const l of r.log)if(l.kind==='fight')acc.fights[l.side]++;}
@@ -345,7 +349,7 @@ function bindSeries(root,rec){
 }
 
 // ---------- 시즌 (월드) ----------
-let SSET={team:'HTG',seed:'world-1',tab:'table',view:null};
+let SSET={team:'HTG',seed:freshInternalSeed('world'),tab:'table',view:null};
 function mySeasonKey(){const w=DB.world,rid=DB.teams[w.myTeam].region;const ks=Object.values(w.seasons).filter(s=>s.region===rid).sort((a,b)=>(b.split||0)-(a.split||0));return ks.length?ks[0].key:null}
 function curS(){const w=DB.world;if(!SSET.view||!w.seasons[SSET.view])SSET.view=mySeasonKey()||Object.keys(w.seasons)[0];return w.seasons[SSET.view]}
 function sName(s){return DB.competitions[s.comp].name+(s.label?' '+s.label:'')}
@@ -421,8 +425,7 @@ const ISEL_KO={timing:{early:'윈터 이후',mid:'스프링 이후',end:'서머 
 function sel(path,val,opts){return `<select data-cfg="${path}">${Object.entries(opts).map(([k,l])=>`<option value="${k}"${String(val)===k?' selected':''}>${l}</option>`).join('')}</select>`}
 function regionCard(r,i){
   return `<div class="cfgcard compact"><div class="cfghead"><b>${esc(r.leagueName)} <small class="hint">${esc(r.name)}</small></b><button class="ghost sm2" data-delr="${i}" aria-label="${esc(r.leagueName)} 삭제">삭제</button></div>
-    <label class="inl">팀 수 <input type="number" min="4" max="16" step="2" data-cfg="r.${i}.teams" value="${r.teams}" aria-label="팀 수"></label>
-    <p class="hint">${fmtRegion(r)} · 월즈 ${r.slots}장</p></div>`;
+    <p class="hint">${r.teams}팀 · ${fmtRegion(r)} · 월즈 ${r.slots}장</p></div>`;
 }
 function intlCard(it,i){
   return `<div class="cfgcard compact"><div class="cfghead"><b>${esc(it.name)}</b><button class="ghost sm2" data-deli="${i}" aria-label="${esc(it.name)} 삭제">삭제</button></div>
@@ -432,7 +435,7 @@ function seasonSetup(){
   const cfg=DB.worldConfig, dirty=DB.configDirty;
   const unused=Object.keys(REGION_PRESETS).filter(k=>!cfg.regions.some(r=>r.id===k));
   const iunused=INTL_PRESETS.filter(p=>!cfg.internationals.some(i=>i.id===p.id));
-  return `<section class="teamhead"><h2>세계 만들기</h2><p>실제 LoL e스포츠 구조(LCK·LPL·LEC·LCS·LCP·CBLOL, 퍼스트 스탠드·MSI·월즈)로 시작합니다. 여기서는 리그와 국제대회를 넣고 빼거나 팀 수만 정하세요. 진행 방식, 샐러리캡·플로어, 외국인·피어리스 규정, 진출권은 게임이 시작되면 리그 사무국과 국제 e스포츠 사무국이 결정합니다.</p></section>
+  return `<section class="teamhead"><h2>세계 만들기</h2><p>LOL GM 기본 리그 구조(LCK 12·LPL 16·LEC 12·LCS 10·LCP 12·CBLOL 10)와 퍼스트 스탠드·MSI·월즈를 기준으로 시작합니다. 팀 수는 각 리그 규정 데이터가 결정하며 새 게임에서 임의로 바꾸지 않습니다. 진행 방식, 샐러리 규정, 외국인·피어리스 규정, 진출권은 게임 중 사무국 시스템이 관리합니다.</p></section>
   <section><h3>리그 (${cfg.regions.length})</h3><div class="cfgs">${cfg.regions.map(regionCard).join('')}</div>
     <div class="controls"><label>리그 추가<select id="addreg"><option value="">고르기</option>${unused.map(k=>`<option value="${k}">${esc(REGION_PRESETS[k].leagueName)} · ${esc(REGION_PRESETS[k].name)}${REGION_PRESETS[k].tier==='major'?' (메이저)':' (신흥)'}</option>`).join('')}<option value="custom">직접 만들기</option></select></label></div></section>
   <section><h3>국제대회 (${cfg.internationals.length})</h3><div class="cfgs">${cfg.internationals.map(intlCard).join('')}</div>
@@ -446,7 +449,6 @@ function seasonSetup(){
   <section><h3>생성된 세계</h3>${worldTable()}</section>
   <section class="controls">
     <label>내 팀<select id="steam"${dirty?' disabled':''}>${teamOpts(SSET.team)}</select></label>
-    <label>시드<input id="sseed" value="${esc(SSET.seed)}"></label>
     <button class="primary" id="sstart"${dirty?' disabled':''}>커리어 시작</button>
   </section>
   ${DB.history.length?`<section><h3>역대 기록</h3>${histTable()}</section>`:''}`;
@@ -555,8 +557,8 @@ function bindSetup(){
   $('#cfgdef').onclick=()=>{DB.worldConfig=defaultWorldConfig();dirty()};
   $('#regen').onclick=()=>{const errs=validateConfig(cfg);if(errs.length){$('#cfgmsg').className='warn';$('#cfgmsg').textContent=errs.join(' / ');return}
     DB=buildWorld(cfg);SSET.team=activeTeams(DB)[0].id;LAST=null;LASTSER=null;MC.res=null;saveDB();nav()};
-  $('#steam').onchange=e=>SSET.team=e.target.value;$('#sseed').oninput=e=>SSET.seed=e.target.value;
-  $('#sstart').onclick=()=>{if(!DB.teams[SSET.team]||DB.teams[SSET.team].active===false)SSET.team=activeTeams(DB)[0].id;SSET.view=null;startWorldSeason(DB,SSET.team,SSET.seed);saveDB();nav()};
+  $('#steam').onchange=e=>SSET.team=e.target.value;
+  $('#sstart').onclick=()=>{if(!DB.teams[SSET.team]||DB.teams[SSET.team].active===false)SSET.team=activeTeams(DB)[0].id;SSET.view=null;startWorldSeason(DB,SSET.team,freshInternalSeed('world'));saveDB();nav()};
 }
 function bindSeason(){
   const w=DB.world;
