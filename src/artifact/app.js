@@ -25,6 +25,10 @@ function freshInternalSeed(prefix='rng'){
 }
 function normalizeLegacyUIState(d){
   if(d&&d.worldConfig&&Array.isArray(d.worldConfig.internationals))d.worldConfig.internationals=d.worldConfig.internationals.filter(i=>!['MCC','WCC'].includes(i.id));
+  if(d&&!d.world&&d.worldConfig&&Array.isArray(d.worldConfig.regions)){
+    const canonical={KR:12,CN:16,EU:12,NA:10,AP:12,BR:10};
+    for(const r of d.worldConfig.regions)if(canonical[r.id])r.teams=canonical[r.id];
+  }
   for(const t of Object.values((d&&d.teams)||{}))if(t.tactics){delete t.tactics.focus;delete t.tactics.side_pref;delete t.tactics.training_load;delete t.tactics.scrim}
   return d;
 }
