@@ -122,20 +122,26 @@ Standings are derived from match results rather than manually owned by UI.
 
 ## Remaining structural risks
 
-### P1 — Team membership has two writable representations
+### DONE — Roster membership invariant layer
 
-Current state contains both:
+The runtime still stores both:
 
 ```text
 team.roster -> PlayerId[]
 player.team -> TeamId | null
 ```
 
-Both are written by transfer/retirement/team-generation code.
+but they are no longer independently mutated by gameplay flows.
 
-Risk: they can diverge.
+Authoritative mutation helpers now own the relationship:
 
-Next action: introduce one roster-membership service/invariant layer so all sign/release/move operations update the relationship atomically.
+- `assignPlayerToTeam(db, player, team)`
+- `removePlayerFromTeam(db, player)`
+- `rosterIntegrityErrors(db)`
+
+Player generation, contracts, academy call-ups, transfers, releases, retirement and club folding use the invariant layer.
+
+The smoke test creates the world, validates all roster/player links, moves a player between two teams, restores the player, and validates the relationship again.
 
 ### P1 — Champion identity is still display-name based
 
@@ -192,14 +198,13 @@ Next action: refactor by vertical slice only. Do not perform a framework rewrite
 
 ## Recommended next implementation order
 
-1. roster membership invariants / transfer-safe ownership
-2. stable champion IDs
-3. stable season and match IDs
-4. persistent match/result registry or durable season result index
-5. New Game → World creation contract cleanup
-6. calendar stop/decision model
-7. draft legality state machine
-8. first match-engine iteration tied to durable result/stat records
+1. stable champion IDs
+2. stable season and match IDs
+3. persistent match/result registry or durable season result index
+4. New Game → World creation contract cleanup
+5. calendar stop/decision model
+6. draft legality state machine
+7. first match-engine iteration tied to durable result/stat records
 
 ## Non-goals
 
