@@ -114,6 +114,8 @@ function orgName(db,rng){
   }
   const n='T'+rng.int(100,999);return {name:n+' Gaming',short:n};
 }
+function activeTeams(db,rid,div){return Object.values(db.teams).filter(t=>t.active!==false&&(!rid||t.region===rid)&&(!div||(t.division||1)===div))}
+
 function genTeam(db,rng,regionId,strength,o={}){
   const on=o.name?{name:o.name,short:o.short}:orgName(db,rng), subs=db.worldConfig.subs||0;
   const t={id:on.short,name:on.name,short:on.short,region:regionId,division:o.div||1,parent:o.parent||null,active:true,fans:baseFans(strength-4-(o.div===2?15:0),rng),coach:genCoach(rng,strength+2),tactics:genTactics(rng),training:defaultTraining(),philosophy:o.parent?'youth':rng.pick(PHILOSOPHIES),roster:[],founded:db.year};
