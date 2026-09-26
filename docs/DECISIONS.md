@@ -96,3 +96,27 @@ Deferral is not deletion.
 Important systems must produce real state changes/results and survive navigation, season progression and later save/load work.
 
 A 100-season automated simulation is a developer/QA validation target, not a player-facing mode.
+
+
+## D-013 — Current implementation ownership
+
+**Decision:** ChatGPT is the current primary implementation, GitHub integration, review and debugging agent.
+
+Claude/GitHub integration is not available in the current workflow and is not required for progress.
+
+If Claude or another external AI is used later, it is an optional specialist contributor. It must receive a bounded task and return work that continues the same GitHub implementation.
+
+## D-014 — Artifact migration accepted
+
+**Decision:** Phase 0 Artifact migration was accepted on 2026-09-26.
+
+Evidence:
+
+- migrated source modules match the supplied Artifact source byte-for-byte except the intentional product branding change in `shell.html` and Artifact README
+- `npm run check` succeeds locally
+- `npm run build` succeeds locally
+- `npm run dev` serves the app successfully
+- GitHub Actions CI succeeds on `main`
+- generated source and repository source blob hashes match
+
+The project advances to `PHASE_1_CORE_GAME`.
