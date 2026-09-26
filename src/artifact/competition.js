@@ -79,9 +79,9 @@ function roundRobin(ids,legs){
   return out;
 }
 const STAGE_KO={round_robin:'풀리그',swiss:'스위스',single_elim:'싱글 엘리미네이션',double_elim:'더블 엘리미네이션'};
-function newSeason(db,compId,year,seed,myTeam,start){
+function newSeason(db,compId,year,seed,start){
   const comp=db.competitions[compId], st0=comp.stages[0];
-  const s={comp:compId,year,seed,myTeam,days:[],cur:0,stage:0,stageData:{},pstats:{},done:false,champion:null,runnerUp:null};
+  const s={comp:compId,year,seed,days:[],cur:0,stage:0,stageData:{},pstats:{},done:false,champion:null,runnerUp:null};
   const rng=new RNG(seed,'schedule');
   let order=st0.type==='round_robin'&&!st0.groups?comp.teams.slice().sort(()=>rng.next()-0.5):comp.teams.slice();
   if(st0.id==='playin'){const nx=comp.stages[1];order=comp.teams.filter(t=>!(nx.direct||[]).includes(t))}
