@@ -4,11 +4,11 @@ Mobile-first esports management simulation.
 
 ## Current stage
 
-**Phase 0 — Artifact Migration & App Foundation**
+**Phase 1 — Core Game**
 
-An existing Claude Artifact prototype is the current UI/UX starting point. The immediate goal is to migrate that prototype into this repository as a real, runnable web application while preserving its approved mobile-first design and interaction flow.
+The existing Artifact prototype has been migrated into this repository as a runnable web application. GitHub is now the primary development codebase.
 
-After the migration is stable, **GitHub becomes the primary development codebase**. Claude Artifact may still be used as an optional UI/UX experiment surface, but it is not the long-term source of truth.
+The current goal is to turn the migrated prototype state into a coherent real game state and complete the first persistent season gameplay loop.
 
 Target prototype flow:
 
@@ -24,7 +24,7 @@ For implementation decisions, use this priority:
 4. `docs/ARTIFACT_INTEGRATION.md` for Artifact/UI migration work
 5. intentional working behavior already in the repository
 
-ChatGPT and Claude work on the **same implementation**. A handoff means continuing the existing code, not building an alternative version.
+ChatGPT is the current primary implementation/review agent for this repository. Any future external AI contribution must continue the same implementation rather than creating an alternative version.
 
 ## Architecture principles
 
