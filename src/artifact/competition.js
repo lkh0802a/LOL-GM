@@ -50,7 +50,7 @@ function simulateSeries(db,aId,bId,bestOf,seed,opt={}){
     ctx.mods[wId]=clamp(ctx.mods[wId]+0.015,-0.08,0.05);
     const mvp=gameMVP(r);
     games.push({n:g,blue,red,seed:gseed,mods:snap.mods,winner:wId,bans:r.draft.bans,sideBy:chooser,sideWhy:sc.why,firstPick:fpTeam,kills:[r.sides[0].kills,r.sides[1].kills],dur:r.durationStr,duration:r.duration,picks:pk,mvp});
-    for(const s of r.sides) for(const p of s.ps) lines.push({pid:p.p.id,tid:s.team.id,champ:p.champ.name,k:p.k,d:p.d,a:p.a,cs:Math.round(p.cs),dmg:Math.round(p.dmg),dur:r.duration,win:s.team.id===wId,mvp:p.p.id===mvp});
+    for(const s of r.sides) for(const p of s.ps) lines.push({pid:p.p.id,tid:s.team.id,champ:p.champ.id,k:p.k,d:p.d,a:p.a,cs:Math.round(p.cs),dmg:Math.round(p.dmg),dur:r.duration,win:s.team.id===wId,mvp:p.p.id===mvp});
     chooser=lId; // 패배 팀이 다음 세트 진영 선택 (블루 선호)
   }
   const tac={[aId]:{...db.teams[aId].tactics},[bId]:{...db.teams[bId].tactics}};
