@@ -32,7 +32,7 @@ function promotionStatus(db,t){
 function setupTeamsForManager(db){const root=managedTeam(db);if(!root)return [];return root.parent?[root]:[root,...reserveTeamsOf(db,root)]}
 function initialSalaryBudget(db,t){const team=teamRef(db,t),R=db.regions[team.region],floor=(team.division||1)===1?(R.salaryFloor||0):0;return Math.max(salaryBudget(db,team),team.initialPayrollBudget||0,floor)}
 function initialSalaryCeiling(db,t){const team=teamRef(db,t),R=db.regions[team.region],budget=initialSalaryBudget(db,team);return (team.division||1)===1&&R.salaryCap>0?Math.min(budget,R.salaryCap):budget}
-function initialSquadLimits(db,t){const team=teamRef(db,t),rules=rosterRulesForTeam(db,team),first=(team.division||1)===1&&!team.parent;return {min:first?rules.firstTeamMin:rules.reserveTeamMin,max:first?rules.firstTeamMax:rules.reserveTeamMax}}
+function initialSquadLimits(db,t){const team=teamRef(db,t),rules=rosterRulesForTeam(db,team),first=!team.parent;return {min:first?rules.firstTeamMin:rules.reserveTeamMin,max:first?rules.firstTeamMax:rules.reserveTeamMax}}
 function initialSquadErrors(db,t){
   const team=teamRef(db,t);if(!team)return ['팀을 찾을 수 없습니다'];
   const R=db.regions[team.region],limits=initialSquadLimits(db,team),errors=[],roster=team.roster||[];

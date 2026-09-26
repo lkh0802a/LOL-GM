@@ -25,14 +25,20 @@ source += `\n(()=>{
   if(!selectable.length||selectable.some(t=>t.parent)) throw new Error('Manager-selectable team filter failed');
   if(selectable.length!==independent.length) throw new Error('Independent club selection coverage failed');
 
-  const careerTeam=selectable.find(t=>!t.parent&&reserveTeamsOf(db,t).length)||selectable[0];
+  const careerTeam=selectable.find(t=>!t.parent&&reserveTeamsOf(db,t).length===1)||selectable.find(t=>!t.parent&&reserveTeamsOf(db,t).length)||selectable[0];
   startCareer(db,careerTeam.id,'smoke-world');
   if(db.world.phase!=='initial_roster'||db.manager.startMode!=='blank_roster') throw new Error('Initial roster phase did not start');
 
   const mine=setupTeamsForManager(db);
   if(!mine.length) throw new Error('Managed organization has no setup squads');
   const userRng=new RNG('smoke-user-roster','user');
-  for(const t of mine) autoBuildInitialSquad(db,t,userRng,INITIAL_ROSTER_TARGET);
+  const managedRoot=parentTeamOf(db,careerTeam)||careerTeam,ownedReserves=reserveTeamsOf(db,managedRoot);
+  if(ownedReserves.length){
+    autoBuildInitialSquad(db,managedRoot,userRng,5);
+    autoBuildInitialSquad(db,ownedReserves[0],userRng,6);
+    for(const t of ownedReserves.slice(1)) autoBuildInitialSquad(db,t,userRng,5);
+    if(managedRoot.roster.length!==5||ownedReserves[0].roster.length!==6) throw new Error('5+6 owned-reserve boundary roster setup failed');
+  } else autoBuildInitialSquad(db,managedRoot,userRng,INITIAL_ROSTER_TARGET);
   const myErrors=initialOrganizationErrors(db,careerTeam);
   if(myErrors.length) throw new Error('Managed initial roster invalid: '+myErrors.join(' | '));
 
