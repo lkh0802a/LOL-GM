@@ -1,15 +1,36 @@
 // ===== LOL GM: UI =====
 const SAVE_VERSION=9;
 const STORAGE_NS='lol-gm';
+const DIRECT_FILE_PREVIEW=location.protocol==='file:'||location.origin==='null';
 let SLOT=(()=>{try{return localStorage.getItem(STORAGE_NS+'-slot')||'1'}catch(e){return '1'}})();
 const STORE_BASE=STORAGE_NS+'-db-v'+SAVE_VERSION+'-';
 let STORE=STORE_BASE+SLOT;
 let DB=null, LAST=null, LASTSER=null, VIEW='season', SQUAD=null, OPEN_P=null, LOGMODE='major', SAVEFAIL=false, MSG='';
 // Phase 1부터 구버전 세이브 호환은 의도적으로 지원하지 않는다.
 // 저장: IndexedDB(용량 큼) 우선, 안 되면 localStorage
-function idb(){return new Promise((res,rej)=>{try{const r=indexedDB.open(STORAGE_NS,1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}})}
-async function idbGet(k){const d=await idb();return new Promise((res,rej)=>{const q=d.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})}
-async function idbSet(k,v){const d=await idb();return new Promise((res,rej)=>{const tx=d.transaction('kv','readwrite');tx.objectStore('kv').put(v,k);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error)})}
+function idb(){return new Promise((res,rej)=>{
+  if(DIRECT_FILE_PREVIEW||typeof indexedDB==='undefined')return rej(new Error('IndexedDB unavailable in direct-file preview'));
+  let done=false;
+  const finish=(ok,v)=>{if(done)return;done=true;clearTimeout(timer);ok?res(v):rej(v)};
+  const timer=setTimeout(()=>finish(false,new Error('IndexedDB timeout')),800);
+  try{
+    const r=indexedDB.open(STORAGE_NS,1);
+    r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('kv'))r.result.createObjectStore('kv')};
+    r.onsuccess=()=>finish(true,r.result);
+    r.onerror=()=>finish(false,r.error||new Error('IndexedDB open failed'));
+    r.onblocked=()=>finish(false,new Error('IndexedDB blocked'));
+  }catch(e){finish(false,e)}
+})}
+async function idbGet(k){const d=await idb();return new Promise((res,rej)=>{
+  let done=false;const finish=(ok,v)=>{if(done)return;done=true;clearTimeout(timer);try{d.close()}catch(e){}ok?res(v):rej(v)};
+  const timer=setTimeout(()=>finish(false,new Error('IndexedDB read timeout')),800);
+  try{const q=d.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>finish(true,q.result);q.onerror=()=>finish(false,q.error||new Error('IndexedDB read failed'))}catch(e){finish(false,e)}
+})}
+async function idbSet(k,v){const d=await idb();return new Promise((res,rej)=>{
+  let done=false;const finish=(ok,v)=>{if(done)return;done=true;clearTimeout(timer);try{d.close()}catch(e){}ok?res(v):rej(v)};
+  const timer=setTimeout(()=>finish(false,new Error('IndexedDB write timeout')),800);
+  try{const tx=d.transaction('kv','readwrite');tx.objectStore('kv').put(v,k);tx.oncomplete=()=>finish(true);tx.onerror=()=>finish(false,tx.error||new Error('IndexedDB write failed'));tx.onabort=()=>finish(false,tx.error||new Error('IndexedDB write aborted'))}catch(e){finish(false,e)}
+})}
 async function loadDB(){
   try{const s=await idbGet(STORE);if(s){const d=unpackDB(s);if(d.version===SAVE_VERSION)return d}}catch(e){}
   try{const s=localStorage.getItem(STORE);if(s){const d=unpackDB(s);if(d.version===SAVE_VERSION)return d}}catch(e){}
@@ -589,4 +610,8 @@ function bindSeason(){
 
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{VIEW=b.dataset.v;nav();window.scrollTo(0,0)});
 $('#main').innerHTML='<p class="empty">세계를 불러오는 중…</p>';
-loadDB().then(d=>{DB=d;nav()});
+loadDB().then(d=>{DB=d;nav()}).catch(e=>{
+  console.error('LOL GM initialization failed',e);
+  $('#main').innerHTML=`<section><h2>게임을 시작하지 못했습니다</h2><p class="warn">${esc(e&&e.message?e.message:'초기화 오류')}</p><p class="hint">파일로 직접 연 HTML에서 저장소 접근이 차단된 경우 자동으로 우회합니다. 새로고침해도 계속되면 최신 HTML 미리보기를 다시 받아 주세요.</p><button class="primary" id="retryboot">다시 시도</button></section>`;
+  const b=$('#retryboot');if(b)b.onclick=()=>location.reload();
+});
