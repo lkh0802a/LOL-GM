@@ -28,11 +28,13 @@ function genPlayer(db,rng,o){
   for(const c of picks){const s=mySig.includes(c);
     pool[c]={mastery:Math.round(clamp(s?80+rng.normal(0,6)+(age-20):55+rng.normal(0,12),20,99)),experience:Math.round(clamp(s?70+rng.normal(0,10)+(age-20)*2:40+rng.normal(0,15),5,99)),
       matchup_knowledge:Math.round(clamp(base-10+rng.normal(0,10)+(age-20),20,99)),confidence:Math.round(clamp(s?72+rng.normal(0,8):50+rng.normal(0,10),10,99))};}
-  const p={id:o.id||uniqId(db,(o.region||'X')+'_'),name:o.name||uniqNick(db,rng),role,age,team:o.team||null,region:o.region,attrs,tend,pool,
+  const p={id:o.id||uniqId(db,(o.region||'X')+'_'),name:o.name||uniqNick(db,rng),role,age,team:null,region:o.region,attrs,tend,pool,
     pot:0,personality:{professionalism:Math.round(clamp(rng.normal(60,15),10,99)),ambition:Math.round(clamp(rng.normal(60,15),10,99))},career:[],titles:[],retired:false,faYears:0};
   const ovr=playerOvr(p);
   p.pot=Math.round(clamp(o.pot!==undefined?o.pot:ovr+Math.max(0,24-age)*rng.range(0.8,2.4)+rng.normal(2,3),ovr,99));
-  db.players[p.id]=p; return p;
+  db.players[p.id]=p;
+  if(o.team)assignPlayerToTeam(db,p,o.team);
+  return p;
 }
 function genCoach(rng,base){const nm=rng.pick(NICK_A)+rng.pick(NICK_B);return {name:nm.charAt(0).toUpperCase()+nm.slice(1),draft:Math.round(clamp(base+rng.normal(0,8),40,95)),analysis:Math.round(clamp(base+rng.normal(0,8),40,95)),development:Math.round(clamp(base+rng.normal(0,10),35,95))}}
 function genTactics(rng){return {aggression:rng.int(35,80),risk_tolerance:rng.int(30,75),objective_priority:rng.int(45,80),vision_investment:rng.int(45,80),scaling_preference:rng.int(30,75)}}
@@ -115,14 +117,53 @@ function orgName(db,rng){
   const n='T'+rng.int(100,999);return {name:n+' Gaming',short:n};
 }
 function activeTeams(db,rid,div){return Object.values(db.teams).filter(t=>t.active!==false&&(!rid||t.region===rid)&&(!div||(t.division||1)===div))}
+function playerRef(db,p){return typeof p==='string'?db.players[p]:p}
+function teamRef(db,t){return typeof t==='string'?db.teams[t]:t}
+function removePlayerFromTeam(db,p){
+  const player=playerRef(db,p);if(!player)return null;
+  const oldId=player.team;
+  for(const t of Object.values(db.teams))if(t.roster&&t.roster.includes(player.id))t.roster=t.roster.filter(id=>id!==player.id);
+  player.team=null;
+  return oldId;
+}
+function assignPlayerToTeam(db,p,t){
+  const player=playerRef(db,p),team=teamRef(db,t);
+  if(!player)throw new Error('Unknown player');
+  if(!team)throw new Error(`Unknown team: ${typeof t==='string'?t:'?'}`);
+  for(const other of Object.values(db.teams))if(other.id!==team.id&&other.roster&&other.roster.includes(player.id))other.roster=other.roster.filter(id=>id!==player.id);
+  team.roster=Array.from(new Set([...(team.roster||[]),player.id]));
+  player.team=team.id;
+  return player;
+}
+function rosterIntegrityErrors(db){
+  const errors=[],seen=new Map();
+  for(const t of Object.values(db.teams)){
+    const roster=t.roster||[];
+    const local=new Set();
+    for(const pid of roster){
+      if(local.has(pid))errors.push(`duplicate roster entry ${t.id}:${pid}`);else local.add(pid);
+      const p=db.players[pid];
+      if(!p){errors.push(`missing player ${pid} in ${t.id}`);continue}
+      if(p.team!==t.id)errors.push(`team mismatch ${pid}: player=${p.team||'FA'}, roster=${t.id}`);
+      const prev=seen.get(pid);if(prev&&prev!==t.id)errors.push(`player ${pid} listed by ${prev} and ${t.id}`);else seen.set(pid,t.id);
+    }
+  }
+  for(const p of Object.values(db.players)){
+    if(!p.team)continue;
+    const t=db.teams[p.team];
+    if(!t)errors.push(`player ${p.id} references missing team ${p.team}`);
+    else if(!(t.roster||[]).includes(p.id))errors.push(`player ${p.id} references ${p.team} but is absent from roster`);
+  }
+  return errors;
+}
 
 function genTeam(db,rng,regionId,strength,o={}){
   const on=o.name?{name:o.name,short:o.short}:orgName(db,rng), subs=db.worldConfig.subs||0;
   const t={id:on.short,name:on.name,short:on.short,region:regionId,division:o.div||1,parent:o.parent||null,active:true,fans:baseFans(strength-4-(o.div===2?15:0),rng),coach:genCoach(rng,strength+2),tactics:genTactics(rng),training:defaultTraining(),philosophy:o.parent?'youth':rng.pick(PHILOSOPHIES),roster:[],founded:db.year};
   db.teams[t.id]=t;
   const tb=strength+rng.normal(0,3);
-  for(const role of ROLES){const age=o.parent?rng.int(17,20):rng.int(18,27);t.roster.push(genPlayer(db,rng,{role,age,base:tb+(age<20?-4:0),region:regionId,team:t.id}).id)}
-  for(let i=0;i<subs;i++){const age=rng.int(17,20);t.roster.push(genPlayer(db,rng,{role:rng.pick(ROLES),age,base:tb-7,region:regionId,team:t.id}).id)}
+  for(const role of ROLES){const age=o.parent?rng.int(17,20):rng.int(18,27);genPlayer(db,rng,{role,age,base:tb+(age<20?-4:0),region:regionId,team:t.id})}
+  for(let i=0;i<subs;i++){const age=rng.int(17,20);genPlayer(db,rng,{role:rng.pick(ROLES),age,base:tb-7,region:regionId,team:t.id})}
   initFinance(db,t,rng);t.roster.forEach(id=>signContract(db,db.players[id],t,marketSalary(db,db.players[id],regionId),rng.int(1,3)));
   return t;
 }
@@ -144,8 +185,8 @@ function addRegion(db,rng,cfg){
   if(R.templates) for(const tt of TEAM_TEMPLATES.slice(0,R.teams)){
     const t={id:tt.id,name:tt.name,short:tt.short,region:R.id,division:1,active:true,fans:baseFans(tt.base,rng),coach:{...tt.coach,development:tt.coach.analysis},tactics:{...tt.tactics},training:defaultTraining(),philosophy:rng.pick(PHILOSOPHIES),roster:[],founded:db.year};
     db.teams[tt.id]=t;
-    for(const [nick,role,age,style,sig] of tt.players)t.roster.push(genPlayer(db,rng,{id:tt.id+'_'+role,name:nick,role,age,style,sig,base:tt.base,region:R.id,team:tt.id}).id);
-    for(let i=0;i<(db.worldConfig.subs||0);i++)t.roster.push(genPlayer(db,rng,{role:rng.pick(ROLES),age:rng.int(17,20),base:tt.base-8,region:R.id,team:tt.id}).id);
+    for(const [nick,role,age,style,sig] of tt.players)genPlayer(db,rng,{id:tt.id+'_'+role,name:nick,role,age,style,sig,base:tt.base,region:R.id,team:tt.id});
+    for(let i=0;i<(db.worldConfig.subs||0);i++)genPlayer(db,rng,{role:rng.pick(ROLES),age:rng.int(17,20),base:tt.base-8,region:R.id,team:tt.id});
     initFinance(db,t,rng);t.roster.forEach(id=>signContract(db,db.players[id],t,marketSalary(db,db.players[id],R.id),rng.int(1,3)));
     made++;
   }
@@ -328,8 +369,7 @@ function runOffseason(db){
     if(!p.team){p.faYears++;if(p.age>=23&&p.faYears>=2)pr+=0.5;if(p.faYears>=3)pr+=0.6;if(p.faYears>=2&&!p.career.length){delete db.players[p.id];continue}}
     if(rng.chance(pr)){p.retired=true;p.retiredYear=w.year;p.peak=Math.max(o,...p.career.map(c=>c.ovr||0));
       const wasTeam=p.team;
-      if(p.team){const t=db.teams[p.team];t.roster=t.roster.filter(x=>x!==p.id);rep.retired.push({pid:p.id,team:p.team,age:p.age,ovr:o})}
-      p.team=null;
+      if(p.team){const oldTeam=p.team;removePlayerFromTeam(db,p);rep.retired.push({pid:p.id,team:oldTeam,age:p.age,ovr:o})}
       if(!p.career.length&&!wasTeam){delete db.players[p.id];continue}
       if(hallOfFame(db,p))rep.hof.push(p.id);
       delete p.pool;delete p.tend;delete p.attrs;}
