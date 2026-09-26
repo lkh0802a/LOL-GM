@@ -26,3 +26,11 @@ jobs:
 
       - name: Verify production artifact
         run: test -s dist/index.html
+
+      - name: Upload HTML preview
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lol-gm-html-preview
+          path: dist/index.html
+          if-no-files-found: error
