@@ -42,7 +42,38 @@ function saveDB(){clearTimeout(saveTimer);saveTimer=setTimeout(async()=>{const s
   try{await idbSet(STORE,str);SAVEFAIL=false;try{localStorage.removeItem(STORE)}catch(e){}}catch(e){try{localStorage.setItem(STORE,str);SAVEFAIL=false}catch(e2){SAVEFAIL=true}}},150)}
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const teamOpts=(sel,div1)=>Object.values(DB.regions).flatMap(r=>(r.div2&&!div1?[1,2]:[1]).map(d=>`<optgroup label="${esc(d===2?divName(r):r.leagueName)}">${activeTeams(DB,r.id,d).map(t=>`<option value="${t.id}"${t.id===sel?' selected':''}>${esc(t.name)}</option>`).join('')}</optgroup>`)).join('');
+const teamOpts=(sel,div1)=>Object.values(DB.regions).map(r=>{
+  const divs=r.div2&&!div1?[1,2]:[1];
+  return divs.map(d=>{const ts=managerSelectableTeams(DB,r.id,d);return ts.length?`<optgroup label="${esc(d===2?divName(r):r.leagueName)}">${ts.map(t=>`<option value="${t.id}"${t.id===sel?' selected':''}>${esc(t.name)}</option>`).join('')}</optgroup>`:''}).join('');
+}).join('');
+function normalizeManagerTeamSelection(){
+  const all=managerSelectableTeams(DB);
+  let team=isManagerSelectableTeam(DB,SSET.team)?DB.teams[SSET.team]:all[0];
+  let rid=SSET.region&&DB.regions[SSET.region]&&managerSelectableTeams(DB,SSET.region).length?SSET.region:(team&&team.region)||(all[0]&&all[0].region);
+  const divs=[1,2].filter(d=>managerSelectableTeams(DB,rid,d).length);
+  let div=+SSET.division;
+  if(!divs.includes(div))div=team&&team.region===rid&&divs.includes(team.division||1)?(team.division||1):divs[0];
+  const teams=managerSelectableTeams(DB,rid,div);
+  if(!teams.some(t=>t.id===SSET.team))SSET.team=(teams[0]||all[0]||{}).id||null;
+  SSET.region=rid||null;SSET.division=div||1;
+  return {rid:SSET.region,div:SSET.division,team:SSET.team,teams,divs,region:DB.regions[SSET.region]};
+}
+function managerTeamPicker(disabled=false){
+  const st=normalizeManagerTeamSelection(), team=st.team&&DB.teams[st.team];
+  const regions=Object.values(DB.regions).filter(r=>managerSelectableTeams(DB,r.id).length);
+  return `<div class="cfgcard compact"><div class="cfghead"><b>감독할 구단 선택</b><span class="hint">지역 → 리그 → 디비전 → 팀</span></div><div class="controls">
+    <label>지역<select id="steam-region"${disabled?' disabled':''}>${regions.map(r=>`<option value="${r.id}"${r.id===st.rid?' selected':''}>${esc(r.name)}</option>`).join('')}</select></label>
+    <label>리그<span class="static-field">${st.region?esc(st.region.leagueName):'—'}</span></label>
+    <label>디비전<select id="steam-division"${disabled?' disabled':''}>${st.divs.map(d=>`<option value="${d}"${d===st.div?' selected':''}>${d===1?'1부':esc(divName(st.region))}</option>`).join('')}</select></label>
+    <label>팀<select id="steam"${disabled?' disabled':''}>${st.teams.map(t=>`<option value="${t.id}"${t.id===st.team?' selected':''}>${esc(t.name)}</option>`).join('')}</select></label>
+  </div>${team?`<p class="hint"><b>${esc(team.name)}</b> · ${team.division===2?'2부 독립 구단':'1부 독립 구단'} · 등록 선수 ${(team.roster||[]).length}명</p>`:''}<p class="hint">Academy/Challengers 등 모구단 소속 2군은 감독 시작 팀으로 선택할 수 없습니다.</p></div>`;
+}
+function bindManagerTeamPicker(){
+  const r=$('#steam-region'),d=$('#steam-division'),t=$('#steam');
+  if(r)r.onchange=e=>{SSET.region=e.target.value;SSET.division=null;SSET.team=null;normalizeManagerTeamSelection();nav()};
+  if(d)d.onchange=e=>{SSET.division=+e.target.value;SSET.team=null;normalizeManagerTeamSelection();nav()};
+  if(t)t.onchange=e=>{SSET.team=e.target.value};
+}
 const n1=v=>Number.isInteger(v)?v:v.toFixed(2);
 function freshInternalSeed(prefix='rng'){
   const a=new Uint32Array(2);try{crypto.getRandomValues(a);return `${prefix}-${a[0].toString(36)}${a[1].toString(36)}`}catch(e){return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`}
@@ -368,7 +399,7 @@ function bindSeries(root,rec){
 }
 
 // ---------- 시즌 (월드) ----------
-let SSET={team:'HTG',seed:freshInternalSeed('world'),tab:'table',view:null};
+let SSET={team:'HTG',region:null,division:null,seed:freshInternalSeed('world'),tab:'table',view:null};
 function mySeasonKey(){const w=DB.world,rid=DB.teams[managedTeamId(DB)].region;const ks=Object.values(w.seasons).filter(s=>s.region===rid).sort((a,b)=>(b.split||0)-(a.split||0));return ks.length?ks[0].key:null}
 function curS(){const w=DB.world;if(!SSET.view||!w.seasons[SSET.view])SSET.view=mySeasonKey()||Object.keys(w.seasons)[0];return w.seasons[SSET.view]}
 function sName(s){return DB.competitions[s.comp].name+(s.label?' '+s.label:'')}
@@ -381,7 +412,7 @@ function phaseText(w){if(w.phase==='season'){const st=w.steps[w.step];return (st
 function viewSeason(){
   const w=DB.world;
   if(!w) return seasonSetup();
-  if(w.phase==='pick') return `<section class="teamhead"><h2>팀 선택</h2><p>${w.fired?'해임되었습니다. ':''}새로 맡을 팀을 고르세요. 세계와 기록은 그대로 이어집니다.</p></section><section class="controls"><label>팀<select id="pickteam">${teamOpts(managedTeamId(DB),true)}</select></label><button class="primary" id="pickgo">이 팀으로 계속</button></section>`;
+  if(w.phase==='pick') return `<section class="teamhead"><h2>팀 선택</h2><p>${w.fired?'해임되었습니다. ':''}새로 맡을 팀을 고르세요. 세계와 기록은 그대로 이어집니다.</p></section><section class="controls"><label>팀<select id="pickteam">${teamOpts(managedTeamId(DB))}</select></label><button class="primary" id="pickgo">이 팀으로 계속</button></section>`;
   const me=managedTeamId(DB), T=DB.teams[me], k=mySeasonKey(), lgS=k&&w.seasons[k];
   const reg=lgS?standings(DB,lgS,'regular'):[], mine=reg.find(x=>x.tid===me), rank=reg.indexOf(mine)+1;
   const nx=nextMine(), nd=nextDate(DB);
@@ -466,10 +497,7 @@ function seasonSetup(){
   <section class="controls"><button class="primary" id="regen">이 설정으로 세계 생성</button><button class="ghost" id="cfgdef">기본 설정으로</button>
     <span id="cfgmsg" class="${dirty?'warn':'hint'}" role="status">${dirty?'설정이 바뀌었습니다. 세계를 다시 생성해야 반영됩니다.':'현재 세계가 설정과 일치합니다.'}</span></section>
   <section><h3>생성된 세계</h3>${worldTable()}</section>
-  <section class="controls">
-    <label>내 팀<select id="steam"${dirty?' disabled':''}>${teamOpts(SSET.team)}</select></label>
-    <button class="primary" id="sstart"${dirty?' disabled':''}>커리어 시작</button>
-  </section>
+  <section><h3>팀 선택</h3>${managerTeamPicker(dirty)}<div class="controls"><button class="primary" id="sstart"${dirty?' disabled':''}>커리어 시작</button></div></section>
   ${DB.history.length?`<section><h3>역대 기록</h3>${histTable()}</section>`:''}`;
 }
 function spark(vals){if(vals.length<2)return '';const W=90,H=24,mx=100,x=i=>i/(vals.length-1)*W,y=v=>H-v/mx*H;return `<svg class="spark" viewBox="0 0 ${W} ${H}" aria-hidden="true"><polyline points="${vals.map((v,i)=>x(i).toFixed(1)+','+y(v).toFixed(1)).join(' ')}"/></svg>`}
@@ -575,9 +603,9 @@ function bindSetup(){
     else cfg.internationals.push({...INTL_PRESETS.find(p=>p.id===v)});dirty()};
   $('#cfgdef').onclick=()=>{DB.worldConfig=defaultWorldConfig();dirty()};
   $('#regen').onclick=()=>{const errs=validateConfig(cfg);if(errs.length){$('#cfgmsg').className='warn';$('#cfgmsg').textContent=errs.join(' / ');return}
-    DB=buildWorld(cfg);SSET.team=activeTeams(DB)[0].id;LAST=null;LASTSER=null;MC.res=null;saveDB();nav()};
-  $('#steam').onchange=e=>SSET.team=e.target.value;
-  $('#sstart').onclick=()=>{if(!DB.teams[SSET.team]||DB.teams[SSET.team].active===false)SSET.team=activeTeams(DB)[0].id;SSET.view=null;startWorldSeason(DB,SSET.team,freshInternalSeed('world'));saveDB();nav()};
+    DB=buildWorld(cfg);const first=managerSelectableTeams(DB)[0];SSET.team=first?first.id:null;SSET.region=first?first.region:null;SSET.division=first?(first.division||1):1;LAST=null;LASTSER=null;MC.res=null;saveDB();nav()};
+  bindManagerTeamPicker();
+  $('#sstart').onclick=()=>{if(!isManagerSelectableTeam(DB,SSET.team)){const first=managerSelectableTeams(DB)[0];SSET.team=first?first.id:null}if(!SSET.team)return;SSET.view=null;startWorldSeason(DB,SSET.team,freshInternalSeed('world'));saveDB();nav()};
 }
 function bindSeason(){
   const w=DB.world;

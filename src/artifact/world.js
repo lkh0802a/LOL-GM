@@ -118,6 +118,11 @@ function orgName(db,rng){
   const n='T'+rng.int(100,999);return {name:n+' Gaming',short:n};
 }
 function activeTeams(db,rid,div){return Object.values(db.teams).filter(t=>t.active!==false&&(!rid||t.region===rid)&&(!div||(t.division||1)===div))}
+function isManagerSelectableTeam(db,t){
+  const team=typeof t==='string'?db.teams[t]:t;
+  return !!team&&team.active!==false&&!team.parent;
+}
+function managerSelectableTeams(db,rid,div){return activeTeams(db,rid,div).filter(t=>isManagerSelectableTeam(db,t))}
 function playerRef(db,p){return typeof p==='string'?db.players[p]:p}
 function teamRef(db,t){return typeof t==='string'?db.teams[t]:t}
 function removePlayerFromTeam(db,p){
