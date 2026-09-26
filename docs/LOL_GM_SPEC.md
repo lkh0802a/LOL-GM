@@ -1,1689 +1,907 @@
-# LOL GM — Master Specification
+# ROLLFM_SPEC.md
 
-> This document is the canonical product/game specification for LOL GM.
-> When older notes, prototype behavior, or implementation details conflict with this document, the latest explicit specification wins.
+> 롤FM 최상위 설계 명세. 구현 전 전체 코드베이스를 분석하고 본 문서를 기준으로 기존/부분/신규/삭제 기능을 분류한다. 충돌 시 최신 본 명세를 우선한다. UI만 있는 가짜 기능, TODO 대체, 의미 없는 독립 수치/슬라이더를 금지한다.
 
-## 0. Product Direction
+## 현재 개발 단계: Phase 1 — Core Foundation
 
-LOL GM is a mobile-first esports management simulation inspired by the structure and strategic depth of professional League of Legends.
+전체 문서는 최종 목표이며 기능을 임의 삭제하지 않는다. 현재는 미래 기능을 얕게 전부 구현하지 말고 다음 핵심 루프를 먼저 완성한다.
 
-The goal is not a simple match-result generator. The world must form a causal simulation loop:
+`새 게임 → 팀 선택 → 날짜 진행 → 로스터 → 밴픽 → 경기 → 결과/통계 → 순위 → 일정 진행 → 플레이오프 → 시즌 종료 → 다음 시즌`
 
-`players + champions + tactics + teamwork + form → draft + match → real statistics → evaluation/meta/reputation/value → patch/recruitment/development/finance → next match`
+- 미래 기능과 호환되는 데이터 구조를 먼저 설계한다.
+- 미구현 미래 기능을 가짜 UI/TODO로 미리 만들어두지 않는다.
+- Phase 1부터 UI는 **모바일 퍼스트**로 설계한다. 스마트폰 세로 화면을 우선하고 PC/태블릿으로 확장한다.
+- 외부 배포/PWA/클라우드 운영 최적화는 핵심 게임 골격이 안정된 뒤 진행한다.
 
-Important values must either be source data used by the simulation or derived values with a clear basis. Avoid disconnected decorative ratings.
+## 1. 핵심 철학
 
-The player and AI clubs ultimately operate under the same core rules.
+목표: LoL 프로씬 전체를 장기간 시뮬레이션하는 Football Manager형 경영 게임.
 
----
+제품 방향은 **모바일 퍼스트 웹 게임**이다. 현재 단계에서는 로컬 실행 가능한 핵심 게임을 우선 완성하되, UI/라우팅/데이터 구조는 이후 외부 URL 배포와 서버 저장 구조로 확장하기 어렵지 않게 설계한다.
 
-# 1. Development Phases
+핵심 순환:
+`선수/챔피언/전술/팀워크/폼 → 밴픽/경기 → 실제 통계 → 평가/메타/명성/가치 → 패치/영입/육성/재정 → 다음 경기`
 
-`CURRENT_PHASE = PHASE_1_CORE_GAME`
+- 원인 데이터와 파생 데이터를 분리한다. 티어/팀전력/메타 등은 가능한 한 실제 데이터에서 파생.
+- 모든 주요 수치는 실제 엔진에서 사용. 장식용 수치 금지.
+- 모든 값을 0~100으로 강제하지 않는다. %, 금액, 계수, 횟수 등 적절한 단위 사용.
+- 내부 계산은 정밀하게, UI는 읽기 쉽게.
+- 깊이는 옵션 개수가 아니라 시스템 상호작용에서 만든다.
+- 플레이어 팀만이 아니라 모든 활성 AI 팀/리그가 같은 세계에서 진행된다.
+- 장기 세이브에서 현실 초기 상태로부터 독자적인 역사/메타/경제/선수 세대가 형성되어야 한다.
 
-The full document describes the target game. **Do not shallowly implement the whole document at once.**
+## 2. 새 게임/팀 선택
 
-## Phase 0 — Claude Artifact Migration & App Foundation
+기본 1부 팀 수:
+- LCK 12
+- LPL 16
+- LCP 12
+- LEC 12
+- LCS 10
+- CBLOL 10
 
-An existing Claude Artifact prototype is the current UI/UX starting point.
+팀 수/규정은 데이터 기반으로 두고 새 게임에서 임의 팀 수 입력은 제거한다.
 
-Purpose: migrate that existing prototype into this repository now, preserve approved mobile UI/UX, establish a runnable application, and then make GitHub the primary development codebase.
+시작 방식:
+- 기존 로스터 시작 지원.
+- 선택 구단을 백지 로스터로 만들어 예산/계약/리그 규정 안에서 직접 선수단을 구성하는 모드 지원.
 
-After stable migration, Artifact is optional for UI/UX experimentation; GitHub remains the long-term source of truth.
+팀 선택:
+- 1부 독립 구단: 가능.
+- 2부 독립 구단: 가능.
+- 1부 구단 소속 2군/Academy: 불가.
+- 강등/승격한 독립 구단은 해당 디비전에서도 플레이 지속 가능.
+
+선택 UI는 `지역 → 리그 → 디비전 → 팀` 구조로 하고 1부/2부, 독립/2군, 프랜차이즈/인증, 승격·강등 가능 여부를 명확히 표시한다. 팀 카드에는 재정, 선수단, 시설, 명성, 최근 성적, 구단 목표 등 실제 상태를 보여준다.
 
-Prototype flow:
+## 3. 팀 이름/브랜딩
+
+가상 팀 이름을 전면 검토한다.
+- 자동생성/촌스러운 이름 최소화.
+- 짧고 기억하기 쉬운 현대적 e스포츠 브랜드 지향.
+- `지역명+Gaming/Esports`, Dragon/Phoenix/Titan류 상투어 남발 금지.
+- 자연스러운 2~4자 약칭.
+- 동일 지역 유사명/중복명 방지.
+- 독립 2부팀도 독자 브랜드 보유.
+- 1부 소속 2군은 모구단과 관계가 명확한 `Academy/Challengers` 계열 규칙 사용.
+- 승격해도 독립팀 브랜드 유지.
+
+## 4. 선수
+
+선수는 독립적인 커리어 엔티티다.
+
+기본:
+- 이름, 나이, 국적, 주/부 포지션, 소속, 1/2군, 계약, 연봉, 시장가치, 명성.
+- 능력 예: 라인전, 교전, 한타, 포지셔닝, 딜링, 생존, 시야, 오브젝트 판단, 로밍, 운영, 사이드, 판단, 안정성, 공격성, 집중력, 적응력, 기복, 챔피언 학습/메타 적응.
+- 포지션별 중요도/평가식을 다르게 한다.
+- 폼, 컨디션, 피로, 사기, 경기 감각, 팀/전술 적응은 기본 실력을 압도하지 않는 범위에서 사용.
 
-`New Game → Team Selection → Dashboard → Roster → Player Detail → Schedule → Draft → Match → Result → Standings`
+챔피언 숙련:
+- 선수×챔피언별 실제 숙련도.
+- 공식전, 스크림, 훈련, 기존 경험, 선수 특성, 챔피언 난이도에 따라 변화.
+- 급성장 금지. 장기 미사용/대규모 리워크 시 일부 재적응 가능.
 
-Phase 0 rules:
+경기 기록:
+- K/D/A, KDA, KP, CS, CS차, 골드, 골드차, GPM, 딜/DPM, 받은 피해, 시야, 오브젝트 관여, 라인 우위, 한타 기여, 평점 등 엔진이 실제 생성 가능한 데이터.
+- 포지션별 평점 공식을 다르게 한다.
 
-- smartphone portrait first
-- tablet/desktop responsive second
-- mock data is allowed
-- mock data must be explicit and replaceable
-- navigation/buttons/tabs must actually work
-- do not pretend future simulation systems are complete
-- preserve approved Artifact visual design during migration
-- exported Artifact may initially land in `src/artifact/` when useful, but this is not mandatory
-- first establish a runnable build and visual/behavioral parity
-- gradually separate presentation, state, domain logic and data after parity
-- do not rewrite an approved Artifact from scratch without a concrete reason
-- after Phase 0 exit criteria in `docs/DEVELOPMENT.md` are met, continue with `docs/POST_ARTIFACT_ROADMAP.md`
+성장:
+- 나이, 잠재력, 출전, 경쟁 수준, 훈련, 스크림, 코칭, 시설, 성장 성향, 현재 수준을 반영.
+- 잠재력은 확정 미래치가 아니며 환경에 따라 도달점이 달라진다.
+- 성장곡선/전성기/쇠퇴 시점은 선수별 차이 허용.
+- 신규→성장→전성기→쇠퇴→은퇴의 완전한 생애주기.
+- 제한적인 포지션 전환/부포지션 습득 지원.
 
-Read `docs/ARTIFACT_INTEGRATION.md`.
+커리어:
+- 시즌별 팀/디비전/출전/통계/계약/이적/우승/국제전/개인상 저장.
+- MVP, 결승 MVP, 포지션 베스트, 신인상, 국제대회 MVP 등은 실제 성과 기반.
+- 명성은 능력과 분리하며 성과/우승/국제전/수상/커리어에서 파생.
 
-## Phase 1 — Core Game
+## 5. 선수 역할/만족도
 
-Replace prototype mock state with real game state.
+계약/로스터 역할: 핵심 주전, 주전, 경쟁, 후보, 유망주 등.
 
-Complete the first real gameplay loop:
+예상 출전시간과 실제 기용 차이가 장기간 크면 만족도/재계약/이적 의사에 영향.
 
-`New Game → Team Selection → Date Progression → Roster → Draft → Match → Result/Stats → Standings → Schedule Progression → Playoffs → Season End → Next Season`
+불만 원인 후보:
+- 출전 부족, 2군 이동, 계약, 팀 성적, 역할, 국제대회 기회, 커리어 목표.
+
+불만은 과도하게 발생하거나 경기력을 즉시 붕괴시키지 않는다. 이적 요청/철회 가능.
+
+## 6. 신인/스카우팅
+
+장기 세이브용 신규 선수 생성:
+- 지역/포지션별 자연스러운 공급.
+- 평범→준수→좋은 유망주→희귀 특급의 분포.
+- 매년 엘리트 과잉 생성 금지.
+- 이름/국적/나이/능력/잠재력/챔피언 풀/성향 생성.
+- 일반 경로: `신인 → 2부/Academy → 경기 → 성장 → 스카우팅 → 1부`.
 
-No fake UI.
+스카우팅:
+- 실제 능력/잠재력을 처음부터 완전 공개하지 않는다.
+- 어린/해외/2부/저표본 선수일수록 불확실성 증가.
+- 관찰로 추정 범위가 좁아진다. 잠재력은 끝까지 일부 불확실성 유지.
+- 지역/선수/대회/포지션/계약상태/저평가 유망주 검색.
+- 보고서는 추정 능력 + 실제 경기 데이터 + 성장 추세 + 챔피언 풀을 함께 분석.
+- 오래된 보고서는 신뢰도 감소 가능.
+
+## 7. 계약/이적시장
 
-## Phase 2 — Management Simulation
+계약:
+- 현실적인 기간.
+- 기본 연봉, 계약금, 성과/우승/국제전 보너스, 바이아웃, 팀/선수 옵션 등 필요한 조항 지원.
+- 모든 계약에 모든 조항을 강제하지 않는다.
+
+시장가치:
+`나이+능력+잠재력 추정+폼+최근 성과+계약잔여+포지션+국제전+명성+수요+리그경제`
+에서 파생. 시장가치≠실제 이적료.
+
+경쟁 시장:
+- 플레이어/AI 모두 같은 선수에게 경쟁 가능.
+- 관심→관찰→내부평가→공식제안→협상 흐름.
+- FA/계약만료/유망주/국제전 활약 선수는 경쟁 증가 가능.
+- 선수는 최고 연봉만 보지 않고 출전시간, 팀/리그 명성, 국제전 가능성, 코칭/시설, 로스터, 커리어 단계, 계약조건을 비교.
+- 다른 팀의 정확한 제안은 항상 공개하지 않는다.
+- 협상 지연 중 경쟁팀에 선수를 빼앗길 수 있다.
+- 자기 팀 선수도 자동 재계약 불가.
+- 관심목록/쇼트리스트/영입 후보 A-B-C 지원.
+- AI는 1순위 실패 시 합리적인 대안으로 이동.
+- AI끼리도 이적/FA/재계약/방출 발생.
+- 연쇄 이적시장 가능.
+- 임대는 리그 설정상 허용되는 경우 선택적 지원.
+
+## 8. 2부/2군
+
+모든 주요 지역에 실제 2부 생태계를 둔다.
+- 1부 소속 2군/Academy + 독립 2부 구단 혼재 가능.
+- 2부는 실제 일정/경기/순위/통계/밴픽/성장/이적을 시뮬레이션.
+- 2부 경기 수준을 고려하여 1부 통계와 동일 가치로 평가하지 않는다.
+- 독립팀은 규정상 승격 가능, 2군은 일반적으로 모구단과 같은 1부에 승격 불가.
+- 2부 국제대회 지원. EMEA Masters는 2부 국제대회 계층.
+
+2군 의무:
+- 프랜차이즈팀: 필수.
+- 혼합제 인증팀: 필수.
+- 혼합제 비인증팀: 선택.
+- 일반 승강제팀: 선택.
+- 의무 여부는 리그명이 아니라 라이선스/규정 데이터에서 파생.
+
+선택 운영 AI는 재정, 유망주, 시설, 로스터, 육성 전략, 비용을 보고 판단. 2군에는 연봉/스태프/시설/운영비가 들고 공식 경기 경험/육성/로스터 안정 등의 이익이 있다.
+
+1군↔2군 이동은 등록 규정으로 무제한 악용을 막는다.
+
+승격/강등 시 라이선스, 재정, 스폰서, 선수 선호도, 2군 의무 등이 새 규정에 맞게 변경될 수 있다.
+
+## 9. 구단/시설/스태프
+
+팀 전력은 단일 숫자가 아니라 선수/팀워크/전술/코칭/폼에서 파생:
+- 초/중/후반, 라인전, 교전, 한타, 운영, 오브젝트, 시야, 사이드, 밴픽, 팀워크, 메타 적응, 안정성 등.
+
+팀워크:
+- 전체 호흡, 포지션/선수간 시너지, 로스터 경험, 전술/조합 숙련.
+- 로스터 대변경 시 즉시 완벽한 팀 금지.
+
+시설:
+- 훈련, 선수육성, 데이터 분석, 스카우팅 등 서로 실제 효과가 다른 것만.
+- 투자비/유지비/업그레이드 기간/효과.
+- 시설은 성장 효율과 선수의 팀 매력도에도 영향.
 
-Implement:
+스태프는 과도하게 세분화하지 않고 감독/코치/분석가/스카우터 중심.
+- 밴픽, 전술, 육성, 메타/상대 분석, 선수관리, 데이터 활용 등 실제 시스템에 영향.
+- AI 스태프도 계약/이동/해임 가능.
+- 감독 교체 시 팀 운영 방향이 변할 수 있다.
 
-- contracts/transfers
-- scouting
-- player growth
-- training
-- scrims
-- lower divisions/reserves
-- facilities
-- finance
-- club/staff management
-- AI club operations
+구단 목표: 우승/플레이오프/국제전/잔류/승격/재정안정/육성 등 현재 상황에 맞게 설정.
 
-## Phase 3 — Living World
+## 10. 훈련
 
-Implement:
+핵심은 `강도`가 아니라 제한된 훈련 자원을 어디에 배분하는가다.
+
+후보:
+- 개인 성장
+- 챔피언 숙련
+- 팀워크
+- 밴픽
+- 라인전
+- 교전
+- 한타
+- 운영
+- 오브젝트
+- 전술
+- 조합
+
+훈련 포인트/시간은 희소 자원. 모든 항목 최대치 불가.
+
+독립적인 훈련강도가 단순 `성장↑ 피로↑`만 만든다면 제거/통합한다.
+
+## 11. 스크림
+
+친선전 시스템은 삭제하고 비공식 연습경기를 스크림으로 통합.
+
+스크림:
+- 실제 팀 선택→요청→AI 수락/거절→일정→세트→로스터/밴픽/전술/조합 테스트.
+- 약팀/균형/강팀 추상 선택 제거.
+- 공식 통계와 완전 분리하되 내부 분석/숙련/준비에는 사용.
+- AI도 요청 가능.
+- 일정/공식전/휴식/상대 의사/관계/수준 등을 고려.
+
+지역 간 스크림:
+- 다른 리그 팀과도 가능.
+- 평상시는 거리/일정/환경을 고려.
+- 국제대회 개최지에 여러 지역 팀이 모이면 해외 스크림 접근성이 크게 증가.
+- 해외 메타 학습/조합 준비에 활용.
+- 스크림 결과/비장의 조합은 외부에 자동 공개되지 않는다.
 
-- all-world AI leagues
-- international tournaments
-- patch simulation
-- regional meta
-- meta diffusion
-- new champions/global pro ban
-- advanced AI draft adaptation
-- long-term history
-- long-term ecosystem simulation
+## 12. 챔피언 데이터
 
-## Phase 4 — Production
+UI는 공식 한국어 챔피언명 사용. 내부 ID는 안정적인 별도 ID 사용.
 
-Only after the core game is stable:
+모든 챔피언에 상세 페이지 제공.
 
-- backend/API
-- database
-- server saves
-- external deployment
-- accounts/cloud saves if needed
-- PWA
-- mobile performance optimization
-- security/backups
-- production migrations
-
----
-
-# 2. Architecture Principles
-
-Keep presentation separate from game truth.
-
-```text
-Artifact / UI / Features
-        ↓
-Application State / Services
-        ↓
-Domain + Simulation Engine
-        ↓
-World Data / Rules / Config
-```
-
-Examples:
-
-- match UI displays a result; it does not decide the winner
-- player UI displays development; it does not calculate growth
-- draft UI sends actions; draft/domain logic validates legality
-- standings UI displays tables; league/rules logic calculates them
-
-Use stable IDs. Never use display names as persistent foreign keys.
-
-Teams, players, champions, leagues, tournaments, patches and rules must be data/config driven where practical.
-
-AI and human presentation/performance optimization may differ, but core rules do not.
-
----
-
-# 3. New Game & Team Selection
-
-Default top-division sizes:
-
-- LCK: 12
-- LPL: 16
-- LCP: 12
-- LEC: 12
-- LCS: 10
-- CBLOL: 10
-
-Team counts are data-driven. Do not expose arbitrary team-count setup during new game.
-
-Support:
-
-- existing-roster start
-- blank-roster start for the selected club, constrained by budget/contracts/league rules
-- selectable top-division independent clubs
-- selectable independent second-tier clubs
-- non-selectable parent-club reserve/academy teams
-- promoted/relegated independent clubs remain playable
-
-Selection hierarchy:
-
-`Region → League → Division → Team`
-
-Clearly communicate:
-
-- first/second tier
-- independent/reserve
-- franchise/certified status
-- promotion/relegation eligibility
-
-Team cards may show finance, roster state, facilities, reputation, recent results and objectives.
-
----
-
-# 4. Club Branding
-
-Fictional clubs should feel like modern esports brands.
-
-Guidelines:
-
-- short, memorable names
-- natural 2–4 letter abbreviations
-- avoid repetitive `Region + Gaming/Esports`
-- avoid excessive Dragon/Phoenix/Titan clichés
-- avoid near-duplicate brands in one region
-- independent lower-tier clubs have distinct brands
-- reserve teams visibly connect to the parent brand through Academy/Challengers-style naming
-- independent brands persist after promotion
-
----
-
-# 5. Players
-
-Players are persistent career entities.
-
-Core data includes:
-
-- stable ID
-- name
-- age
-- nationality
-- positions
-- team
-- first/reserve status
-- contract
-- salary
-- market value
-- reputation
-
-Simulation-linked abilities include:
-
-- laning
-- skirmish
-- teamfight
-- positioning
-- damage
-- survival
-- vision
-- objectives
-- roaming
-- macro
-- side-lane play
-- decision-making
-- stability
-- aggression
-- concentration
-- adaptability
-- variance
-- champion learning
-- meta adaptation
-
-Position-specific weighting is required.
-
-Short-term state may include:
-
-- form
-- condition
-- fatigue
-- morale
-- sharpness
-- team adaptation
-- tactical adaptation
-
-Short-term state must not overpower underlying ability without reason.
-
-## Champion Mastery
-
-Maintain per-player, per-champion mastery.
-
-Influences:
-
-- official matches
-- scrims
-- training
-- prior experience
-- traits
-- champion difficulty
-
-Mastery must not grow unrealistically fast.
-
-Long non-use, major reworks or role changes may create decay/relearning.
-
-## Match Statistics
-
-Generate statistics from actual simulated matches:
-
-- K/D/A
-- KDA
-- kill participation
-- CS
-- CS differential
-- gold
-- gold differential
-- GPM
-- damage
-- DPM
-- damage taken
-- vision
-- objective involvement
-- lane advantage
-- teamfight contribution
-- match rating
-
-Ratings should use position-aware formulas.
-
-## Growth & Career
-
-Growth depends on:
-
-- age
-- hidden potential
-- experience
-- competition level
-- training
-- scrims
-- coaching
-- facilities
-- growth style
-- current ability
-
-Potential is hidden/uncertain.
-
-Players have different development curves and peak ages.
-
-Position switching is possible.
-
-Lifecycle:
-
-`Newgen → Development → Peak → Decline → Retirement`
-
-Career history stores:
-
-- season
-- team
-- division
-- appearances
-- stats
-- contracts
-- transfers
-- titles
-- international results
-- awards
-
-Reputation is separate from ability.
-
-## Squad Roles & Satisfaction
-
-Roles may include:
-
-- core starter
-- starter
-- competition
-- substitute
-- prospect
-
-Promised role versus actual playing time affects satisfaction, renewal and transfer behavior.
-
-Discontent factors can include playing time, reserve demotion, contract, team results, role and international ambition.
-
-Discontent must not appear excessively or automatically destroy performance.
-
-Transfer requests are possible.
-
----
-
-# 6. Newgens & Scouting
-
-Generate a natural supply of new players by region and position.
-
-Avoid:
-
-- excessive elite prospects
-- long-term ability inflation
-- persistent positional shortages
-
-Typical pathway:
-
-`Newgen → lower tier/academy → matches → growth → scouting → first team`
-
-True ability and potential are not fully visible.
-
-Uncertainty should generally be higher for:
-
-- younger players
-- foreign players
-- lower-tier players
-- small samples
-
-Scouting narrows estimates but should not fully reveal potential.
-
-Scouting searches may target:
-
-- region
-- player
-- tournament
-- position
-- contract situation
-- undervalued youth
-
-Reports combine:
-
-- estimated ability
-- estimated potential
-- real statistics
-- trends
-- champion pool
-
-Old reports lose reliability.
-
----
-
-# 7. Contracts & Transfers
-
-Contracts can include:
-
-- realistic term length
-- salary
-- signing bonus
-- performance bonuses
-- title bonuses
-- international bonuses
-- buyout
-- options where appropriate
-
-Market value is derived from factors such as:
-
-- age
-- ability
-- estimated potential
-- form
-- performance
-- contract remaining
-- position
-- international record
-- reputation
-- demand
-- league economy
-
-Market value is not automatically the transfer fee.
-
-Multiple clubs may pursue the same player.
-
-Interest stages:
-
-`Observing → Evaluation → Formal Offer → Negotiation`
-
-Player decisions can weigh:
-
-- salary
-- contract length
-- role
-- competition
-- club/league reputation
-- international opportunities
-- staff/facilities
-- roster quality
-- career stage
-
-Exact rival bids should not always be visible.
-
-Delays can cause a target to sign elsewhere.
-
-Own players do not auto-renew.
-
-Support shortlist planning such as Plan A/B/C.
-
-AI re-evaluates when a target is lost.
-
-AI↔AI transfers, free agency, renewals and releases must occur.
-
-Transfer chain reactions are possible.
-
-Loans may exist if league rules support them.
-
----
-
-# 8. Lower Tiers & Reserve Teams
-
-Major regions require meaningful lower-tier ecosystems containing reserve/academy teams and independent clubs.
-
-Lower tiers have actual:
-
-- schedules
-- matches
-- standings
-- statistics
-- drafts
-- player growth
-- transfers
-
-Competition level matters for development.
-
-Independent clubs may promote when eligible.
-
-Reserve teams generally cannot occupy the same top division as their parent.
-
-EMEA Masters is a lower-tier international competition and is distinct from the planned top-division Masters event.
-
-Reserve requirements derive from license/rules:
-
-- franchise: mandatory
-- mixed system certified club: mandatory
-- mixed system non-certified club: optional
-- ordinary promotion/relegation club: optional
-
-Do not hardcode this by league name.
-
-AI evaluates optional reserve operation based on finances, prospects, facilities, strategy and cost.
-
-Reserve teams have real costs and benefits.
-
-First↔reserve movement follows registration rules and cannot be an unlimited exploit.
-
-Promotion/relegation may affect license, finance, sponsors, player preference and reserve obligations.
-
----
-
-# 9. Clubs, Facilities & Staff
-
-Team strength is derived rather than represented by one magic rating.
-
-Useful dimensions include:
-
-- early game
-- mid game
-- late game
-- laning
-- skirmish
-- teamfight
-- macro
-- objectives
-- vision
-- side play
-- draft
-- teamwork
-- meta adaptation
-- stability
-
-These derive from players, tactics, teamwork, coaching and form.
-
-## Teamwork
-
-Track concepts such as:
-
-- overall cohesion
-- pair/positional synergy
-- roster continuity
-- tactical familiarity
-- composition familiarity
-
-Major roster changes reduce cohesion.
-
-## Facilities
-
-Potential facility categories:
-
-- training
-- development
-- analytics
-- scouting
-
-Facilities have:
-
-- actual gameplay effects
-- construction/upgrade cost
-- upkeep
-- upgrade time
-- attractiveness effects
-
-## Staff
-
-Keep staff manageable:
-
-- manager
-- coach
-- analyst
-- scout
-
-Staff must have real effects.
-
-AI clubs also hire, renew, move and dismiss staff.
-
-Club goals are contextual:
-
-- title
-- playoffs
-- internationals
-- survival
-- promotion
-- finance
-- youth development
-
-Manager dismissal should not force the save to end. Architect the player-manager separately from the club so a future job market/career system remains possible.
-
----
-
-# 10. Training
-
-Training is a scarce allocation system, not a meaningless intensity slider.
-
-Possible focuses:
-
-- individual growth
-- champion mastery
-- teamwork
-- draft
-- laning
-- skirmish
-- teamfight
-- macro
-- objectives
-- tactics
-- compositions
-
-There must be tradeoffs. Everything cannot be maximized simultaneously.
-
-If training intensity only means `growth up / fatigue up`, remove or integrate it into a richer allocation model.
-
----
-
-# 11. Scrims
-
-Remove generic friendlies. Non-official team practice is represented as scrims.
-
-Flow:
-
-`Choose actual team → Request → AI accept/reject → Schedule → Series → Roster/Draft/Tactic testing`
-
-Do not use weak/balanced/strong opponent abstractions.
-
-Scrims:
-
-- use actual teams
-- are separate from official statistics
-- affect mastery/preparation/analysis
-- can be requested by AI
-- depend on schedule/rest/relationships/team level
-
-Cross-region scrims are supported.
-
-Distance, schedule and environment normally constrain them. During international events, co-located teams can scrim more easily.
-
-Scrims are private by default. Opponents must not magically know exact scrim results or preparations.
-
----
-
-# 12. Champion Data
-
-UI uses official Korean champion names where applicable while internal logic uses stable IDs.
-
-Champion data should resemble actual LoL stat structure:
-
-- HP / HP growth
-- resource / growth / recovery
-- attack damage / growth
-- armor / growth
-- magic resistance / growth
-- attack speed / growth
-- attack range
-- movement speed
-
-Passive/Q/W/E/R are separate data.
-
-Ability data may include only applicable fields:
-
-- level-based base damage
-- damage type
-- AP ratio
-- total AD ratio
-- bonus AD ratio
-- HP ratio
-- resource cost
-- cooldown
-- range/AOE
-- healing/shield
-- crowd control/duration
-- slow/movement
-- charges
-- recast
-- stacks
-- execute
-
-Do not force meaningless fields onto every ability.
-
-Abstract labels such as early/late/poke/teamfight strength should generally be derived/helper values rather than the primary source of truth.
-
-The patch engine changes real champion values and the match engine consumes them.
-
----
-
-# 13. Champion Statistics & Meta
-
-Track:
-
-- picks
-- bans
-- pick rate
-- ban rate
-- presence
-- wins/losses
-- win rate
-- sample size
-
-Korean UI term for presence: **밴픽률**
-
-`presence = (picked games + banned games) / total games × 100`
-
-Filters can include:
-
-- season
-- split
-- tournament
-- domestic/international
-- league
-- patch
-- time
-- position
-
-Support top players, top teams, matchups and trends.
-
-Champion tier is derived from current statistics, patch, performance, sample, matchups, position, composition and regional meta. It is not fixed.
-
-Initial meta can resemble real professional LoL, then diverges through the simulated world.
-
-Regional metas can differ on the same patch.
-
-Meta diffusion:
-
-`new pick/comp → success → analysis → spread → counter research`
-
-International events accelerate cross-region meta interaction.
-
----
-
-# 14. New Champions & Global Pro Ban
-
-New champions cannot immediately appear in professional official matches.
-
-Flow:
-
-`Release → Global Pro Ban → Training/Scrim Research → proEligibleDate → Official Eligibility`
-
-During the global ban, teams may practice the champion in training/scrims.
-
-Because official data does not exist yet, evaluation remains uncertain.
-
-Teams may reach very different preparation/mastery levels by unlock.
-
-Global eligibility and tournament eligibility are separate.
-
-A tournament already locked to a patch/champion pool may keep a champion banned after global eligibility begins.
-
-New champion releases should be rare enough to avoid roster explosion.
-
-Rare champion reworks are possible.
-
----
-
-# 15. Patch Engine
-
-Patch analysis may use:
-
-- pick rate
-- ban rate
-- presence
-- win rate
-- sample size
-- position
-- league
-- international performance
-- trend
-- previous patch
-- top-team usage
-- player dependency
-- composition dependency
-- flex value
-
-Do not force every champion toward exactly 50% win rate.
-
-Diagnose likely causes, then modify relevant actual statistics.
-
-Possible changes include:
-
-- base/growth stats
-- damage
-- ratios
-- resource costs
-- cooldown
-- heal/shield
-- movement
-- crowd control
-
-Do not use a universal fixed ±5 adjustment.
-
-Avoid repeated same-direction changes without observation.
-
-Partial rollbacks are possible.
-
-Patch outcomes contain uncertainty.
-
-Target cadence:
-
-- roughly 3 major meta patches per year
-- smaller adjustments between them
-
-Store exact old→new patch notes and historical champion specifications.
-
----
-
-# 16. Draft & Team Compositions
-
-Draft AI must not simply pick champions by tier order.
-
-Consider:
-
-- patch/meta
-- player mastery/pool
-- own selected champions
-- enemy picks
-- lane matchups
-- composition synergy
-- tactics
+기본 스펙(해당되는 값):
+- HP/성장HP
+- 자원/성장자원/회복
+- AD/성장AD
+- 방어/성장방어
+- MR/성장MR
+- 공속/성장공속
+- 사거리
+- 이동속도
+
+패시브/Q/W/E/R을 별도 스킬 데이터로 관리:
+- 설명
+- 레벨별 기본 피해
+- 피해 유형
+- AP/총AD/추가AD/HP 계수 등
+- 자원 비용
+- 쿨다운
+- 사거리/범위
+- 회복/보호막
+- CC 종류/지속시간
+- 둔화/이속
+- 충전/재사용/중첩/처형 등 실제 필요한 효과.
+
+모든 챔피언에 의미 없는 필드를 억지로 채우지 않는다.
+
+초반/후반/포킹/한타 같은 추상 평가는 실제 스펙과 성과에서 파생 가능한 보조 데이터로 사용한다.
+
+## 13. 챔피언 통계/메타
+
+상세 통계:
+- 픽/밴 횟수, 픽률, 밴률, 밴픽률, W/L, 승률, 표본.
+- 시즌/Split/대회/국내·국제/리그/패치/기간/포지션 필터.
+- 주요 선수/팀/맞대결/최근 추세.
+
+`밴픽률 = (픽 경기 + 밴 경기) / 전체 경기 × 100`
+
+티어는 고정 속성이 아니라 현재 스펙, 패치, 실제 픽밴/승률/표본, 상성, 포지션, 조합/지역 메타에서 파생한다.
+
+초기 메타는 현실 프로씬을 어느 정도 반영하되 시작 이후 게임 내부 데이터로 독립 진화.
+
+지역별 메타 허용:
+- 같은 패치에서도 지역별 우선픽/조합이 다를 수 있다.
+- 성공적인 비주류 픽/조합은 `등장→성공→분석→확산→카운터 연구`를 통해 다른 팀/지역으로 전파될 수 있다.
+- 국제대회에서 지역 메타가 충돌하고 대회 중 메타가 변할 수 있다.
+
+## 14. 신규 챔피언/글로벌 밴
+
+신챔 출시 즉시 프로 공식전 사용 금지.
+
+흐름:
+`출시 → 글로벌 프로 밴 → 훈련/스크림 연구 → proEligibleDate → 공식전 해금`
+
+- 글로벌 밴 중 훈련/스크림 사용 가능.
+- 공식 데이터가 없으므로 초기 프로 평가에 불확실성 존재.
+- 팀별 사전 연습량에 따라 해금 직후 숙련도 차이 발생.
+- 글로벌 해금과 특정 대회 사용 가능 여부는 분리.
+- 이미 특정 패치/챔피언 풀로 시작된 대회는 해금 후에도 사용 불가할 수 있다.
+- 신규 챔피언 출시 빈도는 낮게 유지해 장기 세이브 챔피언 폭증 방지.
+- 매우 드문 리워크 지원 가능.
+
+## 15. 패치 엔진
+
+패치 엔진은 실제 누적 데이터를 분석:
+- 픽/밴/밴픽률/승률/표본
+- 포지션/리그/국제전
+- 최근 추세
+- 직전 패치
+- 상위팀 사용
+- 선수/조합 의존
+- flex 여부 등.
+
+승률만 보고 패치 금지. 모든 챔피언을 50%로 수렴시키지 않는다.
+
+원인 진단:
+`왜 강/약한가 → 관련 스펙은 무엇인가 → 변경 종류/폭 결정`
+
+변경 가능:
+- 기본/성장 스탯
+- 피해
+- AP/AD/HP 계수
+- 자원/회복/비용
+- 쿨다운
+- 회복/보호막
+- 이동/CC 등.
+
+고정 ±5 금지. micro/small/medium/large 등의 내부 규모는 가능하나 실제 수치를 변경한다.
+
+동일 방향 연속 패치를 억제하고 충분한 표본을 관찰. 부분 롤백 가능. 패치 결과는 불확실하며 메타 상호작용으로 예상과 다를 수 있다.
+
+연 3회의 주요 메타 패치를 기본으로 하고 소규모 조정은 별도 가능.
+
+패치노트는 정확한 old→new 수치를 표시. 과거 스펙/패치 히스토리 보존.
+
+## 16. 밴픽/조합
+
+AI와 플레이어 모두 단순 챔피언 티어순 픽을 하지 않는다.
+
+픽 판단:
+- 현재 패치/메타
+- 선수별 실제 숙련도/챔피언 풀
+- 이미 고른 아군 챔피언
+- 상대 픽
+- 라인 상성
+- 조합 시너지
+- 전술
 - flex
-- pick order
-- opponent pools/recent data
+- 픽 순서
+- 상대 선수 챔피언 풀/최근 데이터.
 
-Composition dimensions include:
+조합 요소(실제 엔진에 필요한 것만):
+- 이니시/받아치기
+- 한타/포킹/다이브
+- 사이드/스플릿
+- 초반 주도권/후반 성장
+- 라인 우선권
+- 오브젝트
+- CC
+- AD/AP 구조
+- 앞라인
+- 캐리 보호
+- 사거리/기동성.
 
-- engage/counter-engage
-- teamfight
-- poke
-- dive
-- side/split
-- early priority
-- scaling
-- lane priority
-- objectives
-- crowd control
-- AD/AP balance
-- frontline
-- peel
-- range
-- mobility
+모든 5챔 조합을 하드코딩하지 말고 챔피언 속성/스킬/역할 기반으로 동적 시너지 평가.
 
-Synergy should emerge from champion traits/stats where possible rather than hardcoding every pair.
+밴 목적:
+- OP 제거
+- 상대 핵심 선수 견제
+- 우리 조합 카운터 제거
+- 챔피언 풀 압박
+- 준비 조합 보호
+- 상대 예상 조합 차단.
 
-Ban purposes include:
+Flex는 상대 AI가 숨은 포지션을 치팅으로 알지 못하게 한다.
 
-- remove overpowered priority
-- target a player
-- remove counter
-- pinch champion pool
-- protect planned composition
-- block expected composition
+픽 순서는 우선픽 확보/정보 숨김/카운터픽/플렉스에 전략적 의미를 가진다.
 
-Flex roles remain unresolved until realistically inferred.
+고정 `블루 선호 80` 같은 수치는 제거. 블루/레드 가치는 패치, 메타, 선수 풀, 상대, 밴픽 전략에서 파생.
 
-Pick order matters for priority, core pieces, information hiding, counterpick and flex.
+## 17. Bo3/Bo5/Fearless
 
-Do not store a simplistic permanent blue/red preference rating.
+세트 간 정보가 이어진다:
+`이전 세트 결과/픽/실패 원인 → 다음 세트 밴픽/전술 조정`
 
----
+AI는:
+- 성공 조합 재사용
+- 실패 조합 수정
+- 상대 핵심픽 밴
+- 카운터 준비
+- 선수 상태/진영 변화
+등을 고려.
 
-# 17. Bo3 / Bo5 / Fearless
+대회 규칙 데이터로 Standard/Fearless 계열 등 다양한 드래프트 포맷을 정의할 수 있게 한다.
 
-Series have memory and adaptation.
+Fearless에서는 실제 사용 챔피언 기록과 선수별 챔피언 풀이 후반 세트에 영향을 준다.
 
-Previous games can affect:
+## 18. 전술
 
-- next draft
-- tactics
-- target bans
-- composition reuse
-- counter expectations
-- player state
-- side decisions
+플레이어는 자기 팀 전술만 수정. 타 팀은 관찰/분석만.
 
-AI can reuse successful approaches and abandon failed ones, but should not react perfectly.
+전술은 trade-off:
+- 공격성↔안정성
+- 초반↔후반
+- 교전↔운영
+- 자원집중↔분산
+- 오브젝트↔라인/사이드 등.
 
-Draft formats are data-driven:
+모든 수치 100이 최적해가 되면 안 된다.
 
-- Standard
-- Soft Fearless
-- Hard Fearless
-- custom formats
+`탑/미드/바텀 집중` 같은 단순 독립 버프는 제거. 정글동선, 로밍, 자원배분, 캐리역할, 드래프트 등에서 실제 자원 집중이 파생.
 
-Fearless rules use actual previously used champions and player pools.
+밴픽 조합과 전술이 맞지 않으면 효율 저하, 잘 맞으면 실행력 향상.
 
----
+## 19. 경기 엔진
 
-# 18. Tactics
+금지: `팀 전력 + 랜덤값 → 승패`.
 
-The player edits only their own team's tactics.
+핵심 요인:
+- 선수 능력
+- 챔피언 숙련
+- 챔피언 실제 스펙/현재 패치
+- 조합 시너지
+- 밴픽
+- 상성
+- 전술
+- 팀워크
+- 폼/컨디션
+- 현재 경기 상태
+- 제한적 변동성.
 
-Tactics must contain tradeoffs, for example:
+가능하면 단계형:
+`라인전 → 초반 운영/정글개입 → 오브젝트 → 중반 운영/교전 → 한타 → 후반`
 
-- aggression ↔ stability
-- early ↔ late
-- fighting ↔ macro
-- concentration ↔ distribution
-- objective focus ↔ lane/side investment
+앞선 상태가 다음 상태에 영향을 준다.
 
-There must not be an all-100 optimum.
+팀/선수 골드와 격차, 자원집중, 파워스파이크, 오브젝트 등을 엔진 수준에 맞게 모델링.
 
-Remove simplistic focus-lane buffs.
+강팀도 실제 게임 상태가 나쁘면 패배 가능. 작은 초반 우위 하나로 승패 확정도 금지.
 
-Resource focus should emerge from factors such as:
+선수 실수는 판단/안정성/피로/상황과 연동한 제한적 변동성으로 처리.
 
-- jungle pathing
-- roaming
-- draft
-- resource allocation
-- carry roles
+경기 후 라인전/밴픽/전술/선수/오브젝트/한타 등 승부 요인을 설명 가능하게 한다.
 
-Composition/tactic alignment matters.
+## 20. 모든 AI 경기/리그 진행
 
----
+플레이어가 LCK를 맡아도 LPL/LEC/LCS/LCP/CBLOL 및 활성 2부가 모두 진행된다.
 
-# 19. Match Engine
-
-Never resolve a match as:
-
-`team strength + random = winner`
-
-Use:
-
-- player abilities
-- champion mastery
-- actual current champion specifications
-- current patch
-- composition synergy
-- draft
-- lane matchups
-- tactics
-- teamwork
-- form/condition
-- current game state
-- limited variance
-
-Possible phase model:
-
-`Lane → Early Macro/Jungle → Objectives → Mid Macro/Skirmish → Teamfight → Late Game`
-
-State carries forward between phases.
-
-Model at an appropriate abstraction:
-
-- gold
-- gold differential
-- resource concentration
-- power spikes
-- objectives
-
-Comebacks are possible. Small leads are not deterministic.
-
-Mistakes relate to decision-making, stability, fatigue and context plus limited variance.
-
-Post-match explanation should identify meaningful factors such as lane, draft, tactics, player execution, objectives and teamfights.
-
----
-
-# 20. World AI Simulation
-
-If the player manages one region, all active regions and lower tiers continue to progress.
-
-AI matches generate real:
-
-- rosters
-- drafts
-- champion usage
-- results
-- player/team/champion statistics
-- form
-- growth
-- reputation
-
-Background simulation uses the same core model but may use lighter presentation/calculation.
-
-Other leagues feed world/regional meta and patch analysis.
-
-AI participates in:
-
-- recruitment
-- contracts
-- development
-- reserves
-- scouting
-- facilities
-- training
-- scrims
-- tactics
-- draft
-- patch adaptation
-- lineups
-- finance
-- internationals
-
-AI strategy differs based on finance, roster and objectives and can change over time.
-
-AI does not cheat by reading:
-
-- hidden true ability/potential
-- private scrim information
-
-Rational-but-wrong decisions are allowed because information is uncertain.
-
-Avoid random stupidity and omniscience.
-
-AI performs long-term roster planning, continuity management and replacement planning.
-
-The human player receives no special rules advantage.
-
----
-
-# 21. Analyst
-
-Analysis must be based on actual data.
-
-Potential analysis areas:
-
-- champions
-- pick/ban
-- opponents
-- own team
-- players
-- tactics
-- scrims
-- official matches
-- side
-- patch
-
-Raw numbers remain truthful.
-
-Analyst ability affects pattern detection and interpretation, not fabrication of raw data.
-
-Communicate sample uncertainty, weak evidence and patch staleness.
-
----
-
-# 22. Economy
-
-Revenue can include:
-
-- sponsors
-- league/media distribution
-- domestic prize money
-- international prize money
-- other club income
-
-Expenses can include:
-
-- player salaries
-- staff salaries
-- signing costs
-- transfers
-- facilities
-- reserves
-- operations
-
-UI should expose useful financial information such as:
-
-- cash
-- projections
-- payroll
-- salary cap where applicable
-
-Do not ask the user to manually define league salary caps/floors at new game. League rules define them.
-
-Economic disparity between leagues may exist, but it should not permanently make movement impossible.
-
-Evaluate real purchasing power relative to salaries, values and transfer fees.
-
-Small clubs/leagues can rise through discovery, results, international success, reputation and sponsorship.
-
-Large clubs can decline.
-
-Financial distress may cause:
-
-- player sales
-- payroll reduction
-- investment pauses
-- optional reserve-team reconsideration
-
----
-
-# 23. League Rules & License Engine
-
-Rules must be configurable.
-
-Possible fields:
-
-- team count
-- format
-- Bo format
-- playoffs
-- promotion/relegation
-- franchise/certification
-- reserve rules
-- promotion eligibility
-- import rules
-- roster rules
-- salary rules
-- draft rules
-- side selection
-- international slots
-
-Example license concepts:
-
-- FRANCHISE
-- CERTIFIED
-- NON_CERTIFIED
-- PROMOTION_RELEGATION
-
-Derive concepts such as:
-
-- reserveTeamRequired
-- reserveTeamAllowed
-- promotionEligible
-
-Do not hardcode these from league names.
-
----
-
-# 24. League Office
-
-Regional/domestic governance can control:
-
-- participation/license
-- franchise/certification
-- first/second-tier structure
-- promotion/relegation
-- reserve obligations
-- roster registration
-- registration deadlines
-- import rules
-- salary rules
-- revenue distribution
-- prize money
-- domestic schedule
-- playoffs
-- draft/Fearless
-- side selection
-- patch
-- domestic eligibility after global new-champion ban
-- discipline if implemented
-
-This is not a random rule-event generator.
-
-Rule changes require a reason, appropriate cycle and advance notice, usually applying from a future season.
-
-Preserve rules by season historically.
-
----
-
-# 25. International Office
-
-Global/international governance controls competitions such as:
-
+AI 경기에서도:
+- 실제 로스터
+- 밴픽
+- 챔피언
+- 경기 결과
+- 선수/팀/챔피언 통계
+- 폼/성장/명성
+이 발생.
+
+핵심 계산 모델은 플레이어 경기와 공유하되 백그라운드에서는 UI/세부 이벤트를 경량화해 성능 확보.
+
+다른 리그 경기 역시 세계/지역 메타와 패치 분석 데이터에 반영.
+
+## 21. 데이터 분석가
+
+실제 데이터 기반으로:
+- 패치/챔피언
+- 픽밴
+- 상대 선수 챔피언 풀
+- 상대 조합/첫픽/후속픽
+- 블루/레드
+- 우리 팀
+- 스크림 vs 공식전
+- 전술
+을 분석.
+
+원자료를 조작하지 않는다. 능력 차이는 패턴 탐지/해석 수준에서 발생.
+
+표본 부족, 패치 변경, 근거 약함을 표현하며 정답 치트시트가 되어서는 안 된다.
+
+## 22. AI 원칙
+
+AI도 플레이어와 같은 핵심 시스템 사용:
+- 영입/계약/재계약/방출
+- 스카우팅
+- 1/2군
+- 훈련/육성
+- 시설
+- 스크림
+- 밴픽/전술
+- 패치 적응
+- 재정
+- 국제대회 준비.
+
+팀마다 현재 재정/로스터/목표에 따라 즉시전력, 육성, 효율, 비용절감 등 전략이 달라질 수 있다.
+
+AI는 내부 숨은 잠재력, 플레이어의 비공개 스크림 조합 등을 치팅으로 알지 못한다.
+
+항상 최적해를 아는 AI도, 랜덤으로 바보짓하는 AI도 금지. 제한된 정보/분석력 때문에 합리적이지만 틀린 판단은 가능.
+
+AI는 중기 로스터 계획과 대체 후보를 유지하고 매년 무조건 전원 교체하지 않는다.
+
+플레이어를 특별 취급하지 않는다.
+
+## 23. 재정/경제
+
+수입:
+- 스폰서
+- 리그/미디어 배분
+- 국내/국제 상금
+- 기타 필요한 항목.
+
+지출:
+- 선수/스태프 연봉
+- 계약금
+- 이적
+- 시설
+- 2군
+- 운영비.
+
+UI:
+- 현금
+- 예상 수입/지출/손익
+- 총연봉
+- 샐러리캡 사용량.
+
+새 게임에서 cap/floor 수동 입력 제거. 리그 규정으로 관리.
+
+리그 간 경제 격차는 존재하되 영구 독점 구조를 방지. 명목 자본보다 연봉/가치/이적료 대비 실질 구매력을 검증한다.
+
+작은 팀/리그도:
+`발굴→성적→국제전→상금/명성→스폰서→투자→성장`
+가능.
+
+강팀도 장기 실패/재정 악화 시 상대적 하락 가능.
+
+재정 악화 시 AI는 선수 판매/연봉 절감/시설 투자 축소/선택적 2군 운영 재검토 등 대응.
+
+## 24. 리그 규정/라이선스 엔진
+
+리그 이름 하드코딩 금지.
+
+설정 가능:
+- 팀 수
+- 경기방식
+- Bo 형식
+- 플레이오프
+- 승강
+- 프랜차이즈/인증
+- 2군 의무
+- 승격 자격
+- 로스터
+- 외국인 규정
+- 샐러리 규정
+- 드래프트 규칙
+- 진영선택권
+- 국제대회 슬롯.
+
+구단 라이선스 예:
+`FRANCHISE / CERTIFIED / NON_CERTIFIED / PROMOTION_RELEGATION`
+명칭은 코드베이스에 맞게 조정 가능.
+
+`reserveTeamRequired`, `reserveTeamAllowed`, `promotionEligible` 등을 규칙에서 파생.
+
+## 25. 리그 사무국
+
+각 국내/지역 리그의 실제 규정 운영 주체.
+
+담당:
+- 참가팀/라이선스
+- 프랜차이즈/인증
+- 1/2부 및 승강
+- 2군 의무
+- 로스터 등록/마감
+- 외국인 규정
+- 샐러리 규정
+- 수익 배분/상금
+- 국내 일정
+- 정규리그/플레이오프 포맷
+- 국내 밴픽/Fearless 규칙
+- 진영선택권
+- 사용 패치
+- 글로벌 조건 충족 후 국내 챔피언 사용 가능 여부
+- 규정 위반/징계가 필요할 경우 해당 규정.
+
+사무국을 랜덤 이벤트 생성기로 사용하지 않는다. 규정 변경은 충분한 이유/주기/사전 공지와 다음 시즌 적용을 기본으로 한다.
+
+시즌별 규정 히스토리 보존.
+
+## 26. 국제 사무국
+
+국제대회/글로벌 경쟁 규정 운영 주체.
+
+담당:
 - First Stand
 - MSI
-- East/West secondary internationals
+- 동/서부 1부 국제대회
 - Worlds
 - Masters
-- lower-tier internationals
+- 2부 국제대회
+- 국제 슬롯/시드
+- 참가자격
+- 추첨/대진
+- 국제 로스터
+- 대회 패치
+- 밴픽/Fearless
+- 진영선택권
+- 신규 챔피언 글로벌 프로 밴
+- 대회별 챔피언 사용 가능 여부
+- 상금
+- 국제 일정
+- 공식 기록
+- 필요한 글로벌 규정.
 
-Responsibilities include:
+구분:
+`리그 사무국 = 지역 내부`
+`국제 사무국 = 국제대회/글로벌 공통 규정`
 
-- slots
-- seeds
-- eligibility
-- draws
-- brackets
-- international rosters
-- tournament patch
-- draft/Fearless
-- side choice
-- global new-champion pro ban
-- tournament champion eligibility
-- prize
-- schedule
-- records
-- global rules
+## 27. 시즌/국제대회
 
-League Office = regional internal governance.
-
-International Office = international/global governance.
-
----
-
-# 26. Season & International Structure
-
-Target flow:
-
+기본:
 `Split 1 → International 1 → Split 2 → International 2 → Split 3 → International 3 → Offseason`
 
-Planned mapping:
+- Split1 → First Stand.
+- Split2 → MSI.
+- MSI 미진출 상위 1부팀 대상 동/서부 국제대회:
+  - East: LCK/LPL/LCP
+  - West: LEC/LCS/CBLOL
+- Split3 → Worlds + Masters.
+- Masters = Worlds 미진출 강한 1부팀 대상 1부 국제대회.
+- Worlds/Masters 참가 중복 금지.
+- EMEA Masters = 2부 국제대회. Masters와 별개.
+- Mid-Season Challenger Cup, World Challenger Cup 및 관련 레거시 완전 삭제.
+- 참가팀은 실제 국내 성적/시드 규정에서 결정, 랜덤 선정 금지.
+
+대회 포맷은 데이터 기반으로 그룹/스위스/싱글·더블 엘리미네이션/Bo1·3·5 등을 구성 가능.
+
+대회별 사용 패치 고정 가능. 대회 도중 임의 패치 전환 금지.
 
-- Split 1 → First Stand
-- Split 2 → MSI + secondary top-division international
-- Split 3 → Worlds + Masters
+## 28. 진영선택권
 
-Secondary Split 2 events:
+고정 선호 수치 제거.
 
-- East: LCK/LPL/LCP
-- West: LEC/LCS/CBLOL
+대회 규칙으로 선택권 결정:
+- 시드
+- 직전 세트 결과
+- 추첨
+- 기타 설정 규칙.
+
+선택권을 가진 팀은 현재 패치/메타/자기와 상대 챔피언 풀/조합 전략/실제 진영 성적을 보고 판단.
 
-They serve strong teams that did not qualify for MSI.
+## 29. 일정/오프시즌
 
-Masters is a Europa-like top-division secondary event for strong non-Worlds teams.
+일정 엔진은 국내전/국제전/2부/스크림 충돌 방지.
 
-Worlds and Masters do not overlap for one team.
-
-EMEA Masters remains a distinct lower-tier competition.
-
-Remove completely:
-
-- Mid-Season Challenger Cup
-- World Challenger Cup
-
-International qualification uses actual standings/seeding, not random selection.
-
-Tournament formats are configurable:
-
-- round robin
-- groups
-- Swiss
-- single elimination
-- double elimination
-- Bo1/Bo3/Bo5
-
-Tournament patch locking is supported.
-
----
-
-# 27. Side Selection
-
-Do not use a permanent team side-preference stat.
-
-Rules determine who owns selection rights through concepts such as:
-
-- seed
-- previous game result
-- draw
-- custom competition rule
-
-AI chooses side based on:
-
-- patch/meta
-- player/champion pools
-- composition strategy
-- actual side performance
-
----
-
-# 28. Calendar & Offseason
-
-Avoid conflicts among:
-
-- domestic competition
-- internationals
-- lower tiers
-- scrims
-
-Explicit offseason flow:
-
-`Season End → Expiries/Renewals → FA/Transfers → Newgens → Staff/Facilities → Roster Registration → Scrims/Preparation → Next Season`
-
-Calendar exposes important deadlines, internationals and patches.
-
----
-
-# 29. Game Time Progression
-
-The world uses one shared date/time axis.
-
-Primary controls:
-
-- advance one day
-- advance to next major event
-
-All active systems progress together:
-
-- leagues
-- contracts
-- training
-- scrims
-- facilities
-- tournaments
-- AI decisions
-
-Auto-advance stops for required player decisions such as:
-
-- roster deadline
-- contract negotiation
-- official match
-- major offer
-
-A season is continuous world time, not a menu reset.
-
-New seasons preserve persistent state:
-
-- abilities
-- mastery
-- teamwork history
-- finances
-- reputation
-- facilities
-- contracts
-- career/history
-
-Only appropriate seasonal short-term state resets or adjusts.
-
----
-
-# 30. Roster Registration
-
-Support:
-
-- first-team registration
-- reserve registration
-- tournament entry lists
-- deadlines
-- Bo3/Bo5 substitutes
-- legal between-game changes
-
-Emergency registration exists only where rules permit it.
-
-First↔reserve movement and international rosters cannot bypass rules.
-
-AI follows the same registration constraints.
-
----
-
-# 31. Statistics & History
-
-Separate competition contexts such as:
-
-- domestic regular season
-- domestic playoffs
-- top international
-- lower domestic
-- lower international
-- scrims
-
-Filters may include:
-
-- season
-- split
-- tournament
-- league
-- patch
-- time
-- position
-- side
-
-Advanced metrics may only be shown if the engine actually generates them.
-
-Always consider sample size.
-
-Historical records include:
-
-- champions
-- runners-up
-- standings
-- MVPs
-- rosters
-- player totals
-- team totals
-- internationals
-- promotions/relegations
-- champion history
-- patch history
-- records
-
-Create season snapshots.
-
-Optional Hall of Fame uses multi-factor career evaluation.
-
-World/player rankings are informational only and never provide match buffs.
-
----
-
-# 32. News & UI
-
-Generate news from actual world events:
-
-- transfers
-- renewals
-- free agency
-- debuts
-- retirements
-- coaches
-- promotion/relegation
-- titles
-- internationals
-- patches
-- records
-- upsets
-
-Alerts can include:
-
-- contract expiry
-- rival offer
-- discontent
-- scrim
-- registration
-- tournament
-- patch
-- facility
-
-Support global search, filters, sorting, favorites and player comparison where useful.
-
-Use tooltips for dense information.
-
-Mobile-first remains the primary UX rule.
-
----
-
-# 33. Save System
-
-Support isolated save slots and deletion confirmation.
-
-Persistent references use stable IDs, not names.
-
-Long saves must preserve:
-
-- season transitions
-- save/load integrity
-- historical consistency
-
-Use migrations where practical.
-
-## Randomness
-
-Random seed is **not user-facing**.
-
-Do not provide:
-
-- seed input
-- seed display
-- user seed locking
-- same-result guarantees
-
-The same teams/draft/tactics may produce different results due to limited uncertainty.
-
-Internal deterministic RNG control may exist only for implementation/testing and remains hidden from normal players.
-
----
-
-# 34. Same Rules Principle
-
-AI cannot bypass:
-
-- budget/cash/payroll/cap
-- contracts/transfers
-- roster registration
-- first/reserve rules
-- facility costs
-- training/mastery acquisition
-- growth/aging
-- global/tournament champion bans
-
-Teams, player definitions, champion specs, leagues, tournaments, patches and rules should remain separate from core code where practical so fictional additions and format changes do not require rewriting the engine.
-
----
-
-# 35. Manager Save Continuity
-
-If dismissal is implemented, dismissal does not automatically end the save.
-
-The player-manager is architecturally separate from the currently managed club.
-
-This preserves a path to a future manager job market/career system.
-
-The full manager-career system may be implemented later.
-
----
-
-# 36. Legacy / Meaningless Features to Remove or Rework
-
-Remove or replace:
-
-- friendlies → scrims
-- weak/balanced/strong scrim abstraction
-- meaningless training intensity
-- simplistic focus-lane bonus
-- fixed blue/red preference
-- all-100 tactics
-- single champion power number as primary truth
-- random international qualification
-- new-game team-count input
-- manual salary cap/floor input
-- Mid-Season Challenger Cup
-- World Challenger Cup
-- editing other teams' tactics
-- user-facing random seed
-- references to deleted features
-
----
-
-# 37. Historical Consistency
-
-Preserve historical versions of:
-
-- champion specs by patch
-- league rules by season
-- player ability/value/reputation history
-- team finance/strength history
-- league economy/strength history
-- rosters
-- tournament formats/results
-
-Never rewrite historical seasons using current rules.
-
-Aggregated statistics must remain consistent with underlying match data.
-
----
-
-# 38. Performance
-
-Use the same conceptual core engine across the world.
-
-The player's current match may receive detailed presentation/calculation while background matches use optimized simulation.
-
-Use caches/aggregates for large statistical workloads while preserving raw match data needed for history and recalculation.
-
----
-
-# 39. 100-Season Automated Validation
-
-A 100-season continuous simulation is a **developer/QA stability test**, not a player-facing feature.
-
-Validate:
-
-- money inflation
-- salary inflation
-- market-value inflation
-- ability inflation
-- elite prospect overgeneration
-- positional shortages
-- permanent league monopoly
-- insolvency
-- AI roster collapse
-- lower-tier congestion
-- meta lock
-- permanently dead champions
-- patch oscillation
-- schedule conflicts
-- promotion/license errors
-- statistical inconsistency
-
-Debug mode may expose:
-
-- true ability/potential
-- AI decision reasons
-- patch reasoning
-- match calculation summaries
-
-These remain hidden in normal play.
-
----
-
-# 40. Implementation Order
-
-After Artifact integration, a recommended implementation order is:
-
-1. codebase / migrated Artifact analysis
-2. stable IDs and common models
-3. player / champion / team / license models
-4. first/second-tier league, season and calendar
-5. match engine
-6. statistics
-7. draft/tactics
-8. patch/meta
-9. growth/training/scrims
-10. scouting
-11. contracts/transfers
-12. facilities/finance
-13. league/international offices and tournaments
-14. world AI
-15. UI/history/news integration
-16. save/migrations
-17. legacy removal
-18. long automated validation
-
-Reorder when architecture safety requires it, but do not shrink the target design merely for convenience.
-
----
-
-# 41. Completion Conditions
-
-The target product is not considered complete until the implemented world supports, at minimum:
-
-- new game and blank-roster start
-- selectable independent first/second-tier clubs
-- non-selectable parent academy/reserve clubs
-- credible fictional team branding
-- active AI leagues
-- player lifecycle/newgens/retirement
-- scouting uncertainty
-- competitive AI transfer market
-- meaningful lower-tier development and promotion
-- reserve obligations
-- facilities and finance
-- cross-region scrims
-- detailed champion specifications
-- new champion global ban → eligibility
-- numeric patches and patch history
-- regional meta and meta diffusion
-- composition-aware drafting
-- Bo3/Bo5 adaptation and Fearless
-- tactical tradeoffs
-- shared core match engine
-- complete season/international flow
-- league/international office authority
-- statistics/history integrity
-- long-run ecosystem stability
-- no critical build/runtime/null/reference/save-load/season-transition failures
-
----
-
-# 42. AI Coding Assistant Rule
-
-Before substantial implementation:
-
-1. Read this file.
-2. Read `docs/DEVELOPMENT.md`.
-3. If importing Claude Artifact code, read `docs/ARTIFACT_INTEGRATION.md`.
-4. Inspect the latest relevant GitHub code before changing it.
-5. Identify the current phase.
-6. Implement primarily the current phase.
-7. Do not invent missing product rules when this specification already defines them.
-8. Do not implement later phases merely to make the prototype appear more complete.
-9. Do not make current-phase architectural decisions that block later phases.
-10. Treat work from ChatGPT and Claude as prior work in the same project, not disposable alternative implementations.
-11. When existing code conflicts with this specification, explicitly identify the conflict before replacing meaningful working behavior.
-
----
-
-# 43. ChatGPT + Claude Collaborative Development Workflow
-
-LOL GM is a **single shared project jointly developed with ChatGPT and Claude**, not two separate implementations.
-
-The shared source of truth is:
-
-1. the latest code in this GitHub repository
-2. `docs/LOL_GM_SPEC.md`
-3. `docs/DEVELOPMENT.md`
-4. `docs/ARTIFACT_INTEGRATION.md` when Artifact/UI work is involved
-
-## Collaboration rules
-
-Before either AI starts meaningful work:
-
-- inspect the latest relevant repository code
-- read the relevant specification sections
-- identify the current development phase
-- preserve working behavior unless a requested/specification change requires replacement
-- check whether the other AI's previous work already solves part of the task
-
-After either AI finishes meaningful work:
-
-- leave the repository in a coherent, runnable state when possible
-- keep naming, types, routes and architectural boundaries consistent
-- update documentation when architecture or product rules materially change
-- avoid undocumented parallel implementations of the same system
-- make the next task understandable from the repository itself rather than relying only on chat history
-
-## Division of work is flexible
-
-ChatGPT and Claude are not permanently assigned separate layers.
-
-Either may work on UI, architecture, game systems, debugging, refactoring or documentation when appropriate. Work should be divided based on the current task and then integrated into the same codebase.
-
-Claude Artifact is primarily the initial UI/UX prototyping surface, but its approved result becomes part of the shared project after migration.
-
-## Handoff rule
-
-A handoff means continuing the same implementation, not recreating it.
-
-When one AI receives work produced by the other:
-
-1. inspect the existing implementation first
-2. preserve intentional design and working behavior
-3. identify concrete conflicts before replacing substantial code
-4. extend/refactor the existing implementation rather than starting a competing version
-5. commit or otherwise return changes to the same GitHub project
-
-## User role
-
-The user is the product/game director and final decision-maker.
-
-The user should be able to evaluate the game through a runnable test build and describe desired changes in product terms without needing to manually edit UI/UX or application code.
-
-The intended iteration loop is:
-
-`User direction → ChatGPT/Claude implementation → GitHub → runnable test build → user playtest/feedback → next shared iteration`
-
-## Conflict resolution
-
-If ChatGPT and Claude implementations or recommendations conflict:
-
-1. explicit latest user instruction wins
-2. then the latest canonical specification
-3. then existing intentional working behavior
-4. architectural preference alone is not sufficient reason for a destructive rewrite
-
-Do not silently choose incompatible interpretations of a major game rule. Surface the conflict for a product decision when the specification does not resolve it.
+오프시즌을 실제 단계로 취급:
+`시즌 종료 → 계약 만료/재계약 → FA/이적 → 신인 → 스태프/시설 → 로스터 등록 → 스크림/준비 → 다음 시즌`
+
+등록 마감/국제대회 기간/패치 일정 등을 캘린더에 표시.
+
+## 29A. 게임 시간 진행
+
+세계 전체는 하나의 게임 날짜/시간축을 공유한다.
+
+- `하루 진행`, `다음 주요 일정까지 진행` 등 명확한 진행 기능 제공.
+- 진행 시 모든 활성 리그, 계약, 훈련, 스크림, 시설, 대회, AI 의사결정이 함께 처리된다.
+- 로스터 마감, 계약 협상, 공식 경기, 중요한 제안 등 플레이어의 필수 결정이 있으면 자동 진행을 중단할 수 있다.
+- 시즌은 메뉴 전환으로 초기화되는 구조가 아니라 연속된 세계 시간이다.
+- 새 시즌에도 선수 능력/숙련, 팀워크, 재정, 명성, 시설, 계약, 역사 등 지속 데이터는 유지한다. 시즌성 폼 등 필요한 단기 상태만 규칙에 따라 조정한다.
+
+## 29B. 로스터 등록
+
+- 1군/2군 등록, 대회별 엔트리, 등록 마감일을 규정 엔진과 연결한다.
+- Bo3/Bo5 후보 선수 및 규정상 허용되는 세트 간 교체를 지원한다.
+- 긴급 등록/대체는 해당 리그·대회 규칙이 허용할 때만 가능.
+- 1군↔2군 이동과 국제대회 엔트리도 등록 규칙을 우회할 수 없다.
+- AI 역시 동일한 등록 규칙을 따른다.
+
+## 30. 통계/기록
+
+통계 분리:
+- 국내 정규
+- 플레이오프
+- 1부 국제
+- 2부 국내
+- 2부 국제
+- 스크림.
+
+필터:
+- 시즌/Split/대회/리그/패치/기간/포지션/진영 등.
+
+고급 지표는 엔진이 생성 가능한 것만. 표본 크기를 항상 고려.
+
+기록실:
+- 역대 우승/준우승
+- 순위
+- MVP/개인상
+- 역대 로스터
+- 선수/팀 누적 기록
+- 국제대회
+- 승격/강등
+- 챔피언/패치 역사
+- 연승 등 실제 데이터에서 계산 가능한 기록.
+
+시즌 종료 스냅샷으로 과거 로스터/능력/가치/순위 비교 가능.
+
+장기 커리어가 뛰어난 은퇴 선수는 기록 기반 명예의 전당 기능을 선택적으로 지원.
+
+세계/선수 랭킹을 만들 경우 최근 성과/상대 수준/국제전을 이용한 정보성 분석 지표로만 사용하고 경기력 보너스를 주지 않는다.
+
+## 31. 뉴스/정보 UI
+
+실제 데이터에서 뉴스 생성:
+- 이적/재계약/FA
+- 데뷔/은퇴
+- 감독 변경
+- 승격/강등
+- 우승
+- 국제대회
+- 패치
+- 기록 경신
+- 주요 업셋.
+
+중요 알림:
+- 계약 만료
+- 경쟁 제안
+- 선수 불만
+- 스크림 요청
+- 등록 마감
+- 대회
+- 패치
+- 시설 완료 등.
+
+선수/팀/리그/챔피언/대회 통합 검색, 필터/정렬/즐겨찾기/선수 비교 기능 지원.
+
+복잡한 지표에는 툴팁으로 정의 표시.
+
+## 32. 세이브
+
+- 세이브 슬롯 삭제 + 확인.
+- 다른 세이브에 영향 금지.
+- 안정적인 ID 사용. 이름 문자열을 관계 키로 사용하지 않는다.
+- 장기 시즌 전환/세이브로드 무결성 보장.
+- 데이터 구조 변경 시 가능한 범위에서 migration 고려.
+
+난수 시드는 플레이어 기능으로 노출하지 않는다.
+- 시드 입력/고정/표시/동일 결과 보장 기능 없음.
+- 같은 팀/밴픽/전술이어도 경기의 제한적 불확실성 때문에 결과가 항상 같지 않아야 한다.
+- 내부 테스트상 난수 제어가 필요하면 구현 세부사항으로만 사용.
+
+## 33. 의미 없는 기존 기능 정리
+
+재검토/삭제:
+- 일반 친선전 → 스크림으로 통합.
+- 약/균형/강팀 스크림 상대 선택 → 실제 팀 선택.
+- 의미 없는 독립 훈련강도.
+- 단순 집중라인 보너스.
+- 고정 블루/레드 선호.
+- 모든 수치 100이 가능한 전술.
+- 단일 champion power.
+- 랜덤 국제대회 진출.
+- 새 게임 팀 수 입력.
+- cap/floor 직접 입력.
+- Mid-Season Challenger Cup.
+- World Challenger Cup.
+- 다른 팀 전술 편집.
+- 플레이어용 랜덤 시드 UI.
+- 삭제 기능을 참조하는 레거시 코드.
+
+## 34. 데이터 분석/역사적 일관성
+
+과거 데이터를 현재 규칙으로 재작성하지 않는다.
+
+보존:
+- 챔피언 패치별 스펙
+- 시즌별 리그 규정
+- 선수 능력/가치/명성 변화
+- 팀 재정/전력
+- 리그 경제/전력
+- 로스터
+- 대회 포맷/결과.
+
+표시 집계와 원본 경기 데이터가 일치해야 한다.
+
+## 35. AI/시뮬레이션 성능
+
+세계 전체가 움직이되 성능을 고려:
+- 핵심 엔진 공유.
+- 플레이어 경기는 상세 표시.
+- 비관전 AI 경기는 경량 계산.
+- 결과/통계 품질은 동일 원칙 유지.
+- 통계는 필요시 집계/캐시하되 원본 기록 보존.
+
+## 35A. 동일 규칙/데이터 구조 원칙
+
+AI와 플레이어는 계산 표시 방식만 다를 수 있으며 핵심 규칙은 동일해야 한다.
+
+AI가 다음을 우회하지 못하게 한다:
+- 예산/현금/연봉/샐러리 규정
+- 계약/이적 조건
+- 로스터 등록
+- 1군/2군 이동 규정
+- 시설 투자비/운영비
+- 훈련/숙련도 획득
+- 선수 성장/노화
+- 챔피언 글로벌 밴/대회 사용 제한.
+
+팀, 선수, 챔피언 스펙, 리그, 대회, 패치/규정 등 변경 가능성이 높은 게임 데이터는 가능한 한 코드 로직과 분리된 데이터/config 구조로 관리한다. 새 가상 리그/팀/대회 추가나 규정 변경 때문에 핵심 엔진을 뜯어고치지 않도록 한다.
+
+## 35B. 감독 세이브 지속성
+
+구단에서 해임되는 기능을 구현하더라도 그것만으로 세이브를 강제 종료하지 않는 구조를 전제로 한다. 향후 다른 구단 취임/구직 등 감독 커리어 시스템으로 확장할 수 있도록 플레이어 감독과 구단을 영구적으로 동일 엔티티에 묶지 않는다. 세부 감독 커리어 기능은 핵심 게임 루프 이후 확장 가능하다.
+
+## 36. 장기 밸런스/자동 검증
+
+개발용 장기 자동 시뮬레이션을 지원하며 **100시즌 연속 자동 시뮬레이션**을 대표 장기 안정성 테스트로 사용한다. 이는 일반 플레이 기능이 아니라 개발/QA용 도구이며 일반 사용자 UI에 노출할 필요가 없다.
+
+검사:
+- 돈/연봉/시장가치 인플레이션
+- 선수 능력 인플레이션
+- 특급 유망주 과잉
+- 포지션 공급 붕괴
+- 특정 리그 영구 독점
+- 구조적 파산
+- AI 로스터 붕괴
+- 2부 적체
+- 메타 고착
+- 특정 챔피언 영구 사망
+- 패치 진동
+- 일정 충돌
+- 승강/라이선스 오류
+- 통계 불일치.
+
+개발 모드에서 필요하면 AI 영입 판단, 패치 판단, 경기 계산 요약 등 디버그 로그를 제공하되 일반 플레이에서는 숨긴다.
+
+## 37. 구현 우선순위
+
+권장 의존 순서:
+1. 코드베이스/레거시 분석
+2. 공통 ID/데이터 모델
+3. 선수/챔피언/팀/라이선스 모델
+4. 1·2부/시즌/캘린더
+5. 경기 엔진
+6. 통계
+7. 밴픽/전술
+8. 패치/메타
+9. 성장/훈련/스크림
+10. 스카우팅
+11. 계약/이적
+12. 시설/재정
+13. 국내·국제 사무국/대회
+14. AI
+15. UI/기록/뉴스
+16. 세이브/migration
+17. 레거시 제거
+18. 장기 자동 검증
+
+현재 아키텍처상 더 안전한 순서가 있으면 조정 가능하나 전체 목표는 축소하지 않는다.
+
+## 38. 완료 조건
+
+반드시 확인:
+- 새 게임/백지 로스터.
+- 1·2부 독립팀 선택 규칙 및 Academy 선택 제한.
+- 팀 이름/약칭 품질.
+- 모든 활성 리그/AI 진행.
+- 선수 생애주기/신인/은퇴.
+- 스카우팅 불확실성.
+- AI간 이적 경쟁/재계약/대안 영입.
+- 2부 성장/승강/2군 의무.
+- 시설/재정.
+- 해외 스크림.
+- 챔피언 실제 상세 스펙.
+- 신챔 글로벌 밴→해금.
+- 정확한 수치 패치/히스토리.
+- 지역별 메타/메타 전파.
+- 조합 중심 밴픽.
+- Bo3/Bo5 세트 적응/Fearless.
+- 전술 trade-off.
+- 동일 핵심 경기 엔진.
+- 시즌/국제대회 흐름.
+- 리그/국제 사무국 권한.
+- 통계/기록 일관성.
+- 장기 경제/선수/메타 안정성.
+- 타입/빌드/runtime/null/reference/save-load/시즌전환 오류 없음.
+
+## 39. 최종 게임 루프
+
+`신인 생성/2부 → 스카우팅 → 영입 → 시설/훈련/스크림 → 성장 → 1군 → 패치/메타 연구 → 조합/밴픽/전술 → 공식 경기 → 실제 통계 → 국내 성적 → 국제대회 → 명성/가치/재정 → 계약/이적/투자 → 다음 시즌`
+
+동시에:
+
+`챔피언 스펙 → 경기 → 픽밴/승률 데이터 → 패치 엔진 → 수치 변경 → 지역별 메타 변화 → 팀별 연구/스크림 → 새로운 조합 → 다음 경기`
+
+그리고:
+
+`팀 성적 → 명성/수익 → 선수·시설·2군 투자 → 로스터/육성 변화 → 전력 변화 → 다음 성적`
+
+이 세 순환이 하나의 세계에서 연결되어야 한다.
+
+## 40. 구현 완료 보고
+
+완료 후 다음만 간결하게 보고:
+- 구현/수정/삭제한 시스템
+- 주요 데이터 모델 변경
+- 핵심 밸런스/알고리즘 결정과 이유
+- 테스트/장기 시뮬레이션 결과
+- 발견/해결한 문제
+- 남은 문제
+
+작업량이 많다는 이유로 핵심 시스템을 임의 삭제하지 않는다. 한 번에 안전하지 않으면 의존성 순서로 단계 구현하되 본 문서를 최종 목표로 유지한다.
