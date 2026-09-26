@@ -99,7 +99,7 @@ function regionCfg(id,over={}){
 function defaultWorldConfig(){return {
   regions:['KR','CN','EU','NA','AP','BR'].map(id=>regionCfg(id)),
   internationals:['FS','MSI','WORLDS','ASCI','EMM','AMC'].map(id=>({...INTL_PRESETS.find(p=>p.id===id)})),
-  subs:1, changes:'normal', startYear:2027, manage:'manual'
+  subs:1, changes:'normal', startYear:2027, manage:'manual', universalLanguage:true
 }}
 const CHANGE_F={none:0,low:0.5,normal:1,high:1.8};
 
@@ -237,10 +237,11 @@ function addRegion(db,rng,cfg){
 }
 function buildWorld(cfg){
   cfg=JSON.parse(JSON.stringify(cfg||defaultWorldConfig()));
-  const db={version:10,saveId:'save-'+Date.now().toString(36),manager:{id:'manager-human',teamId:null,startMode:null,careerStartedAt:null},worldDate:`${cfg.startYear||2027}-01-01`,coachPool:[],awards:[],hof:[],global:{decisions:[],power:{}},patch:buildPatch(),teams:{},players:{},regions:{},competitions:{},worldConfig:cfg,world:null,history:[],news:[],year:cfg.startYear||2027,configDirty:false,scout:{}};
+  const db={version:11,saveId:'save-'+Date.now().toString(36),manager:{id:'manager-human',teamId:null,startMode:null,careerStartedAt:null},worldDate:`${cfg.startYear||2027}-01-01`,coachPool:[],awards:[],hof:[],global:{decisions:[],power:{}},patch:buildPatch(),teams:{},players:{},regions:{},competitions:{},worldConfig:cfg,world:null,history:[],news:[],year:cfg.startYear||2027,configDirty:false,scout:{}};
   const rng=new RNG('world-v7','gen');
   initPatches(db);
   for(const r of cfg.regions) addRegion(db,rng,r);
+  prepareFirstSeasonFreeAgency(db);
   return db;
 }
 function managedTeamId(db){return db.manager&&db.manager.teamId||null}
@@ -249,21 +250,9 @@ function setManagedTeam(db,teamId){
   if(teamId!==null&&(!db.teams[teamId]||db.teams[teamId].active===false))throw new Error('관리할 수 없는 팀입니다');
   db.manager.teamId=teamId;return teamId;
 }
-function startCareer(db,teamId,mode='existing',seed){
-  if(mode!=='existing')throw new Error('현재 지원하지 않는 커리어 시작 방식입니다');
-  if(!isManagerSelectableTeam(db,teamId))throw new Error('감독 시작 팀으로 선택할 수 없는 구단입니다');
-  const team=db.teams[teamId], roster=[...(team.roster||[])];
-  if(roster.length<5)throw new Error('기존 로스터 시작에는 최소 5명의 등록 선수가 필요합니다');
-  const errors=rosterIntegrityErrors(db);
-  if(errors.length)throw new Error('선수단 데이터가 올바르지 않습니다: '+errors[0]);
-  for(const pid of roster){
-    const p=db.players[pid];
-    if(!p||!p.contract)throw new Error('기존 로스터 선수의 계약 정보가 없습니다: '+pid);
-  }
-  db.manager.startMode='existing';
-  db.manager.careerStartedAt=db.worldDate;
-  startWorldSeason(db,teamId,seed);
-  return db.world;
+function startCareer(db,teamId,seed){
+  if(!db.firstSeasonSetup||!db.firstSeasonSetup.blankRosters)throw new Error('첫 시즌 백지 로스터 세계가 준비되지 않았습니다');
+  return beginInitialRosterPhase(db,teamId,seed);
 }
 
 function validateConfig(cfg){

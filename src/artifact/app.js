@@ -1,7 +1,8 @@
 // ===== LOL GM: UI =====
-const SAVE_VERSION=10;
-const STORAGE_NS='lol-gm-v10';
+const SAVE_VERSION=11;
+const STORAGE_NS='lol-gm-v11';
 const LEGACY_STORAGE_PREFIXES=['lol-gm','lolfm'];
+const LEGACY_DB_NAMES=['lol-gm','lol-gm-v10','lolfm'];
 const DIRECT_FILE_PREVIEW=location.protocol==='file:'||location.origin==='null';
 let SLOT=(()=>{try{return localStorage.getItem(STORAGE_NS+'-slot')||'1'}catch(e){return '1'}})();
 const STORE_BASE=STORAGE_NS+'-db-v'+SAVE_VERSION+'-';
@@ -17,7 +18,7 @@ function purgeLegacySaves(){
     }
   }catch(e){}
   if(!DIRECT_FILE_PREVIEW&&typeof indexedDB!=='undefined'){
-    for(const name of ['lol-gm','lolfm'])try{indexedDB.deleteDatabase(name)}catch(e){}
+    for(const name of LEGACY_DB_NAMES)try{indexedDB.deleteDatabase(name)}catch(e){}
   }
 }
 // 저장: IndexedDB(용량 큼) 우선, 안 되면 localStorage
@@ -73,21 +74,36 @@ function normalizeManagerTeamSelection(){
   return {rid:SSET.region,div:SSET.division,team:SSET.team,teams,divs,region:DB.regions[SSET.region]};
 }
 function managerTeamPicker(disabled=false){
-  const st=normalizeManagerTeamSelection(), team=st.team&&DB.teams[st.team];
+  const st=normalizeManagerTeamSelection(),team=st.team&&DB.teams[st.team];
   const regions=Object.values(DB.regions).filter(r=>managerSelectableTeams(DB,r.id).length);
+  const pay=team?payroll(DB,team):0,budget=team?initialSalaryBudget(DB,team):0;
+  const recent=team&&team.goalLog&&team.goalLog.length?team.goalLog.slice(-1)[0]:'첫 시즌 · 공식 기록 없음';
+  const recentText=typeof recent==='string'?recent:(recent.year+' · '+(recent.ok?'목표 달성':'목표 미달'));
   return `<div class="cfgcard compact"><div class="cfghead"><b>감독할 구단 선택</b><span class="hint">지역 → 리그 → 디비전 → 팀</span></div><div class="controls">
     <label>지역<select id="steam-region"${disabled?' disabled':''}>${regions.map(r=>`<option value="${r.id}"${r.id===st.rid?' selected':''}>${esc(r.name)}</option>`).join('')}</select></label>
     <label>리그<span class="static-field">${st.region?esc(st.region.leagueName):'—'}</span></label>
     <label>디비전<select id="steam-division"${disabled?' disabled':''}>${st.divs.map(d=>`<option value="${d}"${d===st.div?' selected':''}>${d===1?'1부':esc(divName(st.region))}</option>`).join('')}</select></label>
     <label>팀<select id="steam"${disabled?' disabled':''}>${st.teams.map(t=>`<option value="${t.id}"${t.id===st.team?' selected':''}>${esc(t.name)}</option>`).join('')}</select></label>
-  </div>${team?`<p class="hint"><b>${esc(team.name)}</b> · ${team.division===2?'2부 독립 구단':'1부 독립 구단'} · 등록 선수 ${(team.roster||[]).length}명</p>`:''}<div class="arow"><span><b>시작 방식</b></span><span>기존 로스터</span></div><p class="hint">선택한 구단의 현재 선수단, 계약, 재정 상태를 그대로 유지한 채 시작합니다.</p><p class="hint">Academy/Challengers 등 모구단 소속 2군은 감독 시작 팀으로 선택할 수 없습니다.</p></div>`;
+  </div>${team?`<div class="fin">
+    <div><span>재정</span><b>${money(team.finance.cash)}</b><small>초기 연봉 예산 ${money(budget)} · 현재 ${money(pay)}</small></div>
+    <div><span>선수단</span><b>${(team.roster||[]).length}명</b><small>첫 시즌은 전 구단 0명에서 시작</small></div>
+    <div><span>시설</span><b>${team.facility||2} / 5</b><small>현재 통합 시설 수준</small></div>
+    <div><span>명성</span><b>${team.reputation??'—'}</b><small>초기 상태에서 파생</small></div>
+    <div><span>최근 성적</span><b>${esc(recentText)}</b></div>
+    <div><span>구단 목표</span><b>${esc(initialGoalLabel(team))}</b></div>
+    <div><span>승강</span><b>${esc(promotionStatus(DB,team))}</b></div>
+  </div>`:''}
+  <p class="hint">첫 시즌은 모든 구단이 백지 로스터로 시작합니다. 팀을 고른 뒤 전 세계 FA 풀에서 예산과 등록 규정에 맞춰 직접 선수단을 구성합니다.</p>
+  <p class="hint">가상 프로씬 공용어가 정착된 세계이므로 국적에 따른 언어 장벽은 없습니다. 국적/지역은 외국인 등록 규정, 신인 생성, 스카우팅 범위 등에 주로 사용됩니다.</p>
+  <p class="hint">Academy/Challengers 등 모구단 소속 2군은 감독 시작 팀으로 선택할 수 없습니다.</p></div>`;
 }
 function bindManagerTeamPicker(){
   const r=$('#steam-region'),d=$('#steam-division'),t=$('#steam');
   if(r)r.onchange=e=>{SSET.region=e.target.value;SSET.division=null;SSET.team=null;normalizeManagerTeamSelection();nav()};
   if(d)d.onchange=e=>{SSET.division=+e.target.value;SSET.team=null;normalizeManagerTeamSelection();nav()};
-  if(t)t.onchange=e=>{SSET.team=e.target.value};
+  if(t)t.onchange=e=>{SSET.team=e.target.value;nav()};
 }
+
 const n1=v=>Number.isInteger(v)?v:v.toFixed(2);
 function freshInternalSeed(prefix='rng'){
   const a=new Uint32Array(2);try{crypto.getRandomValues(a);return `${prefix}-${a[0].toString(36)}${a[1].toString(36)}`}catch(e){return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`}
@@ -278,6 +294,23 @@ function viewPatch(){
 }
 function bindPatch(){$('#prole').onchange=e=>{PSET.role=e.target.value;nav()};$('#pq').onchange=e=>{PSET.q=e.target.value;nav()}}
 
+// ---------- 첫 시즌 백지 로스터 구성 ----------
+let INITMK={role:'ALL',scope:'all',target:null};
+function renderInitialRosterMarket(){
+  const root=managedTeam(DB),squads=setupTeamsForManager(DB);if(!INITMK.target||!squads.some(t=>t.id===INITMK.target))INITMK.target=squads[0].id;
+  const target=DB.teams[INITMK.target],R=DB.regions[target.region],errors=initialOrganizationErrors(DB,root);
+  const free=Object.values(DB.players).filter(p=>!p.retired&&!p.team&&(INITMK.role==='ALL'||p.role===INITMK.role)&&(INITMK.scope==='all'||p.region===root.region)).sort((a,b)=>obsOvr(DB,b)-obsOvr(DB,a)||a.age-b.age).slice(0,80);
+  const cards=squads.map(t=>{const e=initialSquadErrors(DB,t),lim=initialSquadLimits(DB,t),pay=payroll(DB,t);return `<section class="cfgcard"><div class="cfghead"><b>${esc(t.name)}</b><span class="${e.length?'warn':'hi'}">${t.roster.length}/${lim.max}명 · ${e.length?'미완성':'등록 가능'}</span></div><div class="fin"><div><span>연봉</span><b>${money(pay)}</b><small>예산 ${money(initialSalaryBudget(DB,t))}</small></div><div><span>외국인</span><b>${t.roster.filter(id=>DB.players[id]&&DB.players[id].region!==t.region).length}/${DB.regions[t.region].importLimit??2}</b></div></div>${e.length?`<p class="hint">${e.map(esc).join(' · ')}</p>`:''}${t.roster.length?t.roster.map(id=>{const p=DB.players[id];return `<div class="mrow"><span><span class="role">${ROLE_KO[p.role]}</span> <b>${esc(p.name)}</b> · ${p.age}세 · ${money(p.contract.salary)}</span><button class="ghost sm2" data-init-release="${p.id}">FA로 되돌리기</button></div>`}).join(''):'<p class="empty">아직 등록 선수가 없습니다.</p>'}</section>`}).join('');
+  return `<section class="teamhead"><h2>첫 시즌 로스터 구성</h2><p>${esc(root.name)}에서 커리어를 시작합니다. 모든 구단은 선수 0명에서 출발하며, 생성된 선수들은 전부 FA 풀에 있습니다.</p></section><section><h3>내 구단 조직</h3>${cards}</section>${MSG?`<p class="msg" role="status">${esc(MSG)}</p>`:''}<section><h3>FA 선수 풀</h3><div class="controls"><label>등록 스쿼드<select id="init-target">${squads.map(t=>`<option value="${t.id}"${t.id===INITMK.target?' selected':''}>${esc(t.name)}</option>`).join('')}</select></label><label>포지션<select id="init-role"><option value="ALL">전체</option>${ROLES.map(r=>`<option value="${r}"${INITMK.role===r?' selected':''}>${ROLE_KO[r]}</option>`).join('')}</select></label><label>범위<select id="init-scope"><option value="all"${INITMK.scope==='all'?' selected':''}>전 세계</option><option value="region"${INITMK.scope==='region'?' selected':''}>내 지역</option></select></label></div><div class="fin"><div><span>대상 스쿼드</span><b>${esc(target.name)}</b></div><div><span>연봉 예산</span><b>${money(initialSalaryBudget(DB,target))}</b><small>${R.salaryCap?'캡 '+money(R.salaryCap):'캡 없음'}${R.salaryFloor&&target.division===1?' · 플로어 '+money(R.salaryFloor):''}</small></div><div><span>언어</span><b>공용어 사용</b><small>해외 선수 의사소통 페널티 없음</small></div></div><div class="scroll"><table><thead><tr><th>포지션</th><th>선수</th><th>출신</th><th>나이</th><th>종합</th><th>잠재</th><th>요구 연봉</th><th></th></tr></thead><tbody>${free.map(p=>{const chk=initialSignCheck(DB,p,target);return `<tr><td><span class="role">${ROLE_KO[p.role]}</span></td><td><b>${esc(p.name)}</b></td><td>${esc((DB.regions[p.region]||{name:p.region}).name)}</td><td class="num">${p.age}</td><td class="num">${obsOvr(DB,p)}</td><td>${potText(p)}</td><td class="num">${money(asking(DB,p,target.region))}</td><td><button class="ghost sm2" data-init-sign="${p.id}"${chk.ok?'':' disabled'}>${chk.ok?'2년 계약':'등록 불가'}</button></td></tr>`}).join('')}</tbody></table></div><p class="hint">첫 시즌 창단 구성 단계에서는 요구 연봉으로 즉시 2년 계약합니다. 정식 제안 경쟁·협상은 계약/이적시장 항목에서 확장합니다.</p></section><section><h3>등록 마감</h3>${errors.length?`<p class="warn">${errors.map(esc).join(' / ')}</p>`:'<p class="hi">내 구단 로스터 규정을 모두 충족했습니다.</p>'}<div class="controls"><button class="primary" id="init-final"${errors.length?' disabled':''}>전 세계 로스터 확정 후 시즌 개막</button><span class="hint">확정하면 AI 구단도 남은 FA 풀에서 같은 등록 규칙으로 선수단을 구성합니다.</span></div></section>`;
+}
+function bindInitialRosterMarket(){
+  const act=m=>{MSG=m;saveDB();nav();window.scrollTo(0,0)};
+  $('#init-target').onchange=e=>{INITMK.target=e.target.value;MSG='';nav()};$('#init-role').onchange=e=>{INITMK.role=e.target.value;nav()};$('#init-scope').onchange=e=>{INITMK.scope=e.target.value;nav()};
+  document.querySelectorAll('[data-init-sign]').forEach(b=>b.onclick=()=>act(initialSignPlayer(DB,b.dataset.initSign,INITMK.target,2)));
+  document.querySelectorAll('[data-init-release]').forEach(b=>b.onclick=()=>act(initialReleasePlayer(DB,b.dataset.initRelease)));
+  const fin=$('#init-final');if(fin)fin.onclick=()=>{try{finalizeInitialRosters(DB);MSG='';saveDB();nav();window.scrollTo(0,0)}catch(e){act(e.message||String(e))}};
+}
+
 // ---------- 이적 시장 (직접 운영) ----------
 let MK={role:'ALL',scope:'region',tab:'fa'};
 function renderMarket(){
@@ -413,7 +446,7 @@ function bindSeries(root,rec){
 }
 
 // ---------- 시즌 (월드) ----------
-let SSET={team:'HTG',region:null,division:null,startMode:'existing',seed:freshInternalSeed('world'),tab:'table',view:null};
+let SSET={team:'HTG',region:null,division:null,seed:freshInternalSeed('world'),tab:'table',view:null};
 function mySeasonKey(){const w=DB.world,rid=DB.teams[managedTeamId(DB)].region;const ks=Object.values(w.seasons).filter(s=>s.region===rid).sort((a,b)=>(b.split||0)-(a.split||0));return ks.length?ks[0].key:null}
 function curS(){const w=DB.world;if(!SSET.view||!w.seasons[SSET.view])SSET.view=mySeasonKey()||Object.keys(w.seasons)[0];return w.seasons[SSET.view]}
 function sName(s){return DB.competitions[s.comp].name+(s.label?' '+s.label:'')}
@@ -427,6 +460,7 @@ function viewSeason(){
   const w=DB.world;
   if(!w) return seasonSetup();
   if(w.phase==='pick') return `<section class="teamhead"><h2>팀 선택</h2><p>${w.fired?'해임되었습니다. ':''}새로 맡을 팀을 고르세요. 세계와 기록은 그대로 이어집니다.</p></section><section class="controls"><label>팀<select id="pickteam">${teamOpts(managedTeamId(DB))}</select></label><button class="primary" id="pickgo">이 팀으로 계속</button></section>`;
+  if(w.phase==='initial_roster') return renderInitialRosterMarket();
   const me=managedTeamId(DB), T=DB.teams[me], k=mySeasonKey(), lgS=k&&w.seasons[k];
   const reg=lgS?standings(DB,lgS,'regular'):[], mine=reg.find(x=>x.tid===me), rank=reg.indexOf(mine)+1;
   const nx=nextMine(), nd=nextDate(DB);
@@ -511,7 +545,7 @@ function seasonSetup(){
   <section class="controls"><button class="primary" id="regen">이 설정으로 세계 생성</button><button class="ghost" id="cfgdef">기본 설정으로</button>
     <span id="cfgmsg" class="${dirty?'warn':'hint'}" role="status">${dirty?'설정이 바뀌었습니다. 세계를 다시 생성해야 반영됩니다.':'현재 세계가 설정과 일치합니다.'}</span></section>
   <section><h3>생성된 세계</h3>${worldTable()}</section>
-  <section><h3>팀 선택</h3>${managerTeamPicker(dirty)}<div class="controls"><button class="primary" id="sstart"${dirty?' disabled':''}>커리어 시작</button></div></section>
+  <section><h3>팀 선택</h3>${managerTeamPicker(dirty)}<div class="controls"><button class="primary" id="sstart"${dirty?' disabled':''}>이 팀으로 로스터 구성 시작</button></div></section>
   ${DB.history.length?`<section><h3>역대 기록</h3>${histTable()}</section>`:''}`;
 }
 function spark(vals){if(vals.length<2)return '';const W=90,H=24,mx=100,x=i=>i/(vals.length-1)*W,y=v=>H-v/mx*H;return `<svg class="spark" viewBox="0 0 ${W} ${H}" aria-hidden="true"><polyline points="${vals.map((v,i)=>x(i).toFixed(1)+','+y(v).toFixed(1)).join(' ')}"/></svg>`}
@@ -619,12 +653,13 @@ function bindSetup(){
   $('#regen').onclick=()=>{const errs=validateConfig(cfg);if(errs.length){$('#cfgmsg').className='warn';$('#cfgmsg').textContent=errs.join(' / ');return}
     DB=buildWorld(cfg);const first=managerSelectableTeams(DB)[0];SSET.team=first?first.id:null;SSET.region=first?first.region:null;SSET.division=first?(first.division||1):1;LAST=null;LASTSER=null;MC.res=null;saveDB();nav()};
   bindManagerTeamPicker();
-  $('#sstart').onclick=()=>{if(!isManagerSelectableTeam(DB,SSET.team)){const first=managerSelectableTeams(DB)[0];SSET.team=first?first.id:null}if(!SSET.team)return;SSET.view=null;startCareer(DB,SSET.team,SSET.startMode,freshInternalSeed('world'));saveDB();nav()};
+  $('#sstart').onclick=()=>{if(!isManagerSelectableTeam(DB,SSET.team)){const first=managerSelectableTeams(DB)[0];SSET.team=first?first.id:null}if(!SSET.team)return;SSET.view=null;startCareer(DB,SSET.team,freshInternalSeed('world'));saveDB();nav()};
 }
 function bindSeason(){
   const w=DB.world;
   if(!w)return bindSetup();
   if(w.phase==='pick'){$('#pickgo').onclick=()=>{setManagedTeam(DB,$('#pickteam').value);w.fired=false;const t=DB.teams[managedTeamId(DB)];t.owner.patience=2;w.phase='preseason';SSET.view=null;saveDB();nav()};return}
+  if(w.phase==='initial_roster'){bindInitialRosterMarket();return}
   document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{SSET.view=b.dataset.view;nav()});
   document.querySelectorAll('[data-chap]').forEach(b=>b.onclick=()=>{const i=+b.dataset.chap;SSET.chap=(SSET.chap??w.step)===i?-1:i;const s=Object.values(w.seasons).find(x=>stepOf(DB,x)===i&&(x.region===DB.teams[managedTeamId(DB)].region||DB.competitions[x.comp].international));if(s)SSET.view=s.key;nav()});
   document.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>{SSET.tab=b.dataset.st;$('#stab').innerHTML=seasonTab();document.querySelectorAll('[data-st]').forEach(x=>x.setAttribute('aria-pressed',x===b));bindSeasonTab()});
