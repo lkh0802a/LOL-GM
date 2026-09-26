@@ -2,19 +2,19 @@
 
 ## Current Phase
 
-`CURRENT_PHASE = PHASE_0_ARTIFACT_INTEGRATION`
+`CURRENT_PHASE = PHASE_1_CORE_GAME`
 
-There is already a Claude Artifact prototype. The immediate goal is to **migrate the existing Artifact into this repository now**, preserve its approved UI/UX, and turn the repository into a real runnable web application.
+The Artifact migration is complete and accepted. GitHub is now the primary development codebase.
 
-This is no longer a “build the Artifact first and decide later” phase.
+Current Phase 1 goal: replace prototype-only state with coherent persistent game state and complete the first real gameplay loop:
 
-**After migration parity and build stability are achieved, GitHub becomes the primary development codebase.** Artifact remains optional for future UI/UX experiments.
+`New Game → Team Selection → World Creation → Date Progression → Schedule → Draft → Match → Result/Stats → Standings → Continue Season`
 
-Read `docs/ARTIFACT_INTEGRATION.md` before importing or restructuring Artifact code.
+Use `docs/POST_ARTIFACT_ROADMAP.md` for implementation order and `docs/CORE_DOMAIN_MODEL.md` as an architectural guardrail.
 
-## Phase 0 responsibilities
+## Phase 0 migration record
 
-During the Artifact migration:
+The completed Artifact migration preserved these requirements:
 
 - preserve visual/behavioral parity before large refactors
 - establish a real app entry point and routing
@@ -42,11 +42,9 @@ Phase 0 can end when all of the following are true:
 - stable entity IDs are not replaced by display-name references
 - future domain/engine code can be added without being embedded in screen components
 
-When these criteria are met, change the phase to:
+These criteria were accepted on 2026-09-26. See `docs/PHASE_0_REVIEW.md`.
 
-`CURRENT_PHASE = PHASE_1_CORE_GAME`
-
-and begin the sequence in `docs/POST_ARTIFACT_ROADMAP.md`.
+Phase 1 is active.
 
 ## Planned boundaries
 
@@ -141,16 +139,16 @@ These systems are not Phase 0 implementation requirements.
 
 ## Shared AI development workflow
 
-LOL GM is developed collaboratively by **ChatGPT + Claude in the same GitHub codebase**.
+LOL GM is currently developed primarily by **ChatGPT in this GitHub codebase**.
 
-Neither assistant should assume its own chat history is the project state. The repository and canonical docs are the handoff surface.
+The repository and canonical docs are the project state. Future external AI assistance, if used, must treat the repository as the handoff surface.
 
 For every substantial task:
 
 1. sync understanding from the latest repository state
 2. inspect existing implementation before writing a replacement
 3. follow the current phase and canonical specification
-4. integrate with the other assistant's existing work
+4. integrate with existing repository work
 5. leave code and documentation understandable to the next assistant
 6. prefer one shared implementation over parallel alternatives
 7. verify the change instead of reporting completion from code edits alone
