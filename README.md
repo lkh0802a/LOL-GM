@@ -4,7 +4,7 @@ Mobile-first esports management simulation.
 
 ## Current stage
 
-**Phase 1 — Core Game**
+**Phase 1 — Core Foundation**
 
 The existing Artifact prototype has been migrated into this repository as a runnable web application. GitHub is now the primary development codebase.
 
@@ -104,7 +104,7 @@ Once persistent user saves become a real product requirement, save migrations wi
 ## Development phases
 
 1. **Phase 0 — Artifact Migration & App Foundation:** migrate the existing prototype, preserve UI/UX parity, establish a runnable app and clean boundaries.
-2. **Phase 1 — Core Game:** real game state and the complete season gameplay loop.
+2. **Phase 1 — Core Foundation:** real game state and the complete season gameplay loop.
 3. **Phase 2 — Management Simulation:** transfers, contracts, scouting, growth, training, scrims, reserves, facilities, finance and club AI.
 4. **Phase 3 — Living World:** worldwide leagues, internationals, patches, regional meta, new champions and long-term history.
 5. **Phase 4 — Production:** backend/API, database, server saves, deployment, PWA, security and production migrations.
