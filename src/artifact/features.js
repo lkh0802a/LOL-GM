@@ -60,7 +60,7 @@ function evalGoals(db,w,rep,ev){
       t.goalLog=[...(t.goalLog||[]),{year:w.year,goal:t.goal,ok}].slice(-6);
       if(ok){t.owner.patience=Math.min(3,(t.owner.patience??2)+1);t.owner.wealth=Math.min(99,t.owner.wealth+2)}
       else t.owner.patience=(t.owner.patience??2)-1;
-      if(t.id===w.myTeam){rep.myGoal={goal:t.goal,ok};if(!ok&&t.owner.patience<=0){w.fired=true;ev(`${t.name} 구단주, 감독(플레이어) 해임 — 목표 "${GOAL_KO[t.goal]}" 연속 미달`)}}
+      if(t.id===managedTeamId(db)){rep.myGoal={goal:t.goal,ok};if(!ok&&t.owner.patience<=0){w.fired=true;ev(`${t.name} 구단주, 감독(플레이어) 해임 — 목표 "${GOAL_KO[t.goal]}" 연속 미달`)}}
       else if(!ok&&t.owner.patience<=0&&db.coachPool&&db.coachPool.length){
         const ps=psOf(db,t.region), best=db.coachPool.filter(c=>coachSalary(c,ps)<=t.finance.cash*0.2+3*ps).sort((a,b)=>(b.draft+b.analysis+b.development)-(a.draft+a.analysis+a.development))[0];
         if(best){const old=t.coach.name;hireCoach(db,t,best);t.owner.patience=2;rep.coaches.push({team:t.id,out:old,in:best.name})}}
