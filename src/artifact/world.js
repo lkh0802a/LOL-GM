@@ -1,4 +1,4 @@
-// ===== 롤FM: 월드 (Phase 5 성장 + 월드 확장) =====
+// ===== LOL GM: 월드 (Phase 5 성장 + 월드 확장) =====
 const NICK_A=['Ka','Zer','Lu','Vex','Mor','Ny','Ti','Rho','Sa','Quin','El','Dra','Fen','Jo','Kai','Mir','Oz','Pyr','Ren','Syl','Ul','Wyn','Xan','Yor','Bru','Cae','Del','Gor','Hex','Ish','Lor','Nim','Pax','Riv','Tor','Val','Zu','Aki','Bly','Cro'];
 const NICK_B=['n','ra','x','lo','th','ne','ko','vy','dan','rin','zo','sk','mi','ro','ve','ly','ce','ta','ix','or','us','en','al','yx','e','o','ash','ek','im','ul'];
 const STYLES=Object.keys(STYLE_BIAS);
@@ -114,11 +114,6 @@ function orgName(db,rng){
   }
   const n='T'+rng.int(100,999);return {name:n+' Gaming',short:n};
 }
-// 예전 저장의 한글 팀명을 영어로 바꾼다
-const KO_EN=[...ORG_SUFFIX.filter(x=>x[0]),...ORG_BRANDS,...CORPS,...CORP_BIZ.map(x=>[x[0],' '+x[1]]),...MASCOTS,['챌린저스','Challengers'],['한결','Hangyeol'],['새빛','Saebit'],['블레이즈','Blaze'],['오션','Ocean'],['노바','Nova'],['크라운','Crown'],['스톰','Storm'],['라이징 스타','Rising Star'],['아이언','Iron']].sort((a,b)=>b[0].length-a[0].length);
-function toEnglishName(s){if(!/[가-힣]/.test(s))return s;for(const [k,e] of KO_EN)s=s.split(k).join(e);return s.replace(/\s+/g,' ').trim()}
-function migrateNames(db){for(const t of Object.values(db.teams)){t.name=toEnglishName(t.name);if(t.formerNames)t.formerNames=t.formerNames.map(toEnglishName);if(t.sponsor)t.sponsor.name=toEnglishName(t.sponsor.name)}return db}
-function activeTeams(db,rid,div){return Object.values(db.teams).filter(t=>t.active!==false&&(!rid||t.region===rid)&&(!div||(t.division||1)===div))}
 function genTeam(db,rng,regionId,strength,o={}){
   const on=o.name?{name:o.name,short:o.short}:orgName(db,rng), subs=db.worldConfig.subs||0;
   const t={id:on.short,name:on.name,short:on.short,region:regionId,division:o.div||1,parent:o.parent||null,active:true,fans:baseFans(strength-4-(o.div===2?15:0),rng),coach:genCoach(rng,strength+2),tactics:genTactics(rng),training:defaultTraining(),philosophy:o.parent?'youth':rng.pick(PHILOSOPHIES),roster:[],founded:db.year};
@@ -163,12 +158,19 @@ function addRegion(db,rng,cfg){
 }
 function buildWorld(cfg){
   cfg=JSON.parse(JSON.stringify(cfg||defaultWorldConfig()));
-  const db={version:8,coachPool:[],awards:[],hof:[],global:{decisions:[],power:{}},patch:buildPatch(),teams:{},players:{},regions:{},competitions:{},worldConfig:cfg,world:null,history:[],news:[],year:cfg.startYear||2027,configDirty:false,scout:{}};
+  const db={version:9,saveId:'save-'+Date.now().toString(36),manager:{id:'manager-human',teamId:null},worldDate:`${cfg.startYear||2027}-01-01`,coachPool:[],awards:[],hof:[],global:{decisions:[],power:{}},patch:buildPatch(),teams:{},players:{},regions:{},competitions:{},worldConfig:cfg,world:null,history:[],news:[],year:cfg.startYear||2027,configDirty:false,scout:{}};
   const rng=new RNG('world-v7','gen');
   initPatches(db);
   for(const r of cfg.regions) addRegion(db,rng,r);
   return db;
 }
+function managedTeamId(db){return db.manager&&db.manager.teamId||null}
+function managedTeam(db){const id=managedTeamId(db);return id&&db.teams[id]?db.teams[id]:null}
+function setManagedTeam(db,teamId){
+  if(teamId!==null&&(!db.teams[teamId]||db.teams[teamId].active===false))throw new Error('관리할 수 없는 팀입니다');
+  db.manager.teamId=teamId;return teamId;
+}
+
 function validateConfig(cfg){
   const errs=[], shorts=new Set();
   if(!cfg.regions.length)errs.push('리그가 하나 이상 있어야 합니다');
@@ -190,6 +192,7 @@ function leagueComp(db,rid,div=1){
   return {id:div===2?R.short+'2':R.short,name:div===2?divName(R):R.leagueName,short:div===2?R.short+'2':R.short,region:rid,div,teams,rules:{fearless:true},stages:leagueStages(R,teams.length,div)};
 }
 function startWorldSeason(db,myTeam,seed){
+  setManagedTeam(db,myTeam);
   const regs=Object.values(db.regions), I=db.worldConfig.internationals, maxK=Math.max(...regs.map(r=>r.splits||1));
   const steps=[];
   const intlSteps=tm=>{const tops=I.filter(i=>i.timing===tm&&i.tier!=='low').sort((a,b)=>(a.prestige||1)-(b.prestige||1)),lows=I.filter(i=>i.timing===tm&&i.tier==='low');
@@ -203,7 +206,7 @@ function startWorldSeason(db,myTeam,seed){
     steps.push(...intlSteps(tim[sp]));
   }
   const manage=db.world?db.world.manage:(db.worldConfig.manage||'manual');
-  db.world={year:db.year,seed,myTeam,manage,phase:'season',seasons:{},steps,step:-1,report:null,lastDate:`${db.year}-01-07`,offers:[],marketLog:[]};
+  db.world={year:db.year,seed,manage,phase:'season',seasons:{},steps,step:-1,report:null,lastDate:`${db.year}-01-07`,offers:[],marketLog:[]};
   seasonPatch(db,`${db.year}-01-02`,new RNG(seed+db.year,'patch'));
   setGoals(db);
   advanceStep(db);
@@ -211,7 +214,7 @@ function startWorldSeason(db,myTeam,seed){
 function seasonLastDate(s){return s.days[s.days.length-1].date}
 // 저장 공간 절약: 내 지역이 아닌 리그 경기는 세트 요약만 남긴다
 function compactSeason(db,s){
-  if(s.compact)return; const my=db.teams[db.world.myTeam].region; if(s.region===my||db.competitions[s.comp].international)return;
+  if(s.compact)return; const my=db.teams[managedTeamId(db)].region; if(s.region===my||db.competitions[s.comp].international)return;
   for(const d of s.days)for(const m of d.matches)if(m.res){const r=m.res;r.games=r.games.map(g=>({n:g.n,blue:g.blue,red:g.red,winner:g.winner,kills:g.kills,dur:g.dur,mvp:g.mvp}));delete r.tac;r.lite=true}
   s.compact=true;
 }
@@ -236,7 +239,7 @@ function advanceStep(db){
         for(const div of R.div2?[1,2]:[1]){
           if(activeTeams(db,R.id,div).length<2)continue;
           const comp=leagueComp(db,R.id,div); db.competitions[comp.id]=comp;
-          const key=comp.id+'-'+st.split, s=newSeason(db,comp.id,w.year,`${w.seed}/${w.year}/${key}`,w.myTeam,start);
+          const key=comp.id+'-'+st.split, s=newSeason(db,comp.id,w.year,`${w.seed}/${w.year}/${key}`,start);
           s.key=key;s.split=st.split;s.region=R.id;s.div=div;s.step=w.step;s.label=(R.splits||1)>1?SPLIT_NAME[st.split]:'';
           w.seasons[key]=s;any=true;
         }
@@ -275,7 +278,7 @@ function startInternational(db,id,start,taken=new Set()){
   if(teams.length<4)return false;
   teams.forEach(t=>taken.add(t));
   db.competitions[id]={id,name:it.name,short:it.short||id,teams,rules:{fearless:true},international:true,tier:it.tier||'top',stages:intlStages(it.format,teams,it.bo)};
-  const s=newSeason(db,id,w.year,`${w.seed}/${w.year}/${id}`,w.myTeam,start);
+  const s=newSeason(db,id,w.year,`${w.seed}/${w.year}/${id}`,start);
   s.key=id;s.label='';s.step=w.step;w.seasons[id]=s;
   s.stagesInfo=db.competitions[id].stages.map(x=>x.name).join(' → ');
   news(db,`${it.name} 개막 — ${teams.length}팀 참가 (${INTL_FORMATS[it.format]||it.format})`);
@@ -286,6 +289,7 @@ function nextDate(db){const a=activeSeasons(db);if(!a.length)return null;return 
 function playWorldDay(db){
   const w=db.world; if(w.phase!=='season')return null;
   const d=nextDate(db); if(!d){advanceStep(db);return {date:null,played:[]}}
+  db.worldDate=d;
   patchTick(db,d,new RNG(w.seed+d,'patch'));
   dailyRecovery(db);
   const played=[];
@@ -342,7 +346,7 @@ function runOffseason(db){
   ensureEven(db,rng,ev);
   genCoachPool(db,rng);
   // 훈련 시설: 여유 자금이 있는 AI 구단은 증설 (최대 5단계)
-  for(const t of activeTeams(db,null,1)){if(t.id===w.myTeam||(t.facility||2)>=5)continue;const c=facilityCost(db,t);
+  for(const t of activeTeams(db,null,1)){if(t.id===managedTeamId(db)||(t.facility||2)>=5)continue;const c=facilityCost(db,t);
     if(t.finance.cash>c*3&&rng.chance(['youth','balanced'].includes(t.philosophy)?0.5:0.25)){t.finance.cash=Math.round((t.finance.cash-c)*10)/10;t.facility=(t.facility||2)+1}}
   // 사기: 연봉 불만·출전 기회. 사기가 바닥이면 이적 요청
   for(const t of activeTeams(db)){const before=t.roster.slice();t._pre=before;
@@ -350,8 +354,8 @@ function runOffseason(db){
       const fair=marketSalary(db,p,t.region), starter=starterFor(db,t,p.role)===p;
       p.morale=clamp(p.morale*0.8+13+(p.contract.salary<fair*0.7?-12:0)+(starter?4:-8)+(p.personality.ambition>70&&teamStrength(db,t.id)<db.regions[t.region].strength?-6:0),0,100);
       p.form=0;p.fatigue=5;p.wantsOut=p.morale<30;
-      if(p.wantsOut&&t.id===w.myTeam)ev(`${p.name} 이적 요청 (사기 ${Math.round(p.morale)})`)}}
-  w.sponsorOffers=sponsorOffers(db,db.teams[w.myTeam]);
+      if(p.wantsOut&&t.id===managedTeamId(db))ev(`${p.name} 이적 요청 (사기 ${Math.round(p.morale)})`)}}
+  w.sponsorOffers=sponsorOffers(db,db.teams[managedTeamId(db)]);
   w.report=rep; w.phase='market'; w.offers=[]; w.marketLog=[];
   return rep;
 }
@@ -363,7 +367,7 @@ function closeMarket(db){
   ensureEven(db,rng,ev);
   for(const t of activeTeams(db)){const pre=t._pre||[];const now=ROLES.map(r=>starterFor(db,t,r)).filter(Boolean).map(p=>p.id);const changed=now.filter(id=>!pre.includes(id)).length;
     t.synergy=clamp(teamSynergy(t)*0.85+15-changed*8,10,100);delete t._pre;
-    if(!t.sponsor&&t.id!==w.myTeam&&rng.chance(0.5)){const o=sponsorOffers(db,t);t.sponsor={...rng.pick(o),until:db.year+0}}}
+    if(!t.sponsor&&t.id!==managedTeamId(db)&&rng.chance(0.5)){const o=sponsorOffers(db,t);t.sponsor={...rng.pick(o),until:db.year+0}}}
   for(const R of Object.values(db.regions)){const ts=activeTeams(db,R.id,1);R.teams=ts.length;if(ts.length)R.strength=Math.round(avg(ts.map(t=>teamStrength(db,t.id))))}
   rep.retired.slice(0,3).forEach(r=>news(db,`${db.players[r.pid].name} 은퇴 (${r.age}세)`));
   w.phase='preseason';
@@ -445,38 +449,8 @@ function unpackDB(str){
   delete db.packed; return db;
 }
 
-// 예전 저장: 중하위권 국제대회가 없으면 국제 사무국 신설 형태로 추가
-function migrateIntl(db){
-  const I=db.worldConfig.internationals; if(I.some(i=>i.tier==='low'))return db;
-  for(const i of I){const p=INTL_PRESETS.find(x=>x.id===i.id);if(p&&!i.tier)i.tier=p.tier}
-  const add=INTL_PRESETS.filter(p=>p.tier==='low'&&!I.some(i=>i.id===p.id));
-  if(!add.length)return db;
-  add.forEach(p=>I.push({...p}));
-  db.global=db.global||{decisions:[],power:{}};
-  const yr=db.world?db.world.year:db.year;
-  db.global.decisions.push({year:yr,what:`중하위권 국제대회 신설: ${add.map(p=>p.name).join(', ')}`,why:'상위 대회에 못 나가는 팀들의 국제 경험·상금 확대 (다음 시즌부터)'});
-  return db;
-}
-
-// 예전 저장: 새로 추가된 실제 챔피언을 현재 패치와 기준 패치에 넣는다
-function migrateChamps(db){
-  const base=buildPatch().champions; let n=0;
-  for(const [k,c] of Object.entries(base)){if(!db.patch.champions[k]){db.patch.champions[k]=JSON.parse(JSON.stringify(c));n++}
-    if(db.patches&&db.patches.base&&!db.patches.base.champions[k])db.patches.base.champions[k]=JSON.parse(JSON.stringify(c))}
-  if(n)news(db,`챔피언 ${n}명 추가 — 현재 LoL 챔피언 전원 합류`);
-  return db;
-}
 function stepOf(db,s){
   if(s.step!==undefined)return s.step;
   const w=db.world;
   return w.steps.findIndex(st=>st.kind==='league'?st.split===s.split:(st.ids||[st.id]).includes(s.comp));
-}
-
-// 예전 저장: 3스플릿제·퍼스트 스탠드 시기 이관 (다음 시즌부터 적용)
-function migrateSplits(db){
-  let ch=false;
-  for(const R of Object.values(db.regions))if(R.tier==='major'&&(R.splits||1)<3&&!R.splitsMigrated){R.splits=3;R.splitsMigrated=true;ch=true}
-  for(const it of db.worldConfig.internationals){if(it.id==='FS'&&it.timing!=='early'){it.timing='early';ch=true}if(it.id==='AMC'&&it.timing!=='early'){it.timing='early';ch=true}}
-  if(ch){db.global=db.global||{decisions:[],power:{}};db.global.decisions.push({year:db.world?db.world.year:db.year,what:'3스플릿제 도입 (윈터 → 퍼스트 스탠드 → 스프링 → MSI → 서머 → 월즈)',why:'메이저 리그 일정 통일 — 다음 시즌부터 적용'})}
-  return db;
 }
