@@ -35,7 +35,7 @@ function genPlayer(db,rng,o){
   db.players[p.id]=p; return p;
 }
 function genCoach(rng,base){const nm=rng.pick(NICK_A)+rng.pick(NICK_B);return {name:nm.charAt(0).toUpperCase()+nm.slice(1),draft:Math.round(clamp(base+rng.normal(0,8),40,95)),analysis:Math.round(clamp(base+rng.normal(0,8),40,95)),development:Math.round(clamp(base+rng.normal(0,10),35,95))}}
-function genTactics(rng){return {aggression:rng.int(35,80),risk_tolerance:rng.int(30,75),focus:rng.pick(['balanced','top','mid','bot']),objective_priority:rng.int(45,80),vision_investment:rng.int(45,80),scaling_preference:rng.int(30,75)}}
+function genTactics(rng){return {aggression:rng.int(35,80),risk_tolerance:rng.int(30,75),objective_priority:rng.int(45,80),vision_investment:rng.int(45,80),scaling_preference:rng.int(30,75)}}
 const PHILOSOPHIES=['win-now','youth','balanced','superstar','cost'];
 const PHIL_KO={'win-now':'즉시 전력','youth':'유망주 육성','balanced':'균형','superstar':'스타 영입','cost':'효율 중시'};
 const TRAIN_POINTS=100;
@@ -53,12 +53,12 @@ function facilityUpkeep(db,t){return Math.round((t.facility||2)*1.2*psTeam(db,t)
 // ---------- 지역 프리셋 / 월드 설정 ----------
 // 실제 LoL e스포츠 구조를 본뜬 기본 리그 (리그 수준·시장 규모는 고정, 구조만 편집 가능)
 const REGION_PRESETS = {
-  KR:{name:'한국',leagueName:'LCK',short:'LCK',strength:75,templates:true,tier:'major',d:{teams:10,splits:3,format:'rr_de',playoffTake:6,div2:true,system:'franchise',slots:4,salaryCap:40,salaryFloor:12}},
-  CN:{name:'중국',leagueName:'LPL',short:'LPL',strength:74,tier:'major',d:{teams:14,splits:3,format:'groups_po',playoffTake:8,div2:true,system:'franchise',slots:4,salaryCap:70,salaryFloor:18}},
-  EU:{name:'유럽',leagueName:'LEC',short:'LEC',strength:71,tier:'major',d:{teams:10,splits:3,format:'rr_de',playoffTake:8,system:'franchise',slots:3,salaryCap:0,salaryFloor:6}},
-  NA:{name:'북미',leagueName:'LCS',short:'LCS',strength:68,tier:'major',d:{teams:8,splits:3,format:'rr_de',playoffTake:6,system:'franchise',slots:3,salaryCap:0,salaryFloor:8}},
-  AP:{name:'아시아태평양',leagueName:'LCP',short:'LCP',strength:67,tier:'major',d:{teams:8,splits:3,format:'rr_po',playoffTake:6,system:'mixed',slots:3,salaryCap:0,salaryFloor:3}},
-  BR:{name:'브라질',leagueName:'CBLOL',short:'CBLOL',strength:65,tier:'major',d:{teams:8,splits:3,format:'rr_po',playoffTake:6,system:'franchise',slots:3,salaryCap:0,salaryFloor:2}},
+  KR:{name:'한국',leagueName:'LCK',short:'LCK',strength:75,templates:true,tier:'major',d:{teams:12,splits:3,format:'rr_de',playoffTake:6,div2:true,system:'franchise',slots:4,salaryCap:40,salaryFloor:12}},
+  CN:{name:'중국',leagueName:'LPL',short:'LPL',strength:74,tier:'major',d:{teams:16,splits:3,format:'groups_po',playoffTake:8,div2:true,system:'franchise',slots:4,salaryCap:70,salaryFloor:18}},
+  EU:{name:'유럽',leagueName:'LEC',short:'LEC',strength:71,tier:'major',d:{teams:12,splits:3,format:'rr_de',playoffTake:8,system:'franchise',slots:3,salaryCap:0,salaryFloor:6}},
+  NA:{name:'북미',leagueName:'LCS',short:'LCS',strength:68,tier:'major',d:{teams:10,splits:3,format:'rr_de',playoffTake:6,system:'franchise',slots:3,salaryCap:0,salaryFloor:8}},
+  AP:{name:'아시아태평양',leagueName:'LCP',short:'LCP',strength:67,tier:'major',d:{teams:12,splits:3,format:'rr_po',playoffTake:6,system:'mixed',slots:3,salaryCap:0,salaryFloor:3}},
+  BR:{name:'브라질',leagueName:'CBLOL',short:'CBLOL',strength:65,tier:'major',d:{teams:10,splits:3,format:'rr_po',playoffTake:6,system:'franchise',slots:3,salaryCap:0,salaryFloor:2}},
   VN:{name:'베트남',leagueName:'VCS',short:'VCS',strength:66,tier:'emerging',parent:'AP',d:{teams:8,splits:2,format:'rr_po',playoffTake:6,system:'relegation',slots:3}},
   JP:{name:'일본',leagueName:'LJL',short:'LJL',strength:62,tier:'emerging',parent:'AP',d:{teams:6,splits:2,format:'rr_po',playoffTake:4,system:'franchise',slots:3}},
   TW:{name:'대만·홍콩·마카오',leagueName:'PCS',short:'PCS',strength:64,tier:'emerging',parent:'AP',d:{teams:8,splits:2,format:'rr_po',playoffTake:6,system:'relegation',slots:3}},
@@ -75,8 +75,6 @@ const INTL_PRESETS=[
   {id:'MSI',name:'미드 시즌 인비테이셔널',short:'MSI',tier:'top',timing:'mid',entry:'slots',format:'playin_de',bo:5,ratio:0.5,prestige:2},
   {id:'WORLDS',name:'월드 챔피언십',short:'WC',tier:'top',timing:'end',entry:'slots',format:'playin_swiss_ko',bo:5,ratio:1,prestige:3},
   // 중하위권 대회 (tier low): 상위 대회와 같은 기간에 열리고, 그 대회에 못 나간 팀이 출전
-  {id:'WCC',name:'월드 챌린저 컵',short:'WCC',tier:'low',timing:'end',entry:'next',per:4,format:'groups_ko',bo:5,prestige:0.5},
-  {id:'MCC',name:'미드 시즌 챌린저 컵',short:'MCC',tier:'low',timing:'mid',entry:'next',per:3,format:'groups_ko',bo:3,prestige:0.4},
   {id:'ASCI',name:'아시아 스타 챌린저스',short:'ASCI',tier:'low',timing:'mid',entry:'div2',per:3,zone:'asia',format:'groups_ko',bo:3,prestige:0.3},
   {id:'EMM',name:'EMEA 마스터즈',short:'EMM',tier:'low',timing:'end',entry:'div2',per:3,zone:'emea',format:'groups_ko',bo:3,prestige:0.3},
   {id:'AMC',name:'아메리카스 컵',short:'AMC',tier:'low',timing:'early',entry:'next',per:3,zone:'americas',format:'groups_ko',bo:3,prestige:0.3}
@@ -92,7 +90,7 @@ function regionCfg(id,over={}){
 }
 function defaultWorldConfig(){return {
   regions:['KR','CN','EU','NA','AP','BR'].map(id=>regionCfg(id)),
-  internationals:['FS','MSI','WORLDS','MCC','WCC','ASCI','EMM','AMC'].map(id=>({...INTL_PRESETS.find(p=>p.id===id)})),
+  internationals:['FS','MSI','WORLDS','ASCI','EMM','AMC'].map(id=>({...INTL_PRESETS.find(p=>p.id===id)})),
   subs:1, changes:'normal', startYear:2027, manage:'manual'
 }}
 const CHANGE_F={none:0,low:0.5,normal:1,high:1.8};
