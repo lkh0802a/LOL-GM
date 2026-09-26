@@ -130,28 +130,28 @@ function buildPatch(){
 // ---- 월드 생성 (가상 선수/팀) ----
 const TEAM_TEMPLATES = [
   {id:'HTG', name:'Hangyeol Tigers', short:'HTG', base:78, coach:{name:'Grayson', draft:78, analysis:80},
-   tactics:{aggression:55, risk_tolerance:45, focus:'mid', objective_priority:65, vision_investment:70, scaling_preference:60},
+   tactics:{aggression:55, risk_tolerance:45, objective_priority:65, vision_investment:70, scaling_preference:60},
    players:[['Rook','TOP',23,'laner',['Ornn',"K'Sante"]],['Veil','JGL',24,'macro',['Sejuani','Maokai']],['Solace','MID',25,'star',['Azir','Orianna']],['Kestrel','ADC',21,'mechanical',["Kai'Sa",'Xayah']],['Anchor','SUP',26,'caller',['Rakan','Nautilus']]]},
   {id:'SBZ', name:'Saebit Blaze', short:'SBZ', base:77, coach:{name:'Marrow', draft:70, analysis:68},
-   tactics:{aggression:80, risk_tolerance:70, focus:'bot', objective_priority:55, vision_investment:50, scaling_preference:35},
+   tactics:{aggression:80, risk_tolerance:70, objective_priority:55, vision_investment:50, scaling_preference:35},
    players:[['Tyrant','TOP',22,'aggressive',['Aatrox','Rumble']],['Fang','JGL',20,'aggressive',['Lee Sin','Vi']],['Cinder','MID',23,'mechanical',['Ahri','Syndra']],['Volt','ADC',24,'laner',['Varus','Ezreal']],['Guard','SUP',25,'aggressive',['Nautilus','Alistar']]]},
   {id:'OCN', name:'Ocean Gaming', short:'OCN', base:74, coach:{name:'Hale', draft:82, analysis:84},
-   tactics:{aggression:40, risk_tolerance:35, focus:'balanced', objective_priority:75, vision_investment:80, scaling_preference:70},
+   tactics:{aggression:40, risk_tolerance:35, objective_priority:75, vision_investment:80, scaling_preference:70},
    players:[['Tide','TOP',27,'macro',['Jax',"K'Sante"]],['Current','JGL',26,'macro',['Sejuani','Viego']],['Harbor','MID',28,'caller',['Orianna','Taliyah']],['Gale','ADC',25,'laner',['Jinx','Xayah']],['Buoy','SUP',27,'caller',['Braum','Karma']]]},
   {id:'NVA', name:'Nova Esports', short:'NVA', base:72, coach:{name:'Ives', draft:60, analysis:62},
-   tactics:{aggression:65, risk_tolerance:60, focus:'top', objective_priority:50, vision_investment:55, scaling_preference:50},
+   tactics:{aggression:65, risk_tolerance:60, objective_priority:50, vision_investment:55, scaling_preference:50},
    players:[['Nova','TOP',19,'mechanical',['Jax','Aatrox']],['Orbit','JGL',19,'aggressive',['Viego','Lee Sin']],['Pulse','MID',18,'star',['Syndra','Ahri']],['Comet','ADC',20,'mechanical',['Ezreal',"Kai'Sa"]],['Halo','SUP',21,'laner',['Karma','Rakan']]]},
   {id:'CRW', name:'Crown Gaming Club', short:'CRW', base:77, coach:{name:'Aldous', draft:76, analysis:74},
-   tactics:{aggression:50, risk_tolerance:50, focus:'bot', objective_priority:70, vision_investment:65, scaling_preference:65},
+   tactics:{aggression:50, risk_tolerance:50, objective_priority:70, vision_investment:65, scaling_preference:65},
    players:[['Regal','TOP',25,'macro',['Ornn','Jax']],['Scepter','JGL',23,'caller',['Maokai','Sejuani']],['Monarch','MID',24,'star',['Azir','Syndra']],['Crest','ADC',22,'laner',['Jinx','Varus']],['Warden','SUP',24,'caller',['Braum','Alistar']]]},
   {id:'STM', name:'Storm Esports', short:'STM', base:75, coach:{name:'Rennick', draft:72, analysis:70},
-   tactics:{aggression:70, risk_tolerance:60, focus:'mid', objective_priority:55, vision_investment:55, scaling_preference:40},
+   tactics:{aggression:70, risk_tolerance:60, objective_priority:55, vision_investment:55, scaling_preference:40},
    players:[['Thunder','TOP',22,'aggressive',['Rumble','Aatrox']],['Squall','JGL',21,'mechanical',['Vi','Lee Sin']],['Static','MID',22,'mechanical',['Ahri','Taliyah']],['Bolt','ADC',23,'mechanical',['Xayah',"Kai'Sa"]],['Aegis','SUP',23,'aggressive',['Rakan','Nautilus']]]},
   {id:'RSG', name:'Rising Star Gaming', short:'RSG', base:72, coach:{name:'Pell', draft:66, analysis:72},
-   tactics:{aggression:45, risk_tolerance:40, focus:'balanced', objective_priority:65, vision_investment:70, scaling_preference:60},
+   tactics:{aggression:45, risk_tolerance:40, objective_priority:65, vision_investment:70, scaling_preference:60},
    players:[['Ridge','TOP',24,'macro',["K'Sante",'Ornn']],['Sprout','JGL',20,'macro',['Sejuani','Viego']],['Glint','MID',21,'laner',['Orianna','Azir']],['Arrow','ADC',22,'laner',['Varus','Jinx']],['Petal','SUP',23,'caller',['Karma','Braum']]]},
   {id:'IRN', name:'Iron Wolves', short:'IRN', base:71, coach:{name:'Brock', draft:58, analysis:60},
-   tactics:{aggression:60, risk_tolerance:55, focus:'top', objective_priority:50, vision_investment:50, scaling_preference:45},
+   tactics:{aggression:60, risk_tolerance:55, objective_priority:50, vision_investment:50, scaling_preference:45},
    players:[['Forge','TOP',26,'laner',['Aatrox','Jax']],['Anvil','JGL',25,'aggressive',['Vi','Viego']],['Rivet','MID',24,'caller',['Taliyah','Orianna']],['Spark','ADC',21,'mechanical',['Ezreal','Xayah']],['Plate','SUP',27,'macro',['Alistar','Maokai']]]}
 ];
 const STYLE_BIAS = {
@@ -162,4 +162,3 @@ const STYLE_BIAS = {
   caller:{g:{mental:7,macro:5,mechanical:-5}, t:{teamplay:15,engage_preference:10}},
   aggressive:{g:{combat:3,mechanical:2,mental:-4}, t:{aggression:22,risk_taking:18,roaming:15,engage_preference:12}}
 };
-
