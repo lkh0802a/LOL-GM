@@ -110,7 +110,7 @@ function officeDecisions(db,rng,f,ev,mid){
   }
 }
 function officeMidSeason(db,rng,f){officeDecisions(db,rng,f,t=>news(db,t),true)}
-function foldTeam(db,t){t.active=false;t.folded=db.year;t.roster.forEach(pid=>{const p=db.players[pid];if(p){p.team=null;p.faYears=0}});t.roster=[]}
+function foldTeam(db,t){t.active=false;t.folded=db.year;for(const pid of t.roster.slice()){const p=db.players[pid];if(p){removePlayerFromTeam(db,p);p.faYears=0}}t.roster=[]}
 
 // 세계 단위 결정: 새 지역, 새 국제대회, 구단 인수
 function worldDecisions(db,rng,f,ev){
