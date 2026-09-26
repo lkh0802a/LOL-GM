@@ -93,3 +93,22 @@ The architecture must leave room for:
 - persistent saves
 
 These systems are not Phase 0 implementation requirements.
+
+## Shared AI development workflow
+
+LOL GM is developed collaboratively by **ChatGPT + Claude in the same GitHub codebase**.
+
+Neither assistant should assume its own chat history is the project state. The repository and canonical docs are the handoff surface.
+
+For every substantial task:
+
+1. sync understanding from the latest repository state
+2. inspect existing implementation before writing a replacement
+3. follow the current phase and canonical specification
+4. integrate with the other assistant's existing work
+5. leave code and documentation understandable to the next assistant
+6. prefer one shared implementation over parallel alternatives
+
+The user should not need to edit UI/UX or code manually. Changes are evaluated through runnable builds and user playtesting/feedback.
+
+See `docs/LOL_GM_SPEC.md#43-chatgpt--claude-collaborative-development-workflow` for the full collaboration contract.
