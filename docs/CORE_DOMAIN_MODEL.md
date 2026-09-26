@@ -225,6 +225,12 @@ interface Season {
 
 Season transition preserves persistent world entities and histories.
 
+### Season and match identity
+
+Every season has a stable `SeasonId`.
+
+Every scheduled match has a stable ID namespaced by that season and stores explicit `seasonId` and `competitionId` references. Do not reintroduce season-local IDs such as bare `m0`.
+
 ## Match
 
 A match record should separate scheduling, participation and outcome.
@@ -259,6 +265,12 @@ Conceptually store:
 - completion
 
 UI should never be able to create an illegal draft by directly mutating arrays.
+
+### Champion identity
+
+Champion display names are presentation data. Durable references use stable `ChampionId` values.
+
+Current Phase 1 runtime already uses ChampionId for mastery pools, draft state, match state, champion statistics and patch targeting.
 
 ## Champion
 
