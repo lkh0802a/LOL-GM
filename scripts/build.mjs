@@ -13,6 +13,7 @@ const modules = [
   'office.js',
   'finance.js',
   'features.js',
+  'career.js',
   'app.js',
 ];
 
