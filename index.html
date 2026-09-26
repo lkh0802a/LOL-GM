@@ -1624,7 +1624,7 @@ function addRegion(db,rng,cfg){
 }
 function buildWorld(cfg){
   cfg=JSON.parse(JSON.stringify(cfg||defaultWorldConfig()));
-  const db={version:9,saveId:'save-'+Date.now().toString(36),manager:{id:'manager-human',teamId:null,startMode:null,careerStartedAt:null},worldDate:`${cfg.startYear||2027}-01-01`,coachPool:[],awards:[],hof:[],global:{decisions:[],power:{}},patch:buildPatch(),teams:{},players:{},regions:{},competitions:{},worldConfig:cfg,world:null,history:[],news:[],year:cfg.startYear||2027,configDirty:false,scout:{}};
+  const db={version:10,saveId:'save-'+Date.now().toString(36),manager:{id:'manager-human',teamId:null,startMode:null,careerStartedAt:null},worldDate:`${cfg.startYear||2027}-01-01`,coachPool:[],awards:[],hof:[],global:{decisions:[],power:{}},patch:buildPatch(),teams:{},players:{},regions:{},competitions:{},worldConfig:cfg,world:null,history:[],news:[],year:cfg.startYear||2027,configDirty:false,scout:{}};
   const rng=new RNG('world-v7','gen');
   initPatches(db);
   for(const r of cfg.regions) addRegion(db,rng,r);
@@ -2520,14 +2520,27 @@ function hallOfFame(db,p){
 
 /* ==== FILE: app.js ==== */
 // ===== LOL GM: UI =====
-const SAVE_VERSION=9;
-const STORAGE_NS='lol-gm';
+const SAVE_VERSION=10;
+const STORAGE_NS='lol-gm-v10';
+const LEGACY_STORAGE_PREFIXES=['lol-gm','lolfm'];
 const DIRECT_FILE_PREVIEW=location.protocol==='file:'||location.origin==='null';
 let SLOT=(()=>{try{return localStorage.getItem(STORAGE_NS+'-slot')||'1'}catch(e){return '1'}})();
 const STORE_BASE=STORAGE_NS+'-db-v'+SAVE_VERSION+'-';
 let STORE=STORE_BASE+SLOT;
 let DB=null, LAST=null, LASTSER=null, VIEW='season', SQUAD=null, OPEN_P=null, LOGMODE='major', SAVEFAIL=false, MSG='';
-// Phase 1부터 구버전 세이브 호환은 의도적으로 지원하지 않는다.
+// 기존 개발 세이브는 호환하지 않는다. v10 시작 시 이전 lol-gm/lolfm 저장소를 폐기한다.
+function purgeLegacySaves(){
+  try{
+    for(let i=localStorage.length-1;i>=0;i--){
+      const k=localStorage.key(i);
+      if(!k||k.startsWith(STORAGE_NS+'-'))continue;
+      if(LEGACY_STORAGE_PREFIXES.some(p=>k===p||k.startsWith(p+'-')))localStorage.removeItem(k);
+    }
+  }catch(e){}
+  if(!DIRECT_FILE_PREVIEW&&typeof indexedDB!=='undefined'){
+    for(const name of ['lol-gm','lolfm'])try{indexedDB.deleteDatabase(name)}catch(e){}
+  }
+}
 // 저장: IndexedDB(용량 큼) 우선, 안 되면 localStorage
 function idb(){return new Promise((res,rej)=>{
   if(DIRECT_FILE_PREVIEW||typeof indexedDB==='undefined')return rej(new Error('IndexedDB unavailable in direct-file preview'));
@@ -2553,6 +2566,7 @@ async function idbSet(k,v){const d=await idb();return new Promise((res,rej)=>{
   try{const tx=d.transaction('kv','readwrite');tx.objectStore('kv').put(v,k);tx.oncomplete=()=>finish(true);tx.onerror=()=>finish(false,tx.error||new Error('IndexedDB write failed'));tx.onabort=()=>finish(false,tx.error||new Error('IndexedDB write aborted'))}catch(e){finish(false,e)}
 })}
 async function loadDB(){
+  purgeLegacySaves();
   try{const s=await idbGet(STORE);if(s){const d=unpackDB(s);if(d.version===SAVE_VERSION)return d}}catch(e){}
   try{const s=localStorage.getItem(STORE);if(s){const d=unpackDB(s);if(d.version===SAVE_VERSION)return d}}catch(e){}
   return buildWorld();

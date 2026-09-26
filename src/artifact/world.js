@@ -237,7 +237,7 @@ function addRegion(db,rng,cfg){
 }
 function buildWorld(cfg){
   cfg=JSON.parse(JSON.stringify(cfg||defaultWorldConfig()));
-  const db={version:9,saveId:'save-'+Date.now().toString(36),manager:{id:'manager-human',teamId:null,startMode:null,careerStartedAt:null},worldDate:`${cfg.startYear||2027}-01-01`,coachPool:[],awards:[],hof:[],global:{decisions:[],power:{}},patch:buildPatch(),teams:{},players:{},regions:{},competitions:{},worldConfig:cfg,world:null,history:[],news:[],year:cfg.startYear||2027,configDirty:false,scout:{}};
+  const db={version:10,saveId:'save-'+Date.now().toString(36),manager:{id:'manager-human',teamId:null,startMode:null,careerStartedAt:null},worldDate:`${cfg.startYear||2027}-01-01`,coachPool:[],awards:[],hof:[],global:{decisions:[],power:{}},patch:buildPatch(),teams:{},players:{},regions:{},competitions:{},worldConfig:cfg,world:null,history:[],news:[],year:cfg.startYear||2027,configDirty:false,scout:{}};
   const rng=new RNG('world-v7','gen');
   initPatches(db);
   for(const r of cfg.regions) addRegion(db,rng,r);
