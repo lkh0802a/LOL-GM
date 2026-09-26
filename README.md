@@ -83,6 +83,17 @@ The folders above are architectural boundaries, not a requirement to create empt
 4. **Phase 3 — Living World:** worldwide leagues, internationals, patches, regional meta, new champions and long-term history.
 5. **Phase 4 — Production:** backend/API, database, server saves, deployment, PWA, security and production migrations.
 
+## Key project documents
+
+- `docs/LOL_GM_SPEC.md` — canonical full game specification
+- `docs/DEVELOPMENT.md` — current phase and development rules
+- `docs/ARTIFACT_INTEGRATION.md` — current Artifact migration rules
+- `docs/CLAUDE_HANDOFF.md` — concise implementation handoff for Claude
+- `docs/PHASE_0_ACCEPTANCE_CHECKLIST.md` — migration acceptance criteria
+- `docs/POST_ARTIFACT_ROADMAP.md` — first playable core roadmap
+- `docs/CORE_DOMAIN_MODEL.md` — domain-model guardrails
+- `docs/DECISIONS.md` — high-impact decisions that should not be repeatedly reopened
+
 ## Working rule for AI coding assistants
 
 Read `docs/LOL_GM_SPEC.md` and `docs/DEVELOPMENT.md` before substantial implementation.
