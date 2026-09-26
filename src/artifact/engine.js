@@ -331,8 +331,8 @@ function jungleTick(st){
       const al=lanePS(st,side,l).filter(p=>alive(st,p));
       const tgt=en.reduce((b,p)=>p.hp<b.hp?p:b);
       const pr=-pushFor(st,side,l), hpF=1-tgt.hp, fl=tgt.flashAt>st.t?1:0, vis=visFor(st,side,l);
-      const focus=t.focus===l?0.25:0, allyCC=al.reduce((s,p)=>s+p.champ.kit.cc,0)/20;
-      const f=[['상대 라인 푸시',0.4*pr],['상대 체력',0.5*hpF],['상대 점멸 없음',0.35*fl],['시야',0.3*vis],['전술 집중',focus],['아군 CC',allyCC],['공격성',0.2*td(j,'aggression')]];
+      const allyCC=al.reduce((s,p)=>s+p.champ.kit.cc,0)/20;
+      const f=[['상대 라인 푸시',0.4*pr],['상대 체력',0.5*hpF],['상대 점멸 없음',0.35*fl],['시야',0.3*vis],['아군 CC',allyCC],['공격성',0.2*td(j,'aggression')]];
       const trueU=0.2+f.reduce((s,x)=>s+x[1],0);
       opts.push({kind:'gank',lane:l,tgt,al,en,u:trueU+R.info.normal(0,noiseSd),trueU,f,pr,hpF,fl,vis});
     }
