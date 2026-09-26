@@ -2,83 +2,94 @@
 
 ## Current Phase
 
-`CURRENT_PHASE = PHASE_0_PROTOTYPE`
+`CURRENT_PHASE = PHASE_0_ARTIFACT_INTEGRATION`
 
-Phase 0 exists to establish a durable mobile-first product shell and validate the core game flow.
+The immediate goal is **not to prebuild the final UI in this repository**. Claude Artifact is used to create and validate the mobile-first prototype first. This repository is prepared as a clean landing zone so the approved Artifact can be migrated without a rewrite.
 
-### Build now
+Read `docs/ARTIFACT_INTEGRATION.md` before importing Artifact code.
 
-- New game entry
-- Region / league / team selection
-- Main dashboard
-- Roster
-- Player detail
-- Schedule
-- Standings
-- Draft shell
-- Match shell
-- Result shell
-- Navigation to transfers, champions and statistics
-- Responsive mobile-first layout
-- Explicit mock data/state where real systems do not exist yet
+## Repository responsibility during Phase 0
 
-### Do not build yet
+Prepare boundaries, conventions and migration paths for:
 
-Do not pretend the following systems are complete during Phase 0:
+- app shell / routing
+- reusable presentation components
+- feature screens
+- replaceable mock data
+- application/game state
+- domain types
+- simulation engine
+- data/config
 
-- full match simulation
-- world AI simulation
-- transfer market AI
-- scouting uncertainty
-- long-term player development
-- patch/meta simulation
-- complete financial simulation
-- production backend/database/authentication
+Do not create competing page designs before the Artifact is imported.
 
-Their future boundaries should be respected in the architecture.
+## Planned boundaries
+
+```text
+src/
+├─ app/          # routes and app shell after Artifact migration
+├─ artifact/     # temporary landing zone for exported Artifact code
+├─ components/   # reusable presentation extracted from Artifact
+├─ features/     # screen/feature modules extracted from Artifact
+├─ stores/       # replaceable application/game state
+├─ types/        # shared domain contracts
+├─ engine/       # UI-independent game/simulation logic
+├─ data/         # mock/initial/config data
+└─ utils/
+```
+
+Directories do not need to exist until code requires them.
 
 ## Core separation
 
-UI components must not become the source of truth for simulation rules.
-
 ```text
-UI / Features
-      ↓
-Game State / Application Services
-      ↓
+Artifact / UI
+     ↓
+Application State
+     ↓
 Domain + Simulation Engine
-      ↓
-Config / World Data
+     ↓
+World Data / Rules / Config
 ```
 
-Examples:
+UI must never become the source of truth for simulation rules.
 
-- A match screen displays a match result; it does not decide the winner.
-- A player card displays ability data; it does not calculate player growth.
-- A draft screen sends draft actions; draft legality belongs to draft/domain logic.
-- League screens display standings; competition rules belong to league/rules logic.
+## Phase 0 mock rule
 
-## Data rules
+Artifact mock data is allowed and expected.
 
-- Use stable IDs for persistent entities.
-- Do not use display names as foreign keys.
-- Avoid league-name hardcoding for rules.
-- Keep fictional league/team/champion additions data-driven.
-- Preserve a path toward save migrations and historical snapshots.
-- Mock data must be clearly identifiable and replaceable.
+However:
 
-## UX rules
+- identify mock data clearly
+- keep it replaceable
+- avoid spreading the same mock object across unrelated components
+- use stable IDs
+- do not treat mock schemas as final domain schemas automatically
+- do not fake completed simulation systems
 
-- Smartphone portrait is the primary viewport.
-- Important actions must be usable without hover.
-- Dense management data should remain readable on narrow screens.
-- Desktop layouts may expose more columns/panels but must not define the information architecture.
-- Avoid decorative complexity that reduces information density or navigation speed.
+## What happens after Artifact import
 
-## Definition of Phase 0 done
+The first integration pass should prioritize **visual and behavioral parity with the approved Artifact**.
 
-A user can navigate the complete prototype flow:
+Only after parity is established should code be reorganized gradually into the long-term boundaries. Avoid a large rewrite during import.
 
-`New Game → Team Selection → Dashboard → Roster → Player → Schedule → Draft → Match → Result → Standings`
+## Future compatibility
 
-The flow must be interactive and coherent on a phone-sized viewport. Mock data is acceptable, but fake completed simulation systems are not.
+The architecture must leave room for:
+
+- real calendar progression
+- roster registration
+- draft engine
+- match engine
+- statistics
+- league rules
+- contracts/transfers
+- scouting/development
+- reserves
+- finance/facilities
+- worldwide AI simulation
+- patches/meta
+- international tournaments
+- persistent saves
+
+These systems are not Phase 0 implementation requirements.
