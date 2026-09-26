@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-`CURRENT_PHASE = PHASE_1_CORE_GAME`
+`CURRENT_PHASE = PHASE_1_CORE_FOUNDATION`
 
 The Artifact migration is complete and accepted. GitHub is now the primary development codebase.
 
