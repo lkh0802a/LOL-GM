@@ -66,7 +66,7 @@ function managerTeamPicker(disabled=false){
     <label>리그<span class="static-field">${st.region?esc(st.region.leagueName):'—'}</span></label>
     <label>디비전<select id="steam-division"${disabled?' disabled':''}>${st.divs.map(d=>`<option value="${d}"${d===st.div?' selected':''}>${d===1?'1부':esc(divName(st.region))}</option>`).join('')}</select></label>
     <label>팀<select id="steam"${disabled?' disabled':''}>${st.teams.map(t=>`<option value="${t.id}"${t.id===st.team?' selected':''}>${esc(t.name)}</option>`).join('')}</select></label>
-  </div>${team?`<p class="hint"><b>${esc(team.name)}</b> · ${team.division===2?'2부 독립 구단':'1부 독립 구단'} · 등록 선수 ${(team.roster||[]).length}명</p>`:''}<p class="hint">Academy/Challengers 등 모구단 소속 2군은 감독 시작 팀으로 선택할 수 없습니다.</p></div>`;
+  </div>${team?`<p class="hint"><b>${esc(team.name)}</b> · ${team.division===2?'2부 독립 구단':'1부 독립 구단'} · 등록 선수 ${(team.roster||[]).length}명</p>`:''}<div class="arow"><span><b>시작 방식</b></span><span>기존 로스터</span></div><p class="hint">선택한 구단의 현재 선수단, 계약, 재정 상태를 그대로 유지한 채 시작합니다.</p><p class="hint">Academy/Challengers 등 모구단 소속 2군은 감독 시작 팀으로 선택할 수 없습니다.</p></div>`;
 }
 function bindManagerTeamPicker(){
   const r=$('#steam-region'),d=$('#steam-division'),t=$('#steam');
@@ -399,7 +399,7 @@ function bindSeries(root,rec){
 }
 
 // ---------- 시즌 (월드) ----------
-let SSET={team:'HTG',region:null,division:null,seed:freshInternalSeed('world'),tab:'table',view:null};
+let SSET={team:'HTG',region:null,division:null,startMode:'existing',seed:freshInternalSeed('world'),tab:'table',view:null};
 function mySeasonKey(){const w=DB.world,rid=DB.teams[managedTeamId(DB)].region;const ks=Object.values(w.seasons).filter(s=>s.region===rid).sort((a,b)=>(b.split||0)-(a.split||0));return ks.length?ks[0].key:null}
 function curS(){const w=DB.world;if(!SSET.view||!w.seasons[SSET.view])SSET.view=mySeasonKey()||Object.keys(w.seasons)[0];return w.seasons[SSET.view]}
 function sName(s){return DB.competitions[s.comp].name+(s.label?' '+s.label:'')}
@@ -605,7 +605,7 @@ function bindSetup(){
   $('#regen').onclick=()=>{const errs=validateConfig(cfg);if(errs.length){$('#cfgmsg').className='warn';$('#cfgmsg').textContent=errs.join(' / ');return}
     DB=buildWorld(cfg);const first=managerSelectableTeams(DB)[0];SSET.team=first?first.id:null;SSET.region=first?first.region:null;SSET.division=first?(first.division||1):1;LAST=null;LASTSER=null;MC.res=null;saveDB();nav()};
   bindManagerTeamPicker();
-  $('#sstart').onclick=()=>{if(!isManagerSelectableTeam(DB,SSET.team)){const first=managerSelectableTeams(DB)[0];SSET.team=first?first.id:null}if(!SSET.team)return;SSET.view=null;startWorldSeason(DB,SSET.team,freshInternalSeed('world'));saveDB();nav()};
+  $('#sstart').onclick=()=>{if(!isManagerSelectableTeam(DB,SSET.team)){const first=managerSelectableTeams(DB)[0];SSET.team=first?first.id:null}if(!SSET.team)return;SSET.view=null;startCareer(DB,SSET.team,SSET.startMode,freshInternalSeed('world'));saveDB();nav()};
 }
 function bindSeason(){
   const w=DB.world;
