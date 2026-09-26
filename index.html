@@ -309,7 +309,7 @@ function runDraft(db, teamIds, rng, ctx){
       if(!best){ const r=open[0], c=champs.find(x=>!taken.has(x.id)); best={v:0,r,c:c.id,f:{total:0}}; }
       picks[side][best.r]=best.c; taken.add(best.c);
       log.push({kind,side,champ:best.c,role:best.r,player:roster[side][best.r].name});
-      expl.push({t:0,title:`${tn.short} 픽: ${championLabel(db,best.c)} (${ROLE_KO[best.r]})`,factors:[['메타 인식',best.f.meta],['숙련도',best.f.mastery],['조합',best.f.comp],['상성',best.f.counter],['유연성',best.f.flex],['시리즈 경험',best.f.series||0]],utility:best.v,result:'PICK'});
+      expl.push({t:0,title:`${tn.short} 픽: ${db.patch.champions[best.c].name} (${ROLE_KO[best.r]})`,factors:[['메타 인식',best.f.meta],['숙련도',best.f.mastery],['조합',best.f.comp],['상성',best.f.counter],['유연성',best.f.flex],['시리즈 경험',best.f.series||0]],utility:best.v,result:'PICK'});
     } else {
       const opp=1-side, open=ROLES.filter(r=>!picks[opp][r]), mine=Object.values(picks[opp]).map(n=>db.patch.champions[n]); let best=null;
       const avail={};ROLES.forEach(R=>avail[R]=byRole[R].filter(x=>!taken.has(x.id)).length);
@@ -321,7 +321,7 @@ function runDraft(db, teamIds, rng, ctx){
       if(!best) continue;
       bans[side].push(best.c); taken.add(best.c);
       log.push({kind,side,champ:best.c,role:best.r,player:roster[opp][best.r].name});
-      expl.push({t:0,title:`${tn.short} 밴: ${championLabel(db,best.c)} (상대 ${ROLE_KO[best.r]} ${roster[opp][best.r].name} 견제)`,factors:[['상대 픽 가치',best.f.total],['이전 세트 활약',best.f.reveal]],utility:best.v,result:'BAN'});
+      expl.push({t:0,title:`${tn.short} 밴: ${db.patch.champions[best.c].name} (상대 ${ROLE_KO[best.r]} ${roster[opp][best.r].name} 견제)`,factors:[['상대 픽 가치',best.f.total],['이전 세트 활약',best.f.reveal]],utility:best.v,result:'BAN'});
     }
   }
   return {bans,picks,log,expl};
@@ -820,13 +820,13 @@ const CLASS_KO = {fighter:'전사', tank:'탱커', mage:'마법사', assassin:'�
 const KIT_KEYS = ['burst','dps','cc','engage','disengage','peel','poke','waveclear','mobility','sustain','early','mid','late','difficulty'];
 const KIT_KO = {burst:'폭딜', dps:'지속딜', cc:'CC', engage:'이니시', disengage:'받아치기', peel:'보호', poke:'포킹', waveclear:'라인클리어', mobility:'기동성', sustain:'유지력', early:'초반', mid:'중반', late:'후반', difficulty:'난이도'};
 const BASE_KEYS = ['hp','hpg','ad','adg','arm','armg','as','range','ms'];
-
-function championId(name){
-  const slug=String(name).normalize('NFKD').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
-  return 'champ_'+(slug||Math.abs(hashStr(String(name))));
+function makeChampionId(name){
+  const raw=String(name),slug=raw.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||'champion';
+  let h=2166136261;for(let i=0;i<raw.length;i++){h^=raw.charCodeAt(i);h=Math.imul(h,16777619)}
+  return `champ-${slug}-${(h>>>0).toString(36)}`;
 }
-function championByName(db,name){return Object.values(db.patch.champions).find(c=>c.name===name)||null}
-function championLabel(db,id){const c=db&&db.patch&&db.patch.champions?db.patch.champions[id]:null;return c?c.name:String(id||'')}
+function championIdByName(db,name){const c=Object.values(db.patch.champions).find(x=>x.name===name);return c?c.id:null}
+function championName(db,id){const c=db&&db.patch&&db.patch.champions[id];return c?c.name:String(id||'')}
 
 // base: [hp,hp성장,공격력,공격력성장,방어,방어성장,공속,사거리,이속]
 // kit : [burst,dps,cc,engage,disengage,peel,poke,waveclear,mobility,sustain,early,mid,late,difficulty]
@@ -908,19 +908,19 @@ const ITEM_POOL = {
 function buildPatch(){
   const champions = {};
   for (const [name,roles,cls,dmg,base,kit] of CHAMP_RAW){
-    const b={}, k={}, id=championId(name);
+    const b={}, k={};
     BASE_KEYS.forEach((key,i)=>b[key]=base[i]);
     KIT_KEYS.forEach((key,i)=>k[key]=kit[i]);
-    champions[id] = {id,name, roles, cls, dmg, base:b, kit:k};
+    const id=makeChampionId(name);champions[id] = {id,name, roles, cls, dmg, base:b, kit:k};
   }
   for (const [name,roles,cls,dmg,kit,range] of CHAMP_EXTRA){
     const h=hashStr(name), base=CLASS_BASE[cls].slice(), b={}, k={};
     BASE_KEYS.forEach((key,i)=>{let v=base[i]; if(key!=='range'&&key!=='as') v=Math.round(v*(0.97+(((h>>(i*3))&7)/7)*0.06)*100)/100; b[key]=v});
     if(range) b.range=range;
     KIT_KEYS.forEach((key,i)=>k[key]=kit[i]);
-    const id=championId(name);champions[id]={id,name,roles,cls,dmg,base:b,kit:k};
+    const id=makeChampionId(name);champions[id]={id,name,roles,cls,dmg,base:b,kit:k};
   }
-  for (const [name,roles,arch,dmg] of CHAMP_ARCH){const c=archChampion(name,roles,arch,dmg);champions[c.id]=c}
+  for (const [name,roles,arch,dmg] of CHAMP_ARCH){const c=archChampion(name,roles,arch,dmg);champions[c.id]=c;}
   return {
     id:'26.19',
     rules:{ csGold:23, passiveGold:122, killGold:300, assistGold:150, dragonSpawn:5, dragonRespawn:5, heraldSpawn:14, baronSpawn:20, baronRespawn:6, baronBuff:3, elderBuff:2.5, inhibRespawn:5 },

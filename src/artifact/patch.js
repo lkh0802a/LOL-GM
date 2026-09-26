@@ -10,7 +10,7 @@ function applyNote(P,n){
   const c=P.champions[n.c];
   if(n.type==='kit'&&c)c.kit[n.key]=clamp(c.kit[n.key]+n.d,1,10);
   else if(n.type==='base'&&c)c.base[n.key]=Math.round(c.base[n.key]*(1+n.d)*100)/100;
-  else if(n.type==='new'){const c=archChampion(n.def.name,n.def.roles,n.def.arch,n.def.dmg,null,n.def.id||championId(n.def.name));P.champions[c.id]=c}
+  else if(n.type==='new'){const c=archChampion(n.def.name,n.def.roles,n.def.arch,n.def.dmg);P.champions[n.def.id||c.id]=c;}
   else if(n.type==='rule')P.rules[n.key]=n.v;
 }
 function getPatch(db,id){
@@ -53,11 +53,11 @@ function newPatch(db,date,major,rng){
   // 신규 챔피언: 시즌 개막·중반 패치에 출시
   if(major){
     let def;
-    if(db.patches.newIdx<CHAMP_RELEASES.length){const [name,roles,arch,dmg]=CHAMP_RELEASES[db.patches.newIdx++];def={id:championId(name),name,roles,arch,dmg}}
-    else{let name,id;do{name=rng.pick(NEWCHAMP_A)+rng.pick(NEWCHAMP_B);id=championId(name)}while(P.champions[id]);const role=rng.pick(ROLES);
+    if(db.patches.newIdx<CHAMP_RELEASES.length){const [name,roles,arch,dmg]=CHAMP_RELEASES[db.patches.newIdx++];def={id:makeChampionId(name),name,roles,arch,dmg}}
+    else{let name;do{name=rng.pick(NEWCHAMP_A)+rng.pick(NEWCHAMP_B)}while(Object.values(P.champions).some(c=>c.name===name));const role=rng.pick(ROLES);
       const arch=rng.pick({TOP:['juggernaut','diver','skirmisher','vanguard'],JGL:['diver','assassin','skirmisher','vanguard'],MID:['burst','control','battle','assassin','artillery'],ADC:['marksman','hyper','bully'],SUP:['enchanter','catcher','warden','control']}[role]);
-      def={id,name,roles:[role],arch,dmg:['burst','control','battle','artillery','enchanter','specialist'].includes(arch)?'AP':'AD'};db.patches.newIdx++}
-    notes.push({type:'new',def,why:'신규 챔피언 출시',c:def.name});
+      def={id:makeChampionId(name),name,roles:[role],arch,dmg:['burst','control','battle','artillery','enchanter','specialist'].includes(arch)?'AP':'AD'};db.patches.newIdx++}
+    notes.push({type:'new',def,why:'신규 챔피언 출시',c:def.id});
   }
   notes.forEach(n=>applyNote(P,n));
   P.id=id;

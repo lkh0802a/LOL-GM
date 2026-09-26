@@ -40,11 +40,11 @@ const CHAMP_RELEASES=[];
 const NEWCHAMP_A=['Vel','Kor','Sy','Ar','Tha','Ny','Or','Zel','Ma','Ka','Ro','Is','Val','Qua','Mer','Eth','Ju','Ria'];
 const NEWCHAMP_B=['rith','ana','os','eth','ira','ux','ora','an','ek','ys','ael','un','ix','ova','ith','ara'];
 
-function archChampion(name,roles,arch,dmg,extra,id=championId(name)){
+function archChampion(name,roles,arch,dmg,extra){
   const [cls,kit0,range]=ARCH[arch], h=hashStr(name), b={}, k={};
   const base=CLASS_BASE[cls];
   BASE_KEYS.forEach((key,i)=>{let v=base[i];if(key!=='range'&&key!=='as')v=Math.round(v*(0.96+(((h>>(i*3))&7)/7)*0.08)*100)/100;b[key]=v});
   b.range=range;
   KIT_KEYS.forEach((key,i)=>k[key]=clamp(kit0[i]+(((h>>(i*2+5))&3)-1)+((extra&&extra[key])||0),1,10));
-  return {id,name,roles,cls,dmg,base:b,kit:k,arch};
+  return {id:makeChampionId(name),name,roles,cls,dmg,base:b,kit:k,arch};
 }
