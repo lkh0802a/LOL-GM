@@ -118,6 +118,19 @@ interface GameWorld {
 
 Do not interpret this as a requirement to keep the entire final world in one in-memory object forever. It describes authoritative relationships.
 
+### Roster ownership
+
+Roster membership is updated atomically through shared helpers. Gameplay code must not directly push/remove a player ID and separately modify the player's team reference.
+
+Current invariant:
+
+- a rostered player appears exactly once in that team's roster
+- `player.team` matches the owning team ID
+- a free agent has `player.team === null` and appears in no team roster
+- moving a player automatically removes stale membership from other teams
+
+CI smoke tests enforce these conditions.
+
 ## Player
 
 Minimum persistent identity:
