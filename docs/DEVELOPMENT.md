@@ -4,34 +4,59 @@
 
 `CURRENT_PHASE = PHASE_0_ARTIFACT_INTEGRATION`
 
-The immediate goal is **not to prebuild the final UI in this repository**. Claude Artifact is used to create and validate the mobile-first prototype first. This repository is prepared as a clean landing zone so the approved Artifact can be migrated without a rewrite.
+There is already a Claude Artifact prototype. The immediate goal is to **migrate the existing Artifact into this repository now**, preserve its approved UI/UX, and turn the repository into a real runnable web application.
 
-Read `docs/ARTIFACT_INTEGRATION.md` before importing Artifact code.
+This is no longer a “build the Artifact first and decide later” phase.
 
-## Repository responsibility during Phase 0
+**After migration parity and build stability are achieved, GitHub becomes the primary development codebase.** Artifact remains optional for future UI/UX experiments.
 
-Prepare boundaries, conventions and migration paths for:
+Read `docs/ARTIFACT_INTEGRATION.md` before importing or restructuring Artifact code.
 
-- app shell / routing
-- reusable presentation components
-- feature screens
-- replaceable mock data
-- application/game state
-- domain types
-- simulation engine
-- data/config
+## Phase 0 responsibilities
 
-Do not create competing page designs before the Artifact is imported.
+During the Artifact migration:
+
+- preserve visual/behavioral parity before large refactors
+- establish a real app entry point and routing
+- make install/dev/build commands work
+- keep mock data explicit and replaceable
+- introduce stable IDs where needed
+- establish application-state and domain boundaries without overengineering
+- keep simulation logic out of React/UI components
+- verify smartphone portrait behavior
+- leave the repository understandable to the next AI
+
+Do not use Phase 0 as an excuse to implement the entire master specification.
+
+## Phase 0 exit criteria
+
+Phase 0 can end when all of the following are true:
+
+- the approved Artifact's core UI/UX is present in the repository
+- the app installs and runs from the repository
+- a production build succeeds
+- core navigation/routes work
+- key mobile layouts remain intact
+- obvious runtime/import/asset errors are resolved
+- mock data is identifiable and replaceable
+- stable entity IDs are not replaced by display-name references
+- future domain/engine code can be added without being embedded in screen components
+
+When these criteria are met, change the phase to:
+
+`CURRENT_PHASE = PHASE_1_CORE_GAME`
+
+and begin the sequence in `docs/POST_ARTIFACT_ROADMAP.md`.
 
 ## Planned boundaries
 
 ```text
 src/
-├─ app/          # routes and app shell after Artifact migration
-├─ artifact/     # temporary landing zone for exported Artifact code
+├─ app/          # routes, app shell, providers, navigation
+├─ artifact/     # optional temporary landing zone during migration only
 ├─ components/   # reusable presentation extracted from Artifact
-├─ features/     # screen/feature modules extracted from Artifact
-├─ stores/       # replaceable application/game state
+├─ features/     # screen/feature modules
+├─ stores/       # application/game state
 ├─ types/        # shared domain contracts
 ├─ engine/       # UI-independent game/simulation logic
 ├─ data/         # mock/initial/config data
@@ -43,16 +68,23 @@ Directories do not need to exist until code requires them.
 ## Core separation
 
 ```text
-Artifact / UI
-     ↓
-Application State
-     ↓
+Artifact / UI / Features
+          ↓
+Application State / Services
+          ↓
 Domain + Simulation Engine
-     ↓
+          ↓
 World Data / Rules / Config
 ```
 
 UI must never become the source of truth for simulation rules.
+
+Examples:
+
+- match screens display simulation outcomes; they do not decide winners
+- draft screens issue actions; draft/domain logic validates legality
+- standings screens display tables; league logic calculates them
+- player screens display growth; development systems calculate it
 
 ## Phase 0 mock rule
 
@@ -62,16 +94,29 @@ However:
 
 - identify mock data clearly
 - keep it replaceable
-- avoid spreading the same mock object across unrelated components
+- avoid spreading duplicate mock objects across unrelated components
 - use stable IDs
-- do not treat mock schemas as final domain schemas automatically
+- do not treat prototype schemas as final domain schemas automatically
 - do not fake completed simulation systems
 
 ## What happens after Artifact import
 
-The first integration pass should prioritize **visual and behavioral parity with the approved Artifact**.
+The first integration pass prioritizes **visual and behavioral parity**.
 
-Only after parity is established should code be reorganized gradually into the long-term boundaries. Avoid a large rewrite during import.
+After parity and build stability:
+
+1. analyze the migrated codebase
+2. remove only migration-specific duplication/technical debt that blocks progress
+3. adopt stable common models
+4. introduce real game state
+5. build the first playable season loop in small vertical slices
+
+Do not perform a large rewrite merely to match a preferred architecture.
+
+See:
+
+- `docs/POST_ARTIFACT_ROADMAP.md`
+- `docs/CORE_DOMAIN_MODEL.md`
 
 ## Future compatibility
 
@@ -108,7 +153,12 @@ For every substantial task:
 4. integrate with the other assistant's existing work
 5. leave code and documentation understandable to the next assistant
 6. prefer one shared implementation over parallel alternatives
+7. verify the change instead of reporting completion from code edits alone
 
-The user should not need to edit UI/UX or code manually. Changes are evaluated through runnable builds and user playtesting/feedback.
+The user is the game/product director and tester, not the manual integration layer. The user should not need to edit UI/UX, code, CSS, Git files or build configuration when an AI can perform the work.
+
+The intended loop is:
+
+`User direction → AI implementation → GitHub → runnable build → user playtest → feedback → next iteration`
 
 See `docs/LOL_GM_SPEC.md#43-chatgpt--claude-collaborative-development-workflow` for the full collaboration contract.
