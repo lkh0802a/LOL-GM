@@ -69,7 +69,7 @@ function closeFinances(db,w,rng,ev){
 
 // 계약 만료 · 재계약 · FA 시장
 function contractMarket(db,rng,rep,ev){
-  const year=db.year, size=5+(db.worldConfig.subs||0), w=db.world, mine=w&&w.manage==='manual'?w.myTeam:null;
+  const year=db.year, size=5+(db.worldConfig.subs||0), w=db.world, mine=w&&w.manage==='manual'?managedTeamId(db):null;
   const imports=t=>t.roster.filter(id=>db.players[id]&&db.players[id].region!==t.region).length;
   const release=(t,p,why)=>{ if(p.contract&&p.contract.until>=year){t.finance.buyout=(t.finance.buyout||0)+p.contract.salary*(p.contract.until-year+1)*0.5}
     t.roster=t.roster.filter(x=>x!==p.id);p.team=null;p.contract=null;p.faYears=0;};
@@ -177,7 +177,7 @@ function doTransfer(db,p,from,to,fee){
   from.finance.cash=Math.round((from.finance.cash+fee)*10)/10;to.finance.cash=Math.round((to.finance.cash-fee)*10)/10;
   news(db,`이적: ${p.name} ${from.name} → ${to.name} (이적료 ${money(fee)})`);
 }
-function myT(db){return db.teams[db.world.myTeam]}
+function myT(db){return managedTeam(db)}
 function mResign(db,pid,years){
   const t=myT(db),p=db.players[pid],ask=asking(db,p,t.region),rng=new RNG(db.world.seed+pid+db.year,'resign');
   if(payroll(db,t)-p.contract.salary+ask>salaryBudget(db,t)*1.2)return `${p.name}: 예산이 부족합니다 (요구 연봉 ${money(ask)})`;
@@ -201,12 +201,12 @@ function mTransfer(db,pid,fee){
 // ---- 스카우팅: 내 구단이 아는 만큼만 보인다 ----
 function knowledge(db,p){
   const w=db.world; if(!w)return 100;
-  const me=db.teams[w.myTeam]; if(p.team===me.id||(p.team&&db.teams[p.team]&&db.teams[p.team].parent===me.id))return 100;
+  const me=managedTeam(db); if(p.team===me.id||(p.team&&db.teams[p.team]&&db.teams[p.team].parent===me.id))return 100;
   const k=db.scout[p.id]; if(k!==undefined)return k;
   return p.region===me.region?30:8;
 }
 function scoutFromDay(db,s,day){
-  const w=db.world,me=w.myTeam,myR=db.teams[me].region,comp=db.competitions[s.comp];
+  const w=db.world,me=managedTeamId(db),myR=db.teams[me].region,comp=db.competitions[s.comp];
   const seen=comp.international||s.region===myR; if(!seen)return;
   for(const m of day.matches){const inc=m.a===me||m.b===me?15:comp.international?6:3;
     for(const tid of [m.a,m.b])for(const id of db.teams[tid].roster){db.scout[id]=Math.min(100,(db.scout[id]??(db.players[id].region===myR?30:8))+inc)}}
