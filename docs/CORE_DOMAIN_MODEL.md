@@ -8,6 +8,18 @@ It exists to prevent the migrated UI from accidentally becoming the permanent ga
 
 The rule is: model only what the current vertical slice needs, while keeping identity and ownership compatible with the long-term specification.
 
+## Implemented in Phase 1 foundation
+
+The migrated runtime now has:
+
+- save schema version 9
+- a root `manager` entity separate from club/world state
+- `manager.teamId` as the authoritative managed-club reference
+- a root `worldDate` field for the shared world timeline
+- fresh `lol-gm` browser-storage namespace with no legacy-save import path
+
+Remaining identity normalization work is tracked in `docs/PHASE_1_STATE_AUDIT.md`.
+
 ## Identity conventions
 
 Every persistent entity uses an opaque stable ID.
