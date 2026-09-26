@@ -55,6 +55,11 @@ function facilityUpkeep(db,t){return Math.round((t.facility||2)*1.2*psTeam(db,t)
 
 // ---------- 지역 프리셋 / 월드 설정 ----------
 // 실제 LoL e스포츠 구조를 본뜬 기본 리그 (리그 수준·시장 규모는 고정, 구조만 편집 가능)
+const ROSTER_RULE_PROFILES={
+  LCK_2026:{id:'LCK_2026',integratedMin:11,integratedMax:20,firstTeamMin:5,firstTeamMax:10,reserveTeamMin:5,reserveTeamMax:10,reserveSubMax:5,allowParentReserveMovement:true}
+};
+function rosterRuleProfile(id='LCK_2026'){return ROSTER_RULE_PROFILES[id]||ROSTER_RULE_PROFILES.LCK_2026}
+
 const REGION_PRESETS = {
   KR:{name:'한국',leagueName:'LCK',short:'LCK',strength:75,templates:true,tier:'major',d:{teams:12,splits:3,format:'rr_de',playoffTake:6,div2:true,system:'franchise',slots:4,salaryCap:40,salaryFloor:12}},
   CN:{name:'중국',leagueName:'LPL',short:'LPL',strength:74,tier:'major',d:{teams:16,splits:3,format:'groups_po',playoffTake:8,div2:true,system:'franchise',slots:4,salaryCap:70,salaryFloor:18}},
@@ -89,7 +94,7 @@ function regionCfg(id,over={}){
   const P=REGION_PRESETS[id]||{name:'새 지역',leagueName:'새 리그',short:'NEW',strength:63,d:{}};
   return {id,name:P.name,leagueName:P.leagueName,short:P.short,strength:P.strength,templates:!!P.templates,tier:P.tier||'emerging',parent:P.parent||null,
     format:'rr_po',div2:false,div2Teams:8,teams:8,splits:2,legs:2,regularBo:3,playoffTake:6,playoffBo:5,system:'franchise',relegate:1,slots:3,office:PRESET_OFFICE[id]||'conservative',
-    fearless:true,payScale:PAY_SCALE[id]??0.4,salaryCap:0,salaryFloor:0,importLimit:2,...P.d,...over};
+    fearless:true,payScale:PAY_SCALE[id]??0.4,salaryCap:0,salaryFloor:0,importLimit:2,rosterRuleProfile:'LCK_2026',...P.d,...over};
 }
 function defaultWorldConfig(){return {
   regions:['KR','CN','EU','NA','AP','BR'].map(id=>regionCfg(id)),
@@ -123,6 +128,31 @@ function isManagerSelectableTeam(db,t){
   return !!team&&team.active!==false&&!team.parent;
 }
 function managerSelectableTeams(db,rid,div){return activeTeams(db,rid,div).filter(t=>isManagerSelectableTeam(db,t))}
+function rosterRulesForTeam(db,t){
+  const team=teamRef(db,t);if(!team)return rosterRuleProfile();
+  const region=db.regions[team.region];return rosterRuleProfile(region&&region.rosterRuleProfile);
+}
+function parentTeamOf(db,t){const team=teamRef(db,t);if(!team)return null;return team.parent?db.teams[team.parent]||null:team}
+function reserveTeamsOf(db,t){const parent=parentTeamOf(db,t);if(!parent)return [];return activeTeams(db,parent.region,2).filter(x=>x.parent===parent.id)}
+function organizationTeams(db,t){const parent=parentTeamOf(db,t);if(!parent)return [];return [parent,...reserveTeamsOf(db,parent)]}
+function organizationRoster(db,t){return Array.from(new Set(organizationTeams(db,t).flatMap(x=>x.roster||[])))}
+function rosterMoveCheck(db,p,target){
+  const player=playerRef(db,p),dst=teamRef(db,target);
+  if(!player)return {ok:false,reason:'선수를 찾을 수 없습니다'};
+  if(!dst||dst.active===false)return {ok:false,reason:'이동할 팀을 찾을 수 없습니다'};
+  const src=player.team&&db.teams[player.team];if(!src||src.active===false)return {ok:false,reason:'현재 소속팀이 없습니다'};
+  if(src.id===dst.id)return {ok:false,reason:'이미 해당 스쿼드 소속입니다'};
+  const srcParent=parentTeamOf(db,src),dstParent=parentTeamOf(db,dst);
+  if(!srcParent||!dstParent||srcParent.id!==dstParent.id)return {ok:false,reason:'같은 구단의 1군/2군 사이에서만 이동할 수 있습니다'};
+  const rules=rosterRulesForTeam(db,srcParent);if(!rules.allowParentReserveMovement)return {ok:false,reason:'이 리그 규정은 1군/2군 이동을 허용하지 않습니다'};
+  const srcIsFirst=!src.parent,dstIsFirst=!dst.parent;if(srcIsFirst===dstIsFirst)return {ok:false,reason:'콜업/샌드다운은 1군과 산하 2군 사이에서만 가능합니다'};
+  const srcMin=srcIsFirst?rules.firstTeamMin:rules.reserveTeamMin,dstMax=dstIsFirst?rules.firstTeamMax:rules.reserveTeamMax;
+  if((src.roster||[]).length-1<srcMin)return {ok:false,reason:(srcIsFirst?'1군':'2군')+' 최소 '+srcMin+'명을 유지해야 합니다'};
+  if((dst.roster||[]).length+1>dstMax)return {ok:false,reason:(dstIsFirst?'1군':'2군')+' 최대 '+dstMax+'명을 초과할 수 없습니다'};
+  const total=organizationRoster(db,srcParent).length;if(total<rules.integratedMin||total>rules.integratedMax)return {ok:false,reason:'통합 로스터는 '+rules.integratedMin+'~'+rules.integratedMax+'명이어야 합니다'};
+  return {ok:true,kind:dstIsFirst?'callup':'senddown',from:src.id,to:dst.id,parent:srcParent.id};
+}
+function movePlayerBetweenSquads(db,p,target){const check=rosterMoveCheck(db,p,target);if(!check.ok)throw new Error(check.reason);assignPlayerToTeam(db,p,target);return check}
 function playerRef(db,p){return typeof p==='string'?db.players[p]:p}
 function teamRef(db,t){return typeof t==='string'?db.teams[t]:t}
 function removePlayerFromTeam(db,p){
