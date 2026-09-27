@@ -17,6 +17,19 @@ Development progress is tracked by the 22 major LOL GM systems. Finish one major
 - `5. 계약 / 이적시장` — COMPLETE (2026-09-27)
 - `6. 1부 / 2부 / Academy` — ACTIVE
 
+## UX / Convenience Re-audit (2026-09-27)
+
+Items 1–5 remain engine-complete, but COMPLETE no longer means their current interaction design is frozen. A cross-system convenience audit found follow-up UX debt that must be repaired when the affected surface is touched, and before final integration acceptance:
+
+- squad management currently commits starter, roster-role and training changes immediately; management surfaces should prefer draft/edit → preview → save/apply when several related choices are normally made together
+- owned-reserve call-up/send-down must be edited as a batch and validated against the final organization roster, rather than rejecting a legal swap because its first intermediate click is temporarily illegal
+- initial roster construction and scouting/market actions rerender after many single actions; preserve context/scroll and add batch actions where repeated observation or shortlist management is expected
+- dense roster/scouting tables need stronger mobile-first summaries, filters and compact actions instead of relying on horizontal-table scanning
+- destructive/financial actions should continue to show consequences before commitment; multi-term negotiations already use an explicit offer form and should keep that pattern
+- validation messages must explain the violated rule and, where practical, the required correction instead of only disabling progression
+
+This is now a standing acceptance rule for all 22 systems: functional correctness, persistence and CI are necessary but not sufficient; ordinary management workflows must also be low-friction on smartphone portrait.
+
 Item 6 progress (2026-09-27): Tier-2 ownership and promotion eligibility are now explicit engine rules. Mixed systems create both certified first-division clubs' required owned reserve teams and independent Tier-2 clubs; franchise systems require owned reserves; open/relegation systems treat reserves as optional. Owned reserves retain stable parent IDs across offseasons and are never promotion-eligible, while independent Tier-2 clubs remain eligible where the regional system allows promotion. Smoke coverage verifies the mixed ecosystem and promotion boundary. Remaining Item 6 work must be completed before marking COMPLETE.
 
 Region-first realism rule (2026-09-27): named leagues are researched and modeled independently. LCK is not a fallback template for LPL, LEC, LCS, LCP, CBLOL, or future named regions. Unknown rules fall back to a neutral global profile, not a Korean one.
