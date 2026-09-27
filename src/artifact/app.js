@@ -427,10 +427,10 @@ function bindNegotiationControls(act){
 function bindMarket(){
   const act=m=>{MSG=m;saveDB();nav();const e=document.querySelector('.market');e&&e.scrollIntoView({block:'start'})};
   document.querySelectorAll('[data-spon]').forEach(b=>b.onclick=()=>act(mSponsor(DB,b.dataset.spon)));
-  document.querySelectorAll('[data-hire]').forEach(b=>b.onclick=()=>{if(confirm('감독을 교체할까요?'))act(mHireCoach(DB,b.dataset.hire))});
-  document.querySelectorAll('[data-hire-staff]').forEach(b=>b.onclick=()=>{if(confirm('전문 스태프를 교체할까요?'))act(mHireStaff(DB,b.dataset.hireStaff))});
+  document.querySelectorAll('[data-hire]').forEach(b=>b.onclick=()=>{const t=managedTeam(DB),x=(DB.coachPool||[]).find(c=>c.id===b.dataset.hire),fee=coachSalary(t.coach,psOf(DB,t.region));if(x&&confirm(`${x.name} 감독을 선임할까요?\n기존 감독 해지 위약금 ${money(fee)}\n밴픽 ${t.coach.draft} → ${x.draft} · 분석 ${t.coach.analysis} → ${x.analysis} · 육성 ${t.coach.development} → ${x.development}`))act(mHireCoach(DB,b.dataset.hire))});
+  document.querySelectorAll('[data-hire-staff]').forEach(b=>b.onclick=()=>{const t=managedTeam(DB),x=(DB.staffPool||[]).find(s=>s.id===b.dataset.hireStaff),old=x&&t.staff&&t.staff[x.role],fee=old?staffSalary(old,psOf(DB,t.region)):0;if(x&&confirm(`${STAFF_ROLES[x.role]} ${x.name} 선임\n${old?`${old.name} ${old.rating} → ${x.rating}\n교체 위약금 ${money(fee)}`:`신규 선임 · 능력 ${x.rating}`}`))act(mHireStaff(DB,b.dataset.hireStaff))});
   document.querySelectorAll('[data-start-renew]').forEach(b=>b.onclick=()=>act(startNegotiation(DB,b.dataset.startRenew,'renewal').msg));
-  document.querySelectorAll('[data-release]').forEach(b=>b.onclick=()=>{if(confirm(`${DB.players[b.dataset.release].name} 선수를 방출할까요? 남은 계약이 있으면 해지금이 듭니다.`))act(mRelease(DB,b.dataset.release))});
+  document.querySelectorAll('[data-release]').forEach(b=>b.onclick=()=>{const p=DB.players[b.dataset.release],cost=p.contract&&p.contract.until>=DB.year?p.contract.salary*(p.contract.until-DB.year+1)*.5:0;if(confirm(`${p.name} 선수를 방출할까요?\n해지금 ${money(cost)}${p.contract?` · 계약 ${p.contract.until}년까지`:''}\n방출 후 즉시 FA가 됩니다.`))act(mRelease(DB,b.dataset.release))});
   document.querySelectorAll('[data-interest]').forEach(b=>b.onclick=()=>act(mInterest(DB,b.dataset.interest,'B')));
   document.querySelectorAll('[data-priority]').forEach(el=>el.onchange=()=>act(mInterest(DB,el.dataset.priority,el.value)));
   document.querySelectorAll('[data-evaluate]').forEach(b=>b.onclick=()=>act(mEvaluateTarget(DB,b.dataset.evaluate)));
