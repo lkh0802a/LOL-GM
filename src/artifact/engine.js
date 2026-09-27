@@ -32,16 +32,28 @@ function starterFor(db,team,role){
 
 // ---------- 챔피언 평가 (패치 원수치 기반) ----------
 function championSkillProfile(c){
-  const ss=Object.values(c.skills||{}), n=Math.max(1,ss.length),effects=ss.flatMap(s=>s.effects||[]);
-  const structured=ss.filter(s=>(s.baseDamage&&s.baseDamage.length)||Object.keys(s.ratios||{}).length||s.cc||s.heal||s.shield), dmg=structured.reduce((z,s)=>z+((s.baseDamage||[]).reduce((a,b)=>a+(Number(b)||0),0)/Math.max(1,(s.baseDamage||[]).length))/500,0)/n, ratio=structured.reduce((z,s)=>z+Object.values(s.ratios||{}).reduce((a,b)=>a+(Number(b)||0),0),0)/n;
-  const ccStructured=structured.filter(s=>s.cc).length/n, utilStructured=structured.filter(s=>s.heal||s.shield).length/n;
-  return {power:clamp(ss.reduce((z,s)=>z+(s.power||0),0)/n/10+dmg*.18+ratio*.08,0,1.5),uptime:clamp(ss.reduce((z,s)=>z+(s.cooldown?1/Math.max(1,s.cooldown):0),0)*2.2,0,1),cc:clamp(effects.filter(x=>x==='cc'||x==='engage').length/n+ccStructured*.5,0,1.5),utility:clamp(effects.filter(x=>['shield','sustain','utility','mobility','poke'].includes(x)).length/n+utilStructured*.5,0,1.5),structured:structured.length/n};
+  const ss=Object.values(c.skills||{}),n=Math.max(1,ss.length),effects=ss.flatMap(s=>s.effects||[]);
+  const structured=ss.filter(s=>(s.baseDamage&&s.baseDamage.length)||Object.keys(s.ratios||{}).length||s.cc||s.heal||s.shield);
+  const avgNum=(arr,def=0)=>{const v=(arr||[]).map(Number).filter(Number.isFinite);return v.length?avg(v):def};
+  const dmg=structured.reduce((z,s)=>z+avgNum(s.baseDamage)/500,0)/n,ratio=structured.reduce((z,s)=>z+Object.values(s.ratios||{}).reduce((a,b)=>a+(Number(b)||0),0),0)/n;
+  const dmgMod=avg(ss.map(s=>s.damageMod??1)),utilityMod=avg(ss.map(s=>s.utilityMod??1)),ccMod=avg(ss.map(s=>s.ccMod??1)),mobilityMod=avg(ss.map(s=>s.mobilityMod??1));
+  const healMod=avg(ss.map(s=>s.healMod??1)),shieldMod=avg(ss.map(s=>s.shieldMod??1));
+  const cds=ss.map(s=>Number(s.cooldown)).filter(x=>Number.isFinite(x)&&x>0),ranges=ss.flatMap(s=>(s.range||[]).map(Number)).filter(x=>Number.isFinite(x)&&x>=100&&x<5000),costs=ss.flatMap(s=>(s.cost||[]).map(Number)).filter(x=>Number.isFinite(x)&&x>0);
+  const uptime=clamp(cds.reduce((z,x)=>z+1/x,0)*2.2,0,1.25),reach=clamp((avgNum(ranges,450)-300)/900,0,1),economy=costs.length?clamp(1-avgNum(costs)/230,.62,1):1;
+  const ccStructured=structured.reduce((z,s)=>z+(s.cc?(s.cc.duration||1):0),0)/n,utilStructured=structured.filter(s=>s.heal||s.shield).length/n;
+  return {
+    power:clamp((ss.reduce((z,s)=>z+(s.power||0),0)/n/10+dmg*.18+ratio*.08)*dmgMod,0,1.7),
+    uptime:clamp(uptime*(2-dmgMod*.15),0,1.35),
+    cc:clamp((effects.filter(x=>x==='cc'||x==='engage').length/n+ccStructured*.5)*ccMod,0,1.7),
+    utility:clamp((effects.filter(x=>['shield','sustain','utility','mobility','poke'].includes(x)).length/n+utilStructured*.5)*utilityMod*((healMod+shieldMod)/2),0,1.7),
+    reach, economy, mobility:clamp((effects.filter(x=>x==='mobility').length/n+.2)*mobilityMod,0,1.4), structured:structured.length/n
+  };
 }
 function champStrength(c){
   const k=c.kit,b=c.base,sp=championSkillProfile(c);
-  const stat = (b.hp+b.hpg*10)/1800*0.21 + (b.ad+b.adg*10)/110*0.21 + (b.arm+b.armg*10)/85*0.11 + ((b.mr||30)+(b.mrg||1.3)*10)/60*0.07 + (b.ms-320)/40*0.04 + ((b.as||.65)*(1+(b.asg||2)*.1))*0.04;
-  const kitv = (k.early+k.mid+k.late)/30*0.27 + (k.burst+k.dps)/20*0.16 + (k.cc+k.engage+k.peel)/30*0.11 - k.difficulty/10*0.04;
-  return stat+kitv+sp.power*.06+sp.uptime*.04+sp.cc*.025+sp.utility*.025;
+  const stat=(b.hp+b.hpg*10)/1800*.21+(b.ad+b.adg*10)/110*.21+(b.arm+b.armg*10)/85*.11+((b.mr||30)+(b.mrg||1.3)*10)/60*.07+(b.ms-320)/40*.04+((b.as||.65)*(1+(b.asg||2)*.1))*.04+(b.range-125)/525*.018;
+  const kitv=(k.early+k.mid+k.late)/30*.27+(k.burst+k.dps)/20*.16+(k.cc+k.engage+k.peel)/30*.11-k.difficulty/10*.04;
+  return stat+kitv+sp.power*.06+sp.uptime*.04+sp.cc*.025+sp.utility*.025+sp.reach*.022+sp.mobility*.012+sp.economy*.012;
 }
 
 // ---------- 밴픽 ----------
@@ -118,13 +130,35 @@ function runDraft(db, teamIds, rng, ctx){
   return {bans,picks,log,expl};
 }
 
+function systemEffects(defs,ids){
+  const out=Object.fromEntries((typeof SYSTEM_EFFECT_KEYS!=='undefined'?SYSTEM_EFFECT_KEYS:['offense','defense','sustain','utility','haste','mobility','early','scaling']).map(k=>[k,0]));
+  for(const id of ids||[]){const d=defs&&defs[id];if(!d||d.active===false)continue;for(const k in out)out[k]+=Number(d.effects&&d.effects[k])||0}
+  return out;
+}
+function systemChoiceScore(c,e,role){
+  const k=c.kit||{},front=['fighter','tank'].includes(c.cls),support=role==='SUP'||c.cls==='enchanter';
+  return (e.offense||0)*(.8+(k.burst+k.dps)/16)+(e.defense||0)*(front?1.35:.75)+(e.sustain||0)*(.7+(k.sustain||5)/8)+(e.utility||0)*(support?1.5:.7)+(e.haste||0)*(.8+(k.cc+k.poke)/18)+(e.mobility||0)*(.75+(k.mobility||5)/8)+(e.early||0)*(.65+(k.early||5)/8)+(e.scaling||0)*(.65+(k.late||5)/8);
+}
+function selectItemBuild(patch,c,p,role){
+  const pool=(patch.items&&patch.items[c.cls]||[]).filter(id=>patch.itemDefs&&patch.itemDefs[id]&&patch.itemDefs[id].active!==false);
+  return pool.map(id=>{const d=patch.itemDefs[id],noise=((hashStr((p&&p.id||'')+'|'+c.id+'|'+id)%1000)/1000-.5)*.012;return {id,s:systemChoiceScore(c,d.effects||{},role)+noise-(d.cost||3000)/120000}}).sort((x,y)=>y.s-x.s).map(x=>x.id).slice(0,6);
+}
+function selectRunePage(patch,c,p,role){
+  const rp=patch.runes&&patch.runes[c.cls]||{keystone:[],minor:[]},active=id=>patch.runeDefs&&patch.runeDefs[id]&&patch.runeDefs[id].active!==false;
+  const rank=ids=>ids.filter(active).map(id=>{const d=patch.runeDefs[id],noise=((hashStr((p&&p.id||'')+'|'+c.id+'|'+role+'|'+id)%1000)/1000-.5)*.01;return {id,s:systemChoiceScore(c,d.effects||{},role)+noise}}).sort((a,b)=>b.s-a.s).map(x=>x.id);
+  return [...rank(rp.keystone).slice(0,1),...rank(rp.minor).slice(0,2)];
+}
+function itemPurchaseThresholds(patch,build){
+  let total=500;return (build||[]).map(id=>{total+=(patch.itemDefs&&patch.itemDefs[id]&&patch.itemDefs[id].cost)||3000;return total});
+}
+
 // ---------- 경기 엔진 ----------
 const at=(ps,a)=>ps.p.attrs[a]/100;
 const td=(ps,t)=>ps.p.tend[t]/100;
 
 function newPS(p,side,role,champ,patch){
-  const pr=p.pool[champ]||{mastery:25,confidence:40,experience:10};
-  return {p,side,role,champ:patch.champions[champ],prof:pr,lvl:1,xp:0,gold:500,goldEarned:500,cs:0,k:0,d:0,a:0,dmg:0,dmgTaken:0,vision:0,objectives:0,laneAdv:0,laneSamples:0,teamfightDmg:0,teamfights:0,teamfightWins:0,deadUntil:0,hp:1,flashAt:0,penalty:0,items:[],recall:false};
+  const pr=p.pool[champ]||{mastery:25,confidence:40,experience:10},c=patch.champions[champ],itemPlan=selectItemBuild(patch,c,p,role),runes=selectRunePage(patch,c,p,role);
+  return {p,side,role,champ:c,prof:pr,lvl:1,xp:0,gold:500,goldEarned:500,cs:0,k:0,d:0,a:0,dmg:0,dmgTaken:0,vision:0,objectives:0,laneAdv:0,laneSamples:0,teamfightDmg:0,teamfights:0,teamfightWins:0,deadUntil:0,hp:1,flashAt:0,penalty:0,items:[],itemPlan,itemThresholds:itemPurchaseThresholds(patch,itemPlan),runes,patchRef:patch,recall:false};
 }
 function alive(st,ps){return ps.deadUntil<=st.t}
 function aliveOf(st,side){return st.sides[side].ps.filter(x=>alive(st,x))}
@@ -135,18 +169,19 @@ function combatStats(st,ps){
 }
 function combatStats0(st,ps){
   const c=ps.champ,b=c.base,L=ps.lvl,g=Math.max(0,ps.goldEarned-500),cv=ITEM_CONV[c.cls],k=c.kit,sp=championSkillProfile(c);
-  const ph=st.t<14?k.early:st.t<26?k.mid:k.late, pm=0.8+0.04*ph;
-  const hp=b.hp+b.hpg*(L-1)+g*cv.hp, arm=b.arm+b.armg*(L-1)+g*cv.arm, mr=(b.mr||30)+(b.mrg||1.3)*(L-1)+g*cv.arm*.65, ad=b.ad+b.adg*(L-1)+g*cv.ad;
-  const asp=(b.as||.65)*(1+(b.asg||0)*(L-1)/100),resource=b.resource?clamp((b.resource+(b.resourceg||0)*(L-1))/800+(b.resourceRegen||0)/30,.65,1.18):1;
-  let off=ad*(0.52+0.042*(k.burst+k.dps))*pm*(b.range>400?1.1:1)*(0.88+asp*.18)*(0.94+sp.power*.07+sp.uptime*.04)*resource;
-  const defense=arm*.55+mr*.45;let ehp=hp*(1+defense/100)*(0.83+0.028*k.sustain)*(0.98+sp.utility*.04+sp.cc*.025)*Math.sqrt(pm);
+  const ie=systemEffects(st.patch.itemDefs,ps.items),re=systemEffects(st.patch.runeDefs,ps.runes),phaseEarly=st.t<15?1:0,phaseLate=st.t>=28?1:0;
+  const ph=st.t<14?k.early:st.t<26?k.mid:k.late,pm=.8+.04*ph,phaseSystem=1+(ie.early+re.early)*phaseEarly+(ie.scaling+re.scaling)*phaseLate;
+  const hp=b.hp+b.hpg*(L-1)+g*cv.hp,arm=b.arm+b.armg*(L-1)+g*cv.arm,mr=(b.mr||30)+(b.mrg||1.3)*(L-1)+g*cv.arm*.65,ad=b.ad+b.adg*(L-1)+g*cv.ad;
+  const asp=(b.as||.65)*(1+(b.asg||0)*(L-1)/100),resource=(b.resource?clamp((b.resource+(b.resourceg||0)*(L-1))/800+(b.resourceRegen||0)/30,.65,1.18):1)*sp.economy;
+  const sysOff=1+ie.offense+re.offense+(ie.haste+re.haste)*.35+(ie.mobility+re.mobility)*.16,sysDef=1+ie.defense+re.defense+(ie.sustain+re.sustain)*.55+(ie.utility+re.utility)*.25+(ie.mobility+re.mobility)*.08;
+  let off=ad*(.52+.042*(k.burst+k.dps))*pm*(b.range>400?1.1:1)*(.88+asp*.18)*(.94+sp.power*.07+sp.uptime*.04+sp.reach*.025+sp.mobility*.012)*resource*sysOff*phaseSystem;
+  const defense=arm*.55+mr*.45;let ehp=hp*(1+defense/100)*(.83+.028*k.sustain)*(.98+sp.utility*.04+sp.cc*.025)*Math.sqrt(pm)*sysDef*Math.sqrt(phaseSystem);
   const s=st.sides[ps.side];
-  let buff=1; if(s.soul)buff*=1.08; if(s.baronUntil>st.t)buff*=1.15; if(s.elderUntil>st.t)buff*=1.25;
-  const mf=0.82+0.26*ps.prof.mastery/100+0.04*(ps.prof.confidence-50)/50;
-  const sk=0.84+0.32*avg(['positioning','target_selection','teamfight_awareness','combo_execution','reaction','burst_execution','extended_fight'].map(a=>at(ps,a)));
-  const fm=1+playerMod(ps.p);
-  const md=1+(st.mods?st.mods[ps.side]:0);
-  return {off:off*buff*mf*sk*md*fm, ehp:ehp*buff*Math.sqrt(mf), mf, sk};
+  let buff=1;if(s.soul)buff*=1.08;if(s.baronUntil>st.t)buff*=1.15;if(s.elderUntil>st.t)buff*=1.25;
+  const mf=.82+.26*ps.prof.mastery/100+.04*(ps.prof.confidence-50)/50;
+  const sk=.84+.32*avg(['positioning','target_selection','teamfight_awareness','combo_execution','reaction','burst_execution','extended_fight'].map(a=>at(ps,a)));
+  const fm=1+playerMod(ps.p),md=1+(st.mods?st.mods[ps.side]:0);
+  return {off:off*buff*mf*sk*md*fm,ehp:ehp*buff*Math.sqrt(mf),mf,sk,itemEffects:ie,runeEffects:re};
 }
 function power(st,ps){const c=combatStats(st,ps);return Math.sqrt(c.off*c.ehp)}
 function teamPower(st,side){return aliveOf(st,side).reduce((s,x)=>s+power(st,x)*x.hp**0.5,0)}
@@ -157,8 +192,8 @@ function expl(st,title,factors,extra={}){if(st.quiet)return;st.expl.push({t:st.t
 function pname(st,ps){return `${st.sides[ps.side].team.short} ${ps.p.name}(${ps.champ.name})`}
 
 function addGold(ps,g){ps.gold+=g;ps.goldEarned+=g;
-  while(ps.items.length<ITEM_COST.length && ps.goldEarned>=ITEM_COST[ps.items.length]+500){ps.items.push(ps.p?ITEM_LIST(ps):'')}}
-let ITEM_LIST=ps=>'';
+  while(ps.items.length<(ps.itemPlan||[]).length&&ps.goldEarned>=(ps.itemThresholds||[])[ps.items.length])ps.items.push(ps.itemPlan[ps.items.length]);
+}
 function addXp(ps,x){ps.xp+=x;let l=1;for(let i=1;i<XP_TABLE.length;i++)if(ps.xp>=XP_TABLE[i])l=i+1;ps.lvl=Math.min(18,l)}
 
 function killPlayer(st,killer,victim,assists,reason){
@@ -542,7 +577,6 @@ function towerTick(st){
 function simulateMatch(db,blueId,redId,seed,ctx,quiet){
   const rng=makeStreams(seed);
   const patch=db.patch;
-  ITEM_LIST=ps=>{const pool=patch.items[ps.champ.cls]||[];return pool[ps.items.length%pool.length]};
   const d=runDraft(db,[blueId,redId],rng.draft,ctx);
   const mkSide=(tid,i)=>{const team=db.teams[tid];const ps=ROLES.map(r=>{const p=starterFor(db,team,r);return newPS(p,i,r,d.picks[i][r],patch)});
     return {team,ps,towers:{top:[1,1,1,1],mid:[1,1,1,1],bot:[1,1,1,1]},inhibAt:{top:0,mid:0,bot:0},nexusT:2,nexus:true,dragons:[],soul:false,baronUntil:0,elderUntil:0,herald:0,heraldCharge:false,barons:0,kills:0,towersTaken:0}};
