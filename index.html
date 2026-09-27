@@ -1851,42 +1851,61 @@ function seriesGameSetup(db,aId,bId,bestOf,seed,ctx,g,chooser,srng){
   const snap=seriesDraftSnapshot(ctx);snap.firstPick=fpTeam===blue?0:1;
   return {other,sc,blue,red,gseed,fpTeam,snap};
 }
+function createSeriesSession(db,aId,bId,bestOf,seed,opt={}){
+  const srng=new RNG(seed,'side'),firstChoice=opt.firstChoice||'seed';
+  const chooser=firstChoice==='coin'?(srng.chance(.5)?aId:bId):aId;
+  return {a:aId,b:bId,bestOf,seed,need:Math.ceil(bestOf/2),g:1,chooser,wins:{[aId]:0,[bId]:0},games:[],lines:[],
+    ctx:{used:[],byTeam:{[aId]:{won:[],lost:[]},[bId]:{won:[],lost:[]}},fearless:!!opt.fearless,mods:{[aId]:0,[bId]:0},practice:!!opt.practice,championPool:opt.championPool||null},
+    opt:{fearless:!!opt.fearless,firstChoice,compId:opt.compId||null,metaContext:opt.metaContext||null,replay:!!opt.replay,practice:!!opt.practice},
+    sideRng:{a:srng.a,sp:srng.sp},current:null};
+}
+function seriesSessionRng(sess){const r=new RNG(sess.seed,'side');r.a=sess.sideRng.a;r.sp=sess.sideRng.sp;return r}
+function seriesSessionDone(sess){return sess.wins[sess.a]>=sess.need||sess.wins[sess.b]>=sess.need}
+function seriesSessionPrepareGame(db,sess){
+  if(seriesSessionDone(sess))return null;if(sess.current)return sess.current;
+  const srng=seriesSessionRng(sess),x=seriesGameSetup(db,sess.a,sess.b,sess.bestOf,sess.seed,sess.ctx,sess.g,sess.chooser,srng);
+  sess.sideRng={a:srng.a,sp:srng.sp};
+  sess.current={g:sess.g,chooser:sess.chooser,blue:x.blue,red:x.red,gseed:x.gseed,fpTeam:x.fpTeam,sc:x.sc,snap:x.snap};
+  return sess.current;
+}
+function seriesResultLines(r,wId,mvp){
+  const lines=[];
+  for(let si=0;si<r.sides.length;si++){const s=r.sides[si],oppSide=r.sides[1-si],teamTf=s.ps.reduce((z,x)=>z+(x.teamfightDmg||0),0);
+    for(const p of s.ps){const opp=oppSide.ps.find(x=>x.role===p.role),win=s.team.id===wId,isMvp=p.p.id===mvp;
+      lines.push({pid:p.p.id,tid:s.team.id,champ:p.champ.id,k:p.k,d:p.d,a:p.a,cs:Math.round(p.cs),gold:Math.round(p.goldEarned),dmg:Math.round(p.dmg),dmgTaken:Math.round(p.dmgTaken||0),vision:Math.round((p.vision||0)*10)/10,objectives:p.objectives||0,laneAdv:Math.round((p.laneSamples?p.laneAdv/p.laneSamples:0)*100)/100,teamfightDmg:Math.round(p.teamfightDmg||0),teamfights:p.teamfights||0,teamfightWins:p.teamfightWins||0,teamfightShare:teamTf?(p.teamfightDmg||0)/teamTf:0,csDiff:Math.round(p.cs-(opp?opp.cs:0)),goldDiff:Math.round(p.goldEarned-(opp?opp.goldEarned:0)),dur:r.duration,kp:(p.k+p.a)/Math.max(1,s.kills),csm:p.cs/Math.max(1,r.duration),dpm:p.dmg/Math.max(1,r.duration),rating:playerGameRating(p,s,win,isMvp,r.duration),win,mvp:isMvp});
+    }}
+  return lines;
+}
+function playSeriesSessionGame(db,sess,forcedDraft=null,quiet=true){
+  const cur=seriesSessionPrepareGame(db,sess);if(!cur)throw new Error('Series already complete');
+  const snap=seriesDraftSnapshot(sess.ctx);snap.firstPick=cur.fpTeam===cur.blue?0:1;if(forcedDraft)snap.forced=forcedDraft;
+  const r=simulateMatch(db,cur.blue,cur.red,cur.gseed,snap,quiet);r.comp=sess.opt.compId||null;r.date=db.worldDate;r.metaContext=sess.opt.metaContext||null;
+  if(!sess.opt.replay&&!sess.opt.practice)recordMeta(db,r);
+  const wId=r.winner===0?cur.blue:cur.red,lId=wId===cur.blue?cur.red:cur.blue;sess.wins[wId]++;
+  const pk=[0,1].map(i=>ROLES.map(x=>r.draft.picks[i][x]));
+  sess.ctx.used.push(...pk[0],...pk[1]);sess.ctx.byTeam[wId].won.push(...pk[r.winner]);sess.ctx.byTeam[lId].lost.push(...pk[1-r.winner]);
+  sess.ctx.mods[lId]=clamp(sess.ctx.mods[lId]-0.035*(1.2-teamComposure(db,lId)),-0.08,0.05);sess.ctx.mods[wId]=clamp(sess.ctx.mods[wId]+0.015,-0.08,0.05);
+  const mvp=gameMVP(r);
+  sess.games.push({n:sess.g,blue:cur.blue,red:cur.red,seed:cur.gseed,mods:cur.snap.mods,winner:wId,bans:r.draft.bans,sideBy:cur.chooser,sideWhy:cur.sc.why,firstPick:cur.fpTeam,kills:[r.sides[0].kills,r.sides[1].kills],dur:r.durationStr,duration:r.duration,picks:pk,mvp});
+  sess.lines.push(...seriesResultLines(r,wId,mvp));sess.chooser=lId;sess.g++;sess.current=null;
+  return {game:r,winner:wId,loser:lId,done:seriesSessionDone(sess),score:[sess.wins[sess.a],sess.wins[sess.b]]};
+}
+function seriesSessionResult(db,sess){
+  if(!seriesSessionDone(sess))return null;const tac={[sess.a]:{...db.teams[sess.a].tactics},[sess.b]:{...db.teams[sess.b].tactics}};
+  return {rec:{a:sess.a,b:sess.b,bestOf:sess.bestOf,seed:sess.seed,patch:db.patch.id,fearless:!!sess.opt.fearless,firstChoice:sess.opt.firstChoice,score:[sess.wins[sess.a],sess.wins[sess.b]],winner:sess.wins[sess.a]>sess.wins[sess.b]?sess.a:sess.b,games:sess.games,tac},lines:sess.lines};
+}
 function seriesOpeningDraft(db,aId,bId,bestOf,seed,opt={}){
-  const ctx={used:[],byTeam:{[aId]:{won:[],lost:[]},[bId]:{won:[],lost:[]}},fearless:!!opt.fearless,mods:{[aId]:0,[bId]:0},practice:!!opt.practice,championPool:opt.championPool||null};
-  const srng=new RNG(seed,'side'),chooser=opt.firstChoice==='coin'?(srng.chance(.5)?aId:bId):aId;
-  const x=seriesGameSetup(db,aId,bId,bestOf,seed,ctx,1,chooser,srng);
-  return {...x,chooser,draftCtx:x.snap};
+  const session=createSeriesSession(db,aId,bId,bestOf,seed,opt),x=seriesSessionPrepareGame(db,session);
+  return {...x,chooser:x.chooser,draftCtx:x.snap,session};
 }
 function simulateSeries(db,aId,bId,bestOf,seed,opt={}){
-  const need=Math.ceil(bestOf/2), wins={[aId]:0,[bId]:0}, games=[], lines=[];
-  const ctx={used:[],byTeam:{[aId]:{won:[],lost:[]},[bId]:{won:[],lost:[]}},fearless:!!opt.fearless,mods:{[aId]:0,[bId]:0},practice:!!opt.practice,championPool:opt.championPool||null};
-  const srng=new RNG(seed,'side');
-  // 1세트 진영 선택권: 토너먼트는 상위 시드, 풀리그는 코인 토스
-  let chooser=opt.firstChoice==='coin'?(srng.chance(0.5)?aId:bId):aId;
-  for(let g=1;wins[aId]<need&&wins[bId]<need;g++){
-    const setup=seriesGameSetup(db,aId,bId,bestOf,seed,ctx,g,chooser,srng),{other,sc,blue,red,gseed,fpTeam,snap}=setup;
-    if(opt.forced&&opt.forced[g-1])snap.forced=opt.forced[g-1];
-    const r=simulateMatch(db,blue,red,gseed,snap,opt.capture!==g);r.comp=opt.compId||null;r.date=db.worldDate;r.metaContext=opt.metaContext||null;
-    if(!opt.replay&&!opt.practice)recordMeta(db,r);
-    if(opt.capture===g)return {captured:r};
-    const wId=r.winner===0?blue:red, lId=wId===blue?red:blue;
-    wins[wId]++;
-    const pk=[0,1].map(i=>ROLES.map(x=>r.draft.picks[i][x]));
-    ctx.used.push(...pk[0],...pk[1]);
-    ctx.byTeam[wId].won.push(...pk[r.winner]); ctx.byTeam[lId].lost.push(...pk[1-r.winner]);
-    // 세트 간 멘탈: 침착함이 낮을수록 패배 여파가 크다
-    ctx.mods[lId]=clamp(ctx.mods[lId]-0.035*(1.2-teamComposure(db,lId)),-0.08,0.05);
-    ctx.mods[wId]=clamp(ctx.mods[wId]+0.015,-0.08,0.05);
-    const mvp=gameMVP(r);
-    games.push({n:g,blue,red,seed:gseed,mods:snap.mods,winner:wId,bans:r.draft.bans,sideBy:chooser,sideWhy:sc.why,firstPick:fpTeam,kills:[r.sides[0].kills,r.sides[1].kills],dur:r.durationStr,duration:r.duration,picks:pk,mvp});
-    for(let si=0;si<r.sides.length;si++){const s=r.sides[si],oppSide=r.sides[1-si],teamTf=s.ps.reduce((z,x)=>z+(x.teamfightDmg||0),0);
-      for(const p of s.ps){const opp=oppSide.ps.find(x=>x.role===p.role),win=s.team.id===wId,isMvp=p.p.id===mvp;
-        lines.push({pid:p.p.id,tid:s.team.id,champ:p.champ.id,k:p.k,d:p.d,a:p.a,cs:Math.round(p.cs),gold:Math.round(p.goldEarned),dmg:Math.round(p.dmg),dmgTaken:Math.round(p.dmgTaken||0),vision:Math.round((p.vision||0)*10)/10,objectives:p.objectives||0,laneAdv:Math.round((p.laneSamples?p.laneAdv/p.laneSamples:0)*100)/100,teamfightDmg:Math.round(p.teamfightDmg||0),teamfights:p.teamfights||0,teamfightWins:p.teamfightWins||0,teamfightShare:teamTf?(p.teamfightDmg||0)/teamTf:0,csDiff:Math.round(p.cs-(opp?opp.cs:0)),goldDiff:Math.round(p.goldEarned-(opp?opp.goldEarned:0)),dur:r.duration,kp:(p.k+p.a)/Math.max(1,s.kills),csm:p.cs/Math.max(1,r.duration),dpm:p.dmg/Math.max(1,r.duration),rating:playerGameRating(p,s,win,isMvp,r.duration),win,mvp:isMvp});
-      }}
-    chooser=lId; // 패배 팀이 다음 세트 진영 선택 (블루 선호)
+  const sess=createSeriesSession(db,aId,bId,bestOf,seed,opt);
+  while(!seriesSessionDone(sess)){
+    const cur=seriesSessionPrepareGame(db,sess),forced=opt.forced&&opt.forced[sess.g-1]||null;
+    if(opt.capture===sess.g){const snap=seriesDraftSnapshot(sess.ctx);snap.firstPick=cur.fpTeam===cur.blue?0:1;if(forced)snap.forced=forced;const r=simulateMatch(db,cur.blue,cur.red,cur.gseed,snap,false);r.comp=opt.compId||null;r.date=db.worldDate;r.metaContext=opt.metaContext||null;return {captured:r}}
+    playSeriesSessionGame(db,sess,forced,true);
   }
-  const tac={[aId]:{...db.teams[aId].tactics},[bId]:{...db.teams[bId].tactics}};
-  return {rec:{a:aId,b:bId,bestOf,seed,patch:db.patch.id,fearless:!!opt.fearless,firstChoice:opt.firstChoice||'seed',score:[wins[aId],wins[bId]],winner:wins[aId]>wins[bId]?aId:bId,games,tac},lines};
+  return seriesSessionResult(db,sess);
 }
 // 저장된 세트를 당시 전술로 다시 재생
 function replayGame(db,rec,g){
@@ -2046,10 +2065,13 @@ function finalizeCompetitionDay(db,s,day,cfgIdx,cfg){
   }else if(cfg.type==='round_robin'&&!s.days.slice(s.cur).some(d=>d.stage===cfg.id))finishStage(db,s,cfgIdx,day.date);
   return true;
 }
-function scheduledOpeningDraft(db,s,m){
+function scheduledSeriesSession(db,s,m){
   const day=s.days[s.cur],comp=db.competitions[s.comp],cfgIdx=comp.stages.findIndex(x=>x.id===day.stage),cfg=comp.stages[cfgIdx],opt=scheduledSeriesOptions(db,s,day,cfg),seed=`${s.seed}/${s.year}/${m.id}`;
-  const opening=seriesOpeningDraft(db,m.a,m.b,m.bo,seed,opt);
-  return {s,day,m,comp,cfg,cfgIdx,opt,seed,...opening};
+  const session=createSeriesSession(db,m.a,m.b,m.bo,seed,opt);seriesSessionPrepareGame(db,session);return {session,day,comp,cfg,cfgIdx,opt,seed};
+}
+function scheduledOpeningDraft(db,s,m){
+  const x=scheduledSeriesSession(db,s,m),opening=seriesSessionPrepareGame(db,x.session);
+  return {s,day:x.day,m,comp:x.comp,cfg:x.cfg,cfgIdx:x.cfgIdx,opt:x.opt,seed:x.seed,...opening,draftCtx:opening.snap,session:x.session};
 }
 function playDay(db,s,opt={}){
   if(!s||s.done)return null;
@@ -2846,19 +2868,28 @@ function trainingRecommendation(db,t){
   const intensity=fat>38||cond<84||days<=1?'light':days>=5&&fat<20&&cond>91?'high':'normal';
   const scrim=days>=2&&fat<42&&cond>80;return {intensity,scrim,next,days,fat,cond};
 }
+function pendingOfficialRefs(db,q){
+  const s=db.world.seasons[q.seasonKey],day=s&&s.days[s.cur],m=day&&day.matches.find(x=>x.id===q.matchId);
+  if(!s||!m||m.res)return null;const comp=db.competitions[s.comp],cfgIdx=comp.stages.findIndex(x=>x.id===day.stage),cfg=comp.stages[cfgIdx];
+  return {s,day,m,comp,cfg,cfgIdx};
+}
 function pendingOfficialDraftSetup(db){
   const p=db.world&&db.world.pendingOfficial,q=p&&p.queue&&p.queue[0];if(!q)return null;
-  const s=db.world.seasons[q.seasonKey],m=s&&s.days[s.cur]&&s.days[s.cur].matches.find(x=>x.id===q.matchId);if(!s||!m||m.res)return null;
-  return {...scheduledOpeningDraft(db,s,m),seasonKey:q.seasonKey,pendingDate:p.date};
+  const refs=pendingOfficialRefs(db,q);if(!refs)return null;
+  if(!q.session)q.session=scheduledSeriesSession(db,refs.s,refs.m).session;
+  const cur=seriesSessionPrepareGame(db,q.session);if(!cur)return null;
+  return {...refs,...cur,draftCtx:cur.snap,session:q.session,seasonKey:q.seasonKey,pendingDate:p.date,game:q.session.g,score:[q.session.wins[q.session.a],q.session.wins[q.session.b]],fearlessUsed:q.session.ctx.used.slice()};
 }
 function resolvePendingOfficialMatch(db,forcedDraft){
   const w=db.world,p=w&&w.pendingOfficial,q=p&&p.queue&&p.queue[0];if(!q)throw new Error('No pending official match');
-  const s=w.seasons[q.seasonKey],m=s&&s.days[s.cur]&&s.days[s.cur].matches.find(x=>x.id===q.matchId);if(!s||!m||m.res)throw new Error('Pending official match is stale');
-  const setup=scheduledOpeningDraft(db,s,m),forced={bans:forcedDraft.bans,picks:forcedDraft.picks};
-  const series=simulateScheduledSeries(db,s,setup.day,m,setup.cfg,{forced:[forced]});commitScheduledSeries(db,s,m,series);
-  const finalized=finalizeCompetitionDay(db,s,setup.day,setup.cfgIdx,setup.cfg);if(finalized)scoutFromDay(db,s,setup.day);
+  const refs=pendingOfficialRefs(db,q);if(!refs)throw new Error('Pending official match is stale');
+  if(!q.session)q.session=scheduledSeriesSession(db,refs.s,refs.m).session;
+  const played=playSeriesSessionGame(db,q.session,{bans:forcedDraft.bans,picks:forcedDraft.picks},false);
+  if(!played.done)return {game:played.game,done:false,score:played.score,pending:w.pendingOfficial};
+  const series=seriesSessionResult(db,q.session);commitScheduledSeries(db,refs.s,refs.m,series);
+  const finalized=finalizeCompetitionDay(db,refs.s,refs.day,refs.cfgIdx,refs.cfg);if(finalized)scoutFromDay(db,refs.s,refs.day);
   p.queue.shift();if(!p.queue.length){w.pendingOfficial=null;if(!activeSeasons(db).length)advanceStep(db)}
-  return {rec:series.rec,lines:series.lines,finalized,pending:w.pendingOfficial};
+  return {game:played.game,done:true,score:played.score,rec:series.rec,lines:series.lines,finalized,pending:w.pendingOfficial};
 }
 function playWorldDay(db){
   const w=db.world;if(w.phase!=='season')return null;
@@ -4315,10 +4346,12 @@ function openDraftPractice(db,playerTeamId,opponentTeamId){
 }
 function openPendingOfficialDraft(db){
   const setup=pendingOfficialDraftSetup(db);if(!setup)return false;
-  const me=managedTeamId(db),mine=db.teams[me],oppId=setup.m.a===me?setup.m.b:setup.m.a,opp=db.teams[oppId];
-  const title=`${setup.comp.name} · ${mine.short} vs ${opp.short} · 1세트 밴픽`;
-  openInteractiveDraft(db,[setup.blue,setup.red],me,{seed:setup.gseed,title,locked:true,finishLabel:'공식전 진행',doneText:'1세트 밴픽이 확정되었습니다. 이 밴픽으로 공식전을 진행합니다.',ctx:setup.draftCtx,onComplete:result=>{
-    const out=resolvePendingOfficialMatch(DB,result);LAST=null;LASTSER=out.rec;saveDB();nav();
+  const me=managedTeamId(db),mine=db.teams[me],oppId=setup.m.a===me?setup.m.b:setup.m.a,opp=db.teams[oppId],score=setup.score||[0,0];
+  const aScore=score[0],bScore=score[1],meScore=setup.m.a===me?aScore:bScore,oppScore=setup.m.a===me?bScore:aScore;
+  const locked=setup.fearlessUsed?.length||0,title=`${setup.comp.name} · ${mine.short} ${meScore} : ${oppScore} ${opp.short} · ${setup.game}세트 밴픽`;
+  const fearlessText=locked?` · Fearless 잠금 ${locked}개`:'';
+  openInteractiveDraft(db,[setup.blue,setup.red],me,{seed:setup.gseed,title,locked:true,finishLabel:`${setup.game}세트 진행`,doneText:`${setup.game}세트 밴픽이 확정되었습니다${fearlessText}. 경기 결과에 따라 다음 세트 선택권과 Fearless 잠금이 갱신됩니다.`,ctx:setup.draftCtx,onComplete:result=>{
+    const out=resolvePendingOfficialMatch(DB,result);LAST=out.game||null;LASTSER=out.done?out.rec:null;saveDB();nav();
   }});
   return true;
 }
