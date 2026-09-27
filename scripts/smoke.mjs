@@ -148,6 +148,9 @@ source += `\n(()=>{
   if(!growthProbe.careerEvents.some(e=>e.type==='transfer'&&e.to==='B')) throw new Error('Player career event persistence failed');
   const persisted=unpackDB(packDB(db)),persistedPlayer=persisted.players[sample.id];
   if(!persistedPlayer||persisted.version!==14||persistedPlayer.nationality!==sample.nationality||persistedPlayer.reputation!==sample.reputation||!persistedPlayer.development||!persistedPlayer.roleFamiliarity||!persistedPlayer.pool[poolEntry]||persistedPlayer.pool[poolEntry].trainingExperience!==sample.pool[poolEntry].trainingExperience) throw new Error('Player save round-trip failed');
+  const metaSave=buildWorld(),metaCid=Object.keys(metaSave.patch.champions)[0];metaSave.metaHistory=[{date:'2027-01-02',patch:'26.19',comp:'SAVE_META',season:'S1',year:2027,split:1,stage:'regular',league:'LCK',international:false,regions:['LCK'],sides:[{team:'A',region:'LCK',win:true,picks:[{champ:metaCid,role:'MID',player:'P1',items:['1001'],runes:['8005']}]}],bans:[metaCid]}];
+  const metaPacked=packDB(metaSave),metaRaw=JSON.parse(metaPacked);if(!Array.isArray(metaRaw.metaHistory?.[0])||metaRaw.patches?.base||metaRaw.patches?.initialBase)throw new Error('Save compaction did not remove derived patch/meta object overhead');
+  const metaLoaded=unpackDB(metaPacked),metaRow=metaLoaded.metaHistory?.[0],metaPick=metaRow?.sides?.[0]?.picks?.[0];if(metaRow?.comp!=='SAVE_META'||metaRow?.league!=='LCK'||metaPick?.champ!==metaCid||metaPick?.items?.[0]!=='1001'||metaPick?.runes?.[0]!=='8005')throw new Error('Meta history save round-trip failed');
 
   const selectable=managerSelectableTeams(db), independent=active.filter(t=>!t.parent);
   if(!selectable.length||selectable.some(t=>t.parent)) throw new Error('Manager-selectable team filter failed');
