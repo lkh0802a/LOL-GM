@@ -156,7 +156,18 @@ source += `\n(()=>{
   const matchIds=seasons.flatMap(s=>s.days.flatMap(d=>d.matches.map(m=>m.id)));
   if(!matchIds.length||new Set(matchIds).size!==matchIds.length) throw new Error('Match IDs are not unique');
 
-  console.log('World smoke test: OK — blank rosters, global FA, roster rules, engine-owned regional policy, workforce-backed rookie intake/scouting reports, player identity/role ratings/state/value/development/champion learning/full match metrics/fixed depth charts/roster roles/satisfaction, season bootstrap and Bo1 simulation');
+  const marketDb=unpackDB(packDB(db));runOffseason(marketDb);
+  if(marketDb.world.phase!=='market')throw new Error('Offseason did not open transfer market');
+  const preMarketSupply=talentSupplyErrors(marketDb);if(preMarketSupply.length)throw new Error('Pre-market labor supply failed: '+preMarketSupply.slice(0,5).join(' | '));
+  closeMarket(marketDb);
+  const targetSize=5+(marketDb.worldConfig.subs||0);
+  for(const t of activeTeams(marketDb)){
+    if(t.roster.length<targetSize)throw new Error('Market closed with short roster: '+t.id+' '+t.roster.length+'/'+targetSize);
+    for(const role of ROLES)if(!starterFor(marketDb,t,role))throw new Error('Market closed without '+role+' starter: '+t.id);
+  }
+  if(Object.values(marketDb.players).some(p=>p.entryPath==='emergency'))throw new Error('Emergency-generated player exists after market');
+
+  console.log('World smoke test: OK — blank rosters, global FA, roster rules, engine-owned regional policy, workforce-backed rookie intake/scouting reports, no emergency roster generation, offseason market closure, player identity/role ratings/state/value/development/champion learning/full match metrics/fixed depth charts/roster roles/satisfaction, season bootstrap and Bo1 simulation');
 })()`;
 
 const context = {
