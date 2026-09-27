@@ -1858,6 +1858,26 @@ function createDiv2(db,rng,R){
   if(R.policyMode==='engine'&&!R.policyLocks?.rosterRuleProfile)R.rosterRuleProfile=activeTeams(db,R.id,2).some(t=>t.parent)?'ENGINE_OWNED_RESERVE':'STANDARD_TIER1_2026';
 }
 function abolishDiv2(db,R){R.div2=false;for(const t of activeTeams(db,R.id,2))foldTeam(db,t);if(R.policyMode==='engine'&&!R.policyLocks?.rosterRuleProfile)R.rosterRuleProfile='STANDARD_TIER1_2026'}
+function reconcileTier2Structure(db,rng,R,ev=()=>{}){
+  if(!R||!R.div2)return;
+  const first=activeTeams(db,R.id,1);
+  if(R.system==='franchise'){
+    first.forEach(t=>{t.franchised=true;t.license='franchise';if(!reserveTeamsOf(db,t).length){const a=makeAcademy(db,rng,t);ev(`${t.name} 산하 2군 창단: ${a.name}`)}});
+  }else if(R.system==='mixed'){
+    first.forEach(t=>{
+      t.license=t.franchised?'certified':'open';
+      if(t.franchised&&!reserveTeamsOf(db,t).length){const a=makeAcademy(db,rng,t);ev(`${t.name} 인증 유지용 산하 2군 창단: ${a.name}`)}
+    });
+  }
+  for(const a of activeTeams(db,R.id,2).filter(t=>t.parent)){
+    const parent=db.teams[a.parent];
+    if(!parent||parent.active===false||parent.region!==R.id||(parent.division||1)!==1||reserveRequirement(db,parent)!=='required'){
+      for(const pid of [...(a.roster||[])])removePlayerFromTeam(db,db.players[pid]);
+      foldTeam(db,a);ev(`${a.name} 산하 2군 운영 종료`);
+    }
+  }
+  if(R.policyMode==='engine'&&!R.policyLocks?.rosterRuleProfile)R.rosterRuleProfile=activeTeams(db,R.id,2).some(t=>t.parent)?'ENGINE_OWNED_RESERVE':'STANDARD_TIER1_2026';
+}
 function markFranchised(db,R){const ts=activeTeams(db,R.id,1).sort((a,b)=>(b.fans||0)-(a.fans||0));ts.forEach((t,i)=>t.franchised=i<Math.ceil(ts.length/2))}
 function deriveRegionPayScale(R){
   const strength=R.strength||63,teams=R.teams||8,tierBoost=R.tier==='major'?.12:0,parentAdj=R.parent?-.08:0;
@@ -1868,7 +1888,7 @@ function inferRegionPolicy(db,R){
   const teams=activeTeams(db,R.id,1),n=Math.max(1,teams.length);
   const owners=teams.map(t=>t.owner&&t.owner.wealth||50),ownerAvg=avg(owners),fans=teams.map(t=>t.fans||30),fanAvg=avg(fans);
   const pays=teams.map(t=>topFivePayroll(db,t)).filter(x=>x>0).sort((a,b)=>a-b),med=pays.length?pays[Math.floor(pays.length/2)]:Math.max(1,8*psOf(db,R.id)),disp=pays.length>1?pays[pays.length-1]/Math.max(.1,pays[0]):1;
-  const locals=Object.values(db.players).filter(p=>!p.retired&&p.region===R.id&&playerOvr(p)>=R.strength-10).length/n,reserveOwned=R.div2&&R.system==='franchise';
+  const locals=Object.values(db.players).filter(p=>!p.retired&&p.region===R.id&&playerOvr(p)>=R.strength-10).length/n,reserveOwned=R.div2&&activeTeams(db,R.id,2).some(t=>t.parent);
   R.rosterRuleProfile=reserveOwned?'ENGINE_OWNED_RESERVE':'STANDARD_TIER1_2026';
   const importNeed=clamp((6-locals)/4+(R.strength<66?.25:0)+(fanAvg>50?.15:0),0,1.5),spendPower=clamp((ownerAvg-45)/35+(R.payScale-.55),0,2);
   R.marketProfile=spendPower>=1.15?'high_spend':importNeed>=.75?'open_market':locals>=7?'domestic_development':'balanced';
@@ -2138,8 +2158,10 @@ function promotionRelegation(db,w,rng,ev){
     down.forEach((tid,i)=>{
       const t=db.teams[tid];
       if(up[i]){const u=db.teams[up[i]];t.division=2;u.division=1;u.franchised=false;u.license='open';t.fans=Math.round((t.fans||20)*0.8);u.fans=Math.round((u.fans||10)+8);ev(`${R.leagueName} 승강: ${u.name} 승격 ↔ ${t.name} 강등`)}
-      else{foldTeam(db,t);const nt=genTeam(db,rng,R.id,R.strength-3);if(R.system==='mixed')nt.franchised=false;ev(`${R.leagueName} 강등: ${t.name} → 신생팀 ${nt.name} 합류`)}
+      else{foldTeam(db,t);const nt=genTeam(db,rng,R.id,R.strength-3);if(R.system==='mixed'){nt.franchised=false;nt.license='open'}ev(`${R.leagueName} 강등: ${t.name} → 신생팀 ${nt.name} 합류`)}
     });
+    reconcileTier2Structure(db,rng,R,ev);
+    inferRegionPolicy(db,R);
   }
 }
 
