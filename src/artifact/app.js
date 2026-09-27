@@ -88,7 +88,7 @@ function managerTeamPicker(disabled=false){
   </div>${team?`<div class="fin">
     <div><span>재정</span><b>${money(team.finance.cash)}</b><small>초기 연봉 예산 ${money(budget)} · 현재 ${money(pay)}</small></div>
     <div><span>선수단</span><b>${(team.roster||[]).length}명</b><small>첫 시즌은 전 구단 0명에서 시작</small></div>
-    <div><span>시설</span><b>${team.facility||2} / 5</b><small>현재 통합 시설 수준</small></div>
+    <div><span>시설</span><b>${Math.round(avg(Object.values(ensureFacilities(team)))*10)/10} / 5</b><small>4종 인프라 평균</small></div>
     <div><span>명성</span><b>${team.reputation??'—'}</b><small>초기 상태에서 파생</small></div>
     <div><span>최근 성적</span><b>${esc(recentText)}</b></div>
     <div><span>구단 목표</span><b>${esc(initialGoalLabel(team))}</b></div>
