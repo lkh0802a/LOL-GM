@@ -7,9 +7,10 @@
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "build": "node scripts/build.mjs",
-    "check": "node scripts/check.mjs && node scripts/smoke.mjs",
+    "check": "node scripts/check.mjs && node scripts/validate-system-snapshot.mjs && node scripts/smoke.mjs",
     "sync:champions": "node scripts/sync-champions.mjs",
-    "validate:champions": "node scripts/validate-champion-snapshot.mjs"
+    "validate:champions": "node scripts/validate-champion-snapshot.mjs",
+    "validate:systems": "node scripts/validate-system-snapshot.mjs"
   },
   "engines": {
     "node": ">=20"
