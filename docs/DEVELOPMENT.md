@@ -11,13 +11,16 @@ Current Phase 1 goal: replace prototype-only state with coherent persistent game
 Development progress is tracked by the 22 major LOL GM systems. Finish one major system completely before moving to the next.
 
 - `1. 새 게임 / 팀 선택` — COMPLETE (2026-09-27)
-- `2. 선수` — ACTIVE
+- `2. 선수` — COMPLETE (2026-09-27)
+- `3. 선수 만족도 / 역할` — ACTIVE
 
 Item 1 verified first-season flow:
 
 `World Creation → Team Selection → Global FA Roster Construction → Registration Deadline → Season Start`
 
-Acceptance included blank rosters for every active club, full global FA initialization, eligible independent-club selection, owned-reserve restrictions, the 5+6 integrated-roster boundary, AI world roster construction, season bootstrap, standalone HTML execution, and successful CI.
+Item 1 acceptance included blank rosters for every active club, full global FA initialization, eligible independent-club selection, owned-reserve restrictions, the 5+6 integrated-roster boundary, AI world roster construction, season bootstrap, standalone HTML execution, and successful CI.
+
+Item 2 acceptance included stable player identity and nationality, primary/secondary position familiarity, position-weighted ratings, detailed core metrics, bounded form/condition/fatigue/morale/sharpness/team/tactical adaptation, reputation and market value, champion official/scrim/training experience and mastery adaptation, individualized growth/peak/decline/retirement lifecycle, full match-derived player metrics, career snapshots/events, save round-trip validation, standalone HTML execution, and successful CI.
 
 Use `docs/CORE_DOMAIN_MODEL.md` as an architectural guardrail; older roadmap documents are supporting references rather than the active implementation order.
 

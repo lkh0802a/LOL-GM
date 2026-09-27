@@ -34,6 +34,16 @@ source += `\n(()=>{
   if(!(playerMarketValue(db,sample)>0)||!['신인','성장','전성기','쇠퇴'].includes(careerStage(sample))) throw new Error('Player value/lifecycle failed');
   const core=playerCoreMetrics(sample),coreKeys=['laning','skirmish','teamfight','positioning','damage','survival','vision','objective','roaming','macro','sidelane','decision','stability','aggression','concentration','adaptability','volatility','championLearning','metaAdaptation'];
   if(coreKeys.some(k=>!Number.isFinite(core[k])||core[k]<0||core[k]>100)) throw new Error('Player core metric derivation failed');
+  const patchProbe=JSON.parse(JSON.stringify(sample)),patchBefore=patchProbe.pool[poolEntry].mastery;
+  patchProbe.attrs.meta_adaptation=20;adaptPlayerPoolsToPatch({players:{probe:patchProbe}},[{type:'kit',c:poolEntry}],true);
+  if(patchProbe.pool[poolEntry].mastery>patchBefore) throw new Error('Patch re-adaptation failed');
+  const growthProbe=JSON.parse(JSON.stringify(sample)),growthAge=growthProbe.age,growthExp=growthProbe.pool[poolEntry].experience;
+  growthProbe.team=null;growthProbe.contract=null;growPlayer(db,growthProbe,new RNG('player-growth-smoke','growth'),12,{[poolEntry]:6});
+  if(growthProbe.age!==growthAge+1||growthProbe.pool[poolEntry].experience<=growthExp) throw new Error('Player lifecycle/champion growth failed');
+  recordPlayerEvent(growthProbe,'transfer',db.year,{from:'A',to:'B',fee:1});
+  if(!growthProbe.careerEvents.some(e=>e.type==='transfer'&&e.to==='B')) throw new Error('Player career event persistence failed');
+  const persisted=unpackDB(packDB(db)),persistedPlayer=persisted.players[sample.id];
+  if(!persistedPlayer||persisted.version!==12||persistedPlayer.nationality!==sample.nationality||persistedPlayer.reputation!==sample.reputation||!persistedPlayer.development||!persistedPlayer.roleFamiliarity||!persistedPlayer.pool[poolEntry]||persistedPlayer.pool[poolEntry].trainingExperience!==sample.pool[poolEntry].trainingExperience) throw new Error('Player save round-trip failed');
 
   const selectable=managerSelectableTeams(db), independent=active.filter(t=>!t.parent);
   if(!selectable.length||selectable.some(t=>t.parent)) throw new Error('Manager-selectable team filter failed');
