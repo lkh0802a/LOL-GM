@@ -867,7 +867,8 @@ function packDB(db){
     players[id]=q;
   }
   const scout=Object.fromEntries(Object.entries(db.scout||{}).filter(([id,r])=>db.players[id]&&!db.players[id].retired&&(typeof r==='number'||(r.knowledge||0)>baseScoutKnowledge(db,db.players[id])||(r.observations||0)>0)));
-  return JSON.stringify({...db,players,scout,packed:1});
+  const teams=Object.fromEntries(Object.entries(db.teams).map(([id,t])=>{const q={...t};delete q._pre;return [id,q]}));
+  return JSON.stringify({...db,teams,players,scout,packed:1});
 }
 function unpackDB(str){
   const db=JSON.parse(str); if(!db.packed)return db;
