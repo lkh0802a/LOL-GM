@@ -221,7 +221,8 @@ td.fmt{font-size:12px;color:var(--mut);white-space:normal;min-width:200px}
 <div id="overlay" hidden role="dialog" aria-modal="true" aria-label="시리즈 상세"></div>
 <script>
 /* LOL GM generated bundle. Canonical source lives in src/artifact/*.js. */
-/* ==== FILE: engine.js ==== */
+
+/* --- engine.js --- */
 // ===== LOL GM: 코어 엔진 =====
 function clamp(v,a,b){return v<a?a:v>b?b:v}
 function avg(a){return a.length?a.reduce((s,x)=>s+x,0)/a.length:0}
@@ -801,7 +802,7 @@ function monteCarlo(db,blueId,redId,n,baseSeed){
   return acc;
 }
 
-/* ==== FILE: data.js ==== */
+/* --- data.js --- */
 // ===== LOL GM: 데이터 모델 / 기본 월드 =====
 const ROLES = ['TOP','JGL','MID','ADC','SUP'];
 const ROLE_KO = {TOP:'탑',JGL:'정글',MID:'미드',ADC:'원딜',SUP:'서폿'};
@@ -989,7 +990,8 @@ const STYLE_BIAS = {
   aggressive:{g:{combat:3,mechanical:2,mental:-4}, t:{aggression:22,risk_taking:18,roaming:15,engage_preference:12}}
 };
 
-/* ==== FILE: champs2.js ==== */
+
+/* --- champs2.js --- */
 // ===== LOL GM: 챔피언 확장 (아키타입 기반) =====
 // kit: [burst,dps,cc,engage,disengage,peel,poke,waveclear,mobility,sustain,early,mid,late,difficulty]
 const ARCH={
@@ -1041,7 +1043,7 @@ function archChampion(name,roles,arch,dmg,extra,id=championId(name)){
   return {id,name,roles,cls,dmg,base:b,kit:k,arch};
 }
 
-/* ==== FILE: patch.js ==== */
+/* --- patch.js --- */
 // ===== LOL GM: 패치 / 메타 =====
 // 패치 = 수치 변화(델타)의 기록. 어떤 시점의 패치든 기본 데이터 + 델타로 다시 만들 수 있다
 const PATCH_CACHE={};
@@ -1130,7 +1132,7 @@ function seasonPatch(db,date,rng){
   news(db,`시즌 개막 패치 ${p.id} — 챔피언 ${p.notes.filter(n=>n.c).length}명 조정${nc?`, 신규 챔피언 ${nc.def.name} 출시`:''}`);
 }
 
-/* ==== FILE: competition.js ==== */
+/* --- competition.js --- */
 // ===== LOL GM: Series (Phase 3) =====
 function teamComposure(db,tid){return avg(db.teams[tid].roster.map(id=>db.players[id].attrs.composure))/100}
 function gameMVP(r){
@@ -1416,7 +1418,7 @@ function intlStages(fmt,teams,bo){
   return [grp(n>=12?4:2),ko('groups',n>=12?8:4)];
 }
 
-/* ==== FILE: world.js ==== */
+/* --- world.js --- */
 // ===== LOL GM: 월드 (Phase 5 성장 + 월드 확장) =====
 const NICK_A=['Ka','Zer','Lu','Vex','Mor','Ny','Ti','Rho','Sa','Quin','El','Dra','Fen','Jo','Kai','Mir','Oz','Pyr','Ren','Syl','Ul','Wyn','Xan','Yor','Bru','Cae','Del','Gor','Hex','Ish','Lor','Nim','Pax','Riv','Tor','Val','Zu','Aki','Bly','Cro'];
 const NICK_B=['n','ra','x','lo','th','ne','ko','vy','dan','rin','zo','sk','mi','ro','ve','ly','ce','ta','ix','or','us','en','al','yx','e','o','ash','ek','im','ul'];
@@ -2263,7 +2265,7 @@ function stepOf(db,s){
   return w.steps.findIndex(st=>st.kind==='league'?st.split===s.split:(st.ids||[st.id]).includes(s.comp));
 }
 
-/* ==== FILE: office.js ==== */
+/* --- office.js --- */
 // ===== LOL GM: 흥행 / 리그 사무국 =====
 const OFFICE_STYLES={
   conservative:{label:'보수적',w:{cap:-0.1,floor:-0.1,tax:-0.2,import:-0.2,fearless:-0.2,expand:-0.35,contract:-0.2,playoffs:-0.1,relegation:-0.2,franchise:0.1,mixed:-0.1,div2:-0.1,format:-0.25,splits:-0.2,bo:-0.1}},
@@ -2504,7 +2506,7 @@ function globalOffice(db,w,rng,f,ev){
   worldDecisions(db,rng,f,ev);
 }
 
-/* ==== FILE: finance.js ==== */
+/* --- finance.js --- */
 // ===== LOL GM: 계약 / 재정 / FA 시장 (단위: 억 원) =====
 const PAY_SCALE={}; // legacy compatibility only; new worlds derive pay scale in the policy engine.
 const money=v=>(Math.round(v*10)/10).toFixed(1)+'억';
@@ -2934,7 +2936,7 @@ function mSponsor(db,id){const t=myT(db),o=(db.world.sponsorOffers||[]).find(x=>
 
 function mFacility(db){const t=myT(db);if((t.facility||2)>=5)return '이미 최고 단계입니다';const c=facilityCost(db,t);if(t.finance.cash<c)return `보유 자금이 부족합니다 (${money(c)} 필요)`;t.finance.cash=Math.round((t.finance.cash-c)*10)/10;t.facility=(t.facility||2)+1;return `훈련 시설 ${t.facility}단계로 증설 (${money(c)})`}
 
-/* ==== FILE: features.js ==== */
+/* --- features.js --- */
 // ===== LOL GM: 컨디션·폼·사기·팀 호흡 / 코칭스태프 / 시상·명예의 전당 / 구단주 목표 / 스폰서 =====
 const GOAL_KO={title:'리그 우승',final:'결승 진출',playoffs:'플레이오프 진출',top_half:'상위권 (중위 이상)',survive:'강등 피하기'};
 function pState(p){if(p.form===undefined)p.form=0;if(p.fatigue===undefined)p.fatigue=10;if(p.morale===undefined)p.morale=65;if(p.condition===undefined)p.condition=96;if(p.sharpness===undefined)p.sharpness=55;if(p.teamAdaptation===undefined)p.teamAdaptation=p.team?60:50;if(p.tacticalAdaptation===undefined)p.tacticalAdaptation=p.team?60:50;return p}
@@ -3107,7 +3109,7 @@ function hallOfFame(db,p){
   return false;
 }
 
-/* ==== FILE: career.js ==== */
+/* --- career.js --- */
 // ===== LOL GM: first-season blank roster setup =====
 const INITIAL_ROSTER_TARGET=6;
 const INITIAL_GOAL_KO={title:'리그 우승 도전',final:'결승권 진입',playoffs:'플레이오프 진출',top_half:'상위권 정착',survive:'1부 잔류',promotion:'1부 승격 도전',develop:'유망주 육성과 경쟁력 확보'};
@@ -3234,7 +3236,8 @@ function finalizeInitialRosters(db){
   if(allErrors.length)throw new Error('AI 초기 로스터 구성 실패 · '+allErrors[0]);for(const t of activeTeams(db))initializeTeamRosterRoles(db,t,true);db.manager.careerStartedAt=db.worldDate;db.firstSeasonSetup.completed=true;const seed=db.world.seed,teamId=root.id;startWorldSeason(db,teamId,seed);return db.world;
 }
 
-/* ==== FILE: app.js ==== */
+
+/* --- app.js --- */
 // ===== LOL GM: UI =====
 const SAVE_VERSION=13;
 const STORAGE_NS='lol-gm-v13';
@@ -3349,6 +3352,7 @@ function freshInternalSeed(prefix='rng'){
 function grpAvg(p,g,k=100){return Math.round(avg(ATTR_GROUPS[g].map(a=>obsAttr(DB,p,a,k))))}
 function ovrTag(v){return `<span class="num ${v>=80?'hi':v>=70?'mid':'lo'}">${v}</span>`}
 
+function navKeepScroll(){const y=window.scrollY;nav();requestAnimationFrame(()=>window.scrollTo(0,y))}
 function nav(){
   if(typeof LIVE!=='undefined')clearInterval(LIVE);
   document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-current',b.dataset.v===VIEW?'page':'false'));
@@ -3463,23 +3467,29 @@ function financeTable(rid){
   </tbody></table></div>`;
 }
 function potLabel(p){const r=p.pot-playerOvr(p);return r>=8?'높음':r>=3?'보통':'낮음'}
+function squadEditState(t){
+  if(!SQUAD_EDIT||SQUAD_EDIT.teamId!==t.id)SQUAD_EDIT={teamId:t.id,starters:{...(t.depth?.starters||{})},roles:Object.fromEntries((t.roster||[]).map(id=>[id,DB.players[id]?.rosterRole||recommendedRosterRole(DB,DB.players[id],t)])),tactics:{...t.tactics},training:{...(t.training||defaultTraining())},dirty:false};
+  return SQUAD_EDIT;
+}
+function discardSquadEdit(){SQUAD_EDIT=null;nav()}
+function applySquadEdit(){const t=DB.teams[SQUAD_EDIT?.teamId];if(!t)return;const e=SQUAD_EDIT;for(const r of ROLES){const p=DB.players[e.starters[r]];if(p&&p.team===t.id)setDepthStarter(DB,t,r,p,'manager',false)}for(const [id,role] of Object.entries(e.roles)){const p=DB.players[id];if(p&&p.team===t.id&&p.rosterRole!==role)setRosterRole(DB,p,role,'manager',false)}t.tactics={...e.tactics};t.training={...e.training};SQUAD_EDIT=null;saveDB();nav()}
 function viewSquad(){
   SQUAD=SQUAD&&DB.teams[SQUAD]&&DB.teams[SQUAD].active!==false?SQUAD:(DB.world?managedTeamId(DB):activeTeams(DB)[0].id);
   const t=DB.teams[SQUAD], ps=t.roster.map(id=>DB.players[id]).sort((a,b)=>ROLES.indexOf(a.role)-ROLES.indexOf(b.role)||playerOvr(b)-playerOvr(a));
   const mineOrg=DB.world&&(t.id===managedTeamId(DB)||t.parent===managedTeamId(DB)), kAvg=Math.round(avg(ps.map(p=>knowledge(DB,p))));
-  const tr=t.training||defaultTraining();
+  const edit=mineOrg?squadEditState(t):null,tr=edit?edit.training:(t.training||defaultTraining()),tac=edit?edit.tactics:t.tactics;
   return `<section class="controls"><label>팀<select id="sq">${teamOpts(SQUAD)}</select></label></section>
   <section class="teamhead"><h2>${esc(t.name)}</h2><p>${t.formerNames&&t.formerNames.length?'전신 '+t.formerNames.map(esc).join(', ')+' · ':''}${esc(DB.regions[t.region].leagueName)} · 감독 ${esc(t.coach.name)} (밴픽 ${t.coach.draft} · 분석 ${t.coach.analysis} · 육성 ${t.coach.development}) · 운영 철학 ${PHIL_KO[t.philosophy]||'균형'} · 팬덤 ${t.fans??'—'} · 팀 호흡 ${Math.round(teamSynergy(t))}${t.goal?` · 구단주 목표: ${GOAL_KO[t.goal]}`:''}</p><p class="hint">훈련은 한정된 포인트를 어디에 배분할지 선택합니다. 주전을 자주 바꾸면 팀 호흡이 떨어집니다.</p></section>
   <section><h3>팀 전술</h3><div class="tac">
-    ${Object.keys(TAC_KO).map(k=>`<label><span>${TAC_KO[k]}<output>${t.tactics[k]}</output></span><input type="range" min="0" max="100" value="${t.tactics[k]}" data-tac="${k}"></label>`).join('')}
+    ${Object.keys(TAC_KO).map(k=>`<label><span>${TAC_KO[k]}<output>${tac[k]}</output></span><input type="range" min="0" max="100" value="${tac[k]}" data-tac="${k}"></label>`).join('')}
   </div></section>
   ${financePanel(t)}
   <section><h3>훈련 배분 <small class="hint" id="trleft">남은 포인트 ${TRAIN_POINTS-Object.values(tr).reduce((x,y)=>x+y,0)} / ${TRAIN_POINTS}</small></h3><div class="tac">
     ${Object.keys(ATTR_GROUPS).map(g=>`<label><span>${GROUP_KO[g]}<output>${tr[g]}</output></span><input type="range" min="0" max="${TRAIN_POINTS}" value="${tr[g]}" data-tr="${g}"></label>`).join('')}
-  </div><p class="hint">훈련 포인트는 총 ${TRAIN_POINTS}점입니다. 한 영역에 몰면 그 영역은 크게 오르지만 나머지는 덜 오르거나 떨어지고, 배분하지 않은 포인트는 버려집니다. 한 시즌에 영역별로 오를 수 있는 폭과, 잠재력보다 한참 높게 오르는 것에도 한계가 있습니다.</p>
+  </div>${mineOrg?'<div class="controls"><button class="primary" id="sqapply">변경사항 적용</button><button class="ghost" id="sqdiscard">변경 취소</button><span class="hint">주전·역할·전술·훈련을 여러 개 조정한 뒤 한 번에 적용합니다.</span></div>':''}<p class="hint">훈련 포인트는 총 ${TRAIN_POINTS}점입니다. 한 영역에 몰면 그 영역은 크게 오르지만 나머지는 덜 오르거나 떨어지고, 배분하지 않은 포인트는 버려집니다. 한 시즌에 영역별로 오를 수 있는 폭과, 잠재력보다 한참 높게 오르는 것에도 한계가 있습니다.</p>
   <div class="fin"><div><span>훈련 시설</span><b>${t.facility||2} / 5단계</b><small>성장 ×${facilityMul(t).toFixed(2)} · 유지비 연 ${money(facilityUpkeep(DB,t))}</small></div>${DB.world&&t.id===managedTeamId(DB)?`<div><span>증설</span>${(t.facility||2)<5?`<button class="ghost" id="facup">${t.facility+1||3}단계로 (${money(facilityCost(DB,t))})</button>`:'<b>최고 단계</b>'}<small id="facmsg"></small></div>`:''}</div></section>
   <section><h3>로스터</h3><div class="scroll"><table class="roster"><thead><tr><th>포지션</th><th>선수</th><th>선발</th><th>역할</th><th>만족도</th><th>나이</th><th>종합</th><th>성장 여지</th><th>명성</th><th>시장가치</th><th>폼</th><th>컨디션</th><th>경기 감각</th><th>피로</th><th>사기</th><th>연봉</th><th>계약</th>${Object.keys(ATTR_GROUPS).map(g=>`<th>${GROUP_KO[g]}</th>`).join('')}</tr></thead><tbody>
-    ${ps.map(p=>{const st=pState(p);ensureSatisfaction(p);const roleCtl=mineOrg?`<select data-srole="${p.id}" aria-label="${esc(p.name)} 로스터 역할">${SQUAD_ROLES.map(r=>`<option value="${r}"${p.rosterRole===r?' selected':''}>${SQUAD_ROLE_KO[r]}</option>`).join('')}</select>`:SQUAD_ROLE_KO[p.rosterRole||recommendedRosterRole(DB,p,t)];return `<tr data-p="${p.id}" tabindex="0" class="${OPEN_P===p.id?'open':''}"><td><span class="role">${ROLE_KO[p.role]}</span></td><td><b>${esc(p.name)}</b>${starterFor(DB,t,p.role)===p?'':' <small class="hint">후보</small>'}</td><td>${mineOrg?(starterFor(DB,t,p.role)===p?'<b class="hi">선발</b>':`<button class="ghost sm2" data-starter="${p.id}" data-role="${p.role}">주전 지정</button>`):(starterFor(DB,t,p.role)===p?'선발':'후보')}</td><td>${roleCtl}</td><td class="num ${p.satisfaction<35?'lo':p.satisfaction>=70?'hi':''}">${Math.round(p.satisfaction)}<small class="hint"> ${satisfactionLabel(p.satisfaction)}</small>${p.wantsOut?' <span class="lo">이적요청</span>':''}</td><td class="num">${p.age}</td><td>${ovrTag(obsOvr(DB,p))}${knowledge(DB,p)<100?'<small class="hint">?</small>':''}</td><td>${potText(p)}</td><td class="num">${p.reputation??'—'}</td><td class="num">${money(playerMarketValue(DB,p))}</td><td class="num">${st.form>=3?'<span class="hi">▲</span>':st.form<=-3?'<span class="lo">▼</span>':'–'}</td><td class="num">${Math.round(st.condition)}</td><td class="num">${Math.round(st.sharpness)}</td><td class="num">${Math.round(st.fatigue)}</td><td class="num ${st.morale<35?'lo':''}">${Math.round(st.morale)}${p.wantsOut?' 이적요청':''}</td><td class="num">${p.contract?money(p.contract.salary):'—'}</td><td class="num">${p.contract?'~'+p.contract.until:'—'}</td>${Object.keys(ATTR_GROUPS).map(g=>`<td>${ovrTag(grpAvg(p,g,knowledge(DB,p)))}</td>`).join('')}</tr>`}).join('')}
+    ${ps.map(p=>{const st=pState(p);ensureSatisfaction(p);const shownRole=edit?.roles[p.id]||p.rosterRole||recommendedRosterRole(DB,p,t),shownStarter=edit?.starters[p.role]===p.id;const roleCtl=mineOrg?`<select data-srole="${p.id}" aria-label="${esc(p.name)} 로스터 역할">${SQUAD_ROLES.map(r=>`<option value="${r}"${shownRole===r?' selected':''}>${SQUAD_ROLE_KO[r]}</option>`).join('')}</select>`:SQUAD_ROLE_KO[p.rosterRole||recommendedRosterRole(DB,p,t)];return `<tr data-p="${p.id}" tabindex="0" class="${OPEN_P===p.id?'open':''}"><td><span class="role">${ROLE_KO[p.role]}</span></td><td><b>${esc(p.name)}</b>${(edit?shownStarter:starterFor(DB,t,p.role)===p)?'':' <small class="hint">후보</small>'}</td><td>${mineOrg?(shownStarter?'<b class="hi">선발</b>':`<button class="ghost sm2" data-starter="${p.id}" data-role="${p.role}">주전 지정</button>`):(starterFor(DB,t,p.role)===p?'선발':'후보')}</td><td>${roleCtl}</td><td class="num ${p.satisfaction<35?'lo':p.satisfaction>=70?'hi':''}">${Math.round(p.satisfaction)}<small class="hint"> ${satisfactionLabel(p.satisfaction)}</small>${p.wantsOut?' <span class="lo">이적요청</span>':''}</td><td class="num">${p.age}</td><td>${ovrTag(obsOvr(DB,p))}${knowledge(DB,p)<100?'<small class="hint">?</small>':''}</td><td>${potText(p)}</td><td class="num">${p.reputation??'—'}</td><td class="num">${money(playerMarketValue(DB,p))}</td><td class="num">${st.form>=3?'<span class="hi">▲</span>':st.form<=-3?'<span class="lo">▼</span>':'–'}</td><td class="num">${Math.round(st.condition)}</td><td class="num">${Math.round(st.sharpness)}</td><td class="num">${Math.round(st.fatigue)}</td><td class="num ${st.morale<35?'lo':''}">${Math.round(st.morale)}${p.wantsOut?' 이적요청':''}</td><td class="num">${p.contract?money(p.contract.salary):'—'}</td><td class="num">${p.contract?'~'+p.contract.until:'—'}</td>${Object.keys(ATTR_GROUPS).map(g=>`<td>${ovrTag(grpAvg(p,g,knowledge(DB,p)))}</td>`).join('')}</tr>`}).join('')}
   </tbody></table></div><p class="hint">선수를 누르면 세부 능력치, 챔피언 폭, 커리어가 열립니다.${mineOrg?'':` 스카우팅 정보 ${kAvg}% — 정보가 적을수록 실제와 다르게 보입니다.`}</p>${DB.world&&!mineOrg?`<div class="controls"><button class="ghost" id="scoutT">이 팀 집중 스카우팅 (${money(0.5*psOf(DB,DB.teams[managedTeamId(DB)].region))})</button><span id="scmsg" class="hint"></span></div>`:''}</section>
   <div id="pdetail">${OPEN_P&&DB.players[OPEN_P]&&DB.players[OPEN_P].team===SQUAD?playerDetail(DB.players[OPEN_P]):''}</div>${mineOrg?scoutingSearchBlock():''}`;
 }
@@ -3510,18 +3520,19 @@ function playerDetail(p){
   ${ev.length?`<h4 style="margin-top:14px">커리어 이벤트</h4><div class="scroll"><table class="pool"><thead><tr><th>시즌</th><th>유형</th><th>내용</th></tr></thead><tbody>${ev.map(e=>{const detail=e.type==='contract'?`${esc(tshort(e.team))} · ${money(e.salary)} · ~${e.until}`:e.type==='transfer'?`${esc(tshort(e.from))} → ${esc(tshort(e.to))} · ${money(e.fee)}`:e.type==='award'?`${esc(e.competition)} · ${esc(e.award)}`:e.type==='title'?`${esc(e.competition)} 우승`:e.type==='squad_move'?`${esc(tshort(e.from))} → ${esc(tshort(e.to))}`:e.type==='retirement'?`${e.age}세 은퇴 · 전성기 종합 ${e.peak}`:e.type==='release'?`${esc(tshort(e.team))} 방출`:e.type==='roster_role'?`${SQUAD_ROLE_KO[e.from]||e.from} → ${SQUAD_ROLE_KO[e.to]||e.to}`:e.type==='transfer_request'?`${SAT_REASON_KO[e.reason]||e.reason} · 이적 요청`:e.type==='transfer_request_withdrawn'?'이적 요청 철회':'—';return `<tr><td class="num">${e.year}</td><td>${({contract:'계약',transfer:'이적',award:'개인상',title:'우승',squad_move:'1·2군 이동',retirement:'은퇴',release:'방출',roster_role:'역할 변경',transfer_request:'이적 요청',transfer_request_withdrawn:'요청 철회'}[e.type]||e.type)}</td><td>${detail}</td></tr>`}).join('')}</tbody></table></div>`:''}</section>`;
 }
 function bindSquad(){
-  $('#sq').onchange=e=>{SQUAD=e.target.value;OPEN_P=null;nav()};
+  $('#sq').onchange=e=>{SQUAD_EDIT=null;SQUAD=e.target.value;OPEN_P=null;nav()};
+  if($('#sqapply'))$('#sqapply').onclick=applySquadEdit;if($('#sqdiscard'))$('#sqdiscard').onclick=discardSquadEdit;
   if($('#scoutT'))$('#scoutT').onclick=()=>{const m=scoutPlayers(DB,DB.teams[SQUAD].roster,35,0.5*psOf(DB,DB.teams[managedTeamId(DB)].region));saveDB();nav();$('#scmsg')&&($('#scmsg').textContent=m)};
-  document.querySelectorAll('[data-starter]').forEach(el=>{el.onclick=e=>{e.stopPropagation();const p=DB.players[el.dataset.starter];if(p)setDepthStarter(DB,DB.teams[SQUAD],el.dataset.role,p,'manager',false);saveDB();nav()}});
-  document.querySelectorAll('[data-srole]').forEach(el=>{el.onclick=e=>e.stopPropagation();el.onchange=e=>{e.stopPropagation();const p=DB.players[el.dataset.srole];if(p)setRosterRole(DB,p,el.value,'manager',false);saveDB();nav()}});
-  document.querySelectorAll('[data-tac]').forEach(el=>el.oninput=el.onchange=e=>{const k=el.dataset.tac;DB.teams[SQUAD].tactics[k]=+el.value;if(el.previousElementSibling)el.previousElementSibling.querySelector('output').textContent=el.value;saveDB()});
-  document.querySelectorAll('[data-tr]').forEach(el=>el.oninput=()=>{const t=DB.teams[SQUAD];t.training=t.training||defaultTraining();const k=el.dataset.tr;
-    const others=Object.entries(t.training).filter(([g])=>g!==k).reduce((s,[,v])=>s+v,0), v=Math.min(+el.value,TRAIN_POINTS-others);
-    el.value=v;t.training[k]=v;el.previousElementSibling.querySelector('output').textContent=v;$('#trleft').textContent=`남은 포인트 ${TRAIN_POINTS-others-v} / ${TRAIN_POINTS}`;saveDB()});
+  document.querySelectorAll('[data-starter]').forEach(el=>{el.onclick=e=>{e.stopPropagation();const p=DB.players[el.dataset.starter];if(p){const d=squadEditState(DB.teams[SQUAD]);d.starters[el.dataset.role]=p.id;d.dirty=true}nav()}});
+  document.querySelectorAll('[data-srole]').forEach(el=>{el.onclick=e=>e.stopPropagation();el.onchange=e=>{e.stopPropagation();const p=DB.players[el.dataset.srole];if(p){const d=squadEditState(DB.teams[SQUAD]);d.roles[p.id]=el.value;d.dirty=true}}});
+  document.querySelectorAll('[data-tac]').forEach(el=>el.oninput=el.onchange=e=>{const k=el.dataset.tac;const d=squadEditState(DB.teams[SQUAD]);d.tactics[k]=+el.value;d.dirty=true;if(el.previousElementSibling)el.previousElementSibling.querySelector('output').textContent=el.value});
+  document.querySelectorAll('[data-tr]').forEach(el=>el.oninput=()=>{const t=DB.teams[SQUAD],d=squadEditState(t);const k=el.dataset.tr;
+    const others=Object.entries(d.training).filter(([g])=>g!==k).reduce((s,[,v])=>s+v,0), v=Math.min(+el.value,TRAIN_POINTS-others);
+    el.value=v;d.training[k]=v;d.dirty=true;el.previousElementSibling.querySelector('output').textContent=v;$('#trleft').textContent=`남은 포인트 ${TRAIN_POINTS-others-v} / ${TRAIN_POINTS}`});
   if($('#facup'))$('#facup').onclick=()=>{const m=mFacility(DB);saveDB();nav();const e=$('#facmsg');if(e)e.textContent=m};
   const scRefresh=()=>{SCOUTSET.region=$('#screg')?.value||SCOUTSET.region;SCOUTSET.role=$('#scrole')?.value||SCOUTSET.role;SCOUTSET.contract=$('#sccontract')?.value||SCOUTSET.contract;SCOUTSET.competition=$('#sccomp')?.value||SCOUTSET.competition;SCOUTSET.undervalued=!!$('#scunder')?.checked;SCOUTSET.q=$('#scq')?.value||'';nav()};
   for(const id of ['#screg','#scrole','#sccontract','#sccomp','#scunder','#scq'])if($(id))$(id).onchange=scRefresh;
-  document.querySelectorAll('[data-scout]').forEach(b=>b.onclick=e=>{e.stopPropagation();MSG=scoutPlayers(DB,[b.dataset.scout],20,.1*psOf(DB,managedTeam(DB).region));saveDB();nav()});
+  document.querySelectorAll('[data-scout]').forEach(b=>b.onclick=e=>{e.stopPropagation();MSG=scoutPlayers(DB,[b.dataset.scout],20,.1*psOf(DB,managedTeam(DB).region));saveDB();navKeepScroll()});
   document.querySelectorAll('tr[data-p]').forEach(tr=>{const open=()=>{OPEN_P=OPEN_P===tr.dataset.p?null:tr.dataset.p;nav();const d=$('#pdetail');if(OPEN_P&&d)d.scrollIntoView({behavior:'smooth',block:'start'})};tr.onclick=open;tr.onkeydown=e=>{if(e.key==='Enter')open()}});
 }
 // ---------- 패치·메타 ----------
@@ -3569,7 +3580,7 @@ function renderInitialRosterMarket(){
   <section><h3>등록 마감</h3>${errors.length?`<p class="warn">${errors.map(esc).join(' / ')}</p>`:'<p class="hi">내 구단 로스터 규정을 모두 충족했습니다.</p>'}${openInitial.length?`<p class="warn">진행 중인 계약 협상 ${openInitial.length}건을 먼저 마무리해야 합니다.</p>`:''}<div class="controls"><button class="primary" id="init-final"${errors.length||openInitial.length?' disabled':''}>전 세계 로스터 확정 후 시즌 개막</button><span class="hint">확정하면 AI 구단도 남은 FA 풀에서 같은 계약·등록 핵심 규칙으로 선수단을 구성합니다.</span></div></section>`;
 }
 function bindInitialRosterMarket(){
-  const act=m=>{MSG=m;saveDB();nav();window.scrollTo(0,0)};
+  const act=m=>{const y=window.scrollY;MSG=m;saveDB();nav();requestAnimationFrame(()=>window.scrollTo(0,y))};
   $('#init-target').onchange=e=>{INITMK.target=e.target.value;MSG='';nav()};$('#init-role').onchange=e=>{INITMK.role=e.target.value;nav()};$('#init-scope').onchange=e=>{INITMK.scope=e.target.value;nav()};
   document.querySelectorAll('[data-init-interest]').forEach(b=>b.onclick=()=>act(mInterest(DB,b.dataset.initInterest,'B')));
   document.querySelectorAll('[data-init-priority]').forEach(el=>el.onchange=()=>act(mInterest(DB,el.dataset.initPriority,el.value)));
