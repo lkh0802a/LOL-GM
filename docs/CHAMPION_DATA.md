@@ -12,7 +12,7 @@ Run `node scripts/sync-champions.mjs <version>` to create a reviewable snapshot 
 Imported data is not accepted automatically. Normalization must map each mechanic to LOL GM's explicit skill schema and smoke tests must verify champion count, stable IDs, P/Q/W/E/R presence and numeric fields before a snapshot becomes canonical.
 
 ## Snapshot validation
-Every imported snapshot must pass `scripts/validate-champion-snapshot.mjs`: pinned version, Riot source marker, at least 160 champions, unique stable Riot keys, required base stats, Korean localization, passive and Q/W/E/R structure. LOL GM patch 26.19 maps explicitly to Data Dragon 16.19.1; future mappings must also be explicit rather than using `latest`.
+Every imported snapshot must pass `scripts/validate-champion-snapshot.mjs`: pinned version, Riot source marker, at least 160 champions, unique stable Riot keys, required base stats, Korean champion/passive/Q/W/E/R names and non-empty Korean passive/Q/W/E/R descriptions. LOL GM patch 26.19 maps explicitly to Data Dragon 16.19.1; future mappings must also be explicit rather than using `latest`.
 
 ## Normalized skill mechanics
 Each P/Q/W/E/R entry can carry structured mechanics: per-rank `baseDamage`, coefficient map `ratios` (AP/total AD/bonus AD/HP etc.), `cost`, `range`, structured `cc`, `heal`, `shield`, `charges`, and `recast`. Data Dragon fields are retained when exposed; reviewed CommunityDragon supplements may fill missing mechanics. The match engine consumes structured damage/ratio/CC/utility information instead of treating it as display-only metadata.
@@ -20,4 +20,4 @@ Each P/Q/W/E/R entry can carry structured mechanics: per-rank `baseDamage`, coef
 
 ## Runtime coverage
 
-The embedded 16.19.1 / 26.19 snapshot now covers all 173 initial champions with Korean passive and Q/W/E/R source records. Runtime provenance remains explicit: Data Dragon supplies the pinned source fields, while mechanics not represented by that source remain simulation-derived rather than being presented as authoritative Riot numeric data.
+The embedded 16.19.1 / 26.19 snapshot now covers all 173 initial champions with Korean passive and Q/W/E/R names/descriptions plus the exposed base/spell source fields. Runtime normalization strips presentation markup from descriptions without changing the pinned raw snapshot, reports localized coverage separately from source-match coverage, and keeps provenance explicit: Data Dragon supplies pinned source fields, while mechanics not represented by that source remain simulation-derived rather than being presented as authoritative Riot numeric data.
