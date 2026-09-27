@@ -97,8 +97,8 @@ function normalizeInitialSalaryFloor(db,t){
   if(gap>0&&team.roster.length){const p=db.players[team.roster[0]];p.contract.salary=Math.round((p.contract.salary+gap)*10)/10}
 }
 function aiInitialContractTerms(db,p,t,rng){
-  const ask=asking(db,p,t.region),years=contractYearsForPlayer(db,p,rng),premium=rng.range(.96,1.08),role=defaultPromisedRole(db,p,t);
-  return normalizeContractTerms(db,p,t,ask*premium,years,{signingBonus:rng.chance(.28)?ask*rng.range(.04,.12):0,bonuses:rng.chance(.32)?{performance:ask*.05,title:ask*.08,international:ask*.05}:{},promisedRole:role,option:rng.chance(.15)?{type:rng.chance(.55)?'team':'player'}:null,buyout:p.personality.ambition>=86&&rng.chance(.35)?playerMarketValue(db,p)*1.8:null});
+  const ask=asking(db,p,t.region),years=contractYearsForPlayer(db,p,rng),premium=rng.range(.96,1.08),role=defaultPromisedRole(db,p,t),room=Math.max(.1,initialSalaryCeiling(db,t)-payroll(db,t)),salary=Math.min(room,ask*premium);
+  return normalizeContractTerms(db,p,t,salary,years,{signingBonus:rng.chance(.28)?ask*rng.range(.04,.12):0,bonuses:rng.chance(.32)?{performance:ask*.05,title:ask*.08,international:ask*.05}:{},promisedRole:role,option:rng.chance(.15)?{type:rng.chance(.55)?'team':'player'}:null,buyout:p.personality.ambition>=86&&rng.chance(.35)?playerMarketValue(db,p)*1.8:null});
 }
 function autoBuildInitialSquad(db,t,rng,target=INITIAL_ROSTER_TARGET){
   const team=teamRef(db,t),limits=initialSquadLimits(db,team),want=Math.min(limits.max,Math.max(limits.min,target));
