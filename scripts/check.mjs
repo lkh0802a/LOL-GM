@@ -52,6 +52,19 @@ for (const [file, maxBytes] of Object.entries(maintainabilityBudgets)) {
   }
 }
 
+const draftUiSource = await readFile(resolve(artifact, 'ui-draft.js'), 'utf8');
+const draftShellMarkers = ['du-series-meta','du-fearless','du-last-card','du-ban-img','du-pick-img'];
+const draftUiMarkers = ['officialLastGameCard','draftUiSeriesMeta','draftUiFearlessStrip',"reason:'Fearless'"];
+for (const marker of draftUiMarkers) if (!draftUiSource.includes(marker)) {
+  failed = true;
+  console.error(`Interactive draft UI contract missing marker: ${marker}`);
+}
+const shellSource = await readFile(resolve(artifact, 'shell.html'), 'utf8');
+for (const marker of draftShellMarkers) if (!shellSource.includes(marker)) {
+  failed = true;
+  console.error(`Interactive draft shell contract missing marker: ${marker}`);
+}
+
 const appSource = await readFile(resolve(artifact, 'app.js'), 'utf8');
 const worldSource = await readFile(resolve(artifact, 'world.js'), 'utf8');
 const saveVersion = Number(appSource.match(/const SAVE_VERSION=(\d+)/)?.[1]);

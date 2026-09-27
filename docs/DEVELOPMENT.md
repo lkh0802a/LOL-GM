@@ -255,3 +255,8 @@ Patch-pinned Riot Data Dragon import tooling now exists at `scripts/sync-champio
 - Meta filtering supports region, patch, competition, period, year, domestic/international scope and actual picked position.
 - Team meta learning and counter-research are persistent, and new champions remain practice-usable during the global pro-ban window while tournament pools stay locked.
 - Rare major-patch champion reworks preserve stable champion IDs.
+
+
+### Item 11 live-draft checkpoint — 2026-09-28
+
+The managed-team official match path now pauses world progression and runs every Bo3/Bo5 game through the interactive draft surface. Fixed Fearless locks all ten picks from each prior game; flex roles remain hidden until legal final assignment; game-one First Selection is home-team in domestic double round-robin, explicit seed only where domestic playoff rules say so, and coin toss for international knockout/bracket matches after seeding has served bracket construction. Games two onward always give First Selection to the previous-game loser. The selection screen shows the previous game's score/picks, and the live draft shows series score, resolved First Selection and the accumulated Fearless lock strip. Item 11 remains ACTIVE pending final draft-information/AI-explanation UX and end-to-end acceptance pass.

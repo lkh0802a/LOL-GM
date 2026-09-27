@@ -9,7 +9,7 @@ function openInteractiveDraft(db,teamIds,playerTeamId,opt={}){
   const seed=opt.seed||freshInternalSeed('draft-ui'),ctx=opt.ctx||{used:[],byTeam:{},fearless:true,practice:true,firstPick:0};
   for(const tid of teamIds)if(!ctx.byTeam[tid])ctx.byTeam[tid]={won:[],lost:[]};
   const state=createDraftSession(db,teamIds,new RNG(seed,'draft'),ctx);
-  DRAFT_UI={db,state,playerSide,seed,title:opt.title||'밴픽',filter:'ALL',query:'',selected:null,locked:!!opt.locked,finishLabel:opt.finishLabel||null,doneText:opt.doneText||null,onComplete:typeof opt.onComplete==='function'?opt.onComplete:null};
+  DRAFT_UI={db,state,playerSide,seed,title:opt.title||'밴픽',filter:'ALL',query:'',selected:null,locked:!!opt.locked,finishLabel:opt.finishLabel||null,doneText:opt.doneText||null,meta:opt.meta||null,onComplete:typeof opt.onComplete==='function'?opt.onComplete:null};
   const ov=$('#overlay');ov.hidden=false;ov.setAttribute('aria-label',DRAFT_UI.title);document.body.classList.add('lock');
   draftUiAdvanceAi();draftUiRender();
 }
@@ -23,6 +23,14 @@ function officialSelectionText(setup){
   if(lead.chose==='side')return `상대가 ${lead.value==='blue'?'블루':'레드'} 진영을 먼저 선택했습니다`;
   return `상대가 ${lead.value==='first'?'선픽':'후픽'}을 먼저 선택했습니다`;
 }
+function officialLastGameRow(db,last,side){
+  const tid=side===0?last.blue:last.red,ids=last.picks?.[side]||[],win=last.winner===tid;
+  return `<div class="du-last-team ${win?'win':''}"><b>${esc(db.teams[tid]?.short||tid)}</b><div class="du-last-picks">${ids.map(id=>{const c=db.patch.champions[id];return c?championPortraitMarkup(c,{className:'du-last-pick',alt:false}):''}).join('')}</div><span>${win?'승':'패'}</span></div>`;
+}
+function officialLastGameCard(db,last){
+  if(!last)return '';
+  return `<section class="du-last-card"><div class="du-last-head"><span>직전 ${last.n}세트</span><b>${esc(db.teams[last.winner]?.short||last.winner)} 승</b><small>${last.kills[0]} : ${last.kills[1]} · ${esc(last.dur)}</small></div>${officialLastGameRow(db,last,0)}${officialLastGameRow(db,last,1)}</section>`;
+}
 function openPendingOfficialSelection(db,setup){
   const me=managedTeamId(db),mine=db.teams[me],oppId=setup.m.a===me?setup.m.b:setup.m.a,opp=db.teams[oppId],score=setup.score||[0,0],meScore=setup.m.a===me?score[0]:score[1],oppScore=setup.m.a===me?score[1]:score[0],p=setup.prompt,last=setup.lastGame;
   const ov=$('#overlay');ov.hidden=false;ov.setAttribute('aria-label','세트 선택권');document.body.classList.add('lock');
@@ -34,7 +42,7 @@ function openPendingOfficialSelection(db,setup){
   const holder=db.teams[p.chooser],home=setup.homeTeam&&db.teams[setup.homeTeam];
   ov.innerHTML=`<div class="ovin du-choice-wrap">
     <div class="ovhead"><div><b>${esc(setup.comp.name)} · ${esc(mine.short)} ${meScore} : ${oppScore} ${esc(opp.short)}</b><small class="du-phase">${setup.game}세트 First Selection</small></div></div>
-    ${last?`<div class="du-last"><span>직전 ${last.n}세트</span><b>${esc(db.teams[last.winner].short)} 승</b><small>${last.kills[0]} : ${last.kills[1]} · ${esc(last.dur)}</small></div>`:''}
+    ${officialLastGameCard(db,last)}
     <section class="du-choice-card">
       <small>${esc(officialSelectionText(setup))}</small>
       <h3>${esc(holder.short)}가 첫 번째 선택권 보유</h3>
@@ -51,7 +59,7 @@ function openPendingOfficialDraft(db){
   const aScore=score[0],bScore=score[1],meScore=setup.m.a===me?aScore:bScore,oppScore=setup.m.a===me?bScore:aScore;
   const locked=setup.fearlessUsed?.length||0,title=`${setup.comp.name} · ${mine.short} ${meScore} : ${oppScore} ${opp.short} · ${setup.game}세트 밴픽`;
   const fearlessText=locked?` · Fearless 잠금 ${locked}개`:'';
-  openInteractiveDraft(db,[setup.blue,setup.red],me,{seed:setup.gseed,title,locked:true,finishLabel:`${setup.game}세트 진행`,doneText:`${setup.game}세트 밴픽이 확정되었습니다${fearlessText}. 경기 결과에 따라 다음 세트 선택권과 Fearless 잠금이 갱신됩니다.`,ctx:setup.draftCtx,onComplete:result=>{
+  openInteractiveDraft(db,[setup.blue,setup.red],me,{seed:setup.gseed,title,locked:true,finishLabel:`${setup.game}세트 진행`,doneText:`${setup.game}세트 밴픽이 확정되었습니다${fearlessText}. 경기 결과에 따라 다음 세트 선택권과 Fearless 잠금이 갱신됩니다.`,ctx:setup.draftCtx,meta:{official:true,game:setup.game,competition:setup.comp.name,score:[meScore,oppScore],me:mine.short,opp:opp.short,firstSelectionTeam:db.teams[setup.chooser]?.short||setup.chooser,firstSelectionWhy:setup.sc?.why||'',fearlessUsed:setup.fearlessUsed||[]},onComplete:result=>{
     const out=resolvePendingOfficialMatch(DB,result);LAST=out.game||null;LASTSER=out.done?out.rec:null;saveDB();nav();
   }});
   return true;
@@ -67,6 +75,7 @@ function draftUiAdvanceAi(){
 function draftUiChampionState(c){
   const s=DRAFT_UI.state,turn=draftTurn(s),inPool=s.champs.some(x=>x.id===c.id);
   if(!inPool)return {disabled:true,reason:'사용 불가'};
+  if(s.ctx.fearless&&s.ctx.used?.includes(c.id))return {disabled:true,reason:'Fearless'};
   if(s.taken.has(c.id))return {disabled:true,reason:'선택됨'};
   if(turn&&turn.kind==='P'&&!draftCanPick(s,turn.side,c.id))return {disabled:true,reason:'조합 불가'};
   return {disabled:false,reason:''};
@@ -81,15 +90,27 @@ function draftUiPickSlot(side,index){
   const s=DRAFT_UI.state,id=s.pickList[side][index],c=id&&s.db.patch.champions[id];
   return `<div class="du-pick ${id?'filled':''}"><span class="du-role">P${index+1}</span>${id?championPortraitMarkup(c,{className:'du-pick-img',alt:false}):'<span class="du-pick-empty"></span>'}<div><b>${id?esc(championDisplayName(c)):'—'}</b><small>${id?(c.roles||[]).map(r=>ROLE_KO[r]).join(' · '):'픽 대기'}</small></div></div>`;
 }
+function draftUiBanSlot(side,index){
+  const s=DRAFT_UI.state,id=s.bans[side][index],c=id&&s.db.patch.champions[id];
+  return `<span class="${id?'filled':''}" title="${id?esc(championLabel(s.db,id)):'BAN'}">${id?championPortraitMarkup(c,{className:'du-ban-img',alt:false}):'<i>BAN</i>'}</span>`;
+}
 function draftUiSidePanel(side){
   const s=DRAFT_UI.state,t=s.db.teams[s.teamIds[side]],turn=draftTurn(s),active=turn&&turn.side===side;
   return `<section class="du-side ${side?'red':'blue'} ${active?'active':''}">
     <div class="du-team"><div><small>${side?'RED':'BLUE'} SIDE</small><h3>${esc(t.name)}</h3></div><b>${s.firstPick===side?'선픽':'후픽'}</b></div>
-    <div class="du-bans">${Array.from({length:5},(_,i)=>{const id=s.bans[side][i];return `<span class="${id?'filled':''}">${id?esc(championLabel(s.db,id)):'BAN'}</span>`}).join('')}</div>
+    <div class="du-bans">${Array.from({length:5},(_,i)=>draftUiBanSlot(side,i)).join('')}</div>
     <div class="du-picks">${Array.from({length:5},(_,i)=>draftUiPickSlot(side,i)).join('')}</div>
   </section>`;
 }
 
+function draftUiFearlessStrip(){
+  const m=DRAFT_UI.meta,ids=m?.fearlessUsed||[];if(!ids.length)return '';
+  return `<div class="du-fearless"><b>FEARLESS · ${ids.length} 잠금</b><div>${ids.map(id=>{const c=DRAFT_UI.db.patch.champions[id];return c?championPortraitMarkup(c,{className:'du-fearless-img',alt:false}):''}).join('')}</div></div>`;
+}
+function draftUiSeriesMeta(){
+  const m=DRAFT_UI.meta;if(!m?.official)return '';
+  return `<section class="du-series-meta"><div><small>${esc(m.competition)} · ${m.game}세트</small><strong>${esc(m.me)} ${m.score[0]} : ${m.score[1]} ${esc(m.opp)}</strong></div><div><small>FIRST SELECTION</small><b>${esc(m.firstSelectionTeam)}</b><span>${esc(m.firstSelectionWhy)}</span></div></section>${draftUiFearlessStrip()}`;
+}
 function draftUiGrid(){
   const s=DRAFT_UI.state,rows=Object.values(s.db.patch.champions).filter(draftUiMatch).sort((a,b)=>championDisplayName(a).localeCompare(championDisplayName(b),'ko'));
   return `<div class="du-grid">${rows.map(c=>{const st=draftUiChampionState(c),sel=DRAFT_UI.selected===c.id;
@@ -103,7 +124,7 @@ function draftUiRender(){
   const mine=!done&&turn.side===DRAFT_UI.playerSide;
   ov.innerHTML=`<div class="ovin du-wrap">
     <div class="ovhead"><div><b>${esc(DRAFT_UI.title)}</b><small class="du-phase">${phase}</small></div>${DRAFT_UI.locked?'':'<button class="ghost" id="du-close">닫기</button>'}</div>
-    <div class="du-board">${draftUiSidePanel(0)}<div class="du-center"><strong>${done?'완료':mine?'YOUR TURN':'AI'}</strong><span>${done?'10밴 · 10픽 완료':turn.kind==='B'?'BAN':'PICK'}</span></div>${draftUiSidePanel(1)}</div>
+    ${draftUiSeriesMeta()}<div class="du-board">${draftUiSidePanel(0)}<div class="du-center"><strong>${done?'완료':mine?'YOUR TURN':'AI'}</strong><span>${done?'10밴 · 10픽 완료':turn.kind==='B'?'BAN':'PICK'}</span></div>${draftUiSidePanel(1)}</div>
     ${done?`<section class="du-done"><h3>드래프트 완료</h3><p>${esc(DRAFT_UI.doneText||'단계형 밴픽 코어와 동일한 결과입니다.')}</p><button class="primary" id="du-finish">${esc(DRAFT_UI.finishLabel||(DRAFT_UI.onComplete?'드래프트 확정':'연습 종료'))}</button></section>`:
     `<section class="du-pool">
       <div class="du-tools"><input id="du-search" type="search" autocomplete="off" placeholder="챔피언 검색" value="${esc(DRAFT_UI.query)}"><div class="chips">${DRAFT_UI_FILTERS.map(r=>`<button data-du-role="${r}" aria-pressed="${DRAFT_UI.filter===r}">${r==='ALL'?'전체':ROLE_KO[r]}</button>`).join('')}</div></div>
