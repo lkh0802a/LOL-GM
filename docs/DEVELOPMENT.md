@@ -232,3 +232,7 @@ Domestic league format is office-owned and may be one long season or multiple sp
 This checkpoint records the contract only. Major item 6 remains ACTIVE. Exact executable international scheduling, coefficient arithmetic, patch lock and international roster rules belong to major item 19 and must implement this contract without legacy-format approximation.
 
 Top-division structural invariant: every first division has at least 10 teams and an even team count. The office should normally prefer 10–16 teams, but 18, 20 and larger even leagues are legal when world evolution justifies them; 16 is not a hard cap.
+
+
+### Champion authoritative-data pipeline — 2026-09-27
+Patch-pinned Riot Data Dragon import tooling now exists at `scripts/sync-champions.mjs`; source policy is documented in `docs/CHAMPION_DATA.md`. Runtime fallbacks remain explicitly non-authoritative until a reviewed snapshot is normalized and accepted.
