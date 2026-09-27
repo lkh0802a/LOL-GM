@@ -49,6 +49,18 @@ function championId(name){
 function championByName(db,name){return Object.values(db.patch.champions).find(c=>c.name===name)||null}
 function championLabel(db,id){const c=db&&db.patch&&db.patch.champions?db.patch.champions[id]:null;return c?(c.nameKo||c.name):String(id||'')}
 function championDisplayName(c){return c?(c.nameKo||c.name):''}
+const CHAMPION_VISUAL_VERSION=1;
+const CHAMPION_VISUAL_THEMES=['arcane','celestial','infernal','verdant','storm','shadow','void','frost','solar','hex'];
+const CHAMPION_VISUAL_ORNAMENTS=['hood','crown','horns','mask','halo','crest','braids','visor'];
+function generatedChampionVisual(def){
+  const id=String(def?.id||championId(def?.name||'champion')),seed=Math.abs(hashStr(id+'|'+(def?.arch||'')+'|portrait-v'+CHAMPION_VISUAL_VERSION));
+  const cls=def?.cls||({juggernaut:'fighter',diver:'fighter',skirmisher:'fighter',vanguard:'tank',warden:'tank',burst:'mage',control:'mage',battle:'mage',artillery:'mage',hyper:'marksman',bully:'marksman',catcher:'enchanter'}[def?.arch]||'fighter');
+  const silhouette={tank:'heavy',fighter:'plated',mage:'robed',assassin:'hooded',marksman:'ranged',enchanter:'ornate'}[cls]||'plated';
+  const weapon={tank:'shield',fighter:seed%2?'blade':'spear',mage:seed%2?'staff':'orb',assassin:'blades',marksman:seed%2?'bow':'rifle',enchanter:seed%2?'staff':'orb'}[cls]||'blade';
+  const pool=(def?.dmg==='AP'?['arcane','celestial','verdant','void','frost','hex']:['infernal','storm','shadow','solar','frost','hex']),theme=pool[(seed>>>3)%pool.length];
+  return {version:CHAMPION_VISUAL_VERSION,seed,revision:0,theme,silhouette,weapon,ornament:CHAMPION_VISUAL_ORNAMENTS[(seed>>>7)%CHAMPION_VISUAL_ORNAMENTS.length],pose:['front','threeQuarter','profile'][(seed>>>11)%3],aura:CHAMPION_VISUAL_THEMES[(seed>>>15)%CHAMPION_VISUAL_THEMES.length]};
+}
+function ensureChampionVisual(c){if(!c)return null;if(!c.visual)c.visual=generatedChampionVisual(c);return c.visual}
 const DETAIL_BASE_KEYS=['resource','resourceg','resourceRegen','mr','mrg','asg'];
 const CHAMPION_SOURCE_PATCH='16.19.1';
 function cleanChampionSourceText(v){return String(v||'').replace(/<br\s*\/?>/gi,' ').replace(/<[^>]*>/g,'').replace(/&nbsp;/gi,' ').replace(/&amp;/gi,'&').replace(/&lt;/gi,'<').replace(/&gt;/gi,'>').replace(/&#39;/g,"'").replace(/&quot;/gi,'"').replace(/\s+/g,' ').trim()}

@@ -17,6 +17,7 @@ export const ENGINE_MODULES = [
 export const UI_MODULES = [
   'ui-patch.js',
   'ui-market.js',
+  'ui-champion.js',
   'ui-draft.js',
   'ui-season.js',
   'app.js',

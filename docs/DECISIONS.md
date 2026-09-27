@@ -503,3 +503,14 @@ This applies retroactively to completed major items during later UI touches and 
 - Draft AI evaluates opponent counters against the set of publicly possible role assignments, not a hidden fixed lane. Internal candidate scoring may consider which of the AI team's own feasible roles would make a pick valuable, but that intent is discarded after lock-in.
 - Final role assignment is deterministic and optimizes the team's own player mastery, meta evaluation and champion/system fit. It does not inspect a hidden opponent assignment to gain a second-mover advantage.
 - Match simulation, Fearless tracking, meta recording and replays continue to consume the finalized role map; recorded games remain replayable through the existing forced-draft contract.
+
+
+## D-040 — Champion portrait identity is stable derived presentation
+
+**Decision:** Champion portraits use a stable identity contract without storing binary images in saves.
+
+- Pinned real champions prefer their Riot Data Dragon square champion icon by stable Riot alias. The standalone client supplies a deterministic local SVG fallback when the network image is unavailable.
+- Newly generated LOL GM champions receive a versioned visual profile at release: seed, theme, silhouette, weapon, ornament, pose and aura. The profile is stored in patch history so historical reconstruction and save/reload retain the same visual identity.
+- The rendered generated portrait is derived presentation data. It is an original high-fantasy painted-card composition produced locally from the stable visual profile; saves do not embed image bytes.
+- Major reworks may increment the generated champion's portrait revision while preserving the stable champion ID and visual identity seed.
+- Draft cards, pick slots and later champion surfaces must use the shared portrait resolver rather than inventing per-screen placeholders.

@@ -39,7 +39,7 @@ function draftUiMatch(c){
 }
 function draftUiPickSlot(side,index){
   const s=DRAFT_UI.state,id=s.pickList[side][index],c=id&&s.db.patch.champions[id];
-  return `<div class="du-pick ${id?'filled':''}"><span class="du-role">P${index+1}</span><div><b>${id?esc(championDisplayName(c)):'—'}</b><small>${id?(c.roles||[]).map(r=>ROLE_KO[r]).join(' · '):'픽 대기'}</small></div></div>`;
+  return `<div class="du-pick ${id?'filled':''}"><span class="du-role">P${index+1}</span>${id?championPortraitMarkup(c,{className:'du-pick-img',alt:false}):'<span class="du-pick-empty"></span>'}<div><b>${id?esc(championDisplayName(c)):'—'}</b><small>${id?(c.roles||[]).map(r=>ROLE_KO[r]).join(' · '):'픽 대기'}</small></div></div>`;
 }
 function draftUiSidePanel(side){
   const s=DRAFT_UI.state,t=s.db.teams[s.teamIds[side]],turn=draftTurn(s),active=turn&&turn.side===side;
@@ -54,7 +54,7 @@ function draftUiGrid(){
   const s=DRAFT_UI.state,rows=Object.values(s.db.patch.champions).filter(draftUiMatch).sort((a,b)=>championDisplayName(a).localeCompare(championDisplayName(b),'ko'));
   return `<div class="du-grid">${rows.map(c=>{const st=draftUiChampionState(c),sel=DRAFT_UI.selected===c.id;
     return `<button class="du-champ ${sel?'sel':''}" data-du-champ="${c.id}" ${st.disabled?'disabled':''} title="${esc(st.reason||c.roles.map(r=>ROLE_KO[r]).join(' · '))}">
-      <b>${esc(championDisplayName(c))}</b><small>${c.roles.map(r=>ROLE_KO[r]).join(' · ')}</small>${st.reason?`<em>${esc(st.reason)}</em>`:''}
+      ${championPortraitMarkup(c,{className:'du-champ-img',alt:false})}<span class="du-champ-meta"><b>${esc(championDisplayName(c))}</b><small>${c.roles.map(r=>ROLE_KO[r]).join(' · ')}</small></span>${st.reason?`<em>${esc(st.reason)}</em>`:''}
     </button>`}).join('')}</div>`;
 }
 function draftUiRender(){
