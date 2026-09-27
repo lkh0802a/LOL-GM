@@ -206,3 +206,16 @@ The intended loop is:
 `User direction → AI implementation → GitHub → runnable build → user playtest → feedback → next iteration`
 
 See `docs/LOL_GM_SPEC.md#43-chatgpt--claude-collaborative-development-workflow` for the full collaboration contract.
+
+
+### International ecosystem design checkpoint — 2026-09-27
+
+The canonical first-division international competition contract is now frozen in `INTL_PRESETS` and D-032: First Stand (12), MSI (16), Eastern/Western Cup (8 each), Worlds (24), Masters (16), and Open (12). Official full names are used as internal IDs; display abbreviations are separate.
+
+Worlds uses a 24-team, three-pot league phase with six BO3 matches per team (two opponents from every pot, including the team's own pot), followed by a one-time seeded Round-of-16 draw and a fixed BO5 knockout bracket. Masters uses 2+coefficient slots with a maximum of three teams per league; Open initially uses two teams per core league.
+
+Domestic league format is office-owned and may be one long season or multiple splits. International qualification cannot be a direct regular-table cutoff: standings may seed or qualify teams into a competitive qualifier/playoff, but the berth is decided by matches. All first-division domestic official play pauses during an international phase.
+
+This checkpoint records the contract only. Major item 6 remains ACTIVE. Exact executable international scheduling, coefficient arithmetic, patch lock and international roster rules belong to major item 19 and must implement this contract without legacy-format approximation.
+
+Top-division structural invariant: every first division has at least 10 teams and an even team count. The office should normally prefer 10–16 teams, but 18, 20 and larger even leagues are legal when world evolution justifies them; 16 is not a hard cap.
