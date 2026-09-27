@@ -89,12 +89,20 @@ function afterSeries(db,lines,rec){
 // 매 경기일: 기본 피로 회복. 훈련은 아래의 희소 포인트 배분으로만 관리한다
 function dailyRecovery(db){
   for(const t of Object.values(db.teams)){ if(t.active===false)continue;
-    const rec=4;
+    const prof=staffProfile(t),rec=4+(prof.recovery-50)/45;
     for(const id of t.roster){const p=db.players[id];if(!p)continue;pState(p);p.fatigue=Math.max(0,p.fatigue-rec);p.condition=clamp(p.condition+2.5,0,100);p.form*=.98}
   }
 }
-function trainingGrowthMul(t){return 1}
-function scrimAnalysisBonus(t){return 0}
+function staffProfile(t){const c=t?.coach||{},s=t?.staff||{};return {draft:clamp((c.draft||55)+(s.strategicCoach?.rating||0)*.18,35,99),analysis:clamp((c.analysis||55)+(s.analyst?.rating||0)*.22,35,99),development:clamp((c.development||55)+(s.developmentCoach?.rating||0)*.22,35,99),recovery:clamp(50+(s.performanceCoach?.rating||0)*.45,50,95)}}
+function trainingGrowthMul(t){const p=staffProfile(t);return clamp(.88+(p.development-45)/220,0.88,1.13)}
+function scrimAnalysisBonus(t){const p=staffProfile(t);return clamp((p.analysis-50)/500,0,.09)}
+function staffSalary(s,ps){return Math.round((.35+((s.rating||50)-40)/35)*ps*10)/10}
+const STAFF_ROLES={strategicCoach:'전략 코치',analyst:'분석가',developmentCoach:'육성 코치',performanceCoach:'퍼포먼스 코치'};
+function genStaffMember(rng,role,base=60){const nm=rng.pick(NICK_A)+rng.pick(NICK_B);return {id:'S'+hashStr(role+nm+rng.int(0,99999)),name:nm.charAt(0).toUpperCase()+nm.slice(1),role,rating:Math.round(clamp(base+rng.normal(0,9),35,95)),age:rng.int(27,52)}}
+function ensureTeamStaff(db,t,rng){t.staff=t.staff||{};for(const role of Object.keys(STAFF_ROLES))if(!t.staff[role])t.staff[role]=genStaffMember(rng,role,(t.coach?.analysis||60)-3);db.staffPool=db.staffPool||[]}
+function genStaffPool(db,rng){db.staffPool=db.staffPool||[];for(const role of Object.keys(STAFF_ROLES)){while(db.staffPool.filter(x=>x.role===role).length<6)db.staffPool.push(genStaffMember(rng,role,60+rng.normal(0,6)))}db.staffPool=db.staffPool.slice(-48)}
+function hireStaff(db,t,s){if(!s||!STAFF_ROLES[s.role])throw new Error('유효하지 않은 스태프입니다');t.staff=t.staff||{};const old=t.staff[s.role];if(old)db.staffPool.push(old);db.staffPool=db.staffPool.filter(x=>x.id!==s.id);t.staff[s.role]={...s,since:db.year}}
+
 
 // ---- 코칭스태프 시장 ----
 function coachSalary(c,ps){return Math.round((1+((c.draft+c.analysis+c.development)/3-50)/12)*ps*10)/10}
