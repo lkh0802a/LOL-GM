@@ -51,4 +51,4 @@ CI rejects:
 - smoke-test violations including patch-cache isolation, query-cache invalidation, non-mutating save packing and save round trips
 - performance-probe execution failures for series simulation, draft/system caches and indexed meta queries
 
-The generated root `index.html` is a deployment artifact. Canonical edits belong in `src/artifact/*`.
+The generated root `index.html` is a deployment artifact. Canonical edits belong in `src/artifact/*`. Main-branch CI rebuilds it from the canonical module manifest and commits it only when the generated standalone differs.
