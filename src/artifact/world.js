@@ -449,6 +449,7 @@ function rosterIntegrityErrors(db){
       const prev=seen.get(pid);if(prev&&prev!==t.id)errors.push(`player ${pid} listed by ${prev} and ${t.id}`);else seen.set(pid,t.id);
     }
   }
+  if(db.metaHistoryPacked){db.metaHistory=unpackMetaHistory(db.metaHistory||[]);delete db.metaHistoryPacked}
   for(const p of Object.values(db.players)){
     if(!p.team)continue;
     const t=db.teams[p.team];
@@ -869,6 +870,16 @@ function playerValue(db,p,team){
 }
 
 // ---- 저장용 압축: 능력치·성향·챔피언 폭을 배열로 ----
+function packMetaHistory(rows){
+  return (rows||[]).map(r=>[
+    r.date,r.patch,r.comp,r.season,r.year,r.split,r.stage,r.league,r.international?1:0,r.regions||[],
+    (r.sides||[]).map(s=>[s.team,s.region,s.win?1:0,(s.picks||[]).map(p=>{const x=typeof p==='string'?{champ:p}:p;return [x.champ,x.role||null,x.player||null,x.items||[],x.runes||[]]})]),
+    r.bans||[]
+  ]);
+}
+function unpackMetaHistory(rows){
+  return (rows||[]).map(r=>Array.isArray(r)?{date:r[0],patch:r[1],comp:r[2],season:r[3],year:r[4],split:r[5],stage:r[6],league:r[7],international:!!r[8],regions:r[9]||[],sides:(r[10]||[]).map(s=>({team:s[0],region:s[1],win:!!s[2],picks:(s[3]||[]).map(p=>({champ:p[0],role:p[1],player:p[2],items:p[3]||[],runes:p[4]||[]}))})),bans:r[11]||[]}:r);
+}
 const ALL_ATTRS=Object.values(ATTR_GROUPS).flat();
 function packDB(db){
   for(const s of Object.values(db.world?.seasons||{}))compactFinishedSeasonForSave(db,s);
@@ -882,8 +893,8 @@ function packDB(db){
   }
   const scout=Object.fromEntries(Object.entries(db.scout||{}).filter(([id,r])=>db.players[id]&&!db.players[id].retired&&(typeof r==='number'||(r.knowledge||0)>baseScoutKnowledge(db,db.players[id])||(r.observations||0)>0)));
   const teams=Object.fromEntries(Object.entries(db.teams).map(([id,t])=>{const q={...t};delete q._pre;if(q.facilities)delete q.facility;return [id,q]}));
-  const patches={...(db.patches||{})};delete patches.base;delete patches.initialBase;
-  return JSON.stringify({...db,teams,players,scout,patches,packed:1});
+  const patches={...(db.patches||{})};delete patches.base;delete patches.initialBase;const metaHistory=packMetaHistory(db.metaHistory||[]);
+  return JSON.stringify({...db,teams,players,scout,patches,metaHistory,metaHistoryPacked:1,packed:1});
 }
 function unpackDB(str){
   const db=JSON.parse(str); if(!db.packed)return db;
