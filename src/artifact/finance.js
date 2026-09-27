@@ -8,10 +8,8 @@ function playerMarketValue(db,p){const o=playerOvr(p),rep=p.reputation??o,up=Mat
 function asking(db,p,rid){return Math.round(marketSalary(db,p,rid)*(1+p.personality.ambition/400)*(.96+(p.reputation??playerOvr(p))/1800)*10)/10}
 function signContract(db,p,t,salary,years){const old=p.team;assignPlayerToTeam(db,p,t);p.faYears=0;p.contract={salary:Math.round(salary*10)/10,until:db.year+years-1,signed:db.year};setRosterRole(db,p,recommendedRosterRole(db,p,t),'contract',true);ensureSatisfaction(p);if(old&&old!==t.id){p.satisfaction=clamp(Math.max(p.satisfaction,58),0,100);p.concernStreak=0;p.wantsOut=false;p.wantsOutReason=null}if(db.world)recordPlayerEvent(p,'contract',db.year,{team:t.id,salary:p.contract.salary,years,until:p.contract.until,renewal:old===t.id,rosterRole:p.rosterRole,date:db.worldDate})}
 function payroll(db,t){return t.roster.reduce((a,id)=>a+((db.players[id]&&db.players[id].contract)?db.players[id].contract.salary:0),0)}
-function regulatedPayroll(db,t){
-  const R=db.regions[t.region];if(!R||R.spendingRule!=='sfr_top5')return payroll(db,t);
-  return t.roster.map(id=>db.players[id]).filter(p=>p&&p.contract).map(p=>p.contract.salary).sort((a,b)=>b-a).slice(0,5).reduce((a,b)=>a+b,0);
-}
+function topFivePayroll(db,t){return t.roster.map(id=>db.players[id]).filter(p=>p&&p.contract).map(p=>p.contract.salary).sort((a,b)=>b-a).slice(0,5).reduce((a,b)=>a+b,0)}
+function regulatedPayroll(db,t){const R=db.regions[t.region];return R&&R.spendingRule==='sfr_top5'?topFivePayroll(db,t):payroll(db,t)}
 function spendingTax(db,t){
   const R=db.regions[t.region];if(!R||R.spendingRule!=='sfr_top5'||!R.salaryCap||(t.division||1)!==1)return 0;
   const over=Math.max(0,regulatedPayroll(db,t)-R.salaryCap);if(!over)return 0;
@@ -72,10 +70,11 @@ function closeFinances(db,w,rng,ev){
     if(r.exp.tax>0)ev(`${r.t.name} 균형지출 부담금 ${money(r.exp.tax)} 납부 (상위 5인 기준 ${money(regulatedPayroll(db,r.t))}, 기준선 ${money(r.R.salaryCap)})`);
     // 누적 적자 → 구단 매각 (새 구단주가 자금 투입, 리그 팀 수는 유지)
     if(r.t.parent){const pt=db.teams[r.t.parent];if(pt&&f.cash<0){pt.finance.cash=Math.round((pt.finance.cash+f.cash)*10)/10;f.cash=0}continue} // 2군 적자는 모구단이 부담
-    if(f.cash<-15*psTeam(db,r.t)){
+    const recentLosses=f.history.slice(-2).filter(x=>x.net<0).length;
+    if(f.cash<-12*psTeam(db,r.t)&&recentLosses>=2){
       const old=r.t.name,on=orgName(db,rng);r.t.name=on.name;r.t.formerNames=[...(r.t.formerNames||[]),old];
-      r.t.owner={wealth:Math.round(clamp(rng.normal(65,15),30,95))};f.cash=Math.round(30*psTeam(db,r.t)*10)/10;r.t.fans=Math.round((r.t.fans||30)*0.8);
-      ev(`재정난으로 구단 매각: ${old} → ${r.t.name} (누적 적자, 신규 구단주 자금 투입)`);
+      r.t.owner={wealth:Math.round(clamp(rng.normal(65,15),30,95))};f.cash=Math.round(25*psTeam(db,r.t)*10)/10;r.t.fans=Math.round((r.t.fans||30)*.88);
+      ev(`장기 재정난으로 구단 매각: ${old} → ${r.t.name} (연속 적자, 신규 구단주 자금 투입)`);
     }
   }
 }

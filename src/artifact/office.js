@@ -47,8 +47,8 @@ function rng01(db,k){return (hashStr(k+db.year)%1000)/1000-0.5}
 
 // 사무국 결정: 지표 → 안건별 효용 → 문턱을 넘는 안건만 채택
 function officeDecisions(db,rng,f,ev,mid){
-  if(f<=0)return;
-  const thr=(mid?0.95:0.55)/f;
+  if(f<=0||mid)return;
+  const thr=.78/f;
   for(const R of Object.values(db.regions)){
     const M=R.metrics&&R.metrics[R.metrics.length-1]; if(!M)continue;
     const prev=R.metrics.length>1?R.metrics[R.metrics.length-2]:null, trend=prev?M.hype-prev.hype:0;
@@ -57,9 +57,9 @@ function officeDecisions(db,rng,f,ev,mid){
     const weak=activeTeams(db,R.id,1).map(t=>({t,s:teamStrength(db,t.id)})).sort((a,b)=>a.s-b.s);
     const weakGap=weak.length>2?R.strength-weak[0].s:0;
     const H=M.hype, B=M.balance, props=[];
-    const recent=new Set((R.decisions||[]).filter(d=>db.world.year-d.year<2).map(d=>d.key)); // 같은 종류 안건은 2년 유예
     const grp=k=>({relegation:'system',franchise:'system',mixed:'system'}[k]||k);
-    const add=(key,u,apply,why)=>{if(!recent.has(grp(key)))props.push({key,u:u+(S.w[key]||0)+rng.normal(0,0.15),apply,why})};
+    const structural=new Set(['system','expand','contract','div2','format','splits','cap','floor','tax','import']);
+    const add=(key,u,apply,why)=>{const g=grp(key),cool=structural.has(g)?4:3,last=(R.decisions||[]).filter(d=>d.key===g).slice(-1)[0];if(!last||db.world.year-last.year>=cool)props.push({key,u:u+(S.w[key]||0)+rng.normal(0,.12),apply,why})};
     const takes=[4,6,8].filter(x=>x<=n), up=takes.find(x=>x>R.playoffTake);
     if(!mid){
       if(n<=12) add('expand',(H-55)/18+faDepth*0.3+trend/20-Math.max(0,n-8)*0.3,()=>{const nm=[];for(let i=0;i<2;i++){const t=genTeam(db,rng,R.id,R.strength-3);nm.push(t.name);if(R.system==='mixed')t.franchised=true;if(R.div2&&R.system==='franchise')makeAcademy(db,rng,t)}return `확장팀 ${nm.join(', ')} 창단`},`흥행 ${H}, 영입 가능한 인재 풀 충분`);
@@ -70,21 +70,15 @@ function officeDecisions(db,rng,f,ev,mid){
       if(R.system!=='mixed') add('mixed',(0.55-B)*1.2+(H-45)/30,()=>{R.system='mixed';markFranchised(db,R);return '혼합 리그 전환 — 팬덤 상위 절반은 프랜차이즈 보호, 나머지는 승강 경쟁'},`인기 구단의 안정성과 하위권 경쟁을 함께 확보`);
       if(!R.div2) add('div2',(H-50)/15+faDepth*0.5+(n>=10?0.3:0)-0.2,()=>{createDiv2(db,rng,R);return R.system==='franchise'?`${divName(R)} 창설 — 구단별 2군 참가`:`${divName(R)} 창설 — 승강 연결`},`유망주 육성 무대 필요 (FA 인재 ${faDepth.toFixed(1)}명/팀)`);
       else add('div2',(32-H)/12-0.2,()=>{abolishDiv2(db,R);return `${divName(R)} 폐지`},`흥행 부진으로 운영비 절감`);
-      // 재정 규정: 연봉 격차·구단 재정 건전성·흥행을 보고 캡/플로어/사치세/외국인/피어리스 결정
-      const pays=activeTeams(db,R.id,1).map(t=>payroll(db,t)).sort((a,b)=>a-b), med=pays[Math.floor(pays.length/2)]||1, disp=(pays[pays.length-1]||1)/Math.max(0.1,pays[0]||0.1);
-      const cashes=activeTeams(db,R.id,1).map(t=>t.finance.cash), neg=cashes.filter(c=>c<0).length/Math.max(1,cashes.length);
-      const ps=psOf(db,R.id), rc=v=>Math.round(v);
-      if(!R.salaryCap) add('cap',(disp-2.2)/1.2+(0.55-B),()=>{R.salaryCap=rc(med*1.6);R.luxuryTax=0.5;return `샐러리캡 도입 (${R.salaryCap}억, 초과분 사치세 50%)`},`연봉 격차 ×${disp.toFixed(1)} — 전력 평준화 필요`);
-      else {
+      // 재정 규정은 하드캡이 아니라 상위 5명 기준의 완만한 균형지출 제도로만 진화한다.
+      const pays=activeTeams(db,R.id,1).map(t=>topFivePayroll(db,t)).sort((a,b)=>a-b),med=pays[Math.floor(pays.length/2)]||1,disp=(pays[pays.length-1]||1)/Math.max(.1,pays[0]||.1);
+      const cashes=activeTeams(db,R.id,1).map(t=>t.finance.cash),neg=cashes.filter(c=>c<0).length/Math.max(1,cashes.length),ps=psOf(db,R.id),rc=v=>Math.round(v);
+      if(R.spendingRule!=='sfr_top5')add('cap',(disp-2.8)/1.4+(0.5-B)-.15,()=>{R.spendingRule='sfr_top5';R.salaryCap=rc(med*1.45);R.salaryFloor=rc(med*.55);R.luxuryTax=.75;return `균형지출제도 도입 (상위 5인 기준 ${R.salaryCap}억)`},`상위 5인 연봉 격차 ×${disp.toFixed(1)} — 지속가능성 논의`);
+      else{
         const over=pays.filter(p=>p>R.salaryCap).length/pays.length;
-        add('cap',over*2-0.4+(H-55)/30,()=>{const o=R.salaryCap;R.salaryCap=rc(o*1.15);return `샐러리캡 인상 ${o}억 → ${R.salaryCap}억`},`구단 ${Math.round(over*100)}%가 상한 초과 — 시장 성장 반영`);
-        add('cap',(1.5-disp)*1.5-0.2,()=>{const o=R.salaryCap;R.salaryCap=0;return `샐러리캡 폐지 (기존 ${o}억)`},`연봉 격차 ×${disp.toFixed(1)}로 충분히 고름`);
-        add('tax',(0.5-B)*2+(disp-2.5)/2-0.3,()=>{const o=R.luxuryTax||0.5;R.luxuryTax=Math.min(1,Math.round((o+0.25)*100)/100);return `사치세율 ${Math.round(o*100)}% → ${Math.round(R.luxuryTax*100)}%`},`상위 구단 독주 (균형 ${B})`);
-      }
-      if(!R.salaryFloor) add('floor',((med*0.45)-pays[0])/Math.max(1,med*0.2)+(0.5-B)*0.8,()=>{R.salaryFloor=rc(med*0.6);return `샐러리플로어 도입 (${R.salaryFloor}억)`},`하위 구단 투자 부족 (최저 ${pays[0].toFixed(1)}억, 중간값 ${med.toFixed(1)}억)`);
-      else {
-        add('floor',neg*3-0.5,()=>{const o=R.salaryFloor;R.salaryFloor=rc(o*0.8);return `샐러리플로어 인하 ${o}억 → ${R.salaryFloor}억`},`적자 구단 ${Math.round(neg*100)}% — 재정 부담 완화`);
-        add('floor',(avg(cashes)/(20*ps))-1.2+(0.5-B),()=>{const o=R.salaryFloor;R.salaryFloor=rc(o*1.2);return `샐러리플로어 인상 ${o}억 → ${R.salaryFloor}억`},`구단 재정 여유 — 투자 확대 요구`);
+        add('cap',over*1.5-.55+(H-60)/35,()=>{const o=R.salaryCap;R.salaryCap=rc(o*1.1);R.salaryFloor=rc(Math.min(R.salaryCap*.65,(R.salaryFloor||0)*1.08));return `균형지출 기준선 조정 ${o}억 → ${R.salaryCap}억`},`시장 성장과 초과 구단 비율 ${Math.round(over*100)}% 반영`);
+        add('tax',(0.48-B)*1.5+(disp-3)/3-.35,()=>{const o=R.luxuryTax||.75;R.luxuryTax=Math.min(1.25,Math.round((o+.15)*100)/100);return `균형지출 초과 부담률 상향 ${Math.round(o*100)}% → ${Math.round(R.luxuryTax*100)}%`},`경쟁 균형 악화 (균형 ${B})`);
+        add('floor',neg*2-.7,()=>{const o=R.salaryFloor;R.salaryFloor=rc(Math.max(0,o*.9));return `지출 권장 하한 ${o}억 → ${R.salaryFloor}억`},`적자 구단 ${Math.round(neg*100)}% — 하한 기준 완화`);
       }
       const regPow=(db.global&&db.global.power[R.id])||1;
       add('import',(1.2-regPow)+(45-H)/25-(R.importLimit>=3?0.6:0),()=>{const o=R.importLimit??2;R.importLimit=o+1;return `외국인 선수 한도 ${o} → ${R.importLimit}명`},`국제 경쟁력 보강·해외 스타 유치 (지수 ${regPow})`);
@@ -103,7 +97,7 @@ function officeDecisions(db,rng,f,ev,mid){
     else add('bo',(33-H)/15,()=>{R.playoffBo=3;return '플레이오프 초반 라운드 Bo3로 축소'},`제작 비용 절감`);
     props.sort((a,b)=>b.u-a.u);
     let done=0;
-    for(const p of props){ if(p.u<thr+done*0.3||done>=(mid?1:4))break;
+    for(const p of props){if(p.u<thr||done>=1)break;
       if(props.slice(0,props.indexOf(p)).some(q=>grp(q.key)===grp(p.key)))continue;
       const what=p.apply(); R.decisions=[...(R.decisions||[]),{year:db.world.year,key:grp(p.key),what,why:p.why,mid:!!mid}].slice(-12);
       ev(`${R.leagueName} 사무국${mid?' (시즌 중 점검)':''}: ${what} — ${p.why}`); done++; }
@@ -191,7 +185,7 @@ function worldDecisions(db,rng,f,ev){
   // 구단 인수: 팬은 많은데 성적이 나쁜 구단, 또는 팬이 적은 구단이 매물로
   for(const t of activeTeams(db).filter(t=>!t.parent)){
     const R=db.regions[t.region], s=teamStrength(db,t.id);
-    const p=(0.012+(t.fans>=45&&s<R.strength-2?0.05:0)+(t.fans<15?0.04:0))*f;
+    const p=(.004+(t.fans>=45&&s<R.strength-3?.018:0)+(t.fans<12?.015:0))*f;
     if(rng.chance(p)){const old=t.name,on=orgName(db,rng);t.name=on.name;t.formerNames=[...(t.formerNames||[]),old];t.fans=Math.round(t.fans*0.85);
       ev(`구단 인수: ${old} → ${t.name} (${t.fans>=45?'인기 구단 매각':'저조한 팬덤으로 매각'})`)}
   }
@@ -210,15 +204,15 @@ function globalOffice(db,w,rng,f,ev){
   // 1-2) 월즈 총원 상한·중하위권 대회 규모: 세계 흥행에 따라 확대/축소
   const nReg=Object.keys(db.regions).length, avgHype=avg(Object.values(db.regions).map(R=>((R.metrics||[]).slice(-1)[0]||{hype:45}).hype));
   if(db.global.wcCap===undefined)db.global.wcCap=Math.max(20,Object.values(db.regions).reduce((a,R)=>a+R.slots,0));
-  if(avgHype>=50&&db.global.wcCap<Math.min(40,nReg*5)&&rng.chance(0.5*f)){db.global.wcCap+=2;gev(`월즈 참가 상한 ${db.global.wcCap}팀으로 확대`,`세계 흥행 평균 ${Math.round(avgHype)} — 더 많은 팀에 국제 무대 제공`)}
-  else if(avgHype<34&&db.global.wcCap>16&&rng.chance(0.4*f)){db.global.wcCap-=2;gev(`월즈 참가 상한 ${db.global.wcCap}팀으로 축소`,`세계 흥행 평균 ${Math.round(avgHype)} — 일정·비용 부담`)}
+  if(avgHype>=55&&db.global.wcCap<Math.min(40,nReg*5)&&rng.chance(.15*f)){db.global.wcCap+=2;gev(`월즈 참가 상한 ${db.global.wcCap}팀으로 확대`,`세계 흥행 평균 ${Math.round(avgHype)} — 더 많은 팀에 국제 무대 제공`)}
+  else if(avgHype<30&&db.global.wcCap>16&&rng.chance(.12*f)){db.global.wcCap-=2;gev(`월즈 참가 상한 ${db.global.wcCap}팀으로 축소`,`세계 흥행 평균 ${Math.round(avgHype)} — 일정·비용 부담`)}
   for(const it of db.worldConfig.internationals.filter(i=>i.tier==='low')){
-    if(avgHype>=44&&(it.per||2)<6&&rng.chance(0.35*f)){it.per=(it.per||2)+1;gev(`${it.name} 지역당 ${it.per}팀으로 확대`,`세계 흥행 평균 ${Math.round(avgHype)} — 중하위권 국제 경험 확대`)}
-    else if(avgHype<30&&(it.per||2)>1&&rng.chance(0.3*f)){it.per=(it.per||2)-1;gev(`${it.name} 지역당 ${it.per}팀으로 축소`,`세계 흥행 부진 (평균 ${Math.round(avgHype)})`)}
+    if(avgHype>=50&&(it.per||2)<6&&rng.chance(.12*f)){it.per=(it.per||2)+1;gev(`${it.name} 지역당 ${it.per}팀으로 확대`,`세계 흥행 평균 ${Math.round(avgHype)} — 중하위권 국제 경험 확대`)}
+    else if(avgHype<28&&(it.per||2)>1&&rng.chance(.1*f)){it.per=(it.per||2)-1;gev(`${it.name} 지역당 ${it.per}팀으로 축소`,`세계 흥행 부진 (평균 ${Math.round(avgHype)})`)}
   }
   // 2) 월드 진출권 재배분: 국제 성적 상위 지역 +1, 하위 지역 -1 (넉넉하게: 최소 1, 최대 5)
   const rk=Object.values(db.regions).filter(R=>cnt[R.id]).sort((a,b)=>db.global.power[b.id]-db.global.power[a.id]);
-  if(rk.length>=3&&rng.chance(0.55*f)){
+  if(rk.length>=3&&rng.chance(.2*f)){
     const up=rk[0],dn=rk[rk.length-1];
     const total=()=>Object.values(db.regions).reduce((a,R)=>a+R.slots,0), cap=db.global.wcCap;
     if(up.slots<6&&activeTeams(db,up.id,1).length>=up.slots+3){
@@ -229,7 +223,7 @@ function globalOffice(db,w,rng,f,ev){
   // 3) 국제대회 방식: 참가 팀 수와 지역 간 격차로 판단
   const nR=Object.keys(db.regions).length;
   for(const it of db.worldConfig.internationals){
-    if(!rng.chance(0.25*f))continue;
+    if(!rng.chance(.1*f))continue;
     const zr=Object.values(db.regions).filter(R=>!it.zone||(INTL_ZONES[it.zone]||[]).includes(R.id));
     const n=it.entry==='champions'?zr.length:it.tier==='low'?zr.length*(it.per||2)*(zr.length<=2?2:1):zr.reduce((a,R)=>a+Math.max(1,Math.ceil(R.slots*(it.ratio||1))),0);
     if(it.tier==='low'){const want=n>=10?'groups_de':n>=6?'groups_ko':'ko';if(want!==it.format&&rng.chance(0.5)){const o=it.format;it.format=want;gev(`${it.name} 방식 변경: ${INTL_FORMATS[o]} → ${INTL_FORMATS[want]}`,`참가 ${n}팀 규모에 맞춤`)}continue}
@@ -240,10 +234,6 @@ function globalOffice(db,w,rng,f,ev){
     else if(gap>1.5&&it.id!=='WORLDS'&&!it.format.endsWith('de')&&n>=8){want=it.format.startsWith('playin')?'playin_de':'groups_de';why=`지역 간 격차 큼 — 패자부활(더블 엘리) 도입`}
     if(want!==it.format){const o=it.format;it.format=want;gev(`${it.name} 방식 변경: ${INTL_FORMATS[o]} → ${INTL_FORMATS[want]}`,why)}
   }
-  // 4) 패치 주기: 메타가 고이면 더 자주, 너무 요동치면 느리게
-  const mt=metaTable(db).slice(0,10), conc=mt.reduce((a,x)=>a+x.pres,0)/10;
-  const pt=db.patches, cad=pt.cadence||14;
-  if(conc>0.4&&cad>10&&rng.chance(0.5*f)){pt.cadence=cad-3;gev(`패치 주기 ${pt.cadence}일로 단축`,`상위 챔피언 밴픽률 평균 ${Math.round(conc*100)}% — 메타 고착`)}
-  else if(conc<0.2&&cad<21&&rng.chance(0.4*f)){pt.cadence=cad+3;gev(`패치 주기 ${pt.cadence}일로 연장`,`메타 다양성 충분 (상위 밴픽률 ${Math.round(conc*100)}%)`)}
+  // 패치 주기는 리그 사무국이 변경하지 않는다. 게임 개발사 패치 캘린더를 따른다.
   worldDecisions(db,rng,f,ev);
 }
