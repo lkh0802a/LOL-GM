@@ -41,7 +41,7 @@ function recordMeta(db,r){
   }
   db.metaHistory=db.metaHistory||[];
   const mc=r.metaContext||{};
-  db.metaHistory.push({date:r.date||db.worldDate,patch:r.patch||db.patch.id,comp:r.comp||r.competitionId||null,season:mc.season||null,year:mc.year||+(r.date||db.worldDate).slice(0,4),stage:mc.stage||null,league:mc.league||null,international:!!mc.international,regions,sides:r.sides.map((s,i)=>({team:s.team?.id||null,region:s.team?.region||null,win:r.winner===i,picks:s.ps.map(x=>({champ:x.champ.id,role:x.role,player:x.p.id}))})),bans:r.draft.bans.flat()});
+  db.metaHistory.push({date:r.date||db.worldDate,patch:r.patch||db.patch.id,comp:r.comp||r.competitionId||null,season:mc.season||null,year:mc.year||+(r.date||db.worldDate).slice(0,4),stage:mc.stage||null,league:mc.league||null,international:!!mc.international,regions,sides:r.sides.map((s,i)=>({team:s.team?.id||null,region:s.team?.region||null,win:r.winner===i,picks:s.ps.map(x=>({champ:x.champ.id,role:x.role||null,player:x.p?.id||null}))})),bans:r.draft.bans.flat()});
   const international=regions.length>1;
   for(const s of r.sides){const t=s.team;if(!t)continue;t.metaKnowledge=t.metaKnowledge||{};const enemyRegions=regions.filter(x=>x!==t.region);for(const os of r.sides){if(os===s)continue;for(const pick of os.ps){const cid=pick.champ.id,success=r.winner===r.sides.indexOf(os),novel=((db.regionMetaStats?.[t.region]||{})[cid]?.p||0)<3,learn=(success?.055:.018)*(novel?1.6:1)*(international?1.35:1);t.metaKnowledge[cid]=clamp((t.metaKnowledge[cid]||0)+learn,0,1)}}}
 }
