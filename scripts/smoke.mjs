@@ -157,20 +157,18 @@ source += `\n(()=>{
 
   const reserveParents=activeTeams(db).filter(t=>!t.parent&&reserveTeamsOf(db,t).length);
   if(reserveParents.length){
-    const parent=reserveParents[0],reserve=reserveTeamsOf(db,parent)[0],candidate=db.players[reserve.roster[0]];
-    const before=[...organizationRoster(db,parent)].sort().join(',');
-    const up=rosterMoveCheck(db,candidate,parent);
-    if(!up.ok||up.kind!=='callup') throw new Error('Owned reserve call-up failed: '+up.reason);
-    movePlayerBetweenSquads(db,candidate,parent);
-    const down=rosterMoveCheck(db,candidate,reserve);
-    if(!down.ok||down.kind!=='senddown') throw new Error('Owned reserve send-down failed: '+down.reason);
-    movePlayerBetweenSquads(db,candidate,reserve);
-    if([...organizationRoster(db,parent)].sort().join(',')!==before) throw new Error('Organization roster changed after round trip');
+    const parent=reserveParents[0],reserve=reserveTeamsOf(db,parent)[0],up=db.players[reserve.roster[0]],down=db.players[parent.roster[0]];
+    const plan=rosterPlanState(db,parent),beforeParent=parent.roster.slice(),beforeReserve=reserve.roster.slice();
+    plan.assignments[up.id]=parent.id;plan.assignments[down.id]=reserve.id;
+    const valid=validateRosterPlan(db,parent,plan);if(!valid.ok)throw new Error('Valid batch roster swap rejected: '+valid.errors.join(' | '));
+    const applied=applyRosterPlan(db,parent,plan);if(applied.moves.length!==2||up.team!==parent.id||down.team!==reserve.id)throw new Error('Atomic roster swap failed');
+    const bad=rosterPlanState(db,parent);for(const pid of reserve.roster.slice())bad.assignments[pid]=parent.id;
+    const snapP=parent.roster.slice(),snapR=reserve.roster.slice(),invalid=validateRosterPlan(db,parent,bad);if(invalid.ok)throw new Error('Invalid roster plan accepted');
+    try{applyRosterPlan(db,parent,bad);throw new Error('Invalid roster plan mutated state')}catch(e){}
+    if(parent.roster.join(',')!==snapP.join(',')||reserve.roster.join(',')!==snapR.join(','))throw new Error('Invalid roster plan had side effects');
+    const restore=rosterPlanState(db,parent);restore.assignments[up.id]=reserve.id;restore.assignments[down.id]=parent.id;applyRosterPlan(db,parent,restore);
+    if(parent.roster.length!==beforeParent.length||reserve.roster.length!==beforeReserve.length)throw new Error('Roster swap changed organization size');
   }
-
-  const rosterErrors=rosterIntegrityErrors(db);
-  if(rosterErrors.length) throw new Error('Roster integrity failed: '+rosterErrors.slice(0,5).join(' | '));
-
   const aiReserveParent=activeTeams(db,null,1).find(t=>t.id!==managedTeamId(db)&&reserveTeamsOf(db,t).length);
   if(aiReserveParent){
     const reserve=reserveTeamsOf(db,aiReserveParent)[0],rules=rosterRulesForTeam(db,aiReserveParent);
