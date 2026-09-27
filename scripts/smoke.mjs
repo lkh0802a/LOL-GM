@@ -97,7 +97,8 @@ source += `\n(()=>{
   const teams=activeTeams(db).filter(t=>t.roster.length>=5);
   const series=simulateSeries(db,teams[0].id,teams[1].id,1,'smoke-series',{fearless:true,firstChoice:'seed'});
   if(!series.rec||series.rec.games.length!==1||!series.lines.length) throw new Error('Series smoke simulation failed');
-  if(series.lines.some(l=>!(l.rating>=3&&l.rating<=10)||!(l.gold>0)||l.kp<0)) throw new Error('Player game rating/stat line failed');
+  if(series.lines.some(l=>!(l.rating>=3&&l.rating<=10)||!(l.gold>0)||l.kp<0||['csDiff','goldDiff','dmgTaken','vision','objectives','laneAdv','teamfightDmg','teamfights','teamfightWins','teamfightShare'].some(k=>!Number.isFinite(l[k])))) throw new Error('Player game rating/stat line failed');
+  if(!series.lines.some(l=>l.vision>0)||!series.lines.some(l=>l.objectives>0)) throw new Error('Player vision/objective tracking failed');
   const game=series.rec.games[0];
   for(const cid of [...game.picks[0],...game.picks[1],...(game.bans[0]||[]),...(game.bans[1]||[])]) if(cid&&!db.patch.champions[cid]) throw new Error('Draft champion ID missing: '+cid);
 
@@ -108,7 +109,7 @@ source += `\n(()=>{
   const matchIds=seasons.flatMap(s=>s.days.flatMap(d=>d.matches.map(m=>m.id)));
   if(!matchIds.length||new Set(matchIds).size!==matchIds.length) throw new Error('Match IDs are not unique');
 
-  console.log('World smoke test: OK — blank rosters, global FA, roster rules, player identity/role ratings/state/value/development/champion learning, season bootstrap and Bo1 simulation');
+  console.log('World smoke test: OK — blank rosters, global FA, roster rules, player identity/role ratings/state/value/development/champion learning/full match metrics, season bootstrap and Bo1 simulation');
 })()`;
 
 const context = {

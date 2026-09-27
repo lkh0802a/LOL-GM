@@ -109,7 +109,7 @@ const td=(ps,t)=>ps.p.tend[t]/100;
 
 function newPS(p,side,role,champ,patch){
   const pr=p.pool[champ]||{mastery:25,confidence:40,experience:10};
-  return {p,side,role,champ:patch.champions[champ],prof:pr,lvl:1,xp:0,gold:500,goldEarned:500,cs:0,k:0,d:0,a:0,dmg:0,deadUntil:0,hp:1,flashAt:0,penalty:0,items:[],recall:false};
+  return {p,side,role,champ:patch.champions[champ],prof:pr,lvl:1,xp:0,gold:500,goldEarned:500,cs:0,k:0,d:0,a:0,dmg:0,dmgTaken:0,vision:0,objectives:0,laneAdv:0,laneSamples:0,teamfightDmg:0,teamfights:0,teamfightWins:0,deadUntil:0,hp:1,flashAt:0,penalty:0,items:[],recall:false};
 }
 function alive(st,ps){return ps.deadUntil<=st.t}
 function aliveOf(st,side){return st.sides[side].ps.filter(x=>alive(st,x))}
@@ -163,7 +163,7 @@ function killPlayer(st,killer,victim,assists,reason){
 function fight(st,zone,sideArrs,ctx={}){
   const R=st.rng;
   if(!sideArrs[0].length||!sideArrs[1].length) return null;
-  const vis=st.vision[zone]||0;
+  const vis=st.vision[zone]||0,isTeamfight=sideArrs[0].length+sideArrs[1].length>=6;
   const initScore=[0,1].map(i=>{const a=sideArrs[i];
     return avg(a.map(p=>(at(p,'anticipation')+at(p,'map_awareness')+at(p,'teamfight_awareness'))/3))*1.0
       +(i===0?vis:-vis)*0.4 +(i===0?BAL.blue:0)+ Math.max(...a.map(p=>p.champ.kit.engage))/10*0.25 + (a.length-sideArrs[1-i].length)*0.12 + R.info.normal(0,0.15)});
@@ -206,7 +206,7 @@ function fight(st,zone,sideArrs,ctx={}){
       dmgs.push([f,tgt,d]);
     }
     for(let i=dmgs.length-1;i>0;i--){const j=Math.floor(R.mech.next()*(i+1));[dmgs[i],dmgs[j]]=[dmgs[j],dmgs[i]]}
-    for(const [f,t,d] of dmgs){ if(t.hp<=0)continue; t.hp-=d; t.hitters.add(f); f.ps.dmg+=Math.round(d*0.9); if(t.hp<=0)t.last=f; }
+    for(const [f,t,d] of dmgs){if(t.hp<=0)continue;const dealt=Math.round(d*.9);t.hp-=d;t.hitters.add(f);f.ps.dmg+=dealt;t.ps.dmgTaken+=dealt;if(isTeamfight)f.ps.teamfightDmg+=dealt;if(t.hp<=0)t.last=f;}
     for(const t of F) if(t.alive&&t.hp<=0){t.alive=false;}
     if(rd==='clean')break;
   }
@@ -219,11 +219,12 @@ function fight(st,zone,sideArrs,ctx={}){
   let winner = deaths[0]===deaths[1] ? (sur[0]>=sur[1]? (disengaged===0?1:0):1) : (deaths[0]<deaths[1]?0:1);
   if(deaths[0]===deaths[1]&&disengaged<0) winner = pw0[0]>=pw0[1]?0:1;
   st.vision[zone]=clamp((st.vision[zone]||0)+(winner===0?0.3:-0.3),-1,1);
+  if(isTeamfight)for(const f of F){f.ps.teamfights++;if(f.side===winner)f.ps.teamfightWins++}
   const res={winner,deaths,sur,init,engOk,disengaged,n:[sideArrs[0].length,sideArrs[1].length]};
   expl(st,`교전 (${ctx.label||zone}) ${sideArrs[0].length}v${sideArrs[1].length}`,[
     ['선공권 Blue',initScore[0]],['선공권 Red',initScore[1]],['진입 성공확률',engP],['교전 전 전력 Blue',pw0[0]/1000],['교전 전 전력 Red',pw0[1]/1000]],
     {prob:engP,result:`${engOk?'진입 성공':'진입 실패'} · ${['Blue','Red'][winner]} 승리 ${deaths[1]}–${deaths[0]}${disengaged>=0?' (후퇴)':''}`});
-  if(sideArrs[0].length+sideArrs[1].length>=6)
+  if(isTeamfight)
     log(st,`${ctx.label||'한타'}: ${st.sides[winner].team.short} 승리 (${deaths[1-winner]}킬 / ${deaths[winner]}데스)${disengaged>=0?' · 패배 측 후퇴':''}`,{side:winner,major:true,kind:'fight'});
   return res;
 }
@@ -277,9 +278,10 @@ function incomeTick(st){
 }
 const ZONES=['top','mid','bot','dragon','baron'];
 function visionTick(st){
-  const inv=[0,1].map(i=>{const s=st.sides[i];const a=aliveOf(st,i);
-    return avg(a.map(p=>at(p,'vision_understanding')*(p.role==='SUP'||p.role==='JGL'?1.5:0.8)))*(a.length/5)*(0.7+0.6*s.team.tactics.vision_investment/100)});
-  for(const z of ZONES){const tgt=(inv[0]-inv[1])*1.6; st.vision[z]=clamp(st.vision[z]+(tgt-st.vision[z])*0.35+st.rng.info.normal(0,0.08),-1,1)}
+  const inv=[0,1].map(i=>{const s=st.sides[i],a=aliveOf(st,i),tac=.7+.6*s.team.tactics.vision_investment/100;
+    for(const p of a)p.vision+=(at(p,'vision_understanding')*(p.role==='SUP'||p.role==='JGL'?1.5:.8))*tac*.65;
+    return avg(a.map(p=>at(p,'vision_understanding')*(p.role==='SUP'||p.role==='JGL'?1.5:.8)))*(a.length/5)*tac});
+  for(const z of ZONES){const tgt=(inv[0]-inv[1])*1.6;st.vision[z]=clamp(st.vision[z]+(tgt-st.vision[z])*.35+st.rng.info.normal(0,.08),-1,1)}
 }
 function visFor(st,side,z){return side===0?st.vision[z]:-st.vision[z]}
 function pushFor(st,side,l){return side===0?st.lanePush[l]:-st.lanePush[l]}
@@ -292,6 +294,7 @@ function laningTick(st){
     if(!A.length||!B.length){ st.lanePush[l]=clamp(st.lanePush[l]+(A.length?0.3:-0.3),-1,1); continue; }
     const wv=a=>avg(a.map(p=>at(p,'wave_control')*0.4+at(p,'pressure')*0.4+p.champ.kit.waveclear/10*0.35+p.champ.kit.early/10*0.25))*Math.sqrt(a.length);
     st.lanePush[l]=clamp(st.lanePush[l]*0.6+(wv(A)-wv(B))*0.9+R.dec.normal(0,0.18),-1,1);
+    A.forEach(p=>{p.laneAdv+=st.lanePush[l];p.laneSamples++});B.forEach(p=>{p.laneAdv-=st.lanePush[l];p.laneSamples++});
     const aggr=avg([...A,...B].map(p=>(td(p,'aggression')+td(p,'trading_frequency'))/2));
     if(R.dec.chance(0.25+0.4*aggr)){
       const sc=a=>avg(a.map(p=>(at(p,'trading')*0.4+at(p,'harass')*0.2+at(p,'precision')*0.2+at(p,'skillshot')*0.2)*(0.82+0.26*p.prof.mastery/100)*(0.7+0.06*(p.champ.kit.early+p.champ.kit.poke)/2)))+avg(a.map(p=>p.lvl))*0.03;
@@ -407,7 +410,7 @@ function objectiveTick(st){
         takeStructure(st,giver,{lane:key==='baron'||key==='herald'?'bot':'top'});
       }
     }
-    if(taker>=0){o.wait[key]=0; reward(taker);}
+    if(taker>=0){o.wait[key]=0;const involved=c[taker]&&c[taker].part&&c[taker].part.length?c[taker].part:aliveOf(st,taker);involved.forEach(p=>p.objectives++);reward(taker);}
   };
   if(!o.soul&&o.dragonAt&&st.t>=o.dragonAt){
     const type=o.dragonTypes[o.dragonIdx%o.dragonTypes.length];
