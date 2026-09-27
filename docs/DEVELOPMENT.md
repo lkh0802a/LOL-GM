@@ -6,11 +6,17 @@
 
 The Artifact migration is complete and accepted. GitHub is now the primary development codebase.
 
-Current Phase 1 goal: replace prototype-only state with coherent persistent game state and complete the first real gameplay loop:
+Current Phase 1 goal: replace prototype-only state with coherent persistent game state and complete the first real gameplay loop.
 
-`New Game → Team Selection → World Creation → Date Progression → Schedule → Draft → Match → Result/Stats → Standings → Continue Season`
+Development progress is tracked by the 22 major LOL GM systems. Finish one major system completely before moving to the next. The active item is:
 
-Use `docs/POST_ARTIFACT_ROADMAP.md` for implementation order and `docs/CORE_DOMAIN_MODEL.md` as an architectural guardrail.
+`1. 새 게임 / 팀 선택`
+
+Its first-season flow is:
+
+`World Creation → Team Selection → Global FA Roster Construction → Registration Deadline → Season Start`
+
+After item 1 is fully verified, move to `2. 선수`. Use `docs/CORE_DOMAIN_MODEL.md` as an architectural guardrail; older roadmap documents are supporting references rather than the active implementation order.
 
 ## Phase 0 migration record
 

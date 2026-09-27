@@ -149,3 +149,15 @@ Consequences:
 - match IDs are namespaced by their season ID and carry season/competition references
 
 These changes intentionally invalidate older development saves, so the active save schema is version 10.
+
+
+## D-017 — Blank-roster first season and save schema v11
+
+**Decision:** The first season no longer offers an existing-roster start mode. Every active club begins with a blank roster, every generated player enters the global FA pool without a contract, and the season cannot open until registration rules are satisfied.
+
+- the player selects an eligible independent club, then constructs the first-team roster and any owned reserve roster from the global FA pool
+- AI clubs construct their rosters from the remaining FA pool under the same core registration constraints
+- owned reserve movement is an ownership privilege; independent second-division clubs are manager-selectable but are not call-up/send-down partners
+- the common default roster profile is first team 5–10, owned reserve 5–10, integrated organization 11–20, with league-specific profiles available for later overrides
+- the active save schema is version 11 under the `lol-gm-v11` namespace
+- older development saves remain unsupported

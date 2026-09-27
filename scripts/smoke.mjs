@@ -25,6 +25,18 @@ source += `\n(()=>{
   if(!selectable.length||selectable.some(t=>t.parent)) throw new Error('Manager-selectable team filter failed');
   if(selectable.length!==independent.length) throw new Error('Independent club selection coverage failed');
 
+  const ownedReserveFixture=active.find(t=>t.parent);
+  if(ownedReserveFixture){
+    const originalParent=ownedReserveFixture.parent;
+    ownedReserveFixture.parent=null;
+    const div2Selectable=managerSelectableTeams(db,ownedReserveFixture.region,2);
+    if(!isManagerSelectableTeam(db,ownedReserveFixture)||!div2Selectable.some(t=>t.id===ownedReserveFixture.id)) throw new Error('Independent second-division club selection failed');
+    const fixtureRules=rosterRulesForTeam(db,ownedReserveFixture),fixtureLimits=initialSquadLimits(db,ownedReserveFixture);
+    if(fixtureLimits.min!==fixtureRules.firstTeamMin||fixtureLimits.max!==fixtureRules.firstTeamMax) throw new Error('Independent second-division club did not use first-team roster limits');
+    ownedReserveFixture.parent=originalParent;
+    if(isManagerSelectableTeam(db,ownedReserveFixture)) throw new Error('Owned reserve became manager-selectable after fixture restore');
+  }
+
   const careerTeam=selectable.find(t=>!t.parent&&reserveTeamsOf(db,t).length===1)||selectable.find(t=>!t.parent&&reserveTeamsOf(db,t).length)||selectable[0];
   startCareer(db,careerTeam.id,'smoke-world');
   if(db.world.phase!=='initial_roster'||db.manager.startMode!=='blank_roster') throw new Error('Initial roster phase did not start');
