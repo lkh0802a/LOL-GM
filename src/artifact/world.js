@@ -572,7 +572,7 @@ function addRegion(db,rng,cfg){
 }
 function buildWorld(cfg){
   cfg=JSON.parse(JSON.stringify(cfg||defaultWorldConfig()));
-  const db={version:14,saveId:'save-'+Date.now().toString(36),manager:{id:'manager-human',teamId:null,startMode:null,careerStartedAt:null},worldDate:`${cfg.startYear||2027}-01-01`,coachPool:[],awards:[],hof:[],global:{decisions:[],power:{}},patch:buildPatch(),teams:{},players:{},regions:{},competitions:{},worldConfig:cfg,world:null,history:[],news:[],year:cfg.startYear||2027,configDirty:false,scout:{}};
+  const db={version:15,saveId:'save-'+Date.now().toString(36),manager:{id:'manager-human',teamId:null,startMode:null,careerStartedAt:null},worldDate:`${cfg.startYear||2027}-01-01`,coachPool:[],awards:[],hof:[],global:{decisions:[],power:{}},patch:buildPatch(),teams:{},players:{},regions:{},competitions:{},worldConfig:cfg,world:null,history:[],news:[],year:cfg.startYear||2027,configDirty:false,scout:{}};
   const rng=new RNG('world-v7','gen');
   initPatches(db);
   for(const r of cfg.regions) addRegion(db,rng,r);
@@ -625,7 +625,7 @@ function startWorldSeason(db,myTeam,seed){
     steps.push(...intlSteps(tim[sp]));
   }
   const manage=db.world?db.world.manage:(db.worldConfig.manage||'manual');
-  db.world={year:db.year,seed,manage,phase:'season',seasons:{},steps,step:-1,report:null,lastDate:`${db.year}-01-07`,offers:[],marketLog:[]};
+  db.world={year:db.year,seed,manage,phase:'season',seasons:{},steps,step:-1,report:null,pendingOfficial:null,lastDate:`${db.year}-01-07`,offers:[],marketLog:[]};
   seasonPatch(db,`${db.year}-01-02`,new RNG(seed+db.year,'patch'));
   setGoals(db);
   advanceStep(db);
@@ -714,20 +714,37 @@ function trainingRecommendation(db,t){
   const intensity=fat>38||cond<84||days<=1?'light':days>=5&&fat<20&&cond>91?'high':'normal';
   const scrim=days>=2&&fat<42&&cond>80;return {intensity,scrim,next,days,fat,cond};
 }
+function pendingOfficialDraftSetup(db){
+  const p=db.world&&db.world.pendingOfficial,q=p&&p.queue&&p.queue[0];if(!q)return null;
+  const s=db.world.seasons[q.seasonKey],m=s&&s.days[s.cur]&&s.days[s.cur].matches.find(x=>x.id===q.matchId);if(!s||!m||m.res)return null;
+  return {...scheduledOpeningDraft(db,s,m),seasonKey:q.seasonKey,pendingDate:p.date};
+}
+function resolvePendingOfficialMatch(db,forcedDraft){
+  const w=db.world,p=w&&w.pendingOfficial,q=p&&p.queue&&p.queue[0];if(!q)throw new Error('No pending official match');
+  const s=w.seasons[q.seasonKey],m=s&&s.days[s.cur]&&s.days[s.cur].matches.find(x=>x.id===q.matchId);if(!s||!m||m.res)throw new Error('Pending official match is stale');
+  const setup=scheduledOpeningDraft(db,s,m),forced={bans:forcedDraft.bans,picks:forcedDraft.picks};
+  const series=simulateScheduledSeries(db,s,setup.day,m,setup.cfg,{forced:[forced]});commitScheduledSeries(db,s,m,series);
+  const finalized=finalizeCompetitionDay(db,s,setup.day,setup.cfgIdx,setup.cfg);if(finalized)scoutFromDay(db,s,setup.day);
+  p.queue.shift();if(!p.queue.length){w.pendingOfficial=null;if(!activeSeasons(db).length)advanceStep(db)}
+  return {rec:series.rec,lines:series.lines,finalized,pending:w.pendingOfficial};
+}
 function playWorldDay(db){
-  const w=db.world; if(w.phase!=='season')return null;
-  const d=nextDate(db); if(!d){advanceStep(db);return {date:null,played:[]}}
-  db.worldDate=d;
-  patchTick(db,d,new RNG(w.seed+d,'patch'));
-  dailyRecovery(db);
+  const w=db.world;if(w.phase!=='season')return null;
+  if(w.pendingOfficial&&w.pendingOfficial.queue&&w.pendingOfficial.queue.length)return {date:w.pendingOfficial.date,played:[],pending:w.pendingOfficial};
+  const d=nextDate(db);if(!d){advanceStep(db);return {date:null,played:[],pending:null}}
+  db.worldDate=d;patchTick(db,d,new RNG(w.seed+d,'patch'));dailyRecovery(db);
   for(const t of activeTeams(db))aiManageTraining(db,t);
   if(typeof aiRunScrims==='function')aiRunScrims(db,new RNG(w.seed+d,'scrim'));
-  // 시즌 중에는 경기일마다 AI 산하 2군의 승격/육성 필요를 재평가하되, 모든 이동은 플레이어와 같은 rosterMoveCheck를 통과한다.
   for(const t of activeTeams(db,null,1))aiManageOwnedReserve(db,t);
-  const played=[];
-  for(const s of activeSeasons(db)) if(s.days[s.cur].date===d){const day=playDay(db,s);played.push({s,day});scoutFromDay(db,s,day)}
-  if(!activeSeasons(db).length) advanceStep(db);
-  return {date:d,played};
+  const played=[],queue=[],me=managedTeamId(db);
+  for(const [seasonKey,s] of Object.entries(w.seasons))if(!s.done&&s.days[s.cur].date===d){
+    const r=playDay(db,s,{deferTeam:me});played.push({s,day:r.day});
+    if(r.finalized)scoutFromDay(db,s,r.day);
+    for(const x of r.pending)queue.push({seasonKey,matchId:x.matchId,date:d});
+  }
+  if(queue.length)w.pendingOfficial={date:d,queue};
+  else if(!activeSeasons(db).length)advanceStep(db);
+  return {date:d,played,pending:w.pendingOfficial};
 }
 function news(db,text){db.news.unshift({year:db.world?db.world.year:db.year,text});if(db.news.length>250)db.news.length=250}
 

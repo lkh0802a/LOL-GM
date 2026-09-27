@@ -526,3 +526,14 @@ This applies retroactively to completed major items during later UI touches and 
 - Generated definitions persist a small versioned naming profile containing theme/effect and prefix identity. Recent-prefix checks prevent the same naming stem from being emitted repeatedly in sequence.
 - Existing official names remain untouched. Generated names are stable after release and are preserved in patch history/save reconstruction.
 - CI smoke tests generate batches across champions/items/runes and reject duplicate, near-duplicate or single-language outputs.
+
+
+## D-042 — Managed official matches pause world progression at the draft boundary
+
+**Decision:** Official matches involving the managed team are deferred before simulation and exposed through a persistent world-level pending queue.
+
+- A competition day may simulate and record AI-only matches while leaving the managed match unresolved. The season day does not advance or run stage-transition logic until every scheduled match on that day has a result.
+- The pending official state persists the date plus season/match identifiers. While it is non-empty, world progression returns that pending state without rerunning patch ticks, recovery, training, scrims or reserve management for the date.
+- The official draft UI is modal and locked. Reloading reconstructs the pending first-game draft from the stable series seed, side/first-pick rules and tournament champion pool.
+- In this Item 11 stage, the managed team controls the first game's complete ban/pick. The finalized draft is passed into the existing official series simulator through its forced-draft contract; remaining games stay automatic until the per-game series extension.
+- Scheduled result commit is guarded against duplication. Statistics, meta, player usage, scouting and stage advancement continue through the same official pipelines after resolution.

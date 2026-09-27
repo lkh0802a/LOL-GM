@@ -9,7 +9,7 @@ function openInteractiveDraft(db,teamIds,playerTeamId,opt={}){
   const seed=opt.seed||freshInternalSeed('draft-ui'),ctx=opt.ctx||{used:[],byTeam:{},fearless:true,practice:true,firstPick:0};
   for(const tid of teamIds)if(!ctx.byTeam[tid])ctx.byTeam[tid]={won:[],lost:[]};
   const state=createDraftSession(db,teamIds,new RNG(seed,'draft'),ctx);
-  DRAFT_UI={db,state,playerSide,seed,title:opt.title||'밴픽',filter:'ALL',query:'',selected:null,onComplete:typeof opt.onComplete==='function'?opt.onComplete:null};
+  DRAFT_UI={db,state,playerSide,seed,title:opt.title||'밴픽',filter:'ALL',query:'',selected:null,locked:!!opt.locked,finishLabel:opt.finishLabel||null,doneText:opt.doneText||null,onComplete:typeof opt.onComplete==='function'?opt.onComplete:null};
   const ov=$('#overlay');ov.hidden=false;ov.setAttribute('aria-label',DRAFT_UI.title);document.body.classList.add('lock');
   draftUiAdvanceAi();draftUiRender();
 }
@@ -17,7 +17,17 @@ function openDraftPractice(db,playerTeamId,opponentTeamId){
   const seed=freshInternalSeed('draft-practice'),sideRng=new RNG(seed,'side'),firstPick=sideRng.chance(.5)?0:1;
   openInteractiveDraft(db,[playerTeamId,opponentTeamId],playerTeamId,{seed,title:'밴픽 연습',ctx:{used:[],byTeam:{},fearless:true,practice:true,firstPick}});
 }
+function openPendingOfficialDraft(db){
+  const setup=pendingOfficialDraftSetup(db);if(!setup)return false;
+  const me=managedTeamId(db),mine=db.teams[me],oppId=setup.m.a===me?setup.m.b:setup.m.a,opp=db.teams[oppId];
+  const title=`${setup.comp.name} · ${mine.short} vs ${opp.short} · 1세트 밴픽`;
+  openInteractiveDraft(db,[setup.blue,setup.red],me,{seed:setup.gseed,title,locked:true,finishLabel:'공식전 진행',doneText:'1세트 밴픽이 확정되었습니다. 이 밴픽으로 공식전을 진행합니다.',ctx:setup.draftCtx,onComplete:result=>{
+    const out=resolvePendingOfficialMatch(DB,result);LAST=null;LASTSER=out.rec;saveDB();nav();
+  }});
+  return true;
+}
 function draftUiClose(){
+  if(DRAFT_UI?.locked)return;
   DRAFT_UI=null;const ov=$('#overlay');if(!ov)return;ov.hidden=true;ov.innerHTML='';ov.setAttribute('aria-label','시리즈 상세');document.body.classList.remove('lock');
 }
 function draftUiAdvanceAi(){
@@ -62,9 +72,9 @@ function draftUiRender(){
   const phase=done?'드래프트 완료':`${turn.index+1} / ${DRAFT_ORDER.length} · ${turn.kind==='B'?'밴':'픽'} · ${esc(s.db.teams[s.teamIds[turn.side]].short)} 차례`;
   const mine=!done&&turn.side===DRAFT_UI.playerSide;
   ov.innerHTML=`<div class="ovin du-wrap">
-    <div class="ovhead"><div><b>${esc(DRAFT_UI.title)}</b><small class="du-phase">${phase}</small></div><button class="ghost" id="du-close">닫기</button></div>
+    <div class="ovhead"><div><b>${esc(DRAFT_UI.title)}</b><small class="du-phase">${phase}</small></div>${DRAFT_UI.locked?'':'<button class="ghost" id="du-close">닫기</button>'}</div>
     <div class="du-board">${draftUiSidePanel(0)}<div class="du-center"><strong>${done?'완료':mine?'YOUR TURN':'AI'}</strong><span>${done?'10밴 · 10픽 완료':turn.kind==='B'?'BAN':'PICK'}</span></div>${draftUiSidePanel(1)}</div>
-    ${done?`<section class="du-done"><h3>드래프트 완료</h3><p>단계형 밴픽 코어와 동일한 결과입니다. 공식 경기 연결 단계에서 이 결과를 경기 엔진에 그대로 전달합니다.</p><button class="primary" id="du-finish">${DRAFT_UI.onComplete?'드래프트 확정':'연습 종료'}</button></section>`:
+    ${done?`<section class="du-done"><h3>드래프트 완료</h3><p>${esc(DRAFT_UI.doneText||'단계형 밴픽 코어와 동일한 결과입니다.')}</p><button class="primary" id="du-finish">${esc(DRAFT_UI.finishLabel||(DRAFT_UI.onComplete?'드래프트 확정':'연습 종료'))}</button></section>`:
     `<section class="du-pool">
       <div class="du-tools"><input id="du-search" type="search" autocomplete="off" placeholder="챔피언 검색" value="${esc(DRAFT_UI.query)}"><div class="chips">${DRAFT_UI_FILTERS.map(r=>`<button data-du-role="${r}" aria-pressed="${DRAFT_UI.filter===r}">${r==='ALL'?'전체':ROLE_KO[r]}</button>`).join('')}</div></div>
       <div id="du-grid">${draftUiGrid()}</div>
@@ -75,7 +85,7 @@ function draftUiRender(){
 }
 function draftUiBind(){
   if(!DRAFT_UI)return;
-  $('#du-close').onclick=draftUiClose;
+  const close=$('#du-close');if(close)close.onclick=draftUiClose;
   const finish=$('#du-finish');if(finish)finish.onclick=()=>{const result=draftResult(DRAFT_UI.state),cb=DRAFT_UI.onComplete;if(cb){DRAFT_UI=null;const ov=$('#overlay');ov.hidden=true;ov.innerHTML='';document.body.classList.remove('lock');cb(result)}else draftUiClose()};
   const search=$('#du-search');if(search)search.oninput=e=>{DRAFT_UI.query=e.target.value;const box=$('#du-grid');if(box)box.innerHTML=draftUiGrid();draftUiBindGrid()};
   document.querySelectorAll('[data-du-role]').forEach(b=>b.onclick=()=>{DRAFT_UI.filter=b.dataset.duRole;DRAFT_UI.selected=null;draftUiRender()});
@@ -91,4 +101,4 @@ function draftUiLock(){
   const valid=draftValidateChoice(s,choice);if(!valid.ok){DRAFT_UI.selected=null;draftUiRender();return}
   draftApplyChoice(s,choice);DRAFT_UI.selected=null;draftUiAdvanceAi();draftUiRender();
 }
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&DRAFT_UI)draftUiClose()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&DRAFT_UI&&!DRAFT_UI.locked)draftUiClose()});

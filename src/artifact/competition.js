@@ -27,6 +27,19 @@ function chooseSide(db,tid,opp,ctx,g,bestOf,rng){
 function seriesDraftSnapshot(ctx){
   return {used:ctx.used.slice(),byTeam:Object.fromEntries(Object.entries(ctx.byTeam).map(([id,h])=>[id,{won:h.won.slice(),lost:h.lost.slice()}])),fearless:ctx.fearless,mods:{...ctx.mods},practice:ctx.practice,championPool:ctx.championPool};
 }
+function seriesGameSetup(db,aId,bId,bestOf,seed,ctx,g,chooser,srng){
+  const other=chooser===aId?bId:aId,sc=chooseSide(db,chooser,other,ctx,g,bestOf,srng);
+  const blue=sc.side==='blue'?chooser:other,red=blue===aId?bId:aId,gseed=seed+'/g'+g;
+  let fpTeam=sc.order==='first'?chooser:other;if(BAL.randomTest)fpTeam=srng.chance(.5)?aId:bId;
+  const snap=seriesDraftSnapshot(ctx);snap.firstPick=fpTeam===blue?0:1;
+  return {other,sc,blue,red,gseed,fpTeam,snap};
+}
+function seriesOpeningDraft(db,aId,bId,bestOf,seed,opt={}){
+  const ctx={used:[],byTeam:{[aId]:{won:[],lost:[]},[bId]:{won:[],lost:[]}},fearless:!!opt.fearless,mods:{[aId]:0,[bId]:0},practice:!!opt.practice,championPool:opt.championPool||null};
+  const srng=new RNG(seed,'side'),chooser=opt.firstChoice==='coin'?(srng.chance(.5)?aId:bId):aId;
+  const x=seriesGameSetup(db,aId,bId,bestOf,seed,ctx,1,chooser,srng);
+  return {...x,chooser,draftCtx:x.snap};
+}
 function simulateSeries(db,aId,bId,bestOf,seed,opt={}){
   const need=Math.ceil(bestOf/2), wins={[aId]:0,[bId]:0}, games=[], lines=[];
   const ctx={used:[],byTeam:{[aId]:{won:[],lost:[]},[bId]:{won:[],lost:[]}},fearless:!!opt.fearless,mods:{[aId]:0,[bId]:0},practice:!!opt.practice,championPool:opt.championPool||null};
@@ -34,12 +47,7 @@ function simulateSeries(db,aId,bId,bestOf,seed,opt={}){
   // 1세트 진영 선택권: 토너먼트는 상위 시드, 풀리그는 코인 토스
   let chooser=opt.firstChoice==='coin'?(srng.chance(0.5)?aId:bId):aId;
   for(let g=1;wins[aId]<need&&wins[bId]<need;g++){
-    const other=chooser===aId?bId:aId;
-    const sc=chooseSide(db,chooser,other,ctx,g,bestOf,srng);
-    const blue=sc.side==='blue'?chooser:other, red=blue===aId?bId:aId, gseed=seed+'/g'+g;
-    let fpTeam=sc.order==='first'?chooser:other;
-    if(BAL.randomTest){fpTeam=srng.chance(0.5)?aId:bId}
-    const snap=seriesDraftSnapshot(ctx); snap.firstPick=fpTeam===blue?0:1;
+    const setup=seriesGameSetup(db,aId,bId,bestOf,seed,ctx,g,chooser,srng),{other,sc,blue,red,gseed,fpTeam,snap}=setup;
     if(opt.forced&&opt.forced[g-1])snap.forced=opt.forced[g-1];
     const r=simulateMatch(db,blue,red,gseed,snap,opt.capture!==g);r.comp=opt.compId||null;r.date=db.worldDate;r.metaContext=opt.metaContext||null;
     if(!opt.replay&&!opt.practice)recordMeta(db,r);
@@ -191,35 +199,52 @@ function recordLines(s,lines){
     const c=p.champs[l.champ]||(p.champs[l.champ]=[0,0]);c[0]++;if(l.win)c[1]++;
   }
 }
-function playDay(db,s){
-  if(!s||s.done)return null;
-  const day=s.days[s.cur], comp=db.competitions[s.comp];
-  const cfgIdx=comp.stages.findIndex(x=>x.id===day.stage), cfg=comp.stages[cfgIdx];
-  for(const m of day.matches){
-    const firstChoice=cfg.type==='round_robin'||cfg.type==='swiss'?'coin':'seed';
-    const {rec,lines}=simulateSeries(db,m.a,m.b,m.bo,`${s.seed}/${s.year}/${m.id}`,{fearless:comp.rules&&comp.rules.fearless,firstChoice,compId:s.comp,championPool:comp.championPool,metaContext:{season:s.id,year:s.year,split:s.split||null,stage:day.stage,league:comp.region||s.comp,international:!!comp.international}});
-    m.res=rec; recordLines(s,lines); afterSeries(db,lines,rec); updatePlayerUsage(db,s,rec,lines);
-  }
+function scheduledSeriesOptions(db,s,day,cfg){
+  const comp=db.competitions[s.comp],firstChoice=cfg.type==='round_robin'||cfg.type==='swiss'?'coin':'seed';
+  return {fearless:comp.rules&&comp.rules.fearless,firstChoice,compId:s.comp,championPool:comp.championPool,metaContext:{season:s.id,year:s.year,split:s.split||null,stage:day.stage,league:comp.region||s.comp,international:!!comp.international}};
+}
+function simulateScheduledSeries(db,s,day,m,cfg,extra={}){
+  return simulateSeries(db,m.a,m.b,m.bo,`${s.seed}/${s.year}/${m.id}`,{...scheduledSeriesOptions(db,s,day,cfg),...extra});
+}
+function commitScheduledSeries(db,s,m,series){
+  if(m.res)throw new Error('Scheduled match already resolved: '+m.id);
+  m.res=series.rec;recordLines(s,series.lines);afterSeries(db,series.lines,series.rec);updatePlayerUsage(db,s,series.rec,series.lines);return m.res;
+}
+function finalizeCompetitionDay(db,s,day,cfgIdx,cfg){
+  if(day.matches.some(m=>!m.res))return false;
   s.cur++;
-  const sd=s.stageData[cfg.id], roundDays=s.days.filter(d=>d.stage===cfg.id&&d.label===day.label), roundDone=roundDays.every(d=>d.matches.every(m=>m.res));
+  const comp=db.competitions[s.comp],sd=s.stageData[cfg.id],roundDays=s.days.filter(d=>d.stage===cfg.id&&d.label===day.label),roundDone=roundDays.every(d=>d.matches.every(m=>m.res));
   const nd=addDays(day.date,cfg.dayGap?cfg.dayGap[0]:5);
   if(cfg.type==='single_elim'&&roundDone){
-    const r=sd.rounds[sd.rounds.length-1], ms=roundDays.flatMap(d=>d.matches);
-    sd.elim.push(...ms.map(m=>m.a===m.res.winner?m.b:m.a));
-    sd.alive=[...r.byes,...ms.map(m=>m.res.winner)];
-    if(sd.alive.length===1) finishStage(db,s,cfgIdx,day.date); else addElimRound(db,s,cfgIdx,nd);
-  } else if(cfg.type==='double_elim'&&roundDone){
+    const r=sd.rounds[sd.rounds.length-1],ms=roundDays.flatMap(d=>d.matches);
+    sd.elim.push(...ms.map(m=>m.a===m.res.winner?m.b:m.a));sd.alive=[...r.byes,...ms.map(m=>m.res.winner)];
+    if(sd.alive.length===1)finishStage(db,s,cfgIdx,day.date);else addElimRound(db,s,cfgIdx,nd);
+  }else if(cfg.type==='double_elim'&&roundDone){
     deAfter(sd,sd.rounds[sd.rounds.length-1],roundDays.flatMap(d=>d.matches));
-    if(sd.alive&&sd.alive.length===1&&sd.gf) finishStage(db,s,cfgIdx,day.date); else deRound(db,s,cfgIdx,nd);
-  } else if(cfg.type==='swiss'&&roundDone){
-    for(const m of day.matches){const w=m.res.winner,l=m.a===w?m.b:m.a;sd.rec[w].w++;sd.rec[l].l++;sd.rec[m.a].opp.push(m.b);sd.rec[m.b].opp.push(m.a);
-      if(sd.rec[w].w>=sd.W)sd.advanced.push(w);if(sd.rec[l].l>=sd.L)sd.out.push(l);}
-    const act=sd.teams.filter(t=>!sd.advanced.includes(t)&&!sd.out.includes(t));
-    const want=(comp.stages[cfgIdx+1]||{}).take||Math.floor(sd.teams.length/2);
-    if(act.length>=2&&sd.advanced.length<want) swissRound(db,s,cfgIdx,addDays(day.date,1)); else finishStage(db,s,cfgIdx,day.date);
-  } else if(cfg.type==='round_robin'&&!s.days.slice(s.cur).some(d=>d.stage===cfg.id)) finishStage(db,s,cfgIdx,day.date);
-  return day;
+    if(sd.alive&&sd.alive.length===1&&sd.gf)finishStage(db,s,cfgIdx,day.date);else deRound(db,s,cfgIdx,nd);
+  }else if(cfg.type==='swiss'&&roundDone){
+    for(const m of day.matches){const w=m.res.winner,l=m.a===w?m.b:m.a;sd.rec[w].w++;sd.rec[l].l++;sd.rec[m.a].opp.push(m.b);sd.rec[m.b].opp.push(m.a);if(sd.rec[w].w>=sd.W)sd.advanced.push(w);if(sd.rec[l].l>=sd.L)sd.out.push(l)}
+    const act=sd.teams.filter(t=>!sd.advanced.includes(t)&&!sd.out.includes(t)),want=(comp.stages[cfgIdx+1]||{}).take||Math.floor(sd.teams.length/2);
+    if(act.length>=2&&sd.advanced.length<want)swissRound(db,s,cfgIdx,addDays(day.date,1));else finishStage(db,s,cfgIdx,day.date);
+  }else if(cfg.type==='round_robin'&&!s.days.slice(s.cur).some(d=>d.stage===cfg.id))finishStage(db,s,cfgIdx,day.date);
+  return true;
 }
+function scheduledOpeningDraft(db,s,m){
+  const day=s.days[s.cur],comp=db.competitions[s.comp],cfgIdx=comp.stages.findIndex(x=>x.id===day.stage),cfg=comp.stages[cfgIdx],opt=scheduledSeriesOptions(db,s,day,cfg),seed=`${s.seed}/${s.year}/${m.id}`;
+  const opening=seriesOpeningDraft(db,m.a,m.b,m.bo,seed,opt);
+  return {s,day,m,comp,cfg,cfgIdx,opt,seed,...opening};
+}
+function playDay(db,s,opt={}){
+  if(!s||s.done)return null;
+  const day=s.days[s.cur],comp=db.competitions[s.comp],cfgIdx=comp.stages.findIndex(x=>x.id===day.stage),cfg=comp.stages[cfgIdx],pending=[];
+  for(const m of day.matches){if(m.res)continue;
+    if(opt.deferTeam&&(m.a===opt.deferTeam||m.b===opt.deferTeam)){pending.push({matchId:m.id});continue}
+    commitScheduledSeries(db,s,m,simulateScheduledSeries(db,s,day,m,cfg));
+  }
+  const finalized=finalizeCompetitionDay(db,s,day,cfgIdx,cfg);
+  return {day,pending,finalized};
+}
+
 function finishStage(db,s,idx,date){
   const comp=db.competitions[s.comp], cfg=comp.stages[idx], next=comp.stages[idx+1];
   if(next){

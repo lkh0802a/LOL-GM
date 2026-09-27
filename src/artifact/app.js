@@ -1,8 +1,8 @@
 // ===== LOL GM: UI =====
-const SAVE_VERSION=14;
-const STORAGE_NS='lol-gm-v14';
+const SAVE_VERSION=15;
+const STORAGE_NS='lol-gm-v15';
 const LEGACY_STORAGE_PREFIXES=['lol-gm'];
-const LEGACY_DB_NAMES=['lol-gm','lol-gm-v10','lol-gm-v11','lol-gm-v12','lol-gm-v13'];
+const LEGACY_DB_NAMES=['lol-gm','lol-gm-v10','lol-gm-v11','lol-gm-v12','lol-gm-v13','lol-gm-v14'];
 const DIRECT_FILE_PREVIEW=location.protocol==='file:'||location.origin==='null';
 let SLOT=(()=>{try{return localStorage.getItem(STORAGE_NS+'-slot')||'1'}catch(e){return '1'}})();
 const STORE_BASE=STORAGE_NS+'-db-v'+SAVE_VERSION+'-';

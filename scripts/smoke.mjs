@@ -12,7 +12,7 @@ for (const file of modules) source += `${await readFile(resolve(artifact, file),
 source += `\n(()=>{
   const db=buildWorld();
   if(Object.values(CHAMPION_SOURCE_SNAPSHOT.champions).length!==173||Object.values(CHAMPION_SOURCE_SNAPSHOT.champions).some(c=>!c.nameKo)||Object.values(CHAMPION_SOURCE_SNAPSHOT.champions).filter(c=>c.passive?.nameKo&&c.spells?.length===4).length!==173||db.patch.championSource.matched<170||db.patch.championSource.matched!==db.patch.championSource.total)throw new Error('Authoritative champion baseline coverage incomplete: '+JSON.stringify(db.patch.championSource));
-  if(!db||db.version!==14) throw new Error('Unexpected save schema');
+  if(!db||db.version!==15) throw new Error('Unexpected save schema');
   if(!db.worldDate||!db.worldConfig.universalLanguage) throw new Error('World bootstrap settings failed');
   const intl=Object.fromEntries(db.worldConfig.internationals.map(x=>[x.id,x]));
   const expectedIntl=['FIRST_STAND','MID_SEASON_INVITATIONAL','EASTERN_CUP','WESTERN_CUP','WORLD_CHAMPIONSHIP','MASTERS','OPEN'];
@@ -182,7 +182,25 @@ source += `\n(()=>{
     draftApplyChoice(flexState,{champ:flexChamp.id,side:flexTurn.side,source:'player'});
     const possibleAfter=ROLES.filter(r=>draftRolePossibilities(flexState,flexTurn.side,r).includes(flexChamp.id));
     if(possibleAfter.length<2||flexState.log.at(-1).role!==null)throw new Error('Live draft exposed a hidden flex position');
-  }if(scrimA&&scrimB){const scrimSeries=simulateSeries(db,scrimA.id,scrimB.id,1,'smoke-scrim',{fearless:true,firstChoice:'coin',replay:true}),scrimLine=scrimSeries.lines[0],scrimPlayer=db.players[scrimLine.pid],scrimProfile=ensureChampionProfile(db,scrimPlayer,scrimLine.champ),scrimBefore=scrimProfile.scrimExperience||0,fatigueBefore=scrimPlayer.fatigue||0;recordScrimPractice(db,scrimSeries.rec,scrimSeries.lines);if(scrimProfile.scrimExperience<=scrimBefore||scrimPlayer.fatigue<=fatigueBefore||!(db.teams[scrimLine.tid].scrimIntel>0))throw new Error('Scrim practice effects failed')}
+  }
+  if(scrimA&&scrimB){
+    const pdb=JSON.parse(JSON.stringify(db)),pa=pdb.teams[scrimA.id],pb=pdb.teams[scrimB.id],pcid='PENDING_SMOKE',pkey='__pending_smoke',psid='season_pending_smoke',pdate='2027-07-01',pool=Object.values(pdb.patch.champions).filter(c=>championProEligible(pdb,c,pdate)).map(c=>c.id);
+    setManagedTeam(pdb,pa.id);pdb.world.phase='season';pdb.worldDate='2027-06-28';
+    pdb.competitions[pcid]={id:pcid,name:'Pending Smoke League',short:'PSL',region:pa.region,teams:[pa.id,pb.id],rules:{fearless:true},championPool:pool,stages:[{id:'regular',name:'정규',type:'round_robin',bestOf:1,dayGap:[3]}]};
+    const ps={id:psid,comp:pcid,year:2027,seed:'pending-smoke',days:[
+      {date:pdate,stage:'regular',label:'정규 1라운드',matches:[{id:'pending_match',a:pa.id,b:pb.id,bo:1,res:null}]},
+      {date:'2027-07-04',stage:'regular',label:'정규 2라운드',matches:[{id:'pending_match_2',a:pb.id,b:pa.id,bo:1,res:null}]}
+    ],cur:0,stage:0,stageData:{regular:{type:'round_robin',teams:[pa.id,pb.id],groups:null}},pstats:{},done:false,champion:null,runnerUp:null};
+    pdb.world.seasons={[pkey]:ps};const pd=playDay(pdb,ps,{deferTeam:pa.id});
+    if(pd.finalized||pd.pending.length!==1||ps.cur!==0||ps.days[0].matches[0].res)throw new Error('Managed official match was not deferred');
+    pdb.world.pendingOfficial={date:pdate,queue:[{seasonKey:pkey,matchId:'pending_match',date:pdate}]};
+    const beforeDate=pdb.worldDate,hold=playWorldDay(pdb);if(!hold?.pending||pdb.worldDate!==beforeDate)throw new Error('Pending official day reran world effects');
+    const po=pendingOfficialDraftSetup(pdb);if(!po||![pa.id,pb.id].includes(po.blue)||![pa.id,pb.id].includes(po.red)||po.blue===po.red)throw new Error('Pending official draft setup invalid');
+    const fd=runDraft(pdb,[po.blue,po.red],new RNG(po.gseed,'draft'),po.draftCtx),resolved=resolvePendingOfficialMatch(pdb,fd);
+    if(!resolved.rec||ps.cur!==1||!ps.days[0].matches[0].res||pdb.world.pendingOfficial)throw new Error('Pending official match did not resolve and resume');
+    let duplicateBlocked=false;try{commitScheduledSeries(pdb,ps,ps.days[0].matches[0],resolved)}catch(e){duplicateBlocked=true}if(!duplicateBlocked)throw new Error('Official result committed twice');
+  }
+  if(scrimA&&scrimB){const scrimSeries=simulateSeries(db,scrimA.id,scrimB.id,1,'smoke-scrim',{fearless:true,firstChoice:'coin',replay:true}),scrimLine=scrimSeries.lines[0],scrimPlayer=db.players[scrimLine.pid],scrimProfile=ensureChampionProfile(db,scrimPlayer,scrimLine.champ),scrimBefore=scrimProfile.scrimExperience||0,fatigueBefore=scrimPlayer.fatigue||0;recordScrimPractice(db,scrimSeries.rec,scrimSeries.lines);if(scrimProfile.scrimExperience<=scrimBefore||scrimPlayer.fatigue<=fatigueBefore||!(db.teams[scrimLine.tid].scrimIntel>0))throw new Error('Scrim practice effects failed')}
   if(!(playerMarketValue(db,sample)>0)||!['신인','성장','전성기','쇠퇴'].includes(careerStage(sample))) throw new Error('Player value/lifecycle failed');
   const veteranStage=careerStage({...sample,age:27,proSeasons:0,development:{...sample.development,peakAge:25}});if(veteranStage==='신인')throw new Error('Veteran lifecycle incorrectly classified as rookie');
   ensureSatisfaction(sample);if(!SQUAD_ROLES.includes(recommendedRosterRole(db,sample,active[0]))||!CAREER_GOAL_KO[playerCareerGoal(sample)]) throw new Error('Player roster role/career goal failed');
@@ -197,7 +215,7 @@ source += `\n(()=>{
   recordPlayerEvent(growthProbe,'transfer',db.year,{from:'A',to:'B',fee:1});
   if(!growthProbe.careerEvents.some(e=>e.type==='transfer'&&e.to==='B')) throw new Error('Player career event persistence failed');
   const persisted=unpackDB(packDB(db)),persistedPlayer=persisted.players[sample.id];
-  if(!persistedPlayer||persisted.version!==14||persistedPlayer.nationality!==sample.nationality||persistedPlayer.reputation!==sample.reputation||!persistedPlayer.development||!persistedPlayer.roleFamiliarity||!persistedPlayer.pool[poolEntry]||persistedPlayer.pool[poolEntry].trainingExperience!==sample.pool[poolEntry].trainingExperience) throw new Error('Player save round-trip failed');
+  if(!persistedPlayer||persisted.version!==15||persistedPlayer.nationality!==sample.nationality||persistedPlayer.reputation!==sample.reputation||!persistedPlayer.development||!persistedPlayer.roleFamiliarity||!persistedPlayer.pool[poolEntry]||persistedPlayer.pool[poolEntry].trainingExperience!==sample.pool[poolEntry].trainingExperience) throw new Error('Player save round-trip failed');
   const metaSave=buildWorld(),metaCid=Object.keys(metaSave.patch.champions)[0];metaSave.metaHistory=[{date:'2027-01-02',patch:'26.19',comp:'SAVE_META',season:'S1',year:2027,split:1,stage:'regular',league:'LCK',international:false,regions:['LCK'],sides:[{team:'A',region:'LCK',win:true,picks:[{champ:metaCid,role:'MID',player:'P1',items:['1001'],runes:['8005']}]}],bans:[metaCid]}];
   const rawMetaBytes=JSON.stringify(metaSave.metaHistory).length,metaPacked=packDB(metaSave),metaRaw=JSON.parse(metaPacked),packedMetaBytes=JSON.stringify(metaRaw.metaHistory).length;if(!Array.isArray(metaRaw.metaHistory?.[0])||metaRaw.patches?.base||metaRaw.patches?.initialBase||packedMetaBytes>=rawMetaBytes*.8)throw new Error('Save compaction did not materially reduce derived patch/meta overhead');
   const metaLoaded=unpackDB(metaPacked),metaRow=metaLoaded.metaHistory?.[0],metaPick=metaRow?.sides?.[0]?.picks?.[0];if(metaRow?.comp!=='SAVE_META'||metaRow?.league!=='LCK'||metaPick?.champ!==metaCid||metaPick?.items?.[0]!=='1001'||metaPick?.runes?.[0]!=='8005')throw new Error('Meta history save round-trip failed');
