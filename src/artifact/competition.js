@@ -194,7 +194,7 @@ function playDay(db,s){
   const cfgIdx=comp.stages.findIndex(x=>x.id===day.stage), cfg=comp.stages[cfgIdx];
   for(const m of day.matches){
     const firstChoice=cfg.type==='round_robin'||cfg.type==='swiss'?'coin':'seed';
-    const {rec,lines}=simulateSeries(db,m.a,m.b,m.bo,`${s.seed}/${s.year}/${m.id}`,{fearless:comp.rules&&comp.rules.fearless,firstChoice,compId:s.comp,championPool:comp.championPool,metaContext:{season:s.id,year:s.year,stage:day.stage,league:comp.region||s.comp,international:!!comp.international}});
+    const {rec,lines}=simulateSeries(db,m.a,m.b,m.bo,`${s.seed}/${s.year}/${m.id}`,{fearless:comp.rules&&comp.rules.fearless,firstChoice,compId:s.comp,championPool:comp.championPool,metaContext:{season:s.id,year:s.year,split:s.split||null,stage:day.stage,league:comp.region||s.comp,international:!!comp.international}});
     m.res=rec; recordLines(s,lines); afterSeries(db,lines,rec); updatePlayerUsage(db,s,rec,lines);
   }
   s.cur++;
