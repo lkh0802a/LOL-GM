@@ -1772,6 +1772,35 @@ function rosterMoveCheck(db,p,target){
   return {ok:true,kind:dstIsFirst?'callup':'senddown',from:src.id,to:dst.id,parent:srcParent.id};
 }
 function movePlayerBetweenSquads(db,p,target){const player=playerRef(db,p),check=rosterMoveCheck(db,player,target);if(!check.ok)throw new Error(check.reason);assignPlayerToTeam(db,player,target);if(db.world){recordPlayerEvent(player,'squad_move',db.year,{from:check.from,to:check.to,kind:check.kind,date:db.worldDate});if(typeof onSquadMoveSatisfaction==='function')onSquadMoveSatisfaction(db,player,check)}return check}
+function aiManageOwnedReserve(db,t){
+  const parent=teamRef(db,t);if(!parent||parent.parent||parent.id===managedTeamId(db))return [];
+  const reserve=reserveTeamsOf(db,parent)[0];if(!reserve)return [];
+  const moves=[];
+  // 2군 선수가 1군의 같은 포지션 최선수보다 명확히 강하면 콜업한다.
+  for(const role of ROLES){
+    const first=(parent.roster||[]).map(id=>db.players[id]).filter(p=>p&&p.role===role).sort((a,b)=>playerOvr(b)-playerOvr(a));
+    const second=(reserve.roster||[]).map(id=>db.players[id]).filter(p=>p&&p.role===role).sort((a,b)=>playerOvr(b)-playerOvr(a));
+    if(!first.length||!second.length)continue;
+    const candidate=second[0],incumbent=first[0],gap=playerOvr(candidate)-playerOvr(incumbent);
+    if(gap>=3||(gap>=1&&((incumbent.form??0)<=-7||incumbent.condition<55))){
+      const check=rosterMoveCheck(db,candidate,parent);
+      if(check.ok){movePlayerBetweenSquads(db,candidate,parent);moves.push({pid:candidate.id,kind:'callup',role})}
+    }
+  }
+  // 1군에서 출전 가능성이 낮은 젊은 유망주는 2군의 같은 포지션보다 경쟁력이 있을 때 실전 기회를 준다.
+  initializeDepthChart(db,parent,false);
+  const starters=new Set(ROLES.map(r=>starterFor(db,parent,r)).filter(Boolean).map(p=>p.id));
+  const send=(parent.roster||[]).map(id=>db.players[id]).filter(p=>p&&p.age<=21&&!starters.has(p.id)&&p.pot-playerOvr(p)>=4)
+    .sort((a,b)=>(b.pot-playerOvr(b))-(a.pot-playerOvr(a))||playerOvr(b)-playerOvr(a));
+  for(const p of send){
+    const reserveRole=(reserve.roster||[]).map(id=>db.players[id]).filter(x=>x&&x.role===p.role);
+    if(reserveRole.length&&playerOvr(p)<Math.max(...reserveRole.map(playerOvr))-2)continue;
+    const check=rosterMoveCheck(db,p,reserve);
+    if(check.ok){movePlayerBetweenSquads(db,p,reserve);moves.push({pid:p.id,kind:'senddown',role:p.role})}
+  }
+  if(moves.length){initializeDepthChart(db,parent,true);initializeDepthChart(db,reserve,true);rebalanceAiRosterRoles(db,parent);rebalanceAiRosterRoles(db,reserve)}
+  return moves;
+}
 function playerRef(db,p){return typeof p==='string'?db.players[p]:p}
 function teamRef(db,t){return typeof t==='string'?db.teams[t]:t}
 function removePlayerFromTeam(db,p){
@@ -2066,6 +2095,8 @@ function playWorldDay(db){
   db.worldDate=d;
   patchTick(db,d,new RNG(w.seed+d,'patch'));
   dailyRecovery(db);
+  // 시즌 중에는 경기일마다 AI 산하 2군의 승격/육성 필요를 재평가하되, 모든 이동은 플레이어와 같은 rosterMoveCheck를 통과한다.
+  for(const t of activeTeams(db,null,1))aiManageOwnedReserve(db,t);
   const played=[];
   for(const s of activeSeasons(db)) if(s.days[s.cur].date===d){const day=playDay(db,s);played.push({s,day});scoutFromDay(db,s,day)}
   if(!activeSeasons(db).length) advanceStep(db);
@@ -2138,6 +2169,7 @@ function closeMarket(db){
   if(typeof closeOpenNegotiationsForDeadline==='function')closeOpenNegotiationsForDeadline(db);
   contractMarket(db,rng,rep,ev);
   ensureEven(db,rng,ev);
+  for(const t of activeTeams(db,null,1))aiManageOwnedReserve(db,t);
   for(const t of activeTeams(db)){aiReviewDepthChart(db,t);rebalanceAiRosterRoles(db,t)}
   for(const t of activeTeams(db)){const pre=t._pre||[];const now=ROLES.map(r=>starterFor(db,t,r)).filter(Boolean).map(p=>p.id);const changed=now.filter(id=>!pre.includes(id)).length;
     t.synergy=clamp(teamSynergy(t)*0.85+15-changed*8,10,100);delete t._pre;
