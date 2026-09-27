@@ -166,13 +166,72 @@ const CHAMP_EXTRA = [
   ['Zyra',['SUP','JGL'],'mage','AP',[7,6,6,4,6,5,7,7,1,2,7,8,6,5],575]
 ];
 
-const ITEM_POOL = {
-  fighter:['선혈포식자','스테락의 도전','죽음의 무도','수호 천사','칠흑의 양날도끼','맬모셔스의 아귀'],
-  tank:['태양불꽃 방패','가시갑옷','얼어붙은 심장','정령의 형상','워모그의 갑옷','강철심장'],
-  mage:['루덴의 동반자','마법공학 로켓 벨트','존야의 모래시계','라바돈의 죽음모자','공허의 지팡이','밴시의 장막'],
-  assassin:['요우무의 유령검','세릴다의 원한','죽음의 무도','수호 천사','칠흑의 양날도끼','맬모셔스의 아귀'],
-  marksman:['무한의 대검','크라켄 학살자','고속 연사포','피바라기','도미닉 경의 인사','수호 천사'],
-  enchanter:['월석 재생기','미카엘의 축복','기사의 맹세','구원','불타는 향로','정령의 형상']
+const SYSTEM_EFFECT_KEYS=['offense','defense','sustain','utility','haste','mobility','early','scaling'];
+const ITEM_DEFS={
+  item_goredrinker:{id:'item_goredrinker',name:'선혈포식자',cost:3200,effects:{offense:.025,sustain:.055,haste:.02},classes:['fighter']},
+  item_steraks:{id:'item_steraks',name:'스테락의 도전',cost:3200,effects:{offense:.018,defense:.045,sustain:.02},classes:['fighter']},
+  item_deaths_dance:{id:'item_deaths_dance',name:'죽음의 무도',cost:3300,effects:{offense:.025,defense:.035,haste:.018},classes:['fighter','assassin']},
+  item_guardian_angel:{id:'item_guardian_angel',name:'수호 천사',cost:3200,effects:{offense:.018,defense:.05},classes:['fighter','assassin','marksman']},
+  item_black_cleaver:{id:'item_black_cleaver',name:'칠흑의 양날도끼',cost:3000,effects:{offense:.04,haste:.025,mobility:.012},classes:['fighter','assassin']},
+  item_maw:{id:'item_maw',name:'맬모셔스의 아귀',cost:3100,effects:{offense:.028,defense:.04},classes:['fighter','assassin']},
+  item_sunfire:{id:'item_sunfire',name:'태양불꽃 방패',cost:2800,effects:{defense:.055,offense:.012,early:.012},classes:['tank']},
+  item_thornmail:{id:'item_thornmail',name:'가시갑옷',cost:2700,effects:{defense:.07},classes:['tank']},
+  item_frozen_heart:{id:'item_frozen_heart',name:'얼어붙은 심장',cost:2600,effects:{defense:.055,haste:.035,utility:.015},classes:['tank']},
+  item_spirit_visage:{id:'item_spirit_visage',name:'정령의 형상',cost:2900,effects:{defense:.05,sustain:.045},classes:['tank','enchanter']},
+  item_warmogs:{id:'item_warmogs',name:'워모그의 갑옷',cost:3100,effects:{defense:.075,sustain:.035,scaling:.012},classes:['tank']},
+  item_heartsteel:{id:'item_heartsteel',name:'강철심장',cost:3200,effects:{defense:.06,scaling:.045},classes:['tank']},
+  item_ludens:{id:'item_ludens',name:'루덴의 동반자',cost:3000,effects:{offense:.055,early:.02},classes:['mage']},
+  item_rocketbelt:{id:'item_rocketbelt',name:'마법공학 로켓 벨트',cost:2900,effects:{offense:.035,mobility:.04,early:.015},classes:['mage']},
+  item_zhonyas:{id:'item_zhonyas',name:'존야의 모래시계',cost:3250,effects:{offense:.018,defense:.045,utility:.025},classes:['mage']},
+  item_rabadons:{id:'item_rabadons',name:'라바돈의 죽음모자',cost:3600,effects:{offense:.085,scaling:.035},classes:['mage']},
+  item_void_staff:{id:'item_void_staff',name:'공허의 지팡이',cost:3000,effects:{offense:.065,scaling:.018},classes:['mage']},
+  item_banshees:{id:'item_banshees',name:'밴시의 장막',cost:3100,effects:{offense:.025,defense:.035,utility:.025},classes:['mage']},
+  item_youmuus:{id:'item_youmuus',name:'요우무의 유령검',cost:2800,effects:{offense:.055,mobility:.035,early:.025},classes:['assassin']},
+  item_seryldas:{id:'item_seryldas',name:'세릴다의 원한',cost:3200,effects:{offense:.06,utility:.018,scaling:.02},classes:['assassin']},
+  item_infinity_edge:{id:'item_infinity_edge',name:'무한의 대검',cost:3500,effects:{offense:.085,scaling:.025},classes:['marksman']},
+  item_kraken:{id:'item_kraken',name:'크라켄 학살자',cost:3100,effects:{offense:.06,early:.018},classes:['marksman']},
+  item_rapid_firecannon:{id:'item_rapid_firecannon',name:'고속 연사포',cost:2900,effects:{offense:.035,mobility:.025,utility:.022},classes:['marksman']},
+  item_bloodthirster:{id:'item_bloodthirster',name:'피바라기',cost:3400,effects:{offense:.05,sustain:.055},classes:['marksman']},
+  item_lord_dominiks:{id:'item_lord_dominiks',name:'도미닉 경의 인사',cost:3100,effects:{offense:.07,scaling:.02},classes:['marksman']},
+  item_moonstone:{id:'item_moonstone',name:'월석 재생기',cost:2400,effects:{utility:.055,sustain:.045,haste:.018},classes:['enchanter']},
+  item_mikaels:{id:'item_mikaels',name:'미카엘의 축복',cost:2300,effects:{utility:.06,defense:.022,haste:.015},classes:['enchanter']},
+  item_knights_vow:{id:'item_knights_vow',name:'기사의 맹세',cost:2300,effects:{defense:.04,utility:.045},classes:['enchanter']},
+  item_redemption:{id:'item_redemption',name:'구원',cost:2300,effects:{utility:.065,sustain:.025,haste:.015},classes:['enchanter']},
+  item_ardent:{id:'item_ardent',name:'불타는 향로',cost:2300,effects:{utility:.045,offense:.025,haste:.018},classes:['enchanter']}
+};
+const ITEM_POOL={
+  fighter:['item_goredrinker','item_steraks','item_deaths_dance','item_guardian_angel','item_black_cleaver','item_maw'],
+  tank:['item_sunfire','item_thornmail','item_frozen_heart','item_spirit_visage','item_warmogs','item_heartsteel'],
+  mage:['item_ludens','item_rocketbelt','item_zhonyas','item_rabadons','item_void_staff','item_banshees'],
+  assassin:['item_youmuus','item_seryldas','item_deaths_dance','item_guardian_angel','item_black_cleaver','item_maw'],
+  marksman:['item_infinity_edge','item_kraken','item_rapid_firecannon','item_bloodthirster','item_lord_dominiks','item_guardian_angel'],
+  enchanter:['item_moonstone','item_mikaels','item_knights_vow','item_redemption','item_ardent','item_spirit_visage']
+};
+const RUNE_DEFS={
+  rune_conqueror:{id:'rune_conqueror',name:'정복자',kind:'keystone',effects:{offense:.045,sustain:.025,scaling:.012}},
+  rune_fleet:{id:'rune_fleet',name:'기민한 발놀림',kind:'keystone',effects:{sustain:.04,mobility:.025,early:.012}},
+  rune_tempo:{id:'rune_tempo',name:'치명적 속도',kind:'keystone',effects:{offense:.05,scaling:.025}},
+  rune_electrocute:{id:'rune_electrocute',name:'감전',kind:'keystone',effects:{offense:.055,early:.025}},
+  rune_comet:{id:'rune_comet',name:'신비로운 유성',kind:'keystone',effects:{offense:.04,utility:.018,early:.018}},
+  rune_aery:{id:'rune_aery',name:'콩콩이 소환',kind:'keystone',effects:{utility:.05,offense:.018}},
+  rune_aftershock:{id:'rune_aftershock',name:'여진',kind:'keystone',effects:{defense:.06,utility:.02}},
+  rune_guardian:{id:'rune_guardian',name:'수호자',kind:'keystone',effects:{defense:.035,utility:.055}},
+  rune_manaflow:{id:'rune_manaflow',name:'마나순환 팔찌',kind:'minor',effects:{utility:.025,scaling:.012}},
+  rune_transcendence:{id:'rune_transcendence',name:'깨달음',kind:'minor',effects:{haste:.035,scaling:.01}},
+  rune_bone_plating:{id:'rune_bone_plating',name:'뼈 방패',kind:'minor',effects:{defense:.035,early:.012}},
+  rune_overgrowth:{id:'rune_overgrowth',name:'과잉성장',kind:'minor',effects:{defense:.025,scaling:.02}},
+  rune_alacrity:{id:'rune_alacrity',name:'전설: 민첩함',kind:'minor',effects:{offense:.025,scaling:.012}},
+  rune_triumph:{id:'rune_triumph',name:'승전보',kind:'minor',effects:{sustain:.03,utility:.01}},
+  rune_biscuit:{id:'rune_biscuit',name:'비스킷 배달',kind:'minor',effects:{sustain:.02,utility:.02,early:.012}},
+  rune_approach:{id:'rune_approach',name:'쾌속 접근',kind:'minor',effects:{mobility:.025,utility:.012}}
+};
+const RUNE_POOL={
+  fighter:{keystone:['rune_conqueror','rune_fleet'],minor:['rune_triumph','rune_bone_plating','rune_overgrowth','rune_alacrity']},
+  tank:{keystone:['rune_aftershock','rune_guardian'],minor:['rune_bone_plating','rune_overgrowth','rune_approach','rune_transcendence']},
+  mage:{keystone:['rune_comet','rune_aery','rune_electrocute'],minor:['rune_manaflow','rune_transcendence','rune_biscuit','rune_approach']},
+  assassin:{keystone:['rune_electrocute','rune_conqueror'],minor:['rune_triumph','rune_transcendence','rune_bone_plating','rune_approach']},
+  marksman:{keystone:['rune_tempo','rune_fleet'],minor:['rune_alacrity','rune_triumph','rune_biscuit','rune_overgrowth']},
+  enchanter:{keystone:['rune_aery','rune_guardian'],minor:['rune_manaflow','rune_transcendence','rune_biscuit','rune_approach']}
 };
 
 function buildPatch(championSnapshot=CHAMPION_SOURCE_SNAPSHOT){
@@ -196,7 +255,7 @@ function buildPatch(championSnapshot=CHAMPION_SOURCE_SNAPSHOT){
     id:'26.19',
     championSource:{version:CHAMPION_SOURCE_PATCH,...sourceCoverage},
     rules:{ csGold:23, passiveGold:122, killGold:300, assistGold:150, dragonSpawn:5, dragonRespawn:5, heraldSpawn:14, baronSpawn:20, baronRespawn:6, baronBuff:3, elderBuff:2.5, inhibRespawn:5 },
-    champions, items: ITEM_POOL
+    champions, items:JSON.parse(JSON.stringify(ITEM_POOL)), itemDefs:JSON.parse(JSON.stringify(ITEM_DEFS)), runes:JSON.parse(JSON.stringify(RUNE_POOL)), runeDefs:JSON.parse(JSON.stringify(RUNE_DEFS))
   };
 }
 
