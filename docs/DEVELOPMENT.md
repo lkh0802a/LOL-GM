@@ -16,12 +16,15 @@ Development progress is tracked by the 22 major LOL GM systems. Finish one major
 - `4. 신인 / 스카우팅` — COMPLETE (2026-09-27)
 - `5. 계약 / 이적시장` — COMPLETE (2026-09-27)
 - `6. 1부 / 2부 / Academy` — COMPLETE (2026-09-27)
+- `7. 팀 / 시설 / 스태프` — COMPLETE (2026-09-27)
 
 ## Product-wide convenience acceptance rule (2026-09-27)
 
 Every major system, including already engine-complete Items 1–6, is subject to a standing convenience acceptance rule: automate repetitive or administrative actions that do not create a meaningful strategic choice; preserve player control for decisions with real trade-offs; batch repeated actions where practical; preview projected state, cost and consequences before commit; validate the final state rather than transient intermediate clicks; preserve filters/scroll/editing context; and keep mobile decision surfaces compact. Completion status means the engine contract is accepted, not that poor interaction patterns are frozen.
 
 Current retrofit evidence: squad starters/roles/tactics/training and first/reserve assignment use staged apply; roster-plan validation is final-state/atomic; scouting supports multi-select batch observation; initial blank-roster recruitment supports batch interest/scouting; costly release and staff changes preview financial/ability consequences; facility upgrades are automated by club management rather than exposed as repetitive manual administration.
+
+Item 7 acceptance (2026-09-27): clubs have functional training, analysis, recovery and youth infrastructure with direct development/analysis/recovery effects and full upkeep accounting. Infrastructure capex is board-controlled for both player and AI clubs, uses the shared upgrade/cash validation path, respects club philosophy and financial reserves, and removes low-value manual facility clicking. Coaching now includes head coach plus strategic, analyst, development and performance specialists; these roles materially affect draft/analysis/development/recovery, carry salary/severance costs, persist in saves, age and recycle through the staff market. AI first-division clubs evaluate specialist upgrades using the same staff market while respecting philosophy, improvement threshold and cash reserve. Player-controlled staff changes remain strategic choices and preview ability/cost consequences. Save round-trip and insufficient-funds invariants are smoke-tested; standalone and latest-head CI pass.
 
 ## UX / Convenience Re-audit (2026-09-27)
 
