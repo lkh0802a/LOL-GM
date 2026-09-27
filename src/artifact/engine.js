@@ -45,7 +45,7 @@ const BAL={blue:0.025,counter:0.1,first:0.013};
 const DRAFT_ORDER=[['B',0],['B',1],['B',0],['B',1],['B',0],['B',1],['P',0],['P',1],['P',1],['P',0],['P',0],['P',1],['B',1],['B',0],['B',1],['B',0],['P',1],['P',0],['P',0],['P',1]];
 function runDraft(db, teamIds, rng, ctx){
   ctx=ctx||{used:[],byTeam:{}};
-  const champs=Object.values(db.patch.champions);
+  const champs=Object.values(db.patch.champions).filter(c=>typeof championProEligible!=='function'||championProEligible(db,c));
   const strengths={}; champs.forEach(c=>strengths[c.id]=champStrength(c));
   const vals=Object.values(strengths), mn=Math.min(...vals), mx=Math.max(...vals);
   if(ctx.forced){const f=ctx.forced;return {bans:f.bans,picks:f.picks,log:[],expl:[{t:0,title:'기록된 밴픽 재현',factors:[],result:''}]}}

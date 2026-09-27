@@ -4,13 +4,13 @@ const PATCH_CACHE={};
 const RULE_KO={dragonRespawn:'드래곤 재생성(분)',baronBuff:'바론 버프 지속(분)',csGold:'미니언 골드',killGold:'처치 골드',heraldSpawn:'전령 등장(분)',baronSpawn:'바론 등장(분)'};
 function initPatches(db){
   db.patches={base:JSON.parse(JSON.stringify(db.patch)),list:[],prev:[],nextDate:null,newIdx:0,y:0,n:0,releasesByYear:{}};
-  db.metaStats={};db.metaGames=0;
+  db.metaStats={};db.metaGames=0;db.regionMetaStats={};db.regionMetaGames={};
 }
 function applyNote(P,n){
   const c=P.champions[n.c];
   if(n.type==='kit'&&c)c.kit[n.key]=clamp(c.kit[n.key]+n.d,1,10);
   else if(n.type==='base'&&c)c.base[n.key]=Math.round(c.base[n.key]*(1+n.d)*100)/100;
-  else if(n.type==='new'){const c=archChampion(n.def.name,n.def.roles,n.def.arch,n.def.dmg,null,n.def.id||championId(n.def.name));P.champions[c.id]=c}
+  else if(n.type==='new'){const c=archChampion(n.def.name,n.def.roles,n.def.arch,n.def.dmg,null,n.def.id||championId(n.def.name));c.releaseDate=n.def.releaseDate||null;c.proEligibleDate=n.def.proEligibleDate||null;P.champions[c.id]=c}
   else if(n.type==='rule')P.rules[n.key]=n.v;
 }
 function getPatch(db,id){
@@ -20,16 +20,27 @@ function getPatch(db,id){
   for(const p of db.patches.list){if(P.id===id)break;for(const n of p.notes)applyNote(P,n);P.id=p.id}
   return PATCH_CACHE[id]=P;
 }
+function championProEligible(db,c,date=db.worldDate){
+  if(!c)return false;
+  return !c.proEligibleDate||date>=c.proEligibleDate;
+}
 function recordMeta(db,r){
   if(!db.metaStats)return;
   db.metaGames=(db.metaGames||0)+1;
-  const st=db.metaStats;
-  r.sides.forEach((s,i)=>s.ps.forEach(p=>{const x=st[p.champ.id]||(st[p.champ.id]={p:0,w:0,b:0});x.p++;if(r.winner===i)x.w++}));
-  r.draft.bans.flat().forEach(c=>{const x=st[c]||(st[c]={p:0,w:0,b:0});x.b++});
+  const st=db.metaStats, regions=[...new Set(r.sides.map(s=>s.team&&s.team.region).filter(Boolean))];
+  const add=(bag,cid,key)=>{const x=bag[cid]||(bag[cid]={p:0,w:0,b:0});x[key]++};
+  r.sides.forEach((s,i)=>s.ps.forEach(p=>{add(st,p.champ.id,'p');if(r.winner===i)add(st,p.champ.id,'w')}));
+  r.draft.bans.flat().forEach(c=>add(st,c,'b'));
+  db.regionMetaStats=db.regionMetaStats||{};db.regionMetaGames=db.regionMetaGames||{};
+  for(const rid of regions){
+    const bag=db.regionMetaStats[rid]||(db.regionMetaStats[rid]={});db.regionMetaGames[rid]=(db.regionMetaGames[rid]||0)+1;
+    r.sides.forEach((s,i)=>{if(!s.team||s.team.region!==rid)return;s.ps.forEach(p=>{add(bag,p.champ.id,'p');if(r.winner===i)add(bag,p.champ.id,'w')})});
+    r.draft.bans.flat().forEach(c=>add(bag,c,'b'));
+  }
 }
-function metaTable(db){
-  const G=Math.max(1,db.metaGames||0), st=db.metaStats||{};
-  return Object.values(db.patch.champions).map(c=>{const s=st[c.id]||{p:0,w:0,b:0};return {c,p:s.p,b:s.b,w:s.w,pres:(s.p+s.b)/G,wr:s.p?s.w/s.p:null}}).sort((a,b)=>b.pres-a.pres);
+function metaTable(db,regionId=null){
+  const G=Math.max(1,regionId?(db.regionMetaGames||{})[regionId]||0:db.metaGames||0), st=regionId?((db.regionMetaStats||{})[regionId]||{}):(db.metaStats||{});
+  return Object.values(db.patch.champions).map(c=>{const s=st[c.id]||{p:0,w:0,b:0};return {c,p:s.p,b:s.b,w:s.w,pres:(s.p+s.b)/G,wr:s.p?s.w/s.p:null,sample:G,eligible:championProEligible(db,c)}}).sort((a,b)=>b.pres-a.pres);
 }
 function patchId(db,year){const pt=db.patches;if(pt.y!==year){pt.y=year;pt.n=0}pt.n++;return `${String(year).slice(2)}.${pt.n}`}
 // 밸런스 팀의 판단: 대회에서 너무 많이 쓰이고 이기는 챔피언은 하향, 외면받는 챔피언은 상향
@@ -58,6 +69,7 @@ function newPatch(db,date,major,rng){
     else{let name,id;do{name=rng.pick(NEWCHAMP_A)+rng.pick(NEWCHAMP_B);id=championId(name)}while(P.champions[id]);const role=rng.pick(ROLES);
       const arch=rng.pick({TOP:['juggernaut','diver','skirmisher','vanguard'],JGL:['diver','assassin','skirmisher','vanguard'],MID:['burst','control','battle','assassin','artillery'],ADC:['marksman','hyper','bully'],SUP:['enchanter','catcher','warden','control']}[role]);
       def={id,name,roles:[role],arch,dmg:['burst','control','battle','artillery','enchanter','specialist'].includes(arch)?'AP':'AD'};db.patches.newIdx++}
+    def.releaseDate=date;def.proEligibleDate=addDays(date,14);
     db.patches.releasesByYear=db.patches.releasesByYear||{};db.patches.releasesByYear[year]=released+1;
     notes.push({type:'new',def,why:'신규 챔피언 출시',c:def.name});
   }
@@ -69,6 +81,8 @@ function newPatch(db,date,major,rng){
   // 메타 데이터는 새 패치에서 절반만 이어짐 (팀들이 다시 학습)
   for(const k in db.metaStats){const x=db.metaStats[k];x.p=Math.floor(x.p/3);x.w=Math.floor(x.w/3);x.b=Math.floor(x.b/3)}
   db.metaGames=Math.floor((db.metaGames||0)/3);
+  for(const rid in db.regionMetaStats||{})for(const k in db.regionMetaStats[rid]){const x=db.regionMetaStats[rid][k];x.p=Math.floor(x.p/3);x.w=Math.floor(x.w/3);x.b=Math.floor(x.b/3)}
+  for(const rid in db.regionMetaGames||{})db.regionMetaGames[rid]=Math.floor(db.regionMetaGames[rid]/3);
   return {id,notes};
 }
 function patchTick(db,date,rng){
