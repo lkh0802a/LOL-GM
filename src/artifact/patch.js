@@ -204,12 +204,21 @@ function generatedRuneDef(db,rng,year){
   const keys=['offense','defense','sustain','utility','haste','mobility','early','scaling'].sort(()=>rng.next()-.5),effects={};for(const k of keys.slice(0,kind==='keystone'?2:1))effects[k]=Math.round(rng.range(kind==='keystone'?.025:.012,kind==='keystone'?.06:.035)*1000)/1000;
   return {id,name,nameKo:name,key:id,kind,styleId:style.id,styleKey:style.key,styleNameKo:style.nameKo||style.name,slot,effects,active:true,createdYear:year};
 }
+function canRemoveItem(db,id){
+  const d=db.patch.itemDefs?.[id];if(!d||d.active===false||!['final','boots'].includes(d.tier))return false;
+  for(const cls of d.classes||[]){const active=(db.patch.items?.[cls]||[]).filter(x=>x!==id&&db.patch.itemDefs?.[x]?.active!==false&&db.patch.itemDefs?.[x]?.shopActive!==false);if(active.length<8)return false}
+  return true;
+}
+function canRemoveRune(db,id){
+  const d=db.patch.runeDefs?.[id];if(!d||d.active===false)return false;const style=db.patch.runes?.[String(d.styleId)],slot=style?.slots?.[d.slot]||[];
+  return slot.filter(x=>x!==id&&db.patch.runeDefs?.[x]?.active!==false).length>=1;
+}
 function maybeSystemLifecycle(db,date,major,rng,diag){
   if(!major)return [];const year=+date.slice(0,4),st=db.patches.systemLifeByYear[year]||(db.patches.systemLifeByYear[year]={itemNew:0,itemRemove:0,runeNew:0,runeRemove:0}),out=[];
   if(st.itemNew<2&&rng.chance(.24)){const def=generatedItemDef(db,rng,year);out.push({type:'item_new',id:def.id,def,why:'새로운 빌드 선택지 추가'});st.itemNew++}
   if(st.runeNew<1&&rng.chance(.12)){const def=generatedRuneDef(db,rng,year);out.push({type:'rune_new',id:def.id,def,why:'새로운 룬 선택지 추가'});st.runeNew++}
-  if(diag.sampleGames>=20&&st.itemRemove<1&&rng.chance(.16)){const ev=Object.keys(db.patch.itemDefs||{}).map(id=>systemUsageEvidence(db,'item',id,diag.rows)).filter(x=>x.eligible>=15&&x.usage<.035&&db.patch.itemDefs[x.id].active!==false&&['final','boots'].includes(db.patch.itemDefs[x.id].tier)).sort((a,b)=>a.usage-b.usage)[0];if(ev){out.push({type:'item_remove',id:ev.id,oldActive:true,why:'장기간 낮은 사용률 '+Math.round(ev.usage*100)+'% · 아이템 체계 정리'});st.itemRemove++}}
-  if(diag.sampleGames>=20&&st.runeRemove<1&&rng.chance(.07)){const ev=Object.keys(db.patch.runeDefs||{}).map(id=>systemUsageEvidence(db,'rune',id,diag.rows)).filter(x=>x.eligible>=15&&x.usage<.025&&db.patch.runeDefs[x.id].active!==false).sort((a,b)=>a.usage-b.usage)[0];if(ev){out.push({type:'rune_remove',id:ev.id,oldActive:true,why:'장기간 낮은 사용률 '+Math.round(ev.usage*100)+'% · 룬 체계 정리'});st.runeRemove++}}
+  if(diag.sampleGames>=20&&st.itemRemove<1&&rng.chance(.16)){const ev=Object.keys(db.patch.itemDefs||{}).map(id=>systemUsageEvidence(db,'item',id,diag.rows)).filter(x=>x.eligible>=15&&x.usage<.035&&db.patch.itemDefs[x.id].active!==false&&canRemoveItem(db,x.id)).sort((a,b)=>a.usage-b.usage)[0];if(ev){out.push({type:'item_remove',id:ev.id,oldActive:true,why:'장기간 낮은 사용률 '+Math.round(ev.usage*100)+'% · 아이템 체계 정리'});st.itemRemove++}}
+  if(diag.sampleGames>=20&&st.runeRemove<1&&rng.chance(.07)){const ev=Object.keys(db.patch.runeDefs||{}).map(id=>systemUsageEvidence(db,'rune',id,diag.rows)).filter(x=>x.eligible>=15&&x.usage<.025&&db.patch.runeDefs[x.id].active!==false&&canRemoveRune(db,x.id)).sort((a,b)=>a.usage-b.usage)[0];if(ev){out.push({type:'rune_remove',id:ev.id,oldActive:true,why:'장기간 낮은 사용률 '+Math.round(ev.usage*100)+'% · 룬 체계 정리'});st.runeRemove++}}
   return out;
 }
 function maybeChampionRework(db,date,major,rng,diag){
