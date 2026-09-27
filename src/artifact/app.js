@@ -309,6 +309,7 @@ function noteText(n){
   if(n.type==='new')return `<b>신규 챔피언 ${esc(n.def.name)}</b> <small>${n.def.roles.map(r=>ROLE_KO[r]).join('/')} · ${esc(CLASS_KO[ARCH[n.def.arch][0]])}</small>`;
   if(n.type==='rule')return `<b>${esc(RULE_KO[n.key]||n.key)}</b> ${n.old} → ${n.v}`;
   if(n.type==='kit')return `<b>${esc(championLabel(DB,n.c))}</b> ${KIT_KO[n.key]} ${n.d>0?'<span class="hi">▲</span>':'<span class="lo">▼</span>'} <small>${esc(n.why||'')}</small>`;
+  if(n.type==='skill')return `<b>${esc(championLabel(DB,n.c))} ${esc(n.slot)}</b> 재사용 대기시간 ${n.old}초 → ${n.new}초 <small>${esc(n.why||'')}</small>`;
   if(n.type==='base')return `<b>${esc(championLabel(DB,n.c))}</b> 기본 ${{ad:'공격력',hp:'체력',arm:'방어력',adg:'성장 공격력',hpg:'성장 체력'}[n.key]||n.key} ${n.d>0?'+':''}${Math.round(n.d*100)}% <small>${esc(n.why||'')}</small>`;
   return esc(n.text||'');
 }

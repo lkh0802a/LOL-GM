@@ -8,8 +8,9 @@ function initPatches(db){
 }
 function applyNote(P,n){
   const c=P.champions[n.c];
-  if(n.type==='kit'&&c)c.kit[n.key]=clamp(c.kit[n.key]+n.d,1,10);
-  else if(n.type==='base'&&c)c.base[n.key]=Math.round(c.base[n.key]*(1+n.d)*100)/100;
+  if(n.type==='skill'&&c&&c.skills?.[n.slot])c.skills[n.slot][n.field]=n.new;
+  else if(n.type==='kit'&&c)c.kit[n.key]=clamp(c.kit[n.key]+n.d,1,10);
+  else if(n.type==='base'&&c)c.base[n.key]=n.new??Math.round(c.base[n.key]*(1+n.d)*100)/100;
   else if(n.type==='new'){const c=archChampion(n.def.name,n.def.roles,n.def.arch,n.def.dmg,null,n.def.id||championId(n.def.name));c.releaseDate=n.def.releaseDate||null;c.proEligibleDate=n.def.proEligibleDate||null;P.champions[c.id]=c}
   else if(n.type==='rule')P.rules[n.key]=n.v;
 }
@@ -61,12 +62,13 @@ function newPatch(db,date,major,rng){
   const notes=[], mt=metaTable(db), P=db.patch, id=patchId(db,+date.slice(0,4));
   const strong=['burst','dps','cc','engage','early','mid','late','sustain','poke'];
   const nerfN=major?rng.int(5,8):rng.int(2,4), buffN=major?rng.int(6,9):rng.int(3,5);
-  const nerfs=mt.filter(x=>x.p+x.b>=4&&(x.wr===null||x.wr>=0.48)).slice(0,nerfN+2).sort(()=>rng.next()-0.5).slice(0,nerfN);
-  const low=mt.filter(x=>x.pres<0.04).sort(()=>rng.next()-0.5).slice(0,buffN);
+  const nerfs=mt.filter(x=>x.p+x.b>=4&&(x.wr===null||x.wr>=0.48)&&!recentDir(x.c.id,-1)).slice(0,nerfN+2).sort(()=>rng.next()-0.5).slice(0,nerfN);
+  const low=mt.filter(x=>x.pres<0.04&&!recentDir(x.c.id,1)).sort(()=>rng.next()-0.5).slice(0,buffN);
+  const last=db.patches.list.at(-1),recentDir=(cid,dir)=>!!last?.notes?.some(n=>n.c===cid&&n.dir===dir);
   const change=(x,dir,why)=>{
-    const c=x.c;
-    if(rng.chance(.65)){const k=strong.filter(s=>dir<0?c.kit[s]>=4:c.kit[s]<=8).sort((a,b)=>dir<0?c.kit[b]-c.kit[a]:c.kit[a]-c.kit[b]).slice(0,3);const key=rng.pick(k.length?k:strong),step=rng.chance(.72)?.5:1;notes.push({type:'kit',c:c.id,key,d:dir*step,why})}
-    else {const key=rng.pick(['ad','hp','arm','adg','hpg']);notes.push({type:'base',c:c.id,key,d:Math.round(dir*rng.range(.015,.04)*1000)/1000,why})}
+    const c=x.c,skills=['Q','W','E','R'].map(k=>c.skills?.[k]).filter(s=>s&&Number.isFinite(s.cooldown)&&s.cooldown>0);
+    if(skills.length&&rng.chance(.62)){const sk=rng.pick(skills),old=sk.cooldown,step=rng.chance(.75)?1:2,newV=Math.max(1,Math.round((old+(dir<0?step:-step))*10)/10);notes.push({type:'skill',c:c.id,slot:sk.slot,field:'cooldown',old,new:newV,dir,why})}
+    else {const key=rng.pick(['ad','hp','arm','adg','hpg']),old=c.base[key],delta=Math.round(dir*rng.range(.015,.04)*1000)/1000,newV=Math.round(old*(1+delta)*100)/100;notes.push({type:'base',c:c.id,key,old,new:newV,d:delta,dir,why})}
   };
   nerfs.forEach(x=>change(x,-1,`밴픽률 ${Math.round(x.pres*100)}%${x.wr!==null?` · 승률 ${Math.round(x.wr*100)}%`:''}`));
   low.forEach(x=>change(x,+1,`밴픽률 ${Math.round(x.pres*100)}%로 외면받음`));
