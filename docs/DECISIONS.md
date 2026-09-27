@@ -131,7 +131,7 @@ There are no user saves that must be preserved.
 Consequences:
 
 - Phase 1 starts a clean save schema at version 10.
-- old `lolfm-*` browser storage is not imported
+- browser storage from pre-current development namespaces is not imported
 - old save migration helpers are removed rather than carried indefinitely
 - schema changes may invalidate current development saves when that produces a cleaner long-term model
 - once real user saves matter, explicit save migrations become mandatory again
