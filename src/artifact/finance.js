@@ -146,7 +146,14 @@ function eligibleFillFAs(db,t,role=null){
   return Object.values(db.players).filter(p=>!p.retired&&!p.team&&(!role||p.role===role)&&(p.region===t.region||room>0))
     .sort((a,b)=>(pFillScore(db,b,t)-pFillScore(db,a,t)));
 }
-function pFillScore(db,p,t){const domestic=p.region===t.region?2:0,age=p.age<=21?1:0,cost=Math.min(4,asking(db,p,t.region)/Math.max(.2,psOf(db,t.region)));return playerValue(db,p,t)+domestic+age-cost*.15}
+function aiMarketObservation(db,p,t){
+  const perf=recentMarketPerformance(db,p),sample=Math.min(30,perf.games),foreign=p.region!==t.region,uncertainty=(foreign?4.5:2.5)+(sample<6?3:sample<15?1.5:0),n=((hashStr(t.id+'|'+p.id+'|'+db.year+'|ability')%2001)/1000-1);
+  const ability=Math.round(clamp(playerOvr(p)+n*uncertainty,20,99)),n2=((hashStr(t.id+'|'+p.id+'|'+db.year+'|potential')%2001)/1000-1),ageUpside=p.age<=19?9:p.age<=21?6:p.age<=23?3:1;
+  const potential=Math.round(clamp(ability+ageUpside+n2*(foreign?5:3)+(p.reputation-ability)*.08,ability,99));
+  return {ability,potential,uncertainty:Math.round(uncertainty*10)/10};
+}
+function aiMarketValue(db,p,t){const est=aiMarketObservation(db,p,t),up=Math.max(0,est.potential-est.ability),w={'win-now':0.1,'youth':0.6,'balanced':0.3,'superstar':0.15,'cost':0.35}[t.philosophy]||0.3;return est.ability+up*w-(t.philosophy==='youth'&&p.age>26?2:0)}
+function pFillScore(db,p,t){const domestic=p.region===t.region?2:0,age=p.age<=21?1:0,cost=Math.min(4,asking(db,p,t.region)/Math.max(.2,psOf(db,t.region)));return aiMarketValue(db,p,t)+domestic+age-cost*.15}
 function optionDecision(db,p,t){
   const o=p.contract&&p.contract.option;if(!o||o.year!==db.year)return false;
   const next={...p.contract,salary:o.salary,years:1,signingBonus:0,bonuses:p.contract.bonuses||{},option:null,promisedRole:p.contract.promisedRole||p.rosterRole};
@@ -196,7 +203,7 @@ function contractMarket(db,rng,rep,ev){
         const cur=starterFor(db,t,role), cv=cur?playerValue(db,cur,t):-99;
         const importGap=R.importRecruitMinGap??3;
         const cand=fas.filter(p=>p.role===role&&(p.region===t.region||(playerOvr(p)>=R.strength+importGap&&imports(t)<(R.importLimit??2))))
-          .map(p=>({p,v:playerValue(db,p,t),ask:asking(db,p,t.region)})).filter(x=>x.ask<=budgetLeft[t.id]&&(!cur||cur.wantsOut||cur.contract.until<=year||x.v>cv+5)).sort((a,b)=>b.v-a.v);
+          .map(p=>({p,v:aiMarketValue(db,p,t),ask:asking(db,p,t.region)})).filter(x=>x.ask<=budgetLeft[t.id]&&(!cur||cur.wantsOut||cur.contract.until<=year||x.v>cv+5)).sort((a,b)=>b.v-a.v);
         const c=cand[0]; if(!c)continue;
         const sal=Math.round(c.ask*(['win-now','superstar'].includes(t.philosophy)?rng.range(1,1.15):rng.range(0.95,1.05))*10)/10;
         (offers[c.p.id]=offers[c.p.id]||[]).push({t,sal,starter:true});
@@ -222,8 +229,8 @@ function contractMarket(db,rng,rep,ev){
   for(const t of activeTeams(db,null,1).filter(t=>t.id!==mine&&t.finance.cash>20*psTeam(db,t)).sort(()=>rng.next()-0.5)){
     if(deals>=Math.max(2,Math.ceil(activeTeams(db,null,1).length/10)))break;
     const role=rng.pick(ROLES), cur=starterFor(db,t,role); if(!cur)continue;
-    const cand=activeTeams(db,t.region,1).filter(o=>o.id!==t.id&&o.id!==mine).map(o=>starterFor(db,o,role)).filter(p=>p&&p.contract&&playerValue(db,p,t)>playerValue(db,cur,t)+5)
-      .map(p=>({p,fee:transferFee(db,p)})).filter(x=>x.fee<=t.finance.cash*0.6&&x.p.contract.salary<=budgetLeft[t.id]+cur.contract.salary).sort((a,b)=>playerValue(db,b.p,t)-playerValue(db,a.p,t))[0];
+    const cand=activeTeams(db,t.region,1).filter(o=>o.id!==t.id&&o.id!==mine).map(o=>starterFor(db,o,role)).filter(p=>p&&p.contract&&aiMarketValue(db,p,t)>playerValue(db,cur,t)+5)
+      .map(p=>({p,fee:transferFee(db,p)})).filter(x=>x.fee<=t.finance.cash*0.6&&x.p.contract.salary<=budgetLeft[t.id]+cur.contract.salary).sort((a,b)=>aiMarketValue(db,b.p,t)-aiMarketValue(db,a.p,t))[0];
     if(!cand)continue;
     const seller=db.teams[cand.p.team];
     if(!(seller.finance.cash<10*psTeam(db,seller)||cand.p.wantsOut||rng.chance(.2)))continue;
@@ -348,7 +355,7 @@ function finalizeNegotiation(db,neg,terms){
 }
 function submitNegotiationOffer(db,nid,terms){
   const neg=negotiationStore(db)[nid];if(!neg||neg.status!=='open'||neg.stage!=='player')return {ok:false,msg:'진행 중인 선수 협상이 아닙니다'};
-  const p=db.players[neg.pid],t=db.teams[neg.teamId],offer=normalizeContractTerms(db,p,t,terms.salary,terms.years,terms),err=negotiationBudgetError(db,p,t,offer,neg.kind);if(err)return {ok:false,msg:err};
+  const p=db.players[neg.pid],t=db.teams[neg.teamId],offer=normalizeContractTerms(db,p,t,terms.salary,terms.years,terms),err=negotiationBudgetError(db,p,t,offer,neg.kind);if(err)return {ok:false,msg:err};if(neg.kind==='transfer'&&(offer.signingBonus||0)>Math.max(0,t.finance.cash-(neg.fee||0)))return {ok:false,msg:'이적료 지급 후 계약금을 지급할 현금이 부족합니다'};
   const util=offerUtility(db,p,t,offer,{renewal:neg.kind==='renewal'}),comp=neg.competitors.length?Math.max(...neg.competitors.map(x=>x.utility)):0,threshold=Math.max(offerAcceptanceThreshold(db,p),comp-.035);
   neg.round++;if(neg.lastUtility!=null&&util<neg.lastUtility-.03)neg.patience--;if(util<threshold-.22)neg.patience--;neg.lastOffer=offer;neg.lastUtility=util;neg.history.push({round:neg.round,side:'club',terms:offer,utility:Math.round(util*1000)/1000});
   if(util>=threshold){const r=finalizeNegotiation(db,neg,offer);neg.history.push({round:neg.round,side:'player',result:'accept'});return r}
@@ -378,6 +385,9 @@ function mTransferBid(db,pid,fee){
   neg.clubCounter=Math.round(Math.max(fee*1.06,(fee+ask)/2)*10)/10;neg.history.push({round:neg.clubRounds,stage:'club',side:'seller',result:'counter',fee:neg.clubCounter});return from.name+' 역제안: '+money(neg.clubCounter);
 }
 function acceptSellerCounter(db,nid){const neg=negotiationStore(db)[nid];if(!neg||neg.status!=='open'||neg.stage!=='club'||!neg.clubCounter)return '수락할 구단 역제안이 없습니다';return mTransferBid(db,neg.pid,neg.clubCounter)}
+function closeOpenNegotiationsForDeadline(db){
+  for(const neg of Object.values(negotiationStore(db))){if(neg.status!=='open')continue;neg.status='expired';neg.reason='이적시장 마감';neg.closedDate=db.worldDate;const target=recruitmentTarget(db,neg.pid);if(target){target.stage='closed';target.result='deadline';target.negotiationId=neg.id}}
+}
 // ---- 이적료 / 직접 운영 ----
 function transferFee(db,p){const left=p.contract?Math.max(1,p.contract.until-db.year+1):1;return Math.round(playerMarketValue(db,p)*(.62+.18*Math.min(3,left))*(p.wantsOut?.75:1)*10)/10}
 function doTransfer(db,p,from,to,fee){
