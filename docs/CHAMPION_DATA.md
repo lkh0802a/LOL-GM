@@ -16,3 +16,8 @@ Every imported snapshot must pass `scripts/validate-champion-snapshot.mjs`: pinn
 
 ## Normalized skill mechanics
 Each P/Q/W/E/R entry can carry structured mechanics: per-rank `baseDamage`, coefficient map `ratios` (AP/total AD/bonus AD/HP etc.), `cost`, `range`, structured `cc`, `heal`, `shield`, `charges`, and `recast`. Data Dragon fields are retained when exposed; reviewed CommunityDragon supplements may fill missing mechanics. The match engine consumes structured damage/ratio/CC/utility information instead of treating it as display-only metadata.
+
+
+## Runtime coverage
+
+The embedded 16.19.1 / 26.19 snapshot now covers all 173 initial champions with Korean passive and Q/W/E/R source records. Runtime provenance remains explicit: Data Dragon supplies the pinned source fields, while mechanics not represented by that source remain simulation-derived rather than being presented as authoritative Riot numeric data.
