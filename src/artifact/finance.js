@@ -81,6 +81,12 @@ function closeFinances(db,w,rng,ev){
 }
 
 // 계약 만료 · 재계약 · FA 시장
+function eligibleFillFAs(db,t,role=null){
+  const R=db.regions[t.region],imports=t.roster.filter(id=>db.players[id]&&db.players[id].region!==t.region).length,room=Math.max(0,(R.importLimit??2)-imports);
+  return Object.values(db.players).filter(p=>!p.retired&&!p.team&&(!role||p.role===role)&&(p.region===t.region||room>0))
+    .sort((a,b)=>(pFillScore(db,b,t)-pFillScore(db,a,t)));
+}
+function pFillScore(db,p,t){const domestic=p.region===t.region?2:0,age=p.age<=21?1:0,cost=Math.min(4,asking(db,p,t.region)/Math.max(.2,psOf(db,t.region)));return playerValue(db,p,t)+domestic+age-cost*.15}
 function contractMarket(db,rng,rep,ev){
   const year=db.year, size=5+(db.worldConfig.subs||0), w=db.world, mine=w&&w.manage==='manual'?managedTeamId(db):null;
   const imports=t=>t.roster.filter(id=>db.players[id]&&db.players[id].region!==t.region).length;
@@ -154,13 +160,13 @@ function contractMarket(db,rng,rep,ev){
   // 3) 로스터 채우기 / 정리
   for(const t of activeTeams(db)){
     for(const role of ROLES) if(!starterFor(db,t,role)){
-      const fa=Object.values(db.players).filter(p=>!p.retired&&!p.team&&p.role===role&&p.region===t.region).sort((a,b)=>asking(db,a,t.region)-asking(db,b,t.region))[0]
-        ||generateEmergencyRookie(db,db.regions[t.region],rng,role);
+      const fa=eligibleFillFAs(db,t,role)[0];
+      if(!fa)throw new Error('Talent supply invariant failed during market: '+t.id+' '+role+' has no eligible free agent');
       signContract(db,fa,t,asking(db,fa,t.region),contractYearsForPlayer(db,fa,rng));rep.signings.push({pid:fa.id,team:t.id,salary:fa.contract.salary,years:fa.contract.until-year+1,rookie:fa.age<=19,fill:true});
     }
     while(t.roster.length<size){
-      const fa=Object.values(db.players).filter(p=>!p.retired&&!p.team&&p.region===t.region&&p.age<=21).sort((a,b)=>b.pot-a.pot)[0]
-        ||generateEmergencyRookie(db,db.regions[t.region],rng,rng.pick(ROLES));
+      const fa=eligibleFillFAs(db,t)[0];
+      if(!fa)throw new Error('Talent supply invariant failed during market: '+t.id+' has no eligible free agent for bench slot');
       signContract(db,fa,t,asking(db,fa,t.region),contractYearsForPlayer(db,fa,rng));rep.signings.push({pid:fa.id,team:t.id,salary:fa.contract.salary,years:fa.contract.until-year+1,rookie:fa.age<=19,fill:true});
     }
     while(t.roster.length>size){const b=t.roster.map(id=>db.players[id]).filter(x=>starterFor(db,t,x.role)!==x).sort((a,b)=>playerValue(db,a,t)-playerValue(db,b,t))[0];if(!b)break;release(t,b)}

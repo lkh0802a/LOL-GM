@@ -301,7 +301,7 @@ Constants may define simulation mechanics, but regional outcomes must result fro
 
 - rookie intake volume is calculated from first-division size, Tier-2 size, current young-player depth, development infrastructure and regional competitive strength
 - position generation responds to shortages in the existing young-player pool instead of using a fixed equal quota
-- rookie quality follows a shared ordinary → solid → good → rare elite distribution; each regional class also gets an engine-sampled quality wave, so most classes have 0–1 elite prospects but genuine golden generations can produce multiple elite prospects, while weak classes can produce none; emergency roster fillers remain constrained to ordinary prospect quality
+- rookie quality follows a shared ordinary → solid → good → rare elite distribution; each regional class also gets an engine-sampled quality wave, so most classes have 0–1 elite prospects but genuine golden generations can produce multiple elite prospects, while weak classes can produce none
 - generated rookies are 17–19 and receive the same full player schema: identity, nationality, attributes, potential, personality, champion pool, role familiarity and development profile
 - regions with Tier 2 mark rookie entry through the development pipeline; market logic naturally pushes most non-immediate starters toward reserve/second-tier roster filling
 - scouting is stored as a player-specific report, not a single fixed percentage
@@ -326,4 +326,16 @@ Item 5 (contracts / transfer market) is now active.
 - most classes naturally produce zero or one elite prospect because elite probability is low, not because of a hard cap
 - genuine golden generations may produce multiple elite prospects in one region and year
 - weak generations may produce none
-- emergency roster-filling players are still prevented from becoming accidental elite prospects because they are not part of the normal talent-generation process
+- the pro labor market is maintained with enough visible players before the transfer window; per-team emergency player generation is forbidden
+
+
+## D-028 — No emergency roster generation
+
+**Decision:** A normal LOL GM world must never solve a roster shortage by creating a player at the moment a club needs one.
+
+- structural league changes are finalized before the annual rookie class is generated
+- rookie intake calculations include total active pro roster demand, a free-agent labor buffer and position-specific supply
+- the engine guarantees enough visible regional ecosystem players to cover all active rosters before the transfer window opens
+- final roster filling searches the existing eligible global FA market, subject to import rules, instead of silently creating a local player
+- if the invariant is ever broken, the simulation throws a development error so the supply model is repaired rather than hidden
+- talent scarcity is allowed to mean a shortage of quality, experience or affordability; it must not mean the world literally runs out of players
