@@ -1931,7 +1931,6 @@ function reconcileTier2Structure(db,rng,R,ev=()=>{}){
   for(const a of activeTeams(db,R.id,2).filter(t=>t.parent)){
     const parent=db.teams[a.parent];
     if(!parent||parent.active===false||parent.region!==R.id||(parent.division||1)!==1||reserveRequirement(db,parent)!=='required'){
-      for(const pid of [...(a.roster||[])])removePlayerFromTeam(db,db.players[pid]);
       foldTeam(db,a);ev(`${a.name} 산하 2군 운영 종료`);
     }
   }
