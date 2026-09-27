@@ -437,3 +437,16 @@ This applies retroactively to completed major items during later UI touches and 
 - New champions are globally unavailable in professional draft for 14 days after release, then unlock automatically by stable champion ID and date.
 - Competitive meta evidence is tracked both globally and per region. Teams learn from both, with their own regional sample weighted more strongly; coach analysis and scrim analysis still control observation noise and adaptation speed.
 - Champion base stats and abstract kit dimensions are simulation inputs, not display-only metadata: they feed draft valuation, composition/counter logic, phase scaling, combat offense/EHP, and patch balance changes.
+
+
+## D-033 — Champion data, eligibility and evolving meta
+
+**Decision:** LOL GM champion/meta simulation uses pinned source data and persistent public-learning state rather than fixed tier labels.
+
+- The initial 26.19 world embeds the complete 173-champion Data Dragon baseline with stable internal IDs and Korean display data.
+- Global professional eligibility and tournament champion-pool eligibility are separate; training/scrims may use globally banned new champions before official unlock.
+- Tournament champion pools lock at competition start and do not silently expand after a later global unlock.
+- Official games preserve long-term champion meta history with competition, season, year, stage, league, region, team, player and actual-position context.
+- Team analysis creates persistent meta knowledge; repeated losses create counter-research state, so adoption and answers emerge at different rates by team.
+- International games accelerate cross-region learning; tier presentation remains derived from observed presence/performance.
+- Major champion reworks are rare stochastic patch events and retain champion identity.
