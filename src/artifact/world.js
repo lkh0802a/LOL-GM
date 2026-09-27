@@ -357,27 +357,27 @@ function aiManageOwnedReserve(db,t){
   const parent=teamRef(db,t);if(!parent||parent.parent||parent.id===managedTeamId(db))return [];
   const reserve=reserveTeamsOf(db,parent)[0];if(!reserve)return [];
   const moves=[];
-  // 2군 선수가 1군의 같은 포지션 최선수보다 명확히 강하면 콜업한다.
+  initializeDepthChart(db,parent,false);initializeDepthChart(db,reserve,false);
   for(const role of ROLES){
     const first=(parent.roster||[]).map(id=>db.players[id]).filter(p=>p&&p.role===role).sort((a,b)=>playerOvr(b)-playerOvr(a));
     const second=(reserve.roster||[]).map(id=>db.players[id]).filter(p=>p&&p.role===role).sort((a,b)=>playerOvr(b)-playerOvr(a));
     if(!first.length||!second.length)continue;
-    const candidate=second[0],incumbent=first[0],gap=playerOvr(candidate)-playerOvr(incumbent);
-    if(gap>=3||(gap>=1&&((incumbent.form??0)<=-7||incumbent.condition<55))){
-      const check=rosterMoveCheck(db,candidate,parent);
-      if(check.ok){movePlayerBetweenSquads(db,candidate,parent);moves.push({pid:candidate.id,kind:'callup',role})}
+    const reserveBest=second[0],firstBest=first[0];
+    const callGap=playerOvr(reserveBest)-playerOvr(firstBest),firstBad=(firstBest.form??0)<=-7||firstBest.condition<55;
+    let call=callGap>=3||(callGap>=1&&firstBad),down=null;
+    if(call)down=first.slice().sort((a,b)=>playerOvr(a)-playerOvr(b))[0];
+    if(!call){
+      const starters=new Set(ROLES.map(r=>starterFor(db,parent,r)).filter(Boolean).map(p=>p.id));
+      const prospect=first.filter(p=>p.age<=21&&!starters.has(p.id)&&p.pot-playerOvr(p)>=4).sort((a,b)=>(b.pot-playerOvr(b))-(a.pot-playerOvr(a)))[0];
+      if(prospect&&playerOvr(reserveBest)>=playerOvr(prospect)-2){call=true;down=prospect}
     }
-  }
-  // 1군에서 출전 가능성이 낮은 젊은 유망주는 2군의 같은 포지션보다 경쟁력이 있을 때 실전 기회를 준다.
-  initializeDepthChart(db,parent,false);
-  const starters=new Set(ROLES.map(r=>starterFor(db,parent,r)).filter(Boolean).map(p=>p.id));
-  const send=(parent.roster||[]).map(id=>db.players[id]).filter(p=>p&&p.age<=21&&!starters.has(p.id)&&p.pot-playerOvr(p)>=4)
-    .sort((a,b)=>(b.pot-playerOvr(b))-(a.pot-playerOvr(a))||playerOvr(b)-playerOvr(a));
-  for(const p of send){
-    const reserveRole=(reserve.roster||[]).map(id=>db.players[id]).filter(x=>x&&x.role===p.role);
-    if(reserveRole.length&&playerOvr(p)<Math.max(...reserveRole.map(playerOvr))-2)continue;
-    const check=rosterMoveCheck(db,p,reserve);
-    if(check.ok){movePlayerBetweenSquads(db,p,reserve);moves.push({pid:p.id,kind:'senddown',role:p.role})}
+    if(!call||!down)continue;
+    const upCheck=rosterMoveCheck(db,reserveBest,parent);if(!upCheck.ok)continue;
+    movePlayerBetweenSquads(db,reserveBest,parent);
+    const downCheck=rosterMoveCheck(db,down,reserve);
+    if(!downCheck.ok){assignPlayerToTeam(db,reserveBest,reserve);continue}
+    movePlayerBetweenSquads(db,down,reserve);
+    moves.push({pid:reserveBest.id,kind:'callup',role,swap:down.id},{pid:down.id,kind:'senddown',role,swap:reserveBest.id});
   }
   if(moves.length){initializeDepthChart(db,parent,true);initializeDepthChart(db,reserve,true);rebalanceAiRosterRoles(db,parent);rebalanceAiRosterRoles(db,reserve)}
   return moves;
@@ -751,8 +751,6 @@ function closeMarket(db){
   contractMarket(db,rng,rep,ev);
   ensureEven(db,rng,ev);
   for(const t of activeTeams(db,null,1))aiManageOwnedReserve(db,t);
-  // 시장 마감 시에는 이동 후에도 각 스쿼드의 등록 목표 인원을 다시 충족시킨다.
-  ensureEven(db,rng,ev);
   for(const t of activeTeams(db)){aiReviewDepthChart(db,t);rebalanceAiRosterRoles(db,t)}
   for(const t of activeTeams(db)){const pre=t._pre||[];const now=ROLES.map(r=>starterFor(db,t,r)).filter(Boolean).map(p=>p.id);const changed=now.filter(id=>!pre.includes(id)).length;
     t.synergy=clamp(teamSynergy(t)*0.85+15-changed*8,10,100);delete t._pre;
