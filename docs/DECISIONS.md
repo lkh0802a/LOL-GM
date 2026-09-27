@@ -426,3 +426,8 @@ This applies retroactively to completed major items during later UI touches and 
 - During every international phase, all first-division domestic official competition pauses globally, including for clubs not attending an international event. Training, scrims, rest and roster management remain available.
 - Exact calendar dates, international coefficient arithmetic, tournament patch lock and emergency international roster rules remain to be finalized before major item 19 is accepted.
 - These canonical specifications are recorded now; executable tournament scheduling/format support remains owned by the later international-season system rather than being approximated through legacy formats.
+
+
+## D-033 — Club infrastructure and staff control boundary
+
+**Decision:** Facilities are organization infrastructure, not repetitive manager chores. Training, analysis, recovery and youth facilities have distinct simulation effects and upkeep; club management automatically decides capex from finances and philosophy through the same validated upgrade rules for every club. The player observes infrastructure state/effects but does not manually click upgrades. Sporting staff appointments remain player-controlled because they create meaningful strategic trade-offs. Specialist staff age, circulate through the market and materially affect development, analysis and recovery; AI clubs manage them under the same financial constraints without hidden information.
