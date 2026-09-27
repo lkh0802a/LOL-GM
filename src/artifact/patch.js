@@ -1,13 +1,16 @@
 // ===== LOL GM: 패치 / 메타 =====
 // 패치 = 수치 변화(델타)의 기록. 어떤 시점의 패치든 기본 데이터 + 델타로 다시 만들 수 있다
-const PATCH_CACHE={};
+const PATCH_CACHE=new WeakMap();
+function patchCache(db){let c=PATCH_CACHE.get(db);if(!c){c=new Map();PATCH_CACHE.set(db,c)}return c}
+function clearPatchCache(db){PATCH_CACHE.delete(db)}
 const RULE_KO={dragonRespawn:'드래곤 재생성(분)',baronBuff:'바론 버프 지속(분)',csGold:'미니언 골드',killGold:'처치 골드',heraldSpawn:'전령 등장(분)',baronSpawn:'바론 등장(분)'};
 function initPatches(db){
-  db.patches={base:JSON.parse(JSON.stringify(db.patch)),initialBase:JSON.parse(JSON.stringify(db.patch)),list:[],history:[],prev:[],nextDate:null,newIdx:0,y:0,n:0,releasesByYear:{},releaseTargets:{},reworksByYear:{},majorReworksByYear:{},systemLifeByYear:{},cadence:14};
+  db.patches={initialBase:structuredClone(db.patch),list:[],history:[],prev:[],nextDate:null,newIdx:0,y:0,n:0,releasesByYear:{},releaseTargets:{},reworksByYear:{},majorReworksByYear:{},systemLifeByYear:{},cadence:14};
   db.metaStats={};db.metaGames=0;db.regionMetaStats={};db.regionMetaGames={};
 }
 function applyNote(P,n){
   const c=P.champions[n.c];
+  P._revision=(P._revision||0)+1;if(/^item/.test(n.type)||/^rune/.test(n.type))P._systemRevision=(P._systemRevision||0)+1;
   if(n.type==='skill'&&c&&c.skills&&c.skills[n.slot])c.skills[n.slot][n.field]=JSON.parse(JSON.stringify(n.new));
   else if(n.type==='kit'&&c)c.kit[n.key]=n.new!=null?n.new:clamp(c.kit[n.key]+n.d,1,10);
   else if(n.type==='base'&&c)c.base[n.key]=n.new!=null?n.new:Math.round(c.base[n.key]*(1+n.d)*100)/100;
@@ -22,12 +25,12 @@ function applyNote(P,n){
 }
 function getPatch(db,id){
   if(db.patch&&db.patch.id===id)return db.patch;
-  if(PATCH_CACHE[id])return PATCH_CACHE[id];
-  const P=JSON.parse(JSON.stringify(db.patches.initialBase||db.patches.base));
-  if(P.id===id)return PATCH_CACHE[id]=P;
+  const cache=patchCache(db);if(cache.has(id))return cache.get(id);
+  const P=structuredClone(db.patches.initialBase);
+  if(P.id===id){cache.set(id,P);return P}
   const hist=db.patches.history&&db.patches.history.length?db.patches.history:db.patches.list;
-  for(const p of hist){for(const n of p.notes||[])applyNote(P,n);P.id=p.id;if(P.id===id)return PATCH_CACHE[id]=P}
-  return PATCH_CACHE[id]=P;
+  for(const p of hist){for(const n of p.notes||[])applyNote(P,n);P.id=p.id;if(P.id===id){cache.set(id,P);return P}}
+  cache.set(id,P);return P;
 }
 function championProEligible(db,c,date=db.worldDate){
   if(!c)return false;
@@ -254,7 +257,7 @@ function newPatch(db,date,major,rng){
   P.id=id;
   const rec={id,date,major:!!major,notes,analysis:{sampleGames:diag.sampleGames,championChanges:notes.filter(n=>n.c&&['skill','base','kit'].includes(n.type)).map(n=>n.c),reworks:notes.filter(n=>n.type==='rework').map(n=>({c:n.c,scope:n.scope})),itemChanges:notes.filter(n=>n.type.indexOf('item')===0).map(n=>n.id),runeChanges:notes.filter(n=>n.type.indexOf('rune')===0).map(n=>n.id)}};
   db.patches.list.push(rec);db.patches.history=db.patches.history||[];db.patches.history.push(rec);
-  for(const k in PATCH_CACHE)delete PATCH_CACHE[k];
+  clearPatchCache(db);
   for(const k in db.metaStats){const x=db.metaStats[k];x.p=Math.floor(x.p/3);x.w=Math.floor(x.w/3);x.b=Math.floor(x.b/3)}
   db.metaGames=Math.floor((db.metaGames||0)/3);
   for(const rid in db.regionMetaStats||{})for(const k in db.regionMetaStats[rid]){const x=db.regionMetaStats[rid][k];x.p=Math.floor(x.p/3);x.w=Math.floor(x.w/3);x.b=Math.floor(x.b/3)}
@@ -269,8 +272,8 @@ function patchTick(db,date,rng){
 function seasonPatch(db,date,rng){
   const pt=db.patches;
   pt.prev=pt.list.map(p=>({id:p.id,date:p.date,major:p.major,notes:p.notes}));
-  pt.base=JSON.parse(JSON.stringify(db.patch));pt.list=[];
-  for(const k in PATCH_CACHE)delete PATCH_CACHE[k];
+  pt.list=[];
+  clearPatchCache(db);
   const p=newPatch(db,date,true,rng);pt.nextDate=addDays(date,pt.cadence||14);
   const nc=p.notes.find(n=>n.type==='new');
   news(db,`시즌 개막 패치 ${p.id} — 챔피언 ${p.notes.filter(n=>n.c).length}명 조정${nc?`, 신규 챔피언 ${nc.def.name} 출시`:''}`);
