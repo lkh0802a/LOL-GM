@@ -112,14 +112,14 @@ source += `\n(()=>{
   applyNote(histDb.patch,h1);histDb.patch.id='SMOKE.1';histDb.patches.history.push({id:'SMOKE.1',date:'2027-05-01',major:false,notes:[h1]});applyNote(histDb.patch,h2);histDb.patch.id='SMOKE.2';histDb.patches.history.push({id:'SMOKE.2',date:'2027-05-15',major:false,notes:[h2]});
   const oldPatch=getPatch(histDb,'SMOKE.1');if(oldPatch.champions[histChamp.id].base.hp!==h0-10||oldPatch.champions[histChamp.id].base.ad!==a0)throw new Error('Historical patch reconstruction failed');
   // Refactor invariants: one immutable baseline, per-world patch cache, revision-aware hot-path caches.
-  if('base' in db.patches)throw new Error('Duplicate patch baseline returned after refactor');
+  if('base' in db.patches||'initialBase' in db.patches)throw new Error('Serialized patch baseline returned after refactor');
   const isoA=buildWorld(),isoB=buildWorld(),isoCid=Object.keys(isoA.patch.champions)[0],isoHp=isoA.patch.champions[isoCid].base.hp;
   const isoNA={type:'base',c:isoCid,key:'hp',old:isoHp,new:isoHp-11,dir:-1},isoNB={type:'base',c:isoCid,key:'hp',old:isoHp,new:isoHp+17,dir:1};
   isoA.patches.history.push({id:'ISO.1',date:'2027-06-01',major:false,notes:[isoNA]});isoB.patches.history.push({id:'ISO.1',date:'2027-06-01',major:false,notes:[isoNB]});
   const isoPA=getPatch(isoA,'ISO.1'),isoPB=getPatch(isoB,'ISO.1');if(isoPA===isoPB||isoPA.champions[isoCid].base.hp===isoPB.champions[isoCid].base.hp)throw new Error('Patch cache leaked across worlds');
-  const cacheDb=buildWorld(),cacheChamp=Object.values(cacheDb.patch.champions).find(x=>(cacheDb.patch.items?.[x.cls]||[]).length)||Object.values(cacheDb.patch.champions)[0],profile0=championSystemMetaProfile(cacheDb.patch,cacheChamp),profile1=championSystemMetaProfile(cacheDb.patch,cacheChamp);
-  if(profile0!==profile1)throw new Error('Champion system-meta cache missed identical revision');
-  const cacheItem=(profile0.roles[cacheChamp.roles[0]]?.items||[])[0];if(cacheItem){const d=cacheDb.patch.itemDefs[cacheItem],old=d.cost;applyNote(cacheDb.patch,{type:'item',id:cacheItem,field:'cost',old,new:old+100,dir:-1});const profile2=championSystemMetaProfile(cacheDb.patch,cacheChamp);if(profile2===profile1)throw new Error('System-meta cache did not invalidate after item patch')}
+  const cacheDb=buildWorld(),cacheChamp=Object.values(cacheDb.patch.champions).find(x=>(cacheDb.patch.items?.[x.cls]||[]).length)||Object.values(cacheDb.patch.champions)[0],sysProfile0=championSystemMetaProfile(cacheDb.patch,cacheChamp),sysProfile1=championSystemMetaProfile(cacheDb.patch,cacheChamp);
+  if(sysProfile0!==sysProfile1)throw new Error('Champion system-meta cache missed identical revision');
+  const cacheItem=(sysProfile0.roles[cacheChamp.roles[0]]?.items||[])[0];if(cacheItem){const d=cacheDb.patch.itemDefs[cacheItem],old=d.cost;applyNote(cacheDb.patch,{type:'item',id:cacheItem,field:'cost',old,new:old+100,dir:-1});const sysProfile2=championSystemMetaProfile(cacheDb.patch,cacheChamp);if(sysProfile2===sysProfile1)throw new Error('System-meta cache did not invalidate after item patch')}
   const strength0=champStrength(cacheChamp,cacheDb.patch),oldHp=cacheChamp.base.hp;applyNote(cacheDb.patch,{type:'base',c:cacheChamp.id,key:'hp',old:oldHp,new:oldHp+25,dir:1});const strength1=champStrength(cacheChamp,cacheDb.patch);if(!(strength1>strength0))throw new Error('Champion strength cache did not invalidate after champion patch');
   if(players.some(p=>!p.nationality||!p.roleFamiliarity||p.roleFamiliarity[p.role]!==100||!p.development||p.reputation===undefined||!Array.isArray(p.careerEvents))) throw new Error('Player identity/development schema failed');
   const sample=players[0];pState(sample);
