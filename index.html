@@ -221,7 +221,7 @@ td.fmt{font-size:12px;color:var(--mut);white-space:normal;min-width:200px}
 <div id="overlay" hidden role="dialog" aria-modal="true" aria-label="시리즈 상세"></div>
 <script>
 /* LOL GM generated bundle. Canonical source lives in src/artifact/*.js. */
-/* ===== engine.js ===== */
+/* ==== FILE: engine.js ==== */
 // ===== LOL GM: 코어 엔진 =====
 function clamp(v,a,b){return v<a?a:v>b?b:v}
 function avg(a){return a.length?a.reduce((s,x)=>s+x,0)/a.length:0}
@@ -269,7 +269,7 @@ const BAL={blue:0.025,counter:0.1,first:0.013};
 const DRAFT_ORDER=[['B',0],['B',1],['B',0],['B',1],['B',0],['B',1],['P',0],['P',1],['P',1],['P',0],['P',0],['P',1],['B',1],['B',0],['B',1],['B',0],['P',1],['P',0],['P',0],['P',1]];
 function runDraft(db, teamIds, rng, ctx){
   ctx=ctx||{used:[],byTeam:{}};
-  const champs=Object.values(db.patch.champions);
+  const champs=Object.values(db.patch.champions).filter(c=>typeof championProEligible!=='function'||championProEligible(db,c));
   const strengths={}; champs.forEach(c=>strengths[c.id]=champStrength(c));
   const vals=Object.values(strengths), mn=Math.min(...vals), mx=Math.max(...vals);
   if(ctx.forced){const f=ctx.forced;return {bans:f.bans,picks:f.picks,log:[],expl:[{t:0,title:'기록된 밴픽 재현',factors:[],result:''}]}}
@@ -801,7 +801,7 @@ function monteCarlo(db,blueId,redId,n,baseSeed){
   return acc;
 }
 
-/* ===== data.js ===== */
+/* ==== FILE: data.js ==== */
 // ===== LOL GM: 데이터 모델 / 기본 월드 =====
 const ROLES = ['TOP','JGL','MID','ADC','SUP'];
 const ROLE_KO = {TOP:'탑',JGL:'정글',MID:'미드',ADC:'원딜',SUP:'서폿'};
@@ -989,8 +989,7 @@ const STYLE_BIAS = {
   aggressive:{g:{combat:3,mechanical:2,mental:-4}, t:{aggression:22,risk_taking:18,roaming:15,engage_preference:12}}
 };
 
-
-/* ===== champs2.js ===== */
+/* ==== FILE: champs2.js ==== */
 // ===== LOL GM: 챔피언 확장 (아키타입 기반) =====
 // kit: [burst,dps,cc,engage,disengage,peel,poke,waveclear,mobility,sustain,early,mid,late,difficulty]
 const ARCH={
@@ -1042,20 +1041,20 @@ function archChampion(name,roles,arch,dmg,extra,id=championId(name)){
   return {id,name,roles,cls,dmg,base:b,kit:k,arch};
 }
 
-/* ===== patch.js ===== */
+/* ==== FILE: patch.js ==== */
 // ===== LOL GM: 패치 / 메타 =====
 // 패치 = 수치 변화(델타)의 기록. 어떤 시점의 패치든 기본 데이터 + 델타로 다시 만들 수 있다
 const PATCH_CACHE={};
 const RULE_KO={dragonRespawn:'드래곤 재생성(분)',baronBuff:'바론 버프 지속(분)',csGold:'미니언 골드',killGold:'처치 골드',heraldSpawn:'전령 등장(분)',baronSpawn:'바론 등장(분)'};
 function initPatches(db){
   db.patches={base:JSON.parse(JSON.stringify(db.patch)),list:[],prev:[],nextDate:null,newIdx:0,y:0,n:0,releasesByYear:{}};
-  db.metaStats={};db.metaGames=0;
+  db.metaStats={};db.metaGames=0;db.regionMetaStats={};db.regionMetaGames={};
 }
 function applyNote(P,n){
   const c=P.champions[n.c];
   if(n.type==='kit'&&c)c.kit[n.key]=clamp(c.kit[n.key]+n.d,1,10);
   else if(n.type==='base'&&c)c.base[n.key]=Math.round(c.base[n.key]*(1+n.d)*100)/100;
-  else if(n.type==='new'){const c=archChampion(n.def.name,n.def.roles,n.def.arch,n.def.dmg,null,n.def.id||championId(n.def.name));P.champions[c.id]=c}
+  else if(n.type==='new'){const c=archChampion(n.def.name,n.def.roles,n.def.arch,n.def.dmg,null,n.def.id||championId(n.def.name));c.releaseDate=n.def.releaseDate||null;c.proEligibleDate=n.def.proEligibleDate||null;P.champions[c.id]=c}
   else if(n.type==='rule')P.rules[n.key]=n.v;
 }
 function getPatch(db,id){
@@ -1065,16 +1064,27 @@ function getPatch(db,id){
   for(const p of db.patches.list){if(P.id===id)break;for(const n of p.notes)applyNote(P,n);P.id=p.id}
   return PATCH_CACHE[id]=P;
 }
+function championProEligible(db,c,date=db.worldDate){
+  if(!c)return false;
+  return !c.proEligibleDate||date>=c.proEligibleDate;
+}
 function recordMeta(db,r){
   if(!db.metaStats)return;
   db.metaGames=(db.metaGames||0)+1;
-  const st=db.metaStats;
-  r.sides.forEach((s,i)=>s.ps.forEach(p=>{const x=st[p.champ.id]||(st[p.champ.id]={p:0,w:0,b:0});x.p++;if(r.winner===i)x.w++}));
-  r.draft.bans.flat().forEach(c=>{const x=st[c]||(st[c]={p:0,w:0,b:0});x.b++});
+  const st=db.metaStats, regions=[...new Set(r.sides.map(s=>s.team&&s.team.region).filter(Boolean))];
+  const add=(bag,cid,key)=>{const x=bag[cid]||(bag[cid]={p:0,w:0,b:0});x[key]++};
+  r.sides.forEach((s,i)=>s.ps.forEach(p=>{add(st,p.champ.id,'p');if(r.winner===i)add(st,p.champ.id,'w')}));
+  r.draft.bans.flat().forEach(c=>add(st,c,'b'));
+  db.regionMetaStats=db.regionMetaStats||{};db.regionMetaGames=db.regionMetaGames||{};
+  for(const rid of regions){
+    const bag=db.regionMetaStats[rid]||(db.regionMetaStats[rid]={});db.regionMetaGames[rid]=(db.regionMetaGames[rid]||0)+1;
+    r.sides.forEach((s,i)=>{if(!s.team||s.team.region!==rid)return;s.ps.forEach(p=>{add(bag,p.champ.id,'p');if(r.winner===i)add(bag,p.champ.id,'w')})});
+    r.draft.bans.flat().forEach(c=>add(bag,c,'b'));
+  }
 }
-function metaTable(db){
-  const G=Math.max(1,db.metaGames||0), st=db.metaStats||{};
-  return Object.values(db.patch.champions).map(c=>{const s=st[c.id]||{p:0,w:0,b:0};return {c,p:s.p,b:s.b,w:s.w,pres:(s.p+s.b)/G,wr:s.p?s.w/s.p:null}}).sort((a,b)=>b.pres-a.pres);
+function metaTable(db,regionId=null){
+  const G=Math.max(1,regionId?(db.regionMetaGames||{})[regionId]||0:db.metaGames||0), st=regionId?((db.regionMetaStats||{})[regionId]||{}):(db.metaStats||{});
+  return Object.values(db.patch.champions).map(c=>{const s=st[c.id]||{p:0,w:0,b:0};return {c,p:s.p,b:s.b,w:s.w,pres:(s.p+s.b)/G,wr:s.p?s.w/s.p:null,sample:G,eligible:championProEligible(db,c)}}).sort((a,b)=>b.pres-a.pres);
 }
 function patchId(db,year){const pt=db.patches;if(pt.y!==year){pt.y=year;pt.n=0}pt.n++;return `${String(year).slice(2)}.${pt.n}`}
 // 밸런스 팀의 판단: 대회에서 너무 많이 쓰이고 이기는 챔피언은 하향, 외면받는 챔피언은 상향
@@ -1103,6 +1113,7 @@ function newPatch(db,date,major,rng){
     else{let name,id;do{name=rng.pick(NEWCHAMP_A)+rng.pick(NEWCHAMP_B);id=championId(name)}while(P.champions[id]);const role=rng.pick(ROLES);
       const arch=rng.pick({TOP:['juggernaut','diver','skirmisher','vanguard'],JGL:['diver','assassin','skirmisher','vanguard'],MID:['burst','control','battle','assassin','artillery'],ADC:['marksman','hyper','bully'],SUP:['enchanter','catcher','warden','control']}[role]);
       def={id,name,roles:[role],arch,dmg:['burst','control','battle','artillery','enchanter','specialist'].includes(arch)?'AP':'AD'};db.patches.newIdx++}
+    def.releaseDate=date;def.proEligibleDate=addDays(date,14);
     db.patches.releasesByYear=db.patches.releasesByYear||{};db.patches.releasesByYear[year]=released+1;
     notes.push({type:'new',def,why:'신규 챔피언 출시',c:def.name});
   }
@@ -1114,6 +1125,8 @@ function newPatch(db,date,major,rng){
   // 메타 데이터는 새 패치에서 절반만 이어짐 (팀들이 다시 학습)
   for(const k in db.metaStats){const x=db.metaStats[k];x.p=Math.floor(x.p/3);x.w=Math.floor(x.w/3);x.b=Math.floor(x.b/3)}
   db.metaGames=Math.floor((db.metaGames||0)/3);
+  for(const rid in db.regionMetaStats||{})for(const k in db.regionMetaStats[rid]){const x=db.regionMetaStats[rid][k];x.p=Math.floor(x.p/3);x.w=Math.floor(x.w/3);x.b=Math.floor(x.b/3)}
+  for(const rid in db.regionMetaGames||{})db.regionMetaGames[rid]=Math.floor(db.regionMetaGames[rid]/3);
   return {id,notes};
 }
 function patchTick(db,date,rng){
@@ -1131,7 +1144,7 @@ function seasonPatch(db,date,rng){
   news(db,`시즌 개막 패치 ${p.id} — 챔피언 ${p.notes.filter(n=>n.c).length}명 조정${nc?`, 신규 챔피언 ${nc.def.name} 출시`:''}`);
 }
 
-/* ===== competition.js ===== */
+/* ==== FILE: competition.js ==== */
 // ===== LOL GM: Series (Phase 3) =====
 function teamComposure(db,tid){return avg(db.teams[tid].roster.map(id=>db.players[id].attrs.composure))/100}
 function gameMVP(r){
@@ -1417,7 +1430,7 @@ function intlStages(fmt,teams,bo){
   return [grp(n>=12?4:2),ko('groups',n>=12?8:4)];
 }
 
-/* ===== world.js ===== */
+/* ==== FILE: world.js ==== */
 // ===== LOL GM: 월드 (Phase 5 성장 + 월드 확장) =====
 const NICK_A=['Ka','Zer','Lu','Vex','Mor','Ny','Ti','Rho','Sa','Quin','El','Dra','Fen','Jo','Kai','Mir','Oz','Pyr','Ren','Syl','Ul','Wyn','Xan','Yor','Bru','Cae','Del','Gor','Hex','Ish','Lor','Nim','Pax','Riv','Tor','Val','Zu','Aki','Bly','Cro'];
 const NICK_B=['n','ra','x','lo','th','ne','ko','vy','dan','rin','zo','sk','mi','ro','ve','ly','ce','ta','ix','or','us','en','al','yx','e','o','ash','ek','im','ul'];
@@ -2321,7 +2334,7 @@ function stepOf(db,s){
   return w.steps.findIndex(st=>st.kind==='league'?st.split===s.split:(st.ids||[st.id]).includes(s.comp));
 }
 
-/* ===== office.js ===== */
+/* ==== FILE: office.js ==== */
 // ===== LOL GM: 흥행 / 리그 사무국 =====
 const OFFICE_STYLES={
   conservative:{label:'보수적',w:{cap:-0.1,floor:-0.1,tax:-0.2,import:-0.2,fearless:-0.2,expand:-0.35,contract:-0.2,playoffs:-0.1,relegation:-0.2,franchise:0.1,mixed:-0.1,div2:-0.1,format:-0.25,splits:-0.2,bo:-0.1}},
@@ -2562,7 +2575,7 @@ function globalOffice(db,w,rng,f,ev){
   worldDecisions(db,rng,f,ev);
 }
 
-/* ===== finance.js ===== */
+/* ==== FILE: finance.js ==== */
 // ===== LOL GM: 계약 / 재정 / FA 시장 (단위: 억 원) =====
 const PAY_SCALE={}; // legacy compatibility only; new worlds derive pay scale in the policy engine.
 const money=v=>(Math.round(v*10)/10).toFixed(1)+'억';
@@ -2992,7 +3005,7 @@ function mSponsor(db,id){const t=myT(db),o=(db.world.sponsorOffers||[]).find(x=>
 
 function mHireStaff(db,sid){const t=myT(db),s=(db.staffPool||[]).find(x=>x.id===sid);if(!s)return '스태프를 찾을 수 없습니다';const ps=psOf(db,t.region),old=t.staff&&t.staff[s.role],fee=old?staffSalary(old,ps):0;if(t.finance.cash<fee)return `교체 위약금 ${money(fee)}이 부족합니다`;t.finance.cash=Math.round((t.finance.cash-fee)*10)/10;hireStaff(db,t,s);return `${STAFF_ROLES[s.role]} ${s.name} 선임${fee?` · 위약금 ${money(fee)}`:''}`}
 
-/* ===== features.js ===== */
+/* ==== FILE: features.js ==== */
 // ===== LOL GM: 컨디션·폼·사기·팀 호흡 / 코칭스태프 / 시상·명예의 전당 / 구단주 목표 / 스폰서 =====
 const GOAL_KO={title:'리그 우승',final:'결승 진출',playoffs:'플레이오프 진출',top_half:'상위권 (중위 이상)',survive:'강등 피하기'};
 function pState(p){if(p.form===undefined)p.form=0;if(p.fatigue===undefined)p.fatigue=10;if(p.morale===undefined)p.morale=65;if(p.condition===undefined)p.condition=96;if(p.sharpness===undefined)p.sharpness=55;if(p.teamAdaptation===undefined)p.teamAdaptation=p.team?60:50;if(p.tacticalAdaptation===undefined)p.tacticalAdaptation=p.team?60:50;return p}
@@ -3197,7 +3210,7 @@ function hallOfFame(db,p){
   return false;
 }
 
-/* ===== career.js ===== */
+/* ==== FILE: career.js ==== */
 // ===== LOL GM: first-season blank roster setup =====
 const INITIAL_ROSTER_TARGET=6;
 const INITIAL_GOAL_KO={title:'리그 우승 도전',final:'결승권 진입',playoffs:'플레이오프 진출',top_half:'상위권 정착',survive:'1부 잔류',promotion:'1부 승격 도전',develop:'유망주 육성과 경쟁력 확보'};
@@ -3324,8 +3337,7 @@ function finalizeInitialRosters(db){
   if(allErrors.length)throw new Error('AI 초기 로스터 구성 실패 · '+allErrors[0]);for(const t of activeTeams(db))initializeTeamRosterRoles(db,t,true);db.manager.careerStartedAt=db.worldDate;db.firstSeasonSetup.completed=true;const seed=db.world.seed,teamId=root.id;startWorldSeason(db,teamId,seed);return db.world;
 }
 
-
-/* ===== app.js ===== */
+/* ==== FILE: app.js ==== */
 // ===== LOL GM: UI =====
 const SAVE_VERSION=13;
 const STORAGE_NS='lol-gm-v13';
@@ -4106,6 +4118,7 @@ loadDB().then(d=>{DB=d;nav()}).catch(e=>{
   $('#main').innerHTML=`<section><h2>게임을 시작하지 못했습니다</h2><p class="warn">${esc(e&&e.message?e.message:'초기화 오류')}</p><p class="hint">파일로 직접 연 HTML에서 저장소 접근이 차단된 경우 자동으로 우회합니다. 새로고침해도 계속되면 최신 HTML 미리보기를 다시 받아 주세요.</p><button class="primary" id="retryboot">다시 시도</button></section>`;
   const b=$('#retryboot');if(b)b.onclick=()=>location.reload();
 });
+
 </script>
 </body>
 </html>
