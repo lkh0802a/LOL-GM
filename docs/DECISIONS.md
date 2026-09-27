@@ -368,3 +368,24 @@ Item 5 (contracts / transfer market) is now active.
 - cohort volume varies modestly, but it may never reduce generation below the labor-market supply invariant
 
 This replaces the earlier single independent classWave draw with a persistent, explainable cohort model.
+
+
+## D-031 — Contract and transfer market accepted
+
+**Decision:** Major system 5, `계약 / 이적시장`, is accepted as complete on 2026-09-27.
+
+- player salary demand and market value are derived from ability, age, upside, reputation, recent performance, contract state, role demand and regional economy rather than fixed tables
+- contracts support realistic short durations plus optional signing bonus, performance/title/international bonuses, buyout, team/player option and promised roster role; clauses are optional rather than mandatory
+- player negotiations are persistent, multi-round exchanges with demands, counteroffers, patience and collapse risk instead of one-click acceptance
+- contracted transfers separate club-to-club fee negotiation from player personal terms; seller counteroffers and buyouts are supported
+- recruitment follows `interest → observation/scouting → internal evaluation → formal offer → negotiation`; A/B/C priorities persist as the manager shortlist
+- rival offers remain intentionally opaque; the player evaluates money, promised role, team strength, international opportunity, facilities/coaching, career goal, contract stability and other relevant terms, and may choose a competitor while talks continue
+- renewals are negotiations rather than automatic extensions, while release/expiry and contract options are handled explicitly
+- AI clubs use the same market constraints and contract concepts, execute renewals, FA signings, releases and selected contracted transfers, and move to alternatives over market rounds
+- AI recruitment of external players uses imperfect market observations instead of reading hidden potential directly
+- first-season blank-roster construction now uses the formal contract-negotiation workflow for the player club; AI clubs use the same contract structure and registration/budget constraints
+- open negotiations expire at the registration/market deadline and cannot silently remain live into the season
+- recruitment and negotiation state survives save round trips
+- item 5 is verified by smoke coverage, production build/standalone HTML generation and successful GitHub Actions CI
+
+Item 6 (Tier 1 / Tier 2 / Academy) is now active.
