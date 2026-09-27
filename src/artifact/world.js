@@ -860,7 +860,8 @@ function packDB(db){
     if(p.pool)q.pool=Object.fromEntries(Object.entries(p.pool).map(([c,v])=>[c,[v.mastery,v.experience,v.matchup_knowledge,v.confidence,v.scrimExperience||0,v.trainingExperience||0,v.scrimSeason||0,v.trainingSeason||0]]));
     players[id]=q;
   }
-  return JSON.stringify({...db,players,packed:1});
+  const scout=Object.fromEntries(Object.entries(db.scout||{}).filter(([id,r])=>db.players[id]&&!db.players[id].retired&&(typeof r==='number'||(r.knowledge||0)>baseScoutKnowledge(db,db.players[id])||(r.observations||0)>0)));
+  return JSON.stringify({...db,players,scout,packed:1});
 }
 function unpackDB(str){
   const db=JSON.parse(str); if(!db.packed)return db;
