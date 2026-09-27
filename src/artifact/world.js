@@ -232,7 +232,7 @@ const PHIL_KO={'win-now':'즉시 전력','youth':'유망주 육성','balanced':'
 const TRAIN_POINTS=100;
 const SPLIT_NAME={1:'윈터',2:'스프링',3:'서머'};
 // 그 해 마지막 스플릿 시즌 (승강·시상·목표 판정 기준)
-function finalSeason(w,R,div=1){return Object.values(w.seasons).filter(s=>s.region===R.id&&(s.div||1)===div&&s.split).sort((a,b)=>b.split-a.split)[0]}
+function finalSeason(w,R,div=1){let best=null;for(const s of Object.values(w.seasons))if(s.region===R.id&&(s.div||1)===div&&s.split&&(!best||s.split>best.split))best=s;return best}
 // 나이가 어릴수록 더 많이, 더 빠르게 오른다
 function youthMul(age){return age<=18?1.4:age<=20?1.25:age<=22?1.1:age<=24?1:0.85}
 function growthCap(age){return age<=18?4.2:age<=20?3.5:age<=22?2.8:age<=24?2.1:age<=26?1.5:1.0}
@@ -701,7 +701,7 @@ function startInternational(db,id,start,taken=new Set()){
   return true;
 }
 function activeSeasons(db){return Object.values(db.world.seasons).filter(s=>!s.done)}
-function nextDate(db){const a=activeSeasons(db);if(!a.length)return null;return a.map(s=>s.days[s.cur].date).sort()[0]}
+function nextDate(db){let next=null;for(const s of Object.values(db.world.seasons)){if(s.done)continue;const d=s.days[s.cur].date;if(next===null||d<next)next=d}return next}
 function playWorldDay(db){
   const w=db.world; if(w.phase!=='season')return null;
   const d=nextDate(db); if(!d){advanceStep(db);return {date:null,played:[]}}
