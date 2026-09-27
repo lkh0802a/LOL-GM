@@ -227,7 +227,7 @@ source += `\n(()=>{
   const promoDb=unpackDB(packDB(db)),promoR=Object.values(promoDb.regions).find(R=>R.div2&&['mixed','relegation'].includes(R.system));
   if(promoR){
     const prng2=new RNG('promotion-pressure','world'),events=[];
-    const fakeSeason=(id,comp,region,div,teams,winner,loser)=>{const matches=[];for(let i=0;i<teams.length;i++)for(let j=i+1;j<teams.length;j++){const a=teams[i].id,b=teams[j].id,aw=a===winner||b===loser||(a!==loser&&b!==winner&&i<j),w=aw?a:b;matches.push({id:id+'-'+i+'-'+j,a,b,res:{winner:w,score:w===a?[1,0]:[0,1]}})}return {id,comp,region,div,split:1,done:true,champion:winner,runnerUp:null,stageData:{regular:{teams:teams.map(t=>t.id)}},days:[{stage:'regular',matches}]};};
+    const fakeSeason=(id,comp,region,div,teams,winner,loser)=>{const matches=[];for(let i=0;i<teams.length;i++)for(let j=i+1;j<teams.length;j++){const a=teams[i].id,b=teams[j].id,aw=a===winner||b===loser||(a!==loser&&b!==winner&&i<j),w=aw?a:b;matches.push({id:id+'-'+i+'-'+j,a,b,res:{winner:w,score:w===a?[1,0]:[0,1]}})}return {id,comp,region,div,split:99,done:true,champion:winner,runnerUp:null,stageData:{regular:{teams:teams.map(t=>t.id)}},days:[{stage:'regular',matches}]};};
     for(let cycle=0;cycle<5;cycle++){
       const first=activeTeams(promoDb,promoR.id,1),second=activeTeams(promoDb,promoR.id,2),eligible=second.filter(t=>promotionEligible(promoDb,t));
       if(first.length>=2&&eligible.length){
