@@ -87,10 +87,10 @@ function contractYearsForPlayer(db,p,rng){
 function initFinance(db,t,rng){
   const ps=psTeam(db,t);
   t.owner=t.owner||{wealth:Math.round(clamp(rng.normal(55,18),10,95))};
-  t.facility=t.facility||clamp(Math.round(1+t.owner.wealth/30),1,4);
+  t.facility=t.facility||clamp(Math.round(1+t.owner.wealth/30),1,4);ensureFacilities(t);
   t.finance=t.finance||{cash:Math.round((25+rng.range(0,35))*ps*10)/10,history:[],buyout:0};
 }
-function staffCost(db,t){return (2+coachSalary(t.coach,1))*psTeam(db,t)}
+function staffCost(db,t){const assistants=Object.values(t.staff||{}).reduce((sum,s)=>sum+staffSalary(s,1),0);return (2+coachSalary(t.coach,1)+assistants)*psTeam(db,t)}
 function opsCost(db,t){return 8*psTeam(db,t)}
 function ownerSupport(db,t){if(t.parent)return 4*psOf(db,t.region);return t.owner.wealth/100*(['win-now','superstar'].includes(t.philosophy)?12:6)*psTeam(db,t)}
 function estRevenue(db,t){
