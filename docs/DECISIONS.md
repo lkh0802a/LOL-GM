@@ -462,3 +462,17 @@ This applies retroactively to completed major items during later UI touches and 
 - Official meta history supports region, patch, competition, season, year, split, league, domestic/international, period and actual-position analysis, with player/team/matchup/recent champion insights.
 - Global pro eligibility, tournament pool locking, practice access, regional learning/counter-research and rare stable-ID reworks remain persistent simulation rules.
 - Major system 10 owns the deeper autonomous patch engine: diagnosis, change targeting/magnitude, rollback/oscillation control and long-run balance validation are not implied complete by this decision.
+
+
+## D-036 — Evidence-driven live patch ecosystem
+
+**Decision:** Major system 10, `패치 엔진`, is accepted as complete on 2026-09-27. LOL GM treats patches as evidence-driven changes to a living champion/item/rune/system ecosystem rather than fixed random ± values.
+
+- Balance diagnosis uses per-patch sample reliability, pick/ban pressure, win rate, recent trend, actual-position flex, regional/international spread, top-team usage, player/team concentration and composition dependence. Win rate alone never determines a patch.
+- Same-direction consecutive changes are damped; severe evidence can override the guardrail, while opposite evidence after an overshoot can produce a partial rollback.
+- Champion changes may touch base/growth stats, attack range, spell range, resource costs, cooldowns, damage, utility, healing, shielding and mobility. Notes retain exact old→new values and internal size (`micro/small/medium/large`).
+- Mid-scope and rare major reworks preserve stable champion IDs and therefore preserve player mastery, career records and historical meta references.
+- Items and runes are stable-ID gameplay systems, not display lists. Build/rune selection and their effects feed match simulation; patches can buff, nerf, add or deactivate/remove them, and item cost changes alter purchase timing.
+- New champions target 2–3 releases per year and remain unavailable to professional competition for 14 days after release while practice remains allowed under the Item 9 rule.
+- Patch history is reconstructible across seasons from the initial baseline plus retained patch records, so historical replays/spec inspection do not silently use current values.
+- Major system 11 now owns the actual LoL-style draft interaction UI; this decision does not mark draft UX complete.
