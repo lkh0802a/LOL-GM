@@ -13,7 +13,7 @@ let source = '';
 for (const file of modules) source += `${await readFile(resolve(artifact, file), 'utf8')}\n`;
 source += `\n(()=>{
   const db=buildWorld();
-  if(!db||db.version!==13) throw new Error('Unexpected save schema');
+  if(!db||db.version!==14) throw new Error('Unexpected save schema');
   if(!db.worldDate||!db.worldConfig.universalLanguage) throw new Error('World bootstrap settings failed');
   const intl=Object.fromEntries(db.worldConfig.internationals.map(x=>[x.id,x]));
   const expectedIntl=['FIRST_STAND','MID_SEASON_INVITATIONAL','EASTERN_CUP','WESTERN_CUP','WORLD_CHAMPIONSHIP','MASTERS','OPEN'];
