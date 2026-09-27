@@ -224,6 +224,29 @@ source += `\n(()=>{
     lifecycle.year++;if(lifecycle.world)lifecycle.world.year=lifecycle.year;
   }
 
+  const promoDb=unpackDB(packDB(db)),promoR=Object.values(promoDb.regions).find(R=>R.div2&&['mixed','relegation'].includes(R.system));
+  if(promoR){
+    const prng2=new RNG('promotion-pressure','world'),events=[];
+    for(let cycle=0;cycle<5;cycle++){
+      const first=activeTeams(promoDb,promoR.id,1),second=activeTeams(promoDb,promoR.id,2),eligible=second.filter(t=>promotionEligible(promoDb,t));
+      if(first.length>=2&&eligible.length){
+        const down=first.find(t=>!(promoR.system==='mixed'&&t.franchised))||first[0],up=eligible[cycle%eligible.length];
+        promoDb.world.seasons['pressure-1']={id:'pressure-1',comp:'PRESSURE1',region:promoR.id,div:1,split:1,done:true,champion:first.find(t=>t.id!==down.id)?.id,runnerUp:null,stages:{regular:{table:Object.fromEntries(first.map((t,i)=>[t.id,{w:t.id===down.id?0:first.length-i,l:t.id===down.id?first.length:0,g:first.length}]))}}};
+        promoDb.world.seasons['pressure-2']={id:'pressure-2',comp:'PRESSURE2',region:promoR.id,div:2,split:1,done:true,champion:up.id,runnerUp:null,stages:{regular:{table:Object.fromEntries(second.map((t,i)=>[t.id,{w:t.id===up.id?second.length:Math.max(0,second.length-i-1),l:t.id===up.id?0:i+1,g:second.length}]))}}};
+        promoDb.competitions.PRESSURE1={id:'PRESSURE1',stages:[{id:'regular'}]};promoDb.competitions.PRESSURE2={id:'PRESSURE2',stages:[{id:'regular'}]};
+        const ownedIds=new Set(second.filter(t=>t.parent).map(t=>t.id));
+        promotionRelegation(promoDb,promoDb.world,prng2,x=>events.push(x));
+        if(ownedIds.has(up.id))throw new Error('Pressure fixture selected owned reserve as promotion candidate');
+        if((promoDb.teams[up.id].division||1)!==1)throw new Error('Eligible independent Tier-2 club failed to promote');
+        if(activeTeams(promoDb,promoR.id,1).some(t=>t.parent))throw new Error('Owned reserve entered first division after promotion cycle');
+        for(const t of activeTeams(promoDb,promoR.id,1))if(reserveRequirement(promoDb,t)==='required'&&reserveTeamsOf(promoDb,t).length!==1)throw new Error('Promotion cycle broke required reserve ownership');
+        const pe=rosterIntegrityErrors(promoDb);if(pe.length)throw new Error('Promotion cycle roster integrity failed: '+pe.slice(0,4).join(' | '));
+        promoDb.year++;promoDb.world.year=promoDb.year;
+      }
+    }
+    if(!events.length)throw new Error('Promotion pressure test did not execute');
+  }
+
   const champions=Object.entries(db.patch.champions);
   if(champions.length<100||champions.some(([id,c])=>c.id!==id||!c.name)) throw new Error('Champion ID invariant failed');
 
