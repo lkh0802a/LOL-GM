@@ -236,7 +236,8 @@ function finalSeason(w,R,div=1){let best=null;for(const s of Object.values(w.sea
 // 나이가 어릴수록 더 많이, 더 빠르게 오른다
 function youthMul(age){return age<=18?1.4:age<=20?1.25:age<=22?1.1:age<=24?1:0.85}
 function growthCap(age){return age<=18?4.2:age<=20?3.5:age<=22?2.8:age<=24?2.1:age<=26?1.5:1.0}
-function defaultTraining(){return {mechanical:20,laning:20,combat:20,macro:20,mental:20}}
+function defaultTraining(){return {mechanical:20,laning:20,combat:20,macro:20,mental:20,intensity:'normal'}}
+function trainingIntensity(t){const x=t?.training?.intensity||'normal';return x==='light'?{growth:.9,fatigue:.45,condition:.25}:x==='high'?{growth:1.08,fatigue:1.35,condition:-.35}:{growth:1,fatigue:.8,condition:0}}
 function ensureFacilities(t){const legacy=clamp(t.facility||2,1,5);t.facilities=t.facilities||{training:legacy,analysis:legacy,recovery:legacy,youth:legacy};for(const k of ['training','analysis','recovery','youth'])t.facilities[k]=clamp(t.facilities[k]||legacy,1,5);t.facility=Math.round((t.facilities.training+t.facilities.analysis+t.facilities.recovery+t.facilities.youth)/4);return t.facilities}
 function facilityMul(t){if(!t)return 1;const f=ensureFacilities(t);return .9+.055*(f.training-1)+.02*(f.youth-1)}
 function facilityAnalysisBonus(t){if(!t)return 0;return (ensureFacilities(t).analysis-1)*.012}
@@ -826,12 +827,12 @@ function growPlayer(db,p,rng,games,champGames){
   const team=p.team?db.teams[p.team]:null, before=playerOvr(p),dev=ensurePlayerDevelopment(p);
   const room=clamp((p.pot-before)/10,-0.5,1.5), prof=p.personality.professionalism/100,ageShift=dev.peakAge-25;
   const coach=team?team.coach.development/100:0.45, play=clamp(games/30,0,1);
-  const tr=team?team.training:defaultTraining(), tsum=Object.values(tr).reduce((a,b)=>a+b,0)||1;
+  const tr=team?team.training:defaultTraining(), intensity=trainingIntensity(team),tsum=['mechanical','laning','combat','macro','mental'].reduce((a,k)=>a+(+tr[k]||0),0)||1;
   for(const g in ATTR_GROUPS){
     // 훈련 포인트는 총 100점 한도: 배분하지 않은 포인트는 버려진다 (나눠 쓰는 만큼만 효과)
     const base=ageCurve(p.age-ageShift,g), train=team?(Math.min(TRAIN_POINTS,tr[g])/TRAIN_POINTS*5-1)*0.9:-0.3;
     pState(p);
-    let d=base>0?base*dev.growthRate*(0.45+room*0.6)*(0.7+0.6*prof)*(0.8+0.4*coach)*(0.65+0.55*play)*trainingGrowthMul(team)*facilityMul(team)*(0.9+0.2*p.morale/100):base*dev.declineRate*(1.3-0.6*prof);
+    let d=base>0?base*dev.growthRate*(0.45+room*0.6)*(0.7+0.6*prof)*(0.8+0.4*coach)*(0.65+0.55*play)*trainingGrowthMul(team)*facilityMul(team)*intensity.growth*(0.9+0.2*p.morale/100):base*dev.declineRate*(1.3-0.6*prof);
     d+=train*(base>0?1:0.5);
     if(d>0)d*=youthMul(p.age);
     d=Math.min(d,growthCap(p.age)); // 한 시즌 영역별 성장 상한 (어릴수록 높음)
