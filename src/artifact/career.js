@@ -41,7 +41,8 @@ function minimumViableInitialPayroll(db,t){
   const lim=initialSquadLimits(db,team),extra=Math.max(0,lim.min-chosen.length),bench=Object.values(db.players).filter(p=>!p.retired&&!p.team&&!used.has(p.id)).map(p=>asking(db,p,team.region)).sort((a,b)=>a-b).slice(0,extra);
   return Math.round((chosen.reduce((a,b)=>a+b,0)+bench.reduce((a,b)=>a+b,0))*1.12*10)/10;
 }
-function initialSalaryBudget(db,t){const team=teamRef(db,t);return Math.max(salaryBudget(db,team),team.initialPayrollBudget||0,minimumViableInitialPayroll(db,team))}
+function seedInitialPayrollBudgets(db){for(const t of activeTeams(db)){if(t.initialPayrollBudget==null)t.initialPayrollBudget=minimumViableInitialPayroll(db,t)}}
+function initialSalaryBudget(db,t){const team=teamRef(db,t);return Math.max(salaryBudget(db,team),team.initialPayrollBudget||0)}
 function initialSalaryCeiling(db,t){return initialSalaryBudget(db,t)}
 function initialSquadLimits(db,t){const team=teamRef(db,t),rules=rosterRulesForTeam(db,team),first=!team.parent;return {min:first?rules.firstTeamMin:rules.reserveTeamMin,max:first?rules.firstTeamMax:rules.reserveTeamMax}}
 function initialSquadErrors(db,t){
@@ -105,7 +106,7 @@ function autoBuildInitialWorld(db,excludedIds,seed){
   for(const t of teams)autoBuildInitialSquad(db,t,rng,INITIAL_ROSTER_TARGET);
 }
 function beginInitialRosterPhase(db,teamId,seed){
-  if(!isManagerSelectableTeam(db,teamId))throw new Error('감독 시작 팀으로 선택할 수 없는 구단입니다');setManagedTeam(db,teamId);db.manager.startMode='blank_roster';db.manager.careerStartedAt=null;
+  if(!isManagerSelectableTeam(db,teamId))throw new Error('감독 시작 팀으로 선택할 수 없는 구단입니다');setManagedTeam(db,teamId);seedInitialPayrollBudgets(db);db.manager.startMode='blank_roster';db.manager.careerStartedAt=null;
   db.world={year:db.year,seed,manage:db.worldConfig.manage||'manual',phase:'initial_roster',seasons:{},steps:[],step:-1,report:null,lastDate:db.worldDate,offers:[],marketLog:[]};return db.world;
 }
 function finalizeInitialRosters(db){
