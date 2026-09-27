@@ -16,6 +16,7 @@ const modules = [
   'finance.js',
   'features.js',
   'career.js',
+  'ui-patch.js',
   'app.js',
 ];
 
