@@ -8,6 +8,7 @@ const artifact = resolve(root, 'src', 'artifact');
 const modules = ARTIFACT_MODULES;
 
 let failed = false;
+const globalSymbols = new Map();
 for (const file of modules) {
   const path = resolve(artifact, file);
   const result = spawnSync(process.execPath, ['--check', path], { encoding: 'utf8' });
@@ -15,6 +16,17 @@ for (const file of modules) {
     failed = true;
     console.error(`Syntax check failed: ${file}`);
     console.error(result.stderr || result.stdout);
+  }
+  const source = await readFile(path, 'utf8');
+  const symbols = [
+    ...[...source.matchAll(/(?:^|\n)function\s+([A-Za-z_$][\w$]*)\s*\(/g)].map(m=>m[1]),
+    ...[...source.matchAll(/(?:^|\n)(?:const|let|class)\s+([A-Za-z_$][\w$]*)/g)].map(m=>m[1]),
+  ];
+  for (const name of symbols) {
+    if (globalSymbols.has(name)) {
+      failed = true;
+      console.error(`Duplicate global symbol ${name}: ${globalSymbols.get(name)} and ${file}`);
+    } else globalSymbols.set(name, file);
   }
 }
 
