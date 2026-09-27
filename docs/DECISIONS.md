@@ -389,3 +389,19 @@ This replaces the earlier single independent classWave draw with a persistent, e
 - item 5 is verified by smoke coverage, production build/standalone HTML generation and successful GitHub Actions CI
 
 Item 6 (Tier 1 / Tier 2 / Academy) is now active.
+
+
+## D-UX-001 — Management convenience is part of completion
+
+**Decision:** Management UX is evaluated as part of system completion, not as optional polish.
+
+- prefer staged multi-edit workflows when users naturally make several related choices before committing
+- validate the final proposed state atomically when temporary intermediate states may be illegal
+- show actionable validation reasons and expected corrections
+- preserve list/filter/scroll context across repeated scouting, market and roster actions where practical
+- provide batch actions for genuinely repetitive management work
+- optimize dense management screens for smartphone portrait rather than treating horizontal desktop tables as the primary interaction
+- destructive and financially material actions require clear consequences before commitment
+- AI and player actions must converge on the same final domain validation even when their interaction flows differ
+
+This applies retroactively to completed major items during later UI touches and must be checked again in item 22 final integration.
