@@ -1,13 +1,11 @@
 import { readFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
+import { ARTIFACT_MODULES } from './artifact-modules.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const artifact = resolve(root, 'src', 'artifact');
-const modules = [
-  'champion-source.js', 'system-source.js', 'engine.js', 'data.js', 'champs2.js', 'patch.js', 'competition.js',
-  'world.js', 'office.js', 'finance.js', 'features.js', 'career.js', 'ui-patch.js', 'app.js',
-];
+const modules = ARTIFACT_MODULES;
 
 let failed = false;
 for (const file of modules) {
