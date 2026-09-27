@@ -763,10 +763,10 @@ function runOffseason(db){
   rep.rookies=[];rep.rookieGlobal=rookieGlobalCohort(db);
   for(const R of Object.values(db.regions)){const cls=generateRookieClass(db,R,rng),ri=R.rookieIntake[R.rookieIntake.length-1];rep.rookies.push({region:R.id,count:cls.length,ids:cls.map(p=>p.id),label:ri.label,tiers:ri.tiers,profile:ri.profile})}
   const supplyErrs=talentSupplyErrors(db);if(supplyErrs.length)throw new Error('Talent supply invariant failed before market: '+supplyErrs.slice(0,8).join(' | '));
-  for(const t of activeTeams(db))ensureTeamStaff(db,t,rng);genStaffPool(db,rng);
+  for(const t of activeTeams(db))ensureTeamStaff(db,t,rng);ageStaff(db,rng);genStaffPool(db,rng);
   if(typeof ageScoutReports==='function')ageScoutReports(db);
-  for(const t of activeTeams(db))ensureTeamStaff(db,t,rng);
   genCoachPool(db,rng);genStaffPool(db,rng);
+  for(const t of activeTeams(db,null,1))aiManageStaff(db,t,rng);
   // 시설은 플레이어/AI 공통으로 구단 경영진이 자동 관리한다. 전략적 선택이 아닌 유지·증설 행정은 직접 조작하지 않는다.
   for(const t of activeTeams(db,null,1)){const f=ensureFacilities(t),weights=t.philosophy==='youth'?{youth:1,training:.9,recovery:.45,analysis:.5}:t.philosophy==='win-now'?{analysis:1,recovery:.9,training:.55,youth:.3}:t.philosophy==='cost'?{training:.45,analysis:.4,recovery:.4,youth:.35}:{training:.75,analysis:.7,recovery:.65,youth:.6};
     const choices=Object.keys(weights).filter(k=>f[k]<5).sort((a,b)=>weights[b]-weights[a]);for(const k of choices){const cost=facilityCost(db,t,k),reserve=cost*(t.philosophy==='cost'?5:3);if(t.finance.cash>reserve&&rng.chance(.12+.22*weights[k])){upgradeFacility(db,t,k);break}}}
