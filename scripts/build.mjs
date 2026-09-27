@@ -5,6 +5,7 @@ const root = resolve(import.meta.dirname, '..');
 const artifact = resolve(root, 'src', 'artifact');
 const modules = [
   'champion-source.js',
+  'system-source.js',
   'engine.js',
   'data.js',
   'champs2.js',
