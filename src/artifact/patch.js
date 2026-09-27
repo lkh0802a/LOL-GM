@@ -1,8 +1,27 @@
 // ===== LOL GM: 패치 / 메타 =====
 // 패치 = 수치 변화(델타)의 기록. 어떤 시점의 패치든 기본 데이터 + 델타로 다시 만들 수 있다
 const PATCH_CACHE=new WeakMap();
+const META_HISTORY_CACHE=new WeakMap();
+const EMPTY_META_HISTORY=[];
 function patchCache(db){let c=PATCH_CACHE.get(db);if(!c){c=new Map();PATCH_CACHE.set(db,c)}return c}
 function clearPatchCache(db){PATCH_CACHE.delete(db)}
+function metaHistoryIndex(db){
+  const rows=db.metaHistory||EMPTY_META_HISTORY;let c=META_HISTORY_CACHE.get(db);
+  if(c&&c.rows===rows&&c.length===rows.length)return c;
+  c={rows,length:rows.length,byPatch:new Map(),byComp:new Map(),byRegion:new Map(),filtered:new Map(),patchSorted:new Map()};
+  const add=(map,key,row)=>{if(key==null)return;let a=map.get(key);if(!a){a=[];map.set(key,a)}a.push(row)};
+  for(const row of rows){add(c.byPatch,row.patch,row);add(c.byComp,row.comp,row);for(const region of row.regions||[])add(c.byRegion,region,row)}
+  META_HISTORY_CACHE.set(db,c);return c;
+}
+function metaFilterKey(filter){
+  return ['region','patch','comp','season','year','split','league','scope','from','to','position'].map(k=>String(filter[k]??'')).join('|');
+}
+function metaRowsFiltered(db,filter={}){
+  const c=metaHistoryIndex(db),key=metaFilterKey(filter);if(c.filtered.has(key))return c.filtered.get(key);
+  const choices=[c.rows];if(filter.patch)choices.push(c.byPatch.get(filter.patch)||EMPTY_META_HISTORY);if(filter.comp)choices.push(c.byComp.get(filter.comp)||EMPTY_META_HISTORY);if(filter.region)choices.push(c.byRegion.get(filter.region)||EMPTY_META_HISTORY);
+  const base=choices.reduce((a,b)=>b.length<a.length?b:a),rows=base.filter(r=>(!filter.region||(r.regions||[]).includes(filter.region))&&(!filter.patch||r.patch===filter.patch)&&(!filter.comp||r.comp===filter.comp)&&(!filter.season||r.season===filter.season)&&(!filter.year||r.year===+filter.year)&&(!filter.split||String(r.split)===String(filter.split))&&(!filter.league||r.league===filter.league)&&(!filter.scope||(filter.scope==='INTL'?r.international:!r.international))&&(!filter.from||r.date>=filter.from)&&(!filter.to||r.date<=filter.to));
+  c.filtered.set(key,rows);return rows;
+}
 const RULE_KO={dragonRespawn:'드래곤 재생성(분)',baronBuff:'바론 버프 지속(분)',csGold:'미니언 골드',killGold:'처치 골드',heraldSpawn:'전령 등장(분)',baronSpawn:'바론 등장(분)'};
 function initPatches(db){
   db.patches={list:[],history:[],prev:[],nextDate:null,newIdx:0,y:0,n:0,releasesByYear:{},releaseTargets:{},reworksByYear:{},majorReworksByYear:{},systemLifeByYear:{},cadence:14};
@@ -57,7 +76,7 @@ function recordMeta(db,r){
   for(const side of r.sides){const t=side.team;if(!t)continue;t.metaKnowledge=t.metaKnowledge||{};t.metaCounter=t.metaCounter||{};for(const os of r.sides){if(os===side)continue;for(const pick of os.ps){const cid=pick.champ.id,success=r.winner===r.sides.indexOf(os),novel=((db.regionMetaStats?.[t.region]||{})[cid]?.p||0)<3,analysis=.65+(t.coach?.analysis||50)/140,learn=(success?.055:.018)*(novel?1.6:1)*(international?1.35:1)*analysis;t.metaKnowledge[cid]=clamp((t.metaKnowledge[cid]||0)+learn,0,1);if(r.winner!==r.sides.indexOf(side))t.metaCounter[cid]=clamp((t.metaCounter[cid]||0)+.02*analysis,0,1)}}}
 }
 function metaTableFiltered(db,filter={}){
-  const rows=(db.metaHistory||[]).filter(r=>(!filter.region||r.regions.includes(filter.region))&&(!filter.patch||r.patch===filter.patch)&&(!filter.comp||r.comp===filter.comp)&&(!filter.season||r.season===filter.season)&&(!filter.year||r.year===+filter.year)&&(!filter.split||String(r.split)===String(filter.split))&&(!filter.league||r.league===filter.league)&&(!filter.scope||(filter.scope==='INTL'?r.international:!r.international))&&(!filter.from||r.date>=filter.from)&&(!filter.to||r.date<=filter.to));
+  const rows=metaRowsFiltered(db,filter);
   if(!rows.length)return metaTable(db,filter.region||null);
   const st={},add=(cid,key)=>{const x=st[cid]||(st[cid]={p:0,w:0,b:0});x[key]++};
   for(const r of rows){for(const side of r.sides){if(filter.region&&side.region!==filter.region)continue;for(const pick of side.picks){const p=typeof pick==='string'?{champ:pick}:pick;if(filter.position&&p.role!==filter.position)continue;add(p.champ,'p');if(side.win)add(p.champ,'w')}}for(const cid of r.bans)add(cid,'b')}
@@ -65,7 +84,7 @@ function metaTableFiltered(db,filter={}){
 }
 
 function championMetaInsights(db,cid,filter={}){
-  const players={},teams={},matchups={},recent=[], rows=(db.metaHistory||[]).filter(r=>(!filter.region||r.regions.includes(filter.region))&&(!filter.patch||r.patch===filter.patch)&&(!filter.comp||r.comp===filter.comp)&&(!filter.season||r.season===filter.season)&&(!filter.year||r.year===+filter.year)&&(!filter.split||String(r.split)===String(filter.split))&&(!filter.league||r.league===filter.league)&&(!filter.scope||(filter.scope==='INTL'?r.international:!r.international))&&(!filter.from||r.date>=filter.from)&&(!filter.to||r.date<=filter.to));
+  const players={},teams={},matchups={},recent=[],rows=metaRowsFiltered(db,filter);
   for(const r of rows)for(const side of r.sides||[]){if(filter.region&&side.region!==filter.region)continue;const picks=(side.picks||[]).map(p=>typeof p==='string'?{champ:p}:p),me=picks.find(p=>p.champ===cid&&(!filter.position||p.role===filter.position));if(!me)continue;if(me.player){const x=players[me.player]||(players[me.player]={g:0,w:0});x.g++;if(side.win)x.w++}if(side.team){const x=teams[side.team]||(teams[side.team]={g:0,w:0});x.g++;if(side.win)x.w++}const opp=(r.sides||[]).find(x=>x!==side);if(opp&&me.role){const op=(opp.picks||[]).map(p=>typeof p==='string'?{champ:p}:p).find(p=>p.role===me.role);if(op){const x=matchups[op.champ]||(matchups[op.champ]={g:0,w:0});x.g++;if(side.win)x.w++}}recent.push({date:r.date,win:side.win})}
   const top=o=>Object.entries(o).sort((a,b)=>b[1].g-a[1].g||b[1].w-a[1].w).slice(0,5);return {players:top(players),teams:top(teams),matchups:top(matchups),recent:recent.sort((a,b)=>a.date.localeCompare(b.date)).slice(-10)};
 }
@@ -82,7 +101,7 @@ const PATCH_SIZE_PROFILE={
   large:{stat:[.04,.065],cd:[1.5,2.5],range:[40,75],cost:[15,30],mod:[.05,.08]}
 };
 function patchHistory(db){return db.patches.history&&db.patches.history.length?db.patches.history:db.patches.list||[]}
-function patchEvidenceRows(db){return (db.metaHistory||[]).filter(r=>r.patch===db.patch.id).sort((a,b)=>(a.date||'').localeCompare(b.date||''))}
+function patchEvidenceRows(db){const c=metaHistoryIndex(db),id=db.patch.id;if(c.patchSorted.has(id))return c.patchSorted.get(id);const rows=(c.byPatch.get(id)||EMPTY_META_HISTORY).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));c.patchSorted.set(id,rows);return rows}
 function patchTeamPower(db,tid){
   const t=db.teams&&db.teams[tid];if(!t)return 0;
   const vals=(t.roster||[]).map(id=>db.players&&db.players[id]).filter(Boolean).map(p=>typeof playerOvr==='function'?playerOvr(p):50);
