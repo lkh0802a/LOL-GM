@@ -15,6 +15,8 @@ Development progress is tracked by the 22 major LOL GM systems. Finish one major
 - `3. 선수 만족도 / 역할` — COMPLETE (2026-09-27)
 - `4. 신인 / 스카우팅` — ACTIVE
 
+Cross-system realism baseline (2026-09-27): before major item 4, existing adjacent systems received a realism calibration pass. The baseline keeps fictional league identities while using current LoL-esports operating principles: roughly biweekly game patches with occasional longer gaps, rare champion releases and rare systemic changes, persistent starting fives, low roster churn, mostly short player contracts, region-specific rather than universal spending rules, LCK-style top-five soft spending regulation instead of a hard team-payroll cap, slower league-governance reform, and rookie intake based on first-division ecosystem size rather than counting reserve clubs as separate talent markets.
+
 Item 1 verified first-season flow:
 
 `World Creation → Team Selection → Global FA Roster Construction → Registration Deadline → Season Start`

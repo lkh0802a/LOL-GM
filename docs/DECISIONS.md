@@ -223,3 +223,22 @@ LOL GM treats pro LoL lineups as relatively stable rather than football-style ro
 - transfer requests require very low satisfaction and a long unresolved concern streak, and can be withdrawn after conditions recover
 
 This supersedes any interpretation of item 3 that would cause frequent routine starter rotation.
+
+
+## D-022 — Cross-system realism baseline
+
+**Decision:** Before major item 4, existing simulation systems use a conservative LoL-esports realism baseline rather than FM-style high churn.
+
+- normal live-game patches target a roughly 14-day cadence with occasional longer gaps; league offices cannot dynamically speed up or slow down the developer patch calendar
+- ordinary balance patches are smaller, systemic rule changes are rare, and new champions are not tied to every major patch
+- current Tier-1 seasonal structure remains three regional splits separated by First Stand and MSI, ending at Worlds; fictional league team counts/formats may intentionally differ
+- LCK-style spending regulation is a soft system based on the five highest salaries, not a hard total-payroll registration cap
+- spending above the reference line creates a progressive burden that is redistributed only to eligible teams; the recommended floor is not enforced by automatically inflating salaries
+- other regions do not automatically inherit Korean spending regulation; fictional league offices may adopt a similar mechanism only as a rare long-term reform
+- offseason AI roster moves require materially larger upgrades; academy call-ups need a clear ability/performance reason; contracted transfers are rarer than FA moves
+- player contracts are mostly one or two years, with three-year deals concentrated among young or elite players
+- annual rookie intake scales from first-division ecosystem size, not total reserve-team count
+- league structural reforms occur only in the offseason, at most one material regional change per year, with multi-year cooldowns for repeated reform types
+- ownership changes require sustained financial or competitive pressure and are rarer than before
+
+This baseline is a calibration pass, not completion of later dedicated systems such as contracts, finance, patch engine, league office, or season structure.
