@@ -724,6 +724,8 @@ function playWorldDay(db){
   db.worldDate=d;
   patchTick(db,d,new RNG(w.seed+d,'patch'));
   dailyRecovery(db);
+  for(const t of activeTeams(db))aiManageTraining(db,t);
+  if(typeof aiRunScrims==='function')aiRunScrims(db,new RNG(w.seed+d,'scrim'));
   // 시즌 중에는 경기일마다 AI 산하 2군의 승격/육성 필요를 재평가하되, 모든 이동은 플레이어와 같은 rosterMoveCheck를 통과한다.
   for(const t of activeTeams(db,null,1))aiManageOwnedReserve(db,t);
   const played=[];
