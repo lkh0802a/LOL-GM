@@ -51,10 +51,11 @@ function championLabel(db,id){const c=db&&db.patch&&db.patch.champions?db.patch.
 function championDisplayName(c){return c?(c.nameKo||c.name):''}
 const DETAIL_BASE_KEYS=['resource','resourceg','resourceRegen','mr','mrg','asg'];
 const CHAMPION_SOURCE_PATCH='16.19.1';
+function cleanChampionSourceText(v){return String(v||'').replace(/<br\s*\/?>/gi,' ').replace(/<[^>]*>/g,'').replace(/&nbsp;/gi,' ').replace(/&amp;/gi,'&').replace(/&lt;/gi,'<').replace(/&gt;/gi,'>').replace(/&#39;/g,"'").replace(/&quot;/gi,'"').replace(/\s+/g,' ').trim()}
 function normalizeSourceSkill(slot,raw,fallback){
   if(!raw)return fallback;
   const cds=(raw.cooldown||[]).filter(Number.isFinite), cd=cds.length?cds[0]:fallback.cooldown;
-  const numeric=raw.numeric||{};return {...fallback,slot,name:raw.nameKo||raw.nameEn||fallback.name||slot,sourceName:raw.nameEn||'',cooldown:cd,baseDamage:numeric.baseDamage||fallback.baseDamage||[],ratios:numeric.ratios||fallback.ratios||{},cost:(raw.cost||[]).filter(Number.isFinite),range:(raw.range||[]).filter(Number.isFinite),sourceEffect:raw.effectBurn||[],sourceVars:raw.vars||[],cc:numeric.cc||fallback.cc||null,heal:numeric.heal||fallback.heal||null,shield:numeric.shield||fallback.shield||null,charges:numeric.charges||fallback.charges||null,recast:!!numeric.recast,source:{version:CHAMPION_SOURCE_PATCH,provider:raw.provider||'Riot Data Dragon'}};
+  const numeric=raw.numeric||{};return {...fallback,slot,name:raw.nameKo||raw.nameEn||fallback.name||slot,sourceName:raw.nameEn||'',sourceDescription:cleanChampionSourceText(raw.descriptionKo||raw.descriptionEn||''),cooldown:cd,baseDamage:numeric.baseDamage||fallback.baseDamage||[],ratios:numeric.ratios||fallback.ratios||{},cost:(raw.cost||[]).filter(Number.isFinite),range:(raw.range||[]).filter(Number.isFinite),sourceEffect:raw.effectBurn||[],sourceVars:raw.vars||[],cc:numeric.cc||fallback.cc||null,heal:numeric.heal||fallback.heal||null,shield:numeric.shield||fallback.shield||null,charges:numeric.charges||fallback.charges||null,recast:!!numeric.recast,source:{version:CHAMPION_SOURCE_PATCH,provider:raw.provider||'Riot Data Dragon'}};
 }
 function mergeChampionSource(c,raw){
   if(!raw)return c;
@@ -62,7 +63,7 @@ function mergeChampionSource(c,raw){
   for(const k of map)if(Number.isFinite(b[k]))c.base[k]=b[k];
   c.riotKey=raw.riotKey??c.riotKey;c.riotAlias=raw.alias||c.riotAlias;c.nameKo=raw.nameKo||c.nameKo;c.resourceType=raw.resourceType||c.resourceType;
   c=enrichChampion(c);
-  if(raw.passive)c.skills.P={...c.skills.P,name:raw.passive.nameKo||raw.passive.nameEn||'P',sourceName:raw.passive.nameEn||'',source:{version:CHAMPION_SOURCE_PATCH,provider:'Riot Data Dragon'}};
+  if(raw.passive)c.skills.P={...c.skills.P,name:raw.passive.nameKo||raw.passive.nameEn||'P',sourceName:raw.passive.nameEn||'',sourceDescription:cleanChampionSourceText(raw.passive.descriptionKo||raw.passive.descriptionEn||''),source:{version:CHAMPION_SOURCE_PATCH,provider:'Riot Data Dragon'}};
   for(const sp of raw.spells||[])if(c.skills[sp.slot])c.skills[sp.slot]=normalizeSourceSkill(sp.slot,sp,c.skills[sp.slot]);
   c.baseSource='riot_ddragon';c.detailSource=raw.spells?.length?'riot_ddragon':'hybrid_ddragon';c.detailVersion=CHAMPION_SOURCE_PATCH;
   return c;
@@ -70,9 +71,9 @@ function mergeChampionSource(c,raw){
 function applyChampionSource(champions,snapshot){
   if(!snapshot||snapshot.version!==CHAMPION_SOURCE_PATCH)return {matched:0,total:Object.keys(champions).length};
   const raws=Object.values(snapshot.champions||{}),norm=x=>String(x||'').replace(/[^a-z0-9]/gi,'').toLowerCase(),byAlias=new Map();for(const x of raws){byAlias.set(norm(x.alias),x);byAlias.set(norm(x.nameEn),x)}
-  let matched=0;
-  for(const c of Object.values(champions)){const alias=String(c.riotAlias||c.name||'').replace(/[^a-z0-9]/gi,'').toLowerCase();const raw=byAlias.get(alias);if(raw){mergeChampionSource(c,raw);matched++}}
-  return {matched,total:Object.keys(champions).length};
+  let matched=0,localized=0;
+  for(const c of Object.values(champions)){const alias=String(c.riotAlias||c.name||'').replace(/[^a-z0-9]/gi,'').toLowerCase();const raw=byAlias.get(alias);if(raw){mergeChampionSource(c,raw);matched++;if(raw.passive?.descriptionKo&&(raw.spells||[]).length===4&&raw.spells.every(s=>s.descriptionKo))localized++}}
+  return {matched,localized,total:Object.keys(champions).length};
 }
 function enrichChampion(c){
   const b=c.base,h=Math.abs(hashStr(c.id||c.name)),manaFree=['fighter','assassin'].includes(c.cls)&&((h%5)===0);
