@@ -43,7 +43,7 @@ function recordMeta(db,r){
   const mc=r.metaContext||{};
   db.metaHistory.push({date:r.date||db.worldDate,patch:r.patch||db.patch.id,comp:r.comp||r.competitionId||null,season:mc.season||null,year:mc.year||+(r.date||db.worldDate).slice(0,4),stage:mc.stage||null,league:mc.league||null,international:!!mc.international,regions,sides:r.sides.map((s,i)=>({team:s.team?.id||null,region:s.team?.region||null,win:r.winner===i,picks:s.ps.map(x=>({champ:x.champ.id,role:x.role||null,player:x.p?.id||null}))})),bans:r.draft.bans.flat()});
   const international=regions.length>1;
-  for(const s of r.sides){const t=s.team;if(!t)continue;t.metaKnowledge=t.metaKnowledge||{};const enemyRegions=regions.filter(x=>x!==t.region);for(const os of r.sides){if(os===s)continue;for(const pick of os.ps){const cid=pick.champ.id,success=r.winner===r.sides.indexOf(os),novel=((db.regionMetaStats?.[t.region]||{})[cid]?.p||0)<3,learn=(success?.055:.018)*(novel?1.6:1)*(international?1.35:1);t.metaKnowledge[cid]=clamp((t.metaKnowledge[cid]||0)+learn,0,1)}}}
+  for(const side of r.sides){const t=side.team;if(!t)continue;t.metaKnowledge=t.metaKnowledge||{};t.metaCounter=t.metaCounter||{};for(const os of r.sides){if(os===side)continue;for(const pick of os.ps){const cid=pick.champ.id,success=r.winner===r.sides.indexOf(os),novel=((db.regionMetaStats?.[t.region]||{})[cid]?.p||0)<3,analysis=.65+(t.coach?.analysis||50)/140,learn=(success?.055:.018)*(novel?1.6:1)*(international?1.35:1)*analysis;t.metaKnowledge[cid]=clamp((t.metaKnowledge[cid]||0)+learn,0,1);if(r.winner!==r.sides.indexOf(side))t.metaCounter[cid]=clamp((t.metaCounter[cid]||0)+.02*analysis,0,1)}}}
 }
 function metaTableFiltered(db,filter={}){
   const rows=(db.metaHistory||[]).filter(r=>(!filter.region||r.regions.includes(filter.region))&&(!filter.patch||r.patch===filter.patch)&&(!filter.comp||r.comp===filter.comp)&&(!filter.year||r.year===+filter.year)&&(!filter.scope||(filter.scope==='INTL'?r.international:!r.international))&&(!filter.from||r.date>=filter.from)&&(!filter.to||r.date<=filter.to));
@@ -78,6 +78,7 @@ function newPatch(db,date,major,rng){
   };
   nerfs.forEach(x=>change(x,-1,`밴픽률 ${Math.round(x.pres*100)}%${x.wr!==null?` · 승률 ${Math.round(x.wr*100)}%`:''}`));
   low.forEach(x=>change(x,+1,`밴픽률 ${Math.round(x.pres*100)}%로 외면받음`));
+  if(major&&rng.chance(.025)){const cand=mt.filter(x=>!x.c.releaseDate)[rng.int(0,Math.max(0,mt.filter(x=>!x.c.releaseDate).length-1))];if(cand){const key=rng.pick(['early','mid','late','burst','dps','cc','engage','peel','poke','sustain']),d=rng.chance(.5)?1:-1;notes.push({type:'kit',c:cand.c.id,key,d,dir:d,why:'희귀 대규모 챔피언 리워크'})}}
   if(rng.chance(major?.35:.03)){
     const opts=[['dragonRespawn',[5,6]],['baronBuff',[3,3.5,2.5]],['csGold',[21,22,23,24]],['killGold',[275,300,325]],['heraldSpawn',[14,15,16]],['baronSpawn',[20,22,25]]];
     const [key,vals]=rng.pick(opts), cur=P.rules[key], v=rng.pick(vals.filter(x=>x!==cur)); if(v!==undefined)notes.push({type:'rule',key,v,old:cur,why:'게임 템포 조정'});
