@@ -1,11 +1,12 @@
 // ===== LOL GM: 패치 / 메타 =====
 // 패치 = 수치 변화(델타)의 기록. 어떤 시점의 패치든 기본 데이터 + 델타로 다시 만들 수 있다
 const PATCH_CACHE=new WeakMap();
+const clonePatchState=v=>JSON.parse(JSON.stringify(v));
 function patchCache(db){let c=PATCH_CACHE.get(db);if(!c){c=new Map();PATCH_CACHE.set(db,c)}return c}
 function clearPatchCache(db){PATCH_CACHE.delete(db)}
 const RULE_KO={dragonRespawn:'드래곤 재생성(분)',baronBuff:'바론 버프 지속(분)',csGold:'미니언 골드',killGold:'처치 골드',heraldSpawn:'전령 등장(분)',baronSpawn:'바론 등장(분)'};
 function initPatches(db){
-  db.patches={initialBase:structuredClone(db.patch),list:[],history:[],prev:[],nextDate:null,newIdx:0,y:0,n:0,releasesByYear:{},releaseTargets:{},reworksByYear:{},majorReworksByYear:{},systemLifeByYear:{},cadence:14};
+  db.patches={initialBase:clonePatchState(db.patch),list:[],history:[],prev:[],nextDate:null,newIdx:0,y:0,n:0,releasesByYear:{},releaseTargets:{},reworksByYear:{},majorReworksByYear:{},systemLifeByYear:{},cadence:14};
   db.metaStats={};db.metaGames=0;db.regionMetaStats={};db.regionMetaGames={};
 }
 function applyNote(P,n){
@@ -26,7 +27,7 @@ function applyNote(P,n){
 function getPatch(db,id){
   if(db.patch&&db.patch.id===id)return db.patch;
   const cache=patchCache(db);if(cache.has(id))return cache.get(id);
-  const P=structuredClone(db.patches.initialBase);
+  const P=clonePatchState(db.patches.initialBase);
   if(P.id===id){cache.set(id,P);return P}
   const hist=db.patches.history&&db.patches.history.length?db.patches.history:db.patches.list;
   for(const p of hist){for(const n of p.notes||[])applyNote(P,n);P.id=p.id;if(P.id===id){cache.set(id,P);return P}}
