@@ -3,10 +3,63 @@ const PAY_SCALE={}; // legacy compatibility only; new worlds derive pay scale in
 const money=v=>(Math.round(v*10)/10).toFixed(1)+'억';
 function psOf(db,rid){const R=db.regions[rid];return R?(R.payScale??.5):.5}
 function psTeam(db,t){return psOf(db,t.region)*((t.division||1)===2?0.35:1)}
-function marketSalary(db,p,rid){const o=playerOvr(p),ps=psOf(db,rid||p.region),up=Math.max(0,p.pot-o)*(p.age<=21?.04:.01);return Math.max(.3*ps,Math.round(.5*Math.exp((o-60)*.13)*(1+up)*ps*10)/10)}
-function playerMarketValue(db,p){const o=playerOvr(p),rep=p.reputation??o,up=Math.max(0,p.pot-o),rid=p.team&&db.teams[p.team]?db.teams[p.team].region:p.region,ps=psOf(db,rid),ageMul=p.age<=20?1.2:p.age<=23?1.12:p.age<=26?1:p.age<=29?.82:.62,left=p.contract?Math.max(0,p.contract.until-db.year+1):0,contractMul=p.contract?1+Math.min(3,left)*.12:.72,raw=.65*Math.exp((o-60)*.115)*ps*(.78+rep/180)*(1+up*(p.age<=22?.045:.018))*ageMul*contractMul;return Math.round(Math.max(.2*ps,raw)*10)/10}
-function asking(db,p,rid){return Math.round(marketSalary(db,p,rid)*(1+p.personality.ambition/400)*(.96+(p.reputation??playerOvr(p))/1800)*10)/10}
-function signContract(db,p,t,salary,years){const old=p.team;assignPlayerToTeam(db,p,t);p.faYears=0;p.contract={salary:Math.round(salary*10)/10,until:db.year+years-1,signed:db.year};setRosterRole(db,p,recommendedRosterRole(db,p,t),'contract',true);ensureSatisfaction(p);if(old&&old!==t.id){p.satisfaction=clamp(Math.max(p.satisfaction,58),0,100);p.concernStreak=0;p.wantsOut=false;p.wantsOutReason=null}if(db.world)recordPlayerEvent(p,'contract',db.year,{team:t.id,salary:p.contract.salary,years,until:p.contract.until,renewal:old===t.id,rosterRole:p.rosterRole,date:db.worldDate})}
+function recentMarketPerformance(db,p){
+  const rows=(p.career||[]).slice(-6),g=rows.reduce((a,c)=>a+(c.g||0),0);if(!g)return {games:0,rating:6.5,intl:0,titles:0};
+  const rating=rows.reduce((a,c)=>a+(c.rating||6.5)*(c.g||0),0)/g,intl=rows.filter(c=>c.international).reduce((a,c)=>a+(c.g||0),0),titles=(p.careerEvents||[]).filter(e=>e.type==='title'&&e.year>=db.year-2).length;
+  return {games:g,rating,intl,titles};
+}
+function roleMarketDemand(db,role,rid){
+  const teams=activeTeams(db,rid,1),supply=Object.values(db.players).filter(p=>!p.retired&&p.role===role&&(!rid||p.region===rid)&&(p.age<=30||p.team)).length;
+  const need=Math.max(1,teams.length*1.35);return clamp(need/Math.max(1,supply),.72,1.38);
+}
+function marketSalary(db,p,rid){
+  const o=playerOvr(p),region=rid||p.region,ps=psOf(db,region),up=Math.max(0,p.pot-o),perf=recentMarketPerformance(db,p),demand=roleMarketDemand(db,p.role,region);
+  const repMul=.82+(p.reputation??o)/220,perfMul=clamp(1+(perf.rating-6.5)*.08+Math.min(.1,perf.intl*.004)+Math.min(.08,perf.titles*.035),.82,1.28),ageMul=p.age<=21?1.02:p.age>=29?.88:1;
+  return Math.max(.3*ps,Math.round(.46*Math.exp((o-60)*.13)*(1+up*(p.age<=21?.035:.008))*ps*repMul*perfMul*demand*ageMul*10)/10);
+}
+function playerMarketValue(db,p){
+  const o=playerOvr(p),rep=p.reputation??o,up=Math.max(0,p.pot-o),rid=p.team&&db.teams[p.team]?db.teams[p.team].region:p.region,ps=psOf(db,rid),perf=recentMarketPerformance(db,p),demand=roleMarketDemand(db,p.role,rid);
+  const ageMul=p.age<=20?1.25:p.age<=23?1.16:p.age<=26?1:p.age<=29?.82:.58,left=p.contract?Math.max(0,p.contract.until-db.year+1):0,contractMul=p.contract?1+Math.min(3,left)*.14:.68;
+  const perfMul=clamp(1+(perf.rating-6.5)*.09+Math.min(.13,perf.intl*.004)+Math.min(.12,perf.titles*.045)+(p.form||0)*.008,.75,1.35);
+  const raw=.62*Math.exp((o-60)*.115)*ps*(.76+rep/175)*(1+up*(p.age<=22?.047:.018))*ageMul*contractMul*perfMul*demand;
+  return Math.round(Math.max(.2*ps,raw)*10)/10;
+}
+function asking(db,p,rid){return Math.round(marketSalary(db,p,rid)*(1+p.personality.ambition/420)*(.95+(p.reputation??playerOvr(p))/1700)*10)/10}
+function defaultPromisedRole(db,p,t){const cur=starterFor(db,t,p.role);if(!cur)return 'starter';const gap=playerOvr(p)-playerOvr(cur);return gap>=3?'starter':gap>=-2?'competition':p.age<=21?'prospect':'backup'}
+function normalizeContractTerms(db,p,t,salary,years,terms={}){
+  salary=Math.max(.1,Math.round(+salary*10)/10);years=clamp(Math.round(+years||1),1,4);
+  const sign=Math.max(0,Math.round((terms.signingBonus??salary*(years>=3?.18:years===2?.1:.04))*10)/10);
+  const bonuses={performance:Math.max(0,Math.round((terms.bonuses?.performance??salary*.06)*10)/10),title:Math.max(0,Math.round((terms.bonuses?.title??salary*.1)*10)/10),international:Math.max(0,Math.round((terms.bonuses?.international??salary*.06)*10)/10)};
+  const optionType=['team','player'].includes(terms.option?.type)?terms.option.type:'none',until=db.year+years-1;
+  const option=optionType==='none'?null:{type:optionType,year:until+1,salary:Math.round((terms.option?.salary??salary)*10)/10};
+  const buyout=terms.buyout==null||+terms.buyout<=0?null:Math.round(+terms.buyout*10)/10;
+  return {salary,years,signingBonus:sign,bonuses,buyout,option,promisedRole:SQUAD_ROLES.includes(terms.promisedRole)?terms.promisedRole:defaultPromisedRole(db,p,t)};
+}
+function contractExpectedValue(c){if(!c)return 0;const b=c.bonuses||{};return c.salary+(c.signingBonus||0)/Math.max(1,c.years||1)+(b.performance||0)*.35+(b.title||0)*.14+(b.international||0)*.2}
+function teamInternationalAppeal(db,t){const R=db.regions[t.region],power=db.global?.power?.[R.id]||1;return clamp((R.slots||1)/4*.55+(teamStrength(db,t.id)-R.strength)/18*.3+(t.fans||30)/180+power*.08,0,1.25)}
+function offerUtility(db,p,t,offer,opt={}){
+  ensureSatisfaction(p);const ask=Math.max(.1,asking(db,p,t.region)),moneyScore=contractExpectedValue(offer)/ask,role=offer.promisedRole||defaultPromisedRole(db,p,t),roleScore={core:.72,starter:.62,competition:.24,backup:.02,prospect:p.age<=21?.38:-.08}[role]??0;
+  const strength=(teamStrength(db,t.id)-db.regions[t.region].strength)/12,fac=((t.facility||2)-2)*.08,coach=((t.coach?.development||55)-55)/160,intl=teamInternationalAppeal(db,t),stability=Math.min(3,offer.years||1)*.055;
+  const home=db.worldConfig.universalLanguage?(p.region===t.region?.04:0):(p.region===t.region?.22:-.08),amb=p.personality.ambition/100,career=playerCareerGoal(p);
+  let careerFit=0;if(career==='development')careerFit=fac+coach+(role==='prospect'||role==='competition'?.16:0);else if(career==='starter')careerFit=['core','starter'].includes(role)?.22:-.12;else if(career==='international')careerFit=intl*.18;else if(career==='titles')careerFit=Math.max(0,strength)*.16+intl*.1;else careerFit=stability;
+  const option=offer.option?.type==='player'?.07:offer.option?.type==='team'?-.025:0,buyout=offer.buyout?clamp(offer.buyout/Math.max(.2,playerMarketValue(db,p)),.4,4)*-.018:0;
+  const currentPenalty=opt.renewal?(p.satisfaction-50)/140-(p.wantsOut?.28:0):0;
+  return moneyScore*1.05+roleScore+strength*amb*.18+intl*amb*.22+(t.fans||30)/250+fac+coach+careerFit+stability+home+option+buyout+currentPenalty;
+}
+function offerAcceptanceThreshold(db,p){const rep=(p.reputation||playerOvr(p)),amb=p.personality.ambition/100;return 1.04+rep/520+amb*.12+(p.age<=20?.04:0)}
+function contractBonusCost(db,t,year){
+  let sum=0;for(const id of t.roster){const p=db.players[id],c=p&&p.contract;if(!c||!c.bonuses)continue;const rows=(p.career||[]).filter(x=>x.year===year),g=rows.reduce((a,x)=>a+(x.g||0),0),rating=g?rows.reduce((a,x)=>a+(x.rating||6.5)*(x.g||0),0)/g:0;
+    if(g>=10&&rating>=7.2)sum+=c.bonuses.performance||0;if(rows.some(x=>x.international&&x.g>=3))sum+=c.bonuses.international||0;if((p.careerEvents||[]).some(e=>e.year===year&&e.type==='title'))sum+=c.bonuses.title||0}
+  return Math.round(sum*10)/10;
+}
+function signContract(db,p,t,salary,years,terms={}){
+  const old=p.team,offer=normalizeContractTerms(db,p,t,salary,years,terms);assignPlayerToTeam(db,p,t);p.faYears=0;
+  p.contract={salary:offer.salary,until:db.year+offer.years-1,signed:db.year,years:offer.years,signingBonus:offer.signingBonus,bonuses:offer.bonuses,buyout:offer.buyout,option:offer.option,promisedRole:offer.promisedRole};
+  if(offer.signingBonus&&t.finance)t.finance.cash=Math.round((t.finance.cash-offer.signingBonus)*10)/10;
+  setRosterRole(db,p,offer.promisedRole,'contract',true);ensureSatisfaction(p);if(old&&old!==t.id){p.satisfaction=clamp(Math.max(p.satisfaction,58),0,100);p.concernStreak=0;p.wantsOut=false;p.wantsOutReason=null}
+  if(db.world)recordPlayerEvent(p,'contract',db.year,{team:t.id,salary:p.contract.salary,years:offer.years,until:p.contract.until,renewal:old===t.id,rosterRole:p.rosterRole,signingBonus:offer.signingBonus,buyout:offer.buyout,option:offer.option,date:db.worldDate});
+  return p.contract;
+}
 function payroll(db,t){return t.roster.reduce((a,id)=>a+((db.players[id]&&db.players[id].contract)?db.players[id].contract.salary:0),0)}
 function topFivePayroll(db,t){return t.roster.map(id=>db.players[id]).filter(p=>p&&p.contract).map(p=>p.contract.salary).sort((a,b)=>b-a).slice(0,5).reduce((a,b)=>a+b,0)}
 function regulatedPayroll(db,t){const R=db.regions[t.region];return R&&R.spendingRule==='sfr_top5'?topFivePayroll(db,t):payroll(db,t)}
@@ -58,7 +111,7 @@ function closeFinances(db,w,rng,ev){
     const sp=t.sponsor&&t.sponsor.until>=w.year?t.sponsor:null;
     const rev={league:hype*0.25*ps,sponsor:sp?sp.base+sp.perWin*wins:(t.fans||30)*0.35*ps,merch:(t.fans||30)*0.1*ps,prize:prize[t.id]||0,owner:ownerSupport(db,t)};
     const pay=payroll(db,t),regulated=regulatedPayroll(db,t);
-    const exp={salary:pay,staff:staffCost(db,t),ops:opsCost(db,t),facility:facilityUpkeep(db,t),buyout:t.finance.buyout||0,tax:spendingTax(db,t)};
+    const exp={salary:pay,bonuses:contractBonusCost(db,t,w.year),staff:staffCost(db,t),ops:opsCost(db,t),facility:facilityUpkeep(db,t),buyout:t.finance.buyout||0,tax:spendingTax(db,t)};
     if(exp.tax>0)taxPool[R.id]=(taxPool[R.id]||0)+exp.tax*(R.sfrTeamShare??1)
     return {t,R,rev,exp};
   });
@@ -87,22 +140,36 @@ function eligibleFillFAs(db,t,role=null){
     .sort((a,b)=>(pFillScore(db,b,t)-pFillScore(db,a,t)));
 }
 function pFillScore(db,p,t){const domestic=p.region===t.region?2:0,age=p.age<=21?1:0,cost=Math.min(4,asking(db,p,t.region)/Math.max(.2,psOf(db,t.region)));return playerValue(db,p,t)+domestic+age-cost*.15}
+function optionDecision(db,p,t){
+  const o=p.contract&&p.contract.option;if(!o||o.year!==db.year)return false;
+  const next={...p.contract,salary:o.salary,years:1,signingBonus:0,bonuses:p.contract.bonuses||{},option:null,promisedRole:p.contract.promisedRole||p.rosterRole};
+  if(o.type==='team')return contractExpectedValue(next)<=asking(db,p,t.region)*1.08||starterFor(db,t,p.role)===p;
+  if(o.type==='player')return offerUtility(db,p,t,next,{renewal:true})>=offerAcceptanceThreshold(db,p)-.06;
+  return false;
+}
+function exerciseContractOption(db,p,t,source='engine'){
+  const o=p.contract&&p.contract.option;if(!o||o.year!==db.year)return false;p.contract.until=db.year;p.contract.salary=o.salary;p.contract.years=(p.contract.years||1)+1;p.contract.option=null;
+  recordPlayerEvent(p,'contract_option',db.year,{team:t.id,type:o.type,salary:o.salary,source,date:db.worldDate});return true;
+}
 function contractMarket(db,rng,rep,ev){
   const year=db.year, size=5+(db.worldConfig.subs||0), w=db.world, mine=w&&w.manage==='manual'?managedTeamId(db):null;
   const imports=t=>t.roster.filter(id=>db.players[id]&&db.players[id].region!==t.region).length;
   const release=(t,p,why)=>{ if(p.contract&&p.contract.until>=year){t.finance.buyout=(t.finance.buyout||0)+p.contract.salary*(p.contract.until-year+1)*0.5}
     removePlayerFromTeam(db,p);p.contract=null;p.faYears=0;};
-  // 1) 만료 계약 처리
+  // 1) 옵션 및 만료 계약 처리
+  for(const t of activeTeams(db))for(const id of t.roster.slice()){const p=db.players[id];if(!p||!p.contract||p.contract.until>=year)continue;const opt=p.contract.option;
+    if(opt&&opt.year===year&&t.id!==mine&&optionDecision(db,p,t))exerciseContractOption(db,p,t,'ai');
+  }
   for(const t of activeTeams(db)) for(const id of t.roster.slice()){
     const p=db.players[id]; if(!p||p.retired)continue;
     if(!p.contract){signContract(db,p,t,marketSalary(db,p,t.region),1);continue}
     if(p.contract.until>=year)continue;
     if(t.id===mine){release(t,p);rep.expired.push({pid:p.id,team:t.id,why:'재계약하지 않음'});continue}
     const isStarter=starterFor(db,t,p.role)===p,want=isStarter||p.rosterRole==='competition'||(p.age<=21&&p.pot-playerOvr(p)>=6)||(p.rosterRole==='backup'&&t.roster.length<7&&p.satisfaction>=50);
-    const ask=asking(db,p,t.region), room=salaryBudget(db,t)-payroll(db,t)+p.contract.salary;
-    ensureSatisfaction(p);const stay=rng.chance(clamp(0.42+0.3*(1-p.personality.ambition/100)+(teamStrength(db,t.id)>=db.regions[t.region].strength?0.1:-0.1)+(p.satisfaction-50)/125-(p.wantsOut?.22:0),.08,.92));
-    if(want&&ask<=room&&stay){const yrs=contractYearsForPlayer(db,p,rng);signContract(db,p,t,ask,yrs);rep.resign.push({pid:p.id,team:t.id,salary:ask,years:yrs})}
-    else {release(t,p);rep.expired.push({pid:p.id,team:t.id,why:!want?'재계약 제안 없음':ask>room?'연봉 이견':'FA 시장 도전'})}
+    const ask=asking(db,p,t.region),room=salaryBudget(db,t)-payroll(db,t)+p.contract.salary,yrs=contractYearsForPlayer(db,p,rng),proposal=normalizeContractTerms(db,p,t,ask*rng.range(.96,1.08),yrs,{promisedRole:recommendedRosterRole(db,p,t),option:rng.chance(.18)?{type:rng.chance(.55)?'team':'player'}:null});
+    ensureSatisfaction(p);const stay=offerUtility(db,p,t,proposal,{renewal:true})+rng.normal(0,.06)>=offerAcceptanceThreshold(db,p);
+    if(want&&proposal.salary<=room&&stay){signContract(db,p,t,proposal.salary,yrs,proposal);rep.resign.push({pid:p.id,team:t.id,salary:proposal.salary,years:yrs,terms:proposal})}
+    else {release(t,p);rep.expired.push({pid:p.id,team:t.id,why:!want?'재계약 제안 없음':proposal.salary>room?'연봉 이견':'FA 시장 도전'})}
   }
   // 2) FA 시장 (3라운드: 제안 → 선수 선택)
   // 2군 콜업: 프랜차이즈 구단은 자기 2군에서 먼저 올린다
