@@ -51,7 +51,7 @@ The current three-split migration logic is preserved:
 
 ## Intentional migration changes
 
-- User-facing product branding changed from `롤FM` to `LOL GM`.
+- User-facing product branding is standardized as `LOL GM`.
 - Added reproducible project build/check/dev scripts.
 - Moved canonical Artifact modules under `src/artifact/` to make their migration status explicit.
 - No framework rewrite was performed.
