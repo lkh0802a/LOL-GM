@@ -672,6 +672,7 @@ function runOffseason(db){
 function closeMarket(db){
   const w=db.world, rng=new RNG(w.seed+'/'+w.year,'market'), rep=w.report;
   const ev=t=>{rep.events.push(t);news(db,t)};
+  if(typeof closeOpenNegotiationsForDeadline==='function')closeOpenNegotiationsForDeadline(db);
   contractMarket(db,rng,rep,ev);
   ensureEven(db,rng,ev);
   for(const t of activeTeams(db)){aiReviewDepthChart(db,t);rebalanceAiRosterRoles(db,t)}
