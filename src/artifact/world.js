@@ -867,11 +867,12 @@ function packDB(db){
     players[id]=q;
   }
   const scout=Object.fromEntries(Object.entries(db.scout||{}).filter(([id,r])=>db.players[id]&&!db.players[id].retired&&(typeof r==='number'||(r.knowledge||0)>baseScoutKnowledge(db,db.players[id])||(r.observations||0)>0)));
-  const teams=Object.fromEntries(Object.entries(db.teams).map(([id,t])=>{const q={...t};delete q._pre;return [id,q]}));
+  const teams=Object.fromEntries(Object.entries(db.teams).map(([id,t])=>{const q={...t};delete q._pre;if(q.facilities)delete q.facility;return [id,q]}));
   return JSON.stringify({...db,teams,players,scout,packed:1});
 }
 function unpackDB(str){
   const db=JSON.parse(str); if(!db.packed)return db;
+  for(const t of Object.values(db.teams||{}))ensureFacilities(t);
   for(const p of Object.values(db.players)){
     if(Array.isArray(p.attrs))p.attrs=Object.fromEntries(ALL_ATTRS.map((a,i)=>[a,p.attrs[i]]));
     if(Array.isArray(p.tend))p.tend=Object.fromEntries(TENDENCIES.map((t,i)=>[t,p.tend[i]]));
