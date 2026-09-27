@@ -31,11 +31,15 @@ for (const file of modules) {
 }
 
 const maintainabilityBudgets = {
-  'app.js': 90000,
+  'app.js': 70000,
   'engine.js': 38000,
-  'draft.js': 22000,
+  'draft.js': 26000,
+  'patch.js': 40000,
+  'competition.js': 30000,
+  'world.js': 85000,
   'ui-patch.js': 30000,
   'ui-market.js': 35000,
+  'ui-season.js': 30000,
 };
 for (const [file, maxBytes] of Object.entries(maintainabilityBudgets)) {
   const source = await readFile(resolve(artifact, file), 'utf8');
