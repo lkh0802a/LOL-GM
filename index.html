@@ -354,9 +354,9 @@ function combatStats(st,ps){
 function combatStats0(st,ps){
   const c=ps.champ,b=c.base,L=ps.lvl,g=Math.max(0,ps.goldEarned-500),cv=ITEM_CONV[c.cls],k=c.kit;
   const ph=st.t<14?k.early:st.t<26?k.mid:k.late, pm=0.8+0.04*ph;
-  const hp=b.hp+b.hpg*(L-1)+g*cv.hp, arm=b.arm+b.armg*(L-1)+g*cv.arm, ad=b.ad+b.adg*(L-1)+g*cv.ad;
+  const hp=b.hp+b.hpg*(L-1)+g*cv.hp, arm=b.arm+b.armg*(L-1)+g*cv.arm, mr=(b.mr||30)+(b.mrg||1.3)*(L-1)+g*cv.arm*.65, ad=b.ad+b.adg*(L-1)+g*cv.ad;
   let off=ad*(0.55+0.045*(k.burst+k.dps))*pm*(b.range>400?1.1:1)*(0.9+b.as*0.15);
-  let ehp=hp*(1+arm/100)*(0.85+0.03*k.sustain)*Math.sqrt(pm);
+  const defense=arm*.55+mr*.45;let ehp=hp*(1+defense/100)*(0.85+0.03*k.sustain)*Math.sqrt(pm);
   const s=st.sides[ps.side];
   let buff=1; if(s.soul)buff*=1.08; if(s.baronUntil>st.t)buff*=1.15; if(s.elderUntil>st.t)buff*=1.25;
   const mf=0.82+0.26*ps.prof.mastery/100+0.04*(ps.prof.confidence-50)/50;
@@ -854,6 +854,27 @@ function championId(name){
 }
 function championByName(db,name){return Object.values(db.patch.champions).find(c=>c.name===name)||null}
 function championLabel(db,id){const c=db&&db.patch&&db.patch.champions?db.patch.champions[id]:null;return c?c.name:String(id||'')}
+const DETAIL_BASE_KEYS=['resource','resourceg','resourceRegen','mr','mrg','asg'];
+function enrichChampion(c){
+  const b=c.base,h=Math.abs(hashStr(c.id||c.name)),manaFree=['fighter','assassin'].includes(c.cls)&&((h%5)===0);
+  if(b.mr===undefined)b.mr=c.cls==='marksman'?30:c.cls==='mage'||c.cls==='enchanter'?30:32;
+  if(b.mrg===undefined)b.mrg=c.cls==='marksman'?1.3:2.05;
+  if(b.asg===undefined)b.asg=Math.round((1.5+(h%31)/10)*100)/100;
+  if(b.resource===undefined)b.resource=manaFree?0:Math.round((c.cls==='mage'||c.cls==='enchanter'?430:330)+(h%121));
+  if(b.resourceg===undefined)b.resourceg=b.resource?Math.round((25+(h%31))*10)/10:0;
+  if(b.resourceRegen===undefined)b.resourceRegen=b.resource?Math.round((6+(h%45)/10)*10)/10:0;
+  if(!c.skills){
+    const k=c.kit,physical=c.dmg==='AD',damageType=physical?'physical':'magic';
+    c.skills={
+      P:{slot:'P',kind:'passive',effects:['identity'],power:Math.round((k.sustain+k.mobility+k.dps)/3*10)/10},
+      Q:{slot:'Q',kind:'basic',damageType,effects:[k.poke>=7?'poke':'damage'],power:k.burst,cooldown:Math.max(3,13-k.early)},
+      W:{slot:'W',kind:'basic',damageType,effects:[k.sustain>=6?'sustain':k.peel>=6?'shield':'utility'],power:Math.max(k.sustain,k.peel,k.disengage),cooldown:Math.max(5,16-k.mid)},
+      E:{slot:'E',kind:'basic',damageType,effects:[k.cc>=6?'cc':k.mobility>=6?'mobility':'damage'],power:Math.max(k.cc,k.mobility,k.engage),cooldown:Math.max(5,17-k.mid)},
+      R:{slot:'R',kind:'ultimate',damageType,effects:[k.engage>=7?'engage':k.burst>=7?'burst':'teamfight'],power:Math.max(k.burst,k.cc,k.engage,k.dps),cooldown:Math.max(45,130-k.late*6)}
+    };
+  }
+  return c;
+}
 
 // base: [hp,hp성장,공격력,공격력성장,방어,방어성장,공속,사거리,이속]
 // kit : [burst,dps,cc,engage,disengage,peel,poke,waveclear,mobility,sustain,early,mid,late,difficulty]
@@ -938,16 +959,16 @@ function buildPatch(){
     const b={}, k={}, id=championId(name);
     BASE_KEYS.forEach((key,i)=>b[key]=base[i]);
     KIT_KEYS.forEach((key,i)=>k[key]=kit[i]);
-    champions[id] = {id,name, roles, cls, dmg, base:b, kit:k};
+    champions[id] = enrichChampion({id,name, roles, cls, dmg, base:b, kit:k});
   }
   for (const [name,roles,cls,dmg,kit,range] of CHAMP_EXTRA){
     const h=hashStr(name), base=CLASS_BASE[cls].slice(), b={}, k={};
     BASE_KEYS.forEach((key,i)=>{let v=base[i]; if(key!=='range'&&key!=='as') v=Math.round(v*(0.97+(((h>>(i*3))&7)/7)*0.06)*100)/100; b[key]=v});
     if(range) b.range=range;
     KIT_KEYS.forEach((key,i)=>k[key]=kit[i]);
-    const id=championId(name);champions[id]={id,name,roles,cls,dmg,base:b,kit:k};
+    const id=championId(name);champions[id]=enrichChampion({id,name,roles,cls,dmg,base:b,kit:k});
   }
-  for (const [name,roles,arch,dmg] of CHAMP_ARCH){const c=archChampion(name,roles,arch,dmg);champions[c.id]=c}
+  for (const [name,roles,arch,dmg] of CHAMP_ARCH){const c=enrichChampion(archChampion(name,roles,arch,dmg));champions[c.id]=c}
   return {
     id:'26.19',
     rules:{ csGold:23, passiveGold:122, killGold:300, assistGold:150, dragonSpawn:5, dragonRespawn:5, heraldSpawn:14, baronSpawn:20, baronRespawn:6, baronBuff:3, elderBuff:2.5, inhibRespawn:5 },
@@ -1040,7 +1061,7 @@ function archChampion(name,roles,arch,dmg,extra,id=championId(name)){
   BASE_KEYS.forEach((key,i)=>{let v=base[i];if(key!=='range'&&key!=='as')v=Math.round(v*(0.96+(((h>>(i*3))&7)/7)*0.08)*100)/100;b[key]=v});
   b.range=range;
   KIT_KEYS.forEach((key,i)=>k[key]=clamp(kit0[i]+(((h>>(i*2+5))&3)-1)+((extra&&extra[key])||0),1,10));
-  return {id,name,roles,cls,dmg,base:b,kit:k,arch};
+  return enrichChampion({id,name,roles,cls,dmg,base:b,kit:k,arch});
 }
 
 /* ==== FILE: patch.js ==== */
@@ -3471,7 +3492,7 @@ function viewMatch(){
   if(!DB.teams[SEL.red]||DB.teams[SEL.red].active===false||SEL.red===own)SEL.red=(act.find(t=>t.id!==own)||act[0]).id;
   const oppOpts=Object.values(DB.regions).flatMap(r=>(r.div2?[1,2]:[1]).map(d=>`<optgroup label="${esc(d===2?divName(r):r.leagueName)}">${activeTeams(DB,r.id,d).filter(t=>t.id!==own).map(t=>`<option value="${t.id}"${t.id===SEL.red?' selected':''}>${esc(t.name)} · 연습가치 ${Math.round(scrimValue(DB,own,t.id)*100)}%</option>`).join('')}</optgroup>`)).join('');
   const ready=scrimReadiness(DB,DB.teams[own]),rec=trainingRecommendation(DB,DB.teams[own]);
-  return `<section class="teamhead"><h2>스크림</h2><p>내 팀과 실제 구단을 골라 비공식 연습 경기를 진행합니다. 결과는 공식 전적·리그 순위에 반영되지 않습니다.</p><p class="hint">현재 평균 피로 ${Math.round(ready.avgFatigue||0)} · 컨디션 ${Math.round(ready.avgCondition||0)} · 오늘 ${ready.games||0}게임 · ${ready.reason}</p><p class="hint">${rec.next?`다음 공식전까지 ${rec.days}일 · ${esc(DB.teams[rec.next.opponent]?.name||'상대 미정')}`:'예정된 공식전 없음'} · 스크림 추천 ${rec.scrim?'진행':'휴식'}</p></section>
+  return `${detail}<section class="teamhead"><h2>스크림</h2><p>내 팀과 실제 구단을 골라 비공식 연습 경기를 진행합니다. 결과는 공식 전적·리그 순위에 반영되지 않습니다.</p><p class="hint">현재 평균 피로 ${Math.round(ready.avgFatigue||0)} · 컨디션 ${Math.round(ready.avgCondition||0)} · 오늘 ${ready.games||0}게임 · ${ready.reason}</p><p class="hint">${rec.next?`다음 공식전까지 ${rec.days}일 · ${esc(DB.teams[rec.next.opponent]?.name||'상대 미정')}`:'예정된 공식전 없음'} · 스크림 추천 ${rec.scrim?'진행':'휴식'}</p></section>
   <section class="controls">
     <label>내 팀 <b>${esc(DB.teams[own].name)}</b></label>
     <label>상대팀<select id="red">${oppOpts}</select></label>
@@ -3646,7 +3667,7 @@ function bindSquad(){
   document.querySelectorAll('tr[data-p]').forEach(tr=>{const open=()=>{OPEN_P=OPEN_P===tr.dataset.p?null:tr.dataset.p;nav();const d=$('#pdetail');if(OPEN_P&&d)d.scrollIntoView({behavior:'smooth',block:'start'})};tr.onclick=open;tr.onkeydown=e=>{if(e.key==='Enter')open()}});
 }
 // ---------- 패치·메타 ----------
-let PSET={role:'ALL',q:'',region:'GLOBAL'};
+let PSET={role:'ALL',q:'',region:'GLOBAL',champ:null};
 function noteText(n){
   if(n.type==='new')return `<b>신규 챔피언 ${esc(n.def.name)}</b> <small>${n.def.roles.map(r=>ROLE_KO[r]).join('/')} · ${esc(CLASS_KO[ARCH[n.def.arch][0]])}</small>`;
   if(n.type==='rule')return `<b>${esc(RULE_KO[n.key]||n.key)}</b> ${n.old} → ${n.v}`;
@@ -3659,15 +3680,17 @@ function viewPatch(){
   const rid=PSET.region==='GLOBAL'?null:PSET.region, mt=metaTable(DB,rid), G=rid?((DB.regionMetaGames||{})[rid]||0):(DB.metaGames||0);
   const rows=mt.filter(x=>(PSET.role==='ALL'||x.c.roles.includes(PSET.role))&&(!PSET.q||x.c.name.toLowerCase().includes(PSET.q.toLowerCase())));
   const tier=x=>x.pres>=0.35?'S':x.pres>=0.18?'A':x.pres>=0.08?'B':x.pres>0?'C':'-';
+  const dc=PSET.champ&&DB.patch.champions[PSET.champ], ds=dc&&dc.skills;
+  const detail=dc?`<section id="champdetail"><div class="cfghead"><h3>${esc(dc.name)}</h3><button class="ghost sm2" id="pclose">닫기</button></div><p>${dc.roles.map(r=>ROLE_KO[r]).join('/')} · ${esc(CLASS_KO[dc.cls])} · ${esc(dc.dmg)} · 프로 ${championProEligible(DB,dc)?'사용 가능':`사용 제한 (~${esc(dc.proEligibleDate||'')})`}</p><div class="fin"><div><span>체력</span><b>${Math.round(dc.base.hp)}</b><small>+${dc.base.hpg}/레벨</small></div><div><span>방어력 / 마법 저항력</span><b>${Math.round(dc.base.arm)} / ${Math.round(dc.base.mr)}</b><small>+${dc.base.armg} / +${dc.base.mrg}</small></div><div><span>공격력</span><b>${Math.round(dc.base.ad)}</b><small>+${dc.base.adg}/레벨</small></div><div><span>공속 / 성장</span><b>${dc.base.as}</b><small>+${dc.base.asg}%</small></div><div><span>사거리 / 이동속도</span><b>${dc.base.range} / ${dc.base.ms}</b></div><div><span>자원</span><b>${dc.base.resource||'없음'}</b><small>${dc.base.resource?`성장 +${dc.base.resourceg} · 회복 ${dc.base.resourceRegen}`:''}</small></div></div><h4>스킬 시뮬레이션 데이터</h4><div class="cards">${Object.values(ds||{}).map(sk=>`<article class="card"><b>${sk.slot}</b><p>${sk.kind==='ultimate'?'궁극기':sk.kind==='passive'?'패시브':'기본 스킬'} · ${sk.damageType?sk.damageType+' · ':''}${sk.effects.map(esc).join(', ')}</p><small>효과 강도 ${sk.power}${sk.cooldown?` · 재사용 ${sk.cooldown}초`:''}</small></article>`).join('')}</div><p class="hint">현재 스킬 수치는 경기 시뮬레이션용 구조입니다. 공식 스킬명·설명·계수 데이터는 별도 정합화 대상입니다.</p></section>`:'';
   return `<section class="teamhead"><h2>패치 ${esc(DB.patch.id)}</h2><p>2주마다 패치가 나오고, 시즌 개막과 서머 개막에는 대형 패치와 신규 챔피언이 나옵니다. 밸런스 팀은 대회에서 너무 많이 쓰이고 이기는 챔피언을 하향하고, 외면받는 챔피언을 상향합니다. 팀들은 패치 직후 메타를 잘 모르다가 경기 데이터가 쌓일수록 정확해지고, 분석력이 높은 코치진일수록 빨리 따라잡습니다.</p><p class="hint">챔피언 ${Object.keys(DB.patch.champions).length}명 · 이번 패치 대회 경기 ${G}판${pt.nextDate?` · 다음 패치 ${esc(pt.nextDate)}`:''}</p></section>
   <section><h3>현재 메타</h3><div class="controls"><label>지역<select id="pregion"><option value="GLOBAL">글로벌</option>${Object.values(DB.regions).map(r=>`<option value="${r.id}"${PSET.region===r.id?' selected':''}>${esc(r.name||r.leagueName||r.id)}</option>`).join('')}</select></label><label>포지션<select id="prole"><option value="ALL">전체</option>${ROLES.map(r=>`<option value="${r}"${PSET.role===r?' selected':''}>${ROLE_KO[r]}</option>`).join('')}</select></label><label>검색<input id="pq" value="${esc(PSET.q)}" placeholder="챔피언 이름"></label></div>
   <div class="scroll"><table class="champs"><thead><tr><th>티어</th><th>챔피언</th><th>포지션</th><th>역할군</th><th>밴픽률</th><th>픽</th><th>밴</th><th>승률</th><th>프로 사용</th><th>초반</th><th>후반</th><th>CC</th><th>폭딜</th></tr></thead><tbody>
-  ${rows.slice(0,60).map(x=>`<tr><td><b class="tier t${tier(x)}">${tier(x)}</b></td><td><b>${esc(x.c.name)}</b></td><td>${x.c.roles.map(r=>ROLE_KO[r]).join('/')}</td><td>${CLASS_KO[x.c.cls]}</td><td class="num">${Math.round(x.pres*100)}%</td><td class="num">${x.p}</td><td class="num">${x.b}</td><td class="num">${x.wr===null?'—':Math.round(x.wr*100)+'%'}</td><td>${x.eligible?'<span class="hi">가능</span>':`<span class="lo">제한</span><small>${esc(x.c.proEligibleDate||'')}</small>`}</td><td><span class="pip" style="--v:${x.c.kit.early}">${x.c.kit.early}</span></td><td><span class="pip" style="--v:${x.c.kit.late}">${x.c.kit.late}</span></td><td><span class="pip" style="--v:${x.c.kit.cc}">${x.c.kit.cc}</span></td><td><span class="pip" style="--v:${x.c.kit.burst}">${x.c.kit.burst}</span></td></tr>`).join('')}
+  ${rows.slice(0,60).map(x=>`<tr><td><b class="tier t${tier(x)}">${tier(x)}</b></td><td><button class="linklike" data-champ="${x.c.id}"><b>${esc(x.c.name)}</b></button></td><td>${x.c.roles.map(r=>ROLE_KO[r]).join('/')}</td><td>${CLASS_KO[x.c.cls]}</td><td class="num">${Math.round(x.pres*100)}%</td><td class="num">${x.p}</td><td class="num">${x.b}</td><td class="num">${x.wr===null?'—':Math.round(x.wr*100)+'%'}</td><td>${x.eligible?'<span class="hi">가능</span>':`<span class="lo">제한</span><small>${esc(x.c.proEligibleDate||'')}</small>`}</td><td><span class="pip" style="--v:${x.c.kit.early}">${x.c.kit.early}</span></td><td><span class="pip" style="--v:${x.c.kit.late}">${x.c.kit.late}</span></td><td><span class="pip" style="--v:${x.c.kit.cc}">${x.c.kit.cc}</span></td><td><span class="pip" style="--v:${x.c.kit.burst}">${x.c.kit.burst}</span></td></tr>`).join('')}
   </tbody></table></div>${rows.length>60?`<p class="hint">상위 60명만 표시합니다. 포지션이나 검색으로 좁혀 보세요.</p>`:''}</section>
   <section><h3>패치 노트</h3>${list.length?list.map((p,i)=>`<details class="pnote"${i===0?' open':''}><summary><b>${esc(p.id)}</b> <small>${esc(p.date)}${p.major?' · 대형 패치':''} · 변경 ${p.notes.length}건</small></summary><ul>${p.notes.map(n=>`<li>${noteText(n)}</li>`).join('')}</ul></details>`).join(''):'<p class="empty">커리어를 시작하면 시즌 개막 패치가 적용됩니다.</p>'}
   ${prev.length?`<details class="pnote"><summary>지난 시즌 패치 ${prev.length}개</summary>${prev.map(p=>`<p><b>${esc(p.id)}</b> <small>${esc(p.date)}</small><br>${p.notes.map(noteText).join(' · ')}</p>`).join('')}</details>`:''}</section>`;
 }
-function bindPatch(){$('#pregion').onchange=e=>{PSET.region=e.target.value;nav()};$('#prole').onchange=e=>{PSET.role=e.target.value;nav()};$('#pq').onchange=e=>{PSET.q=e.target.value;nav()}}
+function bindPatch(){document.querySelectorAll('[data-champ]').forEach(b=>b.onclick=()=>{PSET.champ=b.dataset.champ;nav()});if($('#pclose'))$('#pclose').onclick=()=>{PSET.champ=null;nav()};$('#pregion').onchange=e=>{PSET.region=e.target.value;nav()};$('#prole').onchange=e=>{PSET.role=e.target.value;nav()};$('#pq').onchange=e=>{PSET.q=e.target.value;nav()}}
 
 // ---------- 첫 시즌 백지 로스터 구성 ----------
 let INITMK={role:'ALL',scope:'all',target:null};
