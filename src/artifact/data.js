@@ -47,7 +47,8 @@ function championId(name){
   return 'champ_'+(slug||Math.abs(hashStr(String(name))));
 }
 function championByName(db,name){return Object.values(db.patch.champions).find(c=>c.name===name)||null}
-function championLabel(db,id){const c=db&&db.patch&&db.patch.champions?db.patch.champions[id]:null;return c?c.name:String(id||'')}
+function championLabel(db,id){const c=db&&db.patch&&db.patch.champions?db.patch.champions[id]:null;return c?(c.nameKo||c.name):String(id||'')}
+function championDisplayName(c){return c?(c.nameKo||c.name):''}
 const DETAIL_BASE_KEYS=['resource','resourceg','resourceRegen','mr','mrg','asg'];
 const CHAMPION_SOURCE_PATCH='16.19.1';
 function normalizeSourceSkill(slot,raw,fallback){
