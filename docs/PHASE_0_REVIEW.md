@@ -29,8 +29,8 @@ All simulation/UI JavaScript modules are identical to the provided Artifact sour
 
 Intentional source changes:
 
-- document title: `롤FM` → `LOL GM`
-- header branding: `롤FM` → `LOL GM`
+- document title standardized as `LOL GM`
+- header branding standardized as `LOL GM`
 - Artifact README title updated to LOL GM naming
 
 No other Artifact code changes were introduced during migration.
