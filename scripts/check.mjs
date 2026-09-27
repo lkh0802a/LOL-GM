@@ -32,6 +32,8 @@ for (const file of modules) {
 
 const maintainabilityBudgets = {
   'app.js': 90000,
+  'engine.js': 38000,
+  'draft.js': 22000,
   'ui-patch.js': 30000,
   'ui-market.js': 35000,
 };
