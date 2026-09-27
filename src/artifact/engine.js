@@ -33,7 +33,9 @@ function starterFor(db,team,role){
 // ---------- 챔피언 평가 (패치 원수치 기반) ----------
 function championSkillProfile(c){
   const ss=Object.values(c.skills||{}), n=Math.max(1,ss.length),effects=ss.flatMap(s=>s.effects||[]);
-  return {power:ss.reduce((z,s)=>z+(s.power||0),0)/n/10,uptime:clamp(ss.reduce((z,s)=>z+(s.cooldown?1/Math.max(1,s.cooldown):0),0)*2.2,0,1),cc:effects.filter(x=>x==='cc'||x==='engage').length/n,utility:effects.filter(x=>['shield','sustain','utility','mobility','poke'].includes(x)).length/n};
+  const structured=ss.filter(s=>(s.baseDamage&&s.baseDamage.length)||Object.keys(s.ratios||{}).length||s.cc||s.heal||s.shield), dmg=structured.reduce((z,s)=>z+((s.baseDamage||[]).reduce((a,b)=>a+(Number(b)||0),0)/Math.max(1,(s.baseDamage||[]).length))/500,0)/n, ratio=structured.reduce((z,s)=>z+Object.values(s.ratios||{}).reduce((a,b)=>a+(Number(b)||0),0),0)/n;
+  const ccStructured=structured.filter(s=>s.cc).length/n, utilStructured=structured.filter(s=>s.heal||s.shield).length/n;
+  return {power:clamp(ss.reduce((z,s)=>z+(s.power||0),0)/n/10+dmg*.18+ratio*.08,0,1.5),uptime:clamp(ss.reduce((z,s)=>z+(s.cooldown?1/Math.max(1,s.cooldown):0),0)*2.2,0,1),cc:clamp(effects.filter(x=>x==='cc'||x==='engage').length/n+ccStructured*.5,0,1.5),utility:clamp(effects.filter(x=>['shield','sustain','utility','mobility','poke'].includes(x)).length/n+utilStructured*.5,0,1.5),structured:structured.length/n};
 }
 function champStrength(c){
   const k=c.kit,b=c.base,sp=championSkillProfile(c);

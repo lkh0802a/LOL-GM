@@ -54,7 +54,7 @@ const CHAMPION_SOURCE_PATCH='16.19.1';
 function normalizeSourceSkill(slot,raw,fallback){
   if(!raw)return fallback;
   const cds=(raw.cooldown||[]).filter(Number.isFinite), cd=cds.length?cds[0]:fallback.cooldown;
-  return {...fallback,slot,name:raw.nameKo||raw.nameEn||fallback.name||slot,sourceName:raw.nameEn||'',cooldown:cd,source:{version:CHAMPION_SOURCE_PATCH,provider:'Riot Data Dragon'}};
+  const numeric=raw.numeric||{};return {...fallback,slot,name:raw.nameKo||raw.nameEn||fallback.name||slot,sourceName:raw.nameEn||'',cooldown:cd,baseDamage:numeric.baseDamage||fallback.baseDamage||[],ratios:numeric.ratios||fallback.ratios||{},cost:(raw.cost||[]).filter(Number.isFinite),range:(raw.range||[]).filter(Number.isFinite),cc:numeric.cc||fallback.cc||null,heal:numeric.heal||fallback.heal||null,shield:numeric.shield||fallback.shield||null,charges:numeric.charges||fallback.charges||null,recast:!!numeric.recast,source:{version:CHAMPION_SOURCE_PATCH,provider:raw.provider||'Riot Data Dragon'}};
 }
 function mergeChampionSource(c,raw){
   if(!raw)return c;

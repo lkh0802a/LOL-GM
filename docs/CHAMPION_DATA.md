@@ -13,3 +13,6 @@ Imported data is not accepted automatically. Normalization must map each mechani
 
 ## Snapshot validation
 Every imported snapshot must pass `scripts/validate-champion-snapshot.mjs`: pinned version, Riot source marker, at least 160 champions, unique stable Riot keys, required base stats, Korean localization, passive and Q/W/E/R structure. LOL GM patch 26.19 maps explicitly to Data Dragon 16.19.1; future mappings must also be explicit rather than using `latest`.
+
+## Normalized skill mechanics
+Each P/Q/W/E/R entry can carry structured mechanics: per-rank `baseDamage`, coefficient map `ratios` (AP/total AD/bonus AD/HP etc.), `cost`, `range`, structured `cc`, `heal`, `shield`, `charges`, and `recast`. Data Dragon fields are retained when exposed; reviewed CommunityDragon supplements may fill missing mechanics. The match engine consumes structured damage/ratio/CC/utility information instead of treating it as display-only metadata.
