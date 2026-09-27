@@ -714,19 +714,28 @@ function trainingRecommendation(db,t){
   const intensity=fat>38||cond<84||days<=1?'light':days>=5&&fat<20&&cond>91?'high':'normal';
   const scrim=days>=2&&fat<42&&cond>80;return {intensity,scrim,next,days,fat,cond};
 }
+function pendingOfficialRefs(db,q){
+  const s=db.world.seasons[q.seasonKey],day=s&&s.days[s.cur],m=day&&day.matches.find(x=>x.id===q.matchId);
+  if(!s||!m||m.res)return null;const comp=db.competitions[s.comp],cfgIdx=comp.stages.findIndex(x=>x.id===day.stage),cfg=comp.stages[cfgIdx];
+  return {s,day,m,comp,cfg,cfgIdx};
+}
 function pendingOfficialDraftSetup(db){
   const p=db.world&&db.world.pendingOfficial,q=p&&p.queue&&p.queue[0];if(!q)return null;
-  const s=db.world.seasons[q.seasonKey],m=s&&s.days[s.cur]&&s.days[s.cur].matches.find(x=>x.id===q.matchId);if(!s||!m||m.res)return null;
-  return {...scheduledOpeningDraft(db,s,m),seasonKey:q.seasonKey,pendingDate:p.date};
+  const refs=pendingOfficialRefs(db,q);if(!refs)return null;
+  if(!q.session)q.session=scheduledSeriesSession(db,refs.s,refs.m).session;
+  const cur=seriesSessionPrepareGame(db,q.session);if(!cur)return null;
+  return {...refs,...cur,draftCtx:cur.snap,session:q.session,seasonKey:q.seasonKey,pendingDate:p.date,game:q.session.g,score:[q.session.wins[q.session.a],q.session.wins[q.session.b]],fearlessUsed:q.session.ctx.used.slice()};
 }
 function resolvePendingOfficialMatch(db,forcedDraft){
   const w=db.world,p=w&&w.pendingOfficial,q=p&&p.queue&&p.queue[0];if(!q)throw new Error('No pending official match');
-  const s=w.seasons[q.seasonKey],m=s&&s.days[s.cur]&&s.days[s.cur].matches.find(x=>x.id===q.matchId);if(!s||!m||m.res)throw new Error('Pending official match is stale');
-  const setup=scheduledOpeningDraft(db,s,m),forced={bans:forcedDraft.bans,picks:forcedDraft.picks};
-  const series=simulateScheduledSeries(db,s,setup.day,m,setup.cfg,{forced:[forced]});commitScheduledSeries(db,s,m,series);
-  const finalized=finalizeCompetitionDay(db,s,setup.day,setup.cfgIdx,setup.cfg);if(finalized)scoutFromDay(db,s,setup.day);
+  const refs=pendingOfficialRefs(db,q);if(!refs)throw new Error('Pending official match is stale');
+  if(!q.session)q.session=scheduledSeriesSession(db,refs.s,refs.m).session;
+  const played=playSeriesSessionGame(db,q.session,{bans:forcedDraft.bans,picks:forcedDraft.picks},false);
+  if(!played.done)return {game:played.game,done:false,score:played.score,pending:w.pendingOfficial};
+  const series=seriesSessionResult(db,q.session);commitScheduledSeries(db,refs.s,refs.m,series);
+  const finalized=finalizeCompetitionDay(db,refs.s,refs.day,refs.cfgIdx,refs.cfg);if(finalized)scoutFromDay(db,refs.s,refs.day);
   p.queue.shift();if(!p.queue.length){w.pendingOfficial=null;if(!activeSeasons(db).length)advanceStep(db)}
-  return {rec:series.rec,lines:series.lines,finalized,pending:w.pendingOfficial};
+  return {game:played.game,done:true,score:played.score,rec:series.rec,lines:series.lines,finalized,pending:w.pendingOfficial};
 }
 function playWorldDay(db){
   const w=db.world;if(w.phase!=='season')return null;

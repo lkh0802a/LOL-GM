@@ -19,10 +19,12 @@ function openDraftPractice(db,playerTeamId,opponentTeamId){
 }
 function openPendingOfficialDraft(db){
   const setup=pendingOfficialDraftSetup(db);if(!setup)return false;
-  const me=managedTeamId(db),mine=db.teams[me],oppId=setup.m.a===me?setup.m.b:setup.m.a,opp=db.teams[oppId];
-  const title=`${setup.comp.name} · ${mine.short} vs ${opp.short} · 1세트 밴픽`;
-  openInteractiveDraft(db,[setup.blue,setup.red],me,{seed:setup.gseed,title,locked:true,finishLabel:'공식전 진행',doneText:'1세트 밴픽이 확정되었습니다. 이 밴픽으로 공식전을 진행합니다.',ctx:setup.draftCtx,onComplete:result=>{
-    const out=resolvePendingOfficialMatch(DB,result);LAST=null;LASTSER=out.rec;saveDB();nav();
+  const me=managedTeamId(db),mine=db.teams[me],oppId=setup.m.a===me?setup.m.b:setup.m.a,opp=db.teams[oppId],score=setup.score||[0,0];
+  const aScore=score[0],bScore=score[1],meScore=setup.m.a===me?aScore:bScore,oppScore=setup.m.a===me?bScore:aScore;
+  const locked=setup.fearlessUsed?.length||0,title=`${setup.comp.name} · ${mine.short} ${meScore} : ${oppScore} ${opp.short} · ${setup.game}세트 밴픽`;
+  const fearlessText=locked?` · Fearless 잠금 ${locked}개`:'';
+  openInteractiveDraft(db,[setup.blue,setup.red],me,{seed:setup.gseed,title,locked:true,finishLabel:`${setup.game}세트 진행`,doneText:`${setup.game}세트 밴픽이 확정되었습니다${fearlessText}. 경기 결과에 따라 다음 세트 선택권과 Fearless 잠금이 갱신됩니다.`,ctx:setup.draftCtx,onComplete:result=>{
+    const out=resolvePendingOfficialMatch(DB,result);LAST=out.game||null;LASTSER=out.done?out.rec:null;saveDB();nav();
   }});
   return true;
 }
