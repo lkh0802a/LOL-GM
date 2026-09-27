@@ -804,7 +804,7 @@ const ATTR_GROUPS = {
   laning:['trading','csing','wave_control','pressure','all_in','harass','recall_timing','gank_avoidance','lane_adaptation'],
   combat:['positioning','target_selection','engage','disengage','peeling','flanking','burst_execution','extended_fight','teamfight_awareness'],
   macro:['map_awareness','rotation','tempo','objective_setup','resource_allocation','sidelane','vision_understanding','crossmap_decision'],
-  mental:['decision_making','anticipation','concentration','composure','consistency','adaptability','communication','shotcalling','creativity','pressure_handling']
+  mental:['decision_making','anticipation','concentration','composure','consistency','adaptability','communication','shotcalling','creativity','pressure_handling','champion_learning','meta_adaptation']
 };
 const GROUP_KO = {mechanical:'피지컬', laning:'라인전', combat:'교전', macro:'운영', mental:'멘탈/판단'};
 const ATTR_KO = {
@@ -812,10 +812,25 @@ const ATTR_KO = {
   trading:'딜교환', csing:'CS', wave_control:'웨이브 관리', pressure:'라인 압박', all_in:'올인', harass:'견제', recall_timing:'귀환 타이밍', gank_avoidance:'갱 회피', lane_adaptation:'라인 적응',
   positioning:'포지셔닝', target_selection:'타겟 선정', engage:'이니시', disengage:'디스인게이지', peeling:'보호', flanking:'측면 진입', burst_execution:'폭딜 실행', extended_fight:'장기전', teamfight_awareness:'한타 판단',
   map_awareness:'맵 인지', rotation:'합류', tempo:'템포', objective_setup:'오브젝트 준비', resource_allocation:'자원 분배', sidelane:'사이드 운영', vision_understanding:'시야 이해', crossmap_decision:'크로스맵',
-  decision_making:'판단력', anticipation:'예측', concentration:'집중력', composure:'침착함', consistency:'기복 없음', adaptability:'적응력', communication:'소통', shotcalling:'오더', creativity:'창의성', pressure_handling:'압박 대처'
+  decision_making:'판단력', anticipation:'예측', concentration:'집중력', composure:'침착함', consistency:'기복 없음', adaptability:'적응력', communication:'소통', shotcalling:'오더', creativity:'창의성', pressure_handling:'압박 대처', champion_learning:'챔피언 학습', meta_adaptation:'메타 적응'
 };
 const TENDENCIES = ['aggression','risk_taking','roaming','resource_demand','teamplay','trading_frequency','engage_preference','objective_preference','split_preference'];
 const TEND_KO = {aggression:'공격성', risk_taking:'위험 감수', roaming:'로밍', resource_demand:'자원 요구', teamplay:'팀플레이', trading_frequency:'딜교 빈도', engage_preference:'이니시 선호', objective_preference:'오브젝트 선호', split_preference:'스플릿 선호'};
+const ROLE_GROUP_WEIGHTS={
+  TOP:{mechanical:.22,laning:.28,combat:.22,macro:.17,mental:.11},
+  JGL:{mechanical:.14,laning:.07,combat:.20,macro:.36,mental:.23},
+  MID:{mechanical:.24,laning:.25,combat:.22,macro:.18,mental:.11},
+  ADC:{mechanical:.32,laning:.23,combat:.29,macro:.09,mental:.07},
+  SUP:{mechanical:.10,laning:.09,combat:.24,macro:.34,mental:.23}
+};
+const ROLE_KEY_ATTRS={
+  TOP:['trading','wave_control','all_in','positioning','sidelane','decision_making'],
+  JGL:['smite_execution','map_awareness','rotation','tempo','objective_setup','crossmap_decision','decision_making'],
+  MID:['precision','trading','wave_control','positioning','roaming','rotation','decision_making'],
+  ADC:['reaction','kiting','spacing','csing','positioning','target_selection','extended_fight'],
+  SUP:['engage','disengage','peeling','map_awareness','objective_setup','vision_understanding','shotcalling']
+};
+const SECONDARY_ROLE_OPTIONS={TOP:['MID','JGL'],JGL:['SUP','TOP'],MID:['TOP','ADC'],ADC:['MID','SUP'],SUP:['JGL','ADC']};
 const CLASS_KO = {fighter:'전사', tank:'탱커', mage:'마법사', assassin:'암살자', marksman:'원거리 딜러', enchanter:'서포터'};
 const KIT_KEYS = ['burst','dps','cc','engage','disengage','peel','poke','waveclear','mobility','sustain','early','mid','late','difficulty'];
 const KIT_KO = {burst:'폭딜', dps:'지속딜', cc:'CC', engage:'이니시', disengage:'받아치기', peel:'보호', poke:'포킹', waveclear:'라인클리어', mobility:'기동성', sustain:'유지력', early:'초반', mid:'중반', late:'후반', difficulty:'난이도'};
@@ -1079,6 +1094,7 @@ function newPatch(db,date,major,rng){
     notes.push({type:'new',def,why:'신규 챔피언 출시',c:def.name});
   }
   notes.forEach(n=>applyNote(P,n));
+  if(typeof adaptPlayerPoolsToPatch==='function')adaptPlayerPoolsToPatch(db,notes,!!major);
   P.id=id;
   db.patches.list.push({id,date,major:!!major,notes});
   for(const k in PATCH_CACHE)delete PATCH_CACHE[k];
@@ -1109,6 +1125,7 @@ function gameMVP(r){
   const w=r.sides[r.winner], tot=w.ps.reduce((s,p)=>s+p.dmg,0)||1;
   return w.ps.reduce((b,p)=>{const v=(p.k*3+p.a*1.5)/(p.d+1)+p.dmg/tot*10+(p.role==='SUP'?1:0);return !b||v>b.v?{p,v}:b},null).p.p.id;
 }
+function playerGameRating(ps,side,win,mvp,duration){const min=Math.max(1,duration),kp=(ps.k+ps.a)/Math.max(1,side.kills),kda=(ps.k+ps.a)/Math.max(1,ps.d),csm=ps.cs/min,dpm=ps.dmg/min,role=ps.role;let v=4.7+(win?.42:0)+(mvp?.55:0)-ps.d*.08;if(role==='TOP')v+=kda*.38+csm*.11+dpm*.00075+kp*.45;else if(role==='JGL')v+=kda*.4+csm*.055+dpm*.00055+kp*.72;else if(role==='MID')v+=kda*.4+csm*.105+dpm*.0008+kp*.5;else if(role==='ADC')v+=kda*.36+csm*.125+dpm*.0009+kp*.48;else v+=kda*.34+csm*.025+dpm*.00042+kp*.92;return Math.round(clamp(v,3,10)*100)/100}
 // 선택권(진영 vs 픽 순서): 선택권을 가진 팀이 '진영'이나 '픽 순서' 중 하나를 고르면, 상대가 나머지를 고른다
 // 진영 가치: 블루 = 맵 이점(시야·오브젝트 동선). 순서 가치: 선픽 = 최고 챔피언 선점, 후픽 = 마지막 카운터픽(피어리스 후반 세트일수록 커짐)
 function draftPrefs(db,tid,ctx,g,bestOf,rng){
@@ -1155,7 +1172,7 @@ function simulateSeries(db,aId,bId,bestOf,seed,opt={}){
     ctx.mods[wId]=clamp(ctx.mods[wId]+0.015,-0.08,0.05);
     const mvp=gameMVP(r);
     games.push({n:g,blue,red,seed:gseed,mods:snap.mods,winner:wId,bans:r.draft.bans,sideBy:chooser,sideWhy:sc.why,firstPick:fpTeam,kills:[r.sides[0].kills,r.sides[1].kills],dur:r.durationStr,duration:r.duration,picks:pk,mvp});
-    for(const s of r.sides) for(const p of s.ps) lines.push({pid:p.p.id,tid:s.team.id,champ:p.champ.id,k:p.k,d:p.d,a:p.a,cs:Math.round(p.cs),dmg:Math.round(p.dmg),dur:r.duration,win:s.team.id===wId,mvp:p.p.id===mvp});
+    for(const s of r.sides) for(const p of s.ps){const win=s.team.id===wId,isMvp=p.p.id===mvp;lines.push({pid:p.p.id,tid:s.team.id,champ:p.champ.id,k:p.k,d:p.d,a:p.a,cs:Math.round(p.cs),gold:Math.round(p.goldEarned),dmg:Math.round(p.dmg),dur:r.duration,kp:(p.k+p.a)/Math.max(1,s.kills),csm:p.cs/Math.max(1,r.duration),dpm:p.dmg/Math.max(1,r.duration),rating:playerGameRating(p,s,win,isMvp,r.duration),win,mvp:isMvp})}
     chooser=lId; // 패배 팀이 다음 세트 진영 선택 (블루 선호)
   }
   const tac={[aId]:{...db.teams[aId].tactics},[bId]:{...db.teams[bId].tactics}};
@@ -1283,8 +1300,8 @@ function rrTable(db,s,stageId,teams){
 }
 function recordLines(s,lines){
   for(const l of lines){
-    const p=s.pstats[l.pid]||(s.pstats[l.pid]={g:0,w:0,k:0,d:0,a:0,cs:0,dmg:0,min:0,mvp:0,champs:{}});
-    p.g++;p.w+=l.win?1:0;p.k+=l.k;p.d+=l.d;p.a+=l.a;p.cs+=l.cs;p.dmg+=l.dmg;p.min+=l.dur;p.mvp+=l.mvp?1:0;
+    const p=s.pstats[l.pid]||(s.pstats[l.pid]={g:0,w:0,k:0,d:0,a:0,cs:0,gold:0,dmg:0,min:0,mvp:0,ratingSum:0,champs:{}});
+    p.g++;p.w+=l.win?1:0;p.k+=l.k;p.d+=l.d;p.a+=l.a;p.cs+=l.cs;p.gold+=l.gold||0;p.dmg+=l.dmg;p.min+=l.dur;p.mvp+=l.mvp?1:0;p.ratingSum+=l.rating||0;
     const c=p.champs[l.champ]||(p.champs[l.champ]=[0,0]);c[0]++;if(l.win)c[1]++;
   }
 }
@@ -1389,7 +1406,27 @@ function intlStages(fmt,teams,bo){
 const NICK_A=['Ka','Zer','Lu','Vex','Mor','Ny','Ti','Rho','Sa','Quin','El','Dra','Fen','Jo','Kai','Mir','Oz','Pyr','Ren','Syl','Ul','Wyn','Xan','Yor','Bru','Cae','Del','Gor','Hex','Ish','Lor','Nim','Pax','Riv','Tor','Val','Zu','Aki','Bly','Cro'];
 const NICK_B=['n','ra','x','lo','th','ne','ko','vy','dan','rin','zo','sk','mi','ro','ve','ly','ce','ta','ix','or','us','en','al','yx','e','o','ash','ek','im','ul'];
 const STYLES=Object.keys(STYLE_BIAS);
-function playerOvr(p){let s=0,n=0;for(const g in ATTR_GROUPS)for(const a of ATTR_GROUPS[g]){if(a==='smite_execution'&&p.role!=='JGL')continue;s+=p.attrs[a];n++}return Math.round(s/n)}
+function roleFamiliarity(p,role){if(role===p.role)return 100;return (p.roleFamiliarity&&p.roleFamiliarity[role])||0}
+function playerGroupScore(p,g,role=p.role){const keys=ATTR_GROUPS[g].filter(a=>!(a==='smite_execution'&&role!=='JGL')&&!(a==='csing'&&role==='SUP'));return keys.length?avg(keys.map(a=>p.attrs[a])):50}
+function playerRoleRating(p,role=p.role){
+  if(!p||!p.attrs)return 0;const gw=ROLE_GROUP_WEIGHTS[role]||ROLE_GROUP_WEIGHTS[p.role]||ROLE_GROUP_WEIGHTS.MID;
+  let base=0,w=0;for(const [g,x] of Object.entries(gw)){base+=playerGroupScore(p,g,role)*x;w+=x}base=w?base/w:50;
+  const keys=ROLE_KEY_ATTRS[role]||[],key=keys.length?avg(keys.map(a=>p.attrs[a]??50)):base,raw=base*.82+key*.18,fam=roleFamiliarity(p,role);
+  return Math.round(clamp(raw*(role===p.role?1:.82+.18*fam/100),20,99));
+}
+function playerOvr(p){return playerRoleRating(p,p.role)}
+function ensurePlayerDevelopment(p){
+  if(p.development)return p.development;const h=Math.abs(hashStr(p.id||p.name||'player')),base={TOP:24.5,JGL:24,MID:25,ADC:25,SUP:26}[p.role]||25;
+  p.development={growthRate:.88+(h%29)/100,peakAge:Math.round((base+((h>>4)%31-15)/10)*10)/10,declineRate:.85+((h>>9)%36)/100};return p.development;
+}
+function careerStage(p){if(p.retired)return '은퇴';const d=ensurePlayerDevelopment(p),seasons=p.proSeasons||0;if(seasons<=1||p.age<=19)return '신인';if(p.age<d.peakAge-1)return '성장';if(p.age<=d.peakAge+1)return '전성기';return '쇠퇴'}
+function playerSquadLabel(db,p){if(!p.team||!db.teams[p.team])return 'FA';return db.teams[p.team].parent?'2군':'1군'}
+function recordPlayerEvent(p,type,year,data={}){p.careerEvents=p.careerEvents||[];p.careerEvents.push({type,year,...data});if(p.careerEvents.length>120)p.careerEvents=p.careerEvents.slice(-120)}
+function trainSecondaryRole(p,role,amount=1){if(!ROLES.includes(role)||role===p.role)return roleFamiliarity(p,role);p.roleFamiliarity=p.roleFamiliarity||{[p.role]:100};const gain=Math.max(.2,amount)*(.55+(p.attrs.adaptability||50)/100*.55);p.roleFamiliarity[role]=Math.round(clamp((p.roleFamiliarity[role]||25)+gain,0,90));p.secondaryRoles=p.secondaryRoles||[];if(p.roleFamiliarity[role]>=55&&!p.secondaryRoles.includes(role))p.secondaryRoles.push(role);return p.roleFamiliarity[role]}
+function ensureChampionProfile(db,p,cid){if(!p.pool)p.pool={};if(!p.pool[cid])p.pool[cid]={mastery:25,experience:0,matchup_knowledge:35,confidence:40,scrimExperience:0,trainingExperience:0,scrimSeason:0,trainingSeason:0};const pr=p.pool[cid];pr.scrimExperience=pr.scrimExperience||0;pr.trainingExperience=pr.trainingExperience||0;pr.scrimSeason=pr.scrimSeason||0;pr.trainingSeason=pr.trainingSeason||0;return pr}
+function practiceChampion(db,p,cid,kind='training',amount=1){const pr=ensureChampionProfile(db,p,cid),n=Math.max(0,amount);if(kind==='scrim'){pr.scrimExperience+=n;pr.scrimSeason+=n;pr.confidence=Math.round(clamp(pr.confidence+n*.08,10,99))}else{pr.trainingExperience+=n;pr.trainingSeason+=n}return pr}
+function championLearningMultiplier(db,p,cid){const c=db.patch.champions[cid],diff=c&&c.kit?c.kit.difficulty||5:5;return (.65+.7*(p.attrs.champion_learning||50)/100)*(.92+.2*(p.attrs.adaptability||50)/100)/(1+Math.max(0,diff-5)*.045)}
+function adaptPlayerPoolsToPatch(db,notes,major=false){const changed={};for(const n of notes||[])if((n.type==='kit'||n.type==='base')&&n.c)changed[n.c]=(changed[n.c]||0)+1;for(const p of Object.values(db.players))if(!p.retired&&p.pool)for(const [cid,count] of Object.entries(changed)){const pr=p.pool[cid];if(!pr)continue;const adapt=(p.attrs.meta_adaptation||p.attrs.adaptability||50)/100,loss=Math.min(5,Math.max(0,Math.round(count*(major?1.25:.55)*(1.25-adapt))));pr.mastery=Math.round(clamp(pr.mastery-loss,20,99));pr.confidence=Math.round(clamp(pr.confidence-Math.ceil(loss/2),10,99))}}
 function uniqNick(db,rng){for(let i=0;i<200;i++){let n=rng.pick(NICK_A)+rng.pick(NICK_B);if(rng.chance(0.2))n+=rng.pick(['','x','z','9','7']);const taken=Object.values(db.players).some(p=>p.name===n);if(!taken)return n}return 'P'+rng.int(100,999)}
 function uniqId(db,prefix){let i=Object.keys(db.players).length;while(db.players[prefix+i])i++;return prefix+i}
 
@@ -1415,11 +1452,15 @@ function genPlayer(db,rng,o){
   const n=clamp(Math.round(9+(age-17)*0.7+rng.normal(0,2)),7,18), picks=[...mySig,...champs.filter(c=>!mySig.includes(c)).sort(()=>rng.next()-0.5).slice(0,n)];
   for(const c of picks){const s=mySig.includes(c);
     pool[c]={mastery:Math.round(clamp(s?80+rng.normal(0,6)+(age-20):55+rng.normal(0,12),20,99)),experience:Math.round(clamp(s?70+rng.normal(0,10)+(age-20)*2:40+rng.normal(0,15),5,99)),
-      matchup_knowledge:Math.round(clamp(base-10+rng.normal(0,10)+(age-20),20,99)),confidence:Math.round(clamp(s?72+rng.normal(0,8):50+rng.normal(0,10),10,99))};}
-  const p={id:o.id||uniqId(db,(o.region||'X')+'_'),name:o.name||uniqNick(db,rng),role,age,team:null,region:o.region,attrs,tend,pool,
-    pot:0,personality:{professionalism:Math.round(clamp(rng.normal(60,15),10,99)),ambition:Math.round(clamp(rng.normal(60,15),10,99))},career:[],titles:[],retired:false,faYears:0};
-  const ovr=playerOvr(p);
-  p.pot=Math.round(clamp(o.pot!==undefined?o.pot:ovr+Math.max(0,24-age)*rng.range(0.8,2.4)+rng.normal(2,3),ovr,99));
+      matchup_knowledge:Math.round(clamp(base-10+rng.normal(0,10)+(age-20),20,99)),confidence:Math.round(clamp(s?72+rng.normal(0,8):50+rng.normal(0,10),10,99)),scrimExperience:0,trainingExperience:0,scrimSeason:0,trainingSeason:0};}
+  const secondaryRoles=[],flex=SECONDARY_ROLE_OPTIONS[role]||[];if(flex.length&&rng.chance(.28))secondaryRoles.push(rng.pick(flex));
+  const roleFamiliarityMap={[role]:100};for(const r of secondaryRoles)roleFamiliarityMap[r]=rng.int(58,78);const peakBase={TOP:24.5,JGL:24,MID:25,ADC:25,SUP:26}[role]||25;
+  const p={id:o.id||uniqId(db,(o.region||'X')+'_'),name:o.name||uniqNick(db,rng),role,secondaryRoles,roleFamiliarity:roleFamiliarityMap,age,team:null,region:o.region,nationality:o.nationality||o.region,attrs,tend,pool,
+    pot:0,reputation:0,personality:{professionalism:Math.round(clamp(rng.normal(60,15),10,99)),ambition:Math.round(clamp(rng.normal(60,15),10,99))},
+    development:{growthRate:Math.round(clamp(rng.normal(1,.1),.78,1.22)*100)/100,peakAge:Math.round(clamp(rng.normal(peakBase,1.15),21.5,29)*10)/10,declineRate:Math.round(clamp(rng.normal(1,.12),.72,1.35)*100)/100},
+    career:[],careerEvents:[],titles:[],proSeasons:0,retired:false,faYears:0};
+  const ovr=playerOvr(p);p.pot=Math.round(clamp(o.pot!==undefined?o.pot:ovr+Math.max(0,24-age)*rng.range(0.8,2.4)+rng.normal(2,3),ovr,99));
+  p.reputation=Math.round(clamp(ovr*.82+Math.max(0,age-19)*.65+rng.normal(0,3),20,95));
   db.players[p.id]=p;
   if(o.team)assignPlayerToTeam(db,p,o.team);
   return p;
@@ -1539,7 +1580,7 @@ function rosterMoveCheck(db,p,target){
   const total=organizationRoster(db,srcParent).length;if(total<rules.integratedMin||total>rules.integratedMax)return {ok:false,reason:'통합 로스터는 '+rules.integratedMin+'~'+rules.integratedMax+'명이어야 합니다'};
   return {ok:true,kind:dstIsFirst?'callup':'senddown',from:src.id,to:dst.id,parent:srcParent.id};
 }
-function movePlayerBetweenSquads(db,p,target){const check=rosterMoveCheck(db,p,target);if(!check.ok)throw new Error(check.reason);assignPlayerToTeam(db,p,target);return check}
+function movePlayerBetweenSquads(db,p,target){const player=playerRef(db,p),check=rosterMoveCheck(db,player,target);if(!check.ok)throw new Error(check.reason);assignPlayerToTeam(db,player,target);if(db.world)recordPlayerEvent(player,'squad_move',db.year,{from:check.from,to:check.to,kind:check.kind,date:db.worldDate});return check}
 function playerRef(db,p){return typeof p==='string'?db.players[p]:p}
 function teamRef(db,t){return typeof t==='string'?db.teams[t]:t}
 function removePlayerFromTeam(db,p){
@@ -1553,9 +1594,10 @@ function assignPlayerToTeam(db,p,t){
   const player=playerRef(db,p),team=teamRef(db,t);
   if(!player)throw new Error('Unknown player');
   if(!team)throw new Error(`Unknown team: ${typeof t==='string'?t:'?'}`);
+  const oldTeam=player.team&&db.teams[player.team],oldOrg=oldTeam?(oldTeam.parent||oldTeam.id):null,newOrg=team.parent||team.id;
   for(const other of Object.values(db.teams))if(other.id!==team.id&&other.roster&&other.roster.includes(player.id))other.roster=other.roster.filter(id=>id!==player.id);
-  team.roster=Array.from(new Set([...(team.roster||[]),player.id]));
-  player.team=team.id;
+  team.roster=Array.from(new Set([...(team.roster||[]),player.id]));player.team=team.id;
+  if(typeof pState==='function'){pState(player);if(oldOrg!==newOrg){player.teamAdaptation=oldOrg?45:55;player.tacticalAdaptation=oldOrg?48:58}}
   return player;
 }
 function rosterIntegrityErrors(db){
@@ -1624,7 +1666,7 @@ function addRegion(db,rng,cfg){
 }
 function buildWorld(cfg){
   cfg=JSON.parse(JSON.stringify(cfg||defaultWorldConfig()));
-  const db={version:11,saveId:'save-'+Date.now().toString(36),manager:{id:'manager-human',teamId:null,startMode:null,careerStartedAt:null},worldDate:`${cfg.startYear||2027}-01-01`,coachPool:[],awards:[],hof:[],global:{decisions:[],power:{}},patch:buildPatch(),teams:{},players:{},regions:{},competitions:{},worldConfig:cfg,world:null,history:[],news:[],year:cfg.startYear||2027,configDirty:false,scout:{}};
+  const db={version:12,saveId:'save-'+Date.now().toString(36),manager:{id:'manager-human',teamId:null,startMode:null,careerStartedAt:null},worldDate:`${cfg.startYear||2027}-01-01`,coachPool:[],awards:[],hof:[],global:{decisions:[],power:{}},patch:buildPatch(),teams:{},players:{},regions:{},competitions:{},worldConfig:cfg,world:null,history:[],news:[],year:cfg.startYear||2027,configDirty:false,scout:{}};
   const rng=new RNG('world-v7','gen');
   initPatches(db);
   for(const r of cfg.regions) addRegion(db,rng,r);
@@ -1781,25 +1823,27 @@ function runOffseason(db){
     for(const [pid,st] of Object.entries(s.pstats)){const p=db.players[pid];if(!p||p.retired)continue;
       games[pid]=(games[pid]||0)+st.g;champGames[pid]=champGames[pid]||{};
       for(const [c,[n]] of Object.entries(st.champs))champGames[pid][c]=(champGames[pid][c]||0)+n;
-      p.career.push({year:w.year,comp:s.comp,cname,team:p.team,ovr:playerOvr(p),g:st.g,w:st.w,k:st.k,d:st.d,a:st.a,mvp:st.mvp});}
-    if(s.champion)db.teams[s.champion].roster.forEach(pid=>{const p=db.players[pid];if(p)p.titles.push(`${w.year} ${cname}`)});
+      const tm=p.team&&db.teams[p.team],value=typeof playerMarketValue==='function'?playerMarketValue(db,p):0;
+      p.career.push({year:w.year,seasonId:s.id,comp:s.comp,cname,team:p.team,division:tm?(tm.division||1):null,squad:playerSquadLabel(db,p),international:!!db.competitions[s.comp].international,ovr:playerOvr(p),reputation:p.reputation||0,marketValue:value,salary:p.contract?p.contract.salary:null,contractUntil:p.contract?p.contract.until:null,g:st.g,w:st.w,k:st.k,d:st.d,a:st.a,cs:st.cs,dmg:st.dmg,gold:st.gold||0,min:st.min,mvp:st.mvp,rating:st.g&&st.ratingSum?st.ratingSum/st.g:null});}
+    if(s.champion)db.teams[s.champion].roster.forEach(pid=>{const p=db.players[pid];if(p){p.titles.push(`${w.year} ${cname}`);p.reputation=Math.round(clamp((p.reputation||playerOvr(p))+2,20,99));recordPlayerEvent(p,'title',w.year,{competition:cname,team:s.champion,international:!!db.competitions[s.comp].international})}});
   }
   rep.awards=[];rep.coaches=[];rep.hof=[];
   seasonAwards(db,w,rep);
+  for(const p of Object.values(db.players)){const rows=(p.career||[]).filter(c=>c.year===w.year);if(!rows.length)continue;const gamesN=rows.reduce((a,c)=>a+c.g,0),rating=gamesN?rows.reduce((a,c)=>a+(c.rating||6.5)*c.g,0)/gamesN:6.5,intl=rows.some(c=>c.international),awardN=rep.awards.filter(a=>a.pid===p.id).length,target=clamp(playerOvr(p)*.72+rating*3.2+(intl?2:0)+awardN*2,20,99);p.reputation=Math.round(clamp((p.reputation||playerOvr(p))*.72+target*.28,20,99))}
   evalGoals(db,w,rep,ev);
   for(const R of Object.values(db.regions)){const s=finalSeason(w,R);if(s&&s.done)R.lastPlacement=placements(db,s)}
   for(const p of Object.values(db.players)){if(p.retired)continue;const d=growPlayer(db,p,rng,games[p.id]||0,champGames[p.id]||{});if(p.team)rep.growth.push({pid:p.id,d,ovr:playerOvr(p)})}
   rep.growth.sort((a,b)=>b.d-a.d);
   for(const p of Object.values(db.players)){ if(p.retired)continue;
-    const o=playerOvr(p), R=db.regions[p.region];
-    let pr=p.age<26?0:(p.age-25)*0.07+(p.age>=30?0.2:0)+(R&&o<R.strength-8?0.12:0);
-    if(R&&o>=R.strength+5)pr*=0.4;
+    const o=playerOvr(p), R=db.regions[p.region],dev=ensurePlayerDevelopment(p),declineYears=p.age-(dev.peakAge+1);
+    let pr=declineYears<=0?0:declineYears*.06*dev.declineRate+(p.age>=31?.18:0)+(R&&o<R.strength-8?.12:0);
+    if(R&&o>=R.strength+5)pr*=.4;
     if(!p.team){p.faYears++;if(p.age>=23&&p.faYears>=2)pr+=0.5;if(p.faYears>=3)pr+=0.6;if(p.faYears>=2&&!p.career.length){delete db.players[p.id];continue}}
     if(rng.chance(pr)){p.retired=true;p.retiredYear=w.year;p.peak=Math.max(o,...p.career.map(c=>c.ovr||0));
       const wasTeam=p.team;
       if(p.team){const oldTeam=p.team;removePlayerFromTeam(db,p);rep.retired.push({pid:p.id,team:oldTeam,age:p.age,ovr:o})}
       if(!p.career.length&&!wasTeam){delete db.players[p.id];continue}
-      if(hallOfFame(db,p))rep.hof.push(p.id);
+      recordPlayerEvent(p,'retirement',w.year,{team:wasTeam,age:p.age,peak:p.peak});if(hallOfFame(db,p))rep.hof.push(p.id);
       delete p.pool;delete p.tend;delete p.attrs;}
   }
   db.year=w.year+1;
@@ -1866,28 +1910,29 @@ function ageCurve(age,g){
   for(const [a,v] of T)if(age<=a)return v;return -1;
 }
 function growPlayer(db,p,rng,games,champGames){
-  const team=p.team?db.teams[p.team]:null, before=playerOvr(p);
-  const room=clamp((p.pot-before)/10,-0.5,1.5), prof=p.personality.professionalism/100;
+  const team=p.team?db.teams[p.team]:null, before=playerOvr(p),dev=ensurePlayerDevelopment(p);
+  const room=clamp((p.pot-before)/10,-0.5,1.5), prof=p.personality.professionalism/100,ageShift=dev.peakAge-25;
   const coach=team?team.coach.development/100:0.45, play=clamp(games/30,0,1);
   const tr=team?team.training:defaultTraining(), tsum=Object.values(tr).reduce((a,b)=>a+b,0)||1;
   for(const g in ATTR_GROUPS){
     // 훈련 포인트는 총 100점 한도: 배분하지 않은 포인트는 버려진다 (나눠 쓰는 만큼만 효과)
-    const base=ageCurve(p.age,g), train=team?(Math.min(TRAIN_POINTS,tr[g])/TRAIN_POINTS*5-1)*0.9:-0.3;
+    const base=ageCurve(p.age-ageShift,g), train=team?(Math.min(TRAIN_POINTS,tr[g])/TRAIN_POINTS*5-1)*0.9:-0.3;
     pState(p);
-    let d=base>0?base*(0.45+room*0.6)*(0.7+0.6*prof)*(0.8+0.4*coach)*(0.65+0.55*play)*trainingGrowthMul(team)*facilityMul(team)*(0.9+0.2*p.morale/100):base*(1.3-0.6*prof);
+    let d=base>0?base*dev.growthRate*(0.45+room*0.6)*(0.7+0.6*prof)*(0.8+0.4*coach)*(0.65+0.55*play)*trainingGrowthMul(team)*facilityMul(team)*(0.9+0.2*p.morale/100):base*dev.declineRate*(1.3-0.6*prof);
     d+=train*(base>0?1:0.5);
     if(d>0)d*=youthMul(p.age);
     d=Math.min(d,growthCap(p.age)); // 한 시즌 영역별 성장 상한 (어릴수록 높음)
     const ceil=Math.min(99,p.pot+6); // 잠재력 + 6을 넘는 능력치는 더 오르지 않음
     for(const a of ATTR_GROUPS[g]){const v=p.attrs[a]+d+rng.normal(0,1.3);p.attrs[a]=Math.round(clamp(d>0&&p.attrs[a]>=ceil?Math.min(v,p.attrs[a]):d>0?Math.min(v,Math.max(ceil,p.attrs[a])):v,20,99))}
   }
-  // 챔피언 폭: 많이 쓴 챔피언은 숙련, 안 쓴 챔피언은 감각 저하
-  for(const c in champGames) if(!p.pool[c]) p.pool[c]={mastery:35,experience:5,matchup_knowledge:40,confidence:45};
-  for(const c in p.pool){const n=champGames[c]||0, pr=p.pool[c];
-    if(n){pr.mastery=Math.round(clamp(pr.mastery+Math.min(9,n*0.7)*(p.age<22?1.2:1),20,99));pr.experience=Math.round(clamp(pr.experience+n*1.5,0,99));pr.confidence=Math.round(clamp(pr.confidence+rng.normal(2,5),10,99))}
-    else {pr.mastery=Math.round(clamp(pr.mastery-rng.range(0,3),20,99)); if(pr.mastery<40&&Object.keys(p.pool).length>10)delete p.pool[c];}
-    pr.matchup_knowledge=Math.round(clamp(pr.matchup_knowledge+(p.age<28?1.5:0.5),20,99));}
-  p.age++;
+  // 챔피언 폭: 공식전 + 스크림 + 훈련 + 난이도 + 학습 능력을 함께 반영
+  for(const c in champGames)ensureChampionProfile(db,p,c);
+  if(team&&p.pool){const practice=Math.max(2,Math.round((tr.combat+tr.mental)/12*(.7+coach*.5)));Object.entries(p.pool).sort((a,b)=>b[1].mastery-a[1].mastery).slice(0,6).forEach(([c])=>practiceChampion(db,p,c,'training',practice))}
+  for(const c of Object.keys(p.pool||{})){const n=champGames[c]||0,pr=ensureChampionProfile(db,p,c),learn=championLearningMultiplier(db,p,c),practiceGain=(pr.scrimSeason||0)*.16+(pr.trainingSeason||0)*.09,officialGain=Math.min(7,n*.42),gain=Math.min(8,(officialGain+practiceGain)*learn*(p.age<22?1.12:1));
+    if(n||practiceGain){pr.mastery=Math.round(clamp(pr.mastery+gain,20,99));pr.experience=Math.round(clamp(pr.experience+n*1.5,0,999));pr.confidence=Math.round(clamp(pr.confidence+rng.normal(n?2:1,3),10,99))}
+    else {pr.mastery=Math.round(clamp(pr.mastery-rng.range(0,1.8)*(1-(p.attrs.meta_adaptation||50)/180),20,99));if(pr.mastery<36&&Object.keys(p.pool).length>12)delete p.pool[c]}
+    if(p.pool[c]){pr.matchup_knowledge=Math.round(clamp(pr.matchup_knowledge+(n?1.5:.35),20,99));pr.scrimSeason=0;pr.trainingSeason=0}}
+  if(games>0)p.proSeasons=(p.proSeasons||0)+1;p.age++;
   return playerOvr(p)-before;
 }
 function playerValue(db,p,team){
@@ -1904,7 +1949,7 @@ function packDB(db){
     const q={...p};
     if(p.attrs)q.attrs=ALL_ATTRS.map(a=>p.attrs[a]);
     if(p.tend)q.tend=TENDENCIES.map(t=>p.tend[t]);
-    if(p.pool)q.pool=Object.fromEntries(Object.entries(p.pool).map(([c,v])=>[c,[v.mastery,v.experience,v.matchup_knowledge,v.confidence]]));
+    if(p.pool)q.pool=Object.fromEntries(Object.entries(p.pool).map(([c,v])=>[c,[v.mastery,v.experience,v.matchup_knowledge,v.confidence,v.scrimExperience||0,v.trainingExperience||0,v.scrimSeason||0,v.trainingSeason||0]]));
     players[id]=q;
   }
   return JSON.stringify({...db,players,packed:1});
@@ -1914,7 +1959,7 @@ function unpackDB(str){
   for(const p of Object.values(db.players)){
     if(Array.isArray(p.attrs))p.attrs=Object.fromEntries(ALL_ATTRS.map((a,i)=>[a,p.attrs[i]]));
     if(Array.isArray(p.tend))p.tend=Object.fromEntries(TENDENCIES.map((t,i)=>[t,p.tend[i]]));
-    if(p.pool)for(const c in p.pool){const v=p.pool[c];if(Array.isArray(v))p.pool[c]={mastery:v[0],experience:v[1],matchup_knowledge:v[2],confidence:v[3]}}
+    if(p.pool)for(const c in p.pool){const v=p.pool[c];if(Array.isArray(v))p.pool[c]={mastery:v[0],experience:v[1],matchup_knowledge:v[2],confidence:v[3],scrimExperience:v[4]||0,trainingExperience:v[5]||0,scrimSeason:v[6]||0,trainingSeason:v[7]||0}}
   }
   delete db.packed; return db;
 }
@@ -2182,12 +2227,10 @@ const PAY_SCALE={KR:1,CN:1.3,EU:0.8,NA:1,AP:0.45,TW:0.4,VN:0.3,BR:0.35,JP:0.4,TR
 const money=v=>(Math.round(v*10)/10).toFixed(1)+'억';
 function psOf(db,rid){const R=db.regions[rid];return R?(R.payScale??PAY_SCALE[rid]??0.5):0.5}
 function psTeam(db,t){return psOf(db,t.region)*((t.division||1)===2?0.35:1)}
-function marketSalary(db,p,rid){
-  const o=playerOvr(p), ps=psOf(db,rid||p.region), up=Math.max(0,p.pot-o)*(p.age<=21?0.04:0.01);
-  return Math.max(0.3*ps,Math.round(0.5*Math.exp((o-60)*0.13)*(1+up)*ps*10)/10);
-}
-function asking(db,p,rid){return Math.round(marketSalary(db,p,rid)*(1+p.personality.ambition/400)*10)/10}
-function signContract(db,p,t,salary,years){assignPlayerToTeam(db,p,t);p.faYears=0;p.contract={salary:Math.round(salary*10)/10,until:db.year+years-1,signed:db.year}}
+function marketSalary(db,p,rid){const o=playerOvr(p),ps=psOf(db,rid||p.region),up=Math.max(0,p.pot-o)*(p.age<=21?.04:.01);return Math.max(.3*ps,Math.round(.5*Math.exp((o-60)*.13)*(1+up)*ps*10)/10)}
+function playerMarketValue(db,p){const o=playerOvr(p),rep=p.reputation??o,up=Math.max(0,p.pot-o),rid=p.team&&db.teams[p.team]?db.teams[p.team].region:p.region,ps=psOf(db,rid),ageMul=p.age<=20?1.2:p.age<=23?1.12:p.age<=26?1:p.age<=29?.82:.62,left=p.contract?Math.max(0,p.contract.until-db.year+1):0,contractMul=p.contract?1+Math.min(3,left)*.12:.72,raw=.65*Math.exp((o-60)*.115)*ps*(.78+rep/180)*(1+up*(p.age<=22?.045:.018))*ageMul*contractMul;return Math.round(Math.max(.2*ps,raw)*10)/10}
+function asking(db,p,rid){return Math.round(marketSalary(db,p,rid)*(1+p.personality.ambition/400)*(.96+(p.reputation??playerOvr(p))/1800)*10)/10}
+function signContract(db,p,t,salary,years){const old=p.team;assignPlayerToTeam(db,p,t);p.faYears=0;p.contract={salary:Math.round(salary*10)/10,until:db.year+years-1,signed:db.year};if(db.world)recordPlayerEvent(p,'contract',db.year,{team:t.id,salary:p.contract.salary,years,until:p.contract.until,renewal:old===t.id,date:db.worldDate})}
 function payroll(db,t){return t.roster.reduce((a,id)=>a+((db.players[id]&&db.players[id].contract)?db.players[id].contract.salary:0),0)}
 function initFinance(db,t,rng){
   const ps=psTeam(db,t);
@@ -2350,10 +2393,11 @@ function ensureEven(db,rng,ev){
 }
 
 // ---- 이적료 / 직접 운영 ----
-function transferFee(db,p){const left=p.contract?Math.max(1,p.contract.until-db.year+1):1;return Math.round(marketSalary(db,p,db.teams[p.team]?db.teams[p.team].region:p.region)*left*0.9*(1+Math.max(0,p.pot-playerOvr(p))/20)*(p.wantsOut?0.75:1)*10)/10}
+function transferFee(db,p){const left=p.contract?Math.max(1,p.contract.until-db.year+1):1;return Math.round(playerMarketValue(db,p)*(.62+.18*Math.min(3,left))*(p.wantsOut?.75:1)*10)/10}
 function doTransfer(db,p,from,to,fee){
   assignPlayerToTeam(db,p,to);
   from.finance.cash=Math.round((from.finance.cash+fee)*10)/10;to.finance.cash=Math.round((to.finance.cash-fee)*10)/10;
+  recordPlayerEvent(p,'transfer',db.year,{from:from.id,to:to.id,fee,date:db.worldDate});
   news(db,`이적: ${p.name} ${from.name} → ${to.name} (이적료 ${money(fee)})`);
 }
 function myT(db){return managedTeam(db)}
@@ -2365,7 +2409,7 @@ function mResign(db,pid,years){
   signContract(db,p,t,ask,years);return `${p.name}: 재계약 완료 (${money(ask)} · ${years}년)`;
 }
 function mRelease(db,pid){const t=myT(db),p=db.players[pid];const cost=p.contract&&p.contract.until>=db.year?p.contract.salary*(p.contract.until-db.year+1)*0.5:0;
-  t.finance.buyout=(t.finance.buyout||0)+cost;removePlayerFromTeam(db,p);p.contract=null;p.faYears=0;return `${p.name} 방출${cost?` (해지금 ${money(cost)})`:''}`}
+  t.finance.buyout=(t.finance.buyout||0)+cost;removePlayerFromTeam(db,p);p.contract=null;p.faYears=0;recordPlayerEvent(p,'release',db.year,{team:t.id,cost,date:db.worldDate});return `${p.name} 방출${cost?` (해지금 ${money(cost)})`:''}`}
 function mOffer(db,pid,salary,years){const w=db.world;w.offers=w.offers.filter(o=>o.pid!==pid);w.offers.push({pid,salary,years});return `${db.players[pid].name}에게 ${money(salary)} · ${years}년 제안 — 시장 마감 때 선수가 결정합니다`}
 function mTransfer(db,pid,fee){
   const t=myT(db),p=db.players[pid],from=db.teams[p.team],ask=transferFee(db,p),rng=new RNG(db.world.seed+pid+fee,'bid');
@@ -2391,7 +2435,7 @@ function scoutFromDay(db,s,day){
     for(const tid of [m.a,m.b])for(const id of db.teams[tid].roster){db.scout[id]=Math.min(100,(db.scout[id]??(db.players[id].region===myR?30:8))+inc)}}
 }
 function obsAttr(db,p,a,k){if(k>=100)return p.attrs[a];const n=((hashStr(p.id+a)%2001)/1000-1)*(1-k/100)*14;return Math.round(clamp(p.attrs[a]+n,20,99))}
-function obsOvr(db,p){const k=knowledge(db,p);if(k>=100)return playerOvr(p);let s=0,n=0;for(const g in ATTR_GROUPS)for(const a of ATTR_GROUPS[g]){if(a==='smite_execution'&&p.role!=='JGL')continue;s+=obsAttr(db,p,a,k);n++}return Math.round(s/n)}
+function obsOvr(db,p){const k=knowledge(db,p);if(k>=100)return playerOvr(p);const role=p.role,gw=ROLE_GROUP_WEIGHTS[role]||ROLE_GROUP_WEIGHTS.MID,gs=g=>{const keys=ATTR_GROUPS[g].filter(a=>!(a==='smite_execution'&&role!=='JGL')&&!(a==='csing'&&role==='SUP'));return avg(keys.map(a=>obsAttr(db,p,a,k)))};let base=0,w=0;for(const [g,x] of Object.entries(gw)){base+=gs(g)*x;w+=x}base/=w||1;const keys=ROLE_KEY_ATTRS[role]||[],key=keys.length?avg(keys.map(a=>obsAttr(db,p,a,k))):base;return Math.round(clamp(base*.82+key*.18,20,99))}
 function scoutPlayers(db,ids,amt,cost){const t=myT(db);if(t.finance.cash<cost)return '보유 자금이 부족합니다';t.finance.cash=Math.round((t.finance.cash-cost)*10)/10;ids.forEach(id=>db.scout[id]=Math.min(100,knowledge(db,db.players[id])+amt));return `스카우팅 완료 (${money(cost)})`}
 
 function mHireCoach(db,cid){const t=myT(db),c=db.coachPool.find(x=>x.id===cid);if(!c)return '';const ps=psOf(db,t.region),fee=coachSalary(t.coach,ps);
@@ -2403,9 +2447,9 @@ function mFacility(db){const t=myT(db);if((t.facility||2)>=5)return '이미 최�
 /* ==== FILE: features.js ==== */
 // ===== 롤FM: 컨디션·폼·사기·팀 호흡 / 코칭스태프 / 시상·명예의 전당 / 구단주 목표 / 스폰서 =====
 const GOAL_KO={title:'리그 우승',final:'결승 진출',playoffs:'플레이오프 진출',top_half:'상위권 (중위 이상)',survive:'강등 피하기'};
-function pState(p){if(p.form===undefined){p.form=0;p.fatigue=10;p.morale=65}return p}
-// 경기력 보정: 폼(±), 피로(−), 사기(±)
-function playerMod(p){pState(p);return p.form/150-p.fatigue/600+(p.morale-65)/1000}
+function pState(p){if(p.form===undefined)p.form=0;if(p.fatigue===undefined)p.fatigue=10;if(p.morale===undefined)p.morale=65;if(p.condition===undefined)p.condition=96;if(p.sharpness===undefined)p.sharpness=55;if(p.teamAdaptation===undefined)p.teamAdaptation=p.team?60:50;if(p.tacticalAdaptation===undefined)p.tacticalAdaptation=p.team?60:50;return p}
+// 상태는 기본 실력을 보정하지만 압도하지 않도록 총합을 제한한다.
+function playerMod(p){pState(p);const v=p.form/250-p.fatigue/900+(p.condition-92)/1200+(p.morale-65)/1800+(p.sharpness-60)/1700+((p.teamAdaptation+p.tacticalAdaptation)/2-60)/2200;return clamp(v,-.11,.09)}
 function teamSynergy(t){return t.synergy??50}
 // 시리즈 후: 폼·피로·사기 갱신
 function afterSeries(db,lines,rec){
@@ -2414,20 +2458,21 @@ function afterSeries(db,lines,rec){
     const p=db.players[pid]; if(!p)continue; pState(p);
     const k=ls.reduce((a,l)=>a+l.k+l.a*0.7,0), d=ls.reduce((a,l)=>a+l.d,0), w=ls.filter(l=>l.win).length, mv=ls.filter(l=>l.mvp).length;
     const perf=(k/Math.max(1,d)-2.2)*0.8+(w-(ls.length-w))*0.8+mv*1.5;
-    p.form=clamp(p.form*0.7+perf+(hashStr(pid+rec.seed)%3-1),-10,10);
-    p.fatigue=clamp(p.fatigue+ls.length*4,0,100);
+    p.form=clamp(p.form*.7+perf+(hashStr(pid+rec.seed)%3-1),-10,10);
+    p.fatigue=clamp(p.fatigue+ls.length*4,0,100);p.condition=clamp(p.condition-ls.length*1.6,45,100);
+    p.sharpness=clamp(p.sharpness+ls.length*3.2,0,100);p.teamAdaptation=clamp(p.teamAdaptation+ls.length*.7,0,100);p.tacticalAdaptation=clamp(p.tacticalAdaptation+ls.length*.55,0,100);
     p.morale=clamp(p.morale+(w>ls.length/2?2:-2)+mv,0,100);
   }
   // 벤치 선수 사기 하락
   for(const tid of [rec.a,rec.b]){const t=db.teams[tid];if(!t)continue;
-    for(const id of t.roster){if(by[id])continue;const p=db.players[id];if(p){pState(p);p.morale=clamp(p.morale-1,0,100)}}
+    for(const id of t.roster){if(by[id])continue;const p=db.players[id];if(p){pState(p);p.morale=clamp(p.morale-1,0,100);p.sharpness=clamp(p.sharpness-.8,0,100);p.teamAdaptation=clamp(p.teamAdaptation+.18,0,100);p.tacticalAdaptation=clamp(p.tacticalAdaptation+.12,0,100)}}
     t.synergy=clamp(teamSynergy(t)+0.4,0,100);}
 }
 // 매 경기일: 기본 피로 회복. 훈련은 아래의 희소 포인트 배분으로만 관리한다
 function dailyRecovery(db){
   for(const t of Object.values(db.teams)){ if(t.active===false)continue;
     const rec=4;
-    for(const id of t.roster){const p=db.players[id];if(!p)continue;pState(p);p.fatigue=Math.max(0,p.fatigue-rec);p.form*=0.98}
+    for(const id of t.roster){const p=db.players[id];if(!p)continue;pState(p);p.fatigue=Math.max(0,p.fatigue-rec);p.condition=clamp(p.condition+2.5,0,100);p.form*=.98}
   }
 }
 function trainingGrowthMul(t){return 1}
@@ -2485,7 +2530,7 @@ function sponsorOffers(db,t){
 // ---- 시상 · 명예의 전당 ----
 function seasonAwards(db,w,rep){
   db.awards=db.awards||[];
-  const give=(type,pid,comp)=>{if(!pid)return;db.awards.push({year:w.year,type,pid,comp});const p=db.players[pid];if(p)p.titles.push(`${w.year} ${comp} ${type}`);rep.awards.push({type,pid,comp})};
+  const give=(type,pid,comp)=>{if(!pid)return;db.awards.push({year:w.year,type,pid,comp});const p=db.players[pid];if(p){p.titles.push(`${w.year} ${comp} ${type}`);p.reputation=Math.round(clamp((p.reputation||playerOvr(p))+(type==='MVP'||type==='대회 MVP'?3:1),20,99));recordPlayerEvent(p,'award',w.year,{award:type,competition:comp})}rep.awards.push({type,pid,comp})};
   for(const R of Object.values(db.regions)){
     const ss=Object.values(w.seasons).filter(s=>s.region===R.id&&(s.div||1)===1&&s.split&&s.done); if(!ss.length)continue;
     const agg={};for(const s of ss)for(const [pid,st] of Object.entries(s.pstats)){const a=agg[pid]||(agg[pid]={g:0,w:0,k:0,d:0,a:0,mvp:0});for(const k of ['g','w','k','d','a','mvp'])a[k]+=st[k]}
@@ -2619,16 +2664,16 @@ function finalizeInitialRosters(db){
 
 /* ==== FILE: app.js ==== */
 // ===== LOL GM: UI =====
-const SAVE_VERSION=11;
-const STORAGE_NS='lol-gm-v11';
+const SAVE_VERSION=12;
+const STORAGE_NS='lol-gm-v12';
 const LEGACY_STORAGE_PREFIXES=['lol-gm','lolfm'];
-const LEGACY_DB_NAMES=['lol-gm','lol-gm-v10','lolfm'];
+const LEGACY_DB_NAMES=['lol-gm','lol-gm-v10','lol-gm-v11','lolfm'];
 const DIRECT_FILE_PREVIEW=location.protocol==='file:'||location.origin==='null';
 let SLOT=(()=>{try{return localStorage.getItem(STORAGE_NS+'-slot')||'1'}catch(e){return '1'}})();
 const STORE_BASE=STORAGE_NS+'-db-v'+SAVE_VERSION+'-';
 let STORE=STORE_BASE+SLOT;
 let DB=null, LAST=null, LASTSER=null, VIEW='season', SQUAD=null, OPEN_P=null, LOGMODE='major', SAVEFAIL=false, MSG='';
-// 기존 개발 세이브는 호환하지 않는다. v10 시작 시 이전 lol-gm/lolfm 저장소를 폐기한다.
+// 기존 개발 세이브는 호환하지 않는다. 현재 namespace 이전의 lol-gm/lolfm 저장소를 폐기한다.
 function purgeLegacySaves(){
   try{
     for(let i=localStorage.length-1;i>=0;i--){
@@ -2860,25 +2905,23 @@ function viewSquad(){
     ${Object.keys(ATTR_GROUPS).map(g=>`<label><span>${GROUP_KO[g]}<output>${tr[g]}</output></span><input type="range" min="0" max="${TRAIN_POINTS}" value="${tr[g]}" data-tr="${g}"></label>`).join('')}
   </div><p class="hint">훈련 포인트는 총 ${TRAIN_POINTS}점입니다. 한 영역에 몰면 그 영역은 크게 오르지만 나머지는 덜 오르거나 떨어지고, 배분하지 않은 포인트는 버려집니다. 한 시즌에 영역별로 오를 수 있는 폭과, 잠재력보다 한참 높게 오르는 것에도 한계가 있습니다.</p>
   <div class="fin"><div><span>훈련 시설</span><b>${t.facility||2} / 5단계</b><small>성장 ×${facilityMul(t).toFixed(2)} · 유지비 연 ${money(facilityUpkeep(DB,t))}</small></div>${DB.world&&t.id===managedTeamId(DB)?`<div><span>증설</span>${(t.facility||2)<5?`<button class="ghost" id="facup">${t.facility+1||3}단계로 (${money(facilityCost(DB,t))})</button>`:'<b>최고 단계</b>'}<small id="facmsg"></small></div>`:''}</div></section>
-  <section><h3>로스터</h3><div class="scroll"><table class="roster"><thead><tr><th>포지션</th><th>선수</th><th>나이</th><th>종합</th><th>성장 여지</th><th>폼</th><th>피로</th><th>사기</th><th>연봉</th><th>계약</th>${Object.keys(ATTR_GROUPS).map(g=>`<th>${GROUP_KO[g]}</th>`).join('')}</tr></thead><tbody>
-    ${ps.map(p=>`<tr data-p="${p.id}" tabindex="0" class="${OPEN_P===p.id?'open':''}"><td><span class="role">${ROLE_KO[p.role]}</span></td><td><b>${esc(p.name)}</b>${starterFor(DB,t,p.role)===p?'':' <small class="hint">후보</small>'}</td><td class="num">${p.age}</td><td>${ovrTag(obsOvr(DB,p))}${knowledge(DB,p)<100?'<small class="hint">?</small>':''}</td><td>${potText(p)}</td><td class="num">${pState(p).form>=3?'<span class="hi">▲</span>':p.form<=-3?'<span class="lo">▼</span>':'–'}</td><td class="num">${Math.round(p.fatigue)}</td><td class="num ${p.morale<35?'lo':''}">${Math.round(p.morale)}${p.wantsOut?' 이적요청':''}</td><td class="num">${p.contract?money(p.contract.salary):'—'}</td><td class="num">${p.contract?'~'+p.contract.until:'—'}</td>${Object.keys(ATTR_GROUPS).map(g=>`<td>${ovrTag(grpAvg(p,g,knowledge(DB,p)))}</td>`).join('')}</tr>`).join('')}
+  <section><h3>로스터</h3><div class="scroll"><table class="roster"><thead><tr><th>포지션</th><th>선수</th><th>나이</th><th>종합</th><th>성장 여지</th><th>명성</th><th>시장가치</th><th>폼</th><th>컨디션</th><th>경기 감각</th><th>피로</th><th>사기</th><th>연봉</th><th>계약</th>${Object.keys(ATTR_GROUPS).map(g=>`<th>${GROUP_KO[g]}</th>`).join('')}</tr></thead><tbody>
+    ${ps.map(p=>{const st=pState(p);return `<tr data-p="${p.id}" tabindex="0" class="${OPEN_P===p.id?'open':''}"><td><span class="role">${ROLE_KO[p.role]}</span></td><td><b>${esc(p.name)}</b>${starterFor(DB,t,p.role)===p?'':' <small class="hint">후보</small>'}</td><td class="num">${p.age}</td><td>${ovrTag(obsOvr(DB,p))}${knowledge(DB,p)<100?'<small class="hint">?</small>':''}</td><td>${potText(p)}</td><td class="num">${p.reputation??'—'}</td><td class="num">${money(playerMarketValue(DB,p))}</td><td class="num">${st.form>=3?'<span class="hi">▲</span>':st.form<=-3?'<span class="lo">▼</span>':'–'}</td><td class="num">${Math.round(st.condition)}</td><td class="num">${Math.round(st.sharpness)}</td><td class="num">${Math.round(st.fatigue)}</td><td class="num ${st.morale<35?'lo':''}">${Math.round(st.morale)}${p.wantsOut?' 이적요청':''}</td><td class="num">${p.contract?money(p.contract.salary):'—'}</td><td class="num">${p.contract?'~'+p.contract.until:'—'}</td>${Object.keys(ATTR_GROUPS).map(g=>`<td>${ovrTag(grpAvg(p,g,knowledge(DB,p)))}</td>`).join('')}</tr>`}).join('')}
   </tbody></table></div><p class="hint">선수를 누르면 세부 능력치, 챔피언 폭, 커리어가 열립니다.${mineOrg?'':` 스카우팅 정보 ${kAvg}% — 정보가 적을수록 실제와 다르게 보입니다.`}</p>${DB.world&&!mineOrg?`<div class="controls"><button class="ghost" id="scoutT">이 팀 집중 스카우팅 (${money(0.5*psOf(DB,DB.teams[managedTeamId(DB)].region))})</button><span id="scmsg" class="hint"></span></div>`:''}</section>
   <div id="pdetail">${OPEN_P&&DB.players[OPEN_P]&&DB.players[OPEN_P].team===SQUAD?playerDetail(DB.players[OPEN_P]):''}</div>`;
 }
 function potText(p){const k=knowledge(DB,p),o=obsOvr(DB,p),up=Math.max(0,p.pot-playerOvr(p));if(k>=100)return potLabel(p);const w=Math.round((1-k/100)*14);return `${o+Math.max(0,up-w)}~${Math.min(99,o+up+w)}`}
 function playerDetail(p){
-  const k=knowledge(DB,p);
-  return `<section class="pdet"><h3>${esc(p.name)} <small>${ROLE_KO[p.role]} · ${p.age}세 · 종합 ${obsOvr(DB,p)}${k<100?` (스카우팅 ${k}%)`:''} · 잠재 ${potText(p)}${p.contract?` · 연봉 ${money(p.contract.salary)} (${p.contract.until}년까지)`:''}${p.region!==DB.teams[p.team].region&&DB.regions[p.region]?` · ${esc(DB.regions[p.region].name)} 출신 외국인`:''}</small></h3>
+  const k=knowledge(DB,p),team=p.team&&DB.teams[p.team],st=pState(p),nat=DB.regions[p.nationality||p.region],secondary=(p.secondaryRoles||[]).map(r=>ROLE_KO[r]+' '+roleFamiliarity(p,r)).join(' · '),ev=(p.careerEvents||[]).slice().reverse().slice(0,16);
+  return `<section class="pdet"><h3>${esc(p.name)} <small>${ROLE_KO[p.role]} · ${p.age}세 · ${careerStage(p)} · 종합 ${obsOvr(DB,p)}${k<100?` (스카우팅 ${k}%)`:''} · 잠재 ${potText(p)}</small></h3>
+  <div class="fin"><div><span>국적</span><b>${esc(nat?nat.name:(p.nationality||p.region||'—'))}</b><small>${playerSquadLabel(DB,p)}${team?` · ${esc(team.name)}`:''}</small></div><div><span>포지션</span><b>${ROLE_KO[p.role]}</b><small>${secondary?'부 '+esc(secondary):'부포지션 없음'}</small></div><div><span>명성</span><b>${p.reputation??'—'}</b><small>실력과 별도 · 성과 기반</small></div><div><span>시장가치</span><b>${money(playerMarketValue(DB,p))}</b><small>${p.contract?`연봉 ${money(p.contract.salary)} · ~${p.contract.until}`:'FA'}</small></div></div>
+  <div class="fin"><div><span>폼</span><b>${st.form>0?'+':''}${st.form.toFixed(1)}</b></div><div><span>컨디션</span><b>${Math.round(st.condition)}</b></div><div><span>경기 감각</span><b>${Math.round(st.sharpness)}</b></div><div><span>피로</span><b>${Math.round(st.fatigue)}</b></div><div><span>사기</span><b>${Math.round(st.morale)}</b></div><div><span>팀 적응</span><b>${Math.round(st.teamAdaptation)}</b><small>전술 ${Math.round(st.tacticalAdaptation)}</small></div></div>
   ${p.titles&&p.titles.length?`<p class="titles">${p.titles.map(esc).join(' · ')}</p>`:''}
-  <div class="agrid">${Object.keys(ATTR_GROUPS).map(g=>`<div class="agroup"><h4>${GROUP_KO[g]}</h4>${ATTR_GROUPS[g].map(a=>`<div class="arow"><span>${ATTR_KO[a]}</span>${ovrTag(obsAttr(DB,p,a,k))}</div>`).join('')}</div>`).join('')}
-  <div class="agroup"><h4>플레이 성향</h4>${TENDENCIES.map(t=>`<div class="arow"><span>${TEND_KO[t]}</span><span class="bar"><i style="width:${p.tend[t]}%"></i></span></div>`).join('')}
-  <h4 style="margin-top:12px">성격</h4><div class="arow"><span>프로의식</span>${ovrTag(p.personality.professionalism)}</div><div class="arow"><span>야망</span>${ovrTag(p.personality.ambition)}</div></div></div>
-  <h4>챔피언 폭</h4><div class="scroll"><table class="pool"><thead><tr><th>챔피언</th><th>숙련도</th><th>경험</th><th>상성 이해</th><th>자신감</th></tr></thead><tbody>
-  ${Object.entries(p.pool).sort((a,b)=>b[1].mastery-a[1].mastery).map(([c,v])=>`<tr><td>${esc(c)}</td><td>${ovrTag(v.mastery)}</td><td class="num">${v.experience}</td><td class="num">${v.matchup_knowledge}</td><td class="num">${v.confidence}</td></tr>`).join('')}
-  </tbody></table></div>
-  ${p.career.length?`<h4 style="margin-top:14px">커리어</h4><div class="scroll"><table class="pool"><thead><tr><th>시즌</th><th>대회</th><th>팀</th><th>종합</th><th>경기</th><th>승률</th><th>KDA</th><th>POG</th></tr></thead><tbody>
-  ${p.career.slice().reverse().map(c=>`<tr><td class="num">${c.year}</td><td>${esc(c.cname||c.comp)}</td><td>${esc(tshort(c.team))}</td><td class="num">${c.ovr||''}</td><td class="num">${c.g}</td><td class="num">${c.g?Math.round(c.w/c.g*100)+'%':''}</td><td class="num">${((c.k+c.a)/Math.max(1,c.d)).toFixed(2)}</td><td class="num">${c.mvp}</td></tr>`).join('')}
-  </tbody></table></div>`:''}</section>`;
+  <div class="agrid">${Object.keys(ATTR_GROUPS).map(g=>`<div class="agroup"><h4>${GROUP_KO[g]}</h4>${ATTR_GROUPS[g].map(x=>`<div class="arow"><span>${ATTR_KO[x]}</span>${ovrTag(obsAttr(DB,p,x,k))}</div>`).join('')}</div>`).join('')}
+  <div class="agroup"><h4>플레이 성향</h4>${TENDENCIES.map(x=>`<div class="arow"><span>${TEND_KO[x]}</span><span class="bar"><i style="width:${p.tend[x]}%"></i></span></div>`).join('')}<h4 style="margin-top:12px">성격 / 성장</h4><div class="arow"><span>프로의식</span>${ovrTag(p.personality.professionalism)}</div><div class="arow"><span>야망</span>${ovrTag(p.personality.ambition)}</div><div class="arow"><span>전성기 예상</span><b>${Math.round(ensurePlayerDevelopment(p).peakAge-1)}~${Math.round(ensurePlayerDevelopment(p).peakAge+1)}세</b></div></div></div>
+  <h4>챔피언 폭</h4><div class="scroll"><table class="pool"><thead><tr><th>챔피언</th><th>숙련도</th><th>공식 경험</th><th>스크림</th><th>훈련</th><th>상성 이해</th><th>자신감</th></tr></thead><tbody>${Object.entries(p.pool||{}).sort((x,y)=>y[1].mastery-x[1].mastery).map(([c,v])=>`<tr><td>${esc(championLabel(DB,c))}</td><td>${ovrTag(v.mastery)}</td><td class="num">${Math.round(v.experience||0)}</td><td class="num">${Math.round(v.scrimExperience||0)}</td><td class="num">${Math.round(v.trainingExperience||0)}</td><td class="num">${v.matchup_knowledge}</td><td class="num">${v.confidence}</td></tr>`).join('')}</tbody></table></div>
+  ${p.career.length?`<h4 style="margin-top:14px">커리어</h4><div class="scroll"><table class="pool"><thead><tr><th>시즌</th><th>대회</th><th>팀</th><th>구분</th><th>종합</th><th>경기</th><th>평점</th><th>KDA</th><th>GPM</th><th>DPM</th><th>POG</th><th>당시 계약</th></tr></thead><tbody>${p.career.slice().reverse().map(c=>`<tr><td class="num">${c.year}</td><td>${esc(c.cname||c.comp)}${c.international?' · 국제':''}</td><td>${esc(c.team?tshort(c.team):'FA')}</td><td>${c.squad||''}${c.division?` · ${c.division}부`:''}</td><td class="num">${c.ovr||''}</td><td class="num">${c.g}</td><td class="num">${c.rating?c.rating.toFixed(2):'—'}</td><td class="num">${((c.k+c.a)/Math.max(1,c.d)).toFixed(2)}</td><td class="num">${c.min&&c.gold?(c.gold/c.min).toFixed(0):'—'}</td><td class="num">${c.min&&c.dmg?(c.dmg/c.min).toFixed(0):'—'}</td><td class="num">${c.mvp}</td><td class="num">${c.salary!==null&&c.salary!==undefined?`${money(c.salary)} ~${c.contractUntil}`:'—'}</td></tr>`).join('')}</tbody></table></div>`:''}
+  ${ev.length?`<h4 style="margin-top:14px">커리어 이벤트</h4><div class="scroll"><table class="pool"><thead><tr><th>시즌</th><th>유형</th><th>내용</th></tr></thead><tbody>${ev.map(e=>{const detail=e.type==='contract'?`${esc(tshort(e.team))} · ${money(e.salary)} · ~${e.until}`:e.type==='transfer'?`${esc(tshort(e.from))} → ${esc(tshort(e.to))} · ${money(e.fee)}`:e.type==='award'?`${esc(e.competition)} · ${esc(e.award)}`:e.type==='title'?`${esc(e.competition)} 우승`:e.type==='squad_move'?`${esc(tshort(e.from))} → ${esc(tshort(e.to))}`:e.type==='retirement'?`${e.age}세 은퇴 · 전성기 종합 ${e.peak}`:e.type==='release'?`${esc(tshort(e.team))} 방출`:'—';return `<tr><td class="num">${e.year}</td><td>${({contract:'계약',transfer:'이적',award:'개인상',title:'우승',squad_move:'1·2군 이동',retirement:'은퇴',release:'방출'}[e.type]||e.type)}</td><td>${detail}</td></tr>`}).join('')}</tbody></table></div>`:''}</section>`;
 }
 function bindSquad(){
   $('#sq').onchange=e=>{SQUAD=e.target.value;OPEN_P=null;nav()};
@@ -2921,7 +2964,7 @@ function renderInitialRosterMarket(){
   const target=DB.teams[INITMK.target],R=DB.regions[target.region],errors=initialOrganizationErrors(DB,root);
   const free=Object.values(DB.players).filter(p=>!p.retired&&!p.team&&(INITMK.role==='ALL'||p.role===INITMK.role)&&(INITMK.scope==='all'||p.region===root.region)).sort((a,b)=>obsOvr(DB,b)-obsOvr(DB,a)||a.age-b.age).slice(0,80);
   const cards=squads.map(t=>{const e=initialSquadErrors(DB,t),lim=initialSquadLimits(DB,t),pay=payroll(DB,t);return `<section class="cfgcard"><div class="cfghead"><b>${esc(t.name)}</b><span class="${e.length?'warn':'hi'}">${t.roster.length}/${lim.max}명 · ${e.length?'미완성':'등록 가능'}</span></div><div class="fin"><div><span>연봉</span><b>${money(pay)}</b><small>예산 ${money(initialSalaryBudget(DB,t))}</small></div><div><span>외국인</span><b>${t.roster.filter(id=>DB.players[id]&&DB.players[id].region!==t.region).length}/${DB.regions[t.region].importLimit??2}</b></div></div>${e.length?`<p class="hint">${e.map(esc).join(' · ')}</p>`:''}${t.roster.length?t.roster.map(id=>{const p=DB.players[id];return `<div class="mrow"><span><span class="role">${ROLE_KO[p.role]}</span> <b>${esc(p.name)}</b> · ${p.age}세 · ${money(p.contract.salary)}</span><button class="ghost sm2" data-init-release="${p.id}">FA로 되돌리기</button></div>`}).join(''):'<p class="empty">아직 등록 선수가 없습니다.</p>'}</section>`}).join('');
-  return `<section class="teamhead"><h2>첫 시즌 로스터 구성</h2><p>${esc(root.name)}에서 커리어를 시작합니다. 모든 구단은 선수 0명에서 출발하며, 생성된 선수들은 전부 FA 풀에 있습니다.</p></section><section><h3>내 구단 조직</h3>${cards}</section>${MSG?`<p class="msg" role="status">${esc(MSG)}</p>`:''}<section><h3>FA 선수 풀</h3><div class="controls"><label>등록 스쿼드<select id="init-target">${squads.map(t=>`<option value="${t.id}"${t.id===INITMK.target?' selected':''}>${esc(t.name)}</option>`).join('')}</select></label><label>포지션<select id="init-role"><option value="ALL">전체</option>${ROLES.map(r=>`<option value="${r}"${INITMK.role===r?' selected':''}>${ROLE_KO[r]}</option>`).join('')}</select></label><label>범위<select id="init-scope"><option value="all"${INITMK.scope==='all'?' selected':''}>전 세계</option><option value="region"${INITMK.scope==='region'?' selected':''}>내 지역</option></select></label></div><div class="fin"><div><span>대상 스쿼드</span><b>${esc(target.name)}</b></div><div><span>연봉 예산</span><b>${money(initialSalaryBudget(DB,target))}</b><small>${R.salaryCap?'캡 '+money(R.salaryCap):'캡 없음'}${R.salaryFloor&&target.division===1?' · 플로어 '+money(R.salaryFloor):''}</small></div><div><span>언어</span><b>공용어 사용</b><small>해외 선수 의사소통 페널티 없음</small></div></div><div class="scroll"><table><thead><tr><th>포지션</th><th>선수</th><th>출신</th><th>나이</th><th>종합</th><th>잠재</th><th>요구 연봉</th><th></th></tr></thead><tbody>${free.map(p=>{const chk=initialSignCheck(DB,p,target);return `<tr><td><span class="role">${ROLE_KO[p.role]}</span></td><td><b>${esc(p.name)}</b></td><td>${esc((DB.regions[p.region]||{name:p.region}).name)}</td><td class="num">${p.age}</td><td class="num">${obsOvr(DB,p)}</td><td>${potText(p)}</td><td class="num">${money(asking(DB,p,target.region))}</td><td><button class="ghost sm2" data-init-sign="${p.id}"${chk.ok?'':' disabled'}>${chk.ok?'2년 계약':'등록 불가'}</button></td></tr>`}).join('')}</tbody></table></div><p class="hint">첫 시즌 창단 구성 단계에서는 요구 연봉으로 즉시 2년 계약합니다. 정식 제안 경쟁·협상은 계약/이적시장 항목에서 확장합니다.</p></section><section><h3>등록 마감</h3>${errors.length?`<p class="warn">${errors.map(esc).join(' / ')}</p>`:'<p class="hi">내 구단 로스터 규정을 모두 충족했습니다.</p>'}<div class="controls"><button class="primary" id="init-final"${errors.length?' disabled':''}>전 세계 로스터 확정 후 시즌 개막</button><span class="hint">확정하면 AI 구단도 남은 FA 풀에서 같은 등록 규칙으로 선수단을 구성합니다.</span></div></section>`;
+  return `<section class="teamhead"><h2>첫 시즌 로스터 구성</h2><p>${esc(root.name)}에서 커리어를 시작합니다. 모든 구단은 선수 0명에서 출발하며, 생성된 선수들은 전부 FA 풀에 있습니다.</p></section><section><h3>내 구단 조직</h3>${cards}</section>${MSG?`<p class="msg" role="status">${esc(MSG)}</p>`:''}<section><h3>FA 선수 풀</h3><div class="controls"><label>등록 스쿼드<select id="init-target">${squads.map(t=>`<option value="${t.id}"${t.id===INITMK.target?' selected':''}>${esc(t.name)}</option>`).join('')}</select></label><label>포지션<select id="init-role"><option value="ALL">전체</option>${ROLES.map(r=>`<option value="${r}"${INITMK.role===r?' selected':''}>${ROLE_KO[r]}</option>`).join('')}</select></label><label>범위<select id="init-scope"><option value="all"${INITMK.scope==='all'?' selected':''}>전 세계</option><option value="region"${INITMK.scope==='region'?' selected':''}>내 지역</option></select></label></div><div class="fin"><div><span>대상 스쿼드</span><b>${esc(target.name)}</b></div><div><span>연봉 예산</span><b>${money(initialSalaryBudget(DB,target))}</b><small>${R.salaryCap?'캡 '+money(R.salaryCap):'캡 없음'}${R.salaryFloor&&target.division===1?' · 플로어 '+money(R.salaryFloor):''}</small></div><div><span>언어</span><b>공용어 사용</b><small>해외 선수 의사소통 페널티 없음</small></div></div><div class="scroll"><table><thead><tr><th>포지션</th><th>선수</th><th>출신</th><th>나이</th><th>종합</th><th>잠재</th><th>명성</th><th>시장가치</th><th>요구 연봉</th><th></th></tr></thead><tbody>${free.map(p=>{const chk=initialSignCheck(DB,p,target);return `<tr><td><span class="role">${ROLE_KO[p.role]}</span></td><td><b>${esc(p.name)}</b></td><td>${esc((DB.regions[p.nationality||p.region]||{name:p.nationality||p.region}).name)}</td><td class="num">${p.age}</td><td class="num">${obsOvr(DB,p)}</td><td>${potText(p)}</td><td class="num">${p.reputation}</td><td class="num">${money(playerMarketValue(DB,p))}</td><td class="num">${money(asking(DB,p,target.region))}</td><td><button class="ghost sm2" data-init-sign="${p.id}"${chk.ok?'':' disabled'}>${chk.ok?'2년 계약':'등록 불가'}</button></td></tr>`}).join('')}</tbody></table></div><p class="hint">첫 시즌 창단 구성 단계에서는 요구 연봉으로 즉시 2년 계약합니다. 정식 제안 경쟁·협상은 계약/이적시장 항목에서 확장합니다.</p></section><section><h3>등록 마감</h3>${errors.length?`<p class="warn">${errors.map(esc).join(' / ')}</p>`:'<p class="hi">내 구단 로스터 규정을 모두 충족했습니다.</p>'}<div class="controls"><button class="primary" id="init-final"${errors.length?' disabled':''}>전 세계 로스터 확정 후 시즌 개막</button><span class="hint">확정하면 AI 구단도 남은 FA 풀에서 같은 등록 규칙으로 선수단을 구성합니다.</span></div></section>`;
 }
 function bindInitialRosterMarket(){
   const act=m=>{MSG=m;saveDB();nav();window.scrollTo(0,0)};
