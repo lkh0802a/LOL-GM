@@ -260,16 +260,28 @@ function starterFor(db,team,role){
 
 // ---------- 챔피언 평가 (패치 원수치 기반) ----------
 function championSkillProfile(c){
-  const ss=Object.values(c.skills||{}), n=Math.max(1,ss.length),effects=ss.flatMap(s=>s.effects||[]);
-  const structured=ss.filter(s=>(s.baseDamage&&s.baseDamage.length)||Object.keys(s.ratios||{}).length||s.cc||s.heal||s.shield), dmg=structured.reduce((z,s)=>z+((s.baseDamage||[]).reduce((a,b)=>a+(Number(b)||0),0)/Math.max(1,(s.baseDamage||[]).length))/500,0)/n, ratio=structured.reduce((z,s)=>z+Object.values(s.ratios||{}).reduce((a,b)=>a+(Number(b)||0),0),0)/n;
-  const ccStructured=structured.filter(s=>s.cc).length/n, utilStructured=structured.filter(s=>s.heal||s.shield).length/n;
-  return {power:clamp(ss.reduce((z,s)=>z+(s.power||0),0)/n/10+dmg*.18+ratio*.08,0,1.5),uptime:clamp(ss.reduce((z,s)=>z+(s.cooldown?1/Math.max(1,s.cooldown):0),0)*2.2,0,1),cc:clamp(effects.filter(x=>x==='cc'||x==='engage').length/n+ccStructured*.5,0,1.5),utility:clamp(effects.filter(x=>['shield','sustain','utility','mobility','poke'].includes(x)).length/n+utilStructured*.5,0,1.5),structured:structured.length/n};
+  const ss=Object.values(c.skills||{}),n=Math.max(1,ss.length),effects=ss.flatMap(s=>s.effects||[]);
+  const structured=ss.filter(s=>(s.baseDamage&&s.baseDamage.length)||Object.keys(s.ratios||{}).length||s.cc||s.heal||s.shield);
+  const avgNum=(arr,def=0)=>{const v=(arr||[]).map(Number).filter(Number.isFinite);return v.length?avg(v):def};
+  const dmg=structured.reduce((z,s)=>z+avgNum(s.baseDamage)/500,0)/n,ratio=structured.reduce((z,s)=>z+Object.values(s.ratios||{}).reduce((a,b)=>a+(Number(b)||0),0),0)/n;
+  const dmgMod=avg(ss.map(s=>s.damageMod??1)),utilityMod=avg(ss.map(s=>s.utilityMod??1)),ccMod=avg(ss.map(s=>s.ccMod??1)),mobilityMod=avg(ss.map(s=>s.mobilityMod??1));
+  const healMod=avg(ss.map(s=>s.healMod??1)),shieldMod=avg(ss.map(s=>s.shieldMod??1));
+  const cds=ss.map(s=>Number(s.cooldown)).filter(x=>Number.isFinite(x)&&x>0),ranges=ss.flatMap(s=>(s.range||[]).map(Number)).filter(x=>Number.isFinite(x)&&x>=100&&x<5000),costs=ss.flatMap(s=>(s.cost||[]).map(Number)).filter(x=>Number.isFinite(x)&&x>0);
+  const uptime=clamp(cds.reduce((z,x)=>z+1/x,0)*2.2,0,1.25),reach=clamp((avgNum(ranges,450)-300)/900,0,1),economy=costs.length?clamp(1-avgNum(costs)/230,.62,1):1;
+  const ccStructured=structured.reduce((z,s)=>z+(s.cc?(s.cc.duration||1):0),0)/n,utilStructured=structured.filter(s=>s.heal||s.shield).length/n;
+  return {
+    power:clamp((ss.reduce((z,s)=>z+(s.power||0),0)/n/10+dmg*.18+ratio*.08)*dmgMod,0,1.7),
+    uptime:clamp(uptime*(2-dmgMod*.15),0,1.35),
+    cc:clamp((effects.filter(x=>x==='cc'||x==='engage').length/n+ccStructured*.5)*ccMod,0,1.7),
+    utility:clamp((effects.filter(x=>['shield','sustain','utility','mobility','poke'].includes(x)).length/n+utilStructured*.5)*utilityMod*((healMod+shieldMod)/2),0,1.7),
+    reach, economy, mobility:clamp((effects.filter(x=>x==='mobility').length/n+.2)*mobilityMod,0,1.4), structured:structured.length/n
+  };
 }
 function champStrength(c){
   const k=c.kit,b=c.base,sp=championSkillProfile(c);
-  const stat = (b.hp+b.hpg*10)/1800*0.21 + (b.ad+b.adg*10)/110*0.21 + (b.arm+b.armg*10)/85*0.11 + ((b.mr||30)+(b.mrg||1.3)*10)/60*0.07 + (b.ms-320)/40*0.04 + ((b.as||.65)*(1+(b.asg||2)*.1))*0.04;
-  const kitv = (k.early+k.mid+k.late)/30*0.27 + (k.burst+k.dps)/20*0.16 + (k.cc+k.engage+k.peel)/30*0.11 - k.difficulty/10*0.04;
-  return stat+kitv+sp.power*.06+sp.uptime*.04+sp.cc*.025+sp.utility*.025;
+  const stat=(b.hp+b.hpg*10)/1800*.21+(b.ad+b.adg*10)/110*.21+(b.arm+b.armg*10)/85*.11+((b.mr||30)+(b.mrg||1.3)*10)/60*.07+(b.ms-320)/40*.04+((b.as||.65)*(1+(b.asg||2)*.1))*.04+(b.range-125)/525*.018;
+  const kitv=(k.early+k.mid+k.late)/30*.27+(k.burst+k.dps)/20*.16+(k.cc+k.engage+k.peel)/30*.11-k.difficulty/10*.04;
+  return stat+kitv+sp.power*.06+sp.uptime*.04+sp.cc*.025+sp.utility*.025+sp.reach*.022+sp.mobility*.012+sp.economy*.012;
 }
 
 // ---------- 밴픽 ----------
@@ -346,13 +358,35 @@ function runDraft(db, teamIds, rng, ctx){
   return {bans,picks,log,expl};
 }
 
+function systemEffects(defs,ids){
+  const out=Object.fromEntries((typeof SYSTEM_EFFECT_KEYS!=='undefined'?SYSTEM_EFFECT_KEYS:['offense','defense','sustain','utility','haste','mobility','early','scaling']).map(k=>[k,0]));
+  for(const id of ids||[]){const d=defs&&defs[id];if(!d||d.active===false)continue;for(const k in out)out[k]+=Number(d.effects&&d.effects[k])||0}
+  return out;
+}
+function systemChoiceScore(c,e,role){
+  const k=c.kit||{},front=['fighter','tank'].includes(c.cls),support=role==='SUP'||c.cls==='enchanter';
+  return (e.offense||0)*(.8+(k.burst+k.dps)/16)+(e.defense||0)*(front?1.35:.75)+(e.sustain||0)*(.7+(k.sustain||5)/8)+(e.utility||0)*(support?1.5:.7)+(e.haste||0)*(.8+(k.cc+k.poke)/18)+(e.mobility||0)*(.75+(k.mobility||5)/8)+(e.early||0)*(.65+(k.early||5)/8)+(e.scaling||0)*(.65+(k.late||5)/8);
+}
+function selectItemBuild(patch,c,p,role){
+  const pool=(patch.items&&patch.items[c.cls]||[]).filter(id=>patch.itemDefs&&patch.itemDefs[id]&&patch.itemDefs[id].active!==false);
+  return pool.map(id=>{const d=patch.itemDefs[id],noise=((hashStr((p&&p.id||'')+'|'+c.id+'|'+id)%1000)/1000-.5)*.012;return {id,s:systemChoiceScore(c,d.effects||{},role)+noise-(d.cost||3000)/120000}}).sort((x,y)=>y.s-x.s).map(x=>x.id).slice(0,6);
+}
+function selectRunePage(patch,c,p,role){
+  const rp=patch.runes&&patch.runes[c.cls]||{keystone:[],minor:[]},active=id=>patch.runeDefs&&patch.runeDefs[id]&&patch.runeDefs[id].active!==false;
+  const rank=ids=>ids.filter(active).map(id=>{const d=patch.runeDefs[id],noise=((hashStr((p&&p.id||'')+'|'+c.id+'|'+role+'|'+id)%1000)/1000-.5)*.01;return {id,s:systemChoiceScore(c,d.effects||{},role)+noise}}).sort((a,b)=>b.s-a.s).map(x=>x.id);
+  return [...rank(rp.keystone).slice(0,1),...rank(rp.minor).slice(0,2)];
+}
+function itemPurchaseThresholds(patch,build){
+  let total=500;return (build||[]).map(id=>{total+=(patch.itemDefs&&patch.itemDefs[id]&&patch.itemDefs[id].cost)||3000;return total});
+}
+
 // ---------- 경기 엔진 ----------
 const at=(ps,a)=>ps.p.attrs[a]/100;
 const td=(ps,t)=>ps.p.tend[t]/100;
 
 function newPS(p,side,role,champ,patch){
-  const pr=p.pool[champ]||{mastery:25,confidence:40,experience:10};
-  return {p,side,role,champ:patch.champions[champ],prof:pr,lvl:1,xp:0,gold:500,goldEarned:500,cs:0,k:0,d:0,a:0,dmg:0,dmgTaken:0,vision:0,objectives:0,laneAdv:0,laneSamples:0,teamfightDmg:0,teamfights:0,teamfightWins:0,deadUntil:0,hp:1,flashAt:0,penalty:0,items:[],recall:false};
+  const pr=p.pool[champ]||{mastery:25,confidence:40,experience:10},c=patch.champions[champ],itemPlan=selectItemBuild(patch,c,p,role),runes=selectRunePage(patch,c,p,role);
+  return {p,side,role,champ:c,prof:pr,lvl:1,xp:0,gold:500,goldEarned:500,cs:0,k:0,d:0,a:0,dmg:0,dmgTaken:0,vision:0,objectives:0,laneAdv:0,laneSamples:0,teamfightDmg:0,teamfights:0,teamfightWins:0,deadUntil:0,hp:1,flashAt:0,penalty:0,items:[],itemPlan,itemThresholds:itemPurchaseThresholds(patch,itemPlan),runes,patchRef:patch,recall:false};
 }
 function alive(st,ps){return ps.deadUntil<=st.t}
 function aliveOf(st,side){return st.sides[side].ps.filter(x=>alive(st,x))}
@@ -363,18 +397,19 @@ function combatStats(st,ps){
 }
 function combatStats0(st,ps){
   const c=ps.champ,b=c.base,L=ps.lvl,g=Math.max(0,ps.goldEarned-500),cv=ITEM_CONV[c.cls],k=c.kit,sp=championSkillProfile(c);
-  const ph=st.t<14?k.early:st.t<26?k.mid:k.late, pm=0.8+0.04*ph;
-  const hp=b.hp+b.hpg*(L-1)+g*cv.hp, arm=b.arm+b.armg*(L-1)+g*cv.arm, mr=(b.mr||30)+(b.mrg||1.3)*(L-1)+g*cv.arm*.65, ad=b.ad+b.adg*(L-1)+g*cv.ad;
-  const asp=(b.as||.65)*(1+(b.asg||0)*(L-1)/100),resource=b.resource?clamp((b.resource+(b.resourceg||0)*(L-1))/800+(b.resourceRegen||0)/30,.65,1.18):1;
-  let off=ad*(0.52+0.042*(k.burst+k.dps))*pm*(b.range>400?1.1:1)*(0.88+asp*.18)*(0.94+sp.power*.07+sp.uptime*.04)*resource;
-  const defense=arm*.55+mr*.45;let ehp=hp*(1+defense/100)*(0.83+0.028*k.sustain)*(0.98+sp.utility*.04+sp.cc*.025)*Math.sqrt(pm);
+  const ie=systemEffects(st.patch.itemDefs,ps.items),re=systemEffects(st.patch.runeDefs,ps.runes),phaseEarly=st.t<15?1:0,phaseLate=st.t>=28?1:0;
+  const ph=st.t<14?k.early:st.t<26?k.mid:k.late,pm=.8+.04*ph,phaseSystem=1+(ie.early+re.early)*phaseEarly+(ie.scaling+re.scaling)*phaseLate;
+  const hp=b.hp+b.hpg*(L-1)+g*cv.hp,arm=b.arm+b.armg*(L-1)+g*cv.arm,mr=(b.mr||30)+(b.mrg||1.3)*(L-1)+g*cv.arm*.65,ad=b.ad+b.adg*(L-1)+g*cv.ad;
+  const asp=(b.as||.65)*(1+(b.asg||0)*(L-1)/100),resource=(b.resource?clamp((b.resource+(b.resourceg||0)*(L-1))/800+(b.resourceRegen||0)/30,.65,1.18):1)*sp.economy;
+  const sysOff=1+ie.offense+re.offense+(ie.haste+re.haste)*.35+(ie.mobility+re.mobility)*.16,sysDef=1+ie.defense+re.defense+(ie.sustain+re.sustain)*.55+(ie.utility+re.utility)*.25+(ie.mobility+re.mobility)*.08;
+  let off=ad*(.52+.042*(k.burst+k.dps))*pm*(b.range>400?1.1:1)*(.88+asp*.18)*(.94+sp.power*.07+sp.uptime*.04+sp.reach*.025+sp.mobility*.012)*resource*sysOff*phaseSystem;
+  const defense=arm*.55+mr*.45;let ehp=hp*(1+defense/100)*(.83+.028*k.sustain)*(.98+sp.utility*.04+sp.cc*.025)*Math.sqrt(pm)*sysDef*Math.sqrt(phaseSystem);
   const s=st.sides[ps.side];
-  let buff=1; if(s.soul)buff*=1.08; if(s.baronUntil>st.t)buff*=1.15; if(s.elderUntil>st.t)buff*=1.25;
-  const mf=0.82+0.26*ps.prof.mastery/100+0.04*(ps.prof.confidence-50)/50;
-  const sk=0.84+0.32*avg(['positioning','target_selection','teamfight_awareness','combo_execution','reaction','burst_execution','extended_fight'].map(a=>at(ps,a)));
-  const fm=1+playerMod(ps.p);
-  const md=1+(st.mods?st.mods[ps.side]:0);
-  return {off:off*buff*mf*sk*md*fm, ehp:ehp*buff*Math.sqrt(mf), mf, sk};
+  let buff=1;if(s.soul)buff*=1.08;if(s.baronUntil>st.t)buff*=1.15;if(s.elderUntil>st.t)buff*=1.25;
+  const mf=.82+.26*ps.prof.mastery/100+.04*(ps.prof.confidence-50)/50;
+  const sk=.84+.32*avg(['positioning','target_selection','teamfight_awareness','combo_execution','reaction','burst_execution','extended_fight'].map(a=>at(ps,a)));
+  const fm=1+playerMod(ps.p),md=1+(st.mods?st.mods[ps.side]:0);
+  return {off:off*buff*mf*sk*md*fm,ehp:ehp*buff*Math.sqrt(mf),mf,sk,itemEffects:ie,runeEffects:re};
 }
 function power(st,ps){const c=combatStats(st,ps);return Math.sqrt(c.off*c.ehp)}
 function teamPower(st,side){return aliveOf(st,side).reduce((s,x)=>s+power(st,x)*x.hp**0.5,0)}
@@ -385,8 +420,8 @@ function expl(st,title,factors,extra={}){if(st.quiet)return;st.expl.push({t:st.t
 function pname(st,ps){return `${st.sides[ps.side].team.short} ${ps.p.name}(${ps.champ.name})`}
 
 function addGold(ps,g){ps.gold+=g;ps.goldEarned+=g;
-  while(ps.items.length<ITEM_COST.length && ps.goldEarned>=ITEM_COST[ps.items.length]+500){ps.items.push(ps.p?ITEM_LIST(ps):'')}}
-let ITEM_LIST=ps=>'';
+  while(ps.items.length<(ps.itemPlan||[]).length&&ps.goldEarned>=(ps.itemThresholds||[])[ps.items.length])ps.items.push(ps.itemPlan[ps.items.length]);
+}
 function addXp(ps,x){ps.xp+=x;let l=1;for(let i=1;i<XP_TABLE.length;i++)if(ps.xp>=XP_TABLE[i])l=i+1;ps.lvl=Math.min(18,l)}
 
 function killPlayer(st,killer,victim,assists,reason){
@@ -770,7 +805,6 @@ function towerTick(st){
 function simulateMatch(db,blueId,redId,seed,ctx,quiet){
   const rng=makeStreams(seed);
   const patch=db.patch;
-  ITEM_LIST=ps=>{const pool=patch.items[ps.champ.cls]||[];return pool[ps.items.length%pool.length]};
   const d=runDraft(db,[blueId,redId],rng.draft,ctx);
   const mkSide=(tid,i)=>{const team=db.teams[tid];const ps=ROLES.map(r=>{const p=starterFor(db,team,r);return newPS(p,i,r,d.picks[i][r],patch)});
     return {team,ps,towers:{top:[1,1,1,1],mid:[1,1,1,1],bot:[1,1,1,1]},inhibAt:{top:0,mid:0,bot:0},nexusT:2,nexus:true,dragons:[],soul:false,baronUntil:0,elderUntil:0,herald:0,heraldCharge:false,barons:0,kills:0,towersTaken:0}};
@@ -983,13 +1017,72 @@ const CHAMP_EXTRA = [
   ['Zyra',['SUP','JGL'],'mage','AP',[7,6,6,4,6,5,7,7,1,2,7,8,6,5],575]
 ];
 
-const ITEM_POOL = {
-  fighter:['선혈포식자','스테락의 도전','죽음의 무도','수호 천사','칠흑의 양날도끼','맬모셔스의 아귀'],
-  tank:['태양불꽃 방패','가시갑옷','얼어붙은 심장','정령의 형상','워모그의 갑옷','강철심장'],
-  mage:['루덴의 동반자','마법공학 로켓 벨트','존야의 모래시계','라바돈의 죽음모자','공허의 지팡이','밴시의 장막'],
-  assassin:['요우무의 유령검','세릴다의 원한','죽음의 무도','수호 천사','칠흑의 양날도끼','맬모셔스의 아귀'],
-  marksman:['무한의 대검','크라켄 학살자','고속 연사포','피바라기','도미닉 경의 인사','수호 천사'],
-  enchanter:['월석 재생기','미카엘의 축복','기사의 맹세','구원','불타는 향로','정령의 형상']
+const SYSTEM_EFFECT_KEYS=['offense','defense','sustain','utility','haste','mobility','early','scaling'];
+const ITEM_DEFS={
+  item_goredrinker:{id:'item_goredrinker',name:'선혈포식자',cost:3200,effects:{offense:.025,sustain:.055,haste:.02},classes:['fighter']},
+  item_steraks:{id:'item_steraks',name:'스테락의 도전',cost:3200,effects:{offense:.018,defense:.045,sustain:.02},classes:['fighter']},
+  item_deaths_dance:{id:'item_deaths_dance',name:'죽음의 무도',cost:3300,effects:{offense:.025,defense:.035,haste:.018},classes:['fighter','assassin']},
+  item_guardian_angel:{id:'item_guardian_angel',name:'수호 천사',cost:3200,effects:{offense:.018,defense:.05},classes:['fighter','assassin','marksman']},
+  item_black_cleaver:{id:'item_black_cleaver',name:'칠흑의 양날도끼',cost:3000,effects:{offense:.04,haste:.025,mobility:.012},classes:['fighter','assassin']},
+  item_maw:{id:'item_maw',name:'맬모셔스의 아귀',cost:3100,effects:{offense:.028,defense:.04},classes:['fighter','assassin']},
+  item_sunfire:{id:'item_sunfire',name:'태양불꽃 방패',cost:2800,effects:{defense:.055,offense:.012,early:.012},classes:['tank']},
+  item_thornmail:{id:'item_thornmail',name:'가시갑옷',cost:2700,effects:{defense:.07},classes:['tank']},
+  item_frozen_heart:{id:'item_frozen_heart',name:'얼어붙은 심장',cost:2600,effects:{defense:.055,haste:.035,utility:.015},classes:['tank']},
+  item_spirit_visage:{id:'item_spirit_visage',name:'정령의 형상',cost:2900,effects:{defense:.05,sustain:.045},classes:['tank','enchanter']},
+  item_warmogs:{id:'item_warmogs',name:'워모그의 갑옷',cost:3100,effects:{defense:.075,sustain:.035,scaling:.012},classes:['tank']},
+  item_heartsteel:{id:'item_heartsteel',name:'강철심장',cost:3200,effects:{defense:.06,scaling:.045},classes:['tank']},
+  item_ludens:{id:'item_ludens',name:'루덴의 동반자',cost:3000,effects:{offense:.055,early:.02},classes:['mage']},
+  item_rocketbelt:{id:'item_rocketbelt',name:'마법공학 로켓 벨트',cost:2900,effects:{offense:.035,mobility:.04,early:.015},classes:['mage']},
+  item_zhonyas:{id:'item_zhonyas',name:'존야의 모래시계',cost:3250,effects:{offense:.018,defense:.045,utility:.025},classes:['mage']},
+  item_rabadons:{id:'item_rabadons',name:'라바돈의 죽음모자',cost:3600,effects:{offense:.085,scaling:.035},classes:['mage']},
+  item_void_staff:{id:'item_void_staff',name:'공허의 지팡이',cost:3000,effects:{offense:.065,scaling:.018},classes:['mage']},
+  item_banshees:{id:'item_banshees',name:'밴시의 장막',cost:3100,effects:{offense:.025,defense:.035,utility:.025},classes:['mage']},
+  item_youmuus:{id:'item_youmuus',name:'요우무의 유령검',cost:2800,effects:{offense:.055,mobility:.035,early:.025},classes:['assassin']},
+  item_seryldas:{id:'item_seryldas',name:'세릴다의 원한',cost:3200,effects:{offense:.06,utility:.018,scaling:.02},classes:['assassin']},
+  item_infinity_edge:{id:'item_infinity_edge',name:'무한의 대검',cost:3500,effects:{offense:.085,scaling:.025},classes:['marksman']},
+  item_kraken:{id:'item_kraken',name:'크라켄 학살자',cost:3100,effects:{offense:.06,early:.018},classes:['marksman']},
+  item_rapid_firecannon:{id:'item_rapid_firecannon',name:'고속 연사포',cost:2900,effects:{offense:.035,mobility:.025,utility:.022},classes:['marksman']},
+  item_bloodthirster:{id:'item_bloodthirster',name:'피바라기',cost:3400,effects:{offense:.05,sustain:.055},classes:['marksman']},
+  item_lord_dominiks:{id:'item_lord_dominiks',name:'도미닉 경의 인사',cost:3100,effects:{offense:.07,scaling:.02},classes:['marksman']},
+  item_moonstone:{id:'item_moonstone',name:'월석 재생기',cost:2400,effects:{utility:.055,sustain:.045,haste:.018},classes:['enchanter']},
+  item_mikaels:{id:'item_mikaels',name:'미카엘의 축복',cost:2300,effects:{utility:.06,defense:.022,haste:.015},classes:['enchanter']},
+  item_knights_vow:{id:'item_knights_vow',name:'기사의 맹세',cost:2300,effects:{defense:.04,utility:.045},classes:['enchanter']},
+  item_redemption:{id:'item_redemption',name:'구원',cost:2300,effects:{utility:.065,sustain:.025,haste:.015},classes:['enchanter']},
+  item_ardent:{id:'item_ardent',name:'불타는 향로',cost:2300,effects:{utility:.045,offense:.025,haste:.018},classes:['enchanter']}
+};
+const ITEM_POOL={
+  fighter:['item_goredrinker','item_steraks','item_deaths_dance','item_guardian_angel','item_black_cleaver','item_maw'],
+  tank:['item_sunfire','item_thornmail','item_frozen_heart','item_spirit_visage','item_warmogs','item_heartsteel'],
+  mage:['item_ludens','item_rocketbelt','item_zhonyas','item_rabadons','item_void_staff','item_banshees'],
+  assassin:['item_youmuus','item_seryldas','item_deaths_dance','item_guardian_angel','item_black_cleaver','item_maw'],
+  marksman:['item_infinity_edge','item_kraken','item_rapid_firecannon','item_bloodthirster','item_lord_dominiks','item_guardian_angel'],
+  enchanter:['item_moonstone','item_mikaels','item_knights_vow','item_redemption','item_ardent','item_spirit_visage']
+};
+const RUNE_DEFS={
+  rune_conqueror:{id:'rune_conqueror',name:'정복자',kind:'keystone',effects:{offense:.045,sustain:.025,scaling:.012}},
+  rune_fleet:{id:'rune_fleet',name:'기민한 발놀림',kind:'keystone',effects:{sustain:.04,mobility:.025,early:.012}},
+  rune_tempo:{id:'rune_tempo',name:'치명적 속도',kind:'keystone',effects:{offense:.05,scaling:.025}},
+  rune_electrocute:{id:'rune_electrocute',name:'감전',kind:'keystone',effects:{offense:.055,early:.025}},
+  rune_comet:{id:'rune_comet',name:'신비로운 유성',kind:'keystone',effects:{offense:.04,utility:.018,early:.018}},
+  rune_aery:{id:'rune_aery',name:'콩콩이 소환',kind:'keystone',effects:{utility:.05,offense:.018}},
+  rune_aftershock:{id:'rune_aftershock',name:'여진',kind:'keystone',effects:{defense:.06,utility:.02}},
+  rune_guardian:{id:'rune_guardian',name:'수호자',kind:'keystone',effects:{defense:.035,utility:.055}},
+  rune_manaflow:{id:'rune_manaflow',name:'마나순환 팔찌',kind:'minor',effects:{utility:.025,scaling:.012}},
+  rune_transcendence:{id:'rune_transcendence',name:'깨달음',kind:'minor',effects:{haste:.035,scaling:.01}},
+  rune_bone_plating:{id:'rune_bone_plating',name:'뼈 방패',kind:'minor',effects:{defense:.035,early:.012}},
+  rune_overgrowth:{id:'rune_overgrowth',name:'과잉성장',kind:'minor',effects:{defense:.025,scaling:.02}},
+  rune_alacrity:{id:'rune_alacrity',name:'전설: 민첩함',kind:'minor',effects:{offense:.025,scaling:.012}},
+  rune_triumph:{id:'rune_triumph',name:'승전보',kind:'minor',effects:{sustain:.03,utility:.01}},
+  rune_biscuit:{id:'rune_biscuit',name:'비스킷 배달',kind:'minor',effects:{sustain:.02,utility:.02,early:.012}},
+  rune_approach:{id:'rune_approach',name:'쾌속 접근',kind:'minor',effects:{mobility:.025,utility:.012}}
+};
+const RUNE_POOL={
+  fighter:{keystone:['rune_conqueror','rune_fleet'],minor:['rune_triumph','rune_bone_plating','rune_overgrowth','rune_alacrity']},
+  tank:{keystone:['rune_aftershock','rune_guardian'],minor:['rune_bone_plating','rune_overgrowth','rune_approach','rune_transcendence']},
+  mage:{keystone:['rune_comet','rune_aery','rune_electrocute'],minor:['rune_manaflow','rune_transcendence','rune_biscuit','rune_approach']},
+  assassin:{keystone:['rune_electrocute','rune_conqueror'],minor:['rune_triumph','rune_transcendence','rune_bone_plating','rune_approach']},
+  marksman:{keystone:['rune_tempo','rune_fleet'],minor:['rune_alacrity','rune_triumph','rune_biscuit','rune_overgrowth']},
+  enchanter:{keystone:['rune_aery','rune_guardian'],minor:['rune_manaflow','rune_transcendence','rune_biscuit','rune_approach']}
 };
 
 function buildPatch(championSnapshot=CHAMPION_SOURCE_SNAPSHOT){
@@ -1013,7 +1106,7 @@ function buildPatch(championSnapshot=CHAMPION_SOURCE_SNAPSHOT){
     id:'26.19',
     championSource:{version:CHAMPION_SOURCE_PATCH,...sourceCoverage},
     rules:{ csGold:23, passiveGold:122, killGold:300, assistGold:150, dragonSpawn:5, dragonRespawn:5, heraldSpawn:14, baronSpawn:20, baronRespawn:6, baronBuff:3, elderBuff:2.5, inhibRespawn:5 },
-    champions, items: ITEM_POOL
+    champions, items:JSON.parse(JSON.stringify(ITEM_POOL)), itemDefs:JSON.parse(JSON.stringify(ITEM_DEFS)), runes:JSON.parse(JSON.stringify(RUNE_POOL)), runeDefs:JSON.parse(JSON.stringify(RUNE_DEFS))
   };
 }
 
@@ -1111,22 +1204,30 @@ function archChampion(name,roles,arch,dmg,extra,id=championId(name)){
 const PATCH_CACHE={};
 const RULE_KO={dragonRespawn:'드래곤 재생성(분)',baronBuff:'바론 버프 지속(분)',csGold:'미니언 골드',killGold:'처치 골드',heraldSpawn:'전령 등장(분)',baronSpawn:'바론 등장(분)'};
 function initPatches(db){
-  db.patches={base:JSON.parse(JSON.stringify(db.patch)),list:[],prev:[],nextDate:null,newIdx:0,y:0,n:0,releasesByYear:{}};
+  db.patches={base:JSON.parse(JSON.stringify(db.patch)),initialBase:JSON.parse(JSON.stringify(db.patch)),list:[],history:[],prev:[],nextDate:null,newIdx:0,y:0,n:0,releasesByYear:{},releaseTargets:{},reworksByYear:{},majorReworksByYear:{},systemLifeByYear:{},cadence:14};
   db.metaStats={};db.metaGames=0;db.regionMetaStats={};db.regionMetaGames={};
 }
 function applyNote(P,n){
   const c=P.champions[n.c];
-  if(n.type==='skill'&&c&&c.skills?.[n.slot])c.skills[n.slot][n.field]=n.new;
-  else if(n.type==='kit'&&c)c.kit[n.key]=clamp(c.kit[n.key]+n.d,1,10);
-  else if(n.type==='base'&&c)c.base[n.key]=n.new??Math.round(c.base[n.key]*(1+n.d)*100)/100;
-  else if(n.type==='new'){const c=archChampion(n.def.name,n.def.roles,n.def.arch,n.def.dmg,null,n.def.id||championId(n.def.name));c.releaseDate=n.def.releaseDate||null;c.proEligibleDate=n.def.proEligibleDate||null;P.champions[c.id]=c}
+  if(n.type==='skill'&&c&&c.skills&&c.skills[n.slot])c.skills[n.slot][n.field]=JSON.parse(JSON.stringify(n.new));
+  else if(n.type==='kit'&&c)c.kit[n.key]=n.new!=null?n.new:clamp(c.kit[n.key]+n.d,1,10);
+  else if(n.type==='base'&&c)c.base[n.key]=n.new!=null?n.new:Math.round(c.base[n.key]*(1+n.d)*100)/100;
+  else if(n.type==='new'){const nc=archChampion(n.def.name,n.def.roles,n.def.arch,n.def.dmg,null,n.def.id||championId(n.def.name));nc.releaseDate=n.def.releaseDate||null;nc.proEligibleDate=n.def.proEligibleDate||null;P.champions[nc.id]=nc}
   else if(n.type==='rule')P.rules[n.key]=n.v;
+  else if(n.type==='item'&&P.itemDefs&&P.itemDefs[n.id]){const d=P.itemDefs[n.id];if(n.field==='cost')d.cost=n.new;else{d.effects=d.effects||{};d.effects[n.field]=n.new}}
+  else if(n.type==='item_new'){P.itemDefs=P.itemDefs||{};P.itemDefs[n.def.id]=JSON.parse(JSON.stringify(n.def));P.items=P.items||{};for(const cls of n.def.classes||[]){P.items[cls]=P.items[cls]||[];if(!P.items[cls].includes(n.def.id))P.items[cls].push(n.def.id)}}
+  else if(n.type==='item_remove'&&P.itemDefs&&P.itemDefs[n.id])P.itemDefs[n.id].active=false;
+  else if(n.type==='rune'&&P.runeDefs&&P.runeDefs[n.id]){const d=P.runeDefs[n.id];d.effects=d.effects||{};d.effects[n.field]=n.new}
+  else if(n.type==='rune_new'){P.runeDefs=P.runeDefs||{};P.runeDefs[n.def.id]=JSON.parse(JSON.stringify(n.def));P.runes=P.runes||{};for(const cls of n.def.classes||[]){P.runes[cls]=P.runes[cls]||{keystone:[],minor:[]};const k=n.def.kind==='keystone'?'keystone':'minor';if(!P.runes[cls][k].includes(n.def.id))P.runes[cls][k].push(n.def.id)}}
+  else if(n.type==='rune_remove'&&P.runeDefs&&P.runeDefs[n.id])P.runeDefs[n.id].active=false;
 }
 function getPatch(db,id){
   if(db.patch&&db.patch.id===id)return db.patch;
   if(PATCH_CACHE[id])return PATCH_CACHE[id];
-  const P=JSON.parse(JSON.stringify(db.patches.base));
-  for(const p of db.patches.list){if(P.id===id)break;for(const n of p.notes)applyNote(P,n);P.id=p.id}
+  const P=JSON.parse(JSON.stringify(db.patches.initialBase||db.patches.base));
+  if(P.id===id)return PATCH_CACHE[id]=P;
+  const hist=db.patches.history&&db.patches.history.length?db.patches.history:db.patches.list;
+  for(const p of hist){for(const n of p.notes||[])applyNote(P,n);P.id=p.id;if(P.id===id)return PATCH_CACHE[id]=P}
   return PATCH_CACHE[id]=P;
 }
 function championProEligible(db,c,date=db.worldDate){
@@ -1149,7 +1250,7 @@ function recordMeta(db,r){
   }
   db.metaHistory=db.metaHistory||[];
   const mc=r.metaContext||{};
-  db.metaHistory.push({date:r.date||db.worldDate,patch:r.patch||db.patch.id,comp:r.comp||r.competitionId||null,season:mc.season||null,year:mc.year||+(r.date||db.worldDate).slice(0,4),split:mc.split||null,stage:mc.stage||null,league:mc.league||null,international:!!mc.international,regions,sides:r.sides.map((s,i)=>({team:s.team?.id||null,region:s.team?.region||null,win:r.winner===i,picks:s.ps.map(x=>({champ:x.champ.id,role:x.role||null,player:x.p?.id||null}))})),bans:r.draft.bans.flat()});
+  db.metaHistory.push({date:r.date||db.worldDate,patch:r.patch||db.patch.id,comp:r.comp||r.competitionId||null,season:mc.season||null,year:mc.year||+(r.date||db.worldDate).slice(0,4),split:mc.split||null,stage:mc.stage||null,league:mc.league||null,international:!!mc.international,regions,sides:r.sides.map((s,i)=>({team:s.team?.id||null,region:s.team?.region||null,win:r.winner===i,picks:s.ps.map(x=>({champ:x.champ.id,role:x.role||null,player:x.p?.id||null,items:(x.items||[]).slice(),runes:(x.runes||[]).slice()}))})),bans:r.draft.bans.flat()});
   const international=regions.length>1;
   for(const side of r.sides){const t=side.team;if(!t)continue;t.metaKnowledge=t.metaKnowledge||{};t.metaCounter=t.metaCounter||{};for(const os of r.sides){if(os===side)continue;for(const pick of os.ps){const cid=pick.champ.id,success=r.winner===r.sides.indexOf(os),novel=((db.regionMetaStats?.[t.region]||{})[cid]?.p||0)<3,analysis=.65+(t.coach?.analysis||50)/140,learn=(success?.055:.018)*(novel?1.6:1)*(international?1.35:1)*analysis;t.metaKnowledge[cid]=clamp((t.metaKnowledge[cid]||0)+learn,0,1);if(r.winner!==r.sides.indexOf(side))t.metaCounter[cid]=clamp((t.metaCounter[cid]||0)+.02*analysis,0,1)}}}
 }
@@ -1170,54 +1271,191 @@ function metaTable(db,regionId=null){
   const G=Math.max(1,regionId?(db.regionMetaGames||{})[regionId]||0:db.metaGames||0), st=regionId?((db.regionMetaStats||{})[regionId]||{}):(db.metaStats||{});
   return Object.values(db.patch.champions).map(c=>{const s=st[c.id]||{p:0,w:0,b:0};return {c,p:s.p,b:s.b,w:s.w,pres:(s.p+s.b)/G,wr:s.p?s.w/s.p:null,sample:G,eligible:championProEligible(db,c)}}).sort((a,b)=>b.pres-a.pres);
 }
-function patchId(db,year){const pt=db.patches;if(pt.y!==year){pt.y=year;pt.n=0}pt.n++;return `${String(year).slice(2)}.${pt.n}`}
-// 밸런스 팀의 판단: 대회에서 너무 많이 쓰이고 이기는 챔피언은 하향, 외면받는 챔피언은 상향
+function patchId(db,year){const pt=db.patches;if(pt.y!==year){pt.y=year;pt.n=0}pt.n++;return String(year).slice(2)+'.'+pt.n}
+const PATCH_SIZE_KO={micro:'미세',small:'소규모',medium:'중간',large:'대규모'};
+const PATCH_SIZE_PROFILE={
+  micro:{stat:[.005,.012],cd:[.25,.5],range:[10,20],cost:[5,10],mod:[.01,.018]},
+  small:{stat:[.012,.022],cd:[.5,1],range:[15,30],cost:[5,15],mod:[.018,.03]},
+  medium:{stat:[.022,.04],cd:[1,1.75],range:[25,50],cost:[10,20],mod:[.03,.05]},
+  large:{stat:[.04,.065],cd:[1.5,2.5],range:[40,75],cost:[15,30],mod:[.05,.08]}
+};
+function patchHistory(db){return db.patches.history&&db.patches.history.length?db.patches.history:db.patches.list||[]}
+function patchEvidenceRows(db){return (db.metaHistory||[]).filter(r=>r.patch===db.patch.id).sort((a,b)=>(a.date||'').localeCompare(b.date||''))}
+function patchTeamPower(db,tid){
+  const t=db.teams&&db.teams[tid];if(!t)return 0;
+  const vals=(t.roster||[]).map(id=>db.players&&db.players[id]).filter(Boolean).map(p=>typeof playerOvr==='function'?playerOvr(p):50);
+  return vals.length?avg(vals):Number(t.base||t.reputation||50);
+}
+function patchEvidenceContext(db,rows){
+  const tids=[...new Set(rows.flatMap(r=>(r.sides||[]).map(s=>s.team).filter(Boolean)))],powers=tids.map(t=>patchTeamPower(db,t)).sort((a,b)=>a-b);
+  return {topCut:powers.length?powers[Math.floor((powers.length-1)*.75)]:Infinity,regionCount:Math.max(1,Object.keys(db.regions||{}).length)};
+}
+function patchChampionEvidence(db,cid,rows,ctx){
+  rows=rows||patchEvidenceRows(db);ctx=ctx||patchEvidenceContext(db,rows);
+  let p=0,w=0,b=0,intl=0,top=0,recentP=0,recentB=0,oldP=0,oldB=0;const pos={},regions={},teams={},players={},partners={};
+  const cut=Math.floor(rows.length/2);
+  rows.forEach((r,ri)=>{
+    const recent=ri>=cut;if((r.bans||[]).includes(cid)){b++;if(recent)recentB++;else oldB++}
+    for(const side of r.sides||[]){const picks=(side.picks||[]).map(x=>typeof x==='string'?{champ:x}:x),me=picks.find(x=>x.champ===cid);if(!me)continue;
+      p++;if(side.win)w++;if(recent)recentP++;else oldP++;if(r.international)intl++;if(me.role)pos[me.role]=(pos[me.role]||0)+1;if(side.region)regions[side.region]=(regions[side.region]||0)+1;
+      if(side.team){teams[side.team]=(teams[side.team]||0)+1;if(patchTeamPower(db,side.team)>=ctx.topCut)top++}if(me.player)players[me.player]=(players[me.player]||0)+1;
+      for(const x of picks)if(x.champ!==cid)partners[x.champ]=(partners[x.champ]||0)+1;
+    }
+  });
+  const games=Math.max(1,rows.length),pres=(p+b)/games,wr=p?(w+2)/(p+4):.5,recentGames=Math.max(1,rows.length-cut),oldGames=Math.max(1,cut),recentPres=(recentP+recentB)/recentGames,oldPres=(oldP+oldB)/oldGames,trend=recentPres-oldPres;
+  const maxShare=o=>{const v=Object.values(o);return p&&v.length?Math.max(...v)/p:0},playerConc=maxShare(players),teamConc=maxShare(teams),comboConc=maxShare(partners),flex=Object.keys(pos).length,regionSpread=Object.keys(regions).length/ctx.regionCount,intlShare=p?intl/p:0,topShare=p?top/p:0;
+  const confidence=clamp((p+b)/(p+b+12)*Math.min(1,rows.length/24),0,1);
+  const nerfSignal=pres*1.02+Math.max(0,wr-.51)*2.4*confidence+Math.max(0,trend)*.8+Math.max(0,flex-1)*.055+intlShare*.07+regionSpread*.05-Math.max(0,playerConc-.45)*.2-Math.max(0,teamConc-.5)*.12-Math.max(0,comboConc-.65)*.08;
+  const buffSignal=Math.max(0,.065-pres)*3.3*Math.min(1,rows.length/18)+Math.max(0,.47-wr)*1.7*confidence+Math.max(0,-trend)*.38+(p===0&&rows.length>=16?.12:0);
+  let dir=0,signal=0;if(rows.length>=8&&nerfSignal>=.48&&nerfSignal-buffSignal>=.16){dir=-1;signal=nerfSignal}else if(rows.length>=12&&buffSignal>=.2&&buffSignal-nerfSignal*.38>=.07){dir=1;signal=buffSignal}
+  const diagnosis=dir<0?(flex>=2&&pres>.25?'플렉스와 프로 우선순위 과다':wr>=.545&&confidence>.25?'실전 성능 과다':topShare>.65?'상위권 중심 우선순위 과다':'밴픽 압력 과다'):(dir>0?(pres<.025?'저사용으로 전략적 가치 부족':'낮은 실전 성능과 선택률'):'관찰');
+  const why='표본 '+rows.length+'경기 · 밴픽 '+Math.round(pres*100)+'% · 승률 '+Math.round(wr*100)+'% · 최근 추세 '+(trend>=0?'+':'')+Math.round(trend*100)+'%p'+(flex>1?' · '+flex+'포지션 플렉스':'')+(intlShare>.2?' · 국제전 비중 '+Math.round(intlShare*100)+'%':'')+(playerConc>.5?' · 특정 선수 의존 '+Math.round(playerConc*100)+'%':'')+(teamConc>.55?' · 특정 팀 의존 '+Math.round(teamConc*100)+'%':'');
+  return {c:db.patch.champions[cid],cid,games:rows.length,p,b,w,pres,wr,trend,confidence,flex,regionSpread,intlShare,topShare,playerConc,teamConc,comboConc,nerfSignal,buffSignal,dir,signal,diagnosis,why};
+}
+function patchSizeForSignal(signal,major){
+  let s=signal>=.9?'large':signal>=.68?'medium':signal>=.42?'small':'micro';
+  if(major&&s==='micro')s='small';return s;
+}
+function diagnosePatchMeta(db,major=false){
+  const rows=patchEvidenceRows(db),ctx=patchEvidenceContext(db,rows),champions=Object.keys(db.patch.champions).map(id=>patchChampionEvidence(db,id,rows,ctx));
+  return {sampleGames:rows.length,rows,ctx,champions,major:!!major};
+}
+function recentDirectionCount(db,cid,dir,lookback=2){
+  return patchHistory(db).slice(-lookback).reduce((z,p)=>z+(p.notes||[]).some(n=>n.c===cid&&n.dir===dir&&['skill','base','kit'].includes(n.type))?1:0,0);
+}
+function lastChampionChange(db,cid){
+  const h=patchHistory(db);for(let i=h.length-1;i>=0;i--)for(let j=(h[i].notes||[]).length-1;j>=0;j--){const n=h[i].notes[j];if(n.c===cid&&n.dir&&['skill','base','kit'].includes(n.type))return {patch:h[i],note:n}}return null;
+}
+function blendPatchValue(cur,target,f){
+  if(Array.isArray(cur)&&Array.isArray(target))return cur.map((x,i)=>Number.isFinite(+x)&&Number.isFinite(+target[i])?Math.round((+x+(+target[i]-+x)*f)*100)/100:x);
+  return Number.isFinite(+cur)&&Number.isFinite(+target)?Math.round((+cur+(+target-+cur)*f)*100)/100:cur;
+}
+function partialChampionRollback(db,diag,rng){
+  const hit=lastChampionChange(db,diag.cid);if(!hit||hit.note.dir===diag.dir||hit.note.old==null)return null;const n=hit.note,c=diag.c,f=rng.range(.35,.65),out={...n,dir:diag.dir,size:'micro',category:'rollback',why:'직전 '+hit.patch.id+' 조정의 과도한 반응을 부분 롤백 · '+diag.why,rollbackOf:hit.patch.id};
+  if(n.type==='skill'&&c.skills&&c.skills[n.slot]){out.old=JSON.parse(JSON.stringify(c.skills[n.slot][n.field]));out.new=blendPatchValue(out.old,n.old,f)}
+  else if(n.type==='base'){out.old=c.base[n.key];out.new=blendPatchValue(out.old,n.old,f)}
+  else if(n.type==='kit'){out.old=c.kit[n.key];out.new=Math.round(blendPatchValue(out.old,n.old,f)*10)/10;out.d=out.new-out.old}
+  if(JSON.stringify(out.old)===JSON.stringify(out.new))return null;return out;
+}
+function shiftedArray(old,delta,min=0,max=9999){
+  return old.map(x=>{const n=Number(x);if(!Number.isFinite(n)||n<=0)return x;return Math.round(clamp(n+delta,min,max)*100)/100});
+}
+function championBalanceNote(db,diag,dir,size,rng,category='balance'){
+  const c=diag.c,p=PATCH_SIZE_PROFILE[size]||PATCH_SIZE_PROFILE.small,skills=['Q','W','E','R'].map(k=>c.skills&&c.skills[k]).filter(Boolean);
+  const rangeSkills=skills.filter(s=>(s.range||[]).some(x=>Number.isFinite(+x)&&+x>=100&&+x<3000)),costSkills=skills.filter(s=>(s.cost||[]).some(x=>Number.isFinite(+x)&&+x>0)),cdSkills=skills.filter(s=>Number.isFinite(+s.cooldown)&&+s.cooldown>1);
+  let families=dir<0?['cooldown','damage','base','range','utility','cost']:['damage','cooldown','range','base','cost','utility','mobility'];
+  if(diag.flex>=2||diag.pres>.45)families=['range','cooldown','utility','mobility','base','damage','cost'];
+  if(diag.wr>=.55&&diag.confidence>.25)families=['damage','base','cooldown','sustain','range','cost'];
+  for(let tries=0;tries<10;tries++){
+    const fam=rng.pick(families),why=diag.diagnosis+' · '+diag.why;
+    if(fam==='cooldown'&&cdSkills.length){const sk=rng.pick(cdSkills),old=+sk.cooldown,step=rng.range(p.cd[0],p.cd[1]),nv=Math.max(1,Math.round((old+(dir<0?step:-step))*4)/4);if(nv!==old)return {type:'skill',c:c.id,slot:sk.slot,field:'cooldown',old,new:nv,dir,size,category,why}}
+    if(fam==='range'&&rangeSkills.length){const sk=rng.pick(rangeSkills),old=JSON.parse(JSON.stringify(sk.range)),step=Math.round(rng.range(p.range[0],p.range[1])),nv=old.map(x=>Number.isFinite(+x)&&+x>=100&&+x<3000?Math.max(100,+x+(dir<0?-step:step)):x);if(JSON.stringify(nv)!==JSON.stringify(old))return {type:'skill',c:c.id,slot:sk.slot,field:'range',old,new:nv,dir,size,category,why}}
+    if(fam==='cost'&&costSkills.length){const sk=rng.pick(costSkills),old=JSON.parse(JSON.stringify(sk.cost)),step=Math.round(rng.range(p.cost[0],p.cost[1])/5)*5,nv=shiftedArray(old,dir<0?step:-step,0,250);if(JSON.stringify(nv)!==JSON.stringify(old))return {type:'skill',c:c.id,slot:sk.slot,field:'cost',old,new:nv,dir,size,category,why}}
+    if(['damage','utility','sustain','mobility'].includes(fam)&&skills.length){const sk=rng.pick(skills),field=fam==='damage'?'damageMod':fam==='utility'?'utilityMod':fam==='sustain'?(rng.chance(.5)?'healMod':'shieldMod'):'mobilityMod',old=Number(sk[field]??1),step=rng.range(p.mod[0],p.mod[1]),nv=Math.round(clamp(old+(dir>0?step:-step),.72,1.3)*1000)/1000;if(nv!==old)return {type:'skill',c:c.id,slot:sk.slot,field,old,new:nv,dir,size,category,why}}
+    if(fam==='base'){const keys=['hp','ad','arm','mr','hpg','adg','armg','mrg','ms','range','resource','resourceRegen'].filter(k=>Number.isFinite(c.base[k])&&(k!=='resource'||c.base[k]>0)),key=rng.pick(keys);if(!key)continue;const old=c.base[key];let nv;if(key==='ms')nv=Math.round(clamp(old+(dir>0?rng.int(2,4):-rng.int(2,4)),300,380));else if(key==='range')nv=Math.round(clamp(old+(dir>0?rng.pick([10,15,25]):-rng.pick([10,15,25])),100,700));else{const step=rng.range(p.stat[0],p.stat[1]);nv=Math.round(old*(1+(dir>0?step:-step))*100)/100}if(nv!==old)return {type:'base',c:c.id,key,old,new:nv,d:old?nv/old-1:0,dir,size,category,why}}
+  }
+  return null;
+}
+function chooseChampionBalanceChanges(db,diag,major,rng){
+  const nerfN=major?rng.int(6,10):rng.int(2,4),buffN=major?rng.int(7,11):rng.int(3,5),out=[];
+  const take=(dir,n)=>diag.champions.filter(x=>x.dir===dir).sort((a,b)=>b.signal-a.signal).slice(0,n*3);
+  for(const dir of [-1,1]){const limit=dir<0?nerfN:buffN;let count=0;for(const d of take(dir,limit)){if(count>=limit)break;
+      const last=lastChampionChange(db,d.cid);if(last&&last.note.dir!==dir){const rb=partialChampionRollback(db,d,rng);if(rb){out.push(rb);count++;continue}}
+      const same=recentDirectionCount(db,d.cid,dir,2);if(same&&d.signal<.88)continue;let size=patchSizeForSignal(d.signal,major);if(same&&['medium','large'].includes(size))size='small';
+      const n=championBalanceNote(db,d,dir,size,rng);if(n){out.push(n);count++}
+    }}
+  return out;
+}
+function systemClassesForRune(patch,id){return Object.entries(patch.runes||{}).filter(([,p])=>(p.keystone||[]).includes(id)||(p.minor||[]).includes(id)).map(([k])=>k)}
+function systemUsageEvidence(db,kind,id,rows){
+  rows=rows||patchEvidenceRows(db);const def=kind==='item'?db.patch.itemDefs&&db.patch.itemDefs[id]:db.patch.runeDefs&&db.patch.runeDefs[id];if(!def||def.active===false)return {id,uses:0,eligible:0,usage:0,wr:.5,confidence:0};
+  const classes=kind==='item'?(def.classes||[]):systemClassesForRune(db.patch,id);let uses=0,wins=0,eligible=0;
+  for(const r of rows)for(const side of r.sides||[])for(const raw of side.picks||[]){const p=typeof raw==='string'?{champ:raw}:raw,c=db.patch.champions[p.champ];if(!c||!classes.includes(c.cls))continue;eligible++;const arr=kind==='item'?(p.items||[]):p.runes||[];if(arr.includes(id)){uses++;if(side.win)wins++}}
+  const usage=eligible?uses/eligible:0,wr=uses?(wins+2)/(uses+4):.5,confidence=clamp(uses/(uses+10)*Math.min(1,eligible/30),0,1);
+  return {id,uses,wins,eligible,usage,wr,confidence,nerf:Math.max(0,usage-.55)*.8+Math.max(0,wr-.53)*1.5*confidence,buff:Math.max(0,.16-usage)*.55+Math.max(0,.47-wr)*1.1*confidence};
+}
+function lastSystemChange(db,kind,id){
+  const h=patchHistory(db);for(let i=h.length-1;i>=0;i--)for(let j=(h[i].notes||[]).length-1;j>=0;j--){const n=h[i].notes[j];if(n.type===kind&&n.id===id&&n.dir)return {patch:h[i],note:n}}return null;
+}
+function systemBalanceNote(db,kind,ev,dir,size,rng){
+  const defs=kind==='item'?db.patch.itemDefs:db.patch.runeDefs,d=defs[ev.id],p=PATCH_SIZE_PROFILE[size]||PATCH_SIZE_PROFILE.small,keys=Object.keys(d.effects||{}).filter(k=>Number.isFinite(d.effects[k]));
+  if(kind==='item'&&rng.chance(.35)){const old=d.cost,step={micro:50,small:100,medium:150,large:200}[size]||100,nv=clamp(old+(dir<0?step:-step),1800,4000);if(nv!==old)return {type:'item',id:ev.id,field:'cost',old,new:nv,dir,size,why:'아이템 사용률 '+Math.round(ev.usage*100)+'% · 승률 '+Math.round(ev.wr*100)+'%'}}
+  const field=keys.length?rng.pick(keys):(kind==='item'?'offense':'utility'),old=Number(d.effects[field]||0),step=rng.range(p.mod[0],p.mod[1])*.6,nv=Math.round(clamp(old+(dir>0?step:-step),0,.14)*1000)/1000;if(nv===old)return null;
+  return {type:kind,id:ev.id,field,old,new:nv,dir,size,why:(kind==='item'?'아이템':'룬')+' 사용률 '+Math.round(ev.usage*100)+'% · 승률 '+Math.round(ev.wr*100)+'%'};
+}
+function chooseSystemBalanceChanges(db,diag,major,rng){
+  const rows=diag.rows,out=[];for(const kind of ['item','rune']){const defs=kind==='item'?db.patch.itemDefs||{}:db.patch.runeDefs||{},evs=Object.keys(defs).map(id=>systemUsageEvidence(db,kind,id,rows)).filter(x=>x.eligible>=12),nerfs=evs.filter(x=>x.nerf>=.055).sort((a,b)=>b.nerf-a.nerf),buffs=evs.filter(x=>x.buff>=.055).sort((a,b)=>b.buff-a.buff),limit=major?2:1;
+      for(const [dir,list] of [[-1,nerfs],[1,buffs]]){let n=0;for(const ev of list){if(n>=limit)break;const last=lastSystemChange(db,kind,ev.id);if(last&&last.note.dir===dir&&patchHistory(db).slice(-2).includes(last.patch))continue;const sig=dir<0?ev.nerf:ev.buff,size=patchSizeForSignal(sig*4,major),note=systemBalanceNote(db,kind,ev,dir,size,rng);if(note){out.push(note);n++}}}
+    }return out;
+}
+const NEW_ITEM_A=['황혼','폭풍','별빛','핏빛','공허','태양','서리','용맹','심연','천공'];
+const NEW_ITEM_B=['검','창','방패','문장','활','관','성배','갑옷','부적','지팡이'];
+const NEW_RUNE_A=['불굴','추적','비상','집중','공명','격류','인내','섬광','연쇄','초월'];
+const NEW_RUNE_B=['의 맹세','의 발걸음','의 파동','의 표식','의 의지','의 통찰'];
+function generatedItemDef(db,rng,year){
+  const cls=rng.pick(Object.keys(db.patch.items||{})),idx=(db.patches.systemLifeByYear[year]&&db.patches.systemLifeByYear[year].itemNew||0)+1,id='item_gen_'+year+'_'+idx;let name;
+  do{name=rng.pick(NEW_ITEM_A)+rng.pick(NEW_ITEM_B)}while(Object.values(db.patch.itemDefs||{}).some(x=>x.name===name));
+  const keys=cls==='tank'?['defense','sustain','utility','haste']:cls==='enchanter'?['utility','sustain','haste','defense']:cls==='marksman'?['offense','mobility','scaling','sustain']:['offense','haste','mobility','sustain','defense'],effects={};
+  for(const k of keys.slice(0,3))effects[k]=Math.round(rng.range(.018,.055)*1000)/1000;
+  return {id,name,cost:Math.round(rng.range(cls==='enchanter'?2200:2700,cls==='enchanter'?2800:3500)/50)*50,effects,classes:[cls],active:true,createdYear:year};
+}
+function generatedRuneDef(db,rng,year){
+  const classes=Object.keys(db.patch.runes||{}),cls=rng.pick(classes),idx=(db.patches.systemLifeByYear[year]&&db.patches.systemLifeByYear[year].runeNew||0)+1,id='rune_gen_'+year+'_'+idx,kind=rng.chance(.35)?'keystone':'minor';let name;
+  do{name=rng.pick(NEW_RUNE_A)+rng.pick(NEW_RUNE_B)}while(Object.values(db.patch.runeDefs||{}).some(x=>x.name===name));
+  const keys=['offense','defense','sustain','utility','haste','mobility','early','scaling'].sort(()=>rng.next()-.5),effects={};for(const k of keys.slice(0,kind==='keystone'?2:1))effects[k]=Math.round(rng.range(kind==='keystone'?.025:.012,kind==='keystone'?.06:.035)*1000)/1000;
+  return {id,name,kind,effects,classes:[cls],active:true,createdYear:year};
+}
+function maybeSystemLifecycle(db,date,major,rng,diag){
+  if(!major)return [];const year=+date.slice(0,4),st=db.patches.systemLifeByYear[year]||(db.patches.systemLifeByYear[year]={itemNew:0,itemRemove:0,runeNew:0,runeRemove:0}),out=[];
+  if(st.itemNew<2&&rng.chance(.24)){const def=generatedItemDef(db,rng,year);out.push({type:'item_new',id:def.id,def,why:'새로운 빌드 선택지 추가'});st.itemNew++}
+  if(st.runeNew<1&&rng.chance(.12)){const def=generatedRuneDef(db,rng,year);out.push({type:'rune_new',id:def.id,def,why:'새로운 룬 선택지 추가'});st.runeNew++}
+  if(diag.sampleGames>=20&&st.itemRemove<1&&rng.chance(.16)){const ev=Object.keys(db.patch.itemDefs||{}).map(id=>systemUsageEvidence(db,'item',id,diag.rows)).filter(x=>x.eligible>=15&&x.usage<.035&&db.patch.itemDefs[x.id].active!==false).sort((a,b)=>a.usage-b.usage)[0];if(ev){out.push({type:'item_remove',id:ev.id,oldActive:true,why:'장기간 낮은 사용률 '+Math.round(ev.usage*100)+'% · 아이템 체계 정리'});st.itemRemove++}}
+  if(diag.sampleGames>=20&&st.runeRemove<1&&rng.chance(.07)){const ev=Object.keys(db.patch.runeDefs||{}).map(id=>systemUsageEvidence(db,'rune',id,diag.rows)).filter(x=>x.eligible>=15&&x.usage<.025&&db.patch.runeDefs[x.id].active!==false).sort((a,b)=>a.usage-b.usage)[0];if(ev){out.push({type:'rune_remove',id:ev.id,oldActive:true,why:'장기간 낮은 사용률 '+Math.round(ev.usage*100)+'% · 룬 체계 정리'});st.runeRemove++}}
+  return out;
+}
+function maybeChampionRework(db,date,major,rng,diag){
+  if(!major)return [];const year=+date.slice(0,4),out=[],mid=db.patches.reworksByYear[year]||0,big=db.patches.majorReworksByYear[year]||0,doBig=big<1&&rng.chance(.018),doMid=!doBig&&mid<2&&rng.chance(.16);if(!doBig&&!doMid)return out;
+  const scope=doBig?'major':'mid',cand=diag.champions.filter(x=>x.c&&!x.c.releaseDate).sort((a,b)=>a.pres-b.pres||a.wr-b.wr)[0]||rng.pick(diag.champions.filter(x=>x.c&&!x.c.releaseDate));if(!cand)return out;
+  out.push({type:'rework',c:cand.cid,scope,stableId:cand.cid,why:(scope==='major'?'대규모 챔피언 업데이트':'미드스코프 업데이트')+' · 낮은 선택률과 역할 정체성 재정비'});
+  const c=cand.c,kitKeys=['burst','dps','cc','engage','disengage','peel','poke','waveclear','mobility','sustain','early','mid','late'],kN=scope==='major'?4:2;
+  for(const key of kitKeys.sort(()=>rng.next()-.5).slice(0,kN)){const old=c.kit[key],dir=rng.chance(.68)?1:-1,step=scope==='major'?rng.pick([1,1,2]):1,nv=clamp(old+dir*step,1,10);if(nv!==old)out.push({type:'kit',c:c.id,key,old,new:nv,d:nv-old,dir:Math.sign(nv-old),size:scope==='major'?'large':'medium',category:'rework',why:out[0].why})}
+  for(let i=0;i<(scope==='major'?4:2);i++){const d={...cand,diagnosis:out[0].why},n=championBalanceNote(db,d,i%3===2?-1:1,scope==='major'?'large':'medium',rng,'rework');if(n)out.push(n)}
+  if(doBig)db.patches.majorReworksByYear[year]=big+1;else db.patches.reworksByYear[year]=mid+1;return out;
+}
+function maybeRuleChange(db,major,rng){
+  if(!rng.chance(major?.32:.025))return null;const opts=[['dragonRespawn',[5,6]],['baronBuff',[2.5,3,3.5]],['csGold',[21,22,23,24]],['killGold',[275,300,325]],['heraldSpawn',[14,15,16]],['baronSpawn',[20,22,25]]],pick=rng.pick(opts),key=pick[0],vals=pick[1],cur=db.patch.rules[key],v=rng.pick(vals.filter(x=>x!==cur));return v===undefined?null:{type:'rule',key,v,old:cur,why:'게임 템포와 오브젝트 가치 조정'};
+}
+function releaseTarget(db,year,rng){db.patches.releaseTargets=db.patches.releaseTargets||{};if(!db.patches.releaseTargets[year])db.patches.releaseTargets[year]=rng.int(2,3);return db.patches.releaseTargets[year]}
+function maybeNewChampion(db,date,major,rng){
+  const year=+date.slice(0,4),released=(db.patches.releasesByYear&&db.patches.releasesByYear[year])||0,target=releaseTarget(db,year,rng);if(released>=target)return null;
+  const month=+date.slice(5,7),remaining=target-released,opps=Math.max(1,Math.ceil((13-month)*2.1)),chance=clamp(remaining/opps+(major?.16:0)+(month>=10?.08:0),.04,month>=11?.65:.36);if(!rng.chance(chance))return null;
+  let def;if(db.patches.newIdx<CHAMP_RELEASES.length){const x=CHAMP_RELEASES[db.patches.newIdx++];def={id:championId(x[0]),name:x[0],roles:x[1],arch:x[2],dmg:x[3]}}
+  else{let name,id;do{name=rng.pick(NEWCHAMP_A)+rng.pick(NEWCHAMP_B);id=championId(name)}while(db.patch.champions[id]);const role=rng.pick(ROLES),arch=rng.pick({TOP:['juggernaut','diver','skirmisher','vanguard'],JGL:['diver','assassin','skirmisher','vanguard'],MID:['burst','control','battle','assassin','artillery'],ADC:['marksman','hyper','bully'],SUP:['enchanter','catcher','warden','control']}[role]);def={id,name,roles:[role],arch,dmg:['burst','control','battle','artillery','enchanter','specialist'].includes(arch)?'AP':'AD'};db.patches.newIdx++}
+  def.releaseDate=date;def.proEligibleDate=addDays(date,14);db.patches.releasesByYear[year]=released+1;return {type:'new',def,c:def.id,why:'신규 챔피언 출시 · 프로 대회 14일 사용 제한'};
+}
 function newPatch(db,date,major,rng){
-  const notes=[], mt=metaTable(db), P=db.patch, id=patchId(db,+date.slice(0,4));
-  const strong=['burst','dps','cc','engage','early','mid','late','sustain','poke'];
-  const nerfN=major?rng.int(5,8):rng.int(2,4), buffN=major?rng.int(6,9):rng.int(3,5);
-  const last=db.patches.list.at(-1),recentDir=(cid,dir)=>!!last?.notes?.some(n=>n.c===cid&&n.dir===dir);
-  const nerfs=mt.filter(x=>x.p+x.b>=4&&(x.wr===null||x.wr>=0.48)&&!recentDir(x.c.id,-1)).slice(0,nerfN+2).sort(()=>rng.next()-0.5).slice(0,nerfN);
-  const low=mt.filter(x=>x.pres<0.04&&!recentDir(x.c.id,1)).sort(()=>rng.next()-0.5).slice(0,buffN);
-  const change=(x,dir,why)=>{
-    const c=x.c,skills=['Q','W','E','R'].map(k=>c.skills?.[k]).filter(s=>s&&Number.isFinite(s.cooldown)&&s.cooldown>0);
-    if(skills.length&&rng.chance(.62)){const sk=rng.pick(skills),old=sk.cooldown,step=rng.chance(.75)?1:2,newV=Math.max(1,Math.round((old+(dir<0?step:-step))*10)/10);notes.push({type:'skill',c:c.id,slot:sk.slot,field:'cooldown',old,new:newV,dir,why})}
-    else {const key=rng.pick(['ad','hp','arm','adg','hpg']),old=c.base[key],delta=Math.round(dir*rng.range(.015,.04)*1000)/1000,newV=Math.round(old*(1+delta)*100)/100;notes.push({type:'base',c:c.id,key,old,new:newV,d:delta,dir,why})}
-  };
-  nerfs.forEach(x=>change(x,-1,`밴픽률 ${Math.round(x.pres*100)}%${x.wr!==null?` · 승률 ${Math.round(x.wr*100)}%`:''}`));
-  low.forEach(x=>change(x,+1,`밴픽률 ${Math.round(x.pres*100)}%로 외면받음`));
-  if(major&&rng.chance(.025)){const cand=mt.filter(x=>!x.c.releaseDate)[rng.int(0,Math.max(0,mt.filter(x=>!x.c.releaseDate).length-1))];if(cand){const key=rng.pick(['early','mid','late','burst','dps','cc','engage','peel','poke','sustain']),d=rng.chance(.5)?1:-1;notes.push({type:'kit',c:cand.c.id,key,d,dir:d,why:'희귀 대규모 챔피언 리워크'})}}
-  if(rng.chance(major?.35:.03)){
-    const opts=[['dragonRespawn',[5,6]],['baronBuff',[3,3.5,2.5]],['csGold',[21,22,23,24]],['killGold',[275,300,325]],['heraldSpawn',[14,15,16]],['baronSpawn',[20,22,25]]];
-    const [key,vals]=rng.pick(opts), cur=P.rules[key], v=rng.pick(vals.filter(x=>x!==cur)); if(v!==undefined)notes.push({type:'rule',key,v,old:cur,why:'게임 템포 조정'});
-  }
-  // 신규 챔피언은 패치마다 나오지 않는다. 연 2~3명 수준을 중심으로 드물게 출시한다.
-  const year=+date.slice(0,4),released=(db.patches.releasesByYear&&db.patches.releasesByYear[year])||0,releaseChance=major?.58:.07;
-  if(released<4&&rng.chance(releaseChance)){
-    let def;
-    if(db.patches.newIdx<CHAMP_RELEASES.length){const [name,roles,arch,dmg]=CHAMP_RELEASES[db.patches.newIdx++];def={id:championId(name),name,roles,arch,dmg}}
-    else{let name,id;do{name=rng.pick(NEWCHAMP_A)+rng.pick(NEWCHAMP_B);id=championId(name)}while(P.champions[id]);const role=rng.pick(ROLES);
-      const arch=rng.pick({TOP:['juggernaut','diver','skirmisher','vanguard'],JGL:['diver','assassin','skirmisher','vanguard'],MID:['burst','control','battle','assassin','artillery'],ADC:['marksman','hyper','bully'],SUP:['enchanter','catcher','warden','control']}[role]);
-      def={id,name,roles:[role],arch,dmg:['burst','control','battle','artillery','enchanter','specialist'].includes(arch)?'AP':'AD'};db.patches.newIdx++}
-    def.releaseDate=date;def.proEligibleDate=addDays(date,14);
-    db.patches.releasesByYear=db.patches.releasesByYear||{};db.patches.releasesByYear[year]=released+1;
-    notes.push({type:'new',def,why:'신규 챔피언 출시',c:def.name});
-  }
+  const notes=[],P=db.patch,id=patchId(db,+date.slice(0,4)),diag=diagnosePatchMeta(db,major);
+  notes.push(...chooseChampionBalanceChanges(db,diag,major,rng));
+  notes.push(...maybeChampionRework(db,date,major,rng,diag));
+  notes.push(...chooseSystemBalanceChanges(db,diag,major,rng));
+  notes.push(...maybeSystemLifecycle(db,date,major,rng,diag));
+  const rule=maybeRuleChange(db,major,rng);if(rule)notes.push(rule);
+  const nc=maybeNewChampion(db,date,major,rng);if(nc)notes.push(nc);
   notes.forEach(n=>applyNote(P,n));
   if(typeof adaptPlayerPoolsToPatch==='function')adaptPlayerPoolsToPatch(db,notes,!!major);
   P.id=id;
-  db.patches.list.push({id,date,major:!!major,notes});
+  const rec={id,date,major:!!major,notes,analysis:{sampleGames:diag.sampleGames,championChanges:notes.filter(n=>n.c&&['skill','base','kit'].includes(n.type)).map(n=>n.c),reworks:notes.filter(n=>n.type==='rework').map(n=>({c:n.c,scope:n.scope})),itemChanges:notes.filter(n=>n.type.indexOf('item')===0).map(n=>n.id),runeChanges:notes.filter(n=>n.type.indexOf('rune')===0).map(n=>n.id)}};
+  db.patches.list.push(rec);db.patches.history=db.patches.history||[];db.patches.history.push(rec);
   for(const k in PATCH_CACHE)delete PATCH_CACHE[k];
-  // 메타 데이터는 새 패치에서 절반만 이어짐 (팀들이 다시 학습)
   for(const k in db.metaStats){const x=db.metaStats[k];x.p=Math.floor(x.p/3);x.w=Math.floor(x.w/3);x.b=Math.floor(x.b/3)}
   db.metaGames=Math.floor((db.metaGames||0)/3);
   for(const rid in db.regionMetaStats||{})for(const k in db.regionMetaStats[rid]){const x=db.regionMetaStats[rid][k];x.p=Math.floor(x.p/3);x.w=Math.floor(x.w/3);x.b=Math.floor(x.b/3)}
   for(const rid in db.regionMetaGames||{})db.regionMetaGames[rid]=Math.floor(db.regionMetaGames[rid]/3);
-  return {id,notes};
+  return {id,notes,analysis:rec.analysis};
 }
 function patchTick(db,date,rng){
   const pt=db.patches;if(!pt.nextDate)pt.nextDate=addDays(date,14);
-  while(date>=pt.nextDate){const p=newPatch(db,pt.nextDate,false,rng);news(db,`패치 ${p.id} 적용 — 챔피언 ${p.notes.filter(n=>n.c).length}명 조정`);const gap=rng.chance(.08)?21:14;pt.nextDate=addDays(pt.nextDate,pt.cadence||gap)}
+  while(date>=pt.nextDate){const p=newPatch(db,pt.nextDate,false,rng);news(db,'패치 '+p.id+' 적용 — 챔피언 '+new Set(p.notes.filter(n=>n.c).map(n=>n.c)).size+'명 · 아이템 '+p.notes.filter(n=>n.type.indexOf('item')===0).length+'건 · 룬 '+p.notes.filter(n=>n.type.indexOf('rune')===0).length+'건');const gap=rng.chance(.08)?21:(pt.cadence||14);pt.nextDate=addDays(pt.nextDate,gap)}
 }
 // 새 시즌: 지난 시즌 패치를 기준점으로 접고(재생은 이번 시즌 경기만 필요) 개막 대형 패치 적용
 function seasonPatch(db,date,rng){
@@ -1630,7 +1868,7 @@ function trainSecondaryRole(p,role,amount=1){if(!ROLES.includes(role)||role===p.
 function ensureChampionProfile(db,p,cid){if(!p.pool)p.pool={};if(!p.pool[cid])p.pool[cid]={mastery:25,experience:0,matchup_knowledge:35,confidence:40,scrimExperience:0,trainingExperience:0,scrimSeason:0,trainingSeason:0};const pr=p.pool[cid];pr.scrimExperience=pr.scrimExperience||0;pr.trainingExperience=pr.trainingExperience||0;pr.scrimSeason=pr.scrimSeason||0;pr.trainingSeason=pr.trainingSeason||0;return pr}
 function practiceChampion(db,p,cid,kind='training',amount=1){const pr=ensureChampionProfile(db,p,cid),n=Math.max(0,amount);if(kind==='scrim'){pr.scrimExperience+=n;pr.scrimSeason+=n;pr.confidence=Math.round(clamp(pr.confidence+n*.08,10,99))}else{pr.trainingExperience+=n;pr.trainingSeason+=n}return pr}
 function championLearningMultiplier(db,p,cid){const c=db.patch.champions[cid],diff=c&&c.kit?c.kit.difficulty||5:5;return (.65+.7*(p.attrs.champion_learning||50)/100)*(.92+.2*(p.attrs.adaptability||50)/100)/(1+Math.max(0,diff-5)*.045)}
-function adaptPlayerPoolsToPatch(db,notes,major=false){const changed={};for(const n of notes||[])if((n.type==='kit'||n.type==='base')&&n.c)changed[n.c]=(changed[n.c]||0)+1;for(const p of Object.values(db.players))if(!p.retired&&p.pool)for(const [cid,count] of Object.entries(changed)){const pr=p.pool[cid];if(!pr)continue;const adapt=(p.attrs.meta_adaptation||p.attrs.adaptability||50)/100,loss=Math.min(5,Math.max(0,Math.round(count*(major?1.25:.55)*(1.25-adapt))));pr.mastery=Math.round(clamp(pr.mastery-loss,20,99));pr.confidence=Math.round(clamp(pr.confidence-Math.ceil(loss/2),10,99))}}
+function adaptPlayerPoolsToPatch(db,notes,major=false){const changed={};for(const n of notes||[]){if(['kit','base','skill'].includes(n.type)&&n.c)changed[n.c]=(changed[n.c]||0)+1;else if(n.type==='rework'&&n.c)changed[n.c]=(changed[n.c]||0)+(n.scope==='major'?3:2)}for(const p of Object.values(db.players))if(!p.retired&&p.pool)for(const [cid,count] of Object.entries(changed)){const pr=p.pool[cid];if(!pr)continue;const adapt=(p.attrs.meta_adaptation||p.attrs.adaptability||50)/100,loss=Math.min(5,Math.max(0,Math.round(count*(major?1.25:.55)*(1.25-adapt))));pr.mastery=Math.round(clamp(pr.mastery-loss,20,99));pr.confidence=Math.round(clamp(pr.confidence-Math.ceil(loss/2),10,99))}}
 function uniqNick(db,rng){for(let i=0;i<200;i++){let n=rng.pick(NICK_A)+rng.pick(NICK_B);if(rng.chance(0.2))n+=rng.pick(['','x','z','9','7']);const taken=Object.values(db.players).some(p=>p.name===n);if(!taken)return n}return 'P'+rng.int(100,999)}
 function uniqId(db,prefix){let i=Object.keys(db.players).length;while(db.players[prefix+i])i++;return prefix+i}
 
@@ -3732,13 +3970,29 @@ function bindSquad(){
 }
 // ---------- 패치·메타 ----------
 let PSET={role:'ALL',q:'',region:'GLOBAL',patch:'ALL',comp:'ALL',period:'ALL',year:'',season:'ALL',split:'ALL',league:'ALL',scope:'ALL',position:'ALL',champ:null};
+function patchValueText(v,field){
+  if(Array.isArray(v))return v.join('/');
+  if(['damageMod','utilityMod','healMod','shieldMod','ccMod','mobilityMod'].includes(field))return Math.round(Number(v)*100)+'%';
+  return Number.isFinite(Number(v))?String(Math.round(Number(v)*100)/100):String(v??'');
+}
+function patchFieldLabel(field){
+  return {cooldown:'재사용 대기시간',range:'사거리',cost:'자원 소모',damageMod:'피해량 계수',utilityMod:'유틸리티 효과',healMod:'회복 효과',shieldMod:'보호막 효과',ccMod:'CC 효과',mobilityMod:'이동 효과',offense:'공격 효과',defense:'방어 효과',sustain:'유지력',utility:'유틸리티',haste:'스킬 가속 효과',mobility:'기동성',early:'초반 효과',scaling:'성장 효과'}[field]||field;
+}
 function noteText(n){
-  if(n.type==='new')return `<b>신규 챔피언 ${esc(n.def.name)}</b> <small>${n.def.roles.map(r=>ROLE_KO[r]).join('/')} · ${esc(CLASS_KO[ARCH[n.def.arch][0]])}</small>`;
-  if(n.type==='rule')return `<b>${esc(RULE_KO[n.key]||n.key)}</b> ${n.old} → ${n.v}`;
-  if(n.type==='kit')return `<b>${esc(championLabel(DB,n.c))}</b> ${KIT_KO[n.key]} ${n.d>0?'<span class="hi">▲</span>':'<span class="lo">▼</span>'} <small>${esc(n.why||'')}</small>`;
-  if(n.type==='skill')return `<b>${esc(championLabel(DB,n.c))} ${esc(n.slot)}</b> 재사용 대기시간 ${n.old}초 → ${n.new}초 <small>${esc(n.why||'')}</small>`;
-  if(n.type==='base')return `<b>${esc(championLabel(DB,n.c))}</b> 기본 ${{ad:'공격력',hp:'체력',arm:'방어력',adg:'성장 공격력',hpg:'성장 체력'}[n.key]||n.key} ${n.d>0?'+':''}${Math.round(n.d*100)}% <small>${esc(n.why||'')}</small>`;
-  return esc(n.text||'');
+  const why=n.why?` <small>${esc((n.size?PATCH_SIZE_KO[n.size]+' 조정 · ':'')+n.why)}</small>`:'';
+  if(n.type==='new')return `<b>신규 챔피언 ${esc(n.def.name)}</b> <small>${n.def.roles.map(r=>ROLE_KO[r]).join('/')} · ${esc(CLASS_KO[ARCH[n.def.arch][0]])} · ${esc(n.def.proEligibleDate)}부터 프로 사용 가능</small>`;
+  if(n.type==='rework')return `<b>${esc(championLabel(DB,n.c))}</b> ${n.scope==='major'?'대규모 챔피언 업데이트':'미드스코프 업데이트'} <small>안정 ID ${esc(n.stableId)} 유지 · ${esc(n.why||'')}</small>`;
+  if(n.type==='rule')return `<b>${esc(RULE_KO[n.key]||n.key)}</b> ${patchValueText(n.old,n.key)} → ${patchValueText(n.v,n.key)}${why}`;
+  if(n.type==='kit')return `<b>${esc(championLabel(DB,n.c))}</b> ${esc(KIT_KO[n.key]||n.key)} ${patchValueText(n.old,n.key)} → ${patchValueText(n.new,n.key)}${why}`;
+  if(n.type==='skill')return `<b>${esc(championLabel(DB,n.c))} ${esc(n.slot)}</b> ${esc(patchFieldLabel(n.field))} ${patchValueText(n.old,n.field)} → ${patchValueText(n.new,n.field)}${why}`;
+  if(n.type==='base')return `<b>${esc(championLabel(DB,n.c))}</b> ${{ad:'공격력',hp:'체력',arm:'방어력',mr:'마법 저항력',adg:'성장 공격력',hpg:'성장 체력',armg:'성장 방어력',mrg:'성장 마법 저항력',ms:'이동 속도',range:'기본 공격 사거리',resource:'자원',resourceRegen:'자원 회복'}[n.key]||esc(n.key)} ${patchValueText(n.old,n.key)} → ${patchValueText(n.new,n.key)}${why}`;
+  if(n.type==='item'){const d=DB.patch.itemDefs?.[n.id];return `<b>아이템 · ${esc(d?.name||n.id)}</b> ${esc(patchFieldLabel(n.field))} ${patchValueText(n.old,n.field)} → ${patchValueText(n.new,n.field)}${why}`}
+  if(n.type==='item_new')return `<b>신규 아이템 · ${esc(n.def.name)}</b> ${n.def.cost}골드 <small>${esc(n.why||'')}</small>`;
+  if(n.type==='item_remove'){const d=DB.patch.itemDefs?.[n.id];return `<b>아이템 삭제 · ${esc(d?.name||n.id)}</b> <small>${esc(n.why||'')}</small>`}
+  if(n.type==='rune'){const d=DB.patch.runeDefs?.[n.id];return `<b>룬 · ${esc(d?.name||n.id)}</b> ${esc(patchFieldLabel(n.field))} ${patchValueText(n.old,n.field)} → ${patchValueText(n.new,n.field)}${why}`}
+  if(n.type==='rune_new')return `<b>신규 룬 · ${esc(n.def.name)}</b> <small>${n.def.kind==='keystone'?'핵심 룬':'보조 룬'} · ${esc(n.why||'')}</small>`;
+  if(n.type==='rune_remove'){const d=DB.patch.runeDefs?.[n.id];return `<b>룬 삭제 · ${esc(d?.name||n.id)}</b> <small>${esc(n.why||'')}</small>`}
+  return esc(n.text||n.why||'');
 }
 function viewPatch(){
   const pt=DB.patches, list=[...pt.list].reverse(), prev=[...(pt.prev||[])].reverse();
@@ -3749,8 +4003,12 @@ function viewPatch(){
   const insightList=(arr,nameFn)=>arr&&arr.length?arr.map(([id,x])=>esc(nameFn(id))+' '+x.g+'전 '+Math.round(x.w/Math.max(1,x.g)*100)+'%').join(' · '):'표본 없음';
   const insight=dc&&mi?'<section id="champmeta"><h4>대회 메타 인사이트</h4><div class="cards"><article class="card"><b>주요 선수</b><p>'+insightList(mi.players,id=>DB.players[id]?.name||id)+'</p></article><article class="card"><b>주요 팀</b><p>'+insightList(mi.teams,id=>DB.teams[id]?.name||id)+'</p></article><article class="card"><b>동일 포지션 매치업</b><p>'+insightList(mi.matchups,id=>championLabel(DB,id))+'</p></article><article class="card"><b>최근 흐름</b><p>'+(mi.recent.length?mi.recent.map(x=>x.win?'W':'L').join(' · '):'표본 없음')+'</p></article></div></section>':'';
   const detail=dc?`<section id="champdetail"><div class="cfghead"><h3>${esc(championDisplayName(dc))}</h3><button class="ghost sm2" id="pclose">닫기</button></div><p>${dc.roles.map(r=>ROLE_KO[r]).join('/')} · ${esc(CLASS_KO[dc.cls])} · ${esc(dc.dmg)} · 프로 ${championProEligible(DB,dc)?'사용 가능':`사용 제한 (~${esc(dc.proEligibleDate||'')})`}</p><div class="fin"><div><span>체력</span><b>${Math.round(dc.base.hp)}</b><small>+${dc.base.hpg}/레벨</small></div><div><span>방어력 / 마법 저항력</span><b>${Math.round(dc.base.arm)} / ${Math.round(dc.base.mr)}</b><small>+${dc.base.armg} / +${dc.base.mrg}</small></div><div><span>공격력</span><b>${Math.round(dc.base.ad)}</b><small>+${dc.base.adg}/레벨</small></div><div><span>공속 / 성장</span><b>${dc.base.as}</b><small>+${dc.base.asg}%</small></div><div><span>사거리 / 이동속도</span><b>${dc.base.range} / ${dc.base.ms}</b></div><div><span>자원</span><b>${dc.base.resource||'없음'}</b><small>${dc.base.resource?`성장 +${dc.base.resourceg} · 회복 ${dc.base.resourceRegen}`:''}</small></div></div><h4>${dc.detailSource==='riot_ddragon'?'패치 원천 연동 스킬 데이터':'스킬 시뮬레이션 데이터'}</h4><div class="cards">${Object.values(ds||{}).map(sk=>`<article class="card"><b>${sk.slot}${sk.name?` · ${esc(sk.name)}`:''}</b><p>${sk.sourceDescription?esc(sk.sourceDescription):(sk.kind==='ultimate'?'궁극기':sk.kind==='passive'?'패시브':'기본 스킬')+' · '+(sk.damageType?sk.damageType+' · ':'')+sk.effects.map(esc).join(', ')}</p><small>${sk.sourceDescription?'시뮬레이션 해석 · ':''}효과 강도 ${sk.power}${sk.cooldown?` · 재사용 ${sk.cooldown}초`:''}${sk.baseDamage?.length?` · 기본 피해 ${sk.baseDamage.join('/')}`:''}${Object.keys(sk.ratios||{}).length?` · 계수 ${Object.entries(sk.ratios).map(([k,v])=>k.toUpperCase()+' '+v).join(', ')}`:''}${sk.cc?` · CC ${esc(sk.cc.type||'있음')}${sk.cc.duration?' '+sk.cc.duration+'초':''}`:''}${sk.heal?' · 회복':''}${sk.shield?' · 보호막':''}${sk.range?.length?' · 사거리 '+sk.range.join('/'):''}</small></article>`).join('')}</div><p class="hint">${dc.detailSource==='riot_ddragon'?`Riot Data Dragon ${esc(dc.detailVersion||'')}의 한국어 스킬 설명과 공개 스탯이 연결되어 있습니다. Data Dragon에 없는 세부 계수는 시뮬레이션 파생값을 유지합니다.`:'현재 스킬 수치는 경기 시뮬레이션용 대체 구조입니다. 권위 데이터가 연결되면 자동 교체됩니다.'}</p></section>`:'';
-  return `<section class="teamhead"><h2>패치 ${esc(DB.patch.id)}</h2><p>2주마다 패치가 나오고, 시즌 개막과 서머 개막에는 대형 패치와 신규 챔피언이 나옵니다. 밸런스 팀은 대회에서 너무 많이 쓰이고 이기는 챔피언을 하향하고, 외면받는 챔피언을 상향합니다. 팀들은 패치 직후 메타를 잘 모르다가 경기 데이터가 쌓일수록 정확해지고, 분석력이 높은 코치진일수록 빨리 따라잡습니다.</p><p class="hint">챔피언 ${Object.keys(DB.patch.champions).length}명 · 공식 데이터 ${DB.patch.championSource?.matched||0}/${DB.patch.championSource?.total||Object.keys(DB.patch.champions).length} · 한국어 설명 ${DB.patch.championSource?.localized||0}/${DB.patch.championSource?.total||Object.keys(DB.patch.champions).length} · 이번 패치 대회 경기 ${G}판${pt.nextDate?` · 다음 패치 ${esc(pt.nextDate)}`:''}</p></section>
-  ${detail}${insight}
+  const sysRows=patchEvidenceRows(DB),activeItems=Object.values(DB.patch.itemDefs||{}).filter(x=>x.active!==false),activeRunes=Object.values(DB.patch.runeDefs||{}).filter(x=>x.active!==false);
+  const topSystem=(kind,defs)=>defs.map(d=>({d,e:systemUsageEvidence(DB,kind,d.id,sysRows)})).filter(x=>x.e.eligible>0).sort((a,b)=>b.e.usage-a.e.usage).slice(0,5).map(x=>esc(x.d.name)+' '+Math.round(x.e.usage*100)+'%').join(' · ')||'아직 표본 없음';
+  const systemMeta=`<section><h3>아이템 / 룬 메타</h3><div class="cards"><article class="card"><b>아이템 ${activeItems.length}개 활성</b><p>${topSystem('item',activeItems)}</p><small>가격과 공격·방어·유지력·가속·기동성 효과가 실제 구매 시점과 전투력에 반영됩니다.</small></article><article class="card"><b>룬 ${activeRunes.length}개 활성</b><p>${topSystem('rune',activeRunes)}</p><small>챔피언 역할과 빌드에 따라 선택되며 패치마다 버프·너프·추가·삭제될 수 있습니다.</small></article></div></section>`;
+
+  return `<section class="teamhead"><h2>패치 ${esc(DB.patch.id)}</h2><p>패치 엔진은 대회 표본, 밴픽 압력, 승률, 최근 추세, 실제 포지션, 지역·국제전 확산, 상위팀·선수 집중도와 플렉스 여부를 함께 진단합니다. 챔피언 수치·사거리·자원·쿨다운·유틸리티뿐 아니라 아이템과 룬, 시스템 규칙도 조정하며 신규 챔피언·신규/삭제 아이템·룬과 미드스코프/대규모 리워크가 장기적으로 발생합니다.</p><p class="hint">챔피언 ${Object.keys(DB.patch.champions).length}명 · 공식 데이터 ${DB.patch.championSource?.matched||0}/${DB.patch.championSource?.total||Object.keys(DB.patch.champions).length} · 한국어 설명 ${DB.patch.championSource?.localized||0}/${DB.patch.championSource?.total||Object.keys(DB.patch.champions).length} · 아이템 ${activeItems.length} · 룬 ${activeRunes.length} · 이번 패치 대회 경기 ${G}판${pt.nextDate?` · 다음 패치 ${esc(pt.nextDate)}`:''}</p></section>
+  ${detail}${insight}${systemMeta}
   <section><h3>현재 메타</h3><div class="controls"><label>지역<select id="pregion"><option value="GLOBAL">글로벌</option>${Object.values(DB.regions).map(r=>`<option value="${r.id}"${PSET.region===r.id?' selected':''}>${esc(r.name||r.leagueName||r.id)}</option>`).join('')}</select></label><label>패치<select id="ppatch"><option value="ALL">전체</option>${patches.map(x=>`<option value="${esc(x)}"${PSET.patch===x?' selected':''}>${esc(x)}</option>`).join('')}</select></label><label>대회<select id="pcomp"><option value="ALL">전체</option>${comps.map(x=>`<option value="${esc(x)}"${PSET.comp===x?' selected':''}>${esc(x)}</option>`).join('')}</select></label><label>기간<select id="pperiod"><option value="ALL">전체</option><option value="30"${PSET.period==='30'?' selected':''}>최근 30일</option><option value="90"${PSET.period==='90'?' selected':''}>최근 90일</option><option value="YEAR"${PSET.period==='YEAR'?' selected':''}>올해</option></select></label><label>연도<input id="pyear" type="number" min="2026" value="${esc(PSET.year)}" placeholder="전체"></label><label>시즌<select id="pseason"><option value="ALL">전체</option>${seasons.map(x=>`<option value="${esc(x)}"${PSET.season===x?' selected':''}>${esc(x)}</option>`).join('')}</select></label><label>스플릿<select id="psplit"><option value="ALL">전체</option>${splits.map(x=>`<option value="${esc(x)}"${String(PSET.split)===String(x)?' selected':''}>${esc(SPLIT_NAME?.[x]||x)}</option>`).join('')}</select></label><label>리그<select id="pleague"><option value="ALL">전체</option>${leagues.map(x=>`<option value="${esc(x)}"${PSET.league===x?' selected':''}>${esc((DB.regions[x]&&DB.regions[x].leagueName)||x)}</option>`).join('')}</select></label><label>범위<select id="pscope"><option value="ALL">전체</option><option value="DOM"${PSET.scope==='DOM'?' selected':''}>국내</option><option value="INTL"${PSET.scope==='INTL'?' selected':''}>국제</option></select></label><label>실제 픽<select id="pposition"><option value="ALL">전체</option><option value="TOP"${PSET.position==='TOP'?' selected':''}>탑</option><option value="JGL"${PSET.position==='JGL'?' selected':''}>정글</option><option value="MID"${PSET.position==='MID'?' selected':''}>미드</option><option value="ADC"${PSET.position==='ADC'?' selected':''}>원딜</option><option value="SUP"${PSET.position==='SUP'?' selected':''}>서포터</option></select></label><label>포지션<select id="prole"><option value="ALL">전체</option>${ROLES.map(r=>`<option value="${r}"${PSET.role===r?' selected':''}>${ROLE_KO[r]}</option>`).join('')}</select></label><label>검색<input id="pq" value="${esc(PSET.q)}" placeholder="챔피언 이름"></label></div>
   <div class="scroll"><table class="champs"><thead><tr><th>티어</th><th>챔피언</th><th>포지션</th><th>역할군</th><th>밴픽률</th><th>픽</th><th>밴</th><th>승률</th><th>프로 사용</th><th>초반</th><th>후반</th><th>CC</th><th>폭딜</th></tr></thead><tbody>
   ${rows.slice(0,60).map(x=>`<tr><td><b class="tier t${tier(x)}">${tier(x)}</b></td><td><button class="linklike" data-champ="${x.c.id}"><b>${esc(championDisplayName(x.c))}</b></button></td><td>${x.c.roles.map(r=>ROLE_KO[r]).join('/')}</td><td>${CLASS_KO[x.c.cls]}</td><td class="num">${Math.round(x.pres*100)}%</td><td class="num">${x.p}</td><td class="num">${x.b}</td><td class="num">${x.wr===null?'—':Math.round(x.wr*100)+'%'}</td><td>${x.eligible?'<span class="hi">가능</span>':`<span class="lo">제한</span><small>${esc(x.c.proEligibleDate||'')}</small>`}</td><td><span class="pip" style="--v:${x.c.kit.early}">${x.c.kit.early}</span></td><td><span class="pip" style="--v:${x.c.kit.late}">${x.c.kit.late}</span></td><td><span class="pip" style="--v:${x.c.kit.cc}">${x.c.kit.cc}</span></td><td><span class="pip" style="--v:${x.c.kit.burst}">${x.c.kit.burst}</span></td></tr>`).join('')}
