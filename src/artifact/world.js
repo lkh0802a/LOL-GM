@@ -634,6 +634,11 @@ function compactSeason(db,s){
   for(const d of s.days)for(const m of d.matches)if(m.res){const r=m.res;r.games=r.games.map(g=>({n:g.n,blue:g.blue,red:g.red,winner:g.winner,kills:g.kills,dur:g.dur,mvp:g.mvp}));delete r.tac;r.lite=true}
   s.compact=true;
 }
+function compactFinishedSeasonForSave(db,s){
+  if(!s||!s.done)return;
+  compactSeason(db,s);
+  for(const d of s.days)for(const m of d.matches)if(m.res){delete m.res.seed;delete m.res.firstChoice}
+}
 function advanceStep(db){
   const w=db.world;
   for(const s of Object.values(w.seasons))if(s.done)compactSeason(db,s);
@@ -852,6 +857,7 @@ function playerValue(db,p,team){
 // ---- 저장용 압축: 능력치·성향·챔피언 폭을 배열로 ----
 const ALL_ATTRS=Object.values(ATTR_GROUPS).flat();
 function packDB(db){
+  for(const s of Object.values(db.world?.seasons||{}))compactFinishedSeasonForSave(db,s);
   const players={};
   for(const [id,p] of Object.entries(db.players)){
     const q={...p};
