@@ -24,6 +24,9 @@ function chooseSide(db,tid,opp,ctx,g,bestOf,rng){
   return {side,order,chose,why};
 }
 // a = 상위 시드
+function seriesDraftSnapshot(ctx){
+  return {used:ctx.used.slice(),byTeam:Object.fromEntries(Object.entries(ctx.byTeam).map(([id,h])=>[id,{won:h.won.slice(),lost:h.lost.slice()}])),fearless:ctx.fearless,mods:{...ctx.mods},practice:ctx.practice,championPool:ctx.championPool};
+}
 function simulateSeries(db,aId,bId,bestOf,seed,opt={}){
   const need=Math.ceil(bestOf/2), wins={[aId]:0,[bId]:0}, games=[], lines=[];
   const ctx={used:[],byTeam:{[aId]:{won:[],lost:[]},[bId]:{won:[],lost:[]}},fearless:!!opt.fearless,mods:{[aId]:0,[bId]:0},practice:!!opt.practice,championPool:opt.championPool||null};
@@ -36,7 +39,7 @@ function simulateSeries(db,aId,bId,bestOf,seed,opt={}){
     const blue=sc.side==='blue'?chooser:other, red=blue===aId?bId:aId, gseed=seed+'/g'+g;
     let fpTeam=sc.order==='first'?chooser:other;
     if(BAL.randomTest){fpTeam=srng.chance(0.5)?aId:bId}
-    const snap=JSON.parse(JSON.stringify(ctx)); snap.firstPick=fpTeam===blue?0:1;
+    const snap=seriesDraftSnapshot(ctx); snap.firstPick=fpTeam===blue?0:1;
     if(opt.forced&&opt.forced[g-1])snap.forced=opt.forced[g-1];
     const r=simulateMatch(db,blue,red,gseed,snap,opt.capture!==g);r.comp=opt.compId||null;r.date=db.worldDate;r.metaContext=opt.metaContext||null;
     if(!opt.replay&&!opt.practice)recordMeta(db,r);
