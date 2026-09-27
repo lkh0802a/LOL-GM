@@ -24,6 +24,7 @@ function championProEligible(db,c,date=db.worldDate){
   if(!c)return false;
   return !c.proEligibleDate||date>=c.proEligibleDate;
 }
+function championAvailableForContext(db,c,ctx={}){if(!c)return false;if(ctx.practice)return true;if(!championProEligible(db,c))return false;return !ctx.championPool||ctx.championPool.includes(c.id)}
 function recordMeta(db,r){
   if(!db.metaStats)return;
   db.metaGames=(db.metaGames||0)+1;
