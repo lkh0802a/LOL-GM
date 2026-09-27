@@ -238,3 +238,12 @@ Top-division structural invariant: every first division has at least 10 teams an
 Patch-pinned Riot Data Dragon import tooling now exists at `scripts/sync-champions.mjs`; source policy is documented in `docs/CHAMPION_DATA.md`. Runtime fallbacks remain explicitly non-authoritative until a reviewed snapshot is normalized and accepted.
 
 - Champion source normalization/merge layer now accepts a patch-pinned Data Dragon snapshot, preserves LOL GM stable champion IDs, replaces authoritative base/detail fields, records source coverage/version, and leaves unmatched champions on explicit fallback data.
+
+
+## Champion/meta stage checkpoint (2026-09-27)
+
+- Riot Data Dragon 16.19.1 / LoL 26.19 baseline is embedded for all 173 champions, including Korean passive and Q/W/E/R source records.
+- Official champion meta history retains season/year/stage/league/international context plus team, player and actual picked position; history is no longer destructively capped at 5,000 games.
+- Meta filtering supports region, patch, competition, period, year, domestic/international scope and actual picked position.
+- Team meta learning and counter-research are persistent, and new champions remain practice-usable during the global pro-ban window while tournament pools stay locked.
+- Rare major-patch champion reworks preserve stable champion IDs.
