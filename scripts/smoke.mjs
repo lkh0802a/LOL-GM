@@ -161,6 +161,8 @@ source += `\n(()=>{
   const fac=ensureFacilities(staffTeam),oldTrain=fac.training,oldCash=staffTeam.finance.cash;staffTeam.finance.cash=Math.max(oldCash,facilityCost(db,staffTeam,'training')*2);if(oldTrain<5){const mul0=facilityMul(staffTeam);upgradeFacility(db,staffTeam,'training');if(facilityMul(staffTeam)<=mul0)throw new Error('Training facility upgrade had no development effect')}
   if(!Number.isFinite(staffCost(db,staffTeam))||staffCost(db,staffTeam)<=0)throw new Error('Full staff cost invalid');
   staffTeam.staff.analyst=oldAnalyst;staffTeam.finance.cash=oldCash;
+  const aiStaffTeam=activeTeams(db,null,1).find(t=>t.id!==managedTeamId(db));if(!aiStaffTeam)throw new Error('AI staff test team missing');ensureTeamStaff(db,aiStaffTeam,new RNG('ai-staff','staff'));genStaffPool(db,new RNG('ai-staff-pool','staff'));aiStaffTeam.finance.cash=Math.max(aiStaffTeam.finance.cash,500*psOf(db,aiStaffTeam.region));const role='analyst',beforeStaff=aiStaffTeam.staff[role];const elite=genStaffMember(new RNG('elite-ai-staff','staff'),role,95);elite.rating=95;db.staffPool.push(elite);aiManageStaff(db,aiStaffTeam,new RNG('ai-staff-manage','staff'));if(aiStaffTeam.staff[role].rating<beforeStaff.rating)throw new Error('AI staff management downgraded role');
+  const staffAge=aiStaffTeam.staff[role].age;ageStaff(db,new RNG('staff-age','staff'));if(aiStaffTeam.staff[role].age<staffAge)throw new Error('Staff lifecycle age regressed');
 
   const reserveParents=activeTeams(db).filter(t=>!t.parent&&reserveTeamsOf(db,t).length);
   if(reserveParents.length){
