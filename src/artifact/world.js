@@ -168,17 +168,23 @@ function facilityUpkeep(db,t){return Math.round((t.facility||2)*1.2*psTeam(db,t)
 // ---------- 지역 프리셋 / 월드 설정 ----------
 // 실제 LoL e스포츠 구조를 본뜬 기본 리그 (리그 수준·시장 규모는 고정, 구조만 편집 가능)
 const ROSTER_RULE_PROFILES={
-  OWNED_RESERVE_LCK_STYLE_2026:{id:'OWNED_RESERVE_LCK_STYLE_2026',source:'LCK_2026',integratedMin:11,integratedMax:20,firstTeamMin:5,firstTeamMax:10,reserveTeamMin:5,reserveTeamMax:10,reserveSubMax:5}
+  STANDARD_TIER1_2026:{id:'STANDARD_TIER1_2026',source:'GLOBAL_2026',integratedMin:5,integratedMax:10,firstTeamMin:5,firstTeamMax:10,reserveTeamMin:5,reserveTeamMax:10,reserveSubMax:5},
+  OWNED_RESERVE_LCK_STYLE_2026:{id:'OWNED_RESERVE_LCK_STYLE_2026',source:'LCK_2026',integratedMin:11,integratedMax:20,firstTeamMin:5,firstTeamMax:10,reserveTeamMin:5,reserveTeamMax:10,reserveSubMax:5},
+  LCS_2026:{id:'LCS_2026',source:'LCS_2026',integratedMin:5,integratedMax:12,firstTeamMin:5,firstTeamMax:12,reserveTeamMin:5,reserveTeamMax:10,reserveSubMax:7},
+  LCP_2026:{id:'LCP_2026',source:'LCP_2026',integratedMin:5,integratedMax:10,firstTeamMin:5,firstTeamMax:10,reserveTeamMin:5,reserveTeamMax:10,reserveSubMax:5},
+  LEC_2026:{id:'LEC_2026',source:'LEC_2026',integratedMin:5,integratedMax:10,firstTeamMin:5,firstTeamMax:10,reserveTeamMin:5,reserveTeamMax:10,reserveSubMax:5},
+  LPL_2026:{id:'LPL_2026',source:'LPL_2026',integratedMin:5,integratedMax:10,firstTeamMin:5,firstTeamMax:10,reserveTeamMin:5,reserveTeamMax:10,reserveSubMax:5},
+  CBLOL_2026:{id:'CBLOL_2026',source:'CBLOL_2026',integratedMin:5,integratedMax:10,firstTeamMin:5,firstTeamMax:10,reserveTeamMin:5,reserveTeamMax:10,reserveSubMax:5}
 };
-function rosterRuleProfile(id='OWNED_RESERVE_LCK_STYLE_2026'){return ROSTER_RULE_PROFILES[id]||ROSTER_RULE_PROFILES.OWNED_RESERVE_LCK_STYLE_2026}
+function rosterRuleProfile(id='STANDARD_TIER1_2026'){return ROSTER_RULE_PROFILES[id]||ROSTER_RULE_PROFILES.STANDARD_TIER1_2026}
 
 const REGION_PRESETS = {
-  KR:{name:'한국',leagueName:'LCK',short:'LCK',strength:75,templates:true,tier:'major',d:{teams:12,splits:3,format:'rr_de',playoffTake:6,div2:true,system:'franchise',slots:4,spendingRule:'sfr_top5',salaryCap:40,salaryFloor:12,luxuryTax:.5}},
-  CN:{name:'중국',leagueName:'LPL',short:'LPL',strength:74,tier:'major',d:{teams:16,splits:3,format:'groups_po',playoffTake:8,div2:true,system:'franchise',slots:4}},
-  EU:{name:'유럽',leagueName:'LEC',short:'LEC',strength:71,tier:'major',d:{teams:12,splits:3,format:'rr_de',playoffTake:8,system:'franchise',slots:3}},
-  NA:{name:'북미',leagueName:'LCS',short:'LCS',strength:68,tier:'major',d:{teams:10,splits:3,format:'rr_de',playoffTake:6,system:'franchise',slots:3}},
-  AP:{name:'아시아태평양',leagueName:'LCP',short:'LCP',strength:67,tier:'major',d:{teams:12,splits:3,format:'rr_po',playoffTake:6,system:'mixed',slots:3}},
-  BR:{name:'브라질',leagueName:'CBLOL',short:'CBLOL',strength:65,tier:'major',d:{teams:10,splits:3,format:'rr_po',playoffTake:6,system:'franchise',slots:3}},
+  KR:{name:'한국',leagueName:'LCK',short:'LCK',strength:75,templates:true,tier:'major',d:{teams:12,splits:3,format:'rr_de',playoffTake:6,div2:true,system:'franchise',slots:4,spendingRule:'sfr_top5',sfrMode:'kr_progressive',sfrTeamShare:1,salaryCap:40,salaryFloor:12,luxuryTax:1,rosterRuleProfile:'OWNED_RESERVE_LCK_STYLE_2026',importRecruitMinGap:3}},
+  CN:{name:'중국',leagueName:'LPL',short:'LPL',strength:74,tier:'major',d:{teams:16,splits:3,format:'groups_po',playoffTake:8,div2:true,system:'franchise',slots:4,rosterRuleProfile:'LPL_2026',marketProfile:'high_spend',importRecruitMinGap:2}},
+  EU:{name:'유럽',leagueName:'LEC',short:'LEC',strength:71,tier:'major',d:{teams:12,splits:3,format:'rr_de',playoffTake:8,system:'franchise',slots:3,spendingRule:'sfr_top5',sfrMode:'lec_50_100',sfrTeamShare:.5,salaryCap:28,salaryFloor:14,luxuryTax:1,rosterRuleProfile:'LEC_2026',importRecruitMinGap:1}},
+  NA:{name:'북미',leagueName:'LCS',short:'LCS',strength:68,tier:'major',d:{teams:10,splits:3,format:'rr_de',playoffTake:6,system:'franchise',slots:3,rosterRuleProfile:'LCS_2026',marketProfile:'open_market',importRecruitMinGap:0}},
+  AP:{name:'아시아태평양',leagueName:'LCP',short:'LCP',strength:67,tier:'major',d:{teams:12,splits:3,format:'rr_po',playoffTake:6,system:'mixed',slots:3,rosterRuleProfile:'LCP_2026',marketProfile:'multi_region',importRecruitMinGap:1}},
+  BR:{name:'브라질',leagueName:'CBLOL',short:'CBLOL',strength:65,tier:'major',d:{teams:10,splits:3,format:'rr_po',playoffTake:6,system:'franchise',slots:3,rosterRuleProfile:'CBLOL_2026',marketProfile:'domestic_development',importRecruitMinGap:2}},
   VN:{name:'베트남',leagueName:'VCS',short:'VCS',strength:66,tier:'emerging',parent:'AP',d:{teams:8,splits:2,format:'rr_po',playoffTake:6,system:'relegation',slots:3}},
   JP:{name:'일본',leagueName:'LJL',short:'LJL',strength:62,tier:'emerging',parent:'AP',d:{teams:6,splits:2,format:'rr_po',playoffTake:4,system:'franchise',slots:3}},
   TW:{name:'대만·홍콩·마카오',leagueName:'PCS',short:'PCS',strength:64,tier:'emerging',parent:'AP',d:{teams:8,splits:2,format:'rr_po',playoffTake:6,system:'relegation',slots:3}},
@@ -206,7 +212,7 @@ function regionCfg(id,over={}){
   const P=REGION_PRESETS[id]||{name:'새 지역',leagueName:'새 리그',short:'NEW',strength:63,d:{}};
   return {id,name:P.name,leagueName:P.leagueName,short:P.short,strength:P.strength,templates:!!P.templates,tier:P.tier||'emerging',parent:P.parent||null,
     format:'rr_po',div2:false,div2Teams:8,teams:8,splits:2,legs:2,regularBo:3,playoffTake:6,playoffBo:5,system:'franchise',relegate:1,slots:3,office:PRESET_OFFICE[id]||'conservative',
-    fearless:true,payScale:PAY_SCALE[id]??.4,spendingRule:'none',salaryCap:0,salaryFloor:0,luxuryTax:.5,importLimit:2,rosterRuleProfile:'OWNED_RESERVE_LCK_STYLE_2026',...P.d,...over};
+    fearless:true,payScale:PAY_SCALE[id]??.4,spendingRule:'none',sfrMode:null,sfrTeamShare:0,salaryCap:0,salaryFloor:0,luxuryTax:.5,importLimit:2,importRecruitMinGap:3,rosterRuleProfile:'STANDARD_TIER1_2026',marketProfile:'balanced',...P.d,...over};
 }
 function defaultWorldConfig(){return {
   regions:['KR','CN','EU','NA','AP','BR'].map(id=>regionCfg(id)),

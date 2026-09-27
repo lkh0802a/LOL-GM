@@ -20,7 +20,10 @@ source += `\n(()=>{
   if(active.length<2||active.some(t=>t.roster.length!==0)) throw new Error('First-season teams are not blank');
   const players=Object.values(db.players);
   if(players.length<10||players.some(p=>p.team||p.contract)) throw new Error('Initial player pool is not fully FA');
-  if(db.regions.KR.spendingRule!=='sfr_top5'||db.regions.CN.spendingRule!=='none'||db.regions.EU.salaryFloor!==0) throw new Error('Regional spending rules are not realism-calibrated');
+  if(db.regions.KR.spendingRule!=='sfr_top5'||db.regions.EU.spendingRule!=='sfr_top5'||db.regions.EU.salaryFloor!==db.regions.EU.salaryCap*.5)throw new Error('KR/LEC spending rules are not region-specific');
+  if(db.regions.CN.spendingRule!=='none'||db.regions.NA.spendingRule!=='none'||db.regions.AP.spendingRule!=='none'||db.regions.BR.spendingRule!=='none')throw new Error('Non-SFR regions inherited another region financial rule');
+  if(db.regions.KR.rosterRuleProfile===db.regions.NA.rosterRuleProfile||rosterRuleProfile(db.regions.NA.rosterRuleProfile).firstTeamMax!==12)throw new Error('Regional roster profiles are not independent');
+  if(db.regions.CN.importRecruitMinGap===db.regions.NA.importRecruitMinGap)throw new Error('Regional market profiles are not differentiated');
   if((db.patches.cadence||14)!==14)throw new Error('Patch cadence should begin on Riot-style 14-day baseline');
   const patchDates=['2027-01-01','2027-01-15','2027-01-29'];const pDb=buildWorld();const prng=new RNG('patch-realism','p');seasonPatch(pDb,patchDates[0],prng);const p0=pDb.patches.list.length;patchTick(pDb,patchDates[1],prng);patchTick(pDb,patchDates[2],prng);if(pDb.patches.list.length<p0+1)throw new Error('Biweekly patch cadence failed');
   if(players.some(p=>!p.nationality||!p.roleFamiliarity||p.roleFamiliarity[p.role]!==100||!p.development||p.reputation===undefined||!Array.isArray(p.careerEvents))) throw new Error('Player identity/development schema failed');

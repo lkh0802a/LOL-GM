@@ -242,3 +242,19 @@ This supersedes any interpretation of item 3 that would cause frequent routine s
 - ownership changes require sustained financial or competitive pressure and are rarer than before
 
 This baseline is a calibration pass, not completion of later dedicated systems such as contracts, finance, patch engine, league office, or season structure.
+
+
+## D-023 — Region-first realism
+
+**Decision:** Real-world regional leagues are modeled from their own ecosystem rules and market behavior. LCK is never the generic template for another named region.
+
+- LCK keeps its own integrated first/reserve roster model and Korean SFR interpretation
+- LEC uses its own top-five SFR model, including a 50% floor, a 50% excess fee up to 150% of the threshold, a 100% fee above that level, and only half of collected SFR fees returning directly to compliant LEC teams; the rest is treated as ecosystem support
+- LCS uses a wider full-roster profile and an open-market recruiting bias instead of inheriting LCK integrated-roster rules
+- LCP uses a multi-region/promotion-relegation identity and its own roster profile
+- LPL remains a high-spending, high-competition market without silently inheriting Korean SFR parameters
+- CBLOL remains a distinct Brazilian ecosystem with a stronger domestic-development bias
+- when a current rule cannot be verified, LOL GM uses a neutral global baseline and records the uncertainty rather than copying another region's rule
+- fictional regions can choose any model explicitly, but named real-world regions must not receive another region's rules by default
+
+This principle applies to future work on scouting, contracts, Tier 2, finance, league offices, schedules, and international qualification.
