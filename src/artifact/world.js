@@ -898,6 +898,7 @@ function packDB(db){
 }
 function unpackDB(str){
   const db=JSON.parse(str); if(!db.packed)return db;
+  if(db.metaHistoryPacked){db.metaHistory=unpackMetaHistory(db.metaHistory||[]);delete db.metaHistoryPacked}
   for(const t of Object.values(db.teams||{}))ensureFacilities(t);
   for(const p of Object.values(db.players)){
     if(Array.isArray(p.attrs))p.attrs=Object.fromEntries(ALL_ATTRS.map((a,i)=>[a,p.attrs[i]]));
