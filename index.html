@@ -2170,6 +2170,8 @@ function closeMarket(db){
   contractMarket(db,rng,rep,ev);
   ensureEven(db,rng,ev);
   for(const t of activeTeams(db,null,1))aiManageOwnedReserve(db,t);
+  // 시장 마감 시에는 이동 후에도 각 스쿼드의 등록 목표 인원을 다시 충족시킨다.
+  ensureEven(db,rng,ev);
   for(const t of activeTeams(db)){aiReviewDepthChart(db,t);rebalanceAiRosterRoles(db,t)}
   for(const t of activeTeams(db)){const pre=t._pre||[];const now=ROLES.map(r=>starterFor(db,t,r)).filter(Boolean).map(p=>p.id);const changed=now.filter(id=>!pre.includes(id)).length;
     t.synergy=clamp(teamSynergy(t)*0.85+15-changed*8,10,100);delete t._pre;
