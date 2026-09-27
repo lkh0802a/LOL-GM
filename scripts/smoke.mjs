@@ -162,6 +162,15 @@ source += `\n(()=>{
     if(independent.some(t=>!promotionEligible(db,t)))throw new Error('Independent Tier-2 club incorrectly blocked from promotion');
     const parent=db.teams[owned[0].parent];
     if(reserveRequirement(db,parent)!=='required')throw new Error('Certified mixed-system club lost mandatory reserve requirement');
+    const ownedId=owned[0].id,parentId=owned[0].parent;
+    db.teams[parentId].division=2;
+    reconcileTier2Structure(db,new RNG('smoke-tier2-reconcile'),mixedRegion);
+    if(db.teams[ownedId]&&db.teams[ownedId].active!==false)throw new Error('Reserve survived after parent lost first-division eligibility');
+    db.teams[parentId].division=1;db.teams[parentId].franchised=true;
+    reconcileTier2Structure(db,new RNG('smoke-tier2-recreate'),mixedRegion);
+    if(!reserveTeamsOf(db,parentId).length)throw new Error('Required reserve was not restored after first-division certification');
+    inferRegionPolicy(db,mixedRegion);
+    if(mixedRegion.rosterRuleProfile!=='ENGINE_OWNED_RESERVE'||!mixedRegion.policyBasis?.reserveOwned)throw new Error('Mixed-system owned reserves were ignored by policy engine');
   }
 
 
