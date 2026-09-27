@@ -13,13 +13,25 @@ let source = '';
 for (const file of modules) source += `${await readFile(resolve(artifact, file), 'utf8')}\n`;
 source += `\n(()=>{
   const db=buildWorld();
-  if(!db||db.version!==11) throw new Error('Unexpected save schema');
+  if(!db||db.version!==12) throw new Error('Unexpected save schema');
   if(!db.worldDate||!db.worldConfig.universalLanguage) throw new Error('World bootstrap settings failed');
 
   const active=activeTeams(db);
   if(active.length<2||active.some(t=>t.roster.length!==0)) throw new Error('First-season teams are not blank');
   const players=Object.values(db.players);
   if(players.length<10||players.some(p=>p.team||p.contract)) throw new Error('Initial player pool is not fully FA');
+  if(players.some(p=>!p.nationality||!p.roleFamiliarity||p.roleFamiliarity[p.role]!==100||!p.development||p.reputation===undefined||!Array.isArray(p.careerEvents))) throw new Error('Player identity/development schema failed');
+  const sample=players[0];pState(sample);
+  for(const key of ['form','condition','fatigue','morale','sharpness','teamAdaptation','tacticalAdaptation']) if(sample[key]===undefined) throw new Error('Player state missing: '+key);
+  if(playerMod(sample)<-.111||playerMod(sample)>.091) throw new Error('Player state modifier escaped bounded range');
+  const synthetic={id:'synthetic',role:'JGL',attrs:Object.fromEntries(ALL_ATTRS.map(a=>[a,50])),roleFamiliarity:{JGL:100,ADC:100},secondaryRoles:['ADC']};
+  synthetic.attrs.smite_execution=99;synthetic.attrs.objective_setup=99;synthetic.attrs.map_awareness=92;synthetic.attrs.crossmap_decision=92;
+  if(playerRoleRating(synthetic,'JGL')<=playerRoleRating(synthetic,'ADC')) throw new Error('Position-specific player rating failed');
+  const secRole=SECONDARY_ROLE_OPTIONS[sample.role][0],secBefore=roleFamiliarity(sample,secRole);trainSecondaryRole(sample,secRole,4);
+  if(roleFamiliarity(sample,secRole)<=secBefore) throw new Error('Secondary-role learning failed');
+  const poolEntry=Object.keys(sample.pool)[0],practiceBefore=(sample.pool[poolEntry].trainingExperience||0);practiceChampion(db,sample,poolEntry,'training',3);
+  if((sample.pool[poolEntry].trainingExperience||0)<=practiceBefore) throw new Error('Champion training experience failed');
+  if(!(playerMarketValue(db,sample)>0)||!['신인','성장','전성기','쇠퇴'].includes(careerStage(sample))) throw new Error('Player value/lifecycle failed');
 
   const selectable=managerSelectableTeams(db), independent=active.filter(t=>!t.parent);
   if(!selectable.length||selectable.some(t=>t.parent)) throw new Error('Manager-selectable team filter failed');
@@ -83,6 +95,7 @@ source += `\n(()=>{
   const teams=activeTeams(db).filter(t=>t.roster.length>=5);
   const series=simulateSeries(db,teams[0].id,teams[1].id,1,'smoke-series',{fearless:true,firstChoice:'seed'});
   if(!series.rec||series.rec.games.length!==1||!series.lines.length) throw new Error('Series smoke simulation failed');
+  if(series.lines.some(l=>!(l.rating>=3&&l.rating<=10)||!(l.gold>0)||l.kp<0)) throw new Error('Player game rating/stat line failed');
   const game=series.rec.games[0];
   for(const cid of [...game.picks[0],...game.picks[1],...(game.bans[0]||[]),...(game.bans[1]||[])]) if(cid&&!db.patch.champions[cid]) throw new Error('Draft champion ID missing: '+cid);
 
@@ -93,7 +106,7 @@ source += `\n(()=>{
   const matchIds=seasons.flatMap(s=>s.days.flatMap(d=>d.matches.map(m=>m.id)));
   if(!matchIds.length||new Set(matchIds).size!==matchIds.length) throw new Error('Match IDs are not unique');
 
-  console.log('World smoke test: OK — blank first-season rosters, global FA pool, managed roster construction, AI roster construction, universal pro language, roster rules, season bootstrap and Bo1 simulation');
+  console.log('World smoke test: OK — blank rosters, global FA, roster rules, player identity/role ratings/state/value/development/champion learning, season bootstrap and Bo1 simulation');
 })()`;
 
 const context = {

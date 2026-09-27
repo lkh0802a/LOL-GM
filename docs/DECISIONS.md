@@ -161,3 +161,20 @@ These changes intentionally invalidate older development saves, so the active sa
 - the common default roster profile is first team 5–10, owned reserve 5–10, integrated organization 11–20, with league-specific profiles available for later overrides
 - the active save schema is version 11 under the `lol-gm-v11` namespace
 - older development saves remain unsupported
+
+
+## D-018 — Player domain schema v12
+
+**Decision:** Player-system work uses save schema version 12 under the `lol-gm-v12` namespace.
+
+- player overall ratings are position-weighted rather than a flat average
+- primary/secondary position familiarity is explicit and trainable
+- nationality is explicit while region remains the registration/scouting origin key
+- reputation and market value are distinct from raw ability and feed player-market logic
+- form, condition, fatigue, morale, match sharpness, team adaptation and tactical adaptation are bounded match modifiers
+- champion profiles retain official, scrim and training experience; learning ability, champion difficulty and meta adaptation affect mastery
+- each player has an individualized growth/peak/decline profile; potential is not a guaranteed future rating
+- player career snapshots/events preserve team, division/squad, contract, transfers, titles, awards and retirement information
+- match lines carry position-sensitive ratings plus gold/GPM/DPM-compatible data
+
+Older development saves remain unsupported.
