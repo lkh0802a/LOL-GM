@@ -258,3 +258,18 @@ This baseline is a calibration pass, not completion of later dedicated systems s
 - fictional regions can choose any model explicitly, but named real-world regions must not receive another region's rules by default
 
 This principle applies to future work on scouting, contracts, Tier 2, finance, league offices, schedules, and international qualification.
+
+
+## D-024 — Policy engine over global defaults
+
+**Decision:** LOL GM does not use a static global league-policy template when a rule is unspecified.
+
+- verified or intentionally configured regional rules are treated as initial conditions and are locked only for the dimensions explicitly supplied
+- missing policy dimensions are inferred independently from the region's own structure and economy
+- the policy engine considers first-division team count, owner wealth, top-five payroll dispersion, local talent depth, Tier-2 ownership structure, market scale, and current league system
+- it independently resolves roster structure, market profile, import openness, recruiting appetite, and whether a soft spending-control mechanism is justified
+- custom/fictional regions are policy-engine-native from creation
+- after creation, league-office reforms continue to respond to multi-year regional evidence; weak evidence means no change
+- policy changes are component-based rather than choosing a whole 'LCK model', 'LEC model', or 'global model'
+
+The correct fallback for uncertainty is evidence-driven inference or status quo, not copying another region.

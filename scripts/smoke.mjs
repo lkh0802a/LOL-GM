@@ -24,6 +24,9 @@ source += `\n(()=>{
   if(db.regions.CN.spendingRule!=='none'||db.regions.NA.spendingRule!=='none'||db.regions.AP.spendingRule!=='none'||db.regions.BR.spendingRule!=='none')throw new Error('Non-SFR regions inherited another region financial rule');
   if(db.regions.KR.rosterRuleProfile===db.regions.NA.rosterRuleProfile||rosterRuleProfile(db.regions.NA.rosterRuleProfile).firstTeamMax!==12)throw new Error('Regional roster profiles are not independent');
   if(db.regions.CN.importRecruitMinGap===db.regions.NA.importRecruitMinGap)throw new Error('Regional market profiles are not differentiated');
+  const custom=buildWorld({regions:[regionCfg('ZZ',{id:'ZZ',name:'테스트',leagueName:'ZZL',short:'ZZL',teams:8,strength:66,div2:true,system:'franchise',payScale:.7})],internationals:[],subs:1,changes:'normal',startYear:2027,manage:'manual',universalLanguage:true});
+  const z=custom.regions.ZZ;if(!z.policyBasis||z.policyBasis.source!=='engine'||!z.rosterRuleProfile||z.importLimit==null||!z.marketProfile||z.spendingRule==null)throw new Error('Policy engine did not resolve custom-region rules');
+  if(z.rosterRuleProfile!=='ENGINE_OWNED_RESERVE')throw new Error('Policy engine ignored owned-reserve structure');
   if((db.patches.cadence||14)!==14)throw new Error('Patch cadence should begin on Riot-style 14-day baseline');
   const patchDates=['2027-01-01','2027-01-15','2027-01-29'];const pDb=buildWorld();const prng=new RNG('patch-realism','p');seasonPatch(pDb,patchDates[0],prng);const p0=pDb.patches.list.length;patchTick(pDb,patchDates[1],prng);patchTick(pDb,patchDates[2],prng);if(pDb.patches.list.length<p0+1)throw new Error('Biweekly patch cadence failed');
   if(players.some(p=>!p.nationality||!p.roleFamiliarity||p.roleFamiliarity[p.role]!==100||!p.development||p.reputation===undefined||!Array.isArray(p.careerEvents))) throw new Error('Player identity/development schema failed');

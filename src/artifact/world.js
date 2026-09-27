@@ -169,6 +169,7 @@ function facilityUpkeep(db,t){return Math.round((t.facility||2)*1.2*psTeam(db,t)
 // 실제 LoL e스포츠 구조를 본뜬 기본 리그 (리그 수준·시장 규모는 고정, 구조만 편집 가능)
 const ROSTER_RULE_PROFILES={
   STANDARD_TIER1_2026:{id:'STANDARD_TIER1_2026',source:'GLOBAL_2026',integratedMin:5,integratedMax:10,firstTeamMin:5,firstTeamMax:10,reserveTeamMin:5,reserveTeamMax:10,reserveSubMax:5},
+  ENGINE_OWNED_RESERVE:{id:'ENGINE_OWNED_RESERVE',source:'POLICY_ENGINE',integratedMin:10,integratedMax:20,firstTeamMin:5,firstTeamMax:10,reserveTeamMin:5,reserveTeamMax:10,reserveSubMax:5},
   OWNED_RESERVE_LCK_STYLE_2026:{id:'OWNED_RESERVE_LCK_STYLE_2026',source:'LCK_2026',integratedMin:11,integratedMax:20,firstTeamMin:5,firstTeamMax:10,reserveTeamMin:5,reserveTeamMax:10,reserveSubMax:5},
   LCS_2026:{id:'LCS_2026',source:'LCS_2026',integratedMin:5,integratedMax:12,firstTeamMin:5,firstTeamMax:12,reserveTeamMin:5,reserveTeamMax:10,reserveSubMax:7},
   LCP_2026:{id:'LCP_2026',source:'LCP_2026',integratedMin:5,integratedMax:10,firstTeamMin:5,firstTeamMax:10,reserveTeamMin:5,reserveTeamMax:10,reserveSubMax:5},
@@ -209,10 +210,11 @@ const INTL_ZONES={asia:['KR','CN','AP','VN','JP','TW','OC','SEA'],emea:['EU','TR
 const ZONE_KO={asia:'아시아·태평양',emea:'EMEA',americas:'아메리카스'};
 
 function regionCfg(id,over={}){
-  const P=REGION_PRESETS[id]||{name:'새 지역',leagueName:'새 리그',short:'NEW',strength:63,d:{}};
+  const P=REGION_PRESETS[id]||{name:'새 지역',leagueName:'새 리그',short:'NEW',strength:63,d:{}},d=P.d||{};
+  const locks={spendingRule:'spendingRule'in d||'spendingRule'in over,rosterRuleProfile:'rosterRuleProfile'in d||'rosterRuleProfile'in over,marketProfile:'marketProfile'in d||'marketProfile'in over,importLimit:'importLimit'in d||'importLimit'in over,importRecruitMinGap:'importRecruitMinGap'in d||'importRecruitMinGap'in over};
   return {id,name:P.name,leagueName:P.leagueName,short:P.short,strength:P.strength,templates:!!P.templates,tier:P.tier||'emerging',parent:P.parent||null,
     format:'rr_po',div2:false,div2Teams:8,teams:8,splits:2,legs:2,regularBo:3,playoffTake:6,playoffBo:5,system:'franchise',relegate:1,slots:3,office:PRESET_OFFICE[id]||'conservative',
-    fearless:true,payScale:PAY_SCALE[id]??.4,spendingRule:'none',sfrMode:null,sfrTeamShare:0,salaryCap:0,salaryFloor:0,luxuryTax:.5,importLimit:2,importRecruitMinGap:3,rosterRuleProfile:'STANDARD_TIER1_2026',marketProfile:'balanced',...P.d,...over};
+    fearless:true,payScale:PAY_SCALE[id]??.4,spendingRule:null,sfrMode:null,sfrTeamShare:0,salaryCap:0,salaryFloor:0,luxuryTax:.5,importLimit:null,importRecruitMinGap:null,rosterRuleProfile:null,marketProfile:null,policyMode:'engine',policyLocks:locks,...d,...over};
 }
 function defaultWorldConfig(){return {
   regions:['KR','CN','EU','NA','AP','BR'].map(id=>regionCfg(id)),
@@ -246,9 +248,13 @@ function isManagerSelectableTeam(db,t){
   return !!team&&team.active!==false&&!team.parent;
 }
 function managerSelectableTeams(db,rid,div){return activeTeams(db,rid,div).filter(t=>isManagerSelectableTeam(db,t))}
+function engineRosterRuleProfile(region){
+  if(region&&region.div2&&region.system==='franchise')return ROSTER_RULE_PROFILES.ENGINE_OWNED_RESERVE;
+  return ROSTER_RULE_PROFILES.STANDARD_TIER1_2026;
+}
 function rosterRulesForTeam(db,t){
-  const team=teamRef(db,t);if(!team)return rosterRuleProfile();
-  const region=db.regions[team.region];return rosterRuleProfile(region&&region.rosterRuleProfile);
+  const team=teamRef(db,t);if(!team)return ROSTER_RULE_PROFILES.STANDARD_TIER1_2026;
+  const region=db.regions[team.region];return region&&region.rosterRuleProfile?rosterRuleProfile(region.rosterRuleProfile):engineRosterRuleProfile(region);
 }
 function parentTeamOf(db,t){const team=teamRef(db,t);if(!team)return null;return team.parent?db.teams[team.parent]||null:team}
 function reserveTeamsOf(db,t){const parent=parentTeamOf(db,t);if(!parent)return [];return activeTeams(db,parent.region,2).filter(x=>x.parent===parent.id)}
@@ -330,9 +336,30 @@ function createDiv2(db,rng,R){
   R.div2=true;
   if(R.system==='franchise'){for(const t of activeTeams(db,R.id,1))makeAcademy(db,rng,t)}
   else{const n=R.div2Teams||Math.max(6,Math.min(10,activeTeams(db,R.id,1).length));for(let i=0;i<n;i++)genTeam(db,rng,R.id,R.strength-8,{div:2})}
+  if(R.policyMode==='engine'&&!R.policyLocks?.rosterRuleProfile)R.rosterRuleProfile=R.system==='franchise'?'ENGINE_OWNED_RESERVE':'STANDARD_TIER1_2026';
 }
-function abolishDiv2(db,R){R.div2=false;for(const t of activeTeams(db,R.id,2))foldTeam(db,t)}
+function abolishDiv2(db,R){R.div2=false;for(const t of activeTeams(db,R.id,2))foldTeam(db,t);if(R.policyMode==='engine'&&!R.policyLocks?.rosterRuleProfile)R.rosterRuleProfile='STANDARD_TIER1_2026'}
 function markFranchised(db,R){const ts=activeTeams(db,R.id,1).sort((a,b)=>(b.fans||0)-(a.fans||0));ts.forEach((t,i)=>t.franchised=i<Math.ceil(ts.length/2))}
+function inferRegionPolicy(db,R){
+  if(!R||R.policyMode!=='engine')return R;
+  const locks=R.policyLocks||{},teams=activeTeams(db,R.id,1),n=Math.max(1,teams.length);
+  const owners=teams.map(t=>t.owner&&t.owner.wealth||50),ownerAvg=avg(owners);
+  const pays=teams.map(t=>topFivePayroll(db,t)).filter(x=>x>0).sort((a,b)=>a-b),med=pays.length?pays[Math.floor(pays.length/2)]:Math.max(1,8*psOf(db,R.id)),disp=pays.length>1?pays[pays.length-1]/Math.max(.1,pays[0]):1;
+  const locals=Object.values(db.players).filter(p=>!p.retired&&p.region===R.id&&playerOvr(p)>=R.strength-10).length/n;
+  if(!locks.rosterRuleProfile)R.rosterRuleProfile=R.div2&&R.system==='franchise'?'ENGINE_OWNED_RESERVE':'STANDARD_TIER1_2026';
+  if(!locks.marketProfile)R.marketProfile=ownerAvg>=70||R.payScale>=1?'high_spend':locals>=7?'domestic_development':locals<5?'open_market':'balanced';
+  if(!locks.importLimit)R.importLimit=R.marketProfile==='domestic_development'?1:R.marketProfile==='open_market'?3:2;
+  if(!locks.importRecruitMinGap)R.importRecruitMinGap=R.marketProfile==='open_market'?0:R.marketProfile==='high_spend'?1:R.marketProfile==='domestic_development'?3:2;
+  if(!locks.spendingRule){
+    const pressure=n>=8&&disp>=2.8&&ownerAvg>=55;
+    R.spendingRule=pressure?'sfr_top5':'none';
+    if(pressure){R.sfrMode='engine_progressive';R.sfrTeamShare=.75;R.salaryCap=Math.max(1,Math.round(med*1.45));R.salaryFloor=Math.max(0,Math.round(R.salaryCap*.5));R.luxuryTax=.75}
+    else{R.sfrMode=null;R.sfrTeamShare=0;R.salaryCap=0;R.salaryFloor=0}
+  }
+  R.policyBasis={year:db.year,teams:n,ownerAvg:Math.round(ownerAvg),payDisp:Math.round(disp*100)/100,localDepth:Math.round(locals*10)/10,source:'engine'};
+  return R;
+}
+
 function addRegion(db,rng,cfg){
   const R={office:PRESET_OFFICE[cfg.id]||'conservative',...cfg,talent:cfg.strength,joined:db.year,lastPlacement:null,metrics:[],decisions:[]};
   db.regions[R.id]=R;
@@ -350,6 +377,7 @@ function addRegion(db,rng,cfg){
   if(R.div2){R.div2=false;createDiv2(db,rng,R)}
   R.baseSlots=R.slots;
   for(let i=0;i<Math.ceil(R.teams*0.6);i++) genPlayer(db,rng,{role:rng.pick(ROLES),age:rng.int(17,19),base:R.strength-11+rng.normal(0,5),region:R.id});
+  inferRegionPolicy(db,R);
   return R;
 }
 function buildWorld(cfg){

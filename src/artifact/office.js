@@ -73,7 +73,7 @@ function officeDecisions(db,rng,f,ev,mid){
       // 재정 규정은 하드캡이 아니라 상위 5명 기준의 완만한 균형지출 제도로만 진화한다.
       const pays=activeTeams(db,R.id,1).map(t=>topFivePayroll(db,t)).sort((a,b)=>a-b),med=pays[Math.floor(pays.length/2)]||1,disp=(pays[pays.length-1]||1)/Math.max(.1,pays[0]||.1);
       const cashes=activeTeams(db,R.id,1).map(t=>t.finance.cash),neg=cashes.filter(c=>c<0).length/Math.max(1,cashes.length),ps=psOf(db,R.id),rc=v=>Math.round(v);
-      if(R.spendingRule!=='sfr_top5')add('cap',(disp-2.8)/1.4+(0.5-B)-.15,()=>{R.spendingRule='sfr_top5';R.salaryCap=rc(med*1.45);R.salaryFloor=rc(med*.55);R.luxuryTax=.75;return `균형지출제도 도입 (상위 5인 기준 ${R.salaryCap}억)`},`상위 5인 연봉 격차 ×${disp.toFixed(1)} — 지속가능성 논의`);
+      if(R.spendingRule!=='sfr_top5')add('cap',(disp-2.8)/1.4+(0.5-B)-.15,()=>{R.spendingRule='sfr_top5';R.sfrMode='engine_progressive';R.sfrTeamShare=.75;R.salaryCap=rc(med*1.45);R.salaryFloor=rc(med*.5);R.luxuryTax=.75;return `균형지출제도 도입 (상위 5인 기준 ${R.salaryCap}억)`},`상위 5인 연봉 격차 ×${disp.toFixed(1)} — 지속가능성 논의`);
       else{
         const over=pays.filter(p=>p>R.salaryCap).length/pays.length;
         add('cap',over*1.5-.55+(H-60)/35,()=>{const o=R.salaryCap;R.salaryCap=rc(o*1.1);R.salaryFloor=rc(Math.min(R.salaryCap*.65,(R.salaryFloor||0)*1.08));return `균형지출 기준선 조정 ${o}억 → ${R.salaryCap}억`},`시장 성장과 초과 구단 비율 ${Math.round(over*100)}% 반영`);
@@ -81,8 +81,8 @@ function officeDecisions(db,rng,f,ev,mid){
         add('floor',neg*2-.7,()=>{const o=R.salaryFloor;R.salaryFloor=rc(Math.max(0,o*.9));return `지출 권장 하한 ${o}억 → ${R.salaryFloor}억`},`적자 구단 ${Math.round(neg*100)}% — 하한 기준 완화`);
       }
       const regPow=(db.global&&db.global.power[R.id])||1;
-      add('import',(1.2-regPow)+(45-H)/25-(R.importLimit>=3?0.6:0),()=>{const o=R.importLimit??2;R.importLimit=o+1;return `외국인 선수 한도 ${o} → ${R.importLimit}명`},`국제 경쟁력 보강·해외 스타 유치 (지수 ${regPow})`);
-      if((R.importLimit??2)>1) add('import',faDepth-1.8+(regPow-1.5),()=>{const o=R.importLimit??2;R.importLimit=o-1;return `외국인 선수 한도 ${o} → ${R.importLimit}명`},`자국 유망주 출전 기회 확대 (FA 인재 ${faDepth.toFixed(1)}명/팀)`);
+      add('import',(1.2-regPow)+(45-H)/25-(R.importLimit>=3?0.6:0),()=>{const o=R.importLimit??2;R.importLimit=o+1;R.importRecruitMinGap=Math.max(0,(R.importRecruitMinGap??2)-1);return `외국인 선수 한도 ${o} → ${R.importLimit}명`},`국제 경쟁력 보강·해외 스타 유치 (지수 ${regPow})`);
+      if((R.importLimit??2)>1)add('import',faDepth-1.8+(regPow-1.5),()=>{const o=R.importLimit??2;R.importLimit=o-1;R.importRecruitMinGap=Math.min(4,(R.importRecruitMinGap??2)+1);return `외국인 선수 한도 ${o} → ${R.importLimit}명`},`자국 유망주 출전 기회 확대 (FA 인재 ${faDepth.toFixed(1)}명/팀)`);
       const SPL={1:'단일 시즌제',2:'2스플릿제',3:'3스플릿제'};
       if((R.splits||1)<3) add('splits',(H-58)/15+trend/25,()=>{const o=R.splits||1;R.splits=o+1;return `${SPL[o]} → ${SPL[R.splits]} 전환`},`흥행 호조로 시즌 콘텐츠 확대`);
       if((R.splits||1)>1) add('splits',(38-H)/15-trend/25,()=>{const o=R.splits;R.splits=o-1;return `${SPL[o]} → ${SPL[R.splits]} 전환`},`흥행 부진, 일정 피로도 완화`);
