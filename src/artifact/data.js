@@ -10,7 +10,7 @@ const ATTR_GROUPS = {
   laning:['trading','csing','wave_control','pressure','all_in','harass','recall_timing','gank_avoidance','lane_adaptation'],
   combat:['positioning','target_selection','engage','disengage','peeling','flanking','burst_execution','extended_fight','teamfight_awareness'],
   macro:['map_awareness','rotation','tempo','objective_setup','resource_allocation','sidelane','vision_understanding','crossmap_decision'],
-  mental:['decision_making','anticipation','concentration','composure','consistency','adaptability','communication','shotcalling','creativity','pressure_handling']
+  mental:['decision_making','anticipation','concentration','composure','consistency','adaptability','communication','shotcalling','creativity','pressure_handling','champion_learning','meta_adaptation']
 };
 const GROUP_KO = {mechanical:'피지컬', laning:'라인전', combat:'교전', macro:'운영', mental:'멘탈/판단'};
 const ATTR_KO = {
@@ -18,10 +18,25 @@ const ATTR_KO = {
   trading:'딜교환', csing:'CS', wave_control:'웨이브 관리', pressure:'라인 압박', all_in:'올인', harass:'견제', recall_timing:'귀환 타이밍', gank_avoidance:'갱 회피', lane_adaptation:'라인 적응',
   positioning:'포지셔닝', target_selection:'타겟 선정', engage:'이니시', disengage:'디스인게이지', peeling:'보호', flanking:'측면 진입', burst_execution:'폭딜 실행', extended_fight:'장기전', teamfight_awareness:'한타 판단',
   map_awareness:'맵 인지', rotation:'합류', tempo:'템포', objective_setup:'오브젝트 준비', resource_allocation:'자원 분배', sidelane:'사이드 운영', vision_understanding:'시야 이해', crossmap_decision:'크로스맵',
-  decision_making:'판단력', anticipation:'예측', concentration:'집중력', composure:'침착함', consistency:'기복 없음', adaptability:'적응력', communication:'소통', shotcalling:'오더', creativity:'창의성', pressure_handling:'압박 대처'
+  decision_making:'판단력', anticipation:'예측', concentration:'집중력', composure:'침착함', consistency:'기복 없음', adaptability:'적응력', communication:'소통', shotcalling:'오더', creativity:'창의성', pressure_handling:'압박 대처', champion_learning:'챔피언 학습', meta_adaptation:'메타 적응'
 };
 const TENDENCIES = ['aggression','risk_taking','roaming','resource_demand','teamplay','trading_frequency','engage_preference','objective_preference','split_preference'];
 const TEND_KO = {aggression:'공격성', risk_taking:'위험 감수', roaming:'로밍', resource_demand:'자원 요구', teamplay:'팀플레이', trading_frequency:'딜교 빈도', engage_preference:'이니시 선호', objective_preference:'오브젝트 선호', split_preference:'스플릿 선호'};
+const ROLE_GROUP_WEIGHTS={
+  TOP:{mechanical:.22,laning:.28,combat:.22,macro:.17,mental:.11},
+  JGL:{mechanical:.14,laning:.07,combat:.20,macro:.36,mental:.23},
+  MID:{mechanical:.24,laning:.25,combat:.22,macro:.18,mental:.11},
+  ADC:{mechanical:.32,laning:.23,combat:.29,macro:.09,mental:.07},
+  SUP:{mechanical:.10,laning:.09,combat:.24,macro:.34,mental:.23}
+};
+const ROLE_KEY_ATTRS={
+  TOP:['trading','wave_control','all_in','positioning','sidelane','decision_making'],
+  JGL:['smite_execution','map_awareness','rotation','tempo','objective_setup','crossmap_decision','decision_making'],
+  MID:['precision','trading','wave_control','positioning','roaming','rotation','decision_making'],
+  ADC:['reaction','kiting','spacing','csing','positioning','target_selection','extended_fight'],
+  SUP:['engage','disengage','peeling','map_awareness','objective_setup','vision_understanding','shotcalling']
+};
+const SECONDARY_ROLE_OPTIONS={TOP:['MID','JGL'],JGL:['SUP','TOP'],MID:['TOP','ADC'],ADC:['MID','SUP'],SUP:['JGL','ADC']};
 const CLASS_KO = {fighter:'전사', tank:'탱커', mage:'마법사', assassin:'암살자', marksman:'원거리 딜러', enchanter:'서포터'};
 const KIT_KEYS = ['burst','dps','cc','engage','disengage','peel','poke','waveclear','mobility','sustain','early','mid','late','difficulty'];
 const KIT_KO = {burst:'폭딜', dps:'지속딜', cc:'CC', engage:'이니시', disengage:'받아치기', peel:'보호', poke:'포킹', waveclear:'라인클리어', mobility:'기동성', sustain:'유지력', early:'초반', mid:'중반', late:'후반', difficulty:'난이도'};

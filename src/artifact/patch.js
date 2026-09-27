@@ -60,6 +60,7 @@ function newPatch(db,date,major,rng){
     notes.push({type:'new',def,why:'신규 챔피언 출시',c:def.name});
   }
   notes.forEach(n=>applyNote(P,n));
+  if(typeof adaptPlayerPoolsToPatch==='function')adaptPlayerPoolsToPatch(db,notes,!!major);
   P.id=id;
   db.patches.list.push({id,date,major:!!major,notes});
   for(const k in PATCH_CACHE)delete PATCH_CACHE[k];

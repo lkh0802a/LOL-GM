@@ -4,6 +4,7 @@ function gameMVP(r){
   const w=r.sides[r.winner], tot=w.ps.reduce((s,p)=>s+p.dmg,0)||1;
   return w.ps.reduce((b,p)=>{const v=(p.k*3+p.a*1.5)/(p.d+1)+p.dmg/tot*10+(p.role==='SUP'?1:0);return !b||v>b.v?{p,v}:b},null).p.p.id;
 }
+function playerGameRating(ps,side,win,mvp,duration){const min=Math.max(1,duration),kp=(ps.k+ps.a)/Math.max(1,side.kills),kda=(ps.k+ps.a)/Math.max(1,ps.d),csm=ps.cs/min,dpm=ps.dmg/min,role=ps.role;let v=4.7+(win?.42:0)+(mvp?.55:0)-ps.d*.08;if(role==='TOP')v+=kda*.38+csm*.11+dpm*.00075+kp*.45;else if(role==='JGL')v+=kda*.4+csm*.055+dpm*.00055+kp*.72;else if(role==='MID')v+=kda*.4+csm*.105+dpm*.0008+kp*.5;else if(role==='ADC')v+=kda*.36+csm*.125+dpm*.0009+kp*.48;else v+=kda*.34+csm*.025+dpm*.00042+kp*.92;return Math.round(clamp(v,3,10)*100)/100}
 // 선택권(진영 vs 픽 순서): 선택권을 가진 팀이 '진영'이나 '픽 순서' 중 하나를 고르면, 상대가 나머지를 고른다
 // 진영 가치: 블루 = 맵 이점(시야·오브젝트 동선). 순서 가치: 선픽 = 최고 챔피언 선점, 후픽 = 마지막 카운터픽(피어리스 후반 세트일수록 커짐)
 function draftPrefs(db,tid,ctx,g,bestOf,rng){
@@ -50,7 +51,7 @@ function simulateSeries(db,aId,bId,bestOf,seed,opt={}){
     ctx.mods[wId]=clamp(ctx.mods[wId]+0.015,-0.08,0.05);
     const mvp=gameMVP(r);
     games.push({n:g,blue,red,seed:gseed,mods:snap.mods,winner:wId,bans:r.draft.bans,sideBy:chooser,sideWhy:sc.why,firstPick:fpTeam,kills:[r.sides[0].kills,r.sides[1].kills],dur:r.durationStr,duration:r.duration,picks:pk,mvp});
-    for(const s of r.sides) for(const p of s.ps) lines.push({pid:p.p.id,tid:s.team.id,champ:p.champ.id,k:p.k,d:p.d,a:p.a,cs:Math.round(p.cs),dmg:Math.round(p.dmg),dur:r.duration,win:s.team.id===wId,mvp:p.p.id===mvp});
+    for(const s of r.sides) for(const p of s.ps){const win=s.team.id===wId,isMvp=p.p.id===mvp;lines.push({pid:p.p.id,tid:s.team.id,champ:p.champ.id,k:p.k,d:p.d,a:p.a,cs:Math.round(p.cs),gold:Math.round(p.goldEarned),dmg:Math.round(p.dmg),dur:r.duration,kp:(p.k+p.a)/Math.max(1,s.kills),csm:p.cs/Math.max(1,r.duration),dpm:p.dmg/Math.max(1,r.duration),rating:playerGameRating(p,s,win,isMvp,r.duration),win,mvp:isMvp})}
     chooser=lId; // 패배 팀이 다음 세트 진영 선택 (블루 선호)
   }
   const tac={[aId]:{...db.teams[aId].tactics},[bId]:{...db.teams[bId].tactics}};
@@ -178,8 +179,8 @@ function rrTable(db,s,stageId,teams){
 }
 function recordLines(s,lines){
   for(const l of lines){
-    const p=s.pstats[l.pid]||(s.pstats[l.pid]={g:0,w:0,k:0,d:0,a:0,cs:0,dmg:0,min:0,mvp:0,champs:{}});
-    p.g++;p.w+=l.win?1:0;p.k+=l.k;p.d+=l.d;p.a+=l.a;p.cs+=l.cs;p.dmg+=l.dmg;p.min+=l.dur;p.mvp+=l.mvp?1:0;
+    const p=s.pstats[l.pid]||(s.pstats[l.pid]={g:0,w:0,k:0,d:0,a:0,cs:0,gold:0,dmg:0,min:0,mvp:0,ratingSum:0,champs:{}});
+    p.g++;p.w+=l.win?1:0;p.k+=l.k;p.d+=l.d;p.a+=l.a;p.cs+=l.cs;p.gold+=l.gold||0;p.dmg+=l.dmg;p.min+=l.dur;p.mvp+=l.mvp?1:0;p.ratingSum+=l.rating||0;
     const c=p.champs[l.champ]||(p.champs[l.champ]=[0,0]);c[0]++;if(l.win)c[1]++;
   }
 }
