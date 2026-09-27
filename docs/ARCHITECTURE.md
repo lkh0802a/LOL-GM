@@ -9,13 +9,15 @@ LOL GM remains a standalone-first simulation, but standalone delivery does not j
 The authoritative module order lives in `scripts/artifact-modules.mjs`.
 
 - source snapshots: `champion-source.js`, `system-source.js`
-- simulation core: `engine.js`
+- simulation core: `engine.js` (match simulation) and `draft.js` (champion/system evaluation, automatic item/rune environment, draft decisions)
 - baseline/domain data: `data.js`, `champs2.js`
 - patch/meta: `patch.js`
 - competition/world: `competition.js`, `world.js`
 - management domains: `office.js`, `finance.js`, `features.js`, `career.js`
 - domain UI: `ui-patch.js`, `ui-market.js`
 - application shell/controller: `app.js`
+
+The match engine and draft engine stay separate: Item 11 may call the shared draft engine but must not move interactive UI state into simulation code.
 
 New large UI surfaces should be added as `ui-<domain>.js` modules instead of extending `app.js`. The actual LoL-style draft UI for Item 11 follows this rule.
 
