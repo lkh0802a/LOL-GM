@@ -405,3 +405,24 @@ Item 6 (Tier 1 / Tier 2 / Academy) is now active.
 - AI and player actions must converge on the same final domain validation even when their interaction flows differ
 
 This applies retroactively to completed major items during later UI touches and must be checked again in item 22 final integration.
+
+
+## D-032 — International ecosystem and qualification contract
+
+**Decision:** LOL GM uses three seasonal international phases for first-division professional teams. Competition prestige tiers never mean domestic Tier 2/Academy participation.
+
+- Phase 1: First Stand (`FIRST_STAND`), 12 teams, six core leagues initially receive two slots each. Two groups of six play BO3 single round robin; top four per group advance to an eight-team BO5 single-elimination bracket. Same-league teams are separated across groups.
+- Phase 2 Tier 1: Mid-Season Invitational (`MID_SEASON_INVITATIONAL`, display `MSI`), 16 teams. Six core leagues receive two base slots each and four additional slots are distributed by international coefficient/office. All teams enter Swiss; ordinary Swiss matches are BO1 and advancement/elimination matches are BO3. Eight advance to a BO5 double-elimination bracket; the Grand Final has no bracket reset.
+- Phase 2 Tier 2: Eastern Cup (`EASTERN_CUP`, `EC`) and Western Cup (`WESTERN_CUP`, `WEC`), eight teams each. Initial regional allocation is 3-3-2 by regional international coefficient. Two groups of four play BO3 double round robin; top two advance to BO5 semifinals/final.
+- Phase 3 Tier 1: World Championship (`WORLD_CHAMPIONSHIP`, display `Worlds`), 24 teams. Initially six core leagues receive four slots each and no league may exceed four Worlds slots. The league phase uses three pots of eight; every team plays six BO3s, exactly two opponents from each pot including its own pot, with no rematches and no same-domestic-league pairing. Top 16 advance. At the Round of 16 only, ranks 1–8 are drawn against ranks 9–16; that draw fixes the entire BO5 single-elimination bracket through the Final.
+- Worlds league-phase ties use match wins, strength of schedule, set differential, opponents' set differential and set wins. A still-unresolved 8/9 seeding boundary or 16/17 qualification boundary is decided by a BO1 tiebreaker rather than random elimination.
+- Phase 3 Tier 2: Masters (`MASTERS`), 16 teams. Six core leagues receive two base slots; four additional slots are coefficient/office allocated, with a hard total maximum of three Masters teams from one league. Four groups of four play BO3 double round robin; top two advance to a BO5 single-elimination bracket.
+- Phase 3 Tier 3: Open (`OPEN`), 12 teams. Initially each of the six core leagues receives two slots. Two groups of six play BO3 single round robin; same-league teams are separated and the top four per group advance to a BO5 single-elimination bracket.
+- A team may enter only one international competition in the same phase. Slot rights and one-season vacancy filling are separate concepts; league size alone never determines international slots.
+- All international knockout series are BO5. Fearless remains fixed.
+- International slot allocation is owned by the international office and may evolve from in-world international results. Initial strength seeding is only a bootstrap when no in-world history exists.
+- Each domestic league office independently chooses its season structure (one long season, multiple splits, or another format) and its international qualification tournament/competition procedure.
+- Direct qualification by regular-season table cutoff is forbidden. League standings may determine qualifier eligibility, seeding or byes, but the international berth itself must be decided through competitive matches such as playoffs or a qualification tournament.
+- During every international phase, all first-division domestic official competition pauses globally, including for clubs not attending an international event. Training, scrims, rest and roster management remain available.
+- Exact calendar dates, international coefficient arithmetic, tournament patch lock and emergency international roster rules remain to be finalized before major item 19 is accepted.
+- These canonical specifications are recorded now; executable tournament scheduling/format support remains owned by the later international-season system rather than being approximated through legacy formats.
