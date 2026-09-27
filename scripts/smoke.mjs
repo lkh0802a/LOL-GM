@@ -31,10 +31,11 @@ source += `\n(()=>{
   if(rc.length!==rp.count||rc.some(p=>p.age<17||p.age>19||!p.rookieTier||p.entryYear!==db.year))throw new Error('Engine rookie class generation failed');
   if(rp.freeBuffer<rp.teams*.75)throw new Error('Rookie market liquidity buffer is too small');
   if(rp.count<Math.max(5,Math.round(rp.first*.55)))throw new Error('Rookie natural intake multiplier regressed');
-  if(!(rp.ecosystem>0)||!rookieR.rookieIntake.slice(-1)[0].profile.classWave)throw new Error('Rookie class quality wave missing');
+  const ri=rookieR.rookieIntake.slice(-1)[0];if(!(rp.ecosystem>0)||!ri.profile.classWave||!ri.label||!ri.profile.roleWaves)throw new Error('Rookie cohort engine state missing');
+  if(!['흉작','약한 세대','평년','풍년','황금세대'].includes(ri.label))throw new Error('Rookie class label invalid');
   if(typeof generateEmergencyRookie!=='undefined')throw new Error('Per-team emergency rookie generation still exists');
   const supplyCheck=talentSupplyErrors(db);if(supplyCheck.length)throw new Error('Talent supply invariant failed: '+supplyCheck.slice(0,5).join(' | '));
-  const waves=[];for(let i=0;i<240;i++){const tmp={...rp,classWave:undefined};waves.push(rookieTier(new RNG('elite-wave-'+i,'tier'),tmp,2.1))}if(!waves.includes('elite'))throw new Error('Elite rookie probability collapsed under strong class wave');
+  const waves=[],labels=new Set();for(let i=0;i<320;i++){const tmp={...rp},tr=new RNG('elite-wave-'+i,'tier');waves.push(rookieTier(tr,tmp,2.1));labels.add(rookieClassLabel(clamp(Math.exp(tr.normal(0,.34)),.48,1.85)))}if(!waves.includes('elite'))throw new Error('Elite rookie probability collapsed under strong class wave');if(!labels.has('흉작')||!labels.has('풍년'))throw new Error('Rookie year variance collapsed');
   if(ROLES.reduce((n,r)=>n+rc.filter(p=>p.role===r).length,0)!==rc.length)throw new Error('Rookie role supply failed');
   const custom=buildWorld({regions:[regionCfg('ZZ',{id:'ZZ',name:'테스트',leagueName:'ZZL',short:'ZZL',teams:8,strength:66,div2:true,system:'franchise',payScale:.7})],internationals:[],subs:1,changes:'normal',startYear:2027,manage:'manual',universalLanguage:true});
   const z=custom.regions.ZZ;if(!z.policyBasis||z.policyBasis.source!=='engine'||!z.rosterRuleProfile||z.importLimit==null||!z.marketProfile||z.spendingRule==null)throw new Error('Policy engine did not resolve custom-region rules');
@@ -161,6 +162,7 @@ source += `\n(()=>{
   const marketDb=unpackDB(packDB(db));runOffseason(marketDb);
   if(marketDb.world.phase!=='market')throw new Error('Offseason did not open transfer market');
   const preMarketSupply=talentSupplyErrors(marketDb);if(preMarketSupply.length)throw new Error('Pre-market labor supply failed: '+preMarketSupply.slice(0,5).join(' | '));
+  if(!marketDb.world.report.rookieGlobal||!marketDb.world.report.rookies.every(x=>x.label&&x.tiers))throw new Error('Offseason rookie cohort report missing');
   closeMarket(marketDb);
   const targetSize=5+(marketDb.worldConfig.subs||0);
   for(const t of activeTeams(marketDb)){

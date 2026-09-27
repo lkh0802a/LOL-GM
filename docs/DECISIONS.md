@@ -351,3 +351,20 @@ Item 5 (contracts / transfer market) is now active.
 - each position keeps additional supply beyond one player per team, so clubs can have actual choices in the market
 - the visible pool self-corrects because unsigned careerless players can leave the simulation after prolonged failure to find a club
 - quality remains probabilistic: increasing quantity does not directly increase any individual prospect's rating or potential
+
+
+## D-030 — Cohort-based rookie quality
+
+**Decision:** Rookie supply quantity and rookie-class quality are separate engine processes.
+
+- player quantity is determined by pro labor demand, Tier-2 scale, expected turnover and market liquidity
+- class quality is determined by a cohort engine with a shared world-year component plus a regional component
+- regional class strength weakly mean-reverts after extreme years, preventing permanent streaks of golden generations without imposing a hard quota
+- each role receives its own smaller cohort wave, allowing years such as a strong jungle/support generation but weak mid/ADC generation
+- the engine records each regional class as 흉작 / 약한 세대 / 평년 / 풍년 / 황금세대 from the realized quality index
+- class-quality waves change the probability distribution and slightly shift within-tier quality; they do not guarantee a number of elite players
+- a golden generation may still produce no elite prospect by chance, while multiple elite prospects can appear in the same year
+- a global cohort factor can make several regions strong or weak in the same year, while regional shocks preserve independent variation
+- cohort volume varies modestly, but it may never reduce generation below the labor-market supply invariant
+
+This replaces the earlier single independent classWave draw with a persistent, explainable cohort model.

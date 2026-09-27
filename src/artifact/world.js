@@ -176,22 +176,45 @@ function rookieIntakeProfile(db,R){
   const count=Math.max(minimum,natural,totalGap,roleGap);
   return {first,second,teams:teamN,young,desiredPipeline:Math.round(desiredPipeline*10)/10,shortage:Math.round(shortage*100)/100,ecosystem:Math.round(ecosystem*100)/100,count,targetSlots,freeBuffer,totalGap,roleNeeds,expiring,veteranRisk,turnoverReserve,liquidityBase};
 }
+function rookieClassLabel(w){
+  if(w<.72)return '흉작';if(w<.9)return '약한 세대';if(w<1.13)return '평년';if(w<1.38)return '풍년';return '황금세대';
+}
+function rookieGlobalCohort(db){
+  db.global=db.global||{};db.global.rookieCycles=db.global.rookieCycles||{};
+  if(db.global.rookieCycles[db.year])return db.global.rookieCycles[db.year];
+  const rng=new RNG((db.world?.seed||db.saveId||'world')+'/'+db.year,'rookie-global');
+  let quality=Math.exp(rng.normal(0,.14)),volume=Math.exp(rng.normal(0,.07));
+  const shock=rng.next();if(shock<.045)quality*=rng.range(1.22,1.48);else if(shock>.955)quality*=rng.range(.68,.84);
+  quality=clamp(quality,.58,1.62);volume=clamp(volume,.86,1.16);
+  return db.global.rookieCycles[db.year]={year:db.year,quality:Math.round(quality*100)/100,volume:Math.round(volume*100)/100};
+}
+function rookieCohortState(db,R,rng,profile){
+  const global=rookieGlobalCohort(db),prev=(R.rookieIntake||[]).slice(-1)[0]?.profile?.classWave||1;
+  // 직전 세대가 극단적이면 다음 해는 평균으로 돌아오려는 약한 평균회귀가 걸린다.
+  const meanRevert=(1-prev)*.16,regional=Math.exp(rng.normal(meanRevert,.22));
+  const classWave=clamp(global.quality*regional,.48,1.85),volumeWave=clamp(global.volume*Math.exp(rng.normal(0,.06)),.78,1.25);
+  const roleWaves={};for(const role of ROLES)roleWaves[role]=Math.round(clamp(classWave*Math.exp(rng.normal(0,.16)),.42,2.15)*100)/100;
+  return {globalQuality:global.quality,globalVolume:global.volume,classWave:Math.round(classWave*100)/100,volumeWave:Math.round(volumeWave*100)/100,label:rookieClassLabel(classWave),roleWaves};
+}
 function rookieTier(rng,profile,classWave=1){
-  const eco=clamp(profile.ecosystem,.55,1.45),eliteP=clamp(ROOKIE_TIER_WEIGHT.elite*eco*classWave,.004,.055),goodP=clamp(ROOKIE_TIER_WEIGHT.good*(.72+eco*.28)*Math.sqrt(classWave),.035,.16),solidP=clamp(ROOKIE_TIER_WEIGHT.solid*(.9+eco*.1),.14,.3),x=rng.next();
+  const eco=clamp(profile.ecosystem,.55,1.45),eliteP=clamp(ROOKIE_TIER_WEIGHT.elite*eco*classWave,.003,.07),goodP=clamp(ROOKIE_TIER_WEIGHT.good*(.72+eco*.28)*Math.sqrt(classWave),.028,.19),solidP=clamp(ROOKIE_TIER_WEIGHT.solid*(.9+eco*.1)*Math.pow(classWave,.18),.13,.32),x=rng.next();
   if(x<eliteP)return 'elite';if(x<eliteP+goodP)return 'good';if(x<eliteP+goodP+solidP)return 'solid';return 'ordinary';
 }
 function generateRookieClass(db,R,rng){
-  const profile=rookieIntakeProfile(db,R),weights=rookieRoleWeights(db,R),out=[],forcedRoles=[];
+  const profile=rookieIntakeProfile(db,R),weights=rookieRoleWeights(db,R),out=[],forcedRoles=[],cohort=rookieCohortState(db,R,rng,profile);
   for(const role of ROLES)for(let i=0;i<(profile.roleNeeds[role]||0);i++)forcedRoles.push(role);
-  // 클래스 전체 품질은 해마다 흔들린다. 대부분 평년, 드물게 황금세대/흉년이 나온다.
-  const classWave=clamp(Math.exp(rng.normal(0,.32)),.45,2.3);profile.classWave=Math.round(classWave*100)/100;
+  // 수량은 노동시장, 질은 코호트 엔진이 별도로 결정한다. 수량 파동은 여유분에만 적용하며 공급 하한은 깨지지 않는다.
+  const baseCount=profile.count,marketFloor=Math.max(profile.totalGap,Object.values(profile.roleNeeds).reduce((a,b)=>a+b,0),Math.max(5,Math.round(profile.first*.55)));
+  profile.count=Math.max(marketFloor,Math.round(baseCount*cohort.volumeWave));
+  Object.assign(profile,cohort);
   for(let i=0;i<profile.count;i++){
-    const tier=rookieTier(rng,profile,classWave),role=forcedRoles[i]||weightedRole(rng,weights),age=rng.chance(.62)?17:rng.chance(.72)?18:19;
-    const tierBase={ordinary:-2,solid:0,good:2.5,elite:5}[tier],base=(R.talent||R.strength)-13+tierBase+rng.normal(0,3.2),entryPath=R.div2?'tier2_pipeline':'open_qualifier';
+    const role=forcedRoles[i]||weightedRole(rng,weights),roleWave=cohort.roleWaves[role]||cohort.classWave,tier=rookieTier(rng,profile,roleWave),age=rng.chance(.62)?17:rng.chance(.72)?18:19;
+    const tierBase={ordinary:-2,solid:0,good:2.5,elite:5}[tier],cohortEdge=clamp((roleWave-1)*1.35,-1.4,1.8),base=(R.talent||R.strength)-13+tierBase+cohortEdge+rng.normal(0,3.2),entryPath=R.div2?'tier2_pipeline':'open_qualifier';
     const p=genPlayer(db,rng,{role,age,base,region:R.id,entryYear:db.year,entryPath,rookieClass:db.year,rookieTier:tier}),o=playerOvr(p),up={ordinary:[2,7],solid:[5,10],good:[8,14],elite:[12,19]}[tier];
-    p.pot=Math.round(clamp(o+rng.range(up[0],up[1])+Math.max(0,profile.ecosystem-1)*2,o,99));p.reputation=Math.round(clamp(o*.7+rng.normal(-4,2),20,78));out.push(p);
+    p.pot=Math.round(clamp(o+rng.range(up[0],up[1])+Math.max(0,profile.ecosystem-1)*2+clamp((roleWave-1)*1.6,-1.2,2.2),o,99));p.reputation=Math.round(clamp(o*.7+rng.normal(-4,2),20,78));out.push(p);
   }
-  R.rookieIntake=R.rookieIntake||[];R.rookieIntake.push({year:db.year,count:out.length,retireReplacement:profile.turnoverReserve||0,profile,roles:Object.fromEntries(ROLES.map(r=>[r,out.filter(p=>p.role===r).length]))});R.rookieIntake=R.rookieIntake.slice(-10);return out;
+  const tiers=Object.fromEntries(['ordinary','solid','good','elite'].map(k=>[k,out.filter(p=>p.rookieTier===k).length]));
+  R.rookieIntake=R.rookieIntake||[];R.rookieIntake.push({year:db.year,count:out.length,retireReplacement:profile.turnoverReserve||0,label:cohort.label,tiers,profile,roles:Object.fromEntries(ROLES.map(r=>[r,out.filter(p=>p.role===r).length]))});R.rookieIntake=R.rookieIntake.slice(-10);return out;
 }
 function talentSupplyErrors(db){
   const errs=[],size=5+(db.worldConfig.subs||0);
@@ -630,8 +653,8 @@ function runOffseason(db){
     globalOffice(db,w,rng,f,ev);
   }
   ensureEven(db,rng,ev);
-  rep.rookies=[];
-  for(const R of Object.values(db.regions)){const cls=generateRookieClass(db,R,rng);rep.rookies.push({region:R.id,count:cls.length,ids:cls.map(p=>p.id),profile:R.rookieIntake[R.rookieIntake.length-1].profile})}
+  rep.rookies=[];rep.rookieGlobal=rookieGlobalCohort(db);
+  for(const R of Object.values(db.regions)){const cls=generateRookieClass(db,R,rng),ri=R.rookieIntake[R.rookieIntake.length-1];rep.rookies.push({region:R.id,count:cls.length,ids:cls.map(p=>p.id),label:ri.label,tiers:ri.tiers,profile:ri.profile})}
   const supplyErrs=talentSupplyErrors(db);if(supplyErrs.length)throw new Error('Talent supply invariant failed before market: '+supplyErrs.slice(0,8).join(' | '));
   if(typeof ageScoutReports==='function')ageScoutReports(db);
   genCoachPool(db,rng);
