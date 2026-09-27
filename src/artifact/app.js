@@ -112,6 +112,7 @@ function freshInternalSeed(prefix='rng'){
 function grpAvg(p,g,k=100){return Math.round(avg(ATTR_GROUPS[g].map(a=>obsAttr(DB,p,a,k))))}
 function ovrTag(v){return `<span class="num ${v>=80?'hi':v>=70?'mid':'lo'}">${v}</span>`}
 
+function navKeepScroll(){const y=window.scrollY;nav();requestAnimationFrame(()=>window.scrollTo(0,y))}
 function nav(){
   if(typeof LIVE!=='undefined')clearInterval(LIVE);
   document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-current',b.dataset.v===VIEW?'page':'false'));
@@ -284,14 +285,14 @@ function bindSquad(){
   if($('#scoutT'))$('#scoutT').onclick=()=>{const m=scoutPlayers(DB,DB.teams[SQUAD].roster,35,0.5*psOf(DB,DB.teams[managedTeamId(DB)].region));saveDB();nav();$('#scmsg')&&($('#scmsg').textContent=m)};
   document.querySelectorAll('[data-starter]').forEach(el=>{el.onclick=e=>{e.stopPropagation();const p=DB.players[el.dataset.starter];if(p){const d=squadEditState(DB.teams[SQUAD]);d.starters[el.dataset.role]=p.id;d.dirty=true}nav()}});
   document.querySelectorAll('[data-srole]').forEach(el=>{el.onclick=e=>e.stopPropagation();el.onchange=e=>{e.stopPropagation();const p=DB.players[el.dataset.srole];if(p){const d=squadEditState(DB.teams[SQUAD]);d.roles[p.id]=el.value;d.dirty=true}}});
-  document.querySelectorAll('[data-tac]').forEach(el=>el.oninput=el.onchange=e=>{const k=el.dataset.tac;const d=squadEditState(DB.teams[SQUAD]);d.tactics[k]=+el.value;d.dirty=true;if(el.previousElementSibling)el.previousElementSibling.querySelector('output').textContent=el.value;saveDB()});
+  document.querySelectorAll('[data-tac]').forEach(el=>el.oninput=el.onchange=e=>{const k=el.dataset.tac;const d=squadEditState(DB.teams[SQUAD]);d.tactics[k]=+el.value;d.dirty=true;if(el.previousElementSibling)el.previousElementSibling.querySelector('output').textContent=el.value});
   document.querySelectorAll('[data-tr]').forEach(el=>el.oninput=()=>{const t=DB.teams[SQUAD],d=squadEditState(t);const k=el.dataset.tr;
     const others=Object.entries(d.training).filter(([g])=>g!==k).reduce((s,[,v])=>s+v,0), v=Math.min(+el.value,TRAIN_POINTS-others);
     el.value=v;d.training[k]=v;d.dirty=true;el.previousElementSibling.querySelector('output').textContent=v;$('#trleft').textContent=`남은 포인트 ${TRAIN_POINTS-others-v} / ${TRAIN_POINTS}`});
   if($('#facup'))$('#facup').onclick=()=>{const m=mFacility(DB);saveDB();nav();const e=$('#facmsg');if(e)e.textContent=m};
   const scRefresh=()=>{SCOUTSET.region=$('#screg')?.value||SCOUTSET.region;SCOUTSET.role=$('#scrole')?.value||SCOUTSET.role;SCOUTSET.contract=$('#sccontract')?.value||SCOUTSET.contract;SCOUTSET.competition=$('#sccomp')?.value||SCOUTSET.competition;SCOUTSET.undervalued=!!$('#scunder')?.checked;SCOUTSET.q=$('#scq')?.value||'';nav()};
   for(const id of ['#screg','#scrole','#sccontract','#sccomp','#scunder','#scq'])if($(id))$(id).onchange=scRefresh;
-  document.querySelectorAll('[data-scout]').forEach(b=>b.onclick=e=>{e.stopPropagation();MSG=scoutPlayers(DB,[b.dataset.scout],20,.1*psOf(DB,managedTeam(DB).region));saveDB();nav()});
+  document.querySelectorAll('[data-scout]').forEach(b=>b.onclick=e=>{e.stopPropagation();MSG=scoutPlayers(DB,[b.dataset.scout],20,.1*psOf(DB,managedTeam(DB).region));saveDB();navKeepScroll()});
   document.querySelectorAll('tr[data-p]').forEach(tr=>{const open=()=>{OPEN_P=OPEN_P===tr.dataset.p?null:tr.dataset.p;nav();const d=$('#pdetail');if(OPEN_P&&d)d.scrollIntoView({behavior:'smooth',block:'start'})};tr.onclick=open;tr.onkeydown=e=>{if(e.key==='Enter')open()}});
 }
 // ---------- 패치·메타 ----------
@@ -339,7 +340,7 @@ function renderInitialRosterMarket(){
   <section><h3>등록 마감</h3>${errors.length?`<p class="warn">${errors.map(esc).join(' / ')}</p>`:'<p class="hi">내 구단 로스터 규정을 모두 충족했습니다.</p>'}${openInitial.length?`<p class="warn">진행 중인 계약 협상 ${openInitial.length}건을 먼저 마무리해야 합니다.</p>`:''}<div class="controls"><button class="primary" id="init-final"${errors.length||openInitial.length?' disabled':''}>전 세계 로스터 확정 후 시즌 개막</button><span class="hint">확정하면 AI 구단도 남은 FA 풀에서 같은 계약·등록 핵심 규칙으로 선수단을 구성합니다.</span></div></section>`;
 }
 function bindInitialRosterMarket(){
-  const act=m=>{MSG=m;saveDB();nav();window.scrollTo(0,0)};
+  const act=m=>{const y=window.scrollY;MSG=m;saveDB();nav();requestAnimationFrame(()=>window.scrollTo(0,y))};
   $('#init-target').onchange=e=>{INITMK.target=e.target.value;MSG='';nav()};$('#init-role').onchange=e=>{INITMK.role=e.target.value;nav()};$('#init-scope').onchange=e=>{INITMK.scope=e.target.value;nav()};
   document.querySelectorAll('[data-init-interest]').forEach(b=>b.onclick=()=>act(mInterest(DB,b.dataset.initInterest,'B')));
   document.querySelectorAll('[data-init-priority]').forEach(el=>el.onchange=()=>act(mInterest(DB,el.dataset.initPriority,el.value)));
