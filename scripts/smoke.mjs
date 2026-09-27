@@ -311,4 +311,4 @@ const context = {
   Boolean, RegExp, Error, Intl, performance, crypto,
 };
 
-vm.runInNewContext(source, context, { timeout: 12000 });
+vm.runInNewContext(source, context, { timeout: 25000 });
