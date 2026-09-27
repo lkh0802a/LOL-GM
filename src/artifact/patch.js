@@ -40,6 +40,8 @@ function recordMeta(db,r){
   db.metaHistory=db.metaHistory||[];
   db.metaHistory.push({date:r.date||db.worldDate,patch:r.patch||db.patch.id,comp:r.comp||r.competitionId||null,regions,sides:r.sides.map((s,i)=>({region:s.team?.region||null,win:r.winner===i,picks:s.ps.map(x=>x.champ.id)})),bans:r.draft.bans.flat()});
   if(db.metaHistory.length>5000)db.metaHistory.splice(0,db.metaHistory.length-5000);
+  const international=regions.length>1;
+  for(const s of r.sides){const t=s.team;if(!t)continue;t.metaKnowledge=t.metaKnowledge||{};const enemyRegions=regions.filter(x=>x!==t.region);for(const os of r.sides){if(os===s)continue;for(const pick of os.ps){const cid=pick.champ.id,success=r.winner===r.sides.indexOf(os),novel=((db.regionMetaStats?.[t.region]||{})[cid]?.p||0)<3,learn=(success?.055:.018)*(novel?1.6:1)*(international?1.35:1);t.metaKnowledge[cid]=clamp((t.metaKnowledge[cid]||0)+learn,0,1)}}}
 }
 function metaTableFiltered(db,filter={}){
   const rows=(db.metaHistory||[]).filter(r=>(!filter.region||r.regions.includes(filter.region))&&(!filter.patch||r.patch===filter.patch)&&(!filter.comp||r.comp===filter.comp)&&(!filter.from||r.date>=filter.from)&&(!filter.to||r.date<=filter.to));

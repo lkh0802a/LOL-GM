@@ -26,7 +26,7 @@ function chooseSide(db,tid,opp,ctx,g,bestOf,rng){
 // a = 상위 시드
 function simulateSeries(db,aId,bId,bestOf,seed,opt={}){
   const need=Math.ceil(bestOf/2), wins={[aId]:0,[bId]:0}, games=[], lines=[];
-  const ctx={used:[],byTeam:{[aId]:{won:[],lost:[]},[bId]:{won:[],lost:[]}},fearless:!!opt.fearless,mods:{[aId]:0,[bId]:0}};
+  const ctx={used:[],byTeam:{[aId]:{won:[],lost:[]},[bId]:{won:[],lost:[]}},fearless:!!opt.fearless,mods:{[aId]:0,[bId]:0},practice:!!opt.practice,championPool:opt.championPool||null};
   const srng=new RNG(seed,'side');
   // 1세트 진영 선택권: 토너먼트는 상위 시드, 풀리그는 코인 토스
   let chooser=opt.firstChoice==='coin'?(srng.chance(0.5)?aId:bId):aId;
@@ -38,8 +38,8 @@ function simulateSeries(db,aId,bId,bestOf,seed,opt={}){
     if(BAL.randomTest){fpTeam=srng.chance(0.5)?aId:bId}
     const snap=JSON.parse(JSON.stringify(ctx)); snap.firstPick=fpTeam===blue?0:1;
     if(opt.forced&&opt.forced[g-1])snap.forced=opt.forced[g-1];
-    const r=simulateMatch(db,blue,red,gseed,snap,opt.capture!==g);
-    if(!opt.replay)recordMeta(db,r);
+    const r=simulateMatch(db,blue,red,gseed,snap,opt.capture!==g);r.comp=opt.compId||null;r.date=db.worldDate;
+    if(!opt.replay&&!opt.practice)recordMeta(db,r);
     if(opt.capture===g)return {captured:r};
     const wId=r.winner===0?blue:red, lId=wId===blue?red:blue;
     wins[wId]++;
@@ -86,6 +86,7 @@ const STAGE_KO={round_robin:'풀리그',swiss:'스위스',single_elim:'싱글 �
 function newSeason(db,compId,year,seed,start,instanceKey=compId){
   const comp=db.competitions[compId], st0=comp.stages[0], id=`season_${year}_${instanceKey}`;
   const s={id,comp:compId,year,seed,days:[],cur:0,stage:0,stageData:{},pstats:{},done:false,champion:null,runnerUp:null};
+  comp.championPool=Object.values(db.patch.champions).filter(c=>championProEligible(db,c,start||db.worldDate)).map(c=>c.id);comp.championPoolLockedAt=start||db.worldDate;
   const rng=new RNG(seed,'schedule');
   let order=st0.type==='round_robin'&&!st0.groups?comp.teams.slice().sort(()=>rng.next()-0.5):comp.teams.slice();
   if(st0.id==='playin'){const nx=comp.stages[1];order=comp.teams.filter(t=>!(nx.direct||[]).includes(t))}
@@ -193,7 +194,7 @@ function playDay(db,s){
   const cfgIdx=comp.stages.findIndex(x=>x.id===day.stage), cfg=comp.stages[cfgIdx];
   for(const m of day.matches){
     const firstChoice=cfg.type==='round_robin'||cfg.type==='swiss'?'coin':'seed';
-    const {rec,lines}=simulateSeries(db,m.a,m.b,m.bo,`${s.seed}/${s.year}/${m.id}`,{fearless:comp.rules&&comp.rules.fearless,firstChoice});
+    const {rec,lines}=simulateSeries(db,m.a,m.b,m.bo,`${s.seed}/${s.year}/${m.id}`,{fearless:comp.rules&&comp.rules.fearless,firstChoice,compId:s.comp,championPool:comp.championPool});
     m.res=rec; recordLines(s,lines); afterSeries(db,lines,rec); updatePlayerUsage(db,s,rec,lines);
   }
   s.cur++;

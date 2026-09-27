@@ -51,7 +51,7 @@ const BAL={blue:0.025,counter:0.1,first:0.013};
 const DRAFT_ORDER=[['B',0],['B',1],['B',0],['B',1],['B',0],['B',1],['P',0],['P',1],['P',1],['P',0],['P',0],['P',1],['B',1],['B',0],['B',1],['B',0],['P',1],['P',0],['P',0],['P',1]];
 function runDraft(db, teamIds, rng, ctx){
   ctx=ctx||{used:[],byTeam:{}};
-  const champs=Object.values(db.patch.champions).filter(c=>typeof championProEligible!=='function'||championProEligible(db,c));
+  const allowed=ctx.championPool?new Set(ctx.championPool):null;const champs=Object.values(db.patch.champions).filter(c=>(ctx.practice||typeof championProEligible!=='function'||championProEligible(db,c))&&(!allowed||allowed.has(c.id)));
   const strengths={}; champs.forEach(c=>strengths[c.id]=champStrength(c));
   const vals=Object.values(strengths), mn=Math.min(...vals), mx=Math.max(...vals);
   if(ctx.forced){const f=ctx.forced;return {bans:f.bans,picks:f.picks,log:[],expl:[{t:0,title:'기록된 밴픽 재현',factors:[],result:''}]}}
@@ -61,9 +61,9 @@ function runDraft(db, teamIds, rng, ctx){
     const nk=tid+'|'+db.patch.id+'|'+an; const NZ=VHAT_NOISE[nk]||(VHAT_NOISE[nk]=Object.fromEntries(champs.map(c=>[c.id,((hashStr(tid+db.patch.id+c.id)%2000)/1000-1)*0.35*(1.1-an)])));
     champs.forEach(c=>{const noise=NZ[c.id];
       let v=clamp((strengths[c.id]-mn)/(mx-mn||1)+noise,0,1);
-      const gst=MS[c.id],rst=(RMS[rid]||{})[c.id],rg=RMG[rid]||0;
+      const gst=MS[c.id],rst=(RMS[rid]||{})[c.id],rg=RMG[rid]||0,know=((team.metaKnowledge||{})[c.id]||0);
       const observe=(base,st,g,weight)=>{if(!st||!g)return base;const n=st.p+st.b,w=n/(n+18*(1.35-an)),wr=(st.w+2)/(st.p+4),obs=clamp(0.5+(wr-0.5)*2.2+(n/g)*0.5-0.1,0,1);return base*(1-w*weight)+obs*w*weight};
-      v=observe(v,gst,G,.45);v=observe(v,rst,rg,.75);
+      v=observe(v,gst,G,.45);v=observe(v,rst,rg,.75);v=clamp(v+know*.08,0,1);
       m[c.id]=v}); return m});
   const roster=teamIds.map(tid=>{const r={}; ROLES.forEach(role=>r[role]=starterFor(db,db.teams[tid],role)); return r});
   const taken=new Set(ctx.fearless?ctx.used:[]), bans=[[],[]], picks=[{},{}], expl=[];
