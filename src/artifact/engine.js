@@ -167,14 +167,12 @@ function runeChoiceScore(patch,c,p,role,id){
 }
 function selectRunePage(patch,c,p,role){
   const styles=Object.values(patch.runes||{}).filter(s=>s&&Array.isArray(s.slots)&&s.slots.length>=4);
-  if(!styles.length)return [];
-  const bestIn=(style,slot)=>((style.slots&&style.slots[slot])||[]).filter(id=>patch.runeDefs?.[id]?.active!==false).map(id=>({id,s:runeChoiceScore(patch,c,p,role,id)})).sort((a,b)=>b.s-a.s)[0]||null;
-  const ranked=styles.map(style=>{const picks=style.slots.map((_,i)=>bestIn(style,i)).filter(Boolean);return {style,picks,score:picks.reduce((z,x)=>z+x.s,0)}}).sort((a,b)=>b.score-a.score);
-  const primary=ranked[0],out=primary?pimaryFix(primary):[];
-  function pimaryFix(x){return x.picks.map(y=>y.id)}
-  const secondary=ranked.slice(1).map(x=>{const choices=[1,2,3].map(slot=>bestIn(x.style,slot)).filter(Boolean).sort((a,b)=>b.s-a.s).slice(0,2);return {choices,score:choices.reduce((z,y)=>z+y.s,0)}}).sort((a,b)=>b.score-a.score)[0];
-  if(secondary)out.push(...secondary.choices.map(x=>x.id));
-  return out;
+  if(styles.length<2)return [];
+  const bestIn=(style,slot)=>((style.slots&&style.slots[slot])||[]).filter(id=>patch.runeDefs?.[id]?.active!==false).map(id=>({id,s:runeChoiceScore(patch,c,p,role,id),slot})).sort((x,y)=>y.s-x.s)[0]||null;
+  const ranked=styles.map(style=>{const picks=[0,1,2,3].map(slot=>bestIn(style,slot));return {style,picks,score:picks.every(Boolean)?picks.reduce((z,x)=>z+x.s,0):-Infinity}}).filter(x=>Number.isFinite(x.score)).sort((x,y)=>y.score-x.score);
+  const primary=ranked[0];if(!primary)return [];
+  const secondary=ranked.slice(1).map(x=>{const picks=[1,2,3].map(slot=>bestIn(x.style,slot)).filter(Boolean).sort((u,v)=>v.s-u.s).slice(0,2);return {style:x.style,picks,score:picks.length===2?picks.reduce((z,y)=>z+y.s,0):-Infinity}}).filter(x=>Number.isFinite(x.score)).sort((x,y)=>y.score-x.score)[0];
+  return [...primary.picks.map(x=>x.id),...(secondary?secondary.picks.map(x=>x.id):[])];
 }
 function applyItemCraftAction(ps,a){
   for(const id of a.consume||[]){const i=ps.items.indexOf(id);if(i>=0)ps.items.splice(i,1)}
