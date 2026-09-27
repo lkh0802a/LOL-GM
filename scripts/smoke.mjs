@@ -15,6 +15,15 @@ source += `\n(()=>{
   const db=buildWorld();
   if(!db||db.version!==13) throw new Error('Unexpected save schema');
   if(!db.worldDate||!db.worldConfig.universalLanguage) throw new Error('World bootstrap settings failed');
+  const intl=Object.fromEntries(db.worldConfig.internationals.map(x=>[x.id,x]));
+  const expectedIntl=['FIRST_STAND','MID_SEASON_INVITATIONAL','EASTERN_CUP','WESTERN_CUP','WORLD_CHAMPIONSHIP','MASTERS','OPEN'];
+  if(expectedIntl.some(id=>!intl[id]))throw new Error('Canonical international ecosystem missing');
+  if(intl.FIRST_STAND.teams!==12||intl.FIRST_STAND.baseSlots!==2||intl.FIRST_STAND.groupBo!==3||intl.FIRST_STAND.knockoutBo!==5)throw new Error('First Stand spec drift');
+  if(intl.MID_SEASON_INVITATIONAL.teams!==16||intl.MID_SEASON_INVITATIONAL.baseSlots!==2||intl.MID_SEASON_INVITATIONAL.extraSlots!==4||intl.MID_SEASON_INVITATIONAL.knockoutBo!==5)throw new Error('MSI spec drift');
+  if(intl.EASTERN_CUP.teams!==8||intl.WESTERN_CUP.teams!==8)throw new Error('Regional Cup spec drift');
+  if(intl.WORLD_CHAMPIONSHIP.teams!==24||intl.WORLD_CHAMPIONSHIP.baseSlots!==4||intl.WORLD_CHAMPIONSHIP.maxSlots!==4||intl.WORLD_CHAMPIONSHIP.pots!==3||intl.WORLD_CHAMPIONSHIP.potSize!==8||intl.WORLD_CHAMPIONSHIP.leagueMatches!==6||intl.WORLD_CHAMPIONSHIP.leagueBo!==3||intl.WORLD_CHAMPIONSHIP.knockoutTake!==16)throw new Error('Worlds spec drift');
+  if(intl.MASTERS.teams!==16||intl.MASTERS.baseSlots!==2||intl.MASTERS.maxSlots!==3||intl.MASTERS.extraSlots!==4)throw new Error('Masters slot spec drift');
+  if(intl.OPEN.teams!==12||intl.OPEN.baseSlots!==2||intl.OPEN.maxSlots!==2)throw new Error('Open slot spec drift');
 
   const active=activeTeams(db);
   if(active.length<2||active.some(t=>t.roster.length!==0)) throw new Error('First-season teams are not blank');
