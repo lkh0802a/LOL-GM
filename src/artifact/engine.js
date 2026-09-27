@@ -141,11 +141,12 @@ function systemChoiceScore(c,e,role){
 }
 function selectItemBuild(patch,c,p,role){
   const pool=(patch.items&&patch.items[c.cls]||[]).filter(id=>patch.itemDefs&&patch.itemDefs[id]&&patch.itemDefs[id].active!==false&&patch.itemDefs[id].shopActive!==false);
-  return pool.map(id=>{const d=patch.itemDefs[id],noise=((hashStr((p&&p.id||'')+'|'+c.id+'|'+role+'|'+id)%1000)/1000-.5)*.012;return {id,s:systemChoiceScore(c,d.effects||{},role)+noise-(d.cost||3000)/140000+(d.tier==='boots'?.006:0)}}).sort((x,y)=>y.s-x.s).map(x=>x.id).slice(0,6);
+  const ranked=pool.map(id=>{const d=patch.itemDefs[id],noise=((hashStr((p&&p.id||'')+'|'+c.id+'|'+role+'|'+id)%1000)/1000-.5)*.012;return {id,tier:d.tier,s:systemChoiceScore(c,d.effects||{},role)+noise-(d.cost||3000)/140000+(d.tier==='boots'?.006:0)}}).sort((x,y)=>y.s-x.s);
+  const out=[];let boots=false;for(const x of ranked){if(x.tier==='boots'&&boots)continue;out.push(x.id);if(x.tier==='boots')boots=true;if(out.length>=6)break}return out;
 }
 function selectStarterItem(patch,c,p,role){
   const defs=Object.values(patch.itemDefs||{}).filter(d=>d.active!==false&&d.shopActive!==false&&d.tier==='starter'&&(!d.requiredChampion||d.requiredChampion===c.name));
-  const roleFit=d=>{const t=new Set(d.tags||[]);if(role==='JGL'&&t.has('Jungle'))return .08;if(role!=='JGL'&&t.has('Jungle'))return -.12;if(role==='SUP'&&(t.has('Vision')||/support/i.test(d.name||'')))return .04;return 0};
+  const roleFit=d=>{const t=new Set(d.tags||[]);if(role==='JGL')return t.has('Jungle')?.12:-.1;if(t.has('Jungle'))return -.18;if(role==='SUP'&&(t.has('GoldPer')||t.has('Vision')))return .08;return 0};
   const rows=defs.map(d=>({id:d.id,s:systemChoiceScore(c,d.effects||{},role)+roleFit(d)+((hashStr((p&&p.id||'')+'|start|'+d.id)%1000)/1000-.5)*.008-(d.cost||450)/40000})).sort((a,b)=>b.s-a.s);
   return rows[0]?.id||null;
 }
