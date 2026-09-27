@@ -90,7 +90,7 @@ function afterSeries(db,lines,rec){
 function dailyRecovery(db){
   for(const t of Object.values(db.teams)){ if(t.active===false)continue;
     const prof=staffProfile(t),rec=4+(prof.recovery-50)/45+facilityRecoveryBonus(t);
-    for(const id of t.roster){const p=db.players[id];if(!p)continue;pState(p);p.fatigue=Math.max(0,p.fatigue-rec);p.condition=clamp(p.condition+2.5,0,100);p.form*=.98}
+    const ti=trainingIntensity(t);for(const id of t.roster){const p=db.players[id];if(!p)continue;pState(p);p.fatigue=clamp(p.fatigue-rec+ti.fatigue,0,100);p.condition=clamp(p.condition+2.5+ti.condition,0,100);p.form*=.98}
   }
 }
 function staffProfile(t){const c=t?.coach||{},s=t?.staff||{};return {draft:clamp((c.draft||55)+(s.strategicCoach?.rating||0)*.18,35,99),analysis:clamp((c.analysis||55)+(s.analyst?.rating||0)*.22,35,99),development:clamp((c.development||55)+(s.developmentCoach?.rating||0)*.22,35,99),recovery:clamp(50+(s.performanceCoach?.rating||0)*.45,50,95)}}
