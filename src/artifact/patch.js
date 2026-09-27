@@ -86,7 +86,7 @@ function patchTeamPower(db,tid){
   return vals.length?avg(vals):Number(t.base||t.reputation||50);
 }
 function patchEvidenceContext(db,rows){
-  const tids=[...new Set(rows.flatMap(r=>(r.sides||[]).map(s=>s.team).filter(Boolean))],powers=tids.map(t=>patchTeamPower(db,t)).sort((a,b)=>a-b);
+  const tids=[...new Set(rows.flatMap(r=>(r.sides||[]).map(s=>s.team).filter(Boolean)))],powers=tids.map(t=>patchTeamPower(db,t)).sort((a,b)=>a-b);
   return {topCut:powers.length?powers[Math.floor((powers.length-1)*.75)]:Infinity,regionCount:Math.max(1,Object.keys(db.regions||{}).length)};
 }
 function patchChampionEvidence(db,cid,rows,ctx){
