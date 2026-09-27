@@ -17,18 +17,18 @@ The embedded source is immutable baseline data. Long saves evolve from it throug
 
 Every Summoner's Rift item record in the pinned source keeps its Riot ID, Korean name/description, source price, tags, raw stats, recipe inputs and upgrade targets. Runtime derives gameplay-facing fields without replacing source provenance.
 
-Items are classified into starter, component, boots, final, consumable and special records. Normal builds select legal final items/boots from the complete catalog, select an appropriate starter, then purchase the actual component recipe before completing the target item. Component effects are active while held. Price patches alter recipe timing rather than changing display text only.
+Items are classified into starter, component, boots, final, consumable and special records. These choices are engine-owned rather than player-facing management decisions. The simulation selects legal final items/boots from the complete catalog, assigns an appropriate starter, then resolves the actual component recipe before completing the target item. Component effects are active while held. Price and effect patches alter champion performance and therefore draft priority/meta value rather than changing display text only.
 
 Champion-specific or hidden records remain in the complete source catalog but are not exposed as general shop choices.
 
 ## Rune contract
 
-All 62 runes remain attached to their original style and slot. A match selects a legal page from the complete active pool:
+All 62 runes remain attached to their original style and slot. The engine automatically resolves a legal page from the complete active pool; the player does not manually manage rune pages:
 
 - one primary style: one rune from each of slots 0–3
 - one different secondary style: two runes from two distinct non-keystone slots
 
-Rune effects feed combat through the same system-effect layer as items. Removing a rune may not empty a style slot; long-save lifecycle rules preserve a viable rune tree.
+Rune effects feed combat and champion meta evaluation through the same system-effect layer as items, so rune patches can move champion tiers indirectly. Removing a rune may not empty a style slot; long-save lifecycle rules preserve a viable rune tree.
 
 ## Patch lifecycle
 
