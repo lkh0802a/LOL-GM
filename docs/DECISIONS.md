@@ -483,10 +483,12 @@ This applies retroactively to completed major items during later UI touches and 
 **Decision:** Before Major System 11, LOL GM performs a cross-cutting architecture/performance stabilization pass rather than continuing to grow the prototype-shaped global script.
 
 - Persistent state remains world-owned. Reusable caches that depend on a world or patch use WeakMap ownership and revision invalidation; they must not leak values across new games, resets or save slots.
+- Draft hot paths may cache the professionally eligible champion pool, champion strengths, role indexes and champion/system fit only while the patch revision and relevant date/pool identity remain valid. Eligibility changes must invalidate or extend cached state without changing deterministic draft results.
+- Meta-history readers share a world-owned index/query cache keyed by history identity/length and filter dimensions. Patch diagnosis must not repeatedly scan and resort the complete history when an indexed patch subset is available.
 - Historical patch reconstruction uses the pinned source baseline plus retained deltas. Full baseline copies are derived state and are excluded from saves.
-- High-volume meta history is compacted only at persistence boundaries and restored losslessly on load; runtime consumers continue to use the normal object schema.
+- High-volume meta history is compacted only at persistence boundaries and restored losslessly on load; runtime consumers continue to use the normal object schema. Save-only season compaction must not mutate live runtime objects.
 - The world save schema and UI save namespace/version are one contract and CI must reject mismatches.
 - Artifact module order has one manifest. Build, syntax checks and smoke tests may not maintain independent copies of the module list.
-- Large UI domains live in `ui-*.js` modules. `app.js` is the application controller, not the destination for every new screen; Item 11 draft UI must be a separate domain module.
+- Large UI domains live in `ui-*.js` modules. Patch/meta, market/roster and season/world/progression surfaces are separated from `app.js`; Item 11 draft UI must be a separate domain module.
 - Because the artifact is concatenated into one script, CI rejects duplicate top-level global symbols across source modules.
-- Optimization work must preserve deterministic simulation behavior and accepted Items 1–10; performance shortcuts may not remove engine rules or player/AI parity.
+- Optimization work must preserve deterministic simulation behavior and accepted Items 1–10; performance shortcuts may not remove engine rules or player/AI parity. CI runs a performance probe to record simulation/cache/query costs without using unstable wall-clock thresholds as correctness gates.
