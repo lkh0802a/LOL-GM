@@ -1,13 +1,11 @@
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { ENGINE_MODULES } from './artifact-modules.mjs';
 import vm from 'node:vm';
 
 const root = resolve(import.meta.dirname, '..');
 const artifact = resolve(root, 'src', 'artifact');
-const modules = [
-  'champion-source.js', 'system-source.js', 'engine.js', 'data.js', 'champs2.js', 'patch.js', 'competition.js',
-  'world.js', 'office.js', 'finance.js', 'features.js', 'career.js',
-];
+const modules = ENGINE_MODULES;
 
 let source = '';
 for (const file of modules) source += `${await readFile(resolve(artifact, file), 'utf8')}\n`;
