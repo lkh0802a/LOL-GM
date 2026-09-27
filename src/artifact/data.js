@@ -167,74 +167,82 @@ const CHAMP_EXTRA = [
 ];
 
 const SYSTEM_EFFECT_KEYS=['offense','defense','sustain','utility','haste','mobility','early','scaling'];
-const ITEM_DEFS={
-  item_goredrinker:{id:'item_goredrinker',name:'선혈포식자',cost:3200,effects:{offense:.025,sustain:.055,haste:.02},classes:['fighter']},
-  item_steraks:{id:'item_steraks',name:'스테락의 도전',cost:3200,effects:{offense:.018,defense:.045,sustain:.02},classes:['fighter']},
-  item_deaths_dance:{id:'item_deaths_dance',name:'죽음의 무도',cost:3300,effects:{offense:.025,defense:.035,haste:.018},classes:['fighter','assassin']},
-  item_guardian_angel:{id:'item_guardian_angel',name:'수호 천사',cost:3200,effects:{offense:.018,defense:.05},classes:['fighter','assassin','marksman']},
-  item_black_cleaver:{id:'item_black_cleaver',name:'칠흑의 양날도끼',cost:3000,effects:{offense:.04,haste:.025,mobility:.012},classes:['fighter','assassin']},
-  item_maw:{id:'item_maw',name:'맬모셔스의 아귀',cost:3100,effects:{offense:.028,defense:.04},classes:['fighter','assassin']},
-  item_sunfire:{id:'item_sunfire',name:'태양불꽃 방패',cost:2800,effects:{defense:.055,offense:.012,early:.012},classes:['tank']},
-  item_thornmail:{id:'item_thornmail',name:'가시갑옷',cost:2700,effects:{defense:.07},classes:['tank']},
-  item_frozen_heart:{id:'item_frozen_heart',name:'얼어붙은 심장',cost:2600,effects:{defense:.055,haste:.035,utility:.015},classes:['tank']},
-  item_spirit_visage:{id:'item_spirit_visage',name:'정령의 형상',cost:2900,effects:{defense:.05,sustain:.045},classes:['tank','enchanter']},
-  item_warmogs:{id:'item_warmogs',name:'워모그의 갑옷',cost:3100,effects:{defense:.075,sustain:.035,scaling:.012},classes:['tank']},
-  item_heartsteel:{id:'item_heartsteel',name:'강철심장',cost:3200,effects:{defense:.06,scaling:.045},classes:['tank']},
-  item_ludens:{id:'item_ludens',name:'루덴의 동반자',cost:3000,effects:{offense:.055,early:.02},classes:['mage']},
-  item_rocketbelt:{id:'item_rocketbelt',name:'마법공학 로켓 벨트',cost:2900,effects:{offense:.035,mobility:.04,early:.015},classes:['mage']},
-  item_zhonyas:{id:'item_zhonyas',name:'존야의 모래시계',cost:3250,effects:{offense:.018,defense:.045,utility:.025},classes:['mage']},
-  item_rabadons:{id:'item_rabadons',name:'라바돈의 죽음모자',cost:3600,effects:{offense:.085,scaling:.035},classes:['mage']},
-  item_void_staff:{id:'item_void_staff',name:'공허의 지팡이',cost:3000,effects:{offense:.065,scaling:.018},classes:['mage']},
-  item_banshees:{id:'item_banshees',name:'밴시의 장막',cost:3100,effects:{offense:.025,defense:.035,utility:.025},classes:['mage']},
-  item_youmuus:{id:'item_youmuus',name:'요우무의 유령검',cost:2800,effects:{offense:.055,mobility:.035,early:.025},classes:['assassin']},
-  item_seryldas:{id:'item_seryldas',name:'세릴다의 원한',cost:3200,effects:{offense:.06,utility:.018,scaling:.02},classes:['assassin']},
-  item_infinity_edge:{id:'item_infinity_edge',name:'무한의 대검',cost:3500,effects:{offense:.085,scaling:.025},classes:['marksman']},
-  item_kraken:{id:'item_kraken',name:'크라켄 학살자',cost:3100,effects:{offense:.06,early:.018},classes:['marksman']},
-  item_rapid_firecannon:{id:'item_rapid_firecannon',name:'고속 연사포',cost:2900,effects:{offense:.035,mobility:.025,utility:.022},classes:['marksman']},
-  item_bloodthirster:{id:'item_bloodthirster',name:'피바라기',cost:3400,effects:{offense:.05,sustain:.055},classes:['marksman']},
-  item_lord_dominiks:{id:'item_lord_dominiks',name:'도미닉 경의 인사',cost:3100,effects:{offense:.07,scaling:.02},classes:['marksman']},
-  item_moonstone:{id:'item_moonstone',name:'월석 재생기',cost:2400,effects:{utility:.055,sustain:.045,haste:.018},classes:['enchanter']},
-  item_mikaels:{id:'item_mikaels',name:'미카엘의 축복',cost:2300,effects:{utility:.06,defense:.022,haste:.015},classes:['enchanter']},
-  item_knights_vow:{id:'item_knights_vow',name:'기사의 맹세',cost:2300,effects:{defense:.04,utility:.045},classes:['enchanter']},
-  item_redemption:{id:'item_redemption',name:'구원',cost:2300,effects:{utility:.065,sustain:.025,haste:.015},classes:['enchanter']},
-  item_ardent:{id:'item_ardent',name:'불타는 향로',cost:2300,effects:{utility:.045,offense:.025,haste:.018},classes:['enchanter']}
-};
-const ITEM_POOL={
-  fighter:['item_goredrinker','item_steraks','item_deaths_dance','item_guardian_angel','item_black_cleaver','item_maw'],
-  tank:['item_sunfire','item_thornmail','item_frozen_heart','item_spirit_visage','item_warmogs','item_heartsteel'],
-  mage:['item_ludens','item_rocketbelt','item_zhonyas','item_rabadons','item_void_staff','item_banshees'],
-  assassin:['item_youmuus','item_seryldas','item_deaths_dance','item_guardian_angel','item_black_cleaver','item_maw'],
-  marksman:['item_infinity_edge','item_kraken','item_rapid_firecannon','item_bloodthirster','item_lord_dominiks','item_guardian_angel'],
-  enchanter:['item_moonstone','item_mikaels','item_knights_vow','item_redemption','item_ardent','item_spirit_visage']
-};
-const RUNE_DEFS={
-  rune_conqueror:{id:'rune_conqueror',name:'정복자',kind:'keystone',effects:{offense:.045,sustain:.025,scaling:.012}},
-  rune_fleet:{id:'rune_fleet',name:'기민한 발놀림',kind:'keystone',effects:{sustain:.04,mobility:.025,early:.012}},
-  rune_tempo:{id:'rune_tempo',name:'치명적 속도',kind:'keystone',effects:{offense:.05,scaling:.025}},
-  rune_electrocute:{id:'rune_electrocute',name:'감전',kind:'keystone',effects:{offense:.055,early:.025}},
-  rune_comet:{id:'rune_comet',name:'신비로운 유성',kind:'keystone',effects:{offense:.04,utility:.018,early:.018}},
-  rune_aery:{id:'rune_aery',name:'콩콩이 소환',kind:'keystone',effects:{utility:.05,offense:.018}},
-  rune_aftershock:{id:'rune_aftershock',name:'여진',kind:'keystone',effects:{defense:.06,utility:.02}},
-  rune_guardian:{id:'rune_guardian',name:'수호자',kind:'keystone',effects:{defense:.035,utility:.055}},
-  rune_manaflow:{id:'rune_manaflow',name:'마나순환 팔찌',kind:'minor',effects:{utility:.025,scaling:.012}},
-  rune_transcendence:{id:'rune_transcendence',name:'깨달음',kind:'minor',effects:{haste:.035,scaling:.01}},
-  rune_bone_plating:{id:'rune_bone_plating',name:'뼈 방패',kind:'minor',effects:{defense:.035,early:.012}},
-  rune_overgrowth:{id:'rune_overgrowth',name:'과잉성장',kind:'minor',effects:{defense:.025,scaling:.02}},
-  rune_alacrity:{id:'rune_alacrity',name:'전설: 민첩함',kind:'minor',effects:{offense:.025,scaling:.012}},
-  rune_triumph:{id:'rune_triumph',name:'승전보',kind:'minor',effects:{sustain:.03,utility:.01}},
-  rune_biscuit:{id:'rune_biscuit',name:'비스킷 배달',kind:'minor',effects:{sustain:.02,utility:.02,early:.012}},
-  rune_approach:{id:'rune_approach',name:'쾌속 접근',kind:'minor',effects:{mobility:.025,utility:.012}}
-};
-const RUNE_POOL={
-  fighter:{keystone:['rune_conqueror','rune_fleet'],minor:['rune_triumph','rune_bone_plating','rune_overgrowth','rune_alacrity']},
-  tank:{keystone:['rune_aftershock','rune_guardian'],minor:['rune_bone_plating','rune_overgrowth','rune_approach','rune_transcendence']},
-  mage:{keystone:['rune_comet','rune_aery','rune_electrocute'],minor:['rune_manaflow','rune_transcendence','rune_biscuit','rune_approach']},
-  assassin:{keystone:['rune_electrocute','rune_conqueror'],minor:['rune_triumph','rune_transcendence','rune_bone_plating','rune_approach']},
-  marksman:{keystone:['rune_tempo','rune_fleet'],minor:['rune_alacrity','rune_triumph','rune_biscuit','rune_overgrowth']},
-  enchanter:{keystone:['rune_aery','rune_guardian'],minor:['rune_manaflow','rune_transcendence','rune_biscuit','rune_approach']}
-};
+function systemSourceText(v){return String(v||'').toLowerCase()}
+function itemTier(raw){
+  if(raw.hideFromAll||raw.requiredChampion)return 'special';
+  if((raw.tags||[]).includes('Consumable'))return 'consumable';
+  const hasUpgrade=(raw.into||[]).some(id=>SYSTEM_SOURCE_SNAPSHOT.items[id]&&!SYSTEM_SOURCE_SNAPSHOT.items[id].hideFromAll);
+  if((raw.tags||[]).includes('Boots'))return hasUpgrade?'component':'boots';
+  if((raw.gold?.total||0)<=500&&!(raw.from||[]).length)return 'starter';
+  if(hasUpgrade)return 'component';
+  return 'final';
+}
+function itemEffectsFromSource(raw){
+  const s=raw.stats||{},tags=new Set(raw.tags||[]),txt=systemSourceText((raw.descriptionKo||'')+' '+(raw.plaintextKo||'')),e={offense:0,defense:0,sustain:0,utility:0,haste:0,mobility:0,early:0,scaling:0};
+  e.offense+=(s.FlatPhysicalDamageMod||0)/1000+(s.FlatMagicDamageMod||0)/1600+(s.PercentAttackSpeedMod||0)*.1+(s.FlatCritChanceMod||0)*.1;
+  e.defense+=(s.FlatHPPoolMod||0)/10000+(s.FlatArmorMod||0)/1000+(s.FlatSpellBlockMod||0)/1000;
+  e.sustain+=(s.PercentLifeStealMod||0)*.18+(tags.has('HealthRegen')?.012:0)+(tags.has('SpellVamp')?.012:0);
+  e.mobility+=(s.FlatMovementSpeedMod||0)/1000+(s.PercentMovementSpeedMod||0);
+  if(tags.has('ArmorPenetration')||tags.has('MagicPenetration')||/관통/.test(txt))e.offense+=.018;
+  if(tags.has('AbilityHaste')||tags.has('CooldownReduction')||/스킬 가속|재사용 대기시간/.test(txt))e.haste+=.022;
+  if(tags.has('ManaRegen')||tags.has('Mana'))e.utility+=.008;
+  if(tags.has('Vision')||tags.has('Stealth')||/와드|시야/.test(txt))e.utility+=.025;
+  if(tags.has('Active')||/사용 시|고유.*사용/.test(txt))e.utility+=.01;
+  if(/보호막/.test(txt)){e.defense+=.014;e.utility+=.012}
+  if(/회복|흡혈|생명력 흡수/.test(txt))e.sustain+=.015;
+  if(/이동 속도|돌진/.test(txt))e.mobility+=.012;
+  if(/중첩|영구|레벨/.test(txt))e.scaling+=.012;
+  const tier=itemTier(raw);if(tier==='starter')e.early+=.025;else if(tier==='component')e.early+=.008;else if(tier==='final'&&(raw.gold?.total||0)>=3000)e.scaling+=.008;
+  for(const k of SYSTEM_EFFECT_KEYS)e[k]=Math.round(clamp(e[k],0,.16)*1000)/1000;
+  return e;
+}
+function itemClassesFromSource(raw,e){
+  if(itemTier(raw)==='special')return [];
+  if((raw.tags||[]).includes('Boots'))return ['fighter','tank','mage','assassin','marksman','enchanter'];
+  const t=new Set(raw.tags||[]),score={fighter:0,tank:0,mage:0,assassin:0,marksman:0,enchanter:0};
+  if(t.has('Damage')){score.fighter+=3;score.assassin+=3;score.marksman+=3}
+  if(t.has('AttackSpeed')){score.marksman+=4;score.fighter+=2;score.assassin+=1}
+  if(t.has('CriticalStrike'))score.marksman+=6;
+  if(t.has('LifeSteal')){score.marksman+=3;score.fighter+=2;score.assassin+=2}
+  if(t.has('ArmorPenetration')){score.assassin+=5;score.fighter+=2;score.marksman+=2}
+  if(t.has('SpellDamage')){score.mage+=5;score.enchanter+=2}
+  if(t.has('Mana')||t.has('ManaRegen')){score.mage+=2;score.enchanter+=3}
+  if(t.has('Health')){score.tank+=4;score.fighter+=3;score.enchanter+=1}
+  if(t.has('Armor')||t.has('SpellBlock')){score.tank+=5;score.fighter+=2;score.enchanter+=1}
+  if(t.has('HealthRegen')){score.tank+=2;score.fighter+=1;score.enchanter+=1}
+  if(t.has('AbilityHaste')||t.has('CooldownReduction')){score.fighter+=1;score.tank+=1;score.mage+=2;score.enchanter+=2}
+  if(t.has('Vision'))score.enchanter+=5;
+  const max=Math.max(...Object.values(score));if(max<=0)return ['fighter','tank','mage','assassin','marksman','enchanter'];
+  return Object.keys(score).filter(k=>score[k]>=Math.max(1,max*.5));
+}
+function buildItemSystems(snapshot=SYSTEM_SOURCE_SNAPSHOT){
+  const defs={},pool={fighter:[],tank:[],mage:[],assassin:[],marksman:[],enchanter:[]};
+  for(const [id,raw] of Object.entries(snapshot.items||{})){const tier=itemTier(raw),effects=itemEffectsFromSource(raw),classes=itemClassesFromSource(raw,effects),d={id,name:raw.nameKo,nameKo:raw.nameKo,descriptionKo:raw.descriptionKo,plaintextKo:raw.plaintextKo,cost:raw.gold?.total||0,sell:raw.gold?.sell||0,tags:(raw.tags||[]).slice(),stats:{...(raw.stats||{})},from:(raw.from||[]).slice(),into:(raw.into||[]).slice(),tier,classes,effects,active:true,shopActive:!raw.hideFromAll&&!raw.requiredChampion&&raw.inStore!==false,requiredChampion:raw.requiredChampion||null,source:{provider:snapshot.provider,version:snapshot.version,mapId:snapshot.mapId}};
+    defs[id]=d;if(d.shopActive&&['final','boots'].includes(tier))for(const cls of classes)pool[cls].push(id)}
+  for(const cls of Object.keys(pool))pool[cls].sort((a,b)=>(defs[a].cost-defs[b].cost)||defs[a].name.localeCompare(defs[b].name));
+  return {defs,pool};
+}
+function runeEffectsFromSource(raw){
+  const txt=systemSourceText((raw.shortDescKo||'')+' '+(raw.longDescKo||'')),base=raw.slot===0?.04:.018,e={offense:0,defense:0,sustain:0,utility:0,haste:0,mobility:0,early:0,scaling:0};
+  if(/피해|공격력|주문력|공격 속도|치명타|관통/.test(txt))e.offense+=base;
+  if(/체력 회복|회복|흡혈/.test(txt))e.sustain+=base*.9;
+  if(/보호막|방어력|마법 저항력|최대 체력|피해.*감소/.test(txt))e.defense+=base*.9;
+  if(/이동 속도|돌진|도약/.test(txt))e.mobility+=base*.75;
+  if(/스킬 가속|재사용 대기시간|궁극기.*가속/.test(txt))e.haste+=base*.8;
+  if(/와드|시야|골드|소환사 주문|아이템 가속/.test(txt))e.utility+=base*.75;
+  if(/영구|중첩|레벨에 비례|레벨당/.test(txt))e.scaling+=base*.55;
+  if(/초반|첫|3초|4초|10초/.test(txt))e.early+=base*.25;
+  if(!SYSTEM_EFFECT_KEYS.some(k=>e[k]>0))e.utility=base*.6;
+  for(const k of SYSTEM_EFFECT_KEYS)e[k]=Math.round(clamp(e[k],0,.09)*1000)/1000;
+  return e;
+}
+function buildRuneSystems(snapshot=SYSTEM_SOURCE_SNAPSHOT){
+  const defs={};for(const [id,raw] of Object.entries(snapshot.runes||{}))defs[id]={id,name:raw.nameKo,nameKo:raw.nameKo,key:raw.key,styleId:raw.styleId,styleKey:raw.styleKey,styleNameKo:raw.styleNameKo,slot:raw.slot,kind:raw.slot===0?'keystone':'minor',shortDescKo:raw.shortDescKo,longDescKo:raw.longDescKo,effects:runeEffectsFromSource(raw),active:true,source:{provider:snapshot.provider,version:snapshot.version}};
+  const styles={};for(const s of snapshot.runeStyles||[])styles[s.id]={id:s.id,key:s.key,name:s.nameKo,nameKo:s.nameKo,slots:s.slots.map(x=>x.slice())};
+  return {defs,styles};
+}
 
-function buildPatch(championSnapshot=CHAMPION_SOURCE_SNAPSHOT){
+function buildPatch(championSnapshot=CHAMPION_SOURCE_SNAPSHOT,systemSnapshot=SYSTEM_SOURCE_SNAPSHOT){
   const champions = {};
   for (const [name,roles,cls,dmg,base,kit] of CHAMP_RAW){
     const b={}, k={}, id=championId(name);
@@ -250,12 +258,12 @@ function buildPatch(championSnapshot=CHAMPION_SOURCE_SNAPSHOT){
     const id=championId(name);champions[id]=enrichChampion({id,name,roles,cls,dmg,base:b,kit:k});
   }
   for (const [name,roles,arch,dmg] of CHAMP_ARCH){const c=enrichChampion(archChampion(name,roles,arch,dmg));champions[c.id]=c}
-  const sourceCoverage=applyChampionSource(champions,championSnapshot);
+  const sourceCoverage=applyChampionSource(champions,championSnapshot),itemSystem=buildItemSystems(systemSnapshot),runeSystem=buildRuneSystems(systemSnapshot);
   return {
     id:'26.19',
-    championSource:{version:CHAMPION_SOURCE_PATCH,...sourceCoverage},
+    championSource:{version:CHAMPION_SOURCE_PATCH,...sourceCoverage},systemSource:{provider:systemSnapshot.provider,version:systemSnapshot.version,mapId:systemSnapshot.mapId,itemCount:Object.keys(systemSnapshot.items||{}).length,runeCount:Object.keys(systemSnapshot.runes||{}).length,runeStyleCount:(systemSnapshot.runeStyles||[]).length},
     rules:{ csGold:23, passiveGold:122, killGold:300, assistGold:150, dragonSpawn:5, dragonRespawn:5, heraldSpawn:14, baronSpawn:20, baronRespawn:6, baronBuff:3, elderBuff:2.5, inhibRespawn:5 },
-    champions, items:JSON.parse(JSON.stringify(ITEM_POOL)), itemDefs:JSON.parse(JSON.stringify(ITEM_DEFS)), runes:JSON.parse(JSON.stringify(RUNE_POOL)), runeDefs:JSON.parse(JSON.stringify(RUNE_DEFS))
+    champions, items:itemSystem.pool, itemDefs:itemSystem.defs, runes:runeSystem.styles, runeDefs:runeSystem.defs
   };
 }
 
