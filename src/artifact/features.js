@@ -96,6 +96,13 @@ function dailyRecovery(db){
 function staffProfile(t){const c=t?.coach||{},s=t?.staff||{};return {draft:clamp((c.draft||55)+(s.strategicCoach?.rating||0)*.18,35,99),analysis:clamp((c.analysis||55)+(s.analyst?.rating||0)*.22,35,99),development:clamp((c.development||55)+(s.developmentCoach?.rating||0)*.22,35,99),recovery:clamp(50+(s.performanceCoach?.rating||0)*.45,50,95)}}
 function trainingGrowthMul(t){const p=staffProfile(t);return clamp(.88+(p.development-45)/220,0.88,1.13)}
 function scrimAnalysisBonus(t){const p=staffProfile(t);return clamp((p.analysis-50)/500+facilityAnalysisBonus(t),0,.14)}
+function recordScrimPractice(db,rec,lines){
+  if(!rec||!lines)return {players:0,games:0};
+  const teams=new Set([rec.a,rec.b]),seen=new Set();
+  for(const l of lines){const p=db.players[l.pid];if(!p||!teams.has(l.tid))continue;practiceChampion(db,p,l.champ,'scrim',1);p.fatigue=clamp((p.fatigue||0)+1.2,0,100);seen.add(p.id)}
+  for(const tid of teams){const t=db.teams[tid];if(!t)continue;const bonus=scrimAnalysisBonus(t);t.scrimIntel=clamp((t.scrimIntel||0)+.8+bonus*12,0,12)}
+  return {players:seen.size,games:(rec.games||[]).length};
+}
 function staffSalary(s,ps){return Math.round((.35+((s.rating||50)-40)/35)*ps*10)/10}
 const STAFF_ROLES={strategicCoach:'전략 코치',analyst:'분석가',developmentCoach:'육성 코치',performanceCoach:'퍼포먼스 코치'};
 function genStaffMember(rng,role,base=60){const nm=rng.pick(NICK_A)+rng.pick(NICK_B);return {id:'S'+hashStr(role+nm+rng.int(0,99999)),name:nm.charAt(0).toUpperCase()+nm.slice(1),role,rating:Math.round(clamp(base+rng.normal(0,9),35,95)),age:rng.int(27,52)}}
