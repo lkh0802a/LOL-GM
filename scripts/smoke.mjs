@@ -163,6 +163,8 @@ source += `\n(()=>{
   staffTeam.staff.analyst=oldAnalyst;staffTeam.finance.cash=oldCash;
   const aiStaffTeam=activeTeams(db,null,1).find(t=>t.id!==managedTeamId(db));if(!aiStaffTeam)throw new Error('AI staff test team missing');ensureTeamStaff(db,aiStaffTeam,new RNG('ai-staff','staff'));genStaffPool(db,new RNG('ai-staff-pool','staff'));aiStaffTeam.finance.cash=Math.max(aiStaffTeam.finance.cash,500*psOf(db,aiStaffTeam.region));const role='analyst',beforeStaff=aiStaffTeam.staff[role];const elite=genStaffMember(new RNG('elite-ai-staff','staff'),role,95);elite.rating=95;db.staffPool.push(elite);aiManageStaff(db,aiStaffTeam,new RNG('ai-staff-manage','staff'));if(aiStaffTeam.staff[role].rating<beforeStaff.rating)throw new Error('AI staff management downgraded role');
   const staffAge=aiStaffTeam.staff[role].age;ageStaff(db,new RNG('staff-age','staff'));if(aiStaffTeam.staff[role].age<staffAge)throw new Error('Staff lifecycle age regressed');
+  const staffRoundTrip=unpackDB(packDB(db)),rt=staffRoundTrip.teams[staffTeam.id];if(!rt.staff||!rt.staff.analyst||!rt.facilities||!['training','analysis','recovery','youth'].every(k=>Number.isFinite(rt.facilities[k])))throw new Error('Staff/facility save round-trip failed');
+  const poorTeam=activeTeams(db,null,1).find(t=>t.id!==staffTeam.id&&t.id!==aiStaffTeam.id);if(poorTeam){ensureFacilities(poorTeam);poorTeam.finance.cash=0;const before=JSON.stringify(poorTeam.facilities);for(const k of ['training','analysis','recovery','youth']){try{upgradeFacility(db,poorTeam,k)}catch(e){}}if(JSON.stringify(poorTeam.facilities)!==before)throw new Error('Facility upgraded without funds')}
 
   const reserveParents=activeTeams(db).filter(t=>!t.parent&&reserveTeamsOf(db,t).length);
   if(reserveParents.length){
