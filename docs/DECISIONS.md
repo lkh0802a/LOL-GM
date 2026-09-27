@@ -549,3 +549,15 @@ This applies retroactively to completed major items during later UI touches and 
 - International knockout/bracket stages use seeds only for qualification, bracket placement and byes. Once a knockout matchup exists, both single- and double-elimination game-one First Selection use a coin toss; seed order does not carry into that match.
 - From game two onward, the previous game's losing team owns First Selection regardless of how game one was assigned.
 - First Selection means choosing either side (blue/red) or pick order (first/last). The opponent then chooses the remaining dimension. A managed team gets a UI choice whether it is the First Selection holder or the team making the remaining selection.
+
+## D-045 — Managed-club sporting decisions require explicit player authority
+
+**Decision:** Convenience automation may assist the managed club but may not commit consequential sporting choices on the player's behalf.
+
+- The player is the managed club's head coach and final sporting decision-maker.
+- Player signings, transfers, releases, renewals, team-option exercise, roster movement, starters/roles, tactics/training direction and all senior/specialist coaching appointments require explicit player action.
+- Staff AI may recommend, filter, rank, prefill, batch administrative steps and surface consequences, but cannot turn a recommendation into a transaction or lineup decision.
+- Player options are exercised by the player/agent side, not the club. Contract expiry at the registration/market deadline is a rules consequence rather than an AI roster decision.
+- A managed-team staff retirement leaves a vacancy; the engine does not silently generate a replacement. AI clubs may still replace staff automatically.
+- For the managed club, the legacy team.coach simulation slot is presented as the senior assistant. The human player occupies the head-coach role.
+- Board-owned infrastructure remains outside this sporting-control boundary; its automation is not treated as head-coach convenience automation.

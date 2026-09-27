@@ -125,7 +125,18 @@ function genStaffPool(db,rng){db.staffPool=db.staffPool||[];const counts=Object.
 function hireStaff(db,t,s){if(!s||!STAFF_ROLES[s.role])throw new Error('유효하지 않은 스태프입니다');t.staff=t.staff||{};const old=t.staff[s.role];if(old)db.staffPool.push(old);db.staffPool=db.staffPool.filter(x=>x.id!==s.id);t.staff[s.role]={...s,since:db.year}}
 function staffRoleWeight(t,role){const p=t.philosophy||'balanced';return ({youth:{developmentCoach:1.25,strategicCoach:.8,analyst:.85,performanceCoach:.8},'win-now':{strategicCoach:1.2,analyst:1.2,performanceCoach:1.05,developmentCoach:.7},superstar:{strategicCoach:1.1,analyst:1.05,performanceCoach:1,developmentCoach:.8},cost:{strategicCoach:.8,analyst:.8,performanceCoach:.8,developmentCoach:.85},balanced:{strategicCoach:1,analyst:1,performanceCoach:1,developmentCoach:1}}[p]||{})[role]||1}
 function aiManageStaff(db,t,rng){if(!t||t.id===managedTeamId(db)||!t.finance)return false;ensureTeamStaff(db,t,rng);const ps=psOf(db,t.region),cash=t.finance.cash||0,cands=db.staffPool||[];let best=null;for(const role of Object.keys(STAFF_ROLES)){const cur=t.staff[role],w=staffRoleWeight(t,role);for(const s of cands){if(s.role!==role)continue;const gain=(s.rating-cur.rating)*w,fee=staffSalary(cur,ps),annual=staffSalary(s,ps);const reserve=(t.philosophy==='cost'?8:5)*ps;if(gain>=6&&cash>fee+annual+reserve&&(!best||gain>best.gain))best={s,gain,fee}}}if(!best)return false;t.finance.cash=Math.round((t.finance.cash-best.fee)*10)/10;hireStaff(db,t,best.s);return true}
-function ageStaff(db,rng){for(const t of activeTeams(db)){ensureTeamStaff(db,t,rng);for(const s of Object.values(t.staff)){s.age=(s.age||35)+1;if(s.age>=62&&rng.chance(.12+(s.age-62)*.04)){const role=s.role;t.staff[role]=genStaffMember(rng,role,55+(t.coach?.analysis||55)*.08)}}}for(const s of db.staffPool||[])s.age=(s.age||35)+1;db.staffPool=(db.staffPool||[]).filter(s=>s.age<68)}
+function ageStaff(db,rng){
+  const mine=managedTeamId(db);db.staffPool=db.staffPool||[];
+  for(const t of activeTeams(db)){
+    if(t.id!==mine)ensureTeamStaff(db,t,rng);else t.staff=t.staff||{};
+    for(const [role,s] of Object.entries(t.staff||{})){if(!s)continue;s.age=(s.age||35)+1;
+      if(s.age>=62&&rng.chance(.12+(s.age-62)*.04)){
+        if(t.id===mine){delete t.staff[role];if(db.world){db.world.marketLog=db.world.marketLog||[];db.world.marketLog.push((STAFF_ROLES[role]||role)+' '+s.name+' 은퇴 · 후임을 직접 선임하세요')}}
+        else t.staff[role]=genStaffMember(rng,role,55+(t.coach?.analysis||55)*.08);
+      }}
+  }
+  for(const s of db.staffPool)s.age=(s.age||35)+1;db.staffPool=db.staffPool.filter(s=>s.age<68);
+}
 
 
 // ---- 코칭스태프 시장 ----
@@ -158,7 +169,7 @@ function evalGoals(db,w,rep,ev){
       t.goalLog=[...(t.goalLog||[]),{year:w.year,goal:t.goal,ok}].slice(-6);
       if(ok){t.owner.patience=Math.min(3,(t.owner.patience??2)+1);t.owner.wealth=Math.min(99,t.owner.wealth+2)}
       else t.owner.patience=(t.owner.patience??2)-1;
-      if(t.id===managedTeamId(db)){rep.myGoal={goal:t.goal,ok};if(!ok&&t.owner.patience<=0){w.fired=true;ev(`${t.name} 구단주, 감독(플레이어) 해임 — 목표 "${GOAL_KO[t.goal]}" 연속 미달`)}}
+      if(t.id===managedTeamId(db)){rep.myGoal={goal:t.goal,ok};if(!ok&&t.owner.patience<=0){w.fired=true;ev(`${t.name} 구단주, 헤드코치(플레이어) 해임 — 목표 "${GOAL_KO[t.goal]}" 연속 미달`)}}
       else if(!ok&&t.owner.patience<=0&&db.coachPool&&db.coachPool.length){
         const ps=psOf(db,t.region), best=db.coachPool.filter(c=>coachSalary(c,ps)<=t.finance.cash*0.2+3*ps).sort((a,b)=>(b.draft+b.analysis+b.development)-(a.draft+a.analysis+a.development))[0];
         if(best){const old=t.coach.name;hireCoach(db,t,best);t.owner.patience=2;rep.coaches.push({team:t.id,out:old,in:best.name})}}
