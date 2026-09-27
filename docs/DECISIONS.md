@@ -206,3 +206,20 @@ LOL GM treats pro LoL lineups as relatively stable rather than football-style ro
 - playing-time dissatisfaction starts primarily for promised core/starter players after a substantial sample of team games
 - satisfaction decays slowly and transfer requests require severe dissatisfaction that persists across repeated evaluations
 - weak team results, reserve assignment, salary and career-goal complaints also use stricter thresholds so discontent remains exceptional rather than routine
+
+
+## D-021 — Fixed starting five and conservative dissatisfaction
+
+**Decision:** LOL GM uses a LoL-style persistent starting five rather than FM-style automatic rotation.
+
+- every active squad keeps one explicit starter per TOP/JGL/MID/ADC/SUP in a persistent Depth Chart
+- a small OVR change never replaces a valid starter automatically
+- the manager changes starters explicitly from the squad screen
+- AI reviews starters mainly in the offseason and requires a clear performance/ability reason: roughly a 5-point ability gap, or a 3-point gap combined with severe form/condition/transfer-request trouble
+- if a starter leaves the squad, only that now-invalid slot is automatically repaired
+- core starters normally expect about 98% availability and starters about 94%; competition/backup roles do not imply football-style rotation
+- normal bench life does not create playing-time complaints for backup/prospect players
+- playing-time dissatisfaction requires a large, sustained breach of a core/starter promise after a meaningful sample of games
+- transfer requests require very low satisfaction and a long unresolved concern streak, and can be withdrawn after conditions recover
+
+This supersedes any interpretation of item 3 that would cause frequent routine starter rotation.
