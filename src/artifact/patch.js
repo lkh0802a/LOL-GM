@@ -62,9 +62,9 @@ function newPatch(db,date,major,rng){
   const notes=[], mt=metaTable(db), P=db.patch, id=patchId(db,+date.slice(0,4));
   const strong=['burst','dps','cc','engage','early','mid','late','sustain','poke'];
   const nerfN=major?rng.int(5,8):rng.int(2,4), buffN=major?rng.int(6,9):rng.int(3,5);
+  const last=db.patches.list.at(-1),recentDir=(cid,dir)=>!!last?.notes?.some(n=>n.c===cid&&n.dir===dir);
   const nerfs=mt.filter(x=>x.p+x.b>=4&&(x.wr===null||x.wr>=0.48)&&!recentDir(x.c.id,-1)).slice(0,nerfN+2).sort(()=>rng.next()-0.5).slice(0,nerfN);
   const low=mt.filter(x=>x.pres<0.04&&!recentDir(x.c.id,1)).sort(()=>rng.next()-0.5).slice(0,buffN);
-  const last=db.patches.list.at(-1),recentDir=(cid,dir)=>!!last?.notes?.some(n=>n.c===cid&&n.dir===dir);
   const change=(x,dir,why)=>{
     const c=x.c,skills=['Q','W','E','R'].map(k=>c.skills?.[k]).filter(s=>s&&Number.isFinite(s.cooldown)&&s.cooldown>0);
     if(skills.length&&rng.chance(.62)){const sk=rng.pick(skills),old=sk.cooldown,step=rng.chance(.75)?1:2,newV=Math.max(1,Math.round((old+(dir<0?step:-step))*10)/10);notes.push({type:'skill',c:c.id,slot:sk.slot,field:'cooldown',old,new:newV,dir,why})}
