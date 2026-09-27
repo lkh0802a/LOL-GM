@@ -14,7 +14,7 @@ Phase 1 starts a clean schema:
 
 - save version: `9`
 - browser namespace: `lol-gm`
-- no import from old `lolfm-*` keys
+- no import from pre-current development storage keys
 - legacy save migration helpers removed
 - old development saves are intentionally unsupported
 
