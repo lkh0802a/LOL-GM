@@ -162,8 +162,11 @@ source += `\n(()=>{
       const second=(reserve.roster||[]).map(id=>db.players[id]).filter(p=>p&&p.role===role).sort((a,b)=>playerOvr(b)-playerOvr(a));
       if(first.length&&second.length&&aiReserveParent.roster.length<rules.firstTeamMax&&reserve.roster.length>rules.reserveTeamMin){
         for(const a of Object.keys(second[0].attrs))second[0].attrs[a]=Math.max(second[0].attrs[a],Math.min(99,(first[0].attrs[a]||50)+8));
-        const pid=second[0].id,moves=aiManageOwnedReserve(db,aiReserveParent);
-        if(!moves.some(m=>m.pid===pid&&m.kind==='callup')||db.players[pid].team!==aiReserveParent.id)throw new Error('AI failed to call up clearly superior reserve player');
+        const pid=second[0].id,legal=rosterMoveCheck(db,second[0],aiReserveParent);
+        if(legal.ok){
+          const moves=aiManageOwnedReserve(db,aiReserveParent);
+          if(!moves.some(m=>m.pid===pid&&m.kind==='callup')||db.players[pid].team!==aiReserveParent.id)throw new Error('AI failed to call up clearly superior reserve player');
+        }
       }
     }
   }
