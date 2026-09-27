@@ -140,8 +140,8 @@ function viewMatch(){
 function bindMatch(){
   $('#red').onchange=e=>SEL.red=e.target.value;
   $('#bo').onchange=e=>SEL.bo=+e.target.value;
-  $('#play').onclick=()=>{const seed=freshInternalSeed('scrim');if(SEL.bo===1){LASTSER=null;LAST=simulateMatch(DB,SEL.blue,SEL.red,seed);$('#result').innerHTML=renderResult(LAST);bindResult()}
-    else{LAST=null;LASTSER=simulateSeries(DB,SEL.blue,SEL.red,SEL.bo,seed,{fearless:true,firstChoice:'coin',replay:true}).rec;$('#result').innerHTML=renderSeries(LASTSER,true);bindSeries($('#result'),LASTSER)}};
+  $('#play').onclick=()=>{const seed=freshInternalSeed('scrim'),series=simulateSeries(DB,SEL.blue,SEL.red,SEL.bo,seed,{fearless:true,firstChoice:'coin',replay:true});recordScrimPractice(DB,series.rec,series.lines);saveDB();if(SEL.bo===1){LASTSER=null;LAST=simulateMatch(DB,SEL.blue,SEL.red,seed);$('#result').innerHTML=renderResult(LAST);bindResult()}
+    else{LAST=null;LASTSER=series.rec;$('#result').innerHTML=renderSeries(LASTSER,true);bindSeries($('#result'),LASTSER)}};
   if(LASTSER)bindSeries($('#result'),LASTSER);else if(LAST)bindResult();
 }
 let LIVE=null;
