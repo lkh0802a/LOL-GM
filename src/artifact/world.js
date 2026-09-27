@@ -556,7 +556,7 @@ function validateConfig(cfg){
   if(!cfg.regions.length)errs.push('리그가 하나 이상 있어야 합니다');
   for(const r of cfg.regions){
     if(!r.short||shorts.has(r.short))errs.push(`리그 약칭 "${r.short}"이 비었거나 겹칩니다`);shorts.add(r.short);shorts.add(r.short+'2');
-    if(r.teams<10||r.teams>16||r.teams%2)errs.push(`${r.leagueName}: 1부 팀 수는 10~16 사이 짝수여야 합니다`);
+    if(r.teams<10||r.teams%2)errs.push(`${r.leagueName}: 1부 팀 수는 최소 10팀이며 짝수여야 합니다`);
     if(r.playoffTake>r.teams)errs.push(`${r.leagueName}: 플레이오프 진출 팀이 전체 팀보다 많습니다`);
     if(r.format==='groups_po'&&r.teams<10)errs.push(`${r.leagueName}: 그룹 스테이지 방식은 10팀 이상에서 쓸 수 있습니다`);
     if(r.div2&&r.system!=='franchise'&&(r.div2Teams||6)%2)errs.push(`${r.leagueName}: 하부 리그 팀 수는 짝수여야 합니다`);
