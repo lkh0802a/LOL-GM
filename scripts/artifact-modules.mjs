@@ -2,6 +2,7 @@ export const ENGINE_MODULES = [
   'champion-source.js',
   'system-source.js',
   'engine.js',
+  'draft.js',
   'data.js',
   'champs2.js',
   'patch.js',
