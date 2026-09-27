@@ -49,11 +49,23 @@ function championSkillProfile(c){
     reach, economy, mobility:clamp((effects.filter(x=>x==='mobility').length/n+.2)*mobilityMod,0,1.4), structured:structured.length/n
   };
 }
-function champStrength(c){
-  const k=c.kit,b=c.base,sp=championSkillProfile(c);
+function championSystemMetaProfile(patch,c){
+  if(!patch||!patch.itemDefs||!patch.runeDefs)return {power:0,roles:{}};
+  const roles=(c.roles&&c.roles.length?c.roles:['MID']),vals=[],byRole={};
+  for(const role of roles){
+    const pseudo={id:'meta:'+c.id+':'+role},items=selectItemBuild(patch,c,pseudo,role),runes=selectRunePage(patch,c,pseudo,role);
+    const ie=systemEffects(patch.itemDefs,items),re=systemEffects(patch.runeDefs,runes),all={};
+    for(const k of (typeof SYSTEM_EFFECT_KEYS!=='undefined'?SYSTEM_EFFECT_KEYS:['offense','defense','sustain','utility','haste','mobility','early','scaling']))all[k]=(ie[k]||0)+(re[k]||0);
+    const fit=systemChoiceScore(c,all,role),cost=items.length?avg(items.map(id=>patch.itemDefs[id]?.cost||3000)):3000,tempo=clamp((3300-cost)/2600,-.18,.22);
+    byRole[role]={fit,cost,items,runes,power:fit*.085+tempo*.025};vals.push(byRole[role].power);
+  }
+  return {power:avg(vals),roles:byRole};
+}
+function champStrength(c,patch){
+  const k=c.kit,b=c.base,sp=championSkillProfile(c),sys=championSystemMetaProfile(patch,c);
   const stat=(b.hp+b.hpg*10)/1800*.21+(b.ad+b.adg*10)/110*.21+(b.arm+b.armg*10)/85*.11+((b.mr||30)+(b.mrg||1.3)*10)/60*.07+(b.ms-320)/40*.04+((b.as||.65)*(1+(b.asg||2)*.1))*.04+(b.range-125)/525*.018;
   const kitv=(k.early+k.mid+k.late)/30*.27+(k.burst+k.dps)/20*.16+(k.cc+k.engage+k.peel)/30*.11-k.difficulty/10*.04;
-  return stat+kitv+sp.power*.06+sp.uptime*.04+sp.cc*.025+sp.utility*.025+sp.reach*.022+sp.mobility*.012+sp.economy*.012;
+  return stat+kitv+sp.power*.06+sp.uptime*.04+sp.cc*.025+sp.utility*.025+sp.reach*.022+sp.mobility*.012+sp.economy*.012+sys.power;
 }
 
 // ---------- 밴픽 ----------
@@ -64,7 +76,7 @@ const DRAFT_ORDER=[['B',0],['B',1],['B',0],['B',1],['B',0],['B',1],['P',0],['P',
 function runDraft(db, teamIds, rng, ctx){
   ctx=ctx||{used:[],byTeam:{}};
   const champs=Object.values(db.patch.champions).filter(c=>championAvailableForContext(db,c,ctx));
-  const strengths={}; champs.forEach(c=>strengths[c.id]=champStrength(c));
+  const strengths={}; champs.forEach(c=>strengths[c.id]=champStrength(c,db.patch));
   const vals=Object.values(strengths), mn=Math.min(...vals), mx=Math.max(...vals);
   if(ctx.forced){const f=ctx.forced;return {bans:f.bans,picks:f.picks,log:[],expl:[{t:0,title:'기록된 밴픽 재현',factors:[],result:''}]}}
   // 팀별 메타 인식값 V_hat = 패치 직후의 사전 추정(분석력에 따라 오차) + 대회 데이터 관찰(표본이 쌓일수록 비중 증가)
