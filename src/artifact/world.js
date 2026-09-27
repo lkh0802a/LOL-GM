@@ -709,6 +709,15 @@ function startInternational(db,id,start,taken=new Set()){
 }
 function activeSeasons(db){return Object.values(db.world.seasons).filter(s=>!s.done)}
 function nextDate(db){let next=null;for(const s of Object.values(db.world.seasons)){if(s.done)continue;const d=s.days[s.cur].date;if(next===null||d<next)next=d}return next}
+function nextTeamMatch(db,tid){
+  let best=null;for(const s of Object.values(db.world?.seasons||{})){if(s.done)continue;for(let i=s.cur;i<s.days.length;i++){const d=s.days[i],m=d.matches.find(x=>!x.res&&(x.a===tid||x.b===tid));if(m&&(!best||d.date<best.date)){best={date:d.date,opponent:m.a===tid?m.b:m.a,comp:s.comp};break}}}return best;
+}
+function daysUntil(db,date){return date?Math.max(0,Math.ceil((new Date(date)-new Date(db.worldDate))/86400000)):99}
+function trainingRecommendation(db,t){
+  const next=nextTeamMatch(db,t.id),days=daysUntil(db,next?.date),roster=t.roster.map(id=>db.players[id]).filter(Boolean),fat=avg(roster.map(p=>p.fatigue||0)),cond=avg(roster.map(p=>p.condition??96));
+  const intensity=fat>38||cond<84||days<=1?'light':days>=5&&fat<20&&cond>91?'high':'normal';
+  const scrim=days>=2&&fat<42&&cond>80;return {intensity,scrim,next,days,fat,cond};
+}
 function playWorldDay(db){
   const w=db.world; if(w.phase!=='season')return null;
   const d=nextDate(db); if(!d){advanceStep(db);return {date:null,played:[]}}
