@@ -236,3 +236,5 @@ Top-division structural invariant: every first division has at least 10 teams an
 
 ### Champion authoritative-data pipeline — 2026-09-27
 Patch-pinned Riot Data Dragon import tooling now exists at `scripts/sync-champions.mjs`; source policy is documented in `docs/CHAMPION_DATA.md`. Runtime fallbacks remain explicitly non-authoritative until a reviewed snapshot is normalized and accepted.
+
+- Champion source normalization/merge layer now accepts a patch-pinned Data Dragon snapshot, preserves LOL GM stable champion IDs, replaces authoritative base/detail fields, records source coverage/version, and leaves unmatched champions on explicit fallback data.
