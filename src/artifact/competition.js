@@ -1,4 +1,4 @@
-// ===== 롤FM: Series (Phase 3) =====
+// ===== LOL GM: Series (Phase 3) =====
 function teamComposure(db,tid){return avg(db.teams[tid].roster.map(id=>db.players[id].attrs.composure))/100}
 function gameMVP(r){
   const w=r.sides[r.winner], tot=w.ps.reduce((s,p)=>s+p.dmg,0)||1;
@@ -66,7 +66,7 @@ function replayGame(db,rec,g){
   finally{for(const t in keep)db.teams[t].tactics=keep[t];db.patch=cur}
 }
 
-// ===== 롤FM: Competition / Stage 엔진 =====
+// ===== LOL GM: Competition / Stage 엔진 =====
 // 지원 스테이지: round_robin(그룹 가능) · swiss · single_elim · double_elim
 function addDays(iso,n){const d=new Date(iso+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
 function roundRobin(ids,legs){

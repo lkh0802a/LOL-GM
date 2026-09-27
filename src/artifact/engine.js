@@ -1,4 +1,4 @@
-// ===== 롤FM: 코어 엔진 =====
+// ===== LOL GM: 코어 엔진 =====
 function clamp(v,a,b){return v<a?a:v>b?b:v}
 function avg(a){return a.length?a.reduce((s,x)=>s+x,0)/a.length:0}
 function hashStr(s){let h=2166136261>>>0;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}

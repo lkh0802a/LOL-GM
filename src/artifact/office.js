@@ -1,4 +1,4 @@
-// ===== 롤FM: 흥행 / 리그 사무국 =====
+// ===== LOL GM: 흥행 / 리그 사무국 =====
 const OFFICE_STYLES={
   conservative:{label:'보수적',w:{cap:-0.1,floor:-0.1,tax:-0.2,import:-0.2,fearless:-0.2,expand:-0.35,contract:-0.2,playoffs:-0.1,relegation:-0.2,franchise:0.1,mixed:-0.1,div2:-0.1,format:-0.25,splits:-0.2,bo:-0.1}},
   expansion:{label:'확장 지향',w:{cap:-0.1,floor:0.1,tax:-0.1,import:0.2,fearless:0.1,expand:0.45,contract:-0.3,playoffs:0.1,relegation:-0.1,franchise:0,mixed:0.1,div2:0.3,format:0.1,splits:0.1,bo:0}},

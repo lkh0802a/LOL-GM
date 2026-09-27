@@ -1,4 +1,4 @@
-// ===== 롤FM: 챔피언 확장 (아키타입 기반) =====
+// ===== LOL GM: 챔피언 확장 (아키타입 기반) =====
 // kit: [burst,dps,cc,engage,disengage,peel,poke,waveclear,mobility,sustain,early,mid,late,difficulty]
 const ARCH={
   juggernaut:['fighter',[5,7,4,4,2,1,1,5,2,7,6,7,7,4],150],diver:['fighter',[7,5,6,7,2,2,1,5,7,4,7,8,6,6],150],skirmisher:['fighter',[6,8,2,3,3,1,1,5,7,6,6,8,8,7],150],

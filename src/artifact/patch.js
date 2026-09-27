@@ -1,4 +1,4 @@
-// ===== 롤FM: 패치 / 메타 =====
+// ===== LOL GM: 패치 / 메타 =====
 // 패치 = 수치 변화(델타)의 기록. 어떤 시점의 패치든 기본 데이터 + 델타로 다시 만들 수 있다
 const PATCH_CACHE={};
 const RULE_KO={dragonRespawn:'드래곤 재생성(분)',baronBuff:'바론 버프 지속(분)',csGold:'미니언 골드',killGold:'처치 골드',heraldSpawn:'전령 등장(분)',baronSpawn:'바론 등장(분)'};
