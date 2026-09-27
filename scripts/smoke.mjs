@@ -85,7 +85,7 @@ source += `\n(()=>{
   recordPlayerEvent(growthProbe,'transfer',db.year,{from:'A',to:'B',fee:1});
   if(!growthProbe.careerEvents.some(e=>e.type==='transfer'&&e.to==='B')) throw new Error('Player career event persistence failed');
   const persisted=unpackDB(packDB(db)),persistedPlayer=persisted.players[sample.id];
-  if(!persistedPlayer||persisted.version!==13||persistedPlayer.nationality!==sample.nationality||persistedPlayer.reputation!==sample.reputation||!persistedPlayer.development||!persistedPlayer.roleFamiliarity||!persistedPlayer.pool[poolEntry]||persistedPlayer.pool[poolEntry].trainingExperience!==sample.pool[poolEntry].trainingExperience) throw new Error('Player save round-trip failed');
+  if(!persistedPlayer||persisted.version!==14||persistedPlayer.nationality!==sample.nationality||persistedPlayer.reputation!==sample.reputation||!persistedPlayer.development||!persistedPlayer.roleFamiliarity||!persistedPlayer.pool[poolEntry]||persistedPlayer.pool[poolEntry].trainingExperience!==sample.pool[poolEntry].trainingExperience) throw new Error('Player save round-trip failed');
 
   const selectable=managerSelectableTeams(db), independent=active.filter(t=>!t.parent);
   if(!selectable.length||selectable.some(t=>t.parent)) throw new Error('Manager-selectable team filter failed');
@@ -154,6 +154,13 @@ source += `\n(()=>{
     const e=initialSquadErrors(db,t);
     if(e.length) throw new Error('Final initial roster invalid: '+t.id+' '+e.join(' | '));
   }
+
+  const staffTeam=managedRoot;ensureTeamStaff(db,staffTeam,new RNG('staff-smoke','staff'));genStaffPool(db,new RNG('staff-pool-smoke','staff'));
+  const profile0=staffProfile(staffTeam),staffCandidate=(db.staffPool||[]).find(x=>x.role==='analyst');if(!staffCandidate)throw new Error('Staff market missing analyst');
+  const oldAnalyst=staffTeam.staff.analyst;staffCandidate.rating=95;hireStaff(db,staffTeam,staffCandidate);if(staffProfile(staffTeam).analysis<=profile0.analysis)throw new Error('Analyst hire did not improve analysis effect');
+  const fac=ensureFacilities(staffTeam),oldTrain=fac.training,oldCash=staffTeam.finance.cash;staffTeam.finance.cash=Math.max(oldCash,facilityCost(db,staffTeam,'training')*2);if(oldTrain<5){const mul0=facilityMul(staffTeam);upgradeFacility(db,staffTeam,'training');if(facilityMul(staffTeam)<=mul0)throw new Error('Training facility upgrade had no development effect')}
+  if(!Number.isFinite(staffCost(db,staffTeam))||staffCost(db,staffTeam)<=0)throw new Error('Full staff cost invalid');
+  staffTeam.staff.analyst=oldAnalyst;staffTeam.finance.cash=oldCash;
 
   const reserveParents=activeTeams(db).filter(t=>!t.parent&&reserveTeamsOf(db,t).length);
   if(reserveParents.length){
