@@ -20,6 +20,8 @@ source += `\n(()=>{
   if(active.length<2||active.some(t=>t.roster.length!==0)) throw new Error('First-season teams are not blank');
   const players=Object.values(db.players);
   if(players.length<10||players.some(p=>p.team||p.contract)) throw new Error('Initial player pool is not fully FA');
+  if(db.regions.KR.spendingRule!=='sfr_top5'||db.regions.CN.spendingRule!=='none'||db.regions.EU.salaryFloor!==0) throw new Error('Regional spending rules are not realism-calibrated');
+  const patchDates=['2027-01-01','2027-01-15','2027-01-29'];const pDb=buildWorld();const prng=new RNG('patch-realism','p');seasonPatch(pDb,patchDates[0],prng);const p0=pDb.patches.list.length;patchTick(pDb,patchDates[1],prng);patchTick(pDb,patchDates[2],prng);if(pDb.patches.list.length<p0+1)throw new Error('Biweekly patch cadence failed');
   if(players.some(p=>!p.nationality||!p.roleFamiliarity||p.roleFamiliarity[p.role]!==100||!p.development||p.reputation===undefined||!Array.isArray(p.careerEvents))) throw new Error('Player identity/development schema failed');
   const sample=players[0];pState(sample);
   for(const key of ['form','condition','fatigue','morale','sharpness','teamAdaptation','tacticalAdaptation']) if(sample[key]===undefined) throw new Error('Player state missing: '+key);
@@ -82,6 +84,8 @@ source += `\n(()=>{
 
   finalizeInitialRosters(db);
   if(db.world.phase!=='season'||!db.manager.careerStartedAt) throw new Error('Season did not start after roster finalization');
+  const krTeam=activeTeams(db,'KR',1)[0];if(regulatedPayroll(db,krTeam)>payroll(db,krTeam)+.001)throw new Error('SFR payroll exceeds total payroll');
+  if(db.regions.KR.spendingRule==='sfr_top5'&&regulatedPayroll(db,krTeam)!==krTeam.roster.map(id=>db.players[id].contract.salary).sort((a,b)=>b-a).slice(0,5).reduce((a,b)=>a+b,0))throw new Error('SFR is not based on top five salaries');
   for(const t of activeTeams(db)){initializeDepthChart(db,t,false);for(const role of ROLES)if(!starterFor(db,t,role))throw new Error('Depth chart missing starter: '+t.id+' '+role);for(const id of t.roster){const p=db.players[id];ensureSatisfaction(p);if(!SQUAD_ROLES.includes(p.rosterRole)||p.satisfaction<0||p.satisfaction>100)throw new Error('Initial player role/satisfaction failed')}}
   const satTeam=managedRoot,satP=db.players[satTeam.roster[0]],originalSatRole=satP.rosterRole;setRosterRole(db,satP,'core','manager',false);const su=usageFor(satP,db.year);su.teamGames=32;su.games=3;su.series=20;su.teamWins=9;satP.satisfaction=14;satP.concernStreak=9;applySatisfaction(db,satP);
   if(!satP.wantsOut||!satP.satisfactionReasons.includes('playing_time'))throw new Error('Long-term playing-time dissatisfaction did not create transfer request');

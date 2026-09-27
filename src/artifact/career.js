@@ -30,8 +30,8 @@ function promotionStatus(db,t){
   return ['relegation','mixed'].includes(R.system)?'1부 승격 가능':'승격 없음';
 }
 function setupTeamsForManager(db){const root=managedTeam(db);if(!root)return [];return root.parent?[root]:[root,...reserveTeamsOf(db,root)]}
-function initialSalaryBudget(db,t){const team=teamRef(db,t),R=db.regions[team.region],floor=(team.division||1)===1?(R.salaryFloor||0):0;return Math.max(salaryBudget(db,team),team.initialPayrollBudget||0,floor)}
-function initialSalaryCeiling(db,t){const team=teamRef(db,t),R=db.regions[team.region],budget=initialSalaryBudget(db,team);return (team.division||1)===1&&R.salaryCap>0?Math.min(budget,R.salaryCap):budget}
+function initialSalaryBudget(db,t){const team=teamRef(db,t);return Math.max(salaryBudget(db,team),team.initialPayrollBudget||0)}
+function initialSalaryCeiling(db,t){return initialSalaryBudget(db,t)}
 function initialSquadLimits(db,t){const team=teamRef(db,t),rules=rosterRulesForTeam(db,team),first=!team.parent;return {min:first?rules.firstTeamMin:rules.reserveTeamMin,max:first?rules.firstTeamMax:rules.reserveTeamMax}}
 function initialSquadErrors(db,t){
   const team=teamRef(db,t);if(!team)return ['팀을 찾을 수 없습니다'];
@@ -41,9 +41,7 @@ function initialSquadErrors(db,t){
   for(const role of ROLES)if(!roster.some(id=>db.players[id]&&db.players[id].role===role))errors.push(ROLE_KO[role]+' 포지션 필요');
   const imports=roster.filter(id=>db.players[id]&&db.players[id].region!==team.region).length;if(imports>(R.importLimit??2))errors.push('외국인 등록 한도 '+(R.importLimit??2)+'명 초과');
   const pay=payroll(db,team),budget=initialSalaryBudget(db,team);
-  if(pay>budget+0.001)errors.push('연봉 예산 초과');
-  if((team.division||1)===1&&R.salaryCap>0&&pay>R.salaryCap+0.001)errors.push('샐러리캡 초과');
-  if((team.division||1)===1&&R.salaryFloor>0&&pay+0.001<R.salaryFloor)errors.push('샐러리플로어 미달');
+  if(pay>budget+0.001)errors.push('구단 연봉 예산 초과');
   return errors;
 }
 function initialOrganizationErrors(db,t){
@@ -86,9 +84,9 @@ function normalizeInitialSalaryFloor(db,t){
 }
 function autoBuildInitialSquad(db,t,rng,target=INITIAL_ROSTER_TARGET){
   const team=teamRef(db,t),limits=initialSquadLimits(db,team),want=Math.min(limits.max,Math.max(limits.min,target));
-  for(const role of ROLES){if(team.roster.some(id=>db.players[id]&&db.players[id].role===role))continue;const p=initialPickCandidate(db,team,role,rng);if(!p)throw new Error(team.name+'의 '+ROLE_KO[role]+' 선수를 확보하지 못했습니다');const chk=initialSignCheck(db,p,team);signContract(db,p,team,chk.salary,rng.int(1,3))}
+  for(const role of ROLES){if(team.roster.some(id=>db.players[id]&&db.players[id].role===role))continue;const p=initialPickCandidate(db,team,role,rng);if(!p)throw new Error(team.name+'의 '+ROLE_KO[role]+' 선수를 확보하지 못했습니다');const chk=initialSignCheck(db,p,team);signContract(db,p,team,chk.salary,contractYearsForPlayer(db,p,rng))}
   while(team.roster.length<want){const p=initialPickCandidate(db,team,null,rng);if(!p)break;const chk=initialSignCheck(db,p,team);signContract(db,p,team,chk.salary,rng.int(1,3))}
-  normalizeInitialSalaryFloor(db,team);const errors=initialSquadErrors(db,team);if(errors.length)throw new Error(team.name+' 초기 로스터 오류: '+errors.join(', '));return team;
+  const errors=initialSquadErrors(db,team);if(errors.length)throw new Error(team.name+' 초기 로스터 오류: '+errors.join(', '));return team;
 }
 function autoBuildInitialWorld(db,excludedIds,seed){
   const excluded=new Set(excludedIds||[]),rng=new RNG(seed||'initial-market','ai-roster'),teams=activeTeams(db).filter(t=>!excluded.has(t.id));

@@ -3,7 +3,7 @@
 const PATCH_CACHE={};
 const RULE_KO={dragonRespawn:'드래곤 재생성(분)',baronBuff:'바론 버프 지속(분)',csGold:'미니언 골드',killGold:'처치 골드',heraldSpawn:'전령 등장(분)',baronSpawn:'바론 등장(분)'};
 function initPatches(db){
-  db.patches={base:JSON.parse(JSON.stringify(db.patch)),list:[],prev:[],nextDate:null,newIdx:0,y:0,n:0};
+  db.patches={base:JSON.parse(JSON.stringify(db.patch)),list:[],prev:[],nextDate:null,newIdx:0,y:0,n:0,releasesByYear:{}};
   db.metaStats={};db.metaGames=0;
 }
 function applyNote(P,n){
@@ -36,27 +36,29 @@ function patchId(db,year){const pt=db.patches;if(pt.y!==year){pt.y=year;pt.n=0}p
 function newPatch(db,date,major,rng){
   const notes=[], mt=metaTable(db), P=db.patch, id=patchId(db,+date.slice(0,4));
   const strong=['burst','dps','cc','engage','early','mid','late','sustain','poke'];
-  const nerfN=major?rng.int(6,9):rng.int(3,5), buffN=major?rng.int(7,10):rng.int(4,6);
+  const nerfN=major?rng.int(5,8):rng.int(2,4), buffN=major?rng.int(6,9):rng.int(3,5);
   const nerfs=mt.filter(x=>x.p+x.b>=4&&(x.wr===null||x.wr>=0.48)).slice(0,nerfN+2).sort(()=>rng.next()-0.5).slice(0,nerfN);
   const low=mt.filter(x=>x.pres<0.04).sort(()=>rng.next()-0.5).slice(0,buffN);
   const change=(x,dir,why)=>{
     const c=x.c;
-    if(rng.chance(0.6)){const k=strong.filter(s=>dir<0?c.kit[s]>=4:c.kit[s]<=8).sort((a,b)=>dir<0?c.kit[b]-c.kit[a]:c.kit[a]-c.kit[b]).slice(0,3);const key=rng.pick(k.length?k:strong);notes.push({type:'kit',c:c.id,key,d:dir,why})}
-    else {const key=rng.pick(['ad','hp','arm','adg','hpg']);notes.push({type:'base',c:c.id,key,d:Math.round(dir*rng.range(0.03,0.07)*1000)/1000,why})}
+    if(rng.chance(.65)){const k=strong.filter(s=>dir<0?c.kit[s]>=4:c.kit[s]<=8).sort((a,b)=>dir<0?c.kit[b]-c.kit[a]:c.kit[a]-c.kit[b]).slice(0,3);const key=rng.pick(k.length?k:strong),step=rng.chance(.72)?.5:1;notes.push({type:'kit',c:c.id,key,d:dir*step,why})}
+    else {const key=rng.pick(['ad','hp','arm','adg','hpg']);notes.push({type:'base',c:c.id,key,d:Math.round(dir*rng.range(.015,.04)*1000)/1000,why})}
   };
   nerfs.forEach(x=>change(x,-1,`밴픽률 ${Math.round(x.pres*100)}%${x.wr!==null?` · 승률 ${Math.round(x.wr*100)}%`:''}`));
   low.forEach(x=>change(x,+1,`밴픽률 ${Math.round(x.pres*100)}%로 외면받음`));
-  if(rng.chance(major?0.8:0.15)){
+  if(rng.chance(major?.35:.03)){
     const opts=[['dragonRespawn',[5,6]],['baronBuff',[3,3.5,2.5]],['csGold',[21,22,23,24]],['killGold',[275,300,325]],['heraldSpawn',[14,15,16]],['baronSpawn',[20,22,25]]];
     const [key,vals]=rng.pick(opts), cur=P.rules[key], v=rng.pick(vals.filter(x=>x!==cur)); if(v!==undefined)notes.push({type:'rule',key,v,old:cur,why:'게임 템포 조정'});
   }
-  // 신규 챔피언: 시즌 개막·중반 패치에 출시
-  if(major){
+  // 신규 챔피언은 패치마다 나오지 않는다. 연 2~3명 수준을 중심으로 드물게 출시한다.
+  const year=+date.slice(0,4),released=(db.patches.releasesByYear&&db.patches.releasesByYear[year])||0,releaseChance=major?.58:.07;
+  if(released<4&&rng.chance(releaseChance)){
     let def;
     if(db.patches.newIdx<CHAMP_RELEASES.length){const [name,roles,arch,dmg]=CHAMP_RELEASES[db.patches.newIdx++];def={id:championId(name),name,roles,arch,dmg}}
     else{let name,id;do{name=rng.pick(NEWCHAMP_A)+rng.pick(NEWCHAMP_B);id=championId(name)}while(P.champions[id]);const role=rng.pick(ROLES);
       const arch=rng.pick({TOP:['juggernaut','diver','skirmisher','vanguard'],JGL:['diver','assassin','skirmisher','vanguard'],MID:['burst','control','battle','assassin','artillery'],ADC:['marksman','hyper','bully'],SUP:['enchanter','catcher','warden','control']}[role]);
       def={id,name,roles:[role],arch,dmg:['burst','control','battle','artillery','enchanter','specialist'].includes(arch)?'AP':'AD'};db.patches.newIdx++}
+    db.patches.releasesByYear=db.patches.releasesByYear||{};db.patches.releasesByYear[year]=released+1;
     notes.push({type:'new',def,why:'신규 챔피언 출시',c:def.name});
   }
   notes.forEach(n=>applyNote(P,n));
@@ -70,8 +72,8 @@ function newPatch(db,date,major,rng){
   return {id,notes};
 }
 function patchTick(db,date,rng){
-  const pt=db.patches; if(!pt.nextDate)pt.nextDate=addDays(date,14);
-  while(date>=pt.nextDate){const p=newPatch(db,pt.nextDate,false,rng);news(db,`패치 ${p.id} 적용 — 챔피언 ${p.notes.filter(n=>n.c).length}명 조정`);pt.nextDate=addDays(pt.nextDate,pt.cadence||14)}
+  const pt=db.patches;if(!pt.nextDate)pt.nextDate=addDays(date,14);
+  while(date>=pt.nextDate){const p=newPatch(db,pt.nextDate,false,rng);news(db,`패치 ${p.id} 적용 — 챔피언 ${p.notes.filter(n=>n.c).length}명 조정`);const gap=rng.chance(.08)?21:14;pt.nextDate=addDays(pt.nextDate,pt.cadence||gap)}
 }
 // 새 시즌: 지난 시즌 패치를 기준점으로 접고(재생은 이번 시즌 경기만 필요) 개막 대형 패치 적용
 function seasonPatch(db,date,rng){

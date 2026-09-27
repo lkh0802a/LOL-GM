@@ -173,12 +173,12 @@ const ROSTER_RULE_PROFILES={
 function rosterRuleProfile(id='OWNED_RESERVE_LCK_STYLE_2026'){return ROSTER_RULE_PROFILES[id]||ROSTER_RULE_PROFILES.OWNED_RESERVE_LCK_STYLE_2026}
 
 const REGION_PRESETS = {
-  KR:{name:'한국',leagueName:'LCK',short:'LCK',strength:75,templates:true,tier:'major',d:{teams:12,splits:3,format:'rr_de',playoffTake:6,div2:true,system:'franchise',slots:4,salaryCap:40,salaryFloor:12}},
-  CN:{name:'중국',leagueName:'LPL',short:'LPL',strength:74,tier:'major',d:{teams:16,splits:3,format:'groups_po',playoffTake:8,div2:true,system:'franchise',slots:4,salaryCap:70,salaryFloor:18}},
-  EU:{name:'유럽',leagueName:'LEC',short:'LEC',strength:71,tier:'major',d:{teams:12,splits:3,format:'rr_de',playoffTake:8,system:'franchise',slots:3,salaryCap:0,salaryFloor:6}},
-  NA:{name:'북미',leagueName:'LCS',short:'LCS',strength:68,tier:'major',d:{teams:10,splits:3,format:'rr_de',playoffTake:6,system:'franchise',slots:3,salaryCap:0,salaryFloor:8}},
-  AP:{name:'아시아태평양',leagueName:'LCP',short:'LCP',strength:67,tier:'major',d:{teams:12,splits:3,format:'rr_po',playoffTake:6,system:'mixed',slots:3,salaryCap:0,salaryFloor:3}},
-  BR:{name:'브라질',leagueName:'CBLOL',short:'CBLOL',strength:65,tier:'major',d:{teams:10,splits:3,format:'rr_po',playoffTake:6,system:'franchise',slots:3,salaryCap:0,salaryFloor:2}},
+  KR:{name:'한국',leagueName:'LCK',short:'LCK',strength:75,templates:true,tier:'major',d:{teams:12,splits:3,format:'rr_de',playoffTake:6,div2:true,system:'franchise',slots:4,spendingRule:'sfr_top5',salaryCap:40,salaryFloor:12,luxuryTax:.5}},
+  CN:{name:'중국',leagueName:'LPL',short:'LPL',strength:74,tier:'major',d:{teams:16,splits:3,format:'groups_po',playoffTake:8,div2:true,system:'franchise',slots:4}},
+  EU:{name:'유럽',leagueName:'LEC',short:'LEC',strength:71,tier:'major',d:{teams:12,splits:3,format:'rr_de',playoffTake:8,system:'franchise',slots:3}},
+  NA:{name:'북미',leagueName:'LCS',short:'LCS',strength:68,tier:'major',d:{teams:10,splits:3,format:'rr_de',playoffTake:6,system:'franchise',slots:3}},
+  AP:{name:'아시아태평양',leagueName:'LCP',short:'LCP',strength:67,tier:'major',d:{teams:12,splits:3,format:'rr_po',playoffTake:6,system:'mixed',slots:3}},
+  BR:{name:'브라질',leagueName:'CBLOL',short:'CBLOL',strength:65,tier:'major',d:{teams:10,splits:3,format:'rr_po',playoffTake:6,system:'franchise',slots:3}},
   VN:{name:'베트남',leagueName:'VCS',short:'VCS',strength:66,tier:'emerging',parent:'AP',d:{teams:8,splits:2,format:'rr_po',playoffTake:6,system:'relegation',slots:3}},
   JP:{name:'일본',leagueName:'LJL',short:'LJL',strength:62,tier:'emerging',parent:'AP',d:{teams:6,splits:2,format:'rr_po',playoffTake:4,system:'franchise',slots:3}},
   TW:{name:'대만·홍콩·마카오',leagueName:'PCS',short:'PCS',strength:64,tier:'emerging',parent:'AP',d:{teams:8,splits:2,format:'rr_po',playoffTake:6,system:'relegation',slots:3}},
@@ -206,7 +206,7 @@ function regionCfg(id,over={}){
   const P=REGION_PRESETS[id]||{name:'새 지역',leagueName:'새 리그',short:'NEW',strength:63,d:{}};
   return {id,name:P.name,leagueName:P.leagueName,short:P.short,strength:P.strength,templates:!!P.templates,tier:P.tier||'emerging',parent:P.parent||null,
     format:'rr_po',div2:false,div2Teams:8,teams:8,splits:2,legs:2,regularBo:3,playoffTake:6,playoffBo:5,system:'franchise',relegate:1,slots:3,office:PRESET_OFFICE[id]||'conservative',
-    fearless:true,payScale:PAY_SCALE[id]??0.4,salaryCap:0,salaryFloor:0,importLimit:2,rosterRuleProfile:'OWNED_RESERVE_LCK_STYLE_2026',...P.d,...over};
+    fearless:true,payScale:PAY_SCALE[id]??.4,spendingRule:'none',salaryCap:0,salaryFloor:0,luxuryTax:.5,importLimit:2,rosterRuleProfile:'OWNED_RESERVE_LCK_STYLE_2026',...P.d,...over};
 }
 function defaultWorldConfig(){return {
   regions:['KR','CN','EU','NA','AP','BR'].map(id=>regionCfg(id)),
@@ -343,8 +343,6 @@ function addRegion(db,rng,cfg){
   if(R.system==='mixed')markFranchised(db,R);
   if(R.div2){R.div2=false;createDiv2(db,rng,R)}
   R.baseSlots=R.slots;
-  // 샐러리플로어에 맞춰 초기 연봉 조정
-  if(R.salaryFloor>0)for(const t of activeTeams(db,R.id,1)){const pay=payroll(db,t);if(pay<R.salaryFloor&&pay>0){const k=R.salaryFloor/pay;t.roster.forEach(id=>{const p=db.players[id];if(p.contract)p.contract.salary=Math.round(p.contract.salary*k*10)/10})}}
   for(let i=0;i<Math.ceil(R.teams*0.6);i++) genPlayer(db,rng,{role:rng.pick(ROLES),age:rng.int(17,19),base:R.strength-11+rng.normal(0,5),region:R.id});
   return R;
 }
@@ -538,8 +536,8 @@ function runOffseason(db){
     officeDecisions(db,rng,f,ev);
     globalOffice(db,w,rng,f,ev);
   }
-  for(const R of Object.values(db.regions)){const nT=activeTeams(db,R.id).length,k=Math.max(2,Math.round(nT*0.65)),tal=R.talent||R.strength;
-    for(let i=0;i<k;i++){const age=rng.int(17,19),b=tal-12+rng.normal(0,5);genPlayer(db,rng,{role:rng.pick(ROLES),age,base:b,region:R.id,pot:Math.round(clamp(b+12+(tal-70)*0.4+rng.normal(4,6),b+2,99))})}}
+  for(const R of Object.values(db.regions)){const firstN=activeTeams(db,R.id,1).length,k=Math.max(4,Math.round(firstN*(R.tier==='major'?.9:.75))),tal=R.talent||R.strength;
+    for(let i=0;i<k;i++){const age=rng.int(17,19),b=tal-12+rng.normal(0,5);genPlayer(db,rng,{role:rng.pick(ROLES),age,base:b,region:R.id,pot:Math.round(clamp(b+12+(tal-70)*.4+rng.normal(4,6),b+2,99))})}}
   for(const k in db.scout)db.scout[k]=Math.round(db.scout[k]*0.85);
   ensureEven(db,rng,ev);
   genCoachPool(db,rng);
