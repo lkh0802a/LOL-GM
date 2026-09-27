@@ -30,6 +30,17 @@ function starterFor(db,team,role){
   return best;
 }
 
+const SYSTEM_META_CACHE=new WeakMap();
+const CHAMP_STRENGTH_CACHE=new WeakMap();
+const DRAFT_NOISE_CACHE=new WeakMap();
+function revisionBucket(store,key,revision){
+  let b=store.get(key);if(!b||b.revision!==revision){b={revision,values:new Map()};store.set(key,b)}return b.values;
+}
+function draftNoiseBucket(db){
+  const revision=(db.patch?.id||'')+':'+(db.patch?._revision||0);let b=DRAFT_NOISE_CACHE.get(db);
+  if(!b||b.revision!==revision){b={revision,values:new Map()};DRAFT_NOISE_CACHE.set(db,b)}return b.values;
+}
+
 // ---------- 챔피언 평가 (패치 원수치 기반) ----------
 function championSkillProfile(c){
   const ss=Object.values(c.skills||{}),n=Math.max(1,ss.length),effects=ss.flatMap(s=>s.effects||[]);
@@ -51,6 +62,7 @@ function championSkillProfile(c){
 }
 function championSystemMetaProfile(patch,c){
   if(!patch||!patch.itemDefs||!patch.runeDefs)return {power:0,roles:{}};
+  const cache=revisionBucket(SYSTEM_META_CACHE,patch,patch._systemRevision||0);if(cache.has(c.id))return cache.get(c.id);
   const roles=(c.roles&&c.roles.length?c.roles:['MID']),vals=[],byRole={};
   for(const role of roles){
     const pseudo={id:'meta:'+c.id+':'+role},items=selectItemBuild(patch,c,pseudo,role),runes=selectRunePage(patch,c,pseudo,role);
@@ -59,9 +71,13 @@ function championSystemMetaProfile(patch,c){
     const fit=systemChoiceScore(c,all,role),cost=items.length?avg(items.map(id=>patch.itemDefs[id]?.cost||3000)):3000,tempo=clamp((3300-cost)/2600,-.18,.22);
     byRole[role]={fit,cost,items,runes,power:fit*.085+tempo*.025};vals.push(byRole[role].power);
   }
-  return {power:avg(vals),roles:byRole};
+  const result={power:avg(vals),roles:byRole};cache.set(c.id,result);return result;
 }
 function champStrength(c,patch){
+  if(patch){const cache=revisionBucket(CHAMP_STRENGTH_CACHE,patch,patch._revision||0);if(cache.has(c.id))return cache.get(c.id);const v=champStrengthUncached(c,patch);cache.set(c.id,v);return v}
+  return champStrengthUncached(c,null);
+}
+function champStrengthUncached(c,patch){
   const k=c.kit,b=c.base,sp=championSkillProfile(c),sys=championSystemMetaProfile(patch,c);
   const stat=(b.hp+b.hpg*10)/1800*.21+(b.ad+b.adg*10)/110*.21+(b.arm+b.armg*10)/85*.11+((b.mr||30)+(b.mrg||1.3)*10)/60*.07+(b.ms-320)/40*.04+((b.as||.65)*(1+(b.asg||2)*.1))*.04+(b.range-125)/525*.018;
   const kitv=(k.early+k.mid+k.late)/30*.27+(k.burst+k.dps)/20*.16+(k.cc+k.engage+k.peel)/30*.11-k.difficulty/10*.04;
@@ -69,20 +85,19 @@ function champStrength(c,patch){
 }
 
 // ---------- 밴픽 ----------
-const VHAT_NOISE={};
 // 진영·픽 순서 균형 계수 (블루/레드, 선픽/후픽 승률을 50%에 맞추도록 튜닝)
 const BAL={blue:0.025,counter:0.1,first:0.013};
 const DRAFT_ORDER=[['B',0],['B',1],['B',0],['B',1],['B',0],['B',1],['P',0],['P',1],['P',1],['P',0],['P',0],['P',1],['B',1],['B',0],['B',1],['B',0],['P',1],['P',0],['P',0],['P',1]];
 function runDraft(db, teamIds, rng, ctx){
   ctx=ctx||{used:[],byTeam:{}};
+  if(ctx.forced){const f=ctx.forced;return {bans:f.bans,picks:f.picks,log:[],expl:[{t:0,title:'기록된 밴픽 재현',factors:[],result:''}]}}
   const champs=Object.values(db.patch.champions).filter(c=>championAvailableForContext(db,c,ctx));
   const strengths={}; champs.forEach(c=>strengths[c.id]=champStrength(c,db.patch));
   const vals=Object.values(strengths), mn=Math.min(...vals), mx=Math.max(...vals);
-  if(ctx.forced){const f=ctx.forced;return {bans:f.bans,picks:f.picks,log:[],expl:[{t:0,title:'기록된 밴픽 재현',factors:[],result:''}]}}
   // 팀별 메타 인식값 V_hat = 패치 직후의 사전 추정(분석력에 따라 오차) + 대회 데이터 관찰(표본이 쌓일수록 비중 증가)
   const MS=db.metaStats||{}, G=db.metaGames||0, RMS=db.regionMetaStats||{}, RMG=db.regionMetaGames||{};
   const vhat=teamIds.map(tid=>{const team=db.teams[tid],rid=team.region,an=Math.min(1,team.coach.analysis/100+scrimAnalysisBonus(team)); const m={};
-    const nk=tid+'|'+db.patch.id+'|'+an; const NZ=VHAT_NOISE[nk]||(VHAT_NOISE[nk]=Object.fromEntries(champs.map(c=>[c.id,((hashStr(tid+db.patch.id+c.id)%2000)/1000-1)*0.35*(1.1-an)])));
+    const nk=tid+'|'+an,noiseCache=draftNoiseBucket(db);let NZ=noiseCache.get(nk);if(!NZ){NZ=Object.fromEntries(champs.map(c=>[c.id,((hashStr(tid+db.patch.id+c.id)%2000)/1000-1)*0.35*(1.1-an)]));noiseCache.set(nk,NZ)}
     champs.forEach(c=>{const noise=NZ[c.id];
       let v=clamp((strengths[c.id]-mn)/(mx-mn||1)+noise,0,1);
       const gst=MS[c.id],rst=(RMS[rid]||{})[c.id],rg=RMG[rid]||0,know=((team.metaKnowledge||{})[c.id]||0),counter=((team.metaCounter||{})[c.id]||0);
