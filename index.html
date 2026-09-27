@@ -4131,15 +4131,15 @@ function bindSeason(){
 // ===== LOL GM: UI =====
 const SAVE_VERSION=14;
 const STORAGE_NS='lol-gm-v14';
-const LEGACY_STORAGE_PREFIXES=['lol-gm','lolfm'];
-const LEGACY_DB_NAMES=['lol-gm','lol-gm-v10','lol-gm-v11','lol-gm-v12','lol-gm-v13','lolfm'];
+const LEGACY_STORAGE_PREFIXES=['lol-gm'];
+const LEGACY_DB_NAMES=['lol-gm','lol-gm-v10','lol-gm-v11','lol-gm-v12','lol-gm-v13'];
 const DIRECT_FILE_PREVIEW=location.protocol==='file:'||location.origin==='null';
 let SLOT=(()=>{try{return localStorage.getItem(STORAGE_NS+'-slot')||'1'}catch(e){return '1'}})();
 const STORE_BASE=STORAGE_NS+'-db-v'+SAVE_VERSION+'-';
 let STORE=STORE_BASE+SLOT;
 let DB=null, LAST=null, LASTSER=null, VIEW='season', SQUAD=null, OPEN_P=null, LOGMODE='major', SAVEFAIL=false, MSG='';
 let SCOUTSET={region:'ALL',role:'ALL',contract:'all',competition:'ALL',undervalued:false,q:''}, SQUAD_EDIT=null;
-// 기존 개발 세이브는 호환하지 않는다. 현재 namespace 이전의 lol-gm/lolfm 저장소를 폐기한다.
+// 기존 개발 세이브는 호환하지 않는다. 현재 namespace 이전의 LOL GM 개발 저장소를 폐기한다.
 function purgeLegacySaves(){
   try{
     for(let i=localStorage.length-1;i>=0;i--){
