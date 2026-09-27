@@ -1,4 +1,4 @@
-// ===== 롤FM: 계약 / 재정 / FA 시장 (단위: 억 원) =====
+// ===== LOL GM: 계약 / 재정 / FA 시장 (단위: 억 원) =====
 const PAY_SCALE={KR:1,CN:1.3,EU:0.8,NA:1,AP:0.45,TW:0.4,VN:0.3,BR:0.35,JP:0.4,TR:0.35,LA:0.3,OC:0.3};
 const money=v=>(Math.round(v*10)/10).toFixed(1)+'억';
 function psOf(db,rid){const R=db.regions[rid];return R?(R.payScale??PAY_SCALE[rid]??0.5):0.5}
