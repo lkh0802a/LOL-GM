@@ -18,6 +18,15 @@ for (const file of modules) {
   }
 }
 
+const appSource = await readFile(resolve(artifact, 'app.js'), 'utf8');
+const worldSource = await readFile(resolve(artifact, 'world.js'), 'utf8');
+const saveVersion = Number(appSource.match(/const SAVE_VERSION=(\d+)/)?.[1]);
+const worldVersion = Number(worldSource.match(/version:(\d+),saveId:/)?.[1]);
+if (!Number.isInteger(saveVersion) || !Number.isInteger(worldVersion) || saveVersion !== worldVersion) {
+  failed = true;
+  console.error(`Save schema mismatch: app SAVE_VERSION=${saveVersion}, buildWorld version=${worldVersion}`);
+}
+
 const shell = await readFile(resolve(artifact, 'shell.html'), 'utf8');
 if (!shell.includes('<meta name="viewport"')) {
   failed = true;
