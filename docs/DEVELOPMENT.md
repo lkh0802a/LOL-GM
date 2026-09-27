@@ -19,8 +19,8 @@ Development progress is tracked by the 22 major LOL GM systems. Finish one major
 - `7. 팀 / 시설 / 스태프` — COMPLETE (2026-09-27)
 - `8. 훈련 / 스크림` — COMPLETE (2026-09-27)
 - `9. 챔피언 / 메타 / 패치` — COMPLETE (2026-09-27)
-- `10. 패치 엔진` — COMPLETE (2026-09-27)
-- `11. 실제 LoL식 밴픽 UI` — ACTIVE
+- `10. 패치 엔진` — ACTIVE (full 26.19 item/rune source coverage remediation)
+- `11. 실제 LoL식 밴픽 UI` — PENDING
 
 ## Product-wide convenience acceptance rule (2026-09-27)
 
