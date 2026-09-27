@@ -12,14 +12,34 @@ function starterFor(db,team,role){
 }
 
 const SYSTEM_META_CACHE=new WeakMap();
+const SYSTEM_CHOICE_CACHE=new WeakMap();
 const CHAMP_STRENGTH_CACHE=new WeakMap();
+const DRAFT_EVAL_CACHE=new WeakMap();
 const DRAFT_NOISE_CACHE=new WeakMap();
 function revisionBucket(store,key,revision){
   let b=store.get(key);if(!b||b.revision!==revision){b={revision,values:new Map()};store.set(key,b)}return b.values;
 }
+function draftPatchRevisionKey(patch){return (patch?.id||'')+':'+(patch?._revision||0)+':'+(patch?._systemRevision||0)}
 function draftNoiseBucket(db){
-  const revision=(db.patch?.id||'')+':'+(db.patch?._revision||0);let b=DRAFT_NOISE_CACHE.get(db);
+  const revision=draftPatchRevisionKey(db.patch);let b=DRAFT_NOISE_CACHE.get(db);
   if(!b||b.revision!==revision){b={revision,values:new Map()};DRAFT_NOISE_CACHE.set(db,b)}return b.values;
+}
+function buildDraftPoolSnapshot(db,ctx){
+  const champs=Object.values(db.patch.champions).filter(c=>championAvailableForContext(db,c,ctx));
+  const strengths={};champs.forEach(c=>strengths[c.id]=champStrength(c,db.patch));
+  const vals=Object.values(strengths),mn=Math.min(...vals),mx=Math.max(...vals),byRole={};
+  ROLES.forEach(r=>byRole[r]=champs.filter(c=>c.roles.includes(r)));
+  return {champs,strengths,mn,mx,byRole};
+}
+function draftPoolSnapshot(db,ctx={}){
+  const revision=draftPatchRevisionKey(db.patch)+':'+(db.worldDate||'');
+  let b=DRAFT_EVAL_CACHE.get(db);if(!b||b.revision!==revision){b={revision,defaults:{},pools:new WeakMap()};DRAFT_EVAL_CACHE.set(db,b)}
+  const mode=ctx.practice?'practice':'official';
+  if(Array.isArray(ctx.championPool)){
+    let p=b.pools.get(ctx.championPool);if(!p){p={};b.pools.set(ctx.championPool,p)}
+    return p[mode]||(p[mode]=buildDraftPoolSnapshot(db,ctx));
+  }
+  return b.defaults[mode]||(b.defaults[mode]=buildDraftPoolSnapshot(db,ctx));
 }
 
 // ---------- 챔피언 평가 (패치 원수치 기반) ----------
@@ -43,7 +63,7 @@ function championSkillProfile(c){
 }
 function championSystemMetaProfile(patch,c){
   if(!patch||!patch.itemDefs||!patch.runeDefs)return {power:0,roles:{}};
-  const cache=revisionBucket(SYSTEM_META_CACHE,patch,patch._systemRevision||0);if(cache.has(c.id))return cache.get(c.id);
+  const cache=revisionBucket(SYSTEM_META_CACHE,patch,draftPatchRevisionKey(patch));if(cache.has(c.id))return cache.get(c.id);
   const roles=(c.roles&&c.roles.length?c.roles:['MID']),vals=[],byRole={};
   for(const role of roles){
     const pseudo={id:'meta:'+c.id+':'+role},items=selectItemBuild(patch,c,pseudo,role),runes=selectRunePage(patch,c,pseudo,role);
@@ -72,14 +92,12 @@ const DRAFT_ORDER=[['B',0],['B',1],['B',0],['B',1],['B',0],['B',1],['P',0],['P',
 function runDraft(db, teamIds, rng, ctx){
   ctx=ctx||{used:[],byTeam:{}};
   if(ctx.forced){const f=ctx.forced;return {bans:f.bans,picks:f.picks,log:[],expl:[{t:0,title:'기록된 밴픽 재현',factors:[],result:''}]}}
-  const champs=Object.values(db.patch.champions).filter(c=>championAvailableForContext(db,c,ctx));
-  const strengths={}; champs.forEach(c=>strengths[c.id]=champStrength(c,db.patch));
-  const vals=Object.values(strengths), mn=Math.min(...vals), mx=Math.max(...vals);
+  const evalBase=draftPoolSnapshot(db,ctx),{champs,strengths,mn,mx,byRole}=evalBase;
   // 팀별 메타 인식값 V_hat = 패치 직후의 사전 추정(분석력에 따라 오차) + 대회 데이터 관찰(표본이 쌓일수록 비중 증가)
   const MS=db.metaStats||{}, G=db.metaGames||0, RMS=db.regionMetaStats||{}, RMG=db.regionMetaGames||{};
   const vhat=teamIds.map(tid=>{const team=db.teams[tid],rid=team.region,an=Math.min(1,team.coach.analysis/100+scrimAnalysisBonus(team)); const m={};
-    const nk=tid+'|'+an,noiseCache=draftNoiseBucket(db);let NZ=noiseCache.get(nk);if(!NZ){NZ=Object.fromEntries(champs.map(c=>[c.id,((hashStr(tid+db.patch.id+c.id)%2000)/1000-1)*0.35*(1.1-an)]));noiseCache.set(nk,NZ)}
-    champs.forEach(c=>{const noise=NZ[c.id];
+    const nk=tid+'|'+an,noiseCache=draftNoiseBucket(db);let NZ=noiseCache.get(nk);if(!NZ){NZ={};noiseCache.set(nk,NZ)}
+    champs.forEach(c=>{if(NZ[c.id]===undefined)NZ[c.id]=((hashStr(tid+db.patch.id+c.id)%2000)/1000-1)*0.35*(1.1-an);const noise=NZ[c.id];
       let v=clamp((strengths[c.id]-mn)/(mx-mn||1)+noise,0,1);
       const gst=MS[c.id],rst=(RMS[rid]||{})[c.id],rg=RMG[rid]||0,know=((team.metaKnowledge||{})[c.id]||0),counter=((team.metaCounter||{})[c.id]||0);
       const observe=(base,st,g,weight)=>{if(!st||!g)return base;const n=st.p+st.b,w=n/(n+18*(1.35-an)),wr=(st.w+2)/(st.p+4),obs=clamp(0.5+(wr-0.5)*2.2+(n/g)*0.5-0.1,0,1);return base*(1-w*weight)+obs*w*weight};
@@ -88,7 +106,6 @@ function runDraft(db, teamIds, rng, ctx){
   const roster=teamIds.map(tid=>{const r={}; ROLES.forEach(role=>r[role]=starterFor(db,db.teams[tid],role)); return r});
   const taken=new Set(ctx.fearless?ctx.used:[]), bans=[[],[]], picks=[{},{}], expl=[];
   const mastery=(p,c)=>p.pool[c]?p.pool[c].mastery:25;
-  const byRole={};ROLES.forEach(r=>byRole[r]=champs.filter(c=>c.roles.includes(r)));
   const tacs=teamIds.map(t=>db.teams[t].tactics);
   function pickValue(side,role,c,mine){
     const p=roster[side][role], ch=db.patch.champions[c], t=tacs[side];
@@ -147,15 +164,20 @@ function systemChoiceScore(c,e,role){
   const k=c.kit||{},front=['fighter','tank'].includes(c.cls),support=role==='SUP'||c.cls==='enchanter';
   return (e.offense||0)*(.8+(k.burst+k.dps)/16)+(e.defense||0)*(front?1.35:.75)+(e.sustain||0)*(.7+(k.sustain||5)/8)+(e.utility||0)*(support?1.5:.7)+(e.haste||0)*(.8+(k.cc+k.poke)/18)+(e.mobility||0)*(.75+(k.mobility||5)/8)+(e.early||0)*(.65+(k.early||5)/8)+(e.scaling||0)*(.65+(k.late||5)/8);
 }
+function systemChoiceBase(patch,c,role){
+  const cache=revisionBucket(SYSTEM_CHOICE_CACHE,patch,draftPatchRevisionKey(patch)),key=c.id+'|'+role;if(cache.has(key))return cache.get(key);
+  const items=(patch.items&&patch.items[c.cls]||[]).filter(id=>patch.itemDefs&&patch.itemDefs[id]&&patch.itemDefs[id].active!==false&&patch.itemDefs[id].shopActive!==false).map(id=>{const d=patch.itemDefs[id];return {id,tier:d.tier,fit:systemChoiceScore(c,d.effects||{},role),cost:d.cost||3000}});
+  const roleFit=d=>{const t=new Set(d.tags||[]);if(role==='JGL')return t.has('Jungle')?.12:-.1;if(t.has('Jungle'))return -.18;if(role==='SUP'&&(t.has('GoldPer')||t.has('Vision')))return .08;return 0};
+  const starters=Object.values(patch.itemDefs||{}).filter(d=>d.active!==false&&d.shopActive!==false&&d.tier==='starter'&&(!d.requiredChampion||d.requiredChampion===c.name)).map(d=>({id:d.id,fit:systemChoiceScore(c,d.effects||{},role),roleFit:roleFit(d),cost:d.cost||450}));
+  const runes={};for(const d of Object.values(patch.runeDefs||{}))if(d.active!==false)runes[d.id]=systemChoiceScore(c,d.effects||{},role);
+  const out={items,starters,runes};cache.set(key,out);return out;
+}
 function selectItemBuild(patch,c,p,role){
-  const pool=(patch.items&&patch.items[c.cls]||[]).filter(id=>patch.itemDefs&&patch.itemDefs[id]&&patch.itemDefs[id].active!==false&&patch.itemDefs[id].shopActive!==false);
-  const ranked=pool.map(id=>{const d=patch.itemDefs[id],noise=((hashStr((p&&p.id||'')+'|'+c.id+'|'+role+'|'+id)%1000)/1000-.5)*.012;return {id,tier:d.tier,s:systemChoiceScore(c,d.effects||{},role)+noise-(d.cost||3000)/140000+(d.tier==='boots'?.006:0)}}).sort((x,y)=>y.s-x.s);
+  const ranked=systemChoiceBase(patch,c,role).items.map(x=>{const noise=((hashStr((p&&p.id||'')+'|'+c.id+'|'+role+'|'+x.id)%1000)/1000-.5)*.012;return {id:x.id,tier:x.tier,s:x.fit+noise-x.cost/140000+(x.tier==='boots'?.006:0)}}).sort((x,y)=>y.s-x.s);
   const out=[];let boots=false;for(const x of ranked){if(x.tier==='boots'&&boots)continue;out.push(x.id);if(x.tier==='boots')boots=true;if(out.length>=6)break}return out;
 }
 function selectStarterItem(patch,c,p,role){
-  const defs=Object.values(patch.itemDefs||{}).filter(d=>d.active!==false&&d.shopActive!==false&&d.tier==='starter'&&(!d.requiredChampion||d.requiredChampion===c.name));
-  const roleFit=d=>{const t=new Set(d.tags||[]);if(role==='JGL')return t.has('Jungle')?.12:-.1;if(t.has('Jungle'))return -.18;if(role==='SUP'&&(t.has('GoldPer')||t.has('Vision')))return .08;return 0};
-  const rows=defs.map(d=>({id:d.id,s:systemChoiceScore(c,d.effects||{},role)+roleFit(d)+((hashStr((p&&p.id||'')+'|start|'+d.id)%1000)/1000-.5)*.008-(d.cost||450)/40000})).sort((a,b)=>b.s-a.s);
+  const rows=systemChoiceBase(patch,c,role).starters.map(d=>({id:d.id,s:d.fit+d.roleFit+((hashStr((p&&p.id||'')+'|start|'+d.id)%1000)/1000-.5)*.008-d.cost/40000})).sort((a,b)=>b.s-a.s);
   return rows[0]?.id||null;
 }
 function itemCraftActions(patch,finalBuild){
@@ -172,7 +194,7 @@ function itemPurchasePlan(patch,finalBuild,starterId){
 function runeChoiceScore(patch,c,p,role,id){
   const d=patch.runeDefs&&patch.runeDefs[id];if(!d||d.active===false)return -Infinity;
   const noise=((hashStr((p&&p.id||'')+'|'+c.id+'|'+role+'|rune|'+id)%1000)/1000-.5)*.01;
-  return systemChoiceScore(c,d.effects||{},role)+noise;
+  return (systemChoiceBase(patch,c,role).runes[id]??systemChoiceScore(c,d.effects||{},role))+noise;
 }
 function selectRunePage(patch,c,p,role){
   const styles=Object.values(patch.runes||{}).filter(s=>s&&Array.isArray(s.slots)&&s.slots.length>=4);
