@@ -31,11 +31,15 @@ function starterFor(db,team,role){
 }
 
 // ---------- 챔피언 평가 (패치 원수치 기반) ----------
+function championSkillProfile(c){
+  const ss=Object.values(c.skills||{}), n=Math.max(1,ss.length),effects=ss.flatMap(s=>s.effects||[]);
+  return {power:ss.reduce((z,s)=>z+(s.power||0),0)/n/10,uptime:clamp(ss.reduce((z,s)=>z+(s.cooldown?1/Math.max(1,s.cooldown):0),0)*2.2,0,1),cc:effects.filter(x=>x==='cc'||x==='engage').length/n,utility:effects.filter(x=>['shield','sustain','utility','mobility','poke'].includes(x)).length/n};
+}
 function champStrength(c){
-  const k=c.kit,b=c.base;
-  const stat = (b.hp+b.hpg*10)/1800*0.25 + (b.ad+b.adg*10)/110*0.25 + (b.arm+b.armg*10)/85*0.15 + (b.ms-320)/40*0.05;
-  const kitv = (k.early+k.mid+k.late)/30*0.35 + (k.burst+k.dps)/20*0.2 + (k.cc+k.engage+k.peel)/30*0.15 - k.difficulty/10*0.05;
-  return stat+kitv;
+  const k=c.kit,b=c.base,sp=championSkillProfile(c);
+  const stat = (b.hp+b.hpg*10)/1800*0.21 + (b.ad+b.adg*10)/110*0.21 + (b.arm+b.armg*10)/85*0.11 + ((b.mr||30)+(b.mrg||1.3)*10)/60*0.07 + (b.ms-320)/40*0.04 + ((b.as||.65)*(1+(b.asg||2)*.1))*0.04;
+  const kitv = (k.early+k.mid+k.late)/30*0.27 + (k.burst+k.dps)/20*0.16 + (k.cc+k.engage+k.peel)/30*0.11 - k.difficulty/10*0.04;
+  return stat+kitv+sp.power*.06+sp.uptime*.04+sp.cc*.025+sp.utility*.025;
 }
 
 // ---------- 밴픽 ----------
@@ -128,11 +132,12 @@ function combatStats(st,ps){
   if(ps._ck===key)return ps._cs; ps._ck=key; return ps._cs=combatStats0(st,ps);
 }
 function combatStats0(st,ps){
-  const c=ps.champ,b=c.base,L=ps.lvl,g=Math.max(0,ps.goldEarned-500),cv=ITEM_CONV[c.cls],k=c.kit;
+  const c=ps.champ,b=c.base,L=ps.lvl,g=Math.max(0,ps.goldEarned-500),cv=ITEM_CONV[c.cls],k=c.kit,sp=championSkillProfile(c);
   const ph=st.t<14?k.early:st.t<26?k.mid:k.late, pm=0.8+0.04*ph;
   const hp=b.hp+b.hpg*(L-1)+g*cv.hp, arm=b.arm+b.armg*(L-1)+g*cv.arm, mr=(b.mr||30)+(b.mrg||1.3)*(L-1)+g*cv.arm*.65, ad=b.ad+b.adg*(L-1)+g*cv.ad;
-  let off=ad*(0.55+0.045*(k.burst+k.dps))*pm*(b.range>400?1.1:1)*(0.9+b.as*0.15);
-  const defense=arm*.55+mr*.45;let ehp=hp*(1+defense/100)*(0.85+0.03*k.sustain)*Math.sqrt(pm);
+  const asp=(b.as||.65)*(1+(b.asg||0)*(L-1)/100),resource=b.resource?clamp((b.resource+(b.resourceg||0)*(L-1))/800+(b.resourceRegen||0)/30,.65,1.18):1;
+  let off=ad*(0.52+0.042*(k.burst+k.dps))*pm*(b.range>400?1.1:1)*(0.88+asp*.18)*(0.94+sp.power*.07+sp.uptime*.04)*resource;
+  const defense=arm*.55+mr*.45;let ehp=hp*(1+defense/100)*(0.83+0.028*k.sustain)*(0.98+sp.utility*.04+sp.cc*.025)*Math.sqrt(pm);
   const s=st.sides[ps.side];
   let buff=1; if(s.soul)buff*=1.08; if(s.baronUntil>st.t)buff*=1.15; if(s.elderUntil>st.t)buff*=1.25;
   const mf=0.82+0.26*ps.prof.mastery/100+0.04*(ps.prof.confidence-50)/50;

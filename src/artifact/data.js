@@ -58,6 +58,7 @@ function enrichChampion(c){
   if(b.resourceg===undefined)b.resourceg=b.resource?Math.round((25+(h%31))*10)/10:0;
   if(b.resourceRegen===undefined)b.resourceRegen=b.resource?Math.round((6+(h%45)/10)*10)/10:0;
   if(!c.skills){
+    c.detailSource='generated_fallback';
     const k=c.kit,physical=c.dmg==='AD',damageType=physical?'physical':'magic';
     c.skills={
       P:{slot:'P',kind:'passive',effects:['identity'],power:Math.round((k.sustain+k.mobility+k.dps)/3*10)/10},
@@ -67,6 +68,7 @@ function enrichChampion(c){
       R:{slot:'R',kind:'ultimate',damageType,effects:[k.engage>=7?'engage':k.burst>=7?'burst':'teamfight'],power:Math.max(k.burst,k.cc,k.engage,k.dps),cooldown:Math.max(45,130-k.late*6)}
     };
   }
+  if(!c.detailSource)c.detailSource='curated';
   return c;
 }
 
