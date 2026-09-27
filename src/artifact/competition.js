@@ -38,7 +38,7 @@ function simulateSeries(db,aId,bId,bestOf,seed,opt={}){
     if(BAL.randomTest){fpTeam=srng.chance(0.5)?aId:bId}
     const snap=JSON.parse(JSON.stringify(ctx)); snap.firstPick=fpTeam===blue?0:1;
     if(opt.forced&&opt.forced[g-1])snap.forced=opt.forced[g-1];
-    const r=simulateMatch(db,blue,red,gseed,snap,opt.capture!==g);r.comp=opt.compId||null;r.date=db.worldDate;
+    const r=simulateMatch(db,blue,red,gseed,snap,opt.capture!==g);r.comp=opt.compId||null;r.date=db.worldDate;r.metaContext=opt.metaContext||null;
     if(!opt.replay&&!opt.practice)recordMeta(db,r);
     if(opt.capture===g)return {captured:r};
     const wId=r.winner===0?blue:red, lId=wId===blue?red:blue;
@@ -194,7 +194,8 @@ function playDay(db,s){
   const cfgIdx=comp.stages.findIndex(x=>x.id===day.stage), cfg=comp.stages[cfgIdx];
   for(const m of day.matches){
     const firstChoice=cfg.type==='round_robin'||cfg.type==='swiss'?'coin':'seed';
-    const {rec,lines}=simulateSeries(db,m.a,m.b,m.bo,`${s.seed}/${s.year}/${m.id}`,{fearless:comp.rules&&comp.rules.fearless,firstChoice,compId:s.comp,championPool:comp.championPool});
+    const split=s.label||s.instanceKey||null,metaContext={comp:s.comp,season:s.id,year:s.year,split,stage:day.stage,league:comp.region||s.comp,international:!!comp.international};
+    const {rec,lines}=simulateSeries(db,m.a,m.b,m.bo,`${s.seed}/${s.year}/${m.id}`,{fearless:comp.rules&&comp.rules.fearless,firstChoice,compId:s.comp,championPool:comp.championPool,metaContext});
     m.res=rec; recordLines(s,lines); afterSeries(db,lines,rec); updatePlayerUsage(db,s,rec,lines);
   }
   s.cur++;
