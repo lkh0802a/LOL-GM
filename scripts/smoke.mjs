@@ -227,16 +227,17 @@ source += `\n(()=>{
   const promoDb=unpackDB(packDB(db)),promoR=Object.values(promoDb.regions).find(R=>R.div2&&['mixed','relegation'].includes(R.system));
   if(promoR){
     const prng2=new RNG('promotion-pressure','world'),events=[];
+    const fakeSeason=(id,comp,region,div,teams,winner,loser)=>{const matches=[];for(let i=0;i<teams.length;i++)for(let j=i+1;j<teams.length;j++){const a=teams[i].id,b=teams[j].id,aw=a===winner||b===loser||(a!==loser&&b!==winner&&i<j),w=aw?a:b;matches.push({id:id+'-'+i+'-'+j,a,b,res:{winner:w,score:w===a?[1,0]:[0,1]}})}return {id,comp,region,div,split:1,done:true,champion:winner,runnerUp:null,stageData:{regular:{teams:teams.map(t=>t.id)}},days:[{stage:'regular',matches}]};};
     for(let cycle=0;cycle<5;cycle++){
       const first=activeTeams(promoDb,promoR.id,1),second=activeTeams(promoDb,promoR.id,2),eligible=second.filter(t=>promotionEligible(promoDb,t));
       if(first.length>=2&&eligible.length){
         const down=first.find(t=>!(promoR.system==='mixed'&&t.franchised))||first[0],up=eligible[cycle%eligible.length];
-        promoDb.world.seasons['pressure-1']={id:'pressure-1',comp:'PRESSURE1',region:promoR.id,div:1,split:1,done:true,champion:first.find(t=>t.id!==down.id)?.id,runnerUp:null,stages:{regular:{table:Object.fromEntries(first.map((t,i)=>[t.id,{w:t.id===down.id?0:first.length-i,l:t.id===down.id?first.length:0,g:first.length}]))}}};
-        promoDb.world.seasons['pressure-2']={id:'pressure-2',comp:'PRESSURE2',region:promoR.id,div:2,split:1,done:true,champion:up.id,runnerUp:null,stages:{regular:{table:Object.fromEntries(second.map((t,i)=>[t.id,{w:t.id===up.id?second.length:Math.max(0,second.length-i-1),l:t.id===up.id?0:i+1,g:second.length}]))}}};
+        promoDb.world.seasons['pressure-1']=fakeSeason('pressure-1','PRESSURE1',promoR.id,1,first,first.find(t=>t.id!==down.id).id,down.id);
+        promoDb.world.seasons['pressure-2']=fakeSeason('pressure-2','PRESSURE2',promoR.id,2,second,up.id,second.find(t=>t.id!==up.id)?.id);
         promoDb.competitions.PRESSURE1={id:'PRESSURE1',stages:[{id:'regular'}]};promoDb.competitions.PRESSURE2={id:'PRESSURE2',stages:[{id:'regular'}]};
         const ownedIds=new Set(second.filter(t=>t.parent).map(t=>t.id));
-        promotionRelegation(promoDb,promoDb.world,prng2,x=>events.push(x));
         if(ownedIds.has(up.id))throw new Error('Pressure fixture selected owned reserve as promotion candidate');
+        promotionRelegation(promoDb,promoDb.world,prng2,x=>events.push(x));
         if((promoDb.teams[up.id].division||1)!==1)throw new Error('Eligible independent Tier-2 club failed to promote');
         if(activeTeams(promoDb,promoR.id,1).some(t=>t.parent))throw new Error('Owned reserve entered first division after promotion cycle');
         for(const t of activeTeams(promoDb,promoR.id,1))if(reserveRequirement(promoDb,t)==='required'&&reserveTeamsOf(promoDb,t).length!==1)throw new Error('Promotion cycle broke required reserve ownership');
