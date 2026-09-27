@@ -40,20 +40,18 @@ function recordMeta(db,r){
     r.draft.bans.flat().forEach(c=>add(bag,c,'b'));
   }
   db.metaHistory=db.metaHistory||[];
-  const mc=r.metaContext||{}, comp=mc.comp||r.comp||r.competitionId||null;
-  db.metaHistory.push({date:r.date||db.worldDate,patch:r.patch||db.patch.id,comp,season:mc.season||null,year:mc.year||+(r.date||db.worldDate).slice(0,4),split:mc.split||null,stage:mc.stage||null,league:mc.league||null,international:!!mc.international,regions,sides:r.sides.map((s,i)=>({team:s.team?.id||null,region:s.team?.region||null,win:r.winner===i,picks:s.ps.map(x=>({champ:x.champ.id,role:x.role,player:x.p.id}))})),bans:r.draft.bans.flat()});
+  db.metaHistory.push({date:r.date||db.worldDate,patch:r.patch||db.patch.id,comp:r.comp||r.competitionId||null,regions,sides:r.sides.map((s,i)=>({region:s.team?.region||null,win:r.winner===i,picks:s.ps.map(x=>x.champ.id)})),bans:r.draft.bans.flat()});
+  if(db.metaHistory.length>5000)db.metaHistory.splice(0,db.metaHistory.length-5000);
   const international=regions.length>1;
-  for(const side of r.sides){const t=side.team;if(!t)continue;t.metaKnowledge=t.metaKnowledge||{};t.metaCounter=t.metaCounter||{};for(const os of r.sides){if(os===side)continue;for(const pick of os.ps){const cid=pick.champ.id,success=r.winner===r.sides.indexOf(os),novel=((db.regionMetaStats?.[t.region]||{})[cid]?.p||0)<3,analysis=.65+(t.coach?.analysis||50)/140,learn=(success?.055:.018)*(novel?1.6:1)*(international?1.35:1)*analysis;t.metaKnowledge[cid]=clamp((t.metaKnowledge[cid]||0)+learn,0,1);const faced=side.ps.find(x=>x.role===pick.role),lost=r.winner!==r.sides.indexOf(side);if(faced&&lost)t.metaCounter[cid]=clamp((t.metaCounter[cid]||0)+.025*analysis*(international?1.2:1),0,1)}}}
-  if(international)for(const t of Object.values(db.teams)){if(!t.active||regions.includes(t.region))continue;t.metaKnowledge=t.metaKnowledge||{};for(const os of r.sides)for(const pick of os.ps){const cid=pick.champ.id;t.metaKnowledge[cid]=clamp((t.metaKnowledge[cid]||0)+.004*((t.coach?.analysis||50)/100),0,1)}}
+  for(const s of r.sides){const t=s.team;if(!t)continue;t.metaKnowledge=t.metaKnowledge||{};const enemyRegions=regions.filter(x=>x!==t.region);for(const os of r.sides){if(os===s)continue;for(const pick of os.ps){const cid=pick.champ.id,success=r.winner===r.sides.indexOf(os),novel=((db.regionMetaStats?.[t.region]||{})[cid]?.p||0)<3,learn=(success?.055:.018)*(novel?1.6:1)*(international?1.35:1);t.metaKnowledge[cid]=clamp((t.metaKnowledge[cid]||0)+learn,0,1)}}}
 }
 function metaTableFiltered(db,filter={}){
-  const rows=(db.metaHistory||[]).filter(r=>(!filter.region||r.regions.includes(filter.region))&&(!filter.patch||r.patch===filter.patch)&&(!filter.comp||r.comp===filter.comp)&&(!filter.season||r.season===filter.season)&&(!filter.year||r.year===+filter.year)&&(!filter.split||r.split===filter.split)&&(!filter.league||r.league===filter.league)&&(!filter.scope||(filter.scope==='INTL'?r.international:!r.international))&&(!filter.from||r.date>=filter.from)&&(!filter.to||r.date<=filter.to));
+  const rows=(db.metaHistory||[]).filter(r=>(!filter.region||r.regions.includes(filter.region))&&(!filter.patch||r.patch===filter.patch)&&(!filter.comp||r.comp===filter.comp)&&(!filter.from||r.date>=filter.from)&&(!filter.to||r.date<=filter.to));
   if(!rows.length)return metaTable(db,filter.region||null);
   const st={},add=(cid,key)=>{const x=st[cid]||(st[cid]={p:0,w:0,b:0});x[key]++};
-  for(const r of rows){for(const side of r.sides){if(filter.region&&side.region!==filter.region)continue;for(const pick of side.picks){const p=typeof pick==='string'?{champ:pick}:pick;if(filter.position&&p.role!==filter.position)continue;add(p.champ,'p');if(side.win)add(p.champ,'w')}}for(const cid of r.bans)add(cid,'b')}
-  const G=Math.max(1,rows.length);return Object.values(db.patch.champions).map(c=>{const x=st[c.id]||{p:0,w:0,b:0};return {c,p:x.p,b:x.b,w:x.w,pres:(x.p+x.b)/G,wr:x.p?x.w/x.p:null,sample:G,eligible:championProEligible(db,c)}}).sort((a,b)=>b.pres-a.pres);
+  for(const r of rows){for(const side of r.sides){if(filter.region&&side.region!==filter.region)continue;for(const cid of side.picks){add(cid,'p');if(side.win)add(cid,'w')}}for(const cid of r.bans)add(cid,'b')}
+  const G=Math.max(1,rows.length);return Object.values(db.patch.champions).map(c=>{const s=st[c.id]||{p:0,w:0,b:0};return {c,p:s.p,b:s.b,w:s.w,pres:(s.p+s.b)/G,wr:s.p?s.w/s.p:null,sample:G,eligible:championProEligible(db,c)}}).sort((a,b)=>b.pres-a.pres);
 }
-function championMetaInsights(db,cid,filter={}){const rows=(db.metaHistory||[]).filter(r=>(!filter.region||r.regions.includes(filter.region))&&(!filter.comp||r.comp===filter.comp)&&(!filter.year||r.year===+filter.year));const players={},teams={},matchups={};let recent=[];for(const r of rows){for(const side of r.sides){const picks=side.picks.map(p=>typeof p==='string'?{champ:p}:p),me=picks.find(p=>p.champ===cid);if(!me)continue;if(me.player){const x=players[me.player]||(players[me.player]={g:0,w:0});x.g++;x.w+=side.win?1:0}if(side.team){const x=teams[side.team]||(teams[side.team]={g:0,w:0});x.g++;x.w+=side.win?1:0}const opp=r.sides.find(x=>x!==side);if(opp&&me.role){const op=opp.picks.map(p=>typeof p==='string'?{champ:p}:p).find(p=>p.role===me.role);if(op){const x=matchups[op.champ]||(matchups[op.champ]={g:0,w:0});x.g++;x.w+=side.win?1:0}}recent.push({date:r.date,win:side.win})}}const top=o=>Object.entries(o).sort((a,b)=>b[1].g-a[1].g||b[1].w-a[1].w).slice(0,5);recent=recent.sort((a,b)=>a.date.localeCompare(b.date)).slice(-10);return {players:top(players),teams:top(teams),matchups:top(matchups),recent};}
 function metaTable(db,regionId=null){
   const G=Math.max(1,regionId?(db.regionMetaGames||{})[regionId]||0:db.metaGames||0), st=regionId?((db.regionMetaStats||{})[regionId]||{}):(db.metaStats||{});
   return Object.values(db.patch.champions).map(c=>{const s=st[c.id]||{p:0,w:0,b:0};return {c,p:s.p,b:s.b,w:s.w,pres:(s.p+s.b)/G,wr:s.p?s.w/s.p:null,sample:G,eligible:championProEligible(db,c)}}).sort((a,b)=>b.pres-a.pres);
@@ -74,7 +72,6 @@ function newPatch(db,date,major,rng){
   };
   nerfs.forEach(x=>change(x,-1,`밴픽률 ${Math.round(x.pres*100)}%${x.wr!==null?` · 승률 ${Math.round(x.wr*100)}%`:''}`));
   low.forEach(x=>change(x,+1,`밴픽률 ${Math.round(x.pres*100)}%로 외면받음`));
-  if(major&&rng.chance(.025)){const cand=mt.filter(x=>!x.c.releaseDate).sort(()=>rng.next()-0.5)[0];if(cand){const c=cand.c,key=rng.pick(['early','mid','late','burst','dps','cc','engage','peel','poke','sustain']),d=rng.chance(.5)?1:-1;notes.push({type:'kit',c:c.id,key,d,dir:d,why:'희귀 대규모 챔피언 리워크'})}}
   if(rng.chance(major?.35:.03)){
     const opts=[['dragonRespawn',[5,6]],['baronBuff',[3,3.5,2.5]],['csGold',[21,22,23,24]],['killGold',[275,300,325]],['heraldSpawn',[14,15,16]],['baronSpawn',[20,22,25]]];
     const [key,vals]=rng.pick(opts), cur=P.rules[key], v=rng.pick(vals.filter(x=>x!==cur)); if(v!==undefined)notes.push({type:'rule',key,v,old:cur,why:'게임 템포 조정'});
