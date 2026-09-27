@@ -304,7 +304,7 @@ function bindSquad(){
   document.querySelectorAll('tr[data-p]').forEach(tr=>{const open=()=>{OPEN_P=OPEN_P===tr.dataset.p?null:tr.dataset.p;nav();const d=$('#pdetail');if(OPEN_P&&d)d.scrollIntoView({behavior:'smooth',block:'start'})};tr.onclick=open;tr.onkeydown=e=>{if(e.key==='Enter')open()}});
 }
 // ---------- 패치·메타 ----------
-let PSET={role:'ALL',q:''};
+let PSET={role:'ALL',q:'',region:'GLOBAL'};
 function noteText(n){
   if(n.type==='new')return `<b>신규 챔피언 ${esc(n.def.name)}</b> <small>${n.def.roles.map(r=>ROLE_KO[r]).join('/')} · ${esc(CLASS_KO[ARCH[n.def.arch][0]])}</small>`;
   if(n.type==='rule')return `<b>${esc(RULE_KO[n.key]||n.key)}</b> ${n.old} → ${n.v}`;
@@ -314,18 +314,18 @@ function noteText(n){
 }
 function viewPatch(){
   const pt=DB.patches, list=[...pt.list].reverse(), prev=[...(pt.prev||[])].reverse();
-  const mt=metaTable(DB), G=DB.metaGames||0;
+  const rid=PSET.region==='GLOBAL'?null:PSET.region, mt=metaTable(DB,rid), G=rid?((DB.regionMetaGames||{})[rid]||0):(DB.metaGames||0);
   const rows=mt.filter(x=>(PSET.role==='ALL'||x.c.roles.includes(PSET.role))&&(!PSET.q||x.c.name.toLowerCase().includes(PSET.q.toLowerCase())));
   const tier=x=>x.pres>=0.35?'S':x.pres>=0.18?'A':x.pres>=0.08?'B':x.pres>0?'C':'-';
   return `<section class="teamhead"><h2>패치 ${esc(DB.patch.id)}</h2><p>2주마다 패치가 나오고, 시즌 개막과 서머 개막에는 대형 패치와 신규 챔피언이 나옵니다. 밸런스 팀은 대회에서 너무 많이 쓰이고 이기는 챔피언을 하향하고, 외면받는 챔피언을 상향합니다. 팀들은 패치 직후 메타를 잘 모르다가 경기 데이터가 쌓일수록 정확해지고, 분석력이 높은 코치진일수록 빨리 따라잡습니다.</p><p class="hint">챔피언 ${Object.keys(DB.patch.champions).length}명 · 이번 패치 대회 경기 ${G}판${pt.nextDate?` · 다음 패치 ${esc(pt.nextDate)}`:''}</p></section>
-  <section><h3>현재 메타</h3><div class="controls"><label>포지션<select id="prole"><option value="ALL">전체</option>${ROLES.map(r=>`<option value="${r}"${PSET.role===r?' selected':''}>${ROLE_KO[r]}</option>`).join('')}</select></label><label>검색<input id="pq" value="${esc(PSET.q)}" placeholder="챔피언 이름"></label></div>
+  <section><h3>현재 메타</h3><div class="controls"><label>지역<select id="pregion"><option value="GLOBAL">글로벌</option>${Object.values(DB.regions).map(r=>`<option value="${r.id}"${PSET.region===r.id?' selected':''}>${esc(r.name||r.leagueName||r.id)}</option>`).join('')}</select></label><label>포지션<select id="prole"><option value="ALL">전체</option>${ROLES.map(r=>`<option value="${r}"${PSET.role===r?' selected':''}>${ROLE_KO[r]}</option>`).join('')}</select></label><label>검색<input id="pq" value="${esc(PSET.q)}" placeholder="챔피언 이름"></label></div>
   <div class="scroll"><table class="champs"><thead><tr><th>티어</th><th>챔피언</th><th>포지션</th><th>역할군</th><th>밴픽률</th><th>픽</th><th>밴</th><th>승률</th><th>초반</th><th>후반</th><th>CC</th><th>폭딜</th></tr></thead><tbody>
   ${rows.slice(0,60).map(x=>`<tr><td><b class="tier t${tier(x)}">${tier(x)}</b></td><td><b>${esc(x.c.name)}</b></td><td>${x.c.roles.map(r=>ROLE_KO[r]).join('/')}</td><td>${CLASS_KO[x.c.cls]}</td><td class="num">${Math.round(x.pres*100)}%</td><td class="num">${x.p}</td><td class="num">${x.b}</td><td class="num">${x.wr===null?'—':Math.round(x.wr*100)+'%'}</td><td><span class="pip" style="--v:${x.c.kit.early}">${x.c.kit.early}</span></td><td><span class="pip" style="--v:${x.c.kit.late}">${x.c.kit.late}</span></td><td><span class="pip" style="--v:${x.c.kit.cc}">${x.c.kit.cc}</span></td><td><span class="pip" style="--v:${x.c.kit.burst}">${x.c.kit.burst}</span></td></tr>`).join('')}
   </tbody></table></div>${rows.length>60?`<p class="hint">상위 60명만 표시합니다. 포지션이나 검색으로 좁혀 보세요.</p>`:''}</section>
   <section><h3>패치 노트</h3>${list.length?list.map((p,i)=>`<details class="pnote"${i===0?' open':''}><summary><b>${esc(p.id)}</b> <small>${esc(p.date)}${p.major?' · 대형 패치':''} · 변경 ${p.notes.length}건</small></summary><ul>${p.notes.map(n=>`<li>${noteText(n)}</li>`).join('')}</ul></details>`).join(''):'<p class="empty">커리어를 시작하면 시즌 개막 패치가 적용됩니다.</p>'}
   ${prev.length?`<details class="pnote"><summary>지난 시즌 패치 ${prev.length}개</summary>${prev.map(p=>`<p><b>${esc(p.id)}</b> <small>${esc(p.date)}</small><br>${p.notes.map(noteText).join(' · ')}</p>`).join('')}</details>`:''}</section>`;
 }
-function bindPatch(){$('#prole').onchange=e=>{PSET.role=e.target.value;nav()};$('#pq').onchange=e=>{PSET.q=e.target.value;nav()}}
+function bindPatch(){$('#pregion').onchange=e=>{PSET.region=e.target.value;nav()};$('#prole').onchange=e=>{PSET.role=e.target.value;nav()};$('#pq').onchange=e=>{PSET.q=e.target.value;nav()}}
 
 // ---------- 첫 시즌 백지 로스터 구성 ----------
 let INITMK={role:'ALL',scope:'all',target:null};
