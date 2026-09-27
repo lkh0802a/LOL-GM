@@ -237,9 +237,13 @@ function finalSeason(w,R,div=1){return Object.values(w.seasons).filter(s=>s.regi
 function youthMul(age){return age<=18?1.4:age<=20?1.25:age<=22?1.1:age<=24?1:0.85}
 function growthCap(age){return age<=18?4.2:age<=20?3.5:age<=22?2.8:age<=24?2.1:age<=26?1.5:1.0}
 function defaultTraining(){return {mechanical:20,laning:20,combat:20,macro:20,mental:20}}
-function facilityMul(t){return t?0.92+0.05*((t.facility||2)-1):1}
-function facilityCost(db,t){return Math.round(((t.facility||2)+1)*6*psOf(db,t.region)*10)/10}
-function facilityUpkeep(db,t){return Math.round((t.facility||2)*1.2*psTeam(db,t)*10)/10}
+function ensureFacilities(t){const legacy=clamp(t.facility||2,1,5);t.facilities=t.facilities||{training:legacy,analysis:legacy,recovery:legacy,youth:legacy};for(const k of ['training','analysis','recovery','youth'])t.facilities[k]=clamp(t.facilities[k]||legacy,1,5);t.facility=Math.round((t.facilities.training+t.facilities.analysis+t.facilities.recovery+t.facilities.youth)/4);return t.facilities}
+function facilityMul(t){if(!t)return 1;const f=ensureFacilities(t);return .9+.055*(f.training-1)+.02*(f.youth-1)}
+function facilityAnalysisBonus(t){if(!t)return 0;return (ensureFacilities(t).analysis-1)*.012}
+function facilityRecoveryBonus(t){if(!t)return 0;return (ensureFacilities(t).recovery-1)*.7}
+function facilityCost(db,t,key='training'){const f=ensureFacilities(t),lv=f[key]||1;return Math.round((lv+1)*5*psOf(db,t.region)*10)/10}
+function facilityUpkeep(db,t){const f=ensureFacilities(t),sum=Object.values(f).reduce((a,b)=>a+b,0);return Math.round(sum*.32*psTeam(db,t)*10)/10}
+function upgradeFacility(db,t,key){if(!['training','analysis','recovery','youth'].includes(key))throw new Error('유효하지 않은 시설입니다');const f=ensureFacilities(t);if(f[key]>=5)throw new Error('이미 최고 단계입니다');const cost=facilityCost(db,t,key);if(!t.finance||t.finance.cash<cost)throw new Error('시설 증설 자금이 부족합니다');t.finance.cash=Math.round((t.finance.cash-cost)*10)/10;f[key]++;t.facility=Math.round(Object.values(f).reduce((a,b)=>a+b,0)/4);return cost}
 
 // ---------- 지역 프리셋 / 월드 설정 ----------
 // 실제 LoL e스포츠 구조를 본뜬 기본 리그 (리그 수준·시장 규모는 고정, 구조만 편집 가능)
