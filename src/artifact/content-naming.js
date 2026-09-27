@@ -12,8 +12,10 @@ function contentNameDistance(a,b){
 function contentNameTooSimilar(name,existing){
   const n=contentNameNorm(name);if(!n)return true;
   for(const raw of existing||[]){const e=contentNameNorm(raw);if(!e)continue;if(n===e)return true;
-    const max=Math.max(n.length,e.length),d=contentNameDistance(n,e),sim=1-d/max;
-    if((Math.min(n.length,e.length)<=5&&d<=1)||(max>=6&&sim>=.78))return true;
+    const max=Math.max(n.length,e.length),min=Math.min(n.length,e.length),gap=Math.abs(n.length-e.length);
+    if(gap>Math.max(2,Math.floor(max*.24)))continue;
+    const d=contentNameDistance(n,e),sim=1-d/max;
+    if((min<=5&&d<=1)||(max>=6&&sim>=.78))return true;
   }return false;
 }
 function contentExistingNames(db,kind){
@@ -27,7 +29,7 @@ function contentRecentPrefixKeys(db,kind,n=4){
 }
 function contentUniqueName(db,kind,rng,factory){
   const existing=contentExistingNames(db,kind),recent=contentRecentPrefixKeys(db,kind);
-  let last=null;for(let i=0;i<96;i++){const x=factory(i);last=x;if(!x||!x.name||!x.nameKo)continue;
+  let last=null;for(let i=0;i<48;i++){const x=factory(i);last=x;if(!x||!x.name||!x.nameKo)continue;
     if(recent.slice(-2).includes(x.naming?.prefixKey))continue;
     if(!contentNameTooSimilar(x.name,existing)&&!contentNameTooSimilar(x.nameKo,existing))return x;
   }

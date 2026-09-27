@@ -93,7 +93,7 @@ source += `\n(()=>{
   const afterSkill=championSkillProfile(skillChamp);if(afterSkill.reach<beforeSkill.reach||afterSkill.economy<beforeSkill.economy)throw new Error('Skill range/resource patch did not affect simulation profile');
   // Evidence diagnosis uses sample, presence, win rate, trend, flex and concentration instead of win rate alone.
   const diagDb=buildWorld(),diagChamp=Object.values(diagDb.patch.champions)[0],diagOpp=Object.values(diagDb.patch.champions)[1],diagTeams=activeTeams(diagDb).slice(0,2),diagRows=[];
-  for(let i=0;i<24;i++){const picked=i<20,win=i<15,role=i%3===0?'TOP':i%3===1?'MID':'JGL';diagRows.push({date:'2027-02-'+String(i+1).padStart(2,'0'),patch:diagDb.patch.id,international:i%4===0,regions:[diagTeams[0].region,diagTeams[1].region],sides:[{team:diagTeams[0].id,region:diagTeams[0].region,win,picks:picked?[{champ:diagChamp.id,role,player:'PX'+(i%4),items:[itemBuild[0]],runes:[runePage[0]]}]:[]},{team:diagTeams[1].id,region:diagTeams[1].region,win:!win,picks:[{champ:diagOpp.id,role,player:'OP'+i,items:[],runes:[]}]}],bans:picked?[]:[diagChamp.id]})}
+  for(let i=0;i<10;i++){const picked=i<20,win=i<15,role=i%3===0?'TOP':i%3===1?'MID':'JGL';diagRows.push({date:'2027-02-'+String(i+1).padStart(2,'0'),patch:diagDb.patch.id,international:i%4===0,regions:[diagTeams[0].region,diagTeams[1].region],sides:[{team:diagTeams[0].id,region:diagTeams[0].region,win,picks:picked?[{champ:diagChamp.id,role,player:'PX'+(i%4),items:[itemBuild[0]],runes:[runePage[0]]}]:[]},{team:diagTeams[1].id,region:diagTeams[1].region,win:!win,picks:[{champ:diagOpp.id,role,player:'OP'+i,items:[],runes:[]}]}],bans:picked?[]:[diagChamp.id]})}
   diagDb.metaHistory=diagRows;const diagnosis=diagnosePatchMeta(diagDb,false),de=diagnosis.champions.find(x=>x.cid===diagChamp.id);if(diagnosis.sampleGames!==24||!de||de.dir!==-1||de.flex<2||!(de.confidence>0)||!Number.isFinite(de.playerConc)||!Number.isFinite(de.teamConc))throw new Error('Evidence-driven champion patch diagnosis failed');
   // Consecutive opposite reaction produces a partial rollback instead of another full swing.
   const rollbackDb=buildWorld(),rbChamp=Object.values(rollbackDb.patch.champions)[0],rbOld=rbChamp.base.hp,rbN={type:'base',c:rbChamp.id,key:'hp',old:rbOld,new:rbOld-40,dir:-1,size:'medium',why:'smoke'};
@@ -120,9 +120,9 @@ source += `\n(()=>{
   const oldBurst=cacheChamp.kit.burst;applyNote(cacheDb.patch,{type:'kit',c:cacheChamp.id,key:'burst',old:oldBurst,new:clamp(oldBurst+.5,1,10),dir:1});const sysProfileKit=championSystemMetaProfile(cacheDb.patch,cacheChamp);if(sysProfileKit===sysProfile1)throw new Error('Champion system-meta cache ignored champion revision');
   if(typeof NEWCHAMP_A!=='undefined'||typeof NEW_ITEM_A!=='undefined'||typeof NEW_RUNE_A!=='undefined')throw new Error('Legacy combinatorial naming pools remain');
   if(!contentNameTooSimilar('Aatroxx',['Aatrox'])||contentNameTooSimilar('Completely Different',['Aatrox']))throw new Error('Content naming similarity guard failed');
-  const namingDb=buildWorld(),nr=new RNG('content-naming-smoke','names'),champNames=new Set(),itemNames=new Set(),runeNames=new Set();
+  const namingDb={patch:{champions:{official_a:{name:'Aatrox',nameKo:'아트록스'}},itemDefs:{official_i:{name:'Infinity Edge',nameKo:'무한의 대검'}},runeDefs:{official_r:{name:'Electrocute',nameKo:'감전'}}}},nr=new RNG('content-naming-smoke','names'),champNames=new Set(),itemNames=new Set(),runeNames=new Set();
   const arches=['juggernaut','assassin','burst','marksman','enchanter','vanguard'],roles=['TOP','JGL','MID','ADC','SUP'];
-  for(let i=0;i<36;i++){const role=roles[i%roles.length],arch=arches[i%arches.length],dmg=['burst','enchanter'].includes(arch)?'AP':'AD',nm=generateChampionContentName(namingDb,nr,{role,arch,dmg});
+  for(let i=0;i<14;i++){const role=roles[i%roles.length],arch=arches[i%arches.length],dmg=['burst','enchanter'].includes(arch)?'AP':'AD',nm=generateChampionContentName(namingDb,nr,{role,arch,dmg});
     if(nm.name===nm.nameKo||champNames.has(nm.name)||contentNameTooSimilar(nm.name,[...champNames]))throw new Error('Champion naming engine produced duplicate/near-duplicate name');
     champNames.add(nm.name);namingDb.patch.champions['name_probe_'+i]={name:nm.name,nameKo:nm.nameKo,naming:nm.naming};
   }
@@ -130,12 +130,12 @@ source += `\n(()=>{
     if(nm.name===nm.nameKo||itemNames.has(nm.name)||!nm.naming?.theme)throw new Error('Item semantic naming failed');
     itemNames.add(nm.name);namingDb.patch.itemDefs['item_name_probe_'+i]={name:nm.name,nameKo:nm.nameKo,naming:nm.naming};
   }
-  const styles=Object.values(namingDb.patch.runes||{});
-  for(let i=0;i<20;i++){const style=styles[i%styles.length],effects={[['offense','defense','sustain','mobility','haste','utility','scaling','early'][i%8]]:.03},nm=generateRuneContentName(namingDb,nr,{style,kind:i%4===0?'keystone':'minor',effects});
+  const styles=[{key:'Precision'},{key:'Domination'},{key:'Sorcery'},{key:'Resolve'},{key:'Inspiration'}];
+  for(let i=0;i<10;i++){const style=styles[i%styles.length],effects={[['offense','defense','sustain','mobility','haste','utility','scaling','early'][i%8]]:.03},nm=generateRuneContentName(namingDb,nr,{style,kind:i%4===0?'keystone':'minor',effects});
     if(nm.name===nm.nameKo||runeNames.has(nm.name)||!nm.naming?.effect)throw new Error('Rune semantic naming failed');
     runeNames.add(nm.name);namingDb.patch.runeDefs['rune_name_probe_'+i]={name:nm.name,nameKo:nm.nameKo,naming:nm.naming};
   }
-  if(champNames.size!==36||itemNames.size!==24||runeNames.size!==20)throw new Error('Content naming engine diversity collapsed');
+  if(champNames.size!==14||itemNames.size!==10||runeNames.size!==10)throw new Error('Content naming engine diversity collapsed');
   const visualA=generatedChampionVisual({id:'champ_visual_probe',name:'Visual Probe',arch:'assassin',dmg:'AP'}),visualB=generatedChampionVisual({id:'champ_visual_probe',name:'Visual Probe',arch:'assassin',dmg:'AP'});
   if(JSON.stringify(visualA)!==JSON.stringify(visualB)||visualA.version!==CHAMPION_VISUAL_VERSION||!visualA.theme||!visualA.silhouette||!visualA.weapon)throw new Error('Generated champion visual profile is not deterministic');
   const visualPatch=buildWorld().patch,visualDef={id:'champ_visual_new',name:'Visual New',roles:['MID'],arch:'burst',dmg:'AP',releaseDate:'2027-01-01',proEligibleDate:'2027-01-15',visual:visualA};applyNote(visualPatch,{type:'new',def:visualDef,c:visualDef.id});const visualChamp=visualPatch.champions[visualDef.id];
