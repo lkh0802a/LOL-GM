@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 const root = resolve(import.meta.dirname, '..');
 const artifact = resolve(root, 'src', 'artifact');
 const modules = [
-  'engine.js', 'data.js', 'champs2.js', 'patch.js', 'competition.js',
+  'champion-source.js', 'engine.js', 'data.js', 'champs2.js', 'patch.js', 'competition.js',
   'world.js', 'office.js', 'finance.js', 'features.js', 'career.js', 'app.js',
 ];
 
