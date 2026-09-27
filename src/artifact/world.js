@@ -637,11 +637,6 @@ function compactSeason(db,s){
   for(const d of s.days)for(const m of d.matches)if(m.res){const r=m.res;r.games=r.games.map(g=>({n:g.n,blue:g.blue,red:g.red,winner:g.winner,kills:g.kills,dur:g.dur,mvp:g.mvp}));delete r.tac;r.lite=true}
   s.compact=true;
 }
-function compactFinishedSeasonForSave(db,s){
-  if(!s||!s.done)return;
-  compactSeason(db,s);
-  for(const d of s.days)for(const m of d.matches)if(m.res){delete m.res.seed;delete m.res.firstChoice}
-}
 function advanceStep(db){
   const w=db.world;
   for(const s of Object.values(w.seasons))if(s.done)compactSeason(db,s);
@@ -881,8 +876,23 @@ function unpackMetaHistory(rows){
   return (rows||[]).map(r=>Array.isArray(r)?{date:r[0],patch:r[1],comp:r[2],season:r[3],year:r[4],split:r[5],stage:r[6],league:r[7],international:!!r[8],regions:r[9]||[],sides:(r[10]||[]).map(s=>({team:s[0],region:s[1],win:!!s[2],picks:(s[3]||[]).map(p=>({champ:p[0],role:p[1],player:p[2],items:p[3]||[],runes:p[4]||[]}))})),bans:r[11]||[]}:r);
 }
 const ALL_ATTRS=Object.values(ATTR_GROUPS).flat();
+function seriesResultForSave(r,lite){
+  const q={...r};delete q.seed;delete q.firstChoice;
+  if(lite&&!q.lite){q.games=(q.games||[]).map(g=>({n:g.n,blue:g.blue,red:g.red,winner:g.winner,kills:g.kills,dur:g.dur,mvp:g.mvp}));delete q.tac;q.lite=true}
+  return q;
+}
+function worldForSave(db){
+  const w=db.world;if(!w)return w;const managed=db.teams&&db.teams[managedTeamId(db)],my=managed&&managed.region,seasons={};
+  for(const [id,s] of Object.entries(w.seasons||{})){
+    if(!s.done){seasons[id]=s;continue}
+    const lite=!!(my&&s.region&&s.region!==my&&!db.competitions?.[s.comp]?.international);
+    const days=(s.days||[]).map(d=>({...d,matches:(d.matches||[]).map(m=>m.res?{...m,res:seriesResultForSave(m.res,lite)}:m)}));
+    seasons[id]={...s,days};if(lite)seasons[id].compact=true;
+  }
+  return {...w,seasons};
+}
 function packDB(db){
-  for(const s of Object.values(db.world?.seasons||{}))compactFinishedSeasonForSave(db,s);
+  const world=worldForSave(db);
   const players={};
   for(const [id,p] of Object.entries(db.players)){
     const q={...p};
@@ -894,7 +904,7 @@ function packDB(db){
   const scout=Object.fromEntries(Object.entries(db.scout||{}).filter(([id,r])=>db.players[id]&&!db.players[id].retired&&(typeof r==='number'||(r.knowledge||0)>baseScoutKnowledge(db,db.players[id])||(r.observations||0)>0)));
   const teams=Object.fromEntries(Object.entries(db.teams).map(([id,t])=>{const q={...t};delete q._pre;if(q.facilities)delete q.facility;return [id,q]}));
   const patches={...(db.patches||{})};delete patches.base;delete patches.initialBase;const metaHistory=packMetaHistory(db.metaHistory||[]);
-  return JSON.stringify({...db,teams,players,scout,patches,metaHistory,metaHistoryPacked:1,packed:1});
+  return JSON.stringify({...db,world,teams,players,scout,patches,metaHistory,metaHistoryPacked:1,packed:1});
 }
 function unpackDB(str){
   const db=JSON.parse(str); if(!db.packed)return db;
