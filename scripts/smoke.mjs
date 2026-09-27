@@ -40,6 +40,13 @@ source += `\n(()=>{
   if(ROLES.reduce((n,r)=>n+rc.filter(p=>p.role===r).length,0)!==rc.length)throw new Error('Rookie role supply failed');
   const custom=buildWorld({regions:[regionCfg('ZZ',{id:'ZZ',name:'테스트',leagueName:'ZZL',short:'ZZL',teams:10,strength:66,div2:true,system:'franchise',payScale:.7})],internationals:[],subs:1,changes:'normal',startYear:2027,manage:'manual',universalLanguage:true});
   if(Object.values(custom.regions).some(r=>r.teams<10)) throw new Error('Top-league minimum team count failed');
+  for(const n of [18,20]){
+    const large=buildWorld({regions:[regionCfg('LG'+n,{id:'LG'+n,name:'대형 테스트 '+n,leagueName:'L'+n,short:'L'+n,teams:n,strength:66,div2:false,system:'franchise',payScale:.7})],internationals:[],subs:1,changes:'normal',startYear:2027,manage:'manual',universalLanguage:true});
+    const lr=large.regions['LG'+n],lt=activeTeams(large,'LG'+n,1);
+    if(lr.teams!==n||lt.length!==n)throw new Error('Expanded top league failed at '+n+' teams');
+    const stages=leagueStages(lr,lt.length,1),rr=stages.find(x=>x.id==='regular');
+    if(!rr||roundRobin(lt.map(t=>t.id),rr.legs||1).length!==(n-1)*(rr.legs||1))throw new Error('Expanded league schedule failed at '+n+' teams');
+  }
   const z=custom.regions.ZZ;if(!z.policyBasis||z.policyBasis.source!=='engine'||!z.rosterRuleProfile||z.importLimit==null||!z.marketProfile||z.spendingRule==null)throw new Error('Policy engine did not resolve custom-region rules');
   if(z.rosterRuleProfile!=='ENGINE_OWNED_RESERVE')throw new Error('Policy engine ignored owned-reserve structure');
   if((db.patches.cadence||14)!==14)throw new Error('Patch cadence should begin on Riot-style 14-day baseline');
