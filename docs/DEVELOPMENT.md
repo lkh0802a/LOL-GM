@@ -17,6 +17,12 @@ Development progress is tracked by the 22 major LOL GM systems. Finish one major
 - `5. 계약 / 이적시장` — COMPLETE (2026-09-27)
 - `6. 1부 / 2부 / Academy` — COMPLETE (2026-09-27)
 
+## Product-wide convenience acceptance rule (2026-09-27)
+
+Every major system, including already engine-complete Items 1–6, is subject to a standing convenience acceptance rule: automate repetitive or administrative actions that do not create a meaningful strategic choice; preserve player control for decisions with real trade-offs; batch repeated actions where practical; preview projected state, cost and consequences before commit; validate the final state rather than transient intermediate clicks; preserve filters/scroll/editing context; and keep mobile decision surfaces compact. Completion status means the engine contract is accepted, not that poor interaction patterns are frozen.
+
+Current retrofit evidence: squad starters/roles/tactics/training and first/reserve assignment use staged apply; roster-plan validation is final-state/atomic; scouting supports multi-select batch observation; initial blank-roster recruitment supports batch interest/scouting; costly release and staff changes preview financial/ability consequences; facility upgrades are automated by club management rather than exposed as repetitive manual administration.
+
 ## UX / Convenience Re-audit (2026-09-27)
 
 Items 1–5 remain engine-complete, but COMPLETE no longer means their current interaction design is frozen. A cross-system convenience audit found follow-up UX debt that must be repaired when the affected surface is touched, and before final integration acceptance:
