@@ -439,7 +439,7 @@ This applies retroactively to completed major items during later UI touches and 
 - Champion base stats and abstract kit dimensions are simulation inputs, not display-only metadata: they feed draft valuation, composition/counter logic, phase scaling, combat offense/EHP, and patch balance changes.
 
 
-## D-033 — Champion data, eligibility and evolving meta
+## D-034 — Champion data, eligibility and evolving meta
 
 **Decision:** LOL GM champion/meta simulation uses pinned source data and persistent public-learning state rather than fixed tier labels.
 
@@ -450,3 +450,15 @@ This applies retroactively to completed major items during later UI touches and 
 - Team analysis creates persistent meta knowledge; repeated losses create counter-research state, so adoption and answers emerge at different rates by team.
 - International games accelerate cross-region learning; tier presentation remains derived from observed presence/performance.
 - Major champion reworks are rare stochastic patch events and retain champion identity.
+
+
+## D-035 — Champion/meta/patch stage accepted
+
+**Decision:** Major system 9, `챔피언 / 메타 / 패치`, is accepted as complete on 2026-09-27.
+
+- The canonical starting dataset is pinned to LoL 26.19 / Riot Data Dragon 16.19.1 and covers all 173 initial champions with stable LOL GM identity, Korean champion/skill names and Korean passive/Q/W/E/R descriptions.
+- Source-derived fields and simulation-derived mechanics remain distinguishable. Source descriptions are normalized for safe display; missing mechanics are not falsely labeled as authoritative Riot values.
+- Champion source fields materially feed draft/composition/combat calculations; meta tiers remain derived from observed match evidence rather than fixed champion power labels.
+- Official meta history supports region, patch, competition, season, year, split, league, domestic/international, period and actual-position analysis, with player/team/matchup/recent champion insights.
+- Global pro eligibility, tournament pool locking, practice access, regional learning/counter-research and rare stable-ID reworks remain persistent simulation rules.
+- Major system 10 owns the deeper autonomous patch engine: diagnosis, change targeting/magnitude, rollback/oscillation control and long-run balance validation are not implied complete by this decision.
