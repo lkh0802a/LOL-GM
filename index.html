@@ -860,6 +860,30 @@ function championId(name){
 function championByName(db,name){return Object.values(db.patch.champions).find(c=>c.name===name)||null}
 function championLabel(db,id){const c=db&&db.patch&&db.patch.champions?db.patch.champions[id]:null;return c?c.name:String(id||'')}
 const DETAIL_BASE_KEYS=['resource','resourceg','resourceRegen','mr','mrg','asg'];
+const CHAMPION_SOURCE_PATCH='16.19.1';
+function normalizeSourceSkill(slot,raw,fallback){
+  if(!raw)return fallback;
+  const cds=(raw.cooldown||[]).filter(Number.isFinite), cd=cds.length?cds[0]:fallback.cooldown;
+  return {...fallback,slot,name:raw.nameKo||raw.nameEn||fallback.name||slot,sourceName:raw.nameEn||'',cooldown:cd,source:{version:CHAMPION_SOURCE_PATCH,provider:'Riot Data Dragon'}};
+}
+function mergeChampionSource(c,raw){
+  if(!raw)return c;
+  const b=raw.base||{}, map=['hp','hpg','ad','adg','arm','armg','mr','mrg','as','asg','range','ms','resource','resourceg','resourceRegen'];
+  for(const k of map)if(Number.isFinite(b[k]))c.base[k]=b[k];
+  c.riotKey=raw.riotKey??c.riotKey;c.riotAlias=raw.alias||c.riotAlias;c.nameKo=raw.nameKo||c.nameKo;
+  c=enrichChampion(c);
+  if(raw.passive)c.skills.P={...c.skills.P,name:raw.passive.nameKo||raw.passive.nameEn||'P',sourceName:raw.passive.nameEn||'',source:{version:CHAMPION_SOURCE_PATCH,provider:'Riot Data Dragon'}};
+  for(const sp of raw.spells||[])if(c.skills[sp.slot])c.skills[sp.slot]=normalizeSourceSkill(sp.slot,sp,c.skills[sp.slot]);
+  c.detailSource='riot_ddragon';c.detailVersion=CHAMPION_SOURCE_PATCH;
+  return c;
+}
+function applyChampionSource(champions,snapshot){
+  if(!snapshot||snapshot.version!==CHAMPION_SOURCE_PATCH)return {matched:0,total:Object.keys(champions).length};
+  const raws=Object.values(snapshot.champions||{}),byAlias=new Map(raws.map(x=>[String(x.alias||'').toLowerCase(),x]));
+  let matched=0;
+  for(const c of Object.values(champions)){const alias=String(c.riotAlias||c.name||'').replace(/[^a-z0-9]/gi,'').toLowerCase();const raw=byAlias.get(alias);if(raw){mergeChampionSource(c,raw);matched++}}
+  return {matched,total:Object.keys(champions).length};
+}
 function enrichChampion(c){
   const b=c.base,h=Math.abs(hashStr(c.id||c.name)),manaFree=['fighter','assassin'].includes(c.cls)&&((h%5)===0);
   if(b.mr===undefined)b.mr=c.cls==='marksman'?30:c.cls==='mage'||c.cls==='enchanter'?30:32;
@@ -960,7 +984,7 @@ const ITEM_POOL = {
   enchanter:['월석 재생기','미카엘의 축복','기사의 맹세','구원','불타는 향로','정령의 형상']
 };
 
-function buildPatch(){
+function buildPatch(championSnapshot=null){
   const champions = {};
   for (const [name,roles,cls,dmg,base,kit] of CHAMP_RAW){
     const b={}, k={}, id=championId(name);
@@ -976,8 +1000,10 @@ function buildPatch(){
     const id=championId(name);champions[id]=enrichChampion({id,name,roles,cls,dmg,base:b,kit:k});
   }
   for (const [name,roles,arch,dmg] of CHAMP_ARCH){const c=enrichChampion(archChampion(name,roles,arch,dmg));champions[c.id]=c}
+  const sourceCoverage=applyChampionSource(champions,championSnapshot);
   return {
     id:'26.19',
+    championSource:{version:CHAMPION_SOURCE_PATCH,...sourceCoverage},
     rules:{ csGold:23, passiveGold:122, killGold:300, assistGold:150, dragonSpawn:5, dragonRespawn:5, heraldSpawn:14, baronSpawn:20, baronRespawn:6, baronBuff:3, elderBuff:2.5, inhibRespawn:5 },
     champions, items: ITEM_POOL
   };
