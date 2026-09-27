@@ -1,0 +1,21 @@
+export const ENGINE_MODULES = [
+  'champion-source.js',
+  'system-source.js',
+  'engine.js',
+  'data.js',
+  'champs2.js',
+  'patch.js',
+  'competition.js',
+  'world.js',
+  'office.js',
+  'finance.js',
+  'features.js',
+  'career.js',
+];
+
+export const UI_MODULES = [
+  'ui-patch.js',
+  'app.js',
+];
+
+export const ARTIFACT_MODULES = [...ENGINE_MODULES, ...UI_MODULES];
