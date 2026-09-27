@@ -117,6 +117,7 @@ function beginInitialRosterPhase(db,teamId,seed){
 }
 function finalizeInitialRosters(db){
   const root=managedTeam(db);if(!root)throw new Error('관리 구단이 없습니다');const mine=setupTeamsForManager(db),errors=initialOrganizationErrors(db,root);if(errors.length)throw new Error(errors[0]);
+  const mineIds=new Set(mine.map(t=>t.id)),pending=Object.values(negotiationStore(db)).filter(n=>n.status==='open'&&n.kind==='initial'&&mineIds.has(n.teamId));if(pending.length)throw new Error('진행 중인 창단 계약 협상을 먼저 마무리해야 합니다');
   autoBuildInitialWorld(db,mine.map(t=>t.id),db.world.seed);
   const allErrors=[];for(const t of activeTeams(db))for(const e of initialSquadErrors(db,t))allErrors.push(t.name+': '+e);
   for(const t of activeTeams(db).filter(t=>!t.parent&&reserveTeamsOf(db,t).length)){const rules=rosterRulesForTeam(db,t),n=organizationRoster(db,t).length;if(n<rules.integratedMin||n>rules.integratedMax)allErrors.push(t.name+': 통합 로스터 '+n+'명')}
