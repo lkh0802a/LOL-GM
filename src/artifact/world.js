@@ -164,14 +164,16 @@ function rookieIntakeProfile(db,R){
   const count=clamp(Math.round(first*.52+second*.18+shortage*first*.28),Math.max(3,Math.round(first*.3)),Math.max(4,Math.round(first*1.05)));
   return {first,second,young,desiredPipeline:Math.round(desiredPipeline*10)/10,shortage:Math.round(shortage*100)/100,ecosystem:Math.round(ecosystem*100)/100,count};
 }
-function rookieTier(rng,profile,eliteUsed){
-  const eliteP=ROOKIE_TIER_WEIGHT.elite*clamp(profile.ecosystem,.6,1.35),goodP=ROOKIE_TIER_WEIGHT.good*clamp(.75+profile.ecosystem*.25,.8,1.15),x=rng.next();
-  if(!eliteUsed&&x<eliteP)return 'elite';if(x<eliteP+goodP)return 'good';if(x<eliteP+goodP+ROOKIE_TIER_WEIGHT.solid)return 'solid';return 'ordinary';
+function rookieTier(rng,profile,classWave=1){
+  const eco=clamp(profile.ecosystem,.55,1.45),eliteP=clamp(ROOKIE_TIER_WEIGHT.elite*eco*classWave,.004,.055),goodP=clamp(ROOKIE_TIER_WEIGHT.good*(.72+eco*.28)*Math.sqrt(classWave),.035,.16),solidP=clamp(ROOKIE_TIER_WEIGHT.solid*(.9+eco*.1),.14,.3),x=rng.next();
+  if(x<eliteP)return 'elite';if(x<eliteP+goodP)return 'good';if(x<eliteP+goodP+solidP)return 'solid';return 'ordinary';
 }
 function generateRookieClass(db,R,rng){
-  const profile=rookieIntakeProfile(db,R),weights=rookieRoleWeights(db,R),out=[];let eliteUsed=false;
+  const profile=rookieIntakeProfile(db,R),weights=rookieRoleWeights(db,R),out=[];
+  // 클래스 전체 품질은 해마다 흔들린다. 대부분 평년, 드물게 황금세대/흉년이 나온다.
+  const classWave=clamp(Math.exp(rng.normal(0,.32)),.45,2.3);profile.classWave=Math.round(classWave*100)/100;
   for(let i=0;i<profile.count;i++){
-    const tier=rookieTier(rng,profile,eliteUsed);if(tier==='elite')eliteUsed=true;const role=weightedRole(rng,weights),age=rng.chance(.62)?17:rng.chance(.72)?18:19;
+    const tier=rookieTier(rng,profile,classWave),role=weightedRole(rng,weights),age=rng.chance(.62)?17:rng.chance(.72)?18:19;
     const tierBase={ordinary:-2,solid:0,good:2.5,elite:5}[tier],base=(R.talent||R.strength)-13+tierBase+rng.normal(0,3.2),entryPath=R.div2?'tier2_pipeline':'open_qualifier';
     const p=genPlayer(db,rng,{role,age,base,region:R.id,entryYear:db.year,entryPath,rookieClass:db.year,rookieTier:tier}),o=playerOvr(p),up={ordinary:[2,7],solid:[5,10],good:[8,14],elite:[12,19]}[tier];
     p.pot=Math.round(clamp(o+rng.range(up[0],up[1])+Math.max(0,profile.ecosystem-1)*2,o,99));p.reputation=Math.round(clamp(o*.7+rng.normal(-4,2),20,78));out.push(p);

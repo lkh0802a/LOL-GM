@@ -301,7 +301,7 @@ Constants may define simulation mechanics, but regional outcomes must result fro
 
 - rookie intake volume is calculated from first-division size, Tier-2 size, current young-player depth, development infrastructure and regional competitive strength
 - position generation responds to shortages in the existing young-player pool instead of using a fixed equal quota
-- rookie quality follows a shared ordinary → solid → good → rare elite distribution, with at most one elite result per regional class and emergency roster fillers constrained to ordinary prospect quality
+- rookie quality follows a shared ordinary → solid → good → rare elite distribution; each regional class also gets an engine-sampled quality wave, so most classes have 0–1 elite prospects but genuine golden generations can produce multiple elite prospects, while weak classes can produce none; emergency roster fillers remain constrained to ordinary prospect quality
 - generated rookies are 17–19 and receive the same full player schema: identity, nationality, attributes, potential, personality, champion pool, role familiarity and development profile
 - regions with Tier 2 mark rookie entry through the development pipeline; market logic naturally pushes most non-immediate starters toward reserve/second-tier roster filling
 - scouting is stored as a player-specific report, not a single fixed percentage
@@ -314,3 +314,16 @@ Constants may define simulation mechanics, but regional outcomes must result fro
 - the active save schema is v13 under the lol-gm-v13 namespace; older development saves remain unsupported
 
 Item 5 (contracts / transfer market) is now active.
+
+
+## D-027 — No hard elite-rookie cap
+
+**Decision:** Rookie quality uses probabilities and class conditions, never a fixed per-region elite quota.
+
+- there is no maximum of one elite rookie per region or per year
+- each regional rookie class receives a stochastic class-quality wave derived inside the shared rookie engine
+- elite and high-level prospect probabilities respond to regional ecosystem quality and that year's class wave
+- most classes naturally produce zero or one elite prospect because elite probability is low, not because of a hard cap
+- genuine golden generations may produce multiple elite prospects in one region and year
+- weak generations may produce none
+- emergency roster-filling players are still prevented from becoming accidental elite prospects because they are not part of the normal talent-generation process

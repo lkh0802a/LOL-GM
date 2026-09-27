@@ -29,7 +29,8 @@ source += `\n(()=>{
   if(PAY_SCALE.KR||PAY_SCALE.CN||PAY_SCALE.EU||PAY_SCALE.NA)throw new Error('Named regional pay scales are still hardcoded');
   const rookieR=db.regions[Object.keys(db.regions)[0]],rp=rookieIntakeProfile(db,rookieR),rc=generateRookieClass(db,rookieR,new RNG('rookie-smoke','class'));
   if(rc.length!==rp.count||rc.some(p=>p.age<17||p.age>19||!p.rookieTier||p.entryYear!==db.year))throw new Error('Engine rookie class generation failed');
-  if(rc.filter(p=>p.rookieTier==='elite').length>1)throw new Error('Elite rookie over-generation guard failed');
+  if(!(rp.ecosystem>0)||!rookieR.rookieIntake.slice(-1)[0].profile.classWave)throw new Error('Rookie class quality wave missing');
+  const waves=[];for(let i=0;i<240;i++){const tmp={...rp,classWave:undefined};waves.push(rookieTier(new RNG('elite-wave-'+i,'tier'),tmp,2.1))}if(!waves.includes('elite'))throw new Error('Elite rookie probability collapsed under strong class wave');
   if(ROLES.reduce((n,r)=>n+rc.filter(p=>p.role===r).length,0)!==rc.length)throw new Error('Rookie role supply failed');
   const custom=buildWorld({regions:[regionCfg('ZZ',{id:'ZZ',name:'테스트',leagueName:'ZZL',short:'ZZL',teams:8,strength:66,div2:true,system:'franchise',payScale:.7})],internationals:[],subs:1,changes:'normal',startYear:2027,manage:'manual',universalLanguage:true});
   const z=custom.regions.ZZ;if(!z.policyBasis||z.policyBasis.source!=='engine'||!z.rosterRuleProfile||z.importLimit==null||!z.marketProfile||z.spendingRule==null)throw new Error('Policy engine did not resolve custom-region rules');
