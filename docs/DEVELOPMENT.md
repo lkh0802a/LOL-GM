@@ -15,7 +15,7 @@ Development progress is tracked by the 22 major LOL GM systems. Finish one major
 - `3. 선수 만족도 / 역할` — COMPLETE (2026-09-27)
 - `4. 신인 / 스카우팅` — COMPLETE (2026-09-27)
 - `5. 계약 / 이적시장` — COMPLETE (2026-09-27)
-- `6. 1부 / 2부 / Academy` — ACTIVE
+- `6. 1부 / 2부 / Academy` — COMPLETE (2026-09-27)
 
 ## UX / Convenience Re-audit (2026-09-27)
 
@@ -30,7 +30,7 @@ Items 1–5 remain engine-complete, but COMPLETE no longer means their current i
 
 This is now a standing acceptance rule for all 22 systems: functional correctness, persistence and CI are necessary but not sufficient; ordinary management workflows must also be low-friction on smartphone portrait.
 
-Item 6 progress (2026-09-27): Tier-2 ownership and promotion eligibility are now explicit engine rules. Mixed systems create both certified first-division clubs' required owned reserve teams and independent Tier-2 clubs; franchise systems require owned reserves; open/relegation systems treat reserves as optional. Owned reserves retain stable parent IDs across offseasons and are never promotion-eligible, while independent Tier-2 clubs remain eligible where the regional system allows promotion. Smoke coverage verifies the mixed ecosystem and promotion boundary. Remaining Item 6 work must be completed before marking COMPLETE.
+Item 6 acceptance (2026-09-27): Tier-2 ownership, reserve requirements and promotion eligibility are explicit engine rules. Franchise systems maintain required owned reserves; mixed systems combine certified clubs' owned reserves with independent Tier-2 clubs; open/relegation systems preserve independent promotion paths. Owned reserves use stable parent IDs, are never manager-selectable as independent clubs, and are never promotion-eligible. Independent Tier-2 clubs can promote through the same promotion/relegation engine, with repeated-cycle smoke coverage verifying that owned reserves cannot leak into the first division and required reserves are reconciled after structural changes. First/reserve player movement is staged as a final-state roster plan: the UI previews projected squad counts, validation reports exact failures, invalid plans have no side effects, and valid plans apply atomically. AI reserve management uses the same validator/apply path, evaluates visible current ability/performance rather than hidden potential, and has a review cooldown. Reserve closure routes players cleanly to free agency while preserving contract terms. Five-year lifecycle checks cover roster integrity, required reserve count, promotion boundaries and reserve recreation. Standalone HTML is synchronized and latest-head CI passes.
 
 Region-first realism rule (2026-09-27): named leagues are researched and modeled independently. LCK is not a fallback template for LPL, LEC, LCS, LCP, CBLOL, or future named regions. Unknown rules fall back to a neutral global profile, not a Korean one.
 
