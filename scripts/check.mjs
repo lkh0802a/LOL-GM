@@ -34,6 +34,7 @@ const maintainabilityBudgets = {
   'app.js': 70000,
   'engine.js': 38000,
   'draft.js': 26000,
+  'content-naming.js': 16000,
   'patch.js': 40000,
   'competition.js': 30000,
   'world.js': 85000,

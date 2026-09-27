@@ -118,6 +118,24 @@ source += `\n(()=>{
   const cacheDb=buildWorld(),cacheChamp=Object.values(cacheDb.patch.champions).find(x=>(cacheDb.patch.items?.[x.cls]||[]).length)||Object.values(cacheDb.patch.champions)[0],sysProfile0=championSystemMetaProfile(cacheDb.patch,cacheChamp),sysProfile1=championSystemMetaProfile(cacheDb.patch,cacheChamp);
   if(sysProfile0!==sysProfile1)throw new Error('Champion system-meta cache missed identical revision');
   const oldBurst=cacheChamp.kit.burst;applyNote(cacheDb.patch,{type:'kit',c:cacheChamp.id,key:'burst',old:oldBurst,new:clamp(oldBurst+.5,1,10),dir:1});const sysProfileKit=championSystemMetaProfile(cacheDb.patch,cacheChamp);if(sysProfileKit===sysProfile1)throw new Error('Champion system-meta cache ignored champion revision');
+  if(typeof NEWCHAMP_A!=='undefined'||typeof NEW_ITEM_A!=='undefined'||typeof NEW_RUNE_A!=='undefined')throw new Error('Legacy combinatorial naming pools remain');
+  if(!contentNameTooSimilar('Aatroxx',['Aatrox'])||contentNameTooSimilar('Completely Different',['Aatrox']))throw new Error('Content naming similarity guard failed');
+  const namingDb=buildWorld(),nr=new RNG('content-naming-smoke','names'),champNames=new Set(),itemNames=new Set(),runeNames=new Set();
+  const arches=['juggernaut','assassin','burst','marksman','enchanter','vanguard'],roles=['TOP','JGL','MID','ADC','SUP'];
+  for(let i=0;i<36;i++){const role=roles[i%roles.length],arch=arches[i%arches.length],dmg=['burst','enchanter'].includes(arch)?'AP':'AD',nm=generateChampionContentName(namingDb,nr,{role,arch,dmg});
+    if(nm.name===nm.nameKo||champNames.has(nm.name)||contentNameTooSimilar(nm.name,[...champNames]))throw new Error('Champion naming engine produced duplicate/near-duplicate name');
+    champNames.add(nm.name);namingDb.patch.champions['name_probe_'+i]={name:nm.name,nameKo:nm.nameKo,naming:nm.naming};
+  }
+  for(let i=0;i<24;i++){const effects={[['offense','defense','sustain','mobility','haste','utility','scaling','early'][i%8]]:.04},nm=generateItemContentName(namingDb,nr,{cls:i%3===0?'tank':i%3===1?'marksman':'mage',effects});
+    if(nm.name===nm.nameKo||itemNames.has(nm.name)||!nm.naming?.theme)throw new Error('Item semantic naming failed');
+    itemNames.add(nm.name);namingDb.patch.itemDefs['item_name_probe_'+i]={name:nm.name,nameKo:nm.nameKo,naming:nm.naming};
+  }
+  const styles=Object.values(namingDb.patch.runes||{});
+  for(let i=0;i<20;i++){const style=styles[i%styles.length],effects={[['offense','defense','sustain','mobility','haste','utility','scaling','early'][i%8]]:.03},nm=generateRuneContentName(namingDb,nr,{style,kind:i%4===0?'keystone':'minor',effects});
+    if(nm.name===nm.nameKo||runeNames.has(nm.name)||!nm.naming?.effect)throw new Error('Rune semantic naming failed');
+    runeNames.add(nm.name);namingDb.patch.runeDefs['rune_name_probe_'+i]={name:nm.name,nameKo:nm.nameKo,naming:nm.naming};
+  }
+  if(champNames.size!==36||itemNames.size!==24||runeNames.size!==20)throw new Error('Content naming engine diversity collapsed');
   const visualA=generatedChampionVisual({id:'champ_visual_probe',name:'Visual Probe',arch:'assassin',dmg:'AP'}),visualB=generatedChampionVisual({id:'champ_visual_probe',name:'Visual Probe',arch:'assassin',dmg:'AP'});
   if(JSON.stringify(visualA)!==JSON.stringify(visualB)||visualA.version!==CHAMPION_VISUAL_VERSION||!visualA.theme||!visualA.silhouette||!visualA.weapon)throw new Error('Generated champion visual profile is not deterministic');
   const visualPatch=buildWorld().patch,visualDef={id:'champ_visual_new',name:'Visual New',roles:['MID'],arch:'burst',dmg:'AP',releaseDate:'2027-01-01',proEligibleDate:'2027-01-15',visual:visualA};applyNote(visualPatch,{type:'new',def:visualDef,c:visualDef.id});const visualChamp=visualPatch.champions[visualDef.id];

@@ -514,3 +514,15 @@ This applies retroactively to completed major items during later UI touches and 
 - The rendered generated portrait is derived presentation data. It is an original high-fantasy painted-card composition produced locally from the stable visual profile; saves do not embed image bytes.
 - Major reworks may increment the generated champion's portrait revision while preserving the stable champion ID and visual identity seed.
 - Draft cards, pick slots and later champion surfaces must use the shared portrait resolver rather than inventing per-screen placeholders.
+
+
+## D-041 — Generated content uses semantic naming, not blind prefix/suffix concatenation
+
+**Decision:** Long-save champion, item and rune names are generated from the content's gameplay identity before uniqueness checks.
+
+- New champion naming selects a phonetic family from role, archetype and damage identity, then produces paired internal English and Korean display names. Name candidates are rejected when they are identical or too similar to existing champion names.
+- New item naming derives its vocabulary from the strongest gameplay effect and intended class. Offensive, defensive, sustain, mobility, haste, utility, early-game and scaling items therefore draw from different semantic word banks.
+- New rune naming derives from both the rune style and its strongest effect; keystones may use a stronger naming form than minor runes.
+- Generated definitions persist a small versioned naming profile containing theme/effect and prefix identity. Recent-prefix checks prevent the same naming stem from being emitted repeatedly in sequence.
+- Existing official names remain untouched. Generated names are stable after release and are preserved in patch history/save reconstruction.
+- CI smoke tests generate batches across champions/items/runes and reject duplicate, near-duplicate or single-language outputs.

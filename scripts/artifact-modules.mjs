@@ -5,6 +5,7 @@ export const ENGINE_MODULES = [
   'draft.js',
   'data.js',
   'champs2.js',
+  'content-naming.js',
   'patch.js',
   'competition.js',
   'world.js',

@@ -37,9 +37,6 @@ const CHAMP_ARCH=[
 ];
 // 현재 LoL의 모든 챔피언(172명)이 처음부터 들어 있다. 이후 신규 챔피언은 게임 안에서 새로 만들어진다
 const CHAMP_RELEASES=[];
-const NEWCHAMP_A=['Vel','Kor','Sy','Ar','Tha','Ny','Or','Zel','Ma','Ka','Ro','Is','Val','Qua','Mer','Eth','Ju','Ria'];
-const NEWCHAMP_B=['rith','ana','os','eth','ira','ux','ora','an','ek','ys','ael','un','ix','ova','ith','ara'];
-
 function archChampion(name,roles,arch,dmg,extra,id=championId(name)){
   const [cls,kit0,range]=ARCH[arch], h=hashStr(name), b={}, k={};
   const base=CLASS_BASE[cls];

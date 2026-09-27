@@ -33,7 +33,7 @@ function applyNote(P,n){
   if(n.type==='skill'&&c&&c.skills&&c.skills[n.slot])c.skills[n.slot][n.field]=JSON.parse(JSON.stringify(n.new));
   else if(n.type==='kit'&&c)c.kit[n.key]=n.new!=null?n.new:clamp(c.kit[n.key]+n.d,1,10);
   else if(n.type==='base'&&c)c.base[n.key]=n.new!=null?n.new:Math.round(c.base[n.key]*(1+n.d)*100)/100;
-  else if(n.type==='new'){const nc=archChampion(n.def.name,n.def.roles,n.def.arch,n.def.dmg,null,n.def.id||championId(n.def.name));nc.releaseDate=n.def.releaseDate||null;nc.proEligibleDate=n.def.proEligibleDate||null;nc.visual=JSON.parse(JSON.stringify(n.def.visual||generatedChampionVisual(n.def)));P.champions[nc.id]=nc}
+  else if(n.type==='new'){const nc=archChampion(n.def.name,n.def.roles,n.def.arch,n.def.dmg,null,n.def.id||championId(n.def.name));nc.releaseDate=n.def.releaseDate||null;nc.proEligibleDate=n.def.proEligibleDate||null;nc.nameKo=n.def.nameKo||nc.nameKo;nc.naming=n.def.naming?JSON.parse(JSON.stringify(n.def.naming)):null;nc.visual=JSON.parse(JSON.stringify(n.def.visual||generatedChampionVisual(n.def)));P.champions[nc.id]=nc}
   else if(n.type==='rework'&&c&&c.visual){c.visual={...c.visual,revision:(c.visual.revision||0)+(n.scope==='major'?1:0)}}
   else if(n.type==='rule')P.rules[n.key]=n.v;
   else if(n.type==='item'&&P.itemDefs&&P.itemDefs[n.id]){const d=P.itemDefs[n.id];if(n.field==='cost'){const delta=Number(n.new)-Number(d.cost||0);d.cost=n.new;d.recipeCost=Math.max(0,Math.round((Number(d.recipeCost??d.cost)+delta)*100)/100)}else{d.effects=d.effects||{};d.effects[n.field]=n.new}}
@@ -210,22 +210,18 @@ function chooseSystemBalanceChanges(db,diag,major,rng){
       for(const [dir,list] of [[-1,nerfs],[1,buffs]]){let n=0;for(const ev of list){if(n>=limit)break;const last=lastSystemChange(db,kind,ev.id);if(last&&last.note.dir===dir&&patchHistory(db).slice(-2).includes(last.patch))continue;const sig=dir<0?ev.nerf:ev.buff,size=patchSizeForSignal(sig*4,major),note=systemBalanceNote(db,kind,ev,dir,size,rng);if(note){out.push(note);n++}}}
     }return out;
 }
-const NEW_ITEM_A=['황혼','폭풍','별빛','핏빛','공허','태양','서리','용맹','심연','천공'];
-const NEW_ITEM_B=['검','창','방패','문장','활','관','성배','갑옷','부적','지팡이'];
-const NEW_RUNE_A=['불굴','추적','비상','집중','공명','격류','인내','섬광','연쇄','초월'];
-const NEW_RUNE_B=['의 맹세','의 발걸음','의 파동','의 표식','의 의지','의 통찰'];
 function generatedItemDef(db,rng,year){
-  const cls=rng.pick(Object.keys(db.patch.items||{})),idx=(db.patches.systemLifeByYear[year]&&db.patches.systemLifeByYear[year].itemNew||0)+1,id='item_gen_'+year+'_'+idx;let name;
-  do{name=rng.pick(NEW_ITEM_A)+rng.pick(NEW_ITEM_B)}while(Object.values(db.patch.itemDefs||{}).some(x=>x.name===name));
+  const cls=rng.pick(Object.keys(db.patch.items||{})),idx=(db.patches.systemLifeByYear[year]&&db.patches.systemLifeByYear[year].itemNew||0)+1,id='item_gen_'+year+'_'+idx;
   const keys=cls==='tank'?['defense','sustain','utility','haste']:cls==='enchanter'?['utility','sustain','haste','defense']:cls==='marksman'?['offense','mobility','scaling','sustain']:['offense','haste','mobility','sustain','defense'],effects={};
   for(const k of keys.slice(0,3))effects[k]=Math.round(rng.range(.018,.055)*1000)/1000;
-  const cost=Math.round(rng.range(cls==='enchanter'?2200:2700,cls==='enchanter'?2800:3500)/50)*50;return {id,name,nameKo:name,cost,recipeCost:cost,effects,classes:[cls],tier:'final',shopActive:true,from:[],into:[],tags:[],active:true,createdYear:year};
+  const nm=generateItemContentName(db,rng,{cls,effects}),cost=Math.round(rng.range(cls==='enchanter'?2200:2700,cls==='enchanter'?2800:3500)/50)*50;
+  return {id,name:nm.name,nameKo:nm.nameKo,naming:nm.naming,cost,recipeCost:cost,effects,classes:[cls],tier:'final',shopActive:true,from:[],into:[],tags:[],active:true,createdYear:year};
 }
 function generatedRuneDef(db,rng,year){
-  const styles=Object.values(db.patch.runes||{}),style=rng.pick(styles),slot=rng.chance(.28)?0:rng.int(1,3),idx=(db.patches.systemLifeByYear[year]&&db.patches.systemLifeByYear[year].runeNew||0)+1,id='rune_gen_'+year+'_'+idx,kind=slot===0?'keystone':'minor';let name;
-  do{name=rng.pick(NEW_RUNE_A)+rng.pick(NEW_RUNE_B)}while(Object.values(db.patch.runeDefs||{}).some(x=>x.name===name));
+  const styles=Object.values(db.patch.runes||{}),style=rng.pick(styles),slot=rng.chance(.28)?0:rng.int(1,3),idx=(db.patches.systemLifeByYear[year]&&db.patches.systemLifeByYear[year].runeNew||0)+1,id='rune_gen_'+year+'_'+idx,kind=slot===0?'keystone':'minor';
   const keys=['offense','defense','sustain','utility','haste','mobility','early','scaling'].sort(()=>rng.next()-.5),effects={};for(const k of keys.slice(0,kind==='keystone'?2:1))effects[k]=Math.round(rng.range(kind==='keystone'?.025:.012,kind==='keystone'?.06:.035)*1000)/1000;
-  return {id,name,nameKo:name,key:id,kind,styleId:style.id,styleKey:style.key,styleNameKo:style.nameKo||style.name,slot,effects,active:true,createdYear:year};
+  const nm=generateRuneContentName(db,rng,{style,kind,effects});
+  return {id,name:nm.name,nameKo:nm.nameKo,naming:nm.naming,key:id,kind,styleId:style.id,styleKey:style.key,styleNameKo:style.nameKo||style.name,slot,effects,active:true,createdYear:year};
 }
 function canRemoveItem(db,id){
   const d=db.patch.itemDefs?.[id];if(!d||d.active===false||!['final','boots'].includes(d.tier))return false;
@@ -261,7 +257,7 @@ function maybeNewChampion(db,date,major,rng){
   const year=+date.slice(0,4),released=(db.patches.releasesByYear&&db.patches.releasesByYear[year])||0,target=releaseTarget(db,year,rng);if(released>=target)return null;
   const month=+date.slice(5,7),remaining=target-released,opps=Math.max(1,Math.ceil((13-month)*2.1)),chance=clamp(remaining/opps+(major?.16:0)+(month>=10?.08:0),.04,month>=11?.65:.36);if(!rng.chance(chance))return null;
   let def;if(db.patches.newIdx<CHAMP_RELEASES.length){const x=CHAMP_RELEASES[db.patches.newIdx++];def={id:championId(x[0]),name:x[0],roles:x[1],arch:x[2],dmg:x[3]}}
-  else{let name,id;do{name=rng.pick(NEWCHAMP_A)+rng.pick(NEWCHAMP_B);id=championId(name)}while(db.patch.champions[id]);const role=rng.pick(ROLES),arch=rng.pick({TOP:['juggernaut','diver','skirmisher','vanguard'],JGL:['diver','assassin','skirmisher','vanguard'],MID:['burst','control','battle','assassin','artillery'],ADC:['marksman','hyper','bully'],SUP:['enchanter','catcher','warden','control']}[role]);def={id,name,roles:[role],arch,dmg:['burst','control','battle','artillery','enchanter','specialist'].includes(arch)?'AP':'AD'};db.patches.newIdx++}
+  else{const role=rng.pick(ROLES),arch=rng.pick({TOP:['juggernaut','diver','skirmisher','vanguard'],JGL:['diver','assassin','skirmisher','vanguard'],MID:['burst','control','battle','assassin','artillery'],ADC:['marksman','hyper','bully'],SUP:['enchanter','catcher','warden','control']}[role]),dmg=['burst','control','battle','artillery','enchanter','specialist'].includes(arch)?'AP':'AD',nm=generateChampionContentName(db,rng,{role,arch,dmg}),id=championId(nm.name);def={id,name:nm.name,nameKo:nm.nameKo,naming:nm.naming,roles:[role],arch,dmg};db.patches.newIdx++}
   def.releaseDate=date;def.proEligibleDate=addDays(date,14);def.visual=generatedChampionVisual(def);db.patches.releasesByYear[year]=released+1;return {type:'new',def,c:def.id,why:'신규 챔피언 출시 · 프로 대회 14일 사용 제한'};
 }
 function newPatch(db,date,major,rng){
@@ -296,5 +292,5 @@ function seasonPatch(db,date,rng){
   clearPatchCache(db);
   const p=newPatch(db,date,true,rng);pt.nextDate=addDays(date,pt.cadence||14);
   const nc=p.notes.find(n=>n.type==='new');
-  news(db,`시즌 개막 패치 ${p.id} — 챔피언 ${p.notes.filter(n=>n.c).length}명 조정${nc?`, 신규 챔피언 ${nc.def.name} 출시`:''}`);
+  news(db,`시즌 개막 패치 ${p.id} — 챔피언 ${p.notes.filter(n=>n.c).length}명 조정${nc?`, 신규 챔피언 ${nc.def.nameKo||nc.def.name} 출시`:''}`);
 }
