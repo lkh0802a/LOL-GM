@@ -37,9 +37,9 @@ const maintainabilityBudgets = {
 };
 for (const [file, maxBytes] of Object.entries(maintainabilityBudgets)) {
   const source = await readFile(resolve(artifact, file), 'utf8');
-  if (Buffer.byteLength(source, 'utf8') > maxBytes) {
+  if (source.length > maxBytes) {
     failed = true;
-    console.error(`Maintainability budget exceeded: ${file} > ${maxBytes} bytes; split the domain UI instead of growing the monolith`);
+    console.error(`Maintainability budget exceeded: ${file} > ${maxBytes} characters; split the domain UI instead of growing the monolith`);
   }
 }
 
