@@ -153,6 +153,18 @@ source += `\n(()=>{
   const rosterErrors=rosterIntegrityErrors(db);
   if(rosterErrors.length) throw new Error('Roster integrity failed: '+rosterErrors.slice(0,5).join(' | '));
 
+  const mixedRegion=Object.values(db.regions).find(r=>r.system==='mixed');
+  if(mixedRegion){
+    if(!mixedRegion.div2)createDiv2(db,new RNG('smoke-mixed-tier2'),mixedRegion);
+    const tier2=activeTeams(db,mixedRegion.id,2),owned=tier2.filter(t=>t.parent),independent=tier2.filter(t=>!t.parent);
+    if(!owned.length||!independent.length)throw new Error('Mixed Tier-2 ecosystem must contain owned reserves and independent clubs');
+    if(owned.some(t=>promotionEligible(db,t)))throw new Error('Owned reserve incorrectly became promotion eligible');
+    if(independent.some(t=>!promotionEligible(db,t)))throw new Error('Independent Tier-2 club incorrectly blocked from promotion');
+    const parent=db.teams[owned[0].parent];
+    if(reserveRequirement(db,parent)!=='required')throw new Error('Certified mixed-system club lost mandatory reserve requirement');
+  }
+
+
   const champions=Object.entries(db.patch.champions);
   if(champions.length<100||champions.some(([id,c])=>c.id!==id||!c.name)) throw new Error('Champion ID invariant failed');
 
