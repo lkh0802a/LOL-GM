@@ -27,7 +27,7 @@ source += `\n(()=>{
 
   const active=activeTeams(db);
   if(active.length<2||active.some(t=>t.roster.length!==0)) throw new Error('First-season teams are not blank');
-  for(const R of Object.values(db.regions)){const first=activeTeams(db,R.id,1);if(first.length<10||first.length!==R.teams)throw new Error(`Top-league size invariant failed: ${R.id} ${first.length}/${R.teams}`)}
+  for(const R of Object.values(db.regions)){const first=activeTeams(db,R.id,1);if(first.length<10||first.length!==R.teams)throw new Error('Top-league size invariant failed: '+R.id+' '+first.length+'/'+R.teams)}
   const players=Object.values(db.players);
   if(players.length<10||players.some(p=>p.team||p.contract)) throw new Error('Initial player pool is not fully FA');
   for(const R of Object.values(db.regions)){
