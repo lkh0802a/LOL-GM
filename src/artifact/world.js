@@ -273,13 +273,17 @@ const REGION_PRESETS = {
   LA:{name:'라틴 아메리카',leagueName:'LLA',short:'LLA',strength:62,tier:'emerging',parent:'BR',d:{teams:10,splits:2,format:'rr_po',playoffTake:6,system:'franchise',slots:3}}
 };
 const INTL_PRESETS=[
-  // 최상위 대회 (tier top): 서로 날짜가 겹치지 않게 순서대로 진행
-  {id:'FS',name:'퍼스트 스탠드',short:'FS',tier:'top',timing:'early',entry:'champions',format:'ko',bo:5,ratio:1,prestige:1},
-  {id:'MSI',name:'미드 시즌 인비테이셔널',short:'MSI',tier:'top',timing:'mid',entry:'slots',format:'playin_de',bo:5,ratio:0.5,prestige:2},
-  {id:'WORLDS',name:'월드 챔피언십',short:'WC',tier:'top',timing:'end',entry:'slots',format:'playin_swiss_ko',bo:5,ratio:1,prestige:3},
+  // 국제대회는 1부 프로팀 전용이다. 내부 ID는 공식 명칭을 사용하고 표시 약칭은 별도 보관한다.
+  {id:'FIRST_STAND',name:'First Stand',short:'FS',phase:1,tier:1,timing:'early',teams:12,baseSlots:2,format:'first_stand',groupBo:3,knockoutBo:5,prestige:1},
+  {id:'MID_SEASON_INVITATIONAL',name:'Mid-Season Invitational',short:'MSI',phase:2,tier:1,timing:'mid',teams:16,baseSlots:2,extraSlots:4,format:'msi_swiss_de',knockoutBo:5,prestige:2},
+  {id:'EASTERN_CUP',name:'Eastern Cup',short:'EC',phase:2,tier:2,timing:'mid',zone:'east',teams:8,format:'regional_cup',groupBo:3,knockoutBo:5,prestige:1},
+  {id:'WESTERN_CUP',name:'Western Cup',short:'WEC',phase:2,tier:2,timing:'mid',zone:'west',teams:8,format:'regional_cup',groupBo:3,knockoutBo:5,prestige:1},
+  {id:'WORLD_CHAMPIONSHIP',name:'World Championship',short:'Worlds',phase:3,tier:1,timing:'end',teams:24,baseSlots:4,maxSlots:4,format:'worlds_league_phase',pots:3,potSize:8,leagueMatches:6,leagueBo:3,knockoutTake:16,knockoutBo:5,prestige:3},
+  {id:'MASTERS',name:'Masters',short:'Masters',phase:3,tier:2,timing:'end',teams:16,baseSlots:2,maxSlots:3,extraSlots:4,format:'masters_groups',groupBo:3,groupLegs:2,knockoutBo:5,prestige:2},
+  {id:'OPEN',name:'Open',short:'Open',phase:3,tier:3,timing:'end',teams:12,baseSlots:2,maxSlots:2,format:'open_groups',groupBo:3,groupLegs:1,knockoutBo:5,prestige:1},
 ];
-const INTL_ZONES={asia:['KR','CN','AP','VN','JP','TW','OC','SEA'],emea:['EU','TR','ME','CIS'],americas:['NA','BR','LA']};
-const ZONE_KO={asia:'아시아·태평양',emea:'EMEA',americas:'아메리카스'};
+const INTL_ZONES={east:['KR','CN','AP','VN','JP','TW','OC','SEA'],west:['EU','NA','BR','TR','ME','CIS','LA']};
+const ZONE_KO={east:'Eastern',west:'Western'};
 
 function regionCfg(id,over={}){
   const P=REGION_PRESETS[id]||{name:'새 지역',leagueName:'새 리그',short:'NEW',strength:63,d:{}},d=P.d||{};
@@ -290,7 +294,7 @@ function regionCfg(id,over={}){
 }
 function defaultWorldConfig(){return {
   regions:['KR','CN','EU','NA','AP','BR'].map(id=>regionCfg(id)),
-  internationals:['FS','MSI','WORLDS'].map(id=>({...INTL_PRESETS.find(p=>p.id===id)})),
+  internationals:INTL_PRESETS.map(x=>({...x})),
   subs:1, changes:'normal', startYear:2027, manage:'manual', universalLanguage:true
 }}
 const CHANGE_F={none:0,low:0.5,normal:1,high:1.8};
