@@ -17,6 +17,8 @@ Development progress is tracked by the 22 major LOL GM systems. Finish one major
 - `5. 계약 / 이적시장` — COMPLETE (2026-09-27)
 - `6. 1부 / 2부 / Academy` — ACTIVE
 
+Item 6 progress (2026-09-27): Tier-2 ownership and promotion eligibility are now explicit engine rules. Mixed systems create both certified first-division clubs' required owned reserve teams and independent Tier-2 clubs; franchise systems require owned reserves; open/relegation systems treat reserves as optional. Owned reserves retain stable parent IDs across offseasons and are never promotion-eligible, while independent Tier-2 clubs remain eligible where the regional system allows promotion. Smoke coverage verifies the mixed ecosystem and promotion boundary. Remaining Item 6 work must be completed before marking COMPLETE.
+
 Region-first realism rule (2026-09-27): named leagues are researched and modeled independently. LCK is not a fallback template for LPL, LEC, LCS, LCP, CBLOL, or future named regions. Unknown rules fall back to a neutral global profile, not a Korean one.
 
 Policy-engine baseline (2026-09-27): unspecified regional rules no longer fall back to a static global profile. The engine infers missing roster/market/import/spending-policy dimensions from that region's own economy, talent depth, team structure, and Tier-2 organization, while explicit regional rules remain initial conditions.
