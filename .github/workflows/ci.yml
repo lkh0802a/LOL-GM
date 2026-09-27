@@ -21,6 +21,9 @@ jobs:
       - name: Syntax and structure checks
         run: npm run check
 
+      - name: Performance probe
+        run: npm run perf
+
       - name: Production build
         run: npm run build
 
