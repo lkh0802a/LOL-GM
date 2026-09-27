@@ -32,6 +32,8 @@ source += `\n(()=>{
   const poolEntry=Object.keys(sample.pool)[0],practiceBefore=(sample.pool[poolEntry].trainingExperience||0);practiceChampion(db,sample,poolEntry,'training',3);
   if((sample.pool[poolEntry].trainingExperience||0)<=practiceBefore) throw new Error('Champion training experience failed');
   if(!(playerMarketValue(db,sample)>0)||!['신인','성장','전성기','쇠퇴'].includes(careerStage(sample))) throw new Error('Player value/lifecycle failed');
+  const core=playerCoreMetrics(sample),coreKeys=['laning','skirmish','teamfight','positioning','damage','survival','vision','objective','roaming','macro','sidelane','decision','stability','aggression','concentration','adaptability','volatility','championLearning','metaAdaptation'];
+  if(coreKeys.some(k=>!Number.isFinite(core[k])||core[k]<0||core[k]>100)) throw new Error('Player core metric derivation failed');
 
   const selectable=managerSelectableTeams(db), independent=active.filter(t=>!t.parent);
   if(!selectable.length||selectable.some(t=>t.parent)) throw new Error('Manager-selectable team filter failed');

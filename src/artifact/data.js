@@ -1,4 +1,4 @@
-// ===== 롤FM: 데이터 모델 / 기본 월드 =====
+// ===== LOL GM: 데이터 모델 / 기본 월드 =====
 const ROLES = ['TOP','JGL','MID','ADC','SUP'];
 const ROLE_KO = {TOP:'탑',JGL:'정글',MID:'미드',ADC:'원딜',SUP:'서폿'};
 const LANES = ['top','mid','bot'];

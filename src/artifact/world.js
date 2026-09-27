@@ -16,6 +16,30 @@ function ensurePlayerDevelopment(p){
   p.development={growthRate:.88+(h%29)/100,peakAge:Math.round((base+((h>>4)%31-15)/10)*10)/10,declineRate:.85+((h>>9)%36)/100};return p.development;
 }
 function careerStage(p){if(p.retired)return '은퇴';const d=ensurePlayerDevelopment(p),seasons=p.proSeasons||0;if(seasons<=1||p.age<=19)return '신인';if(p.age<d.peakAge-1)return '성장';if(p.age<=d.peakAge+1)return '전성기';return '쇠퇴'}
+function playerCoreMetrics(p){
+  const A=p.attrs,T=p.tend||{},m=(...xs)=>Math.round(avg(xs.map(x=>typeof x==='string'?(A[x]??50):x)));
+  return {
+    laning:m('trading',p.role==='SUP'?'harass':'csing','wave_control','pressure','lane_adaptation'),
+    skirmish:m('reaction','precision','all_in','positioning','extended_fight'),
+    teamfight:m('teamfight_awareness','positioning','target_selection','engage','disengage','peeling'),
+    positioning:Math.round(A.positioning||50),
+    damage:m('precision','kiting','target_selection','burst_execution','extended_fight'),
+    survival:m('dodging','spacing','gank_avoidance','disengage','composure'),
+    vision:m('vision_understanding','map_awareness'),
+    objective:m('objective_setup','decision_making',p.role==='JGL'?(A.smite_execution||50):(A.tempo||50)),
+    roaming:m('rotation','map_awareness','tempo'),
+    macro:m('map_awareness','rotation','tempo','resource_allocation','crossmap_decision'),
+    sidelane:m('sidelane','wave_control','map_awareness'),
+    decision:Math.round(A.decision_making||50),
+    stability:m('consistency','composure','pressure_handling'),
+    aggression:Math.round(T.aggression??50),
+    concentration:Math.round(A.concentration||50),
+    adaptability:Math.round(A.adaptability||50),
+    volatility:Math.round(clamp(100-(A.consistency||50),1,99)),
+    championLearning:Math.round(A.champion_learning||50),
+    metaAdaptation:Math.round(A.meta_adaptation||50)
+  };
+}
 function playerSquadLabel(db,p){if(!p.team||!db.teams[p.team])return 'FA';return db.teams[p.team].parent?'2군':'1군'}
 function recordPlayerEvent(p,type,year,data={}){p.careerEvents=p.careerEvents||[];p.careerEvents.push({type,year,...data});if(p.careerEvents.length>120)p.careerEvents=p.careerEvents.slice(-120)}
 function trainSecondaryRole(p,role,amount=1){if(!ROLES.includes(role)||role===p.role)return roleFamiliarity(p,role);p.roleFamiliarity=p.roleFamiliarity||{[p.role]:100};const gain=Math.max(.2,amount)*(.55+(p.attrs.adaptability||50)/100*.55);p.roleFamiliarity[role]=Math.round(clamp((p.roleFamiliarity[role]||25)+gain,0,90));p.secondaryRoles=p.secondaryRoles||[];if(p.roleFamiliarity[role]>=55&&!p.secondaryRoles.includes(role))p.secondaryRoles.push(role);return p.roleFamiliarity[role]}
