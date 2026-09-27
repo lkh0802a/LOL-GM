@@ -106,7 +106,7 @@ function scrimReadiness(db,t){
 }
 function aiRunScrims(db,rng){
   const teams=activeTeams(db,null,1).filter(t=>t.id!==managedTeamId(db)&&trainingRecommendation(db,t).scrim&&scrimReadiness(db,t).ok);
-  const used=new Set();for(const t of teams){if(used.has(t.id)||!rng.chance(.22))continue;const candidates=teams.filter(o=>o.id!==t.id&&!used.has(o.id)&&o.region===t.region&&scrimReadiness(db,o).ok);if(!candidates.length)continue;const opp=rng.pick(candidates),bo=rng.chance(.28)?3:1,s=simulateSeries(db,t.id,opp.id,bo,'ai-scrim/'+db.worldDate+'/'+t.id+'/'+opp.id,{fearless:true,firstChoice:'coin',replay:true});recordScrimPractice(db,s.rec,s.lines);used.add(t.id);used.add(opp.id)}
+  const used=new Set();for(const t of teams){if(used.has(t.id)||!rng.chance(.22))continue;const candidates=teams.filter(o=>o.id!==t.id&&!used.has(o.id)&&o.region===t.region&&scrimReadiness(db,o).ok);if(!candidates.length)continue;const weighted=candidates.map(o=>[o,Math.max(.1,scrimValue(db,t.id,o.id))]),sum=weighted.reduce((a,x)=>a+x[1],0);let roll=rng.next()*sum,opp=weighted[0][0];for(const [o,v] of weighted){roll-=v;if(roll<=0){opp=o;break}},bo=rng.chance(.28)?3:1,s=simulateSeries(db,t.id,opp.id,bo,'ai-scrim/'+db.worldDate+'/'+t.id+'/'+opp.id,{fearless:true,firstChoice:'coin',replay:true});recordScrimPractice(db,s.rec,s.lines);used.add(t.id);used.add(opp.id)}
 }
 function scrimValue(db,tid,oppId){
   const t=db.teams[tid],opp=db.teams[oppId];if(!t||!opp)return .5;const gap=teamStrength(db,oppId)-teamStrength(db,tid),quality=clamp(1+gap/35,.65,1.3),recent=(t.scrimLog||[]).filter(x=>x.opponent===oppId).slice(-3).length,novelty=[1,.82,.68,.58][Math.min(3,recent)];return quality*novelty;
