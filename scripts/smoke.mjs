@@ -163,6 +163,24 @@ source += `\n(()=>{
   if(marketDb.world.phase!=='market')throw new Error('Offseason did not open transfer market');
   const preMarketSupply=talentSupplyErrors(marketDb);if(preMarketSupply.length)throw new Error('Pre-market labor supply failed: '+preMarketSupply.slice(0,5).join(' | '));
   if(!marketDb.world.report.rookieGlobal||!marketDb.world.report.rookies.every(x=>x.label&&x.tiers))throw new Error('Offseason rookie cohort report missing');
+
+  // 계약/이적시장: 관심 → 관찰 → 내부평가 → 공식 협상, 다회 역제안, A/B/C 후보 상태를 검증한다.
+  const marketTeam=managedTeam(marketDb),faTarget=Object.values(marketDb.players).find(p=>!p.retired&&!p.team);
+  if(!marketTeam||!faTarget)throw new Error('No FA target for contract-market smoke');
+  const interest=setRecruitmentPriority(marketDb,faTarget.id,'A');if(!interest.ok||recruitmentTarget(marketDb,faTarget.id).priority!=='A')throw new Error('Recruitment shortlist priority failed');
+  if(startNegotiation(marketDb,faTarget.id,'fa').ok)throw new Error('Official negotiation started before internal evaluation');
+  observePlayer(marketDb,faTarget,80,{comp:'market-smoke',games:4});syncRecruitmentObservation(marketDb,faTarget.id);
+  const evaluation=recruitmentEvaluation(marketDb,faTarget.id);if(!evaluation.ok||evaluation.target.stage!=='evaluated'||!evaluation.target.evaluation)throw new Error('Recruitment internal evaluation failed');
+  const started=startNegotiation(marketDb,faTarget.id,'fa');if(!started.ok||started.neg.status!=='open'||started.neg.stage!=='player')throw new Error('FA negotiation did not start');
+  const low={...started.neg.demand,salary:Math.max(.1,started.neg.demand.salary*.78),signingBonus:0,bonuses:{performance:0,title:0,international:0},option:null,buyout:null};
+  const counter=negotiationCounter(marketDb,started.neg,normalizeContractTerms(marketDb,faTarget,marketTeam,low.salary,low.years,low));
+  if(!(counter.salary>low.salary)||!SQUAD_ROLES.includes(counter.promisedRole))throw new Error('Negotiation counter-offer failed');
+  cancelNegotiation(marketDb,started.neg.id);if(recruitmentTarget(marketDb,faTarget.id).stage!=='evaluated')throw new Error('Cancelled negotiation did not restore evaluated target');
+  const clauseProbe=normalizeContractTerms(marketDb,faTarget,marketTeam,asking(marketDb,faTarget,marketTeam.region),2,{signingBonus:.5,bonuses:{performance:.2,title:.3,international:.1},buyout:5,option:{type:'player'},promisedRole:'competition'});
+  if(clauseProbe.signingBonus!==.5||clauseProbe.bonuses.title!==.3||clauseProbe.buyout!==5||clauseProbe.option?.type!=='player'||clauseProbe.promisedRole!=='competition')throw new Error('Contract clause normalization failed');
+  const marketRoundTrip=unpackDB(packDB(marketDb));if(!marketRoundTrip.world.recruitment?.targets?.[faTarget.id]||!marketRoundTrip.world.negotiations?.[started.neg.id])throw new Error('Recruitment/negotiation save round-trip failed');
+  const transferTarget=Object.values(marketDb.players).find(p=>p.team&&p.team!==marketTeam.id&&p.contract&&sellerTransferAsk(marketDb,p,marketDb.teams[p.team])<=marketTeam.finance.cash*.7);
+  if(transferTarget){setRecruitmentPriority(marketDb,transferTarget.id,'B');observePlayer(marketDb,transferTarget,80,{comp:'transfer-smoke',games:4});syncRecruitmentObservation(marketDb,transferTarget.id);if(!recruitmentEvaluation(marketDb,transferTarget.id).ok)throw new Error('Transfer target evaluation failed');const ask=sellerTransferAsk(marketDb,transferTarget,marketDb.teams[transferTarget.team]);mTransferBid(marketDb,transferTarget.id,ask*1.2);const tn=negotiationStore(marketDb)[negotiationId(marketDb,transferTarget.id,'transfer')];if(!tn||tn.status!=='open'||tn.stage!=='player'||!(tn.fee>0))throw new Error('Club transfer-fee negotiation failed');cancelNegotiation(marketDb,tn.id)}
   closeMarket(marketDb);
   const targetSize=5+(marketDb.worldConfig.subs||0);
   for(const t of activeTeams(marketDb)){
@@ -179,4 +197,4 @@ const context = {
   Boolean, RegExp, Error, Intl, performance, crypto,
 };
 
-vm.runInNewContext(source, context, { timeout: 8000 });
+vm.runInNewContext(source, context, { timeout: 12000 });
