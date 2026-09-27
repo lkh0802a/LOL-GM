@@ -546,6 +546,6 @@ This applies retroactively to completed major items during later UI touches and 
 
 - Domestic double round-robin: match side A is the home team and receives game-one First Selection. The return fixture reverses the pairing, so the other club receives the same home advantage once.
 - Domestic seeded playoffs may explicitly set `firstChoice: seed`, giving the higher seeded side game-one First Selection.
-- Neutral single-elimination knockout stages, including quarterfinal onward when no First Selection seed priority exists, use a coin toss for game one.
+- International knockout/bracket stages use seeds only for qualification, bracket placement and byes. Once a knockout matchup exists, both single- and double-elimination game-one First Selection use a coin toss; seed order does not carry into that match.
 - From game two onward, the previous game's losing team owns First Selection regardless of how game one was assigned.
 - First Selection means choosing either side (blue/red) or pick order (first/last). The opponent then chooses the remaining dimension. A managed team gets a UI choice whether it is the First Selection holder or the team making the remaining selection.

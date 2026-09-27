@@ -190,6 +190,10 @@ source += `\n(()=>{
     const homeOpt=scheduledSeriesOptions(pdb,{comp:pcid,id:'x',year:2027,split:1},{stage:'regular'},{id:'regular',type:'round_robin'});if(homeOpt.firstChoice!=='home')throw new Error('Domestic regular season did not assign home First Selection');
     const neutralOpt=scheduledSeriesOptions(pdb,{comp:pcid,id:'x',year:2027,split:1},{stage:'ko'},{id:'ko',type:'single_elim'});if(neutralOpt.firstChoice!=='coin')throw new Error('Neutral single elimination did not use coin First Selection');
     const seededOpt=scheduledSeriesOptions(pdb,{comp:pcid,id:'x',year:2027,split:1},{stage:'po'},{id:'po',type:'single_elim',firstChoice:'seed'});if(seededOpt.firstChoice!=='seed')throw new Error('Explicit seeded First Selection override failed');
+    pdb.competitions[pcid].international=true;
+    const intlSingle=scheduledSeriesOptions(pdb,{comp:pcid,id:'x',year:2027},{stage:'ko'},{id:'ko',type:'single_elim',firstChoice:'seed'}),intlDouble=scheduledSeriesOptions(pdb,{comp:pcid,id:'x',year:2027},{stage:'bracket'},{id:'bracket',type:'double_elim',firstChoice:'seed'});
+    if(intlSingle.firstChoice!=='coin'||intlDouble.firstChoice!=='coin')throw new Error('International knockout improperly carried seed into First Selection');
+    pdb.competitions[pcid].international=false;
     const ps={id:psid,comp:pcid,year:2027,seed:'pending-smoke',days:[
       {date:pdate,stage:'regular',label:'정규 1라운드',matches:[{id:'pending_match',a:pa.id,b:pb.id,bo:3,res:null}]},
       {date:'2027-07-04',stage:'regular',label:'정규 2라운드',matches:[{id:'pending_match_2',a:pb.id,b:pa.id,bo:3,res:null}]}
