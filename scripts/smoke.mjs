@@ -37,7 +37,8 @@ source += `\n(()=>{
   const supplyCheck=talentSupplyErrors(db);if(supplyCheck.length)throw new Error('Talent supply invariant failed: '+supplyCheck.slice(0,5).join(' | '));
   const waves=[],labels=new Set();for(let i=0;i<320;i++){const tmp={...rp},tr=new RNG('elite-wave-'+i,'tier');waves.push(rookieTier(tr,tmp,2.1));labels.add(rookieClassLabel(clamp(Math.exp(tr.normal(0,.34)),.48,1.85)))}if(!waves.includes('elite'))throw new Error('Elite rookie probability collapsed under strong class wave');if(!labels.has('흉작')||!labels.has('풍년'))throw new Error('Rookie year variance collapsed');
   if(ROLES.reduce((n,r)=>n+rc.filter(p=>p.role===r).length,0)!==rc.length)throw new Error('Rookie role supply failed');
-  const custom=buildWorld({regions:[regionCfg('ZZ',{id:'ZZ',name:'테스트',leagueName:'ZZL',short:'ZZL',teams:8,strength:66,div2:true,system:'franchise',payScale:.7})],internationals:[],subs:1,changes:'normal',startYear:2027,manage:'manual',universalLanguage:true});
+  const custom=buildWorld({regions:[regionCfg('ZZ',{id:'ZZ',name:'테스트',leagueName:'ZZL',short:'ZZL',teams:10,strength:66,div2:true,system:'franchise',payScale:.7})],internationals:[],subs:1,changes:'normal',startYear:2027,manage:'manual',universalLanguage:true});
+  if(Object.values(custom.regions).some(r=>r.teams<10)) throw new Error('Top-league minimum team count failed');
   const z=custom.regions.ZZ;if(!z.policyBasis||z.policyBasis.source!=='engine'||!z.rosterRuleProfile||z.importLimit==null||!z.marketProfile||z.spendingRule==null)throw new Error('Policy engine did not resolve custom-region rules');
   if(z.rosterRuleProfile!=='ENGINE_OWNED_RESERVE')throw new Error('Policy engine ignored owned-reserve structure');
   if((db.patches.cadence||14)!==14)throw new Error('Patch cadence should begin on Riot-style 14-day baseline');
