@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { ARTIFACT_MODULES } from './artifact-modules.mjs';
@@ -70,6 +70,29 @@ if (!shell.includes('/*CODE*/')) {
 if (!shell.includes('LOL <span>GM</span>')) {
   failed = true;
   console.error('LOL GM branding is missing from shell');
+}
+
+const forbiddenBranding = [
+  ['legacy Latin product name', /ROLLFM/i],
+  ['legacy Korean product name', /롤FM/i],
+  ['legacy storage/product token', /\blolfm\b/i],
+];
+const docFiles = (await readdir(resolve(root, 'docs'))).filter(file => file.endsWith('.md')).map(file => resolve(root, 'docs', file));
+const brandTargets = [
+  ...modules.map(file => resolve(artifact, file)),
+  resolve(artifact, 'shell.html'),
+  resolve(root, 'README.md'),
+  resolve(root, 'MIGRATION_REPORT.md'),
+  ...docFiles,
+];
+for (const path of brandTargets) {
+  const source = await readFile(path, 'utf8');
+  for (const [label, pattern] of forbiddenBranding) {
+    if (pattern.test(source)) {
+      failed = true;
+      console.error(`Forbidden ${label} remains in ${path.slice(root.length + 1)}`);
+    }
+  }
 }
 
 if (failed) process.exit(1);
