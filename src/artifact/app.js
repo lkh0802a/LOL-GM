@@ -599,22 +599,18 @@ const SEL_KO={splits:{1:'단일 시즌',2:'2스플릿',3:'3스플릿'},legs:{1:'
 const ISEL_KO={timing:{early:'윈터 이후',mid:'스프링 이후',end:'서머 이후'},entry:{champions:'직전 스플릿 우승팀',slots:'지역별 진출권',next:'상위 대회 진출권 다음 순위 팀',div2:'하부 리그 상위 팀'},format:INTL_FORMATS,bo:{3:'Bo3',5:'Bo5'}};
 function sel(path,val,opts){return `<select data-cfg="${path}">${Object.entries(opts).map(([k,l])=>`<option value="${k}"${String(val)===k?' selected':''}>${l}</option>`).join('')}</select>`}
 function regionCard(r,i){
-  return `<div class="cfgcard compact"><div class="cfghead"><b>${esc(r.leagueName)} <small class="hint">${esc(r.name)}</small></b><button class="ghost sm2" data-delr="${i}" aria-label="${esc(r.leagueName)} 삭제">삭제</button></div>
+  return `<div class="cfgcard compact"><div class="cfghead"><b>${esc(r.leagueName)} <small class="hint">${esc(r.name)}</small></b></div>
     <p class="hint">${r.teams}팀 · ${fmtRegion(r)} · 월즈 ${r.slots}장</p></div>`;
 }
 function intlCard(it,i){
-  return `<div class="cfgcard compact"><div class="cfghead"><b>${esc(it.name)}</b><button class="ghost sm2" data-deli="${i}" aria-label="${esc(it.name)} 삭제">삭제</button></div>
+  return `<div class="cfgcard compact"><div class="cfghead"><b>${esc(it.name)}</b></div>
     <p class="hint">${it.tier==='low'?'중하위권 대회 · ':''}${it.zone?ZONE_KO[it.zone]+' · ':''}${ISEL_KO.timing[it.timing]} · ${ISEL_KO.entry[it.entry]||''} · ${INTL_FORMATS[it.format]||it.format}</p></div>`;
 }
 function seasonSetup(){
   const cfg=DB.worldConfig, dirty=DB.configDirty;
-  const unused=Object.keys(REGION_PRESETS).filter(k=>!cfg.regions.some(r=>r.id===k));
-  const iunused=INTL_PRESETS.filter(p=>!cfg.internationals.some(i=>i.id===p.id));
-  return `<section class="teamhead"><h2>세계 만들기</h2><p>LOL GM 기본 리그 구조(LCK 12·LPL 16·LEC 12·LCS 10·LCP 12·CBLOL 10)와 퍼스트 스탠드·MSI·월즈를 기준으로 시작합니다. 팀 수는 각 리그 규정 데이터가 결정하며 새 게임에서 임의로 바꾸지 않습니다. 진행 방식, 샐러리 규정, 외국인·피어리스 규정, 진출권은 게임 중 사무국 시스템이 관리합니다.</p></section>
-  <section><h3>리그 (${cfg.regions.length})</h3><div class="cfgs">${cfg.regions.map(regionCard).join('')}</div>
-    <div class="controls"><label>리그 추가<select id="addreg"><option value="">고르기</option>${unused.map(k=>`<option value="${k}">${esc(REGION_PRESETS[k].leagueName)} · ${esc(REGION_PRESETS[k].name)}${REGION_PRESETS[k].tier==='major'?' (메이저)':' (신흥)'}</option>`).join('')}<option value="custom">직접 만들기</option></select></label></div></section>
-  <section><h3>국제대회 (${cfg.internationals.length})</h3><div class="cfgs">${cfg.internationals.map(intlCard).join('')}</div>
-    <div class="controls"><label>국제대회 추가<select id="addintl"><option value="">고르기</option>${iunused.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}<option value="custom">직접 만들기</option></select></label></div></section>
+  return `<section class="teamhead"><h2>세계 만들기</h2><p>LOL GM은 고정된 글로벌 프로 생태계에서 시작합니다. 리그와 국제대회는 새 게임에서 임의로 추가·삭제하지 않으며, 이후 구조 변화는 게임 내 사무국과 세계 변화 시스템이 처리합니다.</p></section>
+  <section><h3>리그 구조</h3><div class="cfgs">${cfg.regions.map(regionCard).join('')}</div></section>
+  <section><h3>국제대회</h3><div class="cfgs">${cfg.internationals.map(intlCard).join('')}</div><p class="hint">퍼스트 스탠드 · MSI · 월드 챔피언십과 권역별 마스터즈/챌린저급 국제대회가 세계 일정에 포함됩니다.</p></section>
   <section><h3>세계 변화와 운영</h3><div class="controls">
     <label>세계 변화 빈도${sel('g.changes',cfg.changes,{none:'없음',low:'낮음',normal:'보통',high:'높음'})}</label>
     <label>내 팀 운영${sel('g.manage',cfg.manage||'manual',{manual:'직접 (계약·영입)',ai:'AI 위임'})}</label>
