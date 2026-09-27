@@ -17,6 +17,7 @@ Development progress is tracked by the 22 major LOL GM systems. Finish one major
 - `5. 계약 / 이적시장` — COMPLETE (2026-09-27)
 - `6. 1부 / 2부 / Academy` — COMPLETE (2026-09-27)
 - `7. 팀 / 시설 / 스태프` — COMPLETE (2026-09-27)
+- `8. 훈련 / 스크림` — COMPLETE (2026-09-27)
 
 ## Product-wide convenience acceptance rule (2026-09-27)
 
@@ -25,6 +26,8 @@ Every major system, including already engine-complete Items 1–6, is subject to
 Current retrofit evidence: squad starters/roles/tactics/training and first/reserve assignment use staged apply; roster-plan validation is final-state/atomic; scouting supports multi-select batch observation; initial blank-roster recruitment supports batch interest/scouting; costly release and staff changes preview financial/ability consequences; facility upgrades are automated by club management rather than exposed as repetitive manual administration.
 
 Item 7 acceptance (2026-09-27): clubs have functional training, analysis, recovery and youth infrastructure with direct development/analysis/recovery effects and full upkeep accounting. Infrastructure capex is board-controlled for both player and AI clubs, uses the shared upgrade/cash validation path, respects club philosophy and financial reserves, and removes low-value manual facility clicking. Coaching now includes head coach plus strategic, analyst, development and performance specialists; these roles materially affect draft/analysis/development/recovery, carry salary/severance costs, persist in saves, age and recycle through the staff market. AI first-division clubs evaluate specialist upgrades using the same staff market while respecting philosophy, improvement threshold and cash reserve. Player-controlled staff changes remain strategic choices and preview ability/cost consequences. Save round-trip and insufficient-funds invariants are smoke-tested; standalone and latest-head CI pass.
+
+Item 8 acceptance (2026-09-27): training combines 100-point focus allocation with light/normal/high intensity, creating a real growth-versus-fatigue/condition trade-off. Schedule-aware recommendations use the next official match and current squad recovery state; player control is preserved while AI uses the same recommendation logic. Scrims remain unofficial but persist champion scrim experience/confidence, player fatigue/condition cost and team analysis intel. Exhausted squads and excessive same-day volume are blocked. Stronger partners can provide more practice value, while repeated partners have diminishing returns; the UI previews this value and AI partner selection uses the same function without hidden information. Smoke coverage locks training automation, scrim development effects, schedule recommendation validity and repeated-partner diminishing value.
 
 ## UX / Convenience Re-audit (2026-09-27)
 
