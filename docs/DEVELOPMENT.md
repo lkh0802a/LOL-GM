@@ -264,3 +264,8 @@ The managed-team official match path now pauses world progression and runs every
 ### Managed-club authority rule — 2026-09-28
 
 The player is the head coach and retains final authority over consequential sporting decisions for the managed club. Player recruitment, contracted transfers, releases, renewals, team-option exercise, first/reserve movement, starting lineup, roster roles, tactics, training direction, scrim choices, senior-assistant appointment and specialist-staff appointment are never auto-committed by club AI. Staff may recommend, rank, prefill, batch or warn. Player-option decisions belong to the player/agent and regulatory/deadline consequences such as an unrenewed expired contract becoming free agency may resolve automatically. AI clubs remain fully automated. Board-owned infrastructure capex remains outside the head coach's sporting remit unless that ownership model is changed explicitly later.
+
+
+### Cross-region rule completion gate — 2026-09-28
+
+No regulation feature is accepted as complete when implemented for one named league only. Every new office-owned rule must be represented as a shared engine capability with region-owned policy/config state. Named leagues may start with different verified initial values; unknown values remain local to that region's policy engine rather than inheriting another league's settings. Acceptance requires cross-region regression coverage and human/AI rule-parity checks. International competition rules remain owned by the international office.

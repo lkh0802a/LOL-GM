@@ -561,3 +561,17 @@ This applies retroactively to completed major items during later UI touches and 
 - A managed-team staff retirement leaves a vacancy; the engine does not silently generate a replacement. AI clubs may still replace staff automatically.
 - For the managed club, the legacy team.coach simulation slot is presented as the senior assistant. The human player occupies the head-coach role.
 - Board-owned infrastructure remains outside this sporting-control boundary; its automation is not treated as head-coach convenience automation.
+
+
+## D-046 — League rules are global capabilities with regional office ownership
+
+**Decision:** A league-rule feature is not complete if it only works for LCK or any other single named region.
+
+- Every active regional league owns its own league-office policy state for every implemented rule category that applies to domestic competition.
+- Verified real-world rules may seed a named region's initial state, but they are inputs to the shared rules engine, not special-case engine branches.
+- Missing or uncertain regional rules must remain region-local: infer from that region's own structure/evidence or preserve the status quo. Never copy LCK, LPL, LEC, LCS, LCP, CBLOL, or another region merely as a fallback.
+- Rule categories include roster/registration, contracts where league-governed, coaching-staff registration, foreign-player limits, spending controls, Tier-2 ownership and movement, promotion/relegation, domestic competition formats, draft/Fearless, side/First Selection, scheduling, licensing and other office-owned constraints.
+- International-tournament rules belong to the international office and do not inherit a domestic office rule unless the international rule explicitly references it.
+- Human-managed and AI-managed clubs use the same rule checks and transaction/state-transition paths. The only ownership difference is who chooses an action: the player or that club's AI.
+- AI clubs are bounded decision-makers, not optimal solvers. Their choices are based on available/scouted information, staff quality, finances, goals and philosophy, so they can make explainable mistakes without bypassing rules.
+- Acceptance for a new rule system must include cross-region coverage: at least two different regional policy states, plus parity checks showing human and AI clubs cannot bypass the same constraints.
