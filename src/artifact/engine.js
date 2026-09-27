@@ -140,16 +140,46 @@ function systemChoiceScore(c,e,role){
   return (e.offense||0)*(.8+(k.burst+k.dps)/16)+(e.defense||0)*(front?1.35:.75)+(e.sustain||0)*(.7+(k.sustain||5)/8)+(e.utility||0)*(support?1.5:.7)+(e.haste||0)*(.8+(k.cc+k.poke)/18)+(e.mobility||0)*(.75+(k.mobility||5)/8)+(e.early||0)*(.65+(k.early||5)/8)+(e.scaling||0)*(.65+(k.late||5)/8);
 }
 function selectItemBuild(patch,c,p,role){
-  const pool=(patch.items&&patch.items[c.cls]||[]).filter(id=>patch.itemDefs&&patch.itemDefs[id]&&patch.itemDefs[id].active!==false);
-  return pool.map(id=>{const d=patch.itemDefs[id],noise=((hashStr((p&&p.id||'')+'|'+c.id+'|'+id)%1000)/1000-.5)*.012;return {id,s:systemChoiceScore(c,d.effects||{},role)+noise-(d.cost||3000)/120000}}).sort((x,y)=>y.s-x.s).map(x=>x.id).slice(0,6);
+  const pool=(patch.items&&patch.items[c.cls]||[]).filter(id=>patch.itemDefs&&patch.itemDefs[id]&&patch.itemDefs[id].active!==false&&patch.itemDefs[id].shopActive!==false);
+  return pool.map(id=>{const d=patch.itemDefs[id],noise=((hashStr((p&&p.id||'')+'|'+c.id+'|'+role+'|'+id)%1000)/1000-.5)*.012;return {id,s:systemChoiceScore(c,d.effects||{},role)+noise-(d.cost||3000)/140000+(d.tier==='boots'?.006:0)}}).sort((x,y)=>y.s-x.s).map(x=>x.id).slice(0,6);
+}
+function selectStarterItem(patch,c,p,role){
+  const defs=Object.values(patch.itemDefs||{}).filter(d=>d.active!==false&&d.shopActive!==false&&d.tier==='starter'&&(!d.requiredChampion||d.requiredChampion===c.name));
+  const roleFit=d=>{const t=new Set(d.tags||[]);if(role==='JGL'&&t.has('Jungle'))return .08;if(role!=='JGL'&&t.has('Jungle'))return -.12;if(role==='SUP'&&(t.has('Vision')||/support/i.test(d.name||'')))return .04;return 0};
+  const rows=defs.map(d=>({id:d.id,s:systemChoiceScore(c,d.effects||{},role)+roleFit(d)+((hashStr((p&&p.id||'')+'|start|'+d.id)%1000)/1000-.5)*.008-(d.cost||450)/40000})).sort((a,b)=>b.s-a.s);
+  return rows[0]?.id||null;
+}
+function itemCraftActions(patch,finalBuild){
+  const defs=patch.itemDefs||{},actions=[];
+  const craft=id=>{const d=defs[id];if(!d||d.active===false||d.shopActive===false)return;for(const from of d.from||[])craft(from);actions.push({id,cost:Math.max(0,Number(d.recipeCost??d.cost??0)),consume:(d.from||[]).slice(),tier:d.tier})};
+  for(const id of finalBuild||[])craft(id);
+  return actions;
+}
+function itemPurchasePlan(patch,finalBuild,starterId){
+  const actions=itemCraftActions(patch,finalBuild);let spent=starterId&&patch.itemDefs?.[starterId]?patch.itemDefs[starterId].cost||0:0;
+  for(const a of actions){spent+=a.cost;a.threshold=500+spent}
+  return actions;
+}
+function runeChoiceScore(patch,c,p,role,id){
+  const d=patch.runeDefs&&patch.runeDefs[id];if(!d||d.active===false)return -Infinity;
+  const noise=((hashStr((p&&p.id||'')+'|'+c.id+'|'+role+'|rune|'+id)%1000)/1000-.5)*.01;
+  return systemChoiceScore(c,d.effects||{},role)+noise;
 }
 function selectRunePage(patch,c,p,role){
-  const rp=patch.runes&&patch.runes[c.cls]||{keystone:[],minor:[]},active=id=>patch.runeDefs&&patch.runeDefs[id]&&patch.runeDefs[id].active!==false;
-  const rank=ids=>ids.filter(active).map(id=>{const d=patch.runeDefs[id],noise=((hashStr((p&&p.id||'')+'|'+c.id+'|'+role+'|'+id)%1000)/1000-.5)*.01;return {id,s:systemChoiceScore(c,d.effects||{},role)+noise}}).sort((a,b)=>b.s-a.s).map(x=>x.id);
-  return [...rank(rp.keystone).slice(0,1),...rank(rp.minor).slice(0,2)];
+  const styles=Object.values(patch.runes||{}).filter(s=>s&&Array.isArray(s.slots)&&s.slots.length>=4);
+  if(!styles.length)return [];
+  const bestIn=(style,slot)=>((style.slots&&style.slots[slot])||[]).filter(id=>patch.runeDefs?.[id]?.active!==false).map(id=>({id,s:runeChoiceScore(patch,c,p,role,id)})).sort((a,b)=>b.s-a.s)[0]||null;
+  const ranked=styles.map(style=>{const picks=style.slots.map((_,i)=>bestIn(style,i)).filter(Boolean);return {style,picks,score:picks.reduce((z,x)=>z+x.s,0)}}).sort((a,b)=>b.score-a.score);
+  const primary=ranked[0],out=primary?pimaryFix(primary):[];
+  function pimaryFix(x){return x.picks.map(y=>y.id)}
+  const secondary=ranked.slice(1).map(x=>{const choices=[1,2,3].map(slot=>bestIn(x.style,slot)).filter(Boolean).sort((a,b)=>b.s-a.s).slice(0,2);return {choices,score:choices.reduce((z,y)=>z+y.s,0)}}).sort((a,b)=>b.score-a.score)[0];
+  if(secondary)out.push(...secondary.choices.map(x=>x.id));
+  return out;
 }
-function itemPurchaseThresholds(patch,build){
-  let total=500;return (build||[]).map(id=>{total+=(patch.itemDefs&&patch.itemDefs[id]&&patch.itemDefs[id].cost)||3000;return total});
+function applyItemCraftAction(ps,a){
+  for(const id of a.consume||[]){const i=ps.items.indexOf(id);if(i>=0)ps.items.splice(i,1)}
+  ps.items.push(a.id);
+  if(ps.items.length>6){const i=ps.items.findIndex(id=>['starter','consumable'].includes(ps.patchRef?.itemDefs?.[id]?.tier));if(i>=0)ps.items.splice(i,1)}
 }
 
 // ---------- 경기 엔진 ----------
@@ -157,8 +187,8 @@ const at=(ps,a)=>ps.p.attrs[a]/100;
 const td=(ps,t)=>ps.p.tend[t]/100;
 
 function newPS(p,side,role,champ,patch){
-  const pr=p.pool[champ]||{mastery:25,confidence:40,experience:10},c=patch.champions[champ],itemPlan=selectItemBuild(patch,c,p,role),runes=selectRunePage(patch,c,p,role);
-  return {p,side,role,champ:c,prof:pr,lvl:1,xp:0,gold:500,goldEarned:500,cs:0,k:0,d:0,a:0,dmg:0,dmgTaken:0,vision:0,objectives:0,laneAdv:0,laneSamples:0,teamfightDmg:0,teamfights:0,teamfightWins:0,deadUntil:0,hp:1,flashAt:0,penalty:0,items:[],itemPlan,itemThresholds:itemPurchaseThresholds(patch,itemPlan),runes,patchRef:patch,recall:false};
+  const pr=p.pool[champ]||{mastery:25,confidence:40,experience:10},c=patch.champions[champ],itemPlan=selectItemBuild(patch,c,p,role),starterItem=selectStarterItem(patch,c,p,role),itemActions=itemPurchasePlan(patch,itemPlan,starterItem),runes=selectRunePage(patch,c,p,role);
+  return {p,side,role,champ:c,prof:pr,lvl:1,xp:0,gold:starterItem?Math.max(0,500-(patch.itemDefs?.[starterItem]?.cost||0)):500,goldEarned:500,cs:0,k:0,d:0,a:0,dmg:0,dmgTaken:0,vision:0,objectives:0,laneAdv:0,laneSamples:0,teamfightDmg:0,teamfights:0,teamfightWins:0,deadUntil:0,hp:1,flashAt:0,penalty:0,items:starterItem?[starterItem]:[],starterItem,itemPlan,itemActions,itemActionIndex:0,runes,patchRef:patch,recall:false};
 }
 function alive(st,ps){return ps.deadUntil<=st.t}
 function aliveOf(st,side){return st.sides[side].ps.filter(x=>alive(st,x))}
@@ -192,7 +222,7 @@ function expl(st,title,factors,extra={}){if(st.quiet)return;st.expl.push({t:st.t
 function pname(st,ps){return `${st.sides[ps.side].team.short} ${ps.p.name}(${ps.champ.name})`}
 
 function addGold(ps,g){ps.gold+=g;ps.goldEarned+=g;
-  while(ps.items.length<(ps.itemPlan||[]).length&&ps.goldEarned>=(ps.itemThresholds||[])[ps.items.length])ps.items.push(ps.itemPlan[ps.items.length]);
+  while(ps.itemActionIndex<(ps.itemActions||[]).length&&ps.goldEarned>=ps.itemActions[ps.itemActionIndex].threshold){applyItemCraftAction(ps,ps.itemActions[ps.itemActionIndex]);ps.itemActionIndex++}
 }
 function addXp(ps,x){ps.xp+=x;let l=1;for(let i=1;i<XP_TABLE.length;i++)if(ps.xp>=XP_TABLE[i])l=i+1;ps.lvl=Math.min(18,l)}
 
