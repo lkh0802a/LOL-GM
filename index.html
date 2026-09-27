@@ -1827,11 +1827,35 @@ function makeAcademy(db,rng,parent){
   const R=db.regions[parent.region];let short=parent.short+'C';while(db.teams[short])short=parent.short+String.fromCharCode(65+rng.int(0,25));
   return genTeam(db,rng,R.id,R.strength-9,{div:2,parent:parent.id,name:parent.name+' Challengers',short});
 }
+function reserveRequirement(db,t){
+  const team=teamRef(db,t);if(!team||team.parent||(team.division||1)!==1)return 'none';
+  const R=db.regions[team.region];if(!R||!R.div2)return 'none';
+  if(R.system==='franchise')return 'required';
+  if(R.system==='mixed')return team.franchised?'required':'optional';
+  return 'optional';
+}
+function promotionEligible(db,t){
+  const team=teamRef(db,t);if(!team||team.active===false||(team.division||1)!==2)return false;
+  if(team.parent)return false;
+  const R=db.regions[team.region];return !!R&&(R.system==='relegation'||R.system==='mixed');
+}
 function createDiv2(db,rng,R){
   R.div2=true;
-  if(R.system==='franchise'){for(const t of activeTeams(db,R.id,1))makeAcademy(db,rng,t)}
-  else{const n=R.div2Teams||Math.max(6,Math.min(10,activeTeams(db,R.id,1).length));for(let i=0;i<n;i++)genTeam(db,rng,R.id,R.strength-8,{div:2})}
-  if(R.policyMode==='engine'&&!R.policyLocks?.rosterRuleProfile)R.rosterRuleProfile=R.system==='franchise'?'ENGINE_OWNED_RESERVE':'STANDARD_TIER1_2026';
+  const first=activeTeams(db,R.id,1);
+  if(R.system==='franchise'){
+    first.forEach(t=>{t.franchised=true;t.license='franchise';if(!reserveTeamsOf(db,t).length)makeAcademy(db,rng,t)});
+  }else if(R.system==='mixed'){
+    markFranchised(db,R);
+    first.forEach(t=>{t.license=t.franchised?'certified':'open';if(reserveRequirement(db,t)==='required'&&!reserveTeamsOf(db,t).length)makeAcademy(db,rng,t)});
+    const target=R.div2Teams||Math.max(8,Math.min(12,first.length));
+    const independent=Math.max(4,target-activeTeams(db,R.id,2).length);
+    for(let i=0;i<independent;i++)genTeam(db,rng,R.id,R.strength-8,{div:2});
+  }else{
+    first.forEach(t=>{t.franchised=false;t.license='open'});
+    const n=R.div2Teams||Math.max(6,Math.min(10,first.length));
+    for(let i=0;i<n;i++)genTeam(db,rng,R.id,R.strength-8,{div:2});
+  }
+  if(R.policyMode==='engine'&&!R.policyLocks?.rosterRuleProfile)R.rosterRuleProfile=activeTeams(db,R.id,2).some(t=>t.parent)?'ENGINE_OWNED_RESERVE':'STANDARD_TIER1_2026';
 }
 function abolishDiv2(db,R){R.div2=false;for(const t of activeTeams(db,R.id,2))foldTeam(db,t);if(R.policyMode==='engine'&&!R.policyLocks?.rosterRuleProfile)R.rosterRuleProfile='STANDARD_TIER1_2026'}
 function markFranchised(db,R){const ts=activeTeams(db,R.id,1).sort((a,b)=>(b.fans||0)-(a.fans||0));ts.forEach((t,i)=>t.franchised=i<Math.ceil(ts.length/2))}
@@ -2108,13 +2132,12 @@ function promotionRelegation(db,w,rng,ev){
     if(R.system!=='relegation'&&R.system!=='mixed')continue;
     const s=finalSeason(w,R); if(!s||!s.done)continue;
     const k=Math.max(1,R.relegate||1);
-    for(const a of activeTeams(db,R.id,2).filter(t=>t.parent)){const on=orgName(db,rng);a.formerNames=[a.name];a.name=on.name;a.parent=null;ev(`${a.formerNames[0]} 독립 구단으로 전환 → ${a.name}`)}
     const down=standings(db,s,'regular').map(x=>x.tid).filter(t=>!(R.system==='mixed'&&db.teams[t].franchised)).slice(-k);
     const s2=finalSeason(w,R,2);
-    const up=R.div2&&s2&&s2.done?placements(db,s2).filter(t=>!db.teams[t].parent).slice(0,k):[];
+    const up=R.div2&&s2&&s2.done?placements(db,s2).filter(t=>promotionEligible(db,t)).slice(0,k):[];
     down.forEach((tid,i)=>{
       const t=db.teams[tid];
-      if(up[i]){const u=db.teams[up[i]];t.division=2;u.division=1;u.fans=Math.round((u.fans||10)+8);t.fans=Math.round((t.fans||20)*0.8);ev(`${R.leagueName} 승강: ${u.name} 승격 ↔ ${t.name} 강등`)}
+      if(up[i]){const u=db.teams[up[i]];t.division=2;u.division=1;u.franchised=false;u.license='open';t.fans=Math.round((t.fans||20)*0.8);u.fans=Math.round((u.fans||10)+8);ev(`${R.leagueName} 승강: ${u.name} 승격 ↔ ${t.name} 강등`)}
       else{foldTeam(db,t);const nt=genTeam(db,rng,R.id,R.strength-3);if(R.system==='mixed')nt.franchised=false;ev(`${R.leagueName} 강등: ${t.name} → 신생팀 ${nt.name} 합류`)}
     });
   }
