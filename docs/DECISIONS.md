@@ -339,3 +339,15 @@ Item 5 (contracts / transfer market) is now active.
 - final roster filling searches the existing eligible global FA market, subject to import rules, instead of silently creating a local player
 - if the invariant is ever broken, the simulation throws a development error so the supply model is repaired rather than hidden
 - talent scarcity is allowed to mean a shortage of quality, experience or affordability; it must not mean the world literally runs out of players
+
+
+## D-029 — Maintain a liquid prospect market
+
+**Decision:** Rookie generation targets a healthy labor market, not merely enough bodies to fill active rosters.
+
+- annual intake has a materially larger natural flow than the minimum roster-replacement requirement
+- the engine maintains a free-agent/prospect liquidity buffer of roughly one extra player per active team, adjusted upward by Tier-2 scale and expected turnover
+- expected contract expiries and older-player retirement risk increase the next class before shortages occur
+- each position keeps additional supply beyond one player per team, so clubs can have actual choices in the market
+- the visible pool self-corrects because unsigned careerless players can leave the simulation after prolonged failure to find a club
+- quality remains probabilistic: increasing quantity does not directly increase any individual prospect's rating or potential

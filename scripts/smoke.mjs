@@ -29,6 +29,8 @@ source += `\n(()=>{
   if(PAY_SCALE.KR||PAY_SCALE.CN||PAY_SCALE.EU||PAY_SCALE.NA)throw new Error('Named regional pay scales are still hardcoded');
   const rookieR=db.regions[Object.keys(db.regions)[0]],rp=rookieIntakeProfile(db,rookieR),rc=generateRookieClass(db,rookieR,new RNG('rookie-smoke','class'));
   if(rc.length!==rp.count||rc.some(p=>p.age<17||p.age>19||!p.rookieTier||p.entryYear!==db.year))throw new Error('Engine rookie class generation failed');
+  if(rp.freeBuffer<rp.teams*.75)throw new Error('Rookie market liquidity buffer is too small');
+  if(rp.count<Math.max(5,Math.round(rp.first*.55)))throw new Error('Rookie natural intake multiplier regressed');
   if(!(rp.ecosystem>0)||!rookieR.rookieIntake.slice(-1)[0].profile.classWave)throw new Error('Rookie class quality wave missing');
   if(typeof generateEmergencyRookie!=='undefined')throw new Error('Per-team emergency rookie generation still exists');
   const supplyCheck=talentSupplyErrors(db);if(supplyCheck.length)throw new Error('Talent supply invariant failed: '+supplyCheck.slice(0,5).join(' | '));

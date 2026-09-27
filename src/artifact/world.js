@@ -157,18 +157,24 @@ function rookieRoleWeights(db,R){
 }
 function weightedRole(rng,w){const rows=ROLES.map(r=>[r,w[r]||1]),sum=rows.reduce((a,x)=>a+x[1],0);let x=rng.next()*sum;for(const [r,v] of rows){x-=v;if(x<=0)return r}return ROLES[ROLES.length-1]}
 function rookieIntakeProfile(db,R){
-  const first=activeTeams(db,R.id,1).length,second=R.div2?activeTeams(db,R.id,2).length:0,teams=activeTeams(db,R.id),teamN=teams.length,young=Object.values(db.players).filter(p=>!p.retired&&p.region===R.id&&p.age<=21).length;
-  const desiredPipeline=first*1.65+second*.8,shortage=clamp((desiredPipeline-young)/Math.max(4,first),-.35,1.2);
+  const first=activeTeams(db,R.id,1).length,second=R.div2?activeTeams(db,R.id,2).length:0,teams=activeTeams(db,R.id),teamN=teams.length,players=Object.values(db.players),young=players.filter(p=>!p.retired&&p.region===R.id&&p.age<=21).length;
+  const desiredPipeline=first*2.05+second*1.05,shortage=clamp((desiredPipeline-young)/Math.max(4,first),-.3,1.35);
   const facilities=teams.map(t=>t.facility||2),dev=teams.map(t=>t.coach?.development||55);
   const ecosystem=clamp((R.strength-58)/18+second/Math.max(1,first)*.35+(avg(facilities)-2)*.08+(avg(dev)-55)/180,.25,1.55);
-  const rosterSize=5+(db.worldConfig.subs||0),targetSlots=teamN*rosterSize,freeBuffer=Math.max(ROLES.length,Math.ceil(teamN*.45));
-  const ecosystemPlayers=Object.values(db.players).filter(p=>!p.retired&&((p.team&&db.teams[p.team]&&db.teams[p.team].region===R.id)||(!p.team&&p.region===R.id)));
+  const rosterSize=5+(db.worldConfig.subs||0),targetSlots=teamN*rosterSize;
+  const ecosystemPlayers=players.filter(p=>!p.retired&&((p.team&&db.teams[p.team]&&db.teams[p.team].region===R.id)||(!p.team&&p.region===R.id)));
+  const expiring=ecosystemPlayers.filter(p=>p.team&&p.contract&&p.contract.until<=db.year).length;
+  const veteranRisk=ecosystemPlayers.filter(p=>p.age>=29).length;
+  const recentRetire=(R.rookieIntake||[]).slice(-3).length?Math.round((R.rookieIntake||[]).slice(-3).reduce((a,x)=>a+(x.retireReplacement||0),0)/Math.min(3,R.rookieIntake.length)):0;
+  const turnoverReserve=Math.ceil(expiring*.55+veteranRisk*.16+recentRetire*.35);
+  const liquidityBase=Math.ceil(teamN*(.85+(second? .12:0)));
+  const freeBuffer=Math.max(ROLES.length*2,liquidityBase+turnoverReserve);
   const totalGap=Math.max(0,targetSlots+freeBuffer-ecosystemPlayers.length);
-  const roleNeeds={};for(const role of ROLES){const target=teamN+Math.max(1,Math.ceil(teamN*.18)),have=ecosystemPlayers.filter(p=>p.role===role).length;roleNeeds[role]=Math.max(0,target-have)}
+  const roleNeeds={};for(const role of ROLES){const target=teamN+Math.max(2,Math.ceil(teamN*.32)),have=ecosystemPlayers.filter(p=>p.role===role).length;roleNeeds[role]=Math.max(0,target-have)}
   const roleGap=Object.values(roleNeeds).reduce((a,b)=>a+b,0);
-  const natural=Math.round(first*.52+second*.18+shortage*first*.28),minimum=Math.max(3,Math.round(first*.3));
+  const natural=Math.round(first*.86+second*.30+shortage*first*.34+turnoverReserve*.38),minimum=Math.max(5,Math.round(first*.55));
   const count=Math.max(minimum,natural,totalGap,roleGap);
-  return {first,second,teams:teamN,young,desiredPipeline:Math.round(desiredPipeline*10)/10,shortage:Math.round(shortage*100)/100,ecosystem:Math.round(ecosystem*100)/100,count,targetSlots,freeBuffer,totalGap,roleNeeds};
+  return {first,second,teams:teamN,young,desiredPipeline:Math.round(desiredPipeline*10)/10,shortage:Math.round(shortage*100)/100,ecosystem:Math.round(ecosystem*100)/100,count,targetSlots,freeBuffer,totalGap,roleNeeds,expiring,veteranRisk,turnoverReserve,liquidityBase};
 }
 function rookieTier(rng,profile,classWave=1){
   const eco=clamp(profile.ecosystem,.55,1.45),eliteP=clamp(ROOKIE_TIER_WEIGHT.elite*eco*classWave,.004,.055),goodP=clamp(ROOKIE_TIER_WEIGHT.good*(.72+eco*.28)*Math.sqrt(classWave),.035,.16),solidP=clamp(ROOKIE_TIER_WEIGHT.solid*(.9+eco*.1),.14,.3),x=rng.next();
@@ -185,7 +191,7 @@ function generateRookieClass(db,R,rng){
     const p=genPlayer(db,rng,{role,age,base,region:R.id,entryYear:db.year,entryPath,rookieClass:db.year,rookieTier:tier}),o=playerOvr(p),up={ordinary:[2,7],solid:[5,10],good:[8,14],elite:[12,19]}[tier];
     p.pot=Math.round(clamp(o+rng.range(up[0],up[1])+Math.max(0,profile.ecosystem-1)*2,o,99));p.reputation=Math.round(clamp(o*.7+rng.normal(-4,2),20,78));out.push(p);
   }
-  R.rookieIntake=R.rookieIntake||[];R.rookieIntake.push({year:db.year,count:out.length,profile,roles:Object.fromEntries(ROLES.map(r=>[r,out.filter(p=>p.role===r).length]))});R.rookieIntake=R.rookieIntake.slice(-10);return out;
+  R.rookieIntake=R.rookieIntake||[];R.rookieIntake.push({year:db.year,count:out.length,retireReplacement:profile.turnoverReserve||0,profile,roles:Object.fromEntries(ROLES.map(r=>[r,out.filter(p=>p.role===r).length]))});R.rookieIntake=R.rookieIntake.slice(-10);return out;
 }
 function talentSupplyErrors(db){
   const errs=[],size=5+(db.worldConfig.subs||0);
