@@ -1844,6 +1844,19 @@ function chooseSide(db,tid,opp,ctx,g,bestOf,rng){
 function seriesDraftSnapshot(ctx){
   return {used:ctx.used.slice(),byTeam:Object.fromEntries(Object.entries(ctx.byTeam).map(([id,h])=>[id,{won:h.won.slice(),lost:h.lost.slice()}])),fearless:ctx.fearless,mods:{...ctx.mods},practice:ctx.practice,championPool:ctx.championPool};
 }
+function seriesGameSetup(db,aId,bId,bestOf,seed,ctx,g,chooser,srng){
+  const other=chooser===aId?bId:aId,sc=chooseSide(db,chooser,other,ctx,g,bestOf,srng);
+  const blue=sc.side==='blue'?chooser:other,red=blue===aId?bId:aId,gseed=seed+'/g'+g;
+  let fpTeam=sc.order==='first'?chooser:other;if(BAL.randomTest)fpTeam=srng.chance(.5)?aId:bId;
+  const snap=seriesDraftSnapshot(ctx);snap.firstPick=fpTeam===blue?0:1;
+  return {other,sc,blue,red,gseed,fpTeam,snap};
+}
+function seriesOpeningDraft(db,aId,bId,bestOf,seed,opt={}){
+  const ctx={used:[],byTeam:{[aId]:{won:[],lost:[]},[bId]:{won:[],lost:[]}},fearless:!!opt.fearless,mods:{[aId]:0,[bId]:0},practice:!!opt.practice,championPool:opt.championPool||null};
+  const srng=new RNG(seed,'side'),chooser=opt.firstChoice==='coin'?(srng.chance(.5)?aId:bId):aId;
+  const x=seriesGameSetup(db,aId,bId,bestOf,seed,ctx,1,chooser,srng);
+  return {...x,chooser,draftCtx:x.snap};
+}
 function simulateSeries(db,aId,bId,bestOf,seed,opt={}){
   const need=Math.ceil(bestOf/2), wins={[aId]:0,[bId]:0}, games=[], lines=[];
   const ctx={used:[],byTeam:{[aId]:{won:[],lost:[]},[bId]:{won:[],lost:[]}},fearless:!!opt.fearless,mods:{[aId]:0,[bId]:0},practice:!!opt.practice,championPool:opt.championPool||null};
@@ -1851,12 +1864,7 @@ function simulateSeries(db,aId,bId,bestOf,seed,opt={}){
   // 1세트 진영 선택권: 토너먼트는 상위 시드, 풀리그는 코인 토스
   let chooser=opt.firstChoice==='coin'?(srng.chance(0.5)?aId:bId):aId;
   for(let g=1;wins[aId]<need&&wins[bId]<need;g++){
-    const other=chooser===aId?bId:aId;
-    const sc=chooseSide(db,chooser,other,ctx,g,bestOf,srng);
-    const blue=sc.side==='blue'?chooser:other, red=blue===aId?bId:aId, gseed=seed+'/g'+g;
-    let fpTeam=sc.order==='first'?chooser:other;
-    if(BAL.randomTest){fpTeam=srng.chance(0.5)?aId:bId}
-    const snap=seriesDraftSnapshot(ctx); snap.firstPick=fpTeam===blue?0:1;
+    const setup=seriesGameSetup(db,aId,bId,bestOf,seed,ctx,g,chooser,srng),{other,sc,blue,red,gseed,fpTeam,snap}=setup;
     if(opt.forced&&opt.forced[g-1])snap.forced=opt.forced[g-1];
     const r=simulateMatch(db,blue,red,gseed,snap,opt.capture!==g);r.comp=opt.compId||null;r.date=db.worldDate;r.metaContext=opt.metaContext||null;
     if(!opt.replay&&!opt.practice)recordMeta(db,r);
@@ -2008,35 +2016,52 @@ function recordLines(s,lines){
     const c=p.champs[l.champ]||(p.champs[l.champ]=[0,0]);c[0]++;if(l.win)c[1]++;
   }
 }
-function playDay(db,s){
-  if(!s||s.done)return null;
-  const day=s.days[s.cur], comp=db.competitions[s.comp];
-  const cfgIdx=comp.stages.findIndex(x=>x.id===day.stage), cfg=comp.stages[cfgIdx];
-  for(const m of day.matches){
-    const firstChoice=cfg.type==='round_robin'||cfg.type==='swiss'?'coin':'seed';
-    const {rec,lines}=simulateSeries(db,m.a,m.b,m.bo,`${s.seed}/${s.year}/${m.id}`,{fearless:comp.rules&&comp.rules.fearless,firstChoice,compId:s.comp,championPool:comp.championPool,metaContext:{season:s.id,year:s.year,split:s.split||null,stage:day.stage,league:comp.region||s.comp,international:!!comp.international}});
-    m.res=rec; recordLines(s,lines); afterSeries(db,lines,rec); updatePlayerUsage(db,s,rec,lines);
-  }
+function scheduledSeriesOptions(db,s,day,cfg){
+  const comp=db.competitions[s.comp],firstChoice=cfg.type==='round_robin'||cfg.type==='swiss'?'coin':'seed';
+  return {fearless:comp.rules&&comp.rules.fearless,firstChoice,compId:s.comp,championPool:comp.championPool,metaContext:{season:s.id,year:s.year,split:s.split||null,stage:day.stage,league:comp.region||s.comp,international:!!comp.international}};
+}
+function simulateScheduledSeries(db,s,day,m,cfg,extra={}){
+  return simulateSeries(db,m.a,m.b,m.bo,`${s.seed}/${s.year}/${m.id}`,{...scheduledSeriesOptions(db,s,day,cfg),...extra});
+}
+function commitScheduledSeries(db,s,m,series){
+  if(m.res)throw new Error('Scheduled match already resolved: '+m.id);
+  m.res=series.rec;recordLines(s,series.lines);afterSeries(db,series.lines,series.rec);updatePlayerUsage(db,s,series.rec,series.lines);return m.res;
+}
+function finalizeCompetitionDay(db,s,day,cfgIdx,cfg){
+  if(day.matches.some(m=>!m.res))return false;
   s.cur++;
-  const sd=s.stageData[cfg.id], roundDays=s.days.filter(d=>d.stage===cfg.id&&d.label===day.label), roundDone=roundDays.every(d=>d.matches.every(m=>m.res));
+  const comp=db.competitions[s.comp],sd=s.stageData[cfg.id],roundDays=s.days.filter(d=>d.stage===cfg.id&&d.label===day.label),roundDone=roundDays.every(d=>d.matches.every(m=>m.res));
   const nd=addDays(day.date,cfg.dayGap?cfg.dayGap[0]:5);
   if(cfg.type==='single_elim'&&roundDone){
-    const r=sd.rounds[sd.rounds.length-1], ms=roundDays.flatMap(d=>d.matches);
-    sd.elim.push(...ms.map(m=>m.a===m.res.winner?m.b:m.a));
-    sd.alive=[...r.byes,...ms.map(m=>m.res.winner)];
-    if(sd.alive.length===1) finishStage(db,s,cfgIdx,day.date); else addElimRound(db,s,cfgIdx,nd);
-  } else if(cfg.type==='double_elim'&&roundDone){
+    const r=sd.rounds[sd.rounds.length-1],ms=roundDays.flatMap(d=>d.matches);
+    sd.elim.push(...ms.map(m=>m.a===m.res.winner?m.b:m.a));sd.alive=[...r.byes,...ms.map(m=>m.res.winner)];
+    if(sd.alive.length===1)finishStage(db,s,cfgIdx,day.date);else addElimRound(db,s,cfgIdx,nd);
+  }else if(cfg.type==='double_elim'&&roundDone){
     deAfter(sd,sd.rounds[sd.rounds.length-1],roundDays.flatMap(d=>d.matches));
-    if(sd.alive&&sd.alive.length===1&&sd.gf) finishStage(db,s,cfgIdx,day.date); else deRound(db,s,cfgIdx,nd);
-  } else if(cfg.type==='swiss'&&roundDone){
-    for(const m of day.matches){const w=m.res.winner,l=m.a===w?m.b:m.a;sd.rec[w].w++;sd.rec[l].l++;sd.rec[m.a].opp.push(m.b);sd.rec[m.b].opp.push(m.a);
-      if(sd.rec[w].w>=sd.W)sd.advanced.push(w);if(sd.rec[l].l>=sd.L)sd.out.push(l);}
-    const act=sd.teams.filter(t=>!sd.advanced.includes(t)&&!sd.out.includes(t));
-    const want=(comp.stages[cfgIdx+1]||{}).take||Math.floor(sd.teams.length/2);
-    if(act.length>=2&&sd.advanced.length<want) swissRound(db,s,cfgIdx,addDays(day.date,1)); else finishStage(db,s,cfgIdx,day.date);
-  } else if(cfg.type==='round_robin'&&!s.days.slice(s.cur).some(d=>d.stage===cfg.id)) finishStage(db,s,cfgIdx,day.date);
-  return day;
+    if(sd.alive&&sd.alive.length===1&&sd.gf)finishStage(db,s,cfgIdx,day.date);else deRound(db,s,cfgIdx,nd);
+  }else if(cfg.type==='swiss'&&roundDone){
+    for(const m of day.matches){const w=m.res.winner,l=m.a===w?m.b:m.a;sd.rec[w].w++;sd.rec[l].l++;sd.rec[m.a].opp.push(m.b);sd.rec[m.b].opp.push(m.a);if(sd.rec[w].w>=sd.W)sd.advanced.push(w);if(sd.rec[l].l>=sd.L)sd.out.push(l)}
+    const act=sd.teams.filter(t=>!sd.advanced.includes(t)&&!sd.out.includes(t)),want=(comp.stages[cfgIdx+1]||{}).take||Math.floor(sd.teams.length/2);
+    if(act.length>=2&&sd.advanced.length<want)swissRound(db,s,cfgIdx,addDays(day.date,1));else finishStage(db,s,cfgIdx,day.date);
+  }else if(cfg.type==='round_robin'&&!s.days.slice(s.cur).some(d=>d.stage===cfg.id))finishStage(db,s,cfgIdx,day.date);
+  return true;
 }
+function scheduledOpeningDraft(db,s,m){
+  const day=s.days[s.cur],comp=db.competitions[s.comp],cfgIdx=comp.stages.findIndex(x=>x.id===day.stage),cfg=comp.stages[cfgIdx],opt=scheduledSeriesOptions(db,s,day,cfg),seed=`${s.seed}/${s.year}/${m.id}`;
+  const opening=seriesOpeningDraft(db,m.a,m.b,m.bo,seed,opt);
+  return {s,day,m,comp,cfg,cfgIdx,opt,seed,...opening};
+}
+function playDay(db,s,opt={}){
+  if(!s||s.done)return null;
+  const day=s.days[s.cur],comp=db.competitions[s.comp],cfgIdx=comp.stages.findIndex(x=>x.id===day.stage),cfg=comp.stages[cfgIdx],pending=[];
+  for(const m of day.matches){if(m.res)continue;
+    if(opt.deferTeam&&(m.a===opt.deferTeam||m.b===opt.deferTeam)){pending.push({matchId:m.id});continue}
+    commitScheduledSeries(db,s,m,simulateScheduledSeries(db,s,day,m,cfg));
+  }
+  const finalized=finalizeCompetitionDay(db,s,day,cfgIdx,cfg);
+  return {day,pending,finalized};
+}
+
 function finishStage(db,s,idx,date){
   const comp=db.competitions[s.comp], cfg=comp.stages[idx], next=comp.stages[idx+1];
   if(next){
@@ -2679,7 +2704,7 @@ function addRegion(db,rng,cfg){
 }
 function buildWorld(cfg){
   cfg=JSON.parse(JSON.stringify(cfg||defaultWorldConfig()));
-  const db={version:14,saveId:'save-'+Date.now().toString(36),manager:{id:'manager-human',teamId:null,startMode:null,careerStartedAt:null},worldDate:`${cfg.startYear||2027}-01-01`,coachPool:[],awards:[],hof:[],global:{decisions:[],power:{}},patch:buildPatch(),teams:{},players:{},regions:{},competitions:{},worldConfig:cfg,world:null,history:[],news:[],year:cfg.startYear||2027,configDirty:false,scout:{}};
+  const db={version:15,saveId:'save-'+Date.now().toString(36),manager:{id:'manager-human',teamId:null,startMode:null,careerStartedAt:null},worldDate:`${cfg.startYear||2027}-01-01`,coachPool:[],awards:[],hof:[],global:{decisions:[],power:{}},patch:buildPatch(),teams:{},players:{},regions:{},competitions:{},worldConfig:cfg,world:null,history:[],news:[],year:cfg.startYear||2027,configDirty:false,scout:{}};
   const rng=new RNG('world-v7','gen');
   initPatches(db);
   for(const r of cfg.regions) addRegion(db,rng,r);
@@ -2732,7 +2757,7 @@ function startWorldSeason(db,myTeam,seed){
     steps.push(...intlSteps(tim[sp]));
   }
   const manage=db.world?db.world.manage:(db.worldConfig.manage||'manual');
-  db.world={year:db.year,seed,manage,phase:'season',seasons:{},steps,step:-1,report:null,lastDate:`${db.year}-01-07`,offers:[],marketLog:[]};
+  db.world={year:db.year,seed,manage,phase:'season',seasons:{},steps,step:-1,report:null,pendingOfficial:null,lastDate:`${db.year}-01-07`,offers:[],marketLog:[]};
   seasonPatch(db,`${db.year}-01-02`,new RNG(seed+db.year,'patch'));
   setGoals(db);
   advanceStep(db);
@@ -2821,20 +2846,37 @@ function trainingRecommendation(db,t){
   const intensity=fat>38||cond<84||days<=1?'light':days>=5&&fat<20&&cond>91?'high':'normal';
   const scrim=days>=2&&fat<42&&cond>80;return {intensity,scrim,next,days,fat,cond};
 }
+function pendingOfficialDraftSetup(db){
+  const p=db.world&&db.world.pendingOfficial,q=p&&p.queue&&p.queue[0];if(!q)return null;
+  const s=db.world.seasons[q.seasonKey],m=s&&s.days[s.cur]&&s.days[s.cur].matches.find(x=>x.id===q.matchId);if(!s||!m||m.res)return null;
+  return {...scheduledOpeningDraft(db,s,m),seasonKey:q.seasonKey,pendingDate:p.date};
+}
+function resolvePendingOfficialMatch(db,forcedDraft){
+  const w=db.world,p=w&&w.pendingOfficial,q=p&&p.queue&&p.queue[0];if(!q)throw new Error('No pending official match');
+  const s=w.seasons[q.seasonKey],m=s&&s.days[s.cur]&&s.days[s.cur].matches.find(x=>x.id===q.matchId);if(!s||!m||m.res)throw new Error('Pending official match is stale');
+  const setup=scheduledOpeningDraft(db,s,m),forced={bans:forcedDraft.bans,picks:forcedDraft.picks};
+  const series=simulateScheduledSeries(db,s,setup.day,m,setup.cfg,{forced:[forced]});commitScheduledSeries(db,s,m,series);
+  const finalized=finalizeCompetitionDay(db,s,setup.day,setup.cfgIdx,setup.cfg);if(finalized)scoutFromDay(db,s,setup.day);
+  p.queue.shift();if(!p.queue.length){w.pendingOfficial=null;if(!activeSeasons(db).length)advanceStep(db)}
+  return {rec:series.rec,lines:series.lines,finalized,pending:w.pendingOfficial};
+}
 function playWorldDay(db){
-  const w=db.world; if(w.phase!=='season')return null;
-  const d=nextDate(db); if(!d){advanceStep(db);return {date:null,played:[]}}
-  db.worldDate=d;
-  patchTick(db,d,new RNG(w.seed+d,'patch'));
-  dailyRecovery(db);
+  const w=db.world;if(w.phase!=='season')return null;
+  if(w.pendingOfficial&&w.pendingOfficial.queue&&w.pendingOfficial.queue.length)return {date:w.pendingOfficial.date,played:[],pending:w.pendingOfficial};
+  const d=nextDate(db);if(!d){advanceStep(db);return {date:null,played:[],pending:null}}
+  db.worldDate=d;patchTick(db,d,new RNG(w.seed+d,'patch'));dailyRecovery(db);
   for(const t of activeTeams(db))aiManageTraining(db,t);
   if(typeof aiRunScrims==='function')aiRunScrims(db,new RNG(w.seed+d,'scrim'));
-  // 시즌 중에는 경기일마다 AI 산하 2군의 승격/육성 필요를 재평가하되, 모든 이동은 플레이어와 같은 rosterMoveCheck를 통과한다.
   for(const t of activeTeams(db,null,1))aiManageOwnedReserve(db,t);
-  const played=[];
-  for(const s of activeSeasons(db)) if(s.days[s.cur].date===d){const day=playDay(db,s);played.push({s,day});scoutFromDay(db,s,day)}
-  if(!activeSeasons(db).length) advanceStep(db);
-  return {date:d,played};
+  const played=[],queue=[],me=managedTeamId(db);
+  for(const [seasonKey,s] of Object.entries(w.seasons))if(!s.done&&s.days[s.cur].date===d){
+    const r=playDay(db,s,{deferTeam:me});played.push({s,day:r.day});
+    if(r.finalized)scoutFromDay(db,s,r.day);
+    for(const x of r.pending)queue.push({seasonKey,matchId:x.matchId,date:d});
+  }
+  if(queue.length)w.pendingOfficial={date:d,queue};
+  else if(!activeSeasons(db).length)advanceStep(db);
+  return {date:d,played,pending:w.pendingOfficial};
 }
 function news(db,text){db.news.unshift({year:db.world?db.world.year:db.year,text});if(db.news.length>250)db.news.length=250}
 
@@ -4263,7 +4305,7 @@ function openInteractiveDraft(db,teamIds,playerTeamId,opt={}){
   const seed=opt.seed||freshInternalSeed('draft-ui'),ctx=opt.ctx||{used:[],byTeam:{},fearless:true,practice:true,firstPick:0};
   for(const tid of teamIds)if(!ctx.byTeam[tid])ctx.byTeam[tid]={won:[],lost:[]};
   const state=createDraftSession(db,teamIds,new RNG(seed,'draft'),ctx);
-  DRAFT_UI={db,state,playerSide,seed,title:opt.title||'밴픽',filter:'ALL',query:'',selected:null,onComplete:typeof opt.onComplete==='function'?opt.onComplete:null};
+  DRAFT_UI={db,state,playerSide,seed,title:opt.title||'밴픽',filter:'ALL',query:'',selected:null,locked:!!opt.locked,finishLabel:opt.finishLabel||null,doneText:opt.doneText||null,onComplete:typeof opt.onComplete==='function'?opt.onComplete:null};
   const ov=$('#overlay');ov.hidden=false;ov.setAttribute('aria-label',DRAFT_UI.title);document.body.classList.add('lock');
   draftUiAdvanceAi();draftUiRender();
 }
@@ -4271,7 +4313,17 @@ function openDraftPractice(db,playerTeamId,opponentTeamId){
   const seed=freshInternalSeed('draft-practice'),sideRng=new RNG(seed,'side'),firstPick=sideRng.chance(.5)?0:1;
   openInteractiveDraft(db,[playerTeamId,opponentTeamId],playerTeamId,{seed,title:'밴픽 연습',ctx:{used:[],byTeam:{},fearless:true,practice:true,firstPick}});
 }
+function openPendingOfficialDraft(db){
+  const setup=pendingOfficialDraftSetup(db);if(!setup)return false;
+  const me=managedTeamId(db),mine=db.teams[me],oppId=setup.m.a===me?setup.m.b:setup.m.a,opp=db.teams[oppId];
+  const title=`${setup.comp.name} · ${mine.short} vs ${opp.short} · 1세트 밴픽`;
+  openInteractiveDraft(db,[setup.blue,setup.red],me,{seed:setup.gseed,title,locked:true,finishLabel:'공식전 진행',doneText:'1세트 밴픽이 확정되었습니다. 이 밴픽으로 공식전을 진행합니다.',ctx:setup.draftCtx,onComplete:result=>{
+    const out=resolvePendingOfficialMatch(DB,result);LAST=null;LASTSER=out.rec;saveDB();nav();
+  }});
+  return true;
+}
 function draftUiClose(){
+  if(DRAFT_UI?.locked)return;
   DRAFT_UI=null;const ov=$('#overlay');if(!ov)return;ov.hidden=true;ov.innerHTML='';ov.setAttribute('aria-label','시리즈 상세');document.body.classList.remove('lock');
 }
 function draftUiAdvanceAi(){
@@ -4316,9 +4368,9 @@ function draftUiRender(){
   const phase=done?'드래프트 완료':`${turn.index+1} / ${DRAFT_ORDER.length} · ${turn.kind==='B'?'밴':'픽'} · ${esc(s.db.teams[s.teamIds[turn.side]].short)} 차례`;
   const mine=!done&&turn.side===DRAFT_UI.playerSide;
   ov.innerHTML=`<div class="ovin du-wrap">
-    <div class="ovhead"><div><b>${esc(DRAFT_UI.title)}</b><small class="du-phase">${phase}</small></div><button class="ghost" id="du-close">닫기</button></div>
+    <div class="ovhead"><div><b>${esc(DRAFT_UI.title)}</b><small class="du-phase">${phase}</small></div>${DRAFT_UI.locked?'':'<button class="ghost" id="du-close">닫기</button>'}</div>
     <div class="du-board">${draftUiSidePanel(0)}<div class="du-center"><strong>${done?'완료':mine?'YOUR TURN':'AI'}</strong><span>${done?'10밴 · 10픽 완료':turn.kind==='B'?'BAN':'PICK'}</span></div>${draftUiSidePanel(1)}</div>
-    ${done?`<section class="du-done"><h3>드래프트 완료</h3><p>단계형 밴픽 코어와 동일한 결과입니다. 공식 경기 연결 단계에서 이 결과를 경기 엔진에 그대로 전달합니다.</p><button class="primary" id="du-finish">${DRAFT_UI.onComplete?'드래프트 확정':'연습 종료'}</button></section>`:
+    ${done?`<section class="du-done"><h3>드래프트 완료</h3><p>${esc(DRAFT_UI.doneText||'단계형 밴픽 코어와 동일한 결과입니다.')}</p><button class="primary" id="du-finish">${esc(DRAFT_UI.finishLabel||(DRAFT_UI.onComplete?'드래프트 확정':'연습 종료'))}</button></section>`:
     `<section class="du-pool">
       <div class="du-tools"><input id="du-search" type="search" autocomplete="off" placeholder="챔피언 검색" value="${esc(DRAFT_UI.query)}"><div class="chips">${DRAFT_UI_FILTERS.map(r=>`<button data-du-role="${r}" aria-pressed="${DRAFT_UI.filter===r}">${r==='ALL'?'전체':ROLE_KO[r]}</button>`).join('')}</div></div>
       <div id="du-grid">${draftUiGrid()}</div>
@@ -4329,7 +4381,7 @@ function draftUiRender(){
 }
 function draftUiBind(){
   if(!DRAFT_UI)return;
-  $('#du-close').onclick=draftUiClose;
+  const close=$('#du-close');if(close)close.onclick=draftUiClose;
   const finish=$('#du-finish');if(finish)finish.onclick=()=>{const result=draftResult(DRAFT_UI.state),cb=DRAFT_UI.onComplete;if(cb){DRAFT_UI=null;const ov=$('#overlay');ov.hidden=true;ov.innerHTML='';document.body.classList.remove('lock');cb(result)}else draftUiClose()};
   const search=$('#du-search');if(search)search.oninput=e=>{DRAFT_UI.query=e.target.value;const box=$('#du-grid');if(box)box.innerHTML=draftUiGrid();draftUiBindGrid()};
   document.querySelectorAll('[data-du-role]').forEach(b=>b.onclick=()=>{DRAFT_UI.filter=b.dataset.duRole;DRAFT_UI.selected=null;draftUiRender()});
@@ -4345,7 +4397,7 @@ function draftUiLock(){
   const valid=draftValidateChoice(s,choice);if(!valid.ok){DRAFT_UI.selected=null;draftUiRender();return}
   draftApplyChoice(s,choice);DRAFT_UI.selected=null;draftUiAdvanceAi();draftUiRender();
 }
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&DRAFT_UI)draftUiClose()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&DRAFT_UI&&!DRAFT_UI.locked)draftUiClose()});
 
 /* ==== FILE: ui-season.js ==== */
 // ===== LOL GM: 시즌 / 세계 / 진행 UI =====
@@ -4479,8 +4531,11 @@ function bindSeason(){
     $('#sreset').onclick=()=>{SSET.team=managedTeamId(DB);w.picking=true;w.phase='pick';saveDB();nav()};
     return;
   }
+  if(w.pendingOfficial&&w.pendingOfficial.queue?.length){
+    document.querySelectorAll('.controls button').forEach(b=>b.disabled=true);requestAnimationFrame(()=>openPendingOfficialDraft(DB));return;
+  }
   const run=(stop)=>{document.querySelectorAll('.controls button').forEach(b=>b.disabled=true);let n=0;
-    const step=()=>{for(let i=0;i<2;i++){const r=playWorldDay(DB);n++;if(!r||DB.world.phase!=='season'||stop(r))return fin()}$('#sprog').textContent=`${n}일 진행 · ${nextDate(DB)||''}`;setTimeout(step,0)};
+    const step=()=>{for(let i=0;i<2;i++){const r=playWorldDay(DB);n++;if(!r||DB.world.phase!=='season'||r.pending||stop(r))return fin()}$('#sprog').textContent=`${n}일 진행 · ${nextDate(DB)||''}`;setTimeout(step,0)};
     const fin=()=>{saveDB();nav()};step()};
   const me=managedTeamId(DB), st0=w.step;
   $('#sday').onclick=()=>run(()=>true);
@@ -4491,10 +4546,10 @@ function bindSeason(){
 
 /* ==== FILE: app.js ==== */
 // ===== LOL GM: UI =====
-const SAVE_VERSION=14;
-const STORAGE_NS='lol-gm-v14';
+const SAVE_VERSION=15;
+const STORAGE_NS='lol-gm-v15';
 const LEGACY_STORAGE_PREFIXES=['lol-gm'];
-const LEGACY_DB_NAMES=['lol-gm','lol-gm-v10','lol-gm-v11','lol-gm-v12','lol-gm-v13'];
+const LEGACY_DB_NAMES=['lol-gm','lol-gm-v10','lol-gm-v11','lol-gm-v12','lol-gm-v13','lol-gm-v14'];
 const DIRECT_FILE_PREVIEW=location.protocol==='file:'||location.origin==='null';
 let SLOT=(()=>{try{return localStorage.getItem(STORAGE_NS+'-slot')||'1'}catch(e){return '1'}})();
 const STORE_BASE=STORAGE_NS+'-db-v'+SAVE_VERSION+'-';
