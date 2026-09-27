@@ -1656,7 +1656,9 @@ function finalSeason(w,R,div=1){let best=null;for(const s of Object.values(w.sea
 // 나이가 어릴수록 더 많이, 더 빠르게 오른다
 function youthMul(age){return age<=18?1.4:age<=20?1.25:age<=22?1.1:age<=24?1:0.85}
 function growthCap(age){return age<=18?4.2:age<=20?3.5:age<=22?2.8:age<=24?2.1:age<=26?1.5:1.0}
-function defaultTraining(){return {mechanical:20,laning:20,combat:20,macro:20,mental:20}}
+function defaultTraining(){return {mechanical:20,laning:20,combat:20,macro:20,mental:20,intensity:'normal'}}
+function trainingIntensity(t){const x=t?.training?.intensity||'normal';return x==='light'?{growth:.9,fatigue:.45,condition:.25}:x==='high'?{growth:1.08,fatigue:1.35,condition:-.35}:{growth:1,fatigue:.8,condition:0}}
+function aiManageTraining(db,t){if(!t||t.id===managedTeamId(db))return;t.training=t.training||defaultTraining();t.training.intensity=trainingRecommendation(db,t).intensity}
 function ensureFacilities(t){const legacy=clamp(t.facility||2,1,5);t.facilities=t.facilities||{training:legacy,analysis:legacy,recovery:legacy,youth:legacy};for(const k of ['training','analysis','recovery','youth'])t.facilities[k]=clamp(t.facilities[k]||legacy,1,5);t.facility=Math.round((t.facilities.training+t.facilities.analysis+t.facilities.recovery+t.facilities.youth)/4);return t.facilities}
 function facilityMul(t){if(!t)return 1;const f=ensureFacilities(t);return .9+.055*(f.training-1)+.02*(f.youth-1)}
 function facilityAnalysisBonus(t){if(!t)return 0;return (ensureFacilities(t).analysis-1)*.012}
@@ -2127,12 +2129,23 @@ function startInternational(db,id,start,taken=new Set()){
 }
 function activeSeasons(db){return Object.values(db.world.seasons).filter(s=>!s.done)}
 function nextDate(db){let next=null;for(const s of Object.values(db.world.seasons)){if(s.done)continue;const d=s.days[s.cur].date;if(next===null||d<next)next=d}return next}
+function nextTeamMatch(db,tid){
+  let best=null;for(const s of Object.values(db.world?.seasons||{})){if(s.done)continue;for(let i=s.cur;i<s.days.length;i++){const d=s.days[i],m=d.matches.find(x=>!x.res&&(x.a===tid||x.b===tid));if(m&&(!best||d.date<best.date)){best={date:d.date,opponent:m.a===tid?m.b:m.a,comp:s.comp};break}}}return best;
+}
+function daysUntil(db,date){return date?Math.max(0,Math.ceil((new Date(date)-new Date(db.worldDate))/86400000)):99}
+function trainingRecommendation(db,t){
+  const next=nextTeamMatch(db,t.id),days=daysUntil(db,next?.date),roster=t.roster.map(id=>db.players[id]).filter(Boolean),fat=avg(roster.map(p=>p.fatigue||0)),cond=avg(roster.map(p=>p.condition??96));
+  const intensity=fat>38||cond<84||days<=1?'light':days>=5&&fat<20&&cond>91?'high':'normal';
+  const scrim=days>=2&&fat<42&&cond>80;return {intensity,scrim,next,days,fat,cond};
+}
 function playWorldDay(db){
   const w=db.world; if(w.phase!=='season')return null;
   const d=nextDate(db); if(!d){advanceStep(db);return {date:null,played:[]}}
   db.worldDate=d;
   patchTick(db,d,new RNG(w.seed+d,'patch'));
   dailyRecovery(db);
+  for(const t of activeTeams(db))aiManageTraining(db,t);
+  if(typeof aiRunScrims==='function')aiRunScrims(db,new RNG(w.seed+d,'scrim'));
   // 시즌 중에는 경기일마다 AI 산하 2군의 승격/육성 필요를 재평가하되, 모든 이동은 플레이어와 같은 rosterMoveCheck를 통과한다.
   for(const t of activeTeams(db,null,1))aiManageOwnedReserve(db,t);
   const played=[];
@@ -2192,6 +2205,7 @@ function runOffseason(db){
   if(typeof ageScoutReports==='function')ageScoutReports(db);
   genCoachPool(db,rng);genStaffPool(db,rng);
   for(const t of activeTeams(db,null,1))aiManageStaff(db,t,rng);
+  for(const t of activeTeams(db))aiManageTraining(db,t);
   // 시설은 플레이어/AI 공통으로 구단 경영진이 자동 관리한다. 전략적 선택이 아닌 유지·증설 행정은 직접 조작하지 않는다.
   for(const t of activeTeams(db,null,1)){const f=ensureFacilities(t),weights=t.philosophy==='youth'?{youth:1,training:.9,recovery:.45,analysis:.5}:t.philosophy==='win-now'?{analysis:1,recovery:.9,training:.55,youth:.3}:t.philosophy==='cost'?{training:.45,analysis:.4,recovery:.4,youth:.35}:{training:.75,analysis:.7,recovery:.65,youth:.6};
     const choices=Object.keys(weights).filter(k=>f[k]<5).sort((a,b)=>weights[b]-weights[a]);for(const k of choices){const cost=facilityCost(db,t,k),reserve=cost*(t.philosophy==='cost'?5:3);if(t.finance.cash>reserve&&rng.chance(.12+.22*weights[k])){upgradeFacility(db,t,k);break}}}
@@ -2246,12 +2260,12 @@ function growPlayer(db,p,rng,games,champGames){
   const team=p.team?db.teams[p.team]:null, before=playerOvr(p),dev=ensurePlayerDevelopment(p);
   const room=clamp((p.pot-before)/10,-0.5,1.5), prof=p.personality.professionalism/100,ageShift=dev.peakAge-25;
   const coach=team?team.coach.development/100:0.45, play=clamp(games/30,0,1);
-  const tr=team?team.training:defaultTraining(), tsum=Object.values(tr).reduce((a,b)=>a+b,0)||1;
+  const tr=team?team.training:defaultTraining(), intensity=trainingIntensity(team),tsum=['mechanical','laning','combat','macro','mental'].reduce((a,k)=>a+(+tr[k]||0),0)||1;
   for(const g in ATTR_GROUPS){
     // 훈련 포인트는 총 100점 한도: 배분하지 않은 포인트는 버려진다 (나눠 쓰는 만큼만 효과)
     const base=ageCurve(p.age-ageShift,g), train=team?(Math.min(TRAIN_POINTS,tr[g])/TRAIN_POINTS*5-1)*0.9:-0.3;
     pState(p);
-    let d=base>0?base*dev.growthRate*(0.45+room*0.6)*(0.7+0.6*prof)*(0.8+0.4*coach)*(0.65+0.55*play)*trainingGrowthMul(team)*facilityMul(team)*(0.9+0.2*p.morale/100):base*dev.declineRate*(1.3-0.6*prof);
+    let d=base>0?base*dev.growthRate*(0.45+room*0.6)*(0.7+0.6*prof)*(0.8+0.4*coach)*(0.65+0.55*play)*trainingGrowthMul(team)*facilityMul(team)*intensity.growth*(0.9+0.2*p.morale/100):base*dev.declineRate*(1.3-0.6*prof);
     d+=train*(base>0?1:0.5);
     if(d>0)d*=youthMul(p.age);
     d=Math.min(d,growthCap(p.age)); // 한 시즌 영역별 성장 상한 (어릴수록 높음)
@@ -3071,12 +3085,33 @@ function afterSeries(db,lines,rec){
 function dailyRecovery(db){
   for(const t of Object.values(db.teams)){ if(t.active===false)continue;
     const prof=staffProfile(t),rec=4+(prof.recovery-50)/45+facilityRecoveryBonus(t);
-    for(const id of t.roster){const p=db.players[id];if(!p)continue;pState(p);p.fatigue=Math.max(0,p.fatigue-rec);p.condition=clamp(p.condition+2.5,0,100);p.form*=.98}
+    const ti=trainingIntensity(t);for(const id of t.roster){const p=db.players[id];if(!p)continue;pState(p);p.fatigue=clamp(p.fatigue-rec+ti.fatigue,0,100);p.condition=clamp(p.condition+2.5+ti.condition,0,100);p.form*=.98}
   }
 }
 function staffProfile(t){const c=t?.coach||{},s=t?.staff||{};return {draft:clamp((c.draft||55)+(s.strategicCoach?.rating||0)*.18,35,99),analysis:clamp((c.analysis||55)+(s.analyst?.rating||0)*.22,35,99),development:clamp((c.development||55)+(s.developmentCoach?.rating||0)*.22,35,99),recovery:clamp(50+(s.performanceCoach?.rating||0)*.45,50,95)}}
 function trainingGrowthMul(t){const p=staffProfile(t);return clamp(.88+(p.development-45)/220,0.88,1.13)}
 function scrimAnalysisBonus(t){const p=staffProfile(t);return clamp((p.analysis-50)/500+facilityAnalysisBonus(t),0,.14)}
+function scrimReadiness(db,t){
+  if(!t)return {ok:false,reason:'팀 없음'};
+  const roster=t.roster.map(id=>db.players[id]).filter(Boolean),avgFatigue=avg(roster.map(p=>p.fatigue||0)),avgCondition=avg(roster.map(p=>p.condition??96));
+  const today=db.worldDate||'',log=(t.scrimLog||[]).filter(x=>x.date===today),games=log.reduce((a,x)=>a+(x.games||0),0);
+  if(games>=5)return {ok:false,reason:'오늘 스크림 한도 도달',avgFatigue,avgCondition,games};
+  if(avgFatigue>=58||avgCondition<=70)return {ok:false,reason:'선수단 회복 필요',avgFatigue,avgCondition,games};
+  return {ok:true,reason:'가능',avgFatigue,avgCondition,games};
+}
+function aiRunScrims(db,rng){
+  const teams=activeTeams(db,null,1).filter(t=>t.id!==managedTeamId(db)&&trainingRecommendation(db,t).scrim&&scrimReadiness(db,t).ok);
+  const used=new Set();for(const t of teams){if(used.has(t.id)||!rng.chance(.22))continue;const candidates=teams.filter(o=>o.id!==t.id&&!used.has(o.id)&&o.region===t.region&&scrimReadiness(db,o).ok);if(!candidates.length)continue;const weighted=candidates.map(o=>[o,Math.max(.1,scrimValue(db,t.id,o.id))]),sum=weighted.reduce((a,x)=>a+x[1],0);let roll=rng.next()*sum,opp=weighted[0][0];for(const [o,v] of weighted){roll-=v;if(roll<=0){opp=o;break}}const bo=rng.chance(.28)?3:1,s=simulateSeries(db,t.id,opp.id,bo,'ai-scrim/'+db.worldDate+'/'+t.id+'/'+opp.id,{fearless:true,firstChoice:'coin',replay:true});recordScrimPractice(db,s.rec,s.lines);used.add(t.id);used.add(opp.id)}
+}
+function scrimValue(db,tid,oppId){
+  const t=db.teams[tid],opp=db.teams[oppId];if(!t||!opp)return .5;const gap=teamStrength(db,oppId)-teamStrength(db,tid),quality=clamp(1+gap/35,.65,1.3),recent=(t.scrimLog||[]).filter(x=>x.opponent===oppId).slice(-3).length,novelty=[1,.82,.68,.58][Math.min(3,recent)];return quality*novelty;
+}
+function recordScrimPractice(db,rec,lines){
+  if(!rec||!lines)return {players:0,games:0};const teams=new Set([rec.a,rec.b]),seen=new Set(),games=(rec.games||[]).length;
+  for(const l of lines){const p=db.players[l.pid];if(!p||!teams.has(l.tid))continue;const opp=l.tid===rec.a?rec.b:rec.a,value=scrimValue(db,l.tid,opp);practiceChampion(db,p,l.champ,'scrim',value);pState(p);p.fatigue=clamp(p.fatigue+1.2,0,100);p.condition=clamp(p.condition-.45,45,100);seen.add(p.id)}
+  for(const tid of teams){const t=db.teams[tid];if(!t)continue;const opp=tid===rec.a?rec.b:rec.a,value=scrimValue(db,tid,opp),bonus=scrimAnalysisBonus(t);t.scrimIntel=clamp((t.scrimIntel||0)+(.8+bonus*12)*value,0,12);t.scrimLog=(t.scrimLog||[]).filter(x=>x.date===db.worldDate).slice(-5);t.scrimLog.push({date:db.worldDate,games,opponent:tid===rec.a?rec.b:rec.a})}
+  return {players:seen.size,games};
+}
 function staffSalary(s,ps){return Math.round((.35+((s.rating||50)-40)/35)*ps*10)/10}
 const STAFF_ROLES={strategicCoach:'전략 코치',analyst:'분석가',developmentCoach:'육성 코치',performanceCoach:'퍼포먼스 코치'};
 function genStaffMember(rng,role,base=60){const nm=rng.pick(NICK_A)+rng.pick(NICK_B);return {id:'S'+hashStr(role+nm+rng.int(0,99999)),name:nm.charAt(0).toUpperCase()+nm.slice(1),role,rating:Math.round(clamp(base+rng.normal(0,9),35,95)),age:rng.int(27,52)}}
@@ -3420,21 +3455,22 @@ function viewMatch(){
   const act=activeTeams(DB), own=DB.world&&DB.teams[managedTeamId(DB)]?managedTeamId(DB):act[0].id;
   SEL.blue=own;
   if(!DB.teams[SEL.red]||DB.teams[SEL.red].active===false||SEL.red===own)SEL.red=(act.find(t=>t.id!==own)||act[0]).id;
-  const oppOpts=Object.values(DB.regions).flatMap(r=>(r.div2?[1,2]:[1]).map(d=>`<optgroup label="${esc(d===2?divName(r):r.leagueName)}">${activeTeams(DB,r.id,d).filter(t=>t.id!==own).map(t=>`<option value="${t.id}"${t.id===SEL.red?' selected':''}>${esc(t.name)}</option>`).join('')}</optgroup>`)).join('');
-  return `<section class="teamhead"><h2>스크림</h2><p>내 팀과 실제 구단을 골라 비공식 연습 경기를 진행합니다. 결과는 공식 전적·리그 순위에 반영되지 않습니다.</p></section>
+  const oppOpts=Object.values(DB.regions).flatMap(r=>(r.div2?[1,2]:[1]).map(d=>`<optgroup label="${esc(d===2?divName(r):r.leagueName)}">${activeTeams(DB,r.id,d).filter(t=>t.id!==own).map(t=>`<option value="${t.id}"${t.id===SEL.red?' selected':''}>${esc(t.name)} · 연습가치 ${Math.round(scrimValue(DB,own,t.id)*100)}%</option>`).join('')}</optgroup>`)).join('');
+  const ready=scrimReadiness(DB,DB.teams[own]),rec=trainingRecommendation(DB,DB.teams[own]);
+  return `<section class="teamhead"><h2>스크림</h2><p>내 팀과 실제 구단을 골라 비공식 연습 경기를 진행합니다. 결과는 공식 전적·리그 순위에 반영되지 않습니다.</p><p class="hint">현재 평균 피로 ${Math.round(ready.avgFatigue||0)} · 컨디션 ${Math.round(ready.avgCondition||0)} · 오늘 ${ready.games||0}게임 · ${ready.reason}</p><p class="hint">${rec.next?`다음 공식전까지 ${rec.days}일 · ${esc(DB.teams[rec.next.opponent]?.name||'상대 미정')}`:'예정된 공식전 없음'} · 스크림 추천 ${rec.scrim?'진행':'휴식'}</p></section>
   <section class="controls">
     <label>내 팀 <b>${esc(DB.teams[own].name)}</b></label>
     <label>상대팀<select id="red">${oppOpts}</select></label>
     <label>형식<select id="bo">${[1,3,5].map(n=>`<option value="${n}"${SEL.bo===n?' selected':''}>${n===1?'단판':'Bo'+n}</option>`).join('')}</select></label>
-    <button class="primary" id="play">스크림 시작</button>
+    <button class="primary" id="play"${ready.ok?'':' disabled'}>스크림 시작</button>
   </section>
   <div id="result">${LASTSER?renderSeries(LASTSER,true):LAST?renderResult(LAST):`<p class="empty">상대 팀과 형식을 고르고 스크림을 시작하세요. 같은 조건에서도 결과는 달라질 수 있습니다.</p>`}</div>`;
 }
 function bindMatch(){
   $('#red').onchange=e=>SEL.red=e.target.value;
   $('#bo').onchange=e=>SEL.bo=+e.target.value;
-  $('#play').onclick=()=>{const seed=freshInternalSeed('scrim');if(SEL.bo===1){LASTSER=null;LAST=simulateMatch(DB,SEL.blue,SEL.red,seed);$('#result').innerHTML=renderResult(LAST);bindResult()}
-    else{LAST=null;LASTSER=simulateSeries(DB,SEL.blue,SEL.red,SEL.bo,seed,{fearless:true,firstChoice:'coin',replay:true}).rec;$('#result').innerHTML=renderSeries(LASTSER,true);bindSeries($('#result'),LASTSER)}};
+  $('#play').onclick=()=>{const readiness=scrimReadiness(DB,DB.teams[SEL.blue]);if(!readiness.ok){MSG=readiness.reason;nav();return}const seed=freshInternalSeed('scrim'),series=simulateSeries(DB,SEL.blue,SEL.red,SEL.bo,seed,{fearless:true,firstChoice:'coin',replay:true});recordScrimPractice(DB,series.rec,series.lines);saveDB();if(SEL.bo===1){LASTSER=null;LAST=simulateMatch(DB,SEL.blue,SEL.red,seed);$('#result').innerHTML=renderResult(LAST);bindResult()}
+    else{LAST=null;LASTSER=series.rec;$('#result').innerHTML=renderSeries(LASTSER,true);bindSeries($('#result'),LASTSER)}};
   if(LASTSER)bindSeries($('#result'),LASTSER);else if(LAST)bindResult();
 }
 let LIVE=null;
@@ -3540,7 +3576,8 @@ function viewSquad(){
   </div></section>
   ${financePanel(t)}
   ${mineOrg?rosterPlanPanel(t):''}
-  <section><h3>훈련 배분 <small class="hint" id="trleft">남은 포인트 ${TRAIN_POINTS-Object.values(tr).reduce((x,y)=>x+y,0)} / ${TRAIN_POINTS}</small></h3><div class="tac">
+  ${(()=>{const r=trainingRecommendation(DB,t),ko={light:'가볍게',normal:'보통',high:'강하게'};return `<p class="hint">추천: ${ko[r.intensity]} 훈련 · ${r.next?`다음 공식전 ${r.days}일 전`:'공식전 일정 없음'} · 평균 피로 ${Math.round(r.fat)} / 컨디션 ${Math.round(r.cond)}</p>`})()}
+  <section><h3>훈련 배분 <small class="hint" id="trleft">남은 포인트 ${TRAIN_POINTS-['mechanical','laning','combat','macro','mental'].reduce((x,k)=>x+(+tr[k]||0),0)} / ${TRAIN_POINTS}</small></h3>${mineOrg?`<label>훈련 강도<select id="trint"><option value="light"${tr.intensity==='light'?' selected':''}>가볍게 · 회복 우선</option><option value="normal"${!tr.intensity||tr.intensity==='normal'?' selected':''}>보통 · 균형</option><option value="high"${tr.intensity==='high'?' selected':''}>강하게 · 성장 우선</option></select></label>`:`<p class="hint">훈련 강도: ${tr.intensity==='high'?'강하게':tr.intensity==='light'?'가볍게':'보통'}</p>`}<div class="tac">
     ${Object.keys(ATTR_GROUPS).map(g=>`<label><span>${GROUP_KO[g]}<output>${tr[g]}</output></span><input type="range" min="0" max="${TRAIN_POINTS}" value="${tr[g]}" data-tr="${g}"></label>`).join('')}
   </div>${mineOrg?'<div class="controls"><button class="primary" id="sqapply">변경사항 적용</button><button class="ghost" id="sqdiscard">변경 취소</button><span class="hint">주전·역할·전술·훈련을 여러 개 조정한 뒤 한 번에 적용합니다.</span></div>':''}<p class="hint">훈련 포인트는 총 ${TRAIN_POINTS}점입니다. 한 영역에 몰면 그 영역은 크게 오르지만 나머지는 덜 오르거나 떨어지고, 배분하지 않은 포인트는 버려집니다. 한 시즌에 영역별로 오를 수 있는 폭과, 잠재력보다 한참 높게 오르는 것에도 한계가 있습니다.</p>
   <div class="fin">${(()=>{const f=ensureFacilities(t),names={training:'훈련',analysis:'분석',recovery:'회복',youth:'유소년'};return Object.keys(names).map(k=>`<div><span>${names[k]} 시설</span><b>${f[k]} / 5</b><small>구단 자동 관리 </small></div>`).join('')})()}</div><p class="hint">훈련·유소년 시설은 성장, 분석 시설은 상대/메타 분석, 회복 시설은 피로 회복에 직접 적용됩니다. 연 유지비 ${money(facilityUpkeep(DB,t))}</p></section>
@@ -3576,6 +3613,7 @@ function playerDetail(p){
   ${ev.length?`<h4 style="margin-top:14px">커리어 이벤트</h4><div class="scroll"><table class="pool"><thead><tr><th>시즌</th><th>유형</th><th>내용</th></tr></thead><tbody>${ev.map(e=>{const detail=e.type==='contract'?`${esc(tshort(e.team))} · ${money(e.salary)} · ~${e.until}`:e.type==='transfer'?`${esc(tshort(e.from))} → ${esc(tshort(e.to))} · ${money(e.fee)}`:e.type==='award'?`${esc(e.competition)} · ${esc(e.award)}`:e.type==='title'?`${esc(e.competition)} 우승`:e.type==='squad_move'?`${esc(tshort(e.from))} → ${esc(tshort(e.to))}`:e.type==='retirement'?`${e.age}세 은퇴 · 전성기 종합 ${e.peak}`:e.type==='release'?`${esc(tshort(e.team))} 방출`:e.type==='roster_role'?`${SQUAD_ROLE_KO[e.from]||e.from} → ${SQUAD_ROLE_KO[e.to]||e.to}`:e.type==='transfer_request'?`${SAT_REASON_KO[e.reason]||e.reason} · 이적 요청`:e.type==='transfer_request_withdrawn'?'이적 요청 철회':'—';return `<tr><td class="num">${e.year}</td><td>${({contract:'계약',transfer:'이적',award:'개인상',title:'우승',squad_move:'1·2군 이동',retirement:'은퇴',release:'방출',roster_role:'역할 변경',transfer_request:'이적 요청',transfer_request_withdrawn:'요청 철회'}[e.type]||e.type)}</td><td>${detail}</td></tr>`}).join('')}</tbody></table></div>`:''}</section>`;
 }
 function bindSquad(){
+  const ti=$('#trint');if(ti)ti.onchange=e=>{const d=squadEditState(DB.teams[SQUAD_EDIT.teamId]);d.training.intensity=e.target.value;d.dirty=true};
   $('#sq').onchange=e=>{const next=DB.teams[e.target.value],same=SQUAD_EDIT&&parentTeamOf(DB,next)?.id===SQUAD_EDIT.parentId;if(!same)SQUAD_EDIT=null;SQUAD=e.target.value;OPEN_P=null;nav()};
   if($('#sqapply'))$('#sqapply').onclick=applySquadEdit;if($('#sqdiscard'))$('#sqdiscard').onclick=discardSquadEdit;
   document.querySelectorAll('[data-squad-dst]').forEach(el=>el.onchange=e=>{e.stopPropagation();const d=squadEditState(DB.teams[SQUAD]);d.rosterPlan.assignments[el.dataset.squadDst]=el.value;d.dirty=true;navKeepScroll()});
