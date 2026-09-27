@@ -30,7 +30,18 @@ function promotionStatus(db,t){
   return ['relegation','mixed'].includes(R.system)?'1부 승격 가능':'승격 없음';
 }
 function setupTeamsForManager(db){const root=managedTeam(db);if(!root)return [];return root.parent?[root]:[root,...reserveTeamsOf(db,root)]}
-function initialSalaryBudget(db,t){const team=teamRef(db,t);return Math.max(salaryBudget(db,team),team.initialPayrollBudget||0)}
+function minimumViableInitialPayroll(db,t){
+  const team=teamRef(db,t),used=new Set(),chosen=[];let imports=0;
+  for(const role of ROLES){
+    const candidates=Object.values(db.players).filter(p=>!p.retired&&!p.team&&p.role===role).map(p=>({p,s:asking(db,p,team.region)})).sort((a,b)=>a.s-b.s);
+    let pick=candidates.find(x=>x.p.region===team.region&&!used.has(x.p.id));
+    if(!pick&&imports<(db.regions[team.region].importLimit??2))pick=candidates.find(x=>!used.has(x.p.id));
+    if(pick){chosen.push(pick.s);used.add(pick.p.id);if(pick.p.region!==team.region)imports++}
+  }
+  const lim=initialSquadLimits(db,team),extra=Math.max(0,lim.min-chosen.length),bench=Object.values(db.players).filter(p=>!p.retired&&!p.team&&!used.has(p.id)).map(p=>asking(db,p,team.region)).sort((a,b)=>a-b).slice(0,extra);
+  return Math.round((chosen.reduce((a,b)=>a+b,0)+bench.reduce((a,b)=>a+b,0))*1.12*10)/10;
+}
+function initialSalaryBudget(db,t){const team=teamRef(db,t);return Math.max(salaryBudget(db,team),team.initialPayrollBudget||0,minimumViableInitialPayroll(db,team))}
 function initialSalaryCeiling(db,t){return initialSalaryBudget(db,t)}
 function initialSquadLimits(db,t){const team=teamRef(db,t),rules=rosterRulesForTeam(db,team),first=!team.parent;return {min:first?rules.firstTeamMin:rules.reserveTeamMin,max:first?rules.firstTeamMax:rules.reserveTeamMax}}
 function initialSquadErrors(db,t){
