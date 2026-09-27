@@ -18,7 +18,7 @@ Development progress is tracked by the 22 major LOL GM systems. Finish one major
 - `6. 1부 / 2부 / Academy` — COMPLETE (2026-09-27)
 - `7. 팀 / 시설 / 스태프` — COMPLETE (2026-09-27)
 - `8. 훈련 / 스크림` — COMPLETE (2026-09-27)
-- `9. 챔피언 / 메타 / 패치` — ACTIVE (global pro-eligibility gate + regional meta tracking + regional draft-learning propagation implemented; champion detail/skill data and acceptance remain)
+- `9. 챔피언 / 메타 / 패치` — ACTIVE (global pro-eligibility gate + regional meta tracking + regional draft-learning propagation implemented; champion detail simulation schema + detail UI implemented; official localized skill/stat source alignment and acceptance remain)
 
 ## Product-wide convenience acceptance rule (2026-09-27)
 
