@@ -27,11 +27,11 @@ source += `\n(()=>{
   const namedPolicies=['KR','CN','EU','NA','AP','BR'].map(id=>db.regions[id]).filter(Boolean);
   if(namedPolicies.some(R=>R.sfrMode==='kr_progressive'||R.sfrMode==='lec_50_100'))throw new Error('Named-region hand policy leaked into engine world');
   if(PAY_SCALE.KR||PAY_SCALE.CN||PAY_SCALE.EU||PAY_SCALE.NA)throw new Error('Named regional pay scales are still hardcoded');
-  const rookieR=db.regions[Object.keys(db.regions)[0]],rp=rookieIntakeProfile(db,rookieR),rc=generateRookieClass(db,rookieR,new RNG('rookie-smoke','class'));
-  if(rc.length!==rp.count||rc.some(p=>p.age<17||p.age>19||!p.rookieTier||p.entryYear!==db.year))throw new Error('Engine rookie class generation failed');
+  const rookieR=db.regions[Object.keys(db.regions)[0]],rp=rookieIntakeProfile(db,rookieR),rc=generateRookieClass(db,rookieR,new RNG('rookie-smoke','class')),ri=rookieR.rookieIntake.slice(-1)[0];
+  if(rc.length!==ri.profile.count||rc.some(p=>p.age<17||p.age>19||!p.rookieTier||p.entryYear!==db.year))throw new Error('Engine rookie class generation failed');
   if(rp.freeBuffer<rp.teams*.75)throw new Error('Rookie market liquidity buffer is too small');
-  if(rp.count<Math.max(5,Math.round(rp.first*.55)))throw new Error('Rookie natural intake multiplier regressed');
-  const ri=rookieR.rookieIntake.slice(-1)[0];if(!(rp.ecosystem>0)||!ri.profile.classWave||!ri.label||!ri.profile.roleWaves)throw new Error('Rookie cohort engine state missing');
+  if(ri.profile.count<Math.max(ri.profile.totalGap,Math.max(5,Math.round(ri.profile.first*.55))))throw new Error('Rookie cohort volume broke labor-market floor');
+  if(!(rp.ecosystem>0)||!ri.profile.classWave||!ri.label||!ri.profile.roleWaves)throw new Error('Rookie cohort engine state missing');
   if(!['흉작','약한 세대','평년','풍년','황금세대'].includes(ri.label))throw new Error('Rookie class label invalid');
   if(typeof generateEmergencyRookie!=='undefined')throw new Error('Per-team emergency rookie generation still exists');
   const supplyCheck=talentSupplyErrors(db);if(supplyCheck.length)throw new Error('Talent supply invariant failed: '+supplyCheck.slice(0,5).join(' | '));
