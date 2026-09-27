@@ -277,10 +277,6 @@ const INTL_PRESETS=[
   {id:'FS',name:'퍼스트 스탠드',short:'FS',tier:'top',timing:'early',entry:'champions',format:'ko',bo:5,ratio:1,prestige:1},
   {id:'MSI',name:'미드 시즌 인비테이셔널',short:'MSI',tier:'top',timing:'mid',entry:'slots',format:'playin_de',bo:5,ratio:0.5,prestige:2},
   {id:'WORLDS',name:'월드 챔피언십',short:'WC',tier:'top',timing:'end',entry:'slots',format:'playin_swiss_ko',bo:5,ratio:1,prestige:3},
-  // 중하위권 대회 (tier low): 상위 대회와 같은 기간에 열리고, 그 대회에 못 나간 팀이 출전
-  {id:'ASCI',name:'아시아 스타 챌린저스',short:'ASCI',tier:'low',timing:'mid',entry:'div2',per:3,zone:'asia',format:'groups_ko',bo:3,prestige:0.3},
-  {id:'EMM',name:'EMEA 마스터즈',short:'EMM',tier:'low',timing:'end',entry:'div2',per:3,zone:'emea',format:'groups_ko',bo:3,prestige:0.3},
-  {id:'AMC',name:'아메리카스 컵',short:'AMC',tier:'low',timing:'early',entry:'next',per:3,zone:'americas',format:'groups_ko',bo:3,prestige:0.3}
 ];
 const INTL_ZONES={asia:['KR','CN','AP','VN','JP','TW','OC','SEA'],emea:['EU','TR','ME','CIS'],americas:['NA','BR','LA']};
 const ZONE_KO={asia:'아시아·태평양',emea:'EMEA',americas:'아메리카스'};
@@ -294,7 +290,7 @@ function regionCfg(id,over={}){
 }
 function defaultWorldConfig(){return {
   regions:['KR','CN','EU','NA','AP','BR'].map(id=>regionCfg(id)),
-  internationals:['FS','MSI','WORLDS','ASCI','EMM','AMC'].map(id=>({...INTL_PRESETS.find(p=>p.id===id)})),
+  internationals:['FS','MSI','WORLDS'].map(id=>({...INTL_PRESETS.find(p=>p.id===id)})),
   subs:1, changes:'normal', startYear:2027, manage:'manual', universalLanguage:true
 }}
 const CHANGE_F={none:0,low:0.5,normal:1,high:1.8};
