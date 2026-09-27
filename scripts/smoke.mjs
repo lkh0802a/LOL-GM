@@ -93,6 +93,18 @@ source += `\n(()=>{
   if(!mine.length) throw new Error('Managed organization has no setup squads');
   const userRng=new RNG('smoke-user-roster','user');
   const managedRoot=parentTeamOf(db,careerTeam)||careerTeam,ownedReserves=reserveTeamsOf(db,managedRoot);
+
+  // 첫 시즌도 즉시계약이 아니라 관심 → 관찰 → 내부평가 → 공식 협상을 실제로 거친다.
+  const initialFa=Object.values(db.players).filter(p=>!p.retired&&!p.team).find(p=>initialSignCheck(db,p,managedRoot).ok);
+  if(!initialFa)throw new Error('No affordable initial-roster FA target');
+  if(!setRecruitmentPriority(db,initialFa.id,'A').ok)throw new Error('Initial recruitment interest failed');
+  observePlayer(db,initialFa,90,{comp:'initial-market-smoke',games:4});syncRecruitmentObservation(db,initialFa.id);
+  const initialEval=recruitmentEvaluation(db,initialFa.id,managedRoot.id);if(!initialEval.ok||initialEval.target.evaluation?.teamId!==managedRoot.id)throw new Error('Initial internal evaluation failed');
+  const initialNeg=startNegotiation(db,initialFa.id,'initial',{teamId:managedRoot.id});if(!initialNeg.ok||initialNeg.neg.kind!=='initial')throw new Error('Initial formal negotiation failed to start');
+  const initialDemand=initialNeg.neg.demand,initialOffer={...initialDemand,salary:Math.min(initialDemand.salary,Math.max(.1,initialSalaryCeiling(db,managedRoot)-payroll(db,managedRoot)))};
+  const initialResult=submitNegotiationOffer(db,initialNeg.neg.id,initialOffer);
+  if(!initialResult.ok||initialFa.team!==managedRoot.id||!initialFa.contract)throw new Error('Initial formal contract negotiation did not sign player');
+  if(recruitmentTarget(db,initialFa.id)?.result!=='signed')throw new Error('Initial recruitment target did not close after signing');
   if(ownedReserves.length){
     autoBuildInitialSquad(db,managedRoot,userRng,5);
     autoBuildInitialSquad(db,ownedReserves[0],userRng,6);
