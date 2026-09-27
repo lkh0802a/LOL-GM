@@ -196,7 +196,7 @@ function generatedItemDef(db,rng,year){
   do{name=rng.pick(NEW_ITEM_A)+rng.pick(NEW_ITEM_B)}while(Object.values(db.patch.itemDefs||{}).some(x=>x.name===name));
   const keys=cls==='tank'?['defense','sustain','utility','haste']:cls==='enchanter'?['utility','sustain','haste','defense']:cls==='marksman'?['offense','mobility','scaling','sustain']:['offense','haste','mobility','sustain','defense'],effects={};
   for(const k of keys.slice(0,3))effects[k]=Math.round(rng.range(.018,.055)*1000)/1000;
-  return {id,name,cost:Math.round(rng.range(cls==='enchanter'?2200:2700,cls==='enchanter'?2800:3500)/50)*50,effects,classes:[cls],active:true,createdYear:year};
+  const cost=Math.round(rng.range(cls==='enchanter'?2200:2700,cls==='enchanter'?2800:3500)/50)*50;return {id,name,nameKo:name,cost,recipeCost:cost,effects,classes:[cls],tier:'final',shopActive:true,from:[],into:[],tags:[],active:true,createdYear:year};
 }
 function generatedRuneDef(db,rng,year){
   const styles=Object.values(db.patch.runes||{}),style=rng.pick(styles),slot=rng.chance(.28)?0:rng.int(1,3),idx=(db.patches.systemLifeByYear[year]&&db.patches.systemLifeByYear[year].runeNew||0)+1,id='rune_gen_'+year+'_'+idx,kind=slot===0?'keystone':'minor';let name;
