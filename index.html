@@ -222,7 +222,7 @@ td.fmt{font-size:12px;color:var(--mut);white-space:normal;min-width:200px}
 .du-center{align-self:center;text-align:center;display:flex;flex-direction:column;gap:2px}.du-center strong{font:400 18px "Black Han Sans",sans-serif}.du-center span{font-size:11px;color:var(--mut)}
 .du-pool{background:var(--surf);border:1px solid var(--line);border-radius:12px;padding:12px}.du-tools{display:flex;gap:10px;align-items:flex-start;justify-content:space-between}.du-tools input{width:min(280px,100%);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:8px 10px}.du-tools .chips{margin:0}
 .du-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:6px;max-height:48vh;overflow:auto;padding:3px;margin:10px 0}
-.du-champ{position:relative;min-height:62px;text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px;cursor:pointer}.du-champ b,.du-champ small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.du-champ small{font-size:10px;color:var(--mut);margin-top:3px}.du-champ em{position:absolute;inset:auto 5px 4px auto;font-style:normal;font-size:9px;color:var(--mut)}.du-champ.sel{border-color:var(--brass);box-shadow:inset 0 0 0 1px var(--brass)}.du-champ:disabled{opacity:.38;cursor:default}
+.du-champ{position:relative;min-height:118px;text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:0;cursor:pointer;overflow:hidden}.du-champ-img{display:block;width:100%;aspect-ratio:1/1;object-fit:cover;background:var(--line)}.du-champ-meta{display:block;padding:6px 7px 7px}.du-champ b,.du-champ small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.du-champ small{font-size:10px;color:var(--mut);margin-top:2px}.du-champ em{position:absolute;inset:5px 5px auto auto;font-style:normal;font-size:9px;color:var(--ink);background:color-mix(in srgb,var(--bg) 82%,transparent);border-radius:4px;padding:2px 4px}.du-champ.sel{border-color:var(--brass);box-shadow:inset 0 0 0 2px var(--brass)}.du-champ:disabled{opacity:.38;cursor:default}.du-champ:disabled .du-champ-img{filter:grayscale(1) brightness(.55)}
 .du-lock{position:sticky;bottom:0;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--surf);border-top:1px solid var(--line);padding:10px 0 0}.du-lock>div{display:flex;flex-direction:column;min-width:0}.du-lock small{color:var(--mut);font-size:11px}.du-done{text-align:center;background:var(--surf);border:1px solid var(--line);border-radius:12px;padding:24px}.du-done p{color:var(--mut)}
 @media (max-width:760px){.du-board{grid-template-columns:1fr 52px 1fr;gap:5px}.du-side{padding:7px}.du-team h3{font-size:14px}.du-team>b{display:none}.du-bans{gap:2px}.du-bans span{font-size:0;min-height:21px}.du-bans span.filled{font-size:8px}.du-pick{grid-template-columns:30px 1fr;padding:4px;min-height:42px}.du-pick small{display:none}.du-center strong{font-size:13px}.du-center span{font-size:9px}.du-tools{display:block}.du-tools input{width:100%;margin-bottom:8px}.du-grid{grid-template-columns:repeat(3,1fr);max-height:44vh}.du-champ{min-height:56px;padding:6px}.du-lock{align-items:flex-end}.du-lock .primary{flex:none;padding:9px 12px}}
 @media (max-width:390px){.du-board{grid-template-columns:1fr 36px 1fr}.du-center span{display:none}.du-role{font-size:9px}.du-grid{grid-template-columns:repeat(2,1fr)}}
@@ -1061,6 +1061,18 @@ function championId(name){
 function championByName(db,name){return Object.values(db.patch.champions).find(c=>c.name===name)||null}
 function championLabel(db,id){const c=db&&db.patch&&db.patch.champions?db.patch.champions[id]:null;return c?(c.nameKo||c.name):String(id||'')}
 function championDisplayName(c){return c?(c.nameKo||c.name):''}
+const CHAMPION_VISUAL_VERSION=1;
+const CHAMPION_VISUAL_THEMES=['arcane','celestial','infernal','verdant','storm','shadow','void','frost','solar','hex'];
+const CHAMPION_VISUAL_ORNAMENTS=['hood','crown','horns','mask','halo','crest','braids','visor'];
+function generatedChampionVisual(def){
+  const id=String(def?.id||championId(def?.name||'champion')),seed=Math.abs(hashStr(id+'|'+(def?.arch||'')+'|portrait-v'+CHAMPION_VISUAL_VERSION));
+  const cls=def?.cls||({juggernaut:'fighter',diver:'fighter',skirmisher:'fighter',vanguard:'tank',warden:'tank',burst:'mage',control:'mage',battle:'mage',artillery:'mage',hyper:'marksman',bully:'marksman',catcher:'enchanter'}[def?.arch]||'fighter');
+  const silhouette={tank:'heavy',fighter:'plated',mage:'robed',assassin:'hooded',marksman:'ranged',enchanter:'ornate'}[cls]||'plated';
+  const weapon={tank:'shield',fighter:seed%2?'blade':'spear',mage:seed%2?'staff':'orb',assassin:'blades',marksman:seed%2?'bow':'rifle',enchanter:seed%2?'staff':'orb'}[cls]||'blade';
+  const pool=(def?.dmg==='AP'?['arcane','celestial','verdant','void','frost','hex']:['infernal','storm','shadow','solar','frost','hex']),theme=pool[(seed>>>3)%pool.length];
+  return {version:CHAMPION_VISUAL_VERSION,seed,revision:0,theme,silhouette,weapon,ornament:CHAMPION_VISUAL_ORNAMENTS[(seed>>>7)%CHAMPION_VISUAL_ORNAMENTS.length],pose:['front','threeQuarter','profile'][(seed>>>11)%3],aura:CHAMPION_VISUAL_THEMES[(seed>>>15)%CHAMPION_VISUAL_THEMES.length]};
+}
+function ensureChampionVisual(c){if(!c)return null;if(!c.visual)c.visual=generatedChampionVisual(c);return c.visual}
 const DETAIL_BASE_KEYS=['resource','resourceg','resourceRegen','mr','mrg','asg'];
 const CHAMPION_SOURCE_PATCH='16.19.1';
 function cleanChampionSourceText(v){return String(v||'').replace(/<br\s*\/?>/gi,' ').replace(/<[^>]*>/g,'').replace(/&nbsp;/gi,' ').replace(/&amp;/gi,'&').replace(/&lt;/gi,'<').replace(/&gt;/gi,'>').replace(/&#39;/g,"'").replace(/&quot;/gi,'"').replace(/\s+/g,' ').trim()}
@@ -1403,7 +1415,8 @@ function applyNote(P,n){
   if(n.type==='skill'&&c&&c.skills&&c.skills[n.slot])c.skills[n.slot][n.field]=JSON.parse(JSON.stringify(n.new));
   else if(n.type==='kit'&&c)c.kit[n.key]=n.new!=null?n.new:clamp(c.kit[n.key]+n.d,1,10);
   else if(n.type==='base'&&c)c.base[n.key]=n.new!=null?n.new:Math.round(c.base[n.key]*(1+n.d)*100)/100;
-  else if(n.type==='new'){const nc=archChampion(n.def.name,n.def.roles,n.def.arch,n.def.dmg,null,n.def.id||championId(n.def.name));nc.releaseDate=n.def.releaseDate||null;nc.proEligibleDate=n.def.proEligibleDate||null;P.champions[nc.id]=nc}
+  else if(n.type==='new'){const nc=archChampion(n.def.name,n.def.roles,n.def.arch,n.def.dmg,null,n.def.id||championId(n.def.name));nc.releaseDate=n.def.releaseDate||null;nc.proEligibleDate=n.def.proEligibleDate||null;nc.visual=JSON.parse(JSON.stringify(n.def.visual||generatedChampionVisual(n.def)));P.champions[nc.id]=nc}
+  else if(n.type==='rework'&&c&&c.visual){c.visual={...c.visual,revision:(c.visual.revision||0)+(n.scope==='major'?1:0)}}
   else if(n.type==='rule')P.rules[n.key]=n.v;
   else if(n.type==='item'&&P.itemDefs&&P.itemDefs[n.id]){const d=P.itemDefs[n.id];if(n.field==='cost'){const delta=Number(n.new)-Number(d.cost||0);d.cost=n.new;d.recipeCost=Math.max(0,Math.round((Number(d.recipeCost??d.cost)+delta)*100)/100)}else{d.effects=d.effects||{};d.effects[n.field]=n.new}}
   else if(n.type==='item_new'){P.itemDefs=P.itemDefs||{};P.itemDefs[n.def.id]=JSON.parse(JSON.stringify(n.def));P.items=P.items||{};for(const cls of n.def.classes||[]){P.items[cls]=P.items[cls]||[];if(!P.items[cls].includes(n.def.id))P.items[cls].push(n.def.id)}}
@@ -1631,7 +1644,7 @@ function maybeNewChampion(db,date,major,rng){
   const month=+date.slice(5,7),remaining=target-released,opps=Math.max(1,Math.ceil((13-month)*2.1)),chance=clamp(remaining/opps+(major?.16:0)+(month>=10?.08:0),.04,month>=11?.65:.36);if(!rng.chance(chance))return null;
   let def;if(db.patches.newIdx<CHAMP_RELEASES.length){const x=CHAMP_RELEASES[db.patches.newIdx++];def={id:championId(x[0]),name:x[0],roles:x[1],arch:x[2],dmg:x[3]}}
   else{let name,id;do{name=rng.pick(NEWCHAMP_A)+rng.pick(NEWCHAMP_B);id=championId(name)}while(db.patch.champions[id]);const role=rng.pick(ROLES),arch=rng.pick({TOP:['juggernaut','diver','skirmisher','vanguard'],JGL:['diver','assassin','skirmisher','vanguard'],MID:['burst','control','battle','assassin','artillery'],ADC:['marksman','hyper','bully'],SUP:['enchanter','catcher','warden','control']}[role]);def={id,name,roles:[role],arch,dmg:['burst','control','battle','artillery','enchanter','specialist'].includes(arch)?'AP':'AD'};db.patches.newIdx++}
-  def.releaseDate=date;def.proEligibleDate=addDays(date,14);db.patches.releasesByYear[year]=released+1;return {type:'new',def,c:def.id,why:'신규 챔피언 출시 · 프로 대회 14일 사용 제한'};
+  def.releaseDate=date;def.proEligibleDate=addDays(date,14);def.visual=generatedChampionVisual(def);db.patches.releasesByYear[year]=released+1;return {type:'new',def,c:def.id,why:'신규 챔피언 출시 · 프로 대회 14일 사용 제한'};
 }
 function newPatch(db,date,major,rng){
   const notes=[],P=db.patch,id=patchId(db,+date.slice(0,4)),diag=diagnosePatchMeta(db,major);
@@ -4060,6 +4073,51 @@ function bindMarket(){
   $('#mkrole').onchange=e=>{MK.role=e.target.value;nav()};$('#mkscope').onchange=e=>{MK.scope=e.target.value;nav()};
 }
 
+/* ==== FILE: ui-champion.js ==== */
+// ===== LOL GM: 챔피언 초상화 렌더러 =====
+// 실존 챔피언은 pinned Data Dragon 아이콘을 우선 사용하고, 신챔/오프라인은 결정론적 SVG 일러스트로 폴백한다.
+
+const CHAMPION_PORTRAIT_PALETTES={
+  arcane:['#10213b','#266bc2','#9ee7ff','#f1d9a0'],celestial:['#171a35','#6456b7','#efcaff','#ffe6a6'],
+  infernal:['#261016','#a62922','#ff9a45','#ffd28a'],verdant:['#10271f','#267259','#8ad6a1','#e8dba5'],
+  storm:['#172332','#365a89','#9bc9ff','#eef5ff'],shadow:['#15131e','#403354','#a98bd2','#e9d7fb'],
+  void:['#1b1028','#632a82','#d16bff','#ffc5f4'],frost:['#122834','#3e7896','#bfefff','#f4fbff'],
+  solar:['#2f2112','#9d6320','#ffd05a','#fff0b5'],hex:['#10282b','#1b7373','#75e0d0','#e4c56e']
+};
+function championPortraitUrl(c){return c?.riotAlias?`https://ddragon.leagueoflegends.com/cdn/${CHAMPION_SOURCE_PATCH}/img/champion/${encodeURIComponent(c.riotAlias)}.png`:null}
+function championPortraitVisual(c){return c?.visual||generatedChampionVisual(c)}
+function championPortraitSvg(c){
+  const v=championPortraitVisual(c),p=CHAMPION_PORTRAIT_PALETTES[v.theme]||CHAMPION_PORTRAIT_PALETTES.hex,s=Math.abs(v.seed||hashStr(c?.id||'portrait')),rev=v.revision||0;
+  const flip=v.pose==='profile'?-1:1,headX=v.pose==='front'?60:v.pose==='profile'?66:63,eyeY=48+(s%3),shoulder=v.silhouette==='heavy'?17:v.silhouette==='ornate'?24:20;
+  const ornament={
+    hood:`<path d="M34 55 Q35 18 60 15 Q87 21 88 57 L78 45 Q70 28 60 29 Q48 28 40 46Z" fill="${p[0]}" opacity=".96"/>`,
+    crown:`<path d="M40 31 L44 14 54 27 61 9 69 27 80 14 82 35Z" fill="${p[3]}" opacity=".85"/>`,
+    horns:`<path d="M43 29 Q28 23 27 8 Q42 17 49 31M75 29 Q90 22 93 8 Q79 16 70 31" fill="none" stroke="${p[2]}" stroke-width="5"/>`,
+    mask:`<path d="M43 45 Q60 35 77 45 L72 60 Q60 68 47 59Z" fill="${p[0]}" stroke="${p[2]}" stroke-width="2"/>`,
+    halo:`<ellipse cx="60" cy="28" rx="24" ry="8" fill="none" stroke="${p[2]}" stroke-width="3" opacity=".72"/>`,
+    crest:`<path d="M58 34 L60 7 69 35Z" fill="${p[2]}" opacity=".85"/>`,
+    braids:`<path d="M42 47 Q28 67 37 101 M76 47 Q92 70 82 103" fill="none" stroke="${p[0]}" stroke-width="7"/>`,
+    visor:`<path d="M40 43 L79 40 74 55 42 57Z" fill="${p[2]}" opacity=".7"/>`
+  }[v.ornament]||'';
+  const weapon={
+    shield:`<path d="M14 63 Q29 50 38 65 L33 108 Q19 103 10 88Z" fill="${p[1]}" stroke="${p[3]}" stroke-width="2"/>`,
+    blade:`<path d="M91 19 L101 15 77 103 69 107Z" fill="${p[3]}" opacity=".92"/>`,
+    spear:`<path d="M93 5 L98 14 72 111" fill="none" stroke="${p[3]}" stroke-width="4"/><path d="M92 5 L104 15 96 20Z" fill="${p[2]}"/>`,
+    staff:`<path d="M92 11 L75 112" stroke="${p[3]}" stroke-width="4"/><circle cx="93" cy="15" r="9" fill="none" stroke="${p[2]}" stroke-width="3"/>`,
+    orb:`<circle cx="91" cy="78" r="13" fill="${p[2]}" opacity=".38"/><circle cx="91" cy="78" r="7" fill="${p[2]}"/>`,
+    blades:`<path d="M17 25 L45 72 M102 24 L76 72" stroke="${p[3]}" stroke-width="5"/>`,
+    bow:`<path d="M92 18 Q112 61 88 109 M91 18 L91 108" fill="none" stroke="${p[3]}" stroke-width="3"/>`,
+    rifle:`<path d="M72 79 L108 63 112 71 80 91Z" fill="${p[3]}"/>`
+  }[v.weapon]||'';
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><defs><radialGradient id="g${s}" cx="50%" cy="38%"><stop offset="0" stop-color="${p[2]}" stop-opacity=".45"/><stop offset=".46" stop-color="${p[1]}" stop-opacity=".72"/><stop offset="1" stop-color="${p[0]}"/></radialGradient><linearGradient id="a${s}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${p[2]}"/><stop offset="1" stop-color="${p[1]}"/></linearGradient><filter id="t${s}"><feTurbulence baseFrequency=".55" numOctaves="2" seed="${(s+rev*17)%97}" type="fractalNoise" result="n"/><feBlend in="SourceGraphic" in2="n" mode="soft-light"/></filter></defs><rect width="120" height="120" fill="url(#g${s})"/><path d="M0 94 Q28 69 45 80 Q60 58 80 76 Q101 67 120 91 V120 H0Z" fill="${p[0]}" opacity=".72"/><g opacity=".28" fill="none" stroke="${p[2]}" stroke-width="2"><circle cx="${18+s%16}" cy="${26+s%18}" r="18"/><path d="M4 80 Q46 32 116 17"/></g><g transform="translate(60 60) scale(${flip} 1) translate(-60 -60)" filter="url(#t${s})">${weapon}<path d="M${shoulder} 119 Q23 81 43 72 Q49 66 50 62 H71 Q72 67 79 73 Q100 82 ${120-shoulder} 119Z" fill="${p[1]}" stroke="${p[3]}" stroke-opacity=".3" stroke-width="2"/><path d="M38 86 L53 76 60 88 68 76 83 87 76 120 44 120Z" fill="url(#a${s})" opacity=".85"/><ellipse cx="${headX}" cy="48" rx="19" ry="24" fill="#d6a17d"/><path d="M42 42 Q44 20 62 20 Q80 22 81 45 Q69 34 58 34 Q48 34 42 42Z" fill="${p[0]}"/>${ornament}<path d="M49 ${eyeY} L56 ${eyeY-1} M66 ${eyeY-1} L73 ${eyeY}" stroke="${p[2]}" stroke-width="2.7" stroke-linecap="round"/><path d="M54 61 Q61 65 68 60" fill="none" stroke="${p[0]}" stroke-width="1.8" opacity=".7"/><path d="M44 73 Q60 81 78 72" fill="none" stroke="${p[3]}" stroke-width="2" opacity=".55"/></g><rect x="2" y="2" width="116" height="116" rx="7" fill="none" stroke="${p[3]}" stroke-opacity=".28" stroke-width="3"/></svg>`;
+}
+function championPortraitDataUri(c){return 'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(championPortraitSvg(c))}
+function championPortraitMarkup(c,opt={}){
+  const cls=opt.className||'champ-portrait',alt=opt.alt===false?'':esc(championDisplayName(c)),fallback=championPortraitDataUri(c),url=championPortraitUrl(c);
+  if(!url)return `<img class="${cls}" src="${fallback}" alt="${alt}" loading="lazy">`;
+  return `<img class="${cls}" src="${url}" alt="${alt}" loading="lazy" decoding="async" data-fallback="${fallback}" onerror="this.onerror=null;this.src=this.dataset.fallback">`;
+}
+
 /* ==== FILE: ui-draft.js ==== */
 // ===== LOL GM: 인터랙티브 밴픽 UI =====
 // 드래프트 규칙은 draft.js의 단계형 코어를 사용한다. 이 파일은 화면 상태와 입력만 담당한다.
@@ -4102,7 +4160,7 @@ function draftUiMatch(c){
 }
 function draftUiPickSlot(side,index){
   const s=DRAFT_UI.state,id=s.pickList[side][index],c=id&&s.db.patch.champions[id];
-  return `<div class="du-pick ${id?'filled':''}"><span class="du-role">P${index+1}</span><div><b>${id?esc(championDisplayName(c)):'—'}</b><small>${id?(c.roles||[]).map(r=>ROLE_KO[r]).join(' · '):'픽 대기'}</small></div></div>`;
+  return `<div class="du-pick ${id?'filled':''}"><span class="du-role">P${index+1}</span>${id?championPortraitMarkup(c,{className:'du-pick-img',alt:false}):'<span class="du-pick-empty"></span>'}<div><b>${id?esc(championDisplayName(c)):'—'}</b><small>${id?(c.roles||[]).map(r=>ROLE_KO[r]).join(' · '):'픽 대기'}</small></div></div>`;
 }
 function draftUiSidePanel(side){
   const s=DRAFT_UI.state,t=s.db.teams[s.teamIds[side]],turn=draftTurn(s),active=turn&&turn.side===side;
@@ -4117,7 +4175,7 @@ function draftUiGrid(){
   const s=DRAFT_UI.state,rows=Object.values(s.db.patch.champions).filter(draftUiMatch).sort((a,b)=>championDisplayName(a).localeCompare(championDisplayName(b),'ko'));
   return `<div class="du-grid">${rows.map(c=>{const st=draftUiChampionState(c),sel=DRAFT_UI.selected===c.id;
     return `<button class="du-champ ${sel?'sel':''}" data-du-champ="${c.id}" ${st.disabled?'disabled':''} title="${esc(st.reason||c.roles.map(r=>ROLE_KO[r]).join(' · '))}">
-      <b>${esc(championDisplayName(c))}</b><small>${c.roles.map(r=>ROLE_KO[r]).join(' · ')}</small>${st.reason?`<em>${esc(st.reason)}</em>`:''}
+      ${championPortraitMarkup(c,{className:'du-champ-img',alt:false})}<span class="du-champ-meta"><b>${esc(championDisplayName(c))}</b><small>${c.roles.map(r=>ROLE_KO[r]).join(' · ')}</small></span>${st.reason?`<em>${esc(st.reason)}</em>`:''}
     </button>`}).join('')}</div>`;
 }
 function draftUiRender(){
