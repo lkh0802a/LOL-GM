@@ -665,7 +665,7 @@ function runOffseason(db){
   for(const t of activeTeams(db)){t._pre=t.roster.slice();for(const id of t.roster){const p=db.players[id];if(!p||!p.contract)continue;pState(p);p.form=0;p.fatigue=5;}}
   if(typeof offseasonPlayerSatisfaction==='function')offseasonPlayerSatisfaction(db,w,rep,ev);
   w.sponsorOffers=sponsorOffers(db,db.teams[managedTeamId(db)]);
-  w.report=rep; w.phase='market'; w.offers=[]; w.marketLog=[];
+  w.report=rep; w.phase='market'; w.offers=[]; w.negotiations={}; w.marketLog=[];
   return rep;
 }
 // ---------- 오프시즌 2단계: 이적 시장 마감 ----------
