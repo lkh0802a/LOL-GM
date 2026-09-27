@@ -187,6 +187,9 @@ source += `\n(()=>{
     const pdb=JSON.parse(JSON.stringify(db)),pa=pdb.teams[scrimA.id],pb=pdb.teams[scrimB.id],pcid='PENDING_SMOKE',pkey='__pending_smoke',psid='season_pending_smoke',pdate='2027-07-01',pool=Object.values(pdb.patch.champions).filter(c=>championProEligible(pdb,c,pdate)).map(c=>c.id);
     setManagedTeam(pdb,pa.id);pdb.world.phase='season';pdb.worldDate='2027-06-28';
     pdb.competitions[pcid]={id:pcid,name:'Pending Smoke League',short:'PSL',region:pa.region,teams:[pa.id,pb.id],rules:{fearless:true},championPool:pool,stages:[{id:'regular',name:'정규',type:'round_robin',bestOf:3,dayGap:[3]}]};
+    const homeOpt=scheduledSeriesOptions(pdb,{comp:pcid,id:'x',year:2027,split:1},{stage:'regular'},{id:'regular',type:'round_robin'});if(homeOpt.firstChoice!=='home')throw new Error('Domestic regular season did not assign home First Selection');
+    const neutralOpt=scheduledSeriesOptions(pdb,{comp:pcid,id:'x',year:2027,split:1},{stage:'ko'},{id:'ko',type:'single_elim'});if(neutralOpt.firstChoice!=='coin')throw new Error('Neutral single elimination did not use coin First Selection');
+    const seededOpt=scheduledSeriesOptions(pdb,{comp:pcid,id:'x',year:2027,split:1},{stage:'po'},{id:'po',type:'single_elim',firstChoice:'seed'});if(seededOpt.firstChoice!=='seed')throw new Error('Explicit seeded First Selection override failed');
     const ps={id:psid,comp:pcid,year:2027,seed:'pending-smoke',days:[
       {date:pdate,stage:'regular',label:'정규 1라운드',matches:[{id:'pending_match',a:pa.id,b:pb.id,bo:3,res:null}]},
       {date:'2027-07-04',stage:'regular',label:'정규 2라운드',matches:[{id:'pending_match_2',a:pb.id,b:pa.id,bo:3,res:null}]}
@@ -195,15 +198,20 @@ source += `\n(()=>{
     if(pd.finalized||pd.pending.length!==1||ps.cur!==0||ps.days[0].matches[0].res)throw new Error('Managed official match was not deferred');
     pdb.world.pendingOfficial={date:pdate,queue:[{seasonKey:pkey,matchId:'pending_match',date:pdate}]};
     const beforeDate=pdb.worldDate,hold=playWorldDay(pdb);if(!hold?.pending||pdb.worldDate!==beforeDate)throw new Error('Pending official day reran world effects');
-    let setup=pendingOfficialDraftSetup(pdb);if(!setup||setup.game!==1||setup.fearlessUsed.length)throw new Error('Opening official draft setup invalid');
+    let selection=pendingOfficialSelectionSetup(pdb);if(!selection||selection.game!==1||selection.prompt.mode!=='first'||selection.prompt.chooser!==pa.id)throw new Error('Home team did not receive game-one First Selection');
+    applyPendingOfficialSelection(pdb,{kind:'order',value:'first'});
+    let setup=pendingOfficialDraftSetup(pdb);if(!setup||setup.game!==1||setup.fearlessUsed.length||setup.fpTeam!==pa.id)throw new Error('Managed First Selection did not reach opening draft');
     const firstDraft=runDraft(pdb,[setup.blue,setup.red],new RNG(setup.gseed,'draft'),setup.draftCtx),firstPicks=[...Object.values(firstDraft.picks[0]),...Object.values(firstDraft.picks[1])],first=resolvePendingOfficialMatch(pdb,firstDraft);
     if(first.done||!pdb.world.pendingOfficial||first.score.reduce((a,b)=>a+b,0)!==1)throw new Error('Bo3 official session ended after one game');
+    selection=pendingOfficialSelectionSetup(pdb);if(!selection||selection.game!==2)throw new Error('Game two First Selection prompt missing');
+    const loser=first.game.winner===0?first.game.sides[1].team.id:first.game.sides[0].team.id;if(selection.prompt.chooser!==loser)throw new Error('Previous game loser did not receive next First Selection');
+    if(selection.prompt.mode==='first')applyPendingOfficialSelection(pdb,{kind:'side',value:'blue'});else applyPendingOfficialSelection(pdb,{kind:selection.prompt.remaining,value:selection.prompt.remaining==='side'?'blue':'first'});
     setup=pendingOfficialDraftSetup(pdb);
     if(setup.game!==2||setup.fearlessUsed.length!==10||firstPicks.some(c=>!setup.fearlessUsed.includes(c)))throw new Error('Fearless picks were not carried into game two');
     const secondDraft=runDraft(pdb,[setup.blue,setup.red],new RNG(setup.gseed,'draft'),setup.draftCtx),secondPicks=[...Object.values(secondDraft.picks[0]),...Object.values(secondDraft.picks[1])];
     if(secondPicks.some(c=>firstPicks.includes(c)))throw new Error('Fearless allowed a previous-game pick');
     let resolved=resolvePendingOfficialMatch(pdb,secondDraft),guard=0;
-    while(!resolved.done&&guard++<3){setup=pendingOfficialDraftSetup(pdb);const d=runDraft(pdb,[setup.blue,setup.red],new RNG(setup.gseed,'draft'),setup.draftCtx);resolved=resolvePendingOfficialMatch(pdb,d)}
+    while(!resolved.done&&guard++<3){selection=pendingOfficialSelectionSetup(pdb);if(selection)applyPendingOfficialSelection(pdb,{kind:selection.prompt.mode==='first'?'order':selection.prompt.remaining,value:selection.prompt.mode==='first'?'first':selection.prompt.remaining==='side'?'blue':'first'});setup=pendingOfficialDraftSetup(pdb);const d=runDraft(pdb,[setup.blue,setup.red],new RNG(setup.gseed,'draft'),setup.draftCtx);resolved=resolvePendingOfficialMatch(pdb,d)}
     if(!resolved.done||!resolved.rec||ps.cur!==1||!ps.days[0].matches[0].res||pdb.world.pendingOfficial)throw new Error('Bo3 pending official series did not resolve and resume');
     const games=resolved.rec.games;if(games.length<2||games.length>3||resolved.rec.score.reduce((a,b)=>a+b,0)!==games.length)throw new Error('Official staged series score/game count invalid');
     let duplicateBlocked=false;try{commitScheduledSeries(pdb,ps,ps.days[0].matches[0],{rec:resolved.rec,lines:resolved.lines})}catch(e){duplicateBlocked=true}if(!duplicateBlocked)throw new Error('Official result committed twice');

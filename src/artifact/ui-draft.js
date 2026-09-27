@@ -17,7 +17,35 @@ function openDraftPractice(db,playerTeamId,opponentTeamId){
   const seed=freshInternalSeed('draft-practice'),sideRng=new RNG(seed,'side'),firstPick=sideRng.chance(.5)?0:1;
   openInteractiveDraft(db,[playerTeamId,opponentTeamId],playerTeamId,{seed,title:'밴픽 연습',ctx:{used:[],byTeam:{},fearless:true,practice:true,firstPick}});
 }
+function officialSelectionText(setup){
+  const p=setup.prompt,lead=p.lead;
+  if(p.mode==='first')return setup.game===1&&setup.homeTeam===p.team?'홈 경기 1세트 첫 번째 선택권':'직전 세트 패배팀 첫 번째 선택권';
+  if(lead.chose==='side')return `상대가 ${lead.value==='blue'?'블루':'레드'} 진영을 먼저 선택했습니다`;
+  return `상대가 ${lead.value==='first'?'선픽':'후픽'}을 먼저 선택했습니다`;
+}
+function openPendingOfficialSelection(db,setup){
+  const me=managedTeamId(db),mine=db.teams[me],oppId=setup.m.a===me?setup.m.b:setup.m.a,opp=db.teams[oppId],score=setup.score||[0,0],meScore=setup.m.a===me?score[0]:score[1],oppScore=setup.m.a===me?score[1]:score[0],p=setup.prompt,last=setup.lastGame;
+  const ov=$('#overlay');ov.hidden=false;ov.setAttribute('aria-label','세트 선택권');document.body.classList.add('lock');
+  const choices=p.mode==='first'
+    ?[{kind:'side',value:'blue',title:'블루 진영',sub:'진영을 먼저 선택'},{kind:'side',value:'red',title:'레드 진영',sub:'진영을 먼저 선택'},{kind:'order',value:'first',title:'선픽',sub:'픽 순서를 먼저 선택'},{kind:'order',value:'last',title:'후픽',sub:'픽 순서를 먼저 선택'}]
+    :(p.remaining==='side'
+      ?[{kind:'side',value:'blue',title:'블루 진영',sub:'남은 진영 선택'},{kind:'side',value:'red',title:'레드 진영',sub:'남은 진영 선택'}]
+      :[{kind:'order',value:'first',title:'선픽',sub:'남은 픽 순서 선택'},{kind:'order',value:'last',title:'후픽',sub:'남은 픽 순서 선택'}]);
+  const holder=db.teams[p.chooser],home=setup.homeTeam&&db.teams[setup.homeTeam];
+  ov.innerHTML=`<div class="ovin du-choice-wrap">
+    <div class="ovhead"><div><b>${esc(setup.comp.name)} · ${esc(mine.short)} ${meScore} : ${oppScore} ${esc(opp.short)}</b><small class="du-phase">${setup.game}세트 First Selection</small></div></div>
+    ${last?`<div class="du-last"><span>직전 ${last.n}세트</span><b>${esc(db.teams[last.winner].short)} 승</b><small>${last.kills[0]} : ${last.kills[1]} · ${esc(last.dur)}</small></div>`:''}
+    <section class="du-choice-card">
+      <small>${esc(officialSelectionText(setup))}</small>
+      <h3>${esc(holder.short)}가 첫 번째 선택권 보유</h3>
+      <p>${home&&setup.game===1?`홈팀: ${esc(home.short)} · `:''}${p.mode==='first'?'진영 또는 픽 순서 중 하나를 먼저 고르세요. 상대가 나머지를 선택합니다.':'상대가 한 항목을 먼저 골랐습니다. 남은 항목을 선택하세요.'}</p>
+      <div class="du-choice-grid">${choices.map(c=>`<button class="du-choice" data-choice-kind="${c.kind}" data-choice-value="${c.value}"><b>${c.title}</b><span>${c.sub}</span></button>`).join('')}</div>
+    </section>
+  </div>`;
+  document.querySelectorAll('[data-choice-kind]').forEach(b=>b.onclick=()=>{applyPendingOfficialSelection(DB,{kind:b.dataset.choiceKind,value:b.dataset.choiceValue});saveDB();openPendingOfficialDraft(DB)});
+}
 function openPendingOfficialDraft(db){
+  const selection=pendingOfficialSelectionSetup(db);if(selection){openPendingOfficialSelection(db,selection);return true}
   const setup=pendingOfficialDraftSetup(db);if(!setup)return false;
   const me=managedTeamId(db),mine=db.teams[me],oppId=setup.m.a===me?setup.m.b:setup.m.a,opp=db.teams[oppId],score=setup.score||[0,0];
   const aScore=score[0],bScore=score[1],meScore=setup.m.a===me?aScore:bScore,oppScore=setup.m.a===me?bScore:aScore;

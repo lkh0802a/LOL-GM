@@ -538,3 +538,14 @@ This applies retroactively to completed major items during later UI touches and 
 - Managed official Bo3/Bo5 series are persisted as game-level series sessions. Every game opens a fresh live draft, then its result updates series score, loser-controlled next-game choice, mental modifiers, series adaptation and Fearless history before the next draft is prepared.
 - Every completed game contributes all ten picked champions to the fixed Fearless lock set for later games in that series; regular bans remain additional to those locks.
 - Scheduled result commit is guarded against duplication. Statistics, meta, player usage, scouting and stage advancement continue through the same official pipelines after the full series resolves.
+
+
+## D-043 — First Selection source depends on competition context
+
+**Decision:** Game-one First Selection is assigned by the competition context, while games two onward always belong to the previous game's loser.
+
+- Domestic double round-robin: match side A is the home team and receives game-one First Selection. The return fixture reverses the pairing, so the other club receives the same home advantage once.
+- Domestic seeded playoffs may explicitly set `firstChoice: seed`, giving the higher seeded side game-one First Selection.
+- Neutral single-elimination knockout stages, including quarterfinal onward when no First Selection seed priority exists, use a coin toss for game one.
+- From game two onward, the previous game's losing team owns First Selection regardless of how game one was assigned.
+- First Selection means choosing either side (blue/red) or pick order (first/last). The opponent then chooses the remaining dimension. A managed team gets a UI choice whether it is the First Selection holder or the team making the remaining selection.

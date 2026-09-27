@@ -719,12 +719,27 @@ function pendingOfficialRefs(db,q){
   if(!s||!m||m.res)return null;const comp=db.competitions[s.comp],cfgIdx=comp.stages.findIndex(x=>x.id===day.stage),cfg=comp.stages[cfgIdx];
   return {s,day,m,comp,cfg,cfgIdx};
 }
-function pendingOfficialDraftSetup(db){
+function pendingOfficialSession(db){
   const p=db.world&&db.world.pendingOfficial,q=p&&p.queue&&p.queue[0];if(!q)return null;
   const refs=pendingOfficialRefs(db,q);if(!refs)return null;
   if(!q.session)q.session=scheduledSeriesSession(db,refs.s,refs.m).session;
-  const cur=seriesSessionPrepareGame(db,q.session);if(!cur)return null;
-  return {...refs,...cur,draftCtx:cur.snap,session:q.session,seasonKey:q.seasonKey,pendingDate:p.date,game:q.session.g,score:[q.session.wins[q.session.a],q.session.wins[q.session.b]],fearlessUsed:q.session.ctx.used.slice()};
+  return {p,q,refs,session:q.session};
+}
+function pendingOfficialSelectionSetup(db){
+  const x=pendingOfficialSession(db);if(!x)return null;
+  const me=managedTeamId(db),prompt=seriesSelectionPrompt(db,x.session,me);if(!prompt)return null;
+  const last=x.session.games[x.session.games.length-1]||null,score=[x.session.wins[x.session.a],x.session.wins[x.session.b]];
+  return {...x.refs,prompt,session:x.session,game:x.session.g,score,lastGame:last,homeTeam:x.refs.m.a};
+}
+function applyPendingOfficialSelection(db,choice){
+  const x=pendingOfficialSession(db);if(!x)throw new Error('No pending official selection');
+  return seriesApplyManagedSelection(db,x.session,managedTeamId(db),choice);
+}
+function pendingOfficialDraftSetup(db){
+  const x=pendingOfficialSession(db);if(!x)return null;
+  if(!x.session.current&&!x.session.selectionResolved)return null;
+  const cur=seriesSessionPrepareGame(db,x.session);if(!cur)return null;
+  return {...x.refs,...cur,draftCtx:cur.snap,session:x.session,seasonKey:x.q.seasonKey,pendingDate:x.p.date,game:x.session.g,score:[x.session.wins[x.session.a],x.session.wins[x.session.b]],fearlessUsed:x.session.ctx.used.slice(),homeTeam:x.refs.m.a};
 }
 function resolvePendingOfficialMatch(db,forcedDraft){
   const w=db.world,p=w&&w.pendingOfficial,q=p&&p.queue&&p.queue[0];if(!q)throw new Error('No pending official match');

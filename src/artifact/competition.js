@@ -23,12 +23,56 @@ function chooseSide(db,tid,opp,ctx,g,bestOf,rng){
   const why=chose==='side'?`진영 선택 → ${side==='blue'?'블루':'레드'} (상대가 ${order==='first'?'후픽':'선픽'} 선택)`:`픽 순서 선택 → ${order==='first'?'선픽':'후픽'}${order==='last'&&me.fl>0.3?' (피어리스로 줄어든 챔피언 폭 — 마지막 카운터픽)':''} (상대가 ${side==='blue'?'레드':'블루'} 선택)`;
   return {side,order,chose,why};
 }
+function resolveFirstSelection(db,chooser,other,ctx,g,bestOf,rng,choice){
+  if(!choice)return chooseSide(db,chooser,other,ctx,g,bestOf,rng);
+  const me=draftPrefs(db,chooser,ctx,g,bestOf,rng),op=draftPrefs(db,other,ctx,g,bestOf,rng),bestSide=v=>v.blue>=v.red?'blue':'red',bestOrd=v=>v.first>=v.last?'first':'last',flip={blue:'red',red:'blue',first:'last',last:'first'};
+  if(choice.kind==='side'){
+    if(!['blue','red'].includes(choice.value))throw new Error('Invalid First Selection side');
+    const side=choice.value,order=flip[bestOrd(op)];
+    return {side,order,chose:'side',why:`첫 번째 선택권 → ${side==='blue'?'블루':'레드'} · 상대가 ${order==='first'?'후픽':'선픽'} 선택`};
+  }
+  if(choice.kind==='order'){
+    if(!['first','last'].includes(choice.value))throw new Error('Invalid First Selection order');
+    const order=choice.value,side=flip[bestSide(op)];
+    return {side,order,chose:'order',why:`첫 번째 선택권 → ${order==='first'?'선픽':'후픽'} · 상대가 ${side==='blue'?'레드':'블루'} 선택`};
+  }
+  throw new Error('Invalid First Selection choice');
+}
+function seriesSelectionPrompt(db,sess,managedId){
+  if(seriesSessionDone(sess)||sess.current||sess.selectionResolved)return null;
+  const chooser=sess.chooser,other=chooser===sess.a?sess.b:sess.a;
+  if(chooser===managedId)return {mode:'first',game:sess.g,chooser,other,team:managedId};
+  if(!sess.selectionLead){
+    const rng=seriesSessionRng(sess),sc=chooseSide(db,chooser,other,sess.ctx,sess.g,sess.bestOf,rng);
+    sess.sideRng={a:rng.a,sp:rng.sp};sess.selectionLead={chooser,other,chose:sc.chose,side:sc.side,order:sc.order,why:sc.why};
+  }
+  const lead=sess.selectionLead,remaining=lead.chose==='side'?'order':'side';
+  return {mode:'remaining',game:sess.g,chooser,other,team:managedId,remaining,lead:{chose:lead.chose,value:lead.chose==='side'?lead.side:lead.order,why:lead.why}};
+}
+function seriesApplyManagedSelection(db,sess,managedId,choice){
+  const chooser=sess.chooser,other=chooser===sess.a?sess.b:sess.a;
+  if(chooser===managedId){
+    const rng=seriesSessionRng(sess),sc=resolveFirstSelection(db,chooser,other,sess.ctx,sess.g,sess.bestOf,rng,choice);
+    sess.sideRng={a:rng.a,sp:rng.sp};sess.selectionResolved=sc;sess.selectionLead=null;return sc;
+  }
+  const prompt=seriesSelectionPrompt(db,sess,managedId),lead=sess.selectionLead;if(!prompt||prompt.mode!=='remaining'||!lead)throw new Error('No remaining First Selection choice');
+  const flip={blue:'red',red:'blue',first:'last',last:'first'};let side=lead.side,order=lead.order;
+  if(prompt.remaining==='order'){
+    if(choice.kind!=='order'||!['first','last'].includes(choice.value))throw new Error('Invalid remaining order choice');
+    order=flip[choice.value];
+  }else{
+    if(choice.kind!=='side'||!['blue','red'].includes(choice.value))throw new Error('Invalid remaining side choice');
+    side=flip[choice.value];
+  }
+  const sc={side,order,chose:lead.chose,why:`${lead.why} · 상대 선택 반영`};sess.selectionResolved=sc;sess.selectionLead=null;return sc;
+}
+
 // a = 상위 시드
 function seriesDraftSnapshot(ctx){
   return {used:ctx.used.slice(),byTeam:Object.fromEntries(Object.entries(ctx.byTeam).map(([id,h])=>[id,{won:h.won.slice(),lost:h.lost.slice()}])),fearless:ctx.fearless,mods:{...ctx.mods},practice:ctx.practice,championPool:ctx.championPool};
 }
-function seriesGameSetup(db,aId,bId,bestOf,seed,ctx,g,chooser,srng){
-  const other=chooser===aId?bId:aId,sc=chooseSide(db,chooser,other,ctx,g,bestOf,srng);
+function seriesGameSetup(db,aId,bId,bestOf,seed,ctx,g,chooser,srng,resolved=null){
+  const other=chooser===aId?bId:aId,sc=resolved||chooseSide(db,chooser,other,ctx,g,bestOf,srng);
   const blue=sc.side==='blue'?chooser:other,red=blue===aId?bId:aId,gseed=seed+'/g'+g;
   let fpTeam=sc.order==='first'?chooser:other;if(BAL.randomTest)fpTeam=srng.chance(.5)?aId:bId;
   const snap=seriesDraftSnapshot(ctx);snap.firstPick=fpTeam===blue?0:1;
@@ -40,14 +84,14 @@ function createSeriesSession(db,aId,bId,bestOf,seed,opt={}){
   return {a:aId,b:bId,bestOf,seed,need:Math.ceil(bestOf/2),g:1,chooser,wins:{[aId]:0,[bId]:0},games:[],lines:[],
     ctx:{used:[],byTeam:{[aId]:{won:[],lost:[]},[bId]:{won:[],lost:[]}},fearless:!!opt.fearless,mods:{[aId]:0,[bId]:0},practice:!!opt.practice,championPool:opt.championPool||null},
     opt:{fearless:!!opt.fearless,firstChoice,compId:opt.compId||null,metaContext:opt.metaContext||null,replay:!!opt.replay,practice:!!opt.practice},
-    sideRng:{a:srng.a,sp:srng.sp},current:null};
+    sideRng:{a:srng.a,sp:srng.sp},selectionLead:null,selectionResolved:null,current:null};
 }
 function seriesSessionRng(sess){const r=new RNG(sess.seed,'side');r.a=sess.sideRng.a;r.sp=sess.sideRng.sp;return r}
 function seriesSessionDone(sess){return sess.wins[sess.a]>=sess.need||sess.wins[sess.b]>=sess.need}
 function seriesSessionPrepareGame(db,sess){
   if(seriesSessionDone(sess))return null;if(sess.current)return sess.current;
-  const srng=seriesSessionRng(sess),x=seriesGameSetup(db,sess.a,sess.b,sess.bestOf,sess.seed,sess.ctx,sess.g,sess.chooser,srng);
-  sess.sideRng={a:srng.a,sp:srng.sp};
+  const srng=seriesSessionRng(sess),x=seriesGameSetup(db,sess.a,sess.b,sess.bestOf,sess.seed,sess.ctx,sess.g,sess.chooser,srng,sess.selectionResolved);
+  sess.sideRng={a:srng.a,sp:srng.sp};sess.selectionResolved=null;sess.selectionLead=null;
   sess.current={g:sess.g,chooser:sess.chooser,blue:x.blue,red:x.red,gseed:x.gseed,fpTeam:x.fpTeam,sc:x.sc,snap:x.snap};
   return sess.current;
 }
@@ -219,7 +263,7 @@ function recordLines(s,lines){
   }
 }
 function scheduledSeriesOptions(db,s,day,cfg){
-  const comp=db.competitions[s.comp],firstChoice=cfg.type==='round_robin'||cfg.type==='swiss'?'coin':'seed';
+  const comp=db.competitions[s.comp],firstChoice=cfg.firstChoice||(cfg.type==='round_robin'&&!comp.international?'home':(['round_robin','swiss','single_elim'].includes(cfg.type)?'coin':'seed'));
   return {fearless:comp.rules&&comp.rules.fearless,firstChoice,compId:s.comp,championPool:comp.championPool,metaContext:{season:s.id,year:s.year,split:s.split||null,stage:day.stage,league:comp.region||s.comp,international:!!comp.international}};
 }
 function simulateScheduledSeries(db,s,day,m,cfg,extra={}){
@@ -250,7 +294,7 @@ function finalizeCompetitionDay(db,s,day,cfgIdx,cfg){
 }
 function scheduledSeriesSession(db,s,m){
   const day=s.days[s.cur],comp=db.competitions[s.comp],cfgIdx=comp.stages.findIndex(x=>x.id===day.stage),cfg=comp.stages[cfgIdx],opt=scheduledSeriesOptions(db,s,day,cfg),seed=`${s.seed}/${s.year}/${m.id}`;
-  const session=createSeriesSession(db,m.a,m.b,m.bo,seed,opt);seriesSessionPrepareGame(db,session);return {session,day,comp,cfg,cfgIdx,opt,seed};
+  const session=createSeriesSession(db,m.a,m.b,m.bo,seed,opt);return {session,day,comp,cfg,cfgIdx,opt,seed};
 }
 function scheduledOpeningDraft(db,s,m){
   const x=scheduledSeriesSession(db,s,m),opening=seriesSessionPrepareGame(db,x.session);
@@ -299,7 +343,7 @@ function leagueStages(R,n,div){
   const fmt=R.format||'rr_po', bo=Math.max(3,R.regularBo||3), pbo=div===2?3:Math.max(3,R.playoffBo||5);
   const take=div===2?Math.min(4,n):Math.min(Math.max(4,R.playoffTake||4),n);
   const rr={id:'regular',name:'정규 시즌',type:'round_robin',legs:Math.max(2,R.legs||2),bestOf:bo,dayGap:[3,4]};
-  const po=t=>({id:'playoffs',name:'플레이오프',type:'single_elim',from:'regular',take:t,bestOf:pbo,dayGap:[6,6]});
+  const po=t=>({id:'playoffs',name:'플레이오프',type:'single_elim',from:'regular',take:t,bestOf:pbo,dayGap:[6,6],firstChoice:'seed'});
   if(div===2)return [rr,po(take)];
   if(fmt==='rr_de')return [rr,{id:'playoffs',name:'플레이오프',type:'double_elim',from:'regular',take:take>=8&&n>=8?8:take>=6&&n>=8?8:4,bestOf:pbo,dayGap:[4,4]}];
   if(fmt==='groups_po'&&n>=10)return [{...rr,name:'그룹 스테이지',groups:2},po(take)];
@@ -308,7 +352,7 @@ function leagueStages(R,n,div){
 // 국제대회: 팀 목록은 시드 순서(지역 1번 시드 → 2번 시드 …)
 function intlStages(fmt,teams,bo){
   const n=teams.length, B=Math.max(3,bo||5);
-  const ko=(from,t)=>({id:'knockout',name:'녹아웃',type:'single_elim',from,take:t,bestOf:B,dayGap:[5,5]});
+  const ko=(from,t)=>({id:'knockout',name:'녹아웃',type:'single_elim',from,take:t,bestOf:B,dayGap:[5,5],firstChoice:'coin'});
   const de=(from,t)=>({id:'knockout',name:'브래킷 스테이지',type:'double_elim',from,take:t,bestOf:B,dayGap:[3,3]});
   const grp=(g,extra={})=>({id:'groups',name:'그룹 스테이지',type:'round_robin',legs:1,bestOf:3,groups:g,dayGap:[1,1,2],...extra});
   const sw=(extra={})=>({id:'groups',name:'스위스 스테이지',type:'swiss',bestOf:3,wins:3,losses:3,dayGap:[2],...extra});
