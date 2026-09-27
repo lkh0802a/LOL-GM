@@ -178,3 +178,19 @@ These changes intentionally invalidate older development saves, so the active sa
 - match lines carry position-sensitive ratings plus gold/GPM/DPM-compatible data
 
 Older development saves remain unsupported.
+
+
+## D-020 — Player roles and satisfaction accepted
+
+**Decision:** Major item 3, `선수 만족도 / 역할`, is accepted as complete on 2026-09-27.
+
+- roster expectations use five explicit levels: core starter, starter, competition, backup and prospect
+- each role carries an expected playing-time share; actual team and player games are accumulated from real series
+- satisfaction is persistent and gradual rather than an instant performance-collapse switch
+- dissatisfaction can come from playing-time gaps, reserve assignment, under-market contract, weak team results, role mismatch, missing international opportunities and unmet career goals
+- players have career goals derived from age, potential, reputation and ambition
+- severe unresolved dissatisfaction can produce a transfer request only after persistence; recovered satisfaction can withdraw it
+- manager role changes are explicit UI actions and role downgrades can carry a satisfaction cost
+- AI clubs rebalance roster roles after offseason market changes
+- satisfaction affects renewal and transfer intent while detailed contract negotiation remains reserved for major item 5
+- item 3 was verified by smoke tests and a mobile standalone-browser scenario that created and displayed a playing-time-driven transfer request
