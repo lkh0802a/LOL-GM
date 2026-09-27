@@ -32,6 +32,7 @@ source += `\n(()=>{
   const poolEntry=Object.keys(sample.pool)[0],practiceBefore=(sample.pool[poolEntry].trainingExperience||0);practiceChampion(db,sample,poolEntry,'training',3);
   if((sample.pool[poolEntry].trainingExperience||0)<=practiceBefore) throw new Error('Champion training experience failed');
   if(!(playerMarketValue(db,sample)>0)||!['신인','성장','전성기','쇠퇴'].includes(careerStage(sample))) throw new Error('Player value/lifecycle failed');
+  ensureSatisfaction(sample);if(!SQUAD_ROLES.includes(recommendedRosterRole(db,sample,active[0]))||!CAREER_GOAL_KO[playerCareerGoal(sample)]) throw new Error('Player roster role/career goal failed');
   const core=playerCoreMetrics(sample),coreKeys=['laning','skirmish','teamfight','positioning','damage','survival','vision','objective','roaming','macro','sidelane','decision','stability','aggression','concentration','adaptability','volatility','championLearning','metaAdaptation'];
   if(coreKeys.some(k=>!Number.isFinite(core[k])||core[k]<0||core[k]>100)) throw new Error('Player core metric derivation failed');
   const patchProbe=JSON.parse(JSON.stringify(sample)),patchBefore=patchProbe.pool[poolEntry].mastery;
@@ -80,6 +81,11 @@ source += `\n(()=>{
 
   finalizeInitialRosters(db);
   if(db.world.phase!=='season'||!db.manager.careerStartedAt) throw new Error('Season did not start after roster finalization');
+  for(const t of activeTeams(db))for(const id of t.roster){const p=db.players[id];ensureSatisfaction(p);if(!SQUAD_ROLES.includes(p.rosterRole)||p.satisfaction<0||p.satisfaction>100)throw new Error('Initial player role/satisfaction failed')}
+  const satTeam=managedRoot,satP=db.players[satTeam.roster[0]],originalSatRole=satP.rosterRole;setRosterRole(db,satP,'core','manager',false);const su=usageFor(satP,db.year);su.teamGames=20;su.games=2;su.series=8;su.teamWins=5;satP.satisfaction=26;satP.concernStreak=3;applySatisfaction(db,satP);
+  if(!satP.wantsOut||!satP.satisfactionReasons.includes('playing_time'))throw new Error('Long-term playing-time dissatisfaction did not create transfer request');
+  su.games=20;su.teamWins=16;satP.satisfaction=55;applySatisfaction(db,satP);if(satP.wantsOut)throw new Error('Transfer request withdrawal failed');
+  setRosterRole(db,satP,originalSatRole||recommendedRosterRole(db,satP,satTeam),'manager',true);satP.usage={year:db.year,teamGames:0,games:0,series:0,wins:0,teamWins:0,intlGames:0,teamIntlGames:0,firstTeamGames:0,reserveGames:0};
   for(const t of activeTeams(db)){
     const e=initialSquadErrors(db,t);
     if(e.length) throw new Error('Final initial roster invalid: '+t.id+' '+e.join(' | '));
@@ -119,7 +125,7 @@ source += `\n(()=>{
   const matchIds=seasons.flatMap(s=>s.days.flatMap(d=>d.matches.map(m=>m.id)));
   if(!matchIds.length||new Set(matchIds).size!==matchIds.length) throw new Error('Match IDs are not unique');
 
-  console.log('World smoke test: OK — blank rosters, global FA, roster rules, player identity/role ratings/state/value/development/champion learning/full match metrics, season bootstrap and Bo1 simulation');
+  console.log('World smoke test: OK — blank rosters, global FA, roster rules, player identity/role ratings/state/value/development/champion learning/full match metrics/roster roles/satisfaction, season bootstrap and Bo1 simulation');
 })()`;
 
 const context = {

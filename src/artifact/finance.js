@@ -6,7 +6,7 @@ function psTeam(db,t){return psOf(db,t.region)*((t.division||1)===2?0.35:1)}
 function marketSalary(db,p,rid){const o=playerOvr(p),ps=psOf(db,rid||p.region),up=Math.max(0,p.pot-o)*(p.age<=21?.04:.01);return Math.max(.3*ps,Math.round(.5*Math.exp((o-60)*.13)*(1+up)*ps*10)/10)}
 function playerMarketValue(db,p){const o=playerOvr(p),rep=p.reputation??o,up=Math.max(0,p.pot-o),rid=p.team&&db.teams[p.team]?db.teams[p.team].region:p.region,ps=psOf(db,rid),ageMul=p.age<=20?1.2:p.age<=23?1.12:p.age<=26?1:p.age<=29?.82:.62,left=p.contract?Math.max(0,p.contract.until-db.year+1):0,contractMul=p.contract?1+Math.min(3,left)*.12:.72,raw=.65*Math.exp((o-60)*.115)*ps*(.78+rep/180)*(1+up*(p.age<=22?.045:.018))*ageMul*contractMul;return Math.round(Math.max(.2*ps,raw)*10)/10}
 function asking(db,p,rid){return Math.round(marketSalary(db,p,rid)*(1+p.personality.ambition/400)*(.96+(p.reputation??playerOvr(p))/1800)*10)/10}
-function signContract(db,p,t,salary,years){const old=p.team;assignPlayerToTeam(db,p,t);p.faYears=0;p.contract={salary:Math.round(salary*10)/10,until:db.year+years-1,signed:db.year};if(db.world)recordPlayerEvent(p,'contract',db.year,{team:t.id,salary:p.contract.salary,years,until:p.contract.until,renewal:old===t.id,date:db.worldDate})}
+function signContract(db,p,t,salary,years){const old=p.team;assignPlayerToTeam(db,p,t);p.faYears=0;p.contract={salary:Math.round(salary*10)/10,until:db.year+years-1,signed:db.year};setRosterRole(db,p,recommendedRosterRole(db,p,t),'contract',true);ensureSatisfaction(p);if(old&&old!==t.id){p.satisfaction=clamp(Math.max(p.satisfaction,58),0,100);p.concernStreak=0;p.wantsOut=false;p.wantsOutReason=null}if(db.world)recordPlayerEvent(p,'contract',db.year,{team:t.id,salary:p.contract.salary,years,until:p.contract.until,renewal:old===t.id,rosterRole:p.rosterRole,date:db.worldDate})}
 function payroll(db,t){return t.roster.reduce((a,id)=>a+((db.players[id]&&db.players[id].contract)?db.players[id].contract.salary:0),0)}
 function initFinance(db,t,rng){
   const ps=psTeam(db,t);
@@ -79,7 +79,7 @@ function contractMarket(db,rng,rep,ev){
     if(t.id===mine){release(t,p);rep.expired.push({pid:p.id,team:t.id,why:'재계약하지 않음'});continue}
     const isStarter=starterFor(db,t,p.role)===p, want=isStarter||(p.age<=21&&p.pot-playerOvr(p)>=6);
     const ask=asking(db,p,t.region), room=salaryBudget(db,t)-payroll(db,t)+p.contract.salary;
-    const stay=rng.chance(0.5+0.35*(1-p.personality.ambition/100)+(teamStrength(db,t.id)>=db.regions[t.region].strength?0.1:-0.1));
+    ensureSatisfaction(p);const stay=rng.chance(clamp(0.42+0.3*(1-p.personality.ambition/100)+(teamStrength(db,t.id)>=db.regions[t.region].strength?0.1:-0.1)+(p.satisfaction-50)/125-(p.wantsOut?.22:0),.08,.92));
     if(want&&ask<=room&&stay){const yrs=p.age<=22?rng.int(2,3):p.age>=27?1:rng.int(1,2);signContract(db,p,t,ask,yrs);rep.resign.push({pid:p.id,team:t.id,salary:ask,years:yrs})}
     else {release(t,p);rep.expired.push({pid:p.id,team:t.id,why:!want?'재계약 제안 없음':ask>room?'연봉 이견':'FA 시장 도전'})}
   }
@@ -180,7 +180,7 @@ function myT(db){return managedTeam(db)}
 function mResign(db,pid,years){
   const t=myT(db),p=db.players[pid],ask=asking(db,p,t.region),rng=new RNG(db.world.seed+pid+db.year,'resign');
   if(payroll(db,t)-p.contract.salary+ask>salaryBudget(db,t)*1.2)return `${p.name}: 예산이 부족합니다 (요구 연봉 ${money(ask)})`;
-  const ok=rng.chance(0.55+0.35*(1-p.personality.ambition/100)+(teamStrength(db,t.id)>=db.regions[t.region].strength?0.1:-0.1)+(years>=2?0.05:0));
+  ensureSatisfaction(p);const ok=rng.chance(clamp(0.48+0.28*(1-p.personality.ambition/100)+(teamStrength(db,t.id)>=db.regions[t.region].strength?0.1:-0.1)+(years>=2?0.05:0)+(p.satisfaction-50)/120-(p.wantsOut?.25:0),.05,.95));
   if(!ok){p.contract.declined=true;return `${p.name}: 재계약 거절 — FA 시장에 나갑니다`}
   signContract(db,p,t,ask,years);return `${p.name}: 재계약 완료 (${money(ask)} · ${years}년)`;
 }
@@ -194,7 +194,7 @@ function mTransfer(db,pid,fee){
   if(p.region!==t.region&&t.roster.filter(id=>db.players[id]&&db.players[id].region!==t.region).length>=(R.importLimit??2))return '외국인 선수 한도를 넘습니다';
   const starter=starterFor(db,from,p.role)===p;
   if(fee<ask*(starter?1.15:0.9)&&!(from.finance.cash<0&&fee>=ask*0.8))return `${from.name}: 거절 (${p.name} 이적료로 약 ${money(ask*(starter?1.15:0.9))} 이상을 원합니다)`;
-  if(!p.wantsOut&&!rng.chance(0.85))return `${p.name}: 이적 거부 — 현 소속팀 잔류를 원합니다`;
+  ensureSatisfaction(p);if(!p.wantsOut&&!rng.chance(clamp(.7+(55-p.satisfaction)/120,.35,.92)))return `${p.name}: 이적 거부 — 현 소속팀 잔류를 원합니다`;
   doTransfer(db,p,from,t,fee);return `${p.name} 영입 완료 (이적료 ${money(fee)}, 연봉 ${money(p.contract.salary)} 승계)`;
 }
 // ---- 스카우팅: 내 구단이 아는 만큼만 보인다 ----

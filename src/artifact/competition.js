@@ -194,7 +194,7 @@ function playDay(db,s){
   for(const m of day.matches){
     const firstChoice=cfg.type==='round_robin'||cfg.type==='swiss'?'coin':'seed';
     const {rec,lines}=simulateSeries(db,m.a,m.b,m.bo,`${s.seed}/${s.year}/${m.id}`,{fearless:comp.rules&&comp.rules.fearless,firstChoice});
-    m.res=rec; recordLines(s,lines); afterSeries(db,lines,rec);
+    m.res=rec; recordLines(s,lines); afterSeries(db,lines,rec); updatePlayerUsage(db,s,rec,lines);
   }
   s.cur++;
   const sd=s.stageData[cfg.id], roundDays=s.days.filter(d=>d.stage===cfg.id&&d.label===day.label), roundDone=roundDays.every(d=>d.matches.every(m=>m.res));

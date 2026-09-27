@@ -4,6 +4,69 @@ function pState(p){if(p.form===undefined)p.form=0;if(p.fatigue===undefined)p.fat
 // 상태는 기본 실력을 보정하지만 압도하지 않도록 총합을 제한한다.
 function playerMod(p){pState(p);const v=p.form/250-p.fatigue/900+(p.condition-92)/1200+(p.morale-65)/1800+(p.sharpness-60)/1700+((p.teamAdaptation+p.tacticalAdaptation)/2-60)/2200;return clamp(v,-.11,.09)}
 function teamSynergy(t){return t.synergy??50}
+const CAREER_GOAL_KO={development:'성장 기회',starter:'주전 정착',international:'국제대회 출전',titles:'우승 경쟁',stability:'안정적인 커리어'};
+const SAT_REASON_KO={playing_time:'출전 시간 부족',reserve:'2군 배치',contract:'계약/연봉 불만',team_results:'팀 성적 불만',role:'역할 불만',international:'국제대회 기회 부족',career_goal:'커리어 목표 불일치'};
+function ensureSatisfaction(p){
+  pState(p);if(p.satisfaction===undefined)p.satisfaction=70;if(!Array.isArray(p.satisfactionReasons))p.satisfactionReasons=[];
+  if(p.concernStreak===undefined)p.concernStreak=0;if(p.wantsOut===undefined)p.wantsOut=false;if(p.wantsOutReason===undefined)p.wantsOutReason=null;
+  playerCareerGoal(p);return p;
+}
+function usageFor(p,year){
+  p.usage=p.usage&&p.usage.year===year?p.usage:{year,teamGames:0,games:0,series:0,wins:0,teamWins:0,intlGames:0,teamIntlGames:0,firstTeamGames:0,reserveGames:0};
+  return p.usage;
+}
+function actualPlayShare(p){const u=p.usage;return u&&u.teamGames?u.games/u.teamGames:0}
+function satisfactionLabel(v){return v>=80?'매우 만족':v>=65?'만족':v>=48?'보통':v>=32?'불만':'매우 불만'}
+function satisfactionIssues(db,p,opt={}){
+  ensureSatisfaction(p);const t=p.team&&db.teams[p.team],u=p.usage&&p.usage.year===db.year?p.usage:null,out=[];
+  if(!t)return out;
+  const exp=expectedPlayShare(p),actual=u&&u.teamGames>=6?actualPlayShare(p):null;
+  if(actual!==null&&exp-actual>.17)out.push({code:'playing_time',severity:clamp((exp-actual)*45,4,22)});
+  if(t.parent&&p.rosterRole!=='prospect'&&(p.age>=22||(p.reputation||0)>=68))out.push({code:'reserve',severity:5+Math.max(0,(p.reputation||60)-65)/5});
+  if(p.contract){const fair=marketSalary(db,p,t.region);if(fair>0&&p.contract.salary/fair<.72)out.push({code:'contract',severity:clamp((.72-p.contract.salary/fair)*28,3,12)})}
+  if(u&&u.teamGames>=10&&u.teamWins/u.teamGames<.43&&p.personality.ambition>=60)out.push({code:'team_results',severity:clamp((.43-u.teamWins/u.teamGames)*30+2,3,10)});
+  const rec=recommendedRosterRole(db,p,t),rr=(SQUAD_ROLE_ORDER[rec]??2)-(SQUAD_ROLE_ORDER[p.rosterRole]??2);
+  if(rr>=2&&p.personality.ambition>=55)out.push({code:'role',severity:rr*3});
+  if(opt.offseason){
+    const goal=playerCareerGoal(p),rows=(p.career||[]).filter(c=>c.year===opt.year),intl=rows.some(c=>c.international&&c.g>0),titles=(p.careerEvents||[]).some(e=>e.year===opt.year&&e.type==='title'),firstGames=rows.filter(c=>c.squad==='1군').reduce((a,c)=>a+c.g,0);
+    if(goal==='international'&&!intl)out.push({code:'international',severity:6});
+    if(goal==='titles'&&!titles)out.push({code:'career_goal',severity:5});
+    if(goal==='starter'&&firstGames<Math.max(6,(u?u.teamGames:0)*.45))out.push({code:'career_goal',severity:5});
+    if(goal==='development'&&p.age<=22&&rows.length&&rows.reduce((a,c)=>a+c.g,0)<6)out.push({code:'career_goal',severity:4});
+  }
+  return out.sort((a,b)=>b.severity-a.severity);
+}
+function applySatisfaction(db,p,opt={}){
+  ensureSatisfaction(p);const issues=satisfactionIssues(db,p,opt),u=p.usage&&p.usage.year===db.year?p.usage:null;
+  let delta=issues.length?-Math.min(opt.offseason?12:3.2,issues.reduce((a,x)=>a+x.severity,0)*(opt.offseason?.22:.07)):0;
+  if(!issues.length&&u&&u.teamGames>=4){const actual=actualPlayShare(p),exp=expectedPlayShare(p);delta=Math.min(opt.offseason?5:1.2,1+(actual-exp)*3)}
+  p.satisfaction=clamp(p.satisfaction+delta,0,100);p.satisfactionReasons=issues.map(x=>x.code);
+  if(p.satisfaction<35&&issues.length)p.concernStreak=(p.concernStreak||0)+1;else p.concernStreak=Math.max(0,(p.concernStreak||0)-1);
+  if(!p.wantsOut&&p.satisfaction<=25&&p.concernStreak>=4){p.wantsOut=true;p.wantsOutReason=issues[0]?issues[0].code:'career_goal';recordPlayerEvent(p,'transfer_request',db.year,{reason:p.wantsOutReason,team:p.team,date:db.worldDate})}
+  else if(p.wantsOut&&p.satisfaction>=52){p.wantsOut=false;const why=p.wantsOutReason;p.wantsOutReason=null;p.concernStreak=0;recordPlayerEvent(p,'transfer_request_withdrawn',db.year,{reason:why,team:p.team,date:db.worldDate})}
+  const target=52+p.satisfaction*.2;p.morale=clamp(p.morale+(target-p.morale)*.05,0,100);
+  return {delta,issues};
+}
+function updatePlayerUsage(db,s,rec,lines){
+  const comp=db.competitions[s.comp],n=rec.games.length,by={};for(const l of lines)(by[l.pid]=by[l.pid]||[]).push(l);
+  for(const tid of [rec.a,rec.b]){const t=db.teams[tid];if(!t)continue;const teamWins=rec.games.filter(g=>g.winner===tid).length;
+    for(const id of t.roster){const p=db.players[id];if(!p)continue;ensureSatisfaction(p);const u=usageFor(p,s.year);u.teamGames+=n;u.teamWins+=teamWins;if(comp.international)u.teamIntlGames+=n;
+      const ls=by[id]||[];u.games+=ls.length;u.series++;u.wins+=ls.filter(x=>x.win).length;if(comp.international)u.intlGames+=ls.length;if(t.parent)u.reserveGames+=ls.length;else u.firstTeamGames+=ls.length;
+      if(u.teamGames>=6&&u.series%2===0)applySatisfaction(db,p);
+    }
+  }
+}
+function onSquadMoveSatisfaction(db,p,check){
+  ensureSatisfaction(p);if(check.kind==='senddown'){const pen=p.rosterRole==='prospect'?2:p.rosterRole==='backup'?4:8;p.satisfaction=clamp(p.satisfaction-pen,0,100);p.satisfactionReasons=Array.from(new Set([...p.satisfactionReasons,'reserve']));p.concernStreak+=p.rosterRole==='core'||p.rosterRole==='starter'?1:0}
+  else {p.satisfaction=clamp(p.satisfaction+3,0,100);p.satisfactionReasons=p.satisfactionReasons.filter(x=>x!=='reserve')}
+  applySatisfaction(db,p);
+}
+function offseasonPlayerSatisfaction(db,w,rep,ev){
+  for(const t of activeTeams(db))for(const id of t.roster){const p=db.players[id];if(!p||p.retired)continue;const was=p.wantsOut,res=applySatisfaction(db,p,{offseason:true,year:w.year});
+    if(!was&&p.wantsOut&&t.id===managedTeamId(db))ev(`${p.name} 이적 요청 — ${SAT_REASON_KO[p.wantsOutReason]||'커리어 불만'} (만족도 ${Math.round(p.satisfaction)})`);
+    if(was&&!p.wantsOut&&t.id===managedTeamId(db))ev(`${p.name} 이적 요청 철회 — 만족도 ${Math.round(p.satisfaction)}`);
+  }
+}
 // 시리즈 후: 폼·피로·사기 갱신
 function afterSeries(db,lines,rec){
   const by={};for(const l of lines)(by[l.pid]=by[l.pid]||[]).push(l);
