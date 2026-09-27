@@ -199,10 +199,12 @@ source += `\n(()=>{
     if(independent.some(t=>!promotionEligible(db,t)))throw new Error('Independent Tier-2 club incorrectly blocked from promotion');
     const parent=db.teams[owned[0].parent];
     if(reserveRequirement(db,parent)!=='required')throw new Error('Certified mixed-system club lost mandatory reserve requirement');
-    const ownedId=owned[0].id,parentId=owned[0].parent;
+    const ownedId=owned[0].id,parentId=owned[0].parent,foldedPlayers=owned[0].roster.map(id=>db.players[id]).filter(Boolean),foldedContracts=new Map(foldedPlayers.map(p=>[p.id,p.contract&&{...p.contract}]));
     db.teams[parentId].division=2;
     reconcileTier2Structure(db,new RNG('smoke-tier2-reconcile'),mixedRegion);
     if(db.teams[ownedId]&&db.teams[ownedId].active!==false)throw new Error('Reserve survived after parent lost first-division eligibility');
+    if(foldedPlayers.some(p=>p.team!==null||p.faYears!==0))throw new Error('Folded reserve players did not become clean free agents');
+    if(foldedPlayers.some(p=>JSON.stringify(p.contract)!==JSON.stringify(foldedContracts.get(p.id))))throw new Error('Folded reserve unexpectedly destroyed player contract terms');
     db.teams[parentId].division=1;db.teams[parentId].franchised=true;
     reconcileTier2Structure(db,new RNG('smoke-tier2-recreate'),mixedRegion);
     if(!reserveTeamsOf(db,parentId).length)throw new Error('Required reserve was not restored after first-division certification');
@@ -210,6 +212,17 @@ source += `\n(()=>{
     if(mixedRegion.rosterRuleProfile!=='ENGINE_OWNED_RESERVE'||!mixedRegion.policyBasis?.reserveOwned)throw new Error('Mixed-system owned reserves were ignored by policy engine');
   }
 
+
+  const lifecycle=unpackDB(packDB(db)),lrng=new RNG('tier2-lifecycle-long','world');
+  for(let i=0;i<5;i++){
+    for(const R of Object.values(lifecycle.regions))if(R.div2)reconcileTier2Structure(lifecycle,lrng,R);
+    const errs=rosterIntegrityErrors(lifecycle);if(errs.length)throw new Error('Tier-2 lifecycle integrity failed in year '+i+': '+errs.slice(0,4).join(' | '));
+    for(const R of Object.values(lifecycle.regions))if(R.div2&&['franchise','mixed'].includes(R.system)){
+      for(const t of activeTeams(lifecycle,R.id,1))if(reserveRequirement(lifecycle,t)==='required'&&reserveTeamsOf(lifecycle,t).length!==1)throw new Error('Required reserve count drifted in '+R.id);
+      if(activeTeams(lifecycle,R.id,2).some(t=>t.parent&&promotionEligible(lifecycle,t)))throw new Error('Owned reserve became promotion eligible in '+R.id);
+    }
+    lifecycle.year++;if(lifecycle.world)lifecycle.world.year=lifecycle.year;
+  }
 
   const champions=Object.entries(db.patch.champions);
   if(champions.length<100||champions.some(([id,c])=>c.id!==id||!c.name)) throw new Error('Champion ID invariant failed');
