@@ -40,8 +40,8 @@ function recordMeta(db,r){
     r.draft.bans.flat().forEach(c=>add(bag,c,'b'));
   }
   db.metaHistory=db.metaHistory||[];
-  db.metaHistory.push({date:r.date||db.worldDate,patch:r.patch||db.patch.id,comp:r.comp||r.competitionId||null,regions,sides:r.sides.map((s,i)=>({region:s.team?.region||null,win:r.winner===i,picks:s.ps.map(x=>x.champ.id)})),bans:r.draft.bans.flat()});
-  if(db.metaHistory.length>5000)db.metaHistory.splice(0,db.metaHistory.length-5000);
+  const mc=r.metaContext||{};
+  db.metaHistory.push({date:r.date||db.worldDate,patch:r.patch||db.patch.id,comp:r.comp||r.competitionId||null,season:mc.season||null,year:mc.year||+(r.date||db.worldDate).slice(0,4),stage:mc.stage||null,league:mc.league||null,international:!!mc.international,regions,sides:r.sides.map((s,i)=>({team:s.team?.id||null,region:s.team?.region||null,win:r.winner===i,picks:s.ps.map(x=>({champ:x.champ.id,role:x.role,player:x.p.id}))})),bans:r.draft.bans.flat()});
   const international=regions.length>1;
   for(const s of r.sides){const t=s.team;if(!t)continue;t.metaKnowledge=t.metaKnowledge||{};const enemyRegions=regions.filter(x=>x!==t.region);for(const os of r.sides){if(os===s)continue;for(const pick of os.ps){const cid=pick.champ.id,success=r.winner===r.sides.indexOf(os),novel=((db.regionMetaStats?.[t.region]||{})[cid]?.p||0)<3,learn=(success?.055:.018)*(novel?1.6:1)*(international?1.35:1);t.metaKnowledge[cid]=clamp((t.metaKnowledge[cid]||0)+learn,0,1)}}}
 }
@@ -49,7 +49,7 @@ function metaTableFiltered(db,filter={}){
   const rows=(db.metaHistory||[]).filter(r=>(!filter.region||r.regions.includes(filter.region))&&(!filter.patch||r.patch===filter.patch)&&(!filter.comp||r.comp===filter.comp)&&(!filter.from||r.date>=filter.from)&&(!filter.to||r.date<=filter.to));
   if(!rows.length)return metaTable(db,filter.region||null);
   const st={},add=(cid,key)=>{const x=st[cid]||(st[cid]={p:0,w:0,b:0});x[key]++};
-  for(const r of rows){for(const side of r.sides){if(filter.region&&side.region!==filter.region)continue;for(const cid of side.picks){add(cid,'p');if(side.win)add(cid,'w')}}for(const cid of r.bans)add(cid,'b')}
+  for(const r of rows){for(const side of r.sides){if(filter.region&&side.region!==filter.region)continue;for(const pick of side.picks){const cid=typeof pick==='string'?pick:pick.champ;add(cid,'p');if(side.win)add(cid,'w')}}for(const cid of r.bans)add(cid,'b')}
   const G=Math.max(1,rows.length);return Object.values(db.patch.champions).map(c=>{const s=st[c.id]||{p:0,w:0,b:0};return {c,p:s.p,b:s.b,w:s.w,pres:(s.p+s.b)/G,wr:s.p?s.w/s.p:null,sample:G,eligible:championProEligible(db,c)}}).sort((a,b)=>b.pres-a.pres);
 }
 function metaTable(db,regionId=null){
