@@ -30,6 +30,19 @@ for (const file of modules) {
   }
 }
 
+const maintainabilityBudgets = {
+  'app.js': 90000,
+  'ui-patch.js': 30000,
+  'ui-market.js': 35000,
+};
+for (const [file, maxBytes] of Object.entries(maintainabilityBudgets)) {
+  const source = await readFile(resolve(artifact, file), 'utf8');
+  if (Buffer.byteLength(source, 'utf8') > maxBytes) {
+    failed = true;
+    console.error(`Maintainability budget exceeded: ${file} > ${maxBytes} bytes; split the domain UI instead of growing the monolith`);
+  }
+}
+
 const appSource = await readFile(resolve(artifact, 'app.js'), 'utf8');
 const worldSource = await readFile(resolve(artifact, 'world.js'), 'utf8');
 const saveVersion = Number(appSource.match(/const SAVE_VERSION=(\d+)/)?.[1]);
