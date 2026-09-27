@@ -15,7 +15,7 @@ function ensurePlayerDevelopment(p){
   if(p.development)return p.development;const h=Math.abs(hashStr(p.id||p.name||'player')),base={TOP:24.5,JGL:24,MID:25,ADC:25,SUP:26}[p.role]||25;
   p.development={growthRate:.88+(h%29)/100,peakAge:Math.round((base+((h>>4)%31-15)/10)*10)/10,declineRate:.85+((h>>9)%36)/100};return p.development;
 }
-function careerStage(p){if(p.retired)return '은퇴';const d=ensurePlayerDevelopment(p),seasons=p.proSeasons||0;if(seasons<=1||p.age<=19)return '신인';if(p.age<d.peakAge-1)return '성장';if(p.age<=d.peakAge+1)return '전성기';return '쇠퇴'}
+function careerStage(p){if(p.retired)return '은퇴';const d=ensurePlayerDevelopment(p),seasons=p.proSeasons||0;if(p.age<=19||(seasons<=1&&p.age<=21))return '신인';if(p.age<d.peakAge-1)return '성장';if(p.age<=d.peakAge+1)return '전성기';return '쇠퇴'}
 const SQUAD_ROLES=['core','starter','competition','backup','prospect'];
 const SQUAD_ROLE_KO={core:'핵심 주전',starter:'주전',competition:'경쟁',backup:'후보',prospect:'유망주'};
 const SQUAD_ROLE_EXPECTED={core:.9,starter:.74,competition:.48,backup:.2,prospect:.24};
@@ -538,6 +538,7 @@ function closeMarket(db){
   const ev=t=>{rep.events.push(t);news(db,t)};
   contractMarket(db,rng,rep,ev);
   ensureEven(db,rng,ev);
+  for(const t of activeTeams(db))rebalanceAiRosterRoles(db,t);
   for(const t of activeTeams(db)){const pre=t._pre||[];const now=ROLES.map(r=>starterFor(db,t,r)).filter(Boolean).map(p=>p.id);const changed=now.filter(id=>!pre.includes(id)).length;
     t.synergy=clamp(teamSynergy(t)*0.85+15-changed*8,10,100);delete t._pre;
     if(!t.sponsor&&t.id!==managedTeamId(db)&&rng.chance(0.5)){const o=sponsorOffers(db,t);t.sponsor={...rng.pick(o),until:db.year+0}}}

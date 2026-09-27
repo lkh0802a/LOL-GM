@@ -18,7 +18,7 @@ function usageFor(p,year){
 function actualPlayShare(p){const u=p.usage;return u&&u.teamGames?u.games/u.teamGames:0}
 function satisfactionLabel(v){return v>=80?'매우 만족':v>=65?'만족':v>=48?'보통':v>=32?'불만':'매우 불만'}
 function satisfactionIssues(db,p,opt={}){
-  ensureSatisfaction(p);const t=p.team&&db.teams[p.team],u=p.usage&&p.usage.year===db.year?p.usage:null,out=[];
+  ensureSatisfaction(p);const t=p.team&&db.teams[p.team],usageYear=opt.year??db.year,u=p.usage&&p.usage.year===usageYear?p.usage:null,out=[];
   if(!t)return out;
   const exp=expectedPlayShare(p),actual=u&&u.teamGames>=6?actualPlayShare(p):null;
   if(actual!==null&&exp-actual>.17)out.push({code:'playing_time',severity:clamp((exp-actual)*45,4,22)});
@@ -37,7 +37,7 @@ function satisfactionIssues(db,p,opt={}){
   return out.sort((a,b)=>b.severity-a.severity);
 }
 function applySatisfaction(db,p,opt={}){
-  ensureSatisfaction(p);const issues=satisfactionIssues(db,p,opt),u=p.usage&&p.usage.year===db.year?p.usage:null;
+  ensureSatisfaction(p);const issues=satisfactionIssues(db,p,opt),usageYear=opt.year??db.year,u=p.usage&&p.usage.year===usageYear?p.usage:null;
   let delta=issues.length?-Math.min(opt.offseason?12:3.2,issues.reduce((a,x)=>a+x.severity,0)*(opt.offseason?.22:.07)):0;
   if(!issues.length&&u&&u.teamGames>=4){const actual=actualPlayShare(p),exp=expectedPlayShare(p);delta=Math.min(opt.offseason?5:1.2,1+(actual-exp)*3)}
   p.satisfaction=clamp(p.satisfaction+delta,0,100);p.satisfactionReasons=issues.map(x=>x.code);
