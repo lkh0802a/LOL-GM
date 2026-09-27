@@ -159,7 +159,7 @@ function weightedRole(rng,w){const rows=ROLES.map(r=>[r,w[r]||1]),sum=rows.reduc
 function rookieIntakeProfile(db,R){
   const first=activeTeams(db,R.id,1).length,second=R.div2?activeTeams(db,R.id,2).length:0,teams=activeTeams(db,R.id),teamN=teams.length,players=Object.values(db.players),young=players.filter(p=>!p.retired&&p.region===R.id&&p.age<=21).length;
   const desiredPipeline=first*2.05+second*1.05,shortage=clamp((desiredPipeline-young)/Math.max(4,first),-.3,1.35);
-  const facilities=teams.map(t=>t.facility||2),dev=teams.map(t=>t.coach?.development||55);
+  const facilities=teams.map(t=>ensureFacilities(t).youth),dev=teams.map(t=>typeof staffProfile==='function'?staffProfile(t).development:(t.coach?.development||55));
   const ecosystem=clamp((R.strength-58)/18+second/Math.max(1,first)*.35+(avg(facilities)-2)*.08+(avg(dev)-55)/180,.25,1.55);
   const rosterSize=5+(db.worldConfig.subs||0),targetSlots=teamN*rosterSize;
   const ecosystemPlayers=players.filter(p=>!p.retired&&((p.team&&db.teams[p.team]&&db.teams[p.team].region===R.id)||(!p.team&&p.region===R.id)));
