@@ -8,10 +8,17 @@ function recentMarketPerformance(db,p){
   const rating=rows.reduce((a,c)=>a+(c.rating||6.5)*(c.g||0),0)/g,intl=rows.filter(c=>c.international).reduce((a,c)=>a+(c.g||0),0),titles=(p.careerEvents||[]).filter(e=>e.type==='title'&&e.year>=db.year-2).length;
   return {games:g,rating,intl,titles};
 }
-function roleMarketDemand(db,role,rid){
-  const teams=activeTeams(db,rid,1),supply=Object.values(db.players).filter(p=>!p.retired&&p.role===role&&(!rid||p.region===rid)&&(p.age<=30||p.team)).length;
-  const need=Math.max(1,teams.length*1.35);return clamp(need/Math.max(1,supply),.72,1.38);
+function marketDemandSnapshot(db,rid){
+  db._marketDemandCache=db._marketDemandCache||{};
+  const teams=activeTeams(db,rid,1),key=[db.year,rid||'ALL',Object.keys(db.players).length,teams.length].join('|'),slot=rid||'ALL',cached=db._marketDemandCache[slot];
+  if(cached&&cached.key===key)return cached.values;
+  const counts=Object.fromEntries(ROLES.map(r=>[r,0]));
+  for(const p of Object.values(db.players))if(!p.retired&&(!rid||p.region===rid)&&(p.age<=30||p.team))counts[p.role]=(counts[p.role]||0)+1;
+  const values=Object.fromEntries(ROLES.map(role=>[role,clamp(Math.max(1,teams.length*1.35)/Math.max(1,counts[role]||0),.72,1.38)]));
+  db._marketDemandCache[slot]={key,values};return values;
 }
+function invalidateMarketDemand(db){if(db)db._marketDemandCache={}}
+function roleMarketDemand(db,role,rid){return marketDemandSnapshot(db,rid)[role]??1}
 function marketSalary(db,p,rid){
   const o=playerOvr(p),region=rid||p.region,ps=psOf(db,region),up=Math.max(0,p.pot-o),perf=recentMarketPerformance(db,p),demand=roleMarketDemand(db,p.role,region);
   const repMul=.82+(p.reputation??o)/220,perfMul=clamp(1+(perf.rating-6.5)*.08+Math.min(.1,perf.intl*.004)+Math.min(.08,perf.titles*.035),.82,1.28),ageMul=p.age<=21?1.02:p.age>=29?.88:1;
@@ -53,7 +60,7 @@ function contractBonusCost(db,t,year){
   return Math.round(sum*10)/10;
 }
 function signContract(db,p,t,salary,years,terms={}){
-  const old=p.team,offer=normalizeContractTerms(db,p,t,salary,years,terms);assignPlayerToTeam(db,p,t);p.faYears=0;
+  const old=p.team,offer=normalizeContractTerms(db,p,t,salary,years,terms);assignPlayerToTeam(db,p,t);invalidateMarketDemand(db);p.faYears=0;
   p.contract={salary:offer.salary,until:db.year+offer.years-1,signed:db.year,years:offer.years,signingBonus:offer.signingBonus,bonuses:offer.bonuses,buyout:offer.buyout,option:offer.option,promisedRole:offer.promisedRole};
   if(offer.signingBonus&&t.finance)t.finance.cash=Math.round((t.finance.cash-offer.signingBonus)*10)/10;
   setRosterRole(db,p,offer.promisedRole,'contract',true);ensureSatisfaction(p);if(old&&old!==t.id){p.satisfaction=clamp(Math.max(p.satisfaction,58),0,100);p.concernStreak=0;p.wantsOut=false;p.wantsOutReason=null}
@@ -341,7 +348,7 @@ function doTransfer(db,p,from,to,fee){
 }
 function myT(db){return managedTeam(db)}
 function mResign(db,pid,years){const r=startNegotiation(db,pid,'renewal');return r.msg}
-function mRelease(db,pid){const t=myT(db),p=db.players[pid];const cost=p.contract&&p.contract.until>=db.year?p.contract.salary*(p.contract.until-db.year+1)*0.5:0;t.finance.buyout=(t.finance.buyout||0)+cost;removePlayerFromTeam(db,p);p.contract=null;p.faYears=0;recordPlayerEvent(p,'release',db.year,{team:t.id,cost,date:db.worldDate});return p.name+' 방출'+(cost?' (해지금 '+money(cost)+')':'')}
+function mRelease(db,pid){const t=myT(db),p=db.players[pid];const cost=p.contract&&p.contract.until>=db.year?p.contract.salary*(p.contract.until-db.year+1)*0.5:0;t.finance.buyout=(t.finance.buyout||0)+cost;removePlayerFromTeam(db,p);invalidateMarketDemand(db);p.contract=null;p.faYears=0;recordPlayerEvent(p,'release',db.year,{team:t.id,cost,date:db.worldDate});return p.name+' 방출'+(cost?' (해지금 '+money(cost)+')':'')}
 function mOffer(db,pid,salary,years){const st=startNegotiation(db,pid,'fa');if(!st.ok)return st.msg;return submitNegotiationOffer(db,st.neg.id,{salary,years}).msg}
 function mTransfer(db,pid,fee){return mTransferBid(db,pid,fee)}
 // ---- 스카우팅: 관찰·경기 표본·보고서 노후화를 함께 추적한다 ----
