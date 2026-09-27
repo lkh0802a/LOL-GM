@@ -246,6 +246,8 @@ This baseline is a calibration pass, not completion of later dedicated systems s
 
 ## D-023 — Region-first realism
 
+**Supersession note:** D-025 supersedes the policy-output parts of D-023 and D-024. Region names no longer assign derived financial, roster, import, market, or office policies; only observable world-state inputs may differ.
+
 **Decision:** Real-world regional leagues are modeled from their own ecosystem rules and market behavior. LCK is never the generic template for another named region.
 
 - LCK keeps its own integrated first/reserve roster model and Korean SFR interpretation
@@ -291,3 +293,24 @@ The correct fallback for uncertainty is evidence-driven inference or status quo,
 - no special-case branch is allowed solely because region id equals KR, CN, EU, NA, AP or BR
 
 Constants may define simulation mechanics, but regional outcomes must result from shared engine logic and observable inputs.
+
+
+## D-026 — Rookie and scouting pipeline accepted
+
+**Decision:** Major system 4 is complete with an engine-driven long-term talent pipeline and uncertainty-based scouting.
+
+- rookie intake volume is calculated from first-division size, Tier-2 size, current young-player depth, development infrastructure and regional competitive strength
+- position generation responds to shortages in the existing young-player pool instead of using a fixed equal quota
+- rookie quality follows a shared ordinary → solid → good → rare elite distribution, with at most one elite result per regional class and emergency roster fillers constrained to ordinary prospect quality
+- generated rookies are 17–19 and receive the same full player schema: identity, nationality, attributes, potential, personality, champion pool, role familiarity and development profile
+- regions with Tier 2 mark rookie entry through the development pipeline; market logic naturally pushes most non-immediate starters toward reserve/second-tier roster filling
+- scouting is stored as a player-specific report, not a single fixed percentage
+- report uncertainty expands for young, foreign, Tier-2 and low-sample players
+- observations from official matches and manual assignments increase knowledge with diminishing returns
+- current ability estimates narrow with knowledge; potential always remains a range even at high knowledge
+- reports include public official-match samples, recent growth direction and observed champion-pool information
+- reports lose knowledge when they become stale
+- scouting search supports region, role, competition, contract status, rookie/prospect status, name and an observed-information-only undervalued-prospect filter
+- the active save schema is v13 under the lol-gm-v13 namespace; older development saves remain unsupported
+
+Item 5 (contracts / transfer market) is now active.

@@ -13,7 +13,8 @@ Development progress is tracked by the 22 major LOL GM systems. Finish one major
 - `1. 새 게임 / 팀 선택` — COMPLETE (2026-09-27)
 - `2. 선수` — COMPLETE (2026-09-27)
 - `3. 선수 만족도 / 역할` — COMPLETE (2026-09-27)
-- `4. 신인 / 스카우팅` — ACTIVE
+- `4. 신인 / 스카우팅` — COMPLETE (2026-09-27)
+- `5. 계약 / 이적시장` — ACTIVE
 
 Region-first realism rule (2026-09-27): named leagues are researched and modeled independently. LCK is not a fallback template for LPL, LEC, LCS, LCP, CBLOL, or future named regions. Unknown rules fall back to a neutral global profile, not a Korean one.
 
@@ -28,6 +29,8 @@ Item 1 verified first-season flow:
 `World Creation → Team Selection → Global FA Roster Construction → Registration Deadline → Season Start`
 
 Item 1 acceptance included blank rosters for every active club, full global FA initialization, eligible independent-club selection, owned-reserve restrictions, the 5+6 integrated-roster boundary, AI world roster construction, season bootstrap, standalone HTML execution, and successful CI.
+
+Item 4 acceptance included engine-derived annual rookie supply from regional ecosystem state, role-gap-sensitive intake, ordinary-to-rare-elite quality distribution with elite over-generation protection, 17–19-year-old generated entrants with nationality/champion pool/personality/development metadata, Tier-2/Academy-oriented entry paths, player-specific scouting reports, low-sample/youth/foreign/Tier-2 uncertainty, observation-driven narrowing, permanently uncertain potential ranges, official-match sample integration, growth-trend and champion-pool reporting, stale-report decay, region/role/competition/contract/undervalued-prospect search filters, save schema v13, standalone HTML sync, and successful CI.
 
 Item 2 acceptance included stable player identity and nationality, primary/secondary position familiarity, position-weighted ratings, detailed core metrics, bounded form/condition/fatigue/morale/sharpness/team/tactical adaptation, reputation and market value, champion official/scrim/training experience and mastery adaptation, individualized growth/peak/decline/retirement lifecycle, full match-derived player metrics, career snapshots/events, save round-trip validation, standalone HTML execution, and successful CI.
 

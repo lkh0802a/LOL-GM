@@ -153,7 +153,7 @@ source += `\n(()=>{
   const matchIds=seasons.flatMap(s=>s.days.flatMap(d=>d.matches.map(m=>m.id)));
   if(!matchIds.length||new Set(matchIds).size!==matchIds.length) throw new Error('Match IDs are not unique');
 
-  console.log('World smoke test: OK — blank rosters, global FA, roster rules, player identity/role ratings/state/value/development/champion learning/full match metrics/fixed depth charts/roster roles/satisfaction, season bootstrap and Bo1 simulation');
+  console.log('World smoke test: OK — blank rosters, global FA, roster rules, engine-owned regional policy, rookie intake/scouting reports, player identity/role ratings/state/value/development/champion learning/full match metrics/fixed depth charts/roster roles/satisfaction, season bootstrap and Bo1 simulation');
 })()`;
 
 const context = {
