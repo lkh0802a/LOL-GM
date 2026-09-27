@@ -388,7 +388,7 @@ This replaces the earlier single independent classWave draw with a persistent, e
 - recruitment and negotiation state survives save round trips
 - item 5 is verified by smoke coverage, production build/standalone HTML generation and successful GitHub Actions CI
 
-Item 6 (Tier 1 / Tier 2 / Academy) is now active.
+Item 6 (Tier 1 / Tier 2 / Academy) was accepted complete on 2026-09-27 after ownership/promotion rules, atomic first/reserve roster planning, AI parity, reserve closure handling, repeated lifecycle validation and promotion-cycle pressure tests passed.
 
 
 ## D-UX-001 — Management convenience is part of completion
