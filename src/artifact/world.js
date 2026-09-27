@@ -18,9 +18,9 @@ function ensurePlayerDevelopment(p){
 function careerStage(p){if(p.retired)return '은퇴';const d=ensurePlayerDevelopment(p),seasons=p.proSeasons||0;if(p.age<=19||(seasons<=1&&p.age<=21))return '신인';if(p.age<d.peakAge-1)return '성장';if(p.age<=d.peakAge+1)return '전성기';return '쇠퇴'}
 const SQUAD_ROLES=['core','starter','competition','backup','prospect'];
 const SQUAD_ROLE_KO={core:'핵심 주전',starter:'주전',competition:'경쟁',backup:'후보',prospect:'유망주'};
-const SQUAD_ROLE_EXPECTED={core:.9,starter:.76,competition:.24,backup:.06,prospect:.12};
+const SQUAD_ROLE_EXPECTED={core:.98,starter:.94,competition:.12,backup:.02,prospect:.02};
 const SQUAD_ROLE_ORDER={prospect:0,backup:1,competition:2,starter:3,core:4};
-function expectedPlayShare(p){return SQUAD_ROLE_EXPECTED[p.rosterRole]??.45}
+function expectedPlayShare(p,t){if(t&&t.parent&&p.rosterRole==='prospect')return .78;return SQUAD_ROLE_EXPECTED[p.rosterRole]??.45}
 function playerCareerGoal(p){
   if(p.careerGoal)return p.careerGoal;
   if(p.age<=20&&p.pot-playerOvr(p)>=6)p.careerGoal='development';
@@ -30,13 +30,37 @@ function playerCareerGoal(p){
   else p.careerGoal='stability';
   return p.careerGoal;
 }
+function setDepthStarter(db,t,role,p,source='manager',silent=false){
+  const team=teamRef(db,t),player=playerRef(db,p);if(!team||!player)return {ok:false,reason:'팀 또는 선수를 찾을 수 없습니다'};
+  if(player.team!==team.id||!(team.roster||[]).includes(player.id))return {ok:false,reason:'해당 스쿼드 소속 선수가 아닙니다'};
+  if(player.role!==role)return {ok:false,reason:'주 포지션과 다른 자리에는 선발 지정할 수 없습니다'};
+  team.depthChart=team.depthChart||{};const old=team.depthChart[role]||null;team.depthChart[role]=player.id;
+  if(!silent&&old!==player.id)recordPlayerEvent(player,'starter_change',db.year,{team:team.id,role,from:old,to:player.id,date:db.worldDate,source});
+  return {ok:true,old,to:player.id};
+}
+function initializeDepthChart(db,t,force=false){
+  const team=teamRef(db,t);if(!team)return;team.depthChart=team.depthChart||{};
+  for(const role of ROLES){const cur=team.depthChart[role]&&db.players[team.depthChart[role]];if(!force&&cur&&cur.team===team.id&&cur.role===role)continue;
+    let best=null,bo=-1;for(const id of team.roster||[]){const p=db.players[id];if(!p||p.role!==role)continue;const o=playerOvr(p);if(o>bo){bo=o;best=p}}
+    if(best)team.depthChart[role]=best.id;else delete team.depthChart[role];
+  }
+}
+function aiReviewDepthChart(db,t){
+  const team=teamRef(db,t);if(!team||team.id===managedTeamId(db))return;initializeDepthChart(db,team,false);
+  for(const role of ROLES){const cur=starterFor(db,team,role);if(!cur)continue;
+    const challengers=(team.roster||[]).map(id=>db.players[id]).filter(p=>p&&p.role===role&&p.id!==cur.id).sort((a,b)=>playerOvr(b)-playerOvr(a));
+    const ch=challengers[0];if(!ch)continue;
+    const gap=playerOvr(ch)-playerOvr(cur),curBad=(cur.form??0)<=-6||cur.condition<60||cur.wantsOut;
+    if(gap>=5||(gap>=3&&curBad))setDepthStarter(db,team,role,ch,'ai',false);
+  }
+}
 function recommendedRosterRole(db,p,t){
   const team=teamRef(db,t);if(!team)return p.age<=20?'prospect':'backup';
-  const same=(team.roster||[]).map(id=>db.players[id]).filter(x=>x&&x.role===p.role).sort((a,b)=>playerOvr(b)-playerOvr(a));
-  const rank=Math.max(0,same.findIndex(x=>x.id===p.id)),best=same[0]?playerOvr(same[0]):playerOvr(p),o=playerOvr(p);
+  const o=playerOvr(p),isStarter=starterFor(db,team,p.role)===p;
+  const same=(team.roster||[]).map(id=>db.players[id]).filter(x=>x&&x.role===p.role).sort((a,b)=>playerOvr(b)-playerOvr(a)),best=same[0]?playerOvr(same[0]):o;
+  if(isStarter&&o>=best-1&&(p.reputation||o)>=82)return 'core';
+  if(isStarter)return 'starter';
   if(team.parent&&p.age<=21&&p.pot-o>=4)return 'prospect';
-  if(rank===0&&o>=best-1&&(p.reputation||o)>=82)return 'core';
-  if(rank===0)return 'starter';
   if(o>=best-3)return 'competition';
   if(p.age<=21&&p.pot-o>=5)return 'prospect';
   return 'backup';
@@ -51,10 +75,7 @@ function setRosterRole(db,p,role,source='club',silent=false){
   }
   return {ok:true,old,role};
 }
-function initializeTeamRosterRoles(db,t,force=false){
-  const team=teamRef(db,t);if(!team)return;
-  for(const id of team.roster||[]){const p=db.players[id];if(p&&(force||!SQUAD_ROLES.includes(p.rosterRole)))setRosterRole(db,p,recommendedRosterRole(db,p,team),'club',true)}
-}
+function initializeTeamRosterRoles(db,t,force=false){const team=teamRef(db,t);if(!team)return;initializeDepthChart(db,team,force);for(const id of team.roster||[]){const p=db.players[id];if(p&&(force||!SQUAD_ROLES.includes(p.rosterRole)))setRosterRole(db,p,recommendedRosterRole(db,p,team),'club',true)}}
 function rebalanceAiRosterRoles(db,t){
   const team=teamRef(db,t);if(!team||team.id===managedTeamId(db))return;
   for(const id of team.roster||[]){const p=db.players[id];if(!p)continue;const r=recommendedRosterRole(db,p,team);if(r!==p.rosterRole)setRosterRole(db,p,r,'club',false)}
@@ -538,7 +559,7 @@ function closeMarket(db){
   const ev=t=>{rep.events.push(t);news(db,t)};
   contractMarket(db,rng,rep,ev);
   ensureEven(db,rng,ev);
-  for(const t of activeTeams(db))rebalanceAiRosterRoles(db,t);
+  for(const t of activeTeams(db)){aiReviewDepthChart(db,t);rebalanceAiRosterRoles(db,t)}
   for(const t of activeTeams(db)){const pre=t._pre||[];const now=ROLES.map(r=>starterFor(db,t,r)).filter(Boolean).map(p=>p.id);const changed=now.filter(id=>!pre.includes(id)).length;
     t.synergy=clamp(teamSynergy(t)*0.85+15-changed*8,10,100);delete t._pre;
     if(!t.sponsor&&t.id!==managedTeamId(db)&&rng.chance(0.5)){const o=sponsorOffers(db,t);t.sponsor={...rng.pick(o),until:db.year+0}}}

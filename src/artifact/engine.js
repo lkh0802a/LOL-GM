@@ -20,8 +20,15 @@ const XP_TABLE=[0,280,660,1140,1720,2400,3180,4060,5040,6120,7300,8580,9960,1144
 const ITEM_CONV={fighter:{hp:.18,arm:.012,ad:.028},tank:{hp:.32,arm:.028,ad:.011},mage:{hp:.05,arm:.004,ad:.05},assassin:{hp:.06,arm:.005,ad:.047},marksman:{hp:.035,arm:.003,ad:.047},enchanter:{hp:.09,arm:.01,ad:.018}};
 const ITEM_COST=[3000,6000,9000,12000,15000,18000];
 
-// 포지션별 주전: 로스터 중 종합 능력이 가장 높은 선수
-function starterFor(db,team,role){let best=null,bo=-1;for(const id of team.roster){const p=db.players[id];if(!p||p.role!==role)continue;const o=playerOvr(p);if(o>bo){bo=o;best=p}}return best}
+// 포지션별 주전은 Depth Chart에 고정한다. 지정 선수가 이탈한 경우에만 자동 보충한다.
+function starterFor(db,team,role){
+  if(!team)return null;team.depthChart=team.depthChart||{};
+  const id=team.depthChart[role],fixed=id&&db.players[id];
+  if(fixed&&fixed.team===team.id&&(team.roster||[]).includes(id)&&fixed.role===role)return fixed;
+  let best=null,bo=-1;for(const pid of team.roster||[]){const p=db.players[pid];if(!p||p.role!==role)continue;const o=playerOvr(p);if(o>bo){bo=o;best=p}}
+  if(best)team.depthChart[role]=best.id;else delete team.depthChart[role];
+  return best;
+}
 
 // ---------- 챔피언 평가 (패치 원수치 기반) ----------
 function champStrength(c){

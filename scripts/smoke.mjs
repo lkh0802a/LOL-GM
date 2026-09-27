@@ -82,12 +82,14 @@ source += `\n(()=>{
 
   finalizeInitialRosters(db);
   if(db.world.phase!=='season'||!db.manager.careerStartedAt) throw new Error('Season did not start after roster finalization');
-  for(const t of activeTeams(db))for(const id of t.roster){const p=db.players[id];ensureSatisfaction(p);if(!SQUAD_ROLES.includes(p.rosterRole)||p.satisfaction<0||p.satisfaction>100)throw new Error('Initial player role/satisfaction failed')}
-  const satTeam=managedRoot,satP=db.players[satTeam.roster[0]],originalSatRole=satP.rosterRole;setRosterRole(db,satP,'core','manager',false);const su=usageFor(satP,db.year);su.teamGames=28;su.games=3;su.series=16;su.teamWins=9;satP.satisfaction=17;satP.concernStreak=7;applySatisfaction(db,satP);
+  for(const t of activeTeams(db)){initializeDepthChart(db,t,false);for(const role of ROLES)if(!starterFor(db,t,role))throw new Error('Depth chart missing starter: '+t.id+' '+role);for(const id of t.roster){const p=db.players[id];ensureSatisfaction(p);if(!SQUAD_ROLES.includes(p.rosterRole)||p.satisfaction<0||p.satisfaction>100)throw new Error('Initial player role/satisfaction failed')}}
+  const satTeam=managedRoot,satP=db.players[satTeam.roster[0]],originalSatRole=satP.rosterRole;setRosterRole(db,satP,'core','manager',false);const su=usageFor(satP,db.year);su.teamGames=32;su.games=3;su.series=20;su.teamWins=9;satP.satisfaction=14;satP.concernStreak=9;applySatisfaction(db,satP);
   if(!satP.wantsOut||!satP.satisfactionReasons.includes('playing_time'))throw new Error('Long-term playing-time dissatisfaction did not create transfer request');
   const offIssues=satisfactionIssues(db,satP,{offseason:true,year:db.year});if(!offIssues.some(x=>x.code==='playing_time'))throw new Error('Offseason satisfaction ignored completed-season usage');
   su.games=28;su.teamWins=20;satP.satisfaction=55;applySatisfaction(db,satP);if(satP.wantsOut)throw new Error('Transfer request withdrawal failed');
   const benchProbe={...satP,id:'bench-probe',rosterRole:'backup',satisfaction:70,satisfactionReasons:[],concernStreak:0,wantsOut:false,wantsOutReason:null,usage:{year:db.year,teamGames:30,games:0,series:15,wins:0,teamWins:15,intlGames:0,teamIntlGames:0,firstTeamGames:0,reserveGames:0}};if(satisfactionIssues(db,benchProbe).some(x=>x.code==='playing_time'))throw new Error('Backup player complained about normal bench usage');
+  const dupTeam=activeTeams(db).find(t=>ROLES.some(r=>t.roster.filter(id=>db.players[id]&&db.players[id].role===r).length>=2));
+  if(dupTeam){const role=ROLES.find(r=>dupTeam.roster.filter(id=>db.players[id]&&db.players[id].role===r).length>=2),pair=dupTeam.roster.map(id=>db.players[id]).filter(p=>p.role===role),fixed=pair[0],other=pair[1];setDepthStarter(db,dupTeam,role,fixed,'test',true);const before=starterFor(db,dupTeam,role);if(before!==fixed)throw new Error('Manual depth chart starter was not respected');for(const a of Object.keys(other.attrs))other.attrs[a]=Math.min(99,other.attrs[a]+2);if(starterFor(db,dupTeam,role)!==fixed)throw new Error('Small OVR change incorrectly auto-swapped fixed starter');setDepthStarter(db,dupTeam,role,other,'test',true);if(starterFor(db,dupTeam,role)!==other)throw new Error('Explicit starter change failed');}
   setRosterRole(db,satP,originalSatRole||recommendedRosterRole(db,satP,satTeam),'manager',true);satP.usage={year:db.year,teamGames:0,games:0,series:0,wins:0,teamWins:0,intlGames:0,teamIntlGames:0,firstTeamGames:0,reserveGames:0};
   for(const t of activeTeams(db)){
     const e=initialSquadErrors(db,t);
@@ -128,7 +130,7 @@ source += `\n(()=>{
   const matchIds=seasons.flatMap(s=>s.days.flatMap(d=>d.matches.map(m=>m.id)));
   if(!matchIds.length||new Set(matchIds).size!==matchIds.length) throw new Error('Match IDs are not unique');
 
-  console.log('World smoke test: OK — blank rosters, global FA, roster rules, player identity/role ratings/state/value/development/champion learning/full match metrics/roster roles/satisfaction, season bootstrap and Bo1 simulation');
+  console.log('World smoke test: OK — blank rosters, global FA, roster rules, player identity/role ratings/state/value/development/champion learning/full match metrics/fixed depth charts/roster roles/satisfaction, season bootstrap and Bo1 simulation');
 })()`;
 
 const context = {
