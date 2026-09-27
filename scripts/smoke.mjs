@@ -141,14 +141,24 @@ source += `\n(()=>{
     const draftCtx=()=>({used:[],byTeam:{[scrimA.id]:{won:[],lost:[]},[scrimB.id]:{won:[],lost:[]}},fearless:true,firstPick:0,practice:true});
     const state=createDraftSession(db,[scrimA.id,scrimB.id],new RNG('draft-session-smoke','draft'),draftCtx());
     let turns=0;while(draftTurn(state)){const choice=draftAiChoice(state);if(choice){const legal=draftValidateChoice(state,choice);if(!legal.ok)throw new Error('AI draft choice rejected by shared validator: '+legal.reason);draftApplyChoice(state,choice)}else draftSkipTurn(state);turns++}
+    if('picks' in state)throw new Error('Live draft state leaked fixed role assignments');
     const staged=draftResult(state),auto=runDraft(db,[scrimA.id,scrimB.id],new RNG('draft-session-smoke','draft'),draftCtx());
     const stagedPicks=[...Object.values(staged.picks[0]),...Object.values(staged.picks[1])],stagedBans=[...staged.bans[0],...staged.bans[1]],allDraft=[...stagedPicks,...stagedBans];
-    if(turns!==DRAFT_ORDER.length||stagedPicks.length!==10||stagedBans.length!==10||new Set(allDraft).size!==allDraft.length)throw new Error('Staged draft state machine produced illegal LoL draft');
+    if(turns!==DRAFT_ORDER.length||stagedPicks.length!==10||stagedBans.length!==10||new Set(allDraft).size!==allDraft.length||staged.pickOrder.some(x=>x.length!==5))throw new Error('Staged draft state machine produced illegal LoL draft');
+    if(ROLES.some(r=>!staged.picks[0][r]||!staged.picks[1][r]))throw new Error('Final draft role assignment incomplete');
     if(JSON.stringify(staged)!==JSON.stringify(auto))throw new Error('Staged draft API changed deterministic automatic draft result');
     const manual=createDraftSession(db,[scrimA.id,scrimB.id],new RNG('draft-manual-smoke','draft'),draftCtx()),first=draftTurn(manual),legalChamp=draftLegalChampions(manual)[0];
     if(!first||first.kind!=='B'||!legalChamp)throw new Error('Draft session did not expose first ban turn');
     draftApplyChoice(manual,{champ:legalChamp.id,side:first.side,source:'player'});
     const dup=draftValidateChoice(manual,{champ:legalChamp.id,side:draftTurn(manual).side});if(dup.ok||dup.reason!=='champion_taken')throw new Error('Draft validator accepted duplicate champion');
+    const flexState=createDraftSession(db,[scrimA.id,scrimB.id],new RNG('draft-flex-smoke','draft'),draftCtx());
+    while(draftTurn(flexState)?.kind==='B'){const c=draftAiChoice(flexState);if(c)draftApplyChoice(flexState,c);else draftSkipTurn(flexState)}
+    const flexTurn=draftTurn(flexState),flexChamp=draftLegalChampions(flexState).find(c=>(c.roles||[]).length>1);
+    if(!flexTurn||flexTurn.kind!=='P'||!flexChamp)throw new Error('Flex draft fixture unavailable');
+    const possibleBefore=draftFeasibleRoles(flexState,flexTurn.side,flexChamp.id);if(possibleBefore.length<2)throw new Error('Flex champion lost multi-role ambiguity before lock');
+    draftApplyChoice(flexState,{champ:flexChamp.id,side:flexTurn.side,source:'player'});
+    const possibleAfter=ROLES.filter(r=>draftRolePossibilities(flexState,flexTurn.side,r).includes(flexChamp.id));
+    if(possibleAfter.length<2||flexState.log.at(-1).role!==null)throw new Error('Live draft exposed a hidden flex position');
   }if(scrimA&&scrimB){const scrimSeries=simulateSeries(db,scrimA.id,scrimB.id,1,'smoke-scrim',{fearless:true,firstChoice:'coin',replay:true}),scrimLine=scrimSeries.lines[0],scrimPlayer=db.players[scrimLine.pid],scrimProfile=ensureChampionProfile(db,scrimPlayer,scrimLine.champ),scrimBefore=scrimProfile.scrimExperience||0,fatigueBefore=scrimPlayer.fatigue||0;recordScrimPractice(db,scrimSeries.rec,scrimSeries.lines);if(scrimProfile.scrimExperience<=scrimBefore||scrimPlayer.fatigue<=fatigueBefore||!(db.teams[scrimLine.tid].scrimIntel>0))throw new Error('Scrim practice effects failed')}
   if(!(playerMarketValue(db,sample)>0)||!['신인','성장','전성기','쇠퇴'].includes(careerStage(sample))) throw new Error('Player value/lifecycle failed');
   const veteranStage=careerStage({...sample,age:27,proSeasons:0,development:{...sample.development,peakAge:25}});if(veteranStage==='신인')throw new Error('Veteran lifecycle incorrectly classified as rookie');

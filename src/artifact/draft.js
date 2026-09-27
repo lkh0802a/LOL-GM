@@ -103,7 +103,7 @@ function createDraftSession(db,teamIds,rng,ctx){
     });return m;
   });
   const roster=teamIds.map(tid=>{const r={};ROLES.forEach(role=>r[role]=starterFor(db,db.teams[tid],role));return r});
-  return {db,teamIds,rng,ctx,champs,strengths,mn,mx,byRole,vhat,roster,taken:new Set(ctx.fearless?ctx.used:[]),bans:[[],[]],picks:[{},{}],expl:[],log:[],tacs:teamIds.map(t=>db.teams[t].tactics),shortlists:{},firstPick:ctx.firstPick||0,cursor:0};
+  return {db,teamIds,rng,ctx,champs,strengths,mn,mx,byRole,vhat,roster,taken:new Set(ctx.fearless?ctx.used:[]),bans:[[],[]],pickList:[[],[]],expl:[],log:[],tacs:teamIds.map(t=>db.teams[t].tactics),shortlists:{},firstPick:ctx.firstPick||0,cursor:0};
 }
 function draftTurn(state){
   if(!state||state.cursor>=DRAFT_ORDER.length)return null;
@@ -111,13 +111,35 @@ function draftTurn(state){
   return {index:state.cursor,kind,side,teamId:state.teamIds[side]};
 }
 function draftMastery(p,c){return p&&p.pool&&p.pool[c]?p.pool[c].mastery:25}
+function draftAssignmentsFor(state,side,extraChamp=null){
+  const ids=state.pickList[side].slice();if(extraChamp)ids.push(extraChamp);
+  const out=[],used=new Set(),assign={};
+  const ordered=ids.slice().sort((a,b)=>{
+    const ca=state.db.patch.champions[a],cb=state.db.patch.champions[b];
+    return (ca?.roles?.length||99)-(cb?.roles?.length||99)||ids.indexOf(a)-ids.indexOf(b);
+  });
+  function walk(i){
+    if(i>=ordered.length){out.push({...assign});return}
+    const id=ordered[i],c=state.db.patch.champions[id];if(!c)return;
+    for(const role of c.roles||[]){if(!ROLES.includes(role)||used.has(role))continue;used.add(role);assign[role]=id;walk(i+1);delete assign[role];used.delete(role)}
+  }
+  walk(0);return out;
+}
+function draftCanPick(state,side,champ){return state.pickList[side].length<5&&draftAssignmentsFor(state,side,champ).length>0}
+function draftRolePossibilities(state,side,role){
+  const ids=new Set();for(const a of draftAssignmentsFor(state,side))if(a[role])ids.add(a[role]);return [...ids];
+}
+function draftFeasibleRoles(state,side,champ){
+  const out=new Set();for(const a of draftAssignmentsFor(state,side,champ))for(const role of ROLES)if(a[role]===champ)out.add(role);return [...out];
+}
 function draftPickValue(state,side,role,c,mine){
   const p=state.roster[side][role],ch=state.db.patch.champions[c],t=state.tacs[side];let comp=0;
   const maxEng=mine.reduce((m,x)=>Math.max(m,x.kit.engage),0);if(maxEng<7)comp+=ch.kit.engage/10*0.5;
   if(!mine.some(x=>x.cls==='tank')&&ch.cls==='tank')comp+=0.35;
   if(mine.length>=2){const ap=mine.filter(x=>x.dmg==='AP').length,ad=mine.length-ap;if(ap===0&&ch.dmg==='AP')comp+=0.3;if(ad===0&&ch.dmg==='AD')comp+=0.3}
   const scal=(t.scaling_preference-50)/50;comp+=scal*(ch.kit.late-ch.kit.early)/10*0.4;
-  const enemy=state.picks[1-side][role];let counter=0;if(enemy){const e=state.db.patch.champions[enemy];counter=((ch.kit.early-e.kit.early)+(ch.kit.poke-e.kit.poke)*0.5)/10*0.5}
+  const enemy=draftRolePossibilities(state,1-side,role).map(id=>state.db.patch.champions[id]).filter(Boolean);
+  let counter=0;if(enemy.length)counter=avg(enemy.map(e=>((ch.kit.early-e.kit.early)+(ch.kit.poke-e.kit.poke)*0.5)/10*0.5));
   const flex=ch.roles.length>1?0.04:0,hist=state.ctx.byTeam[state.teamIds[side]]||{won:[],lost:[]},series=(hist.won.includes(c)?0.03:0)-(hist.lost.includes(c)?0.06:0);
   const f={meta:state.vhat[side][c]*0.35,mastery:draftMastery(p,c)/100*0.5,comp:comp*0.15,counter:counter*BAL.counter,flex,series};f.total=f.meta+f.mastery+f.comp+f.counter+f.flex+f.series;return f;
 }
@@ -131,55 +153,62 @@ function draftValidateChoice(state,choice){
   if(choice.side!==undefined&&choice.side!==turn.side)return {ok:false,reason:'wrong_side'};
   const c=state.db.patch.champions[choice.champ];if(!c||!state.champs.some(x=>x.id===choice.champ))return {ok:false,reason:'champion_unavailable'};
   if(state.taken.has(choice.champ))return {ok:false,reason:'champion_taken'};
-  if(turn.kind==='P'){
-    if(!choice.role||!ROLES.includes(choice.role))return {ok:false,reason:'role_required'};
-    if(state.picks[turn.side][choice.role])return {ok:false,reason:'role_filled'};
-    if(!c.roles.includes(choice.role))return {ok:false,reason:'role_invalid'};
-  }
+  if(turn.kind==='P'&&!draftCanPick(state,turn.side,choice.champ))return {ok:false,reason:'no_legal_role_assignment'};
   return {ok:true,turn,champion:c};
 }
 function draftLegalChampions(state,role=null){
   const turn=draftTurn(state);if(!turn)return [];
-  return state.champs.filter(c=>!state.taken.has(c.id)&&(turn.kind!=='P'||!role||c.roles.includes(role)));
+  return state.champs.filter(c=>!state.taken.has(c.id)&&(turn.kind!=='P'||(draftCanPick(state,turn.side,c.id)&&(!role||draftFeasibleRoles(state,turn.side,c.id).includes(role)))));
 }
 function draftAiChoice(state){
   const turn=draftTurn(state);if(!turn)return null;
   const {kind,side}=turn,tn=state.db.teams[state.teamIds[side]],noise=0.08*(1.1-tn.coach.draft/100);
   if(kind==='P'){
-    const open=ROLES.filter(r=>!state.picks[side][r]),mine=Object.values(state.picks[side]).map(n=>state.db.patch.champions[n]);let best=null;
-    for(const r of open)for(const c of draftShortlist(state,side,r)){if(state.taken.has(c.id))continue;const f=draftPickValue(state,side,r,c.id,mine),v=f.total+(state.rng.next()-0.5)*noise*3.46;if(!best||v>best.v)best={v,role:r,champ:c.id,f}}
-    if(!best){const role=open[0],c=state.champs.find(x=>!state.taken.has(x.id));if(c)best={v:0,role,champ:c.id,f:{total:0}}}
+    const mine=state.pickList[side].map(n=>state.db.patch.champions[n]),seen=new Set(),cands=[];for(const r of ROLES)for(const c of draftShortlist(state,side,r))if(!seen.has(c.id)){seen.add(c.id);cands.push(c)}
+    let best=null;
+    for(const c of cands){if(state.taken.has(c.id)||!draftCanPick(state,side,c.id))continue;for(const role of draftFeasibleRoles(state,side,c.id)){const f=draftPickValue(state,side,role,c.id,mine),v=f.total+(state.rng.next()-0.5)*noise*3.46;if(!best||v>best.v)best={v,intentRole:role,champ:c.id,f}}}
+    if(!best){const c=state.champs.find(x=>!state.taken.has(x.id)&&draftCanPick(state,side,x.id));if(c){const role=draftFeasibleRoles(state,side,c.id)[0];best={v:0,intentRole:role,champ:c.id,f:{total:0}}}}
     return best?{...best,kind,side,source:'ai'}:null;
   }
-  const opp=1-side,open=ROLES.filter(r=>!state.picks[opp][r]),mine=Object.values(state.picks[opp]).map(n=>state.db.patch.champions[n]);let best=null;
-  const avail={};ROLES.forEach(R=>avail[R]=state.byRole[R].filter(x=>!state.taken.has(x.id)).length);
-  const need={};ROLES.forEach(R=>need[R]=[0,1].filter(i=>!state.picks[i][R]).length);
-  const safe=c=>c.roles.every(R=>avail[R]-1>=need[R]+1),oh=state.ctx.byTeam[state.teamIds[opp]];
-  for(const r of open)for(const c of draftShortlist(state,opp,r)){if(state.taken.has(c.id)||!safe(c))continue;const f=draftPickValue(state,opp,r,c.id,mine);f.reveal=oh&&oh.won.includes(c.id)?0.12:0;const v=f.total+f.reveal+(state.rng.next()-0.5)*noise*3.46;if(!best||v>best.v)best={v,role:r,champ:c.id,f}}
+  const opp=1-side,mine=state.pickList[opp].map(n=>state.db.patch.champions[n]),seen=new Set(),cands=[];for(const r of ROLES)for(const c of draftShortlist(state,opp,r))if(!seen.has(c.id)){seen.add(c.id);cands.push(c)}
+  const oh=state.ctx.byTeam[state.teamIds[opp]];let best=null;
+  for(const c of cands){if(state.taken.has(c.id)||!draftCanPick(state,opp,c.id))continue;for(const role of draftFeasibleRoles(state,opp,c.id)){const f=draftPickValue(state,opp,role,c.id,mine);f.reveal=oh&&oh.won.includes(c.id)?0.12:0;const v=f.total+f.reveal+(state.rng.next()-0.5)*noise*3.46;if(!best||v>best.v)best={v,intentRole:role,champ:c.id,f}}}
   return best?{...best,kind,side,source:'ai'}:null;
 }
 function draftApplyChoice(state,choice){
   const valid=draftValidateChoice(state,choice);if(!valid.ok)throw new Error('Invalid draft choice: '+valid.reason);
-  const {turn}=valid,{kind,side}=turn,tn=state.db.teams[state.teamIds[side]],champ=choice.champ,role=choice.role;
+  const {turn}=valid,{kind,side}=turn,tn=state.db.teams[state.teamIds[side]],champ=choice.champ;
   if(kind==='P'){
-    state.picks[side][role]=champ;state.taken.add(champ);
-    state.log.push({kind,side,champ,role,player:state.roster[side][role]?.name||null});
+    state.pickList[side].push(champ);state.taken.add(champ);
+    state.log.push({kind,side,champ,role:null,player:null});
     const f=choice.f||{meta:0,mastery:0,comp:0,counter:0,flex:0,series:0};
-    state.expl.push({t:0,title:`${tn.short} 픽: ${championLabel(state.db,champ)} (${ROLE_KO[role]})`,factors:[['메타 인식',f.meta||0],['숙련도',f.mastery||0],['조합',f.comp||0],['상성',f.counter||0],['유연성',f.flex||0],['시리즈 경험',f.series||0]],utility:choice.v??f.total??0,result:'PICK'});
+    state.expl.push({t:0,title:`${tn.short} 픽: ${championLabel(state.db,champ)}`,factors:[['메타 인식',f.meta||0],['숙련도',f.mastery||0],['조합',f.comp||0],['상성',f.counter||0],['유연성',f.flex||0],['시리즈 경험',f.series||0]],utility:choice.v??f.total??0,result:'PICK'});
   }else{
     state.bans[side].push(champ);state.taken.add(champ);
-    const targetRole=role||valid.champion.roles.find(r=>!state.picks[1-side][r])||valid.champion.roles[0]||null,target=targetRole&&state.roster[1-side][targetRole];
-    state.log.push({kind,side,champ,role:targetRole,player:target?.name||null});
+    const role=choice.intentRole||valid.champion.roles[0]||null,target=role&&state.roster[1-side][role];
+    state.log.push({kind,side,champ,role:null,player:null});
     const f=choice.f||{total:0,reveal:0};
-    state.expl.push({t:0,title:choice.source==='ai'&&targetRole?`${tn.short} 밴: ${championLabel(state.db,champ)} (상대 ${ROLE_KO[targetRole]} ${target?.name||''} 견제)`:`${tn.short} 밴: ${championLabel(state.db,champ)}`,factors:[['상대 픽 가치',f.total||0],['이전 세트 활약',f.reveal||0]],utility:choice.v??0,result:'BAN'});
+    state.expl.push({t:0,title:choice.source==='ai'&&role?`${tn.short} 밴: ${championLabel(state.db,champ)} (상대 ${ROLE_KO[role]} 우선 견제)`:`${tn.short} 밴: ${championLabel(state.db,champ)}`,factors:[['상대 픽 가치',f.total||0],['이전 세트 활약',f.reveal||0]],utility:choice.v??0,result:'BAN'});
   }
   state.cursor++;return state;
 }
 function draftSkipTurn(state){if(draftTurn(state))state.cursor++;return state}
-function draftResult(state){return {bans:state.bans,picks:state.picks,log:state.log,expl:state.expl}}
+function draftAssignmentValue(state,side,a){
+  let v=0;for(const role of ROLES){const id=a[role],c=state.db.patch.champions[id],p=state.roster[side][role],sys=championSystemMetaProfile(state.db.patch,c).roles[role];v+=draftMastery(p,id)/100*.72+(state.vhat[side][id]||0)*.2+(sys?.power||0)}
+  return v;
+}
+function draftFinalAssignment(state,side){
+  const rows=draftAssignmentsFor(state,side);if(state.pickList[side].length!==5||!rows.length)throw new Error('Draft ended without legal five-role assignment');
+  return rows.map(a=>({a,v:draftAssignmentValue(state,side,a)})).sort((x,y)=>y.v-x.v||ROLES.map(r=>x.a[r]).join('|').localeCompare(ROLES.map(r=>y.a[r]).join('|')))[0].a;
+}
+function draftResult(state){
+  const picks=[draftFinalAssignment(state,0),draftFinalAssignment(state,1)],roleByChamp=picks.map(a=>Object.fromEntries(ROLES.map(r=>[a[r],r])));
+  const log=state.log.map(x=>x.kind==='P'?{...x,role:roleByChamp[x.side][x.champ],player:state.roster[x.side][roleByChamp[x.side][x.champ]]?.name||null}:x);
+  return {bans:state.bans,picks,log,expl:state.expl,pickOrder:state.pickList.map(x=>x.slice())};
+}
 function runDraft(db,teamIds,rng,ctx){
   ctx=ctx||{used:[],byTeam:{}};
-  if(ctx.forced){const f=ctx.forced;return {bans:f.bans,picks:f.picks,log:[],expl:[{t:0,title:'기록된 밴픽 재현',factors:[],result:''}]}}
+  if(ctx.forced){const f=ctx.forced;return {bans:f.bans,picks:f.picks,log:[],expl:[{t:0,title:'기록된 밴픽 재현',factors:[],result:''}],pickOrder:[ROLES.map(r=>f.picks[0][r]),ROLES.map(r=>f.picks[1][r])]}}
   const state=createDraftSession(db,teamIds,rng,ctx);
   while(draftTurn(state)){const choice=draftAiChoice(state);if(choice)draftApplyChoice(state,choice);else draftSkipTurn(state)}
   return draftResult(state);

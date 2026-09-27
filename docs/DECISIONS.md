@@ -492,3 +492,14 @@ This applies retroactively to completed major items during later UI touches and 
 - Large UI domains live in `ui-*.js` modules. Patch/meta, market/roster and season/world/progression surfaces are separated from `app.js`; Item 11 draft UI must be a separate domain module.
 - Because the artifact is concatenated into one script, CI rejects duplicate top-level global symbols across source modules.
 - Optimization work must preserve deterministic simulation behavior and accepted Items 1–10; performance shortcuts may not remove engine rules or player/AI parity. CI runs a performance probe to record simulation/cache/query costs without using unstable wall-clock thresholds as correctness gates.
+
+
+## D-039 — Live draft keeps flex positions hidden
+
+**Decision:** Major System 11 stores live picks as ordered champion selections, not fixed lane assignments. A legal five-role assignment is resolved only after all ten picks are complete.
+
+- Every pick must preserve at least one legal one-champion-per-role matching across TOP/JGL/MID/ADC/SUP. An invalid pick is rejected before lock-in.
+- A flex champion may remain feasible in multiple roles throughout the draft. The UI does not disclose an internal intended role because no committed role exists yet.
+- Draft AI evaluates opponent counters against the set of publicly possible role assignments, not a hidden fixed lane. Internal candidate scoring may consider which of the AI team's own feasible roles would make a pick valuable, but that intent is discarded after lock-in.
+- Final role assignment is deterministic and optimizes the team's own player mastery, meta evaluation and champion/system fit. It does not inspect a hidden opponent assignment to gain a second-mover advantage.
+- Match simulation, Fearless tracking, meta recording and replays continue to consume the finalized role map; recorded games remain replayable through the existing forced-draft contract.

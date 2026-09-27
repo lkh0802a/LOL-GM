@@ -24,17 +24,11 @@ function draftUiAdvanceAi(){
   if(!DRAFT_UI)return;const s=DRAFT_UI.state;
   while(draftTurn(s)&&draftTurn(s).side!==DRAFT_UI.playerSide){const choice=draftAiChoice(s);if(choice)draftApplyChoice(s,choice);else draftSkipTurn(s)}
 }
-function draftUiPlayerRole(state,champId){
-  const turn=draftTurn(state);if(!turn||turn.kind!=='P')return null;
-  const c=state.db.patch.champions[champId],open=ROLES.filter(r=>!state.picks[turn.side][r]&&c.roles.includes(r));if(!open.length)return null;
-  const mine=Object.values(state.picks[turn.side]).map(id=>state.db.patch.champions[id]);
-  return open.map(role=>({role,v:draftPickValue(state,turn.side,role,champId,mine).total})).sort((a,b)=>b.v-a.v)[0].role;
-}
 function draftUiChampionState(c){
   const s=DRAFT_UI.state,turn=draftTurn(s),inPool=s.champs.some(x=>x.id===c.id);
   if(!inPool)return {disabled:true,reason:'사용 불가'};
   if(s.taken.has(c.id))return {disabled:true,reason:'선택됨'};
-  if(turn&&turn.kind==='P'&&!ROLES.some(r=>!s.picks[turn.side][r]&&c.roles.includes(r)))return {disabled:true,reason:'포지션 완료'};
+  if(turn&&turn.kind==='P'&&!draftCanPick(s,turn.side,c.id))return {disabled:true,reason:'조합 불가'};
   return {disabled:false,reason:''};
 }
 function draftUiMatch(c){
@@ -43,18 +37,19 @@ function draftUiMatch(c){
   if(!q)return true;
   return championDisplayName(c).toLowerCase().includes(q)||String(c.name||'').toLowerCase().includes(q)||c.roles.some(r=>String(ROLE_KO[r]||r).toLowerCase().includes(q));
 }
-function draftUiSlot(side,role){
-  const s=DRAFT_UI.state,id=s.picks[side][role],c=id&&s.db.patch.champions[id],p=s.roster[side][role];
-  return `<div class="du-pick ${id?'filled':''}"><span class="du-role">${ROLE_KO[role]}</span><div><b>${id?esc(championDisplayName(c)):'—'}</b><small>${esc(p?.name||'주전 미정')}</small></div></div>`;
+function draftUiPickSlot(side,index){
+  const s=DRAFT_UI.state,id=s.pickList[side][index],c=id&&s.db.patch.champions[id];
+  return `<div class="du-pick ${id?'filled':''}"><span class="du-role">P${index+1}</span><div><b>${id?esc(championDisplayName(c)):'—'}</b><small>${id?(c.roles||[]).map(r=>ROLE_KO[r]).join(' · '):'픽 대기'}</small></div></div>`;
 }
 function draftUiSidePanel(side){
   const s=DRAFT_UI.state,t=s.db.teams[s.teamIds[side]],turn=draftTurn(s),active=turn&&turn.side===side;
   return `<section class="du-side ${side?'red':'blue'} ${active?'active':''}">
     <div class="du-team"><div><small>${side?'RED':'BLUE'} SIDE</small><h3>${esc(t.name)}</h3></div><b>${s.firstPick===side?'선픽':'후픽'}</b></div>
     <div class="du-bans">${Array.from({length:5},(_,i)=>{const id=s.bans[side][i];return `<span class="${id?'filled':''}">${id?esc(championLabel(s.db,id)):'BAN'}</span>`}).join('')}</div>
-    <div class="du-picks">${ROLES.map(r=>draftUiSlot(side,r)).join('')}</div>
+    <div class="du-picks">${Array.from({length:5},(_,i)=>draftUiPickSlot(side,i)).join('')}</div>
   </section>`;
 }
+
 function draftUiGrid(){
   const s=DRAFT_UI.state,rows=Object.values(s.db.patch.champions).filter(draftUiMatch).sort((a,b)=>championDisplayName(a).localeCompare(championDisplayName(b),'ko'));
   return `<div class="du-grid">${rows.map(c=>{const st=draftUiChampionState(c),sel=DRAFT_UI.selected===c.id;
@@ -73,7 +68,7 @@ function draftUiRender(){
     `<section class="du-pool">
       <div class="du-tools"><input id="du-search" type="search" autocomplete="off" placeholder="챔피언 검색" value="${esc(DRAFT_UI.query)}"><div class="chips">${DRAFT_UI_FILTERS.map(r=>`<button data-du-role="${r}" aria-pressed="${DRAFT_UI.filter===r}">${r==='ALL'?'전체':ROLE_KO[r]}</button>`).join('')}</div></div>
       <div id="du-grid">${draftUiGrid()}</div>
-      <div class="du-lock"><div><b>${mine?(DRAFT_UI.selected?esc(championLabel(s.db,DRAFT_UI.selected)):'챔피언을 선택하세요'):'상대 팀이 선택 중입니다'}</b><small>${mine?(turn.kind==='P'?'챔피언만 선택하면 포지션은 현재 조합과 주전 숙련도를 기준으로 내부 배정됩니다.':'선택 후 확정해야 밴됩니다.'):'AI 판단을 처리하고 있습니다.'}</small></div><button class="primary" id="du-lock" ${mine&&DRAFT_UI.selected?'':'disabled'}>${turn.kind==='B'?'밴 확정':'픽 확정'}</button></div>
+      <div class="du-lock"><div><b>${mine?(DRAFT_UI.selected?esc(championLabel(s.db,DRAFT_UI.selected)):'챔피언을 선택하세요'):'상대 팀이 선택 중입니다'}</b><small>${mine?(turn.kind==='P'?'픽 단계에서는 포지션을 공개하지 않습니다. 드래프트 종료 후 합법적인 5포지션 배치를 확정합니다.':'선택 후 확정해야 밴됩니다.'):'AI는 공개된 챔피언과 가능한 포지션만 보고 판단합니다.'}</small></div><button class="primary" id="du-lock" ${mine&&DRAFT_UI.selected?'':'disabled'}>${turn.kind==='B'?'밴 확정':'픽 확정'}</button></div>
     </section>`}
   </div>`;
   draftUiBind();
@@ -92,7 +87,7 @@ function draftUiBindGrid(){
 }
 function draftUiLock(){
   if(!DRAFT_UI||!DRAFT_UI.selected)return;const s=DRAFT_UI.state,turn=draftTurn(s);if(!turn||turn.side!==DRAFT_UI.playerSide)return;
-  const role=turn.kind==='P'?draftUiPlayerRole(s,DRAFT_UI.selected):null,choice={champ:DRAFT_UI.selected,side:turn.side,source:'player'};if(role)choice.role=role;
+  const choice={champ:DRAFT_UI.selected,side:turn.side,source:'player'};
   const valid=draftValidateChoice(s,choice);if(!valid.ok){DRAFT_UI.selected=null;draftUiRender();return}
   draftApplyChoice(s,choice);DRAFT_UI.selected=null;draftUiAdvanceAi();draftUiRender();
 }
