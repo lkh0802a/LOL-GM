@@ -153,6 +153,24 @@ source += `\n(()=>{
   const rosterErrors=rosterIntegrityErrors(db);
   if(rosterErrors.length) throw new Error('Roster integrity failed: '+rosterErrors.slice(0,5).join(' | '));
 
+  const aiReserveParent=activeTeams(db,null,1).find(t=>t.id!==managedTeamId(db)&&reserveTeamsOf(db,t).length);
+  if(aiReserveParent){
+    const reserve=reserveTeamsOf(db,aiReserveParent)[0],rules=rosterRulesForTeam(db,aiReserveParent);
+    const role=ROLES.find(r=>(aiReserveParent.roster||[]).some(id=>db.players[id]?.role===r)&&(reserve.roster||[]).some(id=>db.players[id]?.role===r));
+    if(role){
+      const first=(aiReserveParent.roster||[]).map(id=>db.players[id]).filter(p=>p&&p.role===role).sort((a,b)=>playerOvr(b)-playerOvr(a));
+      const second=(reserve.roster||[]).map(id=>db.players[id]).filter(p=>p&&p.role===role).sort((a,b)=>playerOvr(b)-playerOvr(a));
+      if(first.length&&second.length&&aiReserveParent.roster.length<rules.firstTeamMax&&reserve.roster.length>rules.reserveTeamMin){
+        for(const a of Object.keys(second[0].attrs))second[0].attrs[a]=Math.max(second[0].attrs[a],Math.min(99,(first[0].attrs[a]||50)+8));
+        const pid=second[0].id,moves=aiManageOwnedReserve(db,aiReserveParent);
+        if(!moves.some(m=>m.pid===pid&&m.kind==='callup')||db.players[pid].team!==aiReserveParent.id)throw new Error('AI failed to call up clearly superior reserve player');
+      }
+    }
+  }
+  const rosterErrorsAfterAi=rosterIntegrityErrors(db);
+  if(rosterErrorsAfterAi.length) throw new Error('AI reserve management broke roster integrity: '+rosterErrorsAfterAi.slice(0,5).join(' | '));
+
+
   const mixedRegion=Object.values(db.regions).find(r=>r.system==='mixed');
   if(mixedRegion){
     if(!mixedRegion.div2)createDiv2(db,new RNG('smoke-mixed-tier2'),mixedRegion);
