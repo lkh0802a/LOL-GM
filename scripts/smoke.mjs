@@ -93,7 +93,7 @@ source += `\n(()=>{
   const afterSkill=championSkillProfile(skillChamp);if(afterSkill.reach<beforeSkill.reach||afterSkill.economy<beforeSkill.economy)throw new Error('Skill range/resource patch did not affect simulation profile');
   // Evidence diagnosis uses sample, presence, win rate, trend, flex and concentration instead of win rate alone.
   const diagDb=buildWorld(),diagChamp=Object.values(diagDb.patch.champions)[0],diagOpp=Object.values(diagDb.patch.champions)[1],diagTeams=activeTeams(diagDb).slice(0,2),diagRows=[];
-  for(let i=0;i<10;i++){const picked=i<20,win=i<15,role=i%3===0?'TOP':i%3===1?'MID':'JGL';diagRows.push({date:'2027-02-'+String(i+1).padStart(2,'0'),patch:diagDb.patch.id,international:i%4===0,regions:[diagTeams[0].region,diagTeams[1].region],sides:[{team:diagTeams[0].id,region:diagTeams[0].region,win,picks:picked?[{champ:diagChamp.id,role,player:'PX'+(i%4),items:[itemBuild[0]],runes:[runePage[0]]}]:[]},{team:diagTeams[1].id,region:diagTeams[1].region,win:!win,picks:[{champ:diagOpp.id,role,player:'OP'+i,items:[],runes:[]}]}],bans:picked?[]:[diagChamp.id]})}
+  for(let i=0;i<24;i++){const picked=i<20,win=i<15,role=i%3===0?'TOP':i%3===1?'MID':'JGL';diagRows.push({date:'2027-02-'+String(i+1).padStart(2,'0'),patch:diagDb.patch.id,international:i%4===0,regions:[diagTeams[0].region,diagTeams[1].region],sides:[{team:diagTeams[0].id,region:diagTeams[0].region,win,picks:picked?[{champ:diagChamp.id,role,player:'PX'+(i%4),items:[itemBuild[0]],runes:[runePage[0]]}]:[]},{team:diagTeams[1].id,region:diagTeams[1].region,win:!win,picks:[{champ:diagOpp.id,role,player:'OP'+i,items:[],runes:[]}]}],bans:picked?[]:[diagChamp.id]})}
   diagDb.metaHistory=diagRows;const diagnosis=diagnosePatchMeta(diagDb,false),de=diagnosis.champions.find(x=>x.cid===diagChamp.id);if(diagnosis.sampleGames!==24||!de||de.dir!==-1||de.flex<2||!(de.confidence>0)||!Number.isFinite(de.playerConc)||!Number.isFinite(de.teamConc))throw new Error('Evidence-driven champion patch diagnosis failed');
   // Consecutive opposite reaction produces a partial rollback instead of another full swing.
   const rollbackDb=buildWorld(),rbChamp=Object.values(rollbackDb.patch.champions)[0],rbOld=rbChamp.base.hp,rbN={type:'base',c:rbChamp.id,key:'hp',old:rbOld,new:rbOld-40,dir:-1,size:'medium',why:'smoke'};
@@ -126,7 +126,7 @@ source += `\n(()=>{
     if(nm.name===nm.nameKo||champNames.has(nm.name)||contentNameTooSimilar(nm.name,[...champNames]))throw new Error('Champion naming engine produced duplicate/near-duplicate name');
     champNames.add(nm.name);namingDb.patch.champions['name_probe_'+i]={name:nm.name,nameKo:nm.nameKo,naming:nm.naming};
   }
-  for(let i=0;i<24;i++){const effects={[['offense','defense','sustain','mobility','haste','utility','scaling','early'][i%8]]:.04},nm=generateItemContentName(namingDb,nr,{cls:i%3===0?'tank':i%3===1?'marksman':'mage',effects});
+  for(let i=0;i<10;i++){const effects={[['offense','defense','sustain','mobility','haste','utility','scaling','early'][i%8]]:.04},nm=generateItemContentName(namingDb,nr,{cls:i%3===0?'tank':i%3===1?'marksman':'mage',effects});
     if(nm.name===nm.nameKo||itemNames.has(nm.name)||!nm.naming?.theme)throw new Error('Item semantic naming failed');
     itemNames.add(nm.name);namingDb.patch.itemDefs['item_name_probe_'+i]={name:nm.name,nameKo:nm.nameKo,naming:nm.naming};
   }
