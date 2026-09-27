@@ -130,9 +130,9 @@ function combatStats(st,ps){
 function combatStats0(st,ps){
   const c=ps.champ,b=c.base,L=ps.lvl,g=Math.max(0,ps.goldEarned-500),cv=ITEM_CONV[c.cls],k=c.kit;
   const ph=st.t<14?k.early:st.t<26?k.mid:k.late, pm=0.8+0.04*ph;
-  const hp=b.hp+b.hpg*(L-1)+g*cv.hp, arm=b.arm+b.armg*(L-1)+g*cv.arm, ad=b.ad+b.adg*(L-1)+g*cv.ad;
+  const hp=b.hp+b.hpg*(L-1)+g*cv.hp, arm=b.arm+b.armg*(L-1)+g*cv.arm, mr=(b.mr||30)+(b.mrg||1.3)*(L-1)+g*cv.arm*.65, ad=b.ad+b.adg*(L-1)+g*cv.ad;
   let off=ad*(0.55+0.045*(k.burst+k.dps))*pm*(b.range>400?1.1:1)*(0.9+b.as*0.15);
-  let ehp=hp*(1+arm/100)*(0.85+0.03*k.sustain)*Math.sqrt(pm);
+  const defense=arm*.55+mr*.45;let ehp=hp*(1+defense/100)*(0.85+0.03*k.sustain)*Math.sqrt(pm);
   const s=st.sides[ps.side];
   let buff=1; if(s.soul)buff*=1.08; if(s.baronUntil>st.t)buff*=1.15; if(s.elderUntil>st.t)buff*=1.25;
   const mf=0.82+0.26*ps.prof.mastery/100+0.04*(ps.prof.confidence-50)/50;

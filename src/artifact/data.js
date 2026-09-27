@@ -48,6 +48,27 @@ function championId(name){
 }
 function championByName(db,name){return Object.values(db.patch.champions).find(c=>c.name===name)||null}
 function championLabel(db,id){const c=db&&db.patch&&db.patch.champions?db.patch.champions[id]:null;return c?c.name:String(id||'')}
+const DETAIL_BASE_KEYS=['resource','resourceg','resourceRegen','mr','mrg','asg'];
+function enrichChampion(c){
+  const b=c.base,h=Math.abs(hashStr(c.id||c.name)),manaFree=['fighter','assassin'].includes(c.cls)&&((h%5)===0);
+  if(b.mr===undefined)b.mr=c.cls==='marksman'?30:c.cls==='mage'||c.cls==='enchanter'?30:32;
+  if(b.mrg===undefined)b.mrg=c.cls==='marksman'?1.3:2.05;
+  if(b.asg===undefined)b.asg=Math.round((1.5+(h%31)/10)*100)/100;
+  if(b.resource===undefined)b.resource=manaFree?0:Math.round((c.cls==='mage'||c.cls==='enchanter'?430:330)+(h%121));
+  if(b.resourceg===undefined)b.resourceg=b.resource?Math.round((25+(h%31))*10)/10:0;
+  if(b.resourceRegen===undefined)b.resourceRegen=b.resource?Math.round((6+(h%45)/10)*10)/10:0;
+  if(!c.skills){
+    const k=c.kit,physical=c.dmg==='AD',damageType=physical?'physical':'magic';
+    c.skills={
+      P:{slot:'P',kind:'passive',effects:['identity'],power:Math.round((k.sustain+k.mobility+k.dps)/3*10)/10},
+      Q:{slot:'Q',kind:'basic',damageType,effects:[k.poke>=7?'poke':'damage'],power:k.burst,cooldown:Math.max(3,13-k.early)},
+      W:{slot:'W',kind:'basic',damageType,effects:[k.sustain>=6?'sustain':k.peel>=6?'shield':'utility'],power:Math.max(k.sustain,k.peel,k.disengage),cooldown:Math.max(5,16-k.mid)},
+      E:{slot:'E',kind:'basic',damageType,effects:[k.cc>=6?'cc':k.mobility>=6?'mobility':'damage'],power:Math.max(k.cc,k.mobility,k.engage),cooldown:Math.max(5,17-k.mid)},
+      R:{slot:'R',kind:'ultimate',damageType,effects:[k.engage>=7?'engage':k.burst>=7?'burst':'teamfight'],power:Math.max(k.burst,k.cc,k.engage,k.dps),cooldown:Math.max(45,130-k.late*6)}
+    };
+  }
+  return c;
+}
 
 // base: [hp,hp성장,공격력,공격력성장,방어,방어성장,공속,사거리,이속]
 // kit : [burst,dps,cc,engage,disengage,peel,poke,waveclear,mobility,sustain,early,mid,late,difficulty]
@@ -132,16 +153,16 @@ function buildPatch(){
     const b={}, k={}, id=championId(name);
     BASE_KEYS.forEach((key,i)=>b[key]=base[i]);
     KIT_KEYS.forEach((key,i)=>k[key]=kit[i]);
-    champions[id] = {id,name, roles, cls, dmg, base:b, kit:k};
+    champions[id] = enrichChampion({id,name, roles, cls, dmg, base:b, kit:k});
   }
   for (const [name,roles,cls,dmg,kit,range] of CHAMP_EXTRA){
     const h=hashStr(name), base=CLASS_BASE[cls].slice(), b={}, k={};
     BASE_KEYS.forEach((key,i)=>{let v=base[i]; if(key!=='range'&&key!=='as') v=Math.round(v*(0.97+(((h>>(i*3))&7)/7)*0.06)*100)/100; b[key]=v});
     if(range) b.range=range;
     KIT_KEYS.forEach((key,i)=>k[key]=kit[i]);
-    const id=championId(name);champions[id]={id,name,roles,cls,dmg,base:b,kit:k};
+    const id=championId(name);champions[id]=enrichChampion({id,name,roles,cls,dmg,base:b,kit:k});
   }
-  for (const [name,roles,arch,dmg] of CHAMP_ARCH){const c=archChampion(name,roles,arch,dmg);champions[c.id]=c}
+  for (const [name,roles,arch,dmg] of CHAMP_ARCH){const c=enrichChampion(archChampion(name,roles,arch,dmg));champions[c.id]=c}
   return {
     id:'26.19',
     rules:{ csGold:23, passiveGold:122, killGold:300, assistGold:150, dragonSpawn:5, dragonRespawn:5, heraldSpawn:14, baronSpawn:20, baronRespawn:6, baronBuff:3, elderBuff:2.5, inhibRespawn:5 },
