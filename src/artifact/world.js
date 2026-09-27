@@ -18,7 +18,7 @@ function ensurePlayerDevelopment(p){
 function careerStage(p){if(p.retired)return '은퇴';const d=ensurePlayerDevelopment(p),seasons=p.proSeasons||0;if(p.age<=19||(seasons<=1&&p.age<=21))return '신인';if(p.age<d.peakAge-1)return '성장';if(p.age<=d.peakAge+1)return '전성기';return '쇠퇴'}
 const SQUAD_ROLES=['core','starter','competition','backup','prospect'];
 const SQUAD_ROLE_KO={core:'핵심 주전',starter:'주전',competition:'경쟁',backup:'후보',prospect:'유망주'};
-const SQUAD_ROLE_EXPECTED={core:.9,starter:.74,competition:.48,backup:.2,prospect:.24};
+const SQUAD_ROLE_EXPECTED={core:.9,starter:.76,competition:.24,backup:.06,prospect:.12};
 const SQUAD_ROLE_ORDER={prospect:0,backup:1,competition:2,starter:3,core:4};
 function expectedPlayShare(p){return SQUAD_ROLE_EXPECTED[p.rosterRole]??.45}
 function playerCareerGoal(p){
@@ -46,7 +46,7 @@ function setRosterRole(db,p,role,source='club',silent=false){
   const old=player.rosterRole||recommendedRosterRole(db,player,player.team),oldRank=SQUAD_ROLE_ORDER[old]??2,newRank=SQUAD_ROLE_ORDER[role]??2;
   player.rosterRole=role;player.roleAssignedYear=db.year;player.roleAssignedBy=source;
   if(!silent&&old!==role){
-    if(typeof ensureSatisfaction==='function'){ensureSatisfaction(player);player.satisfaction=clamp(player.satisfaction+(newRank>oldRank?2:-Math.min(9,(oldRank-newRank)*3)),0,100)}
+    if(typeof ensureSatisfaction==='function'){ensureSatisfaction(player);player.satisfaction=clamp(player.satisfaction+(newRank>oldRank?1:-Math.min(5,(oldRank-newRank)*2)),0,100)}
     recordPlayerEvent(player,'roster_role',db.year,{from:old,to:role,team:player.team,date:db.worldDate,source});
   }
   return {ok:true,old,role};

@@ -194,3 +194,15 @@ Older development saves remain unsupported.
 - AI clubs rebalance roster roles after offseason market changes
 - satisfaction affects renewal and transfer intent while detailed contract negotiation remains reserved for major item 5
 - item 3 was verified by smoke tests and a mobile standalone-browser scenario that created and displayed a playing-time-driven transfer request
+
+
+### D-020a — Conservative LoL roster expectations
+
+LOL GM treats pro LoL lineups as relatively stable rather than football-style rotation squads.
+
+- core starters expect about 90% usage and normal starters about 76%
+- competition players expect only limited spot usage; backups and prospects can spend long periods without official games
+- ordinary bench usage does not create playing-time complaints
+- playing-time dissatisfaction starts primarily for promised core/starter players after a substantial sample of team games
+- satisfaction decays slowly and transfer requests require severe dissatisfaction that persists across repeated evaluations
+- weak team results, reserve assignment, salary and career-goal complaints also use stricter thresholds so discontent remains exceptional rather than routine

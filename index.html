@@ -1428,7 +1428,7 @@ function ensurePlayerDevelopment(p){
 function careerStage(p){if(p.retired)return '은퇴';const d=ensurePlayerDevelopment(p),seasons=p.proSeasons||0;if(p.age<=19||(seasons<=1&&p.age<=21))return '신인';if(p.age<d.peakAge-1)return '성장';if(p.age<=d.peakAge+1)return '전성기';return '쇠퇴'}
 const SQUAD_ROLES=['core','starter','competition','backup','prospect'];
 const SQUAD_ROLE_KO={core:'핵심 주전',starter:'주전',competition:'경쟁',backup:'후보',prospect:'유망주'};
-const SQUAD_ROLE_EXPECTED={core:.9,starter:.74,competition:.48,backup:.2,prospect:.24};
+const SQUAD_ROLE_EXPECTED={core:.9,starter:.76,competition:.24,backup:.06,prospect:.12};
 const SQUAD_ROLE_ORDER={prospect:0,backup:1,competition:2,starter:3,core:4};
 function expectedPlayShare(p){return SQUAD_ROLE_EXPECTED[p.rosterRole]??.45}
 function playerCareerGoal(p){
@@ -1456,7 +1456,7 @@ function setRosterRole(db,p,role,source='club',silent=false){
   const old=player.rosterRole||recommendedRosterRole(db,player,player.team),oldRank=SQUAD_ROLE_ORDER[old]??2,newRank=SQUAD_ROLE_ORDER[role]??2;
   player.rosterRole=role;player.roleAssignedYear=db.year;player.roleAssignedBy=source;
   if(!silent&&old!==role){
-    if(typeof ensureSatisfaction==='function'){ensureSatisfaction(player);player.satisfaction=clamp(player.satisfaction+(newRank>oldRank?2:-Math.min(9,(oldRank-newRank)*3)),0,100)}
+    if(typeof ensureSatisfaction==='function'){ensureSatisfaction(player);player.satisfaction=clamp(player.satisfaction+(newRank>oldRank?1:-Math.min(5,(oldRank-newRank)*2)),0,100)}
     recordPlayerEvent(player,'roster_role',db.year,{from:old,to:role,team:player.team,date:db.worldDate,source});
   }
   return {ok:true,old,role};
@@ -2538,29 +2538,30 @@ function satisfactionIssues(db,p,opt={}){
   ensureSatisfaction(p);const t=p.team&&db.teams[p.team],usageYear=opt.year??db.year,u=p.usage&&p.usage.year===usageYear?p.usage:null,out=[];
   if(!t)return out;
   const exp=expectedPlayShare(p),actual=u&&u.teamGames>=6?actualPlayShare(p):null;
-  if(actual!==null&&exp-actual>.17)out.push({code:'playing_time',severity:clamp((exp-actual)*45,4,22)});
-  if(t.parent&&p.rosterRole!=='prospect'&&(p.age>=22||(p.reputation||0)>=68))out.push({code:'reserve',severity:5+Math.max(0,(p.reputation||60)-65)/5});
-  if(p.contract){const fair=marketSalary(db,p,t.region);if(fair>0&&p.contract.salary/fair<.72)out.push({code:'contract',severity:clamp((.72-p.contract.salary/fair)*28,3,12)})}
-  if(u&&u.teamGames>=10&&u.teamWins/u.teamGames<.43&&p.personality.ambition>=60)out.push({code:'team_results',severity:clamp((.43-u.teamWins/u.teamGames)*30+2,3,10)});
+  if(actual!==null&&u.teamGames>=12&&['core','starter'].includes(p.rosterRole)&&exp-actual>.24)out.push({code:'playing_time',severity:clamp((exp-actual)*28,3,12)});
+  else if(actual!==null&&u.teamGames>=18&&p.rosterRole==='competition'&&exp-actual>.2&&p.personality.ambition>=72)out.push({code:'playing_time',severity:clamp((exp-actual)*16,2,6)});
+  if(t.parent&&p.rosterRole!=='prospect'&&(p.age>=23||(p.reputation||0)>=74)&&p.personality.ambition>=62)out.push({code:'reserve',severity:3+Math.max(0,(p.reputation||60)-72)/8});
+  if(p.contract){const fair=marketSalary(db,p,t.region);if(fair>0&&p.contract.salary/fair<.62&&p.personality.ambition>=60)out.push({code:'contract',severity:clamp((.62-p.contract.salary/fair)*20,2,7)})}
+  if(u&&u.teamGames>=18&&u.teamWins/u.teamGames<.35&&p.personality.ambition>=76)out.push({code:'team_results',severity:clamp((.35-u.teamWins/u.teamGames)*20+2,2,6)});
   const rec=recommendedRosterRole(db,p,t),rr=(SQUAD_ROLE_ORDER[rec]??2)-(SQUAD_ROLE_ORDER[p.rosterRole]??2);
-  if(rr>=2&&p.personality.ambition>=55)out.push({code:'role',severity:rr*3});
+  if(rr>=2&&['core','starter'].includes(rec)&&p.personality.ambition>=68)out.push({code:'role',severity:Math.min(6,rr*2)});
   if(opt.offseason){
     const goal=playerCareerGoal(p),rows=(p.career||[]).filter(c=>c.year===opt.year),intl=rows.some(c=>c.international&&c.g>0),titles=(p.careerEvents||[]).some(e=>e.year===opt.year&&e.type==='title'),firstGames=rows.filter(c=>c.squad==='1군').reduce((a,c)=>a+c.g,0);
-    if(goal==='international'&&!intl)out.push({code:'international',severity:6});
-    if(goal==='titles'&&!titles)out.push({code:'career_goal',severity:5});
-    if(goal==='starter'&&firstGames<Math.max(6,(u?u.teamGames:0)*.45))out.push({code:'career_goal',severity:5});
-    if(goal==='development'&&p.age<=22&&rows.length&&rows.reduce((a,c)=>a+c.g,0)<6)out.push({code:'career_goal',severity:4});
+    if(goal==='international'&&!intl&&(p.reputation||0)>=76&&p.personality.ambition>=72)out.push({code:'international',severity:4});
+    if(goal==='titles'&&!titles&&p.personality.ambition>=82)out.push({code:'career_goal',severity:3});
+    if(goal==='starter'&&['core','starter'].includes(p.rosterRole)&&firstGames<Math.max(5,(u?u.teamGames:0)*.4))out.push({code:'career_goal',severity:3});
+    if(goal==='development'&&p.age<=21&&rows.length&&rows.reduce((a,c)=>a+c.g,0)<4&&p.rosterRole!=='prospect')out.push({code:'career_goal',severity:2});
   }
   return out.sort((a,b)=>b.severity-a.severity);
 }
 function applySatisfaction(db,p,opt={}){
   ensureSatisfaction(p);const issues=satisfactionIssues(db,p,opt),usageYear=opt.year??db.year,u=p.usage&&p.usage.year===usageYear?p.usage:null;
-  let delta=issues.length?-Math.min(opt.offseason?12:3.2,issues.reduce((a,x)=>a+x.severity,0)*(opt.offseason?.22:.07)):0;
+  let delta=issues.length?-Math.min(opt.offseason?7:1.4,issues.reduce((a,x)=>a+x.severity,0)*(opt.offseason?.16:.035)):0;
   if(!issues.length&&u&&u.teamGames>=4){const actual=actualPlayShare(p),exp=expectedPlayShare(p);delta=Math.min(opt.offseason?5:1.2,1+(actual-exp)*3)}
   p.satisfaction=clamp(p.satisfaction+delta,0,100);p.satisfactionReasons=issues.map(x=>x.code);
-  if(p.satisfaction<35&&issues.length)p.concernStreak=(p.concernStreak||0)+1;else p.concernStreak=Math.max(0,(p.concernStreak||0)-1);
-  if(!p.wantsOut&&p.satisfaction<=25&&p.concernStreak>=4){p.wantsOut=true;p.wantsOutReason=issues[0]?issues[0].code:'career_goal';recordPlayerEvent(p,'transfer_request',db.year,{reason:p.wantsOutReason,team:p.team,date:db.worldDate})}
-  else if(p.wantsOut&&p.satisfaction>=52){p.wantsOut=false;const why=p.wantsOutReason;p.wantsOutReason=null;p.concernStreak=0;recordPlayerEvent(p,'transfer_request_withdrawn',db.year,{reason:why,team:p.team,date:db.worldDate})}
+  if(p.satisfaction<28&&issues.length&&['core','starter'].includes(p.rosterRole))p.concernStreak=(p.concernStreak||0)+1;else p.concernStreak=Math.max(0,(p.concernStreak||0)-1);
+  if(!p.wantsOut&&p.satisfaction<=18&&p.concernStreak>=8&&issues.length){p.wantsOut=true;p.wantsOutReason=issues[0].code;recordPlayerEvent(p,'transfer_request',db.year,{reason:p.wantsOutReason,team:p.team,date:db.worldDate})}
+  else if(p.wantsOut&&p.satisfaction>=50){p.wantsOut=false;const why=p.wantsOutReason;p.wantsOutReason=null;p.concernStreak=0;recordPlayerEvent(p,'transfer_request_withdrawn',db.year,{reason:why,team:p.team,date:db.worldDate})}
   const target=52+p.satisfaction*.2;p.morale=clamp(p.morale+(target-p.morale)*.05,0,100);
   return {delta,issues};
 }
@@ -2569,12 +2570,12 @@ function updatePlayerUsage(db,s,rec,lines){
   for(const tid of [rec.a,rec.b]){const t=db.teams[tid];if(!t)continue;const teamWins=rec.games.filter(g=>g.winner===tid).length;
     for(const id of t.roster){const p=db.players[id];if(!p)continue;ensureSatisfaction(p);const u=usageFor(p,s.year);u.teamGames+=n;u.teamWins+=teamWins;if(comp.international)u.teamIntlGames+=n;
       const ls=by[id]||[];u.games+=ls.length;u.series++;u.wins+=ls.filter(x=>x.win).length;if(comp.international)u.intlGames+=ls.length;if(t.parent)u.reserveGames+=ls.length;else u.firstTeamGames+=ls.length;
-      if(u.teamGames>=6&&u.series%2===0)applySatisfaction(db,p);
+      if(u.teamGames>=12&&u.series%4===0)applySatisfaction(db,p);
     }
   }
 }
 function onSquadMoveSatisfaction(db,p,check){
-  ensureSatisfaction(p);if(check.kind==='senddown'){const pen=p.rosterRole==='prospect'?2:p.rosterRole==='backup'?4:8;p.satisfaction=clamp(p.satisfaction-pen,0,100);p.satisfactionReasons=Array.from(new Set([...p.satisfactionReasons,'reserve']));p.concernStreak+=p.rosterRole==='core'||p.rosterRole==='starter'?1:0}
+  ensureSatisfaction(p);if(check.kind==='senddown'){const pen=p.rosterRole==='prospect'?1:p.rosterRole==='backup'?2:p.rosterRole==='competition'?3:6;p.satisfaction=clamp(p.satisfaction-pen,0,100);p.satisfactionReasons=Array.from(new Set([...p.satisfactionReasons,'reserve']));p.concernStreak+=p.rosterRole==='core'||p.rosterRole==='starter'?1:0}
   else {p.satisfaction=clamp(p.satisfaction+3,0,100);p.satisfactionReasons=p.satisfactionReasons.filter(x=>x!=='reserve')}
   applySatisfaction(db,p);
 }
