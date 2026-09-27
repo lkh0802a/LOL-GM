@@ -20,10 +20,13 @@ source += `\n(()=>{
   if(active.length<2||active.some(t=>t.roster.length!==0)) throw new Error('First-season teams are not blank');
   const players=Object.values(db.players);
   if(players.length<10||players.some(p=>p.team||p.contract)) throw new Error('Initial player pool is not fully FA');
-  if(db.regions.KR.spendingRule!=='sfr_top5'||db.regions.EU.spendingRule!=='sfr_top5'||db.regions.EU.salaryFloor!==db.regions.EU.salaryCap*.5)throw new Error('KR/LEC spending rules are not region-specific');
-  if(db.regions.CN.spendingRule!=='none'||db.regions.NA.spendingRule!=='none'||db.regions.AP.spendingRule!=='none'||db.regions.BR.spendingRule!=='none')throw new Error('Non-SFR regions inherited another region financial rule');
-  if(db.regions.KR.rosterRuleProfile===db.regions.NA.rosterRuleProfile||rosterRuleProfile(db.regions.NA.rosterRuleProfile).firstTeamMax!==12)throw new Error('Regional roster profiles are not independent');
-  if(db.regions.CN.importRecruitMinGap===db.regions.NA.importRecruitMinGap)throw new Error('Regional market profiles are not differentiated');
+  for(const R of Object.values(db.regions)){
+    if(R.policyMode!=='engine'||!R.policyBasis||R.policyBasis.source!=='engine')throw new Error('Region policy is not engine-owned: '+R.id);
+    if(R.payScale==null||R.importLimit==null||R.importRecruitMinGap==null||!R.rosterRuleProfile||!R.marketProfile||!R.office||R.spendingRule==null)throw new Error('Policy engine left unresolved output: '+R.id);
+  }
+  const namedPolicies=['KR','CN','EU','NA','AP','BR'].map(id=>db.regions[id]).filter(Boolean);
+  if(namedPolicies.some(R=>R.sfrMode==='kr_progressive'||R.sfrMode==='lec_50_100'))throw new Error('Named-region hand policy leaked into engine world');
+  if(PAY_SCALE.KR||PAY_SCALE.CN||PAY_SCALE.EU||PAY_SCALE.NA)throw new Error('Named regional pay scales are still hardcoded');
   const custom=buildWorld({regions:[regionCfg('ZZ',{id:'ZZ',name:'테스트',leagueName:'ZZL',short:'ZZL',teams:8,strength:66,div2:true,system:'franchise',payScale:.7})],internationals:[],subs:1,changes:'normal',startYear:2027,manage:'manual',universalLanguage:true});
   const z=custom.regions.ZZ;if(!z.policyBasis||z.policyBasis.source!=='engine'||!z.rosterRuleProfile||z.importLimit==null||!z.marketProfile||z.spendingRule==null)throw new Error('Policy engine did not resolve custom-region rules');
   if(z.rosterRuleProfile!=='ENGINE_OWNED_RESERVE')throw new Error('Policy engine ignored owned-reserve structure');

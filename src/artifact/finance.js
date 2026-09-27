@@ -1,7 +1,7 @@
 // ===== LOL GM: 계약 / 재정 / FA 시장 (단위: 억 원) =====
-const PAY_SCALE={KR:1,CN:1.3,EU:0.8,NA:1,AP:0.45,TW:0.4,VN:0.3,BR:0.35,JP:0.4,TR:0.35,LA:0.3,OC:0.3};
+const PAY_SCALE={}; // legacy compatibility only; new worlds derive pay scale in the policy engine.
 const money=v=>(Math.round(v*10)/10).toFixed(1)+'억';
-function psOf(db,rid){const R=db.regions[rid];return R?(R.payScale??PAY_SCALE[rid]??0.5):0.5}
+function psOf(db,rid){const R=db.regions[rid];return R?(R.payScale??.5):.5}
 function psTeam(db,t){return psOf(db,t.region)*((t.division||1)===2?0.35:1)}
 function marketSalary(db,p,rid){const o=playerOvr(p),ps=psOf(db,rid||p.region),up=Math.max(0,p.pot-o)*(p.age<=21?.04:.01);return Math.max(.3*ps,Math.round(.5*Math.exp((o-60)*.13)*(1+up)*ps*10)/10)}
 function playerMarketValue(db,p){const o=playerOvr(p),rep=p.reputation??o,up=Math.max(0,p.pot-o),rid=p.team&&db.teams[p.team]?db.teams[p.team].region:p.region,ps=psOf(db,rid),ageMul=p.age<=20?1.2:p.age<=23?1.12:p.age<=26?1:p.age<=29?.82:.62,left=p.contract?Math.max(0,p.contract.until-db.year+1):0,contractMul=p.contract?1+Math.min(3,left)*.12:.72,raw=.65*Math.exp((o-60)*.115)*ps*(.78+rep/180)*(1+up*(p.age<=22?.045:.018))*ageMul*contractMul;return Math.round(Math.max(.2*ps,raw)*10)/10}

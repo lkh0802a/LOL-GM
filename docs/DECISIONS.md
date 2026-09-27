@@ -273,3 +273,21 @@ This principle applies to future work on scouting, contracts, Tier 2, finance, l
 - policy changes are component-based rather than choosing a whole 'LCK model', 'LEC model', or 'global model'
 
 The correct fallback for uncertainty is evidence-driven inference or status quo, not copying another region.
+
+
+## D-025 — Engine owns policy outputs
+
+**Decision:** The simulation engine, not hand-authored regional labels, owns all derived league-policy outputs.
+
+- named-region presets may provide observable world-state inputs such as identity, strength, team count, current competition structure, or whether a Tier-2 scene exists
+- presets must not directly assign spending regulation, salary thresholds, market archetype, import appetite, roster-policy profile, office ideology, or regional pay scale
+- regional pay scale is derived from market strength, league size, tier and structural context
+- roster policy is derived from the actual Tier-2 ownership structure
+- market behavior and import policy are derived from local talent depth, fan demand, owner spending power and regional strength
+- spending regulation is introduced only when measured payroll dispersion, ownership resources and league size create enough pressure
+- spending thresholds, redistribution share, floor and excess burden are calculated from the region's own payroll/fan/talent data
+- office style is derived from the same regional conditions rather than assigned by region name
+- engine decisions persist their evidence in policyBasis so UI, tests and future systems can explain why a policy exists
+- no special-case branch is allowed solely because region id equals KR, CN, EU, NA, AP or BR
+
+Constants may define simulation mechanics, but regional outcomes must result from shared engine logic and observable inputs.
