@@ -5,7 +5,7 @@ import vm from 'node:vm';
 const root = resolve(import.meta.dirname, '..');
 const artifact = resolve(root, 'src', 'artifact');
 const modules = [
-  'engine.js', 'data.js', 'champs2.js', 'patch.js', 'competition.js',
+  'champion-source.js', 'engine.js', 'data.js', 'champs2.js', 'patch.js', 'competition.js',
   'world.js', 'office.js', 'finance.js', 'features.js', 'career.js',
 ];
 
@@ -13,6 +13,7 @@ let source = '';
 for (const file of modules) source += `${await readFile(resolve(artifact, file), 'utf8')}\n`;
 source += `\n(()=>{
   const db=buildWorld();
+  if(db.patch.championSource.matched<170||db.patch.championSource.matched!==db.patch.championSource.total)throw new Error('Authoritative champion baseline coverage incomplete: '+JSON.stringify(db.patch.championSource));
   if(!db||db.version!==14) throw new Error('Unexpected save schema');
   if(!db.worldDate||!db.worldConfig.universalLanguage) throw new Error('World bootstrap settings failed');
   const intl=Object.fromEntries(db.worldConfig.internationals.map(x=>[x.id,x]));

@@ -60,16 +60,16 @@ function mergeChampionSource(c,raw){
   if(!raw)return c;
   const b=raw.base||{}, map=['hp','hpg','ad','adg','arm','armg','mr','mrg','as','asg','range','ms','resource','resourceg','resourceRegen'];
   for(const k of map)if(Number.isFinite(b[k]))c.base[k]=b[k];
-  c.riotKey=raw.riotKey??c.riotKey;c.riotAlias=raw.alias||c.riotAlias;c.nameKo=raw.nameKo||c.nameKo;
+  c.riotKey=raw.riotKey??c.riotKey;c.riotAlias=raw.alias||c.riotAlias;c.nameKo=raw.nameKo||c.nameKo;c.resourceType=raw.resourceType||c.resourceType;
   c=enrichChampion(c);
   if(raw.passive)c.skills.P={...c.skills.P,name:raw.passive.nameKo||raw.passive.nameEn||'P',sourceName:raw.passive.nameEn||'',source:{version:CHAMPION_SOURCE_PATCH,provider:'Riot Data Dragon'}};
   for(const sp of raw.spells||[])if(c.skills[sp.slot])c.skills[sp.slot]=normalizeSourceSkill(sp.slot,sp,c.skills[sp.slot]);
-  c.detailSource='riot_ddragon';c.detailVersion=CHAMPION_SOURCE_PATCH;
+  c.baseSource='riot_ddragon';c.detailSource=raw.spells?.length?'riot_ddragon':'hybrid_ddragon';c.detailVersion=CHAMPION_SOURCE_PATCH;
   return c;
 }
 function applyChampionSource(champions,snapshot){
   if(!snapshot||snapshot.version!==CHAMPION_SOURCE_PATCH)return {matched:0,total:Object.keys(champions).length};
-  const raws=Object.values(snapshot.champions||{}),byAlias=new Map(raws.map(x=>[String(x.alias||'').toLowerCase(),x]));
+  const raws=Object.values(snapshot.champions||{}),norm=x=>String(x||'').replace(/[^a-z0-9]/gi,'').toLowerCase(),byAlias=new Map();for(const x of raws){byAlias.set(norm(x.alias),x);byAlias.set(norm(x.nameEn),x)}
   let matched=0;
   for(const c of Object.values(champions)){const alias=String(c.riotAlias||c.name||'').replace(/[^a-z0-9]/gi,'').toLowerCase();const raw=byAlias.get(alias);if(raw){mergeChampionSource(c,raw);matched++}}
   return {matched,total:Object.keys(champions).length};
@@ -174,7 +174,7 @@ const ITEM_POOL = {
   enchanter:['월석 재생기','미카엘의 축복','기사의 맹세','구원','불타는 향로','정령의 형상']
 };
 
-function buildPatch(championSnapshot=null){
+function buildPatch(championSnapshot=CHAMPION_SOURCE_SNAPSHOT){
   const champions = {};
   for (const [name,roles,cls,dmg,base,kit] of CHAMP_RAW){
     const b={}, k={}, id=championId(name);
