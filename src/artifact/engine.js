@@ -61,9 +61,9 @@ function runDraft(db, teamIds, rng, ctx){
     const nk=tid+'|'+db.patch.id+'|'+an; const NZ=VHAT_NOISE[nk]||(VHAT_NOISE[nk]=Object.fromEntries(champs.map(c=>[c.id,((hashStr(tid+db.patch.id+c.id)%2000)/1000-1)*0.35*(1.1-an)])));
     champs.forEach(c=>{const noise=NZ[c.id];
       let v=clamp((strengths[c.id]-mn)/(mx-mn||1)+noise,0,1);
-      const gst=MS[c.id],rst=(RMS[rid]||{})[c.id],rg=RMG[rid]||0,know=((team.metaKnowledge||{})[c.id]||0);
+      const gst=MS[c.id],rst=(RMS[rid]||{})[c.id],rg=RMG[rid]||0,know=((team.metaKnowledge||{})[c.id]||0),counter=((team.metaCounter||{})[c.id]||0);
       const observe=(base,st,g,weight)=>{if(!st||!g)return base;const n=st.p+st.b,w=n/(n+18*(1.35-an)),wr=(st.w+2)/(st.p+4),obs=clamp(0.5+(wr-0.5)*2.2+(n/g)*0.5-0.1,0,1);return base*(1-w*weight)+obs*w*weight};
-      v=observe(v,gst,G,.45);v=observe(v,rst,rg,.75);v=clamp(v+know*.08,0,1);
+      v=observe(v,gst,G,.45);v=observe(v,rst,rg,.75);const uncertainty=c.proEligibleDate&&c.releaseDate?clamp((14-Math.max(0,(new Date(db.worldDate)-new Date(c.releaseDate))/86400000))/14,0,1):0;v=clamp(v+know*.08-counter*.035+(uncertainty?(know-.5)*.12*uncertainty:0),0,1);
       m[c.id]=v}); return m});
   const roster=teamIds.map(tid=>{const r={}; ROLES.forEach(role=>r[role]=starterFor(db,db.teams[tid],role)); return r});
   const taken=new Set(ctx.fearless?ctx.used:[]), bans=[[],[]], picks=[{},{}], expl=[];
