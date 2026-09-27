@@ -336,50 +336,79 @@ function parentTeamOf(db,t){const team=teamRef(db,t);if(!team)return null;return
 function reserveTeamsOf(db,t){const parent=parentTeamOf(db,t);if(!parent)return [];return activeTeams(db,parent.region,2).filter(x=>x.parent===parent.id)}
 function organizationTeams(db,t){const parent=parentTeamOf(db,t);if(!parent)return [];return [parent,...reserveTeamsOf(db,parent)]}
 function organizationRoster(db,t){return Array.from(new Set(organizationTeams(db,t).flatMap(x=>x.roster||[])))}
+function rosterPlanState(db,t){
+  const parent=parentTeamOf(db,t);if(!parent)return null;
+  const teams=organizationTeams(db,parent),assignments={};
+  for(const team of teams)for(const pid of (team.roster||[]))assignments[pid]=team.id;
+  return {parentId:parent.id,teamIds:teams.map(x=>x.id),assignments};
+}
+function validateRosterPlan(db,t,plan){
+  const parent=parentTeamOf(db,t),errors=[];if(!parent)return {ok:false,errors:['구단을 찾을 수 없습니다']};
+  const teams=organizationTeams(db,parent),teamIds=new Set(teams.map(x=>x.id)),rules=rosterRulesForTeam(db,parent);
+  if(!reserveTeamsOf(db,parent).length)errors.push('이 구단은 산하 2군을 운영하지 않습니다');
+  const base=organizationRoster(db,parent),baseSet=new Set(base),assign=plan&&plan.assignments||{},counts=Object.fromEntries(teams.map(x=>[x.id,0]));
+  for(const pid of base){
+    const p=db.players[pid],dst=assign[pid]||p?.team;
+    if(!p){errors.push('존재하지 않는 선수가 로스터에 포함되어 있습니다: '+pid);continue}
+    if(!teamIds.has(dst)){errors.push(p.name+': 같은 구단의 1군/2군에만 배치할 수 있습니다');continue}
+    counts[dst]=(counts[dst]||0)+1;
+  }
+  for(const pid of Object.keys(assign))if(!baseSet.has(pid))errors.push('구단 통합 로스터 밖의 선수를 이동할 수 없습니다: '+pid);
+  const first=parent,firstN=counts[first.id]||0;
+  if(firstN<rules.firstTeamMin)errors.push('1군은 최소 '+rules.firstTeamMin+'명이어야 합니다 (현재 계획 '+firstN+'명)');
+  if(firstN>rules.firstTeamMax)errors.push('1군은 최대 '+rules.firstTeamMax+'명까지 가능합니다 (현재 계획 '+firstN+'명)');
+  for(const reserve of teams.filter(x=>x.parent)){
+    const n=counts[reserve.id]||0;
+    if(n<rules.reserveTeamMin)errors.push(reserve.name+'은 최소 '+rules.reserveTeamMin+'명이어야 합니다 (현재 계획 '+n+'명)');
+    if(n>rules.reserveTeamMax)errors.push(reserve.name+'은 최대 '+rules.reserveTeamMax+'명까지 가능합니다 (현재 계획 '+n+'명)');
+  }
+  const total=Object.values(counts).reduce((x,y)=>x+y,0);
+  if(total<rules.integratedMin||total>rules.integratedMax)errors.push('통합 로스터는 '+rules.integratedMin+'~'+rules.integratedMax+'명이어야 합니다 (현재 '+total+'명)');
+  return {ok:errors.length===0,errors,counts,total,parentId:parent.id,assignments:Object.fromEntries(base.map(pid=>[pid,assign[pid]||db.players[pid].team]))};
+}
+function applyRosterPlan(db,t,plan,source='manager'){
+  const checked=validateRosterPlan(db,t,plan);if(!checked.ok)throw new Error(checked.errors.join('\n'));
+  const parent=db.teams[checked.parentId],before=Object.fromEntries(Object.keys(checked.assignments).map(pid=>[pid,db.players[pid].team])),moves=[];
+  for(const [pid,dst] of Object.entries(checked.assignments))if(before[pid]!==dst)moves.push({pid,from:before[pid],to:dst,kind:dst===parent.id?'callup':'senddown'});
+  for(const team of organizationTeams(db,parent))team.roster=(team.roster||[]).filter(pid=>!moves.some(m=>m.pid===pid));
+  for(const m of moves){const p=db.players[m.pid],dst=db.teams[m.to];dst.roster.push(p.id);p.team=dst.id}
+  if(db.world)for(const m of moves){const p=db.players[m.pid];recordPlayerEvent(p,'squad_move',db.year,{from:m.from,to:m.to,kind:m.kind,date:db.worldDate,source});if(typeof onSquadMoveSatisfaction==='function')onSquadMoveSatisfaction(db,p,m)}
+  for(const team of organizationTeams(db,parent))initializeDepthChart(db,team,true);
+  return {...checked,moves};
+}
 function rosterMoveCheck(db,p,target){
   const player=playerRef(db,p),dst=teamRef(db,target);
   if(!player)return {ok:false,reason:'선수를 찾을 수 없습니다'};
   if(!dst||dst.active===false)return {ok:false,reason:'이동할 팀을 찾을 수 없습니다'};
   const src=player.team&&db.teams[player.team];if(!src||src.active===false)return {ok:false,reason:'현재 소속팀이 없습니다'};
   if(src.id===dst.id)return {ok:false,reason:'이미 해당 스쿼드 소속입니다'};
-  const srcParent=parentTeamOf(db,src),dstParent=parentTeamOf(db,dst);
-  if(!srcParent||!dstParent||srcParent.id!==dstParent.id)return {ok:false,reason:'같은 구단의 1군/2군 사이에서만 이동할 수 있습니다'};
-  const rules=rosterRulesForTeam(db,srcParent);if(!reserveTeamsOf(db,srcParent).length)return {ok:false,reason:'이 구단은 산하 2군을 운영하지 않습니다'};
-  const srcIsFirst=!src.parent,dstIsFirst=!dst.parent;if(srcIsFirst===dstIsFirst)return {ok:false,reason:'콜업/샌드다운은 1군과 산하 2군 사이에서만 가능합니다'};
-  const srcMin=srcIsFirst?rules.firstTeamMin:rules.reserveTeamMin,dstMax=dstIsFirst?rules.firstTeamMax:rules.reserveTeamMax;
-  if((src.roster||[]).length-1<srcMin)return {ok:false,reason:(srcIsFirst?'1군':'2군')+' 최소 '+srcMin+'명을 유지해야 합니다'};
-  if((dst.roster||[]).length+1>dstMax)return {ok:false,reason:(dstIsFirst?'1군':'2군')+' 최대 '+dstMax+'명을 초과할 수 없습니다'};
-  const total=organizationRoster(db,srcParent).length;if(total<rules.integratedMin||total>rules.integratedMax)return {ok:false,reason:'통합 로스터는 '+rules.integratedMin+'~'+rules.integratedMax+'명이어야 합니다'};
-  return {ok:true,kind:dstIsFirst?'callup':'senddown',from:src.id,to:dst.id,parent:srcParent.id};
+  const plan=rosterPlanState(db,src);if(!plan)return {ok:false,reason:'구단을 찾을 수 없습니다'};
+  plan.assignments[player.id]=dst.id;
+  const checked=validateRosterPlan(db,src,plan);
+  return checked.ok?{ok:true,kind:dst.parent?'senddown':'callup',from:src.id,to:dst.id,parent:checked.parentId}:{ok:false,reason:checked.errors[0],errors:checked.errors};
 }
-function movePlayerBetweenSquads(db,p,target){const player=playerRef(db,p),check=rosterMoveCheck(db,player,target);if(!check.ok)throw new Error(check.reason);assignPlayerToTeam(db,player,target);if(db.world){recordPlayerEvent(player,'squad_move',db.year,{from:check.from,to:check.to,kind:check.kind,date:db.worldDate});if(typeof onSquadMoveSatisfaction==='function')onSquadMoveSatisfaction(db,player,check)}return check}
+function movePlayerBetweenSquads(db,p,target){const player=playerRef(db,p),src=player&&player.team&&db.teams[player.team];if(!src)throw new Error('현재 소속팀이 없습니다');const plan=rosterPlanState(db,src);plan.assignments[player.id]=teamRef(db,target)?.id;const result=applyRosterPlan(db,src,plan);return result.moves[0]}
 function aiManageOwnedReserve(db,t){
   const parent=teamRef(db,t);if(!parent||parent.parent||parent.id===managedTeamId(db))return [];
   const reserve=reserveTeamsOf(db,parent)[0];if(!reserve)return [];
-  const moves=[];
+  const last=parent.reserveReviewDate;if(last&&Math.abs((new Date(db.worldDate)-new Date(last))/86400000)<7)return [];
+  parent.reserveReviewDate=db.worldDate;
   initializeDepthChart(db,parent,false);initializeDepthChart(db,reserve,false);
+  const plan=rosterPlanState(db,parent),moves=[];
   for(const role of ROLES){
-    const first=(parent.roster||[]).map(id=>db.players[id]).filter(p=>p&&p.role===role).sort((a,b)=>playerOvr(b)-playerOvr(a));
-    const second=(reserve.roster||[]).map(id=>db.players[id]).filter(p=>p&&p.role===role).sort((a,b)=>playerOvr(b)-playerOvr(a));
+    const first=(parent.roster||[]).map(id=>db.players[id]).filter(p=>p&&p.role===role).sort((x,y)=>playerOvr(y)-playerOvr(x));
+    const second=(reserve.roster||[]).map(id=>db.players[id]).filter(p=>p&&p.role===role).sort((x,y)=>playerOvr(y)-playerOvr(x));
     if(!first.length||!second.length)continue;
-    const reserveBest=second[0],firstBest=first[0];
-    const callGap=playerOvr(reserveBest)-playerOvr(firstBest),firstBad=(firstBest.form??0)<=-7||firstBest.condition<55;
-    let call=callGap>=3||(callGap>=1&&firstBad),down=null;
-    if(call)down=first.slice().sort((a,b)=>playerOvr(a)-playerOvr(b))[0];
-    if(!call){
-      const starters=new Set(ROLES.map(r=>starterFor(db,parent,r)).filter(Boolean).map(p=>p.id));
-      const prospect=first.filter(p=>p.age<=21&&!starters.has(p.id)&&p.pot-playerOvr(p)>=4).sort((a,b)=>(b.pot-playerOvr(b))-(a.pot-playerOvr(a)))[0];
-      if(prospect&&playerOvr(reserveBest)>=playerOvr(prospect)-2){call=true;down=prospect}
-    }
-    if(!call||!down)continue;
-    const upCheck=rosterMoveCheck(db,reserveBest,parent);if(!upCheck.ok)continue;
-    movePlayerBetweenSquads(db,reserveBest,parent);
-    const downCheck=rosterMoveCheck(db,down,reserve);
-    if(!downCheck.ok){assignPlayerToTeam(db,reserveBest,reserve);continue}
-    movePlayerBetweenSquads(db,down,reserve);
-    moves.push({pid:reserveBest.id,kind:'callup',role,swap:down.id},{pid:down.id,kind:'senddown',role,swap:reserveBest.id});
+    const up=second[0],down=first.slice().sort((x,y)=>playerOvr(x)-playerOvr(y))[0],starter=starterFor(db,parent,role);
+    const performanceGap=playerOvr(up)-playerOvr(down),starterTrouble=starter&&((starter.form??0)<=-7||starter.condition<55);
+    if(performanceGap<2&&!(performanceGap>=0&&starterTrouble))continue;
+    plan.assignments[up.id]=parent.id;plan.assignments[down.id]=reserve.id;
+    moves.push({pid:up.id,kind:'callup',role,swap:down.id},{pid:down.id,kind:'senddown',role,swap:up.id});
   }
-  if(moves.length){initializeDepthChart(db,parent,true);initializeDepthChart(db,reserve,true);rebalanceAiRosterRoles(db,parent);rebalanceAiRosterRoles(db,reserve)}
+  if(!moves.length)return [];
+  const checked=validateRosterPlan(db,parent,plan);if(!checked.ok)return [];
+  applyRosterPlan(db,parent,plan,'ai');
+  rebalanceAiRosterRoles(db,parent);rebalanceAiRosterRoles(db,reserve);
   return moves;
 }
 function playerRef(db,p){return typeof p==='string'?db.players[p]:p}
