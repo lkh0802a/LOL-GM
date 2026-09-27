@@ -142,13 +142,43 @@ function genPlayer(db,rng,o){
   const p={id:o.id||uniqId(db,(o.region||'X')+'_'),name:o.name||uniqNick(db,rng),role,secondaryRoles,roleFamiliarity:roleFamiliarityMap,age,team:null,region:o.region,nationality:o.nationality||o.region,attrs,tend,pool,
     pot:0,reputation:0,personality:{professionalism:Math.round(clamp(rng.normal(60,15),10,99)),ambition:Math.round(clamp(rng.normal(60,15),10,99))},
     development:{growthRate:Math.round(clamp(rng.normal(1,.1),.78,1.22)*100)/100,peakAge:Math.round(clamp(rng.normal(peakBase,1.15),21.5,29)*10)/10,declineRate:Math.round(clamp(rng.normal(1,.12),.72,1.35)*100)/100},
-    career:[],careerEvents:[],titles:[],proSeasons:0,rosterRole:null,careerGoal:null,satisfaction:70,satisfactionReasons:[],concernStreak:0,wantsOut:false,wantsOutReason:null,retired:false,faYears:0};
+    career:[],careerEvents:[],titles:[],proSeasons:0,rosterRole:null,careerGoal:null,satisfaction:70,satisfactionReasons:[],concernStreak:0,wantsOut:false,wantsOutReason:null,retired:false,faYears:0,entryYear:o.entryYear??db.year,entryPath:o.entryPath||'generated',rookieClass:o.rookieClass||null,rookieTier:o.rookieTier||null,developmentTrail:[]};
   const ovr=playerOvr(p);p.pot=Math.round(clamp(o.pot!==undefined?o.pot:ovr+Math.max(0,24-age)*rng.range(0.8,2.4)+rng.normal(2,3),ovr,99));
   p.reputation=Math.round(clamp(ovr*.82+Math.max(0,age-19)*.65+rng.normal(0,3),20,95));
+  p.developmentTrail=[{year:db.year,ovr}];
   db.players[p.id]=p;
   if(o.team)assignPlayerToTeam(db,p,o.team);
   return p;
 }
+const ROOKIE_TIER_WEIGHT={ordinary:.69,solid:.22,good:.075,elite:.015};
+function rookieRoleWeights(db,R){
+  const young=Object.values(db.players).filter(p=>!p.retired&&p.region===R.id&&p.age<=22),counts=Object.fromEntries(ROLES.map(r=>[r,young.filter(p=>p.role===r).length]));
+  const mean=avg(Object.values(counts))||1;return Object.fromEntries(ROLES.map(r=>[r,clamp(1+(mean-counts[r])/Math.max(2,mean),.35,2.4)]));
+}
+function weightedRole(rng,w){const rows=ROLES.map(r=>[r,w[r]||1]),sum=rows.reduce((a,x)=>a+x[1],0);let x=rng.next()*sum;for(const [r,v] of rows){x-=v;if(x<=0)return r}return ROLES[ROLES.length-1]}
+function rookieIntakeProfile(db,R){
+  const first=activeTeams(db,R.id,1).length,second=R.div2?activeTeams(db,R.id,2).length:0,young=Object.values(db.players).filter(p=>!p.retired&&p.region===R.id&&p.age<=21).length;
+  const desiredPipeline=first*1.65+second*.8,shortage=clamp((desiredPipeline-young)/Math.max(4,first),-.35,1.2);
+  const facilities=activeTeams(db,R.id).map(t=>t.facility||2),dev=activeTeams(db,R.id).map(t=>t.coach?.development||55);
+  const ecosystem=clamp((R.strength-58)/18+second/Math.max(1,first)*.35+(avg(facilities)-2)*.08+(avg(dev)-55)/180,.25,1.55);
+  const count=clamp(Math.round(first*.52+second*.18+shortage*first*.28),Math.max(3,Math.round(first*.3)),Math.max(4,Math.round(first*1.05)));
+  return {first,second,young,desiredPipeline:Math.round(desiredPipeline*10)/10,shortage:Math.round(shortage*100)/100,ecosystem:Math.round(ecosystem*100)/100,count};
+}
+function rookieTier(rng,profile,eliteUsed){
+  const eliteP=ROOKIE_TIER_WEIGHT.elite*clamp(profile.ecosystem,.6,1.35),goodP=ROOKIE_TIER_WEIGHT.good*clamp(.75+profile.ecosystem*.25,.8,1.15),x=rng.next();
+  if(!eliteUsed&&x<eliteP)return 'elite';if(x<eliteP+goodP)return 'good';if(x<eliteP+goodP+ROOKIE_TIER_WEIGHT.solid)return 'solid';return 'ordinary';
+}
+function generateRookieClass(db,R,rng){
+  const profile=rookieIntakeProfile(db,R),weights=rookieRoleWeights(db,R),out=[];let eliteUsed=false;
+  for(let i=0;i<profile.count;i++){
+    const tier=rookieTier(rng,profile,eliteUsed);if(tier==='elite')eliteUsed=true;const role=weightedRole(rng,weights),age=rng.chance(.62)?17:rng.chance(.72)?18:19;
+    const tierBase={ordinary:-2,solid:0,good:2.5,elite:5}[tier],base=(R.talent||R.strength)-13+tierBase+rng.normal(0,3.2),entryPath=R.div2?'tier2_pipeline':'open_qualifier';
+    const p=genPlayer(db,rng,{role,age,base,region:R.id,entryYear:db.year,entryPath,rookieClass:db.year,rookieTier:tier}),o=playerOvr(p),up={ordinary:[2,7],solid:[5,10],good:[8,14],elite:[12,19]}[tier];
+    p.pot=Math.round(clamp(o+rng.range(up[0],up[1])+Math.max(0,profile.ecosystem-1)*2,o,99));p.reputation=Math.round(clamp(o*.7+rng.normal(-4,2),20,78));out.push(p);
+  }
+  R.rookieIntake=R.rookieIntake||[];R.rookieIntake.push({year:db.year,count:out.length,profile,roles:Object.fromEntries(ROLES.map(r=>[r,out.filter(p=>p.role===r).length]))});R.rookieIntake=R.rookieIntake.slice(-10);return out;
+}
+function generateEmergencyRookie(db,R,rng,role){const p=genPlayer(db,rng,{role,age:rng.int(17,19),base:(R.talent||R.strength)-14+rng.normal(0,2.5),region:R.id,entryYear:db.year,entryPath:'emergency',rookieClass:db.year,rookieTier:'ordinary'}),o=playerOvr(p);p.pot=Math.round(clamp(o+rng.range(2,6),o,99));return p;}
 function genCoach(rng,base){const nm=rng.pick(NICK_A)+rng.pick(NICK_B);return {name:nm.charAt(0).toUpperCase()+nm.slice(1),draft:Math.round(clamp(base+rng.normal(0,8),40,95)),analysis:Math.round(clamp(base+rng.normal(0,8),40,95)),development:Math.round(clamp(base+rng.normal(0,10),35,95))}}
 function genTactics(rng){return {aggression:rng.int(35,80),risk_tolerance:rng.int(30,75),objective_priority:rng.int(45,80),vision_investment:rng.int(45,80),scaling_preference:rng.int(30,75)}}
 const PHILOSOPHIES=['win-now','youth','balanced','superstar','cost'];
@@ -388,7 +418,7 @@ function addRegion(db,rng,cfg){
 }
 function buildWorld(cfg){
   cfg=JSON.parse(JSON.stringify(cfg||defaultWorldConfig()));
-  const db={version:12,saveId:'save-'+Date.now().toString(36),manager:{id:'manager-human',teamId:null,startMode:null,careerStartedAt:null},worldDate:`${cfg.startYear||2027}-01-01`,coachPool:[],awards:[],hof:[],global:{decisions:[],power:{}},patch:buildPatch(),teams:{},players:{},regions:{},competitions:{},worldConfig:cfg,world:null,history:[],news:[],year:cfg.startYear||2027,configDirty:false,scout:{}};
+  const db={version:13,saveId:'save-'+Date.now().toString(36),manager:{id:'manager-human',teamId:null,startMode:null,careerStartedAt:null},worldDate:`${cfg.startYear||2027}-01-01`,coachPool:[],awards:[],hof:[],global:{decisions:[],power:{}},patch:buildPatch(),teams:{},players:{},regions:{},competitions:{},worldConfig:cfg,world:null,history:[],news:[],year:cfg.startYear||2027,configDirty:false,scout:{}};
   const rng=new RNG('world-v7','gen');
   initPatches(db);
   for(const r of cfg.regions) addRegion(db,rng,r);
@@ -554,7 +584,7 @@ function runOffseason(db){
   for(const p of Object.values(db.players)){const rows=(p.career||[]).filter(c=>c.year===w.year);if(!rows.length)continue;const gamesN=rows.reduce((a,c)=>a+c.g,0),rating=gamesN?rows.reduce((a,c)=>a+(c.rating||6.5)*c.g,0)/gamesN:6.5,intl=rows.some(c=>c.international),awardN=rep.awards.filter(a=>a.pid===p.id).length,target=clamp(playerOvr(p)*.72+rating*3.2+(intl?2:0)+awardN*2,20,99);p.reputation=Math.round(clamp((p.reputation||playerOvr(p))*.72+target*.28,20,99))}
   evalGoals(db,w,rep,ev);
   for(const R of Object.values(db.regions)){const s=finalSeason(w,R);if(s&&s.done)R.lastPlacement=placements(db,s)}
-  for(const p of Object.values(db.players)){if(p.retired)continue;const d=growPlayer(db,p,rng,games[p.id]||0,champGames[p.id]||{});if(p.team)rep.growth.push({pid:p.id,d,ovr:playerOvr(p)})}
+  for(const p of Object.values(db.players)){if(p.retired)continue;const d=growPlayer(db,p,rng,games[p.id]||0,champGames[p.id]||{});p.developmentTrail=p.developmentTrail||[];p.developmentTrail.push({year:w.year,ovr:playerOvr(p)});p.developmentTrail=p.developmentTrail.slice(-6);if(p.team)rep.growth.push({pid:p.id,d,ovr:playerOvr(p)})}
   rep.growth.sort((a,b)=>b.d-a.d);
   for(const p of Object.values(db.players)){ if(p.retired)continue;
     const o=playerOvr(p), R=db.regions[p.region],dev=ensurePlayerDevelopment(p),declineYears=p.age-(dev.peakAge+1);
@@ -576,9 +606,9 @@ function runOffseason(db){
     officeDecisions(db,rng,f,ev);
     globalOffice(db,w,rng,f,ev);
   }
-  for(const R of Object.values(db.regions)){const firstN=activeTeams(db,R.id,1).length,k=Math.max(4,Math.round(firstN*(R.tier==='major'?.9:.75))),tal=R.talent||R.strength;
-    for(let i=0;i<k;i++){const age=rng.int(17,19),b=tal-12+rng.normal(0,5);genPlayer(db,rng,{role:rng.pick(ROLES),age,base:b,region:R.id,pot:Math.round(clamp(b+12+(tal-70)*.4+rng.normal(4,6),b+2,99))})}}
-  for(const k in db.scout)db.scout[k]=Math.round(db.scout[k]*0.85);
+  rep.rookies=[];
+  for(const R of Object.values(db.regions)){const cls=generateRookieClass(db,R,rng);rep.rookies.push({region:R.id,count:cls.length,ids:cls.map(p=>p.id),profile:R.rookieIntake[R.rookieIntake.length-1].profile})}
+  if(typeof ageScoutReports==='function')ageScoutReports(db);
   ensureEven(db,rng,ev);
   genCoachPool(db,rng);
   // 훈련 시설: 여유 자금이 있는 AI 구단은 증설 (최대 5단계)
