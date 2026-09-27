@@ -18,7 +18,8 @@ Development progress is tracked by the 22 major LOL GM systems. Finish one major
 - `6. 1부 / 2부 / Academy` — COMPLETE (2026-09-27)
 - `7. 팀 / 시설 / 스태프` — COMPLETE (2026-09-27)
 - `8. 훈련 / 스크림` — COMPLETE (2026-09-27)
-- `9. 챔피언 / 메타 / 패치` — ACTIVE (global pro-eligibility gate + regional meta tracking + regional draft-learning propagation implemented; champion detail simulation schema + detail UI implemented; official localized skill/stat source alignment and acceptance remain)
+- `9. 챔피언 / 메타 / 패치` — COMPLETE (2026-09-27)
+- `10. 패치 엔진` — ACTIVE
 
 ## Product-wide convenience acceptance rule (2026-09-27)
 
@@ -29,6 +30,8 @@ Current retrofit evidence: squad starters/roles/tactics/training and first/reser
 Item 7 acceptance (2026-09-27): clubs have functional training, analysis, recovery and youth infrastructure with direct development/analysis/recovery effects and full upkeep accounting. Infrastructure capex is board-controlled for both player and AI clubs, uses the shared upgrade/cash validation path, respects club philosophy and financial reserves, and removes low-value manual facility clicking. Coaching now includes head coach plus strategic, analyst, development and performance specialists; these roles materially affect draft/analysis/development/recovery, carry salary/severance costs, persist in saves, age and recycle through the staff market. AI first-division clubs evaluate specialist upgrades using the same staff market while respecting philosophy, improvement threshold and cash reserve. Player-controlled staff changes remain strategic choices and preview ability/cost consequences. Save round-trip and insufficient-funds invariants are smoke-tested; standalone and latest-head CI pass.
 
 Item 8 acceptance (2026-09-27): training combines 100-point focus allocation with light/normal/high intensity, creating a real growth-versus-fatigue/condition trade-off. Schedule-aware recommendations use the next official match and current squad recovery state; player control is preserved while AI uses the same recommendation logic. Scrims remain unofficial but persist champion scrim experience/confidence, player fatigue/condition cost and team analysis intel. Exhausted squads and excessive same-day volume are blocked. Stronger partners can provide more practice value, while repeated partners have diminishing returns; the UI previews this value and AI partner selection uses the same function without hidden information. Smoke coverage locks training automation, scrim development effects, schedule recommendation validity and repeated-partner diminishing value.
+
+Item 9 acceptance (2026-09-27): the initial 26.19 world embeds a patch-pinned Riot Data Dragon 16.19.1 baseline for all 173 champions with stable LOL GM IDs, Korean names, Korean passive/Q/W/E/R descriptions, exposed base stats and spell cooldown/cost/range source fields. Runtime normalization preserves source provenance while simulation-only mechanics remain explicitly derived; champion base/detail data is consumed by draft/composition/combat logic rather than being display-only. Champion detail UI shows authoritative Korean descriptions and distinguishes source fields from simulation interpretation. Official-match meta history persists competition/season/year/split/stage/league/domestic-international/region/team/player/actual-position context with filters and champion player/team/matchup/recent insights. Global professional eligibility, locked tournament champion pools, practice access during the global ban, regional meta evidence, persistent team meta knowledge/counter-research, cross-region learning and stable-ID rare reworks are smoke-covered. This acceptance does not complete Item 10: autonomous patch diagnosis/change selection remains a separate patch-engine system.
 
 ## UX / Convenience Re-audit (2026-09-27)
 
@@ -242,7 +245,7 @@ Patch-pinned Riot Data Dragon import tooling now exists at `scripts/sync-champio
 
 ## Champion/meta stage checkpoint (2026-09-27)
 
-- Riot Data Dragon 16.19.1 / LoL 26.19 baseline is embedded for all 173 champions, including Korean passive and Q/W/E/R source records.
+- Riot Data Dragon 16.19.1 / LoL 26.19 baseline is embedded for all 173 champions, including Korean passive and Q/W/E/R names/descriptions plus exposed base/spell source fields.
 - Official champion meta history retains season/year/stage/league/international context plus team, player and actual picked position; history is no longer destructively capped at 5,000 games.
 - Meta filtering supports region, patch, competition, period, year, domestic/international scope and actual picked position.
 - Team meta learning and counter-research are persistent, and new champions remain practice-usable during the global pro-ban window while tournament pools stay locked.
