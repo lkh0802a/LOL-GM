@@ -49,7 +49,7 @@ assert(contrast(darkBg,darkFg)>=4.5,'dark primary text/background contrast below
   const regions=[{scrollWidth:880,clientWidth:320,dataset:{}},{scrollWidth:180,clientWidth:320,dataset:{}}];
   for(const item of regions){
     item.setAttribute=function(k,v){this[k]=v};
-    item.removeAttribute=function(k){delete this[k]};
+    item.removeAttribute=function(k){if(k==='tabindex')delete this.tabIndex;else delete this[k]};
   }
   const main={innerHTML:'',focusCalls:0,focus(options){this.focusCalls++;this.lastFocusOptions=options},
     querySelectorAll:s=>s==='.scroll'?regions:[]};
