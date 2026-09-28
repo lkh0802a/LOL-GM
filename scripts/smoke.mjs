@@ -351,6 +351,7 @@ source += `\n(()=>{
   // 첫 시즌도 즉시계약이 아니라 관심 → 관찰 → 내부평가 → 공식 협상을 실제로 거친다.
   const contractCapProbe=normalizeContractTerms(db,Object.values(db.players)[0],managedRoot,1,9,{});if(contractCapProbe.years!==3)throw new Error('Contract duration exceeded confirmed three-year maximum');
   for(const rule of Object.values(ROSTER_RULE_PROFILES))if(rule.firstTeamMin!==5||rule.firstTeamMax!==10)throw new Error('Regional roster profile overrode global 5-10 first-team registration');
+  for(const id of ['ENGINE_OWNED_RESERVE','OWNED_RESERVE_LCK_STYLE_2026'])if(ROSTER_RULE_PROFILES[id].integratedMin!==11)throw new Error('Owned-reserve organization lost the 11-player emergency-callup buffer');
   const targetTeams=activeTeams(db),targetProbe=targetTeams.map(t=>initialRosterTarget(db,t));if(targetProbe.some((n,i)=>{const lim=initialSquadLimits(db,targetTeams[i]);return n<lim.min||n>lim.max}))throw new Error('Initial roster target escaped roster limits');
   const contenders=targetTeams.filter(t=>!t.parent&&['title','final'].includes(t.setupGoal));if(contenders.some(t=>initialRosterTarget(db,t)>6))throw new Error('Contender roster target stopped using five-player core baseline');
   const lottery=targetTeams.filter(t=>!t.parent&&['survive','develop','promotion'].includes(t.setupGoal));if(lottery.length&&!lottery.some(t=>initialRosterTarget(db,t)>5))throw new Error('Lower-table lottery roster behavior disappeared');

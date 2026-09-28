@@ -636,6 +636,7 @@ This applies retroactively to completed major items during later UI touches and 
 **Decision:** Reserve/Academy roster structure is not forced to mirror the first team.
 
 - Reserve/Academy official rosters have a global minimum of five players and must cover all five primary roles when they play official matches. Each regional office sets the maximum size and its own non-local rule.
+- An organization that directly owns a reserve/Academy team has an integrated organization-roster minimum of **11 players**. This is not a third roster; it is the first team plus owned reserve units viewed as one organization. The extra player above the two five-player minima exists as an emergency-callup buffer so one ordinary temporary absence does not automatically force a first-team or reserve forfeit. Independent second-division clubs do not share this privilege.
 - A first-team player may appear in a reserve/Academy official match only when both the internal-movement window and that competition's registration window allow the move.
 - Regional offices may set a cooldown between call-up and send-down actions.
 - A first-team-registered player may train with the reserve group without automatically losing first-team registration, and reserve players may freely join first-team training/scrims without a formal internal move. Official-match eligibility remains registration-controlled.
