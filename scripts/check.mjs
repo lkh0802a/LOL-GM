@@ -45,6 +45,11 @@ const maintainabilityBudgets = {
   'save.js': 10000,
   'roster.js': 22000,
   'lineup.js': 12000,
+  'finance.js': 18000,
+  'contracts.js': 26000,
+  'scouting.js': 14000,
+  'transfer.js': 26000,
+  'staff.js': 8000,
   'features.js': 30000,
   'role-conversion.js': 14000,
   'draft-analysis.js': 18000,
@@ -101,6 +106,11 @@ const saveSource = await readFile(resolve(artifact, 'save.js'), 'utf8');
 const worldSource = await readFile(resolve(artifact, 'world.js'), 'utf8');
 const rosterSource = await readFile(resolve(artifact, 'roster.js'), 'utf8');
 const draftSource = await readFile(resolve(artifact, 'draft.js'), 'utf8');
+const financeSource = await readFile(resolve(artifact, 'finance.js'), 'utf8');
+const contractsSource = await readFile(resolve(artifact, 'contracts.js'), 'utf8');
+const scoutingSource = await readFile(resolve(artifact, 'scouting.js'), 'utf8');
+const transferSource = await readFile(resolve(artifact, 'transfer.js'), 'utf8');
+const staffSource = await readFile(resolve(artifact, 'staff.js'), 'utf8');
 const featuresSource = await readFile(resolve(artifact, 'features.js'), 'utf8');
 const draftAnalysisSource = await readFile(resolve(artifact, 'draft-analysis.js'), 'utf8');
 const legacySaveLines = saveSource.split('\n').filter(line => /secondaryRoles|roleFamiliarity/.test(line));
@@ -188,6 +198,18 @@ for (const marker of ['function packDB(','function unpackDB(','function worldFor
     failed = true;
     console.error('Save responsibility leaked back into world.js: '+marker);
   }
+}
+for (const marker of ['function normalizeContractTerms(','function signContract(','function contractMarket(']) {
+  if (!contractsSource.includes(marker)) { failed=true; console.error('Contract-domain helper missing: '+marker); }
+  if (financeSource.includes(marker)) { failed=true; console.error('Contract responsibility leaked into finance.js: '+marker); }
+}
+for (const marker of ['function recruitmentStore(','function startNegotiation(','function doTransfer(']) {
+  if (!transferSource.includes(marker)) { failed=true; console.error('Transfer-domain helper missing: '+marker); }
+  if (financeSource.includes(marker)||contractsSource.includes(marker)) { failed=true; console.error('Transfer responsibility leaked into finance/contract domain: '+marker); }
+}
+for (const marker of ['function ensureScoutReport(','function scoutReport(','function observePlayer(']) {
+  if (!scoutingSource.includes(marker)) { failed=true; console.error('Scouting-domain helper missing: '+marker); }
+  if (financeSource.includes(marker)) { failed=true; console.error('Scouting responsibility leaked into finance.js: '+marker); }
 }
 const saveVersion = Number(appSource.match(/const SAVE_VERSION=(\d+)/)?.[1]);
 const worldVersion = Number(worldSource.match(/version:(\d+),saveId:/)?.[1]);

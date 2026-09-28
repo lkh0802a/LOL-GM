@@ -1,3 +1,19 @@
+function ensureEven(db,rng,ev){
+  for(const R of Object.values(db.regions)){
+    for(const div of R.div2?[1,2]:[1]){
+      const n=activeTeams(db,R.id,div).length;
+      if(n%2){const t=div===1?genTeam(db,rng,R.id,R.strength-3):genTeam(db,rng,R.id,R.strength-8,{div:2});if(R.system==='mixed'&&div===1)t.franchised=false;
+        if(div===1&&R.div2&&R.system==='franchise')makeAcademy(db,rng,t);
+        ev(`${div===1?R.leagueName:divName(R)} 신규 창단 승인: ${t.name} (${n+1}팀 체제)`)}
+    }
+    // 프랜차이즈 2군 리그는 모구단 수와 맞춘다
+    if(R.div2&&R.system==='franchise'){for(const t of activeTeams(db,R.id,1))if(!activeTeams(db,R.id,2).some(a=>a.parent===t.id))makeAcademy(db,rng,t)}
+    R.teams=activeTeams(db,R.id,1).length;
+  }
+}
+
+// ---- 영입 후보 / 관심 → 관찰 → 내부평가 ----
+
 // ===== LOL GM: Offseason orchestration =====
 // Owns season closeout, retirement/growth handoff, market-close transition,
 // promotion/relegation and next-season organizational reset.

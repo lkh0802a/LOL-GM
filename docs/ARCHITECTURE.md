@@ -20,7 +20,7 @@ The authoritative module order lives in `scripts/artifact-modules.mjs`.
 - offseason orchestration: `offseason.js` (season closeout, market close, promotion/relegation)
 - persistence: `save.js` (compact save view and unpack/migration handoff)
 - roster/registration: `roster.js` (local eligibility, contracted-move accounting, organization roster rules, 1st↔reserve planning/movement, roster integrity)
-- management domains: `office.js`, `finance.js`, `features.js`, `role-conversion.js`, `career.js`
+- management domains: `office.js`, `finance.js`, `contracts.js`, `transfer.js`, `scouting.js`, `staff.js`, `features.js`, `role-conversion.js`, `career.js`
 - draft information layer: `draft-analysis.js` (scouting-bounded mastery estimates, meta/composition evidence, opponent-intent explanation); legality and selection remain in `draft.js`
 - domain UI: `ui-patch.js`, `ui-market.js`, `ui-champion.js`, `ui-player.js`, `ui-roster.js`, `ui-draft.js`, `ui-season.js`
 - application shell/controller: `app.js`
@@ -28,6 +28,14 @@ The authoritative module order lives in `scripts/artifact-modules.mjs`.
 The match engine and draft engine stay separate. Draft legality/selection state stays in `draft.js`; scouting-bounded informational analysis stays in `draft-analysis.js`; interactive state stays in `ui-draft.js`.
 
 New large UI surfaces should be added as `ui-<domain>.js` modules instead of extending `app.js`. Squad editing lives in `ui-roster.js`; player detail/scouting lives in `ui-player.js`; draft UI lives in `ui-draft.js`. Small files are kept separate only when they own a coherent domain boundary, not merely to increase module count.
+
+## Domain ownership notes
+
+- `finance.js` owns club cash flow, payroll/spending controls, revenue/cost closeout and sponsorship acceptance.
+- `contracts.js` owns player market valuation, contract terms/options/signing and the AI contract/FA market.
+- `transfer.js` owns recruitment workflow, negotiations and permanent transfer execution.
+- `scouting.js` owns observed player knowledge and reports; contract/transfer code may consume its public estimates but must not reimplement scouting uncertainty.
+- `staff.js` owns staff lifecycle/market actions after the staff extraction in this rebuild.
 
 ## State and cache rules
 
