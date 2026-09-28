@@ -1,11 +1,10 @@
 // ===== LOL GM: 흥행 / 리그 사무국 =====
 const OFFICE_STYLES={
-  conservative:{label:'보수적',w:{cap:-0.1,floor:-0.1,tax:-0.2,import:-0.2,fearless:-0.2,expand:-0.35,contract:-0.2,playoffs:-0.1,relegation:-0.2,franchise:0.1,mixed:-0.1,div2:-0.1,format:-0.25,splits:-0.2,bo:-0.1}},
-  expansion:{label:'확장 지향',w:{cap:-0.1,floor:0.1,tax:-0.1,import:0.2,fearless:0.1,expand:0.45,contract:-0.3,playoffs:0.1,relegation:-0.1,franchise:0,mixed:0.1,div2:0.3,format:0.1,splits:0.1,bo:0}},
-  revenue:{label:'수익 중심',w:{cap:0.2,floor:0,tax:0.1,import:0.1,fearless:0.2,expand:0.15,contract:0.15,playoffs:0.2,relegation:-0.3,franchise:0.35,mixed:0.15,div2:0,format:0.2,splits:0.3,bo:0.15}},
-  balance:{label:'경쟁 균형 중시',w:{cap:0.3,floor:0.3,tax:0.3,import:-0.1,fearless:0,expand:0,contract:0.1,playoffs:0.3,relegation:0.35,franchise:-0.2,mixed:0.2,div2:0.2,format:0.1,splits:0,bo:0.1}}
+  conservative:{label:'보수적',w:{cap:-0.1,floor:-0.1,tax:-0.2,import:-0.2,expand:-0.35,contract:-0.2,playoffs:-0.1,relegation:-0.2,franchise:0.1,mixed:-0.1,div2:-0.1,format:-0.25,splits:-0.2,bo:-0.1}},
+  expansion:{label:'확장 지향',w:{cap:-0.1,floor:0.1,tax:-0.1,import:0.2,expand:0.45,contract:-0.3,playoffs:0.1,relegation:-0.1,franchise:0,mixed:0.1,div2:0.3,format:0.1,splits:0.1,bo:0}},
+  revenue:{label:'수익 중심',w:{cap:0.2,floor:0,tax:0.1,import:0.1,expand:0.15,contract:0.15,playoffs:0.2,relegation:-0.3,franchise:0.35,mixed:0.15,div2:0,format:0.2,splits:0.3,bo:0.15}},
+  balance:{label:'경쟁 균형 중시',w:{cap:0.3,floor:0.3,tax:0.3,import:-0.1,expand:0,contract:0.1,playoffs:0.3,relegation:0.35,franchise:-0.2,mixed:0.2,div2:0.2,format:0.1,splits:0,bo:0.1}}
 };
-const PRESET_OFFICE={KR:'conservative',CN:'expansion',EU:'balance',NA:'revenue'};
 function baseFans(strength,rng){return Math.round(clamp(20+(strength-60)*1.6+rng.normal(0,8),5,90))}
 function hypeLabel(h){return h>=70?'매우 높음':h>=55?'높음':h>=40?'보통':h>=28?'낮음':'침체'}
 
@@ -53,7 +52,7 @@ function officeDecisions(db,rng,f,ev,mid){
     const M=R.metrics&&R.metrics[R.metrics.length-1]; if(!M)continue;
     const prev=R.metrics.length>1?R.metrics[R.metrics.length-2]:null, trend=prev?M.hype-prev.hype:0;
     const S=OFFICE_STYLES[R.office]||OFFICE_STYLES.conservative, n=activeTeams(db,R.id,1).length;
-    const faDepth=Object.values(db.players).filter(p=>!p.retired&&!p.team&&p.region===R.id&&playerOvr(p)>=R.strength-10).length/Math.max(1,n);
+    const faDepth=Object.values(db.players).filter(p=>!p.retired&&!p.team&&isLocalPlayer(p,R.id)&&playerOvr(p)>=R.strength-10).length/Math.max(1,n);
     const weak=activeTeams(db,R.id,1).map(t=>({t,s:teamStrength(db,t.id)})).sort((a,b)=>a.s-b.s);
     const weakGap=weak.length>2?R.strength-weak[0].s:0;
     const H=M.hype, B=M.balance, props=[];
@@ -81,8 +80,8 @@ function officeDecisions(db,rng,f,ev,mid){
         add('floor',neg*2-.7,()=>{const o=R.salaryFloor;R.salaryFloor=rc(Math.max(0,o*.9));return `지출 권장 하한 ${o}억 → ${R.salaryFloor}억`},`적자 구단 ${Math.round(neg*100)}% — 하한 기준 완화`);
       }
       const regPow=(db.global&&db.global.power[R.id])||1;
-      add('import',(1.2-regPow)+(45-H)/25-(R.importLimit>=3?0.6:0),()=>{const o=R.importLimit??2;R.importLimit=o+1;R.importRecruitMinGap=Math.max(0,(R.importRecruitMinGap??2)-1);return `외국인 선수 한도 ${o} → ${R.importLimit}명`},`국제 경쟁력 보강·해외 스타 유치 (지수 ${regPow})`);
-      if((R.importLimit??2)>1)add('import',faDepth-1.8+(regPow-1.5),()=>{const o=R.importLimit??2;R.importLimit=o-1;R.importRecruitMinGap=Math.min(4,(R.importRecruitMinGap??2)+1);return `외국인 선수 한도 ${o} → ${R.importLimit}명`},`자국 유망주 출전 기회 확대 (FA 인재 ${faDepth.toFixed(1)}명/팀)`);
+      add('import',(1.2-regPow)+(45-H)/25,()=>{const o=R.importRecruitMinGap??2;R.importRecruitMinGap=Math.max(0,o-1);return `비로컬 영입 기준 완화 ${o} → ${R.importRecruitMinGap}`},`국제 경쟁력 보강·해외 스타 유치 (1군 비로컬 상한 2명은 고정)`);
+      add('import',faDepth-1.8+(regPow-1.5),()=>{const o=R.importRecruitMinGap??2;R.importRecruitMinGap=Math.min(4,o+1);return `비로컬 영입 기준 강화 ${o} → ${R.importRecruitMinGap}`},`자국 유망주 출전 기회 확대 (1군 비로컬 상한 2명은 고정)`);
       const SPL={1:'단일 시즌제',2:'2스플릿제',3:'3스플릿제'};
       if((R.splits||1)<3) add('splits',(H-58)/15+trend/25,()=>{const o=R.splits||1;R.splits=o+1;return `${SPL[o]} → ${SPL[R.splits]} 전환`},`흥행 호조로 시즌 콘텐츠 확대`);
       if((R.splits||1)>1) add('splits',(38-H)/15-trend/25,()=>{const o=R.splits;R.splits=o-1;return `${SPL[o]} → ${SPL[R.splits]} 전환`},`흥행 부진, 일정 피로도 완화`);
@@ -123,7 +122,7 @@ function worldDecisions(db,rng,f,ev){
     if(c.par){
       // 모리그에서 팬덤이 약한 구단 2곳이 새 리그로 이적 (연고 이전) — 모리그는 신규 창단으로 짝수 유지
       const mv=activeTeams(db,c.par.id,1).filter(t=>!t.franchised).sort((a,b)=>(a.fans||0)-(b.fans||0)).slice(0,activeTeams(db,c.par.id,1).length>=8?2:0);
-      for(const t of mv){t.region=id;t.division=1;t.roster.forEach(pid=>{const p=db.players[pid];if(p)p.region=id});activeTeams(db,c.par.id,2).filter(a=>a.parent===t.id).forEach(a=>foldTeam(db,a))}
+      for(const t of mv){t.region=id;t.division=1;activeTeams(db,c.par.id,2).filter(a=>a.parent===t.id).forEach(a=>foldTeam(db,a))}
       // 새 리그 팀 수는 짝수로 맞춘다
       const extra=activeTeams(db,id,1).length-cfg.teams; for(let k=0;k<extra;k++){const w=activeTeams(db,id,1).filter(t=>!mv.includes(t)).sort((a,b)=>(a.fans||0)-(b.fans||0))[0];if(w)foldTeam(db,w)}
       why=`${c.par.leagueName}에서 분리 독립 — ${mv.length?mv.map(t=>t.name).join(', ')+' 연고 이전, ':''}모리그 흥행 ${(c.par.metrics||[]).slice(-1)[0]?.hype??'-'}`;
@@ -136,9 +135,8 @@ function worldDecisions(db,rng,f,ev){
         // 권역의 모든 지역이 독립 → 모리그는 역할을 다하고 해체, 남은 구단은 팀 수가 적은 리그부터 나눠 합류, 진출권도 나눠 승계
         const rest=activeTeams(db,P.id,1).sort((a,b)=>(b.fans||0)-(a.fans||0)), got={};
         for(const t of rest){const dst=kids.map(k=>db.regions[k]).sort((a,b)=>activeTeams(db,a.id,1).length-activeTeams(db,b.id,1).length)[0];
-          t.region=dst.id;t.division=1;t.roster.forEach(pid=>{const p=db.players[pid];if(p)p.region=dst.id});(got[dst.leagueName]=got[dst.leagueName]||[]).push(t.name)}
+          t.region=dst.id;t.division=1;(got[dst.leagueName]=got[dst.leagueName]||[]).push(t.name)}
         for(const t of activeTeams(db,P.id,2))foldTeam(db,t);
-        Object.values(db.players).filter(p=>!p.retired&&!p.team&&p.region===P.id).forEach(p=>p.region=kids[0]);
         const heirs=kids.map(k=>db.regions[k]).sort((a,b)=>b.strength-a.strength);
         for(let k=0;k<P.slots;k++)heirs[k%heirs.length].slots++;
         for(const k of kids)db.regions[k].parent=null;
@@ -146,9 +144,8 @@ function worldDecisions(db,rng,f,ev){
         why+=` · 권역의 모든 지역이 독립해 ${P.leagueName} 해체 — 잔여 구단 분산(${Object.entries(got).map(([l,n])=>`${l}: ${n.length}팀`).join(', ')}), 진출권 ${P.slots}장 승계`;
       } else if(activeTeams(db,P.id,1).length<6){
         const rest=activeTeams(db,P.id,1);
-        for(const t of rest){t.region=id;t.roster.forEach(pid=>{const p=db.players[pid];if(p)p.region=id})}
+        for(const t of rest){t.region=id}
         for(const t of activeTeams(db,P.id,2))foldTeam(db,t);
-        Object.values(db.players).filter(p=>!p.retired&&!p.team&&p.region===P.id).forEach(p=>p.region=id);
         R.slots=Math.max(R.slots,P.slots);
         for(const k of Object.keys(REGION_PRESETS))if(REGION_PRESETS[k].parent===P.id&&db.regions[k])db.regions[k].parent=null;
         delete db.regions[P.id];
@@ -162,17 +159,15 @@ function worldDecisions(db,rng,f,ev){
   if(lowE.length&&rng.chance(0.5*f)){ // 신흥 리그가 2년 연속 침체하면 모리그로 재통합
     const g=lowE[0], host=db.regions[g.parent];
     const ts=activeTeams(db,g.id,1).sort((a,b)=>(b.fans||0)-(a.fans||0)), keep=ts.slice(0,2);
-    for(const t of ts){if(keep.includes(t)){t.region=host.id;t.division=1;t.roster.forEach(id=>{const p=db.players[id];if(p)p.region=host.id})}else foldTeam(db,t)}
+    for(const t of ts){if(keep.includes(t)){t.region=host.id;t.division=1}else foldTeam(db,t)}
     for(const t of activeTeams(db,g.id))foldTeam(db,t);
-    Object.values(db.players).filter(p=>!p.retired&&!p.team&&p.region===g.id).forEach(p=>p.region=host.id);
     delete db.regions[g.id];
     gev(`${g.leagueName} 해체 — ${host.leagueName}로 재통합 (${keep.map(t=>t.name).join(', ')} 합류)`,'2년 연속 흥행 침체');
   }
   const low=Object.values(db.regions).filter(R=>(R.metrics||[]).length>=2&&R.metrics.slice(-2).every(m=>m.hype<30)).sort((a,b)=>a.strength-b.strength);
   if(Object.keys(db.regions).length>=5&&low.length>=2&&low.every(R=>R.tier!=='major')&&rng.chance(0.4*f)){
     const [A,B]=low, host=A.strength>=B.strength?A:B, gone=host===A?B:A;
-    for(const t of activeTeams(db,gone.id)){t.region=host.id;t.division=1;t.parent=null;t.roster.forEach(id=>{const p=db.players[id];if(p)p.region=host.id})}
-    Object.values(db.players).filter(p=>!p.retired&&!p.team&&p.region===gone.id).forEach(p=>p.region=host.id);
+    for(const t of activeTeams(db,gone.id)){t.region=host.id;t.division=1;t.parent=null}
     const old=host.leagueName;host.leagueName=`${host.name}·${gone.name} 연합 리그`;host.name=`${host.name}·${gone.name}`;host.slots=Math.min(4,host.slots+1);
     delete db.regions[gone.id];
     gev(`리그 통합: ${old} + ${gone.leagueName} → ${host.leagueName}`,'두 지역 모두 2년 연속 흥행 침체');
