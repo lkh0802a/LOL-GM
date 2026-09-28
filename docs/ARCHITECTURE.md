@@ -27,7 +27,8 @@ The authoritative module order lives in `scripts/artifact-modules.mjs`.
 - management domains: `office.js` (regions), `office-international.js` (global governance), `finance.js`, `contracts.js`, `transfer.js`, `scouting.js`, `staff.js`, `scrim.js`, `player-relations.js`, `features.js`, `role-conversion.js`, `career.js`
 - draft information layer: `draft-analysis.js` (scouting-bounded mastery estimates, meta/composition evidence, opponent-intent explanation); legality and selection remain in `draft.js`
 - domain UI: `ui-setup.js`, `ui-match.js`, `ui-manager.js`, `ui-data.js`, `ui-patch.js`, `ui-market.js`, `ui-market-initial.js`, `ui-negotiations.js`, `ui-market-staff.js`, `ui-champion.js`, `ui-player.js`, `ui-roster.js`, `ui-draft.js`, `ui-season.js`
-- application shell/controller: `app.js` (storage/bootstrap, shared UI state/helpers, navigation only)
+- shared transient UI state and screen routing: `ui-state.js` (cross-screen view state, six routes, route bindings, scroll restoration and world-replacement reset)
+- application shell/controller: `app.js` (storage/bootstrap, shared read helpers and season landing surface)
 
 The match, draft, item/rune, series and competition engines stay separate. `engine.js` owns one-game simulation; `draft.js` owns draft legality/selection; `series.js` owns First Selection/Fearless and best-of state; `competition.js` owns schedules/stages/standings. Scouting-bounded draft analysis stays in `draft-analysis.js`; interactive draft state stays in `ui-draft.js`.
 
