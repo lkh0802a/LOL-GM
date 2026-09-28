@@ -169,10 +169,15 @@ function contractMarket(db,rng,rep,ev){
       const u=o=>o.sal/ask*1.2+(teamStrength(db,o.t.id)-db.regions[o.t.region].strength)/10*p.personality.ambition/100+(o.t.fans||30)/100*0.4+(o.starter?0.5:0)+(db.worldConfig.universalLanguage?(o.t.region===p.region?0.08:0):(o.t.region===p.region?0.4:-0.2))+(db.regions[o.t.region].slots||1)*0.05+rng.normal(0,0.1);
       const best=os.map(o=>({o,v:u(o)})).sort((a,b)=>b.v-a.v).find(x=>budgetLeft[x.o.t.id]>=x.o.sal);
       if(!best)continue;
-      if(best.o.mine)w.marketLog.push(`${p.name}: ${best.o.t.id===mine?'영입 성공':'다른 구단 선택'}`);
       const t=best.o.t,yrs=best.o.years?best.o.years:contractYearsForPlayer(db,p,rng);
       const prev=starterFor(db,t,p.role);
-      signMarketContract(db,p,t,best.o.sal,yrs,{},'fa',best.o.mine?'manager':'ai'); budgetLeft[t.id]-=best.o.sal;
+      // Multiple market offers can be based on the same earlier import count.
+      // Recheck with the shared action validator and skip an obsolete offer.
+      const signed=commitWorldAction(db,{type:'player.sign',pid:p.id,teamId:t.id,
+        salary:best.o.sal,years:yrs,kind:'fa',actor:best.o.mine?'manager':'ai',terms:{}});
+      if(!signed.ok)continue;
+      if(best.o.mine)w.marketLog.push(`${p.name}: ${best.o.t.id===mine?'영입 성공':'다른 구단 선택'}`);
+      budgetLeft[t.id]-=best.o.sal;
       rep.signings.push({pid:p.id,team:t.id,salary:best.o.sal,years:yrs,rookie:p.age<=19&&!p.career.length,import:!isLocalPlayer(p,t.region),offers:os.length,out:null});
       if(t.roster.length>size+1){const bench=t.roster.map(id=>db.players[id]).filter(x=>x!==p&&starterFor(db,t,x.role)!==x).sort((a,b)=>playerValue(db,a,t)-playerValue(db,b,t))[0];
         if(bench){release(t,bench);rep.signings[rep.signings.length-1].out=bench.id}}
