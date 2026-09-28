@@ -77,7 +77,7 @@ function normalizeRestoredSave(db){
     if(!Array.isArray(w.marketLog))w.marketLog=[];
   }
   if(!saveObject(db.manager))db.manager={id:'manager-human',teamId:null,startMode:null,careerStartedAt:null};
-  if(typeof migrateLegacyStaffState==='function')migrateLegacyStaffState(db);
+  migrateLegacyStaffState(db);
   db.saveFormat=SAVE_FORMAT_VERSION;
   return db;
 }

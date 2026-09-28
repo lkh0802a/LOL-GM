@@ -19,7 +19,7 @@ function patchEvidenceRows(db){
 }
 function patchTeamPower(db,tid){
   const t=db.teams&&db.teams[tid];if(!t)return 0;
-  const vals=(t.roster||[]).map(id=>db.players&&db.players[id]).filter(Boolean).map(p=>typeof playerOvr==='function'?playerOvr(p):50);
+  const vals=(t.roster||[]).map(id=>db.players&&db.players[id]).filter(Boolean).map(p=>playerOvr(p));
   return vals.length?avg(vals):Number(t.base||t.reputation||50);
 }
 function patchEvidenceContext(db,rows){
