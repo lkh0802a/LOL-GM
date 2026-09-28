@@ -65,4 +65,3 @@ function bindSquad(){
   document.querySelectorAll('tr[data-p]').forEach(tr=>{const open=()=>{OPEN_P=OPEN_P===tr.dataset.p?null:tr.dataset.p;nav();const d=$('#pdetail');if(OPEN_P&&d)d.scrollIntoView({behavior:'smooth',block:'start'})};tr.onclick=open;tr.onkeydown=e=>{if(e.key==='Enter')open()}});
 }
 // ---------- 몬테카를로 ----------
-let MC={blue:'HTG',red:'SBZ',n:300,res:null,running:false};
