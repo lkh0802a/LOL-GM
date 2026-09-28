@@ -1,6 +1,5 @@
 // ===== LOL GM: Match / scrim / series result UI =====
 // ---------- 경기 ----------
-let SEL={blue:'HTG',red:'SBZ',bo:1,fearless:true};
 function viewMatch(){
   const act=activeTeams(DB), own=DB.world&&DB.teams[managedTeamId(DB)]?managedTeamId(DB):act[0].id;
   SEL.blue=own;
@@ -25,7 +24,6 @@ function bindMatch(){
     else{LAST=null;LASTSER=series.rec;$('#result').innerHTML=renderSeries(LASTSER,true);bindSeries($('#result'),LASTSER)}};
   if(LASTSER)bindSeries($('#result'),LASTSER);else if(LAST)bindResult();
 }
-let LIVE=null;
 function bindResult(){
   const wb=$('#watch'); if(wb)wb.onclick=()=>{clearInterval(LIVE);const r=LAST,L=r.log.filter(l=>l.major||l.kind==='gank');let i=0,k=[0,0];
     const box=$('#live');box.innerHTML=`<div class="livebox"><div class="livesc"><span class="bl">${esc(r.sides[0].team.short)}</span> <b id="lk">0 : 0</b> <span class="rd">${esc(r.sides[1].team.short)}</span> <time id="lt">00:00</time></div><ol id="ll"></ol></div>`;
