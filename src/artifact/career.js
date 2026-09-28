@@ -84,9 +84,12 @@ function initialPickCandidate(db,t,role,rng){
   const candidates=Object.values(db.players).filter(p=>!p.retired&&!p.team&&(!role||p.role===role)).map(p=>({p,chk:initialSignCheck(db,p,team)})).filter(x=>x.chk.ok)
     .map(x=>({p:x.p,salary:x.chk.salary,score:initialCandidateScore(db,x.p,team,rng)-x.chk.salary*0.35}));
   if(!candidates.length)return null;
-  const prudent=candidates.filter(x=>x.salary<=softMax+0.001).sort((a,b)=>b.score-a.score);
+  // Mandatory role coverage preserves import slots when a legal local option exists.
+  // This prevents an early foreign luxury signing from making a later required role impossible.
+  const local=role?candidates.filter(x=>x.p.region===team.region):[],pool=local.length?local:candidates;
+  const prudent=pool.filter(x=>x.salary<=softMax+0.001).sort((a,b)=>b.score-a.score);
   if(prudent.length)return prudent[0].p;
-  return candidates.sort((a,b)=>a.salary-b.salary||b.score-a.score)[0].p;
+  return pool.sort((a,b)=>a.salary-b.salary||b.score-a.score)[0].p;
 }
 function normalizeInitialSalaryFloor(db,t){
   const team=teamRef(db,t),R=db.regions[team.region];if((team.division||1)!==1||!R.salaryFloor)return;
@@ -108,7 +111,7 @@ function autoBuildInitialSquad(db,t,rng,target=INITIAL_ROSTER_TARGET){
 }
 function autoBuildInitialWorld(db,excludedIds,seed){
   const excluded=new Set(excludedIds||[]),rng=new RNG(seed||'initial-market','ai-roster'),teams=activeTeams(db).filter(t=>!excluded.has(t.id));
-  for(const role of ROLES){const order=teams.slice().sort((a,b)=>(b.reputation||0)-(a.reputation||0)||rng.next()-0.5);for(const t of order){if(t.roster.some(id=>db.players[id]&&db.players[id].role===role))continue;const p=initialPickCandidate(db,t,role,rng);if(!p)throw new Error(t.name+' AI 로스터가 '+ROLE_KO[role]+' 선수를 확보하지 못했습니다');const terms=aiInitialContractTerms(db,p,t,rng),chk=initialOfferCheck(db,p,t,terms);if(!chk.ok)throw new Error(t.name+' AI 초기 계약 실패: '+chk.reason);signContract(db,p,t,terms.salary,terms.years,terms)}}
+  for(const role of ROLES){const order=teams.map(t=>({t,tie:rng.next()})).sort((a,b)=>(b.t.reputation||0)-(a.t.reputation||0)||a.tie-b.tie).map(x=>x.t);for(const t of order){if(t.roster.some(id=>db.players[id]&&db.players[id].role===role))continue;const p=initialPickCandidate(db,t,role,rng);if(!p)throw new Error(t.name+' AI 로스터가 '+ROLE_KO[role]+' 선수를 확보하지 못했습니다');const terms=aiInitialContractTerms(db,p,t,rng),chk=initialOfferCheck(db,p,t,terms);if(!chk.ok)throw new Error(t.name+' AI 초기 계약 실패: '+chk.reason);signContract(db,p,t,terms.salary,terms.years,terms)}}
   for(const t of teams)autoBuildInitialSquad(db,t,rng,INITIAL_ROSTER_TARGET);
 }
 function beginInitialRosterPhase(db,teamId,seed){
