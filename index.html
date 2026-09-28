@@ -3356,7 +3356,17 @@ function rosterMoveCheck(db,p,target){
   const checked=validateRosterPlan(db,src,plan);
   return checked.ok?{ok:true,kind:dst.parent?'senddown':'callup',from:src.id,to:dst.id,parent:checked.parentId}:{ok:false,reason:checked.errors[0],errors:checked.errors};
 }
-function movePlayerBetweenSquads(db,p,target){const player=playerRef(db,p),src=player&&player.team&&db.teams[player.team];if(!src)throw new Error('현재 소속팀이 없습니다');const plan=rosterPlanState(db,src);plan.assignments[player.id]=teamRef(db,target)?.id;const result=applyRosterPlan(db,src,plan);return result.moves[0]}
+function movePlayerBetweenSquads(db,p,target){
+  const player=playerRef(db,p),src=player&&player.team&&db.teams[player.team];
+  if(!src)throw new Error('현재 소속팀이 없습니다');
+  const plan=rosterPlanState(db,src);
+  plan.assignments[player.id]=teamRef(db,target)?.id;
+  const preview=previewWorldAction(db,{type:'roster.plan',parentId:src.id,assignments:plan.assignments,actor:'manager'});
+  if(!preview.ok)throw new Error(preview.errors.join('\n'));
+  const result=applyWorldAction(db,preview);
+  if(!result.ok)throw new Error(result.errors.join('\n'));
+  return result.moves[0];
+}
 function aiManageOwnedReserve(db,t){
   const parent=teamRef(db,t);if(!parent||parent.parent||parent.id===managedTeamId(db))return [];
   const reserve=reserveTeamsOf(db,parent)[0];if(!reserve)return [];
@@ -3369,8 +3379,10 @@ function aiManageOwnedReserve(db,t){
   const down=first[0],up=second[0],gap=fit(up)-fit(down),starterTrouble=ROLES.some(role=>parent.depthChart?.[role]===down.id&&((down.form??0)<=-7||down.condition<55));
   if(gap<2&&!(gap>=0&&starterTrouble))return [];
   const plan=rosterPlanState(db,parent);plan.assignments[up.id]=parent.id;plan.assignments[down.id]=reserve.id;
-  const checked=validateRosterPlan(db,parent,plan);if(!checked.ok)return [];
-  applyRosterPlan(db,parent,plan,'ai');rebalanceAiRosterRoles(db,parent);rebalanceAiRosterRoles(db,reserve);
+  const preview=previewWorldAction(db,{type:'roster.plan',parentId:parent.id,assignments:plan.assignments,actor:'ai'});
+  if(!preview.ok)return [];
+  const applied=applyWorldAction(db,preview);if(!applied.ok)return [];
+  rebalanceAiRosterRoles(db,parent);rebalanceAiRosterRoles(db,reserve);
   return [{pid:up.id,kind:'callup',swap:down.id},{pid:down.id,kind:'senddown',swap:up.id}];
 }
 function playerRef(db,p){return typeof p==='string'?db.players[p]:p}
@@ -3481,6 +3493,90 @@ function aiReviewDepthChart(db,t){
   if(!validateStartingLineup(db,team,cur).ok||bestScore-curScore>=5||(troubled&&bestScore-curScore>=3)){
     team.depthChart=best;for(const role of ROLES){const pid=best[role];if(pid&&cur[role]!==pid)recordPlayerEvent(db.players[pid],'starter_change',db.year,{team:team.id,role,from:cur[role]||null,to:pid,date:db.worldDate,source:'ai'})}
   }
+}
+
+/* ==== FILE: state-transaction.js ==== */
+// ===== LOL GM: command validation, preview and guarded application =====
+// The pure preview is a short-lived decision object, not persistent game state.
+// Human and AI callers use the same handlers; actor-specific authority is checked here.
+
+function worldActionError(reason,message){
+  return {ok:false,reason,errors:[message]};
+}
+
+function rosterActionSnapshot(db,parentId){
+  return {
+    date:db.worldDate||null,
+    year:db.world?.year??db.year,
+    teams:organizationTeams(db,parentId).map(t=>({
+      id:t.id,roster:(t.roster||[]).slice().sort()
+    }))
+  };
+}
+
+const WORLD_ACTION_HANDLERS={
+  'roster.plan':{
+    validate(db,action){
+      const parent=parentTeamOf(db,action.parentId);
+      if(!parent||parent.active===false)return worldActionError('missing_team','구단을 찾을 수 없습니다');
+      const owner=managedTeamId(db);
+      if(owner&&action.actor==='manager'&&parent.id!==owner)
+        return worldActionError('unauthorized','관리하지 않는 구단의 로스터는 변경할 수 없습니다');
+      if(owner&&action.actor==='ai'&&parent.id===owner)
+        return worldActionError('unauthorized','관리 구단의 로스터는 AI가 자동 확정할 수 없습니다');
+      if(!action.assignments||typeof action.assignments!=='object'||Array.isArray(action.assignments))
+        return worldActionError('invalid_action','유효한 로스터 배치 계획이 필요합니다');
+      const checked=validateRosterPlan(db,parent,{assignments:action.assignments});
+      if(!checked.ok)return {ok:false,reason:'roster_invalid',errors:checked.errors.slice()};
+      const moves=Object.entries(checked.assignments)
+        .filter(([pid,dst])=>db.players[pid].team!==dst)
+        .map(([pid,to])=>({pid,from:db.players[pid].team,to,kind:to===parent.id?'callup':'senddown'}));
+      return {ok:true,parentId:parent.id,assignments:{...checked.assignments},
+        counts:{...checked.counts},total:checked.total,moves};
+    },
+    apply(db,action){
+      return applyRosterPlan(db,action.parentId,{assignments:action.assignments},action.actor);
+    },
+    snapshot:rosterActionSnapshot
+  }
+};
+
+function validateWorldAction(db,command){
+  if(!db||!db.teams||!db.players||!command||typeof command!=='object')
+    return worldActionError('invalid_action','게임 상태 또는 요청이 올바르지 않습니다');
+  const actor=command.actor||'manager';
+  if(actor!=='manager'&&actor!=='ai')
+    return worldActionError('invalid_actor','지원하지 않는 작업 주체입니다');
+  const handler=WORLD_ACTION_HANDLERS[command.type];
+  if(!handler)return worldActionError('unknown_action','지원하지 않는 작업입니다');
+  return handler.validate(db,{...command,actor});
+}
+
+function previewWorldAction(db,command){
+  const checked=validateWorldAction(db,command);
+  if(!checked.ok)return checked;
+  const actor=command.actor||'manager',handler=WORLD_ACTION_HANDLERS[command.type];
+  return {ok:true,type:command.type,
+    command:{type:command.type,actor,parentId:checked.parentId,assignments:{...checked.assignments}},
+    expected:handler.snapshot(db,checked.parentId),
+    changes:checked.moves.map(m=>({...m})),
+    counts:{...checked.counts},total:checked.total};
+}
+
+function applyWorldAction(db,preview){
+  if(!preview||preview.ok!==true||!preview.command||!preview.expected)
+    return worldActionError('invalid_preview','먼저 유효한 작업 미리보기를 생성해야 합니다');
+  const handler=WORLD_ACTION_HANDLERS[preview.command.type];
+  if(!handler)return worldActionError('unknown_action','지원하지 않는 작업입니다');
+  const current=handler.snapshot(db,preview.command.parentId);
+  if(JSON.stringify(current)!==JSON.stringify(preview.expected))
+    return worldActionError('stale_preview','로스터 또는 게임 날짜가 변경되었습니다. 계획을 다시 확인하세요');
+  const checked=validateWorldAction(db,preview.command);
+  if(!checked.ok)return checked;
+  if(JSON.stringify(checked.moves)!==JSON.stringify(preview.changes))
+    return worldActionError('stale_preview','계획의 변경 내역이 달라졌습니다. 미리보기를 다시 생성하세요');
+  const applied=handler.apply(db,preview.command);
+  return {...applied,ok:true,type:preview.command.type};
 }
 
 /* ==== FILE: office.js ==== */
@@ -5252,10 +5348,12 @@ function rosterPlanPanel(t){const root=parentTeamOf(DB,t),res=reserveTeamsOf(DB,
 function discardSquadEdit(){SQUAD_EDIT=null;nav()}
 function applySquadEdit(){
   const t=DB.teams[SQUAD_EDIT?.teamId];if(!t)return;const e=SQUAD_EDIT,root=parentTeamOf(DB,t)||t,hasReserve=reserveTeamsOf(DB,root).length>0;
-  if(hasReserve){const checked=validateRosterPlan(DB,e.parentId,e.rosterPlan);if(!checked.ok){MSG=checked.errors.join(' · ');navKeepScroll();return}}
-  const planned=hasReserve?Object.entries(e.rosterPlan.assignments).filter(([,dst])=>dst===t.id).map(([pid])=>pid):(t.roster||[]).slice(),lineup=validateStartingLineup(DB,t,e.starters,planned);
+  const preview=hasReserve?previewWorldAction(DB,{type:'roster.plan',parentId:e.parentId,assignments:e.rosterPlan.assignments,actor:'manager'}):null;
+  if(hasReserve&&!preview.ok){MSG=preview.errors.join(' · ');navKeepScroll();return}
+  const planned=hasReserve?Object.entries(preview.command.assignments).filter(([,dst])=>dst===t.id).map(([pid])=>pid):(t.roster||[]).slice(),lineup=validateStartingLineup(DB,t,e.starters,planned);
   if(!lineup.ok){MSG=lineup.errors.join(' · ');navKeepScroll();return}
-  if(hasReserve)applyRosterPlan(DB,e.parentId,e.rosterPlan);t.depthChart={};
+  if(hasReserve){const applied=applyWorldAction(DB,preview);if(!applied.ok){MSG=applied.errors.join(' · ');navKeepScroll();return}}
+  t.depthChart={};
   for(const r of ROLES){const p=DB.players[e.starters[r]];if(p&&p.team===t.id)setDepthStarter(DB,t,r,p,'manager',false)}
   for(const [id,role] of Object.entries(e.roles)){const p=DB.players[id];if(p&&p.rosterRole!==role)setRosterRole(DB,p,role,'manager',false)}
   t.tactics={...e.tactics};t.training={...e.training};SQUAD_EDIT=null;MSG='';saveDB();nav();
