@@ -29,7 +29,7 @@ function runOffseason(db){
     for(const [pid,st] of Object.entries(s.pstats)){const p=db.players[pid];if(!p||p.retired)continue;
       games[pid]=(games[pid]||0)+st.g;champGames[pid]=champGames[pid]||{};
       for(const [c,[n]] of Object.entries(st.champs))champGames[pid][c]=(champGames[pid][c]||0)+n;
-      const tm=p.team&&db.teams[p.team],value=typeof playerMarketValue==='function'?playerMarketValue(db,p):0;
+      const tm=p.team&&db.teams[p.team],value=playerMarketValue(db,p);
       p.career.push({year:w.year,seasonId:s.id,comp:s.comp,cname,team:p.team,region:tm?tm.region:playerActiveLocalRegion(p),division:tm?(tm.division||1):null,squad:playerSquadLabel(db,p),international:!!db.competitions[s.comp].international,ovr:playerOvr(p),reputation:p.reputation||0,marketValue:value,salary:p.contract?p.contract.salary:null,contractUntil:p.contract?p.contract.until:null,g:st.g,w:st.w,k:st.k,d:st.d,a:st.a,cs:st.cs,dmg:st.dmg,gold:st.gold||0,dmgTaken:st.dmgTaken||0,vision:st.vision||0,objectives:st.objectives||0,csDiff:st.csDiff||0,goldDiff:st.goldDiff||0,laneAdv:st.laneAdvGames?st.laneAdvSum/st.laneAdvGames:0,teamfightDmg:st.teamfightDmg||0,teamfights:st.teamfights||0,teamfightWins:st.teamfightWins||0,teamfightShare:st.g?st.teamfightShareSum/st.g:0,kp:st.g?st.kpSum/st.g:0,min:st.min,mvp:st.mvp,rating:st.g&&st.ratingSum?st.ratingSum/st.g:null});}
     if(s.champion)db.teams[s.champion].roster.forEach(pid=>{const p=db.players[pid];if(p){p.titles.push(`${w.year} ${cname}`);p.reputation=Math.round(clamp((p.reputation||playerOvr(p))+2,20,99));recordPlayerEvent(p,'title',w.year,{competition:cname,team:s.champion,international:!!db.competitions[s.comp].international})}});
   }
@@ -65,7 +65,7 @@ function runOffseason(db){
   for(const R of Object.values(db.regions)){const cls=generateRookieClass(db,R,rng),ri=R.rookieIntake[R.rookieIntake.length-1];rep.rookies.push({region:R.id,count:cls.length,ids:cls.map(p=>p.id),label:ri.label,tiers:ri.tiers,profile:ri.profile})}
   const supplyErrs=talentSupplyErrors(db);if(supplyErrs.length)throw new Error('Talent supply invariant failed before market: '+supplyErrs.slice(0,8).join(' | '));
   for(const t of activeTeams(db)){if(t.id===managedTeamId(db))ensureStaffRoster(t);else ensureTeamStaff(db,t,rng)}ageStaff(db,rng);genStaffPool(db,rng);
-  if(typeof ageScoutReports==='function')ageScoutReports(db);
+  ageScoutReports(db);
   for(const t of activeTeams(db,null,1))aiManageStaff(db,t,rng);
   for(const t of activeTeams(db))aiManageTraining(db,t);
   // 시설은 플레이어/AI 공통으로 구단 경영진이 자동 관리한다. 전략적 선택이 아닌 유지·증설 행정은 직접 조작하지 않는다.
@@ -73,7 +73,7 @@ function runOffseason(db){
     const choices=Object.keys(weights).filter(k=>f[k]<5).sort((a,b)=>weights[b]-weights[a]);for(const k of choices){const cost=facilityCost(db,t,k),reserve=cost*(t.philosophy==='cost'?5:3);if(t.finance.cash>reserve&&rng.chance(.12+.22*weights[k])){upgradeFacility(db,t,k);break}}}
   // 선수 만족도: 한 시즌 누적 출전/역할/계약/성적/국제전/커리어 목표를 결산한다.
   for(const t of activeTeams(db)){t._pre=t.roster.slice();for(const id of t.roster){const p=db.players[id];if(!p||!p.contract)continue;pState(p);p.form=0;p.fatigue=5;}}
-  if(typeof offseasonPlayerSatisfaction==='function')offseasonPlayerSatisfaction(db,w,rep,ev);
+  offseasonPlayerSatisfaction(db,w,rep,ev);
   w.sponsorOffers=sponsorOffers(db,db.teams[managedTeamId(db)]);
   w.report=rep; w.phase='market'; w.offers=[]; w.negotiations={}; w.marketLog=[];
   return rep;
@@ -82,7 +82,7 @@ function runOffseason(db){
 function closeMarket(db){
   const w=db.world, rng=new RNG(w.seed+'/'+w.year,'market'), rep=w.report;
   const ev=t=>{rep.events.push(t);news(db,t)};
-  if(typeof closeOpenNegotiationsForDeadline==='function')closeOpenNegotiationsForDeadline(db);
+  closeOpenNegotiationsForDeadline(db);
   contractMarket(db,rng,rep,ev);
   ensureEven(db,rng,ev);
   for(const t of activeTeams(db,null,1))aiManageOwnedReserve(db,t);
