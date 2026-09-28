@@ -113,9 +113,9 @@ const later=()=>new Promise(resolve=>setImmediate(resolve));
     closeUiOverlay:()=>{},console
   });
   context.$=selector=>node(selector.slice(1));
-  vm.runInContext(state,context,{filename:'ui-state.js'});
   vm.runInContext(season.slice(season.lastIndexOf('function bindSeason(){')),context,{filename:'bindSeason()'});
   vm.runInContext(manager.slice(manager.lastIndexOf('function bindMC(){')),context,{filename:'bindMC()'});
+  vm.runInContext(state,context,{filename:'ui-state.js'});
   const run=js=>vm.runInContext(js,context);
   const flush=()=>{const work=callbacks.splice(0);work.forEach(fn=>fn())};
   run('nav()');
