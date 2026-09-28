@@ -818,6 +818,100 @@ source += `
       'canonical squad move preflight changed when obsolete manager wrapper was deleted');
   });
 
+  test('11j-initial-manager-negotiation-path-after-legacy-removal',()=>{
+    const db=buildWorld(),team=activeTeams(db,null,1)[0],
+      other=activeTeams(db,null,1).find(t=>t.id!==team.id),
+      p=Object.values(db.players).find(x=>!x.retired&&!x.team&&isLocalPlayer(x,team.region));
+    assert(team&&other&&p,'initial negotiation regression fixture missing');
+    setManagedTeam(db,team.id);
+    db.world={year:db.year,seed:'stage5-4a-initial',phase:'initial_roster',
+      manage:'manual',negotiations:{},recruitment:{targets:{}}};
+    team.initialPayrollBudget=10000;team.finance.cash=10000;
+    const outside=initialStartNegotiation(db,p.id,other.id);
+    assert(outside==='내 구단 조직의 스쿼드에만 등록할 수 있습니다'&&
+      Object.keys(db.world.negotiations).length===0,
+      'initial squad manager shortcut authorized an unrelated organization');
+    const unseen=initialStartNegotiation(db,p.id,team.id);
+    assert(unseen==='관심 등록 → 관찰 → 내부 평가를 완료한 뒤 공식 협상을 시작할 수 있습니다'&&
+      Object.keys(db.world.negotiations).length===0,
+      'initial negotiation skipped the recruitment evaluation gate');
+    db.world.recruitment.targets[p.id]={
+      pid:p.id,stage:'evaluated',evaluation:{teamId:team.id},knowledge:100
+    };
+    const started=initialStartNegotiation(db,p.id,team.id),
+      id=negotiationId(db,p.id,'initial',team.id),neg=db.world.negotiations[id];
+    assert(neg&&neg.kind==='initial'&&neg.teamId===team.id&&neg.status==='open'&&
+      started.includes('협상을 시작했습니다'),
+      'canonical initial-squad negotiation could not begin');
+    const repeated=initialStartNegotiation(db,p.id,team.id);
+    assert(repeated.includes('이미 진행 중입니다')&&
+      Object.keys(db.world.negotiations).length===1,
+      'initial negotiation created duplicate open negotiations');
+    assert(!p.team&&!team.roster.includes(p.id),
+      'opening a negotiation prematurely contracted or registered a player');
+  });
+
+  test('11k-scheduled-series-session-after-unused-opener-removal',()=>{
+    const db=buildWorld(),[a,b]=activeTeams(db,null,1),
+      compId='S54_REG_COMP',stage={id:'regular',type:'round_robin'},
+      match={id:'S54_M1',a:a.id,b:b.id,bo:3,res:null};
+    assert(a&&b,'scheduled series fixture needs two organizations');
+    db.competitions[compId]={id:compId,region:a.region,international:false,
+      rules:{fearless:true},stages:[stage]};
+    const season={id:'S54_SEASON',comp:compId,year:db.year,split:1,
+      seed:'s54-regular',cur:0,days:[{stage:'regular',date:db.worldDate,matches:[match]}]};
+    const before=JSON.stringify(season),
+      prepared=scheduledSeriesSession(db,season,match);
+    assert(prepared.cfgIdx===0&&prepared.cfg===stage&&
+      prepared.seed==='s54-regular/'+db.year+'/S54_M1'&&
+      prepared.opt.firstChoice==='home'&&prepared.opt.fearless===true,
+      'canonical scheduled series lost competition first-choice/fearless rules');
+    assert(prepared.session.a===a.id&&prepared.session.b===b.id&&
+      prepared.session.bestOf===3&&prepared.session.seed===prepared.seed&&
+      prepared.session.chooser===a.id,
+      'scheduled series could not create a deterministic canonical session');
+    const game=seriesSessionPrepareGame(db,prepared.session);
+    assert(game&&game.g===1&&[a.id,b.id].includes(game.blue)&&
+      [a.id,b.id].includes(game.red)&&game.blue!==game.red,
+      'scheduled session could not begin a real draft/game');
+    assert(JSON.stringify(season)===before&&!match.res,
+      'scheduled session setup unexpectedly resolved or edited official fixture');
+  });
+
+  test('11l-reserve-preflight-and-transaction-after-legacy-removal',()=>{
+    const db=buildWorld(),parent=activeTeams(db,null,1).find(x=>reserveTeamsOf(db,x).length);
+    assert(parent,'roster regression fixture needs owned reserve');
+    const reserve=reserveTeamsOf(db,parent)[0],
+      free=Object.values(db.players).filter(p=>!p.retired&&!p.team).slice(0,12);
+    assert(free.length===12,'insufficient free players to test reserve roster');
+    for(let i=0;i<free.length;i++)
+      assignPlayerToTeam(db,free[i],i<6?parent:reserve);
+    setManagedTeam(db,parent.id);
+    const candidate=free[6],before=JSON.stringify(rosterActionSnapshot(db,parent.id)),
+      check=rosterMoveCheck(db,candidate,parent);
+    assert(check.ok&&check.kind==='callup'&&check.to===parent.id&&
+      check.from===reserve.id&&check.parent===parent.id,
+      'live reserve preflight no longer accepts a legal call-up');
+    assert(JSON.stringify(rosterActionSnapshot(db,parent.id))===before,
+      'reserve preflight changed team rosters without a transaction');
+    const plan=rosterPlanState(db,parent);
+    plan.assignments[candidate.id]=parent.id;
+    const preview=previewWorldAction(db,{type:'roster.plan',parentId:parent.id,
+      assignments:plan.assignments,actor:'manager'});
+    assert(preview.ok&&preview.changes.length===1&&
+      preview.changes[0].pid===candidate.id&&
+      JSON.stringify(rosterActionSnapshot(db,parent.id))===before,
+      'manager roster preview diverges from legal reserve preflight');
+    const applied=applyWorldAction(db,preview);
+    assert(applied.ok&&candidate.team===parent.id&&
+      parent.roster.includes(candidate.id)&&!reserve.roster.includes(candidate.id)&&
+      !rosterIntegrityErrors(db).length,
+      'canonical roster transaction failed a preflight-approved call-up');
+    const replay=applyWorldAction(db,preview);
+    assert(!replay.ok&&replay.reason==='stale_preview',
+      'canonical squad transaction allowed replay after successful commit');
+  });
+
   console.log('11.5 Step 1 regression baseline: OK ('+results.join(', ')+')');
 })();
 `;
