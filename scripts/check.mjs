@@ -92,12 +92,6 @@ for (const file of modules.filter(file => file !== 'save.js')) {
     console.error(`Deprecated secondary-role model leaked into ${file}: ${marker}`);
   }
 }
-const legacySaveLines = saveSource.split('\n').filter(line => /secondaryRoles|roleFamiliarity/.test(line));
-for (const line of legacySaveLines) if (!/delete\s+[^;]*(secondaryRoles|roleFamiliarity)/.test(line)) {
-  failed = true;
-  console.error('Deprecated secondary-role field is used by save.js outside deletion/migration cleanup: '+line.trim());
-}
-
 const appSource = await readFile(resolve(artifact, 'app.js'), 'utf8');
 const playerSource = await readFile(resolve(artifact, 'player.js'), 'utf8');
 const developmentSource = await readFile(resolve(artifact, 'development.js'), 'utf8');
@@ -109,6 +103,12 @@ const rosterSource = await readFile(resolve(artifact, 'roster.js'), 'utf8');
 const draftSource = await readFile(resolve(artifact, 'draft.js'), 'utf8');
 const featuresSource = await readFile(resolve(artifact, 'features.js'), 'utf8');
 const draftAnalysisSource = await readFile(resolve(artifact, 'draft-analysis.js'), 'utf8');
+const legacySaveLines = saveSource.split('\n').filter(line => /secondaryRoles|roleFamiliarity/.test(line));
+for (const line of legacySaveLines) if (!/delete\s+[^;]*(secondaryRoles|roleFamiliarity)/.test(line)) {
+  failed = true;
+  console.error('Deprecated secondary-role field is used by save.js outside deletion/migration cleanup: '+line.trim());
+}
+
 if (!draftSource.includes('function draftCandidateAnalysis(')) {
   failed = true;
   console.error('Draft candidate analysis domain helper is missing');
