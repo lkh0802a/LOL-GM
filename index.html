@@ -2206,6 +2206,50 @@ const STYLES=Object.keys(STYLE_BIAS);
 const GENERATED_SECONDARY_ROLE_RATE=.08;
 function officialRoleEligible(p,role){return !!p&&p.role===role}
 function roleFamiliarity(p,role){if(role===p.role)return 100;return (p.roleFamiliarity&&p.roleFamiliarity[role])||0}
+
+// 등록 자격은 선수의 출신/국적과 분리한다. region은 레거시 출신 생태계 키로만 유지한다.
+const FIRST_TEAM_NON_LOCAL_LIMIT=2, CONTRACTED_MOVE_LIMIT_PER_SEASON=2;
+function ensurePlayerEligibility(p){
+  if(!p)return null;
+  const origin=p.originRegion||p.region||p.nationality||null;
+  if(!p.originRegion)p.originRegion=origin;
+  if(!p.originLocalRegion)p.originLocalRegion=p.originRegion||origin;
+  if(!p.activeLocalRegion)p.activeLocalRegion=p.originLocalRegion||origin;
+  p.localEligibility=p.localEligibility||{};
+  if(!p.localEligibility.origin)p.localEligibility.origin=p.originLocalRegion;
+  p.localEligibility.active=p.activeLocalRegion;
+  p.localEligibility.qualifications=p.localEligibility.qualifications||{};
+  if(!Array.isArray(p.contractedMoves))p.contractedMoves=[];
+  return p;
+}
+function playerOriginRegion(p){return ensurePlayerEligibility(p)?.originRegion||null}
+function playerActiveLocalRegion(p){return ensurePlayerEligibility(p)?.activeLocalRegion||null}
+function isLocalPlayer(p,regionId){return !!p&&!!regionId&&playerActiveLocalRegion(p)===regionId}
+function nonLocalLimitForTeam(db,t){
+  const team=teamRef(db,t);if(!team)return FIRST_TEAM_NON_LOCAL_LIMIT;
+  if((team.division||1)===1)return FIRST_TEAM_NON_LOCAL_LIMIT;
+  const R=db.regions[team.region];return Math.max(0,R?.reserveImportLimit??FIRST_TEAM_NON_LOCAL_LIMIT);
+}
+function teamNonLocalCount(db,t,excludePid=null){
+  const team=teamRef(db,t);if(!team)return 0;
+  return (team.roster||[]).reduce((n,id)=>{if(id===excludePid)return n;const p=db.players[id];return n+(p&&!isLocalPlayer(p,team.region)?1:0)},0);
+}
+function localRegistrationError(db,t,p){
+  const team=teamRef(db,t),player=playerRef(db,p);if(!team||!player)return '등록 대상을 찾을 수 없습니다';
+  if(isLocalPlayer(player,team.region))return null;
+  if((team.roster||[]).includes(player.id))return null;
+  return teamNonLocalCount(db,team)>=nonLocalLimitForTeam(db,team)?'비로컬 선수 등록 상한을 넘습니다':null;
+}
+function contractedMoveSeason(db){return db?.world?.year??db?.year}
+function contractedMoveCount(db,p){ensurePlayerEligibility(p);const y=contractedMoveSeason(db);return (p?.contractedMoves||[]).filter(x=>x.season===y&&x.counts!==false).length}
+function contractedMoveError(db,p){return contractedMoveCount(db,p)>=CONTRACTED_MOVE_LIMIT_PER_SEASON?'한 시즌 계약 구단 이동은 최대 2회까지 가능합니다':null}
+function recordContractedMove(db,p,kind,from,to,extra={}){
+  ensurePlayerEligibility(p);const season=contractedMoveSeason(db);
+  if(kind==='loan_return'||kind==='loan_purchase_conversion'||kind==='restructure')return null;
+  if(contractedMoveError(db,p))throw new Error('Contracted move limit exceeded: '+p.id);
+  const row={season,kind,from:from?.id||from||null,to:to?.id||to||null,date:db.worldDate||null,counts:true,...extra};
+  p.contractedMoves.push(row);return row;
+}
 function playerGroupScore(p,g,role=p.role){const keys=ATTR_GROUPS[g].filter(a=>!(a==='smite_execution'&&role!=='JGL')&&!(a==='csing'&&role==='SUP'));return keys.length?avg(keys.map(a=>p.attrs[a])):50}
 function playerRoleRating(p,role=p.role){
   if(!p||!p.attrs)return 0;const gw=ROLE_GROUP_WEIGHTS[role]||ROLE_GROUP_WEIGHTS[p.role]||ROLE_GROUP_WEIGHTS.MID;
@@ -2342,7 +2386,8 @@ function genPlayer(db,rng,o){
       matchup_knowledge:Math.round(clamp(base-10+rng.normal(0,10)+(age-20),20,99)),confidence:Math.round(clamp(s?72+rng.normal(0,8):50+rng.normal(0,10),10,99)),scrimExperience:0,trainingExperience:0,scrimSeason:0,trainingSeason:0};}
   const secondaryRoles=[],flex=SECONDARY_ROLE_OPTIONS[role]||[];if(flex.length&&rng.chance(GENERATED_SECONDARY_ROLE_RATE))secondaryRoles.push(rng.pick(flex));
   const roleFamiliarityMap={[role]:100};for(const r of secondaryRoles)roleFamiliarityMap[r]=rng.int(55,68);const peakBase={TOP:24.5,JGL:24,MID:25,ADC:25,SUP:26}[role]||25;
-  const p={id:o.id||uniqId(db,(o.region||'X')+'_'),name:o.name||uniqNick(db,rng),role,secondaryRoles,roleFamiliarity:roleFamiliarityMap,age,team:null,region:o.region,nationality:o.nationality||o.region,attrs,tend,pool,
+  const originRegion=o.region,originLocalRegion=o.originLocalRegion||originRegion;
+  const p={id:o.id||uniqId(db,(o.region||'X')+'_'),name:o.name||uniqNick(db,rng),role,secondaryRoles,roleFamiliarity:roleFamiliarityMap,age,team:null,region:originRegion,originRegion,nationality:o.nationality||originRegion,originLocalRegion,activeLocalRegion:o.activeLocalRegion||originLocalRegion,localEligibility:{origin:originLocalRegion,active:o.activeLocalRegion||originLocalRegion,qualifications:{}},contractedMoves:[],attrs,tend,pool,
     pot:0,reputation:0,personality:{professionalism:Math.round(clamp(rng.normal(60,15),10,99)),ambition:Math.round(clamp(rng.normal(60,15),10,99))},
     development:{growthRate:Math.round(clamp(rng.normal(1,.1),.78,1.22)*100)/100,peakAge:Math.round(clamp(rng.normal(peakBase,1.15),21.5,29)*10)/10,declineRate:Math.round(clamp(rng.normal(1,.12),.72,1.35)*100)/100},
     career:[],careerEvents:[],titles:[],proSeasons:0,rosterRole:null,careerGoal:null,satisfaction:70,satisfactionReasons:[],concernStreak:0,wantsOut:false,wantsOutReason:null,retired:false,faYears:0,entryYear:o.entryYear??db.year,entryPath:o.entryPath||'generated',rookieClass:o.rookieClass||null,rookieTier:o.rookieTier||null,developmentTrail:[]};
@@ -2736,11 +2781,12 @@ function inferRegionPolicy(db,R){
   const teams=activeTeams(db,R.id,1),n=Math.max(1,teams.length);
   const owners=teams.map(t=>t.owner&&t.owner.wealth||50),ownerAvg=avg(owners),fans=teams.map(t=>t.fans||30),fanAvg=avg(fans);
   const pays=teams.map(t=>topFivePayroll(db,t)).filter(x=>x>0).sort((a,b)=>a-b),med=pays.length?pays[Math.floor(pays.length/2)]:Math.max(1,8*psOf(db,R.id)),disp=pays.length>1?pays[pays.length-1]/Math.max(.1,pays[0]):1;
-  const locals=Object.values(db.players).filter(p=>!p.retired&&p.region===R.id&&playerOvr(p)>=R.strength-10).length/n,reserveOwned=R.div2&&activeTeams(db,R.id,2).some(t=>t.parent);
+  const locals=Object.values(db.players).filter(p=>!p.retired&&isLocalPlayer(p,R.id)&&playerOvr(p)>=R.strength-10).length/n,reserveOwned=R.div2&&activeTeams(db,R.id,2).some(t=>t.parent);
   R.rosterRuleProfile=reserveOwned?'ENGINE_OWNED_RESERVE':'STANDARD_TIER1_2026';
   const importNeed=clamp((6-locals)/4+(R.strength<66?.25:0)+(fanAvg>50?.15:0),0,1.5),spendPower=clamp((ownerAvg-45)/35+(R.payScale-.55),0,2);
   R.marketProfile=spendPower>=1.15?'high_spend':importNeed>=.75?'open_market':locals>=7?'domestic_development':'balanced';
-  R.importLimit=clamp(Math.round(1+importNeed+(R.marketProfile==='open_market'?.7:0)),1,4);
+  R.importLimit=FIRST_TEAM_NON_LOCAL_LIMIT; // legacy field: 1군 비로컬 상한은 글로벌 2명 고정
+  R.reserveImportLimit=clamp(Math.round(1+importNeed+(R.marketProfile==='open_market'?.7:0)),1,4);
   R.importRecruitMinGap=clamp(Math.round(3-importNeed*2-spendPower*.45),0,4);
   const pressure=n>=8&&disp>=2.65&&ownerAvg>=52;
   R.spendingRule=pressure?'sfr_top5':'none';
@@ -2987,7 +3033,7 @@ function runOffseason(db){
       games[pid]=(games[pid]||0)+st.g;champGames[pid]=champGames[pid]||{};
       for(const [c,[n]] of Object.entries(st.champs))champGames[pid][c]=(champGames[pid][c]||0)+n;
       const tm=p.team&&db.teams[p.team],value=typeof playerMarketValue==='function'?playerMarketValue(db,p):0;
-      p.career.push({year:w.year,seasonId:s.id,comp:s.comp,cname,team:p.team,division:tm?(tm.division||1):null,squad:playerSquadLabel(db,p),international:!!db.competitions[s.comp].international,ovr:playerOvr(p),reputation:p.reputation||0,marketValue:value,salary:p.contract?p.contract.salary:null,contractUntil:p.contract?p.contract.until:null,g:st.g,w:st.w,k:st.k,d:st.d,a:st.a,cs:st.cs,dmg:st.dmg,gold:st.gold||0,dmgTaken:st.dmgTaken||0,vision:st.vision||0,objectives:st.objectives||0,csDiff:st.csDiff||0,goldDiff:st.goldDiff||0,laneAdv:st.laneAdvGames?st.laneAdvSum/st.laneAdvGames:0,teamfightDmg:st.teamfightDmg||0,teamfights:st.teamfights||0,teamfightWins:st.teamfightWins||0,teamfightShare:st.g?st.teamfightShareSum/st.g:0,kp:st.g?st.kpSum/st.g:0,min:st.min,mvp:st.mvp,rating:st.g&&st.ratingSum?st.ratingSum/st.g:null});}
+      p.career.push({year:w.year,seasonId:s.id,comp:s.comp,cname,team:p.team,region:tm?tm.region:playerActiveLocalRegion(p),division:tm?(tm.division||1):null,squad:playerSquadLabel(db,p),international:!!db.competitions[s.comp].international,ovr:playerOvr(p),reputation:p.reputation||0,marketValue:value,salary:p.contract?p.contract.salary:null,contractUntil:p.contract?p.contract.until:null,g:st.g,w:st.w,k:st.k,d:st.d,a:st.a,cs:st.cs,dmg:st.dmg,gold:st.gold||0,dmgTaken:st.dmgTaken||0,vision:st.vision||0,objectives:st.objectives||0,csDiff:st.csDiff||0,goldDiff:st.goldDiff||0,laneAdv:st.laneAdvGames?st.laneAdvSum/st.laneAdvGames:0,teamfightDmg:st.teamfightDmg||0,teamfights:st.teamfights||0,teamfightWins:st.teamfightWins||0,teamfightShare:st.g?st.teamfightShareSum/st.g:0,kp:st.g?st.kpSum/st.g:0,min:st.min,mvp:st.mvp,rating:st.g&&st.ratingSum?st.ratingSum/st.g:null});}
     if(s.champion)db.teams[s.champion].roster.forEach(pid=>{const p=db.players[pid];if(p){p.titles.push(`${w.year} ${cname}`);p.reputation=Math.round(clamp((p.reputation||playerOvr(p))+2,20,99));recordPlayerEvent(p,'title',w.year,{competition:cname,team:s.champion,international:!!db.competitions[s.comp].international})}});
   }
   rep.awards=[];rep.coaches=[];rep.hof=[];
