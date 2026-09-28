@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#ECEFF2;--surf:#FFFFFF;--ink:#18212B;--mut:#5D6B78;--line:#D5DBE1;--brass:#9C7A2F;--blue:#2F6CD4;--red:#C9412F;--blue-t:rgba(47,108,212,.14);--red-t:rgba(201,65,47,.13);
+:root{--bg:#ECEFF2;--surf:#FFFFFF;--ink:#18212B;--mut:#5D6B78;--line:#D5DBE1;--brass:#84601D;--blue:#2F6CD4;--red:#C9412F;--blue-t:rgba(47,108,212,.14);--red-t:rgba(201,65,47,.13);
   --on-brass:#FFFFFF;--hi:#1F7A4D;--mi:#8A6A1C;--lo:#9A3B2E;
   box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121820;--surf:#1B232D;--ink:#E6EBF0;--mut:#93A1AE;--line:#2C3743;--brass:#D9B064;--blue:#5B95F0;--red:#EC6A55;--blue-t:rgba(91,149,240,.18);--red-t:rgba(236,106,85,.16);--on-brass:#1B1405;--hi:#5FCB93;--mi:#D9B064;--lo:#EC8A78}}
@@ -235,13 +235,55 @@ td.fmt{font-size:12px;color:var(--mut);white-space:normal;min-width:200px}
 @media (max-width:390px){.du-center span{display:inline}.du-role{font-size:9px}.du-team h3{font-size:12px}.du-pick{grid-template-columns:20px 30px minmax(0,1fr)}.du-pick-img,.du-pick-empty{width:30px;height:30px}.du-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:340px){.du-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
-@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+/* 11.5/6-4: keyboard reachability and narrow/zoomed viewport safety */
+.skip-link{position:absolute;top:-100vh;left:12px;z-index:30;background:var(--surf);color:var(--ink);padding:10px 14px;border:2px solid var(--brass);border-radius:8px}
+.skip-link:focus{top:calc(8px + env(safe-area-inset-top,0px))}
+.roster-open{border:0;background:transparent;padding:7px 2px;color:var(--ink);font-weight:700;text-align:left;cursor:pointer;text-decoration:underline;text-decoration-color:var(--brass);text-underline-offset:3px}
+.roster-open[aria-expanded="true"]{color:var(--blue)}
+.scroll{max-width:100%;min-width:0}
+.cfgcard,.market,.report,.pdet,.du-side,.du-pool{min-width:0;overflow-wrap:anywhere}
+.cfgs{grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
+.rgrid{grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr))}
+.fin{grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr))}
+.cfghead{flex-wrap:wrap;gap:8px}
+.chaphead b{min-width:0;overflow-wrap:anywhere}
+.chaphead small{white-space:normal;text-align:right}
+.du-wrap,.du-choice-wrap{min-width:0}
+.du-board,.du-tools,.du-series-meta{min-width:0}
+.du-board>*{min-width:0}
+.du-champ[aria-pressed="true"]{border-color:var(--brass);box-shadow:inset 0 0 0 2px var(--brass)}
+:focus-visible{outline:3px solid var(--brass);outline-offset:3px}
+@media(max-width:640px){
+ main{padding-inline:12px}
+ .controls>button,.primary,.ghost,.sm2,.seg button,.chaphead,.chips button,.du-mobile-tabs button,.du-tools .chips button{min-height:44px}
+ .roster-open{min-height:44px}
+ .cfgs,.rgrid,.fin,.tac{grid-template-columns:minmax(0,1fr)}
+ .controls label{max-width:100%}
+ .controls select,.controls input,.mrow input,.mrow select,.cfggrid input,.cfggrid select,.du-tools input,textarea{font-size:16px}
+ .du-board{min-width:0}
+ .du-last-team,.du-last-card{min-width:0}
+ .du-last-picks{min-width:0;overflow-x:auto}
+ .du-lock{min-width:0}
+ .du-lock>div{overflow-wrap:anywhere}
+}
+@media(max-width:360px){
+ .seasonhead h2{font-size:25px}
+ .du-board{gap:3px}
+ .du-side{padding:5px}
+ .du-team h3{overflow-wrap:anywhere}
+ .du-pick{gap:3px}
+ .du-champ{min-width:0}
+}
+@media(prefers-reduced-motion:reduce){
+ *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+ #ll li{animation:none}
+}
 </style>
 </head>
 <body>
-<header><h1>LOL <span>GM</span></h1><p>살아 움직이는 e스포츠 세계</p></header>
-<nav><div><button data-v="season">시즌</button><button data-v="match">스크림</button><button data-v="squad">선수단</button><button data-v="patch">패치·메타</button><button data-v="mc">시뮬레이션</button><button data-v="data">저장</button></div></nav>
-<main id="main"></main>
+<header><a class="skip-link" href="#main">게임 콘텐츠로 건너뛰기</a><h1>LOL <span>GM</span></h1><p>살아 움직이는 e스포츠 세계</p></header>
+<nav aria-label="주요 화면"><div><button type="button" data-v="season">시즌</button><button type="button" data-v="match">스크림</button><button type="button" data-v="squad">선수단</button><button type="button" data-v="patch">패치·메타</button><button type="button" data-v="mc">시뮬레이션</button><button type="button" data-v="data">저장</button></div></nav>
+<main id="main" tabindex="-1" aria-label="게임 콘텐츠"></main>
 <div id="overlay" hidden role="dialog" aria-modal="true" aria-label="시리즈 상세" tabindex="-1"></div>
 <script>
 /*CODE*/
