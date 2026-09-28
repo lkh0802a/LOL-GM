@@ -156,6 +156,24 @@ function draftCandidateAnalysis(state,side,champ){
   }
   return out;
 }
+function draftStaffAdvice(state,side){
+  const turn=draftTurn(state);if(!turn||turn.side!==side)return null;
+  const team=state.db.teams[state.teamIds[side]],members=teamStaffMembers(team),strategic=members.filter(s=>s.role==='strategicCoach').sort((a,b)=>b.rating-a.rating)[0]||null,analysts=members.filter(s=>s.role==='analyst').sort((a,b)=>b.rating-a.rating),analyst=analysts[0]||null;
+  if(!strategic&&!analyst)return {available:false,kind:turn.kind,confidence:0,suggestions:[]};
+  const prof=staffProfile(team),quality=clamp(((strategic?.rating||45)+(analyst?.rating||45))/200,.35,.95),legal=draftLegalChampions(state),opp=1-side,oppHist=state.ctx.byTeam[state.teamIds[opp]]||{won:[],lost:[]},mine=state.pickList[side].map(id=>state.db.patch.champions[id]).filter(Boolean);
+  const rows=legal.map(c=>{
+    let score=0,factors={meta:Math.round((state.vhat[side][c.id]||0)*100),mastery:null,comp:null,counter:null,revealed:false};
+    if(turn.kind==='P'){
+      const vals=draftFeasibleRoles(state,side,c.id).map(role=>draftPickValue(state,side,role,c.id,mine));if(!vals.length)return null;
+      const best=vals.sort((a,b)=>b.total-a.total)[0];score=best.total;factors.mastery=Math.round(best.mastery*200);factors.comp=Math.round(best.comp*100);factors.counter=Math.round(best.counter*100);
+    }else{
+      factors.revealed=oppHist.won.includes(c.id)||oppHist.lost.includes(c.id);score=(state.vhat[side][c.id]||0)*.78+(oppHist.won.includes(c.id)?.16:oppHist.lost.includes(c.id)?.06:0)+(c.roles.length>1?.02:0);
+    }
+    const jitter=((hashStr(state.teamIds[side]+'|staff-advice|'+state.cursor+'|'+c.id)%2001)/1000-1)*(1-quality)*.14;
+    return {champ:c.id,score:score+jitter,factors};
+  }).filter(Boolean).sort((a,b)=>b.score-a.score||a.champ.localeCompare(b.champ)).slice(0,3);
+  return {available:true,kind:turn.kind,confidence:Math.round(clamp((prof.draft+prof.analysis)/2,0,99)),strategic:strategic?{name:strategic.name,rating:strategic.rating}:null,analyst:analyst?{name:analyst.name,rating:analyst.rating}:null,suggestions:rows};
+}
 function draftShortlist(state,side,role){
   const k=side+role;if(!state.shortlists[k]){const p=state.roster[side][role];state.shortlists[k]=state.byRole[role].map(c=>({c,q:state.vhat[side][c.id]*0.35+draftMastery(p,c.id)/200})).sort((a,b)=>b.q-a.q).map(x=>x.c)}
   return state.shortlists[k].filter(c=>!state.taken.has(c.id)).slice(0,10);

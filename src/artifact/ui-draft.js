@@ -121,6 +121,13 @@ function draftUiAnalysisContent(){
   return `<div class="du-analysis-head"><div><b>${esc(championDisplayName(c))}</b><span>${esc(roles)}</span></div><small>우리 팀 기준 · 최종 포지션은 드래프트 종료 후 확정</small></div><div class="du-analysis-metrics"><div><span>메타 인식</span><b>${a.meta}</b></div><div><span>최고 숙련</span><b>${a.mastery}</b></div><div><span>조합 보정</span><b>${draftUiSigned(a.comp)}</b></div><div><span>상성 보정</span><b>${draftUiSigned(a.counter)}</b></div></div><div class="du-analysis-roles">${rows}</div>`;
 }
 function draftUiAnalysisPanel(){return `<aside class="du-analysis" id="du-analysis">${draftUiAnalysisContent()}</aside>`}
+function draftUiStaffAdvice(){
+  if(!DRAFT_UI)return '';const a=draftStaffAdvice(DRAFT_UI.state,DRAFT_UI.playerSide);if(!a)return '';
+  if(!a.available)return '<section class="du-advice"><div class="du-advice-head"><b>스태프 조언</b><span>전략 코치/분석가 없음</span></div><p>전문 스태프를 선임하면 현재 밴픽 후보에 대한 조언을 받을 수 있습니다.</p></section>';
+  const staff=[a.strategic&&`전략 코치 ${esc(a.strategic.name)}`,a.analyst&&`분석가 ${esc(a.analyst.name)}`].filter(Boolean).join(' · ');
+  const cards=a.suggestions.map((x,i)=>{const c=DRAFT_UI.state.db.patch.champions[x.champ],f=x.factors,why=a.kind==='P'?`메타 ${f.meta} · 숙련 ${f.mastery} · 조합 ${draftUiSigned(f.comp)} · 상성 ${draftUiSigned(f.counter)}`:`메타 ${f.meta}${f.revealed?' · 이번 시리즈 공개 정보 반영':''}`;return `<button data-du-advice="${x.champ}"><small>${i+1}순위 검토</small><b>${esc(championDisplayName(c))}</b><span>${why}</span></button>`}).join('');
+  return `<section class="du-advice"><div class="du-advice-head"><b>스태프 조언</b><span>${staff} · 신뢰 ${a.confidence}</span></div><div class="du-advice-grid">${cards}</div><p>조언은 현재 공개 정보와 우리 팀 데이터만 사용하며 선택을 자동 실행하지 않습니다.</p></section>`;
+}
 function draftUiGrid(){
   const s=DRAFT_UI.state,rows=Object.values(s.db.patch.champions).filter(draftUiMatch).sort((a,b)=>championDisplayName(a).localeCompare(championDisplayName(b),'ko'));
   return `<div class="du-grid">${rows.map(c=>{const st=draftUiChampionState(c),sel=DRAFT_UI.selected===c.id;
@@ -138,6 +145,7 @@ function draftUiRender(){
     ${done?`<section class="du-done"><h3>드래프트 완료</h3><p>${esc(DRAFT_UI.doneText||'단계형 밴픽 코어와 동일한 결과입니다.')}</p><button class="primary" id="du-finish">${esc(DRAFT_UI.finishLabel||(DRAFT_UI.onComplete?'드래프트 확정':'연습 종료'))}</button></section>`:
     `<section class="du-pool">
       <div class="du-tools"><input id="du-search" type="search" autocomplete="off" placeholder="챔피언 검색" value="${esc(DRAFT_UI.query)}"><div class="chips">${DRAFT_UI_FILTERS.map(r=>`<button data-du-role="${r}" aria-pressed="${DRAFT_UI.filter===r}">${r==='ALL'?'전체':ROLE_KO[r]}</button>`).join('')}</div></div>
+      ${draftUiStaffAdvice()}
       ${draftUiAnalysisPanel()}
       <div id="du-grid">${draftUiGrid()}</div>
       <div class="du-lock"><div><b>${mine?(DRAFT_UI.selected?esc(championLabel(s.db,DRAFT_UI.selected)):'챔피언을 선택하세요'):'상대 팀이 선택 중입니다'}</b><small>${mine?(turn.kind==='P'?'픽 단계에서는 포지션을 공개하지 않습니다. 드래프트 종료 후 합법적인 5포지션 배치를 확정합니다.':'선택 후 확정해야 밴됩니다.'):'AI는 공개된 챔피언과 가능한 포지션만 보고 판단합니다.'}</small></div><button class="primary" id="du-lock" ${mine&&DRAFT_UI.selected?'':'disabled'}>${turn.kind==='B'?'밴 확정':'픽 확정'}</button></div>
@@ -151,6 +159,7 @@ function draftUiBind(){
   const finish=$('#du-finish');if(finish)finish.onclick=()=>{const result=draftResult(DRAFT_UI.state),cb=DRAFT_UI.onComplete;if(cb){DRAFT_UI=null;const ov=$('#overlay');ov.hidden=true;ov.innerHTML='';document.body.classList.remove('lock');cb(result)}else draftUiClose()};
   const search=$('#du-search');if(search)search.oninput=e=>{DRAFT_UI.query=e.target.value;const box=$('#du-grid');if(box)box.innerHTML=draftUiGrid();draftUiBindGrid()};
   document.querySelectorAll('[data-du-role]').forEach(b=>b.onclick=()=>{DRAFT_UI.filter=b.dataset.duRole;DRAFT_UI.selected=null;draftUiRender()});
+  document.querySelectorAll('[data-du-advice]').forEach(b=>b.onclick=()=>{DRAFT_UI.selected=b.dataset.duAdvice;draftUiRender()});
   draftUiBindGrid();
   const lock=$('#du-lock');if(lock)lock.onclick=()=>draftUiLock();
 }
