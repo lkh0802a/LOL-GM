@@ -1,5 +1,4 @@
 // ---------- 패치·메타 ----------
-let PSET={role:'ALL',q:'',region:'GLOBAL',patch:'ALL',comp:'ALL',period:'ALL',year:'',season:'ALL',split:'ALL',league:'ALL',scope:'ALL',position:'ALL',champ:null};
 function patchValueText(v,field){
   if(Array.isArray(v))return v.join('/');
   if(['damageMod','utilityMod','healMod','shieldMod','ccMod','mobilityMod'].includes(field))return Math.round(Number(v)*100)+'%';

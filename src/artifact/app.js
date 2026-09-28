@@ -5,8 +5,7 @@ const DIRECT_FILE_PREVIEW=location.protocol==='file:'||location.origin==='null';
 let SLOT=(()=>{try{return localStorage.getItem(STORAGE_NS+'-slot')||'1'}catch(e){return '1'}})();
 const STORE_BASE=STORAGE_NS+'-db-v'+SAVE_VERSION+'-';
 let STORE=STORE_BASE+SLOT;
-let DB=null, LAST=null, LASTSER=null, VIEW='season', SQUAD=null, OPEN_P=null, LOGMODE='major', SAVEFAIL=false, MSG='';
-let SCOUTSET={region:'ALL',role:'ALL',contract:'all',competition:'ALL',undervalued:false,q:''}, SQUAD_EDIT=null;
+let DB=null, SAVEFAIL=false;
 // Older namespaces are left intact as user backups. Unsupported world versions
 // are never silently replaced or deleted during boot.
 // 저장: IndexedDB(용량 큼) 우선, 안 되면 localStorage
@@ -81,21 +80,11 @@ function freshInternalSeed(prefix='rng'){
 function grpAvg(p,g,k=100){return Math.round(avg(ATTR_GROUPS[g].map(a=>obsAttr(DB,p,a,k))))}
 function ovrTag(v){return `<span class="num ${v>=80?'hi':v>=70?'mid':'lo'}">${v}</span>`}
 
-function navKeepScroll(){const y=window.scrollY;nav();requestAnimationFrame(()=>window.scrollTo(0,y))}
-function nav(){
-  if(typeof LIVE!=='undefined')clearInterval(LIVE);
-  document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-current',b.dataset.v===VIEW?'page':'false'));
-  const m=$('#main');
-  m.innerHTML={season:viewSeason,match:viewMatch,squad:viewSquad,patch:viewPatch,mc:viewMC,data:viewData}[VIEW]();
-  ({season:bindSeason,match:bindMatch,patch:bindPatch,squad:bindSquad,champs:()=>{},mc:bindMC,data:bindData})[VIEW]();
-}
-
 // ---------- 선수단 ----------
 const TAC_KO={aggression:'공격성',risk_tolerance:'위험 감수',objective_priority:'오브젝트 우선도',vision_investment:'시야 투자',scaling_preference:'후반 지향'};
 // ---------- 데이터 ----------
 // ---------- 시리즈 ----------
 // ---------- 시즌 (월드) ----------
-let SSET={team:'HTG',region:null,division:null,seed:freshInternalSeed('world'),tab:'table',view:null};
 function mySeasonKey(){const w=DB.world,rid=DB.teams[managedTeamId(DB)].region;const ks=Object.values(w.seasons).filter(s=>s.region===rid).sort((a,b)=>(b.split||0)-(a.split||0));return ks.length?ks[0].key:null}
 function curS(){const w=DB.world;if(!SSET.view||!w.seasons[SSET.view])SSET.view=mySeasonKey()||Object.keys(w.seasons)[0];return w.seasons[SSET.view]}
 function sName(s){return DB.competitions[s.comp].name+(s.label?' '+s.label:'')}
@@ -166,7 +155,7 @@ function renderReport(r){
    </div></section>`;
 }
 
-document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{VIEW=b.dataset.v;nav();window.scrollTo(0,0)});
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>navigateTo(b.dataset.v));
 $('#main').innerHTML='<p class="empty">세계를 불러오는 중…</p>';
 loadDB().then(d=>{DB=d;nav()}).catch(e=>{
   console.error('LOL GM initialization failed',e);

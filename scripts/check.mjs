@@ -32,6 +32,7 @@ for (const file of modules) {
 
 const maintainabilityBudgets = {
   'app.js': 22000,
+  'ui-state.js': 6500,
   'random.js': 5000,
   'engine.js': 34000,
   'champion-data.js': 14000,

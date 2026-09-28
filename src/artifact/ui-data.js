@@ -19,8 +19,8 @@ function bindData(){
     try{
       const loaded=await loadDB();DB=loaded;
       try{localStorage.setItem(STORAGE_NS+'-slot',SLOT)}catch(e){}
-      LAST=null;LASTSER=null;MC.res=null;SSET.view=null;
-      saveDB();VIEW='season';nav();
+      resetUiForWorld();
+      saveDB();navigateTo('season');
     }catch(e){
       SLOT=previous.slot;STORE=previous.key;DB=previous.db;
       msg('슬롯을 불러오지 못했습니다. 원본은 보존됩니다 — '+e.message);
@@ -28,7 +28,7 @@ function bindData(){
   });
   $('#dshow').onclick=()=>{$('#djson').value=packDB(DB);msg('압축된 JSON입니다. 그대로 복사해 두면 됩니다.')};
   $('#dapply').onclick=()=>{try{const d=unpackDB($('#djson').value);if(!d.teams||!d.players||!d.patch||!d.regions)throw new Error('teams, players, patch, regions 항목이 필요합니다');
-    if(d.version!==SAVE_VERSION)throw new Error(`이 세이브는 현재 버전(${SAVE_VERSION})과 호환되지 않습니다`);DB=d;saveDB();LAST=null;LASTSER=null;MC.res=null;msg('적용했습니다.')}catch(e){msg('적용하지 못했습니다 — '+e.message)}};
+    if(d.version!==SAVE_VERSION)throw new Error(`이 세이브는 현재 버전(${SAVE_VERSION})과 호환되지 않습니다`);DB=d;resetUiForWorld();saveDB();msg('적용했습니다.')}catch(e){msg('적용하지 못했습니다 — '+e.message)}};
   $('#dcopy').onclick=()=>{const v=$('#djson').value||packDB(DB);navigator.clipboard&&navigator.clipboard.writeText(v).then(()=>msg('복사했습니다.'),()=>msg('복사 권한이 없습니다. JSON 열기 후 직접 선택해서 복사하세요.'))};
-  $('#dreset').onclick=()=>{if(!confirm('이 슬롯의 커리어가 모두 지워집니다. 계속할까요?'))return;DB=buildWorld();saveDB();LAST=null;LASTSER=null;MC.res=null;VIEW='season';nav()};
+  $('#dreset').onclick=()=>{if(!confirm('이 슬롯의 커리어가 모두 지워집니다. 계속할까요?'))return;DB=buildWorld();resetUiForWorld();saveDB();navigateTo('season')};
 }

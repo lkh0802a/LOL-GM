@@ -58,6 +58,7 @@ export const UI_MODULES = [
   'ui-roster.js',
   'ui-draft.js',
   'ui-season.js',
+  'ui-state.js',
   'app.js',
 ];
 
