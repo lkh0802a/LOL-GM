@@ -91,6 +91,41 @@ source += `
     assert(applied.moves.length===2&&db.players[up].team===parent.id&&db.players[down].team===reserve.id,'atomic first/reserve swap failed');
   });
 
+  test('06b-roster-transaction',()=>{
+    const db=buildWorld(),parent=activeTeams(db,null,1).find(t=>reserveTeamsOf(db,t).length);
+    assert(parent,'transaction fixture needs reserve organization');
+    const reserve=reserveTeamsOf(db,parent)[0],free=Object.values(db.players).filter(p=>!p.team).slice(0,11);
+    for(let i=0;i<free.length;i++)assignPlayerToTeam(db,free[i],i<6?parent:reserve);
+    setManagedTeam(db,parent.id);
+    const up=reserve.roster[0],down=parent.roster[0],plan=rosterPlanState(db,parent);
+    plan.assignments[up]=parent.id;plan.assignments[down]=reserve.id;
+    const action={type:'roster.plan',parentId:parent.id,assignments:plan.assignments,actor:'manager'};
+    const before=JSON.stringify(rosterActionSnapshot(db,parent.id));
+    const wrong=previewWorldAction(db,{...action,assignments:{...plan.assignments,[up]:'UNKNOWN'}});
+    assert(!wrong.ok&&wrong.reason==='roster_invalid','invalid roster transaction should reject before applying');
+    assert(JSON.stringify(rosterActionSnapshot(db,parent.id))===before,'invalid preview must not mutate organization state');
+    const aiBlocked=previewWorldAction(db,{...action,actor:'ai'});
+    assert(!aiBlocked.ok&&aiBlocked.reason==='unauthorized','AI cannot commit the managed club roster');
+    const preview=previewWorldAction(db,action);
+    assert(preview.ok&&preview.changes.length===2&&preview.total===11,'roster transaction preview must report exact moves');
+    assert(JSON.stringify(rosterActionSnapshot(db,parent.id))===before,'valid preview must be read-only');
+    plan.assignments[up]=reserve.id;
+    assert(preview.command.assignments[up]===parent.id,'preview must hold an independent immutable-intent snapshot');
+    const saveDate=db.worldDate;db.worldDate='2028-02-01';
+    const expired=applyWorldAction(db,preview);
+    assert(!expired.ok&&expired.reason==='stale_preview','date drift must reject pending roster application');
+    db.worldDate=saveDate;
+    assert(JSON.stringify(rosterActionSnapshot(db,parent.id))===before,'stale rejection must not mutate rosters');
+    const result=applyWorldAction(db,preview);
+    assert(result.ok&&result.moves.length===2&&db.players[up].team===parent.id&&db.players[down].team===reserve.id,'previewed roster swap failed');
+    const repeated=applyWorldAction(db,preview);
+    assert(!repeated.ok&&repeated.reason==='stale_preview','replaying a committed plan must be rejected');
+    assert(!rosterIntegrityErrors(db).length,'committed roster action must retain team/player consistency');
+    const unowned=activeTeams(db,null,1).find(t=>t.id!==parent.id);
+    const forbidden=previewWorldAction(db,{type:'roster.plan',parentId:unowned.id,assignments:{},actor:'manager'});
+    assert(!forbidden.ok&&forbidden.reason==='unauthorized','manager action must not reach unowned teams');
+  });
+
   test('07-staff-migration-caps',()=>{
     const db=buildWorld(),t=activeTeams(db)[0];t.coach={id:'legacy'};t.staff={analyst:{id:'legacy-a',role:'analyst',rating:60}};
     migrateLegacyStaffState(db);

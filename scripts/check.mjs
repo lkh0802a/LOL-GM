@@ -55,6 +55,7 @@ const maintainabilityBudgets = {
   'save.js': 10000,
   'roster.js': 22000,
   'lineup.js': 12000,
+  'state-transaction.js': 9000,
   'finance.js': 18000,
   'contracts.js': 26000,
   'scouting.js': 14000,
@@ -109,6 +110,22 @@ for (const [owner,former,marker] of stage2Ownership) {
   if (!ownerSource.includes(marker) || formerSource.includes(marker)) {
     failed=true;
     console.error('Stage 11.5/2 domain boundary violated: '+marker+' must belong to '+owner);
+  }
+}
+
+const transactionSource = await readFile(resolve(artifact,'state-transaction.js'),'utf8');
+for (const marker of ['function validateWorldAction(','function previewWorldAction(','function applyWorldAction(','roster.plan']) {
+  if (!transactionSource.includes(marker)) {
+    failed = true;
+    console.error('Shared world transaction capability missing: '+marker);
+  }
+}
+const rosterSourceForTransactions = await readFile(resolve(artifact,'roster.js'),'utf8');
+const rosterUiForTransactions = await readFile(resolve(artifact,'ui-roster.js'),'utf8');
+for(const [owner,marker] of [[rosterSourceForTransactions,"actor:'ai'"],[rosterUiForTransactions,"actor:'manager'"]]){
+  if(!owner.includes('previewWorldAction(')||!owner.includes('applyWorldAction(')||!owner.includes(marker)){
+    failed = true;
+    console.error('Shared roster transaction path must be used by AI and manager');
   }
 }
 

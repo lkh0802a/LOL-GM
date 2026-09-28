@@ -126,7 +126,17 @@ function rosterMoveCheck(db,p,target){
   const checked=validateRosterPlan(db,src,plan);
   return checked.ok?{ok:true,kind:dst.parent?'senddown':'callup',from:src.id,to:dst.id,parent:checked.parentId}:{ok:false,reason:checked.errors[0],errors:checked.errors};
 }
-function movePlayerBetweenSquads(db,p,target){const player=playerRef(db,p),src=player&&player.team&&db.teams[player.team];if(!src)throw new Error('현재 소속팀이 없습니다');const plan=rosterPlanState(db,src);plan.assignments[player.id]=teamRef(db,target)?.id;const result=applyRosterPlan(db,src,plan);return result.moves[0]}
+function movePlayerBetweenSquads(db,p,target){
+  const player=playerRef(db,p),src=player&&player.team&&db.teams[player.team];
+  if(!src)throw new Error('현재 소속팀이 없습니다');
+  const plan=rosterPlanState(db,src);
+  plan.assignments[player.id]=teamRef(db,target)?.id;
+  const preview=previewWorldAction(db,{type:'roster.plan',parentId:src.id,assignments:plan.assignments,actor:'manager'});
+  if(!preview.ok)throw new Error(preview.errors.join('\n'));
+  const result=applyWorldAction(db,preview);
+  if(!result.ok)throw new Error(result.errors.join('\n'));
+  return result.moves[0];
+}
 function aiManageOwnedReserve(db,t){
   const parent=teamRef(db,t);if(!parent||parent.parent||parent.id===managedTeamId(db))return [];
   const reserve=reserveTeamsOf(db,parent)[0];if(!reserve)return [];
@@ -139,8 +149,10 @@ function aiManageOwnedReserve(db,t){
   const down=first[0],up=second[0],gap=fit(up)-fit(down),starterTrouble=ROLES.some(role=>parent.depthChart?.[role]===down.id&&((down.form??0)<=-7||down.condition<55));
   if(gap<2&&!(gap>=0&&starterTrouble))return [];
   const plan=rosterPlanState(db,parent);plan.assignments[up.id]=parent.id;plan.assignments[down.id]=reserve.id;
-  const checked=validateRosterPlan(db,parent,plan);if(!checked.ok)return [];
-  applyRosterPlan(db,parent,plan,'ai');rebalanceAiRosterRoles(db,parent);rebalanceAiRosterRoles(db,reserve);
+  const preview=previewWorldAction(db,{type:'roster.plan',parentId:parent.id,assignments:plan.assignments,actor:'ai'});
+  if(!preview.ok)return [];
+  const applied=applyWorldAction(db,preview);if(!applied.ok)return [];
+  rebalanceAiRosterRoles(db,parent);rebalanceAiRosterRoles(db,reserve);
   return [{pid:up.id,kind:'callup',swap:down.id},{pid:down.id,kind:'senddown',swap:up.id}];
 }
 function playerRef(db,p){return typeof p==='string'?db.players[p]:p}
