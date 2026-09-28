@@ -3217,12 +3217,11 @@ function stepOf(db,s){
 /* ==== FILE: office.js ==== */
 // ===== LOL GM: 흥행 / 리그 사무국 =====
 const OFFICE_STYLES={
-  conservative:{label:'보수적',w:{cap:-0.1,floor:-0.1,tax:-0.2,import:-0.2,fearless:-0.2,expand:-0.35,contract:-0.2,playoffs:-0.1,relegation:-0.2,franchise:0.1,mixed:-0.1,div2:-0.1,format:-0.25,splits:-0.2,bo:-0.1}},
-  expansion:{label:'확장 지향',w:{cap:-0.1,floor:0.1,tax:-0.1,import:0.2,fearless:0.1,expand:0.45,contract:-0.3,playoffs:0.1,relegation:-0.1,franchise:0,mixed:0.1,div2:0.3,format:0.1,splits:0.1,bo:0}},
-  revenue:{label:'수익 중심',w:{cap:0.2,floor:0,tax:0.1,import:0.1,fearless:0.2,expand:0.15,contract:0.15,playoffs:0.2,relegation:-0.3,franchise:0.35,mixed:0.15,div2:0,format:0.2,splits:0.3,bo:0.15}},
-  balance:{label:'경쟁 균형 중시',w:{cap:0.3,floor:0.3,tax:0.3,import:-0.1,fearless:0,expand:0,contract:0.1,playoffs:0.3,relegation:0.35,franchise:-0.2,mixed:0.2,div2:0.2,format:0.1,splits:0,bo:0.1}}
+  conservative:{label:'보수적',w:{cap:-0.1,floor:-0.1,tax:-0.2,import:-0.2,expand:-0.35,contract:-0.2,playoffs:-0.1,relegation:-0.2,franchise:0.1,mixed:-0.1,div2:-0.1,format:-0.25,splits:-0.2,bo:-0.1}},
+  expansion:{label:'확장 지향',w:{cap:-0.1,floor:0.1,tax:-0.1,import:0.2,expand:0.45,contract:-0.3,playoffs:0.1,relegation:-0.1,franchise:0,mixed:0.1,div2:0.3,format:0.1,splits:0.1,bo:0}},
+  revenue:{label:'수익 중심',w:{cap:0.2,floor:0,tax:0.1,import:0.1,expand:0.15,contract:0.15,playoffs:0.2,relegation:-0.3,franchise:0.35,mixed:0.15,div2:0,format:0.2,splits:0.3,bo:0.15}},
+  balance:{label:'경쟁 균형 중시',w:{cap:0.3,floor:0.3,tax:0.3,import:-0.1,expand:0,contract:0.1,playoffs:0.3,relegation:0.35,franchise:-0.2,mixed:0.2,div2:0.2,format:0.1,splits:0,bo:0.1}}
 };
-const PRESET_OFFICE={KR:'conservative',CN:'expansion',EU:'balance',NA:'revenue'};
 function baseFans(strength,rng){return Math.round(clamp(20+(strength-60)*1.6+rng.normal(0,8),5,90))}
 function hypeLabel(h){return h>=70?'매우 높음':h>=55?'높음':h>=40?'보통':h>=28?'낮음':'침체'}
 
@@ -3270,7 +3269,7 @@ function officeDecisions(db,rng,f,ev,mid){
     const M=R.metrics&&R.metrics[R.metrics.length-1]; if(!M)continue;
     const prev=R.metrics.length>1?R.metrics[R.metrics.length-2]:null, trend=prev?M.hype-prev.hype:0;
     const S=OFFICE_STYLES[R.office]||OFFICE_STYLES.conservative, n=activeTeams(db,R.id,1).length;
-    const faDepth=Object.values(db.players).filter(p=>!p.retired&&!p.team&&p.region===R.id&&playerOvr(p)>=R.strength-10).length/Math.max(1,n);
+    const faDepth=Object.values(db.players).filter(p=>!p.retired&&!p.team&&isLocalPlayer(p,R.id)&&playerOvr(p)>=R.strength-10).length/Math.max(1,n);
     const weak=activeTeams(db,R.id,1).map(t=>({t,s:teamStrength(db,t.id)})).sort((a,b)=>a.s-b.s);
     const weakGap=weak.length>2?R.strength-weak[0].s:0;
     const H=M.hype, B=M.balance, props=[];
@@ -3298,8 +3297,8 @@ function officeDecisions(db,rng,f,ev,mid){
         add('floor',neg*2-.7,()=>{const o=R.salaryFloor;R.salaryFloor=rc(Math.max(0,o*.9));return `지출 권장 하한 ${o}억 → ${R.salaryFloor}억`},`적자 구단 ${Math.round(neg*100)}% — 하한 기준 완화`);
       }
       const regPow=(db.global&&db.global.power[R.id])||1;
-      add('import',(1.2-regPow)+(45-H)/25-(R.importLimit>=3?0.6:0),()=>{const o=R.importLimit??2;R.importLimit=o+1;R.importRecruitMinGap=Math.max(0,(R.importRecruitMinGap??2)-1);return `외국인 선수 한도 ${o} → ${R.importLimit}명`},`국제 경쟁력 보강·해외 스타 유치 (지수 ${regPow})`);
-      if((R.importLimit??2)>1)add('import',faDepth-1.8+(regPow-1.5),()=>{const o=R.importLimit??2;R.importLimit=o-1;R.importRecruitMinGap=Math.min(4,(R.importRecruitMinGap??2)+1);return `외국인 선수 한도 ${o} → ${R.importLimit}명`},`자국 유망주 출전 기회 확대 (FA 인재 ${faDepth.toFixed(1)}명/팀)`);
+      add('import',(1.2-regPow)+(45-H)/25,()=>{const o=R.importRecruitMinGap??2;R.importRecruitMinGap=Math.max(0,o-1);return `비로컬 영입 기준 완화 ${o} → ${R.importRecruitMinGap}`},`국제 경쟁력 보강·해외 스타 유치 (1군 비로컬 상한 2명은 고정)`);
+      add('import',faDepth-1.8+(regPow-1.5),()=>{const o=R.importRecruitMinGap??2;R.importRecruitMinGap=Math.min(4,o+1);return `비로컬 영입 기준 강화 ${o} → ${R.importRecruitMinGap}`},`자국 유망주 출전 기회 확대 (1군 비로컬 상한 2명은 고정)`);
       const SPL={1:'단일 시즌제',2:'2스플릿제',3:'3스플릿제'};
       if((R.splits||1)<3) add('splits',(H-58)/15+trend/25,()=>{const o=R.splits||1;R.splits=o+1;return `${SPL[o]} → ${SPL[R.splits]} 전환`},`흥행 호조로 시즌 콘텐츠 확대`);
       if((R.splits||1)>1) add('splits',(38-H)/15-trend/25,()=>{const o=R.splits;R.splits=o-1;return `${SPL[o]} → ${SPL[R.splits]} 전환`},`흥행 부진, 일정 피로도 완화`);
@@ -3340,7 +3339,7 @@ function worldDecisions(db,rng,f,ev){
     if(c.par){
       // 모리그에서 팬덤이 약한 구단 2곳이 새 리그로 이적 (연고 이전) — 모리그는 신규 창단으로 짝수 유지
       const mv=activeTeams(db,c.par.id,1).filter(t=>!t.franchised).sort((a,b)=>(a.fans||0)-(b.fans||0)).slice(0,activeTeams(db,c.par.id,1).length>=8?2:0);
-      for(const t of mv){t.region=id;t.division=1;t.roster.forEach(pid=>{const p=db.players[pid];if(p)p.region=id});activeTeams(db,c.par.id,2).filter(a=>a.parent===t.id).forEach(a=>foldTeam(db,a))}
+      for(const t of mv){t.region=id;t.division=1;activeTeams(db,c.par.id,2).filter(a=>a.parent===t.id).forEach(a=>foldTeam(db,a))}
       // 새 리그 팀 수는 짝수로 맞춘다
       const extra=activeTeams(db,id,1).length-cfg.teams; for(let k=0;k<extra;k++){const w=activeTeams(db,id,1).filter(t=>!mv.includes(t)).sort((a,b)=>(a.fans||0)-(b.fans||0))[0];if(w)foldTeam(db,w)}
       why=`${c.par.leagueName}에서 분리 독립 — ${mv.length?mv.map(t=>t.name).join(', ')+' 연고 이전, ':''}모리그 흥행 ${(c.par.metrics||[]).slice(-1)[0]?.hype??'-'}`;
@@ -3353,9 +3352,8 @@ function worldDecisions(db,rng,f,ev){
         // 권역의 모든 지역이 독립 → 모리그는 역할을 다하고 해체, 남은 구단은 팀 수가 적은 리그부터 나눠 합류, 진출권도 나눠 승계
         const rest=activeTeams(db,P.id,1).sort((a,b)=>(b.fans||0)-(a.fans||0)), got={};
         for(const t of rest){const dst=kids.map(k=>db.regions[k]).sort((a,b)=>activeTeams(db,a.id,1).length-activeTeams(db,b.id,1).length)[0];
-          t.region=dst.id;t.division=1;t.roster.forEach(pid=>{const p=db.players[pid];if(p)p.region=dst.id});(got[dst.leagueName]=got[dst.leagueName]||[]).push(t.name)}
+          t.region=dst.id;t.division=1;(got[dst.leagueName]=got[dst.leagueName]||[]).push(t.name)}
         for(const t of activeTeams(db,P.id,2))foldTeam(db,t);
-        Object.values(db.players).filter(p=>!p.retired&&!p.team&&p.region===P.id).forEach(p=>p.region=kids[0]);
         const heirs=kids.map(k=>db.regions[k]).sort((a,b)=>b.strength-a.strength);
         for(let k=0;k<P.slots;k++)heirs[k%heirs.length].slots++;
         for(const k of kids)db.regions[k].parent=null;
@@ -3363,9 +3361,8 @@ function worldDecisions(db,rng,f,ev){
         why+=` · 권역의 모든 지역이 독립해 ${P.leagueName} 해체 — 잔여 구단 분산(${Object.entries(got).map(([l,n])=>`${l}: ${n.length}팀`).join(', ')}), 진출권 ${P.slots}장 승계`;
       } else if(activeTeams(db,P.id,1).length<6){
         const rest=activeTeams(db,P.id,1);
-        for(const t of rest){t.region=id;t.roster.forEach(pid=>{const p=db.players[pid];if(p)p.region=id})}
+        for(const t of rest){t.region=id}
         for(const t of activeTeams(db,P.id,2))foldTeam(db,t);
-        Object.values(db.players).filter(p=>!p.retired&&!p.team&&p.region===P.id).forEach(p=>p.region=id);
         R.slots=Math.max(R.slots,P.slots);
         for(const k of Object.keys(REGION_PRESETS))if(REGION_PRESETS[k].parent===P.id&&db.regions[k])db.regions[k].parent=null;
         delete db.regions[P.id];
@@ -3379,17 +3376,15 @@ function worldDecisions(db,rng,f,ev){
   if(lowE.length&&rng.chance(0.5*f)){ // 신흥 리그가 2년 연속 침체하면 모리그로 재통합
     const g=lowE[0], host=db.regions[g.parent];
     const ts=activeTeams(db,g.id,1).sort((a,b)=>(b.fans||0)-(a.fans||0)), keep=ts.slice(0,2);
-    for(const t of ts){if(keep.includes(t)){t.region=host.id;t.division=1;t.roster.forEach(id=>{const p=db.players[id];if(p)p.region=host.id})}else foldTeam(db,t)}
+    for(const t of ts){if(keep.includes(t)){t.region=host.id;t.division=1}else foldTeam(db,t)}
     for(const t of activeTeams(db,g.id))foldTeam(db,t);
-    Object.values(db.players).filter(p=>!p.retired&&!p.team&&p.region===g.id).forEach(p=>p.region=host.id);
     delete db.regions[g.id];
     gev(`${g.leagueName} 해체 — ${host.leagueName}로 재통합 (${keep.map(t=>t.name).join(', ')} 합류)`,'2년 연속 흥행 침체');
   }
   const low=Object.values(db.regions).filter(R=>(R.metrics||[]).length>=2&&R.metrics.slice(-2).every(m=>m.hype<30)).sort((a,b)=>a.strength-b.strength);
   if(Object.keys(db.regions).length>=5&&low.length>=2&&low.every(R=>R.tier!=='major')&&rng.chance(0.4*f)){
     const [A,B]=low, host=A.strength>=B.strength?A:B, gone=host===A?B:A;
-    for(const t of activeTeams(db,gone.id)){t.region=host.id;t.division=1;t.parent=null;t.roster.forEach(id=>{const p=db.players[id];if(p)p.region=host.id})}
-    Object.values(db.players).filter(p=>!p.retired&&!p.team&&p.region===gone.id).forEach(p=>p.region=host.id);
+    for(const t of activeTeams(db,gone.id)){t.region=host.id;t.division=1;t.parent=null}
     const old=host.leagueName;host.leagueName=`${host.name}·${gone.name} 연합 리그`;host.name=`${host.name}·${gone.name}`;host.slots=Math.min(4,host.slots+1);
     delete db.regions[gone.id];
     gev(`리그 통합: ${old} + ${gone.leagueName} → ${host.leagueName}`,'두 지역 모두 2년 연속 흥행 침체');
@@ -3600,18 +3595,18 @@ function closeFinances(db,w,rng,ev){
 
 // 계약 만료 · 재계약 · FA 시장
 function eligibleFillFAs(db,t,role=null){
-  const R=db.regions[t.region],imports=t.roster.filter(id=>db.players[id]&&db.players[id].region!==t.region).length,room=Math.max(0,(R.importLimit??2)-imports);
-  return Object.values(db.players).filter(p=>!p.retired&&!p.team&&(!role||p.role===role)&&(p.region===t.region||room>0))
+  const room=Math.max(0,nonLocalLimitForTeam(db,t)-teamNonLocalCount(db,t));
+  return Object.values(db.players).filter(p=>!p.retired&&!p.team&&(!role||p.role===role)&&(isLocalPlayer(p,t.region)||room>0))
     .sort((a,b)=>(pFillScore(db,b,t)-pFillScore(db,a,t)));
 }
 function aiMarketObservation(db,p,t){
-  const perf=recentMarketPerformance(db,p),sample=Math.min(30,perf.games),foreign=p.region!==t.region,uncertainty=(foreign?4.5:2.5)+(sample<6?3:sample<15?1.5:0),n=((hashStr(t.id+'|'+p.id+'|'+db.year+'|ability')%2001)/1000-1);
+  const perf=recentMarketPerformance(db,p),sample=Math.min(30,perf.games),foreign=!isLocalPlayer(p,t.region),uncertainty=(foreign?4.5:2.5)+(sample<6?3:sample<15?1.5:0),n=((hashStr(t.id+'|'+p.id+'|'+db.year+'|ability')%2001)/1000-1);
   const ability=Math.round(clamp(playerOvr(p)+n*uncertainty,20,99)),n2=((hashStr(t.id+'|'+p.id+'|'+db.year+'|potential')%2001)/1000-1),ageUpside=p.age<=19?9:p.age<=21?6:p.age<=23?3:1;
   const potential=Math.round(clamp(ability+ageUpside+n2*(foreign?5:3)+(p.reputation-ability)*.08,ability,99));
   return {ability,potential,uncertainty:Math.round(uncertainty*10)/10};
 }
 function aiMarketValue(db,p,t){const est=aiMarketObservation(db,p,t),up=Math.max(0,est.potential-est.ability),w={'win-now':0.1,'youth':0.6,'balanced':0.3,'superstar':0.15,'cost':0.35}[t.philosophy]||0.3;return est.ability+up*w-(t.philosophy==='youth'&&p.age>26?2:0)}
-function pFillScore(db,p,t){const domestic=p.region===t.region?2:0,age=p.age<=21?1:0,cost=Math.min(4,asking(db,p,t.region)/Math.max(.2,psOf(db,t.region)));return aiMarketValue(db,p,t)+domestic+age-cost*.15}
+function pFillScore(db,p,t){const domestic=isLocalPlayer(p,t.region)?2:0,age=p.age<=21?1:0,cost=Math.min(4,asking(db,p,t.region)/Math.max(.2,psOf(db,t.region)));return aiMarketValue(db,p,t)+domestic+age-cost*.15}
 function optionDecision(db,p,t){
   const o=p.contract&&p.contract.option;if(!o||o.year!==db.year)return false;
   const next={...p.contract,salary:o.salary,years:1,signingBonus:0,bonuses:p.contract.bonuses||{},option:null,promisedRole:p.contract.promisedRole||p.rosterRole};
@@ -3630,7 +3625,7 @@ function exerciseContractOption(db,p,t,source='engine'){
 }
 function contractMarket(db,rng,rep,ev){
   const year=db.year, size=5+(db.worldConfig.subs||0), w=db.world, mine=w&&w.manage==='manual'?managedTeamId(db):null;
-  const imports=t=>t.roster.filter(id=>db.players[id]&&db.players[id].region!==t.region).length;
+  const imports=t=>teamNonLocalCount(db,t);
   const release=(t,p,why)=>{ if(p.contract&&p.contract.until>=year){t.finance.buyout=(t.finance.buyout||0)+p.contract.salary*(p.contract.until-year+1)*0.5}
     removePlayerFromTeam(db,p);p.contract=null;p.faYears=0;};
   // 1) 옵션 및 만료 계약 처리
@@ -3639,7 +3634,7 @@ function contractMarket(db,rng,rep,ev){
   }
   for(const t of activeTeams(db)) for(const id of t.roster.slice()){
     const p=db.players[id]; if(!p||p.retired)continue;
-    if(!p.contract){if(t.id===mine){rep.expired.push({pid:p.id,team:t.id,why:'계약 필요'});continue}signContract(db,p,t,marketSalary(db,p,t.region),1);continue}
+    if(!p.contract){release(t,p);rep.expired.push({pid:p.id,team:t.id,why:'무계약 상태 — FA 전환'});continue}
     if(p.contract.until>=year)continue;
     if(t.id===mine){release(t,p);rep.expired.push({pid:p.id,team:t.id,why:'재계약하지 않음'});continue}
     const isStarter=starterFor(db,t,p.role)===p,want=isStarter||p.rosterRole==='competition'||(p.age<=21&&p.pot-playerOvr(p)>=6)||(p.rosterRole==='backup'&&t.roster.length<7&&p.satisfaction>=50);
@@ -3665,7 +3660,7 @@ function contractMarket(db,rng,rep,ev){
       for(const role of ROLES){
         const cur=starterFor(db,t,role), cv=cur?playerValue(db,cur,t):-99;
         const importGap=R.importRecruitMinGap??3;
-        const cand=fas.filter(p=>p.role===role&&(p.region===t.region||(playerOvr(p)>=R.strength+importGap&&imports(t)<(R.importLimit??2))))
+        const cand=fas.filter(p=>p.role===role&&(isLocalPlayer(p,t.region)||(playerOvr(p)>=R.strength+importGap&&imports(t)<nonLocalLimitForTeam(db,t))))
           .map(p=>({p,v:aiMarketValue(db,p,t),ask:asking(db,p,t.region)})).filter(x=>x.ask<=budgetLeft[t.id]&&(!cur||cur.wantsOut||cur.contract.until<=year||x.v>cv+5)).sort((a,b)=>b.v-a.v);
         const c=cand[0]; if(!c)continue;
         const sal=Math.round(c.ask*(['win-now','superstar'].includes(t.philosophy)?rng.range(1,1.15):rng.range(0.95,1.05))*10)/10;
@@ -3681,7 +3676,7 @@ function contractMarket(db,rng,rep,ev){
       const t=best.o.t,yrs=best.o.years?best.o.years:contractYearsForPlayer(db,p,rng);
       const prev=starterFor(db,t,p.role);
       signContract(db,p,t,best.o.sal,yrs); budgetLeft[t.id]-=best.o.sal;
-      rep.signings.push({pid:p.id,team:t.id,salary:best.o.sal,years:yrs,rookie:p.age<=19&&!p.career.length,import:p.region!==t.region,offers:os.length,out:null});
+      rep.signings.push({pid:p.id,team:t.id,salary:best.o.sal,years:yrs,rookie:p.age<=19&&!p.career.length,import:!isLocalPlayer(p,t.region),offers:os.length,out:null});
       if(t.roster.length>size+1){const bench=t.roster.map(id=>db.players[id]).filter(x=>x!==p&&starterFor(db,t,x.role)!==x).sort((a,b)=>playerValue(db,a,t)-playerValue(db,b,t))[0];
         if(bench){release(t,bench);rep.signings[rep.signings.length-1].out=bench.id}}
       else if(prev)rep.signings[rep.signings.length-1].out=null;
@@ -3692,14 +3687,16 @@ function contractMarket(db,rng,rep,ev){
   for(const t of activeTeams(db,null,1).filter(t=>t.id!==mine&&t.finance.cash>20*psTeam(db,t)).sort(()=>rng.next()-0.5)){
     if(deals>=Math.max(2,Math.ceil(activeTeams(db,null,1).length/10)))break;
     const role=rng.pick(ROLES), cur=starterFor(db,t,role); if(!cur)continue;
-    const cand=activeTeams(db,t.region,1).filter(o=>o.id!==t.id&&o.id!==mine).map(o=>starterFor(db,o,role)).filter(p=>p&&p.contract&&aiMarketValue(db,p,t)>playerValue(db,cur,t)+5)
+    if(contractedMoveError(db,cur))continue;
+    const cand=activeTeams(db,t.region,1).filter(o=>o.id!==t.id&&o.id!==mine).map(o=>starterFor(db,o,role)).filter(p=>p&&p.contract&&!contractedMoveError(db,p)&&aiMarketValue(db,p,t)>playerValue(db,cur,t)+5)
       .map(p=>({p,fee:transferFee(db,p)})).filter(x=>x.fee<=t.finance.cash*0.6&&x.p.contract.salary<=budgetLeft[t.id]+cur.contract.salary).sort((a,b)=>aiMarketValue(db,b.p,t)-aiMarketValue(db,a.p,t))[0];
     if(!cand)continue;
     const seller=db.teams[cand.p.team];
+    if(localRegistrationError(db,t,cand.p)||localRegistrationError(db,seller,cur))continue;
     if(!(seller.finance.cash<10*psTeam(db,seller)||cand.p.wantsOut||rng.chance(.2)))continue;
     doTransfer(db,cand.p,seller,t,cand.fee);deals++;
     rep.transfers.push({pid:cand.p.id,from:seller.id,to:t.id,fee:cand.fee});
-    if(t.roster.length>size){assignPlayerToTeam(db,cur,seller);rep.transfers[rep.transfers.length-1].swap=cur.id}
+    if(t.roster.length>size){doTransfer(db,cur,t,seller,0);rep.transfers[rep.transfers.length-1].swap=cur.id}
   }
   // 3) 로스터 채우기 / 정리
   for(const t of activeTeams(db)){
@@ -3769,8 +3766,7 @@ function negotiationPreferredYears(p){const goal=playerCareerGoal(p);if(p.age>=2
 function negotiationCompetition(db,p,t,rng,kind){
   if(kind==='renewal')return [];
   return activeTeams(db,null,1).filter(x=>x.id!==t.id&&!x.parent).map(team=>{
-    const R=db.regions[team.region],imports=team.roster.filter(id=>db.players[id]&&db.players[id].region!==team.region).length;
-    if(p.region!==team.region&&imports>=(R.importLimit??2))return null;
+    if(localRegistrationError(db,team,p))return null;
     const cur=starterFor(db,team,p.role),need=!cur?8:aiMarketObservation(db,p,team).ability-playerOvr(cur),baseBudget=(kind==='initial'&&typeof initialSalaryBudget==='function')?initialSalaryBudget(db,team):salaryBudget(db,team),room=baseBudget-payroll(db,team),ask=asking(db,p,team.region);
     if(room<ask*.82||need<-4)return null;
     const years=contractYearsForPlayer(db,p,rng),terms=normalizeContractTerms(db,p,team,ask*rng.range(.94,1.12),years,{promisedRole:defaultPromisedRole(db,p,team),option:rng.chance(.14)?{type:'player'}:null});
@@ -3787,6 +3783,7 @@ function negotiationDemand(db,p,t,kind,rng,competitors=[]){
 }
 function startNegotiation(db,pid,kind='fa',extra={}){
   const w=db.world,t=extra.teamId?db.teams[extra.teamId]:myT(db),p=db.players[pid];if(!w||!t||!p)return {ok:false,msg:'협상 대상을 찾을 수 없습니다'};
+  if(kind==='transfer'){const moveErr=contractedMoveError(db,p);if(moveErr)return {ok:false,msg:moveErr}}
   if((kind==='fa'||kind==='initial')&&p.team)return {ok:false,msg:'FA 선수가 아닙니다'};if(kind==='renewal'&&p.team!==t.id)return {ok:false,msg:'우리 팀 선수가 아닙니다'};
   if(kind==='initial'){const allowed=typeof setupTeamsForManager==='function'?new Set(setupTeamsForManager(db).map(x=>x.id)):new Set([managedTeamId(db)]);if(!allowed.has(t.id))return {ok:false,msg:'내 구단 조직의 스쿼드만 계약 대상이 될 수 있습니다'}}
   if((kind==='fa'||kind==='transfer'||kind==='initial')&&!recruitmentReady(db,pid,t.id))return {ok:false,msg:'관심 등록 → 관찰 → 내부 평가를 완료한 뒤 공식 협상을 시작할 수 있습니다'};
@@ -3801,8 +3798,7 @@ function negotiationBudgetError(db,p,t,terms,kind){
   if(kind==='initial'&&typeof initialOfferCheck==='function'){const x=initialOfferCheck(db,p,t,terms);if(!x.ok)return x.reason}
   else if(projected>baseBudget*1.2)return '연봉 예산을 크게 초과합니다';
   if((terms.signingBonus||0)>t.finance.cash)return '계약금을 지급할 현금이 부족합니다';
-  const R=db.regions[t.region],imports=t.roster.filter(id=>db.players[id]&&db.players[id].region!==t.region).length;
-  if(kind!=='renewal'&&p.region!==t.region&&imports>=(R.importLimit??2))return '외국인 선수 한도를 넘습니다';
+  if(kind!=='renewal'){const localErr=localRegistrationError(db,t,p);if(localErr)return localErr}
   return null;
 }
 function negotiationCounter(db,neg,offer){
@@ -3813,7 +3809,7 @@ function negotiationCounter(db,neg,offer){
 }
 function finalizeNegotiation(db,neg,terms){
   const p=db.players[neg.pid],t=db.teams[neg.teamId];
-  if(neg.kind==='transfer'){const from=db.teams[neg.sellerId];if(!from||p.team!==from.id)return {ok:false,msg:'원소속 구단 상태가 변경되어 협상이 종료되었습니다'};doTransfer(db,p,from,t,neg.fee)}
+  if(neg.kind==='transfer'){const from=db.teams[neg.sellerId];if(!from||p.team!==from.id)return {ok:false,msg:'원소속 구단 상태가 변경되어 협상이 종료되었습니다'};const moveErr=contractedMoveError(db,p)||localRegistrationError(db,t,p);if(moveErr)return {ok:false,msg:moveErr};doTransfer(db,p,from,t,neg.fee)}
   signContract(db,p,t,terms.salary,terms.years,terms);neg.status='accepted';neg.counter=null;neg.acceptedTerms=terms;neg.closedDate=db.worldDate;
   const target=recruitmentTarget(db,neg.pid);if(target){target.stage='closed';target.result='signed';target.negotiationId=neg.id}
   return {ok:true,msg:p.name+' 계약 합의 · '+money(terms.salary)+' · '+terms.years+'년'};
@@ -3840,7 +3836,7 @@ function cancelNegotiation(db,nid){const neg=negotiationStore(db)[nid];if(!neg||
 function sellerTransferAsk(db,p,from){if(p.contract?.buyout)return p.contract.buyout;const base=transferFee(db,p),starter=starterFor(db,from,p.role)===p,financeNeed=from.finance.cash<0?.88:1,exit=p.wantsOut?.82:1;return Math.round(base*(starter?1.12:.96)*financeNeed*exit*10)/10}
 function mTransferBid(db,pid,fee){
   const t=myT(db),p=db.players[pid],from=p&&db.teams[p.team];if(!p||!from||from.id===t.id)return '이적 대상을 찾을 수 없습니다';if(fee>t.finance.cash)return '보유 자금이 부족합니다';
-  const R=db.regions[t.region];if(p.region!==t.region&&t.roster.filter(id=>db.players[id]&&db.players[id].region!==t.region).length>=(R.importLimit??2))return '외국인 선수 한도를 넘습니다';
+  const moveErr=contractedMoveError(db,p);if(moveErr)return moveErr;const localErr=localRegistrationError(db,t,p);if(localErr)return localErr;
   const id=negotiationId(db,pid,'transfer'),store=negotiationStore(db),ask=sellerTransferAsk(db,p,from);let neg=store[id];
   if(!neg||neg.status!=='open'){const st=startNegotiation(db,pid,'transfer',{sellerId:from.id});if(!st.ok)return st.msg;neg=st.neg;neg.stage='club';neg.clubRounds=0}
   neg.clubRounds=(neg.clubRounds||0)+1;neg.history.push({round:neg.clubRounds,stage:'club',side:'buyer',fee});
@@ -3856,7 +3852,8 @@ function closeOpenNegotiationsForDeadline(db){
 // ---- 이적료 / 직접 운영 ----
 function transferFee(db,p){const left=p.contract?Math.max(1,p.contract.until-db.year+1):1;return Math.round(playerMarketValue(db,p)*(.62+.18*Math.min(3,left))*(p.wantsOut?.75:1)*10)/10}
 function doTransfer(db,p,from,to,fee){
-  assignPlayerToTeam(db,p,to);
+  const moveErr=contractedMoveError(db,p),localErr=localRegistrationError(db,to,p);if(moveErr||localErr)throw new Error(moveErr||localErr);
+  recordContractedMove(db,p,'permanent',from,to,{fee});assignPlayerToTeam(db,p,to);
   from.finance.cash=Math.round((from.finance.cash+fee)*10)/10;to.finance.cash=Math.round((to.finance.cash-fee)*10)/10;
   recordPlayerEvent(p,'transfer',db.year,{from:from.id,to:to.id,fee,date:db.worldDate});
   news(db,`이적: ${p.name} ${from.name} → ${to.name} (이적료 ${money(fee)})`);
