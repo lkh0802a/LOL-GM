@@ -13,6 +13,7 @@ export const ENGINE_MODULES = [
   'office.js',
   'finance.js',
   'features.js',
+  'role-conversion.js',
   'draft-analysis.js',
   'career.js',
 ];
