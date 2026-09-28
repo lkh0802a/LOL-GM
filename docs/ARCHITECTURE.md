@@ -27,6 +27,7 @@ The authoritative module order lives in `scripts/artifact-modules.mjs`.
 - management domains: `office.js` (regions), `office-international.js` (global governance), `finance.js`, `contracts.js`, `transfer.js`, `scouting.js`, `staff.js`, `scrim.js`, `player-relations.js`, `features.js`, `role-conversion.js`, `career.js`
 - draft information layer: `draft-analysis.js` (scouting-bounded mastery estimates, meta/composition evidence, opponent-intent explanation); legality and selection remain in `draft.js`
 - domain UI: `ui-setup.js`, `ui-match.js`, `ui-manager.js`, `ui-data.js`, `ui-patch.js`, `ui-market.js`, `ui-market-initial.js`, `ui-negotiations.js`, `ui-market-staff.js`, `ui-champion.js`, `ui-player.js`, `ui-roster.js`, `ui-draft.js`, `ui-season.js`
+- modal/keyboard ownership: `ui-overlay.js` (single dialog lifecycle, background inerting, focus containment/return, dismissibility policy for match reports, practice drafts and locked official First Selection)
 - shared transient UI state and screen routing: `ui-state.js` (cross-screen view state, six routes, route bindings, scroll restoration and world-replacement reset)
 - application shell/controller: `app.js` (storage/bootstrap, shared read helpers and season landing surface)
 
