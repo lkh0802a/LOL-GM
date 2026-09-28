@@ -524,6 +524,121 @@ source += `
     assert(r5.games.length>=3&&r5.games.length<=5&&Math.max(...r5.score)===3&&uniqueSeriesPicks(r5),'Bo5/Fearless regression after save/load');
   });
 
+
+  test('11a-meta-index-incremental-and-bounded',()=>{
+    const db=buildWorld(),region=Object.keys(db.regions)[0],rows=[];
+    for(let i=0;i<6000;i++)rows.push({
+      date:'2027-01-'+String(1+i%28).padStart(2,'0'),
+      patch:'META.'+(i%4),comp:'COMP.'+(i%3),season:'S'+(i%2),split:1,
+      league:region,regions:[region],international:false,sides:[],bans:[]
+    });
+    db.metaHistory=rows;
+    const index=metaHistoryIndex(db),filtered=metaRowsFiltered(db,{patch:'META.1',comp:'COMP.2'}),
+      facets=metaHistoryFacets(db);
+    assert(filtered.length===500&&facets.patches[0]==='META.3'&&facets.comps.length===3,
+      'historical index/filter/facet baseline mismatch');
+    const append={date:'2027-04-07',patch:'META.1',comp:'NEW_COMP',
+      season:'NEW_SEASON',split:2,league:'NEW_LEAGUE',
+      regions:[region],international:false,sides:[],bans:[]};
+    rows.push(append);
+    assert(metaHistoryIndex(db)===index&&index.length===6001,
+      'appending one match rebuilt the entire meta-history index');
+    const updated=metaRowsFiltered(db,{patch:'META.1',comp:'COMP.2'});
+    assert(updated!==filtered&&updated.length===filtered.length,
+      'incremental append did not invalidate cached query');
+    const newer=metaRowsFiltered(db,{patch:'META.1',comp:'NEW_COMP'});
+    assert(newer.length===1&&newer[0]===append,'incremental by-patch/competition indexes lost appended row');
+    const newFacets=metaHistoryFacets(db);
+    assert(newFacets!==facets&&newFacets.comps.includes('NEW_COMP')&&newFacets.seasons.includes('NEW_SEASON')&&
+      newFacets.leagues.includes('NEW_LEAGUE')&&newFacets.splits.includes(2),
+      'incremental facets did not receive new competition dimensions');
+    for(let i=0;i<META_FILTER_CACHE_LIMIT+35;i++)
+      metaRowsFiltered(db,{from:'2027-'+String(i).padStart(3,'0')});
+    assert(index.filtered.size===META_FILTER_CACHE_LIMIT,'filtered-index LRU capacity is unbounded');
+    const fresh=rows.slice(-5);db.metaHistory=fresh;
+    assert(metaHistoryIndex(db)!==index&&metaRowsFiltered(db,{comp:'NEW_COMP'}).length===1,
+      'history array replacement must trigger a safe full reindex');
+    const reindexed=metaHistoryIndex(db);
+    fresh.splice(0,1);
+    assert(metaHistoryIndex(db)!==reindexed,'history truncation must trigger a full reindex');
+    const restored=unpackDB(packDB(db));
+    assert(metaRowsFiltered(restored,{comp:'NEW_COMP'}).length===1&&
+      !Object.prototype.hasOwnProperty.call(JSON.parse(packDB(db)),'byPatch'),
+      'incremental meta indexes leaked into persisted state');
+  });
+
+  test('11b-historic-patch-cache-limit',()=>{
+    const db=buildWorld(),champ=Object.values(db.patch.champions)[0],
+      base=champ.base.hp,keys=[];
+    for(let i=0;i<PATCH_REPLAY_CACHE_LIMIT+5;i++){
+      const id='PERF.'+(i+1),hp=base+i+1;
+      db.patches.history.push({id,date:'2027-04-01',major:false,
+        notes:[{type:'base',c:champ.id,key:'hp',old:hp-1,new:hp,dir:1}]});
+      keys.push(id);
+    }
+    for(let i=0;i<keys.length;i++){
+      const historic=getPatch(db,keys[i]);
+      assert(historic.id===keys[i]&&historic.champions[champ.id].base.hp===base+i+1,
+        'historical patch cache returned an incorrect patch revision');
+      assert(patchCache(db).size<=PATCH_REPLAY_CACHE_LIMIT,
+        'historical patch snapshots grew without a size limit');
+    }
+    const last=getPatch(db,keys.at(-1));
+    assert(last===getPatch(db,keys.at(-1)),'hot historical patch snapshot did not hit cache');
+    const old=getPatch(db,keys[0]);
+    assert(old.id===keys[0]&&old.champions[champ.id].base.hp===base+1,
+      'evicted patch could not reconstruct from retained notes');
+    assert(patchCache(db).size===PATCH_REPLAY_CACHE_LIMIT&&
+      !patchCache(db).has(keys[1]),'LRU reconstruction did not evict the oldest snapshot');
+    clearPatchCache(db);
+    assert(patchCache(db).size===0,'world patch cache did not release memory on reset');
+  });
+
+  test('11c-system-usage-index-parity',()=>{
+    const db=buildWorld(),champs=Object.values(db.patch.champions),
+      ids=Object.values(db.patch.itemDefs).filter(d=>['final','boots'].includes(d.tier)&&d.active!==false).slice(0,12).map(d=>d.id),
+      runes=Object.values(db.patch.runeDefs).filter(d=>d.active!==false).slice(0,8).map(d=>d.id);
+    assert(ids.length===12&&runes.length===8,'system evidence fixture missing definitions');
+    db.patch.id='REG.PERF';db.metaHistory=[];
+    for(let i=0;i<100;i++){
+      const a=champs[i%champs.length],b=champs[(i*7+3)%champs.length];
+      db.metaHistory.push({
+        date:'2027-03-'+String(1+i%28).padStart(2,'0'),patch:db.patch.id,
+        comp:'REG_COMP',regions:[],sides:[
+          {team:'A',region:'A',win:i%2===0,picks:[{champ:a.id,role:'TOP',items:ids.slice(i%5,i%5+3),runes:runes.slice(i%4,i%4+3)}]},
+          {team:'B',region:'B',win:i%2!==0,picks:[{champ:b.id,role:'MID',items:ids.slice(i%4,i%4+3),runes:runes.slice(i%3,i%3+3)}]}
+        ],bans:[]
+      });
+    }
+    const rows=patchEvidenceRows(db);
+    for(const [kind,list] of [['item',ids],['rune',runes]]){
+      for(const id of list){
+        const indexed=systemUsageEvidence(db,kind,id,rows),
+          direct=systemUsageEvidence(db,kind,id,rows.slice());
+        assert(JSON.stringify(indexed)===JSON.stringify(direct),
+          'indexed '+kind+' evidence changed original statistical meaning: '+id);
+      }
+    }
+    const cached=patchSystemUsageIndex(db,rows);
+    assert(cached===patchSystemUsageIndex(db,rows),
+      'per-world system evidence cache misses same patch/rows');
+    const def=db.patch.itemDefs[ids[0]],old=def.cost;
+    applyNote(db.patch,{type:'item',id:ids[0],field:'cost',old,new:old+50,dir:-1});
+    assert(patchSystemUsageIndex(db,rows)!==cached,
+      'item cost/revision change did not invalidate system evidence index');
+    const appended={...db.metaHistory[0],date:'2027-04-03'};
+    db.metaHistory.push(appended);
+    const more=patchEvidenceRows(db);
+    assert(more!==rows&&more.length===rows.length+1&&patchSystemUsageIndex(db,more).all===202,
+      'new match did not invalidate indexed system usage');
+    const indexed=systemUsageEvidence(db,'rune',runes[0],more),
+      direct=systemUsageEvidence(db,'rune',runes[0],more.slice());
+    assert(JSON.stringify(indexed)===JSON.stringify(direct),'appended match changed rune evidence parity');
+    const facets=metaHistoryFacets(db),saved=packDB(db);
+    assert(facets.comps.includes('REG_COMP')&&saved.length>0,
+      'system/meta caches could not coexist with save serialization');
+  });
+
   console.log('11.5 Step 1 regression baseline: OK ('+results.join(', ')+')');
 })();
 `;

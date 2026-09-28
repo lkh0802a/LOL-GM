@@ -27,12 +27,12 @@ function applyNote(P,n){
 }
 function getPatch(db,id){
   if(db.patch&&db.patch.id===id)return db.patch;
-  const cache=patchCache(db);if(cache.has(id))return cache.get(id);
+  const cached=historicPatchCacheHit(db,id);if(cached)return cached;
   const P=buildPatch();
-  if(P.id===id){cache.set(id,P);return P}
+  if(P.id===id)return rememberHistoricPatch(db,id,P);
   const hist=db.patches.history&&db.patches.history.length?db.patches.history:db.patches.list;
-  for(const p of hist){for(const n of p.notes||[])applyNote(P,n);P.id=p.id;if(P.id===id){cache.set(id,P);return P}}
-  cache.set(id,P);return P;
+  for(const p of hist){for(const n of p.notes||[])applyNote(P,n);P.id=p.id;if(P.id===id)return rememberHistoricPatch(db,id,P)}
+  return rememberHistoricPatch(db,id,P);
 }
 function championProEligible(db,c,date=db.worldDate){
   if(!c)return false;

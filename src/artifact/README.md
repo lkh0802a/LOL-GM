@@ -14,7 +14,7 @@ Module owners after 11.5 stage 3:
 - `state-transaction.js` provides the shared `validate → preview → apply` command gateway; `state-player-actions.js` owns contracts/transfers/releases/options; `state-rollback.js` owns action-scoped undo and post-commit roster integrity.
 - `save.js` packs persistable views; `save-migration.js` restores legacy world-v15 format-1 and format-2 saves, without overwriting malformed or unsupported records.
 
-These remain ordered, concatenated classic JavaScript source files. Further deglobalization, performance cleanup, legacy deletion and UI architecture are **separate** 11.5 steps 4–6. Build and verification commands:
+These remain ordered, concatenated classic JavaScript source files. Further deglobalization, legacy deletion and UI architecture are **separate** 11.5 steps 5–6. Step 4 adds incremental/bounded meta indexes, indexed item/rune evidence and an LRU for historical patch replay without dropping saved history. Build and verification commands:
 
 ```bash
 npm run check

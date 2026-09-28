@@ -7,7 +7,16 @@ const PATCH_SIZE_PROFILE={
   large:{stat:[.04,.065],cd:[1.5,2.5],range:[40,75],cost:[15,30],mod:[.05,.08]}
 };
 function patchHistory(db){return db.patches.history&&db.patches.history.length?db.patches.history:db.patches.list||[]}
-function patchEvidenceRows(db){const c=metaHistoryIndex(db),id=db.patch.id;if(c.patchSorted.has(id))return c.patchSorted.get(id);const rows=(c.byPatch.get(id)||EMPTY_META_HISTORY).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));c.patchSorted.set(id,rows);return rows}
+function patchEvidenceRows(db){
+  const c=metaHistoryIndex(db),id=db.patch.id;
+  if(c.patchSorted.has(id)){
+    const hit=c.patchSorted.get(id);
+    c.patchSorted.delete(id);c.patchSorted.set(id,hit);
+    return hit;
+  }
+  const rows=(c.byPatch.get(id)||EMPTY_META_HISTORY).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  return metaCacheRemember(c.patchSorted,id,rows,META_PATCH_SORT_LIMIT);
+}
 function patchTeamPower(db,tid){
   const t=db.teams&&db.teams[tid];if(!t)return 0;
   const vals=(t.roster||[]).map(id=>db.players&&db.players[id]).filter(Boolean).map(p=>typeof playerOvr==='function'?playerOvr(p):50);
@@ -93,13 +102,67 @@ function chooseChampionBalanceChanges(db,diag,major,rng){
     }}
   return out;
 }
+// Patch notes and patch UI request evidence for every item and rune. Build
+// once from the canonical current-patch rows instead of traversing the same
+// thousands of picks once per definition. Explicit external rows keep the
+// original scan path to avoid stale answers for caller-mutated arrays.
+const SYSTEM_USAGE_INDEX_CACHE=new WeakMap();
+function patchSystemUsageIndex(db,rows){
+  if(rows!==patchEvidenceRows(db))return null;
+  const revision=draftPatchRevisionKey(db.patch),old=SYSTEM_USAGE_INDEX_CACHE.get(db);
+  if(old&&old.rows===rows&&old.revision===revision)return old;
+  const index={rows,revision,all:0,byClass:{},items:{},runes:{}};
+  const accumulate=(bag,id,cls,won)=>{
+    const row=bag[id]||(bag[id]={});
+    const x=row[cls]||(row[cls]={uses:0,wins:0});
+    x.uses++;if(won)x.wins++;
+  };
+  for(const match of rows)for(const side of match.sides||[])for(const raw of side.picks||[]){
+    const pick=typeof raw==='string'?{champ:raw}:raw,
+      champion=db.patch.champions[pick.champ];
+    if(!champion)continue;
+    index.all++;
+    const cls=champion.cls;index.byClass[cls]=(index.byClass[cls]||0)+1;
+    for(const id of new Set(pick.items||[]))accumulate(index.items,id,cls,side.win);
+    for(const id of new Set(pick.runes||[]))accumulate(index.runes,id,'all',side.win);
+  }
+  SYSTEM_USAGE_INDEX_CACHE.set(db,index);
+  return index;
+}
 function systemUsageEvidence(db,kind,id,rows){
-  rows=rows||patchEvidenceRows(db);const def=kind==='item'?db.patch.itemDefs&&db.patch.itemDefs[id]:db.patch.runeDefs&&db.patch.runeDefs[id];if(!def||def.active===false)return {id,uses:0,eligible:0,usage:0,wr:.5,confidence:0};
+  rows=rows||patchEvidenceRows(db);
+  const def=kind==='item'?db.patch.itemDefs&&db.patch.itemDefs[id]:db.patch.runeDefs&&db.patch.runeDefs[id];
+  if(!def||def.active===false)return {id,uses:0,eligible:0,usage:0,wr:.5,confidence:0};
   if(kind==='item'&&!['final','boots'].includes(def.tier))return {id,uses:0,eligible:0,usage:0,wr:.5,confidence:0};
-  const classes=kind==='item'?(def.classes||[]):null;let uses=0,wins=0,eligible=0;
-  for(const r of rows)for(const side of r.sides||[])for(const raw of side.picks||[]){const p=typeof raw==='string'?{champ:raw}:raw,c=db.patch.champions[p.champ];if(!c||(classes&&!classes.includes(c.cls)))continue;eligible++;const arr=kind==='item'?(p.items||[]):p.runes||[];if(arr.includes(id)){uses++;if(side.win)wins++}}
-  const usage=eligible?uses/eligible:0,wr=uses?(wins+2)/(uses+4):.5,confidence=clamp(uses/(uses+10)*Math.min(1,eligible/30),0,1);
-  return {id,uses,wins,eligible,usage,wr,confidence,nerf:Math.max(0,usage-.55)*.8+Math.max(0,wr-.53)*1.5*confidence,buff:Math.max(0,.16-usage)*.55+Math.max(0,.47-wr)*1.1*confidence};
+  const classes=kind==='item'?(def.classes||[]):null;
+  let uses=0,wins=0,eligible=0;
+  const index=patchSystemUsageIndex(db,rows);
+  if(index){
+    if(kind==='rune'){
+      eligible=index.all;
+      uses=index.runes[id]?.all?.uses||0;
+      wins=index.runes[id]?.all?.wins||0;
+    }else{
+      for(const cls of new Set(classes)){
+        eligible+=index.byClass[cls]||0;
+        uses+=index.items[id]?.[cls]?.uses||0;
+        wins+=index.items[id]?.[cls]?.wins||0;
+      }
+    }
+  }else{
+    for(const r of rows)for(const side of r.sides||[])for(const raw of side.picks||[]){
+      const p=typeof raw==='string'?{champ:raw}:raw,c=db.patch.champions[p.champ];
+      if(!c||(classes&&!classes.includes(c.cls)))continue;
+      eligible++;
+      const arr=kind==='item'?(p.items||[]):p.runes||[];
+      if(arr.includes(id)){uses++;if(side.win)wins++}
+    }
+  }
+  const usage=eligible?uses/eligible:0,wr=uses?(wins+2)/(uses+4):.5,
+    confidence=clamp(uses/(uses+10)*Math.min(1,eligible/30),0,1);
+  return {id,uses,wins,eligible,usage,wr,confidence,
+    nerf:Math.max(0,usage-.55)*.8+Math.max(0,wr-.53)*1.5*confidence,
+    buff:Math.max(0,.16-usage)*.55+Math.max(0,.47-wr)*1.1*confidence};
 }
 function lastSystemChange(db,kind,id){
   const h=patchHistory(db);for(let i=h.length-1;i>=0;i--)for(let j=(h[i].notes||[]).length-1;j>=0;j--){const n=h[i].notes[j];if(n.type===kind&&n.id===id&&n.dir)return {patch:h[i],note:n}}return null;
