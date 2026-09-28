@@ -93,9 +93,9 @@ function initialSignPlayer(db,pid,targetId){return initialStartNegotiation(db,pi
 function initialReleasePlayer(db,pid){const p=db.players[pid],allowed=new Set(setupTeamsForManager(db).map(t=>t.id));if(!p||!p.team||!allowed.has(p.team))return '초기 로스터에서 방출할 수 없는 선수입니다';removePlayerFromTeam(db,p);p.contract=null;p.faYears=0;return p.name+' 선수를 FA 풀로 되돌렸습니다'}
 function initialCandidateScore(db,p,t,key='',salary=null){
   const ps=Math.max(.2,psOf(db,t.region)),cost=(salary??asking(db,p,t.region))/ps,costWeight={cost:.55,balanced:.28,youth:.3,'win-now':.16,superstar:.1}[t.philosophy]??.28;
-  const star=t.philosophy==='superstar'?(p.reputation||0)*.025:0,covered=(t.roster||[]).some(id=>db.players[id]?.role===p.role),coverage=covered?0:1.25,fit=Math.max(...ROLES.map(role=>playerRoleRating(p,role)))*.015;
+  const star=t.philosophy==='superstar'?(p.reputation||0)*.025:0,covered=(t.roster||[]).some(id=>db.players[id]?.role===p.role),coverage=covered?0:1.25;
   const noise=((hashStr((db.world?.seed||db.saveId)+'|initial|'+t.id+'|'+p.id+'|'+key)%2001)/1000-1)*1.2;
-  return aiMarketValue(db,p,t)+star+coverage+fit-cost*costWeight+noise;
+  return aiMarketValue(db,p,t)+star+coverage-cost*costWeight+noise;
 }
 function initialMarketSnapshot(db,teams){
   const free=Object.values(db.players).filter(p=>!p.retired&&!p.team),priceCache=new Map(),regions=[...new Set((teams||activeTeams(db)).map(t=>t.region))],byRegion={};
@@ -112,9 +112,16 @@ function initialFutureFeasible(db,t,candidate,salary,snap=null){
   for(let foreignN=0;foreignN<=Math.min(room,need);foreignN++){const localN=need-foreignN,cost=initialCheapestCost(rows.local,candidate.id,localN)+initialCheapestCost(rows.foreign,candidate.id,foreignN);best=Math.min(best,cost)}
   return best<=budget+.001;
 }
+function initialCandidateShortlist(db,team,market,softMax){
+  const ps=Math.max(.2,psOf(db,team.region)),covered=new Set((team.roster||[]).map(id=>db.players[id]?.role).filter(Boolean)),seen=new Set(),out=[];
+  const add=p=>{if(p&&!p.team&&!seen.has(p.id)){seen.add(p.id);out.push(p)}};
+  const regional=market.byRegion[team.region]||{local:[],foreign:[]};for(const x of regional.local.slice(0,18))add(x.p);for(const x of regional.foreign.slice(0,10))add(x.p);
+  const publicTop=market.free.map(p=>{const salary=market.price(p,team.region),coverage=covered.has(p.role)?0:3,youth=(team.philosophy==='youth'&&p.age<=21)?3:0,star=team.philosophy==='superstar'?(p.reputation||0)*.12:0,pricePenalty=Math.max(0,salary-softMax)/ps*.08;return {p,q:(p.reputation||50)+coverage+youth+star-pricePenalty}}).sort((a,b)=>b.q-a.q).slice(0,28);
+  for(const x of publicTop)add(x.p);return out;
+}
 function initialPickCandidate(db,t,key='',snap=null){
   const team=teamRef(db,t),market=snap||initialMarketSnapshot(db,[team]),target=team.initialRosterTarget||initialRosterTarget(db,team),room=Math.max(0,initialSalaryCeiling(db,team)-payroll(db,team)),slotsLeft=Math.max(1,target-team.roster.length),softMax=room/slotsLeft*1.35,rows=[];
-  for(const p of market.free){if(p.team)continue;const salary=market.price(p,team.region),chk=initialOfferCheck(db,p,team,{salary});if(!chk.ok)continue;rows.push({p,salary,score:initialCandidateScore(db,p,team,key,salary)})}
+  for(const p of initialCandidateShortlist(db,team,market,softMax)){const salary=market.price(p,team.region),chk=initialOfferCheck(db,p,team,{salary});if(!chk.ok)continue;rows.push({p,salary,score:initialCandidateScore(db,p,team,key,salary)})}
   rows.sort((a,b)=>(a.salary<=softMax)!==(b.salary<=softMax)?(a.salary<=softMax?-1:1):b.score-a.score||a.salary-b.salary);
   for(const row of rows)if(initialFutureFeasible(db,team,row.p,row.salary,market))return row.p;return null;
 }
