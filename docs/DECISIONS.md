@@ -620,22 +620,16 @@ This applies retroactively to completed major items during later UI touches and 
 - Selection changes among players already on the same official roster, including between games of a Bo3/Bo5 where otherwise legal, are not roster-registration changes and have no separate count limit.
 
 
-## D-050 — Official player positions are registered primary roles
+## D-050 — Superseded registered-primary-role model
 
-**Decision:** A player may not be arbitrarily moved to another position for an official match.
-
-- Official first-team roster coverage is checked against registered primary roles: at least one TOP, JGL, MID, ADC and SUP.
-- A coach cannot use an existing secondary-role familiarity value to bypass the registered position and field the player in that other role.
-- Secondary-role/off-role familiarity is training and transition information, not a second official registration position.
-- A genuine role conversion may begin training at any time, but completion is a long-term engine outcome based on age, adaptability, training load and prior familiarity, followed by a formal primary-role registration update. As the new role develops, old-role familiarity can decay; the old role remains as off-role familiarity only if enough skill remains. Multiple career conversions are possible but carry cumulative efficiency/growth costs.
-- Generated-player meaningful off-role familiarity is intentionally rare (8% baseline) and is never official position eligibility. It represents prior exposure only; formal role conversion remains a separate future process.
+**Status:** **SUPERSEDED by D-058.** This checkpoint documented the earlier registered-primary-role design and is retained only as decision history. Runtime and current rules must not use it as an eligibility source.
 
 
 ## D-051 — Reserve/Academy registration remains region-owned
 
 **Decision:** Reserve/Academy roster structure is not forced to mirror the first team.
 
-- Reserve/Academy official rosters have a global minimum of five players and must cover all five primary roles when they play official matches. Each regional office sets the maximum size and its own non-local rule.
+- Reserve/Academy official rosters have a global minimum of five players. They do **not** need five different natural primary roles; a match uses five distinct registered players assigned to the five game slots under D-058. Each regional office sets the maximum size and its own non-local rule.
 - An organization that directly owns a reserve/Academy team has an integrated organization-roster minimum of **11 players**. This is not a third roster; it is the first team plus owned reserve units viewed as one organization. The extra player above the two five-player minima exists as an emergency-callup buffer so one ordinary temporary absence does not automatically force a first-team or reserve forfeit. Independent second-division clubs do not share this privilege.
 - A first-team player may appear in a reserve/Academy official match only when both the internal-movement window and that competition's registration window allow the move.
 - Regional offices may set a cooldown between call-up and send-down actions.
@@ -704,7 +698,7 @@ This applies retroactively to completed major items during later UI touches and 
 - Contract lengths are negotiated rather than globally fixed. Playing-time/role promises may be contractual or verbal.
 - Every permanent transfer requires player consent. Outside pre-contracts open after the incumbent club's 14-day exclusivity period.
 - Incoming-region transfer windows govern cross-region transfers; loan-to-purchase conversion does not consume an extra move.
-- Position conversion is consensual and completed from familiarity + training duration + scrim/official evidence.
+- Position conversion is consensual and completed from long-term training progress, role-fit development, champion preparation and scrim/official use. General secondary-role familiarity is not part of the current model.
 - Academy has no global age cap; veteran eligibility is regional policy.
 - Earned-but-inactive local eligibility has a validity period. Qualification-rule changes grandfather existing progress.
 - Region split/merge lets players choose successor local status, with legacy-local protection through the current contract for players made non-local only by restructuring.
@@ -747,3 +741,4 @@ Implementation must keep these decisions separate from temporary tuning constant
 - Long-term role conversion remains a distinct career/training decision. The manager may propose it and the player may accept or reject it. Conversion is not required for one-off off-role match usage.
 - Conversion spam is discouraged by training opportunity cost, adaptation/champion-preparation loss and possible relationship/satisfaction effects, not by a hard system cooldown or a match-eligibility lock.
 - Once sustained training and real usage establish the new specialization, the player's primary-role identity may change; this identity update is not tied to a registration window.
+- **Role-conversion implementation status:** manager proposals can be accepted or rejected; accepted conversions accumulate daily training plus target-role official/scrim usage, prepare target-role champion pools, consume part of general development opportunity, can be cancelled or redirected with sunk costs, and persist role-change history. AI clubs use the same conversion API and may propose conversions for players they are already using off-role.
