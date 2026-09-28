@@ -421,24 +421,17 @@ function aiManageOwnedReserve(db,t){
   const parent=teamRef(db,t);if(!parent||parent.parent||parent.id===managedTeamId(db))return [];
   const reserve=reserveTeamsOf(db,parent)[0];if(!reserve)return [];
   const last=parent.reserveReviewDate;if(last&&Math.abs((new Date(db.worldDate)-new Date(last))/86400000)<7)return [];
-  parent.reserveReviewDate=db.worldDate;
-  initializeDepthChart(db,parent,false);initializeDepthChart(db,reserve,false);
-  const plan=rosterPlanState(db,parent),moves=[];
-  for(const role of ROLES){
-    const first=(parent.roster||[]).map(id=>db.players[id]).filter(p=>p&&p.role===role).sort((x,y)=>playerOvr(y)-playerOvr(x));
-    const second=(reserve.roster||[]).map(id=>db.players[id]).filter(p=>p&&p.role===role).sort((x,y)=>playerOvr(y)-playerOvr(x));
-    if(!first.length||!second.length)continue;
-    const up=second[0],down=first.slice().sort((x,y)=>playerOvr(x)-playerOvr(y))[0],starter=starterFor(db,parent,role);
-    const performanceGap=playerOvr(up)-playerOvr(down),starterTrouble=starter&&((starter.form??0)<=-7||starter.condition<55);
-    if(performanceGap<2&&!(performanceGap>=0&&starterTrouble))continue;
-    plan.assignments[up.id]=parent.id;plan.assignments[down.id]=reserve.id;
-    moves.push({pid:up.id,kind:'callup',role,swap:down.id},{pid:down.id,kind:'senddown',role,swap:up.id});
-  }
-  if(!moves.length)return [];
+  parent.reserveReviewDate=db.worldDate;initializeDepthChart(db,parent,false);initializeDepthChart(db,reserve,false);
+  const fit=p=>Math.max(...ROLES.map(role=>playerRoleRating(p,role)))+(p.form||0)*.22+(p.condition??96)*.025;
+  const first=(parent.roster||[]).map(id=>db.players[id]).filter(Boolean).sort((a,b)=>fit(a)-fit(b));
+  const second=(reserve.roster||[]).map(id=>db.players[id]).filter(Boolean).sort((a,b)=>fit(b)-fit(a));
+  if(!first.length||!second.length)return [];
+  const down=first[0],up=second[0],gap=fit(up)-fit(down),starterTrouble=ROLES.some(role=>parent.depthChart?.[role]===down.id&&((down.form??0)<=-7||down.condition<55));
+  if(gap<2&&!(gap>=0&&starterTrouble))return [];
+  const plan=rosterPlanState(db,parent);plan.assignments[up.id]=parent.id;plan.assignments[down.id]=reserve.id;
   const checked=validateRosterPlan(db,parent,plan);if(!checked.ok)return [];
-  applyRosterPlan(db,parent,plan,'ai');
-  rebalanceAiRosterRoles(db,parent);rebalanceAiRosterRoles(db,reserve);
-  return moves;
+  applyRosterPlan(db,parent,plan,'ai');rebalanceAiRosterRoles(db,parent);rebalanceAiRosterRoles(db,reserve);
+  return [{pid:up.id,kind:'callup',swap:down.id},{pid:down.id,kind:'senddown',swap:up.id}];
 }
 function playerRef(db,p){return typeof p==='string'?db.players[p]:p}
 function teamRef(db,t){return typeof t==='string'?db.teams[t]:t}
