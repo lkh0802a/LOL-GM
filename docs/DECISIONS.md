@@ -587,11 +587,11 @@ This applies retroactively to completed major items during later UI touches and 
 - Only one active local exists at a time. Relinquishing an acquired local restores the origin local immediately; a relinquished non-origin local must be earned again from scratch.
 - Same-region club movement preserves service. A same-region FA gap preserves progress but adds no service time. Cross-region loan pauses progress without adding service in either region. Registration to another region by normal contract resets the previous region's progress.
 - When a qualification rule measures service by seasons, a partial/half season with actual registration and service in that region counts as one service season; paused FA or cross-region-loan time does not create service credit.
-- The official registered-roster non-local cap is globally fixed at two.
-- Contracted club-to-club moves are capped at two per player per **season**, measured from season start through season end. Loan moves count toward this cap; free-agent signings, same-organization first/reserve movement and league-restructuring movement are not transfers.
-- Regional offices own transfer-window timing and domestic registration-window/change-count rules. Free agents may sign year-round, but official eligibility begins at a valid registration opportunity.
-- Official first-team registration is 5–10 players; the ten-player cap does not limit the club's total contracted players. A player may occupy only one official roster at a time, so simultaneous first-team and reserve/Academy registration is prohibited.
-- A domestically deregistered player may be registered again from the **next** registration period, subject to the normal available change allowance; only same-window removal-and-return is prohibited.
+- The official first-team registered-roster non-local cap is globally fixed at two; it does not cap the club's total contracted players or reserve/Academy holdings.
+- Contracted club-to-club moves are capped at two per player per **season**, measured from season start through season end. A loan departure counts once, while return to the parent club does not add another move. Free-agent signings, same-organization first/reserve movement and league-restructuring movement are not transfers.
+- Regional offices own transfer-window timing, official registration windows and broader first/reserve internal-movement windows. Free agents may sign year-round, but official eligibility begins at a valid registration opportunity.
+- Official first-team registration is 5–10 players and must contain at least one player eligible for each of TOP/JGL/MID/ADC/SUP. The ten-player cap does not limit the club's total contracted players. A player may occupy only one official roster at a time, so simultaneous first-team and reserve/Academy registration is prohibited. A loanee may be officially registered only by the borrowing club during the loan.
+- Domestic official-roster changes have no separate count limit: clubs may change the list freely while a regional registration window is open and cannot make ordinary changes while it is closed. A deregistered player may return when a later registration window opens.
 - Emergency replacement rules are office-owned exceptions: the competition office predefines whether a full ten-player roster must first deregister someone or may temporarily exceed ten for the emergency replacement.
 - International tournaments lock the initially submitted final roster for the event; only pre-published international-office emergency replacement rules may override the lock.
 - Detailed canonical rules are maintained in `docs/ROSTER_TRANSFER_LOCAL_RULES.md`.
@@ -606,3 +606,15 @@ This applies retroactively to completed major items during later UI touches and 
 - Game-one source follows D-043: domestic double round-robin home team; explicitly seeded domestic playoff higher seed; international knockout/bracket coin toss after matchup formation.
 - Games two onward always assign First Selection to the previous game's loser.
 - Offices may schedule competitions and registration rules around these systems but may not replace or disable the systems themselves.
+
+
+## D-049 — Internal squad assignment is separate from official competition registration
+
+**Decision:** First-team/reserve/Academy squad assignment and official competition registration are separate states.
+
+- Regional offices define broad internal-movement windows for first-team↔reserve/Academy promotion and demotion. These windows should be materially more permissive than official competition-registration windows.
+- There is no promotion/demotion count limit inside an open internal-movement window.
+- Internal movement can occur while the official registration window is closed if the internal-movement window is still open.
+- Such a move changes training/scrim/squad assignment immediately but does not silently change official match eligibility.
+- Official match eligibility changes only through an open official registration window or a valid emergency exception.
+- Selection changes among players already on the same official roster, including between games of a Bo3/Bo5 where otherwise legal, are not roster-registration changes and have no separate count limit.
