@@ -471,8 +471,40 @@ for(const file of modules.filter(f=>!['app.js','shell.html'].includes(f))){
   }
 }
 
+// 11.5/5-3: these obsolete wrappers have no runtime, markup or test caller.
+// A search across all 55 canonical engine/UI source modules and the smoke suite
+// found zero non-declaration uses. Keep the actual supported entrypoints.
+const stage53Removed=[
+  'initialSignPlayer','normalizeInitialSalaryFloor','nextMid',
+  'scheduledOpeningDraft','movePlayerBetweenSquads','mOffer'
+];
+for(const file of modules){
+  const src=await readFile(resolve(artifact,file),'utf8');
+  for(const name of stage53Removed)
+    if(new RegExp('\\b'+name+'\\b').test(src)){
+      failed=true;console.error('11.5/5-3 obsolete/unreachable API returned in '+file+': '+name);
+    }
+}
+for(const [file,marker] of [
+  ['career.js','function initialStartNegotiation('],
+  ['career.js','function autoBuildInitialSquad('],
+  ['competition.js','function scheduledSeriesSession('],
+  ['roster.js','function rosterMoveCheck('],
+  ['state-transaction.js','function previewWorldAction('],
+  ['transfer.js','function startNegotiation(']
+]){
+  const src=await readFile(resolve(artifact,file),'utf8');
+  if(!src.includes(marker)){
+    failed=true;console.error('11.5/5-3 actively used entrypoint missing in '+file+': '+marker);
+  }
+}
+for(const marker of ['autoBuildInitialSquad(db,','rosterMoveCheck(db,'])
+  if(!stage5Smoke.includes(marker)){
+    failed=true;console.error('11.5/5-3 smoke acceptance lost active caller: '+marker);
+  }
+
 const regressionSource = await readFile(resolve(root, 'scripts', 'regression.mjs'), 'utf8');
-for (const marker of ['01-world-bootstrap','05-contracts','06-owned-reserve-roster','06c-player-sign-transaction','06d-player-transfer-transaction','06e-ai-transfer-and-move-limit','06f-release-and-option-transaction','06g-save-format-and-cache-isolation','06h-legacy-v15-save-restoration','06i-invalid-and-forward-saves','06j-transaction-transfer-rollback','06k-transaction-roster-rollback','06l-transaction-release-option-rollback','06m-transaction-actor-parity-and-membership-guard','09-patch-baseline','11-draft-series-save','11a-meta-index-incremental-and-bounded','11b-historic-patch-cache-limit','11c-system-usage-index-parity','11d-shared-registration-rule-and-pure-preview','11e-roster-detach-is-single-owner','11f-dead-api-pruned-without-market-breakage','11g-required-domain-hooks-have-real-effects','11h-initial-market-must-use-real-budget-and-team-policy','mid-Bo5 session did not survive save/load']) {
+for (const marker of ['01-world-bootstrap','05-contracts','06-owned-reserve-roster','06c-player-sign-transaction','06d-player-transfer-transaction','06e-ai-transfer-and-move-limit','06f-release-and-option-transaction','06g-save-format-and-cache-isolation','06h-legacy-v15-save-restoration','06i-invalid-and-forward-saves','06j-transaction-transfer-rollback','06k-transaction-roster-rollback','06l-transaction-release-option-rollback','06m-transaction-actor-parity-and-membership-guard','09-patch-baseline','11-draft-series-save','11a-meta-index-incremental-and-bounded','11b-historic-patch-cache-limit','11c-system-usage-index-parity','11d-shared-registration-rule-and-pure-preview','11e-roster-detach-is-single-owner','11f-dead-api-pruned-without-market-breakage','11g-required-domain-hooks-have-real-effects','11h-initial-market-must-use-real-budget-and-team-policy','11i-unreachable-wrappers-removed-and-supported-routes-retained','mid-Bo5 session did not survive save/load']) {
   if (!regressionSource.includes(marker)) {
     failed = true;
     console.error('11.5 regression baseline missing marker: '+marker);

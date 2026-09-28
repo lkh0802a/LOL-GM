@@ -24,7 +24,6 @@ function newSeason(db,compId,year,seed,start,instanceKey=compId){
   addStageDays(db,s,0,order,start||`${year}-01-14`);
   return s;
 }
-function nextMid(s){return `${s.id}_match_${s.days.reduce((n,d)=>n+d.matches.length,0)}`}
 function pushDay(s,date,stage,label,pairs,bo){let n=s.days.reduce((a,d)=>a+d.matches.length,0);s.days.push({date,stage,label,matches:pairs.map(([a,b])=>({id:`${s.id}_match_${n++}`,a,b,bo,res:null}))})}
 function addStageDays(db,s,idx,teams,date){
   const cfg=db.competitions[s.comp].stages[idx], gap=i=>cfg.dayGap?cfg.dayGap[i%cfg.dayGap.length]:3;
@@ -151,10 +150,6 @@ function finalizeCompetitionDay(db,s,day,cfgIdx,cfg){
 function scheduledSeriesSession(db,s,m){
   const day=s.days[s.cur],comp=db.competitions[s.comp],cfgIdx=comp.stages.findIndex(x=>x.id===day.stage),cfg=comp.stages[cfgIdx],opt=scheduledSeriesOptions(db,s,day,cfg),seed=`${s.seed}/${s.year}/${m.id}`;
   const session=createSeriesSession(db,m.a,m.b,m.bo,seed,opt);return {session,day,comp,cfg,cfgIdx,opt,seed};
-}
-function scheduledOpeningDraft(db,s,m){
-  const x=scheduledSeriesSession(db,s,m),opening=seriesSessionPrepareGame(db,x.session);
-  return {s,day:x.day,m,comp:x.comp,cfg:x.cfg,cfgIdx:x.cfgIdx,opt:x.opt,seed:x.seed,...opening,draftCtx:opening.snap,session:x.session};
 }
 function playDay(db,s,opt={}){
   if(!s||s.done)return null;

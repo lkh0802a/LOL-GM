@@ -790,6 +790,34 @@ source += `
       'initial negotiations accepted a club outside the managed organization');
   });
 
+  test('11i-unreachable-wrappers-removed-and-supported-routes-retained',()=>{
+    // Retired entrypoints are not aliases for the active negotiated signing,
+    // scheduled series or manager-squad transaction paths.
+    assert(typeof initialSignPlayer==='undefined'&&
+      typeof normalizeInitialSalaryFloor==='undefined'&&
+      typeof nextMid==='undefined'&&
+      typeof scheduledOpeningDraft==='undefined'&&
+      typeof movePlayerBetweenSquads==='undefined'&&
+      typeof mOffer==='undefined',
+      'an unreachable legacy/domain wrapper was restored');
+    for(const [name,api] of [
+      ['initialStartNegotiation',initialStartNegotiation],
+      ['autoBuildInitialSquad',autoBuildInitialSquad],
+      ['scheduledSeriesSession',scheduledSeriesSession],
+      ['rosterMoveCheck',rosterMoveCheck],
+      ['previewWorldAction',previewWorldAction],
+      ['applyWorldAction',applyWorldAction],
+      ['startNegotiation',startNegotiation]
+    ])assert(typeof api==='function','supported replacement API disappeared: '+name);
+    const db=buildWorld(),p=Object.values(db.players).find(x=>!x.team);
+    assert(p,'legacy wrapper cleanup lacks an available player');
+    const snapshot=JSON.stringify(db);
+    const invalid=rosterMoveCheck(db,p,'NO_SUCH_SQUAD');
+    assert(!invalid.ok&&invalid.reason==='이동할 팀을 찾을 수 없습니다'&&
+      JSON.stringify(db)===snapshot,
+      'canonical squad move preflight changed when obsolete manager wrapper was deleted');
+  });
+
   console.log('11.5 Step 1 regression baseline: OK ('+results.join(', ')+')');
 })();
 `;

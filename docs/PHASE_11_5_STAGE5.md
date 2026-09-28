@@ -3,8 +3,8 @@
 ## Completion plan
 
 - **5-1 — canonical registration and roster helpers (completed):** deduplicate local-region and contracted-move checks, route player actions and AI market through the roster domain, unify detachment, prune proven-dead `PAY_SCALE` and `mResign` aliases.
-- **5-2 — remaining legacy/optional domain fallback audit (this PR):** remove fallback branches for APIs guaranteed by the canonical module manifest; prevent missing active gameplay dependencies from being silently skipped. Retain actual optional browser APIs and historical save migration.
-- **5-3 — duplicate-flow and module-boundary consolidation (pending):** audit remaining reachable contract, lineup and roster flows; remove only proven duplicates and add parity regressions.
+- **5-2 — remaining legacy/optional domain fallback audit (completed):** remove fallback branches for APIs guaranteed by the canonical module manifest; prevent missing active gameplay dependencies from being silently skipped. Retain actual optional browser APIs and historical save migration.
+- **5-3 — duplicate-flow and module-boundary consolidation (this PR):** audit remaining reachable contract, lineup and roster flows; remove only proven duplicates and add parity regressions.
 - **5-4 — final compatibility and acceptance (pending):** expanded regression and multi-season/save-resume checks, full CI and main-build verification before declaring stage 5 complete.
 
 
@@ -49,6 +49,36 @@ An obsolete guarded call to the **nonexistent** `resetRoleConversionSeasonLoad` 
 
 Regression `11g` verifies player-state/role-satisfaction, rework-pool adaptation and full rune selection. Regression `11h` verifies the first-squad salary/ownership/offer checks. Structural CI validates required module owners and rejects a reintroduced optional hook guard. Full preexisting regression/smoke/perf/build gates, plus PR/main CI and generated HTML sync, are mandatory for this substage.
 
-**5-3 and 5-4 are not included in stage 5-2.**
+## Stage 5-3: Unreachable entrypoints and duplicate dispatch inventory
+
+Static source audit covers all 55 engine/UI modules (excluding the generated
+champion and system source datasets), the standalone HTML shell and the
+regression/smoke scripts. Six declarations have no runtime caller anywhere in
+these supported surfaces. Delete only these functions; do not modify
+their active replacements or call semantics:
+
+| Retired function | Owner | Active source of truth |
+|---|---|---|
+| `initialSignPlayer` | `career.js` | `initialStartNegotiation` + negotiation UI |
+| `normalizeInitialSalaryFloor` | `career.js` | configured initial budgets / `initialOfferCheck`; no automatic forced salary raises |
+| `nextMid` | `competition.js` | canonical scheduling and match IDs inside competition state |
+| `scheduledOpeningDraft` | `competition.js` | `scheduledSeriesSession` and current season/draft preparation |
+| `movePlayerBetweenSquads` | `roster.js` | `roster.plan` preview/application through transaction gateway |
+| `mOffer` | `transfer.js` | `startNegotiation` and `submitNegotiationOffer` |
+
+Two candidates were **deliberately retained**, because smoke tests execute
+them: `autoBuildInitialSquad` (initial managed squad filling) and
+`rosterMoveCheck` (reserve roster legality). The older-save migrator,
+`migrateLegacyStaffState`, match records and all world-v15 format-1
+compatibility paths remain untouched.
+
+Regression `11i` checks that these six retired entrypoints stay removed
+while the supported APIs are still callable, and that canonical squad
+preflight remains pure. Structural CI rejects declarations or references to
+the six retired names anywhere in canonical source and protects both
+smoke-called functions. Prior regression `01`–`11h`, initial-market/roster
+smoke, item/rune/draft performance and standalone build remain mandatory.
+
+**5-4 final compatibility and acceptance is not included in 5-3.**
 
 **Not included:** Stage 6 UI-state architecture; new patch, youth or transfer rules; deleting any historical save/patch/game record; globally replacing the bootstrap/domain-writer APIs with a new data model.

@@ -47,6 +47,8 @@ New large UI surfaces should be added as `ui-<domain>.js` modules instead of ext
 - `player-relations.js` owns player condition modifiers, relationships, usage and satisfaction/transfer-request lifecycle.
 - `scrim.js` owns scrim readiness, AI partner scheduling/value and practice effects.
 
+Static reachability audits distinguish dead wrappers from supported entrypoints. Legacy stage 5-3 removes uncalled initial-signing, forced-salary-floor, match-ID, scheduled-opening-draft, direct squad-moving and FA-offer aliases; canonical negotiation, competition and `roster.plan` transaction paths remain. Both `autoBuildInitialSquad` and `rosterMoveCheck` are still required by smoke acceptance and must not be removed. This is not permission to delete save migration or compatibility code.
+
 Required cross-domain hooks are not optional features: the ordered standalone manifest always loads `SYSTEM_EFFECT_KEYS`, champion-pool patch adaptation, satisfaction/player-state/role-conversion usage rules, staff migration and initial-market budget/ownership checks. Do not hide a missing engine dependency behind a `typeof ...==='function'` fallback. Runtime-dependent browser APIs (`indexedDB`, preview timers) and the supported legacy save-migration procedures are separate concerns and must not be pruned simply because a static reference appears rare. A previous player-aging call to the undefined `resetRoleConversionSeasonLoad` symbol was dead and has been removed without introducing a new yearly reset mechanic.
 
 ## State and cache rules

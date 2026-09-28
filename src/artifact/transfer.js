@@ -154,6 +154,5 @@ function mRelease(db,pid){
   if(!result.ok)return (result.errors||['방출할 수 없습니다']).join(' · ');
   return p.name+' 방출'+(result.cost?' (해지금 '+money(result.cost)+')':'');
 }
-function mOffer(db,pid,salary,years){const st=startNegotiation(db,pid,'fa');if(!st.ok)return st.msg;return submitNegotiationOffer(db,st.neg.id,{salary,years}).msg}
 function mTransfer(db,pid,fee){return mTransferBid(db,pid,fee)}
 // ---- 스카우팅: 관찰·경기 표본·보고서 노후화를 함께 추적한다 ----
