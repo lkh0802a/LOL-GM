@@ -153,9 +153,18 @@ const STAFF_DEPT_LABEL={coach:'코칭팀',analyst:'분석팀',scout:'스카우�
 function staffDepartment(role){return STAFF_DEPARTMENT[role]||'coach'}
 function ensureStaffRoster(t){
   if(!t)return [];
-  if(Array.isArray(t.staffRoster))return t.staffRoster;
+  if(Array.isArray(t.staffRoster)){delete t.staff;return t.staffRoster}
   const old=t.staff&&typeof t.staff==='object'?Object.values(t.staff).filter(Boolean):[];
   t.staffRoster=old.map(s=>({...s,department:staffDepartment(s.role)}));delete t.staff;return t.staffRoster;
+}
+function migrateLegacyStaffState(db){
+  if(!db)return db;
+  for(const t of Object.values(db.teams||{})){
+    ensureStaffRoster(t);
+    if(Object.prototype.hasOwnProperty.call(t,'coach'))delete t.coach;
+  }
+  if(Object.prototype.hasOwnProperty.call(db,'coachPool'))delete db.coachPool;
+  return db;
 }
 function teamStaffMembers(t,dept=null){const xs=ensureStaffRoster(t);return dept?xs.filter(s=>staffDepartment(s.role)===dept):xs}
 function staffDeptCount(t,dept){return teamStaffMembers(t,dept).length}

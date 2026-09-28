@@ -991,12 +991,13 @@ function packDB(db){
     players[id]=q;
   }
   const scout=Object.fromEntries(Object.entries(db.scout||{}).filter(([id,r])=>db.players[id]&&!db.players[id].retired&&(typeof r==='number'||(r.knowledge||0)>baseScoutKnowledge(db,db.players[id])||(r.observations||0)>0)));
-  const teams=Object.fromEntries(Object.entries(db.teams).map(([id,t])=>{const q={...t};delete q._pre;if(q.facilities)delete q.facility;return [id,q]}));
+  const teams=Object.fromEntries(Object.entries(db.teams).map(([id,t])=>{const q={...t};delete q._pre;delete q.coach;delete q.staff;if(q.facilities)delete q.facility;return [id,q]}));
   const patches={...(db.patches||{})};delete patches.base;delete patches.initialBase;const metaHistory=packMetaHistory(db.metaHistory||[]);
   return JSON.stringify({...db,world,teams,players,scout,patches,metaHistory,metaHistoryPacked:1,packed:1});
 }
 function unpackDB(str){
-  const db=JSON.parse(str); if(!db.packed)return db;
+  const db=JSON.parse(str);
+  if(!db.packed)return typeof migrateLegacyStaffState==='function'?migrateLegacyStaffState(db):db;
   if(db.metaHistoryPacked){db.metaHistory=unpackMetaHistory(db.metaHistory||[]);delete db.metaHistoryPacked}
   for(const t of Object.values(db.teams||{}))ensureFacilities(t);
   for(const p of Object.values(db.players)){
@@ -1004,7 +1005,8 @@ function unpackDB(str){
     if(Array.isArray(p.tend))p.tend=Object.fromEntries(TENDENCIES.map((t,i)=>[t,p.tend[i]]));
     if(p.pool)for(const c in p.pool){const v=p.pool[c];if(Array.isArray(v))p.pool[c]={mastery:v[0],experience:v[1],matchup_knowledge:v[2],confidence:v[3],scrimExperience:v[4]||0,trainingExperience:v[5]||0,scrimSeason:v[6]||0,trainingSeason:v[7]||0}}
   }
-  delete db.packed; return db;
+  delete db.packed;
+  return typeof migrateLegacyStaffState==='function'?migrateLegacyStaffState(db):db;
 }
 
 function stepOf(db,s){
