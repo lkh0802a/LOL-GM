@@ -197,6 +197,7 @@ source += `\n(()=>{
     const manual=createDraftSession(db,[scrimA.id,scrimB.id],new RNG('draft-manual-smoke','draft'),draftCtx()),first=draftTurn(manual),legalChamp=draftLegalChampions(manual)[0];
     if(!first||first.kind!=='B'||!legalChamp)throw new Error('Draft session did not expose first ban turn');
     const banAnalysis=draftCandidateAnalysis(manual,first.side,legalChamp.id);if(!banAnalysis||banAnalysis.kind!=='B'||!Number.isFinite(banAnalysis.meta)||!banAnalysis.roles.length||Object.prototype.hasOwnProperty.call(banAnalysis,'intentRole'))throw new Error('Draft ban candidate analysis leaked hidden intent or missing data');
+    const banAdvice=draftStaffAdvice(manual,first.side),banAdvice2=draftStaffAdvice(manual,first.side);if(!banAdvice?.available||banAdvice.kind!=='B'||!banAdvice.suggestions.length||JSON.stringify(banAdvice)!==JSON.stringify(banAdvice2)||banAdvice.suggestions.some(x=>Object.prototype.hasOwnProperty.call(x,'intentRole')||!draftLegalChampions(manual).some(c=>c.id===x.champ)))throw new Error('Draft staff ban advice invalid or leaked hidden intent');
     draftApplyChoice(manual,{champ:legalChamp.id,side:first.side,source:'player'});
     const dup=draftValidateChoice(manual,{champ:legalChamp.id,side:draftTurn(manual).side});if(dup.ok||dup.reason!=='champion_taken')throw new Error('Draft validator accepted duplicate champion');
     const flexState=createDraftSession(db,[scrimA.id,scrimB.id],new RNG('draft-flex-smoke','draft'),draftCtx());
@@ -205,6 +206,7 @@ source += `\n(()=>{
     if(!flexTurn||flexTurn.kind!=='P'||!flexChamp)throw new Error('Flex draft fixture unavailable');
     const possibleBefore=draftFeasibleRoles(flexState,flexTurn.side,flexChamp.id);if(possibleBefore.length<2)throw new Error('Flex champion lost multi-role ambiguity before lock');
     const pickAnalysis=draftCandidateAnalysis(flexState,flexTurn.side,flexChamp.id);if(!pickAnalysis||pickAnalysis.kind!=='P'||pickAnalysis.roles.length<2||pickAnalysis.roleFits.length<2||!Number.isFinite(pickAnalysis.mastery)||Object.prototype.hasOwnProperty.call(pickAnalysis,'intentRole'))throw new Error('Draft pick candidate analysis broke flex ambiguity');
+    const pickAdvice=draftStaffAdvice(flexState,flexTurn.side);if(!pickAdvice?.available||pickAdvice.kind!=='P'||!pickAdvice.suggestions.length||pickAdvice.suggestions.some(x=>Object.prototype.hasOwnProperty.call(x,'intentRole')||Object.prototype.hasOwnProperty.call(x,'role')||Object.prototype.hasOwnProperty.call(x,'player')))throw new Error('Draft staff pick advice exposed a hidden role assignment');
     draftApplyChoice(flexState,{champ:flexChamp.id,side:flexTurn.side,source:'player'});
     const possibleAfter=ROLES.filter(r=>draftRolePossibilities(flexState,flexTurn.side,r).includes(flexChamp.id));
     if(possibleAfter.length<2||flexState.log.at(-1).role!==null)throw new Error('Live draft exposed a hidden flex position');
