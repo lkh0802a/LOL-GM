@@ -78,12 +78,12 @@ function histTable(){
 }
 function findMatch(id){const s=curS();for(const d of s.days)for(const m of d.matches)if(m.id===id)return m}
 function openSeries(m){
-  const ov=$('#overlay'); ov.hidden=false; document.body.classList.add('lock');
-  ov.innerHTML=`<div class="ovin"><div class="ovhead"><b>${esc(tname(m.a))} vs ${esc(tname(m.b))}</b><button class="ghost" id="ovclose">닫기</button></div><div id="ovbody">${renderSeries(m.res)}</div></div>`;
-  $('#ovclose').onclick=closeOv; bindSeries($('#ovbody'),m.res); $('#ovclose').focus();
+  const title=`${tname(m.a)} vs ${tname(m.b)}`;
+  const markup=`<div class="ovin"><div class="ovhead"><b>${esc(title)}</b><button class="ghost" id="ovclose">닫기</button></div><div id="ovbody">${renderSeries(m.res)}</div></div>`;
+  openUiOverlay({kind:'series',label:title,html:markup,dismissible:true,onDismiss:closeOv,focusSelector:'#ovclose'});
+  $('#ovclose').onclick=closeOv;bindSeries($('#ovbody'),m.res);
 }
-function closeOv(){const ov=$('#overlay');ov.hidden=true;ov.innerHTML='';document.body.classList.remove('lock')}
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#overlay').hidden)closeOv()});
+function closeOv(){closeUiOverlay()}
 function bindSeasonTab(){document.querySelectorAll('#stab [data-m]').forEach(b=>b.onclick=()=>{const m=findMatch(b.dataset.m);if(m&&m.res)openSeries(m)})}
 function bindSetup(){
   const cfg=DB.worldConfig, dirty=()=>{DB.configDirty=true;saveDB();nav()};
