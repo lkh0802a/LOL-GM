@@ -9,6 +9,7 @@ export const ENGINE_MODULES = [
   'patch.js',
   'competition.js',
   'world.js',
+  'lineup.js',
   'office.js',
   'finance.js',
   'features.js',

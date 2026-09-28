@@ -53,3 +53,5 @@ CI rejects:
 - performance-probe execution failures for series simulation, draft/system caches and indexed meta queries
 
 The generated root `index.html` is a deployment artifact. Canonical edits belong in `src/artifact/*`. Main-branch CI rebuilds it from the canonical module manifest and commits it only when the generated standalone differs.
+
+- lineup domain: `lineup.js` owns official five-player slot assignment and validation; `p.role` is player identity, not an eligibility gate.

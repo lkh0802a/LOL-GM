@@ -38,6 +38,7 @@ const maintainabilityBudgets = {
   'patch.js': 40000,
   'competition.js': 30000,
   'world.js': 85000,
+  'lineup.js': 12000,
   'features.js': 30000,
   'draft-analysis.js': 18000,
   'ui-patch.js': 30000,
