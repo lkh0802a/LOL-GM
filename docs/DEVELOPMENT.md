@@ -288,7 +288,11 @@ Fearless and First Selection are fixed core match-system concepts, not regional-
 
 The former registered-primary-role enforcement model was superseded. A player's primary role is now specialization/identity rather than match eligibility. Official lineups require five distinct registered players assigned to TOP/JGL/MID/ADC/SUP, with no natural-role coverage requirement. General secondary-role fields were removed from generated players and save serialization. `lineup.js` owns lineup validation/assignment, and `ui-roster.js` exposes game-slot assignment separately from the player's primary role.
 
-Long-term role conversion remains a career/training decision: the manager may propose it, the player may accept or reject it, and repeated conversions are discouraged through training/adaptation/relationship costs rather than a hard match-position lock. One-off off-role usage remains legal without conversion.
+Long-term role conversion is now implemented as a separate career/training decision. The manager proposes a target role and the player may accept or reject it. Accepted plans accumulate daily training progress and accelerate when the player actually plays the target role in official matches or scrims; target-role champion preparation and role-key development also advance. Conversion training consumes part of ordinary development capacity, redirects/cancellation preserve sunk costs through trust/relationship effects, repeated conversions become less efficient, and completion changes only the player's primary-role identity. One-off off-role usage remains legal without conversion.
+
+### Role-conversion implementation — 2026-09-28
+
+`role-conversion.js` now owns proposal acceptance/refusal, conversion progress, role-use acceleration, target-role champion preparation, development opportunity cost, cancellation/redirect handling, AI use of the same API and primary-role history. `competition.js` records the actual game-role slot on player lines, while `features.js` feeds official/scrim evidence into the conversion engine. `ui-roster.js` exposes proposal, progress and cancellation controls without turning conversion into a match-eligibility requirement.
 
 ### Contract / retention / staff rule checkpoint — 2026-09-28
 
