@@ -80,8 +80,12 @@ function negotiationCounter(db,neg,offer){
 }
 function finalizeNegotiation(db,neg,terms){
   const p=db.players[neg.pid],t=db.teams[neg.teamId];
-  if(neg.kind==='transfer'){const from=db.teams[neg.sellerId];if(!from||p.team!==from.id)return {ok:false,msg:'원소속 구단 상태가 변경되어 협상이 종료되었습니다'};const moveErr=contractedMoveError(db,p)||localRegistrationError(db,t,p);if(moveErr)return {ok:false,msg:moveErr};doTransfer(db,p,from,t,neg.fee)}
-  signContract(db,p,t,terms.salary,terms.years,terms);neg.status='accepted';neg.counter=null;neg.acceptedTerms=terms;neg.closedDate=db.worldDate;
+  if(!p||!t)return {ok:false,msg:'협상 선수 또는 구단이 존재하지 않습니다'};
+  const result=commitWorldAction(db,{type:'player.sign',pid:p.id,teamId:t.id,kind:neg.kind,
+    fromId:neg.kind==='transfer'?neg.sellerId:null,fee:neg.kind==='transfer'?neg.fee:0,
+    salary:terms.salary,years:terms.years,terms,actor:'manager'});
+  if(!result.ok)return {ok:false,msg:(result.errors||['계약 조건이 변경되었습니다']).join(' · ')};
+  neg.status='accepted';neg.counter=null;neg.acceptedTerms=terms;neg.closedDate=db.worldDate;
   const target=recruitmentTarget(db,neg.pid);if(target){target.stage='closed';target.result='signed';target.negotiationId=neg.id}
   return {ok:true,msg:p.name+' 계약 합의 · '+money(terms.salary)+' · '+terms.years+'년'};
 }
@@ -90,14 +94,20 @@ function submitNegotiationOffer(db,nid,terms){
   const p=db.players[neg.pid],t=db.teams[neg.teamId],offer=normalizeContractTerms(db,p,t,terms.salary,terms.years,terms),err=negotiationBudgetError(db,p,t,offer,neg.kind);if(err)return {ok:false,msg:err};if(neg.kind==='transfer'&&(offer.signingBonus||0)>Math.max(0,t.finance.cash-(neg.fee||0)))return {ok:false,msg:'이적료 지급 후 계약금을 지급할 현금이 부족합니다'};
   const util=offerUtility(db,p,t,offer,{renewal:neg.kind==='renewal'}),comp=neg.competitors.length?Math.max(...neg.competitors.map(x=>x.utility)):0,threshold=Math.max(offerAcceptanceThreshold(db,p),comp-.035);
   neg.round++;if(neg.lastUtility!=null&&util<neg.lastUtility-.03)neg.patience--;if(util<threshold-.22)neg.patience--;neg.lastOffer=offer;neg.lastUtility=util;neg.history.push({round:neg.round,side:'club',terms:offer,utility:Math.round(util*1000)/1000});
-  if(util>=threshold){const r=finalizeNegotiation(db,neg,offer);neg.history.push({round:neg.round,side:'player',result:'accept'});return r}
+  if(util>=threshold){const r=finalizeNegotiation(db,neg,offer);neg.history.push({round:neg.round,side:'player',result:r.ok?'accept':'commit_rejected'});return r}
   if(neg.round>=neg.maxRounds||neg.patience<=0||util<threshold-.62){neg.status='withdrawn';neg.reason='조건 차이가 커 협상 결렬';neg.closedDate=db.worldDate;const target=recruitmentTarget(db,neg.pid);if(target){target.stage='evaluated';target.result='negotiation_failed';target.negotiationId=null}return {ok:false,msg:p.name+' 측이 협상에서 철수했습니다'}}
   if((neg.kind==='fa'||neg.kind==='initial')&&neg.round>=2&&neg.competitors.length){
     const rival=neg.competitors[0],rt=db.teams[rival.teamId],gap=rival.utility-util,rrng=new RNG(db.world.seed+'/'+neg.id+'/'+neg.round,'negotiation-rival');
     if(rt&&!p.team&&!negotiationBudgetError(db,p,rt,rival.terms,'fa')&&rival.utility>=offerAcceptanceThreshold(db,p)-.02&&(gap>.08||rrng.chance(clamp(.16+Math.max(0,gap)*1.8,.12,.72)))){
-      signContract(db,p,rt,rival.terms.salary,rival.terms.years,rival.terms);neg.status='lost';neg.reason='경쟁 구단 선택';neg.closedDate=db.worldDate;neg.history.push({round:neg.round,side:'player',result:'rival',teamId:rt.id});
-      const target=recruitmentTarget(db,neg.pid);if(target){target.stage='closed';target.result='lost_to_rival';target.negotiationId=neg.id}
-      return {ok:false,msg:p.name+' 선수가 협상 중 '+rt.name+'의 제안을 선택했습니다'};
+      const signed=commitWorldAction(db,{type:'player.sign',pid:p.id,teamId:rt.id,kind:'fa',actor:'ai',
+        salary:rival.terms.salary,years:rival.terms.years,terms:rival.terms});
+      if(signed.ok){
+        neg.status='lost';neg.reason='경쟁 구단 선택';neg.closedDate=db.worldDate;
+        neg.history.push({round:neg.round,side:'player',result:'rival',teamId:rt.id});
+        const target=recruitmentTarget(db,neg.pid);
+        if(target){target.stage='closed';target.result='lost_to_rival';target.negotiationId=neg.id}
+        return {ok:false,msg:p.name+' 선수가 협상 중 '+rt.name+'의 제안을 선택했습니다'};
+      }
     }
   }
   neg.counter=negotiationCounter(db,neg,offer);neg.history.push({round:neg.round,side:'player',result:'counter',terms:neg.counter});return {ok:true,counter:neg.counter,msg:p.name+' 측이 역제안했습니다'};
@@ -132,13 +142,19 @@ function doTransfer(db,p,from,to,fee){
 function myT(db){return managedTeam(db)}
 function mResign(db,pid,years){const r=startNegotiation(db,pid,'renewal');return r.msg}
 function mExerciseTeamOption(db,pid){
-  const t=myT(db),p=db.players[pid],o=p&&p.contract&&p.contract.option;
-  if(!p||p.team!==t.id)return '우리 팀 선수가 아닙니다';
+  const t=myT(db),p=db.players[pid],o=p?.contract?.option;
+  if(!t||!p||p.team!==t.id)return '우리 팀 선수가 아닙니다';
   if(!o||o.type!=='team'||o.year!==db.year)return '행사할 수 있는 팀 옵션이 없습니다';
-  if(!exerciseContractOption(db,p,t,'manager'))return '팀 옵션 행사에 실패했습니다';
+  const result=commitWorldAction(db,{type:'player.option',pid,teamId:t.id,actor:'manager'});
+  if(!result.ok)return (result.errors||['팀 옵션 행사에 실패했습니다']).join(' · ');
   return p.name+' 팀 옵션 행사 · '+db.year+'년 연봉 '+money(p.contract.salary);
 }
-function mRelease(db,pid){const t=myT(db),p=db.players[pid];const cost=p.contract&&p.contract.until>=db.year?p.contract.salary*(p.contract.until-db.year+1)*0.5:0;t.finance.buyout=(t.finance.buyout||0)+cost;removePlayerFromTeam(db,p);invalidateMarketDemand(db);p.contract=null;p.faYears=0;recordPlayerEvent(p,'release',db.year,{team:t.id,cost,date:db.worldDate});return p.name+' 방출'+(cost?' (해지금 '+money(cost)+')':'')}
+function mRelease(db,pid){
+  const t=myT(db),p=db.players[pid];
+  const result=commitWorldAction(db,{type:'player.release',pid,teamId:t?.id,mode:'manager',actor:'manager'});
+  if(!result.ok)return (result.errors||['방출할 수 없습니다']).join(' · ');
+  return p.name+' 방출'+(result.cost?' (해지금 '+money(result.cost)+')':'');
+}
 function mOffer(db,pid,salary,years){const st=startNegotiation(db,pid,'fa');if(!st.ok)return st.msg;return submitNegotiationOffer(db,st.neg.id,{salary,years}).msg}
 function mTransfer(db,pid,fee){return mTransferBid(db,pid,fee)}
 // ---- 스카우팅: 관찰·경기 표본·보고서 노후화를 함께 추적한다 ----

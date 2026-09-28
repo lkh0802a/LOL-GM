@@ -47,36 +47,51 @@ function validateWorldAction(db,command){
   if(!db||!db.teams||!db.players||!command||typeof command!=='object')
     return worldActionError('invalid_action','게임 상태 또는 요청이 올바르지 않습니다');
   const actor=command.actor||'manager';
-  if(actor!=='manager'&&actor!=='ai')
+  if(actor!=='manager'&&actor!=='ai'&&actor!=='system')
     return worldActionError('invalid_actor','지원하지 않는 작업 주체입니다');
   const handler=WORLD_ACTION_HANDLERS[command.type];
   if(!handler)return worldActionError('unknown_action','지원하지 않는 작업입니다');
   return handler.validate(db,{...command,actor});
 }
 
+// Every handler canonicalizes the intent, renders a read-only preview and checks a
+// current source-state snapshot before any mutation. Keep persisted DBs preview-free.
 function previewWorldAction(db,command){
   const checked=validateWorldAction(db,command);
   if(!checked.ok)return checked;
   const actor=command.actor||'manager',handler=WORLD_ACTION_HANDLERS[command.type];
-  return {ok:true,type:command.type,
-    command:{type:command.type,actor,parentId:checked.parentId,assignments:{...checked.assignments}},
-    expected:handler.snapshot(db,checked.parentId),
-    changes:checked.moves.map(m=>({...m})),
-    counts:{...checked.counts},total:checked.total};
+  const intent=handler.canonical
+    ?handler.canonical(db,{...command,actor},checked)
+    :{type:command.type,actor,parentId:checked.parentId,assignments:{...checked.assignments}};
+  const changes=handler.changes
+    ?handler.changes(db,intent,checked)
+    :checked.moves.map(m=>({...m}));
+  const result={ok:true,type:command.type,command:intent,
+    expected:handler.snapshot(db,handler.canonical?intent:checked.parentId),
+    changes};
+  if(checked.counts)result.counts={...checked.counts};
+  if(checked.total!==undefined)result.total=checked.total;
+  return result;
 }
 
 function applyWorldAction(db,preview){
-  if(!preview||preview.ok!==true||!preview.command||!preview.expected)
+  if(!db||!preview||preview.ok!==true||!preview.command||!preview.expected)
     return worldActionError('invalid_preview','먼저 유효한 작업 미리보기를 생성해야 합니다');
   const handler=WORLD_ACTION_HANDLERS[preview.command.type];
   if(!handler)return worldActionError('unknown_action','지원하지 않는 작업입니다');
-  const current=handler.snapshot(db,preview.command.parentId);
-  if(JSON.stringify(current)!==JSON.stringify(preview.expected))
-    return worldActionError('stale_preview','로스터 또는 게임 날짜가 변경되었습니다. 계획을 다시 확인하세요');
-  const checked=validateWorldAction(db,preview.command);
-  if(!checked.ok)return checked;
-  if(JSON.stringify(checked.moves)!==JSON.stringify(preview.changes))
-    return worldActionError('stale_preview','계획의 변경 내역이 달라졌습니다. 미리보기를 다시 생성하세요');
-  const applied=handler.apply(db,preview.command);
+  const key=handler.canonical?preview.command:preview.command.parentId;
+  if(JSON.stringify(handler.snapshot(db,key))!==JSON.stringify(preview.expected))
+    return worldActionError('stale_preview','게임 상태가 변경되었습니다. 계획을 다시 확인하세요');
+  const fresh=previewWorldAction(db,preview.command);
+  if(!fresh.ok)return fresh;
+  if(JSON.stringify(fresh.command)!==JSON.stringify(preview.command)||
+     JSON.stringify(fresh.changes)!==JSON.stringify(preview.changes))
+    return worldActionError('stale_preview','적용할 작업이 미리보기와 다릅니다. 다시 확인하세요');
+  const applied=handler.apply(db,fresh.command);
   return {...applied,ok:true,type:preview.command.type};
+}
+
+function commitWorldAction(db,command){
+  const preview=previewWorldAction(db,command);
+  return preview.ok?applyWorldAction(db,preview):preview;
 }

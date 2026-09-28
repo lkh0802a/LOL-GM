@@ -126,6 +126,113 @@ source += `
     assert(!forbidden.ok&&forbidden.reason==='unauthorized','manager action must not reach unowned teams');
   });
 
+
+  test('06c-player-sign-transaction',()=>{
+    const db=buildWorld(),team=activeTeams(db,null,1)[0],p=Object.values(db.players).find(x=>!x.retired&&!x.team&&playerActionLocal(x,team.region));
+    assert(p,'free agent fixture missing');setManagedTeam(db,team.id);db.world={year:db.year,manage:'manual'};
+    const command={type:'player.sign',pid:p.id,teamId:team.id,kind:'fa',actor:'manager',
+      salary:3.2,years:2,terms:{signingBonus:1,promisedRole:'starter',buyout:8,bonuses:{title:.2}}};
+    team.finance.cash=20;
+    const before=JSON.stringify(playerActionSnapshot(db,command));
+    const wrong=previewWorldAction(db,{...command,salary:-1});
+    assert(!wrong.ok&&wrong.reason==='invalid_terms','negative contract terms must fail');
+    const badTarget=previewWorldAction(db,{...command,teamId:activeTeams(db,null,1)[1].id});
+    assert(!badTarget.ok&&badTarget.reason==='unauthorized','manager may not sign for another organization');
+    const preview=previewWorldAction(db,command);
+    assert(preview.ok&&preview.changes[0].salary===3.2&&preview.changes[0].years===2,'signing preview must expose contract effects');
+    assert(JSON.stringify(playerActionSnapshot(db,command))===before,'contract preview must be read-only');
+    team.finance.cash=0;
+    const stale=applyWorldAction(db,preview);
+    assert(!stale.ok&&stale.reason==='stale_preview','financial state drift must reject signing');
+    team.finance.cash=20;
+    assert(JSON.stringify(playerActionSnapshot(db,command))===before,'failed signing must preserve club and player');
+    const applied=applyWorldAction(db,preview);
+    assert(applied.ok&&p.team===team.id&&p.contract.salary===3.2&&p.contract.years===2,'FA contract commit failed');
+    assert(team.finance.cash===19&&team.roster.includes(p.id),'signing bonus or registration missing');
+    const replay=applyWorldAction(db,preview);
+    assert(!replay.ok&&replay.reason==='stale_preview','signing must not apply twice');
+    const renewal=commitWorldAction(db,{type:'player.sign',pid:p.id,teamId:team.id,kind:'renewal',
+      actor:'manager',salary:4,years:3,terms:{promisedRole:'core'}});
+    assert(renewal.ok&&p.contract.salary===4&&p.contract.years===3&&team.roster.filter(id=>id===p.id).length===1,'renewal must update existing contract without duplicating roster');
+    assert(!rosterIntegrityErrors(db).length,'sign and renewal must retain roster integrity');
+    const loaded=unpackDB(packDB(db));
+    assert(loaded.players[p.id].contract.salary===4,'transaction contract must survive save roundtrip');
+  });
+
+  test('06d-player-transfer-transaction',()=>{
+    const db=buildWorld(),teams=activeTeams(db,null,1),buyer=teams[0],seller=teams[1];
+    const p=Object.values(db.players).find(x=>!x.retired&&!x.team&&playerActionLocal(x,buyer.region));
+    assert(p,'transfer fixture missing');setManagedTeam(db,buyer.id);db.world={year:db.year,manage:'manual'};
+    assignPlayerToTeam(db,p,seller);
+    p.contract={salary:2,until:db.year+1,years:2,signingBonus:0,promisedRole:'starter'};
+    buyer.finance.cash=25;seller.finance.cash=10;
+    const command={type:'player.sign',pid:p.id,teamId:buyer.id,fromId:seller.id,
+      kind:'transfer',actor:'manager',fee:7,salary:2.5,years:3,
+      terms:{signingBonus:1,promisedRole:'starter'}};
+    const before=JSON.stringify(playerActionSnapshot(db,command));
+    const invalid=previewWorldAction(db,{...command,fee:50});
+    assert(!invalid.ok&&invalid.reason==='insufficient_cash','transfer must reject insufficient buyer cash');
+    assert(JSON.stringify(playerActionSnapshot(db,command))===before,'invalid transfer preview must preserve player/club state');
+    const prev=previewWorldAction(db,command);
+    assert(prev.ok&&prev.changes[0].fee===7,'transfer preview must describe the fee');
+    p.contract.salary=2.1;
+    assert(!applyWorldAction(db,prev).ok,'stale seller terms must block transfer');
+    p.contract.salary=2;
+    const done=applyWorldAction(db,prev);
+    assert(done.ok&&p.team===buyer.id&&p.contract.salary===2.5,'transfer and agreed contract must commit together');
+    assert(buyer.finance.cash===17&&seller.finance.cash===17,'transfer fee and contract bonus settlement changed');
+    assert(p.contractedMoves?.length===1&&p.contractedMoves[0].fee===7,'transfer move count must be recorded once');
+    assert(!seller.roster.includes(p.id)&&buyer.roster.includes(p.id),'transfer registration is inconsistent');
+    const old=JSON.stringify(playerActionSnapshot(db,command));
+    const reject=commitWorldAction(db,{type:'player.transfer',pid:p.id,fromId:seller.id,teamId:buyer.id,fee:1,actor:'ai'});
+    assert(!reject.ok&&JSON.stringify(playerActionSnapshot(db,command))===old,'invalid second transfer must not partially mutate');
+    assert(!rosterIntegrityErrors(db).length,'transfer must retain roster integrity');
+  });
+
+  test('06e-ai-transfer-and-move-limit',()=>{
+    const db=buildWorld(),teams=activeTeams(db,null,1),seller=teams[0],buyer=teams[1],owner=teams[2];
+    const p=Object.values(db.players).find(x=>!x.retired&&!x.team&&playerActionLocal(x,buyer.region));
+    assert(p,'AI transfer fixture missing');setManagedTeam(db,owner.id);db.world={year:db.year,manage:'manual'};
+    assignPlayerToTeam(db,p,seller);p.contract={salary:1.5,until:db.year+1,years:2};
+    const command={type:'player.transfer',pid:p.id,fromId:seller.id,teamId:buyer.id,fee:1.2,actor:'ai'};
+    buyer.finance.cash=10;seller.finance.cash=5;
+    const preview=previewWorldAction(db,command);
+    assert(preview.ok,'AI permanent transfer must share transaction gateway');
+    const sent=applyWorldAction(db,preview);
+    assert(sent.ok&&p.team===buyer.id&&p.contract.salary===1.5,'AI transfer must retain original contract');
+    assert(Math.abs(buyer.finance.cash-8.8)<1e-9&&Math.abs(seller.finance.cash-6.2)<1e-9,'AI transfer fee must settle');
+    const back=commitWorldAction(db,{type:'player.transfer',pid:p.id,fromId:buyer.id,teamId:seller.id,fee:0,actor:'ai'});
+    assert(back.ok&&p.contractedMoves?.length===2,'AI reciprocal transfer must count as second season move');
+    const state=JSON.stringify(playerActionSnapshot(db,command));
+    const blocked=commitWorldAction(db,command);
+    assert(!blocked.ok&&blocked.reason==='invalid_transfer','third contracted move must be prohibited');
+    assert(JSON.stringify(playerActionSnapshot(db,command))===state,'move-limit rejection must leave both clubs unchanged');
+    assert(!rosterIntegrityErrors(db).length,'AI transfer must keep roster integrity');
+  });
+
+  test('06f-release-and-option-transaction',()=>{
+    const db=buildWorld(),teams=activeTeams(db,null,1),team=teams[0],other=teams[1];
+    setManagedTeam(db,team.id);db.world={year:db.year,manage:'manual'};
+    const p=Object.values(db.players).find(x=>!x.retired&&!x.team&&playerActionLocal(x,team.region));
+    assert(p,'release fixture missing');
+    assignPlayerToTeam(db,p,team);team.finance.cash=15;team.finance.buyout=0;
+    p.contract={salary:2,until:db.year+1,years:2,option:{type:'team',year:db.year,salary:3}};
+    const blocked=commitWorldAction(db,{type:'player.release',pid:p.id,teamId:other.id,mode:'manager',actor:'manager'});
+    assert(!blocked.ok&&p.team===team.id,'release of another club player must be blocked');
+    const prev=previewWorldAction(db,{type:'player.release',pid:p.id,teamId:team.id,mode:'manager',actor:'manager'});
+    assert(prev.ok&&prev.changes[0].cost===2,'release preview must show termination expense');
+    const done=applyWorldAction(db,prev);
+    assert(done.ok&&!p.team&&!p.contract&&team.finance.buyout===2,'manager release must settle cost and move player to FA');
+    assert(!rosterIntegrityErrors(db).length,'release must keep roster integrity');
+    assignPlayerToTeam(db,p,team);p.contract={salary:2,until:db.year-1,years:1,option:{type:'team',year:db.year,salary:3}};
+    const option=commitWorldAction(db,{type:'player.option',pid:p.id,teamId:team.id,actor:'manager'});
+    assert(option.ok&&p.contract.salary===3&&p.contract.option===null,'team option transaction failed');
+    const again=commitWorldAction(db,{type:'player.option',pid:p.id,teamId:team.id,actor:'manager'});
+    assert(!again.ok&&again.reason==='invalid_option','an exercised option cannot be repeated');
+    const expired=commitWorldAction(db,{type:'player.release',pid:p.id,teamId:team.id,mode:'expired',actor:'ai'});
+    assert(!expired.ok&&p.team===team.id,'AI may not auto-release nonexpired managed club contracts');
+  });
+
   test('07-staff-migration-caps',()=>{
     const db=buildWorld(),t=activeTeams(db)[0];t.coach={id:'legacy'};t.staff={analyst:{id:'legacy-a',role:'analyst',rating:60}};
     migrateLegacyStaffState(db);
