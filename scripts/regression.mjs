@@ -29,6 +29,21 @@ source += `
   const seriesPicks=rec=>(rec.games||[]).flatMap(g=>(g.picks||[]).flat());
   const uniqueSeriesPicks=rec=>{const p=seriesPicks(rec);return new Set(p).size===p.length};
 
+  const faultAfterActionApply=(db,preview)=>{
+    const handler=WORLD_ACTION_HANDLERS[preview.command.type],old=handler.apply;
+    let writerFinished=false;
+    try{
+      handler.apply=(state,command)=>{
+        const applied=old(state,command);
+        writerFinished=true;
+        throw new Error('regression forced late writer failure');
+      };
+      const result=applyWorldAction(db,preview);
+      assert(writerFinished,'fault injection did not reach the completed domain writer: '+preview.command.type);
+      return result;
+    }finally{handler.apply=old}
+  };
+
   test('01-world-bootstrap',()=>{
     const db=buildWorld();
     assert(db.version===15,'save schema baseline drift');
@@ -319,6 +334,132 @@ source += `
     const before=JSON.stringify(integrityProbe);
     rosterIntegrityErrors(integrityProbe);
     assert(JSON.stringify(integrityProbe)===before,'roster integrity check must not secretly migrate save records');
+  });
+
+
+  test('06j-transaction-transfer-rollback',()=>{
+    for(const kind of ['player.sign','player.transfer']){
+      const db=buildWorld(),[buyer,seller]=activeTeams(db,null,1),
+        p=Object.values(db.players).find(x=>!x.retired&&!x.team&&playerActionLocal(x,buyer.region));
+      assert(p,'rollback transfer test lacks local FA fixture');
+      setManagedTeam(db,buyer.id);db.world={year:db.year,phase:'market',manage:'manual'};
+      assignPlayerToTeam(db,p,seller);
+      p.contract={salary:2,until:db.year+1,years:2,option:null};
+      buyer.finance.cash=40;seller.finance.cash=8;
+      db._marketDemandCache={rollbackProbe:1};
+      const command={type:kind,pid:p.id,teamId:buyer.id,fromId:seller.id,
+        actor:'manager',fee:4,...(kind==='player.sign'?
+          {kind:'transfer',salary:3,years:2,terms:{signingBonus:1,promisedRole:'starter'}}:{})};
+      const before=JSON.stringify(db),rosterRef=buyer.roster,newsRef=db.news;
+      const preview=previewWorldAction(db,command);
+      assert(preview.ok,'player transfer rollback preview failed: '+kind);
+      assert(JSON.stringify(db)===before,'transfer validation or preview wrote to world: '+kind);
+      const failed=faultAfterActionApply(db,preview);
+      assert(!failed.ok&&failed.reason==='apply_failed','late transfer error did not report rollback: '+kind);
+      assert(JSON.stringify(db)===before,'failed transfer leaked fees, roster, contract, news or move history: '+kind);
+      assert(db.players[p.id]===p&&buyer.roster===rosterRef&&db.news===newsRef,
+        'failed transfer replaced externally referenced player/roster/news object: '+kind);
+      assert(!rosterIntegrityErrors(db).length,'transfer rollback damaged membership: '+kind);
+      const retried=applyWorldAction(db,preview);
+      assert(retried.ok&&p.team===buyer.id&&seller.finance.cash===12&&buyer.finance.cash===(kind==='player.sign'?35:36),
+        'transfer cannot commit after reverted late failure: '+kind);
+    }
+  });
+
+  test('06k-transaction-roster-rollback',()=>{
+    const db=buildWorld(),parent=activeTeams(db,null,1).find(t=>reserveTeamsOf(db,t).length);
+    assert(parent,'rollback roster fixture needs owned reserve');
+    const reserve=reserveTeamsOf(db,parent)[0],players=Object.values(db.players).filter(p=>!p.team).slice(0,11);
+    for(let i=0;i<11;i++)assignPlayerToTeam(db,players[i],i<6?parent:reserve);
+    setManagedTeam(db,parent.id);db.world={year:db.year,manage:'manual'};
+    const up=reserve.roster[0],down=parent.roster[0],plan=rosterPlanState(db,parent);
+    plan.assignments[up]=parent.id;plan.assignments[down]=reserve.id;
+    const command={type:'roster.plan',parentId:parent.id,assignments:plan.assignments,actor:'manager'};
+    const before=JSON.stringify(db),parentRef=parent.roster,reserveRef=reserve.roster,
+      upRef=db.players[up],downRef=db.players[down];
+    const preview=previewWorldAction(db,command);
+    assert(preview.ok&&JSON.stringify(db)===before,'roster action preview mutated world');
+    const rejected=faultAfterActionApply(db,preview);
+    assert(!rejected.ok&&rejected.reason==='apply_failed'&&JSON.stringify(db)===before,
+      'late roster-swap error left a partial move, satisfaction change, chart or player event');
+    assert(db.players[up]===upRef&&db.players[down]===downRef&&parent.roster===parentRef&&reserve.roster===reserveRef,
+      'rollback failed to preserve roster and player references');
+    const foreign=unpackDB(packDB(db));foreign.saveId='independent-world';
+    const foreignBefore=JSON.stringify(foreign);
+    const cross=applyWorldAction(foreign,preview);
+    assert(!cross.ok&&cross.reason==='stale_preview'&&JSON.stringify(foreign)===foreignBefore,
+      'a roster preview must not be applicable to another saved world');
+    const completed=applyWorldAction(db,preview);
+    assert(completed.ok&&db.players[up].team===parent.id&&db.players[down].team===reserve.id,
+      'roster swap could not commit after rollback');
+    assert(!rosterIntegrityErrors(db).length,'roster rollback/retry failed integrity');
+  });
+
+  test('06l-transaction-release-option-rollback',()=>{
+    const db=buildWorld(),t=activeTeams(db,null,1)[0],p=Object.values(db.players).find(x=>!x.team);
+    assert(p,'release rollback fixture missing free agent');
+    setManagedTeam(db,t.id);db.world={year:db.year,manage:'manual'};
+    assignPlayerToTeam(db,p,t);t.finance.buyout=1;
+    p.contract={salary:2,until:db.year+1,years:2,
+      option:{type:'team',year:db.year,salary:3}};
+    db._marketDemandCache={rollbackProbe:2};
+    const release={type:'player.release',pid:p.id,teamId:t.id,actor:'manager',mode:'manager'},
+      rpreview=previewWorldAction(db,release),before=JSON.stringify(db);
+    assert(rpreview.ok,'release rollback preview failed');
+    const released=faultAfterActionApply(db,rpreview);
+    assert(!released.ok&&released.reason==='apply_failed'&&JSON.stringify(db)===before,
+      'failed release left a buyout, role, contract or event mutation');
+    const option={type:'player.option',pid:p.id,teamId:t.id,actor:'manager'},
+      opreview=previewWorldAction(db,option);
+    assert(opreview.ok&&JSON.stringify(db)===before,'option preview changed player state');
+    const attempted=faultAfterActionApply(db,opreview);
+    assert(!attempted.ok&&attempted.reason==='apply_failed'&&JSON.stringify(db)===before,
+      'failed option left a salary/year or event mutation');
+    const accepted=applyWorldAction(db,opreview);
+    assert(accepted.ok&&p.contract.salary===3&&!p.contract.option,
+      'team option could not be exercised after rollback');
+    assert(!rosterIntegrityErrors(db).length,'release/option rollback affected roster integrity');
+  });
+
+  test('06m-transaction-actor-parity-and-membership-guard',()=>{
+    const db=buildWorld(),t=activeTeams(db,null,1)[0],
+      p=Object.values(db.players).find(x=>!x.team&&playerActionLocal(x,t.region));
+    assert(p,'actor parity fixture missing FA');
+    setManagedTeam(db,t.id);db.world={year:db.year,manage:'ai'};
+    t.finance.cash=25;
+    const base={type:'player.sign',pid:p.id,teamId:t.id,kind:'fa',salary:3,years:2,
+      terms:{promisedRole:'starter',signingBonus:1}};
+    const start=JSON.stringify(db),manager=previewWorldAction(db,{...base,actor:'manager'}),
+      ai=previewWorldAction(db,{...base,actor:'ai'});
+    assert(manager.ok&&ai.ok&&JSON.stringify(manager.changes)===JSON.stringify(ai.changes),
+      'AI delegation and manager path produced different contract preview');
+    assert(JSON.stringify(db)===start,'actor parity previews mutated world');
+    db.world.manage='manual';
+    const blocked=previewWorldAction(db,{...base,actor:'ai'});
+    assert(!blocked.ok&&blocked.reason==='unauthorized','managed-club manual contracts must reject AI');
+    db.world.manage='ai';
+    const unrelated=previewWorldAction(db,{...base,actor:'unknown'});
+    assert(!unrelated.ok&&unrelated.reason==='invalid_actor','unknown actor must be rejected');
+    // A domain writer that returns success with duplicate registrations must
+    // be detected and rolled back, not recorded as a committed action.
+    const original=WORLD_ACTION_HANDLERS['player.sign'].apply;
+    try{
+      WORLD_ACTION_HANDLERS['player.sign'].apply=(state,command)=>{
+        const result=original(state,command);
+        state.teams[command.teamId].roster.push(command.pid);
+        return result;
+      };
+      const rejected=applyWorldAction(db,manager);
+      assert(!rejected.ok&&rejected.reason==='apply_failed'&&JSON.stringify(db)===start,
+        'post-commit membership violation must roll back all command effects');
+    }finally{WORLD_ACTION_HANDLERS['player.sign'].apply=original}
+    const success=applyWorldAction(db,ai);
+    assert(success.ok&&p.team===t.id&&p.contract.salary===3,'AI delegate signing failed after integrity rollback');
+    const replay=applyWorldAction(db,manager);
+    assert(!replay.ok&&replay.reason==='stale_preview','manager action duplicated the delegated transaction');
+    const resumed=unpackDB(packDB(db));
+    assert(resumed.players[p.id].contract.salary===3&&resumed.teams[t.id].roster.includes(p.id)&&
+      !rosterIntegrityErrors(resumed).length,'committed shared transaction cannot resume from save');
   });
 
   test('07-staff-migration-caps',()=>{

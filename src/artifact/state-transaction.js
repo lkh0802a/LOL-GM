@@ -8,6 +8,7 @@ function worldActionError(reason,message){
 
 function rosterActionSnapshot(db,parentId){
   return {
+    saveId:db.saveId||null,
     date:db.worldDate||null,
     year:db.world?.year??db.year,
     teams:organizationTeams(db,parentId).map(t=>({
@@ -87,8 +88,22 @@ function applyWorldAction(db,preview){
   if(JSON.stringify(fresh.command)!==JSON.stringify(preview.command)||
      JSON.stringify(fresh.changes)!==JSON.stringify(preview.changes))
     return worldActionError('stale_preview','적용할 작업이 미리보기와 다릅니다. 다시 확인하세요');
-  const applied=handler.apply(db,fresh.command);
-  return {...applied,ok:true,type:preview.command.type};
+  // Domain writers are synchronous but may still throw after changing a
+  // player's roster, contract or a transfer fee. Undo the affected scope if
+  // any writer or post-commit membership check fails.
+  let journal=null;
+  try{
+    journal=captureWorldActionJournal(db,fresh.command);
+    const applied=handler.apply(db,fresh.command);
+    if(!applied||applied.ok===false)
+      throw new Error((applied?.errors||['도메인 작업 적용 실패']).join(' · '));
+    const errors=worldActionScopeErrors(db,fresh.command,journal.playerIds);
+    if(errors.length)throw new Error(errors.join(' · '));
+    return {...applied,ok:true,type:preview.command.type};
+  }catch(e){
+    if(journal)journal.rollback();
+    return worldActionError('apply_failed','작업을 적용하지 못해 변경 사항을 되돌렸습니다: '+(e?.message||String(e)));
+  }
 }
 
 function commitWorldAction(db,command){
