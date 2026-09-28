@@ -53,8 +53,8 @@ for (const [file, maxBytes] of Object.entries(maintainabilityBudgets)) {
 }
 
 const draftUiSource = await readFile(resolve(artifact, 'ui-draft.js'), 'utf8');
-const draftShellMarkers = ['du-series-meta','du-fearless','du-last-card','du-ban-img','du-pick-img'];
-const draftUiMarkers = ['officialLastGameCard','draftUiSeriesMeta','draftUiFearlessStrip','draftUiAnalysisPanel','draftUiStaffAdvice','draftUiOpponentIntent','draftUiEvidenceSources','draftUiPoolTop',"reason:'Fearless'"];
+const draftShellMarkers = ['du-series-meta','du-fearless','du-last-card','du-ban-img','du-pick-img','du-mobile-tabs','safe-area-inset-bottom'];
+const draftUiMarkers = ['officialLastGameCard','draftUiSeriesMeta','draftUiFearlessStrip','draftUiAnalysisPanel','draftUiStaffAdvice','draftUiOpponentIntent','draftUiEvidenceSources','draftUiPoolTop','data-du-info','du-info-panel',"reason:'Fearless'"];
 for (const marker of draftUiMarkers) if (!draftUiSource.includes(marker)) {
   failed = true;
   console.error(`Interactive draft UI contract missing marker: ${marker}`);
