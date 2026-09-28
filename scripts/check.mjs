@@ -195,7 +195,7 @@ for (const obsoleteId of ['addreg','addintl']) {
   }
 }
 
-for (const file of modules.filter(file => file !== 'save.js')) {
+for (const file of modules.filter(file => !['save.js','save-migration.js'].includes(file))) {
   const source = await readFile(resolve(artifact, file), 'utf8');
   for (const marker of ['secondaryRoles','roleFamiliarity','trainSecondaryRole','officialRoleEligible']) if (source.includes(marker)) {
     failed = true;
