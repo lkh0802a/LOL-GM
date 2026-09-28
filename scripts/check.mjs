@@ -39,7 +39,10 @@ const maintainabilityBudgets = {
   'competition.js': 30000,
   'player.js': 25000,
   'development.js': 12000,
-  'world.js': 48000,
+  'world.js': 28000,
+  'season.js': 24000,
+  'offseason.js': 16000,
+  'save.js': 10000,
   'roster.js': 22000,
   'lineup.js': 12000,
   'features.js': 30000,
@@ -93,6 +96,9 @@ for (const file of modules.filter(file => file !== 'world.js')) {
 const appSource = await readFile(resolve(artifact, 'app.js'), 'utf8');
 const playerSource = await readFile(resolve(artifact, 'player.js'), 'utf8');
 const developmentSource = await readFile(resolve(artifact, 'development.js'), 'utf8');
+const seasonSource = await readFile(resolve(artifact, 'season.js'), 'utf8');
+const offseasonSource = await readFile(resolve(artifact, 'offseason.js'), 'utf8');
+const saveSource = await readFile(resolve(artifact, 'save.js'), 'utf8');
 const worldSource = await readFile(resolve(artifact, 'world.js'), 'utf8');
 const rosterSource = await readFile(resolve(artifact, 'roster.js'), 'utf8');
 const draftSource = await readFile(resolve(artifact, 'draft.js'), 'utf8');
@@ -146,6 +152,36 @@ for (const marker of ['function growPlayer(','function defaultTraining(','functi
   if (worldSource.includes(marker)) {
     failed = true;
     console.error('Development responsibility leaked back into world.js: '+marker);
+  }
+}
+for (const marker of ['function startWorldSeason(','function playWorldDay(','function startInternational(']) {
+  if (!seasonSource.includes(marker)) {
+    failed = true;
+    console.error('Season orchestration helper is missing: '+marker);
+  }
+  if (worldSource.includes(marker)) {
+    failed = true;
+    console.error('Season responsibility leaked back into world.js: '+marker);
+  }
+}
+for (const marker of ['function runOffseason(','function closeMarket(','function promotionRelegation(']) {
+  if (!offseasonSource.includes(marker)) {
+    failed = true;
+    console.error('Offseason helper is missing: '+marker);
+  }
+  if (worldSource.includes(marker)) {
+    failed = true;
+    console.error('Offseason responsibility leaked back into world.js: '+marker);
+  }
+}
+for (const marker of ['function packDB(','function unpackDB(','function worldForSave(']) {
+  if (!saveSource.includes(marker)) {
+    failed = true;
+    console.error('Save serialization helper is missing: '+marker);
+  }
+  if (worldSource.includes(marker)) {
+    failed = true;
+    console.error('Save responsibility leaked back into world.js: '+marker);
   }
 }
 const saveVersion = Number(appSource.match(/const SAVE_VERSION=(\d+)/)?.[1]);

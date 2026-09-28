@@ -14,7 +14,11 @@ The authoritative module order lives in `scripts/artifact-modules.mjs`.
 - player lifecycle: `player.js` (evaluation/identity, squad-role promises, champion learning, player generation, rookie cohorts)
 - player development: `development.js` (training, facilities, age curves, seasonal growth)
 - patch/meta: `patch.js`
-- competition/world: `competition.js`, `world.js`
+- competition engine: `competition.js`
+- world configuration/bootstrap: `world.js`
+- season orchestration: `season.js` (league/international calendar, official-match pause/resume, day progression)
+- offseason orchestration: `offseason.js` (season closeout, market close, promotion/relegation)
+- persistence: `save.js` (compact save view and unpack/migration handoff)
 - roster/registration: `roster.js` (local eligibility, contracted-move accounting, organization roster rules, 1st↔reserve planning/movement, roster integrity)
 - management domains: `office.js`, `finance.js`, `features.js`, `role-conversion.js`, `career.js`
 - draft information layer: `draft-analysis.js` (scouting-bounded mastery estimates, meta/composition evidence, opponent-intent explanation); legality and selection remain in `draft.js`
@@ -29,7 +33,9 @@ New large UI surfaces should be added as `ui-<domain>.js` modules instead of ext
 
 Roster mutation must flow through the roster-domain helpers (`assignPlayerToTeam`, `removePlayerFromTeam`, `validateRosterPlan`/`applyRosterPlan`) instead of ad-hoc cross-module array edits when the operation is covered by those APIs. Match-slot changes are a separate concern owned by `lineup.js`.
 
-Player generation and rookie-supply rules belong in `player.js`. Training/facilities/seasonal attribute growth belong in `development.js`. `world.js` may orchestrate those systems but must not reimplement them.
+Player generation and rookie-supply rules belong in `player.js`. Training/facilities/seasonal attribute growth belong in `development.js`.
+
+World bootstrap must not own season execution, offseason processing or persistence. `season.js` owns competition/calendar orchestration, `offseason.js` owns year-transition processing, and `save.js` owns serialization. `world.js` is limited to configuration, region/team topology and career bootstrap.
 
 
 Persistent game state lives under the world DB object. Module-level caches must never own persistent state.
