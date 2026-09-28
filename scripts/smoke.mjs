@@ -316,8 +316,8 @@ source += `\n(()=>{
 
   finalizeInitialRosters(db);
   if(db.world.phase!=='season'||!db.manager.careerStartedAt) throw new Error('Season did not start after roster finalization');
-  const scoutTarget=Object.values(db.players).find(p=>p.team&&p.team!==managedTeamId(db)&&!(db.teams[p.team]&&db.teams[p.team].parent===managedTeamId(db)));
-  if(!scoutTarget)throw new Error('No scouting target');
+  const scoutTarget=Object.values(db.players).find(p=>p.team&&p.team!==managedTeamId(db)&&!(db.teams[p.team]&&db.teams[p.team].parent===managedTeamId(db))&&knowledge(db,p)<90);
+  if(!scoutTarget)throw new Error('No unobserved scouting target');
   const k0=knowledge(db,scoutTarget);observePlayer(db,scoutTarget,20,{comp:'test',games:3});const k1=knowledge(db,scoutTarget),sr=scoutReport(db,scoutTarget);
   if(k1<=k0||!sr||sr.observations<1||sr.knowledge!==k1)throw new Error('Scouting observation did not increase report knowledge');
   const y0=db.year;db.year++;ageScoutReports(db);if(knowledge(db,scoutTarget)>=k1)throw new Error('Stale scouting report did not decay');db.year=y0;
