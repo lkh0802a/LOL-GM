@@ -128,6 +128,10 @@ function draftUiStaffAdvice(){
   const cards=a.suggestions.map((x,i)=>{const c=DRAFT_UI.state.db.patch.champions[x.champ],f=x.factors,why=a.kind==='P'?`메타 ${f.meta} · 숙련 ${f.mastery} · 조합 ${draftUiSigned(f.comp)} · 상성 ${draftUiSigned(f.counter)}`:`메타 ${f.meta}${f.revealed?' · 이번 시리즈 공개 정보 반영':''}`;return `<button data-du-advice="${x.champ}"><small>${i+1}순위 검토</small><b>${esc(championDisplayName(c))}</b><span>${why}</span></button>`}).join('');
   return `<section class="du-advice"><div class="du-advice-head"><b>스태프 조언</b><span>${staff} · 신뢰 ${a.confidence}</span></div><div class="du-advice-grid">${cards}</div><p>조언은 현재 공개 정보와 우리 팀 데이터만 사용하며 선택을 자동 실행하지 않습니다.</p></section>`;
 }
+function draftUiOpponentIntent(){
+  if(!DRAFT_UI)return '';const rows=draftOpponentIntent(DRAFT_UI.state,DRAFT_UI.playerSide,3);if(!rows.length)return '';
+  return `<section class="du-intent"><div class="du-intent-head"><b>상대 의도 추정</b><span>공개 밴픽 + 우리 분석/스카우팅 기준</span></div><div class="du-intent-list">${rows.map(x=>{const c=DRAFT_UI.state.db.patch.champions[x.champ],roles=x.roles.map(r=>ROLE_KO[r]||r).join(' · ');return `<div class="du-intent-row"><div><small>${x.kind==='P'?'PICK':'BAN'} · 신뢰 ${x.confidence}</small><b>${esc(championDisplayName(c))}</b><span>${esc(roles)}</span></div><p>${x.reasons.map(esc).join(' · ')}</p></div>`}).join('')}</div><small class="du-intent-note">실제 AI 내부 역할 지정이나 비공개 선수 데이터가 아니라 현재 확인 가능한 정보에서 추정한 설명입니다.</small></section>`;
+}
 function draftUiGrid(){
   const s=DRAFT_UI.state,rows=Object.values(s.db.patch.champions).filter(draftUiMatch).sort((a,b)=>championDisplayName(a).localeCompare(championDisplayName(b),'ko'));
   return `<div class="du-grid">${rows.map(c=>{const st=draftUiChampionState(c),sel=DRAFT_UI.selected===c.id;
@@ -146,6 +150,7 @@ function draftUiRender(){
     `<section class="du-pool">
       <div class="du-tools"><input id="du-search" type="search" autocomplete="off" placeholder="챔피언 검색" value="${esc(DRAFT_UI.query)}"><div class="chips">${DRAFT_UI_FILTERS.map(r=>`<button data-du-role="${r}" aria-pressed="${DRAFT_UI.filter===r}">${r==='ALL'?'전체':ROLE_KO[r]}</button>`).join('')}</div></div>
       ${draftUiStaffAdvice()}
+      ${draftUiOpponentIntent()}
       ${draftUiAnalysisPanel()}
       <div id="du-grid">${draftUiGrid()}</div>
       <div class="du-lock"><div><b>${mine?(DRAFT_UI.selected?esc(championLabel(s.db,DRAFT_UI.selected)):'챔피언을 선택하세요'):'상대 팀이 선택 중입니다'}</b><small>${mine?(turn.kind==='P'?'픽 단계에서는 포지션을 공개하지 않습니다. 드래프트 종료 후 합법적인 5포지션 배치를 확정합니다.':'선택 후 확정해야 밴됩니다.'):'AI는 공개된 챔피언과 가능한 포지션만 보고 판단합니다.'}</small></div><button class="primary" id="du-lock" ${mine&&DRAFT_UI.selected?'':'disabled'}>${turn.kind==='B'?'밴 확정':'픽 확정'}</button></div>

@@ -121,6 +121,20 @@ function staffProfile(t){
 function staffDevelopmentFor(t,role){const p=staffProfile(t),pos=roleCoachRating(t,role);return clamp(p.development+(pos?Math.max(0,pos-45)*.16:0),35,99)}
 function trainingGrowthMul(t){const p=staffProfile(t);return clamp(.88+(p.development-45)/220,0.88,1.13)}
 function scrimAnalysisBonus(t){const p=staffProfile(t);return clamp((p.analysis-50)/500+facilityAnalysisBonus(t),0,.14)}
+function draftOpponentIntent(state,observerSide,limit=3){
+  if(!state)return [];const db=state.db,opp=1-observerSide,observer=db.teams[state.teamIds[observerSide]],prof=staffProfile(observer),hist=state.ctx.byTeam[state.teamIds[observerSide]]||{won:[],lost:[]};
+  return state.log.filter(x=>x.side===opp).slice(-limit).reverse().map(x=>{
+    const c=db.patch.champions[x.champ],meta=Math.round(clamp(state.vhat[observerSide]?.[x.champ]||0,0,1)*100),roles=(c?.roles||[]).filter(r=>ROLES.includes(r)),reasons=[];let info=prof.analysis,confidence=prof.analysis;
+    if(x.kind==='P'){
+      const reports=roles.map(role=>state.roster[opp][role]).filter(Boolean).map(p=>{const r=scoutReport(db,p),cm=r.champions.find(z=>z.id===x.champ);return {knowledge:r.knowledge,mastery:cm?.mastery||0}});info=reports.length?Math.round(avg(reports.map(r=>r.knowledge))):0;confidence=Math.round(clamp(prof.analysis*.55+info*.45,20,95));
+      if(meta>=65)reasons.push('현재 메타 우선도가 높은 픽');if(roles.length>1)reasons.push('복수 포지션 가능성을 남기는 픽');if(reports.some(r=>r.mastery>=65))reasons.push('스카우팅에서 확인된 챔피언 폭과 부합');if(!reasons.length)reasons.push('조합 방향을 숨기며 챔피언을 선점한 선택');
+    }else{
+      const ownMastery=roles.map(role=>draftMastery(state.roster[observerSide][role],x.champ));if(ownMastery.some(v=>v>=70))reasons.push('우리 선수의 높은 숙련 챔피언 견제 가능성');if(hist.won.includes(x.champ))reasons.push('이전 세트 승리 픽 재사용 차단 가능성');if(meta>=65)reasons.push('메타 우선 챔피언 제거 가능성');if(roles.length>1)reasons.push('플렉스 선택지 차단 가능성');if(!reasons.length)reasons.push('일반적인 밴 우선순위에 따른 견제 가능성');
+      confidence=Math.round(clamp(prof.analysis+(hist.won.includes(x.champ)?8:0),20,96));
+    }
+    return {kind:x.kind,champ:x.champ,meta,roles,confidence,information:Math.round(info),reasons:reasons.slice(0,3)};
+  });
+}
 function scrimReadiness(db,t){
   if(!t)return {ok:false,reason:'팀 없음'};
   const roster=t.roster.map(id=>db.players[id]).filter(Boolean),avgFatigue=avg(roster.map(p=>p.fatigue||0)),avgCondition=avg(roster.map(p=>p.condition??96));
