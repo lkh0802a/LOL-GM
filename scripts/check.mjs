@@ -65,6 +65,14 @@ for (const marker of draftShellMarkers) if (!shellSource.includes(marker)) {
   console.error(`Interactive draft shell contract missing marker: ${marker}`);
 }
 
+const setupUiSource = await readFile(resolve(artifact, 'ui-season.js'), 'utf8');
+for (const obsoleteId of ['addreg','addintl']) {
+  if (setupUiSource.includes(`#${obsoleteId}`)) {
+    failed = true;
+    console.error(`Removed setup control #${obsoleteId} is still referenced by bindSetup`);
+  }
+}
+
 const appSource = await readFile(resolve(artifact, 'app.js'), 'utf8');
 const worldSource = await readFile(resolve(artifact, 'world.js'), 'utf8');
 const saveVersion = Number(appSource.match(/const SAVE_VERSION=(\d+)/)?.[1]);
