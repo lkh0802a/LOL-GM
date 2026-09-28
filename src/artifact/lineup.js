@@ -20,11 +20,12 @@ function bestStartingLineup(db,t,locked={}){
   const players=(team.roster||[]).map(id=>db.players[id]).filter(p=>validLineupPlayer(db,team,p)),base={},used=new Set();
   for(const role of ROLES){const p=locked[role]&&db.players[locked[role]];if(validLineupPlayer(db,team,p)&&!used.has(p.id)){base[role]=p.id;used.add(p.id)}}
   const roles=ROLES.filter(r=>!base[r]),available=players.filter(p=>!used.has(p.id));if(available.length<roles.length)return base;
+  const scores=Object.fromEntries(available.map(p=>[p.id,Object.fromEntries(roles.map(role=>[role,lineupRoleScore(p,role)]))]));
   let dp=new Map([[0,{score:0,map:{...base}}]]);
   for(const p of available){
     const next=new Map(dp);
     for(const [mask,state] of dp)for(let i=0;i<roles.length;i++){
-      const bit=1<<i;if(mask&bit)continue;const role=roles[i],nmask=mask|bit,score=state.score+lineupRoleScore(p,role),prev=next.get(nmask);
+      const bit=1<<i;if(mask&bit)continue;const role=roles[i],nmask=mask|bit,score=state.score+scores[p.id][role],prev=next.get(nmask);
       if(!prev||score>prev.score)next.set(nmask,{score,map:{...state.map,[role]:p.id}});
     }
     dp=next;

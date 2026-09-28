@@ -77,7 +77,7 @@ function playerCareerGoal(p){
 }
 function recommendedRosterRole(db,p,t){
   const team=teamRef(db,t);if(!team)return p.age<=20?'prospect':'backup';
-  const o=playerOvr(p),isStarter=ROLES.some(role=>starterFor(db,team,role)===p);
+  const o=playerOvr(p),isStarter=Object.values(team.depthChart||{}).includes(p.id);
   const same=(team.roster||[]).map(id=>db.players[id]).filter(x=>x&&x.role===p.role).sort((a,b)=>playerOvr(b)-playerOvr(a)),best=same[0]?playerOvr(same[0]):o;
   if(isStarter&&o>=best-1&&(p.reputation||o)>=82)return 'core';
   if(isStarter)return 'starter';
