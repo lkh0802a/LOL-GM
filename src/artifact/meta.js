@@ -3,24 +3,84 @@
 
 const META_HISTORY_CACHE=new WeakMap();
 const EMPTY_META_HISTORY=[];
+const META_FILTER_CACHE_LIMIT=64, META_PATCH_SORT_LIMIT=12, PATCH_REPLAY_CACHE_LIMIT=8;
 function patchCache(db){let c=PATCH_CACHE.get(db);if(!c){c=new Map();PATCH_CACHE.set(db,c)}return c}
 function clearPatchCache(db){PATCH_CACHE.delete(db)}
+function rememberHistoricPatch(db,id,patch){
+  const cache=patchCache(db);
+  cache.delete(id);cache.set(id,patch);
+  if(cache.size>PATCH_REPLAY_CACHE_LIMIT)cache.delete(cache.keys().next().value);
+  return patch;
+}
+function historicPatchCacheHit(db,id){
+  const cache=patchCache(db),patch=cache.get(id);
+  if(patch){cache.delete(id);cache.set(id,patch)}
+  return patch||null;
+}
+function metaIndexAdd(map,key,row){
+  if(key==null)return;
+  let a=map.get(key);if(!a){a=[];map.set(key,a)}a.push(row);
+}
+function metaIndexAddRow(index,row){
+  metaIndexAdd(index.byPatch,row.patch,row);
+  metaIndexAdd(index.byComp,row.comp,row);
+  for(const region of row.regions||[])metaIndexAdd(index.byRegion,region,row);
+  for(const key of ['comp','patch','season','split','league']){
+    const value=row[key];
+    if(value!==undefined&&value!==null&&value!=='')index.facetSets[key].add(value);
+  }
+}
 function metaHistoryIndex(db){
-  const rows=db.metaHistory||EMPTY_META_HISTORY;let c=META_HISTORY_CACHE.get(db);
-  if(c&&c.rows===rows&&c.length===rows.length)return c;
-  c={rows,length:rows.length,byPatch:new Map(),byComp:new Map(),byRegion:new Map(),filtered:new Map(),patchSorted:new Map()};
-  const add=(map,key,row)=>{if(key==null)return;let a=map.get(key);if(!a){a=[];map.set(key,a)}a.push(row)};
-  for(const row of rows){add(c.byPatch,row.patch,row);add(c.byComp,row.comp,row);for(const region of row.regions||[])add(c.byRegion,region,row)}
+  const rows=db.metaHistory||EMPTY_META_HISTORY;
+  let c=META_HISTORY_CACHE.get(db);
+  if(c&&c.rows===rows){
+    // A normal match records by appending; never rebuild 10k+ historical rows
+    // just because a single new professional game has finished.
+    if(c.length===rows.length&&c.tail===rows[rows.length-1])return c;
+    if(c.length<rows.length&&c.tail===rows[c.length-1]){
+      for(let i=c.length;i<rows.length;i++)metaIndexAddRow(c,rows[i]);
+      c.length=rows.length;c.tail=rows[rows.length-1];
+      c.filtered.clear();c.patchSorted.clear();c.facets=null;
+      return c;
+    }
+  }
+  // Array replacement/truncation or changed tail identity: full safe rebuild.
+  c={rows,length:rows.length,tail:rows[rows.length-1],
+    byPatch:new Map(),byComp:new Map(),byRegion:new Map(),
+    filtered:new Map(),patchSorted:new Map(),facets:null,
+    facetSets:Object.fromEntries(['comp','patch','season','split','league'].map(k=>[k,new Set()]))};
+  for(const row of rows)metaIndexAddRow(c,row);
   META_HISTORY_CACHE.set(db,c);return c;
+}
+function metaHistoryFacets(db){
+  const c=metaHistoryIndex(db);
+  if(c.facets)return c.facets;
+  const sorted=key=>[...c.facetSets[key]].sort();
+  return c.facets={
+    comps:sorted('comp'),patches:sorted('patch').reverse(),
+    seasons:sorted('season').reverse(),splits:sorted('split'),
+    leagues:sorted('league')
+  };
+}
+function metaCacheRemember(cache,key,value,limit){
+  if(cache.has(key))cache.delete(key);
+  cache.set(key,value);
+  if(cache.size>limit)cache.delete(cache.keys().next().value);
+  return value;
 }
 function metaFilterKey(filter){
   return ['region','patch','comp','season','year','split','league','scope','from','to','position'].map(k=>String(filter[k]??'')).join('|');
 }
 function metaRowsFiltered(db,filter={}){
-  const c=metaHistoryIndex(db),key=metaFilterKey(filter);if(c.filtered.has(key))return c.filtered.get(key);
+  const c=metaHistoryIndex(db),key=metaFilterKey(filter);
+  if(c.filtered.has(key)){
+    const hit=c.filtered.get(key);
+    c.filtered.delete(key);c.filtered.set(key,hit);
+    return hit;
+  }
   const choices=[c.rows];if(filter.patch)choices.push(c.byPatch.get(filter.patch)||EMPTY_META_HISTORY);if(filter.comp)choices.push(c.byComp.get(filter.comp)||EMPTY_META_HISTORY);if(filter.region)choices.push(c.byRegion.get(filter.region)||EMPTY_META_HISTORY);
   const base=choices.reduce((a,b)=>b.length<a.length?b:a),rows=base.filter(r=>(!filter.region||(r.regions||[]).includes(filter.region))&&(!filter.patch||r.patch===filter.patch)&&(!filter.comp||r.comp===filter.comp)&&(!filter.season||r.season===filter.season)&&(!filter.year||r.year===+filter.year)&&(!filter.split||String(r.split)===String(filter.split))&&(!filter.league||r.league===filter.league)&&(!filter.scope||(filter.scope==='INTL'?r.international:!r.international))&&(!filter.from||r.date>=filter.from)&&(!filter.to||r.date<=filter.to));
-  c.filtered.set(key,rows);return rows;
+  return metaCacheRemember(c.filtered,key,rows,META_FILTER_CACHE_LIMIT);
 }
 
 function recordMeta(db,r){

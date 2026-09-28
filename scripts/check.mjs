@@ -389,8 +389,30 @@ if (!Number.isInteger(saveVersion) || !Number.isInteger(worldVersion) || saveVer
   console.error(`Save schema mismatch: app SAVE_VERSION=${saveVersion}, buildWorld version=${worldVersion}`);
 }
 
+// 11.5/4: keep long-career indexes bounded, incremental, and non-persistent.
+const balanceIndexSource=await readFile(resolve(artifact,'patch-balance.js'),'utf8');
+const patchUiIndexSource=await readFile(resolve(artifact,'ui-patch.js'),'utf8');
+const perfIndexSource=await readFile(resolve(root,'scripts','perf.mjs'),'utf8');
+for(const [source,marker] of [
+  [metaSource,'const META_FILTER_CACHE_LIMIT=64'],
+  [metaSource,'const META_HISTORY_CACHE=new WeakMap()'],
+  [metaSource,'function metaHistoryFacets('],
+  [metaSource,'function metaIndexAddRow('],
+  [metaSource,'function historicPatchCacheHit('],
+  [patchSource,'rememberHistoricPatch(db,id,P)'],
+  [balanceIndexSource,'function patchSystemUsageIndex('],
+  [balanceIndexSource,'const SYSTEM_USAGE_INDEX_CACHE=new WeakMap()'],
+  [patchUiIndexSource,'metaHistoryFacets(DB)'],
+  [perfIndexSource,'meta_incremental_append'],
+  [perfIndexSource,'system_usage_reference_scan']
+]){
+  if(!source.includes(marker)){
+    failed=true;console.error('11.5/4 index or performance gate missing: '+marker);
+  }
+}
+
 const regressionSource = await readFile(resolve(root, 'scripts', 'regression.mjs'), 'utf8');
-for (const marker of ['01-world-bootstrap','05-contracts','06-owned-reserve-roster','06c-player-sign-transaction','06d-player-transfer-transaction','06e-ai-transfer-and-move-limit','06f-release-and-option-transaction','06g-save-format-and-cache-isolation','06h-legacy-v15-save-restoration','06i-invalid-and-forward-saves','06j-transaction-transfer-rollback','06k-transaction-roster-rollback','06l-transaction-release-option-rollback','06m-transaction-actor-parity-and-membership-guard','09-patch-baseline','11-draft-series-save','mid-Bo5 session did not survive save/load']) {
+for (const marker of ['01-world-bootstrap','05-contracts','06-owned-reserve-roster','06c-player-sign-transaction','06d-player-transfer-transaction','06e-ai-transfer-and-move-limit','06f-release-and-option-transaction','06g-save-format-and-cache-isolation','06h-legacy-v15-save-restoration','06i-invalid-and-forward-saves','06j-transaction-transfer-rollback','06k-transaction-roster-rollback','06l-transaction-release-option-rollback','06m-transaction-actor-parity-and-membership-guard','09-patch-baseline','11-draft-series-save','11a-meta-index-incremental-and-bounded','11b-historic-patch-cache-limit','11c-system-usage-index-parity','mid-Bo5 session did not survive save/load']) {
   if (!regressionSource.includes(marker)) {
     failed = true;
     console.error('11.5 regression baseline missing marker: '+marker);
