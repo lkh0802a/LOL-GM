@@ -36,7 +36,8 @@ const maintainabilityBudgets = {
   'draft.js': 26000,
   'content-naming.js': 16000,
   'patch.js': 40000,
-  'competition.js': 30000,
+  'series.js': 18000,
+  'competition.js': 18000,
   'player.js': 25000,
   'development.js': 14000,
   'player-relations.js': 16000,
@@ -108,6 +109,8 @@ const saveSource = await readFile(resolve(artifact, 'save.js'), 'utf8');
 const worldSource = await readFile(resolve(artifact, 'world.js'), 'utf8');
 const rosterSource = await readFile(resolve(artifact, 'roster.js'), 'utf8');
 const draftSource = await readFile(resolve(artifact, 'draft.js'), 'utf8');
+const seriesSource = await readFile(resolve(artifact, 'series.js'), 'utf8');
+const competitionSource = await readFile(resolve(artifact, 'competition.js'), 'utf8');
 const financeSource = await readFile(resolve(artifact, 'finance.js'), 'utf8');
 const contractsSource = await readFile(resolve(artifact, 'contracts.js'), 'utf8');
 const scoutingSource = await readFile(resolve(artifact, 'scouting.js'), 'utf8');
@@ -229,6 +232,13 @@ for (const marker of ['function scrimReadiness(','function aiRunScrims(','functi
 }
 if (!developmentSource.includes('function dailyRecovery(') || featuresSource.includes('function dailyRecovery(')) {
   failed=true; console.error('Daily recovery must be owned by development/training domain');
+}
+for (const marker of ['function createSeriesSession(','function playSeriesSessionGame(','function simulateSeries(']) {
+  if (!seriesSource.includes(marker)) { failed=true; console.error('Series-domain helper missing: '+marker); }
+  if (competitionSource.includes(marker)) { failed=true; console.error('Series responsibility leaked into competition.js: '+marker); }
+}
+for (const marker of ['function newSeason(','function standings(','function playDay(']) {
+  if (!competitionSource.includes(marker)) { failed=true; console.error('Competition helper missing: '+marker); }
 }
 const saveVersion = Number(appSource.match(/const SAVE_VERSION=(\d+)/)?.[1]);
 const worldVersion = Number(worldSource.match(/version:(\d+),saveId:/)?.[1]);

@@ -14,7 +14,8 @@ The authoritative module order lives in `scripts/artifact-modules.mjs`.
 - player lifecycle: `player.js` (evaluation/identity, squad-role promises, champion learning, player generation, rookie cohorts)
 - player development/training: `development.js` (training plans, facilities, daily recovery, age curves, seasonal growth)
 - patch/meta: `patch.js`
-- competition engine: `competition.js`
+- series engine: `series.js` (First Selection, Fearless, best-of sessions, replay)
+- competition engine: `competition.js` (schedules, stages, standings, scheduled-series orchestration)
 - world configuration/bootstrap: `world.js`
 - season orchestration: `season.js` (league/international calendar, official-match pause/resume, day progression)
 - offseason orchestration: `offseason.js` (season closeout, market close, promotion/relegation)
@@ -25,7 +26,7 @@ The authoritative module order lives in `scripts/artifact-modules.mjs`.
 - domain UI: `ui-patch.js`, `ui-market.js`, `ui-champion.js`, `ui-player.js`, `ui-roster.js`, `ui-draft.js`, `ui-season.js`
 - application shell/controller: `app.js`
 
-The match engine and draft engine stay separate. Draft legality/selection state stays in `draft.js`; scouting-bounded informational analysis stays in `draft-analysis.js`; interactive state stays in `ui-draft.js`.
+The match, draft, series and competition engines stay separate. `engine.js` owns one-game simulation; `draft.js` owns draft legality/selection; `series.js` owns First Selection/Fearless and best-of state; `competition.js` owns schedules/stages/standings. Scouting-bounded draft analysis stays in `draft-analysis.js`; interactive draft state stays in `ui-draft.js`.
 
 New large UI surfaces should be added as `ui-<domain>.js` modules instead of extending `app.js`. Squad editing lives in `ui-roster.js`; player detail/scouting lives in `ui-player.js`; draft UI lives in `ui-draft.js`. Small files are kept separate only when they own a coherent domain boundary, not merely to increase module count.
 

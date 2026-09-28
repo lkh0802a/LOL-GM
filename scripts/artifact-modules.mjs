@@ -7,6 +7,7 @@ export const ENGINE_MODULES = [
   'champs2.js',
   'content-naming.js',
   'patch.js',
+  'series.js',
   'competition.js',
   'player.js',
   'development.js',
