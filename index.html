@@ -2497,8 +2497,6 @@ function genTactics(rng){return {aggression:rng.int(35,80),risk_tolerance:rng.in
 const PHILOSOPHIES=['win-now','youth','balanced','superstar','cost'];
 const PHIL_KO={'win-now':'즉시 전력','youth':'유망주 육성','balanced':'균형','superstar':'스타 영입','cost':'효율 중시'};
 const SPLIT_NAME={1:'윈터',2:'스프링',3:'서머'};
-// 그 해 마지막 스플릿 시즌 (승강·시상·목표 판정 기준)
-function finalSeason(w,R,div=1){let best=null;for(const s of Object.values(w.seasons))if(s.region===R.id&&(s.div||1)===div&&s.split&&(!best||s.split>best.split))best=s;return best}
 // ---------- 지역 프리셋 / 월드 설정 ----------
 // 실제 LoL e스포츠 구조를 본뜬 기본 리그 (리그 수준·시장 규모는 고정, 구조만 편집 가능)
 const REGION_PRESETS = {
@@ -2717,6 +2715,14 @@ function validateConfig(cfg){
   return errs;
 }
 
+/* ==== FILE: season.js ==== */
+// ===== LOL GM: Season / competition orchestration =====
+// Owns league and international season construction, calendar progression,
+// managed official-match pauses and day-by-day world competition execution.
+
+// 그 해 마지막 스플릿 시즌 (승강·시상·목표 판정 기준)
+function finalSeason(w,R,div=1){let best=null;for(const s of Object.values(w.seasons))if(s.region===R.id&&(s.div||1)===div&&s.split&&(!best||s.split>best.split))best=s;return best}
+
 // ---------- 리그/시즌 구성 ----------
 function divName(R){return R.system==='franchise'?`${R.leagueName} 챌린저스`:`${R.leagueName} 2부`}
 function leagueComp(db,rid,div=1){
@@ -2887,6 +2893,17 @@ function playWorldDay(db){
 }
 function news(db,text){db.news.unshift({year:db.world?db.world.year:db.year,text});if(db.news.length>250)db.news.length=250}
 
+function stepOf(db,s){
+  if(s.step!==undefined)return s.step;
+  const w=db.world;
+  return w.steps.findIndex(st=>st.kind==='league'?st.split===s.split:(st.ids||[st.id]).includes(s.comp));
+}
+
+/* ==== FILE: offseason.js ==== */
+// ===== LOL GM: Offseason orchestration =====
+// Owns season closeout, retirement/growth handoff, market-close transition,
+// promotion/relegation and next-season organizational reset.
+
 // ---------- 오프시즌 1단계: 기록·성장·은퇴·승강·흥행·재정·사무국 ----------
 function runOffseason(db){
   const w=db.world, rng=new RNG(w.seed+'/'+w.year,'offseason'), f=CHANGE_F[db.worldConfig.changes]??1;
@@ -2982,6 +2999,11 @@ function promotionRelegation(db,w,rng,ev){
   }
 }
 
+/* ==== FILE: save.js ==== */
+// ===== LOL GM: Save serialization =====
+// Owns compact persisted views and runtime restoration only.
+// Save packing must not mutate live runtime state.
+
 // ---- 저장용 압축: 능력치·성향·챔피언 폭을 배열로 ----
 function packMetaHistory(rows){
   return (rows||[]).map(r=>[
@@ -3037,12 +3059,6 @@ function unpackDB(str){
   }
   delete db.packed;
   return typeof migrateLegacyStaffState==='function'?migrateLegacyStaffState(db):db;
-}
-
-function stepOf(db,s){
-  if(s.step!==undefined)return s.step;
-  const w=db.world;
-  return w.steps.findIndex(st=>st.kind==='league'?st.split===s.split:(st.ids||[st.id]).includes(s.comp));
 }
 
 /* ==== FILE: roster.js ==== */
