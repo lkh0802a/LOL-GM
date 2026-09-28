@@ -141,7 +141,7 @@ function draftUiOpponentIntent(){
 function draftUiGrid(){
   const s=DRAFT_UI.state,rows=Object.values(s.db.patch.champions).filter(draftUiMatch).sort((a,b)=>championDisplayName(a).localeCompare(championDisplayName(b),'ko'));
   return `<div class="du-grid">${rows.map(c=>{const st=draftUiChampionState(c),sel=DRAFT_UI.selected===c.id;
-    return `<button class="du-champ ${sel?'sel':''}" data-du-champ="${c.id}" ${st.disabled?'disabled':''} title="${esc(st.reason||c.roles.map(r=>ROLE_KO[r]).join(' · '))}">
+    return `<button class="du-champ ${sel?'sel':''}" data-du-champ="${c.id}" aria-pressed="${sel}" aria-label="${esc(championDisplayName(c))} · ${esc(c.roles.map(r=>ROLE_KO[r]).join(' · '))}${st.reason?' · '+esc(st.reason):''}" ${st.disabled?'disabled':''} title="${esc(st.reason||c.roles.map(r=>ROLE_KO[r]).join(' · '))}">
       ${championPortraitMarkup(c,{className:'du-champ-img',alt:false})}<span class="du-champ-meta"><b>${esc(championDisplayName(c))}</b><small>${c.roles.map(r=>ROLE_KO[r]).join(' · ')}</small></span>${st.reason?`<em>${esc(st.reason)}</em>`:''}
     </button>`}).join('')}</div>`;
 }
@@ -150,19 +150,19 @@ function draftUiRender(){
   const phase=done?'드래프트 완료':`${turn.index+1} / ${DRAFT_ORDER.length} · ${turn.kind==='B'?'밴':'픽'} · ${esc(s.db.teams[s.teamIds[turn.side]].short)} 차례`;
   const mine=!done&&turn.side===DRAFT_UI.playerSide;
   const markup=`<div class="ovin du-wrap">
-    <div class="ovhead"><div><b>${esc(DRAFT_UI.title)}</b><small class="du-phase">${phase}</small></div>${DRAFT_UI.locked?'':'<button class="ghost" id="du-close">닫기</button>'}</div>
+    <div class="ovhead"><div><b>${esc(DRAFT_UI.title)}</b><small class="du-phase" role="status" aria-live="polite">${phase}</small></div>${DRAFT_UI.locked?'':'<button class="ghost" id="du-close">닫기</button>'}</div>
     ${draftUiSeriesMeta()}<div class="du-board">${draftUiSidePanel(0)}<div class="du-center"><strong>${done?'완료':mine?'YOUR TURN':'AI'}</strong><span>${done?'10밴 · 10픽 완료':turn.kind==='B'?'BAN':'PICK'}</span></div>${draftUiSidePanel(1)}</div>
     ${done?`<section class="du-done"><h3>드래프트 완료</h3><p>${esc(DRAFT_UI.doneText||'단계형 밴픽 코어와 동일한 결과입니다.')}</p><button class="primary" id="du-finish">${esc(DRAFT_UI.finishLabel||(DRAFT_UI.onComplete?'드래프트 확정':'연습 종료'))}</button></section>`:
     `<section class="du-pool">
       <div class="du-tools"><input id="du-search" aria-label="챔피언 검색" type="search" autocomplete="off" placeholder="챔피언 검색" value="${esc(DRAFT_UI.query)}"><div class="chips">${DRAFT_UI_FILTERS.map(r=>`<button data-du-role="${r}" aria-pressed="${DRAFT_UI.filter===r}">${r==='ALL'?'전체':ROLE_KO[r]}</button>`).join('')}</div></div>
       <div class="du-mobile-tabs" role="group" aria-label="밴픽 정보">
-        <button data-du-info="analysis" aria-pressed="${DRAFT_UI.infoTab==='analysis'}">후보 분석</button>
-        <button data-du-info="advice" aria-pressed="${DRAFT_UI.infoTab==='advice'}">스태프 조언</button>
-        <button data-du-info="intent" aria-pressed="${DRAFT_UI.infoTab==='intent'}">상대 의도</button>
+        <button data-du-info="analysis" aria-controls="du-info-analysis" aria-pressed="${DRAFT_UI.infoTab==='analysis'}">후보 분석</button>
+        <button data-du-info="advice" aria-controls="du-info-advice" aria-pressed="${DRAFT_UI.infoTab==='advice'}">스태프 조언</button>
+        <button data-du-info="intent" aria-controls="du-info-intent" aria-pressed="${DRAFT_UI.infoTab==='intent'}">상대 의도</button>
       </div>
-      <div class="du-info-panel ${DRAFT_UI.infoTab==='advice'?'active':''}" data-du-panel="advice">${draftUiStaffAdvice()}</div>
-      <div class="du-info-panel ${DRAFT_UI.infoTab==='intent'?'active':''}" data-du-panel="intent">${draftUiOpponentIntent()}</div>
-      <div class="du-info-panel ${DRAFT_UI.infoTab==='analysis'?'active':''}" data-du-panel="analysis">${draftUiAnalysisPanel()}</div>
+      <div class="du-info-panel ${DRAFT_UI.infoTab==='advice'?'active':''}" id="du-info-advice" data-du-panel="advice">${draftUiStaffAdvice()}</div>
+      <div class="du-info-panel ${DRAFT_UI.infoTab==='intent'?'active':''}" id="du-info-intent" data-du-panel="intent">${draftUiOpponentIntent()}</div>
+      <div class="du-info-panel ${DRAFT_UI.infoTab==='analysis'?'active':''}" id="du-info-analysis" data-du-panel="analysis">${draftUiAnalysisPanel()}</div>
       <div id="du-grid">${draftUiGrid()}</div>
       <div class="du-lock"><div><b>${mine?(DRAFT_UI.selected?esc(championLabel(s.db,DRAFT_UI.selected)):'챔피언을 선택하세요'):'상대 팀이 선택 중입니다'}</b><small>${mine?(turn.kind==='P'?'픽 단계에서는 포지션을 공개하지 않습니다. 드래프트 종료 후 합법적인 5포지션 배치를 확정합니다.':'선택 후 확정해야 밴됩니다.'):'AI는 공개된 챔피언과 가능한 포지션만 보고 판단합니다.'}</small></div><button class="primary" id="du-lock" ${mine&&DRAFT_UI.selected?'':'disabled'}>${turn.kind==='B'?'밴 확정':'픽 확정'}</button></div>
     </section>`}
@@ -182,7 +182,7 @@ function draftUiBind(){
   const lock=$('#du-lock');if(lock)lock.onclick=()=>draftUiLock();
 }
 function draftUiBindGrid(){
-  document.querySelectorAll('[data-du-champ]').forEach(b=>b.onclick=()=>{DRAFT_UI.selected=b.dataset.duChamp;DRAFT_UI.infoTab='analysis';document.querySelectorAll('[data-du-champ]').forEach(x=>x.classList.toggle('sel',x===b));document.querySelectorAll('[data-du-info]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.duInfo==='analysis')));document.querySelectorAll('.du-info-panel').forEach(x=>x.classList.toggle('active',x.dataset.duPanel==='analysis'));const lock=$('#du-lock');if(lock)lock.disabled=false;const name=lock?.previousElementSibling?.querySelector('b');if(name)name.textContent=championLabel(DRAFT_UI.state.db,DRAFT_UI.selected);const analysis=$('#du-analysis');if(analysis)analysis.innerHTML=draftUiAnalysisContent()});
+  document.querySelectorAll('[data-du-champ]').forEach(b=>b.onclick=()=>{DRAFT_UI.selected=b.dataset.duChamp;DRAFT_UI.infoTab='analysis';document.querySelectorAll('[data-du-champ]').forEach(x=>{x.classList.toggle('sel',x===b);x.setAttribute('aria-pressed',String(x===b))});document.querySelectorAll('[data-du-info]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.duInfo==='analysis')));document.querySelectorAll('.du-info-panel').forEach(x=>x.classList.toggle('active',x.dataset.duPanel==='analysis'));const lock=$('#du-lock');if(lock)lock.disabled=false;const name=lock?.previousElementSibling?.querySelector('b');if(name)name.textContent=championLabel(DRAFT_UI.state.db,DRAFT_UI.selected);const analysis=$('#du-analysis');if(analysis)analysis.innerHTML=draftUiAnalysisContent()});
 }
 function draftUiLock(){
   if(!DRAFT_UI||!DRAFT_UI.selected)return;const s=DRAFT_UI.state,turn=draftTurn(s);if(!turn||turn.side!==DRAFT_UI.playerSide)return;
