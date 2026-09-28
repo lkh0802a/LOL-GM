@@ -176,6 +176,7 @@ source += `\n(()=>{
   const offRole=db.players.ROLE_PROBE_0;if(!setDepthStarter(db,roleProbeTeam,'TOP',offRole,'test',true).ok)throw new Error('Registered player could not be assigned off natural role');
   const duplicate=ROLES.filter(r=>roleProbeTeam.depthChart[r]===offRole.id);if(duplicate.length!==1)throw new Error('One player occupied multiple lineup slots');
   initializeDepthChart(db,roleProbeTeam,false);if(!validateStartingLineup(db,roleProbeTeam).ok)throw new Error('Free-position lineup could not restore five unique starters');
+  if(roleProbeTeam.roster.map(id=>db.players[id]).some(p=>p.role==='TOP'))throw new Error('Free-position probe unexpectedly retained natural TOP coverage');
   delete db.teams[roleProbeTeam.id];for(let i=0;i<ROLES.length;i++)delete db.players['ROLE_PROBE_'+i];
   const poolEntry=Object.keys(sample.pool)[0],practiceBefore=(sample.pool[poolEntry].trainingExperience||0);practiceChampion(db,sample,poolEntry,'training',3);
   if((sample.pool[poolEntry].trainingExperience||0)<=practiceBefore) throw new Error('Champion training experience failed');
