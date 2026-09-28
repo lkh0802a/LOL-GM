@@ -146,7 +146,13 @@ function runInitialMarketTo(db,teams,seed,targetFn,maxRounds=80){
   for(let round=0;round<maxRounds&&!teams.every(done);round++){const contenders=teams.filter(t=>!done(t)),r=resolveInitialOfferRound(db,contenders,round,seed,targetFn);if(!r.signed)break}
   return teams.filter(t=>!done(t));
 }
-function runInitialMinimumMarket(db,teams,seed){return runInitialMarketTo(db,teams,seed+'|minimum',t=>initialSquadLimits(db,t).min,80)}
+function initialLegalMinimumTarget(db,t){
+  const team=teamRef(db,t),lim=initialSquadLimits(db,team);if(!team?.parent)return lim.min;
+  const root=parentTeamOf(db,team),reserves=reserveTeamsOf(db,root),rules=rosterRulesForTeam(db,root),base=rules.firstTeamMin+reserves.length*rules.reserveTeamMin;let extra=Math.max(0,rules.integratedMin-base);
+  for(const reserve of reserves){const rlim=initialSquadLimits(db,reserve),add=Math.min(extra,Math.max(0,rlim.max-rlim.min));if(reserve.id===team.id)return rlim.min+add;extra-=add}
+  return lim.min;
+}
+function runInitialMinimumMarket(db,teams,seed){return runInitialMarketTo(db,teams,seed+'|minimum',t=>initialLegalMinimumTarget(db,t),80)}
 function runInitialDepthMarket(db,teams,seed){return runInitialMarketTo(db,teams,seed+'|depth',t=>t.initialRosterTarget||initialRosterTarget(db,t),80)}
 function autoBuildInitialSquad(db,t,rng,target=null){
   const team=teamRef(db,t),limits=initialSquadLimits(db,team),want=Math.min(limits.max,Math.max(limits.min,target??initialRosterTarget(db,team)));team.initialRosterTarget=want;
