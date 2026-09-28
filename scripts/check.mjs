@@ -32,11 +32,18 @@ for (const file of modules) {
 
 const maintainabilityBudgets = {
   'app.js': 22000,
-  'engine.js': 38000,
-  'draft.js': 26000,
+  'random.js': 5000,
+  'engine.js': 34000,
+  'champion-data.js': 14000,
+  'system-data.js': 14000,
+  'data.js': 20000,
+  'systems.js': 11000,
+  'draft.js': 21000,
   'content-naming.js': 16000,
   'meta.js': 14000,
-  'patch.js': 30000,
+  'patch.js': 9000,
+  'patch-balance.js': 22000,
+  'patch-content.js': 12500,
   'series.js': 18000,
   'competition.js': 18000,
   'player.js': 25000,
@@ -58,7 +65,12 @@ const maintainabilityBudgets = {
   'role-conversion.js': 14000,
   'draft-analysis.js': 18000,
   'ui-patch.js': 30000,
-  'ui-market.js': 35000,
+  'ui-market.js': 17000,
+  'ui-market-initial.js': 15000,
+  'ui-negotiations.js': 9500,
+  'ui-market-staff.js': 8500,
+  'office-international.js': 18000,
+  'office.js': 17000,
   'ui-setup.js': 16000,
   'ui-match.js': 22000,
   'ui-manager.js': 16000,
@@ -74,6 +86,29 @@ for (const [file, maxBytes] of Object.entries(maintainabilityBudgets)) {
   if (source.length > maxBytes) {
     failed = true;
     console.error(`Maintainability budget exceeded: ${file} > ${maxBytes} characters; split the domain UI instead of growing the monolith`);
+  }
+}
+
+
+const stage2Ownership = [
+  ['random.js','engine.js','function makeStreams('],
+  ['champion-data.js','data.js','function applyChampionSource('],
+  ['system-data.js','data.js','function buildRuneSystems('],
+  ['systems.js','draft.js','function selectRunePage('],
+  ['systems.js','draft.js','function championSystemMetaProfile('],
+  ['patch-balance.js','patch.js','function diagnosePatchMeta('],
+  ['patch-content.js','patch.js','function maybeNewChampion('],
+  ['office-international.js','office.js','function globalOffice('],
+  ['ui-market-initial.js','ui-market.js','function renderInitialRosterMarket('],
+  ['ui-negotiations.js','ui-market.js','function renderNegotiations('],
+  ['ui-market-staff.js','ui-market.js','function coachBlock('],
+];
+for (const [owner,former,marker] of stage2Ownership) {
+  const ownerSource = await readFile(resolve(artifact,owner),'utf8');
+  const formerSource = await readFile(resolve(artifact,former),'utf8');
+  if (!ownerSource.includes(marker) || formerSource.includes(marker)) {
+    failed=true;
+    console.error('Stage 11.5/2 domain boundary violated: '+marker+' must belong to '+owner);
   }
 }
 
