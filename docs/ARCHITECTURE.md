@@ -15,12 +15,12 @@ The authoritative module order lives in `scripts/artifact-modules.mjs`.
 - competition/world: `competition.js`, `world.js`
 - management domains: `office.js`, `finance.js`, `features.js`, `career.js`
 - draft information layer: `draft-analysis.js` (scouting-bounded mastery estimates, meta/composition evidence, opponent-intent explanation); legality and selection remain in `draft.js`
-- domain UI: `ui-patch.js`, `ui-market.js`, `ui-champion.js`, `ui-draft.js`, `ui-season.js`
+- domain UI: `ui-patch.js`, `ui-market.js`, `ui-champion.js`, `ui-roster.js`, `ui-draft.js`, `ui-season.js`
 - application shell/controller: `app.js`
 
 The match engine and draft engine stay separate. Draft legality/selection state stays in `draft.js`; scouting-bounded informational analysis stays in `draft-analysis.js`; interactive state stays in `ui-draft.js`.
 
-New large UI surfaces should be added as `ui-<domain>.js` modules instead of extending `app.js`. The actual LoL-style draft UI for Item 11 follows this rule.
+New large UI surfaces should be added as `ui-<domain>.js` modules instead of extending `app.js`. Roster/player/scouting UI lives in `ui-roster.js`; draft UI lives in `ui-draft.js`. Small files are kept separate only when they own a coherent domain boundary, not merely to increase module count.
 
 ## State and cache rules
 

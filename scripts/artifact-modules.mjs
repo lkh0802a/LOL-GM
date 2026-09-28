@@ -21,6 +21,7 @@ export const UI_MODULES = [
   'ui-patch.js',
   'ui-market.js',
   'ui-champion.js',
+  'ui-roster.js',
   'ui-draft.js',
   'ui-season.js',
   'app.js',
