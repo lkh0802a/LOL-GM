@@ -239,6 +239,7 @@ function contractMarket(db,rng,rep,ev){
       .map(p=>({p,fee:transferFee(db,p)})).filter(x=>x.fee<=t.finance.cash*0.6&&x.p.contract.salary<=budgetLeft[t.id]+cur.contract.salary).sort((a,b)=>aiMarketValue(db,b.p,t)-aiMarketValue(db,a.p,t))[0];
     if(!cand)continue;
     const seller=db.teams[cand.p.team];
+    if(localRegistrationError(db,t,cand.p)||localRegistrationError(db,seller,cur))continue;
     if(!(seller.finance.cash<10*psTeam(db,seller)||cand.p.wantsOut||rng.chance(.2)))continue;
     doTransfer(db,cand.p,seller,t,cand.fee);deals++;
     rep.transfers.push({pid:cand.p.id,from:seller.id,to:t.id,fee:cand.fee});
