@@ -783,6 +783,8 @@ function playWorldDay(db){
   const d=nextDate(db);if(!d){advanceStep(db);return {date:null,played:[],pending:null}}
   db.worldDate=d;patchTick(db,d,new RNG(w.seed+d,'patch'));dailyRecovery(db);
   for(const t of activeTeams(db))aiManageTraining(db,t);
+  if(typeof aiReviewRoleConversions==='function')for(const t of activeTeams(db))aiReviewRoleConversions(db,t);
+  if(typeof advanceRoleConversionsDay==='function')advanceRoleConversionsDay(db);
   if(typeof aiRunScrims==='function')aiRunScrims(db,new RNG(w.seed+d,'scrim'));
   for(const t of activeTeams(db,null,1))aiManageOwnedReserve(db,t);
   const played=[],queue=[],me=managedTeamId(db);
@@ -901,14 +903,14 @@ function growPlayer(db,p,rng,games,champGames){
   const team=p.team?db.teams[p.team]:null, before=playerOvr(p),dev=ensurePlayerDevelopment(p);
   const room=clamp((p.pot-before)/10,-0.5,1.5), prof=p.personality.professionalism/100,ageShift=dev.peakAge-25;
   const coach=team?staffDevelopmentFor(team,p.role)/100:0.45, play=clamp(games/30,0,1);
-  const tr=team?team.training:defaultTraining(), intensity=trainingIntensity(team),tsum=['mechanical','laning','combat','macro','mental'].reduce((a,k)=>a+(+tr[k]||0),0)||1;
+  const tr=team?team.training:defaultTraining(), intensity=trainingIntensity(team),conversionMul=typeof roleConversionGrowthMultiplier==='function'?roleConversionGrowthMultiplier(p):1,tsum=['mechanical','laning','combat','macro','mental'].reduce((a,k)=>a+(+tr[k]||0),0)||1;
   for(const g in ATTR_GROUPS){
     // 훈련 포인트는 총 100점 한도: 배분하지 않은 포인트는 버려진다 (나눠 쓰는 만큼만 효과)
     const base=ageCurve(p.age-ageShift,g), train=team?(Math.min(TRAIN_POINTS,tr[g])/TRAIN_POINTS*5-1)*0.9:-0.3;
     pState(p);
     let d=base>0?base*dev.growthRate*(0.45+room*0.6)*(0.7+0.6*prof)*(0.8+0.4*coach)*(0.65+0.55*play)*trainingGrowthMul(team)*facilityMul(team)*intensity.growth*(0.9+0.2*p.morale/100):base*dev.declineRate*(1.3-0.6*prof);
     d+=train*(base>0?1:0.5);
-    if(d>0)d*=youthMul(p.age);
+    if(d>0)d*=youthMul(p.age)*conversionMul;
     d=Math.min(d,growthCap(p.age)); // 한 시즌 영역별 성장 상한 (어릴수록 높음)
     const ceil=Math.min(99,p.pot+6); // 잠재력 + 6을 넘는 능력치는 더 오르지 않음
     for(const a of ATTR_GROUPS[g]){const v=p.attrs[a]+d+rng.normal(0,1.3);p.attrs[a]=Math.round(clamp(d>0&&p.attrs[a]>=ceil?Math.min(v,p.attrs[a]):d>0?Math.min(v,Math.max(ceil,p.attrs[a])):v,20,99))}
@@ -920,7 +922,7 @@ function growPlayer(db,p,rng,games,champGames){
     if(n||practiceGain){pr.mastery=Math.round(clamp(pr.mastery+gain,20,99));pr.experience=Math.round(clamp(pr.experience+n*1.5,0,999));pr.confidence=Math.round(clamp(pr.confidence+rng.normal(n?2:1,3),10,99))}
     else {pr.mastery=Math.round(clamp(pr.mastery-rng.range(0,1.8)*(1-(p.attrs.meta_adaptation||50)/180),20,99));if(pr.mastery<36&&Object.keys(p.pool).length>12)delete p.pool[c]}
     if(p.pool[c]){pr.matchup_knowledge=Math.round(clamp(pr.matchup_knowledge+(n?1.5:.35),20,99));pr.scrimSeason=0;pr.trainingSeason=0}}
-  if(games>0)p.proSeasons=(p.proSeasons||0)+1;p.age++;
+  if(games>0)p.proSeasons=(p.proSeasons||0)+1;p.age++;if(typeof resetRoleConversionSeasonLoad==='function')resetRoleConversionSeasonLoad(p);
   return playerOvr(p)-before;
 }
 function playerValue(db,p,team){
