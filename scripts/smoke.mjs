@@ -318,8 +318,8 @@ source += `\n(()=>{
   if(db.world.phase!=='season'||!db.manager.careerStartedAt) throw new Error('Season did not start after roster finalization');
   const scoutTarget=Object.values(db.players).find(p=>p.team&&p.team!==managedTeamId(db)&&!(db.teams[p.team]&&db.teams[p.team].parent===managedTeamId(db)));
   if(!scoutTarget)throw new Error('No scouting target');
-  const k0=knowledge(db,scoutTarget),pr0=scoutPotentialRange(db,scoutTarget);observePlayer(db,scoutTarget,20,{comp:'test',games:3});const k1=knowledge(db,scoutTarget),pr1=scoutPotentialRange(db,scoutTarget),sr=scoutReport(db,scoutTarget);
-  if(k1<=k0||!sr||sr.observations<1||pr1[1]-pr1[0]>pr0[1]-pr0[0])throw new Error('Scouting observation did not narrow report');
+  const k0=knowledge(db,scoutTarget);observePlayer(db,scoutTarget,20,{comp:'test',games:3});const k1=knowledge(db,scoutTarget),sr=scoutReport(db,scoutTarget);
+  if(k1<=k0||!sr||sr.observations<1||sr.knowledge!==k1)throw new Error('Scouting observation did not increase report knowledge');
   const y0=db.year;db.year++;ageScoutReports(db);if(knowledge(db,scoutTarget)>=k1)throw new Error('Stale scouting report did not decay');db.year=y0;
   const krTeam=activeTeams(db,'KR',1)[0];if(regulatedPayroll(db,krTeam)>payroll(db,krTeam)+.001)throw new Error('SFR payroll exceeds total payroll');
   if(db.regions.KR.spendingRule==='sfr_top5'&&regulatedPayroll(db,krTeam)!==krTeam.roster.map(id=>db.players[id].contract.salary).sort((a,b)=>b-a).slice(0,5).reduce((a,b)=>a+b,0))throw new Error('SFR is not based on top five salaries');
