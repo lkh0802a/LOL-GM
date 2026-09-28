@@ -38,8 +38,9 @@ function initializeDepthChart(db,t,force=false){
 }
 function starterFor(db,team,role){
   if(!team||!ROLES.includes(role))return null;team.depthChart=team.depthChart||{};
-  if(!validateStartingLineup(db,team).ok)initializeDepthChart(db,team,false);
-  const p=team.depthChart[role]&&db.players[team.depthChart[role]];return validLineupPlayer(db,team,p)?p:null;
+  const id=team.depthChart[role],p=id&&db.players[id],unique=id&&ROLES.every(r=>r===role||team.depthChart[r]!==id);
+  if(validLineupPlayer(db,team,p)&&unique)return p;
+  initializeDepthChart(db,team,false);const fixed=team.depthChart[role]&&db.players[team.depthChart[role]];return validLineupPlayer(db,team,fixed)?fixed:null;
 }
 function setDepthStarter(db,t,role,p,source='manager',silent=false){
   const team=teamRef(db,t),player=playerRef(db,p);if(!team||!player)return {ok:false,reason:'팀 또는 선수를 찾을 수 없습니다'};
