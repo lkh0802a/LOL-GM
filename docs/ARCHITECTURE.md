@@ -13,7 +13,8 @@ The authoritative module order lives in `scripts/artifact-modules.mjs`.
 - baseline/domain data: `data.js`, `champs2.js`
 - player lifecycle: `player.js` (evaluation/identity, squad-role promises, champion learning, player generation, rookie cohorts)
 - player development/training: `development.js` (training plans, facilities, daily recovery, age curves, seasonal growth)
-- patch/meta: `patch.js`
+- professional meta evidence: `meta.js`
+- patch lifecycle/balance: `patch.js`
 - series engine: `series.js` (First Selection, Fearless, best-of sessions, replay)
 - competition engine: `competition.js` (schedules, stages, standings, scheduled-series orchestration)
 - world configuration/bootstrap: `world.js`
@@ -31,6 +32,8 @@ The match, draft, series and competition engines stay separate. `engine.js` owns
 New large UI surfaces should be added as `ui-<domain>.js` modules instead of extending `app.js`. Squad editing lives in `ui-roster.js`; player detail/scouting lives in `ui-player.js`; draft UI lives in `ui-draft.js`. Small files are kept separate only when they own a coherent domain boundary, not merely to increase module count.
 
 ## Domain ownership notes
+
+- `meta.js` owns match-derived meta evidence and query indexes. `patch.js` may consume that evidence for balance diagnosis but does not own meta-history storage/query logic.
 
 - `finance.js` owns club cash flow, payroll/spending controls, revenue/cost closeout and sponsorship acceptance.
 - `contracts.js` owns player market valuation, contract terms/options/signing and the AI contract/FA market.

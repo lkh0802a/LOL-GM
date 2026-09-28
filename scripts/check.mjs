@@ -35,7 +35,8 @@ const maintainabilityBudgets = {
   'engine.js': 38000,
   'draft.js': 26000,
   'content-naming.js': 16000,
-  'patch.js': 40000,
+  'meta.js': 14000,
+  'patch.js': 30000,
   'series.js': 18000,
   'competition.js': 18000,
   'player.js': 25000,
@@ -108,6 +109,8 @@ const offseasonSource = await readFile(resolve(artifact, 'offseason.js'), 'utf8'
 const saveSource = await readFile(resolve(artifact, 'save.js'), 'utf8');
 const worldSource = await readFile(resolve(artifact, 'world.js'), 'utf8');
 const rosterSource = await readFile(resolve(artifact, 'roster.js'), 'utf8');
+const metaSource = await readFile(resolve(artifact, 'meta.js'), 'utf8');
+const patchSource = await readFile(resolve(artifact, 'patch.js'), 'utf8');
 const draftSource = await readFile(resolve(artifact, 'draft.js'), 'utf8');
 const seriesSource = await readFile(resolve(artifact, 'series.js'), 'utf8');
 const competitionSource = await readFile(resolve(artifact, 'competition.js'), 'utf8');
@@ -239,6 +242,13 @@ for (const marker of ['function createSeriesSession(','function playSeriesSessio
 }
 for (const marker of ['function newSeason(','function standings(','function playDay(']) {
   if (!competitionSource.includes(marker)) { failed=true; console.error('Competition helper missing: '+marker); }
+}
+for (const marker of ['function metaHistoryIndex(','function recordMeta(','function metaTableFiltered(']) {
+  if (!metaSource.includes(marker)) { failed=true; console.error('Meta-domain helper missing: '+marker); }
+  if (patchSource.includes(marker)) { failed=true; console.error('Meta responsibility leaked into patch.js: '+marker); }
+}
+for (const marker of ['function applyNote(','function getPatch(','function patchTick(']) {
+  if (!patchSource.includes(marker)) { failed=true; console.error('Patch-domain helper missing: '+marker); }
 }
 const saveVersion = Number(appSource.match(/const SAVE_VERSION=(\d+)/)?.[1]);
 const worldVersion = Number(worldSource.match(/version:(\d+),saveId:/)?.[1]);
