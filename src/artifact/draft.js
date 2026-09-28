@@ -93,7 +93,7 @@ function createDraftSession(db,teamIds,rng,ctx){
   ctx=ctx||{used:[],byTeam:{}};
   const evalBase=draftPoolSnapshot(db,ctx),{champs,strengths,mn,mx,byRole}=evalBase;
   const MS=db.metaStats||{},G=db.metaGames||0,RMS=db.regionMetaStats||{},RMG=db.regionMetaGames||{};
-  const vhat=teamIds.map(tid=>{const team=db.teams[tid],rid=team.region,an=Math.min(1,team.coach.analysis/100+scrimAnalysisBonus(team)),m={};
+  const vhat=teamIds.map(tid=>{const team=db.teams[tid],rid=team.region,an=Math.min(1,staffProfile(team).analysis/100+scrimAnalysisBonus(team)),m={};
     const nk=tid+'|'+an,noiseCache=draftNoiseBucket(db);let NZ=noiseCache.get(nk);if(!NZ){NZ={};noiseCache.set(nk,NZ)}
     champs.forEach(c=>{if(NZ[c.id]===undefined)NZ[c.id]=((hashStr(tid+db.patch.id+c.id)%2000)/1000-1)*0.35*(1.1-an);const noise=NZ[c.id];
       let v=clamp((strengths[c.id]-mn)/(mx-mn||1)+noise,0,1);
@@ -162,7 +162,7 @@ function draftLegalChampions(state,role=null){
 }
 function draftAiChoice(state){
   const turn=draftTurn(state);if(!turn)return null;
-  const {kind,side}=turn,tn=state.db.teams[state.teamIds[side]],noise=0.08*(1.1-tn.coach.draft/100);
+  const {kind,side}=turn,tn=state.db.teams[state.teamIds[side]],noise=0.08*(1.1-staffProfile(tn).draft/100);
   if(kind==='P'){
     const mine=state.pickList[side].map(n=>state.db.patch.champions[n]),seen=new Set(),cands=[];for(const r of ROLES)for(const c of draftShortlist(state,side,r))if(!seen.has(c.id)){seen.add(c.id);cands.push(c)}
     let best=null;
