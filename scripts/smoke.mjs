@@ -199,6 +199,8 @@ source += `\n(()=>{
     const banAnalysis=draftCandidateAnalysis(manual,first.side,legalChamp.id);if(!banAnalysis||banAnalysis.kind!=='B'||!Number.isFinite(banAnalysis.meta)||!banAnalysis.roles.length||Object.prototype.hasOwnProperty.call(banAnalysis,'intentRole'))throw new Error('Draft ban candidate analysis leaked hidden intent or missing data');
     const banAdvice=draftStaffAdvice(manual,first.side),banAdvice2=draftStaffAdvice(manual,first.side);if(!banAdvice?.available||banAdvice.kind!=='B'||!banAdvice.suggestions.length||JSON.stringify(banAdvice)!==JSON.stringify(banAdvice2)||banAdvice.suggestions.some(x=>Object.prototype.hasOwnProperty.call(x,'intentRole')||!draftLegalChampions(manual).some(c=>c.id===x.champ)))throw new Error('Draft staff ban advice invalid or leaked hidden intent');
     draftApplyChoice(manual,{champ:legalChamp.id,side:first.side,source:'player'});
+    const oppBanChoice=draftAiChoice(manual);if(!oppBanChoice||oppBanChoice.side===first.side)throw new Error('Opponent ban intent fixture unavailable');draftApplyChoice(manual,oppBanChoice);
+    const observedBan=draftOpponentIntent(manual,first.side,1)[0];if(!observedBan||observedBan.kind!=='B'||observedBan.champ!==oppBanChoice.champ||!Number.isFinite(observedBan.confidence)||!observedBan.reasons.length||['intentRole','player','mastery'].some(k=>Object.prototype.hasOwnProperty.call(observedBan,k)))throw new Error('Opponent ban intent explanation leaked private draft state');
     const dup=draftValidateChoice(manual,{champ:legalChamp.id,side:draftTurn(manual).side});if(dup.ok||dup.reason!=='champion_taken')throw new Error('Draft validator accepted duplicate champion');
     const flexState=createDraftSession(db,[scrimA.id,scrimB.id],new RNG('draft-flex-smoke','draft'),draftCtx());
     while(draftTurn(flexState)?.kind==='B'){const c=draftAiChoice(flexState);if(c)draftApplyChoice(flexState,c);else draftSkipTurn(flexState)}
@@ -210,6 +212,8 @@ source += `\n(()=>{
     draftApplyChoice(flexState,{champ:flexChamp.id,side:flexTurn.side,source:'player'});
     const possibleAfter=ROLES.filter(r=>draftRolePossibilities(flexState,flexTurn.side,r).includes(flexChamp.id));
     if(possibleAfter.length<2||flexState.log.at(-1).role!==null)throw new Error('Live draft exposed a hidden flex position');
+    const oppPickChoice=draftAiChoice(flexState);if(!oppPickChoice||oppPickChoice.side===flexTurn.side||oppPickChoice.kind!=='P')throw new Error('Opponent pick intent fixture unavailable');draftApplyChoice(flexState,oppPickChoice);
+    const observedPick=draftOpponentIntent(flexState,flexTurn.side,1)[0],publicRoles=flexState.db.patch.champions[oppPickChoice.champ].roles.filter(r=>ROLES.includes(r));if(!observedPick||observedPick.kind!=='P'||observedPick.champ!==oppPickChoice.champ||JSON.stringify(observedPick.roles)!==JSON.stringify(publicRoles)||!observedPick.reasons.length||['intentRole','player','mastery'].some(k=>Object.prototype.hasOwnProperty.call(observedPick,k)))throw new Error('Opponent pick intent explanation exposed hidden role assignment');
   }
   if(scrimA&&scrimB){
     const pdb=JSON.parse(JSON.stringify(db)),pa=pdb.teams[scrimA.id],pb=pdb.teams[scrimB.id],pcid='PENDING_SMOKE',pkey='__pending_smoke',psid='season_pending_smoke',pdate='2027-07-01',pool=Object.values(pdb.patch.champions).filter(c=>championProEligible(pdb,c,pdate)).map(c=>c.id);

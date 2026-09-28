@@ -54,7 +54,7 @@ for (const [file, maxBytes] of Object.entries(maintainabilityBudgets)) {
 
 const draftUiSource = await readFile(resolve(artifact, 'ui-draft.js'), 'utf8');
 const draftShellMarkers = ['du-series-meta','du-fearless','du-last-card','du-ban-img','du-pick-img'];
-const draftUiMarkers = ['officialLastGameCard','draftUiSeriesMeta','draftUiFearlessStrip','draftUiAnalysisPanel','draftUiStaffAdvice',"reason:'Fearless'"];
+const draftUiMarkers = ['officialLastGameCard','draftUiSeriesMeta','draftUiFearlessStrip','draftUiAnalysisPanel','draftUiStaffAdvice','draftUiOpponentIntent',"reason:'Fearless'"];
 for (const marker of draftUiMarkers) if (!draftUiSource.includes(marker)) {
   failed = true;
   console.error(`Interactive draft UI contract missing marker: ${marker}`);
@@ -76,6 +76,7 @@ for (const obsoleteId of ['addreg','addintl']) {
 const appSource = await readFile(resolve(artifact, 'app.js'), 'utf8');
 const worldSource = await readFile(resolve(artifact, 'world.js'), 'utf8');
 const draftSource = await readFile(resolve(artifact, 'draft.js'), 'utf8');
+const featuresSource = await readFile(resolve(artifact, 'features.js'), 'utf8');
 if (!draftSource.includes('function draftCandidateAnalysis(')) {
   failed = true;
   console.error('Draft candidate analysis domain helper is missing');
@@ -83,6 +84,10 @@ if (!draftSource.includes('function draftCandidateAnalysis(')) {
 if (!draftSource.includes('function draftStaffAdvice(')) {
   failed = true;
   console.error('Draft staff advice domain helper is missing');
+}
+if (!featuresSource.includes('function draftOpponentIntent(')) {
+  failed = true;
+  console.error('Opponent draft intent analysis helper is missing');
 }
 const saveVersion = Number(appSource.match(/const SAVE_VERSION=(\d+)/)?.[1]);
 const worldVersion = Number(worldSource.match(/version:(\d+),saveId:/)?.[1]);
