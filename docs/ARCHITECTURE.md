@@ -21,7 +21,7 @@ The authoritative module order lives in `scripts/artifact-modules.mjs`.
 - world configuration/bootstrap: `world.js`
 - season orchestration: `season.js` (league/international calendar, official-match pause/resume, day progression)
 - offseason orchestration: `offseason.js` (season closeout, market close, promotion/relegation)
-- persistence: `save.js` (compact save view and unpack/migration handoff)
+- persistence: `save.js` (non-mutating compact save view and parse handoff), `save-migration.js` (versioned encoding migration, legacy v15 normalization and transient cache cleanup)
 - roster/registration: `roster.js` (local eligibility, contracted-move accounting, organization roster rules, 1st↔reserve planning/movement, roster integrity)
 - transaction gateway: `state-transaction.js` (shared read-only validation and preview, stale-state guards, revalidation before application) and `state-player-actions.js` (signing/renewal, full transfer, release and contract-option command handlers)
 - management domains: `office.js` (regions), `office-international.js` (global governance), `finance.js`, `contracts.js`, `transfer.js`, `scouting.js`, `staff.js`, `scrim.js`, `player-relations.js`, `features.js`, `role-conversion.js`, `career.js`
@@ -64,11 +64,11 @@ Historical patch objects are reconstructed from the pinned 26.19 source plus ret
 
 ## Save rules
 
-`SAVE_VERSION` and the `buildWorld().version` schema must match; CI rejects drift.
+`SAVE_VERSION` and the `buildWorld().version` schema must match; CI rejects drift. The world schema remains 15; storage encoding changes are independently tracked by `saveFormat` (current format 2), and missing markers mean legacy format 1. Unsupported world/encoding versions or malformed payloads cause a clear load error, never a silent new-world replacement.
 
 High-volume records may use a compact persisted representation only when `unpackDB` restores the exact runtime structure. Meta-history packing preserves date, patch/competition dimensions, teams, players, positions, items, runes and bans.
 
-Derived caches and baseline snapshots must not be serialized. Save compaction must build a serialization view; it may not delete or rewrite fields in live runtime objects merely to reduce persisted size.
+Derived caches and baseline snapshots must not be serialized. Save compaction must build a serialization view; it may not delete or rewrite fields in live runtime objects merely to reduce persisted size. Save migration is a load-time operation only; it restores player attr/tendency/pool arrays, legacy staff fields, eligibility data, compressed meta history and safe missing world-market containers without changing pending official series, career history, contracts or negotiation state. Older storage namespaces are kept as backups and not purged during startup; cross-major world-schema upgrades (e.g. 14 → 15) are not assumed safe. Corrupt/unsupported saves are preserved for recovery. Slot writes capture the destination key and world when scheduled to prevent writing into the wrong slot after switching.
 
 ## Build and CI rules
 

@@ -187,7 +187,6 @@ function rosterIntegrityErrors(db){
       const prev=seen.get(pid);if(prev&&prev!==t.id)errors.push(`player ${pid} listed by ${prev} and ${t.id}`);else seen.set(pid,t.id);
     }
   }
-  if(db.metaHistoryPacked){db.metaHistory=unpackMetaHistory(db.metaHistory||[]);delete db.metaHistoryPacked}
   for(const p of Object.values(db.players)){
     if(!p.team)continue;
     const t=db.teams[p.team];

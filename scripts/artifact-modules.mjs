@@ -23,6 +23,7 @@ export const ENGINE_MODULES = [
   'season.js',
   'offseason.js',
   'save.js',
+  'save-migration.js',
   'roster.js',
   'lineup.js',
   'state-transaction.js',
