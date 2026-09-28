@@ -52,9 +52,16 @@ function initialSalaryBudget(db,t){const team=teamRef(db,t);return Math.max(sala
 function initialSalaryCeiling(db,t){return initialSalaryBudget(db,t)}
 function initialSquadLimits(db,t){const team=teamRef(db,t),rules=rosterRulesForTeam(db,team),first=!team.parent;return {min:first?rules.firstTeamMin:rules.reserveTeamMin,max:first?rules.firstTeamMax:rules.reserveTeamMax}}
 function initialRosterTarget(db,t){
-  const team=teamRef(db,t),lim=initialSquadLimits(db,team),floor=Math.max(.1,minimumViableInitialPayroll(db,team)),capacity=Math.max(0,initialSalaryBudget(db,team)/floor-1);
-  const philosophy={cost:-1,balanced:0,youth:1,'win-now':1,superstar:1}[team.philosophy]??0,goal=['title','final','promotion'].includes(team.setupGoal)?1:0;
-  return clamp(lim.min+Math.max(0,Math.floor(capacity*2)+philosophy+goal),lim.min,lim.max);
+  const team=teamRef(db,t),lim=initialSquadLimits(db,team),floor=Math.max(.1,minimumViableInitialPayroll(db,team)),room=Math.max(0,initialSalaryBudget(db,team)-floor);
+  const cheapExtra=Math.max(.1,(floor/Math.max(5,lim.min))*.55),affordable=Math.max(0,Math.floor(room/cheapExtra)),goal=team.setupGoal||'top_half';
+  if(team.parent)return clamp(lim.min+Math.min(3,Math.max(0,affordable)),lim.min,lim.max);
+  if(['title','final'].includes(goal))return clamp(lim.min+(team.philosophy==='youth'&&affordable>=2?1:0),lim.min,lim.max);
+  if(['survive','develop','promotion'].includes(goal)){
+    const intent=1+(['youth','cost'].includes(team.philosophy)?1:0)+(affordable>=3?1:0);
+    return clamp(lim.min+Math.min(3,Math.min(affordable,intent)),lim.min,Math.min(8,lim.max));
+  }
+  const extra=['youth','cost'].includes(team.philosophy)&&affordable>=1?1:0;
+  return clamp(lim.min+extra,lim.min,lim.max);
 }
 function initialSquadErrors(db,t){
   const team=teamRef(db,t);if(!team)return ['팀을 찾을 수 없습니다'];

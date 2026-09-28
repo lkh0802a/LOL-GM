@@ -296,15 +296,19 @@ function upgradeFacility(db,t,key){if(!['training','analysis','recovery','youth'
 
 // ---------- 지역 프리셋 / 월드 설정 ----------
 // 실제 LoL e스포츠 구조를 본뜬 기본 리그 (리그 수준·시장 규모는 고정, 구조만 편집 가능)
+const GLOBAL_FIRST_TEAM_MIN=5,GLOBAL_FIRST_TEAM_MAX=10,GLOBAL_RESERVE_TEAM_MIN=5;
+function rosterRule(id,source,{integratedMin=GLOBAL_FIRST_TEAM_MIN,integratedMax=GLOBAL_FIRST_TEAM_MAX,reserveTeamMax=10,reserveSubMax=5}={}){
+  return {id,source,integratedMin,integratedMax,firstTeamMin:GLOBAL_FIRST_TEAM_MIN,firstTeamMax:GLOBAL_FIRST_TEAM_MAX,reserveTeamMin:GLOBAL_RESERVE_TEAM_MIN,reserveTeamMax,reserveSubMax};
+}
 const ROSTER_RULE_PROFILES={
-  STANDARD_TIER1_2026:{id:'STANDARD_TIER1_2026',source:'GLOBAL_2026',integratedMin:5,integratedMax:10,firstTeamMin:5,firstTeamMax:10,reserveTeamMin:5,reserveTeamMax:10,reserveSubMax:5},
-  ENGINE_OWNED_RESERVE:{id:'ENGINE_OWNED_RESERVE',source:'POLICY_ENGINE',integratedMin:10,integratedMax:20,firstTeamMin:5,firstTeamMax:10,reserveTeamMin:5,reserveTeamMax:10,reserveSubMax:5},
-  OWNED_RESERVE_LCK_STYLE_2026:{id:'OWNED_RESERVE_LCK_STYLE_2026',source:'LCK_2026',integratedMin:11,integratedMax:20,firstTeamMin:5,firstTeamMax:10,reserveTeamMin:5,reserveTeamMax:10,reserveSubMax:5},
-  LCS_2026:{id:'LCS_2026',source:'LCS_2026',integratedMin:5,integratedMax:12,firstTeamMin:5,firstTeamMax:12,reserveTeamMin:5,reserveTeamMax:10,reserveSubMax:7},
-  LCP_2026:{id:'LCP_2026',source:'LCP_2026',integratedMin:5,integratedMax:10,firstTeamMin:5,firstTeamMax:10,reserveTeamMin:5,reserveTeamMax:10,reserveSubMax:5},
-  LEC_2026:{id:'LEC_2026',source:'LEC_2026',integratedMin:5,integratedMax:10,firstTeamMin:5,firstTeamMax:10,reserveTeamMin:5,reserveTeamMax:10,reserveSubMax:5},
-  LPL_2026:{id:'LPL_2026',source:'LPL_2026',integratedMin:5,integratedMax:10,firstTeamMin:5,firstTeamMax:10,reserveTeamMin:5,reserveTeamMax:10,reserveSubMax:5},
-  CBLOL_2026:{id:'CBLOL_2026',source:'CBLOL_2026',integratedMin:5,integratedMax:10,firstTeamMin:5,firstTeamMax:10,reserveTeamMin:5,reserveTeamMax:10,reserveSubMax:5}
+  STANDARD_TIER1_2026:rosterRule('STANDARD_TIER1_2026','GLOBAL_2026'),
+  ENGINE_OWNED_RESERVE:rosterRule('ENGINE_OWNED_RESERVE','POLICY_ENGINE',{integratedMin:10,integratedMax:20}),
+  OWNED_RESERVE_LCK_STYLE_2026:rosterRule('OWNED_RESERVE_LCK_STYLE_2026','LCK_2026',{integratedMin:10,integratedMax:20}),
+  LCS_2026:rosterRule('LCS_2026','LCS_2026',{integratedMin:5,integratedMax:10,reserveSubMax:7}),
+  LCP_2026:rosterRule('LCP_2026','LCP_2026'),
+  LEC_2026:rosterRule('LEC_2026','LEC_2026'),
+  LPL_2026:rosterRule('LPL_2026','LPL_2026'),
+  CBLOL_2026:rosterRule('CBLOL_2026','CBLOL_2026')
 };
 function rosterRuleProfile(id='STANDARD_TIER1_2026'){return ROSTER_RULE_PROFILES[id]||ROSTER_RULE_PROFILES.STANDARD_TIER1_2026}
 
