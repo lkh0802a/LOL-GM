@@ -20,7 +20,7 @@ Development progress is tracked by the 22 major LOL GM systems. Finish one major
 - `8. 훈련 / 스크림` — COMPLETE (2026-09-27)
 - `9. 챔피언 / 메타 / 패치` — COMPLETE (2026-09-27)
 - `10. 패치 엔진` — COMPLETE (2026-09-27)
-- `11. 실제 LoL식 밴픽 UI` — ACTIVE
+- `11. 실제 LoL식 밴픽 UI` — COMPLETE (2026-09-28)
 
 ## Product-wide convenience acceptance rule (2026-09-27)
 
@@ -257,9 +257,13 @@ Patch-pinned Riot Data Dragon import tooling now exists at `scripts/sync-champio
 - Rare major-patch champion reworks preserve stable champion IDs.
 
 
-### Item 11 live-draft checkpoint — 2026-09-28
+### Item 11 live-draft acceptance — 2026-09-28
 
-The managed-team official match path now pauses world progression and runs every Bo3/Bo5 game through the interactive draft surface. Fixed Fearless locks all ten picks from each prior game; flex roles remain hidden until legal final assignment; game-one First Selection is home-team in domestic double round-robin, explicit seed only where domestic playoff rules say so, and coin toss for international knockout/bracket matches after seeding has served bracket construction. Games two onward always give First Selection to the previous-game loser. The selection screen shows the previous game's score/picks, and the live draft shows series score, resolved First Selection and the accumulated Fearless lock strip. Item 11 remains ACTIVE pending final draft-information/AI-explanation UX and end-to-end acceptance pass.
+Item 11 is COMPLETE. Every managed-team official Bo3/Bo5 game pauses world progression at the decision boundary and runs through the interactive LoL-style draft surface. Fixed Fearless accumulates all ten picks from each completed game; flex roles remain unresolved and hidden until a legal final five-role assignment; game-one First Selection is home-team in domestic double round-robin, explicit seed only where domestic playoff configuration says so, and coin toss for international knockout/bracket matches. Games two onward always give First Selection to the previous-game loser, and the managed team explicitly chooses either the first dimension or the remaining side/order dimension.
+
+Draft information is bounded by what the club can legitimately know. Candidate analysis shows own-player champion pools, current composition needs, public matchup possibilities and meta evidence with source/confidence provenance. Opponent champion-pool estimates are scouting-bounded ranges rather than true hidden mastery. Strategic-coach/analyst advice remains advisory and never auto-locks a choice. Opponent-intent explanations use public draft state, series history and available scouting/analysis only; AI internal intent roles and unrevealed flex assignments are not surfaced.
+
+Player and AI choices pass through the same draft validator. Smoke acceptance drives managed-side choices and AI-side choices through the same staged state machine, checks identical rejection reasons for illegal duplicate/wrong-side choices, and completes both official Bo3 and Bo5 pending-series paths. The Bo5 acceptance includes First Selection handoff after every game, accumulated Fearless uniqueness, a mid-series save round-trip, single result commit and world-progression resume. Mobile portrait draft UX uses compact information tabs, two-column team boards, three-column champion browsing on normal phone widths, horizontal role filters, 44px decision controls and safe-area-aware sticky lock controls. Syntax/structure, smoke, performance, production build, generated standalone synchronization and latest-head CI gate acceptance.
 
 ### Managed-club authority rule — 2026-09-28
 
