@@ -2168,7 +2168,6 @@ function newSeason(db,compId,year,seed,start,instanceKey=compId){
   addStageDays(db,s,0,order,start||`${year}-01-14`);
   return s;
 }
-function nextMid(s){return `${s.id}_match_${s.days.reduce((n,d)=>n+d.matches.length,0)}`}
 function pushDay(s,date,stage,label,pairs,bo){let n=s.days.reduce((a,d)=>a+d.matches.length,0);s.days.push({date,stage,label,matches:pairs.map(([a,b])=>({id:`${s.id}_match_${n++}`,a,b,bo,res:null}))})}
 function addStageDays(db,s,idx,teams,date){
   const cfg=db.competitions[s.comp].stages[idx], gap=i=>cfg.dayGap?cfg.dayGap[i%cfg.dayGap.length]:3;
@@ -2295,10 +2294,6 @@ function finalizeCompetitionDay(db,s,day,cfgIdx,cfg){
 function scheduledSeriesSession(db,s,m){
   const day=s.days[s.cur],comp=db.competitions[s.comp],cfgIdx=comp.stages.findIndex(x=>x.id===day.stage),cfg=comp.stages[cfgIdx],opt=scheduledSeriesOptions(db,s,day,cfg),seed=`${s.seed}/${s.year}/${m.id}`;
   const session=createSeriesSession(db,m.a,m.b,m.bo,seed,opt);return {session,day,comp,cfg,cfgIdx,opt,seed};
-}
-function scheduledOpeningDraft(db,s,m){
-  const x=scheduledSeriesSession(db,s,m),opening=seriesSessionPrepareGame(db,x.session);
-  return {s,day:x.day,m,comp:x.comp,cfg:x.cfg,cfgIdx:x.cfgIdx,opt:x.opt,seed:x.seed,...opening,draftCtx:opening.snap,session:x.session};
 }
 function playDay(db,s,opt={}){
   if(!s||s.done)return null;
@@ -3567,17 +3562,6 @@ function rosterMoveCheck(db,p,target){
   const checked=validateRosterPlan(db,src,plan);
   return checked.ok?{ok:true,kind:dst.parent?'senddown':'callup',from:src.id,to:dst.id,parent:checked.parentId}:{ok:false,reason:checked.errors[0],errors:checked.errors};
 }
-function movePlayerBetweenSquads(db,p,target){
-  const player=playerRef(db,p),src=player&&player.team&&db.teams[player.team];
-  if(!src)throw new Error('현재 소속팀이 없습니다');
-  const plan=rosterPlanState(db,src);
-  plan.assignments[player.id]=teamRef(db,target)?.id;
-  const preview=previewWorldAction(db,{type:'roster.plan',parentId:src.id,assignments:plan.assignments,actor:'manager'});
-  if(!preview.ok)throw new Error(preview.errors.join('\n'));
-  const result=applyWorldAction(db,preview);
-  if(!result.ok)throw new Error(result.errors.join('\n'));
-  return result.moves[0];
-}
 function aiManageOwnedReserve(db,t){
   const parent=teamRef(db,t);if(!parent||parent.parent||parent.id===managedTeamId(db))return [];
   const reserve=reserveTeamsOf(db,parent)[0];if(!reserve)return [];
@@ -4644,7 +4628,6 @@ function mRelease(db,pid){
   if(!result.ok)return (result.errors||['방출할 수 없습니다']).join(' · ');
   return p.name+' 방출'+(result.cost?' (해지금 '+money(result.cost)+')':'');
 }
-function mOffer(db,pid,salary,years){const st=startNegotiation(db,pid,'fa');if(!st.ok)return st.msg;return submitNegotiationOffer(db,st.neg.id,{salary,years}).msg}
 function mTransfer(db,pid,fee){return mTransferBid(db,pid,fee)}
 // ---- 스카우팅: 관찰·경기 표본·보고서 노후화를 함께 추적한다 ----
 
@@ -5278,7 +5261,6 @@ function initialStartNegotiation(db,pid,targetId){
   const player=db.players[pid],target=db.teams[targetId],allowed=new Set(setupTeamsForManager(db).map(t=>t.id));if(!allowed.has(targetId))return '내 구단 조직의 스쿼드에만 등록할 수 있습니다';
   const chk=initialSignCheck(db,player,target);if(!chk.ok)return chk.reason;return startNegotiation(db,pid,'initial',{teamId:targetId}).msg;
 }
-function initialSignPlayer(db,pid,targetId){return initialStartNegotiation(db,pid,targetId)}
 function initialReleasePlayer(db,pid){
   const p=db.players[pid],allowed=new Set(setupTeamsForManager(db).map(t=>t.id));
   if(!p||!p.team||!allowed.has(p.team))return '초기 로스터에서 방출할 수 없는 선수입니다';
@@ -5318,14 +5300,6 @@ function initialPickCandidate(db,t,key='',snap=null){
   for(const p of initialCandidateShortlist(db,team,market,softMax)){const salary=market.price(p,team.region),chk=initialOfferCheck(db,p,team,{salary});if(!chk.ok)continue;rows.push({p,salary,score:initialCandidateScore(db,p,team,key,salary)})}
   rows.sort((a,b)=>(a.salary<=softMax)!==(b.salary<=softMax)?(a.salary<=softMax?-1:1):b.score-a.score||a.salary-b.salary);
   for(const row of rows)if(initialFutureFeasible(db,team,row.p,row.salary,market))return row.p;return null;
-}
-function normalizeInitialSalaryFloor(db,t){
-  const team=teamRef(db,t),R=db.regions[team.region];if((team.division||1)!==1||!R.salaryFloor)return;
-  const pay=payroll(db,team);if(pay<=0||pay>=R.salaryFloor)return;
-  const k=R.salaryFloor/pay;
-  for(const id of team.roster){const p=db.players[id];if(p&&p.contract)p.contract.salary=Math.round(p.contract.salary*k*10)/10}
-  const gap=Math.round((R.salaryFloor-payroll(db,team))*10)/10;
-  if(gap>0&&team.roster.length){const p=db.players[team.roster[0]];p.contract.salary=Math.round((p.contract.salary+gap)*10)/10}
 }
 function aiInitialContractTerms(db,p,t,rng){
   const ask=asking(db,p,t.region),years=contractYearsForPlayer(db,p,rng),premium=rng.range(.96,1.08),role=defaultPromisedRole(db,p,t),room=Math.max(.1,initialSalaryCeiling(db,t)-payroll(db,t)),salary=Math.min(room,ask*premium);
