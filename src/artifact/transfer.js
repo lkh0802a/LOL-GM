@@ -140,7 +140,6 @@ function doTransfer(db,p,from,to,fee){
   news(db,`이적: ${p.name} ${from.name} → ${to.name} (이적료 ${money(fee)})`);
 }
 function myT(db){return managedTeam(db)}
-function mResign(db,pid,years){const r=startNegotiation(db,pid,'renewal');return r.msg}
 function mExerciseTeamOption(db,pid){
   const t=myT(db),p=db.players[pid],o=p?.contract?.option;
   if(!t||!p||p.team!==t.id)return '우리 팀 선수가 아닙니다';

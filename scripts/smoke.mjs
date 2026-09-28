@@ -52,7 +52,7 @@ source += `\n(()=>{
   if(Object.values(OFFICE_STYLES).some(x=>Object.prototype.hasOwnProperty.call(x.w,'fearless')))throw new Error('Fearless leaked back into office policy');
   const namedPolicies=['KR','CN','EU','NA','AP','BR'].map(id=>db.regions[id]).filter(Boolean);
   if(namedPolicies.some(R=>R.sfrMode==='kr_progressive'||R.sfrMode==='lec_50_100'))throw new Error('Named-region hand policy leaked into engine world');
-  if(PAY_SCALE.KR||PAY_SCALE.CN||PAY_SCALE.EU||PAY_SCALE.NA)throw new Error('Named regional pay scales are still hardcoded');
+  if(typeof PAY_SCALE!=='undefined'||namedPolicies.some(R=>psOf(db,R.id)!==R.payScale))throw new Error('Legacy pay-scale table remains or regional finance policies no longer supply pay rates');
   const rookieR=db.regions[Object.keys(db.regions)[0]],rp=rookieIntakeProfile(db,rookieR),rc=generateRookieClass(db,rookieR,new RNG('rookie-smoke','class')),ri=rookieR.rookieIntake.slice(-1)[0];
   if(rc.length!==ri.profile.count||rc.some(p=>p.age<17||p.age>19||!p.rookieTier||p.entryYear!==db.year))throw new Error('Engine rookie class generation failed');
   if(rp.freeBuffer<rp.teams*.75)throw new Error('Rookie market liquidity buffer is too small');

@@ -411,8 +411,40 @@ for(const [source,marker] of [
   }
 }
 
+// 11.5/5: one canonical regional/transfer-registration rule path, no dead wrappers.
+const stage5Finance=await readFile(resolve(artifact,'finance.js'),'utf8');
+const stage5Transfer=await readFile(resolve(artifact,'transfer.js'),'utf8');
+const stage5Contracts=await readFile(resolve(artifact,'contracts.js'),'utf8');
+const stage5Roster=await readFile(resolve(artifact,'roster.js'),'utf8');
+const stage5Smoke=await readFile(resolve(root,'scripts','smoke.mjs'),'utf8');
+for(const marker of ['function detachPlayerFromRosters(',
+  'function localRegistrationError(','function contractedMoveError(',
+  'function playerActiveLocalRegion(']){
+  if(!stage5Roster.includes(marker)){
+    failed=true;console.error('11.5/5 canonical roster helper missing: '+marker);
+  }
+}
+for(const marker of ['localRegistrationError(db,','contractedMoveError(db,','teamNonLocalCount(db,']){
+  if(!playerActionSource.includes(marker)){
+    failed=true;console.error('11.5/5 player transactions no longer call canonical rules: '+marker);
+  }
+}
+if(playerActionSource.includes('playerActionLocal')||
+   playerActionSource.includes('playerActionMoveError')||
+   stage5Contracts.includes('playerActionLocalError')||
+   stage5Finance.includes('PAY_SCALE')||
+   stage5Transfer.includes('function mResign(')||
+   !stage5Smoke.includes("typeof PAY_SCALE!=='undefined'")){
+  failed=true;console.error('11.5/5 deprecated registration, finance or renewal aliases returned');
+}
+if(stage5Roster.includes('function contractedMoveCount(db,p){ensurePlayerEligibility')||
+   !stage5Roster.includes('Array.isArray(p?.contractedMoves)')||
+   !stage5Roster.includes('detachPlayerFromRosters(db,player.id,team.id);')){
+  failed=true;console.error('11.5/5 read-only move check or shared roster detachment changed');
+}
+
 const regressionSource = await readFile(resolve(root, 'scripts', 'regression.mjs'), 'utf8');
-for (const marker of ['01-world-bootstrap','05-contracts','06-owned-reserve-roster','06c-player-sign-transaction','06d-player-transfer-transaction','06e-ai-transfer-and-move-limit','06f-release-and-option-transaction','06g-save-format-and-cache-isolation','06h-legacy-v15-save-restoration','06i-invalid-and-forward-saves','06j-transaction-transfer-rollback','06k-transaction-roster-rollback','06l-transaction-release-option-rollback','06m-transaction-actor-parity-and-membership-guard','09-patch-baseline','11-draft-series-save','11a-meta-index-incremental-and-bounded','11b-historic-patch-cache-limit','11c-system-usage-index-parity','mid-Bo5 session did not survive save/load']) {
+for (const marker of ['01-world-bootstrap','05-contracts','06-owned-reserve-roster','06c-player-sign-transaction','06d-player-transfer-transaction','06e-ai-transfer-and-move-limit','06f-release-and-option-transaction','06g-save-format-and-cache-isolation','06h-legacy-v15-save-restoration','06i-invalid-and-forward-saves','06j-transaction-transfer-rollback','06k-transaction-roster-rollback','06l-transaction-release-option-rollback','06m-transaction-actor-parity-and-membership-guard','09-patch-baseline','11-draft-series-save','11a-meta-index-incremental-and-bounded','11b-historic-patch-cache-limit','11c-system-usage-index-parity','11d-shared-registration-rule-and-pure-preview','11e-roster-detach-is-single-owner','11f-dead-api-pruned-without-market-breakage','mid-Bo5 session did not survive save/load']) {
   if (!regressionSource.includes(marker)) {
     failed = true;
     console.error('11.5 regression baseline missing marker: '+marker);
