@@ -72,6 +72,7 @@ function updatePlayerUsage(db,s,rec,lines){
       if(u.teamGames>=16&&u.series%6===0)applySatisfaction(db,p);
     }
   }
+  if(typeof recordRoleConversionUsage==='function')recordRoleConversionUsage(db,lines,'official');
 }
 function onSquadMoveSatisfaction(db,p,check){
   ensureSatisfaction(p);if(check.kind==='senddown'){const pen=p.rosterRole==='prospect'?1:p.rosterRole==='backup'?2:p.rosterRole==='competition'?3:6;p.satisfaction=clamp(p.satisfaction-pen,0,100);p.satisfactionReasons=Array.from(new Set([...p.satisfactionReasons,'reserve']));p.concernStreak+=p.rosterRole==='core'||p.rosterRole==='starter'?1:0;p.managerTrust=clamp(p.managerTrust-(p.rosterRole==='core'||p.rosterRole==='starter'?4:1),0,100)}
@@ -140,6 +141,7 @@ function recordScrimPractice(db,rec,lines){
   if(!rec||!lines)return {players:0,games:0};const teams=new Set([rec.a,rec.b]),seen=new Set(),games=(rec.games||[]).length;
   for(const l of lines){const p=db.players[l.pid];if(!p||!teams.has(l.tid))continue;const opp=l.tid===rec.a?rec.b:rec.a,value=scrimValue(db,l.tid,opp);practiceChampion(db,p,l.champ,'scrim',value);pState(p);p.fatigue=clamp(p.fatigue+1.2,0,100);p.condition=clamp(p.condition-.45,45,100);seen.add(p.id)}
   for(const tid of teams){const t=db.teams[tid];if(!t)continue;const opp=tid===rec.a?rec.b:rec.a,value=scrimValue(db,tid,opp),bonus=scrimAnalysisBonus(t);t.scrimIntel=clamp((t.scrimIntel||0)+(.8+bonus*12)*value,0,12);t.scrimLog=(t.scrimLog||[]).filter(x=>x.date===db.worldDate).slice(-5);t.scrimLog.push({date:db.worldDate,games,opponent:tid===rec.a?rec.b:rec.a})}
+  if(typeof recordRoleConversionUsage==='function')recordRoleConversionUsage(db,lines,'scrim');
   return {players:seen.size,games};
 }
 function staffSalary(s,ps){return Math.round((.35+((s.rating||50)-40)/35)*ps*10)/10}
