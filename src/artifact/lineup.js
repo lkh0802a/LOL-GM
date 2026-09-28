@@ -19,14 +19,17 @@ function bestStartingLineup(db,t,locked={}){
   const team=teamRef(db,t);if(!team)return {};
   const players=(team.roster||[]).map(id=>db.players[id]).filter(p=>validLineupPlayer(db,team,p)),base={},used=new Set();
   for(const role of ROLES){const p=locked[role]&&db.players[locked[role]];if(validLineupPlayer(db,team,p)&&!used.has(p.id)){base[role]=p.id;used.add(p.id)}}
-  const roles=ROLES.filter(r=>!base[r]);let best=null,bestScore=-Infinity,cur={...base};
-  function walk(i,score){
-    if(i>=roles.length){if(score>bestScore){bestScore=score;best={...cur}}return}
-    const role=roles[i];
-    for(const p of players){if(used.has(p.id))continue;used.add(p.id);cur[role]=p.id;walk(i+1,score+lineupRoleScore(p,role));used.delete(p.id);delete cur[role]}
+  const roles=ROLES.filter(r=>!base[r]),available=players.filter(p=>!used.has(p.id));if(available.length<roles.length)return base;
+  let dp=new Map([[0,{score:0,map:{...base}}]]);
+  for(const p of available){
+    const next=new Map(dp);
+    for(const [mask,state] of dp)for(let i=0;i<roles.length;i++){
+      const bit=1<<i;if(mask&bit)continue;const role=roles[i],nmask=mask|bit,score=state.score+lineupRoleScore(p,role),prev=next.get(nmask);
+      if(!prev||score>prev.score)next.set(nmask,{score,map:{...state.map,[role]:p.id}});
+    }
+    dp=next;
   }
-  if(players.length-used.size>=roles.length)walk(0,0);
-  return best||base;
+  return dp.get((1<<roles.length)-1)?.map||base;
 }
 function initializeDepthChart(db,t,force=false){
   const team=teamRef(db,t);if(!team)return;team.depthChart=team.depthChart||{};
