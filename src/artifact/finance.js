@@ -34,7 +34,7 @@ function playerMarketValue(db,p){
 function asking(db,p,rid){return Math.round(marketSalary(db,p,rid)*(1+p.personality.ambition/420)*(.95+(p.reputation??playerOvr(p))/1700)*10)/10}
 function defaultPromisedRole(db,p,t){const cur=starterFor(db,t,p.role);if(!cur)return 'starter';const gap=playerOvr(p)-playerOvr(cur);return gap>=3?'starter':gap>=-2?'competition':p.age<=21?'prospect':'backup'}
 function normalizeContractTerms(db,p,t,salary,years,terms={}){
-  salary=Math.max(.1,Math.round(+salary*10)/10);years=clamp(Math.round(+years||1),1,4);
+  salary=Math.max(.1,Math.round(+salary*10)/10);years=clamp(Math.round(+years||1),1,3);
   const sign=Math.max(0,Math.round((terms.signingBonus??0)*10)/10);
   const bonuses={performance:Math.max(0,Math.round((terms.bonuses?.performance??0)*10)/10),title:Math.max(0,Math.round((terms.bonuses?.title??0)*10)/10),international:Math.max(0,Math.round((terms.bonuses?.international??0)*10)/10)};
   const optionType=['team','player'].includes(terms.option?.type)?terms.option.type:'none',until=db.year+years-1;

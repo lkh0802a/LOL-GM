@@ -719,3 +719,19 @@ Canonical detail:
 - `docs/STAFF_RULES.md`
 - `docs/INTERNATIONAL_OFFICE_RULES.md`
 - `docs/GOVERNANCE_RESTRUCTURE_RULES.md`
+
+## D-057 — Initial market, scouting memory, club philosophy and scrim geography follow-up
+
+**Decision:** The 2026-09-28 realism follow-up replaces simplifying defaults with the following rules.
+
+- The first-season AI roster market behaves like a market: clubs make competing offers in rounds and players compare offers instead of clubs receiving players through a fixed sequential draft order.
+- AI clubs do not share one fixed roster size. Their target squad depth varies within the legal roster limits from finances, goals and club philosophy.
+- Non-local slots are strategic assets, not local-first restrictions. AI recruitment may use them for stars, value signings or prospects according to team philosophy, provided the eventual legal roster remains feasible.
+- AI scouting knowledge is persistent per club/player rather than a stateless perfect-information lookup.
+- True potential may have a weak indirect effect on the market, but clubs do not read exact hidden potential for decisions.
+- Scrims are easiest within the same region, are routinely possible with geographically nearby regions, and become much easier across long distance when teams are co-located for international events or future bootcamps/travel.
+- Club philosophy evolves from ownership, finances, results, development structure and club history rather than remaining a permanently random creation-time label.
+- Player contracts are freely negotiated within a **maximum duration of three years**.
+
+Implementation must keep these decisions separate from temporary tuning constants and preserve player/AI legality parity.
+

@@ -349,7 +349,9 @@ source += `\n(()=>{
   const managedRoot=parentTeamOf(db,careerTeam)||careerTeam,ownedReserves=reserveTeamsOf(db,managedRoot);
 
   // 첫 시즌도 즉시계약이 아니라 관심 → 관찰 → 내부평가 → 공식 협상을 실제로 거친다.
-  const initialFa=Object.values(db.players).filter(p=>!p.retired&&!p.team).find(p=>initialSignCheck(db,p,managedRoot).ok);
+  const contractCapProbe=normalizeContractTerms(db,Object.values(db.players)[0],managedRoot,1,9,{});if(contractCapProbe.years!==3)throw new Error('Contract duration exceeded confirmed three-year maximum');
+  const targetProbe=activeTeams(db).map(t=>initialRosterTarget(db,t));if(targetProbe.some((n,i)=>{const lim=initialSquadLimits(db,activeTeams(db)[i]);return n<lim.min||n>lim.max}))throw new Error('Initial roster target escaped roster limits');
+    const initialFa=Object.values(db.players).filter(p=>!p.retired&&!p.team).find(p=>initialSignCheck(db,p,managedRoot).ok);
   if(!initialFa)throw new Error('No affordable initial-roster FA target');
   if(!setRecruitmentPriority(db,initialFa.id,'A').ok)throw new Error('Initial recruitment interest failed');
   observePlayer(db,initialFa,90,{comp:'initial-market-smoke',games:4});syncRecruitmentObservation(db,initialFa.id);
@@ -368,12 +370,14 @@ source += `\n(()=>{
     autoBuildInitialSquad(db,ownedReserves[0],userRng,6);
     for(const t of ownedReserves.slice(1)) autoBuildInitialSquad(db,t,userRng,5);
     if(managedRoot.roster.length!==5||ownedReserves[0].roster.length!==6) throw new Error('5+6 owned-reserve boundary roster setup failed');
-  } else autoBuildInitialSquad(db,managedRoot,userRng,INITIAL_ROSTER_TARGET);
+  } else autoBuildInitialSquad(db,managedRoot,userRng,initialRosterTarget(db,managedRoot));
   const myErrors=initialOrganizationErrors(db,careerTeam);
   if(myErrors.length) throw new Error('Managed initial roster invalid: '+myErrors.join(' | '));
 
   finalizeInitialRosters(db);
   if(db.world.phase!=='season'||!db.manager.careerStartedAt) throw new Error('Season did not start after roster finalization');
+  const aiInitialTeams=activeTeams(db).filter(t=>!setupTeamsForManager(db).some(x=>x.id===t.id));if(aiInitialTeams.some(t=>t.roster.length!==t.initialRosterTarget))throw new Error('AI initial market did not reach team-specific roster targets');
+  if(new Set(aiInitialTeams.map(t=>t.initialRosterTarget)).size<2)throw new Error('AI initial roster targets collapsed to one fixed size');
   const scoutTarget=Object.values(db.players).find(p=>p.team&&p.team!==managedTeamId(db)&&!(db.teams[p.team]&&db.teams[p.team].parent===managedTeamId(db))&&knowledge(db,p)<90);
   if(!scoutTarget)throw new Error('No unobserved scouting target');
   const k0=knowledge(db,scoutTarget);observePlayer(db,scoutTarget,20,{comp:'test',games:3});const k1=knowledge(db,scoutTarget),sr=scoutReport(db,scoutTarget);

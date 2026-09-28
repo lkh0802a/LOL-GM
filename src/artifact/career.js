@@ -1,5 +1,4 @@
 // ===== LOL GM: first-season blank roster setup =====
-const INITIAL_ROSTER_TARGET=6;
 const INITIAL_GOAL_KO={title:'리그 우승 도전',final:'결승권 진입',playoffs:'플레이오프 진출',top_half:'상위권 정착',survive:'1부 잔류',promotion:'1부 승격 도전',develop:'유망주 육성과 경쟁력 확보'};
 
 function prepareFirstSeasonFreeAgency(db){
@@ -30,28 +29,40 @@ function promotionStatus(db,t){
   return ['relegation','mixed'].includes(R.system)?'1부 승격 가능':'승격 없음';
 }
 function setupTeamsForManager(db){const root=managedTeam(db);if(!root)return [];return root.parent?[root]:[root,...reserveTeamsOf(db,root)]}
-function initialPayrollFloorKey(db,team){const lim=initialSquadLimits(db,team),R=db.regions[team.region];return [team.region,lim.min,R.importLimit??2].join('|')}
+function initialPayrollFloorKey(db,team){const lim=initialSquadLimits(db,team);return [team.region,lim.min,nonLocalLimitForTeam(db,team)].join('|')}
+function cheapestInitialRoleOptions(db,team,role,excludeId=null){
+  return Object.values(db.players).filter(p=>!p.retired&&!p.team&&p.id!==excludeId&&p.role===role)
+    .map(p=>({p,s:asking(db,p,team.region),nonLocal:!isLocalPlayer(p,team.region)})).sort((a,b)=>a.s-b.s);
+}
 function minimumViableInitialPayroll(db,t){
   const team=teamRef(db,t);db.initialPayrollFloorCache=db.initialPayrollFloorCache||{};const key=initialPayrollFloorKey(db,team);
   if(db.initialPayrollFloorCache[key]!=null)return db.initialPayrollFloorCache[key];
-  const free=Object.values(db.players).filter(p=>!p.retired&&!p.team),used=new Set(),chosen=[];let imports=0;
-  const priced=free.map(p=>({p,s:asking(db,p,team.region)})),byRole=Object.fromEntries(ROLES.map(r=>[r,[]]));
-  for(const x of priced)byRole[x.p.role].push(x);for(const role of ROLES)byRole[role].sort((a,b)=>a.s-b.s);
-  for(const role of ROLES){const candidates=byRole[role],pick=candidates.find(x=>x.p.region===team.region&&!used.has(x.p.id))||(imports<(db.regions[team.region].importLimit??2)?candidates.find(x=>!used.has(x.p.id)):null);if(pick){chosen.push(pick.s);used.add(pick.p.id);if(pick.p.region!==team.region)imports++}}
-  const lim=initialSquadLimits(db,team),extra=Math.max(0,lim.min-chosen.length),bench=priced.filter(x=>!used.has(x.p.id)).map(x=>x.s).sort((a,b)=>a-b).slice(0,extra);
-  const floor=Math.round((chosen.reduce((a,b)=>a+b,0)+bench.reduce((a,b)=>a+b,0))*1.12*10)/10;db.initialPayrollFloorCache[key]=floor;return floor;
+  const cap=nonLocalLimitForTeam(db,team),states=[{cost:0,imports:0}];
+  for(const role of ROLES){
+    const xs=cheapestInitialRoleOptions(db,team,role),local=xs.find(x=>!x.nonLocal),foreign=xs.find(x=>x.nonLocal),choices=[local,foreign].filter(Boolean);
+    const next=[];for(const st of states)for(const x of choices){const imports=st.imports+(x.nonLocal?1:0);if(imports<=cap)next.push({cost:st.cost+x.s,imports})}
+    states.splice(0,states.length,...next.sort((a,b)=>a.cost-b.cost).slice(0,cap+2));
+  }
+  const core=states.length?states[0].cost:0,lim=initialSquadLimits(db,team),extra=Math.max(0,lim.min-ROLES.length);
+  const bench=Object.values(db.players).filter(p=>!p.retired&&!p.team).map(p=>asking(db,p,team.region)).sort((a,b)=>a-b).slice(0,extra).reduce((a,b)=>a+b,0);
+  const floor=Math.round((core+bench)*1.12*10)/10;db.initialPayrollFloorCache[key]=floor;return floor;
 }
 function seedInitialPayrollBudgets(db){db.initialPayrollFloorCache={};for(const t of activeTeams(db)){if(t.initialPayrollBudget==null)t.initialPayrollBudget=minimumViableInitialPayroll(db,t)}}
 function initialSalaryBudget(db,t){const team=teamRef(db,t);return Math.max(salaryBudget(db,team),team.initialPayrollBudget||0)}
 function initialSalaryCeiling(db,t){return initialSalaryBudget(db,t)}
 function initialSquadLimits(db,t){const team=teamRef(db,t),rules=rosterRulesForTeam(db,team),first=!team.parent;return {min:first?rules.firstTeamMin:rules.reserveTeamMin,max:first?rules.firstTeamMax:rules.reserveTeamMax}}
+function initialRosterTarget(db,t){
+  const team=teamRef(db,t),lim=initialSquadLimits(db,team),floor=Math.max(.1,minimumViableInitialPayroll(db,team)),capacity=Math.max(0,initialSalaryBudget(db,team)/floor-1);
+  const philosophy={cost:-1,balanced:0,youth:1,'win-now':1,superstar:1}[team.philosophy]??0,goal=['title','final','promotion'].includes(team.setupGoal)?1:0;
+  return clamp(lim.min+Math.max(0,Math.floor(capacity*2)+philosophy+goal),lim.min,lim.max);
+}
 function initialSquadErrors(db,t){
   const team=teamRef(db,t);if(!team)return ['팀을 찾을 수 없습니다'];
-  const R=db.regions[team.region],limits=initialSquadLimits(db,team),errors=[],roster=team.roster||[];
+  const limits=initialSquadLimits(db,team),errors=[],roster=team.roster||[];
   if(roster.length<limits.min)errors.push('최소 '+limits.min+'명 필요');
   if(roster.length>limits.max)errors.push('최대 '+limits.max+'명 초과');
   for(const role of ROLES)if(!roster.some(id=>db.players[id]&&db.players[id].role===role))errors.push(ROLE_KO[role]+' 포지션 필요');
-  const imports=roster.filter(id=>db.players[id]&&db.players[id].region!==team.region).length;if(imports>(R.importLimit??2))errors.push('외국인 등록 한도 '+(R.importLimit??2)+'명 초과');
+  const imports=teamNonLocalCount(db,team),cap=nonLocalLimitForTeam(db,team);if(imports>cap)errors.push('비로컬 등록 한도 '+cap+'명 초과');
   const pay=payroll(db,team),budget=initialSalaryBudget(db,team);
   if(pay>budget+0.001)errors.push('구단 연봉 예산 초과');
   return errors;
@@ -66,7 +77,7 @@ function initialOfferCheck(db,p,target,terms={}){
   const player=playerRef(db,p),team=teamRef(db,target);if(!player||player.retired)return {ok:false,reason:'계약할 수 없는 선수입니다'};if(player.team)return {ok:false,reason:'이미 소속팀이 있는 선수입니다'};if(!team||team.active===false)return {ok:false,reason:'대상 팀이 없습니다'};
   const limits=initialSquadLimits(db,team);if((team.roster||[]).length>=limits.max)return {ok:false,reason:'스쿼드 최대 '+limits.max+'명입니다'};
   const root=parentTeamOf(db,team),rules=rosterRulesForTeam(db,root);if(root&&reserveTeamsOf(db,root).length&&organizationRoster(db,root).length>=rules.integratedMax)return {ok:false,reason:'통합 로스터 최대 '+rules.integratedMax+'명입니다'};
-  const R=db.regions[team.region],imports=(team.roster||[]).filter(id=>db.players[id]&&db.players[id].region!==team.region).length;if(player.region!==team.region&&imports>=(R.importLimit??2))return {ok:false,reason:'외국인 등록 한도에 도달했습니다'};
+  const imports=teamNonLocalCount(db,team),cap=nonLocalLimitForTeam(db,team);if(!isLocalPlayer(player,team.region)&&imports>=cap)return {ok:false,reason:'비로컬 등록 한도에 도달했습니다'};
   const salary=Math.max(.1,+terms.salary||asking(db,player,team.region)),projected=payroll(db,team)+salary,ceiling=initialSalaryCeiling(db,team);if(projected>ceiling+0.001)return {ok:false,reason:'연봉 예산을 초과합니다'};
   return {ok:true,salary};
 }
@@ -77,20 +88,35 @@ function initialStartNegotiation(db,pid,targetId){
 }
 function initialSignPlayer(db,pid,targetId){return initialStartNegotiation(db,pid,targetId)}
 function initialReleasePlayer(db,pid){const p=db.players[pid],allowed=new Set(setupTeamsForManager(db).map(t=>t.id));if(!p||!p.team||!allowed.has(p.team))return '초기 로스터에서 방출할 수 없는 선수입니다';removePlayerFromTeam(db,p);p.contract=null;p.faYears=0;return p.name+' 선수를 FA 풀로 되돌렸습니다'}
-function initialCandidateScore(db,p,t,rng){return aiMarketValue(db,p,t)+(p.region===t.region?0.5:0)+rng.normal(0,1.2)}
-function initialPickCandidate(db,t,role,rng){
-  const team=teamRef(db,t),room=Math.max(0,initialSalaryCeiling(db,team)-payroll(db,team));
-  const slotsLeft=Math.max(1,INITIAL_ROSTER_TARGET-team.roster.length),softMax=room/slotsLeft*1.35;
-  const candidates=Object.values(db.players).filter(p=>!p.retired&&!p.team&&(!role||p.role===role)).map(p=>({p,chk:initialSignCheck(db,p,team)})).filter(x=>x.chk.ok)
-    .map(x=>({p:x.p,salary:x.chk.salary,score:initialCandidateScore(db,x.p,team,rng)-x.chk.salary*0.35}));
-  if(!candidates.length)return null;
-  // Mandatory role coverage preserves import slots when a legal local option exists.
-  // This prevents an early foreign luxury signing from making a later required role impossible.
-  const local=role?candidates.filter(x=>x.p.region===team.region):[],pool=local.length?local:candidates;
-  const prudent=pool.filter(x=>x.salary<=softMax+0.001).sort((a,b)=>b.score-a.score);
-  if(prudent.length)return prudent[0].p;
-  return pool.sort((a,b)=>a.salary-b.salary||b.score-a.score)[0].p;
+function initialCandidateScore(db,p,t,key=''){
+  const ps=Math.max(.2,psOf(db,t.region)),cost=asking(db,p,t.region)/ps,costWeight={cost:.55,balanced:.28,youth:.3,'win-now':.16,superstar:.1}[t.philosophy]??.28;
+  const star=t.philosophy==='superstar'?(p.reputation||0)*.025:0,noise=((hashStr((db.world?.seed||db.saveId)+'|initial|'+t.id+'|'+p.id+'|'+key)%2001)/1000-1)*1.2;
+  return aiMarketValue(db,p,t)+star-cost*costWeight+noise;
 }
+function initialMissingRoles(db,t,extraPlayer=null){
+  const ids=(t.roster||[]).map(id=>db.players[id]).filter(Boolean);if(extraPlayer)ids.push(extraPlayer);
+  return ROLES.filter(role=>!ids.some(p=>p.role===role));
+}
+function initialFutureFeasible(db,t,candidate,salary){
+  const team=teamRef(db,t),lim=initialSquadLimits(db,team),projected=(team.roster||[]).length+1,missing=initialMissingRoles(db,team,candidate);
+  if(projected+missing.length>lim.max)return false;
+  const usedImports=teamNonLocalCount(db,team)+(isLocalPlayer(candidate,team.region)?0:1),cap=nonLocalLimitForTeam(db,team),budget=initialSalaryCeiling(db,team)-payroll(db,team)-salary;
+  if(usedImports>cap||budget<-.001)return false;
+  let states=[{cost:0,imports:usedImports}];
+  for(const role of missing){
+    const xs=cheapestInitialRoleOptions(db,team,role,candidate.id),local=xs.find(x=>!x.nonLocal),foreign=xs.find(x=>x.nonLocal),choices=[local,foreign].filter(Boolean);
+    if(!choices.length)return false;
+    const next=[];for(const st of states)for(const x of choices){const imports=st.imports+(x.nonLocal?1:0),cost=st.cost+x.s;if(imports<=cap&&cost<=budget+.001)next.push({cost,imports})}
+    states=next;if(!states.length)return false;
+  }
+  return true;
+}
+function initialCandidateOptions(db,t,role,key=''){
+  const team=teamRef(db,t),target=team.initialRosterTarget||initialRosterTarget(db,team),room=Math.max(0,initialSalaryCeiling(db,team)-payroll(db,team)),slotsLeft=Math.max(1,target-team.roster.length),softMax=room/slotsLeft*1.35;
+  return Object.values(db.players).filter(p=>!p.retired&&!p.team&&(!role||p.role===role)).map(p=>({p,chk:initialSignCheck(db,p,team)})).filter(x=>x.chk.ok&&initialFutureFeasible(db,team,x.p,x.chk.salary))
+    .map(x=>({p:x.p,salary:x.chk.salary,score:initialCandidateScore(db,x.p,team,key)})).sort((a,b)=>(a.salary<=softMax)!==(b.salary<=softMax)?(a.salary<=softMax?-1:1):b.score-a.score||a.salary-b.salary);
+}
+function initialPickCandidate(db,t,role,key=''){return initialCandidateOptions(db,t,role,key)[0]?.p||null}
 function normalizeInitialSalaryFloor(db,t){
   const team=teamRef(db,t),R=db.regions[team.region];if((team.division||1)!==1||!R.salaryFloor)return;
   const pay=payroll(db,team);if(pay<=0||pay>=R.salaryFloor)return;
@@ -103,16 +129,32 @@ function aiInitialContractTerms(db,p,t,rng){
   const ask=asking(db,p,t.region),years=contractYearsForPlayer(db,p,rng),premium=rng.range(.96,1.08),role=defaultPromisedRole(db,p,t),room=Math.max(.1,initialSalaryCeiling(db,t)-payroll(db,t)),salary=Math.min(room,ask*premium);
   return normalizeContractTerms(db,p,t,salary,years,{signingBonus:rng.chance(.28)?ask*rng.range(.04,.12):0,bonuses:rng.chance(.32)?{performance:ask*.05,title:ask*.08,international:ask*.05}:{},promisedRole:role,option:rng.chance(.15)?{type:rng.chance(.55)?'team':'player'}:null,buyout:p.personality.ambition>=86&&rng.chance(.35)?playerMarketValue(db,p)*1.8:null});
 }
-function autoBuildInitialSquad(db,t,rng,target=INITIAL_ROSTER_TARGET){
-  const team=teamRef(db,t),limits=initialSquadLimits(db,team),want=Math.min(limits.max,Math.max(limits.min,target));
-  for(const role of ROLES){if(team.roster.some(id=>db.players[id]&&db.players[id].role===role))continue;const p=initialPickCandidate(db,team,role,rng);if(!p)throw new Error(team.name+'의 '+ROLE_KO[role]+' 선수를 확보하지 못했습니다');const terms=aiInitialContractTerms(db,p,team,rng),chk=initialOfferCheck(db,p,team,terms);if(!chk.ok)throw new Error(team.name+' 초기 계약 실패: '+chk.reason);signContract(db,p,team,terms.salary,terms.years,terms)}
-  while(team.roster.length<want){const p=initialPickCandidate(db,team,null,rng);if(!p)break;const terms=aiInitialContractTerms(db,p,team,rng),chk=initialOfferCheck(db,p,team,terms);if(!chk.ok)break;signContract(db,p,team,terms.salary,terms.years,terms)}
+function initialOfferForTeam(db,t,phase,round,seed){
+  const missing=initialMissingRoles(db,t),target=t.initialRosterTarget||initialRosterTarget(db,t);if(phase==='roles'&&!missing.length)return null;if(phase==='depth'&&t.roster.length>=target)return null;
+  const role=phase==='roles'?missing.map(r=>({r,n:cheapestInitialRoleOptions(db,t,r).length})).sort((a,b)=>a.n-b.n)[0]?.r:null,key=phase+'|'+round+'|'+(role||'ANY'),p=initialPickCandidate(db,t,role,key);if(!p)return null;
+  const rng=new RNG((seed||'initial-market')+'|'+t.id+'|'+key,'initial-offer'),terms=aiInitialContractTerms(db,p,t,rng),chk=initialOfferCheck(db,p,t,terms);if(!chk.ok)return null;
+  return {team:t,player:p,terms,role,value:offerUtility(db,p,t,terms)+((hashStr((seed||'initial-market')+'|choose|'+p.id+'|'+t.id+'|'+round)%1001)/1000-.5)*.08};
+}
+function resolveInitialOfferRound(db,teams,phase,round,seed){
+  const offers=teams.map(t=>initialOfferForTeam(db,t,phase,round,seed)).filter(Boolean),byPlayer={};for(const o of offers)(byPlayer[o.player.id]=byPlayer[o.player.id]||[]).push(o);
+  let signed=0;for(const os of Object.values(byPlayer)){const best=os.sort((a,b)=>b.value-a.value||b.terms.salary-a.terms.salary)[0],p=best.player,t=best.team;if(p.team)continue;const chk=initialOfferCheck(db,p,t,best.terms);if(!chk.ok||!initialFutureFeasible(db,t,p,best.terms.salary))continue;signContract(db,p,t,best.terms.salary,best.terms.years,best.terms);signed++}
+  return {offers:offers.length,signed};
+}
+function runInitialMarketPhase(db,teams,phase,seed){
+  const done=t=>phase==='roles'?initialMissingRoles(db,t).length===0:t.roster.length>=(t.initialRosterTarget||initialRosterTarget(db,t));
+  for(let round=0;round<80&&!teams.every(done);round++){const r=resolveInitialOfferRound(db,teams,phase,round,seed);if(!r.signed&&teams.some(t=>!done(t)))break}
+  return teams.filter(t=>!done(t));
+}
+function autoBuildInitialSquad(db,t,rng,target=null){
+  const team=teamRef(db,t),limits=initialSquadLimits(db,team),want=Math.min(limits.max,Math.max(limits.min,target??initialRosterTarget(db,team)));team.initialRosterTarget=want;
+  for(let guard=0;guard<20&&initialMissingRoles(db,team).length;guard++){const role=initialMissingRoles(db,team)[0],p=initialPickCandidate(db,team,role,'single|'+guard);if(!p)break;const terms=aiInitialContractTerms(db,p,team,rng),chk=initialOfferCheck(db,p,team,terms);if(!chk.ok)break;signContract(db,p,team,terms.salary,terms.years,terms)}
+  while(team.roster.length<want){const p=initialPickCandidate(db,team,null,'depth|'+team.roster.length);if(!p)break;const terms=aiInitialContractTerms(db,p,team,rng),chk=initialOfferCheck(db,p,team,terms);if(!chk.ok)break;signContract(db,p,team,terms.salary,terms.years,terms)}
   const errors=initialSquadErrors(db,team);if(errors.length)throw new Error(team.name+' 초기 로스터 오류: '+errors.join(', '));return team;
 }
 function autoBuildInitialWorld(db,excludedIds,seed){
-  const excluded=new Set(excludedIds||[]),rng=new RNG(seed||'initial-market','ai-roster'),teams=activeTeams(db).filter(t=>!excluded.has(t.id));
-  for(const role of ROLES){const order=teams.map(t=>({t,tie:rng.next()})).sort((a,b)=>(b.t.reputation||0)-(a.t.reputation||0)||a.tie-b.tie).map(x=>x.t);for(const t of order){if(t.roster.some(id=>db.players[id]&&db.players[id].role===role))continue;const p=initialPickCandidate(db,t,role,rng);if(!p)throw new Error(t.name+' AI 로스터가 '+ROLE_KO[role]+' 선수를 확보하지 못했습니다');const terms=aiInitialContractTerms(db,p,t,rng),chk=initialOfferCheck(db,p,t,terms);if(!chk.ok)throw new Error(t.name+' AI 초기 계약 실패: '+chk.reason);signContract(db,p,t,terms.salary,terms.years,terms)}}
-  for(const t of teams)autoBuildInitialSquad(db,t,rng,INITIAL_ROSTER_TARGET);
+  const excluded=new Set(excludedIds||[]),teams=activeTeams(db).filter(t=>!excluded.has(t.id));for(const t of teams)t.initialRosterTarget=initialRosterTarget(db,t);
+  let pending=runInitialMarketPhase(db,teams,'roles',seed);if(pending.length)throw new Error(pending[0].name+' AI 로스터가 필수 포지션을 확보하지 못했습니다');
+  pending=runInitialMarketPhase(db,teams,'depth',seed);if(pending.length)throw new Error(pending[0].name+' AI 로스터가 목표 인원을 확보하지 못했습니다');
 }
 function beginInitialRosterPhase(db,teamId,seed){
   if(!isManagerSelectableTeam(db,teamId))throw new Error('감독 시작 팀으로 선택할 수 없는 구단입니다');setManagedTeam(db,teamId);seedInitialPayrollBudgets(db);db.manager.startMode='blank_roster';db.manager.careerStartedAt=null;
