@@ -82,7 +82,7 @@ const later=()=>new Promise(resolve=>setImmediate(resolve));
 }
 {
   // Execute real navigation and scheduled work against a minimal DOM + engine fixture.
-  let saves=0,days=0,matches=0,official=0;
+  let saves=0,days=0,matches=0,official=0;const unexpected=[];
   const callbacks=[],frames=[],nodes=new Map();
   const node=id=>{if(!nodes.has(id))nodes.set(id,{id,textContent:'',innerHTML:'',disabled:false,inert:false});return nodes.get(id)};
   const tabs=['season','match','squad','patch','mc','data'].map(v=>({
@@ -109,8 +109,9 @@ const later=()=>new Promise(resolve=>setImmediate(resolve));
     viewSeason:()=>'<section>season</section>',viewMatch:()=>'<section>match</section>',
     viewSquad:()=>'<section>squad</section>',viewPatch:()=>'<section>patch</section>',
     viewMC:()=>'<section>mc</section>',viewData:()=>'<section>data</section>',
+    renderMC:acc=>'<section>completed '+acc.n+'</section>',
     bindMatch:()=>{},bindSquad:()=>{},bindPatch:()=>{},bindData:()=>{},
-    closeUiOverlay:()=>{},console
+    closeUiOverlay:()=>{},console:{error:(...args)=>unexpected.push(args)}
   });
   context.$=selector=>node(selector.slice(1));
   vm.runInContext(season.slice(season.lastIndexOf('function bindSeason(){')),context,{filename:'bindSeason()'});
@@ -145,6 +146,8 @@ const later=()=>new Promise(resolve=>setImmediate(resolve));
   assert.equal(matches,125);
   assert.equal(run('MC.res.n'),100,'uninterrupted Monte Carlo must still complete');
   assert.equal(run('MC.running'),false);
+  assert.equal(node('mcout').innerHTML,'<section>completed 100</section>');
+  assert.equal(unexpected.length,0,'an acceptance case must not hide an exception');
   run("UI_OVERLAY={dismissible:false}");
   assert.equal(run("navigateTo('season')"),false,'locked official draft must block route changes');
   run('UI_OVERLAY=null;SLOT_SWITCHING=true');
