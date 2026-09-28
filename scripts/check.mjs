@@ -85,12 +85,17 @@ for (const obsoleteId of ['addreg','addintl']) {
   }
 }
 
-for (const file of modules.filter(file => file !== 'world.js')) {
+for (const file of modules.filter(file => file !== 'save.js')) {
   const source = await readFile(resolve(artifact, file), 'utf8');
   for (const marker of ['secondaryRoles','roleFamiliarity','trainSecondaryRole','officialRoleEligible']) if (source.includes(marker)) {
     failed = true;
     console.error(`Deprecated secondary-role model leaked into ${file}: ${marker}`);
   }
+}
+const legacySaveLines = saveSource.split('\n').filter(line => /secondaryRoles|roleFamiliarity/.test(line));
+for (const line of legacySaveLines) if (!/delete\s+[^;]*(secondaryRoles|roleFamiliarity)/.test(line)) {
+  failed = true;
+  console.error('Deprecated secondary-role field is used by save.js outside deletion/migration cleanup: '+line.trim());
 }
 
 const appSource = await readFile(resolve(artifact, 'app.js'), 'utf8');
