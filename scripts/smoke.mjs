@@ -184,6 +184,24 @@ source += `\n(()=>{
   const intensityProbe=active.find(t=>t.id!==managedTeamId(db));if(intensityProbe){intensityProbe.training=defaultTraining();for(const id of intensityProbe.roster){const p=db.players[id];if(p){p.fatigue=55;p.condition=78}}aiManageTraining(db,intensityProbe);if(intensityProbe.training.intensity!=='light')throw new Error('AI did not reduce training under fatigue')}
   if(intensityProbe){const rr=trainingRecommendation(db,intensityProbe);if(!['light','normal','high'].includes(rr.intensity)||typeof rr.scrim!=='boolean')throw new Error('Training recommendation invalid')}
   const scrimReady=t=>ROLES.every(role=>starterFor(db,t,role)),scrimA=active.find(scrimReady),scrimB=active.find(t=>t.id!==scrimA?.id&&scrimReady(t));if(scrimA&&scrimB){const v0=scrimValue(db,scrimA.id,scrimB.id);scrimA.scrimLog=[{date:db.worldDate,games:1,opponent:scrimB.id},{date:db.worldDate,games:1,opponent:scrimB.id},{date:db.worldDate,games:1,opponent:scrimB.id}];const v1=scrimValue(db,scrimA.id,scrimB.id);if(!(v1<v0))throw new Error('Repeated scrim partner did not lose practice value');scrimA.scrimLog=[]}
+  const managedOfficialDraft=(xdb,setup,managedId,tag)=>{
+    const state=createDraftSession(xdb,[setup.blue,setup.red],new RNG(setup.gseed,'draft'),setup.draftCtx),playerSide=[setup.blue,setup.red].indexOf(managedId);if(playerSide<0)throw new Error('Managed draft acceptance lost player side');
+    let playerTurns=0,aiTurns=0;
+    while(draftTurn(state)){
+      const turn=draftTurn(state);let choice;
+      if(turn.side===playerSide){
+        const legal=draftLegalChampions(state);if(!legal.length){draftSkipTurn(state);continue}
+        const pick=legal[hashStr(tag+'|'+turn.index)%legal.length];choice={champ:pick.id,side:turn.side,source:'player'};playerTurns++;
+      }else{choice=draftAiChoice(state);aiTurns++}
+      if(!choice){draftSkipTurn(state);continue}
+      const pCheck=draftValidateChoice(state,{...choice,source:'player'}),aCheck=draftValidateChoice(state,{...choice,source:'ai'});
+      if(pCheck.ok!==aCheck.ok||pCheck.reason!==aCheck.reason)throw new Error('Player/AI draft validation diverged');
+      if(!pCheck.ok)throw new Error('Managed acceptance produced illegal draft choice: '+pCheck.reason);
+      draftApplyChoice(state,choice);
+    }
+    const result=draftResult(state);if(!playerTurns||!aiTurns||ROLES.some(r=>!result.picks[0][r]||!result.picks[1][r]))throw new Error('Managed interactive draft acceptance incomplete');
+    return {result,playerTurns,aiTurns};
+  };
   if(scrimA&&scrimB){
     const draftCtx=()=>({used:[],byTeam:{[scrimA.id]:{won:[],lost:[]},[scrimB.id]:{won:[],lost:[]}},fearless:true,firstPick:0,practice:true});
     const state=createDraftSession(db,[scrimA.id,scrimB.id],new RNG('draft-session-smoke','draft'),draftCtx());
@@ -202,7 +220,8 @@ source += `\n(()=>{
     draftApplyChoice(manual,{champ:legalChamp.id,side:first.side,source:'player'});
     const oppBanChoice=draftAiChoice(manual);if(!oppBanChoice||oppBanChoice.side===first.side)throw new Error('Opponent ban intent fixture unavailable');draftApplyChoice(manual,oppBanChoice);
     const observedBan=draftOpponentIntent(manual,first.side,1)[0];if(!observedBan||observedBan.kind!=='B'||observedBan.champ!==oppBanChoice.champ||!Number.isFinite(observedBan.confidence)||!observedBan.reasons.length||['intentRole','player','mastery'].some(k=>Object.prototype.hasOwnProperty.call(observedBan,k)))throw new Error('Opponent ban intent explanation leaked private draft state');
-    const dup=draftValidateChoice(manual,{champ:legalChamp.id,side:draftTurn(manual).side});if(dup.ok||dup.reason!=='champion_taken')throw new Error('Draft validator accepted duplicate champion');
+    const dupPlayer=draftValidateChoice(manual,{champ:legalChamp.id,side:draftTurn(manual).side,source:'player'}),dupAi=draftValidateChoice(manual,{champ:legalChamp.id,side:draftTurn(manual).side,source:'ai'});if(dupPlayer.ok||dupAi.ok||dupPlayer.reason!=='champion_taken'||dupAi.reason!==dupPlayer.reason)throw new Error('Player/AI validator parity failed for duplicate champion');
+    const wrongPlayer=draftValidateChoice(manual,{champ:draftLegalChampions(manual)[0]?.id,side:1-draftTurn(manual).side,source:'player'}),wrongAi=draftValidateChoice(manual,{champ:draftLegalChampions(manual)[0]?.id,side:1-draftTurn(manual).side,source:'ai'});if(wrongPlayer.ok||wrongAi.ok||wrongPlayer.reason!=='wrong_side'||wrongAi.reason!==wrongPlayer.reason)throw new Error('Player/AI validator parity failed for wrong side');
     const flexState=createDraftSession(db,[scrimA.id,scrimB.id],new RNG('draft-flex-smoke','draft'),draftCtx());
     while(draftTurn(flexState)?.kind==='B'){const c=draftAiChoice(flexState);if(c)draftApplyChoice(flexState,c);else draftSkipTurn(flexState)}
     const flexTurn=draftTurn(flexState),flexChamp=draftLegalChampions(flexState).find(c=>(c.roles||[]).length>1);
@@ -242,20 +261,46 @@ source += `\n(()=>{
     let selection=pendingOfficialSelectionSetup(pdb);if(!selection||selection.game!==1||selection.prompt.mode!=='first'||selection.prompt.chooser!==pa.id)throw new Error('Home team did not receive game-one First Selection');
     applyPendingOfficialSelection(pdb,{kind:'order',value:'first'});
     let setup=pendingOfficialDraftSetup(pdb);if(!setup||setup.game!==1||setup.fearlessUsed.length||setup.fpTeam!==pa.id)throw new Error('Managed First Selection did not reach opening draft');
-    const firstDraft=runDraft(pdb,[setup.blue,setup.red],new RNG(setup.gseed,'draft'),setup.draftCtx),firstPicks=[...Object.values(firstDraft.picks[0]),...Object.values(firstDraft.picks[1])],first=resolvePendingOfficialMatch(pdb,firstDraft);
+    const firstDraft=managedOfficialDraft(pdb,setup,pa.id,'bo3-g1').result,firstPicks=[...Object.values(firstDraft.picks[0]),...Object.values(firstDraft.picks[1])],first=resolvePendingOfficialMatch(pdb,firstDraft);
     if(first.done||!pdb.world.pendingOfficial||first.score.reduce((a,b)=>a+b,0)!==1)throw new Error('Bo3 official session ended after one game');
     selection=pendingOfficialSelectionSetup(pdb);if(!selection||selection.game!==2)throw new Error('Game two First Selection prompt missing');
     const loser=first.game.winner===0?first.game.sides[1].team.id:first.game.sides[0].team.id;if(selection.prompt.chooser!==loser)throw new Error('Previous game loser did not receive next First Selection');
     if(selection.prompt.mode==='first')applyPendingOfficialSelection(pdb,{kind:'side',value:'blue'});else applyPendingOfficialSelection(pdb,{kind:selection.prompt.remaining,value:selection.prompt.remaining==='side'?'blue':'first'});
     setup=pendingOfficialDraftSetup(pdb);
     if(setup.game!==2||setup.fearlessUsed.length!==10||firstPicks.some(c=>!setup.fearlessUsed.includes(c)))throw new Error('Fearless picks were not carried into game two');
-    const secondDraft=runDraft(pdb,[setup.blue,setup.red],new RNG(setup.gseed,'draft'),setup.draftCtx),secondPicks=[...Object.values(secondDraft.picks[0]),...Object.values(secondDraft.picks[1])];
+    const secondDraft=managedOfficialDraft(pdb,setup,pa.id,'bo3-g2').result,secondPicks=[...Object.values(secondDraft.picks[0]),...Object.values(secondDraft.picks[1])];
     if(secondPicks.some(c=>firstPicks.includes(c)))throw new Error('Fearless allowed a previous-game pick');
     let resolved=resolvePendingOfficialMatch(pdb,secondDraft),guard=0;
-    while(!resolved.done&&guard++<3){selection=pendingOfficialSelectionSetup(pdb);if(selection)applyPendingOfficialSelection(pdb,{kind:selection.prompt.mode==='first'?'order':selection.prompt.remaining,value:selection.prompt.mode==='first'?'first':selection.prompt.remaining==='side'?'blue':'first'});setup=pendingOfficialDraftSetup(pdb);const d=runDraft(pdb,[setup.blue,setup.red],new RNG(setup.gseed,'draft'),setup.draftCtx);resolved=resolvePendingOfficialMatch(pdb,d)}
+    while(!resolved.done&&guard++<3){selection=pendingOfficialSelectionSetup(pdb);if(selection)applyPendingOfficialSelection(pdb,{kind:selection.prompt.mode==='first'?'order':selection.prompt.remaining,value:selection.prompt.mode==='first'?'first':selection.prompt.remaining==='side'?'blue':'first'});setup=pendingOfficialDraftSetup(pdb);const d=managedOfficialDraft(pdb,setup,pa.id,'bo3-g'+setup.game).result;resolved=resolvePendingOfficialMatch(pdb,d)}
     if(!resolved.done||!resolved.rec||ps.cur!==1||!ps.days[0].matches[0].res||pdb.world.pendingOfficial)throw new Error('Bo3 pending official series did not resolve and resume');
     const games=resolved.rec.games;if(games.length<2||games.length>3||resolved.rec.score.reduce((a,b)=>a+b,0)!==games.length)throw new Error('Official staged series score/game count invalid');
     let duplicateBlocked=false;try{commitScheduledSeries(pdb,ps,ps.days[0].matches[0],{rec:resolved.rec,lines:resolved.lines})}catch(e){duplicateBlocked=true}if(!duplicateBlocked)throw new Error('Official result committed twice');
+  }
+  if(scrimA&&scrimB){
+    let bdb=JSON.parse(JSON.stringify(db));const aId=scrimA.id,bId=scrimB.id,bcid='PENDING_BO5_ACCEPT',bkey='__pending_bo5_accept',bsid='season_pending_bo5_accept',bdate='2027-08-01',bpool=Object.values(bdb.patch.champions).filter(c=>championProEligible(bdb,c,bdate)).map(c=>c.id);
+    setManagedTeam(bdb,aId);bdb.world.phase='season';bdb.world.pendingOfficial=null;bdb.worldDate='2027-07-30';
+    bdb.competitions[bcid]={id:bcid,name:'Bo5 Acceptance International',short:'B5A',region:'INTL',teams:[aId,bId],rules:{fearless:true},championPool:bpool,international:true,stages:[{id:'groups',name:'그룹',type:'round_robin',bestOf:5,dayGap:[3]}]};
+    const bs={id:bsid,comp:bcid,year:2027,seed:'pending-bo5-accept',days:[
+      {date:bdate,stage:'groups',label:'그룹 1라운드',matches:[{id:'bo5_accept',a:aId,b:bId,bo:5,res:null}]},
+      {date:'2027-08-04',stage:'groups',label:'그룹 2라운드',matches:[{id:'bo5_accept_2',a:bId,b:aId,bo:5,res:null}]}
+    ],cur:0,stage:0,stageData:{groups:{type:'round_robin',teams:[aId,bId],groups:null}},pstats:{},done:false,champion:null,runnerUp:null};
+    bdb.world.seasons={[bkey]:bs};
+    const opened=playWorldDay(bdb);if(!opened?.pending||!bdb.world.pendingOfficial||bdb.world.pendingOfficial.queue[0]?.matchId!=='bo5_accept')throw new Error('Bo5 official match did not pause at managed draft boundary');
+    const allSeriesPicks=new Set();let finished=null,gameCount=0,savedMidSeries=false;
+    while(bdb.world.pendingOfficial&&gameCount<5){
+      const selection=pendingOfficialSelectionSetup(bdb);if(!selection)throw new Error('Bo5 First Selection prompt missing');
+      if(gameCount>0){const last=selection.lastGame,expectedLoser=last.winner===last.blue?last.red:last.blue;if(selection.prompt.chooser!==expectedLoser)throw new Error('Bo5 next-game First Selection did not go to previous loser')}
+      const prompt=selection.prompt,choice=prompt.mode==='first'?{kind:gameCount%2?'side':'order',value:gameCount%2?'red':'first'}:{kind:prompt.remaining,value:prompt.remaining==='side'?'blue':'last'};
+      applyPendingOfficialSelection(bdb,choice);
+      const setup=pendingOfficialDraftSetup(bdb);if(!setup||setup.game!==gameCount+1||setup.fearlessUsed.length!==gameCount*10)throw new Error('Bo5 draft setup/Fearless accumulation invalid');
+      const live=managedOfficialDraft(bdb,setup,aId,'bo5-g'+setup.game),picks=[...Object.values(live.result.picks[0]),...Object.values(live.result.picks[1])];
+      if(picks.length!==10||picks.some(id=>allSeriesPicks.has(id)))throw new Error('Bo5 Fearless reused a prior-series pick');picks.forEach(id=>allSeriesPicks.add(id));
+      finished=resolvePendingOfficialMatch(bdb,live.result);gameCount++;
+      if(gameCount===1&&!finished.done){bdb=unpackDB(packDB(bdb));if(!bdb.world.pendingOfficial?.queue?.[0]?.session)throw new Error('Pending Bo5 session did not survive save round-trip');savedMidSeries=true}
+      if(finished.done)break;
+    }
+    const finalSeason=bdb.world.seasons[bkey],finalMatch=finalSeason.days[0].matches[0],rec=finalMatch.res;
+    if(!finished?.done||!savedMidSeries||bdb.world.pendingOfficial||!rec||gameCount<3||gameCount>5||rec.games.length!==gameCount||rec.score.reduce((x,y)=>x+y,0)!==gameCount||Math.max(...rec.score)!==3||allSeriesPicks.size!==gameCount*10||finalSeason.cur!==1)throw new Error('Bo5 managed official end-to-end acceptance failed');
   }
   if(scrimA&&scrimB){const scrimSeries=simulateSeries(db,scrimA.id,scrimB.id,1,'smoke-scrim',{fearless:true,firstChoice:'coin',replay:true}),scrimLine=scrimSeries.lines[0],scrimPlayer=db.players[scrimLine.pid],scrimProfile=ensureChampionProfile(db,scrimPlayer,scrimLine.champ),scrimBefore=scrimProfile.scrimExperience||0,fatigueBefore=scrimPlayer.fatigue||0;recordScrimPractice(db,scrimSeries.rec,scrimSeries.lines);if(scrimProfile.scrimExperience<=scrimBefore||scrimPlayer.fatigue<=fatigueBefore||!(db.teams[scrimLine.tid].scrimIntel>0))throw new Error('Scrim practice effects failed')}
   if(!(playerMarketValue(db,sample)>0)||!['신인','성장','전성기','쇠퇴'].includes(careerStage(sample))) throw new Error('Player value/lifecycle failed');
