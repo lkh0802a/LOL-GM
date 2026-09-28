@@ -103,7 +103,7 @@ function initialMarketSnapshot(db,teams){
   for(const region of regions){const rows=free.map(p=>({p,id:p.id,s:price(p,region),nonLocal:!isLocalPlayer(p,region)}));byRegion[region]={local:rows.filter(x=>!x.nonLocal).sort((a,b)=>a.s-b.s),foreign:rows.filter(x=>x.nonLocal).sort((a,b)=>a.s-b.s)}}
   return {free,price,byRegion};
 }
-function initialCheapestCost(rows,excludeId,n){let cost=0,count=0;for(const x of rows){if(x.id===excludeId)continue;cost+=x.s;if(++count>=n)break}return count===n?cost:Infinity}
+function initialCheapestCost(rows,excludeId,n){if(n<=0)return 0;let cost=0,count=0;for(const x of rows){if(x.id===excludeId)continue;cost+=x.s;if(++count>=n)break}return count===n?cost:Infinity}
 function initialFutureFeasible(db,t,candidate,salary,snap=null){
   const team=teamRef(db,t),lim=initialSquadLimits(db,team),projected=(team.roster||[]).length+1,need=Math.max(0,lim.min-projected);
   const usedImports=teamNonLocalCount(db,team)+(isLocalPlayer(candidate,team.region)?0:1),cap=nonLocalLimitForTeam(db,team),budget=initialSalaryCeiling(db,team)-payroll(db,team)-salary;
