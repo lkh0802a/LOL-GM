@@ -1,6 +1,5 @@
 // ===== LOL GM: recruitment market views / control dispatch =====
 // ---------- 이적 시장 (직접 운영) ----------
-let MK={role:'ALL',scope:'region',tab:'fa'};
 function recruitStageLabel(e){return !e?'미등록':e.stage==='interest'?'관심':e.stage==='observed'?'관찰 완료':e.stage==='evaluated'?'내부 평가 완료':e.stage==='negotiating'?'협상 중':e.stage==='closed'?(e.result==='signed'?'영입 완료':e.result==='lost_to_rival'?'경쟁 구단 선택':'종료'):e.stage}
 function recruitButtons(p,e){
   if(p.team===managedTeamId(DB))return '';
