@@ -192,7 +192,7 @@ function buildWorld(cfg){
   const rng=new RNG('world-v7','gen');
   initPatches(db);
   for(const r of cfg.regions) addRegion(db,rng,r);
-  if(typeof ensureTeamStaff==='function'){for(const t of activeTeams(db))ensureTeamStaff(db,t,rng);genStaffPool(db,rng)}
+  for(const t of activeTeams(db))ensureTeamStaff(db,t,rng);genStaffPool(db,rng)
   prepareFirstSeasonFreeAgency(db);
   return db;
 }

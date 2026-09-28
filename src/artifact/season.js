@@ -159,9 +159,9 @@ function playWorldDay(db){
   const d=nextDate(db);if(!d){advanceStep(db);return {date:null,played:[],pending:null}}
   db.worldDate=d;patchTick(db,d,new RNG(w.seed+d,'patch'));dailyRecovery(db);
   for(const t of activeTeams(db))aiManageTraining(db,t);
-  if(typeof aiReviewRoleConversions==='function')for(const t of activeTeams(db))aiReviewRoleConversions(db,t);
-  if(typeof advanceRoleConversionsDay==='function')advanceRoleConversionsDay(db);
-  if(typeof aiRunScrims==='function')aiRunScrims(db,new RNG(w.seed+d,'scrim'));
+  for(const t of activeTeams(db))aiReviewRoleConversions(db,t);
+  advanceRoleConversionsDay(db);
+  aiRunScrims(db,new RNG(w.seed+d,'scrim'));
   for(const t of activeTeams(db,null,1))aiManageOwnedReserve(db,t);
   const played=[],queue=[],me=managedTeamId(db);
   for(const [seasonKey,s] of Object.entries(w.seasons))if(!s.done&&s.days[s.cur].date===d){
