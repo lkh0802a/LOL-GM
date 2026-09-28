@@ -97,26 +97,35 @@ function initialMissingRoles(db,t,extraPlayer=null){
   const ids=(t.roster||[]).map(id=>db.players[id]).filter(Boolean);if(extraPlayer)ids.push(extraPlayer);
   return ROLES.filter(role=>!ids.some(p=>p.role===role));
 }
+function initialFutureRoleChoices(db,team,missing,excludeId){
+  const need=new Set(missing),best=Object.fromEntries(missing.map(r=>[r,{local:null,foreign:null}]));
+  for(const p of Object.values(db.players)){
+    if(p.retired||p.team||p.id===excludeId||!need.has(p.role))continue;
+    const nonLocal=!isLocalPlayer(p,team.region),slot=nonLocal?'foreign':'local',s=asking(db,p,team.region),cur=best[p.role][slot];
+    if(!cur||s<cur.s)best[p.role][slot]={s,nonLocal};
+  }
+  return best;
+}
 function initialFutureFeasible(db,t,candidate,salary){
   const team=teamRef(db,t),lim=initialSquadLimits(db,team),projected=(team.roster||[]).length+1,missing=initialMissingRoles(db,team,candidate);
   if(projected+missing.length>lim.max)return false;
   const usedImports=teamNonLocalCount(db,team)+(isLocalPlayer(candidate,team.region)?0:1),cap=nonLocalLimitForTeam(db,team),budget=initialSalaryCeiling(db,team)-payroll(db,team)-salary;
   if(usedImports>cap||budget<-.001)return false;
-  let states=[{cost:0,imports:usedImports}];
+  const best=initialFutureRoleChoices(db,team,missing,candidate.id);let states=[{cost:0,imports:usedImports}];
   for(const role of missing){
-    const xs=cheapestInitialRoleOptions(db,team,role,candidate.id),local=xs.find(x=>!x.nonLocal),foreign=xs.find(x=>x.nonLocal),choices=[local,foreign].filter(Boolean);
-    if(!choices.length)return false;
+    const choices=Object.values(best[role]||{}).filter(Boolean);if(!choices.length)return false;
     const next=[];for(const st of states)for(const x of choices){const imports=st.imports+(x.nonLocal?1:0),cost=st.cost+x.s;if(imports<=cap&&cost<=budget+.001)next.push({cost,imports})}
     states=next;if(!states.length)return false;
   }
   return true;
 }
-function initialCandidateOptions(db,t,role,key=''){
+function initialPickCandidate(db,t,role,key=''){
   const team=teamRef(db,t),target=team.initialRosterTarget||initialRosterTarget(db,team),room=Math.max(0,initialSalaryCeiling(db,team)-payroll(db,team)),slotsLeft=Math.max(1,target-team.roster.length),softMax=room/slotsLeft*1.35;
-  return Object.values(db.players).filter(p=>!p.retired&&!p.team&&(!role||p.role===role)).map(p=>({p,chk:initialSignCheck(db,p,team)})).filter(x=>x.chk.ok&&initialFutureFeasible(db,team,x.p,x.chk.salary))
-    .map(x=>({p:x.p,salary:x.chk.salary,score:initialCandidateScore(db,x.p,team,key)})).sort((a,b)=>(a.salary<=softMax)!==(b.salary<=softMax)?(a.salary<=softMax?-1:1):b.score-a.score||a.salary-b.salary);
+  const rows=Object.values(db.players).filter(p=>!p.retired&&!p.team&&(!role||p.role===role)).map(p=>{const chk=initialSignCheck(db,p,team);return chk.ok?{p,salary:chk.salary,score:initialCandidateScore(db,p,team,key)}:null}).filter(Boolean)
+    .sort((a,b)=>(a.salary<=softMax)!==(b.salary<=softMax)?(a.salary<=softMax?-1:1):b.score-a.score||a.salary-b.salary);
+  for(const row of rows)if(initialFutureFeasible(db,team,row.p,row.salary))return row.p;
+  return null;
 }
-function initialPickCandidate(db,t,role,key=''){return initialCandidateOptions(db,t,role,key)[0]?.p||null}
 function normalizeInitialSalaryFloor(db,t){
   const team=teamRef(db,t),R=db.regions[team.region];if((team.division||1)!==1||!R.salaryFloor)return;
   const pay=payroll(db,team);if(pay<=0||pay>=R.salaryFloor)return;
@@ -129,14 +138,17 @@ function aiInitialContractTerms(db,p,t,rng){
   const ask=asking(db,p,t.region),years=contractYearsForPlayer(db,p,rng),premium=rng.range(.96,1.08),role=defaultPromisedRole(db,p,t),room=Math.max(.1,initialSalaryCeiling(db,t)-payroll(db,t)),salary=Math.min(room,ask*premium);
   return normalizeContractTerms(db,p,t,salary,years,{signingBonus:rng.chance(.28)?ask*rng.range(.04,.12):0,bonuses:rng.chance(.32)?{performance:ask*.05,title:ask*.08,international:ask*.05}:{},promisedRole:role,option:rng.chance(.15)?{type:rng.chance(.55)?'team':'player'}:null,buyout:p.personality.ambition>=86&&rng.chance(.35)?playerMarketValue(db,p)*1.8:null});
 }
-function initialOfferForTeam(db,t,phase,round,seed){
+function initialRoleSupplyCounts(db){
+  const out=Object.fromEntries(ROLES.map(r=>[r,0]));for(const p of Object.values(db.players))if(!p.retired&&!p.team&&out[p.role]!==undefined)out[p.role]++;return out;
+}
+function initialOfferForTeam(db,t,phase,round,seed,supply){
   const missing=initialMissingRoles(db,t),target=t.initialRosterTarget||initialRosterTarget(db,t);if(phase==='roles'&&!missing.length)return null;if(phase==='depth'&&t.roster.length>=target)return null;
-  const role=phase==='roles'?missing.map(r=>({r,n:cheapestInitialRoleOptions(db,t,r).length})).sort((a,b)=>a.n-b.n)[0]?.r:null,key=phase+'|'+round+'|'+(role||'ANY'),p=initialPickCandidate(db,t,role,key);if(!p)return null;
+  const role=phase==='roles'?missing.slice().sort((a,b)=>(supply[a]||0)-(supply[b]||0))[0]:null,key=phase+'|'+round+'|'+(role||'ANY'),p=initialPickCandidate(db,t,role,key);if(!p)return null;
   const rng=new RNG((seed||'initial-market')+'|'+t.id+'|'+key,'initial-offer'),terms=aiInitialContractTerms(db,p,t,rng),chk=initialOfferCheck(db,p,t,terms);if(!chk.ok)return null;
   return {team:t,player:p,terms,role,value:offerUtility(db,p,t,terms)+((hashStr((seed||'initial-market')+'|choose|'+p.id+'|'+t.id+'|'+round)%1001)/1000-.5)*.08};
 }
 function resolveInitialOfferRound(db,teams,phase,round,seed){
-  const offers=teams.map(t=>initialOfferForTeam(db,t,phase,round,seed)).filter(Boolean),byPlayer={};for(const o of offers)(byPlayer[o.player.id]=byPlayer[o.player.id]||[]).push(o);
+  const supply=initialRoleSupplyCounts(db),offers=teams.map(t=>initialOfferForTeam(db,t,phase,round,seed,supply)).filter(Boolean),byPlayer={};for(const o of offers)(byPlayer[o.player.id]=byPlayer[o.player.id]||[]).push(o);
   let signed=0;for(const os of Object.values(byPlayer)){const best=os.sort((a,b)=>b.value-a.value||b.terms.salary-a.terms.salary)[0],p=best.player,t=best.team;if(p.team)continue;const chk=initialOfferCheck(db,p,t,best.terms);if(!chk.ok||!initialFutureFeasible(db,t,p,best.terms.salary))continue;signContract(db,p,t,best.terms.salary,best.terms.years,best.terms);signed++}
   return {offers:offers.length,signed};
 }
