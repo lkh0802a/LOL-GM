@@ -20,12 +20,36 @@ const UI_ROUTES=Object.freeze({
   mc:{render:viewMC,bind:bindMC},
   data:{render:viewData,bind:bindData}
 });
+// Cooperative UI work is scoped to its world, save slot and render generation.
+const UI_TASKS=new Map();
+function cancelUiTask(kind){
+  const task=UI_TASKS.get(kind);
+  if(!task)return;
+  UI_TASKS.delete(kind);task.active=false;
+  if(task.onCancel)task.onCancel();
+}
+function cancelUiTasks(){for(const kind of [...UI_TASKS.keys()])cancelUiTask(kind)}
+function beginUiTask(kind,onCancel=null){
+  cancelUiTask(kind);
+  const task={kind,db:DB,slot:SLOT,view:VIEW,renderId:UI_RENDER_ID,active:true,onCancel};
+  UI_TASKS.set(kind,task);
+  return task;
+}
+function isUiTaskCurrent(task){
+  return !!task&&task.active&&UI_TASKS.get(task.kind)===task&&
+    task.db===DB&&task.slot===SLOT&&task.view===VIEW&&task.renderId===UI_RENDER_ID;
+}
+function finishUiTask(task){
+  if(!isUiTaskCurrent(task))return false;
+  UI_TASKS.delete(task.kind);task.active=false;return true;
+}
 let UI_RENDER_ID=0;
 function nav(){
   const route=UI_ROUTES[VIEW];
   if(!route)throw new Error('Unknown screen: '+VIEW);
   const main=document.querySelector('#main');
   if(!main)throw new Error('Main screen container missing');
+  cancelUiTasks();
   UI_RENDER_ID++;
   if(LIVE!==null)clearInterval(LIVE);
   document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-current',b.dataset.v===VIEW?'page':'false'));
@@ -33,7 +57,12 @@ function nav(){
   route.bind();
 }
 function navigateTo(view,options={}){
-  if(!Object.prototype.hasOwnProperty.call(UI_ROUTES,view))return false;
+  if(!Object.prototype.hasOwnProperty.call(UI_ROUTES,view)||!DB||SLOT_SWITCHING)return false;
+  if(UI_OVERLAY){
+    if(!UI_OVERLAY.dismissible)return false;
+    if(UI_OVERLAY.onDismiss)UI_OVERLAY.onDismiss();
+    else closeUiOverlay();
+  }
   VIEW=view;
   nav();
   if(!options.keepScroll)window.scrollTo(0,0);
@@ -46,6 +75,9 @@ function navKeepScroll(){
   requestAnimationFrame(()=>{if(generation===UI_RENDER_ID&&VIEW===view)window.scrollTo(0,y)});
 }
 function resetUiForWorld(){
+  cancelUiTasks();
+  if(UI_OVERLAY)closeUiOverlay({force:true,restoreFocus:false});
+  DRAFT_UI=null;
   LAST=null;LASTSER=null;OPEN_P=null;SQUAD_EDIT=null;MSG='';
-  MC.res=null;SSET.view=null;
+  MC.res=null;MC.running=false;SSET.view=null;
 }
