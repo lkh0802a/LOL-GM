@@ -8,9 +8,9 @@ function playerGameRating(ps,side,win,mvp,duration){const min=Math.max(1,duratio
 // 선택권(진영 vs 픽 순서): 선택권을 가진 팀이 '진영'이나 '픽 순서' 중 하나를 고르면, 상대가 나머지를 고른다
 // 진영 가치: 블루 = 맵 이점(시야·오브젝트 동선). 순서 가치: 선픽 = 최고 챔피언 선점, 후픽 = 마지막 카운터픽(피어리스 후반 세트일수록 커짐)
 function draftPrefs(db,tid,ctx,g,bestOf,rng){
-  const t=db.teams[tid], an=t.coach.analysis/100, noise=()=>rng.normal(0,0.03*(1.1-an));
+  const t=db.teams[tid], prof=staffProfile(t),an=prof.analysis/100, noise=()=>rng.normal(0,0.03*(1.1-an));
   const fl=ctx.fearless?Math.min(1,ctx.used.length/40):0;
-  return {blue:0.03+noise(),red:noise(),first:0.05+noise(),last:0.02+0.03*t.coach.draft/100+0.05*fl+(g===bestOf?0.02:0)+noise(),fl};
+  return {blue:0.03+noise(),red:noise(),first:0.05+noise(),last:0.02+0.03*prof.draft/100+0.05*fl+(g===bestOf?0.02:0)+noise(),fl};
 }
 function chooseSide(db,tid,opp,ctx,g,bestOf,rng){
   const me=draftPrefs(db,tid,ctx,g,bestOf,rng), op=draftPrefs(db,opp,ctx,g,bestOf,rng);

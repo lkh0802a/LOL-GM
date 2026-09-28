@@ -110,7 +110,7 @@ function dailyRecovery(db){
     const ti=trainingIntensity(t);for(const id of t.roster){const p=db.players[id];if(!p)continue;pState(p);p.fatigue=clamp(p.fatigue-rec+ti.fatigue,0,100);p.condition=clamp(p.condition+2.5+ti.condition,0,100);p.form*=.98}
   }
 }
-function staffProfile(t){const c=t?.coach||{},s=t?.staff||{};return {draft:clamp((c.draft||55)+(s.strategicCoach?.rating||0)*.18,35,99),analysis:clamp((c.analysis||55)+(s.analyst?.rating||0)*.22,35,99),development:clamp((c.development||55)+(s.developmentCoach?.rating||0)*.22,35,99),recovery:clamp(50+(s.performanceCoach?.rating||0)*.45,50,95)}}
+function staffProfile(t){const s=t?.staff||{};return {draft:clamp(42+(s.strategicCoach?.rating||0)*.52,35,96),analysis:clamp(42+(s.analyst?.rating||0)*.52,35,96),development:clamp(42+(s.developmentCoach?.rating||0)*.52,35,96),recovery:clamp(45+(s.performanceCoach?.rating||0)*.5,40,93)}}
 function trainingGrowthMul(t){const p=staffProfile(t);return clamp(.88+(p.development-45)/220,0.88,1.13)}
 function scrimAnalysisBonus(t){const p=staffProfile(t);return clamp((p.analysis-50)/500+facilityAnalysisBonus(t),0,.14)}
 function scrimReadiness(db,t){
@@ -137,7 +137,7 @@ function recordScrimPractice(db,rec,lines){
 function staffSalary(s,ps){return Math.round((.35+((s.rating||50)-40)/35)*ps*10)/10}
 const STAFF_ROLES={strategicCoach:'전략 코치',analyst:'분석가',developmentCoach:'육성 코치',performanceCoach:'퍼포먼스 코치'};
 function genStaffMember(rng,role,base=60){const nm=rng.pick(NICK_A)+rng.pick(NICK_B);return {id:'S'+hashStr(role+nm+rng.int(0,99999)),name:nm.charAt(0).toUpperCase()+nm.slice(1),role,rating:Math.round(clamp(base+rng.normal(0,9),35,95)),age:rng.int(27,52)}}
-function ensureTeamStaff(db,t,rng){t.staff=t.staff||{};for(const role of Object.keys(STAFF_ROLES))if(!t.staff[role])t.staff[role]=genStaffMember(rng,role,(t.coach?.analysis||60)-3);db.staffPool=db.staffPool||[]}
+function ensureTeamStaff(db,t,rng){t.staff=t.staff||{};const base=clamp((db.regions[t.region]?.strength||62)-4,50,72);for(const role of Object.keys(STAFF_ROLES))if(!t.staff[role])t.staff[role]=genStaffMember(rng,role,base);db.staffPool=db.staffPool||[]}
 function genStaffPool(db,rng){db.staffPool=db.staffPool||[];const counts=Object.fromEntries(Object.keys(STAFF_ROLES).map(r=>[r,0]));for(const s of db.staffPool)if(counts[s.role]!==undefined)counts[s.role]++;for(const role of Object.keys(STAFF_ROLES))while(counts[role]<6){db.staffPool.push(genStaffMember(rng,role,60+rng.normal(0,6)));counts[role]++}db.staffPool=db.staffPool.slice(-48)}
 function hireStaff(db,t,s){if(!s||!STAFF_ROLES[s.role])throw new Error('유효하지 않은 스태프입니다');t.staff=t.staff||{};const old=t.staff[s.role];if(old)db.staffPool.push(old);db.staffPool=db.staffPool.filter(x=>x.id!==s.id);t.staff[s.role]={...s,since:db.year}}
 function staffRoleWeight(t,role){const p=t.philosophy||'balanced';return ({youth:{developmentCoach:1.25,strategicCoach:.8,analyst:.85,performanceCoach:.8},'win-now':{strategicCoach:1.2,analyst:1.2,performanceCoach:1.05,developmentCoach:.7},superstar:{strategicCoach:1.1,analyst:1.05,performanceCoach:1,developmentCoach:.8},cost:{strategicCoach:.8,analyst:.8,performanceCoach:.8,developmentCoach:.85},balanced:{strategicCoach:1,analyst:1,performanceCoach:1,developmentCoach:1}}[p]||{})[role]||1}
@@ -149,25 +149,12 @@ function ageStaff(db,rng){
     for(const [role,s] of Object.entries(t.staff||{})){if(!s)continue;s.age=(s.age||35)+1;
       if(s.age>=62&&rng.chance(.12+(s.age-62)*.04)){
         if(t.id===mine){delete t.staff[role];if(db.world){db.world.marketLog=db.world.marketLog||[];db.world.marketLog.push((STAFF_ROLES[role]||role)+' '+s.name+' 은퇴 · 후임을 직접 선임하세요')}}
-        else t.staff[role]=genStaffMember(rng,role,55+(t.coach?.analysis||55)*.08);
+        else t.staff[role]=genStaffMember(rng,role,clamp((db.regions[t.region]?.strength||62)-6,48,70));
       }}
   }
   for(const s of db.staffPool)s.age=(s.age||35)+1;db.staffPool=db.staffPool.filter(s=>s.age<68);
 }
 
-
-// ---- 코칭스태프 시장 ----
-function coachSalary(c,ps){return Math.round((1+((c.draft+c.analysis+c.development)/3-50)/12)*ps*10)/10}
-function ensureCoach(db,t,rng){if(!t.coach.id){t.coach.id='C'+hashStr(t.id+t.coach.name);t.coach.age=t.coach.age||40;t.coach.since=db.year}}
-function genCoachPool(db,rng){
-  db.coachPool=db.coachPool||[];
-  // 은퇴 선수 중 판단력 좋은 선수는 코치로 전향
-  for(const p of Object.values(db.players)){ if(!p.retired||p.retiredYear!==db.year-1||p.coachDone)continue;p.coachDone=true;
-    if((p.peak||0)>=70&&rng.chance(0.35))db.coachPool.push({id:'C'+p.id,name:p.name,draft:Math.round(clamp((p.peak||70)-8+rng.normal(0,6),40,95)),analysis:Math.round(clamp((p.peak||70)-6+rng.normal(0,6),40,95)),development:Math.round(clamp(60+rng.normal(0,10),35,95)),age:p.age+1,exPlayer:true})}
-  while(db.coachPool.length<12)db.coachPool.push({...genCoach(rng,62+rng.normal(0,6)),id:'C'+db.year+'_'+db.coachPool.length+rng.int(0,999),age:rng.int(30,50)});
-  db.coachPool=db.coachPool.slice(-30);
-}
-function hireCoach(db,t,c){if(t.coach&&t.coach.id)db.coachPool.push({...t.coach});db.coachPool=db.coachPool.filter(x=>x.id!==c.id);t.coach={...c,since:db.year}}
 
 // ---- 구단주 목표 ----
 function setGoals(db){
@@ -187,9 +174,7 @@ function evalGoals(db,w,rep,ev){
       if(ok){t.owner.patience=Math.min(3,(t.owner.patience??2)+1);t.owner.wealth=Math.min(99,t.owner.wealth+2)}
       else t.owner.patience=(t.owner.patience??2)-1;
       if(t.id===managedTeamId(db)){rep.myGoal={goal:t.goal,ok};if(!ok&&t.owner.patience<=0){w.fired=true;ev(`${t.name} 구단주, 헤드코치(플레이어) 해임 — 목표 "${GOAL_KO[t.goal]}" 연속 미달`)}}
-      else if(!ok&&t.owner.patience<=0&&db.coachPool&&db.coachPool.length){
-        const ps=psOf(db,t.region), best=db.coachPool.filter(c=>coachSalary(c,ps)<=t.finance.cash*0.2+3*ps).sort((a,b)=>(b.draft+b.analysis+b.development)-(a.draft+a.analysis+a.development))[0];
-        if(best){const old=t.coach.name;hireCoach(db,t,best);t.owner.patience=2;rep.coaches.push({team:t.id,out:old,in:best.name})}}
+      else if(!ok&&t.owner.patience<=0){const changed=aiManageStaff(db,t,new RNG((w.seed||'world')+'/'+w.year+'/'+t.id,'staff-review'));t.owner.patience=1;if(changed)ev(`${t.name}, 성적 부진 후 전문 코칭스태프 보강`)}
     }
   }
 }
