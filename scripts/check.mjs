@@ -515,6 +515,22 @@ if (!String(packageJson.scripts?.check||'').includes('scripts/regression.mjs')) 
   failed = true;
   console.error('Regression baseline is not wired into npm run check');
 }
+// 11.5/5-4: multi-year games, current/legacy save restore and consecutive
+// rookie/market cycles must be a required check, not an optional smoke run.
+const careerAcceptanceSource=await readFile(resolve(root,'scripts','career-acceptance.mjs'),'utf8');
+for(const marker of ['for(let cycle=0;cycle<2;cycle++)','playDay(db,s)',
+  'runOffseason(db)','closeMarket(db)','startWorldSeason(db,teamId,',
+  'unpackDB(JSON.stringify(data))','packDB(db)','rosterIntegrityErrors(db)',
+  'talentSupplyErrors(db)','CAREER_ACCEPTANCE']){
+  if(!careerAcceptanceSource.includes(marker)){
+    failed=true;console.error('11.5/5-4 multi-year acceptance missing: '+marker);
+  }
+}
+if(!String(packageJson.scripts?.check||'').includes('scripts/career-acceptance.mjs')||
+  !String(packageJson.scripts?.['career:acceptance']||'').includes('scripts/career-acceptance.mjs')){
+  failed=true;console.error('11.5/5-4 career acceptance is not wired into npm run check');
+}
+
 
 const shell = await readFile(resolve(artifact, 'shell.html'), 'utf8');
 if (!shell.includes('<meta name="viewport"')) {

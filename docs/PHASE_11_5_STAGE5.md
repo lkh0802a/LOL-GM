@@ -6,9 +6,9 @@
 - **5-2 — remaining legacy/optional domain fallback audit (completed):** remove fallback branches for APIs guaranteed by the canonical module manifest; prevent missing active gameplay dependencies from being silently skipped. Retain actual optional browser APIs and historical save migration.
 - **5-3 — duplicate-flow and module-boundary consolidation (completed):** audit remaining reachable contract, lineup and roster flows; remove only proven duplicates and add parity regressions.
 - **5-4 — final compatibility and acceptance (three small increments):**
-  - **5-4a (this PR):** critical-path regression coverage for initial-manager negotiation, scheduled series preparation, legal reserve call-ups and stale-preview rejection.
-  - **5-4b (pending):** long-career progression and legacy save/restore acceptance.
-  - **5-4c (pending):** final regression/performance/build gate, generated artifact parity and Stage 5 sign-off.
+  - **5-4a (completed):** critical-path regression coverage for initial-manager negotiation, scheduled series preparation, legal reserve call-ups and stale-preview rejection.
+  - **5-4b (this PR):** two successive real domestic league/postseason competitions, two rookie/offseason/market cycles, current v15 format-2 and format-1 compatibility restore and roster/supply invariants.
+  - **5-4c (this PR, verify before merge):** mandatory new acceptance script plus full existing regression, performance, build, generated artifact parity, PR CI, post-merge main CI and standalone sync.
 
 
 ## Goal and boundaries
@@ -110,3 +110,44 @@ here. Final HTML/CI sign-off is **5-4c**, also pending.
 
 
 **Not included:** Stage 6 UI-state architecture; new patch, youth or transfer rules; deleting any historical save/patch/game record; globally replacing the bootstrap/domain-writer APIs with a new data model.
+
+
+## Stage 5-4b: Long-career and versioned save acceptance
+
+The standalone `scripts/career-acceptance.mjs` loads every canonical engine
+module, builds a bounded but **real ten-club single-region world**, starts a
+managed blank-roster career, fills the first squad via the existing contract
+gateway and allows the AI initial market to fill remaining teams.
+
+Over two consecutive calendar years, it plays genuine domestic league and
+knockout rounds (not fabricated winners), preserving completed match
+IDs/results, checking one season champion per complete competition and
+requiring at least 50 official matches across both years. It runs both
+`runOffseason` and `closeMarket` each year and checks real rookie intake,
+team registration/roster limits, starting lineup roles and labor supply.
+
+The test serializes and restores at season bootstrap, mid-season with completed
+official matches, offseason boundary, market open, market closed, and next
+season bootstrap. It checks that packing leaves live state untouched, that
+derived caches are absent from restored records, and that saved team
+ownership/rosters remain intact. Two checkpoints emulate supported **world-v15
+format-1** records by omitting `saveFormat` (including absent legacy local
+eligibility), and verify that they load as save format 2 without erasing
+gameplay state.
+
+Run independently using `npm run career:acceptance`; `npm run check` includes
+this script so CI cannot pass without multi-year and legacy restore coverage.
+The VM has a bounded execution timeout and explicit per-season day limit;
+acceptance fails rather than silently skipping an unfinished season.
+
+## Stage 5-4c: Final quality and generated artifact gates
+
+Completion requires the PR CI and post-merge `main` CI to pass all existing
+static checks and regressions 01–11l, system snapshot validation, full world
+smoke including managed Bo3/Bo5, multi-year career acceptance, the performance
+probe, build, artifact verification, and standalone preview. `main` must
+contain the generated `index.html` corresponding to the canonical module
+sources; root HTML must not be hand-edited.
+
+Final status can be marked **complete only after** both CI runs and standalone
+parity are observed. 11.5 Stage 6 and phases 12–23 are outside Stage 5.
