@@ -9,7 +9,7 @@ function openInteractiveDraft(db,teamIds,playerTeamId,opt={}){
   for(const tid of teamIds)if(!ctx.byTeam[tid])ctx.byTeam[tid]={won:[],lost:[]};
   const state=createDraftSession(db,teamIds,new RNG(seed,'draft'),ctx);
   DRAFT_UI={db,state,playerSide,seed,title:opt.title||'밴픽',filter:'ALL',query:'',selected:null,infoTab:'analysis',locked:!!opt.locked,finishLabel:opt.finishLabel||null,doneText:opt.doneText||null,meta:opt.meta||null,onComplete:typeof opt.onComplete==='function'?opt.onComplete:null};
-  const ov=$('#overlay');ov.hidden=false;ov.setAttribute('aria-label',DRAFT_UI.title);document.body.classList.add('lock');
+  openUiOverlay({kind:'draft',label:DRAFT_UI.title,html:'',dismissible:!DRAFT_UI.locked,onDismiss:draftUiClose});
   draftUiAdvanceAi();draftUiRender();
 }
 function openDraftPractice(db,playerTeamId,opponentTeamId){
@@ -32,14 +32,14 @@ function officialLastGameCard(db,last){
 }
 function openPendingOfficialSelection(db,setup){
   const me=managedTeamId(db),mine=db.teams[me],oppId=setup.m.a===me?setup.m.b:setup.m.a,opp=db.teams[oppId],score=setup.score||[0,0],meScore=setup.m.a===me?score[0]:score[1],oppScore=setup.m.a===me?score[1]:score[0],p=setup.prompt,last=setup.lastGame;
-  const ov=$('#overlay');ov.hidden=false;ov.setAttribute('aria-label','세트 선택권');document.body.classList.add('lock');
+  
   const choices=p.mode==='first'
     ?[{kind:'side',value:'blue',title:'블루 진영',sub:'진영을 먼저 선택'},{kind:'side',value:'red',title:'레드 진영',sub:'진영을 먼저 선택'},{kind:'order',value:'first',title:'선픽',sub:'픽 순서를 먼저 선택'},{kind:'order',value:'last',title:'후픽',sub:'픽 순서를 먼저 선택'}]
     :(p.remaining==='side'
       ?[{kind:'side',value:'blue',title:'블루 진영',sub:'남은 진영 선택'},{kind:'side',value:'red',title:'레드 진영',sub:'남은 진영 선택'}]
       :[{kind:'order',value:'first',title:'선픽',sub:'남은 픽 순서 선택'},{kind:'order',value:'last',title:'후픽',sub:'남은 픽 순서 선택'}]);
   const holder=db.teams[p.chooser],home=setup.homeTeam&&db.teams[setup.homeTeam];
-  ov.innerHTML=`<div class="ovin du-choice-wrap">
+  const markup=`<div class="ovin du-choice-wrap">
     <div class="ovhead"><div><b>${esc(setup.comp.name)} · ${esc(mine.short)} ${meScore} : ${oppScore} ${esc(opp.short)}</b><small class="du-phase">${setup.game}세트 First Selection</small></div></div>
     ${officialLastGameCard(db,last)}
     <section class="du-choice-card">
@@ -49,6 +49,7 @@ function openPendingOfficialSelection(db,setup){
       <div class="du-choice-grid">${choices.map(c=>`<button class="du-choice" data-choice-kind="${c.kind}" data-choice-value="${c.value}"><b>${c.title}</b><span>${c.sub}</span></button>`).join('')}</div>
     </section>
   </div>`;
+  openUiOverlay({kind:'selection',label:'세트 선택권',html:markup,dismissible:false,focusSelector:'[data-choice-kind]'});
   document.querySelectorAll('[data-choice-kind]').forEach(b=>b.onclick=()=>{applyPendingOfficialSelection(DB,{kind:b.dataset.choiceKind,value:b.dataset.choiceValue});saveDB();openPendingOfficialDraft(DB)});
 }
 function openPendingOfficialDraft(db){
@@ -64,8 +65,8 @@ function openPendingOfficialDraft(db){
   return true;
 }
 function draftUiClose(){
-  if(DRAFT_UI?.locked)return;
-  DRAFT_UI=null;const ov=$('#overlay');if(!ov)return;ov.hidden=true;ov.innerHTML='';ov.setAttribute('aria-label','시리즈 상세');document.body.classList.remove('lock');
+  if(!DRAFT_UI||DRAFT_UI.locked)return;
+  DRAFT_UI=null;closeUiOverlay();
 }
 function draftUiAdvanceAi(){
   if(!DRAFT_UI)return;const s=DRAFT_UI.state;
@@ -145,15 +146,15 @@ function draftUiGrid(){
     </button>`}).join('')}</div>`;
 }
 function draftUiRender(){
-  if(!DRAFT_UI)return;const s=DRAFT_UI.state,turn=draftTurn(s),done=!turn,ov=$('#overlay');
+  if(!DRAFT_UI)return;const s=DRAFT_UI.state,turn=draftTurn(s),done=!turn;
   const phase=done?'드래프트 완료':`${turn.index+1} / ${DRAFT_ORDER.length} · ${turn.kind==='B'?'밴':'픽'} · ${esc(s.db.teams[s.teamIds[turn.side]].short)} 차례`;
   const mine=!done&&turn.side===DRAFT_UI.playerSide;
-  ov.innerHTML=`<div class="ovin du-wrap">
+  const markup=`<div class="ovin du-wrap">
     <div class="ovhead"><div><b>${esc(DRAFT_UI.title)}</b><small class="du-phase">${phase}</small></div>${DRAFT_UI.locked?'':'<button class="ghost" id="du-close">닫기</button>'}</div>
     ${draftUiSeriesMeta()}<div class="du-board">${draftUiSidePanel(0)}<div class="du-center"><strong>${done?'완료':mine?'YOUR TURN':'AI'}</strong><span>${done?'10밴 · 10픽 완료':turn.kind==='B'?'BAN':'PICK'}</span></div>${draftUiSidePanel(1)}</div>
     ${done?`<section class="du-done"><h3>드래프트 완료</h3><p>${esc(DRAFT_UI.doneText||'단계형 밴픽 코어와 동일한 결과입니다.')}</p><button class="primary" id="du-finish">${esc(DRAFT_UI.finishLabel||(DRAFT_UI.onComplete?'드래프트 확정':'연습 종료'))}</button></section>`:
     `<section class="du-pool">
-      <div class="du-tools"><input id="du-search" type="search" autocomplete="off" placeholder="챔피언 검색" value="${esc(DRAFT_UI.query)}"><div class="chips">${DRAFT_UI_FILTERS.map(r=>`<button data-du-role="${r}" aria-pressed="${DRAFT_UI.filter===r}">${r==='ALL'?'전체':ROLE_KO[r]}</button>`).join('')}</div></div>
+      <div class="du-tools"><input id="du-search" aria-label="챔피언 검색" type="search" autocomplete="off" placeholder="챔피언 검색" value="${esc(DRAFT_UI.query)}"><div class="chips">${DRAFT_UI_FILTERS.map(r=>`<button data-du-role="${r}" aria-pressed="${DRAFT_UI.filter===r}">${r==='ALL'?'전체':ROLE_KO[r]}</button>`).join('')}</div></div>
       <div class="du-mobile-tabs" role="group" aria-label="밴픽 정보">
         <button data-du-info="analysis" aria-pressed="${DRAFT_UI.infoTab==='analysis'}">후보 분석</button>
         <button data-du-info="advice" aria-pressed="${DRAFT_UI.infoTab==='advice'}">스태프 조언</button>
@@ -166,12 +167,13 @@ function draftUiRender(){
       <div class="du-lock"><div><b>${mine?(DRAFT_UI.selected?esc(championLabel(s.db,DRAFT_UI.selected)):'챔피언을 선택하세요'):'상대 팀이 선택 중입니다'}</b><small>${mine?(turn.kind==='P'?'픽 단계에서는 포지션을 공개하지 않습니다. 드래프트 종료 후 합법적인 5포지션 배치를 확정합니다.':'선택 후 확정해야 밴됩니다.'):'AI는 공개된 챔피언과 가능한 포지션만 보고 판단합니다.'}</small></div><button class="primary" id="du-lock" ${mine&&DRAFT_UI.selected?'':'disabled'}>${turn.kind==='B'?'밴 확정':'픽 확정'}</button></div>
     </section>`}
   </div>`;
+  refreshUiOverlay(markup,{focusSelector:done?'#du-finish':DRAFT_UI.locked?'#du-search':'#du-close'});
   draftUiBind();
 }
 function draftUiBind(){
   if(!DRAFT_UI)return;
   const close=$('#du-close');if(close)close.onclick=draftUiClose;
-  const finish=$('#du-finish');if(finish)finish.onclick=()=>{const result=draftResult(DRAFT_UI.state),cb=DRAFT_UI.onComplete;if(cb){DRAFT_UI=null;const ov=$('#overlay');ov.hidden=true;ov.innerHTML='';document.body.classList.remove('lock');cb(result)}else draftUiClose()};
+  const finish=$('#du-finish');if(finish)finish.onclick=()=>{const result=draftResult(DRAFT_UI.state),cb=DRAFT_UI.onComplete;if(cb){DRAFT_UI=null;closeUiOverlay({force:true,restoreFocus:false});cb(result)}else draftUiClose()};
   const search=$('#du-search');if(search)search.oninput=e=>{DRAFT_UI.query=e.target.value;const box=$('#du-grid');if(box)box.innerHTML=draftUiGrid();draftUiBindGrid()};
   document.querySelectorAll('[data-du-role]').forEach(b=>b.onclick=()=>{DRAFT_UI.filter=b.dataset.duRole;DRAFT_UI.selected=null;draftUiRender()});
   document.querySelectorAll('[data-du-info]').forEach(b=>b.onclick=()=>{DRAFT_UI.infoTab=b.dataset.duInfo;draftUiRender()});
@@ -188,4 +190,3 @@ function draftUiLock(){
   const valid=draftValidateChoice(s,choice);if(!valid.ok){DRAFT_UI.selected=null;draftUiRender();return}
   draftApplyChoice(s,choice);DRAFT_UI.selected=null;draftUiAdvanceAi();draftUiRender();
 }
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&DRAFT_UI&&!DRAFT_UI.locked)draftUiClose()});
