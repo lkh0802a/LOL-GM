@@ -559,7 +559,7 @@ This applies retroactively to completed major items during later UI touches and 
 - Staff AI may recommend, filter, rank, prefill, batch administrative steps and surface consequences, but cannot turn a recommendation into a transaction or lineup decision.
 - Player options are exercised by the player/agent side, not the club. Contract expiry at the registration/market deadline is a rules consequence rather than an AI roster decision.
 - A managed-team staff retirement leaves a vacancy; the engine does not silently generate a replacement. AI clubs may still replace staff automatically.
-- For the managed club, the legacy team.coach simulation slot is presented as the senior assistant. The human player occupies the head-coach role.
+- The human player occupies the managed club's head-coach role. There is no separate generic senior-assistant role in the target staff model; legacy `team.coach` dependencies must be migrated into specialist staff systems rather than surfaced as a senior assistant.
 - Board-owned infrastructure remains outside this sporting-control boundary; its automation is not treated as head-coach convenience automation.
 
 
@@ -584,7 +584,7 @@ This applies retroactively to completed major items during later UI touches and 
 - A player keeps nationality/origin identity independently from the one active registration-local eligibility.
 - Multi-national players choose one origin local at career start; that first selection remains the permanent origin-local entitlement.
 - A player may acquire a non-origin local only through continuous service in one region under qualification terms agreed by that regional office and the international office. Qualification grants a player/agent choice; it does not auto-switch the active local. If qualification is completed mid-season, activation of the newly acquired local is deferred until the next season.
-- Only one active local exists at a time. Relinquishing an acquired local restores the origin local immediately; a relinquished non-origin local must be earned again from scratch.
+- Only one active local exists at a time. A switch, including restoration of the origin local after an acquired local was active, takes effect from the next season and is chosen during the offseason. An earned non-origin eligibility that was never activated remains available for a later offseason choice; a non-origin local that was actually activated and later relinquished must be earned again from scratch.
 - Same-region club movement preserves service. A same-region FA gap preserves progress but adds no service time. Cross-region loan pauses progress without adding service in either region. Registration to another region by normal contract resets the previous region's progress.
 - When a qualification rule measures service by seasons, a partial/half season with actual registration and service in that region counts as one service season; paused FA or cross-region-loan time does not create service credit.
 - The official first-team registered-roster non-local cap is globally fixed at two; it does not cap the club's total contracted players or reserve/Academy holdings.
@@ -627,7 +627,7 @@ This applies retroactively to completed major items during later UI touches and 
 - Official first-team roster coverage is checked against registered primary roles: at least one TOP, JGL, MID, ADC and SUP.
 - A coach cannot use an existing secondary-role familiarity value to bypass the registered position and field the player in that other role.
 - Secondary-role/off-role familiarity is training and transition information, not a second official registration position.
-- A genuine role conversion must be a deliberate long-term career process followed by a formal primary-role registration update; it cannot be an instant lineup edit or game-to-game swap.
+- A genuine role conversion may begin training at any time, but completion is a long-term engine outcome based on age, adaptability, training load and prior familiarity, followed by a formal primary-role registration update. As the new role develops, old-role familiarity can decay; the old role remains as off-role familiarity only if enough skill remains. Multiple career conversions are possible but carry cumulative efficiency/growth costs.
 - Generated-player meaningful off-role familiarity is intentionally rare (8% baseline) and is never official position eligibility. It represents prior exposure only; formal role conversion remains a separate future process.
 
 
@@ -635,8 +635,58 @@ This applies retroactively to completed major items during later UI touches and 
 
 **Decision:** Reserve/Academy roster structure is not forced to mirror the first team.
 
-- Each regional office sets reserve/Academy roster minimum/maximum size and its own non-local rule.
+- Reserve/Academy official rosters have a global minimum of five players and must cover all five primary roles when they play official matches. Each regional office sets the maximum size and its own non-local rule.
 - A first-team player may appear in a reserve/Academy official match only when both the internal-movement window and that competition's registration window allow the move.
 - Regional offices may set a cooldown between call-up and send-down actions.
+- A first-team-registered player may train with the reserve group without automatically losing first-team registration, and reserve players may freely join first-team training/scrims without a formal internal move. Official-match eligibility remains registration-controlled.
+- Academy units that are structurally separate from reserve teams are development-only and do not participate in league-pyramid promotion/relegation.
 - Internal movement is locked for the duration of an international tournament.
 - The managed club and AI clubs use the same reserve/Academy eligibility and movement checks.
+
+
+## D-052 — Loans and offseason contract exits use explicit clauses
+
+**Decision:** Loan and contract-exit behavior is clause-driven rather than free-form.
+
+- Loans last either half a season or one full season.
+- Early recall is legal only when the loan contract contains a recall clause.
+- Loan fees may be zero. Salary responsibility is negotiable from 0–100% between parent and borrowing clubs.
+- Both optional purchase clauses and mandatory purchase clauses are supported.
+- A loan departure consumes one of the player's two allowed contracted moves that season; returning to the parent club does not consume another.
+- Mutual contract termination is restricted to the offseason.
+- Unilateral club release pays the guaranteed remainder defined by that player's contract guarantee percentage/amount.
+
+
+## D-053 — Renewal intent and relationship breakdown precede transfer requests
+
+**Decision:** Player dissatisfaction primarily affects relationships and retention, not automatic transfer requests.
+
+- Negative playing time, role, team results, coaching, contract treatment or interpersonal conditions reduce satisfaction and club/player relationship quality.
+- The largest sporting-business consequence is lower renewal willingness: higher demands, shorter patience, negotiation breakdown and eventual free departure become more likely.
+- Explicit transfer wishes are rare escalation events reserved for severe, sustained breakdowns rather than the default response to dissatisfaction.
+- After the season's final international tournament, the incumbent club receives a 14-day exclusive renewal-negotiation period for expiring players. Other clubs may contact/negotiate from day 15 onward. This is exclusivity only, not a right to match or automatic retention.
+
+
+## D-054 — Matchday use is the registered roster, not a second mini-roster
+
+**Decision:** Official registration is the player-eligibility boundary.
+
+- Every officially registered player is available for match selection; no separate reduced matchday roster is required.
+- A game itself has no player substitutions after it starts. Between games of a Bo3/Bo5, registered players may be changed.
+- Five eligible starters are sufficient; no minimum bench size exists.
+- Fewer than five eligible players means a forfeit unless a pre-published emergency-replacement rule validly restores eligibility.
+- Injuries exist but are rare; condition, fatigue and illness are the normal availability pressures.
+- The first-team non-local cap is a roster cap, not a starting-lineup cap, so both registered non-local players may start together.
+
+
+## D-055 — Staff employment is departmental; competition accreditation is office-owned
+
+**Decision:** Club employment limits and competition-event accreditation are separate.
+
+- The managed user is the head coach. The target model has no generic senior assistant.
+- Coaching staff are a separate department with up to **9 employed coaches**, allowing strategic/development/performance specialists and all five positional coaches if the club chooses.
+- Analysts are a separate department with up to **4 analysts**.
+- Scouts are a separate department with up to **6 scouts**.
+- These are club employment caps, not mandatory staffing levels; wages and club finances should make full departments expensive.
+- Regional/international offices may separately limit how many employed staff can be officially accredited or present for a competition/event.
+- Legacy `team.coach` behavior must be migrated into specialist staff attributes before the generic slot is removed from runtime.

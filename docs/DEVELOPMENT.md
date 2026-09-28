@@ -282,7 +282,7 @@ Fearless and First Selection are fixed core match-system concepts, not regional-
 
 ### Registered-position realism checkpoint — 2026-09-28
 
-Official player positions are now a registration constraint, not a free tactical switch. First-team roster coverage uses each player's primary role, and official matches may not field a player in an arbitrary different role. Secondary-role familiarity remains internal training/transition data only. A genuine role conversion must be a deliberate long-term process followed by a formal primary-role registration update; exact conversion duration/eligibility remains to be specified before implementation. The current generated-player 28% secondary-role chance is therefore not a target realism rate and should not be used as official-position eligibility.
+Official player positions are now a registration constraint, not a free tactical switch. First-team roster coverage uses each player's primary role, and official matches may not field a player in an arbitrary different role. Secondary-role familiarity remains internal training/transition data only. A genuine role conversion must be a deliberate long-term process followed by a formal primary-role registration update; exact conversion duration/eligibility remains to be specified before implementation. The former 28% generated-player secondary-role chance was replaced by an 8% baseline and is not official-position eligibility.
 
 Reserve/Academy roster size and non-local limits remain regional-office policy. First-team players may play reserve/Academy official matches only when both internal-movement and competition-registration windows allow it; regional offices may impose movement cooldowns. Internal first/reserve movement is locked during international tournaments.
 
@@ -290,3 +290,14 @@ Reserve/Academy roster size and non-local limits remain regional-office policy. 
 ### Official-position enforcement implementation — 2026-09-28
 
 The source now enforces the registered-primary-role rule at both depth-chart assignment and match-simulation boundaries. A player with secondary/off-role familiarity cannot be selected as the official starter for that role. Generated players now receive meaningful off-role familiarity only at an 8% baseline (down from 28%), with a narrower initial familiarity range, and the player UI labels it as transition familiarity rather than an official secondary position. Smoke coverage rejects both manual depth-chart bypass and tampered off-role starter state.
+
+
+### Contract / retention / staff rule checkpoint — 2026-09-28
+
+Position conversion may start at any time, with completion duration determined by the simulation from age, adaptability, training load and familiarity. Old-role familiarity decays as conversion progresses, and repeated career conversions carry cumulative efficiency costs.
+
+Loans are half-season or full-season deals. Recall requires a clause; fees may be zero; wage share is negotiable; purchase options and obligations are supported. Mutual termination is offseason-only and unilateral release honors the contract's guaranteed amount. Player dissatisfaction now targets relationship quality and renewal intent first; transfer wishes are rare severe-breakdown events. After the final international event, expiring players have a 14-day incumbent-only renewal period before outside contact opens.
+
+Match eligibility is the official registered roster, with no second matchday mini-roster. Between-game substitutions are legal, in-game player substitutions are not, and fewer than five eligible players forfeits absent a valid emergency exception. Injuries are rare relative to condition/fatigue/illness.
+
+The staff target is now departmental: no generic senior assistant, up to 9 coaches, 4 analysts and 6 scouts employed by a club. Competition staff accreditation limits remain office-owned. Legacy `team.coach` must be migrated rather than abruptly deleted because development, drafting and finance still depend on it.
