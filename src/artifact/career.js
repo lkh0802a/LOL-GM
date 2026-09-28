@@ -130,22 +130,24 @@ function aiInitialContractTerms(db,p,t,rng){
   const ask=asking(db,p,t.region),years=contractYearsForPlayer(db,p,rng),premium=rng.range(.96,1.08),role=defaultPromisedRole(db,p,t),room=Math.max(.1,initialSalaryCeiling(db,t)-payroll(db,t)),salary=Math.min(room,ask*premium);
   return normalizeContractTerms(db,p,t,salary,years,{signingBonus:rng.chance(.28)?ask*rng.range(.04,.12):0,bonuses:rng.chance(.32)?{performance:ask*.05,title:ask*.08,international:ask*.05}:{},promisedRole:role,option:rng.chance(.15)?{type:rng.chance(.55)?'team':'player'}:null,buyout:p.personality.ambition>=86&&rng.chance(.35)?playerMarketValue(db,p)*1.8:null});
 }
-function initialOfferForTeam(db,t,round,seed,market){
-  const target=t.initialRosterTarget||initialRosterTarget(db,t);if(t.roster.length>=target)return null;
-  const key='depth|'+round,p=initialPickCandidate(db,t,key,market);if(!p)return null;
+function initialOfferForTeam(db,t,round,seed,market,target){
+  const want=target??t.initialRosterTarget??initialRosterTarget(db,t);if(t.roster.length>=want)return null;
+  const key='market|'+round+'|'+want,p=initialPickCandidate(db,t,key,market);if(!p)return null;
   const rng=new RNG((seed||'initial-market')+'|'+t.id+'|'+key,'initial-offer'),terms=aiInitialContractTerms(db,p,t,rng),chk=initialOfferCheck(db,p,t,terms);if(!chk.ok)return null;
   return {team:t,player:p,terms,value:offerUtility(db,p,t,terms)+((hashStr((seed||'initial-market')+'|choose|'+p.id+'|'+t.id+'|'+round)%1001)/1000-.5)*.08};
 }
-function resolveInitialOfferRound(db,teams,round,seed){
-  const market=initialMarketSnapshot(db,teams),offers=teams.map(t=>initialOfferForTeam(db,t,round,seed,market)).filter(Boolean),byPlayer={};for(const o of offers)(byPlayer[o.player.id]=byPlayer[o.player.id]||[]).push(o);
+function resolveInitialOfferRound(db,teams,round,seed,targetFn){
+  const market=initialMarketSnapshot(db,teams),offers=teams.map(t=>initialOfferForTeam(db,t,round,seed,market,targetFn(t))).filter(Boolean),byPlayer={};for(const o of offers)(byPlayer[o.player.id]=byPlayer[o.player.id]||[]).push(o);
   let signed=0;for(const os of Object.values(byPlayer)){const best=os.sort((a,b)=>b.value-a.value||b.terms.salary-a.terms.salary)[0],p=best.player,t=best.team;if(p.team)continue;const chk=initialOfferCheck(db,p,t,best.terms);if(!chk.ok||!initialFutureFeasible(db,t,p,best.terms.salary,market))continue;signContract(db,p,t,best.terms.salary,best.terms.years,best.terms);signed++}
   return {offers:offers.length,signed};
 }
-function runInitialDepthMarket(db,teams,seed){
-  const done=t=>t.roster.length>=(t.initialRosterTarget||initialRosterTarget(db,t));
-  for(let round=0;round<80&&!teams.every(done);round++){const contenders=teams.filter(t=>!done(t)),r=resolveInitialOfferRound(db,contenders,round,seed);if(!r.signed)break}
+function runInitialMarketTo(db,teams,seed,targetFn,maxRounds=80){
+  const done=t=>t.roster.length>=targetFn(t);
+  for(let round=0;round<maxRounds&&!teams.every(done);round++){const contenders=teams.filter(t=>!done(t)),r=resolveInitialOfferRound(db,contenders,round,seed,targetFn);if(!r.signed)break}
   return teams.filter(t=>!done(t));
 }
+function runInitialMinimumMarket(db,teams,seed){return runInitialMarketTo(db,teams,seed+'|minimum',t=>initialSquadLimits(db,t).min,80)}
+function runInitialDepthMarket(db,teams,seed){return runInitialMarketTo(db,teams,seed+'|depth',t=>t.initialRosterTarget||initialRosterTarget(db,t),80)}
 function autoBuildInitialSquad(db,t,rng,target=null){
   const team=teamRef(db,t),limits=initialSquadLimits(db,team),want=Math.min(limits.max,Math.max(limits.min,target??initialRosterTarget(db,team)));team.initialRosterTarget=want;
   while(team.roster.length<want){const market=initialMarketSnapshot(db,[team]),p=initialPickCandidate(db,team,'depth|'+team.roster.length,market);if(!p)break;const terms=aiInitialContractTerms(db,p,team,rng),chk=initialOfferCheck(db,p,team,terms);if(!chk.ok)break;signContract(db,p,team,terms.salary,terms.years,terms)}
@@ -153,6 +155,7 @@ function autoBuildInitialSquad(db,t,rng,target=null){
 }
 function autoBuildInitialWorld(db,excludedIds,seed){
   const excluded=new Set(excludedIds||[]),teams=activeTeams(db).filter(t=>!excluded.has(t.id));for(const t of teams)t.initialRosterTarget=initialRosterTarget(db,t);
+  const short=runInitialMinimumMarket(db,teams,seed);if(short.length)throw new Error(short[0].name+' AI 로스터가 법정 최소 인원을 확보하지 못했습니다');
   runInitialDepthMarket(db,teams,seed);for(const t of teams)t.initialRosterBuilt=t.roster.length;
 }
 function beginInitialRosterPhase(db,teamId,seed){
