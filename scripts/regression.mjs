@@ -233,6 +233,94 @@ source += `
     assert(!expired.ok&&p.team===team.id,'AI may not auto-release nonexpired managed club contracts');
   });
 
+  test('06g-save-format-and-cache-isolation',()=>{
+    const db=buildWorld(),team=activeTeams(db)[0],p=Object.values(db.players).find(x=>x&&x.attrs);
+    assert(team&&p,'save format test fixture missing');
+    db._marketDemandCache={test:123};db.initialPayrollFloorCache={stale:true};
+    db.patches.base={test:'do not serialize'};db.patches.initialBase={test:'do not serialize'};
+    db.metaHistory=[{date:'2027-02-01',patch:db.patch.id,comp:'SAVE_REGRESSION',
+      sides:[{team:team.id,region:team.region,win:true,
+        picks:[{champ:Object.keys(db.patch.champions)[0],role:'MID',player:p.id,items:['item-a'],runes:['rune-b']}]}],
+      bans:[['BAN']],regions:[team.region],international:false}];
+    const original=JSON.stringify(db),packed=packDB(db),stored=JSON.parse(packed);
+    assert(JSON.stringify(db)===original,'save packing must not mutate runtime world');
+    assert(stored.saveFormat===SAVE_FORMAT_VERSION&&stored.version===15&&stored.packed===1&&stored.metaHistoryPacked===1,
+      'save format version or compact metadata drift');
+    for(const key of SAVE_TRANSIENT_ROOT_FIELDS)if(key!=='packed'&&key!=='metaHistoryPacked')
+      assert(!Object.prototype.hasOwnProperty.call(stored,key),'transient root data leaked: '+key);
+    assert(!Object.prototype.hasOwnProperty.call(stored.patches,'base')&&
+      !Object.prototype.hasOwnProperty.call(stored.patches,'initialBase'),'large patch baselines leaked');
+    const loaded=unpackDB(packed),row=loaded.metaHistory[0];
+    assert(loaded.saveFormat===SAVE_FORMAT_VERSION&&
+      !Object.prototype.hasOwnProperty.call(loaded,'packed')&&
+      !Object.prototype.hasOwnProperty.call(loaded,'metaHistoryPacked')&&
+      !Object.prototype.hasOwnProperty.call(loaded,'_marketDemandCache')&&
+      !Object.prototype.hasOwnProperty.call(loaded,'initialPayrollFloorCache'),
+      'serialized cache or compact marker survived restoration');
+    assert(row.sides[0].picks[0].player===p.id&&row.sides[0].picks[0].items[0]==='item-a'&&
+      row.sides[0].picks[0].runes[0]==='rune-b','save migration dropped rich meta history');
+    assert(!rosterIntegrityErrors(loaded).length,'save restoration damaged roster invariants');
+    assert(packDB(loaded).includes('"saveFormat":2'),'normalized save could not be repacked');
+  });
+
+  test('06h-legacy-v15-save-restoration',()=>{
+    const db=buildWorld(),team=activeTeams(db)[0],p=Object.values(db.players).find(x=>x&&x.attrs);
+    const legacy=JSON.parse(JSON.stringify(db));
+    delete legacy.saveFormat;delete legacy.packed;delete legacy.metaHistoryPacked;
+    legacy.metaHistory=[['2027-03-01','27.1','SAVE_LEGACY','LEGACY',2027,1,'regular',
+      'KR',0,['KR'],[[team.id,team.region,1,[['CHAMP','MID',p.id,['sword'],['rune']]]]],[]]];
+    legacy.players[p.id].attrs=ALL_ATTRS.map(a=>p.attrs[a]);
+    legacy.players[p.id].tend=TENDENCIES.map(k=>p.tend[k]);
+    legacy.players[p.id].pool={legacy:[70,3,40,50,2,5,1,2]};
+    delete legacy.players[p.id].activeLocalRegion;
+    delete legacy.players[p.id].contractedMoves;
+    const oldStaff=(legacy.teams[team.id].staffRoster||[])[0];
+    delete legacy.teams[team.id].staffRoster;
+    legacy.teams[team.id].staff={analyst:oldStaff||{id:'legacy',role:'analyst',rating:55}};
+    legacy.teams[team.id].coach={id:'old-coach'};
+    legacy.coachPool=[{id:'old-coach'}];
+    legacy.world={year:db.year,phase:'season',pendingOfficial:{
+      date:'2027-04-02',queue:[{seasonKey:'SAVE_LEGACY',matchId:'M1',session:{g:2,games:[{n:1}]}}]},
+      negotiations:{'NEG_TEST':{id:'NEG_TEST',status:'open'}},
+      recruitment:{targets:{[p.id]:{stage:'negotiating',negotiationId:'NEG_TEST'}}}};
+    const before=JSON.stringify(legacy),loaded=unpackDB(before),lp=loaded.players[p.id];
+    assert(JSON.stringify(legacy)===before,'migration mutated its serialized input fixture');
+    assert(loaded.saveFormat===2&&!Object.prototype.hasOwnProperty.call(loaded,'coachPool')&&
+      !Object.prototype.hasOwnProperty.call(loaded.teams[team.id],'coach')&&
+      !Object.prototype.hasOwnProperty.call(loaded.teams[team.id],'staff')&&
+      Array.isArray(loaded.teams[team.id].staffRoster),'legacy staff cleanup failed');
+    assert(!Array.isArray(lp.attrs)&&lp.attrs[ALL_ATTRS[0]]===p.attrs[ALL_ATTRS[0]]&&
+      lp.pool.legacy.scrimSeason===1&&lp.pool.legacy.trainingSeason===2&&
+      lp.activeLocalRegion===lp.originLocalRegion&&Array.isArray(lp.contractedMoves),
+      'legacy player fields were not restored');
+    assert(loaded.metaHistory[0].sides[0].picks[0].runes[0]==='rune'&&
+      loaded.world.pendingOfficial.queue[0].session.g===2&&
+      loaded.world.negotiations.NEG_TEST.status==='open'&&
+      loaded.world.recruitment.targets[p.id].negotiationId==='NEG_TEST',
+      'legacy v15 load lost pending match, meta history or ongoing negotiations');
+    assert(!rosterIntegrityErrors(loaded).length,'legacy load damaged roster consistency');
+  });
+
+  test('06i-invalid-and-forward-saves',()=>{
+    const db=buildWorld(),raw=JSON.parse(packDB(db));
+    for(const [name,bad] of [
+      ['older-unsupported-world',{...raw,version:14}],
+      ['future-world',{...raw,version:16}],
+      ['future-format',{...raw,saveFormat:99}],
+      ['missing-regions',{...raw,regions:null}],
+      ['malformed-teams',{...raw,teams:[]}]]){
+      let rejected=false;
+      try{unpackDB(JSON.stringify(bad))}catch(e){rejected=true}
+      assert(rejected,'invalid or unsupported save silently loaded: '+name);
+    }
+    const integrityProbe=buildWorld();
+    integrityProbe.metaHistoryPacked=1;
+    integrityProbe.metaHistory=[['legacy',null]];
+    const before=JSON.stringify(integrityProbe);
+    rosterIntegrityErrors(integrityProbe);
+    assert(JSON.stringify(integrityProbe)===before,'roster integrity check must not secretly migrate save records');
+  });
+
   test('07-staff-migration-caps',()=>{
     const db=buildWorld(),t=activeTeams(db)[0];t.coach={id:'legacy'};t.staff={analyst:{id:'legacy-a',role:'analyst',rating:60}};
     migrateLegacyStaffState(db);

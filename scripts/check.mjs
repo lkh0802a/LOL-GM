@@ -53,6 +53,7 @@ const maintainabilityBudgets = {
   'season.js': 24000,
   'offseason.js': 16000,
   'save.js': 10000,
+  'save-migration.js': 8000,
   'roster.js': 22000,
   'lineup.js': 12000,
   'state-transaction.js': 9000,
@@ -148,6 +149,29 @@ for(const file of ['contracts.js','transfer.js','career.js']){
 }
 if(!transactionSource.includes('function commitWorldAction(')){
   failed=true;console.error('Single-step world transaction gateway missing');
+}
+
+// 11.5/3-3: a separately versioned save-encoding migration and non-destructive restore.
+const saveMigrationSource=await readFile(resolve(artifact,'save-migration.js'),'utf8');
+const saveSerializationSource=await readFile(resolve(artifact,'save.js'),'utf8');
+const appSaveSource=await readFile(resolve(artifact,'app.js'),'utf8');
+const rosterIntegritySource=await readFile(resolve(artifact,'roster.js'),'utf8');
+for(const marker of ['const SAVE_FORMAT_VERSION=2','function validateSaveEnvelope(',
+  'function normalizeRestoredSave(','function migrateSaveState(',
+  'function unpackPlayerSaveFields(']){
+  if(!saveMigrationSource.includes(marker)){failed=true;console.error('11.5/3-3 migration gate missing: '+marker)}
+}
+if(!saveSerializationSource.includes('return migrateSaveState(JSON.parse(str))')||
+   !saveSerializationSource.includes('saveFormat:SAVE_FORMAT_VERSION')){
+  failed=true;console.error('Save encoding must use explicit version and migration path');
+}
+if(appSaveSource.includes('purgeLegacySaves(')||
+   !appSaveSource.includes('if(invalid.length)')||
+   !appSaveSource.includes('const db=DB,slot=SLOT,key=STORE')){
+  failed=true;console.error('Storage must preserve invalid/old saves and capture writes by slot');
+}
+if(rosterIntegritySource.includes('if(db.metaHistoryPacked)')){
+  failed=true;console.error('Roster integrity check must be pure: save restoration belongs to save-migration');
 }
 
 const draftUiSource = await readFile(resolve(artifact, 'ui-draft.js'), 'utf8');
@@ -351,7 +375,7 @@ if (!Number.isInteger(saveVersion) || !Number.isInteger(worldVersion) || saveVer
 }
 
 const regressionSource = await readFile(resolve(root, 'scripts', 'regression.mjs'), 'utf8');
-for (const marker of ['01-world-bootstrap','05-contracts','06-owned-reserve-roster','06c-player-sign-transaction','06d-player-transfer-transaction','06e-ai-transfer-and-move-limit','06f-release-and-option-transaction','09-patch-baseline','11-draft-series-save','mid-Bo5 session did not survive save/load']) {
+for (const marker of ['01-world-bootstrap','05-contracts','06-owned-reserve-roster','06c-player-sign-transaction','06d-player-transfer-transaction','06e-ai-transfer-and-move-limit','06f-release-and-option-transaction','06g-save-format-and-cache-isolation','06h-legacy-v15-save-restoration','06i-invalid-and-forward-saves','09-patch-baseline','11-draft-series-save','mid-Bo5 session did not survive save/load']) {
   if (!regressionSource.includes(marker)) {
     failed = true;
     console.error('11.5 regression baseline missing marker: '+marker);
