@@ -12,7 +12,7 @@ The authoritative module order lives in `scripts/artifact-modules.mjs`.
 - simulation core: `engine.js` (match simulation) and `draft.js` (champion/system evaluation, automatic item/rune environment, draft decisions)
 - baseline/domain data: `data.js`, `champs2.js`
 - player lifecycle: `player.js` (evaluation/identity, squad-role promises, champion learning, player generation, rookie cohorts)
-- player development: `development.js` (training, facilities, age curves, seasonal growth)
+- player development/training: `development.js` (training plans, facilities, daily recovery, age curves, seasonal growth)
 - patch/meta: `patch.js`
 - competition engine: `competition.js`
 - world configuration/bootstrap: `world.js`
@@ -20,7 +20,7 @@ The authoritative module order lives in `scripts/artifact-modules.mjs`.
 - offseason orchestration: `offseason.js` (season closeout, market close, promotion/relegation)
 - persistence: `save.js` (compact save view and unpack/migration handoff)
 - roster/registration: `roster.js` (local eligibility, contracted-move accounting, organization roster rules, 1st↔reserve planning/movement, roster integrity)
-- management domains: `office.js`, `finance.js`, `contracts.js`, `transfer.js`, `scouting.js`, `staff.js`, `features.js`, `role-conversion.js`, `career.js`
+- management domains: `office.js`, `finance.js`, `contracts.js`, `transfer.js`, `scouting.js`, `staff.js`, `scrim.js`, `player-relations.js`, `features.js`, `role-conversion.js`, `career.js`
 - draft information layer: `draft-analysis.js` (scouting-bounded mastery estimates, meta/composition evidence, opponent-intent explanation); legality and selection remain in `draft.js`
 - domain UI: `ui-patch.js`, `ui-market.js`, `ui-champion.js`, `ui-player.js`, `ui-roster.js`, `ui-draft.js`, `ui-season.js`
 - application shell/controller: `app.js`
@@ -35,7 +35,9 @@ New large UI surfaces should be added as `ui-<domain>.js` modules instead of ext
 - `contracts.js` owns player market valuation, contract terms/options/signing and the AI contract/FA market.
 - `transfer.js` owns recruitment workflow, negotiations and permanent transfer execution.
 - `scouting.js` owns observed player knowledge and reports; contract/transfer code may consume its public estimates but must not reimplement scouting uncertainty.
-- `staff.js` owns staff lifecycle/market actions after the staff extraction in this rebuild.
+- `staff.js` owns staff departments, staffing limits, coaching profile, generation, AI management and manager staff actions.
+- `player-relations.js` owns player condition modifiers, relationships, usage and satisfaction/transfer-request lifecycle.
+- `scrim.js` owns scrim readiness, AI partner scheduling/value and practice effects.
 
 ## State and cache rules
 

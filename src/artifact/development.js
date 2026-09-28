@@ -54,3 +54,11 @@ function playerValue(db,p,team){
   const w={'win-now':0.1,'youth':0.6,'balanced':0.3,'superstar':0.15,'cost':0.35}[team.philosophy]||0.3;
   return o+up*w-(team.philosophy==='youth'&&p.age>26?2:0);
 }
+
+// Daily recovery belongs to the training/development domain.
+function dailyRecovery(db){
+  for(const t of Object.values(db.teams)){ if(t.active===false)continue;
+    const prof=staffProfile(t),rec=4+(prof.recovery-50)/45+facilityRecoveryBonus(t);
+    const ti=trainingIntensity(t);for(const id of t.roster){const p=db.players[id];if(!p)continue;pState(p);p.fatigue=clamp(p.fatigue-rec+ti.fatigue,0,100);p.condition=clamp(p.condition+2.5+ti.condition,0,100);p.form*=.98}
+  }
+}

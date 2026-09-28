@@ -38,7 +38,8 @@ const maintainabilityBudgets = {
   'patch.js': 40000,
   'competition.js': 30000,
   'player.js': 25000,
-  'development.js': 12000,
+  'development.js': 14000,
+  'player-relations.js': 16000,
   'world.js': 28000,
   'season.js': 24000,
   'offseason.js': 16000,
@@ -49,8 +50,9 @@ const maintainabilityBudgets = {
   'contracts.js': 26000,
   'scouting.js': 14000,
   'transfer.js': 26000,
-  'staff.js': 8000,
-  'features.js': 30000,
+  'staff.js': 18000,
+  'scrim.js': 10000,
+  'features.js': 14000,
   'role-conversion.js': 14000,
   'draft-analysis.js': 18000,
   'ui-patch.js': 30000,
@@ -111,6 +113,8 @@ const contractsSource = await readFile(resolve(artifact, 'contracts.js'), 'utf8'
 const scoutingSource = await readFile(resolve(artifact, 'scouting.js'), 'utf8');
 const transferSource = await readFile(resolve(artifact, 'transfer.js'), 'utf8');
 const staffSource = await readFile(resolve(artifact, 'staff.js'), 'utf8');
+const relationsSource = await readFile(resolve(artifact, 'player-relations.js'), 'utf8');
+const scrimSource = await readFile(resolve(artifact, 'scrim.js'), 'utf8');
 const featuresSource = await readFile(resolve(artifact, 'features.js'), 'utf8');
 const draftAnalysisSource = await readFile(resolve(artifact, 'draft-analysis.js'), 'utf8');
 const legacySaveLines = saveSource.split('\n').filter(line => /secondaryRoles|roleFamiliarity/.test(line));
@@ -210,6 +214,21 @@ for (const marker of ['function recruitmentStore(','function startNegotiation(',
 for (const marker of ['function ensureScoutReport(','function scoutReport(','function observePlayer(']) {
   if (!scoutingSource.includes(marker)) { failed=true; console.error('Scouting-domain helper missing: '+marker); }
   if (financeSource.includes(marker)) { failed=true; console.error('Scouting responsibility leaked into finance.js: '+marker); }
+}
+for (const marker of ['function ensureSatisfaction(','function updatePlayerUsage(','function afterSeries(']) {
+  if (!relationsSource.includes(marker)) { failed=true; console.error('Player-relations helper missing: '+marker); }
+  if (featuresSource.includes(marker)) { failed=true; console.error('Player-relations responsibility leaked into features.js: '+marker); }
+}
+for (const marker of ['function staffProfile(','function ensureStaffRoster(','function aiManageStaff(']) {
+  if (!staffSource.includes(marker)) { failed=true; console.error('Staff-domain helper missing: '+marker); }
+  if (featuresSource.includes(marker)) { failed=true; console.error('Staff responsibility leaked into features.js: '+marker); }
+}
+for (const marker of ['function scrimReadiness(','function aiRunScrims(','function recordScrimPractice(']) {
+  if (!scrimSource.includes(marker)) { failed=true; console.error('Scrim-domain helper missing: '+marker); }
+  if (featuresSource.includes(marker)) { failed=true; console.error('Scrim responsibility leaked into features.js: '+marker); }
+}
+if (!developmentSource.includes('function dailyRecovery(') || featuresSource.includes('function dailyRecovery(')) {
+  failed=true; console.error('Daily recovery must be owned by development/training domain');
 }
 const saveVersion = Number(appSource.match(/const SAVE_VERSION=(\d+)/)?.[1]);
 const worldVersion = Number(worldSource.match(/version:(\d+),saveId:/)?.[1]);
