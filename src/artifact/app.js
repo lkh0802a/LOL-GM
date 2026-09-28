@@ -95,7 +95,7 @@ function managerTeamPicker(disabled=false){
     <div><span>승강</span><b>${esc(promotionStatus(DB,team))}</b></div>
   </div>`:''}
   <p class="hint">첫 시즌은 모든 구단이 백지 로스터로 시작합니다. 팀을 고른 뒤 전 세계 FA 풀에서 예산과 등록 규정에 맞춰 직접 선수단을 구성합니다.</p>
-  <p class="hint">가상 프로씬 공용어가 정착된 세계이므로 국적에 따른 언어 장벽은 없습니다. 국적/지역은 외국인 등록 규정, 신인 생성, 스카우팅 범위 등에 주로 사용됩니다.</p>
+  <p class="hint">가상 프로씬 공용어가 정착된 세계이므로 국적에 따른 언어 장벽은 없습니다. 국적/출신지역은 신인 생성·스카우팅 정체성에 사용되고, 공식 등록의 비로컬 판정은 별도 활성 로컬 자격을 사용합니다.</p>
   <p class="hint">Academy/Challengers 등 모구단 소속 2군은 감독 시작 팀으로 선택할 수 없습니다.</p></div>`;
 }
 function bindManagerTeamPicker(){
@@ -461,7 +461,7 @@ function renderReport(r){
     <div><h4>하락세</h4>${r.growth.slice(-6).reverse().map(g=>`<div class="arow"><span>${esc(nm(g.pid))} <small>${DB.players[g.pid]?DB.players[g.pid].age:''}세</small></span><span class="num lo">${g.d} → ${g.ovr}</span></div>`).join('')}</div>
     ${(r.transfers||[]).length?`<div><h4>이적 (${r.transfers.length})</h4>${r.transfers.map(x=>`<div class="arow ${x.to===mineT||x.from===mineT?'minea':''}"><span>${esc(nm(x.pid))} <small>${esc(tshort(x.from))} → ${esc(tshort(x.to))}</small></span><span class="num">${money(x.fee)}</span></div>`).join('')}</div>`:''}
     <div><h4>은퇴 (${r.retired.length})</h4>${r.retired.slice(0,8).map(x=>`<div class="arow"><span>${esc(nm(x.pid))} <small>${esc(tshort(x.team))}</small></span><span class="num">${x.age}세</span></div>`).join('')||'<p class="hint">없음</p>'}</div>
-    <div><h4>FA 영입 (${r.signings.length})</h4>${sig.filter(x=>!x.fill).sort((a,b)=>(b.team===mineT)-(a.team===mineT)||b.salary-a.salary).slice(0,10).map(x=>`<div class="arow ${x.team===mineT?'minea':''}"><span>${esc(tshort(x.team))} ← ${esc(nm(x.pid))}${x.import?' <small>외국인</small>':''}${x.rookie?' <small>신인</small>':''}</span><span class="num">${money(x.salary)} · ${x.years}년${x.offers>1?` <small>(${x.offers}팀 경쟁)</small>`:''}</span></div>`).join('')}</div>
+    <div><h4>FA 영입 (${r.signings.length})</h4>${sig.filter(x=>!x.fill).sort((a,b)=>(b.team===mineT)-(a.team===mineT)||b.salary-a.salary).slice(0,10).map(x=>`<div class="arow ${x.team===mineT?'minea':''}"><span>${esc(tshort(x.team))} ← ${esc(nm(x.pid))}${x.import?' <small>비로컬</small>':''}${x.rookie?' <small>신인</small>':''}</span><span class="num">${money(x.salary)} · ${x.years}년${x.offers>1?` <small>(${x.offers}팀 경쟁)</small>`:''}</span></div>`).join('')}</div>
     <div><h4>재계약 (${(r.resign||[]).length}) · 계약 만료 (${(r.expired||[]).length})</h4>${(r.resign||[]).filter(x=>x.team===mineT).concat((r.resign||[]).filter(x=>x.team!==mineT).sort((a,b)=>b.salary-a.salary)).slice(0,5).map(x=>`<div class="arow ${x.team===mineT?'minea':''}"><span>${esc(tshort(x.team))} ${esc(nm(x.pid))}</span><span class="num">${money(x.salary)} · ${x.years}년</span></div>`).join('')}${(r.expired||[]).filter(x=>x.team===mineT).map(x=>`<div class="arow minea"><span>${esc(nm(x.pid))} 이탈</span><span class="hint">${esc(x.why)}</span></div>`).join('')}</div>
    </div></section>`;
 }
