@@ -152,6 +152,7 @@ const STAFF_DEPARTMENT={strategicCoach:'coach',developmentCoach:'coach',performa
 const STAFF_DEPT_LABEL={coach:'코칭팀',analyst:'분석팀',scout:'스카우팅팀'},STAFF_DEPT_LIMITS={coach:9,analyst:4,scout:6};
 function staffDepartment(role){return STAFF_DEPARTMENT[role]||'coach'}
 function ensureStaffRoster(t){
+  if(!t)return [];
   if(Array.isArray(t.staffRoster))return t.staffRoster;
   const old=t.staff&&typeof t.staff==='object'?Object.values(t.staff).filter(Boolean):[];
   t.staffRoster=old.map(s=>({...s,department:staffDepartment(s.role)}));delete t.staff;return t.staffRoster;
