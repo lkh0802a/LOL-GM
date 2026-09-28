@@ -1,4 +1,4 @@
-// ===== LOL GM: 데이터 모델 / 기본 월드 =====
+// ===== LOL GM: reference constants, templates and baseline assembly =====
 const ROLES = ['TOP','JGL','MID','ADC','SUP'];
 const ROLE_KO = {TOP:'탑',JGL:'정글',MID:'미드',ADC:'원딜',SUP:'서폿'};
 const LANES = ['top','mid','bot'];
@@ -40,74 +40,6 @@ const CLASS_KO = {fighter:'전사', tank:'탱커', mage:'마법사', assassin:'�
 const KIT_KEYS = ['burst','dps','cc','engage','disengage','peel','poke','waveclear','mobility','sustain','early','mid','late','difficulty'];
 const KIT_KO = {burst:'폭딜', dps:'지속딜', cc:'CC', engage:'이니시', disengage:'받아치기', peel:'보호', poke:'포킹', waveclear:'라인클리어', mobility:'기동성', sustain:'유지력', early:'초반', mid:'중반', late:'후반', difficulty:'난이도'};
 const BASE_KEYS = ['hp','hpg','ad','adg','arm','armg','as','range','ms'];
-
-function championId(name){
-  const slug=String(name).normalize('NFKD').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
-  return 'champ_'+(slug||Math.abs(hashStr(String(name))));
-}
-function championByName(db,name){return Object.values(db.patch.champions).find(c=>c.name===name)||null}
-function championLabel(db,id){const c=db&&db.patch&&db.patch.champions?db.patch.champions[id]:null;return c?(c.nameKo||c.name):String(id||'')}
-function championDisplayName(c){return c?(c.nameKo||c.name):''}
-const CHAMPION_VISUAL_VERSION=1;
-const CHAMPION_VISUAL_THEMES=['arcane','celestial','infernal','verdant','storm','shadow','void','frost','solar','hex'];
-const CHAMPION_VISUAL_ORNAMENTS=['hood','crown','horns','mask','halo','crest','braids','visor'];
-function generatedChampionVisual(def){
-  const id=String(def?.id||championId(def?.name||'champion')),seed=Math.abs(hashStr(id+'|'+(def?.arch||'')+'|portrait-v'+CHAMPION_VISUAL_VERSION));
-  const cls=def?.cls||({juggernaut:'fighter',diver:'fighter',skirmisher:'fighter',vanguard:'tank',warden:'tank',burst:'mage',control:'mage',battle:'mage',artillery:'mage',hyper:'marksman',bully:'marksman',catcher:'enchanter'}[def?.arch]||'fighter');
-  const silhouette={tank:'heavy',fighter:'plated',mage:'robed',assassin:'hooded',marksman:'ranged',enchanter:'ornate'}[cls]||'plated';
-  const weapon={tank:'shield',fighter:seed%2?'blade':'spear',mage:seed%2?'staff':'orb',assassin:'blades',marksman:seed%2?'bow':'rifle',enchanter:seed%2?'staff':'orb'}[cls]||'blade';
-  const pool=(def?.dmg==='AP'?['arcane','celestial','verdant','void','frost','hex']:['infernal','storm','shadow','solar','frost','hex']),theme=pool[(seed>>>3)%pool.length];
-  return {version:CHAMPION_VISUAL_VERSION,seed,revision:0,theme,silhouette,weapon,ornament:CHAMPION_VISUAL_ORNAMENTS[(seed>>>7)%CHAMPION_VISUAL_ORNAMENTS.length],pose:['front','threeQuarter','profile'][(seed>>>11)%3],aura:CHAMPION_VISUAL_THEMES[(seed>>>15)%CHAMPION_VISUAL_THEMES.length]};
-}
-function ensureChampionVisual(c){if(!c)return null;if(!c.visual)c.visual=generatedChampionVisual(c);return c.visual}
-const DETAIL_BASE_KEYS=['resource','resourceg','resourceRegen','mr','mrg','asg'];
-const CHAMPION_SOURCE_PATCH='16.19.1';
-function cleanChampionSourceText(v){return String(v||'').replace(/<br\s*\/?>/gi,' ').replace(/<[^>]*>/g,'').replace(/&nbsp;/gi,' ').replace(/&amp;/gi,'&').replace(/&lt;/gi,'<').replace(/&gt;/gi,'>').replace(/&#39;/g,"'").replace(/&quot;/gi,'"').replace(/\s+/g,' ').trim()}
-function normalizeSourceSkill(slot,raw,fallback){
-  if(!raw)return fallback;
-  const cds=(raw.cooldown||[]).filter(Number.isFinite), cd=cds.length?cds[0]:fallback.cooldown;
-  const numeric=raw.numeric||{};return {...fallback,slot,name:raw.nameKo||raw.nameEn||fallback.name||slot,sourceName:raw.nameEn||'',sourceDescription:cleanChampionSourceText(raw.descriptionKo||raw.descriptionEn||''),cooldown:cd,baseDamage:numeric.baseDamage||fallback.baseDamage||[],ratios:numeric.ratios||fallback.ratios||{},cost:(raw.cost||[]).filter(Number.isFinite),range:(raw.range||[]).filter(Number.isFinite),sourceEffect:raw.effectBurn||[],sourceVars:raw.vars||[],cc:numeric.cc||fallback.cc||null,heal:numeric.heal||fallback.heal||null,shield:numeric.shield||fallback.shield||null,charges:numeric.charges||fallback.charges||null,recast:!!numeric.recast,source:{version:CHAMPION_SOURCE_PATCH,provider:raw.provider||'Riot Data Dragon'}};
-}
-function mergeChampionSource(c,raw){
-  if(!raw)return c;
-  const b=raw.base||{}, map=['hp','hpg','ad','adg','arm','armg','mr','mrg','as','asg','range','ms','resource','resourceg','resourceRegen'];
-  for(const k of map)if(Number.isFinite(b[k]))c.base[k]=b[k];
-  c.riotKey=raw.riotKey??c.riotKey;c.riotAlias=raw.alias||c.riotAlias;c.nameKo=raw.nameKo||c.nameKo;c.resourceType=raw.resourceType||c.resourceType;
-  c=enrichChampion(c);
-  if(raw.passive)c.skills.P={...c.skills.P,name:raw.passive.nameKo||raw.passive.nameEn||'P',sourceName:raw.passive.nameEn||'',sourceDescription:cleanChampionSourceText(raw.passive.descriptionKo||raw.passive.descriptionEn||''),source:{version:CHAMPION_SOURCE_PATCH,provider:'Riot Data Dragon'}};
-  for(const sp of raw.spells||[])if(c.skills[sp.slot])c.skills[sp.slot]=normalizeSourceSkill(sp.slot,sp,c.skills[sp.slot]);
-  c.baseSource='riot_ddragon';c.detailSource=raw.spells?.length?'riot_ddragon':'hybrid_ddragon';c.detailVersion=CHAMPION_SOURCE_PATCH;
-  return c;
-}
-function applyChampionSource(champions,snapshot){
-  if(!snapshot||snapshot.version!==CHAMPION_SOURCE_PATCH)return {matched:0,total:Object.keys(champions).length};
-  const raws=Object.values(snapshot.champions||{}),norm=x=>String(x||'').replace(/[^a-z0-9]/gi,'').toLowerCase(),byAlias=new Map();for(const x of raws){byAlias.set(norm(x.alias),x);byAlias.set(norm(x.nameEn),x)}
-  let matched=0,localized=0;
-  for(const c of Object.values(champions)){const alias=String(c.riotAlias||c.name||'').replace(/[^a-z0-9]/gi,'').toLowerCase();const raw=byAlias.get(alias);if(raw){mergeChampionSource(c,raw);matched++;if(raw.passive?.descriptionKo&&(raw.spells||[]).length===4&&raw.spells.every(s=>s.descriptionKo))localized++}}
-  return {matched,localized,total:Object.keys(champions).length};
-}
-function enrichChampion(c){
-  const b=c.base,h=Math.abs(hashStr(c.id||c.name)),manaFree=['fighter','assassin'].includes(c.cls)&&((h%5)===0);
-  if(b.mr===undefined)b.mr=c.cls==='marksman'?30:c.cls==='mage'||c.cls==='enchanter'?30:32;
-  if(b.mrg===undefined)b.mrg=c.cls==='marksman'?1.3:2.05;
-  if(b.asg===undefined)b.asg=Math.round((1.5+(h%31)/10)*100)/100;
-  if(b.resource===undefined)b.resource=manaFree?0:Math.round((c.cls==='mage'||c.cls==='enchanter'?430:330)+(h%121));
-  if(b.resourceg===undefined)b.resourceg=b.resource?Math.round((25+(h%31))*10)/10:0;
-  if(b.resourceRegen===undefined)b.resourceRegen=b.resource?Math.round((6+(h%45)/10)*10)/10:0;
-  if(!c.skills){
-    c.detailSource='generated_fallback';
-    const k=c.kit,physical=c.dmg==='AD',damageType=physical?'physical':'magic';
-    c.skills={
-      P:{slot:'P',kind:'passive',effects:['identity'],power:Math.round((k.sustain+k.mobility+k.dps)/3*10)/10},
-      Q:{slot:'Q',kind:'basic',damageType,effects:[k.poke>=7?'poke':'damage'],power:k.burst,cooldown:Math.max(3,13-k.early)},
-      W:{slot:'W',kind:'basic',damageType,effects:[k.sustain>=6?'sustain':k.peel>=6?'shield':'utility'],power:Math.max(k.sustain,k.peel,k.disengage),cooldown:Math.max(5,16-k.mid)},
-      E:{slot:'E',kind:'basic',damageType,effects:[k.cc>=6?'cc':k.mobility>=6?'mobility':'damage'],power:Math.max(k.cc,k.mobility,k.engage),cooldown:Math.max(5,17-k.mid)},
-      R:{slot:'R',kind:'ultimate',damageType,effects:[k.engage>=7?'engage':k.burst>=7?'burst':'teamfight'],power:Math.max(k.burst,k.cc,k.engage,k.dps),cooldown:Math.max(45,130-k.late*6)}
-    };
-  }
-  if(!c.detailSource)c.detailSource='curated';
-  return c;
-}
 
 // base: [hp,hp성장,공격력,공격력성장,방어,방어성장,공속,사거리,이속]
 // kit : [burst,dps,cc,engage,disengage,peel,poke,waveclear,mobility,sustain,early,mid,late,difficulty]
@@ -176,82 +108,6 @@ const CHAMP_EXTRA = [
   ['Neeko',['SUP','MID'],'mage','AP',[8,4,7,7,4,3,5,7,4,2,6,8,6,6]],['Bard',['SUP'],'enchanter','AP',[5,3,7,6,7,6,4,2,8,4,6,8,7,8],500],
   ['Zyra',['SUP','JGL'],'mage','AP',[7,6,6,4,6,5,7,7,1,2,7,8,6,5],575]
 ];
-
-const SYSTEM_EFFECT_KEYS=['offense','defense','sustain','utility','haste','mobility','early','scaling'];
-function systemSourceText(v){return String(v||'').toLowerCase()}
-function itemTier(raw){
-  if(raw.hideFromAll||raw.requiredChampion)return 'special';
-  if((raw.tags||[]).includes('Consumable'))return 'consumable';
-  const hasUpgrade=(raw.into||[]).some(id=>SYSTEM_SOURCE_SNAPSHOT.items[id]&&!SYSTEM_SOURCE_SNAPSHOT.items[id].hideFromAll);
-  if((raw.tags||[]).includes('Boots'))return hasUpgrade?'component':'boots';
-  if((raw.gold?.total||0)<=500&&!(raw.from||[]).length)return 'starter';
-  if(hasUpgrade)return 'component';
-  return 'final';
-}
-function itemEffectsFromSource(raw){
-  const s=raw.stats||{},tags=new Set(raw.tags||[]),txt=systemSourceText((raw.descriptionKo||'')+' '+(raw.plaintextKo||'')),e={offense:0,defense:0,sustain:0,utility:0,haste:0,mobility:0,early:0,scaling:0};
-  e.offense+=(s.FlatPhysicalDamageMod||0)/1000+(s.FlatMagicDamageMod||0)/1600+(s.PercentAttackSpeedMod||0)*.1+(s.FlatCritChanceMod||0)*.1;
-  e.defense+=(s.FlatHPPoolMod||0)/10000+(s.FlatArmorMod||0)/1000+(s.FlatSpellBlockMod||0)/1000;
-  e.sustain+=(s.PercentLifeStealMod||0)*.18+(tags.has('HealthRegen')?.012:0)+(tags.has('SpellVamp')?.012:0);
-  e.mobility+=(s.FlatMovementSpeedMod||0)/1000+(s.PercentMovementSpeedMod||0);
-  if(tags.has('ArmorPenetration')||tags.has('MagicPenetration')||/관통/.test(txt))e.offense+=.018;
-  if(tags.has('AbilityHaste')||tags.has('CooldownReduction')||/스킬 가속|재사용 대기시간/.test(txt))e.haste+=.022;
-  if(tags.has('ManaRegen')||tags.has('Mana'))e.utility+=.008;
-  if(tags.has('Vision')||tags.has('Stealth')||/와드|시야/.test(txt))e.utility+=.025;
-  if(tags.has('Active')||/사용 시|고유.*사용/.test(txt))e.utility+=.01;
-  if(/보호막/.test(txt)){e.defense+=.014;e.utility+=.012}
-  if(/회복|흡혈|생명력 흡수/.test(txt))e.sustain+=.015;
-  if(/이동 속도|돌진/.test(txt))e.mobility+=.012;
-  if(/중첩|영구|레벨/.test(txt))e.scaling+=.012;
-  const tier=itemTier(raw);if(tier==='starter')e.early+=.025;else if(tier==='component')e.early+=.008;else if(tier==='final'&&(raw.gold?.total||0)>=3000)e.scaling+=.008;
-  for(const k of SYSTEM_EFFECT_KEYS)e[k]=Math.round(clamp(e[k],0,.16)*1000)/1000;
-  return e;
-}
-function itemClassesFromSource(raw,e){
-  if(itemTier(raw)==='special')return [];
-  if((raw.tags||[]).includes('Boots'))return ['fighter','tank','mage','assassin','marksman','enchanter'];
-  const t=new Set(raw.tags||[]),score={fighter:0,tank:0,mage:0,assassin:0,marksman:0,enchanter:0};
-  if(t.has('Damage')){score.fighter+=3;score.assassin+=3;score.marksman+=3}
-  if(t.has('AttackSpeed')){score.marksman+=4;score.fighter+=2;score.assassin+=1}
-  if(t.has('CriticalStrike'))score.marksman+=6;
-  if(t.has('LifeSteal')){score.marksman+=3;score.fighter+=2;score.assassin+=2}
-  if(t.has('ArmorPenetration')){score.assassin+=5;score.fighter+=2;score.marksman+=2}
-  if(t.has('SpellDamage')){score.mage+=5;score.enchanter+=2}
-  if(t.has('Mana')||t.has('ManaRegen')){score.mage+=2;score.enchanter+=3}
-  if(t.has('Health')){score.tank+=4;score.fighter+=3;score.enchanter+=1}
-  if(t.has('Armor')||t.has('SpellBlock')){score.tank+=5;score.fighter+=2;score.enchanter+=1}
-  if(t.has('HealthRegen')){score.tank+=2;score.fighter+=1;score.enchanter+=1}
-  if(t.has('AbilityHaste')||t.has('CooldownReduction')){score.fighter+=1;score.tank+=1;score.mage+=2;score.enchanter+=2}
-  if(t.has('Vision'))score.enchanter+=5;
-  const max=Math.max(...Object.values(score));if(max<=0)return ['fighter','tank','mage','assassin','marksman','enchanter'];
-  return Object.keys(score).filter(k=>score[k]>=Math.max(1,max*.5));
-}
-function buildItemSystems(snapshot=SYSTEM_SOURCE_SNAPSHOT){
-  const defs={},pool={fighter:[],tank:[],mage:[],assassin:[],marksman:[],enchanter:[]};
-  for(const [id,raw] of Object.entries(snapshot.items||{})){const tier=itemTier(raw),effects=itemEffectsFromSource(raw),classes=itemClassesFromSource(raw,effects),d={id,name:raw.nameKo,nameKo:raw.nameKo,descriptionKo:raw.descriptionKo,plaintextKo:raw.plaintextKo,cost:raw.gold?.total||0,recipeCost:raw.gold?.base??raw.gold?.total??0,sell:raw.gold?.sell||0,tags:(raw.tags||[]).slice(),stats:{...(raw.stats||{})},from:(raw.from||[]).slice(),into:(raw.into||[]).slice(),tier,classes,effects,active:true,shopActive:!raw.hideFromAll&&!raw.requiredChampion&&raw.inStore!==false,requiredChampion:raw.requiredChampion||null,source:{provider:snapshot.provider,version:snapshot.version,mapId:snapshot.mapId}};
-    defs[id]=d;if(d.shopActive&&['final','boots'].includes(tier))for(const cls of classes)pool[cls].push(id)}
-  for(const cls of Object.keys(pool))pool[cls].sort((a,b)=>(defs[a].cost-defs[b].cost)||defs[a].name.localeCompare(defs[b].name));
-  return {defs,pool};
-}
-function runeEffectsFromSource(raw){
-  const txt=systemSourceText((raw.shortDescKo||'')+' '+(raw.longDescKo||'')),base=raw.slot===0?.04:.018,e={offense:0,defense:0,sustain:0,utility:0,haste:0,mobility:0,early:0,scaling:0};
-  if(/피해|공격력|주문력|공격 속도|치명타|관통/.test(txt))e.offense+=base;
-  if(/체력 회복|회복|흡혈/.test(txt))e.sustain+=base*.9;
-  if(/보호막|방어력|마법 저항력|최대 체력|피해.*감소/.test(txt))e.defense+=base*.9;
-  if(/이동 속도|돌진|도약/.test(txt))e.mobility+=base*.75;
-  if(/스킬 가속|재사용 대기시간|궁극기.*가속/.test(txt))e.haste+=base*.8;
-  if(/와드|시야|골드|소환사 주문|아이템 가속/.test(txt))e.utility+=base*.75;
-  if(/영구|중첩|레벨에 비례|레벨당/.test(txt))e.scaling+=base*.55;
-  if(/초반|첫|3초|4초|10초/.test(txt))e.early+=base*.25;
-  if(!SYSTEM_EFFECT_KEYS.some(k=>e[k]>0))e.utility=base*.6;
-  for(const k of SYSTEM_EFFECT_KEYS)e[k]=Math.round(clamp(e[k],0,.09)*1000)/1000;
-  return e;
-}
-function buildRuneSystems(snapshot=SYSTEM_SOURCE_SNAPSHOT){
-  const defs={};for(const [id,raw] of Object.entries(snapshot.runes||{}))defs[id]={id,name:raw.nameKo,nameKo:raw.nameKo,key:raw.key,styleId:raw.styleId,styleKey:raw.styleKey,styleNameKo:raw.styleNameKo,slot:raw.slot,kind:raw.slot===0?'keystone':'minor',shortDescKo:raw.shortDescKo,longDescKo:raw.longDescKo,effects:runeEffectsFromSource(raw),active:true,source:{provider:snapshot.provider,version:snapshot.version}};
-  const styles={};for(const s of snapshot.runeStyles||[])styles[s.id]={id:s.id,key:s.key,name:s.nameKo,nameKo:s.nameKo,slots:s.slots.map(x=>x.slice())};
-  return {defs,styles};
-}
 
 function buildPatch(championSnapshot=CHAMPION_SOURCE_SNAPSHOT,systemSnapshot=SYSTEM_SOURCE_SNAPSHOT){
   const champions = {};

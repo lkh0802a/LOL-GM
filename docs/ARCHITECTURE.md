@@ -9,12 +9,13 @@ LOL GM remains a standalone-first simulation, but standalone delivery does not j
 The authoritative module order lives in `scripts/artifact-modules.mjs`.
 
 - source snapshots: `champion-source.js`, `system-source.js`
-- simulation core: `engine.js` (match simulation) and `draft.js` (champion/system evaluation, automatic item/rune environment, draft decisions)
-- baseline/domain data: `data.js`, `champs2.js`
+- deterministic utilities: `random.js` (RNG streams and shared numeric helpers)
+- simulation core: `engine.js` (one-game match), `draft.js` (draft), `systems.js` (automatic items/runes and system-meta)
+- baseline/domain data: `data.js` (templates), `champion-data.js` (champion normalization), `system-data.js` (item/rune normalization), `champs2.js`
 - player lifecycle: `player.js` (evaluation/identity, squad-role promises, champion learning, player generation, rookie cohorts)
 - player development/training: `development.js` (training plans, facilities, daily recovery, age curves, seasonal growth)
 - professional meta evidence: `meta.js`
-- patch lifecycle/balance: `patch.js`
+- patch lifecycle/balance: `patch.js` (replay/calendar), `patch-balance.js` (diagnosis), `patch-content.js` (content lifecycle)
 - series engine: `series.js` (First Selection, Fearless, best-of sessions, replay)
 - competition engine: `competition.js` (schedules, stages, standings, scheduled-series orchestration)
 - world configuration/bootstrap: `world.js`
@@ -22,14 +23,14 @@ The authoritative module order lives in `scripts/artifact-modules.mjs`.
 - offseason orchestration: `offseason.js` (season closeout, market close, promotion/relegation)
 - persistence: `save.js` (compact save view and unpack/migration handoff)
 - roster/registration: `roster.js` (local eligibility, contracted-move accounting, organization roster rules, 1st↔reserve planning/movement, roster integrity)
-- management domains: `office.js`, `finance.js`, `contracts.js`, `transfer.js`, `scouting.js`, `staff.js`, `scrim.js`, `player-relations.js`, `features.js`, `role-conversion.js`, `career.js`
+- management domains: `office.js` (regions), `office-international.js` (global governance), `finance.js`, `contracts.js`, `transfer.js`, `scouting.js`, `staff.js`, `scrim.js`, `player-relations.js`, `features.js`, `role-conversion.js`, `career.js`
 - draft information layer: `draft-analysis.js` (scouting-bounded mastery estimates, meta/composition evidence, opponent-intent explanation); legality and selection remain in `draft.js`
-- domain UI: `ui-setup.js`, `ui-match.js`, `ui-manager.js`, `ui-data.js`, `ui-patch.js`, `ui-market.js`, `ui-champion.js`, `ui-player.js`, `ui-roster.js`, `ui-draft.js`, `ui-season.js`
+- domain UI: `ui-setup.js`, `ui-match.js`, `ui-manager.js`, `ui-data.js`, `ui-patch.js`, `ui-market.js`, `ui-market-initial.js`, `ui-negotiations.js`, `ui-market-staff.js`, `ui-champion.js`, `ui-player.js`, `ui-roster.js`, `ui-draft.js`, `ui-season.js`
 - application shell/controller: `app.js` (storage/bootstrap, shared UI state/helpers, navigation only)
 
-The match, draft, series and competition engines stay separate. `engine.js` owns one-game simulation; `draft.js` owns draft legality/selection; `series.js` owns First Selection/Fearless and best-of state; `competition.js` owns schedules/stages/standings. Scouting-bounded draft analysis stays in `draft-analysis.js`; interactive draft state stays in `ui-draft.js`.
+The match, draft, item/rune, series and competition engines stay separate. `engine.js` owns one-game simulation; `draft.js` owns draft legality/selection; `series.js` owns First Selection/Fearless and best-of state; `competition.js` owns schedules/stages/standings. Scouting-bounded draft analysis stays in `draft-analysis.js`; interactive draft state stays in `ui-draft.js`.
 
-`ui-match.js` owns scrim/match/series-result rendering, `ui-setup.js` owns world/team selection, `ui-manager.js` owns finance/Monte-Carlo surfaces, and `ui-data.js` owns save-slot/import-export surfaces. `app.js` is not a view bucket.
+`ui-market-initial.js` owns first-season roster markets; `ui-negotiations.js` owns negotiation forms; `ui-market-staff.js` owns staffing and sponsorship panels and bindings. `ui-match.js` owns scrim/match/series-result rendering, `ui-setup.js` owns world/team selection, `ui-manager.js` owns finance/Monte-Carlo surfaces, and `ui-data.js` owns save-slot/import-export surfaces. `app.js` is not a view bucket.
 
 New large UI surfaces should be added as `ui-<domain>.js` modules instead of extending `app.js`. Squad editing lives in `ui-roster.js`; player detail/scouting lives in `ui-player.js`; draft UI lives in `ui-draft.js`. Small files are kept separate only when they own a coherent domain boundary, not merely to increase module count.
 
