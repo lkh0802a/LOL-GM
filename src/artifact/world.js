@@ -867,7 +867,7 @@ function runOffseason(db){
   rep.rookies=[];rep.rookieGlobal=rookieGlobalCohort(db);
   for(const R of Object.values(db.regions)){const cls=generateRookieClass(db,R,rng),ri=R.rookieIntake[R.rookieIntake.length-1];rep.rookies.push({region:R.id,count:cls.length,ids:cls.map(p=>p.id),label:ri.label,tiers:ri.tiers,profile:ri.profile})}
   const supplyErrs=talentSupplyErrors(db);if(supplyErrs.length)throw new Error('Talent supply invariant failed before market: '+supplyErrs.slice(0,8).join(' | '));
-  for(const t of activeTeams(db))ensureTeamStaff(db,t,rng);ageStaff(db,rng);genStaffPool(db,rng);
+  for(const t of activeTeams(db)){if(t.id===managedTeamId(db))ensureStaffRoster(t);else ensureTeamStaff(db,t,rng)}ageStaff(db,rng);genStaffPool(db,rng);
   if(typeof ageScoutReports==='function')ageScoutReports(db);
   for(const t of activeTeams(db,null,1))aiManageStaff(db,t,rng);
   for(const t of activeTeams(db))aiManageTraining(db,t);
@@ -924,7 +924,7 @@ function ageCurve(age,g){
 function growPlayer(db,p,rng,games,champGames){
   const team=p.team?db.teams[p.team]:null, before=playerOvr(p),dev=ensurePlayerDevelopment(p);
   const room=clamp((p.pot-before)/10,-0.5,1.5), prof=p.personality.professionalism/100,ageShift=dev.peakAge-25;
-  const coach=team?staffProfile(team).development/100:0.45, play=clamp(games/30,0,1);
+  const coach=team?staffDevelopmentFor(team,p.role)/100:0.45, play=clamp(games/30,0,1);
   const tr=team?team.training:defaultTraining(), intensity=trainingIntensity(team),tsum=['mechanical','laning','combat','macro','mental'].reduce((a,k)=>a+(+tr[k]||0),0)||1;
   for(const g in ATTR_GROUPS){
     // 훈련 포인트는 총 100점 한도: 배분하지 않은 포인트는 버려진다 (나눠 쓰는 만큼만 효과)

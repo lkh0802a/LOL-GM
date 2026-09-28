@@ -90,7 +90,7 @@ function initFinance(db,t,rng){
   t.facility=t.facility||clamp(Math.round(1+t.owner.wealth/30),1,4);ensureFacilities(t);
   t.finance=t.finance||{cash:Math.round((25+rng.range(0,35))*ps*10)/10,history:[],buyout:0};
 }
-function staffCost(db,t){const specialists=Object.values(t.staff||{}).reduce((sum,s)=>sum+(s?staffSalary(s,1):0),0);return (2+specialists)*psTeam(db,t)}
+function staffCost(db,t){const specialists=teamStaffMembers(t).reduce((sum,s)=>sum+staffSalary(s,1),0);return (2+specialists)*psTeam(db,t)}
 function opsCost(db,t){return 8*psTeam(db,t)}
 function ownerSupport(db,t){if(t.parent)return 4*psOf(db,t.region);return t.owner.wealth/100*(['win-now','superstar'].includes(t.philosophy)?12:6)*psTeam(db,t)}
 function estRevenue(db,t){
@@ -419,7 +419,7 @@ function mOffer(db,pid,salary,years){const st=startNegotiation(db,pid,'fa');if(!
 function mTransfer(db,pid,fee){return mTransferBid(db,pid,fee)}
 // ---- 스카우팅: 관찰·경기 표본·보고서 노후화를 함께 추적한다 ----
 function sameScoutZone(a,b){if(a===b)return true;return Object.values(INTL_ZONES).some(z=>z.includes(a)&&z.includes(b))}
-function scoutingPower(db){const t=managedTeam(db);if(!t)return 1;return clamp(.78+(t.facility||2)*.06+staffProfile(t).analysis/250,.8,1.38)}
+function scoutingPower(db){const t=managedTeam(db);if(!t)return 1;return clamp(.78+(t.facility||2)*.06+staffProfile(t).scouting/250,.8,1.38)}
 function baseScoutKnowledge(db,p){const me=managedTeam(db);if(!me)return 0;if(p.team===me.id||(p.team&&db.teams[p.team]&&db.teams[p.team].parent===me.id))return 100;if(p.region===me.region)return 22;return sameScoutZone(p.region,me.region)?10:4}
 function ensureScoutReport(db,p){db.scout=db.scout||{};let r=db.scout[p.id];if(typeof r==='number')r=db.scout[p.id]={knowledge:r,lastSeenYear:db.year-1,lastSeenDate:null,observations:0,gamesSeen:0,competitions:{},snapshots:[]};if(!r)r=db.scout[p.id]={knowledge:baseScoutKnowledge(db,p),lastSeenYear:null,lastSeenDate:null,observations:0,gamesSeen:0,competitions:{},snapshots:[]};r.competitions=r.competitions||{};r.snapshots=r.snapshots||[];return r}
 function knowledge(db,p){if(!db.world)return 100;const base=baseScoutKnowledge(db,p);if(base>=100)return 100;const r=ensureScoutReport(db,p);return Math.round(clamp(Math.max(base,r.knowledge||0),0,98))}
@@ -437,4 +437,5 @@ function scoutReport(db,p){const r=ensureScoutReport(db,p),sample=scoutSample(db
 function scoutPlayers(db,ids,amt,cost){const t=myT(db);if(t.finance.cash<cost)return '보유 자금이 부족합니다';t.finance.cash=Math.round((t.finance.cash-cost)*10)/10;for(const id of ids){const p=db.players[id];if(p){observePlayer(db,p,Math.min(24,amt*.55),{games:0,comp:'manual'});syncRecruitmentObservation(db,id)}}return `스카우팅 보고서 갱신 (${money(cost)})`}
 function mSponsor(db,id){const t=myT(db),o=(db.world.sponsorOffers||[]).find(x=>x.id===id);if(!o)return '';t.sponsor={...o,until:db.year+o.years-1};return `${o.name} ${o.type} 스폰서 계약 (${o.years}년)`}
 
-function mHireStaff(db,sid){const t=myT(db),s=(db.staffPool||[]).find(x=>x.id===sid);if(!s)return '스태프를 찾을 수 없습니다';const ps=psOf(db,t.region),old=t.staff&&t.staff[s.role],fee=old?staffSalary(old,ps):0;if(t.finance.cash<fee)return `교체 위약금 ${money(fee)}이 부족합니다`;t.finance.cash=Math.round((t.finance.cash-fee)*10)/10;hireStaff(db,t,s);return `${STAFF_ROLES[s.role]} ${s.name} 선임${fee?` · 위약금 ${money(fee)}`:''}`}
+function mHireStaff(db,sid){const t=myT(db),s=(db.staffPool||[]).find(x=>x.id===sid);if(!s)return '스태프를 찾을 수 없습니다';if(!staffCanHire(t,s))return (STAFF_DEPT_LABEL[staffDepartment(s.role)]||'스태프')+' 고용 상한에 도달했습니다';const annual=staffSalary(s,psOf(db,t.region));if(t.finance.cash<annual)return '보유 자금이 부족합니다';hireStaff(db,t,s);return `${STAFF_ROLES[s.role]} ${s.name} 선임 · ${STAFF_DEPT_LABEL[staffDepartment(s.role)]} ${staffDeptCount(t,staffDepartment(s.role))}/${STAFF_DEPT_LIMITS[staffDepartment(s.role)]}`}
+function mReleaseStaff(db,sid){const t=myT(db),s=teamStaffMembers(t).find(x=>x.id===sid);if(!s)return '스태프를 찾을 수 없습니다';const fee=staffSalary(s,psOf(db,t.region));if(t.finance.cash<fee)return '계약 해지 비용이 부족합니다';t.finance.cash=Math.round((t.finance.cash-fee)*10)/10;releaseStaff(db,t,sid);return `${STAFF_ROLES[s.role]} ${s.name} 계약 해지 · 비용 ${money(fee)}`}

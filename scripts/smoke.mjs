@@ -346,9 +346,12 @@ source += `\n(()=>{
   if(JSON.stringify(legacyProfile)!==JSON.stringify(profile0)||Math.abs(legacyCost-cost0)>.0001)throw new Error('Legacy team.coach still affects runtime');
   staffTeam.coach=legacyCoach;
   const staffCandidate=(db.staffPool||[]).find(x=>x.role==='analyst');if(!staffCandidate)throw new Error('Staff market missing analyst');
-  const oldAnalyst=staffTeam.staff.analyst;staffCandidate.rating=95;hireStaff(db,staffTeam,staffCandidate);if(staffProfile(staffTeam).analysis<=profile0.analysis)throw new Error('Analyst hire did not improve analysis effect');
+  staffCandidate.rating=95;hireStaff(db,staffTeam,staffCandidate);if(staffProfile(staffTeam).analysis<=profile0.analysis)throw new Error('Additional analyst did not improve analysis with diminishing returns');if(staffDeptCount(staffTeam,'analyst')<2)throw new Error('Multiple analysts are not supported');
   const fac=ensureFacilities(staffTeam),oldTrain=fac.training,oldCash=staffTeam.finance.cash;staffTeam.finance.cash=Math.max(oldCash,facilityCost(db,staffTeam,'training')*2);if(oldTrain<5){const mul0=facilityMul(staffTeam);upgradeFacility(db,staffTeam,'training');if(facilityMul(staffTeam)<=mul0)throw new Error('Training facility upgrade had no development effect')}
   if(!Number.isFinite(staffCost(db,staffTeam))||staffCost(db,staffTeam)<=0)throw new Error('Full staff cost invalid');
+  if(STAFF_DEPT_LIMITS.coach!==9||STAFF_DEPT_LIMITS.analyst!==4||STAFF_DEPT_LIMITS.scout!==6)throw new Error('Staff department caps drifted');
+  if(!Object.values({TOP:'topCoach',JGL:'jglCoach',MID:'midCoach',ADC:'adcCoach',SUP:'supCoach'}).every(r=>STAFF_ROLES[r]))throw new Error('Positional coaching roles missing');
+  if(!STAFF_ROLES.scout||staffProfile(staffTeam).scouting<=0)throw new Error('Scouting department profile missing');
   if(Object.values(db.teams).some(t=>Object.prototype.hasOwnProperty.call(t,'coach')))throw new Error('New world still creates generic team.coach');
   if(Object.prototype.hasOwnProperty.call(db,'coachPool'))throw new Error('New world still creates generic coachPool');
   staffTeam.staff.analyst=oldAnalyst;staffTeam.finance.cash=oldCash;
