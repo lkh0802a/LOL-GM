@@ -5505,7 +5505,7 @@ function renderInitialRosterMarket(){
   <section><h3>등록 마감</h3>${errors.length?`<p class="warn">${errors.map(esc).join(' / ')}</p>`:'<p class="hi">내 구단 로스터 규정을 모두 충족했습니다.</p>'}${openInitial.length?`<p class="warn">진행 중인 계약 협상 ${openInitial.length}건을 먼저 마무리해야 합니다.</p>`:''}<div class="controls"><button class="primary" id="init-final"${errors.length||openInitial.length?' disabled':''}>전 세계 로스터 확정 후 시즌 개막</button><span class="hint">확정하면 AI 구단도 남은 FA 풀에서 같은 계약·등록 핵심 규칙으로 선수단을 구성합니다.</span></div></section>`;
 }
 function bindInitialRosterMarket(){
-  const act=m=>{const y=window.scrollY;MSG=m;saveDB();nav();requestAnimationFrame(()=>window.scrollTo(0,y))};
+  const act=m=>{MSG=m;saveDB();navKeepScroll()};
   $('#init-target').onchange=e=>{INITMK.target=e.target.value;MSG='';nav()};$('#init-role').onchange=e=>{INITMK.role=e.target.value;nav()};$('#init-scope').onchange=e=>{INITMK.scope=e.target.value;nav()};
   document.querySelectorAll('[data-init-interest]').forEach(b=>b.onclick=()=>act(mInterest(DB,b.dataset.initInterest,'B')));
   if($('#init-all'))$('#init-all').onchange=e=>document.querySelectorAll('[data-init-select]').forEach(x=>x.checked=e.target.checked);
@@ -5872,16 +5872,40 @@ function renderMC(a){
 function bindMC(){
   $('#mb').onchange=e=>MC.blue=e.target.value;$('#mr').onchange=e=>MC.red=e.target.value;$('#mn').onchange=e=>MC.n=+e.target.value;
   $('#mrun').onclick=()=>{
-    if(MC.running)return;MC.running=true;const btn=$('#mrun');
-    const baseSeed=freshInternalSeed('mc'), acc={wins:0,time:0,gd15:0,fd:0,ft:0,fb:0,baron:[0,0],kills:[0,0],towers:[0,0],dragons:[0,0],fights:[0,0],n:0,times:[],blue:MC.blue,red:MC.red};
+    if(MC.running)return;
+    MC.running=true;
+    const btn=$('#mrun'),db=DB,blue=MC.blue,red=MC.red;
+    const task=beginUiTask('monte-carlo',()=>{MC.running=false});
+    const baseSeed=freshInternalSeed('mc'), acc={wins:0,time:0,gd15:0,fd:0,ft:0,fb:0,baron:[0,0],kills:[0,0],towers:[0,0],dragons:[0,0],fights:[0,0],n:0,times:[],blue,red};
     let i=0;const N=MC.n;
-    const step=()=>{const end=Math.min(N,i+25);
-      for(;i<end;i++){const r=simulateMatch(DB,MC.blue,MC.red,baseSeed+'#'+i);acc.n++;if(r.winner===0)acc.wins++;acc.time+=r.duration;acc.times.push(r.duration);acc.gd15+=r.goldHist[14]??r.goldHist[r.goldHist.length-1];
-        if(r.firsts.dragon===0)acc.fd++;if(r.firsts.tower===0)acc.ft++;if(r.firsts.blood===0)acc.fb++;
-        for(const s of [0,1]){acc.baron[s]+=r.sides[s].barons>0?1:0;acc.kills[s]+=r.sides[s].kills;acc.towers[s]+=r.sides[s].towersTaken;acc.dragons[s]+=r.sides[s].dragons.length}
-        for(const l of r.log)if(l.kind==='fight')acc.fights[l.side]++;}
-      btn.textContent=`실행 중 ${i}/${N}`;
-      if(i<N)setTimeout(step,0);else{MC.res=acc;MC.running=false;btn.textContent='시뮬레이션 실행';$('#mcout').innerHTML=renderMC(acc)}};
+    const step=()=>{
+      if(!isUiTaskCurrent(task))return;
+      try{
+        const end=Math.min(N,i+25);
+        for(;i<end;i++){
+          const r=simulateMatch(db,blue,red,baseSeed+'#'+i);
+          acc.n++;if(r.winner===0)acc.wins++;acc.time+=r.duration;acc.times.push(r.duration);
+          acc.gd15+=r.goldHist[14]??r.goldHist[r.goldHist.length-1];
+          if(r.firsts.dragon===0)acc.fd++;if(r.firsts.tower===0)acc.ft++;if(r.firsts.blood===0)acc.fb++;
+          for(const side of [0,1]){
+            acc.baron[side]+=r.sides[side].barons>0?1:0;acc.kills[side]+=r.sides[side].kills;
+            acc.towers[side]+=r.sides[side].towersTaken;acc.dragons[side]+=r.sides[side].dragons.length;
+          }
+          for(const l of r.log)if(l.kind==='fight')acc.fights[l.side]++;
+        }
+        btn.textContent=`실행 중 ${i}/${N}`;
+        if(i<N)setTimeout(step,0);
+        else if(finishUiTask(task)){
+          MC.res=acc;MC.running=false;btn.textContent='시뮬레이션 실행';
+          const output=$('#mcout');if(output)output.innerHTML=renderMC(acc);
+        }
+      }catch(e){
+        finishUiTask(task);MC.running=false;
+        btn.textContent='시뮬레이션 실행';
+        const output=$('#mcout');if(output)output.textContent='시뮬레이션 오류: '+e.message;
+        console.error('LOL GM Monte Carlo failed',e);
+      }
+    };
     step();
   };
 }
@@ -5898,22 +5922,11 @@ function viewData(){
   <textarea id="djson" spellcheck="false" aria-label="월드 데이터 JSON" placeholder="JSON 열기를 누르거나 여기에 붙여 넣으세요"></textarea>`;
 }
 function bindData(){
-  const msg=t=>$('#dmsg').textContent=t;
+  const renderId=UI_RENDER_ID;
+  const msg=t=>{if(VIEW!=='data'||UI_RENDER_ID!==renderId)return;const output=$('#dmsg');if(output)output.textContent=t};
   document.querySelectorAll('[data-slot]').forEach(b=>b.onclick=async()=>{
-    const previous={slot:SLOT,key:STORE,db:DB},str=packDB(DB);
-    try{await idbSet(previous.key,str)}
-    catch(e){try{localStorage.setItem(previous.key,str)}
-      catch(e2){msg('현재 슬롯 저장에 실패했습니다. 슬롯 전환을 중단했습니다.');return}}
-    SLOT=b.dataset.slot;STORE=STORE_BASE+SLOT;
-    try{
-      const loaded=await loadDB();DB=loaded;
-      try{localStorage.setItem(STORAGE_NS+'-slot',SLOT)}catch(e){}
-      resetUiForWorld();
-      saveDB();navigateTo('season');
-    }catch(e){
-      SLOT=previous.slot;STORE=previous.key;DB=previous.db;
-      msg('슬롯을 불러오지 못했습니다. 원본은 보존됩니다 — '+e.message);
-    }
+    const result=await switchSaveSlot(b.dataset.slot);
+    if(!result.ok&&result.error)msg(result.error);
   });
   $('#dshow').onclick=()=>{$('#djson').value=packDB(DB);msg('압축된 JSON입니다. 그대로 복사해 두면 됩니다.')};
   $('#dapply').onclick=()=>{try{const d=unpackDB($('#djson').value);if(!d.teams||!d.players||!d.patch||!d.regions)throw new Error('teams, players, patch, regions 항목이 필요합니다');
@@ -6317,7 +6330,7 @@ function bindSetup(){
   });
   $('#cfgdef').onclick=()=>{DB.worldConfig=defaultWorldConfig();dirty()};
   $('#regen').onclick=()=>{const errs=validateConfig(cfg);if(errs.length){$('#cfgmsg').className='warn';$('#cfgmsg').textContent=errs.join(' / ');return}
-    DB=buildWorld(cfg);const first=managerSelectableTeams(DB)[0];SSET.team=first?first.id:null;SSET.region=first?first.region:null;SSET.division=first?(first.division||1):1;LAST=null;LASTSER=null;MC.res=null;saveDB();nav()};
+    resetUiForWorld();DB=buildWorld(cfg);const first=managerSelectableTeams(DB)[0];SSET.team=first?first.id:null;SSET.region=first?first.region:null;SSET.division=first?(first.division||1):1;LAST=null;LASTSER=null;MC.res=null;saveDB();nav()};
   bindManagerTeamPicker();
   $('#sstart').onclick=()=>{if(!isManagerSelectableTeam(DB,SSET.team)){const first=managerSelectableTeams(DB)[0];SSET.team=first?first.id:null}if(!SSET.team)return;SSET.view=null;startCareer(DB,SSET.team,freshInternalSeed('world'));saveDB();nav()};
 }
@@ -6342,11 +6355,38 @@ function bindSeason(){
     return;
   }
   if(w.pendingOfficial&&w.pendingOfficial.queue?.length){
-    document.querySelectorAll('.controls button').forEach(b=>b.disabled=true);requestAnimationFrame(()=>openPendingOfficialDraft(DB));return;
+    document.querySelectorAll('.controls button').forEach(b=>b.disabled=true);
+    const db=DB,renderId=UI_RENDER_ID;
+    requestAnimationFrame(()=>{
+      if(db!==DB||VIEW!=='season'||UI_RENDER_ID!==renderId||UI_OVERLAY||
+        !db.world?.pendingOfficial?.queue?.length)return;
+      openPendingOfficialDraft(db);
+    });
+    return;
   }
-  const run=(stop)=>{document.querySelectorAll('.controls button').forEach(b=>b.disabled=true);let n=0;
-    const step=()=>{for(let i=0;i<2;i++){const r=playWorldDay(DB);n++;if(!r||DB.world.phase!=='season'||r.pending||stop(r))return fin()}$('#sprog').textContent=`${n}일 진행 · ${nextDate(DB)||''}`;setTimeout(step,0)};
-    const fin=()=>{saveDB();nav()};step()};
+  const run=(stop)=>{
+    document.querySelectorAll('.controls button').forEach(b=>b.disabled=true);
+    const db=DB;let n=0;
+    const task=beginUiTask('season-days',()=>{if(n)saveDB()});
+    const fin=()=>{if(!finishUiTask(task))return;saveDB();nav()};
+    const step=()=>{
+      if(!isUiTaskCurrent(task))return;
+      try{
+        for(let i=0;i<2;i++){
+          const result=playWorldDay(db);n++;
+          if(!result||db.world.phase!=='season'||result.pending||stop(result))return fin();
+        }
+        const progress=$('#sprog');
+        if(progress)progress.textContent=`${n}일 진행 · ${nextDate(db)||''}`;
+        setTimeout(step,0);
+      }catch(e){
+        finishUiTask(task);if(n)saveDB();
+        console.error('LOL GM date progression failed',e);
+        MSG='날짜 진행 중 오류: '+e.message;nav();
+      }
+    };
+    step();
+  };
   const me=managedTeamId(DB), st0=w.step;
   $('#sday').onclick=()=>run(()=>true);
   $('#smine').onclick=()=>run(r=>r.played.some(x=>x.day.matches.some(m=>m.a===me||m.b===me)));
@@ -6471,12 +6511,36 @@ const UI_ROUTES=Object.freeze({
   mc:{render:viewMC,bind:bindMC},
   data:{render:viewData,bind:bindData}
 });
+// Cooperative UI work is scoped to its world, save slot and render generation.
+const UI_TASKS=new Map();
+function cancelUiTask(kind){
+  const task=UI_TASKS.get(kind);
+  if(!task)return;
+  UI_TASKS.delete(kind);task.active=false;
+  if(task.onCancel)task.onCancel();
+}
+function cancelUiTasks(){for(const kind of [...UI_TASKS.keys()])cancelUiTask(kind)}
+function beginUiTask(kind,onCancel=null){
+  cancelUiTask(kind);
+  const task={kind,db:DB,slot:SLOT,view:VIEW,renderId:UI_RENDER_ID,active:true,onCancel};
+  UI_TASKS.set(kind,task);
+  return task;
+}
+function isUiTaskCurrent(task){
+  return !!task&&task.active&&UI_TASKS.get(task.kind)===task&&
+    task.db===DB&&task.slot===SLOT&&task.view===VIEW&&task.renderId===UI_RENDER_ID;
+}
+function finishUiTask(task){
+  if(!isUiTaskCurrent(task))return false;
+  UI_TASKS.delete(task.kind);task.active=false;return true;
+}
 let UI_RENDER_ID=0;
 function nav(){
   const route=UI_ROUTES[VIEW];
   if(!route)throw new Error('Unknown screen: '+VIEW);
   const main=document.querySelector('#main');
   if(!main)throw new Error('Main screen container missing');
+  cancelUiTasks();
   UI_RENDER_ID++;
   if(LIVE!==null)clearInterval(LIVE);
   document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-current',b.dataset.v===VIEW?'page':'false'));
@@ -6484,7 +6548,12 @@ function nav(){
   route.bind();
 }
 function navigateTo(view,options={}){
-  if(!Object.prototype.hasOwnProperty.call(UI_ROUTES,view))return false;
+  if(!Object.prototype.hasOwnProperty.call(UI_ROUTES,view)||!DB||SLOT_SWITCHING)return false;
+  if(UI_OVERLAY){
+    if(!UI_OVERLAY.dismissible)return false;
+    if(UI_OVERLAY.onDismiss)UI_OVERLAY.onDismiss();
+    else closeUiOverlay();
+  }
   VIEW=view;
   nav();
   if(!options.keepScroll)window.scrollTo(0,0);
@@ -6497,8 +6566,11 @@ function navKeepScroll(){
   requestAnimationFrame(()=>{if(generation===UI_RENDER_ID&&VIEW===view)window.scrollTo(0,y)});
 }
 function resetUiForWorld(){
+  cancelUiTasks();
+  if(UI_OVERLAY)closeUiOverlay({force:true,restoreFocus:false});
+  DRAFT_UI=null;
   LAST=null;LASTSER=null;OPEN_P=null;SQUAD_EDIT=null;MSG='';
-  MC.res=null;SSET.view=null;
+  MC.res=null;MC.running=false;SSET.view=null;
 }
 
 /* ==== FILE: app.js ==== */
@@ -6509,7 +6581,7 @@ const DIRECT_FILE_PREVIEW=location.protocol==='file:'||location.origin==='null';
 let SLOT=(()=>{try{return localStorage.getItem(STORAGE_NS+'-slot')||'1'}catch(e){return '1'}})();
 const STORE_BASE=STORAGE_NS+'-db-v'+SAVE_VERSION+'-';
 let STORE=STORE_BASE+SLOT;
-let DB=null, SAVEFAIL=false;
+let DB=null, SAVEFAIL=false, SLOT_SWITCHING=false;
 // Older namespaces are left intact as user backups. Unsupported world versions
 // are never silently replaced or deleted during boot.
 // 저장: IndexedDB(용량 큼) 우선, 안 되면 localStorage
@@ -6536,40 +6608,86 @@ async function idbSet(k,v){const d=await idb();return new Promise((res,rej)=>{
   const timer=setTimeout(()=>finish(false,new Error('IndexedDB write timeout')),800);
   try{const tx=d.transaction('kv','readwrite');tx.objectStore('kv').put(v,k);tx.oncomplete=()=>finish(true);tx.onerror=()=>finish(false,tx.error||new Error('IndexedDB write failed'));tx.onabort=()=>finish(false,tx.error||new Error('IndexedDB write aborted'))}catch(e){finish(false,e)}
 })}
-async function loadDB(){
+async function loadDB(key=STORE){
   const invalid=[];
+  // A local fallback is newer than a failed IndexedDB update for this key.
+  // A successful IndexedDB write removes the local fallback.
   let stored=null;
-  try{stored=await idbGet(STORE)}catch(e){}
-  if(stored!==null&&stored!==undefined){
-    try{return unpackDB(stored)}
-    catch(e){invalid.push('IndexedDB: '+e.message)}
-  }
-  stored=null;
-  try{stored=localStorage.getItem(STORE)}catch(e){}
+  try{stored=localStorage.getItem(key)}catch(e){}
   if(stored!==null&&stored!==undefined){
     try{return unpackDB(stored)}
     catch(e){invalid.push('로컬 저장소: '+e.message)}
+  }
+  stored=null;
+  try{stored=await idbGet(key)}catch(e){}
+  if(stored!==null&&stored!==undefined){
+    try{return unpackDB(stored)}
+    catch(e){invalid.push('IndexedDB: '+e.message)}
   }
   if(invalid.length)
     throw new Error('저장 데이터를 복원할 수 없습니다. 원본은 삭제하거나 덮어쓰지 않았습니다. '+invalid.join(' / '));
   return buildWorld();
 }
 let saveTimer=null;
+// Per-slot write queues keep late IndexedDB completions from overwriting a
+// newer snapshot. All bytes and metadata are frozen before joining the queue.
+const SAVE_QUEUES=new Map();
+function persistWorldSnapshot(db,slot,key){
+  const str=packDB(db),teamId=managedTeamId(db);
+  const meta=JSON.stringify({team:teamId&&db.teams[teamId]?db.teams[teamId].name:'',year:db.world?db.world.year:''});
+  const prior=SAVE_QUEUES.get(key)||Promise.resolve(true);
+  const next=prior.then(async()=>{
+    try{
+      await idbSet(key,str);
+      try{localStorage.removeItem(key)}catch(e){}
+    }catch(e){
+      try{localStorage.setItem(key,str)}catch(e2){return false}
+    }
+    try{localStorage.setItem(STORAGE_NS+'-meta-'+slot,meta)}catch(e){}
+    return true;
+  });
+  SAVE_QUEUES.set(key,next);
+  next.then(ok=>{if(DB===db&&SLOT===slot)SAVEFAIL=!ok});
+  return next;
+}
 function saveDB(){
-  // Capture the slot and game instance before the delayed write. Switching save
-  // slots must never redirect a pending write into the newly selected slot.
   const db=DB,slot=SLOT,key=STORE;
   clearTimeout(saveTimer);
-  saveTimer=setTimeout(async()=>{
-    const str=packDB(db),teamId=managedTeamId(db);
-    try{localStorage.setItem(STORAGE_NS+'-meta-'+slot,JSON.stringify({
-      team:teamId&&db.teams[teamId]?db.teams[teamId].name:'',
-      year:db.world?db.world.year:''
-    }))}catch(e){}
-    try{await idbSet(key,str);SAVEFAIL=false;
-      try{localStorage.removeItem(key)}catch(e){}
-    }catch(e){try{localStorage.setItem(key,str);SAVEFAIL=false}catch(e2){SAVEFAIL=true}}
+  saveTimer=setTimeout(()=>{
+    saveTimer=null;
+    try{void persistWorldSnapshot(db,slot,key)}
+    catch(e){if(DB===db&&SLOT===slot)SAVEFAIL=true;console.error('LOL GM save failed',e)}
   },150);
+}
+async function switchSaveSlot(nextSlot){
+  if(SLOT_SWITCHING||nextSlot===SLOT||!['1','2','3'].includes(nextSlot))
+    return {ok:false,error:'이미 슬롯을 전환 중이거나 올바르지 않은 슬롯입니다.'};
+  SLOT_SWITCHING=true;
+  cancelUiTasks();
+  const main=document.querySelector('#main'),navigation=document.querySelector('nav');
+  if(main)main.inert=true;
+  if(navigation)navigation.inert=true;
+  let switched=false,error='';
+  try{
+    clearTimeout(saveTimer);saveTimer=null;
+    const saved=await persistWorldSnapshot(DB,SLOT,STORE);
+    if(!saved)throw new Error('현재 슬롯 저장에 실패했습니다. 슬롯 전환을 중단했습니다.');
+    const key=STORE_BASE+nextSlot;
+    const loaded=await loadDB(key);
+    // Commit the slot identity and world only after both I/O operations finish.
+    SLOT=nextSlot;STORE=key;DB=loaded;
+    try{localStorage.setItem(STORAGE_NS+'-slot',SLOT)}catch(e){}
+    resetUiForWorld();
+    saveDB();
+    switched=true;
+  }catch(e){error='슬롯을 불러오지 못했습니다. 원본은 보존됩니다 — '+e.message}
+  finally{
+    SLOT_SWITCHING=false;
+    if(main)main.inert=false;
+    if(navigation)navigation.inert=false;
+  }
+  if(switched)navigateTo('season');
+  return {ok:switched,error};
 }
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
