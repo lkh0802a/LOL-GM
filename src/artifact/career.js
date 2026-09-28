@@ -90,7 +90,12 @@ function initialStartNegotiation(db,pid,targetId){
   const chk=initialSignCheck(db,player,target);if(!chk.ok)return chk.reason;return startNegotiation(db,pid,'initial',{teamId:targetId}).msg;
 }
 function initialSignPlayer(db,pid,targetId){return initialStartNegotiation(db,pid,targetId)}
-function initialReleasePlayer(db,pid){const p=db.players[pid],allowed=new Set(setupTeamsForManager(db).map(t=>t.id));if(!p||!p.team||!allowed.has(p.team))return '초기 로스터에서 방출할 수 없는 선수입니다';removePlayerFromTeam(db,p);p.contract=null;p.faYears=0;return p.name+' 선수를 FA 풀로 되돌렸습니다'}
+function initialReleasePlayer(db,pid){
+  const p=db.players[pid],allowed=new Set(setupTeamsForManager(db).map(t=>t.id));
+  if(!p||!p.team||!allowed.has(p.team))return '초기 로스터에서 방출할 수 없는 선수입니다';
+  const result=commitWorldAction(db,{type:'player.release',pid,teamId:p.team,mode:'initial',actor:'manager'});
+  return result.ok?p.name+' 선수를 FA 풀로 되돌렸습니다':result.errors.join(' · ');
+}
 function initialCandidateScore(db,p,t,key='',salary=null){
   const ps=Math.max(.2,psOf(db,t.region)),cost=(salary??asking(db,p,t.region))/ps,costWeight={cost:.55,balanced:.28,youth:.3,'win-now':.16,superstar:.1}[t.philosophy]??.28;
   const star=t.philosophy==='superstar'?(p.reputation||0)*.025:0,covered=(t.roster||[]).some(id=>db.players[id]?.role===p.role),coverage=covered?0:1.25;
@@ -145,7 +150,9 @@ function initialOfferForTeam(db,t,round,seed,market,target){
 }
 function resolveInitialOfferRound(db,teams,round,seed,targetFn){
   const market=initialMarketSnapshot(db,teams),offers=teams.map(t=>initialOfferForTeam(db,t,round,seed,market,targetFn(t))).filter(Boolean),byPlayer={};for(const o of offers)(byPlayer[o.player.id]=byPlayer[o.player.id]||[]).push(o);
-  let signed=0;for(const os of Object.values(byPlayer)){const best=os.sort((a,b)=>b.value-a.value||b.terms.salary-a.terms.salary)[0],p=best.player,t=best.team;if(p.team)continue;const chk=initialOfferCheck(db,p,t,best.terms);if(!chk.ok||!initialFutureFeasible(db,t,p,best.terms.salary,market))continue;signContract(db,p,t,best.terms.salary,best.terms.years,best.terms);signed++}
+  let signed=0;for(const os of Object.values(byPlayer)){const best=os.sort((a,b)=>b.value-a.value||b.terms.salary-a.terms.salary)[0],p=best.player,t=best.team;if(p.team)continue;const chk=initialOfferCheck(db,p,t,best.terms);if(!chk.ok||!initialFutureFeasible(db,t,p,best.terms.salary,market))continue;const done=commitWorldAction(db,{type:'player.sign',pid:p.id,teamId:t.id,kind:'initial',actor:'ai',
+      salary:best.terms.salary,years:best.terms.years,terms:best.terms});
+    if(done.ok)signed++}
   return {offers:offers.length,signed};
 }
 function runInitialMarketTo(db,teams,seed,targetFn,maxRounds=80){
@@ -163,7 +170,8 @@ function runInitialMinimumMarket(db,teams,seed){return runInitialMarketTo(db,tea
 function runInitialDepthMarket(db,teams,seed){return runInitialMarketTo(db,teams,seed+'|depth',t=>t.initialRosterTarget||initialRosterTarget(db,t),80)}
 function autoBuildInitialSquad(db,t,rng,target=null){
   const team=teamRef(db,t),limits=initialSquadLimits(db,team),want=Math.min(limits.max,Math.max(limits.min,target??initialRosterTarget(db,team)));team.initialRosterTarget=want;
-  while(team.roster.length<want){const market=initialMarketSnapshot(db,[team]),p=initialPickCandidate(db,team,'depth|'+team.roster.length,market);if(!p)break;const terms=aiInitialContractTerms(db,p,team,rng),chk=initialOfferCheck(db,p,team,terms);if(!chk.ok)break;signContract(db,p,team,terms.salary,terms.years,terms)}
+  while(team.roster.length<want){const market=initialMarketSnapshot(db,[team]),p=initialPickCandidate(db,team,'depth|'+team.roster.length,market);if(!p)break;const terms=aiInitialContractTerms(db,p,team,rng),chk=initialOfferCheck(db,p,team,terms);if(!chk.ok)break;const done=commitWorldAction(db,{type:'player.sign',pid:p.id,teamId:team.id,kind:'initial',actor:'ai',
+      salary:terms.salary,years:terms.years,terms});if(!done.ok)break}
   const errors=initialSquadErrors(db,team);if(errors.length)throw new Error(team.name+' 초기 로스터 오류: '+errors.join(', '));return team;
 }
 function autoBuildInitialWorld(db,excludedIds,seed){

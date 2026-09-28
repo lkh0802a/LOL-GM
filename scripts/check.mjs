@@ -56,6 +56,7 @@ const maintainabilityBudgets = {
   'roster.js': 22000,
   'lineup.js': 12000,
   'state-transaction.js': 9000,
+  'state-player-actions.js': 17000,
   'finance.js': 18000,
   'contracts.js': 26000,
   'scouting.js': 14000,
@@ -127,6 +128,26 @@ for(const [owner,marker] of [[rosterSourceForTransactions,"actor:'ai'"],[rosterU
     failed = true;
     console.error('Shared roster transaction path must be used by AI and manager');
   }
+}
+
+const playerActionSource = await readFile(resolve(artifact,'state-player-actions.js'),'utf8');
+for(const marker of ['function validatePlayerSignAction(','function validatePlayerTransferAction(',
+  'function validatePlayerReleaseAction(','function validatePlayerOptionAction(',
+  'function playerActionSnapshot(','function applyPlayerSignAction(','function applyPlayerTransferAction(',
+  'function applyPlayerReleaseAction(','function applyPlayerOptionAction(',
+  "'player.sign'","'player.transfer'","'player.release'","'player.option'"]){
+  if(!playerActionSource.includes(marker)){
+    failed=true;console.error('Stage 11.5/3-2 player transaction handler missing: '+marker);
+  }
+}
+for(const file of ['contracts.js','transfer.js','career.js']){
+  const owner=await readFile(resolve(artifact,file),'utf8');
+  if(!owner.includes('commitWorldAction(')){
+    failed=true;console.error('Stage 11.5/3-2 missing command-gateway client: '+file);
+  }
+}
+if(!transactionSource.includes('function commitWorldAction(')){
+  failed=true;console.error('Single-step world transaction gateway missing');
 }
 
 const draftUiSource = await readFile(resolve(artifact, 'ui-draft.js'), 'utf8');
@@ -330,7 +351,7 @@ if (!Number.isInteger(saveVersion) || !Number.isInteger(worldVersion) || saveVer
 }
 
 const regressionSource = await readFile(resolve(root, 'scripts', 'regression.mjs'), 'utf8');
-for (const marker of ['01-world-bootstrap','05-contracts','06-owned-reserve-roster','09-patch-baseline','11-draft-series-save','mid-Bo5 session did not survive save/load']) {
+for (const marker of ['01-world-bootstrap','05-contracts','06-owned-reserve-roster','06c-player-sign-transaction','06d-player-transfer-transaction','06e-ai-transfer-and-move-limit','06f-release-and-option-transaction','09-patch-baseline','11-draft-series-save','mid-Bo5 session did not survive save/load']) {
   if (!regressionSource.includes(marker)) {
     failed = true;
     console.error('11.5 regression baseline missing marker: '+marker);

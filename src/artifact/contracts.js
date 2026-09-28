@@ -112,14 +112,22 @@ function exerciseContractOption(db,p,t,source='engine'){
   const o=p.contract&&p.contract.option;if(!o||o.year!==db.year)return false;p.contract.until=db.year;p.contract.salary=o.salary;p.contract.years=(p.contract.years||1)+1;p.contract.option=null;
   recordPlayerEvent(p,'contract_option',db.year,{team:t.id,type:o.type,salary:o.salary,source,date:db.worldDate});return true;
 }
+function commitMarketPlayerAction(db,command){
+  const result=commitWorldAction(db,command);
+  if(!result.ok)throw new Error('Market player transaction failed: '+(result.errors||[]).join(' · '));
+  return result;
+}
+function signMarketContract(db,p,t,salary,years,terms={},kind='fa',actor='ai'){
+  return commitMarketPlayerAction(db,{type:'player.sign',pid:p.id,teamId:t.id,salary,years,terms,kind,actor}).contract;
+}
 function contractMarket(db,rng,rep,ev){
   const year=db.year, size=5+(db.worldConfig.subs||0), w=db.world, mine=w&&w.manage==='manual'?managedTeamId(db):null;
   const imports=t=>teamNonLocalCount(db,t);
-  const release=(t,p,why)=>{ if(p.contract&&p.contract.until>=year){t.finance.buyout=(t.finance.buyout||0)+p.contract.salary*(p.contract.until-year+1)*0.5}
-    removePlayerFromTeam(db,p);p.contract=null;p.faYears=0;};
+  const release=(t,p,why)=>commitMarketPlayerAction(db,{type:'player.release',pid:p.id,teamId:t.id,
+    mode:t.id===mine&&(!p.contract||p.contract.until<year)?'expired':'market',actor:'system'});
   // 1) 옵션 및 만료 계약 처리
   for(const t of activeTeams(db))for(const id of t.roster.slice()){const p=db.players[id];if(!p||!p.contract||p.contract.until>=year)continue;const opt=p.contract.option;
-    if(opt&&opt.year===year&&shouldAutoExerciseOption(db,p,t,mine))exerciseContractOption(db,p,t,t.id===mine?'player':'ai');
+    if(opt&&opt.year===year&&shouldAutoExerciseOption(db,p,t,mine))commitMarketPlayerAction(db,{type:'player.option',pid:p.id,teamId:t.id,actor:opt.type==='player'?'system':'ai'});
   }
   for(const t of activeTeams(db)) for(const id of t.roster.slice()){
     const p=db.players[id]; if(!p||p.retired)continue;
@@ -129,7 +137,7 @@ function contractMarket(db,rng,rep,ev){
     const isStarter=starterFor(db,t,p.role)===p,want=isStarter||p.rosterRole==='competition'||(p.age<=21&&p.pot-playerOvr(p)>=6)||(p.rosterRole==='backup'&&t.roster.length<7&&p.satisfaction>=50);
     const ask=asking(db,p,t.region),room=salaryBudget(db,t)-payroll(db,t)+p.contract.salary,yrs=contractYearsForPlayer(db,p,rng),proposal=normalizeContractTerms(db,p,t,ask*rng.range(.96,1.08),yrs,{promisedRole:recommendedRosterRole(db,p,t),option:rng.chance(.18)?{type:rng.chance(.55)?'team':'player'}:null});
     ensureSatisfaction(p);const stay=offerUtility(db,p,t,proposal,{renewal:true})+rng.normal(0,.06)>=offerAcceptanceThreshold(db,p);
-    if(want&&proposal.salary<=room&&stay){signContract(db,p,t,proposal.salary,yrs,proposal);rep.resign.push({pid:p.id,team:t.id,salary:proposal.salary,years:yrs,terms:proposal})}
+    if(want&&proposal.salary<=room&&stay){signMarketContract(db,p,t,proposal.salary,yrs,proposal,'renewal','ai');rep.resign.push({pid:p.id,team:t.id,salary:proposal.salary,years:yrs,terms:proposal})}
     else {release(t,p);rep.expired.push({pid:p.id,team:t.id,why:!want?'재계약 제안 없음':proposal.salary>room?'연봉 이견':'FA 시장 도전'})}
   }
   // 2) FA 시장 (3라운드: 제안 → 선수 선택)
@@ -164,7 +172,7 @@ function contractMarket(db,rng,rep,ev){
       if(best.o.mine)w.marketLog.push(`${p.name}: ${best.o.t.id===mine?'영입 성공':'다른 구단 선택'}`);
       const t=best.o.t,yrs=best.o.years?best.o.years:contractYearsForPlayer(db,p,rng);
       const prev=starterFor(db,t,p.role);
-      signContract(db,p,t,best.o.sal,yrs); budgetLeft[t.id]-=best.o.sal;
+      signMarketContract(db,p,t,best.o.sal,yrs,{},'fa',best.o.mine?'manager':'ai'); budgetLeft[t.id]-=best.o.sal;
       rep.signings.push({pid:p.id,team:t.id,salary:best.o.sal,years:yrs,rookie:p.age<=19&&!p.career.length,import:!isLocalPlayer(p,t.region),offers:os.length,out:null});
       if(t.roster.length>size+1){const bench=t.roster.map(id=>db.players[id]).filter(x=>x!==p&&starterFor(db,t,x.role)!==x).sort((a,b)=>playerValue(db,a,t)-playerValue(db,b,t))[0];
         if(bench){release(t,bench);rep.signings[rep.signings.length-1].out=bench.id}}
@@ -183,21 +191,21 @@ function contractMarket(db,rng,rep,ev){
     const seller=db.teams[cand.p.team];
     if(localRegistrationError(db,t,cand.p)||localRegistrationError(db,seller,cur))continue;
     if(!(seller.finance.cash<10*psTeam(db,seller)||cand.p.wantsOut||rng.chance(.2)))continue;
-    doTransfer(db,cand.p,seller,t,cand.fee);deals++;
+    commitMarketPlayerAction(db,{type:'player.transfer',pid:cand.p.id,fromId:seller.id,teamId:t.id,fee:cand.fee,actor:'ai'});deals++;
     rep.transfers.push({pid:cand.p.id,from:seller.id,to:t.id,fee:cand.fee});
-    if(t.roster.length>size){doTransfer(db,cur,t,seller,0);rep.transfers[rep.transfers.length-1].swap=cur.id}
+    if(t.roster.length>size){commitMarketPlayerAction(db,{type:'player.transfer',pid:cur.id,fromId:t.id,teamId:seller.id,fee:0,actor:'ai'});rep.transfers[rep.transfers.length-1].swap=cur.id}
   }
   // 3) 로스터 채우기 / 정리
   for(const t of activeTeams(db)){
     for(const role of ROLES) if(!starterFor(db,t,role)){
       const fa=eligibleFillFAs(db,t,role)[0];
       if(!fa)throw new Error('Talent supply invariant failed during market: '+t.id+' '+role+' has no eligible free agent');
-      signContract(db,fa,t,asking(db,fa,t.region),contractYearsForPlayer(db,fa,rng));rep.signings.push({pid:fa.id,team:t.id,salary:fa.contract.salary,years:fa.contract.until-year+1,rookie:fa.age<=19,fill:true});
+      signMarketContract(db,fa,t,asking(db,fa,t.region),contractYearsForPlayer(db,fa,rng),{},'fa',t.id===mine?'system':'ai');rep.signings.push({pid:fa.id,team:t.id,salary:fa.contract.salary,years:fa.contract.until-year+1,rookie:fa.age<=19,fill:true});
     }
     while(t.roster.length<size){
       const fa=eligibleFillFAs(db,t)[0];
       if(!fa)throw new Error('Talent supply invariant failed during market: '+t.id+' has no eligible free agent for bench slot');
-      signContract(db,fa,t,asking(db,fa,t.region),contractYearsForPlayer(db,fa,rng));rep.signings.push({pid:fa.id,team:t.id,salary:fa.contract.salary,years:fa.contract.until-year+1,rookie:fa.age<=19,fill:true});
+      signMarketContract(db,fa,t,asking(db,fa,t.region),contractYearsForPlayer(db,fa,rng),{},'fa',t.id===mine?'system':'ai');rep.signings.push({pid:fa.id,team:t.id,salary:fa.contract.salary,years:fa.contract.until-year+1,rookie:fa.age<=19,fill:true});
     }
     while(t.roster.length>size){const b=t.roster.map(id=>db.players[id]).filter(x=>starterFor(db,t,x.role)!==x).sort((a,b)=>playerValue(db,a,t)-playerValue(db,b,t))[0];if(!b)break;release(t,b)}
     // SFR 하한은 강제 연봉 인상이 아니라 분배 자격 기준으로만 사용한다.
