@@ -2223,8 +2223,12 @@ function intlStages(fmt,teams,bo){
   return [grp(n>=12?4:2),ko('groups',n>=12?8:4)];
 }
 
-/* ==== FILE: world.js ==== */
-// ===== LOL GM: 월드 (Phase 5 성장 + 월드 확장) =====
+/* ==== FILE: player.js ==== */
+// ===== LOL GM: Player lifecycle domain =====
+// Owns player evaluation/identity, squad-role promises, champion-profile learning,
+// generated players, rookie cohort supply and player-career event history.
+// Match-slot legality is not owned here.
+
 const NICK_A=['Ka','Zer','Lu','Vex','Mor','Ny','Ti','Rho','Sa','Quin','El','Dra','Fen','Jo','Kai','Mir','Oz','Pyr','Ren','Syl','Ul','Wyn','Xan','Yor','Bru','Cae','Del','Gor','Hex','Ish','Lor','Nim','Pax','Riv','Tor','Val','Zu','Aki','Bly','Cro'];
 const NICK_B=['n','ra','x','lo','th','ne','ko','vy','dan','rin','zo','sk','mi','ro','ve','ly','ce','ta','ix','or','us','en','al','yx','e','o','ash','ek','im','ul'];
 const STYLES=Object.keys(STYLE_BIAS);
@@ -2428,13 +2432,14 @@ function talentSupplyErrors(db){
   }
   return errs;
 }
-function genTactics(rng){return {aggression:rng.int(35,80),risk_tolerance:rng.int(30,75),objective_priority:rng.int(45,80),vision_investment:rng.int(45,80),scaling_preference:rng.int(30,75)}}
-const PHILOSOPHIES=['win-now','youth','balanced','superstar','cost'];
-const PHIL_KO={'win-now':'즉시 전력','youth':'유망주 육성','balanced':'균형','superstar':'스타 영입','cost':'효율 중시'};
+
+/* ==== FILE: development.js ==== */
+// ===== LOL GM: Player development / training domain =====
+// Owns training intensity, facilities, age curves, seasonal growth and development valuation.
+// Long-term role conversion remains isolated in role-conversion.js.
+
 const TRAIN_POINTS=100;
-const SPLIT_NAME={1:'윈터',2:'스프링',3:'서머'};
-// 그 해 마지막 스플릿 시즌 (승강·시상·목표 판정 기준)
-function finalSeason(w,R,div=1){let best=null;for(const s of Object.values(w.seasons))if(s.region===R.id&&(s.div||1)===div&&s.split&&(!best||s.split>best.split))best=s;return best}
+
 // 나이가 어릴수록 더 많이, 더 빠르게 오른다
 function youthMul(age){return age<=18?1.4:age<=20?1.25:age<=22?1.1:age<=24?1:0.85}
 function growthCap(age){return age<=18?4.2:age<=20?3.5:age<=22?2.8:age<=24?2.1:age<=26?1.5:1.0}
@@ -2449,6 +2454,51 @@ function facilityCost(db,t,key='training'){const f=ensureFacilities(t),lv=f[key]
 function facilityUpkeep(db,t){const f=ensureFacilities(t),sum=Object.values(f).reduce((a,b)=>a+b,0);return Math.round(sum*.32*psTeam(db,t)*10)/10}
 function upgradeFacility(db,t,key){if(!['training','analysis','recovery','youth'].includes(key))throw new Error('유효하지 않은 시설입니다');const f=ensureFacilities(t);if(f[key]>=5)throw new Error('이미 최고 단계입니다');const cost=facilityCost(db,t,key);if(!t.finance||t.finance.cash<cost)throw new Error('시설 증설 자금이 부족합니다');t.finance.cash=Math.round((t.finance.cash-cost)*10)/10;f[key]++;t.facility=Math.round(Object.values(f).reduce((a,b)=>a+b,0)/4);return cost}
 
+function ageCurve(age,g){
+  const T={mechanical:[[19,3],[21,2],[23,0.8],[25,0],[27,-1],[99,-2.2]],laning:[[19,2.5],[22,1.8],[24,0.6],[26,0],[28,-0.8],[99,-1.8]],combat:[[19,2.5],[22,1.8],[24,0.6],[26,0],[28,-0.8],[99,-1.8]],
+    macro:[[19,2.5],[23,2],[26,1],[28,0.3],[30,-0.3],[99,-1]],mental:[[19,2.5],[23,2],[26,1],[28,0.3],[30,-0.3],[99,-1]]}[g];
+  for(const [a,v] of T)if(age<=a)return v;return -1;
+}
+function growPlayer(db,p,rng,games,champGames){
+  const team=p.team?db.teams[p.team]:null, before=playerOvr(p),dev=ensurePlayerDevelopment(p);
+  const room=clamp((p.pot-before)/10,-0.5,1.5), prof=p.personality.professionalism/100,ageShift=dev.peakAge-25;
+  const coach=team?staffDevelopmentFor(team,p.role)/100:0.45, play=clamp(games/30,0,1);
+  const tr=team?team.training:defaultTraining(), intensity=trainingIntensity(team),conversionMul=typeof roleConversionGrowthMultiplier==='function'?roleConversionGrowthMultiplier(p):1,tsum=['mechanical','laning','combat','macro','mental'].reduce((a,k)=>a+(+tr[k]||0),0)||1;
+  for(const g in ATTR_GROUPS){
+    // 훈련 포인트는 총 100점 한도: 배분하지 않은 포인트는 버려진다 (나눠 쓰는 만큼만 효과)
+    const base=ageCurve(p.age-ageShift,g), train=team?(Math.min(TRAIN_POINTS,tr[g])/TRAIN_POINTS*5-1)*0.9:-0.3;
+    pState(p);
+    let d=base>0?base*dev.growthRate*(0.45+room*0.6)*(0.7+0.6*prof)*(0.8+0.4*coach)*(0.65+0.55*play)*trainingGrowthMul(team)*facilityMul(team)*intensity.growth*(0.9+0.2*p.morale/100):base*dev.declineRate*(1.3-0.6*prof);
+    d+=train*(base>0?1:0.5);
+    if(d>0)d*=youthMul(p.age)*conversionMul;
+    d=Math.min(d,growthCap(p.age)); // 한 시즌 영역별 성장 상한 (어릴수록 높음)
+    const ceil=Math.min(99,p.pot+6); // 잠재력 + 6을 넘는 능력치는 더 오르지 않음
+    for(const a of ATTR_GROUPS[g]){const v=p.attrs[a]+d+rng.normal(0,1.3);p.attrs[a]=Math.round(clamp(d>0&&p.attrs[a]>=ceil?Math.min(v,p.attrs[a]):d>0?Math.min(v,Math.max(ceil,p.attrs[a])):v,20,99))}
+  }
+  // 챔피언 폭: 공식전 + 스크림 + 훈련 + 난이도 + 학습 능력을 함께 반영
+  for(const c in champGames)ensureChampionProfile(db,p,c);
+  if(team&&p.pool){const practice=Math.max(2,Math.round((tr.combat+tr.mental)/12*(.7+coach*.5)));Object.entries(p.pool).sort((a,b)=>b[1].mastery-a[1].mastery).slice(0,6).forEach(([c])=>practiceChampion(db,p,c,'training',practice))}
+  for(const c of Object.keys(p.pool||{})){const n=champGames[c]||0,pr=ensureChampionProfile(db,p,c),learn=championLearningMultiplier(db,p,c),practiceGain=(pr.scrimSeason||0)*.16+(pr.trainingSeason||0)*.09,officialGain=Math.min(7,n*.42),gain=Math.min(8,(officialGain+practiceGain)*learn*(p.age<22?1.12:1));
+    if(n||practiceGain){pr.mastery=Math.round(clamp(pr.mastery+gain,20,99));pr.experience=Math.round(clamp(pr.experience+n*1.5,0,999));pr.confidence=Math.round(clamp(pr.confidence+rng.normal(n?2:1,3),10,99))}
+    else {pr.mastery=Math.round(clamp(pr.mastery-rng.range(0,1.8)*(1-(p.attrs.meta_adaptation||50)/180),20,99));if(pr.mastery<36&&Object.keys(p.pool).length>12)delete p.pool[c]}
+    if(p.pool[c]){pr.matchup_knowledge=Math.round(clamp(pr.matchup_knowledge+(n?1.5:.35),20,99));pr.scrimSeason=0;pr.trainingSeason=0}}
+  if(games>0)p.proSeasons=(p.proSeasons||0)+1;p.age++;if(typeof resetRoleConversionSeasonLoad==='function')resetRoleConversionSeasonLoad(p);
+  return playerOvr(p)-before;
+}
+function playerValue(db,p,team){
+  const o=playerOvr(p), up=Math.max(0,p.pot-o);
+  const w={'win-now':0.1,'youth':0.6,'balanced':0.3,'superstar':0.15,'cost':0.35}[team.philosophy]||0.3;
+  return o+up*w-(team.philosophy==='youth'&&p.age>26?2:0);
+}
+
+/* ==== FILE: world.js ==== */
+// ===== LOL GM: 월드 (Phase 5 성장 + 월드 확장) =====
+function genTactics(rng){return {aggression:rng.int(35,80),risk_tolerance:rng.int(30,75),objective_priority:rng.int(45,80),vision_investment:rng.int(45,80),scaling_preference:rng.int(30,75)}}
+const PHILOSOPHIES=['win-now','youth','balanced','superstar','cost'];
+const PHIL_KO={'win-now':'즉시 전력','youth':'유망주 육성','balanced':'균형','superstar':'스타 영입','cost':'효율 중시'};
+const SPLIT_NAME={1:'윈터',2:'스프링',3:'서머'};
+// 그 해 마지막 스플릿 시즌 (승강·시상·목표 판정 기준)
+function finalSeason(w,R,div=1){let best=null;for(const s of Object.values(w.seasons))if(s.region===R.id&&(s.div||1)===div&&s.split&&(!best||s.split>best.split))best=s;return best}
 // ---------- 지역 프리셋 / 월드 설정 ----------
 // 실제 LoL e스포츠 구조를 본뜬 기본 리그 (리그 수준·시장 규모는 고정, 구조만 편집 가능)
 const REGION_PRESETS = {
@@ -2930,43 +2980,6 @@ function promotionRelegation(db,w,rng,ev){
     reconcileTier2Structure(db,rng,R,ev);
     inferRegionPolicy(db,R);
   }
-}
-
-function ageCurve(age,g){
-  const T={mechanical:[[19,3],[21,2],[23,0.8],[25,0],[27,-1],[99,-2.2]],laning:[[19,2.5],[22,1.8],[24,0.6],[26,0],[28,-0.8],[99,-1.8]],combat:[[19,2.5],[22,1.8],[24,0.6],[26,0],[28,-0.8],[99,-1.8]],
-    macro:[[19,2.5],[23,2],[26,1],[28,0.3],[30,-0.3],[99,-1]],mental:[[19,2.5],[23,2],[26,1],[28,0.3],[30,-0.3],[99,-1]]}[g];
-  for(const [a,v] of T)if(age<=a)return v;return -1;
-}
-function growPlayer(db,p,rng,games,champGames){
-  const team=p.team?db.teams[p.team]:null, before=playerOvr(p),dev=ensurePlayerDevelopment(p);
-  const room=clamp((p.pot-before)/10,-0.5,1.5), prof=p.personality.professionalism/100,ageShift=dev.peakAge-25;
-  const coach=team?staffDevelopmentFor(team,p.role)/100:0.45, play=clamp(games/30,0,1);
-  const tr=team?team.training:defaultTraining(), intensity=trainingIntensity(team),conversionMul=typeof roleConversionGrowthMultiplier==='function'?roleConversionGrowthMultiplier(p):1,tsum=['mechanical','laning','combat','macro','mental'].reduce((a,k)=>a+(+tr[k]||0),0)||1;
-  for(const g in ATTR_GROUPS){
-    // 훈련 포인트는 총 100점 한도: 배분하지 않은 포인트는 버려진다 (나눠 쓰는 만큼만 효과)
-    const base=ageCurve(p.age-ageShift,g), train=team?(Math.min(TRAIN_POINTS,tr[g])/TRAIN_POINTS*5-1)*0.9:-0.3;
-    pState(p);
-    let d=base>0?base*dev.growthRate*(0.45+room*0.6)*(0.7+0.6*prof)*(0.8+0.4*coach)*(0.65+0.55*play)*trainingGrowthMul(team)*facilityMul(team)*intensity.growth*(0.9+0.2*p.morale/100):base*dev.declineRate*(1.3-0.6*prof);
-    d+=train*(base>0?1:0.5);
-    if(d>0)d*=youthMul(p.age)*conversionMul;
-    d=Math.min(d,growthCap(p.age)); // 한 시즌 영역별 성장 상한 (어릴수록 높음)
-    const ceil=Math.min(99,p.pot+6); // 잠재력 + 6을 넘는 능력치는 더 오르지 않음
-    for(const a of ATTR_GROUPS[g]){const v=p.attrs[a]+d+rng.normal(0,1.3);p.attrs[a]=Math.round(clamp(d>0&&p.attrs[a]>=ceil?Math.min(v,p.attrs[a]):d>0?Math.min(v,Math.max(ceil,p.attrs[a])):v,20,99))}
-  }
-  // 챔피언 폭: 공식전 + 스크림 + 훈련 + 난이도 + 학습 능력을 함께 반영
-  for(const c in champGames)ensureChampionProfile(db,p,c);
-  if(team&&p.pool){const practice=Math.max(2,Math.round((tr.combat+tr.mental)/12*(.7+coach*.5)));Object.entries(p.pool).sort((a,b)=>b[1].mastery-a[1].mastery).slice(0,6).forEach(([c])=>practiceChampion(db,p,c,'training',practice))}
-  for(const c of Object.keys(p.pool||{})){const n=champGames[c]||0,pr=ensureChampionProfile(db,p,c),learn=championLearningMultiplier(db,p,c),practiceGain=(pr.scrimSeason||0)*.16+(pr.trainingSeason||0)*.09,officialGain=Math.min(7,n*.42),gain=Math.min(8,(officialGain+practiceGain)*learn*(p.age<22?1.12:1));
-    if(n||practiceGain){pr.mastery=Math.round(clamp(pr.mastery+gain,20,99));pr.experience=Math.round(clamp(pr.experience+n*1.5,0,999));pr.confidence=Math.round(clamp(pr.confidence+rng.normal(n?2:1,3),10,99))}
-    else {pr.mastery=Math.round(clamp(pr.mastery-rng.range(0,1.8)*(1-(p.attrs.meta_adaptation||50)/180),20,99));if(pr.mastery<36&&Object.keys(p.pool).length>12)delete p.pool[c]}
-    if(p.pool[c]){pr.matchup_knowledge=Math.round(clamp(pr.matchup_knowledge+(n?1.5:.35),20,99));pr.scrimSeason=0;pr.trainingSeason=0}}
-  if(games>0)p.proSeasons=(p.proSeasons||0)+1;p.age++;if(typeof resetRoleConversionSeasonLoad==='function')resetRoleConversionSeasonLoad(p);
-  return playerOvr(p)-before;
-}
-function playerValue(db,p,team){
-  const o=playerOvr(p), up=Math.max(0,p.pot-o);
-  const w={'win-now':0.1,'youth':0.6,'balanced':0.3,'superstar':0.15,'cost':0.35}[team.philosophy]||0.3;
-  return o+up*w-(team.philosophy==='youth'&&p.age>26?2:0);
 }
 
 // ---- 저장용 압축: 능력치·성향·챔피언 폭을 배열로 ----
