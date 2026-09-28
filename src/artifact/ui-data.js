@@ -9,7 +9,8 @@ function viewData(){
   <textarea id="djson" spellcheck="false" aria-label="월드 데이터 JSON" placeholder="JSON 열기를 누르거나 여기에 붙여 넣으세요"></textarea>`;
 }
 function bindData(){
-  const msg=t=>$('#dmsg').textContent=t;
+  const renderId=UI_RENDER_ID;
+  const msg=t=>{if(VIEW!=='data'||UI_RENDER_ID!==renderId)return;const output=$('#dmsg');if(output)output.textContent=t};
   document.querySelectorAll('[data-slot]').forEach(b=>b.onclick=async()=>{
     const result=await switchSaveSlot(b.dataset.slot);
     if(!result.ok&&result.error)msg(result.error);
