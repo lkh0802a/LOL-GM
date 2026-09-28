@@ -38,6 +38,18 @@ Item 10 acceptance (2026-09-27): the patch engine diagnoses the live professiona
 
 Pre-Item-11 stabilization (2026-09-27): before adding the full draft UI, the runtime/build architecture was refactored without changing accepted Items 1–10. Patch-history caching is world-owned through WeakMap state rather than a shared global object; champion/system evaluation, automatic item/rune fit, same-day draft champion pools and meta-history queries are revision/index cached with explicit invalidation. Draft noise now lazily admits champions that become professionally eligible inside the same patch instead of retaining an incomplete cached champion set. Series simulation no longer JSON deep-clones draft context every game. Derived 26.19 patch baselines are no longer serialized; historical patches rebuild from pinned source plus deltas. Meta-history save records use a reversible compact representation with smoke-tested material size reduction, and save-only season compaction now operates on a serialization view rather than deleting fields from live runtime state. A discovered save bug was fixed by aligning UI SAVE_VERSION/storage namespace 14 with buildWorld schema 14, and CI rejects future schema drift. Patch/meta, roster/market, and season/world/progression UI were extracted from app.js into domain modules; app.js fell from about 82.8 KB to 65.0 KB. Build/check/smoke share one artifact module manifest, CI rejects duplicate cross-module globals, maintainability budgets cover the major engine/UI modules, and CI records a deterministic performance probe for Bo3 simulation, draft-pool cache hits, item/rune selection and 10k-row meta queries. See docs/ARCHITECTURE.md.
 
+## 11.5 Architecture Rebuild
+
+### Step 1 — Freeze / regression baseline
+
+**COMPLETE when the introducing CI run is green.**
+
+- Added `scripts/regression.mjs` as a dedicated executable baseline for confirmed Items 1–11 behavior.
+- Wired the regression gate into `npm run check` before the full smoke suite.
+- Frozen critical save/load, Bo3/Bo5, Fearless, First Selection, contract, integrated-roster, local-rule, staff-cap, rookie, patch and item/rune invariants.
+- Added `docs/REGRESSION_BASELINE.md` to distinguish confirmed invariants from known audit findings that must not be accidentally blessed as legacy behavior.
+- Step 2 must not begin until this gate is green.
+
 ## UX / Convenience Re-audit (2026-09-27)
 
 Items 1–5 remain engine-complete, but COMPLETE no longer means their current interaction design is frozen. A cross-system convenience audit found follow-up UX debt that must be repaired when the affected surface is touched, and before final integration acceptance:

@@ -63,6 +63,7 @@ CI rejects:
 - save-schema version mismatch
 - incomplete pinned champion/item/rune source coverage
 - core UI monolith growth past the maintainability budget
+- dedicated 11.5 regression-baseline violations from `scripts/regression.mjs` (world/player/roster/contracts/staff/local rules/patch/system/draft/Bo3/Bo5/save-resume)
 - smoke-test violations including patch-cache isolation, query-cache invalidation, non-mutating save packing and save round trips
 - performance-probe execution failures for series simulation, draft/system caches and indexed meta queries
 

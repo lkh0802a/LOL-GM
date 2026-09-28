@@ -8,10 +8,11 @@
     "dev": "node scripts/dev.mjs",
     "build": "node scripts/build.mjs",
     "perf": "node scripts/perf.mjs",
-    "check": "node scripts/check.mjs && node scripts/validate-system-snapshot.mjs && node scripts/smoke.mjs",
+    "check": "node scripts/check.mjs && node scripts/validate-system-snapshot.mjs && node scripts/regression.mjs && node scripts/smoke.mjs",
     "sync:champions": "node scripts/sync-champions.mjs",
     "validate:champions": "node scripts/validate-champion-snapshot.mjs",
-    "validate:systems": "node scripts/validate-system-snapshot.mjs"
+    "validate:systems": "node scripts/validate-system-snapshot.mjs",
+    "regression": "node scripts/regression.mjs"
   },
   "engines": {
     "node": ">=20"

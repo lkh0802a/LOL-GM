@@ -196,6 +196,19 @@ if (!Number.isInteger(saveVersion) || !Number.isInteger(worldVersion) || saveVer
   console.error(`Save schema mismatch: app SAVE_VERSION=${saveVersion}, buildWorld version=${worldVersion}`);
 }
 
+const regressionSource = await readFile(resolve(root, 'scripts', 'regression.mjs'), 'utf8');
+for (const marker of ['01-world-bootstrap','05-contracts','06-owned-reserve-roster','09-patch-baseline','11-draft-series-save','mid-Bo5 session did not survive save/load']) {
+  if (!regressionSource.includes(marker)) {
+    failed = true;
+    console.error('11.5 regression baseline missing marker: '+marker);
+  }
+}
+const packageJson = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
+if (!String(packageJson.scripts?.check||'').includes('scripts/regression.mjs')) {
+  failed = true;
+  console.error('Regression baseline is not wired into npm run check');
+}
+
 const shell = await readFile(resolve(artifact, 'shell.html'), 'utf8');
 if (!shell.includes('<meta name="viewport"')) {
   failed = true;
