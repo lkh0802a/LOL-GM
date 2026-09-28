@@ -4766,14 +4766,6 @@ function bindSetup(){
     else cfg[a]=v;
     dirty();
   });
-  document.querySelectorAll('[data-delr]').forEach(b=>b.onclick=()=>{cfg.regions.splice(+b.dataset.delr,1);dirty()});
-  document.querySelectorAll('[data-deli]').forEach(b=>b.onclick=()=>{cfg.internationals.splice(+b.dataset.deli,1);dirty()});
-  $('#addreg').onchange=e=>{const v=e.target.value;if(!v)return;
-    if(v==='custom'){let n=1;while(cfg.regions.some(r=>r.id==='C'+n))n++;cfg.regions.push(regionCfg('C'+n,{name:'새 지역 '+n,leagueName:'새 리그 '+n,short:'NL'+n,slots:1,teams:6}))}
-    else cfg.regions.push(regionCfg(v));dirty()};
-  $('#addintl').onchange=e=>{const v=e.target.value;if(!v)return;
-    if(v==='custom'){let n=1;while(cfg.internationals.some(i=>i.id==='X'+n))n++;cfg.internationals.push({id:'X'+n,name:'새 국제대회 '+n,short:'X'+n,timing:'end',entry:'champions',format:'ko',bo:5})}
-    else cfg.internationals.push({...INTL_PRESETS.find(p=>p.id===v)});dirty()};
   $('#cfgdef').onclick=()=>{DB.worldConfig=defaultWorldConfig();dirty()};
   $('#regen').onclick=()=>{const errs=validateConfig(cfg);if(errs.length){$('#cfgmsg').className='warn';$('#cfgmsg').textContent=errs.join(' / ');return}
     DB=buildWorld(cfg);const first=managerSelectableTeams(DB)[0];SSET.team=first?first.id:null;SSET.region=first?first.region:null;SSET.division=first?(first.division||1):1;LAST=null;LASTSER=null;MC.res=null;saveDB();nav()};
