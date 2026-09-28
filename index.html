@@ -1842,7 +1842,10 @@ function seasonPatch(db,date,rng){
   news(db,`시즌 개막 패치 ${p.id} — 챔피언 ${p.notes.filter(n=>n.c).length}명 조정${nc?`, 신규 챔피언 ${nc.def.nameKo||nc.def.name} 출시`:''}`);
 }
 
-/* ==== FILE: competition.js ==== */
+/* ==== FILE: series.js ==== */
+// ===== LOL GM: Series / First Selection / Fearless domain =====
+// Owns best-of session state, side/order selection, series-level Fearless context and replay.
+
 // ===== LOL GM: Series (Phase 3) =====
 function teamComposure(db,tid){return avg(db.teams[tid].roster.map(id=>db.players[id].attrs.composure))/100}
 function gameMVP(r){
@@ -1990,6 +1993,11 @@ function replayGame(db,rec,g){
 
 // ===== LOL GM: Competition / Stage 엔진 =====
 // 지원 스테이지: round_robin(그룹 가능) · swiss · single_elim · double_elim
+
+/* ==== FILE: competition.js ==== */
+// ===== LOL GM: Competition scheduling / standings domain =====
+// Owns schedules, stages, standings and scheduled-series orchestration.
+
 function addDays(iso,n){const d=new Date(iso+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
 function roundRobin(ids,legs){
   const t=ids.slice(); if(t.length%2)t.push(null);
