@@ -57,6 +57,7 @@ const maintainabilityBudgets = {
   'roster.js': 22000,
   'lineup.js': 12000,
   'state-transaction.js': 9000,
+  'state-rollback.js': 8000,
   'state-player-actions.js': 17000,
   'finance.js': 18000,
   'contracts.js': 26000,
@@ -129,6 +130,20 @@ for(const [owner,marker] of [[rosterSourceForTransactions,"actor:'ai'"],[rosterU
     failed = true;
     console.error('Shared roster transaction path must be used by AI and manager');
   }
+}
+
+const rollbackSource=await readFile(resolve(artifact,'state-rollback.js'),'utf8');
+for(const marker of ['function captureWorldActionJournal(','function worldActionScopeErrors(',
+  'function actionJournalRestoreObject(','function actionJournalRestoreTeam(']){
+  if(!rollbackSource.includes(marker)){
+    failed=true;console.error('11.5/3-4 rollback journal helper missing: '+marker);
+  }
+}
+if(!transactionSource.includes('journal=captureWorldActionJournal(')||
+   !transactionSource.includes('journal.rollback()')||
+   !transactionSource.includes('worldActionScopeErrors(')||
+   !transactionSource.includes('saveId:db.saveId||null')){
+  failed=true;console.error('11.5/3-4 guarded commit/rollback or save ownership marker missing');
 }
 
 const playerActionSource = await readFile(resolve(artifact,'state-player-actions.js'),'utf8');
@@ -375,7 +390,7 @@ if (!Number.isInteger(saveVersion) || !Number.isInteger(worldVersion) || saveVer
 }
 
 const regressionSource = await readFile(resolve(root, 'scripts', 'regression.mjs'), 'utf8');
-for (const marker of ['01-world-bootstrap','05-contracts','06-owned-reserve-roster','06c-player-sign-transaction','06d-player-transfer-transaction','06e-ai-transfer-and-move-limit','06f-release-and-option-transaction','06g-save-format-and-cache-isolation','06h-legacy-v15-save-restoration','06i-invalid-and-forward-saves','09-patch-baseline','11-draft-series-save','mid-Bo5 session did not survive save/load']) {
+for (const marker of ['01-world-bootstrap','05-contracts','06-owned-reserve-roster','06c-player-sign-transaction','06d-player-transfer-transaction','06e-ai-transfer-and-move-limit','06f-release-and-option-transaction','06g-save-format-and-cache-isolation','06h-legacy-v15-save-restoration','06i-invalid-and-forward-saves','06j-transaction-transfer-rollback','06k-transaction-roster-rollback','06l-transaction-release-option-rollback','06m-transaction-actor-parity-and-membership-guard','09-patch-baseline','11-draft-series-save','mid-Bo5 session did not survive save/load']) {
   if (!regressionSource.includes(marker)) {
     failed = true;
     console.error('11.5 regression baseline missing marker: '+marker);

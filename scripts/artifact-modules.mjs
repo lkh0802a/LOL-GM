@@ -27,6 +27,7 @@ export const ENGINE_MODULES = [
   'roster.js',
   'lineup.js',
   'state-transaction.js',
+  'state-rollback.js',
   'office.js',
   'office-international.js',
   'finance.js',
