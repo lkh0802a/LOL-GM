@@ -584,7 +584,7 @@ This applies retroactively to completed major items during later UI touches and 
 - A player keeps nationality/origin identity independently from the one active registration-local eligibility.
 - Multi-national players choose one origin local at career start; that first selection remains the permanent origin-local entitlement.
 - A player may acquire a non-origin local only through continuous service in one region under qualification terms agreed by that regional office and the international office. Qualification grants a player/agent choice; it does not auto-switch the active local. If qualification is completed mid-season, activation of the newly acquired local is deferred until the next season.
-- Only one active local exists at a time. A switch, including restoration of the origin local after an acquired local was active, takes effect from the next season and is chosen during the offseason. An earned non-origin eligibility that was never activated remains available for a later offseason choice; a non-origin local that was actually activated and later relinquished must be earned again from scratch.
+- Only one active local exists at a time. A switch, including restoration of the origin local after an acquired local was active, takes effect from the next season and is chosen during the offseason. An earned non-origin eligibility that was never activated remains available only for its rule-defined validity period; a non-origin local that was actually activated and later relinquished must be earned again from scratch.
 - Same-region club movement preserves service. A same-region FA gap preserves progress but adds no service time. Cross-region loan pauses progress without adding service in either region. Registration to another region by normal contract resets the previous region's progress.
 - When a qualification rule measures service by seasons, a partial/half season with actual registration and service in that region counts as one service season; paused FA or cross-region-loan time does not create service credit.
 - The official first-team registered-roster non-local cap is globally fixed at two; it does not cap the club's total contracted players or reserve/Academy holdings.
@@ -690,3 +690,32 @@ This applies retroactively to completed major items during later UI touches and 
 - These are club employment caps, not mandatory staffing levels; wages and club finances should make full departments expensive.
 - Regional/international offices may separately limit how many employed staff can be officially accredited or present for a competition/event.
 - Legacy `team.coach` behavior must be migrated into specialist staff attributes before the generic slot is removed from runtime.
+
+
+## D-056 — Final rule sweep: player, staff, international and governance rules
+
+**Decision:** The remaining 69 pre-implementation choices are frozen by the 2026-09-28 rule sweep.
+
+- Player↔manager uses separate relationship and trust dimensions; all player pairs have relationship state that can affect teamwork.
+- There is no formal captain slot. Leadership is emergent and mainly stabilizes morale/relationships.
+- Explicit agents are reserved for notable players; others use personal negotiation tendencies.
+- Renewal rejection creates cooldowns; fully broken talks reopen only after meaningful context change.
+- Contract lengths are negotiated rather than globally fixed. Playing-time/role promises may be contractual or verbal.
+- Every permanent transfer requires player consent. Outside pre-contracts open after the incumbent club's 14-day exclusivity period.
+- Incoming-region transfer windows govern cross-region transfers; loan-to-purchase conversion does not consume an extra move.
+- Position conversion is consensual and completed from familiarity + training duration + scrim/official evidence.
+- Academy has no global age cap; veteran eligibility is regional policy.
+- Earned-but-inactive local eligibility has a validity period. Qualification-rule changes grandfather existing progress.
+- Region split/merge lets players choose successor local status, with legacy-local protection through the current contract for players made non-local only by restructuring.
+- Staff may hold multiple specialties with diluted effect; duplicate analysts have diminishing returns; pre-hire exact staff ability is hidden.
+- International patch lock is seven days before event start. International coefficients use weighted results from the prior three years with tournament-specific weights, with recent Worlds as extra-slot tiebreak.
+- International phases pause all top-division domestic official play globally.
+- Administrative violations may be adjudicated after submission; clearly illegal state transitions are blocked before submission.
+- Injuries are rare and representative; illness is more common; burnout is a rare sustained-overload outcome.
+
+Canonical detail:
+- `docs/PLAYER_RELATION_CONTRACT_RULES.md`
+- `docs/ROSTER_TRANSFER_LOCAL_RULES.md`
+- `docs/STAFF_RULES.md`
+- `docs/INTERNATIONAL_OFFICE_RULES.md`
+- `docs/GOVERNANCE_RESTRUCTURE_RULES.md`
