@@ -168,7 +168,7 @@ These changes intentionally invalidate older development saves, so the active sa
 **Decision:** Player-system work uses save schema version 12 under the `lol-gm-v12` namespace.
 
 - player overall ratings are position-weighted rather than a flat average
-- primary/secondary position familiarity is explicit and trainable
+- primary/secondary position familiarity was explicit and trainable in the v12 implementation; this permission model is superseded by D-058
 - nationality is explicit while region remains the registration/scouting origin key
 - reputation and market value are distinct from raw ability and feed player-market logic
 - form, condition, fatigue, morale, match sharpness, team adaptation and tactical adaptation are bounded match modifiers
@@ -736,3 +736,14 @@ Canonical detail:
 
 Implementation must keep these decisions separate from temporary tuning constants and preserve player/AI legality parity.
 
+## D-058 — Match roles are lineup assignments, not registration permissions
+
+**Decision:** A professional player's primary role is identity/specialization, not an official-match eligibility gate.
+
+- A legal match lineup is five distinct registered players assigned one each to TOP/JGL/MID/ADC/SUP. The players do not need matching primary roles.
+- First-team and reserve/Academy registration no longer require one natural-primary player for each of the five roles.
+- General secondary-role permission/familiarity fields are removed. Off-role performance comes from role-weighted attributes, champion pool, tactics/adaptation and accumulated experience rather than a stored eligibility flag or flat percentage penalty.
+- There is no separate emergency-off-role exception. Emergency call-ups use the same lineup rule; if the reserve side has to move another player into the vacated slot, the organization bears the resulting performance cost rather than a forfeit caused solely by primary-role labels.
+- Long-term role conversion remains a distinct career/training decision. The manager may propose it and the player may accept or reject it. Conversion is not required for one-off off-role match usage.
+- Conversion spam is discouraged by training opportunity cost, adaptation/champion-preparation loss and possible relationship/satisfaction effects, not by a hard system cooldown or a match-eligibility lock.
+- Once sustained training and real usage establish the new specialization, the player's primary-role identity may change; this identity update is not tied to a registration window.

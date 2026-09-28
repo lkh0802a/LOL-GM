@@ -73,7 +73,7 @@ Item 4 acceptance included engine-derived annual rookie supply from regional eco
 
 Item 5 acceptance included market-derived salary and transfer valuation, realistic 1–4 year contract lengths, signing/performance/title/international bonuses, buyouts, team/player options and promised roles, persistent multi-round player negotiations with counteroffers and patience, club-to-club transfer-fee negotiation, A/B/C recruitment priorities, the required interest → observation → internal evaluation → formal offer → negotiation workflow, hidden rival terms and live competition risk, player choice based on pay/role/team strength/international opportunity/facilities/career fit, manual renewals instead of automatic retention, AI renewals/FA signings/releases/contracted transfers with fallback market rounds, no hidden-potential market cheating, first-season blank-roster contracts using the same formal negotiation model, unresolved-deal expiry at the market deadline, save persistence for recruitment/negotiation state, standalone HTML sync, and successful CI.
 
-Item 2 acceptance included stable player identity and nationality, primary/secondary position familiarity, position-weighted ratings, detailed core metrics, bounded form/condition/fatigue/morale/sharpness/team/tactical adaptation, reputation and market value, champion official/scrim/training experience and mastery adaptation, individualized growth/peak/decline/retirement lifecycle, full match-derived player metrics, career snapshots/events, save round-trip validation, standalone HTML execution, and successful CI.
+Item 2 acceptance included stable player identity and nationality, position-weighted ratings, detailed core metrics, bounded form/condition/fatigue/morale/sharpness/team/tactical adaptation, reputation and market value, champion official/scrim/training experience and mastery adaptation, individualized growth/peak/decline/retirement lifecycle, full match-derived player metrics, career snapshots/events, save round-trip validation, standalone HTML execution, and successful CI. The former secondary-position permission model was later superseded by the free lineup-role model.
 
 Item 3 acceptance included five explicit roster roles (핵심 주전/주전/경쟁/후보/유망주), a persistent five-player Depth Chart per squad, explicit manager starter changes, strong AI starter inertia, expected versus actual playing-time tracking, persistent satisfaction and career goals, conservative LoL-style dissatisfaction thresholds, dissatisfaction sources for playing time/reserve assignment/contract/team results/role/international opportunity/career goals, controlled morale impact, rare long-running transfer requests and withdrawals, AI offseason role rebalancing, contract/transfer decision integration, standalone mobile UI verification, and successful CI.
 
@@ -284,21 +284,15 @@ Domestic official-roster changes use windows rather than a change-count quota: w
 Fearless and First Selection are fixed core match-system concepts, not regional-office or international-office toggles. The earlier cross-region rule checkpoint is therefore interpreted only for genuinely office-owned regulation categories.
 
 
-### Registered-position realism checkpoint — 2026-09-28
+### Free lineup-role model checkpoint — 2026-09-28
 
-Official player positions are now a registration constraint, not a free tactical switch. First-team roster coverage uses each player's primary role, and official matches may not field a player in an arbitrary different role. Secondary-role familiarity remains internal training/transition data only. A genuine role conversion must be a deliberate long-term process followed by a formal primary-role registration update; exact conversion duration/eligibility remains to be specified before implementation. The former 28% generated-player secondary-role chance was replaced by an 8% baseline and is not official-position eligibility.
+The former registered-primary-role enforcement model was superseded. A player's primary role is now specialization/identity rather than match eligibility. Official lineups require five distinct registered players assigned to TOP/JGL/MID/ADC/SUP, with no natural-role coverage requirement. General secondary-role fields were removed from generated players and save serialization. `lineup.js` owns lineup validation/assignment, and `ui-roster.js` exposes game-slot assignment separately from the player's primary role.
 
-Reserve/Academy roster size and non-local limits remain regional-office policy. First-team players may play reserve/Academy official matches only when both internal-movement and competition-registration windows allow it; regional offices may impose movement cooldowns. Internal first/reserve movement is locked during international tournaments.
-
-
-### Official-position enforcement implementation — 2026-09-28
-
-The source now enforces the registered-primary-role rule at both depth-chart assignment and match-simulation boundaries. A player with secondary/off-role familiarity cannot be selected as the official starter for that role. Generated players now receive meaningful off-role familiarity only at an 8% baseline (down from 28%), with a narrower initial familiarity range, and the player UI labels it as transition familiarity rather than an official secondary position. Smoke coverage rejects both manual depth-chart bypass and tampered off-role starter state.
-
+Long-term role conversion remains a career/training decision: the manager may propose it, the player may accept or reject it, and repeated conversions are discouraged through training/adaptation/relationship costs rather than a hard match-position lock. One-off off-role usage remains legal without conversion.
 
 ### Contract / retention / staff rule checkpoint — 2026-09-28
 
-Position conversion may start at any time, with completion duration determined by the simulation from age, adaptability, training load and familiarity. Old-role familiarity decays as conversion progresses, and repeated career conversions carry cumulative efficiency costs.
+Position conversion is a long-term specialization change rather than an eligibility unlock. It may be proposed at any time, the player may accept or refuse, and its cost comes from training opportunity, champion/role preparation, adaptation and relationship effects. Repeated changes remain possible but inefficient.
 
 Loans are half-season or full-season deals. Recall requires a clause; fees may be zero; wage share is negotiable; purchase options and obligations are supported. Mutual termination is offseason-only and unilateral release honors the contract's guaranteed amount. Player dissatisfaction now targets relationship quality and renewal intent first; transfer wishes are rare severe-breakdown events. After the final international event, expiring players have a 14-day incumbent-only renewal period before outside contact opens.
 

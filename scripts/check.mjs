@@ -77,6 +77,14 @@ for (const obsoleteId of ['addreg','addintl']) {
   }
 }
 
+for (const file of modules.filter(file => file !== 'world.js')) {
+  const source = await readFile(resolve(artifact, file), 'utf8');
+  for (const marker of ['secondaryRoles','roleFamiliarity','trainSecondaryRole','officialRoleEligible']) if (source.includes(marker)) {
+    failed = true;
+    console.error(`Deprecated secondary-role model leaked into ${file}: ${marker}`);
+  }
+}
+
 const appSource = await readFile(resolve(artifact, 'app.js'), 'utf8');
 const worldSource = await readFile(resolve(artifact, 'world.js'), 'utf8');
 const draftSource = await readFile(resolve(artifact, 'draft.js'), 'utf8');
