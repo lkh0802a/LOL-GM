@@ -170,7 +170,7 @@ function runInitialMinimumMarket(db,teams,seed){return runInitialMarketTo(db,tea
 function runInitialDepthMarket(db,teams,seed){return runInitialMarketTo(db,teams,seed+'|depth',t=>t.initialRosterTarget||initialRosterTarget(db,t),80)}
 function autoBuildInitialSquad(db,t,rng,target=null){
   const team=teamRef(db,t),limits=initialSquadLimits(db,team),want=Math.min(limits.max,Math.max(limits.min,target??initialRosterTarget(db,team)));team.initialRosterTarget=want;
-  while(team.roster.length<want){const market=initialMarketSnapshot(db,[team]),p=initialPickCandidate(db,team,'depth|'+team.roster.length,market);if(!p)break;const terms=aiInitialContractTerms(db,p,team,rng),chk=initialOfferCheck(db,p,team,terms);if(!chk.ok)break;const done=commitWorldAction(db,{type:'player.sign',pid:p.id,teamId:team.id,kind:'initial',actor:'ai',
+  while(team.roster.length<want){const market=initialMarketSnapshot(db,[team]),p=initialPickCandidate(db,team,'depth|'+team.roster.length,market);if(!p)break;const terms=aiInitialContractTerms(db,p,team,rng),chk=initialOfferCheck(db,p,team,terms);if(!chk.ok)break;const done=commitWorldAction(db,{type:'player.sign',pid:p.id,teamId:team.id,kind:'initial',actor:'system',
       salary:terms.salary,years:terms.years,terms});if(!done.ok)break}
   const errors=initialSquadErrors(db,team);if(errors.length)throw new Error(team.name+' 초기 로스터 오류: '+errors.join(', '));return team;
 }
