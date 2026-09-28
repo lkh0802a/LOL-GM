@@ -15,7 +15,7 @@ The authoritative module order lives in `scripts/artifact-modules.mjs`.
 - competition/world: `competition.js`, `world.js`
 - management domains: `office.js`, `finance.js`, `features.js`, `role-conversion.js`, `career.js`
 - draft information layer: `draft-analysis.js` (scouting-bounded mastery estimates, meta/composition evidence, opponent-intent explanation); legality and selection remain in `draft.js`
-- domain UI: `ui-patch.js`, `ui-market.js`, `ui-champion.js`, `ui-roster.js`, `ui-draft.js`, `ui-season.js`
+- domain UI: `ui-patch.js`, `ui-market.js`, `ui-champion.js`, `ui-player.js`, `ui-roster.js`, `ui-draft.js`, `ui-season.js`
 - application shell/controller: `app.js`
 
 The match engine and draft engine stay separate. Draft legality/selection state stays in `draft.js`; scouting-bounded informational analysis stays in `draft-analysis.js`; interactive state stays in `ui-draft.js`.
@@ -56,3 +56,4 @@ The generated root `index.html` is a deployment artifact. Canonical edits belong
 
 - lineup domain: `lineup.js` owns official five-player slot assignment and validation; `p.role` is player identity, not an eligibility gate.
 - role conversion domain: `role-conversion.js` owns proposal acceptance/refusal, long-term training progress, role-use acceleration, opportunity cost and primary-role identity changes. It does not gate one-off lineup assignment.
+- player detail/scouting domain: `ui-player.js` owns player detail, scouting search/report rendering and role-conversion controls; `ui-roster.js` owns squad editing/bindings.

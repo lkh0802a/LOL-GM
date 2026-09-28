@@ -45,7 +45,8 @@ const maintainabilityBudgets = {
   'ui-patch.js': 30000,
   'ui-market.js': 35000,
   'ui-champion.js': 18000,
-  'ui-roster.js': 26000,
+  'ui-player.js': 18000,
+  'ui-roster.js': 18000,
   'ui-draft.js': 22000,
   'ui-season.js': 30000,
 };
