@@ -596,4 +596,6 @@ const context = {
   Boolean, RegExp, Error, Intl, performance, crypto,
 };
 
-vm.runInNewContext(source, context, { timeout: 25000 });
+// Functional E2E is intentionally broader than the dedicated performance probe.
+// Keep enough headroom to avoid runner-noise flakes; scripts/perf.mjs remains the performance gate.
+vm.runInNewContext(source, context, { timeout: 35000 });
