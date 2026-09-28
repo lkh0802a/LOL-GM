@@ -115,7 +115,7 @@ function applyRosterPlan(db,t,plan,source='manager'){
   for(const [pid,dst] of Object.entries(checked.assignments))if(before[pid]!==dst)moves.push({pid,from:before[pid],to:dst,kind:dst===parent.id?'callup':'senddown'});
   for(const team of organizationTeams(db,parent))team.roster=(team.roster||[]).filter(pid=>!moves.some(m=>m.pid===pid));
   for(const m of moves){const p=db.players[m.pid],dst=db.teams[m.to];dst.roster.push(p.id);p.team=dst.id}
-  if(db.world)for(const m of moves){const p=db.players[m.pid];recordPlayerEvent(p,'squad_move',db.year,{from:m.from,to:m.to,kind:m.kind,date:db.worldDate,source});if(typeof onSquadMoveSatisfaction==='function')onSquadMoveSatisfaction(db,p,m)}
+  if(db.world)for(const m of moves){const p=db.players[m.pid];recordPlayerEvent(p,'squad_move',db.year,{from:m.from,to:m.to,kind:m.kind,date:db.worldDate,source});onSquadMoveSatisfaction(db,p,m)}
   for(const team of organizationTeams(db,parent))initializeDepthChart(db,team,true);
   return {...checked,moves};
 }
@@ -129,17 +129,6 @@ function rosterMoveCheck(db,p,target){
   plan.assignments[player.id]=dst.id;
   const checked=validateRosterPlan(db,src,plan);
   return checked.ok?{ok:true,kind:dst.parent?'senddown':'callup',from:src.id,to:dst.id,parent:checked.parentId}:{ok:false,reason:checked.errors[0],errors:checked.errors};
-}
-function movePlayerBetweenSquads(db,p,target){
-  const player=playerRef(db,p),src=player&&player.team&&db.teams[player.team];
-  if(!src)throw new Error('현재 소속팀이 없습니다');
-  const plan=rosterPlanState(db,src);
-  plan.assignments[player.id]=teamRef(db,target)?.id;
-  const preview=previewWorldAction(db,{type:'roster.plan',parentId:src.id,assignments:plan.assignments,actor:'manager'});
-  if(!preview.ok)throw new Error(preview.errors.join('\n'));
-  const result=applyWorldAction(db,preview);
-  if(!result.ok)throw new Error(result.errors.join('\n'));
-  return result.moves[0];
 }
 function aiManageOwnedReserve(db,t){
   const parent=teamRef(db,t);if(!parent||parent.parent||parent.id===managedTeamId(db))return [];
@@ -181,7 +170,7 @@ function assignPlayerToTeam(db,p,t){
   const oldTeam=player.team&&db.teams[player.team],oldOrg=oldTeam?(oldTeam.parent||oldTeam.id):null,newOrg=team.parent||team.id;
   detachPlayerFromRosters(db,player.id,team.id);
   team.roster=Array.from(new Set([...(team.roster||[]),player.id]));player.team=team.id;
-  if(typeof pState==='function'){pState(player);if(oldOrg!==newOrg){player.teamAdaptation=oldOrg?45:55;player.tacticalAdaptation=oldOrg?48:58}}
+  pState(player);if(oldOrg!==newOrg){player.teamAdaptation=oldOrg?45:55;player.tacticalAdaptation=oldOrg?48:58}
   return player;
 }
 function rosterIntegrityErrors(db){

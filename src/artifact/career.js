@@ -89,7 +89,6 @@ function initialStartNegotiation(db,pid,targetId){
   const player=db.players[pid],target=db.teams[targetId],allowed=new Set(setupTeamsForManager(db).map(t=>t.id));if(!allowed.has(targetId))return '내 구단 조직의 스쿼드에만 등록할 수 있습니다';
   const chk=initialSignCheck(db,player,target);if(!chk.ok)return chk.reason;return startNegotiation(db,pid,'initial',{teamId:targetId}).msg;
 }
-function initialSignPlayer(db,pid,targetId){return initialStartNegotiation(db,pid,targetId)}
 function initialReleasePlayer(db,pid){
   const p=db.players[pid],allowed=new Set(setupTeamsForManager(db).map(t=>t.id));
   if(!p||!p.team||!allowed.has(p.team))return '초기 로스터에서 방출할 수 없는 선수입니다';
@@ -129,14 +128,6 @@ function initialPickCandidate(db,t,key='',snap=null){
   for(const p of initialCandidateShortlist(db,team,market,softMax)){const salary=market.price(p,team.region),chk=initialOfferCheck(db,p,team,{salary});if(!chk.ok)continue;rows.push({p,salary,score:initialCandidateScore(db,p,team,key,salary)})}
   rows.sort((a,b)=>(a.salary<=softMax)!==(b.salary<=softMax)?(a.salary<=softMax?-1:1):b.score-a.score||a.salary-b.salary);
   for(const row of rows)if(initialFutureFeasible(db,team,row.p,row.salary,market))return row.p;return null;
-}
-function normalizeInitialSalaryFloor(db,t){
-  const team=teamRef(db,t),R=db.regions[team.region];if((team.division||1)!==1||!R.salaryFloor)return;
-  const pay=payroll(db,team);if(pay<=0||pay>=R.salaryFloor)return;
-  const k=R.salaryFloor/pay;
-  for(const id of team.roster){const p=db.players[id];if(p&&p.contract)p.contract.salary=Math.round(p.contract.salary*k*10)/10}
-  const gap=Math.round((R.salaryFloor-payroll(db,team))*10)/10;
-  if(gap>0&&team.roster.length){const p=db.players[team.roster[0]];p.contract.salary=Math.round((p.contract.salary+gap)*10)/10}
 }
 function aiInitialContractTerms(db,p,t,rng){
   const ask=asking(db,p,t.region),years=contractYearsForPlayer(db,p,rng),premium=rng.range(.96,1.08),role=defaultPromisedRole(db,p,t),room=Math.max(.1,initialSalaryCeiling(db,t)-payroll(db,t)),salary=Math.min(room,ask*premium);
