@@ -5414,7 +5414,6 @@ function finalizeInitialRosters(db){
 
 /* ==== FILE: ui-patch.js ==== */
 // ---------- 패치·메타 ----------
-let PSET={role:'ALL',q:'',region:'GLOBAL',patch:'ALL',comp:'ALL',period:'ALL',year:'',season:'ALL',split:'ALL',league:'ALL',scope:'ALL',position:'ALL',champ:null};
 function patchValueText(v,field){
   if(Array.isArray(v))return v.join('/');
   if(['damageMod','utilityMod','healMod','shieldMod','ccMod','mobilityMod'].includes(field))return Math.round(Number(v)*100)+'%';
@@ -5545,7 +5544,6 @@ function bindClubOfficeControls(act){
 /* ==== FILE: ui-market.js ==== */
 // ===== LOL GM: recruitment market views / control dispatch =====
 // ---------- 이적 시장 (직접 운영) ----------
-let MK={role:'ALL',scope:'region',tab:'fa'};
 function recruitStageLabel(e){return !e?'미등록':e.stage==='interest'?'관심':e.stage==='observed'?'관찰 완료':e.stage==='evaluated'?'내부 평가 완료':e.stage==='negotiating'?'협상 중':e.stage==='closed'?(e.result==='signed'?'영입 완료':e.result==='lost_to_rival'?'경쟁 구단 선택':'종료'):e.stage}
 function recruitButtons(p,e){
   if(p.team===managedTeamId(DB))return '';
@@ -5719,7 +5717,6 @@ function seasonSetup(){
 /* ==== FILE: ui-match.js ==== */
 // ===== LOL GM: Match / scrim / series result UI =====
 // ---------- 경기 ----------
-let SEL={blue:'HTG',red:'SBZ',bo:1,fearless:true};
 function viewMatch(){
   const act=activeTeams(DB), own=DB.world&&DB.teams[managedTeamId(DB)]?managedTeamId(DB):act[0].id;
   SEL.blue=own;
@@ -5744,7 +5741,6 @@ function bindMatch(){
     else{LAST=null;LASTSER=series.rec;$('#result').innerHTML=renderSeries(LASTSER,true);bindSeries($('#result'),LASTSER)}};
   if(LASTSER)bindSeries($('#result'),LASTSER);else if(LAST)bindResult();
 }
-let LIVE=null;
 function bindResult(){
   const wb=$('#watch'); if(wb)wb.onclick=()=>{clearInterval(LIVE);const r=LAST,L=r.log.filter(l=>l.major||l.kind==='gank');let i=0,k=[0,0];
     const box=$('#live');box.innerHTML=`<div class="livebox"><div class="livesc"><span class="bl">${esc(r.sides[0].team.short)}</span> <b id="lk">0 : 0</b> <span class="rd">${esc(r.sides[1].team.short)}</span> <time id="lt">00:00</time></div><ol id="ll"></ol></div>`;
@@ -5912,8 +5908,8 @@ function bindData(){
     try{
       const loaded=await loadDB();DB=loaded;
       try{localStorage.setItem(STORAGE_NS+'-slot',SLOT)}catch(e){}
-      LAST=null;LASTSER=null;MC.res=null;SSET.view=null;
-      saveDB();VIEW='season';nav();
+      resetUiForWorld();
+      saveDB();navigateTo('season');
     }catch(e){
       SLOT=previous.slot;STORE=previous.key;DB=previous.db;
       msg('슬롯을 불러오지 못했습니다. 원본은 보존됩니다 — '+e.message);
@@ -5921,9 +5917,9 @@ function bindData(){
   });
   $('#dshow').onclick=()=>{$('#djson').value=packDB(DB);msg('압축된 JSON입니다. 그대로 복사해 두면 됩니다.')};
   $('#dapply').onclick=()=>{try{const d=unpackDB($('#djson').value);if(!d.teams||!d.players||!d.patch||!d.regions)throw new Error('teams, players, patch, regions 항목이 필요합니다');
-    if(d.version!==SAVE_VERSION)throw new Error(`이 세이브는 현재 버전(${SAVE_VERSION})과 호환되지 않습니다`);DB=d;saveDB();LAST=null;LASTSER=null;MC.res=null;msg('적용했습니다.')}catch(e){msg('적용하지 못했습니다 — '+e.message)}};
+    if(d.version!==SAVE_VERSION)throw new Error(`이 세이브는 현재 버전(${SAVE_VERSION})과 호환되지 않습니다`);DB=d;resetUiForWorld();saveDB();msg('적용했습니다.')}catch(e){msg('적용하지 못했습니다 — '+e.message)}};
   $('#dcopy').onclick=()=>{const v=$('#djson').value||packDB(DB);navigator.clipboard&&navigator.clipboard.writeText(v).then(()=>msg('복사했습니다.'),()=>msg('복사 권한이 없습니다. JSON 열기 후 직접 선택해서 복사하세요.'))};
-  $('#dreset').onclick=()=>{if(!confirm('이 슬롯의 커리어가 모두 지워집니다. 계속할까요?'))return;DB=buildWorld();saveDB();LAST=null;LASTSER=null;MC.res=null;VIEW='season';nav()};
+  $('#dreset').onclick=()=>{if(!confirm('이 슬롯의 커리어가 모두 지워집니다. 계속할까요?'))return;DB=buildWorld();resetUiForWorld();saveDB();navigateTo('season')};
 }
 
 /* ==== FILE: ui-player.js ==== */
@@ -6026,14 +6022,12 @@ function bindSquad(){
   document.querySelectorAll('tr[data-p]').forEach(tr=>{const open=()=>{OPEN_P=OPEN_P===tr.dataset.p?null:tr.dataset.p;nav();const d=$('#pdetail');if(OPEN_P&&d)d.scrollIntoView({behavior:'smooth',block:'start'})};tr.onclick=open;tr.onkeydown=e=>{if(e.key==='Enter')open()}});
 }
 // ---------- 몬테카를로 ----------
-let MC={blue:'HTG',red:'SBZ',n:300,res:null,running:false};
 
 /* ==== FILE: ui-draft.js ==== */
 // ===== LOL GM: 인터랙티브 밴픽 UI =====
 // 드래프트 규칙은 draft.js의 단계형 코어를 사용한다. 이 파일은 화면 상태와 입력만 담당한다.
 
 const DRAFT_UI_FILTERS=['ALL',...ROLES];
-let DRAFT_UI=null;
 
 function openInteractiveDraft(db,teamIds,playerTeamId,opt={}){
   const playerSide=teamIds.indexOf(playerTeamId);if(playerSide<0)throw new Error('Managed team is not part of draft');
@@ -6359,6 +6353,59 @@ function bindSeason(){
   $('#send').onclick=()=>run(()=>false);
 }
 
+/* ==== FILE: ui-state.js ==== */
+// ===== LOL GM: transient UI state and screen routing =====
+// View-local state is deliberately excluded from the persistent world DB.
+// These globals retain their established names for the standalone classic-script build.
+let LAST=null, LASTSER=null, VIEW='season', SQUAD=null, OPEN_P=null, LOGMODE='major', MSG='';
+let SCOUTSET={region:'ALL',role:'ALL',contract:'all',competition:'ALL',undervalued:false,q:''}, SQUAD_EDIT=null;
+let SSET={team:'HTG',region:null,division:null,seed:freshInternalSeed('world'),tab:'table',view:null};
+let SEL={blue:'HTG',red:'SBZ',bo:1,fearless:true};
+let LIVE=null;
+let MK={role:'ALL',scope:'region',tab:'fa'};
+let MC={blue:'HTG',red:'SBZ',n:300,res:null,running:false};
+let PSET={role:'ALL',q:'',region:'GLOBAL',patch:'ALL',comp:'ALL',period:'ALL',year:'',season:'ALL',split:'ALL',league:'ALL',scope:'ALL',position:'ALL',champ:null};
+let DRAFT_UI=null;
+
+// Keep the supported screen map and its binding ownership in one place.
+const UI_ROUTES=Object.freeze({
+  season:{render:viewSeason,bind:bindSeason},
+  match:{render:viewMatch,bind:bindMatch},
+  squad:{render:viewSquad,bind:bindSquad},
+  patch:{render:viewPatch,bind:bindPatch},
+  mc:{render:viewMC,bind:bindMC},
+  data:{render:viewData,bind:bindData}
+});
+let UI_RENDER_ID=0;
+function nav(){
+  const route=UI_ROUTES[VIEW];
+  if(!route)throw new Error('Unknown screen: '+VIEW);
+  const main=document.querySelector('#main');
+  if(!main)throw new Error('Main screen container missing');
+  UI_RENDER_ID++;
+  if(LIVE!==null)clearInterval(LIVE);
+  document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-current',b.dataset.v===VIEW?'page':'false'));
+  main.innerHTML=route.render();
+  route.bind();
+}
+function navigateTo(view,options={}){
+  if(!Object.prototype.hasOwnProperty.call(UI_ROUTES,view))return false;
+  VIEW=view;
+  nav();
+  if(!options.keepScroll)window.scrollTo(0,0);
+  return true;
+}
+function navKeepScroll(){
+  const y=window.scrollY,view=VIEW;
+  nav();
+  const generation=UI_RENDER_ID;
+  requestAnimationFrame(()=>{if(generation===UI_RENDER_ID&&VIEW===view)window.scrollTo(0,y)});
+}
+function resetUiForWorld(){
+  LAST=null;LASTSER=null;OPEN_P=null;SQUAD_EDIT=null;MSG='';
+  MC.res=null;SSET.view=null;
+}
+
 /* ==== FILE: app.js ==== */
 // ===== LOL GM: UI =====
 const SAVE_VERSION=15;
@@ -6367,8 +6414,7 @@ const DIRECT_FILE_PREVIEW=location.protocol==='file:'||location.origin==='null';
 let SLOT=(()=>{try{return localStorage.getItem(STORAGE_NS+'-slot')||'1'}catch(e){return '1'}})();
 const STORE_BASE=STORAGE_NS+'-db-v'+SAVE_VERSION+'-';
 let STORE=STORE_BASE+SLOT;
-let DB=null, LAST=null, LASTSER=null, VIEW='season', SQUAD=null, OPEN_P=null, LOGMODE='major', SAVEFAIL=false, MSG='';
-let SCOUTSET={region:'ALL',role:'ALL',contract:'all',competition:'ALL',undervalued:false,q:''}, SQUAD_EDIT=null;
+let DB=null, SAVEFAIL=false;
 // Older namespaces are left intact as user backups. Unsupported world versions
 // are never silently replaced or deleted during boot.
 // 저장: IndexedDB(용량 큼) 우선, 안 되면 localStorage
@@ -6443,21 +6489,11 @@ function freshInternalSeed(prefix='rng'){
 function grpAvg(p,g,k=100){return Math.round(avg(ATTR_GROUPS[g].map(a=>obsAttr(DB,p,a,k))))}
 function ovrTag(v){return `<span class="num ${v>=80?'hi':v>=70?'mid':'lo'}">${v}</span>`}
 
-function navKeepScroll(){const y=window.scrollY;nav();requestAnimationFrame(()=>window.scrollTo(0,y))}
-function nav(){
-  if(typeof LIVE!=='undefined')clearInterval(LIVE);
-  document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-current',b.dataset.v===VIEW?'page':'false'));
-  const m=$('#main');
-  m.innerHTML={season:viewSeason,match:viewMatch,squad:viewSquad,patch:viewPatch,mc:viewMC,data:viewData}[VIEW]();
-  ({season:bindSeason,match:bindMatch,patch:bindPatch,squad:bindSquad,champs:()=>{},mc:bindMC,data:bindData})[VIEW]();
-}
-
 // ---------- 선수단 ----------
 const TAC_KO={aggression:'공격성',risk_tolerance:'위험 감수',objective_priority:'오브젝트 우선도',vision_investment:'시야 투자',scaling_preference:'후반 지향'};
 // ---------- 데이터 ----------
 // ---------- 시리즈 ----------
 // ---------- 시즌 (월드) ----------
-let SSET={team:'HTG',region:null,division:null,seed:freshInternalSeed('world'),tab:'table',view:null};
 function mySeasonKey(){const w=DB.world,rid=DB.teams[managedTeamId(DB)].region;const ks=Object.values(w.seasons).filter(s=>s.region===rid).sort((a,b)=>(b.split||0)-(a.split||0));return ks.length?ks[0].key:null}
 function curS(){const w=DB.world;if(!SSET.view||!w.seasons[SSET.view])SSET.view=mySeasonKey()||Object.keys(w.seasons)[0];return w.seasons[SSET.view]}
 function sName(s){return DB.competitions[s.comp].name+(s.label?' '+s.label:'')}
@@ -6528,7 +6564,7 @@ function renderReport(r){
    </div></section>`;
 }
 
-document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{VIEW=b.dataset.v;nav();window.scrollTo(0,0)});
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>navigateTo(b.dataset.v));
 $('#main').innerHTML='<p class="empty">세계를 불러오는 중…</p>';
 loadDB().then(d=>{DB=d;nav()}).catch(e=>{
   console.error('LOL GM initialization failed',e);
