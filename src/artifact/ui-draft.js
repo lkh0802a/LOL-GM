@@ -111,6 +111,16 @@ function draftUiSeriesMeta(){
   const m=DRAFT_UI.meta;if(!m?.official)return '';
   return `<section class="du-series-meta"><div><small>${esc(m.competition)} · ${m.game}세트</small><strong>${esc(m.me)} ${m.score[0]} : ${m.score[1]} ${esc(m.opp)}</strong></div><div><small>FIRST SELECTION</small><b>${esc(m.firstSelectionTeam)}</b><span>${esc(m.firstSelectionWhy)}</span></div></section>${draftUiFearlessStrip()}`;
 }
+function draftUiSigned(v){return (v>0?'+':'')+v}
+function draftUiAnalysisContent(){
+  if(!DRAFT_UI?.selected)return '<div class="du-analysis-empty"><b>후보 분석</b><span>챔피언을 선택하면 현재 팀 기준 평가를 표시합니다.</span></div>';
+  const s=DRAFT_UI.state,turn=draftTurn(s),a=turn&&draftCandidateAnalysis(s,DRAFT_UI.playerSide,DRAFT_UI.selected),c=s.db.patch.champions[DRAFT_UI.selected];if(!a||!c)return '';
+  const roles=a.roles.map(r=>ROLE_KO[r]||r).join(' · ')||'—';
+  if(a.kind==='B')return `<div class="du-analysis-head"><div><b>${esc(championDisplayName(c))}</b><span>${esc(roles)}</span></div><small>밴 후보 · 상대의 숨은 포지션/의도는 사용하지 않음</small></div><div class="du-analysis-metrics"><div><span>메타 인식</span><b>${a.meta}</b></div><div><span>초반</span><b>${a.early}/10</b></div><div><span>중반</span><b>${a.mid}/10</b></div><div><span>후반</span><b>${a.late}/10</b></div></div>`;
+  const rows=(a.roleFits||[]).map(x=>`<span><b>${ROLE_KO[x.role]||x.role}</b> ${esc(x.player||'—')} · 숙련 ${x.mastery}</span>`).join('');
+  return `<div class="du-analysis-head"><div><b>${esc(championDisplayName(c))}</b><span>${esc(roles)}</span></div><small>우리 팀 기준 · 최종 포지션은 드래프트 종료 후 확정</small></div><div class="du-analysis-metrics"><div><span>메타 인식</span><b>${a.meta}</b></div><div><span>최고 숙련</span><b>${a.mastery}</b></div><div><span>조합 보정</span><b>${draftUiSigned(a.comp)}</b></div><div><span>상성 보정</span><b>${draftUiSigned(a.counter)}</b></div></div><div class="du-analysis-roles">${rows}</div>`;
+}
+function draftUiAnalysisPanel(){return `<aside class="du-analysis" id="du-analysis">${draftUiAnalysisContent()}</aside>`}
 function draftUiGrid(){
   const s=DRAFT_UI.state,rows=Object.values(s.db.patch.champions).filter(draftUiMatch).sort((a,b)=>championDisplayName(a).localeCompare(championDisplayName(b),'ko'));
   return `<div class="du-grid">${rows.map(c=>{const st=draftUiChampionState(c),sel=DRAFT_UI.selected===c.id;
@@ -128,6 +138,7 @@ function draftUiRender(){
     ${done?`<section class="du-done"><h3>드래프트 완료</h3><p>${esc(DRAFT_UI.doneText||'단계형 밴픽 코어와 동일한 결과입니다.')}</p><button class="primary" id="du-finish">${esc(DRAFT_UI.finishLabel||(DRAFT_UI.onComplete?'드래프트 확정':'연습 종료'))}</button></section>`:
     `<section class="du-pool">
       <div class="du-tools"><input id="du-search" type="search" autocomplete="off" placeholder="챔피언 검색" value="${esc(DRAFT_UI.query)}"><div class="chips">${DRAFT_UI_FILTERS.map(r=>`<button data-du-role="${r}" aria-pressed="${DRAFT_UI.filter===r}">${r==='ALL'?'전체':ROLE_KO[r]}</button>`).join('')}</div></div>
+      ${draftUiAnalysisPanel()}
       <div id="du-grid">${draftUiGrid()}</div>
       <div class="du-lock"><div><b>${mine?(DRAFT_UI.selected?esc(championLabel(s.db,DRAFT_UI.selected)):'챔피언을 선택하세요'):'상대 팀이 선택 중입니다'}</b><small>${mine?(turn.kind==='P'?'픽 단계에서는 포지션을 공개하지 않습니다. 드래프트 종료 후 합법적인 5포지션 배치를 확정합니다.':'선택 후 확정해야 밴됩니다.'):'AI는 공개된 챔피언과 가능한 포지션만 보고 판단합니다.'}</small></div><button class="primary" id="du-lock" ${mine&&DRAFT_UI.selected?'':'disabled'}>${turn.kind==='B'?'밴 확정':'픽 확정'}</button></div>
     </section>`}
@@ -144,7 +155,7 @@ function draftUiBind(){
   const lock=$('#du-lock');if(lock)lock.onclick=()=>draftUiLock();
 }
 function draftUiBindGrid(){
-  document.querySelectorAll('[data-du-champ]').forEach(b=>b.onclick=()=>{DRAFT_UI.selected=b.dataset.duChamp;document.querySelectorAll('[data-du-champ]').forEach(x=>x.classList.toggle('sel',x===b));const lock=$('#du-lock');if(lock)lock.disabled=false;const name=lock?.previousElementSibling?.querySelector('b');if(name)name.textContent=championLabel(DRAFT_UI.state.db,DRAFT_UI.selected)});
+  document.querySelectorAll('[data-du-champ]').forEach(b=>b.onclick=()=>{DRAFT_UI.selected=b.dataset.duChamp;document.querySelectorAll('[data-du-champ]').forEach(x=>x.classList.toggle('sel',x===b));const lock=$('#du-lock');if(lock)lock.disabled=false;const name=lock?.previousElementSibling?.querySelector('b');if(name)name.textContent=championLabel(DRAFT_UI.state.db,DRAFT_UI.selected);const analysis=$('#du-analysis');if(analysis)analysis.innerHTML=draftUiAnalysisContent()});
 }
 function draftUiLock(){
   if(!DRAFT_UI||!DRAFT_UI.selected)return;const s=DRAFT_UI.state,turn=draftTurn(s);if(!turn||turn.side!==DRAFT_UI.playerSide)return;

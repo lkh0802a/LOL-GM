@@ -143,6 +143,19 @@ function draftPickValue(state,side,role,c,mine){
   const flex=ch.roles.length>1?0.04:0,hist=state.ctx.byTeam[state.teamIds[side]]||{won:[],lost:[]},series=(hist.won.includes(c)?0.03:0)-(hist.lost.includes(c)?0.06:0);
   const f={meta:state.vhat[side][c]*0.35,mastery:draftMastery(p,c)/100*0.5,comp:comp*0.15,counter:counter*BAL.counter,flex,series};f.total=f.meta+f.mastery+f.comp+f.counter+f.flex+f.series;return f;
 }
+function draftCandidateAnalysis(state,side,champ){
+  const c=state.db.patch.champions[champ];if(!c)return null;
+  const turn=draftTurn(state),kind=turn?.kind||'P',roles=(kind==='P'?draftFeasibleRoles(state,side,champ):(c.roles||[]).filter(r=>ROLES.includes(r)));
+  const out={champ,kind,meta:Math.round(clamp(state.vhat[side]?.[champ]||0,0,1)*100),roles,early:c.kit.early,mid:c.kit.mid,late:c.kit.late};
+  if(kind==='P'){
+    const mine=state.pickList[side].map(id=>state.db.patch.champions[id]).filter(Boolean);
+    out.roleFits=roles.map(role=>{const p=state.roster[side][role],f=draftPickValue(state,side,role,champ,mine);return {role,player:p?.name||null,mastery:Math.round(draftMastery(p,champ)),comp:Math.round((f.comp||0)*100),counter:Math.round((f.counter||0)*100)}}); 
+    out.mastery=out.roleFits.length?Math.max(...out.roleFits.map(x=>x.mastery)):0;
+    out.comp=out.roleFits.length?Math.round(avg(out.roleFits.map(x=>x.comp))):0;
+    out.counter=out.roleFits.length?Math.round(avg(out.roleFits.map(x=>x.counter))):0;
+  }
+  return out;
+}
 function draftShortlist(state,side,role){
   const k=side+role;if(!state.shortlists[k]){const p=state.roster[side][role];state.shortlists[k]=state.byRole[role].map(c=>({c,q:state.vhat[side][c.id]*0.35+draftMastery(p,c.id)/200})).sort((a,b)=>b.q-a.q).map(x=>x.c)}
   return state.shortlists[k].filter(c=>!state.taken.has(c.id)).slice(0,10);
