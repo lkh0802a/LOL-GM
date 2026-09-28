@@ -4,8 +4,11 @@
 
 - **5-1 — canonical registration and roster helpers (completed):** deduplicate local-region and contracted-move checks, route player actions and AI market through the roster domain, unify detachment, prune proven-dead `PAY_SCALE` and `mResign` aliases.
 - **5-2 — remaining legacy/optional domain fallback audit (completed):** remove fallback branches for APIs guaranteed by the canonical module manifest; prevent missing active gameplay dependencies from being silently skipped. Retain actual optional browser APIs and historical save migration.
-- **5-3 — duplicate-flow and module-boundary consolidation (this PR):** audit remaining reachable contract, lineup and roster flows; remove only proven duplicates and add parity regressions.
-- **5-4 — final compatibility and acceptance (pending):** expanded regression and multi-season/save-resume checks, full CI and main-build verification before declaring stage 5 complete.
+- **5-3 — duplicate-flow and module-boundary consolidation (completed):** audit remaining reachable contract, lineup and roster flows; remove only proven duplicates and add parity regressions.
+- **5-4 — final compatibility and acceptance (three small increments):**
+  - **5-4a (this PR):** critical-path regression coverage for initial-manager negotiation, scheduled series preparation, legal reserve call-ups and stale-preview rejection.
+  - **5-4b (pending):** long-career progression and legacy save/restore acceptance.
+  - **5-4c (pending):** final regression/performance/build gate, generated artifact parity and Stage 5 sign-off.
 
 
 ## Goal and boundaries
@@ -80,5 +83,30 @@ smoke-called functions. Prior regression `01`–`11h`, initial-market/roster
 smoke, item/rune/draft performance and standalone build remain mandatory.
 
 **5-4 final compatibility and acceptance is not included in 5-3.**
+
+## Stage 5-4a: Focused existing-feature regression (this PR)
+
+Scope is strictly **new tests and maintenance documentation**, not another
+gameplay refactor. The preceding 5-1–5-3 cleanup removed unused entrypoints
+but must leave supported managers, world simulation and roster flows intact.
+
+- Regression `11j` exercises the real `initialStartNegotiation` route:
+  unauthorized external squad, unevaluated prospect, evaluated candidate,
+  single open negotiation and no premature player/team mutation.
+- Regression `11k` exercises `scheduledSeriesSession` in a regular-season
+  league fixture: deterministic series seed, Bo3, First Selection, Fearless,
+  first-game setup and unchanged pending official fixture.
+- Regression `11l` verifies the supported `rosterMoveCheck` against the
+  manager `roster.plan` transaction gateway: read-only preflight and preview,
+  legal call-up, consistent membership and replay protection.
+- `scripts/check.mjs` makes 11j–11l mandatory so future cleanup cannot
+  silently drop these acceptance tests.
+
+All earlier stage 1–5-3 tests and smoke/perf/build remain required. No
+new save format, salary, roster, draft or patch rule is introduced.
+Long-career and save-resume stress acceptance is **5-4b**, not included
+here. Final HTML/CI sign-off is **5-4c**, also pending.
+
+
 
 **Not included:** Stage 6 UI-state architecture; new patch, youth or transfer rules; deleting any historical save/patch/game record; globally replacing the bootstrap/domain-writer APIs with a new data model.
