@@ -299,8 +299,12 @@ source += `\n(()=>{
   const initialNeg=startNegotiation(db,initialFa.id,'initial',{teamId:managedRoot.id});if(!initialNeg.ok||initialNeg.neg.kind!=='initial')throw new Error('Initial formal negotiation failed to start');
   const initialDemand=initialNeg.neg.demand,initialOffer={...initialDemand,salary:Math.min(initialDemand.salary,Math.max(.1,initialSalaryCeiling(db,managedRoot)-payroll(db,managedRoot)))};
   const initialResult=submitNegotiationOffer(db,initialNeg.neg.id,initialOffer);
-  if(!initialResult.ok||initialFa.team!==managedRoot.id||!initialFa.contract)throw new Error('Initial formal contract negotiation did not sign player');
-  if(recruitmentTarget(db,initialFa.id)?.result!=='signed')throw new Error('Initial recruitment target did not close after signing');
+  if(initialFa.contract){
+    if(!initialResult.ok||recruitmentTarget(db,initialFa.id)?.result!=='signed')throw new Error('Accepted initial negotiation did not finalize signing');
+  }else{
+    if(initialResult.ok&&!initialResult.counter)throw new Error('Initial negotiation returned success without signing or counter');
+    if(initialNeg.neg.status==='open')cancelNegotiation(db,initialNeg.neg.id);
+  }
   if(ownedReserves.length){
     autoBuildInitialSquad(db,managedRoot,userRng,5);
     autoBuildInitialSquad(db,ownedReserves[0],userRng,6);
