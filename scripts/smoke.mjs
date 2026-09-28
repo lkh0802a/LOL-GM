@@ -32,7 +32,24 @@ source += `\n(()=>{
   for(const R of Object.values(db.regions)){
     if(R.policyMode!=='engine'||!R.policyBasis||R.policyBasis.source!=='engine')throw new Error('Region policy is not engine-owned: '+R.id);
     if(R.payScale==null||R.importLimit==null||R.importRecruitMinGap==null||!R.rosterRuleProfile||!R.marketProfile||!R.office||R.spendingRule==null)throw new Error('Policy engine left unresolved output: '+R.id);
+    if(R.importLimit!==FIRST_TEAM_NON_LOCAL_LIMIT||R.importLimit!==2)throw new Error('First-team non-local cap drifted: '+R.id+' '+R.importLimit);
+    if(R.reserveImportLimit==null)throw new Error('Reserve non-local policy missing: '+R.id);
   }
+  const eligibilityProbe={id:'ELIGIBILITY_PROBE',region:'ORIGIN',nationality:'ORIGIN',contractedMoves:[]};
+  ensurePlayerEligibility(eligibilityProbe);
+  if(eligibilityProbe.originRegion!=='ORIGIN'||eligibilityProbe.activeLocalRegion!=='ORIGIN'||!isLocalPlayer(eligibilityProbe,'ORIGIN'))throw new Error('Player local identity initialization failed');
+  eligibilityProbe.activeLocalRegion='ACTIVE';
+  if(!isLocalPlayer(eligibilityProbe,'ACTIVE')||isLocalPlayer(eligibilityProbe,'ORIGIN')||eligibilityProbe.region!=='ORIGIN')throw new Error('Active local was not separated from origin identity');
+  eligibilityProbe.contractedMoves=[{season:db.year,kind:'permanent',counts:true},{season:db.year,kind:'loan',counts:true}];
+  if(!contractedMoveError(db,eligibilityProbe)||contractedMoveCount(db,eligibilityProbe)!==2)throw new Error('Season transfer cap failed');
+  const regR=Object.values(db.regions)[0],foreignR=Object.values(db.regions).find(x=>x.id!==regR.id);
+  if(foreignR){
+    const ids=['REG_NL_1','REG_NL_2','REG_NL_3'],fakeTeam={id:'REG_PROBE_TEAM',region:regR.id,division:1,roster:ids.slice(0,2)};
+    for(const id of ids)db.players[id]={id,region:foreignR.id,originRegion:foreignR.id,originLocalRegion:foreignR.id,activeLocalRegion:foreignR.id,localEligibility:{origin:foreignR.id,active:foreignR.id,qualifications:{}},contractedMoves:[]};
+    if(teamNonLocalCount(db,fakeTeam)!==2||nonLocalLimitForTeam(db,fakeTeam)!==2||!localRegistrationError(db,fakeTeam,db.players[ids[2]]))throw new Error('First-team non-local registration guard failed');
+    for(const id of ids)delete db.players[id];
+  }
+  if(Object.values(OFFICE_STYLES).some(x=>Object.prototype.hasOwnProperty.call(x.w,'fearless')))throw new Error('Fearless leaked back into office policy');
   const namedPolicies=['KR','CN','EU','NA','AP','BR'].map(id=>db.regions[id]).filter(Boolean);
   if(namedPolicies.some(R=>R.sfrMode==='kr_progressive'||R.sfrMode==='lec_50_100'))throw new Error('Named-region hand policy leaked into engine world');
   if(PAY_SCALE.KR||PAY_SCALE.CN||PAY_SCALE.EU||PAY_SCALE.NA)throw new Error('Named regional pay scales are still hardcoded');
