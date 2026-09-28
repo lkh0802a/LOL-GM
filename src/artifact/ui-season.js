@@ -97,7 +97,7 @@ function bindSetup(){
   });
   $('#cfgdef').onclick=()=>{DB.worldConfig=defaultWorldConfig();dirty()};
   $('#regen').onclick=()=>{const errs=validateConfig(cfg);if(errs.length){$('#cfgmsg').className='warn';$('#cfgmsg').textContent=errs.join(' / ');return}
-    DB=buildWorld(cfg);const first=managerSelectableTeams(DB)[0];SSET.team=first?first.id:null;SSET.region=first?first.region:null;SSET.division=first?(first.division||1):1;LAST=null;LASTSER=null;MC.res=null;saveDB();nav()};
+    resetUiForWorld();DB=buildWorld(cfg);const first=managerSelectableTeams(DB)[0];SSET.team=first?first.id:null;SSET.region=first?first.region:null;SSET.division=first?(first.division||1):1;LAST=null;LASTSER=null;MC.res=null;saveDB();nav()};
   bindManagerTeamPicker();
   $('#sstart').onclick=()=>{if(!isManagerSelectableTeam(DB,SSET.team)){const first=managerSelectableTeams(DB)[0];SSET.team=first?first.id:null}if(!SSET.team)return;SSET.view=null;startCareer(DB,SSET.team,freshInternalSeed('world'));saveDB();nav()};
 }
@@ -122,11 +122,38 @@ function bindSeason(){
     return;
   }
   if(w.pendingOfficial&&w.pendingOfficial.queue?.length){
-    document.querySelectorAll('.controls button').forEach(b=>b.disabled=true);requestAnimationFrame(()=>openPendingOfficialDraft(DB));return;
+    document.querySelectorAll('.controls button').forEach(b=>b.disabled=true);
+    const db=DB,renderId=UI_RENDER_ID;
+    requestAnimationFrame(()=>{
+      if(db!==DB||VIEW!=='season'||UI_RENDER_ID!==renderId||UI_OVERLAY||
+        !db.world?.pendingOfficial?.queue?.length)return;
+      openPendingOfficialDraft(db);
+    });
+    return;
   }
-  const run=(stop)=>{document.querySelectorAll('.controls button').forEach(b=>b.disabled=true);let n=0;
-    const step=()=>{for(let i=0;i<2;i++){const r=playWorldDay(DB);n++;if(!r||DB.world.phase!=='season'||r.pending||stop(r))return fin()}$('#sprog').textContent=`${n}일 진행 · ${nextDate(DB)||''}`;setTimeout(step,0)};
-    const fin=()=>{saveDB();nav()};step()};
+  const run=(stop)=>{
+    document.querySelectorAll('.controls button').forEach(b=>b.disabled=true);
+    const db=DB;let n=0;
+    const task=beginUiTask('season-days',()=>{if(n)saveDB()});
+    const fin=()=>{if(!finishUiTask(task))return;saveDB();nav()};
+    const step=()=>{
+      if(!isUiTaskCurrent(task))return;
+      try{
+        for(let i=0;i<2;i++){
+          const result=playWorldDay(db);n++;
+          if(!result||db.world.phase!=='season'||result.pending||stop(result))return fin();
+        }
+        const progress=$('#sprog');
+        if(progress)progress.textContent=`${n}일 진행 · ${nextDate(db)||''}`;
+        setTimeout(step,0);
+      }catch(e){
+        finishUiTask(task);if(n)saveDB();
+        console.error('LOL GM date progression failed',e);
+        MSG='날짜 진행 중 오류: '+e.message;nav();
+      }
+    };
+    step();
+  };
   const me=managedTeamId(DB), st0=w.step;
   $('#sday').onclick=()=>run(()=>true);
   $('#smine').onclick=()=>run(r=>r.played.some(x=>x.day.matches.some(m=>m.a===me||m.b===me)));
