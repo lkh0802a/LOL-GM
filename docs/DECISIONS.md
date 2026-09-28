@@ -570,8 +570,37 @@ This applies retroactively to completed major items during later UI touches and 
 - Every active regional league owns its own league-office policy state for every implemented rule category that applies to domestic competition.
 - Verified real-world rules may seed a named region's initial state, but they are inputs to the shared rules engine, not special-case engine branches.
 - Missing or uncertain regional rules must remain region-local: infer from that region's own structure/evidence or preserve the status quo. Never copy LCK, LPL, LEC, LCS, LCP, CBLOL, or another region merely as a fallback.
-- Rule categories include roster/registration, contracts where league-governed, coaching-staff registration, foreign-player limits, spending controls, Tier-2 ownership and movement, promotion/relegation, domestic competition formats, draft/Fearless, side/First Selection, scheduling, licensing and other office-owned constraints.
+- Rule categories include roster/registration, contracts where league-governed, coaching-staff registration, local/non-local eligibility administration, spending controls, Tier-2 ownership and movement, promotion/relegation, domestic competition formats, scheduling, licensing and other office-owned constraints. Fearless and First Selection are fixed match-system concepts and are not regional-office policy.
 - International-tournament rules belong to the international office and do not inherit a domestic office rule unless the international rule explicitly references it.
 - Human-managed and AI-managed clubs use the same rule checks and transaction/state-transition paths. The only ownership difference is who chooses an action: the player or that club's AI.
 - AI clubs are bounded decision-makers, not optimal solvers. Their choices are based on available/scouted information, staff quality, finances, goals and philosophy, so they can make explainable mistakes without bypassing rules.
 - Acceptance for a new rule system must include cross-region coverage: at least two different regional policy states, plus parity checks showing human and AI clubs cannot bypass the same constraints.
+
+
+## D-047 — Local eligibility, transfers and roster registration are separate rule layers
+
+**Decision:** Player identity, local eligibility, transfer counting and competition registration are distinct state machines and must not be inferred from one `player.region` comparison.
+
+- A player keeps nationality/origin identity independently from the one active registration-local eligibility.
+- Multi-national players choose one origin local at career start; that first selection remains the permanent origin-local entitlement.
+- A player may acquire a non-origin local only through continuous service in one region under qualification terms agreed by that regional office and the international office. Qualification grants a player/agent choice; it does not auto-switch the active local.
+- Only one active local exists at a time. Relinquishing an acquired local restores the origin local immediately; a relinquished non-origin local must be earned again from scratch.
+- Same-region club movement preserves service. A same-region FA gap preserves progress but adds no service time. Cross-region loan pauses progress without adding service in either region. Registration to another region by normal contract resets the previous region's progress.
+- The official registered-roster non-local cap is globally fixed at two.
+- Contracted club-to-club permanent transfers are capped at two per player per year. Free-agent signings, same-organization first/reserve movement and league-restructuring movement are not transfers.
+- Regional offices own transfer-window timing and domestic registration-window/change-count rules. Free agents may sign year-round, but official eligibility begins at a valid registration opportunity.
+- Official first-team registration is 5–10 players; the ten-player cap does not limit the club's total contracted players.
+- A domestically deregistered player may be registered again only after skipping at least one registration period and consuming the normal available change allowance.
+- International tournaments lock the initially submitted final roster for the event; only pre-published international-office emergency replacement rules may override the lock.
+- Detailed canonical rules are maintained in `docs/ROSTER_TRANSFER_LOCAL_RULES.md`.
+
+
+## D-048 — Fearless and First Selection are fixed match-system invariants
+
+**Decision:** Fearless and First Selection are core LOL GM match rules, not policy toggles owned by regional or international offices.
+
+- Fearless remains fixed for official series and cannot be enabled/disabled by a league office.
+- First Selection's concept and choice procedure remain fixed.
+- Game-one source follows D-043: domestic double round-robin home team; explicitly seeded domestic playoff higher seed; international knockout/bracket coin toss after matchup formation.
+- Games two onward always assign First Selection to the previous game's loser.
+- Offices may schedule competitions and registration rules around these systems but may not replace or disable the systems themselves.

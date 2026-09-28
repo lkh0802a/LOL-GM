@@ -269,3 +269,10 @@ The player is the head coach and retains final authority over consequential spor
 ### Cross-region rule completion gate — 2026-09-28
 
 No regulation feature is accepted as complete when implemented for one named league only. Every new office-owned rule must be represented as a shared engine capability with region-owned policy/config state. Named leagues may start with different verified initial values; unknown values remain local to that region's policy engine rather than inheriting another league's settings. Acceptance requires cross-region regression coverage and human/AI rule-parity checks. International competition rules remain owned by the international office.
+
+
+### Local eligibility / transfer / roster-registration checkpoint — 2026-09-28
+
+The current design contract is frozen in `docs/ROSTER_TRANSFER_LOCAL_RULES.md` and D-047/D-048. Player origin/nationality must be separated from active local registration eligibility; a globally fixed non-local roster cap of two and a globally fixed official first-team registration range of 5–10 apply. Contracted permanent transfers are limited to two per player per year, while free-agent signings are not transfers and may occur year-round subject to the next official registration opportunity. Domestic registration windows/change counts remain regional-office policy, with one registration-window cooldown before a deregistered player can return. International tournaments lock the initially submitted final roster except for pre-published emergency replacement rules.
+
+Fearless and First Selection are fixed core match-system concepts, not regional-office or international-office toggles. The earlier cross-region rule checkpoint is therefore interpreted only for genuinely office-owned regulation categories.
