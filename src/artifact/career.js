@@ -171,7 +171,7 @@ function runInitialDepthMarket(db,teams,seed){return runInitialMarketTo(db,teams
 function autoBuildInitialSquad(db,t,rng,target=null){
   const team=teamRef(db,t),limits=initialSquadLimits(db,team),want=Math.min(limits.max,Math.max(limits.min,target??initialRosterTarget(db,team)));team.initialRosterTarget=want;
   while(team.roster.length<want){const market=initialMarketSnapshot(db,[team]),p=initialPickCandidate(db,team,'depth|'+team.roster.length,market);if(!p)break;const terms=aiInitialContractTerms(db,p,team,rng),chk=initialOfferCheck(db,p,team,terms);if(!chk.ok)break;const done=commitWorldAction(db,{type:'player.sign',pid:p.id,teamId:team.id,kind:'initial',actor:'system',
-      salary:terms.salary,years:terms.years,terms});if(!done.ok)break}
+      salary:terms.salary,years:terms.years,terms});if(!done.ok)throw new Error('Initial roster transaction rejected: '+done.reason+' / '+(done.errors||[]).join(' | '))}
   const errors=initialSquadErrors(db,team);if(errors.length)throw new Error(team.name+' 초기 로스터 오류: '+errors.join(', '));return team;
 }
 function autoBuildInitialWorld(db,excludedIds,seed){
