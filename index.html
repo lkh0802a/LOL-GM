@@ -1544,10 +1544,10 @@ function generateRuneContentName(db,rng,spec){
   return contentUniqueName(db,'rune',rng,()=>runeNameCandidate(rng,styleKey,effect,spec.kind));
 }
 
-/* ==== FILE: patch.js ==== */
-// ===== LOL GM: 패치 / 메타 =====
-// 패치 = 수치 변화(델타)의 기록. 어떤 시점의 패치든 기본 데이터 + 델타로 다시 만들 수 있다
-const PATCH_CACHE=new WeakMap();
+/* ==== FILE: meta.js ==== */
+// ===== LOL GM: Professional meta evidence domain =====
+// Owns match-derived meta history, indexes, filtered queries and champion meta insights.
+
 const META_HISTORY_CACHE=new WeakMap();
 const EMPTY_META_HISTORY=[];
 function patchCache(db){let c=PATCH_CACHE.get(db);if(!c){c=new Map();PATCH_CACHE.set(db,c)}return c}
@@ -1569,41 +1569,7 @@ function metaRowsFiltered(db,filter={}){
   const base=choices.reduce((a,b)=>b.length<a.length?b:a),rows=base.filter(r=>(!filter.region||(r.regions||[]).includes(filter.region))&&(!filter.patch||r.patch===filter.patch)&&(!filter.comp||r.comp===filter.comp)&&(!filter.season||r.season===filter.season)&&(!filter.year||r.year===+filter.year)&&(!filter.split||String(r.split)===String(filter.split))&&(!filter.league||r.league===filter.league)&&(!filter.scope||(filter.scope==='INTL'?r.international:!r.international))&&(!filter.from||r.date>=filter.from)&&(!filter.to||r.date<=filter.to));
   c.filtered.set(key,rows);return rows;
 }
-const RULE_KO={dragonRespawn:'드래곤 재생성(분)',baronBuff:'바론 버프 지속(분)',csGold:'미니언 골드',killGold:'처치 골드',heraldSpawn:'전령 등장(분)',baronSpawn:'바론 등장(분)'};
-function initPatches(db){
-  db.patches={list:[],history:[],prev:[],nextDate:null,newIdx:0,y:0,n:0,releasesByYear:{},releaseTargets:{},reworksByYear:{},majorReworksByYear:{},systemLifeByYear:{},cadence:14};
-  db.metaStats={};db.metaGames=0;db.regionMetaStats={};db.regionMetaGames={};
-}
-function applyNote(P,n){
-  const c=P.champions[n.c];
-  P._revision=(P._revision||0)+1;if(/^item/.test(n.type)||/^rune/.test(n.type))P._systemRevision=(P._systemRevision||0)+1;
-  if(n.type==='skill'&&c&&c.skills&&c.skills[n.slot])c.skills[n.slot][n.field]=JSON.parse(JSON.stringify(n.new));
-  else if(n.type==='kit'&&c)c.kit[n.key]=n.new!=null?n.new:clamp(c.kit[n.key]+n.d,1,10);
-  else if(n.type==='base'&&c)c.base[n.key]=n.new!=null?n.new:Math.round(c.base[n.key]*(1+n.d)*100)/100;
-  else if(n.type==='new'){const nc=archChampion(n.def.name,n.def.roles,n.def.arch,n.def.dmg,null,n.def.id||championId(n.def.name));nc.releaseDate=n.def.releaseDate||null;nc.proEligibleDate=n.def.proEligibleDate||null;nc.nameKo=n.def.nameKo||nc.nameKo;nc.naming=n.def.naming?JSON.parse(JSON.stringify(n.def.naming)):null;nc.visual=JSON.parse(JSON.stringify(n.def.visual||generatedChampionVisual(n.def)));P.champions[nc.id]=nc}
-  else if(n.type==='rework'&&c&&c.visual){c.visual={...c.visual,revision:(c.visual.revision||0)+(n.scope==='major'?1:0)}}
-  else if(n.type==='rule')P.rules[n.key]=n.v;
-  else if(n.type==='item'&&P.itemDefs&&P.itemDefs[n.id]){const d=P.itemDefs[n.id];if(n.field==='cost'){const delta=Number(n.new)-Number(d.cost||0);d.cost=n.new;d.recipeCost=Math.max(0,Math.round((Number(d.recipeCost??d.cost)+delta)*100)/100)}else{d.effects=d.effects||{};d.effects[n.field]=n.new}}
-  else if(n.type==='item_new'){P.itemDefs=P.itemDefs||{};P.itemDefs[n.def.id]=JSON.parse(JSON.stringify(n.def));P.items=P.items||{};for(const cls of n.def.classes||[]){P.items[cls]=P.items[cls]||[];if(!P.items[cls].includes(n.def.id))P.items[cls].push(n.def.id)}}
-  else if(n.type==='item_remove'&&P.itemDefs&&P.itemDefs[n.id])P.itemDefs[n.id].active=false;
-  else if(n.type==='rune'&&P.runeDefs&&P.runeDefs[n.id]){const d=P.runeDefs[n.id];d.effects=d.effects||{};d.effects[n.field]=n.new}
-  else if(n.type==='rune_new'){P.runeDefs=P.runeDefs||{};P.runeDefs[n.def.id]=JSON.parse(JSON.stringify(n.def));P.runes=P.runes||{};const sid=String(n.def.styleId),slot=Math.max(0,Math.min(3,+n.def.slot||0));if(P.runes[sid]){P.runes[sid].slots=P.runes[sid].slots||[[],[],[],[]];P.runes[sid].slots[slot]=P.runes[sid].slots[slot]||[];if(!P.runes[sid].slots[slot].includes(n.def.id))P.runes[sid].slots[slot].push(n.def.id)}}
-  else if(n.type==='rune_remove'&&P.runeDefs&&P.runeDefs[n.id])P.runeDefs[n.id].active=false;
-}
-function getPatch(db,id){
-  if(db.patch&&db.patch.id===id)return db.patch;
-  const cache=patchCache(db);if(cache.has(id))return cache.get(id);
-  const P=buildPatch();
-  if(P.id===id){cache.set(id,P);return P}
-  const hist=db.patches.history&&db.patches.history.length?db.patches.history:db.patches.list;
-  for(const p of hist){for(const n of p.notes||[])applyNote(P,n);P.id=p.id;if(P.id===id){cache.set(id,P);return P}}
-  cache.set(id,P);return P;
-}
-function championProEligible(db,c,date=db.worldDate){
-  if(!c)return false;
-  return !c.proEligibleDate||date>=c.proEligibleDate;
-}
-function championAvailableForContext(db,c,ctx={}){if(!c)return false;if(ctx.practice)return true;if(!championProEligible(db,c))return false;return !ctx.championPool||ctx.championPool.includes(c.id)}
+
 function recordMeta(db,r){
   if(!db.metaStats)return;
   db.metaGames=(db.metaGames||0)+1;
@@ -1640,6 +1606,50 @@ function metaTable(db,regionId=null){
   const G=Math.max(1,regionId?(db.regionMetaGames||{})[regionId]||0:db.metaGames||0), st=regionId?((db.regionMetaStats||{})[regionId]||{}):(db.metaStats||{});
   return Object.values(db.patch.champions).map(c=>{const s=st[c.id]||{p:0,w:0,b:0};return {c,p:s.p,b:s.b,w:s.w,pres:(s.p+s.b)/G,wr:s.p?s.w/s.p:null,sample:G,eligible:championProEligible(db,c)}}).sort((a,b)=>b.pres-a.pres);
 }
+
+/* ==== FILE: patch.js ==== */
+// ===== LOL GM: Patch lifecycle / balance domain =====
+// Owns patch snapshots, deltas, eligibility, diagnosis, champion/system balance, reworks and releases.
+
+// 패치 = 수치 변화(델타)의 기록. 어떤 시점의 패치든 기본 데이터 + 델타로 다시 만들 수 있다
+const PATCH_CACHE=new WeakMap();
+
+const RULE_KO={dragonRespawn:'드래곤 재생성(분)',baronBuff:'바론 버프 지속(분)',csGold:'미니언 골드',killGold:'처치 골드',heraldSpawn:'전령 등장(분)',baronSpawn:'바론 등장(분)'};
+function initPatches(db){
+  db.patches={list:[],history:[],prev:[],nextDate:null,newIdx:0,y:0,n:0,releasesByYear:{},releaseTargets:{},reworksByYear:{},majorReworksByYear:{},systemLifeByYear:{},cadence:14};
+  db.metaStats={};db.metaGames=0;db.regionMetaStats={};db.regionMetaGames={};
+}
+function applyNote(P,n){
+  const c=P.champions[n.c];
+  P._revision=(P._revision||0)+1;if(/^item/.test(n.type)||/^rune/.test(n.type))P._systemRevision=(P._systemRevision||0)+1;
+  if(n.type==='skill'&&c&&c.skills&&c.skills[n.slot])c.skills[n.slot][n.field]=JSON.parse(JSON.stringify(n.new));
+  else if(n.type==='kit'&&c)c.kit[n.key]=n.new!=null?n.new:clamp(c.kit[n.key]+n.d,1,10);
+  else if(n.type==='base'&&c)c.base[n.key]=n.new!=null?n.new:Math.round(c.base[n.key]*(1+n.d)*100)/100;
+  else if(n.type==='new'){const nc=archChampion(n.def.name,n.def.roles,n.def.arch,n.def.dmg,null,n.def.id||championId(n.def.name));nc.releaseDate=n.def.releaseDate||null;nc.proEligibleDate=n.def.proEligibleDate||null;nc.nameKo=n.def.nameKo||nc.nameKo;nc.naming=n.def.naming?JSON.parse(JSON.stringify(n.def.naming)):null;nc.visual=JSON.parse(JSON.stringify(n.def.visual||generatedChampionVisual(n.def)));P.champions[nc.id]=nc}
+  else if(n.type==='rework'&&c&&c.visual){c.visual={...c.visual,revision:(c.visual.revision||0)+(n.scope==='major'?1:0)}}
+  else if(n.type==='rule')P.rules[n.key]=n.v;
+  else if(n.type==='item'&&P.itemDefs&&P.itemDefs[n.id]){const d=P.itemDefs[n.id];if(n.field==='cost'){const delta=Number(n.new)-Number(d.cost||0);d.cost=n.new;d.recipeCost=Math.max(0,Math.round((Number(d.recipeCost??d.cost)+delta)*100)/100)}else{d.effects=d.effects||{};d.effects[n.field]=n.new}}
+  else if(n.type==='item_new'){P.itemDefs=P.itemDefs||{};P.itemDefs[n.def.id]=JSON.parse(JSON.stringify(n.def));P.items=P.items||{};for(const cls of n.def.classes||[]){P.items[cls]=P.items[cls]||[];if(!P.items[cls].includes(n.def.id))P.items[cls].push(n.def.id)}}
+  else if(n.type==='item_remove'&&P.itemDefs&&P.itemDefs[n.id])P.itemDefs[n.id].active=false;
+  else if(n.type==='rune'&&P.runeDefs&&P.runeDefs[n.id]){const d=P.runeDefs[n.id];d.effects=d.effects||{};d.effects[n.field]=n.new}
+  else if(n.type==='rune_new'){P.runeDefs=P.runeDefs||{};P.runeDefs[n.def.id]=JSON.parse(JSON.stringify(n.def));P.runes=P.runes||{};const sid=String(n.def.styleId),slot=Math.max(0,Math.min(3,+n.def.slot||0));if(P.runes[sid]){P.runes[sid].slots=P.runes[sid].slots||[[],[],[],[]];P.runes[sid].slots[slot]=P.runes[sid].slots[slot]||[];if(!P.runes[sid].slots[slot].includes(n.def.id))P.runes[sid].slots[slot].push(n.def.id)}}
+  else if(n.type==='rune_remove'&&P.runeDefs&&P.runeDefs[n.id])P.runeDefs[n.id].active=false;
+}
+function getPatch(db,id){
+  if(db.patch&&db.patch.id===id)return db.patch;
+  const cache=patchCache(db);if(cache.has(id))return cache.get(id);
+  const P=buildPatch();
+  if(P.id===id){cache.set(id,P);return P}
+  const hist=db.patches.history&&db.patches.history.length?db.patches.history:db.patches.list;
+  for(const p of hist){for(const n of p.notes||[])applyNote(P,n);P.id=p.id;if(P.id===id){cache.set(id,P);return P}}
+  cache.set(id,P);return P;
+}
+function championProEligible(db,c,date=db.worldDate){
+  if(!c)return false;
+  return !c.proEligibleDate||date>=c.proEligibleDate;
+}
+function championAvailableForContext(db,c,ctx={}){if(!c)return false;if(ctx.practice)return true;if(!championProEligible(db,c))return false;return !ctx.championPool||ctx.championPool.includes(c.id)}
+
 function patchId(db,year){const pt=db.patches;if(pt.y!==year){pt.y=year;pt.n=0}pt.n++;return String(year).slice(2)+'.'+pt.n}
 const PATCH_SIZE_KO={micro:'미세',small:'소규모',medium:'중간',large:'대규모'};
 const PATCH_SIZE_PROFILE={
