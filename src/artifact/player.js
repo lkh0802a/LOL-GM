@@ -52,7 +52,7 @@ function setRosterRole(db,p,role,source='club',silent=false){
   const old=player.rosterRole||recommendedRosterRole(db,player,player.team),oldRank=SQUAD_ROLE_ORDER[old]??2,newRank=SQUAD_ROLE_ORDER[role]??2;
   player.rosterRole=role;player.roleAssignedYear=db.year;player.roleAssignedBy=source;
   if(!silent&&old!==role){
-    if(typeof ensureSatisfaction==='function'){ensureSatisfaction(player);player.satisfaction=clamp(player.satisfaction+(newRank>oldRank?1:-Math.min(5,(oldRank-newRank)*2)),0,100)}
+    ensureSatisfaction(player);player.satisfaction=clamp(player.satisfaction+(newRank>oldRank?1:-Math.min(5,(oldRank-newRank)*2)),0,100)
     recordPlayerEvent(player,'roster_role',db.year,{from:old,to:role,team:player.team,date:db.worldDate,source});
   }
   return {ok:true,old,role};
@@ -140,7 +140,7 @@ function weightedRole(rng,w){const rows=ROLES.map(r=>[r,w[r]||1]),sum=rows.reduc
 function rookieIntakeProfile(db,R){
   const first=activeTeams(db,R.id,1).length,second=R.div2?activeTeams(db,R.id,2).length:0,teams=activeTeams(db,R.id),teamN=teams.length,players=Object.values(db.players),young=players.filter(p=>!p.retired&&p.region===R.id&&p.age<=21).length;
   const desiredPipeline=first*2.05+second*1.05,shortage=clamp((desiredPipeline-young)/Math.max(4,first),-.3,1.35);
-  const facilities=teams.map(t=>ensureFacilities(t).youth),dev=teams.map(t=>typeof staffProfile==='function'?staffProfile(t).development:55);
+  const facilities=teams.map(t=>ensureFacilities(t).youth),dev=teams.map(t=>staffProfile(t).development);
   const ecosystem=clamp((R.strength-58)/18+second/Math.max(1,first)*.35+(avg(facilities)-2)*.08+(avg(dev)-55)/180,.25,1.55);
   const rosterSize=5+(db.worldConfig.subs||0),targetSlots=teamN*rosterSize;
   const ecosystemPlayers=players.filter(p=>!p.retired&&((p.team&&db.teams[p.team]&&db.teams[p.team].region===R.id)||(!p.team&&p.region===R.id)));

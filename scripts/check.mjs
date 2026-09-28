@@ -443,8 +443,36 @@ if(stage5Roster.includes('function contractedMoveCount(db,p){ensurePlayerEligibi
   failed=true;console.error('11.5/5 read-only move check or shared roster detachment changed');
 }
 
+// 11.5/5-2: Engine module manifest always supplies these domain APIs.
+// Remove optional fallbacks: a missing dependency should fail loudly rather
+// than quietly skipping contract, staff, draft or player-state rules.
+const stage52Hooks=[
+  ['system-data.js','const SYSTEM_EFFECT_KEYS='],
+  ['player.js','function adaptPlayerPoolsToPatch('],
+  ['player-relations.js','function ensureSatisfaction('],
+  ['player-relations.js','function onSquadMoveSatisfaction('],
+  ['player-relations.js','function pState('],
+  ['role-conversion.js','function recordRoleConversionUsage('],
+  ['staff.js','function staffProfile('],
+  ['staff.js','function migrateLegacyStaffState('],
+  ['career.js','function initialSalaryBudget('],
+  ['career.js','function initialOfferCheck('],
+  ['career.js','function setupTeamsForManager(']
+];
+for(const [file,marker] of stage52Hooks){
+  const s=await readFile(resolve(artifact,file),'utf8');
+  if(!s.includes(marker)){failed=true;console.error('11.5/5-2 required engine API missing: '+file+' '+marker)}
+}
+const obsoleteDomainGuards=/typeof\s+(?:SYSTEM_EFFECT_KEYS|adaptPlayerPoolsToPatch|playerOvr|ensureSatisfaction|staffProfile|resetRoleConversionSeasonLoad|recordRoleConversionUsage|onSquadMoveSatisfaction|pState|migrateLegacyStaffState|initialSalaryBudget|setupTeamsForManager|initialOfferCheck)\s*(?:===|!==)\s*['"](?:function|undefined)['"]/;
+for(const file of modules.filter(f=>!['app.js','shell.html'].includes(f))){
+  const s=await readFile(resolve(artifact,file),'utf8');
+  if(obsoleteDomainGuards.test(s)||s.includes('resetRoleConversionSeasonLoad(')){
+    failed=true;console.error('11.5/5-2 obsolete optional hook fallback: '+file);
+  }
+}
+
 const regressionSource = await readFile(resolve(root, 'scripts', 'regression.mjs'), 'utf8');
-for (const marker of ['01-world-bootstrap','05-contracts','06-owned-reserve-roster','06c-player-sign-transaction','06d-player-transfer-transaction','06e-ai-transfer-and-move-limit','06f-release-and-option-transaction','06g-save-format-and-cache-isolation','06h-legacy-v15-save-restoration','06i-invalid-and-forward-saves','06j-transaction-transfer-rollback','06k-transaction-roster-rollback','06l-transaction-release-option-rollback','06m-transaction-actor-parity-and-membership-guard','09-patch-baseline','11-draft-series-save','11a-meta-index-incremental-and-bounded','11b-historic-patch-cache-limit','11c-system-usage-index-parity','11d-shared-registration-rule-and-pure-preview','11e-roster-detach-is-single-owner','11f-dead-api-pruned-without-market-breakage','mid-Bo5 session did not survive save/load']) {
+for (const marker of ['01-world-bootstrap','05-contracts','06-owned-reserve-roster','06c-player-sign-transaction','06d-player-transfer-transaction','06e-ai-transfer-and-move-limit','06f-release-and-option-transaction','06g-save-format-and-cache-isolation','06h-legacy-v15-save-restoration','06i-invalid-and-forward-saves','06j-transaction-transfer-rollback','06k-transaction-roster-rollback','06l-transaction-release-option-rollback','06m-transaction-actor-parity-and-membership-guard','09-patch-baseline','11-draft-series-save','11a-meta-index-incremental-and-bounded','11b-historic-patch-cache-limit','11c-system-usage-index-parity','11d-shared-registration-rule-and-pure-preview','11e-roster-detach-is-single-owner','11f-dead-api-pruned-without-market-breakage','11g-required-domain-hooks-have-real-effects','11h-initial-market-must-use-real-budget-and-team-policy','mid-Bo5 session did not survive save/load']) {
   if (!regressionSource.includes(marker)) {
     failed = true;
     console.error('11.5 regression baseline missing marker: '+marker);

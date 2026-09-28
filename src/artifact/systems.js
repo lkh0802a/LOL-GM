@@ -8,14 +8,14 @@ function championSystemMetaProfile(patch,c){
   for(const role of roles){
     const pseudo={id:'meta:'+c.id+':'+role},items=selectItemBuild(patch,c,pseudo,role),runes=selectRunePage(patch,c,pseudo,role);
     const ie=systemEffects(patch.itemDefs,items),re=systemEffects(patch.runeDefs,runes),all={};
-    for(const k of (typeof SYSTEM_EFFECT_KEYS!=='undefined'?SYSTEM_EFFECT_KEYS:['offense','defense','sustain','utility','haste','mobility','early','scaling']))all[k]=(ie[k]||0)+(re[k]||0);
+    for(const k of SYSTEM_EFFECT_KEYS)all[k]=(ie[k]||0)+(re[k]||0);
     const fit=systemChoiceScore(c,all,role),cost=items.length?avg(items.map(id=>patch.itemDefs[id]?.cost||3000)):3000,tempo=clamp((3300-cost)/2600,-.18,.22);
     byRole[role]={fit,cost,items,runes,power:fit*.085+tempo*.025};vals.push(byRole[role].power);
   }
   const result={power:avg(vals),roles:byRole};cache.set(c.id,result);return result;
 }
 function systemEffects(defs,ids){
-  const out=Object.fromEntries((typeof SYSTEM_EFFECT_KEYS!=='undefined'?SYSTEM_EFFECT_KEYS:['offense','defense','sustain','utility','haste','mobility','early','scaling']).map(k=>[k,0]));
+  const out=Object.fromEntries(SYSTEM_EFFECT_KEYS.map(k=>[k,0]));
   for(const id of ids||[]){const d=defs&&defs[id];if(!d||d.active===false)continue;for(const k in out)out[k]+=Number(d.effects&&d.effects[k])||0}
   return out;
 }

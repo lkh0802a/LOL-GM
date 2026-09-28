@@ -731,6 +731,65 @@ source += `
       'removing unused renewal wrapper broke the authoritative negotiation path');
   });
 
+  test('11g-required-domain-hooks-have-real-effects',()=>{
+    const db=buildWorld(),team=activeTeams(db,null,1)[0],
+      free=Object.values(db.players).find(p=>!p.team&&!p.retired);
+    assert(team&&free,'domain hook fixture missing');
+    assert(Array.isArray(SYSTEM_EFFECT_KEYS)&&SYSTEM_EFFECT_KEYS.includes('offense')&&
+      SYSTEM_EFFECT_KEYS.includes('scaling')&&SYSTEM_EFFECT_KEYS.length===8,
+      'item/rune engine effect dimensions must be a required system-data module');
+    // The player-state module must always run for roster assignments;
+    // a missing hook may not silently skip adaptation and state initialization.
+    for(const key of ['condition','fatigue','sharpness','teamAdaptation','tacticalAdaptation'])delete free[key];
+    assignPlayerToTeam(db,free,team);
+    assert(free.condition===96&&free.sharpness===55&&free.teamAdaptation===55&&
+      free.tacticalAdaptation===58,
+      'required state hook was skipped on player assignment');
+    free.rosterRole='starter';delete free.satisfaction;delete free.managerTrust;
+    const changed=setRosterRole(db,free,'backup','regression');
+    assert(changed.ok&&free.satisfaction!==undefined&&free.managerTrust!==undefined&&
+      free.careerEvents.some(e=>e.type==='roster_role'),
+      'required satisfaction hook was skipped after explicit roster-role change');
+    const cid=Object.keys(db.patch.champions)[0],
+      champ=db.patch.champions[cid];
+    free.pool={[cid]:{mastery:78,confidence:75}};
+    free.attrs.meta_adaptation=40;
+    const oldMastery=free.pool[cid].mastery;
+    adaptPlayerPoolsToPatch(db,[{type:'rework',c:cid,scope:'major'}],true);
+    assert(free.pool[cid].mastery<oldMastery,
+      'player champion rework adaptation ceased to function');
+    const selected=selectRunePage(db.patch,champ,free,champ.roles[0]);
+    assert(selected.length===6,'item/rune rules drifted when removing optional effect-key fallback');
+    assert(!rosterIntegrityErrors(db).length,'required domain hooks damaged roster membership');
+  });
+
+  test('11h-initial-market-must-use-real-budget-and-team-policy',()=>{
+    const db=buildWorld(),t=activeTeams(db,null,1)[0],
+      other=activeTeams(db,null,1).find(x=>x.id!==t.id),
+      local=Object.values(db.players).find(p=>!p.team&&!p.retired&&isLocalPlayer(p,t.region));
+    assert(t&&other&&local,'initial market policy fixture missing');
+    setManagedTeam(db,t.id);
+    db.world={year:db.year,seed:'stage5-2',phase:'initial_roster',manage:'manual',
+      recruitment:{targets:{}},negotiations:{}};
+    t.finance.cash=10000;
+    t.initialPayrollBudget=salaryBudget(db,t)+100;
+    assert(initialSalaryBudget(db,t)===t.initialPayrollBudget&&
+      setupTeamsForManager(db).some(x=>x.id===t.id),
+      'initial roster salary budget or managed organization API missing');
+    const valid=initialOfferCheck(db,local,t,{salary:1.5,signingBonus:0});
+    assert(valid.ok,'initial offer fixture cannot sign a local player');
+    const budgetGate=negotiationBudgetError(db,local,t,{salary:1.5,signingBonus:0},'initial');
+    assert(!budgetGate,'negotiation budget disagrees with available initial budget');
+    const blocked=negotiationBudgetError(db,local,t,{
+      salary:initialSalaryBudget(db,t)*4,signingBonus:0
+    },'initial');
+    assert(blocked==='연봉 예산을 초과합니다',
+      'initial offer was not checked against authoritative initial budget');
+    const unauthorized=startNegotiation(db,local.id,'initial',{teamId:other.id});
+    assert(!unauthorized.ok&&unauthorized.msg==='내 구단 조직의 스쿼드만 계약 대상이 될 수 있습니다',
+      'initial negotiations accepted a club outside the managed organization');
+  });
+
   console.log('11.5 Step 1 regression baseline: OK ('+results.join(', ')+')');
 })();
 `;
