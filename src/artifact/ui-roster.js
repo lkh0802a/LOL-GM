@@ -11,10 +11,12 @@ function rosterPlanPanel(t){const root=parentTeamOf(DB,t),res=reserveTeamsOf(DB,
 function discardSquadEdit(){SQUAD_EDIT=null;nav()}
 function applySquadEdit(){
   const t=DB.teams[SQUAD_EDIT?.teamId];if(!t)return;const e=SQUAD_EDIT,root=parentTeamOf(DB,t)||t,hasReserve=reserveTeamsOf(DB,root).length>0;
-  if(hasReserve){const checked=validateRosterPlan(DB,e.parentId,e.rosterPlan);if(!checked.ok){MSG=checked.errors.join(' · ');navKeepScroll();return}}
-  const planned=hasReserve?Object.entries(e.rosterPlan.assignments).filter(([,dst])=>dst===t.id).map(([pid])=>pid):(t.roster||[]).slice(),lineup=validateStartingLineup(DB,t,e.starters,planned);
+  const preview=hasReserve?previewWorldAction(DB,{type:'roster.plan',parentId:e.parentId,assignments:e.rosterPlan.assignments,actor:'manager'}):null;
+  if(hasReserve&&!preview.ok){MSG=preview.errors.join(' · ');navKeepScroll();return}
+  const planned=hasReserve?Object.entries(preview.command.assignments).filter(([,dst])=>dst===t.id).map(([pid])=>pid):(t.roster||[]).slice(),lineup=validateStartingLineup(DB,t,e.starters,planned);
   if(!lineup.ok){MSG=lineup.errors.join(' · ');navKeepScroll();return}
-  if(hasReserve)applyRosterPlan(DB,e.parentId,e.rosterPlan);t.depthChart={};
+  if(hasReserve){const applied=applyWorldAction(DB,preview);if(!applied.ok){MSG=applied.errors.join(' · ');navKeepScroll();return}}
+  t.depthChart={};
   for(const r of ROLES){const p=DB.players[e.starters[r]];if(p&&p.team===t.id)setDepthStarter(DB,t,r,p,'manager',false)}
   for(const [id,role] of Object.entries(e.roles)){const p=DB.players[id];if(p&&p.rosterRole!==role)setRosterRole(DB,p,role,'manager',false)}
   t.tactics={...e.tactics};t.training={...e.training};SQUAD_EDIT=null;MSG='';saveDB();nav();

@@ -25,6 +25,7 @@ export const ENGINE_MODULES = [
   'save.js',
   'roster.js',
   'lineup.js',
+  'state-transaction.js',
   'office.js',
   'office-international.js',
   'finance.js',

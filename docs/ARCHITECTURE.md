@@ -23,6 +23,7 @@ The authoritative module order lives in `scripts/artifact-modules.mjs`.
 - offseason orchestration: `offseason.js` (season closeout, market close, promotion/relegation)
 - persistence: `save.js` (compact save view and unpack/migration handoff)
 - roster/registration: `roster.js` (local eligibility, contracted-move accounting, organization roster rules, 1st↔reserve planning/movement, roster integrity)
+- transaction gateway: `state-transaction.js` (shared read-only validation and preview, time/membership stale guards, revalidation before application; initial command type: `roster.plan`)
 - management domains: `office.js` (regions), `office-international.js` (global governance), `finance.js`, `contracts.js`, `transfer.js`, `scouting.js`, `staff.js`, `scrim.js`, `player-relations.js`, `features.js`, `role-conversion.js`, `career.js`
 - draft information layer: `draft-analysis.js` (scouting-bounded mastery estimates, meta/composition evidence, opponent-intent explanation); legality and selection remain in `draft.js`
 - domain UI: `ui-setup.js`, `ui-match.js`, `ui-manager.js`, `ui-data.js`, `ui-patch.js`, `ui-market.js`, `ui-market-initial.js`, `ui-negotiations.js`, `ui-market-staff.js`, `ui-champion.js`, `ui-player.js`, `ui-roster.js`, `ui-draft.js`, `ui-season.js`
@@ -48,7 +49,7 @@ New large UI surfaces should be added as `ui-<domain>.js` modules instead of ext
 
 ## State and cache rules
 
-Roster mutation must flow through the roster-domain helpers (`assignPlayerToTeam`, `removePlayerFromTeam`, `validateRosterPlan`/`applyRosterPlan`) instead of ad-hoc cross-module array edits when the operation is covered by those APIs. Match-slot changes are a separate concern owned by `lineup.js`.
+Roster mutation must flow through the roster-domain helpers (`assignPlayerToTeam`, `removePlayerFromTeam`, `validateRosterPlan`/`applyRosterPlan`) instead of ad-hoc cross-module array edits when the operation is covered by those APIs. Managed-club and AI reserve-squad decisions submit `roster.plan` through the shared `validateWorldAction` / `previewWorldAction` / `applyWorldAction` gateway. The preview contains only command intent, a roster/date ownership snapshot and proposed changes; never store the preview in a save. Old direct low-level roster helpers remain available for world bootstrap and migration. Match-slot changes are a separate concern owned by `lineup.js`.
 
 Player generation and rookie-supply rules belong in `player.js`. Training/facilities/seasonal attribute growth belong in `development.js`.
 
