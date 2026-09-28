@@ -2,6 +2,9 @@
 const NICK_A=['Ka','Zer','Lu','Vex','Mor','Ny','Ti','Rho','Sa','Quin','El','Dra','Fen','Jo','Kai','Mir','Oz','Pyr','Ren','Syl','Ul','Wyn','Xan','Yor','Bru','Cae','Del','Gor','Hex','Ish','Lor','Nim','Pax','Riv','Tor','Val','Zu','Aki','Bly','Cro'];
 const NICK_B=['n','ra','x','lo','th','ne','ko','vy','dan','rin','zo','sk','mi','ro','ve','ly','ce','ta','ix','or','us','en','al','yx','e','o','ash','ek','im','ul'];
 const STYLES=Object.keys(STYLE_BIAS);
+// 의미 있는 오프롤 경험은 드물게 생성한다. 공식전 포지션 자격은 항상 p.role 하나뿐이다.
+const GENERATED_SECONDARY_ROLE_RATE=.08;
+function officialRoleEligible(p,role){return !!p&&p.role===role}
 function roleFamiliarity(p,role){if(role===p.role)return 100;return (p.roleFamiliarity&&p.roleFamiliarity[role])||0}
 function playerGroupScore(p,g,role=p.role){const keys=ATTR_GROUPS[g].filter(a=>!(a==='smite_execution'&&role!=='JGL')&&!(a==='csing'&&role==='SUP'));return keys.length?avg(keys.map(a=>p.attrs[a])):50}
 function playerRoleRating(p,role=p.role){
@@ -33,22 +36,22 @@ function playerCareerGoal(p){
 function setDepthStarter(db,t,role,p,source='manager',silent=false){
   const team=teamRef(db,t),player=playerRef(db,p);if(!team||!player)return {ok:false,reason:'팀 또는 선수를 찾을 수 없습니다'};
   if(player.team!==team.id||!(team.roster||[]).includes(player.id))return {ok:false,reason:'해당 스쿼드 소속 선수가 아닙니다'};
-  if(player.role!==role)return {ok:false,reason:'주 포지션과 다른 자리에는 선발 지정할 수 없습니다'};
+  if(!officialRoleEligible(player,role))return {ok:false,reason:'공식전은 등록된 주 포지션으로만 선발 지정할 수 있습니다'};
   team.depthChart=team.depthChart||{};const old=team.depthChart[role]||null;team.depthChart[role]=player.id;
   if(!silent&&old!==player.id)recordPlayerEvent(player,'starter_change',db.year,{team:team.id,role,from:old,to:player.id,date:db.worldDate,source});
   return {ok:true,old,to:player.id};
 }
 function initializeDepthChart(db,t,force=false){
   const team=teamRef(db,t);if(!team)return;team.depthChart=team.depthChart||{};
-  for(const role of ROLES){const cur=team.depthChart[role]&&db.players[team.depthChart[role]];if(!force&&cur&&cur.team===team.id&&cur.role===role)continue;
-    let best=null,bo=-1;for(const id of team.roster||[]){const p=db.players[id];if(!p||p.role!==role)continue;const o=playerOvr(p);if(o>bo){bo=o;best=p}}
+  for(const role of ROLES){const cur=team.depthChart[role]&&db.players[team.depthChart[role]];if(!force&&cur&&cur.team===team.id&&officialRoleEligible(cur,role))continue;
+    let best=null,bo=-1;for(const id of team.roster||[]){const p=db.players[id];if(!officialRoleEligible(p,role))continue;const o=playerOvr(p);if(o>bo){bo=o;best=p}}
     if(best)team.depthChart[role]=best.id;else delete team.depthChart[role];
   }
 }
 function aiReviewDepthChart(db,t){
   const team=teamRef(db,t);if(!team||team.id===managedTeamId(db))return;initializeDepthChart(db,team,false);
   for(const role of ROLES){const cur=starterFor(db,team,role);if(!cur)continue;
-    const challengers=(team.roster||[]).map(id=>db.players[id]).filter(p=>p&&p.role===role&&p.id!==cur.id).sort((a,b)=>playerOvr(b)-playerOvr(a));
+    const challengers=(team.roster||[]).map(id=>db.players[id]).filter(p=>officialRoleEligible(p,role)&&p.id!==cur.id).sort((a,b)=>playerOvr(b)-playerOvr(a));
     const ch=challengers[0];if(!ch)continue;
     const gap=playerOvr(ch)-playerOvr(cur),curBad=(cur.form??0)<=-6||cur.condition<60||cur.wantsOut;
     if(gap>=5||(gap>=3&&curBad))setDepthStarter(db,team,role,ch,'ai',false);
@@ -137,8 +140,8 @@ function genPlayer(db,rng,o){
   for(const c of picks){const s=mySig.includes(c);
     pool[c]={mastery:Math.round(clamp(s?80+rng.normal(0,6)+(age-20):55+rng.normal(0,12),20,99)),experience:Math.round(clamp(s?70+rng.normal(0,10)+(age-20)*2:40+rng.normal(0,15),5,99)),
       matchup_knowledge:Math.round(clamp(base-10+rng.normal(0,10)+(age-20),20,99)),confidence:Math.round(clamp(s?72+rng.normal(0,8):50+rng.normal(0,10),10,99)),scrimExperience:0,trainingExperience:0,scrimSeason:0,trainingSeason:0};}
-  const secondaryRoles=[],flex=SECONDARY_ROLE_OPTIONS[role]||[];if(flex.length&&rng.chance(.28))secondaryRoles.push(rng.pick(flex));
-  const roleFamiliarityMap={[role]:100};for(const r of secondaryRoles)roleFamiliarityMap[r]=rng.int(58,78);const peakBase={TOP:24.5,JGL:24,MID:25,ADC:25,SUP:26}[role]||25;
+  const secondaryRoles=[],flex=SECONDARY_ROLE_OPTIONS[role]||[];if(flex.length&&rng.chance(GENERATED_SECONDARY_ROLE_RATE))secondaryRoles.push(rng.pick(flex));
+  const roleFamiliarityMap={[role]:100};for(const r of secondaryRoles)roleFamiliarityMap[r]=rng.int(55,68);const peakBase={TOP:24.5,JGL:24,MID:25,ADC:25,SUP:26}[role]||25;
   const p={id:o.id||uniqId(db,(o.region||'X')+'_'),name:o.name||uniqNick(db,rng),role,secondaryRoles,roleFamiliarity:roleFamiliarityMap,age,team:null,region:o.region,nationality:o.nationality||o.region,attrs,tend,pool,
     pot:0,reputation:0,personality:{professionalism:Math.round(clamp(rng.normal(60,15),10,99)),ambition:Math.round(clamp(rng.normal(60,15),10,99))},
     development:{growthRate:Math.round(clamp(rng.normal(1,.1),.78,1.22)*100)/100,peakAge:Math.round(clamp(rng.normal(peakBase,1.15),21.5,29)*10)/10,declineRate:Math.round(clamp(rng.normal(1,.12),.72,1.35)*100)/100},

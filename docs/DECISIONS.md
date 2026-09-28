@@ -628,7 +628,7 @@ This applies retroactively to completed major items during later UI touches and 
 - A coach cannot use an existing secondary-role familiarity value to bypass the registered position and field the player in that other role.
 - Secondary-role/off-role familiarity is training and transition information, not a second official registration position.
 - A genuine role conversion must be a deliberate long-term career process followed by a formal primary-role registration update; it cannot be an instant lineup edit or game-to-game swap.
-- Current generated-player secondary-role frequency is not a realism target. Future generation should avoid making meaningful secondary roles routine and should derive them from credible history/training rather than treating them as common free flexibility.
+- Generated-player meaningful off-role familiarity is intentionally rare (8% baseline) and is never official position eligibility. It represents prior exposure only; formal role conversion remains a separate future process.
 
 
 ## D-051 — Reserve/Academy registration remains region-owned

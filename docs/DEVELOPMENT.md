@@ -285,3 +285,8 @@ Fearless and First Selection are fixed core match-system concepts, not regional-
 Official player positions are now a registration constraint, not a free tactical switch. First-team roster coverage uses each player's primary role, and official matches may not field a player in an arbitrary different role. Secondary-role familiarity remains internal training/transition data only. A genuine role conversion must be a deliberate long-term process followed by a formal primary-role registration update; exact conversion duration/eligibility remains to be specified before implementation. The current generated-player 28% secondary-role chance is therefore not a target realism rate and should not be used as official-position eligibility.
 
 Reserve/Academy roster size and non-local limits remain regional-office policy. First-team players may play reserve/Academy official matches only when both internal-movement and competition-registration windows allow it; regional offices may impose movement cooldowns. Internal first/reserve movement is locked during international tournaments.
+
+
+### Official-position enforcement implementation — 2026-09-28
+
+The source now enforces the registered-primary-role rule at both depth-chart assignment and match-simulation boundaries. A player with secondary/off-role familiarity cannot be selected as the official starter for that role. Generated players now receive meaningful off-role familiarity only at an 8% baseline (down from 28%), with a narrower initial familiarity range, and the player UI labels it as transition familiarity rather than an official secondary position. Smoke coverage rejects both manual depth-chart bypass and tampered off-role starter state.

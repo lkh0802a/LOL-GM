@@ -147,12 +147,19 @@ source += `\n(()=>{
   const cacheItem=(sysProfile0.roles[cacheChamp.roles[0]]?.items||[])[0];if(cacheItem){const d=cacheDb.patch.itemDefs[cacheItem],old=d.cost;applyNote(cacheDb.patch,{type:'item',id:cacheItem,field:'cost',old,new:old+100,dir:-1});const sysProfile2=championSystemMetaProfile(cacheDb.patch,cacheChamp);if(sysProfile2===sysProfile1)throw new Error('System-meta cache did not invalidate after item patch')}
   const strength0=champStrength(cacheChamp,cacheDb.patch),oldHp=cacheChamp.base.hp;applyNote(cacheDb.patch,{type:'base',c:cacheChamp.id,key:'hp',old:oldHp,new:oldHp+25,dir:1});const strength1=champStrength(cacheChamp,cacheDb.patch);if(!(strength1>strength0))throw new Error('Champion strength cache did not invalidate after champion patch');
   if(players.some(p=>!p.nationality||!p.roleFamiliarity||p.roleFamiliarity[p.role]!==100||!p.development||p.reputation===undefined||!Array.isArray(p.careerEvents))) throw new Error('Player identity/development schema failed');
+  if(GENERATED_SECONDARY_ROLE_RATE>.1)throw new Error('Generated secondary-role rate is too high for pro-role realism');
+  if(players.some(p=>(p.secondaryRoles||[]).length>1||(p.secondaryRoles||[]).some(r=>r===p.role||roleFamiliarity(p,r)<55||roleFamiliarity(p,r)>68)))throw new Error('Generated off-role familiarity contract failed');
   const sample=players[0];pState(sample);
   for(const key of ['form','condition','fatigue','morale','sharpness','teamAdaptation','tacticalAdaptation']) if(sample[key]===undefined) throw new Error('Player state missing: '+key);
   if(playerMod(sample)<-.111||playerMod(sample)>.091) throw new Error('Player state modifier escaped bounded range');
   const synthetic={id:'synthetic',role:'JGL',attrs:Object.fromEntries(ALL_ATTRS.map(a=>[a,50])),roleFamiliarity:{JGL:100,ADC:100},secondaryRoles:['ADC']};
   synthetic.attrs.smite_execution=99;synthetic.attrs.objective_setup=99;synthetic.attrs.map_awareness=92;synthetic.attrs.crossmap_decision=92;
   if(playerRoleRating(synthetic,'JGL')<=playerRoleRating(synthetic,'ADC')) throw new Error('Position-specific player rating failed');
+  const roleProbeTeam={id:'ROLE_PROBE_TEAM',roster:['ROLE_PROBE_PLAYER'],depthChart:{}},roleProbePlayer={...synthetic,id:'ROLE_PROBE_PLAYER',team:'ROLE_PROBE_TEAM',careerEvents:[]};
+  db.teams[roleProbeTeam.id]=roleProbeTeam;db.players[roleProbePlayer.id]=roleProbePlayer;const illegalOfficialRole='ADC';
+  if(setDepthStarter(db,roleProbeTeam,illegalOfficialRole,roleProbePlayer,'test',true).ok)throw new Error('Secondary-role familiarity bypassed official primary-role starter rule');
+  roleProbeTeam.depthChart[illegalOfficialRole]=roleProbePlayer.id;if(starterFor(db,roleProbeTeam,illegalOfficialRole)===roleProbePlayer)throw new Error('Depth chart accepted off-role official starter');
+  delete db.teams[roleProbeTeam.id];delete db.players[roleProbePlayer.id];
   const secRole=SECONDARY_ROLE_OPTIONS[sample.role][0],secBefore=roleFamiliarity(sample,secRole);trainSecondaryRole(sample,secRole,4);
   if(roleFamiliarity(sample,secRole)<=secBefore) throw new Error('Secondary-role learning failed');
   const poolEntry=Object.keys(sample.pool)[0],practiceBefore=(sample.pool[poolEntry].trainingExperience||0);practiceChampion(db,sample,poolEntry,'training',3);
