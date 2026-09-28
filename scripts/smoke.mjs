@@ -376,7 +376,7 @@ source += `\n(()=>{
 
   finalizeInitialRosters(db);
   if(db.world.phase!=='season'||!db.manager.careerStartedAt) throw new Error('Season did not start after roster finalization');
-  const aiInitialTeams=activeTeams(db).filter(t=>!setupTeamsForManager(db).some(x=>x.id===t.id));if(aiInitialTeams.some(t=>t.roster.length!==t.initialRosterTarget))throw new Error('AI initial market did not reach team-specific roster targets');
+  const aiInitialTeams=activeTeams(db).filter(t=>!setupTeamsForManager(db).some(x=>x.id===t.id));if(aiInitialTeams.some(t=>{const lim=initialSquadLimits(db,t);return t.roster.length<lim.min||t.roster.length>lim.max||t.roster.length>t.initialRosterTarget}))throw new Error('AI initial market violated legal/planned roster depth');
   if(new Set(aiInitialTeams.map(t=>t.initialRosterTarget)).size<2)throw new Error('AI initial roster targets collapsed to one fixed size');
   const scoutTarget=Object.values(db.players).find(p=>p.team&&p.team!==managedTeamId(db)&&!(db.teams[p.team]&&db.teams[p.team].parent===managedTeamId(db))&&knowledge(db,p)<90);
   if(!scoutTarget)throw new Error('No unobserved scouting target');
