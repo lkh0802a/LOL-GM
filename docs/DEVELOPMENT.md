@@ -278,3 +278,10 @@ The current design contract is frozen in `docs/ROSTER_TRANSFER_LOCAL_RULES.md` a
 Domestic official-roster changes use windows rather than a change-count quota: while a regional registration window is open, clubs may revise the official list without a separate count limit; outside it, ordinary official-list changes are locked. First-team↔reserve/Academy squad assignment is a separate state with its own broader regional movement windows and no count quota while open. Internal movement may happen while official registration is closed, but it changes training/squad placement rather than official match eligibility. Emergency rules may still define whether a temporary roster overage beyond ten is allowed. International tournaments lock the initially submitted final roster except for pre-published emergency replacement rules.
 
 Fearless and First Selection are fixed core match-system concepts, not regional-office or international-office toggles. The earlier cross-region rule checkpoint is therefore interpreted only for genuinely office-owned regulation categories.
+
+
+### Registered-position realism checkpoint — 2026-09-28
+
+Official player positions are now a registration constraint, not a free tactical switch. First-team roster coverage uses each player's primary role, and official matches may not field a player in an arbitrary different role. Secondary-role familiarity remains internal training/transition data only. A genuine role conversion must be a deliberate long-term process followed by a formal primary-role registration update; exact conversion duration/eligibility remains to be specified before implementation. The current generated-player 28% secondary-role chance is therefore not a target realism rate and should not be used as official-position eligibility.
+
+Reserve/Academy roster size and non-local limits remain regional-office policy. First-team players may play reserve/Academy official matches only when both internal-movement and competition-registration windows allow it; regional offices may impose movement cooldowns. Internal first/reserve movement is locked during international tournaments.

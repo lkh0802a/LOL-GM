@@ -618,3 +618,25 @@ This applies retroactively to completed major items during later UI touches and 
 - Such a move changes training/scrim/squad assignment immediately but does not silently change official match eligibility.
 - Official match eligibility changes only through an open official registration window or a valid emergency exception.
 - Selection changes among players already on the same official roster, including between games of a Bo3/Bo5 where otherwise legal, are not roster-registration changes and have no separate count limit.
+
+
+## D-050 — Official player positions are registered primary roles
+
+**Decision:** A player may not be arbitrarily moved to another position for an official match.
+
+- Official first-team roster coverage is checked against registered primary roles: at least one TOP, JGL, MID, ADC and SUP.
+- A coach cannot use an existing secondary-role familiarity value to bypass the registered position and field the player in that other role.
+- Secondary-role/off-role familiarity is training and transition information, not a second official registration position.
+- A genuine role conversion must be a deliberate long-term career process followed by a formal primary-role registration update; it cannot be an instant lineup edit or game-to-game swap.
+- Current generated-player secondary-role frequency is not a realism target. Future generation should avoid making meaningful secondary roles routine and should derive them from credible history/training rather than treating them as common free flexibility.
+
+
+## D-051 — Reserve/Academy registration remains region-owned
+
+**Decision:** Reserve/Academy roster structure is not forced to mirror the first team.
+
+- Each regional office sets reserve/Academy roster minimum/maximum size and its own non-local rule.
+- A first-team player may appear in a reserve/Academy official match only when both the internal-movement window and that competition's registration window allow the move.
+- Regional offices may set a cooldown between call-up and send-down actions.
+- Internal movement is locked for the duration of an international tournament.
+- The managed club and AI clubs use the same reserve/Academy eligibility and movement checks.
