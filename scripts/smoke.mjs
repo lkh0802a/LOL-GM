@@ -163,22 +163,20 @@ source += `\n(()=>{
   const snapCtx={used:['A'],byTeam:{T1:{won:['W'],lost:[]},T2:{won:[],lost:['L']}},fearless:true,mods:{T1:.01,T2:-.02},practice:false,championPool:['A','B']},snapCopy=seriesDraftSnapshot(snapCtx);snapCopy.used.push('B');snapCopy.byTeam.T1.won.push('X');snapCopy.mods.T1=.5;if(snapCtx.used.length!==1||snapCtx.byTeam.T1.won.length!==1||snapCtx.mods.T1!==.01)throw new Error('Series draft snapshot shares mutable context state');
   const cacheItem=(sysProfile0.roles[cacheChamp.roles[0]]?.items||[])[0];if(cacheItem){const d=cacheDb.patch.itemDefs[cacheItem],old=d.cost;applyNote(cacheDb.patch,{type:'item',id:cacheItem,field:'cost',old,new:old+100,dir:-1});const sysProfile2=championSystemMetaProfile(cacheDb.patch,cacheChamp);if(sysProfile2===sysProfile1)throw new Error('System-meta cache did not invalidate after item patch')}
   const strength0=champStrength(cacheChamp,cacheDb.patch),oldHp=cacheChamp.base.hp;applyNote(cacheDb.patch,{type:'base',c:cacheChamp.id,key:'hp',old:oldHp,new:oldHp+25,dir:1});const strength1=champStrength(cacheChamp,cacheDb.patch);if(!(strength1>strength0))throw new Error('Champion strength cache did not invalidate after champion patch');
-  if(players.some(p=>!p.nationality||!p.roleFamiliarity||p.roleFamiliarity[p.role]!==100||!p.development||p.reputation===undefined||!Array.isArray(p.careerEvents))) throw new Error('Player identity/development schema failed');
-  if(GENERATED_SECONDARY_ROLE_RATE>.1)throw new Error('Generated secondary-role rate is too high for pro-role realism');
-  if(players.some(p=>(p.secondaryRoles||[]).length>1||(p.secondaryRoles||[]).some(r=>r===p.role||roleFamiliarity(p,r)<55||roleFamiliarity(p,r)>68)))throw new Error('Generated off-role familiarity contract failed');
+  if(players.some(p=>!p.nationality||!p.development||p.reputation===undefined||!Array.isArray(p.careerEvents)||Object.prototype.hasOwnProperty.call(p,'secondaryRoles')||Object.prototype.hasOwnProperty.call(p,'roleFamiliarity'))) throw new Error('Player identity/position schema failed');
   const sample=players[0];pState(sample);
   for(const key of ['form','condition','fatigue','morale','sharpness','teamAdaptation','tacticalAdaptation']) if(sample[key]===undefined) throw new Error('Player state missing: '+key);
   if(playerMod(sample)<-.111||playerMod(sample)>.091) throw new Error('Player state modifier escaped bounded range');
-  const synthetic={id:'synthetic',role:'JGL',attrs:Object.fromEntries(ALL_ATTRS.map(a=>[a,50])),roleFamiliarity:{JGL:100,ADC:100},secondaryRoles:['ADC']};
+  const synthetic={id:'synthetic',role:'JGL',attrs:Object.fromEntries(ALL_ATTRS.map(a=>[a,50]))};
   synthetic.attrs.smite_execution=99;synthetic.attrs.objective_setup=99;synthetic.attrs.map_awareness=92;synthetic.attrs.crossmap_decision=92;
   if(playerRoleRating(synthetic,'JGL')<=playerRoleRating(synthetic,'ADC')) throw new Error('Position-specific player rating failed');
-  const roleProbeTeam={id:'ROLE_PROBE_TEAM',roster:['ROLE_PROBE_PLAYER'],depthChart:{}},roleProbePlayer={...synthetic,id:'ROLE_PROBE_PLAYER',team:'ROLE_PROBE_TEAM',careerEvents:[]};
-  db.teams[roleProbeTeam.id]=roleProbeTeam;db.players[roleProbePlayer.id]=roleProbePlayer;const illegalOfficialRole='ADC';
-  if(setDepthStarter(db,roleProbeTeam,illegalOfficialRole,roleProbePlayer,'test',true).ok)throw new Error('Secondary-role familiarity bypassed official primary-role starter rule');
-  roleProbeTeam.depthChart[illegalOfficialRole]=roleProbePlayer.id;if(starterFor(db,roleProbeTeam,illegalOfficialRole)===roleProbePlayer)throw new Error('Depth chart accepted off-role official starter');
-  delete db.teams[roleProbeTeam.id];delete db.players[roleProbePlayer.id];
-  const secRole=SECONDARY_ROLE_OPTIONS[sample.role][0],secBefore=roleFamiliarity(sample,secRole);trainSecondaryRole(sample,secRole,4);
-  if(roleFamiliarity(sample,secRole)<=secBefore) throw new Error('Secondary-role learning failed');
+  const roleProbeTeam={id:'ROLE_PROBE_TEAM',roster:ROLES.map((r,i)=>'ROLE_PROBE_'+i),depthChart:{}};
+  ROLES.forEach((r,i)=>{db.players['ROLE_PROBE_'+i]={...synthetic,id:'ROLE_PROBE_'+i,role:i===0?'MID':r,team:roleProbeTeam.id,name:'Probe '+i,careerEvents:[]}});
+  db.teams[roleProbeTeam.id]=roleProbeTeam;initializeDepthChart(db,roleProbeTeam,true);
+  const offRole=db.players.ROLE_PROBE_0;if(!setDepthStarter(db,roleProbeTeam,'TOP',offRole,'test',true).ok)throw new Error('Registered player could not be assigned off natural role');
+  const duplicate=ROLES.filter(r=>roleProbeTeam.depthChart[r]===offRole.id);if(duplicate.length!==1)throw new Error('One player occupied multiple lineup slots');
+  initializeDepthChart(db,roleProbeTeam,false);if(!validateStartingLineup(db,roleProbeTeam).ok)throw new Error('Free-position lineup could not restore five unique starters');
+  delete db.teams[roleProbeTeam.id];for(let i=0;i<ROLES.length;i++)delete db.players['ROLE_PROBE_'+i];
   const poolEntry=Object.keys(sample.pool)[0],practiceBefore=(sample.pool[poolEntry].trainingExperience||0);practiceChampion(db,sample,poolEntry,'training',3);
   if((sample.pool[poolEntry].trainingExperience||0)<=practiceBefore) throw new Error('Champion training experience failed');
   const intensityProbe=active.find(t=>t.id!==managedTeamId(db));if(intensityProbe){intensityProbe.training=defaultTraining();for(const id of intensityProbe.roster){const p=db.players[id];if(p){p.fatigue=55;p.condition=78}}aiManageTraining(db,intensityProbe);if(intensityProbe.training.intensity!=='light')throw new Error('AI did not reduce training under fatigue')}
@@ -317,7 +315,7 @@ source += `\n(()=>{
   recordPlayerEvent(growthProbe,'transfer',db.year,{from:'A',to:'B',fee:1});
   if(!growthProbe.careerEvents.some(e=>e.type==='transfer'&&e.to==='B')) throw new Error('Player career event persistence failed');
   const persisted=unpackDB(packDB(db)),persistedPlayer=persisted.players[sample.id];
-  if(!persistedPlayer||persisted.version!==15||persistedPlayer.nationality!==sample.nationality||persistedPlayer.reputation!==sample.reputation||!persistedPlayer.development||!persistedPlayer.roleFamiliarity||!persistedPlayer.pool[poolEntry]||persistedPlayer.pool[poolEntry].trainingExperience!==sample.pool[poolEntry].trainingExperience) throw new Error('Player save round-trip failed');
+  if(!persistedPlayer||persisted.version!==15||persistedPlayer.nationality!==sample.nationality||persistedPlayer.reputation!==sample.reputation||!persistedPlayer.development||Object.prototype.hasOwnProperty.call(persistedPlayer,'secondaryRoles')||Object.prototype.hasOwnProperty.call(persistedPlayer,'roleFamiliarity')||!persistedPlayer.pool[poolEntry]||persistedPlayer.pool[poolEntry].trainingExperience!==sample.pool[poolEntry].trainingExperience) throw new Error('Player save round-trip failed');
   const metaSave=buildWorld(),metaCid=Object.keys(metaSave.patch.champions)[0];metaSave.metaHistory=[{date:'2027-01-02',patch:'26.19',comp:'SAVE_META',season:'S1',year:2027,split:1,stage:'regular',league:'LCK',international:false,regions:['LCK'],sides:[{team:'A',region:'LCK',win:true,picks:[{champ:metaCid,role:'MID',player:'P1',items:['1001'],runes:['8005']}]}],bans:[metaCid]}];
   const rawMetaBytes=JSON.stringify(metaSave.metaHistory).length,metaPacked=packDB(metaSave),metaRaw=JSON.parse(metaPacked),packedMetaBytes=JSON.stringify(metaRaw.metaHistory).length;if(!Array.isArray(metaRaw.metaHistory?.[0])||metaRaw.patches?.base||metaRaw.patches?.initialBase||packedMetaBytes>=rawMetaBytes*.8)throw new Error('Save compaction did not materially reduce derived patch/meta overhead');
   const metaLoaded=unpackDB(metaPacked),metaRow=metaLoaded.metaHistory?.[0],metaPick=metaRow?.sides?.[0]?.picks?.[0];if(metaRow?.comp!=='SAVE_META'||metaRow?.league!=='LCK'||metaPick?.champ!==metaCid||metaPick?.items?.[0]!=='1001'||metaPick?.runes?.[0]!=='8005')throw new Error('Meta history save round-trip failed');

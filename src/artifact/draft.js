@@ -1,16 +1,6 @@
 // ===== LOL GM: 밴픽 / 시스템 메타 엔진 =====
 // 경기 시뮬레이션과 분리된 챔피언 평가, 자동 아이템·룬 환경, 밴픽 의사결정 도메인.
 
-// 포지션별 주전은 Depth Chart에 고정한다. 지정 선수가 이탈한 경우에만 자동 보충한다.
-function starterFor(db,team,role){
-  if(!team)return null;team.depthChart=team.depthChart||{};
-  const id=team.depthChart[role],fixed=id&&db.players[id];
-  if(fixed&&fixed.team===team.id&&(team.roster||[]).includes(id)&&fixed.role===role)return fixed;
-  let best=null,bo=-1;for(const pid of team.roster||[]){const p=db.players[pid];if(!p||p.role!==role)continue;const o=playerOvr(p);if(o>bo){bo=o;best=p}}
-  if(best)team.depthChart[role]=best.id;else delete team.depthChart[role];
-  return best;
-}
-
 const SYSTEM_META_CACHE=new WeakMap();
 const SYSTEM_CHOICE_CACHE=new WeakMap();
 const CHAMP_STRENGTH_CACHE=new WeakMap();

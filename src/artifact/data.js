@@ -36,7 +36,6 @@ const ROLE_KEY_ATTRS={
   ADC:['reaction','kiting','spacing','csing','positioning','target_selection','extended_fight'],
   SUP:['engage','disengage','peeling','map_awareness','objective_setup','vision_understanding','shotcalling']
 };
-const SECONDARY_ROLE_OPTIONS={TOP:['MID','JGL'],JGL:['SUP','TOP'],MID:['TOP','ADC'],ADC:['MID','SUP'],SUP:['JGL','ADC']};
 const CLASS_KO = {fighter:'전사', tank:'탱커', mage:'마법사', assassin:'암살자', marksman:'원거리 딜러', enchanter:'서포터'};
 const KIT_KEYS = ['burst','dps','cc','engage','disengage','peel','poke','waveclear','mobility','sustain','early','mid','late','difficulty'];
 const KIT_KO = {burst:'폭딜', dps:'지속딜', cc:'CC', engage:'이니시', disengage:'받아치기', peel:'보호', poke:'포킹', waveclear:'라인클리어', mobility:'기동성', sustain:'유지력', early:'초반', mid:'중반', late:'후반', difficulty:'난이도'};

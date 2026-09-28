@@ -68,7 +68,6 @@ function initialSquadErrors(db,t){
   const limits=initialSquadLimits(db,team),errors=[],roster=team.roster||[];
   if(roster.length<limits.min)errors.push('최소 '+limits.min+'명 필요');
   if(roster.length>limits.max)errors.push('최대 '+limits.max+'명 초과');
-  for(const role of ROLES)if(!roster.some(id=>db.players[id]&&db.players[id].role===role))errors.push(ROLE_KO[role]+' 포지션 필요');
   const imports=teamNonLocalCount(db,team),cap=nonLocalLimitForTeam(db,team);if(imports>cap)errors.push('비로컬 등록 한도 '+cap+'명 초과');
   const pay=payroll(db,team),budget=initialSalaryBudget(db,team);
   if(pay>budget+0.001)errors.push('구단 연봉 예산 초과');
