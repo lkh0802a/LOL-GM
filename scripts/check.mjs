@@ -37,7 +37,8 @@ const maintainabilityBudgets = {
   'content-naming.js': 16000,
   'patch.js': 40000,
   'competition.js': 30000,
-  'world.js': 85000,
+  'world.js': 68000,
+  'roster.js': 22000,
   'lineup.js': 12000,
   'features.js': 30000,
   'role-conversion.js': 14000,
@@ -89,6 +90,7 @@ for (const file of modules.filter(file => file !== 'world.js')) {
 
 const appSource = await readFile(resolve(artifact, 'app.js'), 'utf8');
 const worldSource = await readFile(resolve(artifact, 'world.js'), 'utf8');
+const rosterSource = await readFile(resolve(artifact, 'roster.js'), 'utf8');
 const draftSource = await readFile(resolve(artifact, 'draft.js'), 'utf8');
 const featuresSource = await readFile(resolve(artifact, 'features.js'), 'utf8');
 const draftAnalysisSource = await readFile(resolve(artifact, 'draft-analysis.js'), 'utf8');
@@ -111,6 +113,16 @@ for (const marker of ['function draftMasteryObservation(','function draftCandida
 for (const marker of ['function draftMasteryObservation(','function draftOpponentIntent(','function draftCandidateEvidence(']) if (featuresSource.includes(marker)) {
   failed = true;
   console.error('Draft-analysis responsibility leaked back into features.js: '+marker);
+}
+for (const marker of ['function validateRosterPlan(','function applyRosterPlan(','function rosterIntegrityErrors(','function localRegistrationError(']) {
+  if (!rosterSource.includes(marker)) {
+    failed = true;
+    console.error('Roster domain helper is missing: '+marker);
+  }
+  if (worldSource.includes(marker)) {
+    failed = true;
+    console.error('Roster-domain responsibility leaked back into world.js: '+marker);
+  }
 }
 const saveVersion = Number(appSource.match(/const SAVE_VERSION=(\d+)/)?.[1]);
 const worldVersion = Number(worldSource.match(/version:(\d+),saveId:/)?.[1]);

@@ -13,6 +13,7 @@ The authoritative module order lives in `scripts/artifact-modules.mjs`.
 - baseline/domain data: `data.js`, `champs2.js`
 - patch/meta: `patch.js`
 - competition/world: `competition.js`, `world.js`
+- roster/registration: `roster.js` (local eligibility, contracted-move accounting, organization roster rules, 1st↔reserve planning/movement, roster integrity)
 - management domains: `office.js`, `finance.js`, `features.js`, `role-conversion.js`, `career.js`
 - draft information layer: `draft-analysis.js` (scouting-bounded mastery estimates, meta/composition evidence, opponent-intent explanation); legality and selection remain in `draft.js`
 - domain UI: `ui-patch.js`, `ui-market.js`, `ui-champion.js`, `ui-player.js`, `ui-roster.js`, `ui-draft.js`, `ui-season.js`
@@ -20,9 +21,12 @@ The authoritative module order lives in `scripts/artifact-modules.mjs`.
 
 The match engine and draft engine stay separate. Draft legality/selection state stays in `draft.js`; scouting-bounded informational analysis stays in `draft-analysis.js`; interactive state stays in `ui-draft.js`.
 
-New large UI surfaces should be added as `ui-<domain>.js` modules instead of extending `app.js`. Roster/player/scouting UI lives in `ui-roster.js`; draft UI lives in `ui-draft.js`. Small files are kept separate only when they own a coherent domain boundary, not merely to increase module count.
+New large UI surfaces should be added as `ui-<domain>.js` modules instead of extending `app.js`. Squad editing lives in `ui-roster.js`; player detail/scouting lives in `ui-player.js`; draft UI lives in `ui-draft.js`. Small files are kept separate only when they own a coherent domain boundary, not merely to increase module count.
 
 ## State and cache rules
+
+Roster mutation must flow through the roster-domain helpers (`assignPlayerToTeam`, `removePlayerFromTeam`, `validateRosterPlan`/`applyRosterPlan`) instead of ad-hoc cross-module array edits when the operation is covered by those APIs. Match-slot changes are a separate concern owned by `lineup.js`.
+
 
 Persistent game state lives under the world DB object. Module-level caches must never own persistent state.
 
