@@ -16,6 +16,8 @@ const window={scrollY:70,scrollTo(x,y){this.scrollY=y;calls.push('scroll:'+x+':'
 const document={querySelector(s){return s==='#main'?main:null},querySelectorAll(s){return s==='nav button'?tabs:[]}};
 const context=vm.createContext({
   document,window,
+  DB:{test:true},SLOT:'1',SLOT_SWITCHING:false,UI_OVERLAY:null,
+  clearUiOverlay:()=>{},closeUiOverlay:()=>{},
   clearInterval:n=>calls.push('interval:'+n),
   requestAnimationFrame:f=>frames.push(f),
   freshInternalSeed:()=> 'test-world-seed',

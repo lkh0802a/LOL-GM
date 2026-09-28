@@ -40,16 +40,40 @@ function renderMC(a){
 function bindMC(){
   $('#mb').onchange=e=>MC.blue=e.target.value;$('#mr').onchange=e=>MC.red=e.target.value;$('#mn').onchange=e=>MC.n=+e.target.value;
   $('#mrun').onclick=()=>{
-    if(MC.running)return;MC.running=true;const btn=$('#mrun');
-    const baseSeed=freshInternalSeed('mc'), acc={wins:0,time:0,gd15:0,fd:0,ft:0,fb:0,baron:[0,0],kills:[0,0],towers:[0,0],dragons:[0,0],fights:[0,0],n:0,times:[],blue:MC.blue,red:MC.red};
+    if(MC.running)return;
+    MC.running=true;
+    const btn=$('#mrun'),db=DB,blue=MC.blue,red=MC.red;
+    const task=beginUiTask('monte-carlo',()=>{MC.running=false});
+    const baseSeed=freshInternalSeed('mc'), acc={wins:0,time:0,gd15:0,fd:0,ft:0,fb:0,baron:[0,0],kills:[0,0],towers:[0,0],dragons:[0,0],fights:[0,0],n:0,times:[],blue,red};
     let i=0;const N=MC.n;
-    const step=()=>{const end=Math.min(N,i+25);
-      for(;i<end;i++){const r=simulateMatch(DB,MC.blue,MC.red,baseSeed+'#'+i);acc.n++;if(r.winner===0)acc.wins++;acc.time+=r.duration;acc.times.push(r.duration);acc.gd15+=r.goldHist[14]??r.goldHist[r.goldHist.length-1];
-        if(r.firsts.dragon===0)acc.fd++;if(r.firsts.tower===0)acc.ft++;if(r.firsts.blood===0)acc.fb++;
-        for(const s of [0,1]){acc.baron[s]+=r.sides[s].barons>0?1:0;acc.kills[s]+=r.sides[s].kills;acc.towers[s]+=r.sides[s].towersTaken;acc.dragons[s]+=r.sides[s].dragons.length}
-        for(const l of r.log)if(l.kind==='fight')acc.fights[l.side]++;}
-      btn.textContent=`실행 중 ${i}/${N}`;
-      if(i<N)setTimeout(step,0);else{MC.res=acc;MC.running=false;btn.textContent='시뮬레이션 실행';$('#mcout').innerHTML=renderMC(acc)}};
+    const step=()=>{
+      if(!isUiTaskCurrent(task))return;
+      try{
+        const end=Math.min(N,i+25);
+        for(;i<end;i++){
+          const r=simulateMatch(db,blue,red,baseSeed+'#'+i);
+          acc.n++;if(r.winner===0)acc.wins++;acc.time+=r.duration;acc.times.push(r.duration);
+          acc.gd15+=r.goldHist[14]??r.goldHist[r.goldHist.length-1];
+          if(r.firsts.dragon===0)acc.fd++;if(r.firsts.tower===0)acc.ft++;if(r.firsts.blood===0)acc.fb++;
+          for(const side of [0,1]){
+            acc.baron[side]+=r.sides[side].barons>0?1:0;acc.kills[side]+=r.sides[side].kills;
+            acc.towers[side]+=r.sides[side].towersTaken;acc.dragons[side]+=r.sides[side].dragons.length;
+          }
+          for(const l of r.log)if(l.kind==='fight')acc.fights[l.side]++;
+        }
+        btn.textContent=`실행 중 ${i}/${N}`;
+        if(i<N)setTimeout(step,0);
+        else if(finishUiTask(task)){
+          MC.res=acc;MC.running=false;btn.textContent='시뮬레이션 실행';
+          const output=$('#mcout');if(output)output.innerHTML=renderMC(acc);
+        }
+      }catch(e){
+        finishUiTask(task);MC.running=false;
+        btn.textContent='시뮬레이션 실행';
+        const output=$('#mcout');if(output)output.textContent='시뮬레이션 오류: '+e.message;
+        console.error('LOL GM Monte Carlo failed',e);
+      }
+    };
     step();
   };
 }

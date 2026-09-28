@@ -9,22 +9,11 @@ function viewData(){
   <textarea id="djson" spellcheck="false" aria-label="월드 데이터 JSON" placeholder="JSON 열기를 누르거나 여기에 붙여 넣으세요"></textarea>`;
 }
 function bindData(){
-  const msg=t=>$('#dmsg').textContent=t;
+  const renderId=UI_RENDER_ID;
+  const msg=t=>{if(VIEW!=='data'||UI_RENDER_ID!==renderId)return;const output=$('#dmsg');if(output)output.textContent=t};
   document.querySelectorAll('[data-slot]').forEach(b=>b.onclick=async()=>{
-    const previous={slot:SLOT,key:STORE,db:DB},str=packDB(DB);
-    try{await idbSet(previous.key,str)}
-    catch(e){try{localStorage.setItem(previous.key,str)}
-      catch(e2){msg('현재 슬롯 저장에 실패했습니다. 슬롯 전환을 중단했습니다.');return}}
-    SLOT=b.dataset.slot;STORE=STORE_BASE+SLOT;
-    try{
-      const loaded=await loadDB();DB=loaded;
-      try{localStorage.setItem(STORAGE_NS+'-slot',SLOT)}catch(e){}
-      resetUiForWorld();
-      saveDB();navigateTo('season');
-    }catch(e){
-      SLOT=previous.slot;STORE=previous.key;DB=previous.db;
-      msg('슬롯을 불러오지 못했습니다. 원본은 보존됩니다 — '+e.message);
-    }
+    const result=await switchSaveSlot(b.dataset.slot);
+    if(!result.ok&&result.error)msg(result.error);
   });
   $('#dshow').onclick=()=>{$('#djson').value=packDB(DB);msg('압축된 JSON입니다. 그대로 복사해 두면 됩니다.')};
   $('#dapply').onclick=()=>{try{const d=unpackDB($('#djson').value);if(!d.teams||!d.players||!d.patch||!d.regions)throw new Error('teams, players, patch, regions 항목이 필요합니다');

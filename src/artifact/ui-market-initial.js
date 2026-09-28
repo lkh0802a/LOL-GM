@@ -19,7 +19,7 @@ function renderInitialRosterMarket(){
   <section><h3>등록 마감</h3>${errors.length?`<p class="warn">${errors.map(esc).join(' / ')}</p>`:'<p class="hi">내 구단 로스터 규정을 모두 충족했습니다.</p>'}${openInitial.length?`<p class="warn">진행 중인 계약 협상 ${openInitial.length}건을 먼저 마무리해야 합니다.</p>`:''}<div class="controls"><button class="primary" id="init-final"${errors.length||openInitial.length?' disabled':''}>전 세계 로스터 확정 후 시즌 개막</button><span class="hint">확정하면 AI 구단도 남은 FA 풀에서 같은 계약·등록 핵심 규칙으로 선수단을 구성합니다.</span></div></section>`;
 }
 function bindInitialRosterMarket(){
-  const act=m=>{const y=window.scrollY;MSG=m;saveDB();nav();requestAnimationFrame(()=>window.scrollTo(0,y))};
+  const act=m=>{MSG=m;saveDB();navKeepScroll()};
   $('#init-target').onchange=e=>{INITMK.target=e.target.value;MSG='';nav()};$('#init-role').onchange=e=>{INITMK.role=e.target.value;nav()};$('#init-scope').onchange=e=>{INITMK.scope=e.target.value;nav()};
   document.querySelectorAll('[data-init-interest]').forEach(b=>b.onclick=()=>act(mInterest(DB,b.dataset.initInterest,'B')));
   if($('#init-all'))$('#init-all').onchange=e=>document.querySelectorAll('[data-init-select]').forEach(x=>x.checked=e.target.checked);

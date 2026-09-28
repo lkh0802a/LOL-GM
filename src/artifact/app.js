@@ -5,7 +5,7 @@ const DIRECT_FILE_PREVIEW=location.protocol==='file:'||location.origin==='null';
 let SLOT=(()=>{try{return localStorage.getItem(STORAGE_NS+'-slot')||'1'}catch(e){return '1'}})();
 const STORE_BASE=STORAGE_NS+'-db-v'+SAVE_VERSION+'-';
 let STORE=STORE_BASE+SLOT;
-let DB=null, SAVEFAIL=false;
+let DB=null, SAVEFAIL=false, SLOT_SWITCHING=false;
 // Older namespaces are left intact as user backups. Unsupported world versions
 // are never silently replaced or deleted during boot.
 // 저장: IndexedDB(용량 큼) 우선, 안 되면 localStorage
@@ -32,40 +32,86 @@ async function idbSet(k,v){const d=await idb();return new Promise((res,rej)=>{
   const timer=setTimeout(()=>finish(false,new Error('IndexedDB write timeout')),800);
   try{const tx=d.transaction('kv','readwrite');tx.objectStore('kv').put(v,k);tx.oncomplete=()=>finish(true);tx.onerror=()=>finish(false,tx.error||new Error('IndexedDB write failed'));tx.onabort=()=>finish(false,tx.error||new Error('IndexedDB write aborted'))}catch(e){finish(false,e)}
 })}
-async function loadDB(){
+async function loadDB(key=STORE){
   const invalid=[];
+  // A local fallback is newer than a failed IndexedDB update for this key.
+  // A successful IndexedDB write removes the local fallback.
   let stored=null;
-  try{stored=await idbGet(STORE)}catch(e){}
-  if(stored!==null&&stored!==undefined){
-    try{return unpackDB(stored)}
-    catch(e){invalid.push('IndexedDB: '+e.message)}
-  }
-  stored=null;
-  try{stored=localStorage.getItem(STORE)}catch(e){}
+  try{stored=localStorage.getItem(key)}catch(e){}
   if(stored!==null&&stored!==undefined){
     try{return unpackDB(stored)}
     catch(e){invalid.push('로컬 저장소: '+e.message)}
+  }
+  stored=null;
+  try{stored=await idbGet(key)}catch(e){}
+  if(stored!==null&&stored!==undefined){
+    try{return unpackDB(stored)}
+    catch(e){invalid.push('IndexedDB: '+e.message)}
   }
   if(invalid.length)
     throw new Error('저장 데이터를 복원할 수 없습니다. 원본은 삭제하거나 덮어쓰지 않았습니다. '+invalid.join(' / '));
   return buildWorld();
 }
 let saveTimer=null;
+// Per-slot write queues keep late IndexedDB completions from overwriting a
+// newer snapshot. All bytes and metadata are frozen before joining the queue.
+const SAVE_QUEUES=new Map();
+function persistWorldSnapshot(db,slot,key){
+  const str=packDB(db),teamId=managedTeamId(db);
+  const meta=JSON.stringify({team:teamId&&db.teams[teamId]?db.teams[teamId].name:'',year:db.world?db.world.year:''});
+  const prior=SAVE_QUEUES.get(key)||Promise.resolve(true);
+  const next=prior.then(async()=>{
+    try{
+      await idbSet(key,str);
+      try{localStorage.removeItem(key)}catch(e){}
+    }catch(e){
+      try{localStorage.setItem(key,str)}catch(e2){return false}
+    }
+    try{localStorage.setItem(STORAGE_NS+'-meta-'+slot,meta)}catch(e){}
+    return true;
+  });
+  SAVE_QUEUES.set(key,next);
+  next.then(ok=>{if(DB===db&&SLOT===slot)SAVEFAIL=!ok});
+  return next;
+}
 function saveDB(){
-  // Capture the slot and game instance before the delayed write. Switching save
-  // slots must never redirect a pending write into the newly selected slot.
   const db=DB,slot=SLOT,key=STORE;
   clearTimeout(saveTimer);
-  saveTimer=setTimeout(async()=>{
-    const str=packDB(db),teamId=managedTeamId(db);
-    try{localStorage.setItem(STORAGE_NS+'-meta-'+slot,JSON.stringify({
-      team:teamId&&db.teams[teamId]?db.teams[teamId].name:'',
-      year:db.world?db.world.year:''
-    }))}catch(e){}
-    try{await idbSet(key,str);SAVEFAIL=false;
-      try{localStorage.removeItem(key)}catch(e){}
-    }catch(e){try{localStorage.setItem(key,str);SAVEFAIL=false}catch(e2){SAVEFAIL=true}}
+  saveTimer=setTimeout(()=>{
+    saveTimer=null;
+    try{void persistWorldSnapshot(db,slot,key)}
+    catch(e){if(DB===db&&SLOT===slot)SAVEFAIL=true;console.error('LOL GM save failed',e)}
   },150);
+}
+async function switchSaveSlot(nextSlot){
+  if(SLOT_SWITCHING||nextSlot===SLOT||!['1','2','3'].includes(nextSlot))
+    return {ok:false,error:'이미 슬롯을 전환 중이거나 올바르지 않은 슬롯입니다.'};
+  SLOT_SWITCHING=true;
+  cancelUiTasks();
+  const main=document.querySelector('#main'),navigation=document.querySelector('nav');
+  if(main)main.inert=true;
+  if(navigation)navigation.inert=true;
+  let switched=false,error='';
+  try{
+    clearTimeout(saveTimer);saveTimer=null;
+    const saved=await persistWorldSnapshot(DB,SLOT,STORE);
+    if(!saved)throw new Error('현재 슬롯 저장에 실패했습니다. 슬롯 전환을 중단했습니다.');
+    const key=STORE_BASE+nextSlot;
+    const loaded=await loadDB(key);
+    // Commit the slot identity and world only after both I/O operations finish.
+    SLOT=nextSlot;STORE=key;DB=loaded;
+    try{localStorage.setItem(STORAGE_NS+'-slot',SLOT)}catch(e){}
+    resetUiForWorld();
+    saveDB();
+    switched=true;
+  }catch(e){error='슬롯을 불러오지 못했습니다. 원본은 보존됩니다 — '+e.message}
+  finally{
+    SLOT_SWITCHING=false;
+    if(main)main.inert=false;
+    if(navigation)navigation.inert=false;
+  }
+  if(switched)navigateTo('season');
+  return {ok:switched,error};
 }
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
