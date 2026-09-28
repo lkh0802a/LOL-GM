@@ -583,15 +583,16 @@ This applies retroactively to completed major items during later UI touches and 
 
 - A player keeps nationality/origin identity independently from the one active registration-local eligibility.
 - Multi-national players choose one origin local at career start; that first selection remains the permanent origin-local entitlement.
-- A player may acquire a non-origin local only through continuous service in one region under qualification terms agreed by that regional office and the international office. Qualification grants a player/agent choice; it does not auto-switch the active local.
+- A player may acquire a non-origin local only through continuous service in one region under qualification terms agreed by that regional office and the international office. Qualification grants a player/agent choice; it does not auto-switch the active local. If qualification is completed mid-season, activation of the newly acquired local is deferred until the next season.
 - Only one active local exists at a time. Relinquishing an acquired local restores the origin local immediately; a relinquished non-origin local must be earned again from scratch.
 - Same-region club movement preserves service. A same-region FA gap preserves progress but adds no service time. Cross-region loan pauses progress without adding service in either region. Registration to another region by normal contract resets the previous region's progress.
 - When a qualification rule measures service by seasons, a partial/half season with actual registration and service in that region counts as one service season; paused FA or cross-region-loan time does not create service credit.
 - The official registered-roster non-local cap is globally fixed at two.
-- Contracted club-to-club permanent transfers are capped at two per player per year. Free-agent signings, same-organization first/reserve movement and league-restructuring movement are not transfers.
+- Contracted club-to-club moves are capped at two per player per **season**, measured from season start through season end. Loan moves count toward this cap; free-agent signings, same-organization first/reserve movement and league-restructuring movement are not transfers.
 - Regional offices own transfer-window timing and domestic registration-window/change-count rules. Free agents may sign year-round, but official eligibility begins at a valid registration opportunity.
-- Official first-team registration is 5–10 players; the ten-player cap does not limit the club's total contracted players.
-- A domestically deregistered player may be registered again only after skipping at least one registration period and consuming the normal available change allowance.
+- Official first-team registration is 5–10 players; the ten-player cap does not limit the club's total contracted players. A player may occupy only one official roster at a time, so simultaneous first-team and reserve/Academy registration is prohibited.
+- A domestically deregistered player may be registered again from the **next** registration period, subject to the normal available change allowance; only same-window removal-and-return is prohibited.
+- Emergency replacement rules are office-owned exceptions: the competition office predefines whether a full ten-player roster must first deregister someone or may temporarily exceed ten for the emergency replacement.
 - International tournaments lock the initially submitted final roster for the event; only pre-published international-office emergency replacement rules may override the lock.
 - Detailed canonical rules are maintained in `docs/ROSTER_TRANSFER_LOCAL_RULES.md`.
 
