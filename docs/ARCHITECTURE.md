@@ -13,7 +13,7 @@ The authoritative module order lives in `scripts/artifact-modules.mjs`.
 - baseline/domain data: `data.js`, `champs2.js`
 - patch/meta: `patch.js`
 - competition/world: `competition.js`, `world.js`
-- management domains: `office.js`, `finance.js`, `features.js`, `career.js`
+- management domains: `office.js`, `finance.js`, `features.js`, `role-conversion.js`, `career.js`
 - draft information layer: `draft-analysis.js` (scouting-bounded mastery estimates, meta/composition evidence, opponent-intent explanation); legality and selection remain in `draft.js`
 - domain UI: `ui-patch.js`, `ui-market.js`, `ui-champion.js`, `ui-roster.js`, `ui-draft.js`, `ui-season.js`
 - application shell/controller: `app.js`
@@ -55,3 +55,4 @@ CI rejects:
 The generated root `index.html` is a deployment artifact. Canonical edits belong in `src/artifact/*`. Main-branch CI rebuilds it from the canonical module manifest and commits it only when the generated standalone differs.
 
 - lineup domain: `lineup.js` owns official five-player slot assignment and validation; `p.role` is player identity, not an eligibility gate.
+- role conversion domain: `role-conversion.js` owns proposal acceptance/refusal, long-term training progress, role-use acceleration, opportunity cost and primary-role identity changes. It does not gate one-off lineup assignment.
