@@ -129,7 +129,7 @@ source += `
 
   test('06c-player-sign-transaction',()=>{
     const db=buildWorld(),team=activeTeams(db,null,1)[0],p=Object.values(db.players).find(x=>!x.retired&&!x.team&&playerActionLocal(x,team.region));
-    assert(p,'free agent fixture missing');setManagedTeam(db,team.id);db.world.manage='manual';
+    assert(p,'free agent fixture missing');setManagedTeam(db,team.id);db.world={year:db.year,manage:'manual'};
     const command={type:'player.sign',pid:p.id,teamId:team.id,kind:'fa',actor:'manager',
       salary:3.2,years:2,terms:{signingBonus:1,promisedRole:'starter',buyout:8,bonuses:{title:.2}}};
     team.finance.cash=20;
@@ -162,7 +162,7 @@ source += `
   test('06d-player-transfer-transaction',()=>{
     const db=buildWorld(),teams=activeTeams(db,null,1),buyer=teams[0],seller=teams[1];
     const p=Object.values(db.players).find(x=>!x.retired&&!x.team&&playerActionLocal(x,buyer.region));
-    assert(p,'transfer fixture missing');setManagedTeam(db,buyer.id);db.world.manage='manual';
+    assert(p,'transfer fixture missing');setManagedTeam(db,buyer.id);db.world={year:db.year,manage:'manual'};
     assignPlayerToTeam(db,p,seller);
     p.contract={salary:2,until:db.year+1,years:2,signingBonus:0,promisedRole:'starter'};
     buyer.finance.cash=25;seller.finance.cash=10;
@@ -192,7 +192,7 @@ source += `
   test('06e-ai-transfer-and-move-limit',()=>{
     const db=buildWorld(),teams=activeTeams(db,null,1),seller=teams[0],buyer=teams[1],owner=teams[2];
     const p=Object.values(db.players).find(x=>!x.retired&&!x.team&&playerActionLocal(x,buyer.region));
-    assert(p,'AI transfer fixture missing');setManagedTeam(db,owner.id);db.world.manage='manual';
+    assert(p,'AI transfer fixture missing');setManagedTeam(db,owner.id);db.world={year:db.year,manage:'manual'};
     assignPlayerToTeam(db,p,seller);p.contract={salary:1.5,until:db.year+1,years:2};
     const command={type:'player.transfer',pid:p.id,fromId:seller.id,teamId:buyer.id,fee:1.2,actor:'ai'};
     buyer.finance.cash=10;seller.finance.cash=5;
@@ -212,7 +212,7 @@ source += `
 
   test('06f-release-and-option-transaction',()=>{
     const db=buildWorld(),teams=activeTeams(db,null,1),team=teams[0],other=teams[1];
-    setManagedTeam(db,team.id);db.world.manage='manual';
+    setManagedTeam(db,team.id);db.world={year:db.year,manage:'manual'};
     const p=Object.values(db.players).find(x=>!x.retired&&!x.team&&playerActionLocal(x,team.region));
     assert(p,'release fixture missing');
     assignPlayerToTeam(db,p,team);team.finance.cash=15;team.finance.buyout=0;
