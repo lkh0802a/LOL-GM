@@ -38,6 +38,8 @@ const maintainabilityBudgets = {
   'patch.js': 40000,
   'competition.js': 30000,
   'world.js': 85000,
+  'features.js': 30000,
+  'draft-analysis.js': 18000,
   'ui-patch.js': 30000,
   'ui-market.js': 35000,
   'ui-champion.js': 18000,
@@ -77,6 +79,7 @@ const appSource = await readFile(resolve(artifact, 'app.js'), 'utf8');
 const worldSource = await readFile(resolve(artifact, 'world.js'), 'utf8');
 const draftSource = await readFile(resolve(artifact, 'draft.js'), 'utf8');
 const featuresSource = await readFile(resolve(artifact, 'features.js'), 'utf8');
+const draftAnalysisSource = await readFile(resolve(artifact, 'draft-analysis.js'), 'utf8');
 if (!draftSource.includes('function draftCandidateAnalysis(')) {
   failed = true;
   console.error('Draft candidate analysis domain helper is missing');
@@ -85,13 +88,17 @@ if (!draftSource.includes('function draftStaffAdvice(')) {
   failed = true;
   console.error('Draft staff advice domain helper is missing');
 }
-if (!featuresSource.includes('function draftOpponentIntent(')) {
+if (!draftAnalysisSource.includes('function draftOpponentIntent(')) {
   failed = true;
   console.error('Opponent draft intent analysis helper is missing');
 }
-for (const marker of ['function draftMasteryObservation(','function draftCandidateEvidence(','function draftMetaEvidence(']) if (!featuresSource.includes(marker)) {
+for (const marker of ['function draftMasteryObservation(','function draftCandidateEvidence(','function draftMetaEvidence(']) if (!draftAnalysisSource.includes(marker)) {
   failed = true;
   console.error('Draft evidence/provenance helper is missing: '+marker);
+}
+for (const marker of ['function draftMasteryObservation(','function draftOpponentIntent(','function draftCandidateEvidence(']) if (featuresSource.includes(marker)) {
+  failed = true;
+  console.error('Draft-analysis responsibility leaked back into features.js: '+marker);
 }
 const saveVersion = Number(appSource.match(/const SAVE_VERSION=(\d+)/)?.[1]);
 const worldVersion = Number(worldSource.match(/version:(\d+),saveId:/)?.[1]);
