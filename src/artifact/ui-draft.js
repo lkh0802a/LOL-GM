@@ -2,7 +2,6 @@
 // 드래프트 규칙은 draft.js의 단계형 코어를 사용한다. 이 파일은 화면 상태와 입력만 담당한다.
 
 const DRAFT_UI_FILTERS=['ALL',...ROLES];
-let DRAFT_UI=null;
 
 function openInteractiveDraft(db,teamIds,playerTeamId,opt={}){
   const playerSide=teamIds.indexOf(playerTeamId);if(playerSide<0)throw new Error('Managed team is not part of draft');
