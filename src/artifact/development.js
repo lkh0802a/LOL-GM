@@ -46,7 +46,7 @@ function growPlayer(db,p,rng,games,champGames){
     if(n||practiceGain){pr.mastery=Math.round(clamp(pr.mastery+gain,20,99));pr.experience=Math.round(clamp(pr.experience+n*1.5,0,999));pr.confidence=Math.round(clamp(pr.confidence+rng.normal(n?2:1,3),10,99))}
     else {pr.mastery=Math.round(clamp(pr.mastery-rng.range(0,1.8)*(1-(p.attrs.meta_adaptation||50)/180),20,99));if(pr.mastery<36&&Object.keys(p.pool).length>12)delete p.pool[c]}
     if(p.pool[c]){pr.matchup_knowledge=Math.round(clamp(pr.matchup_knowledge+(n?1.5:.35),20,99));pr.scrimSeason=0;pr.trainingSeason=0}}
-  if(games>0)p.proSeasons=(p.proSeasons||0)+1;p.age++;if(typeof resetRoleConversionSeasonLoad==='function')resetRoleConversionSeasonLoad(p);
+  if(games>0)p.proSeasons=(p.proSeasons||0)+1;p.age++;
   return playerOvr(p)-before;
 }
 function playerValue(db,p,team){

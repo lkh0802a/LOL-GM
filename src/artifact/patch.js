@@ -50,7 +50,7 @@ function newPatch(db,date,major,rng){
   const rule=maybeRuleChange(db,major,rng);if(rule)notes.push(rule);
   const nc=maybeNewChampion(db,date,major,rng);if(nc)notes.push(nc);
   notes.forEach(n=>applyNote(P,n));
-  if(typeof adaptPlayerPoolsToPatch==='function')adaptPlayerPoolsToPatch(db,notes,!!major);
+  adaptPlayerPoolsToPatch(db,notes,!!major);
   P.id=id;
   const rec={id,date,major:!!major,notes,analysis:{sampleGames:diag.sampleGames,championChanges:notes.filter(n=>n.c&&['skill','base','kit'].includes(n.type)).map(n=>n.c),reworks:notes.filter(n=>n.type==='rework').map(n=>({c:n.c,scope:n.scope})),itemChanges:notes.filter(n=>n.type.indexOf('item')===0).map(n=>n.id),runeChanges:notes.filter(n=>n.type.indexOf('rune')===0).map(n=>n.id)}};
   db.patches.list.push(rec);db.patches.history=db.patches.history||[];db.patches.history.push(rec);

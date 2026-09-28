@@ -1,10 +1,11 @@
-# LOL GM 11.5 / Stage 5: Legacy cleanup (3 substages)
+# LOL GM 11.5 / Stage 5: Legacy cleanup (4 substages)
 
 ## Completion plan
 
-- **5-1 — canonical registration and roster helpers (this PR):** deduplicate local-region and contracted-move checks, route player actions and AI market through the roster domain, unify detachment, prune proven-dead `PAY_SCALE` and `mResign` aliases.
-- **5-2 — remaining legacy and duplicate-flow audit (pending):** inspect other reachable legacy calls and overlapping responsibilities across engine/UI modules; remove only verified-dead paths, and retain save migration/compatibility as required.
-- **5-3 — final compatibility and acceptance (pending):** expanded regression and long-career/save-resume checks, full CI, and main-build verification before declaring stage 5 complete.
+- **5-1 — canonical registration and roster helpers (completed):** deduplicate local-region and contracted-move checks, route player actions and AI market through the roster domain, unify detachment, prune proven-dead `PAY_SCALE` and `mResign` aliases.
+- **5-2 — remaining legacy/optional domain fallback audit (this PR):** remove fallback branches for APIs guaranteed by the canonical module manifest; prevent missing active gameplay dependencies from being silently skipped. Retain actual optional browser APIs and historical save migration.
+- **5-3 — duplicate-flow and module-boundary consolidation (pending):** audit remaining reachable contract, lineup and roster flows; remove only proven duplicates and add parity regressions.
+- **5-4 — final compatibility and acceptance (pending):** expanded regression and multi-season/save-resume checks, full CI and main-build verification before declaring stage 5 complete.
 
 
 ## Goal and boundaries
@@ -33,5 +34,21 @@ Remove demonstrably unused compatibility stubs and duplicate rule implementation
 - Regression **11e** checks transfer/release clear duplicate roster entries while preserving other players and successful save/load recovery.
 - Regression **11f** guards removed dead APIs, policy-driven regional pay values and the active renewal negotiation route.
 - CI checks forbid duplicate transaction-only registration and move-limit implementations or a reintroduced empty `PAY_SCALE` table. Smoke tests assert region-defined pay scales and absence of the removed table. Stages 1–4 regression, long-season performance, build and standalone sync remain mandatory.
+
+## Stage 5-2: Required module hooks and dead fallback branches
+
+The standalone build concatenates all modules in `scripts/artifact-modules.mjs` into a single classic-JavaScript scope. Source symbol inventory confirms each of the following has exactly one real owner and is always present in the engine artifact. Their older `typeof name==='function'` / `typeof name!=='undefined'` fallback checks were unreachable for supported builds and, if an owner were missing, would silently weaken gameplay.
+
+- `system-data.js` → `systems.js`: use canonical `SYSTEM_EFFECT_KEYS` for item and rune composition instead of a duplicated fallback list.
+- `player.js` → `patch.js`: champion skill/baseline/rework changes always update practiced champion pools; an absent hook is not ignored.
+- `player-relations.js`, `role-conversion.js` and `staff.js` → player, roster, development and patch evidence: satisfaction, role-conversion match usage, player-state defaults and youth coaching effects are always applied rather than falling back to neutral values.
+- `career.js` → `transfer.js`: initial-squad salary budget, valid managed squad destinations and initial-offer checks always use the implemented career domain, rather than accepting incomplete fallback behavior.
+- `staff.js` → `save-migration.js`: legacy staff restoration is a required migration, never silently omitted.
+
+An obsolete guarded call to the **nonexistent** `resetRoleConversionSeasonLoad` API in player aging was also removed; it previously did nothing. A new season-reset mechanic is not introduced in a behavior-preserving cleanup. That mechanic, if desired, requires separate gameplay acceptance tests and approval.\n\nThis removes *only* optional guards around required, available engine APIs and that inert dead call. It does not remove `migrateLegacyStaffState`, old player/roster-save field migrations, version-15 format-1 compatibility, or historical world records. Browser-dependent guards (`indexedDB`, direct-file preview and timer globals) remain because their availability actually varies at runtime. No draft choices, budget formulae, imports, patches or career outcomes are intentionally altered.
+
+Regression `11g` verifies player-state/role-satisfaction, rework-pool adaptation and full rune selection. Regression `11h` verifies the first-squad salary/ownership/offer checks. Structural CI validates required module owners and rejects a reintroduced optional hook guard. Full preexisting regression/smoke/perf/build gates, plus PR/main CI and generated HTML sync, are mandatory for this substage.
+
+**5-3 and 5-4 are not included in stage 5-2.**
 
 **Not included:** Stage 6 UI-state architecture; new patch, youth or transfer rules; deleting any historical save/patch/game record; globally replacing the bootstrap/domain-writer APIs with a new data model.

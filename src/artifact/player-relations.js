@@ -73,7 +73,7 @@ function updatePlayerUsage(db,s,rec,lines){
       if(u.teamGames>=16&&u.series%6===0)applySatisfaction(db,p);
     }
   }
-  if(typeof recordRoleConversionUsage==='function')recordRoleConversionUsage(db,lines,'official');
+  recordRoleConversionUsage(db,lines,'official');
 }
 function onSquadMoveSatisfaction(db,p,check){
   ensureSatisfaction(p);if(check.kind==='senddown'){const pen=p.rosterRole==='prospect'?1:p.rosterRole==='backup'?2:p.rosterRole==='competition'?3:6;p.satisfaction=clamp(p.satisfaction-pen,0,100);p.satisfactionReasons=Array.from(new Set([...p.satisfactionReasons,'reserve']));p.concernStreak+=p.rosterRole==='core'||p.rosterRole==='starter'?1:0;p.managerTrust=clamp(p.managerTrust-(p.rosterRole==='core'||p.rosterRole==='starter'?4:1),0,100)}
