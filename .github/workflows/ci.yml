@@ -9,6 +9,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -36,13 +40,34 @@ jobs:
       - name: Sync generated standalone
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
-          if ! git diff --quiet -- index.html; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- index.html; then
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+            npm run build
+
+            if git diff --quiet -- index.html; then
+              exit 0
+            fi
+
             git add index.html
             git commit -m "build: sync generated standalone"
-            git push
-          fi
+
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+
+            echo "Standalone sync raced with a newer main commit; retrying ($attempt/3)."
+          done
+
+          echo "Standalone sync failed after 3 attempts."
+          exit 1
 
       - name: Upload HTML preview
         if: always()
