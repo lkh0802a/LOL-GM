@@ -336,10 +336,17 @@ source += `\n(()=>{
   }
 
   const staffTeam=managedRoot;ensureTeamStaff(db,staffTeam,new RNG('staff-smoke','staff'));genStaffPool(db,new RNG('staff-pool-smoke','staff'));
-  const profile0=staffProfile(staffTeam),staffCandidate=(db.staffPool||[]).find(x=>x.role==='analyst');if(!staffCandidate)throw new Error('Staff market missing analyst');
+  const profile0=staffProfile(staffTeam),cost0=staffCost(db,staffTeam),legacyCoach=staffTeam.coach;
+  staffTeam.coach={id:'LEGACY_PROBE',name:'Legacy',draft:99,analysis:99,development:99};
+  const legacyProfile=staffProfile(staffTeam),legacyCost=staffCost(db,staffTeam);
+  if(JSON.stringify(legacyProfile)!==JSON.stringify(profile0)||Math.abs(legacyCost-cost0)>.0001)throw new Error('Legacy team.coach still affects runtime');
+  staffTeam.coach=legacyCoach;
+  const staffCandidate=(db.staffPool||[]).find(x=>x.role==='analyst');if(!staffCandidate)throw new Error('Staff market missing analyst');
   const oldAnalyst=staffTeam.staff.analyst;staffCandidate.rating=95;hireStaff(db,staffTeam,staffCandidate);if(staffProfile(staffTeam).analysis<=profile0.analysis)throw new Error('Analyst hire did not improve analysis effect');
   const fac=ensureFacilities(staffTeam),oldTrain=fac.training,oldCash=staffTeam.finance.cash;staffTeam.finance.cash=Math.max(oldCash,facilityCost(db,staffTeam,'training')*2);if(oldTrain<5){const mul0=facilityMul(staffTeam);upgradeFacility(db,staffTeam,'training');if(facilityMul(staffTeam)<=mul0)throw new Error('Training facility upgrade had no development effect')}
   if(!Number.isFinite(staffCost(db,staffTeam))||staffCost(db,staffTeam)<=0)throw new Error('Full staff cost invalid');
+  if(Object.values(db.teams).some(t=>Object.prototype.hasOwnProperty.call(t,'coach')))throw new Error('New world still creates generic team.coach');
+  if(Object.prototype.hasOwnProperty.call(db,'coachPool'))throw new Error('New world still creates generic coachPool');
   staffTeam.staff.analyst=oldAnalyst;staffTeam.finance.cash=oldCash;
   const aiStaffTeam=activeTeams(db,null,1).find(t=>t.id!==managedTeamId(db));if(!aiStaffTeam)throw new Error('AI staff test team missing');ensureTeamStaff(db,aiStaffTeam,new RNG('ai-staff','staff'));genStaffPool(db,new RNG('ai-staff-pool','staff'));aiStaffTeam.finance.cash=Math.max(aiStaffTeam.finance.cash,500*psOf(db,aiStaffTeam.region));const role='analyst',beforeStaff=aiStaffTeam.staff[role];const elite=genStaffMember(new RNG('elite-ai-staff','staff'),role,95);elite.rating=95;db.staffPool.push(elite);aiManageStaff(db,aiStaffTeam,new RNG('ai-staff-manage','staff'));if(aiStaffTeam.staff[role].rating<beforeStaff.rating)throw new Error('AI staff management downgraded role');
   const staffAge=aiStaffTeam.staff[role].age;ageStaff(db,new RNG('staff-age','staff'));if(aiStaffTeam.staff[role].age<staffAge)throw new Error('Staff lifecycle age regressed');
