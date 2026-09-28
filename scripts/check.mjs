@@ -54,7 +54,7 @@ for (const [file, maxBytes] of Object.entries(maintainabilityBudgets)) {
 
 const draftUiSource = await readFile(resolve(artifact, 'ui-draft.js'), 'utf8');
 const draftShellMarkers = ['du-series-meta','du-fearless','du-last-card','du-ban-img','du-pick-img'];
-const draftUiMarkers = ['officialLastGameCard','draftUiSeriesMeta','draftUiFearlessStrip','draftUiAnalysisPanel','draftUiStaffAdvice','draftUiOpponentIntent',"reason:'Fearless'"];
+const draftUiMarkers = ['officialLastGameCard','draftUiSeriesMeta','draftUiFearlessStrip','draftUiAnalysisPanel','draftUiStaffAdvice','draftUiOpponentIntent','draftUiEvidenceSources','draftUiPoolTop',"reason:'Fearless'"];
 for (const marker of draftUiMarkers) if (!draftUiSource.includes(marker)) {
   failed = true;
   console.error(`Interactive draft UI contract missing marker: ${marker}`);
@@ -88,6 +88,10 @@ if (!draftSource.includes('function draftStaffAdvice(')) {
 if (!featuresSource.includes('function draftOpponentIntent(')) {
   failed = true;
   console.error('Opponent draft intent analysis helper is missing');
+}
+for (const marker of ['function draftMasteryObservation(','function draftCandidateEvidence(','function draftMetaEvidence(']) if (!featuresSource.includes(marker)) {
+  failed = true;
+  console.error('Draft evidence/provenance helper is missing: '+marker);
 }
 const saveVersion = Number(appSource.match(/const SAVE_VERSION=(\d+)/)?.[1]);
 const worldVersion = Number(worldSource.match(/version:(\d+),saveId:/)?.[1]);

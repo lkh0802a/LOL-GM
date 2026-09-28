@@ -121,6 +121,71 @@ function staffProfile(t){
 function staffDevelopmentFor(t,role){const p=staffProfile(t),pos=roleCoachRating(t,role);return clamp(p.development+(pos?Math.max(0,pos-45)*.16:0),35,99)}
 function trainingGrowthMul(t){const p=staffProfile(t);return clamp(.88+(p.development-45)/220,0.88,1.13)}
 function scrimAnalysisBonus(t){const p=staffProfile(t);return clamp((p.analysis-50)/500+facilityAnalysisBonus(t),0,.14)}
+function draftMasteryObservation(state,observerSide,targetSide,p,cid){
+  if(!p)return {value:25,confidence:0,sources:['선수 정보 없음']};
+  const actual=draftMastery(p,cid);if(observerSide===targetSide)return {value:actual,confidence:100,sources:['구단 내부 훈련·스크림 데이터']};
+  const db=state.db,observer=db.teams[state.teamIds[observerSide]],target=db.teams[state.teamIds[targetSide]],managed=managedTeamId(db)===observer?.id;
+  if(managed){
+    const base=baseScoutKnowledge(db,p),raw=(db.scout||{})[p.id],stored=typeof raw==='number'?raw:(raw?.knowledge||0),knowledge=Math.round(clamp(Math.max(base,stored),0,98));
+    const noise=((hashStr(observer.id+'|draft-scout|'+p.id+'|'+cid)%2001)/1000-1)*(100-knowledge)*.12,value=Math.round(clamp(actual+noise,20,99)),sources=[];
+    if(raw&&typeof raw==='object'&&(raw.gamesSeen||0)>0)sources.push('공식 경기 관찰 '+raw.gamesSeen+'G');
+    if(raw&&typeof raw==='object'&&(raw.observations||0)>0)sources.push('스카우팅 관찰 '+raw.observations+'회');
+    if(!sources.length)sources.push(p.region===observer.region?'동일 지역 기본 정보':sameScoutZone(p.region,observer.region)?'동일 권역 기본 정보':'해외 기본 정보');
+    sources.push('스카우팅팀 '+Math.round(staffProfile(observer).scouting));
+    return {value,confidence:knowledge,sources};
+  }
+  const prof=staffProfile(observer),sameRegion=observer?.region===target?.region,sameZone=!sameRegion&&sameScoutZone(observer?.region,target?.region),hist=state.ctx.byTeam[state.teamIds[targetSide]]||{won:[],lost:[]},revealed=hist.won.includes(cid)||hist.lost.includes(cid);
+  const confidence=Math.round(clamp(18+prof.scouting*.34+prof.analysis*.23+(sameRegion?15:sameZone?7:0)+(revealed?12:0),25,92)),noise=((hashStr((observer?.id||'AI')+'|opp-mastery|'+p.id+'|'+cid)%2001)/1000-1)*(100-confidence)*.16,value=Math.round(clamp(actual+noise,20,99));
+  const sources=['스카우팅팀 '+Math.round(prof.scouting),'분석팀 '+Math.round(prof.analysis)];if(sameRegion)sources.push('동일 지역 관찰');else if(sameZone)sources.push('동일 권역 관찰');if(revealed)sources.push('이번 시리즈 공개 픽');
+  return {value,confidence,sources};
+}
+function draftMetaEvidence(state,side,cid){
+  const db=state.db,team=db.teams[state.teamIds[side]],rid=team.region,gst=(db.metaStats||{})[cid],rst=((db.regionMetaStats||{})[rid]||{})[cid],globalSample=gst?(gst.p||0)+(gst.b||0):0,regionalSample=rst?(rst.p||0)+(rst.b||0):0,study=clamp(((team.metaKnowledge||{})[cid]||0),0,1),analysis=staffProfile(team).analysis,sources=[];
+  if(regionalSample)sources.push((db.regions[rid]?.short||rid)+' 프로 표본 '+regionalSample);
+  if(globalSample)sources.push('글로벌 프로 표본 '+globalSample);
+  if(study>.01)sources.push('구단 챔피언 연구 '+Math.round(study*100));
+  sources.push('분석팀 '+Math.round(analysis));
+  const confidence=Math.round(clamp(analysis*.55+Math.min(34,Math.sqrt(globalSample+regionalSample*1.35)*5)+(study*12),20,98));
+  return {score:Math.round(clamp(state.vhat[side]?.[cid]||0,0,1)*100),confidence,globalSample,regionalSample,teamStudy:Math.round(study*100),sources};
+}
+function draftManagedChampionPoolEvidence(db,p,cid){
+  const me=managedTeam(db),base=baseScoutKnowledge(db,p),raw=(db.scout||{})[p.id],stored=typeof raw==='number'?raw:(raw?.knowledge||0),knowledge=Math.round(clamp(Math.max(base,stored),0,98)),estimate=id=>Math.round(clamp(draftMastery(p,id)+((hashStr((me?.id||'M')+'|pool|'+p.id+'|'+id)%2001)/1000-1)*(100-knowledge)*.12,20,99)),width=Math.max(2,Math.ceil((100-knowledge)/12)),range=id=>{const v=estimate(id);return [Math.max(20,v-width),Math.min(99,v+width)]},sources=[];
+  if(raw&&typeof raw==='object'&&(raw.gamesSeen||0)>0)sources.push('공식 경기 관찰 '+raw.gamesSeen+'G');
+  if(raw&&typeof raw==='object'&&(raw.observations||0)>0)sources.push('스카우팅 관찰 '+raw.observations+'회');
+  if(!sources.length)sources.push(p.region===me?.region?'동일 지역 기본 정보':sameScoutZone(p.region,me?.region)?'동일 권역 기본 정보':'해외 기본 정보');
+  const top=Object.keys(p.pool||{}).map(id=>({champ:id,estimate:estimate(id),range:range(id)})).sort((a,b)=>b.estimate-a.estimate).slice(0,4).map(x=>({champ:x.champ,range:x.range}));
+  return {knowledge,selectedRange:range(cid),top,sources,lastSeenDate:typeof raw==='object'?raw.lastSeenDate||null:null};
+}
+function draftOwnChampionPoolEvidence(state,side,role,cid){
+  const p=state.roster[side][role];if(!p)return null;const rows=Object.entries(p.pool||{}).map(([id,v])=>({champ:id,mastery:Math.round(v.mastery||25)})).sort((a,b)=>b.mastery-a.mastery),idx=rows.findIndex(x=>x.champ===cid);
+  return {rank:idx>=0?idx+1:null,total:rows.length,trained:idx>=0,top:rows.slice(0,4),source:'팀 내부 훈련·스크림 데이터',confidence:100};
+}
+function draftCompositionEvidence(state,side,cid,score){
+  const c=state.db.patch.champions[cid],mine=state.pickList[side].map(id=>state.db.patch.champions[id]).filter(Boolean),t=state.tacs[side],reasons=[],maxEng=mine.reduce((m,x)=>Math.max(m,x.kit.engage),0);
+  if(maxEng<7&&c.kit.engage>=5)reasons.push('현재 이니시에이팅 부족 보완');
+  if(!mine.some(x=>x.cls==='tank')&&c.cls==='tank')reasons.push('전방 탱커 부재 보완');
+  if(mine.length>=2){const ap=mine.filter(x=>x.dmg==='AP').length,ad=mine.length-ap;if(ap===0&&c.dmg==='AP')reasons.push('AP 피해 비중 보완');if(ad===0&&c.dmg==='AD')reasons.push('AD 피해 비중 보완')}
+  const scaling=(t.scaling_preference-50)/50*(c.kit.late-c.kit.early);if(Math.abs(scaling)>=.8)reasons.push(scaling>0?'팀 시간대 선호와 부합':'팀 시간대 선호와 충돌');
+  if(!reasons.length)reasons.push('현재 조합에서 뚜렷한 구조 보정 없음');
+  return {score,currentPicks:mine.map(x=>x.id),reasons,source:'현재 우리 공개 픽 + 팀 전술'};
+}
+function draftCandidateEvidence(state,side,cid,out){
+  out.metaEvidence=draftMetaEvidence(state,side,cid);
+  if(out.kind==='P'){
+    out.compositionEvidence=draftCompositionEvidence(state,side,cid,out.comp);
+    for(const fit of out.roleFits||[]){
+      const p=state.roster[side][fit.role],enemy=draftRolePossibilities(state,1-side,fit.role);
+      fit.pool=draftOwnChampionPoolEvidence(state,side,fit.role,cid);
+      fit.matchups=enemy.map(id=>({champ:id,name:championDisplayName(state.db.patch.champions[id])}));
+      fit.matchupSource=enemy.length?'상대 공개 픽에서 가능한 '+ROLE_KO[fit.role]+' 배치':'상대 해당 포지션 픽 미공개';
+      fit.playerId=p?.id||null;
+    }
+  }else{
+    const opp=1-side;
+    out.opponentPool=(out.roles||[]).map(role=>{const p=state.roster[opp][role];if(!p)return null;const managed=managedTeamId(state.db)===state.teamIds[side],pool=managed?draftManagedChampionPoolEvidence(state.db,p,cid):null,obs=draftMasteryObservation(state,side,opp,p,cid);return {role,player:p.name,knowledge:pool?.knowledge??obs.confidence,selectedRange:pool?.selectedRange||[Math.max(20,obs.value-6),Math.min(99,obs.value+6)],top:pool?.top||[],sources:pool?.sources||obs.sources,lastSeenDate:pool?.lastSeenDate||null}}).filter(Boolean);
+  }
+  return out;
+}
 function draftOpponentIntent(state,observerSide,limit=3){
   if(!state)return [];const db=state.db,opp=1-observerSide,observer=db.teams[state.teamIds[observerSide]],prof=staffProfile(observer),hist=state.ctx.byTeam[state.teamIds[observerSide]]||{won:[],lost:[]};
   return state.log.filter(x=>x.side===opp).slice(-limit).reverse().map(x=>{

@@ -132,8 +132,8 @@ function draftRolePossibilities(state,side,role){
 function draftFeasibleRoles(state,side,champ){
   const out=new Set();for(const a of draftAssignmentsFor(state,side,champ))for(const role of ROLES)if(a[role]===champ)out.add(role);return [...out];
 }
-function draftPickValue(state,side,role,c,mine){
-  const p=state.roster[side][role],ch=state.db.patch.champions[c],t=state.tacs[side];let comp=0;
+function draftPickValue(state,side,role,c,mine,observerSide=side){
+  const p=state.roster[side][role],ch=state.db.patch.champions[c],t=state.tacs[side],masteryObs=draftMasteryObservation(state,observerSide,side,p,c);let comp=0;
   const maxEng=mine.reduce((m,x)=>Math.max(m,x.kit.engage),0);if(maxEng<7)comp+=ch.kit.engage/10*0.5;
   if(!mine.some(x=>x.cls==='tank')&&ch.cls==='tank')comp+=0.35;
   if(mine.length>=2){const ap=mine.filter(x=>x.dmg==='AP').length,ad=mine.length-ap;if(ap===0&&ch.dmg==='AP')comp+=0.3;if(ad===0&&ch.dmg==='AD')comp+=0.3}
@@ -141,7 +141,7 @@ function draftPickValue(state,side,role,c,mine){
   const enemy=draftRolePossibilities(state,1-side,role).map(id=>state.db.patch.champions[id]).filter(Boolean);
   let counter=0;if(enemy.length)counter=avg(enemy.map(e=>((ch.kit.early-e.kit.early)+(ch.kit.poke-e.kit.poke)*0.5)/10*0.5));
   const flex=ch.roles.length>1?0.04:0,hist=state.ctx.byTeam[state.teamIds[side]]||{won:[],lost:[]},series=(hist.won.includes(c)?0.03:0)-(hist.lost.includes(c)?0.06:0);
-  const f={meta:state.vhat[side][c]*0.35,mastery:draftMastery(p,c)/100*0.5,comp:comp*0.15,counter:counter*BAL.counter,flex,series};f.total=f.meta+f.mastery+f.comp+f.counter+f.flex+f.series;return f;
+  const f={meta:state.vhat[side][c]*0.35,mastery:masteryObs.value/100*0.5,masteryKnowledge:masteryObs.confidence,comp:comp*0.15,counter:counter*BAL.counter,flex,series};f.total=f.meta+f.mastery+f.comp+f.counter+f.flex+f.series;return f;
 }
 function draftCandidateAnalysis(state,side,champ){
   const c=state.db.patch.champions[champ];if(!c)return null;
@@ -154,7 +154,7 @@ function draftCandidateAnalysis(state,side,champ){
     out.comp=out.roleFits.length?Math.round(avg(out.roleFits.map(x=>x.comp))):0;
     out.counter=out.roleFits.length?Math.round(avg(out.roleFits.map(x=>x.counter))):0;
   }
-  return out;
+  return draftCandidateEvidence(state,side,champ,out);
 }
 function draftStaffAdvice(state,side){
   const turn=draftTurn(state);if(!turn||turn.side!==side)return null;
@@ -203,7 +203,7 @@ function draftAiChoice(state){
   }
   const opp=1-side,mine=state.pickList[opp].map(n=>state.db.patch.champions[n]),seen=new Set(),cands=[];for(const r of ROLES)for(const c of draftShortlist(state,opp,r))if(!seen.has(c.id)){seen.add(c.id);cands.push(c)}
   const oh=state.ctx.byTeam[state.teamIds[opp]];let best=null;
-  for(const c of cands){if(state.taken.has(c.id)||!draftCanPick(state,opp,c.id))continue;for(const role of draftFeasibleRoles(state,opp,c.id)){const f=draftPickValue(state,opp,role,c.id,mine);f.reveal=oh&&oh.won.includes(c.id)?0.12:0;const v=f.total+f.reveal+(state.rng.next()-0.5)*noise*3.46;if(!best||v>best.v)best={v,intentRole:role,champ:c.id,f}}}
+  for(const c of cands){if(state.taken.has(c.id)||!draftCanPick(state,opp,c.id))continue;for(const role of draftFeasibleRoles(state,opp,c.id)){const f=draftPickValue(state,opp,role,c.id,mine,side);f.reveal=oh&&oh.won.includes(c.id)?0.12:0;const v=f.total+f.reveal+(state.rng.next()-0.5)*noise*3.46;if(!best||v>best.v)best={v,intentRole:role,champ:c.id,f}}}
   return best?{...best,kind,side,source:'ai'}:null;
 }
 function draftApplyChoice(state,choice){
