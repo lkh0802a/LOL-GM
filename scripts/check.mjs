@@ -40,6 +40,7 @@ const maintainabilityBudgets = {
   'world.js': 85000,
   'lineup.js': 12000,
   'features.js': 30000,
+  'role-conversion.js': 14000,
   'draft-analysis.js': 18000,
   'ui-patch.js': 30000,
   'ui-market.js': 35000,
