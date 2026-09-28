@@ -586,6 +586,7 @@ This applies retroactively to completed major items during later UI touches and 
 - A player may acquire a non-origin local only through continuous service in one region under qualification terms agreed by that regional office and the international office. Qualification grants a player/agent choice; it does not auto-switch the active local.
 - Only one active local exists at a time. Relinquishing an acquired local restores the origin local immediately; a relinquished non-origin local must be earned again from scratch.
 - Same-region club movement preserves service. A same-region FA gap preserves progress but adds no service time. Cross-region loan pauses progress without adding service in either region. Registration to another region by normal contract resets the previous region's progress.
+- When a qualification rule measures service by seasons, a partial/half season with actual registration and service in that region counts as one service season; paused FA or cross-region-loan time does not create service credit.
 - The official registered-roster non-local cap is globally fixed at two.
 - Contracted club-to-club permanent transfers are capped at two per player per year. Free-agent signings, same-organization first/reserve movement and league-restructuring movement are not transfers.
 - Regional offices own transfer-window timing and domestic registration-window/change-count rules. Free agents may sign year-round, but official eligibility begins at a valid registration opportunity.
