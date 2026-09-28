@@ -2,21 +2,6 @@
 // A command validates against a read-only view and commits through the existing
 // domain writers. Do not serialize previews or create a second roster ledger.
 
-function playerActionLocal(p,regionId){
-  return !!p&&!!regionId&&(p.activeLocalRegion||p.originLocalRegion||p.originRegion||p.region||p.nationality||null)===regionId;
-}
-function playerActionLocalError(db,team,p){
-  if(!team||!p)return '등록 대상을 찾을 수 없습니다';
-  if(playerActionLocal(p,team.region)||(team.roster||[]).includes(p.id))return null;
-  const count=(team.roster||[]).reduce((n,pid)=>{
-    const other=db.players[pid];return n+(other&&!playerActionLocal(other,team.region)?1:0);
-  },0);
-  return count>=nonLocalLimitForTeam(db,team)?'비로컬 선수 등록 상한을 넘습니다':null;
-}
-function playerActionMoveError(db,p){
-  const count=(p.contractedMoves||[]).filter(m=>m.season===(db.world?.year??db.year)&&m.counts!==false).length;
-  return count>=CONTRACTED_MOVE_LIMIT_PER_SEASON?'한 시즌 계약 구단 이동은 최대 2회까지 가능합니다':null;
-}
 function playerActionAuthority(db,actor,team,exception=null){
   const owner=managedTeamId(db),org=team&&parentTeamOf(db,team),managed=!!(owner&&org?.id===owner);
   if(actor==='manager'&&!managed)return worldActionError('unauthorized','관리 구단 소속 작업만 직접 실행할 수 있습니다');
@@ -47,7 +32,7 @@ function playerActionSnapshot(db,action){
       const t=db.teams[id];
       return t?{id,active:t.active!==false,roster:(t.roster||[]).slice().sort(),
         cash:t.finance?.cash??null,buyout:t.finance?.buyout??null,
-        foreign:(t.roster||[]).reduce((n,pid)=>n+(db.players[pid]&&!playerActionLocal(db.players[pid],t.region)?1:0),0)}
+        foreign:teamNonLocalCount(db,t)}
       :{id,missing:true};
     })
   };
@@ -82,7 +67,7 @@ function validatePlayerSignAction(db,a){
     return worldActionError('invalid_terms','유효하지 않은 계약 금액입니다');
   if(!playerActionFinance(t))return worldActionError('invalid_finance','구단 재정 정보가 없습니다');
   if(kind!=='renewal'){
-    const registration=playerActionLocalError(db,t,p);
+    const registration=localRegistrationError(db,t,p);
     if(registration)return worldActionError('registration_limit',registration);
   }
   let fee=0;
@@ -90,7 +75,7 @@ function validatePlayerSignAction(db,a){
     if(!playerActionFinance(from))return worldActionError('invalid_finance','원소속 구단 재정 정보가 없습니다');
     if(!Number.isFinite(a.fee)||a.fee<0)return worldActionError('invalid_fee','이적료는 0 이상의 유효한 금액이어야 합니다');
     fee=a.fee;
-    const move=playerActionMoveError(db,p);if(move)return worldActionError('move_limit',move);
+    const move=contractedMoveError(db,p);if(move)return worldActionError('move_limit',move);
   }
   if(fee+terms.signingBonus>0&&t.finance.cash+1e-8<fee+terms.signingBonus)
     return worldActionError('insufficient_cash','이적료 및 계약금을 지급할 현금이 부족합니다');
@@ -109,7 +94,7 @@ function validatePlayerTransferAction(db,a){
   if(!Number.isFinite(a.fee)||a.fee<0)return worldActionError('invalid_fee','이적료는 0 이상의 유효한 금액이어야 합니다');
   if(!playerActionFinance(from)||!playerActionFinance(to))return worldActionError('invalid_finance','구단 재정 정보가 없습니다');
   if(a.fee>0&&to.finance.cash+1e-8<a.fee)return worldActionError('insufficient_cash','이적료를 지급할 현금이 부족합니다');
-  const move=playerActionMoveError(db,p)||playerActionLocalError(db,to,p);
+  const move=contractedMoveError(db,p)||localRegistrationError(db,to,p);
   if(move)return worldActionError('invalid_transfer',move);
   return {ok:true,pid:p.id,fromId:from.id,teamId:to.id,fee:a.fee};
 }

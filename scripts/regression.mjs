@@ -143,7 +143,7 @@ source += `
 
 
   test('06c-player-sign-transaction',()=>{
-    const db=buildWorld(),team=activeTeams(db,null,1)[0],p=Object.values(db.players).find(x=>!x.retired&&!x.team&&playerActionLocal(x,team.region));
+    const db=buildWorld(),team=activeTeams(db,null,1)[0],p=Object.values(db.players).find(x=>!x.retired&&!x.team&&isLocalPlayer(x,team.region));
     assert(p,'free agent fixture missing');setManagedTeam(db,team.id);db.world={year:db.year,manage:'manual'};
     const command={type:'player.sign',pid:p.id,teamId:team.id,kind:'fa',actor:'manager',
       salary:3.2,years:2,terms:{signingBonus:1,promisedRole:'starter',buyout:8,bonuses:{title:.2}}};
@@ -176,7 +176,7 @@ source += `
 
   test('06d-player-transfer-transaction',()=>{
     const db=buildWorld(),teams=activeTeams(db,null,1),buyer=teams[0],seller=teams[1];
-    const p=Object.values(db.players).find(x=>!x.retired&&!x.team&&playerActionLocal(x,buyer.region));
+    const p=Object.values(db.players).find(x=>!x.retired&&!x.team&&isLocalPlayer(x,buyer.region));
     assert(p,'transfer fixture missing');setManagedTeam(db,buyer.id);db.world={year:db.year,manage:'manual'};
     assignPlayerToTeam(db,p,seller);
     p.contract={salary:2,until:db.year+1,years:2,signingBonus:0,promisedRole:'starter'};
@@ -206,7 +206,7 @@ source += `
 
   test('06e-ai-transfer-and-move-limit',()=>{
     const db=buildWorld(),teams=activeTeams(db,null,1),seller=teams[0],buyer=teams[1],owner=teams[2];
-    const p=Object.values(db.players).find(x=>!x.retired&&!x.team&&playerActionLocal(x,buyer.region));
+    const p=Object.values(db.players).find(x=>!x.retired&&!x.team&&isLocalPlayer(x,buyer.region));
     assert(p,'AI transfer fixture missing');setManagedTeam(db,owner.id);db.world={year:db.year,manage:'manual'};
     assignPlayerToTeam(db,p,seller);p.contract={salary:1.5,until:db.year+1,years:2};
     const command={type:'player.transfer',pid:p.id,fromId:seller.id,teamId:buyer.id,fee:1.2,actor:'ai'};
@@ -228,7 +228,7 @@ source += `
   test('06f-release-and-option-transaction',()=>{
     const db=buildWorld(),teams=activeTeams(db,null,1),team=teams[0],other=teams[1];
     setManagedTeam(db,team.id);db.world={year:db.year,manage:'manual'};
-    const p=Object.values(db.players).find(x=>!x.retired&&!x.team&&playerActionLocal(x,team.region));
+    const p=Object.values(db.players).find(x=>!x.retired&&!x.team&&isLocalPlayer(x,team.region));
     assert(p,'release fixture missing');
     assignPlayerToTeam(db,p,team);team.finance.cash=15;team.finance.buyout=0;
     p.contract={salary:2,until:db.year+1,years:2,option:{type:'team',year:db.year,salary:3}};
@@ -340,7 +340,7 @@ source += `
   test('06j-transaction-transfer-rollback',()=>{
     for(const kind of ['player.sign','player.transfer']){
       const db=buildWorld(),[buyer,seller]=activeTeams(db,null,1),
-        p=Object.values(db.players).find(x=>!x.retired&&!x.team&&playerActionLocal(x,buyer.region));
+        p=Object.values(db.players).find(x=>!x.retired&&!x.team&&isLocalPlayer(x,buyer.region));
       assert(p,'rollback transfer test lacks local FA fixture');
       setManagedTeam(db,buyer.id);db.world={year:db.year,phase:'market',manage:'manual'};
       assignPlayerToTeam(db,p,seller);
@@ -423,7 +423,7 @@ source += `
 
   test('06m-transaction-actor-parity-and-membership-guard',()=>{
     const db=buildWorld(),t=activeTeams(db,null,1)[0],
-      p=Object.values(db.players).find(x=>!x.team&&playerActionLocal(x,t.region));
+      p=Object.values(db.players).find(x=>!x.team&&isLocalPlayer(x,t.region));
     assert(p,'actor parity fixture missing FA');
     setManagedTeam(db,t.id);db.world={year:db.year,manage:'ai'};
     t.finance.cash=25;
@@ -637,6 +637,98 @@ source += `
     const facets=metaHistoryFacets(db),saved=packDB(db);
     assert(facets.comps.includes('REG_COMP')&&saved.length>0,
       'system/meta caches could not coexist with save serialization');
+  });
+
+
+  test('11d-shared-registration-rule-and-pure-preview',()=>{
+    const db=buildWorld(),t=activeTeams(db,null,1)[0],
+      foreignR=Object.values(db.regions).find(r=>r.id!==t.region),
+      legacy={id:'REG_LEGACY_LOCAL',region:t.region,contractedMoves:{obsolete:true}},
+      other={id:'REG_LEGACY_FOREIGN',originRegion:foreignR.id,region:foreignR.id};
+    const beforeLegacy=JSON.stringify([legacy,other]);
+    assert(isLocalPlayer(legacy,t.region)&&!isLocalPlayer(other,t.region)&&
+      playerActiveLocalRegion(legacy)===t.region&&
+      contractedMoveCount(db,legacy)===0&&!contractedMoveError(db,legacy),
+      'read-only local-region and move-count defaults changed for legacy records');
+    assert(JSON.stringify([legacy,other])===beforeLegacy,
+      'registration or move-count lookup unexpectedly migrated a player');
+    const foreign=Object.values(db.players).filter(p=>!p.retired&&!p.team&&!isLocalPlayer(p,t.region)).slice(0,3);
+    assert(foreign.length===3,'foreign free-agent regression fixture incomplete');
+    for(const p of foreign.slice(0,2))assignPlayerToTeam(db,p,t);
+    setManagedTeam(db,t.id);db.world={year:db.year,manage:'manual'};
+    t.finance.cash=80;
+    const candidate=foreign[2],
+      command={type:'player.sign',pid:candidate.id,teamId:t.id,actor:'manager',
+        kind:'fa',salary:2,years:2,terms:{promisedRole:'starter'}};
+    const expected=localRegistrationError(db,t,candidate),before=JSON.stringify(db),
+      invalid=previewWorldAction(db,command);
+    assert(expected&&invalid.reason==='registration_limit'&&invalid.errors[0]===expected,
+      'transaction and roster registration limits differ');
+    assert(JSON.stringify(db)===before,'foreign-cap validation mutated player eligibility or finances');
+    // Residency change takes effect through the same single regional rule, not
+    // a second transaction-only reimplementation.
+    candidate.activeLocalRegion=t.region;
+    const qualifiedBefore=JSON.stringify(db),accepted=previewWorldAction(db,command);
+    assert(accepted.ok&&!localRegistrationError(db,t,candidate)&&
+      JSON.stringify(db)===qualifiedBefore,
+      'residency qualification did not use the canonical local rule');
+    const local=Object.values(db.players).find(p=>!p.team&&isLocalPlayer(p,t.region));
+    const seller=activeTeams(db,null,1).find(x=>x.id!==t.id);
+    assert(local&&seller,'move-limit comparison fixture missing');
+    assignPlayerToTeam(db,local,seller);
+    local.contract={salary:2,until:db.year+1,years:2};
+    local.contractedMoves=[{season:db.year,counts:true},{season:db.year,counts:true}];
+    const moveBefore=JSON.stringify(db),domainError=contractedMoveError(db,local),
+      blocked=previewWorldAction(db,{type:'player.sign',pid:local.id,teamId:t.id,
+        fromId:seller.id,kind:'transfer',actor:'manager',fee:1,salary:2,years:2,
+        terms:{promisedRole:'starter'}});
+    assert(blocked.reason==='move_limit'&&blocked.errors[0]===domainError&&
+      contractedMoveCount(db,local)===2,'seasonal two-move ceiling differs between paths');
+    assert(JSON.stringify(db)===moveBefore,'move-limit validation mutated world state');
+  });
+
+  test('11e-roster-detach-is-single-owner',()=>{
+    const db=buildWorld(),[one,two,three]=activeTeams(db,null,1),
+      [p,q]=Object.values(db.players).filter(x=>!x.team).slice(0,2);
+    assert(p&&q&&one&&two&&three,'roster detachment test fixtures missing');
+    assignPlayerToTeam(db,p,one);
+    assignPlayerToTeam(db,q,two);
+    // A legacy/corrupt duplicate should be cleared by both transfer and release
+    // via the one canonical detachment function.
+    two.roster.push(p.id);
+    assignPlayerToTeam(db,p,three);
+    assert(p.team===three.id&&three.roster.filter(x=>x===p.id).length===1&&
+      !one.roster.includes(p.id)&&!two.roster.includes(p.id)&&
+      q.team===two.id&&two.roster.includes(q.id),
+      'reassignment did not detach stale entries or altered another player');
+    one.roster.push(p.id);two.roster.push(p.id);
+    const old=removePlayerFromTeam(db,p);
+    assert(old===three.id&&p.team===null&&
+      [one,two,three].every(team=>!team.roster.includes(p.id))&&
+      q.team===two.id&&two.roster.includes(q.id),
+      'release did not use the shared detachment path');
+    assert(!rosterIntegrityErrors(db).length,'shared detachment left invalid memberships');
+    const restored=unpackDB(packDB(db));
+    assert(!rosterIntegrityErrors(restored).length&&restored.players[q.id].team===two.id,
+      'reassigned rosters cannot resume after save/restore');
+  });
+
+  test('11f-dead-api-pruned-without-market-breakage',()=>{
+    assert(typeof PAY_SCALE==='undefined'&&typeof mResign==='undefined',
+      'dead regional salary table or unused renewal wrapper returned');
+    const db=buildWorld(),t=activeTeams(db,null,1)[0],p=Object.values(db.players).find(x=>!x.team);
+    assert(t&&p,'renewal compatibility fixture missing');
+    assert(psOf(db,t.region)===(db.regions[t.region].payScale??.5),
+      'salary pricing no longer delegates to active regional policy');
+    setManagedTeam(db,t.id);
+    db.world={year:db.year,seed:'legacy-cleanup-neg',phase:'market',
+      manage:'manual',negotiations:{},recruitment:{targets:{}}};
+    assignPlayerToTeam(db,p,t);
+    p.contract={salary:2,until:db.year+1,years:2};
+    const renewed=startNegotiation(db,p.id,'renewal');
+    assert(renewed.ok&&renewed.neg.kind==='renewal'&&
+      db.world.negotiations[renewed.neg.id]===renewed.neg,
+      'removing unused renewal wrapper broke the authoritative negotiation path');
   });
 
   console.log('11.5 Step 1 regression baseline: OK ('+results.join(', ')+')');

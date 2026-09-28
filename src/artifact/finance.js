@@ -1,5 +1,4 @@
 // ===== LOL GM: Club finance / economy domain (unit: 100M KRW) =====
-const PAY_SCALE={}; // legacy compatibility only; new worlds derive pay scale in the policy engine.
 const money=v=>(Math.round(v*10)/10).toFixed(1)+'억';
 function psOf(db,rid){const R=db.regions[rid];return R?(R.payScale??.5):.5}
 function psTeam(db,t){return psOf(db,t.region)*((t.division||1)===2?0.35:1)}

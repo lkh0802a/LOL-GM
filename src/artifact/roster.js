@@ -19,7 +19,11 @@ function ensurePlayerEligibility(p){
   return p;
 }
 function playerOriginRegion(p){return ensurePlayerEligibility(p)?.originRegion||null}
-function playerActiveLocalRegion(p){return ensurePlayerEligibility(p)?.activeLocalRegion||null}
+// Read-only eligibility lookups are shared by market estimates, previews and
+// domain writers. Normalization belongs in player creation/save migration.
+function playerActiveLocalRegion(p){
+  return p&&(p.activeLocalRegion||p.originLocalRegion||p.originRegion||p.region||p.nationality||null);
+}
 function isLocalPlayer(p,regionId){return !!p&&!!regionId&&playerActiveLocalRegion(p)===regionId}
 function nonLocalLimitForTeam(db,t){
   const team=teamRef(db,t);if(!team)return FIRST_TEAM_NON_LOCAL_LIMIT;
@@ -37,7 +41,7 @@ function localRegistrationError(db,t,p){
   return teamNonLocalCount(db,team)>=nonLocalLimitForTeam(db,team)?'비로컬 선수 등록 상한을 넘습니다':null;
 }
 function contractedMoveSeason(db){return db?.world?.year??db?.year}
-function contractedMoveCount(db,p){ensurePlayerEligibility(p);const y=contractedMoveSeason(db);return (p?.contractedMoves||[]).filter(x=>x.season===y&&x.counts!==false).length}
+function contractedMoveCount(db,p){const y=contractedMoveSeason(db),moves=Array.isArray(p?.contractedMoves)?p.contractedMoves:[];return moves.filter(x=>x.season===y&&x.counts!==false).length}
 function contractedMoveError(db,p){return contractedMoveCount(db,p)>=CONTRACTED_MOVE_LIMIT_PER_SEASON?'한 시즌 계약 구단 이동은 최대 2회까지 가능합니다':null}
 function recordContractedMove(db,p,kind,from,to,extra={}){
   ensurePlayerEligibility(p);const season=contractedMoveSeason(db);
@@ -157,10 +161,16 @@ function aiManageOwnedReserve(db,t){
 }
 function playerRef(db,p){return typeof p==='string'?db.players[p]:p}
 function teamRef(db,t){return typeof t==='string'?db.teams[t]:t}
+function detachPlayerFromRosters(db,pid,exceptId=null){
+  for(const t of Object.values(db.teams)){
+    if(t.id===exceptId||!t.roster||!t.roster.includes(pid))continue;
+    t.roster=t.roster.filter(id=>id!==pid);
+  }
+}
 function removePlayerFromTeam(db,p){
   const player=playerRef(db,p);if(!player)return null;
   const oldId=player.team;
-  for(const t of Object.values(db.teams))if(t.roster&&t.roster.includes(player.id))t.roster=t.roster.filter(id=>id!==player.id);
+  detachPlayerFromRosters(db,player.id);
   player.team=null;
   return oldId;
 }
@@ -169,7 +179,7 @@ function assignPlayerToTeam(db,p,t){
   if(!player)throw new Error('Unknown player');
   if(!team)throw new Error(`Unknown team: ${typeof t==='string'?t:'?'}`);
   const oldTeam=player.team&&db.teams[player.team],oldOrg=oldTeam?(oldTeam.parent||oldTeam.id):null,newOrg=team.parent||team.id;
-  for(const other of Object.values(db.teams))if(other.id!==team.id&&other.roster&&other.roster.includes(player.id))other.roster=other.roster.filter(id=>id!==player.id);
+  detachPlayerFromRosters(db,player.id,team.id);
   team.roster=Array.from(new Set([...(team.roster||[]),player.id]));player.team=team.id;
   if(typeof pState==='function'){pState(player);if(oldOrg!==newOrg){player.teamAdaptation=oldOrg?45:55;player.tacticalAdaptation=oldOrg?48:58}}
   return player;
