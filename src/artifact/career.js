@@ -88,8 +88,8 @@ function initialStartNegotiation(db,pid,targetId){
 }
 function initialSignPlayer(db,pid,targetId){return initialStartNegotiation(db,pid,targetId)}
 function initialReleasePlayer(db,pid){const p=db.players[pid],allowed=new Set(setupTeamsForManager(db).map(t=>t.id));if(!p||!p.team||!allowed.has(p.team))return '초기 로스터에서 방출할 수 없는 선수입니다';removePlayerFromTeam(db,p);p.contract=null;p.faYears=0;return p.name+' 선수를 FA 풀로 되돌렸습니다'}
-function initialCandidateScore(db,p,t,key=''){
-  const ps=Math.max(.2,psOf(db,t.region)),cost=asking(db,p,t.region)/ps,costWeight={cost:.55,balanced:.28,youth:.3,'win-now':.16,superstar:.1}[t.philosophy]??.28;
+function initialCandidateScore(db,p,t,key='',salary=null){
+  const ps=Math.max(.2,psOf(db,t.region)),cost=(salary??asking(db,p,t.region))/ps,costWeight={cost:.55,balanced:.28,youth:.3,'win-now':.16,superstar:.1}[t.philosophy]??.28;
   const star=t.philosophy==='superstar'?(p.reputation||0)*.025:0,noise=((hashStr((db.world?.seed||db.saveId)+'|initial|'+t.id+'|'+p.id+'|'+key)%2001)/1000-1)*1.2;
   return aiMarketValue(db,p,t)+star-cost*costWeight+noise;
 }
@@ -97,21 +97,29 @@ function initialMissingRoles(db,t,extraPlayer=null){
   const ids=(t.roster||[]).map(id=>db.players[id]).filter(Boolean);if(extraPlayer)ids.push(extraPlayer);
   return ROLES.filter(role=>!ids.some(p=>p.role===role));
 }
-function initialFutureRoleChoices(db,team,missing,excludeId){
-  const need=new Set(missing),best=Object.fromEntries(missing.map(r=>[r,{local:null,foreign:null}]));
-  for(const p of Object.values(db.players)){
-    if(p.retired||p.team||p.id===excludeId||!need.has(p.role))continue;
-    const nonLocal=!isLocalPlayer(p,team.region),slot=nonLocal?'foreign':'local',s=asking(db,p,team.region),cur=best[p.role][slot];
-    if(!cur||s<cur.s)best[p.role][slot]={s,nonLocal};
+function initialMarketSnapshot(db,teams){
+  const free=Object.values(db.players).filter(p=>!p.retired&&!p.team),byRole=Object.fromEntries(ROLES.map(r=>[r,[]])),priceCache=new Map(),regions=[...new Set((teams||activeTeams(db)).map(t=>t.region))];
+  for(const p of free)if(byRole[p.role])byRole[p.role].push(p);
+  const price=(p,region)=>{const k=region+'|'+p.id;if(!priceCache.has(k))priceCache.set(k,asking(db,p,region));return priceCache.get(k)};
+  const alternatives={};
+  for(const region of regions){
+    alternatives[region]={};
+    for(const role of ROLES){
+      let local=[],foreign=[];for(const p of byRole[role]){const row={id:p.id,s:price(p,region),nonLocal:!isLocalPlayer(p,region)};(row.nonLocal?foreign:local).push(row)}
+      alternatives[region][role]={local:local.sort((a,b)=>a.s-b.s).slice(0,2),foreign:foreign.sort((a,b)=>a.s-b.s).slice(0,2)};
+    }
   }
-  return best;
+  return {free,byRole,price,alternatives,supply:Object.fromEntries(ROLES.map(r=>[r,byRole[r].length]))};
 }
-function initialFutureFeasible(db,t,candidate,salary){
+function initialFutureRoleChoices(team,missing,excludeId,snap){
+  const out={};for(const role of missing){const src=snap.alternatives[team.region]?.[role]||{local:[],foreign:[]};out[role]={local:src.local.find(x=>x.id!==excludeId)||null,foreign:src.foreign.find(x=>x.id!==excludeId)||null}}return out;
+}
+function initialFutureFeasible(db,t,candidate,salary,snap=null){
   const team=teamRef(db,t),lim=initialSquadLimits(db,team),projected=(team.roster||[]).length+1,missing=initialMissingRoles(db,team,candidate);
   if(projected+missing.length>lim.max)return false;
   const usedImports=teamNonLocalCount(db,team)+(isLocalPlayer(candidate,team.region)?0:1),cap=nonLocalLimitForTeam(db,team),budget=initialSalaryCeiling(db,team)-payroll(db,team)-salary;
   if(usedImports>cap||budget<-.001)return false;
-  const best=initialFutureRoleChoices(db,team,missing,candidate.id);let states=[{cost:0,imports:usedImports}];
+  const market=snap||initialMarketSnapshot(db,[team]),best=initialFutureRoleChoices(team,missing,candidate.id,market);let states=[{cost:0,imports:usedImports}];
   for(const role of missing){
     const choices=Object.values(best[role]||{}).filter(Boolean);if(!choices.length)return false;
     const next=[];for(const st of states)for(const x of choices){const imports=st.imports+(x.nonLocal?1:0),cost=st.cost+x.s;if(imports<=cap&&cost<=budget+.001)next.push({cost,imports})}
@@ -119,11 +127,11 @@ function initialFutureFeasible(db,t,candidate,salary){
   }
   return true;
 }
-function initialPickCandidate(db,t,role,key=''){
-  const team=teamRef(db,t),target=team.initialRosterTarget||initialRosterTarget(db,team),room=Math.max(0,initialSalaryCeiling(db,team)-payroll(db,team)),slotsLeft=Math.max(1,target-team.roster.length),softMax=room/slotsLeft*1.35;
-  const rows=Object.values(db.players).filter(p=>!p.retired&&!p.team&&(!role||p.role===role)).map(p=>{const chk=initialSignCheck(db,p,team);return chk.ok?{p,salary:chk.salary,score:initialCandidateScore(db,p,team,key)}:null}).filter(Boolean)
-    .sort((a,b)=>(a.salary<=softMax)!==(b.salary<=softMax)?(a.salary<=softMax?-1:1):b.score-a.score||a.salary-b.salary);
-  for(const row of rows)if(initialFutureFeasible(db,team,row.p,row.salary))return row.p;
+function initialPickCandidate(db,t,role,key='',snap=null){
+  const team=teamRef(db,t),market=snap||initialMarketSnapshot(db,[team]),target=team.initialRosterTarget||initialRosterTarget(db,team),room=Math.max(0,initialSalaryCeiling(db,team)-payroll(db,team)),slotsLeft=Math.max(1,target-team.roster.length),softMax=room/slotsLeft*1.35,pool=role?market.byRole[role]:market.free;
+  const rows=[];for(const p of pool){if(p.team)continue;const salary=market.price(p,team.region),chk=initialOfferCheck(db,p,team,{salary});if(!chk.ok)continue;rows.push({p,salary,score:initialCandidateScore(db,p,team,key,salary)})}
+  rows.sort((a,b)=>(a.salary<=softMax)!==(b.salary<=softMax)?(a.salary<=softMax?-1:1):b.score-a.score||a.salary-b.salary);
+  for(const row of rows)if(initialFutureFeasible(db,team,row.p,row.salary,market))return row.p;
   return null;
 }
 function normalizeInitialSalaryFloor(db,t){
@@ -138,18 +146,15 @@ function aiInitialContractTerms(db,p,t,rng){
   const ask=asking(db,p,t.region),years=contractYearsForPlayer(db,p,rng),premium=rng.range(.96,1.08),role=defaultPromisedRole(db,p,t),room=Math.max(.1,initialSalaryCeiling(db,t)-payroll(db,t)),salary=Math.min(room,ask*premium);
   return normalizeContractTerms(db,p,t,salary,years,{signingBonus:rng.chance(.28)?ask*rng.range(.04,.12):0,bonuses:rng.chance(.32)?{performance:ask*.05,title:ask*.08,international:ask*.05}:{},promisedRole:role,option:rng.chance(.15)?{type:rng.chance(.55)?'team':'player'}:null,buyout:p.personality.ambition>=86&&rng.chance(.35)?playerMarketValue(db,p)*1.8:null});
 }
-function initialRoleSupplyCounts(db){
-  const out=Object.fromEntries(ROLES.map(r=>[r,0]));for(const p of Object.values(db.players))if(!p.retired&&!p.team&&out[p.role]!==undefined)out[p.role]++;return out;
-}
-function initialOfferForTeam(db,t,phase,round,seed,supply){
+function initialOfferForTeam(db,t,phase,round,seed,market){
   const missing=initialMissingRoles(db,t),target=t.initialRosterTarget||initialRosterTarget(db,t);if(phase==='roles'&&!missing.length)return null;if(phase==='depth'&&t.roster.length>=target)return null;
-  const role=phase==='roles'?missing.slice().sort((a,b)=>(supply[a]||0)-(supply[b]||0))[0]:null,key=phase+'|'+round+'|'+(role||'ANY'),p=initialPickCandidate(db,t,role,key);if(!p)return null;
+  const role=phase==='roles'?missing.slice().sort((a,b)=>(market.supply[a]||0)-(market.supply[b]||0))[0]:null,key=phase+'|'+round+'|'+(role||'ANY'),p=initialPickCandidate(db,t,role,key,market);if(!p)return null;
   const rng=new RNG((seed||'initial-market')+'|'+t.id+'|'+key,'initial-offer'),terms=aiInitialContractTerms(db,p,t,rng),chk=initialOfferCheck(db,p,t,terms);if(!chk.ok)return null;
   return {team:t,player:p,terms,role,value:offerUtility(db,p,t,terms)+((hashStr((seed||'initial-market')+'|choose|'+p.id+'|'+t.id+'|'+round)%1001)/1000-.5)*.08};
 }
 function resolveInitialOfferRound(db,teams,phase,round,seed){
-  const supply=initialRoleSupplyCounts(db),offers=teams.map(t=>initialOfferForTeam(db,t,phase,round,seed,supply)).filter(Boolean),byPlayer={};for(const o of offers)(byPlayer[o.player.id]=byPlayer[o.player.id]||[]).push(o);
-  let signed=0;for(const os of Object.values(byPlayer)){const best=os.sort((a,b)=>b.value-a.value||b.terms.salary-a.terms.salary)[0],p=best.player,t=best.team;if(p.team)continue;const chk=initialOfferCheck(db,p,t,best.terms);if(!chk.ok||!initialFutureFeasible(db,t,p,best.terms.salary))continue;signContract(db,p,t,best.terms.salary,best.terms.years,best.terms);signed++}
+  const market=initialMarketSnapshot(db,teams),offers=teams.map(t=>initialOfferForTeam(db,t,phase,round,seed,market)).filter(Boolean),byPlayer={};for(const o of offers)(byPlayer[o.player.id]=byPlayer[o.player.id]||[]).push(o);
+  let signed=0;for(const os of Object.values(byPlayer)){const best=os.sort((a,b)=>b.value-a.value||b.terms.salary-a.terms.salary)[0],p=best.player,t=best.team;if(p.team)continue;const chk=initialOfferCheck(db,p,t,best.terms);if(!chk.ok||!initialFutureFeasible(db,t,p,best.terms.salary,market))continue;signContract(db,p,t,best.terms.salary,best.terms.years,best.terms);signed++}
   return {offers:offers.length,signed};
 }
 function runInitialMarketPhase(db,teams,phase,seed){
@@ -159,8 +164,8 @@ function runInitialMarketPhase(db,teams,phase,seed){
 }
 function autoBuildInitialSquad(db,t,rng,target=null){
   const team=teamRef(db,t),limits=initialSquadLimits(db,team),want=Math.min(limits.max,Math.max(limits.min,target??initialRosterTarget(db,team)));team.initialRosterTarget=want;
-  for(let guard=0;guard<20&&initialMissingRoles(db,team).length;guard++){const role=initialMissingRoles(db,team)[0],p=initialPickCandidate(db,team,role,'single|'+guard);if(!p)break;const terms=aiInitialContractTerms(db,p,team,rng),chk=initialOfferCheck(db,p,team,terms);if(!chk.ok)break;signContract(db,p,team,terms.salary,terms.years,terms)}
-  while(team.roster.length<want){const p=initialPickCandidate(db,team,null,'depth|'+team.roster.length);if(!p)break;const terms=aiInitialContractTerms(db,p,team,rng),chk=initialOfferCheck(db,p,team,terms);if(!chk.ok)break;signContract(db,p,team,terms.salary,terms.years,terms)}
+  for(let guard=0;guard<20&&initialMissingRoles(db,team).length;guard++){const role=initialMissingRoles(db,team)[0],market=initialMarketSnapshot(db,[team]),p=initialPickCandidate(db,team,role,'single|'+guard,market);if(!p)break;const terms=aiInitialContractTerms(db,p,team,rng),chk=initialOfferCheck(db,p,team,terms);if(!chk.ok)break;signContract(db,p,team,terms.salary,terms.years,terms)}
+  while(team.roster.length<want){const market=initialMarketSnapshot(db,[team]),p=initialPickCandidate(db,team,null,'depth|'+team.roster.length,market);if(!p)break;const terms=aiInitialContractTerms(db,p,team,rng),chk=initialOfferCheck(db,p,team,terms);if(!chk.ok)break;signContract(db,p,team,terms.salary,terms.years,terms)}
   const errors=initialSquadErrors(db,team);if(errors.length)throw new Error(team.name+' 초기 로스터 오류: '+errors.join(', '));return team;
 }
 function autoBuildInitialWorld(db,excludedIds,seed){
