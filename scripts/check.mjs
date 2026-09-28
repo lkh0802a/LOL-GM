@@ -31,7 +31,7 @@ for (const file of modules) {
 }
 
 const maintainabilityBudgets = {
-  'app.js': 52000,
+  'app.js': 22000,
   'engine.js': 38000,
   'draft.js': 26000,
   'content-naming.js': 16000,
@@ -59,6 +59,10 @@ const maintainabilityBudgets = {
   'draft-analysis.js': 18000,
   'ui-patch.js': 30000,
   'ui-market.js': 35000,
+  'ui-setup.js': 16000,
+  'ui-match.js': 22000,
+  'ui-manager.js': 16000,
+  'ui-data.js': 12000,
   'ui-champion.js': 18000,
   'ui-player.js': 18000,
   'ui-roster.js': 18000,
@@ -101,6 +105,10 @@ for (const file of modules.filter(file => file !== 'save.js')) {
     console.error(`Deprecated secondary-role model leaked into ${file}: ${marker}`);
   }
 }
+const uiSetupSource = await readFile(resolve(artifact, 'ui-setup.js'), 'utf8');
+const uiMatchSource = await readFile(resolve(artifact, 'ui-match.js'), 'utf8');
+const uiManagerSource = await readFile(resolve(artifact, 'ui-manager.js'), 'utf8');
+const uiDataSource = await readFile(resolve(artifact, 'ui-data.js'), 'utf8');
 const appSource = await readFile(resolve(artifact, 'app.js'), 'utf8');
 const playerSource = await readFile(resolve(artifact, 'player.js'), 'utf8');
 const developmentSource = await readFile(resolve(artifact, 'development.js'), 'utf8');
@@ -249,6 +257,18 @@ for (const marker of ['function metaHistoryIndex(','function recordMeta(','funct
 }
 for (const marker of ['function applyNote(','function getPatch(','function patchTick(']) {
   if (!patchSource.includes(marker)) { failed=true; console.error('Patch-domain helper missing: '+marker); }
+}
+for (const marker of ['function viewMatch(','function renderResult(','function renderSeries(']) {
+  if (!uiMatchSource.includes(marker)) { failed=true; console.error('Match UI helper missing: '+marker); }
+  if (appSource.includes(marker)) { failed=true; console.error('Match UI leaked back into app.js: '+marker); }
+}
+for (const marker of ['function managerTeamPicker(','function seasonSetup(']) {
+  if (!uiSetupSource.includes(marker)) { failed=true; console.error('Setup UI helper missing: '+marker); }
+  if (appSource.includes(marker)) { failed=true; console.error('Setup UI leaked back into app.js: '+marker); }
+}
+for (const marker of ['function viewData(','function bindData(']) {
+  if (!uiDataSource.includes(marker)) { failed=true; console.error('Data UI helper missing: '+marker); }
+  if (appSource.includes(marker)) { failed=true; console.error('Data UI leaked back into app.js: '+marker); }
 }
 const saveVersion = Number(appSource.match(/const SAVE_VERSION=(\d+)/)?.[1]);
 const worldVersion = Number(worldSource.match(/version:(\d+),saveId:/)?.[1]);
