@@ -1,16 +1,73 @@
 // ===== LOL GM: global esports office, region/competition governance =====
+// Geographic *markets*, not a list of real-world league brands. They enter only
+// through the normal world-office expansion roll, never as a fixed starting league.
+const FUTURE_LEAGUE_MARKETS=[
+  {id:'IN',name:'인도·남아시아',brand:'South Asian',short:'SAX',strength:63,system:'franchise'},
+  {id:'AFR',name:'사하라 이남 아프리카',brand:'African',short:'AFX',strength:61,system:'mixed'},
+  {id:'CAR',name:'카리브해',brand:'Caribbean',short:'CRX',strength:60,system:'relegation'},
+  {id:'CAS',name:'중앙아시아',brand:'Central Asian',short:'CAX',strength:62,system:'relegation'},
+  {id:'AND',name:'안데스',brand:'Andean',short:'ANX',strength:62,system:'mixed'},
+  {id:'NOR',name:'북유럽',brand:'Northern',short:'NRX',strength:65,system:'franchise'},
+  {id:'GUL',name:'걸프',brand:'Gulf',short:'GFX',strength:62,system:'franchise'},
+  {id:'BAL',name:'발트해',brand:'Baltic',short:'BLX',strength:61,system:'relegation'}
+];
+const FUTURE_LEAGUE_TITLES=['Horizon','Ascension','Frontier','Aurora','Vertex','Nova','Summit','Rising'];
+const FUTURE_LEAGUE_FORMATS=['Circuit','League','Championship','Series'];
+function newLeagueIdentity(db,rng,market){
+  const usedNames=new Set([
+    ...Object.values(REGION_PRESETS).map(x=>x.leagueName),
+    ...Object.values(db.regions).map(x=>x.leagueName),
+    ...(db.global?.foundedLeagueNames||[])
+  ]);
+  const usedShorts=new Set([
+    ...Object.values(REGION_PRESETS).map(x=>x.short),
+    ...Object.values(db.regions).map(x=>x.short),
+    ...(db.global?.foundedLeagueShorts||[])
+  ]);
+  let leagueName='';
+  for(let i=0;i<40;i++){
+    const proposal=market.brand+' '+rng.pick(FUTURE_LEAGUE_TITLES)+' '+rng.pick(FUTURE_LEAGUE_FORMATS);
+    if(!usedNames.has(proposal)){leagueName=proposal;break}
+  }
+  if(!leagueName){
+    let n=2;
+    while(usedNames.has(market.brand+' Frontier League '+n))n++;
+    leagueName=market.brand+' Frontier League '+n;
+  }
+  let short=market.short,n=2;
+  while(usedShorts.has(short))short=market.short+n++;
+  return {leagueName,short};
+}
+function futureLeagueCandidates(db){
+  return FUTURE_LEAGUE_MARKETS.filter(m=>!db.regions[m.id]&&
+    !(db.global?.dissolved||[]).includes(m.id)).map(m=>({
+      id:m.id,P:m,par:null,fictional:true,score:m.strength/10
+    })).sort((a,b)=>b.score-a.score);
+}
 function worldDecisions(db,rng,f,ev){
   if(f<=0)return;
   const gev=(what,why)=>{db.global.decisions=[...(db.global.decisions||[]),{year:db.world.year,what,why}].slice(-15);ev(`국제 e스포츠 사무국: ${what} — ${why}`)};
   const nR=Object.keys(db.regions).length, avgH=db.worldHype/Math.max(1,nR);
   // 새 지역 합류: 모(母)리그가 있는 신흥 지역은 '분리 독립', 없으면 신규 출범
-  const pool=Object.keys(REGION_PRESETS).filter(k=>!db.regions[k]&&!(db.global.dissolved||[]).includes(k)).map(id=>{const P=REGION_PRESETS[id],par=P.parent&&db.regions[P.parent],pm=par&&(par.metrics||[]).slice(-1)[0];
-    return {id,P,par,score:P.strength/10+(pm?(pm.hype-45)/15:0)+(par?activeTeams(db,par.id,1).length/10:0)}}).sort((a,b)=>b.score-a.score);
+  const historic=Object.keys(REGION_PRESETS).filter(k=>!db.regions[k]&&!(db.global.dissolved||[]).includes(k)).map(id=>{const P=REGION_PRESETS[id],par=P.parent&&db.regions[P.parent],pm=par&&(par.metrics||[]).slice(-1)[0];
+    return {id,P,par,fictional:false,score:P.strength/10+(pm?(pm.hype-45)/15:0)+(par?activeTeams(db,par.id,1).length/10:0)}}).sort((a,b)=>b.score-a.score);
+  const future=futureLeagueCandidates(db);
   const pJoin=clamp((avgH-40)/50,0,0.35)*f;
-  if(pool.length&&rng.chance(pJoin)){
-    const c=rng.chance(0.7)?pool[0]:rng.pick(pool), id=c.id, off=rng.pick(Object.keys(OFFICE_STYLES));
-    const nSlots=clamp(Math.round((REGION_PRESETS[id].strength-58)/3.5),1,3), cfg=regionCfg(id,{div2:false,office:off,slots:nSlots});
+  if((historic.length||future.length)&&rng.chance(pJoin)){
+    // Speculative leagues are eligible even while historical expansion options remain.
+    const pool=historic.length&&future.length?(rng.chance(.5)?future:historic):historic.length?historic:future;
+    const c=rng.chance(0.7)?pool[0]:rng.pick(pool),id=c.id,P=c.P,off=rng.pick(Object.keys(OFFICE_STYLES));
+    const nSlots=clamp(Math.round((P.strength-58)/3.5),1,3);
+    const fictional=c.fictional?newLeagueIdentity(db,rng,P):null;
+    const cfg=regionCfg(id,c.fictional?{id,name:P.name,leagueName:fictional.leagueName,
+      short:fictional.short,strength:P.strength,tier:'emerging',teams:10,
+      system:P.system,div2:false,office:off,slots:nSlots}
+      :{div2:false,office:off,slots:nSlots});
     const R=addRegion(db,rng,cfg);
+    if(c.fictional){
+      (db.global.foundedLeagueNames=db.global.foundedLeagueNames||[]).push(R.leagueName);
+      (db.global.foundedLeagueShorts=db.global.foundedLeagueShorts||[]).push(R.short);
+    }
     let why=`세계 흥행 평균 ${Math.round(avgH)}`;
     if(c.par){
       // 모리그에서 팬덤이 약한 구단 2곳이 새 리그로 이적 (연고 이전) — 모리그는 신규 창단으로 짝수 유지
@@ -45,7 +102,7 @@ function worldDecisions(db,rng,f,ev){
         why+=` · ${P.leagueName} 해체 — 잔여 ${rest.length}팀과 진출권 ${P.slots}장을 ${cfg.leagueName}이 승계`;
       }
     }
-    gev(`새 지역 리그: ${cfg.name} — ${cfg.leagueName} 출범 (${activeTeams(db,id,1).length}팀, 월즈 ${cfg.slots}장)`,why+` · 진출권은 리그 수준(${REGION_PRESETS[id].strength})에 맞춰 배정`);
+    gev(`새 지역 리그: ${cfg.name} — ${cfg.leagueName} 출범 (${activeTeams(db,id,1).length}팀, 월즈 ${cfg.slots}장)`,why+` · 진출권은 리그 수준(${P.strength})에 맞춰 배정`);
   }
   // 리그 통합: 흥행이 2년 연속 침체한 두 지역은 하나의 리그로 합친다
   const lowE=Object.values(db.regions).filter(R=>R.tier==='emerging'&&R.parent&&db.regions[R.parent]&&(R.metrics||[]).length>=2&&R.metrics.slice(-2).every(m=>m.hype<28));

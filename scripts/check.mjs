@@ -504,7 +504,7 @@ for(const marker of ['autoBuildInitialSquad(db,','rosterMoveCheck(db,'])
   }
 
 const regressionSource = await readFile(resolve(root, 'scripts', 'regression.mjs'), 'utf8');
-for (const marker of ['01-world-bootstrap','05-contracts','06-owned-reserve-roster','06c-player-sign-transaction','06d-player-transfer-transaction','06e-ai-transfer-and-move-limit','06f-release-and-option-transaction','06g-save-format-and-cache-isolation','06h-legacy-v15-save-restoration','06i-invalid-and-forward-saves','06j-transaction-transfer-rollback','06k-transaction-roster-rollback','06l-transaction-release-option-rollback','06m-transaction-actor-parity-and-membership-guard','09-patch-baseline','11-draft-series-save','11a-meta-index-incremental-and-bounded','11b-historic-patch-cache-limit','11c-system-usage-index-parity','11d-shared-registration-rule-and-pure-preview','11e-roster-detach-is-single-owner','11f-dead-api-pruned-without-market-breakage','11g-required-domain-hooks-have-real-effects','11h-initial-market-must-use-real-budget-and-team-policy','11i-unreachable-wrappers-removed-and-supported-routes-retained','11j-initial-manager-negotiation-path-after-legacy-removal','11k-scheduled-series-session-after-unused-opener-removal','11l-reserve-preflight-and-transaction-after-legacy-removal','mid-Bo5 session did not survive save/load']) {
+for (const marker of ['01-world-bootstrap','05-contracts','06-owned-reserve-roster','06c-player-sign-transaction','06d-player-transfer-transaction','06e-ai-transfer-and-move-limit','06f-release-and-option-transaction','06g-save-format-and-cache-isolation','06h-legacy-v15-save-restoration','06i-invalid-and-forward-saves','06j-transaction-transfer-rollback','06k-transaction-roster-rollback','06l-transaction-release-option-rollback','06m-transaction-actor-parity-and-membership-guard','09-patch-baseline','11-draft-series-save','11a-meta-index-incremental-and-bounded','11b-historic-patch-cache-limit','11c-system-usage-index-parity','11d-shared-registration-rule-and-pure-preview','11e-roster-detach-is-single-owner','11f-dead-api-pruned-without-market-breakage','11g-required-domain-hooks-have-real-effects','11h-initial-market-must-use-real-budget-and-team-policy','11i-unreachable-wrappers-removed-and-supported-routes-retained','11j-initial-manager-negotiation-path-after-legacy-removal','11k-scheduled-series-session-after-unused-opener-removal','11l-reserve-preflight-and-transaction-after-legacy-removal','11m-new-procedural-regional-league-and-save-restore','mid-Bo5 session did not survive save/load']) {
   if (!regressionSource.includes(marker)) {
     failed = true;
     console.error('11.5 regression baseline missing marker: '+marker);
@@ -517,6 +517,15 @@ if (!String(packageJson.scripts?.check||'').includes('scripts/regression.mjs')) 
 }
 // 11.5/5-4: multi-year games, current/legacy save restore and consecutive
 // rookie/market cycles must be a required check, not an optional smoke run.
+// Newly founded professional leagues may come from speculative markets,
+// not solely from fixed historical-region labels.
+const officeWorldSource=await readFile(resolve(artifact,'office-international.js'),'utf8');
+for(const text of ['FUTURE_LEAGUE_MARKETS','newLeagueIdentity(','futureLeagueCandidates(db)',
+  'historic.length&&future.length','db.global.foundedLeagueNames']){
+  if(!officeWorldSource.includes(text)){
+    failed=true;console.error('Speculative league expansion missing: '+text);
+  }
+}
 const careerAcceptanceSource=await readFile(resolve(root,'scripts','career-acceptance.mjs'),'utf8');
 for(const marker of ['for(let cycle=0;cycle<2;cycle++)','playDay(db,s)',
   'runOffseason(db)','closeMarket(db)','startWorldSeason(db,teamId,',

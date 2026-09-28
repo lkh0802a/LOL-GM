@@ -45,6 +45,9 @@ New large UI surfaces should be added as `ui-<domain>.js` modules instead of ext
 - `scouting.js` owns observed player knowledge and reports; contract/transfer code may consume its public estimates but must not reimplement scouting uncertainty.
 - `staff.js` owns staff departments, staffing limits, coaching profile, generation, AI management and manager staff actions.
 - `player-relations.js` owns player condition modifiers, relationships, usage and satisfaction/transfer-request lifecycle.
+
+- World-office league expansion (`office-international.js`) combines historical region presets with `FUTURE_LEAGUE_MARKETS`. The latter contains only potential geographic markets, not real league identities. On a successful expansion roll the office selects historical or speculative candidates; speculative leagues receive a generated, collision-checked `leagueName` and unique `short`. The initial world preset list remains unchanged. New league history and branding must survive v15 saves, and the same canonical `addRegion` team generation, roster and `leagueComp` schedule rules apply. No static preset-only assumption is allowed when reading the chosen candidate's strength.
+
 - `scrim.js` owns scrim readiness, AI partner scheduling/value and practice effects.
 
 Static reachability audits distinguish dead wrappers from supported entrypoints. Legacy stage 5-3 removes uncalled initial-signing, forced-salary-floor, match-ID, scheduled-opening-draft, direct squad-moving and FA-offer aliases; canonical negotiation, competition and `roster.plan` transaction paths remain. Both `autoBuildInitialSquad` and `rosterMoveCheck` are still required by smoke acceptance and must not be removed. This is not permission to delete save migration or compatibility code.

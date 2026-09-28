@@ -912,6 +912,52 @@ source += `
       'canonical squad transaction allowed replay after successful commit');
   });
 
+
+  test('11m-new-procedural-regional-league-and-save-restore',()=>{
+    const db=buildWorld(),regionIds=new Set(Object.keys(db.regions)),
+      originalNames=new Set(Object.values(REGION_PRESETS).map(x=>x.leagueName));
+    assert(futureLeagueCandidates(db).length>=6,
+      'engine must offer speculative regional markets beyond historical presets');
+    assert(futureLeagueCandidates(db).every(x=>!REGION_PRESETS[x.id]),
+      'fictional regional candidates reused preset identifiers');
+    db.world={year:db.year,seed:'future-region-regression',phase:'market',
+      seasons:{},steps:[],step:0,report:null,offers:[],marketLog:[]};
+    db.worldHype=100*regionIds.size;
+    const rng=new RNG('new-league-regression','office');
+    let chanceCalls=0;
+    // Force only the expansion decision and speculative candidate selection.
+    rng.chance=()=>++chanceCalls<=3;
+    const newsRows=[];
+    worldDecisions(db,rng,1,t=>newsRows.push(t));
+    const added=Object.values(db.regions).filter(R=>!regionIds.has(R.id));
+    assert(added.length===1,'world office did not found a speculative region');
+    const fresh=added[0];
+    assert(!REGION_PRESETS[fresh.id]&&!originalNames.has(fresh.leagueName)&&
+      fresh.leagueName.startsWith(FUTURE_LEAGUE_MARKETS.find(m=>m.id===fresh.id).brand+' ')&&
+      fresh.leagueName!==fresh.name&&fresh.leagueName.split(' ').length>=3,
+      'new league reused a historical brand instead of an invented identity');
+    assert(activeTeams(db,fresh.id,1).length===10&&fresh.slots>=1&&
+      db.global.foundedLeagueNames.includes(fresh.leagueName)&&
+      db.global.foundedLeagueShorts.includes(fresh.short),
+      'invented league did not create a valid region, teams and slot allocation');
+    assert(newsRows.some(x=>x.includes(fresh.leagueName))&&
+      !rosterIntegrityErrors(db).length,
+      'invented league failed governance reporting or roster integrity');
+    const comp=leagueComp(db,fresh.id);
+    assert(comp.teams.length===10&&comp.stages.length>0,
+      'invented league cannot schedule an official domestic competition');
+    const restored=unpackDB(packDB(db));
+    assert(restored.regions[fresh.id].leagueName===fresh.leagueName&&
+      restored.global.foundedLeagueNames.includes(fresh.leagueName)&&
+      !futureLeagueCandidates(restored).some(x=>x.id===fresh.id),
+      'invented league identity or candidate removal did not survive save/load');
+    const other=FUTURE_LEAGUE_MARKETS.find(m=>m.id!==fresh.id);
+    const named=newLeagueIdentity(restored,new RNG('another-league','brand'),other);
+    assert(named.leagueName!==fresh.leagueName&&named.short!==fresh.short&&
+      !originalNames.has(named.leagueName),
+      'new-world branding repeated an existing or historical league identity');
+  });
+
   console.log('11.5 Step 1 regression baseline: OK ('+results.join(', ')+')');
 })();
 `;
