@@ -834,7 +834,7 @@ function createDraftSession(db,teamIds,rng,ctx){
   ctx=ctx||{used:[],byTeam:{}};
   const evalBase=draftPoolSnapshot(db,ctx),{champs,strengths,mn,mx,byRole}=evalBase;
   const MS=db.metaStats||{},G=db.metaGames||0,RMS=db.regionMetaStats||{},RMG=db.regionMetaGames||{};
-  const vhat=teamIds.map(tid=>{const team=db.teams[tid],rid=team.region,an=Math.min(1,team.coach.analysis/100+scrimAnalysisBonus(team)),m={};
+  const vhat=teamIds.map(tid=>{const team=db.teams[tid],rid=team.region,an=Math.min(1,staffProfile(team).analysis/100+scrimAnalysisBonus(team)),m={};
     const nk=tid+'|'+an,noiseCache=draftNoiseBucket(db);let NZ=noiseCache.get(nk);if(!NZ){NZ={};noiseCache.set(nk,NZ)}
     champs.forEach(c=>{if(NZ[c.id]===undefined)NZ[c.id]=((hashStr(tid+db.patch.id+c.id)%2000)/1000-1)*0.35*(1.1-an);const noise=NZ[c.id];
       let v=clamp((strengths[c.id]-mn)/(mx-mn||1)+noise,0,1);
@@ -903,7 +903,7 @@ function draftLegalChampions(state,role=null){
 }
 function draftAiChoice(state){
   const turn=draftTurn(state);if(!turn)return null;
-  const {kind,side}=turn,tn=state.db.teams[state.teamIds[side]],noise=0.08*(1.1-tn.coach.draft/100);
+  const {kind,side}=turn,tn=state.db.teams[state.teamIds[side]],noise=0.08*(1.1-staffProfile(tn).draft/100);
   if(kind==='P'){
     const mine=state.pickList[side].map(n=>state.db.patch.champions[n]),seen=new Set(),cands=[];for(const r of ROLES)for(const c of draftShortlist(state,side,r))if(!seen.has(c.id)){seen.add(c.id);cands.push(c)}
     let best=null;
@@ -1295,28 +1295,28 @@ function buildPatch(championSnapshot=CHAMPION_SOURCE_SNAPSHOT,systemSnapshot=SYS
 
 // ---- 월드 생성 (가상 선수/팀) ----
 const TEAM_TEMPLATES = [
-  {id:'HTG', name:'Hangyeol Tigers', short:'HTG', base:78, coach:{name:'Grayson', draft:78, analysis:80},
+  {id:'HTG', name:'Hangyeol Tigers', short:'HTG', base:78,
    tactics:{aggression:55, risk_tolerance:45, objective_priority:65, vision_investment:70, scaling_preference:60},
    players:[['Rook','TOP',23,'laner',['Ornn',"K'Sante"]],['Veil','JGL',24,'macro',['Sejuani','Maokai']],['Solace','MID',25,'star',['Azir','Orianna']],['Kestrel','ADC',21,'mechanical',["Kai'Sa",'Xayah']],['Anchor','SUP',26,'caller',['Rakan','Nautilus']]]},
-  {id:'SBZ', name:'Saebit Blaze', short:'SBZ', base:77, coach:{name:'Marrow', draft:70, analysis:68},
+  {id:'SBZ', name:'Saebit Blaze', short:'SBZ', base:77,
    tactics:{aggression:80, risk_tolerance:70, objective_priority:55, vision_investment:50, scaling_preference:35},
    players:[['Tyrant','TOP',22,'aggressive',['Aatrox','Rumble']],['Fang','JGL',20,'aggressive',['Lee Sin','Vi']],['Cinder','MID',23,'mechanical',['Ahri','Syndra']],['Volt','ADC',24,'laner',['Varus','Ezreal']],['Guard','SUP',25,'aggressive',['Nautilus','Alistar']]]},
-  {id:'OCN', name:'Ocean Gaming', short:'OCN', base:74, coach:{name:'Hale', draft:82, analysis:84},
+  {id:'OCN', name:'Ocean Gaming', short:'OCN', base:74,
    tactics:{aggression:40, risk_tolerance:35, objective_priority:75, vision_investment:80, scaling_preference:70},
    players:[['Tide','TOP',27,'macro',['Jax',"K'Sante"]],['Current','JGL',26,'macro',['Sejuani','Viego']],['Harbor','MID',28,'caller',['Orianna','Taliyah']],['Gale','ADC',25,'laner',['Jinx','Xayah']],['Buoy','SUP',27,'caller',['Braum','Karma']]]},
-  {id:'NVA', name:'Nova Esports', short:'NVA', base:72, coach:{name:'Ives', draft:60, analysis:62},
+  {id:'NVA', name:'Nova Esports', short:'NVA', base:72,
    tactics:{aggression:65, risk_tolerance:60, objective_priority:50, vision_investment:55, scaling_preference:50},
    players:[['Nova','TOP',19,'mechanical',['Jax','Aatrox']],['Orbit','JGL',19,'aggressive',['Viego','Lee Sin']],['Pulse','MID',18,'star',['Syndra','Ahri']],['Comet','ADC',20,'mechanical',['Ezreal',"Kai'Sa"]],['Halo','SUP',21,'laner',['Karma','Rakan']]]},
-  {id:'CRW', name:'Crown Gaming Club', short:'CRW', base:77, coach:{name:'Aldous', draft:76, analysis:74},
+  {id:'CRW', name:'Crown Gaming Club', short:'CRW', base:77,
    tactics:{aggression:50, risk_tolerance:50, objective_priority:70, vision_investment:65, scaling_preference:65},
    players:[['Regal','TOP',25,'macro',['Ornn','Jax']],['Scepter','JGL',23,'caller',['Maokai','Sejuani']],['Monarch','MID',24,'star',['Azir','Syndra']],['Crest','ADC',22,'laner',['Jinx','Varus']],['Warden','SUP',24,'caller',['Braum','Alistar']]]},
-  {id:'STM', name:'Storm Esports', short:'STM', base:75, coach:{name:'Rennick', draft:72, analysis:70},
+  {id:'STM', name:'Storm Esports', short:'STM', base:75,
    tactics:{aggression:70, risk_tolerance:60, objective_priority:55, vision_investment:55, scaling_preference:40},
    players:[['Thunder','TOP',22,'aggressive',['Rumble','Aatrox']],['Squall','JGL',21,'mechanical',['Vi','Lee Sin']],['Static','MID',22,'mechanical',['Ahri','Taliyah']],['Bolt','ADC',23,'mechanical',['Xayah',"Kai'Sa"]],['Aegis','SUP',23,'aggressive',['Rakan','Nautilus']]]},
-  {id:'RSG', name:'Rising Star Gaming', short:'RSG', base:72, coach:{name:'Pell', draft:66, analysis:72},
+  {id:'RSG', name:'Rising Star Gaming', short:'RSG', base:72,
    tactics:{aggression:45, risk_tolerance:40, objective_priority:65, vision_investment:70, scaling_preference:60},
    players:[['Ridge','TOP',24,'macro',["K'Sante",'Ornn']],['Sprout','JGL',20,'macro',['Sejuani','Viego']],['Glint','MID',21,'laner',['Orianna','Azir']],['Arrow','ADC',22,'laner',['Varus','Jinx']],['Petal','SUP',23,'caller',['Karma','Braum']]]},
-  {id:'IRN', name:'Iron Wolves', short:'IRN', base:71, coach:{name:'Brock', draft:58, analysis:60},
+  {id:'IRN', name:'Iron Wolves', short:'IRN', base:71,
    tactics:{aggression:60, risk_tolerance:55, objective_priority:50, vision_investment:50, scaling_preference:45},
    players:[['Forge','TOP',26,'laner',['Aatrox','Jax']],['Anvil','JGL',25,'aggressive',['Vi','Viego']],['Rivet','MID',24,'caller',['Taliyah','Orianna']],['Spark','ADC',21,'mechanical',['Ezreal','Xayah']],['Plate','SUP',27,'macro',['Alistar','Maokai']]]}
 ];
@@ -1595,7 +1595,7 @@ function recordMeta(db,r){
   const mc=r.metaContext||{};
   db.metaHistory.push({date:r.date||db.worldDate,patch:r.patch||db.patch.id,comp:r.comp||r.competitionId||null,season:mc.season||null,year:mc.year||+(r.date||db.worldDate).slice(0,4),split:mc.split||null,stage:mc.stage||null,league:mc.league||null,international:!!mc.international,regions,sides:r.sides.map((s,i)=>({team:s.team?.id||null,region:s.team?.region||null,win:r.winner===i,picks:s.ps.map(x=>({champ:x.champ.id,role:x.role||null,player:x.p?.id||null,items:(x.items||[]).slice(),runes:(x.runes||[]).slice()}))})),bans:r.draft.bans.flat()});
   const international=regions.length>1;
-  for(const side of r.sides){const t=side.team;if(!t)continue;t.metaKnowledge=t.metaKnowledge||{};t.metaCounter=t.metaCounter||{};for(const os of r.sides){if(os===side)continue;for(const pick of os.ps){const cid=pick.champ.id,success=r.winner===r.sides.indexOf(os),novel=((db.regionMetaStats?.[t.region]||{})[cid]?.p||0)<3,analysis=.65+(t.coach?.analysis||50)/140,learn=(success?.055:.018)*(novel?1.6:1)*(international?1.35:1)*analysis;t.metaKnowledge[cid]=clamp((t.metaKnowledge[cid]||0)+learn,0,1);if(r.winner!==r.sides.indexOf(side))t.metaCounter[cid]=clamp((t.metaCounter[cid]||0)+.02*analysis,0,1)}}}
+  for(const side of r.sides){const t=side.team;if(!t)continue;t.metaKnowledge=t.metaKnowledge||{};t.metaCounter=t.metaCounter||{};for(const os of r.sides){if(os===side)continue;for(const pick of os.ps){const cid=pick.champ.id,success=r.winner===r.sides.indexOf(os),novel=((db.regionMetaStats?.[t.region]||{})[cid]?.p||0)<3,analysis=.65+staffProfile(t).analysis/140,learn=(success?.055:.018)*(novel?1.6:1)*(international?1.35:1)*analysis;t.metaKnowledge[cid]=clamp((t.metaKnowledge[cid]||0)+learn,0,1);if(r.winner!==r.sides.indexOf(side))t.metaCounter[cid]=clamp((t.metaCounter[cid]||0)+.02*analysis,0,1)}}}
 }
 function metaTableFiltered(db,filter={}){
   const rows=metaRowsFiltered(db,filter);
@@ -1827,9 +1827,9 @@ function playerGameRating(ps,side,win,mvp,duration){const min=Math.max(1,duratio
 // 선택권(진영 vs 픽 순서): 선택권을 가진 팀이 '진영'이나 '픽 순서' 중 하나를 고르면, 상대가 나머지를 고른다
 // 진영 가치: 블루 = 맵 이점(시야·오브젝트 동선). 순서 가치: 선픽 = 최고 챔피언 선점, 후픽 = 마지막 카운터픽(피어리스 후반 세트일수록 커짐)
 function draftPrefs(db,tid,ctx,g,bestOf,rng){
-  const t=db.teams[tid], an=t.coach.analysis/100, noise=()=>rng.normal(0,0.03*(1.1-an));
+  const t=db.teams[tid], prof=staffProfile(t),an=prof.analysis/100, noise=()=>rng.normal(0,0.03*(1.1-an));
   const fl=ctx.fearless?Math.min(1,ctx.used.length/40):0;
-  return {blue:0.03+noise(),red:noise(),first:0.05+noise(),last:0.02+0.03*t.coach.draft/100+0.05*fl+(g===bestOf?0.02:0)+noise(),fl};
+  return {blue:0.03+noise(),red:noise(),first:0.05+noise(),last:0.02+0.03*prof.draft/100+0.05*fl+(g===bestOf?0.02:0)+noise(),fl};
 }
 function chooseSide(db,tid,opp,ctx,g,bestOf,rng){
   const me=draftPrefs(db,tid,ctx,g,bestOf,rng), op=draftPrefs(db,opp,ctx,g,bestOf,rng);
@@ -2407,7 +2407,7 @@ function weightedRole(rng,w){const rows=ROLES.map(r=>[r,w[r]||1]),sum=rows.reduc
 function rookieIntakeProfile(db,R){
   const first=activeTeams(db,R.id,1).length,second=R.div2?activeTeams(db,R.id,2).length:0,teams=activeTeams(db,R.id),teamN=teams.length,players=Object.values(db.players),young=players.filter(p=>!p.retired&&p.region===R.id&&p.age<=21).length;
   const desiredPipeline=first*2.05+second*1.05,shortage=clamp((desiredPipeline-young)/Math.max(4,first),-.3,1.35);
-  const facilities=teams.map(t=>ensureFacilities(t).youth),dev=teams.map(t=>typeof staffProfile==='function'?staffProfile(t).development:(t.coach?.development||55));
+  const facilities=teams.map(t=>ensureFacilities(t).youth),dev=teams.map(t=>typeof staffProfile==='function'?staffProfile(t).development:55);
   const ecosystem=clamp((R.strength-58)/18+second/Math.max(1,first)*.35+(avg(facilities)-2)*.08+(avg(dev)-55)/180,.25,1.55);
   const rosterSize=5+(db.worldConfig.subs||0),targetSlots=teamN*rosterSize;
   const ecosystemPlayers=players.filter(p=>!p.retired&&((p.team&&db.teams[p.team]&&db.teams[p.team].region===R.id)||(!p.team&&p.region===R.id)));
@@ -2473,7 +2473,6 @@ function talentSupplyErrors(db){
   }
   return errs;
 }
-function genCoach(rng,base){const nm=rng.pick(NICK_A)+rng.pick(NICK_B);return {name:nm.charAt(0).toUpperCase()+nm.slice(1),draft:Math.round(clamp(base+rng.normal(0,8),40,95)),analysis:Math.round(clamp(base+rng.normal(0,8),40,95)),development:Math.round(clamp(base+rng.normal(0,10),35,95))}}
 function genTactics(rng){return {aggression:rng.int(35,80),risk_tolerance:rng.int(30,75),objective_priority:rng.int(45,80),vision_investment:rng.int(45,80),scaling_preference:rng.int(30,75)}}
 const PHILOSOPHIES=['win-now','youth','balanced','superstar','cost'];
 const PHIL_KO={'win-now':'즉시 전력','youth':'유망주 육성','balanced':'균형','superstar':'스타 영입','cost':'효율 중시'};
@@ -2709,7 +2708,7 @@ function rosterIntegrityErrors(db){
 
 function genTeam(db,rng,regionId,strength,o={}){
   const on=o.name?{name:o.name,short:o.short}:orgName(db,rng), subs=db.worldConfig.subs||0;
-  const t={id:on.short,name:on.name,short:on.short,region:regionId,division:o.div||1,parent:o.parent||null,active:true,fans:baseFans(strength-4-(o.div===2?15:0),rng),coach:genCoach(rng,strength+2),tactics:genTactics(rng),training:defaultTraining(),philosophy:o.parent?'youth':rng.pick(PHILOSOPHIES),roster:[],founded:db.year};
+  const t={id:on.short,name:on.name,short:on.short,region:regionId,division:o.div||1,parent:o.parent||null,active:true,fans:baseFans(strength-4-(o.div===2?15:0),rng),tactics:genTactics(rng),training:defaultTraining(),philosophy:o.parent?'youth':rng.pick(PHILOSOPHIES),roster:[],founded:db.year};
   db.teams[t.id]=t;
   const tb=strength+rng.normal(0,3);
   for(const role of ROLES){const age=o.parent?rng.int(17,20):rng.int(18,27);genPlayer(db,rng,{role,age,base:tb+(age<20?-4:0),region:regionId,team:t.id})}
@@ -2804,7 +2803,7 @@ function addRegion(db,rng,cfg){
   db.regions[R.id]=R;
   let made=0;
   if(R.templates) for(const tt of TEAM_TEMPLATES.slice(0,R.teams)){
-    const t={id:tt.id,name:tt.name,short:tt.short,region:R.id,division:1,active:true,fans:baseFans(tt.base,rng),coach:{...tt.coach,development:tt.coach.analysis},tactics:{...tt.tactics},training:defaultTraining(),philosophy:rng.pick(PHILOSOPHIES),roster:[],founded:db.year};
+    const t={id:tt.id,name:tt.name,short:tt.short,region:R.id,division:1,active:true,fans:baseFans(tt.base,rng),tactics:{...tt.tactics},training:defaultTraining(),philosophy:rng.pick(PHILOSOPHIES),roster:[],founded:db.year};
     db.teams[tt.id]=t;
     for(const [nick,role,age,style,sig] of tt.players)genPlayer(db,rng,{id:tt.id+'_'+role,name:nick,role,age,style,sig,base:tt.base,region:R.id,team:tt.id});
     for(let i=0;i<(db.worldConfig.subs||0);i++)genPlayer(db,rng,{role:rng.pick(ROLES),age:rng.int(17,20),base:tt.base-8,region:R.id,team:tt.id});
@@ -2821,10 +2820,11 @@ function addRegion(db,rng,cfg){
 }
 function buildWorld(cfg){
   cfg=JSON.parse(JSON.stringify(cfg||defaultWorldConfig()));
-  const db={version:15,saveId:'save-'+Date.now().toString(36),manager:{id:'manager-human',teamId:null,startMode:null,careerStartedAt:null},worldDate:`${cfg.startYear||2027}-01-01`,coachPool:[],awards:[],hof:[],global:{decisions:[],power:{}},patch:buildPatch(),teams:{},players:{},regions:{},competitions:{},worldConfig:cfg,world:null,history:[],news:[],year:cfg.startYear||2027,configDirty:false,scout:{}};
+  const db={version:15,saveId:'save-'+Date.now().toString(36),manager:{id:'manager-human',teamId:null,startMode:null,careerStartedAt:null},worldDate:`${cfg.startYear||2027}-01-01`,awards:[],hof:[],global:{decisions:[],power:{}},patch:buildPatch(),teams:{},players:{},regions:{},competitions:{},worldConfig:cfg,world:null,history:[],news:[],year:cfg.startYear||2027,configDirty:false,scout:{}};
   const rng=new RNG('world-v7','gen');
   initPatches(db);
   for(const r of cfg.regions) addRegion(db,rng,r);
+  if(typeof ensureTeamStaff==='function'){for(const t of activeTeams(db))ensureTeamStaff(db,t,rng);genStaffPool(db,rng)}
   prepareFirstSeasonFreeAgency(db);
   return db;
 }
@@ -3067,9 +3067,8 @@ function runOffseason(db){
   rep.rookies=[];rep.rookieGlobal=rookieGlobalCohort(db);
   for(const R of Object.values(db.regions)){const cls=generateRookieClass(db,R,rng),ri=R.rookieIntake[R.rookieIntake.length-1];rep.rookies.push({region:R.id,count:cls.length,ids:cls.map(p=>p.id),label:ri.label,tiers:ri.tiers,profile:ri.profile})}
   const supplyErrs=talentSupplyErrors(db);if(supplyErrs.length)throw new Error('Talent supply invariant failed before market: '+supplyErrs.slice(0,8).join(' | '));
-  for(const t of activeTeams(db))ensureTeamStaff(db,t,rng);ageStaff(db,rng);genStaffPool(db,rng);
+  for(const t of activeTeams(db)){if(t.id===managedTeamId(db))ensureStaffRoster(t);else ensureTeamStaff(db,t,rng)}ageStaff(db,rng);genStaffPool(db,rng);
   if(typeof ageScoutReports==='function')ageScoutReports(db);
-  genCoachPool(db,rng);genStaffPool(db,rng);
   for(const t of activeTeams(db,null,1))aiManageStaff(db,t,rng);
   for(const t of activeTeams(db))aiManageTraining(db,t);
   // 시설은 플레이어/AI 공통으로 구단 경영진이 자동 관리한다. 전략적 선택이 아닌 유지·증설 행정은 직접 조작하지 않는다.
@@ -3125,7 +3124,7 @@ function ageCurve(age,g){
 function growPlayer(db,p,rng,games,champGames){
   const team=p.team?db.teams[p.team]:null, before=playerOvr(p),dev=ensurePlayerDevelopment(p);
   const room=clamp((p.pot-before)/10,-0.5,1.5), prof=p.personality.professionalism/100,ageShift=dev.peakAge-25;
-  const coach=team?team.coach.development/100:0.45, play=clamp(games/30,0,1);
+  const coach=team?staffDevelopmentFor(team,p.role)/100:0.45, play=clamp(games/30,0,1);
   const tr=team?team.training:defaultTraining(), intensity=trainingIntensity(team),tsum=['mechanical','laning','combat','macro','mental'].reduce((a,k)=>a+(+tr[k]||0),0)||1;
   for(const g in ATTR_GROUPS){
     // 훈련 포인트는 총 100점 한도: 배분하지 않은 포인트는 버려진다 (나눠 쓰는 만큼만 효과)
@@ -3192,12 +3191,13 @@ function packDB(db){
     players[id]=q;
   }
   const scout=Object.fromEntries(Object.entries(db.scout||{}).filter(([id,r])=>db.players[id]&&!db.players[id].retired&&(typeof r==='number'||(r.knowledge||0)>baseScoutKnowledge(db,db.players[id])||(r.observations||0)>0)));
-  const teams=Object.fromEntries(Object.entries(db.teams).map(([id,t])=>{const q={...t};delete q._pre;if(q.facilities)delete q.facility;return [id,q]}));
+  const teams=Object.fromEntries(Object.entries(db.teams).map(([id,t])=>{const q={...t};delete q._pre;delete q.coach;delete q.staff;if(q.facilities)delete q.facility;return [id,q]}));
   const patches={...(db.patches||{})};delete patches.base;delete patches.initialBase;const metaHistory=packMetaHistory(db.metaHistory||[]);
   return JSON.stringify({...db,world,teams,players,scout,patches,metaHistory,metaHistoryPacked:1,packed:1});
 }
 function unpackDB(str){
-  const db=JSON.parse(str); if(!db.packed)return db;
+  const db=JSON.parse(str);
+  if(!db.packed)return typeof migrateLegacyStaffState==='function'?migrateLegacyStaffState(db):db;
   if(db.metaHistoryPacked){db.metaHistory=unpackMetaHistory(db.metaHistory||[]);delete db.metaHistoryPacked}
   for(const t of Object.values(db.teams||{}))ensureFacilities(t);
   for(const p of Object.values(db.players)){
@@ -3205,7 +3205,8 @@ function unpackDB(str){
     if(Array.isArray(p.tend))p.tend=Object.fromEntries(TENDENCIES.map((t,i)=>[t,p.tend[i]]));
     if(p.pool)for(const c in p.pool){const v=p.pool[c];if(Array.isArray(v))p.pool[c]={mastery:v[0],experience:v[1],matchup_knowledge:v[2],confidence:v[3],scrimExperience:v[4]||0,trainingExperience:v[5]||0,scrimSeason:v[6]||0,trainingSeason:v[7]||0}}
   }
-  delete db.packed; return db;
+  delete db.packed;
+  return typeof migrateLegacyStaffState==='function'?migrateLegacyStaffState(db):db;
 }
 
 function stepOf(db,s){
@@ -3499,7 +3500,7 @@ function contractExpectedValue(c){if(!c)return 0;const b=c.bonuses||{};return c.
 function teamInternationalAppeal(db,t){const R=db.regions[t.region],power=db.global?.power?.[R.id]||1;return clamp((R.slots||1)/4*.55+(teamStrength(db,t.id)-R.strength)/18*.3+(t.fans||30)/180+power*.08,0,1.25)}
 function offerUtility(db,p,t,offer,opt={}){
   ensureSatisfaction(p);const ask=Math.max(.1,asking(db,p,t.region)),moneyScore=contractExpectedValue(offer)/ask,role=offer.promisedRole||defaultPromisedRole(db,p,t),roleScore={core:.72,starter:.62,competition:.24,backup:.02,prospect:p.age<=21?.38:-.08}[role]??0;
-  const strength=(teamStrength(db,t.id)-db.regions[t.region].strength)/12,fac=((t.facility||2)-2)*.08,coach=((t.coach?.development||55)-55)/160,intl=teamInternationalAppeal(db,t),stability=Math.min(3,offer.years||1)*.055;
+  const strength=(teamStrength(db,t.id)-db.regions[t.region].strength)/12,fac=((t.facility||2)-2)*.08,coach=(staffProfile(t).development-55)/160,intl=teamInternationalAppeal(db,t),stability=Math.min(3,offer.years||1)*.055;
   const home=db.worldConfig.universalLanguage?(p.region===t.region?.04:0):(p.region===t.region?.22:-.08),amb=p.personality.ambition/100,career=playerCareerGoal(p);
   let careerFit=0;if(career==='development')careerFit=fac+coach+(role==='prospect'||role==='competition'?.16:0);else if(career==='starter')careerFit=['core','starter'].includes(role)?.22:-.12;else if(career==='international')careerFit=intl*.18;else if(career==='titles')careerFit=Math.max(0,strength)*.16+intl*.1;else careerFit=stability;
   const option=offer.option?.type==='player'?.07:offer.option?.type==='team'?-.025:0,buyout=offer.buyout?clamp(offer.buyout/Math.max(.2,playerMarketValue(db,p)),.4,4)*-.018:0;
@@ -3543,7 +3544,7 @@ function initFinance(db,t,rng){
   t.facility=t.facility||clamp(Math.round(1+t.owner.wealth/30),1,4);ensureFacilities(t);
   t.finance=t.finance||{cash:Math.round((25+rng.range(0,35))*ps*10)/10,history:[],buyout:0};
 }
-function staffCost(db,t){const assistants=Object.values(t.staff||{}).reduce((sum,s)=>sum+staffSalary(s,1),0);return (2+coachSalary(t.coach,1)+assistants)*psTeam(db,t)}
+function staffCost(db,t){const specialists=teamStaffMembers(t).reduce((sum,s)=>sum+staffSalary(s,1),0);return (2+specialists)*psTeam(db,t)}
 function opsCost(db,t){return 8*psTeam(db,t)}
 function ownerSupport(db,t){if(t.parent)return 4*psOf(db,t.region);return t.owner.wealth/100*(['win-now','superstar'].includes(t.philosophy)?12:6)*psTeam(db,t)}
 function estRevenue(db,t){
@@ -3872,7 +3873,7 @@ function mOffer(db,pid,salary,years){const st=startNegotiation(db,pid,'fa');if(!
 function mTransfer(db,pid,fee){return mTransferBid(db,pid,fee)}
 // ---- 스카우팅: 관찰·경기 표본·보고서 노후화를 함께 추적한다 ----
 function sameScoutZone(a,b){if(a===b)return true;return Object.values(INTL_ZONES).some(z=>z.includes(a)&&z.includes(b))}
-function scoutingPower(db){const t=managedTeam(db);if(!t)return 1;return clamp(.78+(t.facility||2)*.06+((t.coach&&t.coach.analysis)||55)/250,.8,1.38)}
+function scoutingPower(db){const t=managedTeam(db);if(!t)return 1;return clamp(.78+(t.facility||2)*.06+staffProfile(t).scouting/250,.8,1.38)}
 function baseScoutKnowledge(db,p){const me=managedTeam(db);if(!me)return 0;if(p.team===me.id||(p.team&&db.teams[p.team]&&db.teams[p.team].parent===me.id))return 100;if(p.region===me.region)return 22;return sameScoutZone(p.region,me.region)?10:4}
 function ensureScoutReport(db,p){db.scout=db.scout||{};let r=db.scout[p.id];if(typeof r==='number')r=db.scout[p.id]={knowledge:r,lastSeenYear:db.year-1,lastSeenDate:null,observations:0,gamesSeen:0,competitions:{},snapshots:[]};if(!r)r=db.scout[p.id]={knowledge:baseScoutKnowledge(db,p),lastSeenYear:null,lastSeenDate:null,observations:0,gamesSeen:0,competitions:{},snapshots:[]};r.competitions=r.competitions||{};r.snapshots=r.snapshots||[];return r}
 function knowledge(db,p){if(!db.world)return 100;const base=baseScoutKnowledge(db,p);if(base>=100)return 100;const r=ensureScoutReport(db,p);return Math.round(clamp(Math.max(base,r.knowledge||0),0,98))}
@@ -3888,11 +3889,10 @@ function scoutPotentialRange(db,p){const k=knowledge(db,p),risk=scoutingRisk(db,
 function scoutGrowthTrend(p){const a=(p.developmentTrail||[]).slice(-3);if(a.length<2)return {delta:null,label:'표본 부족'};const d=a[a.length-1].ovr-a[0].ovr;return {delta:d,label:d>=3?'빠른 상승':d>=1?'상승':d<=-2?'하락':d<0?'소폭 하락':'정체'}}
 function scoutReport(db,p){const r=ensureScoutReport(db,p),sample=scoutSample(db,p),ability=scoutAbilityRange(db,p),potential=scoutPotentialRange(db,p),growth=scoutGrowthTrend(p),champions=Object.entries(p.pool||{}).sort((a,b)=>b[1].mastery-a[1].mastery).slice(0,5).map(([id,v])=>({id,mastery:Math.round(clamp(v.mastery+((hashStr(p.id+id)%1001)/1000-.5)*(100-knowledge(db,p))*.12,20,99))}));return {knowledge:knowledge(db,p),ability,potential,sample,growth,champions,lastSeenDate:r.lastSeenDate,staleYears:r.staleYears||0,observations:r.observations||0,gamesSeen:r.gamesSeen||0}}
 function scoutPlayers(db,ids,amt,cost){const t=myT(db);if(t.finance.cash<cost)return '보유 자금이 부족합니다';t.finance.cash=Math.round((t.finance.cash-cost)*10)/10;for(const id of ids){const p=db.players[id];if(p){observePlayer(db,p,Math.min(24,amt*.55),{games:0,comp:'manual'});syncRecruitmentObservation(db,id)}}return `스카우팅 보고서 갱신 (${money(cost)})`}
-function mHireCoach(db,cid){const t=myT(db),c=db.coachPool.find(x=>x.id===cid);if(!c)return '';const ps=psOf(db,t.region),fee=coachSalary(t.coach,ps);
-  if(t.finance.cash<fee)return '보유 자금이 부족합니다 (기존 수석 코치 위약금 '+money(fee)+')';t.finance.cash=Math.round((t.finance.cash-fee)*10)/10;const old=t.coach.name;hireCoach(db,t,c);return `${c.name} 수석 코치 선임 (${old} 계약 해지, 위약금 ${money(fee)})`}
 function mSponsor(db,id){const t=myT(db),o=(db.world.sponsorOffers||[]).find(x=>x.id===id);if(!o)return '';t.sponsor={...o,until:db.year+o.years-1};return `${o.name} ${o.type} 스폰서 계약 (${o.years}년)`}
 
-function mHireStaff(db,sid){const t=myT(db),s=(db.staffPool||[]).find(x=>x.id===sid);if(!s)return '스태프를 찾을 수 없습니다';const ps=psOf(db,t.region),old=t.staff&&t.staff[s.role],fee=old?staffSalary(old,ps):0;if(t.finance.cash<fee)return `교체 위약금 ${money(fee)}이 부족합니다`;t.finance.cash=Math.round((t.finance.cash-fee)*10)/10;hireStaff(db,t,s);return `${STAFF_ROLES[s.role]} ${s.name} 선임${fee?` · 위약금 ${money(fee)}`:''}`}
+function mHireStaff(db,sid){const t=myT(db),s=(db.staffPool||[]).find(x=>x.id===sid);if(!s)return '스태프를 찾을 수 없습니다';if(!staffCanHire(t,s))return (STAFF_DEPT_LABEL[staffDepartment(s.role)]||'스태프')+' 고용 상한에 도달했습니다';const annual=staffSalary(s,psOf(db,t.region));if(t.finance.cash<annual)return '보유 자금이 부족합니다';hireStaff(db,t,s);return `${STAFF_ROLES[s.role]} ${s.name} 선임 · ${STAFF_DEPT_LABEL[staffDepartment(s.role)]} ${staffDeptCount(t,staffDepartment(s.role))}/${STAFF_DEPT_LIMITS[staffDepartment(s.role)]}`}
+function mReleaseStaff(db,sid){const t=myT(db),s=teamStaffMembers(t).find(x=>x.id===sid);if(!s)return '스태프를 찾을 수 없습니다';const fee=staffSalary(s,psOf(db,t.region));if(t.finance.cash<fee)return '계약 해지 비용이 부족합니다';t.finance.cash=Math.round((t.finance.cash-fee)*10)/10;releaseStaff(db,t,sid);return `${STAFF_ROLES[s.role]} ${s.name} 계약 해지 · 비용 ${money(fee)}`}
 
 /* ==== FILE: features.js ==== */
 // ===== LOL GM: 컨디션·폼·사기·팀 호흡 / 코칭스태프 / 시상·명예의 전당 / 구단주 목표 / 스폰서 =====
@@ -4007,7 +4007,15 @@ function dailyRecovery(db){
     const ti=trainingIntensity(t);for(const id of t.roster){const p=db.players[id];if(!p)continue;pState(p);p.fatigue=clamp(p.fatigue-rec+ti.fatigue,0,100);p.condition=clamp(p.condition+2.5+ti.condition,0,100);p.form*=.98}
   }
 }
-function staffProfile(t){const c=t?.coach||{},s=t?.staff||{};return {draft:clamp((c.draft||55)+(s.strategicCoach?.rating||0)*.18,35,99),analysis:clamp((c.analysis||55)+(s.analyst?.rating||0)*.22,35,99),development:clamp((c.development||55)+(s.developmentCoach?.rating||0)*.22,35,99),recovery:clamp(50+(s.performanceCoach?.rating||0)*.45,50,95)}}
+function staffAggregate(ms){const xs=(ms||[]).filter(Boolean).map(s=>s.rating||50).sort((a,b)=>b-a);if(!xs.length)return 0;const weights=[1,.28,.16,.1,.07,.05];let v=0;for(let i=0;i<xs.length;i++)v+=xs[i]*(weights[i]||.03);return clamp(v,0,99)}
+function staffByRole(t,role){return teamStaffMembers(t).filter(s=>s.role===role)}
+function positionCoachRole(role){return {TOP:'topCoach',JGL:'jglCoach',MID:'midCoach',ADC:'adcCoach',SUP:'supCoach'}[role]||null}
+function roleCoachRating(t,role){const key=positionCoachRole(role);return key?staffAggregate(staffByRole(t,key)):0}
+function staffProfile(t){
+  const strategic=staffAggregate(staffByRole(t,'strategicCoach')),analysis=staffAggregate(staffByRole(t,'analyst')),development=staffAggregate(staffByRole(t,'developmentCoach')),performance=staffAggregate(staffByRole(t,'performanceCoach')),scouting=staffAggregate(staffByRole(t,'scout'));
+  return {draft:clamp(42+strategic*.52,35,96),analysis:clamp(42+analysis*.52,35,96),development:clamp(42+development*.52,35,96),recovery:clamp(45+performance*.5,40,93),scouting:clamp(40+scouting*.5,35,96)};
+}
+function staffDevelopmentFor(t,role){const p=staffProfile(t),pos=roleCoachRating(t,role);return clamp(p.development+(pos?Math.max(0,pos-45)*.16:0),35,99)}
 function trainingGrowthMul(t){const p=staffProfile(t);return clamp(.88+(p.development-45)/220,0.88,1.13)}
 function scrimAnalysisBonus(t){const p=staffProfile(t);return clamp((p.analysis-50)/500+facilityAnalysisBonus(t),0,.14)}
 function scrimReadiness(db,t){
@@ -4032,39 +4040,71 @@ function recordScrimPractice(db,rec,lines){
   return {players:seen.size,games};
 }
 function staffSalary(s,ps){return Math.round((.35+((s.rating||50)-40)/35)*ps*10)/10}
-const STAFF_ROLES={strategicCoach:'전략 코치',analyst:'분석가',developmentCoach:'육성 코치',performanceCoach:'퍼포먼스 코치'};
-function genStaffMember(rng,role,base=60){const nm=rng.pick(NICK_A)+rng.pick(NICK_B);return {id:'S'+hashStr(role+nm+rng.int(0,99999)),name:nm.charAt(0).toUpperCase()+nm.slice(1),role,rating:Math.round(clamp(base+rng.normal(0,9),35,95)),age:rng.int(27,52)}}
-function ensureTeamStaff(db,t,rng){t.staff=t.staff||{};for(const role of Object.keys(STAFF_ROLES))if(!t.staff[role])t.staff[role]=genStaffMember(rng,role,(t.coach?.analysis||60)-3);db.staffPool=db.staffPool||[]}
-function genStaffPool(db,rng){db.staffPool=db.staffPool||[];const counts=Object.fromEntries(Object.keys(STAFF_ROLES).map(r=>[r,0]));for(const s of db.staffPool)if(counts[s.role]!==undefined)counts[s.role]++;for(const role of Object.keys(STAFF_ROLES))while(counts[role]<6){db.staffPool.push(genStaffMember(rng,role,60+rng.normal(0,6)));counts[role]++}db.staffPool=db.staffPool.slice(-48)}
-function hireStaff(db,t,s){if(!s||!STAFF_ROLES[s.role])throw new Error('유효하지 않은 스태프입니다');t.staff=t.staff||{};const old=t.staff[s.role];if(old)db.staffPool.push(old);db.staffPool=db.staffPool.filter(x=>x.id!==s.id);t.staff[s.role]={...s,since:db.year}}
-function staffRoleWeight(t,role){const p=t.philosophy||'balanced';return ({youth:{developmentCoach:1.25,strategicCoach:.8,analyst:.85,performanceCoach:.8},'win-now':{strategicCoach:1.2,analyst:1.2,performanceCoach:1.05,developmentCoach:.7},superstar:{strategicCoach:1.1,analyst:1.05,performanceCoach:1,developmentCoach:.8},cost:{strategicCoach:.8,analyst:.8,performanceCoach:.8,developmentCoach:.85},balanced:{strategicCoach:1,analyst:1,performanceCoach:1,developmentCoach:1}}[p]||{})[role]||1}
-function aiManageStaff(db,t,rng){if(!t||t.id===managedTeamId(db)||!t.finance)return false;ensureTeamStaff(db,t,rng);const ps=psOf(db,t.region),cash=t.finance.cash||0,cands=db.staffPool||[];let best=null;for(const role of Object.keys(STAFF_ROLES)){const cur=t.staff[role],w=staffRoleWeight(t,role);for(const s of cands){if(s.role!==role)continue;const gain=(s.rating-cur.rating)*w,fee=staffSalary(cur,ps),annual=staffSalary(s,ps);const reserve=(t.philosophy==='cost'?8:5)*ps;if(gain>=6&&cash>fee+annual+reserve&&(!best||gain>best.gain))best={s,gain,fee}}}if(!best)return false;t.finance.cash=Math.round((t.finance.cash-best.fee)*10)/10;hireStaff(db,t,best.s);return true}
+const STAFF_ROLES={
+  strategicCoach:'전략 코치',developmentCoach:'육성 코치',performanceCoach:'퍼포먼스 코치',
+  topCoach:'TOP 포지션 코치',jglCoach:'JGL 포지션 코치',midCoach:'MID 포지션 코치',adcCoach:'ADC 포지션 코치',supCoach:'SUP 포지션 코치',
+  analyst:'분석가',scout:'스카우터'
+};
+const STAFF_DEPARTMENT={strategicCoach:'coach',developmentCoach:'coach',performanceCoach:'coach',topCoach:'coach',jglCoach:'coach',midCoach:'coach',adcCoach:'coach',supCoach:'coach',analyst:'analyst',scout:'scout'};
+const STAFF_DEPT_LABEL={coach:'코칭팀',analyst:'분석팀',scout:'스카우팅팀'},STAFF_DEPT_LIMITS={coach:9,analyst:4,scout:6};
+function staffDepartment(role){return STAFF_DEPARTMENT[role]||'coach'}
+function ensureStaffRoster(t){
+  if(!t)return [];
+  if(Array.isArray(t.staffRoster)){delete t.staff;return t.staffRoster}
+  const old=t.staff&&typeof t.staff==='object'?Object.values(t.staff).filter(Boolean):[];
+  t.staffRoster=old.map(s=>({...s,department:staffDepartment(s.role)}));delete t.staff;return t.staffRoster;
+}
+function migrateLegacyStaffState(db){
+  if(!db)return db;
+  for(const t of Object.values(db.teams||{})){
+    ensureStaffRoster(t);
+    if(Object.prototype.hasOwnProperty.call(t,'coach'))delete t.coach;
+  }
+  if(Object.prototype.hasOwnProperty.call(db,'coachPool'))delete db.coachPool;
+  return db;
+}
+function teamStaffMembers(t,dept=null){const xs=ensureStaffRoster(t);return dept?xs.filter(s=>staffDepartment(s.role)===dept):xs}
+function staffDeptCount(t,dept){return teamStaffMembers(t,dept).length}
+function staffCanHire(t,s){const d=staffDepartment(s.role);return staffDeptCount(t,d)<(STAFF_DEPT_LIMITS[d]||0)}
+function genStaffMember(rng,role,base=60){const nm=rng.pick(NICK_A)+rng.pick(NICK_B);return {id:'S'+hashStr(role+nm+rng.int(0,99999)),name:nm.charAt(0).toUpperCase()+nm.slice(1),role,department:staffDepartment(role),rating:Math.round(clamp(base+rng.normal(0,9),35,95)),age:rng.int(27,52)}}
+function ensureTeamStaff(db,t,rng){
+  const roster=ensureStaffRoster(t),base=clamp((db.regions[t.region]?.strength||62)-4,50,72),need={strategicCoach:1,developmentCoach:1,performanceCoach:1,analyst:1,scout:2};
+  for(const [role,n] of Object.entries(need))while(roster.filter(s=>s.role===role).length<n)roster.push(genStaffMember(rng,role,base));
+  db.staffPool=db.staffPool||[];return roster;
+}
+function genStaffPool(db,rng){
+  db.staffPool=db.staffPool||[];const counts=Object.fromEntries(Object.keys(STAFF_ROLES).map(r=>[r,0]));
+  for(const s of db.staffPool)if(counts[s.role]!==undefined)counts[s.role]++;
+  for(const role of Object.keys(STAFF_ROLES))while(counts[role]<6){db.staffPool.push(genStaffMember(rng,role,60+rng.normal(0,6)));counts[role]++}
+  db.staffPool=db.staffPool.slice(-100);
+}
+function hireStaff(db,t,s){
+  if(!s||!STAFF_ROLES[s.role])throw new Error('유효하지 않은 스태프입니다');
+  if(!staffCanHire(t,s))throw new Error((STAFF_DEPT_LABEL[staffDepartment(s.role)]||'스태프')+' 고용 상한에 도달했습니다');
+  db.staffPool=db.staffPool||[];db.staffPool=db.staffPool.filter(x=>x.id!==s.id);ensureStaffRoster(t).push({...s,department:staffDepartment(s.role),since:db.year});return s;
+}
+function releaseStaff(db,t,sid){
+  const roster=ensureStaffRoster(t),i=roster.findIndex(s=>s.id===sid);if(i<0)return null;const [s]=roster.splice(i,1);db.staffPool=db.staffPool||[];db.staffPool.push(s);return s;
+}
+function staffRoleWeight(t,role){
+  const p=t.philosophy||'balanced',dept=staffDepartment(role),pos=role.endsWith('Coach')&&!['strategicCoach','developmentCoach','performanceCoach'].includes(role);
+  const base={youth:{coach:1.12,analyst:.9,scout:1.15},'win-now':{coach:1.12,analyst:1.2,scout:.85},superstar:{coach:1.05,analyst:1,scout:1.05},cost:{coach:.82,analyst:.8,scout:.9},balanced:{coach:1,analyst:1,scout:1}}[p]||{coach:1,analyst:1,scout:1};
+  return (base[dept]||1)*(role==='developmentCoach'&&p==='youth'?1.15:role==='strategicCoach'&&p==='win-now'?1.1:pos&&p==='youth'?1.08:1);
+}
+function aiManageStaff(db,t,rng){
+  if(!t||t.id===managedTeamId(db)||!t.finance)return false;ensureTeamStaff(db,t,rng);
+  const ps=psOf(db,t.region),cash=t.finance.cash||0,reserve=(t.philosophy==='cost'?8:5)*ps,cands=db.staffPool||[];let best=null;
+  for(const s of cands){if(!STAFF_ROLES[s.role])continue;const dept=staffDepartment(s.role),members=teamStaffMembers(t,dept),same=members.filter(x=>x.role===s.role).sort((a,b)=>a.rating-b.rating),room=members.length<(STAFF_DEPT_LIMITS[dept]||0),replace=room?null:(same[0]||members.slice().sort((a,b)=>a.rating-b.rating)[0]);const base=replace?.rating||(same.length?Math.max(...same.map(x=>x.rating)):45),gain=(s.rating-base)*staffRoleWeight(t,s.role),fee=replace?staffSalary(replace,ps):0,annual=staffSalary(s,ps);if(gain>=6&&cash>fee+annual+reserve&&(!best||gain>best.gain))best={s,gain,fee,replace}}
+  if(!best)return false;t.finance.cash=Math.round((t.finance.cash-best.fee)*10)/10;if(best.replace)releaseStaff(db,t,best.replace.id);hireStaff(db,t,best.s);return true;
+}
 function ageStaff(db,rng){
   const mine=managedTeamId(db);db.staffPool=db.staffPool||[];
   for(const t of activeTeams(db)){
-    if(t.id!==mine)ensureTeamStaff(db,t,rng);else t.staff=t.staff||{};
-    for(const [role,s] of Object.entries(t.staff||{})){if(!s)continue;s.age=(s.age||35)+1;
-      if(s.age>=62&&rng.chance(.12+(s.age-62)*.04)){
-        if(t.id===mine){delete t.staff[role];if(db.world){db.world.marketLog=db.world.marketLog||[];db.world.marketLog.push((STAFF_ROLES[role]||role)+' '+s.name+' 은퇴 · 후임을 직접 선임하세요')}}
-        else t.staff[role]=genStaffMember(rng,role,55+(t.coach?.analysis||55)*.08);
-      }}
+    const roster=t.id===mine?ensureStaffRoster(t):ensureTeamStaff(db,t,rng);
+    for(let i=roster.length-1;i>=0;i--){const s=roster[i];s.age=(s.age||35)+1;if(s.age>=62&&rng.chance(.12+(s.age-62)*.04)){roster.splice(i,1);if(t.id===mine&&db.world){db.world.marketLog=db.world.marketLog||[];db.world.marketLog.push((STAFF_ROLES[s.role]||s.role)+' '+s.name+' 은퇴 · 후임을 직접 선임하세요')}}}
   }
   for(const s of db.staffPool)s.age=(s.age||35)+1;db.staffPool=db.staffPool.filter(s=>s.age<68);
 }
-
-
-// ---- 코칭스태프 시장 ----
-function coachSalary(c,ps){return Math.round((1+((c.draft+c.analysis+c.development)/3-50)/12)*ps*10)/10}
-function ensureCoach(db,t,rng){if(!t.coach.id){t.coach.id='C'+hashStr(t.id+t.coach.name);t.coach.age=t.coach.age||40;t.coach.since=db.year}}
-function genCoachPool(db,rng){
-  db.coachPool=db.coachPool||[];
-  // 은퇴 선수 중 판단력 좋은 선수는 코치로 전향
-  for(const p of Object.values(db.players)){ if(!p.retired||p.retiredYear!==db.year-1||p.coachDone)continue;p.coachDone=true;
-    if((p.peak||0)>=70&&rng.chance(0.35))db.coachPool.push({id:'C'+p.id,name:p.name,draft:Math.round(clamp((p.peak||70)-8+rng.normal(0,6),40,95)),analysis:Math.round(clamp((p.peak||70)-6+rng.normal(0,6),40,95)),development:Math.round(clamp(60+rng.normal(0,10),35,95)),age:p.age+1,exPlayer:true})}
-  while(db.coachPool.length<12)db.coachPool.push({...genCoach(rng,62+rng.normal(0,6)),id:'C'+db.year+'_'+db.coachPool.length+rng.int(0,999),age:rng.int(30,50)});
-  db.coachPool=db.coachPool.slice(-30);
-}
-function hireCoach(db,t,c){if(t.coach&&t.coach.id)db.coachPool.push({...t.coach});db.coachPool=db.coachPool.filter(x=>x.id!==c.id);t.coach={...c,since:db.year}}
 
 // ---- 구단주 목표 ----
 function setGoals(db){
@@ -4084,9 +4124,7 @@ function evalGoals(db,w,rep,ev){
       if(ok){t.owner.patience=Math.min(3,(t.owner.patience??2)+1);t.owner.wealth=Math.min(99,t.owner.wealth+2)}
       else t.owner.patience=(t.owner.patience??2)-1;
       if(t.id===managedTeamId(db)){rep.myGoal={goal:t.goal,ok};if(!ok&&t.owner.patience<=0){w.fired=true;ev(`${t.name} 구단주, 헤드코치(플레이어) 해임 — 목표 "${GOAL_KO[t.goal]}" 연속 미달`)}}
-      else if(!ok&&t.owner.patience<=0&&db.coachPool&&db.coachPool.length){
-        const ps=psOf(db,t.region), best=db.coachPool.filter(c=>coachSalary(c,ps)<=t.finance.cash*0.2+3*ps).sort((a,b)=>(b.draft+b.analysis+b.development)-(a.draft+a.analysis+a.development))[0];
-        if(best){const old=t.coach.name;hireCoach(db,t,best);t.owner.patience=2;rep.coaches.push({team:t.id,out:old,in:best.name})}}
+      else if(!ok&&t.owner.patience<=0){const changed=aiManageStaff(db,t,new RNG((w.seed||'world')+'/'+w.year+'/'+t.id,'staff-review'));t.owner.patience=1;if(changed)ev(`${t.name}, 성적 부진 후 전문 코칭스태프 보강`)}
     }
   }
 }
@@ -4394,9 +4432,11 @@ function sponsorBlock(t){
   return `<h4>메인 스폰서</h4>${cur?`<p>${esc(cur.name)} ${esc(cur.type)} — 기본 ${money(cur.base)}${cur.perWin?` + 승리당 ${money(cur.perWin)}`:''} (${cur.until}년까지)</p>`:offers.map(o=>`<div class="mrow"><span><b>${esc(o.name)}</b> ${esc(o.type)} · 기본 ${money(o.base)}${o.perWin?` + 승리당 ${money(o.perWin)}`:''} · ${o.years}년</span><button class="ghost sm2" data-spon="${o.id}">계약</button></div>`).join('')+'<p class="hint">계약하지 않으면 팬덤에 따라 매년 다시 정해집니다.</p>'}`;
 }
 function coachBlock(t){
-  const ps=psOf(DB,t.region);ensureFacilities(t);
-  return `<div class="fin"><div><span>헤드코치</span><b>플레이어</b><small>밴픽·선수단·코치진 최종 결정</small></div>${Object.entries(t.staff||{}).map(([r,x])=>`<div><span>${STAFF_ROLES[r]}</span><b>${esc(x.name)}</b><small>능력 ${x.rating}</small></div>`).join('')}</div><p class="hint">범용 수석코치는 사용하지 않습니다. 전문 스태프가 분석·훈련·전략 조언을 담당하며 최종 결정은 헤드코치가 합니다.</p>
-  <h4>전문 스태프 시장</h4>${(DB.staffPool||[]).slice().sort((a,b)=>b.rating-a.rating).map(x=>`<div class="mrow"><span><b>${esc(x.name)}</b> · ${STAFF_ROLES[x.role]} · 능력 ${x.rating} · 연봉 ${money(staffSalary(x,ps))}</span><button class="ghost sm2" data-hire-staff="${x.id}">선임</button></div>`).join('')}`;
+  const ps=psOf(DB,t.region),members=teamStaffMembers(t);ensureFacilities(t);
+  const dept=(d)=>members.filter(s=>staffDepartment(s.role)===d),cards=members.slice().sort((a,b)=>staffDepartment(a.role).localeCompare(staffDepartment(b.role))||b.rating-a.rating).map(x=>`<div class="mrow"><span><b>${esc(x.name)}</b> · ${STAFF_ROLES[x.role]} · 능력 ${x.rating} · 연봉 ${money(staffSalary(x,ps))}</span><button class="ghost sm2" data-fire-staff="${x.id}">계약 해지</button></div>`).join('');
+  const limits=`코칭팀 ${dept('coach').length}/${STAFF_DEPT_LIMITS.coach} · 분석팀 ${dept('analyst').length}/${STAFF_DEPT_LIMITS.analyst} · 스카우팅팀 ${dept('scout').length}/${STAFF_DEPT_LIMITS.scout}`;
+  const market=(DB.staffPool||[]).slice().sort((a,b)=>b.rating-a.rating).map(x=>{const d=staffDepartment(x.role),full=staffDeptCount(t,d)>=STAFF_DEPT_LIMITS[d];return `<div class="mrow"><span><b>${esc(x.name)}</b> · ${STAFF_ROLES[x.role]} · 능력 ${x.rating} · 연봉 ${money(staffSalary(x,ps))}</span><button class="ghost sm2" data-hire-staff="${x.id}"${full?' disabled':''}>${full?'부서 정원':'선임'}</button></div>`}).join('');
+  return `<div class="fin"><div><span>헤드코치</span><b>플레이어</b><small>최종 스포츠 결정</small></div><div><span>부서 정원</span><b>${limits}</b><small>범용 수석코치 없음</small></div><div><span>스태프 효과</span><b>전략 ${Math.round(staffProfile(t).draft)} · 분석 ${Math.round(staffProfile(t).analysis)}</b><small>육성 ${Math.round(staffProfile(t).development)} · 스카우팅 ${Math.round(staffProfile(t).scouting)}</small></div></div><h4>현재 스태프</h4>${cards||'<p class="hint">고용된 전문 스태프가 없습니다.</p>'}<h4>스태프 시장</h4>${market}`;
 }
 function negotiationTermsFromDom(nid){return {salary:+document.querySelector(`[data-neg-sal="${nid}"]`).value,years:+document.querySelector(`[data-neg-years="${nid}"]`).value,signingBonus:+document.querySelector(`[data-neg-sign="${nid}"]`).value,bonuses:{performance:+document.querySelector(`[data-neg-perf="${nid}"]`).value,title:+document.querySelector(`[data-neg-title="${nid}"]`).value,international:+document.querySelector(`[data-neg-intl="${nid}"]`).value},buyout:+document.querySelector(`[data-neg-buyout="${nid}"]`).value||null,option:document.querySelector(`[data-neg-option="${nid}"]`).value==='none'?null:{type:document.querySelector(`[data-neg-option="${nid}"]`).value},promisedRole:document.querySelector(`[data-neg-role="${nid}"]`).value}}
 function bindNegotiationControls(act){
@@ -4409,7 +4449,8 @@ function bindNegotiationControls(act){
 function bindMarket(){
   const act=m=>{MSG=m;saveDB();nav();const e=document.querySelector('.market');e&&e.scrollIntoView({block:'start'})};
   document.querySelectorAll('[data-spon]').forEach(b=>b.onclick=()=>act(mSponsor(DB,b.dataset.spon)));
-  document.querySelectorAll('[data-hire-staff]').forEach(b=>b.onclick=()=>{const t=managedTeam(DB),x=(DB.staffPool||[]).find(s=>s.id===b.dataset.hireStaff),old=x&&t.staff&&t.staff[x.role],fee=old?staffSalary(old,psOf(DB,t.region)):0;if(x&&confirm(`${STAFF_ROLES[x.role]} ${x.name} 선임\n${old?`${old.name} ${old.rating} → ${x.rating}\n교체 위약금 ${money(fee)}`:`신규 선임 · 능력 ${x.rating}`}`))act(mHireStaff(DB,b.dataset.hireStaff))});
+  document.querySelectorAll('[data-hire-staff]').forEach(b=>b.onclick=()=>{const x=(DB.staffPool||[]).find(s=>s.id===b.dataset.hireStaff);if(x&&confirm(`${STAFF_ROLES[x.role]} ${x.name}을(를) 선임할까요?\n능력 ${x.rating} · ${STAFF_DEPT_LABEL[staffDepartment(x.role)]}`))act(mHireStaff(DB,b.dataset.hireStaff))});
+  document.querySelectorAll('[data-fire-staff]').forEach(b=>b.onclick=()=>{const s=teamStaffMembers(managedTeam(DB)).find(x=>x.id===b.dataset.fireStaff);if(s&&confirm(`${STAFF_ROLES[s.role]} ${s.name}의 계약을 해지할까요?`))act(mReleaseStaff(DB,b.dataset.fireStaff))});
   document.querySelectorAll('[data-exercise-option]').forEach(b=>b.onclick=()=>act(mExerciseTeamOption(DB,b.dataset.exerciseOption)));
   document.querySelectorAll('[data-start-renew]').forEach(b=>b.onclick=()=>act(startNegotiation(DB,b.dataset.startRenew,'renewal').msg));
   document.querySelectorAll('[data-release]').forEach(b=>b.onclick=()=>{const p=DB.players[b.dataset.release],cost=p.contract&&p.contract.until>=DB.year?p.contract.salary*(p.contract.until-DB.year+1)*.5:0;if(confirm(`${p.name} 선수를 방출할까요?\n해지금 ${money(cost)}${p.contract?` · 계약 ${p.contract.until}년까지`:''}\n방출 후 즉시 FA가 됩니다.`))act(mRelease(DB,b.dataset.release))});
@@ -5019,7 +5060,7 @@ function viewSquad(){
   const mineOrg=DB.world&&(t.id===managedTeamId(DB)||t.parent===managedTeamId(DB)), kAvg=Math.round(avg(ps.map(p=>knowledge(DB,p))));
   const edit=mineOrg?squadEditState(t):null,tr=edit?edit.training:(t.training||defaultTraining()),tac=edit?edit.tactics:t.tactics;
   return `<section class="controls"><label>팀<select id="sq">${teamOpts(SQUAD)}</select></label></section>
-  <section class="teamhead"><h2>${esc(t.name)}</h2><p>${t.formerNames&&t.formerNames.length?'전신 '+t.formerNames.map(esc).join(', ')+' · ':''}${esc(DB.regions[t.region].leagueName)} · 감독 ${esc(t.coach.name)} (밴픽 ${t.coach.draft} · 분석 ${t.coach.analysis} · 육성 ${t.coach.development}) · 운영 철학 ${PHIL_KO[t.philosophy]||'균형'} · 팬덤 ${t.fans??'—'} · 팀 호흡 ${Math.round(teamSynergy(t))}${t.goal?` · 구단주 목표: ${GOAL_KO[t.goal]}`:''}</p><p class="hint">훈련은 한정된 포인트를 어디에 배분할지 선택합니다. 주전을 자주 바꾸면 팀 호흡이 떨어집니다.</p></section>
+  <section class="teamhead"><h2>${esc(t.name)}</h2><p>${t.formerNames&&t.formerNames.length?'전신 '+t.formerNames.map(esc).join(', ')+' · ':''}${esc(DB.regions[t.region].leagueName)} · 감독 ${t.id===managedTeamId(DB)?'플레이어':'구단 AI'} · 운영 철학 ${PHIL_KO[t.philosophy]||'균형'} · 팬덤 ${t.fans??'—'} · 팀 호흡 ${Math.round(teamSynergy(t))}${t.goal?` · 구단주 목표: ${GOAL_KO[t.goal]}`:''}</p><p class="hint">전문 스태프가 밴픽·분석·육성·회복을 지원하며, 관리 구단의 최종 스포츠 결정은 플레이어가 내립니다.</p></section>
   <section><h3>팀 전술</h3><div class="tac">
     ${Object.keys(TAC_KO).map(k=>`<label><span>${TAC_KO[k]}<output>${tac[k]}</output></span><input type="range" min="0" max="100" value="${tac[k]}" data-tac="${k}"></label>`).join('')}
   </div></section>
@@ -5229,7 +5270,7 @@ function renderReport(r){
    ${DB.world.fired?'<p class="warn">해임되었습니다. 다른 팀을 골라 커리어를 이어가세요.</p>':''}
    ${(r.awards||[]).length?`<div class="rx"><h4>시상</h4>${r.awards.map(a=>`<p><b>${esc(a.comp)} ${esc(a.type)}</b> ${esc(nm(a.pid))} <small>${esc(tshort(DB.players[a.pid]&&DB.players[a.pid].team))}</small></p>`).join('')}</div>`:''}
    ${(r.hof||[]).length?`<div class="rx"><h4>명예의 전당 헌액</h4><p>${r.hof.map(id=>esc(nm(id))).join(', ')}</p></div>`:''}
-   ${(r.coaches||[]).length?`<div class="rx"><h4>감독 교체</h4>${r.coaches.map(c=>`<p>${esc(tshort(c.team))}: ${esc(c.out)} → ${esc(c.in)}</p>`).join('')}</div>`:''}
+
    ${r.events.length?`<div class="rx"><h4>세계 변화</h4>${r.events.map(e=>`<p>${esc(e)}</p>`).join('')}</div>`:''}
    <div class="rgrid">
     <div><h4>가장 크게 성장</h4>${r.growth.slice(0,8).map(g=>`<div class="arow"><span>${esc(nm(g.pid))} <small>${esc(tshort(DB.players[g.pid]&&DB.players[g.pid].team))} · ${DB.players[g.pid]?DB.players[g.pid].age:''}세</small></span><span class="num hi">+${g.d} → ${g.ovr}</span></div>`).join('')}</div>
