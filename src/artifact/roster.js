@@ -18,27 +18,66 @@ function ensurePlayerEligibility(p){
   if(!Array.isArray(p.contractedMoves))p.contractedMoves=[];
   return p;
 }
+// Canonical rule *queries* are pure, including on v15 legacy player records
+// that have not gone through load-time eligibility normalization. Transaction
+// previews must never call the mutating normalization helpers.
+function playerLocalRegionView(p){
+  return p&&(p.activeLocalRegion||p.originLocalRegion||p.originRegion||p.region||p.nationality||null);
+}
+function isLocalPlayerReadOnly(p,regionId){
+  return !!p&&!!regionId&&playerLocalRegionView(p)===regionId;
+}
 function playerOriginRegion(p){return ensurePlayerEligibility(p)?.originRegion||null}
-function playerActiveLocalRegion(p){return ensurePlayerEligibility(p)?.activeLocalRegion||null}
+function playerActiveLocalRegion(p){return playerLocalRegionView(ensurePlayerEligibility(p))}
 function isLocalPlayer(p,regionId){return !!p&&!!regionId&&playerActiveLocalRegion(p)===regionId}
 function nonLocalLimitForTeam(db,t){
   const team=teamRef(db,t);if(!team)return FIRST_TEAM_NON_LOCAL_LIMIT;
   if((team.division||1)===1)return FIRST_TEAM_NON_LOCAL_LIMIT;
   const R=db.regions[team.region];return Math.max(0,R?.reserveImportLimit??FIRST_TEAM_NON_LOCAL_LIMIT);
 }
+function teamNonLocalCountReadOnly(db,t,excludePid=null){
+  const team=teamRef(db,t);if(!team)return 0;
+  return (team.roster||[]).reduce((n,id)=>{
+    if(id===excludePid)return n;
+    const p=db.players[id];
+    return n+(p&&!isLocalPlayerReadOnly(p,team.region)?1:0);
+  },0);
+}
 function teamNonLocalCount(db,t,excludePid=null){
   const team=teamRef(db,t);if(!team)return 0;
-  return (team.roster||[]).reduce((n,id)=>{if(id===excludePid)return n;const p=db.players[id];return n+(p&&!isLocalPlayer(p,team.region)?1:0)},0);
+  // Preserve the original domain writer's lazy eligibility normalization.
+  for(const id of team.roster||[])if(id!==excludePid&&db.players[id])ensurePlayerEligibility(db.players[id]);
+  return teamNonLocalCountReadOnly(db,team,excludePid);
+}
+function localRegistrationErrorReadOnly(db,t,p){
+  const team=teamRef(db,t),player=playerRef(db,p);
+  if(!team||!player)return '등록 대상을 찾을 수 없습니다';
+  if(isLocalPlayerReadOnly(player,team.region)||(team.roster||[]).includes(player.id))return null;
+  return teamNonLocalCountReadOnly(db,team)>=nonLocalLimitForTeam(db,team)?'비로컬 선수 등록 상한을 넘습니다':null;
 }
 function localRegistrationError(db,t,p){
-  const team=teamRef(db,t),player=playerRef(db,p);if(!team||!player)return '등록 대상을 찾을 수 없습니다';
-  if(isLocalPlayer(player,team.region))return null;
-  if((team.roster||[]).includes(player.id))return null;
-  return teamNonLocalCount(db,team)>=nonLocalLimitForTeam(db,team)?'비로컬 선수 등록 상한을 넘습니다':null;
+  const team=teamRef(db,t),player=playerRef(db,p);
+  if(!team||!player)return '등록 대상을 찾을 수 없습니다';
+  // Existing domain callers keep their historical load-time repair behavior;
+  // validation/preview callers use localRegistrationErrorReadOnly instead.
+  ensurePlayerEligibility(player);
+  if(!isLocalPlayerReadOnly(player,team.region)&&!(team.roster||[]).includes(player.id))
+    for(const id of team.roster||[])if(db.players[id])ensurePlayerEligibility(db.players[id]);
+  return localRegistrationErrorReadOnly(db,team,player);
 }
 function contractedMoveSeason(db){return db?.world?.year??db?.year}
-function contractedMoveCount(db,p){ensurePlayerEligibility(p);const y=contractedMoveSeason(db);return (p?.contractedMoves||[]).filter(x=>x.season===y&&x.counts!==false).length}
-function contractedMoveError(db,p){return contractedMoveCount(db,p)>=CONTRACTED_MOVE_LIMIT_PER_SEASON?'한 시즌 계약 구단 이동은 최대 2회까지 가능합니다':null}
+function contractedMoveCountReadOnly(db,p){
+  const y=contractedMoveSeason(db);
+  return (p?.contractedMoves||[]).filter(x=>x.season===y&&x.counts!==false).length;
+}
+function contractedMoveCount(db,p){ensurePlayerEligibility(p);return contractedMoveCountReadOnly(db,p)}
+function contractedMoveErrorReadOnly(db,p){
+  return contractedMoveCountReadOnly(db,p)>=CONTRACTED_MOVE_LIMIT_PER_SEASON?'한 시즌 계약 구단 이동은 최대 2회까지 가능합니다':null;
+}
+function contractedMoveError(db,p){
+  ensurePlayerEligibility(p);
+  return contractedMoveErrorReadOnly(db,p);
+}
 function recordContractedMove(db,p,kind,from,to,extra={}){
   ensurePlayerEligibility(p);const season=contractedMoveSeason(db);
   if(kind==='loan_return'||kind==='loan_purchase_conversion'||kind==='restructure')return null;

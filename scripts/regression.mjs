@@ -143,7 +143,7 @@ source += `
 
 
   test('06c-player-sign-transaction',()=>{
-    const db=buildWorld(),team=activeTeams(db,null,1)[0],p=Object.values(db.players).find(x=>!x.retired&&!x.team&&playerActionLocal(x,team.region));
+    const db=buildWorld(),team=activeTeams(db,null,1)[0],p=Object.values(db.players).find(x=>!x.retired&&!x.team&&isLocalPlayerReadOnly(x,team.region));
     assert(p,'free agent fixture missing');setManagedTeam(db,team.id);db.world={year:db.year,manage:'manual'};
     const command={type:'player.sign',pid:p.id,teamId:team.id,kind:'fa',actor:'manager',
       salary:3.2,years:2,terms:{signingBonus:1,promisedRole:'starter',buyout:8,bonuses:{title:.2}}};
@@ -176,7 +176,7 @@ source += `
 
   test('06d-player-transfer-transaction',()=>{
     const db=buildWorld(),teams=activeTeams(db,null,1),buyer=teams[0],seller=teams[1];
-    const p=Object.values(db.players).find(x=>!x.retired&&!x.team&&playerActionLocal(x,buyer.region));
+    const p=Object.values(db.players).find(x=>!x.retired&&!x.team&&isLocalPlayerReadOnly(x,buyer.region));
     assert(p,'transfer fixture missing');setManagedTeam(db,buyer.id);db.world={year:db.year,manage:'manual'};
     assignPlayerToTeam(db,p,seller);
     p.contract={salary:2,until:db.year+1,years:2,signingBonus:0,promisedRole:'starter'};
@@ -206,7 +206,7 @@ source += `
 
   test('06e-ai-transfer-and-move-limit',()=>{
     const db=buildWorld(),teams=activeTeams(db,null,1),seller=teams[0],buyer=teams[1],owner=teams[2];
-    const p=Object.values(db.players).find(x=>!x.retired&&!x.team&&playerActionLocal(x,buyer.region));
+    const p=Object.values(db.players).find(x=>!x.retired&&!x.team&&isLocalPlayerReadOnly(x,buyer.region));
     assert(p,'AI transfer fixture missing');setManagedTeam(db,owner.id);db.world={year:db.year,manage:'manual'};
     assignPlayerToTeam(db,p,seller);p.contract={salary:1.5,until:db.year+1,years:2};
     const command={type:'player.transfer',pid:p.id,fromId:seller.id,teamId:buyer.id,fee:1.2,actor:'ai'};
@@ -228,7 +228,7 @@ source += `
   test('06f-release-and-option-transaction',()=>{
     const db=buildWorld(),teams=activeTeams(db,null,1),team=teams[0],other=teams[1];
     setManagedTeam(db,team.id);db.world={year:db.year,manage:'manual'};
-    const p=Object.values(db.players).find(x=>!x.retired&&!x.team&&playerActionLocal(x,team.region));
+    const p=Object.values(db.players).find(x=>!x.retired&&!x.team&&isLocalPlayerReadOnly(x,team.region));
     assert(p,'release fixture missing');
     assignPlayerToTeam(db,p,team);team.finance.cash=15;team.finance.buyout=0;
     p.contract={salary:2,until:db.year+1,years:2,option:{type:'team',year:db.year,salary:3}};
@@ -340,7 +340,7 @@ source += `
   test('06j-transaction-transfer-rollback',()=>{
     for(const kind of ['player.sign','player.transfer']){
       const db=buildWorld(),[buyer,seller]=activeTeams(db,null,1),
-        p=Object.values(db.players).find(x=>!x.retired&&!x.team&&playerActionLocal(x,buyer.region));
+        p=Object.values(db.players).find(x=>!x.retired&&!x.team&&isLocalPlayerReadOnly(x,buyer.region));
       assert(p,'rollback transfer test lacks local FA fixture');
       setManagedTeam(db,buyer.id);db.world={year:db.year,phase:'market',manage:'manual'};
       assignPlayerToTeam(db,p,seller);
@@ -423,7 +423,7 @@ source += `
 
   test('06m-transaction-actor-parity-and-membership-guard',()=>{
     const db=buildWorld(),t=activeTeams(db,null,1)[0],
-      p=Object.values(db.players).find(x=>!x.team&&playerActionLocal(x,t.region));
+      p=Object.values(db.players).find(x=>!x.team&&isLocalPlayerReadOnly(x,t.region));
     assert(p,'actor parity fixture missing FA');
     setManagedTeam(db,t.id);db.world={year:db.year,manage:'ai'};
     t.finance.cash=25;
@@ -524,6 +524,78 @@ source += `
     assert(r5.games.length>=3&&r5.games.length<=5&&Math.max(...r5.score)===3&&uniqueSeriesPicks(r5),'Bo5/Fearless regression after save/load');
   });
 
+
+  test('11d-pure-registration-rule-parity',()=>{
+    const db=buildWorld(),team=activeTeams(db,null,1)[0],
+      foreign=Object.values(db.players).filter(p=>!p.retired&&!p.team&&!isLocalPlayerReadOnly(p,team.region));
+    assert(team&&foreign.length>=3,'pure rule test requires a foreign-player supply');
+    setManagedTeam(db,team.id);db.world={year:db.year,manage:'manual'};
+    const [a,b,c]=foreign;
+    assignPlayerToTeam(db,a,team);assignPlayerToTeam(db,b,team);
+    team.finance.cash=25;
+    // Old-save fields are not guaranteed to be populated. Pure reads must
+    // resolve identical local eligibility without initializing any of them.
+    for(const p of [a,b,c]){
+      delete p.activeLocalRegion;delete p.originLocalRegion;
+      delete p.localEligibility;
+    }
+    const readBefore=JSON.stringify(db);
+    assert(teamNonLocalCountReadOnly(db,team)===2&&
+      !isLocalPlayerReadOnly(c,team.region)&&
+      localRegistrationErrorReadOnly(db,team,c)==='비로컬 선수 등록 상한을 넘습니다',
+      'pure registration rules missed a legacy nonlocal quota');
+    const command={type:'player.sign',actor:'manager',teamId:team.id,pid:c.id,
+      kind:'fa',salary:2,years:1,terms:{promisedRole:'backup'}};
+    const snapshot=playerActionSnapshot(db,command);
+    const denied=previewWorldAction(db,command);
+    assert(!denied.ok&&denied.reason==='registration_limit'&&snapshot.teams[0].foreign===2,
+      'transaction registration view differs from the shared roster rule');
+    assert(JSON.stringify(db)===readBefore,'registration preview mutated an unnormalized legacy player');
+    assert(localRegistrationError(db,team,c)===
+      localRegistrationErrorReadOnly(db,team,c),
+      'domain and pure registration validation disagree after normalization');
+    assert(teamNonLocalCount(db,team)===teamNonLocalCountReadOnly(db,team),
+      'domain and pure foreign-player counts disagree');
+    // Clearing one occupied slot should allow the exact previously denied
+    // contract, without changing the canonical rule or preview semantics.
+    removePlayerFromTeam(db,a);
+    const allowed=previewWorldAction(db,command);
+    assert(allowed.ok,'registration must become valid when a foreign slot opens');
+    const completed=applyWorldAction(db,allowed);
+    assert(completed.ok&&db.players[c.id].team===team.id,
+      'shared registration rule prevented a valid FA contract');
+    assert(!rosterIntegrityErrors(db).length,'registration rule cleanup damaged roster integrity');
+  });
+
+  test('11e-pure-contracted-move-rule-parity',()=>{
+    const db=buildWorld(),p=Object.values(db.players).find(x=>!x.team);
+    assert(p,'contracted move legacy fixture missing');
+    delete p.originRegion;delete p.originLocalRegion;
+    delete p.activeLocalRegion;delete p.localEligibility;
+    delete p.contractedMoves;
+    const before=JSON.stringify(p);
+    assert(contractedMoveCountReadOnly(db,p)===0&&
+      contractedMoveErrorReadOnly(db,p)===null&&
+      JSON.stringify(p)===before,
+      'missing move history must be treated as zero without mutating player');
+    p.contractedMoves=[
+      {season:db.year,kind:'permanent',counts:true},
+      {season:db.year,kind:'loan_return',counts:false},
+      {season:db.year,kind:'permanent',counts:true},
+      {season:db.year-1,kind:'permanent',counts:true}
+    ];
+    const seasonBefore=JSON.stringify(p),expected='한 시즌 계약 구단 이동은 최대 2회까지 가능합니다';
+    assert(contractedMoveCountReadOnly(db,p)===2&&
+      contractedMoveErrorReadOnly(db,p)===expected&&
+      JSON.stringify(p)===seasonBefore,
+      'pure contracted-move season gate changed its counting semantics');
+    assert(contractedMoveCount(db,p)===2&&contractedMoveError(db,p)===expected,
+      'low-level move writer and action read-only quota disagree');
+    const restored=unpackDB(packDB(db));
+    assert(contractedMoveCountReadOnly(restored,restored.players[p.id])===2&&
+      contractedMoveErrorReadOnly(restored,restored.players[p.id])===expected,
+      'contracted-move quota changed through save round trip');
+  });
 
   test('11a-meta-index-incremental-and-bounded',()=>{
     const db=buildWorld(),region=Object.keys(db.regions)[0],rows=[];
