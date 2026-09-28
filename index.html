@@ -2533,15 +2533,19 @@ function upgradeFacility(db,t,key){if(!['training','analysis','recovery','youth'
 
 // ---------- 지역 프리셋 / 월드 설정 ----------
 // 실제 LoL e스포츠 구조를 본뜬 기본 리그 (리그 수준·시장 규모는 고정, 구조만 편집 가능)
+const GLOBAL_FIRST_TEAM_MIN=5,GLOBAL_FIRST_TEAM_MAX=10,GLOBAL_RESERVE_TEAM_MIN=5;
+function rosterRule(id,source,{integratedMin=GLOBAL_FIRST_TEAM_MIN,integratedMax=GLOBAL_FIRST_TEAM_MAX,reserveTeamMax=10,reserveSubMax=5}={}){
+  return {id,source,integratedMin,integratedMax,firstTeamMin:GLOBAL_FIRST_TEAM_MIN,firstTeamMax:GLOBAL_FIRST_TEAM_MAX,reserveTeamMin:GLOBAL_RESERVE_TEAM_MIN,reserveTeamMax,reserveSubMax};
+}
 const ROSTER_RULE_PROFILES={
-  STANDARD_TIER1_2026:{id:'STANDARD_TIER1_2026',source:'GLOBAL_2026',integratedMin:5,integratedMax:10,firstTeamMin:5,firstTeamMax:10,reserveTeamMin:5,reserveTeamMax:10,reserveSubMax:5},
-  ENGINE_OWNED_RESERVE:{id:'ENGINE_OWNED_RESERVE',source:'POLICY_ENGINE',integratedMin:10,integratedMax:20,firstTeamMin:5,firstTeamMax:10,reserveTeamMin:5,reserveTeamMax:10,reserveSubMax:5},
-  OWNED_RESERVE_LCK_STYLE_2026:{id:'OWNED_RESERVE_LCK_STYLE_2026',source:'LCK_2026',integratedMin:11,integratedMax:20,firstTeamMin:5,firstTeamMax:10,reserveTeamMin:5,reserveTeamMax:10,reserveSubMax:5},
-  LCS_2026:{id:'LCS_2026',source:'LCS_2026',integratedMin:5,integratedMax:12,firstTeamMin:5,firstTeamMax:12,reserveTeamMin:5,reserveTeamMax:10,reserveSubMax:7},
-  LCP_2026:{id:'LCP_2026',source:'LCP_2026',integratedMin:5,integratedMax:10,firstTeamMin:5,firstTeamMax:10,reserveTeamMin:5,reserveTeamMax:10,reserveSubMax:5},
-  LEC_2026:{id:'LEC_2026',source:'LEC_2026',integratedMin:5,integratedMax:10,firstTeamMin:5,firstTeamMax:10,reserveTeamMin:5,reserveTeamMax:10,reserveSubMax:5},
-  LPL_2026:{id:'LPL_2026',source:'LPL_2026',integratedMin:5,integratedMax:10,firstTeamMin:5,firstTeamMax:10,reserveTeamMin:5,reserveTeamMax:10,reserveSubMax:5},
-  CBLOL_2026:{id:'CBLOL_2026',source:'CBLOL_2026',integratedMin:5,integratedMax:10,firstTeamMin:5,firstTeamMax:10,reserveTeamMin:5,reserveTeamMax:10,reserveSubMax:5}
+  STANDARD_TIER1_2026:rosterRule('STANDARD_TIER1_2026','GLOBAL_2026'),
+  ENGINE_OWNED_RESERVE:rosterRule('ENGINE_OWNED_RESERVE','POLICY_ENGINE',{integratedMin:10,integratedMax:20}),
+  OWNED_RESERVE_LCK_STYLE_2026:rosterRule('OWNED_RESERVE_LCK_STYLE_2026','LCK_2026',{integratedMin:10,integratedMax:20}),
+  LCS_2026:rosterRule('LCS_2026','LCS_2026',{integratedMin:5,integratedMax:10,reserveSubMax:7}),
+  LCP_2026:rosterRule('LCP_2026','LCP_2026'),
+  LEC_2026:rosterRule('LEC_2026','LEC_2026'),
+  LPL_2026:rosterRule('LPL_2026','LPL_2026'),
+  CBLOL_2026:rosterRule('CBLOL_2026','CBLOL_2026')
 };
 function rosterRuleProfile(id='STANDARD_TIER1_2026'){return ROSTER_RULE_PROFILES[id]||ROSTER_RULE_PROFILES.STANDARD_TIER1_2026}
 
@@ -4342,9 +4346,16 @@ function initialSalaryBudget(db,t){const team=teamRef(db,t);return Math.max(sala
 function initialSalaryCeiling(db,t){return initialSalaryBudget(db,t)}
 function initialSquadLimits(db,t){const team=teamRef(db,t),rules=rosterRulesForTeam(db,team),first=!team.parent;return {min:first?rules.firstTeamMin:rules.reserveTeamMin,max:first?rules.firstTeamMax:rules.reserveTeamMax}}
 function initialRosterTarget(db,t){
-  const team=teamRef(db,t),lim=initialSquadLimits(db,team),floor=Math.max(.1,minimumViableInitialPayroll(db,team)),capacity=Math.max(0,initialSalaryBudget(db,team)/floor-1);
-  const philosophy={cost:-1,balanced:0,youth:1,'win-now':1,superstar:1}[team.philosophy]??0,goal=['title','final','promotion'].includes(team.setupGoal)?1:0;
-  return clamp(lim.min+Math.max(0,Math.floor(capacity*2)+philosophy+goal),lim.min,lim.max);
+  const team=teamRef(db,t),lim=initialSquadLimits(db,team),floor=Math.max(.1,minimumViableInitialPayroll(db,team)),room=Math.max(0,initialSalaryBudget(db,team)-floor);
+  const cheapExtra=Math.max(.1,(floor/Math.max(5,lim.min))*.55),affordable=Math.max(0,Math.floor(room/cheapExtra)),goal=team.setupGoal||'top_half';
+  if(team.parent)return clamp(lim.min+Math.min(3,Math.max(0,affordable)),lim.min,lim.max);
+  if(['title','final'].includes(goal))return clamp(lim.min+(team.philosophy==='youth'&&affordable>=2?1:0),lim.min,lim.max);
+  if(['survive','develop','promotion'].includes(goal)){
+    const intent=1+(['youth','cost'].includes(team.philosophy)?1:0)+(affordable>=3?1:0);
+    return clamp(lim.min+Math.min(3,Math.min(affordable,intent)),lim.min,Math.min(8,lim.max));
+  }
+  const extra=['youth','cost'].includes(team.philosophy)&&affordable>=1?1:0;
+  return clamp(lim.min+extra,lim.min,lim.max);
 }
 function initialSquadErrors(db,t){
   const team=teamRef(db,t);if(!team)return ['팀을 찾을 수 없습니다'];
