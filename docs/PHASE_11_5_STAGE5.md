@@ -1,4 +1,4 @@
-# LOL GM 11.5 / Stage 5: Legacy cleanup (4 substages)
+# LOL GM 11.5 / Stage 5: Legacy cleanup — COMPLETE (4 substages)
 
 ## Completion plan
 
@@ -6,9 +6,9 @@
 - **5-2 — remaining legacy/optional domain fallback audit (completed):** remove fallback branches for APIs guaranteed by the canonical module manifest; prevent missing active gameplay dependencies from being silently skipped. Retain actual optional browser APIs and historical save migration.
 - **5-3 — duplicate-flow and module-boundary consolidation (completed):** audit remaining reachable contract, lineup and roster flows; remove only proven duplicates and add parity regressions.
 - **5-4 — final compatibility and acceptance (three small increments):**
-  - **5-4a (completed):** critical-path regression coverage for initial-manager negotiation, scheduled series preparation, legal reserve call-ups and stale-preview rejection.
-  - **5-4b (this PR):** two successive real domestic league/postseason competitions, two rookie/offseason/market cycles, current v15 format-2 and format-1 compatibility restore and roster/supply invariants.
-  - **5-4c (this PR, verify before merge):** mandatory new acceptance script plus full existing regression, performance, build, generated artifact parity, PR CI, post-merge main CI and standalone sync.
+  - **5-4a (completed, PR #14):** critical-path regression coverage for initial-manager negotiation, scheduled series preparation, legal reserve call-ups and stale-preview rejection.
+  - **5-4b (completed, PR #15):** two successive real domestic league/postseason competitions, two rookie/offseason/market cycles, current v15 format-2 and format-1 compatibility restore and roster/supply invariants.
+  - **5-4c (completed, PR #15 and main CI):** mandatory new acceptance script plus full existing regression, performance, build, generated artifact parity, PR CI, post-merge main CI and standalone sync.
 
 
 ## Goal and boundaries
@@ -84,7 +84,7 @@ smoke, item/rune/draft performance and standalone build remain mandatory.
 
 **5-4 final compatibility and acceptance is not included in 5-3.**
 
-## Stage 5-4a: Focused existing-feature regression (this PR)
+## Stage 5-4a: Focused existing-feature regression (completed in PR #14)
 
 Scope is strictly **new tests and maintenance documentation**, not another
 gameplay refactor. The preceding 5-1–5-3 cleanup removed unused entrypoints
@@ -105,7 +105,7 @@ but must leave supported managers, world simulation and roster flows intact.
 All earlier stage 1–5-3 tests and smoke/perf/build remain required. No
 new save format, salary, roster, draft or patch rule is introduced.
 Long-career and save-resume stress acceptance is **5-4b**, not included
-here. Final HTML/CI sign-off is **5-4c**, also pending.
+here. The 5-4c HTML/CI sign-off is complete.
 
 
 
@@ -149,5 +149,24 @@ probe, build, artifact verification, and standalone preview. `main` must
 contain the generated `index.html` corresponding to the canonical module
 sources; root HTML must not be hand-edited.
 
-Final status can be marked **complete only after** both CI runs and standalone
-parity are observed. 11.5 Stage 6 and phases 12–23 are outside Stage 5.
+## Final verified acceptance — 2026-09-28
+
+Stage 5 is **complete**. In PR
+[#15](https://github.com/lkh0802a/LOL-GM/pull/15), all required checks
+passed ([PR CI #36406398432](https://github.com/lkh0802a/LOL-GM/actions/runs/36406398432)).
+The squash commit `f72f381c16f20bcc11a7bbfdd496bd20c8a199a9`
+also passed post-merge
+[main CI #36406723092](https://github.com/lkh0802a/LOL-GM/actions/runs/36406723092):
+syntax/structural gates, regression 01–11l, full world smoke,
+`CAREER_ACCEPTANCE`, indexed-meta/system perf, production build,
+standalone artifact verification and `Sync generated standalone`.
+
+The two-year career runner actually resolved **186 official fixtures**
+(93 in 2027 and 93 in 2028), generated **30 / 19** rookies in its
+bounded single-region fixture, performed **8** modern save resumes and
+**2** v15-format-1 migration resumes. World schema remains **15** and
+save encoding **2**. The generated root `index.html` matched the
+canonical build, so no additional standalone sync commit was needed.
+
+Stage 6 (UI-state consolidation) and phases 12–23 are **not** covered
+by this Stage 5 sign-off.
