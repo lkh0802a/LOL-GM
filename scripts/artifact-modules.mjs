@@ -8,6 +8,8 @@ export const ENGINE_MODULES = [
   'content-naming.js',
   'patch.js',
   'competition.js',
+  'player.js',
+  'development.js',
   'world.js',
   'roster.js',
   'lineup.js',

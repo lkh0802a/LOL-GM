@@ -11,6 +11,8 @@ The authoritative module order lives in `scripts/artifact-modules.mjs`.
 - source snapshots: `champion-source.js`, `system-source.js`
 - simulation core: `engine.js` (match simulation) and `draft.js` (champion/system evaluation, automatic item/rune environment, draft decisions)
 - baseline/domain data: `data.js`, `champs2.js`
+- player lifecycle: `player.js` (evaluation/identity, squad-role promises, champion learning, player generation, rookie cohorts)
+- player development: `development.js` (training, facilities, age curves, seasonal growth)
 - patch/meta: `patch.js`
 - competition/world: `competition.js`, `world.js`
 - roster/registration: `roster.js` (local eligibility, contracted-move accounting, organization roster rules, 1st↔reserve planning/movement, roster integrity)
@@ -26,6 +28,8 @@ New large UI surfaces should be added as `ui-<domain>.js` modules instead of ext
 ## State and cache rules
 
 Roster mutation must flow through the roster-domain helpers (`assignPlayerToTeam`, `removePlayerFromTeam`, `validateRosterPlan`/`applyRosterPlan`) instead of ad-hoc cross-module array edits when the operation is covered by those APIs. Match-slot changes are a separate concern owned by `lineup.js`.
+
+Player generation and rookie-supply rules belong in `player.js`. Training/facilities/seasonal attribute growth belong in `development.js`. `world.js` may orchestrate those systems but must not reimplement them.
 
 
 Persistent game state lives under the world DB object. Module-level caches must never own persistent state.
