@@ -92,7 +92,7 @@ function validatePlayerSignAction(db,a){
     fee=a.fee;
     const move=playerActionMoveError(db,p);if(move)return worldActionError('move_limit',move);
   }
-  if(t.finance.cash+1e-8<fee+terms.signingBonus)
+  if(fee+terms.signingBonus>0&&t.finance.cash+1e-8<fee+terms.signingBonus)
     return worldActionError('insufficient_cash','이적료 및 계약금을 지급할 현금이 부족합니다');
   return {ok:true,pid:p.id,teamId:t.id,kind,fromId:from?.id||null,fee,terms};
 }
@@ -108,7 +108,7 @@ function validatePlayerTransferAction(db,a){
   }
   if(!Number.isFinite(a.fee)||a.fee<0)return worldActionError('invalid_fee','이적료는 0 이상의 유효한 금액이어야 합니다');
   if(!playerActionFinance(from)||!playerActionFinance(to))return worldActionError('invalid_finance','구단 재정 정보가 없습니다');
-  if(to.finance.cash+1e-8<a.fee)return worldActionError('insufficient_cash','이적료를 지급할 현금이 부족합니다');
+  if(a.fee>0&&to.finance.cash+1e-8<a.fee)return worldActionError('insufficient_cash','이적료를 지급할 현금이 부족합니다');
   const move=playerActionMoveError(db,p)||playerActionLocalError(db,to,p);
   if(move)return worldActionError('invalid_transfer',move);
   return {ok:true,pid:p.id,fromId:from.id,teamId:to.id,fee:a.fee};
