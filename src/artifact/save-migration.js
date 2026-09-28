@@ -29,8 +29,10 @@ function validateSaveEnvelope(db){
       throw new Error('구단 로스터 데이터가 손상되었습니다: '+id);
   }
   for(const [id,p] of Object.entries(db.players)){
-    if(!saveObject(p)||!saveObject(p.attrs)&&!Array.isArray(p.attrs))
-      throw new Error('선수 능력치 데이터가 손상되었습니다: '+id);
+    // Some supported world snapshots contain provisional player records
+    // without generated attributes; preserve them for the domain layer.
+    if(!saveObject(p)||p.attrs!=null&&!saveObject(p.attrs)&&!Array.isArray(p.attrs))
+      throw new Error('선수 데이터가 손상되었습니다: '+id);
   }
   return format;
 }
