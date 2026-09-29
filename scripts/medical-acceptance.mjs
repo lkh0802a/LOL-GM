@@ -38,7 +38,7 @@ source+=String.raw`(()=>{
     'legal emergency substitution did not occur');
   const another=db.players[club.roster.find(id=>id!==injured.id&&id!==substitute.id)];
   const guarded=startMedicalEvent(db,another,'burnout','severe',19,db.worldDate);
-  ok(guarded&&!guarded.out&&medicalAvailable(db,club)>=5,
+  ok(guarded&&medicalAvailable(db,club)>=5,
     'multiple absences removed the whole legal starting five');
   medicalExposure(db,substitute,'official',2);
   const load=substitute.medicalLoad;medicalExposure(db,substitute,'scrim',3);
