@@ -11,11 +11,12 @@ function initFinance(db,t,rng){
 }
 // Prepaid transfer fees, signing bonuses and board infrastructure investments
 // have already affected cash. Recording them again at close would double charge.
-const FINANCE_PREPAID_KEYS=['facilityInvestment','signingBonus','transferPaid','transferReceived','staffSeverance','scoutingExpense'];
+const FINANCE_PREPAID_KEYS=['facilityInvestment','signingBonus','transferPaid','transferReceived','staffSeverance','scoutingExpense','medicalReplacementWage'];
 function financePrepaid(t){if(!t.finance)throw new Error('구단 재정 정보가 없습니다');const f=t.finance;f.prepaid=f.prepaid||{};return f.prepaid}
 function recordFinancePrepaid(t,key,amount){
   if(!FINANCE_PREPAID_KEYS.includes(key)||!Number.isFinite(amount)||amount<0)throw new Error('잘못된 선지급 재정 항목');
-  const p=financePrepaid(t);p[key]=Math.round(((p[key]||0)+amount)*10)/10;
+  const p=financePrepaid(t),digits=key==='medicalReplacementWage'?1000:10;
+  p[key]=Math.round(((p[key]||0)+amount)*digits)/digits;
 }
 function sumFinanceRows(rows){return Object.values(rows).reduce((a,v)=>a+v,0)}
 function financeSeasonWins(db,t,w=db.world){if(!w?.seasons)return 0;
@@ -51,7 +52,7 @@ function financeOperatingExpense(db,t,w=db.world){
   const pre=t.finance?.prepaid||{},ps=psTeam(db,t);
   const international=w?.seasons?Object.values(w.seasons).filter(s=>
     db.competitions[s.comp]?.international&&s.teams?.includes(t.id)).length:0;
-  return {salary:payroll(db,t),
+  return {salary:payroll(db,t),medicalReplacementWage:pre.medicalReplacementWage||0,
     bonuses:w&&w.year<=db.year?contractBonusCost(db,t,w.year):0,
     staff:staffCost(db,t),ops:opsCost(db,t),facility:facilityUpkeep(db,t),
     travel:international*.55*ps,
@@ -65,7 +66,7 @@ function financePrepaidSettlement(t){
   const p=t.finance?.prepaid||{};
   return {income:p.transferReceived||0,
     expense:(p.facilityInvestment||0)+(p.signingBonus||0)+(p.transferPaid||0)+
-      (p.staffSeverance||0)+(p.scoutingExpense||0)};
+      (p.staffSeverance||0)+(p.scoutingExpense||0)+(p.medicalReplacementWage||0)};
 }
 function staffCost(db,t){const specialists=teamStaffMembers(t).reduce((sum,s)=>sum+staffSalary(s,1),0);return (2+specialists)*psTeam(db,t)}
 function opsCost(db,t){return 8*psTeam(db,t)}
@@ -154,7 +155,8 @@ function closeFinances(db,w,rng,ev){
     parent.exp.academySupport=(parent.exp.academySupport||0)+funding;
   }
   const round=value=>Math.round(value*10)/10;
-  const roundRows=rows=>Object.fromEntries(Object.entries(rows).map(([key,v])=>[key,round(v)]));
+  const roundRows=rows=>Object.fromEntries(Object.entries(rows).map(([key,v])=>
+    [key,key==='medicalReplacementWage'?Math.round(v*1000)/1000:round(v)]));
   for(const row of recs){
     const inc=sumFinanceRows(row.rev),out=sumFinanceRows(row.exp),f=row.t.finance;
     const net=inc-out;
