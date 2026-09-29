@@ -89,6 +89,8 @@ source+=String.raw`(()=>{
   const org=buildWorld(cfg2),owner=activeTeams(org,null,1)[0];
   startCareer(org,owner.id,'d02-emergency');
   autoBuildInitialSquad(org,owner,new RNG('d02-callup','squad'),5);
+  autoBuildInitialSquad(org,reserveTeamsOf(org,owner)[0],
+    new RNG('d02-callup','academy'),6);
   finalizeInitialRosters(org);
   const first=activeTeams(org,null,1).find(t=>t.id!==owner.id&&
     reserveTeamsOf(org,t).some(s=>medicalAvailable(org,s)>5)&&
