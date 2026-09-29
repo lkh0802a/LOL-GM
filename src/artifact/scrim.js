@@ -62,13 +62,7 @@ function backgroundScrimChampion(db,p,role,rng){
   const item=shortlist[Math.floor(rng.next()*Math.min(3,shortlist.length))];
   return {champ:item.c,mastery:item.profile.mastery||25};
 }
-// Automatic background practice uses the current player/role/patch/mastery
-// inputs to resolve each private set. It does not forge official match rows,
-// meta sample counts, or public statistics. Interactive scrims (D09) can still
-// use simulateSeries to generate full draft/match replays.
 function simulateBackgroundScrim(db,t,opp,games,rng,slot,booked=null,proposal=null,bookings=null){
-  // Negotiated partner selection must also clear the competitive secrecy
-  // embargo. Booking checks remain independent of AI acceptance probability.
   const assessment=scrimPartnerAssessment(db,t,opp);
   if(!assessment.allowed)return null;
   const shared=scrimSharedWorkHours(db,t,opp,slot,db.worldDate,bookings);
@@ -117,8 +111,6 @@ function simulateBackgroundScrim(db,t,opp,games,rng,slot,booked=null,proposal=nu
   return rec;
 }
 function aiRunScrims(db,rng){
-  // A manager's club also receives routine practice. Choosing a specific
-  // opponent or requesting an interactive full scrim belongs to D09.
   const booked=officialBookedTeams(db),rivals=scrimRivalCalendar(db),
     bookings={[db.worldDate]:booked,
       [addDays(db.worldDate,-1)]:officialBookedTeams(db,addDays(db.worldDate,-1)),
@@ -128,8 +120,6 @@ function aiRunScrims(db,rng){
   const intents=Object.fromEntries(eligible.map(t=>[t.id,scrimClubIntent(db,t)])),
     strengths=Object.fromEntries(eligible.map(t=>[t.id,teamStrength(db,t.id)]));
   let blocks=0,sets=0;
-  // Two scheduled daily blocks, with 2-3 sets each; matches and recovery
-  // automatically narrow the daily allowance to 0-2 or 0-4 sets.
   for(const slot of ['afternoon','evening']){
     const busy=new Set();
     const order=eligible.slice().sort((a,b)=>String(a.id).localeCompare(String(b.id)));
@@ -147,9 +137,6 @@ function aiRunScrims(db,rng){
         offer:scrimPartnerAssessment(db,t,o,intents,strengths,rivals)}))
         .filter(x=>x.offer.allowed).map(x=>({...x,
           weight:x.offer.weight*Math.max(.2,scrimValue(db,t.id,x.team.id))}));
-      // Requests are bilateral: the host picks a practice fit, then the
-      // other club can decline. Try an alternate only while the same time
-      // window stays free; do not force a scrim when no one accepts.
       let attempts=0;
       while(ranked.length&&attempts++<4){
         const total=ranked.reduce((sum,row)=>sum+row.weight,0);
