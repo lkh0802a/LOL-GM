@@ -100,9 +100,14 @@ function afterSeries(db,lines,rec){
   }
   // 벤치 선수 사기 하락
   for(const tid of [rec.a,rec.b]){const t=db.teams[tid];if(!t)continue;
-    for(const id of t.roster){if(by[id])continue;const p=db.players[id];if(p){pState(p);p.morale=clamp(p.morale-1,0,100);p.sharpness=clamp(p.sharpness-.8,0,100);p.teamAdaptation=clamp(p.teamAdaptation+.18,0,100);p.tacticalAdaptation=clamp(p.tacticalAdaptation+.12,0,100)}}
+    for(const id of t.roster){if(by[id])continue;const p=db.players[id];if(p){pState(p);const missing=['core','starter'].includes(p.rosterRole)?-.35:0;p.morale=clamp(p.morale+missing,0,100);p.sharpness=clamp(p.sharpness-.5,0,100);p.teamAdaptation=clamp(p.teamAdaptation+.18,0,100);p.tacticalAdaptation=clamp(p.tacticalAdaptation+.12,0,100)}}
     const active=Object.keys(by).filter(id=>db.players[id]?.team===tid),relDelta=rec.winner===tid?.18:-.08;
     for(let i=0;i<active.length;i++)for(let j=i+1;j<active.length;j++)adjustPlayerRelationship(db,active[i],active[j],relDelta);
-    const rel=teamRelationshipScore(db,t);t.synergy=clamp(teamSynergy(t)+0.4+(rel-50)/140,0,100);}
+    const rel=teamRelationshipScore(db,t),previous=teamSynergy(t);
+    const result=rec.winner===tid?.25:-.42;
+    const relation=(rel-50)*.013;
+    const integration=(50-previous)*.008;
+    const absences=active.length<5?-.24:0;
+    t.synergy=clamp(previous+result+relation+integration+absences,0,100);}
 }
 // 매 경기일: 기본 피로 회복. 훈련은 아래의 희소 포인트 배분으로만 관리한다
