@@ -28,7 +28,8 @@ const fixture=String.raw`(()=>{
       '3-split first event must be a shorter opening tournament');
     else assert(rr.legs>=2,'single/two-split league must retain return fixtures');
     const matchCount=s.days.flatMap(d=>d.matches).length,
-      expected=R.teams*(R.teams-1)/2*rr.legs;
+      expected=(s.stageData[rr.id].groups||[comp.teams]).reduce(
+        (total,group)=>total+group.length*(group.length-1)/2*rr.legs,0);
     assert(matchCount===expected,'fixture conservation fails '+R.id);
     const w0=s.days[0].date;
     const weekdayOrder=broadcastDays(R);
