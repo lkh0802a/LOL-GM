@@ -61,17 +61,19 @@ function medicalScar(db,p,m,date){
 function medicalHeal(db,p,elapsed,date){
   const m=p.medical;
   if(m?.daysLeft>0){
-    m.daysLeft-=elapsed*medicalCare(db,p);
+    const care=medicalCare(db,p),unused=Math.max(0,elapsed-m.daysLeft/care);
+    m.daysLeft-=elapsed*care;
     m.lastTick=date;
     if(m.daysLeft<=0){
       medicalScar(db,p,m,date);
-      p.medicalResidual={daysLeft:m.kind==='injury'?(m.severity==='severe'?24:12):m.kind==='burnout'?16:4,
-        penalty:m.kind==='injury'?.026:m.kind==='burnout'?.018:.012};
+      p.medicalResidual={daysLeft:Math.max(0,(m.kind==='injury'?(m.severity==='severe'?24:12):m.kind==='burnout'?16:4)-unused),
+        penalty:m.kind==='injury'?.026:m.kind==='burnout'?.018:.012,lastTick:date};
       p.medical=null;
       recordPlayerEvent(p,'medical_return',db.year,{kind:m.kind,site:m.site,date});
     }
   }else if(p.medicalResidual?.daysLeft>0){
     p.medicalResidual.daysLeft=Math.max(0,p.medicalResidual.daysLeft-elapsed);
+    p.medicalResidual.lastTick=date;
     if(!p.medicalResidual.daysLeft)p.medicalResidual=null;
   }
 }
@@ -114,7 +116,7 @@ function medicalOffseasonRecovery(db,date){
   // must not remain frozen until the next competitive fixture.
   for(const p of Object.values(db.players)){
     if(!p.medical?.daysLeft&&!p.medicalResidual?.daysLeft)continue;
-    const from=p.medical?.lastTick||db.worldDate;
+    const from=p.medical?.lastTick||p.medicalResidual?.lastTick||db.worldDate;
     const elapsed=Math.max(0,Math.floor((Date.parse(date+'T00:00:00Z')-
       Date.parse(from+'T00:00:00Z'))/86400000));
     if(elapsed)medicalHeal(db,p,elapsed,date);
