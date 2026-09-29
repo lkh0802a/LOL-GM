@@ -48,19 +48,28 @@ function allocateBroadcastWeek(first,second,week){
   return buckets;
 }
 function officialBookedTeams(db,date=db.worldDate){
-  const busy=new Set();
-  for(const s of Object.values(db.world?.seasons||{})){
-    const dates=s.days;if(!dates?.length)continue;
-    let lo=0,hi=dates.length-1;
-    while(lo<=hi){
-      const mid=(lo+hi)>>1,x=dates[mid].date;
-      if(x<date)lo=mid+1;
-      else if(x>date)hi=mid-1;
-      else{
-        let start=mid;while(start>0&&dates[start-1].date===date)start--;
-        for(let i=start;i<dates.length&&dates[i].date===date;i++)
-          for(const match of dates[i].matches){busy.add(match.a);busy.add(match.b)}
-        break;
+  const busy=new Set(),from=addDays(date,-1),to=addDays(date,1);
+  for(const season of Object.values(db.world?.seasons||{})){
+    const days=season.days;if(!days?.length)continue;
+    let lo=0,hi=days.length;
+    while(lo<hi){const mid=(lo+hi)>>1;if(days[mid].date<from)lo=mid+1;else hi=mid}
+    for(let i=lo;i<days.length&&days[i].date<=to;i++){
+      const day=days[i];
+      for(const match of day.matches){
+        // Legacy saves without real kickoff timestamps still use their old
+        // world-day bookings. New saves block the true UTC game day and the
+        // local match day for *both* teams, including midnight overrun.
+        if(!match.startsAt){
+          if(day.date===date){busy.add(match.a);busy.add(match.b)}
+          continue;
+        }
+        const end=new Date(Date.parse(match.startsAt)+
+          (match.bo>=5?8:6)*3600000).toISOString();
+        for(const tid of [match.a,match.b]){
+          const zone=teamTimeZone(db,tid);
+          if(day.date===date||zonedClock(match.startsAt,zone).date===date||
+            zonedClock(end,zone).date===date)busy.add(tid);
+        }
       }
     }
   }
