@@ -26,6 +26,41 @@ function medicalPerformancePenalty(p){
   const m=p?.medical,r=p?.medicalResidual;
   return m?.daysLeft>0&&!m.out?m.penalty||0:r?.daysLeft>0?r.penalty||0:0;
 }
+// Club-side contract availability risk (0–0.17), NOT a clinical prognosis.
+// Temporary absences matter while active; ordinary illness does not create a
+// lasting stigma. Only recent physical injuries affect subsequent offers.
+// Permanent attribute loss, if any, is already reflected in the player's OVR.
+function medicalContractRisk(db,p){
+  if(!p)return 0;
+  const date=db.worldDate&&db.worldDate.slice(0,4)>=String(db.year)?
+    db.worldDate:db.year+'-01-07';
+  const now=Date.parse(date+'T00:00:00Z');
+  const active=p.medical?.daysLeft>0?p.medical:null;
+  let risk=0,severeHistory=0;
+  if(active){
+    if(active.kind==='injury')
+      risk+=active.severity==='severe'?(active.out?.07:.016):
+        active.severity==='moderate'?(active.out?.035:.012):.006;
+    else risk+=active.kind==='burnout'?(active.out?.03:.012):.006;
+    if(active.out)risk+=Math.min(.025,active.daysLeft*.00045);
+  }else if(p.medicalResidual?.daysLeft>0)
+    risk+=Math.min(.012,p.medicalResidual.daysLeft*.0004);
+  for(const e of p.careerEvents||[]){
+    if(e.type!=='medical_start'||e.kind!=='injury'||!e.date||
+      !['severe','moderate'].includes(e.severity))continue;
+    // The active incident is already represented above, not counted twice.
+    if(active&&e.date===active.started&&e.kind===active.kind)continue;
+    const elapsed=(now-Date.parse(e.date+'T00:00:00Z'))/86400000;
+    if(!Number.isFinite(elapsed)||elapsed<0||elapsed>=730)continue;
+    const weight=1-elapsed/730;
+    if(e.severity==='severe'){risk+=.026*weight;severeHistory+=weight}
+    else risk+=.008*weight;
+  }
+  // Repeated significant incidents in the same period concern clubs more
+  // than a single recovered injury; their impact also expires with time.
+  risk+=Math.max(0,severeHistory-1)*.035;
+  return Math.round(clamp(risk,0,.17)*1000)/1000;
+}
 function medicalSummary(p){
   const m=p?.medical,r=p?.medicalResidual;
   if(m?.daysLeft>0)return (MEDICAL_LABELS[m.site]||MEDICAL_LABELS[m.kind]||'건강 문제')+
