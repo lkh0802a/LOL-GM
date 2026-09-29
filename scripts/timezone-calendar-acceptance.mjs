@@ -172,6 +172,13 @@ const fixture=String.raw`(()=>{
     simulateBackgroundScrim(db,a,b,1,new RNG('no-utc-overlap','scrim'),
       'afternoon')===null,
     'same nominal afternoon in Korea and Los Angeles cannot be booked together');
+  b.practiceTimeZone='Asia/Taipei';
+  const partial=scrimTimeOverlap(db,a,b,db.worldDate,'afternoon');
+  verify(scrimOverlapGames(partial)===2,
+    'one-hour time-zone difference should leave only two shared practice hours');
+  verify(simulateBackgroundScrim(db,a,b,3,new RNG('too-many-sets','scrim'),
+    'afternoon')===null,
+    'cross-timezone overlap must reject more practice games than time permits');
   delete b.practiceTimeZone;
   const rec=simulateBackgroundScrim(db,a,b,2,new RNG('utc-shared','scrim'),
     'afternoon');
