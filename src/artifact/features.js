@@ -25,14 +25,74 @@ function evalGoals(db,w,rep,ev){
 }
 
 // ---- 스폰서 계약 ----
+function sponsorMarketStrength(db,t){
+  const R=db.regions[t.region],hype=R.metrics?.at(-1)?.hype??45;
+  const reputation=clamp((t.fans||30)*.72+(t.reputation||R.strength||60)*.28,8,99);
+  return {hype,reputation,base:psTeam(db,t)*(.16*hype+.32*reputation)};
+}
+function sponsorGoalFor(t){
+  if(['title','final'].includes(t.goal))return 'final';
+  if(['playoffs','top_half'].includes(t.goal))return 'playoffs';
+  return 'survive';
+}
+function sponsorGoalLabel(goal){
+  return {final:'국내 결승 진출',playoffs:'국내 플레이오프 진출',survive:'국내 리그 잔류'}[goal]||'국내 성적 목표';
+}
+function sponsorGoalReached(db,t,w,goal){
+  if(!goal)return false;
+  const ss=Object.values(w.seasons||{}).filter(s=>
+    s.done&&s.region===t.region&&(s.div||1)===(t.division||1)&&
+    !db.competitions[s.comp]?.international);
+  if(!ss.length)return false;
+  if(goal==='final')return ss.some(s=>s.champion===t.id||s.runnerUp===t.id);
+  if(goal==='playoffs')return ss.some(s=>s.champion===t.id||s.runnerUp===t.id||
+    (s.stageData?.playoffs?.seeds||[]).includes(t.id));
+  return ss.some(s=>{
+    const results=standings(db,s,'regular');const pos=results.findIndex(row=>row.tid===t.id);
+    return pos>=0&&pos<results.length-Math.max(1,db.regions[t.region].relegate||1);
+  });
+}
+function sponsorAchievementBonus(db,t,w){
+  const sp=t.sponsor;
+  return sp&&sp.until>=w.year&&sp.milestone&&sponsorGoalReached(db,t,w,sp.milestone)
+    ?sp.milestoneBonus||0:0;
+}
 function sponsorOffers(db,t){
-  const ps=psOf(db,t.region), base=(t.fans||30)*0.35*ps, seed=hashStr(t.id+db.year);
+  const scale=sponsorMarketStrength(db,t),seed=hashStr(t.id+'|'+db.year+'|sponsor');
   const brands=['Hangyeol Electronics','Nuri Telecom','Gaon Energy','Mir Foods','Raon Motors','Sejin Life','Yunseul Beauty','Dodam Games'];
+  const base=scale.base,ps=psTeam(db,t),goal=sponsorGoalFor(t);
+  const moneyRound=value=>Math.round(value*10)/10;
   return [
-    {id:'fixed',name:brands[seed%brands.length],type:'고정형',base:Math.round(base*1.0*10)/10,perWin:0,years:1},
-    {id:'perf',name:brands[(seed>>3)%brands.length],type:'성과형',base:Math.round(base*0.6*10)/10,perWin:Math.round(0.9*ps*10)/10,years:1},
-    {id:'long',name:brands[(seed>>6)%brands.length],type:'장기형',base:Math.round(base*0.9*10)/10,perWin:0,years:3}
+    {id:'fixed',name:brands[seed%brands.length],type:'안정형',base:moneyRound(base),
+      perWin:0,years:1,milestone:null,milestoneBonus:0},
+    {id:'perf',name:brands[(seed>>>3)%brands.length],type:'성과형',base:moneyRound(base*.68),
+      perWin:moneyRound(.23*ps),years:1,milestone:goal,milestoneBonus:moneyRound(base*.28)},
+    {id:'long',name:brands[(seed>>>6)%brands.length],type:'장기형',base:moneyRound(base*.91),
+      perWin:0,years:3,milestone:null,milestoneBonus:0}
   ];
+}
+function sponsorExpectedValue(db,t,sp){
+  // Club directors can know the size of their previous regular-season slate,
+  // not the private outcome of next year's matches.
+  const previous=t.goalLog?.at(-1),success=previous?.ok?0.8:0.35;
+  const R=db.regions[t.region],schedule=Math.max(10,(R.teams||10)*2-2);
+  const estimatedWins=schedule*(t.goal==='title'||t.goal==='final'?.66:
+    t.goal==='playoffs'?.55:t.goal==='survive'?.37:.48);
+  return sp.base+(sp.perWin||0)*estimatedWins+
+    (sp.milestoneBonus||0)*success;
+}
+function aiSelectSponsor(db,t){
+  if(t.sponsor?.until>=db.year)return null;
+  const offers=sponsorOffers(db,t),ps=psTeam(db,t),stressed=(t.finance?.cash||0)<10*ps;
+  const selected=offers.map(sp=>{
+    const expected=sponsorExpectedValue(db,t,sp);
+    // A cash-strapped board values guaranteed revenue and contract length.
+    const score=expected+(stressed?(sp.base*.35+(sp.years-1)*.18*ps):0)+
+      (t.philosophy==='cost'?(sp.base*.13):0);
+    return {sp,score};
+  }).sort((a,b)=>b.score-a.score)[0].sp;
+  t.sponsor={...selected,until:db.year+selected.years-1};
+  return selected;
 }
 
 // ---- 시상 · 명예의 전당 ----
