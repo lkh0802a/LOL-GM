@@ -35,7 +35,7 @@ const fixture=String.raw`(()=>{
     const weekdayOrder=broadcastDays(R);
     assert(weekdayOrder.length===4,'league requires four broadcasting days');
     const seenFixtureIds=new Set();
-    for(let k=0;k<Math.min(4,Math.floor((R.teams-1)*rr.legs/2));k++){
+    for(let k=0;k<Math.min(4,Math.floor(((s.stageData[rr.id].groups||[comp.teams])[0].length-1)*rr.legs/2));k++){
       const from=dayNum(w0)+k*7,into=from+7;
       const days=s.days.filter(x=>dayNum(x.date)>=from&&dayNum(x.date)<into);
       assert(days.length===4,'broadcast week must occupy four dates '+R.id+'/'+k);
