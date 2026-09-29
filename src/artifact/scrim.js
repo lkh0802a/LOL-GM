@@ -114,7 +114,7 @@ function aiRunScrims(db,rng){
       const total=ranked.reduce((sum,row)=>sum+row.weight,0);
       let roll=rng.next()*total,opponent=ranked[0].team;
       for(const row of ranked){roll-=row.weight;if(roll<=0){opponent=row.team;break}}
-      const games=Math.min(round===0?3:3,scrimReadiness(db,t).remaining,
+      const games=Math.min(3,scrimReadiness(db,t).remaining,
         scrimReadiness(db,opponent).remaining);
       if(games<1)continue;
       const rec=simulateBackgroundScrim(db,t,opponent,games,rng);
