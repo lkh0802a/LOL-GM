@@ -15,10 +15,10 @@ function startWorldSeason(db,myTeam,seed){
   setManagedTeam(db,myTeam);
   const regs=Object.values(db.regions), I=db.worldConfig.internationals, maxK=Math.max(...regs.map(r=>r.splits||1));
   const steps=[];
-  const intlSteps=tm=>{const tops=I.filter(i=>i.timing===tm&&i.tier!=='low').sort((a,b)=>(a.prestige||1)-(b.prestige||1)),lows=I.filter(i=>i.timing===tm&&i.tier==='low');
-    const out=tops.map(i=>({kind:'intl',ids:[i.id],label:i.name}));
-    if(lows.length){if(out.length){const L=out[out.length-1];L.ids.push(...lows.map(i=>i.id));L.label+=` · ${lows.map(i=>i.name).join(' · ')}`}else out.push({kind:'intl',ids:lows.map(i=>i.id),label:lows.map(i=>i.name).join(' · ')})}
-    return out};
+  const intlSteps=timing=>I.filter(i=>i.timing===timing)
+    .sort((a,b)=>(typeof a.tier==='number'?a.tier:3)-(typeof b.tier==='number'?b.tier:3)
+      ||(b.prestige||1)-(a.prestige||1))
+    .map(i=>({kind:'intl',ids:[i.id],label:i.name,timing}));
   // 3스플릿제: 스플릿1(윈터) → 퍼스트 스탠드 → 스플릿2(스프링) → MSI → 스플릿3(서머) → 월즈. 스플릿이 적은 리그는 뒤쪽 스플릿만 치른다
   const tim={1:'early',2:'mid',3:'end'};
   for(let sp=1;sp<=3;sp++){
@@ -82,22 +82,57 @@ function regionPlacements(db,R){
 }
 function regionPower(db,R){const h=(db.global&&db.global.power||{})[R.id];return h!==undefined?h:R.strength}
 function teamStrength(db,tid){const t=db.teams[tid];return avg(ROLES.map(r=>{const p=starterFor(db,t,r);return p?playerRoleRating(p,r):40}))}
+function internationalEntryPool(db,it,excluded=new Set()){
+  const zones=INTL_ZONES[it.zone]||null;
+  // Zone cups invite only their stated geographical pool.
+  const regions=Object.values(db.regions).filter(R=>!zones||zones.includes(R.id))
+    .sort((a,b)=>regionPower(db,b)-regionPower(db,a)||a.id.localeCompare(b.id));
+  const entries=regions.map(R=>{
+    const rank=regionPlacements(db,R);
+    let candidates=rank.filter(tid=>db.teams[tid]?.active!==false&&!excluded.has(tid));
+    if(it.entry==='div2'&&R.div2){
+      const s=[3,2,1].map(sp=>db.world.seasons[R.short+'2-'+sp]).find(s=>s&&s.done);
+      if(s)candidates=placements(db,s).filter(tid=>!excluded.has(tid));
+    }else if(it.entry==='next'){
+      const offset=R.slots||2;
+      candidates=candidates.slice(offset);
+    }
+    return {R,candidates,taken:0};
+  });
+  const desired=Math.max(4,it.teams||regions.reduce((n,R)=>n+Math.max(1,R.slots||2),0));
+  const maximum=Math.max(1,it.maxSlots||it.baseSlots+(it.extraSlots||0)||Math.max(4,it.per||2));
+  const players=[];
+  const take=e=>{if(e.taken>=maximum||!e.candidates.length)return false;
+    players.push(e.candidates.shift());e.taken++;return true};
+  const passes=Math.max(1,it.baseSlots||it.per||(it.entry==='champions'?1:it.entry==='slots'?1:2));
+  for(let i=0;i<passes&&players.length<desired;i++)
+    for(const entry of entries)if(players.length<desired)take(entry);
+  // Extra bids are assigned by regional competitive strength, one additional
+  // place per region in successive passes rather than to one dominant league.
+  const remainingExtra=it.extraSlots??Math.max(0,desired-players.length);
+  let extra=0;
+  while(players.length<desired&&extra<remainingExtra){
+    let inserted=false;
+    for(const entry of entries){if(players.length>=desired||extra>=remainingExtra)break;
+      if(take(entry)){extra++;inserted=true}}
+    if(!inserted)break;
+  }
+  // A dynamically formed region may have fewer real eligible teams than the
+  // event's advertised capacity. Never invent phantom teams.
+  return players;
+}
 function startInternational(db,id,start,taken=new Set()){
-  const w=db.world, it=db.worldConfig.internationals.find(x=>x.id===id); if(!it)return false;
-  const regs=Object.values(db.regions).filter(R=>!it.zone||(INTL_ZONES[it.zone]||[]).includes(R.id)).sort((a,b)=>regionPower(db,b)-regionPower(db,a));
-  const topSlots=R=>{const top=db.worldConfig.internationals.find(x=>x.tier!=='low'&&x.timing===it.timing&&x.entry==='slots');return top?Math.max(1,Math.ceil(R.slots*(top.ratio||1))):R.slots};
-  const lists=regs.map(R=>{
-    if(it.entry==='champions')return regionPlacements(db,R).slice(0,1);
-    if(it.entry==='slots')return regionPlacements(db,R).slice(0,Math.max(1,Math.ceil(R.slots*(it.ratio||1))));
-    const per=(it.per||2)*(regs.length<=2?2:1);
-    if(it.entry==='div2'&&R.div2){const s=[3,2,1].map(sp=>w.seasons[R.short+'2-'+sp]).find(s=>s&&s.done);if(s)return placements(db,s).filter(t=>!taken.has(t)).slice(0,per)}
-    // 'next' (또는 하부 리그 없는 지역): 상위 대회 진출권 바로 다음 순위부터, 같은 기간 다른 대회에 이미 나간 팀은 건너뜀
-    return regionPlacements(db,R).slice(topSlots(R)).filter(t=>!taken.has(t)).slice(0,per);
-  }).map(l=>l.filter(t=>!taken.has(t)));
-  const teams=[];for(let k=0;k<6;k++)for(const l of lists)if(l[k])teams.push(l[k]);
+  const w=db.world,it=db.worldConfig.internationals.find(x=>x.id===id);
+  if(!it)return false;
+  w.intlParticipation=w.intlParticipation||{};
+  const key=it.timing||'end',
+    prior=new Set([...(w.intlParticipation[key]||[]),...taken]);
+  const teams=internationalEntryPool(db,it,prior);
   if(teams.length<4)return false;
   teams.forEach(t=>taken.add(t));
-  db.competitions[id]={id,name:it.name,short:it.short||id,teams,rules:{fearless:true},international:true,tier:it.tier||'top',stages:intlStages(it.format,teams,it.bo)};
+  w.intlParticipation[key]=[...(w.intlParticipation[key]||[]),...teams];
+  db.competitions[id]={id,name:it.name,short:it.short||id,teams,rules:{fearless:true},
+    international:true,tier:it.tier||1,stages:intlStages(it.format,teams,it.knockoutBo||it.bo)};
   const s=newSeason(db,id,w.year,`${w.seed}/${w.year}/${id}`,start,id);
   s.key=id;s.label='';s.step=w.step;w.seasons[id]=s;
   s.stagesInfo=db.competitions[id].stages.map(x=>x.name).join(' → ');
