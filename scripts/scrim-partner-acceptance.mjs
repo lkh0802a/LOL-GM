@@ -41,10 +41,19 @@ const source=String.raw`(()=>{
     comparable={[strong.id]:80,[weak.id]:81};
   const fair=scrimPartnerAssessment(db,strong,weak,null,comparable);
   const lopsided=scrimPartnerAssessment(db,strong,weak,null,strengths);
-  check(fair.allowed&&lopsided.allowed&&fair.acceptance>lopsided.acceptance*3,
-    'strong team is not selective when invited by a far weaker team');
-  check(lopsided.left.approval<lopsided.right.approval*.4,
-    'weak club should welcome strong practice more often than the strong club does');
+  check(fair.allowed&&lopsided.allowed&&fair.acceptance>=.74&&
+    fair.acceptance<=.84&&lopsided.acceptance>=.30&&
+    lopsided.acceptance<=.42,
+    'scrim probabilities left the moderate same-tier / strength-gap bands');
+  check(fair.acceptance>lopsided.acceptance*1.8&&
+    lopsided.left.approval<lopsided.right.approval*.75,
+    'weak club should welcome strong practice more often, without blanket rejection');
+  const gaps=[8,12,20,30,40],rates=gaps.map(gap=>
+    scrimPartnerAssessment(db,strong,weak,null,
+      {[strong.id]:80+gap,[weak.id]:80}).acceptance);
+  check(rates.every((v,i)=>i===0||v<rates[i-1])&&
+    rates.every(rate=>rate>=.25),
+    'acceptance must soften gradually and remain possible across realistic strength gaps');
   const confidenceDb=unpackDB(packDB(db));
   const confidenceStrong=confidenceDb.teams[strong.id],
     confidenceWeak=confidenceDb.teams[weak.id];
@@ -65,9 +74,26 @@ const source=String.raw`(()=>{
     'losing streak and low player morale did not change practice goals');
   const recovering=scrimPartnerAssessment(confidenceDb,
     confidenceStrong,confidenceWeak,null,strengths);
-  check(recovering.allowed&&recovering.acceptance>lopsided.acceptance*4&&
+  check(recovering.allowed&&
+    recovering.acceptance>=lopsided.acceptance+.10&&
+    recovering.acceptance<=lopsided.acceptance+.23&&
+    recovering.acceptance<fair.acceptance&&
     recovering.left.reason.includes('자신감'),
-    'slumping stronger clubs must seek controlled games against weaker opponents');
+    'confidence reset should increase interest by a moderate amount, not override team strength');
+  // A less severe slump must have a smaller boost than a deep slump.
+  const partialDb=unpackDB(packDB(db)),partialStrong=partialDb.teams[strong.id];
+  for(const role of ROLES){
+    const player=starterFor(partialDb,partialStrong,role);
+    if(player)player.morale=54;
+  }
+  partialDb.world.seasons._partialEvidence={
+    days:losing.slice(0,2)
+  };
+  const partial=scrimPartnerAssessment(partialDb,partialStrong,
+    partialDb.teams[weak.id],null,strengths);
+  check(partial.allowed&&partial.acceptance>lopsided.acceptance+.04&&
+    partial.acceptance<recovering.acceptance-.01,
+    'the confidence-building boost must scale with slump severity');
   // Opponent relationships are evaluated for both teams, so invert the
   // invitation without changing whether a match is a forbidden future rival.
   const reversed=scrimPartnerAssessment(db,weak,strong,null,strengths);
@@ -80,8 +106,10 @@ const source=String.raw`(()=>{
   };
   const confidential=scrimPartnerAssessment(secrecyDb,
     secrecyDb.teams[strong.id],secrecyDb.teams[weak.id],null,comparable);
-  check(confidential.allowed&&confidential.acceptance<fair.acceptance*.5,
-    'the two-week tactical secrecy window did not reduce invitation acceptance');
+  check(confidential.allowed&&
+    confidential.acceptance>=fair.acceptance*.60&&
+    confidential.acceptance<=fair.acceptance*.75,
+    'the two-week tactical secrecy window should lower interest, not nearly ban it');
   // Repeated partners lose selection weight even if both teams remain free.
   const repeatDb=unpackDB(packDB(db));
   repeatDb.teams[strong.id].scrimLog=Array.from({length:3},(_,i)=>({
@@ -122,6 +150,8 @@ const source=String.raw`(()=>{
     embargo:conflict.rivalDays,strongVsWeak:Math.round(lopsided.acceptance*100),
     slumpingStrong:Math.round(recovering.acceptance*100),
     sameTier:Math.round(fair.acceptance*100),
+    moderateSlump:Math.round(partial.acceptance*100),
+    strengthBands:gaps.map((gap,i)=>[gap,Math.round(rates[i]*100)]),
     blocks:result.blocks,sets:result.sets,recorded:activities,
     version:restored.version,saveFormat:restored.saveFormat
   }));
