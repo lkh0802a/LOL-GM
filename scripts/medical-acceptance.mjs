@@ -7,8 +7,11 @@ const dir=resolve(import.meta.dirname,'..','src','artifact');
 let source='';
 for(const file of ENGINE_MODULES)source+=await readFile(resolve(dir,file),'utf8')+'\n';
 const ui=await readFile(resolve(dir,'ui-roster.js'),'utf8');
+const marketUi=await readFile(resolve(dir,'ui-market.js'),'utf8');
 if(!ui.includes('data-medical-plan')||!ui.includes('p.medicalPlan=e.target.value'))
   throw new Error('D02_MEDICAL player rest controls missing from manager roster');
+if(!marketUi.includes('의료 가용성 위험')||!marketUi.includes('medicalContractRisk(DB,p)'))
+  throw new Error('D02_MEDICAL recruitment evaluation is missing live contract availability risk');
 source+=String.raw`(()=>{
   const ok=(x,msg)=>{if(!x)throw new Error('D02_MEDICAL '+msg)};
   const cfg=defaultWorldConfig();
@@ -33,6 +36,65 @@ source+=String.raw`(()=>{
   const initialSave=unpackDB(packDB(db));
   ok(originalFree.every(id=>initialSave.players[id]&&!initialSave.players[id].team),
     'unsigned FA reserve did not survive save roundtrip');
+  // D02-B5: modest, recency-decaying CLUB availability risk affects actual
+  // valuations and contract lengths, not the athlete's requested pay.
+  const healthyBase=db.players[manager.roster[0]];
+  const qualityAttrs=Object.fromEntries(Object.keys(healthyBase.attrs).map(k=>[k,86]));
+  const healthy={...healthyBase,age:20,attrs:qualityAttrs,pot:97,reputation:90,
+    medical:null,medicalResidual:null,careerEvents:[]};
+  const activeSevere={...healthy,medical:{kind:'injury',severity:'severe',
+    out:true,daysLeft:42,started:db.worldDate}};
+  const smallIllness={...healthy,medical:{kind:'illness',severity:'minor',
+    out:false,daysLeft:5,started:db.worldDate}};
+  const oldInjury={...healthy,careerEvents:[{type:'medical_start',
+    kind:'injury',severity:'severe',date:addDays(db.worldDate,-760)}]};
+  const healed={...healthy,medicalResidual:{daysLeft:14},careerEvents:[{
+    type:'medical_start',kind:'injury',severity:'severe',
+    date:addDays(db.worldDate,-25)}]};
+  const repeat={...healthy,careerEvents:[7,30,55].map(days=>({
+    type:'medical_start',kind:'injury',severity:'severe',
+    date:addDays(db.worldDate,-days)}))};
+  const riskSevere=medicalContractRisk(db,activeSevere),
+    riskHealed=medicalContractRisk(db,healed),
+    riskRepeat=medicalContractRisk(db,repeat);
+  ok(medicalContractRisk(db,healthy)===0&&medicalContractRisk(db,oldInjury)===0,
+    'clean or 2-year-old injury history still affects contract valuation');
+  ok(medicalContractRisk(db,smallIllness)<.02&&riskHealed>0&&
+    riskHealed<riskSevere&&riskSevere>.07&&riskSevere<.12&&
+    riskRepeat>.115&&riskRepeat<=.17,
+    'acute, recovered or recurring medical absence risk is miscalibrated');
+  ok(playerMarketValue(db,activeSevere)<playerMarketValue(db,healthy)&&
+    aiMarketValue(db,activeSevere,manager)<aiMarketValue(db,healthy,manager),
+    'medical availability does not affect market price and AI recruitment');
+  ok(asking(db,activeSevere,manager.region)===asking(db,healthy,manager.region)&&
+    offerAcceptanceThreshold(db,activeSevere)===offerAcceptanceThreshold(db,healthy),
+    'player salary demands or consent were mechanically reduced for injury');
+  const durationDraw=()=>({next:()=>.99,chance:()=>false});
+  ok(contractYearsForPlayer(db,healthy,durationDraw())===3&&
+    contractYearsForPlayer(db,activeSevere,durationDraw())===2&&
+    contractYearsForPlayer(db,repeat,durationDraw())===1&&
+    contractYearsForPlayer(db,oldInjury,durationDraw())===3,
+    'medical risk did not bound AI contract duration proportionately');
+  // Scouting board and career negotiation use the same live engine value.
+  const observedFA=initialFree[0],pastEvents=observedFA.careerEvents.slice();
+  observedFA.medical={kind:'injury',severity:'severe',out:true,
+    daysLeft:32,started:db.worldDate};
+  recordPlayerEvent(observedFA,'medical_start',db.year,{kind:'injury',
+    severity:'severe',date:db.worldDate,out:true});
+  ok(setRecruitmentPriority(db,observedFA.id,'B').ok,
+    'could not add FA to medical risk recruitment fixture');
+  observePlayer(db,observedFA,95,{comp:'d02-medical-recruitment',games:4});
+  const evaluated=recruitmentEvaluation(db,observedFA.id,manager.id);
+  ok(evaluated.ok&&evaluated.target.evaluation.medicalRiskPct>5&&
+    evaluated.target.evaluation.medicalRiskPct<12,
+    'medical recruitment risk was not captured by actual scouting evaluation');
+  const remembered=unpackDB(packDB(db));
+  ok(remembered.world.recruitment.targets[observedFA.id].evaluation.medicalRiskPct===
+    evaluated.target.evaluation.medicalRiskPct,
+    'scouted medical availability risk did not survive save roundtrip');
+  observedFA.medical=null;observedFA.careerEvents=pastEvents;
+  ok(medicalContractRisk(db,observedFA)===0,
+    'cleared temporary injury left a permanent market penalty');
   ok(manager.roster.length===5,'need a five-person starting baseline');
   const p=db.players[manager.roster[0]],original=playerMod(p);
   const initialCash=manager.finance.cash;
@@ -214,7 +276,7 @@ source+=String.raw`(()=>{
 
     ok(db.version===15,'world schema changed');
   console.log('D02_MEDICAL_ACCEPTANCE '+JSON.stringify({
-    fivePlayerFloor:true,emergencySubstitute:true,emergencyFA:true,faSupply:roleDepth,individualRest:true,rehab:true,format2Save:true,
+    fivePlayerFloor:true,emergencySubstitute:true,emergencyFA:true,faSupply:roleDepth,contractRisk:{acute:riskSevere,recovered:riskHealed,recurrent:riskRepeat},individualRest:true,rehab:true,format2Save:true,
     dayIdempotent:true,offseasonRecovery:true,scars:scarCount,samples:600
   }));
 })();`;
