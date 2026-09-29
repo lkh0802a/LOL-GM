@@ -51,7 +51,7 @@ source+=String.raw`(()=>{
     remaining=contestants.filter(id=>![A,B,C].includes(id));
   scored.res={winner:A,score:[2,0]};
   one.done=true;one.champion=A;one.runnerUp=C;
-  one.stageData.playoffs={type:'single_elim',elim:[...remaining.slice(0,4),B,C]};
+  one.stageData.playoffs={type:'single_elim',elim:[...remaining.slice(0,2),C]};
   // Prove each later season has a distinct fixture list and championship.
   const makeSplit=split=>{
     const key='LCS-'+split,s=newSeason(db,one.comp,db.year,
@@ -89,7 +89,7 @@ source+=String.raw`(()=>{
     'current and prior split wins/losses were not tallied together');
   two.done=true;two.champion=B;two.runnerUp=A;
   two.stageData.playoffs={type:'single_elim',
-    elim:[...remaining.slice(0,4),C,A]};
+    elim:[...remaining.slice(0,2),A]};
   const three=makeSplit(3);
   const prior=standings(db,three,regular);
   check(prior.find(x=>x.tid===A).w===1&&prior.find(x=>x.tid===A).l===1&&
