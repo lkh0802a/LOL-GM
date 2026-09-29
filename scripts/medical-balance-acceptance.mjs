@@ -100,9 +100,11 @@ source+=String.raw`(()=>{
     }
     for(const k of Object.keys(stats))
       for(const field of Object.keys(stats[k]))stats[k][field]+=season[k][field];
+    const annualRate=row=>Math.round((row.injury+row.illness+row.burnout)/
+      row.days*365*1000)/10;
     perSeed.push({seed:iteration,
-      controlled:season.controlled.injury+season.controlled.illness+season.controlled.burnout,
-      loaded:season.loaded.injury+season.loaded.illness+season.loaded.burnout});
+      controlled:annualRate(season.controlled),
+      loaded:annualRate(season.loaded)});
     assert(Object.keys(db.players).length===startingCount,
       'a real athlete was created while auditing medical events');
   }
@@ -123,6 +125,9 @@ source+=String.raw`(()=>{
     'ordinary illness disappeared from one playing population');
   assert(low.unavailable+highStress.unavailable<total(low)+total(highStress),
     'all medical incidents became automatic disqualifying injuries');
+  assert(new Set(perSeed.map(x=>x.controlled)).size>=3&&
+    new Set(perSeed.map(x=>x.loaded)).size>=3,
+    'year-to-year event counts collapsed to a fixed identical outcome');
   // Recovery support should materially reduce the observed duration of the
   // same moderate event (no permanent scars, no event lottery in this probe).
   const careTeam=normal,fac=ensureFacilities(careTeam);
@@ -144,8 +149,13 @@ source+=String.raw`(()=>{
   fac.recovery=originalFacility;careTeam.training.intensity=originalIntensity;
   assert(fast<slow&&slow-fast>=3,
     'facilities/training did not improve real measured injury recovery');
+  const spread=field=>{
+    const xs=perSeed.map(x=>x[field]).sort((a,b)=>a-b);
+    return {min:xs[0],median:xs[Math.floor(xs.length/2)],max:xs[xs.length-1]};
+  };
   const summary={
     seeds,yearsPerSeed:1,athleteDays:{controlled:low.days,loaded:highStress.days},
+    seedSpreadPer100:{controlled:spread('controlled'),loaded:spread('loaded')},
     annualEventsPer100:{controlled:{
       injury:rate(low,'injury'),illness:rate(low,'illness'),
       burnout:rate(low,'burnout'),all:Math.round(total(low)/low.days*365*1000)/10
