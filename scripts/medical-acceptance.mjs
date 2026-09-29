@@ -19,6 +19,20 @@ source+=String.raw`(()=>{
   startCareer(db,manager.id,'d02-medical');
   autoBuildInitialSquad(db,manager,new RNG('d02','initial'),5);
   finalizeInitialRosters(db);
+  // The initial auction must leave a modest real FA pool across every role,
+  // without generating emergency players after a health incident.
+  const initialFree=Object.values(db.players).filter(p=>
+    !p.retired&&!p.team&&isLocalPlayer(p,manager.region));
+  const roleDepth=Object.fromEntries(ROLES.map(role=>
+    [role,initialFree.filter(p=>p.role===role).length]));
+  ok(ROLES.every(role=>roleDepth[role]>=2),
+    'initial market exhausted or inflated unsigned regional players: '+JSON.stringify(roleDepth));
+  const faCount=Object.keys(db.players).length,originalFree=initialFree.map(p=>p.id).sort();
+  ok(seedFirstSeasonFreeAgentDepth(db).length===0&&Object.keys(db.players).length===faCount,
+    'FA seeding repeated after initial market completion');
+  const initialSave=unpackDB(packDB(db));
+  ok(originalFree.every(id=>initialSave.players[id]&&!initialSave.players[id].team),
+    'unsigned FA reserve did not survive save roundtrip');
   ok(manager.roster.length===5,'need a five-person starting baseline');
   const p=db.players[manager.roster[0]],original=playerMod(p);
   const initialCash=manager.finance.cash;
@@ -110,20 +124,17 @@ source+=String.raw`(()=>{
   const verifyEmergencyFA=(team,label)=>{
     ok(team.roster.length===5&&medicalAvailable(db,team)===5,
       label+' needs an ordinary healthy five-player roster');
-    // Blank-roster setup may sign the full first-year market. Introduce
-    // an actual generated, unattached open-qualifier player for this fixture.
-    const targetRole=db.players[team.roster[0]].role;
-    const available=genPlayer(db,new RNG('d02-fa-'+label,'fixture'),{
-      role:targetRole,age:23,base:db.regions[team.region].strength-10,
-      region:team.region,entryPath:'open_qualifier'
-    });
-    ok(!available.team,'test free agent was assigned before signing');
+    const available=Object.values(db.players).filter(p=>
+      !p.team&&!p.retired&&isLocalPlayer(p,team.region));
+    ok(available.length>=5,label+' emergency fixture has no natural FA reserve');
     const before=new Set(team.roster),beforePayroll=payroll(db,team);
     team.finance.cash=1000; // Give this deterministic fixture sufficient headroom.
     const victim=db.players[team.roster[0]];
     const priorMedical=victim.medical?{...victim.medical}:null;
     const incident=startMedicalEvent(db,victim,'injury','severe',21,db.worldDate);
     const signed=team.roster.map(id=>db.players[id]).find(p=>!before.has(p.id));
+    ok(Object.keys(db.players).length===faCount,
+      label+' generated an athlete on demand instead of signing an existing FA');
     ok(incident?.out&&incident.severity==='severe'&&medicalOut(victim),
       label+' failed to apply a genuine medical absence: '+JSON.stringify({priorMedical,incident,available:medicalAvailable(db,team),roster:team.roster.length,faCount:Object.values(db.players).filter(x=>!x.team&&!x.retired).length,budget:salaryBudget(db,team)-payroll(db,team)}));
     ok(signed&&signed.team===team.id&&signed.contract?.years===1&&
@@ -162,6 +173,10 @@ source+=String.raw`(()=>{
   autoBuildInitialSquad(org,reserveTeamsOf(org,owner)[0],
     new RNG('d02-callup','academy'),6);
   finalizeInitialRosters(org);
+  const krFA=Object.values(org.players).filter(p=>!p.retired&&!p.team&&isLocalPlayer(p,'KR'));
+  const minKoreanFA=Math.max(2,Math.ceil(activeTeams(org,'KR').length/5));
+  ok(ROLES.every(role=>krFA.filter(p=>p.role===role).length>=minKoreanFA),
+    'owned academy league lost regional free-agent labor depth');
   const first=activeTeams(org,null,1).find(t=>t.id!==owner.id&&
     reserveTeamsOf(org,t).some(s=>medicalAvailable(org,s)>5)&&
     (t.roster||[]).length<rosterRulesForTeam(org,t).firstTeamMax);
@@ -199,7 +214,7 @@ source+=String.raw`(()=>{
 
     ok(db.version===15,'world schema changed');
   console.log('D02_MEDICAL_ACCEPTANCE '+JSON.stringify({
-    fivePlayerFloor:true,emergencySubstitute:true,emergencyFA:true,individualRest:true,rehab:true,format2Save:true,
+    fivePlayerFloor:true,emergencySubstitute:true,emergencyFA:true,faSupply:roleDepth,individualRest:true,rehab:true,format2Save:true,
     dayIdempotent:true,offseasonRecovery:true,scars:scarCount,samples:600
   }));
 })();`;
