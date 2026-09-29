@@ -16,10 +16,11 @@ function validateStartingLineup(db,t,assignment=null,rosterOverride=null){
   }
   return {ok:errors.length===0,errors,assignment:Object.fromEntries(ROLES.map(r=>[r,map[r]||null]))};
 }
-function bestStartingLineup(db,t,locked={}){
+function bestStartingLineup(db,t,locked={},scrim=false){
   const team=teamRef(db,t);if(!team)return {};
-  const players=(team.roster||[]).map(id=>db.players[id]).filter(p=>validLineupPlayer(db,team,p)),base={},used=new Set();
-  for(const role of ROLES){const p=locked[role]&&db.players[locked[role]];if(validLineupPlayer(db,team,p)&&!used.has(p.id)){base[role]=p.id;used.add(p.id)}}
+  const eligible=p=>validLineupPlayer(db,team,p)&&(!scrim||!medicalScrimRest(db,p));
+  const players=(team.roster||[]).map(id=>db.players[id]).filter(eligible),base={},used=new Set();
+  for(const role of ROLES){const p=locked[role]&&db.players[locked[role]];if(eligible(p)&&!used.has(p.id)){base[role]=p.id;used.add(p.id)}}
   const roles=ROLES.filter(r=>!base[r]),available=players.filter(p=>!used.has(p.id));if(available.length<roles.length)return base;
   const scores=Object.fromEntries(available.map(p=>[p.id,Object.fromEntries(roles.map(role=>[role,lineupRoleScore(p,role)]))]));
   let dp=new Map([[0,{score:0,map:{...base}}]]);

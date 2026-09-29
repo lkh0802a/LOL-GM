@@ -1,7 +1,5 @@
 // ===== LOL GM: Scrim domain =====
-// Owns daily practice blocks, non-official practice results and accumulated intel.
-// Background blocks are lightweight to keep long multi-region careers responsive;
-// official fixtures continue to use the full match/series engine.
+// Two daily blocks, private results and scouting intel; no official stats.
 
 function scrimAnalysisBonus(t){
   const p=staffProfile(t);
@@ -14,7 +12,7 @@ function scrimDailyCapacity(db,t,booked=null){
   if((booked||officialBookedTeams(db)).has(t.id))return 0;
   const days=daysUntil(db,nextTeamMatch(db,t.id)?.date);
   if(days===0)return 0; // No practice blocks on an official fixture day.
-  const roster=(t.roster||[]).map(id=>db.players[id]).filter(p=>p&&!p.retired&&!medicalOut(p));
+  const roster=(t.roster||[]).map(id=>db.players[id]).filter(p=>p&&!p.retired&&!medicalOut(p)&&!medicalScrimRest(db,p));
   if(roster.length<5)return 0;
   const fatigue=avg(roster.map(p=>p.fatigue||0));
   const condition=avg(roster.map(p=>p.condition??96));
@@ -27,7 +25,7 @@ function scrimDailyCapacity(db,t,booked=null){
 }
 function scrimReadiness(db,t,booked=null){
   if(!t)return {ok:false,reason:'팀 없음'};
-  const roster=(t.roster||[]).map(id=>db.players[id]).filter(p=>p&&!p.retired&&!medicalOut(p));
+  const roster=(t.roster||[]).map(id=>db.players[id]).filter(p=>p&&!p.retired&&!medicalOut(p)&&!medicalScrimRest(db,p));
   const avgFatigue=avg(roster.map(p=>p.fatigue||0));
   const avgCondition=avg(roster.map(p=>p.condition??96));
   const capacity=scrimDailyCapacity(db,t,booked),today=db.worldDate||'';
@@ -77,12 +75,14 @@ function simulateBackgroundScrim(db,t,opp,games,rng,slot,booked=null,proposal=nu
     !second.availableSlots.includes(slot)||games>first.remaining||games>second.remaining)return null;
   const participants=[t,opp],lines=[],results=[],wins={[t.id]:0,[opp.id]:0};
   for(let g=0;g<games;g++){
-    const selections=participants.map(team=>ROLES.map(role=>{
-      const player=starterFor(db,team,role);
+    const selections=participants.map(team=>{
+      const scrimMap=bestStartingLineup(db,team,{},true);
+      return ROLES.map(role=>{
+      const player=scrimMap[role]&&db.players[scrimMap[role]];
       if(!player||player.retired)return null;
       const selected=backgroundScrimChampion(db,player,role,rng);
       return selected?{player,role,...selected}:null;
-    }));
+    });});
     if(selections.some(side=>side.some(entry=>!entry)))break;
     const values=selections.map((side,i)=>{
       const club=participants[i];
@@ -171,6 +171,7 @@ function recordScrimPractice(db,rec,lines){
   for(const l of lines){
     const p=db.players[l.pid];if(!p||!teams.has(l.tid))continue;
     const opp=l.tid===rec.a?rec.b:rec.a,value=scrimValue(db,l.tid,opp);
+    if(p.medicalPlanDate!==db.worldDate){p.medicalDayPlan=medicalPlanFor(db,p);p.medicalPlanDate=db.worldDate}
     practiceChampion(db,p,l.champ,'scrim',value);
     medicalExposure(db,p,'scrim',1);
     pState(p);p.fatigue=clamp(p.fatigue+1.2,0,100);

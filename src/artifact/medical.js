@@ -3,6 +3,23 @@
 // This is a game simulation, not a clinical diagnosis model.
 
 const MEDICAL_LABELS={wrist:'손목',back:'허리',neck:'목',illness:'질병',burnout:'번아웃'};
+const MEDICAL_PLAN_LABELS={auto:'자동',normal:'일반 훈련',light:'훈련 감량',rest:'완전 휴식',rehab:'재활'};
+// Plans are per-player. The manager may override an owned player's plan;
+// rival clubs decide independently, even after a player is transferred.
+function medicalPlanFor(db,p){
+  if(!p)return 'normal';
+  const team=p.team&&db.teams[p.team],owned=team&&parentTeamOf(db,team)?.id===managedTeamId(db);
+  const selected=owned?p.medicalPlan:'auto';
+  if(['normal','light','rest'].includes(selected))return selected;
+  if(selected==='rehab')return p.medical?.daysLeft>0||p.medicalResidual?.daysLeft>0?'rehab':'rest';
+  if(p.medical?.daysLeft>0)return 'rehab';
+  if(p.medicalPlanDate===db.worldDate&&p.medicalDayPlan)return p.medicalDayPlan;
+  if(p.medicalResidual?.daysLeft>0)return 'light';
+  if((p.fatigue||0)>=51||(p.condition??96)<74)return 'rest';
+  if((p.fatigue||0)>=34||(p.condition??96)<85)return 'light';
+  return 'normal';
+}
+function medicalScrimRest(db,p){const mode=medicalPlanFor(db,p);return mode==='rest'||mode==='rehab'}
 function medicalOut(p){return !!(p?.medical&&p.medical.daysLeft>0&&p.medical.out)}
 function medicalAvailable(db,t){return (t?.roster||[]).filter(id=>{const p=db.players[id];return p&&!p.retired&&!medicalOut(p)}).length}
 function medicalPerformancePenalty(p){
@@ -20,7 +37,9 @@ function medicalCare(db,p){
   const t=p.team&&db.teams[p.team];
   if(!t)return 0.75;
   const recovery=staffProfile(t).recovery,fac=facilityRecoveryBonus(t),tr=trainingIntensity(t);
-  return clamp(.88+(recovery-50)/225+fac*.05+(tr.growth<1?.07:tr.growth>1?-.13:0)-Math.max(0,(p.fatigue||0)-45)/330,.65,1.32);
+  const plan=medicalPlanFor(db,p);
+  return clamp(.88+(recovery-50)/225+fac*.05+(tr.growth<1?.07:tr.growth>1?-.13:0)-Math.max(0,(p.fatigue||0)-45)/330+
+    (plan==='rehab'?.12:plan==='rest'?.065:plan==='light'?.025:0),.65,1.42);
 }
 function medicalExposure(db,p,kind='scrim',games=1){
   if(!p||p.retired)return;
@@ -124,18 +143,21 @@ function medicalDailyTick(db,date){
       pState(p);
       const rng=new RNG((db.world?.seed||'world')+'|'+date+'|'+p.id,'medical');
       const load=p.medicalLoad||0;
-      const high=t.training?.intensity==='high',care=medicalCare(db,p);
-      p.medicalLoad=Math.round(clamp(load*.86+(high?.35:.08),0,38)*100)/100;
-      p.medicalOverloadDays=load>=9&&(high||p.fatigue>=38)?
-        Math.min(120,(p.medicalOverloadDays||0)+1):Math.max(0,(p.medicalOverloadDays||0)-2);
+      const plan=medicalPlanFor(db,p),rest=medicalScrimRest(db,p);
+      p.medicalDayPlan=plan;p.medicalPlanDate=date;
+      const high=t.training?.intensity==='high'&&!rest&&plan!=='light',care=medicalCare(db,p);
+      p.medicalLoad=Math.round(clamp(load*(rest?.73:plan==='light'?.82:.86)+(rest?0:high?.35:plan==='light'?.02:.08),0,38)*100)/100;
+      p.medicalOverloadDays=load>=9&&!rest&&(high||p.fatigue>=38)?
+        Math.min(120,(p.medicalOverloadDays||0)+1):Math.max(0,(p.medicalOverloadDays||0)-(rest?4:2));
+      if(rest)p.medicalRestDays=Math.min(366,(p.medicalRestDays||0)+1);
       if(p.medical?.daysLeft>0||p.medicalResidual?.daysLeft>0)medicalHeal(db,p,1,date);
       if(p.medical?.daysLeft>0)continue;
       if(p.medicalResidual?.daysLeft>0&&rng.chance(.98))continue;
       const injury=clamp(.000065*(1+load/22)*(1+Math.max(0,p.age-28)*.035)*
-        (high?1.25:1)*(1+Math.max(0,p.fatigue-45)/95),0,.00042);
+        (high?1.25:1)*(1+Math.max(0,p.fatigue-45)/95)*(rest?.57:plan==='light'?.83:1),0,.00042);
       const illness=.00020*(1+(p.condition<70?.32:0));
       const burnout=(p.medicalOverloadDays||0)>=14?
-        clamp(.00008*((p.medicalOverloadDays||0)-12)/18,0,.00032):0;
+        clamp(.00008*((p.medicalOverloadDays||0)-12)/18*(rest?.45:1),0,.00032):0;
       const draw=rng.next();let kind;
       if(draw<injury)kind='injury';
       else if(draw<injury+illness)kind='illness';

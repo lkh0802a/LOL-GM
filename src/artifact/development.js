@@ -91,7 +91,8 @@ function ageCurve(age,g){
   for(const [a,v] of T)if(age<=a)return v;return -1;
 }
 function growPlayer(db,p,rng,games,champGames){
-  const team=p.team?db.teams[p.team]:null, before=playerOvr(p),dev=ensurePlayerDevelopment(p);
+  const team=p.team?db.teams[p.team]:null, before=playerOvr(p),dev=ensurePlayerDevelopment(p),
+    practiceFactor=Math.max(.82,1-Math.min(280,p.medicalRestDays||0)*.00065);
   const room=clamp((p.pot-before)/10,-0.5,1.5), prof=p.personality.professionalism/100,ageShift=dev.peakAge-25;
   const coach=team?staffDevelopmentFor(team,p.role)/100:0.45, play=clamp(games/30,0,1);
   const tr=team?team.training:defaultTraining(), intensity=trainingIntensity(team),conversionMul=roleConversionGrowthMultiplier(p),tsum=['mechanical','laning','combat','macro','mental'].reduce((a,k)=>a+(+tr[k]||0),0)||1;
@@ -101,7 +102,7 @@ function growPlayer(db,p,rng,games,champGames){
     pState(p);
     let d=base>0?base*dev.growthRate*(0.45+room*0.6)*(0.7+0.6*prof)*(0.8+0.4*coach)*(0.65+0.55*play)*trainingGrowthMul(team)*facilityMul(team,p.age)*intensity.growth*(0.9+0.2*p.morale/100):base*dev.declineRate*(1.3-0.6*prof);
     d+=train*(base>0?1:0.5);
-    if(d>0)d*=youthMul(p.age)*conversionMul;
+    if(d>0)d*=youthMul(p.age)*conversionMul*practiceFactor;
     d=Math.min(d,growthCap(p.age)); // 한 시즌 영역별 성장 상한 (어릴수록 높음)
     const ceil=Math.min(99,p.pot+6); // 잠재력 + 6을 넘는 능력치는 더 오르지 않음
     for(const a of ATTR_GROUPS[g]){const v=p.attrs[a]+d+rng.normal(0,1.3);p.attrs[a]=Math.round(clamp(d>0&&p.attrs[a]>=ceil?Math.min(v,p.attrs[a]):d>0?Math.min(v,Math.max(ceil,p.attrs[a])):v,20,99))}
@@ -113,7 +114,7 @@ function growPlayer(db,p,rng,games,champGames){
     if(n||practiceGain){pr.mastery=Math.round(clamp(pr.mastery+gain,20,99));pr.experience=Math.round(clamp(pr.experience+n*1.5,0,999));pr.confidence=Math.round(clamp(pr.confidence+rng.normal(n?2:1,3),10,99))}
     else {pr.mastery=Math.round(clamp(pr.mastery-rng.range(0,1.8)*(1-(p.attrs.meta_adaptation||50)/180),20,99));if(pr.mastery<36&&Object.keys(p.pool).length>12)delete p.pool[c]}
     if(p.pool[c]){pr.matchup_knowledge=Math.round(clamp(pr.matchup_knowledge+(n?1.5:.35),20,99));pr.scrimSeason=0;pr.trainingSeason=0}}
-  if(games>0)p.proSeasons=(p.proSeasons||0)+1;p.age++;
+  if(games>0)p.proSeasons=(p.proSeasons||0)+1;p.age++;p.medicalRestDays=0;
   return playerOvr(p)-before;
 }
 function playerValue(db,p,team){
@@ -126,6 +127,11 @@ function playerValue(db,p,team){
 function dailyRecovery(db){
   for(const t of Object.values(db.teams)){ if(t.active===false)continue;
     const prof=staffProfile(t),rec=4+(prof.recovery-50)/45+facilityRecoveryBonus(t);
-    const ti=trainingIntensity(t);for(const id of t.roster){const p=db.players[id];if(!p)continue;pState(p);p.fatigue=clamp(p.fatigue-rec+ti.fatigue,0,100);p.condition=clamp(p.condition+2.5+ti.condition,0,100);p.form*=.98}
+    const ti=trainingIntensity(t);for(const id of t.roster){const p=db.players[id];if(!p)continue;pState(p);
+      const plan=medicalPlanFor(db,p),off=plan==='rest'||plan==='rehab';
+      p.fatigue=clamp(p.fatigue-rec+(off?0:plan==='light'?ti.fatigue*.4:ti.fatigue)-(plan==='rest'?3:plan==='rehab'?1.7:plan==='light'?.9:0),0,100);
+      p.condition=clamp(p.condition+2.5+(off?.8:plan==='light'?.1:ti.condition),0,100);
+      if(off)p.sharpness=clamp(p.sharpness-.28,0,100);
+      p.form*=.98}
   }
 }
