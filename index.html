@@ -2638,12 +2638,41 @@ function growthCap(age){return age<=18?4.2:age<=20?3.5:age<=22?2.8:age<=24?2.1:a
 function defaultTraining(){return {mechanical:20,laning:20,combat:20,macro:20,mental:20,intensity:'normal'}}
 function trainingIntensity(t){const x=t?.training?.intensity||'normal';return x==='light'?{growth:.9,fatigue:.45,condition:.25}:x==='high'?{growth:1.08,fatigue:1.35,condition:-.35}:{growth:1,fatigue:.8,condition:0}}
 function aiManageTraining(db,t){if(!t||t.id===managedTeamId(db))return;t.training=t.training||defaultTraining();t.training.intensity=trainingRecommendation(db,t).intensity}
-function ensureFacilities(t){const legacy=clamp(t.facility||2,1,5);t.facilities=t.facilities||{training:legacy,analysis:legacy,recovery:legacy,youth:legacy};for(const k of ['training','analysis','recovery','youth'])t.facilities[k]=clamp(t.facilities[k]||legacy,1,5);t.facility=Math.round((t.facilities.training+t.facilities.analysis+t.facilities.recovery+t.facilities.youth)/4);return t.facilities}
-function facilityMul(t){if(!t)return 1;const f=ensureFacilities(t);return .9+.055*(f.training-1)+.02*(f.youth-1)}
+const FACILITY_TYPES=['training','analysis','recovery','youth','scouting'];
+const FACILITY_LABELS={training:'훈련',analysis:'데이터 분석',recovery:'회복',youth:'유소년 육성',scouting:'스카우팅'};
+function ensureFacilities(t){
+  const legacy=clamp(t.facility||2,1,5),raw=t.facilities||{};
+  for(const k of FACILITY_TYPES){
+    const fallback=k==='scouting'?1:legacy;
+    raw[k]=clamp(raw[k]||fallback,1,5);
+  }
+  t.facilities=raw;
+  t.facility=Math.round(FACILITY_TYPES.reduce((v,k)=>v+raw[k],0)/FACILITY_TYPES.length);
+  return raw;
+}
+function facilityMul(t,age=null){
+  if(!t)return 1;
+  const f=ensureFacilities(t),young=age==null?1:age<=20?1:age<=23?.6:.14;
+  return .9+.055*(f.training-1)+.04*(f.youth-1)*young;
+}
+function facilityScoutingBonus(t){if(!t)return 0;return (ensureFacilities(t).scouting-1)*.065}
+function facilityInvestmentScore(db,t,key){
+  const f=ensureFacilities(t),roster=(t.roster||[]).map(id=>db.players[id]).filter(Boolean);
+  const kids=roster.length?roster.filter(p=>p.age<=22).length/roster.length:.35;
+  const old=roster.length?roster.filter(p=>p.age>=27).length/roster.length:.25;
+  const p=t.philosophy||'balanced';
+  const fit={training:1+.25*(p==='win-now')+.15*roster.length/8,
+    analysis:.85+(p==='win-now'?.4:0)+(p==='superstar'?.15:0),
+    recovery:.7+old*.65+(t.training?.intensity==='high'?.2:0),
+    youth:.7+kids*.95+(p==='youth'?.45:0),
+    scouting:.75+(p==='youth'?.35:0)+(p==='cost'?.2:0)}[key]||0;
+  const cost=facilityCost(db,t,key);
+  return Math.round((fit/(1+.23*(f[key]-1)))/(1+cost/Math.max(5,estRevenue(db,t))*.38)*100)/100;
+}
 function facilityAnalysisBonus(t){if(!t)return 0;return (ensureFacilities(t).analysis-1)*.012}
 function facilityRecoveryBonus(t){if(!t)return 0;return (ensureFacilities(t).recovery-1)*.7}
-function facilityCost(db,t,key='training'){const f=ensureFacilities(t),lv=f[key]||1;return Math.round((lv+1)*5*psOf(db,t.region)*10)/10}
-function facilityUpkeep(db,t){const f=ensureFacilities(t),sum=Object.values(f).reduce((a,b)=>a+b,0);return Math.round(sum*.32*psTeam(db,t)*10)/10}
+function facilityCost(db,t,key='training'){const f=ensureFacilities(t),lv=f[key]||1;return Math.round((lv+1)*5*psOf(db,t.region)*(key==='scouting'?.9:key==='youth'?1.12:1)*10)/10}
+function facilityUpkeep(db,t){const f=ensureFacilities(t),sum=FACILITY_TYPES.reduce((a,k)=>a+f[k],0);return Math.round(sum*.32*psTeam(db,t)*10)/10}
 function facilityBuildDays(level){return 18+level*12}
 function facilityReadyDate(start,days){
   const d=new Date((start||'2027-01-01')+'T00:00:00Z');
@@ -2651,7 +2680,7 @@ function facilityReadyDate(start,days){
   return d.toISOString().slice(0,10);
 }
 function upgradeFacility(db,t,key,opt={}){
-  if(!['training','analysis','recovery','youth'].includes(key))throw new Error('유효하지 않은 시설입니다');
+  if(!FACILITY_TYPES.includes(key))throw new Error('유효하지 않은 시설입니다');
   const f=ensureFacilities(t);
   if(f[key]>=5)throw new Error('이미 최고 단계입니다');
   if((t.facilityProjects||[]).some(p=>p.key===key))throw new Error('이미 증설 중인 시설입니다');
@@ -2665,7 +2694,7 @@ function upgradeFacility(db,t,key,opt={}){
       ready:facilityReadyDate(db.worldDate,opt.deferDays)});
   }else{
     f[key]++;
-    t.facility=Math.round(Object.values(f).reduce((a,b)=>a+b,0)/4);
+    t.facility=Math.round(FACILITY_TYPES.reduce((a,k)=>a+f[k],0)/FACILITY_TYPES.length);
   }
   return cost;
 }
@@ -2679,7 +2708,7 @@ function advanceFacilityConstruction(db,date=db.worldDate){
       if(f[p.key]===p.from){f[p.key]=p.to;completed++}
     }
     t.facilityProjects=remaining;
-    t.facility=Math.round(Object.values(f).reduce((a,b)=>a+b,0)/4);
+    t.facility=Math.round(FACILITY_TYPES.reduce((a,k)=>a+f[k],0)/FACILITY_TYPES.length);
   }
   return completed;
 }
@@ -2698,7 +2727,7 @@ function growPlayer(db,p,rng,games,champGames){
     // 훈련 포인트는 총 100점 한도: 배분하지 않은 포인트는 버려진다 (나눠 쓰는 만큼만 효과)
     const base=ageCurve(p.age-ageShift,g), train=team?(Math.min(TRAIN_POINTS,tr[g])/TRAIN_POINTS*5-1)*0.9:-0.3;
     pState(p);
-    let d=base>0?base*dev.growthRate*(0.45+room*0.6)*(0.7+0.6*prof)*(0.8+0.4*coach)*(0.65+0.55*play)*trainingGrowthMul(team)*facilityMul(team)*intensity.growth*(0.9+0.2*p.morale/100):base*dev.declineRate*(1.3-0.6*prof);
+    let d=base>0?base*dev.growthRate*(0.45+room*0.6)*(0.7+0.6*prof)*(0.8+0.4*coach)*(0.65+0.55*play)*trainingGrowthMul(team)*facilityMul(team,p.age)*intensity.growth*(0.9+0.2*p.morale/100):base*dev.declineRate*(1.3-0.6*prof);
     d+=train*(base>0?1:0.5);
     if(d>0)d*=youthMul(p.age)*conversionMul;
     d=Math.min(d,growthCap(p.age)); // 한 시즌 영역별 성장 상한 (어릴수록 높음)
@@ -3318,9 +3347,25 @@ function runOffseason(db){
   ageScoutReports(db);
   for(const t of activeTeams(db,null,1))aiManageStaff(db,t,rng);
   for(const t of activeTeams(db))aiManageTraining(db,t);
-  // 시설은 플레이어/AI 공통으로 구단 경영진이 자동 관리한다. 전략적 선택이 아닌 유지·증설 행정은 직접 조작하지 않는다.
-  for(const t of activeTeams(db,null,1)){const f=ensureFacilities(t),weights=t.philosophy==='youth'?{youth:1,training:.9,recovery:.45,analysis:.5}:t.philosophy==='win-now'?{analysis:1,recovery:.9,training:.55,youth:.3}:t.philosophy==='cost'?{training:.45,analysis:.4,recovery:.4,youth:.35}:{training:.75,analysis:.7,recovery:.65,youth:.6};
-    const choices=Object.keys(weights).filter(k=>f[k]<5&&!(t.facilityProjects||[]).some(p=>p.key===k)).sort((a,b)=>weights[b]-weights[a]);for(const k of choices){const cost=facilityCost(db,t,k),reserve=cost*(t.philosophy==='cost'?5:3);if(t.finance.cash>reserve&&financeForecast(db,t).closingCash>reserve&&rng.chance(.12+.22*weights[k])){upgradeFacility(db,t,k,{deferDays:facilityBuildDays(f[k])});break}}}
+  // Player-controlled and AI boards share the same facility investment model.
+  // Need, maturity and economic opportunity cost—not a fixed regional upgrade—drive proposals.
+  for(const t of activeTeams(db,null,1)){
+    const f=ensureFacilities(t),liquidity=financeRunway(db,t),projected=financeForecast(db,t).closingCash;
+    if((t.facilityProjects||[]).length>=2||['critical','strained'].includes(liquidity.severity))continue;
+    const options=FACILITY_TYPES.filter(key=>f[key]<5&&!(t.facilityProjects||[]).some(p=>p.key===key))
+      .map(key=>{
+        const cost=facilityCost(db,t,key);
+        const reserve=Math.max(cost*(t.philosophy==='cost'?4:2.5),liquidity.monthly*3);
+        return {key,cost,reserve,benefit:facilityInvestmentScore(db,t,key)};
+      })
+      .filter(opt=>t.finance.cash>opt.cost+opt.reserve&&projected>opt.cost+opt.reserve)
+      .sort((a,b)=>b.benefit-a.benefit||a.key.localeCompare(b.key));
+    const best=options[0];
+    if(best&&best.benefit>.6&&rng.chance(clamp(.1+best.benefit*.18,0,.45))){
+      upgradeFacility(db,t,best.key,{deferDays:facilityBuildDays(f[best.key])});
+      ev(`${t.name} 시설 투자 결정: ${FACILITY_LABELS[best.key]} ${f[best.key]}→${f[best.key]+1} 단계 · ${money(best.cost)}`);
+    }
+  }
   // 선수 만족도: 한 시즌 누적 출전/역할/계약/성적/국제전/커리어 목표를 결산한다.
   for(const t of activeTeams(db)){t._pre=t.roster.slice();for(const id of t.roster){const p=db.players[id];if(!p||!p.contract)continue;pState(p);p.form=0;p.fatigue=5;}}
   offseasonPlayerSatisfaction(db,w,rep,ev);
@@ -3339,7 +3384,7 @@ function closeMarket(db){
   for(const t of activeTeams(db)){aiReviewDepthChart(db,t);rebalanceAiRosterRoles(db,t)}
   for(const t of activeTeams(db)){const pre=t._pre||[];const now=ROLES.map(r=>starterFor(db,t,r)).filter(Boolean).map(p=>p.id);const changed=now.filter(id=>!pre.includes(id)).length;
     t.synergy=clamp(teamSynergy(t)*0.85+15-changed*8,10,100);delete t._pre;
-    if(!t.sponsor&&t.id!==managedTeamId(db)&&rng.chance(0.5)){const o=sponsorOffers(db,t);t.sponsor={...rng.pick(o),until:db.year+0}}}
+    if(t.id!==managedTeamId(db)&&!t.parent&&(!t.sponsor||t.sponsor.until<db.year)){const chosen=aiSelectSponsor(db,t);if(chosen)ev(`${t.name} ${chosen.type} 스폰서 계약 · ${chosen.years}년`)}}
   for(const R of Object.values(db.regions)){const ts=activeTeams(db,R.id,1);R.teams=ts.length;if(ts.length)R.strength=Math.round(avg(ts.map(t=>teamStrength(db,t.id))))}
   rep.retired.slice(0,3).forEach(r=>news(db,`${db.players[r.pid].name} 은퇴 (${r.age}세)`));
   w.phase='preseason';
@@ -4312,94 +4357,176 @@ function initFinance(db,t,rng){
 }
 // Prepaid transfer fees, signing bonuses and board infrastructure investments
 // have already affected cash. Recording them again at close would double charge.
-const FINANCE_PREPAID_KEYS=['facilityInvestment','signingBonus','transferPaid','transferReceived','staffSeverance'];
+const FINANCE_PREPAID_KEYS=['facilityInvestment','signingBonus','transferPaid','transferReceived','staffSeverance','scoutingExpense'];
 function financePrepaid(t){if(!t.finance)throw new Error('구단 재정 정보가 없습니다');const f=t.finance;f.prepaid=f.prepaid||{};return f.prepaid}
 function recordFinancePrepaid(t,key,amount){
   if(!FINANCE_PREPAID_KEYS.includes(key)||!Number.isFinite(amount)||amount<0)throw new Error('잘못된 선지급 재정 항목');
   const p=financePrepaid(t);p[key]=Math.round(((p[key]||0)+amount)*10)/10;
 }
 function sumFinanceRows(rows){return Object.values(rows).reduce((a,v)=>a+v,0)}
-function financeSeasonWins(db,t){
-  const w=db.world;if(!w?.seasons)return 0;
+function financeSeasonWins(db,t,w=db.world){if(!w?.seasons)return 0;
   return Object.values(w.seasons).reduce((n,s)=>{
-    if(!s.stageData?.regular)return n;
+    if(!s.stageData?.regular||db.competitions[s.comp]?.international||s.region!==t.region)return n;
     const standing=standings(db,s,'regular').find(x=>x.tid===t.id);
     return n+(standing?.w||0);
   },0);
 }
-// Conservative same-year budget outlook; no speculative prizes or future wins.
-// Prepaid activity is shown in P&L but not removed from cash a second time.
-function financeForecast(db,t){
-  const R=db.regions[t.region],ps=psTeam(db,t),last=(R.metrics||[]).slice(-1)[0],hype=last?last.hype:45;
-  const sponsor=t.sponsor?.until>=db.year?t.sponsor:null,pre=t.finance?.prepaid||{};
-  const rev={league:hype*.25*ps,sponsor:sponsor?sponsor.base+(sponsor.perWin||0)*financeSeasonWins(db,t):(t.fans||30)*.35*ps,
-    merch:(t.fans||30)*.1*ps,owner:ownerSupport(db,t),transfer:pre.transferReceived||0};
-  const exp={salary:payroll(db,t),staff:staffCost(db,t),ops:opsCost(db,t),facility:facilityUpkeep(db,t),
-    tax:spendingTax(db,t),buyout:t.finance?.buyout||0,
+// One commercial forecast and annual settlement policy, shared by AI and human clubs.
+function financeExposure(db,t){
+  const hype=db.regions[t.region]?.metrics?.at(-1)?.hype??45;
+  const fans=clamp(t.fans??30,3,100),starCount=(t.roster||[]).filter(id=>
+    db.players[id]&&(db.players[id].reputation||0)>=78).length;
+  return {hype,fans,stars:Math.min(5,starCount),
+    broadcast:clamp(.85+(fans-35)/230,.72,1.19),
+    merchandising:clamp(.85+starCount*.07+(fans-35)/350,.74,1.26)};
+}
+function financeCommercialIncome(db,t,w=db.world,forecast=false,prize=0){
+  const exposure=financeExposure(db,t),ps=psTeam(db,t),
+    seasonYear=w?.year??db.year,sp=t.sponsor?.until>=seasonYear?t.sponsor:null,
+    pre=t.finance?.prepaid||{};
+  const wins=financeSeasonWins(db,t,w);
+  return {league:exposure.hype*.25*ps*exposure.broadcast,
+    sponsor:sp?(sp.base+(sp.perWin||0)*wins):exposure.fans*.35*ps,
+    merch:exposure.fans*.1*ps*exposure.merchandising,
+    prize:forecast?0:prize,
+    sponsorMilestone:forecast?0:sponsorAchievementBonus(db,t,w),
+    owner:ownerSupport(db,t),
+    transfer:pre.transferReceived||0};
+}
+function financeOperatingExpense(db,t,w=db.world){
+  const pre=t.finance?.prepaid||{},ps=psTeam(db,t);
+  const international=w?.seasons?Object.values(w.seasons).filter(s=>
+    db.competitions[s.comp]?.international&&s.teams?.includes(t.id)).length:0;
+  return {salary:payroll(db,t),
+    bonuses:w&&w.year<=db.year?contractBonusCost(db,t,w.year):0,
+    staff:staffCost(db,t),ops:opsCost(db,t),facility:facilityUpkeep(db,t),
+    travel:international*.55*ps,
+    interest:Math.max(0,-(t.finance?.cash||0))*.06,
+    buyout:t.finance?.buyout||0,tax:spendingTax(db,t),
     facilityInvestment:pre.facilityInvestment||0,signingBonus:pre.signingBonus||0,
-    transfer:pre.transferPaid||0,staffSeverance:pre.staffSeverance||0};
-  const prepaidIn=pre.transferReceived||0,prepaidOut=(pre.facilityInvestment||0)+(pre.signingBonus||0)+(pre.transferPaid||0)+(pre.staffSeverance||0);
-  const revenue=sumFinanceRows(rev),expense=sumFinanceRows(exp);
-  return {rev,exp,revenue,expense,net:revenue-expense,
-    // The current cash balance already includes prepaid receipts/payments.
-    closingCash:(t.finance?.cash||0)+(revenue-prepaidIn)-(expense-prepaidOut),
-    unknown:['국내·국제 상금','추가 성과급','미확정 이적료','향후 스폰서 승리 수당','사치세 재분배']};
+    transfer:pre.transferPaid||0,staffSeverance:pre.staffSeverance||0,
+    scouting:pre.scoutingExpense||0};
+}
+function financePrepaidSettlement(t){
+  const p=t.finance?.prepaid||{};
+  return {income:p.transferReceived||0,
+    expense:(p.facilityInvestment||0)+(p.signingBonus||0)+(p.transferPaid||0)+
+      (p.staffSeverance||0)+(p.scoutingExpense||0)};
 }
 function staffCost(db,t){const specialists=teamStaffMembers(t).reduce((sum,s)=>sum+staffSalary(s,1),0);return (2+specialists)*psTeam(db,t)}
 function opsCost(db,t){return 8*psTeam(db,t)}
-function ownerSupport(db,t){if(t.parent)return 4*psOf(db,t.region);return t.owner.wealth/100*(['win-now','superstar'].includes(t.philosophy)?12:6)*psTeam(db,t)}
+function ownerSupport(db,t){
+  if(t.parent)return 4*psOf(db,t.region);
+  const owner=t.owner||{wealth:50};
+  return owner.wealth/100*(['win-now','superstar'].includes(t.philosophy)?12:6)*psTeam(db,t);
+}
 function estRevenue(db,t){
-  const R=db.regions[t.region], ps=psTeam(db,t), m=(R.metrics||[]).slice(-1)[0], hype=m?m.hype:45;
-  return hype*0.25*ps+(t.fans||30)*0.45*ps+ownerSupport(db,t);
+  const rev=financeCommercialIncome(db,t,null,true);
+  return rev.league+rev.sponsor+rev.merch+rev.owner;
+}
+function financeRunway(db,t){
+  const monthly=(payroll(db,t)+staffCost(db,t)+opsCost(db,t)+facilityUpkeep(db,t))/12;
+  const cash=t.finance?.cash||0;
+  const months=monthly>0?Math.max(0,cash)/monthly:99;
+  const severity=cash<0?'critical':months<3?'strained':months<9?'watch':'stable';
+  return {months:Math.round(months*10)/10,severity,monthly};
 }
 function salaryBudget(db,t){
-  const b=estRevenue(db,t)*0.95+Math.max(0,t.finance.cash)*0.3-staffCost(db,t)-opsCost(db,t);
-  return b*(['win-now','superstar'].includes(t.philosophy)?1.15:t.philosophy==='cost'?0.85:1);
+  const liquid=Math.max(0,t.finance.cash),cashPressure=financeRunway(db,t);
+  const b=estRevenue(db,t)*.95+liquid*.3-staffCost(db,t)-opsCost(db,t);
+  const normal= ['win-now','superstar'].includes(t.philosophy)?1.15:t.philosophy==='cost'?.85:1;
+  // A financially distressed board cannot promise next year's payroll from
+  // cash it does not possess. Existing player contracts are still honoured.
+  const cautious=cashPressure.severity==='critical'?.82:cashPressure.severity==='strained'?.91:1;
+  return Math.max(0,b*normal*cautious);
+}
+// Conservative statement; only already-observed wins and committed expenses.
+function financeForecast(db,t){
+  const rev=financeCommercialIncome(db,t,db.world,true),
+    exp=financeOperatingExpense(db,t,db.world),settled=financePrepaidSettlement(t);
+  // Future contingent performance bonuses remain uncertain.
+  exp.bonuses=0;
+  const revenue=sumFinanceRows(rev),expense=sumFinanceRows(exp);
+  return {rev,exp,revenue,expense,net:revenue-expense,
+    closingCash:(t.finance?.cash||0)+revenue-expense-settled.income+settled.expense,
+    runway:financeRunway(db,t),
+    unknown:['미확정 상금','스폰서 목표 달성 수당','미지급 선수 성과급',
+      '미확정 선수 거래','향후 공식 경기 승수','사치세 재분배']};
 }
 
 // 한 해 결산: 중계권 분배, 스폰서, 굿즈, 상금, 구단주 지원 − 연봉, 스태프, 운영비, 사치세
 function closeFinances(db,w,rng,ev){
   const prize={};
-  for(const s of Object.values(w.seasons)){ if(!s.done)continue;
-    const c=db.competitions[s.comp], ps=c.international?1:psOf(db,c.region);
-    const pool=c.international?(c.id==='WORLDS'?45:c.tier==='low'?5:18):9*ps;
-    const wts=c.teams.map(t=>[t,1+elimReach(db,s,t)*3]), sum=wts.reduce((a,x)=>a+x[1],0);
-    wts.forEach(([t,x])=>prize[t]=(prize[t]||0)+pool*x/sum);
+  for(const season of Object.values(w.seasons||{})){
+    if(!season.done)continue;
+    const c=db.competitions[season.comp];
+    if(!c)continue;
+    const pool=c.international?(c.id==='WORLDS'?45:c.tier==='low'?5:18):9*psOf(db,c.region);
+    const participants=(c.teams||[]).filter(id=>db.teams[id]);
+    const weights=participants.map(id=>[id,1+elimReach(db,season,id)*3]);
+    const total=weights.reduce((n,row)=>n+row[1],0);
+    if(total)for(const [id,weight] of weights)prize[id]=(prize[id]||0)+pool*weight/total;
   }
   const taxPool={};
   const recs=activeTeams(db).map(t=>{
-    const R=db.regions[t.region], ps=psTeam(db,t), m=(R.metrics||[]).slice(-1)[0], hype=m?m.hype:45;
-    const wins=Object.values(w.seasons).reduce((a,s)=>{const r=(s.stageData.regular&&standings(db,s,'regular').find(x=>x.tid===t.id));return a+(r?r.w:0)},0);
-    const sp=t.sponsor&&t.sponsor.until>=w.year?t.sponsor:null;
-    const pre=t.finance.prepaid||{};
-    const rev={league:hype*0.25*ps,sponsor:sp?sp.base+(sp.perWin||0)*wins:(t.fans||30)*0.35*ps,merch:(t.fans||30)*0.1*ps,prize:prize[t.id]||0,owner:ownerSupport(db,t),transfer:pre.transferReceived||0};
-    const pay=payroll(db,t),regulated=regulatedPayroll(db,t);
-    const exp={salary:pay,bonuses:contractBonusCost(db,t,w.year),staff:staffCost(db,t),ops:opsCost(db,t),facility:facilityUpkeep(db,t),buyout:t.finance.buyout||0,tax:spendingTax(db,t),facilityInvestment:pre.facilityInvestment||0,signingBonus:pre.signingBonus||0,transfer:pre.transferPaid||0,staffSeverance:pre.staffSeverance||0};
-    if(exp.tax>0)taxPool[R.id]=(taxPool[R.id]||0)+exp.tax*(R.sfrTeamShare??1)
-    const prepaidIn=pre.transferReceived||0,prepaidOut=(pre.facilityInvestment||0)+(pre.signingBonus||0)+(pre.transferPaid||0)+(pre.staffSeverance||0);
-    return {t,R,rev,exp,prepaidIn,prepaidOut};
+    const R=db.regions[t.region];
+    const rev=financeCommercialIncome(db,t,w,false,prize[t.id]||0);
+    const exp=financeOperatingExpense(db,t,w);
+    if(exp.tax>0)taxPool[R.id]=(taxPool[R.id]||0)+exp.tax*(R.sfrTeamShare??1);
+    return {t,R,rev,exp,settled:financePrepaidSettlement(t)};
   });
-  for(const r of recs){
-    if(taxPool[r.R.id]){const under=recs.filter(x=>x.R===r.R&&x.R.spendingRule==='sfr_top5'&&x.exp.tax===0&&regulatedPayroll(db,x.t)>=(x.R.salaryFloor||0)&&regulatedPayroll(db,x.t)<=(x.R.salaryCap||Infinity)&&(x.t.division||1)===1);if(under.includes(r))r.rev.tax=taxPool[r.R.id]/under.length}
-    const inc=sumFinanceRows(r.rev),out=sumFinanceRows(r.exp);
-    const f=r.t.finance;f.buyout=0;f.prepaid={};f.cash=Math.round((f.cash+inc-out-r.prepaidIn+r.prepaidOut)*10)/10;
-    const round=o=>Object.fromEntries(Object.entries(o).map(([k,v])=>[k,Math.round(v*10)/10]));
-    f.history=[...f.history,{year:w.year,rev:round(r.rev),exp:round(r.exp),net:Math.round((inc-out)*10)/10,cash:f.cash}].slice(-10);
-    if(r.exp.tax>0)ev(`${r.t.name} 균형지출 부담금 ${money(r.exp.tax)} 납부 (상위 5인 기준 ${money(regulatedPayroll(db,r.t))}, 기준선 ${money(r.R.salaryCap)})`);
-    // 누적 적자 → 구단 매각 (새 구단주가 자금 투입, 리그 팀 수는 유지)
-    if(r.t.parent){const pt=db.teams[r.t.parent];if(pt&&f.cash<0){pt.finance.cash=Math.round((pt.finance.cash+f.cash)*10)/10;f.cash=0}continue} // 2군 적자는 모구단이 부담
-    const recentLosses=f.history.slice(-2).filter(x=>x.net<0).length;
-    if(f.cash<-12*psTeam(db,r.t)&&recentLosses>=2){
-      const old=r.t.name,on=orgName(db,rng);r.t.name=on.name;r.t.formerNames=[...(r.t.formerNames||[]),old];
-      r.t.owner={wealth:Math.round(clamp(rng.normal(65,15),30,95))};f.cash=Math.round(25*psTeam(db,r.t)*10)/10;r.t.fans=Math.round((r.t.fans||30)*.88);
-      ev(`장기 재정난으로 구단 매각: ${old} → ${r.t.name} (연속 적자, 신규 구단주 자금 투입)`);
+  // Any tax redistribution is financed by collected liabilities in the same
+  // regional office; it is not added to the league from nowhere.
+  for(const R of Object.values(db.regions)){
+    const share=taxPool[R.id]||0;if(!share)continue;
+    const under=recs.filter(row=>row.R===R&&R.spendingRule==='sfr_top5'&&
+      row.exp.tax===0&&(row.t.division||1)===1&&
+      regulatedPayroll(db,row.t)>=(R.salaryFloor||0)&&
+      regulatedPayroll(db,row.t)<=(R.salaryCap||Infinity));
+    if(under.length)for(const row of under)row.rev.tax=share/under.length;
+  }
+  // An academy deficit is funded by its parent club, and both sides show that
+  // internal cash transfer in their statements. No unmatched cash adjustments.
+  const index=new Map(recs.map(row=>[row.t.id,row]));
+  for(const row of recs){
+    if(!row.t.parent)continue;
+    const parent=index.get(row.t.parent);
+    if(!parent)continue;
+    const projected=row.t.finance.cash+sumFinanceRows(row.rev)-sumFinanceRows(row.exp)-
+      row.settled.income+row.settled.expense;
+    const funding=Math.round(Math.max(0,-projected)*10)/10;
+    if(!funding)continue;
+    row.rev.academyFunding=funding;
+    parent.exp.academySupport=(parent.exp.academySupport||0)+funding;
+  }
+  const round=value=>Math.round(value*10)/10;
+  const roundRows=rows=>Object.fromEntries(Object.entries(rows).map(([key,v])=>[key,round(v)]));
+  for(const row of recs){
+    const inc=sumFinanceRows(row.rev),out=sumFinanceRows(row.exp),f=row.t.finance;
+    const net=inc-out;
+    f.cash=round(f.cash+net-row.settled.income+row.settled.expense);
+    f.buyout=0;f.prepaid={};
+    f.history=[...f.history,{year:w.year,rev:roundRows(row.rev),
+      exp:roundRows(row.exp),net:round(net),cash:f.cash}].slice(-10);
+    if(row.exp.tax>0)ev(`${row.t.name} 균형지출 부담금 ${money(row.exp.tax)} 납부 (상위 5인 기준 ${money(regulatedPayroll(db,row.t))}, 기준선 ${money(row.R.salaryCap)})`);
+    if(row.t.parent)continue;
+    const losses=f.history.slice(-2).filter(y=>y.net<0).length;
+    if(f.cash<-12*psTeam(db,row.t)&&losses>=2){
+      const old=row.t.name,renamed=orgName(db,rng),before=f.cash;
+      row.t.name=renamed.name;row.t.formerNames=[...(row.t.formerNames||[]),old];
+      row.t.owner={wealth:Math.round(clamp(rng.normal(65,15),30,95))};
+      f.cash=round(25*psTeam(db,row.t));row.t.fans=Math.round((row.t.fans||30)*.88);
+      // Equity recapitalization is a capital movement, not an operating profit.
+      const year=f.history.at(-1);
+      year.capital={newOwner:f.cash-before};year.cash=f.cash;
+      ev(`장기 재정난으로 구단 매각: ${old} → ${row.t.name} (연속 적자, 신규 구단주 자금 투입 ${money(f.cash-before)})`);
     }
   }
 }
 
 // 계약 만료 · 재계약 · FA 시장
 
-function mSponsor(db,id){const t=myT(db),o=(db.world.sponsorOffers||[]).find(x=>x.id===id);if(!o)return '';t.sponsor={...o,until:db.year+o.years-1};return `${o.name} ${o.type} 스폰서 계약 (${o.years}년)`}
+function mSponsor(db,id){const t=myT(db);if(!t)return '구단을 찾을 수 없습니다';if(t.sponsor?.until>=db.year)return '기존 스폰서 계약 기간이 남아 있습니다';const offers=db.world?.sponsorOffers||[];const o=offers.find(x=>x.id===id);if(!o)return '제안이 만료되었습니다';t.sponsor={...o,until:db.year+o.years-1};return `${o.name} ${o.type} 스폰서 계약 (${o.years}년)`}
 
 /* ==== FILE: contracts.js ==== */
 // ===== LOL GM: Player contract / FA market domain =====
@@ -4448,7 +4575,7 @@ function contractExpectedValue(c){if(!c)return 0;const b=c.bonuses||{};return c.
 function teamInternationalAppeal(db,t){const R=db.regions[t.region],power=db.global?.power?.[R.id]||1;return clamp((R.slots||1)/4*.55+(teamStrength(db,t.id)-R.strength)/18*.3+(t.fans||30)/180+power*.08,0,1.25)}
 function offerUtility(db,p,t,offer,opt={}){
   ensureSatisfaction(p);const ask=Math.max(.1,asking(db,p,t.region)),moneyScore=contractExpectedValue(offer)/ask,role=offer.promisedRole||defaultPromisedRole(db,p,t),roleScore={core:.72,starter:.62,competition:.24,backup:.02,prospect:p.age<=21?.38:-.08}[role]??0;
-  const strength=(teamStrength(db,t.id)-db.regions[t.region].strength)/12,fac=((t.facility||2)-2)*.08,coach=(staffProfile(t).development-55)/160,intl=teamInternationalAppeal(db,t),stability=Math.min(3,offer.years||1)*.055;
+  const strength=(teamStrength(db,t.id)-db.regions[t.region].strength)/12,facilities=ensureFacilities(t),fac=(facilities.training-2)*.055+(p.age<=22?(facilities.youth-2)*.075:(facilities.recovery-2)*.018),coach=(staffProfile(t).development-55)/160,intl=teamInternationalAppeal(db,t),stability=Math.min(3,offer.years||1)*.055;
   const home=db.worldConfig.universalLanguage?(p.region===t.region?.04:0):(p.region===t.region?.22:-.08),amb=p.personality.ambition/100,career=playerCareerGoal(p);
   let careerFit=0;if(career==='development')careerFit=fac+coach+(role==='prospect'||role==='competition'?.16:0);else if(career==='starter')careerFit=['core','starter'].includes(role)?.22:-.12;else if(career==='international')careerFit=intl*.18;else if(career==='titles')careerFit=Math.max(0,strength)*.16+intl*.1;else careerFit=stability;
   const option=offer.option?.type==='player'?.07:offer.option?.type==='team'?-.025:0,buyout=offer.buyout?clamp(offer.buyout/Math.max(.2,playerMarketValue(db,p)),.4,4)*-.018:0;
@@ -4591,7 +4718,7 @@ function contractMarket(db,rng,rep,ev){
   }
   // 이적료 거래: 예산이 넉넉한 구단이 다른 구단 주전을 사 온다
   let deals=0;
-  for(const t of activeTeams(db,null,1).filter(t=>t.id!==mine&&t.finance.cash>20*psTeam(db,t)).sort(()=>rng.next()-0.5)){
+  for(const t of activeTeams(db,null,1).filter(t=>t.id!==mine&&t.finance.cash>20*psTeam(db,t)&&financeRunway(db,t).months>=9&&financeForecast(db,t).closingCash>8*psTeam(db,t)).sort(()=>rng.next()-0.5)){
     if(deals>=Math.max(2,Math.ceil(activeTeams(db,null,1).length/10)))break;
     const role=rng.pick(ROLES), cur=starterFor(db,t,role); if(!cur)continue;
     if(contractedMoveError(db,cur))continue;
@@ -4600,7 +4727,7 @@ function contractMarket(db,rng,rep,ev){
     if(!cand)continue;
     const seller=db.teams[cand.p.team];
     if(localRegistrationError(db,t,cand.p)||localRegistrationError(db,seller,cur))continue;
-    if(!(seller.finance.cash<10*psTeam(db,seller)||cand.p.wantsOut||rng.chance(.2)))continue;
+    if(!(financeRunway(db,seller).severity!=='stable'||cand.p.wantsOut||rng.chance(.2)))continue;
     commitMarketPlayerAction(db,{type:'player.transfer',pid:cand.p.id,fromId:seller.id,teamId:t.id,fee:cand.fee,actor:'ai'});deals++;
     rep.transfers.push({pid:cand.p.id,from:seller.id,to:t.id,fee:cand.fee});
     if(t.roster.length>size){commitMarketPlayerAction(db,{type:'player.transfer',pid:cur.id,fromId:t.id,teamId:seller.id,fee:0,actor:'ai'});rep.transfers[rep.transfers.length-1].swap=cur.id}
@@ -4628,7 +4755,7 @@ function contractMarket(db,rng,rep,ev){
 // Owns observation knowledge, uncertainty, reports, report ageing and manual scouting actions.
 
 function sameScoutZone(a,b){if(a===b)return true;return Object.values(INTL_ZONES).some(z=>z.includes(a)&&z.includes(b))}
-function scoutingPower(db){const t=managedTeam(db);if(!t)return 1;return clamp(.78+(t.facility||2)*.06+staffProfile(t).scouting/250,.8,1.38)}
+function scoutingPower(db){const t=managedTeam(db);if(!t)return 1;return clamp(.78+facilityScoutingBonus(t)+staffProfile(t).scouting/250,.8,1.46)}
 function baseScoutKnowledge(db,p){const me=managedTeam(db);if(!me)return 0;if(p.team===me.id||(p.team&&db.teams[p.team]&&db.teams[p.team].parent===me.id))return 100;if(p.region===me.region)return 22;return sameScoutZone(p.region,me.region)?10:4}
 function ensureScoutReport(db,p){db.scout=db.scout||{};let r=db.scout[p.id];if(typeof r==='number')r=db.scout[p.id]={knowledge:r,lastSeenYear:db.year-1,lastSeenDate:null,observations:0,gamesSeen:0,competitions:{},snapshots:[]};if(!r)r=db.scout[p.id]={knowledge:baseScoutKnowledge(db,p),lastSeenYear:null,lastSeenDate:null,observations:0,gamesSeen:0,competitions:{},snapshots:[]};r.competitions=r.competitions||{};r.snapshots=r.snapshots||[];return r}
 function knowledge(db,p){if(!db.world)return 100;const base=baseScoutKnowledge(db,p);if(base>=100)return 100;const r=ensureScoutReport(db,p);return Math.round(clamp(Math.max(base,r.knowledge||0),0,98))}
@@ -4643,7 +4770,7 @@ function scoutAbilityRange(db,p){const k=knowledge(db,p),c=obsOvr(db,p),w=Math.m
 function scoutPotentialRange(db,p){const k=knowledge(db,p),risk=scoutingRisk(db,p),noise=((hashStr(p.id+'pot')%2001)/1000-1)*Math.max(1,(100-k)/13),center=clamp(p.pot+noise,playerOvr(p),99),w=Math.max(3,Math.ceil((100-k)/8+risk*.45));return [Math.max(playerOvr(p),Math.round(center-w)),Math.min(99,Math.round(center+w))]}
 function scoutGrowthTrend(p){const a=(p.developmentTrail||[]).slice(-3);if(a.length<2)return {delta:null,label:'표본 부족'};const d=a[a.length-1].ovr-a[0].ovr;return {delta:d,label:d>=3?'빠른 상승':d>=1?'상승':d<=-2?'하락':d<0?'소폭 하락':'정체'}}
 function scoutReport(db,p){const r=ensureScoutReport(db,p),sample=scoutSample(db,p),ability=scoutAbilityRange(db,p),potential=scoutPotentialRange(db,p),growth=scoutGrowthTrend(p),champions=Object.entries(p.pool||{}).sort((a,b)=>b[1].mastery-a[1].mastery).slice(0,5).map(([id,v])=>({id,mastery:Math.round(clamp(v.mastery+((hashStr(p.id+id)%1001)/1000-.5)*(100-knowledge(db,p))*.12,20,99))}));return {knowledge:knowledge(db,p),ability,potential,sample,growth,champions,lastSeenDate:r.lastSeenDate,staleYears:r.staleYears||0,observations:r.observations||0,gamesSeen:r.gamesSeen||0}}
-function scoutPlayers(db,ids,amt,cost){const t=myT(db);if(t.finance.cash<cost)return '보유 자금이 부족합니다';t.finance.cash=Math.round((t.finance.cash-cost)*10)/10;for(const id of ids){const p=db.players[id];if(p){observePlayer(db,p,Math.min(24,amt*.55),{games:0,comp:'manual'});syncRecruitmentObservation(db,id)}}return `스카우팅 보고서 갱신 (${money(cost)})`}
+function scoutPlayers(db,ids,amt,cost){const t=myT(db);if(t.finance.cash<cost)return '보유 자금이 부족합니다';t.finance.cash=Math.round((t.finance.cash-cost)*10)/10;recordFinancePrepaid(t,'scoutingExpense',cost);for(const id of ids){const p=db.players[id];if(p){observePlayer(db,p,Math.min(24,amt*.55),{games:0,comp:'manual'});syncRecruitmentObservation(db,id)}}return `스카우팅 보고서 갱신 (${money(cost)})`}
 
 /* ==== FILE: transfer.js ==== */
 // ===== LOL GM: Recruitment / negotiation / transfer domain =====
@@ -5060,7 +5187,7 @@ function staffRoleWeight(t,role){
 }
 function aiManageStaff(db,t,rng){
   if(!t||t.id===managedTeamId(db)||!t.finance)return false;ensureTeamStaff(db,t,rng);
-  const ps=psOf(db,t.region),cash=t.finance.cash||0,reserve=(t.philosophy==='cost'?8:5)*ps,cands=db.staffPool||[];let best=null;
+  const ps=psOf(db,t.region),cash=t.finance.cash||0,reserve=(t.philosophy==='cost'?8:5)*ps,cands=db.staffPool||[],liquidity=financeRunway(db,t);if(['critical','strained'].includes(liquidity.severity)||financeForecast(db,t).closingCash<reserve*2)return false;let best=null;
   for(const s of cands){if(!STAFF_ROLES[s.role])continue;const dept=staffDepartment(s.role),members=teamStaffMembers(t,dept),same=members.filter(x=>x.role===s.role).sort((a,b)=>a.rating-b.rating),room=members.length<(STAFF_DEPT_LIMITS[dept]||0),replace=room?null:(same[0]||members.slice().sort((a,b)=>a.rating-b.rating)[0]);const base=replace?.rating||(same.length?Math.max(...same.map(x=>x.rating)):45),gain=(s.rating-base)*staffRoleWeight(t,s.role),fee=replace?staffSalary(replace,ps):0,annual=staffSalary(s,ps);if(gain>=6&&cash>fee+annual+reserve&&(!best||gain>best.gain))best={s,gain,fee,replace}}
   if(!best)return false;t.finance.cash=Math.round((t.finance.cash-best.fee)*10)/10;if(best.fee)recordFinancePrepaid(t,'staffSeverance',best.fee);if(best.replace)releaseStaff(db,t,best.replace.id);hireStaff(db,t,best.s);return true;
 }
@@ -5132,14 +5259,77 @@ function evalGoals(db,w,rep,ev){
 }
 
 // ---- 스폰서 계약 ----
+function sponsorMarketStrength(db,t){
+  const R=db.regions[t.region],hype=R.metrics?.at(-1)?.hype??45;
+  const reputation=clamp((t.fans||30)*.72+(t.reputation||R.strength||60)*.28,8,99);
+  return {hype,reputation,base:psTeam(db,t)*(.16*hype+.32*reputation)};
+}
+function sponsorGoalFor(t){
+  if(['title','final'].includes(t.goal))return 'final';
+  if(t.goal==='playoffs')return 'playoffs';
+  if(t.goal==='top_half'||(t.goal==='survive'&&(t.franchised||t.license==='franchise')))return 'top_half';
+  return 'survive';
+}
+function sponsorGoalLabel(goal){
+  return {final:'국내 결승 진출',playoffs:'국내 플레이오프 진출',top_half:'국내 리그 상위 절반',survive:'국내 리그 잔류'}[goal]||'국내 성적 목표';
+}
+function sponsorGoalReached(db,t,w,goal){
+  if(!goal)return false;
+  const ss=Object.values(w.seasons||{}).filter(s=>
+    s.done&&s.region===t.region&&(s.div||1)===(t.division||1)&&
+    !db.competitions[s.comp]?.international);
+  if(!ss.length)return false;
+  if(goal==='final')return ss.some(s=>s.champion===t.id||s.runnerUp===t.id);
+  if(goal==='playoffs')return ss.some(s=>s.champion===t.id||s.runnerUp===t.id||
+    (s.stageData?.playoffs?.seeds||[]).includes(t.id));
+  return ss.some(s=>{
+    if(goal==='survive'&&t.franchised)return true;
+    const results=standings(db,s,'regular');const pos=results.findIndex(row=>row.tid===t.id);
+    const limit=goal==='top_half'?Math.ceil(results.length/2):results.length-Math.max(1,db.regions[t.region].relegate||1);
+    return pos>=0&&pos<limit;
+  });
+}
+function sponsorAchievementBonus(db,t,w){
+  const sp=t.sponsor;
+  return sp&&sp.until>=w.year&&sp.milestone&&sponsorGoalReached(db,t,w,sp.milestone)
+    ?sp.milestoneBonus||0:0;
+}
 function sponsorOffers(db,t){
-  const ps=psOf(db,t.region), base=(t.fans||30)*0.35*ps, seed=hashStr(t.id+db.year);
+  const scale=sponsorMarketStrength(db,t),seed=hashStr(t.id+'|'+db.year+'|sponsor');
   const brands=['Hangyeol Electronics','Nuri Telecom','Gaon Energy','Mir Foods','Raon Motors','Sejin Life','Yunseul Beauty','Dodam Games'];
+  const base=scale.base,ps=psTeam(db,t),goal=sponsorGoalFor(t);
+  const moneyRound=value=>Math.round(value*10)/10;
   return [
-    {id:'fixed',name:brands[seed%brands.length],type:'고정형',base:Math.round(base*1.0*10)/10,perWin:0,years:1},
-    {id:'perf',name:brands[(seed>>3)%brands.length],type:'성과형',base:Math.round(base*0.6*10)/10,perWin:Math.round(0.9*ps*10)/10,years:1},
-    {id:'long',name:brands[(seed>>6)%brands.length],type:'장기형',base:Math.round(base*0.9*10)/10,perWin:0,years:3}
+    {id:'fixed',name:brands[seed%brands.length],type:'안정형',base:moneyRound(base),
+      perWin:0,years:1,milestone:null,milestoneBonus:0},
+    {id:'perf',name:brands[(seed>>>3)%brands.length],type:'성과형',base:moneyRound(base*.68),
+      perWin:moneyRound(.23*ps),years:1,milestone:goal,milestoneBonus:moneyRound(base*.28)},
+    {id:'long',name:brands[(seed>>>6)%brands.length],type:'장기형',base:moneyRound(base*.91),
+      perWin:0,years:3,milestone:null,milestoneBonus:0}
   ];
+}
+function sponsorExpectedValue(db,t,sp){
+  // Club directors can know the size of their previous regular-season slate,
+  // not the private outcome of next year's matches.
+  const previous=t.goalLog?.at(-1),success=previous?.ok?0.8:0.35;
+  const R=db.regions[t.region],schedule=Math.max(10,(R.teams||10)*2-2);
+  const estimatedWins=schedule*(t.goal==='title'||t.goal==='final'?.66:
+    t.goal==='playoffs'?.55:t.goal==='survive'?.37:.48);
+  return sp.base+(sp.perWin||0)*estimatedWins+
+    (sp.milestoneBonus||0)*success;
+}
+function aiSelectSponsor(db,t){
+  if(t.sponsor?.until>=db.year)return null;
+  const offers=sponsorOffers(db,t),ps=psTeam(db,t),stressed=(t.finance?.cash||0)<10*ps;
+  const selected=offers.map(sp=>{
+    const expected=sponsorExpectedValue(db,t,sp);
+    // A cash-strapped board values guaranteed revenue and contract length.
+    const score=expected+(stressed?(sp.base*.35+(sp.years-1)*.18*ps):0)+
+      (t.philosophy==='cost'?(sp.base*.13):0);
+    return {sp,score};
+  }).sort((a,b)=>b.score-a.score)[0].sp;
+  t.sponsor={...selected,until:db.year+selected.years-1};
+  return selected;
 }
 
 // ---- 시상 · 명예의 전당 ----
@@ -5644,17 +5834,17 @@ function bindInitialRosterMarket(){
 // ===== LOL GM: club staff/sponsor market panels and actions =====
 function sponsorBlock(t){
   const cur=t.sponsor&&t.sponsor.until>=DB.year?t.sponsor:null, offers=DB.world.sponsorOffers||[];
-  return `<h4>메인 스폰서</h4>${cur?`<p>${esc(cur.name)} ${esc(cur.type)} — 기본 ${money(cur.base)}${cur.perWin?` + 승리당 ${money(cur.perWin)}`:''} (${cur.until}년까지)</p>`:offers.map(o=>`<div class="mrow"><span><b>${esc(o.name)}</b> ${esc(o.type)} · 기본 ${money(o.base)}${o.perWin?` + 승리당 ${money(o.perWin)}`:''} · ${o.years}년</span><button class="ghost sm2" data-spon="${o.id}">계약</button></div>`).join('')+'<p class="hint">계약하지 않으면 팬덤에 따라 매년 다시 정해집니다.</p>'}`;
+  return `<h4>메인 스폰서</h4>${cur?`<p>${esc(cur.name)} ${esc(cur.type)} — 기본 ${money(cur.base)}${cur.perWin?` + 국내 1승당 ${money(cur.perWin)}`:''}${cur.milestone?` + ${sponsorGoalLabel(cur.milestone)} 달성 시 ${money(cur.milestoneBonus)}`:''} (${cur.until}년까지)</p>`:offers.map(o=>`<div class="mrow"><span><b>${esc(o.name)}</b> ${esc(o.type)} · 보장 ${money(o.base)}${o.perWin?` + 국내 1승당 ${money(o.perWin)}`:''}${o.milestone?` + ${sponsorGoalLabel(o.milestone)} 보너스 ${money(o.milestoneBonus)}`:''} · ${o.years}년 <small class="hint">예상 연간 ${money(sponsorExpectedValue(DB,t,o))}</small></span><button class="ghost sm2" data-spon="${o.id}">계약</button></div>`).join('')+'<p class="hint">기본 계약과 성과형 보너스의 확실성이 다릅니다. 계약 전 조건을 비교해 선택하세요. 제안은 시장 연도에만 유효합니다.</p>'}`;
 }
 function coachBlock(t){
   const ps=psOf(DB,t.region),members=teamStaffMembers(t);ensureFacilities(t);const profile=staffProfile(t);
   const dept=(d)=>members.filter(s=>staffDepartment(s.role)===d),cards=members.slice().sort((a,b)=>staffDepartment(a.role).localeCompare(staffDepartment(b.role))||b.rating-a.rating).map(x=>`<div class="mrow"><span><b>${esc(x.name)}</b> · ${STAFF_ROLES[x.role]} · 능력 ${x.rating} · 연봉 ${money(staffSalary(x,ps))}</span><button class="ghost sm2" data-fire-staff="${x.id}">계약 해지</button></div>`).join('');
   const limits=`코칭팀 ${dept('coach').length}/${STAFF_DEPT_LIMITS.coach} · 분석팀 ${dept('analyst').length}/${STAFF_DEPT_LIMITS.analyst} · 스카우팅팀 ${dept('scout').length}/${STAFF_DEPT_LIMITS.scout}`;
-  const labels={training:'훈련',analysis:'데이터 분석',recovery:'회복',youth:'육성'};
+  const labels=FACILITY_LABELS;
   const facilities=t.facilities||{},projects=t.facilityProjects||[];
   const building=projects.map(p=>labels[p.key]+' '+p.from+'→'+p.to+' (완료 예정 '+p.ready+')').join(' · ');
   const market=(DB.staffPool||[]).slice().sort((a,b)=>b.rating-a.rating).map(x=>{const d=staffDepartment(x.role),full=staffDeptCount(t,d)>=STAFF_DEPT_LIMITS[d];return `<div class="mrow"><span><b>${esc(x.name)}</b> · ${STAFF_ROLES[x.role]} · 능력 ${x.rating} · 연봉 ${money(staffSalary(x,ps))}</span><button class="ghost sm2" data-hire-staff="${x.id}"${full?' disabled':''}>${full?'부서 정원':'선임'}</button></div>`}).join('');
-  return `<div class="fin"><div><span>헤드코치</span><b>플레이어</b><small>최종 스포츠 결정</small></div><div><span>부서 정원</span><b>${limits}</b><small>범용 수석코치 없음</small></div><div><span>스태프 효과</span><b>전략 ${Math.round(profile.draft)} · 분석 ${Math.round(profile.analysis)}</b><small>육성 ${Math.round(profile.development)} · 스카우팅 ${Math.round(profile.scouting)}</small></div></div><h4>시설 운영 현황</h4><p class="hint">${Object.entries(labels).map(([k,v])=>v+' '+(facilities[k]||1)+'단계').join(' · ')} · 연간 유지비 ${money(facilityUpkeep(DB,t))}</p><p class="hint">${building?'시설 증설 중: '+esc(building):'진행 중인 시설 증설 없음'} · 구단 경영진이 투자 판단</p><h4>현재 스태프</h4>${cards||'<p class="hint">고용된 전문 스태프가 없습니다.</p>'}<h4>스태프 시장</h4>${market}`;
+  return `<div class="fin"><div><span>헤드코치</span><b>플레이어</b><small>최종 스포츠 결정</small></div><div><span>부서 정원</span><b>${limits}</b><small>범용 수석코치 없음</small></div><div><span>스태프 효과</span><b>전략 ${Math.round(profile.draft)} · 분석 ${Math.round(profile.analysis)}</b><small>육성 ${Math.round(profile.development)} · 스카우팅 ${Math.round(profile.scouting)}</small></div></div><h4>시설 운영 현황</h4><p class="hint">${Object.entries(labels).map(([k,v])=>v+' '+(facilities[k]||1)+'단계').join(' · ')} · 연간 유지비 ${money(facilityUpkeep(DB,t))}</p><p class="hint">훈련: 시즌 능력치 성장 · 데이터 분석: 조합/상대 준비 · 회복: 일일 피로 회복 · 유소년: 젊은 선수 성장/영입 매력 · 스카우팅: 관찰 보고서 정확도</p><p class="hint">다음 시설 투자 판단: ${FACILITY_TYPES.filter(k=>facilities[k]<5).map(k=>labels[k]+' '+facilityInvestmentScore(DB,t,k).toFixed(2)).sort().join(' · ')} (투자 적합도, 현재 선수단·구단 철학·비용 반영)</p><p class="hint">${building?'시설 증설 중: '+esc(building):'진행 중인 시설 증설 없음'} · 구단 경영진이 투자 판단</p><h4>현재 스태프</h4>${cards||'<p class="hint">고용된 전문 스태프가 없습니다.</p>'}<h4>스태프 시장</h4>${market}`;
 }
 function bindClubOfficeControls(act){
   document.querySelectorAll('[data-spon]').forEach(b=>b.onclick=()=>act(mSponsor(DB,b.dataset.spon)));
@@ -5955,19 +6145,21 @@ function bindSeries(root,rec){
 function financePanel(t){
   const f=t.finance; if(!f)return '';
   const R=DB.regions[t.region], last=f.history.slice(-1)[0], pay=payroll(DB,t), outlook=financeForecast(DB,t);
-  const RK={league:'중계권 분배',sponsor:'스폰서',merch:'굿즈',prize:'상금',owner:'구단주 지원',tax:'사치세 분배',transfer:'이적료 수입'}, EK={salary:'연봉',staff:'코칭 스태프',ops:'운영비',facility:'훈련 시설',floor:'플로어 부담금',buyout:'선수 방출 비용',tax:'사치세',facilityInvestment:'시설 증설비',signingBonus:'계약금',transfer:'이적료 지출',staffSeverance:'스태프 해지금'};
+  const RK={league:'중계권 분배',sponsor:'스폰서',merch:'굿즈',prize:'상금',owner:'구단주 지원',tax:'사치세 분배',transfer:'이적료 수입',sponsorMilestone:'스폰서 목표 달성',academyFunding:'모구단 지원금'}, EK={salary:'연봉',staff:'코칭 스태프',ops:'운영비',facility:'훈련 시설',floor:'플로어 부담금',buyout:'선수 방출 비용',tax:'사치세',facilityInvestment:'시설 증설비',signingBonus:'계약금',transfer:'이적료 지출',staffSeverance:'스태프 해지금',travel:'해외 대회 출장비',interest:'재정 부족 부담금',scouting:'스카우팅 비용',academySupport:'2군 운영 지원'};
   return `<section><h3>재정</h3><div class="fin">
     <div><span>보유 자금</span><b class="${f.cash<0?'neg':''}">${money(f.cash)}</b></div>
     <div><span>연봉 총액</span><b>${money(pay)}</b><small>${R.spendingRule==='sfr_top5'?`SFR 상위 5인 ${money(regulatedPayroll(DB,t))} · 기준 ${money(R.salaryCap)}${R.salaryCap?' · '+Math.round(regulatedPayroll(DB,t)/R.salaryCap*100)+'% 사용':''}${regulatedPayroll(DB,t)>R.salaryCap?' 초과':''}`:'구단 자체 예산'}</small></div>
     <div><span>영입 예산</span><b>${money(Math.max(0,salaryBudget(DB,t)-pay))}</b></div>
     <div><span>구단주 재력</span><b>${t.owner?t.owner.wealth:'—'}</b></div>
+    <div><span>운영 여유</span><b>${outlook.runway.months}개월</b><small>${({stable:'안정',watch:'유의',strained:'긴축',critical:'위기'})[outlook.runway.severity]}</small></div>
     <div><span>예상 수입</span><b>${money(outlook.revenue)}</b></div>
     <div><span>예상 지출</span><b>${money(outlook.expense)}</b></div>
     <div><span>예상 손익</span><b class="${outlook.net<0?'neg':''}">${money(outlook.net)}</b></div>
     <div><span>예상 결산 현금</span><b class="${outlook.closingCash<0?'neg':''}">${money(outlook.closingCash)}</b></div>
   </div><div class="rgrid"><div><h4>예상 수입 내역</h4>${Object.entries(outlook.rev).filter(([,v])=>v>0).map(([k,v])=>`<div class="arow"><span>${RK[k]||k}</span><b>${money(v)}</b></div>`).join('')}</div><div><h4>예상 지출 내역</h4>${Object.entries(outlook.exp).filter(([,v])=>v>0).map(([k,v])=>`<div class="arow"><span>${EK[k]||k}</span><b>${money(v)}</b></div>`).join('')}</div></div>
-  <p class="hint">보수적인 추정치입니다. 아직 확정되지 않은 상금·추가 승리 수당·성과급·향후 이적과 재분배액은 미포함입니다. 이미 지급한 시설·계약·이적 비용은 결산 현금에서 두 번 차감하지 않습니다.</p>
+  <p class="hint">현재 시즌 출전·팬덤·지역 흥행·스폰서 조건을 기준으로 한 추정치입니다. 확정되지 않은 상금·추가 승리 수당·성과급·스폰서 목표 보너스·향후 거래·지출부담금 재분배는 미포함입니다. 이미 지급한 비용은 중복 차감하지 않습니다.</p>
   ${outlook.closingCash<0?'<p class="warn">예상 결산 현금이 적자입니다. 추가 지출에 주의하세요.</p>':''}
+  ${last?.capital?`<p class="hint">${last.year}년 구단 매각/외부 자본 투입: ${money(last.capital.newOwner||0)} (영업손익과 구분)</p>`:''}
   ${last?`<div class="rgrid"><div><h4>${last.year} 수입 ${money(Object.values(last.rev).reduce((a,b)=>a+b,0))}</h4>${Object.entries(last.rev).filter(([,v])=>v).map(([k,v])=>`<div class="arow"><span>${RK[k]||k}</span><span class="num">${money(v)}</span></div>`).join('')}</div>
   <div><h4>${last.year} 지출 ${money(Object.values(last.exp).reduce((a,b)=>a+b,0))}</h4>${Object.entries(last.exp).filter(([,v])=>v).map(([k,v])=>`<div class="arow"><span>${EK[k]||k}</span><span class="num">${money(v)}</span></div>`).join('')}<div class="arow"><span><b>순이익</b></span><span class="num ${last.net<0?'lo':'hi'}"><b>${money(last.net)}</b></span></div></div></div>`:'<p class="hint">첫 시즌이 끝나면 결산이 나옵니다.</p>'}</section>`;
 }
