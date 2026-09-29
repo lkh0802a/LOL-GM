@@ -21,7 +21,11 @@ source+=String.raw`(()=>{
   finalizeInitialRosters(db);
   ok(manager.roster.length===5,'need a five-person starting baseline');
   const p=db.players[manager.roster[0]],original=playerMod(p);
+  const initialCash=manager.finance.cash;
+  manager.finance.cash=0; // An unaffordable free agent must not bypass the five-player floor.
   const limited=startMedicalEvent(db,p,'injury','severe',25,db.worldDate);
+  manager.finance.cash=initialCash;
+  ok(manager.roster.length===5,'unfunded emergency FA was added despite zero cash');
   ok(limited&&!limited.out&&!medicalOut(p)&&limited.severity==='minor',
     'incident left a five-person team unable to compete');
   ok(playerMod(p)<original-.03,'limited participation did not hurt performance');
@@ -101,6 +105,42 @@ source+=String.raw`(()=>{
     scarCount+=lost;
   }
   ok(scarCount>=2&&scarCount<100,'permanent loss was not rare');
+  // D02-B3: sign a season-long FA only when academy coverage is unavailable.
+  // Exercise both the managed club and a rival under identical market rules.
+  const verifyEmergencyFA=(team,label)=>{
+    ok(team.roster.length===5&&medicalAvailable(db,team)===5,
+      label+' needs an ordinary healthy five-player roster');
+    const before=new Set(team.roster),beforePayroll=payroll(db,team);
+    team.finance.cash=1000; // Give this deterministic fixture sufficient headroom.
+    const victim=db.players[team.roster[0]];
+    const incident=startMedicalEvent(db,victim,'injury','severe',21,db.worldDate);
+    const signed=team.roster.map(id=>db.players[id]).find(p=>!before.has(p.id));
+    ok(incident?.out&&incident.severity==='severe'&&medicalOut(victim),
+      label+' failed to apply a genuine medical absence');
+    ok(signed&&signed.team===team.id&&signed.contract?.years===1&&
+      signed.contract.until===db.year&&team.roster.length===6,
+      label+' did not sign a one-year substitute');
+    ok(signed.careerEvents.some(e=>e.type==='medical_emergency_fa'&&
+      e.for===victim.id&&e.to===team.id),
+      label+' emergency signing lost its reason in player history');
+    ok(Math.abs(payroll(db,team)-beforePayroll-signed.contract.salary)<.001,
+      label+' substitute contract was not added to the wage bill');
+    ok(medicalAvailable(db,team)===5&&validateStartingLineup(db,team).ok,
+      label+' failed to maintain an eligible starting lineup');
+    ok(rosterIntegrityErrors(db).length===0,
+      label+' signing introduced a duplicate or inconsistent registration');
+    const saved=unpackDB(packDB(db));
+    ok(saved.players[victim.id].medical?.out&&
+      saved.players[signed.id].team===team.id&&
+      saved.players[signed.id].contract?.until===db.year&&
+      saved.teams[team.id].roster.includes(signed.id),
+      label+' emergency signing or absence failed the save roundtrip');
+  };
+  verifyEmergencyFA(manager,'manager');
+  const aiClub=teams.find(t=>t.id!==manager.id&&t.id!==club.id&&
+    t.roster.length===5&&medicalAvailable(db,t)===5);
+  ok(aiClub,'need a five-person AI team for the FA signing test');
+  verifyEmergencyFA(aiClub,'AI');
   // D02-B: protected top and reserve squads exchange only surplus healthy
   // players, using the same atomic roster plan as manager and club AI.
   const cfg2=defaultWorldConfig();
@@ -150,7 +190,7 @@ source+=String.raw`(()=>{
 
     ok(db.version===15,'world schema changed');
   console.log('D02_MEDICAL_ACCEPTANCE '+JSON.stringify({
-    fivePlayerFloor:true,emergencySubstitute:true,individualRest:true,rehab:true,format2Save:true,
+    fivePlayerFloor:true,emergencySubstitute:true,emergencyFA:true,individualRest:true,rehab:true,format2Save:true,
     dayIdempotent:true,offseasonRecovery:true,scars:scarCount,samples:600
   }));
 })();`;
