@@ -89,3 +89,35 @@ function pushTimedEventDay(s,localDate,stage,label,pairs,bo){
   }
   s.days.sort((a,b)=>a.date.localeCompare(b.date));
 }
+
+function scrimUtcTimeOnDay(db,team,slot,utcDate=db.worldDate){
+  const zone=teamTimeZone(db,team.id),
+    time=slot==='afternoon'?'14:00':'19:00';
+  if(slot!=='afternoon'&&slot!=='evening')return null;
+  // In Los Angeles, Tuesday evening falls on Wednesday UTC. In Korea,
+  // both sessions fall on Tuesday UTC. Search the corresponding local date.
+  for(const localDate of [addDays(utcDate,-1),utcDate,addDays(utcDate,1)]){
+    const startsAt=zonedKickoffUTC(localDate,time,zone);
+    if(startsAt.slice(0,10)===utcDate)return {startsAt,localDate,zone};
+  }
+  return null;
+}
+function scrimSharedWorkHours(db,t,other,slot,utcDate=db.worldDate){
+  const first=scrimUtcTimeOnDay(db,t,slot,utcDate);
+  if(!first)return null;
+  const second=zonedClock(first.startsAt,teamTimeZone(db,other.id));
+  // A 3-game block needs approximately three consecutive waking hours for
+  // *both* teams. No 03:00 international scrims disguised as "afternoon".
+  if(second.hour<12||second.hour>20)return null;
+  const opponentSlot=second.hour<18?'afternoon':'evening';
+  for(const [team,day,block] of [[t,first.localDate,slot],
+    [other,second.date,opponentSlot]]){
+    if(officialBookedTeams(db,day).has(team.id))return null;
+    if((team.scrimLog||[]).some(x=>
+      (x.localDate||x.date)===day&&x.slot===block))return null;
+  }
+  return {startsAt:first.startsAt,
+    localDates:{[t.id]:first.localDate,[other.id]:second.date},
+    slots:{[t.id]:slot,[other.id]:opponentSlot},
+    timeZones:{[t.id]:first.zone,[other.id]:second.zone}};
+}
