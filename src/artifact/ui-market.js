@@ -38,7 +38,7 @@ function bindMarket(){
   bindClubOfficeControls(act);
   document.querySelectorAll('[data-exercise-option]').forEach(b=>b.onclick=()=>act(mExerciseTeamOption(DB,b.dataset.exerciseOption)));
   document.querySelectorAll('[data-start-renew]').forEach(b=>b.onclick=()=>act(startNegotiation(DB,b.dataset.startRenew,'renewal').msg));
-  document.querySelectorAll('[data-release]').forEach(b=>b.onclick=()=>{const p=DB.players[b.dataset.release],cost=p.contract&&p.contract.until>=DB.year?p.contract.salary*(p.contract.until-DB.year+1)*.5:0;if(confirm(`${p.name} 선수를 방출할까요?\n해지금 ${money(cost)}${p.contract?` · 계약 ${p.contract.until}년까지`:''}\n방출 후 즉시 FA가 됩니다.`))act(mRelease(DB,b.dataset.release))});
+  document.querySelectorAll('[data-release]').forEach(b=>b.onclick=()=>{const p=DB.players[b.dataset.release],cost=p.contract?.medicalReplacement?0:p.contract&&p.contract.until>=DB.year?p.contract.salary*(p.contract.until-DB.year+1)*.5:0;if(confirm(`${p.name} 선수를 방출할까요?\n해지금 ${money(cost)}${p.contract?` · 계약 ${p.contract.until}년까지`:''}\n방출 후 즉시 FA가 됩니다.`))act(mRelease(DB,b.dataset.release))});
   document.querySelectorAll('[data-interest]').forEach(b=>b.onclick=()=>act(mInterest(DB,b.dataset.interest,'B')));
   document.querySelectorAll('[data-priority]').forEach(el=>el.onchange=()=>act(mInterest(DB,el.dataset.priority,el.value)));
   document.querySelectorAll('[data-evaluate]').forEach(b=>b.onclick=()=>act(mEvaluateTarget(DB,b.dataset.evaluate)));
