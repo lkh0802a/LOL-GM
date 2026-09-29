@@ -2,14 +2,15 @@
 // Registered players may occupy any game-role slot. This domain owns unique-five validation,
 // role-fit lineup construction and starter assignment; p.role remains the player's primary identity.
 
-function lineupRoleScore(p,role){return playerRoleRating(p,role)}
-function validLineupPlayer(db,team,p){return !!p&&p.team===team.id&&(team.roster||[]).includes(p.id)}
+function lineupRoleScore(p,role){return playerRoleRating(p,role)-medicalPerformancePenalty(p)*100}
+function validLineupPlayer(db,team,p){return !!p&&!p.retired&&!medicalOut(p)&&p.team===team.id&&(team.roster||[]).includes(p.id)}
 function validateStartingLineup(db,t,assignment=null,rosterOverride=null){
   const team=teamRef(db,t);if(!team)return {ok:false,errors:['팀을 찾을 수 없습니다']};
   const roster=new Set(rosterOverride||team.roster||[]),map=assignment||team.depthChart||{},errors=[],used=new Set(),planned=Array.isArray(rosterOverride);
   for(const role of ROLES){
     const pid=map[role],p=pid&&db.players[pid];
     if(!p||!roster.has(pid)||(!planned&&p.team!==team.id))errors.push(ROLE_KO[role]+' 슬롯에 등록 선수가 필요합니다');
+    else if(medicalOut(p))errors.push(p.name+' 선수는 치료 중이어서 출전할 수 없습니다');
     else if(used.has(pid))errors.push(p.name+' 선수를 두 포지션에 동시에 선발할 수 없습니다');
     else used.add(pid);
   }

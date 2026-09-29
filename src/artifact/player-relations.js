@@ -3,7 +3,7 @@
 
 function pState(p){if(p.form===undefined)p.form=0;if(p.fatigue===undefined)p.fatigue=10;if(p.morale===undefined)p.morale=65;if(p.condition===undefined)p.condition=96;if(p.sharpness===undefined)p.sharpness=55;if(p.teamAdaptation===undefined)p.teamAdaptation=p.team?60:50;if(p.tacticalAdaptation===undefined)p.tacticalAdaptation=p.team?60:50;return p}
 // 상태는 기본 실력을 보정하지만 압도하지 않도록 총합을 제한한다.
-function playerMod(p){pState(p);const v=p.form/250-p.fatigue/900+(p.condition-92)/1200+(p.morale-65)/1800+(p.sharpness-60)/1700+((p.teamAdaptation+p.tacticalAdaptation)/2-60)/2200;return clamp(v,-.11,.09)}
+function playerMod(p){pState(p);const v=p.form/250-p.fatigue/900+(p.condition-92)/1200+(p.morale-65)/1800+(p.sharpness-60)/1700+((p.teamAdaptation+p.tacticalAdaptation)/2-60)/2200;return clamp(v,-.11,.09)-medicalPerformancePenalty(p)}
 function teamSynergy(t){return t.synergy??50}
 function playerRelationKey(a,b){const x=typeof a==='string'?a:a?.id,y=typeof b==='string'?b:b?.id;if(!x||!y||x===y)return null;return x<y?x+'|'+y:y+'|'+x}
 function playerRelationship(db,a,b){const k=playerRelationKey(a,b);if(!k)return 50;db.playerRelations=db.playerRelations||{};return db.playerRelations[k]??50}
@@ -94,6 +94,7 @@ function afterSeries(db,lines,rec){
     const k=ls.reduce((a,l)=>a+l.k+l.a*0.7,0), d=ls.reduce((a,l)=>a+l.d,0), w=ls.filter(l=>l.win).length, mv=ls.filter(l=>l.mvp).length;
     const perf=(k/Math.max(1,d)-2.2)*0.8+(w-(ls.length-w))*0.8+mv*1.5;
     p.form=clamp(p.form*.7+perf+(hashStr(pid+rec.seed)%3-1),-10,10);
+    medicalExposure(db,p,'official',ls.length);
     p.fatigue=clamp(p.fatigue+ls.length*4,0,100);p.condition=clamp(p.condition-ls.length*1.6,45,100);
     p.sharpness=clamp(p.sharpness+ls.length*3.2,0,100);p.teamAdaptation=clamp(p.teamAdaptation+ls.length*.7,0,100);p.tacticalAdaptation=clamp(p.tacticalAdaptation+ls.length*.55,0,100);
     p.morale=clamp(p.morale+(w>ls.length/2?2:-2)+mv,0,100);
