@@ -71,8 +71,9 @@ function simulateBackgroundScrim(db,t,opp,games,rng,slot,booked=null,proposal=nu
   // embargo. Booking checks remain independent of AI acceptance probability.
   const assessment=scrimPartnerAssessment(db,t,opp);
   if(!assessment.allowed)return null;
-  const first=scrimReadiness(db,t,booked),second=scrimReadiness(db,opp,booked);
-  if(!slot||!first.ok||!second.ok||!first.availableSlots.includes(slot)||
+  const first=scrimReadiness(db,t,booked),second=scrimReadiness(db,opp,booked),
+    sharedTime=scrimTimeOverlap(db,t,opp,db.worldDate,slot);
+  if(!sharedTime||!first.ok||!second.ok||!first.availableSlots.includes(slot)||
     !second.availableSlots.includes(slot)||games>first.remaining||games>second.remaining)return null;
   const participants=[t,opp],lines=[],results=[],wins={[t.id]:0,[opp.id]:0};
   for(let g=0;g<games;g++){
@@ -107,7 +108,8 @@ function simulateBackgroundScrim(db,t,opp,games,rng,slot,booked=null,proposal=nu
   if(!results.length)return null;
   const plan=proposal?.allowed?proposal:assessment;
   const rec={a:t.id,b:opp.id,games:results,wins,practice:true,patch:db.patch.id,
-    date:db.worldDate,slot,goals:{[t.id]:plan.left.reason,
+    date:db.worldDate,slot,startsAt:sharedTime.startsAt,
+    endsAt:sharedTime.endsAt,goals:{[t.id]:plan.left.reason,
       [opp.id]:plan.right.reason}};
   recordScrimPractice(db,rec,lines);
   return rec;
@@ -131,7 +133,8 @@ function aiRunScrims(db,rng){
       if(busy.has(t.id)||!first.ok||!first.availableSlots.includes(slot)||!rng.chance(.84))continue;
       const candidates=order.filter(o=>o.id!==t.id&&!busy.has(o.id)&&
         o.region===t.region&&
-        scrimReadiness(db,o,booked).availableSlots?.includes(slot));
+        scrimReadiness(db,o,booked).availableSlots?.includes(slot)&&
+        !!scrimTimeOverlap(db,t,o,db.worldDate,slot));
       if(!candidates.length)continue;
       const ranked=candidates.map(o=>({team:o,
         offer:scrimPartnerAssessment(db,t,o,intents,strengths,rivals)}))
@@ -182,6 +185,7 @@ function recordScrimPractice(db,rec,lines){
     team.scrimLog.push({date:db.worldDate,games,opponent:opp,
       wins:rec.wins?.[tid]??null,losses:rec.wins?games-(rec.wins[tid]||0):null,
       patch:rec.patch||db.patch.id,slot:rec.slot||null,
+      startsAt:rec.startsAt||null,endsAt:rec.endsAt||null,
       purpose:rec.goals?.[tid]||'팀 연습'});
   }
   recordRoleConversionUsage(db,lines,'scrim');
