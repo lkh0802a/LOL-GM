@@ -13,6 +13,7 @@ function medicalPlanFor(db,p){
   if(['normal','light','rest'].includes(selected))return selected;
   if(selected==='rehab')return p.medical?.daysLeft>0||p.medicalResidual?.daysLeft>0?'rehab':'rest';
   if(p.medical?.daysLeft>0)return 'rehab';
+  if(p.medicalPlanDate===db.worldDate&&p.medicalDayPlan)return p.medicalDayPlan;
   if(p.medicalResidual?.daysLeft>0)return 'light';
   if((p.fatigue||0)>=51||(p.condition??96)<74)return 'rest';
   if((p.fatigue||0)>=34||(p.condition??96)<85)return 'light';
@@ -103,6 +104,7 @@ function medicalDailyTick(db,date){
       const rng=new RNG((db.world?.seed||'world')+'|'+date+'|'+p.id,'medical');
       const load=p.medicalLoad||0;
       const plan=medicalPlanFor(db,p),rest=medicalScrimRest(db,p);
+      p.medicalDayPlan=plan;p.medicalPlanDate=date;
       const high=t.training?.intensity==='high'&&!rest&&plan!=='light',care=medicalCare(db,p);
       p.medicalLoad=Math.round(clamp(load*(rest?.73:plan==='light'?.82:.86)+(rest?0:high?.35:plan==='light'?.02:.08),0,38)*100)/100;
       p.medicalOverloadDays=load>=9&&!rest&&(high||p.fatigue>=38)?
