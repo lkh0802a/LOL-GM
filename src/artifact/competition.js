@@ -49,7 +49,7 @@ function addStageDays(db,s,idx,teams,date){
       }
     }else{
       for(let r=0;r<R;r++){
-        pushDay(s,date,cfg.id,`${cfg.name} ${r+1}라운드`,
+        pushEventRound(s,date,cfg.id,`${cfg.name} ${r+1}라운드`,
           sched.flatMap(x=>x[r]||[]),cfg.bestOf);
         date=addDays(date,gap(r));
       }
@@ -108,7 +108,7 @@ function swissRound(db,s,idx,date){
     carry=pool;}
   if(!pairs.length)return;
   const bo=cfg.bestOf; const label=`${cfg.name} ${sd.round+1}라운드`;
-  pushDay(s,date,cfg.id,label,pairs,bo);
+  pushEventRound(s,date,cfg.id,label,pairs,bo);
   sd.round++;sd.lastLabel=label;
 }
 function standings(db,s,stageId){
@@ -163,9 +163,9 @@ function finalizeCompetitionDay(db,s,day,cfgIdx,cfg){
     deAfter(sd,sd.rounds[sd.rounds.length-1],roundDays.flatMap(d=>d.matches));
     if(sd.alive&&sd.alive.length===1&&sd.gf)finishStage(db,s,cfgIdx,localDate);else deRound(db,s,cfgIdx,nd);
   }else if(cfg.type==='swiss'&&roundDone){
-    for(const m of day.matches){const w=m.res.winner,l=m.a===w?m.b:m.a;sd.rec[w].w++;sd.rec[l].l++;sd.rec[m.a].opp.push(m.b);sd.rec[m.b].opp.push(m.a);if(sd.rec[w].w>=sd.W)sd.advanced.push(w);if(sd.rec[l].l>=sd.L)sd.out.push(l)}
+    for(const m of roundDays.flatMap(d=>d.matches)){const w=m.res.winner,l=m.a===w?m.b:m.a;sd.rec[w].w++;sd.rec[l].l++;sd.rec[m.a].opp.push(m.b);sd.rec[m.b].opp.push(m.a);if(sd.rec[w].w>=sd.W)sd.advanced.push(w);if(sd.rec[l].l>=sd.L)sd.out.push(l)}
     const act=sd.teams.filter(t=>!sd.advanced.includes(t)&&!sd.out.includes(t)),want=(comp.stages[cfgIdx+1]||{}).take||Math.floor(sd.teams.length/2);
-    if(act.length>=2&&sd.advanced.length<want)swissRound(db,s,cfgIdx,addDays(localDate,1));else finishStage(db,s,cfgIdx,localDate);
+    if(act.length>=2&&sd.advanced.length<want)swissRound(db,s,cfgIdx,addDays(localDate,2));else finishStage(db,s,cfgIdx,localDate);
   }else if(cfg.type==='round_robin'&&!s.days.slice(s.cur).some(d=>d.stage===cfg.id))finishStage(db,s,cfgIdx,localDate);
   return true;
 }
