@@ -16,7 +16,45 @@ function facilityAnalysisBonus(t){if(!t)return 0;return (ensureFacilities(t).ana
 function facilityRecoveryBonus(t){if(!t)return 0;return (ensureFacilities(t).recovery-1)*.7}
 function facilityCost(db,t,key='training'){const f=ensureFacilities(t),lv=f[key]||1;return Math.round((lv+1)*5*psOf(db,t.region)*10)/10}
 function facilityUpkeep(db,t){const f=ensureFacilities(t),sum=Object.values(f).reduce((a,b)=>a+b,0);return Math.round(sum*.32*psTeam(db,t)*10)/10}
-function upgradeFacility(db,t,key){if(!['training','analysis','recovery','youth'].includes(key))throw new Error('유효하지 않은 시설입니다');const f=ensureFacilities(t);if(f[key]>=5)throw new Error('이미 최고 단계입니다');const cost=facilityCost(db,t,key);if(!t.finance||t.finance.cash<cost)throw new Error('시설 증설 자금이 부족합니다');t.finance.cash=Math.round((t.finance.cash-cost)*10)/10;f[key]++;t.facility=Math.round(Object.values(f).reduce((a,b)=>a+b,0)/4);return cost}
+function facilityBuildDays(level){return 18+level*12}
+function facilityReadyDate(start,days){
+  const d=new Date((start||'2027-01-01')+'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate()+days);
+  return d.toISOString().slice(0,10);
+}
+function upgradeFacility(db,t,key,opt={}){
+  if(!['training','analysis','recovery','youth'].includes(key))throw new Error('유효하지 않은 시설입니다');
+  const f=ensureFacilities(t);
+  if(f[key]>=5)throw new Error('이미 최고 단계입니다');
+  if((t.facilityProjects||[]).some(p=>p.key===key))throw new Error('이미 증설 중인 시설입니다');
+  const cost=facilityCost(db,t,key);
+  if(!t.finance||t.finance.cash<cost)throw new Error('시설 증설 자금이 부족합니다');
+  t.finance.cash=Math.round((t.finance.cash-cost)*10)/10;
+  recordFinancePrepaid(t,'facilityInvestment',cost);
+  if(opt.deferDays>0){
+    t.facilityProjects=t.facilityProjects||[];
+    t.facilityProjects.push({key,from:f[key],to:f[key]+1,cost,started:db.worldDate,
+      ready:facilityReadyDate(db.worldDate,opt.deferDays)});
+  }else{
+    f[key]++;
+    t.facility=Math.round(Object.values(f).reduce((a,b)=>a+b,0)/4);
+  }
+  return cost;
+}
+function advanceFacilityConstruction(db,date=db.worldDate){
+  let completed=0;
+  for(const t of activeTeams(db)){
+    if(!t.facilityProjects?.length)continue;
+    const f=ensureFacilities(t),remaining=[];
+    for(const p of t.facilityProjects){
+      if(!date||date<p.ready){remaining.push(p);continue}
+      if(f[p.key]===p.from){f[p.key]=p.to;completed++}
+    }
+    t.facilityProjects=remaining;
+    t.facility=Math.round(Object.values(f).reduce((a,b)=>a+b,0)/4);
+  }
+  return completed;
+}
 
 function ageCurve(age,g){
   const T={mechanical:[[19,3],[21,2],[23,0.8],[25,0],[27,-1],[99,-2.2]],laning:[[19,2.5],[22,1.8],[24,0.6],[26,0],[28,-0.8],[99,-1.8]],combat:[[19,2.5],[22,1.8],[24,0.6],[26,0],[28,-0.8],[99,-1.8]],
