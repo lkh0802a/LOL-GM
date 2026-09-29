@@ -208,10 +208,18 @@ const INTL_FORMATS={first_stand:'조별리그 + 녹아웃',msi_swiss_de:'스위�
   worlds_league_phase:'6라운드 리그 페이즈 + 16강 토너먼트',masters_groups:'조별 더블 라운드로빈 + 녹아웃',
   open_groups:'조별리그 + 녹아웃',regional_cup:'권역별 조별리그 + 녹아웃',
   playin_swiss_ko:'플레이인 + 스위스 + 녹아웃',swiss_ko:'스위스 + 녹아웃',playin_groups_ko:'플레이인 + 그룹 + 녹아웃',playin_de:'플레이인 + 더블 엘리미네이션',groups_ko:'그룹 + 녹아웃',groups_de:'그룹 + 더블 엘리미네이션',ko:'녹아웃'};
-function leagueStages(R,n,div){
+function leagueStages(R,n,div,split=3){
   const fmt=R.format||'rr_po', bo=Math.max(3,R.regularBo||3), pbo=div===2?3:Math.max(3,R.playoffBo||5);
   const take=div===2?Math.min(4,n):Math.min(Math.max(4,R.playoffTake||4),n);
-  const rr={id:'regular',name:'정규 시즌',type:'round_robin',legs:Math.max(2,R.legs||2),bestOf:bo,dayGap:[3,4],broadcast:'weekly'};
+  // A 16-team three-split circuit would otherwise have 90 regular series
+  // per club each season plus international travel: not a viable broadcast year.
+  // Split larger leagues into two even-sized broadcast conferences, and use
+  // a shorter kickoff conference stage for 12-team circuits.
+  const conferences=div!==2&&(R.splits||1)>=3&&n%4===0&&
+    (n>=14||(n>=12&&split===1));
+  const rr={id:'regular',name:conferences?'정규 시즌 · 콘퍼런스':'정규 시즌',
+    type:'round_robin',legs:Math.max(2,R.legs||2),bestOf:bo,
+    dayGap:[3,4],broadcast:'weekly',...(conferences?{groups:2}:{})};
   const po=t=>({id:'playoffs',name:'플레이오프',type:'single_elim',from:'regular',take:t,bestOf:pbo,dayGap:[6,6],firstChoice:'seed'});
   if(div===2)return [rr,po(take)];
   if(fmt==='rr_de')return [rr,{id:'playoffs',name:'플레이오프',type:'double_elim',from:'regular',take:take>=8&&n>=8?8:take>=6&&n>=8?8:4,bestOf:pbo,dayGap:[4,4]}];
