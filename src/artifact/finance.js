@@ -111,43 +111,73 @@ function financeForecast(db,t){
 // 한 해 결산: 중계권 분배, 스폰서, 굿즈, 상금, 구단주 지원 − 연봉, 스태프, 운영비, 사치세
 function closeFinances(db,w,rng,ev){
   const prize={};
-  for(const s of Object.values(w.seasons)){ if(!s.done)continue;
-    const c=db.competitions[s.comp], ps=c.international?1:psOf(db,c.region);
-    const pool=c.international?(c.id==='WORLDS'?45:c.tier==='low'?5:18):9*ps;
-    const wts=c.teams.map(t=>[t,1+elimReach(db,s,t)*3]), sum=wts.reduce((a,x)=>a+x[1],0);
-    wts.forEach(([t,x])=>prize[t]=(prize[t]||0)+pool*x/sum);
+  for(const season of Object.values(w.seasons||{})){
+    if(!season.done)continue;
+    const c=db.competitions[season.comp];
+    if(!c)continue;
+    const pool=c.international?(c.id==='WORLDS'?45:c.tier==='low'?5:18):9*psOf(db,c.region);
+    const participants=(c.teams||[]).filter(id=>db.teams[id]);
+    const weights=participants.map(id=>[id,1+elimReach(db,season,id)*3]);
+    const total=weights.reduce((n,row)=>n+row[1],0);
+    if(total)for(const [id,weight] of weights)prize[id]=(prize[id]||0)+pool*weight/total;
   }
   const taxPool={};
   const recs=activeTeams(db).map(t=>{
-    const R=db.regions[t.region], ps=psTeam(db,t), m=(R.metrics||[]).slice(-1)[0], hype=m?m.hype:45;
-    const wins=Object.values(w.seasons).reduce((a,s)=>{const r=(s.stageData.regular&&standings(db,s,'regular').find(x=>x.tid===t.id));return a+(r?r.w:0)},0);
-    const sp=t.sponsor&&t.sponsor.until>=w.year?t.sponsor:null;
-    const pre=t.finance.prepaid||{};
-    const rev={league:hype*0.25*ps,sponsor:sp?sp.base+(sp.perWin||0)*wins:(t.fans||30)*0.35*ps,merch:(t.fans||30)*0.1*ps,prize:prize[t.id]||0,owner:ownerSupport(db,t),transfer:pre.transferReceived||0};
-    const pay=payroll(db,t),regulated=regulatedPayroll(db,t);
-    const exp={salary:pay,bonuses:contractBonusCost(db,t,w.year),staff:staffCost(db,t),ops:opsCost(db,t),facility:facilityUpkeep(db,t),buyout:t.finance.buyout||0,tax:spendingTax(db,t),facilityInvestment:pre.facilityInvestment||0,signingBonus:pre.signingBonus||0,transfer:pre.transferPaid||0,staffSeverance:pre.staffSeverance||0};
-    if(exp.tax>0)taxPool[R.id]=(taxPool[R.id]||0)+exp.tax*(R.sfrTeamShare??1)
-    const prepaidIn=pre.transferReceived||0,prepaidOut=(pre.facilityInvestment||0)+(pre.signingBonus||0)+(pre.transferPaid||0)+(pre.staffSeverance||0);
-    return {t,R,rev,exp,prepaidIn,prepaidOut};
+    const R=db.regions[t.region];
+    const rev=financeCommercialIncome(db,t,w,false,prize[t.id]||0);
+    const exp=financeOperatingExpense(db,t,w);
+    if(exp.tax>0)taxPool[R.id]=(taxPool[R.id]||0)+exp.tax*(R.sfrTeamShare??1);
+    return {t,R,rev,exp,settled:financePrepaidSettlement(t)};
   });
-  for(const r of recs){
-    if(taxPool[r.R.id]){const under=recs.filter(x=>x.R===r.R&&x.R.spendingRule==='sfr_top5'&&x.exp.tax===0&&regulatedPayroll(db,x.t)>=(x.R.salaryFloor||0)&&regulatedPayroll(db,x.t)<=(x.R.salaryCap||Infinity)&&(x.t.division||1)===1);if(under.includes(r))r.rev.tax=taxPool[r.R.id]/under.length}
-    const inc=sumFinanceRows(r.rev),out=sumFinanceRows(r.exp);
-    const f=r.t.finance;f.buyout=0;f.prepaid={};f.cash=Math.round((f.cash+inc-out-r.prepaidIn+r.prepaidOut)*10)/10;
-    const round=o=>Object.fromEntries(Object.entries(o).map(([k,v])=>[k,Math.round(v*10)/10]));
-    f.history=[...f.history,{year:w.year,rev:round(r.rev),exp:round(r.exp),net:Math.round((inc-out)*10)/10,cash:f.cash}].slice(-10);
-    if(r.exp.tax>0)ev(`${r.t.name} 균형지출 부담금 ${money(r.exp.tax)} 납부 (상위 5인 기준 ${money(regulatedPayroll(db,r.t))}, 기준선 ${money(r.R.salaryCap)})`);
-    // 누적 적자 → 구단 매각 (새 구단주가 자금 투입, 리그 팀 수는 유지)
-    if(r.t.parent){const pt=db.teams[r.t.parent];if(pt&&f.cash<0){pt.finance.cash=Math.round((pt.finance.cash+f.cash)*10)/10;f.cash=0}continue} // 2군 적자는 모구단이 부담
-    const recentLosses=f.history.slice(-2).filter(x=>x.net<0).length;
-    if(f.cash<-12*psTeam(db,r.t)&&recentLosses>=2){
-      const old=r.t.name,on=orgName(db,rng);r.t.name=on.name;r.t.formerNames=[...(r.t.formerNames||[]),old];
-      r.t.owner={wealth:Math.round(clamp(rng.normal(65,15),30,95))};f.cash=Math.round(25*psTeam(db,r.t)*10)/10;r.t.fans=Math.round((r.t.fans||30)*.88);
-      ev(`장기 재정난으로 구단 매각: ${old} → ${r.t.name} (연속 적자, 신규 구단주 자금 투입)`);
+  // Any tax redistribution is financed by collected liabilities in the same
+  // regional office; it is not added to the league from nowhere.
+  for(const R of Object.values(db.regions)){
+    const share=taxPool[R.id]||0;if(!share)continue;
+    const under=recs.filter(row=>row.R===R&&R.spendingRule==='sfr_top5'&&
+      row.exp.tax===0&&(row.t.division||1)===1&&
+      regulatedPayroll(db,row.t)>=(R.salaryFloor||0)&&
+      regulatedPayroll(db,row.t)<=(R.salaryCap||Infinity));
+    if(under.length)for(const row of under)row.rev.tax=share/under.length;
+  }
+  // An academy deficit is funded by its parent club, and both sides show that
+  // internal cash transfer in their statements. No unmatched cash adjustments.
+  const index=new Map(recs.map(row=>[row.t.id,row]));
+  for(const row of recs){
+    if(!row.t.parent)continue;
+    const parent=index.get(row.t.parent);
+    if(!parent)continue;
+    const projected=row.t.finance.cash+sumFinanceRows(row.rev)-sumFinanceRows(row.exp)-
+      row.settled.income+row.settled.expense;
+    const funding=Math.round(Math.max(0,-projected)*10)/10;
+    if(!funding)continue;
+    row.rev.academyFunding=funding;
+    parent.exp.academySupport=(parent.exp.academySupport||0)+funding;
+  }
+  const round=value=>Math.round(value*10)/10;
+  const roundRows=rows=>Object.fromEntries(Object.entries(rows).map(([key,v])=>[key,round(v)]));
+  for(const row of recs){
+    const inc=sumFinanceRows(row.rev),out=sumFinanceRows(row.exp),f=row.t.finance;
+    const net=inc-out;
+    f.cash=round(f.cash+net-row.settled.income+row.settled.expense);
+    f.buyout=0;f.prepaid={};
+    f.history=[...f.history,{year:w.year,rev:roundRows(row.rev),
+      exp:roundRows(row.exp),net:round(net),cash:f.cash}].slice(-10);
+    if(row.exp.tax>0)ev(`${row.t.name} 균형지출 부담금 ${money(row.exp.tax)} 납부 (상위 5인 기준 ${money(regulatedPayroll(db,row.t))}, 기준선 ${money(row.R.salaryCap)})`);
+    if(row.t.parent)continue;
+    const losses=f.history.slice(-2).filter(y=>y.net<0).length;
+    if(f.cash<-12*psTeam(db,row.t)&&losses>=2){
+      const old=row.t.name,renamed=orgName(db,rng),before=f.cash;
+      row.t.name=renamed.name;row.t.formerNames=[...(row.t.formerNames||[]),old];
+      row.t.owner={wealth:Math.round(clamp(rng.normal(65,15),30,95))};
+      f.cash=round(25*psTeam(db,row.t));row.t.fans=Math.round((row.t.fans||30)*.88);
+      // Equity recapitalization is a capital movement, not an operating profit.
+      const year=f.history.at(-1);
+      year.capital={newOwner:f.cash-before};year.cash=f.cash;
+      ev(`장기 재정난으로 구단 매각: ${old} → ${row.t.name} (연속 적자, 신규 구단주 자금 투입 ${money(f.cash-before)})`);
     }
   }
 }
 
 // 계약 만료 · 재계약 · FA 시장
 
-function mSponsor(db,id){const t=myT(db),o=(db.world.sponsorOffers||[]).find(x=>x.id===id);if(!o)return '';t.sponsor={...o,until:db.year+o.years-1};return `${o.name} ${o.type} 스폰서 계약 (${o.years}년)`}
+function mSponsor(db,id){const t=myT(db);if(!t)return '구단을 찾을 수 없습니다';if(t.sponsor?.until>=db.year)return '기존 스폰서 계약 기간이 남아 있습니다';const offers=db.world?.sponsorOffers||[];const o=offers.find(x=>x.id===id);if(!o)return '제안이 만료되었습니다';t.sponsor={...o,until:db.year+o.years-1};return `${o.name} ${o.type} 스폰서 계약 (${o.years}년)`}
