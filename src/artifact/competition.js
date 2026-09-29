@@ -49,9 +49,9 @@ function addStageDays(db,s,idx,teams,date){
       }
     }else{
       for(let r=0;r<R;r++){
-        pushEventRound(s,date,cfg.id,`${cfg.name} ${r+1}라운드`,
-          sched.flatMap(x=>x[r]||[]),cfg.bestOf);
-        date=addDays(date,gap(r));
+        const pairs=sched.flatMap(x=>x[r]||[]);
+        pushEventRound(s,date,cfg.id,`${cfg.name} ${r+1}라운드`,pairs,cfg.bestOf);
+        date=addDays(date,eventRoundGap(s,pairs.length,gap(r)));
       }
     }
     s.stageData[cfg.id]={type:cfg.type,teams,groups:cfg.groups>1?groups:null};
