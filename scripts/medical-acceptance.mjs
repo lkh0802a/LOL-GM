@@ -110,6 +110,14 @@ source+=String.raw`(()=>{
   const verifyEmergencyFA=(team,label)=>{
     ok(team.roster.length===5&&medicalAvailable(db,team)===5,
       label+' needs an ordinary healthy five-player roster');
+    // Blank-roster setup may sign the full first-year market. Introduce
+    // an actual generated, unattached open-qualifier player for this fixture.
+    const targetRole=db.players[team.roster[0]].role;
+    const available=genPlayer(db,new RNG('d02-fa-'+label,'fixture'),{
+      role:targetRole,age:23,base:db.regions[team.region].strength-10,
+      region:team.region,entryPath:'open_qualifier'
+    });
+    ok(!available.team,'test free agent was assigned before signing');
     const before=new Set(team.roster),beforePayroll=payroll(db,team);
     team.finance.cash=1000; // Give this deterministic fixture sufficient headroom.
     const victim=db.players[team.roster[0]];
