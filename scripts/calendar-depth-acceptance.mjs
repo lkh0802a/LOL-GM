@@ -25,15 +25,26 @@ const fixture=String.raw`(()=>{
   const leagueFixtureDates=domestic.days.filter(d=>d.matches.some(m=>
     m.a===user.id||m.b===user.id)).map(d=>d.date);
   assert(leagueFixtureDates.length>=8,'league schedule does not reach eight games');
+  const firstBroadcast=domestic.days[0].date,myOpening=leagueFixtureDates[0];
   for(let week=0;week<4;week++){
-    const start=addDays(firstFixture,week*7),end=addDays(start,7);
+    const start=addDays(firstBroadcast,week*7),end=addDays(start,7);
     const weekly=leagueFixtureDates.filter(date=>date>=start&&date<end);
-    assert(weekly.length===2,'each first-division team must have two regular matches per week');
-  }
-  for(let i=1;i<8;i++){
-    const elapsed=(new Date(leagueFixtureDates[i]+'T00:00:00Z')-
-      new Date(leagueFixtureDates[i-1]+'T00:00:00Z'))/86400000;
-    assert(elapsed===(i%2?3:4),'domestic match dates must alternate 3/4 day breaks');
+    assert(weekly.length===2,'each team must have two regular series per broadcast week');
+    const period=domestic.days.filter(day=>day.date>=start&&day.date<end);
+    assert(period.length===4,'each broadcast week must use four program days');
+    assert(period.every(day=>day.broadcast&&day.matches.length>=1&&
+      day.matches.every(match=>!!match.broadcastTime)),
+      'series must be assigned actual dated and timed broadcast slots');
+    const weekTeams=new Map();
+    for(const day of period)for(const m of day.matches)for(const id of [m.a,m.b])
+      weekTeams.set(id,[...(weekTeams.get(id)||[]),day.date]);
+    for(const dates of weekTeams.values()){
+      assert(dates.length===2,'every club must appear twice in each full broadcast week');
+      const elapsed=(new Date(dates[1]+'T00:00:00Z')-
+        new Date(dates[0]+'T00:00:00Z'))/86400000;
+      assert(elapsed>=2&&elapsed<=5,
+        'teams must have a normal recovery interval between two weekly broadcasts');
+    }
   }
   const t=db.teams[user.id],p=db.players[t.roster[0]];
   assert(p,'managed team needs a real player');
@@ -110,7 +121,7 @@ const fixture=String.raw`(()=>{
     last=r.date;
     if(r.pending){pending=r;break}
   }
-  assert(pending&&pending.date===firstFixture,'managed draft did not pause on the first match date');
+  assert(pending&&pending.date===myOpening,'managed draft did not pause on its actual broadcast date');
   const matchDate=db.worldDate,marker=db.world.lastDailyTick,
     practice=p.roleConversion?.trainingDays,fatigue=p.fatigue,
     facility=t.facilities.training,patches=db.patches.list.length;
@@ -157,11 +168,11 @@ const fixture=String.raw`(()=>{
   assert((prep.metaGames||0)===priorMeta,
     'private practice polluted the official patch/meta sample count');
   const checkTeam=activePractice[0].team;
-  prep.worldDate=addDays(firstFixture,-1);
-  assert(scrimDailyCapacity(prep,checkTeam)<=2,
+  prep.worldDate=addDays(myOpening,-1);
+  assert(scrimDailyCapacity(prep,user)<=2,
     'match eve should cap private practice at a light two-set session');
-  prep.worldDate=firstFixture;
-  assert(scrimDailyCapacity(prep,checkTeam)===0&&!scrimReadiness(prep,checkTeam).ok,
+  prep.worldDate=myOpening;
+  assert(scrimDailyCapacity(prep,user)===0&&!scrimReadiness(prep,user).ok,
     'official double-header dates cannot schedule conflicting scrims');
   const scrimSaved=unpackDB(packDB(prep));
   assert(scrimSaved.teams[checkTeam.id].scrimLog.length===checkTeam.scrimLog.length,
