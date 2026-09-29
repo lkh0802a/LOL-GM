@@ -81,6 +81,8 @@ function medicalEmergencyFASigning(db,t,injured){
   if(!t||medicalAvailable(db,t)!==5)return null;
   const rules=rosterRulesForTeam(db,t),cap=t.parent?rules.reserveTeamMax:rules.firstTeamMax;
   if((t.roster||[]).length>=cap||!t.finance||t.finance.cash<=0)return null;
+  const parent=parentTeamOf(db,t);
+  if(reserveTeamsOf(db,parent).length&&organizationRoster(db,parent).length>=rules.integratedMax)return null;
   const budget=salaryBudget(db,t)-payroll(db,t);
   if(!Number.isFinite(budget)||budget<=0)return null;
   const choices=Object.values(db.players).filter(p=>
