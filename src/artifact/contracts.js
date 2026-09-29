@@ -26,7 +26,7 @@ function playerMarketValue(db,p){
   const o=playerOvr(p),rep=p.reputation??o,up=Math.max(0,p.pot-o),rid=p.team&&db.teams[p.team]?db.teams[p.team].region:p.region,ps=psOf(db,rid),perf=recentMarketPerformance(db,p),demand=roleMarketDemand(db,p.role,rid);
   const ageMul=p.age<=20?1.25:p.age<=23?1.16:p.age<=26?1:p.age<=29?.82:.58,left=p.contract?Math.max(0,p.contract.until-db.year+1):0,contractMul=p.contract?1+Math.min(3,left)*.14:.68;
   const perfMul=clamp(1+(perf.rating-6.5)*.09+Math.min(.13,perf.intl*.004)+Math.min(.12,perf.titles*.045)+(p.form||0)*.008,.75,1.35);
-  const raw=.62*Math.exp((o-60)*.115)*ps*(.76+rep/175)*(1+up*(p.age<=22?.047:.018))*ageMul*contractMul*perfMul*demand;
+  const raw=.62*Math.exp((o-60)*.115)*ps*(.76+rep/175)*(1+up*(p.age<=22?.047:.018))*ageMul*contractMul*perfMul*demand*(1-medicalContractRisk(db,p)*.75);
   return Math.round(Math.max(.2*ps,raw)*10)/10;
 }
 function asking(db,p,rid){return Math.round(marketSalary(db,p,rid)*(1+p.personality.ambition/420)*(.95+(p.reputation??playerOvr(p))/1700)*10)/10}
@@ -75,12 +75,18 @@ function spendingTax(db,t){
   const a=Math.min(over,R.salaryCap*.1),b=Math.min(Math.max(0,over-a),R.salaryCap*.15),c=Math.max(0,over-a-b);
   return a*.25+b*.5+c*(R.luxuryTax||1);
 }
+function medicalContractYears(db,p,years){
+  const risk=medicalContractRisk(db,p);
+  return risk>=.115?Math.min(years,1):risk>=.065?Math.min(years,2):years;
+}
 function contractYearsForPlayer(db,p,rng){
   const elite=(p.reputation||playerOvr(p))>=85;
-  if(p.age<=20){const x=rng.next();return x<(elite?.1:.15)?1:x<(elite?.62:.72)?2:3}
-  if(p.age<=25){const x=rng.next();return x<(elite?.25:.45)?1:x<(elite?.78:.9)?2:3}
-  if(p.age<=28)return rng.chance(elite?.42:.7)?1:2;
-  return rng.chance(.88)?1:2;
+  let years;
+  if(p.age<=20){const x=rng.next();years=x<(elite?.1:.15)?1:x<(elite?.62:.72)?2:3}
+  else if(p.age<=25){const x=rng.next();years=x<(elite?.25:.45)?1:x<(elite?.78:.9)?2:3}
+  else if(p.age<=28)years=rng.chance(elite?.42:.7)?1:2;
+  else years=rng.chance(.88)?1:2;
+  return medicalContractYears(db,p,years);
 }
 
 function eligibleFillFAs(db,t,role=null){
@@ -94,7 +100,7 @@ function aiMarketObservation(db,p,t){
   const potential=Math.round(clamp(ability+ageUpside+n2*(foreign?5:3)+(p.reputation-ability)*.08,ability,99));
   return {ability,potential,uncertainty:Math.round(uncertainty*10)/10};
 }
-function aiMarketValue(db,p,t){const est=aiMarketObservation(db,p,t),up=Math.max(0,est.potential-est.ability),w={'win-now':0.1,'youth':0.6,'balanced':0.3,'superstar':0.15,'cost':0.35}[t.philosophy]||0.3;return est.ability+up*w-(t.philosophy==='youth'&&p.age>26?2:0)}
+function aiMarketValue(db,p,t){const est=aiMarketObservation(db,p,t),up=Math.max(0,est.potential-est.ability),w={'win-now':0.1,'youth':0.6,'balanced':0.3,'superstar':0.15,'cost':0.35}[t.philosophy]||0.3;return est.ability+up*w-(t.philosophy==='youth'&&p.age>26?2:0)-medicalContractRisk(db,p)*18}
 function pFillScore(db,p,t){const domestic=isLocalPlayer(p,t.region)?2:0,age=p.age<=21?1:0,cost=Math.min(4,asking(db,p,t.region)/Math.max(.2,psOf(db,t.region)));return aiMarketValue(db,p,t)+domestic+age-cost*.15}
 function optionDecision(db,p,t){
   const o=p.contract&&p.contract.option;if(!o||o.year!==db.year)return false;
@@ -135,7 +141,7 @@ function contractMarket(db,rng,rep,ev){
     if(p.contract.until>=year)continue;
     if(t.id===mine){release(t,p);rep.expired.push({pid:p.id,team:t.id,why:'재계약하지 않음'});continue}
     const isStarter=starterFor(db,t,p.role)===p,want=isStarter||p.rosterRole==='competition'||(p.age<=21&&p.pot-playerOvr(p)>=6)||(p.rosterRole==='backup'&&t.roster.length<7&&p.satisfaction>=50);
-    const ask=asking(db,p,t.region),room=salaryBudget(db,t)-payroll(db,t)+p.contract.salary,yrs=contractYearsForPlayer(db,p,rng),proposal=normalizeContractTerms(db,p,t,ask*rng.range(.96,1.08),yrs,{promisedRole:recommendedRosterRole(db,p,t),option:rng.chance(.18)?{type:rng.chance(.55)?'team':'player'}:null});
+    const ask=asking(db,p,t.region),room=salaryBudget(db,t)-payroll(db,t)+p.contract.salary,yrs=contractYearsForPlayer(db,p,rng),proposal=normalizeContractTerms(db,p,t,ask*rng.range(.96,1.08)*(1-medicalContractRisk(db,p)*.4),yrs,{promisedRole:recommendedRosterRole(db,p,t),option:rng.chance(.18)?{type:rng.chance(.55)?'team':'player'}:null});
     ensureSatisfaction(p);const stay=offerUtility(db,p,t,proposal,{renewal:true})+rng.normal(0,.06)>=offerAcceptanceThreshold(db,p);
     if(want&&proposal.salary<=room&&stay){signMarketContract(db,p,t,proposal.salary,yrs,proposal,'renewal','ai');rep.resign.push({pid:p.id,team:t.id,salary:proposal.salary,years:yrs,terms:proposal})}
     else {release(t,p);rep.expired.push({pid:p.id,team:t.id,why:!want?'재계약 제안 없음':proposal.salary>room?'연봉 이견':'FA 시장 도전'})}
@@ -160,7 +166,7 @@ function contractMarket(db,rng,rep,ev){
         const cand=fas.filter(p=>p.role===role&&(isLocalPlayer(p,t.region)||(playerOvr(p)>=R.strength+importGap&&imports(t)<nonLocalLimitForTeam(db,t))))
           .map(p=>({p,v:aiMarketValue(db,p,t),ask:asking(db,p,t.region)})).filter(x=>x.ask<=budgetLeft[t.id]&&(!cur||cur.wantsOut||cur.contract.until<=year||x.v>cv+5)).sort((a,b)=>b.v-a.v);
         const c=cand[0]; if(!c)continue;
-        const sal=Math.round(c.ask*(['win-now','superstar'].includes(t.philosophy)?rng.range(1,1.15):rng.range(0.95,1.05))*10)/10;
+        const sal=Math.round(c.ask*(['win-now','superstar'].includes(t.philosophy)?rng.range(1,1.15):rng.range(0.95,1.05))*(1-medicalContractRisk(db,c.p)*.4)*10)/10;
         (offers[c.p.id]=offers[c.p.id]||[]).push({t,sal,starter:true});
       }
     }
