@@ -1,7 +1,5 @@
 // ===== LOL GM: Scrim domain =====
-// Owns daily practice blocks, non-official practice results and accumulated intel.
-// Background blocks are lightweight to keep long multi-region careers responsive;
-// official fixtures continue to use the full match/series engine.
+// Two daily blocks, private results and scouting intel; no official stats.
 
 function scrimAnalysisBonus(t){
   const p=staffProfile(t);
