@@ -22,7 +22,7 @@ Development progress is tracked by the 22 major LOL GM systems. Finish one major
 - `10. 패치 엔진` — COMPLETE (2026-09-27)
 - `11. 실제 LoL식 밴픽 UI` — COMPLETE (2026-09-28)
 - `11.5. 아키텍처 정리 / UI 통합` — COMPLETE (2026-09-29; steps 1–6)
-- `12. 시설 / 재정` — IMPLEMENTED (2026-09-29; pending phase-12 CI and merge verification). See `docs/PHASE_12_FINANCE.md`.
+- `12. 시설 / 재정` — COMPLETE (2026-09-29; Phase 12 acceptance, engine regression, 2-season career, performance and build CI passed). See `docs/PHASE_12_FINANCE.md`.
 
 ## Product-wide convenience acceptance rule (2026-09-27)
 
