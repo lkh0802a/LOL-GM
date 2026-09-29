@@ -10,12 +10,41 @@ function growthCap(age){return age<=18?4.2:age<=20?3.5:age<=22?2.8:age<=24?2.1:a
 function defaultTraining(){return {mechanical:20,laning:20,combat:20,macro:20,mental:20,intensity:'normal'}}
 function trainingIntensity(t){const x=t?.training?.intensity||'normal';return x==='light'?{growth:.9,fatigue:.45,condition:.25}:x==='high'?{growth:1.08,fatigue:1.35,condition:-.35}:{growth:1,fatigue:.8,condition:0}}
 function aiManageTraining(db,t){if(!t||t.id===managedTeamId(db))return;t.training=t.training||defaultTraining();t.training.intensity=trainingRecommendation(db,t).intensity}
-function ensureFacilities(t){const legacy=clamp(t.facility||2,1,5);t.facilities=t.facilities||{training:legacy,analysis:legacy,recovery:legacy,youth:legacy};for(const k of ['training','analysis','recovery','youth'])t.facilities[k]=clamp(t.facilities[k]||legacy,1,5);t.facility=Math.round((t.facilities.training+t.facilities.analysis+t.facilities.recovery+t.facilities.youth)/4);return t.facilities}
-function facilityMul(t){if(!t)return 1;const f=ensureFacilities(t);return .9+.055*(f.training-1)+.02*(f.youth-1)}
+const FACILITY_TYPES=['training','analysis','recovery','youth','scouting'];
+const FACILITY_LABELS={training:'훈련',analysis:'데이터 분석',recovery:'회복',youth:'유소년 육성',scouting:'스카우팅'};
+function ensureFacilities(t){
+  const legacy=clamp(t.facility||2,1,5),raw=t.facilities||{};
+  for(const k of FACILITY_TYPES){
+    const fallback=k==='scouting'?1:legacy;
+    raw[k]=clamp(raw[k]||fallback,1,5);
+  }
+  t.facilities=raw;
+  t.facility=Math.round(FACILITY_TYPES.reduce((v,k)=>v+raw[k],0)/FACILITY_TYPES.length);
+  return raw;
+}
+function facilityMul(t,age=null){
+  if(!t)return 1;
+  const f=ensureFacilities(t),young=age==null?1:age<=20?1:age<=23?.6:.14;
+  return .9+.055*(f.training-1)+.04*(f.youth-1)*young;
+}
+function facilityScoutingBonus(t){if(!t)return 0;return (ensureFacilities(t).scouting-1)*.065}
+function facilityInvestmentScore(db,t,key){
+  const f=ensureFacilities(t),roster=(t.roster||[]).map(id=>db.players[id]).filter(Boolean);
+  const kids=roster.length?roster.filter(p=>p.age<=22).length/roster.length:.35;
+  const old=roster.length?roster.filter(p=>p.age>=27).length/roster.length:.25;
+  const p=t.philosophy||'balanced';
+  const fit={training:1+.25*(p==='win-now')+.15*roster.length/8,
+    analysis:.85+(p==='win-now'?.4:0)+(p==='superstar'?.15:0),
+    recovery:.7+old*.65+(t.training?.intensity==='high'?.2:0),
+    youth:.7+kids*.95+(p==='youth'?.45:0),
+    scouting:.75+(p==='youth'?.35:0)+(p==='cost'?.2:0)}[key]||0;
+  const cost=facilityCost(db,t,key);
+  return Math.round((fit/(1+.23*(f[key]-1)))/(1+cost/Math.max(5,estRevenue(db,t))*.38)*100)/100;
+}
 function facilityAnalysisBonus(t){if(!t)return 0;return (ensureFacilities(t).analysis-1)*.012}
 function facilityRecoveryBonus(t){if(!t)return 0;return (ensureFacilities(t).recovery-1)*.7}
-function facilityCost(db,t,key='training'){const f=ensureFacilities(t),lv=f[key]||1;return Math.round((lv+1)*5*psOf(db,t.region)*10)/10}
-function facilityUpkeep(db,t){const f=ensureFacilities(t),sum=Object.values(f).reduce((a,b)=>a+b,0);return Math.round(sum*.32*psTeam(db,t)*10)/10}
+function facilityCost(db,t,key='training'){const f=ensureFacilities(t),lv=f[key]||1;return Math.round((lv+1)*5*psOf(db,t.region)*(key==='scouting'?.9:key==='youth'?1.12:1)*10)/10}
+function facilityUpkeep(db,t){const f=ensureFacilities(t),sum=FACILITY_TYPES.reduce((a,k)=>a+f[k],0);return Math.round(sum*.32*psTeam(db,t)*10)/10}
 function facilityBuildDays(level){return 18+level*12}
 function facilityReadyDate(start,days){
   const d=new Date((start||'2027-01-01')+'T00:00:00Z');
@@ -23,7 +52,7 @@ function facilityReadyDate(start,days){
   return d.toISOString().slice(0,10);
 }
 function upgradeFacility(db,t,key,opt={}){
-  if(!['training','analysis','recovery','youth'].includes(key))throw new Error('유효하지 않은 시설입니다');
+  if(!FACILITY_TYPES.includes(key))throw new Error('유효하지 않은 시설입니다');
   const f=ensureFacilities(t);
   if(f[key]>=5)throw new Error('이미 최고 단계입니다');
   if((t.facilityProjects||[]).some(p=>p.key===key))throw new Error('이미 증설 중인 시설입니다');
@@ -37,7 +66,7 @@ function upgradeFacility(db,t,key,opt={}){
       ready:facilityReadyDate(db.worldDate,opt.deferDays)});
   }else{
     f[key]++;
-    t.facility=Math.round(Object.values(f).reduce((a,b)=>a+b,0)/4);
+    t.facility=Math.round(FACILITY_TYPES.reduce((a,k)=>a+f[k],0)/FACILITY_TYPES.length);
   }
   return cost;
 }
@@ -51,7 +80,7 @@ function advanceFacilityConstruction(db,date=db.worldDate){
       if(f[p.key]===p.from){f[p.key]=p.to;completed++}
     }
     t.facilityProjects=remaining;
-    t.facility=Math.round(Object.values(f).reduce((a,b)=>a+b,0)/4);
+    t.facility=Math.round(FACILITY_TYPES.reduce((a,k)=>a+f[k],0)/FACILITY_TYPES.length);
   }
   return completed;
 }
@@ -70,7 +99,7 @@ function growPlayer(db,p,rng,games,champGames){
     // 훈련 포인트는 총 100점 한도: 배분하지 않은 포인트는 버려진다 (나눠 쓰는 만큼만 효과)
     const base=ageCurve(p.age-ageShift,g), train=team?(Math.min(TRAIN_POINTS,tr[g])/TRAIN_POINTS*5-1)*0.9:-0.3;
     pState(p);
-    let d=base>0?base*dev.growthRate*(0.45+room*0.6)*(0.7+0.6*prof)*(0.8+0.4*coach)*(0.65+0.55*play)*trainingGrowthMul(team)*facilityMul(team)*intensity.growth*(0.9+0.2*p.morale/100):base*dev.declineRate*(1.3-0.6*prof);
+    let d=base>0?base*dev.growthRate*(0.45+room*0.6)*(0.7+0.6*prof)*(0.8+0.4*coach)*(0.65+0.55*play)*trainingGrowthMul(team)*facilityMul(team,p.age)*intensity.growth*(0.9+0.2*p.morale/100):base*dev.declineRate*(1.3-0.6*prof);
     d+=train*(base>0?1:0.5);
     if(d>0)d*=youthMul(p.age)*conversionMul;
     d=Math.min(d,growthCap(p.age)); // 한 시즌 영역별 성장 상한 (어릴수록 높음)
