@@ -12,7 +12,9 @@ function leagueComp(db,rid,div=1){
   return {id:div===2?R.short+'2':R.short,name:div===2?divName(R):R.leagueName,short:div===2?R.short+'2':R.short,region:rid,div,teams,rules:{fearless:true},stages:leagueStages(R,teams.length,div)};
 }
 function startWorldSeason(db,myTeam,seed){
-  medicalOffseasonRecovery(db,`${db.year}-01-06`);
+  const medicalRolloverDate=`${db.year}-01-06`;
+  medicalOffseasonRecovery(db,medicalRolloverDate);
+  if(!db.worldDate||db.worldDate<medicalRolloverDate)db.worldDate=medicalRolloverDate;
   setManagedTeam(db,myTeam);
   const regs=Object.values(db.regions), I=db.worldConfig.internationals, maxK=Math.max(...regs.map(r=>r.splits||1));
   const steps=[];
