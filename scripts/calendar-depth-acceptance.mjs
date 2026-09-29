@@ -20,6 +20,21 @@ const fixture=String.raw`(()=>{
   assert(db.world.phase==='season','first season did not start');
   const firstFixture=nextDate(db),initial=db.worldDate;
   assert(firstFixture>addDays(initial,8),'need an authentic inter-fixture gap');
+  const domestic=Object.values(db.world.seasons).find(x=>x.region===user.region&&x.div===1);
+  assert(domestic,'the real first-division fixture list is missing');
+  const leagueFixtureDates=domestic.days.filter(d=>d.matches.some(m=>
+    m.a===user.id||m.b===user.id)).map(d=>d.date);
+  assert(leagueFixtureDates.length>=8,'league schedule does not reach eight games');
+  for(let week=0;week<4;week++){
+    const start=addDays(firstFixture,week*7),end=addDays(start,7);
+    const weekly=leagueFixtureDates.filter(date=>date>=start&&date<end);
+    assert(weekly.length===2,'each first-division team must have two regular matches per week');
+  }
+  for(let i=1;i<8;i++){
+    const elapsed=(new Date(leagueFixtureDates[i]+'T00:00:00Z')-
+      new Date(leagueFixtureDates[i-1]+'T00:00:00Z'))/86400000;
+    assert(elapsed===(i%2?3:4),'domestic match dates must alternate 3/4 day breaks');
+  }
   const t=db.teams[user.id],p=db.players[t.roster[0]];
   assert(p,'managed team needs a real player');
   pState(p);p.fatigue=40;p.condition=75;
@@ -39,7 +54,13 @@ const fixture=String.raw`(()=>{
     'first press must advance one real calendar day');
   assert(db.worldDate===day1.date&&db.world.lastDailyTick===day1.date,
     'processed date marker not retained');
-  assert(p.fatigue<startFatigue&&p.condition>75,'no daily recovery tick');
+  // Recovery is followed by actual private scrim practice. A club can
+  // finish a productive day with higher NET fatigue, despite recuperating.
+  const recovery=4+(staffProfile(t).recovery-50)/45+facilityRecoveryBonus(t),
+    train=trainingIntensity(t);
+  assert(p.fatigue<=startFatigue-recovery+train.fatigue+6*1.2+.01&&
+    p.condition>=75+2.5+train.condition-6*.45-.01,
+    'daily recovery was missing from the scrim-inclusive workload');
   assert(p.roleConversion.trainingDays===1,'no daily role-practice tick');
   assert(t.facilities.training===level,'facility benefit activated too early');
   assert(db.patch.id===initialPatch&&db.patches.list.length===oldPatchCount,
@@ -104,17 +125,47 @@ const fixture=String.raw`(()=>{
   assert(held.pending&&!held.advanced&&resumed.worldDate===matchDate&&
     resumed.world.lastDailyTick===marker,
     'save/reload changed an official match pause');
-  const other=activeTeams(db,null,1).find(team=>team.id!==user.id);
-  t.scrimLog=[{date:addDays(matchDate,-1),games:1,opponent:other.id}];
-  assert(!aiScrimCooldownReady(db,t),'AI accepted scrim with only one rest day');
-  t.scrimLog=[{date:addDays(matchDate,-6),games:1,opponent:other.id}];
-  assert(aiScrimCooldownReady(db,t),'six-day AI scrim cooldown did not expire');
-  recordScrimPractice(db,{a:t.id,b:other.id,games:[{}]},[{
-    tid:t.id,pid:p.id,champ:Object.keys(db.patch.champions)[0],role:p.role
-  }]);
-  assert(t.scrimLog.some(x=>x.date===addDays(matchDate,-6))&&
-    t.scrimLog.some(x=>x.date===matchDate),
-    'scrim log forgot prior days and opponents');
+  // Genuine double-header training: on off days each team can play two
+  // opponent-matched practice blocks, with 2-3 private games per block.
+  const prep=unpackDB(packDB(checkpoint)),practiceDay=addDays(firstFixture,-4);
+  prep.worldDate=practiceDay;
+  const practiceTeams=activeTeams(prep,null,1);
+  const preCap=Object.fromEntries(practiceTeams.map(team=>
+    [team.id,scrimDailyCapacity(prep,team)]));
+  const priorMeta=prep.metaGames||0;
+  const priorLearning=Object.values(prep.players).reduce((n,player)=>n+
+    Object.values(player.pool||{}).reduce((m,pr)=>m+(pr.scrimExperience||0),0),0);
+  const scrimOut=aiRunScrims(prep,new RNG('d01-daily-practice','training'));
+  assert(scrimOut.blocks>=2&&scrimOut.sets>=6,
+    'clubs should hold multiple practice blocks and private scrim sets in one day');
+  const activePractice=practiceTeams.map(team=>({
+    team,dateLogs:(team.scrimLog||[]).filter(log=>log.date===practiceDay)
+  })).filter(x=>x.dateLogs.length);
+  assert(activePractice.some(x=>x.dateLogs.length>=2),
+    'at least one club must play two distinct scrim sessions on a normal practice day');
+  for(const entry of activePractice){
+    const games=entry.dateLogs.reduce((total,row)=>total+row.games,0);
+    assert(games<=preCap[entry.team.id],
+      'practice workload exceeded pre-game rest/fatigue limits');
+    assert(entry.dateLogs.every(row=>row.games>=1&&row.games<=3&&row.opponent&&
+      row.wins+row.losses===row.games),
+      'practice block is not recorded as actual private games against a named opponent');
+  }
+  const learned=Object.values(prep.players).reduce((n,player)=>n+
+    Object.values(player.pool||{}).reduce((m,pr)=>m+(pr.scrimExperience||0),0),0);
+  assert(learned>priorLearning,'private scrims did not train champion mastery');
+  assert((prep.metaGames||0)===priorMeta,
+    'private practice polluted the official patch/meta sample count');
+  const checkTeam=activePractice[0].team;
+  prep.worldDate=addDays(firstFixture,-1);
+  assert(scrimDailyCapacity(prep,checkTeam)<=2,
+    'match eve should cap private practice at a light two-set session');
+  prep.worldDate=firstFixture;
+  assert(scrimDailyCapacity(prep,checkTeam)===0&&!scrimReadiness(prep,checkTeam).ok,
+    'official double-header dates cannot schedule conflicting scrims');
+  const scrimSaved=unpackDB(packDB(prep));
+  assert(scrimSaved.teams[checkTeam.id].scrimLog.length===checkTeam.scrimLog.length,
+    'multiple same-day private scrim sessions were lost in v15 save/restore');
   const legacy=JSON.parse(packDB(resumed));
   delete legacy.saveFormat;delete legacy.world.lastDailyTick;
   const oldSave=unpackDB(JSON.stringify(legacy));
@@ -137,6 +188,7 @@ check(home.includes('id="sday">하루 진행')&&home.includes('id="sfixture">다
   'day-advance controls are not labelled truthfully');
 check(season.includes('lastDailyTick===date')&&season.includes('majorPatchEvents.push'),
   'idempotent dates and deferred patch processing missing');
-check(scrim.includes('aiScrimCooldownReady')&&scrim.includes('slice(-39)'),
-  'AI scrim spacing and multi-day scrim log missing');
+check(scrim.includes('scrimDailyCapacity')&&scrim.includes('simulateBackgroundScrim')&&
+  scrim.includes('slice(-39)'),
+  'multi-block daily scrim planning and multi-day practice history missing');
 console.log('D01 calendar/UI integration acceptance: PASS');

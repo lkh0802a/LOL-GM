@@ -113,7 +113,7 @@ function daysUntil(db,date){return date?Math.max(0,Math.ceil((new Date(date)-new
 function trainingRecommendation(db,t){
   const next=nextTeamMatch(db,t.id),days=daysUntil(db,next?.date),roster=t.roster.map(id=>db.players[id]).filter(Boolean),fat=avg(roster.map(p=>p.fatigue||0)),cond=avg(roster.map(p=>p.condition??96));
   const intensity=fat>38||cond<84||days<=1?'light':days>=5&&fat<20&&cond>91?'high':'normal';
-  const scrim=days>=2&&fat<42&&cond>80;return {intensity,scrim,next,days,fat,cond};
+  const scrim=days>=1&&fat<54&&cond>70;return {intensity,scrim,next,days,fat,cond};
 }
 function pendingOfficialRefs(db,q){
   const s=db.world.seasons[q.seasonKey],day=s&&s.days[s.cur],m=day&&day.matches.find(x=>x.id===q.matchId);
