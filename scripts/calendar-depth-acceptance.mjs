@@ -54,7 +54,13 @@ const fixture=String.raw`(()=>{
     'first press must advance one real calendar day');
   assert(db.worldDate===day1.date&&db.world.lastDailyTick===day1.date,
     'processed date marker not retained');
-  assert(p.fatigue<startFatigue&&p.condition>75,'no daily recovery tick');
+  // Recovery is followed by actual private scrim practice. A club can
+  // finish a productive day with higher NET fatigue, despite recuperating.
+  const recovery=4+(staffProfile(t).recovery-50)/45+facilityRecoveryBonus(t),
+    train=trainingIntensity(t);
+  assert(p.fatigue<=startFatigue-recovery+train.fatigue+6*1.2+.01&&
+    p.condition>=75+2.5+train.condition-6*.45-.01,
+    'daily recovery was missing from the scrim-inclusive workload');
   assert(p.roleConversion.trainingDays===1,'no daily role-practice tick');
   assert(t.facilities.training===level,'facility benefit activated too early');
   assert(db.patch.id===initialPatch&&db.patches.list.length===oldPatchCount,
