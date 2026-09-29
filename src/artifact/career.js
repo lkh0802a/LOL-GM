@@ -174,11 +174,42 @@ function beginInitialRosterPhase(db,teamId,seed){
   if(!isManagerSelectableTeam(db,teamId))throw new Error('감독 시작 팀으로 선택할 수 없는 구단입니다');setManagedTeam(db,teamId);seedInitialPayrollBudgets(db);db.manager.startMode='blank_roster';db.manager.careerStartedAt=null;
   db.world={year:db.year,seed,manage:db.worldConfig.manage||'manual',phase:'initial_roster',seasons:{},steps:[],step:-1,report:null,lastDate:db.worldDate,offers:[],negotiations:{},recruitment:{targets:{}},marketLog:[]};return db.world;
 }
+// The first-year blind auction can exhaust the unsigned player pool.
+// Replenish only after the legitimate initial roster market has closed:
+// otherwise clubs simply consume the reserve during setup. The goal is a small
+// real labor market, NOT on-demand emergency generation when an injury occurs.
+function seedFirstSeasonFreeAgentDepth(db){
+  if(!db.firstSeasonSetup?.blankRosters||db.firstSeasonSetup.completed)return [];
+  const created=[],seed=db.world?.seed||'first-season';
+  for(const region of Object.values(db.regions)){
+    const n=activeTeams(db,region.id).length;
+    if(!n)continue;
+    // 10 clubs: two unsigned players per position; 20 clubs: four.
+    // Nearby regions remain separate for local registration eligibility.
+    const minPerRole=Math.max(2,Math.min(5,Math.ceil(n/5)));
+    const rng=new RNG(seed+'|'+db.year+'|'+region.id,'initial-fa-depth');
+    for(const role of ROLES){
+      const free=()=>Object.values(db.players).filter(p=>
+        !p.retired&&!p.team&&isLocalPlayer(p,region.id)&&p.role===role).length;
+      // Bound additions per call and count actual unsigned, local athletes.
+      const missing=Math.max(0,minPerRole-free());
+      for(let i=0;i<missing;i++){
+        const age=rng.pick([18,19,20,21,22,23,24,25,27,29]);
+        const base=region.strength-12+clamp(rng.normal(0,3),-6,6);
+        const p=genPlayer(db,rng,{role,age,base,region:region.id,
+          entryYear:db.year,entryPath:'open_qualifier'});
+        created.push(p.id);
+      }
+    }
+  }
+  return created;
+}
+
 function finalizeInitialRosters(db){
   const root=managedTeam(db);if(!root)throw new Error('관리 구단이 없습니다');const mine=setupTeamsForManager(db),errors=initialOrganizationErrors(db,root);if(errors.length)throw new Error(errors[0]);
   const mineIds=new Set(mine.map(t=>t.id)),pending=Object.values(negotiationStore(db)).filter(n=>n.status==='open'&&n.kind==='initial'&&mineIds.has(n.teamId));if(pending.length)throw new Error('진행 중인 창단 계약 협상을 먼저 마무리해야 합니다');
   autoBuildInitialWorld(db,mine.map(t=>t.id),db.world.seed);
   const allErrors=[];for(const t of activeTeams(db))for(const e of initialSquadErrors(db,t))allErrors.push(t.name+': '+e);
   for(const t of activeTeams(db).filter(t=>!t.parent&&reserveTeamsOf(db,t).length)){const rules=rosterRulesForTeam(db,t),n=organizationRoster(db,t).length;if(n<rules.integratedMin||n>rules.integratedMax)allErrors.push(t.name+': 통합 로스터 '+n+'명')}
-  if(allErrors.length)throw new Error('AI 초기 로스터 구성 실패 · '+allErrors[0]);for(const t of activeTeams(db))initializeTeamRosterRoles(db,t,true);db.manager.careerStartedAt=db.worldDate;db.firstSeasonSetup.completed=true;const seed=db.world.seed,teamId=root.id;startWorldSeason(db,teamId,seed);return db.world;
+  if(allErrors.length)throw new Error('AI 초기 로스터 구성 실패 · '+allErrors[0]);for(const t of activeTeams(db))initializeTeamRosterRoles(db,t,true);seedFirstSeasonFreeAgentDepth(db);db.manager.careerStartedAt=db.worldDate;db.firstSeasonSetup.completed=true;const seed=db.world.seed,teamId=root.id;startWorldSeason(db,teamId,seed);return db.world;
 }
