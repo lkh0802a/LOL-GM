@@ -48,6 +48,28 @@ source+=String.raw`(()=>{
   assert(base.burnout===0&&overloaded.burnout>0&&
     restedOverload.burnout<overloaded.burnout,
     'accumulated overload or recovery failed burnout risk check');
+  // Preventive support is a real rate modifier, not a narrative UI stat.
+  const supported={...intense,facilities:{...ensureFacilities(intense),recovery:5},
+    staffRoster:[{role:'performanceCoach',rating:94}]};
+  const unsupported={...intense,facilities:{...ensureFacilities(intense),recovery:1},
+    staffRoster:[]};
+  const supportedOdds=medicalIncidentOdds({...p,medicalOverloadDays:65},supported,18,'normal');
+  const unsupportedOdds=medicalIncidentOdds({...p,medicalOverloadDays:65},unsupported,18,'normal');
+  assert(supportedOdds.injury<unsupportedOdds.injury*.90&&
+    supportedOdds.burnout<unsupportedOdds.burnout*.90&&
+    supportedOdds.illness===unsupportedOdds.illness,
+    'medical staff/facility prevention is missing or erases ordinary illness');
+  const overusePlayer={...p,id:'medical-plan-overuse',
+    medicalLoad:15,medicalOverloadDays:48,
+    medicalPlan:'auto',medicalDayPlan:null,medicalPlanDate:null,
+    team:intense.id};
+  assert(medicalPlanFor(db,overusePlayer)==='rest'&&
+    medicalPlanFor(db,{...overusePlayer,medicalOverloadDays:25})==='light'&&
+    medicalPlanFor(db,{...overusePlayer,medicalOverloadDays:5})==='normal',
+    'AI preventive overuse plans fail to distinguish rest, light and normal');
+  overusePlayer.medicalPlan='normal';overusePlayer.team=manager.id;
+  assert(medicalPlanFor(db,overusePlayer)==='normal',
+    'manager deliberately selected normal training but AI forcibly overrode it');
 
   const count=()=>({days:0,injury:0,illness:0,burnout:0,
     severe:0,moderate:0,minor:0,unavailable:0});
