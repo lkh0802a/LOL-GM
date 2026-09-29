@@ -2183,6 +2183,76 @@ function replayGame(db,rec,g){
 // ===== LOL GM: Competition / Stage 엔진 =====
 // 지원 스테이지: round_robin(그룹 가능) · swiss · single_elim · double_elim
 
+/* ==== FILE: broadcast-calendar.js ==== */
+// ===== LOL GM: broadcast-week and team booking calendar =====
+// Official domestic rounds are broadcast across Tuesday–Sunday. The private
+// scrim calendar reads the same actual fixture dates, even after a match ends.
+
+function nextBroadcastTuesday(start){
+  const day=new Date(start+'T00:00:00Z').getUTCDay();
+  return addDays(start,(2-day+7)%7);
+}
+function broadcastSlotTime(slot,total){
+  if(total===1)return '17:00';
+  if(total===2)return ['17:00','20:00'][slot];
+  if(total===3)return ['13:00','16:30','20:00'][slot];
+  if(total===4)return ['11:00','14:00','17:00','20:00'][slot];
+  // Additional concurrent broadcast feeds can be implemented separately;
+  // these starts describe the main production window, not series end times.
+  return String(9+Math.floor(slot*13/Math.max(1,total-1))).padStart(2,'0')+':00';
+}
+// A round-robin broadcast week contains two opponent rounds. Each side may
+// play only once per round; a full rest day is guaranteed between series.
+function allocateBroadcastWeek(first,second,week){
+  const buckets=Array.from({length:6},()=>[]);
+  const firstDate={},limit=Math.max(2,Math.ceil((first.length+second.length)/6));
+  const rotate=(pairs,n)=>pairs.length?
+    pairs.slice(n%pairs.length).concat(pairs.slice(0,n%pairs.length)):[];
+  for(const pair of rotate(first,week)){
+    let day=0;
+    for(let i=1;i<3;i++)if(buckets[i].length<buckets[day].length)day=i;
+    buckets[day].push({pair,round:0});
+    firstDate[pair[0]]=firstDate[pair[1]]=day;
+  }
+  const matches=rotate(second,week);
+  // Date-constrained matches go first so late first-round competitors are
+  // never forced to play back-to-back days merely to fill a TV slot.
+  matches.sort((a,b)=>
+    Math.max(firstDate[b[0]]??-1,firstDate[b[1]]??-1)-
+    Math.max(firstDate[a[0]]??-1,firstDate[a[1]]??-1));
+  for(const pair of matches){
+    const minDay=Math.max(3,(firstDate[pair[0]]??-2)+2,(firstDate[pair[1]]??-2)+2);
+    let day=-1;
+    for(let d=minDay;d<6;d++){
+      if(day<0||(buckets[d].length<limit&&buckets[day].length>=limit)||
+        ((buckets[d].length<limit)===(buckets[day].length<limit)&&buckets[d].length<buckets[day].length))
+        day=d;
+    }
+    if(day<0)throw new Error('Cannot fit two domestic series with a full rest day');
+    buckets[day].push({pair,round:1});
+  }
+  return buckets;
+}
+function officialBookedTeams(db,date=db.worldDate){
+  const busy=new Set();
+  for(const s of Object.values(db.world?.seasons||{})){
+    const dates=s.days;if(!dates?.length)continue;
+    let lo=0,hi=dates.length-1;
+    while(lo<=hi){
+      const mid=(lo+hi)>>1,x=dates[mid].date;
+      if(x<date)lo=mid+1;
+      else if(x>date)hi=mid-1;
+      else{
+        let start=mid;while(start>0&&dates[start-1].date===date)start--;
+        for(let i=start;i<dates.length&&dates[i].date===date;i++)
+          for(const match of dates[i].matches){busy.add(match.a);busy.add(match.b)}
+        break;
+      }
+    }
+  }
+  return busy;
+}
+
 /* ==== FILE: competition.js ==== */
 // ===== LOL GM: Competition scheduling / standings domain =====
 // Owns schedules, stages, standings and scheduled-series orchestration.
@@ -2216,8 +2286,35 @@ function addStageDays(db,s,idx,teams,date){
   if(cfg.type==='round_robin'){
     let groups=[teams];
     if(cfg.groups>1){groups=Array.from({length:cfg.groups},()=>[]);teams.forEach((t,i)=>{const r=Math.floor(i/cfg.groups),k=i%cfg.groups;groups[r%2?cfg.groups-1-k:k].push(t)})}
-    const sched=groups.map(g=>roundRobin(g,cfg.legs||1)), R=Math.max(...sched.map(x=>x.length));
-    for(let r=0;r<R;r++){pushDay(s,date,cfg.id,`${cfg.name} ${r+1}라운드`,sched.flatMap(x=>x[r]||[]),cfg.bestOf);date=addDays(date,gap(r))}
+    const sched=groups.map(g=>roundRobin(g,cfg.legs||1)),R=Math.max(...sched.map(x=>x.length));
+    if(cfg.broadcastWeek){
+      // Two fixtures per club per seven-day week; matches are aired on
+      // Tuesday–Sunday, rather than all teams being forced onto two dates.
+      const anchor=nextBroadcastTuesday(date);
+      for(let week=0;week<Math.ceil(R/2);week++){
+        const first=sched.flatMap(x=>x[week*2]||[]),
+          second=sched.flatMap(x=>x[week*2+1]||[]);
+        const weekDays=allocateBroadcastWeek(first,second,week);
+        for(let offset=0;offset<6;offset++){
+          const fixtures=weekDays[offset];
+          if(!fixtures.length)continue;
+          const round=week*2+fixtures[0].round+1;
+          pushDay(s,addDays(anchor,week*7+offset),cfg.id,
+            `${cfg.name} ${round}라운드`,fixtures.map(x=>x.pair),cfg.bestOf);
+          const matches=s.days[s.days.length-1].matches;
+          for(let slot=0;slot<matches.length;slot++){
+            matches[slot].time=broadcastSlotTime(slot,matches.length);
+            matches[slot].broadcastSlot=slot+1;
+          }
+        }
+      }
+    }else{
+      for(let r=0;r<R;r++){
+        pushDay(s,date,cfg.id,`${cfg.name} ${r+1}라운드`,
+          sched.flatMap(x=>x[r]||[]),cfg.bestOf);
+        date=addDays(date,gap(r));
+      }
+    }
     s.stageData[cfg.id]={type:cfg.type,teams,groups:cfg.groups>1?groups:null};
   } else if(cfg.type==='swiss'){
     const sd=s.stageData[cfg.id]={type:'swiss',teams,rec:Object.fromEntries(teams.map(t=>[t,{w:0,l:0,opp:[]}])),round:0,advanced:[],out:[],W:cfg.wins||3,L:cfg.losses||3};
@@ -2379,7 +2476,7 @@ const INTL_FORMATS={playin_swiss_ko:'플레이인 + 스위스 + 녹아웃',swiss
 function leagueStages(R,n,div){
   const fmt=R.format||'rr_po', bo=Math.max(3,R.regularBo||3), pbo=div===2?3:Math.max(3,R.playoffBo||5);
   const take=div===2?Math.min(4,n):Math.min(Math.max(4,R.playoffTake||4),n);
-  const rr={id:'regular',name:'정규 시즌',type:'round_robin',legs:Math.max(2,R.legs||2),bestOf:bo,dayGap:[3,4]};
+  const rr={id:'regular',name:'정규 시즌',type:'round_robin',legs:Math.max(2,R.legs||2),bestOf:bo,dayGap:[3,4],broadcastWeek:true};
   const po=t=>({id:'playoffs',name:'플레이오프',type:'single_elim',from:'regular',take:t,bestOf:pbo,dayGap:[6,6],firstChoice:'seed'});
   if(div===2)return [rr,po(take)];
   if(fmt==='rr_de')return [rr,{id:'playoffs',name:'플레이오프',type:'double_elim',from:'regular',take:take>=8&&n>=8?8:take>=6&&n>=8?8:4,bestOf:pbo,dayGap:[4,4]}];
@@ -5258,8 +5355,11 @@ function scrimAnalysisBonus(t){
   const p=staffProfile(t);
   return clamp((p.analysis-50)/500+facilityAnalysisBonus(t),0,.14);
 }
-function scrimDailyCapacity(db,t){
+function scrimDailyCapacity(db,t,booked=null){
   if(!t||t.active===false)return 0;
+  // Check the complete official calendar, not merely the next *unplayed*
+  // match: an already completed televised series still books the full day.
+  if((booked||officialBookedTeams(db)).has(t.id))return 0;
   const days=daysUntil(db,nextTeamMatch(db,t.id)?.date);
   if(days===0)return 0; // No practice blocks on an official fixture day.
   const roster=(t.roster||[]).map(id=>db.players[id]).filter(p=>p&&!p.retired);
@@ -5273,17 +5373,22 @@ function scrimDailyCapacity(db,t){
   const conditionCap=condition<=77?2:condition<=85?4:6;
   return Math.min(scheduleCap,fatigueCap,conditionCap);
 }
-function scrimReadiness(db,t){
+function scrimReadiness(db,t,booked=null){
   if(!t)return {ok:false,reason:'팀 없음'};
   const roster=(t.roster||[]).map(id=>db.players[id]).filter(Boolean);
   const avgFatigue=avg(roster.map(p=>p.fatigue||0));
   const avgCondition=avg(roster.map(p=>p.condition??96));
-  const capacity=scrimDailyCapacity(db,t),today=db.worldDate||'';
+  const capacity=scrimDailyCapacity(db,t,booked),today=db.worldDate||'';
   const log=(t.scrimLog||[]).filter(x=>x.date===today);
   const games=log.reduce((a,x)=>a+(x.games||0),0);
-  if(capacity===0)return {ok:false,reason:'공식 경기 또는 회복 우선',avgFatigue,avgCondition,games,capacity};
-  if(games>=capacity)return {ok:false,reason:'오늘 스크림 연습량 완료',avgFatigue,avgCondition,games,capacity};
-  return {ok:true,reason:'가능',avgFatigue,avgCondition,games,capacity,remaining:capacity-games};
+  // Two distinct booking blocks. Old saved scrims did not have a block field;
+  // retain their occupied sessions in recorded order.
+  const occupied=new Set(log.map((x,i)=>x.slot||(['afternoon','evening'][Math.min(1,i)])));
+  const availableSlots=['afternoon','evening'].filter(slot=>!occupied.has(slot));
+  if(capacity===0)return {ok:false,reason:'공식 경기 또는 회복 우선',avgFatigue,avgCondition,games,capacity,availableSlots:[]};
+  if(games>=capacity||!availableSlots.length)
+    return {ok:false,reason:'오늘 스크림 연습량 완료',avgFatigue,avgCondition,games,capacity,availableSlots:[]};
+  return {ok:true,reason:'가능',avgFatigue,avgCondition,games,capacity,remaining:capacity-games,availableSlots};
 }
 function scrimValue(db,tid,oppId){
   const t=db.teams[tid],opp=db.teams[oppId];if(!t||!opp)return .5;
@@ -5309,7 +5414,11 @@ function backgroundScrimChampion(db,p,role,rng){
 // inputs to resolve each private set. It does not forge official match rows,
 // meta sample counts, or public statistics. Interactive scrims (D09) can still
 // use simulateSeries to generate full draft/match replays.
-function simulateBackgroundScrim(db,t,opp,games,rng){
+function simulateBackgroundScrim(db,t,opp,games,rng,slot,booked=null){
+  // Double-sided preflight: both teams need the very same unbooked block.
+  const first=scrimReadiness(db,t,booked),second=scrimReadiness(db,opp,booked);
+  if(!slot||!first.ok||!second.ok||!first.availableSlots.includes(slot)||
+    !second.availableSlots.includes(slot)||games>first.remaining||games>second.remaining)return null;
   const participants=[t,opp],lines=[],results=[],wins={[t.id]:0,[opp.id]:0};
   for(let g=0;g<games;g++){
     const selections=participants.map(team=>ROLES.map(role=>{
@@ -5341,34 +5450,38 @@ function simulateBackgroundScrim(db,t,opp,games,rng){
     results.push({n:g+1,winner,picks});
   }
   if(!results.length)return null;
-  const rec={a:t.id,b:opp.id,games:results,wins,practice:true,patch:db.patch.id,date:db.worldDate};
+  const rec={a:t.id,b:opp.id,games:results,wins,practice:true,patch:db.patch.id,
+    date:db.worldDate,slot};
   recordScrimPractice(db,rec,lines);
   return rec;
 }
 function aiRunScrims(db,rng){
   // A manager's club also receives routine practice. Choosing a specific
   // opponent or requesting an interactive full scrim belongs to D09.
+  const booked=officialBookedTeams(db);
   const eligible=activeTeams(db,null,1).filter(t=>trainingRecommendation(db,t).scrim&&
-    scrimReadiness(db,t).ok);
+    scrimReadiness(db,t,booked).ok);
   let blocks=0,sets=0;
   // Two scheduled daily blocks, with 2-3 sets each; matches and recovery
   // automatically narrow the daily allowance to 0-2 or 0-4 sets.
-  for(let round=0;round<2;round++){
+  for(const slot of ['afternoon','evening']){
     const busy=new Set();
     const order=eligible.slice().sort((a,b)=>String(a.id).localeCompare(String(b.id)));
     for(const t of order){
-      if(busy.has(t.id)||!scrimReadiness(db,t).ok||!rng.chance(.84))continue;
+      const first=scrimReadiness(db,t,booked);
+      if(busy.has(t.id)||!first.ok||!first.availableSlots.includes(slot)||!rng.chance(.84))continue;
       const candidates=order.filter(o=>o.id!==t.id&&!busy.has(o.id)&&
-        o.region===t.region&&scrimReadiness(db,o).ok);
+        o.region===t.region&&
+        scrimReadiness(db,o,booked).availableSlots?.includes(slot));
       if(!candidates.length)continue;
       const ranked=candidates.map(o=>({team:o,weight:Math.max(.1,scrimValue(db,t.id,o.id))}));
       const total=ranked.reduce((sum,row)=>sum+row.weight,0);
       let roll=rng.next()*total,opponent=ranked[0].team;
       for(const row of ranked){roll-=row.weight;if(roll<=0){opponent=row.team;break}}
-      const games=Math.min(3,scrimReadiness(db,t).remaining,
-        scrimReadiness(db,opponent).remaining);
+      const second=scrimReadiness(db,opponent,booked);
+      const games=Math.min(3,first.remaining,second.remaining);
       if(games<1)continue;
-      const rec=simulateBackgroundScrim(db,t,opponent,games,rng);
+      const rec=simulateBackgroundScrim(db,t,opponent,games,rng,slot,booked);
       if(!rec)continue;
       busy.add(t.id);busy.add(opponent.id);
       blocks++;sets+=rec.games.length;
@@ -5393,7 +5506,7 @@ function recordScrimPractice(db,rec,lines){
     team.scrimLog=(team.scrimLog||[]).slice(-39);
     team.scrimLog.push({date:db.worldDate,games,opponent:opp,
       wins:rec.wins?.[tid]??null,losses:rec.wins?games-(rec.wins[tid]||0):null,
-      patch:rec.patch||db.patch.id});
+      patch:rec.patch||db.patch.id,slot:rec.slot||null});
   }
   recordRoleConversionUsage(db,lines,'scrim');
   return {players:seen.size,games};
@@ -6489,6 +6602,7 @@ function viewSquad(){
     ${Object.keys(TAC_KO).map(k=>`<label><span>${TAC_KO[k]}<output>${tac[k]}</output></span><input type="range" min="0" max="100" value="${tac[k]}" data-tac="${k}"></label>`).join('')}
   </div></section>
   ${financePanel(t)}
+  ${DB.world?.phase==='season'?`<section><h3>공식전·스크림 일정</h3><p class="hint">오늘 ${esc(DB.worldDate)} · ${officialBookedTeams(DB).has(t.id)?'공식 경기 예정/진행 · 스크림 불가':scrimReadiness(DB,t).ok?'스크림 가능 ('+scrimReadiness(DB,t).availableSlots.map(x=>x==='afternoon'?'오후':'저녁').join('·')+') · 잔여 '+scrimReadiness(DB,t).remaining+'세트':esc(scrimReadiness(DB,t).reason)} · 양팀 모두 같은 연습 시간이 비어야 편성됩니다.</p><p class="hint">다음 공식전: ${esc(nextTeamMatch(DB,t.id)?.date||'미정')} / 최근 스크림: ${(t.scrimLog||[]).slice(-4).reverse().map(x=>esc(x.date)+' '+(x.slot==='afternoon'?'오후':x.slot==='evening'?'저녁':'연습')+' '+esc(DB.teams[x.opponent]?.short||x.opponent)+' '+x.games+'세트').join(' · ')||'없음'}</p></section>`:''}
   ${mineOrg?rosterPlanPanel(t):''}
   ${(()=>{const r=trainingRecommendation(DB,t),ko={light:'가볍게',normal:'보통',high:'강하게'};return `<p class="hint">추천: ${ko[r.intensity]} 훈련 · ${r.next?`다음 공식전 ${r.days}일 전`:'공식전 일정 없음'} · 평균 피로 ${Math.round(r.fat)} / 컨디션 ${Math.round(r.cond)}</p>`})()}
   <section><h3>훈련 배분 <small class="hint" id="trleft">남은 포인트 ${TRAIN_POINTS-['mechanical','laning','combat','macro','mental'].reduce((x,k)=>x+(+tr[k]||0),0)} / ${TRAIN_POINTS}</small></h3>${mineOrg?`<label>훈련 강도<select id="trint"><option value="light"${tr.intensity==='light'?' selected':''}>가볍게 · 회복 우선</option><option value="normal"${!tr.intensity||tr.intensity==='normal'?' selected':''}>보통 · 균형</option><option value="high"${tr.intensity==='high'?' selected':''}>강하게 · 성장 우선</option></select></label>`:`<p class="hint">훈련 강도: ${tr.intensity==='high'?'강하게':tr.intensity==='light'?'가볍게':'보통'}</p>`}<div class="tac">
@@ -6762,6 +6876,7 @@ function seasonTab(){
   if(SSET.tab==='sched'){
     return `<section><ol class="sched">${s.days.map((d,i)=>`<li class="${i===s.cur?'today':''}"><div class="sd"><time>${esc(d.date)}</time><span>${esc(d.label)}</span></div>
       ${d.matches.map(m=>`<button class="sm ${m.a===me||m.b===me?'mine':''}" data-m="${m.id}"${m.res?'':' disabled'}>
+        ${m.time?`<small>${esc(m.time)} · ${m.broadcastSlot}경기</small>`:''}
         <span class="${m.res&&m.res.winner===m.a?'w':''}">${esc(tshort(m.a))}</span><b>${m.res?m.res.score.join(' : '):'vs'}</b><span class="${m.res&&m.res.winner===m.b?'w':''}">${esc(tshort(m.b))}</span></button>`).join('')}</li>`).join('')}</ol></section>`;
   }
   if(SSET.tab==='bracket'){
