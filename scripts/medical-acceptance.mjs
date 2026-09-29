@@ -74,7 +74,7 @@ source+=String.raw`(()=>{
   const date=addDays(db.worldDate,1);
   ok(applyWorldDailyEffects(db,date),'world did not run medical day');
   ok(p.medicalRestDays===1,'rest day was not counted toward seasonal lost practice');
-  ok(medicalPlanFor(db,injured)==='rehab','rival AI ignored an injured player's rehabilitation');
+  ok(medicalPlanFor(db,injured)==='rehab','rival AI ignored injury rehabilitation');
   ok(medicalPlanFor(db,db.players[manager.roster[1]])!=='rehab','healthy player forced into medical rehab');
   const before=JSON.stringify([db.players[injured.id].medical,
     db.players[substitute.id].medicalLoad,db.players[p.id].medical]);
