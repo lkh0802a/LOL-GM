@@ -48,6 +48,8 @@ const maintainabilityBudgets = {
   'patch-content.js': 12500,
   'series.js': 18000,
   'competition.js': 18000,
+  'competition-broadcast.js': 8000,
+  'competition-international.js': 8000,
   'player.js': 25000,
   'development.js': 14000,
   'player-relations.js': 16000,
