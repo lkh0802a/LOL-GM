@@ -83,3 +83,47 @@ function scrimTimeOverlap(db,first,second,date,slot){
     endsAt:new Date(end).toISOString(),
     firstTimeZone:a.timeZone,secondTimeZone:b.timeZone};
 }
+
+// Group by *actual* UTC date, not the venue calendar day. A multi-series
+// broadcast can cross midnight UTC; two consecutive local days can even
+// share one UTC date. Preserve a single world-day tick and unique match IDs.
+function appendUtcFixtureDay(s,localDate,stage,label,pairs,bo,timeSlots){
+  let nextId=s.days.reduce((n,d)=>n+d.matches.length,0);
+  const touched=new Set(),zone=s.venueTimeZone||'UTC';
+  for(let i=0;i<pairs.length;i++){
+    const [a,b]=pairs[i],time=timeSlots?.[i]||broadcastSlotTime(i,pairs.length),
+      utcAt=venueToUtc(localDate,time,zone),utcDay=utcAt.slice(0,10);
+    let day=s.days.find(d=>d.date===utcDay&&d.stage===stage);
+    if(!day){
+      day={date:utcDay,stage,label,localDate,matches:[]};
+      s.days.push(day);
+    }
+    day.matches.push({id:`${s.id}_match_${nextId++}`,a,b,bo,res:null,
+      time,localDate,timeZone:zone,utcAt,roundLabel:label,
+      broadcastSlot:i+1});
+    touched.add(day);
+  }
+  for(const day of touched){
+    day.matches.sort((a,b)=>a.utcAt.localeCompare(b.utcAt));
+    day.label=[...new Set(day.matches.map(m=>m.roundLabel))].join(' · ');
+    day.localDate=day.matches.at(-1).localDate;
+  }
+  s.days.sort((a,b)=>a.date.localeCompare(b.date));
+}
+function pushVenueRound(s,localDate,stage,label,pairs,bo){
+  const perDay=s.venueTimeZone?3:Math.max(1,pairs.length);
+  for(let i=0;i<pairs.length;i+=perDay)
+    pushDay(s,addDays(localDate,Math.floor(i/perDay)),stage,label,
+      pairs.slice(i,i+perDay),bo);
+}
+function venueRoundGap(s,games,normalGap){
+  return s.venueTimeZone?
+    Math.max(normalGap,Math.ceil(games/3)+1):normalGap;
+}
+
+// A three-game block needs roughly three hours. A two-hour overlap cannot
+// legitimately host all three games merely because 90 minutes intersect.
+function scrimOverlapGames(overlap){
+  return overlap?Math.floor((Date.parse(overlap.endsAt)-
+    Date.parse(overlap.startsAt))/3600000):0;
+}

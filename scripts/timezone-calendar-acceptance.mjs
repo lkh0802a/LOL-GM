@@ -78,6 +78,86 @@ const fixture=String.raw`(()=>{
       m.utcAt.slice(0,10)===d.date&&m.timeZone===intl.venueTimeZone)),
     'international event must use one neutral hosting region and real UTC timing');
 
+  // A 16–20 club Pacific league has simultaneous *local* TV dates whose
+  // early and late matches occupy different UTC dates. No fixture may be
+  // dropped, duplicated, or processed twice after midnight.
+  let rollover=0;
+  for(const n of [10,12,16,18,20]){
+    const R=regionCfg('NA',{teams:n,legs:2,format:'rr_po',div2:false}),
+      teamIds=Array.from({length:n},(_,i)=>'ZONE_FAKE_'+n+'_'+i),
+      id='ZONE_BROADCAST_'+n;
+    db.competitions[id]={id,region:'NA',teams:teamIds,
+      stages:leagueStages(R,n,1)};
+    const fixture=newSeason(db,id,2027,'tz-competition-'+n,'2027-01-19',id),
+      matches=fixture.days.filter(d=>d.stage==='regular')
+        .flatMap(d=>d.matches.map(m=>({m,d}))),
+      local=matches[0].m.localDate;
+    verify(fixture.days.every((d,i)=>i===0||fixture.days[i-1].date<=d.date),
+      'UTC game days not chronological for '+n+' teams');
+    const idSet=new Set(matches.map(x=>x.m.id));
+    verify(idSet.size===matches.length,'cross-midnight lost/duplicated official match IDs');
+    for(const {m,d} of matches){
+      verify(m.utcAt.slice(0,10)===d.date&&
+        venueClockParts(m.utcAt,m.timeZone).date===m.localDate&&
+        venueClockParts(m.utcAt,m.timeZone).time===m.time,
+        'local clock converted to wrong UTC date for '+n+' teams');
+    }
+    for(let week=0;week<4;week++){
+      const from=addDays(local,week*7),to=addDays(from,7),
+        weekly=matches.filter(x=>x.m.localDate>=from&&x.m.localDate<to),
+        byClub=Object.fromEntries(teamIds.map(id=>[id,[]])),
+        localDays=new Set();
+      for(const {m} of weekly){
+        localDays.add(m.localDate);
+        for(const tid of [m.a,m.b])byClub[tid].push(m.localDate);
+      }
+      verify(localDays.size===6&&[...localDays].every(date=>
+        new Date(date+'T00:00:00Z').getUTCDay()!==1),
+        n+'-club broadcast week lost a local TV day or included Monday');
+      verify(Object.values(byClub).every(days=>days.length===2&&
+        days[0]!==days[1]),
+        'club booked incorrect weekly series count across midnight '+n);
+    }
+    const localDays=[...new Set(matches.map(x=>x.m.localDate))];
+    if(n>=16){
+      const spans=localDays.filter(day=>
+        new Set(matches.filter(x=>x.m.localDate===day)
+          .map(x=>x.d.date)).size>=2).length;
+      verify(spans>0,'large Pacific league did not exercise split UTC dates');
+      rollover+=spans;
+    }
+    delete db.competitions[id];
+  }
+  // 16-team neutral Swiss is staged over several local broadcast days. Every
+  // participant's first-round record must be counted exactly once when the
+  // final UTC day is completed, and the next round must wait for recovery.
+  const swissTeams=activeTeams(db,null,1).slice(0,16).map(t=>t.id),
+    swissComp={id:'_TZ_SWISS',name:'Timezone Swiss',international:true,
+      timeZone:'America/Los_Angeles',teams:swissTeams,
+      stages:[{id:'sw',name:'Swiss',type:'swiss',bestOf:1,wins:3,losses:3}]};
+  db.competitions._TZ_SWISS=swissComp;
+  const swiss=newSeason(db,'_TZ_SWISS',db.year,'timezone-swiss','2027-01-19'),
+    firstRound=swiss.days.slice(),cfgSwiss=swissComp.stages[0];
+  verify(firstRound.length>=3&&firstRound.reduce((n,day)=>
+    n+day.matches.length,0)===swissTeams.length/2,
+    'international Swiss round was not spread across several local broadcast days');
+  for(const d of firstRound){
+    verify(d.matches.every(m=>m.utcAt.slice(0,10)===d.date),
+      'Swiss round date must equal actual UTC start');
+    for(const m of d.matches)m.res={winner:m.a,score:[1,0]};
+    finalizeCompetitionDay(db,swiss,d,0,cfgSwiss);
+  }
+  verify(Object.values(swiss.stageData.sw.rec).every(row=>row.w+row.l===1),
+    'cross-midnight Swiss bracket omitted results from earlier UTC days');
+  const lastLocal=firstRound.at(-1).matches.at(-1).localDate,
+    nextLocal=swiss.days.slice(firstRound.length)[0]?.matches[0]?.localDate;
+  verify(nextLocal&&nextLocal>=addDays(lastLocal,2),
+    'next Swiss round did not preserve one full local rest day');
+  console.log('TIMEZONE_CROSS_MIDNIGHT '+JSON.stringify({
+    pacificRolloverDays:rollover,swissDays:firstRound.length,
+    originalSwissMatches:swissTeams.length/2
+  }));
+
   const pair=activeTeams(db,'KR',1).flatMap((first,i,a)=>a.slice(i+1)
     .filter(second=>scrimPartnerAssessment(db,first,second).allowed)
     .map(second=>[first,second]))[0];
@@ -92,6 +172,13 @@ const fixture=String.raw`(()=>{
     simulateBackgroundScrim(db,a,b,1,new RNG('no-utc-overlap','scrim'),
       'afternoon')===null,
     'same nominal afternoon in Korea and Los Angeles cannot be booked together');
+  b.practiceTimeZone='Asia/Taipei';
+  const partial=scrimTimeOverlap(db,a,b,db.worldDate,'afternoon');
+  verify(scrimOverlapGames(partial)===2,
+    'one-hour time-zone difference should leave only two shared practice hours');
+  verify(simulateBackgroundScrim(db,a,b,3,new RNG('too-many-sets','scrim'),
+    'afternoon')===null,
+    'cross-timezone overlap must reject more practice games than time permits');
   delete b.practiceTimeZone;
   const rec=simulateBackgroundScrim(db,a,b,2,new RNG('utc-shared','scrim'),
     'afternoon');
@@ -119,6 +206,7 @@ vm.runInNewContext(engine+'\n'+fixture,{console,Date,Math,JSON,Set,Map,
   {timeout:40000});
 const ui=await readFile(resolve(base,'ui-season.js'),'utf8');
 if(!ui.includes('fixtureTimeInfo(m)')||
-   !ui.includes("d.matches[0]?.localDate||d.date"))
-  throw new Error('Live broadcasts must display local dates and KST conversion');
+   !ui.includes('d.date)} UTC')||
+   !ui.includes('new Set(d.matches.map(m=>m.localDate||d.date))'))
+  throw new Error('Live broadcasts must show the real UTC day, all venue-local dates and KST conversion');
 console.log('Timezone broadcast UI integration: PASS');

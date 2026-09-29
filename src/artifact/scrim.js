@@ -73,7 +73,7 @@ function simulateBackgroundScrim(db,t,opp,games,rng,slot,booked=null,proposal=nu
   if(!assessment.allowed)return null;
   const first=scrimReadiness(db,t,booked),second=scrimReadiness(db,opp,booked),
     sharedTime=scrimTimeOverlap(db,t,opp,db.worldDate,slot);
-  if(!sharedTime||!first.ok||!second.ok||!first.availableSlots.includes(slot)||
+  if(!sharedTime||games>scrimOverlapGames(sharedTime)||!first.ok||!second.ok||!first.availableSlots.includes(slot)||
     !second.availableSlots.includes(slot)||games>first.remaining||games>second.remaining)return null;
   const participants=[t,opp],lines=[],results=[],wins={[t.id]:0,[opp.id]:0};
   for(let g=0;g<games;g++){
@@ -140,9 +140,6 @@ function aiRunScrims(db,rng){
         offer:scrimPartnerAssessment(db,t,o,intents,strengths,rivals)}))
         .filter(x=>x.offer.allowed).map(x=>({...x,
           weight:x.offer.weight*Math.max(.2,scrimValue(db,t.id,x.team.id))}));
-      // Requests are bilateral: the host picks a practice fit, then the
-      // other club can decline. Try an alternate only while the same time
-      // window stays free; do not force a scrim when no one accepts.
       let attempts=0;
       while(ranked.length&&attempts++<4){
         const total=ranked.reduce((sum,row)=>sum+row.weight,0);
@@ -154,7 +151,8 @@ function aiRunScrims(db,rng){
         ranked.splice(at,1);
         const opponent=chosen.team;
         const second=scrimReadiness(db,opponent,booked),
-          games=Math.min(3,first.remaining,second.remaining);
+          games=Math.min(3,first.remaining,second.remaining,
+            scrimOverlapGames(scrimTimeOverlap(db,t,opponent,db.worldDate,slot)));
         if(games<1||!rng.chance(chosen.offer.acceptance))continue;
         const rec=simulateBackgroundScrim(db,t,opponent,games,rng,
           slot,booked,chosen.offer);
