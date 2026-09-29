@@ -47,20 +47,46 @@ function allocateBroadcastWeek(first,second,week){
   }
   return buckets;
 }
+// All regional start times are interpreted in the broadcast venue's real
+// IANA time zone, then stored as UTC instants in the competition event list.
+function scheduleBroadcastRoundRobin(s,cfg,schedules,count,start){
+  const anchor=nextBroadcastTuesday(start);
+  for(let week=0;week<Math.ceil(count/2);week++){
+    const first=schedules.flatMap(x=>x[week*2]||[]),
+      second=schedules.flatMap(x=>x[week*2+1]||[]),
+      weekDays=allocateBroadcastWeek(first,second,week);
+    for(let offset=0;offset<6;offset++){
+      const fixtures=weekDays[offset];
+      if(!fixtures.length)continue;
+      const round=week*2+fixtures[0].round+1,local=addDays(anchor,week*7+offset);
+      pushDay(s,local,cfg.id,`${cfg.name} ${round}라운드`,
+        fixtures.map(x=>x.pair),cfg.bestOf,
+        fixtures.map((_,i)=>broadcastSlotTime(i,fixtures.length)));
+      s.days[s.days.length-1].matches.forEach((m,i)=>m.broadcastSlot=i+1);
+    }
+  }
+}
 function officialBookedTeams(db,date=db.worldDate){
   const busy=new Set();
   for(const s of Object.values(db.world?.seasons||{})){
     const dates=s.days;if(!dates?.length)continue;
-    let lo=0,hi=dates.length-1;
-    while(lo<=hi){
-      const mid=(lo+hi)>>1,x=dates[mid].date;
-      if(x<date)lo=mid+1;
-      else if(x>date)hi=mid-1;
-      else{
-        let start=mid;while(start>0&&dates[start-1].date===date)start--;
-        for(let i=start;i<dates.length&&dates[i].date===date;i++)
-          for(const match of dates[i].matches){busy.add(match.a);busy.add(match.b)}
-        break;
+    // Absolute UTC and hosting venue's local day can differ (e.g. a
+    // Los Angeles 20:00 match starts at 03:00Z the *following* day).
+    // Both dates block private training. Previously completed fixtures
+    // continue blocking the same day's team time as well.
+    const firstDate=addDays(date,-1),lastDate=addDays(date,1);
+    let lo=0,hi=dates.length;
+    while(lo<hi){
+      const mid=(lo+hi)>>1;
+      if(dates[mid].date<firstDate)lo=mid+1;
+      else hi=mid;
+    }
+    for(let i=lo;i<dates.length&&dates[i].date<=lastDate;i++){
+      const day=dates[i];
+      for(const match of day.matches){
+        if(day.date===date||match.localDate===date){
+          busy.add(match.a);busy.add(match.b);
+        }
       }
     }
   }
