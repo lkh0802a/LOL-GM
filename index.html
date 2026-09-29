@@ -3121,7 +3121,7 @@ function startWorldSeason(db,myTeam,seed){
     steps.push(...intlSteps(tim[sp]));
   }
   const manage=db.world?db.world.manage:(db.worldConfig.manage||'manual');
-  db.world={year:db.year,seed,manage,phase:'season',seasons:{},steps,step:-1,report:null,pendingOfficial:null,lastDate:`${db.year}-01-07`,offers:[],marketLog:[]};
+  db.world={year:db.year,seed,manage,phase:'season',seasons:{},steps,step:-1,report:null,pendingOfficial:null,lastDate:`${db.year}-01-07`,lastDailyTick:null,majorPatchEvents:[],offers:[],marketLog:[]};
   seasonPatch(db,`${db.year}-01-02`,new RNG(seed+db.year,'patch'));
   setGoals(db);
   advanceStep(db);
@@ -3142,11 +3142,11 @@ function advanceStep(db){
     if(w.step>=w.steps.length){w.phase='offseason';news(db,`${w.year} 시즌 일정이 모두 끝났습니다`);return}
     const st=w.steps[w.step], start=addDays(w.lastDate,st.kind==='intl'?18:(w.step===0?7:14));
     if(st.kind==='league'){
-      if(st.split>1&&w.step>0){ // 스플릿 개막: 대형 패치 + 사무국 중간 점검
-        const rng=new RNG(w.seed+w.year,'mid');
-        const p=newPatch(db,start,true,rng);db.patches.nextDate=addDays(start,db.patches.cadence||14);
-        const nc=p.notes.find(n=>n.type==='new');news(db,`${SPLIT_NAME[st.split]} 개막 패치 ${p.id}${nc?` — 신규 챔피언 ${nc.def.name} 출시`:''}`);
-        officeMidSeason(db,rng,CHANGE_F[db.worldConfig.changes]??1);
+      if(st.split>1&&w.step>0){
+        // The next bracket is prepared now, but its large patch must not be
+        // applied weeks early while the calendar still sits in the break.
+        w.majorPatchEvents=w.majorPatchEvents||[];
+        w.majorPatchEvents.push({date:start,step:w.step,split:st.split});
       }
       let any=false;
       for(const R of Object.values(db.regions)){
@@ -3248,25 +3248,70 @@ function resolvePendingOfficialMatch(db,forcedDraft){
   p.queue.shift();if(!p.queue.length){w.pendingOfficial=null;if(!activeSeasons(db).length)advanceStep(db)}
   return {game:played.game,done:true,score:played.score,rec:series.rec,lines:series.lines,finalized,pending:w.pendingOfficial};
 }
-function playWorldDay(db){
-  const w=db.world;if(w.phase!=='season')return null;
-  if(w.pendingOfficial&&w.pendingOfficial.queue&&w.pendingOfficial.queue.length)return {date:w.pendingOfficial.date,played:[],pending:w.pendingOfficial};
-  const d=nextDate(db);if(!d){advanceStep(db);return {date:null,played:[],pending:null}}
-  db.worldDate=d;advanceFacilityConstruction(db,d);patchTick(db,d,new RNG(w.seed+d,'patch'));dailyRecovery(db);
+// Match dates are fixtures; the authoritative world clock moves through every
+// intervening calendar date, including rest days and inter-stage breaks.
+function nextCalendarDate(db){
+  const fixture=nextDate(db);
+  if(fixture===null)return null;
+  const previous=db.worldDate||`${db.year}-01-01`;
+  if(previous>fixture)throw new Error('월드 날짜가 미진행 공식 경기일보다 늦습니다: '+previous+' > '+fixture);
+  if(previous===fixture)return fixture; // legacy saves may be parked on an unplayed match date
+  return addDays(previous,1);
+}
+function applyCalendarPatchEvents(db,date){
+  const w=db.world;
+  if(!w.majorPatchEvents?.length)return;
+  const remaining=[];
+  for(const e of w.majorPatchEvents){
+    if(e.date>date){remaining.push(e);continue}
+    const rng=new RNG(w.seed+w.year+'|'+e.step,'mid');
+    const p=newPatch(db,e.date,true,rng);
+    db.patches.nextDate=addDays(e.date,db.patches.cadence||14);
+    const nc=p.notes.find(n=>n.type==='new');
+    news(db,`${SPLIT_NAME[e.split]} 개막 패치 ${p.id}${nc?` — 신규 챔피언 ${nc.def.nameKo||nc.def.name} 출시`:''}`);
+    officeMidSeason(db,rng,CHANGE_F[db.worldConfig.changes]??1);
+  }
+  w.majorPatchEvents=remaining;
+}
+function applyWorldDailyEffects(db,date){
+  const w=db.world;
+  if(w.lastDailyTick===date)return false;
+  if(w.lastDailyTick&&w.lastDailyTick>date)throw new Error('이미 처리한 날짜를 다시 진행할 수 없습니다');
+  db.worldDate=date;
+  // A scheduled patch is effective *on* its intended date, never during the
+  // preceding break. Then every actual day runs exactly once.
+  applyCalendarPatchEvents(db,date);
+  patchTick(db,date,new RNG(w.seed+date,'patch'));
+  advanceFacilityConstruction(db,date);
   for(const t of activeTeams(db))aiManageTraining(db,t);
+  dailyRecovery(db);
   for(const t of activeTeams(db))aiReviewRoleConversions(db,t);
   advanceRoleConversionsDay(db);
-  aiRunScrims(db,new RNG(w.seed+d,'scrim'));
+  aiRunScrims(db,new RNG(w.seed+date,'scrim'));
   for(const t of activeTeams(db,null,1))aiManageOwnedReserve(db,t);
-  const played=[],queue=[],me=managedTeamId(db);
-  for(const [seasonKey,s] of Object.entries(w.seasons))if(!s.done&&s.days[s.cur].date===d){
-    const r=playDay(db,s,{deferTeam:me});played.push({s,day:r.day});
-    if(r.finalized)scoutFromDay(db,s,r.day);
-    for(const x of r.pending)queue.push({seasonKey,matchId:x.matchId,date:d});
+  w.lastDailyTick=date;
+  return true;
+}
+function playWorldDay(db){
+  const w=db.world;if(w.phase!=='season')return null;
+  // An unfinished managed Bo3/Bo5 must be resumed before advancing another
+  // day; do not apply recovery, patches, or construction a second time.
+  if(w.pendingOfficial?.queue?.length)return {date:w.pendingOfficial.date,played:[],pending:w.pendingOfficial,advanced:false};
+  const d=nextCalendarDate(db);
+  if(!d){advanceStep(db);return {date:null,played:[],pending:null,advanced:false}}
+  const advanced=applyWorldDailyEffects(db,d);
+  const fixture=nextDate(db),played=[],queue=[],me=managedTeamId(db);
+  if(d===fixture){
+    for(const [seasonKey,s] of Object.entries(w.seasons))if(!s.done&&s.days[s.cur].date===d){
+      const result=playDay(db,s,{deferTeam:me});
+      played.push({s,day:result.day});
+      if(result.finalized)scoutFromDay(db,s,result.day);
+      for(const m of result.pending)queue.push({seasonKey,matchId:m.matchId,date:d});
+    }
+    if(queue.length)w.pendingOfficial={date:d,queue};
+    else if(!activeSeasons(db).length)advanceStep(db);
   }
-  if(queue.length)w.pendingOfficial={date:d,queue};
-  else if(!activeSeasons(db).length)advanceStep(db);
-  return {date:d,played,pending:w.pendingOfficial};
+  return {date:d,played,pending:w.pendingOfficial,advanced};
 }
 function news(db,text){db.news.unshift({year:db.world?db.world.year:db.year,text});if(db.news.length>250)db.news.length=250}
 
@@ -5216,9 +5261,15 @@ function scrimReadiness(db,t){
   if(avgFatigue>=58||avgCondition<=70)return {ok:false,reason:'선수단 회복 필요',avgFatigue,avgCondition,games};
   return {ok:true,reason:'가능',avgFatigue,avgCondition,games};
 }
+function aiScrimCooldownReady(db,t){
+  const recent=(t.scrimLog||[]).filter(x=>x.date&&x.date<=db.worldDate)
+    .sort((a,b)=>a.date.localeCompare(b.date)).at(-1);
+  return !recent||(new Date(db.worldDate+'T00:00:00Z')-new Date(recent.date+'T00:00:00Z'))/86400000>=6;
+}
 function aiRunScrims(db,rng){
-  const teams=activeTeams(db,null,1).filter(t=>t.id!==managedTeamId(db)&&trainingRecommendation(db,t).scrim&&scrimReadiness(db,t).ok);
-  const used=new Set();for(const t of teams){if(used.has(t.id)||!rng.chance(.22))continue;const candidates=teams.filter(o=>o.id!==t.id&&!used.has(o.id)&&o.region===t.region&&scrimReadiness(db,o).ok);if(!candidates.length)continue;const weighted=candidates.map(o=>[o,Math.max(.1,scrimValue(db,t.id,o.id))]),sum=weighted.reduce((a,x)=>a+x[1],0);let roll=rng.next()*sum,opp=weighted[0][0];for(const [o,v] of weighted){roll-=v;if(roll<=0){opp=o;break}}const bo=rng.chance(.28)?3:1,s=simulateSeries(db,t.id,opp.id,bo,'ai-scrim/'+db.worldDate+'/'+t.id+'/'+opp.id,{fearless:true,firstChoice:'coin',replay:true,practice:true});recordScrimPractice(db,s.rec,s.lines);used.add(t.id);used.add(opp.id)}
+  const teams=activeTeams(db,null,1).filter(t=>t.id!==managedTeamId(db)&&
+    trainingRecommendation(db,t).scrim&&scrimReadiness(db,t).ok&&aiScrimCooldownReady(db,t));
+  const used=new Set();for(const t of teams){if(used.has(t.id)||!rng.chance(.16))continue;const candidates=teams.filter(o=>o.id!==t.id&&!used.has(o.id)&&o.region===t.region&&scrimReadiness(db,o).ok);if(!candidates.length)continue;const weighted=candidates.map(o=>[o,Math.max(.1,scrimValue(db,t.id,o.id))]),sum=weighted.reduce((a,x)=>a+x[1],0);let roll=rng.next()*sum,opp=weighted[0][0];for(const [o,v] of weighted){roll-=v;if(roll<=0){opp=o;break}}const bo=rng.chance(.28)?3:1,s=simulateSeries(db,t.id,opp.id,bo,'ai-scrim/'+db.worldDate+'/'+t.id+'/'+opp.id,{fearless:true,firstChoice:'coin',replay:true,practice:true});recordScrimPractice(db,s.rec,s.lines);used.add(t.id);used.add(opp.id)}
 }
 function scrimValue(db,tid,oppId){
   const t=db.teams[tid],opp=db.teams[oppId];if(!t||!opp)return .5;const gap=teamStrength(db,oppId)-teamStrength(db,tid),quality=clamp(1+gap/35,.65,1.3),recent=(t.scrimLog||[]).filter(x=>x.opponent===oppId).slice(-3).length,novelty=[1,.82,.68,.58][Math.min(3,recent)];return quality*novelty;
@@ -5226,7 +5277,8 @@ function scrimValue(db,tid,oppId){
 function recordScrimPractice(db,rec,lines){
   if(!rec||!lines)return {players:0,games:0};const teams=new Set([rec.a,rec.b]),seen=new Set(),games=(rec.games||[]).length;
   for(const l of lines){const p=db.players[l.pid];if(!p||!teams.has(l.tid))continue;const opp=l.tid===rec.a?rec.b:rec.a,value=scrimValue(db,l.tid,opp);practiceChampion(db,p,l.champ,'scrim',value);pState(p);p.fatigue=clamp(p.fatigue+1.2,0,100);p.condition=clamp(p.condition-.45,45,100);seen.add(p.id)}
-  for(const tid of teams){const t=db.teams[tid];if(!t)continue;const opp=tid===rec.a?rec.b:rec.a,value=scrimValue(db,tid,opp),bonus=scrimAnalysisBonus(t);t.scrimIntel=clamp((t.scrimIntel||0)+(.8+bonus*12)*value,0,12);t.scrimLog=(t.scrimLog||[]).filter(x=>x.date===db.worldDate).slice(-5);t.scrimLog.push({date:db.worldDate,games,opponent:tid===rec.a?rec.b:rec.a})}
+  for(const tid of teams){const t=db.teams[tid];if(!t)continue;const opp=tid===rec.a?rec.b:rec.a,value=scrimValue(db,tid,opp),bonus=scrimAnalysisBonus(t);t.scrimIntel=clamp((t.scrimIntel||0)+(.8+bonus*12)*value,0,12);// Preserve recent *multi-day* partner memory for cooldown and novelty.
+    t.scrimLog=(t.scrimLog||[]).slice(-39);t.scrimLog.push({date:db.worldDate,games,opponent:tid===rec.a?rec.b:rec.a})}
   recordRoleConversionUsage(db,lines,'scrim');
   return {players:seen.size,games};
 }
@@ -6704,7 +6756,7 @@ function bindSeason(){
           if(!result||db.world.phase!=='season'||result.pending||stop(result))return fin();
         }
         const progress=$('#sprog');
-        if(progress)progress.textContent=`${n}일 진행 · ${nextDate(db)||''}`;
+        if(progress)progress.textContent=`${n}일 진행 · 현재 ${db.worldDate} · 다음 경기 ${nextDate(db)||'일정 없음'}`;
         setTimeout(step,0);
       }catch(e){
         finishUiTask(task);if(n)saveDB();
@@ -6716,6 +6768,7 @@ function bindSeason(){
   };
   const me=managedTeamId(DB), st0=w.step;
   $('#sday').onclick=()=>run(()=>true);
+  $('#sfixture').onclick=()=>run(r=>r.played.length>0);
   $('#smine').onclick=()=>run(r=>r.played.some(x=>x.day.matches.some(m=>m.a===me||m.b===me)));
   $('#sstep').onclick=()=>run(()=>DB.world.step!==st0);
   $('#send').onclick=()=>run(()=>false);
@@ -7078,7 +7131,7 @@ function viewSeason(){
   const reg=lgS?standings(DB,lgS,'regular'):[], mine=reg.find(x=>x.tid===me), rank=reg.indexOf(mine)+1;
   const nx=nextMine(), nd=nextDate(DB);
   let right='';
-  if(w.phase==='season') right=`<div class="nextm"><span>${nd?esc(nd)+' 진행 예정':''}</span><b>${nx?`다음 경기 ${esc(nx.d.date)} — vs ${esc(tname(nx.m.a===me?nx.m.b:nx.m.a))} (${esc(sName(nx.s))} · Bo${nx.m.bo})`:'이번 단계에 남은 경기가 없습니다'}</b></div>`;
+  if(w.phase==='season') right=`<div class="nextm"><span>현재 ${esc(DB.worldDate||'날짜 미정')} · 다음 경기 ${nd?esc(nd):'일정 없음'}</span><b>${nx?`다음 경기 ${esc(nx.d.date)} — vs ${esc(tname(nx.m.a===me?nx.m.b:nx.m.a))} (${esc(sName(nx.s))} · Bo${nx.m.bo})`:'이번 단계에 남은 경기가 없습니다'}</b></div>`;
   else{const last=DB.history.filter(h=>h.year===w.year&&h.intl).slice(-1)[0];right=`<div class="champ"><span>${w.year} ${last?esc(last.compName):''} 우승</span><b>${last?esc(tname(last.champion)):'—'}</b></div>`}
   return `<section class="seasonhead">
     <div><h2>${w.year} 시즌</h2><p>${esc(T.name)} · ${esc(DB.regions[T.region].leagueName)}${lgS?' '+esc(lgS.label):''} ${mine&&(mine.w+mine.l)?`${rank}위 (${mine.w}승 ${mine.l}패)`:''} · ${esc(phaseText(w))}</p></div>${right}
@@ -7107,7 +7160,7 @@ function controlsFor(w){
   if(w.phase==='offseason') return `<button class="primary" id="soff">오프시즌 진행</button><span class="hint">성장·노쇠, 은퇴, 승강, 세계 변화, 신인, 로스터 정비가 처리됩니다.</span>`;
   if(w.phase==='market') return `<button class="primary" id="smkt">이적 시장 마감</button><label class="inl">내 팀 운영 <select id="smanage">${[['manual','직접'],['ai','AI 위임']].map(([k,l])=>`<option value="${k}"${w.manage===k?' selected':''}>${l}</option>`).join('')}</select></label><span class="hint">${w.manage==='manual'?'재계약·방출·FA 제안·이적 제안을 마친 뒤 마감하세요.':'AI가 내 팀 계약을 처리합니다.'}</span>`;
   if(w.phase==='preseason') return w.fired?`<button class="primary" id="sreset">새 팀 고르기</button>`:`<button class="primary" id="snew">${DB.year} 시즌 시작</button><button class="ghost" id="sreset">맡을 팀 바꾸기</button>`;
-  return `<button class="primary" id="sday">다음 경기일 진행</button><button class="ghost" id="smine"${nextMine()?'':' disabled'}>내 경기까지</button><button class="ghost" id="sstep">이번 단계 끝까지</button><button class="ghost" id="send">시즌 끝까지</button>`;
+  return `<button class="primary" id="sday">하루 진행</button><button class="ghost" id="sfixture">다음 경기일</button><button class="ghost" id="smine"${nextMine()?'':' disabled'}>내 경기까지</button><button class="ghost" id="sstep">이번 단계 끝까지</button><button class="ghost" id="send">시즌 끝까지</button>`;
 }
 function renderReport(r){
   const nm=id=>DB.players[id]?DB.players[id].name:'?';
