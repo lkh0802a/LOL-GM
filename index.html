@@ -2270,6 +2270,50 @@ function scrimTimeOverlap(db,first,second,date,slot){
     firstTimeZone:a.timeZone,secondTimeZone:b.timeZone};
 }
 
+// Group by *actual* UTC date, not the venue calendar day. A multi-series
+// broadcast can cross midnight UTC; two consecutive local days can even
+// share one UTC date. Preserve a single world-day tick and unique match IDs.
+function appendUtcFixtureDay(s,localDate,stage,label,pairs,bo,timeSlots){
+  let nextId=s.days.reduce((n,d)=>n+d.matches.length,0);
+  const touched=new Set(),zone=s.venueTimeZone||'UTC';
+  for(let i=0;i<pairs.length;i++){
+    const [a,b]=pairs[i],time=timeSlots?.[i]||broadcastSlotTime(i,pairs.length),
+      utcAt=venueToUtc(localDate,time,zone),utcDay=utcAt.slice(0,10);
+    let day=s.days.find(d=>d.date===utcDay&&d.stage===stage);
+    if(!day){
+      day={date:utcDay,stage,label,localDate,matches:[]};
+      s.days.push(day);
+    }
+    day.matches.push({id:`${s.id}_match_${nextId++}`,a,b,bo,res:null,
+      time,localDate,timeZone:zone,utcAt,roundLabel:label,
+      broadcastSlot:i+1});
+    touched.add(day);
+  }
+  for(const day of touched){
+    day.matches.sort((a,b)=>a.utcAt.localeCompare(b.utcAt));
+    day.label=[...new Set(day.matches.map(m=>m.roundLabel))].join(' · ');
+    day.localDate=day.matches.at(-1).localDate;
+  }
+  s.days.sort((a,b)=>a.date.localeCompare(b.date));
+}
+function pushVenueRound(s,localDate,stage,label,pairs,bo){
+  const perDay=s.venueTimeZone?3:Math.max(1,pairs.length);
+  for(let i=0;i<pairs.length;i+=perDay)
+    pushDay(s,addDays(localDate,Math.floor(i/perDay)),stage,label,
+      pairs.slice(i,i+perDay),bo);
+}
+function venueRoundGap(s,games,normalGap){
+  return s.venueTimeZone?
+    Math.max(normalGap,Math.ceil(games/3)+1):normalGap;
+}
+
+// A three-game block needs roughly three hours. A two-hour overlap cannot
+// legitimately host all three games merely because 90 minutes intersect.
+function scrimOverlapGames(overlap){
+  return overlap?Math.floor((Date.parse(overlap.endsAt)-
+    Date.parse(overlap.startsAt))/3600000):0;
+}
+
 /* ==== FILE: broadcast-calendar.js ==== */
 // ===== LOL GM: broadcast-week and team booking calendar =====
 // Official domestic rounds are broadcast across Tuesday–Sunday. The private
@@ -2396,15 +2440,7 @@ function newSeason(db,compId,year,seed,start,instanceKey=compId){
   return s;
 }
 function pushDay(s,date,stage,label,pairs,bo,timeSlots=null){
-  let n=s.days.reduce((a,d)=>a+d.matches.length,0),zone=s.venueTimeZone||'UTC';
-  const matches=pairs.map(([a,b],i)=>{
-    const time=timeSlots?.[i]||'17:00',utcAt=venueToUtc(date,time,zone);
-    return {id:`${s.id}_match_${n++}`,a,b,bo,res:null,
-      time,localDate:date,timeZone:zone,utcAt};
-  });
-  const dates=[...new Set(matches.map(m=>m.utcAt.slice(0,10)))];
-  if(dates.length>1)throw new Error('TV day spans multiple UTC dates: '+date+' '+zone);
-  s.days.push({date:dates[0]||date,stage,label,matches});
+  appendUtcFixtureDay(s,date,stage,label,pairs,bo,timeSlots);
 }
 function addStageDays(db,s,idx,teams,date){
   const cfg=db.competitions[s.comp].stages[idx], gap=i=>cfg.dayGap?cfg.dayGap[i%cfg.dayGap.length]:3;
@@ -2416,9 +2452,9 @@ function addStageDays(db,s,idx,teams,date){
       scheduleBroadcastRoundRobin(s,cfg,sched,R,date);
     }else{
       for(let r=0;r<R;r++){
-        pushDay(s,date,cfg.id,`${cfg.name} ${r+1}라운드`,
-          sched.flatMap(x=>x[r]||[]),cfg.bestOf);
-        date=addDays(date,gap(r));
+        const pairs=sched.flatMap(x=>x[r]||[]);
+        pushVenueRound(s,date,cfg.id,`${cfg.name} ${r+1}라운드`,pairs,cfg.bestOf);
+        date=addDays(date,venueRoundGap(s,pairs.length,gap(r)));
       }
     }
     s.stageData[cfg.id]={type:cfg.type,teams,groups:cfg.groups>1?groups:null};
@@ -2475,7 +2511,7 @@ function swissRound(db,s,idx,date){
     carry=pool;}
   if(!pairs.length)return;
   const bo=cfg.bestOf; const label=`${cfg.name} ${sd.round+1}라운드`;
-  pushDay(s,date,cfg.id,label,pairs,bo);
+  pushVenueRound(s,date,cfg.id,label,pairs,bo);
   sd.round++;sd.lastLabel=label;
 }
 function standings(db,s,stageId){
@@ -2521,19 +2557,19 @@ function finalizeCompetitionDay(db,s,day,cfgIdx,cfg){
   if(day.matches.some(m=>!m.res))return false;
   s.cur++;
   const comp=db.competitions[s.comp],sd=s.stageData[cfg.id],roundDays=s.days.filter(d=>d.stage===cfg.id&&d.label===day.label),roundDone=roundDays.every(d=>d.matches.every(m=>m.res));
-  const nd=addDays(day.date,cfg.dayGap?cfg.dayGap[0]:5);
+  const localDate=day.matches.at(-1)?.localDate||day.date,nd=addDays(localDate,cfg.dayGap?cfg.dayGap[0]:5);
   if(cfg.type==='single_elim'&&roundDone){
     const r=sd.rounds[sd.rounds.length-1],ms=roundDays.flatMap(d=>d.matches);
     sd.elim.push(...ms.map(m=>m.a===m.res.winner?m.b:m.a));sd.alive=[...r.byes,...ms.map(m=>m.res.winner)];
-    if(sd.alive.length===1)finishStage(db,s,cfgIdx,day.date);else addElimRound(db,s,cfgIdx,nd);
+    if(sd.alive.length===1)finishStage(db,s,cfgIdx,localDate);else addElimRound(db,s,cfgIdx,nd);
   }else if(cfg.type==='double_elim'&&roundDone){
     deAfter(sd,sd.rounds[sd.rounds.length-1],roundDays.flatMap(d=>d.matches));
-    if(sd.alive&&sd.alive.length===1&&sd.gf)finishStage(db,s,cfgIdx,day.date);else deRound(db,s,cfgIdx,nd);
+    if(sd.alive&&sd.alive.length===1&&sd.gf)finishStage(db,s,cfgIdx,localDate);else deRound(db,s,cfgIdx,nd);
   }else if(cfg.type==='swiss'&&roundDone){
-    for(const m of day.matches){const w=m.res.winner,l=m.a===w?m.b:m.a;sd.rec[w].w++;sd.rec[l].l++;sd.rec[m.a].opp.push(m.b);sd.rec[m.b].opp.push(m.a);if(sd.rec[w].w>=sd.W)sd.advanced.push(w);if(sd.rec[l].l>=sd.L)sd.out.push(l)}
+    for(const m of roundDays.flatMap(d=>d.matches)){const w=m.res.winner,l=m.a===w?m.b:m.a;sd.rec[w].w++;sd.rec[l].l++;sd.rec[m.a].opp.push(m.b);sd.rec[m.b].opp.push(m.a);if(sd.rec[w].w>=sd.W)sd.advanced.push(w);if(sd.rec[l].l>=sd.L)sd.out.push(l)}
     const act=sd.teams.filter(t=>!sd.advanced.includes(t)&&!sd.out.includes(t)),want=(comp.stages[cfgIdx+1]||{}).take||Math.floor(sd.teams.length/2);
-    if(act.length>=2&&sd.advanced.length<want)swissRound(db,s,cfgIdx,addDays(day.date,1));else finishStage(db,s,cfgIdx,day.date);
-  }else if(cfg.type==='round_robin'&&!s.days.slice(s.cur).some(d=>d.stage===cfg.id))finishStage(db,s,cfgIdx,day.date);
+    if(act.length>=2&&sd.advanced.length<want)swissRound(db,s,cfgIdx,addDays(localDate,2));else finishStage(db,s,cfgIdx,localDate);
+  }else if(cfg.type==='round_robin'&&!s.days.slice(s.cur).some(d=>d.stage===cfg.id))finishStage(db,s,cfgIdx,localDate);
   return true;
 }
 function scheduledSeriesSession(db,s,m){
@@ -5656,7 +5692,7 @@ function simulateBackgroundScrim(db,t,opp,games,rng,slot,booked=null,proposal=nu
   if(!assessment.allowed)return null;
   const first=scrimReadiness(db,t,booked),second=scrimReadiness(db,opp,booked),
     sharedTime=scrimTimeOverlap(db,t,opp,db.worldDate,slot);
-  if(!sharedTime||!first.ok||!second.ok||!first.availableSlots.includes(slot)||
+  if(!sharedTime||games>scrimOverlapGames(sharedTime)||!first.ok||!second.ok||!first.availableSlots.includes(slot)||
     !second.availableSlots.includes(slot)||games>first.remaining||games>second.remaining)return null;
   const participants=[t,opp],lines=[],results=[],wins={[t.id]:0,[opp.id]:0};
   for(let g=0;g<games;g++){
@@ -5723,9 +5759,6 @@ function aiRunScrims(db,rng){
         offer:scrimPartnerAssessment(db,t,o,intents,strengths,rivals)}))
         .filter(x=>x.offer.allowed).map(x=>({...x,
           weight:x.offer.weight*Math.max(.2,scrimValue(db,t.id,x.team.id))}));
-      // Requests are bilateral: the host picks a practice fit, then the
-      // other club can decline. Try an alternate only while the same time
-      // window stays free; do not force a scrim when no one accepts.
       let attempts=0;
       while(ranked.length&&attempts++<4){
         const total=ranked.reduce((sum,row)=>sum+row.weight,0);
@@ -5737,7 +5770,8 @@ function aiRunScrims(db,rng){
         ranked.splice(at,1);
         const opponent=chosen.team;
         const second=scrimReadiness(db,opponent,booked),
-          games=Math.min(3,first.remaining,second.remaining);
+          games=Math.min(3,first.remaining,second.remaining,
+            scrimOverlapGames(scrimTimeOverlap(db,t,opponent,db.worldDate,slot)));
         if(games<1||!rng.chance(chosen.offer.acceptance))continue;
         const rec=simulateBackgroundScrim(db,t,opponent,games,rng,
           slot,booked,chosen.offer);
@@ -7137,7 +7171,7 @@ function seasonTab(){
       </tbody></table></div>${take?`<p class="hint">선 위 ${take}팀이 다음 스테이지에 진출합니다.</p>`:''}</section>`}).join('')||'<p class="empty">이 대회는 순위표 없이 토너먼트로만 진행됩니다.</p>';
   }
   if(SSET.tab==='sched'){
-    return `<section><ol class="sched">${s.days.map((d,i)=>`<li class="${i===s.cur?'today':''}"><div class="sd"><time>${esc(d.matches[0]?.localDate||d.date)}</time><span>${esc(d.label)} · ${esc(d.matches[0]?.timeZone||'UTC')}</span></div>
+    return `<section><ol class="sched">${s.days.map((d,i)=>`<li class="${i===s.cur?'today':''}"><div class="sd"><time>${esc(d.date)} UTC</time><span>${esc(d.label)} · 현지 ${esc([...new Set(d.matches.map(m=>m.localDate||d.date))].join(' / '))} · ${esc(d.matches[0]?.timeZone||'UTC')}</span></div>
       ${d.matches.map(m=>`<button class="sm ${m.a===me||m.b===me?'mine':''}" data-m="${m.id}"${m.res?'':' disabled'}>
         ${m.time?`<small>${esc(fixtureTimeInfo(m))}${m.broadcastSlot?' · '+m.broadcastSlot+'경기':''}</small>`:''}
         <span class="${m.res&&m.res.winner===m.a?'w':''}">${esc(tshort(m.a))}</span><b>${m.res?m.res.score.join(' : '):'vs'}</b><span class="${m.res&&m.res.winner===m.b?'w':''}">${esc(tshort(m.b))}</span></button>`).join('')}</li>`).join('')}</ol></section>`;
