@@ -346,6 +346,17 @@ source += `\n(()=>{
   const careerTeam=selectable.find(t=>!t.parent&&reserveTeamsOf(db,t).length===1)||selectable.find(t=>!t.parent&&reserveTeamsOf(db,t).length)||selectable[0];
   startCareer(db,careerTeam.id,'smoke-world');
   if(db.world.phase!=='initial_roster'||db.manager.startMode!=='blank_roster') throw new Error('Initial roster phase did not start');
+  // The initial auction must not revoke salaries it just allowed because a
+  // signing bonus lowers liquidity in the dynamic annual budget.
+  for(const t of activeTeams(db)){
+    const startCeiling=initialSalaryCeiling(db,t),cash=t.finance.cash;
+    if((t.initialPayrollBudget||0)+.001<salaryBudget(db,t))
+      throw new Error('Initial wage ceiling did not capture the board budget');
+    t.finance.cash=0;
+    if(initialSalaryCeiling(db,t)+.001<startCeiling)
+      throw new Error('Pay envelope shrank after signing-bonus cash outflow');
+    t.finance.cash=cash;
+  }
 
   const mine=setupTeamsForManager(db);
   if(!mine.length) throw new Error('Managed organization has no setup squads');
