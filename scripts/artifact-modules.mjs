@@ -21,6 +21,7 @@ export const ENGINE_MODULES = [
   'player.js',
   'development.js',
   'player-relations.js',
+  'medical.js',
   'world.js',
   'season.js',
   'offseason.js',
