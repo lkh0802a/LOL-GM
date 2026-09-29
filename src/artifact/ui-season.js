@@ -139,7 +139,7 @@ function bindSeason(){
     const step=()=>{
       if(!isUiTaskCurrent(task))return;
       try{
-        for(let i=0;i<3;i++){
+        for(let i=0;i<2;i++){
           const result=playWorldDay(db);n++;
           if(!result||db.world.phase!=='season'||result.pending||stop(result))return fin();
         }
