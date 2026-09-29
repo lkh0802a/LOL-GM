@@ -15,7 +15,9 @@ function roundRobin(ids,legs){
 const STAGE_KO={round_robin:'풀리그',swiss:'스위스',single_elim:'싱글 엘리미네이션',double_elim:'더블 엘리미네이션'};
 function newSeason(db,compId,year,seed,start,instanceKey=compId){
   const comp=db.competitions[compId], st0=comp.stages[0], id=`season_${year}_${instanceKey}`;
-  const s={id,comp:compId,year,seed,days:[],cur:0,stage:0,stageData:{},pstats:{},done:false,champion:null,runnerUp:null};
+  const venue=competitionVenue(db,comp);
+  comp.timeZone=venue.timeZone;comp.venueRegion=venue.region;
+  const s={id,comp:compId,year,seed,days:[],cur:0,stage:0,stageData:{},pstats:{},done:false,champion:null,runnerUp:null,venueTimeZone:venue.timeZone,venueRegion:venue.region};
   comp.championPool=Object.values(db.patch.champions).filter(c=>championProEligible(db,c,start||db.worldDate)).map(c=>c.id);comp.championPoolLockedAt=start||db.worldDate;
   const rng=new RNG(seed,'schedule');
   let order=st0.type==='round_robin'&&!st0.groups?comp.teams.slice().sort(()=>rng.next()-0.5):comp.teams.slice();
@@ -24,7 +26,17 @@ function newSeason(db,compId,year,seed,start,instanceKey=compId){
   addStageDays(db,s,0,order,start||`${year}-01-14`);
   return s;
 }
-function pushDay(s,date,stage,label,pairs,bo){let n=s.days.reduce((a,d)=>a+d.matches.length,0);s.days.push({date,stage,label,matches:pairs.map(([a,b])=>({id:`${s.id}_match_${n++}`,a,b,bo,res:null}))})}
+function pushDay(s,date,stage,label,pairs,bo,timeSlots=null){
+  let n=s.days.reduce((a,d)=>a+d.matches.length,0),zone=s.venueTimeZone||'UTC';
+  const matches=pairs.map(([a,b],i)=>{
+    const time=timeSlots?.[i]||'17:00',utcAt=venueToUtc(date,time,zone);
+    return {id:`${s.id}_match_${n++}`,a,b,bo,res:null,
+      time,localDate:date,timeZone:zone,utcAt};
+  });
+  const dates=[...new Set(matches.map(m=>m.utcAt.slice(0,10)))];
+  if(dates.length>1)throw new Error('TV day spans multiple UTC dates: '+date+' '+zone);
+  s.days.push({date:dates[0]||date,stage,label,matches});
+}
 function addStageDays(db,s,idx,teams,date){
   const cfg=db.competitions[s.comp].stages[idx], gap=i=>cfg.dayGap?cfg.dayGap[i%cfg.dayGap.length]:3;
   if(cfg.type==='round_robin'){
@@ -32,26 +44,7 @@ function addStageDays(db,s,idx,teams,date){
     if(cfg.groups>1){groups=Array.from({length:cfg.groups},()=>[]);teams.forEach((t,i)=>{const r=Math.floor(i/cfg.groups),k=i%cfg.groups;groups[r%2?cfg.groups-1-k:k].push(t)})}
     const sched=groups.map(g=>roundRobin(g,cfg.legs||1)),R=Math.max(...sched.map(x=>x.length));
     if(cfg.broadcastWeek){
-      // Two fixtures per club per seven-day week; matches are aired on
-      // Tuesday–Sunday, rather than all teams being forced onto two dates.
-      const anchor=nextBroadcastTuesday(date);
-      for(let week=0;week<Math.ceil(R/2);week++){
-        const first=sched.flatMap(x=>x[week*2]||[]),
-          second=sched.flatMap(x=>x[week*2+1]||[]);
-        const weekDays=allocateBroadcastWeek(first,second,week);
-        for(let offset=0;offset<6;offset++){
-          const fixtures=weekDays[offset];
-          if(!fixtures.length)continue;
-          const round=week*2+fixtures[0].round+1;
-          pushDay(s,addDays(anchor,week*7+offset),cfg.id,
-            `${cfg.name} ${round}라운드`,fixtures.map(x=>x.pair),cfg.bestOf);
-          const matches=s.days[s.days.length-1].matches;
-          for(let slot=0;slot<matches.length;slot++){
-            matches[slot].time=broadcastSlotTime(slot,matches.length);
-            matches[slot].broadcastSlot=slot+1;
-          }
-        }
-      }
+      scheduleBroadcastRoundRobin(s,cfg,sched,R,date);
     }else{
       for(let r=0;r<R;r++){
         pushDay(s,date,cfg.id,`${cfg.name} ${r+1}라운드`,

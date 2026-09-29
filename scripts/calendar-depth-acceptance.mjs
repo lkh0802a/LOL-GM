@@ -22,22 +22,27 @@ const fixture=String.raw`(()=>{
   assert(firstFixture>addDays(initial,8),'need an authentic inter-fixture gap');
   const domestic=Object.values(db.world.seasons).find(x=>x.region===user.region&&x.div===1);
   assert(domestic,'the real first-division fixture list is missing');
-  const leagueFixtureDates=domestic.days.filter(d=>d.matches.some(m=>
-    m.a===user.id||m.b===user.id)).map(d=>d.date);
+  const userBroadcasts=domestic.days.flatMap(d=>d.matches
+    .filter(m=>m.a===user.id||m.b===user.id)
+    .map(m=>({date:d.date,localDate:m.localDate||d.date})));
+  const leagueFixtureDates=userBroadcasts.map(m=>m.date),
+    localFixtureDates=userBroadcasts.map(m=>m.localDate);
   assert(leagueFixtureDates.length>=8,'league schedule does not reach eight games');
-  const broadcastStart=domestic.days[0].date,firstUserFixture=leagueFixtureDates[0];
+  const broadcastStart=domestic.days[0].matches[0].localDate,
+    firstUserFixture=leagueFixtureDates[0];
   assert(new Date(broadcastStart+'T00:00:00Z').getUTCDay()===2,
-    'six-day television week must open on Tuesday');
+    'six-day local television week must open on Tuesday');
   for(let week=0;week<4;week++){
     const start=addDays(broadcastStart,week*7),end=addDays(start,7);
-    const weekly=leagueFixtureDates.filter(date=>date>=start&&date<end);
+    const weekly=localFixtureDates.filter(date=>date>=start&&date<end);
     assert(weekly.length===2,'each first-division team must play twice in a broadcast week');
-    const broadcast=domestic.days.filter(day=>day.stage==='regular'&&day.date>=start&&day.date<end);
+    const broadcast=domestic.days.filter(day=>day.stage==='regular'&&
+      day.matches.some(match=>match.localDate>=start&&match.localDate<end));
     assert(broadcast.length===6,'each complete domestic week must have six broadcast days');
     const perClub={};
     for(const day of broadcast){
-      assert(new Date(day.date+'T00:00:00Z').getUTCDay()!==1,
-        'the domestic broadcast week must keep Monday dark');
+      assert(new Date(day.matches[0].localDate+'T00:00:00Z').getUTCDay()!==1,
+        'the domestic venue-local broadcast week must keep Monday dark');
       assert(day.matches.length<=2,'ten-club league needs at most two broadcast series per day');
       const sessionIds=new Set();
       for(const match of day.matches){
