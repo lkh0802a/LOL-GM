@@ -52,9 +52,10 @@ const source=String.raw`(()=>{
     const player=starterFor(confidenceDb,confidenceStrong,role);
     if(player)player.morale=43;
   }
+  const separateRival=clubs.find(x=>x.id!==strong.id&&x.id!==weak.id);
   const losing=Array.from({length:3},(_,i)=>({
     date:addDays(date,-(i+1)),matches:[{
-      a:strong.id,b:weak.id,res:{winner:weak.id}
+      a:strong.id,b:separateRival.id,res:{winner:separateRival.id}
     }]
   }));
   confidenceDb.world.seasons._formEvidence={days:losing};
