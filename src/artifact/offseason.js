@@ -53,6 +53,10 @@ function runOffseason(db){
       delete p.pool;delete p.tend;delete p.attrs;}
   }
   db.year=w.year+1;
+  // Resolve offseason calendar gaps before the contract market appraises
+  // medical availability; otherwise an already-recovered December absence
+  // is incorrectly priced as an active January injury.
+  medicalOffseasonRecovery(db,`${db.year}-01-06`);
   promotionRelegation(db,w,rng,ev);
   updateHype(db,w);
   closeFinances(db,w,rng,ev);
