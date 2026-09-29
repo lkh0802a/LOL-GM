@@ -80,7 +80,52 @@ source+=String.raw`(()=>{
     scarCount+=lost;
   }
   ok(scarCount>=2&&scarCount<100,'permanent loss was not rare');
-  ok(db.version===15,'world schema changed');
+  // D02-B: protected top and reserve squads exchange only surplus healthy
+  // players, using the same atomic roster plan as manager and club AI.
+  const cfg2=defaultWorldConfig();
+  cfg2.regions=[regionCfg('KR',{teams:10,splits:1,legs:1,regularBo:1,
+    playoffBo:1,playoffTake:4,format:'rr_po',div2:true,system:'franchise'})];
+  cfg2.internationals=[];cfg2.subs=1;cfg2.changes='none';
+  const org=buildWorld(cfg2),owner=activeTeams(org,null,1)[0];
+  startCareer(org,owner.id,'d02-emergency');
+  autoBuildInitialSquad(org,owner,new RNG('d02-callup','squad'),5);
+  finalizeInitialRosters(org);
+  const first=activeTeams(org,null,1).find(t=>t.id!==owner.id&&
+    reserveTeamsOf(org,t).some(s=>medicalAvailable(org,s)>5)&&
+    (t.roster||[]).length<rosterRulesForTeam(org,t).firstTeamMax);
+  ok(first,'no registered club with a surplus owned-reserve substitute');
+  const reserve=reserveTeamsOf(org,first).find(s=>medicalAvailable(org,s)>5);
+  const spareBefore=medicalAvailable(org,reserve),firstBefore=first.roster.length;
+  const need=Math.max(0,medicalAvailable(org,first)-5);
+  for(const id of first.roster.slice(0,need))
+    ok(startMedicalEvent(org,org.players[id],'illness','moderate',8,org.worldDate)?.out,
+      'preparation did not reduce club healthy roster to five');
+  ok(medicalAvailable(org,first)===5,'callup setup healthy count incorrect');
+  const target=first.roster.map(id=>org.players[id]).find(p=>!medicalOut(p));
+  const emergency=startMedicalEvent(org,target,'injury','severe',32,org.worldDate);
+  ok(emergency?.out&&emergency.severity==='severe'&&medicalOut(target),
+    'available academy player did not allow a genuine absence');
+  ok(first.roster.length===firstBefore+1&&medicalAvailable(org,first)===5,
+    'first team failed to register a substitute');
+  ok(medicalAvailable(org,reserve)===spareBefore-1&&medicalAvailable(org,reserve)>=5,
+    'academy was left below its own legal match minimum');
+  const promoted=org.players[first.roster.find(id=>
+    org.players[id].careerEvents?.some(e=>e.type==='medical_callup'&&e.for===target.id))];
+  ok(promoted&&promoted.team===first.id&&
+    (reserve.roster||[]).every(id=>id!==promoted.id)&&
+    validateStartingLineup(org,first).ok,
+    'emergency callup was not an eligible unique-five lineup');
+  const restoredOrg=unpackDB(packDB(org));
+  ok(restoredOrg.players[target.id].medical?.out&&
+    restoredOrg.players[promoted.id].team===first.id&&
+    medicalAvailable(restoredOrg,reserveTeamsOf(restoredOrg,first.id)[0])>=5,
+    'emergency registration or absence failed the save roundtrip');
+  const beforeLoad=promoted.medicalLoad=10;
+  medicalDailyTick(org,addDays(org.worldDate,1));
+  ok(promoted.medicalLoad<beforeLoad&&promoted.medicalLoad>8.5,
+    'medical lottery processed a moved player twice on one day');
+
+    ok(db.version===15,'world schema changed');
   console.log('D02_MEDICAL_ACCEPTANCE '+JSON.stringify({
     fivePlayerFloor:true,emergencySubstitute:true,format2Save:true,
     dayIdempotent:true,offseasonRecovery:true,scars:scarCount,samples:600
