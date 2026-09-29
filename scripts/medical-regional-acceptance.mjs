@@ -143,6 +143,7 @@ source+=String.raw`(()=>{
         saves++;
       }
     }
+    console.log('D02_REGIONAL_SAMPLE '+JSON.stringify({seed,days,official,internationalMatches:ints,scrimBlocks:blocks,rosteredPlayerDays:seasonEvents.days,incidents:{injury:seasonEvents.injury,illness:seasonEvents.illness,burnout:seasonEvents.burnout},lastDate,saves}));
     assert(db.world.phase==='offseason'&&days>150&&days<520,
       'long realistic league/calendar failed to terminate '+JSON.stringify({seed,days,date:lastDate}));
     const seasons=Object.values(db.world.seasons);
@@ -158,7 +159,7 @@ source+=String.raw`(()=>{
       completedCups.every(s=>s.done)&&ints>0,
       'cross-region cup had no completed real matches');
     assert(completedCups.some(s=>
-      new Set(s.teams.map(id=>db.teams[id]?.region)).size===2),
+      new Set((db.competitions[s.comp]?.teams||[]).map(id=>db.teams[id]?.region)).size===2),
       'international tournament did not involve both regions');
     assert(official>400&&blocks>0&&scheduledIntervals>=5,
       'too few verified real fixture/scrim exposure days');
@@ -170,7 +171,6 @@ source+=String.raw`(()=>{
     assert(seasonEvents.unavailableDays<=seasonEvents.days,
       'medical availability tally exceeded registered athlete-days');
     assert(!rosterIntegrityErrors(db).length,'full-season roster integrity lost');
-    const beforeCash=Object.fromEntries(activeTeams(db).map(t=>[t.id,t.finance.cash]));
     const report=runOffseason(db);
     assert(db.world.phase==='market'&&report.rookies?.length===2,
       'medical gap crossed a market/year boundary without rookie intake');
