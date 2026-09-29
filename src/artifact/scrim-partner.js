@@ -18,6 +18,22 @@ function scrimOfficialRivalWindow(db,aId,bId){
   }
   return closest;
 }
+// One lookup table per calendar tick makes matching large regions cheap:
+function scrimRivalCalendar(db){
+  const date=db.worldDate||`${db.year}-01-01`,start=addDays(date,-3),
+    end=addDays(date,14),rivals=new Map();
+  for(const season of Object.values(db.world?.seasons||{}))
+    for(const day of season.days||[]){
+      if(day.date<start||day.date>end)continue;
+      const days=Math.round((new Date(day.date+'T00:00:00Z')-
+        new Date(date+'T00:00:00Z'))/86400000);
+      for(const m of day.matches||[]){
+        const key=[m.a,m.b].sort().join('|'),old=rivals.get(key);
+        if(old===undefined||Math.abs(days)<Math.abs(old))rivals.set(key,days);
+      }
+    }
+  return rivals;
+}
 function scrimRecentResults(db,tid){
   const recent=[];
   const today=db.worldDate||`${db.year}-01-01`;
@@ -78,12 +94,13 @@ function scrimPartnerInterest(db,t,other,intent=null,strength=null,otherStrength
   return {approval,desire,reason,goal:intent.goal,
     confidence:intent.confidence,relativeStrength:gap};
 }
-function scrimPartnerAssessment(db,t,other,intents=null,strengths=null){
+function scrimPartnerAssessment(db,t,other,intents=null,strengths=null,rivals=null){
   if(!t||!other||t.id===other.id||t.active===false||other.active===false)
     return {allowed:false,reason:'참가 불가 팀'};
   if(t.region!==other.region)
     return {allowed:false,reason:'현지 훈련권역이 다릅니다'};
-  const rivalDays=scrimOfficialRivalWindow(db,t.id,other.id);
+  const key=[t.id,other.id].sort().join('|'),rivalDays=rivals?
+    (rivals.get(key)??null):scrimOfficialRivalWindow(db,t.id,other.id);
   if(rivalDays!==null&&rivalDays>=-3&&rivalDays<=7)
     return {allowed:false,reason:'최근 또는 7일 내 공식전 맞대결 상대',
       rivalDays};
