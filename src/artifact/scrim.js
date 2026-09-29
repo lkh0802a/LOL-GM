@@ -14,7 +14,7 @@ function scrimDailyCapacity(db,t,booked=null){
   if((booked||officialBookedTeams(db)).has(t.id))return 0;
   const days=daysUntil(db,nextTeamMatch(db,t.id)?.date);
   if(days===0)return 0; // No practice blocks on an official fixture day.
-  const roster=(t.roster||[]).map(id=>db.players[id]).filter(p=>p&&!p.retired);
+  const roster=(t.roster||[]).map(id=>db.players[id]).filter(p=>p&&!p.retired&&!medicalOut(p));
   if(roster.length<5)return 0;
   const fatigue=avg(roster.map(p=>p.fatigue||0));
   const condition=avg(roster.map(p=>p.condition??96));
@@ -172,6 +172,7 @@ function recordScrimPractice(db,rec,lines){
     const p=db.players[l.pid];if(!p||!teams.has(l.tid))continue;
     const opp=l.tid===rec.a?rec.b:rec.a,value=scrimValue(db,l.tid,opp);
     practiceChampion(db,p,l.champ,'scrim',value);
+    medicalExposure(db,p,'scrim',1);
     pState(p);p.fatigue=clamp(p.fatigue+1.2,0,100);
     p.condition=clamp(p.condition-.45,45,100);seen.add(p.id);
   }
