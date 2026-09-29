@@ -15,6 +15,7 @@ export const ENGINE_MODULES = [
   'patch-balance.js',
   'patch-content.js',
   'series.js',
+  'broadcast-calendar.js',
   'competition.js',
   'player.js',
   'development.js',
