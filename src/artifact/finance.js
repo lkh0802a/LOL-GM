@@ -31,7 +31,7 @@ function financeSeasonWins(db,t){
 function financeForecast(db,t){
   const R=db.regions[t.region],ps=psTeam(db,t),last=(R.metrics||[]).slice(-1)[0],hype=last?last.hype:45;
   const sponsor=t.sponsor?.until>=db.year?t.sponsor:null,pre=t.finance?.prepaid||{};
-  const rev={league:hype*.25*ps,sponsor:sponsor?sponsor.base+sponsor.perWin*financeSeasonWins(db,t):(t.fans||30)*.35*ps,
+  const rev={league:hype*.25*ps,sponsor:sponsor?sponsor.base+(sponsor.perWin||0)*financeSeasonWins(db,t):(t.fans||30)*.35*ps,
     merch:(t.fans||30)*.1*ps,owner:ownerSupport(db,t),transfer:pre.transferReceived||0};
   const exp={salary:payroll(db,t),staff:staffCost(db,t),ops:opsCost(db,t),facility:facilityUpkeep(db,t),
     tax:spendingTax(db,t),buyout:t.finance?.buyout||0,
@@ -71,7 +71,7 @@ function closeFinances(db,w,rng,ev){
     const wins=Object.values(w.seasons).reduce((a,s)=>{const r=(s.stageData.regular&&standings(db,s,'regular').find(x=>x.tid===t.id));return a+(r?r.w:0)},0);
     const sp=t.sponsor&&t.sponsor.until>=w.year?t.sponsor:null;
     const pre=t.finance.prepaid||{};
-    const rev={league:hype*0.25*ps,sponsor:sp?sp.base+sp.perWin*wins:(t.fans||30)*0.35*ps,merch:(t.fans||30)*0.1*ps,prize:prize[t.id]||0,owner:ownerSupport(db,t),transfer:pre.transferReceived||0};
+    const rev={league:hype*0.25*ps,sponsor:sp?sp.base+(sp.perWin||0)*wins:(t.fans||30)*0.35*ps,merch:(t.fans||30)*0.1*ps,prize:prize[t.id]||0,owner:ownerSupport(db,t),transfer:pre.transferReceived||0};
     const pay=payroll(db,t),regulated=regulatedPayroll(db,t);
     const exp={salary:pay,bonuses:contractBonusCost(db,t,w.year),staff:staffCost(db,t),ops:opsCost(db,t),facility:facilityUpkeep(db,t),buyout:t.finance.buyout||0,tax:spendingTax(db,t),facilityInvestment:pre.facilityInvestment||0,signingBonus:pre.signingBonus||0,transfer:pre.transferPaid||0,staffSeverance:pre.staffSeverance||0};
     if(exp.tax>0)taxPool[R.id]=(taxPool[R.id]||0)+exp.tax*(R.sfrTeamShare??1)
