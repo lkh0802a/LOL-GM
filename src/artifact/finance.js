@@ -11,49 +11,101 @@ function initFinance(db,t,rng){
 }
 // Prepaid transfer fees, signing bonuses and board infrastructure investments
 // have already affected cash. Recording them again at close would double charge.
-const FINANCE_PREPAID_KEYS=['facilityInvestment','signingBonus','transferPaid','transferReceived','staffSeverance'];
+const FINANCE_PREPAID_KEYS=['facilityInvestment','signingBonus','transferPaid','transferReceived','staffSeverance','scoutingExpense'];
 function financePrepaid(t){if(!t.finance)throw new Error('구단 재정 정보가 없습니다');const f=t.finance;f.prepaid=f.prepaid||{};return f.prepaid}
 function recordFinancePrepaid(t,key,amount){
   if(!FINANCE_PREPAID_KEYS.includes(key)||!Number.isFinite(amount)||amount<0)throw new Error('잘못된 선지급 재정 항목');
   const p=financePrepaid(t);p[key]=Math.round(((p[key]||0)+amount)*10)/10;
 }
 function sumFinanceRows(rows){return Object.values(rows).reduce((a,v)=>a+v,0)}
-function financeSeasonWins(db,t){
-  const w=db.world;if(!w?.seasons)return 0;
+function financeSeasonWins(db,t,w=db.world){if(!w?.seasons)return 0;
   return Object.values(w.seasons).reduce((n,s)=>{
-    if(!s.stageData?.regular)return n;
+    if(!s.stageData?.regular||db.competitions[s.comp]?.international||s.region!==t.region)return n;
     const standing=standings(db,s,'regular').find(x=>x.tid===t.id);
     return n+(standing?.w||0);
   },0);
 }
-// Conservative same-year budget outlook; no speculative prizes or future wins.
-// Prepaid activity is shown in P&L but not removed from cash a second time.
-function financeForecast(db,t){
-  const R=db.regions[t.region],ps=psTeam(db,t),last=(R.metrics||[]).slice(-1)[0],hype=last?last.hype:45;
-  const sponsor=t.sponsor?.until>=db.year?t.sponsor:null,pre=t.finance?.prepaid||{};
-  const rev={league:hype*.25*ps,sponsor:sponsor?sponsor.base+(sponsor.perWin||0)*financeSeasonWins(db,t):(t.fans||30)*.35*ps,
-    merch:(t.fans||30)*.1*ps,owner:ownerSupport(db,t),transfer:pre.transferReceived||0};
-  const exp={salary:payroll(db,t),staff:staffCost(db,t),ops:opsCost(db,t),facility:facilityUpkeep(db,t),
-    tax:spendingTax(db,t),buyout:t.finance?.buyout||0,
+// One commercial forecast and annual settlement policy, shared by AI and human clubs.
+function financeExposure(db,t){
+  const hype=db.regions[t.region]?.metrics?.at(-1)?.hype??45;
+  const fans=clamp(t.fans??30,3,100),starCount=(t.roster||[]).filter(id=>
+    db.players[id]&&(db.players[id].reputation||0)>=78).length;
+  return {hype,fans,stars:Math.min(5,starCount),
+    broadcast:clamp(.85+(fans-35)/230,.72,1.19),
+    merchandising:clamp(.85+starCount*.07+(fans-35)/350,.74,1.26)};
+}
+function financeCommercialIncome(db,t,w=db.world,forecast=false,prize=0){
+  const exposure=financeExposure(db,t),ps=psTeam(db,t),
+    seasonYear=w?.year??db.year,sp=t.sponsor?.until>=seasonYear?t.sponsor:null,
+    pre=t.finance?.prepaid||{};
+  const wins=financeSeasonWins(db,t,w);
+  return {league:exposure.hype*.25*ps*exposure.broadcast,
+    sponsor:sp?(sp.base+(sp.perWin||0)*wins):exposure.fans*.35*ps,
+    merch:exposure.fans*.1*ps*exposure.merchandising,
+    prize:forecast?0:prize,
+    sponsorMilestone:forecast?0:sponsorAchievementBonus(db,t,w),
+    owner:ownerSupport(db,t),
+    transfer:pre.transferReceived||0};
+}
+function financeOperatingExpense(db,t,w=db.world){
+  const pre=t.finance?.prepaid||{},ps=psTeam(db,t);
+  const international=w?.seasons?Object.values(w.seasons).filter(s=>
+    db.competitions[s.comp]?.international&&s.teams?.includes(t.id)).length:0;
+  return {salary:payroll(db,t),
+    bonuses:w&&w.year<=db.year?contractBonusCost(db,t,w.year):0,
+    staff:staffCost(db,t),ops:opsCost(db,t),facility:facilityUpkeep(db,t),
+    travel:international*.55*ps,
+    interest:Math.max(0,-(t.finance?.cash||0))*.06,
+    buyout:t.finance?.buyout||0,tax:spendingTax(db,t),
     facilityInvestment:pre.facilityInvestment||0,signingBonus:pre.signingBonus||0,
-    transfer:pre.transferPaid||0,staffSeverance:pre.staffSeverance||0};
-  const prepaidIn=pre.transferReceived||0,prepaidOut=(pre.facilityInvestment||0)+(pre.signingBonus||0)+(pre.transferPaid||0)+(pre.staffSeverance||0);
-  const revenue=sumFinanceRows(rev),expense=sumFinanceRows(exp);
-  return {rev,exp,revenue,expense,net:revenue-expense,
-    // The current cash balance already includes prepaid receipts/payments.
-    closingCash:(t.finance?.cash||0)+(revenue-prepaidIn)-(expense-prepaidOut),
-    unknown:['국내·국제 상금','추가 성과급','미확정 이적료','향후 스폰서 승리 수당','사치세 재분배']};
+    transfer:pre.transferPaid||0,staffSeverance:pre.staffSeverance||0,
+    scouting:pre.scoutingExpense||0};
+}
+function financePrepaidSettlement(t){
+  const p=t.finance?.prepaid||{};
+  return {income:p.transferReceived||0,
+    expense:(p.facilityInvestment||0)+(p.signingBonus||0)+(p.transferPaid||0)+
+      (p.staffSeverance||0)+(p.scoutingExpense||0)};
 }
 function staffCost(db,t){const specialists=teamStaffMembers(t).reduce((sum,s)=>sum+staffSalary(s,1),0);return (2+specialists)*psTeam(db,t)}
 function opsCost(db,t){return 8*psTeam(db,t)}
-function ownerSupport(db,t){if(t.parent)return 4*psOf(db,t.region);return t.owner.wealth/100*(['win-now','superstar'].includes(t.philosophy)?12:6)*psTeam(db,t)}
+function ownerSupport(db,t){
+  if(t.parent)return 4*psOf(db,t.region);
+  const owner=t.owner||{wealth:50};
+  return owner.wealth/100*(['win-now','superstar'].includes(t.philosophy)?12:6)*psTeam(db,t);
+}
 function estRevenue(db,t){
-  const R=db.regions[t.region], ps=psTeam(db,t), m=(R.metrics||[]).slice(-1)[0], hype=m?m.hype:45;
-  return hype*0.25*ps+(t.fans||30)*0.45*ps+ownerSupport(db,t);
+  const rev=financeCommercialIncome(db,t,null,true);
+  return rev.league+rev.sponsor+rev.merch+rev.owner;
+}
+function financeRunway(db,t){
+  const monthly=(payroll(db,t)+staffCost(db,t)+opsCost(db,t)+facilityUpkeep(db,t))/12;
+  const cash=t.finance?.cash||0;
+  const months=monthly>0?Math.max(0,cash)/monthly:99;
+  const severity=cash<0?'critical':months<3?'strained':months<9?'watch':'stable';
+  return {months:Math.round(months*10)/10,severity,monthly};
 }
 function salaryBudget(db,t){
-  const b=estRevenue(db,t)*0.95+Math.max(0,t.finance.cash)*0.3-staffCost(db,t)-opsCost(db,t);
-  return b*(['win-now','superstar'].includes(t.philosophy)?1.15:t.philosophy==='cost'?0.85:1);
+  const liquid=Math.max(0,t.finance.cash),cashPressure=financeRunway(db,t);
+  const b=estRevenue(db,t)*.95+liquid*.3-staffCost(db,t)-opsCost(db,t);
+  const normal= ['win-now','superstar'].includes(t.philosophy)?1.15:t.philosophy==='cost'?.85:1;
+  // A financially distressed board cannot promise next year's payroll from
+  // cash it does not possess. Existing player contracts are still honoured.
+  const cautious=cashPressure.severity==='critical'?.82:cashPressure.severity==='strained'?.91:1;
+  return Math.max(0,b*normal*cautious);
+}
+// Conservative statement; only already-observed wins and committed expenses.
+function financeForecast(db,t){
+  const rev=financeCommercialIncome(db,t,db.world,true),
+    exp=financeOperatingExpense(db,t,db.world),settled=financePrepaidSettlement(t);
+  // Future contingent performance bonuses remain uncertain.
+  exp.bonuses=0;
+  const revenue=sumFinanceRows(rev),expense=sumFinanceRows(exp);
+  return {rev,exp,revenue,expense,net:revenue-expense,
+    closingCash:(t.finance?.cash||0)+revenue-expense-settled.income+settled.expense,
+    runway:financeRunway(db,t),
+    unknown:['미확정 상금','스폰서 목표 달성 수당','미지급 선수 성과급',
+      '미확정 선수 거래','향후 공식 경기 승수','사치세 재분배']};
 }
 
 // 한 해 결산: 중계권 분배, 스폰서, 굿즈, 상금, 구단주 지원 − 연봉, 스태프, 운영비, 사치세
