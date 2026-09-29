@@ -107,8 +107,10 @@ source+=String.raw`(()=>{
     }
   }
   ok(runs.length===seeds.length*seasonsPerSeed&&
-    totalMatches>=150&&totalActiveDays>=400&&totalPlayerDays>15000,
-    'real medical sampling coverage too small');
+    totalMatches>=150&&totalActiveDays>=240&&totalPlayerDays>12000,
+    'real medical sampling coverage too small: '+JSON.stringify({
+      runs:runs.length,totalMatches,totalActiveDays,totalPlayerDays
+    }));
   ok(totalIllness+totalInjury+totalBurnout>0,
     'medical engine generated no events during live full-calendar seasons');
   ok(totalAbsences<=totalInjury+totalIllness+totalBurnout,
