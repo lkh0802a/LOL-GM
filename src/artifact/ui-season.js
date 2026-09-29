@@ -32,9 +32,9 @@ function seasonTab(){
       </tbody></table></div>${take?`<p class="hint">선 위 ${take}팀이 다음 스테이지에 진출합니다.</p>`:''}</section>`}).join('')||'<p class="empty">이 대회는 순위표 없이 토너먼트로만 진행됩니다.</p>';
   }
   if(SSET.tab==='sched'){
-    return `<section><ol class="sched">${s.days.map((d,i)=>`<li class="${i===s.cur?'today':''}"><div class="sd"><time>${esc(d.date)}</time><span>${esc(d.label)}</span></div>
+    return `<section><ol class="sched">${s.days.map((d,i)=>`<li class="${i===s.cur?'today':''}"><div class="sd"><time>${esc(d.date)} UTC</time><span>${esc(d.label)}</span></div>
       ${d.matches.map(m=>`<button class="sm ${m.a===me||m.b===me?'mine':''}" data-m="${m.id}"${m.res?'':' disabled'}>
-        ${m.time?`<small>${esc(m.time)} · ${m.broadcastSlot}경기</small>`:''}
+        ${m.startsAt?`<small>현지 ${esc(m.localDate)} ${esc(m.time)} (${esc(m.timeZone)}) · 한국 ${esc(viewerTimeLabel(m))} · ${m.broadcastSlot}경기</small>`:m.time?`<small>${esc(m.time)} · ${m.broadcastSlot}경기</small>`:''}
         <span class="${m.res&&m.res.winner===m.a?'w':''}">${esc(tshort(m.a))}</span><b>${m.res?m.res.score.join(' : '):'vs'}</b><span class="${m.res&&m.res.winner===m.b?'w':''}">${esc(tshort(m.b))}</span></button>`).join('')}</li>`).join('')}</ol></section>`;
   }
   if(SSET.tab==='bracket'){
