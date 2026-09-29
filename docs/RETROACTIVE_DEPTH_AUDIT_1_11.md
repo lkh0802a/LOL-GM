@@ -1,6 +1,7 @@
 # LOL GM — 1~11 / 11.5 소급 게임플레이 깊이 감사
 
 > 기준: 2026-09-29, `main` commit `ef1ef9c20e1edd58e5677e476265af7d4fff2425`.
+> 추후 구현 상태: **D01 실제 일일 시계는 `feat/retro-d01-real-world-calendar`에서 보완 및 CI 검증**, D02~D13은 계속 미완. [세부 수락 근거](PHASE_D01_CALENDAR.md).
 > **문서/코드 조사 보고서**다. 이 변경 자체는 아래 기능을 구현하거나 테스트를 추가하지 않는다.
 > 기존 COMPLETE는 해당 시점의 **최소 엔진·회귀 계약이 수용됨**을 뜻하며, 전체 기획서의 사실적·장기적 깊이가 모두 완성됐다는 뜻이 아니다.
 
@@ -20,7 +21,7 @@
 
 | 기존 단계 | 실재하는 기능 / 보호할 기준 | 부족한 깊이·검증 영역 | 판정 |
 |---|---|---|---|
-| **1. 새 게임/팀 선택** | 관리자/구단 ID 분리, 월드 v15, 전세계 FA 창설, 날짜·시즌·팀 선택, 시즌 진입. `world.js`, `season.js`, `save.js`. | 아래 **D01**. `playWorldDay`는 다음 공식 경기일을 곧바로 지정하므로 매일 진행되는 세계 활동의 횟수·날짜가 실제 일수와 일치하지 않음. | 확인된 차이 |
+| **1. 새 게임/팀 선택** | 관리자/구단 ID 분리, 월드 v15, 전세계 FA 창설, 날짜·시즌·팀 선택, 시즌 진입. `world.js`, `season.js`, `save.js`. | **D01 이슈는 보완됨:** `playWorldDay`가 일 단위로 진행하며 모든 실제 날짜의 회복·전향·시설·패치가 일치하도록 검증. 대회 밖 신규 날짜 이벤트는 별도 후속 단계. | D01 수락 완료 |
 | **2. 선수** | 능력·성장곡선·폼·챔피언 숙련·경기 통계·커리어/은퇴. `player.js`, `development.js`, `engine.js`. | **D02**. 최종 규칙에 있는 희귀 부상·질병·번아웃과 재활/장기 후유증을 핵심 선수/일정/경기 경로에서 발견하지 못함. 선수관리·등록·대체선발에 영향을 주도록 수직 구현 필요. | 확인된 차이(검토한 경로 기준) |
 | **3. 선수 만족도/역할** | 역할 약속·감독 신뢰/관계·팀원 쌍 관계·출전 비율·불화/이적 의사·역할 전향. `player-relations.js`, `role-conversion.js`. | 관계망은 실제 구현돼 있으므로 ‘미구현’으로 단정 금지. 관계 변화 → 특정 조합의 팀워크/전술/재계약 → AI 대응을 여러 시즌에 걸쳐 측정하는 검증이 부족. **D08**. | 검증 미완 |
 | **4. 신인/스카우팅** | 시장 규모 연동 신인·특급 확률 변동·관찰에 따른 오차 축소·기간 경과 정보 노후화. `player.js`, `scouting.js`. | **D03**. `db.scout[p.id]`는 관리 구단 중심이며 AI 평가는 `aiMarketObservation`의 시즌별 결정적 노이즈와 실제 `playerOvr`에서 파생. 각 AI 구단이 별도 지역 커버리지/축적 관찰/보고서 갱신 비용을 가지는 지속적 조사 모델이 아님. | 확인된 차이 |
@@ -37,7 +38,7 @@
 
 | ID / 긴급도 | 기능 연결 | 실행할 심화 작업 | 완료로 인정할 테스트 |
 |---|---|---|---|
-| **D01 / P0** | 1·2·6·8·11 | 경기 없는 날을 건너뛰지 않는 **실제 세계 일일 시계** 설계. 경기일·로스터 마감·패치·스크림·휴식·시설 공사·역할 전향·중요 협상 일정을 독립된 이벤트로 취급하고 결정 대기에서 중단. 성능을 위해 빈 날만 안전하게 건너뛰되 모든 일일 효과의 횟수·순서는 일치시킬 것. | 7일 공백의 회복/훈련/공사/스크림 실행 날짜·횟수, 동일 세이브 하루 진행과 다음 일정까지 진행의 상태 동등성, 공식 경기 대기 중 재실행 없음, 저장 재개, 전지역 시계 불일치 0건. |
+| **D01 / 완료** | 1·2·6·8·11 | [일일 시계 구현/수락](PHASE_D01_CALENDAR.md): 기존 경기일 건너뛰기 제거. 경기 없는 날도 모든 회복·전향·시설·패치가 하루씩 처리되고, 일정까지 이동은 이를 반복 호출. 기존 수동 밴픽·공식경기 저장 차단 보존. 경기일·로스터 마감·패치·스크림·휴식·시설 공사·역할 전향·중요 협상 일정을 독립된 이벤트로 취급하고 결정 대기에서 중단. 성능을 위해 빈 날만 안전하게 건너뛰되 모든 일일 효과의 횟수·순서는 일치시킬 것. | 전용 `calendar-depth-acceptance`로 13일 공백/시설 공사/일일 회복·전향·패치 발효일·공식 Bo 대기·v15 저장/복원·스크림 이력 및 일일 처리 동등성 검증. 기존 전체 회귀·2시즌 공식 경기 검사와 병행. 100시즌 전체 월드 시간 성능은 D11에서 별도 확인. |
 | **D02 / P1** | 2·3·8·11 | 손목/허리/목 등 **희귀 부상**, 질병, 과부하에 따른 번아웃과 휴식. 발생 빈도·훈련/스크림 노출·선수 성향·치료/회복·후유증을 확률 엔진에 연결하고 대체 로스터/대회 등록/재계약과 상호작용. | 장기 발생률/연령 편향/회복 분포, 결장 시 라인업 규칙·경기력 변화, 저장 일관성, AI와 관리 구단의 동일 판정. |
 | **D03 / P0** | 4·5·7 | 구단별 관찰 메모리/지역·리그 담당 범위, 스태프 탐색 능력, 정보가 축적/노후화되는 스카우팅. 실제 잠재력 직접 이용을 피하고 AI의 관찰 근거를 설명 가능하게. | 두 AI 구단의 같은 선수에 대한 상이한 정보/영입 판단, 관찰 후 오차 감소·시간 경과 정보 감쇠, 시설/스태프 투자 효과, 오래된 보고서로 인한 합리적 실패. |
 | **D04 / P0** | 5 | **계약 기간/보장/냉각/우선협상** 심화. 현 `1~3` 상한과 `docs/REGRESSION_BASELINE.md`의 3년 계약 보호를 나중의 `RULE_SWEEP_A` 자유 기간 규칙과 먼저 조정한 뒤 바꿀 것. 계약 거절 뒤 냉각기, 선수 약속·에이전트, 선수 동의·계약 보장액 정산 등 단계적 계약 상태머신. | 제안/역제안/거절/재개 조건/이적 동의, 선수 성향에 따른 조건 선호, 원소속 독점 기간과 날짜 경계, 파산/방출 때 보장금, 저장·롤백·AI 동일 규칙. |
@@ -53,7 +54,7 @@
 
 ### 구현 순서에 관한 제약
 
-1. **D01 시간축**은 D02(일일 부상·회복), D09(일정 스크림), D05(이적 실효일)의 공통 기반이므로 우선 설계·검증한다. 급하게 시간 처리만 다시 작성하지 말고 기존 `playWorldDay` / `pendingOfficial` / `advanceStep`의 재진입 안전성을 보존한다.
+1. **D01 시간축은 일 단위로 보완 및 검증됨.** D02(일일 부상·회복), D09(스크림 일정), D05(이적 실효일)은 **기존 `applyWorldDailyEffects`를 통해 날짜 이벤트를 추가**하고 `playWorldDay`/`pendingOfficial`/`advanceStep`의 재진입 안전성을 보존한다.
 2. **D04/D05 및 D07**은 법적/회계적 한 번의 상태 전이가 선수/구단·계약·현금·영구 기록에 반영되도록 기존 `state-transaction.js` / `state-rollback.js`와 결합한다. 기존 `player.sign`, `player.transfer`, `roster.plan` 동작을 대체하거나 이중 구현하지 말 것.
 3. **D03**은 AI에 진짜 숨은 능력치를 주는 것이 아니라 **AI별 관측 상태**를 추가하는 것. 내 구단의 `db.scout` 기록을 AI 전체의 공용 진실로 사용해서도 안 된다.
 4. **D06과 13단계 국내·국제 사무국**은 같은 기능의 반복 구현을 방지하도록 책임을 먼저 나눈다. **D11**은 후속 장기 QA에서 실행할 수 있지만, 실행하지 않은 장기 밸런스를 완료라고 표시하지 않는다.
@@ -62,7 +63,7 @@
 ## 검사 근거 및 한계
 
 - 조사한 코드: `world.js`, `season.js`, `competition.js`, `player.js`, `player-relations.js`, `role-conversion.js`, `development.js`, `scouting.js`, `contracts.js`, `transfer.js`, `staff.js`, `scrim.js`, `draft.js`, `series.js`, `engine.js`, `features.js`, `ui-market-staff.js`, `ui-season.js` 및 기존 회귀 문서와 `scripts/career-acceptance.mjs`.
-- 확실히 관찰된 코드 경로 예: `season.js::nextDate/playWorldDay` → 다음 경기일로 점프; `scrim.js::aiRunScrims` → 같은 지역 조건; `staff.js::genStaffMember/mHireStaff/mReleaseStaff`와 `ui-market-staff.js::coachBlock` → 즉시 영입·정확 등급; `contracts.js::normalizeContractTerms` → 1~3년; `contracts.js::aiMarketObservation` → 실제 `playerOvr`에 노이즈; `scouting.js::ensureScoutReport` → 관리 구단 전용 선수 관찰 키; `series.js::draftPrefs` → 수치 상수; `draft.js::championSkillProfile`와 `engine.js::combatStats0` → 집계 능력치 모델.
+- 확실히 관찰된 코드 경로 예: `season.js::nextDate/playWorldDay` → 점검 당시 다음 경기일로 점프했고 D01 패치에서 실제 일일 시계로 보완; `scrim.js::aiRunScrims` → 같은 지역 조건; `staff.js::genStaffMember/mHireStaff/mReleaseStaff`와 `ui-market-staff.js::coachBlock` → 즉시 영입·정확 등급; `contracts.js::normalizeContractTerms` → 1~3년; `contracts.js::aiMarketObservation` → 실제 `playerOvr`에 노이즈; `scouting.js::ensureScoutReport` → 관리 구단 전용 선수 관찰 키; `series.js::draftPrefs` → 수치 상수; `draft.js::championSkillProfile`와 `engine.js::combatStats0` → 집계 능력치 모델.
 - `scripts/regression.mjs`, `scripts/smoke.mjs`는 **정해진 규칙의 회귀 방지**에 유효하나 전 기능의 충분한 현실성이나 장기 안정성을 증명하지 않는다. `scripts/career-acceptance.mjs`의 2시즌/186경기 검증 역시 100시즌 대체재가 아니다.
 - 미구현으로 기술한 것은 **검토한 연결 경로와 확정 요구 대비** 판단이다. 다른 곳에 부분 구현이 있으면 해당 ID에 증거(구체적 함수/플레이 시나리오/실패 테스트)를 추가해 ‘확인된 차이’에서 ‘검증 미완’이나 ‘보호’로 수정한다.
 - **이 문서는 결함·심화 백로그의 소급 목록이지 PR 구현·버그 수정 결과가 아니다.** 완료 처리에는 각 항목별 독립적인 기능/AI/저장/경계 시나리오 수락 테스트와 병합 후 CI가 필요하다.

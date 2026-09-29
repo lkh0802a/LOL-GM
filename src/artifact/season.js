@@ -26,7 +26,7 @@ function startWorldSeason(db,myTeam,seed){
     steps.push(...intlSteps(tim[sp]));
   }
   const manage=db.world?db.world.manage:(db.worldConfig.manage||'manual');
-  db.world={year:db.year,seed,manage,phase:'season',seasons:{},steps,step:-1,report:null,pendingOfficial:null,lastDate:`${db.year}-01-07`,offers:[],marketLog:[]};
+  db.world={year:db.year,seed,manage,phase:'season',seasons:{},steps,step:-1,report:null,pendingOfficial:null,lastDate:`${db.year}-01-07`,lastDailyTick:null,majorPatchEvents:[],offers:[],marketLog:[]};
   seasonPatch(db,`${db.year}-01-02`,new RNG(seed+db.year,'patch'));
   setGoals(db);
   advanceStep(db);
@@ -47,11 +47,11 @@ function advanceStep(db){
     if(w.step>=w.steps.length){w.phase='offseason';news(db,`${w.year} 시즌 일정이 모두 끝났습니다`);return}
     const st=w.steps[w.step], start=addDays(w.lastDate,st.kind==='intl'?18:(w.step===0?7:14));
     if(st.kind==='league'){
-      if(st.split>1&&w.step>0){ // 스플릿 개막: 대형 패치 + 사무국 중간 점검
-        const rng=new RNG(w.seed+w.year,'mid');
-        const p=newPatch(db,start,true,rng);db.patches.nextDate=addDays(start,db.patches.cadence||14);
-        const nc=p.notes.find(n=>n.type==='new');news(db,`${SPLIT_NAME[st.split]} 개막 패치 ${p.id}${nc?` — 신규 챔피언 ${nc.def.name} 출시`:''}`);
-        officeMidSeason(db,rng,CHANGE_F[db.worldConfig.changes]??1);
+      if(st.split>1&&w.step>0){
+        // The next bracket is prepared now, but its large patch must not be
+        // applied weeks early while the calendar still sits in the break.
+        w.majorPatchEvents=w.majorPatchEvents||[];
+        w.majorPatchEvents.push({date:start,step:w.step,split:st.split});
       }
       let any=false;
       for(const R of Object.values(db.regions)){
@@ -153,25 +153,70 @@ function resolvePendingOfficialMatch(db,forcedDraft){
   p.queue.shift();if(!p.queue.length){w.pendingOfficial=null;if(!activeSeasons(db).length)advanceStep(db)}
   return {game:played.game,done:true,score:played.score,rec:series.rec,lines:series.lines,finalized,pending:w.pendingOfficial};
 }
-function playWorldDay(db){
-  const w=db.world;if(w.phase!=='season')return null;
-  if(w.pendingOfficial&&w.pendingOfficial.queue&&w.pendingOfficial.queue.length)return {date:w.pendingOfficial.date,played:[],pending:w.pendingOfficial};
-  const d=nextDate(db);if(!d){advanceStep(db);return {date:null,played:[],pending:null}}
-  db.worldDate=d;advanceFacilityConstruction(db,d);patchTick(db,d,new RNG(w.seed+d,'patch'));dailyRecovery(db);
+// Match dates are fixtures; the authoritative world clock moves through every
+// intervening calendar date, including rest days and inter-stage breaks.
+function nextCalendarDate(db){
+  const fixture=nextDate(db);
+  if(fixture===null)return null;
+  const previous=db.worldDate||`${db.year}-01-01`;
+  if(previous>fixture)throw new Error('월드 날짜가 미진행 공식 경기일보다 늦습니다: '+previous+' > '+fixture);
+  if(previous===fixture)return fixture; // legacy saves may be parked on an unplayed match date
+  return addDays(previous,1);
+}
+function applyCalendarPatchEvents(db,date){
+  const w=db.world;
+  if(!w.majorPatchEvents?.length)return;
+  const remaining=[];
+  for(const e of w.majorPatchEvents){
+    if(e.date>date){remaining.push(e);continue}
+    const rng=new RNG(w.seed+w.year+'|'+e.step,'mid');
+    const p=newPatch(db,e.date,true,rng);
+    db.patches.nextDate=addDays(e.date,db.patches.cadence||14);
+    const nc=p.notes.find(n=>n.type==='new');
+    news(db,`${SPLIT_NAME[e.split]} 개막 패치 ${p.id}${nc?` — 신규 챔피언 ${nc.def.nameKo||nc.def.name} 출시`:''}`);
+    officeMidSeason(db,rng,CHANGE_F[db.worldConfig.changes]??1);
+  }
+  w.majorPatchEvents=remaining;
+}
+function applyWorldDailyEffects(db,date){
+  const w=db.world;
+  if(w.lastDailyTick===date)return false;
+  if(w.lastDailyTick&&w.lastDailyTick>date)throw new Error('이미 처리한 날짜를 다시 진행할 수 없습니다');
+  db.worldDate=date;
+  // A scheduled patch is effective *on* its intended date, never during the
+  // preceding break. Then every actual day runs exactly once.
+  applyCalendarPatchEvents(db,date);
+  patchTick(db,date,new RNG(w.seed+date,'patch'));
+  advanceFacilityConstruction(db,date);
   for(const t of activeTeams(db))aiManageTraining(db,t);
+  dailyRecovery(db);
   for(const t of activeTeams(db))aiReviewRoleConversions(db,t);
   advanceRoleConversionsDay(db);
-  aiRunScrims(db,new RNG(w.seed+d,'scrim'));
+  aiRunScrims(db,new RNG(w.seed+date,'scrim'));
   for(const t of activeTeams(db,null,1))aiManageOwnedReserve(db,t);
-  const played=[],queue=[],me=managedTeamId(db);
-  for(const [seasonKey,s] of Object.entries(w.seasons))if(!s.done&&s.days[s.cur].date===d){
-    const r=playDay(db,s,{deferTeam:me});played.push({s,day:r.day});
-    if(r.finalized)scoutFromDay(db,s,r.day);
-    for(const x of r.pending)queue.push({seasonKey,matchId:x.matchId,date:d});
+  w.lastDailyTick=date;
+  return true;
+}
+function playWorldDay(db){
+  const w=db.world;if(w.phase!=='season')return null;
+  // An unfinished managed Bo3/Bo5 must be resumed before advancing another
+  // day; do not apply recovery, patches, or construction a second time.
+  if(w.pendingOfficial?.queue?.length)return {date:w.pendingOfficial.date,played:[],pending:w.pendingOfficial,advanced:false};
+  const d=nextCalendarDate(db);
+  if(!d){advanceStep(db);return {date:null,played:[],pending:null,advanced:false}}
+  const advanced=applyWorldDailyEffects(db,d);
+  const fixture=nextDate(db),played=[],queue=[],me=managedTeamId(db);
+  if(d===fixture){
+    for(const [seasonKey,s] of Object.entries(w.seasons))if(!s.done&&s.days[s.cur].date===d){
+      const result=playDay(db,s,{deferTeam:me});
+      played.push({s,day:result.day});
+      if(result.finalized)scoutFromDay(db,s,result.day);
+      for(const m of result.pending)queue.push({seasonKey,matchId:m.matchId,date:d});
+    }
+    if(queue.length)w.pendingOfficial={date:d,queue};
+    else if(!activeSeasons(db).length)advanceStep(db);
   }
-  if(queue.length)w.pendingOfficial={date:d,queue};
-  else if(!activeSeasons(db).length)advanceStep(db);
-  return {date:d,played,pending:w.pendingOfficial};
+  return {date:d,played,pending:w.pendingOfficial,advanced};
 }
 function news(db,text){db.news.unshift({year:db.world?db.world.year:db.year,text});if(db.news.length>250)db.news.length=250}
 
