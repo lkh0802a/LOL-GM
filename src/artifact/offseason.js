@@ -68,9 +68,25 @@ function runOffseason(db){
   ageScoutReports(db);
   for(const t of activeTeams(db,null,1))aiManageStaff(db,t,rng);
   for(const t of activeTeams(db))aiManageTraining(db,t);
-  // 시설은 플레이어/AI 공통으로 구단 경영진이 자동 관리한다. 전략적 선택이 아닌 유지·증설 행정은 직접 조작하지 않는다.
-  for(const t of activeTeams(db,null,1)){const f=ensureFacilities(t),weights=t.philosophy==='youth'?{youth:1,training:.9,recovery:.45,analysis:.5}:t.philosophy==='win-now'?{analysis:1,recovery:.9,training:.55,youth:.3}:t.philosophy==='cost'?{training:.45,analysis:.4,recovery:.4,youth:.35}:{training:.75,analysis:.7,recovery:.65,youth:.6};
-    const choices=Object.keys(weights).filter(k=>f[k]<5&&!(t.facilityProjects||[]).some(p=>p.key===k)).sort((a,b)=>weights[b]-weights[a]);for(const k of choices){const cost=facilityCost(db,t,k),reserve=cost*(t.philosophy==='cost'?5:3);if(t.finance.cash>reserve&&financeForecast(db,t).closingCash>reserve&&rng.chance(.12+.22*weights[k])){upgradeFacility(db,t,k,{deferDays:facilityBuildDays(f[k])});break}}}
+  // Player-controlled and AI boards share the same facility investment model.
+  // Need, maturity and economic opportunity cost—not a fixed regional upgrade—drive proposals.
+  for(const t of activeTeams(db,null,1)){
+    const f=ensureFacilities(t),liquidity=financeRunway(db,t),projected=financeForecast(db,t).closingCash;
+    if((t.facilityProjects||[]).length>=2||['critical','strained'].includes(liquidity.severity))continue;
+    const options=FACILITY_TYPES.filter(key=>f[key]<5&&!(t.facilityProjects||[]).some(p=>p.key===key))
+      .map(key=>{
+        const cost=facilityCost(db,t,key);
+        const reserve=Math.max(cost*(t.philosophy==='cost'?4:2.5),liquidity.monthly*3);
+        return {key,cost,reserve,benefit:facilityInvestmentScore(db,t,key)};
+      })
+      .filter(opt=>t.finance.cash>opt.cost+opt.reserve&&projected>opt.cost+opt.reserve)
+      .sort((a,b)=>b.benefit-a.benefit||a.key.localeCompare(b.key));
+    const best=options[0];
+    if(best&&best.benefit>.6&&rng.chance(clamp(.1+best.benefit*.18,0,.45))){
+      upgradeFacility(db,t,best.key,{deferDays:facilityBuildDays(f[best.key])});
+      ev(`${t.name} 시설 투자 결정: ${FACILITY_LABELS[best.key]} ${f[best.key]}→${f[best.key]+1} 단계 · ${money(best.cost)}`);
+    }
+  }
   // 선수 만족도: 한 시즌 누적 출전/역할/계약/성적/국제전/커리어 목표를 결산한다.
   for(const t of activeTeams(db)){t._pre=t.roster.slice();for(const id of t.roster){const p=db.players[id];if(!p||!p.contract)continue;pState(p);p.form=0;p.fatigue=5;}}
   offseasonPlayerSatisfaction(db,w,rep,ev);
@@ -89,7 +105,7 @@ function closeMarket(db){
   for(const t of activeTeams(db)){aiReviewDepthChart(db,t);rebalanceAiRosterRoles(db,t)}
   for(const t of activeTeams(db)){const pre=t._pre||[];const now=ROLES.map(r=>starterFor(db,t,r)).filter(Boolean).map(p=>p.id);const changed=now.filter(id=>!pre.includes(id)).length;
     t.synergy=clamp(teamSynergy(t)*0.85+15-changed*8,10,100);delete t._pre;
-    if(!t.sponsor&&t.id!==managedTeamId(db)&&rng.chance(0.5)){const o=sponsorOffers(db,t);t.sponsor={...rng.pick(o),until:db.year+0}}}
+    if(t.id!==managedTeamId(db)&&!t.parent&&(!t.sponsor||t.sponsor.until<db.year)){const chosen=aiSelectSponsor(db,t);if(chosen)ev(`${t.name} ${chosen.type} 스폰서 계약 · ${chosen.years}년`)}}
   for(const R of Object.values(db.regions)){const ts=activeTeams(db,R.id,1);R.teams=ts.length;if(ts.length)R.strength=Math.round(avg(ts.map(t=>teamStrength(db,t.id))))}
   rep.retired.slice(0,3).forEach(r=>news(db,`${db.players[r.pid].name} 은퇴 (${r.age}세)`));
   w.phase='preseason';

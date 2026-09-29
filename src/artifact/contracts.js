@@ -44,7 +44,7 @@ function contractExpectedValue(c){if(!c)return 0;const b=c.bonuses||{};return c.
 function teamInternationalAppeal(db,t){const R=db.regions[t.region],power=db.global?.power?.[R.id]||1;return clamp((R.slots||1)/4*.55+(teamStrength(db,t.id)-R.strength)/18*.3+(t.fans||30)/180+power*.08,0,1.25)}
 function offerUtility(db,p,t,offer,opt={}){
   ensureSatisfaction(p);const ask=Math.max(.1,asking(db,p,t.region)),moneyScore=contractExpectedValue(offer)/ask,role=offer.promisedRole||defaultPromisedRole(db,p,t),roleScore={core:.72,starter:.62,competition:.24,backup:.02,prospect:p.age<=21?.38:-.08}[role]??0;
-  const strength=(teamStrength(db,t.id)-db.regions[t.region].strength)/12,fac=((t.facility||2)-2)*.08,coach=(staffProfile(t).development-55)/160,intl=teamInternationalAppeal(db,t),stability=Math.min(3,offer.years||1)*.055;
+  const strength=(teamStrength(db,t.id)-db.regions[t.region].strength)/12,facilities=ensureFacilities(t),fac=(facilities.training-2)*.055+(p.age<=22?(facilities.youth-2)*.075:(facilities.recovery-2)*.018),coach=(staffProfile(t).development-55)/160,intl=teamInternationalAppeal(db,t),stability=Math.min(3,offer.years||1)*.055;
   const home=db.worldConfig.universalLanguage?(p.region===t.region?.04:0):(p.region===t.region?.22:-.08),amb=p.personality.ambition/100,career=playerCareerGoal(p);
   let careerFit=0;if(career==='development')careerFit=fac+coach+(role==='prospect'||role==='competition'?.16:0);else if(career==='starter')careerFit=['core','starter'].includes(role)?.22:-.12;else if(career==='international')careerFit=intl*.18;else if(career==='titles')careerFit=Math.max(0,strength)*.16+intl*.1;else careerFit=stability;
   const option=offer.option?.type==='player'?.07:offer.option?.type==='team'?-.025:0,buyout=offer.buyout?clamp(offer.buyout/Math.max(.2,playerMarketValue(db,p)),.4,4)*-.018:0;
@@ -187,7 +187,7 @@ function contractMarket(db,rng,rep,ev){
   }
   // 이적료 거래: 예산이 넉넉한 구단이 다른 구단 주전을 사 온다
   let deals=0;
-  for(const t of activeTeams(db,null,1).filter(t=>t.id!==mine&&t.finance.cash>20*psTeam(db,t)).sort(()=>rng.next()-0.5)){
+  for(const t of activeTeams(db,null,1).filter(t=>t.id!==mine&&t.finance.cash>20*psTeam(db,t)&&financeRunway(db,t).months>=9&&financeForecast(db,t).closingCash>8*psTeam(db,t)).sort(()=>rng.next()-0.5)){
     if(deals>=Math.max(2,Math.ceil(activeTeams(db,null,1).length/10)))break;
     const role=rng.pick(ROLES), cur=starterFor(db,t,role); if(!cur)continue;
     if(contractedMoveError(db,cur))continue;
@@ -196,7 +196,7 @@ function contractMarket(db,rng,rep,ev){
     if(!cand)continue;
     const seller=db.teams[cand.p.team];
     if(localRegistrationError(db,t,cand.p)||localRegistrationError(db,seller,cur))continue;
-    if(!(seller.finance.cash<10*psTeam(db,seller)||cand.p.wantsOut||rng.chance(.2)))continue;
+    if(!(financeRunway(db,seller).severity!=='stable'||cand.p.wantsOut||rng.chance(.2)))continue;
     commitMarketPlayerAction(db,{type:'player.transfer',pid:cand.p.id,fromId:seller.id,teamId:t.id,fee:cand.fee,actor:'ai'});deals++;
     rep.transfers.push({pid:cand.p.id,from:seller.id,to:t.id,fee:cand.fee});
     if(t.roster.length>size){commitMarketPlayerAction(db,{type:'player.transfer',pid:cur.id,fromId:t.id,teamId:seller.id,fee:0,actor:'ai'});rep.transfers[rep.transfers.length-1].swap=cur.id}
