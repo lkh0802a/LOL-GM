@@ -15,8 +15,14 @@ function medicalPlanFor(db,p){
   if(p.medical?.daysLeft>0)return 'rehab';
   if(p.medicalPlanDate===db.worldDate&&p.medicalDayPlan)return p.medicalDayPlan;
   if(p.medicalResidual?.daysLeft>0)return 'light';
-  if((p.fatigue||0)>=51||(p.condition??96)<74)return 'rest';
-  if((p.fatigue||0)>=34||(p.condition??96)<85)return 'light';
+  // Calendar-aware AI prevention: accumulated overuse deserves a recovery day
+  // even when condition/fatigue have not yet fallen below the basic threshold.
+  // This is not imposed on a manager's explicit normal/light/rest choice.
+  const overloaded=(p.medicalLoad||0)>=9;
+  if((p.fatigue||0)>=51||(p.condition??96)<74||
+    (overloaded&&(p.medicalOverloadDays||0)>=45))return 'rest';
+  if((p.fatigue||0)>=34||(p.condition??96)<85||
+    (overloaded&&(p.medicalOverloadDays||0)>=20))return 'light';
   return 'normal';
 }
 function medicalScrimRest(db,p){const mode=medicalPlanFor(db,p);return mode==='rest'||mode==='rehab'}
@@ -263,12 +269,17 @@ function medicalHeal(db,p,elapsed,date){
 // Rest lowers overuse risk without changing ordinary infectious illness.
 function medicalIncidentOdds(p,t,load,plan){
   const rest=plan==='rest'||plan==='rehab',high=t.training?.intensity==='high'&&!rest&&plan!=='light';
+  // The same paid recovery staff and facilities that accelerate rehabilitation
+  // also reduce preventable overuse incidents. Bounded to avoid a medical
+  // arms race or eliminating the baseline risk from high-activity schedules.
+  const prevention=clamp(1-(staffProfile(t).recovery-50)*.0017-
+    (ensureFacilities(t).recovery-1)*.022,.79,1.08);
   const injury=clamp(.000065*(1+load/22)*(1+Math.max(0,p.age-28)*.035)*
     (high?1.25:1)*(1+Math.max(0,p.fatigue-45)/95)*
-    (rest?.57:plan==='light'?.83:1),0,.00042);
+    (rest?.57:plan==='light'?.83:1)*prevention,0,.00042);
   const illness=.00020*(1+((p.condition??96)<70?.32:0));
   const burnout=(p.medicalOverloadDays||0)>=14?
-    clamp(.00008*((p.medicalOverloadDays||0)-12)/18*(rest?.45:1),0,.00032):0;
+    clamp(.00008*((p.medicalOverloadDays||0)-12)/18*(rest?.45:1)*prevention,0,.00032):0;
   return {injury,illness,burnout};
 }
 function medicalDailyTick(db,date){
