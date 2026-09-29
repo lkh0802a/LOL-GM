@@ -75,40 +75,6 @@ function placements(db,s){
   const comp=db.competitions[s.comp];const reg=standings(db,s,comp.stages[0].id).map(x=>x.tid);
   const out=[s.champion,s.runnerUp].filter(Boolean);for(const t of reg)if(!out.includes(t))out.push(t);return out;
 }
-// Annual championship points are earned at the end of each independently
-// completed split. Unfinished playoffs award no speculative points.
-const CHAMPIONSHIP_FINISH_POINTS=[0,20,45,70,100];
-function championshipStandings(db,R,div=1){
-  const teams=activeTeams(db,R.id,div).map(t=>t.id),world=db.world;
-  const seasons=Object.values(world?.seasons||{}).filter(s=>s.done&&s.year===world.year&&
-    s.region===R.id&&(s.div||1)===div&&s.split).sort((a,b)=>a.split-b.split);
-  const totals=Object.fromEntries(teams.map(t=>[t,{tid:t,points:0,bySplit:{}}]));
-  for(const s of seasons)for(const id of teams){
-    const award=CHAMPIONSHIP_FINISH_POINTS[elimReach(db,s,id)]||0;
-    totals[id].points+=award;totals[id].bySplit[s.split]=award;
-  }
-  const latest=seasons.at(-1),order=latest?placements(db,latest):
-    teams.slice().sort((a,b)=>teamStrength(db,b)-teamStrength(db,a));
-  const tie=new Map(order.map((id,i)=>[id,i]));
-  return Object.values(totals).sort((a,b)=>b.points-a.points||
-    (tie.get(a.tid)??999)-(tie.get(b.tid)??999)||a.tid.localeCompare(b.tid));
-}
-function recentSplitChampion(db,R){
-  return [3,2,1].map(sp=>db.world?.seasons[R.short+'-'+sp])
-    .find(s=>s?.done)?.champion||null;
-}
-function regionPlacements(db,R,div=1){
-  const w=db.world,act=activeTeams(db,R.id,div).map(t=>t.id);
-  const done=[3,2,1].map(sp=>w?.seasons[R.short+(div===2?'2':'')+'-'+sp])
-    .find(s=>s?.done);
-  const mode=R.standingsMode||'independent';
-  let base=done?(mode==='points'?championshipStandings(db,R,div).map(x=>x.tid):
-    mode==='cumulative'?standings(db,done,'regular').map(x=>x.tid):
-    placements(db,done)):(div===1?R.lastPlacement||[]:[]);
-  base=base.filter(t=>act.includes(t));
-  const rest=act.filter(t=>!base.includes(t)).sort((a,b)=>teamStrength(db,b)-teamStrength(db,a));
-  return [...base,...rest];
-}
 function regionPower(db,R){const h=(db.global&&db.global.power||{})[R.id];return h!==undefined?h:R.strength}
 function teamStrength(db,tid){const t=db.teams[tid];return avg(ROLES.map(r=>{const p=starterFor(db,t,r);return p?playerRoleRating(p,r):40}))}
 function startInternational(db,id,start,taken=new Set()){
