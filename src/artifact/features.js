@@ -32,11 +32,12 @@ function sponsorMarketStrength(db,t){
 }
 function sponsorGoalFor(t){
   if(['title','final'].includes(t.goal))return 'final';
-  if(['playoffs','top_half'].includes(t.goal))return 'playoffs';
+  if(t.goal==='playoffs')return 'playoffs';
+  if(t.goal==='top_half'||(t.goal==='survive'&&(t.franchised||t.license==='franchise')))return 'top_half';
   return 'survive';
 }
 function sponsorGoalLabel(goal){
-  return {final:'국내 결승 진출',playoffs:'국내 플레이오프 진출',survive:'국내 리그 잔류'}[goal]||'국내 성적 목표';
+  return {final:'국내 결승 진출',playoffs:'국내 플레이오프 진출',top_half:'국내 리그 상위 절반',survive:'국내 리그 잔류'}[goal]||'국내 성적 목표';
 }
 function sponsorGoalReached(db,t,w,goal){
   if(!goal)return false;
@@ -48,8 +49,10 @@ function sponsorGoalReached(db,t,w,goal){
   if(goal==='playoffs')return ss.some(s=>s.champion===t.id||s.runnerUp===t.id||
     (s.stageData?.playoffs?.seeds||[]).includes(t.id));
   return ss.some(s=>{
+    if(goal==='survive'&&t.franchised)return true;
     const results=standings(db,s,'regular');const pos=results.findIndex(row=>row.tid===t.id);
-    return pos>=0&&pos<results.length-Math.max(1,db.regions[t.region].relegate||1);
+    const limit=goal==='top_half'?Math.ceil(results.length/2):results.length-Math.max(1,db.regions[t.region].relegate||1);
+    return pos>=0&&pos<limit;
   });
 }
 function sponsorAchievementBonus(db,t,w){
