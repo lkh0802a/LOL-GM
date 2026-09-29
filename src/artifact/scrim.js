@@ -171,6 +171,7 @@ function recordScrimPractice(db,rec,lines){
   for(const l of lines){
     const p=db.players[l.pid];if(!p||!teams.has(l.tid))continue;
     const opp=l.tid===rec.a?rec.b:rec.a,value=scrimValue(db,l.tid,opp);
+    if(p.medicalPlanDate!==db.worldDate){p.medicalDayPlan=medicalPlanFor(db,p);p.medicalPlanDate=db.worldDate}
     practiceChampion(db,p,l.champ,'scrim',value);
     medicalExposure(db,p,'scrim',1);
     pState(p);p.fatigue=clamp(p.fatigue+1.2,0,100);
