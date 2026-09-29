@@ -3143,6 +3143,41 @@ function medicalPerformancePenalty(p){
   const m=p?.medical,r=p?.medicalResidual;
   return m?.daysLeft>0&&!m.out?m.penalty||0:r?.daysLeft>0?r.penalty||0:0;
 }
+// Club-side contract availability risk (0–0.17), NOT a clinical prognosis.
+// Temporary absences matter while active; ordinary illness does not create a
+// lasting stigma. Only recent physical injuries affect subsequent offers.
+// Permanent attribute loss, if any, is already reflected in the player's OVR.
+function medicalContractRisk(db,p){
+  if(!p)return 0;
+  const date=db.worldDate&&db.worldDate.slice(0,4)>=String(db.year)?
+    db.worldDate:db.year+'-01-07';
+  const now=Date.parse(date+'T00:00:00Z');
+  const active=p.medical?.daysLeft>0?p.medical:null;
+  let risk=0,severeHistory=0;
+  if(active){
+    if(active.kind==='injury')
+      risk+=active.severity==='severe'?(active.out?.07:.016):
+        active.severity==='moderate'?(active.out?.035:.012):.006;
+    else risk+=active.kind==='burnout'?(active.out?.03:.012):.006;
+    if(active.out)risk+=Math.min(.025,active.daysLeft*.00045);
+  }else if(p.medicalResidual?.daysLeft>0)
+    risk+=Math.min(.012,p.medicalResidual.daysLeft*.0004);
+  for(const e of p.careerEvents||[]){
+    if(e.type!=='medical_start'||e.kind!=='injury'||!e.date||
+      !['severe','moderate'].includes(e.severity))continue;
+    // The active incident is already represented above, not counted twice.
+    if(active&&e.date===active.started&&e.kind===active.kind)continue;
+    const elapsed=(now-Date.parse(e.date+'T00:00:00Z'))/86400000;
+    if(!Number.isFinite(elapsed)||elapsed<0||elapsed>=730)continue;
+    const weight=1-elapsed/730;
+    if(e.severity==='severe'){risk+=.026*weight;severeHistory+=weight}
+    else risk+=.008*weight;
+  }
+  // Repeated significant incidents in the same period concern clubs more
+  // than a single recovered injury; their impact also expires with time.
+  risk+=Math.max(0,severeHistory-1)*.035;
+  return Math.round(clamp(risk,0,.17)*1000)/1000;
+}
 function medicalSummary(p){
   const m=p?.medical,r=p?.medicalResidual;
   if(m?.daysLeft>0)return (MEDICAL_LABELS[m.site]||MEDICAL_LABELS[m.kind]||'건강 문제')+
@@ -3845,6 +3880,10 @@ function runOffseason(db){
       delete p.pool;delete p.tend;delete p.attrs;}
   }
   db.year=w.year+1;
+  // Resolve offseason calendar gaps before the contract market appraises
+  // medical availability; otherwise an already-recovered December absence
+  // is incorrectly priced as an active January injury.
+  medicalOffseasonRecovery(db,`${db.year}-01-06`);
   promotionRelegation(db,w,rng,ev);
   updateHype(db,w);
   closeFinances(db,w,rng,ev);
@@ -5072,7 +5111,7 @@ function playerMarketValue(db,p){
   const o=playerOvr(p),rep=p.reputation??o,up=Math.max(0,p.pot-o),rid=p.team&&db.teams[p.team]?db.teams[p.team].region:p.region,ps=psOf(db,rid),perf=recentMarketPerformance(db,p),demand=roleMarketDemand(db,p.role,rid);
   const ageMul=p.age<=20?1.25:p.age<=23?1.16:p.age<=26?1:p.age<=29?.82:.58,left=p.contract?Math.max(0,p.contract.until-db.year+1):0,contractMul=p.contract?1+Math.min(3,left)*.14:.68;
   const perfMul=clamp(1+(perf.rating-6.5)*.09+Math.min(.13,perf.intl*.004)+Math.min(.12,perf.titles*.045)+(p.form||0)*.008,.75,1.35);
-  const raw=.62*Math.exp((o-60)*.115)*ps*(.76+rep/175)*(1+up*(p.age<=22?.047:.018))*ageMul*contractMul*perfMul*demand;
+  const raw=.62*Math.exp((o-60)*.115)*ps*(.76+rep/175)*(1+up*(p.age<=22?.047:.018))*ageMul*contractMul*perfMul*demand*(1-medicalContractRisk(db,p)*.75);
   return Math.round(Math.max(.2*ps,raw)*10)/10;
 }
 function asking(db,p,rid){return Math.round(marketSalary(db,p,rid)*(1+p.personality.ambition/420)*(.95+(p.reputation??playerOvr(p))/1700)*10)/10}
@@ -5121,12 +5160,18 @@ function spendingTax(db,t){
   const a=Math.min(over,R.salaryCap*.1),b=Math.min(Math.max(0,over-a),R.salaryCap*.15),c=Math.max(0,over-a-b);
   return a*.25+b*.5+c*(R.luxuryTax||1);
 }
+function medicalContractYears(db,p,years){
+  const risk=medicalContractRisk(db,p);
+  return risk>=.115?Math.min(years,1):risk>=.065?Math.min(years,2):years;
+}
 function contractYearsForPlayer(db,p,rng){
   const elite=(p.reputation||playerOvr(p))>=85;
-  if(p.age<=20){const x=rng.next();return x<(elite?.1:.15)?1:x<(elite?.62:.72)?2:3}
-  if(p.age<=25){const x=rng.next();return x<(elite?.25:.45)?1:x<(elite?.78:.9)?2:3}
-  if(p.age<=28)return rng.chance(elite?.42:.7)?1:2;
-  return rng.chance(.88)?1:2;
+  let years;
+  if(p.age<=20){const x=rng.next();years=x<(elite?.1:.15)?1:x<(elite?.62:.72)?2:3}
+  else if(p.age<=25){const x=rng.next();years=x<(elite?.25:.45)?1:x<(elite?.78:.9)?2:3}
+  else if(p.age<=28)years=rng.chance(elite?.42:.7)?1:2;
+  else years=rng.chance(.88)?1:2;
+  return medicalContractYears(db,p,years);
 }
 
 function eligibleFillFAs(db,t,role=null){
@@ -5140,7 +5185,7 @@ function aiMarketObservation(db,p,t){
   const potential=Math.round(clamp(ability+ageUpside+n2*(foreign?5:3)+(p.reputation-ability)*.08,ability,99));
   return {ability,potential,uncertainty:Math.round(uncertainty*10)/10};
 }
-function aiMarketValue(db,p,t){const est=aiMarketObservation(db,p,t),up=Math.max(0,est.potential-est.ability),w={'win-now':0.1,'youth':0.6,'balanced':0.3,'superstar':0.15,'cost':0.35}[t.philosophy]||0.3;return est.ability+up*w-(t.philosophy==='youth'&&p.age>26?2:0)}
+function aiMarketValue(db,p,t){const est=aiMarketObservation(db,p,t),up=Math.max(0,est.potential-est.ability),w={'win-now':0.1,'youth':0.6,'balanced':0.3,'superstar':0.15,'cost':0.35}[t.philosophy]||0.3;return est.ability+up*w-(t.philosophy==='youth'&&p.age>26?2:0)-medicalContractRisk(db,p)*18}
 function pFillScore(db,p,t){const domestic=isLocalPlayer(p,t.region)?2:0,age=p.age<=21?1:0,cost=Math.min(4,asking(db,p,t.region)/Math.max(.2,psOf(db,t.region)));return aiMarketValue(db,p,t)+domestic+age-cost*.15}
 function optionDecision(db,p,t){
   const o=p.contract&&p.contract.option;if(!o||o.year!==db.year)return false;
@@ -5181,7 +5226,7 @@ function contractMarket(db,rng,rep,ev){
     if(p.contract.until>=year)continue;
     if(t.id===mine){release(t,p);rep.expired.push({pid:p.id,team:t.id,why:'재계약하지 않음'});continue}
     const isStarter=starterFor(db,t,p.role)===p,want=isStarter||p.rosterRole==='competition'||(p.age<=21&&p.pot-playerOvr(p)>=6)||(p.rosterRole==='backup'&&t.roster.length<7&&p.satisfaction>=50);
-    const ask=asking(db,p,t.region),room=salaryBudget(db,t)-payroll(db,t)+p.contract.salary,yrs=contractYearsForPlayer(db,p,rng),proposal=normalizeContractTerms(db,p,t,ask*rng.range(.96,1.08),yrs,{promisedRole:recommendedRosterRole(db,p,t),option:rng.chance(.18)?{type:rng.chance(.55)?'team':'player'}:null});
+    const ask=asking(db,p,t.region),room=salaryBudget(db,t)-payroll(db,t)+p.contract.salary,yrs=contractYearsForPlayer(db,p,rng),proposal=normalizeContractTerms(db,p,t,ask*rng.range(.96,1.08)*(1-medicalContractRisk(db,p)*.4),yrs,{promisedRole:recommendedRosterRole(db,p,t),option:rng.chance(.18)?{type:rng.chance(.55)?'team':'player'}:null});
     ensureSatisfaction(p);const stay=offerUtility(db,p,t,proposal,{renewal:true})+rng.normal(0,.06)>=offerAcceptanceThreshold(db,p);
     if(want&&proposal.salary<=room&&stay){signMarketContract(db,p,t,proposal.salary,yrs,proposal,'renewal','ai');rep.resign.push({pid:p.id,team:t.id,salary:proposal.salary,years:yrs,terms:proposal})}
     else {release(t,p);rep.expired.push({pid:p.id,team:t.id,why:!want?'재계약 제안 없음':proposal.salary>room?'연봉 이견':'FA 시장 도전'})}
@@ -5206,7 +5251,7 @@ function contractMarket(db,rng,rep,ev){
         const cand=fas.filter(p=>p.role===role&&(isLocalPlayer(p,t.region)||(playerOvr(p)>=R.strength+importGap&&imports(t)<nonLocalLimitForTeam(db,t))))
           .map(p=>({p,v:aiMarketValue(db,p,t),ask:asking(db,p,t.region)})).filter(x=>x.ask<=budgetLeft[t.id]&&(!cur||cur.wantsOut||cur.contract.until<=year||x.v>cv+5)).sort((a,b)=>b.v-a.v);
         const c=cand[0]; if(!c)continue;
-        const sal=Math.round(c.ask*(['win-now','superstar'].includes(t.philosophy)?rng.range(1,1.15):rng.range(0.95,1.05))*10)/10;
+        const sal=Math.round(c.ask*(['win-now','superstar'].includes(t.philosophy)?rng.range(1,1.15):rng.range(0.95,1.05))*(1-medicalContractRisk(db,c.p)*.4)*10)/10;
         (offers[c.p.id]=offers[c.p.id]||[]).push({t,sal,starter:true});
       }
     }
@@ -5309,8 +5354,8 @@ function recruitmentEvaluation(db,pid,teamId=null){
   const t=teamId?db.teams[teamId]:myT(db),p=db.players[pid],e=recruitmentTarget(db,pid);if(!t||!p)return {ok:false,msg:'영입 대상을 찾을 수 없습니다'};if(!e)return {ok:false,msg:'먼저 관심목록에 등록해야 합니다'};
   syncRecruitmentObservation(db,pid);const k=knowledge(db,p);if(k<35)return {ok:false,msg:`관찰 정보가 부족합니다 (현재 ${k}%, 내부 평가에는 35% 이상 필요)`};
   const r=scoutReport(db,p),ability=Math.round(avg(r.ability)),potential=Math.round(avg(r.potential)),cur=starterFor(db,t,p.role),gap=cur?ability-playerOvr(cur):8,baseBudget=(db.world?.phase==='initial_roster')?initialSalaryBudget(db,t):salaryBudget(db,t),room=Math.max(.1,baseBudget-payroll(db,t)),cost=asking(db,p,t.region)/room;
-  const fit=Math.round(clamp(50+gap*4+(potential-ability)*.9+(p.age<=21?5:0)+teamInternationalAppeal(db,t)*5-Math.max(0,cost-1)*18,0,100));
-  e.stage='evaluated';e.knowledge=k;e.evaluation={teamId:t.id,date:db.worldDate,knowledge:k,ability:r.ability,potential:r.potential,fit,expectedRole:defaultPromisedRole(db,p,t),salaryAsk:asking(db,p,t.region),marketValue:playerMarketValue(db,p),risk:Math.round(scoutingRisk(db,p)*10)/10};
+  const fit=Math.round(clamp(50+gap*4+(potential-ability)*.9+(p.age<=21?5:0)+teamInternationalAppeal(db,t)*5-Math.max(0,cost-1)*18-medicalContractRisk(db,p)*22,0,100));
+  e.stage='evaluated';e.knowledge=k;e.evaluation={teamId:t.id,date:db.worldDate,knowledge:k,ability:r.ability,potential:r.potential,fit,expectedRole:defaultPromisedRole(db,p,t),salaryAsk:asking(db,p,t.region),marketValue:playerMarketValue(db,p),risk:Math.round(scoutingRisk(db,p)*10)/10,medicalRiskPct:Math.round(medicalContractRisk(db,p)*1000)/10};
   return {ok:true,target:e,msg:`${p.name} 내부 평가 완료 · 적합도 ${fit}/100`};
 }
 function recruitmentReady(db,pid,teamId=null){const e=syncRecruitmentObservation(db,pid);return !!(e&&['evaluated','negotiating'].includes(e.stage)&&(!teamId||!e.evaluation?.teamId||e.evaluation.teamId===teamId))}
@@ -5330,7 +5375,7 @@ function negotiationCompetition(db,p,t,rng,kind){
     if(localRegistrationError(db,team,p))return null;
     const cur=starterFor(db,team,p.role),need=!cur?8:aiMarketObservation(db,p,team).ability-playerOvr(cur),baseBudget=(kind==='initial')?initialSalaryBudget(db,team):salaryBudget(db,team),room=baseBudget-payroll(db,team),ask=asking(db,p,team.region);
     if(room<ask*.82||need<-4)return null;
-    const years=contractYearsForPlayer(db,p,rng),terms=normalizeContractTerms(db,p,team,ask*rng.range(.94,1.12),years,{promisedRole:defaultPromisedRole(db,p,team),option:rng.chance(.14)?{type:'player'}:null});
+    const years=contractYearsForPlayer(db,p,rng),terms=normalizeContractTerms(db,p,team,ask*rng.range(.94,1.12)*(1-medicalContractRisk(db,p)*.4),years,{promisedRole:defaultPromisedRole(db,p,team),option:rng.chance(.14)?{type:'player'}:null});
     return {teamId:team.id,terms,utility:offerUtility(db,p,team,terms),need};
   }).filter(Boolean).sort((a,b)=>b.utility-a.utility).slice(0,2);
 }
@@ -6707,7 +6752,7 @@ function recruitButtons(p,e){
 function renderRecruitmentBoard(){
   const rows=recruitmentBoard(DB).filter(e=>DB.players[e.pid]&&!DB.players[e.pid].retired),rank={A:0,B:1,C:2};
   if(!rows.length)return '<p class="hint">아직 영입 후보가 없습니다. FA나 이적 대상에서 관심 등록 후 스카우팅과 내부 평가를 진행하세요.</p>';
-  return rows.sort((a,b)=>(rank[a.priority]??9)-(rank[b.priority]??9)).map(e=>{const p=DB.players[e.pid],ev=e.evaluation,where=p.team?esc(tshort(p.team)):'FA';return `<div class="mrow"><span><b>${e.priority}</b> <span class="role">${ROLE_KO[p.role]}</span> <b>${esc(p.name)}</b> · ${where} · ${recruitStageLabel(e)} · 정보 ${knowledge(DB,p)}%${ev?` · 적합도 <b>${ev.fit}</b>/100 · 능력 ${ev.ability[0]}–${ev.ability[1]} · 잠재 ${ev.potential[0]}–${ev.potential[1]} · 예상 역할 ${SQUAD_ROLE_KO[ev.expectedRole]||ev.expectedRole}`:''}</span><span>${recruitButtons(p,e)}${e.stage==='evaluated'&&!p.team?`<button class="primary sm2" data-start-fa="${p.id}">공식 협상</button>`:''}</span></div>`}).join('');
+  return rows.sort((a,b)=>(rank[a.priority]??9)-(rank[b.priority]??9)).map(e=>{const p=DB.players[e.pid],ev=e.evaluation,where=p.team?esc(tshort(p.team)):'FA';return `<div class="mrow"><span><b>${e.priority}</b> <span class="role">${ROLE_KO[p.role]}</span> <b>${esc(p.name)}</b> · ${where} · ${recruitStageLabel(e)} · 정보 ${knowledge(DB,p)}%${ev?` · 적합도 <b>${ev.fit}</b>/100 · 능력 ${ev.ability[0]}–${ev.ability[1]} · 잠재 ${ev.potential[0]}–${ev.potential[1]} · 예상 역할 ${SQUAD_ROLE_KO[ev.expectedRole]||ev.expectedRole} · 의료 가용성 위험 ${Math.round(medicalContractRisk(DB,p)*100)}%`:''}</span><span>${recruitButtons(p,e)}${e.stage==='evaluated'&&!p.team?`<button class="primary sm2" data-start-fa="${p.id}">공식 협상</button>`:''}</span></div>`}).join('');
 }
 function renderMarket(){
   const w=DB.world,t=DB.teams[managedTeamId(DB)],R=DB.regions[t.region],pay=payroll(DB,t),budget=salaryBudget(DB,t);
