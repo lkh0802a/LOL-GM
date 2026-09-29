@@ -88,6 +88,19 @@ function addStageDays(db,s,idx,teams,date){
       addBroadcastLeagueDays(s,cfg,combined,date);
     }else for(let r=0;r<R;r++){pushDay(s,date,cfg.id,`${cfg.name} ${r+1}라운드`,sched.flatMap(x=>x[r]||[]),cfg.bestOf);date=addDays(date,gap(r))}
     s.stageData[cfg.id]={type:cfg.type,teams,groups:cfg.groups>1?groups:null};
+  } else if(cfg.type==='league_phase'){
+    const slate=roundRobin(teams,1),count=Math.min(cfg.matches||6,slate.length),
+      dailyCap=cfg.broadcastCap||4;
+    for(let r=0;r<count;r++){
+      const fixtures=slate[r]||[];
+      for(let k=0;k<fixtures.length;k+=dailyCap){
+        pushDay(s,addDays(date,Math.floor(k/dailyCap)),cfg.id,
+          `${cfg.name} ${r+1}라운드 · 중계 ${Math.floor(k/dailyCap)+1}`,
+          fixtures.slice(k,k+dailyCap),cfg.bestOf,true);
+      }
+      date=addDays(date,Math.max(Math.ceil(fixtures.length/dailyCap)+1,cfg.dayGap?.[0]||4));
+    }
+    s.stageData[cfg.id]={type:cfg.type,teams};
   } else if(cfg.type==='swiss'){
     const sd=s.stageData[cfg.id]={type:'swiss',teams,rec:Object.fromEntries(teams.map(t=>[t,{w:0,l:0,opp:[]}])),round:0,advanced:[],out:[],W:cfg.wins||3,L:cfg.losses||3};
     swissRound(db,s,idx,date);
@@ -244,7 +257,10 @@ function elimReach(db,s,tid){
 }
 // ---- 진행 방식 프리셋 (리그: 항상 더블 라운드로빈 이상 · Bo3 이상) ----
 const LEAGUE_FORMATS={rr_po:'더블 라운드로빈 + 플레이오프',rr_de:'더블 라운드로빈 + 더블 엘리미네이션',groups_po:'그룹 더블 라운드로빈 + 플레이오프'};
-const INTL_FORMATS={playin_swiss_ko:'플레이인 + 스위스 + 녹아웃',swiss_ko:'스위스 + 녹아웃',playin_groups_ko:'플레이인 + 그룹 + 녹아웃',playin_de:'플레이인 + 더블 엘리미네이션',groups_ko:'그룹 + 녹아웃',groups_de:'그룹 + 더블 엘리미네이션',ko:'녹아웃'};
+const INTL_FORMATS={first_stand:'조별리그 + 녹아웃',msi_swiss_de:'스위스 + 더블 엘리미네이션',
+  worlds_league_phase:'6라운드 리그 페이즈 + 16강 토너먼트',masters_groups:'조별 더블 라운드로빈 + 녹아웃',
+  open_groups:'조별리그 + 녹아웃',regional_cup:'권역별 조별리그 + 녹아웃',
+  playin_swiss_ko:'플레이인 + 스위스 + 녹아웃',swiss_ko:'스위스 + 녹아웃',playin_groups_ko:'플레이인 + 그룹 + 녹아웃',playin_de:'플레이인 + 더블 엘리미네이션',groups_ko:'그룹 + 녹아웃',groups_de:'그룹 + 더블 엘리미네이션',ko:'녹아웃'};
 function leagueStages(R,n,div){
   const fmt=R.format||'rr_po', bo=Math.max(3,R.regularBo||3), pbo=div===2?3:Math.max(3,R.playoffBo||5);
   const take=div===2?Math.min(4,n):Math.min(Math.max(4,R.playoffTake||4),n);
@@ -262,6 +278,15 @@ function intlStages(fmt,teams,bo){
   const de=(from,t)=>({id:'knockout',name:'브래킷 스테이지',type:'double_elim',from,take:t,bestOf:B,dayGap:[3,3]});
   const grp=(g,extra={})=>({id:'groups',name:'그룹 스테이지',type:'round_robin',legs:1,bestOf:3,groups:g,dayGap:[1,1,2],...extra});
   const sw=(extra={})=>({id:'groups',name:'스위스 스테이지',type:'swiss',bestOf:3,wins:3,losses:3,dayGap:[2],...extra});
+  if(fmt==='first_stand'&&n>=8)return [grp(n>=12?3:2,{bestOf:3}),ko('groups',Math.min(8,Math.floor(n/2)*2))];
+  if(fmt==='msi_swiss_de'&&n>=12)return [sw(),de('groups',8)];
+  if(fmt==='worlds_league_phase'&&n>=16){
+    return [{id:'league_phase',name:'월드 리그 페이즈',type:'league_phase',matches:6,
+      bestOf:3,dayGap:[4],broadcastCap:4},ko('league_phase',16)];
+  }
+  if(fmt==='masters_groups'&&n>=8)return [grp(n>=16?4:2,{legs:2,bestOf:3}),ko('groups',Math.min(8,n/2))];
+  if(fmt==='open_groups'&&n>=8)return [grp(n>=12?3:2,{bestOf:3}),ko('groups',Math.min(8,n/2))];
+  if(fmt==='regional_cup'&&n>=6)return [grp(2,{bestOf:3}),ko('groups',4)];
   if((fmt==='playin_swiss_ko'||fmt==='swiss_ko')&&n>=12){
     if(n<=16&&fmt==='swiss_ko'&&n===16)return [sw(),ko('groups',8)];
     const adv=Math.max(2,Math.min(8,Math.round((n-16)/3)+2)), direct=teams.slice(0,16-adv), pin=teams.slice(16-adv);
