@@ -56,7 +56,9 @@ function runOffseason(db){
   // Resolve offseason calendar gaps before the contract market appraises
   // medical availability; otherwise an already-recovered December absence
   // is incorrectly priced as an active January injury.
-  medicalOffseasonRecovery(db,`${db.year}-01-06`);
+  const medicalRolloverDate=`${db.year}-01-06`;
+  medicalOffseasonRecovery(db,medicalRolloverDate);
+  db.worldDate=medicalRolloverDate;
   promotionRelegation(db,w,rng,ev);
   updateHype(db,w);
   closeFinances(db,w,rng,ev);
