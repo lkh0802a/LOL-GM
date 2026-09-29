@@ -19,7 +19,9 @@ const tests=String.raw`(()=>{
   check(migration.version===15&&migration.saveFormat===2,'save schema/format drift');
   check(migration.teams[club.id].facilities.scouting===1,'legacy facility saves must restore a functioning scouting unit');
 
-  club.goal='final';club.sponsor=null;
+  club.goal='top_half';check(sponsorGoalFor(club)==='top_half','upper-table sponsorship must not require a playoff berth');
+  club.goal='survive';club.franchised=true;check(sponsorGoalFor(club)==='top_half','franchise clubs cannot sell relegation-survival targets');
+  club.franchised=false;club.goal='final';club.sponsor=null;
   const all=sponsorOffers(world,club),ids=all.map(v=>v.id);
   check(ids.join(',')==='fixed,perf,long','sponsor marketplace must expose distinct contracts');
   check(all[1].milestone==='final'&&all[1].milestoneBonus>0&&all[1].perWin>0,
