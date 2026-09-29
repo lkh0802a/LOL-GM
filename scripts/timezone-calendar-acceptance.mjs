@@ -148,7 +148,7 @@ const fixture=String.raw`(()=>{
     finalizeCompetitionDay(db,swiss,d,0,cfgSwiss);
   }
   verify(Object.values(swiss.stageData.sw.rec).every(row=>row.w+row.l===1),
-    'cross-midnight Swiss bracket only counted its final day's games');
+    'cross-midnight Swiss bracket omitted results from earlier UTC days');
   const lastLocal=firstRound.at(-1).matches.at(-1).localDate,
     nextLocal=swiss.days.slice(firstRound.length)[0]?.matches[0]?.localDate;
   verify(nextLocal&&nextLocal>=addDays(lastLocal,2),
