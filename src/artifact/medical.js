@@ -198,6 +198,19 @@ function medicalHeal(db,p,elapsed,date){
     if(!p.medicalResidual.daysLeft)p.medicalResidual=null;
   }
 }
+// Daily event probabilities used by the live medical tick and multi-seed
+// balance audit. These are per eligible player-day, NOT annual injury rates.
+// Rest lowers overuse risk without changing ordinary infectious illness.
+function medicalIncidentOdds(p,t,load,plan){
+  const rest=plan==='rest'||plan==='rehab',high=t.training?.intensity==='high'&&!rest&&plan!=='light';
+  const injury=clamp(.000065*(1+load/22)*(1+Math.max(0,p.age-28)*.035)*
+    (high?1.25:1)*(1+Math.max(0,p.fatigue-45)/95)*
+    (rest?.57:plan==='light'?.83:1),0,.00042);
+  const illness=.00020*(1+((p.condition??96)<70?.32:0));
+  const burnout=(p.medicalOverloadDays||0)>=14?
+    clamp(.00008*((p.medicalOverloadDays||0)-12)/18*(rest?.45:1),0,.00032):0;
+  return {injury,illness,burnout};
+}
 function medicalDailyTick(db,date){
   // Snapshot participants: an emergency organization callup can move a player
   // between the two squads while this day's health lottery is running.
@@ -221,11 +234,7 @@ function medicalDailyTick(db,date){
       if(p.medical?.daysLeft>0||p.medicalResidual?.daysLeft>0)medicalHeal(db,p,1,date);
       if(p.medical?.daysLeft>0)continue;
       if(p.medicalResidual?.daysLeft>0&&rng.chance(.98))continue;
-      const injury=clamp(.000065*(1+load/22)*(1+Math.max(0,p.age-28)*.035)*
-        (high?1.25:1)*(1+Math.max(0,p.fatigue-45)/95)*(rest?.57:plan==='light'?.83:1),0,.00042);
-      const illness=.00020*(1+(p.condition<70?.32:0));
-      const burnout=(p.medicalOverloadDays||0)>=14?
-        clamp(.00008*((p.medicalOverloadDays||0)-12)/18*(rest?.45:1),0,.00032):0;
+      const {injury,illness,burnout}=medicalIncidentOdds(p,t,load,plan);
       const draw=rng.next();let kind;
       if(draw<injury)kind='injury';
       else if(draw<injury+illness)kind='illness';
