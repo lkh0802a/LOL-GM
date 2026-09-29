@@ -10,6 +10,7 @@ const root=resolve(import.meta.dirname,'..','src','artifact');
 let source='';
 for(const file of [...ENGINE_MODULES,'ui-season.js','ui-setup.js'])
   source+=await readFile(resolve(root,file),'utf8')+'\n';
+source+='function esc(x){return String(x)}\n';
 source+=String.raw`(()=>{
   const check=(yes,message)=>{if(!yes)throw new Error('SPLIT_AGGREGATION '+message)};
   const cfg=defaultWorldConfig();
