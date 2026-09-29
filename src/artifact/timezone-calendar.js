@@ -100,7 +100,7 @@ function appendUtcFixtureDay(s,localDate,stage,label,pairs,bo,timeSlots){
     }
     day.matches.push({id:`${s.id}_match_${nextId++}`,a,b,bo,res:null,
       time,localDate,timeZone:zone,utcAt,roundLabel:label,
-      broadcastSlot:timeSlots?i+1:null});
+      broadcastSlot:i+1});
     touched.add(day);
   }
   for(const day of touched){
