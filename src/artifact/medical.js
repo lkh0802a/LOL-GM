@@ -122,7 +122,7 @@ function medicalReplacementClause(db,injured,plannedDays,annualSalary){
     guaranteedDays=clamp(Math.ceil(days*.5),7,21),
     maximumDays=clamp(days+7,14,90),start=db.worldDate;
   const guaranteedThrough=addDays(start,guaranteedDays-1);
-  return {forPid:injured.id,startedOn:start,guaranteedThrough,
+  return {forPid:injured.id,absenceDays:plannedDays,startedOn:start,guaranteedThrough,
     expiresOn:addDays(start,maximumDays-1),paidThrough:guaranteedThrough,
     paid:medicalWageRound(annualSalary*guaranteedDays/365)};
 }
