@@ -24,15 +24,30 @@ function newSeason(db,compId,year,seed,start,instanceKey=compId){
   addStageDays(db,s,0,order,start||`${year}-01-14`);
   return s;
 }
-function pushDay(s,date,stage,label,pairs,bo){let n=s.days.reduce((a,d)=>a+d.matches.length,0);s.days.push({date,stage,label,matches:pairs.map(([a,b])=>({id:`${s.id}_match_${n++}`,a,b,bo,res:null}))})}
 function addStageDays(db,s,idx,teams,date){
   const cfg=db.competitions[s.comp].stages[idx], gap=i=>cfg.dayGap?cfg.dayGap[i%cfg.dayGap.length]:3;
   if(cfg.type==='round_robin'){
     let groups=[teams];
     if(cfg.groups>1){groups=Array.from({length:cfg.groups},()=>[]);teams.forEach((t,i)=>{const r=Math.floor(i/cfg.groups),k=i%cfg.groups;groups[r%2?cfg.groups-1-k:k].push(t)})}
     const sched=groups.map(g=>roundRobin(g,cfg.legs||1)), R=Math.max(...sched.map(x=>x.length));
-    for(let r=0;r<R;r++){pushDay(s,date,cfg.id,`${cfg.name} ${r+1}라운드`,sched.flatMap(x=>x[r]||[]),cfg.bestOf);date=addDays(date,gap(r))}
+    if(cfg.broadcast==='weekly'){
+      const combined=Array.from({length:R},(_,r)=>sched.flatMap(x=>x[r]||[]));
+      addBroadcastLeagueDays(s,cfg,combined,date);
+    }else for(let r=0;r<R;r++){pushDay(s,date,cfg.id,`${cfg.name} ${r+1}라운드`,sched.flatMap(x=>x[r]||[]),cfg.bestOf);date=addDays(date,gap(r))}
     s.stageData[cfg.id]={type:cfg.type,teams,groups:cfg.groups>1?groups:null};
+  } else if(cfg.type==='league_phase'){
+    const slate=roundRobin(teams,1),count=Math.min(cfg.matches||6,slate.length),
+      dailyCap=cfg.broadcastCap||4;
+    for(let r=0;r<count;r++){
+      const fixtures=slate[r]||[];
+      for(let k=0;k<fixtures.length;k+=dailyCap){
+        pushDay(s,addDays(date,Math.floor(k/dailyCap)),cfg.id,
+          `${cfg.name} ${r+1}라운드 · 중계 ${Math.floor(k/dailyCap)+1}`,
+          fixtures.slice(k,k+dailyCap),cfg.bestOf,true);
+      }
+      date=addDays(date,Math.max(Math.ceil(fixtures.length/dailyCap)+1,cfg.dayGap?.[0]||4));
+    }
+    s.stageData[cfg.id]={type:cfg.type,teams};
   } else if(cfg.type==='swiss'){
     const sd=s.stageData[cfg.id]={type:'swiss',teams,rec:Object.fromEntries(teams.map(t=>[t,{w:0,l:0,opp:[]}])),round:0,advanced:[],out:[],W:cfg.wins||3,L:cfg.losses||3};
     swissRound(db,s,idx,date);
@@ -189,42 +204,17 @@ function elimReach(db,s,tid){
 }
 // ---- 진행 방식 프리셋 (리그: 항상 더블 라운드로빈 이상 · Bo3 이상) ----
 const LEAGUE_FORMATS={rr_po:'더블 라운드로빈 + 플레이오프',rr_de:'더블 라운드로빈 + 더블 엘리미네이션',groups_po:'그룹 더블 라운드로빈 + 플레이오프'};
-const INTL_FORMATS={playin_swiss_ko:'플레이인 + 스위스 + 녹아웃',swiss_ko:'스위스 + 녹아웃',playin_groups_ko:'플레이인 + 그룹 + 녹아웃',playin_de:'플레이인 + 더블 엘리미네이션',groups_ko:'그룹 + 녹아웃',groups_de:'그룹 + 더블 엘리미네이션',ko:'녹아웃'};
+const INTL_FORMATS={first_stand:'조별리그 + 녹아웃',msi_swiss_de:'스위스 + 더블 엘리미네이션',
+  worlds_league_phase:'6라운드 리그 페이즈 + 16강 토너먼트',masters_groups:'조별 더블 라운드로빈 + 녹아웃',
+  open_groups:'조별리그 + 녹아웃',regional_cup:'권역별 조별리그 + 녹아웃',
+  playin_swiss_ko:'플레이인 + 스위스 + 녹아웃',swiss_ko:'스위스 + 녹아웃',playin_groups_ko:'플레이인 + 그룹 + 녹아웃',playin_de:'플레이인 + 더블 엘리미네이션',groups_ko:'그룹 + 녹아웃',groups_de:'그룹 + 더블 엘리미네이션',ko:'녹아웃'};
 function leagueStages(R,n,div){
   const fmt=R.format||'rr_po', bo=Math.max(3,R.regularBo||3), pbo=div===2?3:Math.max(3,R.playoffBo||5);
   const take=div===2?Math.min(4,n):Math.min(Math.max(4,R.playoffTake||4),n);
-  const rr={id:'regular',name:'정규 시즌',type:'round_robin',legs:Math.max(2,R.legs||2),bestOf:bo,dayGap:[3,4]};
+  const rr={id:'regular',name:'정규 시즌',type:'round_robin',legs:Math.max(2,R.legs||2),bestOf:bo,dayGap:[3,4],broadcast:'weekly'};
   const po=t=>({id:'playoffs',name:'플레이오프',type:'single_elim',from:'regular',take:t,bestOf:pbo,dayGap:[6,6],firstChoice:'seed'});
   if(div===2)return [rr,po(take)];
   if(fmt==='rr_de')return [rr,{id:'playoffs',name:'플레이오프',type:'double_elim',from:'regular',take:take>=8&&n>=8?8:take>=6&&n>=8?8:4,bestOf:pbo,dayGap:[4,4]}];
   if(fmt==='groups_po'&&n>=10)return [{...rr,name:'그룹 스테이지',groups:2},po(take)];
   return [rr,po(take)];
-}
-// 국제대회: 팀 목록은 시드 순서(지역 1번 시드 → 2번 시드 …)
-function intlStages(fmt,teams,bo){
-  const n=teams.length, B=Math.max(3,bo||5);
-  const ko=(from,t)=>({id:'knockout',name:'녹아웃',type:'single_elim',from,take:t,bestOf:B,dayGap:[5,5],firstChoice:'coin'});
-  const de=(from,t)=>({id:'knockout',name:'브래킷 스테이지',type:'double_elim',from,take:t,bestOf:B,dayGap:[3,3]});
-  const grp=(g,extra={})=>({id:'groups',name:'그룹 스테이지',type:'round_robin',legs:1,bestOf:3,groups:g,dayGap:[1,1,2],...extra});
-  const sw=(extra={})=>({id:'groups',name:'스위스 스테이지',type:'swiss',bestOf:3,wins:3,losses:3,dayGap:[2],...extra});
-  if((fmt==='playin_swiss_ko'||fmt==='swiss_ko')&&n>=12){
-    if(n<=16&&fmt==='swiss_ko'&&n===16)return [sw(),ko('groups',8)];
-    const adv=Math.max(2,Math.min(8,Math.round((n-16)/3)+2)), direct=teams.slice(0,16-adv), pin=teams.slice(16-adv);
-    if(n===16)return [sw(),ko('groups',8)];
-    if(pin.length>adv)return [{id:'playin',name:'플레이인',type:'round_robin',legs:1,bestOf:3,groups:Math.max(1,Math.min(adv,Math.ceil(pin.length/6))),dayGap:[1,1]},sw({from:'playin',take:adv,direct}),ko('groups',8)];
-  }
-  if((fmt==='swiss_ko'||fmt==='playin_swiss_ko')&&n===8)return [sw({wins:2,losses:2}),ko('groups',4)];
-  if(fmt==='playin_groups_ko'&&n>=10){
-    const size=n>=16?16:8, adv=size===16?4:2, direct=teams.slice(0,size-adv), pin=teams.slice(size-adv);
-    if(pin.length>adv)return [{id:'playin',name:'플레이인',type:'round_robin',legs:1,bestOf:3,groups:pin.length>=8?2:1,dayGap:[1,1]},grp(size/4,{from:'playin',take:adv,direct}),ko('groups',size/2)];
-  }
-  if(fmt==='playin_de'&&n>=6){
-    const size=n>=8?8:4, adv=n>8?Math.min(4,Math.max(2,n-size+2)):0;
-    if(adv){const direct=teams.slice(0,size-adv), pin=teams.slice(size-adv);
-      if(pin.length>adv)return [{id:'playin',name:'플레이인',type:'round_robin',legs:1,bestOf:3,groups:Math.max(1,Math.min(adv,Math.ceil(pin.length/6))),dayGap:[1,1]},{...de('playin',adv),direct}];}
-    return [{...de(undefined,size)}];
-  }
-  if(fmt==='ko'||n<6){let P=4;while(P*2<=n)P*=2;return [{...ko(undefined,P)}]}
-  if(fmt==='groups_de'&&n>=8)return [grp(n>=12?4:2),de('groups',8)];
-  return [grp(n>=12?4:2),ko('groups',n>=12?8:4)];
 }

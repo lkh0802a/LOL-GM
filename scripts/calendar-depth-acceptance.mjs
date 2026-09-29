@@ -30,10 +30,27 @@ const fixture=String.raw`(()=>{
     const weekly=leagueFixtureDates.filter(date=>date>=start&&date<end);
     assert(weekly.length===2,'each first-division team must have two regular matches per week');
   }
-  for(let i=1;i<8;i++){
+  for(let i=1;i<leagueFixtureDates.length;i++){
     const elapsed=(new Date(leagueFixtureDates[i]+'T00:00:00Z')-
       new Date(leagueFixtureDates[i-1]+'T00:00:00Z'))/86400000;
-    assert(elapsed===(i%2?3:4),'domestic match dates must alternate 3/4 day breaks');
+    assert(elapsed>=2,'broadcast scheduler assigned matches on consecutive days');
+  }
+  const weeklyDays=domestic.days.filter(d=>d.stage==='regular');
+  for(const d of weeklyDays){
+    const weekday=new Date(d.date+'T00:00:00Z').getUTCDay();
+    assert(weekday>=3&&weekday<=6||weekday===0,
+      'regular league fixture scheduled outside its Wed-Sun broadcast window');
+    assert(d.matches.length<=2,
+      'ten-team league must not show more than two Bo3 on a broadcast day');
+    assert(d.matches.every(m=>m.broadcastTime&&typeof m.broadcastTime==='string'),
+      'individual series missing their announced broadcast slot');
+    assert(new Set(d.matches.map(m=>m.broadcastTime)).size===d.matches.length,
+      'two Bo3 broadcasts were assigned exactly the same time');
+    const seen=new Set();
+    for(const m of d.matches)for(const tid of [m.a,m.b]){
+      assert(!seen.has(tid),'a club has two domestic broadcast fixtures on one date');
+      seen.add(tid);
+    }
   }
   const t=db.teams[user.id],p=db.players[t.roster[0]];
   assert(p,'managed team needs a real player');
