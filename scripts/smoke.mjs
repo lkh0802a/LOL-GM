@@ -288,7 +288,8 @@ source += `\n(()=>{
       {date:'2027-08-04',stage:'groups',label:'그룹 2라운드',matches:[{id:'bo5_accept_2',a:bId,b:aId,bo:5,res:null}]}
     ],cur:0,stage:0,stageData:{groups:{type:'round_robin',teams:[aId,bId],groups:null}},pstats:{},done:false,champion:null,runnerUp:null};
     bdb.world.seasons={[bkey]:bs};
-    const opened=playWorldDay(bdb);if(!opened?.pending||!bdb.world.pendingOfficial||bdb.world.pendingOfficial.queue[0]?.matchId!=='bo5_accept')throw new Error('Bo5 official match did not pause at managed draft boundary');
+    const restBefore=playWorldDay(bdb);if(restBefore.date!=='2027-07-31'||restBefore.pending)throw new Error('Calendar skipped the rest day before the Bo5 opener');
+    const opened=playWorldDay(bdb);if(!opened?.pending||!bdb.world.pendingOfficial||bdb.world.pendingOfficial.queue[0]?.matchId!=='bo5_accept'||opened.date!==bdate)throw new Error('Bo5 official match did not pause at managed draft boundary');
     const allSeriesPicks=new Set();let finished=null,gameCount=0,savedMidSeries=false;
     while(bdb.world.pendingOfficial&&gameCount<5){
       const selection=pendingOfficialSelectionSetup(bdb);if(!selection)throw new Error('Bo5 First Selection prompt missing');
