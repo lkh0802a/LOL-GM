@@ -102,7 +102,7 @@ function scrimUtcTimeOnDay(db,team,slot,utcDate=db.worldDate){
   }
   return null;
 }
-function scrimSharedWorkHours(db,t,other,slot,utcDate=db.worldDate){
+function scrimSharedWorkHours(db,t,other,slot,utcDate=db.worldDate,bookings=null){
   const first=scrimUtcTimeOnDay(db,t,slot,utcDate);
   if(!first)return null;
   const second=zonedClock(first.startsAt,teamTimeZone(db,other.id));
@@ -112,7 +112,7 @@ function scrimSharedWorkHours(db,t,other,slot,utcDate=db.worldDate){
   const opponentSlot=second.hour<18?'afternoon':'evening';
   for(const [team,day,block] of [[t,first.localDate,slot],
     [other,second.date,opponentSlot]]){
-    if(officialBookedTeams(db,day).has(team.id))return null;
+    if((bookings?.[day]||officialBookedTeams(db,day)).has(team.id))return null;
     if((team.scrimLog||[]).some(x=>
       (x.localDate||x.date)===day&&x.slot===block))return null;
   }
