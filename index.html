@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#ECEFF2;--surf:#FFFFFF;--ink:#18212B;--mut:#5D6B78;--line:#D5DBE1;--brass:#9C7A2F;--blue:#2F6CD4;--red:#C9412F;--blue-t:rgba(47,108,212,.14);--red-t:rgba(201,65,47,.13);
+:root{--bg:#ECEFF2;--surf:#FFFFFF;--ink:#18212B;--mut:#5D6B78;--line:#D5DBE1;--brass:#84601D;--blue:#2F6CD4;--red:#C9412F;--blue-t:rgba(47,108,212,.14);--red-t:rgba(201,65,47,.13);
   --on-brass:#FFFFFF;--hi:#1F7A4D;--mi:#8A6A1C;--lo:#9A3B2E;
   box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121820;--surf:#1B232D;--ink:#E6EBF0;--mut:#93A1AE;--line:#2C3743;--brass:#D9B064;--blue:#5B95F0;--red:#EC6A55;--blue-t:rgba(91,149,240,.18);--red-t:rgba(236,106,85,.16);--on-brass:#1B1405;--hi:#5FCB93;--mi:#D9B064;--lo:#EC8A78}}
@@ -94,7 +94,7 @@ span.num.hi{color:var(--hi);font-weight:700}span.num.mid{color:var(--mi);font-we
 .tac output{font-variant-numeric:tabular-nums;font-weight:700}
 .tac input[type=range]{accent-color:var(--brass);width:100%}
 .tac select{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px}
-.roster tr[data-p]{cursor:pointer}.roster tr[data-p]:hover,.roster tr.open{background:var(--bg)}
+.roster tr[data-p]{cursor:default}.roster tr[data-p]:hover,.roster tr.open{background:var(--bg)}
 .pdet{background:var(--surf);border:1px solid var(--line);border-radius:10px;padding:14px}
 .pdet h3{color:var(--ink);font-size:20px}.pdet small{color:var(--mut);font-weight:400;font-size:13px}
 .agrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px 22px;margin-bottom:14px}
@@ -235,13 +235,55 @@ td.fmt{font-size:12px;color:var(--mut);white-space:normal;min-width:200px}
 @media (max-width:390px){.du-center span{display:inline}.du-role{font-size:9px}.du-team h3{font-size:12px}.du-pick{grid-template-columns:20px 30px minmax(0,1fr)}.du-pick-img,.du-pick-empty{width:30px;height:30px}.du-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:340px){.du-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
-@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+/* 11.5/6-4: keyboard reachability and narrow/zoomed viewport safety */
+.skip-link{position:absolute;top:-100vh;left:12px;z-index:30;background:var(--surf);color:var(--ink);padding:10px 14px;border:2px solid var(--brass);border-radius:8px}
+.skip-link:focus{top:calc(8px + env(safe-area-inset-top,0px))}
+.roster-open{border:0;background:transparent;padding:7px 2px;color:var(--ink);font-weight:700;text-align:left;cursor:pointer;text-decoration:underline;text-decoration-color:var(--brass);text-underline-offset:3px}
+.roster-open[aria-expanded="true"]{color:var(--blue)}
+.scroll{max-width:100%;min-width:0}
+.cfgcard,.market,.report,.pdet,.du-side,.du-pool{min-width:0;overflow-wrap:anywhere}
+.cfgs{grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
+.rgrid{grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr))}
+.fin{grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr))}
+.cfghead{flex-wrap:wrap;gap:8px}
+.chaphead b{min-width:0;overflow-wrap:anywhere}
+.chaphead small{white-space:normal;text-align:right}
+.du-wrap,.du-choice-wrap{min-width:0}
+.du-board,.du-tools,.du-series-meta{min-width:0}
+.du-board>*{min-width:0}
+.du-champ[aria-pressed="true"]{border-color:var(--brass);box-shadow:inset 0 0 0 2px var(--brass)}
+:focus-visible{outline:3px solid var(--brass);outline-offset:3px}
+@media(max-width:640px){
+ main{padding-inline:12px}
+ .controls>button,.primary,.ghost,.sm2,.seg button,.chaphead,.chips button,.du-mobile-tabs button,.du-tools .chips button{min-height:44px}
+ .roster-open{min-height:44px}
+ .cfgs,.rgrid,.fin,.tac{grid-template-columns:minmax(0,1fr)}
+ .controls label{max-width:100%}
+ .controls select,.controls input,.mrow input,.mrow select,.cfggrid input,.cfggrid select,.du-tools input,textarea{font-size:16px}
+ .du-board{min-width:0}
+ .du-last-team,.du-last-card{min-width:0}
+ .du-last-picks{min-width:0;overflow-x:auto}
+ .du-lock{min-width:0}
+ .du-lock>div{overflow-wrap:anywhere}
+}
+@media(max-width:360px){
+ .seasonhead h2{font-size:25px}
+ .du-board{gap:3px}
+ .du-side{padding:5px}
+ .du-team h3{overflow-wrap:anywhere}
+ .du-pick{gap:3px}
+ .du-champ{min-width:0}
+}
+@media(prefers-reduced-motion:reduce){
+ *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+ #ll li{animation:none}
+}
 </style>
 </head>
 <body>
-<header><h1>LOL <span>GM</span></h1><p>살아 움직이는 e스포츠 세계</p></header>
-<nav><div><button data-v="season">시즌</button><button data-v="match">스크림</button><button data-v="squad">선수단</button><button data-v="patch">패치·메타</button><button data-v="mc">시뮬레이션</button><button data-v="data">저장</button></div></nav>
-<main id="main"></main>
+<header><a class="skip-link" href="#main">게임 콘텐츠로 건너뛰기</a><h1>LOL <span>GM</span></h1><p>살아 움직이는 e스포츠 세계</p></header>
+<nav aria-label="주요 화면"><div><button type="button" data-v="season">시즌</button><button type="button" data-v="match">스크림</button><button type="button" data-v="squad">선수단</button><button type="button" data-v="patch">패치·메타</button><button type="button" data-v="mc">시뮬레이션</button><button type="button" data-v="data">저장</button></div></nav>
+<main id="main" tabindex="-1" aria-label="게임 콘텐츠"></main>
 <div id="overlay" hidden role="dialog" aria-modal="true" aria-label="시리즈 상세" tabindex="-1"></div>
 <script>
 /* LOL GM generated bundle. Canonical source lives in src/artifact/*.js. */
@@ -6009,7 +6051,7 @@ function viewSquad(){
   </div>${mineOrg?'<div class="controls"><button class="primary" id="sqapply">변경사항 적용</button><button class="ghost" id="sqdiscard">변경 취소</button><span class="hint">주전·역할·전술·훈련을 여러 개 조정한 뒤 한 번에 적용합니다.</span></div>':''}<p class="hint">훈련 포인트는 총 ${TRAIN_POINTS}점입니다. 한 영역에 몰면 그 영역은 크게 오르지만 나머지는 덜 오르거나 떨어지고, 배분하지 않은 포인트는 버려집니다. 한 시즌에 영역별로 오를 수 있는 폭과, 잠재력보다 한참 높게 오르는 것에도 한계가 있습니다.</p>
   <div class="fin">${(()=>{const f=ensureFacilities(t),names={training:'훈련',analysis:'분석',recovery:'회복',youth:'유소년'};return Object.keys(names).map(k=>`<div><span>${names[k]} 시설</span><b>${f[k]} / 5</b><small>구단 자동 관리 </small></div>`).join('')})()}</div><p class="hint">훈련·유소년 시설은 성장, 분석 시설은 상대/메타 분석, 회복 시설은 피로 회복에 직접 적용됩니다. 연 유지비 ${money(facilityUpkeep(DB,t))}</p></section>
   <section><h3>로스터</h3><div class="scroll"><table class="roster"><thead><tr><th>포지션</th><th>선수</th><th>경기 슬롯</th><th>역할</th><th>만족도</th><th>나이</th><th>종합</th><th>성장 여지</th><th>명성</th><th>시장가치</th><th>폼</th><th>컨디션</th><th>경기 감각</th><th>피로</th><th>사기</th><th>연봉</th><th>계약</th>${Object.keys(ATTR_GROUPS).map(g=>`<th>${GROUP_KO[g]}</th>`).join('')}</tr></thead><tbody>
-    ${ps.map(p=>{const st=pState(p);ensureSatisfaction(p);const shownRole=edit?.roles[p.id]||p.rosterRole||recommendedRosterRole(DB,p,t),lineupMap=edit?.starters||t.depthChart||{},assignedRole=ROLES.find(r=>lineupMap[r]===p.id)||'',roleCtl=mineOrg?`<select data-srole="${p.id}" aria-label="${esc(p.name)} 로스터 역할">${SQUAD_ROLES.map(r=>`<option value="${r}"${shownRole===r?' selected':''}>${SQUAD_ROLE_KO[r]}</option>`).join('')}</select>`:SQUAD_ROLE_KO[p.rosterRole||recommendedRosterRole(DB,p,t)],starterCtl=mineOrg?`<select data-lineup-player="${p.id}" aria-label="${esc(p.name)} 경기 포지션"><option value="">후보</option>${ROLES.map(r=>`<option value="${r}"${assignedRole===r?' selected':''}>${ROLE_KO[r]} · 적합 ${playerRoleRating(p,r)}</option>`).join('')}</select>`:(assignedRole?ROLE_KO[assignedRole]:'후보');return `<tr data-p="${p.id}" tabindex="0" class="${OPEN_P===p.id?'open':''}"><td><span class="role">${ROLE_KO[p.role]}</span></td><td><b>${esc(p.name)}</b>${assignedRole?'':' <small class="hint">후보</small>'}</td><td>${starterCtl}</td><td>${roleCtl}</td><td class="num ${p.satisfaction<35?'lo':p.satisfaction>=70?'hi':''}">${Math.round(p.satisfaction)}<small class="hint"> ${satisfactionLabel(p.satisfaction)}</small>${p.wantsOut?' <span class="lo">이적요청</span>':''}</td><td class="num">${p.age}</td><td>${ovrTag(obsOvr(DB,p))}${knowledge(DB,p)<100?'<small class="hint">?</small>':''}</td><td>${potText(p)}</td><td class="num">${p.reputation??'—'}</td><td class="num">${money(playerMarketValue(DB,p))}</td><td class="num">${st.form>=3?'<span class="hi">▲</span>':st.form<=-3?'<span class="lo">▼</span>':'–'}</td><td class="num">${Math.round(st.condition)}</td><td class="num">${Math.round(st.sharpness)}</td><td class="num">${Math.round(st.fatigue)}</td><td class="num ${st.morale<35?'lo':''}">${Math.round(st.morale)}${p.wantsOut?' 이적요청':''}</td><td class="num">${p.contract?money(p.contract.salary):'—'}</td><td class="num">${p.contract?'~'+p.contract.until:'—'}</td>${Object.keys(ATTR_GROUPS).map(g=>`<td>${ovrTag(grpAvg(p,g,knowledge(DB,p)))}</td>`).join('')}</tr>`}).join('')}
+    ${ps.map(p=>{const st=pState(p);ensureSatisfaction(p);const shownRole=edit?.roles[p.id]||p.rosterRole||recommendedRosterRole(DB,p,t),lineupMap=edit?.starters||t.depthChart||{},assignedRole=ROLES.find(r=>lineupMap[r]===p.id)||'',roleCtl=mineOrg?`<select data-srole="${p.id}" aria-label="${esc(p.name)} 로스터 역할">${SQUAD_ROLES.map(r=>`<option value="${r}"${shownRole===r?' selected':''}>${SQUAD_ROLE_KO[r]}</option>`).join('')}</select>`:SQUAD_ROLE_KO[p.rosterRole||recommendedRosterRole(DB,p,t)],starterCtl=mineOrg?`<select data-lineup-player="${p.id}" aria-label="${esc(p.name)} 경기 포지션"><option value="">후보</option>${ROLES.map(r=>`<option value="${r}"${assignedRole===r?' selected':''}>${ROLE_KO[r]} · 적합 ${playerRoleRating(p,r)}</option>`).join('')}</select>`:(assignedRole?ROLE_KO[assignedRole]:'후보');return `<tr data-p="${p.id}" class="${OPEN_P===p.id?'open':''}"><td><span class="role">${ROLE_KO[p.role]}</span></td><td><button type="button" class="roster-open" data-p-open="${esc(p.id)}" aria-expanded="${OPEN_P===p.id}" aria-controls="pdetail">${esc(p.name)}</button>${assignedRole?'':' <small class="hint">후보</small>'}</td><td>${starterCtl}</td><td>${roleCtl}</td><td class="num ${p.satisfaction<35?'lo':p.satisfaction>=70?'hi':''}">${Math.round(p.satisfaction)}<small class="hint"> ${satisfactionLabel(p.satisfaction)}</small>${p.wantsOut?' <span class="lo">이적요청</span>':''}</td><td class="num">${p.age}</td><td>${ovrTag(obsOvr(DB,p))}${knowledge(DB,p)<100?'<small class="hint">?</small>':''}</td><td>${potText(p)}</td><td class="num">${p.reputation??'—'}</td><td class="num">${money(playerMarketValue(DB,p))}</td><td class="num">${st.form>=3?'<span class="hi">▲</span>':st.form<=-3?'<span class="lo">▼</span>':'–'}</td><td class="num">${Math.round(st.condition)}</td><td class="num">${Math.round(st.sharpness)}</td><td class="num">${Math.round(st.fatigue)}</td><td class="num ${st.morale<35?'lo':''}">${Math.round(st.morale)}${p.wantsOut?' 이적요청':''}</td><td class="num">${p.contract?money(p.contract.salary):'—'}</td><td class="num">${p.contract?'~'+p.contract.until:'—'}</td>${Object.keys(ATTR_GROUPS).map(g=>`<td>${ovrTag(grpAvg(p,g,knowledge(DB,p)))}</td>`).join('')}</tr>`}).join('')}
   </tbody></table></div><p class="hint">주포지션은 선수의 전문 역할 표시이며 출전 자격 제한이 아닙니다. 등록 선수 5명을 TOP/JGL/MID/ADC/SUP 경기 슬롯에 자유롭게 배치할 수 있습니다. 선수를 누르면 세부 능력치, 챔피언 폭, 커리어가 열립니다.${mineOrg?'':` 스카우팅 정보 ${kAvg}% — 정보가 적을수록 실제와 다르게 보입니다.`}</p>${DB.world&&!mineOrg?`<div class="controls"><button class="ghost" id="scoutT">이 팀 집중 스카우팅 (${money(0.5*psOf(DB,DB.teams[managedTeamId(DB)].region))})</button><span id="scmsg" class="hint"></span></div>`:''}</section>
   <div id="pdetail">${OPEN_P&&DB.players[OPEN_P]&&DB.players[OPEN_P].team===SQUAD?playerDetail(DB.players[OPEN_P]):''}</div>${mineOrg?scoutingSearchBlock():''}`;
 }
@@ -6032,7 +6074,15 @@ function bindSquad(){
   document.querySelectorAll('[data-scout]').forEach(b=>b.onclick=e=>{e.stopPropagation();MSG=scoutPlayers(DB,[b.dataset.scout],20,.1*psOf(DB,managedTeam(DB).region));saveDB();navKeepScroll()});
   if($('#scall'))$('#scall').onchange=e=>document.querySelectorAll('[data-scout-select]').forEach(x=>x.checked=e.target.checked);
   if($('#scbatch'))$('#scbatch').onclick=()=>{const ids=[...document.querySelectorAll('[data-scout-select]:checked')].slice(0,10).map(x=>x.dataset.scoutSelect);if(!ids.length){MSG='관찰할 선수를 선택하세요';navKeepScroll();return}MSG=scoutPlayers(DB,ids,20,.1*psOf(DB,managedTeam(DB).region)*ids.length);saveDB();navKeepScroll()};
-  document.querySelectorAll('tr[data-p]').forEach(tr=>{const open=()=>{OPEN_P=OPEN_P===tr.dataset.p?null:tr.dataset.p;nav();const d=$('#pdetail');if(OPEN_P&&d)d.scrollIntoView({behavior:'smooth',block:'start'})};tr.onclick=open;tr.onkeydown=e=>{if(e.key==='Enter')open()}});
+  document.querySelectorAll('[data-p-open]').forEach(button=>button.onclick=()=>{
+    const playerId=button.dataset.pOpen;
+    OPEN_P=OPEN_P===playerId?null:playerId;
+    nav();
+    const restored=[...document.querySelectorAll('[data-p-open]')].find(el=>el.dataset.pOpen===playerId);
+    restored?.focus();
+    const detail=$('#pdetail');
+    if(OPEN_P&&detail)detail.scrollIntoView({behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
+  });
 }
 // ---------- 몬테카를로 ----------
 
@@ -6180,7 +6230,7 @@ function draftUiOpponentIntent(){
 function draftUiGrid(){
   const s=DRAFT_UI.state,rows=Object.values(s.db.patch.champions).filter(draftUiMatch).sort((a,b)=>championDisplayName(a).localeCompare(championDisplayName(b),'ko'));
   return `<div class="du-grid">${rows.map(c=>{const st=draftUiChampionState(c),sel=DRAFT_UI.selected===c.id;
-    return `<button class="du-champ ${sel?'sel':''}" data-du-champ="${c.id}" ${st.disabled?'disabled':''} title="${esc(st.reason||c.roles.map(r=>ROLE_KO[r]).join(' · '))}">
+    return `<button class="du-champ ${sel?'sel':''}" data-du-champ="${c.id}" aria-pressed="${sel}" aria-label="${esc(championDisplayName(c))} · ${esc(c.roles.map(r=>ROLE_KO[r]).join(' · '))}${st.reason?' · '+esc(st.reason):''}" ${st.disabled?'disabled':''} title="${esc(st.reason||c.roles.map(r=>ROLE_KO[r]).join(' · '))}">
       ${championPortraitMarkup(c,{className:'du-champ-img',alt:false})}<span class="du-champ-meta"><b>${esc(championDisplayName(c))}</b><small>${c.roles.map(r=>ROLE_KO[r]).join(' · ')}</small></span>${st.reason?`<em>${esc(st.reason)}</em>`:''}
     </button>`}).join('')}</div>`;
 }
@@ -6189,19 +6239,19 @@ function draftUiRender(){
   const phase=done?'드래프트 완료':`${turn.index+1} / ${DRAFT_ORDER.length} · ${turn.kind==='B'?'밴':'픽'} · ${esc(s.db.teams[s.teamIds[turn.side]].short)} 차례`;
   const mine=!done&&turn.side===DRAFT_UI.playerSide;
   const markup=`<div class="ovin du-wrap">
-    <div class="ovhead"><div><b>${esc(DRAFT_UI.title)}</b><small class="du-phase">${phase}</small></div>${DRAFT_UI.locked?'':'<button class="ghost" id="du-close">닫기</button>'}</div>
+    <div class="ovhead"><div><b>${esc(DRAFT_UI.title)}</b><small class="du-phase" role="status" aria-live="polite">${phase}</small></div>${DRAFT_UI.locked?'':'<button class="ghost" id="du-close">닫기</button>'}</div>
     ${draftUiSeriesMeta()}<div class="du-board">${draftUiSidePanel(0)}<div class="du-center"><strong>${done?'완료':mine?'YOUR TURN':'AI'}</strong><span>${done?'10밴 · 10픽 완료':turn.kind==='B'?'BAN':'PICK'}</span></div>${draftUiSidePanel(1)}</div>
     ${done?`<section class="du-done"><h3>드래프트 완료</h3><p>${esc(DRAFT_UI.doneText||'단계형 밴픽 코어와 동일한 결과입니다.')}</p><button class="primary" id="du-finish">${esc(DRAFT_UI.finishLabel||(DRAFT_UI.onComplete?'드래프트 확정':'연습 종료'))}</button></section>`:
     `<section class="du-pool">
       <div class="du-tools"><input id="du-search" aria-label="챔피언 검색" type="search" autocomplete="off" placeholder="챔피언 검색" value="${esc(DRAFT_UI.query)}"><div class="chips">${DRAFT_UI_FILTERS.map(r=>`<button data-du-role="${r}" aria-pressed="${DRAFT_UI.filter===r}">${r==='ALL'?'전체':ROLE_KO[r]}</button>`).join('')}</div></div>
       <div class="du-mobile-tabs" role="group" aria-label="밴픽 정보">
-        <button data-du-info="analysis" aria-pressed="${DRAFT_UI.infoTab==='analysis'}">후보 분석</button>
-        <button data-du-info="advice" aria-pressed="${DRAFT_UI.infoTab==='advice'}">스태프 조언</button>
-        <button data-du-info="intent" aria-pressed="${DRAFT_UI.infoTab==='intent'}">상대 의도</button>
+        <button data-du-info="analysis" aria-controls="du-info-analysis" aria-pressed="${DRAFT_UI.infoTab==='analysis'}">후보 분석</button>
+        <button data-du-info="advice" aria-controls="du-info-advice" aria-pressed="${DRAFT_UI.infoTab==='advice'}">스태프 조언</button>
+        <button data-du-info="intent" aria-controls="du-info-intent" aria-pressed="${DRAFT_UI.infoTab==='intent'}">상대 의도</button>
       </div>
-      <div class="du-info-panel ${DRAFT_UI.infoTab==='advice'?'active':''}" data-du-panel="advice">${draftUiStaffAdvice()}</div>
-      <div class="du-info-panel ${DRAFT_UI.infoTab==='intent'?'active':''}" data-du-panel="intent">${draftUiOpponentIntent()}</div>
-      <div class="du-info-panel ${DRAFT_UI.infoTab==='analysis'?'active':''}" data-du-panel="analysis">${draftUiAnalysisPanel()}</div>
+      <div class="du-info-panel ${DRAFT_UI.infoTab==='advice'?'active':''}" id="du-info-advice" data-du-panel="advice">${draftUiStaffAdvice()}</div>
+      <div class="du-info-panel ${DRAFT_UI.infoTab==='intent'?'active':''}" id="du-info-intent" data-du-panel="intent">${draftUiOpponentIntent()}</div>
+      <div class="du-info-panel ${DRAFT_UI.infoTab==='analysis'?'active':''}" id="du-info-analysis" data-du-panel="analysis">${draftUiAnalysisPanel()}</div>
       <div id="du-grid">${draftUiGrid()}</div>
       <div class="du-lock"><div><b>${mine?(DRAFT_UI.selected?esc(championLabel(s.db,DRAFT_UI.selected)):'챔피언을 선택하세요'):'상대 팀이 선택 중입니다'}</b><small>${mine?(turn.kind==='P'?'픽 단계에서는 포지션을 공개하지 않습니다. 드래프트 종료 후 합법적인 5포지션 배치를 확정합니다.':'선택 후 확정해야 밴됩니다.'):'AI는 공개된 챔피언과 가능한 포지션만 보고 판단합니다.'}</small></div><button class="primary" id="du-lock" ${mine&&DRAFT_UI.selected?'':'disabled'}>${turn.kind==='B'?'밴 확정':'픽 확정'}</button></div>
     </section>`}
@@ -6221,7 +6271,7 @@ function draftUiBind(){
   const lock=$('#du-lock');if(lock)lock.onclick=()=>draftUiLock();
 }
 function draftUiBindGrid(){
-  document.querySelectorAll('[data-du-champ]').forEach(b=>b.onclick=()=>{DRAFT_UI.selected=b.dataset.duChamp;DRAFT_UI.infoTab='analysis';document.querySelectorAll('[data-du-champ]').forEach(x=>x.classList.toggle('sel',x===b));document.querySelectorAll('[data-du-info]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.duInfo==='analysis')));document.querySelectorAll('.du-info-panel').forEach(x=>x.classList.toggle('active',x.dataset.duPanel==='analysis'));const lock=$('#du-lock');if(lock)lock.disabled=false;const name=lock?.previousElementSibling?.querySelector('b');if(name)name.textContent=championLabel(DRAFT_UI.state.db,DRAFT_UI.selected);const analysis=$('#du-analysis');if(analysis)analysis.innerHTML=draftUiAnalysisContent()});
+  document.querySelectorAll('[data-du-champ]').forEach(b=>b.onclick=()=>{DRAFT_UI.selected=b.dataset.duChamp;DRAFT_UI.infoTab='analysis';document.querySelectorAll('[data-du-champ]').forEach(x=>{x.classList.toggle('sel',x===b);x.setAttribute('aria-pressed',String(x===b))});document.querySelectorAll('[data-du-info]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.duInfo==='analysis')));document.querySelectorAll('.du-info-panel').forEach(x=>x.classList.toggle('active',x.dataset.duPanel==='analysis'));const lock=$('#du-lock');if(lock)lock.disabled=false;const name=lock?.previousElementSibling?.querySelector('b');if(name)name.textContent=championLabel(DRAFT_UI.state.db,DRAFT_UI.selected);const analysis=$('#du-analysis');if(analysis)analysis.innerHTML=draftUiAnalysisContent()});
 }
 function draftUiLock(){
   if(!DRAFT_UI||!DRAFT_UI.selected)return;const s=DRAFT_UI.state,turn=draftTurn(s);if(!turn||turn.side!==DRAFT_UI.playerSide)return;
@@ -6440,6 +6490,7 @@ function openUiOverlay({kind,label,html,dismissible=false,onDismiss=null,focusSe
   root.hidden=false;
   root.setAttribute('aria-label',label);
   root.innerHTML=html;
+  if(typeof uiEnhanceScrollRegions==='function')uiEnhanceScrollRegions(root);
   document.body.classList.add('lock');
   uiOverlayBackground(true);
   uiOverlayFocus(root,focusSelector);
@@ -6451,6 +6502,7 @@ function refreshUiOverlay(html,{label=null,focusSelector=null}={}){
   const key=root.contains(current)?uiOverlayFocusKey(current):null;
   if(label!==null){UI_OVERLAY.label=label;root.setAttribute('aria-label',label)}
   root.innerHTML=html;
+  if(typeof uiEnhanceScrollRegions==='function')uiEnhanceScrollRegions(root);
   uiOverlayFocus(root,focusSelector,key);
 }
 function closeUiOverlay({force=false,restoreFocus=true}={}){
@@ -6535,6 +6587,28 @@ function finishUiTask(task){
   UI_TASKS.delete(task.kind);task.active=false;return true;
 }
 let UI_RENDER_ID=0;
+// Only genuinely overflowing horizontal data regions become keyboard tab stops.
+function uiEnhanceScrollRegions(root){
+  if(!root||typeof root.querySelectorAll!=='function')return;
+  root.querySelectorAll('.scroll').forEach(region=>{
+    if(!Number.isFinite(region.scrollWidth)||!Number.isFinite(region.clientWidth))return;
+    if(region.scrollWidth>region.clientWidth+1){
+      region.tabIndex=0;
+      region.setAttribute('role','region');
+      region.setAttribute('aria-label','가로로 스크롤 가능한 표 또는 경기 기록');
+      region.dataset.keyboardScroll='true';
+    }else if(region.dataset.keyboardScroll==='true'){
+      region.removeAttribute('tabindex');
+      region.removeAttribute('role');
+      region.removeAttribute('aria-label');
+      delete region.dataset.keyboardScroll;
+    }
+  });
+}
+window.addEventListener?.('resize',()=>{
+  uiEnhanceScrollRegions(document.querySelector('#main'));
+  if(typeof UI_OVERLAY!=='undefined'&&UI_OVERLAY)uiEnhanceScrollRegions(document.querySelector('#overlay'));
+});
 function nav(){
   const route=UI_ROUTES[VIEW];
   if(!route)throw new Error('Unknown screen: '+VIEW);
@@ -6545,6 +6619,7 @@ function nav(){
   if(LIVE!==null)clearInterval(LIVE);
   document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-current',b.dataset.v===VIEW?'page':'false'));
   main.innerHTML=route.render();
+  uiEnhanceScrollRegions(main);
   route.bind();
 }
 function navigateTo(view,options={}){
@@ -6557,6 +6632,7 @@ function navigateTo(view,options={}){
   VIEW=view;
   nav();
   if(!options.keepScroll)window.scrollTo(0,0);
+  document.querySelector('#main')?.focus?.({preventScroll:true});
   return true;
 }
 function navKeepScroll(){
