@@ -113,10 +113,11 @@ source+=String.raw`(()=>{
     const before=new Set(team.roster),beforePayroll=payroll(db,team);
     team.finance.cash=1000; // Give this deterministic fixture sufficient headroom.
     const victim=db.players[team.roster[0]];
+    const priorMedical=victim.medical?{...victim.medical}:null;
     const incident=startMedicalEvent(db,victim,'injury','severe',21,db.worldDate);
     const signed=team.roster.map(id=>db.players[id]).find(p=>!before.has(p.id));
     ok(incident?.out&&incident.severity==='severe'&&medicalOut(victim),
-      label+' failed to apply a genuine medical absence');
+      label+' failed to apply a genuine medical absence: '+JSON.stringify({priorMedical,incident,available:medicalAvailable(db,team),roster:team.roster.length,faCount:Object.values(db.players).filter(x=>!x.team&&!x.retired).length,budget:salaryBudget(db,team)-payroll(db,team)}));
     ok(signed&&signed.team===team.id&&signed.contract?.years===1&&
       signed.contract.until===db.year&&team.roster.length===6,
       label+' did not sign a one-year substitute');
