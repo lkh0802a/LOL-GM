@@ -27,7 +27,7 @@ function scrimDailyCapacity(db,t,booked=null){
 }
 function scrimReadiness(db,t,booked=null){
   if(!t)return {ok:false,reason:'팀 없음'};
-  const roster=(t.roster||[]).map(id=>db.players[id]).filter(Boolean);
+  const roster=(t.roster||[]).map(id=>db.players[id]).filter(p=>p&&!p.retired&&!medicalOut(p));
   const avgFatigue=avg(roster.map(p=>p.fatigue||0));
   const avgCondition=avg(roster.map(p=>p.condition??96));
   const capacity=scrimDailyCapacity(db,t,booked),today=db.worldDate||'';
