@@ -206,6 +206,7 @@ vm.runInNewContext(engine+'\n'+fixture,{console,Date,Math,JSON,Set,Map,
   {timeout:40000});
 const ui=await readFile(resolve(base,'ui-season.js'),'utf8');
 if(!ui.includes('fixtureTimeInfo(m)')||
-   !ui.includes("d.matches[0]?.localDate||d.date"))
-  throw new Error('Live broadcasts must display local dates and KST conversion');
+   !ui.includes('d.date)} UTC')||
+   !ui.includes('new Set(d.matches.map(m=>m.localDate||d.date))'))
+  throw new Error('Live broadcasts must show the real UTC day, all venue-local dates and KST conversion');
 console.log('Timezone broadcast UI integration: PASS');
