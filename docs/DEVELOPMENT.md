@@ -24,6 +24,12 @@ Development progress is tracked by the 22 major LOL GM systems. Finish one major
 - `11.5. 아키텍처 정리 / UI 통합` — COMPLETE (2026-09-29; steps 1–6)
 - `12. 시설 / 재정` — COMPLETE (2026-09-29; Phase 12 acceptance, engine regression, 2-season career, performance and build CI passed). See `docs/PHASE_12_FINANCE.md`.
 
+## Retroactive depth audit of previously accepted Items 1–11 and 11.5 (2026-09-29)
+
+**The historical COMPLETE marks above remain valid as baseline engine and regression acceptances, not certification that every game-design rule has full depth.** Do not infer from these status labels that contract/loan systems, staff negotiations, AI-owned scouting observations, realistic calendar day progression or all champion interactions are finished.
+
+The source-backed discrepancy matrix and executable follow-up backlog are maintained in **[`docs/RETROACTIVE_DEPTH_AUDIT_1_11.md`](RETROACTIVE_DEPTH_AUDIT_1_11.md)**. It separates verified gaps from unverified depth, explicitly preserves existing working systems, and identifies follow-up dependencies and tests. Its P0 findings include calendar gaps, per-club scouting depth, contract/loan terms and staff-market realism; later work must decide scheduling explicitly rather than silently claiming they were completed or rewriting the engine wholesale.
+
 ## Functional depth acceptance rule (2026-09-29)
 
 **Existing function/class/UI presence is a baseline, not a completion criterion.** For each of Items 12–23 and any revisit of earlier systems, build and validate a complete cause-and-effect gameplay loop: data/state → engine decision/constraint → interaction with adjacent domains → player-facing consequences → long-save consistency → AI/manager parity → tests under normal and stress conditions. Reusing the existing code is preferred to writing duplicate systems; filling only UI counters or producing documentation is insufficient. Game-world and club-economic outcomes must be emergent from their respective entities' actual context, not universal scripted rewards.
