@@ -278,6 +278,24 @@ source+=String.raw`(()=>{
   const allCommitted=financeOperatingExpense(db,manager).medicalReplacementWage;
   ok(Math.abs(allCommitted-(manager.finance.prepaid?.medicalReplacementWage||0))<.0001,
     'medical wage prepayment was missing from annual ledger');
+  // An offseason calendar jump should not bill 120 unused days after a
+  // replacement's original athlete would have recovered.
+  db.worldDate=addDays(baseDate,45);
+  const skipBefore=new Set(manager.roster);
+  const skippedIncident=startMedicalEvent(db,replacement.victim,
+    'injury','severe',21,db.worldDate);
+  const lateCover=manager.roster.map(id=>db.players[id]).find(q=>!skipBefore.has(q.id));
+  ok(skippedIncident?.out&&lateCover?.contract?.medicalReplacement,
+    'could not sign a fresh conditional replacement for calendar-skip test');
+  const lateClause=lateCover.contract.medicalReplacement,lateStart=db.worldDate;
+  const lateRest=unpackDB(packDB(db));
+  ok(lateRest.players[lateCover.id].contract.medicalReplacement.forPid===
+    replacement.victim.id,'short-term clause was lost in modern save');
+  medicalOffseasonRecovery(db,addDays(lateStart,120));
+  ok(!lateCover.team&&!lateCover.contract&&
+    lateClause.paid<lateRest.players[lateCover.id].contract.salary*50/365&&
+    medicalAvailable(db,manager)>=5&&rosterIntegrityErrors(db).length===0,
+    'calendar jump overcharged medical cover or failed to end the employment');
   // D02-B: protected top and reserve squads exchange only surplus healthy
   // players, using the same atomic roster plan as manager and club AI.
   const cfg2=defaultWorldConfig();
