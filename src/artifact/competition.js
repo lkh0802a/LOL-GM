@@ -24,14 +24,69 @@ function newSeason(db,compId,year,seed,start,instanceKey=compId){
   addStageDays(db,s,0,order,start||`${year}-01-14`);
   return s;
 }
-function pushDay(s,date,stage,label,pairs,bo){let n=s.days.reduce((a,d)=>a+d.matches.length,0);s.days.push({date,stage,label,matches:pairs.map(([a,b])=>({id:`${s.id}_match_${n++}`,a,b,bo,res:null}))})}
+function broadcastKickoffs(n){
+  if(n===1)return ['17:00'];if(n===2)return ['17:00','19:30'];
+  if(n===3)return ['14:00','17:00','20:00'];
+  return ['11:00','14:00','17:00','20:00','22:30','23:30'].slice(0,n);
+}
+function pushDay(s,date,stage,label,pairs,bo,broadcast=false){
+  let n=s.days.reduce((a,d)=>a+d.matches.length,0),times=broadcast?broadcastKickoffs(pairs.length):[];
+  s.days.push({date,stage,label,matches:pairs.map(([a,b],i)=>({
+    id:`${s.id}_match_${n++}`,a,b,bo,res:null,...(broadcast?{broadcastTime:times[i]||'20:00'}:{})
+  }))});
+}
+function broadcastWeekStart(date){
+  const d=new Date(date+'T00:00:00Z'),day=d.getUTCDay();
+  return addDays(date,(3-day+7)%7); // Wed-Sun broadcast window
+}
+function assignBroadcastWeek(rounds){
+  const matches=rounds.flatMap((pairs,round)=>pairs.map(pair=>({pair,round})));
+  const total=matches.length,minimum=Math.max(2,Math.ceil(total/5));
+  for(let cap=minimum;cap<=minimum+2;cap++){
+    const days=Array.from({length:5},()=>[]),assigned=new Map();
+    let attempts=0;
+    const fill=i=>{
+      if(i===matches.length)return true;
+      if(++attempts>250000)return false;
+      const m=matches[i],opts=m.round===0?[0,1,2]:[2,3,4];
+      const sorted=opts.slice().sort((a,b)=>days[a].length-days[b].length||a-b);
+      for(const d of sorted){
+        if(days[d].length>=cap)continue;
+        if(m.pair.some(t=>(assigned.get(t)||[]).some(prev=>Math.abs(prev-d)<2)))continue;
+        days[d].push(m.pair);
+        for(const t of m.pair){const v=assigned.get(t)||[];v.push(d);assigned.set(t,v)}
+        if(fill(i+1))return true;
+        for(const t of m.pair){const v=assigned.get(t);v.pop();if(!v.length)assigned.delete(t)}
+        days[d].pop();
+      }
+      return false;
+    };
+    if(fill(0))return days;
+  }
+  throw new Error('방송 일정의 팀별 휴식일과 중계 슬롯을 동시에 만족하지 못했습니다');
+}
+function addBroadcastLeagueDays(s,cfg,sched,start){
+  const opening=broadcastWeekStart(start);
+  for(let round=0;round<sched.length;round+=2){
+    const week=Math.floor(round/2),weekStart=addDays(opening,week*7),
+      allocation=assignBroadcastWeek(sched.slice(round,round+2));
+    for(let day=0;day<allocation.length;day++)if(allocation[day].length){
+      const label=`${cfg.name} ${round+1}${round+1<sched.length?'–'+(round+2):''}라운드 · 중계 ${day+1}/5`;
+      pushDay(s,addDays(weekStart,day),cfg.id,label,allocation[day],cfg.bestOf,true);
+    }
+  }
+}
+
 function addStageDays(db,s,idx,teams,date){
   const cfg=db.competitions[s.comp].stages[idx], gap=i=>cfg.dayGap?cfg.dayGap[i%cfg.dayGap.length]:3;
   if(cfg.type==='round_robin'){
     let groups=[teams];
     if(cfg.groups>1){groups=Array.from({length:cfg.groups},()=>[]);teams.forEach((t,i)=>{const r=Math.floor(i/cfg.groups),k=i%cfg.groups;groups[r%2?cfg.groups-1-k:k].push(t)})}
     const sched=groups.map(g=>roundRobin(g,cfg.legs||1)), R=Math.max(...sched.map(x=>x.length));
-    for(let r=0;r<R;r++){pushDay(s,date,cfg.id,`${cfg.name} ${r+1}라운드`,sched.flatMap(x=>x[r]||[]),cfg.bestOf);date=addDays(date,gap(r))}
+    if(cfg.broadcast==='weekly'){
+      const combined=Array.from({length:R},(_,r)=>sched.flatMap(x=>x[r]||[]));
+      addBroadcastLeagueDays(s,cfg,combined,date);
+    }else for(let r=0;r<R;r++){pushDay(s,date,cfg.id,`${cfg.name} ${r+1}라운드`,sched.flatMap(x=>x[r]||[]),cfg.bestOf);date=addDays(date,gap(r))}
     s.stageData[cfg.id]={type:cfg.type,teams,groups:cfg.groups>1?groups:null};
   } else if(cfg.type==='swiss'){
     const sd=s.stageData[cfg.id]={type:'swiss',teams,rec:Object.fromEntries(teams.map(t=>[t,{w:0,l:0,opp:[]}])),round:0,advanced:[],out:[],W:cfg.wins||3,L:cfg.losses||3};
@@ -193,7 +248,7 @@ const INTL_FORMATS={playin_swiss_ko:'플레이인 + 스위스 + 녹아웃',swiss
 function leagueStages(R,n,div){
   const fmt=R.format||'rr_po', bo=Math.max(3,R.regularBo||3), pbo=div===2?3:Math.max(3,R.playoffBo||5);
   const take=div===2?Math.min(4,n):Math.min(Math.max(4,R.playoffTake||4),n);
-  const rr={id:'regular',name:'정규 시즌',type:'round_robin',legs:Math.max(2,R.legs||2),bestOf:bo,dayGap:[3,4]};
+  const rr={id:'regular',name:'정규 시즌',type:'round_robin',legs:Math.max(2,R.legs||2),bestOf:bo,dayGap:[3,4],broadcast:'weekly'};
   const po=t=>({id:'playoffs',name:'플레이오프',type:'single_elim',from:'regular',take:t,bestOf:pbo,dayGap:[6,6],firstChoice:'seed'});
   if(div===2)return [rr,po(take)];
   if(fmt==='rr_de')return [rr,{id:'playoffs',name:'플레이오프',type:'double_elim',from:'regular',take:take>=8&&n>=8?8:take>=6&&n>=8?8:4,bestOf:pbo,dayGap:[4,4]}];
