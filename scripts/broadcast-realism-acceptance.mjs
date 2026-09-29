@@ -69,6 +69,10 @@ const fixture=String.raw`(()=>{
   // Team-cohesion checks do not rely on old design spec: a losing team with
   // awful real peer relationships must be able to lose chemistry.
   const team=activeTeams(db,'NA',1)[0],opp=activeTeams(db,'NA',1)[1];
+  const rng=new RNG('fixture-squad', 'chemistry');
+  db.playerRelations=db.playerRelations||{};
+  for(const t of [team,opp])for(let i=0;i<6;i++)
+    genPlayer(db,rng,{role:ROLES[i%5],age:21+i,base:65,region:t.region,team:t.id});
   for(const t of [team,opp]){
     const starterIds=t.roster.slice(0,5);
     assert(starterIds.length>=5,'fixture world has no roster');
