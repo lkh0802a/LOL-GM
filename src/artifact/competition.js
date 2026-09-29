@@ -45,7 +45,6 @@ function addStageDays(db,s,idx,teams,date){
           const round=week*2+fixtures[0].round+1;
           pushDay(s,addDays(anchor,week*7+offset),cfg.id,
             `${cfg.name} ${round}라운드`,fixtures.map(x=>x.pair),cfg.bestOf);
-          // pushDay converts every local broadcast session to its true UTC day.
         }
       }
     }else{
@@ -155,19 +154,19 @@ function finalizeCompetitionDay(db,s,day,cfgIdx,cfg){
   if(day.matches.some(m=>!m.res))return false;
   s.cur++;
   const comp=db.competitions[s.comp],sd=s.stageData[cfg.id],roundDays=s.days.filter(d=>d.stage===cfg.id&&d.label===day.label),roundDone=roundDays.every(d=>d.matches.every(m=>m.res));
-  const nd=addDays(day.date,cfg.dayGap?cfg.dayGap[0]:5);
+  const localDate=day.localDate||day.date,nd=addDays(localDate,cfg.dayGap?cfg.dayGap[0]:5);
   if(cfg.type==='single_elim'&&roundDone){
     const r=sd.rounds[sd.rounds.length-1],ms=roundDays.flatMap(d=>d.matches);
     sd.elim.push(...ms.map(m=>m.a===m.res.winner?m.b:m.a));sd.alive=[...r.byes,...ms.map(m=>m.res.winner)];
-    if(sd.alive.length===1)finishStage(db,s,cfgIdx,day.date);else addElimRound(db,s,cfgIdx,nd);
+    if(sd.alive.length===1)finishStage(db,s,cfgIdx,localDate);else addElimRound(db,s,cfgIdx,nd);
   }else if(cfg.type==='double_elim'&&roundDone){
     deAfter(sd,sd.rounds[sd.rounds.length-1],roundDays.flatMap(d=>d.matches));
-    if(sd.alive&&sd.alive.length===1&&sd.gf)finishStage(db,s,cfgIdx,day.date);else deRound(db,s,cfgIdx,nd);
+    if(sd.alive&&sd.alive.length===1&&sd.gf)finishStage(db,s,cfgIdx,localDate);else deRound(db,s,cfgIdx,nd);
   }else if(cfg.type==='swiss'&&roundDone){
     for(const m of day.matches){const w=m.res.winner,l=m.a===w?m.b:m.a;sd.rec[w].w++;sd.rec[l].l++;sd.rec[m.a].opp.push(m.b);sd.rec[m.b].opp.push(m.a);if(sd.rec[w].w>=sd.W)sd.advanced.push(w);if(sd.rec[l].l>=sd.L)sd.out.push(l)}
     const act=sd.teams.filter(t=>!sd.advanced.includes(t)&&!sd.out.includes(t)),want=(comp.stages[cfgIdx+1]||{}).take||Math.floor(sd.teams.length/2);
-    if(act.length>=2&&sd.advanced.length<want)swissRound(db,s,cfgIdx,addDays(day.date,1));else finishStage(db,s,cfgIdx,day.date);
-  }else if(cfg.type==='round_robin'&&!s.days.slice(s.cur).some(d=>d.stage===cfg.id))finishStage(db,s,cfgIdx,day.date);
+    if(act.length>=2&&sd.advanced.length<want)swissRound(db,s,cfgIdx,addDays(localDate,1));else finishStage(db,s,cfgIdx,localDate);
+  }else if(cfg.type==='round_robin'&&!s.days.slice(s.cur).some(d=>d.stage===cfg.id))finishStage(db,s,cfgIdx,localDate);
   return true;
 }
 function scheduledSeriesSession(db,s,m){
