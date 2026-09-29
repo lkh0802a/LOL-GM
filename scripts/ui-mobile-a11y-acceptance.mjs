@@ -6,8 +6,8 @@ import assert from 'node:assert/strict';
 
 const root=resolve(import.meta.dirname,'..','src','artifact');
 const get=path=>readFile(resolve(root,path),'utf8');
-const [shell,uiState,roster,draft,overlay,season,data]=await Promise.all(
-  ['shell.html','ui-state.js','ui-roster.js','ui-draft.js','ui-overlay.js','ui-season.js','ui-data.js'].map(get));
+const [shell,uiState,roster,draft,overlay,season,data,app]=await Promise.all(
+  ['shell.html','ui-state.js','ui-roster.js','ui-draft.js','ui-overlay.js','ui-season.js','ui-data.js','app.js'].map(get));
 
 for(const marker of [
   '<html lang="ko">','width=device-width, initial-scale=1, viewport-fit=cover',
@@ -137,6 +137,6 @@ assert(contrast(darkBg,darkFg)>=4.5,'dark primary text/background contrast below
 }
 assert(overlay.includes("if(typeof uiEnhanceScrollRegions==='function')uiEnhanceScrollRegions(root)"),
   'dialog scroll regions must receive the same keyboard enhancements');
-assert(season.includes('role="status"')&&data.includes('role="status"'),
+assert(app.includes('role="status"')&&data.includes('role="status"'),
   'season progress and save operations need announced status');
 console.log('Stage 11.5/6-4 mobile/a11y acceptance: PASS (320px and zoom CSS contracts, focus/skip, scroll regions, contrast, roster keyboard actions, draft ARIA, reduced motion)');
