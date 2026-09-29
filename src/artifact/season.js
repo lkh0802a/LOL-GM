@@ -7,9 +7,9 @@ function finalSeason(w,R,div=1){let best=null;for(const s of Object.values(w.sea
 
 // ---------- 리그/시즌 구성 ----------
 function divName(R){return R.system==='franchise'?`${R.leagueName} 챌린저스`:`${R.leagueName} 2부`}
-function leagueComp(db,rid,div=1){
+function leagueComp(db,rid,div=1,split=null){
   const R=db.regions[rid], teams=activeTeams(db,rid,div).filter(t=>div===1||true).map(t=>t.id);
-  return {id:div===2?R.short+'2':R.short,name:div===2?divName(R):R.leagueName,short:div===2?R.short+'2':R.short,region:rid,div,teams,rules:{fearless:true},stages:leagueStages(R,teams.length,div)};
+  return {id:div===2?R.short+'2':R.short,name:div===2?divName(R):R.leagueName,short:div===2?R.short+'2':R.short,region:rid,div,teams,rules:{fearless:true},stages:leagueStages(R,teams.length,div,split)};
 }
 function startWorldSeason(db,myTeam,seed){
   setManagedTeam(db,myTeam);
@@ -45,7 +45,7 @@ function advanceStep(db){
   while(true){
     w.step++;
     if(w.step>=w.steps.length){w.phase='offseason';news(db,`${w.year} 시즌 일정이 모두 끝났습니다`);return}
-    const st=w.steps[w.step], start=addDays(w.lastDate,st.kind==='intl'?18:(w.step===0?7:14));
+    const st=w.steps[w.step], start=addDays(w.lastDate,st.kind==='intl'?8:(w.step===0?7:10));
     if(st.kind==='league'){
       if(st.split>1&&w.step>0){
         // The next bracket is prepared now, but its large patch must not be
@@ -58,7 +58,7 @@ function advanceStep(db){
         if((R.splits||1)<4-st.split)continue;
         for(const div of R.div2?[1,2]:[1]){
           if(activeTeams(db,R.id,div).length<2)continue;
-          const comp=leagueComp(db,R.id,div); db.competitions[comp.id]=comp;
+          const comp=leagueComp(db,R.id,div,st.split); db.competitions[comp.id]=comp;
           const key=comp.id+'-'+st.split, s=newSeason(db,comp.id,w.year,`${w.seed}/${w.year}/${key}`,start,key);
           s.key=key;s.split=st.split;s.region=R.id;s.div=div;s.step=w.step;s.label=(R.splits||1)>1?SPLIT_NAME[st.split]:'';
           w.seasons[key]=s;any=true;

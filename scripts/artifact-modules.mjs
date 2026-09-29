@@ -16,6 +16,7 @@ export const ENGINE_MODULES = [
   'patch-content.js',
   'series.js',
   'competition.js',
+  'competition-broadcast.js',
   'player.js',
   'development.js',
   'player-relations.js',

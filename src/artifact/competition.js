@@ -24,14 +24,24 @@ function newSeason(db,compId,year,seed,start,instanceKey=compId){
   addStageDays(db,s,0,order,start||`${year}-01-14`);
   return s;
 }
-function pushDay(s,date,stage,label,pairs,bo){let n=s.days.reduce((a,d)=>a+d.matches.length,0);s.days.push({date,stage,label,matches:pairs.map(([a,b])=>({id:`${s.id}_match_${n++}`,a,b,bo,res:null}))})}
+function pushDay(s,date,stage,label,pairs,bo,opt={}){
+  let n=s.days.reduce((a,d)=>a+d.matches.length,0);
+  const times=pairs.length===1?['17:00']:
+    pairs.length===2?['17:00','20:00']:
+    pairs.length===3?['14:00','17:00','20:00']:
+    pairs.map((_,i)=>String(12+i*2).padStart(2,'0')+':00');
+  s.days.push({date,stage,label,broadcast:!!opt.broadcast,
+    matches:pairs.map(([a,b],i)=>({id:`${s.id}_match_${n++}`,a,b,bo,res:null,
+      ...(opt.broadcast?{broadcastTime:times[i],broadcastSlot:i+1}: {})}))});
+}
 function addStageDays(db,s,idx,teams,date){
   const cfg=db.competitions[s.comp].stages[idx], gap=i=>cfg.dayGap?cfg.dayGap[i%cfg.dayGap.length]:3;
   if(cfg.type==='round_robin'){
     let groups=[teams];
     if(cfg.groups>1){groups=Array.from({length:cfg.groups},()=>[]);teams.forEach((t,i)=>{const r=Math.floor(i/cfg.groups),k=i%cfg.groups;groups[r%2?cfg.groups-1-k:k].push(t)})}
-    const sched=groups.map(g=>roundRobin(g,cfg.legs||1)), R=Math.max(...sched.map(x=>x.length));
-    for(let r=0;r<R;r++){pushDay(s,date,cfg.id,`${cfg.name} ${r+1}라운드`,sched.flatMap(x=>x[r]||[]),cfg.bestOf);date=addDays(date,gap(r))}
+    if(!db.competitions[s.comp].international)addBroadcastRoundRobin(db,s,cfg,groups,date);
+    else {const sched=groups.map(g=>roundRobin(g,cfg.legs||1)), rounds=Math.max(...sched.map(x=>x.length));
+      for(let r=0;r<rounds;r++){pushDay(s,date,cfg.id,`${cfg.name} ${r+1}라운드`,sched.flatMap(x=>x[r]||[]),cfg.bestOf);date=addDays(date,gap(r))}}
     s.stageData[cfg.id]={type:cfg.type,teams,groups:cfg.groups>1?groups:null};
   } else if(cfg.type==='swiss'){
     const sd=s.stageData[cfg.id]={type:'swiss',teams,rec:Object.fromEntries(teams.map(t=>[t,{w:0,l:0,opp:[]}])),round:0,advanced:[],out:[],W:cfg.wins||3,L:cfg.losses||3};
@@ -190,10 +200,10 @@ function elimReach(db,s,tid){
 // ---- 진행 방식 프리셋 (리그: 항상 더블 라운드로빈 이상 · Bo3 이상) ----
 const LEAGUE_FORMATS={rr_po:'더블 라운드로빈 + 플레이오프',rr_de:'더블 라운드로빈 + 더블 엘리미네이션',groups_po:'그룹 더블 라운드로빈 + 플레이오프'};
 const INTL_FORMATS={playin_swiss_ko:'플레이인 + 스위스 + 녹아웃',swiss_ko:'스위스 + 녹아웃',playin_groups_ko:'플레이인 + 그룹 + 녹아웃',playin_de:'플레이인 + 더블 엘리미네이션',groups_ko:'그룹 + 녹아웃',groups_de:'그룹 + 더블 엘리미네이션',ko:'녹아웃'};
-function leagueStages(R,n,div){
+function leagueStages(R,n,div,split=null){
   const fmt=R.format||'rr_po', bo=Math.max(3,R.regularBo||3), pbo=div===2?3:Math.max(3,R.playoffBo||5);
   const take=div===2?Math.min(4,n):Math.min(Math.max(4,R.playoffTake||4),n);
-  const rr={id:'regular',name:'정규 시즌',type:'round_robin',legs:Math.max(2,R.legs||2),bestOf:bo,dayGap:[3,4]};
+  const rr={id:'regular',name:'정규 시즌',type:'round_robin',legs:split===1&&(R.splits||1)>=3?1:Math.max(2,R.legs||2),bestOf:bo,dayGap:[3,4]};
   const po=t=>({id:'playoffs',name:'플레이오프',type:'single_elim',from:'regular',take:t,bestOf:pbo,dayGap:[6,6],firstChoice:'seed'});
   if(div===2)return [rr,po(take)];
   if(fmt==='rr_de')return [rr,{id:'playoffs',name:'플레이오프',type:'double_elim',from:'regular',take:take>=8&&n>=8?8:take>=6&&n>=8?8:4,bestOf:pbo,dayGap:[4,4]}];
