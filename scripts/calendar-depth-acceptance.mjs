@@ -245,11 +245,15 @@ const fixture=String.raw`(()=>{
   assert(rejected===null,'a team with an official fixture was allowed to scrim an idle club');
 
   // On a mutually open date, both sides reserve the same session block.
-  const mutual=unpackDB(packDB(checkpoint)),pair=activeTeams(mutual,null,1).slice(0,2);
+  const mutual=unpackDB(packDB(checkpoint));
   mutual.worldDate=addDays(firstFixture,-4);
-  assert(!officialBookedTeams(mutual).has(pair[0].id)&&
-    !officialBookedTeams(mutual).has(pair[1].id),
-    'the test setup must give both practice opponents a free day');
+  const freeTeams=activeTeams(mutual,null,1).filter(team=>
+    !officialBookedTeams(mutual).has(team.id)),
+    pair=freeTeams.flatMap((first,i)=>freeTeams.slice(i+1)
+      .filter(second=>scrimPartnerAssessment(mutual,first,second).allowed)
+      .map(second=>[first,second]))[0];
+  assert(pair&&pair.every(team=>!officialBookedTeams(mutual).has(team.id)),
+    'the test setup must use two unbooked teams not facing each other within a week');
   const firstBlock=simulateBackgroundScrim(mutual,pair[0],pair[1],2,
     new RNG('mutual-scrim','afternoon'),'afternoon');
   assert(firstBlock?.games.length===2&&pair.every(team=>

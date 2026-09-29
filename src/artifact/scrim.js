@@ -66,8 +66,11 @@ function backgroundScrimChampion(db,p,role,rng){
 // inputs to resolve each private set. It does not forge official match rows,
 // meta sample counts, or public statistics. Interactive scrims (D09) can still
 // use simulateSeries to generate full draft/match replays.
-function simulateBackgroundScrim(db,t,opp,games,rng,slot,booked=null){
-  // Double-sided preflight: both teams need the very same unbooked block.
+function simulateBackgroundScrim(db,t,opp,games,rng,slot,booked=null,proposal=null){
+  // Negotiated partner selection must also clear the competitive secrecy
+  // embargo. Booking checks remain independent of AI acceptance probability.
+  const assessment=scrimPartnerAssessment(db,t,opp);
+  if(!assessment.allowed)return null;
   const first=scrimReadiness(db,t,booked),second=scrimReadiness(db,opp,booked);
   if(!slot||!first.ok||!second.ok||!first.availableSlots.includes(slot)||
     !second.availableSlots.includes(slot)||games>first.remaining||games>second.remaining)return null;
@@ -102,17 +105,21 @@ function simulateBackgroundScrim(db,t,opp,games,rng,slot,booked=null){
     results.push({n:g+1,winner,picks});
   }
   if(!results.length)return null;
+  const plan=proposal?.allowed?proposal:assessment;
   const rec={a:t.id,b:opp.id,games:results,wins,practice:true,patch:db.patch.id,
-    date:db.worldDate,slot};
+    date:db.worldDate,slot,goals:{[t.id]:plan.left.reason,
+      [opp.id]:plan.right.reason}};
   recordScrimPractice(db,rec,lines);
   return rec;
 }
 function aiRunScrims(db,rng){
   // A manager's club also receives routine practice. Choosing a specific
   // opponent or requesting an interactive full scrim belongs to D09.
-  const booked=officialBookedTeams(db);
+  const booked=officialBookedTeams(db),rivals=scrimRivalCalendar(db);
   const eligible=activeTeams(db,null,1).filter(t=>trainingRecommendation(db,t).scrim&&
     scrimReadiness(db,t,booked).ok);
+  const intents=Object.fromEntries(eligible.map(t=>[t.id,scrimClubIntent(db,t)])),
+    strengths=Object.fromEntries(eligible.map(t=>[t.id,teamStrength(db,t.id)]));
   let blocks=0,sets=0;
   // Two scheduled daily blocks, with 2-3 sets each; matches and recovery
   // automatically narrow the daily allowance to 0-2 or 0-4 sets.
@@ -126,17 +133,33 @@ function aiRunScrims(db,rng){
         o.region===t.region&&
         scrimReadiness(db,o,booked).availableSlots?.includes(slot));
       if(!candidates.length)continue;
-      const ranked=candidates.map(o=>({team:o,weight:Math.max(.1,scrimValue(db,t.id,o.id))}));
-      const total=ranked.reduce((sum,row)=>sum+row.weight,0);
-      let roll=rng.next()*total,opponent=ranked[0].team;
-      for(const row of ranked){roll-=row.weight;if(roll<=0){opponent=row.team;break}}
-      const second=scrimReadiness(db,opponent,booked);
-      const games=Math.min(3,first.remaining,second.remaining);
-      if(games<1)continue;
-      const rec=simulateBackgroundScrim(db,t,opponent,games,rng,slot,booked);
-      if(!rec)continue;
-      busy.add(t.id);busy.add(opponent.id);
-      blocks++;sets+=rec.games.length;
+      const ranked=candidates.map(o=>({team:o,
+        offer:scrimPartnerAssessment(db,t,o,intents,strengths,rivals)}))
+        .filter(x=>x.offer.allowed).map(x=>({...x,
+          weight:x.offer.weight*Math.max(.2,scrimValue(db,t.id,x.team.id))}));
+      // Requests are bilateral: the host picks a practice fit, then the
+      // other club can decline. Try an alternate only while the same time
+      // window stays free; do not force a scrim when no one accepts.
+      let attempts=0;
+      while(ranked.length&&attempts++<4){
+        const total=ranked.reduce((sum,row)=>sum+row.weight,0);
+        let roll=rng.next()*total,chosen=ranked[ranked.length-1],at=ranked.length-1;
+        for(let i=0;i<ranked.length;i++){
+          roll-=ranked[i].weight;
+          if(roll<=0){chosen=ranked[i];at=i;break}
+        }
+        ranked.splice(at,1);
+        const opponent=chosen.team;
+        const second=scrimReadiness(db,opponent,booked),
+          games=Math.min(3,first.remaining,second.remaining);
+        if(games<1||!rng.chance(chosen.offer.acceptance))continue;
+        const rec=simulateBackgroundScrim(db,t,opponent,games,rng,
+          slot,booked,chosen.offer);
+        if(!rec)continue;
+        busy.add(t.id);busy.add(opponent.id);
+        blocks++;sets+=rec.games.length;
+        break;
+      }
     }
   }
   return {blocks,sets};
@@ -158,7 +181,8 @@ function recordScrimPractice(db,rec,lines){
     team.scrimLog=(team.scrimLog||[]).slice(-39);
     team.scrimLog.push({date:db.worldDate,games,opponent:opp,
       wins:rec.wins?.[tid]??null,losses:rec.wins?games-(rec.wins[tid]||0):null,
-      patch:rec.patch||db.patch.id,slot:rec.slot||null});
+      patch:rec.patch||db.patch.id,slot:rec.slot||null,
+      purpose:rec.goals?.[tid]||'팀 연습'});
   }
   recordRoleConversionUsage(db,lines,'scrim');
   return {players:seen.size,games};

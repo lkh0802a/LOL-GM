@@ -37,6 +37,7 @@ export const ENGINE_MODULES = [
   'transfer.js',
   'state-player-actions.js',
   'staff.js',
+  'scrim-partner.js',
   'scrim.js',
   'features.js',
   'role-conversion.js',
