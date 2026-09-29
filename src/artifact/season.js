@@ -107,7 +107,7 @@ function startInternational(db,id,start,taken=new Set()){
 function activeSeasons(db){return Object.values(db.world.seasons).filter(s=>!s.done)}
 function nextDate(db){let next=null;for(const s of Object.values(db.world.seasons)){if(s.done)continue;const d=s.days[s.cur].date;if(next===null||d<next)next=d}return next}
 function nextTeamMatch(db,tid){
-  let best=null;for(const s of Object.values(db.world?.seasons||{})){if(s.done)continue;for(let i=s.cur;i<s.days.length;i++){const d=s.days[i],m=d.matches.find(x=>!x.res&&(x.a===tid||x.b===tid));if(m&&(!best||d.date<best.date)){best={date:d.date,opponent:m.a===tid?m.b:m.a,comp:s.comp};break}}}return best;
+  let best=null;for(const s of Object.values(db.world?.seasons||{})){if(s.done)continue;for(let i=s.cur;i<s.days.length;i++){const d=s.days[i],m=d.matches.find(x=>!x.res&&(x.a===tid||x.b===tid));if(m&&(!best||d.date<best.date)){best={date:d.date,localDate:m.localDate||d.date,time:m.time||null,timeZone:m.timeZone||null,utcAt:m.utcAt||null,opponent:m.a===tid?m.b:m.a,comp:s.comp};break}}}return best;
 }
 function daysUntil(db,date){return date?Math.max(0,Math.ceil((new Date(date)-new Date(db.worldDate))/86400000)):99}
 function trainingRecommendation(db,t){
