@@ -44,6 +44,28 @@ function finishUiTask(task){
   UI_TASKS.delete(task.kind);task.active=false;return true;
 }
 let UI_RENDER_ID=0;
+// Only genuinely overflowing horizontal data regions become keyboard tab stops.
+function uiEnhanceScrollRegions(root){
+  if(!root||typeof root.querySelectorAll!=='function')return;
+  root.querySelectorAll('.scroll').forEach(region=>{
+    if(!Number.isFinite(region.scrollWidth)||!Number.isFinite(region.clientWidth))return;
+    if(region.scrollWidth>region.clientWidth+1){
+      region.tabIndex=0;
+      region.setAttribute('role','region');
+      region.setAttribute('aria-label','가로로 스크롤 가능한 표 또는 경기 기록');
+      region.dataset.keyboardScroll='true';
+    }else if(region.dataset.keyboardScroll==='true'){
+      region.removeAttribute('tabindex');
+      region.removeAttribute('role');
+      region.removeAttribute('aria-label');
+      delete region.dataset.keyboardScroll;
+    }
+  });
+}
+window.addEventListener?.('resize',()=>{
+  uiEnhanceScrollRegions(document.querySelector('#main'));
+  if(typeof UI_OVERLAY!=='undefined'&&UI_OVERLAY)uiEnhanceScrollRegions(document.querySelector('#overlay'));
+});
 function nav(){
   const route=UI_ROUTES[VIEW];
   if(!route)throw new Error('Unknown screen: '+VIEW);
@@ -54,6 +76,7 @@ function nav(){
   if(LIVE!==null)clearInterval(LIVE);
   document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-current',b.dataset.v===VIEW?'page':'false'));
   main.innerHTML=route.render();
+  uiEnhanceScrollRegions(main);
   route.bind();
 }
 function navigateTo(view,options={}){
@@ -66,6 +89,7 @@ function navigateTo(view,options={}){
   VIEW=view;
   nav();
   if(!options.keepScroll)window.scrollTo(0,0);
+  document.querySelector('#main')?.focus?.({preventScroll:true});
   return true;
 }
 function navKeepScroll(){
