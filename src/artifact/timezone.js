@@ -61,3 +61,31 @@ function viewerTimeLabel(m,zone='Asia/Seoul'){
   const clock=zonedClock(m.startsAt,zone);
   return clock.date+' '+clock.time+' ('+zone+')';
 }
+
+// Build the fixture matrix by the actual UTC date on which each game begins.
+// One local broadcast day can cross UTC midnight, and adjacent local days can
+// share a UTC date; the world should tick that date exactly once.
+function pushTimedEventDay(s,localDate,stage,label,pairs,bo){
+  let n=s.days.reduce((a,d)=>a+d.matches.length,0),changed=new Set();
+  const total=pairs.length;
+  for(let index=0;index<total;index++){
+    const [a,b]=pairs[index],time=broadcastSlotTime(index,total),
+      startsAt=zonedKickoffUTC(localDate,time,s.timeZone),
+      utcDate=startsAt.slice(0,10);
+    let day=s.days.find(d=>d.date===utcDate&&d.stage===stage);
+    if(!day){
+      day={date:utcDate,localDate,stage,label,matches:[]};
+      s.days.push(day);
+    }
+    day.matches.push({id:`${s.id}_match_${n++}`,a,b,bo,res:null,
+      time,broadcastSlot:index+1,localDate,timeZone:s.timeZone,
+      startsAt,roundLabel:label});
+    changed.add(day);
+  }
+  for(const day of changed){
+    day.matches.sort((a,b)=>(a.startsAt||'').localeCompare(b.startsAt||''));
+    day.label=[...new Set(day.matches.map(m=>m.roundLabel))].join(' · ');
+    day.localDate=day.matches[day.matches.length-1].localDate;
+  }
+  s.days.sort((a,b)=>a.date.localeCompare(b.date));
+}
