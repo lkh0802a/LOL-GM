@@ -127,12 +127,29 @@ function worldDecisions(db,rng,f,ev){
   const weakI=I.filter(i=>i.id!=='WORLDS'&&(i.prestige||1)<=1).sort((a,b)=>(a.prestige||1)-(b.prestige||1));
   const avgPrev=Object.values(db.regions).map(R=>(R.metrics||[]).slice(-2)[0]).filter(Boolean).reduce((a,m,_,arr)=>a+m.hype/arr.length,0);
   if(weakI.length&&avgH<32&&avgPrev<32&&rng.chance(0.3*f)){const it=weakI[0];I.splice(I.indexOf(it),1);gev(`${it.name} 폐지`,`세계 흥행 부진 (평균 ${Math.round(avgH)}) — 일정 과밀 해소`)}
-  // 구단 인수: 팬은 많은데 성적이 나쁜 구단, 또는 팬이 적은 구단이 매물로
+  // A change of ownership normally preserves the club's brand, fanbase,
+  // league history and player contracts. Rebranding is a *separate* choice.
   for(const t of activeTeams(db).filter(t=>!t.parent)){
-    const R=db.regions[t.region], s=teamStrength(db,t.id);
-    const p=(.004+(t.fans>=45&&s<R.strength-3?.018:0)+(t.fans<12?.015:0))*f;
-    if(rng.chance(p)){const old=t.name,on=orgName(db,rng);t.name=on.name;t.formerNames=[...(t.formerNames||[]),old];t.fans=Math.round(t.fans*0.85);
-      ev(`구단 인수: ${old} → ${t.name} (${t.fans>=45?'인기 구단 매각':'저조한 팬덤으로 매각'})`)}
+    const R=db.regions[t.region],strength=teamStrength(db,t.id);
+    const prob=(.004+(t.fans>=45&&strength<R.strength-3?.018:0)+(t.fans<12?.015:0))*f;
+    if(!rng.chance(prob))continue;
+    const old=t.name,oldOwner=t.owner||{},before=t.finance?.cash||0;
+    t.owner={...oldOwner,wealth:Math.round(clamp(rng.normal(58,18),22,96)),patience:2};
+    // New ownership can refinance debts, recorded as equity instead of revenue.
+    const target=Math.max(0,5*psTeam(db,t)-before),equity=before<0?
+      Math.round(Math.min(target,(8+t.owner.wealth*.14)*psTeam(db,t))*10)/10:0;
+    if(equity>0&&t.finance){
+      t.finance.cash=Math.round((before+equity)*10)/10;
+      t.finance.capitalEvents=[...(t.finance.capitalEvents||[]),{
+        year:db.year,date:db.worldDate,type:'ownership',amount:equity}].slice(-12);
+    }
+    const rebrand=rng.chance(t.fans<18?.24:.07);
+    if(rebrand){
+      const fresh=orgName(db,rng);
+      t.formerNames=[...(t.formerNames||[]),old];
+      t.name=fresh.name;t.fans=Math.round(clamp(t.fans*.96,3,100));
+    }
+    ev(`구단 인수: ${old}${rebrand?' → '+t.name+' (별도 리브랜딩)':''} · 소유주 변경${equity?' · 자본 확충 '+money(equity):''}`);
   }
 }
 
