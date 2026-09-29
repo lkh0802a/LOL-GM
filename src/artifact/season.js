@@ -157,7 +157,7 @@ function playWorldDay(db){
   const w=db.world;if(w.phase!=='season')return null;
   if(w.pendingOfficial&&w.pendingOfficial.queue&&w.pendingOfficial.queue.length)return {date:w.pendingOfficial.date,played:[],pending:w.pendingOfficial};
   const d=nextDate(db);if(!d){advanceStep(db);return {date:null,played:[],pending:null}}
-  db.worldDate=d;patchTick(db,d,new RNG(w.seed+d,'patch'));dailyRecovery(db);
+  db.worldDate=d;advanceFacilityConstruction(db,d);patchTick(db,d,new RNG(w.seed+d,'patch'));dailyRecovery(db);
   for(const t of activeTeams(db))aiManageTraining(db,t);
   for(const t of activeTeams(db))aiReviewRoleConversions(db,t);
   advanceRoleConversionsDay(db);
