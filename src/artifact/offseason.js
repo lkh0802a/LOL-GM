@@ -120,9 +120,13 @@ function promotionRelegation(db,w,rng,ev){
     const s2=finalSeason(w,R,2);
     const up=R.div2&&s2&&s2.done?placements(db,s2).filter(t=>promotionEligible(db,t)).slice(0,k):[];
     down.forEach((tid,i)=>{
-      const t=db.teams[tid];
-      if(up[i]){const u=db.teams[up[i]];t.division=2;u.division=1;u.franchised=false;u.license='open';t.fans=Math.round((t.fans||20)*0.8);u.fans=Math.round((u.fans||10)+8);ev(`${R.leagueName} 승강: ${u.name} 승격 ↔ ${t.name} 강등`)}
-      else{foldTeam(db,t);const nt=genTeam(db,rng,R.id,R.strength-3);if(R.system==='mixed'){nt.franchised=false;nt.license='open'}ev(`${R.leagueName} 강등: ${t.name} → 신생팀 ${nt.name} 합류`)}
+      const t=db.teams[tid],u=up[i]&&db.teams[up[i]];
+      // A league cannot relegate a club into oblivion or invent a replacement
+      // applicant merely because no eligible licensed challenger exists.
+      if(!u){ev(`${R.leagueName} 승강: ${t.name} 1부 유지 — 자격을 갖춘 승격 구단 없음`);return}
+      t.division=2;u.division=1;u.franchised=false;u.license='open';
+      t.fans=Math.round((t.fans||20)*.94);u.fans=Math.round((u.fans||10)+8);
+      ev(`${R.leagueName} 승강: ${u.name} 승격 ↔ ${t.name} 강등`);
     });
     reconcileTier2Structure(db,rng,R,ev);
     inferRegionPolicy(db,R);
