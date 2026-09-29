@@ -2958,7 +2958,8 @@ function ageCurve(age,g){
   for(const [a,v] of T)if(age<=a)return v;return -1;
 }
 function growPlayer(db,p,rng,games,champGames){
-  const team=p.team?db.teams[p.team]:null, before=playerOvr(p),dev=ensurePlayerDevelopment(p);
+  const team=p.team?db.teams[p.team]:null, before=playerOvr(p),dev=ensurePlayerDevelopment(p),
+    practiceFactor=Math.max(.82,1-Math.min(280,p.medicalRestDays||0)*.00065);
   const room=clamp((p.pot-before)/10,-0.5,1.5), prof=p.personality.professionalism/100,ageShift=dev.peakAge-25;
   const coach=team?staffDevelopmentFor(team,p.role)/100:0.45, play=clamp(games/30,0,1);
   const tr=team?team.training:defaultTraining(), intensity=trainingIntensity(team),conversionMul=roleConversionGrowthMultiplier(p),tsum=['mechanical','laning','combat','macro','mental'].reduce((a,k)=>a+(+tr[k]||0),0)||1;
@@ -2968,7 +2969,7 @@ function growPlayer(db,p,rng,games,champGames){
     pState(p);
     let d=base>0?base*dev.growthRate*(0.45+room*0.6)*(0.7+0.6*prof)*(0.8+0.4*coach)*(0.65+0.55*play)*trainingGrowthMul(team)*facilityMul(team,p.age)*intensity.growth*(0.9+0.2*p.morale/100):base*dev.declineRate*(1.3-0.6*prof);
     d+=train*(base>0?1:0.5);
-    if(d>0)d*=youthMul(p.age)*conversionMul;
+    if(d>0)d*=youthMul(p.age)*conversionMul*practiceFactor;
     d=Math.min(d,growthCap(p.age)); // 한 시즌 영역별 성장 상한 (어릴수록 높음)
     const ceil=Math.min(99,p.pot+6); // 잠재력 + 6을 넘는 능력치는 더 오르지 않음
     for(const a of ATTR_GROUPS[g]){const v=p.attrs[a]+d+rng.normal(0,1.3);p.attrs[a]=Math.round(clamp(d>0&&p.attrs[a]>=ceil?Math.min(v,p.attrs[a]):d>0?Math.min(v,Math.max(ceil,p.attrs[a])):v,20,99))}
@@ -2980,7 +2981,7 @@ function growPlayer(db,p,rng,games,champGames){
     if(n||practiceGain){pr.mastery=Math.round(clamp(pr.mastery+gain,20,99));pr.experience=Math.round(clamp(pr.experience+n*1.5,0,999));pr.confidence=Math.round(clamp(pr.confidence+rng.normal(n?2:1,3),10,99))}
     else {pr.mastery=Math.round(clamp(pr.mastery-rng.range(0,1.8)*(1-(p.attrs.meta_adaptation||50)/180),20,99));if(pr.mastery<36&&Object.keys(p.pool).length>12)delete p.pool[c]}
     if(p.pool[c]){pr.matchup_knowledge=Math.round(clamp(pr.matchup_knowledge+(n?1.5:.35),20,99));pr.scrimSeason=0;pr.trainingSeason=0}}
-  if(games>0)p.proSeasons=(p.proSeasons||0)+1;p.age++;
+  if(games>0)p.proSeasons=(p.proSeasons||0)+1;p.age++;p.medicalRestDays=0;
   return playerOvr(p)-before;
 }
 function playerValue(db,p,team){
@@ -2993,7 +2994,12 @@ function playerValue(db,p,team){
 function dailyRecovery(db){
   for(const t of Object.values(db.teams)){ if(t.active===false)continue;
     const prof=staffProfile(t),rec=4+(prof.recovery-50)/45+facilityRecoveryBonus(t);
-    const ti=trainingIntensity(t);for(const id of t.roster){const p=db.players[id];if(!p)continue;pState(p);p.fatigue=clamp(p.fatigue-rec+ti.fatigue,0,100);p.condition=clamp(p.condition+2.5+ti.condition,0,100);p.form*=.98}
+    const ti=trainingIntensity(t);for(const id of t.roster){const p=db.players[id];if(!p)continue;pState(p);
+      const plan=medicalPlanFor(db,p),off=plan==='rest'||plan==='rehab';
+      p.fatigue=clamp(p.fatigue-rec+(off?0:plan==='light'?ti.fatigue*.4:ti.fatigue)-(plan==='rest'?3:plan==='rehab'?1.7:plan==='light'?.9:0),0,100);
+      p.condition=clamp(p.condition+2.5+(off?.8:plan==='light'?.1:ti.condition),0,100);
+      if(off)p.sharpness=clamp(p.sharpness-.28,0,100);
+      p.form*=.98}
   }
 }
 
@@ -3114,6 +3120,23 @@ function afterSeries(db,lines,rec){
 // This is a game simulation, not a clinical diagnosis model.
 
 const MEDICAL_LABELS={wrist:'손목',back:'허리',neck:'목',illness:'질병',burnout:'번아웃'};
+const MEDICAL_PLAN_LABELS={auto:'자동',normal:'일반 훈련',light:'훈련 감량',rest:'완전 휴식',rehab:'재활'};
+// Plans are per-player. The manager may override an owned player's plan;
+// rival clubs decide independently, even after a player is transferred.
+function medicalPlanFor(db,p){
+  if(!p)return 'normal';
+  const team=p.team&&db.teams[p.team],owned=team&&parentTeamOf(db,team)?.id===managedTeamId(db);
+  const selected=owned?p.medicalPlan:'auto';
+  if(['normal','light','rest'].includes(selected))return selected;
+  if(selected==='rehab')return p.medical?.daysLeft>0||p.medicalResidual?.daysLeft>0?'rehab':'rest';
+  if(p.medical?.daysLeft>0)return 'rehab';
+  if(p.medicalPlanDate===db.worldDate&&p.medicalDayPlan)return p.medicalDayPlan;
+  if(p.medicalResidual?.daysLeft>0)return 'light';
+  if((p.fatigue||0)>=51||(p.condition??96)<74)return 'rest';
+  if((p.fatigue||0)>=34||(p.condition??96)<85)return 'light';
+  return 'normal';
+}
+function medicalScrimRest(db,p){const mode=medicalPlanFor(db,p);return mode==='rest'||mode==='rehab'}
 function medicalOut(p){return !!(p?.medical&&p.medical.daysLeft>0&&p.medical.out)}
 function medicalAvailable(db,t){return (t?.roster||[]).filter(id=>{const p=db.players[id];return p&&!p.retired&&!medicalOut(p)}).length}
 function medicalPerformancePenalty(p){
@@ -3131,7 +3154,9 @@ function medicalCare(db,p){
   const t=p.team&&db.teams[p.team];
   if(!t)return 0.75;
   const recovery=staffProfile(t).recovery,fac=facilityRecoveryBonus(t),tr=trainingIntensity(t);
-  return clamp(.88+(recovery-50)/225+fac*.05+(tr.growth<1?.07:tr.growth>1?-.13:0)-Math.max(0,(p.fatigue||0)-45)/330,.65,1.32);
+  const plan=medicalPlanFor(db,p);
+  return clamp(.88+(recovery-50)/225+fac*.05+(tr.growth<1?.07:tr.growth>1?-.13:0)-Math.max(0,(p.fatigue||0)-45)/330+
+    (plan==='rehab'?.12:plan==='rest'?.065:plan==='light'?.025:0),.65,1.42);
 }
 function medicalExposure(db,p,kind='scrim',games=1){
   if(!p||p.retired)return;
@@ -3235,18 +3260,21 @@ function medicalDailyTick(db,date){
       pState(p);
       const rng=new RNG((db.world?.seed||'world')+'|'+date+'|'+p.id,'medical');
       const load=p.medicalLoad||0;
-      const high=t.training?.intensity==='high',care=medicalCare(db,p);
-      p.medicalLoad=Math.round(clamp(load*.86+(high?.35:.08),0,38)*100)/100;
-      p.medicalOverloadDays=load>=9&&(high||p.fatigue>=38)?
-        Math.min(120,(p.medicalOverloadDays||0)+1):Math.max(0,(p.medicalOverloadDays||0)-2);
+      const plan=medicalPlanFor(db,p),rest=medicalScrimRest(db,p);
+      p.medicalDayPlan=plan;p.medicalPlanDate=date;
+      const high=t.training?.intensity==='high'&&!rest&&plan!=='light',care=medicalCare(db,p);
+      p.medicalLoad=Math.round(clamp(load*(rest?.73:plan==='light'?.82:.86)+(rest?0:high?.35:plan==='light'?.02:.08),0,38)*100)/100;
+      p.medicalOverloadDays=load>=9&&!rest&&(high||p.fatigue>=38)?
+        Math.min(120,(p.medicalOverloadDays||0)+1):Math.max(0,(p.medicalOverloadDays||0)-(rest?4:2));
+      if(rest)p.medicalRestDays=Math.min(366,(p.medicalRestDays||0)+1);
       if(p.medical?.daysLeft>0||p.medicalResidual?.daysLeft>0)medicalHeal(db,p,1,date);
       if(p.medical?.daysLeft>0)continue;
       if(p.medicalResidual?.daysLeft>0&&rng.chance(.98))continue;
       const injury=clamp(.000065*(1+load/22)*(1+Math.max(0,p.age-28)*.035)*
-        (high?1.25:1)*(1+Math.max(0,p.fatigue-45)/95),0,.00042);
+        (high?1.25:1)*(1+Math.max(0,p.fatigue-45)/95)*(rest?.57:plan==='light'?.83:1),0,.00042);
       const illness=.00020*(1+(p.condition<70?.32:0));
       const burnout=(p.medicalOverloadDays||0)>=14?
-        clamp(.00008*((p.medicalOverloadDays||0)-12)/18,0,.00032):0;
+        clamp(.00008*((p.medicalOverloadDays||0)-12)/18*(rest?.45:1),0,.00032):0;
       const draw=rng.next();let kind;
       if(draw<injury)kind='injury';
       else if(draw<injury+illness)kind='illness';
@@ -4223,10 +4251,11 @@ function validateStartingLineup(db,t,assignment=null,rosterOverride=null){
   }
   return {ok:errors.length===0,errors,assignment:Object.fromEntries(ROLES.map(r=>[r,map[r]||null]))};
 }
-function bestStartingLineup(db,t,locked={}){
+function bestStartingLineup(db,t,locked={},scrim=false){
   const team=teamRef(db,t);if(!team)return {};
-  const players=(team.roster||[]).map(id=>db.players[id]).filter(p=>validLineupPlayer(db,team,p)),base={},used=new Set();
-  for(const role of ROLES){const p=locked[role]&&db.players[locked[role]];if(validLineupPlayer(db,team,p)&&!used.has(p.id)){base[role]=p.id;used.add(p.id)}}
+  const eligible=p=>validLineupPlayer(db,team,p)&&(!scrim||!medicalScrimRest(db,p));
+  const players=(team.roster||[]).map(id=>db.players[id]).filter(eligible),base={},used=new Set();
+  for(const role of ROLES){const p=locked[role]&&db.players[locked[role]];if(eligible(p)&&!used.has(p.id)){base[role]=p.id;used.add(p.id)}}
   const roles=ROLES.filter(r=>!base[r]),available=players.filter(p=>!used.has(p.id));if(available.length<roles.length)return base;
   const scores=Object.fromEntries(available.map(p=>[p.id,Object.fromEntries(roles.map(role=>[role,lineupRoleScore(p,role)]))]));
   let dp=new Map([[0,{score:0,map:{...base}}]]);
@@ -5787,9 +5816,7 @@ function scrimPartnerAssessment(db,t,other,intents=null,strengths=null,rivals=nu
 
 /* ==== FILE: scrim.js ==== */
 // ===== LOL GM: Scrim domain =====
-// Owns daily practice blocks, non-official practice results and accumulated intel.
-// Background blocks are lightweight to keep long multi-region careers responsive;
-// official fixtures continue to use the full match/series engine.
+// Two daily blocks, private results and scouting intel; no official stats.
 
 function scrimAnalysisBonus(t){
   const p=staffProfile(t);
@@ -5802,7 +5829,7 @@ function scrimDailyCapacity(db,t,booked=null){
   if((booked||officialBookedTeams(db)).has(t.id))return 0;
   const days=daysUntil(db,nextTeamMatch(db,t.id)?.date);
   if(days===0)return 0; // No practice blocks on an official fixture day.
-  const roster=(t.roster||[]).map(id=>db.players[id]).filter(p=>p&&!p.retired&&!medicalOut(p));
+  const roster=(t.roster||[]).map(id=>db.players[id]).filter(p=>p&&!p.retired&&!medicalOut(p)&&!medicalScrimRest(db,p));
   if(roster.length<5)return 0;
   const fatigue=avg(roster.map(p=>p.fatigue||0));
   const condition=avg(roster.map(p=>p.condition??96));
@@ -5815,7 +5842,7 @@ function scrimDailyCapacity(db,t,booked=null){
 }
 function scrimReadiness(db,t,booked=null){
   if(!t)return {ok:false,reason:'팀 없음'};
-  const roster=(t.roster||[]).map(id=>db.players[id]).filter(p=>p&&!p.retired&&!medicalOut(p));
+  const roster=(t.roster||[]).map(id=>db.players[id]).filter(p=>p&&!p.retired&&!medicalOut(p)&&!medicalScrimRest(db,p));
   const avgFatigue=avg(roster.map(p=>p.fatigue||0));
   const avgCondition=avg(roster.map(p=>p.condition??96));
   const capacity=scrimDailyCapacity(db,t,booked),today=db.worldDate||'';
@@ -5865,12 +5892,14 @@ function simulateBackgroundScrim(db,t,opp,games,rng,slot,booked=null,proposal=nu
     !second.availableSlots.includes(slot)||games>first.remaining||games>second.remaining)return null;
   const participants=[t,opp],lines=[],results=[],wins={[t.id]:0,[opp.id]:0};
   for(let g=0;g<games;g++){
-    const selections=participants.map(team=>ROLES.map(role=>{
-      const player=starterFor(db,team,role);
+    const selections=participants.map(team=>{
+      const scrimMap=bestStartingLineup(db,team,{},true);
+      return ROLES.map(role=>{
+      const player=scrimMap[role]&&db.players[scrimMap[role]];
       if(!player||player.retired)return null;
       const selected=backgroundScrimChampion(db,player,role,rng);
       return selected?{player,role,...selected}:null;
-    }));
+    });});
     if(selections.some(side=>side.some(entry=>!entry)))break;
     const values=selections.map((side,i)=>{
       const club=participants[i];
@@ -5959,6 +5988,7 @@ function recordScrimPractice(db,rec,lines){
   for(const l of lines){
     const p=db.players[l.pid];if(!p||!teams.has(l.tid))continue;
     const opp=l.tid===rec.a?rec.b:rec.a,value=scrimValue(db,l.tid,opp);
+    if(p.medicalPlanDate!==db.worldDate){p.medicalDayPlan=medicalPlanFor(db,p);p.medicalPlanDate=db.worldDate}
     practiceChampion(db,p,l.champ,'scrim',value);
     medicalExposure(db,p,'scrim',1);
     pState(p);p.fatigue=clamp(p.fatigue+1.2,0,100);
@@ -7077,14 +7107,19 @@ function viewSquad(){
     ${Object.keys(ATTR_GROUPS).map(g=>`<label><span>${GROUP_KO[g]}<output>${tr[g]}</output></span><input type="range" min="0" max="${TRAIN_POINTS}" value="${tr[g]}" data-tr="${g}"></label>`).join('')}
   </div>${mineOrg?'<div class="controls"><button class="primary" id="sqapply">변경사항 적용</button><button class="ghost" id="sqdiscard">변경 취소</button><span class="hint">주전·역할·전술·훈련을 여러 개 조정한 뒤 한 번에 적용합니다.</span></div>':''}<p class="hint">훈련 포인트는 총 ${TRAIN_POINTS}점입니다. 한 영역에 몰면 그 영역은 크게 오르지만 나머지는 덜 오르거나 떨어지고, 배분하지 않은 포인트는 버려집니다. 한 시즌에 영역별로 오를 수 있는 폭과, 잠재력보다 한참 높게 오르는 것에도 한계가 있습니다.</p>
   <div class="fin">${(()=>{const f=ensureFacilities(t),names={training:'훈련',analysis:'분석',recovery:'회복',youth:'유소년'};return Object.keys(names).map(k=>`<div><span>${names[k]} 시설</span><b>${f[k]} / 5</b><small>구단 자동 관리 </small></div>`).join('')})()}</div><p class="hint">훈련·유소년 시설은 성장, 분석 시설은 상대/메타 분석, 회복 시설은 피로 회복에 직접 적용됩니다. 연 유지비 ${money(facilityUpkeep(DB,t))}</p></section>
-  <section><h3>로스터</h3><div class="scroll"><table class="roster"><thead><tr><th>포지션</th><th>선수</th><th>경기 슬롯</th><th>역할</th><th>만족도</th><th>나이</th><th>종합</th><th>성장 여지</th><th>명성</th><th>시장가치</th><th>폼</th><th>컨디션</th><th>경기 감각</th><th>피로</th><th>사기</th><th>연봉</th><th>계약</th>${Object.keys(ATTR_GROUPS).map(g=>`<th>${GROUP_KO[g]}</th>`).join('')}</tr></thead><tbody>
-    ${ps.map(p=>{const st=pState(p);ensureSatisfaction(p);const shownRole=edit?.roles[p.id]||p.rosterRole||recommendedRosterRole(DB,p,t),lineupMap=edit?.starters||t.depthChart||{},assignedRole=ROLES.find(r=>lineupMap[r]===p.id)||'',roleCtl=mineOrg?`<select data-srole="${p.id}" aria-label="${esc(p.name)} 로스터 역할">${SQUAD_ROLES.map(r=>`<option value="${r}"${shownRole===r?' selected':''}>${SQUAD_ROLE_KO[r]}</option>`).join('')}</select>`:SQUAD_ROLE_KO[p.rosterRole||recommendedRosterRole(DB,p,t)],starterCtl=mineOrg?`<select data-lineup-player="${p.id}" aria-label="${esc(p.name)} 경기 포지션"><option value="">후보</option>${ROLES.map(r=>`<option value="${r}"${assignedRole===r?' selected':''}>${ROLE_KO[r]} · 적합 ${playerRoleRating(p,r)}</option>`).join('')}</select>`:(assignedRole?ROLE_KO[assignedRole]:'후보');return `<tr data-p="${p.id}" class="${OPEN_P===p.id?'open':''}"><td><span class="role">${ROLE_KO[p.role]}</span></td><td><button type="button" class="roster-open" data-p-open="${esc(p.id)}" aria-expanded="${OPEN_P===p.id}" aria-controls="pdetail">${esc(p.name)}</button>${medicalSummary(p)==='정상'?'':' <small class="lo">'+esc(medicalSummary(p))+'</small>'}${assignedRole?'':' <small class="hint">후보</small>'}</td><td>${starterCtl}</td><td>${roleCtl}</td><td class="num ${p.satisfaction<35?'lo':p.satisfaction>=70?'hi':''}">${Math.round(p.satisfaction)}<small class="hint"> ${satisfactionLabel(p.satisfaction)}</small>${p.wantsOut?' <span class="lo">이적요청</span>':''}</td><td class="num">${p.age}</td><td>${ovrTag(obsOvr(DB,p))}${knowledge(DB,p)<100?'<small class="hint">?</small>':''}</td><td>${potText(p)}</td><td class="num">${p.reputation??'—'}</td><td class="num">${money(playerMarketValue(DB,p))}</td><td class="num">${st.form>=3?'<span class="hi">▲</span>':st.form<=-3?'<span class="lo">▼</span>':'–'}</td><td class="num">${Math.round(st.condition)}</td><td class="num">${Math.round(st.sharpness)}</td><td class="num">${Math.round(st.fatigue)}</td><td class="num ${st.morale<35?'lo':''}">${Math.round(st.morale)}${p.wantsOut?' 이적요청':''}</td><td class="num">${p.contract?money(p.contract.salary):'—'}</td><td class="num">${p.contract?'~'+p.contract.until:'—'}</td>${Object.keys(ATTR_GROUPS).map(g=>`<td>${ovrTag(grpAvg(p,g,knowledge(DB,p)))}</td>`).join('')}</tr>`}).join('')}
+  <section><h3>로스터</h3><div class="scroll"><table class="roster"><thead><tr><th>포지션</th><th>선수</th><th>경기 슬롯</th><th>역할</th><th>회복 계획</th><th>만족도</th><th>나이</th><th>종합</th><th>성장 여지</th><th>명성</th><th>시장가치</th><th>폼</th><th>컨디션</th><th>경기 감각</th><th>피로</th><th>사기</th><th>연봉</th><th>계약</th>${Object.keys(ATTR_GROUPS).map(g=>`<th>${GROUP_KO[g]}</th>`).join('')}</tr></thead><tbody>
+    ${ps.map(p=>{const st=pState(p);ensureSatisfaction(p);const shownRole=edit?.roles[p.id]||p.rosterRole||recommendedRosterRole(DB,p,t),lineupMap=edit?.starters||t.depthChart||{},assignedRole=ROLES.find(r=>lineupMap[r]===p.id)||'',roleCtl=mineOrg?`<select data-srole="${p.id}" aria-label="${esc(p.name)} 로스터 역할">${SQUAD_ROLES.map(r=>`<option value="${r}"${shownRole===r?' selected':''}>${SQUAD_ROLE_KO[r]}</option>`).join('')}</select>`:SQUAD_ROLE_KO[p.rosterRole||recommendedRosterRole(DB,p,t)],starterCtl=mineOrg?`<select data-lineup-player="${p.id}" aria-label="${esc(p.name)} 경기 포지션"><option value="">후보</option>${ROLES.map(r=>`<option value="${r}"${assignedRole===r?' selected':''}>${ROLE_KO[r]} · 적합 ${playerRoleRating(p,r)}</option>`).join('')}</select>`:(assignedRole?ROLE_KO[assignedRole]:'후보');const healthCtl=mineOrg?`<select data-medical-plan="${esc(p.id)}" aria-label="${esc(p.name)} 회복 계획">${Object.entries(MEDICAL_PLAN_LABELS).map(([mode,label])=>`<option value="${mode}"${(p.medicalPlan||'auto')===mode?' selected':''}>${mode==='auto'?'자동 · '+MEDICAL_PLAN_LABELS[medicalPlanFor(DB,p)]:label}</option>`).join('')}</select>`:MEDICAL_PLAN_LABELS[medicalPlanFor(DB,p)];return `<tr data-p="${p.id}" class="${OPEN_P===p.id?'open':''}"><td><span class="role">${ROLE_KO[p.role]}</span></td><td><button type="button" class="roster-open" data-p-open="${esc(p.id)}" aria-expanded="${OPEN_P===p.id}" aria-controls="pdetail">${esc(p.name)}</button>${medicalSummary(p)==='정상'?'':' <small class="lo">'+esc(medicalSummary(p))+'</small>'}${assignedRole?'':' <small class="hint">후보</small>'}</td><td>${starterCtl}</td><td>${roleCtl}</td><td>${healthCtl}</td><td class="num ${p.satisfaction<35?'lo':p.satisfaction>=70?'hi':''}">${Math.round(p.satisfaction)}<small class="hint"> ${satisfactionLabel(p.satisfaction)}</small>${p.wantsOut?' <span class="lo">이적요청</span>':''}</td><td class="num">${p.age}</td><td>${ovrTag(obsOvr(DB,p))}${knowledge(DB,p)<100?'<small class="hint">?</small>':''}</td><td>${potText(p)}</td><td class="num">${p.reputation??'—'}</td><td class="num">${money(playerMarketValue(DB,p))}</td><td class="num">${st.form>=3?'<span class="hi">▲</span>':st.form<=-3?'<span class="lo">▼</span>':'–'}</td><td class="num">${Math.round(st.condition)}</td><td class="num">${Math.round(st.sharpness)}</td><td class="num">${Math.round(st.fatigue)}</td><td class="num ${st.morale<35?'lo':''}">${Math.round(st.morale)}${p.wantsOut?' 이적요청':''}</td><td class="num">${p.contract?money(p.contract.salary):'—'}</td><td class="num">${p.contract?'~'+p.contract.until:'—'}</td>${Object.keys(ATTR_GROUPS).map(g=>`<td>${ovrTag(grpAvg(p,g,knowledge(DB,p)))}</td>`).join('')}</tr>`}).join('')}
   </tbody></table></div><p class="hint">주포지션은 선수의 전문 역할 표시이며 출전 자격 제한이 아닙니다. 등록 선수 5명을 TOP/JGL/MID/ADC/SUP 경기 슬롯에 자유롭게 배치할 수 있습니다. 선수를 누르면 세부 능력치, 챔피언 폭, 커리어가 열립니다.${mineOrg?'':` 스카우팅 정보 ${kAvg}% — 정보가 적을수록 실제와 다르게 보입니다.`}</p>${DB.world&&!mineOrg?`<div class="controls"><button class="ghost" id="scoutT">이 팀 집중 스카우팅 (${money(0.5*psOf(DB,DB.teams[managedTeamId(DB)].region))})</button><span id="scmsg" class="hint"></span></div>`:''}</section>
   <div id="pdetail">${OPEN_P&&DB.players[OPEN_P]&&DB.players[OPEN_P].team===SQUAD?playerDetail(DB.players[OPEN_P]):''}</div>${mineOrg?scoutingSearchBlock():''}`;
 }
 function bindSquad(){
   const ti=$('#trint');if(ti)ti.onchange=e=>{const d=squadEditState(DB.teams[SQUAD_EDIT.teamId]);d.training.intensity=e.target.value;d.dirty=true};
   $('#sq').onchange=e=>{const next=DB.teams[e.target.value],same=SQUAD_EDIT&&parentTeamOf(DB,next)?.id===SQUAD_EDIT.parentId;if(!same)SQUAD_EDIT=null;SQUAD=e.target.value;OPEN_P=null;nav()};
+  document.querySelectorAll('[data-medical-plan]').forEach(el=>el.onchange=e=>{
+    const p=DB.players[e.target.dataset.medicalPlan],club=p&&DB.teams[p.team];
+    if(!club||parentTeamOf(DB,club)?.id!==managedTeamId(DB))return;
+    p.medicalPlan=e.target.value;saveDB();navKeepScroll();
+  });
   if($('#sqapply'))$('#sqapply').onclick=applySquadEdit;if($('#sqdiscard'))$('#sqdiscard').onclick=discardSquadEdit;
   document.querySelectorAll('[data-squad-dst]').forEach(el=>el.onchange=e=>{e.stopPropagation();const d=squadEditState(DB.teams[SQUAD]);d.rosterPlan.assignments[el.dataset.squadDst]=el.value;d.dirty=true;navKeepScroll()});
   if($('#scoutT'))$('#scoutT').onclick=()=>{const m=scoutPlayers(DB,DB.teams[SQUAD].roster,35,0.5*psOf(DB,DB.teams[managedTeamId(DB)].region));saveDB();nav();$('#scmsg')&&($('#scmsg').textContent=m)};
