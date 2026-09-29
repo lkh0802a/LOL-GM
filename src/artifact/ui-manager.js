@@ -1,14 +1,20 @@
 // ===== LOL GM: Finance / Monte Carlo manager UI =====
 function financePanel(t){
   const f=t.finance; if(!f)return '';
-  const R=DB.regions[t.region], last=f.history.slice(-1)[0], pay=payroll(DB,t);
-  const RK={league:'중계권 분배',sponsor:'스폰서',merch:'굿즈',prize:'상금',owner:'구단주 지원',tax:'사치세 분배'}, EK={salary:'연봉',staff:'코칭 스태프',ops:'운영비',facility:'훈련 시설',floor:'플로어 부담금',buyout:'계약 해지금',tax:'사치세'};
+  const R=DB.regions[t.region], last=f.history.slice(-1)[0], pay=payroll(DB,t), outlook=financeForecast(DB,t);
+  const RK={league:'중계권 분배',sponsor:'스폰서',merch:'굿즈',prize:'상금',owner:'구단주 지원',tax:'사치세 분배',transfer:'이적료 수입'}, EK={salary:'연봉',staff:'코칭 스태프',ops:'운영비',facility:'훈련 시설',floor:'플로어 부담금',buyout:'선수 방출 비용',tax:'사치세',facilityInvestment:'시설 증설비',signingBonus:'계약금',transfer:'이적료 지출',staffSeverance:'스태프 해지금'};
   return `<section><h3>재정</h3><div class="fin">
     <div><span>보유 자금</span><b class="${f.cash<0?'neg':''}">${money(f.cash)}</b></div>
-    <div><span>연봉 총액</span><b>${money(pay)}</b><small>${R.spendingRule==='sfr_top5'?`SFR 상위 5인 ${money(regulatedPayroll(DB,t))} · 기준 ${money(R.salaryCap)}${regulatedPayroll(DB,t)>R.salaryCap?' 초과':''}`:'구단 자체 예산'}</small></div>
+    <div><span>연봉 총액</span><b>${money(pay)}</b><small>${R.spendingRule==='sfr_top5'?`SFR 상위 5인 ${money(regulatedPayroll(DB,t))} · 기준 ${money(R.salaryCap)}${R.salaryCap?' · '+Math.round(regulatedPayroll(DB,t)/R.salaryCap*100)+'% 사용':''}${regulatedPayroll(DB,t)>R.salaryCap?' 초과':''}`:'구단 자체 예산'}</small></div>
     <div><span>영입 예산</span><b>${money(Math.max(0,salaryBudget(DB,t)-pay))}</b></div>
     <div><span>구단주 재력</span><b>${t.owner?t.owner.wealth:'—'}</b></div>
-  </div>
+    <div><span>예상 수입</span><b>${money(outlook.revenue)}</b></div>
+    <div><span>예상 지출</span><b>${money(outlook.expense)}</b></div>
+    <div><span>예상 손익</span><b class="${outlook.net<0?'neg':''}">${money(outlook.net)}</b></div>
+    <div><span>예상 결산 현금</span><b class="${outlook.closingCash<0?'neg':''}">${money(outlook.closingCash)}</b></div>
+  </div><div class="rgrid"><div><h4>예상 수입 내역</h4>${Object.entries(outlook.rev).filter(([,v])=>v>0).map(([k,v])=>`<div class="arow"><span>${RK[k]||k}</span><b>${money(v)}</b></div>`).join('')}</div><div><h4>예상 지출 내역</h4>${Object.entries(outlook.exp).filter(([,v])=>v>0).map(([k,v])=>`<div class="arow"><span>${EK[k]||k}</span><b>${money(v)}</b></div>`).join('')}</div></div>
+  <p class="hint">보수적인 추정치입니다. 아직 확정되지 않은 상금·추가 승리 수당·성과급·향후 이적과 재분배액은 미포함입니다. 이미 지급한 시설·계약·이적 비용은 결산 현금에서 두 번 차감하지 않습니다.</p>
+  ${outlook.closingCash<0?'<p class="warn">예상 결산 현금이 적자입니다. 추가 지출에 주의하세요.</p>':''}
   ${last?`<div class="rgrid"><div><h4>${last.year} 수입 ${money(Object.values(last.rev).reduce((a,b)=>a+b,0))}</h4>${Object.entries(last.rev).filter(([,v])=>v).map(([k,v])=>`<div class="arow"><span>${RK[k]||k}</span><span class="num">${money(v)}</span></div>`).join('')}</div>
   <div><h4>${last.year} 지출 ${money(Object.values(last.exp).reduce((a,b)=>a+b,0))}</h4>${Object.entries(last.exp).filter(([,v])=>v).map(([k,v])=>`<div class="arow"><span>${EK[k]||k}</span><span class="num">${money(v)}</span></div>`).join('')}<div class="arow"><span><b>순이익</b></span><span class="num ${last.net<0?'lo':'hi'}"><b>${money(last.net)}</b></span></div></div></div>`:'<p class="hint">첫 시즌이 끝나면 결산이 나옵니다.</p>'}</section>`;
 }
