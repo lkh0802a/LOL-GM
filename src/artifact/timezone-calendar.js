@@ -120,3 +120,10 @@ function venueRoundGap(s,games,normalGap){
   return s.venueTimeZone?
     Math.max(normalGap,Math.ceil(games/3)+1):normalGap;
 }
+
+// A three-game block needs roughly three hours. A two-hour overlap cannot
+// legitimately host all three games merely because 90 minutes intersect.
+function scrimOverlapGames(overlap){
+  return overlap?Math.floor((Date.parse(overlap.endsAt)-
+    Date.parse(overlap.startsAt))/3600000):0;
+}
