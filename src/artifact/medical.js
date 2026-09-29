@@ -26,6 +26,35 @@ function medicalExposure(db,p,kind='scrim',games=1){
   if(!p||p.retired)return;
   p.medicalLoad=Math.round(clamp((p.medicalLoad||0)+games*(kind==='official'?1.55:.65),0,38)*100)/100;
 }
+// Use the existing atomic organization roster-plan command. A player can only
+// be moved if the other active squad still fields five healthy competitors.
+function medicalEmergencyCallup(db,t,injured){
+  if(!t||medicalAvailable(db,t)!==5)return null;
+  const rules=rosterRulesForTeam(db,t),cap=t.parent?rules.reserveTeamMax:rules.firstTeamMax;
+  if((t.roster||[]).length>=cap)return null;
+  const from=t.parent?[db.teams[t.parent]]:reserveTeamsOf(db,t);
+  for(const source of from){
+    if(!source||medicalAvailable(db,source)<=5)continue;
+    const candidates=(source.roster||[]).map(id=>db.players[id])
+      .filter(p=>p&&!p.retired&&!medicalOut(p)&&p.team===source.id&&
+        !localRegistrationError(db,t,p))
+      .sort((a,b)=>lineupRoleScore(b,injured.role)-lineupRoleScore(a,injured.role));
+    for(const replacement of candidates){
+      const plan=rosterPlanState(db,t);
+      if(!plan)break;
+      plan.assignments[replacement.id]=t.id;
+      const result=commitWorldAction(db,{type:'roster.plan',parentId:plan.parentId,
+        assignments:plan.assignments,actor:'system'});
+      if(!result.ok)continue;
+      recordPlayerEvent(replacement,'medical_callup',db.year,
+        {date:db.worldDate,for:injured.id,from:source.id,to:t.id});
+      if(t.id===managedTeamId(db))news(db,
+        injured.name+' 건강 문제로 '+replacement.name+' 긴급 등록 ('+source.short+' → '+t.short+')');
+      return replacement;
+    }
+  }
+  return null;
+}
 // Explicit entry point allows deterministic validation of medical severity and
 // the legal five-player floor, without rolling arbitrary real-world odds.
 function startMedicalEvent(db,p,kind,level,days,date=db.worldDate,rng=null){
@@ -35,6 +64,8 @@ function startMedicalEvent(db,p,kind,level,days,date=db.worldDate,rng=null){
   const site=kind==='injury'?roll.pick(['wrist','back','neck']):kind;
   const proposedOut=level!=='minor';
   const t=p.team&&db.teams[p.team];
+  if(proposedOut&&t&&medicalAvailable(db,t)===5)
+    medicalEmergencyCallup(db,t,p);
   const enough=t&&medicalAvailable(db,t)>5;
   const out=!!(proposedOut&&enough);
   const severity=out?level:'minor';
@@ -42,6 +73,9 @@ function startMedicalEvent(db,p,kind,level,days,date=db.worldDate,rng=null){
   const duration=Math.max(2,Math.round(days));
   p.medical={kind,site,severity,out,penalty,daysLeft:duration,
     started:date,lastTick:date,plannedDays:duration};
+  // Registered emergencies and ordinary bench absences both need a usable
+  // lineup immediately, not only when a match later calls starterFor().
+  if(out&&t)initializeDepthChart(db,t,false);
   p.condition=clamp((p.condition??96)-(out?9:5),45,100);
   recordPlayerEvent(p,'medical_start',db.year,{kind,site,severity,out,date,days:duration,team:p.team||null});
   if(t?.id===managedTeamId(db))news(db,p.name+' · '+medicalSummary(p));
@@ -78,9 +112,15 @@ function medicalHeal(db,p,elapsed,date){
   }
 }
 function medicalDailyTick(db,date){
-  for(const t of activeTeams(db)){
-    for(const id of t.roster||[]){
+  // Snapshot participants: an emergency organization callup can move a player
+  // between the two squads while this day's health lottery is running.
+  const participants=activeTeams(db).flatMap(t=>(t.roster||[]).map(id=>id));
+  const seen=new Set();
+  for(const id of participants){
+      if(seen.has(id))continue;
+      seen.add(id);
       const p=db.players[id];if(!p||p.retired)continue;
+      const t=p.team&&db.teams[p.team];if(!t)continue;
       pState(p);
       const rng=new RNG((db.world?.seed||'world')+'|'+date+'|'+p.id,'medical');
       const load=p.medicalLoad||0;
@@ -108,7 +148,6 @@ function medicalDailyTick(db,date){
         kind==='burnout'?rng.int(14,28):
         severity==='severe'?rng.int(22,50):severity==='moderate'?rng.int(7,17):rng.int(3,8);
       startMedicalEvent(db,p,kind,severity,Math.ceil(duration/clamp(care,.85,1.18)),date,rng);
-    }
   }
 }
 function medicalOffseasonRecovery(db,date){
