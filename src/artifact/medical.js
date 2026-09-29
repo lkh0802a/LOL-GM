@@ -73,6 +73,9 @@ function startMedicalEvent(db,p,kind,level,days,date=db.worldDate,rng=null){
   const duration=Math.max(2,Math.round(days));
   p.medical={kind,site,severity,out,penalty,daysLeft:duration,
     started:date,lastTick:date,plannedDays:duration};
+  // Registered emergencies and ordinary bench absences both need a usable
+  // lineup immediately, not only when a match later calls starterFor().
+  if(out&&t)initializeDepthChart(db,t,false);
   p.condition=clamp((p.condition??96)-(out?9:5),45,100);
   recordPlayerEvent(p,'medical_start',db.year,{kind,site,severity,out,date,days:duration,team:p.team||null});
   if(t?.id===managedTeamId(db))news(db,p.name+' · '+medicalSummary(p));
