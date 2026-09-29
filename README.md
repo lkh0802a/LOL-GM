@@ -4,15 +4,11 @@ Mobile-first esports management simulation.
 
 ## Current stage
 
-**Phase 1 — Core Foundation**
+Items **1–11**, the **11.5 architecture refactor**, and **12/12-B facilities and finance** have passed their scoped engine/CI acceptance and are incorporated into the canonical standalone game. Work on Item 13 has not started.
 
-The existing Artifact prototype has been migrated into this repository as a runnable web application. GitHub is now the primary development codebase.
+**Scoped engine acceptance is not the same as fully fleshed-out gameplay.** A retroactive, code-backed review identified follow-up work across Items 1–11, including the world day clock, player availability, scouting intelligence, contract/loan agreements, staff negotiations, scrim geography, champion differentiation and First Selection strategy. Read [the retrospective gameplay-depth audit](docs/RETROACTIVE_DEPTH_AUDIT_1_11.md) before planning additional feature work; preserve existing game engines and accepted rules rather than starting a rewrite.
 
-The current goal is to turn the migrated prototype state into a coherent real game state and complete the first persistent season gameplay loop.
-
-Target prototype flow:
-
-`New Game → League/Team Selection → Dashboard → Roster → Player Detail → Schedule → Draft → Match → Result → Standings`
+The canonical current implementation status and acceptance rules are in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). The consolidated design target remains [docs/LOL_GM_SPEC.md](docs/LOL_GM_SPEC.md).
 
 ## Source of truth
 
@@ -93,13 +89,11 @@ Canonical migrated Artifact source lives in `src/artifact/`. The root `index.htm
 
 GitHub Actions runs the syntax/structure checks and production build on every push to `main`.
 
-## Save compatibility during Phase 1
+## Active saves and compatibility
 
-The game is still pre-release. Legacy Artifact saves are intentionally not supported during the current core-state refactor.
+The active world schema is **v15** with compact save format **2**, and the browser storage namespace is `lol-gm-v15` with three save slots. The game normalizes supported older v15 save-format encodings on import/load; arbitrary earlier world schemas and forward/unknown save formats are **not** guaranteed compatible. Do not follow the superseded Phase-0/early-Phase-1 schema descriptions in historical documents when editing persistence.
 
-The active save schema is version 12 under the `lol-gm-v12` browser-storage namespace. Version 12 introduces the completed player-domain schema; older development saves are intentionally discarded.
-
-Once persistent user saves become a real product requirement, save migrations will become mandatory.
+`src/artifact/save-migration.js`, `src/artifact/save.js`, `scripts/regression.mjs` and `scripts/career-acceptance.mjs` define/verify the current persistence contract. The generated root `index.html` is built from `src/artifact/`; do not edit it manually.
 
 ## Development phases
 
@@ -113,6 +107,8 @@ Once persistent user saves become a real product requirement, save migrations wi
 
 - `docs/LOL_GM_SPEC.md` — canonical full game specification
 - `docs/DEVELOPMENT.md` — current phase and development rules
+- `docs/RETROACTIVE_DEPTH_AUDIT_1_11.md` — code-backed gaps and follow-up acceptance plan for completed Items 1–11/11.5
+- `docs/PHASE_12_FINANCE.md` — facilities and economy implementation and known depth limits
 - `docs/ARTIFACT_INTEGRATION.md` — current Artifact migration rules
 - `docs/CLAUDE_HANDOFF.md` — concise implementation handoff for Claude
 - `docs/PHASE_0_ACCEPTANCE_CHECKLIST.md` — migration acceptance criteria
