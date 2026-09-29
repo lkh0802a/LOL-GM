@@ -44,7 +44,9 @@ function minimumViableInitialPayroll(db,t){
   }
   const floor=Math.round((Number.isFinite(best)?best:0)*1.12*10)/10;db.initialPayrollFloorCache[key]=floor;return floor;
 }
-function seedInitialPayrollBudgets(db){db.initialPayrollFloorCache={};for(const t of activeTeams(db)){const floor=minimumViableInitialPayroll(db,t);t.initialPayrollBudget=Math.max(t.initialPayrollBudget||0,floor)}}
+// Fix the starting wage envelope before sign-on bonuses drain cash and
+// lower a club's dynamic runway-derived budget during the initial auction.
+function seedInitialPayrollBudgets(db){db.initialPayrollFloorCache={};for(const t of activeTeams(db)){const floor=minimumViableInitialPayroll(db,t);t.initialPayrollBudget=Math.max(t.initialPayrollBudget||0,floor,salaryBudget(db,t))}}
 function initialSalaryBudget(db,t){const team=teamRef(db,t);return Math.max(salaryBudget(db,team),team.initialPayrollBudget||0)}
 function initialSalaryCeiling(db,t){return initialSalaryBudget(db,t)}
 function initialSquadLimits(db,t){const team=teamRef(db,t),rules=rosterRulesForTeam(db,team),first=!team.parent;return {min:first?rules.firstTeamMin:rules.reserveTeamMin,max:first?rules.firstTeamMax:rules.reserveTeamMax}}
