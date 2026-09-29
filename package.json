@@ -8,7 +8,7 @@
     "dev": "node scripts/dev.mjs",
     "build": "node scripts/build.mjs",
     "perf": "node scripts/perf.mjs",
-    "check": "node scripts/check.mjs && node scripts/ui-state-acceptance.mjs && node scripts/ui-overlay-acceptance.mjs && node scripts/ui-async-acceptance.mjs && node scripts/ui-mobile-a11y-acceptance.mjs && node scripts/finance-acceptance.mjs && node scripts/finance-depth-acceptance.mjs && node scripts/validate-system-snapshot.mjs && node scripts/regression.mjs && node scripts/smoke.mjs && node scripts/career-acceptance.mjs",
+    "check": "node scripts/check.mjs && node scripts/ui-state-acceptance.mjs && node scripts/ui-overlay-acceptance.mjs && node scripts/ui-async-acceptance.mjs && node scripts/ui-mobile-a11y-acceptance.mjs && node scripts/finance-acceptance.mjs && node scripts/finance-depth-acceptance.mjs && node scripts/calendar-depth-acceptance.mjs && node scripts/validate-system-snapshot.mjs && node scripts/regression.mjs && node scripts/smoke.mjs && node scripts/career-acceptance.mjs",
     "sync:champions": "node scripts/sync-champions.mjs",
     "validate:champions": "node scripts/validate-champion-snapshot.mjs",
     "validate:systems": "node scripts/validate-system-snapshot.mjs",
