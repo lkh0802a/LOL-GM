@@ -139,12 +139,12 @@ function bindSeason(){
     const step=()=>{
       if(!isUiTaskCurrent(task))return;
       try{
-        for(let i=0;i<2;i++){
+        for(let i=0;i<3;i++){
           const result=playWorldDay(db);n++;
           if(!result||db.world.phase!=='season'||result.pending||stop(result))return fin();
         }
         const progress=$('#sprog');
-        if(progress)progress.textContent=`${n}일 진행 · ${nextDate(db)||''}`;
+        if(progress)progress.textContent=`${n}일 진행 · 현재 ${db.worldDate} · 다음 경기 ${nextDate(db)||'일정 없음'}`;
         setTimeout(step,0);
       }catch(e){
         finishUiTask(task);if(n)saveDB();
@@ -156,6 +156,7 @@ function bindSeason(){
   };
   const me=managedTeamId(DB), st0=w.step;
   $('#sday').onclick=()=>run(()=>true);
+  $('#sfixture').onclick=()=>run(r=>r.played.length>0);
   $('#smine').onclick=()=>run(r=>r.played.some(x=>x.day.matches.some(m=>m.a===me||m.b===me)));
   $('#sstep').onclick=()=>run(()=>DB.world.step!==st0);
   $('#send').onclick=()=>run(()=>false);
