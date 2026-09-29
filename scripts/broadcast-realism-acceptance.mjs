@@ -20,7 +20,8 @@ const fixture=String.raw`(()=>{
   const db=buildWorld(cfg),date='2027-01-14';
   const checks=[];
   for(const R of Object.values(db.regions)){
-    const comp=leagueComp(db,R.id,1,1),s=newSeason(db,comp.id,db.year,'broadcast-'+R.id,date);
+    const comp=leagueComp(db,R.id,1,1);db.competitions[comp.id]=comp;
+    const s=newSeason(db,comp.id,db.year,'broadcast-'+R.id,date);
     const rr=comp.stages[0],weeks=Math.floor((R.teams*(rr.legs||1)-rr.legs)/2);
     assert(rr.type==='round_robin','initial regional stage should be round robin');
     if(R.splits>=3)assert(rr.legs===1,
