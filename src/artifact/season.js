@@ -93,6 +93,10 @@ function championshipStandings(db,R,div=1){
   return Object.values(totals).sort((a,b)=>b.points-a.points||
     (tie.get(a.tid)??999)-(tie.get(b.tid)??999)||a.tid.localeCompare(b.tid));
 }
+function recentSplitChampion(db,R){
+  return [3,2,1].map(sp=>db.world?.seasons[R.short+'-'+sp])
+    .find(s=>s?.done)?.champion||null;
+}
 function regionPlacements(db,R,div=1){
   const w=db.world,act=activeTeams(db,R.id,div).map(t=>t.id);
   const done=[3,2,1].map(sp=>w?.seasons[R.short+(div===2?'2':'')+'-'+sp])
@@ -115,8 +119,8 @@ function startInternational(db,id,start,taken=new Set()){
     if(it.entry==='champions'){
       // Tournament-champion invitations always honor the *last split winner*,
       // even in a region where World slots use accumulated season points.
-      const last=[3,2,1].map(sp=>w.seasons[R.short+'-'+sp]).find(s=>s?.done);
-      return last?.champion?[last.champion]:regionPlacements(db,R).slice(0,1);
+      const champion=recentSplitChampion(db,R);
+      return champion?[champion]:regionPlacements(db,R).slice(0,1);
     }
     if(it.entry==='slots')return regionPlacements(db,R).slice(0,Math.max(1,Math.ceil(R.slots*(it.ratio||1))));
     const per=(it.per||2)*(regs.length<=2?2:1);
