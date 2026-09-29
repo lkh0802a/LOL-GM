@@ -121,3 +121,14 @@ function scrimSharedWorkHours(db,t,other,slot,utcDate=db.worldDate,bookings=null
     slots:{[t.id]:slot,[other.id]:opponentSlot},
     timeZones:{[t.id]:first.zone,[other.id]:second.zone}};
 }
+
+function pushEventRound(s,date,stage,label,pairs,bo){
+  const perDay=s.timeZone?3:Math.max(1,pairs.length);
+  for(let start=0;start<pairs.length;start+=perDay)
+    pushDay(s,addDays(date,Math.floor(start/perDay)),stage,label,
+      pairs.slice(start,start+perDay),bo);
+}
+function eventRoundGap(s,numberOfGames,originalGap){
+  return s.timeZone?Math.max(originalGap,Math.ceil(numberOfGames/3)+1):
+    originalGap;
+}
