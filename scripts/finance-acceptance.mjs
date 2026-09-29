@@ -63,7 +63,7 @@ const fixture=String.raw`(()=>{
   const broken=t.finance.cash,levels=JSON.stringify(t.facilities);
   t.finance.cash=0;
   try{upgradeFacility(db,t,'analysis',{deferDays:30});throw Error('unfunded facility project accepted')}
-  catch(e){assert(e.message.includes('자금 부족'),'insufficient-funds upgrade not blocked')}
+  catch(e){assert(e.message.includes('자금이 부족'),'insufficient-funds upgrade not blocked')}
   assert(JSON.stringify(t.facilities)===levels&&!t.facilityProjects.length,'failed facility upgrade must not mutate levels');
   t.finance.cash=broken;
   console.log('PHASE12_ACCEPTANCE {"worldVersion":'+db.version+',"saveFormat":'+again.saveFormat+',"capex":'+cost+',"ready":"'+originalReady+'","financeNet":'+row.net+',"forecastNet":'+beforeClose.net+'}');
