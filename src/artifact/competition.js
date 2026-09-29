@@ -113,13 +113,29 @@ function standings(db,s,stageId){
 function groupStandings(db,s,stageId){const sd=s.stageData[stageId];return sd.groups.map(g=>rrTable(db,s,stageId,g))}
 function rrTable(db,s,stageId,teams){
   const tb={};teams.forEach(t=>tb[t]={tid:t,w:0,l:0,gw:0,gl:0,h2h:{},form:[]});
-  for(const d of s.days) if(d.stage===stageId) for(const m of d.matches) if(m.res&&tb[m.a]&&tb[m.b]){
-    const [sa,sb]=m.res.score, wa=m.res.winner===m.a;
-    tb[m.a].gw+=sa;tb[m.a].gl+=sb;tb[m.b].gw+=sb;tb[m.b].gl+=sa;
-    tb[wa?m.a:m.b].w++;tb[wa?m.b:m.a].l++;
-    tb[m.a].h2h[m.b]=(tb[m.a].h2h[m.b]||0)+(wa?1:-1);tb[m.b].h2h[m.a]=(tb[m.b].h2h[m.a]||0)+(wa?-1:1);
-    tb[m.a].form.push(wa?'W':'L');tb[m.b].form.push(wa?'L':'W');
-  }
+  const comp=db.competitions[s.comp],region=comp&&!comp.international&&db.regions[comp.region];
+  // Each split remains a separate fixture/playoff tournament. Only the
+  // regular-season table carries older results when the region explicitly
+  // chooses cumulative records; other regions, years and divisions cannot mix.
+  const previous=region?.standingsMode==='cumulative'&&s.split?
+    Object.values(db.world?.seasons||{}).filter(x=>x!==s&&x.done&&
+      x.comp===s.comp&&x.year===s.year&&x.split&&x.split<s.split)
+      .sort((a,b)=>a.split-b.split):[];
+  for(const season of [...previous,s])for(const d of season.days)
+    if(d.stage===stageId)for(const m of d.matches){
+      if(!m.res||!tb[m.a]&&!tb[m.b])continue;
+      const [sa,sb]=m.res.score,wa=m.res.winner===m.a;
+      if(tb[m.a]){
+        tb[m.a].gw+=sa;tb[m.a].gl+=sb;tb[m.a][wa?'w':'l']++;
+        tb[m.a].form.push(wa?'W':'L');
+        if(tb[m.b])tb[m.a].h2h[m.b]=(tb[m.a].h2h[m.b]||0)+(wa?1:-1);
+      }
+      if(tb[m.b]){
+        tb[m.b].gw+=sb;tb[m.b].gl+=sa;tb[m.b][wa?'l':'w']++;
+        tb[m.b].form.push(wa?'L':'W');
+        if(tb[m.a])tb[m.b].h2h[m.a]=(tb[m.b].h2h[m.a]||0)+(wa?-1:1);
+      }
+    }
   return Object.values(tb).sort((x,y)=>(y.w-x.w)||((y.gw-y.gl)-(x.gw-x.gl))||((y.h2h[x.tid]||0)-(x.h2h[y.tid]||0))||(hashStr(s.seed+x.tid)-hashStr(s.seed+y.tid)));
 }
 function recordLines(s,lines){
