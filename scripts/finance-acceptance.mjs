@@ -79,6 +79,6 @@ assert(ui.includes('financeForecast(DB,t)')&&ui.includes('예상 수입')&&ui.in
 assert(season.includes('financePanel(DB.teams[me])'),'forecast is not visible in the season history view');
 assert(office.includes('facilityProjects')&&office.includes('완료 예정'),'club office must show active construction');
 assert(day.includes('advanceFacilityConstruction(db,d)'),'calendar must complete facility construction');
-assert(year.includes('financeForecast(db,t).closingCash>reserve'),
-  'AI board investments must respect cash runway');
+assert(year.includes('facilityInvestmentScore(db,t,key)')&&year.includes('financeRunway(db,t)')&&year.includes('opt.cost+opt.reserve'),
+  'AI board investments must respect marginal facility benefit and liquidity');
 console.log('Phase 12 finance UI/AI integration: PASS');
