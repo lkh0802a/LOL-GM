@@ -25,15 +25,85 @@ const fixture=String.raw`(()=>{
   const leagueFixtureDates=domestic.days.filter(d=>d.matches.some(m=>
     m.a===user.id||m.b===user.id)).map(d=>d.date);
   assert(leagueFixtureDates.length>=8,'league schedule does not reach eight games');
+  const broadcastStart=domestic.days[0].date,firstUserFixture=leagueFixtureDates[0];
+  assert(new Date(broadcastStart+'T00:00:00Z').getUTCDay()===2,
+    'six-day television week must open on Tuesday');
   for(let week=0;week<4;week++){
-    const start=addDays(firstFixture,week*7),end=addDays(start,7);
+    const start=addDays(broadcastStart,week*7),end=addDays(start,7);
     const weekly=leagueFixtureDates.filter(date=>date>=start&&date<end);
-    assert(weekly.length===2,'each first-division team must have two regular matches per week');
+    assert(weekly.length===2,'each first-division team must play twice in a broadcast week');
+    const broadcast=domestic.days.filter(day=>day.stage==='regular'&&day.date>=start&&day.date<end);
+    assert(broadcast.length===6,'each complete domestic week must have six broadcast days');
+    const perClub={};
+    for(const day of broadcast){
+      assert(new Date(day.date+'T00:00:00Z').getUTCDay()!==1,
+        'the domestic broadcast week must keep Monday dark');
+      assert(day.matches.length<=2,'ten-club league needs at most two broadcast series per day');
+      const sessionIds=new Set();
+      for(const match of day.matches){
+        assert(match.time&&match.broadcastSlot&&!sessionIds.has(match.broadcastSlot),
+          'a broadcast series lacks a distinct timed session');
+        sessionIds.add(match.broadcastSlot);
+        for(const id of [match.a,match.b]){
+          perClub[id]=(perClub[id]||0)+1;
+          assert(broadcast.filter(d=>d.date===day.date).flatMap(d=>d.matches)
+            .filter(m=>m.a===id||m.b===id).length===1,
+            'a club was booked for multiple official series on one date');
+        }
+      }
+    }
+    assert(Object.values(perClub).length===10&&Object.values(perClub).every(n=>n===2),
+      'two weekly official fixtures must be guaranteed for every club');
   }
   for(let i=1;i<8;i++){
     const elapsed=(new Date(leagueFixtureDates[i]+'T00:00:00Z')-
       new Date(leagueFixtureDates[i-1]+'T00:00:00Z'))/86400000;
-    assert(elapsed===(i%2?3:4),'domestic match dates must alternate 3/4 day breaks');
+    assert(elapsed>=2&&elapsed<=6,
+      'domestic club must keep a rest day between twice-weekly official series');
+  }
+  // Large leagues need three or four matches on a single TV day, not
+  // sixteen same-day Bo3s. Group formats retain two weekly series/club.
+  for(const clubs of [12,16,18,20]){
+    const teamIds=Array.from({length:clubs},(_,index)=>'TV-'+clubs+'-'+index);
+    const R=regionCfg('NA',{teams:clubs,legs:2,format:clubs===16?'groups_po':'rr_po'});
+    const stages=leagueStages(R,clubs,1);
+    const league='BROADCAST-'+clubs;
+    db.competitions[league]={id:league,teams:teamIds,stages};
+    const schedule=newSeason(db,league,2027,'broadcast-'+clubs,'2027-01-14',league);
+    const date0=schedule.days[0].date;
+    const slots=new Set(schedule.days.filter(day=>day.stage===stages[0].id)
+      .flatMap(day=>day.matches.map(match=>match.id)));
+    assert(slots.size===schedule.days.filter(day=>day.stage===stages[0].id)
+      .reduce((n,day)=>n+day.matches.length,0),
+      'broadcast scheduling duplicated official series at '+clubs+' teams');
+    for(let week=0;week<4;week++){
+      const start=addDays(date0,week*7),end=addDays(start,7);
+      const days=schedule.days.filter(day=>day.stage===stages[0].id&&
+        day.date>=start&&day.date<end);
+      const perTeam=Object.fromEntries(teamIds.map(id=>[id,[]]));
+      for(const day of days){
+        assert(new Date(day.date+'T00:00:00Z').getUTCDay()!==1,
+          'a domestic TV match was scheduled on Monday');
+        assert(day.matches.length<=Math.max(2,Math.ceil(clubs/6)),
+          'six-day broadcast day was overloaded for '+clubs+' teams');
+        const sameDay=new Set();
+        for(const match of day.matches){
+          assert(match.time&&match.broadcastSlot,'TV slot lacks a published time');
+          for(const tid of [match.a,match.b]){
+            assert(!sameDay.has(tid),'team booked twice on one broadcast date');
+            sameDay.add(tid);
+            perTeam[tid].push(day.date);
+          }
+        }
+      }
+      assert(Object.values(perTeam).every(dates=>dates.length===2),
+        clubs+'-team broadcast week does not deliver two official series per club');
+      assert(Object.values(perTeam).every(dates=>
+        (new Date(dates[1]+'T00:00:00Z')-
+          new Date(dates[0]+'T00:00:00Z'))/86400000>=2),
+        'a club was forced to play live official matches on adjacent dates');
+    }
+    delete db.competitions[league];
   }
   const t=db.teams[user.id],p=db.players[t.roster[0]];
   assert(p,'managed team needs a real player');
@@ -110,7 +180,7 @@ const fixture=String.raw`(()=>{
     last=r.date;
     if(r.pending){pending=r;break}
   }
-  assert(pending&&pending.date===firstFixture,'managed draft did not pause on the first match date');
+  assert(pending&&pending.date===firstUserFixture,'managed draft did not pause on its own scheduled broadcast date');
   const matchDate=db.worldDate,marker=db.world.lastDailyTick,
     practice=p.roleConversion?.trainingDays,fatigue=p.fatigue,
     facility=t.facilities.training,patches=db.patches.list.length;
@@ -156,16 +226,55 @@ const fixture=String.raw`(()=>{
   assert(learned>priorLearning,'private scrims did not train champion mastery');
   assert((prep.metaGames||0)===priorMeta,
     'private practice polluted the official patch/meta sample count');
-  const checkTeam=activePractice[0].team;
+  const checkTeam=activePractice[0].team,
+    fixtureTeam=prep.teams[domestic.days[0].matches[0].a],
+    idleTeam=activeTeams(prep,null,1).find(team=>
+      !domestic.days[0].matches.some(m=>m.a===team.id||m.b===team.id));
   prep.worldDate=addDays(firstFixture,-1);
-  assert(scrimDailyCapacity(prep,checkTeam)<=2,
-    'match eve should cap private practice at a light two-set session');
+  assert(scrimDailyCapacity(prep,fixtureTeam)<=2,
+    'a fixture-day opponent needs reduced match-eve scrim volume');
   prep.worldDate=firstFixture;
-  assert(scrimDailyCapacity(prep,checkTeam)===0&&!scrimReadiness(prep,checkTeam).ok,
-    'official double-header dates cannot schedule conflicting scrims');
+  assert(officialBookedTeams(prep).has(fixtureTeam.id)&&
+    !officialBookedTeams(prep).has(idleTeam.id),
+    'the shared official booking table must identify the actual two teams on stage');
+  assert(scrimDailyCapacity(prep,fixtureTeam)===0&&
+    !scrimReadiness(prep,fixtureTeam).ok,
+    'official match day must block practice for the competing team');
+  const rejected=simulateBackgroundScrim(prep,fixtureTeam,idleTeam,1,
+    new RNG('booked-official','scrim'),'afternoon');
+  assert(rejected===null,'a team with an official fixture was allowed to scrim an idle club');
+
+  // On a mutually open date, both sides reserve the same session block.
+  const mutual=unpackDB(packDB(checkpoint)),pair=activeTeams(mutual,null,1).slice(0,2);
+  mutual.worldDate=addDays(firstFixture,-4);
+  assert(!officialBookedTeams(mutual).has(pair[0].id)&&
+    !officialBookedTeams(mutual).has(pair[1].id),
+    'the test setup must give both practice opponents a free day');
+  const firstBlock=simulateBackgroundScrim(mutual,pair[0],pair[1],2,
+    new RNG('mutual-scrim','afternoon'),'afternoon');
+  assert(firstBlock?.games.length===2&&pair.every(team=>
+    (team.scrimLog||[]).some(log=>log.date===mutual.worldDate&&
+      log.slot==='afternoon'&&log.opponent===(team===pair[0]?pair[1].id:pair[0].id))),
+    'afternoon practice must book one identical slot for both clubs');
+  assert(simulateBackgroundScrim(mutual,pair[0],pair[1],1,
+    new RNG('double-booked','afternoon'),'afternoon')===null,
+    'a team was booked twice in the same practice slot');
+  const evening=simulateBackgroundScrim(mutual,pair[0],pair[1],2,
+    new RNG('mutual-scrim','evening'),'evening');
+  assert(evening?.games.length===2,
+    'both teams with free evening schedules should be allowed a second practice block');
+  assert(!scrimReadiness(mutual,pair[0]).ok&&
+    simulateBackgroundScrim(mutual,pair[0],pair[1],1,
+      new RNG('third-slot','scrim'),'afternoon')===null,
+    'a full day incorrectly allowed an unscheduled third practice block');
+  const savedMutual=unpackDB(packDB(mutual));
+  assert(savedMutual.teams[pair[0].id].scrimLog.some(log=>log.slot==='afternoon')&&
+    savedMutual.teams[pair[1].id].scrimLog.some(log=>log.slot==='evening'),
+    'both synchronized practice bookings must survive saving');
+
   const scrimSaved=unpackDB(packDB(prep));
   assert(scrimSaved.teams[checkTeam.id].scrimLog.length===checkTeam.scrimLog.length,
-    'multiple same-day private scrim sessions were lost in v15 save/restore');
+    'multiple private scrim sessions were lost in v15 save/restore');
   const legacy=JSON.parse(packDB(resumed));
   delete legacy.saveFormat;delete legacy.world.lastDailyTick;
   const oldSave=unpackDB(JSON.stringify(legacy));
@@ -188,7 +297,7 @@ check(home.includes('id="sday">하루 진행')&&home.includes('id="sfixture">다
   'day-advance controls are not labelled truthfully');
 check(season.includes('lastDailyTick===date')&&season.includes('majorPatchEvents.push'),
   'idempotent dates and deferred patch processing missing');
-check(scrim.includes('scrimDailyCapacity')&&scrim.includes('simulateBackgroundScrim')&&
-  scrim.includes('slice(-39)'),
+check(scrim.includes('officialBookedTeams(db)')&&scrim.includes('availableSlots')&&
+  scrim.includes('simulateBackgroundScrim')&&scrim.includes('slice(-39)'),
   'multi-block daily scrim planning and multi-day practice history missing');
 console.log('D01 calendar/UI integration acceptance: PASS');

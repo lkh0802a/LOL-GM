@@ -30,8 +30,35 @@ function addStageDays(db,s,idx,teams,date){
   if(cfg.type==='round_robin'){
     let groups=[teams];
     if(cfg.groups>1){groups=Array.from({length:cfg.groups},()=>[]);teams.forEach((t,i)=>{const r=Math.floor(i/cfg.groups),k=i%cfg.groups;groups[r%2?cfg.groups-1-k:k].push(t)})}
-    const sched=groups.map(g=>roundRobin(g,cfg.legs||1)), R=Math.max(...sched.map(x=>x.length));
-    for(let r=0;r<R;r++){pushDay(s,date,cfg.id,`${cfg.name} ${r+1}라운드`,sched.flatMap(x=>x[r]||[]),cfg.bestOf);date=addDays(date,gap(r))}
+    const sched=groups.map(g=>roundRobin(g,cfg.legs||1)),R=Math.max(...sched.map(x=>x.length));
+    if(cfg.broadcastWeek){
+      // Two fixtures per club per seven-day week; matches are aired on
+      // Tuesday–Sunday, rather than all teams being forced onto two dates.
+      const anchor=nextBroadcastTuesday(date);
+      for(let week=0;week<Math.ceil(R/2);week++){
+        const first=sched.flatMap(x=>x[week*2]||[]),
+          second=sched.flatMap(x=>x[week*2+1]||[]);
+        const weekDays=allocateBroadcastWeek(first,second,week);
+        for(let offset=0;offset<6;offset++){
+          const fixtures=weekDays[offset];
+          if(!fixtures.length)continue;
+          const round=week*2+fixtures[0].round+1;
+          pushDay(s,addDays(anchor,week*7+offset),cfg.id,
+            `${cfg.name} ${round}라운드`,fixtures.map(x=>x.pair),cfg.bestOf);
+          const matches=s.days[s.days.length-1].matches;
+          for(let slot=0;slot<matches.length;slot++){
+            matches[slot].time=broadcastSlotTime(slot,matches.length);
+            matches[slot].broadcastSlot=slot+1;
+          }
+        }
+      }
+    }else{
+      for(let r=0;r<R;r++){
+        pushDay(s,date,cfg.id,`${cfg.name} ${r+1}라운드`,
+          sched.flatMap(x=>x[r]||[]),cfg.bestOf);
+        date=addDays(date,gap(r));
+      }
+    }
     s.stageData[cfg.id]={type:cfg.type,teams,groups:cfg.groups>1?groups:null};
   } else if(cfg.type==='swiss'){
     const sd=s.stageData[cfg.id]={type:'swiss',teams,rec:Object.fromEntries(teams.map(t=>[t,{w:0,l:0,opp:[]}])),round:0,advanced:[],out:[],W:cfg.wins||3,L:cfg.losses||3};
@@ -193,7 +220,7 @@ const INTL_FORMATS={playin_swiss_ko:'플레이인 + 스위스 + 녹아웃',swiss
 function leagueStages(R,n,div){
   const fmt=R.format||'rr_po', bo=Math.max(3,R.regularBo||3), pbo=div===2?3:Math.max(3,R.playoffBo||5);
   const take=div===2?Math.min(4,n):Math.min(Math.max(4,R.playoffTake||4),n);
-  const rr={id:'regular',name:'정규 시즌',type:'round_robin',legs:Math.max(2,R.legs||2),bestOf:bo,dayGap:[3,4]};
+  const rr={id:'regular',name:'정규 시즌',type:'round_robin',legs:Math.max(2,R.legs||2),bestOf:bo,dayGap:[3,4],broadcastWeek:true};
   const po=t=>({id:'playoffs',name:'플레이오프',type:'single_elim',from:'regular',take:t,bestOf:pbo,dayGap:[6,6],firstChoice:'seed'});
   if(div===2)return [rr,po(take)];
   if(fmt==='rr_de')return [rr,{id:'playoffs',name:'플레이오프',type:'double_elim',from:'regular',take:take>=8&&n>=8?8:take>=6&&n>=8?8:4,bestOf:pbo,dayGap:[4,4]}];

@@ -7,8 +7,11 @@ function scrimAnalysisBonus(t){
   const p=staffProfile(t);
   return clamp((p.analysis-50)/500+facilityAnalysisBonus(t),0,.14);
 }
-function scrimDailyCapacity(db,t){
+function scrimDailyCapacity(db,t,booked=null){
   if(!t||t.active===false)return 0;
+  // Check the complete official calendar, not merely the next *unplayed*
+  // match: an already completed televised series still books the full day.
+  if((booked||officialBookedTeams(db)).has(t.id))return 0;
   const days=daysUntil(db,nextTeamMatch(db,t.id)?.date);
   if(days===0)return 0; // No practice blocks on an official fixture day.
   const roster=(t.roster||[]).map(id=>db.players[id]).filter(p=>p&&!p.retired);
@@ -22,17 +25,22 @@ function scrimDailyCapacity(db,t){
   const conditionCap=condition<=77?2:condition<=85?4:6;
   return Math.min(scheduleCap,fatigueCap,conditionCap);
 }
-function scrimReadiness(db,t){
+function scrimReadiness(db,t,booked=null){
   if(!t)return {ok:false,reason:'팀 없음'};
   const roster=(t.roster||[]).map(id=>db.players[id]).filter(Boolean);
   const avgFatigue=avg(roster.map(p=>p.fatigue||0));
   const avgCondition=avg(roster.map(p=>p.condition??96));
-  const capacity=scrimDailyCapacity(db,t),today=db.worldDate||'';
+  const capacity=scrimDailyCapacity(db,t,booked),today=db.worldDate||'';
   const log=(t.scrimLog||[]).filter(x=>x.date===today);
   const games=log.reduce((a,x)=>a+(x.games||0),0);
-  if(capacity===0)return {ok:false,reason:'공식 경기 또는 회복 우선',avgFatigue,avgCondition,games,capacity};
-  if(games>=capacity)return {ok:false,reason:'오늘 스크림 연습량 완료',avgFatigue,avgCondition,games,capacity};
-  return {ok:true,reason:'가능',avgFatigue,avgCondition,games,capacity,remaining:capacity-games};
+  // Two distinct booking blocks. Old saved scrims did not have a block field;
+  // retain their occupied sessions in recorded order.
+  const occupied=new Set(log.map((x,i)=>x.slot||(['afternoon','evening'][Math.min(1,i)])));
+  const availableSlots=['afternoon','evening'].filter(slot=>!occupied.has(slot));
+  if(capacity===0)return {ok:false,reason:'공식 경기 또는 회복 우선',avgFatigue,avgCondition,games,capacity,availableSlots:[]};
+  if(games>=capacity||!availableSlots.length)
+    return {ok:false,reason:'오늘 스크림 연습량 완료',avgFatigue,avgCondition,games,capacity,availableSlots:[]};
+  return {ok:true,reason:'가능',avgFatigue,avgCondition,games,capacity,remaining:capacity-games,availableSlots};
 }
 function scrimValue(db,tid,oppId){
   const t=db.teams[tid],opp=db.teams[oppId];if(!t||!opp)return .5;
@@ -58,7 +66,11 @@ function backgroundScrimChampion(db,p,role,rng){
 // inputs to resolve each private set. It does not forge official match rows,
 // meta sample counts, or public statistics. Interactive scrims (D09) can still
 // use simulateSeries to generate full draft/match replays.
-function simulateBackgroundScrim(db,t,opp,games,rng){
+function simulateBackgroundScrim(db,t,opp,games,rng,slot,booked=null){
+  // Double-sided preflight: both teams need the very same unbooked block.
+  const first=scrimReadiness(db,t,booked),second=scrimReadiness(db,opp,booked);
+  if(!slot||!first.ok||!second.ok||!first.availableSlots.includes(slot)||
+    !second.availableSlots.includes(slot)||games>first.remaining||games>second.remaining)return null;
   const participants=[t,opp],lines=[],results=[],wins={[t.id]:0,[opp.id]:0};
   for(let g=0;g<games;g++){
     const selections=participants.map(team=>ROLES.map(role=>{
@@ -90,34 +102,38 @@ function simulateBackgroundScrim(db,t,opp,games,rng){
     results.push({n:g+1,winner,picks});
   }
   if(!results.length)return null;
-  const rec={a:t.id,b:opp.id,games:results,wins,practice:true,patch:db.patch.id,date:db.worldDate};
+  const rec={a:t.id,b:opp.id,games:results,wins,practice:true,patch:db.patch.id,
+    date:db.worldDate,slot};
   recordScrimPractice(db,rec,lines);
   return rec;
 }
 function aiRunScrims(db,rng){
   // A manager's club also receives routine practice. Choosing a specific
   // opponent or requesting an interactive full scrim belongs to D09.
+  const booked=officialBookedTeams(db);
   const eligible=activeTeams(db,null,1).filter(t=>trainingRecommendation(db,t).scrim&&
-    scrimReadiness(db,t).ok);
+    scrimReadiness(db,t,booked).ok);
   let blocks=0,sets=0;
   // Two scheduled daily blocks, with 2-3 sets each; matches and recovery
   // automatically narrow the daily allowance to 0-2 or 0-4 sets.
-  for(let round=0;round<2;round++){
+  for(const slot of ['afternoon','evening']){
     const busy=new Set();
     const order=eligible.slice().sort((a,b)=>String(a.id).localeCompare(String(b.id)));
     for(const t of order){
-      if(busy.has(t.id)||!scrimReadiness(db,t).ok||!rng.chance(.84))continue;
+      const first=scrimReadiness(db,t,booked);
+      if(busy.has(t.id)||!first.ok||!first.availableSlots.includes(slot)||!rng.chance(.84))continue;
       const candidates=order.filter(o=>o.id!==t.id&&!busy.has(o.id)&&
-        o.region===t.region&&scrimReadiness(db,o).ok);
+        o.region===t.region&&
+        scrimReadiness(db,o,booked).availableSlots?.includes(slot));
       if(!candidates.length)continue;
       const ranked=candidates.map(o=>({team:o,weight:Math.max(.1,scrimValue(db,t.id,o.id))}));
       const total=ranked.reduce((sum,row)=>sum+row.weight,0);
       let roll=rng.next()*total,opponent=ranked[0].team;
       for(const row of ranked){roll-=row.weight;if(roll<=0){opponent=row.team;break}}
-      const games=Math.min(3,scrimReadiness(db,t).remaining,
-        scrimReadiness(db,opponent).remaining);
+      const second=scrimReadiness(db,opponent,booked);
+      const games=Math.min(3,first.remaining,second.remaining);
       if(games<1)continue;
-      const rec=simulateBackgroundScrim(db,t,opponent,games,rng);
+      const rec=simulateBackgroundScrim(db,t,opponent,games,rng,slot,booked);
       if(!rec)continue;
       busy.add(t.id);busy.add(opponent.id);
       blocks++;sets+=rec.games.length;
@@ -142,7 +158,7 @@ function recordScrimPractice(db,rec,lines){
     team.scrimLog=(team.scrimLog||[]).slice(-39);
     team.scrimLog.push({date:db.worldDate,games,opponent:opp,
       wins:rec.wins?.[tid]??null,losses:rec.wins?games-(rec.wins[tid]||0):null,
-      patch:rec.patch||db.patch.id});
+      patch:rec.patch||db.patch.id,slot:rec.slot||null});
   }
   recordRoleConversionUsage(db,lines,'scrim');
   return {players:seen.size,games};
