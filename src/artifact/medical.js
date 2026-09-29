@@ -74,6 +74,37 @@ function medicalEmergencyCallup(db,t,injured){
   }
   return null;
 }
+// Reserve registration has priority. If a club has no spare academy player,
+// try one legal season-long FA contract through the shared atomic transaction.
+// A cash-strapped club or full roster cannot bypass its spending/slot limits.
+function medicalEmergencyFASigning(db,t,injured){
+  if(!t||medicalAvailable(db,t)!==5)return null;
+  const rules=rosterRulesForTeam(db,t),cap=t.parent?rules.reserveTeamMax:rules.firstTeamMax;
+  if((t.roster||[]).length>=cap||!t.finance||t.finance.cash<=0)return null;
+  const budget=salaryBudget(db,t)-payroll(db,t);
+  if(!Number.isFinite(budget)||budget<=0)return null;
+  const choices=Object.values(db.players).filter(p=>
+    p&&!p.retired&&!p.team&&!medicalOut(p)&&!(p.medical?.daysLeft>0)&&
+    !localRegistrationError(db,t,p))
+    .map(p=>({p,salary:asking(db,p,t.region)}))
+    .filter(x=>Number.isFinite(x.salary)&&x.salary<=budget+1e-8&&x.salary<=t.finance.cash*2)
+    .sort((a,b)=>{
+      const fit=x=>lineupRoleScore(x.p,injured.role)-
+        Math.min(4,x.salary/Math.max(.1,psTeam(db,t)))*.12;
+      return fit(b)-fit(a)||a.salary-b.salary||a.p.id.localeCompare(b.p.id);
+    });
+  for(const {p,salary} of choices){
+    const result=commitWorldAction(db,{type:'player.sign',pid:p.id,teamId:t.id,
+      salary,years:1,terms:{promisedRole:'competition'},kind:'fa',actor:'system'});
+    if(!result.ok)continue;
+    recordPlayerEvent(p,'medical_emergency_fa',db.year,
+      {date:db.worldDate,for:injured.id,to:t.id,salary,until:p.contract.until});
+    if(parentTeamOf(db,t)?.id===managedTeamId(db))news(db,
+      injured.name+'의 결장에 대비해 FA '+p.name+' 긴급 영입 ('+t.short+')');
+    return p;
+  }
+  return null;
+}
 // Explicit entry point allows deterministic validation of medical severity and
 // the legal five-player floor, without rolling arbitrary real-world odds.
 function startMedicalEvent(db,p,kind,level,days,date=db.worldDate,rng=null){
@@ -84,7 +115,7 @@ function startMedicalEvent(db,p,kind,level,days,date=db.worldDate,rng=null){
   const proposedOut=level!=='minor';
   const t=p.team&&db.teams[p.team];
   if(proposedOut&&t&&medicalAvailable(db,t)===5)
-    medicalEmergencyCallup(db,t,p);
+    medicalEmergencyCallup(db,t,p)||medicalEmergencyFASigning(db,t,p);
   const enough=t&&medicalAvailable(db,t)>5;
   const out=!!(proposedOut&&enough);
   const severity=out?level:'minor';
