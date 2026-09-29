@@ -97,7 +97,16 @@ function startInternational(db,id,start,taken=new Set()){
   const teams=[];for(let k=0;k<6;k++)for(const l of lists)if(l[k])teams.push(l[k]);
   if(teams.length<4)return false;
   teams.forEach(t=>taken.add(t));
-  db.competitions[id]={id,name:it.name,short:it.short||id,teams,rules:{fearless:true},international:true,tier:it.tier||'top',stages:intlStages(it.format,teams,it.bo)};
+  // Host-country time is authoritative for international broadcasts. If no
+  // venue is fixed by the competition config, rotate deterministically among
+  // participating regions; never default to the manager's local clock.
+  const regions=[...new Set(teams.map(t=>db.teams[t]?.region))].filter(r=>db.regions[r]).sort(),
+    hostRegion=it.hostRegion&&db.regions[it.hostRegion]?it.hostRegion:
+      regions[Math.abs(hashStr(id+'/'+w.year))%regions.length],
+    timeZone=it.timeZone||regionTimeZone(db,hostRegion);
+  db.competitions[id]={id,name:it.name,short:it.short||id,teams,rules:{fearless:true},
+    international:true,tier:it.tier||'top',hostRegion,timeZone,
+    stages:intlStages(it.format,teams,it.bo)};
   const s=newSeason(db,id,w.year,`${w.seed}/${w.year}/${id}`,start,id);
   s.key=id;s.label='';s.step=w.step;w.seasons[id]=s;
   s.stagesInfo=db.competitions[id].stages.map(x=>x.name).join(' → ');
