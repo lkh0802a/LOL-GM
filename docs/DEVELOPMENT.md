@@ -24,6 +24,12 @@ Development progress is tracked by the 22 major LOL GM systems. Finish one major
 - `11.5. 아키텍처 정리 / UI 통합` — COMPLETE (2026-09-29; steps 1–6)
 - `12. 시설 / 재정` — COMPLETE (2026-09-29; Phase 12 acceptance, engine regression, 2-season career, performance and build CI passed). See `docs/PHASE_12_FINANCE.md`.
 
+## Functional depth acceptance rule (2026-09-29)
+
+**Existing function/class/UI presence is a baseline, not a completion criterion.** For each of Items 12–23 and any revisit of earlier systems, build and validate a complete cause-and-effect gameplay loop: data/state → engine decision/constraint → interaction with adjacent domains → player-facing consequences → long-save consistency → AI/manager parity → tests under normal and stress conditions. Reusing the existing code is preferred to writing duplicate systems; filling only UI counters or producing documentation is insufficient. Game-world and club-economic outcomes must be emergent from their respective entities' actual context, not universal scripted rewards.
+
+The first Item 12 pass was limited to budget outlooks and prepaid-flow accounting; Item 12-B adds sponsor choices and sport-based payouts, regional commerce, liquidity-sensitive AI policies, a specialized scouting facility and actual parent/academy fiscal transfers. See `docs/PHASE_12_FINANCE.md`. 100-season economy inflation/competitive convergence belongs to the long-run QA stage and must not be claimed as validated by a two-season acceptance alone. Future item completion claims must explain both actual game rules delivered and known boundaries, not simply which existing modules were found.
+
 ## Product-wide convenience acceptance rule (2026-09-27)
 
 Every major system, including already engine-complete Items 1–6, is subject to a standing convenience acceptance rule: automate repetitive or administrative actions only when they do not commit a strategic choice; recommendations, batching, sorting and prefill may be automated, but consequential sporting decisions for the managed club require explicit player confirmation; batch repeated actions where practical; preview projected state, cost and consequences before commit; validate the final state rather than transient intermediate clicks; preserve filters/scroll/editing context; and keep mobile decision surfaces compact. Completion status means the engine contract is accepted, not that poor interaction patterns are frozen.
