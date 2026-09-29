@@ -14,7 +14,7 @@ function renderRecruitmentBoard(){
 }
 function renderMarket(){
   const w=DB.world,t=DB.teams[managedTeamId(DB)],R=DB.regions[t.region],pay=payroll(DB,t),budget=salaryBudget(DB,t);
-  const exp=t.roster.map(id=>DB.players[id]).filter(p=>!p.contract||p.contract.until<DB.year);
+  const exp=t.roster.map(id=>DB.players[id]).filter(p=>!p.contract||!p.contract.medicalReplacement&&p.contract.until<DB.year);
   const roster=t.roster.map(id=>DB.players[id]);
   const fas=Object.values(DB.players).filter(p=>!p.retired&&!p.team&&(MK.role==='ALL'||p.role===MK.role)&&(MK.scope==='all'||isLocalPlayer(p,t.region))).sort((a,b)=>obsOvr(DB,b)-obsOvr(DB,a)).slice(0,25);
   const tgts=activeTeams(DB,MK.scope==='all'?null:t.region,1).filter(o=>o.id!==t.id).flatMap(o=>o.roster.map(id=>DB.players[id])).filter(p=>p&&p.contract&&(MK.role==='ALL'||p.role===MK.role)).sort((a,b)=>obsOvr(DB,b)-obsOvr(DB,a)).slice(0,25);
@@ -24,7 +24,7 @@ function renderMarket(){
   <h4>진행 중인 협상</h4>${renderNegotiations()}
   <h4>영입 후보 A/B/C</h4>${renderRecruitmentBoard()}
   ${exp.length?`<h4>계약 결정 — 헤드코치 직접 확정</h4>${exp.map(p=>{const n=negotiationStore(DB)[negotiationId(DB,p.id,'renewal')],o=p.contract?.option,opt=o&&o.year===DB.year?o:null;return `<div class="mrow"><span><span class="role">${ROLE_KO[p.role]}</span> <b>${esc(p.name)}</b> ${p.age}세 · 종합 ${playerOvr(p)} · ${p.contract?`현재 ${money(p.contract.salary)} · 시장 요구 약 ${money(asking(DB,p,t.region))}`:'무계약 상태 · 정식 계약 필요'}${opt?` · ${opt.type==='team'?'팀':'선수'} 옵션 ${money(opt.salary)}`:''}</span><span>${opt?.type==='team'?`<button class="ghost sm2" data-exercise-option="${p.id}">팀 옵션 행사</button>`:opt?.type==='player'?'<small class="hint">선수 측 옵션 결정</small>':''}${n&&n.status==='open'?'<small class="hi">협상 중</small>':`<button class="primary sm2" data-start-renew="${p.id}">재계약 협상</button>`}</span></div>`}).join('')}`:''}
-  <h4>현재 로스터</h4>${roster.map(p=>`<div class="mrow"><span><span class="role">${ROLE_KO[p.role]}</span> <b>${esc(p.name)}</b> ${p.age}세 · 종합 ${playerOvr(p)} · ${p.contract?money(p.contract.salary)+' ~'+p.contract.until:''}${starterFor(DB,t,p.role)===p?'':' <small class="hint">후보</small>'}</span><button class="ghost sm2" data-release="${p.id}">방출</button></div>`).join('')}
+  <h4>현재 로스터</h4>${roster.map(p=>`<div class="mrow"><span><span class="role">${ROLE_KO[p.role]}</span> <b>${esc(p.name)}</b> ${p.age}세 · 종합 ${playerOvr(p)} · ${p.contract?.medicalReplacement?'의료 대체 · 연 환산 '+money(p.contract.salary)+' · 보장 '+p.contract.medicalReplacement.guaranteedThrough+' · 조건 종료 '+p.contract.medicalReplacement.expiresOn:p.contract?money(p.contract.salary)+' ~'+p.contract.until:''}${starterFor(DB,t,p.role)===p?'':' <small class="hint">후보</small>'}</span><button class="ghost sm2" data-release="${p.id}">방출</button></div>`).join('')}
   ${sponsorBlock(t)}
   <div class="controls" style="margin-top:12px"><div class="seg"><button data-mk="fa" aria-pressed="${MK.tab==='fa'}">FA</button><button data-mk="tr" aria-pressed="${MK.tab==='tr'}">이적 대상</button><button data-mk="coach" aria-pressed="${MK.tab==='coach'}">스태프</button></div>
     <label>포지션<select id="mkrole"><option value="ALL">전체</option>${ROLES.map(r=>`<option value="${r}"${MK.role===r?' selected':''}>${ROLE_KO[r]}</option>`).join('')}</select></label>
@@ -38,7 +38,7 @@ function bindMarket(){
   bindClubOfficeControls(act);
   document.querySelectorAll('[data-exercise-option]').forEach(b=>b.onclick=()=>act(mExerciseTeamOption(DB,b.dataset.exerciseOption)));
   document.querySelectorAll('[data-start-renew]').forEach(b=>b.onclick=()=>act(startNegotiation(DB,b.dataset.startRenew,'renewal').msg));
-  document.querySelectorAll('[data-release]').forEach(b=>b.onclick=()=>{const p=DB.players[b.dataset.release],cost=p.contract&&p.contract.until>=DB.year?p.contract.salary*(p.contract.until-DB.year+1)*.5:0;if(confirm(`${p.name} 선수를 방출할까요?\n해지금 ${money(cost)}${p.contract?` · 계약 ${p.contract.until}년까지`:''}\n방출 후 즉시 FA가 됩니다.`))act(mRelease(DB,b.dataset.release))});
+  document.querySelectorAll('[data-release]').forEach(b=>b.onclick=()=>{const p=DB.players[b.dataset.release],cost=p.contract?.medicalReplacement?0:p.contract&&p.contract.until>=DB.year?p.contract.salary*(p.contract.until-DB.year+1)*.5:0;if(confirm(`${p.name} 선수를 방출할까요?\n해지금 ${money(cost)}${p.contract?` · 계약 ${p.contract.until}년까지`:''}\n방출 후 즉시 FA가 됩니다.`))act(mRelease(DB,b.dataset.release))});
   document.querySelectorAll('[data-interest]').forEach(b=>b.onclick=()=>act(mInterest(DB,b.dataset.interest,'B')));
   document.querySelectorAll('[data-priority]').forEach(el=>el.onchange=()=>act(mInterest(DB,el.dataset.priority,el.value)));
   document.querySelectorAll('[data-evaluate]').forEach(b=>b.onclick=()=>act(mEvaluateTarget(DB,b.dataset.evaluate)));

@@ -109,10 +109,69 @@ function medicalEmergencyCallup(db,t,injured){
   }
   return null;
 }
+// This is an expressly limited replacement agreement, never an ordinary
+// one-year salary obligation. The guaranteed days are paid on signing; further
+// employed days are paid at the same agreed annualized daily rate. An automatic
+// end is conditional on the injured player returning OR the fixed expiry date,
+// and may not remove a club's legal/healthy five-player floor.
+const medicalWageRound=n=>Math.round(n*1000)/1000;
+const medicalDayDiff=(from,to)=>Math.max(0,Math.round(
+  (Date.parse(to+'T00:00:00Z')-Date.parse(from+'T00:00:00Z'))/86400000));
+function medicalReplacementClause(db,injured,plannedDays,annualSalary){
+  const days=Math.max(2,Math.min(90,Math.ceil(plannedDays))),
+    guaranteedDays=clamp(Math.ceil(days*.5),7,21),
+    maximumDays=clamp(days+7,14,90),start=db.worldDate;
+  const guaranteedThrough=addDays(start,guaranteedDays-1);
+  return {forPid:injured.id,absenceDays:plannedDays,startedOn:start,guaranteedThrough,
+    expiresOn:addDays(start,maximumDays-1),paidThrough:guaranteedThrough,
+    paid:medicalWageRound(annualSalary*guaranteedDays/365)};
+}
+function medicalReplacementSafeToEnd(db,p,date){
+  const c=p?.contract?.medicalReplacement,t=p?.team&&db.teams[p.team];
+  if(!c||!t||date<=c.guaranteedThrough)return false;
+  const injured=db.players[c.forPid],returned=injured?.team===t.id&&!medicalOut(injured);
+  if(!returned&&date<=c.expiresOn)return false;
+  const r=rosterRulesForTeam(db,t),min=t.parent?r.reserveTeamMin:r.firstTeamMin;
+  if(t.roster.length<=min||medicalAvailable(db,t)-(medicalOut(p)?0:1)<5)return false;
+  const org=parentTeamOf(db,t);
+  if(reserveTeamsOf(db,org).length&&organizationRoster(db,org).length<=r.integratedMin)return false;
+  return true;
+}
+function medicalReplacementCharge(db,p,through){
+  const c=p?.contract?.medicalReplacement,t=p?.team&&db.teams[p.team];
+  if(!c||!t||!through||through<=c.paidThrough)return 0;
+  const dayCount=medicalDayDiff(c.startedOn,through)+1;
+  const total=medicalWageRound(p.contract.salary*dayCount/365),
+    due=medicalWageRound(Math.max(0,total-c.paid));
+  if(due){
+    // An explicit conditional daily extension is a payroll liability even if
+    // the club's cash has since run out; never make a player work for free.
+    t.finance.cash=medicalWageRound(t.finance.cash-due);
+    recordFinancePrepaid(t,'medicalReplacementWage',due);
+  }
+  c.paid=medicalWageRound(c.paid+due);c.paidThrough=through;
+  return due;
+}
+function medicalReplacementDailyTick(db,date,projectedReturns={}){
+  for(const p of Object.values(db.players)){
+    const c=p.contract?.medicalReplacement;if(!c||!p.team)continue;
+    const release=medicalReplacementSafeToEnd(db,p,date);
+    let through=date;
+    if(release){
+      const source=db.players[c.forPid],returned=source?.team===p.team&&!medicalOut(source);
+      through=returned?Math.min(date,projectedReturns[c.forPid]||addDays(date,-1)):c.expiresOn;
+    }
+    medicalReplacementCharge(db,p,through);
+    if(!release)continue;
+    const ended=commitWorldAction(db,{type:'player.release',pid:p.id,
+      teamId:p.team,mode:'medical_end',date,actor:'system'});
+    if(!ended.ok)throw new Error('Medical replacement end failed: '+ended.errors.join(' / '));
+  }
+}
 // Reserve registration has priority. If a club has no spare academy player,
-// try one legal season-long FA contract through the shared atomic transaction.
-// A cash-strapped club or full roster cannot bypass its spending/slot limits.
-function medicalEmergencyFASigning(db,t,injured){
+// try one legal guaranteed/conditional temporary FA contract through the
+// shared atomic transaction. No athlete is generated at injury time.
+function medicalEmergencyFASigning(db,t,injured,days){
   if(!t||medicalAvailable(db,t)!==5)return null;
   const rules=rosterRulesForTeam(db,t),cap=t.parent?rules.reserveTeamMax:rules.firstTeamMax;
   if((t.roster||[]).length>=cap||!t.finance||t.finance.cash<=0)return null;
@@ -124,7 +183,8 @@ function medicalEmergencyFASigning(db,t,injured){
     p&&!p.retired&&!p.team&&!medicalOut(p)&&!(p.medical?.daysLeft>0)&&
     !localRegistrationError(db,t,p))
     .map(p=>({p,salary:asking(db,p,t.region)}))
-    .filter(x=>Number.isFinite(x.salary)&&x.salary<=budget+1e-8&&x.salary<=t.finance.cash*2)
+    .filter(x=>Number.isFinite(x.salary)&&x.salary<=budget+1e-8&&
+      medicalReplacementClause(db,injured,days,x.salary).paid<=t.finance.cash+1e-8)
     .sort((a,b)=>{
       const fit=x=>lineupRoleScore(x.p,injured.role)-
         Math.min(4,x.salary/Math.max(.1,psTeam(db,t)))*.12;
@@ -132,10 +192,10 @@ function medicalEmergencyFASigning(db,t,injured){
     });
   for(const {p,salary} of choices){
     const result=commitWorldAction(db,{type:'player.sign',pid:p.id,teamId:t.id,
-      salary,years:1,terms:{promisedRole:'competition'},kind:'fa',actor:'system'});
+      salary,years:1,terms:{promisedRole:'competition'},
+      replacement:{forPid:injured.id,absenceDays:days},
+      kind:'medical_replacement',actor:'system'});
     if(!result.ok)continue;
-    recordPlayerEvent(p,'medical_emergency_fa',db.year,
-      {date:db.worldDate,for:injured.id,to:t.id,salary,until:p.contract.until});
     if(parentTeamOf(db,t)?.id===managedTeamId(db))news(db,
       injured.name+'의 결장에 대비해 FA '+p.name+' 긴급 영입 ('+t.short+')');
     return p;
@@ -152,7 +212,7 @@ function startMedicalEvent(db,p,kind,level,days,date=db.worldDate,rng=null){
   const proposedOut=level!=='minor';
   const t=p.team&&db.teams[p.team];
   if(proposedOut&&t&&medicalAvailable(db,t)===5)
-    medicalEmergencyCallup(db,t,p)||medicalEmergencyFASigning(db,t,p);
+    medicalEmergencyCallup(db,t,p)||medicalEmergencyFASigning(db,t,p,days);
   const enough=t&&medicalAvailable(db,t)>5;
   const out=!!(proposedOut&&enough);
   const severity=out?level:'minor';
@@ -248,10 +308,18 @@ function medicalDailyTick(db,date){
         severity==='severe'?rng.int(22,50):severity==='moderate'?rng.int(7,17):rng.int(3,8);
       startMedicalEvent(db,p,kind,severity,Math.ceil(duration/clamp(care,.85,1.18)),date,rng);
   }
+  medicalReplacementDailyTick(db,date);
 }
 function medicalOffseasonRecovery(db,date){
   // Season progression can jump across a real offseason. Existing absences
-  // must not remain frozen until the next competitive fixture.
+  // must not remain frozen until the next competitive fixture. Snapshot the
+  // estimated return day before bulk recovery, so temporary cover is not
+  // charged for months after the player's expected return.
+  const projectedReturns={};
+  for(const p of Object.values(db.players))if(p.medical?.daysLeft>0){
+    const from=p.medical.lastTick||db.worldDate;
+    projectedReturns[p.id]=addDays(from,Math.ceil(p.medical.daysLeft/medicalCare(db,p)));
+  }
   for(const p of Object.values(db.players)){
     if(!p.medical?.daysLeft&&!p.medicalResidual?.daysLeft)continue;
     const from=p.medical?.lastTick||p.medicalResidual?.lastTick||db.worldDate;
@@ -259,4 +327,5 @@ function medicalOffseasonRecovery(db,date){
       Date.parse(from+'T00:00:00Z'))/86400000));
     if(elapsed)medicalHeal(db,p,elapsed,date);
   }
+  medicalReplacementDailyTick(db,date,projectedReturns);
 }

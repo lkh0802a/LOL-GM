@@ -181,7 +181,7 @@ source+=String.raw`(()=>{
     scarCount+=lost;
   }
   ok(scarCount>=2&&scarCount<100,'permanent loss was not rare');
-  // D02-B3: sign a season-long FA only when academy coverage is unavailable.
+  // D02-B3/B7: sign a guaranteed, day-billed replacement only when academy coverage is unavailable.
   // Exercise both the managed club and a rival under identical market rules.
   const verifyEmergencyFA=(team,label)=>{
     ok(team.roster.length===5&&medicalAvailable(db,team)===5,
@@ -191,6 +191,7 @@ source+=String.raw`(()=>{
     ok(available.length>=5,label+' emergency fixture has no natural FA reserve');
     const before=new Set(team.roster),beforePayroll=payroll(db,team);
     team.finance.cash=1000; // Give this deterministic fixture sufficient headroom.
+    const oldWages=team.finance.prepaid?.medicalReplacementWage||0;
     const victim=db.players[team.roster[0]];
     const priorMedical=victim.medical?{...victim.medical}:null;
     const incident=startMedicalEvent(db,victim,'injury','severe',21,db.worldDate);
@@ -200,13 +201,22 @@ source+=String.raw`(()=>{
     ok(incident?.out&&incident.severity==='severe'&&medicalOut(victim),
       label+' failed to apply a genuine medical absence: '+JSON.stringify({priorMedical,incident,available:medicalAvailable(db,team),roster:team.roster.length,faCount:Object.values(db.players).filter(x=>!x.team&&!x.retired).length,budget:salaryBudget(db,team)-payroll(db,team)}));
     ok(signed&&signed.team===team.id&&signed.contract?.years===1&&
-      signed.contract.until===db.year&&team.roster.length===6,
-      label+' did not sign a one-year substitute');
+      signed.contract.medicalReplacement&&team.roster.length===6,
+      label+' did not sign a genuine day-billed replacement');
+    const clause=signed.contract.medicalReplacement;
+    ok(clause.forPid===victim.id&&clause.startedOn===db.worldDate&&
+      clause.guaranteedThrough===addDays(db.worldDate,10)&&
+      clause.expiresOn===addDays(db.worldDate,27)&&
+      clause.paid>0&&clause.paid<signed.contract.salary/6,
+      label+' replacement guarantees or conditional deadline were invalid');
     ok(signed.careerEvents.some(e=>e.type==='medical_emergency_fa'&&
       e.for===victim.id&&e.to===team.id),
       label+' emergency signing lost its reason in player history');
-    ok(Math.abs(payroll(db,team)-beforePayroll-signed.contract.salary)<.001,
-      label+' substitute contract was not added to the wage bill');
+    ok(Math.abs(payroll(db,team)-beforePayroll)<.001,
+      label+' full-year payroll was inflated by an emergency short contract');
+    ok(Math.abs((team.finance.prepaid?.medicalReplacementWage||0)-oldWages-clause.paid)<.0001&&
+      Math.abs(1000-team.finance.cash-clause.paid)<.0001,
+      label+' guaranteed daily wages were not paid exactly once from cash');
     ok(medicalAvailable(db,team)===5&&validateStartingLineup(db,team).ok,
       label+' failed to maintain an eligible starting lineup');
     ok(rosterIntegrityErrors(db).length===0,
@@ -214,15 +224,78 @@ source+=String.raw`(()=>{
     const saved=unpackDB(packDB(db));
     ok(saved.players[victim.id].medical?.out&&
       saved.players[signed.id].team===team.id&&
-      saved.players[signed.id].contract?.until===db.year&&
+      saved.players[signed.id].contract?.medicalReplacement?.forPid===victim.id&&
       saved.teams[team.id].roster.includes(signed.id),
       label+' emergency signing or absence failed the save roundtrip');
+    return {team,victim,signed,clause};
   };
-  verifyEmergencyFA(manager,'manager');
+  const replacement=verifyEmergencyFA(manager,'manager');
   const aiClub=teams.find(t=>t.id!==manager.id&&t.id!==club.id&&
     t.roster.length===5&&medicalAvailable(db,t)===5);
   ok(aiClub,'need a five-person AI team for the FA signing test');
-  verifyEmergencyFA(aiClub,'AI');
+  const aiReplacement=verifyEmergencyFA(aiClub,'AI');
+  const baseDate=replacement.clause.startedOn;
+  const blocked=commitWorldAction(db,{type:'player.release',pid:replacement.signed.id,
+    teamId:replacement.team.id,mode:'medical_end',date:addDays(baseDate,2),actor:'system'});
+  ok(!blocked.ok&&medicalAvailable(db,replacement.team)===5,
+    'guaranteed period or healthy five-player floor was bypassed');
+  const noManagerCover=previewWorldAction(db,{type:'player.sign',
+    pid:Object.values(db.players).find(q=>!q.team&&!q.retired).id,
+    teamId:manager.id,salary:1,years:1,kind:'medical_replacement',
+    replacement:{forPid:replacement.victim.id,absenceDays:21},actor:'manager'});
+  ok(!noManagerCover.ok,'manager created a privileged medical replacement without system authority');
+  const cashBefore=manager.finance.cash,paidBefore=replacement.clause.paid;
+  medicalReplacementDailyTick(db,addDays(baseDate,12));
+  ok(replacement.signed.team===manager.id&&
+    medicalAvailable(db,manager)===5&&replacement.clause.paid>paidBefore&&
+    manager.finance.cash<cashBefore,
+    'daily medical cover was released early or extra work went unpaid');
+  const billed=replacement.clause.paid,cashBilled=manager.finance.cash;
+  medicalReplacementDailyTick(db,addDays(baseDate,12));
+  ok(replacement.clause.paid===billed&&manager.finance.cash===cashBilled,
+    'repeated medical date double-billed the same guaranteed daily work');
+  medicalReplacementDailyTick(db,addDays(baseDate,30));
+  ok(replacement.signed.team===manager.id&&medicalAvailable(db,manager)===5&&
+    replacement.clause.paid>billed,
+    'scheduled expiry removed the only legal substitute instead of paying an extension');
+  medicalHeal(db,replacement.victim,99,addDays(baseDate,31));
+  const prepaidEnd=replacement.clause.paid;
+  medicalReplacementDailyTick(db,addDays(baseDate,31));
+  ok(!replacement.signed.team&&!replacement.signed.contract&&
+    replacement.team.roster.length===5&&rosterIntegrityErrors(db).length===0&&
+    replacement.signed.careerEvents.some(e=>e.type==='medical_replacement_end'&&
+      e.for===replacement.victim.id&&Math.abs(e.paid-prepaidEnd)<.0001),
+    'recovered starter did not close the conditional contract through a legal atomic release');
+  const aiStart=aiReplacement.clause.startedOn;
+  medicalHeal(db,aiReplacement.victim,99,addDays(aiStart,2));
+  medicalReplacementDailyTick(db,addDays(aiStart,2));
+  ok(aiReplacement.signed.team===aiClub.id,
+    'quick recovery unlawfully cancelled the replacement guarantee');
+  medicalReplacementDailyTick(db,addDays(aiStart,11));
+  ok(!aiReplacement.signed.team&&
+    aiReplacement.signed.careerEvents.some(e=>e.type==='medical_replacement_end'),
+    'AI substitute was not released on the first legal post-guarantee day');
+  const allCommitted=financeOperatingExpense(db,manager).medicalReplacementWage;
+  ok(Math.abs(allCommitted-(manager.finance.prepaid?.medicalReplacementWage||0))<.0001,
+    'medical wage prepayment was missing from annual ledger');
+  // An offseason calendar jump should not bill 120 unused days after a
+  // replacement's original athlete would have recovered.
+  db.worldDate=addDays(baseDate,45);
+  const skipBefore=new Set(manager.roster);
+  const skippedIncident=startMedicalEvent(db,replacement.victim,
+    'injury','severe',21,db.worldDate);
+  const lateCover=manager.roster.map(id=>db.players[id]).find(q=>!skipBefore.has(q.id));
+  ok(skippedIncident?.out&&lateCover?.contract?.medicalReplacement,
+    'could not sign a fresh conditional replacement for calendar-skip test');
+  const lateClause=lateCover.contract.medicalReplacement,lateStart=db.worldDate;
+  const lateRest=unpackDB(packDB(db));
+  ok(lateRest.players[lateCover.id].contract.medicalReplacement.forPid===
+    replacement.victim.id,'short-term clause was lost in modern save');
+  medicalOffseasonRecovery(db,addDays(lateStart,120));
+  ok(!lateCover.team&&!lateCover.contract&&
+    lateClause.paid<lateRest.players[lateCover.id].contract.salary*50/365&&
+    medicalAvailable(db,manager)>=5&&rosterIntegrityErrors(db).length===0,
+    'calendar jump overcharged medical cover or failed to end the employment');
   // D02-B: protected top and reserve squads exchange only surplus healthy
   // players, using the same atomic roster plan as manager and club AI.
   const cfg2=defaultWorldConfig();
@@ -276,7 +349,7 @@ source+=String.raw`(()=>{
 
     ok(db.version===15,'world schema changed');
   console.log('D02_MEDICAL_ACCEPTANCE '+JSON.stringify({
-    fivePlayerFloor:true,emergencySubstitute:true,emergencyFA:true,faSupply:roleDepth,contractRisk:{acute:riskSevere,recovered:riskHealed,recurrent:riskRepeat},individualRest:true,rehab:true,format2Save:true,
+    fivePlayerFloor:true,emergencySubstitute:true,emergencyFA:true,shortCover:true,conditionalPay:true,faSupply:roleDepth,contractRisk:{acute:riskSevere,recovered:riskHealed,recurrent:riskRepeat},individualRest:true,rehab:true,format2Save:true,
     dayIdempotent:true,offseasonRecovery:true,scars:scarCount,samples:600
   }));
 })();`;

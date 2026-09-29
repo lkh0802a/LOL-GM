@@ -51,17 +51,31 @@ function validatePlayerSignAction(db,a){
   const auth=playerActionAuthority(db,a.actor,t);
   if(auth)return auth;
   const kind=a.kind||'fa',from=p.team&&playerActionTeam(db,p.team);
-  if(!['fa','renewal','initial','transfer'].includes(kind))
+  if(!['fa','renewal','initial','transfer','medical_replacement'].includes(kind))
     return worldActionError('invalid_action','지원하지 않는 계약 유형입니다');
   if(kind==='renewal'&&p.team!==t.id)
     return worldActionError('invalid_contract','기존 소속 구단에서만 재계약할 수 있습니다');
-  if((kind==='fa'||kind==='initial')&&p.team)
+  if((kind==='fa'||kind==='initial'||kind==='medical_replacement')&&p.team)
     return worldActionError('invalid_contract','FA가 아닌 선수는 신규 계약할 수 없습니다');
   if(kind==='transfer'&&(!from||from.id===t.id||a.fromId!==from.id))
     return worldActionError('invalid_transfer','원소속 구단 정보가 일치하지 않습니다');
   if(!Number.isFinite(+a.salary)||+a.salary<=0||!Number.isFinite(+a.years)||+a.years<=0)
     return worldActionError('invalid_terms','연봉과 계약 기간은 양수여야 합니다');
   const terms=playerActionTerms(db,p,t,a);
+  let replacement=null;
+  if(kind==='medical_replacement'){
+    const original=db.players[a.replacement?.forPid],days=+a.replacement?.absenceDays;
+    if(a.actor!=='system'||!original||original===p||original.team!==t.id||
+      medicalOut(original)||medicalAvailable(db,t)!==5||p.medical?.daysLeft>0||
+      !Number.isInteger(days)||days<2||days>90||+a.years!==1||
+      terms.signingBonus||terms.option||terms.buyout||
+      Object.values(terms.bonuses).some(Boolean))
+      return worldActionError('invalid_contract','의료 긴급 대체 계약의 전제 조건이 충족되지 않았습니다');
+    replacement=medicalReplacementClause(db,original,days,terms.salary);
+    if(t.finance?.cash+1e-8<replacement.paid)
+      return worldActionError('insufficient_cash','긴급 대체 계약의 보장급을 지급할 현금이 부족합니다');
+  }else if(a.replacement)
+    return worldActionError('invalid_contract','일반 선수 계약에는 의료 대체 조건을 붙일 수 없습니다');
   const allNumbers=[terms.salary,terms.years,terms.signingBonus,terms.buyout??0,terms.option?.salary??0,...Object.values(terms.bonuses||{})];
   if(!allNumbers.every(Number.isFinite))
     return worldActionError('invalid_terms','유효하지 않은 계약 금액입니다');
@@ -79,7 +93,7 @@ function validatePlayerSignAction(db,a){
   }
   if(fee+terms.signingBonus>0&&t.finance.cash+1e-8<fee+terms.signingBonus)
     return worldActionError('insufficient_cash','이적료 및 계약금을 지급할 현금이 부족합니다');
-  return {ok:true,pid:p.id,teamId:t.id,kind,fromId:from?.id||null,fee,terms};
+  return {ok:true,pid:p.id,teamId:t.id,kind,fromId:from?.id||null,fee,terms,replacement};
 }
 function validatePlayerTransferAction(db,a){
   const p=db.players[a.pid],from=playerActionTeam(db,a.fromId),to=playerActionTeam(db,a.teamId);
@@ -101,17 +115,23 @@ function validatePlayerTransferAction(db,a){
 function validatePlayerReleaseAction(db,a){
   const p=db.players[a.pid],t=playerActionTeam(db,a.teamId),mode=a.mode||'manager';
   if(!p||!t||p.team!==t.id)return worldActionError('invalid_release','방출할 소속 선수를 찾을 수 없습니다');
-  if(!['manager','market','initial','expired'].includes(mode))
+  if(!['manager','market','initial','expired','medical_end'].includes(mode))
     return worldActionError('invalid_action','지원하지 않는 방출 유형입니다');
   if(a.actor==='manager'&&mode==='market'||a.actor==='ai'&&(mode==='manager'||mode==='initial'))
     return worldActionError('unauthorized','선택한 작업 주체가 방출 유형과 일치하지 않습니다');
+  const date=mode==='medical_end'?a.date||db.worldDate:null;
+  if(mode==='medical_end'&&(a.actor!=='system'||!medicalReplacementSafeToEnd(db,p,date)))
+    return worldActionError('invalid_release','의료 대체 계약의 종료 시점 또는 법정 등록 인원 조건이 충족되지 않았습니다');
+  if((mode==='market'||mode==='expired')&&p.contract?.medicalReplacement)
+    return worldActionError('invalid_release','의료 대체 계약은 의료 종료 규칙으로만 자동 만료됩니다');
   const auth=playerActionAuthority(db,a.actor,t,mode==='expired'?'expiry':null);if(auth)return auth;
   if(mode==='expired'&&p.contract?.until>=db.year)
     return worldActionError('invalid_release','만료되지 않은 계약은 자동 종료할 수 없습니다');
   if(!playerActionFinance(t))return worldActionError('invalid_finance','구단 재정 정보가 없습니다');
-  const cost=mode==='initial'?0:p.contract&&p.contract.until>=db.year?p.contract.salary*(p.contract.until-db.year+1)*.5:0;
+  const cost=mode==='initial'||mode==='medical_end'||p.contract?.medicalReplacement?0:
+    p.contract&&p.contract.until>=db.year?p.contract.salary*(p.contract.until-db.year+1)*.5:0;
   if(!Number.isFinite(cost))return worldActionError('invalid_contract','방출 비용을 계산할 수 없습니다');
-  return {ok:true,pid:p.id,teamId:t.id,mode,cost};
+  return {ok:true,pid:p.id,teamId:t.id,mode,cost,date};
 }
 function validatePlayerOptionAction(db,a){
   const p=db.players[a.pid],t=playerActionTeam(db,a.teamId),option=p?.contract?.option;
@@ -127,9 +147,11 @@ function validatePlayerOptionAction(db,a){
 function playerActionCanonical(db,a,v){
   const base={type:a.type,actor:a.actor,pid:v.pid,teamId:v.teamId};
   if(a.type==='player.sign')return {...base,kind:v.kind,fromId:v.fromId,fee:v.fee,
-    salary:v.terms.salary,years:v.terms.years,terms:JSON.parse(JSON.stringify(v.terms))};
+    salary:v.terms.salary,years:v.terms.years,terms:JSON.parse(JSON.stringify(v.terms)),
+    ...(v.replacement?{replacement:{...v.replacement}}:{})};
   if(a.type==='player.transfer')return {...base,fromId:v.fromId,fee:v.fee};
-  if(a.type==='player.release')return {...base,mode:v.mode};
+  if(a.type==='player.release')return {...base,mode:v.mode,
+    ...(v.mode==='medical_end'?{date:v.date}:{})};
   return base;
 }
 function playerActionChanges(db,c,v){
@@ -145,6 +167,15 @@ function applyPlayerSignAction(db,c){
   const p=db.players[c.pid],t=db.teams[c.teamId];
   if(c.kind==='transfer')doTransfer(db,p,db.teams[c.fromId],t,c.fee);
   const contract=signContract(db,p,t,c.salary,c.years,c.terms);
+  if(c.kind==='medical_replacement'){
+    contract.medicalReplacement={...c.replacement};
+    t.finance.cash=medicalWageRound(t.finance.cash-c.replacement.paid);
+    recordFinancePrepaid(t,'medicalReplacementWage',c.replacement.paid);
+    recordPlayerEvent(p,'medical_emergency_fa',db.year,{date:db.worldDate,
+      for:c.replacement.forPid,to:t.id,salary:contract.salary,
+      guaranteedThrough:c.replacement.guaranteedThrough,
+      expiresOn:c.replacement.expiresOn,guarantee:c.replacement.paid});
+  }
   return {contract};
 }
 function applyPlayerTransferAction(db,c){
@@ -153,12 +184,20 @@ function applyPlayerTransferAction(db,c){
 }
 function applyPlayerReleaseAction(db,c){
   const p=db.players[c.pid],t=db.teams[c.teamId],contract=p.contract,
-    cost=c.mode==='initial'?0:contract&&contract.until>=db.year?contract.salary*(contract.until-db.year+1)*.5:0;
+    cost=c.mode==='initial'||c.mode==='medical_end'||contract?.medicalReplacement?0:
+      contract&&contract.until>=db.year?contract.salary*(contract.until-db.year+1)*.5:0;
   if(cost)t.finance.buyout=(t.finance.buyout||0)+cost;
   removePlayerFromTeam(db,p);
-  if(c.mode==='manager')invalidateMarketDemand(db);
+  if(c.mode==='manager'||c.mode==='medical_end')invalidateMarketDemand(db);
   p.contract=null;p.faYears=0;
   if(c.mode==='manager')recordPlayerEvent(p,'release',db.year,{team:t.id,cost,date:db.worldDate});
+  if(c.mode==='medical_end'){
+    recordPlayerEvent(p,'medical_replacement_end',db.year,{
+      date:c.date,team:t.id,for:contract.medicalReplacement.forPid,
+      paid:contract.medicalReplacement.paid});
+    if(parentTeamOf(db,t)?.id===managedTeamId(db))
+      news(db,p.name+' 선수의 의료 대체 계약이 종료되어 FA로 복귀했습니다 ('+t.short+')');
+  }
   return {pid:p.id,teamId:t.id,cost};
 }
 function applyPlayerOptionAction(db,c){
