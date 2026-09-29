@@ -91,7 +91,7 @@ function appendUtcFixtureDay(s,localDate,stage,label,pairs,bo,timeSlots){
   let nextId=s.days.reduce((n,d)=>n+d.matches.length,0);
   const touched=new Set(),zone=s.venueTimeZone||'UTC';
   for(let i=0;i<pairs.length;i++){
-    const [a,b]=pairs[i],time=timeSlots?.[i]||'17:00',
+    const [a,b]=pairs[i],time=timeSlots?.[i]||broadcastSlotTime(i,pairs.length),
       utcAt=venueToUtc(localDate,time,zone),utcDay=utcAt.slice(0,10);
     let day=s.days.find(d=>d.date===utcDay&&d.stage===stage);
     if(!day){
