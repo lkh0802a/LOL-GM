@@ -22,87 +22,75 @@ const fixture=String.raw`(()=>{
   assert(firstFixture>addDays(initial,8),'need an authentic inter-fixture gap');
   const domestic=Object.values(db.world.seasons).find(x=>x.region===user.region&&x.div===1);
   assert(domestic,'the real first-division fixture list is missing');
-  const leagueFixtureDates=domestic.days.filter(d=>d.matches.some(m=>
-    m.a===user.id||m.b===user.id)).map(d=>d.date);
+  const regularMatches=domestic.days.filter(d=>d.stage==='regular')
+    .flatMap(d=>d.matches);
+  const leagueFixtureDates=regularMatches.filter(m=>
+    m.a===user.id||m.b===user.id).map(m=>m.startsAt.slice(0,10));
   assert(leagueFixtureDates.length>=8,'league schedule does not reach eight games');
-  const broadcastStart=domestic.days[0].date,firstUserFixture=leagueFixtureDates[0];
+  const broadcastStart=regularMatches[0].localDate,
+    firstUserFixture=leagueFixtureDates[0];
   assert(new Date(broadcastStart+'T00:00:00Z').getUTCDay()===2,
-    'six-day television week must open on Tuesday');
-  for(let week=0;week<4;week++){
-    const start=addDays(broadcastStart,week*7),end=addDays(start,7);
-    const weekly=leagueFixtureDates.filter(date=>date>=start&&date<end);
-    assert(weekly.length===2,'each first-division team must play twice in a broadcast week');
-    const broadcast=domestic.days.filter(day=>day.stage==='regular'&&day.date>=start&&day.date<end);
-    assert(broadcast.length===6,'each complete domestic week must have six broadcast days');
+    'local television week must open on Tuesday');
+  const testBroadcastWeek=(matches,clubs,weekStart)=>{
+    const end=addDays(weekStart,7),
+      weekly=matches.filter(m=>m.localDate>=weekStart&&m.localDate<end);
+    const byDay={};
+    for(const m of weekly)(byDay[m.localDate]=byDay[m.localDate]||[]).push(m);
+    assert(Object.keys(byDay).length===6,
+      clubs+'-team local league week must have six broadcast days');
     const perClub={};
-    for(const day of broadcast){
-      assert(new Date(day.date+'T00:00:00Z').getUTCDay()!==1,
-        'the domestic broadcast week must keep Monday dark');
-      assert(day.matches.length<=2,'ten-club league needs at most two broadcast series per day');
-      const sessionIds=new Set();
-      for(const match of day.matches){
-        assert(match.time&&match.broadcastSlot&&!sessionIds.has(match.broadcastSlot),
-          'a broadcast series lacks a distinct timed session');
-        sessionIds.add(match.broadcastSlot);
-        for(const id of [match.a,match.b]){
-          perClub[id]=(perClub[id]||0)+1;
-          assert(broadcast.filter(d=>d.date===day.date).flatMap(d=>d.matches)
-            .filter(m=>m.a===id||m.b===id).length===1,
-            'a club was booked for multiple official series on one date');
+    for(const [localDate,rows] of Object.entries(byDay)){
+      assert(new Date(localDate+'T00:00:00Z').getUTCDay()!==1,
+        'venue-local Mondays must stay unscheduled');
+      assert(rows.length<=Math.max(2,Math.ceil(clubs/6)),
+        'overloaded local broadcast day: '+clubs+' '+localDate);
+      const localTeams=new Set(),slots=new Set();
+      for(const m of rows){
+        assert(m.time&&m.startsAt&&m.timeZone&&m.broadcastSlot&&
+          m.startsAt.slice(0,10).length===10,
+          'missing UTC kickoff and venue-local clock metadata');
+        assert(zonedClock(m.startsAt,m.timeZone).date===localDate&&
+          zonedClock(m.startsAt,m.timeZone).time===m.time,
+          'scheduled UTC instant differs from published local start');
+        assert(!slots.has(m.broadcastSlot),'double-booked broadcast session');
+        slots.add(m.broadcastSlot);
+        for(const id of [m.a,m.b]){
+          assert(!localTeams.has(id),'club booked twice in one local day');
+          localTeams.add(id);
+          (perClub[id]=perClub[id]||[]).push(localDate);
         }
       }
     }
-    assert(Object.values(perClub).length===10&&Object.values(perClub).every(n=>n===2),
-      'two weekly official fixtures must be guaranteed for every club');
-  }
+    assert(Object.keys(perClub).length===clubs&&
+      Object.values(perClub).every(dates=>dates.length===2),
+      'each club needs exactly two official matches per local broadcast week');
+    assert(Object.values(perClub).every(dates=>
+      (new Date(dates[1]+'T00:00:00Z')-
+        new Date(dates[0]+'T00:00:00Z'))/86400000>=2),
+      'a club must get at least one full free local day between series');
+  };
+  for(let week=0;week<4;week++)
+    testBroadcastWeek(regularMatches,10,addDays(broadcastStart,week*7));
   for(let i=1;i<8;i++){
     const elapsed=(new Date(leagueFixtureDates[i]+'T00:00:00Z')-
       new Date(leagueFixtureDates[i-1]+'T00:00:00Z'))/86400000;
     assert(elapsed>=2&&elapsed<=6,
-      'domestic club must keep a rest day between twice-weekly official series');
+      'domestic club must have a rest day in its real UTC fixture calendar');
   }
-  // Large leagues need three or four matches on a single TV day, not
-  // sixteen same-day Bo3s. Group formats retain two weekly series/club.
   for(const clubs of [12,16,18,20]){
     const teamIds=Array.from({length:clubs},(_,index)=>'TV-'+clubs+'-'+index);
-    const R=regionCfg('NA',{teams:clubs,legs:2,format:clubs===16?'groups_po':'rr_po'});
-    const stages=leagueStages(R,clubs,1);
+    const R=regionCfg('NA',{teams:clubs,legs:2,
+      format:clubs===16?'groups_po':'rr_po'}),stages=leagueStages(R,clubs,1);
     const league='BROADCAST-'+clubs;
-    db.competitions[league]={id:league,teams:teamIds,stages};
-    const schedule=newSeason(db,league,2027,'broadcast-'+clubs,'2027-01-14',league);
-    const date0=schedule.days[0].date;
-    const slots=new Set(schedule.days.filter(day=>day.stage===stages[0].id)
-      .flatMap(day=>day.matches.map(match=>match.id)));
-    assert(slots.size===schedule.days.filter(day=>day.stage===stages[0].id)
-      .reduce((n,day)=>n+day.matches.length,0),
-      'broadcast scheduling duplicated official series at '+clubs+' teams');
-    for(let week=0;week<4;week++){
-      const start=addDays(date0,week*7),end=addDays(start,7);
-      const days=schedule.days.filter(day=>day.stage===stages[0].id&&
-        day.date>=start&&day.date<end);
-      const perTeam=Object.fromEntries(teamIds.map(id=>[id,[]]));
-      for(const day of days){
-        assert(new Date(day.date+'T00:00:00Z').getUTCDay()!==1,
-          'a domestic TV match was scheduled on Monday');
-        assert(day.matches.length<=Math.max(2,Math.ceil(clubs/6)),
-          'six-day broadcast day was overloaded for '+clubs+' teams');
-        const sameDay=new Set();
-        for(const match of day.matches){
-          assert(match.time&&match.broadcastSlot,'TV slot lacks a published time');
-          for(const tid of [match.a,match.b]){
-            assert(!sameDay.has(tid),'team booked twice on one broadcast date');
-            sameDay.add(tid);
-            perTeam[tid].push(day.date);
-          }
-        }
-      }
-      assert(Object.values(perTeam).every(dates=>dates.length===2),
-        clubs+'-team broadcast week does not deliver two official series per club');
-      assert(Object.values(perTeam).every(dates=>
-        (new Date(dates[1]+'T00:00:00Z')-
-          new Date(dates[0]+'T00:00:00Z'))/86400000>=2),
-        'a club was forced to play live official matches on adjacent dates');
-    }
+    db.competitions[league]={id:league,region:'NA',teams:teamIds,stages};
+    const schedule=newSeason(db,league,2027,'broadcast-'+clubs,
+      '2027-01-14',league);
+    const matches=schedule.days.filter(day=>day.stage===stages[0].id)
+      .flatMap(day=>day.matches),ids=new Set(matches.map(m=>m.id));
+    assert(ids.size===matches.length,'duplicated official broadcast series');
+    const first=matches[0].localDate;
+    for(let week=0;week<4;week++)
+      testBroadcastWeek(matches,clubs,addDays(first,week*7));
     delete db.competitions[league];
   }
   const t=db.teams[user.id],p=db.players[t.roster[0]];
