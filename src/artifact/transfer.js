@@ -100,7 +100,8 @@ function closePlayerNegotiationFailure(db,neg,p,hardBreak){
 }
 function negotiationCompetition(db,p,t,rng,kind){
   if(kind==='renewal')return [];
-  return activeTeams(db,null,1).filter(x=>x.id!==t.id&&!x.parent).map(team=>{
+  return activeTeams(db,null,1).filter(x=>x.id!==t.id&&!x.parent&&
+    (kind!=='early_fa'||earlyContactAllowed(db,p,x))).map(team=>{
     if(localRegistrationError(db,team,p))return null;
     const cur=starterFor(db,team,p.role),need=!cur?8:aiMarketObservation(db,p,team).ability-playerOvr(cur),baseBudget=(kind==='initial')?initialSalaryBudget(db,team):salaryBudget(db,team),room=baseBudget-payroll(db,team),ask=asking(db,p,team.region);
     if(room<ask*.82||need<-4)return null;
