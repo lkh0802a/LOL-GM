@@ -33,19 +33,19 @@ function mDropInterest(db,pid){return removeRecruitmentTarget(db,pid)}
 function negotiationStore(db){const w=db.world;if(!w)return {};w.negotiations=w.negotiations||{};return w.negotiations}
 function negotiationId(db,pid,kind,teamId=null){return 'NEG_'+db.year+'_'+pid+'_'+kind+(teamId?'_'+teamId:'')}
 function negotiationRoundLimit(p){return clamp(3+Math.round((p.personality.professionalism-50)/35)-(p.personality.ambition>=82?1:0),2,5)}
-function negotiationPreferredYears(p){const goal=playerCareerGoal(p);if(p.age>=29)return 1;if(p.age<=21&&goal==='development')return 3;if(goal==='stability')return 3;if(p.personality.ambition>=82&&p.age>=23)return 1;return 2}
+function negotiationPreferredYears(db,p,t){return contractDurationPolicy(db,p,t).preferred}
 function negotiationCompetition(db,p,t,rng,kind){
   if(kind==='renewal')return [];
   return activeTeams(db,null,1).filter(x=>x.id!==t.id&&!x.parent).map(team=>{
     if(localRegistrationError(db,team,p))return null;
     const cur=starterFor(db,team,p.role),need=!cur?8:aiMarketObservation(db,p,team).ability-playerOvr(cur),baseBudget=(kind==='initial')?initialSalaryBudget(db,team):salaryBudget(db,team),room=baseBudget-payroll(db,team),ask=asking(db,p,team.region);
     if(room<ask*.82||need<-4)return null;
-    const years=contractYearsForPlayer(db,p,rng),terms=normalizeContractTerms(db,p,team,ask*rng.range(.94,1.12)*(1-medicalContractRisk(db,p)*.4),years,{promisedRole:defaultPromisedRole(db,p,team),option:rng.chance(.14)?{type:'player'}:null});
+    const years=contractYearsForPlayer(db,p,rng,team),terms=normalizeContractTerms(db,p,team,ask*rng.range(.94,1.12)*(1-medicalContractRisk(db,p)*.4),years,{promisedRole:defaultPromisedRole(db,p,team),option:rng.chance(.14)?{type:'player'}:null});
     return {teamId:team.id,terms,utility:offerUtility(db,p,team,terms),need};
   }).filter(Boolean).sort((a,b)=>b.utility-a.utility).slice(0,2);
 }
 function negotiationDemand(db,p,t,kind,rng,competitors=[]){
-  const ask=asking(db,p,t.region),best=competitors.length?Math.max(...competitors.map(x=>x.utility)):0,goal=playerCareerGoal(p),years=negotiationPreferredYears(p);
+  const ask=asking(db,p,t.region),best=competitors.length?Math.max(...competitors.map(x=>x.utility)):0,goal=playerCareerGoal(p),years=negotiationPreferredYears(db,p,t);
   ensureSatisfaction(p);let premium=1+(p.personality.ambition-50)/500+(p.wantsOut&&kind==='renewal'?.12:0)+(best>offerAcceptanceThreshold(db,p)?.06:0);
   if(kind==='renewal'){premium+=Math.max(0,(55-p.managerTrust)/230)+Math.max(0,(45-p.managerRelationship)/320);if(p.satisfaction>=75&&p.managerTrust>=65)premium-=.045}
   const role=goal==='starter'?'starter':defaultPromisedRole(db,p,t),sign=ask*(p.reputation>=82?.18:p.personality.ambition>=75?.14:.09);
