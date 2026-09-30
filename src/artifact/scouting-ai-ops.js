@@ -68,6 +68,13 @@ function aiScoutingCoveragePlan(db,t,candidates,capacity){
     publicPool:(grouped[region]||[]).length
   }));
 }
+function aiScoutingBatchCharge(unitCost,count){
+  return Math.round(unitCost*Math.max(0,count)*10)/10;
+}
+function aiScoutingAffordableTargets(available,unitCost,capacity){
+  for(let n=capacity;n>0;n--)if(aiScoutingBatchCharge(unitCost,n)<=available+.001)return n;
+  return 0;
+}
 function aiRunScoutingOperation(db,t){
   const owner=aiScoutingOwner(db,t);if(!owner||owner.parent||
     owner.id===managedTeamId(db)||!owner.finance)return null;
@@ -77,8 +84,8 @@ function aiRunScoutingOperation(db,t){
     unitCost=aiScoutingUnitCost(db,owner),
     runway=financeRunway(db,owner),
     reserve=runway.monthly*3,
-    affordable=unitCost>0?Math.max(0,Math.floor((owner.finance.cash-reserve+.000001)/unitCost)):0,
-    targetLimit=Math.min(capacity,affordable),
+    available=Math.max(0,owner.finance.cash-reserve),
+    targetLimit=unitCost>0?aiScoutingAffordableTargets(available,unitCost,capacity):0,
     candidates=Object.values(db.players).filter(p=>aiScoutingEligibleTarget(db,owner,p)),
     assignments=aiScoutingCoveragePlan(db,owner,candidates,capacity),
     covered=new Set(assignments.map(x=>x.region)),
@@ -89,8 +96,6 @@ function aiRunScoutingOperation(db,t){
   for(const row of ranked){
     if(targets.length>=targetLimit)break;
     const p=row.p,before=aiScoutReport(db,owner,p),beforeK=before.knowledge||0;
-    owner.finance.cash=Math.round((owner.finance.cash-unitCost)*1000)/1000;
-    recordFinancePrepaid(owner,'scoutingExpense',unitCost);
     const report=observeAiPlayer(db,owner,p,aiScoutingVisitGain(),{
       comp:'SCOUT:'+aiScoutingTargetRegion(db,p),games:0});
     if(!report)continue;
@@ -99,7 +104,10 @@ function aiRunScoutingOperation(db,t){
       afterKnowledge:Math.round(report.knowledge||0),sourceBefore:before.source,
       sourceAfter:report.source||'scouted'});
   }
-  const spent=Math.round((cashBefore-owner.finance.cash)*1000)/1000,
+  const charge=aiScoutingBatchCharge(unitCost,targets.length);
+  owner.finance.cash=Math.round((cashBefore-charge)*10)/10;
+  if(charge)recordFinancePrepaid(owner,'scoutingExpense',charge);
+  const spent=Math.round((cashBefore-owner.finance.cash)*10)/10,
     operation={year:db.year,date:db.worldDate,capacity,targetLimit,unitCost,
       reserve:Math.round(reserve*1000)/1000,runway:runway.severity,
       assignments,targets,spent,cashBefore:Math.round(cashBefore*1000)/1000,
