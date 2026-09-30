@@ -31,7 +31,8 @@ function mDropInterest(db,pid){return removeRecruitmentTarget(db,pid)}
 
 // ---- 선수 계약 협상 엔진 ----
 function negotiationStore(db){const w=db.world;if(!w)return {};w.negotiations=w.negotiations||{};return w.negotiations}
-function negotiationId(db,pid,kind,teamId=null){return 'NEG_'+db.year+'_'+pid+'_'+kind+(teamId?'_'+teamId:'')}
+function negotiationId(db,pid,kind,teamId=null){return 'NEG_'+db.year+'_'+pid+'_'+kind+
+  ((teamId&&(kind==='initial'||kind==='precontract'))?'_'+teamId:'')}
 function negotiationRoundLimit(p){return clamp(3+Math.round((p.personality.professionalism-50)/35)-(p.personality.ambition>=82?1:0),2,5)}
 function negotiationPreferredYears(db,p,t){return contractDurationPolicy(db,p,t).preferred}
 function negotiationSituationSnapshot(db,p,t,kind){
@@ -118,10 +119,19 @@ function negotiationDemand(db,p,t,kind,rng,competitors=[]){
 function startNegotiation(db,pid,kind='fa',extra={}){
   const w=db.world,t=extra.teamId?db.teams[extra.teamId]:myT(db),p=db.players[pid];if(!w||!t||!p)return {ok:false,msg:'협상 대상을 찾을 수 없습니다'};
   if(kind==='transfer'){const moveErr=contractedMoveError(db,p);if(moveErr)return {ok:false,msg:moveErr}}
+  if(kind==='precontract'){
+    const contactErr=contractWindowContactError(db,p,t,'precontract');
+    if(contactErr)return {ok:false,msg:contactErr};
+  }
+  if(kind==='renewal'&&w.phase==='offseason'&&w.contractWindow){
+    const contactErr=contractWindowContactError(db,p,t,'renewal');
+    if(contactErr)return {ok:false,msg:contactErr};
+  }
   if((kind==='fa'||kind==='initial')&&p.team)return {ok:false,msg:'FA 선수가 아닙니다'};if(kind==='renewal'&&p.team!==t.id)return {ok:false,msg:'우리 팀 선수가 아닙니다'};
   if(kind==='initial'){const allowed=new Set(setupTeamsForManager(db).map(x=>x.id));if(!allowed.has(t.id))return {ok:false,msg:'내 구단 조직의 스쿼드만 계약 대상이 될 수 있습니다'}}
-  if((kind==='fa'||kind==='transfer'||kind==='initial')&&!recruitmentReady(db,pid,t.id))return {ok:false,msg:'관심 등록 → 관찰 → 내부 평가를 완료한 뒤 공식 협상을 시작할 수 있습니다'};
-  const id=negotiationId(db,pid,kind,kind==='initial'?t.id:null),store=negotiationStore(db),
+  if((kind==='fa'||kind==='transfer'||kind==='initial'||kind==='precontract')&&!recruitmentReady(db,pid,t.id))return {ok:false,msg:'관심 등록 → 관찰 → 내부 평가를 완료한 뒤 공식 협상을 시작할 수 있습니다'};
+  const id=negotiationId(db,pid,kind,
+      (kind==='initial'||kind==='precontract')?t.id:null),store=negotiationStore(db),
     current=store[id];
   if(current&&current.status==='open')return {ok:true,neg:current,msg:p.name+' 협상이 이미 진행 중입니다'};
   const previous=current||latestNegotiationAttempt(db,pid,kind,t.id),
@@ -158,13 +168,24 @@ function negotiationCounter(db,neg,offer){
 function finalizeNegotiation(db,neg,terms){
   const p=db.players[neg.pid],t=db.teams[neg.teamId];
   if(!p||!t)return {ok:false,msg:'협상 선수 또는 구단이 존재하지 않습니다'};
-  const result=commitWorldAction(db,{type:'player.sign',pid:p.id,teamId:t.id,kind:neg.kind,
-    fromId:neg.kind==='transfer'?neg.sellerId:null,fee:neg.kind==='transfer'?neg.fee:0,
-    salary:terms.salary,years:terms.years,terms,actor:'manager'});
-  if(!result.ok)return {ok:false,msg:(result.errors||['계약 조건이 변경되었습니다']).join(' · ')};
+  const future=(neg.kind==='precontract')||
+    (neg.kind==='renewal'&&db.world?.phase==='offseason'&&
+      db.world?.contractWindow&&contractExpiresThisSeason(db,p));
+  let result;
+  if(future){
+    result=recordContractAgreement(db,p,t,terms,neg.kind,'manager');
+  }else{
+    result=commitWorldAction(db,{type:'player.sign',pid:p.id,teamId:t.id,kind:neg.kind,
+      fromId:neg.kind==='transfer'?neg.sellerId:null,fee:neg.kind==='transfer'?neg.fee:0,
+      salary:terms.salary,years:terms.years,terms,actor:'manager'});
+    if(!result.ok)result={ok:false,msg:(result.errors||['계약 조건이 변경되었습니다']).join(' · ')};
+  }
+  if(!result.ok)return result;
   neg.status='accepted';neg.counter=null;neg.acceptedTerms=terms;neg.closedDate=db.worldDate;
-  const target=recruitmentTarget(db,neg.pid);if(target){target.stage='closed';target.result='signed';target.negotiationId=neg.id}
-  return {ok:true,msg:p.name+' 계약 합의 · '+money(terms.salary)+' · '+terms.years+'년'};
+  if(future)neg.agreement=contractAgreementFor(db,p.id);
+  const target=recruitmentTarget(db,neg.pid);
+  if(target){target.stage='closed';target.result=future?'agreed_future':'signed';target.negotiationId=neg.id}
+  return {ok:true,msg:future?result.msg:p.name+' 계약 합의 · '+money(terms.salary)+' · '+terms.years+'년'};
 }
 function submitNegotiationOffer(db,nid,terms){
   const neg=negotiationStore(db)[nid];if(!neg||neg.status!=='open'||neg.stage!=='player')return {ok:false,msg:'진행 중인 선수 협상이 아닙니다'};
