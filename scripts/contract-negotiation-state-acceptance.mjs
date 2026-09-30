@@ -25,17 +25,25 @@ source+=String.raw`(()=>{
   ensureSatisfaction(player);
 
   const mildOffer=(neg)=>{
-    const threshold=offerAcceptanceThreshold(db,player);
-    for(let n=99;n>=15;n--){
-      const salary=Math.max(.1,Math.round(neg.demand.salary*n/100*10)/10),
-        offer=normalizeContractTerms(db,player,team,salary,neg.demand.years,{
-          ...neg.demand,signingBonus:neg.demand.signingBonus,
-          bonuses:{...(neg.demand.bonuses||{})},
-          option:neg.demand.option?{...neg.demand.option}:null
-        }),
-        utility=offerUtility(db,player,team,offer,{renewal:true});
-      if(utility<threshold-.04&&utility>=threshold-.20)return {offer,utility,threshold};
-    }
+    const threshold=offerAcceptanceThreshold(db,player),
+      roles=['backup','prospect','competition','starter','core'],
+      options=[null,{type:'team'},{type:'player'}];
+    for(const role of roles)for(const years of [1,2,3])for(const option of options)
+      for(const bonusFactor of [0,.35,.7,1])for(let n=10;n<=110;n+=2){
+        const salary=Math.max(.1,Math.round(neg.demand.salary*n/100*10)/10),
+          offer=normalizeContractTerms(db,player,team,salary,years,{
+            signingBonus:Math.round((neg.demand.signingBonus||0)*bonusFactor*10)/10,
+            bonuses:{
+              performance:Math.round((neg.demand.bonuses?.performance||0)*bonusFactor*10)/10,
+              title:Math.round((neg.demand.bonuses?.title||0)*bonusFactor*10)/10,
+              international:Math.round((neg.demand.bonuses?.international||0)*bonusFactor*10)/10
+            },
+            option,buyout:null,promisedRole:role
+          }),
+          utility=offerUtility(db,player,team,offer,{renewal:true});
+        if(utility<threshold-.04&&utility>=threshold-.20)
+          return {offer,utility,threshold};
+      }
     throw new Error('D04_NEGOTIATION_STATE could not construct mild rejection offer');
   };
 
