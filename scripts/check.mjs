@@ -65,6 +65,7 @@ const maintainabilityBudgets = {
   'finance.js': 18000,
   'contracts.js': 26000,
   'scouting.js': 14000,
+  'scouting-ai.js': 10000,
   'transfer.js': 26000,
   'staff.js': 18000,
   'scrim.js': 10000,
