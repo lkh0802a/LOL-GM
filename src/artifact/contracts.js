@@ -318,4 +318,29 @@ function contractMarket(db,rng,rep,ev){
     // SFR 하한은 강제 연봉 인상이 아니라 분배 자격 기준으로만 사용한다.
   }
 }
+function reconcileMinimumRosterAfterExpiry(db,rng,rep){
+  // Contracts now legally expire on Worlds+14 rather than waiting for the
+  // later market-close routine. Never leave an active organization below the
+  // same five-available-player invariant protected by medical acceptance.
+  const rows=[];
+  for(const t of activeTeams(db)){
+    let guard=0;
+    while(medicalAvailable(db,t)<5&&guard++<8){
+      const fa=eligibleFillFAs(db,t)[0];
+      if(!fa)throw new Error('Talent supply invariant failed after contract expiry: '+t.id);
+      const years=contractYearsForPlayer(db,fa,rng,t),
+        salary=asking(db,fa,t.region),
+        terms=normalizeContractTerms(db,fa,t,salary,years,{
+          promisedRole:defaultPromisedRole(db,fa,t)});
+      signMarketContract(db,fa,t,terms.salary,terms.years,terms,'fa','system');
+      const row={pid:fa.id,team:t.id,salary:terms.salary,years:terms.years,
+        compliance:true,reason:'post_expiry_minimum_roster'};
+      rows.push(row);if(rep)rep.signings.push(row);
+    }
+    if(medicalAvailable(db,t)<5)
+      throw new Error('Post-expiry roster reconciliation failed: '+t.id);
+  }
+  return rows;
+}
+
 // 리그 팀 수를 짝수로 유지 (1부·2부 각각)
