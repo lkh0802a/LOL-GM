@@ -83,7 +83,7 @@ function validatePlayerSignAction(db,a){
       futureAgreement.years,futureAgreement.terms);
     if(+a.salary!==futureAgreement.salary||+a.years!==futureAgreement.years||
       JSON.stringify(terms)!==JSON.stringify(agreed))
-      return worldActionError('invalid_terms','재계약 발효 조건은 원래 합의한 조건과 같아야 합니다');
+      return worldActionError('invalid_terms','미래 계약 발효 조건은 원래 합의한 조건과 같아야 합니다');
   }
   let replacement=null;
   if(kind==='medical_replacement'){
