@@ -155,3 +155,14 @@ D03의 마지막 핵심 검증은 **오래된 보고서 기반 영입 실패와 
 - reassessment 기록은 save/restore 후 유지되어야 한다.
 
 B4 acceptance와 전체 장기 회귀가 통과하면 D03의 감사 기준인 구단별 상이한 정보, 관찰 후 오차 감소, 시간 경과 감쇠, 스태프/시설 투자 효과, 오래된 보고서 기반 합리적 실패와 재평가가 모두 충족되므로 D03을 완료 처리한다.
+
+
+### B4 검증 결과 — D03 완료
+
+최종 PR CI의 `D03_SCOUTING_REASSESSMENT_ACCEPTANCE`에서 TOP 두 FA를 통제 비교했다. 오래된 보고서를 가진 선수의 실제 OVR은 50까지 하락했고 대체 선수는 76이었지만, 구단의 stale 보고서는 ability 93을 유지해 생산용 `aiMarketOfferCandidates`가 stale 선수를 먼저 선택했다. 이 잘못된 우선순위는 save/restore 후에도 그대로 유지됐다.
+
+실제 `aiRunScoutingOperation` 재관찰 뒤 해당 선수의 저장 ability는 93 → 67, 시장가치는 93 → 67.1로 `-25.9` 하락했다. 전체 실제 FA shortlist에서는 순위가 1위 → 4위로 내려갔고 leader와 rank가 모두 변경됐다. 두 선수만 둔 통제 shortlist에서는 1순위가 stale 선수 `NA_0`에서 실제 OVR 76인 대체 선수 `NA_6`로 반전됐다. stale 분기와 fresh 분기에서 동일 `signMarketContract` 경로를 실행해 각각 그 시점의 서로 다른 1순위가 실제 계약되는 것도 확인했다. reassessment 기록 역시 save/restore 뒤 유지됐다.
+
+같은 CI에서 B1/B2의 구단별 보고서·창단 dossier, B3의 능동 운영 acceptance, 67개 Artifact 모듈 구조 검사, D02 다지역 628일·948 공식 경기·15,636 스크림 블록·78,514 선수·일, regression baseline, world smoke, 2시즌 career 186경기, performance probe, production build가 모두 통과했다. 의료·계약·시장가치·스카우팅 비용/관찰 gain의 밸런스 상수는 변경하지 않았다.
+
+따라서 감사 문서의 D03 수락 기준인 **구단별 상이한 정보/영입 판단, 관찰 후 오차 감소, 시간 경과 정보 감쇠, 시설·스태프 투자 효과, 오래된 보고서로 인한 합리적 실패와 재평가**를 모두 충족한 것으로 기록하고 D03을 COMPLETE 처리한다. 다음 가장 앞선 미완료 항목은 D04/P0 계약 기간·보장·냉각·우선협상 심화다.
