@@ -58,12 +58,39 @@ function aiPublicMarketObservation(db,p,t){
   return {ability,potential,uncertainty:Math.round(uncertainty*10)/10,
     knowledge:aiBaseScoutKnowledge(db,t,p),source:'public',lastSeenDate:null,staleYears:0};
 }
+function initialAiMarketDossierSignal(db,p,t){
+  // Preserve the accepted first-season auction signal exactly, but create it
+  // once inside the scouting domain instead of re-reading hidden ability on
+  // every market comparison.
+  const perf=recentMarketPerformance(db,p),sample=Math.min(30,perf.games),
+    foreign=!isLocalPlayer(p,t.region),
+    uncertainty=(foreign?4.5:2.5)+(sample<6?3:sample<15?1.5:0),
+    n=((hashStr(t.id+'|'+p.id+'|'+db.year+'|ability')%2001)/1000-1),
+    ability=Math.round(clamp(playerOvr(p)+n*uncertainty,20,99)),
+    n2=((hashStr(t.id+'|'+p.id+'|'+db.year+'|potential')%2001)/1000-1),
+    ageUpside=p.age<=19?9:p.age<=21?6:p.age<=23?3:1,
+    potential=Math.round(clamp(ability+ageUpside+n2*(foreign?5:3)+
+      (p.reputation-ability)*.08,ability,99));
+  return {ability,potential,uncertainty:Math.round(uncertainty*10)/10};
+}
+function seedInitialAiScoutReport(db,t,p){
+  const owner=aiScoutingOwner(db,t),r=ensureAiScoutReport(db,owner,p);
+  if(!owner||!r||r.ability!=null&&r.potential!=null)return r;
+  const signal=initialAiMarketDossierSignal(db,p,owner);
+  r.ability=signal.ability;r.potential=signal.potential;
+  r.uncertainty=signal.uncertainty;r.source='founding_dossier';
+  r.dossierYear=db.year;r.lastSeenDate=db.worldDate;r.lastSeenYear=db.year;r.staleYears=0;
+  r.snapshots.push({year:db.year,date:db.worldDate,knowledge:Math.round(r.knowledge||0),
+    ability:r.ability,potential:r.potential,uncertainty:r.uncertainty,source:r.source});
+  r.snapshots=r.snapshots.slice(-8);
+  return r;
+}
 function observeAiPlayer(db,t,p,gain,opt={}){
   const owner=aiScoutingOwner(db,t);if(!owner||!p||p.retired||
     owner.id===managedTeamId(db)||aiBaseScoutKnowledge(db,owner,p)>=100)return null;
   const r=ensureAiScoutReport(db,owner,p),before=r.knowledge||0,
     power=scoutingPowerForTeam(owner),diminish=.55+.45*(1-before/100);
-  r.knowledge=clamp(before+gain*power*diminish,0,98);
+  r.knowledge=clamp(before+gain*power*diminish,0,98);r.source='scouted';
   r.observations=(r.observations||0)+1;r.gamesSeen=(r.gamesSeen||0)+(opt.games||0);
   r.lastSeenDate=db.worldDate;r.lastSeenYear=db.year;r.staleYears=0;
   if(opt.comp){r.competitions[opt.comp]=(r.competitions[opt.comp]||0)+(opt.games||1);
@@ -84,14 +111,19 @@ function observeAiPlayer(db,t,p,gain,opt={}){
   r.snapshots=r.snapshots.slice(-8);return r;
 }
 function aiScoutReport(db,t,p){
-  const owner=aiScoutingOwner(db,t),state=owner&&owner.scoutingState,
-    r=state?.reports?.[p.id];
-  if(!r)return aiPublicMarketObservation(db,p,owner||t);
+  const owner=aiScoutingOwner(db,t);if(!owner)return aiPublicMarketObservation(db,p,t);
+  let r=owner.scoutingState?.reports?.[p.id];
+  if(db.world?.phase==='initial_roster'&&
+    (!r||r.ability==null||r.potential==null))r=seedInitialAiScoutReport(db,owner,p);
+  if(!r)return aiPublicMarketObservation(db,p,owner);
   const base=aiBaseScoutKnowledge(db,owner,p),k=Math.round(clamp(Math.max(base,r.knowledge||0),0,98));
   if(r.ability==null||r.potential==null)return aiPublicMarketObservation(db,p,owner);
+  const uncertainty=r.source==='founding_dossier'&&!(r.staleYears||0)&&
+    Number.isFinite(r.uncertainty)?r.uncertainty:
+    aiScoutUncertainty(db,owner,p,k,r.staleYears||0);
   return {ability:r.ability,potential:Math.max(r.ability,r.potential),
-    uncertainty:aiScoutUncertainty(db,owner,p,k,r.staleYears||0),knowledge:k,
-    source:'scouted',lastSeenDate:r.lastSeenDate,staleYears:r.staleYears||0,
+    uncertainty,knowledge:k,source:r.source||'scouted',
+    lastSeenDate:r.lastSeenDate,staleYears:r.staleYears||0,
     observations:r.observations||0,gamesSeen:r.gamesSeen||0};
 }
 function ageScoutReports(db){
