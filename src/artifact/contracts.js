@@ -94,11 +94,28 @@ function eligibleFillFAs(db,t,role=null){
   return Object.values(db.players).filter(p=>!p.retired&&!p.team&&(!role||p.role===role)&&(isLocalPlayer(p,t.region)||room>0))
     .sort((a,b)=>(pFillScore(db,b,t)-pFillScore(db,a,t)));
 }
+function initialRosterMarketObservation(db,p,t){
+  // Preserve the accepted first-season blank-roster auction in D03-B1. At
+  // world creation there is no prior club observation history to migrate; its
+  // current-ability baseline is isolated here for a later initial-market pass.
+  const perf=recentMarketPerformance(db,p),sample=Math.min(30,perf.games),
+    foreign=!isLocalPlayer(p,t.region),
+    uncertainty=(foreign?4.5:2.5)+(sample<6?3:sample<15?1.5:0),
+    n=((hashStr(t.id+'|'+p.id+'|'+db.year+'|ability')%2001)/1000-1),
+    ability=Math.round(clamp(playerOvr(p)+n*uncertainty,20,99)),
+    n2=((hashStr(t.id+'|'+p.id+'|'+db.year+'|potential')%2001)/1000-1),
+    ageUpside=p.age<=19?9:p.age<=21?6:p.age<=23?3:1,
+    potential=Math.round(clamp(ability+ageUpside+n2*(foreign?5:3)+
+      (p.reputation-ability)*.08,ability,99));
+  return {ability,potential,uncertainty:Math.round(uncertainty*10)/10,
+    source:'initial-baseline'};
+}
 function aiMarketObservation(db,p,t){
-  const perf=recentMarketPerformance(db,p),sample=Math.min(30,perf.games),foreign=!isLocalPlayer(p,t.region),uncertainty=(foreign?4.5:2.5)+(sample<6?3:sample<15?1.5:0),n=((hashStr(t.id+'|'+p.id+'|'+db.year+'|ability')%2001)/1000-1);
-  const ability=Math.round(clamp(playerOvr(p)+n*uncertainty,20,99)),n2=((hashStr(t.id+'|'+p.id+'|'+db.year+'|potential')%2001)/1000-1),ageUpside=p.age<=19?9:p.age<=21?6:p.age<=23?3:1;
-  const potential=Math.round(clamp(ability+ageUpside+n2*(foreign?5:3)+(p.reputation-ability)*.08,ability,99));
-  return {ability,potential,uncertainty:Math.round(uncertainty*10)/10};
+  if(db.world?.phase==='initial_roster')return initialRosterMarketObservation(db,p,t);
+  // D03: established-club recruitment consumes only that club's persistent
+  // observation state (or a public-data fallback). Hidden current OVR/POT are
+  // sampled only when the scouting engine creates a noisy report.
+  return aiScoutReport(db,t,p);
 }
 function aiMarketValue(db,p,t){const est=aiMarketObservation(db,p,t),up=Math.max(0,est.potential-est.ability),w={'win-now':0.1,'youth':0.6,'balanced':0.3,'superstar':0.15,'cost':0.35}[t.philosophy]||0.3;return est.ability+up*w-(t.philosophy==='youth'&&p.age>26?2:0)-medicalContractRisk(db,p)*18}
 function pFillScore(db,p,t){const domestic=isLocalPlayer(p,t.region)?2:0,age=p.age<=21?1:0,cost=Math.min(4,asking(db,p,t.region)/Math.max(.2,psOf(db,t.region)));return aiMarketValue(db,p,t)+domestic+age-cost*.15}
