@@ -113,11 +113,13 @@ function recordContractAgreement(db,p,t,terms,kind='renewal',actor='manager'){
   const auth=playerActionAuthority(db,actor,t);
   if(auth)return {ok:false,msg:auth.errors?.join(' · ')||'구단 계약 권한이 없습니다'};
   const err=contractWindowContactError(db,p,t,kind);if(err)return {ok:false,msg:err};
-  const normalized=normalizeContractTerms(db,p,t,terms.salary,terms.years,terms),
+  // Next-season option dates must also be next-season dates. The playing
+  // contract remains untouched until the exact post-Worlds expiry boundary.
+  const normalized=withContractStartSeason(db,cw.startSeason,()=>
+    normalizeContractTerms(db,p,t,terms.salary,terms.years,terms)),
     budgetErr=negotiationBudgetError(db,p,t,normalized,kind);
   if(budgetErr)return {ok:false,msg:budgetErr};
-  const cw=db.world.contractWindow,
-    row={pid:p.id,fromTeamId:p.team,teamId:t.id,kind,status:'agreed',
+  const row={pid:p.id,fromTeamId:p.team,teamId:t.id,kind,status:'agreed',
       agreedDate:db.worldDate,effectiveDate:cw.effectiveDate,
       contractExpiryDate:cw.contractExpiryDate,startSeason:cw.startSeason,
       salary:normalized.salary,years:normalized.years,terms:normalized,actor};
