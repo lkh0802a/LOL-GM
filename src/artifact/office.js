@@ -19,7 +19,12 @@ function updateHype(db,w){
     const ts=activeTeams(db,R.id,1); if(!ts.length)continue;
     const ss=Object.values(w.seasons).filter(s=>s.region===R.id&&(s.div||1)===1&&s.split&&s.done);
     const rec={};ts.forEach(t=>rec[t.id]={w:0,l:0});
-    for(const s of ss)for(const r of standings(db,s,'regular'))if(rec[r.tid]){rec[r.tid].w+=r.w;rec[r.tid].l+=r.l}
+    // Cumulative tables already include earlier split results. Summing those
+    // tables again would double/triple count prior wins in office metrics.
+    const latest=ss.slice().sort((a,b)=>b.split-a.split)[0];
+    const tables=latest?.standingsMode==='cumulative'?[latest]:ss;
+    for(const season of tables)for(const row of standings(db,season,'regular'))
+      if(rec[row.tid]){rec[row.tid].w+=row.w;rec[row.tid].l+=row.l}
     const pct=ts.map(t=>{const x=rec[t.id];return x.w+x.l?x.w/(x.w+x.l):0.5});
     const sd=Math.sqrt(avg(pct.map(p=>(p-0.5)**2)));
     // 독주: 같은 팀이 연속 우승하면 균형 점수 하락
