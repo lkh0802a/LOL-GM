@@ -47,11 +47,7 @@ const SEL_KO={splits:{1:'단일 시즌',2:'2스플릿',3:'3스플릿'},standings
 const ISEL_KO={timing:{early:'윈터 이후',mid:'스프링 이후',end:'서머 이후'},entry:{champions:'직전 스플릿 우승팀',slots:'지역별 진출권',next:'상위 대회 진출권 다음 순위 팀',div2:'하부 리그 상위 팀'},format:INTL_FORMATS,bo:{3:'Bo3',5:'Bo5'}};
 function sel(path,val,opts){return `<select data-cfg="${path}">${Object.entries(opts).map(([k,l])=>`<option value="${k}"${String(val)===k?' selected':''}>${l}</option>`).join('')}</select>`}
 function regionCard(r,i){
-  return `<div class="cfgcard compact"><div class="cfghead"><b>${esc(r.leagueName)} <small class="hint">${esc(r.name)}</small></b></div>
-    <div class="controls">
-      <label>스플릿 수${sel('r.'+i+'.splits',r.splits,SEL_KO.splits)}</label>
-      <label>성적 집계 방식${sel('r.'+i+'.standingsMode',r.standingsMode||'independent',SEL_KO.standingsMode)}</label>
-    </div>
+  return `<div class="cfgcard compact"><div class="cfghead"><b>${esc(r.leagueName)} <small class="hint">${esc(r.name)}</small></b><span class="hint">리그 사무국 관할</span></div>
     <p class="hint">${r.teams}팀 · ${fmtRegion(r)} · 월즈 ${r.slots}장</p></div>`;
 }
 function intlCard(it,i){
@@ -61,7 +57,7 @@ function intlCard(it,i){
 function seasonSetup(){
   const cfg=DB.worldConfig, dirty=DB.configDirty;
   return `<section class="teamhead"><h2>세계 만들기</h2><p>LOL GM은 고정된 글로벌 프로 생태계에서 시작합니다. 리그와 국제대회는 새 게임에서 임의로 추가·삭제하지 않으며, 이후 구조 변화는 게임 내 사무국과 세계 변화 시스템이 처리합니다.</p></section>
-  <section><h3>리그 구조</h3><p class="hint">스플릿 기간과 성적 집계는 각 리그에서 따로 선택합니다. 독립: 매 스플릿 순위 초기화 · 전적 누적: 정규 시즌 승패를 다음 기간으로 승계 · 포인트 누적: 각 스플릿 승패는 초기화하고 플레이오프 최종 성적 점수를 연간 합산합니다. 국제대회 직전 우승팀 자격은 어느 방식이든 해당 스플릿 챔피언에게 있습니다.</p><div class="cfgs">${cfg.regions.map(regionCard).join('')}</div></section>
+  <section><h3>리그 구조</h3><p class="hint">스플릿 기간 수와 성적 집계 방식은 각 지역 리그 사무국이 독립적으로 결정합니다. 감독이 직접 선택하지 않습니다. 사무국은 시즌 종료 후 흥행·경쟁 균형·운영 부담에 따라 다음 시즌 구조를 변경할 수 있으며, 결정은 세계 뉴스와 사무국 기록에 남습니다.</p><div class="cfgs">${cfg.regions.map(regionCard).join('')}</div></section>
   <section><h3>국제대회</h3><div class="cfgs">${cfg.internationals.map(intlCard).join('')}</div><p class="hint">퍼스트 스탠드 · MSI · 월드 챔피언십과 권역별 마스터즈/챌린저급 국제대회가 세계 일정에 포함됩니다.</p></section>
   <section><h3>세계 변화와 운영</h3><div class="controls">
     <label>세계 변화 빈도${sel('g.changes',cfg.changes,{none:'없음',low:'낮음',normal:'보통',high:'높음'})}</label>
