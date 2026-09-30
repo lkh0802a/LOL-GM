@@ -1,5 +1,6 @@
-// D02-B9: complete multi-region (2/3 split) calendar and cross-region cup
-// medical stress audit, with witnessed age, medical support and training mixes.
+// D02-B9/B10.1: complete multi-region (2/3 split) calendar and cross-region
+// cup medical audit. B10.1 measures actual overload/auto-rest exposure without
+// manufacturing medical incidents or tuning their odds.
 // Do not interpret rare simulated clinical events as population prevalence.
 import {readFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
@@ -15,12 +16,53 @@ source+=String.raw`(()=>{
     'd02-b9-calendar-NA','d02-b9-calendar-EU'
   ],rows=[];
   const inc=()=>({days:0,injury:0,illness:0,burnout:0,unavailableDays:0});
+  // Test-only observer: intercept the real lottery's exact numeric odds after
+  // dailyRecovery but before scrims. Preserve the same probability object and
+  // RNG calls; a post-day recomputation would use changed player fatigue.
+  const realIncidentOdds=medicalIncidentOdds;
+  let sampledOdds=null;
+  medicalIncidentOdds=(...args)=>{
+    const odds=realIncidentOdds(...args);
+    if(sampledOdds)sampledOdds.set(args[0].id,odds.burnout);
+    return odds;
+  };
+  const exposure=()=>({playerDays:0,healthyDays:0,load9Days:0,
+    overload14Days:0,overload20Days:0,overload45Days:0,
+    sameDayRegistrations:0,eligibleBurnoutDays:0,modeledBurnoutEvents:0,peakLoad:0,
+    peakOverloadDays:0,normal:0,light:0,rest:0,rehab:0});
+  // Probabilities here are sums of the *same* live model's per-player daily
+  // odds among players healthy before the day's tick (no ongoing rehab).
+  // They are risk exposure diagnostics, not a prediction of observed cases.
+  const trackExposure=(row,p,prior,date,burnoutOdds)=>{
+    row.playerDays++;
+    const load=p.medicalLoad||0,overload=p.medicalOverloadDays||0,
+      plan=p.medicalPlanDate===date?p.medicalDayPlan:medicalPlanFor(db,p);
+    assert(['normal','light','rest','rehab'].includes(plan),
+      'live medical daily plan was not recorded '+date+' '+p.id);
+    row[plan]++;
+    if(prior.sameDayRegistration)row.sameDayRegistrations++;
+    row.peakLoad=Math.max(row.peakLoad,load);
+    row.peakOverloadDays=Math.max(row.peakOverloadDays,overload);
+    if(prior.load>=9)row.load9Days++;
+    if(overload>=14)row.overload14Days++;
+    if(overload>=20)row.overload20Days++;
+    if(overload>=45)row.overload45Days++;
+    if(!prior.healthy)return;
+    row.healthyDays++;
+    // This is the genuine eligibility-gated odds from the live day's
+    // medical lottery, not a replay or a post-scrim approximation.
+    assert(Number.isFinite(burnoutOdds)&&burnoutOdds>=0&&burnoutOdds<=.00032,
+      'captured live burnout probability is out of range');
+    if(burnoutOdds>0)row.eligibleBurnoutDays++;
+    row.modeledBurnoutEvents+=burnoutOdds;
+  };
   const grand={days:0,official:0,scrimBlocks:0,internationalMatches:0,
     events:inc(),byRegion:{NA:inc(),EU:inc()},
     byCare:{supported:inc(),basic:inc()},
     byAge:{young:inc(),prime:inc(),veteran:inc()},
     byIntensity:{light:inc(),normal:inc(),high:inc()},
     planDays:{normal:0,light:0,rest:0,rehab:0},
+    burnoutExposure:exposure(),byOperator:{manager:exposure(),ai:exposure()},
     peakLoad:0,saves:0};
   const add=(row,p,evt)=>{
     row.days++;
@@ -74,14 +116,28 @@ source+=String.raw`(()=>{
     const started=db.worldDate;
     let lastDate=started,days=0,official=0,blocks=0,ints=0,saves=0,
       dailyRegions={NA:0,EU:0},maxLoad=0,seasonEvents=inc(),
-      scheduledIntervals=0,sawCup=false,regionSplits={NA:0,EU:0};
+      seasonExposure=exposure(),scheduledIntervals=0,
+      sawCup=false,regionSplits={NA:0,EU:0};
     let savedDuringLeague=false,savedDuringInternational=false;
     while(db.world.phase==='season'&&days<520){
       const date=nextCalendarDate(db);
       if(date===null){advanceStep(db);continue}
       assert(!lastDate||date>=lastDate,
         'calendar moved backwards within a multistage season');
+      // One pre-tick snapshot, taken before recovery, AI rest decisions and
+      // the medical lottery. A player is counted exactly once per roster-day.
+      const before=new Map();
+      for(const t of activeTeams(db))for(const id of t.roster){
+        const p=db.players[id];
+        if(!p||p.retired)continue;
+        assert(!before.has(id),'the same player is registered in two squads');
+        before.set(id,{load:p.medicalLoad||0,
+          healthy:!(p.medical?.daysLeft>0||p.medicalResidual?.daysLeft>0)});
+      }
+      sampledOdds=new Map();
       const played=applyWorldDailyEffects(db,date);
+      const dailyOdds=sampledOdds;
+      sampledOdds=null;
       assert(played&&db.world.lastDailyTick===date,
         'real daily medical and scrim tick duplicated or skipped');
       lastDate=date;days++;
@@ -101,8 +157,14 @@ source+=String.raw`(()=>{
             trainRow=grand.byIntensity[intensity];
           for(const row of [grand.events,grand.byRegion[t.region],
             careRow,ageRow,trainRow,seasonEvents])add(row,p,evt);
-          const plan=medicalPlanFor(db,p);
+          const plan=p.medicalPlanDate===date?p.medicalDayPlan:medicalPlanFor(db,p);
           if(grand.planDays[plan]!==undefined)grand.planDays[plan]++;
+          // An emergency FA may be legally registered during this very tick.
+          // Count the athlete-day, but never invent a preceding lottery draw.
+          const prior=before.get(p.id)||{load:0,healthy:false,sameDayRegistration:true};
+          for(const row of [grand.burnoutExposure,seasonExposure,
+            grand.byOperator[parentTeamOf(db,t)?.id===owner.id?'manager':'ai']])
+            trackExposure(row,p,prior,date,dailyOdds.get(p.id)||0);
           if(p.medicalLoad>maxLoad)maxLoad=p.medicalLoad;
           if(p.medicalLoad>grand.peakLoad)grand.peakLoad=p.medicalLoad;
         }
@@ -143,7 +205,7 @@ source+=String.raw`(()=>{
         saves++;
       }
     }
-    console.log('D02_REGIONAL_SAMPLE '+JSON.stringify({seed,days,official,internationalMatches:ints,scrimBlocks:blocks,rosteredPlayerDays:seasonEvents.days,incidents:{injury:seasonEvents.injury,illness:seasonEvents.illness,burnout:seasonEvents.burnout},lastDate,saves}));
+    console.log('D02_REGIONAL_SAMPLE '+JSON.stringify({seed,days,official,internationalMatches:ints,scrimBlocks:blocks,rosteredPlayerDays:seasonEvents.days,incidents:{injury:seasonEvents.injury,illness:seasonEvents.illness,burnout:seasonEvents.burnout},overloadDays:seasonExposure.overload14Days,restDays:seasonExposure.rest,healthyBurnoutRiskDays:seasonExposure.eligibleBurnoutDays,modeledBurnoutEvents:+seasonExposure.modeledBurnoutEvents.toFixed(4),lastDate,saves}));
     assert(db.world.phase==='offseason'&&days>150&&days<520,
       'long realistic league/calendar failed to terminate '+JSON.stringify({seed,days,date:lastDate}));
     const seasons=Object.values(db.world.seasons);
@@ -167,6 +229,14 @@ source+=String.raw`(()=>{
       'save was not verified during domestic play and international play');
     assert(maxLoad>2&&seasonEvents.days>=days*100,
       'medical athletes received no substantial live calendar exposure');
+    assert(seasonExposure.playerDays===seasonEvents.days&&
+      seasonExposure.healthyDays<=seasonExposure.playerDays&&
+      seasonExposure.overload45Days<=seasonExposure.overload20Days&&
+      seasonExposure.overload20Days<=seasonExposure.overload14Days&&
+      seasonExposure.eligibleBurnoutDays<=seasonExposure.healthyDays&&
+      ['normal','light','rest','rehab'].reduce((n,p)=>n+seasonExposure[p],0)===
+        seasonExposure.playerDays,
+      'real-calendar burnout exposure accounting is inconsistent');
     for(const k of cases)assert(seasonEvents[k]>=0,'negative case count');
     assert(seasonEvents.unavailableDays<=seasonEvents.days,
       'medical availability tally exceeded registered athlete-days');
@@ -188,6 +258,10 @@ source+=String.raw`(()=>{
       rosteredPlayerDays:seasonEvents.days,
       illnesses:seasonEvents.illness,injuries:seasonEvents.injury,
       burnout:seasonEvents.burnout,
+      healthyBurnoutRiskDays:seasonExposure.eligibleBurnoutDays,
+      modeledBurnoutEvents:+seasonExposure.modeledBurnoutEvents.toFixed(4),
+      peakOverloadDays:seasonExposure.peakOverloadDays,
+      overload14Days:seasonExposure.overload14Days,
       unavailablePlayerDays:seasonEvents.unavailableDays,
       maxMedicalLoad:Math.round(maxLoad*10)/10,
       medicalExpenses:Math.round(medicalExpenses*1000)/1000,
@@ -207,6 +281,23 @@ source+=String.raw`(()=>{
     'training intensity distribution did not span all three modes');
   assert(grand.events.injury+grand.events.illness+grand.events.burnout>=1,
     'no medical incidents in a substantial observed real-calendar sample');
+  const observed=grand.burnoutExposure;
+  assert(observed.playerDays===grand.events.days&&
+    observed.peakOverloadDays>=0&&observed.peakOverloadDays<=120&&
+    observed.healthyDays<=observed.playerDays&&
+    observed.sameDayRegistrations<=observed.playerDays&&
+    observed.eligibleBurnoutDays<=observed.healthyDays&&
+    observed.modeledBurnoutEvents>=0&&
+    observed.modeledBurnoutEvents<=observed.eligibleBurnoutDays*.00032+1e-8,
+    'risk exposure totals or per-eligible-day upper bound are invalid');
+  assert(grand.byOperator.manager.playerDays+
+    grand.byOperator.ai.playerDays===observed.playerDays&&
+    grand.byOperator.manager.playerDays>0&&
+    grand.byOperator.ai.playerDays>0,
+    'manager/AI medical workload exposure is not partitioned correctly');
+  assert(['normal','light','rest','rehab'].every(plan=>
+    grand.planDays[plan]===observed[plan]),
+    'medical plan exposure counts contradict the previously measured plans');
   const eventRate=row=>Math.round((row.injury+row.illness+row.burnout)/
     Math.max(1,row.days)*365*1000)/10;
   const combinedRate=eventRate(grand.events);
@@ -228,6 +319,22 @@ source+=String.raw`(()=>{
     byRegion:buckets(grand.byRegion),byFacility:buckets(grand.byCare),
     byAge:buckets(grand.byAge),byIntensity:buckets(grand.byIntensity),
     recoveryPlans:grand.planDays,maxMedicalLoad:grand.peakLoad,
+    burnoutExposure:{athleteDays:observed.playerDays,
+      healthyDays:observed.healthyDays,sameDayRegistrations:observed.sameDayRegistrations,
+      load9Days:observed.load9Days,
+      overload14Days:observed.overload14Days,
+      overload20Days:observed.overload20Days,
+      overload45Days:observed.overload45Days,
+      eligibleBurnoutDays:observed.eligibleBurnoutDays,
+      modeledBurnoutEvents:+observed.modeledBurnoutEvents.toFixed(4),
+      peakOverloadDays:observed.peakOverloadDays,
+      manager:{athleteDays:grand.byOperator.manager.playerDays,
+        burnoutRiskDays:grand.byOperator.manager.eligibleBurnoutDays,
+        recoveryDays:grand.byOperator.manager.light+
+          grand.byOperator.manager.rest},
+      ai:{athleteDays:grand.byOperator.ai.playerDays,
+        burnoutRiskDays:grand.byOperator.ai.eligibleBurnoutDays,
+        recoveryDays:grand.byOperator.ai.light+grand.byOperator.ai.rest}},
     saveRestores:grand.saves,runs:rows
   }));
 })();`;
