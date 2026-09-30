@@ -47,3 +47,43 @@ B1은 D03 전체 완료가 아니다. 다음 단위에서는 최초 백지 로�
 PR CI에서 `D03_SCOUTING_ACCEPTANCE`는 동일 선수에 대해 강한 스카우팅 조직이 반복 6회·12경기 표본 뒤 지식 54, 약한 조직은 별도 보고서를 유지했고, 강한 조직의 불확실성은 9.8 → 7.3으로 축소됐다. 연도 경계 뒤 해당 보고서는 지식 46·불확실성 9.3으로 노후화됐으며 추정 능력/잠재력은 자동으로 현재값에 갱신되지 않았다. 미관찰 제3구단은 `public` fallback을 유지했고 save format 2 왕복 뒤 관찰 6회·12경기 표본이 그대로 복원됐다.
 
 첫 구현에서는 새 공개정보 fallback이 최초 백지 로스터 경매의 선수 선택까지 바꿔 D02 다지역 의료 시드의 기존 5인 하한 결과를 흔드는 회귀가 발생했다. B1 범위를 기존 일반시장에 맞게 조정하여 `initial_roster`는 보호된 baseline을 유지했고, 재실행에서 D02 다지역 78,514 선수·일/948경기/15,636 스크림 블록 검증, regression, smoke, 2시즌 career, perf, production build가 모두 통과했다. 이 초기시장 baseline 자체의 관찰 모델 전환은 잔여 D03 작업이다.
+
+
+## D03-B2 — 최초 백지 로스터 시장의 창단 스카우팅 dossier
+
+### 문제
+
+B1에서는 첫 시즌 `initial_roster` 경매만 기존 `contracts.js::initialRosterMarketObservation`을 보존했다. 이 함수는 경매가 선수를 비교할 때마다 실제 현재 OVR을 다시 기준으로 계산했기 때문에, 구단별 보고서가 시장 판단의 단일 정보원이 된다는 D03 규칙에 예외가 남아 있었다.
+
+### B2 구현 규칙
+
+- 기존 창단 경매의 선수 선택·의료 장기 시드·로스터 수급 결과를 바꾸지 않기 위해, 기존 초기시장 능력/잠재 추정 공식을 **동일한 1회 관측 신호**로 사용한다. 밸런스 수치는 조정하지 않는다.
+- 이 신호 생성은 `scouting.js::initialAiMarketDossierSignal` 안에서만 수행한다. 최초로 해당 선수를 검토한 구단은 `seedInitialAiScoutReport`를 통해 자신의 `scoutingState.reports[player]`에 `founding_dossier`를 저장한다.
+- `contracts.js::aiMarketObservation`의 `initial_roster` 특례와 숨은 OVR 직접 조회를 제거한다. 창단 경매와 일반 시장 모두 `aiScoutReport` 하나를 통해서만 정보를 소비한다.
+- dossier가 생성된 뒤에는 같은 창단시장 안에서 선수의 실제 능력치가 변하더라도 저장된 ability/potential을 유지한다. 즉 후보 정렬 중 현재 OVR을 재조회하지 않는다.
+- 서로 다른 구단은 동일 선수에 대해 각자 별도 dossier를 생성하며, 기존 구단 ID 기반 관측 오차를 그대로 유지한다.
+- 창단 dossier는 save/restore 대상이다. 이후 실제 경기 관찰이 들어오면 `source='scouted'`로 전환되어 B1의 누적 관찰/노후화 경로를 그대로 사용한다.
+
+### B2 acceptance
+
+기존 `scripts/scouting-depth-acceptance.mjs`를 확장해 다음을 검증한다.
+
+- 초기시장 dossier의 ability/potential/uncertainty가 B1 이전에 보호했던 기존 창단 경매 공식과 정확히 일치한다.
+- dossier 최초 생성 이후 실제 OVR을 강제로 변화시켜도 `aiMarketObservation`과 `aiMarketValue`는 변하지 않는다.
+- 두 AI 구단은 같은 선수에 대해 서로 독립된 dossier 객체를 가진다.
+- `aiMarketObservation`에는 더 이상 `playerOvr`/실제 잠재력 직접 조회나 초기시장 별도 함수가 존재하지 않는다.
+- `initial_roster` 상태에서 save/restore 후에도 founding dossier가 동일하게 복원된다.
+- B1의 일반시장 구단별 관찰, 스태프/시설 효과, 반복 관찰, 연간 노후화 acceptance도 함께 유지한다.
+
+## B2 이후 남은 D03
+
+D03 전체 완료는 아니다. 다음 독립 단위는 **능동 스카우팅 운영**이다. 시장 개장 전 AI가 제한된 조사 자원을 어떤 선수/지역/리그에 배분하는지, 관찰 비용과 구단 재정·스카우터/시설 역량이 어떻게 연결되는지 구현해야 한다. 이후 오래된 보고서 때문에 실제 영입 판단을 틀리고 추가 관찰 후 재평가하는 시장 시나리오까지 검증해야 한다. D07의 스태프 계약 자체는 계속 별도 범위다.
+
+
+### B2 검증 결과
+
+최종 코드 PR CI에서 65개 Artifact 모듈 구조 검사가 통과했다. 최초 구현은 B2 로직을 기존 `scouting.js`에 추가하면서 14,000자 유지보수성 예산을 초과했고, 예산을 늘리지 않고 AI 구단 보고서/시장 관찰을 `scouting-ai.js`로 분리했다. 최종 크기는 관리 구단 스카우팅 도메인 약 6.5k자, AI 스카우팅 도메인 약 8.0k자이며 새 모듈에는 10k 유지보수성 예산을 별도로 둔다.
+
+`D03_SCOUTING_ACCEPTANCE`의 창단시장 표본에서 실제 OVR을 74 → 92로 강제 변경해도 최초 저장 dossier의 관측 능력 73·잠재 81과 시장 평가는 변하지 않았고, B1 이전 초기시장 공식과 `baselineParity=true`를 확인했다. 서로 다른 두 구단의 dossier는 독립 객체로 저장되며 초기시장 save/restore도 통과했다. B1 일반시장 검증도 지식 46 → 반복관찰 54 → 연간 노후화 46, 불확실성 9.8 → 7.3 → 9.3으로 그대로 유지됐다.
+
+같은 CI에서 D02 다지역 실제 달력 628일·공식 경기 948건·국제전 18건·실제 스크림 블록 15,636건·78,514 선수·일을 동일하게 완주했고, regression baseline, world smoke, 2시즌 career(공식 경기 186건·modern save resume 8회·legacy resume 2회), performance probe와 production build가 모두 통과했다. 창단 경매의 밸런스 상수나 의료 확률은 변경하지 않았다.
