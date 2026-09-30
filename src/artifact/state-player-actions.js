@@ -52,18 +52,17 @@ function validatePlayerSignAction(db,a){
   if(auth)return auth;
   const kind=a.kind||'fa',from=p.team&&playerActionTeam(db,p.team);
   if(!['fa','renewal','initial','transfer','medical_replacement',
-      'precontract','renewal_agreement'].includes(kind))
+      'renewal_agreement'].includes(kind))
     return worldActionError('invalid_action','지원하지 않는 계약 유형입니다');
-  const futureAgreement=['precontract','renewal_agreement'].includes(kind)
+  const futureAgreement=kind==='renewal_agreement'
     ?contractAgreementFor(db,p.id):null;
-  if(['precontract','renewal_agreement'].includes(kind)){
+  if(kind==='renewal_agreement'){
     if(a.actor!=='system'||!futureAgreement||futureAgreement.status!=='agreed'||
-      futureAgreement.teamId!==t.id||
-      (p.team&&p.team!==futureAgreement.fromTeamId&&p.team!==futureAgreement.teamId)||
+      futureAgreement.kind!=='renewal'||futureAgreement.teamId!==t.id||
+      p.team!==futureAgreement.fromTeamId||
       futureAgreement.effectiveDate>db.worldDate||
-      futureAgreement.kind!==(kind==='renewal_agreement'?'renewal':'precontract')||
       (p.contract&&p.contract.until>=db.year))
-      return worldActionError('invalid_contract','발효 가능한 다음 계약 합의가 아닙니다');
+      return worldActionError('invalid_contract','발효 가능한 원소속 재계약 합의가 아닙니다');
   }
   if(kind==='renewal'&&p.team!==t.id)
     return worldActionError('invalid_contract','기존 소속 구단에서만 재계약할 수 있습니다');
@@ -79,7 +78,7 @@ function validatePlayerSignAction(db,a){
       futureAgreement.years,futureAgreement.terms);
     if(+a.salary!==futureAgreement.salary||+a.years!==futureAgreement.years||
       JSON.stringify(terms)!==JSON.stringify(agreed))
-      return worldActionError('invalid_terms','가계약 발효 조건은 원래 합의한 조건과 같아야 합니다');
+      return worldActionError('invalid_terms','재계약 발효 조건은 원래 합의한 조건과 같아야 합니다');
   }
   let replacement=null;
   if(kind==='medical_replacement'){
@@ -185,7 +184,13 @@ function playerActionChanges(db,c,v){
 function applyPlayerSignAction(db,c){
   const p=db.players[c.pid],t=db.teams[c.teamId];
   if(c.kind==='transfer')doTransfer(db,p,db.teams[c.fromId],t,c.fee);
+  const cw=db.world?.contractWindow,
+    offseasonFaSeason=c.kind==='fa'&&db.world?.phase==='offseason'&&
+      cw?.stage==='fa'?cw.startSeason:null,
+    beforeYear=db.year;
+  if(offseasonFaSeason)db.year=offseasonFaSeason;
   const contract=signContract(db,p,t,c.salary,c.years,c.terms);
+  if(offseasonFaSeason)db.year=beforeYear;
   if(c.kind==='medical_replacement'){
     contract.medicalReplacement={...c.replacement};
     t.finance.cash=medicalWageRound(t.finance.cash-c.replacement.paid);
