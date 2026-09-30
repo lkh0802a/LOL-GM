@@ -49,7 +49,7 @@ function financeCommercialIncome(db,t,w=db.world,forecast=false,prize=0){
     transfer:pre.transferReceived||0};
 }
 function financeSeasonPayroll(db,t,w=db.world){
-  const snap=w?.contractWindow?.seasonYear===w?.year?
+  const snap=w&&w.contractWindow?.seasonYear===w.year?
     w.contractWindow.financePayroll?.[t.id]:null;
   return snap||{salary:payroll(db,t),regulated:regulatedPayroll(db,t)};
 }
