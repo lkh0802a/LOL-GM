@@ -22,7 +22,7 @@ function updateHype(db,w){
     // Cumulative tables already include earlier split results. Summing those
     // tables again would double/triple count prior wins in office metrics.
     const latest=ss.slice().sort((a,b)=>b.split-a.split)[0];
-    const tables=latest?.standingsMode==='cumulative'?[latest]:ss;
+    const tables=(latest?.standingsMode||R.standingsMode)==='cumulative'?[latest]:ss;
     for(const season of tables)for(const row of standings(db,season,'regular'))
       if(rec[row.tid]){rec[row.tid].w+=row.w;rec[row.tid].l+=row.l}
     const pct=ts.map(t=>{const x=rec[t.id];return x.w+x.l?x.w/(x.w+x.l):0.5});
