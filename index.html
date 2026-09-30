@@ -2430,7 +2430,7 @@ function newSeason(db,compId,year,seed,start,instanceKey=compId){
   const comp=db.competitions[compId], st0=comp.stages[0], id=`season_${year}_${instanceKey}`;
   const venue=competitionVenue(db,comp);
   comp.timeZone=venue.timeZone;comp.venueRegion=venue.region;
-  const s={id,comp:compId,year,seed,days:[],cur:0,stage:0,stageData:{},pstats:{},done:false,champion:null,runnerUp:null,venueTimeZone:venue.timeZone,venueRegion:venue.region};
+  const s={id,comp:compId,year,seed,days:[],cur:0,stage:0,stageData:{},pstats:{},done:false,champion:null,runnerUp:null,standingsMode:comp.region?(db.regions[comp.region]?.standingsMode||'independent'):null,venueTimeZone:venue.timeZone,venueRegion:venue.region};
   comp.championPool=Object.values(db.patch.champions).filter(c=>championProEligible(db,c,start||db.worldDate)).map(c=>c.id);comp.championPoolLockedAt=start||db.worldDate;
   const rng=new RNG(seed,'schedule');
   let order=st0.type==='round_robin'&&!st0.groups?comp.teams.slice().sort(()=>rng.next()-0.5):comp.teams.slice();
@@ -2653,7 +2653,7 @@ function rrTable(db,s,stageId,teams){
   // Each split remains a separate fixture/playoff tournament. Only the
   // regular-season table carries older results when the region explicitly
   // chooses cumulative records; other regions, years and divisions cannot mix.
-  const previous=region?.standingsMode==='cumulative'&&s.split?
+  const previous=(s.standingsMode||region?.standingsMode)==='cumulative'&&s.split?
     Object.values(db.world?.seasons||{}).filter(x=>x!==s&&x.done&&
       x.comp===s.comp&&x.year===s.year&&x.split&&x.split<s.split)
       .sort((a,b)=>a.split-b.split):[];
@@ -2700,7 +2700,7 @@ function regionPlacements(db,R,div=1){
   const w=db.world,act=activeTeams(db,R.id,div).map(t=>t.id);
   const done=[3,2,1].map(sp=>w?.seasons[R.short+(div===2?'2':'')+'-'+sp])
     .find(s=>s?.done);
-  const mode=R.standingsMode||'independent';
+  const mode=done?.standingsMode||R.standingsMode||'independent';
   let base=done?(mode==='points'?championshipStandings(db,R,div).map(x=>x.tid):
     mode==='cumulative'?standings(db,done,'regular').map(x=>x.tid):
     placements(db,done)):(div===1?R.lastPlacement||[]:[]);
@@ -4011,7 +4011,7 @@ function runOffseason(db){
   seasonAwards(db,w,rep);
   for(const p of Object.values(db.players)){const rows=(p.career||[]).filter(c=>c.year===w.year);if(!rows.length)continue;const gamesN=rows.reduce((a,c)=>a+c.g,0),rating=gamesN?rows.reduce((a,c)=>a+(c.rating||6.5)*c.g,0)/gamesN:6.5,intl=rows.some(c=>c.international),awardN=rep.awards.filter(a=>a.pid===p.id).length,target=clamp(playerOvr(p)*.72+rating*3.2+(intl?2:0)+awardN*2,20,99);p.reputation=Math.round(clamp((p.reputation||playerOvr(p))*.72+target*.28,20,99))}
   evalGoals(db,w,rep,ev);
-  for(const R of Object.values(db.regions)){const s=finalSeason(w,R);if(s&&s.done)R.lastPlacement=placements(db,s)}
+  for(const R of Object.values(db.regions)){const s=finalSeason(w,R);if(s&&s.done)R.lastPlacement=regionPlacements(db,R)}
   for(const p of Object.values(db.players)){if(p.retired)continue;const d=growPlayer(db,p,rng,games[p.id]||0,champGames[p.id]||{});p.developmentTrail=p.developmentTrail||[];p.developmentTrail.push({year:w.year,ovr:playerOvr(p)});p.developmentTrail=p.developmentTrail.slice(-6);if(p.team)rep.growth.push({pid:p.id,d,ovr:playerOvr(p)})}
   rep.growth.sort((a,b)=>b.d-a.d);
   for(const p of Object.values(db.players)){ if(p.retired)continue;
@@ -4776,7 +4776,12 @@ function updateHype(db,w){
     const ts=activeTeams(db,R.id,1); if(!ts.length)continue;
     const ss=Object.values(w.seasons).filter(s=>s.region===R.id&&(s.div||1)===1&&s.split&&s.done);
     const rec={};ts.forEach(t=>rec[t.id]={w:0,l:0});
-    for(const s of ss)for(const r of standings(db,s,'regular'))if(rec[r.tid]){rec[r.tid].w+=r.w;rec[r.tid].l+=r.l}
+    // Cumulative tables already include earlier split results. Summing those
+    // tables again would double/triple count prior wins in office metrics.
+    const latest=ss.slice().sort((a,b)=>b.split-a.split)[0];
+    const tables=(latest?.standingsMode||R.standingsMode)==='cumulative'?[latest]:ss;
+    for(const season of tables)for(const row of standings(db,season,'regular'))
+      if(rec[row.tid]){rec[row.tid].w+=row.w;rec[row.tid].l+=row.l}
     const pct=ts.map(t=>{const x=rec[t.id];return x.w+x.l?x.w/(x.w+x.l):0.5});
     const sd=Math.sqrt(avg(pct.map(p=>(p-0.5)**2)));
     // 독주: 같은 팀이 연속 우승하면 균형 점수 하락
@@ -4814,7 +4819,7 @@ function officeDecisions(db,rng,f,ev,mid){
     const weakGap=weak.length>2?R.strength-weak[0].s:0;
     const H=M.hype, B=M.balance, props=[];
     const grp=k=>({relegation:'system',franchise:'system',mixed:'system'}[k]||k);
-    const structural=new Set(['system','expand','contract','div2','format','splits','cap','floor','tax','import']);
+    const structural=new Set(['system','expand','contract','div2','format','splits','standingsMode','cap','floor','tax','import']);
     const add=(key,u,apply,why)=>{const g=grp(key),cool=structural.has(g)?4:3,last=(R.decisions||[]).filter(d=>d.key===g).slice(-1)[0];if(!last||db.world.year-last.year>=cool)props.push({key,u:u+(S.w[key]||0)+rng.normal(0,.12),apply,why})};
     const takes=[4,6,8].filter(x=>x<=n), up=takes.find(x=>x>R.playoffTake);
     if(!mid){
@@ -4842,6 +4847,26 @@ function officeDecisions(db,rng,f,ev,mid){
       const SPL={1:'단일 시즌제',2:'2스플릿제',3:'3스플릿제'};
       if((R.splits||1)<3) add('splits',(H-58)/15+trend/25,()=>{const o=R.splits||1;R.splits=o+1;return `${SPL[o]} → ${SPL[R.splits]} 전환`},`흥행 호조로 시즌 콘텐츠 확대`);
       if((R.splits||1)>1) add('splits',(38-H)/15-trend/25,()=>{const o=R.splits;R.splits=o-1;return `${SPL[o]} → ${SPL[R.splits]} 전환`},`흥행 부진, 일정 피로도 완화`);
+      // The league office—not the manager—may independently revise how
+      // completed split results determine annual qualification. Changes are
+      // offseason-only, cooldown-governed and effective next season.
+      if((R.splits||1)>1){
+        const mode=R.standingsMode||'independent';
+        const schemes=[
+          {key:'points',score:(.58-B)*1.75+(H-48)/37+
+            (R.splits===3?.24:0),why:`플레이오프 성과와 스플릿 간 종합 경쟁 반영 (흥행 ${H}, 경쟁 균형 ${B})`},
+          {key:'cumulative',score:(H-46)/43+(.6-B)*.75+
+            (R.splits===3?.12:0),why:`매 스플릿 정규시즌 전적 승계로 연간 성적 연속성 강화 (흥행 ${H})`},
+          {key:'independent',score:(45-H)/30+(B-.48)*1.55+
+            (trend<0?-.08:0),why:`기간별 독립 우승 경쟁과 새 출발 강화 (흥행 ${H}, 경쟁 균형 ${B})`}
+        ];
+        for(const scheme of schemes)if(scheme.key!==mode)
+          add('standingsMode',scheme.score,()=>{
+            const old=R.standingsMode||'independent';
+            R.standingsMode=scheme.key;
+            return `성적 집계 방식 변경: ${SPLIT_STANDINGS_MODES[old]} → ${SPLIT_STANDINGS_MODES[scheme.key]} (다음 시즌부터)`;
+          },scheme.why);
+      }
     }
     if(up!==undefined) add('playoffs',(0.55-B)*3+(H<45?0.2:0),()=>{const o=R.playoffTake;R.playoffTake=up;return `플레이오프 ${o}팀 → ${up}팀 확대`},`순위 경쟁 약화 (균형 ${B})`);
     if(R.playoffTake>4) add('playoffs',(B-0.75)*3-0.2,()=>{const o=R.playoffTake;R.playoffTake=takes.filter(x=>x<o&&x>0).pop()||4;return `플레이오프 ${o}팀 → ${R.playoffTake}팀 축소`},`정규 시즌 경쟁이 충분히 치열함 (균형 ${B})`);
@@ -7084,11 +7109,7 @@ const SEL_KO={splits:{1:'단일 시즌',2:'2스플릿',3:'3스플릿'},standings
 const ISEL_KO={timing:{early:'윈터 이후',mid:'스프링 이후',end:'서머 이후'},entry:{champions:'직전 스플릿 우승팀',slots:'지역별 진출권',next:'상위 대회 진출권 다음 순위 팀',div2:'하부 리그 상위 팀'},format:INTL_FORMATS,bo:{3:'Bo3',5:'Bo5'}};
 function sel(path,val,opts){return `<select data-cfg="${path}">${Object.entries(opts).map(([k,l])=>`<option value="${k}"${String(val)===k?' selected':''}>${l}</option>`).join('')}</select>`}
 function regionCard(r,i){
-  return `<div class="cfgcard compact"><div class="cfghead"><b>${esc(r.leagueName)} <small class="hint">${esc(r.name)}</small></b></div>
-    <div class="controls">
-      <label>스플릿 수${sel('r.'+i+'.splits',r.splits,SEL_KO.splits)}</label>
-      <label>성적 집계 방식${sel('r.'+i+'.standingsMode',r.standingsMode||'independent',SEL_KO.standingsMode)}</label>
-    </div>
+  return `<div class="cfgcard compact"><div class="cfghead"><b>${esc(r.leagueName)} <small class="hint">${esc(r.name)}</small></b><span class="hint">리그 사무국 관할</span></div>
     <p class="hint">${r.teams}팀 · ${fmtRegion(r)} · 월즈 ${r.slots}장</p></div>`;
 }
 function intlCard(it,i){
@@ -7098,7 +7119,7 @@ function intlCard(it,i){
 function seasonSetup(){
   const cfg=DB.worldConfig, dirty=DB.configDirty;
   return `<section class="teamhead"><h2>세계 만들기</h2><p>LOL GM은 고정된 글로벌 프로 생태계에서 시작합니다. 리그와 국제대회는 새 게임에서 임의로 추가·삭제하지 않으며, 이후 구조 변화는 게임 내 사무국과 세계 변화 시스템이 처리합니다.</p></section>
-  <section><h3>리그 구조</h3><p class="hint">스플릿 기간과 성적 집계는 각 리그에서 따로 선택합니다. 독립: 매 스플릿 순위 초기화 · 전적 누적: 정규 시즌 승패를 다음 기간으로 승계 · 포인트 누적: 각 스플릿 승패는 초기화하고 플레이오프 최종 성적 점수를 연간 합산합니다. 국제대회 직전 우승팀 자격은 어느 방식이든 해당 스플릿 챔피언에게 있습니다.</p><div class="cfgs">${cfg.regions.map(regionCard).join('')}</div></section>
+  <section><h3>리그 구조</h3><p class="hint">스플릿 기간 수와 성적 집계 방식은 각 지역 리그 사무국이 독립적으로 결정합니다. 감독이 직접 선택하지 않습니다. 사무국은 시즌 종료 후 흥행·경쟁 균형·운영 부담에 따라 다음 시즌 구조를 변경할 수 있으며, 결정은 세계 뉴스와 사무국 기록에 남습니다.</p><div class="cfgs">${cfg.regions.map(regionCard).join('')}</div></section>
   <section><h3>국제대회</h3><div class="cfgs">${cfg.internationals.map(intlCard).join('')}</div><p class="hint">퍼스트 스탠드 · MSI · 월드 챔피언십과 권역별 마스터즈/챌린저급 국제대회가 세계 일정에 포함됩니다.</p></section>
   <section><h3>세계 변화와 운영</h3><div class="controls">
     <label>세계 변화 빈도${sel('g.changes',cfg.changes,{none:'없음',low:'낮음',normal:'보통',high:'높음'})}</label>
@@ -7675,7 +7696,7 @@ function seasonTab(){
   const s=curS(); if(!s)return '<p class="empty">진행 중인 대회가 없습니다.</p>';
   const comp=DB.competitions[s.comp], me=managedTeamId(DB);
   if(SSET.tab==='table'){
-    const region=comp.region&&DB.regions[comp.region],mode=region?.standingsMode||'independent';
+    const region=comp.region&&DB.regions[comp.region],mode=s.standingsMode||region?.standingsMode||'independent';
     const doneSplits=region?Object.values(DB.world.seasons).filter(x=>
       x.done&&x.year===DB.world.year&&x.region===region.id&&
       (x.div||1)===(comp.div||1)&&x.split).length:0;
