@@ -31,8 +31,27 @@ function playerMarketValue(db,p){
 }
 function asking(db,p,rid){return Math.round(marketSalary(db,p,rid)*(1+p.personality.ambition/420)*(.95+(p.reputation??playerOvr(p))/1700)*10)/10}
 function defaultPromisedRole(db,p,t){const cur=starterFor(db,t,p.role);if(!cur)return 'starter';const gap=playerOvr(p)-playerOvr(cur);return gap>=3?'starter':gap>=-2?'competition':p.age<=21?'prospect':'backup'}
+function contractDurationPolicy(db,p,t=null){
+  const goal=playerCareerGoal(p),amb=p.personality?.ambition??50;
+  let preferred=2,reason='balanced';
+  if(p.age>=29){preferred=1;reason='veteran_flexibility'}
+  else if(p.age<=21&&goal==='development'){preferred=3;reason='development_security'}
+  else if(goal==='stability'){preferred=3;reason='career_stability'}
+  else if(amb>=82&&p.age>=23){preferred=1;reason='ambitious_flexibility'}
+  return {min:1,max:3,preferred,choices:[1,2,3],reason};
+}
+function contractDurationFit(db,p,t,years){
+  const policy=contractDurationPolicy(db,p,t),
+    y=clamp(Math.round(+years||policy.preferred),policy.min,policy.max),
+    distance=Math.abs(y-policy.preferred);
+  // Reuse the pre-D04 duration weight (.055 per step): B1 changes direction
+  // by player preference, not the magnitude of contract-term utility.
+  return Math.max(.055,.165-distance*.055);
+}
 function normalizeContractTerms(db,p,t,salary,years,terms={}){
-  salary=Math.max(.1,Math.round(+salary*10)/10);years=clamp(Math.round(+years||1),1,3);
+  const duration=contractDurationPolicy(db,p,t);
+  salary=Math.max(.1,Math.round(+salary*10)/10);
+  years=clamp(Math.round(+years||duration.preferred),duration.min,duration.max);
   const sign=Math.max(0,Math.round((terms.signingBonus??0)*10)/10);
   const bonuses={performance:Math.max(0,Math.round((terms.bonuses?.performance??0)*10)/10),title:Math.max(0,Math.round((terms.bonuses?.title??0)*10)/10),international:Math.max(0,Math.round((terms.bonuses?.international??0)*10)/10)};
   const optionType=['team','player'].includes(terms.option?.type)?terms.option.type:'none',until=db.year+years-1;
@@ -44,12 +63,12 @@ function contractExpectedValue(c){if(!c)return 0;const b=c.bonuses||{};return c.
 function teamInternationalAppeal(db,t){const R=db.regions[t.region],power=db.global?.power?.[R.id]||1;return clamp((R.slots||1)/4*.55+(teamStrength(db,t.id)-R.strength)/18*.3+(t.fans||30)/180+power*.08,0,1.25)}
 function offerUtility(db,p,t,offer,opt={}){
   ensureSatisfaction(p);const ask=Math.max(.1,asking(db,p,t.region)),moneyScore=contractExpectedValue(offer)/ask,role=offer.promisedRole||defaultPromisedRole(db,p,t),roleScore={core:.72,starter:.62,competition:.24,backup:.02,prospect:p.age<=21?.38:-.08}[role]??0;
-  const strength=(teamStrength(db,t.id)-db.regions[t.region].strength)/12,facilities=ensureFacilities(t),fac=(facilities.training-2)*.055+(p.age<=22?(facilities.youth-2)*.075:(facilities.recovery-2)*.018),coach=(staffProfile(t).development-55)/160,intl=teamInternationalAppeal(db,t),stability=Math.min(3,offer.years||1)*.055;
+  const strength=(teamStrength(db,t.id)-db.regions[t.region].strength)/12,facilities=ensureFacilities(t),fac=(facilities.training-2)*.055+(p.age<=22?(facilities.youth-2)*.075:(facilities.recovery-2)*.018),coach=(staffProfile(t).development-55)/160,intl=teamInternationalAppeal(db,t),durationFit=contractDurationFit(db,p,t,offer.years);
   const home=db.worldConfig.universalLanguage?(p.region===t.region?.04:0):(p.region===t.region?.22:-.08),amb=p.personality.ambition/100,career=playerCareerGoal(p);
-  let careerFit=0;if(career==='development')careerFit=fac+coach+(role==='prospect'||role==='competition'?.16:0);else if(career==='starter')careerFit=['core','starter'].includes(role)?.22:-.12;else if(career==='international')careerFit=intl*.18;else if(career==='titles')careerFit=Math.max(0,strength)*.16+intl*.1;else careerFit=stability;
+  let careerFit=0;if(career==='development')careerFit=fac+coach+(role==='prospect'||role==='competition'?.16:0);else if(career==='starter')careerFit=['core','starter'].includes(role)?.22:-.12;else if(career==='international')careerFit=intl*.18;else if(career==='titles')careerFit=Math.max(0,strength)*.16+intl*.1;else careerFit=durationFit;
   const option=offer.option?.type==='player'?.07:offer.option?.type==='team'?-.025:0,buyout=offer.buyout?clamp(offer.buyout/Math.max(.2,playerMarketValue(db,p)),.4,4)*-.018:0;
   const currentPenalty=opt.renewal?(p.satisfaction-50)/170+(p.managerTrust-50)/105+(p.managerRelationship-50)/190-(p.wantsOut?.4:0):0;
-  return moneyScore*1.05+roleScore+strength*amb*.18+intl*amb*.22+(t.fans||30)/250+fac+coach+careerFit+stability+home+option+buyout+currentPenalty;
+  return moneyScore*1.05+roleScore+strength*amb*.18+intl*amb*.22+(t.fans||30)/250+fac+coach+careerFit+durationFit+home+option+buyout+currentPenalty;
 }
 function offerAcceptanceThreshold(db,p){const rep=(p.reputation||playerOvr(p)),amb=p.personality.ambition/100;return 1.04+rep/520+amb*.12+(p.age<=20?.04:0)}
 function contractBonusCost(db,t,year){
@@ -79,14 +98,14 @@ function medicalContractYears(db,p,years){
   const risk=medicalContractRisk(db,p);
   return risk>=.115?Math.min(years,1):risk>=.065?Math.min(years,2):years;
 }
-function contractYearsForPlayer(db,p,rng){
-  const elite=(p.reputation||playerOvr(p))>=85;
+function contractYearsForPlayer(db,p,rng,t=null){
+  const elite=(p.reputation||playerOvr(p))>=85,policy=contractDurationPolicy(db,p,t);
   let years;
   if(p.age<=20){const x=rng.next();years=x<(elite?.1:.15)?1:x<(elite?.62:.72)?2:3}
   else if(p.age<=25){const x=rng.next();years=x<(elite?.25:.45)?1:x<(elite?.78:.9)?2:3}
   else if(p.age<=28)years=rng.chance(elite?.42:.7)?1:2;
   else years=rng.chance(.88)?1:2;
-  return medicalContractYears(db,p,years);
+  return clamp(medicalContractYears(db,p,years),policy.min,policy.max);
 }
 
 function eligibleFillFAs(db,t,role=null){
