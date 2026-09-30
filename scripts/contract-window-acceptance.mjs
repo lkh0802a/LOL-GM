@@ -42,6 +42,10 @@ source+=String.raw`(()=>{
     cw.contractExpiryDate==='2027-12-31'&&cw.effectiveDate==='2028-01-01',
     'calendar boundaries are not day 1-14 / day 15 / year-end / Jan 1');
   assert(db.worldDate==='2027-11-17','exclusive window did not begin day after final competition');
+  const dayStep=advanceOffseasonContractDay(db);
+  assert(dayStep.ok&&dayStep.stage==='exclusive'&&db.worldDate==='2027-11-18',
+    'exclusive contract window cannot advance one real day for B2 cooldowns');
+  db.worldDate=cw.startDate;
 
   let blocked=startNegotiation(db,target.id,'precontract',{teamId:mine.id});
   assert(!blocked.ok&&blocked.msg.includes('14일'),'outside contact opened during incumbent exclusivity');
@@ -195,7 +199,8 @@ vm.runInNewContext(source,{console,Date,Math,JSON,Set,Map,WeakMap,Object,
 const [app,market]=await Promise.all([
   readFile(resolve(root,'app.js'),'utf8'),readFile(resolve(root,'ui-market.js'),'utf8')
 ]);
-if(!app.includes('renderContractWindow()')||!app.includes('scontractopen')||
+if(!app.includes('renderContractWindow()')||!app.includes('scontractday')||
+  !app.includes('scontractopen')||
   !market.includes('data-start-precontract')||!market.includes('bindContractWindow'))
   throw new Error('D04_CONTRACT_WINDOW manager UI does not expose both contract-window stages');
 console.log('D04_CONTRACT_WINDOW_UI_ACCEPTANCE '+JSON.stringify({
