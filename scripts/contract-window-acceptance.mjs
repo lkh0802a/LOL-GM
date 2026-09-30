@@ -148,16 +148,17 @@ source+=String.raw`(()=>{
   assert(fa,'fixture missing FA after expiry');
   fa.age=26;fa.faYears=0;fa.personality.ambition=50;
   const faTeam=other,ask=asking(db,fa,faTeam.region),
-    fair=normalizeContractTerms(db,fa,faTeam,ask,2,{promisedRole:'starter'}),
+    fair=normalizeContractTerms(db,fa,faTeam,ask,2,{promisedRole:'core'}),
     low=normalizeContractTerms(db,fa,faTeam,ask*.6,2,{promisedRole:'backup'});
   db.world.phase='season';
   const strict=offerAcceptanceThreshold(db,fa,{kind:'fa'});
   db.world.phase='offseason';db.world.contractWindow.stage='fa';
-  const continuity=offerAcceptanceThreshold(db,fa,{kind:'fa'});
+  const continuity=offerAcceptanceThreshold(db,fa,{kind:'fa'}),
+    fairUtility=offerUtility(db,fa,faTeam,fair);
   assert(continuity<strict,'unsigned-season career risk did not lower fair-offer resistance');
   assert(contractOfferReasonable(db,fa,faTeam,fair,'fa')&&
-    !contractOfferReasonable(db,fa,faTeam,low,'fa'),
-    'career continuity either rejected fair pay or accepted clear undervaluation');
+    fairUtility>=continuity&&!contractOfferReasonable(db,fa,faTeam,low,'fa'),
+    'career continuity did not accept a market-level core offer or accepted clear undervaluation');
 
   packed=packDB(db);db=unpackDB(packed);
   assert(db.world.contractWindow.stage==='fa'&&
@@ -175,6 +176,7 @@ source+=String.raw`(()=>{
       options:settled.settlement.options.length},
     acceptance:{strict:Math.round(strict*1000)/1000,
       continuity:Math.round(continuity*1000)/1000,
+      fairUtility:Math.round(fairUtility*1000)/1000,
       fair:true,undervalued:false},
     saveFormat:JSON.parse(packed).saveFormat
   }));
