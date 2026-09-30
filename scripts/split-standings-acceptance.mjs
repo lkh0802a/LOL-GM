@@ -136,9 +136,51 @@ source+=String.raw`(()=>{
   reset.year++;reset.world={...reset.world,year:reset.year,seasons:{}};
   check(championshipStandings(reset,reset.regions.NA).every(x=>x.points===0),
     'championship points leaked between years');
-  // A single-split region may select points without changing its schedule.
+  // League-office governance alone makes and records rule changes; never
+  // mutate an already-completed competition's standings mode.
+  const officeDb=unpackDB(packDB(db)),officeR=officeDb.regions.NA,
+    officeNews=[];
+  officeDb.world.year=2028;
+  officeR.standingsMode='independent';
+  officeR.metrics=[{year:2027,hype:95,balance:.03,fans:85,stars:5,teams:10}];
+  const guarded=['system','expand','contract','div2','format','splits',
+    'cap','floor','tax','import','playoffs','bo'];
+  officeR.decisions=guarded.map(key=>({key,year:2028}));
+  const oldSplitCount=officeR.splits,
+    seasonMode=officeDb.world.seasons['LCS-2'].standingsMode;
+  officeDecisions(officeDb,new RNG('split-office-2028','office'),1,
+    msg=>officeNews.push(msg),false);
+  const ratified=officeR.decisions.filter(x=>x.key==='standingsMode');
+  check(officeR.standingsMode==='points'&&ratified.length===1&&
+    ratified[0].year===2028&&officeNews.some(x=>x.includes('성적 집계 방식 변경'))&&
+    officeR.splits===oldSplitCount,
+    'league office did not independently adopt a justified ranking policy');
+  check(officeDb.world.seasons['LCS-2'].standingsMode===seasonMode&&
+    standings(officeDb,officeDb.world.seasons['LCS-2'],regular)
+      .find(x=>x.tid===A).w===1,
+    'office policy changed historical split rules after their fixtures ended');
+  officeR.metrics=[{year:2029,hype:12,balance:.98,fans:20,stars:1,teams:10}];
+  officeDb.world.year=2029;
+  officeR.decisions=officeR.decisions.filter(x=>x.key==='standingsMode')
+    .concat(guarded.map(key=>({key,year:2029})));
+  officeDecisions(officeDb,new RNG('split-office-2029','office'),1,
+    msg=>officeNews.push(msg),false);
+  check(officeR.standingsMode==='points'&&
+    officeR.decisions.filter(x=>x.key==='standingsMode').length===1,
+    'office violated the minimum interval between structural decisions');
+  officeR.metrics=[{year:2032,hype:12,balance:.98,fans:20,stars:1,teams:10}];
+  officeDb.world.year=2032;
+  officeR.decisions=officeR.decisions.filter(x=>x.key==='standingsMode')
+    .concat(guarded.map(key=>({key,year:2032})));
+  officeDecisions(officeDb,new RNG('split-office-2032','office'),1,
+    msg=>officeNews.push(msg),false);
+  check(officeR.standingsMode==='independent'&&
+    officeR.decisions.filter(x=>x.key==='standingsMode').length===2,
+    'office did not retain the authority to change formats in a later offseason');
+  // A single-split office may retain its inherited policy independently of
+  // the number of scheduling periods; it is never an extra manager setting.
   check(regionCfg('JP',{splits:1,standingsMode:'points'}).standingsMode==='points',
-    'single-season schedule disallowed independent aggregation selection');
+    'split count and aggregation configuration are accidentally the same field');
   console.log('SPLIT_AGGREGATION '+JSON.stringify({
     allowedModes:Object.keys(SPLIT_STANDINGS_MODES),
     twoAndThreeSplits:true,firstSplitWins:carriedA.w,
