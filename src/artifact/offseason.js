@@ -61,8 +61,7 @@ function runOffseason(db){
   // B3 exposes the 14-day contract window as real world dates, but no training
   // or matches occur there. Preserve B10's full passive recovery from the last
   // competitive date instead of shortening recovery by the displayed window.
-  const medicalRolloverDate=`${db.year}-01-06`,
-    recoveryClock=db.worldDate;
+  const medicalRolloverDate=`${db.year}-01-06`;
   if(cw?.seasonEndDate)db.worldDate=cw.seasonEndDate;
   medicalOffseasonRecovery(db,medicalRolloverDate);
   db.worldDate=medicalRolloverDate;
