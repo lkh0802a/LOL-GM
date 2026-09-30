@@ -326,12 +326,21 @@ function reconcileMinimumRosterAfterExpiry(db,rng,rep){
   for(const t of activeTeams(db)){
     let guard=0;
     while(medicalAvailable(db,t)<5&&guard++<8){
-      const fa=eligibleFillFAs(db,t)[0];
-      if(!fa)throw new Error('Talent supply invariant failed after contract expiry: '+t.id);
-      const years=contractYearsForPlayer(db,fa,rng,t),
-        salary=asking(db,fa,t.region),
-        terms=normalizeContractTerms(db,fa,t,salary,years,{
-          promisedRole:defaultPromisedRole(db,fa,t)});
+      let accepted=null;
+      for(const fa of eligibleFillFAs(db,t)){
+        const years=contractYearsForPlayer(db,fa,rng,t),ask=asking(db,fa,t.region);
+        for(const mult of [1,1.05,1.15]){
+          const terms=normalizeContractTerms(db,fa,t,ask*mult,years,{
+            promisedRole:defaultPromisedRole(db,fa,t)});
+          if(contractOfferReasonable(db,fa,t,terms,'fa')&&
+            offerUtility(db,fa,t,terms)>=offerAcceptanceThreshold(db,fa,{kind:'fa'})){
+            accepted={fa,terms};break;
+          }
+        }
+        if(accepted)break;
+      }
+      if(!accepted)throw new Error('No willing eligible free agent for post-expiry minimum roster: '+t.id);
+      const {fa,terms}=accepted;
       signMarketContract(db,fa,t,terms.salary,terms.years,terms,'fa','system');
       const row={pid:fa.id,team:t.id,salary:terms.salary,years:terms.years,
         compliance:true,reason:'post_expiry_minimum_roster'};
