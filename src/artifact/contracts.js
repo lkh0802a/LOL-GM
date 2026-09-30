@@ -159,6 +159,26 @@ function aiMarketOfferCandidates(db,t,fas,role,budgetRoom,year=db.year){
     .sort((a,b)=>b.v-a.v||a.p.id.localeCompare(b.p.id));
 }
 
+function aiRenewalDecision(db,p,t,rng){
+  const isStarter=starterFor(db,t,p.role)===p,
+    want=isStarter||p.rosterRole==='competition'||
+      (p.age<=21&&p.pot-playerOvr(p)>=6)||
+      (p.rosterRole==='backup'&&t.roster.length<7&&p.satisfaction>=50),
+    ask=asking(db,p,t.region),
+    room=salaryBudget(db,t)-payroll(db,t)+(p.contract?.salary||0),
+    yrs=contractYearsForPlayer(db,p,rng),
+    proposal=normalizeContractTerms(db,p,t,
+      ask*rng.range(.96,1.08)*(1-medicalContractRisk(db,p)*.4),yrs,{
+        promisedRole:recommendedRosterRole(db,p,t),
+        option:rng.chance(.18)?{type:rng.chance(.55)?'team':'player'}:null
+      });
+  ensureSatisfaction(p);
+  const stay=offerUtility(db,p,t,proposal,{renewal:true})+
+    rng.normal(0,.06)>=offerAcceptanceThreshold(db,p);
+  return {want,ask,room,yrs,proposal,stay,
+    accepted:want&&proposal.salary<=room&&stay};
+}
+
 function contractMarket(db,rng,rep,ev){
   const year=db.year, size=5+(db.worldConfig.subs||0), w=db.world, mine=w&&w.manage==='manual'?managedTeamId(db):null;
   const imports=t=>teamNonLocalCount(db,t);
@@ -173,11 +193,19 @@ function contractMarket(db,rng,rep,ev){
     if(!p.contract){release(t,p);rep.expired.push({pid:p.id,team:t.id,why:'무계약 상태 — FA 전환'});continue}
     if(p.contract.medicalReplacement||p.contract.until>=year)continue;
     if(t.id===mine){release(t,p);rep.expired.push({pid:p.id,team:t.id,why:'재계약하지 않음'});continue}
-    const isStarter=starterFor(db,t,p.role)===p,want=isStarter||p.rosterRole==='competition'||(p.age<=21&&p.pot-playerOvr(p)>=6)||(p.rosterRole==='backup'&&t.roster.length<7&&p.satisfaction>=50);
-    const ask=asking(db,p,t.region),room=salaryBudget(db,t)-payroll(db,t)+p.contract.salary,yrs=contractYearsForPlayer(db,p,rng),proposal=normalizeContractTerms(db,p,t,ask*rng.range(.96,1.08)*(1-medicalContractRisk(db,p)*.4),yrs,{promisedRole:recommendedRosterRole(db,p,t),option:rng.chance(.18)?{type:rng.chance(.55)?'team':'player'}:null});
-    ensureSatisfaction(p);const stay=offerUtility(db,p,t,proposal,{renewal:true})+rng.normal(0,.06)>=offerAcceptanceThreshold(db,p);
-    if(want&&proposal.salary<=room&&stay){signMarketContract(db,p,t,proposal.salary,yrs,proposal,'renewal','ai');rep.resign.push({pid:p.id,team:t.id,salary:proposal.salary,years:yrs,terms:proposal})}
-    else {release(t,p);rep.expired.push({pid:p.id,team:t.id,why:!want?'재계약 제안 없음':proposal.salary>room?'연봉 이견':'FA 시장 도전'})}
+    const decision=aiRenewalDecision(db,p,t,rng);
+    if(w.contractWindow?.completed){
+      release(t,p);rep.expired.push({pid:p.id,team:t.id,why:'우선협상 기간 종료 — FA 전환'});
+    }else if(decision.accepted){
+      signMarketContract(db,p,t,decision.proposal.salary,decision.yrs,
+        decision.proposal,'renewal','ai');
+      rep.resign.push({pid:p.id,team:t.id,salary:decision.proposal.salary,
+        years:decision.yrs,terms:decision.proposal});
+    }else{
+      release(t,p);rep.expired.push({pid:p.id,team:t.id,
+        why:!decision.want?'재계약 제안 없음':
+          decision.proposal.salary>decision.room?'연봉 이견':'FA 시장 도전'});
+    }
   }
   // 2) FA 시장 (3라운드: 제안 → 선수 선택)
   // 2군 콜업: 프랜차이즈 구단은 자기 2군에서 먼저 올린다
