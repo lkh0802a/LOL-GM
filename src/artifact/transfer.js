@@ -119,6 +119,10 @@ function negotiationDemand(db,p,t,kind,rng,competitors=[]){
 function startNegotiation(db,pid,kind='fa',extra={}){
   const w=db.world,t=extra.teamId?db.teams[extra.teamId]:myT(db),p=db.players[pid];if(!w||!t||!p)return {ok:false,msg:'협상 대상을 찾을 수 없습니다'};
   if(kind==='transfer'){const moveErr=contractedMoveError(db,p);if(moveErr)return {ok:false,msg:moveErr}}
+  if(kind==='early_fa'){
+    const contactErr=contractWindowContactError(db,p,t,'early_fa');
+    if(contactErr)return {ok:false,msg:contactErr};
+  }
   if(kind==='renewal'&&w.phase==='offseason'&&w.contractWindow){
     const contactErr=contractWindowContactError(db,p,t,'renewal');
     if(contactErr)return {ok:false,msg:contactErr};
@@ -127,8 +131,9 @@ function startNegotiation(db,pid,kind='fa',extra={}){
     return {ok:false,msg:'기존 계약이 종료되어 재계약 우선협상 기간이 끝났습니다'};
   if((kind==='fa'||kind==='initial')&&p.team)return {ok:false,msg:'FA 선수가 아닙니다'};if(kind==='renewal'&&p.team!==t.id)return {ok:false,msg:'우리 팀 선수가 아닙니다'};
   if(kind==='initial'){const allowed=new Set(setupTeamsForManager(db).map(x=>x.id));if(!allowed.has(t.id))return {ok:false,msg:'내 구단 조직의 스쿼드만 계약 대상이 될 수 있습니다'}}
-  if((kind==='fa'||kind==='transfer'||kind==='initial')&&!recruitmentReady(db,pid,t.id))return {ok:false,msg:'관심 등록 → 관찰 → 내부 평가를 완료한 뒤 공식 협상을 시작할 수 있습니다'};
-  const id=negotiationId(db,pid,kind,kind==='initial'?t.id:null),
+  if((kind==='fa'||kind==='early_fa'||kind==='transfer'||kind==='initial')&&!recruitmentReady(db,pid,t.id))return {ok:false,msg:'관심 등록 → 관찰 → 내부 평가를 완료한 뒤 공식 협상을 시작할 수 있습니다'};
+  const id=negotiationId(db,pid,kind,
+      (kind==='initial'||kind==='early_fa')?t.id:null),
     store=negotiationStore(db),
     current=store[id];
   if(current&&current.status==='open')return {ok:true,neg:current,msg:p.name+' 협상이 이미 진행 중입니다'};
@@ -166,8 +171,9 @@ function negotiationCounter(db,neg,offer){
 function finalizeNegotiation(db,neg,terms){
   const p=db.players[neg.pid],t=db.teams[neg.teamId];
   if(!p||!t)return {ok:false,msg:'협상 선수 또는 구단이 존재하지 않습니다'};
-  const future=neg.kind==='renewal'&&db.world?.phase==='offseason'&&
-    db.world?.contractWindow?.stage==='exclusive'&&contractExpiresThisSeason(db,p);
+  const future=(neg.kind==='renewal'||neg.kind==='early_fa')&&
+    db.world?.phase==='offseason'&&db.world?.contractWindow?.stage==='exclusive'&&
+    contractExpiresThisSeason(db,p);
   let result;
   if(future){
     result=recordContractAgreement(db,p,t,terms,neg.kind,'manager');
@@ -187,15 +193,20 @@ function finalizeNegotiation(db,neg,terms){
   neg.status='accepted';neg.counter=null;neg.acceptedTerms=terms;neg.closedDate=db.worldDate;
   if(future)neg.agreement=contractAgreementFor(db,p.id);
   const target=recruitmentTarget(db,neg.pid);
-  if(target){target.stage='closed';target.result=future?'renewal_agreed':'signed';target.negotiationId=neg.id}
+  if(target){target.stage='closed';target.result=future?
+    (neg.kind==='early_fa'?'early_fa_agreed':'renewal_agreed'):'signed';target.negotiationId=neg.id}
   return {ok:true,msg:future?result.msg:p.name+' 계약 합의 · '+money(terms.salary)+' · '+terms.years+'년'};
 }
 function submitNegotiationOffer(db,nid,terms){
   const neg=negotiationStore(db)[nid];if(!neg||neg.status!=='open'||neg.stage!=='player')return {ok:false,msg:'진행 중인 선수 협상이 아닙니다'};
   const p=db.players[neg.pid],t=db.teams[neg.teamId],offer=normalizeContractTerms(db,p,t,terms.salary,terms.years,terms),err=negotiationBudgetError(db,p,t,offer,neg.kind);if(err)return {ok:false,msg:err};if(neg.kind==='transfer'&&(offer.signingBonus||0)>Math.max(0,t.finance.cash-(neg.fee||0)))return {ok:false,msg:'이적료 지급 후 계약금을 지급할 현금이 부족합니다'};
-  const util=offerUtility(db,p,t,offer,{renewal:neg.kind==='renewal'}),comp=neg.competitors.length?Math.max(...neg.competitors.map(x=>x.utility)):0,threshold=Math.max(offerAcceptanceThreshold(db,p),comp-.035);
+  const util=offerUtility(db,p,t,offer,{renewal:neg.kind==='renewal'}),
+    comp=neg.competitors.length?Math.max(...neg.competitors.map(x=>x.utility)):0,
+    threshold=Math.max(offerAcceptanceThreshold(db,p,{kind:neg.kind}),comp-.035),
+    reasonable=!['fa','early_fa','renewal'].includes(neg.kind)||
+      contractOfferReasonable(db,p,t,offer,neg.kind);
   neg.round++;if(neg.lastUtility!=null&&util<neg.lastUtility-.03)neg.patience--;if(util<threshold-.22)neg.patience--;neg.lastOffer=offer;neg.lastUtility=util;neg.history.push({round:neg.round,side:'club',terms:offer,utility:Math.round(util*1000)/1000});
-  if(util>=threshold){const r=finalizeNegotiation(db,neg,offer);neg.history.push({round:neg.round,side:'player',result:r.ok?'accept':'commit_rejected'});return r}
+  if(reasonable&&util>=threshold){const r=finalizeNegotiation(db,neg,offer);neg.history.push({round:neg.round,side:'player',result:r.ok?'accept':'commit_rejected'});return r}
   if(neg.round>=neg.maxRounds||neg.patience<=0||util<threshold-.62){
     const hardBreak=neg.patience<=0||util<threshold-.62;
     closePlayerNegotiationFailure(db,neg,p,hardBreak);
@@ -204,7 +215,7 @@ function submitNegotiationOffer(db,nid,terms){
   }
   if((neg.kind==='fa'||neg.kind==='initial')&&neg.round>=2&&neg.competitors.length){
     const rival=neg.competitors[0],rt=db.teams[rival.teamId],gap=rival.utility-util,rrng=new RNG(db.world.seed+'/'+neg.id+'/'+neg.round,'negotiation-rival');
-    if(rt&&!p.team&&!negotiationBudgetError(db,p,rt,rival.terms,'fa')&&rival.utility>=offerAcceptanceThreshold(db,p)-.02&&(gap>.08||rrng.chance(clamp(.16+Math.max(0,gap)*1.8,.12,.72)))){
+    if(rt&&!p.team&&!negotiationBudgetError(db,p,rt,rival.terms,'fa')&&rival.utility>=offerAcceptanceThreshold(db,p,{kind:'fa'})-.02&&(gap>.08||rrng.chance(clamp(.16+Math.max(0,gap)*1.8,.12,.72)))){
       const signed=commitWorldAction(db,{type:'player.sign',pid:p.id,teamId:rt.id,kind:'fa',actor:'ai',
         salary:rival.terms.salary,years:rival.terms.years,terms:rival.terms});
       if(signed.ok){
