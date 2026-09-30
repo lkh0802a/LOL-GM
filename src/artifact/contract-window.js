@@ -84,6 +84,8 @@ function grantEarlyContact(db,pid,actor='manager'){
   const row={pid,incumbentId:t.id,grantedDate:db.worldDate,
     expiresOn:cw.contractExpiryDate,actor};
   cw.contactWaivers[pid]=row;
+  recordPlayerEvent(p,'early_contact_allowed',cw.seasonYear,{
+    team:t.id,date:db.worldDate,expiryDate:cw.contractExpiryDate,actor});
   return {ok:true,waiver:row,msg:p.name+' 타 구단 조기 접촉 허용 · 계약은 '+
     cw.contractExpiryDate+'까지 유지됩니다'};
 }
