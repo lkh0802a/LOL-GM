@@ -16,6 +16,16 @@ source+=String.raw`(()=>{
     'd02-b9-calendar-NA','d02-b9-calendar-EU'
   ],rows=[];
   const inc=()=>({days:0,injury:0,illness:0,burnout:0,unavailableDays:0});
+  // Test-only observer: intercept the real lottery's exact numeric odds after
+  // dailyRecovery but before scrims. Preserve the same probability object and
+  // RNG calls; a post-day recomputation would use changed player fatigue.
+  const realIncidentOdds=medicalIncidentOdds;
+  let sampledOdds=null;
+  medicalIncidentOdds=(...args)=>{
+    const odds=realIncidentOdds(...args);
+    if(sampledOdds)sampledOdds.set(args[0].id,odds.burnout);
+    return odds;
+  };
   const exposure=()=>({playerDays:0,healthyDays:0,load9Days:0,
     overload14Days:0,overload20Days:0,overload45Days:0,
     sameDayRegistrations:0,eligibleBurnoutDays:0,modeledBurnoutEvents:0,peakLoad:0,
@@ -23,7 +33,7 @@ source+=String.raw`(()=>{
   // Probabilities here are sums of the *same* live model's per-player daily
   // odds among players healthy before the day's tick (no ongoing rehab).
   // They are risk exposure diagnostics, not a prediction of observed cases.
-  const trackExposure=(row,p,t,prior,date)=>{
+  const trackExposure=(row,p,prior,date,burnoutOdds)=>{
     row.playerDays++;
     const load=p.medicalLoad||0,overload=p.medicalOverloadDays||0,
       plan=p.medicalPlanDate===date?p.medicalDayPlan:medicalPlanFor(db,p);
@@ -39,11 +49,12 @@ source+=String.raw`(()=>{
     if(overload>=45)row.overload45Days++;
     if(!prior.healthy)return;
     row.healthyDays++;
-    // Daily odds use *pre-tick load*, and updated overload count and
-    // training/fatigue after daily recovery. Medical events are not altered.
-    const chance=medicalIncidentOdds(p,t,prior.load,plan).burnout;
-    if(chance>0)row.eligibleBurnoutDays++;
-    row.modeledBurnoutEvents+=chance;
+    // This is the genuine eligibility-gated odds from the live day's
+    // medical lottery, not a replay or a post-scrim approximation.
+    assert(Number.isFinite(burnoutOdds)&&burnoutOdds>=0&&burnoutOdds<=.00032,
+      'captured live burnout probability is out of range');
+    if(burnoutOdds>0)row.eligibleBurnoutDays++;
+    row.modeledBurnoutEvents+=burnoutOdds;
   };
   const grand={days:0,official:0,scrimBlocks:0,internationalMatches:0,
     events:inc(),byRegion:{NA:inc(),EU:inc()},
@@ -123,7 +134,10 @@ source+=String.raw`(()=>{
         before.set(id,{load:p.medicalLoad||0,
           healthy:!(p.medical?.daysLeft>0||p.medicalResidual?.daysLeft>0)});
       }
+      sampledOdds=new Map();
       const played=applyWorldDailyEffects(db,date);
+      const dailyOdds=sampledOdds;
+      sampledOdds=null;
       assert(played&&db.world.lastDailyTick===date,
         'real daily medical and scrim tick duplicated or skipped');
       lastDate=date;days++;
@@ -150,7 +164,7 @@ source+=String.raw`(()=>{
           const prior=before.get(p.id)||{load:0,healthy:false,sameDayRegistration:true};
           for(const row of [grand.burnoutExposure,seasonExposure,
             grand.byOperator[parentTeamOf(db,t)?.id===owner.id?'manager':'ai']])
-            trackExposure(row,p,t,prior,date);
+            trackExposure(row,p,prior,date,dailyOdds.get(p.id)||0);
           if(p.medicalLoad>maxLoad)maxLoad=p.medicalLoad;
           if(p.medicalLoad>grand.peakLoad)grand.peakLoad=p.medicalLoad;
         }
