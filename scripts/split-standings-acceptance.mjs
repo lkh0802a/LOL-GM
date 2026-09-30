@@ -25,10 +25,10 @@ source+=String.raw`(()=>{
     regionCfg('EU',{splits:2,standingsMode:'points'}).standingsMode==='points',
     'independent region-specific period/aggregation configuration ignored');
   const card=regionCard(cfg.regions[0],0);
-  check(card.includes('data-cfg="r.0.splits"')&&
-    card.includes('data-cfg="r.0.standingsMode"')&&
-    card.includes('성적 집계 방식')&&card.includes('value="cumulative"'),
-    'new-game setup omitted distinct aggregation and split selectors');
+  check(card.includes('리그 사무국 관할')&&
+    card.includes('독립')&&!card.includes('data-cfg="r.0.splits"')&&
+    !card.includes('data-cfg="r.0.standingsMode"'),
+    'manager-facing setup must display league rules without editable selectors');
   cfg.regions[0].standingsMode='missing_mode';
   check(validateConfig(cfg).some(msg=>msg.includes('성적 집계')),
     'unknown aggregation mode passed world-config validation');
@@ -69,6 +69,7 @@ source+=String.raw`(()=>{
   check(firstIndependent.w===0&&firstIndependent.gw===0,
     'independent split did not reset regular results');
   R.standingsMode='cumulative';db.worldConfig.regions[0].standingsMode='cumulative';
+  two.standingsMode='cumulative'; // fixture for a season approved by the league office
   const secondCumulative=standings(db,two,regular),
     carriedA=secondCumulative.find(row=>row.tid===A),
     carriedB=secondCumulative.find(row=>row.tid===B);
@@ -99,6 +100,9 @@ source+=String.raw`(()=>{
   check(three.days.every(d=>d.matches.every(m=>!m.res)),
     'cumulative points inadvertently pre-resolved official fixtures');
   R.standingsMode='points';db.worldConfig.regions[0].standingsMode='points';
+  check(standings(db,two,regular).find(x=>x.tid===A).w===1,
+    'league-office decisions retroactively modified previous season standings');
+  three.standingsMode='points'; // next season runs under its own frozen rule
   const now=standings(db,three,regular);
   check(now.every(x=>x.w===0&&x.l===0),
     'championship points mode must reset match results per split');
@@ -122,6 +126,8 @@ source+=String.raw`(()=>{
   const legacy=JSON.parse(packDB(db));
   delete legacy.regions.NA.standingsMode;
   delete legacy.worldConfig.regions[0].standingsMode;
+  for(const season of Object.values(legacy.world.seasons))
+    delete season.standingsMode;
   const old=unpackDB(JSON.stringify(legacy));
   check(regionPlacements(old,old.regions.NA)[0]===B&&
     standings(old,old.world.seasons['LCS-3'],regular).every(x=>x.w===0),
