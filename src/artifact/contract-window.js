@@ -115,7 +115,8 @@ function recordContractAgreement(db,p,t,terms,kind='renewal',actor='manager'){
   const err=contractWindowContactError(db,p,t,kind);if(err)return {ok:false,msg:err};
   // Next-season option dates must also be next-season dates. The playing
   // contract remains untouched until the exact post-Worlds expiry boundary.
-  const normalized=withContractStartSeason(db,cw.startSeason,()=>
+  const cw=db.world.contractWindow,
+    normalized=withContractStartSeason(db,cw.startSeason,()=>
     normalizeContractTerms(db,p,t,terms.salary,terms.years,terms)),
     budgetErr=negotiationBudgetError(db,p,t,normalized,kind);
   if(budgetErr)return {ok:false,msg:budgetErr};
