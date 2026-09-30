@@ -1,4 +1,5 @@
-// D04-B3: 14-day incumbent exclusivity, day-15 outside contact and Jan-1 future contract activation.
+// D04-B3: contracts expire two weeks after Worlds; incumbent exclusivity lasts
+// through expiry, with optional club-granted early contact and day-15 open FA.
 import {readFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import vm from 'node:vm';
@@ -9,187 +10,179 @@ let source='';
 for(const file of ENGINE_MODULES)source+=await readFile(resolve(root,file),'utf8')+'\n';
 source+=String.raw`(()=>{
   const assert=(x,m)=>{if(!x)throw new Error('D04_CONTRACT_WINDOW '+m)};
-  let db=buildWorld(),teams=activeTeams(db,null,1).slice(0,3),
-    pool=Object.values(db.players).filter(p=>!p.retired&&!p.team);
-  assert(teams.length===3&&pool.length>=4,'fixture missing teams/players');
-  let [mine,other,third]=teams,[own,target,optionPlayer,aiTarget]=pool.slice(0,4);
+  let db=buildWorld(),teams=activeTeams(db,null,1).slice(0,4),
+    pool=Object.values(db.players).filter(p=>!p.retired&&!p.team).slice(0,10);
+  assert(teams.length===4&&pool.length>=7,'fixture missing teams/players');
+  let [mine,other,third,fourth]=teams,
+    [own,ownWaive,optionPlayer,target,aiTarget,otherStarter,careerFa]=pool;
   setManagedTeam(db,mine.id);
-  mine.finance.cash=other.finance.cash=third.finance.cash=1000;
-  own.age=25;own.careerGoal='stability';own.personality.ambition=45;
-  target.age=24;target.careerGoal='stability';target.personality.ambition=30;
-  target.satisfaction=95;target.managerTrust=90;target.managerRelationship=90;
-  target.rosterRole='core';
-  optionPlayer.age=24;
-  aiTarget.age=25;aiTarget.careerGoal='stability';aiTarget.personality.ambition=35;
-  aiTarget.satisfaction=95;aiTarget.managerTrust=90;aiTarget.managerRelationship=90;
-  aiTarget.rosterRole='core';
-  signContract(db,own,mine,asking(db,own,mine.region),1,{promisedRole:'starter'});
-  signContract(db,target,other,asking(db,target,other.region),1,{promisedRole:'core'});
-  signContract(db,optionPlayer,other,asking(db,optionPlayer,other.region),1,{
-    promisedRole:'competition',option:{type:'team'}});
-  signContract(db,aiTarget,third,asking(db,aiTarget,third.region),1,{promisedRole:'core'});
-  assert([own,target,optionPlayer,aiTarget].every(x=>x.contract.until===2027),
-    'fixture contracts do not expire in season year');
+  for(const t of teams)t.finance.cash=1000;
+  const oneYear=(p,t,role='starter')=>{
+    signContract(db,p,t,asking(db,p,t.region),1,{promisedRole:role});
+    p.contract.until=2027;return p;
+  };
+  own.careerGoal='stability';own.personality.ambition=45;
+  oneYear(own,mine,'starter');oneYear(ownWaive,mine,'backup');
+  oneYear(optionPlayer,mine,'competition');
+  optionPlayer.contract.option={type:'team',year:2028,salary:optionPlayer.contract.salary};
+  target.careerGoal='stability';target.personality.ambition=35;
+  oneYear(target,other,'starter');
+  aiTarget.careerGoal='stability';aiTarget.personality.ambition=30;
+  oneYear(aiTarget,third,'backup');
+  oneYear(otherStarter,other,'starter');
+  aiTarget.role=otherStarter.role;
+  otherStarter.wantsOut=true;
 
+  db.competitions.WORLD_CHAMPIONSHIP=db.competitions.WORLD_CHAMPIONSHIP||{
+    id:'WORLD_CHAMPIONSHIP',name:'World Championship',short:'Worlds',international:true};
   db.world={year:2027,seed:'d04-b3',manage:'manual',phase:'offseason',
-    seasons:{},steps:[],step:0,report:null,offers:[],marketLog:[],
-    negotiations:{},recruitment:{},lastDate:'2027-11-16'};
-  db.year=2027;db.worldDate='2027-11-16';
+    seasons:{worlds:{done:true,comp:'WORLD_CHAMPIONSHIP',
+      days:[{date:'2027-11-16',matches:[]}]}},
+    steps:[],step:0,report:null,offers:[],marketLog:[],negotiations:{},
+    recruitment:{},lastDate:'2027-11-20'};
+  db.year=2027;db.worldDate='2027-11-20';
 
   let cw=initOffseasonContractWindow(db);
+  assert(cw.seasonEndDate==='2027-11-16',
+    'contract window followed a later event instead of Worlds');
   assert(cw.startDate==='2027-11-17'&&cw.exclusiveThrough==='2027-11-30'&&
-    cw.outsideContactDate==='2027-12-01'&&
-    cw.contractExpiryDate==='2027-12-31'&&cw.effectiveDate==='2028-01-01',
-    'calendar boundaries are not day 1-14 / day 15 / year-end / Jan 1');
-  assert(db.worldDate==='2027-11-17','exclusive window did not begin day after final competition');
-  const dayStep=advanceOffseasonContractDay(db);
-  assert(dayStep.ok&&dayStep.stage==='exclusive'&&db.worldDate==='2027-11-18',
-    'exclusive contract window cannot advance one real day for B2 cooldowns');
-  db.worldDate=cw.startDate;
+    cw.contractExpiryDate==='2027-11-30'&&cw.outsideContactDate==='2027-12-01'&&
+    cw.effectiveDate==='2027-12-01',
+    'Worlds+14 expiry / day-15 FA boundaries are wrong');
+  assert(db.worldDate==='2027-11-20',
+    'opening contract window rewound an already-later world date');
 
-  let blocked=startNegotiation(db,target.id,'precontract',{teamId:mine.id});
-  assert(!blocked.ok&&blocked.msg.includes('14일'),'outside contact opened during incumbent exclusivity');
-
-  const acceptedOffer=(neg,p,t,renewal)=>{
-    const competitor=neg.competitors?.length?Math.max(...neg.competitors.map(x=>x.utility)):0,
-      threshold=Math.max(offerAcceptanceThreshold(db,p),competitor-.035),
-      cap=(renewal?salaryBudget(db,t)-payroll(db,t)+(p.contract?.salary||0):
-        salaryBudget(db,t)-payroll(db,t))*1.2;
-    for(const role of ['core','starter','competition'])for(const years of [1,2,3])
-      for(let k=10;k<=20;k++){
-        const sal=Math.round(Math.min(cap,asking(db,p,t.region)*k/10)*10)/10,
-          offer=normalizeContractTerms(db,p,t,sal,years,{
-            signingBonus:0,bonuses:{performance:0,title:0,international:0},
-            promisedRole:role,option:null,buyout:null
-          });
-        if(!negotiationBudgetError(db,p,t,offer,renewal?'renewal':'precontract')&&
-          offerUtility(db,p,t,offer,{renewal})>=threshold)return offer;
-      }
-    throw new Error('D04_CONTRACT_WINDOW no acceptable legal offer found');
-  };
-
-  let n=startNegotiation(db,own.id,'renewal');
-  assert(n.ok,'incumbent renewal could not start in exclusive window');
-  let offer=acceptedOffer(n.neg,own,mine,true),r=submitNegotiationOffer(db,n.neg.id,offer);
-  assert(r.ok&&n.neg.status==='accepted','exclusive renewal agreement did not accept');
-  let ownAgreement=contractAgreementFor(db,own.id);
-  assert(ownAgreement?.kind==='renewal'&&ownAgreement.status==='agreed'&&
-    own.team===mine.id&&own.contract.until===2027,
-    'renewal agreement changed current contract before expiry');
-
-  // AI uses the same incumbent agreement writer and cannot operate the managed organization.
-  let aiDb=unpackDB(packDB(db)),aiRows=aiRunExclusiveRenewals(aiDb);
-  assert(aiDb.world.contractWindow.incumbentProcessed&&
-    aiRows.every(x=>x.kind==='renewal'&&x.fromTeamId===x.teamId&&x.status==='agreed'),
-    'AI incumbent renewal path bypassed the shared agreement rules');
-  assert(!aiRows.some(x=>x.teamId===mine.id),
-    'AI changed the manually managed organization during exclusivity');
-
-  // Isolate manager outside-contact behavior after the AI parity branch above.
-  db.world.contractWindow.incumbentProcessed=true;
-  let adv=advanceOffseasonContractWindow(db);cw=db.world.contractWindow;
-  assert(adv.ok&&cw.stage==='outside'&&db.worldDate==='2027-12-01',
-    'day-15 outside contact boundary did not open');
-
-  blocked=startNegotiation(db,optionPlayer.id,'precontract',{teamId:mine.id});
-  assert(!blocked.ok&&blocked.msg.includes('옵션'),
-    'player with next-season option was exposed to pre-contract');
-
+  // Normal outside clubs cannot contact a contracted player during exclusivity.
   setRecruitmentPriority(db,target.id,'A');
   scoutPlayers(db,[target.id],40,0);scoutPlayers(db,[target.id],40,0);
-  assert(recruitmentEvaluation(db,target.id,mine.id).ok,
-    'outside target could not complete real recruitment evaluation');
-  n=startNegotiation(db,target.id,'precontract',{teamId:mine.id});
-  assert(n.ok&&n.neg.kind==='precontract','day-15 pre-contract negotiation did not start');
-  offer=acceptedOffer(n.neg,target,mine,false);
-  r=submitNegotiationOffer(db,n.neg.id,offer);
-  assert(r.ok&&n.neg.status==='accepted','pre-contract agreement did not accept');
-  let pre=contractAgreementFor(db,target.id);
-  assert(pre?.kind==='precontract'&&pre.teamId===mine.id&&pre.fromTeamId===other.id&&
-    target.team===other.id&&target.contract.until===2027,
-    'pre-contract moved player before existing contract expiry');
+  assert(recruitmentEvaluation(db,target.id,mine.id).ok,'target evaluation failed');
+  let blocked=startNegotiation(db,target.id,'early_fa',{teamId:mine.id});
+  assert(!blocked.ok&&blocked.msg.includes('허용하지 않은'),
+    'outside club bypassed incumbent exclusivity');
 
-  // AI outside offers use the same legal contact gate/writer. A direct legal AI
-  // agreement on a separate player proves actor parity without consuming the manager fixture.
-  const aiTerms=normalizeContractTerms(db,aiTarget,other,asking(db,aiTarget,other.region),1,{
-    promisedRole:'starter'});
-  const aiAgreement=recordContractAgreement(db,aiTarget,other,aiTerms,'precontract','ai');
-  assert(aiAgreement.ok&&contractAgreementFor(db,aiTarget.id)?.actor==='ai'&&
-    aiTarget.team===third.id,'AI pre-contract did not use shared future-agreement semantics');
+  // Both manager and AI incumbents use the same explicit waiver. It only opens
+  // talks; it does not release the player or end the existing playing contract.
+  let waiver=grantEarlyContact(db,ownWaive.id,'manager');
+  assert(waiver.ok&&ownWaive.team===mine.id&&ownWaive.contract.until===2027,
+    'manager waiver prematurely released the player');
+  assert(!grantEarlyContact(db,optionPlayer.id,'manager').ok,
+    'pending team option was waived before option resolution');
+  waiver=grantEarlyContact(db,target.id,'ai');
+  assert(waiver.ok&&target.team===other.id,
+    'AI incumbent could not grant the same early-contact permission');
 
+  // Waiver state must survive save/restore before any agreement.
   let packed=packDB(db);db=unpackDB(packed);
-  mine=db.teams[mine.id];other=db.teams[other.id];
-  own=db.players[own.id];target=db.players[target.id];aiTarget=db.players[aiTarget.id];
-  assert(contractAgreementFor(db,target.id)?.status==='agreed'&&
-    db.world.contractWindow.stage==='outside','contract window/agreement failed save restore');
+  mine=db.teams[mine.id];other=db.teams[other.id];third=db.teams[third.id];
+  own=db.players[own.id];ownWaive=db.players[ownWaive.id];
+  optionPlayer=db.players[optionPlayer.id];target=db.players[target.id];
+  aiTarget=db.players[aiTarget.id];careerFa=db.players[careerFa.id];
+  cw=db.world.contractWindow;
+  assert(cw.contactWaivers[target.id]&&cw.contactWaivers[ownWaive.id],
+    'exclusive-contact waiver failed save/restore');
 
-  // Binding agreement cannot activate before Jan 1 or with altered terms.
-  db.year=2028;db.worldDate='2027-12-31';
-  let preview=previewWorldAction(db,{type:'player.sign',pid:target.id,teamId:mine.id,
-    fromId:other.id,kind:'precontract',actor:'system',
-    salary:pre.salary,years:pre.years,terms:pre.terms});
-  assert(!preview.ok,'pre-contract activated before existing contract ended');
-  db.worldDate='2028-01-01';
-  preview=previewWorldAction(db,{type:'player.sign',pid:target.id,teamId:mine.id,
-    fromId:other.id,kind:'precontract',actor:'system',
-    salary:pre.salary+.1,years:pre.years,terms:{...pre.terms,salary:pre.salary+.1}});
-  assert(!preview.ok&&preview.reason==='invalid_terms',
-    'future activation allowed terms different from binding agreement');
-
-  // Controlled fixture: outside AI market was covered separately above.
-  db.world.contractWindow.outsideProcessed=true;
-  const rep={resign:[],signings:[],expired:[]},
-    settle=settleOffseasonContractRollover(db,rep);
-  own=db.players[own.id];target=db.players[target.id];aiTarget=db.players[aiTarget.id];
-  assert(settle.applied.length===3&&own.team===mine.id&&target.team===mine.id&&
-    aiTarget.team===other.id,'Jan-1 agreement activation did not move/sign expected players');
-  assert(contractAgreementFor(db,target.id).status==='effective'&&
-    contractAgreementFor(db,target.id).appliedDate==='2028-01-01'&&
-    target.contract.signed===2028&&target.contract.until===2028+pre.years-1,
-    'pre-contract did not become the real contract on Jan 1');
-  assert(!db.teams[other.id].roster.includes(target.id),
-    'old club retained player after pre-contract activation');
-  assert(db.worldDate==='2028-01-01',
-    'controlled Jan-1 settlement unexpectedly changed the caller date');
-
-  // A binding agreement must not crash the world if the player retires before
-  // its effective date. It becomes an audited void without any signing action.
-  const voidPlayer=Object.values(db.players).find(p=>!p.retired&&!p.team&&p.id!==target.id);
-  assert(voidPlayer,'fixture missing player for agreement-void lifecycle');
-  assignPlayerToTeam(db,voidPlayer,other);
-  signContract(db,voidPlayer,other,asking(db,voidPlayer,other.region),1,{promisedRole:'backup'});
-  voidPlayer.contract.until=2028;
-  db.world.year=2028;db.world.contractWindow={
-    seasonYear:2028,seasonEndDate:'2028-11-16',startDate:'2028-11-17',
-    exclusiveThrough:'2028-11-30',outsideContactDate:'2028-12-01',
-    contractExpiryDate:'2028-12-31',effectiveDate:'2029-01-01',
-    stage:'outside',incumbentProcessed:true,outsideProcessed:true,completed:true
+  const acceptable=(p,t,kind)=>{
+    const ask=asking(db,p,t.region);
+    for(const role of ['starter','core','competition'])for(const years of [1,2,3])
+      for(const mul of [1,1.05,1.1,1.2]){
+        const offer=normalizeContractTerms(db,p,t,ask*mul,years,{
+          signingBonus:0,bonuses:{performance:0,title:0,international:0},
+          promisedRole:role,option:null,buyout:null});
+        if(!negotiationBudgetError(db,p,t,offer,kind)&&
+          contractOfferReasonable(db,p,t,offer,kind)&&
+          offerUtility(db,p,t,offer,{renewal:kind==='renewal'})>=
+            offerAcceptanceThreshold(db,p,{kind}))return offer;
+      }
+    throw new Error('D04_CONTRACT_WINDOW no reasonable acceptable offer '+p.id);
   };
-  db.worldDate='2028-12-01';
-  const voidTerms=normalizeContractTerms(db,voidPlayer,mine,
-    asking(db,voidPlayer,mine.region),1,{promisedRole:'backup'});
-  const voidAgreement=recordContractAgreement(db,voidPlayer,mine,voidTerms,'precontract','manager');
-  assert(voidAgreement.ok,'void lifecycle agreement could not be recorded');
-  removePlayerFromTeam(db,voidPlayer);voidPlayer.retired=true;voidPlayer.retiredYear=2028;
-  db.year=2029;db.worldDate='2029-01-01';
-  const voidActivation=applyDueContractAgreements(db,null);
-  assert(voidActivation.applied.length===0&&voidActivation.voided.length===1&&
-    contractAgreementFor(db,voidPlayer.id).status==='void'&&
-    contractAgreementFor(db,voidPlayer.id).voidReason==='player_retired_or_missing',
-    'retired player agreement did not void cleanly');
+
+  // Manager early contact becomes a binding next-season agreement but current
+  // club/contract stay unchanged until Worlds+14 expiry.
+  let n=startNegotiation(db,target.id,'early_fa',{teamId:mine.id});
+  assert(n.ok&&n.neg.kind==='early_fa','authorized early-contact negotiation failed');
+  let offer=acceptable(target,mine,'early_fa'),
+    result=submitNegotiationOffer(db,n.neg.id,offer);
+  assert(result.ok&&n.neg.status==='accepted','reasonable early-contact deal rejected');
+  let earlyAgreement=contractAgreementFor(db,target.id);
+  assert(earlyAgreement?.kind==='early_fa'&&earlyAgreement.status==='agreed'&&
+    earlyAgreement.effectiveDate==='2027-12-01'&&target.team===other.id&&
+    target.contract.until===2027,
+    'early agreement changed current playing rights before expiry');
+
+  // Incumbent renewal follows the same expiry date and starts next season.
+  n=startNegotiation(db,own.id,'renewal');
+  assert(n.ok,'incumbent renewal could not start');
+  offer=acceptable(own,mine,'renewal');
+  result=submitNegotiationOffer(db,n.neg.id,offer);
+  assert(result.ok&&contractAgreementFor(db,own.id)?.kind==='renewal'&&
+    own.contract.until===2027,'renewal did not remain future-dated');
+
+  // AI early-contact path: prepare another source waiver and a destination with
+  // a replaceable starter, then let the production AI offer engine decide.
+  grantEarlyContact(db,aiTarget.id,'ai');
+  const cur=starterFor(db,other,aiTarget.role);if(cur)cur.wantsOut=true;
+  const aiRows=aiRunEarlyContactOffers(db);
+  assert(aiRows.every(row=>row.kind==='early_fa'&&row.actor==='ai'),
+    'AI early-contact writer diverged from shared agreement rules');
+
+  // Player employment logic: a realistic offer receives an offseason
+  // employment-risk adjustment, but an established-market-floor violation
+  // remains an explicit reject.
+  const faTeam=fourth,ask=asking(db,careerFa,faTeam.region),
+    fair=normalizeContractTerms(db,careerFa,faTeam,ask,1,{promisedRole:'starter'}),
+    cheap=normalizeContractTerms(db,careerFa,faTeam,ask*.5,1,{promisedRole:'starter'}),
+    baseThreshold=1.04+(careerFa.reputation||playerOvr(careerFa))/520+
+      careerFa.personality.ambition/100*.12+(careerFa.age<=20?.04:0),
+    faThreshold=offerAcceptanceThreshold(db,careerFa,{kind:'fa'});
+  assert(faThreshold<baseThreshold&&contractOfferReasonable(db,careerFa,faTeam,fair,'fa')&&
+    !contractOfferReasonable(db,careerFa,faTeam,cheap,'fa'),
+    'employment risk did not distinguish reasonable offer from undervaluation');
+
+  const seasonPayroll=financeSeasonPayroll(db,other,db.world);
+  assert(seasonPayroll.salary===cw.financePayroll[other.id].salary,
+    'season finance no longer uses Worlds-close payroll snapshot');
+
+  // Through Nov 30, current contracts remain. Day 15 (Dec 1) closes them,
+  // activates accepted next-season agreements, and opens normal FA access.
+  db.worldDate='2027-11-30';
+  assert(target.team===other.id&&target.contract,
+    'contract ended before Worlds+14 boundary');
+  const closed=advanceOffseasonContractDay(db);cw=db.world.contractWindow;
+  assert(closed.stage==='fa'&&db.worldDate==='2027-12-01'&&cw.completed,
+    'day-15 FA opening did not occur');
+  own=db.players[own.id];target=db.players[target.id];ownWaive=db.players[ownWaive.id];
+  assert(own.team===mine.id&&own.contract.signed===2028,
+    'renewal agreement did not activate as next-season contract');
+  assert(target.team===mine.id&&target.contract.signed===2028&&
+    contractAgreementFor(db,target.id).status==='effective',
+    'early-contact agreement did not activate after old contract expired');
+  assert(!ownWaive.team&&!ownWaive.contract,
+    'waived player without a deal was not released to FA at expiry');
+
+  // A player released on day 15 is now a normal FA, not a pre-contract case.
+  setRecruitmentPriority(db,ownWaive.id,'A');
+  scoutPlayers(db,[ownWaive.id],40,0);scoutPlayers(db,[ownWaive.id],40,0);
+  assert(recruitmentEvaluation(db,ownWaive.id,mine.id).ok,
+    'released FA evaluation failed');
+  const faStart=startNegotiation(db,ownWaive.id,'fa',{teamId:mine.id});
+  assert(faStart.ok,'day-15 normal FA negotiation did not open');
 
   packed=packDB(db);db=unpackDB(packed);
-  assert(contractAgreementFor(db,target.id)?.status==='effective'&&
+  assert(db.world.contractWindow.completed&&
+    contractAgreementFor(db,target.id)?.status==='effective'&&
     db.players[target.id].team===mine.id,
-    'effective future contract failed save/restore');
+    'expiry settlement failed save/restore');
 
   console.log('D04_CONTRACT_WINDOW_ACCEPTANCE '+JSON.stringify({
-    dates:{end:'2027-11-16',start:cw.startDate,exclusiveThrough:cw.exclusiveThrough,
-      outside:cw.outsideContactDate,expiry:cw.contractExpiryDate,effective:cw.effectiveDate},
-    agreements:{renewal:own.id,precontract:target.id,ai:aiTarget.id},
-    aiExclusiveAgreements:aiRows.length,
-    activated:settle.applied.map(x=>({pid:x.pid,kind:x.kind,team:x.teamId,
-      appliedDate:x.appliedDate})),
+    worlds:'2027-11-16',exclusive:['2027-11-17','2027-11-30'],
+    expiry:'2027-11-30',faOpen:'2027-12-01',
+    waivers:Object.keys(cw.contactWaivers||{}).length,
+    earlyAiAgreements:aiRows.length,
+    activated:closed.settlement.applied.map(x=>({pid:x.pid,kind:x.kind,team:x.teamId})),
+    employmentRisk:{base:Math.round(baseThreshold*1000)/1000,
+      offseason:Math.round(faThreshold*1000)/1000,
+      cheapReasonable:contractOfferReasonable(db,db.players[careerFa.id]||careerFa,
+        db.teams[faTeam.id],cheap,'fa')},
     saveFormat:JSON.parse(packed).saveFormat
   }));
 })();`;
@@ -199,10 +192,10 @@ vm.runInNewContext(source,{console,Date,Math,JSON,Set,Map,WeakMap,Object,
 const [app,market]=await Promise.all([
   readFile(resolve(root,'app.js'),'utf8'),readFile(resolve(root,'ui-market.js'),'utf8')
 ]);
-if(!app.includes('renderContractWindow()')||!app.includes('scontractday')||
-  !app.includes('scontractopen')||
-  !market.includes('data-start-precontract')||!market.includes('bindContractWindow'))
-  throw new Error('D04_CONTRACT_WINDOW manager UI does not expose both contract-window stages');
+if(!app.includes('scontractday')||!app.includes('scontractopen')||
+  !market.includes('data-waive-contact')||!market.includes('data-start-early-fa')||
+  market.includes('data-start-precontract'))
+  throw new Error('D04_CONTRACT_WINDOW UI does not expose waiver / early-contact / day-15 FA rules');
 console.log('D04_CONTRACT_WINDOW_UI_ACCEPTANCE '+JSON.stringify({
-  exclusiveControl:true,outsidePrecontract:true,futureDates:true
+  dailyExclusive:true,contactWaiver:true,earlyContact:true,day15RegularFa:true
 }));
