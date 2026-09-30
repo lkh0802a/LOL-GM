@@ -16,8 +16,11 @@ function aiGrantEarlyContact(db){
     if(mine&&parentTeamOf(db,t)?.id===mine)continue;
     for(const id of (t.roster||[])){
       const p=db.players[id];
-      if(contractExpiresThisSeason(db,p)&&!contractHasPendingOption(db,p)&&
-        !aiWantsRenewal(db,p,t)){
+      if(!contractExpiresThisSeason(db,p)||contractHasPendingOption(db,p))continue;
+      const room=salaryBudget(db,t)-payroll(db,t)+(p.contract?.salary||0),
+        ask=asking(db,p,t.region),
+        plansToRenew=aiWantsRenewal(db,p,t)&&room>=ask*.78;
+      if(!plansToRenew){
         const r=grantEarlyContact(db,id,'ai');
         if(r.ok)waivers.push(r.waiver);
       }
