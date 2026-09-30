@@ -93,6 +93,9 @@ function runOffseason(db){
       ev(`${t.name} 시설 투자 결정: ${FACILITY_LABELS[best.key]} ${f[best.key]}→${f[best.key]+1} 단계 · ${money(best.cost)}`);
     }
   }
+  // D03-B3: once staff/facility decisions are known, AI clubs spend real
+  // cash on a bounded pre-market scouting operation. Manager scouting remains manual.
+  rep.aiScouting=aiRunActiveScouting(db);
   // 선수 만족도: 한 시즌 누적 출전/역할/계약/성적/국제전/커리어 목표를 결산한다.
   for(const t of activeTeams(db)){t._pre=t.roster.slice();for(const id of t.roster){const p=db.players[id];if(!p||!p.contract)continue;pState(p);p.form=0;p.fatigue=5;}}
   offseasonPlayerSatisfaction(db,w,rep,ev);
