@@ -127,6 +127,8 @@ function startNegotiation(db,pid,kind='fa',extra={}){
     const contactErr=contractWindowContactError(db,p,t,'renewal');
     if(contactErr)return {ok:false,msg:contactErr};
   }
+  if(kind==='renewal'&&w.contractWindow?.completed&&p.contract?.until<db.year)
+    return {ok:false,msg:'기존 계약이 종료되어 재계약 우선협상 기간이 끝났습니다'};
   if((kind==='fa'||kind==='initial')&&p.team)return {ok:false,msg:'FA 선수가 아닙니다'};if(kind==='renewal'&&p.team!==t.id)return {ok:false,msg:'우리 팀 선수가 아닙니다'};
   if(kind==='initial'){const allowed=new Set(setupTeamsForManager(db).map(x=>x.id));if(!allowed.has(t.id))return {ok:false,msg:'내 구단 조직의 스쿼드만 계약 대상이 될 수 있습니다'}}
   if((kind==='fa'||kind==='transfer'||kind==='initial'||kind==='precontract')&&!recruitmentReady(db,pid,t.id))return {ok:false,msg:'관심 등록 → 관찰 → 내부 평가를 완료한 뒤 공식 협상을 시작할 수 있습니다'};
