@@ -59,6 +59,8 @@ function contractWindowContactError(db,p,t,kind){
   return null;
 }
 function recordContractAgreement(db,p,t,terms,kind,actor='manager'){
+  const auth=playerActionAuthority(db,actor,t);
+  if(auth)return {ok:false,msg:auth.errors?.join(' · ')||'구단 계약 권한이 없습니다'};
   const err=contractWindowContactError(db,p,t,kind);
   if(err)return {ok:false,msg:err};
   const normalized=normalizeContractTerms(db,p,t,terms.salary,terms.years,terms),
@@ -86,7 +88,7 @@ function aiRunExclusiveRenewals(db){
   const w=db.world,cw=w?.contractWindow;if(!cw||cw.incumbentProcessed)return [];
   const manual=w.manage==='manual'?managedTeamId(db):null,
     rng=new RNG(w.seed+'/'+cw.seasonYear,'exclusive-renewal'),rows=[];
-  for(const t of activeTeams(db).filter(t=>t.id!==manual)){
+  for(const t of activeTeams(db).filter(t=>!manual||parentTeamOf(db,t)?.id!==manual)){
     for(const id of (t.roster||[]).slice()){
       const p=db.players[id];if(!contractExpiresThisSeason(db,p)||contractAgreementFor(db,p.id))continue;
       const decision=aiRenewalDecision(db,p,t,rng);
