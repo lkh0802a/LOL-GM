@@ -128,3 +128,41 @@ D03의 마지막 핵심 검증은 **오래된 보고서 기반 영입 실패와 
 첫 acceptance에서는 프리시즌에 다음 시즌 `db.competitions` 인스턴스가 아직 없어 리그 assignment가 빈 배열이 되는 문제를 확인했다. 리그 담당 범위를 시즌 인스턴스와 분리해 `REGION:DIV1/2` 키로도 보존하도록 수정했다. 두 번째 acceptance에서는 0.1억 단위인 기존 재정 장부에 선수별 소액을 반복 기록하면서 현금과 prepaid가 서로 다르게 반올림되는 문제를 확인했다. 관리 구단 `scoutPlayers`처럼 타깃 전체를 한 배치로 0.1억 단위 정산하도록 수정했으며 재정 허용 가능 타깃 수도 이 실제 배치 청구액 기준으로 계산한다.
 
 같은 최종 CI에서 B1/B2 스카우팅 acceptance, 66개 Artifact 모듈 구조 검사, D02 다지역 628일·948 공식 경기·15,636 스크림 블록·78,514 선수·일, regression baseline, world smoke, 2시즌 career 186경기, performance probe, production build가 모두 통과했다. 의료 확률과 기존 창단시장 밸런스는 변경하지 않았다.
+
+
+## D03-B4 — 오래된 보고서의 영입 오류와 재관찰 후 재평가
+
+### B4 구현 규칙
+
+- 오래된 보고서가 남아 있는 선수는 실제 현재 능력과 저장 추정치가 달라질 수 있으며, AI는 **저장된 보고서만** 사용하므로 합리적인 오판이 발생할 수 있다. 현재 OVR/POT을 몰래 확인해 정정하지 않는다.
+- B3의 능동 조사 우선순위는 기존 공개정보 점수를 유지하되, `staleYears`, 현재 보고서 불확실성, 공개정보와 기존 보고서의 불일치가 큰 선수를 제한적으로 더 우선한다. 이 우선순위에는 숨은 OVR/POT을 사용하지 않는다.
+- 실제 FA 영입 판단을 만드는 기존 `contractMarket` 후보 필터/정렬을 `aiMarketOfferCandidates`로 공통화한다. 런타임 시장과 acceptance가 동일 함수를 사용하며 시장 평가 공식 자체는 바꾸지 않는다.
+- stale 선수를 재관찰하기 직전과 직후, 해당 선수가 실제 생산용 FA shortlist에서 가지는 순위·선두 후보·`aiMarketValue`를 기록한다.
+- 재평가 기록은 `scoutingState.reassessments`에 최근 12건까지 보존하고, 각 B3 operation에도 그 실행에서 발생한 reassessment를 연결한다.
+- fresh 관찰은 기존 `observeAiPlayer`만 사용하므로 실제 현재 능력을 직접 읽는 곳은 관측 신호 생성 지점 하나뿐이며, 시장은 여전히 저장 보고서만 소비한다.
+- 재평가 정보와 stale 오류 상태 모두 기존 save/restore 경로를 그대로 통과해야 한다.
+
+### B4 acceptance
+
+`scripts/scouting-reassessment-acceptance.mjs`는 같은 포지션의 두 FA만 비교하는 통제 시장을 만든다.
+
+- 한 선수를 강할 때 실제 관찰한 뒤 1년이 지나고, 보이지 않는 사이 실제 능력이 크게 하락한 상태를 만든다. 보고서는 자동 갱신되지 않아 stale estimate가 그대로 남아야 한다.
+- 실제 현재 OVR은 대체 선수가 더 높지만, 생산용 `aiMarketOfferCandidates`는 stale report 때문에 하락한 선수를 우선해야 한다.
+- stale 상태를 save/restore한 뒤에도 같은 잘못된 우선순위가 유지되어야 한다.
+- 실제 `aiRunScoutingOperation`이 그 stale 선수를 재조사하고 reassessment audit를 남겨야 한다.
+- 재관찰 뒤 저장 추정 능력과 시장가치가 하락하고, 동일 생산용 shortlist의 1순위가 대체 선수로 바뀌어야 한다.
+- stale 분기와 fresh 분기에서 동일 `signMarketContract` 거래 경로를 실행했을 때 각각 서로 다른 선수가 실제 계약되어야 한다.
+- reassessment 기록은 save/restore 후 유지되어야 한다.
+
+B4 acceptance와 전체 장기 회귀가 통과하면 D03의 감사 기준인 구단별 상이한 정보, 관찰 후 오차 감소, 시간 경과 감쇠, 스태프/시설 투자 효과, 오래된 보고서 기반 합리적 실패와 재평가가 모두 충족되므로 D03을 완료 처리한다.
+
+
+### B4 검증 결과 — D03 완료
+
+최종 PR CI의 `D03_SCOUTING_REASSESSMENT_ACCEPTANCE`에서 TOP 두 FA를 통제 비교했다. 오래된 보고서를 가진 선수의 실제 OVR은 50까지 하락했고 대체 선수는 76이었지만, 구단의 stale 보고서는 ability 93을 유지해 생산용 `aiMarketOfferCandidates`가 stale 선수를 먼저 선택했다. 이 잘못된 우선순위는 save/restore 후에도 그대로 유지됐다.
+
+실제 `aiRunScoutingOperation` 재관찰 뒤 해당 선수의 저장 ability는 93 → 67, 시장가치는 93 → 67.1로 `-25.9` 하락했다. 전체 실제 FA shortlist에서는 순위가 1위 → 4위로 내려갔고 leader와 rank가 모두 변경됐다. 두 선수만 둔 통제 shortlist에서는 1순위가 stale 선수 `NA_0`에서 실제 OVR 76인 대체 선수 `NA_6`로 반전됐다. stale 분기와 fresh 분기에서 동일 `signMarketContract` 경로를 실행해 각각 그 시점의 서로 다른 1순위가 실제 계약되는 것도 확인했다. reassessment 기록 역시 save/restore 뒤 유지됐다.
+
+같은 CI에서 B1/B2의 구단별 보고서·창단 dossier, B3의 능동 운영 acceptance, 67개 Artifact 모듈 구조 검사, D02 다지역 628일·948 공식 경기·15,636 스크림 블록·78,514 선수·일, regression baseline, world smoke, 2시즌 career 186경기, performance probe, production build가 모두 통과했다. 의료·계약·시장가치·스카우팅 비용/관찰 gain의 밸런스 상수는 변경하지 않았다.
+
+따라서 감사 문서의 D03 수락 기준인 **구단별 상이한 정보/영입 판단, 관찰 후 오차 감소, 시간 경과 정보 감쇠, 시설·스태프 투자 효과, 오래된 보고서로 인한 합리적 실패와 재평가**를 모두 충족한 것으로 기록하고 D03을 COMPLETE 처리한다. 다음 가장 앞선 미완료 항목은 D04/P0 계약 기간·보장·냉각·우선협상 심화다.

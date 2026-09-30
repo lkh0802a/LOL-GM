@@ -90,19 +90,31 @@ function aiRunScoutingOperation(db,t){
     assignments=aiScoutingCoveragePlan(db,owner,candidates,capacity),
     covered=new Set(assignments.map(x=>x.region)),
     ranked=candidates.filter(p=>covered.has(aiScoutingTargetRegion(db,p)))
-      .map(p=>({p,score:aiScoutingPublicFit(db,owner,p)}))
+      .map(p=>({p,score:aiScoutingResearchPriority(db,owner,p)}))
       .sort((a,b)=>b.score-a.score||a.p.id.localeCompare(b.p.id)),
     targets=[],cashBefore=owner.finance.cash;
+  const reassessments=[];
   for(const row of ranked){
     if(targets.length>=targetLimit)break;
-    const p=row.p,before=aiScoutReport(db,owner,p),beforeK=before.knowledge||0;
+    const p=row.p,before=aiScoutReport(db,owner,p),beforeK=before.knowledge||0,
+      staleBefore=before.staleYears||0,
+      marketBefore=staleBefore>0?aiMarketOfferRankSnapshot(db,owner,p):null;
     const report=observeAiPlayer(db,owner,p,aiScoutingVisitGain(),{
       comp:'SCOUT:'+aiScoutingTargetRegion(db,p),games:0});
     if(!report)continue;
+    const marketAfter=staleBefore>0?aiMarketOfferRankSnapshot(db,owner,p):null;
     targets.push({pid:p.id,region:aiScoutingTargetRegion(db,p),role:p.role,
       publicScore:Math.round(row.score*10)/10,beforeKnowledge:Math.round(beforeK),
       afterKnowledge:Math.round(report.knowledge||0),sourceBefore:before.source,
-      sourceAfter:report.source||'scouted'});
+      sourceAfter:report.source||'scouted',staleYearsBefore:staleBefore});
+    if(staleBefore>0&&marketBefore&&marketAfter)reassessments.push({
+      pid:p.id,role:p.role,staleYearsBefore:staleBefore,
+      before:marketBefore,after:marketAfter,
+      leaderChanged:marketBefore.leader!==marketAfter.leader,
+      rankChanged:marketBefore.rank!==marketAfter.rank,
+      valueDelta:marketAfter.value==null||marketBefore.value==null?null:
+        Math.round((marketAfter.value-marketBefore.value)*10)/10
+    });
   }
   const charge=aiScoutingBatchCharge(unitCost,targets.length);
   owner.finance.cash=Math.round((cashBefore-charge)*10)/10;
@@ -112,8 +124,10 @@ function aiRunScoutingOperation(db,t){
       reserve:Math.round(reserve*1000)/1000,runway:runway.severity,
       assignments,targets,spent,cashBefore:Math.round(cashBefore*1000)/1000,
       cashAfter:Math.round(owner.finance.cash*1000)/1000,
-      reason:targetLimit<=0?'liquidity':targets.length?'completed':'no-covered-targets'};
+      reason:targetLimit<=0?'liquidity':targets.length?'completed':'no-covered-targets',
+      reassessments};
   state.operations=[...(state.operations||[]),operation].slice(-6);
+  state.reassessments=[...(state.reassessments||[]),...reassessments].slice(-12);
   state.lastOperation=operation;return operation;
 }
 function aiRunActiveScouting(db){

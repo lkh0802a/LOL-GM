@@ -39,6 +39,7 @@ export const ENGINE_MODULES = [
   'scouting.js',
   'scouting-ai.js',
   'scouting-ai-ops.js',
+  'scouting-ai-reassessment.js',
   'transfer.js',
   'state-player-actions.js',
   'staff.js',
