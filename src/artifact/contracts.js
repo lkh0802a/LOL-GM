@@ -89,7 +89,7 @@ function unsignedSeasonCareerRisk(db,p,kind='fa'){
 function offerAcceptanceThreshold(db,p,opt={}){
   const rep=(p.reputation||playerOvr(p)),amb=p.personality.ambition/100,
     base=1.04+rep/520+amb*.12+(p.age<=20?.04:0);
-  return base-unsignedSeasonCareerRisk(db,p,opt.kind||'fa');
+  return base-unsignedSeasonCareerRisk(db,p,opt.kind||(p.team?'renewal':'fa'));
 }
 function contractOfferReasonable(db,p,t,offer,kind='fa'){
   // The opportunity cost of unemployment does not override genuine
@@ -188,10 +188,7 @@ function aiMarketOfferCandidates(db,t,fas,role,budgetRoom,year=db.year){
 }
 
 function aiRenewalDecision(db,p,t,rng){
-  const isStarter=starterFor(db,t,p.role)===p,
-    want=isStarter||p.rosterRole==='competition'||
-      (p.age<=21&&p.pot-playerOvr(p)>=6)||
-      (p.rosterRole==='backup'&&t.roster.length<7&&p.satisfaction>=50),
+  const want=aiWantsRenewal(db,p,t),
     ask=asking(db,p,t.region),
     room=salaryBudget(db,t)-payroll(db,t)+(p.contract?.salary||0),
     yrs=contractYearsForPlayer(db,p,rng),
