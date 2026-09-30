@@ -133,9 +133,13 @@ source+=String.raw`(()=>{
     standings(old,old.world.seasons['LCS-3'],regular).every(x=>x.w===0),
     'old saves without an aggregation mode did not default to independent');
   const reset=unpackDB(packDB(db));
+  const endOfYearOrder=regionPlacements(reset,reset.regions.NA);
+  reset.regions.NA.lastPlacement=endOfYearOrder.slice();
   reset.year++;reset.world={...reset.world,year:reset.year,seasons:{}};
   check(championshipStandings(reset,reset.regions.NA).every(x=>x.points===0),
     'championship points leaked between years');
+  check(regionPlacements(reset,reset.regions.NA).join('|')===endOfYearOrder.join('|'),
+    'annual league-office qualification order was not preserved for early next-year invitations');
   // League-office governance alone makes and records rule changes; never
   // mutate an already-completed competition's standings mode.
   const officeDb=unpackDB(packDB(db)),officeR=officeDb.regions.NA,
