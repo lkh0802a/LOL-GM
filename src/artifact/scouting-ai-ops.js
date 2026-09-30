@@ -33,6 +33,15 @@ function aiScoutingEligibleTarget(db,t,p){
   // the coming market. Research remains tied to actionable recruitment.
   return !p.team||!p.contract||p.contract.until<db.year;
 }
+function aiScoutingLeagueKeys(db,region){
+  const live=Object.values(db.competitions||{}).filter(c=>!c.international&&c.region===region)
+    .map(c=>c.id).sort();
+  if(live.length)return live;
+  const R=db.regions[region];
+  // Offseason scouting runs before next-season competition instances exist.
+  // Keep a stable tier assignment instead of dropping league ownership.
+  return R?.div2?[region+':DIV1',region+':DIV2']:[region+':DIV1'];
+}
 function aiScoutingCoveragePlan(db,t,candidates,capacity){
   const scouts=staffByRole(t,'scout').slice().sort((a,b)=>(b.rating||0)-(a.rating||0)),
     f=ensureFacilities(t),
@@ -53,8 +62,7 @@ function aiScoutingCoveragePlan(db,t,candidates,capacity){
     .filter((r,i,x)=>x.indexOf(r)===i).slice(0,slots);
   return regions.map((region,i)=>({
     region,
-    leagues:Object.values(db.competitions||{}).filter(c=>!c.international&&c.region===region)
-      .map(c=>c.id).sort(),
+    leagues:aiScoutingLeagueKeys(db,region),
     scoutIds:scouts.length?scouts.filter((_,j)=>j%regions.length===i).map(s=>s.id):[],
     scoutingFacility:f.scouting,
     publicPool:(grouped[region]||[]).length
