@@ -25,10 +25,10 @@ source+=String.raw`(()=>{
     regionCfg('EU',{splits:2,standingsMode:'points'}).standingsMode==='points',
     'independent region-specific period/aggregation configuration ignored');
   const card=regionCard(cfg.regions[0],0);
-  check(card.includes('data-cfg="r.0.splits"')&&
-    card.includes('data-cfg="r.0.standingsMode"')&&
-    card.includes('성적 집계 방식')&&card.includes('value="cumulative"'),
-    'new-game setup omitted distinct aggregation and split selectors');
+  check(card.includes('리그 사무국 관할')&&
+    card.includes('독립')&&!card.includes('data-cfg="r.0.splits"')&&
+    !card.includes('data-cfg="r.0.standingsMode"'),
+    'manager-facing setup must display league rules without editable selectors');
   cfg.regions[0].standingsMode='missing_mode';
   check(validateConfig(cfg).some(msg=>msg.includes('성적 집계')),
     'unknown aggregation mode passed world-config validation');
@@ -69,6 +69,7 @@ source+=String.raw`(()=>{
   check(firstIndependent.w===0&&firstIndependent.gw===0,
     'independent split did not reset regular results');
   R.standingsMode='cumulative';db.worldConfig.regions[0].standingsMode='cumulative';
+  two.standingsMode='cumulative'; // fixture for a season approved by the league office
   const secondCumulative=standings(db,two,regular),
     carriedA=secondCumulative.find(row=>row.tid===A),
     carriedB=secondCumulative.find(row=>row.tid===B);
@@ -99,6 +100,9 @@ source+=String.raw`(()=>{
   check(three.days.every(d=>d.matches.every(m=>!m.res)),
     'cumulative points inadvertently pre-resolved official fixtures');
   R.standingsMode='points';db.worldConfig.regions[0].standingsMode='points';
+  check(standings(db,two,regular).find(x=>x.tid===A).w===1,
+    'league-office decisions retroactively modified previous season standings');
+  three.standingsMode='points'; // next season runs under its own frozen rule
   const now=standings(db,three,regular);
   check(now.every(x=>x.w===0&&x.l===0),
     'championship points mode must reset match results per split');
@@ -122,17 +126,69 @@ source+=String.raw`(()=>{
   const legacy=JSON.parse(packDB(db));
   delete legacy.regions.NA.standingsMode;
   delete legacy.worldConfig.regions[0].standingsMode;
+  for(const season of Object.values(legacy.world.seasons))
+    delete season.standingsMode;
   const old=unpackDB(JSON.stringify(legacy));
   check(regionPlacements(old,old.regions.NA)[0]===B&&
     standings(old,old.world.seasons['LCS-3'],regular).every(x=>x.w===0),
     'old saves without an aggregation mode did not default to independent');
   const reset=unpackDB(packDB(db));
+  const endOfYearOrder=regionPlacements(reset,reset.regions.NA);
+  reset.regions.NA.lastPlacement=endOfYearOrder.slice();
   reset.year++;reset.world={...reset.world,year:reset.year,seasons:{}};
   check(championshipStandings(reset,reset.regions.NA).every(x=>x.points===0),
     'championship points leaked between years');
-  // A single-split region may select points without changing its schedule.
+  check(regionPlacements(reset,reset.regions.NA).join('|')===endOfYearOrder.join('|'),
+    'annual league-office qualification order was not preserved for early next-year invitations');
+  // League-office governance alone makes and records rule changes; never
+  // mutate an already-completed competition's standings mode.
+  const officeDb=unpackDB(packDB(db)),officeR=officeDb.regions.NA,
+    officeNews=[];
+  officeDb.world.year=2028;
+  officeR.standingsMode='independent';
+  officeR.metrics=[{year:2027,hype:95,balance:.03,fans:85,stars:5,teams:10}];
+  const guarded=['system','expand','contract','div2','format','splits',
+    'cap','floor','tax','import','playoffs','bo'];
+  officeR.decisions=guarded.map(key=>({key,year:2028}));
+  const oldSplitCount=officeR.splits,
+    seasonMode=officeDb.world.seasons['LCS-2'].standingsMode;
+  officeDecisions(officeDb,new RNG('split-office-2028','office'),1,
+    msg=>officeNews.push(msg),false);
+  const ratified=officeR.decisions.filter(x=>x.key==='standingsMode');
+  check(officeR.standingsMode==='points'&&ratified.length===1&&
+    ratified[0].year===2028&&officeNews.some(x=>x.includes('성적 집계 방식 변경'))&&
+    officeR.splits===oldSplitCount,
+    'league office did not independently adopt a justified ranking policy');
+  check(officeDb.world.seasons['LCS-2'].standingsMode===seasonMode&&
+    standings(officeDb,officeDb.world.seasons['LCS-2'],regular)
+      .find(x=>x.tid===A).w===1,
+    'office policy changed historical split rules after their fixtures ended');
+  officeR.metrics=[{year:2029,hype:12,balance:.98,fans:20,stars:1,teams:10}];
+  officeDb.world.year=2029;
+  officeR.decisions=officeR.decisions.filter(x=>x.key==='standingsMode')
+    .concat(guarded.map(key=>({key,year:2029})));
+  officeDecisions(officeDb,new RNG('split-office-2029','office'),1,
+    msg=>officeNews.push(msg),false);
+  check(officeR.standingsMode==='points'&&
+    officeR.decisions.filter(x=>x.key==='standingsMode').length===1,
+    'office violated the minimum interval between structural decisions');
+  officeR.metrics=[{year:2032,hype:12,balance:.98,fans:20,stars:1,teams:10}];
+  officeDb.world.year=2032;
+  officeR.decisions=officeR.decisions.filter(x=>x.key==='standingsMode')
+    .concat(guarded.map(key=>({key,year:2032})));
+  officeDecisions(officeDb,new RNG('split-office-2032','office'),1,
+    msg=>officeNews.push(msg),false);
+  check(officeR.standingsMode==='independent'&&
+    officeR.decisions.some(x=>x.key==='standingsMode'&&x.year===2032)&&
+    officeNews.filter(x=>x.includes('성적 집계 방식 변경')).length===2,
+    'office did not retain the authority to change formats in a later offseason: '+JSON.stringify({
+      mode:officeR.standingsMode,decisions:officeR.decisions,
+      lastNews:officeNews.at(-1),metrics:officeR.metrics
+    }));
+  // A single-split office may retain its inherited policy independently of
+  // the number of scheduling periods; it is never an extra manager setting.
   check(regionCfg('JP',{splits:1,standingsMode:'points'}).standingsMode==='points',
-    'single-season schedule disallowed independent aggregation selection');
+    'split count and aggregation configuration are accidentally the same field');
   console.log('SPLIT_AGGREGATION '+JSON.stringify({
     allowedModes:Object.keys(SPLIT_STANDINGS_MODES),
     twoAndThreeSplits:true,firstSplitWins:carriedA.w,

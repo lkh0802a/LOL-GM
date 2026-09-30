@@ -7,7 +7,7 @@ function rrTable(db,s,stageId,teams){
   // Each split remains a separate fixture/playoff tournament. Only the
   // regular-season table carries older results when the region explicitly
   // chooses cumulative records; other regions, years and divisions cannot mix.
-  const previous=region?.standingsMode==='cumulative'&&s.split?
+  const previous=(s.standingsMode||region?.standingsMode)==='cumulative'&&s.split?
     Object.values(db.world?.seasons||{}).filter(x=>x!==s&&x.done&&
       x.comp===s.comp&&x.year===s.year&&x.split&&x.split<s.split)
       .sort((a,b)=>a.split-b.split):[];
@@ -54,7 +54,7 @@ function regionPlacements(db,R,div=1){
   const w=db.world,act=activeTeams(db,R.id,div).map(t=>t.id);
   const done=[3,2,1].map(sp=>w?.seasons[R.short+(div===2?'2':'')+'-'+sp])
     .find(s=>s?.done);
-  const mode=R.standingsMode||'independent';
+  const mode=done?.standingsMode||R.standingsMode||'independent';
   let base=done?(mode==='points'?championshipStandings(db,R,div).map(x=>x.tid):
     mode==='cumulative'?standings(db,done,'regular').map(x=>x.tid):
     placements(db,done)):(div===1?R.lastPlacement||[]:[]);
