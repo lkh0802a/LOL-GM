@@ -2524,17 +2524,6 @@ function standings(db,s,stageId){
   return rrTable(db,s,stageId,sd?sd.teams:[]);
 }
 function groupStandings(db,s,stageId){const sd=s.stageData[stageId];return sd.groups.map(g=>rrTable(db,s,stageId,g))}
-function rrTable(db,s,stageId,teams){
-  const tb={};teams.forEach(t=>tb[t]={tid:t,w:0,l:0,gw:0,gl:0,h2h:{},form:[]});
-  for(const d of s.days) if(d.stage===stageId) for(const m of d.matches) if(m.res&&tb[m.a]&&tb[m.b]){
-    const [sa,sb]=m.res.score, wa=m.res.winner===m.a;
-    tb[m.a].gw+=sa;tb[m.a].gl+=sb;tb[m.b].gw+=sb;tb[m.b].gl+=sa;
-    tb[wa?m.a:m.b].w++;tb[wa?m.b:m.a].l++;
-    tb[m.a].h2h[m.b]=(tb[m.a].h2h[m.b]||0)+(wa?1:-1);tb[m.b].h2h[m.a]=(tb[m.b].h2h[m.a]||0)+(wa?-1:1);
-    tb[m.a].form.push(wa?'W':'L');tb[m.b].form.push(wa?'L':'W');
-  }
-  return Object.values(tb).sort((x,y)=>(y.w-x.w)||((y.gw-y.gl)-(x.gw-x.gl))||((y.h2h[x.tid]||0)-(x.h2h[y.tid]||0))||(hashStr(s.seed+x.tid)-hashStr(s.seed+y.tid)));
-}
 function recordLines(s,lines){
   for(const l of lines){
     const p=s.pstats[l.pid]||(s.pstats[l.pid]={g:0,w:0,k:0,d:0,a:0,cs:0,gold:0,dmg:0,dmgTaken:0,vision:0,objectives:0,csDiff:0,goldDiff:0,laneAdvSum:0,laneAdvGames:0,teamfightDmg:0,teamfights:0,teamfightWins:0,teamfightShareSum:0,kpSum:0,min:0,mvp:0,ratingSum:0,champs:{}});
@@ -2652,6 +2641,72 @@ function intlStages(fmt,teams,bo){
   if(fmt==='ko'||n<6){let P=4;while(P*2<=n)P*=2;return [{...ko(undefined,P)}]}
   if(fmt==='groups_de'&&n>=8)return [grp(n>=12?4:2),de('groups',8)];
   return [grp(n>=12?4:2),ko('groups',n>=12?8:4)];
+}
+
+/* ==== FILE: league-aggregation.js ==== */
+// ===== LOL GM: League annual standings and split result aggregation =====
+// Separate from competition fixture generation, playoff execution and season progression.
+
+function rrTable(db,s,stageId,teams){
+  const tb={};teams.forEach(t=>tb[t]={tid:t,w:0,l:0,gw:0,gl:0,h2h:{},form:[]});
+  const comp=db.competitions[s.comp],region=comp&&!comp.international&&db.regions[comp.region];
+  // Each split remains a separate fixture/playoff tournament. Only the
+  // regular-season table carries older results when the region explicitly
+  // chooses cumulative records; other regions, years and divisions cannot mix.
+  const previous=region?.standingsMode==='cumulative'&&s.split?
+    Object.values(db.world?.seasons||{}).filter(x=>x!==s&&x.done&&
+      x.comp===s.comp&&x.year===s.year&&x.split&&x.split<s.split)
+      .sort((a,b)=>a.split-b.split):[];
+  for(const season of [...previous,s])for(const d of season.days)
+    if(d.stage===stageId)for(const m of d.matches){
+      if(!m.res||!tb[m.a]&&!tb[m.b])continue;
+      const [sa,sb]=m.res.score,wa=m.res.winner===m.a;
+      if(tb[m.a]){
+        tb[m.a].gw+=sa;tb[m.a].gl+=sb;tb[m.a][wa?'w':'l']++;
+        tb[m.a].form.push(wa?'W':'L');
+        if(tb[m.b])tb[m.a].h2h[m.b]=(tb[m.a].h2h[m.b]||0)+(wa?1:-1);
+      }
+      if(tb[m.b]){
+        tb[m.b].gw+=sb;tb[m.b].gl+=sa;tb[m.b][wa?'l':'w']++;
+        tb[m.b].form.push(wa?'L':'W');
+        if(tb[m.a])tb[m.b].h2h[m.a]=(tb[m.b].h2h[m.a]||0)+(wa?-1:1);
+      }
+    }
+  return Object.values(tb).sort((x,y)=>(y.w-x.w)||((y.gw-y.gl)-(x.gw-x.gl))||((y.h2h[x.tid]||0)-(x.h2h[y.tid]||0))||(hashStr(s.seed+x.tid)-hashStr(s.seed+y.tid)));
+}
+// Annual championship points are earned at the end of each independently
+// completed split. Unfinished playoffs award no speculative points.
+const CHAMPIONSHIP_FINISH_POINTS=[0,20,45,70,100];
+function championshipStandings(db,R,div=1){
+  const teams=activeTeams(db,R.id,div).map(t=>t.id),world=db.world;
+  const seasons=Object.values(world?.seasons||{}).filter(s=>s.done&&s.year===world.year&&
+    s.region===R.id&&(s.div||1)===div&&s.split).sort((a,b)=>a.split-b.split);
+  const totals=Object.fromEntries(teams.map(t=>[t,{tid:t,points:0,bySplit:{}}]));
+  for(const s of seasons)for(const id of teams){
+    const award=CHAMPIONSHIP_FINISH_POINTS[elimReach(db,s,id)]||0;
+    totals[id].points+=award;totals[id].bySplit[s.split]=award;
+  }
+  const latest=seasons.at(-1),order=latest?placements(db,latest):
+    teams.slice().sort((a,b)=>teamStrength(db,b)-teamStrength(db,a));
+  const tie=new Map(order.map((id,i)=>[id,i]));
+  return Object.values(totals).sort((a,b)=>b.points-a.points||
+    (tie.get(a.tid)??999)-(tie.get(b.tid)??999)||a.tid.localeCompare(b.tid));
+}
+function recentSplitChampion(db,R){
+  return [3,2,1].map(sp=>db.world?.seasons[R.short+'-'+sp])
+    .find(s=>s?.done)?.champion||null;
+}
+function regionPlacements(db,R,div=1){
+  const w=db.world,act=activeTeams(db,R.id,div).map(t=>t.id);
+  const done=[3,2,1].map(sp=>w?.seasons[R.short+(div===2?'2':'')+'-'+sp])
+    .find(s=>s?.done);
+  const mode=R.standingsMode||'independent';
+  let base=done?(mode==='points'?championshipStandings(db,R,div).map(x=>x.tid):
+    mode==='cumulative'?standings(db,done,'regular').map(x=>x.tid):
+    placements(db,done)):(div===1?R.lastPlacement||[]:[]);
+  base=base.filter(t=>act.includes(t));
+  const rest=act.filter(t=>!base.includes(t)).sort((a,b)=>teamStrength(db,b)-teamStrength(db,a));
+  return [...base,...rest];
 }
 
 /* ==== FILE: player.js ==== */
@@ -3464,6 +3519,8 @@ function genTactics(rng){return {aggression:rng.int(35,80),risk_tolerance:rng.in
 const PHILOSOPHIES=['win-now','youth','balanced','superstar','cost'];
 const PHIL_KO={'win-now':'즉시 전력','youth':'유망주 육성','balanced':'균형','superstar':'스타 영입','cost':'효율 중시'};
 const SPLIT_NAME={1:'윈터',2:'스프링',3:'서머'};
+// Scheduling periods and season-result aggregation are separate rules.
+const SPLIT_STANDINGS_MODES={independent:'스플릿별 독립',cumulative:'정규시즌 전적 누적',points:'챔피언십 포인트 누적'};
 // ---------- 지역 프리셋 / 월드 설정 ----------
 // 실제 LoL e스포츠 구조를 본뜬 기본 리그 (리그 수준·시장 규모는 고정, 구조만 편집 가능)
 const REGION_PRESETS = {
@@ -3499,7 +3556,7 @@ const ZONE_KO={east:'Eastern',west:'Western'};
 function regionCfg(id,over={}){
   const P=REGION_PRESETS[id]||{name:'새 지역',leagueName:'새 리그',short:'NEW',strength:63,d:{}},d=P.d||{};
   return {id,name:P.name,leagueName:P.leagueName,short:P.short,strength:P.strength,templates:!!P.templates,tier:P.tier||'emerging',parent:P.parent||null,
-    format:'rr_po',div2:false,div2Teams:8,teams:10,splits:2,legs:2,regularBo:3,playoffTake:6,playoffBo:5,system:'franchise',relegate:1,slots:3,office:null,
+    format:'rr_po',div2:false,div2Teams:8,teams:10,splits:2,standingsMode:'independent',legs:2,regularBo:3,playoffTake:6,playoffBo:5,system:'franchise',relegate:1,slots:3,office:null,
     fearless:true,payScale:null,spendingRule:null,sfrMode:null,sfrTeamShare:0,salaryCap:0,salaryFloor:0,luxuryTax:.5,importLimit:null,importRecruitMinGap:null,rosterRuleProfile:null,marketProfile:null,policyMode:'engine',policyLocks:{},...d,...over,
     spendingRule:null,sfrMode:null,sfrTeamShare:0,salaryCap:0,salaryFloor:0,importLimit:null,importRecruitMinGap:null,rosterRuleProfile:null,marketProfile:null,office:null,payScale:null};
 }
@@ -3675,6 +3732,8 @@ function validateConfig(cfg){
     if(!r.short||shorts.has(r.short))errs.push(`리그 약칭 "${r.short}"이 비었거나 겹칩니다`);shorts.add(r.short);shorts.add(r.short+'2');
     if(r.teams<10||r.teams%2)errs.push(`${r.leagueName}: 1부 팀 수는 최소 10팀이며 짝수여야 합니다`);
     if(r.playoffTake>r.teams)errs.push(`${r.leagueName}: 플레이오프 진출 팀이 전체 팀보다 많습니다`);
+    if(r.standingsMode&&!Object.hasOwn(SPLIT_STANDINGS_MODES,r.standingsMode))
+      errs.push(`${r.leagueName}: 지원하지 않는 스플릿 성적 집계 방식입니다`);
     if(r.format==='groups_po'&&r.teams<10)errs.push(`${r.leagueName}: 그룹 스테이지 방식은 10팀 이상에서 쓸 수 있습니다`);
     if(r.div2&&r.system!=='franchise'&&(r.div2Teams||6)%2)errs.push(`${r.leagueName}: 하부 리그 팀 수는 짝수여야 합니다`);
   }
@@ -3760,14 +3819,6 @@ function placements(db,s){
   const comp=db.competitions[s.comp];const reg=standings(db,s,comp.stages[0].id).map(x=>x.tid);
   const out=[s.champion,s.runnerUp].filter(Boolean);for(const t of reg)if(!out.includes(t))out.push(t);return out;
 }
-function regionPlacements(db,R){
-  const w=db.world, act=activeTeams(db,R.id,1).map(t=>t.id);
-  const done=[3,2,1].map(sp=>w.seasons[R.short+'-'+sp]).find(s=>s&&s.done);
-  let base=done?placements(db,done):(R.lastPlacement||[]);
-  base=base.filter(t=>act.includes(t));
-  const rest=act.filter(t=>!base.includes(t)).sort((a,b)=>teamStrength(db,b)-teamStrength(db,a));
-  return [...base,...rest];
-}
 function regionPower(db,R){const h=(db.global&&db.global.power||{})[R.id];return h!==undefined?h:R.strength}
 function teamStrength(db,tid){const t=db.teams[tid];return avg(ROLES.map(r=>{const p=starterFor(db,t,r);return p?playerRoleRating(p,r):40}))}
 function startInternational(db,id,start,taken=new Set()){
@@ -3775,7 +3826,12 @@ function startInternational(db,id,start,taken=new Set()){
   const regs=Object.values(db.regions).filter(R=>!it.zone||(INTL_ZONES[it.zone]||[]).includes(R.id)).sort((a,b)=>regionPower(db,b)-regionPower(db,a));
   const topSlots=R=>{const top=db.worldConfig.internationals.find(x=>x.tier!=='low'&&x.timing===it.timing&&x.entry==='slots');return top?Math.max(1,Math.ceil(R.slots*(top.ratio||1))):R.slots};
   const lists=regs.map(R=>{
-    if(it.entry==='champions')return regionPlacements(db,R).slice(0,1);
+    if(it.entry==='champions'){
+      // Tournament-champion invitations always honor the *last split winner*,
+      // even in a region where World slots use accumulated season points.
+      const champion=recentSplitChampion(db,R);
+      return champion?[champion]:regionPlacements(db,R).slice(0,1);
+    }
     if(it.entry==='slots')return regionPlacements(db,R).slice(0,Math.max(1,Math.ceil(R.slots*(it.ratio||1))));
     const per=(it.per||2)*(regs.length<=2?2:1);
     if(it.entry==='div2'&&R.div2){const s=[3,2,1].map(sp=>w.seasons[R.short+'2-'+sp]).find(s=>s&&s.done);if(s)return placements(db,s).filter(t=>!taken.has(t)).slice(0,per)}
@@ -4040,9 +4096,13 @@ function promotionRelegation(db,w,rng,ev){
     if(R.system!=='relegation'&&R.system!=='mixed')continue;
     const s=finalSeason(w,R); if(!s||!s.done)continue;
     const k=Math.max(1,R.relegate||1);
-    const down=standings(db,s,'regular').map(x=>x.tid).filter(t=>!(R.system==='mixed'&&db.teams[t].franchised)).slice(-k);
+    const down=(R.standingsMode==='points'?regionPlacements(db,R):
+      standings(db,s,'regular').map(x=>x.tid))
+      .filter(t=>!(R.system==='mixed'&&db.teams[t].franchised)).slice(-k);
     const s2=finalSeason(w,R,2);
-    const up=R.div2&&s2&&s2.done?placements(db,s2).filter(t=>promotionEligible(db,t)).slice(0,k):[];
+    const up=R.div2&&s2&&s2.done?
+      (R.standingsMode==='points'?regionPlacements(db,R,2):placements(db,s2))
+        .filter(t=>promotionEligible(db,t)).slice(0,k):[];
     down.forEach((tid,i)=>{
       const t=db.teams[tid];
       if(up[i]){const u=db.teams[up[i]];t.division=2;u.division=1;u.franchised=false;u.license='open';t.fans=Math.round((t.fans||20)*0.8);u.fans=Math.round((u.fans||10)+8);ev(`${R.leagueName} 승강: ${u.name} 승격 ↔ ${t.name} 강등`)}
@@ -7020,11 +7080,15 @@ function bindManagerTeamPicker(){
 }
 
 // ----- 세계 만들기 (커리어 시작 전에만) -----
-const SEL_KO={splits:{1:'단일 시즌',2:'2스플릿',3:'3스플릿'},legs:{1:'싱글',2:'더블'},regularBo:{3:'Bo3',5:'Bo5'},playoffTake:{4:'4팀',6:'6팀',8:'8팀'},playoffBo:{3:'Bo3',5:'Bo5'},system:{franchise:'프랜차이즈',relegation:'승강제',mixed:'혼합 (상위 절반 보호)'},slots:{1:'1장',2:'2장',3:'3장',4:'4장',5:'5장'},relegate:{1:'1팀',2:'2팀'},div2:{0:'없음',1:'있음'},div2Teams:{4:'4팀',6:'6팀',8:'8팀',10:'10팀'}};
+const SEL_KO={splits:{1:'단일 시즌',2:'2스플릿',3:'3스플릿'},standingsMode:SPLIT_STANDINGS_MODES,legs:{1:'싱글',2:'더블'},regularBo:{3:'Bo3',5:'Bo5'},playoffTake:{4:'4팀',6:'6팀',8:'8팀'},playoffBo:{3:'Bo3',5:'Bo5'},system:{franchise:'프랜차이즈',relegation:'승강제',mixed:'혼합 (상위 절반 보호)'},slots:{1:'1장',2:'2장',3:'3장',4:'4장',5:'5장'},relegate:{1:'1팀',2:'2팀'},div2:{0:'없음',1:'있음'},div2Teams:{4:'4팀',6:'6팀',8:'8팀',10:'10팀'}};
 const ISEL_KO={timing:{early:'윈터 이후',mid:'스프링 이후',end:'서머 이후'},entry:{champions:'직전 스플릿 우승팀',slots:'지역별 진출권',next:'상위 대회 진출권 다음 순위 팀',div2:'하부 리그 상위 팀'},format:INTL_FORMATS,bo:{3:'Bo3',5:'Bo5'}};
 function sel(path,val,opts){return `<select data-cfg="${path}">${Object.entries(opts).map(([k,l])=>`<option value="${k}"${String(val)===k?' selected':''}>${l}</option>`).join('')}</select>`}
 function regionCard(r,i){
   return `<div class="cfgcard compact"><div class="cfghead"><b>${esc(r.leagueName)} <small class="hint">${esc(r.name)}</small></b></div>
+    <div class="controls">
+      <label>스플릿 수${sel('r.'+i+'.splits',r.splits,SEL_KO.splits)}</label>
+      <label>성적 집계 방식${sel('r.'+i+'.standingsMode',r.standingsMode||'independent',SEL_KO.standingsMode)}</label>
+    </div>
     <p class="hint">${r.teams}팀 · ${fmtRegion(r)} · 월즈 ${r.slots}장</p></div>`;
 }
 function intlCard(it,i){
@@ -7034,7 +7098,7 @@ function intlCard(it,i){
 function seasonSetup(){
   const cfg=DB.worldConfig, dirty=DB.configDirty;
   return `<section class="teamhead"><h2>세계 만들기</h2><p>LOL GM은 고정된 글로벌 프로 생태계에서 시작합니다. 리그와 국제대회는 새 게임에서 임의로 추가·삭제하지 않으며, 이후 구조 변화는 게임 내 사무국과 세계 변화 시스템이 처리합니다.</p></section>
-  <section><h3>리그 구조</h3><div class="cfgs">${cfg.regions.map(regionCard).join('')}</div></section>
+  <section><h3>리그 구조</h3><p class="hint">스플릿 기간과 성적 집계는 각 리그에서 따로 선택합니다. 독립: 매 스플릿 순위 초기화 · 전적 누적: 정규 시즌 승패를 다음 기간으로 승계 · 포인트 누적: 각 스플릿 승패는 초기화하고 플레이오프 최종 성적 점수를 연간 합산합니다. 국제대회 직전 우승팀 자격은 어느 방식이든 해당 스플릿 챔피언에게 있습니다.</p><div class="cfgs">${cfg.regions.map(regionCard).join('')}</div></section>
   <section><h3>국제대회</h3><div class="cfgs">${cfg.internationals.map(intlCard).join('')}</div><p class="hint">퍼스트 스탠드 · MSI · 월드 챔피언십과 권역별 마스터즈/챌린저급 국제대회가 세계 일정에 포함됩니다.</p></section>
   <section><h3>세계 변화와 운영</h3><div class="controls">
     <label>세계 변화 빈도${sel('g.changes',cfg.changes,{none:'없음',low:'낮음',normal:'보통',high:'높음'})}</label>
@@ -7601,7 +7665,7 @@ function globalCard(){const g=DB.global||{decisions:[],power:{}};const P=Object.
   return `<div class="cfgcard"><div class="cfghead"><b>국제대회 · 진출권 · 패치 주기 · 지역 승인</b><span class="hint">패치 주기 ${DB.patches.cadence||14}일</span></div>
   ${P.length?`<div class="arow"><span>국제 경쟁력 지수</span><span class="hint">${P.map(([R,v])=>`${esc(R.name)} ${v}`).join(' · ')}</span></div>`:''}
   ${g.decisions.slice().reverse().slice(0,6).map(d=>`<div class="dec"><time>${d.year}</time> <b>${esc(d.what)}</b><br><small>${esc(d.why)}</small></div>`).join('')||'<p class="hint">첫 시즌이 끝나면 국제대회 성적을 보고 결정합니다.</p>'}</div>`}
-function fmtRegion(r){const fin=r.spendingRule==='sfr_top5'?` · 엔진 SFR 상위5 ${r.salaryCap}억`:' · 균형지출 규제 없음',p=r.policyBasis,pol=p?.source==='engine'?` · 정책엔진(팬 ${p.fanAvg??'-'}·자금 ${p.ownerAvg??'-'}·인재 ${p.localDepth??'-'})`:'';return `${LEAGUE_FORMATS[r.format||'rr_po']} · ${SEL_KO.splits[r.splits]} · 정규 Bo${Math.max(3,r.regularBo)} · PO ${r.playoffTake}팀 Bo${r.playoffBo} · ${SEL_KO.system[r.system]}${r.div2?' · 하부 리그':''}${fin}${pol}`}
+function fmtRegion(r){const fin=r.spendingRule==='sfr_top5'?` · 엔진 SFR 상위5 ${r.salaryCap}억`:' · 균형지출 규제 없음',p=r.policyBasis,pol=p?.source==='engine'?` · 정책엔진(팬 ${p.fanAvg??'-'}·자금 ${p.ownerAvg??'-'}·인재 ${p.localDepth??'-'})`:'';return `${LEAGUE_FORMATS[r.format||'rr_po']} · ${SEL_KO.splits[r.splits]} · ${SPLIT_STANDINGS_MODES[r.standingsMode||'independent']||SPLIT_STANDINGS_MODES.independent} · 정규 Bo${Math.max(3,r.regularBo)} · PO ${r.playoffTake}팀 Bo${r.playoffBo} · ${SEL_KO.system[r.system]}${r.div2?' · 하부 리그':''}${fin}${pol}`}
 function worldTable(){
   return `<div class="scroll"><table><thead><tr><th>지역</th><th>리그</th><th>구분</th><th>팀</th><th>수준</th><th>흥행</th><th>균형</th><th>사무국</th><th>진출권</th><th>방식</th></tr></thead><tbody>
   ${Object.values(DB.regions).map(r=>{const ts=activeTeams(DB,r.id,1),m=(r.metrics||[]).slice(-1)[0];return `<tr><td><b>${esc(r.name)}</b></td><td>${esc(r.leagueName)}</td><td>${r.tier==='major'?'메이저':'신흥'}${r.parent&&DB.regions[r.parent]?`<small class="hint"> (${esc(DB.regions[r.parent].leagueName)} 권역)</small>`:''}</td><td class="num">${ts.length}</td><td class="num">${Math.round(avg(ts.map(t=>teamStrength(DB,t.id))))}</td><td class="num">${m?m.hype+' <small class="hint">'+hypeLabel(m.hype)+'</small>':'—'}</td><td class="num">${m?m.balance.toFixed(2):'—'}</td><td>${esc((OFFICE_STYLES[r.office]||{}).label||'')}</td><td class="num">${r.slots}</td><td class="fmt">${fmtRegion(r)}</td></tr>`}).join('')}
@@ -7611,14 +7675,26 @@ function seasonTab(){
   const s=curS(); if(!s)return '<p class="empty">진행 중인 대회가 없습니다.</p>';
   const comp=DB.competitions[s.comp], me=managedTeamId(DB);
   if(SSET.tab==='table'){
+    const region=comp.region&&DB.regions[comp.region],mode=region?.standingsMode||'independent';
+    const doneSplits=region?Object.values(DB.world.seasons).filter(x=>
+      x.done&&x.year===DB.world.year&&x.region===region.id&&
+      (x.div||1)===(comp.div||1)&&x.split).length:0;
+    const pointRows=region&&mode==='points'&&doneSplits?
+      championshipStandings(DB,region,comp.div||1):[];
+    const annualPoints=region&&mode==='points'?
+      `<section><h3>${esc(region.leagueName)} · 연간 챔피언십 포인트</h3>
+      <p class="hint">완료된 ${doneSplits}개 스플릿만 합산 · 우승 100 / 준우승 70 / 4강 45 / 플레이오프 진출 20점. 동점은 최근 완료 스플릿 순위로 정합니다. 현재 스플릿 승패/플레이오프는 별도 진행합니다.</p>
+      ${pointRows.length?`<div class="scroll"><table class="stand"><thead><tr><th>순위</th><th>팀</th><th>총점</th><th>스플릿별</th></tr></thead><tbody>
+      ${pointRows.map((r,i)=>`<tr class="${r.tid===me?'mine':''}"><td class="num">${i+1}</td><td><b>${esc(tname(r.tid))}</b></td><td class="num">${r.points}</td><td>${Object.entries(r.bySplit).map(([sp,pt])=>`${SPLIT_NAME[sp]||sp} ${pt}점`).join(' · ')}</td></tr>`).join('')}
+      </tbody></table></div>`:'<p class="empty">첫 스플릿 종료 후 누적 포인트가 표시됩니다.</p>'}</section>`:'';
     const sw=comp.stages.filter(x=>x.type==='swiss'&&s.stageData[x.id]).map(cfg=>{const sd=s.stageData[cfg.id];const rows=standings(DB,s,cfg.id);
       return `<section><h3>${esc(sName(s))} · ${esc(cfg.name)} <small class="hint">${sd.W}승 진출 · ${sd.L}패 탈락</small></h3><div class="scroll"><table class="stand"><thead><tr><th>팀</th><th>전적</th><th>상태</th></tr></thead><tbody>
       ${rows.map(r=>`<tr class="${r.tid===me?'mine':''}"><td><b>${esc(tname(r.tid))}</b></td><td class="num">${r.w}-${r.l}</td><td>${sd.advanced.includes(r.tid)?'진출':sd.out.includes(r.tid)?'탈락':'진행 중'}</td></tr>`).join('')}</tbody></table></div></section>`}).join('');
     const grp=comp.stages.filter(x=>x.type==='round_robin'&&x.groups>1&&s.stageData[x.id]).map(cfg=>groupStandings(DB,s,cfg.id).map((rows,gi)=>`<section><h3>${esc(sName(s))} · ${esc(cfg.name)} ${String.fromCharCode(65+gi)}조</h3><div class="scroll"><table class="stand"><thead><tr><th>순위</th><th>팀</th><th>승</th><th>패</th><th>득실</th></tr></thead><tbody>${rows.map((r,i)=>`<tr class="${r.tid===me?'mine':''}"><td class="num">${i+1}</td><td><b>${esc(tname(r.tid))}</b></td><td class="num">${r.w}</td><td class="num">${r.l}</td><td class="num">${r.gw-r.gl}</td></tr>`).join('')}</tbody></table></div></section>`).join('')).join('');
-    if(sw||grp)return sw+grp;
-    return comp.stages.filter(x=>x.type==='round_robin').map(cfg=>{if(!s.stageData[cfg.id])return '';const rows=standings(DB,s,cfg.id), take=(comp.stages.find(x=>x.from===cfg.id)||{}).take;
-      return `<section><h3>${esc(sName(s))} · ${esc(cfg.name)}</h3><div class="scroll"><table class="stand"><thead><tr><th>순위</th><th>팀</th>${comp.international?'<th>지역</th>':''}<th>승</th><th>패</th><th>세트</th><th>득실</th><th>최근 5</th></tr></thead><tbody>
-      ${rows.map((r,i)=>`<tr class="${r.tid===me?'mine':''} ${take&&i===take-1?'cut':''} ${(!comp.international&&comp.div===1&&s===finalSeason(DB.world,DB.regions[comp.region]||{},1)&&['relegation','mixed'].includes((DB.regions[comp.region]||{}).system)&&i>=rows.length-((DB.regions[comp.region]||{}).relegate||1)&&!(DB.teams[r.tid].franchised&&DB.regions[comp.region].system==='mixed'))?'danger':''}"><td class="num">${i+1}</td><td><b>${esc(tname(r.tid))}</b>${DB.teams[r.tid].franchised&&(DB.regions[comp.region]||{}).system==='mixed'?' <small class="hint">보호</small>':''}</td>${comp.international?`<td>${esc((DB.regions[DB.teams[r.tid].region]||{name:''}).name)}</td>`:''}<td class="num">${r.w}</td><td class="num">${r.l}</td><td class="num">${r.gw}-${r.gl}</td><td class="num">${r.gw-r.gl>0?'+':''}${r.gw-r.gl}</td><td class="form">${r.form.slice(-5).map(f=>`<i class="${f}">${f==='W'?'승':'패'}</i>`).join('')}</td></tr>`).join('')}
+    if(sw||grp)return annualPoints+sw+grp;
+    return annualPoints+comp.stages.filter(x=>x.type==='round_robin').map(cfg=>{if(!s.stageData[cfg.id])return '';const rows=standings(DB,s,cfg.id), take=(comp.stages.find(x=>x.from===cfg.id)||{}).take;
+      return `<section><h3>${esc(sName(s))} · ${esc(cfg.name)}${mode==='cumulative'&&s.split?' · 연간 누적 전적':''}</h3><div class="scroll"><table class="stand"><thead><tr><th>순위</th><th>팀</th>${comp.international?'<th>지역</th>':''}<th>승</th><th>패</th><th>세트</th><th>득실</th><th>최근 5</th></tr></thead><tbody>
+      ${rows.map((r,i)=>`<tr class="${r.tid===me?'mine':''} ${take&&i===take-1?'cut':''} ${(!comp.international&&comp.div===1&&mode!=='points'&&s===finalSeason(DB.world,DB.regions[comp.region]||{},1)&&['relegation','mixed'].includes((DB.regions[comp.region]||{}).system)&&i>=rows.length-((DB.regions[comp.region]||{}).relegate||1)&&!(DB.teams[r.tid].franchised&&DB.regions[comp.region].system==='mixed'))?'danger':''}"><td class="num">${i+1}</td><td><b>${esc(tname(r.tid))}</b>${DB.teams[r.tid].franchised&&(DB.regions[comp.region]||{}).system==='mixed'?' <small class="hint">보호</small>':''}</td>${comp.international?`<td>${esc((DB.regions[DB.teams[r.tid].region]||{name:''}).name)}</td>`:''}<td class="num">${r.w}</td><td class="num">${r.l}</td><td class="num">${r.gw}-${r.gl}</td><td class="num">${r.gw-r.gl>0?'+':''}${r.gw-r.gl}</td><td class="form">${r.form.slice(-5).map(f=>`<i class="${f}">${f==='W'?'승':'패'}</i>`).join('')}</td></tr>`).join('')}
       </tbody></table></div>${take?`<p class="hint">선 위 ${take}팀이 다음 스테이지에 진출합니다.</p>`:''}</section>`}).join('')||'<p class="empty">이 대회는 순위표 없이 토너먼트로만 진행됩니다.</p>';
   }
   if(SSET.tab==='sched'){
