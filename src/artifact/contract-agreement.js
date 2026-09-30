@@ -1,85 +1,81 @@
-// ===== LOL GM: D04-B3 future contract agreement activation lifecycle =====
-// Loaded after contract-window.js. Keeps future-agreement settlement and
-// exceptional void handling separate from contact-window eligibility.
-function contractAgreementActionKind(row){
-  return row.kind==='renewal'?'renewal_agreement':'precontract';
+// ===== LOL GM: D04-B3 contract expiry / renewal activation lifecycle =====
+// The current contract remains in force through the 14-day incumbent window.
+// On day 15, accepted renewals/options become next-season contracts and every
+// other expiring player is released to FA before outside contact begins.
+
+function withContractStartSeason(db,season,fn){
+  const before=db.year;db.year=season;
+  try{return fn()}finally{db.year=before}
 }
-function voidContractAgreement(db,row,reason,p=null){
-  row.status='void';row.voidReason=reason;row.voidDate=db.worldDate;
-  if(p&&!p.retired)recordPlayerEvent(p,'contract_agreement_void',
-    contractWindowYear(db),{from:row.fromTeamId,to:row.teamId,kind:row.kind,
-      reason,date:db.worldDate,effectiveDate:row.effectiveDate});
-  return row;
-}
-function applyDueContractAgreements(db,rep=null){
-  const store=contractAgreementStore(db),applied=[],voided=[];
+function applyDueContractAgreements(db){
+  const store=contractAgreementStore(db),applied=[];
   for(const row of Object.values(store)){
-    if(row.status!=='agreed'||row.effectiveDate>db.worldDate)continue;
+    if(row.kind!=='renewal'||row.status!=='agreed'||row.effectiveDate>db.worldDate)continue;
     const p=db.players[row.pid],t=db.teams[row.teamId];
-    if(!p||p.retired){
-      voided.push(voidContractAgreement(db,row,'player_retired_or_missing',p||null));
+    if(!p||p.retired||!t||t.active===false||p.team!==row.fromTeamId){
+      row.status='void';row.voidReason='party_unavailable';row.voidDate=db.worldDate;
       continue;
     }
-    if(!t||t.active===false){
-      voided.push(voidContractAgreement(db,row,'target_team_inactive',p));
-      continue;
-    }
-    // An early release/fold may leave the player unattached before Jan 1.
-    // The binding agreement still stands. A move to a different active club
-    // creates a new live contract relationship and voids this future deal.
-    if(p.team&&p.team!==row.fromTeamId&&p.team!==row.teamId){
-      voided.push(voidContractAgreement(db,row,'source_contract_changed',p));
-      continue;
-    }
-    if(p.contract&&p.contract.until>=db.year){
-      voided.push(voidContractAgreement(db,row,'source_contract_extended',p));
-      continue;
-    }
-    const result=commitWorldAction(db,{type:'player.sign',pid:p.id,teamId:t.id,
-      fromId:row.fromTeamId,kind:contractAgreementActionKind(row),actor:'system',
-      salary:row.salary,years:row.years,terms:row.terms});
-    if(!result.ok)throw new Error('Binding contract agreement failed: '+
+    const result=withContractStartSeason(db,row.startSeason,()=>commitWorldAction(db,{
+      type:'player.sign',pid:p.id,teamId:t.id,kind:'renewal_agreement',actor:'system',
+      salary:row.salary,years:row.years,terms:row.terms
+    }));
+    if(!result.ok)throw new Error('Binding renewal activation failed: '+
       row.pid+' '+(result.errors||[]).join(' · '));
     row.status='effective';row.appliedDate=db.worldDate;applied.push(row);
-    if(rep){
-      if(row.kind==='renewal')rep.resign.push({pid:p.id,team:t.id,
-        salary:row.salary,years:row.years,terms:row.terms,agreement:true});
-      else rep.signings.push({pid:p.id,team:t.id,salary:row.salary,
-        years:row.years,precontract:true,from:row.fromTeamId});
-    }
   }
-  if(rep&&voided.length)rep.contractVoids=[...(rep.contractVoids||[]),
-    ...voided.map(row=>({pid:row.pid,team:row.teamId,kind:row.kind,
-      reason:row.voidReason,date:row.voidDate}))];
-  return {applied,voided};
+  return applied;
+}
+function expireContractPlayer(db,p,t,cw){
+  const result=withContractStartSeason(db,cw.startSeason,()=>commitWorldAction(db,{
+    type:'player.release',pid:p.id,teamId:t.id,mode:'expired',actor:'system'
+  }));
+  if(!result.ok)throw new Error('Expired contract release failed: '+
+    p.id+' '+(result.errors||[]).join(' · '));
+  return p.id;
+}
+function autoResolveExpiryOption(db,p,t,cw,mine){
+  const o=p.contract?.option;
+  if(!o||o.year!==cw.startSeason)return false;
+  return withContractStartSeason(db,cw.startSeason,()=>{
+    if(!shouldAutoExerciseOption(db,p,t,mine))return false;
+    const r=commitWorldAction(db,{type:'player.option',pid:p.id,teamId:t.id,
+      actor:o.type==='player'?'system':'ai'});
+    return !!r.ok;
+  });
+}
+function finalizeExclusiveContractExpiry(db){
+  const w=db.world,cw=w?.contractWindow;
+  if(!cw)return {applied:[],released:[],options:[]};
+  const applied=applyDueContractAgreements(db),released=[],options=[],
+    mine=w.manage==='manual'?managedTeamId(db):null;
+  for(const t of activeTeams(db))for(const id of (t.roster||[]).slice()){
+    const p=db.players[id];
+    if(!p?.contract||p.contract.medicalReplacement||
+      p.contract.until!==cw.seasonYear)continue;
+    if(autoResolveExpiryOption(db,p,t,cw,mine)){options.push(p.id);continue}
+    released.push(expireContractPlayer(db,p,t,cw));
+  }
+  return {applied,released,options,expiryDate:cw.contractExpiryDate,
+    faOpenDate:cw.outsideContactDate,reported:false};
 }
 function settleOffseasonContractRollover(db,rep){
   const w=db.world,cw=w?.contractWindow;
   if(!cw)return {applied:[],released:[],options:[]};
-  if(cw.stage==='exclusive')advanceOffseasonContractWindow(db);
-  const precontracts=aiRunOutsidePreContracts(db);
-  cw.completed=true;
-  const restoreDate=db.worldDate,effective=cw.effectiveDate;
-  db.worldDate=effective;
-  const activation=applyDueContractAgreements(db,rep),
-    applied=activation.applied,voided=activation.voided,released=[],options=[],
-    mine=w.manage==='manual'?managedTeamId(db):null;
-  for(const t of activeTeams(db))for(const id of (t.roster||[]).slice()){
-    const p=db.players[id];if(!p?.contract||p.contract.medicalReplacement||
-      p.contract.until>=db.year)continue;
-    const o=p.contract.option;
-    if(o&&o.year===db.year&&shouldAutoExerciseOption(db,p,t,mine)){
-      const r=commitWorldAction(db,{type:'player.option',pid:p.id,teamId:t.id,
-        actor:o.type==='player'?'system':'ai'});
-      if(r.ok){options.push(p.id);continue}
+  if(cw.stage==='exclusive')closeExclusiveContractWindow(db);
+  const settlement=cw.settlement||{applied:[],released:[],options:[]};
+  if(rep&&!settlement.reported){
+    for(const row of settlement.applied)rep.resign.push({
+      pid:row.pid,team:row.teamId,salary:row.salary,years:row.years,
+      terms:row.terms,agreement:true
+    });
+    for(const pid of settlement.released){
+      const p=db.players[pid],event=(p?.careerEvents||[]).slice().reverse()
+        .find(e=>e.type==='contract_agreement_void');
+      rep.expired.push({pid,team:event?.team||null,
+        why:'월즈 종료 2주 후 계약 만료 — FA 전환'});
     }
-    if(o&&o.year===db.year&&t.id===mine&&o.type==='team')continue;
-    const from=t.id,r=commitWorldAction(db,{type:'player.release',pid:p.id,
-      teamId:from,mode:'expired',actor:'system'});
-    if(!r.ok)throw new Error('Expired contract release failed: '+p.id);
-    released.push(p.id);
-    if(rep)rep.expired.push({pid:p.id,team:from,why:'계약 종료 — FA 전환'});
+    settlement.reported=true;
   }
-  db.worldDate=restoreDate;
-  return {applied,voided,released,options,precontracts};
+  return settlement;
 }
