@@ -18,7 +18,7 @@ source+=String.raw`(()=>{
   const inc=()=>({days:0,injury:0,illness:0,burnout:0,unavailableDays:0});
   const exposure=()=>({playerDays:0,healthyDays:0,load9Days:0,
     overload14Days:0,overload20Days:0,overload45Days:0,
-    eligibleBurnoutDays:0,modeledBurnoutEvents:0,peakLoad:0,
+    sameDayRegistrations:0,eligibleBurnoutDays:0,modeledBurnoutEvents:0,peakLoad:0,
     peakOverloadDays:0,normal:0,light:0,rest:0,rehab:0});
   // Probabilities here are sums of the *same* live model's per-player daily
   // odds among players healthy before the day's tick (no ongoing rehab).
@@ -26,10 +26,11 @@ source+=String.raw`(()=>{
   const trackExposure=(row,p,t,prior,date)=>{
     row.playerDays++;
     const load=p.medicalLoad||0,overload=p.medicalOverloadDays||0,
-      plan=p.medicalPlanDate===date?p.medicalDayPlan:null;
+      plan=p.medicalPlanDate===date?p.medicalDayPlan:medicalPlanFor(db,p);
     assert(['normal','light','rest','rehab'].includes(plan),
       'live medical daily plan was not recorded '+date+' '+p.id);
     row[plan]++;
+    if(prior.sameDayRegistration)row.sameDayRegistrations++;
     row.peakLoad=Math.max(row.peakLoad,load);
     row.peakOverloadDays=Math.max(row.peakOverloadDays,overload);
     if(prior.load>=9)row.load9Days++;
@@ -142,10 +143,11 @@ source+=String.raw`(()=>{
             trainRow=grand.byIntensity[intensity];
           for(const row of [grand.events,grand.byRegion[t.region],
             careRow,ageRow,trainRow,seasonEvents])add(row,p,evt);
-          const plan=medicalPlanFor(db,p);
+          const plan=p.medicalPlanDate===date?p.medicalDayPlan:medicalPlanFor(db,p);
           if(grand.planDays[plan]!==undefined)grand.planDays[plan]++;
-          const prior=before.get(p.id);
-          assert(!!prior,'new player appeared without a pre-tick roster snapshot');
+          // An emergency FA may be legally registered during this very tick.
+          // Count the athlete-day, but never invent a preceding lottery draw.
+          const prior=before.get(p.id)||{load:0,healthy:false,sameDayRegistration:true};
           for(const row of [grand.burnoutExposure,seasonExposure,
             grand.byOperator[parentTeamOf(db,t)?.id===owner.id?'manager':'ai']])
             trackExposure(row,p,t,prior,date);
@@ -269,6 +271,7 @@ source+=String.raw`(()=>{
   assert(observed.playerDays===grand.events.days&&
     observed.peakOverloadDays>=0&&observed.peakOverloadDays<=120&&
     observed.healthyDays<=observed.playerDays&&
+    observed.sameDayRegistrations<=observed.playerDays&&
     observed.eligibleBurnoutDays<=observed.healthyDays&&
     observed.modeledBurnoutEvents>=0&&
     observed.modeledBurnoutEvents<=observed.eligibleBurnoutDays*.00032+1e-8,
@@ -303,7 +306,8 @@ source+=String.raw`(()=>{
     byAge:buckets(grand.byAge),byIntensity:buckets(grand.byIntensity),
     recoveryPlans:grand.planDays,maxMedicalLoad:grand.peakLoad,
     burnoutExposure:{athleteDays:observed.playerDays,
-      healthyDays:observed.healthyDays,load9Days:observed.load9Days,
+      healthyDays:observed.healthyDays,sameDayRegistrations:observed.sameDayRegistrations,
+      load9Days:observed.load9Days,
       overload14Days:observed.overload14Days,
       overload20Days:observed.overload20Days,
       overload45Days:observed.overload45Days,
