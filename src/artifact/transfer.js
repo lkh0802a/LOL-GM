@@ -111,7 +111,7 @@ function negotiationCompetition(db,p,t,rng,kind){
 }
 function negotiationDemand(db,p,t,kind,rng,competitors=[]){
   const ask=asking(db,p,t.region),best=competitors.length?Math.max(...competitors.map(x=>x.utility)):0,goal=playerCareerGoal(p),years=negotiationPreferredYears(db,p,t);
-  ensureSatisfaction(p);let premium=1+(p.personality.ambition-50)/500+(p.wantsOut&&kind==='renewal'?.12:0)+(best>offerAcceptanceThreshold(db,p)?.06:0);
+  ensureSatisfaction(p);let premium=1+(p.personality.ambition-50)/500+(p.wantsOut&&kind==='renewal'?.12:0)+(best>offerAcceptanceThreshold(db,p,{kind})?.06:0);
   if(kind==='renewal'){premium+=Math.max(0,(55-p.managerTrust)/230)+Math.max(0,(45-p.managerRelationship)/320);if(p.satisfaction>=75&&p.managerTrust>=65)premium-=.045}
   const role=goal==='starter'?'starter':defaultPromisedRole(db,p,t),sign=ask*(p.reputation>=82?.18:p.personality.ambition>=75?.14:.09);
   const option=p.personality.ambition>=78&&p.age<=27?{type:'player'}:null,buyout=p.personality.ambition>=82?Math.round(playerMarketValue(db,p)*1.8*10)/10:null;
