@@ -73,6 +73,13 @@ function validatePlayerSignAction(db,a){
   if(!Number.isFinite(+a.salary)||+a.salary<=0||!Number.isFinite(+a.years)||+a.years<=0)
     return worldActionError('invalid_terms','연봉과 계약 기간은 양수여야 합니다');
   const terms=playerActionTerms(db,p,t,a);
+  if(futureAgreement){
+    const agreed=normalizeContractTerms(db,p,t,futureAgreement.salary,
+      futureAgreement.years,futureAgreement.terms);
+    if(+a.salary!==futureAgreement.salary||+a.years!==futureAgreement.years||
+      JSON.stringify(terms)!==JSON.stringify(agreed))
+      return worldActionError('invalid_terms','가계약 발효 조건은 원래 합의한 조건과 같아야 합니다');
+  }
   let replacement=null;
   if(kind==='medical_replacement'){
     const original=db.players[a.replacement?.forPid],days=+a.replacement?.absenceDays;
