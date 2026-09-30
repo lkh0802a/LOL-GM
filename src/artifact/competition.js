@@ -17,7 +17,7 @@ function newSeason(db,compId,year,seed,start,instanceKey=compId){
   const comp=db.competitions[compId], st0=comp.stages[0], id=`season_${year}_${instanceKey}`;
   const venue=competitionVenue(db,comp);
   comp.timeZone=venue.timeZone;comp.venueRegion=venue.region;
-  const s={id,comp:compId,year,seed,days:[],cur:0,stage:0,stageData:{},pstats:{},done:false,champion:null,runnerUp:null,venueTimeZone:venue.timeZone,venueRegion:venue.region};
+  const s={id,comp:compId,year,seed,days:[],cur:0,stage:0,stageData:{},pstats:{},done:false,champion:null,runnerUp:null,standingsMode:comp.region?(db.regions[comp.region]?.standingsMode||'independent'):null,venueTimeZone:venue.timeZone,venueRegion:venue.region};
   comp.championPool=Object.values(db.patch.champions).filter(c=>championProEligible(db,c,start||db.worldDate)).map(c=>c.id);comp.championPoolLockedAt=start||db.worldDate;
   const rng=new RNG(seed,'schedule');
   let order=st0.type==='round_robin'&&!st0.groups?comp.teams.slice().sort(()=>rng.next()-0.5):comp.teams.slice();
