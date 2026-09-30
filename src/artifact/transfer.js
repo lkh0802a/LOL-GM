@@ -79,7 +79,7 @@ function negotiationReopenCheck(db,prev,p,t,kind){
 function negotiationAttemptSummary(neg){
   return {
     id:neg.id,attempt:neg.attempt||1,status:neg.status,reason:neg.reason||null,
-    createdDate:neg.createdDate||null,closedDate:neg.closedDate||null,
+    failureType:neg.failureType||null,createdDate:neg.createdDate||null,closedDate:neg.closedDate||null,
     cooldownUntil:neg.cooldownUntil||null,reopenRequiresChange:!!neg.reopenRequiresChange,
     situationAtClose:neg.situationAtClose||null
   };
@@ -171,7 +171,8 @@ function submitNegotiationOffer(db,nid,terms){
   if(neg.round>=neg.maxRounds||neg.patience<=0||util<threshold-.62){
     const hardBreak=neg.patience<=0||util<threshold-.62;
     closePlayerNegotiationFailure(db,neg,p,hardBreak);
-    return {ok:false,msg:hardBreak?p.name+' 측과 협상이 완전 결렬됐습니다':p.name+' 측이 이번 재계약 제안을 거절했습니다'}
+    return {ok:false,msg:hardBreak?p.name+' 측과 협상이 완전 결렬됐습니다':
+      p.name+' 측이 이번 '+(neg.kind==='renewal'?'재계약 ':'')+'제안을 거절했습니다'}
   }
   if((neg.kind==='fa'||neg.kind==='initial')&&neg.round>=2&&neg.competitors.length){
     const rival=neg.competitors[0],rt=db.teams[rival.teamId],gap=rival.utility-util,rrng=new RNG(db.world.seed+'/'+neg.id+'/'+neg.round,'negotiation-rival');
