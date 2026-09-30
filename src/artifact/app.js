@@ -142,7 +142,7 @@ function nextMine(){
 function phaseText(w){
   if(w.phase==='season'){const st=w.steps[w.step];return (st?st.label+' 진행 중':'')+` · 패치 ${DB.patch.id}`}
   if(w.phase==='offseason'&&w.contractWindow)
-    return w.contractWindow.stage==='exclusive'?'원소속 독점 재계약':'가계약 접촉 기간';
+    return w.contractWindow.stage==='exclusive'?'원소속 독점 재계약':'FA 시장';
   return w.phase==='offseason'?'시즌 종료':w.phase==='market'?'이적 시장':'오프시즌';
 }
 function viewSeason(){
