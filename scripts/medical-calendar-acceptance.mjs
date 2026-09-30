@@ -68,6 +68,9 @@ source+=String.raw`(()=>{
       const carryIn=Object.values(db.players).filter(p=>p.team&&!p.retired);
       const carryInLoad9=carryIn.filter(p=>(p.medicalLoad||0)>=9).length;
       const carryInOverload14=carryIn.filter(p=>(p.medicalOverloadDays||0)>=14).length;
+      if(cycle>0)ok(carryInLoad9===0&&carryInOverload14===0,
+        'offseason calendar gap failed to dissipate prior-season workload '+
+        JSON.stringify({seed,year,carryInLoad9,carryInOverload14}));
       let days=0,official=0,playerDays=0,saved=false,maximumLoad=0,
         scrimBlocks=0,managedScrimBlocks=0,managedScrimSets=0;
       while(db.world.phase==='season'&&days<415){
