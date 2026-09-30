@@ -69,6 +69,7 @@ const maintainabilityBudgets = {
   'scouting-ai-ops.js': 7000,
   'scouting-ai-reassessment.js': 5000,
   'transfer.js': 26000,
+  'contract-window.js': 11000,
   'staff.js': 18000,
   'scrim.js': 10000,
   'features.js': 14000,
