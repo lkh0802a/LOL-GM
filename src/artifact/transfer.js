@@ -172,9 +172,15 @@ function finalizeNegotiation(db,neg,terms){
   if(future){
     result=recordContractAgreement(db,p,t,terms,neg.kind,'manager');
   }else{
-    result=commitWorldAction(db,{type:'player.sign',pid:p.id,teamId:t.id,kind:neg.kind,
+    const command={type:'player.sign',pid:p.id,teamId:t.id,kind:neg.kind,
       fromId:neg.kind==='transfer'?neg.sellerId:null,fee:neg.kind==='transfer'?neg.fee:0,
-      salary:terms.salary,years:terms.years,terms,actor:'manager'});
+      salary:terms.salary,years:terms.years,terms,actor:'manager'},
+      postWorldsFa=neg.kind==='fa'&&db.world?.phase==='offseason'&&
+        db.world?.contractWindow?.stage==='fa';
+    result=postWorldsFa
+      ?withContractStartSeason(db,db.world.contractWindow.startSeason,
+        ()=>commitWorldAction(db,command))
+      :commitWorldAction(db,command);
     if(!result.ok)result={ok:false,msg:(result.errors||['계약 조건이 변경되었습니다']).join(' · ')};
   }
   if(!result.ok)return result;
