@@ -66,12 +66,6 @@ function initOffseasonContractWindow(db){
 }
 // A club can relinquish its *exclusive contact* right without terminating the
 // still-binding playing contract. Early agreements only take effect on day 15.
-function aiWantsRenewal(db,p,t){
-  const starter=starterFor(db,t,p.role)===p;
-  return starter||p.rosterRole==='competition'||
-    (p.age<=21&&p.pot-playerOvr(p)>=6)||
-    (p.rosterRole==='backup'&&t.roster.length<7&&p.satisfaction>=50);
-}
 function grantEarlyContact(db,pid,actor='manager'){
   const cw=db.world?.contractWindow,p=db.players[pid],
     t=p?.team&&db.teams[p.team];
@@ -93,59 +87,12 @@ function grantEarlyContact(db,pid,actor='manager'){
   return {ok:true,waiver:row,msg:p.name+' 타 구단 조기 접촉 허용 · 계약은 '+
     cw.contractExpiryDate+'까지 유지됩니다'};
 }
-function aiGrantEarlyContact(db){
-  const cw=db.world?.contractWindow;
-  if(!cw||cw.aiWaiversProcessed)return [];
-  const mine=db.world?.manage==='manual'?managedTeamId(db):null,waivers=[];
-  for(const t of activeTeams(db)){
-    if(mine&&parentTeamOf(db,t)?.id===mine)continue;
-    for(const id of (t.roster||[])){
-      const p=db.players[id];
-      if(contractExpiresThisSeason(db,p)&&!contractHasPendingOption(db,p)&&
-        !aiWantsRenewal(db,p,t)){
-        const r=grantEarlyContact(db,id,'ai');
-        if(r.ok)waivers.push(r.waiver);
-      }
-    }
-  }
-  cw.aiWaiversProcessed=true;return waivers;
-}
 function earlyContactAllowed(db,p,t){
   const cw=db.world?.contractWindow,waiver=cw?.contactWaivers?.[p?.id];
   return !!(cw?.stage==='exclusive'&&db.worldDate<=cw.contractExpiryDate&&
     waiver&&waiver.incumbentId===p.team&&p.team!==t?.id&&
     !contractHasPendingOption(db,p)&&!contractAgreementFor(db,p.id)?.status?.match(/^(agreed|effective)$/));
 }
-function aiRunEarlyContactOffers(db){
-  const cw=db.world?.contractWindow;
-  if(!cw||cw.stage!=='exclusive')return [];
-  const mine=db.world.manage==='manual'?managedTeamId(db):null,rows=[],
-    rng=new RNG(db.world.seed+'/'+db.worldDate,'early-contact');
-  for(const waiver of Object.values(cw.contactWaivers||{})){
-    const p=db.players[waiver.pid];if(!p||!contractExpiresThisSeason(db,p)||
-      contractAgreementFor(db,p.id)?.status==='agreed')continue;
-    const candidates=activeTeams(db,null,1).filter(t=>!t.parent&&
-      (!mine||parentTeamOf(db,t)?.id!==mine)&&earlyContactAllowed(db,p,t))
-      .map(t=>{
-        const room=salaryBudget(db,t)-payroll(db,t),
-          shortlist=aiMarketOfferCandidates(db,t,[p],p.role,room,cw.startSeason);
-        if(!shortlist.length)return null;
-        const offer=normalizeContractTerms(db,p,t,asking(db,p,t.region)*
-          (1-medicalContractRisk(db,p)*.4),contractYearsForPlayer(db,p,rng,t),{
-            promisedRole:defaultPromisedRole(db,p,t)});
-        if(negotiationBudgetError(db,p,t,offer,'early_fa'))return null;
-        return {t,offer,utility:offerUtility(db,p,t,offer)};
-      }).filter(Boolean).sort((a,b)=>b.utility-a.utility||
-        a.t.id.localeCompare(b.t.id));
-    const best=candidates[0];
-    if(!best||!contractOfferReasonable(db,p,best.t,best.offer,'early_fa')||
-      best.utility<offerAcceptanceThreshold(db,p,{kind:'early_fa'}))continue;
-    const r=recordContractAgreement(db,p,best.t,best.offer,'early_fa','ai');
-    if(r.ok)rows.push(r.agreement);
-  }
-  return rows;
-}
-
 function contractWindowContactError(db,p,t,kind){
   const w=db.world,cw=w?.contractWindow;
   if(!w||w.phase!=='offseason'||!cw)return '오프시즌 계약 협상 기간이 아닙니다';
