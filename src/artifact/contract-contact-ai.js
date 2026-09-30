@@ -4,7 +4,7 @@
 
 function aiWantsRenewal(db,p,t){
   const starter=starterFor(db,t,p.role)===p;
-  return starter||p.rosterRole==='competition'||
+  return starter||['core','starter','competition'].includes(p.rosterRole)||
     (p.age<=21&&p.pot-playerOvr(p)>=6)||
     (p.rosterRole==='backup'&&t.roster.length<7&&p.satisfaction>=50);
 }
