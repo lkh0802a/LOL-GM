@@ -19,7 +19,10 @@ function aiGrantEarlyContact(db){
       if(!contractExpiresThisSeason(db,p)||contractHasPendingOption(db,p))continue;
       const room=salaryBudget(db,t)-payroll(db,t)+(p.contract?.salary||0),
         ask=asking(db,p,t.region),
-        plansToRenew=aiWantsRenewal(db,p,t)&&room>=ask*.78;
+        // Reuse the same established AI-market floor used by player
+        // reasonableness instead of a separate waiver-only salary constant.
+        minimum=ask*.95*(1-medicalContractRisk(db,p)*.4),
+        plansToRenew=aiWantsRenewal(db,p,t)&&room>=minimum;
       if(!plansToRenew){
         const r=grantEarlyContact(db,id,'ai');
         if(r.ok)waivers.push(r.waiver);
