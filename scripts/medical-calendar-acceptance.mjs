@@ -188,8 +188,13 @@ source+=String.raw`(()=>{
       const rep=runOffseason(db);
       ok(db.world.phase==='market'&&db.year===year+1&&rep.rookies.length===1,
         'offseason medical recovery or rookie market interrupted');
-      ok(activeTeams(db).every(t=>medicalAvailable(db,t)>=5),
-        'medical absences persisted after a full offseason calendar jump');
+      const offseasonShort=activeTeams(db).filter(t=>medicalAvailable(db,t)<5)
+        .map(t=>({team:t.id,roster:t.roster.length,available:medicalAvailable(db,t),
+          out:t.roster.map(id=>db.players[id]).filter(p=>p&&medicalOut(p))
+            .map(p=>({id:p.id,kind:p.medical?.kind,daysLeft:p.medical?.daysLeft}))}));
+      ok(!offseasonShort.length,
+        'medical absences persisted after a full offseason calendar jump '+
+        JSON.stringify({seed,year,offseasonShort}));
       // Regular wages and short cover are distinct in statements; settlement
       // cannot double-debit already-paid short cover.
       totalMedicalWages+=activeTeams(db).reduce((v,t)=>v+
