@@ -27,6 +27,26 @@ function aiScoutingPublicFit(db,t,p){
   return view.ability+Math.max(0,view.potential-view.ability)*
     (t.philosophy==='youth'?.45:.18)+need+youth+star+winNow+info+local;
 }
+function aiScoutingResearchPriority(db,t,p){
+  const base=aiScoutingPublicFit(db,t,p),
+    r=aiScoutingOwner(db,t)?.scoutingState?.reports?.[p.id];
+  if(!r||!(r.staleYears>0)||r.ability==null)return base;
+  const pub=aiPublicMarketObservation(db,p,t),
+    uncertainty=aiScoutUncertainty(db,t,p,r.knowledge||0,r.staleYears||0),
+    disagreement=Math.abs((r.ability??pub.ability)-pub.ability);
+  // Staleness, uncertainty and disagreement are all information-state signals;
+  // none reads current hidden OVR/POT. They only decide who deserves re-checking.
+  return base+Math.min(9,(r.staleYears||0)*1.5+uncertainty*.25+disagreement*.12);
+}
+function aiMarketOfferRankSnapshot(db,t,p){
+  if(!p||p.team)return {rank:null,leader:null,value:null,offerable:false};
+  const fas=Object.values(db.players).filter(x=>!x.retired&&!x.team),
+    room=Math.max(0,salaryBudget(db,t)-payroll(db,t)),
+    rows=aiMarketOfferCandidates(db,t,fas,p.role,room,db.year),
+    i=rows.findIndex(x=>x.p.id===p.id);
+  return {rank:i<0?null:i+1,leader:rows[0]?.p.id||null,
+    value:Math.round(aiMarketValue(db,p,t)*10)/10,offerable:i>=0};
+}
 function aiScoutingEligibleTarget(db,t,p){
   if(!p||p.retired||aiBaseScoutKnowledge(db,t,p)>=100)return false;
   // Scout players who are already free or whose contract is due to expire in
@@ -90,19 +110,31 @@ function aiRunScoutingOperation(db,t){
     assignments=aiScoutingCoveragePlan(db,owner,candidates,capacity),
     covered=new Set(assignments.map(x=>x.region)),
     ranked=candidates.filter(p=>covered.has(aiScoutingTargetRegion(db,p)))
-      .map(p=>({p,score:aiScoutingPublicFit(db,owner,p)}))
+      .map(p=>({p,score:aiScoutingResearchPriority(db,owner,p)}))
       .sort((a,b)=>b.score-a.score||a.p.id.localeCompare(b.p.id)),
     targets=[],cashBefore=owner.finance.cash;
+  const reassessments=[];
   for(const row of ranked){
     if(targets.length>=targetLimit)break;
-    const p=row.p,before=aiScoutReport(db,owner,p),beforeK=before.knowledge||0;
+    const p=row.p,before=aiScoutReport(db,owner,p),beforeK=before.knowledge||0,
+      staleBefore=before.staleYears||0,
+      marketBefore=staleBefore>0?aiMarketOfferRankSnapshot(db,owner,p):null;
     const report=observeAiPlayer(db,owner,p,aiScoutingVisitGain(),{
       comp:'SCOUT:'+aiScoutingTargetRegion(db,p),games:0});
     if(!report)continue;
+    const marketAfter=staleBefore>0?aiMarketOfferRankSnapshot(db,owner,p):null;
     targets.push({pid:p.id,region:aiScoutingTargetRegion(db,p),role:p.role,
       publicScore:Math.round(row.score*10)/10,beforeKnowledge:Math.round(beforeK),
       afterKnowledge:Math.round(report.knowledge||0),sourceBefore:before.source,
-      sourceAfter:report.source||'scouted'});
+      sourceAfter:report.source||'scouted',staleYearsBefore:staleBefore});
+    if(staleBefore>0&&marketBefore&&marketAfter)reassessments.push({
+      pid:p.id,role:p.role,staleYearsBefore:staleBefore,
+      before:marketBefore,after:marketAfter,
+      leaderChanged:marketBefore.leader!==marketAfter.leader,
+      rankChanged:marketBefore.rank!==marketAfter.rank,
+      valueDelta:marketAfter.value==null||marketBefore.value==null?null:
+        Math.round((marketAfter.value-marketBefore.value)*10)/10
+    });
   }
   const charge=aiScoutingBatchCharge(unitCost,targets.length);
   owner.finance.cash=Math.round((cashBefore-charge)*10)/10;
@@ -112,8 +144,10 @@ function aiRunScoutingOperation(db,t){
       reserve:Math.round(reserve*1000)/1000,runway:runway.severity,
       assignments,targets,spent,cashBefore:Math.round(cashBefore*1000)/1000,
       cashAfter:Math.round(owner.finance.cash*1000)/1000,
-      reason:targetLimit<=0?'liquidity':targets.length?'completed':'no-covered-targets'};
+      reason:targetLimit<=0?'liquidity':targets.length?'completed':'no-covered-targets',
+      reassessments};
   state.operations=[...(state.operations||[]),operation].slice(-6);
+  state.reassessments=[...(state.reassessments||[]),...reassessments].slice(-12);
   state.lastOperation=operation;return operation;
 }
 function aiRunActiveScouting(db){
