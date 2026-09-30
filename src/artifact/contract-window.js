@@ -84,6 +84,13 @@ function grantEarlyContact(db,pid,actor='manager'){
   const row={pid,incumbentId:t.id,grantedDate:db.worldDate,
     expiresOn:cw.contractExpiryDate,actor};
   cw.contactWaivers[pid]=row;
+  const renewal=negotiationStore(db)[negotiationId(db,pid,'renewal')];
+  if(renewal?.status==='open'){
+    renewal.status='cancelled';renewal.closedDate=db.worldDate;
+    renewal.reason='원소속 구단이 독점 접촉권 포기';
+    const target=recruitmentTarget(db,pid);
+    if(target?.negotiationId===renewal.id)target.negotiationId=null;
+  }
   recordPlayerEvent(p,'early_contact_allowed',cw.seasonYear,{
     team:t.id,date:db.worldDate,expiryDate:cw.contractExpiryDate,actor});
   return {ok:true,waiver:row,msg:p.name+' 타 구단 조기 접촉 허용 · 계약은 '+
