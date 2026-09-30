@@ -4,9 +4,24 @@
 // 14 days. Other clubs may contact the player from day 15, after expiry.
 
 function contractWindowYear(db){return db.world?.year??db.year}
+function contractWindowAnchorDate(db){
+  const w=db.world,finished=Object.values(w?.seasons||{}).filter(s=>s?.done&&s.days?.length),
+    endDate=s=>s.days[s.days.length-1].date,
+    worlds=finished.filter(s=>{
+      const comp=db.competitions[s.comp];
+      return s.comp==='WORLD_CHAMPIONSHIP'||comp?.id==='WORLD_CHAMPIONSHIP'||
+        comp?.short==='Worlds'||comp?.name==='World Championship';
+    });
+  if(worlds.length)return worlds.map(endDate).sort().at(-1);
+  // Custom worlds may omit the standard Worlds preset. Fall back to the
+  // latest completed international, then the world's final scheduled date.
+  const internationals=finished.filter(s=>db.competitions[s.comp]?.international);
+  if(internationals.length)return internationals.map(endDate).sort().at(-1);
+  return w?.lastDate||db.worldDate||contractWindowYear(db)+'-11-01';
+}
 function contractWindowDates(db){
-  const w=db.world,year=contractWindowYear(db),
-    seasonEnd=w?.lastDate||db.worldDate||year+'-11-01',
+  const year=contractWindowYear(db),
+    seasonEnd=contractWindowAnchorDate(db),
     exclusiveThrough=addDays(seasonEnd,14),
     outsideContactDate=addDays(seasonEnd,15);
   return {
