@@ -58,22 +58,108 @@ function initOffseasonContractWindow(db){
   if(w.contractWindow)return w.contractWindow;
   const d=contractWindowDates(db);
   w.contractWindow={...d,stage:'exclusive',incumbentProcessed:false,
-    completed:false,financePayroll:contractClosingPayrollSnapshot(db)};
+    completed:false,contactWaivers:{},financePayroll:contractClosingPayrollSnapshot(db)};
   contractAgreementStore(db);
   if(!db.worldDate||db.worldDate<d.startDate)db.worldDate=d.startDate;
+  aiGrantEarlyContact(db);
   return w.contractWindow;
 }
+// A club can relinquish its *exclusive contact* right without terminating the
+// still-binding playing contract. Early agreements only take effect on day 15.
+function aiWantsRenewal(db,p,t){
+  const starter=starterFor(db,t,p.role)===p;
+  return starter||p.rosterRole==='competition'||
+    (p.age<=21&&p.pot-playerOvr(p)>=6)||
+    (p.rosterRole==='backup'&&t.roster.length<7&&p.satisfaction>=50);
+}
+function grantEarlyContact(db,pid,actor='manager'){
+  const cw=db.world?.contractWindow,p=db.players[pid],
+    t=p?.team&&db.teams[p.team];
+  if(!cw||cw.stage!=='exclusive'||db.worldDate>cw.contractExpiryDate||
+    !contractExpiresThisSeason(db,p)||!t)
+    return {ok:false,msg:'현재 독점 협상 중인 만료 예정 선수가 아닙니다'};
+  const auth=playerActionAuthority(db,actor,t);
+  if(auth)return {ok:false,msg:auth.errors?.join(' · ')||'구단 결정 권한이 없습니다'};
+  if(contractHasPendingOption(db,p))
+    return {ok:false,msg:'다음 시즌 옵션 행사 여부가 먼저 결정돼야 합니다'};
+  if(contractAgreementFor(db,pid)?.status==='agreed')
+    return {ok:false,msg:'이미 재계약에 합의해 조기 접촉을 허용할 수 없습니다'};
+  cw.contactWaivers=cw.contactWaivers||{};
+  if(cw.contactWaivers[pid])
+    return {ok:true,waiver:cw.contactWaivers[pid],msg:'이미 타 구단 접촉을 허용했습니다'};
+  const row={pid,incumbentId:t.id,grantedDate:db.worldDate,
+    expiresOn:cw.contractExpiryDate,actor};
+  cw.contactWaivers[pid]=row;
+  return {ok:true,waiver:row,msg:p.name+' 타 구단 조기 접촉 허용 · 계약은 '+
+    cw.contractExpiryDate+'까지 유지됩니다'};
+}
+function aiGrantEarlyContact(db){
+  const cw=db.world?.contractWindow;
+  if(!cw||cw.aiWaiversProcessed)return [];
+  const mine=db.world?.manage==='manual'?managedTeamId(db):null,waivers=[];
+  for(const t of activeTeams(db)){
+    if(mine&&parentTeamOf(db,t)?.id===mine)continue;
+    for(const id of (t.roster||[])){
+      const p=db.players[id];
+      if(contractExpiresThisSeason(db,p)&&!contractHasPendingOption(db,p)&&
+        !aiWantsRenewal(db,p,t)){
+        const r=grantEarlyContact(db,id,'ai');
+        if(r.ok)waivers.push(r.waiver);
+      }
+    }
+  }
+  cw.aiWaiversProcessed=true;return waivers;
+}
+function earlyContactAllowed(db,p,t){
+  const cw=db.world?.contractWindow,waiver=cw?.contactWaivers?.[p?.id];
+  return !!(cw?.stage==='exclusive'&&db.worldDate<=cw.contractExpiryDate&&
+    waiver&&waiver.incumbentId===p.team&&p.team!==t?.id&&
+    !contractHasPendingOption(db,p)&&!contractAgreementFor(db,p.id)?.status?.match(/^(agreed|effective)$/));
+}
+function aiRunEarlyContactOffers(db){
+  const cw=db.world?.contractWindow;
+  if(!cw||cw.stage!=='exclusive')return [];
+  const mine=db.world.manage==='manual'?managedTeamId(db):null,rows=[],
+    rng=new RNG(db.world.seed+'/'+db.worldDate,'early-contact');
+  for(const waiver of Object.values(cw.contactWaivers||{})){
+    const p=db.players[waiver.pid];if(!p||!contractExpiresThisSeason(db,p)||
+      contractAgreementFor(db,p.id)?.status==='agreed')continue;
+    const candidates=activeTeams(db,null,1).filter(t=>!t.parent&&
+      (!mine||parentTeamOf(db,t)?.id!==mine)&&earlyContactAllowed(db,p,t))
+      .map(t=>{
+        const room=salaryBudget(db,t)-payroll(db,t),
+          shortlist=aiMarketOfferCandidates(db,t,[p],p.role,room,cw.startSeason);
+        if(!shortlist.length)return null;
+        const offer=normalizeContractTerms(db,p,t,asking(db,p,t.region)*
+          (1-medicalContractRisk(db,p)*.4),contractYearsForPlayer(db,p,rng,t),{
+            promisedRole:defaultPromisedRole(db,p,t)});
+        if(negotiationBudgetError(db,p,t,offer,'early_fa'))return null;
+        return {t,offer,utility:offerUtility(db,p,t,offer)};
+      }).filter(Boolean).sort((a,b)=>b.utility-a.utility||
+        a.t.id.localeCompare(b.t.id));
+    const best=candidates[0];
+    if(!best||!contractOfferReasonable(db,p,best.t,best.offer,'early_fa')||
+      best.utility<offerAcceptanceThreshold(db,p,{kind:'early_fa'}))continue;
+    const r=recordContractAgreement(db,p,best.t,best.offer,'early_fa','ai');
+    if(r.ok)rows.push(r.agreement);
+  }
+  return rows;
+}
+
 function contractWindowContactError(db,p,t,kind){
   const w=db.world,cw=w?.contractWindow;
   if(!w||w.phase!=='offseason'||!cw)return '오프시즌 계약 협상 기간이 아닙니다';
-  if(kind!=='renewal')return '독점기간에는 원소속 재계약만 협상할 수 있습니다';
   if(cw.stage!=='exclusive'||db.worldDate>cw.contractExpiryDate)
-    return '원소속 독점 재계약 기간이 끝났습니다';
+    return '원소속 독점 협상 기간이 끝났습니다';
   if(!p||!t||!contractExpiresThisSeason(db,p))
     return '이번 독점기간에 만료되는 계약이 아닙니다';
-  if(p.team!==t.id)return '재계약은 현 소속 구단만 협상할 수 있습니다';
   if(contractAgreementFor(db,p.id)?.status==='agreed')
-    return '이미 다음 시즌 재계약에 합의한 선수입니다';
+    return '이미 다음 시즌 계약에 합의한 선수입니다';
+  if(kind==='early_fa')
+    return earlyContactAllowed(db,p,t)?null:
+      '원소속 구단이 조기 접촉을 허용하지 않은 선수입니다';
+  if(kind!=='renewal'||p.team!==t.id)
+    return '원소속 구단만 재계약을 진행할 수 있습니다';
   return null;
 }
 function recordContractAgreement(db,p,t,terms,kind='renewal',actor='manager'){
@@ -81,26 +167,26 @@ function recordContractAgreement(db,p,t,terms,kind='renewal',actor='manager'){
   if(auth)return {ok:false,msg:auth.errors?.join(' · ')||'구단 계약 권한이 없습니다'};
   const err=contractWindowContactError(db,p,t,kind);if(err)return {ok:false,msg:err};
   const normalized=normalizeContractTerms(db,p,t,terms.salary,terms.years,terms),
-    budgetErr=negotiationBudgetError(db,p,t,normalized,'renewal');
+    budgetErr=negotiationBudgetError(db,p,t,normalized,kind);
   if(budgetErr)return {ok:false,msg:budgetErr};
   const cw=db.world.contractWindow,
-    row={pid:p.id,fromTeamId:p.team,teamId:t.id,kind:'renewal',status:'agreed',
+    row={pid:p.id,fromTeamId:p.team,teamId:t.id,kind,status:'agreed',
       agreedDate:db.worldDate,effectiveDate:cw.effectiveDate,
       contractExpiryDate:cw.contractExpiryDate,startSeason:cw.startSeason,
       salary:normalized.salary,years:normalized.years,terms:normalized,actor};
   contractAgreementStore(db)[p.id]=row;
-  recordPlayerEvent(p,'renewal_agreement',cw.seasonYear,{
+  recordPlayerEvent(p,kind==='renewal'?'renewal_agreement':'early_fa_agreement',cw.seasonYear,{
     from:p.team,to:t.id,agreedDate:db.worldDate,effectiveDate:cw.effectiveDate,
     contractExpiryDate:cw.contractExpiryDate,salary:normalized.salary,
     years:normalized.years
   });
   for(const neg of Object.values(negotiationStore(db))){
     if(neg.pid!==p.id||neg.status!=='open')continue;
-    if(neg.teamId===t.id&&neg.kind==='renewal')continue;
-    neg.status='superseded';neg.reason='선수가 원소속 재계약에 합의';neg.closedDate=db.worldDate;
+    if(neg.teamId===t.id&&neg.kind===kind)continue;
+    neg.status='superseded';neg.reason='선수가 다음 시즌 계약에 합의';neg.closedDate=db.worldDate;
   }
-  return {ok:true,agreement:row,msg:p.name+' 재계약 합의 · 기존 계약 '+
-    cw.contractExpiryDate+' 만료 · '+cw.effectiveDate+' 새 계약 시작'};
+  return {ok:true,agreement:row,msg:p.name+' 다음 계약 합의 · 기존 계약 '+
+    cw.contractExpiryDate+'까지 유지 · '+cw.effectiveDate+' 새 계약 시작'};
 }
 function aiRunExclusiveRenewals(db){
   const w=db.world,cw=w?.contractWindow;if(!cw||cw.incumbentProcessed)return [];
@@ -110,7 +196,7 @@ function aiRunExclusiveRenewals(db){
     for(const id of (t.roster||[]).slice()){
       const p=db.players[id];
       if(!contractExpiresThisSeason(db,p)||contractHasPendingOption(db,p)||
-        contractAgreementFor(db,p.id))continue;
+        cw.contactWaivers?.[p.id]||contractAgreementFor(db,p.id))continue;
       const decision=aiRenewalDecision(db,p,t,rng);if(!decision.accepted)continue;
       const r=recordContractAgreement(db,p,t,decision.proposal,'renewal','ai');
       if(r.ok)rows.push(r.agreement);
@@ -138,11 +224,11 @@ function closeExclusiveContractWindow(db){
   if(!cw)return {ok:false,msg:'계약 협상 기간을 종료할 수 없습니다'};
   if(cw.stage!=='exclusive')return {ok:true,stage:cw.stage,date:db.worldDate,
     settlement:cw.settlement||null,msg:'원소속 독점기간이 이미 끝났습니다'};
-  const renewals=aiRunExclusiveRenewals(db);
+  const renewals=aiRunExclusiveRenewals(db),earlyOffers=aiRunEarlyContactOffers(db);
   db.worldDate=cw.outsideContactDate;
   const settlement=finalizeExclusiveContractExpiry(db);
   cw.stage='fa';cw.completed=true;cw.settlement=settlement;
-  return {ok:true,stage:'fa',date:db.worldDate,renewals,settlement,
+  return {ok:true,stage:'fa',date:db.worldDate,renewals,earlyOffers,settlement,
     msg:'14일 원소속 독점기간 종료 · 기존 계약 만료 · FA 접촉 개방'};
 }
 function advanceOffseasonContractDay(db){
@@ -152,7 +238,7 @@ function advanceOffseasonContractDay(db){
     msg:'원소속 독점기간이 이미 끝났습니다'};
   const next=addDays(db.worldDate,1);
   if(next>=cw.outsideContactDate)return closeExclusiveContractWindow(db);
-  db.worldDate=next;
+  db.worldDate=next;aiRunEarlyContactOffers(db);
   return {ok:true,stage:'exclusive',date:db.worldDate,
     msg:'원소속 독점 재계약 기간 · '+db.worldDate};
 }
