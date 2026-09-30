@@ -323,9 +323,24 @@ function medicalDailyTick(db,date){
 }
 function medicalOffseasonRecovery(db,date){
   // Season progression can jump across a real offseason. Existing absences
-  // must not remain frozen until the next competitive fixture. Snapshot the
-  // estimated return day before bulk recovery, so temporary cover is not
-  // charged for months after the player's expected return.
+  // must not remain frozen until the next competitive fixture. The same gap
+  // must also dissipate accumulated competition/practice load: otherwise a
+  // player can enter January carrying November overload despite having no
+  // scheduled matches or scrims during the skipped dates. This is passive
+  // recovery only; it does not create offseason incident lotteries or alter
+  // the live injury/illness/burnout probabilities.
+  const gapFromWorld=Math.max(0,Math.floor((Date.parse(date+'T00:00:00Z')-
+    Date.parse((db.worldDate||date)+'T00:00:00Z'))/86400000));
+  if(gapFromWorld)for(const p of Object.values(db.players)){
+    if(!p||p.retired)continue;
+    // Daily normal-season decay is .86 before training exposure is added.
+    // During the skipped offseason there is no scheduled training exposure,
+    // so apply only that decay and the ordinary non-overload recovery rate.
+    p.medicalLoad=Math.round(clamp((p.medicalLoad||0)*Math.pow(.86,gapFromWorld),0,38)*100)/100;
+    p.medicalOverloadDays=Math.max(0,(p.medicalOverloadDays||0)-gapFromWorld*2);
+  }
+  // Snapshot the estimated return day before bulk recovery, so temporary cover
+  // is not charged for months after the player's expected return.
   const projectedReturns={};
   for(const p of Object.values(db.players))if(p.medical?.daysLeft>0){
     const from=p.medical.lastTick||db.worldDate;
