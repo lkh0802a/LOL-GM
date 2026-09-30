@@ -125,6 +125,19 @@ function commitMarketPlayerAction(db,command){
 function signMarketContract(db,p,t,salary,years,terms={},kind='fa',actor='ai'){
   return commitMarketPlayerAction(db,{type:'player.sign',pid:p.id,teamId:t.id,salary,years,terms,kind,actor}).contract;
 }
+function aiMarketOfferCandidates(db,t,fas,role,budgetRoom,year=db.year){
+  const R=db.regions[t.region],cur=starterFor(db,t,role),
+    cv=cur?playerValue(db,cur,t):-99,importGap=R.importRecruitMinGap??3,
+    imports=teamNonLocalCount(db,t);
+  return fas.filter(p=>p.role===role&&
+      (isLocalPlayer(p,t.region)||(playerOvr(p)>=R.strength+importGap&&
+        imports<nonLocalLimitForTeam(db,t))))
+    .map(p=>({p,v:aiMarketValue(db,p,t),ask:asking(db,p,t.region)}))
+    .filter(x=>x.ask<=budgetRoom&&
+      (!cur||cur.wantsOut||cur.contract.until<=year||x.v>cv+5))
+    .sort((a,b)=>b.v-a.v||a.p.id.localeCompare(b.p.id));
+}
+
 function contractMarket(db,rng,rep,ev){
   const year=db.year, size=5+(db.worldConfig.subs||0), w=db.world, mine=w&&w.manage==='manual'?managedTeamId(db):null;
   const imports=t=>teamNonLocalCount(db,t);
@@ -162,8 +175,7 @@ function contractMarket(db,rng,rep,ev){
       for(const role of ROLES){
         const cur=starterFor(db,t,role), cv=cur?playerValue(db,cur,t):-99;
         const importGap=R.importRecruitMinGap??3;
-        const cand=fas.filter(p=>p.role===role&&(isLocalPlayer(p,t.region)||(playerOvr(p)>=R.strength+importGap&&imports(t)<nonLocalLimitForTeam(db,t))))
-          .map(p=>({p,v:aiMarketValue(db,p,t),ask:asking(db,p,t.region)})).filter(x=>x.ask<=budgetLeft[t.id]&&(!cur||cur.wantsOut||cur.contract.until<=year||x.v>cv+5)).sort((a,b)=>b.v-a.v);
+        const cand=aiMarketOfferCandidates(db,t,fas,role,budgetLeft[t.id],year);
         const c=cand[0]; if(!c)continue;
         const sal=Math.round(c.ask*(['win-now','superstar'].includes(t.philosophy)?rng.range(1,1.15):rng.range(0.95,1.05))*(1-medicalContractRisk(db,c.p)*.4)*10)/10;
         (offers[c.p.id]=offers[c.p.id]||[]).push({t,sal,starter:true});
