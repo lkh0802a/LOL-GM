@@ -32,7 +32,7 @@ function expireContractPlayer(db,p,t,cw){
   }));
   if(!result.ok)throw new Error('Expired contract release failed: '+
     p.id+' '+(result.errors||[]).join(' · '));
-  return p.id;
+  return {pid:p.id,team:t.id};
 }
 function autoResolveExpiryOption(db,p,t,cw,mine){
   const o=p.contract?.option;
@@ -69,12 +69,9 @@ function settleOffseasonContractRollover(db,rep){
       pid:row.pid,team:row.teamId,salary:row.salary,years:row.years,
       terms:row.terms,agreement:true
     });
-    for(const pid of settlement.released){
-      const p=db.players[pid],event=(p?.careerEvents||[]).slice().reverse()
-        .find(e=>e.type==='contract_agreement_void');
-      rep.expired.push({pid,team:event?.team||null,
-        why:'월즈 종료 2주 후 계약 만료 — FA 전환'});
-    }
+    for(const row of settlement.released)rep.expired.push({
+      pid:row.pid,team:row.team,why:'월즈 종료 2주 후 계약 만료 — FA 전환'
+    });
     settlement.reported=true;
   }
   return settlement;
