@@ -58,10 +58,11 @@ function validatePlayerSignAction(db,a){
     ?contractAgreementFor(db,p.id):null;
   if(['precontract','renewal_agreement'].includes(kind)){
     if(a.actor!=='system'||!futureAgreement||futureAgreement.status!=='agreed'||
-      futureAgreement.teamId!==t.id||futureAgreement.fromTeamId!==p.team||
+      futureAgreement.teamId!==t.id||
+      (p.team&&p.team!==futureAgreement.fromTeamId&&p.team!==futureAgreement.teamId)||
       futureAgreement.effectiveDate>db.worldDate||
       futureAgreement.kind!==(kind==='renewal_agreement'?'renewal':'precontract')||
-      !p.contract||p.contract.until>=db.year)
+      (p.contract&&p.contract.until>=db.year))
       return worldActionError('invalid_contract','발효 가능한 다음 계약 합의가 아닙니다');
   }
   if(kind==='renewal'&&p.team!==t.id)
