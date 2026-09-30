@@ -148,6 +148,32 @@ source+=String.raw`(()=>{
   assert(db.worldDate==='2028-01-01',
     'controlled Jan-1 settlement unexpectedly changed the caller date');
 
+  // A binding agreement must not crash the world if the player retires before
+  // its effective date. It becomes an audited void without any signing action.
+  const voidPlayer=Object.values(db.players).find(p=>!p.retired&&!p.team&&p.id!==target.id);
+  assert(voidPlayer,'fixture missing player for agreement-void lifecycle');
+  assignPlayerToTeam(db,voidPlayer,other);
+  signContract(db,voidPlayer,other,asking(db,voidPlayer,other.region),1,{promisedRole:'backup'});
+  voidPlayer.contract.until=2028;
+  db.world.year=2028;db.world.contractWindow={
+    seasonYear:2028,seasonEndDate:'2028-11-16',startDate:'2028-11-17',
+    exclusiveThrough:'2028-11-30',outsideContactDate:'2028-12-01',
+    contractExpiryDate:'2028-12-31',effectiveDate:'2029-01-01',
+    stage:'outside',incumbentProcessed:true,outsideProcessed:true,completed:true
+  };
+  db.worldDate='2028-12-01';
+  const voidTerms=normalizeContractTerms(db,voidPlayer,mine,
+    asking(db,voidPlayer,mine.region),1,{promisedRole:'backup'});
+  const voidAgreement=recordContractAgreement(db,voidPlayer,mine,voidTerms,'precontract','manager');
+  assert(voidAgreement.ok,'void lifecycle agreement could not be recorded');
+  removePlayerFromTeam(db,voidPlayer);voidPlayer.retired=true;voidPlayer.retiredYear=2028;
+  db.year=2029;db.worldDate='2029-01-01';
+  const voidActivation=applyDueContractAgreements(db,null);
+  assert(voidActivation.applied.length===0&&voidActivation.voided.length===1&&
+    contractAgreementFor(db,voidPlayer.id).status==='void'&&
+    contractAgreementFor(db,voidPlayer.id).voidReason==='player_retired_or_missing',
+    'retired player agreement did not void cleanly');
+
   packed=packDB(db);db=unpackDB(packed);
   assert(contractAgreementFor(db,target.id)?.status==='effective'&&
     db.players[target.id].team===mine.id,
