@@ -51,8 +51,19 @@ function validatePlayerSignAction(db,a){
   const auth=playerActionAuthority(db,a.actor,t);
   if(auth)return auth;
   const kind=a.kind||'fa',from=p.team&&playerActionTeam(db,p.team);
-  if(!['fa','renewal','initial','transfer','medical_replacement'].includes(kind))
+  if(!['fa','renewal','initial','transfer','medical_replacement',
+      'precontract','renewal_agreement'].includes(kind))
     return worldActionError('invalid_action','지원하지 않는 계약 유형입니다');
+  const futureAgreement=['precontract','renewal_agreement'].includes(kind)
+    ?contractAgreementFor(db,p.id):null;
+  if(['precontract','renewal_agreement'].includes(kind)){
+    if(a.actor!=='system'||!futureAgreement||futureAgreement.status!=='agreed'||
+      futureAgreement.teamId!==t.id||futureAgreement.fromTeamId!==p.team||
+      futureAgreement.effectiveDate>db.worldDate||
+      futureAgreement.kind!==(kind==='renewal_agreement'?'renewal':'precontract')||
+      !p.contract||p.contract.until>=db.year)
+      return worldActionError('invalid_contract','발효 가능한 다음 계약 합의가 아닙니다');
+  }
   if(kind==='renewal'&&p.team!==t.id)
     return worldActionError('invalid_contract','기존 소속 구단에서만 재계약할 수 있습니다');
   if((kind==='fa'||kind==='initial'||kind==='medical_replacement')&&p.team)
@@ -80,7 +91,7 @@ function validatePlayerSignAction(db,a){
   if(!allNumbers.every(Number.isFinite))
     return worldActionError('invalid_terms','유효하지 않은 계약 금액입니다');
   if(!playerActionFinance(t))return worldActionError('invalid_finance','구단 재정 정보가 없습니다');
-  if(kind!=='renewal'){
+  if(kind!=='renewal'&&kind!=='renewal_agreement'){
     const registration=localRegistrationError(db,t,p);
     if(registration)return worldActionError('registration_limit',registration);
   }
