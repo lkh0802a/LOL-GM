@@ -75,14 +75,6 @@ function placements(db,s){
   const comp=db.competitions[s.comp];const reg=standings(db,s,comp.stages[0].id).map(x=>x.tid);
   const out=[s.champion,s.runnerUp].filter(Boolean);for(const t of reg)if(!out.includes(t))out.push(t);return out;
 }
-function regionPlacements(db,R){
-  const w=db.world, act=activeTeams(db,R.id,1).map(t=>t.id);
-  const done=[3,2,1].map(sp=>w.seasons[R.short+'-'+sp]).find(s=>s&&s.done);
-  let base=done?placements(db,done):(R.lastPlacement||[]);
-  base=base.filter(t=>act.includes(t));
-  const rest=act.filter(t=>!base.includes(t)).sort((a,b)=>teamStrength(db,b)-teamStrength(db,a));
-  return [...base,...rest];
-}
 function regionPower(db,R){const h=(db.global&&db.global.power||{})[R.id];return h!==undefined?h:R.strength}
 function teamStrength(db,tid){const t=db.teams[tid];return avg(ROLES.map(r=>{const p=starterFor(db,t,r);return p?playerRoleRating(p,r):40}))}
 function startInternational(db,id,start,taken=new Set()){
@@ -90,7 +82,12 @@ function startInternational(db,id,start,taken=new Set()){
   const regs=Object.values(db.regions).filter(R=>!it.zone||(INTL_ZONES[it.zone]||[]).includes(R.id)).sort((a,b)=>regionPower(db,b)-regionPower(db,a));
   const topSlots=R=>{const top=db.worldConfig.internationals.find(x=>x.tier!=='low'&&x.timing===it.timing&&x.entry==='slots');return top?Math.max(1,Math.ceil(R.slots*(top.ratio||1))):R.slots};
   const lists=regs.map(R=>{
-    if(it.entry==='champions')return regionPlacements(db,R).slice(0,1);
+    if(it.entry==='champions'){
+      // Tournament-champion invitations always honor the *last split winner*,
+      // even in a region where World slots use accumulated season points.
+      const champion=recentSplitChampion(db,R);
+      return champion?[champion]:regionPlacements(db,R).slice(0,1);
+    }
     if(it.entry==='slots')return regionPlacements(db,R).slice(0,Math.max(1,Math.ceil(R.slots*(it.ratio||1))));
     const per=(it.per||2)*(regs.length<=2?2:1);
     if(it.entry==='div2'&&R.div2){const s=[3,2,1].map(sp=>w.seasons[R.short+'2-'+sp]).find(s=>s&&s.done);if(s)return placements(db,s).filter(t=>!taken.has(t)).slice(0,per)}

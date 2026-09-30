@@ -3,6 +3,8 @@ function genTactics(rng){return {aggression:rng.int(35,80),risk_tolerance:rng.in
 const PHILOSOPHIES=['win-now','youth','balanced','superstar','cost'];
 const PHIL_KO={'win-now':'즉시 전력','youth':'유망주 육성','balanced':'균형','superstar':'스타 영입','cost':'효율 중시'};
 const SPLIT_NAME={1:'윈터',2:'스프링',3:'서머'};
+// Scheduling periods and season-result aggregation are separate rules.
+const SPLIT_STANDINGS_MODES={independent:'스플릿별 독립',cumulative:'정규시즌 전적 누적',points:'챔피언십 포인트 누적'};
 // ---------- 지역 프리셋 / 월드 설정 ----------
 // 실제 LoL e스포츠 구조를 본뜬 기본 리그 (리그 수준·시장 규모는 고정, 구조만 편집 가능)
 const REGION_PRESETS = {
@@ -38,7 +40,7 @@ const ZONE_KO={east:'Eastern',west:'Western'};
 function regionCfg(id,over={}){
   const P=REGION_PRESETS[id]||{name:'새 지역',leagueName:'새 리그',short:'NEW',strength:63,d:{}},d=P.d||{};
   return {id,name:P.name,leagueName:P.leagueName,short:P.short,strength:P.strength,templates:!!P.templates,tier:P.tier||'emerging',parent:P.parent||null,
-    format:'rr_po',div2:false,div2Teams:8,teams:10,splits:2,legs:2,regularBo:3,playoffTake:6,playoffBo:5,system:'franchise',relegate:1,slots:3,office:null,
+    format:'rr_po',div2:false,div2Teams:8,teams:10,splits:2,standingsMode:'independent',legs:2,regularBo:3,playoffTake:6,playoffBo:5,system:'franchise',relegate:1,slots:3,office:null,
     fearless:true,payScale:null,spendingRule:null,sfrMode:null,sfrTeamShare:0,salaryCap:0,salaryFloor:0,luxuryTax:.5,importLimit:null,importRecruitMinGap:null,rosterRuleProfile:null,marketProfile:null,policyMode:'engine',policyLocks:{},...d,...over,
     spendingRule:null,sfrMode:null,sfrTeamShare:0,salaryCap:0,salaryFloor:0,importLimit:null,importRecruitMinGap:null,rosterRuleProfile:null,marketProfile:null,office:null,payScale:null};
 }
@@ -214,6 +216,8 @@ function validateConfig(cfg){
     if(!r.short||shorts.has(r.short))errs.push(`리그 약칭 "${r.short}"이 비었거나 겹칩니다`);shorts.add(r.short);shorts.add(r.short+'2');
     if(r.teams<10||r.teams%2)errs.push(`${r.leagueName}: 1부 팀 수는 최소 10팀이며 짝수여야 합니다`);
     if(r.playoffTake>r.teams)errs.push(`${r.leagueName}: 플레이오프 진출 팀이 전체 팀보다 많습니다`);
+    if(r.standingsMode&&!Object.hasOwn(SPLIT_STANDINGS_MODES,r.standingsMode))
+      errs.push(`${r.leagueName}: 지원하지 않는 스플릿 성적 집계 방식입니다`);
     if(r.format==='groups_po'&&r.teams<10)errs.push(`${r.leagueName}: 그룹 스테이지 방식은 10팀 이상에서 쓸 수 있습니다`);
     if(r.div2&&r.system!=='franchise'&&(r.div2Teams||6)%2)errs.push(`${r.leagueName}: 하부 리그 팀 수는 짝수여야 합니다`);
   }

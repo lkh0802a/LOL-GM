@@ -111,17 +111,6 @@ function standings(db,s,stageId){
   return rrTable(db,s,stageId,sd?sd.teams:[]);
 }
 function groupStandings(db,s,stageId){const sd=s.stageData[stageId];return sd.groups.map(g=>rrTable(db,s,stageId,g))}
-function rrTable(db,s,stageId,teams){
-  const tb={};teams.forEach(t=>tb[t]={tid:t,w:0,l:0,gw:0,gl:0,h2h:{},form:[]});
-  for(const d of s.days) if(d.stage===stageId) for(const m of d.matches) if(m.res&&tb[m.a]&&tb[m.b]){
-    const [sa,sb]=m.res.score, wa=m.res.winner===m.a;
-    tb[m.a].gw+=sa;tb[m.a].gl+=sb;tb[m.b].gw+=sb;tb[m.b].gl+=sa;
-    tb[wa?m.a:m.b].w++;tb[wa?m.b:m.a].l++;
-    tb[m.a].h2h[m.b]=(tb[m.a].h2h[m.b]||0)+(wa?1:-1);tb[m.b].h2h[m.a]=(tb[m.b].h2h[m.a]||0)+(wa?-1:1);
-    tb[m.a].form.push(wa?'W':'L');tb[m.b].form.push(wa?'L':'W');
-  }
-  return Object.values(tb).sort((x,y)=>(y.w-x.w)||((y.gw-y.gl)-(x.gw-x.gl))||((y.h2h[x.tid]||0)-(x.h2h[y.tid]||0))||(hashStr(s.seed+x.tid)-hashStr(s.seed+y.tid)));
-}
 function recordLines(s,lines){
   for(const l of lines){
     const p=s.pstats[l.pid]||(s.pstats[l.pid]={g:0,w:0,k:0,d:0,a:0,cs:0,gold:0,dmg:0,dmgTaken:0,vision:0,objectives:0,csDiff:0,goldDiff:0,laneAdvSum:0,laneAdvGames:0,teamfightDmg:0,teamfights:0,teamfightWins:0,teamfightShareSum:0,kpSum:0,min:0,mvp:0,ratingSum:0,champs:{}});
