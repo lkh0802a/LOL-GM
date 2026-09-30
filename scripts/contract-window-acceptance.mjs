@@ -49,7 +49,7 @@ source+=String.raw`(()=>{
   assert(db.worldDate==='2027-11-17','exclusive window did not start next day');
 
   // No outside approach is legal during exclusivity without the incumbent's waiver.
-  let blocked=startNegotiation(db,target.id,'early_fa',{teamId:mine.id});
+  let blocked=startNegotiation(db,ownWaive.id,'early_fa',{teamId:other.id});
   assert(!blocked.ok&&blocked.msg.includes('허용'),
     'outside club bypassed incumbent exclusivity');
 
@@ -148,7 +148,7 @@ source+=String.raw`(()=>{
   assert(fa,'fixture missing FA after expiry');
   fa.age=26;fa.faYears=0;fa.personality.ambition=50;
   const faTeam=other,ask=asking(db,fa,faTeam.region),
-    fair=normalizeContractTerms(db,fa,faTeam,ask*.9,2,{promisedRole:'starter'}),
+    fair=normalizeContractTerms(db,fa,faTeam,ask,2,{promisedRole:'starter'}),
     low=normalizeContractTerms(db,fa,faTeam,ask*.6,2,{promisedRole:'backup'});
   db.world.phase='season';
   const strict=offerAcceptanceThreshold(db,fa,{kind:'fa'});
