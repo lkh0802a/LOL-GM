@@ -41,6 +41,7 @@ export const ENGINE_MODULES = [
   'scouting-ai-ops.js',
   'scouting-ai-reassessment.js',
   'transfer.js',
+  'contract-window.js',
   'state-player-actions.js',
   'staff.js',
   'scrim-partner.js',
