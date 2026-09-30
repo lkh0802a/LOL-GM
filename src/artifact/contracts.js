@@ -49,9 +49,11 @@ function contractDurationFit(db,p,t,years){
   return Math.max(.055,.165-distance*.055);
 }
 function normalizeContractTerms(db,p,t,salary,years,terms={}){
-  const duration=contractDurationPolicy(db,p,t);
+  const duration=contractDurationPolicy(db,p,t),
+    requestedYears=years==null||years===''?duration.preferred:+years;
   salary=Math.max(.1,Math.round(+salary*10)/10);
-  years=clamp(Math.round(+years||duration.preferred),duration.min,duration.max);
+  years=clamp(Math.round(Number.isFinite(requestedYears)?requestedYears:duration.preferred),
+    duration.min,duration.max);
   const sign=Math.max(0,Math.round((terms.signingBonus??0)*10)/10);
   const bonuses={performance:Math.max(0,Math.round((terms.bonuses?.performance??0)*10)/10),title:Math.max(0,Math.round((terms.bonuses?.title??0)*10)/10),international:Math.max(0,Math.round((terms.bonuses?.international??0)*10)/10)};
   const optionType=['team','player'].includes(terms.option?.type)?terms.option.type:'none',until=db.year+years-1;
