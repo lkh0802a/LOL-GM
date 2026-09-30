@@ -36,6 +36,7 @@ export const ENGINE_MODULES = [
   'office-international.js',
   'finance.js',
   'contracts.js',
+  'contract-market-behavior.js',
   'scouting.js',
   'scouting-ai.js',
   'scouting-ai-ops.js',
