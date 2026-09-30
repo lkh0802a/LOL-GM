@@ -127,6 +127,7 @@ function bindSeason(){
     if(!w.contractWindow){
       $('#soff').onclick=()=>{initOffseasonContractWindow(DB);saveDB();nav();window.scrollTo(0,0)};
     }else if(w.contractWindow.stage==='exclusive'){
+      $('#scontractday').onclick=()=>{advanceOffseasonContractDay(DB);saveDB();nav()};
       $('#scontractopen').onclick=()=>{advanceOffseasonContractWindow(DB);saveDB();nav();window.scrollTo(0,0)};
     }else{
       $('#soff').onclick=()=>{runOffseason(DB);saveDB();nav();window.scrollTo(0,0)};
