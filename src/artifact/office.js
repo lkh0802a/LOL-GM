@@ -57,7 +57,7 @@ function officeDecisions(db,rng,f,ev,mid){
     const weakGap=weak.length>2?R.strength-weak[0].s:0;
     const H=M.hype, B=M.balance, props=[];
     const grp=k=>({relegation:'system',franchise:'system',mixed:'system'}[k]||k);
-    const structural=new Set(['system','expand','contract','div2','format','splits','cap','floor','tax','import']);
+    const structural=new Set(['system','expand','contract','div2','format','splits','standingsMode','cap','floor','tax','import']);
     const add=(key,u,apply,why)=>{const g=grp(key),cool=structural.has(g)?4:3,last=(R.decisions||[]).filter(d=>d.key===g).slice(-1)[0];if(!last||db.world.year-last.year>=cool)props.push({key,u:u+(S.w[key]||0)+rng.normal(0,.12),apply,why})};
     const takes=[4,6,8].filter(x=>x<=n), up=takes.find(x=>x>R.playoffTake);
     if(!mid){
@@ -85,6 +85,26 @@ function officeDecisions(db,rng,f,ev,mid){
       const SPL={1:'단일 시즌제',2:'2스플릿제',3:'3스플릿제'};
       if((R.splits||1)<3) add('splits',(H-58)/15+trend/25,()=>{const o=R.splits||1;R.splits=o+1;return `${SPL[o]} → ${SPL[R.splits]} 전환`},`흥행 호조로 시즌 콘텐츠 확대`);
       if((R.splits||1)>1) add('splits',(38-H)/15-trend/25,()=>{const o=R.splits;R.splits=o-1;return `${SPL[o]} → ${SPL[R.splits]} 전환`},`흥행 부진, 일정 피로도 완화`);
+      // The league office—not the manager—may independently revise how
+      // completed split results determine annual qualification. Changes are
+      // offseason-only, cooldown-governed and effective next season.
+      if((R.splits||1)>1){
+        const mode=R.standingsMode||'independent';
+        const schemes=[
+          {key:'points',score:(.58-B)*1.75+(H-48)/37+
+            (R.splits===3?.24:0),why:`플레이오프 성과와 스플릿 간 종합 경쟁 반영 (흥행 ${H}, 경쟁 균형 ${B})`},
+          {key:'cumulative',score:(H-46)/43+(.6-B)*.75+
+            (R.splits===3?.12:0),why:`매 스플릿 정규시즌 전적 승계로 연간 성적 연속성 강화 (흥행 ${H})`},
+          {key:'independent',score:(45-H)/30+(B-.48)*1.55+
+            (trend<0?-.08:0),why:`기간별 독립 우승 경쟁과 새 출발 강화 (흥행 ${H}, 경쟁 균형 ${B})`}
+        ];
+        for(const scheme of schemes)if(scheme.key!==mode)
+          add('standingsMode',scheme.score,()=>{
+            const old=R.standingsMode||'independent';
+            R.standingsMode=scheme.key;
+            return `성적 집계 방식 변경: ${SPLIT_STANDINGS_MODES[old]} → ${SPLIT_STANDINGS_MODES[scheme.key]} (다음 시즌부터)`;
+          },scheme.why);
+      }
     }
     if(up!==undefined) add('playoffs',(0.55-B)*3+(H<45?0.2:0),()=>{const o=R.playoffTake;R.playoffTake=up;return `플레이오프 ${o}팀 → ${up}팀 확대`},`순위 경쟁 약화 (균형 ${B})`);
     if(R.playoffTake>4) add('playoffs',(B-0.75)*3-0.2,()=>{const o=R.playoffTake;R.playoffTake=takes.filter(x=>x<o&&x>0).pop()||4;return `플레이오프 ${o}팀 → ${R.playoffTake}팀 축소`},`정규 시즌 경쟁이 충분히 치열함 (균형 ${B})`);
