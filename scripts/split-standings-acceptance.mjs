@@ -176,7 +176,10 @@ source+=String.raw`(()=>{
     msg=>officeNews.push(msg),false);
   check(officeR.standingsMode==='independent'&&
     officeR.decisions.filter(x=>x.key==='standingsMode').length===2,
-    'office did not retain the authority to change formats in a later offseason');
+    'office did not retain the authority to change formats in a later offseason: '+JSON.stringify({
+      mode:officeR.standingsMode,decisions:officeR.decisions,
+      lastNews:officeNews.at(-1),metrics:officeR.metrics
+    }));
   // A single-split office may retain its inherited policy independently of
   // the number of scheduling periods; it is never an extra manager setting.
   check(regionCfg('JP',{splits:1,standingsMode:'points'}).standingsMode==='points',
