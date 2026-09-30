@@ -130,10 +130,14 @@ function startNegotiation(db,pid,kind='fa',extra={}){
     if(reopen.reason==='cooldown')return {ok:false,msg:p.name+' 재계약 협상 냉각기간입니다 · '+reopen.until+'부터 재개 가능'};
     return {ok:false,msg:p.name+' 측과 완전 결렬된 협상은 선수·구단 상황이 의미 있게 바뀌어야 재개할 수 있습니다'};
   }
-  const rng=new RNG(w.seed+'/'+db.year+'/'+pid+'/'+kind+'/'+t.id+'/'+((previous?.attempt||0)+1),'negotiation'),
+  const attempt=(previous?.attempt||0)+1,
+    // Preserve the pre-B2 RNG stream for every first negotiation. Only an
+    // actual reopened attempt receives a distinct deterministic stream.
+    seed=w.seed+'/'+db.year+'/'+pid+'/'+kind+'/'+t.id+(attempt>1?'/'+attempt:''),
+    rng=new RNG(seed,'negotiation'),
     competitors=negotiationCompetition(db,p,t,rng,kind),demand=negotiationDemand(db,p,t,kind,rng,competitors),rounds=negotiationRoundLimit(p),
     previousAttempts=previous?[...(previous.previousAttempts||[]),negotiationAttemptSummary(previous)]:[];
-  const neg={id,pid,teamId:t.id,kind,status:'open',stage:kind==='transfer'?'club':'player',sellerId:extra.sellerId||p.team||null,fee:extra.fee||0,clubCounter:null,round:0,maxRounds:rounds,patience:rounds,competitors,demand,counter:demand,lastOffer:null,lastUtility:null,history:[],createdDate:db.worldDate,attempt:(previous?.attempt||0)+1,previousAttempts,reopenedChanges:reopen.changes};
+  const neg={id,pid,teamId:t.id,kind,status:'open',stage:kind==='transfer'?'club':'player',sellerId:extra.sellerId||p.team||null,fee:extra.fee||0,clubCounter:null,round:0,maxRounds:rounds,patience:rounds,competitors,demand,counter:demand,lastOffer:null,lastUtility:null,history:[],createdDate:db.worldDate,attempt,previousAttempts,reopenedChanges:reopen.changes};
   store[id]=neg;const target=recruitmentTarget(db,pid);if(target){target.stage='negotiating';target.negotiationId=id}
   return {ok:true,neg,msg:p.name+' 측과 협상을 시작했습니다'};
 }
