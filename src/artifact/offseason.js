@@ -76,6 +76,7 @@ function runOffseason(db){
   ensureEven(db,rng,ev);
   rep.rookies=[];rep.rookieGlobal=rookieGlobalCohort(db);
   for(const R of Object.values(db.regions)){const cls=generateRookieClass(db,R,rng),ri=R.rookieIntake[R.rookieIntake.length-1];rep.rookies.push({region:R.id,count:cls.length,ids:cls.map(p=>p.id),label:ri.label,tiers:ri.tiers,profile:ri.profile})}
+  rep.expiryComplianceSignings=reconcileMinimumRosterAfterExpiry(db,rng,rep);
   const supplyErrs=talentSupplyErrors(db);if(supplyErrs.length)throw new Error('Talent supply invariant failed before market: '+supplyErrs.slice(0,8).join(' | '));
   for(const t of activeTeams(db)){if(t.id===managedTeamId(db))ensureStaffRoster(t);else ensureTeamStaff(db,t,rng)}ageStaff(db,rng);genStaffPool(db,rng);
   ageScoutReports(db);
