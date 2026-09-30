@@ -104,15 +104,15 @@ function advanceOffseasonContractDay(db){
   if(!cw)return {ok:false,msg:'계약 협상 기간을 진행할 수 없습니다'};
   if(cw.stage!=='exclusive')return {ok:true,stage:cw.stage,date:db.worldDate,
     msg:'원소속 독점 기간이 이미 끝났습니다'};
-  const renewals=aiRunExclusiveRenewals(db),
-    next=addDays(db.worldDate,1);
+  const next=addDays(db.worldDate,1);
   if(next>=cw.outsideContactDate){
+    const renewals=aiRunExclusiveRenewals(db);
     cw.stage='outside';db.worldDate=cw.outsideContactDate;
     return {ok:true,stage:'outside',date:db.worldDate,renewals,
       msg:'14일 원소속 독점 기간 종료 · 타 구단 접촉/가계약 가능'};
   }
   db.worldDate=next;
-  return {ok:true,stage:'exclusive',date:db.worldDate,renewals,
+  return {ok:true,stage:'exclusive',date:db.worldDate,renewals:[],
     msg:'원소속 독점 재계약 기간 · '+db.worldDate};
 }
 function advanceOffseasonContractWindow(db){
