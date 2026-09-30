@@ -184,7 +184,7 @@ function controlsFor(w){
   if(w.phase==='offseason'){
     const cw=w.contractWindow;
     if(!cw)return `<button class="primary" id="soff">계약 협상 기간 열기</button><span class="hint">시즌 종료 후 원소속 구단 14일 독점 재계약 기간을 시작합니다.</span>`;
-    if(cw.stage==='exclusive')return `<button class="primary" id="scontractopen">14일 독점 기간 종료</button><span class="hint">${cw.startDate}~${cw.exclusiveThrough} 원소속 구단만 재계약 가능 · ${cw.outsideContactDate}부터 타 구단 접촉</span>`;
+    if(cw.stage==='exclusive')return `<button class="primary" id="scontractday">하루 진행</button><button class="ghost" id="scontractopen">독점 기간 끝까지</button><span class="hint">현재 ${DB.worldDate} · ${cw.startDate}~${cw.exclusiveThrough} 원소속 구단만 재계약 가능 · ${cw.outsideContactDate}부터 타 구단 접촉</span>`;
     return `<button class="primary" id="soff">계약 종료일로 진행</button><span class="hint">가계약을 마친 뒤 ${cw.contractExpiryDate} 계약 종료와 ${cw.effectiveDate} 발효를 처리하고 다음 시즌 시장으로 이동합니다.</span>`;
   }
   if(w.phase==='market') return `<button class="primary" id="smkt">이적 시장 마감</button><label class="inl">내 팀 운영 <select id="smanage">${[['manual','직접'],['ai','AI 위임']].map(([k,l])=>`<option value="${k}"${w.manage===k?' selected':''}>${l}</option>`).join('')}</select></label><span class="hint">${w.manage==='manual'?'재계약·방출·FA 제안·이적 제안을 마친 뒤 마감하세요.':'AI가 내 팀 계약을 처리합니다.'}</span>`;
