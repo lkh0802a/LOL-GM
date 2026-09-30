@@ -175,7 +175,8 @@ source+=String.raw`(()=>{
   officeDecisions(officeDb,new RNG('split-office-2032','office'),1,
     msg=>officeNews.push(msg),false);
   check(officeR.standingsMode==='independent'&&
-    officeR.decisions.filter(x=>x.key==='standingsMode').length===2,
+    officeR.decisions.some(x=>x.key==='standingsMode'&&x.year===2032)&&
+    officeNews.filter(x=>x.includes('성적 집계 방식 변경')).length===2,
     'office did not retain the authority to change formats in a later offseason: '+JSON.stringify({
       mode:officeR.standingsMode,decisions:officeR.decisions,
       lastNews:officeNews.at(-1),metrics:officeR.metrics
