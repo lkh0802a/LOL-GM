@@ -21,7 +21,7 @@ function seasonTab(){
   const s=curS(); if(!s)return '<p class="empty">진행 중인 대회가 없습니다.</p>';
   const comp=DB.competitions[s.comp], me=managedTeamId(DB);
   if(SSET.tab==='table'){
-    const region=comp.region&&DB.regions[comp.region],mode=region?.standingsMode||'independent';
+    const region=comp.region&&DB.regions[comp.region],mode=s.standingsMode||region?.standingsMode||'independent';
     const doneSplits=region?Object.values(DB.world.seasons).filter(x=>
       x.done&&x.year===DB.world.year&&x.region===region.id&&
       (x.div||1)===(comp.div||1)&&x.split).length:0;
