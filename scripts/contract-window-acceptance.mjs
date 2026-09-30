@@ -31,6 +31,9 @@ source+=String.raw`(()=>{
   resetExpiring(ownRenew,mine);
   resetExpiring(ownWaive,mine,'titles');
   resetExpiring(target,other);
+  // Keep this source club interested in renewing so the fixture begins with
+  // real exclusivity; the waiver below is the only thing that opens contact.
+  target.rosterRole='competition';
   resetExpiring(aiTarget,third);
 
   db.world={year:2027,seed:'d04-b3',manage:'manual',phase:'offseason',
