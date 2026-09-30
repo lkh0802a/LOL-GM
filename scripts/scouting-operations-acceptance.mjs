@@ -56,9 +56,9 @@ source+=String.raw`(()=>{
   assert(strongOp.targets.length===strongOp.targetLimit&&
     weakOp.targets.length===weakOp.targetLimit,
     'funded operation did not use its bounded target allocation');
-  assert(near(strongOp.spent,strongOp.unitCost*strongOp.targets.length)&&
-    near(weakOp.spent,weakOp.unitCost*weakOp.targets.length),
-    'operation spending diverged from manager-equivalent unit cost');
+  assert(near(strongOp.spent,aiScoutingBatchCharge(strongOp.unitCost,strongOp.targets.length))&&
+    near(weakOp.spent,aiScoutingBatchCharge(weakOp.unitCost,weakOp.targets.length)),
+    'operation spending diverged from manager-equivalent batch accounting');
   assert(near(strongCash-strong.finance.cash,strongOp.spent)&&
     near(weakCash-weak.finance.cash,weakOp.spent),
     'scouting did not deduct real club cash');
