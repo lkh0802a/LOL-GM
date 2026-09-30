@@ -32,7 +32,7 @@ function mDropInterest(db,pid){return removeRecruitmentTarget(db,pid)}
 // ---- 선수 계약 협상 엔진 ----
 function negotiationStore(db){const w=db.world;if(!w)return {};w.negotiations=w.negotiations||{};return w.negotiations}
 function negotiationId(db,pid,kind,teamId=null){return 'NEG_'+db.year+'_'+pid+'_'+kind+
-  ((teamId&&kind==='initial')?'_'+teamId:'')}
+  ((teamId&&(kind==='initial'||kind==='early_fa'))?'_'+teamId:'')}
 function negotiationRoundLimit(p){return clamp(3+Math.round((p.personality.professionalism-50)/35)-(p.personality.ambition>=82?1:0),2,5)}
 function negotiationPreferredYears(db,p,t){return contractDurationPolicy(db,p,t).preferred}
 function negotiationSituationSnapshot(db,p,t,kind){
