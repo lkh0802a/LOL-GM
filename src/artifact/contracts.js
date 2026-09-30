@@ -81,10 +81,13 @@ function unsignedSeasonCareerRisk(db,p,kind='fa'){
   if(kind==='renewal'&&(!w.contractWindow||!contractExpiresThisSeason(db,p)||p.wantsOut))
     return 0;
   if(kind==='early_fa'&&!w.contractWindow)return 0;
-  const base=kind==='renewal'?.055:.105,
-    unsigned=Math.min(2,p.faYears||0)*.035,
-    prime=p.age>=24&&p.age<=29?.025:0;
-  return Math.min(.20,base+unsigned+prime);
+  // Reuse existing negotiation magnitudes instead of inventing a separate
+  // "desperation" scale: one duration-utility step is .055 and .22 is the
+  // existing meaningful under-offer/patience boundary.
+  const step=.055,base=kind==='renewal'?step:step*2,
+    unsigned=Math.min(2,p.faYears||0)*step,
+    prime=p.age>=24&&p.age<=29?step:0;
+  return Math.min(.22,base+unsigned+prime);
 }
 function offerAcceptanceThreshold(db,p,opt={}){
   const rep=(p.reputation||playerOvr(p)),amb=p.personality.ambition/100,
@@ -96,9 +99,11 @@ function contractOfferReasonable(db,p,t,offer,kind='fa'){
   // undervaluation: low guaranteed pay + bench/minor role is still rejectable.
   const ask=Math.max(.1,asking(db,p,t.region)),
     guaranteed=offer.salary+(offer.signingBonus||0)/Math.max(1,offer.years||1),
-    role=offer.promisedRole||defaultPromisedRole(db,p,t);
-  return guaranteed>=ask*.78&&
-    !(['backup','prospect'].includes(role)&&p.age>=23&&guaranteed<ask*.92);
+    // Existing AI market offers start at .95 of ask before the same medical
+    // risk discount. Treat anything below that established floor as genuine
+    // undervaluation; role/club quality remains inside offerUtility.
+    establishedFloor=.95*(1-medicalContractRisk(db,p)*.4);
+  return guaranteed>=ask*establishedFloor;
 }
 function contractBonusCost(db,t,year){
   let sum=0;for(const id of t.roster){const p=db.players[id],c=p&&p.contract;if(!c||!c.bonuses)continue;const rows=(p.career||[]).filter(x=>x.year===year),g=rows.reduce((a,x)=>a+(x.g||0),0),rating=g?rows.reduce((a,x)=>a+(x.rating||6.5)*(x.g||0),0)/g:0;
