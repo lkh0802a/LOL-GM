@@ -11,12 +11,12 @@ for(const file of ENGINE_MODULES)source+=await readFile(resolve(root,file),'utf8
 source+=String.raw`(()=>{
   const assert=(x,m)=>{if(!x)throw new Error('D04_CONTRACT_WINDOW '+m)};
   let db=buildWorld(),mine=activeTeams(db,null,1)[0],
-    peers=activeTeams(db,mine.region,1).filter(t=>t.id!==mine.id);
-  assert(mine&&peers.length>=2,'fixture missing same-region clubs');
+    peers=activeTeams(db,mine.region,1).filter(t=>t.id!==mine.id),
+    pool=Object.values(db.players).filter(p=>!p.retired&&!p.team).slice(0,4);
+  assert(mine&&peers.length>=2&&pool.length===4,
+    'fixture missing same-region clubs/free players');
   let other=peers[0],third=peers[1],
-    ownRenew=db.players[mine.roster[0]],ownWaive=db.players[mine.roster[1]],
-    target=db.players[other.roster[0]],aiTarget=db.players[third.roster[0]];
-  assert(ownRenew&&ownWaive&&target&&aiTarget,'fixture missing roster players');
+    [ownRenew,ownWaive,target,aiTarget]=pool;
   setManagedTeam(db,mine.id);
   mine.finance.cash=other.finance.cash=third.finance.cash=1000;
 
