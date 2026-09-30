@@ -200,7 +200,12 @@ function finalizeNegotiation(db,neg,terms){
 }
 function submitNegotiationOffer(db,nid,terms){
   const neg=negotiationStore(db)[nid];if(!neg||neg.status!=='open'||neg.stage!=='player')return {ok:false,msg:'진행 중인 선수 협상이 아닙니다'};
-  const p=db.players[neg.pid],t=db.teams[neg.teamId],offer=normalizeContractTerms(db,p,t,terms.salary,terms.years,terms),err=negotiationBudgetError(db,p,t,offer,neg.kind);if(err)return {ok:false,msg:err};if(neg.kind==='transfer'&&(offer.signingBonus||0)>Math.max(0,t.finance.cash-(neg.fee||0)))return {ok:false,msg:'이적료 지급 후 계약금을 지급할 현금이 부족합니다'};
+  const p=db.players[neg.pid],t=db.teams[neg.teamId];
+  if(['renewal','early_fa'].includes(neg.kind)&&db.world?.phase==='offseason'&&db.world?.contractWindow){
+    const contactErr=contractWindowContactError(db,p,t,neg.kind);
+    if(contactErr)return {ok:false,msg:contactErr};
+  }
+  const offer=normalizeContractTerms(db,p,t,terms.salary,terms.years,terms),err=negotiationBudgetError(db,p,t,offer,neg.kind);if(err)return {ok:false,msg:err};if(neg.kind==='transfer'&&(offer.signingBonus||0)>Math.max(0,t.finance.cash-(neg.fee||0)))return {ok:false,msg:'이적료 지급 후 계약금을 지급할 현금이 부족합니다'};
   const util=offerUtility(db,p,t,offer,{renewal:neg.kind==='renewal'}),
     comp=neg.competitors.length?Math.max(...neg.competitors.map(x=>x.utility)):0,
     threshold=Math.max(offerAcceptanceThreshold(db,p,{kind:neg.kind}),comp-.035),
