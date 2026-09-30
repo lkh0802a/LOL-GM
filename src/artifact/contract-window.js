@@ -107,12 +107,16 @@ function contractWindowContactError(db,p,t,kind){
       '원소속 구단이 조기 접촉을 허용하지 않은 선수입니다';
   if(kind!=='renewal'||p.team!==t.id)
     return '원소속 구단만 재계약을 진행할 수 있습니다';
+  if(cw.contactWaivers?.[p.id])
+    return '원소속 구단이 독점권을 포기해 재계약 대신 타 구단 접촉을 허용한 선수입니다';
   return null;
 }
 function recordContractAgreement(db,p,t,terms,kind='renewal',actor='manager'){
   const auth=playerActionAuthority(db,actor,t);
   if(auth)return {ok:false,msg:auth.errors?.join(' · ')||'구단 계약 권한이 없습니다'};
   const err=contractWindowContactError(db,p,t,kind);if(err)return {ok:false,msg:err};
+  if(kind==='early_fa'&&actor==='manager'&&!recruitmentReady(db,p.id,t.id))
+    return {ok:false,msg:'조기 접촉 허용 뒤에도 스카우팅과 내부 평가가 필요합니다'};
   // Next-season option dates must also be next-season dates. The playing
   // contract remains untouched until the exact post-Worlds expiry boundary.
   const cw=db.world.contractWindow,
