@@ -10,6 +10,7 @@ function ensureEven(db,rng,ev){
     if(R.div2&&R.system==='franchise'){for(const t of activeTeams(db,R.id,1))if(!activeTeams(db,R.id,2).some(a=>a.parent===t.id))makeAcademy(db,rng,t)}
     R.teams=activeTeams(db,R.id,1).length;
   }
+  syncCompetitionLicenses(db,'office-structure-review');
 }
 
 // ---- 영입 후보 / 관심 → 관찰 → 내부평가 ----
@@ -72,8 +73,10 @@ function runOffseason(db){
   rep.contractWindow=settleOffseasonContractRollover(db,rep);
   setWorldCalendarDate(db,medicalRolloverDate);
   if(f>0){
+    const successionCount=db.global?.regionHistory?.length||0;
     officeDecisions(db,rng,f,ev);
     globalOffice(db,w,rng,f,ev);
+    if((db.global?.regionHistory?.length||0)!==successionCount)aiChooseLocalEligibility(db);
   }
   ensureEven(db,rng,ev);
   rep.rookies=[];rep.rookieGlobal=rookieGlobalCohort(db);
@@ -144,7 +147,7 @@ function promotionRelegation(db,w,rng,ev){
         .filter(t=>promotionEligible(db,t)).slice(0,k):[];
     down.forEach((tid,i)=>{
       const t=db.teams[tid];
-      if(up[i]){const u=db.teams[up[i]];t.division=2;u.division=1;u.franchised=false;u.license='open';t.fans=Math.round((t.fans||20)*0.8);u.fans=Math.round((u.fans||10)+8);ev(`${R.leagueName} 승강: ${u.name} 승격 ↔ ${t.name} 강등`)}
+      if(up[i]){const u=db.teams[up[i]];ensureClubLicense(db,t);ensureClubLicense(db,u);t.division=2;u.division=1;u.franchised=false;u.license='open';syncClubLicense(db,t,'relegation');syncClubLicense(db,u,'promotion');t.fans=Math.round((t.fans||20)*0.8);u.fans=Math.round((u.fans||10)+8);ev(`${R.leagueName} 승강: ${u.name} 승격 ↔ ${t.name} 강등`)}
       else{foldTeam(db,t);const nt=genTeam(db,rng,R.id,R.strength-3);if(R.system==='mixed'){nt.franchised=false;nt.license='open'}ev(`${R.leagueName} 강등: ${t.name} → 신생팀 ${nt.name} 합류`)}
     });
     reconcileTier2Structure(db,rng,R,ev);

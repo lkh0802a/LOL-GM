@@ -530,6 +530,7 @@ jobs:
       - regression-smoke-career
       - perf-build
       - smoke-parity
+      - daily-career-smoke
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 3
@@ -546,6 +547,7 @@ jobs:
           MEDICAL_RESULT: ${{ needs.medical.result }}
           REGRESSION_RESULT: ${{ needs.regression-smoke-career.result }}
           PERF_BUILD_RESULT: ${{ needs.perf-build.result }}
+          DAILY_CAREER_RESULT: ${{ needs.daily-career-smoke.result }}
           PARITY_REQUIRED: ${{ github.event_name == 'workflow_dispatch' && (inputs.smoke_parity || inputs.refactor_parity) }}
           PARITY_RESULT: ${{ needs.smoke-parity.result }}
         run: |
@@ -566,9 +568,32 @@ jobs:
             [[ "$MEDICAL_RESULT" == "success" ]]
             [[ "$REGRESSION_RESULT" == "success" ]]
             [[ "$PERF_BUILD_RESULT" == "success" ]]
+            [[ "$DAILY_CAREER_RESULT" == "success" ]]
           fi
 
           echo "Required CI gate passed: docs_only=$DOCS_ONLY run_full=$RUN_FULL"
+
+  daily-career-smoke:
+    needs: [changes, static-fast]
+    if: needs.changes.outputs.run_full == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: One real daily-clock career with international play
+        env:
+          CAREER_SEASONS: 1
+          CAREER_SEED: daily-ci
+        run: node scripts/daily-career-acceptance.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: daily-career-smoke
+          path: reports/
+          if-no-files-found: error
 
   standalone-sync:
     needs: [changes, perf-build, verify]

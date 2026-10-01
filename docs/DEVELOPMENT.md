@@ -869,3 +869,210 @@ partial old plans; valid zero/underallocated plans and intensity remain intact.
 Opponent training controls are disabled. Focused acceptance exercises all three
 intensities, invalid saved fields and actual player growth, preventing poisoned
 attributes instead of only hiding NaN in the UI.
+
+## D11 actual daily-clock long-career runner (2026-10-02)
+
+PR #105 passed full final-head CI and merged as
+`71256de44aecdae0f7ea0aa1807c8b44b13a9d35`. Training input/apply also passed
+in a real Edge viewport for all intensities, with five controls on one desktop
+row and no mobile horizontal overflow. Latest standalone HTML includes this fix.
+
+`scripts/daily-career-acceptance.mjs` follows `playWorldDay`, daily effects,
+managed First Selection and canonical interactive draft/result writers. It never
+positions the clock directly on fixtures. Save/resume covers pending official
+series, completed season and market boundaries. The bounded starting world has
+closed NA, open EU with second division and an eight-team international Swiss
+event; ordinary world evolution remains enabled. It exercises real AI operation
+and promotion without substituting fabricated champions. Two domestic years and
+one international year passed locally; these are short-path evidence only.
+
+Ordinary full CI adds one international career year to its required gate. The
+separate manual `long-career.yml` runs three independent seeds for 100 years each
+by default, without repeating the expensive run on every PR. Reports checkpoint
+each completed year and retain partial progress/error on failure. They include
+day/fixture counts, official pending games, champions, patches, active/total
+players, team count, ability/cash/salary/value quantiles, champion pick diversity,
+save size, runtime and heap use. Review warnings flag a champion winning over
+70% of the last ten editions, a champion exceeding 8% of all recorded picks,
+median ability rising over 8 points in ten years, or median salary tripling in
+ten years. These are investigation triggers, not claims of a realistic target
+distribution or automatic balance changes. Budget: 120-minute engine deadline, 125-minute
+Actions job, 1.5 GiB observed heap threshold (2 GiB Node heap).
+
+Remaining D11: execute the final merged revision's three 100-season jobs, repair
+actual failures and review long-run monopoly/inflation/meta warning trends.
+This small-world scenario is not proof of default
+six-region Android performance. Whole-D remains active; D04/D06 ownership and
+economic boundaries, D07–D10 and D13 real mobile tasks still remain.
+
+PR #106 head `7b6313ed086753090a81d829d510aa017d0a489e` could not run CI:
+Actions run 36899884255 failed before any step, with GitHub's annotation
+"recent account payments have failed or your spending limit needs to be increased".
+This is an account execution block, not a test failure. Do not merge this PR or
+claim full CI success. Do not change billing or spending settings automatically.
+Local bounded checks remain available; retain long-run partial reports and keep
+implementation work independent of this external block.
+
+## D06 ownership continuity (2026-10-02)
+
+Ordinary office-approved acquisitions previously only changed the club name,
+leaving the same owner in place. Both those acquisitions and financial rescue
+sales now create distinct stable owner identities and append a dated ownership
+chain identifying the same continuing club, region/division and license.
+They retain the club ID, employment/staff contracts, registration, parent links,
+finances and results. Rescue equity remains capital in the existing statement;
+ordinary acquisitions do not invent cash revenue. A new board starts with a
+fresh patience budget. Owned reserves cannot be sold independently through this
+path. Legacy saves gain a current identity without fabricated past acquisitions.
+
+Owners: club-ownership.js, finance.js, office-international.js and save-migration.js.
+Focused acceptance covers continuity, sequential identities, legacy/current save
+restore, reserve rejection, ordinary production acquisition and real financial
+recapitalization/accounting. Finance, the 29-acceptance shared runner (25 engine contexts) and static checks (91 modules) pass.
+Remaining D06: license approval/transfer lifecycle and region merge/split successor
+history/local eligibility; this batch does not complete those boundaries.
+
+External execution block: PR #106's CI failed before any step on GitHub account
+billing/spending restrictions (run 36899884255), not a test failure. Preserve its
+branch and do not merge without full CI. Its follow-up local documentation commit
+is 115a2c6. A local single-seed 100-season fallback is running as process 26248,
+with reports .diagnostics/daily-local-1.json and stdout/stderr files. It loaded
+PR #106's engine revision before this ownership change; do not attribute its
+results to the new ownership code. Early actual daily-clock seasons passed;
+completion and remaining two seeds are still unverified. Do not change account
+billing settings automatically. Continue implementation independently.
+## D06 region/club organization continuity (2026-10-02)
+
+Region mergers previously promoted every moved second team to division one and
+removed its parent; independence could instead close an owned reserve merely
+because its parent changed region. All five office-directed relocation paths now
+share region-continuity.js: continuing clubs retain IDs, division and employment
+organization, with owned reserves moving alongside parents. Destinations retain
+second-division support. Each relocated club records a dated same-club region
+history. Regional succession records preserve predecessor names and successor
+IDs before dissolved region objects are removed, without self-predecessor links.
+Ordinary voluntary relocation is not introduced by this administrative path.
+
+Focused acceptance triggers the actual production merger, then checks splitting,
+contracts/staff/financial/history continuity, reserve parent/division, successor
+save restoration and invalid-destination rejection. Static checks (91 modules)
+and the seven-case calendar/scouting runner pass. Whole-D/D06 are not complete:
+player successor-local choice, current-contract legacy eligibility and license
+approval remain the next connected work. Do not infer that preserving a club
+also grants a player new local status; those policies require explicit commands.
+
+The GitHub account execution block persists; this change must remain a draft
+until full CI can run. Preserve PR #106 (long careers) and #107 (owners) and their
+independent branches. The running process 26248 still targets #106's prior engine,
+not this change: 12 seasons through 2038 passed at last observation, with save
+size about 25 MB and year-boundary heap about 511 MB. The process working set was
+about 2.9 GB, materially higher than heap: later runner reporting should include
+RSS/external allocations, and mobile performance acceptance remains unproven.
+No duplicate 100-season run should be started while this process is active.
+
+## D06 successor-local and contract protection (2026-10-02)
+
+PR #108 now also grants explicit successor-region choices to players whose native,
+active or unexpired earned local region is reorganized. Existing player-choice
+commands retain manager/player authority; AI and free agents can choose through
+that same path. Choosing a native successor replaces the effective native option
+without rewriting historical birthplace. Alternative succession choices are
+consumed, including chained reorganizations before activation. Valid independent
+qualifications retain their normal expiry. Service progress follows the player's
+successor employment region while retaining the snapshotted old rule/days/seasons.
+
+Office-directed club moves protect the old contract's registered-local status
+within the continuing employment organization until its original signed/until
+identity changes. Exceptions are explicitly scoped to club IDs and do not become
+portable region-wide local status or follow an external borrowing club. Renewal
+cannot extend the original deadline. Shared registration, roster plans, market
+projections and scouting classification now pass the actual destination club;
+market capacity also honors a valid next-season choice. A post-reorganization AI
+review queues new choices before recruitment, without duplicating existing ones.
+Saved malformed contract exceptions fail validation.
+
+Focused acceptance now includes a five-native official squad after relocation,
+nonportable/loan guards, renewal boundary, old service-rule continuity, managed
+and FA choices, exclusive chained native succession and save validation. Shared
+29-acceptance UI/contracts runner, seven calendar/scouting cases, registration,
+transfer-stage/local-service and 91-module static checks pass locally. Full CI
+remains blocked by the recorded GitHub account execution restriction; #108 stays
+draft and latest player-facing HTML remains the verified merged #105 build.
+D06 still requires license approval/transfer lifecycle and wider regional-policy
+acceptance; no whole-D completion is claimed. The existing #106-engine long run
+had reached 20 seasons through 2046 (about 58 MB save / 1.25 GB year-boundary heap)
+at last observation, and is not evidence for this new eligibility code.
+
+## D integrated implementation batch (2026-10-02)
+
+Current work is consolidated on feature/d-stage-integration from main
+71256de44aecdae0f7ea0aa1807c8b44b13a9d35. This batch combines the actual daily
+career clock and long-career QA (#106), ownership continuity (#107), and region
+organization/successor-local/current-contract protection (#108). Component
+branches remain recoverable; one integration PR becomes the review target.
+Those earlier dated entries describe component history, not separate merge plans.
+
+Integration validation passed locally: 30 shared UI/contracts acceptance cases
+across 26 engine contexts, seven calendar/scouting cases, 13 CI/publication/
+mutation ownership unit tests, and 92-module static/build checks. An actual
+daily-clock year with seed d-integration covered 258 official fixtures and save
+restoration. A second bounded year with seed d-memory-report verified the new
+memory report and resident-memory guard: 258 fixtures, approximately 6 MB save,
+136 MB heap and 647 MB RSS at its year boundary. These are desktop Node results,
+not mobile performance acceptance or completed multi-seed 100-season validation.
+
+The QA runner now reports heap, RSS, external and array-buffer memory separately;
+defaults retain the 1536 MiB heap budget and add a 4096 MiB RSS ceiling. Regional
+monopoly warnings accommodate multiple editions per year and avoid duplicate
+warnings for one competition/year. Primary files are daily-career-acceptance.mjs,
+club-ownership.js, region-continuity.js, shared local-service/roster/market paths,
+their acceptance cases and CI/long-career workflows. No temporary engine fork is
+introduced. Diagnostic files remain untracked.
+
+GitHub run 36899884255 was blocked before steps by failed account payments or a
+spending limit. No unlock/reset time was provided. Full CI remains mandatory for
+merging this batch; account billing settings must not be changed automatically.
+The prior-engine process 26248 remains the only 100-season run; it does not verify
+this integrated code. Preserve its partial reports even on budget failure.
+dist/LOL-GM-latest.html remains the verified #105 build; the locally built draft
+is separately available as dist/LOL-GM-D-preview.html.
+
+Next connected work: D06 license approval/transfer lifecycle, then remaining
+D04/D07-D10 mechanisms and D12/D13 acceptance. D11 requires completed multiple
+100-season seeds, and D13 still needs real mobile core tasks/TalkBack evidence.
+Neither D06 nor the whole D stage is marked complete by this consolidation.
+
+## D06 competition license lifecycle (2026-10-02)
+
+The integration batch now records a stable same-club competitionLicense ID and
+current office approval, region, division, parent, legal holder and policy kind.
+Existing franchise/mixed/open/reserve rules determine these states; this does
+not add a player-managed license market or change the configured league model.
+Ownership changes transfer the legal holder for the parent and owned reserves
+without replacing the club's license identity. Region moves, office system
+changes and actual promotion/relegation append dated transitions. Closed clubs
+return their license alongside existing financial and employment settlement.
+Unchanged reviews do not append history. Legacy saves get current approval state
+without fabricated prior events, while existing saved history is preserved.
+
+club-license.js owns this record; existing world/office/offseason/ownership/
+region/closure writers call it rather than introducing competing actions. Closure
+previews reject a changed owner/license state, and the operation-scoped rollback
+journal restores license data on a late failure. The acceptance case exercises
+franchise/mixed/open policies, a continuing parent/reserve sale and regional move,
+production promotion in two regions, mixed protection, reserve exclusion,
+old-owner preview rejection, closure rollback and current/legacy save restoration.
+
+Local validation: all 31 shared acceptance cases / 27 fresh engine contexts,
+seven calendar/scouting cases and 93-module static/build checks pass. The actual
+daily-career seed d-license-integration passed one year, 128 daily ticks, 258
+fixtures, 46 managed official games and phase save restoration; boundary save
+about 5.9 MB, heap 131 MB / RSS 352 MB. The untracked D preview is updated, while
+the verified latest HTML remains #105. The prior-engine process 26248 reached
+25 seasons through 2051, about 92 MB save and 942 MB boundary heap, still running;
+neither its partial run nor this bounded new-code year proves complete D11.
+
+Continue remaining D04/D07-D10 mechanisms and D12/D13 acceptance. D06 still needs
+wider repeated policy/succession acceptance in long careers. Full CI remains an
+unexecuted account-blocked merge gate for #109, and real mobile/TalkBack evidence
+remains required before whole-D completion.

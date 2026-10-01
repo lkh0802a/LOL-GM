@@ -35,7 +35,7 @@ function aiScoutUncertainty(db,t,p,k,stale=0){
 }
 function aiPublicMarketObservation(db,p,t){
   const perf=recentMarketPerformance(db,p),sample=Math.min(30,perf.games),
-    foreign=!isLocalPlayer(p,t.region),uncertainty=(foreign?5:3)+(sample<6?3:sample<15?1.5:0),
+    foreign=!isLocalPlayer(p,t.region,t.id),uncertainty=(foreign?5:3)+(sample<6?3:sample<15?1.5:0),
     noise=((hashStr(t.id+'|'+p.id+'|'+db.year+'|public')%2001)/1000-1),
     performance=(perf.rating-6.5)*4+Math.min(3,perf.intl*.08)+Math.min(3,perf.titles*.8),
     ability=Math.round(clamp((p.reputation??60)+performance+noise*uncertainty,20,99)),
@@ -47,7 +47,7 @@ function aiPublicMarketObservation(db,p,t){
 }
 function initialAiMarketDossierSignal(db,p,t){
   const perf=recentMarketPerformance(db,p),sample=Math.min(30,perf.games),
-    foreign=!isLocalPlayer(p,t.region),
+    foreign=!isLocalPlayer(p,t.region,t.id),
     uncertainty=(foreign?4.5:2.5)+(sample<6?3:sample<15?1.5:0),
     n=((hashStr(t.id+'|'+p.id+'|'+db.year+'|ability')%2001)/1000-1),
     ability=Math.round(clamp(playerOvr(p)+n*uncertainty,20,99)),

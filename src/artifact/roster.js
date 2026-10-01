@@ -24,7 +24,14 @@ function playerOriginRegion(p){return ensurePlayerEligibility(p)?.originRegion||
 function playerActiveLocalRegion(p){
   return p&&(p.activeLocalRegion||p.originLocalRegion||p.originRegion||p.region||p.nationality||null);
 }
-function isLocalPlayer(p,regionId){return !!p&&!!regionId&&playerActiveLocalRegion(p)===regionId}
+function legacyLocalForClub(p,regionId,teamId){
+  const c=p?.contract,owner=p?.loan?.ownerId||p?.team;
+  return !!c&&!!teamId&&(p.localEligibility?.legacyContracts||[]).some(q=>
+    q.region===regionId&&Array.isArray(q.teams)&&q.teams.includes(teamId)&&q.teams.includes(owner)&&
+    q.signed===c.signed&&q.until===c.until);
+}
+function isLocalPlayer(p,regionId,teamId=null){return !!p&&!!regionId&&
+  (playerActiveLocalRegion(p)===regionId||legacyLocalForClub(p,regionId,teamId))}
 function nonLocalLimitForTeam(db,t){
   const team=teamRef(db,t);if(!team)return FIRST_TEAM_NON_LOCAL_LIMIT;
   if((team.division||1)===1)return FIRST_TEAM_NON_LOCAL_LIMIT;
@@ -32,19 +39,19 @@ function nonLocalLimitForTeam(db,t){
 }
 function teamNonLocalCount(db,t,excludePid=null){
   const team=teamRef(db,t);if(!team)return 0;
-  return (team.roster||[]).reduce((n,id)=>{if(id===excludePid)return n;const p=db.players[id];return n+(p&&!isLocalPlayer(p,team.region)?1:0)},0);
+  return (team.roster||[]).reduce((n,id)=>{if(id===excludePid)return n;const p=db.players[id];return n+(p&&!projectedPlayerIsLocal(db,p,team)?1:0)},0);
 }
 function localRegistrationError(db,t,p){
   const team=teamRef(db,t),player=playerRef(db,p);if(!team||!player)return '등록 대상을 찾을 수 없습니다';
-  if(projectedPlayerLocal(db,player)===team.region)return null;
+  if(projectedPlayerIsLocal(db,player,team))return null;
   if(officialRegistrationEnabled(db)){
     const ids=(team.registration?.players||[]).filter(id=>officialPlayerCanRepresent(db,db.players[id],team));
-    return ids.includes(player.id)||ids.filter(id=>projectedPlayerLocal(db,db.players[id])!==team.region).length<nonLocalLimitForTeam(db,team)
+    return ids.includes(player.id)||ids.filter(id=>!projectedPlayerIsLocal(db,db.players[id],team)).length<nonLocalLimitForTeam(db,team)
       ?null:'공식 명단 비로컬 상한을 넘습니다';
   }
   if((team.roster||[]).includes(player.id))return null;
-  const reserved=loanOutgoingPlayers(db,team).filter(p=>p.id!==player.id&&projectedPlayerLocal(db,p)!==team.region).length,
-    foreign=team.roster.filter(id=>projectedPlayerLocal(db,db.players[id])!==team.region).length;
+  const reserved=loanOutgoingPlayers(db,team).filter(p=>p.id!==player.id&&!projectedPlayerIsLocal(db,p,team)).length,
+    foreign=team.roster.filter(id=>!projectedPlayerIsLocal(db,db.players[id],team)).length;
   return foreign+reserved>=nonLocalLimitForTeam(db,team)?'임대 복귀 인원 포함 비로컬 선수 등록 상한을 넘습니다':null;
 }
 function contractedMoveSeason(db){return db?.world?.year??db?.year}
@@ -111,8 +118,8 @@ function validateRosterPlan(db,t,plan){
     if(!officialRegistrationEnabled(db)&&reserved.length&&(counts[team.id]||0)+reserved.length>max)errors.push(team.name+': 임대 복귀 자리를 유지해야 합니다');
     if(!officialRegistrationEnabled(db)&&reserved.length){
       const foreign=base.filter(pid=>assign[pid]===team.id||!assign[pid]&&db.players[pid].team===team.id)
-        .filter(pid=>!isLocalPlayer(db.players[pid],team.region)).length+
-        reserved.filter(p=>!isLocalPlayer(p,team.region)).length;
+        .filter(pid=>!projectedPlayerIsLocal(db,db.players[pid],team)).length+
+        reserved.filter(p=>!projectedPlayerIsLocal(db,p,team)).length;
       if(foreign>nonLocalLimitForTeam(db,team))errors.push(team.name+': 임대 복귀 비로컬 자리를 유지해야 합니다');
     }
   }

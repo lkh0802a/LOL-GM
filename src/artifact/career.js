@@ -31,7 +31,7 @@ function promotionStatus(db,t){
 function setupTeamsForManager(db){const root=managedTeam(db);if(!root)return [];return root.parent?[root]:[root,...reserveTeamsOf(db,root)]}
 function initialPayrollFloorKey(db,team){const lim=initialSquadLimits(db,team);return [team.region,lim.min,nonLocalLimitForTeam(db,team)].join('|')}
 function cheapestInitialRows(db,team){
-  const rows=Object.values(db.players).filter(p=>!p.retired&&!p.team).map(p=>({id:p.id,s:asking(db,p,team.region),nonLocal:!isLocalPlayer(p,team.region)}));
+  const rows=Object.values(db.players).filter(p=>!p.retired&&!p.team).map(p=>({id:p.id,s:asking(db,p,team.region),nonLocal:!projectedPlayerIsLocal(db,p,team)}));
   return {local:rows.filter(x=>!x.nonLocal).sort((a,b)=>a.s-b.s),foreign:rows.filter(x=>x.nonLocal).sort((a,b)=>a.s-b.s)};
 }
 function minimumViableInitialPayroll(db,t){
@@ -82,7 +82,7 @@ function initialOfferCheck(db,p,target,terms={}){
   const player=playerRef(db,p),team=teamRef(db,target);if(!player||player.retired)return {ok:false,reason:'계약할 수 없는 선수입니다'};if(player.team)return {ok:false,reason:'이미 소속팀이 있는 선수입니다'};if(!team||team.active===false)return {ok:false,reason:'대상 팀이 없습니다'};
   const limits=initialSquadLimits(db,team);if((team.roster||[]).length>=limits.max)return {ok:false,reason:'스쿼드 최대 '+limits.max+'명입니다'};
   const root=parentTeamOf(db,team),rules=rosterRulesForTeam(db,root);if(root&&reserveTeamsOf(db,root).length&&organizationRoster(db,root).length>=rules.integratedMax)return {ok:false,reason:'통합 로스터 최대 '+rules.integratedMax+'명입니다'};
-  const imports=teamNonLocalCount(db,team),cap=nonLocalLimitForTeam(db,team);if(!isLocalPlayer(player,team.region)&&imports>=cap)return {ok:false,reason:'비로컬 등록 한도에 도달했습니다'};
+  const imports=teamNonLocalCount(db,team),cap=nonLocalLimitForTeam(db,team);if(!projectedPlayerIsLocal(db,player,team)&&imports>=cap)return {ok:false,reason:'비로컬 등록 한도에 도달했습니다'};
   const salary=Math.max(.1,+terms.salary||asking(db,player,team.region)),projected=payroll(db,team)+salary,ceiling=initialSalaryCeiling(db,team);if(projected>ceiling+0.001)return {ok:false,reason:'연봉 예산을 초과합니다'};
   return {ok:true,salary};
 }
@@ -112,7 +112,7 @@ function initialMarketSnapshot(db,teams){
 function initialCheapestCost(rows,excludeId,n){if(n<=0)return 0;let cost=0,count=0;for(const x of rows){if(x.id===excludeId)continue;cost+=x.s;if(++count>=n)break}return count===n?cost:Infinity}
 function initialFutureFeasible(db,t,candidate,salary,snap=null){
   const team=teamRef(db,t),lim=initialSquadLimits(db,team),projected=(team.roster||[]).length+1,need=Math.max(0,lim.min-projected);
-  const usedImports=teamNonLocalCount(db,team)+(isLocalPlayer(candidate,team.region)?0:1),cap=nonLocalLimitForTeam(db,team),budget=initialSalaryCeiling(db,team)-payroll(db,team)-salary;
+  const usedImports=teamNonLocalCount(db,team)+(projectedPlayerIsLocal(db,candidate,team)?0:1),cap=nonLocalLimitForTeam(db,team),budget=initialSalaryCeiling(db,team)-payroll(db,team)-salary;
   if(projected>lim.max||usedImports>cap||budget<-.001)return false;if(!need)return true;
   const market=snap||initialMarketSnapshot(db,[team]),rows=market.byRegion[team.region],room=cap-usedImports;let best=Infinity;
   for(let foreignN=0;foreignN<=Math.min(room,need);foreignN++){const localN=need-foreignN,cost=initialCheapestCost(rows.local,candidate.id,localN)+initialCheapestCost(rows.foreign,candidate.id,foreignN);best=Math.min(best,cost)}
