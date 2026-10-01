@@ -171,5 +171,18 @@ does not prove a complete dependency graph or transaction correctness.
 Focused guard tests cover a new UI cash writer, growth within an existing owner,
 caller migration/removal, reads versus writes and literal bracket spelling.
 Runtime code, RNG, save format and game rules are unchanged in this R02 step.
-Next: centralize finance cash/ledger writers while preserving operation order,
-rounding and the existing transaction rollback scope.
+
+## R03 incremental finance writer migration
+
+The signing-bonus and permanent-transfer paths now call
+`finance.js::payFinancePrepaid` / `receiveFinancePrepaidTransfer`. They update
+cash and its existing prepaid category together in the finance domain. Their
+prior one-decimal cash rounding, category rounding, and transfer call order are
+preserved. Player action transaction snapshots still own rollback. The ownership
+guard now expects zero direct cash writes in `contracts.js` and `transfer.js`,
+and records their two new writers in `finance.js`.
+
+Remaining direct writers are staged for separate follow-ups: staff severance,
+medical replacement wages, scouting expense, facilities, the unlisted AI / other
+contract paths, and roster/date migration. Check the guard inventory and direct
+callers before each step. Do not claim finance is fully centralized yet.

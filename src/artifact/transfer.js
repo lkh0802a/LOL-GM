@@ -258,8 +258,7 @@ function transferFee(db,p){const left=p.contract?Math.max(1,p.contract.until-db.
 function doTransfer(db,p,from,to,fee){
   const moveErr=contractedMoveError(db,p),localErr=localRegistrationError(db,to,p);if(moveErr||localErr)throw new Error(moveErr||localErr);
   recordContractedMove(db,p,'permanent',from,to,{fee});assignPlayerToTeam(db,p,to);
-  from.finance.cash=Math.round((from.finance.cash+fee)*10)/10;to.finance.cash=Math.round((to.finance.cash-fee)*10)/10;
-  recordFinancePrepaid(from,'transferReceived',fee);recordFinancePrepaid(to,'transferPaid',fee);
+  receiveFinancePrepaidTransfer(from,fee);payFinancePrepaid(to,'transferPaid',fee);
   recordPlayerEvent(p,'transfer',db.year,{from:from.id,to:to.id,fee,date:db.worldDate});
   news(db,`이적: ${p.name} ${from.name} → ${to.name} (이적료 ${money(fee)})`);
 }

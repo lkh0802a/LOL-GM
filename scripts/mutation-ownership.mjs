@@ -3,8 +3,9 @@
 // This is a conservative source-text guard, not an alias-aware JS call graph.
 export const MUTATION_OWNERSHIP={
   'contract-window.js':{date:3},
-  'contracts.js':{cash:1,assign:3},
+  'contracts.js':{assign:3},
   'development.js':{cash:1},
+  'finance.js':{cash:2},
   'medical.js':{cash:1},
   'office.js':{remove:1},
   'offseason.js':{date:3,remove:1},
@@ -14,7 +15,7 @@ export const MUTATION_OWNERSHIP={
   'season.js':{date:2},
   'staff.js':{cash:2},
   'state-player-actions.js':{cash:1,remove:1},
-  'transfer.js':{cash:2,assign:1}
+  'transfer.js':{assign:1}
 };
 
 export function mutationInventory(source){
