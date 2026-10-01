@@ -431,8 +431,6 @@ jobs:
     if: needs.changes.outputs.run_full == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 8
-    permissions:
-      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -449,11 +447,7 @@ jobs:
         run: node scripts/ci-run.mjs build -- npm run build
 
       - name: Verify production artifact
-        run: test -s dist/index.html
-
-      - name: Sync generated standalone
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: node scripts/sync-standalone.mjs
+        run: test -s dist/index.html && cmp -s index.html dist/index.html
 
       - name: Upload HTML preview
         uses: actions/upload-artifact@v4
@@ -514,3 +508,32 @@ jobs:
           fi
 
           echo "Required CI gate passed: docs_only=$DOCS_ONLY run_full=$RUN_FULL"
+
+  standalone-sync:
+    needs: [changes, perf-build, verify]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.outputs.run_full == 'true' && needs.verify.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout validated commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Download validated standalone
+        uses: actions/download-artifact@v4
+        with:
+          name: lol-gm-html-preview
+          path: validated-standalone
+
+      - name: Sync validated standalone
+        run: |
+          cp validated-standalone/index.html index.html
+          node scripts/sync-standalone.mjs
