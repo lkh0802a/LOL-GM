@@ -744,3 +744,45 @@ runner: 24 acceptances / 20 isolated contexts; static: 86 modules. Full final-he
 Actions remains the merge gate. Next connected target: outstanding D04 insolvency
 and representation boundaries, then D06 official registration/employment separation
 and regional restructuring, followed by remaining D07–D13 acceptance.
+
+## D06-B1 official registration gameplay batch (2026-10-02)
+
+New seasons explicitly enable registrationVersion 1. team.roster/player.team
+remain employment/training assignment; team.registration holds the submitted
+domestic list and official starting five. International seasons snapshot entries
+before play. Existing in-season saves preserve legacy participation until their
+next season, rather than fabricating a past submission or invalidating a live Bo.
+
+Manager/AI submit final organization lists through one atomic roster.register
+command. A first/reserve exchange validates the two final lists together, with
+5-player minima, region-owned reserve cap/import policy, first-team 10/2 maxima,
+contract/loan ownership and single-squad membership. Employment holdings can
+exceed official maxima. Owned-reserve coaches control their squad's registration,
+while parent club economic/internal-move authority remains unchanged.
+
+Region-owned registrationWindows, internalMoveWindows and internalMoveWaitDays
+are separate. The fictional default domestic submission periods reuse Jan 7–31
+and Jul 1–14; internal moves default to unrestricted domestic days with zero wait.
+International entries and internal moves lock at the first actual UTC fixture,
+until tournament completion. Internal moves preserve existing official rights.
+Outside-window FA employment does not grant official eligibility or local service.
+Official lineups can change outside submission windows; an active set draft locks
+its selection. Local-service days now use actual domestic registration.
+
+Official matches and interactive drafts use derived official squad views, retaining
+original player objects for real statistics. Employment rosters/depth are not
+temporarily overwritten. Explicit medical replacement policy adds exceptional
+entries and preserves the other squad's five-player floor; a late entry failure
+rolls back the underlying signing/move, finances, service and tournament entries.
+Shortage forfeits create no games/appearances. Double shortages are explicitly
+flagged and retain scheduled bracket order for administrative advancement, a
+fictional fallback requiring later long-run balance review.
+
+Owners: registration.js (policy/commands/AI/save validation), registration-match.js
+(derived official views, final entries, medical exception and shortages), compact
+ui-registration.js and existing season/competition/series/medical/roster journals.
+Focused registry/medical and two-season career checks pass; static: 89 modules.
+Full final-head Actions remains the merge gate. D06 is not complete: license and
+owner transitions, split/merge successor local choice/history and long-run reserve
+regeneration/promotion evidence remain. D04 representation/insolvency and later
+D07–D13 work also remain; the whole-D objective stays active.

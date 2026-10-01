@@ -37,6 +37,11 @@ function teamNonLocalCount(db,t,excludePid=null){
 function localRegistrationError(db,t,p){
   const team=teamRef(db,t),player=playerRef(db,p);if(!team||!player)return '등록 대상을 찾을 수 없습니다';
   if(projectedPlayerLocal(db,player)===team.region)return null;
+  if(officialRegistrationEnabled(db)){
+    const ids=(team.registration?.players||[]).filter(id=>officialPlayerCanRepresent(db,db.players[id],team));
+    return ids.includes(player.id)||ids.filter(id=>projectedPlayerLocal(db,db.players[id])!==team.region).length<nonLocalLimitForTeam(db,team)
+      ?null:'공식 명단 비로컬 상한을 넘습니다';
+  }
   if((team.roster||[]).includes(player.id))return null;
   const reserved=loanOutgoingPlayers(db,team).filter(p=>p.id!==player.id&&projectedPlayerLocal(db,p)!==team.region).length,
     foreign=team.roster.filter(id=>projectedPlayerLocal(db,db.players[id])!==team.region).length;
@@ -90,6 +95,7 @@ function rosterPlanState(db,t){
 function validateRosterPlan(db,t,plan){
   const parent=parentTeamOf(db,t),errors=[];if(!parent)return {ok:false,errors:['구단을 찾을 수 없습니다']};
   const teams=organizationTeams(db,parent),teamIds=new Set(teams.map(x=>x.id)),rules=rosterRulesForTeam(db,parent);
+  const blocked=internalSquadMoveError(db,parent,plan?.assignments);if(blocked)errors.push(blocked);
   if(!reserveTeamsOf(db,parent).length)errors.push('이 구단은 산하 2군을 운영하지 않습니다');
   const base=organizationRoster(db,parent),baseSet=new Set(base),assign=plan&&plan.assignments||{},counts=Object.fromEntries(teams.map(x=>[x.id,0]));
   for(const pid of base){
@@ -102,8 +108,8 @@ function validateRosterPlan(db,t,plan){
   for(const pid of Object.keys(assign))if(!baseSet.has(pid))errors.push('구단 통합 로스터 밖의 선수를 이동할 수 없습니다: '+pid);
   for(const team of teams){
     const reserved=loanOutgoingPlayers(db,team),max=team.parent?rules.reserveTeamMax:rules.firstTeamMax;
-    if(reserved.length&&(counts[team.id]||0)+reserved.length>max)errors.push(team.name+': 임대 복귀 자리를 유지해야 합니다');
-    if(reserved.length){
+    if(!officialRegistrationEnabled(db)&&reserved.length&&(counts[team.id]||0)+reserved.length>max)errors.push(team.name+': 임대 복귀 자리를 유지해야 합니다');
+    if(!officialRegistrationEnabled(db)&&reserved.length){
       const foreign=base.filter(pid=>assign[pid]===team.id||!assign[pid]&&db.players[pid].team===team.id)
         .filter(pid=>!isLocalPlayer(db.players[pid],team.region)).length+
         reserved.filter(p=>!isLocalPlayer(p,team.region)).length;
@@ -112,14 +118,14 @@ function validateRosterPlan(db,t,plan){
   }
   const first=parent,firstN=counts[first.id]||0;
   if(firstN<rules.firstTeamMin)errors.push('1군은 최소 '+rules.firstTeamMin+'명이어야 합니다 (현재 계획 '+firstN+'명)');
-  if(firstN>rules.firstTeamMax)errors.push('1군은 최대 '+rules.firstTeamMax+'명까지 가능합니다 (현재 계획 '+firstN+'명)');
+  if(!officialRegistrationEnabled(db)&&firstN>rules.firstTeamMax)errors.push('1군은 최대 '+rules.firstTeamMax+'명까지 가능합니다 (현재 계획 '+firstN+'명)');
   for(const reserve of teams.filter(x=>x.parent)){
     const n=counts[reserve.id]||0;
     if(n<rules.reserveTeamMin)errors.push(reserve.name+'은 최소 '+rules.reserveTeamMin+'명이어야 합니다 (현재 계획 '+n+'명)');
-    if(n>rules.reserveTeamMax)errors.push(reserve.name+'은 최대 '+rules.reserveTeamMax+'명까지 가능합니다 (현재 계획 '+n+'명)');
+    if(!officialRegistrationEnabled(db)&&n>rules.reserveTeamMax)errors.push(reserve.name+'은 최대 '+rules.reserveTeamMax+'명까지 가능합니다 (현재 계획 '+n+'명)');
   }
   const total=Object.values(counts).reduce((x,y)=>x+y,0);
-  if(total<rules.integratedMin||total>rules.integratedMax)errors.push('통합 로스터는 '+rules.integratedMin+'~'+rules.integratedMax+'명이어야 합니다 (현재 '+total+'명)');
+  if(total<rules.integratedMin||!officialRegistrationEnabled(db)&&total>rules.integratedMax)errors.push('통합 로스터는 '+rules.integratedMin+'~'+rules.integratedMax+'명이어야 합니다 (현재 '+total+'명)');
   return {ok:errors.length===0,errors,counts,total,parentId:parent.id,assignments:Object.fromEntries(base.map(pid=>[pid,assign[pid]||db.players[pid].team]))};
 }
 function applyRosterPlan(db,t,plan,source='manager'){
@@ -127,7 +133,8 @@ function applyRosterPlan(db,t,plan,source='manager'){
   const parent=db.teams[checked.parentId],before=Object.fromEntries(Object.keys(checked.assignments).map(pid=>[pid,db.players[pid].team])),moves=[];
   for(const [pid,dst] of Object.entries(checked.assignments))if(before[pid]!==dst)moves.push({pid,from:before[pid],to:dst,kind:dst===parent.id?'callup':'senddown'});
   for(const team of organizationTeams(db,parent))team.roster=(team.roster||[]).filter(pid=>!moves.some(m=>m.pid===pid));
-  for(const m of moves){const p=db.players[m.pid],dst=db.teams[m.to];dst.roster.push(p.id);p.team=dst.id}
+  for(const m of moves){const p=db.players[m.pid],dst=db.teams[m.to];dst.roster.push(p.id);p.team=dst.id;
+    if(officialRegistrationEnabled(db))p.lastInternalMoveDate=db.worldDate}
   if(db.world)for(const m of moves){const p=db.players[m.pid];recordPlayerEvent(p,'squad_move',db.year,{from:m.from,to:m.to,kind:m.kind,date:db.worldDate,source});onSquadMoveSatisfaction(db,p,m)}
   for(const team of organizationTeams(db,parent))initializeDepthChart(db,team,true);
   return {...checked,moves};

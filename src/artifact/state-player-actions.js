@@ -113,7 +113,7 @@ function validatePlayerSignAction(db,a){
   if(kind!=='renewal'&&kind!=='renewal_agreement'){
     const capacity=loanOutgoingPlayers(db,t).length&&loanRosterCapacityError(db,t,p);
     if(capacity)return worldActionError('registration_limit',capacity);
-    const registration=localRegistrationError(db,t,p);
+    const registration=officialRegistrationEnabled(db)&&kind!=='medical_replacement'?null:localRegistrationError(db,t,p);
     if(registration)return worldActionError('registration_limit',registration);
   }
   let fee=0;
@@ -152,7 +152,7 @@ function validatePlayerTransferAction(db,a){
   const feePlan=normalizeTransferFeePlan(db,a.fee,a.feePlan);
   if(!feePlan.ok)return worldActionError('invalid_terms',feePlan.reason);
   if(feePlan.upfront>0&&to.finance.cash+1e-8<feePlan.upfront)return worldActionError('insufficient_cash','선지급 이적료를 지급할 현금이 부족합니다');
-  const move=contractedMoveError(db,p)||localRegistrationError(db,to,p);
+  const move=contractedMoveError(db,p)||(!officialRegistrationEnabled(db)&&localRegistrationError(db,to,p));
   if(move)return worldActionError('invalid_transfer',move);
   const capacity=loanOutgoingPlayers(db,to).length&&loanRosterCapacityError(db,to,p);
   if(capacity)return worldActionError('registration_limit',capacity);
