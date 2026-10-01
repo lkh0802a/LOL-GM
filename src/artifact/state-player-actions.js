@@ -226,10 +226,11 @@ function applyPlayerReleaseAction(db,c){
     settlement=contractReleaseSettlement(db,p,c.mode,c.amount),cost=settlement.amount;
   recordContractReleaseObligation(t,cost,settlement);
   removePlayerFromTeam(db,p);
-  if(c.mode==='manager'||c.mode==='medical_end'||c.mode==='mutual')invalidateMarketDemand(db);
+  if(['manager','medical_end','mutual','club_closure'].includes(c.mode))invalidateMarketDemand(db);
   p.contract=null;p.faYears=0;
-  if(c.mode==='manager'||c.mode==='mutual'||cost>0)
-    recordPlayerEvent(p,c.mode==='mutual'?'mutual_termination':'release',db.year,
+  if(['manager','mutual','club_closure'].includes(c.mode)||cost>0)
+    recordPlayerEvent(p,c.mode==='mutual'?'mutual_termination':
+      c.mode==='club_closure'?'club_closure':'release',db.year,
     {team:t.id,cost,date:db.worldDate,settlement});
   if(c.mode==='medical_end'){
     recordPlayerEvent(p,'medical_replacement_end',db.year,{

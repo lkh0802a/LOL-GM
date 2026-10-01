@@ -128,6 +128,11 @@ function officeDecisions(db,rng,f,ev,mid){
   }
 }
 function officeMidSeason(db,rng,f){officeDecisions(db,rng,f,t=>news(db,t),true)}
-function foldTeam(db,t){t.active=false;t.folded=db.year;for(const pid of t.roster.slice()){const p=db.players[pid];if(p){removePlayerFromTeam(db,p);p.faYears=0}}t.roster=[]}
+function foldTeam(db,t){
+  if(t.active===false)return;
+  const result=commitWorldAction(db,{type:'club.close',teamId:t.id,actor:'system'});
+  if(!result.ok)throw new Error('구단 해체 실패: '+result.errors.join(' · '));
+  return result;
+}
 
 // 세계 단위 결정: 새 지역, 새 국제대회, 구단 인수

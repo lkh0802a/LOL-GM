@@ -11,6 +11,20 @@ function releaseObligationsPanel(releases,title){
 }
 function financePanel(t){
   const f=t.finance; if(!f)return '';
+  if(t.active===false&&f.closureSettlement){
+    const closure=f.closureSettlement;
+    return `<section><h3>해체 구단 계약 정산 · ${esc(t.name)}</h3>
+      <div class="fin"><div><span>계약 보상 청구</span><b>${money(closure.amount)}</b></div>
+      <div><span>지급 완료</span><b>${money(closure.paidAmount)}</b></div>
+      <div><span>미지급</span><b>${money(closure.unpaidAmount)}</b></div></div>
+      <p class="hint">${esc(closure.date||String(closure.year))} 해체 시 가용 현금을 청구액 비율로 배분했습니다. 미지급 채무는 기록에 보존되며 다음 시즌 운영비로 중복 청구하지 않습니다.</p>
+      ${releaseObligationsPanel(financeReleaseObligations(t),'해체 구단 미지급 보상')}
+      <details class="cfgcard release-settlements"><summary>선수별 지급 내역</summary>
+      ${closure.items.map(row=>`<div class="cfgcard"><b>${esc(row.playerName||row.pid)}</b>
+        <p>청구 ${money(row.amount)} · 지급 ${money(row.paidAmount)} · 미지급 ${money(row.unpaidAmount)}</p></div>`).join('')}
+      ${closure.unattributedAmount?`<p class="hint">상세 미기록 청구 ${money(closure.unattributedAmount)} · 지급 ${money(closure.unattributedPaid)} · 미지급 ${money(closure.unattributedUnpaid)}</p>`:''}
+      </details></section>`;
+  }
   const R=DB.regions[t.region], last=f.history.slice(-1)[0], pay=payroll(DB,t), outlook=financeForecast(DB,t);
   const RK={league:'중계권 분배',sponsor:'스폰서',merch:'굿즈',prize:'상금',owner:'구단주 지원',tax:'사치세 분배',transfer:'이적료 수입',sponsorMilestone:'스폰서 목표 달성',academyFunding:'모구단 지원금'}, EK={salary:'연봉',staff:'코칭 스태프',ops:'운영비',facility:'훈련 시설',floor:'플로어 부담금',buyout:'선수 방출 비용',tax:'사치세',facilityInvestment:'시설 증설비',signingBonus:'계약금',transfer:'이적료 지출',staffSeverance:'스태프 해지금',travel:'해외 대회 출장비',interest:'재정 부족 부담금',scouting:'스카우팅 비용',academySupport:'2군 운영 지원'};
   return `<section><h3>재정</h3><div class="fin">

@@ -18,6 +18,8 @@ function actionJournalTeamSnapshot(team){
   const hasRoster=Object.prototype.hasOwnProperty.call(team,'roster');
   return {
     team,hasDepth,hasFinance,hasRoster,
+    lifecycle:['active','folded'].map(key=>({key,
+      present:Object.prototype.hasOwnProperty.call(team,key),value:team[key]})),
     rosterRef:team.roster,roster:(team.roster||[]).slice(),
     depthRef:team.depthChart,depth:hasDepth?actionJournalClone(team.depthChart):null,
     financeRef:team.finance,finance:hasFinance?actionJournalClone(team.finance):null
@@ -26,6 +28,8 @@ function actionJournalTeamSnapshot(team){
 
 function actionJournalRestoreTeam(entry){
   const {team}=entry;
+  for(const {key,present,value} of entry.lifecycle)
+    if(present)team[key]=value;else delete team[key];
   if(entry.hasRoster){
     if(Array.isArray(entry.rosterRef)){
       entry.rosterRef.splice(0,entry.rosterRef.length,...entry.roster);
@@ -45,7 +49,10 @@ function actionJournalRestoreTeam(entry){
 
 function actionJournalTargets(db,command){
   const playerIds=new Set(),teamIds=new Set();
-  if(command.type==='roster.plan'||command.type==='roster.market-callup'){
+  if(command.type==='club.close'){
+    for(const id of command.teamIds)teamIds.add(id);
+    for(const pid of command.playerIds)playerIds.add(pid);
+  }else if(command.type==='roster.plan'||command.type==='roster.market-callup'){
     for(const team of organizationTeams(db,command.parentId)){
       teamIds.add(team.id);
     }
@@ -75,9 +82,21 @@ function captureWorldActionJournal(db,command){
   const newsRef=db.news,newsRows=Array.isArray(newsRef)?newsRef.slice():null;
   const hasDemand=Object.prototype.hasOwnProperty.call(db,'_marketDemandCache');
   const demandRef=db._marketDemandCache;
+  const w=db.world,closure=command.type==='club.close'&&w?{
+    firedPresent:Object.prototype.hasOwnProperty.call(w,'fired'),fired:w.fired,
+    rows:[...command.negotiationIds.map(id=>[w.negotiations,id]),
+      ...command.agreementIds.map(id=>[w.contractAgreements,id])]
+      .map(([store,id])=>({store,id,ref:store[id],record:actionJournalClone(store[id])}))
+  }:null;
   return {
     playerIds,
     rollback(){
+      if(closure){
+        if(closure.firedPresent)w.fired=closure.fired;else delete w.fired;
+        for(const {store,id,ref,record} of closure.rows){
+          actionJournalRestoreObject(ref,record);store[id]=ref;
+        }
+      }
       for(const entry of teams)actionJournalRestoreTeam(entry);
       for(const {pid,player,record} of players){
         actionJournalRestoreObject(player,record);
