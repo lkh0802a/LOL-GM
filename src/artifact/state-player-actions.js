@@ -35,7 +35,7 @@ function playerActionSnapshot(db,action){
       return t?{id,active:t.active!==false,roster:(t.roster||[]).slice().sort(),
         cash:t.finance?.cash??null,buyout:t.finance?.buyout??null,
         deals:JSON.parse(JSON.stringify(t.finance?.transferDeals||null)),
-        foreign:teamNonLocalCount(db,t)}
+        foreign:teamNonLocalCount(db,t),relationship:p?playerTeamRelationship(db,p,t):50}
       :{id,missing:true};
     })
   };

@@ -31,6 +31,29 @@ function playerRelationKey(a,b){const x=typeof a==='string'?a:a?.id,y=typeof b==
 function playerRelationship(db,a,b){const k=playerRelationKey(a,b);if(!k)return 50;return db.playerRelations?.[k]??50}
 function adjustPlayerRelationship(db,a,b,delta){const k=playerRelationKey(a,b);if(!k)return 50;db.playerRelations=db.playerRelations||{};const v=clamp((db.playerRelations[k]??50)+delta,0,100);db.playerRelations[k]=Math.round(v*10)/10;return db.playerRelations[k]}
 function teamRelationshipScore(db,t){const ids=(t?.roster||[]).filter(id=>db.players[id]&&!db.players[id].retired);if(ids.length<2)return 50;let sum=0,n=0;for(let i=0;i<ids.length;i++)for(let j=i+1;j<ids.length;j++){sum+=playerRelationship(db,ids[i],ids[j]);n++}return n?sum/n:50}
+function rememberTeamRelationships(db,t,ids){
+  t.relationshipReports=t.relationshipReports||{};
+  const members=[...new Set(ids)].filter(id=>db.players[id]?.team===t.id);
+  for(let i=0;i<members.length;i++)for(let j=i+1;j<members.length;j++){
+    const key=playerRelationKey(members[i],members[j]);
+    t.relationshipReports[key]={value:playerRelationship(db,members[i],members[j]),date:db.worldDate};
+  }
+  const entries=Object.entries(t.relationshipReports);
+  if(entries.length>512)t.relationshipReports=Object.fromEntries(entries.sort((a,b)=>String(b[1].date).localeCompare(String(a[1].date))||a[0].localeCompare(b[0])).slice(0,512));
+}
+function knownRecruitRelationship(db,t,p){
+  const values=(t.roster||[]).filter(id=>id!==p.id).map(id=>{
+    const report=t.relationshipReports?.[playerRelationKey(p.id,id)];
+    if(!report||!Number.isFinite(report.value)||!report.date)return 50;
+    const days=Math.max(0,(Date.parse(db.worldDate)-Date.parse(report.date))/86400000);
+    return Number.isFinite(days)?50+(clamp(report.value,0,100)-50)*Math.max(0,1-days/730):50;
+  });
+  return values.length?avg(values):50;
+}
+function playerTeamRelationship(db,p,t){
+  const ids=(t.roster||[]).filter(id=>id!==p.id&&db.players[id]&&!db.players[id].retired);
+  return ids.length?avg(ids.map(id=>playerRelationship(db,p,id))):50;
+}
 const CAREER_GOAL_KO={development:'성장 기회',starter:'주전 정착',international:'국제대회 출전',titles:'우승 경쟁',stability:'안정적인 커리어'};
 const SAT_REASON_KO={teammates:'동료와의 불화',playing_time:'출전 시간 부족',promise_role:'역할 약속 불이행',reserve:'2군 배치',contract:'계약/연봉 불만',team_results:'팀 성적 불만',role:'역할 불만',international:'국제대회 기회 부족',career_goal:'커리어 목표 불일치'};
 function startContractRolePromise(db,p,t){
@@ -164,6 +187,6 @@ function afterSeries(db,lines,rec){
     for(const id of t.roster){if(by[id])continue;const p=db.players[id];if(p){pState(p);p.morale=clamp(p.morale-1,0,100);p.sharpness=clamp(p.sharpness-.8,0,100);p.teamAdaptation=clamp(p.teamAdaptation+.18,0,100);p.tacticalAdaptation=clamp(p.tacticalAdaptation+.12,0,100)}}
     const active=Object.keys(by).filter(id=>db.players[id]?.team===tid),relDelta=rec.winner===tid?.18:-.08;
     for(let i=0;i<active.length;i++)for(let j=i+1;j<active.length;j++)adjustPlayerRelationship(db,active[i],active[j],relDelta);
-    recoverTeamCohesion(db,t,active,.025);}
+    rememberTeamRelationships(db,t,active);recoverTeamCohesion(db,t,active,.025);}
 }
 // 매 경기일: 기본 피로 회복. 훈련은 아래의 희소 포인트 배분으로만 관리한다
