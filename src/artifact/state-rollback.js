@@ -45,7 +45,7 @@ function actionJournalRestoreTeam(entry){
 
 function actionJournalTargets(db,command){
   const playerIds=new Set(),teamIds=new Set();
-  if(command.type==='roster.plan'){
+  if(command.type==='roster.plan'||command.type==='roster.market-callup'){
     for(const team of organizationTeams(db,command.parentId)){
       teamIds.add(team.id);
     }

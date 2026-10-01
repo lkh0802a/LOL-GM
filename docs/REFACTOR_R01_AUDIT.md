@@ -228,3 +228,25 @@ ordering and the lastDailyTick duplicate/backward guards remain intact.
 
 Next: remove the AI reserve-callup bypass through roster-plan parity coverage,
 then audit replacement-complete helpers for deletion and final compatibility QA.
+
+## R05 AI market callup convergence
+
+`contracts.js` now requests `aiMarketReserveCallups`; selection thresholds,
+assignment order and report entries are owned by roster.js. Each atomic callup
+uses `roster.market-callup` through the shared preview, stale-state check,
+revalidation, scoped rollback and post-commit membership guard. Contracts retain
+only the intentional signContract bootstrap/domain assignment.
+
+Market replenishment is not a registered-season roster plan: releases can leave
+an organization below minimum before FA signings refill it. Reusing weekly
+roster.plan would reject historically accepted callups, and its squad events
+would alter satisfaction. The dedicated market command preserves those
+semantics while restricting execution to AI market maintenance and protecting
+the managed club. No registration rule, RNG call or selection threshold changes.
+
+market-reserve-acceptance.mjs compares five baseline scenarios, including
+underfilled rosters, swaps and no-callup thresholds, across complete DB/report
+and save/restore state. It also verifies pure previews, late-writer rollback and
+manager authority. This acceptance is part of local check and the existing
+shared Actions domain runner. Next: release-settlement ownership and final
+legacy/dependency/compatibility audit.

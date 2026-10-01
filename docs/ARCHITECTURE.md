@@ -105,3 +105,10 @@ The generated root `index.html` is a deployment artifact. Canonical edits belong
 - lineup domain: `lineup.js` owns official five-player slot assignment and validation; `p.role` is player identity, not an eligibility gate.
 - role conversion domain: `role-conversion.js` owns proposal acceptance/refusal, long-term training progress, role-use acceleration, opportunity cost and primary-role identity changes. It does not gate one-off lineup assignment.
 - player detail/scouting domain: `ui-player.js` owns player detail, scouting search/report rendering and role-conversion controls; `ui-roster.js` owns squad editing/bindings.
+
+Market FA replenishment uses the same preview/commit/rollback gateway via
+`roster.market-callup`, with decision and assignment owned by `roster.js`. This
+maintenance operation precedes complete registration and preserves historical
+market behavior (including no squad-move satisfaction/event changes); it is
+AI-only, market-only and cannot operate on a manually managed club. Ordinary
+manager/weekly reserve swaps retain full `roster.plan` validation.

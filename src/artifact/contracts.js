@@ -206,12 +206,7 @@ function contractMarket(db,rng,rep,ev){
     }
   }
   // 2) FA 시장 (3라운드: 제안 → 선수 선택)
-  // 2군 콜업: 프랜차이즈 구단은 자기 2군에서 먼저 올린다
-  for(const a of activeTeams(db).filter(t=>t.parent)){const t=db.teams[a.parent];if(!t||t.active===false||t.id===mine)continue;
-    for(const role of ROLES){const cur=starterFor(db,t,role),cand=a.roster.map(id=>db.players[id]).filter(p=>p.role===role).sort((x,y)=>playerOvr(y)-playerOvr(x))[0];
-      if(cand&&(!cur||playerOvr(cand)>=playerOvr(cur)+5||(playerOvr(cand)>=playerOvr(cur)+3&&((cur.form??0)<=-6||cur.wantsOut)))){assignPlayerToTeam(db,cand,t);
-        if(cur&&t.roster.length>size)assignPlayerToTeam(db,cur,a)
-        rep.signings.push({pid:cand.id,team:t.id,salary:cand.contract?cand.contract.salary:0,years:cand.contract?cand.contract.until-year+1:1,callup:true});}}}
+  aiMarketReserveCallups(db,rep);
   const budgetLeft={};activeTeams(db).forEach(t=>budgetLeft[t.id]=salaryBudget(db,t)-payroll(db,t));
   for(let round=0;round<3;round++){
     const fas=Object.values(db.players).filter(p=>!p.retired&&!p.team);
