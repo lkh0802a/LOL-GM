@@ -86,6 +86,7 @@ const maintainabilityBudgets = {
   'scouting-ai-ops.js': 7000,
   'scouting-ai-reassessment.js': 5000,
   'transfer.js': 26000,
+  'contract-negotiation.js': 21000,
   'contract-window.js': 11000,
   'contract-contact-ai.js': 6000,
   'contract-agreement.js': 8000,
@@ -182,7 +183,7 @@ for(const marker of ['function validatePlayerSignAction(','function validatePlay
     failed=true;console.error('Stage 11.5/3-2 player transaction handler missing: '+marker);
   }
 }
-for(const file of ['contracts.js','transfer.js','career.js']){
+for(const file of ['contracts.js','contract-negotiation.js','transfer.js','career.js']){
   const owner=sourceOf(file);
   if(!owner.includes('commitWorldAction(')){
     failed=true;console.error('Stage 11.5/3-2 missing command-gateway client: '+file);
@@ -264,6 +265,7 @@ const financeSource = sourceOf('finance.js');
 const contractsSource = sourceOf('contracts.js');
 const scoutingSource = sourceOf('scouting.js');
 const transferSource = sourceOf('transfer.js');
+const negotiationSource = sourceOf('contract-negotiation.js');
 const staffSource = sourceOf('staff.js');
 const relationsSource = sourceOf('player-relations.js');
 const scrimSource = sourceOf('scrim.js');
@@ -359,9 +361,17 @@ for (const marker of ['function normalizeContractTerms(','function signContract(
   if (!contractsSource.includes(marker)) { failed=true; console.error('Contract-domain helper missing: '+marker); }
   if (financeSource.includes(marker)) { failed=true; console.error('Contract responsibility leaked into finance.js: '+marker); }
 }
-for (const marker of ['function recruitmentStore(','function startNegotiation(','function doTransfer(']) {
+for (const marker of ['function recruitmentStore(','function sellerTransferAsk(','function mTransferBid(','function doTransfer(']) {
   if (!transferSource.includes(marker)) { failed=true; console.error('Transfer-domain helper missing: '+marker); }
   if (financeSource.includes(marker)||contractsSource.includes(marker)) { failed=true; console.error('Transfer responsibility leaked into finance/contract domain: '+marker); }
+}
+for (const marker of ['function negotiationStore(','function negotiationId(',
+  'function startNegotiation(','function submitNegotiationOffer(',
+  'function finalizeNegotiation(','function cancelNegotiation(']) {
+  if (!negotiationSource.includes(marker)) { failed=true; console.error('Player negotiation helper missing: '+marker); }
+  if (transferSource.includes(marker)||contractsSource.includes(marker)||financeSource.includes(marker)) {
+    failed=true; console.error('Player negotiation responsibility leaked out of contract-negotiation.js: '+marker);
+  }
 }
 for (const marker of ['function ensureScoutReport(','function scoutReport(','function observePlayer(']) {
   if (!scoutingSource.includes(marker)) { failed=true; console.error('Scouting-domain helper missing: '+marker); }
@@ -517,7 +527,7 @@ for(const [file,marker] of [
   ['competition.js','function scheduledSeriesSession('],
   ['roster.js','function rosterMoveCheck('],
   ['state-transaction.js','function previewWorldAction('],
-  ['transfer.js','function startNegotiation(']
+  ['contract-negotiation.js','function startNegotiation(']
 ]){
   const src=sourceOf(file);
   if(!src.includes(marker)){

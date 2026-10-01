@@ -412,8 +412,10 @@ are real callers. Structural ownership and legacy removal remain Issue #62 work.
 ### Current sequence
 
 Issue #57 is complete. Issue #62 R01 now has a code-backed ownership baseline in
-REFACTOR_R01_AUDIT.md; continue with small R02 guardrail/boundary changes, then
-R03–R07 and remove legacy only after caller parity is proven. Preserve accepted
+REFACTOR_R01_AUDIT.md. R02 mutation ownership guards are in place; R03 has moved
+expense/transfer settlements into finance and player negotiation into
+contract-negotiation.js. Next converge offseason calendar writers and AI roster
+callers, then remove legacy only after caller parity is proven. Preserve accepted
 D04-B3; after the refactor, recheck D04-B4 and the latest depth audit before
 choosing subsequent gameplay work. Follow ANDROID_TARGET.md through mobile
 UX/performance, production packaging and real-device offline/save validation.
