@@ -262,6 +262,10 @@ jobs:
   smoke:
     needs: [changes, ui-finance-contracts, calendar-scouting]
     if: needs.changes.outputs.run_full == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [core, patch-system]
     runs-on: ubuntu-latest
     timeout-minutes: 6
     steps:
@@ -273,8 +277,18 @@ jobs:
         with:
           node-version: 22
 
-      - name: Full smoke coverage
+      - name: Smoke coverage shard
+        env:
+          SMOKE_MODE: ${{ matrix.mode }}
+          SMOKE_RESULT_FILE: smoke-${{ matrix.mode }}.json
         run: node scripts/smoke.mjs
+
+      - name: Upload smoke result
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-${{ matrix.mode }}
+          path: smoke-${{ matrix.mode }}.json
+          if-no-files-found: error
 
   career:
     needs: [changes, ui-finance-contracts, calendar-scouting]
