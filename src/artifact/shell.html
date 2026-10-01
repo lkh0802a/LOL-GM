@@ -96,6 +96,10 @@ span.num.hi{color:var(--hi);font-weight:700}span.num.mid{color:var(--mi);font-we
 .tac label span{display:flex;justify-content:space-between}
 .tac output{font-variant-numeric:tabular-nums;font-weight:700}
 .tac input[type=range]{accent-color:var(--brass);width:100%}
+.tac.training-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:8px 16px}
+.training-grid label{min-width:0}
+.training-grid input[type=range]{min-height:44px;margin:0}
+@media(max-width:760px){.tac.training-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 16px}.training-grid label:last-child{grid-column:1/-1}}
 .tac select{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px}
 .roster tr[data-p]{cursor:default}.roster tr[data-p]:hover,.roster tr.open{background:var(--bg)}
 .pdet{background:var(--surf);border:1px solid var(--line);border-radius:10px;padding:14px}
