@@ -1,13 +1,6 @@
 // Phase 12: player/AI facility projects, prepaid finance flows, forecast and save parity.
 import assert from 'node:assert/strict';
-import {readFile} from 'node:fs/promises';
-import {resolve} from 'node:path';
-import vm from 'node:vm';
-import {ENGINE_MODULES} from './artifact-modules.mjs';
-
-const artifact=resolve(import.meta.dirname,'..','src','artifact');
-let source='';
-for(const file of ENGINE_MODULES)source+=await readFile(resolve(artifact,file),'utf8')+'\n';
+import {artifactSources,runEngineFixture} from './test-harness.mjs';
 const fixture=String.raw`(()=>{
   const assert=(ok,msg)=>{if(!ok)throw new Error(msg)};
   const close=(a,b)=>Math.abs(a-b)<.11;
@@ -68,12 +61,10 @@ const fixture=String.raw`(()=>{
   t.finance.cash=broken;
   console.log('PHASE12_ACCEPTANCE {"worldVersion":'+db.version+',"saveFormat":'+again.saveFormat+',"capex":'+cost+',"ready":"'+originalReady+'","financeNet":'+row.net+',"forecastNet":'+beforeClose.net+'}');
 })()`;
-vm.runInNewContext(source+'\n'+fixture,{console,Date,Math,JSON,Set,Map,Object,Array,String,Number,Boolean,RegExp,Error,Intl,performance,crypto},{timeout:35000});
-const ui=await readFile(resolve(artifact,'ui-manager.js'),'utf8');
-const season=await readFile(resolve(artifact,'ui-season.js'),'utf8');
-const office=await readFile(resolve(artifact,'ui-market-staff.js'),'utf8');
-const day=await readFile(resolve(artifact,'season.js'),'utf8');
-const year=await readFile(resolve(artifact,'offseason.js'),'utf8');
+await runEngineFixture(fixture,{timeout:35000,filename:'finance-acceptance.fixture.js'});
+const [ui,season,office,day,year]=await artifactSources([
+  'ui-manager.js','ui-season.js','ui-market-staff.js','season.js','offseason.js'
+]);
 assert(ui.includes('financeForecast(DB,t)')&&ui.includes('예상 수입')&&ui.includes('예상 결산 현금'),
   'financial outlook must be accessible in the user interface');
 assert(season.includes('financePanel(DB.teams[me])'),'forecast is not visible in the season history view');
