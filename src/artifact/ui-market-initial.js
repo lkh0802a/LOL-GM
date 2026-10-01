@@ -1,6 +1,7 @@
 // ===== LOL GM: first-season organization market UI =====
 let INITMK={role:'ALL',scope:'all',target:null};
 function renderInitialRosterMarket(){
+  if(managedTeam(DB)?.parent)return renderAcademyRosterControl(managedTeam(DB),true);
   const root=managedTeam(DB),squads=setupTeamsForManager(DB);if(!INITMK.target||!squads.some(t=>t.id===INITMK.target))INITMK.target=squads[0].id;
   const target=DB.teams[INITMK.target],R=DB.regions[target.region],openInitial=Object.values(negotiationStore(DB)).filter(n=>n.status==='open'&&n.kind==='initial'&&squads.some(t=>t.id===n.teamId)),errors=initialOrganizationErrors(DB,root);
   const free=Object.values(DB.players).filter(p=>!p.retired&&!p.team&&(INITMK.role==='ALL'||p.role===INITMK.role)&&(INITMK.scope==='all'||isLocalPlayer(p,root.region))).sort((x,y)=>obsOvr(DB,y)-obsOvr(DB,x)||x.age-y.age).slice(0,80);
@@ -20,7 +21,7 @@ function renderInitialRosterMarket(){
 }
 function bindInitialRosterMarket(){
   const act=m=>{MSG=m;saveDB();navKeepScroll()};
-  $('#init-target').onchange=e=>{INITMK.target=e.target.value;MSG='';nav()};$('#init-role').onchange=e=>{INITMK.role=e.target.value;nav()};$('#init-scope').onchange=e=>{INITMK.scope=e.target.value;nav()};
+  if($('#init-target'))$('#init-target').onchange=e=>{INITMK.target=e.target.value;MSG='';nav()};if($('#init-role'))$('#init-role').onchange=e=>{INITMK.role=e.target.value;nav()};if($('#init-scope'))$('#init-scope').onchange=e=>{INITMK.scope=e.target.value;nav()};
   document.querySelectorAll('[data-init-interest]').forEach(b=>b.onclick=()=>act(mInterest(DB,b.dataset.initInterest,'B')));
   if($('#init-all'))$('#init-all').onchange=e=>document.querySelectorAll('[data-init-select]').forEach(x=>x.checked=e.target.checked);
   const initSelected=()=>[...document.querySelectorAll('[data-init-select]:checked')].slice(0,10).map(x=>x.dataset.initSelect);

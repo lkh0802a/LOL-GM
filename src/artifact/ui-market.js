@@ -1,5 +1,13 @@
 // ===== LOL GM: recruitment market views / control dispatch =====
 // ---------- 이적 시장 (직접 운영) ----------
+function renderAcademyRosterControl(t,initial=false){
+  const parent=DB.teams[t.parent];
+  return `<section><h3>소유 2군 감독 · ${esc(t.name)}</h3>
+    <p class="hint">모구단 ${esc(parent?.name||t.parent)}이 선수 영입·계약·방출과 1·2군 이동을 담당합니다. 배정된 선수의 경기·전술·훈련·육성을 관리하세요.</p>
+    ${t.roster.map(id=>DB.players[id]).filter(Boolean).map(p=>`<div class="cfgcard"><b>${esc(p.name)}</b> · ${ROLE_KO[p.role]}<p>${p.contract?money(p.contract.salary)+' · ~'+p.contract.until:'계약 처리 중'}</p></div>`).join('')}
+    ${initial?'<button class="primary" id="init-final">배정된 선수단으로 시즌 시작</button>':''}
+    </section>`;
+}
 function recruitStageLabel(e){return !e?'미등록':e.stage==='interest'?'관심':e.stage==='observed'?'관찰 완료':e.stage==='evaluated'?'내부 평가 완료':e.stage==='negotiating'?'협상 중':e.stage==='closed'?(e.result==='signed'?'영입 완료':e.result==='lost_to_rival'?'경쟁 구단 선택':'종료'):e.stage}
 function recruitButtons(p,e){
   if(p.team===managedTeamId(DB))return '';
@@ -41,6 +49,7 @@ function bindMutualTerminationControls(act){
 function renderContractWindow(){
   const w=DB.world,cw=w?.contractWindow,t=DB.teams[managedTeamId(DB)];
   if(!cw||!t)return '';
+  if(t.parent)return renderAcademyRosterControl(t);
   const exclusive=cw.stage==='exclusive',
     own=(t.roster||[]).map(id=>DB.players[id]).filter(p=>contractExpiresThisSeason(DB,p)),
     waived=exclusive?Object.values(cw.contactWaivers||{}).map(x=>DB.players[x.pid])
@@ -95,6 +104,7 @@ function bindContractWindow(){
 }
 
 function renderMarket(){
+  if(managedTeam(DB)?.parent)return renderAcademyRosterControl(managedTeam(DB));
   const w=DB.world,t=DB.teams[managedTeamId(DB)],R=DB.regions[t.region],pay=payroll(DB,t),budget=salaryBudget(DB,t);
   const exp=t.roster.map(id=>DB.players[id]).filter(p=>!p.contract||!p.contract.medicalReplacement&&p.contract.until<DB.year);
   const roster=t.roster.map(id=>DB.players[id]);
@@ -117,6 +127,7 @@ function renderMarket(){
   <p class="hint">영입은 관심 등록 → 관찰/스카우팅 → 내부 평가 → 공식 제안 순서입니다. 재계약도 자동 확정되지 않으며 선수 측과 조건을 협상해야 합니다.</p></section>`;
 }
 function bindMarket(){
+  if(managedTeam(DB)?.parent)return;
   const act=m=>{MSG=m;saveDB();nav();const e=document.querySelector('.market');e&&e.scrollIntoView({block:'start'})};
   bindMutualTerminationControls(act);
   bindClubOfficeControls(act);

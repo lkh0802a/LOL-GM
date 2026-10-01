@@ -356,8 +356,8 @@ source += `\n(()=>{
   const saveView=buildWorld();saveView.competitions.SAVE_COMP={id:'SAVE_COMP',international:true};saveView.world={year:2027,seed:'world-seed',manage:'manual',phase:'season',steps:[],step:0,lastDate:'2027-01-02',seasons:{SAVE_SEASON:{id:'SAVE_SEASON',comp:'SAVE_COMP',done:true,days:[{date:'2027-01-02',matches:[{id:'M1',res:{seed:'match-seed',firstChoice:'coin',games:[],tac:{A:{x:1}},score:[1,0],winner:'A'}}]}],pstats:{}}}};const savePacked=JSON.parse(packDB(saveView)),liveRes=saveView.world.seasons.SAVE_SEASON.days[0].matches[0].res,packedRes=savePacked.world.seasons.SAVE_SEASON.days[0].matches[0].res;if(liveRes.seed!=='match-seed'||liveRes.firstChoice!=='coin'||packedRes.seed!==undefined||packedRes.firstChoice!==undefined)throw new Error('Save compaction mutated runtime season state');
 
   __smokeMark('draft-match-save');\n  const selectable=managerSelectableTeams(db), independent=active.filter(t=>!t.parent);
-  if(!selectable.length||selectable.some(t=>t.parent)) throw new Error('Manager-selectable team filter failed');
-  if(selectable.length!==independent.length) throw new Error('Independent club selection coverage failed');
+  if(!selectable.length||selectable.some(t=>t.active===false)) throw new Error('Manager-selectable team filter failed');
+  if(selectable.length!==active.length) throw new Error('Active first/reserve club selection coverage failed');
 
   const ownedReserveFixture=active.find(t=>t.parent);
   if(ownedReserveFixture){
@@ -368,7 +368,7 @@ source += `\n(()=>{
     const fixtureRules=rosterRulesForTeam(db,ownedReserveFixture),fixtureLimits=initialSquadLimits(db,ownedReserveFixture);
     if(fixtureLimits.min!==fixtureRules.firstTeamMin||fixtureLimits.max!==fixtureRules.firstTeamMax) throw new Error('Independent second-division club did not use first-team roster limits');
     ownedReserveFixture.parent=originalParent;
-    if(isManagerSelectableTeam(db,ownedReserveFixture)) throw new Error('Owned reserve became manager-selectable after fixture restore');
+    if(!isManagerSelectableTeam(db,ownedReserveFixture)) throw new Error('Owned reserve coach selection failed');
   }
 
   const careerTeam=selectable.find(t=>!t.parent&&reserveTeamsOf(db,t).length===1)||selectable.find(t=>!t.parent&&reserveTeamsOf(db,t).length)||selectable[0];

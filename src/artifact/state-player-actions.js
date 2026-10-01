@@ -3,6 +3,8 @@
 // domain writers. Do not serialize previews or create a second roster ledger.
 
 function playerActionAuthority(db,actor,team,exception=null){
+  if(actor==='manager'&&managedTeam(db)?.parent)
+    return worldActionError('unauthorized','소유 2군의 선수 영입·계약·방출은 모구단이 담당합니다');
   const owner=managedTeamId(db),org=team&&parentTeamOf(db,team),managed=!!(owner&&org?.id===owner);
   if(actor==='manager'&&!managed)return worldActionError('unauthorized','관리 구단 소속 작업만 직접 실행할 수 있습니다');
   if(actor==='ai'&&db.world?.manage==='manual'&&managed&&!['expiry','player-option'].includes(exception))

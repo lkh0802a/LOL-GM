@@ -155,7 +155,7 @@ function recordContractAgreement(db,p,t,terms,kind='renewal',actor='manager'){
 }
 function aiRunExclusiveRenewals(db){
   const w=db.world,cw=w?.contractWindow;if(!cw||cw.incumbentProcessed)return [];
-  const manual=w.manage==='manual'?managedTeamId(db):null,
+  const manual=w.manage==='manual'?managedRecruitmentTeamId(db):null,
     rng=new RNG(w.seed+'/'+cw.seasonYear,'exclusive-renewal'),rows=[];
   for(const t of activeTeams(db).filter(t=>!manual||parentTeamOf(db,t)?.id!==manual)){
     for(const id of (t.roster||[]).slice()){

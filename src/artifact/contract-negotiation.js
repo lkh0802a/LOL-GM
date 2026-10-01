@@ -91,6 +91,7 @@ function negotiationDemand(db,p,t,kind,rng,competitors=[]){
   return normalizeContractTerms(db,p,t,ask*premium,years,{releaseGuaranteeRate:contractGuaranteePolicy(p).preferred,signingBonus:sign,bonuses:{performance:ask*.07,title:ask*.12,international:ask*.07},promisedRole:role,option,buyout});
 }
 function startNegotiation(db,pid,kind='fa',extra={}){
+  if(managedTeam(db)?.parent)return {ok:false,msg:'소유 2군의 선수 계약은 모구단이 담당합니다'};
   const w=db.world,t=extra.teamId?db.teams[extra.teamId]:myT(db),p=db.players[pid];if(!w||!t||!p)return {ok:false,msg:'협상 대상을 찾을 수 없습니다'};
   if(kind==='transfer'){const moveErr=contractedMoveError(db,p);if(moveErr)return {ok:false,msg:moveErr}}
   if(kind==='early_fa'){
@@ -172,6 +173,7 @@ function finalizeNegotiation(db,neg,terms){
   return {ok:true,msg:future?result.msg:p.name+' 계약 합의 · '+money(terms.salary)+' · '+terms.years+'년'};
 }
 function submitNegotiationOffer(db,nid,terms){
+  if(managedTeam(db)?.parent)return {ok:false,msg:'소유 2군의 선수 계약은 모구단이 담당합니다'};
   if(!contractGuaranteeTermsValid(terms))
     return {ok:false,msg:'유효하지 않은 방출 보장률입니다'};
   const neg=negotiationStore(db)[nid];if(!neg||neg.status!=='open'||neg.stage!=='player')return {ok:false,msg:'진행 중인 선수 협상이 아닙니다'};

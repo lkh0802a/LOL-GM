@@ -34,7 +34,7 @@ function roleConversionAcceptance(db,p,targetRole,source='manager'){
 }
 function proposeRoleConversion(db,pid,targetRole,source='manager'){
   const p=playerRef(db,pid);if(!p||p.retired)return {ok:false,accepted:false,reason:'전향을 제안할 수 없는 선수입니다'};
-  if(source==='manager'&&p.team&&!organizationTeams(db,managedTeam(db)).some(t=>t.id===p.team))return {ok:false,accepted:false,reason:'내 구단 선수에게만 전향을 제안할 수 있습니다'};
+  if(source==='manager'&&p.team&&!managerControlsSquad(db,p.team))return {ok:false,accepted:false,reason:'내 구단 선수에게만 전향을 제안할 수 있습니다'};
   ensureRoleConversionState(p);if(p.roleConversion?.targetRole===targetRole)return {ok:true,accepted:true,reason:'이미 해당 포지션 전향을 진행 중입니다',conversion:p.roleConversion};
   p.roleProposalCount=(p.roleProposalCount||0)+1;const res=roleConversionAcceptance(db,p,targetRole,source);if(!res.ok)return res;
   if(!res.accepted){
