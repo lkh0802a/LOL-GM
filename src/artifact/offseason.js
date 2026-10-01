@@ -38,6 +38,7 @@ function runOffseason(db){
     if(s.champion)db.teams[s.champion].roster.forEach(pid=>{const p=db.players[pid];if(p){p.titles.push(`${w.year} ${cname}`);p.reputation=Math.round(clamp((p.reputation||playerOvr(p))+2,20,99));recordPlayerEvent(p,'title',w.year,{competition:cname,team:s.champion,international:!!db.competitions[s.comp].international})}});
   }
   rep.awards=[];rep.coaches=[];rep.hof=[];
+  processTransferPayments(db);
   seasonAwards(db,w,rep);
   for(const p of Object.values(db.players)){const rows=(p.career||[]).filter(c=>c.year===w.year);if(!rows.length)continue;const gamesN=rows.reduce((a,c)=>a+c.g,0),rating=gamesN?rows.reduce((a,c)=>a+(c.rating||6.5)*c.g,0)/gamesN:6.5,intl=rows.some(c=>c.international),awardN=rep.awards.filter(a=>a.pid===p.id).length,target=clamp(playerOvr(p)*.72+rating*3.2+(intl?2:0)+awardN*2,20,99);p.reputation=Math.round(clamp((p.reputation||playerOvr(p))*.72+target*.28,20,99))}
   evalGoals(db,w,rep,ev);
@@ -57,6 +58,7 @@ function runOffseason(db){
       delete p.pool;delete p.tend;delete p.attrs;}
   }
   db.year=w.year+1;
+  aiChooseLocalEligibility(db);
   // B3 exposes the 14-day contract window as real world dates, but no training
   // or matches occur there. Preserve B10's full passive recovery from the last
   // competitive date instead of shortening recovery by the displayed window.

@@ -29,10 +29,39 @@ function aiReviewLoanMarket(db){
       for(const {p} of candidates){
         const result=commitWorldAction(db,{type:'player.loan',actor:'ai',pid:p.id,
           fromId:p.team,teamId:to.id,duration:md<'07-01'?'half':'season',
-          salaryShare:1,fee:0,promisedRole:'starter',recall:false});
+          salaryShare:1,fee:0,promisedRole:'starter',recall:true,
+          ...aiLoanPurchaseProposal(db,p,to)});
         if(result.ok){deals++;break}
       }
     }
   }
   return deals;
+}
+function aiLoanPurchaseProposal(db,p,to){
+  const fee=sellerTransferAsk(db,p,db.teams[p.team]);
+  if(fee>Math.max(0,to.finance.cash-financeCommittedTransferCash(db,to))*.4)return {};
+  const personal=aiTransferPersonalTerms(db,p,to,Math.max(0,salaryBudget(db,to)-payroll(db,to)));
+  if(!personal)return {};
+  const terms=personal.kind==='retained'?personal.consent.terms:personal.terms;
+  return {purchase:{type:'option',fee,salary:terms.salary,years:terms.years,terms}};
+}
+function aiReviewLoanDecisions(db){
+  if(Number((db.worldDate||'').slice(-2))%7!==0)return;
+  for(const pid of loanIndex(db).players.slice()){
+    const p=db.players[pid],l=p.loan,owner=db.teams[l.ownerId],borrower=db.teams[l.borrowerId];
+    if(l.purchase?.type==='option'&&!playerActionAuthority(db,'ai',borrower)){
+      const starter=borrower.depthChart?.[p.role]===p.id,quote=l.purchase,
+        room=salaryBudget(db,borrower)-payroll(db,borrower)+p.contract.salary*l.salaryShare;
+      if(starter&&quote.terms.salary<=room&&quote.fee+quote.terms.signingBonus<=
+        borrower.finance.cash-financeCommittedTransferCash(db,borrower)){
+        const result=commitWorldAction(db,{type:'player.loan-purchase',actor:'ai',pid,
+          fromId:owner.id,teamId:borrower.id});if(result.ok)continue;
+      }
+    }
+    if(l.recall&&!playerActionAuthority(db,'ai',owner)){
+      const current=owner.depthChart?.[p.role]&&db.players[owner.depthChart[p.role]];
+      if(current&&medicalOut(current)&&medicalAvailable(db,owner)<5)
+        commitWorldAction(db,{type:'player.loan-return',actor:'ai',pid,fromId:borrower.id,teamId:owner.id});
+    }
+  }
 }

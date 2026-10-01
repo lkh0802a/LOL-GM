@@ -107,17 +107,10 @@ function payroll(db,t){
     return sum+(c&&!c.medicalReplacement?c.salary*(p.loan?p.loan.salaryShare:1):0)},0);
   return current+loanOutgoingPlayers(db,t).reduce((sum,p)=>sum+p.contract.salary*(1-p.loan.salaryShare),0);
 }
-function ownedContractPayroll(db,t){
+function ownedContractPayroll(db,t,year=contractedMoveSeason(db)){
   return t.roster.reduce((sum,id)=>{const p=db.players[id];
-    return sum+(p?.contract&&!p.contract.medicalReplacement&&!p.loan?p.contract.salary:0)},0)+
+    return sum+(p?.contract&&!p.contract.medicalReplacement&&!p.loan&&(p.contract.signed??0)<=year?p.contract.salary:0)},0)+
     loanOutgoingPlayers(db,t).reduce((sum,p)=>sum+p.contract.salary,0);
-}
-function recordLoanWageAdjustment(t,year,amount,pid){
-  if(!Number.isFinite(amount)||!t?.finance)throw new Error('임대 급여 정산 정보가 유효하지 않습니다');
-  const f=t.finance;
-  if(f.loanWages&&f.loanWages.year!==year)throw new Error('미정산 임대 급여 연도가 다릅니다');
-  f.loanWages=f.loanWages||{year,amount:0,players:{}};f.loanWages.amount+=amount;
-  f.loanWages.players[pid]=(f.loanWages.players[pid]||0)+amount;
 }
 function topFivePayroll(db,t){
   const salaries=t.roster.map(id=>db.players[id]).filter(p=>p?.contract&&!p.contract.medicalReplacement)
@@ -128,9 +121,11 @@ function topFivePayroll(db,t){
 function loanAnnualRegulatedPayroll(db,t,year=contractedMoveSeason(db)){
   const wages={};
   for(const p of [...t.roster.map(id=>db.players[id]),...loanOutgoingPlayers(db,t)])
-    if(p?.contract&&!p.contract.medicalReplacement&&(!p.loan||p.loan.ownerId===t.id))wages[p.id]=p.contract.salary;
+    if(p?.contract&&!p.contract.medicalReplacement&&(p.contract.signed??0)<=year&&(!p.loan||p.loan.ownerId===t.id))wages[p.id]=p.contract.salary;
   if(t.finance?.loanWages?.year===year)
     for(const [pid,amount] of Object.entries(t.finance.loanWages.players))wages[pid]=(wages[pid]||0)+amount;
+  if(t.finance?.loanConversionWages?.year===year)
+    for(const [pid,amount] of Object.entries(t.finance.loanConversionWages.players))wages[pid]=(wages[pid]||0)+amount;
   const values=Object.values(wages);
   return (db.regions[t.region]?.spendingRule==='sfr_top5'?values.sort((a,b)=>b-a).slice(0,5):values)
     .reduce((sum,n)=>sum+n,0);
@@ -176,7 +171,7 @@ function financeCommercialIncome(db,t,w=db.world,forecast=false,prize=0){
 function financeSeasonPayroll(db,t,w=db.world){
   const snap=w&&w.contractWindow?.seasonYear===w.year?
     w.contractWindow.financePayroll?.[t.id]:null;
-  return snap||{salary:ownedContractPayroll(db,t),regulated:loanAnnualRegulatedPayroll(db,t,w?.year??db.year)};
+  return snap||{salary:ownedContractPayroll(db,t,w?.year??db.year),regulated:loanAnnualRegulatedPayroll(db,t,w?.year??db.year)};
 }
 function financeOperatingExpense(db,t,w=db.world){
   const pre=t.finance?.prepaid||{},ps=psTeam(db,t),
@@ -185,6 +180,7 @@ function financeOperatingExpense(db,t,w=db.world){
     db.competitions[s.comp]?.international&&s.teams?.includes(t.id)).length:0;
   return {salary:seasonPayroll.salary,
     ...(t.finance?.loanWages?.year===(w?.year??db.year)?{loanWages:t.finance.loanWages.amount}:{}),
+    ...(t.finance?.loanConversionWages?.year===(w?.year??db.year)?{loanConversion:t.finance.loanConversionWages.amount}:{}),
     medicalReplacementWage:pre.medicalReplacementWage||0,
     bonuses:w&&w.year<=db.year?contractBonusCost(db,t,w.year):0,
     staff:staffCost(db,t),ops:opsCost(db,t),facility:facilityUpkeep(db,t),
@@ -214,13 +210,13 @@ function estRevenue(db,t){
 }
 function financeRunway(db,t){
   const monthly=(payroll(db,t)+staffCost(db,t)+opsCost(db,t)+facilityUpkeep(db,t))/12;
-  const cash=t.finance?.cash||0;
+  const cash=(t.finance?.cash||0)-financeCommittedTransferCash(db,t);
   const months=monthly>0?Math.max(0,cash)/monthly:99;
   const severity=cash<0?'critical':months<3?'strained':months<9?'watch':'stable';
   return {months:Math.round(months*10)/10,severity,monthly};
 }
 function salaryBudget(db,t){
-  const liquid=Math.max(0,t.finance.cash),cashPressure=financeRunway(db,t);
+  const liquid=Math.max(0,t.finance.cash-financeCommittedTransferCash(db,t)),cashPressure=financeRunway(db,t);
   const b=estRevenue(db,t)*.95+liquid*.3-staffCost(db,t)-opsCost(db,t);
   const normal= ['win-now','superstar'].includes(t.philosophy)?1.15:t.philosophy==='cost'?.85:1;
   // A financially distressed board cannot promise next year's payroll from
@@ -297,6 +293,7 @@ function closeFinances(db,w,rng,ev){
     const releases=financeReleaseObligations(row.t);
     f.buyout=0;f.prepaid={};
     if(f.loanWages?.year===w.year)delete f.loanWages;
+    if(f.loanConversionWages?.year===w.year)delete f.loanConversionWages;
     if(f.releaseObligations)f.releaseObligations=[];
     f.history=[...f.history,{year:w.year,rev:roundRows(row.rev),
       exp:roundRows(row.exp),net:round(net),cash:f.cash,

@@ -31,14 +31,17 @@ function mDropInterest(db,pid){return removeRecruitmentTarget(db,pid)}
 
 // ---- 구단 간 이적료 협상 ----
 function sellerTransferAsk(db,p,from){if(p.contract?.buyout)return p.contract.buyout;const base=transferFee(db,p),starter=starterFor(db,from,p.role)===p,financeNeed=from.finance.cash<0?.88:1,exit=p.wantsOut?.82:1;return Math.round(base*(starter?1.12:.96)*financeNeed*exit*10)/10}
-function mTransferBid(db,pid,fee){
-  const t=myT(db),p=db.players[pid],from=p&&db.teams[p.team];if(!p||!from||from.id===t.id)return '이적 대상을 찾을 수 없습니다';if(fee>t.finance.cash)return '보유 자금이 부족합니다';
+function mTransferBid(db,pid,fee,feePlan=null){
+  const t=myT(db),p=db.players[pid],from=p&&db.teams[p.team];if(!p||!from||from.id===t.id)return '이적 대상을 찾을 수 없습니다';
+  const window=permanentTransferWindowError(db,p,t);if(window)return window;
+  const payment=normalizeTransferFeePlan(db,fee,feePlan);if(!payment.ok)return payment.reason;
+  if(payment.upfront>t.finance.cash)return '선지급할 보유 자금이 부족합니다';
   const moveErr=contractedMoveError(db,p);if(moveErr)return moveErr;const localErr=localRegistrationError(db,t,p);if(localErr)return localErr;
   const id=negotiationId(db,pid,'transfer'),store=negotiationStore(db),ask=sellerTransferAsk(db,p,from);let neg=store[id];
   if(!neg||neg.status!=='open'){const st=startNegotiation(db,pid,'transfer',{sellerId:from.id});if(!st.ok)return st.msg;neg=st.neg;neg.stage='club';neg.clubRounds=0}
   neg.clubRounds=(neg.clubRounds||0)+1;neg.history.push({round:neg.clubRounds,stage:'club',side:'buyer',fee});
   const acceptAt=ask*(from.finance.cash<0?.9:1);
-  if(fee>=acceptAt){neg.fee=Math.round(fee*10)/10;neg.stage='player';neg.clubCounter=null;neg.history.push({round:neg.clubRounds,stage:'club',side:'seller',result:'accept',fee:neg.fee});return from.name+'과 이적료 '+money(neg.fee)+' 합의 · 이제 '+p.name+' 측과 개인조건을 협상하세요'}
+  if(fee-(fee-payment.upfront)*.05>=acceptAt){neg.fee=Math.round(fee*10)/10;neg.feePlan=payment.plan;neg.stage='player';neg.clubCounter=null;neg.history.push({round:neg.clubRounds,stage:'club',side:'seller',result:'accept',fee:neg.fee,feePlan:payment.plan});return from.name+'과 이적료 '+money(neg.fee)+' 합의 · 이제 '+p.name+' 측과 개인조건을 협상하세요'}
   if(neg.clubRounds>=3&&fee<ask*.82){neg.status='withdrawn';neg.reason='이적료 협상 결렬';return from.name+': 이적료 협상 종료'}
   neg.clubCounter=Math.round(Math.max(fee*1.06,(fee+ask)/2)*10)/10;neg.history.push({round:neg.clubRounds,stage:'club',side:'seller',result:'counter',fee:neg.clubCounter});return from.name+' 역제안: '+money(neg.clubCounter);
 }
@@ -48,13 +51,13 @@ function closeOpenNegotiationsForDeadline(db){
 }
 // ---- 이적료 / 직접 운영 ----
 function transferFee(db,p){const left=p.contract?Math.max(1,p.contract.until-db.year+1):1;return Math.round(playerMarketValue(db,p)*(.62+.18*Math.min(3,left))*(p.wantsOut?.75:1)*10)/10}
-function doTransfer(db,p,from,to,fee,consent=null){
+function doTransfer(db,p,from,to,fee,consent=null,feePlan=null){
   const moveErr=contractedMoveError(db,p),localErr=localRegistrationError(db,to,p);if(moveErr||localErr)throw new Error(moveErr||localErr);
   recordContractedMove(db,p,'permanent',from,to,{fee});assignPlayerToTeam(db,p,to);
   startContractRolePromise(db,p,to);
-  receiveFinancePrepaidTransfer(from,fee);payFinancePrepaid(to,'transferPaid',fee);
+  settleTransferSigningFee(db,p,from,to,fee,feePlan);
   recordPlayerEvent(p,'transfer',db.year,{from:from.id,to:to.id,fee,date:db.worldDate,
-    ...(consent?{consent}:{})});
+    ...(consent?{consent}:{}),...(feePlan?{feePlan}:{})});
   news(db,`이적: ${p.name} ${from.name} → ${to.name} (이적료 ${money(fee)})`);
 }
 function myT(db){return managedTeam(db)}

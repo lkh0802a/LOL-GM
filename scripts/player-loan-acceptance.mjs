@@ -155,4 +155,4 @@ await runEngineFixture(String.raw`(()=>{
   console.log('PLAYER_LOAN_ACCEPTANCE '+JSON.stringify({pureStaleRollback:true,ownerContract:true,
     rights:true,wageConservation:true,halfReturn:true,moveLimit:true,reservedCapacity:true,
     closureRollback:true,saveRestore:true,uiConfirmCancel:true,aiProduction:true,windowAuthority:true}));
-})();`,{filename:'player-loan.fixture.js',setupSources:[await artifactSource('ui-player-loans.js')]});
+})();`,{filename:'player-loan.fixture.js',setupSources:[await artifactSource('ui-player-loans.js'),await artifactSource('ui-transfer-terms.js')]});

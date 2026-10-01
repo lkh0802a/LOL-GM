@@ -80,9 +80,11 @@ function validateLoanStart(db,a){
   }
   const consent=loanPlayerConsent(db,p,to,a.promisedRole);
   if(!consent.ok||!consent.willing)return worldActionError('player_consent','선수가 임대 기회와 조건에 동의하지 않았습니다. '+consent.reason);
+  const purchase=validateLoanPurchaseTerms(db,p,from,to,a,managingSource);
+  if(!purchase.ok)return worldActionError('invalid_purchase',purchase.reason);
   return {ok:true,pid:p.id,fromId:from.id,teamId:to.id,duration:a.duration,
     promisedRole:a.promisedRole,recall:a.recall,salaryShare:a.salaryShare,fee:a.fee,
-    endDate:loanEndDate(db,a.duration),consent};
+    endDate:loanEndDate(db,a.duration),consent,...(purchase.purchase?{purchase:purchase.purchase}:{})};
 }
 function loanWageAmount(db,p,date){
   const loan=p.loan,year=loan.season,start=loan.lastWageDate,
@@ -104,6 +106,7 @@ function applyLoanStart(db,c){
   p.loan={ownerId:from.id,borrowerId:to.id,season:contractedMoveSeason(db),
     startDate:db.worldDate,lastWageDate:db.worldDate,endDate:c.endDate,
     duration:c.duration,recall:c.recall,salaryShare:c.salaryShare,fee:c.fee,
+    ...(c.purchase?{purchase:JSON.parse(JSON.stringify(c.purchase))}:{}),
     promisedRole:c.promisedRole,originalRole:p.rosterRole,
     usageStart:JSON.parse(JSON.stringify(u||null)),
     promiseStart:{year:db.year,date:db.worldDate,games:u?.games||0,
@@ -130,6 +133,8 @@ function validateLoanExisting(db,a){
   }else if(a.actor!=='system'){
     const auth=playerActionAuthority(db,a.actor,db.teams[loan.ownerId]);if(auth)return auth;
   }
+  if(a.type==='player.loan-return'&&loan.purchase?.type==='obligation')
+    return worldActionError('binding_purchase','의무 매입은 복귀로 취소할 수 없습니다');
   if(a.type==='player.loan-return'&&db.teams[loan.ownerId].active===false)
     return worldActionError('club_closed','해체 구단 계약은 해체 정산에서 처리해야 합니다');
   return {ok:true,pid:p.id,fromId:loan.borrowerId,teamId:loan.ownerId};
@@ -161,9 +166,10 @@ for(const [type,validate,apply] of [
 function processLoanDaily(db){
   for(const pid of loanIndex(db).players.slice()){
     const p=db.players[pid];
-    const result=commitWorldAction(db,{type:db.worldDate>=p.loan.endDate||db.world?.phase==='offseason'
-      ?'player.loan-return':'player.loan-accrue',pid:p.id,fromId:p.loan.borrowerId,
-      teamId:p.loan.ownerId,actor:'system'});
+    const due=db.worldDate>=p.loan.endDate||db.world?.phase==='offseason',purchase=due&&p.loan.purchase?.type==='obligation',
+      result=commitWorldAction(db,{type:purchase?'player.loan-purchase':due?'player.loan-return':'player.loan-accrue',
+        pid:p.id,fromId:purchase?p.loan.ownerId:p.loan.borrowerId,
+        teamId:purchase?p.loan.borrowerId:p.loan.ownerId,actor:'system'});
     if(!result.ok)throw new Error((result.errors||[]).join(' · '));
   }
 }

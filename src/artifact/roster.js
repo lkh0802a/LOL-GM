@@ -36,10 +36,11 @@ function teamNonLocalCount(db,t,excludePid=null){
 }
 function localRegistrationError(db,t,p){
   const team=teamRef(db,t),player=playerRef(db,p);if(!team||!player)return '등록 대상을 찾을 수 없습니다';
-  if(isLocalPlayer(player,team.region))return null;
+  if(projectedPlayerLocal(db,player)===team.region)return null;
   if((team.roster||[]).includes(player.id))return null;
-  const reserved=loanOutgoingPlayers(db,team).filter(p=>p.id!==player.id&&!isLocalPlayer(p,team.region)).length;
-  return teamNonLocalCount(db,team)+reserved>=nonLocalLimitForTeam(db,team)?'임대 복귀 인원 포함 비로컬 선수 등록 상한을 넘습니다':null;
+  const reserved=loanOutgoingPlayers(db,team).filter(p=>p.id!==player.id&&projectedPlayerLocal(db,p)!==team.region).length,
+    foreign=team.roster.filter(id=>projectedPlayerLocal(db,db.players[id])!==team.region).length;
+  return foreign+reserved>=nonLocalLimitForTeam(db,team)?'임대 복귀 인원 포함 비로컬 선수 등록 상한을 넘습니다':null;
 }
 function contractedMoveSeason(db){return db?.world?.year??db?.year}
 function contractedMoveCount(db,p){const y=contractedMoveSeason(db),moves=Array.isArray(p?.contractedMoves)?p.contractedMoves:[];return moves.filter(x=>x.season===y&&x.counts!==false).length}
@@ -221,6 +222,7 @@ function removePlayerFromTeam(db,p){
   const oldId=player.team;
   detachPlayerFromRosters(db,player.id);
   player.team=null;
+  localServiceRegistration(db,player,null);
   return oldId;
 }
 function assignPlayerToTeam(db,p,t){
@@ -230,6 +232,7 @@ function assignPlayerToTeam(db,p,t){
   const oldTeam=player.team&&db.teams[player.team],oldOrg=oldTeam?(oldTeam.parent||oldTeam.id):null,newOrg=team.parent||team.id;
   detachPlayerFromRosters(db,player.id,team.id);
   team.roster=Array.from(new Set([...(team.roster||[]),player.id]));player.team=team.id;
+  localServiceRegistration(db,player,team);
   pState(player);if(oldOrg!==newOrg){player.teamAdaptation=oldOrg?45:55;player.tacticalAdaptation=oldOrg?48:58}
   return player;
 }

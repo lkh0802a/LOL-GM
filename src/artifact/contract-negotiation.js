@@ -157,6 +157,7 @@ function finalizeNegotiation(db,neg,terms){
   }else{
     const command={type:'player.sign',pid:p.id,teamId:t.id,kind:neg.kind,
       fromId:neg.kind==='transfer'?neg.sellerId:null,fee:neg.kind==='transfer'?neg.fee:0,
+      ...(neg.feePlan?{feePlan:neg.feePlan}:{}),
       salary:terms.salary,years:terms.years,terms,actor:'manager'},
       postWorldsFa=neg.kind==='fa'&&db.world?.phase==='offseason'&&
         db.world?.contractWindow?.stage==='fa';
@@ -184,7 +185,7 @@ function submitNegotiationOffer(db,nid,terms){
     const contactErr=contractWindowContactError(db,p,t,neg.kind);
     if(contactErr)return {ok:false,msg:contactErr};
   }
-  const offer=normalizeContractTerms(db,p,t,terms.salary,terms.years,terms),err=negotiationBudgetError(db,p,t,offer,neg.kind);if(err)return {ok:false,msg:err};if(neg.kind==='transfer'&&(offer.signingBonus||0)>Math.max(0,t.finance.cash-(neg.fee||0)))return {ok:false,msg:'이적료 지급 후 계약금을 지급할 현금이 부족합니다'};
+  const offer=normalizeContractTerms(db,p,t,terms.salary,terms.years,terms),err=negotiationBudgetError(db,p,t,offer,neg.kind);if(err)return {ok:false,msg:err};if(neg.kind==='transfer'&&(offer.signingBonus||0)>Math.max(0,t.finance.cash-(neg.feePlan?.upfront??neg.fee??0)))return {ok:false,msg:'이적료 지급 후 계약금을 지급할 현금이 부족합니다'};
   const util=offerUtility(db,p,t,offer,{renewal:neg.kind==='renewal'}),
     comp=neg.competitors.length?Math.max(...neg.competitors.map(x=>x.utility)):0,
     threshold=Math.max(offerAcceptanceThreshold(db,p,{kind:neg.kind}),comp-.035),
