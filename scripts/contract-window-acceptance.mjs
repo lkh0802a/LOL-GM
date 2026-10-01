@@ -1,14 +1,8 @@
 // D04-B3: post-Worlds 14-day incumbent exclusivity, optional waiver,
 // exact expiry on day 14, and day-15 FA / next-contract activation.
-import {readFile} from 'node:fs/promises';
-import {resolve} from 'node:path';
-import vm from 'node:vm';
-import {ENGINE_MODULES} from './artifact-modules.mjs';
+import {artifactSources,runEngineFixture} from './test-harness.mjs';
 
-const root=resolve(import.meta.dirname,'..','src','artifact');
-let source='';
-for(const file of ENGINE_MODULES)source+=await readFile(resolve(root,file),'utf8')+'\n';
-source+=String.raw`(()=>{
+const fixture=String.raw`(()=>{
   const assert=(x,m)=>{if(!x)throw new Error('D04_CONTRACT_WINDOW '+m)};
   let db=buildWorld(),mine=activeTeams(db,null,1)[0],
     peers=activeTeams(db,mine.region,1).filter(t=>t.id!==mine.id),
@@ -181,12 +175,9 @@ source+=String.raw`(()=>{
     saveFormat:JSON.parse(packed).saveFormat
   }));
 })();`;
-vm.runInNewContext(source,{console,Date,Math,JSON,Set,Map,WeakMap,Object,
-  Array,String,Number,Boolean,RegExp,Error,Intl,performance,crypto},{timeout:30000});
+await runEngineFixture(fixture,{timeout:30000,filename:'contract-window-acceptance.fixture.js'});
 
-const [app,market]=await Promise.all([
-  readFile(resolve(root,'app.js'),'utf8'),readFile(resolve(root,'ui-market.js'),'utf8')
-]);
+const [app,market]=await artifactSources(['app.js','ui-market.js']);
 if(!app.includes('scontractday')||!app.includes('scontractopen')||
   !market.includes('data-allow-contact')||!market.includes('data-start-early')||
   !market.includes('bindContractWindow'))
