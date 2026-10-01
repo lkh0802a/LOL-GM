@@ -1,12 +1,5 @@
 // Realistic AI practice-market acceptances, using canonical engine and save code.
-import {readFile} from 'node:fs/promises';
-import {resolve} from 'node:path';
-import vm from 'node:vm';
-import {ENGINE_MODULES} from './artifact-modules.mjs';
-const artifact=resolve(import.meta.dirname,'..','src','artifact');
-let engine='';
-for(const file of ENGINE_MODULES)
-  engine+=await readFile(resolve(artifact,file),'utf8')+'\n';
+import {artifactSources,runEngineFixture} from './test-harness.mjs';
 const source=String.raw`(()=>{
   const check=(ok,why)=>{if(!ok)throw new Error('SCRIM_PARTNER_ACCEPTANCE '+why)};
   const cfg=defaultWorldConfig();
@@ -156,12 +149,10 @@ const source=String.raw`(()=>{
     version:restored.version,saveFormat:restored.saveFormat
   }));
 })()`;
-vm.runInNewContext(engine+'\n'+source,{console,Date,Math,JSON,Set,Map,
-  Object,Array,String,Number,Boolean,RegExp,Error,Intl,performance,crypto},
-  {timeout:40000});
-const [owner,practice,ui]=await Promise.all(
-  ['scrim-partner.js','scrim.js','ui-roster.js'].map(path=>
-    readFile(resolve(artifact,path),'utf8')));
+await runEngineFixture(source,{timeout:40000,filename:'scrim-partner-acceptance.fixture.js'});
+const [owner,practice,ui]=await artifactSources(
+  ['scrim-partner.js','scrim.js','ui-roster.js']
+);
 const assert=(condition,msg)=>{if(!condition)throw new Error('Scrim UI: '+msg)};
 assert(owner.includes('scrimOfficialRivalWindow')&&
   owner.includes('scrimClubIntent')&&owner.includes('scrimPartnerAssessment')&&
