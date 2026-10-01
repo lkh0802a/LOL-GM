@@ -8,8 +8,23 @@ const TRAIN_POINTS=100;
 function youthMul(age){return age<=18?1.4:age<=20?1.25:age<=22?1.1:age<=24?1:0.85}
 function growthCap(age){return age<=18?4.2:age<=20?3.5:age<=22?2.8:age<=24?2.1:age<=26?1.5:1.0}
 function defaultTraining(){return {mechanical:20,laning:20,combat:20,macro:20,mental:20,intensity:'normal'}}
+function normalizeTraining(plan){
+  const result=defaultTraining(),keys=Object.keys(ATTR_GROUPS);
+  for(const k of keys){const v=plan?.[k];result[k]=v!==null&&v!==''&&Number.isFinite(Number(v))?Math.round(clamp(Number(v),0,TRAIN_POINTS)):20}
+  const total=keys.reduce((s,k)=>s+result[k],0);
+  if(total>TRAIN_POINTS)for(const k of keys)result[k]=Math.floor(result[k]*TRAIN_POINTS/total);
+  if(['light','normal','high'].includes(plan?.intensity))result.intensity=plan.intensity;
+  return result;
+}
+function setTrainingAllocation(plan,key,value){
+  const result=normalizeTraining(plan);
+  if(!Object.hasOwn(ATTR_GROUPS,key))return result;
+  const others=Object.keys(ATTR_GROUPS).filter(k=>k!==key).reduce((s,k)=>s+result[k],0);
+  if(Number.isFinite(Number(value)))result[key]=Math.round(clamp(Number(value),0,TRAIN_POINTS-others));
+  return result;
+}
 function trainingIntensity(t){const x=t?.training?.intensity||'normal';return x==='light'?{growth:.9,fatigue:.45,condition:.25}:x==='high'?{growth:1.08,fatigue:1.35,condition:-.35}:{growth:1,fatigue:.8,condition:0}}
-function aiManageTraining(db,t){if(!t||t.id===managedTeamId(db))return;t.training=t.training||defaultTraining();t.training.intensity=trainingRecommendation(db,t).intensity}
+function aiManageTraining(db,t){if(!t||t.id===managedTeamId(db))return;t.training=normalizeTraining(t.training);t.training.intensity=trainingRecommendation(db,t).intensity}
 const FACILITY_TYPES=['training','analysis','recovery','youth','scouting'];
 const FACILITY_LABELS={training:'훈련',analysis:'데이터 분석',recovery:'회복',youth:'유소년 육성',scouting:'스카우팅'};
 function ensureFacilities(t){
@@ -94,7 +109,7 @@ function growPlayer(db,p,rng,games,champGames){
     practiceFactor=Math.max(.82,1-Math.min(280,p.medicalRestDays||0)*.00065);
   const room=clamp((p.pot-before)/10,-0.5,1.5), prof=p.personality.professionalism/100,ageShift=dev.peakAge-25;
   const coach=team?staffDevelopmentFor(team,p.role)/100:0.45, play=clamp(games/30,0,1);
-  const tr=team?team.training:defaultTraining(), intensity=trainingIntensity(team),conversionMul=roleConversionGrowthMultiplier(p),tsum=['mechanical','laning','combat','macro','mental'].reduce((a,k)=>a+(+tr[k]||0),0)||1;
+  const tr=normalizeTraining(team?.training), intensity=trainingIntensity(team),conversionMul=roleConversionGrowthMultiplier(p),tsum=['mechanical','laning','combat','macro','mental'].reduce((a,k)=>a+tr[k],0)||1;
   for(const g in ATTR_GROUPS){
     // 훈련 포인트는 총 100점 한도: 배분하지 않은 포인트는 버려진다 (나눠 쓰는 만큼만 효과)
     const base=ageCurve(p.age-ageShift,g), train=team?(Math.min(TRAIN_POINTS,tr[g])/TRAIN_POINTS*5-1)*0.9:-0.3;

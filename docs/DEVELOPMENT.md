@@ -839,3 +839,33 @@ slot 10. This desktop mobile viewport is not real Android/TalkBack acceptance.
 Full final-head Actions remains the merge gate. Next: remaining D04 insolvency/
 representation, D06 ownership/license/regional history, then D07–D13. Keep the
 existing whole-D automation; do not create duplicate recurring jobs.
+
+## D12 contextual First Selection (2026-10-02)
+
+Selection AI now compares current eligible patch picks, its own registered
+players' champion mastery, bounded opponent scouting, replacement scarcity,
+contested picks, counterpick exposure and remaining Fearless breadth. Manual
+side/order choices remain authoritative. Assessment does not repair depth charts
+or consume match RNG; the existing selection noise stream remains separate.
+Official sessions assess official registration views, including AI-first prompts.
+Pending choices and their explanations survive saves; completed games retain
+compact decision evidence. Replays retain recorded side and pick order even
+when current champion pools differ from the historical match.
+
+Focused acceptance proves actual AI choices change across identical seeds when
+mastery breadth changes, opponent estimates remain bounded, patch/Fearless
+changes reach assessments, all four manual choices work, and Bo3/Bo5 pending
+choices survive saves. Training-only players cannot affect official selection.
+Static checks pass for 90 modules; full Actions is the merge gate. This delivers
+the contextual selection component, not all D12 or whole-D acceptance. Next:
+actual daily-clock long careers, remaining economic/ownership boundaries and
+staff/training/match mechanics. The existing two-season shortcut fixture is
+not evidence of a 100-season daily-clock career.
+
+Player-reported training NaN: the slider summed the string intensity alongside
+numeric group allocations. Allocation now sums only attribute groups and enforces
+finite values and the 100-point budget. Restore and growth normalize damaged or
+partial old plans; valid zero/underallocated plans and intensity remain intact.
+Opponent training controls are disabled. Focused acceptance exercises all three
+intensities, invalid saved fields and actual player growth, preventing poisoned
+attributes instead of only hiding NaN in the UI.
