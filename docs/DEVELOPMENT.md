@@ -291,7 +291,7 @@ See `docs/LOL_GM_SPEC.md#43-chatgpt--claude-collaborative-development-workflow` 
 
 ### International ecosystem design checkpoint — 2026-09-27
 
-The canonical first-division international competition contract is now frozen in `INTL_PRESETS` and D-032: First Stand (12), MSI (16), Eastern/Western Cup (8 each), Worlds (24), Masters (16), and Open (12). Official full names are used as internal IDs; display abbreviations are separate.
+The canonical first-division international competition contract is now frozen in `INTL_PRESETS` and D-032: First Stand (12), MSI (16), Eastern/Western Cup (8 each), Worlds (24), Worlds Masters (16), and Worlds Open (12). Official full names are used as internal IDs; display abbreviations are separate.
 
 Worlds uses a 24-team, three-pot league phase with six BO3 matches per team (two opponents from every pot, including the team's own pot), followed by a one-time seeded Round-of-16 draw and a fixed BO5 knockout bracket. Masters uses 2+coefficient slots with a maximum of three teams per league; Open initially uses two teams per core league.
 
@@ -483,3 +483,8 @@ This is selector-level evidence, not a claim that the whole game or CI is 1.58x
 faster. Full Actions performance plus exact pre-change smoke/two-season/save
 parity are required before accepting the optimization. D04-B4 remains unfinished;
 resume its next independent gameplay unit after this bounded optimization.
+
+Tournament naming correction (2026-10-01): display names are Worlds Masters
+(월즈 마스터즈) and Worlds Open (월즈 오픈). Keep existing MASTERS/OPEN IDs
+for saved schedules and results. Restore old default display names on load;
+preserve user-customized names and formats.

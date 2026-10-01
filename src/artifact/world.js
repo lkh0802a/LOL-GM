@@ -35,8 +35,8 @@ const INTL_PRESETS=[
   {id:'EASTERN_CUP',name:'Eastern Cup',short:'EC',phase:2,tier:2,timing:'mid',zone:'east',teams:8,format:'regional_cup',groupBo:3,knockoutBo:5,prestige:1},
   {id:'WESTERN_CUP',name:'Western Cup',short:'WEC',phase:2,tier:2,timing:'mid',zone:'west',teams:8,format:'regional_cup',groupBo:3,knockoutBo:5,prestige:1},
   {id:'WORLD_CHAMPIONSHIP',name:'World Championship',short:'Worlds',phase:3,tier:1,timing:'end',teams:24,baseSlots:4,maxSlots:4,format:'worlds_league_phase',pots:3,potSize:8,leagueMatches:6,leagueBo:3,knockoutTake:16,knockoutBo:5,prestige:3},
-  {id:'MASTERS',name:'Masters',short:'Masters',phase:3,tier:2,timing:'end',teams:16,baseSlots:2,maxSlots:3,extraSlots:4,format:'masters_groups',groupBo:3,groupLegs:2,knockoutBo:5,prestige:2},
-  {id:'OPEN',name:'Open',short:'Open',phase:3,tier:3,timing:'end',teams:12,baseSlots:2,maxSlots:2,format:'open_groups',groupBo:3,groupLegs:1,knockoutBo:5,prestige:1},
+  {id:'MASTERS',name:'Worlds Masters',short:'Worlds Masters',phase:3,tier:2,timing:'end',teams:16,baseSlots:2,maxSlots:3,extraSlots:4,format:'masters_groups',groupBo:3,groupLegs:2,knockoutBo:5,prestige:2},
+  {id:'OPEN',name:'Worlds Open',short:'Worlds Open',phase:3,tier:3,timing:'end',teams:12,baseSlots:2,maxSlots:2,format:'open_groups',groupBo:3,groupLegs:1,knockoutBo:5,prestige:1},
 ];
 const INTL_ZONES={east:['KR','CN','AP','VN','JP','TW','OC','SEA'],west:['EU','NA','BR','TR','ME','CIS','LA']};
 const ZONE_KO={east:'Eastern',west:'Western'};

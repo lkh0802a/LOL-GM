@@ -57,6 +57,21 @@ function normalizeRestoredSave(db){
   // Format 2 uses the same runtime object model, but strips derived caches.
   for(const k of SAVE_TRANSIENT_ROOT_FIELDS)delete db[k];
   db.metaHistory=unpackMetaHistory(db.metaHistory||[]);
+  // Rename only former defaults; IDs, custom names and tournament rules stay.
+  for(const [id,oldName] of [['MASTERS','Masters'],['OPEN','Open']]){
+    const preset=INTL_PRESETS.find(x=>x.id===id);
+    for(const row of [...(db.worldConfig.internationals||[]),
+      ...Object.values(db.competitions||{})]){
+      if(row.id!==id)continue;
+      if(row.name===oldName)row.name=preset.name;
+      if(row.short===oldName)row.short=preset.short;
+    }
+    for(const row of db.history||[])
+      if(row.comp===id&&row.compName===oldName)row.compName=preset.name;
+    for(const step of db.world?.steps||[])
+      if(step.kind==='intl'&&(step.ids||[step.id]).includes(id)&&step.label)
+        step.label=step.label.split(' · ').map(x=>x===oldName?preset.name:x).join(' · ');
+  }
   for(const t of Object.values(db.teams)){
     ensureFacilities(t);
     delete t._pre;
