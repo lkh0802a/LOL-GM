@@ -941,3 +941,64 @@ PR #106's engine revision before this ownership change; do not attribute its
 results to the new ownership code. Early actual daily-clock seasons passed;
 completion and remaining two seeds are still unverified. Do not change account
 billing settings automatically. Continue implementation independently.
+## D06 region/club organization continuity (2026-10-02)
+
+Region mergers previously promoted every moved second team to division one and
+removed its parent; independence could instead close an owned reserve merely
+because its parent changed region. All five office-directed relocation paths now
+share region-continuity.js: continuing clubs retain IDs, division and employment
+organization, with owned reserves moving alongside parents. Destinations retain
+second-division support. Each relocated club records a dated same-club region
+history. Regional succession records preserve predecessor names and successor
+IDs before dissolved region objects are removed, without self-predecessor links.
+Ordinary voluntary relocation is not introduced by this administrative path.
+
+Focused acceptance triggers the actual production merger, then checks splitting,
+contracts/staff/financial/history continuity, reserve parent/division, successor
+save restoration and invalid-destination rejection. Static checks (91 modules)
+and the seven-case calendar/scouting runner pass. Whole-D/D06 are not complete:
+player successor-local choice, current-contract legacy eligibility and license
+approval remain the next connected work. Do not infer that preserving a club
+also grants a player new local status; those policies require explicit commands.
+
+The GitHub account execution block persists; this change must remain a draft
+until full CI can run. Preserve PR #106 (long careers) and #107 (owners) and their
+independent branches. The running process 26248 still targets #106's prior engine,
+not this change: 12 seasons through 2038 passed at last observation, with save
+size about 25 MB and year-boundary heap about 511 MB. The process working set was
+about 2.9 GB, materially higher than heap: later runner reporting should include
+RSS/external allocations, and mobile performance acceptance remains unproven.
+No duplicate 100-season run should be started while this process is active.
+
+## D06 successor-local and contract protection (2026-10-02)
+
+PR #108 now also grants explicit successor-region choices to players whose native,
+active or unexpired earned local region is reorganized. Existing player-choice
+commands retain manager/player authority; AI and free agents can choose through
+that same path. Choosing a native successor replaces the effective native option
+without rewriting historical birthplace. Alternative succession choices are
+consumed, including chained reorganizations before activation. Valid independent
+qualifications retain their normal expiry. Service progress follows the player's
+successor employment region while retaining the snapshotted old rule/days/seasons.
+
+Office-directed club moves protect the old contract's registered-local status
+within the continuing employment organization until its original signed/until
+identity changes. Exceptions are explicitly scoped to club IDs and do not become
+portable region-wide local status or follow an external borrowing club. Renewal
+cannot extend the original deadline. Shared registration, roster plans, market
+projections and scouting classification now pass the actual destination club;
+market capacity also honors a valid next-season choice. A post-reorganization AI
+review queues new choices before recruitment, without duplicating existing ones.
+Saved malformed contract exceptions fail validation.
+
+Focused acceptance now includes a five-native official squad after relocation,
+nonportable/loan guards, renewal boundary, old service-rule continuity, managed
+and FA choices, exclusive chained native succession and save validation. Shared
+29-acceptance UI/contracts runner, seven calendar/scouting cases, registration,
+transfer-stage/local-service and 91-module static checks pass locally. Full CI
+remains blocked by the recorded GitHub account execution restriction; #108 stays
+draft and latest player-facing HTML remains the verified merged #105 build.
+D06 still requires license approval/transfer lifecycle and wider regional-policy
+acceptance; no whole-D completion is claimed. The existing #106-engine long run
+had reached 20 seasons through 2046 (about 58 MB save / 1.25 GB year-boundary heap)
+at last observation, and is not evidence for this new eligibility code.

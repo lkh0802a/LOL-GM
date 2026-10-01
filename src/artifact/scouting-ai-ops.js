@@ -23,7 +23,7 @@ function aiScoutingPublicFit(db,t,p){
     star=t.philosophy==='superstar'&&p.reputation>=78?4:0,
     winNow=t.philosophy==='win-now'?Math.max(0,view.ability-68)*.15:0,
     info=Math.min(4,view.uncertainty*.35),
-    local=isLocalPlayer(p,t.region)?1.5:0;
+    local=isLocalPlayer(p,t.region,t.id)?1.5:0;
   return view.ability+Math.max(0,view.potential-view.ability)*
     (t.philosophy==='youth'?.45:.18)+need+youth+star+winNow+info+local;
 }

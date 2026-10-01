@@ -37,6 +37,7 @@ export const ENGINE_MODULES = [
   'office.js',
   'office-international.js',
   'club-ownership.js',
+  'region-continuity.js',
   'finance.js',
   'contracts.js',
   'contract-market-behavior.js',

@@ -46,7 +46,7 @@ function officialMedicalReplacementAllowed(db,t,injured,p){
     other.registration.players.filter(id=>id!==p.id&&officialPlayerCanRepresent(db,db.players[id],other)&&
       !medicalOut(db.players[id])).length<5))return false;
   return lists.every(ids=>ids.includes(injured.id)&&ids.length<officialRosterCap(db,t)&&
-    (isLocalPlayer(p,t.region)||ids.filter(id=>!isLocalPlayer(db.players[id],t.region)).length<nonLocalLimitForTeam(db,t)));
+    (isLocalPlayer(p,t.region,t.id)||ids.filter(id=>!isLocalPlayer(db.players[id],t.region,t.id)).length<nonLocalLimitForTeam(db,t)));
 }
 function registerMedicalOfficialReplacement(db,t,injured,p){
   if(!officialRegistrationEnabled(db))return;

@@ -12,7 +12,7 @@ function initialOfficialRoster(db,t){
   const preferred=Array.from(new Set([...ROLES.map(r=>t.depthChart?.[r]),...candidates])).filter(id=>candidates.includes(id));
   for(const id of preferred){const p=db.players[id];
     if(selected.length>=officialRosterCap(db,t))break;
-    if(!isLocalPlayer(p,t.region)&&selected.filter(x=>!isLocalPlayer(db.players[x],t.region)).length>=limit)continue;
+    if(!isLocalPlayer(p,t.region,t.id)&&selected.filter(x=>!isLocalPlayer(db.players[x],t.region,t.id)).length>=limit)continue;
     selected.push(id);
   }
   return selected;
@@ -59,7 +59,7 @@ function officialRegistrationErrors(db,t,players,proposed={}){
   if(new Set(players).size!==players.length)errors.push('같은 선수를 중복 등록할 수 없습니다');
   if(players.length<5||players.length>officialRosterCap(db,t))errors.push('공식 명단은 5~'+officialRosterCap(db,t)+'명이어야 합니다');
   if(players.some(id=>!officialPlayerCanRepresent(db,db.players[id],t)))errors.push('계약 또는 임대 권한이 없는 선수가 포함되었습니다');
-  if(players.filter(id=>!isLocalPlayer(db.players[id],t.region)).length>nonLocalLimitForTeam(db,t))errors.push('공식 명단 비로컬 상한을 넘었습니다');
+  if(players.filter(id=>!isLocalPlayer(db.players[id],t.region,t.id)).length>nonLocalLimitForTeam(db,t))errors.push('공식 명단 비로컬 상한을 넘었습니다');
   for(const other of activeTeams(db))if(other.id!==t.id&&
     (proposed[other.id]||other.registration?.players||[]).some(id=>players.includes(id)&&officialPlayerCanRepresent(db,db.players[id],other)))
     errors.push('다른 공식 스쿼드에 등록된 선수는 먼저 등록 해제해야 합니다');
