@@ -5,41 +5,6 @@ function scrimAnalysisBonus(t){
   const p=staffProfile(t);
   return clamp((p.analysis-50)/500+facilityAnalysisBonus(t),0,.14);
 }
-function scrimDailyCapacity(db,t,booked=null){
-  if(!t||t.active===false)return 0;
-  // Check the complete official calendar, not merely the next *unplayed*
-  // match: an already completed televised series still books the full day.
-  if((booked||officialBookedTeams(db)).has(t.id))return 0;
-  const days=daysUntil(db,nextTeamMatch(db,t.id)?.date);
-  if(days===0)return 0; // No practice blocks on an official fixture day.
-  const roster=(t.roster||[]).map(id=>db.players[id]).filter(p=>p&&!p.retired&&!medicalOut(p)&&!medicalScrimRest(db,p));
-  if(roster.length<5)return 0;
-  const fatigue=avg(roster.map(p=>p.fatigue||0));
-  const condition=avg(roster.map(p=>p.condition??96));
-  if(fatigue>=60||condition<=67)return 0;
-  // Weekly double-header: lighter taper the night before, two blocks otherwise.
-  const scheduleCap=days===1?2:days===2?4:6;
-  const fatigueCap=fatigue>=49?2:fatigue>=38?4:6;
-  const conditionCap=condition<=77?2:condition<=85?4:6;
-  return Math.min(scheduleCap,fatigueCap,conditionCap);
-}
-function scrimReadiness(db,t,booked=null){
-  if(!t)return {ok:false,reason:'팀 없음'};
-  const roster=(t.roster||[]).map(id=>db.players[id]).filter(p=>p&&!p.retired&&!medicalOut(p)&&!medicalScrimRest(db,p));
-  const avgFatigue=avg(roster.map(p=>p.fatigue||0));
-  const avgCondition=avg(roster.map(p=>p.condition??96));
-  const capacity=scrimDailyCapacity(db,t,booked),today=db.worldDate||'';
-  const log=(t.scrimLog||[]).filter(x=>x.date===today);
-  const games=log.reduce((a,x)=>a+(x.games||0),0);
-  // Two distinct booking blocks. Old saved scrims did not have a block field;
-  // retain their occupied sessions in recorded order.
-  const occupied=new Set(log.map((x,i)=>x.slot||(['afternoon','evening'][Math.min(1,i)])));
-  const availableSlots=['afternoon','evening'].filter(slot=>!occupied.has(slot));
-  if(capacity===0)return {ok:false,reason:'공식 경기 또는 회복 우선',avgFatigue,avgCondition,games,capacity,availableSlots:[]};
-  if(games>=capacity||!availableSlots.length)
-    return {ok:false,reason:'오늘 스크림 연습량 완료',avgFatigue,avgCondition,games,capacity,availableSlots:[]};
-  return {ok:true,reason:'가능',avgFatigue,avgCondition,games,capacity,remaining:capacity-games,availableSlots};
-}
 function scrimValue(db,tid,oppId){
   const t=db.teams[tid],opp=db.teams[oppId];if(!t||!opp)return .5;
   const gap=teamStrength(db,oppId)-teamStrength(db,tid);
@@ -91,7 +56,7 @@ function simulateBackgroundScrim(db,t,opp,games,rng,slot,booked=null,proposal=nu
         x.mastery*.095+champStrength(x.champ,db.patch)*4.1-
         (x.player.fatigue||0)*.13+
         (x.player.condition??96)*.035,0)/5;
-      return effective+teamSynergy(club)*.035+scrimAnalysisBonus(club)*14;
+      return effective+lineupSynergy(db,club,side.map(x=>x.player.id))*.035+scrimAnalysisBonus(club)*14;
     });
     const winner=(values[0]-values[1]+rng.normal(0,8.5))>=0?t.id:opp.id;
     wins[winner]++;
@@ -132,7 +97,7 @@ function aiRunScrims(db,rng){
       const first=scrimReadiness(db,t,booked);
       if(busy.has(t.id)||!first.ok||!first.availableSlots.includes(slot)||!rng.chance(.84))continue;
       const candidates=order.filter(o=>o.id!==t.id&&!busy.has(o.id)&&
-        o.region===t.region&&
+        teamPracticeVenue(db,o).region===teamPracticeVenue(db,t).region&&
         scrimReadiness(db,o,booked).availableSlots?.includes(slot)&&
         !!scrimTimeOverlap(db,t,o,db.worldDate,slot));
       if(!candidates.length)continue;
@@ -168,6 +133,9 @@ function aiRunScrims(db,rng){
 function recordScrimPractice(db,rec,lines){
   if(!rec||!lines)return {players:0,games:0};
   const teams=new Set([rec.a,rec.b]),seen=new Set(),games=(rec.games||[]).length;
+  if(games<1)return {players:0,games:0};
+  for(const tid of teams){const t=db.teams[tid];if(!t||games*SCRIM_PRACTICE_COST>practiceDay(db,t).remaining)throw Error('오늘 남은 연습 시간이 부족합니다')}
+  for(const tid of teams)consumeScrimPractice(db,db.teams[tid],games);
   for(const l of lines){
     const p=db.players[l.pid];if(!p||!teams.has(l.tid))continue;
     const opp=l.tid===rec.a?rec.b:rec.a,value=scrimValue(db,l.tid,opp);

@@ -126,7 +126,7 @@ function closeMarket(db){
   for(const t of activeTeams(db,null,1))aiManageOwnedReserve(db,t);
   for(const t of activeTeams(db)){aiReviewDepthChart(db,t);rebalanceAiRosterRoles(db,t)}
   for(const t of activeTeams(db)){const pre=t._pre||[];const now=ROLES.map(r=>starterFor(db,t,r)).filter(Boolean).map(p=>p.id);const changed=now.filter(id=>!pre.includes(id)).length;
-    t.synergy=clamp(teamSynergy(t)*0.85+15-changed*8,10,100);delete t._pre;
+    t.synergy=clamp(teamSynergy(t)-changed*5,15,85);recoverTeamCohesion(db,t,now,.08);delete t._pre;
     if(t.id!==managedTeamId(db)&&!t.parent&&(!t.sponsor||t.sponsor.until<db.year)){const chosen=aiSelectSponsor(db,t);if(chosen)ev(`${t.name} ${chosen.type} 스폰서 계약 · ${chosen.years}년`)}}
   for(const R of Object.values(db.regions)){const ts=activeTeams(db,R.id,1);R.teams=ts.length;if(ts.length)R.strength=Math.round(avg(ts.map(t=>teamStrength(db,t.id))))}
   rep.retired.slice(0,3).forEach(r=>news(db,`${db.players[r.pid].name} 은퇴 (${r.age}세)`));

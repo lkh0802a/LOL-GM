@@ -106,7 +106,8 @@ function scrimPartnerInterest(db,t,other,intent=null,strength=null,otherStrength
 function scrimPartnerAssessment(db,t,other,intents=null,strengths=null,rivals=null){
   if(!t||!other||t.id===other.id||t.active===false||other.active===false)
     return {allowed:false,reason:'참가 불가 팀'};
-  if(t.region!==other.region)
+  const firstVenue=teamPracticeVenue(db,t),secondVenue=teamPracticeVenue(db,other);
+  if(firstVenue.region!==secondVenue.region)
     return {allowed:false,reason:'현지 훈련권역이 다릅니다'};
   const key=[t.id,other.id].sort().join('|'),rivalDays=rivals?
     (rivals.get(key)??null):scrimOfficialRivalWindow(db,t.id,other.id);
@@ -122,6 +123,6 @@ function scrimPartnerAssessment(db,t,other,intents=null,strengths=null,rivals=nu
   const secrecy=rivalDays!==null&&rivalDays>7&&rivalDays<=14?.68:1;
   const acceptance=clamp(left.approval*right.approval*secrecy,.015,.97),
     weight=Math.max(.01,left.desire*right.desire*acceptance);
-  return {allowed:true,reason:'양팀 훈련 목적에 부합',acceptance,weight,
+  return {allowed:true,reason:'양팀 훈련 목적에 부합',venue:firstVenue.region,acceptance,weight,
     left,right,rivalDays};
 }
