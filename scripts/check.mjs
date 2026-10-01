@@ -2,6 +2,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import vm from 'node:vm';
 import { ARTIFACT_MODULES } from './artifact-modules.mjs';
+import { assertMutationOwnership } from './mutation-ownership.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const artifact = resolve(root, 'src', 'artifact');
@@ -18,6 +19,7 @@ const sourceOf = file => {
 };
 
 let failed = false;
+assertMutationOwnership(new Map(modules.map(file=>[file,sourceOf(file)])));
 const globalSymbols = new Map();
 for (const file of modules) {
   const path = resolve(artifact, file);
