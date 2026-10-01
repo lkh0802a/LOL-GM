@@ -25,7 +25,7 @@ The authoritative module order lives in `scripts/artifact-modules.mjs`.
 - roster/registration: `roster.js` (local eligibility, contracted-move accounting, organization roster rules, 1st↔reserve planning/movement, roster integrity)
 - transaction gateway: `state-transaction.js` (shared read-only validation/preview, stale-state guards, revalidation and guarded commit), `state-player-actions.js` (signing/renewal, full transfer, release and contract-option command handlers) and `state-rollback.js` (action-scoped undo log and post-commit membership checks)
 - facilities and club economy: `development.js` owns infrastructure levels, timed construction and physical training/analysis/recovery effects. `finance.js` owns budgets, prepaid cash movements, conservative forecasts and audited annual statements, while `offseason.js` chooses board investments and `season.js` activates completed construction on world days. See `docs/PHASE_12_FINANCE.md`.
-- management domains: `office.js` (regions), `office-international.js` (global governance), `finance.js`, `contracts.js`, `transfer.js`, `scouting.js`, `staff.js`, `scrim.js`, `player-relations.js`, `features.js`, `role-conversion.js`, `career.js`
+- management domains: `office.js` (regions), `office-international.js` (global governance), `finance.js`, `contracts.js`, `contract-negotiation.js`, `transfer.js`, `scouting.js`, `staff.js`, `scrim.js`, `player-relations.js`, `features.js`, `role-conversion.js`, `career.js`
 - draft information layer: `draft-analysis.js` (scouting-bounded mastery estimates, meta/composition evidence, opponent-intent explanation); legality and selection remain in `draft.js`
 - domain UI: `ui-setup.js`, `ui-match.js`, `ui-manager.js`, `ui-data.js`, `ui-patch.js`, `ui-market.js`, `ui-market-initial.js`, `ui-negotiations.js`, `ui-market-staff.js`, `ui-champion.js`, `ui-player.js`, `ui-roster.js`, `ui-draft.js`, `ui-season.js`
 - modal/keyboard ownership: `ui-overlay.js` (single dialog lifecycle, background inerting, focus containment/return, dismissibility policy for match reports, practice drafts and locked official First Selection)
@@ -45,7 +45,8 @@ New large UI surfaces should be added as `ui-<domain>.js` modules instead of ext
 
 - `finance.js` owns club cash flow, payroll/spending controls, revenue/cost closeout and sponsorship acceptance.
 - `contracts.js` owns player market valuation, contract terms/options/signing and the AI contract/FA market.
-- `transfer.js` owns recruitment workflow, negotiations and permanent transfer execution.
+- `contract-negotiation.js` owns shared persisted negotiation state, player terms/rounds, reopening and agreement through the player-action gateway. It serves initial, FA, renewal and transfer personal terms.
+- `transfer.js` owns recruitment workflow, seller fee negotiations and permanent transfer execution. Recruitment tracking remains a shared consumer of player negotiation outcomes.
 - `scouting.js` owns observed player knowledge and reports; contract/transfer code may consume its public estimates but must not reimplement scouting uncertainty.
 - `staff.js` owns staff departments, staffing limits, coaching profile, generation, AI management and manager staff actions.
 - `player-relations.js` owns player condition modifiers, relationships, usage and satisfaction/transfer-request lifecycle.

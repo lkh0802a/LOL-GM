@@ -6,9 +6,9 @@ This audit is the entry point for Issue #62. It does not change game rules. The 
 
 ## Runtime shape
 
-The standalone runtime currently concatenates **71 classic-script modules** in the order declared by `scripts/artifact-modules.mjs`:
+The standalone runtime now concatenates **72 classic-script modules** in the order declared by `scripts/artifact-modules.mjs`:
 
-- 54 engine/domain modules
+- 55 engine/domain modules
 - 17 UI/application modules
 
 The files are physically split, but dependencies remain implicit browser globals. Therefore file size alone is not the main refactor criterion. Mutation ownership, transaction entry points and caller count take priority.
@@ -194,3 +194,20 @@ cash and prepaid rounding. The medical acceptance continues to cover the
 conditional-pay rules. Accounting paths that use a local `cash` alias remain
 outside this conservative guard. Search actual callers and ledger categories
 before each migration; do not claim all finance mutation is centralized yet.
+
+## R03 player negotiation boundary
+
+`contract-negotiation.js` now owns `world.negotiations`, negotiation identifiers,
+player demand/rounds/reopening and final contract agreement. The implementation
+is moved verbatim from `transfer.js`; all public names, RNG calls, terms and save
+keys are retained. `transfer.js` retains recruitment tracking, seller fee
+negotiation and permanent transfer execution. Player negotiations still consume
+recruitment APIs and finalize through the existing player-action/agreement
+gateways; this file split does not remove classic-script global dependencies.
+
+The manifest loads the new domain before transfer/window consumers. Static
+ownership checks require the player negotiation entry points in their new owner
+and reject their return to transfer/contracts/finance. Existing negotiation-state,
+contract-window, save/rollback and regression coverage remain the behavioral gate.
+Next: converge offseason world-date writers while preserving B3 boundaries,
+then address the AI reserve-callup bypass with parity coverage.
