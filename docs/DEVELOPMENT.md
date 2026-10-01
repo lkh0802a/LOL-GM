@@ -1002,3 +1002,42 @@ D06 still requires license approval/transfer lifecycle and wider regional-policy
 acceptance; no whole-D completion is claimed. The existing #106-engine long run
 had reached 20 seasons through 2046 (about 58 MB save / 1.25 GB year-boundary heap)
 at last observation, and is not evidence for this new eligibility code.
+
+## D integrated implementation batch (2026-10-02)
+
+Current work is consolidated on feature/d-stage-integration from main
+71256de44aecdae0f7ea0aa1807c8b44b13a9d35. This batch combines the actual daily
+career clock and long-career QA (#106), ownership continuity (#107), and region
+organization/successor-local/current-contract protection (#108). Component
+branches remain recoverable; one integration PR becomes the review target.
+Those earlier dated entries describe component history, not separate merge plans.
+
+Integration validation passed locally: 30 shared UI/contracts acceptance cases
+across 26 engine contexts, seven calendar/scouting cases, 13 CI/publication/
+mutation ownership unit tests, and 92-module static/build checks. An actual
+daily-clock year with seed d-integration covered 258 official fixtures and save
+restoration. A second bounded year with seed d-memory-report verified the new
+memory report and resident-memory guard: 258 fixtures, approximately 6 MB save,
+136 MB heap and 647 MB RSS at its year boundary. These are desktop Node results,
+not mobile performance acceptance or completed multi-seed 100-season validation.
+
+The QA runner now reports heap, RSS, external and array-buffer memory separately;
+defaults retain the 1536 MiB heap budget and add a 4096 MiB RSS ceiling. Regional
+monopoly warnings accommodate multiple editions per year and avoid duplicate
+warnings for one competition/year. Primary files are daily-career-acceptance.mjs,
+club-ownership.js, region-continuity.js, shared local-service/roster/market paths,
+their acceptance cases and CI/long-career workflows. No temporary engine fork is
+introduced. Diagnostic files remain untracked.
+
+GitHub run 36899884255 was blocked before steps by failed account payments or a
+spending limit. No unlock/reset time was provided. Full CI remains mandatory for
+merging this batch; account billing settings must not be changed automatically.
+The prior-engine process 26248 remains the only 100-season run; it does not verify
+this integrated code. Preserve its partial reports even on budget failure.
+dist/LOL-GM-latest.html remains the verified #105 build; the locally built draft
+is separately available as dist/LOL-GM-D-preview.html.
+
+Next connected work: D06 license approval/transfer lifecycle, then remaining
+D04/D07-D10 mechanisms and D12/D13 acceptance. D11 requires completed multiple
+100-season seeds, and D13 still needs real mobile core tasks/TalkBack evidence.
+Neither D06 nor the whole D stage is marked complete by this consolidation.
