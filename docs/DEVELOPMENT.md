@@ -585,3 +585,10 @@ transfer events. AI checks both purchases and proposed swaps before committing.
 Focused transfer-consent, owned-reserve-coach and static checks pass; full Actions
 is the acceptance gate. Next candidates: AI negotiating new personal terms,
 agent/promises, remaining insolvency claims and D05 loans.
+
+B4e1 CI integration: the first regression run rejected legacy transfer fixtures
+whose hard-coded pay no longer guaranteed player agreement. Transaction fee,
+retained-contract and rollback fixtures now use agreed salary relative to the
+actual player asking price; all original financial, stale, move-limit and rollback
+assertions remain. Local regression passed after this fixture correction. Full
+final-head Actions remains the merge gate.
