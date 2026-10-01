@@ -160,3 +160,13 @@ reused. cash_recovery and reserve_support describe matched internal transfers;
 active-parent recovery history is bounded to 20 settled entries and never feeds
 annual operating revenue. UI renders the transfer direction/kind; legacy support
 rows without kind still display as support.
+
+
+contract-market-behavior owns permanent-transfer consent. Decision evaluation
+clones the target team/player and isolates market-demand cache so legacy
+normalization in negotiation utilities cannot mutate original preview state.
+Player transaction validation checks it for player.transfer and transfer-kind
+player.sign, and canonical consent evidence is freshly recomputed before writes.
+The transfer writer archives consent with the move; roster internal assignment
+continues to use its separate gateway. AI candidate and swap selection reuse the
+same consent policy instead of assuming club fee agreement authorizes the player.

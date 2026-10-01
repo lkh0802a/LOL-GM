@@ -181,8 +181,10 @@ source += `
     assignPlayerToTeam(db,p,seller);
     p.contract={salary:2,until:db.year+1,years:2,signingBonus:0,promisedRole:'starter'};
     buyer.finance.cash=25;seller.finance.cash=10;
+    // Fee/rollback tests require a player who accepts the agreed personal terms.
+    const agreedSalary=Math.ceil(asking(db,p,buyer.region)*2*10)/10;
     const command={type:'player.sign',pid:p.id,teamId:buyer.id,fromId:seller.id,
-      kind:'transfer',actor:'manager',fee:7,salary:2.5,years:3,
+      kind:'transfer',actor:'manager',fee:7,salary:agreedSalary,years:3,
       terms:{signingBonus:1,promisedRole:'starter'}};
     const before=JSON.stringify(playerActionSnapshot(db,command));
     const invalid=previewWorldAction(db,{...command,fee:50});
@@ -194,7 +196,7 @@ source += `
     assert(!applyWorldAction(db,prev).ok,'stale seller terms must block transfer');
     p.contract.salary=2;
     const done=applyWorldAction(db,prev);
-    assert(done.ok&&p.team===buyer.id&&p.contract.salary===2.5,'transfer and agreed contract must commit together');
+    assert(done.ok&&p.team===buyer.id&&p.contract.salary===agreedSalary,'transfer and agreed contract must commit together');
     assert(buyer.finance.cash===17&&seller.finance.cash===17,'transfer fee and contract bonus settlement changed');
     assert(p.contractedMoves?.length===1&&p.contractedMoves[0].fee===7,'transfer move count must be recorded once');
     assert(!seller.roster.includes(p.id)&&buyer.roster.includes(p.id),'transfer registration is inconsistent');
@@ -208,13 +210,15 @@ source += `
     const db=buildWorld(),teams=activeTeams(db,null,1),seller=teams[0],buyer=teams[1],owner=teams[2];
     const p=Object.values(db.players).find(x=>!x.retired&&!x.team&&isLocalPlayer(x,buyer.region));
     assert(p,'AI transfer fixture missing');setManagedTeam(db,owner.id);db.world={year:db.year,manage:'manual'};
-    assignPlayerToTeam(db,p,seller);p.contract={salary:1.5,until:db.year+1,years:2};
+    assignPlayerToTeam(db,p,seller);
+    const retainedSalary=Math.ceil(Math.max(asking(db,p,buyer.region),asking(db,p,seller.region))*2*10)/10;
+    p.contract={salary:retainedSalary,until:db.year+1,years:2,promisedRole:'starter'};
     const command={type:'player.transfer',pid:p.id,fromId:seller.id,teamId:buyer.id,fee:1.2,actor:'ai'};
     buyer.finance.cash=10;seller.finance.cash=5;
     const preview=previewWorldAction(db,command);
     assert(preview.ok,'AI permanent transfer must share transaction gateway');
     const sent=applyWorldAction(db,preview);
-    assert(sent.ok&&p.team===buyer.id&&p.contract.salary===1.5,'AI transfer must retain original contract');
+    assert(sent.ok&&p.team===buyer.id&&p.contract.salary===retainedSalary,'AI transfer must retain original contract');
     assert(Math.abs(buyer.finance.cash-8.8)<1e-9&&Math.abs(seller.finance.cash-6.2)<1e-9,'AI transfer fee must settle');
     const back=commitWorldAction(db,{type:'player.transfer',pid:p.id,fromId:buyer.id,teamId:seller.id,fee:0,actor:'ai'});
     assert(back.ok&&p.contractedMoves?.length===2,'AI reciprocal transfer must count as second season move');
@@ -344,12 +348,13 @@ source += `
       assert(p,'rollback transfer test lacks local FA fixture');
       setManagedTeam(db,buyer.id);db.world={year:db.year,phase:'market',manage:'manual'};
       assignPlayerToTeam(db,p,seller);
-      p.contract={salary:2,until:db.year+1,years:2,option:null};
+      const agreedSalary=Math.ceil(asking(db,p,buyer.region)*2*10)/10;
+      p.contract={salary:agreedSalary,until:db.year+1,years:2,option:null,promisedRole:'starter'};
       buyer.finance.cash=40;seller.finance.cash=8;
       db._marketDemandCache={rollbackProbe:1};
       const command={type:kind,pid:p.id,teamId:buyer.id,fromId:seller.id,
         actor:'manager',fee:4,...(kind==='player.sign'?
-          {kind:'transfer',salary:3,years:2,terms:{signingBonus:1,promisedRole:'starter'}}:{})};
+          {kind:'transfer',salary:agreedSalary,years:2,terms:{signingBonus:1,promisedRole:'starter'}}:{})};
       const before=JSON.stringify(db),rosterRef=buyer.roster,newsRef=db.news;
       const preview=previewWorldAction(db,command);
       assert(preview.ok,'player transfer rollback preview failed: '+kind);

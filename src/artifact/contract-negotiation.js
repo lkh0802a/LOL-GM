@@ -186,7 +186,7 @@ function submitNegotiationOffer(db,nid,terms){
   const util=offerUtility(db,p,t,offer,{renewal:neg.kind==='renewal'}),
     comp=neg.competitors.length?Math.max(...neg.competitors.map(x=>x.utility)):0,
     threshold=Math.max(offerAcceptanceThreshold(db,p,{kind:neg.kind}),comp-.035),
-    reasonable=!['fa','early_fa','renewal'].includes(neg.kind)||
+    reasonable=!['fa','early_fa','renewal','transfer'].includes(neg.kind)||
       contractOfferReasonable(db,p,t,offer,neg.kind);
   neg.round++;if(neg.lastUtility!=null&&util<neg.lastUtility-.03)neg.patience--;if(util<threshold-.22)neg.patience--;neg.lastOffer=offer;neg.lastUtility=util;neg.history.push({round:neg.round,side:'club',terms:offer,utility:Math.round(util*1000)/1000});
   if(reasonable&&util>=threshold){const r=finalizeNegotiation(db,neg,offer);neg.history.push({round:neg.round,side:'player',result:r.ok?'accept':'commit_rejected'});return r}
