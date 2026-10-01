@@ -106,6 +106,7 @@ const maintainabilityBudgets = {
   'patch-balance.js': 22000,
   'patch-content.js': 12500,
   'series.js': 18000,
+  'first-selection.js': 8500,
   'competition.js': 18000,
   'league-aggregation.js': 12000,
   'player.js': 25000,

@@ -10,13 +10,8 @@ function gameMVP(r){
 function playerGameRating(ps,side,win,mvp,duration){const min=Math.max(1,duration),kp=(ps.k+ps.a)/Math.max(1,side.kills),kda=(ps.k+ps.a)/Math.max(1,ps.d),csm=ps.cs/min,dpm=ps.dmg/min,vis=ps.vision/min,obj=ps.objectives||0,lane=ps.laneSamples?ps.laneAdv/ps.laneSamples:0,tf=ps.teamfights?ps.teamfightDmg/ps.teamfights/1000:0,role=ps.role;let v=4.55+(win?.42:0)+(mvp?.55:0)-ps.d*.08;if(role==='TOP')v+=kda*.35+csm*.105+dpm*.00068+kp*.4+lane*.18+tf*.12;else if(role==='JGL')v+=kda*.36+csm*.045+dpm*.00048+kp*.64+vis*.08+obj*.12+tf*.1;else if(role==='MID')v+=kda*.37+csm*.1+dpm*.00074+kp*.46+lane*.16+tf*.13;else if(role==='ADC')v+=kda*.33+csm*.12+dpm*.00084+kp*.44+lane*.12+tf*.15;else v+=kda*.3+csm*.02+dpm*.00036+kp*.78+vis*.14+obj*.1+tf*.1;return Math.round(clamp(v,3,10)*100)/100}
 // 선택권(진영 vs 픽 순서): 선택권을 가진 팀이 '진영'이나 '픽 순서' 중 하나를 고르면, 상대가 나머지를 고른다
 // 진영 가치: 블루 = 맵 이점(시야·오브젝트 동선). 순서 가치: 선픽 = 최고 챔피언 선점, 후픽 = 마지막 카운터픽(피어리스 후반 세트일수록 커짐)
-function draftPrefs(db,tid,ctx,g,bestOf,rng){
-  const t=db.teams[tid], prof=staffProfile(t),an=prof.analysis/100, noise=()=>rng.normal(0,0.03*(1.1-an));
-  const fl=ctx.fearless?Math.min(1,ctx.used.length/40):0;
-  return {blue:0.03+noise(),red:noise(),first:0.05+noise(),last:0.02+0.03*prof.draft/100+0.05*fl+(g===bestOf?0.02:0)+noise(),fl};
-}
 function chooseSide(db,tid,opp,ctx,g,bestOf,rng){
-  const me=draftPrefs(db,tid,ctx,g,bestOf,rng), op=draftPrefs(db,opp,ctx,g,bestOf,rng);
+  const me=draftPrefs(db,tid,ctx,g,bestOf,rng,opp), op=draftPrefs(db,opp,ctx,g,bestOf,rng,tid);
   const bestSide=v=>v.blue>=v.red?'blue':'red', bestOrd=v=>v.first>=v.last?'first':'last', flip={blue:'red',red:'blue',first:'last',last:'first'};
   // 선택권을 가진 팀은 현재 패치·코치·피어리스 상황을 보고 진영 또는 픽 순서 중 가치가 높은 쪽을 고른다.
   const sA=bestSide(me), oA=flip[bestOrd(op)], vA=me[sA]+me[oA];
@@ -24,20 +19,20 @@ function chooseSide(db,tid,opp,ctx,g,bestOf,rng){
   let side,order,chose;
   if(vA>=vB){side=sA;order=oA;chose='side'}else{side=sB;order=oB;chose='order'}
   const why=chose==='side'?`진영 선택 → ${side==='blue'?'블루':'레드'} (상대가 ${order==='first'?'후픽':'선픽'} 선택)`:`픽 순서 선택 → ${order==='first'?'선픽':'후픽'}${order==='last'&&me.fl>0.3?' (피어리스로 줄어든 챔피언 폭 — 마지막 카운터픽)':''} (상대가 ${side==='blue'?'레드':'블루'} 선택)`;
-  return {side,order,chose,why};
+  return {side,order,chose,why:why+" · "+selectionDecisionReason(me,order),evidence:selectionDecisionSummary(me,op,{side:vA,order:vB})};
 }
 function resolveFirstSelection(db,chooser,other,ctx,g,bestOf,rng,choice){
   if(!choice)return chooseSide(db,chooser,other,ctx,g,bestOf,rng);
-  const me=draftPrefs(db,chooser,ctx,g,bestOf,rng),op=draftPrefs(db,other,ctx,g,bestOf,rng),bestSide=v=>v.blue>=v.red?'blue':'red',bestOrd=v=>v.first>=v.last?'first':'last',flip={blue:'red',red:'blue',first:'last',last:'first'};
+  const me=draftPrefs(db,chooser,ctx,g,bestOf,rng,other),op=draftPrefs(db,other,ctx,g,bestOf,rng,chooser),bestSide=v=>v.blue>=v.red?'blue':'red',bestOrd=v=>v.first>=v.last?'first':'last',flip={blue:'red',red:'blue',first:'last',last:'first'};
   if(choice.kind==='side'){
     if(!['blue','red'].includes(choice.value))throw new Error('Invalid First Selection side');
     const side=choice.value,order=flip[bestOrd(op)];
-    return {side,order,chose:'side',why:`첫 번째 선택권 → ${side==='blue'?'블루':'레드'} · 상대가 ${order==='first'?'후픽':'선픽'} 선택`};
+    return {side,order,chose:'side',evidence:selectionDecisionSummary(me,op,{manual:true}),why:`첫 번째 선택권 → ${side==='blue'?'블루':'레드'} · 상대가 ${order==='first'?'후픽':'선픽'} 선택`};
   }
   if(choice.kind==='order'){
     if(!['first','last'].includes(choice.value))throw new Error('Invalid First Selection order');
     const order=choice.value,side=flip[bestSide(op)];
-    return {side,order,chose:'order',why:`첫 번째 선택권 → ${order==='first'?'선픽':'후픽'} · 상대가 ${side==='blue'?'레드':'블루'} 선택`};
+    return {side,order,chose:'order',evidence:selectionDecisionSummary(me,op,{manual:true}),why:`첫 번째 선택권 → ${order==='first'?'선픽':'후픽'} · 상대가 ${side==='blue'?'레드':'블루'} 선택`};
   }
   throw new Error('Invalid First Selection choice');
 }
@@ -46,8 +41,8 @@ function seriesSelectionPrompt(db,sess,managedId){
   const chooser=sess.chooser,other=chooser===sess.a?sess.b:sess.a;
   if(chooser===managedId)return {mode:'first',game:sess.g,chooser,other,team:managedId};
   if(!sess.selectionLead){
-    const rng=seriesSessionRng(sess),sc=chooseSide(db,chooser,other,sess.ctx,sess.g,sess.bestOf,rng);
-    sess.sideRng={a:rng.a,sp:rng.sp};sess.selectionLead={chooser,other,chose:sc.chose,side:sc.side,order:sc.order,why:sc.why};
+    const rng=seriesSessionRng(sess),sc=chooseSide(seriesOfficialView(db,sess),chooser,other,sess.ctx,sess.g,sess.bestOf,rng);
+    sess.sideRng={a:rng.a,sp:rng.sp};sess.selectionLead={chooser,other,chose:sc.chose,side:sc.side,order:sc.order,why:sc.why,evidence:sc.evidence};
   }
   const lead=sess.selectionLead,remaining=lead.chose==='side'?'order':'side';
   return {mode:'remaining',game:sess.g,chooser,other,team:managedId,remaining,lead:{chose:lead.chose,value:lead.chose==='side'?lead.side:lead.order,why:lead.why}};
@@ -55,7 +50,7 @@ function seriesSelectionPrompt(db,sess,managedId){
 function seriesApplyManagedSelection(db,sess,managedId,choice){
   const chooser=sess.chooser,other=chooser===sess.a?sess.b:sess.a;
   if(chooser===managedId){
-    const rng=seriesSessionRng(sess),sc=resolveFirstSelection(db,chooser,other,sess.ctx,sess.g,sess.bestOf,rng,choice);
+    const rng=seriesSessionRng(sess),sc=resolveFirstSelection(seriesOfficialView(db,sess),chooser,other,sess.ctx,sess.g,sess.bestOf,rng,choice);
     sess.sideRng={a:rng.a,sp:rng.sp};sess.selectionResolved=sc;sess.selectionLead=null;return sc;
   }
   const prompt=seriesSelectionPrompt(db,sess,managedId),lead=sess.selectionLead;if(!prompt||prompt.mode!=='remaining'||!lead)throw new Error('No remaining First Selection choice');
@@ -67,7 +62,7 @@ function seriesApplyManagedSelection(db,sess,managedId,choice){
     if(choice.kind!=='side'||!['blue','red'].includes(choice.value))throw new Error('Invalid remaining side choice');
     side=flip[choice.value];
   }
-  const sc={side,order,chose:lead.chose,why:`${lead.why} · 상대 선택 반영`};sess.selectionResolved=sc;sess.selectionLead=null;return sc;
+  const sc={side,order,chose:lead.chose,evidence:lead.evidence,why:`${lead.why} · 상대 선택 반영`};sess.selectionResolved=sc;sess.selectionLead=null;return sc;
 }
 
 // a = 상위 시드
@@ -86,14 +81,19 @@ function createSeriesSession(db,aId,bId,bestOf,seed,opt={}){
   const chooser=firstChoice==='coin'?(srng.chance(.5)?aId:bId):aId;
   return {a:aId,b:bId,bestOf,seed,need:Math.ceil(bestOf/2),g:1,chooser,wins:{[aId]:0,[bId]:0},games:[],lines:[],
     ctx:{used:[],byTeam:{[aId]:{won:[],lost:[]},[bId]:{won:[],lost:[]}},fearless:!!opt.fearless,mods:{[aId]:0,[bId]:0},practice:!!opt.practice,championPool:opt.championPool||null},
-    opt:{fearless:!!opt.fearless,firstChoice,compId:opt.compId||null,metaContext:opt.metaContext||null,replay:!!opt.replay,practice:!!opt.practice},
+    opt:{fearless:!!opt.fearless,firstChoice,compId:opt.compId||null,metaContext:opt.metaContext||null,replay:!!opt.replay,practice:!!opt.practice,selections:opt.replay?opt.selections||null:null},
     sideRng:{a:srng.a,sp:srng.sp},selectionLead:null,selectionResolved:null,current:null};
 }
 function seriesSessionRng(sess){const r=new RNG(sess.seed,'side');r.a=sess.sideRng.a;r.sp=sess.sideRng.sp;return r}
 function seriesSessionDone(sess){return sess.wins[sess.a]>=sess.need||sess.wins[sess.b]>=sess.need}
 function seriesSessionPrepareGame(db,sess){
   if(seriesSessionDone(sess))return null;if(sess.current)return sess.current;
-  const srng=seriesSessionRng(sess),x=seriesGameSetup(db,sess.a,sess.b,sess.bestOf,sess.seed,sess.ctx,sess.g,sess.chooser,srng,sess.selectionResolved);
+  const recorded=sess.opt.replay&&sess.opt.selections?.[sess.g-1];
+  if(recorded&&[sess.a,sess.b].includes(recorded.blue)&&[sess.a,sess.b].includes(recorded.firstPick)){
+    sess.chooser=[sess.a,sess.b].includes(recorded.sideBy)?recorded.sideBy:sess.chooser;
+    sess.selectionResolved={side:recorded.blue===sess.chooser?'blue':'red',order:recorded.firstPick===sess.chooser?'first':'last',chose:'replay',why:recorded.sideWhy||'당시 선택권 재현',evidence:recorded.selectionEvidence||null};
+  }
+  const srng=seriesSessionRng(sess),x=seriesGameSetup(seriesOfficialView(db,sess),sess.a,sess.b,sess.bestOf,sess.seed,sess.ctx,sess.g,sess.chooser,srng,sess.selectionResolved);
   sess.sideRng={a:srng.a,sp:srng.sp};sess.selectionResolved=null;sess.selectionLead=null;
   sess.current={g:sess.g,chooser:sess.chooser,blue:x.blue,red:x.red,gseed:x.gseed,fpTeam:x.fpTeam,sc:x.sc,snap:x.snap};
   return sess.current;
@@ -116,7 +116,7 @@ function playSeriesSessionGame(db,sess,forcedDraft=null,quiet=true){
   sess.ctx.used.push(...pk[0],...pk[1]);sess.ctx.byTeam[wId].won.push(...pk[r.winner]);sess.ctx.byTeam[lId].lost.push(...pk[1-r.winner]);
   sess.ctx.mods[lId]=clamp(sess.ctx.mods[lId]-0.035*(1.2-teamComposure(matchDb,lId)),-0.08,0.05);sess.ctx.mods[wId]=clamp(sess.ctx.mods[wId]+0.015,-0.08,0.05);
   const mvp=gameMVP(r);
-  sess.games.push({n:sess.g,blue:cur.blue,red:cur.red,seed:cur.gseed,mods:cur.snap.mods,winner:wId,bans:r.draft.bans,sideBy:cur.chooser,sideWhy:cur.sc.why,firstPick:cur.fpTeam,kills:[r.sides[0].kills,r.sides[1].kills],dur:r.durationStr,duration:r.duration,picks:pk,mvp});
+  sess.games.push({n:sess.g,blue:cur.blue,red:cur.red,seed:cur.gseed,mods:cur.snap.mods,winner:wId,bans:r.draft.bans,sideBy:cur.chooser,sideWhy:cur.sc.why,selectionEvidence:recordedSelectionEvidence(cur.sc.evidence),firstPick:cur.fpTeam,kills:[r.sides[0].kills,r.sides[1].kills],dur:r.durationStr,duration:r.duration,picks:pk,mvp});
   sess.lines.push(...seriesResultLines(r,wId,mvp));sess.chooser=lId;sess.g++;sess.current=null;
   return {game:r,winner:wId,loser:lId,done:seriesSessionDone(sess),score:[sess.wins[sess.a],sess.wins[sess.b]]};
 }
@@ -138,7 +138,7 @@ function replayGame(db,rec,g){
   const keep={};for(const t in rec.tac){keep[t]=db.teams[t].tactics;db.teams[t].tactics=rec.tac[t]}
   const cur=db.patch; if(rec.patch&&rec.patch!==cur.id)db.patch=getPatch(db,rec.patch);
   const forced=rec.games.map(x=>({picks:[0,1].map(i=>Object.fromEntries(ROLES.map((r,j)=>[r,x.picks[i][j]]))),bans:x.bans||[[],[]]}));
-  try{return simulateSeries(db,rec.a,rec.b,rec.bestOf,rec.seed,{fearless:rec.fearless,firstChoice:rec.firstChoice,capture:g.n,forced,replay:true}).captured}
+  try{return simulateSeries(db,rec.a,rec.b,rec.bestOf,rec.seed,{fearless:rec.fearless,firstChoice:rec.firstChoice,capture:g.n,forced,selections:rec.games,replay:true}).captured}
   finally{for(const t in keep)db.teams[t].tactics=keep[t];db.patch=cur}
 }
 
