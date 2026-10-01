@@ -4,17 +4,23 @@
 // seasons and deliberately different manager training policies.
 // Distinct from synthetic daily exposure in medical-balance-acceptance.mjs.
 // Full engine dates and matches are advanced without interactive coach draft UI.
-import {readFile} from 'node:fs/promises';
+import {readFile,writeFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import vm from 'node:vm';
 import {ENGINE_MODULES} from './artifact-modules.mjs';
 
 const dir=resolve(import.meta.dirname,'..','src','artifact');
-let source='';
+const shardRaw=process.env.MEDICAL_CALENDAR_SHARD;
+const shardIndex=shardRaw===undefined?null:Number(shardRaw);
+if(shardIndex!==null&&(!Number.isInteger(shardIndex)||shardIndex<0||shardIndex>1))
+  throw new Error('MEDICAL_CALENDAR_SHARD must be 0 or 1');
+const shardOutput=process.env.MEDICAL_SHARD_OUTPUT||null;
+let source='const __MEDICAL_CALENDAR_SHARD='+JSON.stringify(shardIndex)+';\n';
 for(const file of ENGINE_MODULES)source+=await readFile(resolve(dir,file),'utf8')+'\n';
 source+=String.raw`(()=>{
   const ok=(test,msg)=>{if(!test)throw new Error('D02_MEDICAL_CALENDAR '+msg)};
-  const runs=[],seeds=['medical-real-calendar-A','medical-real-calendar-B'],
+  const runs=[],allSeeds=['medical-real-calendar-A','medical-real-calendar-B'],
+    seeds=__MEDICAL_CALENDAR_SHARD===null?allSeeds:[allSeeds[__MEDICAL_CALENDAR_SHARD]],
     seasonsPerSeed=2;
   // Observe the exact live burnout odds used by medicalDailyTick. The observer
   // never substitutes a formula, changes RNG calls, or feeds results back into
@@ -45,7 +51,7 @@ source+=String.raw`(()=>{
     totalInjury=0,totalIllness=0,totalBurnout=0,totalAbsences=0,
     totalSaves=0,totalMedicalWages=0;
   for(const seed of seeds){
-    const managedIntensity=seed===seeds[0]?'high':'light';
+    const managedIntensity=seed===allSeeds[0]?'high':'light';
     const cfg=defaultWorldConfig();
     cfg.regions=[regionCfg('NA',{teams:10,splits:1,legs:1,regularBo:1,
       playoffBo:1,playoffTake:4,format:'rr_po',div2:false,system:'franchise'})];
@@ -206,14 +212,15 @@ source+=String.raw`(()=>{
       if(cycle+1<seasonsPerSeed)startWorldSeason(db,teamId,seed);
     }
   }
-  ok(runs.length===seeds.length*seasonsPerSeed&&
+  if(__MEDICAL_CALENDAR_SHARD===null)ok(runs.length===allSeeds.length*seasonsPerSeed&&
     totalMatches>=150&&totalActiveDays>=240&&totalPlayerDays>12000,
     'real medical sampling coverage too small: '+JSON.stringify({
       runs:runs.length,totalMatches,totalActiveDays,totalPlayerDays
     }));
-  ok(totalIllness+totalInjury+totalBurnout>0,
+  if(__MEDICAL_CALENDAR_SHARD===null)ok(totalIllness+totalInjury+totalBurnout>0,
     'medical engine generated no events during live full-calendar seasons');
-  ok(runs.filter(x=>x.managedIntensity==='high').length===seasonsPerSeed&&
+  if(__MEDICAL_CALENDAR_SHARD===null)ok(
+    runs.filter(x=>x.managedIntensity==='high').length===seasonsPerSeed&&
     runs.filter(x=>x.managedIntensity==='light').length===seasonsPerSeed,
     'multi-season audit did not preserve both manager training policies');
   ok(runs.every(x=>exposureOk(x.burnoutExposure)&&
@@ -237,7 +244,7 @@ source+=String.raw`(()=>{
       restDays:rs.reduce((n,x)=>n+x.burnoutExposure.rest,0),
       lightDays:rs.reduce((n,x)=>n+x.burnoutExposure.light,0)}];
   }));
-  const report={seeds:seeds.length,seasonsPerSeed,runs,
+  const report={shardIndex:__MEDICAL_CALENDAR_SHARD,seeds:seeds.length,seasonsPerSeed,runs,
     totalMatches,totalActiveDays,registeredPlayerDays:totalPlayerDays,
     incidents:{injury:totalInjury,illness:totalIllness,burnout:totalBurnout,
       absences:totalAbsences},
@@ -245,8 +252,12 @@ source+=String.raw`(()=>{
       burnout:rate(totalBurnout),all:rate(totalInjury+totalIllness+totalBurnout)},
     longitudinalBurnoutExposure:byPolicy,
     medicalWageExpense:Math.round(totalMedicalWages*1000)/1000,
-    modernSaves:totalSaves,worldVersion:15,saveFormat:2};
+    modernSaves:totalSaves,worldVersion:15,saveFormat:2,
+    aggregateRaw:{totalMatches,totalActiveDays,totalPlayerDays,totalInjury,totalIllness,
+      totalBurnout,totalAbsences,totalSaves,totalMedicalWages}};
   console.log('D02_MEDICAL_CALENDAR '+JSON.stringify(report));
+  return report;
 })();`;
-vm.runInNewContext(source,{console,Date,Math,JSON,Set,Map,WeakMap,Object,
+const report=vm.runInNewContext(source,{console,Date,Math,JSON,Set,Map,WeakMap,Object,
   Array,String,Number,Boolean,RegExp,Error,Intl,performance,crypto},{timeout:150000});
+if(shardOutput)await writeFile(shardOutput,JSON.stringify(report)+'\n','utf8');
