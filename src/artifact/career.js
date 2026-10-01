@@ -133,7 +133,7 @@ function initialPickCandidate(db,t,key='',snap=null){
 }
 function aiInitialContractTerms(db,p,t,rng){
   const ask=asking(db,p,t.region),years=contractYearsForPlayer(db,p,rng),premium=rng.range(.96,1.08),role=defaultPromisedRole(db,p,t),room=Math.max(.1,initialSalaryCeiling(db,t)-payroll(db,t)),salary=Math.min(room,ask*premium);
-  return normalizeContractTerms(db,p,t,salary,years,{signingBonus:rng.chance(.28)?ask*rng.range(.04,.12):0,bonuses:rng.chance(.32)?{performance:ask*.05,title:ask*.08,international:ask*.05}:{},promisedRole:role,option:rng.chance(.15)?{type:rng.chance(.55)?'team':'player'}:null,buyout:p.personality.ambition>=86&&rng.chance(.35)?playerMarketValue(db,p)*1.8:null});
+  return normalizeContractTerms(db,p,t,salary,years,{releaseGuaranteeRate:contractGuaranteePolicy(p).preferred,signingBonus:rng.chance(.28)?ask*rng.range(.04,.12):0,bonuses:rng.chance(.32)?{performance:ask*.05,title:ask*.08,international:ask*.05}:{},promisedRole:role,option:rng.chance(.15)?{type:rng.chance(.55)?'team':'player'}:null,buyout:p.personality.ambition>=86&&rng.chance(.35)?playerMarketValue(db,p)*1.8:null});
 }
 function initialOfferForTeam(db,t,round,seed,market,target){
   const want=target??t.initialRosterTarget??initialRosterTarget(db,t);if(t.roster.length>=want)return null;

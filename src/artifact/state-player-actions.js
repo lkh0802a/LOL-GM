@@ -77,6 +77,8 @@ function validatePlayerSignAction(db,a){
     return worldActionError('invalid_transfer','원소속 구단 정보가 일치하지 않습니다');
   if(!Number.isFinite(+a.salary)||+a.salary<=0||!Number.isFinite(+a.years)||+a.years<=0)
     return worldActionError('invalid_terms','연봉과 계약 기간은 양수여야 합니다');
+  if(!contractGuaranteeTermsValid(a.terms))
+    return worldActionError('invalid_terms','방출 보장률은 50%, 75%, 100% 중 선택해야 합니다');
   const terms=playerActionTerms(db,p,t,a);
   if(futureAgreement){
     const agreed=normalizeContractTerms(db,p,t,futureAgreement.salary,

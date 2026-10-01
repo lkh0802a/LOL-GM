@@ -47,6 +47,7 @@ function aiRunEarlyContactOffers(db){
         if(!shortlist.length)return null;
         const offer=normalizeContractTerms(db,p,t,asking(db,p,t.region)*
           (1-medicalContractRisk(db,p)*.4),contractYearsForPlayer(db,p,rng,t),{
+            releaseGuaranteeRate:contractGuaranteePolicy(p).preferred,
             promisedRole:defaultPromisedRole(db,p,t)});
         if(negotiationBudgetError(db,p,t,offer,'early_fa'))return null;
         return {t,offer,utility:offerUtility(db,p,t,offer)};
@@ -60,4 +61,3 @@ function aiRunEarlyContactOffers(db){
   }
   return rows;
 }
-

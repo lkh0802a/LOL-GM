@@ -14,15 +14,15 @@ await runEngineFixture(String.raw`(()=>{
   const players=Object.values(db.players).filter(p=>!p.retired&&!p.team).slice(0,3);
   players[0].name='<script>player</script>';
   for(const [index,actor] of ['manager','ai'].entries()){
-    const team=index?other:mine,p=players[index];
-    signContract(db,p,team,1.7,3);
+    const team=index?other:mine,p=players[index],rate=index?1:.75;
+    signContract(db,p,team,1.7,3,{releaseGuaranteeRate:rate});
     const command={type:'player.release',pid:p.id,teamId:team.id,actor,
       mode:index?'market':'manager'},cash=team.finance.cash,before=JSON.stringify(db),
       preview=previewWorldAction(db,command);
     check(preview.ok&&JSON.stringify(db)===before,'impure or failed release preview');
     const detail=preview.changes[0].settlement;
-    check(detail.pid===p.id&&detail.remainingYears===3&&detail.guaranteeRate===.5&&
-      Object.is(detail.amount,1.7*3*.5),'missing or rounded contractual basis');
+    check(detail.pid===p.id&&detail.remainingYears===3&&detail.guaranteeRate===rate&&
+      Object.is(detail.amount,1.7*3*rate),'missing or rounded contractual basis');
     const applied=applyWorldAction(db,preview),pending=financeReleaseObligations(team);
     check(applied.ok&&pending.items.length===1&&team.finance.cash===cash&&
       pending.amount===detail.amount&&pending.unattributedAmount===0,
