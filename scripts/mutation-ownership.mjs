@@ -5,7 +5,7 @@ export const MUTATION_OWNERSHIP={
   'calendar.js':{date:1},
   'contract-window.js':{},
   'contracts.js':{assign:1},
-  'finance.js':{cash:4,obligation:1},
+  'finance.js':{cash:6,obligation:1},
   'medical.js':{},
   'office.js':{},
   'offseason.js':{remove:1},

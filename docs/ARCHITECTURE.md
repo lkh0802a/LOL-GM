@@ -132,3 +132,11 @@ Preview snapshots organization membership, contracts, finance and commitments.
 Paid/unpaid closure statements persist; annual close excludes inactive clubs.
 Separate club cash pools and player-only claims are explicit current scope,
 not an assertion about insolvency law or parent guarantees.
+
+
+D04-B4d2 adds financeTeamIds to closure canonical commands so an active supporting
+parent is snapshotted and journaled even when only its reserve closes. The pure
+funding plan protects parent claims, proposes matched cash transfers and then
+reuses claim allocation. Finance owns both transfer sides; an active parent's
+bounded closureSupportHistory is a settled cash record, not annual operating cost.
+Closed statements retain funding details; old statements without funding remain valid.

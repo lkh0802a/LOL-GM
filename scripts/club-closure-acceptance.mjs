@@ -88,6 +88,57 @@ await runEngineFixture(String.raw`(()=>{
   academy.finance.buyout=0;
   check(foldTeam(reserveWorld,academy).ok&&first.active!==false&&
     academy.active===false&&!reserveWorld.world.fired,'reserve closure dissolved parent');
+  // Existing parent support also funds reserve termination, with actual cash.
+  for(const parentCash of [10,2,0,-1]){
+    const world=buildWorld(),parent=activeTeams(world,null,1)[0],
+      reserve=reserveTeamsOf(world,parent)[0],
+      p=Object.values(world.players).find(x=>!x.team&&!x.retired);
+    signContract(world,p,reserve,4,2,{releaseGuaranteeRate:1});
+    parent.finance.cash=parentCash;parent.finance.buyout=1;reserve.finance.cash=1;
+    const action={type:'club.close',teamId:reserve.id,actor:'system'},
+      initial=JSON.stringify(world),quote=previewWorldAction(world,action),
+      support=Math.min(7,Math.max(0,parentCash-1));
+    check(quote.ok&&JSON.stringify(world)===initial&&
+      near(quote.changes[0].funding.received,support),'support preview mutated world or spent protected claims');
+    parent.finance.cash+=1;
+    check(!applyWorldAction(world,quote).ok,'support-parent cash omitted from stale snapshot');
+    parent.finance.cash=parentCash;
+    const originalScope=worldActionScopeErrors,beforeFailure=JSON.stringify(world);
+    worldActionScopeErrors=(db,cmd,ids)=>cmd.type==='club.close'?['support late failure']:originalScope(db,cmd,ids);
+    const failed=commitWorldAction(world,action);worldActionScopeErrors=originalScope;
+    check(!failed.ok&&JSON.stringify(world)===beforeFailure,'support parent cash/history did not roll back');
+    check(commitWorldAction(world,action).ok,'funded reserve closure failed');
+    const statement=reserve.finance.closureSettlement;
+    check(near(parent.finance.cash,parentCash-support)&&parent.finance.buyout===1&&
+      near(statement.paidAmount,1+support)&&near(statement.unpaidAmount,7-support)&&
+      near(parent.finance.cash+reserve.finance.cash+statement.paidAmount,parentCash+1),
+      'parent support invented cash or lost debt');
+    DB=world;const beforeUi=JSON.stringify(world),panel=financePanel(parent);
+    check(JSON.stringify(world)===beforeUi&&(!support||panel.includes('2군 종료 정산 지원 내역')),
+      'support statement missing or UI mutated world');
+    const restored=unpackDB(packDB(world));
+    check(JSON.stringify(restored.teams[parent.id].finance)===JSON.stringify(parent.finance)&&
+      JSON.stringify(restored.teams[reserve.id].finance)===JSON.stringify(reserve.finance),
+      'funding history did not survive save restore');
+    const history=JSON.stringify(parent.finance.closureSupportHistory),parentId=parent.id,
+      control=unpackDB(packDB(world));
+    delete control.teams[parentId].finance.closureSupportHistory;
+    closeFinances(world,{year:world.year,seasons:{}},new RNG('funding-close'),()=>{});
+    closeFinances(control,{year:control.year,seasons:{}},new RNG('funding-close'),()=>{});
+    check(JSON.stringify(world.teams[parentId].finance.closureSupportHistory)===history,
+      'annual finance changed closure funding history');
+    check(world.teams[parentId].finance.cash===control.teams[parentId].finance.cash,
+      'annual finance charged funding history again');
+  }
+  // Closing the organization can fund a reserve after protecting parent claims.
+  const group=buildWorld(),head=activeTeams(group,null,1)[0],
+    child=reserveTeamsOf(group,head)[0],free=Object.values(group.players).filter(x=>!x.team&&!x.retired);
+  signContract(group,free[0],head,1,2,{releaseGuaranteeRate:1});
+  signContract(group,free[1],child,3,2,{releaseGuaranteeRate:1});
+  head.finance.cash=5;child.finance.cash=0;
+  check(foldTeam(group,head).ok&&head.finance.closureSettlement.paidAmount===2&&
+    child.finance.closureSettlement.paidAmount===3&&child.finance.buyout===3&&
+    head.finance.cash===0&&child.finance.cash===0,'whole organization funding failed');
   // Solvent and insolvent single-club cases preserve cash and debt independently.
   for(const cash of [7,0,-3]){
     const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:2,div2:false})];
@@ -104,5 +155,6 @@ await runEngineFixture(String.raw`(()=>{
   console.log('D04_CLUB_CLOSURE_ACCEPTANCE '+JSON.stringify({purePreview:true,
     parentReserves:true,staleCashContract:true,rollback:true,legacyClaims:true,
     proportionalPayment:true,insolventNoWriteoff:true,medicalExempt:true,
-    agreements:true,saveRestore:true,noAnnualDoubleCharge:true,ui:true}));
+    agreements:true,saveRestore:true,noAnnualDoubleCharge:true,parentFunding:true,
+    protectedParentClaims:true,fundingRollback:true,ui:true}));
 })();`,{filename:'club-closure.fixture.js',setupSources:[ui,escapeDeclaration]});

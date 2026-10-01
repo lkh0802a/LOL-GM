@@ -72,7 +72,20 @@ function financeClosureAllocation(cash,claims){
     unattributedPaid:claims.unattributedAmount*ratio,
     unattributedUnpaid:paidAmount===amount?0:claims.unattributedAmount*(1-ratio)};
 }
-function settleClubClosureFinance(t,year,date){
+function applyClubClosureFunding(db,transfers,closingIds,year,date){
+  for(const row of transfers){
+    const from=db.teams[row.fromId],to=db.teams[row.toId];
+    if(!Number.isFinite(row.amount)||row.amount<0||from.finance.cash+1e-8<row.amount)
+      throw new Error('구단 해체 지원금이 가용 현금을 초과합니다');
+    from.finance.cash-=row.amount;to.finance.cash+=row.amount;
+    if(!closingIds.includes(from.id)){
+      const f=from.finance;
+      f.closureSupportHistory=[...(f.closureSupportHistory||[]),
+        {year,date,...row,cashAfter:f.cash}].slice(-20);
+    }
+  }
+}
+function settleClubClosureFinance(t,year,date,funding=null){
   const f=t.finance;
   if(f.closureSettlement)throw new Error('이미 정산한 구단 해체입니다');
   const cashBefore=f.cash,allocation=financeClosureAllocation(cashBefore,financeReleaseObligations(t));
@@ -80,7 +93,8 @@ function settleClubClosureFinance(t,year,date){
   f.buyout=allocation.unpaidAmount;
   f.releaseObligations=allocation.items.filter(row=>row.unpaidAmount>0)
     .map(row=>({...row,originalAmount:row.amount,amount:row.unpaidAmount}));
-  f.closureSettlement={year,date,cashBefore,cashAfter:f.cash,...allocation};
+  f.closureSettlement={year,date,cashBefore,cashAfter:f.cash,...allocation,
+    ...(funding?{funding}:{})};
   return f.closureSettlement;
 }
 function payroll(db,t){return t.roster.reduce((a,id)=>{const c=db.players[id]?.contract;return a+(c&&!c.medicalReplacement?c.salary:0)},0)}

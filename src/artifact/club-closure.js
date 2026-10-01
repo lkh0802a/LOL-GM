@@ -3,6 +3,34 @@
 function clubClosureTeams(db,t){
   return [t,...(t.parent?[]:activeTeams(db).filter(x=>x.parent===t.id))];
 }
+function clubClosureFinanceTeams(db,teams){
+  const parent=teams[0].parent&&playerActionTeam(db,teams[0].parent);
+  return parent?[...teams,parent]:teams;
+}
+function clubClosureFundingPlan(db,c){
+  const teams=c.teamIds.map(id=>db.teams[id]),
+    original=new Map(teams.map(t=>[t.id,clubClosureAllocation(db,t)])),
+    parent=db.teams[teams[0].parent||teams[0].id],transfers=[];
+  if(parent&&parent.active!==false){
+    const own=original.get(parent.id)||financeReleaseObligations(parent);
+    financeClosureAllocation(parent.finance.cash,own);
+    const needs=teams.filter(t=>t.parent===parent.id)
+      .map(t=>({t,need:original.get(t.id).unpaidAmount})).filter(row=>row.need>0),
+      total=needs.reduce((n,row)=>n+row.need,0),
+      available=Math.min(total,Math.max(0,parent.finance.cash-own.amount));
+    if(available>0)for(const {t,need} of needs)
+      transfers.push({fromId:parent.id,toId:t.id,amount:available*need/total});
+  }
+  const changes=teams.map(t=>{
+    const received=transfers.filter(x=>x.toId===t.id).reduce((n,x)=>n+x.amount,0),
+      provided=transfers.filter(x=>x.fromId===t.id).reduce((n,x)=>n+x.amount,0),
+      claims=original.get(t.id),funding={received,provided,cashBefore:t.finance.cash,
+        transfers:transfers.filter(x=>x.fromId===t.id||x.toId===t.id)};
+    return {teamId:t.id,kind:'club_closure',funding,
+      settlement:financeClosureAllocation(t.finance.cash+received-provided,claims)};
+  });
+  return {transfers,changes};
+}
 function validateClubClosure(db,a){
   if(a.actor!=='system')return worldActionError('unauthorized','구단 해체는 사무국이 결정합니다');
   const t=playerActionTeam(db,a.teamId);
@@ -26,9 +54,13 @@ function validateClubClosure(db,a){
     .map(([id])=>id),agreementIds=Object.keys(w?.contractAgreements||{})
     .filter(pid=>w.contractAgreements[pid].status==='agreed'&&
       teamIds.includes(w.contractAgreements[pid].teamId));
-  try{for(const team of teams)clubClosureAllocation(db,team)}
+  const financeTeams=clubClosureFinanceTeams(db,teams);
+  if(financeTeams.some(team=>!playerActionFinance(team)))
+    return worldActionError('invalid_finance','모구단 지원 재정 정보가 유효하지 않습니다');
+  try{clubClosureFundingPlan(db,{teamIds})}
   catch(e){return worldActionError('invalid_finance',e.message)}
-  return {ok:true,teamId:t.id,teamIds,playerIds,negotiationIds,agreementIds};
+  return {ok:true,teamId:t.id,teamIds,financeTeamIds:financeTeams.map(x=>x.id),
+    playerIds,negotiationIds,agreementIds};
 }
 function clubClosureAllocation(db,t){
   const pending=financeReleaseObligations(t),newItems=t.roster.map(pid=>
@@ -41,7 +73,7 @@ function clubClosureAllocation(db,t){
 function clubClosureSnapshot(db,c){
   const w=db.world;
   return JSON.parse(JSON.stringify({date:db.worldDate||null,year:db.year,saveId:db.saveId,
-    teams:c.teamIds.map(id=>{
+    teams:c.financeTeamIds.map(id=>{
       const t=db.teams[id];
       return {id,active:t?.active,parent:t?.parent||null,roster:t?.roster,
         finance:t?.finance,players:(t?.roster||[]).map(pid=>({pid,
@@ -50,12 +82,14 @@ function clubClosureSnapshot(db,c){
     agreements:c.agreementIds.map(id=>w?.contractAgreements?.[id])}));
 }
 function applyClubClosure(db,c){
-  const w=db.world,settlements=[];
+  const w=db.world,settlements=[],plan=clubClosureFundingPlan(db,c);
+  applyClubClosureFunding(db,plan.transfers,c.teamIds,db.year,db.worldDate||null);
   for(const id of c.teamIds){
     const t=db.teams[id];
     for(const pid of t.roster.slice())
       applyPlayerReleaseAction(db,{pid,teamId:id,mode:'club_closure',actor:'system'});
-    const settlement=settleClubClosureFinance(t,db.year,db.worldDate||null);
+    const funding=plan.changes.find(row=>row.teamId===id).funding,
+      settlement=settleClubClosureFinance(t,db.year,db.worldDate||null,funding);
     t.active=false;t.folded=db.year;
     settlements.push({teamId:id,...settlement});
   }
@@ -71,10 +105,9 @@ function applyClubClosure(db,c){
 WORLD_ACTION_HANDLERS['club.close']={
   validate:validateClubClosure,
   canonical(db,a,v){return {type:a.type,actor:a.actor,teamId:v.teamId,
-    teamIds:v.teamIds.slice(),playerIds:v.playerIds.slice(),
+    teamIds:v.teamIds.slice(),financeTeamIds:v.financeTeamIds.slice(),playerIds:v.playerIds.slice(),
     negotiationIds:v.negotiationIds.slice(),agreementIds:v.agreementIds.slice()}},
   snapshot:clubClosureSnapshot,
-  changes(db,c){return c.teamIds.map(id=>({teamId:id,kind:'club_closure',
-    settlement:clubClosureAllocation(db,db.teams[id])}))},
+  changes(db,c){return clubClosureFundingPlan(db,c).changes},
   apply:applyClubClosure
 };
