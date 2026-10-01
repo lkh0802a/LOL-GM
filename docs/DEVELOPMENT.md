@@ -1144,3 +1144,69 @@ Next: run the final engine PR's required CI once; then validate current-engine
 long careers without duplicating runs, including varied loadouts and mobile memory
 limits. Remaining D04/D07-D10 mechanisms and D12/D13 remain open. Whole D11/D
 must not be marked complete from this memory improvement or a bounded year.
+
+## D07 connected staff employment batch (2026-10-02)
+
+Baseline: generated main 6f0d83d after merged #111. Staff are now continuing
+people with a primary job, secondary specialty, public estimate, ambition,
+fixed annual wage, 1–3-year contract and dated employment history. Secondary
+expertise supplements its corresponding coaching/analysis/recovery/scouting
+effect at 35% weight. Old staff retain their IDs and primary ability/effects;
+restoration supplies a current two-year employment baseline and public estimate,
+without inventing past events. Previously closed legacy clubs return their staff
+to the free market instead of inventing new historical compensation claims.
+
+Public/interview estimates are stored observation data. Changing hidden ability
+does not silently change an existing dossier or interview. Club-specific annual
+interviews narrow uncertainty; AI ranks staff with observations, not exact rating.
+The worker's asking wage is a public demand. Personal consent considers wage and
+club reputation weighted by ambition. AI cannot poach managed-club staff.
+
+staff-contracts.js owns sign/renew/release/expire/retire/interview commands via
+the existing guarded action gate. Payroll uses agreed absolute annual wages,
+without applying regional scale twice. Hiring/renewal checks one year's liquidity
+and final forecast payroll; the agreed wage is charged through annual finances.
+Termination/buyout uses a common 50% of remaining annual wages, without adding
+an individually negotiated guarantee setting. Poaching pays the existing finance
+transfer writer; termination uses prepaid severance without annual double charge.
+
+At a full department, outgoing termination and incoming employment are one
+transaction. The shared preview contains both compensation costs and the final
+payroll change. Late failure restores original people, roster/pool identities,
+contracts, histories, interviews and finance. AI prefers replacement in the same
+primary job and uses this same command. Department limits 9/4/6 remain enforced.
+The market exposes year/wage terms, an optional replacement selector, interviews,
+guarded confirmation and 20-person pages; exact staff ability is no longer shown.
+
+Expiry and retirement preserve the person and career. AI renews through the same
+contract command if affordable; managed appointments expire into free agency
+without auto-replacement. Retired people have a separate historical archive.
+Club closure includes staff claims in the existing proportional player/staff
+allocation and parent/reserve funding. Cash-short unpaid claims remain recorded;
+employees return to free agency, and closure rollback restores employment too.
+Existing player-only closure arithmetic tests use expired staff contracts to
+isolate that policy; new acceptance separately covers nonzero staff creditors.
+
+Local validation: dedicated staff acceptance covers offers/cancel/confirm,
+observations, secondary effects, periods/renewal, budget/caps, consensual poaching,
+cash conservation, replacement including full-department AI, late rollback,
+expiry/retirement, insolvent closure/stale preview/escaped creditor UI, legacy and
+current saves. The shared UI/finance/contract runner passed 32 cases in 28 fresh
+contexts, regression and core smoke passed; 94-module static validation passes.
+Final required CI is the merge gate. Broad long-career staff retention/balance and
+actual mobile interaction are not proved by these bounded tests.
+
+D11 updated failure: the single #111-engine local run daily-memory-main-1/PID7512
+ended after 23 completed seasons through 2049, during 2050 offseason, with the
+old AI hireStaff department-cap exception, not OOM. Its last completed save was
+about 56.8 MB/heap 1164 MB/RSS 1987 MB; the final after-restore checkpoint was
+heap 615 MB/RSS 1721 MB. Preserve JSON/stdout/stderr/process metadata. This D07
+batch replaces that old two-step staff replacement with the atomic command and
+tests the full-department production caller. Do not call this failed run passing
+100 seasons or evidence for this new engine. Next long run must use a merged,
+verified current engine and must not duplicate any live daily-career process.
+
+Remaining: broader staff/AI career and balance evidence in D11, D04 remaining
+agency/insolvency mechanisms, D08 relationships, D09 resource commitments,
+D10 controlled patch/match experiments, D12/D13 complete task acceptance.
+The full D stage remains open.

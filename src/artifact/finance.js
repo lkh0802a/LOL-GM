@@ -198,7 +198,7 @@ function financePrepaidSettlement(t){
     expense:(p.facilityInvestment||0)+(p.signingBonus||0)+(p.transferPaid||0)+
       (p.staffSeverance||0)+(p.scoutingExpense||0)+(p.medicalReplacementWage||0)};
 }
-function staffCost(db,t){const specialists=teamStaffMembers(t).reduce((sum,s)=>sum+staffSalary(s,1),0);return (2+specialists)*psTeam(db,t)}
+function staffCost(db,t){const ps=psTeam(db,t);return 2*ps+teamStaffMembers(t).reduce((sum,s)=>sum+staffSalary(s,ps),0)}
 function opsCost(db,t){return 8*psTeam(db,t)}
 function ownerSupport(db,t){
   if(t.parent)return 4*psOf(db,t.region);

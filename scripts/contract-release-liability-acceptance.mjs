@@ -87,5 +87,5 @@ await runEngineFixture(String.raw`(()=>{
 })();`,{filename:'contract-release-liability.fixture.js',setupSources:[ui,escapeDeclaration]});
 
 assert(ui.includes('financeReleaseObligations(t)')&&ui.includes('last?.releaseSettlement'));
-assert(ui.includes('<details')&&ui.includes('esc(row.playerName||row.pid)'));
+assert(ui.includes('<details')&&ui.includes('esc(row.staffName||row.playerName||row.sid||row.pid)'));
 assert(shell.includes('.release-settlements summary{min-height:44px'));

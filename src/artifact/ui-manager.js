@@ -3,7 +3,7 @@ function releaseObligationsPanel(releases,title){
   if(!releases?.amount)return '';
   return `<details class="cfgcard release-settlements"><summary>${esc(title)} · ${money(releases.amount)}</summary>
     <p class="hint">연봉·잔여 연수·보상 비율은 방출 당시 계약 기준입니다.</p>
-    ${releases.items.map(row=>`<div class="cfgcard"><b>${esc(row.playerName||row.pid)}</b>
+    ${releases.items.map(row=>`<div class="cfgcard"><b>${esc(row.staffName||row.playerName||row.sid||row.pid)}</b>
       <p>${money(row.amount)} · ${esc(row.date||String(row.year))}</p>
       <p class="hint">연봉 ${money(row.salary)} · 잔여 ${row.remainingYears}년 · 보상 ${Math.round(row.guaranteeRate*100)}%</p></div>`).join('')}
     ${releases.unattributedAmount>0?`<p class="hint">기존 기록의 상세 미기록 채무 ${money(releases.unattributedAmount)}</p>`:''}
@@ -23,8 +23,8 @@ function financePanel(t){
         row.toId===t.id?'모구단 정산 지원':'소유 2군 정산 지원'} ${money(row.amount)}</p>`).join('')}
       ${transferDealRows(t).length?transferPaymentsPanel(t):''}
   ${releaseObligationsPanel(financeReleaseObligations(t),'해체 구단 미지급 보상')}
-      <details class="cfgcard release-settlements"><summary>선수별 지급 내역</summary>
-      ${closure.items.map(row=>`<div class="cfgcard"><b>${esc(row.playerName||row.pid)}</b>
+      <details class="cfgcard release-settlements"><summary>${closure.items.some(r=>r.claimantKind==='staff')?'선수·스태프별 지급 내역':'선수별 지급 내역'}</summary>
+      ${closure.items.map(row=>`<div class="cfgcard"><b>${esc(row.staffName||row.playerName||row.sid||row.pid)}</b>
         <p>청구 ${money(row.amount)} · 지급 ${money(row.paidAmount)} · 미지급 ${money(row.unpaidAmount)}</p></div>`).join('')}
       ${closure.unattributedAmount?`<p class="hint">상세 미기록 청구 ${money(closure.unattributedAmount)} · 지급 ${money(closure.unattributedPaid)} · 미지급 ${money(closure.unattributedUnpaid)}</p>`:''}
       </details></section>`;
