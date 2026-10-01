@@ -19,7 +19,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
+    types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
   contents: read
@@ -35,6 +35,9 @@ jobs:
     outputs:
       docs_only: ${{ steps.scope.outputs.docs_only }}
       run_full: ${{ steps.scope.outputs.run_full }}
+      run_ui: ${{ steps.scope.outputs.run_ui }}
+      run_calendar: ${{ steps.scope.outputs.run_calendar }}
+      run_build: ${{ steps.scope.outputs.run_build }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -52,12 +55,6 @@ jobs:
           PR_DRAFT: ${{ github.event.pull_request.draft }}
         run: |
           set -euo pipefail
-          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
-            echo "docs_only=false" >> "$GITHUB_OUTPUT"
-            echo "run_full=true" >> "$GITHUB_OUTPUT"
-            echo "Explicit full validation of $GITHUB_SHA"
-            exit 0
-          fi
           if [[ "$EVENT_NAME" == "pull_request" ]]; then
             base="$PR_BASE_SHA"
             head="$PR_HEAD_SHA"
@@ -75,36 +72,7 @@ jobs:
             mapfile -t changed < <(git diff-tree --no-commit-id --name-only -r "$head")
           fi
 
-          docs_only=true
-          if (( ${#changed[@]} == 0 )); then
-            docs_only=false
-          fi
-          for file in "${changed[@]}"; do
-            if [[ "$file" == docs/* ]]; then
-              continue
-            fi
-            if [[ "$file" != */* && "$file" == *.md ]]; then
-              continue
-            fi
-            docs_only=false
-            break
-          done
-
-          run_full=false
-          if [[ "$docs_only" != "true" ]]; then
-            if [[ "$EVENT_NAME" == "push" || "$PR_DRAFT" != "true" ]]; then
-              run_full=true
-            fi
-          fi
-
-          {
-            echo "docs_only=$docs_only"
-            echo "run_full=$run_full"
-          } >> "$GITHUB_OUTPUT"
-
-          printf 'Changed files (%d):\n' "${#changed[@]}"
-          printf '  %s\n' "${changed[@]}"
-          echo "docs_only=$docs_only run_full=$run_full"
+          node scripts/ci-scope.mjs "$EVENT_NAME" "$PR_DRAFT" "${changed[@]}"
 
   static-fast:
     needs: changes
@@ -122,19 +90,22 @@ jobs:
       - name: Static syntax and structure
         run: node scripts/ci-run.mjs static -- npm run check:static
 
+      - name: Validation scope policy
+        run: node --test scripts/ci-scope.test.mjs
+
       - name: Upload validation report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: validation-static-fast
           path: ci-results/
-          retention-days: 7
+          retention-days: 3
           compression-level: 1
           if-no-files-found: warn
 
   ui-finance-contracts:
     needs: [changes, static-fast]
-    if: needs.changes.outputs.docs_only != 'true'
+    if: needs.changes.outputs.run_ui == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
@@ -155,7 +126,7 @@ jobs:
         with:
           name: validation-ui-finance-contracts
           path: ci-results/
-          retention-days: 7
+          retention-days: 3
           compression-level: 1
           if-no-files-found: warn
 
@@ -182,158 +153,45 @@ jobs:
         with:
           name: validation-calendar-scouting
           path: ci-results/
-          retention-days: 7
-          compression-level: 1
-          if-no-files-found: warn
-
-  medical-core:
-    needs: [changes, ui-finance-contracts, calendar-scouting]
-    if: needs.changes.outputs.run_full == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Medical core gate
-        run: node scripts/ci-run.mjs medical-core -- npm run check:medical-core
-
-      - name: Upload validation report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: validation-medical-core
-          path: ci-results/
-          retention-days: 7
-          compression-level: 1
-          if-no-files-found: warn
-
-  medical-regional:
-    needs: [changes, ui-finance-contracts, calendar-scouting]
-    if: needs.changes.outputs.run_full == 'true'
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [0, 1]
-    runs-on: ubuntu-latest
-    timeout-minutes: 8
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Regional medical seed shard
-        env:
-          MEDICAL_REGIONAL_SHARD: ${{ matrix.shard }}
-          MEDICAL_SHARD_OUTPUT: regional-${{ matrix.shard }}.json
-        run: node scripts/ci-run.mjs medical-regional -- node scripts/medical-regional-acceptance.mjs
-
-      - name: Upload regional shard summary
-        uses: actions/upload-artifact@v4
-        with:
-          name: medical-regional-${{ matrix.shard }}
-          path: regional-${{ matrix.shard }}.json
-          if-no-files-found: error
-
-      - name: Upload validation report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: validation-medical-regional-${{ matrix.shard }}
-          path: ci-results/
-          retention-days: 7
-          compression-level: 1
-          if-no-files-found: warn
-
-  medical-calendar:
-    needs: [changes, ui-finance-contracts, calendar-scouting]
-    if: needs.changes.outputs.run_full == 'true'
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [0, 1]
-    runs-on: ubuntu-latest
-    timeout-minutes: 6
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Calendar medical seed shard
-        env:
-          MEDICAL_CALENDAR_SHARD: ${{ matrix.shard }}
-          MEDICAL_SHARD_OUTPUT: calendar-${{ matrix.shard }}.json
-        run: node scripts/ci-run.mjs medical-calendar -- node scripts/medical-calendar-acceptance.mjs
-
-      - name: Upload calendar shard summary
-        uses: actions/upload-artifact@v4
-        with:
-          name: medical-calendar-${{ matrix.shard }}
-          path: calendar-${{ matrix.shard }}.json
-          if-no-files-found: error
-
-      - name: Upload validation report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: validation-medical-calendar-${{ matrix.shard }}
-          path: ci-results/
-          retention-days: 7
+          retention-days: 3
           compression-level: 1
           if-no-files-found: warn
 
   medical:
-    needs: [changes, medical-core, medical-regional, medical-calendar]
+    needs: [changes, static-fast]
     if: needs.changes.outputs.run_full == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 20
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
-
-      - name: Download medical shard summaries
-        uses: actions/download-artifact@v4
-        with:
-          pattern: medical-*
-          path: medical-shards
-          merge-multiple: true
-
-      - name: Aggregate regional medical invariant
-        run: node scripts/ci-run.mjs medical-regional-aggregate -- node scripts/medical-shard-aggregate.mjs regional medical-shards/regional-0.json medical-shards/regional-1.json
-
-      - name: Aggregate calendar medical invariant
-        run: node scripts/ci-run.mjs medical-calendar-aggregate -- node scripts/medical-shard-aggregate.mjs calendar medical-shards/calendar-0.json medical-shards/calendar-1.json
-
-      - name: Upload validation report
+      - name: Medical core
+        run: node scripts/ci-run.mjs medical-core -- npm run check:medical-core
+      - name: All medical seed shards and aggregate invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          for shard in 0 1; do
+            MEDICAL_REGIONAL_SHARD="$shard" MEDICAL_SHARD_OUTPUT="regional-$shard.json" node scripts/ci-run.mjs "medical-regional-$shard" -- node scripts/medical-regional-acceptance.mjs
+            MEDICAL_CALENDAR_SHARD="$shard" MEDICAL_SHARD_OUTPUT="calendar-$shard.json" node scripts/ci-run.mjs "medical-calendar-$shard" -- node scripts/medical-calendar-acceptance.mjs
+          done
+          node scripts/ci-run.mjs medical-regional-aggregate -- node scripts/medical-shard-aggregate.mjs regional regional-0.json regional-1.json
+          node scripts/ci-run.mjs medical-calendar-aggregate -- node scripts/medical-shard-aggregate.mjs calendar calendar-0.json calendar-1.json
+      - uses: actions/upload-artifact@v4
         if: always()
-        uses: actions/upload-artifact@v4
         with:
           name: validation-medical
-          path: ci-results/
-          retention-days: 7
-          compression-level: 1
+          path: |
+            ci-results/
+            regional-*.json
+            calendar-*.json
+          retention-days: 3
           if-no-files-found: warn
 
   regression:
-    needs: [changes, ui-finance-contracts, calendar-scouting]
+    needs: [changes, static-fast]
     if: needs.changes.outputs.run_full == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 6
@@ -355,12 +213,12 @@ jobs:
         with:
           name: validation-regression
           path: ci-results/
-          retention-days: 7
+          retention-days: 3
           compression-level: 1
           if-no-files-found: warn
 
   smoke:
-    needs: [changes, ui-finance-contracts, calendar-scouting]
+    needs: [changes, static-fast]
     if: needs.changes.outputs.run_full == 'true'
     strategy:
       fail-fast: false
@@ -396,12 +254,12 @@ jobs:
         with:
           name: validation-smoke-${{ matrix.mode }}
           path: ci-results/
-          retention-days: 7
+          retention-days: 3
           compression-level: 1
           if-no-files-found: warn
 
   career:
-    needs: [changes, ui-finance-contracts, calendar-scouting]
+    needs: [changes, static-fast]
     if: needs.changes.outputs.run_full == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 6
@@ -423,7 +281,7 @@ jobs:
         with:
           name: validation-career
           path: ci-results/
-          retention-days: 7
+          retention-days: 3
           compression-level: 1
           if-no-files-found: warn
 
@@ -447,8 +305,8 @@ jobs:
           echo "Regression/smoke/career aggregate gate passed."
 
   perf-build:
-    needs: [changes, ui-finance-contracts, calendar-scouting]
-    if: needs.changes.outputs.run_full == 'true'
+    needs: [changes, static-fast]
+    if: needs.changes.outputs.run_build == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
@@ -461,6 +319,7 @@ jobs:
           node-version: 22
 
       - name: Performance probe
+        if: needs.changes.outputs.run_full == 'true'
         run: node scripts/ci-run.mjs perf -- npm run perf
 
       - name: Production build
@@ -482,7 +341,7 @@ jobs:
         with:
           name: validation-perf-build
           path: ci-results/
-          retention-days: 7
+          retention-days: 3
           compression-level: 1
           if-no-files-found: warn
 
@@ -517,7 +376,7 @@ jobs:
         with:
           name: validation-smoke-parity
           path: ci-results/
-          retention-days: 7
+          retention-days: 3
           if-no-files-found: warn
 
   verify:
@@ -540,6 +399,9 @@ jobs:
         env:
           DOCS_ONLY: ${{ needs.changes.outputs.docs_only }}
           RUN_FULL: ${{ needs.changes.outputs.run_full }}
+          RUN_UI: ${{ needs.changes.outputs.run_ui }}
+          RUN_CALENDAR: ${{ needs.changes.outputs.run_calendar }}
+          RUN_BUILD: ${{ needs.changes.outputs.run_build }}
           CHANGES_RESULT: ${{ needs.changes.result }}
           STATIC_RESULT: ${{ needs.static-fast.result }}
           UI_RESULT: ${{ needs.ui-finance-contracts.result }}
@@ -559,10 +421,9 @@ jobs:
             [[ "$PARITY_RESULT" == "success" ]]
           fi
 
-          if [[ "$DOCS_ONLY" != "true" ]]; then
-            [[ "$UI_RESULT" == "success" ]]
-            [[ "$CALENDAR_RESULT" == "success" ]]
-          fi
+          if [[ "$RUN_UI" == "true" ]]; then [[ "$UI_RESULT" == "success" ]]; fi
+          if [[ "$RUN_CALENDAR" == "true" ]]; then [[ "$CALENDAR_RESULT" == "success" ]]; fi
+          if [[ "$RUN_BUILD" == "true" ]]; then [[ "$PERF_BUILD_RESULT" == "success" ]]; fi
 
           if [[ "$RUN_FULL" == "true" ]]; then
             [[ "$MEDICAL_RESULT" == "success" ]]
@@ -597,7 +458,7 @@ jobs:
 
   standalone-sync:
     needs: [changes, perf-build, verify]
-    if: ${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.result == 'success' && needs.changes.outputs.run_full == 'true' && needs.perf-build.result == 'success' && needs.verify.result == 'success' }}
+    if: ${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.result == 'success' && needs.changes.outputs.run_build == 'true' && needs.perf-build.result == 'success' && needs.verify.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 3
     permissions:
