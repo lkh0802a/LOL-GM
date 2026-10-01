@@ -38,6 +38,7 @@ export const ENGINE_MODULES = [
   'finance.js',
   'contracts.js',
   'contract-market-behavior.js',
+  'contract-transfer-market.js',
   'scouting.js',
   'scouting-ai.js',
   'scouting-ai-ops.js',

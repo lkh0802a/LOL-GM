@@ -170,3 +170,11 @@ player.sign, and canonical consent evidence is freshly recomputed before writes.
 The transfer writer archives consent with the move; roster internal assignment
 continues to use its separate gateway. AI candidate and swap selection reuse the
 same consent policy instead of assuming club fee agreement authorizes the player.
+
+
+D04-B4e2: contract-transfer-market owns AI permanent-transfer proposals and the
+market purchase loop. It consumes shared player consent and sends retained/new
+contracts to the existing atomic commands. Payroll room is computed from actual
+contracts and cash after the fee, with no speculative swap credit. Proposal views
+clone player/team data; contracts retains FA/renewal processing and invokes this
+module once. Both standalone and engine manifests include the module.
