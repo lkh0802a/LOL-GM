@@ -1102,3 +1102,45 @@ requires every suite selected by its scope; selected failures cannot be skipped.
 The old-policy duplicate main run 36910992603 was canceled to avoid paying for
 already successful PR verification. This requires the subsequent lightweight
 main publication to refresh the committed standalone HTML.
+
+## D11 long-career memory recovery (2026-10-02)
+
+PR #110 passed its selected three-job run 36912057493 and merged as
+4572b15ee9806e8dd403c264377bd50f37f13131. Lightweight main publication
+36912274078 succeeded; generated standalone commit 960f46d is the new baseline.
+The $10/month stop-at-limit policy and minimal CI selection remain in force.
+
+The prior-engine 100-season process 26248 terminated with native V8 heap exhaustion
+after 30 completed seasons through 2056. Its last boundary save was 124,761,960
+bytes and heap 1,277,779,048 bytes; fatal GC reached about 2 GB. Its JSON still
+says running because native OOM bypassed JavaScript error handling. Preserve the
+original .diagnostics/daily-local-1.json and stdout/stderr; do not treat it as a
+live process, a passing 100-season run or evidence for the merged engine.
+
+save.js now interns repeated restored meta-history strings and shares immutable
+item/rune loadouts. A bounded 4096-combination dictionary avoids retaining every
+unique build key while loading. Encoded rows are replaced progressively so old
+compact containers can be reclaimed. No historic match, player, item, rune,
+patch or query dimension is removed; existing v15/format 1 and 2 saves remain
+compatible. Shared loadouts must not be mutated by evidence consumers.
+
+The daily QA runner releases old fixture references and serialized saves before
+the next restore, records before-save/before-restore/after-restore memory stages,
+checks heap/RSS budgets at these boundaries and reports meta-history row counts.
+This distinguishes engine history growth from QA-held copies and preserves the
+last observed stage if a native crash bypasses normal failure reporting.
+
+Local evidence: regression passes including 6000-game archive roundtrip, sharing,
+immutable evidence, legacy order/duplicate slots, historic query and insight
+counts. Static validation checks 93 modules. A separate synthetic 60,000-game
+restore probe retained about 382 MB before vs 77 MB after (same 140 MB serialized
+history, forced GC for measurement). This is a repeated-loadout synthetic case,
+not a mobile benchmark or proof of real 100-season completion. Real daily seed
+d-memory-resume passed one season, 128 ticks, 258 fixtures, 46 managed games,
+international competition and checkpoint restores; save about 6.1 MB,
+heap 160 MB/RSS 714 MB at the reported boundary.
+
+Next: run the final engine PR's required CI once; then validate current-engine
+long careers without duplicating runs, including varied loadouts and mobile memory
+limits. Remaining D04/D07-D10 mechanisms and D12/D13 remain open. Whole D11/D
+must not be marked complete from this memory improvement or a bounded year.

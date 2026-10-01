@@ -11,7 +11,30 @@ function packMetaHistory(rows){
   ]);
 }
 function unpackMetaHistory(rows){
-  return (rows||[]).map(r=>Array.isArray(r)?{date:r[0],patch:r[1],comp:r[2],season:r[3],year:r[4],split:r[5],stage:r[6],league:r[7],international:!!r[8],regions:r[9]||[],sides:(r[10]||[]).map(s=>({team:s[0],region:s[1],win:!!s[2],picks:(s[3]||[]).map(p=>({champ:p[0],role:p[1],player:p[2],items:p[3]||[],runes:p[4]||[]}))})),bans:r[11]||[]}:r);
+  const strings=new Map(),loadouts=new Map();
+  const intern=x=>{if(typeof x!=='string')return x;const old=strings.get(x);if(old!==undefined)return old;strings.set(x,x);return x};
+  const ids=xs=>(xs||[]).map(intern);
+  // Historical loadouts are immutable evidence. Share repeated combinations,
+  // without retaining an unbounded dictionary of unique builds during loading.
+  const loadout=xs=>{const values=ids(xs),key=JSON.stringify(values),old=loadouts.get(key);if(old)return old;Object.freeze(values);if(loadouts.size<4096)loadouts.set(key,values);return values};
+  rows=rows||[];
+  // Restoration owns these parsed rows; replace each encoded row immediately
+  // so GC can reclaim it before the entire history has been expanded.
+  for(let i=0;i<rows.length;i++){
+    const r=rows[i];
+    const row=Array.isArray(r)?{date:r[0],patch:r[1],comp:r[2],season:r[3],year:r[4],split:r[5],stage:r[6],league:r[7],international:!!r[8],regions:r[9]||[],sides:(r[10]||[]).map(s=>({team:s[0],region:s[1],win:!!s[2],picks:(s[3]||[]).map(p=>({champ:p[0],role:p[1],player:p[2],items:p[3]||[],runes:p[4]||[]}))})),bans:r[11]||[]}:r;
+    for(const key of ['date','patch','comp','season','stage','league'])row[key]=intern(row[key]);
+    row.regions=ids(row.regions);row.bans=ids(row.bans);
+    for(const side of row.sides||[]){
+      side.team=intern(side.team);side.region=intern(side.region);
+      for(const pick of side.picks||[])if(typeof pick==='object'&&pick){
+        pick.champ=intern(pick.champ);pick.role=intern(pick.role);pick.player=intern(pick.player);
+        pick.items=loadout(pick.items);pick.runes=loadout(pick.runes);
+      }
+    }
+    rows[i]=row;
+  }
+  return rows;
 }
 const ALL_ATTRS=Object.values(ATTR_GROUPS).flat();
 function seriesResultForSave(r,lite){

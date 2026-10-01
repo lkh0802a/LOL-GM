@@ -282,6 +282,26 @@ source += `
     assert(packDB(loaded).includes('"saveFormat":2'),'normalized save could not be repacked');
   });
 
+  test('06g2-large-history-loadout-sharing',()=>{
+    const db=buildWorld(),cid=Object.keys(db.patch.champions)[0];
+    const rows=Array.from({length:6000},(_,i)=>({date:'2027-02-01',patch:'27.1',comp:'ARCHIVE',season:'ARCHIVE-2027',year:2027,split:1,stage:'regular',league:'KR',international:false,regions:['KR'],bans:[cid],sides:[{team:'ARCHIVE_TEAM',region:'KR',win:i%2===0,picks:[{champ:cid,role:'MID',player:'ARCHIVE_PLAYER',items:['sword','boots'],runes:['rune-a','rune-b']}]}]}));
+    const encoded=JSON.stringify(packMetaHistory(rows));
+    const restored=unpackMetaHistory(JSON.parse(encoded)),pick=restored[0].sides[0].picks[0];
+    assert(restored.length===rows.length&&JSON.stringify(packMetaHistory(restored))===encoded,'large archive changed or lost evidence');
+    assert(restored.every(r=>r.sides[0].picks[0].items===pick.items&&r.sides[0].picks[0].runes===pick.runes),'repeated loadouts still allocate per-game copies');
+    assert(Object.isFrozen(pick.items)&&Object.isFrozen(pick.runes),'shared history evidence must be immutable');
+    db.metaHistory=restored;
+    const result=metaTableFiltered(db,{comp:'ARCHIVE',year:2027,position:'MID'}).find(x=>x.c.id===cid);
+    const insights=championMetaInsights(db,cid,{comp:'ARCHIVE'});
+    assert(result.p===6000&&result.w===3000&&result.b===6000&&insights.players[0][1].g===6000,'archive queries lost counts or player evidence');
+    const loaded=unpackDB(packDB(db));
+    assert(loaded.metaHistory.length===6000&&loaded.metaHistory[1].sides[0].picks[0].items===loaded.metaHistory[0].sides[0].picks[0].items,'save/load discarded sharing or history');
+    const variants=JSON.parse(JSON.stringify(rows.slice(0,3)));
+    variants[1].sides[0].picks[0].items.reverse();variants[2].sides[0].picks[0].items.push('sword');
+    const legacy=unpackMetaHistory(variants);
+    assert(legacy[0].sides[0].picks[0].items.join(',')==='sword,boots'&&legacy[1].sides[0].picks[0].items.join(',')==='boots,sword'&&legacy[2].sides[0].picks[0].items.length===3,'legacy distinct order or duplicate slots merged');
+  });
+
   test('06h-legacy-v15-save-restoration',()=>{
     const db=buildWorld(),team=activeTeams(db)[0],p=Object.values(db.players).find(x=>x&&x.attrs);
     const legacy=JSON.parse(JSON.stringify(db));
