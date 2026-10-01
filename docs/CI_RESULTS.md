@@ -39,3 +39,18 @@ The publishing job runs only after the full `verify` gate succeeds on a main
 push. It downloads that run's HTML preview artifact; the build job verifies
 byte equality with root `index.html`. Only the publishing job can write repository
 contents. PR validation never publishes standalone files.
+
+## Explicit full and parity runs
+
+Use Actions → CI → Run workflow with the intended branch/ref. Manual dispatch
+always runs the complete gate even when the last commit changes only docs.
+The optional `smoke_parity` checkbox additionally runs the existing full/core/
+patch-system comparison, asserts identical runtime/persisted/RNG fingerprints
+and coverage union, and uploads `validation-smoke-parity`. A requested parity
+failure fails `verify`. Leave it off for normal full regression; enable it when
+changing shard boundaries or deliberately reconfirming equivalence.
+
+Manual runs never publish standalone files. Their concurrency group is separate
+from push/PR validation so a diagnostic run cannot cancel main publication.
+New runs of the same event/ref still cancel stale runs. Seeds, seasons and
+assertions are unchanged; no schedule or extra default matrix is added.

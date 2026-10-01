@@ -1,6 +1,12 @@
 name: CI
 
 on:
+  workflow_dispatch:
+    inputs:
+      smoke_parity:
+        description: Also prove full/core smoke state and coverage parity
+        type: boolean
+        default: false
   push:
     branches: [main]
   pull_request:
@@ -11,7 +17,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -38,6 +44,12 @@ jobs:
           PR_DRAFT: ${{ github.event.pull_request.draft }}
         run: |
           set -euo pipefail
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            echo "run_full=true" >> "$GITHUB_OUTPUT"
+            echo "Explicit full validation of $GITHUB_SHA"
+            exit 0
+          fi
           if [[ "$EVENT_NAME" == "pull_request" ]]; then
             base="$PR_BASE_SHA"
             head="$PR_HEAD_SHA"
@@ -466,6 +478,32 @@ jobs:
           compression-level: 1
           if-no-files-found: warn
 
+  smoke-parity:
+    needs: static-fast
+    if: github.event_name == 'workflow_dispatch' && inputs.smoke_parity
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Prove smoke shard parity
+        run: node scripts/ci-run.mjs smoke-parity -- node scripts/smoke-shard-acceptance.mjs
+
+      - name: Upload parity evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-smoke-parity
+          path: ci-results/
+          retention-days: 7
+          if-no-files-found: warn
+
   verify:
     needs:
       - changes
@@ -475,6 +513,7 @@ jobs:
       - medical
       - regression-smoke-career
       - perf-build
+      - smoke-parity
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 3
@@ -491,10 +530,16 @@ jobs:
           MEDICAL_RESULT: ${{ needs.medical.result }}
           REGRESSION_RESULT: ${{ needs.regression-smoke-career.result }}
           PERF_BUILD_RESULT: ${{ needs.perf-build.result }}
+          PARITY_REQUIRED: ${{ github.event_name == 'workflow_dispatch' && inputs.smoke_parity }}
+          PARITY_RESULT: ${{ needs.smoke-parity.result }}
         run: |
           set -euo pipefail
           [[ "$CHANGES_RESULT" == "success" ]]
           [[ "$STATIC_RESULT" == "success" ]]
+
+          if [[ "$PARITY_REQUIRED" == "true" ]]; then
+            [[ "$PARITY_RESULT" == "success" ]]
+          fi
 
           if [[ "$DOCS_ONLY" != "true" ]]; then
             [[ "$UI_RESULT" == "success" ]]

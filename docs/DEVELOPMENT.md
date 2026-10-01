@@ -417,3 +417,4 @@ R03–R07 and remove legacy only after caller parity is proven. Preserve accepte
 D04-B3; after the refactor, recheck D04-B4 and the latest depth audit before
 choosing subsequent gameplay work. Follow ANDROID_TARGET.md through mobile
 UX/performance, production packaging and real-device offline/save validation.
+Manual full/parity support is a follow-up convenience, not a new optimization phase.
