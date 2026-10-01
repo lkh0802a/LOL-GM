@@ -1,13 +1,7 @@
 // D03-B4: stale reports may rationally mis-rank a player, then fresh scouting revises the real market shortlist.
-import {readFile} from 'node:fs/promises';
-import {resolve} from 'node:path';
-import vm from 'node:vm';
-import {ENGINE_MODULES} from './artifact-modules.mjs';
+import {runEngineFixture} from './test-harness.mjs';
 
-const root=resolve(import.meta.dirname,'..','src','artifact');
-let source='';
-for(const file of ENGINE_MODULES)source+=await readFile(resolve(root,file),'utf8')+'\n';
-source+=String.raw`(()=>{
+const fixture=String.raw`(()=>{
   const assert=(x,m)=>{if(!x)throw new Error('D03_REASSESS '+m)};
   const cfg=defaultWorldConfig();
   cfg.regions=[
@@ -121,5 +115,4 @@ source+=String.raw`(()=>{
     saveFormat:JSON.parse(freshPacked).saveFormat
   }));
 })();`;
-vm.runInNewContext(source,{console,Date,Math,JSON,Set,Map,WeakMap,Object,
-  Array,String,Number,Boolean,RegExp,Error,Intl,performance,crypto},{timeout:30000});
+await runEngineFixture(fixture,{timeout:30000,filename:'scouting-reassessment-acceptance.fixture.js'});

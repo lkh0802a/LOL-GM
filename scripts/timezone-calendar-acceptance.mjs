@@ -1,12 +1,5 @@
 // Real event time zones, KST broadcast display, DST and bilateral practice hours.
-import {readFile} from 'node:fs/promises';
-import {resolve} from 'node:path';
-import vm from 'node:vm';
-import {ENGINE_MODULES} from './artifact-modules.mjs';
-const base=resolve(import.meta.dirname,'..','src','artifact');
-let engine='';
-for(const file of ENGINE_MODULES)
-  engine+=await readFile(resolve(base,file),'utf8')+'\n';
+import {artifactSource,runEngineFixture} from './test-harness.mjs';
 const fixture=String.raw`(()=>{
   const verify=(condition,msg)=>{if(!condition)throw new Error('TIMEZONE_ACCEPTANCE '+msg)};
   const utc=(day,time,zone)=>venueToUtc(day,time,zone);
@@ -201,10 +194,8 @@ const fixture=String.raw`(()=>{
     worldVersion:loaded.version,saveFormat:loaded.saveFormat
   }));
 })()`;
-vm.runInNewContext(engine+'\n'+fixture,{console,Date,Math,JSON,Set,Map,
-  Object,Array,String,Number,Boolean,RegExp,Error,Intl,performance,crypto},
-  {timeout:40000});
-const ui=await readFile(resolve(base,'ui-season.js'),'utf8');
+await runEngineFixture(fixture,{timeout:40000,filename:'timezone-calendar-acceptance.fixture.js'});
+const ui=await artifactSource('ui-season.js');
 if(!ui.includes('fixtureTimeInfo(m)')||
    !ui.includes('d.date)} UTC')||
    !ui.includes('new Set(d.matches.map(m=>m.localDate||d.date))'))
