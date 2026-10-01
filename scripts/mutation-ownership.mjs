@@ -4,16 +4,15 @@
 export const MUTATION_OWNERSHIP={
   'contract-window.js':{date:3},
   'contracts.js':{assign:3},
-  'development.js':{cash:1},
   'finance.js':{cash:2},
   'medical.js':{cash:1},
   'office.js':{remove:1},
   'offseason.js':{date:3,remove:1},
   'player.js':{assign:1},
-  'scouting-ai-ops.js':{cash:1},
-  'scouting.js':{cash:1},
+  'scouting-ai-ops.js':{},
+  'scouting.js':{},
   'season.js':{date:2},
-  'staff.js':{cash:2},
+  'staff.js':{},
   'state-player-actions.js':{cash:1,remove:1},
   'transfer.js':{assign:1}
 };
