@@ -10,6 +10,8 @@ const modules = ENGINE_MODULES;
 let source = '';
 for (const file of modules) source += `${await readFile(resolve(artifact, file), 'utf8')}\n`;
 source += `\n(()=>{
+  const __smokeStarted=performance.now(),__smokeTimings=[];let __smokeMarkAt=__smokeStarted;
+  const __smokeMark=name=>{const now=performance.now();__smokeTimings.push({name,ms:Math.round((now-__smokeMarkAt)*10)/10});__smokeMarkAt=now};
   const db=buildWorld();
   if(Object.values(CHAMPION_SOURCE_SNAPSHOT.champions).length!==173||Object.values(CHAMPION_SOURCE_SNAPSHOT.champions).some(c=>!c.nameKo)||Object.values(CHAMPION_SOURCE_SNAPSHOT.champions).filter(c=>c.passive?.nameKo&&c.spells?.length===4).length!==173||db.patch.championSource.matched<170||db.patch.championSource.matched!==db.patch.championSource.total)throw new Error('Authoritative champion baseline coverage incomplete: '+JSON.stringify(db.patch.championSource));
   if(!db||db.version!==15) throw new Error('Unexpected save schema');
