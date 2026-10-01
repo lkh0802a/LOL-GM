@@ -6,6 +6,7 @@ function psTeam(db,t){return psOf(db,t.region)*((t.division||1)===2?0.35:1)}
 function initFinance(db,t,rng){
   const ps=psTeam(db,t);
   t.owner=t.owner||{wealth:Math.round(clamp(rng.normal(55,18),10,95))};
+  ensureClubOwnership(t);
   t.facility=t.facility||clamp(Math.round(1+t.owner.wealth/30),1,4);ensureFacilities(t);
   t.finance=t.finance||{cash:Math.round((25+rng.range(0,35))*ps*10)/10,history:[],buyout:0};
 }
@@ -303,8 +304,7 @@ function closeFinances(db,w,rng,ev){
     const losses=f.history.slice(-2).filter(y=>y.net<0).length;
     if(f.cash<-12*psTeam(db,row.t)&&losses>=2){
       const old=row.t.name,renamed=orgName(db,rng),before=f.cash;
-      row.t.name=renamed.name;row.t.formerNames=[...(row.t.formerNames||[]),old];
-      row.t.owner={wealth:Math.round(clamp(rng.normal(65,15),30,95))};
+      transferClubOwnership(db,row.t,{name:renamed.name,wealth:Math.round(clamp(rng.normal(65,15),30,95)),reason:'financial-recapitalization',year:w.year});
       f.cash=round(25*psTeam(db,row.t));row.t.fans=Math.round((row.t.fans||30)*.88);
       // Equity recapitalization is a capital movement, not an operating profit.
       const year=f.history.at(-1);
