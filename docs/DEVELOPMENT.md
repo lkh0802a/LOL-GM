@@ -412,7 +412,9 @@ are real callers. Structural ownership and legacy removal remain Issue #62 work.
 
 ### Current sequence
 
-Finish Issue #57's remaining manual-run support and evidence checklist before
-Issue #62 refactoring. Preserve accepted D04-B3; recheck D04-B4 and the depth audit
+Issue #57 is closed with the evidence and deferred-risk decisions recorded in
+its completion comment. Manual full/parity support is a follow-up convenience,
+not a new optimization phase. Continue Issue #62 ownership/refactoring work.
+Preserve accepted D04-B3; recheck D04-B4 and the depth audit
 before choosing subsequent gameplay work. Follow ANDROID_TARGET.md through mobile
 UX/performance, production packaging and real-device offline/save validation.
