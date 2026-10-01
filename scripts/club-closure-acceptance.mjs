@@ -22,7 +22,7 @@ await runEngineFixture(String.raw`(()=>{
   medical.contract.medicalReplacement={paid:.01};
   a.name='<script>creditor</script>';
   parent.finance.cash=3;parent.finance.buyout=2;
-  reserve.finance.cash=10;
+  reserve.finance.cash=3;
   const command={type:'club.close',actor:'system',teamId:parent.id},before=JSON.stringify(db),
     preview=previewWorldAction(db,command);
   check(preview.ok&&JSON.stringify(db)===before,'closure preview mutated world');
@@ -48,7 +48,7 @@ await runEngineFixture(String.raw`(()=>{
     parent.roster.length===0&&reserve.roster.length===0,'organization did not close together');
   for(const p of players)check(p.team===null&&p.contract===null&&
     p.careerEvents.at(-1).type==='club_closure','closure left stale player contract');
-  check(parent.finance.cash===0&&parent.finance.buyout===7&&reserve.finance.cash===7&&
+  check(parent.finance.cash===0&&parent.finance.buyout===7&&reserve.finance.cash===0&&
     reserve.finance.buyout===0&&near(parent.finance.closureSettlement.unattributedUnpaid,1.4),
     'cash/debt disappeared or was fabricated');
   check(near(financeReleaseObligations(parent).unattributedAmount,1.4)&&
@@ -139,6 +139,74 @@ await runEngineFixture(String.raw`(()=>{
   check(foldTeam(group,head).ok&&head.finance.closureSettlement.paidAmount===2&&
     child.finance.closureSettlement.paidAmount===3&&child.finance.buyout===3&&
     head.finance.cash===0&&child.finance.cash===0,'whole organization funding failed');
+  // Return a closed reserve's surplus even when its continuing parent is in debt.
+  const recovery=buildWorld(),owner=activeTeams(recovery,null,1)[0],
+    closing=reserveTeamsOf(recovery,owner)[0],
+    athlete=Object.values(recovery.players).find(p=>!p.team&&!p.retired);
+  signContract(recovery,athlete,closing,4,2,{releaseGuaranteeRate:1});
+  owner.finance.cash=-5;owner.finance.buyout=1;closing.finance.cash=10;
+  const recoveryAction={type:'club.close',actor:'system',teamId:closing.id},
+    recoveryBefore=JSON.stringify(recovery),recoveryPreview=previewWorldAction(recovery,recoveryAction);
+  check(recoveryPreview.ok&&JSON.stringify(recovery)===recoveryBefore&&
+    recoveryPreview.changes[0].funding.provided===2,'recovery preview spent reserve claims');
+  const originalScope=worldActionScopeErrors;
+  worldActionScopeErrors=(db,cmd,ids)=>cmd.type==='club.close'?['late recovery failure']:originalScope(db,cmd,ids);
+  const recoveryFailed=applyWorldAction(recovery,recoveryPreview);worldActionScopeErrors=originalScope;
+  check(!recoveryFailed.ok&&JSON.stringify(recovery)===recoveryBefore,
+    'recovery cash/history not rolled back');
+  check(commitWorldAction(recovery,recoveryAction).ok&&owner.finance.cash===-3&&
+    owner.finance.buyout===1&&closing.finance.cash===0&&closing.finance.buyout===0&&
+    closing.finance.closureSettlement.paidAmount===8&&
+    owner.finance.closureCashRecoveryHistory[0].amount===2,
+    'recovery lost cash or reserve compensation');
+  DB=recovery;const readBefore=JSON.stringify(recovery),ownerHtml=financePanel(owner),
+    closingHtml=financePanel(closing);
+  check(ownerHtml.includes('2군 종료 잔여 자금 회수')&&
+    closingHtml.includes('모구단에 잔여 자금 반환')&&JSON.stringify(recovery)===readBefore,
+    'recovery UI absent or mutated state');
+  const savedRecovery=unpackDB(packDB(recovery));
+  check(JSON.stringify(savedRecovery.teams[owner.id].finance)===JSON.stringify(owner.finance)&&
+    JSON.stringify(savedRecovery.teams[closing.id].finance)===JSON.stringify(closing.finance),
+    'recovery records lost in save');
+  const recoveryControl=unpackDB(packDB(recovery));
+  delete recoveryControl.teams[owner.id].finance.closureCashRecoveryHistory;
+  closeFinances(recovery,{year:recovery.year,seasons:{}},new RNG('recovery-annual'),()=>{});
+  closeFinances(recoveryControl,{year:recoveryControl.year,seasons:{}},new RNG('recovery-annual'),()=>{});
+  check(recovery.teams[owner.id].finance.cash===recoveryControl.teams[owner.id].finance.cash,
+    'recovery was counted as annual income again');
+  for(const ownerCash of [10,2]){
+    const deficitWorld=buildWorld(),head=activeTeams(deficitWorld,null,1)[0],
+      squad=reserveTeamsOf(deficitWorld,head)[0],
+      p=Object.values(deficitWorld.players).find(p=>!p.team&&!p.retired);
+    signContract(deficitWorld,p,squad,1,2,{releaseGuaranteeRate:1});
+    head.finance.cash=ownerCash;squad.finance.cash=-3;
+    check(foldTeam(deficitWorld,squad).ok,'negative-cash reserve closure failed');
+    const record=squad.finance.closureSettlement,provided=Math.min(ownerCash,5),
+      paid=Math.max(0,provided-3);
+    check(record.funding.received===provided&&record.paidAmount===paid&&
+      record.unpaidAmount===2-paid&&squad.finance.cash===-3+provided-paid&&
+      head.finance.cash===ownerCash-provided,
+      'support failed to cover negative cash before paying player claims');
+  }
+  // Recover before support: cash from a solvent owned squad pays parent claims
+  // and can support another closed squad without creating outside equity.
+  const organization=buildWorld(),principal=activeTeams(organization,null,1)[0],
+    donor=reserveTeamsOf(organization,principal)[0],
+    recipient=activeTeams(organization).find(t=>t.parent&&t.parent!==principal.id),
+    cohort=Object.values(organization.players).filter(p=>!p.team&&!p.retired).slice(0,3);
+  recipient.parent=principal.id;
+  signContract(organization,cohort[0],principal,1,2,{releaseGuaranteeRate:1});
+  signContract(organization,cohort[1],donor,1,2,{releaseGuaranteeRate:1});
+  signContract(organization,cohort[2],recipient,4.5,2,{releaseGuaranteeRate:1});
+  principal.finance.cash=0;donor.finance.cash=10;recipient.finance.cash=0;
+  check(foldTeam(organization,principal).ok&&
+    principal.finance.closureSettlement.paidAmount===2&&
+    donor.finance.closureSettlement.paidAmount===2&&
+    recipient.finance.closureSettlement.paidAmount===6&&recipient.finance.buyout===3&&
+    [principal,donor,recipient].every(t=>t.finance.cash===0)&&
+    principal.finance.closureSettlement.funding.received===8&&
+    principal.finance.closureSettlement.funding.provided===6,
+    'recovery/support ordering lost cash or parent protected claims');
   // Solvent and insolvent single-club cases preserve cash and debt independently.
   for(const cash of [7,0,-3]){
     const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:2,div2:false})];
@@ -156,5 +224,6 @@ await runEngineFixture(String.raw`(()=>{
     parentReserves:true,staleCashContract:true,rollback:true,legacyClaims:true,
     proportionalPayment:true,insolventNoWriteoff:true,medicalExempt:true,
     agreements:true,saveRestore:true,noAnnualDoubleCharge:true,parentFunding:true,
-    protectedParentClaims:true,fundingRollback:true,ui:true}));
+    protectedParentClaims:true,fundingRollback:true,surplusRecovery:true,
+    recoveryBeforeSupport:true,recoverySaveUi:true,ui:true}));
 })();`,{filename:'club-closure.fixture.js',setupSources:[ui,escapeDeclaration]});

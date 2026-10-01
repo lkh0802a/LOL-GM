@@ -83,6 +83,11 @@ function applyClubClosureFunding(db,transfers,closingIds,year,date){
       f.closureSupportHistory=[...(f.closureSupportHistory||[]),
         {year,date,...row,cashAfter:f.cash}].slice(-20);
     }
+    if(!closingIds.includes(to.id)){
+      const f=to.finance;
+      f.closureCashRecoveryHistory=[...(f.closureCashRecoveryHistory||[]),
+        {year,date,...row,cashAfter:f.cash}].slice(-20);
+    }
   }
 }
 function settleClubClosureFinance(t,year,date,funding=null){

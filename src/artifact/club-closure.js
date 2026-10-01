@@ -14,12 +14,23 @@ function clubClosureFundingPlan(db,c){
   if(parent&&parent.active!==false){
     const own=original.get(parent.id)||financeReleaseObligations(parent);
     financeClosureAllocation(parent.finance.cash,own);
+    // Owned squads return only cash left after protecting their own claims.
+    // Recover it before calculating support, so a closing organization does
+    // not strand reserve cash while its parent has unpaid player obligations.
+    for(const t of teams.filter(t=>t.parent===parent.id)){
+      const surplus=Math.max(0,t.finance.cash-original.get(t.id).amount);
+      if(surplus>0)transfers.push({fromId:t.id,toId:parent.id,
+        amount:surplus,kind:'cash_recovery'});
+    }
+    const recovered=transfers.reduce((n,row)=>n+row.amount,0);
     const needs=teams.filter(t=>t.parent===parent.id)
-      .map(t=>({t,need:original.get(t.id).unpaidAmount})).filter(row=>row.need>0),
+      .map(t=>({t,need:original.get(t.id).amount>0?
+        Math.max(0,original.get(t.id).amount-t.finance.cash):0})).filter(row=>row.need>0),
       total=needs.reduce((n,row)=>n+row.need,0),
-      available=Math.min(total,Math.max(0,parent.finance.cash-own.amount));
+      available=Math.min(total,Math.max(0,parent.finance.cash+recovered-own.amount));
     if(available>0)for(const {t,need} of needs)
-      transfers.push({fromId:parent.id,toId:t.id,amount:available*need/total});
+      transfers.push({fromId:parent.id,toId:t.id,amount:available*need/total,
+        kind:'reserve_support'});
   }
   const changes=teams.map(t=>{
     const received=transfers.filter(x=>x.toId===t.id).reduce((n,x)=>n+x.amount,0),
