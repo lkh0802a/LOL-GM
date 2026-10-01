@@ -8,7 +8,7 @@ test('engine and unknown changes retain all required validation',()=>{
   }
 });
 test('draft, documentation and CI orchestration avoid game simulations',()=>{
-  for(const [draft,files] of [['true',['src/artifact/world.js']],['false',['docs/DEVELOPMENT.md']],['false',['.github/workflows/ci.yml','scripts/ci-scope.test.mjs']]]){
+  for(const [draft,files] of [['true',['src/artifact/world.js']],['false',['docs/DEVELOPMENT.md']],['false',['.github/workflows/ci.yml','scripts/ci-scope.test.mjs']],['false',['.github/workflows/ci.yml','scripts/ci-scope.mjs','docs/DEVELOPMENT.md']]]){
     const s=validationScope('pull_request',draft,files);
     for(const key of ['run_full','run_ui','run_calendar','run_build'])assert.equal(s[key],false,key);
   }
