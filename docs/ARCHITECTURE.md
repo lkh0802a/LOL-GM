@@ -150,3 +150,13 @@ Player-action and negotiation entry points independently reject academy-coach
 recruitment; hiding controls alone is insufficient. Parent organization roster.plan
 remains AI-owned. First-year academy start uses the shared global initial market,
 then the coach confirms the provided roster without rebuilding it at finalization.
+
+
+D04-B4d3 closure planning recovers a closing owned reserve's surplus after its
+claims, then calculates parent support using recovered cash while protecting
+parent claims. Negative reserve cash contributes to the liquidity gap when
+player claims exist. Existing finance transfer writes and closure journal are
+reused. cash_recovery and reserve_support describe matched internal transfers;
+active-parent recovery history is bounded to 20 settled entries and never feeds
+annual operating revenue. UI renders the transfer direction/kind; legacy support
+rows without kind still display as support.

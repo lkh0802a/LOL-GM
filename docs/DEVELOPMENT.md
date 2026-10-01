@@ -524,7 +524,7 @@ The current Worlds+14 model remains the fictional game's policy; this source
 must not trigger an automatic migration to real-world calendar dates. Revisit
 only where the fictional design needs a more coherent rule.
 
-Current unit: D04-B4d2. Main files: club-closure.js, finance.js, office.js,
+Current unit: D04-B4d3. Main files: club-closure.js, finance.js, office.js,
 state-player-actions.js, state-rollback.js and closure/player finance UI.
 Focused acceptance covers authority, parent/reserve scope, stale previews, late
 rollback, paid/unpaid balances, legacy claims, agreements, UI and save restore.
@@ -565,3 +565,13 @@ Full regression and build are Actions-owned. The former independent-only smoke
 expectation is replaced with coverage of active independent and parent-owned teams.
 
 Local academy-coach validation: static check and focused UI/finance/contracts runner passed (18 acceptances, 14 engine contexts). Full Actions required before acceptance.
+
+
+D04-B4d3 unit: recover closing owned-reserve cash after protecting its own claims,
+then protect parent claims before supporting other closing reserves. Support for
+negative-cash reserves accounts for the liquidity deficit before player payouts.
+No invented equity or duplicate annual income. Finance keeps bounded recovery
+history; closed statements and UI distinguish returns from support. Focused
+closure acceptance verifies cash/debt conservation, rollback, save/UI and annual
+accounting. Remaining insolvency work includes independent assets and other claims;
+next gameplay candidates include transfer consent and D05 loans.

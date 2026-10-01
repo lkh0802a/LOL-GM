@@ -18,8 +18,9 @@ function financePanel(t){
       <div><span>지급 완료</span><b>${money(closure.paidAmount)}</b></div>
       <div><span>미지급</span><b>${money(closure.unpaidAmount)}</b></div></div>
       <p class="hint">${esc(closure.date||String(closure.year))} 해체 시 가용 현금을 청구액 비율로 배분했습니다. 미지급 채무는 기록에 보존되며 다음 시즌 운영비로 중복 청구하지 않습니다.</p>
-      ${closure.funding?.received?`<p>모구단 정산 지원 ${money(closure.funding.received)}</p>`:''}
-      ${closure.funding?.provided?`<p>소유 2군 정산 지원 ${money(closure.funding.provided)}</p>`:''}
+      ${(closure.funding?.transfers||[]).map(row=>`<p>${row.kind==='cash_recovery'?
+        row.toId===t.id?'2군 잔여 자금 회수':'모구단에 잔여 자금 반환':
+        row.toId===t.id?'모구단 정산 지원':'소유 2군 정산 지원'} ${money(row.amount)}</p>`).join('')}
       ${releaseObligationsPanel(financeReleaseObligations(t),'해체 구단 미지급 보상')}
       <details class="cfgcard release-settlements"><summary>선수별 지급 내역</summary>
       ${closure.items.map(row=>`<div class="cfgcard"><b>${esc(row.playerName||row.pid)}</b>
@@ -47,6 +48,9 @@ function financePanel(t){
   ${f.closureSupportHistory?.length?`<details class="cfgcard release-settlements"><summary>2군 종료 정산 지원 내역</summary>
     <p class="hint">이미 현금에 반영된 내부 지원금입니다. 다음 결산에서 다시 차감하지 않습니다.</p>
     ${f.closureSupportHistory.map(row=>`<p>${esc(row.date||String(row.year))} · ${esc(DB.teams[row.toId]?.name||row.toId)} · ${money(row.amount)}</p>`).join('')}</details>`:''}
+  ${f.closureCashRecoveryHistory?.length?`<details class="cfgcard release-settlements"><summary>2군 종료 잔여 자금 회수</summary>
+    <p class="hint">2군의 선수 보상 채무를 보호한 뒤 반환받은 현금입니다. 다음 결산 수입으로 중복 반영하지 않습니다.</p>
+    ${f.closureCashRecoveryHistory.map(row=>`<p>${esc(row.date||String(row.year))} · ${esc(DB.teams[row.fromId]?.name||row.fromId)} · ${money(row.amount)}</p>`).join('')}</details>`:''}
   ${last?.capital?`<p class="hint">${last.year}년 구단 매각/외부 자본 투입: ${money(last.capital.newOwner||0)} (영업손익과 구분)</p>`:''}
   ${last?`<div class="rgrid"><div><h4>${last.year} 수입 ${money(Object.values(last.rev).reduce((a,b)=>a+b,0))}</h4>${Object.entries(last.rev).filter(([,v])=>v).map(([k,v])=>`<div class="arow"><span>${RK[k]||k}</span><span class="num">${money(v)}</span></div>`).join('')}</div>
   <div><h4>${last.year} 지출 ${money(Object.values(last.exp).reduce((a,b)=>a+b,0))}</h4>${Object.entries(last.exp).filter(([,v])=>v).map(([k,v])=>`<div class="arow"><span>${EK[k]||k}</span><span class="num">${money(v)}</span></div>`).join('')}<div class="arow"><span><b>순이익</b></span><span class="num ${last.net<0?'lo':'hi'}"><b>${money(last.net)}</b></span></div></div></div>`:'<p class="hint">첫 시즌이 끝나면 결산이 나옵니다.</p>'}</section>`;
