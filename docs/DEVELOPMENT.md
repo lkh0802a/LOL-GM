@@ -904,3 +904,11 @@ actual failures and review long-run monopoly/inflation/meta warning trends.
 This small-world scenario is not proof of default
 six-region Android performance. Whole-D remains active; D04/D06 ownership and
 economic boundaries, D07–D10 and D13 real mobile tasks still remain.
+
+PR #106 head `7b6313ed086753090a81d829d510aa017d0a489e` could not run CI:
+Actions run 36899884255 failed before any step, with GitHub's annotation
+"recent account payments have failed or your spending limit needs to be increased".
+This is an account execution block, not a test failure. Do not merge this PR or
+claim full CI success. Do not change billing or spending settings automatically.
+Local bounded checks remain available; retain long-run partial reports and keep
+implementation work independent of this external block.
