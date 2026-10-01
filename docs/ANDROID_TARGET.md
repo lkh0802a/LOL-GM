@@ -37,6 +37,28 @@ must work offline. iOS expansion should remain possible, but is secondary.
 Neither CI setup nor optimization alone is project completion. Do not rebuild
 already accepted contracts, patch/meta or medical behavior from their names.
 
+## Performance work during mobile development
+
+User decision, 2026-10-01: development-efficiency optimization and the planned
+refactor are complete. Perform remaining engine and mobile performance work
+while developing the relevant roadmap feature or platform integration; do not
+insert another standalone general optimization phase before feature development.
+
+- Feature implementation: measure and improve affected simulation, AI, market,
+  growth, scheduling, statistics and save/load paths when a bottleneck is found.
+- Mobile HTML UX: implement efficient rendering, bounded memory/save growth,
+  useful batching/caches, low idle CPU and background suspension alongside the
+  related screens and simulation controls. Measure long careers and sessions,
+  including CPU/RAM, battery and heat on supported mobile devices.
+- Android integration: verify release-mode lifecycle, durable saves, kill/reopen
+  recovery, background behavior and resource use on an actual Android device.
+
+The mobile performance milestone in the required sequence is the final
+acceptance gate for this integrated work. It does not postpone performance until
+all features are finished. Existing optimization completion does not mean these
+mobile requirements have passed. Keep deterministic engine/save checks and the
+desktop/mobile HTML-before-APK delivery order.
+
 ## Current evidence and technology decision boundary
 
 The repository has dependency-free JavaScript global modules concatenated by
