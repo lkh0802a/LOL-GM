@@ -53,7 +53,7 @@ function defaultWorldConfig(){return {
   internationals:INTL_PRESETS.map(x=>({...x})),
   subs:1, changes:'normal', startYear:2027, manage:'manual', universalLanguage:true
 }}
-const CHANGE_F={none:0,low:0.5,normal:1,high:1.8};
+const WORLD_CHANGE_FREQUENCY=1; // Always the normal office/world evolution rate.
 
 // ---------- 프로게임단 이름 ----------
 const ORG_BRANDS=[['넥서스','Nexus','NX'],['반타','Vanta','VT'],['오닉스','Onyx','OX'],['크림슨','Crimson','CR'],['오로라','Aurora','AU'],['제니스','Zenith','ZN'],['헬릭스','Helix','HX'],['솔스티스','Solstice','SL'],['패러곤','Paragon','PG'],['버텍스','Vertex','VX'],['이클립스','Eclipse','EC'],['아펙스','Apex','AP'],['레디언트','Radiant','RD'],['보텍스','Vortex','VO'],['세이블','Sable','SB'],['템페스트','Tempest','TP'],['루멘','Lumen','LU'],['스펙터','Specter','SP'],['코발트','Cobalt','CB'],['아르고스','Argos','AR'],['미라지','Mirage','MR'],['케스트럴','Kestrel','KS'],['오블리비언','Oblivion','OB'],['인피니티','Infinity','IF'],['퀘이사','Quasar','QS'],['블랙쏜','Blackthorn','BT'],['하이드라','Hydra','HY'],['세라프','Seraph','SR'],['엠버','Ember','EM'],['글레이셔','Glacier','GL'],['노스타','Northstar','NS'],['프리즘','Prism','PZ']];
@@ -194,6 +194,7 @@ function addRegion(db,rng,cfg){
 }
 function buildWorld(cfg){
   cfg=JSON.parse(JSON.stringify(cfg||defaultWorldConfig()));
+  cfg.changes='normal';
   const db={version:15,saveId:'save-'+Date.now().toString(36),manager:{id:'manager-human',teamId:null,startMode:null,careerStartedAt:null},worldDate:`${cfg.startYear||2027}-01-01`,awards:[],hof:[],global:{decisions:[],power:{}},patch:buildPatch(),teams:{},players:{},regions:{},competitions:{},worldConfig:cfg,world:null,history:[],news:[],year:cfg.startYear||2027,configDirty:false,scout:{}};
   const rng=new RNG(WORLD_GENERATION_SEED,'gen');
   initPatches(db);

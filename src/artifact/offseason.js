@@ -24,7 +24,7 @@ function runOffseason(db){
   // Headless/AI callers historically advanced offseason in one call. Preserve
   // that contract while the interactive UI exposes both real window stages.
   if(cw?.stage==='exclusive')advanceOffseasonContractWindow(db);
-  const rng=new RNG(w.seed+'/'+w.year,'offseason'), f=CHANGE_F[db.worldConfig.changes]??1;
+  const rng=new RNG(w.seed+'/'+w.year,'offseason'), f=WORLD_CHANGE_FREQUENCY;
   const rep={year:w.year,growth:[],retired:[],signings:[],resign:[],expired:[],transfers:[],events:[]};
   const ev=t=>{rep.events.push(t);news(db,t)};
   const games={}, champGames={};

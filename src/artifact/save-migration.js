@@ -56,6 +56,7 @@ function normalizeRestoredSave(db){
   // World schema v15, format 1: pre-migration JSON saves and packed exports.
   // Format 2 uses the same runtime object model, but strips derived caches.
   for(const k of SAVE_TRANSIENT_ROOT_FIELDS)delete db[k];
+  db.worldConfig.changes='normal';
   db.metaHistory=unpackMetaHistory(db.metaHistory||[]);
   // Rename only former defaults; IDs, custom names and tournament rules stay.
   for(const [id,oldName] of [['MASTERS','Masters'],['OPEN','Open']]){

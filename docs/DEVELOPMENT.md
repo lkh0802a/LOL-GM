@@ -488,3 +488,16 @@ Tournament naming correction (2026-10-01): display names are Worlds Masters
 (월즈 마스터즈) and Worlds Open (월즈 오픈). Keep existing MASTERS/OPEN IDs
 for saved schedules and results. Restore old default display names on load;
 preserve user-customized names and formats.
+
+World setup decision (2026-10-01): remove the world-change frequency selector
+entirely, including advanced settings. New worlds and restored saves use normal
+frequency; calendar/offseason evolution always uses the normal multiplier (1).
+The manager/AI delegation control remains a separate setting.
+
+Default-world gap identified (2026-10-01): Korea/China create only owned reserve
+teams in Tier 2, excluded from manager selection by design. Other default core
+regions do not currently create Tier-2 leagues. Independent Tier-2 selection is
+implemented and tested in custom worlds, but no independent Tier-2 club exists
+in the default starting world. A playable default Tier-2 start is therefore
+unfinished; decide the regional independent league composition before adding
+clubs. Do not treat an owned Academy/Challengers squad as an independent club.
