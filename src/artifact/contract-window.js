@@ -191,6 +191,8 @@ function closeExclusiveContractWindow(db){
     settlement:cw.settlement||null,msg:'원소속 독점기간이 이미 끝났습니다'};
   const renewals=aiRunExclusiveRenewals(db),earlyOffers=aiRunEarlyContactOffers(db);
   setWorldCalendarDate(db,cw.outsideContactDate);
+  processTransferPayments(db);
+  processLocalServiceDaily(db);aiChooseLocalEligibility(db);
   const settlement=finalizeExclusiveContractExpiry(db);
   cw.stage='fa';cw.completed=true;cw.settlement=settlement;
   return {ok:true,stage:'fa',date:db.worldDate,renewals,earlyOffers,settlement,
@@ -203,7 +205,7 @@ function advanceOffseasonContractDay(db){
     msg:'원소속 독점기간이 이미 끝났습니다'};
   const next=addDays(db.worldDate,1);
   if(next>=cw.outsideContactDate)return closeExclusiveContractWindow(db);
-  setWorldCalendarDate(db,next);aiRunEarlyContactOffers(db);
+  setWorldCalendarDate(db,next);processTransferPayments(db);processLocalServiceDaily(db);aiChooseLocalEligibility(db);aiRunEarlyContactOffers(db);
   return {ok:true,stage:'exclusive',date:db.worldDate,
     msg:'원소속 독점 재계약 기간 · '+db.worldDate};
 }

@@ -704,3 +704,43 @@ fees; deeper regional market/calendar integration. Continuous local service
 accrual remains unimplemented: loans preserve existing qualification without
 inventing residence progress. Strategic AI recall and broader insolvency remain
 unfinished. HTML/mobile-first delivery and all roadmap Items 1–23 remain in scope.
+
+## D05-B2 / local-service connected gameplay batch (2026-10-02)
+
+The user requested D01–D13 as one continuing development objective with larger
+connected batches. Keep independently validated merge boundaries inside that
+objective; neither this batch nor the presence of modules proves all D complete.
+Long-save/economy and actual mobile play evidence remain acceptance requirements.
+
+Delivered: agreed loan purchase options/obligations, binding season-end conversion,
+next-season contract start and annual wage conservation without an extra move;
+weekly AI option purchase and shortage recall; guaranteed installments and actual
+official appearance/international/title add-ons, mirrored buyer/seller journals,
+partial-payment debt retention, cash commitment awareness and rollback. Player
+deletion and club closure do not erase invoices. Broader insolvency priority and
+asset recovery are still separate work. Default permanent windows reuse regional
+loan dates in season; offseason permanent moves use the existing future-contract
+and exclusive-renewal guards. Only the destination window applies.
+
+Continuous local service now accrues actual registered days/seasons, pauses
+without erasing FA progress, continues across same-region teams/loans, pauses
+both regions during cross-region loans and resets on ordinary regional moves.
+The service run snapshots its qualifying rules, preserving progress when policy
+changes. Earned eligibility never auto-activates: willing players choose during
+offseason, with next-season activation, expiry for unused choices and fresh
+service after relinquishing an activated acquired local. The configurable default
+four-season/two-year-choice rule is fictional game policy. No pre-save service is
+invented. Region split/merge successor selection and explicit official roster vs
+employment state still remain for D06; unused expired entitlement renewal needs
+its own agreed rule before adding it.
+
+Major owners: transfer-payments, transfer-market-rules, loan-purchase, local-service
+and compact transfer/local UI modules; existing calendar, finance, negotiation,
+roster and save gateways compose them. No timers/background polling introduced.
+Focused transfer and local-service acceptances pass, including pure previews,
+late failure rollback, production AI, wages, installments/debt, actual conditions,
+policy grandfathering, deferred choice, saves and real UI cancel/confirm. Shared
+runner: 24 acceptances / 20 isolated contexts; static: 86 modules. Full final-head
+Actions remains the merge gate. Next connected target: outstanding D04 insolvency
+and representation boundaries, then D06 official registration/employment separation
+and regional restructuring, followed by remaining D07–D13 acceptance.

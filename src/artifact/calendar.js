@@ -36,7 +36,10 @@ function applyWorldDailyEffects(db,date){
   if(w.lastDailyTick&&w.lastDailyTick>date)throw new Error('이미 처리한 날짜를 다시 진행할 수 없습니다');
   setWorldCalendarDate(db,date);
   processLoanDaily(db);
+  processTransferPayments(db);
   aiReviewLoanMarket(db);
+  aiReviewLoanDecisions(db);
+  processLocalServiceDaily(db);
   // A scheduled patch is effective *on* its intended date, never during the
   // preceding break. Then every actual day runs exactly once.
   applyCalendarPatchEvents(db,date);

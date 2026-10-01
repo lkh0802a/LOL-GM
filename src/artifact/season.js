@@ -16,6 +16,7 @@ function startWorldSeason(db,myTeam,seed){
   medicalOffseasonRecovery(db,medicalRolloverDate);
   if(!db.worldDate||db.worldDate<medicalRolloverDate)setWorldCalendarDate(db,medicalRolloverDate);
   setManagedTeam(db,myTeam);
+  activateLocalChoices(db,db.year);
   const regs=Object.values(db.regions), I=db.worldConfig.internationals, maxK=Math.max(...regs.map(r=>r.splits||1));
   const steps=[];
   const intlSteps=tm=>{const tops=I.filter(i=>i.timing===tm&&i.tier!=='low').sort((a,b)=>(a.prestige||1)-(b.prestige||1)),lows=I.filter(i=>i.timing===tm&&i.tier==='low');

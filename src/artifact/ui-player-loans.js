@@ -6,6 +6,7 @@ function playerLoanPanel(p){
       canRecall=loan.recall&&!mine?.parent&&parentTeamOf(DB,owner)?.id===mine?.id;
     return `<h4>임대</h4><p>계약 구단 ${esc(owner.short)} · 출전 구단 ${esc(borrower.short)}</p>
       <p>~${loan.endDate}${loan.duration==='season'?' · 시즌 종료 시 복귀':''} · ${SQUAD_ROLE_KO[loan.promisedRole]} · 임대료 ${money(loan.fee)} · 임대 구단 급여 ${Math.round(loan.salaryShare*100)}% · ${loan.recall?'조기 복귀 가능':'조기 복귀 불가'}</p>
+      ${loan.purchase?loanPurchaseControls(p):''}
       ${canRecall?`<button class="ghost" data-loan-return="${p.id}">조기 복귀 내용 확인</button>`:''}`;
   }
   if(!mine||mine.parent||!p.team||!p.contract||p.retired)return '';
@@ -19,7 +20,7 @@ function playerLoanPanel(p){
     <label>급여 부담 (%)<input data-loan-share="${p.id}" type="number" min="0" max="100" value="100" inputmode="decimal"></label>
     <label>임대료 (억)<input data-loan-fee="${p.id}" type="number" min="0" step="0.1" value="0" inputmode="decimal"></label>
     <label><input data-loan-recall="${p.id}" type="checkbox">원소속 조기 리콜 허용</label>
-    <button class="primary" data-loan-preview="${p.id}">제안 내용 확인</button></div>
+    </div>${loanPurchaseOfferFields(p)}<button class="primary" data-loan-preview="${p.id}">제안 내용 확인</button>
     <p class="hint">원계약과 연봉은 유지됩니다. 선수와 원소속 구단 동의가 필요합니다. 반 시즌은 7월 1일 또는 이번 시즌 종료까지입니다. 임대 중에는 방출·재계약·다른 구단 이적이 제한됩니다.</p>`;
 }
 function bindLoanControls(){
@@ -28,7 +29,7 @@ function bindLoanControls(){
     if(!preview.ok){MSG=(preview.errors||[]).join(' · ');navKeepScroll();return}
     const c=preview.command,p=DB.players[c.pid],returning=c.type==='player.loan-return';
     if(!confirm(returning?`${p.name} 선수를 원소속으로 즉시 복귀시킬까요?`:
-      `${p.name} 임대 · ${c.endDate}까지 (시즌이 먼저 끝나면 복귀)\n임대료 ${money(c.fee)} · 급여 ${Math.round(c.salaryShare*100)}%\n${SQUAD_ROLE_KO[c.promisedRole]} · ${c.recall?'원소속 조기 리콜 허용':'조기 리콜 없음'}\n확정할까요?`))return;
+      `${p.name} 임대 · ${c.endDate}까지\n임대료 ${money(c.fee)} · 급여 ${Math.round(c.salaryShare*100)}%\n${SQUAD_ROLE_KO[c.promisedRole]} · ${c.recall?'리콜 허용':'리콜 없음'}\n${loanPurchaseDescription(c)}\n${c.purchase?transferFeePlanText(c.purchase.feePlan):''}\n확정할까요?`))return;
     const result=applyWorldAction(DB,preview);
     MSG=result.ok?(returning?'임대 복귀 완료':'임대 계약 완료'):(result.errors||[]).join(' · ');
     if(result.ok)saveDB();navKeepScroll();
@@ -38,7 +39,8 @@ function bindLoanControls(){
     apply(previewWorldAction(DB,{type:'player.loan',pid:id,fromId:p.team,
       teamId:read('target',id)?.value||managedTeamId(DB),actor:'manager',duration:read('duration',id).value,
       promisedRole:read('role',id).value,salaryShare:Number(read('share',id).value)/100,
-      fee:Number(read('fee',id).value),recall:read('recall',id).checked}));
+      fee:Number(read('fee',id).value),recall:read('recall',id).checked,
+      purchase:loanPurchaseFromDom(p,read('role',id).value,read('duration',id).value)}));
   });
   document.querySelectorAll('[data-loan-return]').forEach(b=>b.onclick=e=>{
     e.stopPropagation();const p=DB.players[b.dataset.loanReturn];

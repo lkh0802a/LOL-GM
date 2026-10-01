@@ -59,6 +59,8 @@ function bindSquad(){
   document.querySelectorAll('[data-srole]').forEach(el=>{el.onclick=e=>e.stopPropagation();el.onchange=e=>{e.stopPropagation();const p=DB.players[el.dataset.srole];if(p){const d=squadEditState(DB.teams[SQUAD]);d.roles[p.id]=el.value;d.dirty=true}}});
   bindRolePromiseControls();
   bindLoanControls();
+  bindLoanPurchaseControls();
+  bindLocalServiceControls();
   document.querySelectorAll('[data-role-convert]').forEach(b=>b.onclick=e=>{e.stopPropagation();const r=proposeRoleConversion(DB,b.dataset.roleConvert,b.dataset.targetRole,'manager');MSG=r.reason;saveDB();navKeepScroll()});
   document.querySelectorAll('[data-role-convert-cancel]').forEach(b=>b.onclick=e=>{e.stopPropagation();const r=cancelRoleConversion(DB,b.dataset.roleConvert,'manager');MSG=r.reason;saveDB();navKeepScroll()});
   document.querySelectorAll('[data-tac]').forEach(el=>el.oninput=el.onchange=e=>{const k=el.dataset.tac;const d=squadEditState(DB.teams[SQUAD]);d.tactics[k]=+el.value;d.dirty=true;if(el.previousElementSibling)el.previousElementSibling.querySelector('output').textContent=el.value});

@@ -101,12 +101,14 @@ function updatePlayerUsage(db,s,rec,lines){
   for(const tid of [rec.a,rec.b]){const t=db.teams[tid];if(!t)continue;const teamWins=rec.games.filter(g=>g.winner===tid).length;
     for(const id of t.roster){const p=db.players[id];if(!p)continue;ensureSatisfaction(p);const u=usageFor(p,s.year);u.teamGames+=n;u.teamWins+=teamWins;if(comp.international)u.teamIntlGames+=n;
       const ls=by[id]||[];
+      recordTransferAppearances(p,tid,ls.length,comp.international);
       if(medicalOut(p)&&!ls.length)u.unavailableTeamGames=(u.unavailableTeamGames||0)+n;
       u.games+=ls.length;u.series++;u.wins+=ls.filter(x=>x.win).length;if(comp.international)u.intlGames+=ls.length;if(t.parent)u.reserveGames+=ls.length;else u.firstTeamGames+=ls.length;
       if(u.teamGames>=16&&u.series%6===0)applySatisfaction(db,p);
     }
   }
   recordRoleConversionUsage(db,lines,'official');
+  processTransferPayments(db);
 }
 function onSquadMoveSatisfaction(db,p,check){
   ensureSatisfaction(p);if(check.kind==='senddown'){const pen=p.rosterRole==='prospect'?1:p.rosterRole==='backup'?2:p.rosterRole==='competition'?3:6;p.satisfaction=clamp(p.satisfaction-pen,0,100);p.satisfactionReasons=Array.from(new Set([...p.satisfactionReasons,'reserve']));p.concernStreak+=p.rosterRole==='core'||p.rosterRole==='starter'?1:0;p.managerTrust=clamp(p.managerTrust-(p.rosterRole==='core'||p.rosterRole==='starter'?4:1),0,100)}

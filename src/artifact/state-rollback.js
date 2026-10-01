@@ -60,7 +60,7 @@ function actionJournalTargets(db,command){
       if(db.players[pid]?.team!==dst)playerIds.add(pid);
     }
   }else{
-    playerIds.add(command.pid);
+    if(command.type!=='finance.transfer-payment')playerIds.add(command.pid);
     for(const id of [command.teamId,command.fromId,db.players[command.pid]?.team])
       if(id)teamIds.add(id);
   }

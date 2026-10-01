@@ -34,6 +34,7 @@ function playerActionSnapshot(db,action){
       const t=db.teams[id];
       return t?{id,active:t.active!==false,roster:(t.roster||[]).slice().sort(),
         cash:t.finance?.cash??null,buyout:t.finance?.buyout??null,
+        deals:JSON.parse(JSON.stringify(t.finance?.transferDeals||null)),
         foreign:teamNonLocalCount(db,t)}
       :{id,missing:true};
     })
@@ -54,6 +55,7 @@ function validatePlayerSignAction(db,a){
   const auth=playerActionAuthority(db,a.actor,t);
   if(auth)return auth;
   const kind=a.kind||'fa',from=p.team&&playerActionTeam(db,p.team);
+  if(a.feePlan&&kind!=='transfer')return worldActionError('invalid_terms','분할 이적료는 이적 계약에만 적용됩니다');
   if(!['fa','renewal','initial','transfer','medical_replacement',
       'renewal_agreement','early_fa_agreement'].includes(kind))
     return worldActionError('invalid_action','지원하지 않는 계약 유형입니다');
@@ -116,19 +118,22 @@ function validatePlayerSignAction(db,a){
   }
   let fee=0;
   if(kind==='transfer'){
+    const window=permanentTransferWindowError(db,p,t);if(window)return worldActionError('market_closed',window);
     if(!playerActionFinance(from))return worldActionError('invalid_finance','원소속 구단 재정 정보가 없습니다');
     if(!Number.isFinite(a.fee)||a.fee<0)return worldActionError('invalid_fee','이적료는 0 이상의 유효한 금액이어야 합니다');
     fee=a.fee;
     const move=contractedMoveError(db,p);if(move)return worldActionError('move_limit',move);
   }
-  if(fee+terms.signingBonus>0&&t.finance.cash+1e-8<fee+terms.signingBonus)
+  const feePlan=normalizeTransferFeePlan(db,fee,a.feePlan);
+  if(!feePlan.ok)return worldActionError('invalid_terms',feePlan.reason);
+  if(feePlan.upfront+terms.signingBonus>0&&t.finance.cash+1e-8<feePlan.upfront+terms.signingBonus)
     return worldActionError('insufficient_cash','이적료 및 계약금을 지급할 현금이 부족합니다');
   let consent=null;
   if(kind==='transfer'){
     consent=contractTransferConsent(db,p,t,terms);
     if(!consent.ok||!consent.willing)return worldActionError('player_consent',consent.reason);
   }
-  return {ok:true,pid:p.id,teamId:t.id,kind,fromId:from?.id||null,fee,terms,replacement,consent};
+  return {ok:true,pid:p.id,teamId:t.id,kind,fromId:from?.id||null,fee,terms,replacement,consent,feePlan:feePlan.plan};
 }
 function validatePlayerTransferAction(db,a){
   const p=db.players[a.pid],from=playerActionTeam(db,a.fromId),to=playerActionTeam(db,a.teamId);
@@ -137,20 +142,23 @@ function validatePlayerTransferAction(db,a){
     return worldActionError('invalid_transfer','이적 구단 또는 소속 선수 정보가 일치하지 않습니다');
   const auth=playerActionAuthority(db,a.actor,to);
   if(auth)return auth;
+  const window=permanentTransferWindowError(db,p,to);if(window)return worldActionError('market_closed',window);
   if(a.actor==='ai'&&db.world?.manage==='manual'){
     const fromAuth=playerActionAuthority(db,'ai',from);
     if(fromAuth)return fromAuth;
   }
   if(!Number.isFinite(a.fee)||a.fee<0)return worldActionError('invalid_fee','이적료는 0 이상의 유효한 금액이어야 합니다');
   if(!playerActionFinance(from)||!playerActionFinance(to))return worldActionError('invalid_finance','구단 재정 정보가 없습니다');
-  if(a.fee>0&&to.finance.cash+1e-8<a.fee)return worldActionError('insufficient_cash','이적료를 지급할 현금이 부족합니다');
+  const feePlan=normalizeTransferFeePlan(db,a.fee,a.feePlan);
+  if(!feePlan.ok)return worldActionError('invalid_terms',feePlan.reason);
+  if(feePlan.upfront>0&&to.finance.cash+1e-8<feePlan.upfront)return worldActionError('insufficient_cash','선지급 이적료를 지급할 현금이 부족합니다');
   const move=contractedMoveError(db,p)||localRegistrationError(db,to,p);
   if(move)return worldActionError('invalid_transfer',move);
   const capacity=loanOutgoingPlayers(db,to).length&&loanRosterCapacityError(db,to,p);
   if(capacity)return worldActionError('registration_limit',capacity);
   const consent=contractTransferConsent(db,p,to);
   if(!consent.ok||!consent.willing)return worldActionError('player_consent',consent.reason);
-  return {ok:true,pid:p.id,fromId:from.id,teamId:to.id,fee:a.fee,consent};
+  return {ok:true,pid:p.id,fromId:from.id,teamId:to.id,fee:a.fee,consent,feePlan:feePlan.plan};
 }
 function validatePlayerReleaseAction(db,a){
   const p=db.players[a.pid],t=playerActionTeam(db,a.teamId),mode=a.mode||'manager';
@@ -195,6 +203,7 @@ function validatePlayerOptionAction(db,a){
 }
 function playerActionCanonical(db,a,v){
   const base={type:a.type,actor:a.actor,pid:v.pid,teamId:v.teamId,
+    ...(v.feePlan?{feePlan:JSON.parse(JSON.stringify(v.feePlan))}:{}),
     ...(v.consent?{consent:JSON.parse(JSON.stringify(v.consent))}:{})};
   if(a.type==='player.sign')return {...base,kind:v.kind,fromId:v.fromId,fee:v.fee,
     salary:v.terms.salary,years:v.terms.years,terms:JSON.parse(JSON.stringify(v.terms)),
@@ -217,7 +226,7 @@ function playerActionChanges(db,c,v){
 }
 function applyPlayerSignAction(db,c){
   const p=db.players[c.pid],t=db.teams[c.teamId];
-  if(c.kind==='transfer')doTransfer(db,p,db.teams[c.fromId],t,c.fee,c.consent);
+  if(c.kind==='transfer')doTransfer(db,p,db.teams[c.fromId],t,c.fee,c.consent,c.feePlan);
   const cw=db.world?.contractWindow,
     offseasonFaSeason=c.kind==='fa'&&db.world?.phase==='offseason'&&
       cw?.stage==='fa'?cw.startSeason:null,
@@ -236,7 +245,7 @@ function applyPlayerSignAction(db,c){
   return {contract};
 }
 function applyPlayerTransferAction(db,c){
-  doTransfer(db,db.players[c.pid],db.teams[c.fromId],db.teams[c.teamId],c.fee,c.consent);
+  doTransfer(db,db.players[c.pid],db.teams[c.fromId],db.teams[c.teamId],c.fee,c.consent,c.feePlan);
   return {pid:c.pid,from:c.fromId,to:c.teamId,fee:c.fee};
 }
 function applyPlayerReleaseAction(db,c){
