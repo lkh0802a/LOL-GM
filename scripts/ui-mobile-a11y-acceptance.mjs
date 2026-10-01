@@ -135,7 +135,7 @@ assert(contrast(darkBg,darkFg)>=4.5,'dark primary text/background contrast below
     assert(draft.includes('aria-controls="du-info-'+kind+'"')&&draft.includes('id="du-info-'+kind+'"'));
   assert(draft.includes('role="status" aria-live="polite"'),'draft turn changes need an accessible status');
 }
-assert(overlay.includes("if(typeof uiEnhanceScrollRegions==='function')uiEnhanceScrollRegions(root)"),
+assert(overlay.includes('uiEnhanceScrollRegions(root)'),
   'dialog scroll regions must receive the same keyboard enhancements');
 assert(app.includes('role="status"')&&data.includes('role="status"'),
   'season progress and save operations need announced status');
