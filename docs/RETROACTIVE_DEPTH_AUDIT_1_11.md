@@ -77,3 +77,9 @@ D08/D09 connected batch: bounded current-lineup cohesion, conflict satisfaction/
 D09 follow-up connects individual conversion time to the shared drill allocation and personal growth accounting, excludes medical rest/official days, and precomputes daily venues/time ranges with uncached parity tests. Manual partner workflows and long/mobile evidence remain open; see DEVELOPMENT.md.
 
 D08 decision follow-up preserves role-fit DP and human locks while adding bounded pair-aware bench refinement, production AI decision evidence, scoped/stale club relationship reports for recruitment, player personal offer willingness and snapshot/reopening guards. See DEVELOPMENT.md for tests and remaining long-term/mobile evidence; this does not finish whole D.
+
+D09 manual partner requests now share actual calendar, consent, venue, reservation,
+health and practice-resource policies with automatic scrims. Both-party bookings,
+refusal/cancellation persistence, guarded actions and real daily execution have
+dedicated acceptance evidence. See DEVELOPMENT.md for the implementation and
+remaining long-term/mobile verification. Whole D remains open.

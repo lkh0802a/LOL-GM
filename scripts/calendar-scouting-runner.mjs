@@ -6,6 +6,7 @@ const acceptances=[
   'calendar-depth-acceptance.mjs',
   'timezone-calendar-acceptance.mjs',
   'scrim-partner-acceptance.mjs',
+  'scrim-plans-acceptance.mjs',
   'split-standings-acceptance.mjs',
   'scouting-depth-acceptance.mjs',
   'scouting-operations-acceptance.mjs',

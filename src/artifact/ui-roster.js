@@ -34,6 +34,7 @@ function viewSquad(){
   </div></section>
   ${financePanel(t)}
   ${squadLoanPanel(t)}
+  ${scrimPlansPanel(t)}
   ${DB.world?.phase==='season'?`<section><h3>공식전·스크림 일정</h3><p class="hint">오늘 ${esc(DB.worldDate)} · ${officialBookedTeams(DB).has(t.id)?'공식 경기 예정/진행 · 스크림 불가':scrimReadiness(DB,t).ok?'스크림 가능 ('+scrimReadiness(DB,t).availableSlots.map(x=>x==='afternoon'?'오후':'저녁').join('·')+') · 잔여 '+scrimReadiness(DB,t).remaining+'세트':esc(scrimReadiness(DB,t).reason)} · 양팀 모두 같은 연습 시간이 비어야 하며, 7일 내 공식전 상대는 피하고 전력 격차·연패·자신감 회복 목적을 반영해 상호 수락해야 편성됩니다.</p><p class="hint">다음 공식전: ${esc(nextTeamMatch(DB,t.id)?.date||'미정')} / 최근 스크림: ${(t.scrimLog||[]).slice(-4).reverse().map(x=>esc(x.date)+' '+(x.slot==='afternoon'?'오후':x.slot==='evening'?'저녁':'연습')+' '+esc(DB.teams[x.opponent]?.short||x.opponent)+' '+x.games+'세트'+(x.purpose?' · '+esc(x.purpose):'')).join(' · ')||'없음'}</p></section>`:''}
   ${mineOrg?rosterPlanPanel(t):''}
   ${(()=>{const r=trainingRecommendation(DB,t),ko={light:'가볍게',normal:'보통',high:'강하게'};return `<p class="hint">추천: ${ko[r.intensity]} 훈련 · ${r.next?`다음 공식전 ${r.days}일 전`:'공식전 일정 없음'} · 평균 피로 ${Math.round(r.fat)} / 컨디션 ${Math.round(r.cond)}</p>`})()}
@@ -47,6 +48,7 @@ function viewSquad(){
   <div id="pdetail">${OPEN_P&&DB.players[OPEN_P]&&DB.players[OPEN_P].team===SQUAD?playerDetail(DB.players[OPEN_P]):''}</div>${mineOrg?scoutingSearchBlock():''}`;
 }
 function bindSquad(){
+  bindScrimPlans();
   const focus=$('#practicefocus');if(focus)focus.onchange=e=>{const d=squadEditState(DB.teams[SQUAD_EDIT.teamId]);d.training.focus=e.target.value;d.dirty=true};
   const ti=$('#trint');if(ti)ti.onchange=e=>{const d=squadEditState(DB.teams[SQUAD_EDIT.teamId]);d.training.intensity=e.target.value;d.dirty=true};
   $('#sq').onchange=e=>{const next=DB.teams[e.target.value],same=SQUAD_EDIT&&parentTeamOf(DB,next)?.id===SQUAD_EDIT.parentId;if(!same)SQUAD_EDIT=null;SQUAD=e.target.value;OPEN_P=null;nav()};

@@ -1333,3 +1333,35 @@ Remaining: D08 long-term conflict/retention/recruitment balance and mobile
 workflows, D09 manual partner request/consent/schedule, D11 supervised process
 exit evidence and actual multi-seed100seasons. Existing failed/interrupted
 diagnostics remain preserved; no long run was duplicated. Whole D remains open.
+
+### D09 manual scrim bookings (2026-10-02)
+
+The squad screen can request 1–3 sets in an afternoon/evening block tomorrow
+through seven days ahead. Both clubs must have compatible local practice venues,
+overlapping UTC times, healthy rosters and free capacity; scheduled official
+matches and the existing competitive secrecy window remain authoritative.
+The requesting manager supplies their own consent. The opponent uses its existing
+training preferences with a deterministic pair/date/block response. Accepted,
+declined and cancelled requests persist in the world ledger. Changing set count,
+reversing clubs or cancelling cannot reroll that response. Owned reserve coaches
+can arrange their own squad's practice, while AI cannot reserve the human squad
+without a manager request. Routine automatic practice remains available.
+
+Accepted bookings run before routine AI practice and drills on the actual daily
+tick. Both clubs spend the existing shared practice budget, and private logs occupy
+their block. Changed fixtures, health or venue can block execution without a free
+practice grant; missed dates do not grant retroactive practice. Cancellation
+releases both slots. Old saves have an empty optional ledger. Future responses
+remain until their date; finished history retains at most128 rows for14days.
+Request/cancel actions use the existing pure preview, stale-state gate and atomic
+rollback, preserving the original ledger reference after a late failure.
+
+Files: scrim-plans.js, ui-scrim-plans.js, calendar, state-rollback, ui-roster,
+module manifest, package and calendar/scouting acceptance runner. Dedicated
+acceptance covers consent/refusal, both-party reservation, authority including
+owned reserves, embargo/recovery, cancellation, save/load, stale and late rollback,
+actual private games/shared costs, changed fixtures and the production daily tick.
+Calendar/scouting8 acceptances pass locally. Full mandatory CI remains the merge
+gate; D09 long-term scheduling balance and D13 real mobile task evidence remain
+open. D11 supervised execution and actual multi-seed100seasons are still pending;
+no long run was started or duplicated by this change.
