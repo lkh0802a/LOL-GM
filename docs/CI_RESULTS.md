@@ -34,3 +34,8 @@ also skip stale publication; other push failures remain failures. No reset,
 rebuild, force push or retry against unvalidated source is performed.
 Focused tests cover publication, unchanged files, stale runs, push races and
 failure propagation, including a disposable real Git remote.
+
+The publishing job runs only after the full `verify` gate succeeds on a main
+push. It downloads that run's HTML preview artifact; the build job verifies
+byte equality with root `index.html`. Only the publishing job can write repository
+contents. PR validation never publishes standalone files.
