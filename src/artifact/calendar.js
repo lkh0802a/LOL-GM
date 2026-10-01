@@ -26,7 +26,7 @@ function applyCalendarPatchEvents(db,date){
     db.patches.nextDate=addDays(e.date,db.patches.cadence||14);
     const nc=p.notes.find(n=>n.type==='new');
     news(db,`${SPLIT_NAME[e.split]} 개막 패치 ${p.id}${nc?` — 신규 챔피언 ${nc.def.nameKo||nc.def.name} 출시`:''}`);
-    officeMidSeason(db,rng,CHANGE_F[db.worldConfig.changes]??1);
+    officeMidSeason(db,rng,WORLD_CHANGE_FREQUENCY);
   }
   w.majorPatchEvents=remaining;
 }
