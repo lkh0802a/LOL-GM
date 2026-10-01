@@ -140,7 +140,7 @@ function validatePlayerTransferAction(db,a){
 function validatePlayerReleaseAction(db,a){
   const p=db.players[a.pid],t=playerActionTeam(db,a.teamId),mode=a.mode||'manager';
   if(!p||!t||p.team!==t.id)return worldActionError('invalid_release','방출할 소속 선수를 찾을 수 없습니다');
-  if(!['manager','market','initial','expired','medical_end'].includes(mode))
+  if(!['manager','market','initial','expired','medical_end','mutual'].includes(mode))
     return worldActionError('invalid_action','지원하지 않는 방출 유형입니다');
   if(a.actor==='manager'&&mode==='market'||a.actor==='ai'&&(mode==='manager'||mode==='initial'))
     return worldActionError('unauthorized','선택한 작업 주체가 방출 유형과 일치하지 않습니다');
@@ -153,7 +153,15 @@ function validatePlayerReleaseAction(db,a){
   if(mode==='expired'&&p.contract?.until>=db.year)
     return worldActionError('invalid_release','만료되지 않은 계약은 자동 종료할 수 없습니다');
   if(!playerActionFinance(t))return worldActionError('invalid_finance','구단 재정 정보가 없습니다');
-  const cost=contractReleaseCost(db,p,mode);
+  let cost=contractReleaseCost(db,p,mode);
+  if(mode==='mutual'){
+    const consent=contractMutualTerminationTerms(db,p);
+    if(!consent.ok||!consent.willing)
+      return worldActionError('player_consent',consent.reason);
+    if(!Number.isFinite(a.amount)||a.amount<consent.minimumAmount||a.amount>consent.guaranteedAmount)
+      return worldActionError('invalid_terms','합의금은 선수 요구액 이상, 계약 보장액 이하여야 합니다');
+    cost=a.amount;
+  }
   if(!Number.isFinite(cost))return worldActionError('invalid_contract','방출 비용을 계산할 수 없습니다');
   return {ok:true,pid:p.id,teamId:t.id,mode,cost,date};
 }
@@ -175,6 +183,7 @@ function playerActionCanonical(db,a,v){
     ...(v.replacement?{replacement:{...v.replacement}}:{})};
   if(a.type==='player.transfer')return {...base,fromId:v.fromId,fee:v.fee};
   if(a.type==='player.release')return {...base,mode:v.mode,
+    ...(v.mode==='mutual'?{amount:v.cost}:{}),
     ...(v.mode==='medical_end'?{date:v.date}:{})};
   return base;
 }
@@ -184,7 +193,7 @@ function playerActionChanges(db,c,v){
     salary:c.salary,years:c.years,signingBonus:c.terms.signingBonus,fee:c.fee}];
   if(c.type==='player.transfer')return [{pid:c.pid,kind:'transfer',from,to:c.teamId,fee:c.fee}];
   if(c.type==='player.release')return [{pid:c.pid,kind:'release',from,to:null,cost:v.cost,
-    settlement:contractReleaseSettlement(db,db.players[c.pid],c.mode)}];
+    settlement:contractReleaseSettlement(db,db.players[c.pid],c.mode,c.amount)}];
   return [{pid:c.pid,kind:'option',team:c.teamId,type:v.option.type,
     salary:v.option.salary}];
 }
@@ -214,12 +223,13 @@ function applyPlayerTransferAction(db,c){
 }
 function applyPlayerReleaseAction(db,c){
   const p=db.players[c.pid],t=db.teams[c.teamId],contract=p.contract,
-    settlement=contractReleaseSettlement(db,p,c.mode),cost=settlement.amount;
+    settlement=contractReleaseSettlement(db,p,c.mode,c.amount),cost=settlement.amount;
   recordContractReleaseObligation(t,cost,settlement);
   removePlayerFromTeam(db,p);
-  if(c.mode==='manager'||c.mode==='medical_end')invalidateMarketDemand(db);
+  if(c.mode==='manager'||c.mode==='medical_end'||c.mode==='mutual')invalidateMarketDemand(db);
   p.contract=null;p.faYears=0;
-  if(c.mode==='manager'||cost>0)recordPlayerEvent(p,'release',db.year,
+  if(c.mode==='manager'||c.mode==='mutual'||cost>0)
+    recordPlayerEvent(p,c.mode==='mutual'?'mutual_termination':'release',db.year,
     {team:t.id,cost,date:db.worldDate,settlement});
   if(c.mode==='medical_end'){
     recordPlayerEvent(p,'medical_replacement_end',db.year,{

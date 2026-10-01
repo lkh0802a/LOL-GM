@@ -12,6 +12,32 @@ function renderRecruitmentBoard(){
   if(!rows.length)return '<p class="hint">아직 영입 후보가 없습니다. FA나 이적 대상에서 관심 등록 후 스카우팅과 내부 평가를 진행하세요.</p>';
   return rows.sort((a,b)=>(rank[a.priority]??9)-(rank[b.priority]??9)).map(e=>{const p=DB.players[e.pid],ev=e.evaluation,where=p.team?esc(tshort(p.team)):'FA';return `<div class="mrow"><span><b>${e.priority}</b> <span class="role">${ROLE_KO[p.role]}</span> <b>${esc(p.name)}</b> · ${where} · ${recruitStageLabel(e)} · 정보 ${knowledge(DB,p)}%${ev?` · 적합도 <b>${ev.fit}</b>/100 · 능력 ${ev.ability[0]}–${ev.ability[1]} · 잠재 ${ev.potential[0]}–${ev.potential[1]} · 예상 역할 ${SQUAD_ROLE_KO[ev.expectedRole]||ev.expectedRole} · 의료 가용성 위험 ${Math.round(medicalContractRisk(DB,p)*100)}%`:''}</span><span>${recruitButtons(p,e)}${e.stage==='evaluated'&&!p.team?`<button class="primary sm2" data-start-fa="${p.id}">공식 협상</button>`:''}</span></div>`}).join('');
 }
+function renderMutualTermination(t){
+  const rows=(t.roster||[]).map(pid=>DB.players[pid]).filter(Boolean)
+    .map(p=>({p,terms:contractMutualTerminationTerms(DB,p)})).filter(x=>x.terms.ok);
+  if(!rows.length)return '';
+  return `<details class="cfgcard release-settlements"><summary>상호 해지 협상</summary>
+    <p class="hint">오프시즌에 선수 동의를 받아 계약을 종료합니다. 합의금은 방출 보상과 같은 결산에서 지급하며, 기존 계약과 옵션은 종료됩니다.</p>
+    ${rows.map(({p,terms})=>`<div class="cfgcard"><b>${esc(p.name)}</b>
+      <p class="hint">${esc(terms.reason)} · 계약 보장 ${money(terms.guaranteedAmount)}</p>
+      ${terms.willing?`<div class="controls"><label>합의금 <input type="number" step="any" min="${terms.minimumAmount}" max="${terms.guaranteedAmount}" value="${terms.minimumAmount}" data-mutual-amount="${p.id}">억</label>
+        <button class="ghost" data-mutual-submit="${p.id}">상호 해지 제안</button></div>
+        <p class="hint">선수 요구 ${money(terms.minimumAmount)} 이상</p>`:'<p class="hint">선수 동의 없음 · 상호 해지 불가</p>'}
+    </div>`).join('')}</details>`;
+}
+function bindMutualTerminationControls(act){
+  document.querySelectorAll('[data-mutual-submit]').forEach(button=>button.onclick=()=>{
+    const p=DB.players[button.dataset.mutualSubmit],amount=+
+      document.querySelector(`[data-mutual-amount="${p.id}"]`).value,
+      preview=previewWorldAction(DB,{type:'player.release',actor:'manager',
+        pid:p.id,teamId:p.team,mode:'mutual',amount});
+    if(!preview.ok){act(preview.errors.join(' · '));return}
+    if(!confirm(p.name+' 선수와 상호 해지할까요?\n합의금 '+money(amount)+
+      '\n기존 계약·옵션은 종료되며 선수는 즉시 FA가 됩니다.'))return;
+    const result=applyWorldAction(DB,preview);
+    act(result.ok?p.name+' 상호 해지 합의 · '+money(result.cost):result.errors.join(' · '));
+  });
+}
 function renderContractWindow(){
   const w=DB.world,cw=w?.contractWindow,t=DB.teams[managedTeamId(DB)];
   if(!cw||!t)return '';
@@ -46,13 +72,15 @@ function renderContractWindow(){
   return `<section class="market contractwindow"><h3>월즈 종료 후 계약 협상 — ${esc(t.name)}</h3>
     <p class="hint">최종 경기 ${cw.seasonEndDate} · 원소속 독점 ${cw.startDate}~${cw.exclusiveThrough} · 기존 계약 만료 ${cw.contractExpiryDate} · FA 접촉 ${cw.outsideContactDate}부터</p>
     <p class="${exclusive?'warn':'hi'}">${exclusive?'기존 계약은 14일 유지됩니다. 원소속은 독점 재계약권을 갖지만 재계약 의사가 없으면 해당 선수의 타 구단 조기 접촉을 허용할 수 있습니다.':'독점기간과 기존 계약이 끝났습니다. 미재계약 선수는 FA이며 모든 구단이 협상할 수 있습니다.'}</p>
-    <h4>진행 중인 협상</h4>${renderNegotiations()}
+    ${renderMutualTermination(t)}
+  <h4>진행 중인 협상</h4>${renderNegotiations()}
     ${exclusive?`<h4>우리 팀 만료 예정 계약</h4>${ownRows||'<p class="hint">이번 독점기간 만료 예정 선수가 없습니다.</p>'}<h4>타 구단이 조기 접촉을 허용한 선수</h4>${earlyRows||'<p class="hint">현재 조기 접촉 허용 선수가 없습니다.</p>'}`:
       `<h4>FA 시장</h4>${faRows||'<p class="hint">현재 협상 가능한 FA가 없습니다.</p>'}`}
   </section>`;
 }
 function bindContractWindow(){
   const act=m=>{MSG=m;saveDB();nav();const e=document.querySelector('.contractwindow');e&&e.scrollIntoView({block:'start'})};
+  bindMutualTerminationControls(act);
   document.querySelectorAll('[data-start-renew]').forEach(b=>b.onclick=()=>act(startNegotiation(DB,b.dataset.startRenew,'renewal').msg));
   document.querySelectorAll('[data-allow-contact]').forEach(b=>b.onclick=()=>act(grantEarlyContact(DB,b.dataset.allowContact,'manager').msg));
   document.querySelectorAll('[data-exercise-window-option]').forEach(b=>b.onclick=()=>act(exerciseExclusiveTeamOption(DB,b.dataset.exerciseWindowOption).msg));
@@ -75,6 +103,7 @@ function renderMarket(){
   return `<section class="market"><h3>이적 시장 — ${esc(t.name)}</h3>
   <div class="fin"><div><span>보유 자금</span><b>${money(t.finance.cash)}</b></div><div><span>연봉 총액</span><b>${money(pay)}</b><small>${R.spendingRule==='sfr_top5'?`SFR 상위 5인 ${money(regulatedPayroll(DB,t))} / ${money(R.salaryCap)}`:'리그 하드캡 없음'}</small></div><div><span>영입 예산</span><b>${money(Math.max(0,budget-pay))}</b></div><div><span>로스터</span><b>${t.roster.length}/${5+(DB.worldConfig.subs||0)}</b></div></div>
   ${MSG?`<p class="msg" role="status">${esc(MSG)}</p>`:''}
+  ${renderMutualTermination(t)}
   <h4>진행 중인 협상</h4>${renderNegotiations()}
   <h4>영입 후보 A/B/C</h4>${renderRecruitmentBoard()}
   ${exp.length?`<h4>계약 결정 — 헤드코치 직접 확정</h4>${exp.map(p=>{const n=negotiationStore(DB)[negotiationId(DB,p.id,'renewal')],o=p.contract?.option,opt=o&&o.year===DB.year?o:null;return `<div class="mrow"><span><span class="role">${ROLE_KO[p.role]}</span> <b>${esc(p.name)}</b> ${p.age}세 · 종합 ${playerOvr(p)} · ${p.contract?`현재 ${money(p.contract.salary)} · 시장 요구 약 ${money(asking(DB,p,t.region))}`:'무계약 상태 · 정식 계약 필요'}${opt?` · ${opt.type==='team'?'팀':'선수'} 옵션 ${money(opt.salary)}`:''}</span><span>${opt?.type==='team'?`<button class="ghost sm2" data-exercise-option="${p.id}">팀 옵션 행사</button>`:opt?.type==='player'?'<small class="hint">선수 측 옵션 결정</small>':''}${n&&n.status==='open'?'<small class="hi">협상 중</small>':`<button class="primary sm2" data-start-renew="${p.id}">재계약 협상</button>`}</span></div>`}).join('')}`:''}
@@ -89,6 +118,7 @@ function renderMarket(){
 }
 function bindMarket(){
   const act=m=>{MSG=m;saveDB();nav();const e=document.querySelector('.market');e&&e.scrollIntoView({block:'start'})};
+  bindMutualTerminationControls(act);
   bindClubOfficeControls(act);
   document.querySelectorAll('[data-exercise-option]').forEach(b=>b.onclick=()=>act(mExerciseTeamOption(DB,b.dataset.exerciseOption)));
   document.querySelectorAll('[data-start-renew]').forEach(b=>b.onclick=()=>act(startNegotiation(DB,b.dataset.startRenew,'renewal').msg));

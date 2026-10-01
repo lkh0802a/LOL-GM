@@ -433,7 +433,10 @@ and exposes the contractual basis in touch-friendly disclosure cards. It keeps
 the existing 50% compensation rule. B4b adds negotiated 50/75/100% release
 protection with legacy 50% defaults, shared AI/player terms, deferred agreement
 activation, save/restore and the same transactional finance settlement.
-Mutual termination and insolvency remain later B4 work; D04 is not complete.
+B4c adds offseason mutual termination through the shared release transaction,
+player consent/compensation demands, manager UI and AI cleanup, with preserved
+medical/future-contract boundaries, rollback, saves and single annual settlement.
+Insolvency settlement remains later B4 work; D04 is not complete.
 Continue the complete numbered roadmap and D follow-ups. Follow ANDROID_TARGET.md
 through playable desktop/mobile HTML acceptance before Android production
 packaging and real-device offline/save validation.

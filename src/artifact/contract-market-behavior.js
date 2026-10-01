@@ -35,3 +35,26 @@ function contractOfferReasonable(db,p,t,offer,kind='fa'){
     establishedFloor=.95*(1-medicalContractRisk(db,p)*.4);
   return guaranteed>=ask*establishedFloor;
 }
+
+// Offseason departure consent is a player decision, not a second release writer.
+function contractMutualTerminationTerms(db,p){
+  if(!['offseason','market'].includes(db.world?.phase))
+    return {ok:false,reason:'상호 해지는 오프시즌에만 협상할 수 있습니다'};
+  if(!p?.team||p.retired||!p.contract||p.contract.until<db.year||p.contract.medicalReplacement)
+    return {ok:false,reason:'유효한 일반 선수 계약이 필요합니다'};
+  if(db.world?.contractAgreements?.[p.id]?.status==='agreed')
+    return {ok:false,reason:'이미 합의한 다음 계약을 먼저 처리해야 합니다'};
+  const guaranteedAmount=contractReleaseCost(db,p);
+  if(!Number.isFinite(guaranteedAmount)||guaranteedAmount<=0)
+    return {ok:false,reason:'계약 보장액이 유효하지 않습니다'};
+  const goal=playerCareerGoal({...p}),unhappy=(p.satisfaction??50)<50,
+    seekingRole=['backup','competition'].includes(p.rosterRole)&&goal==='starter',
+    willing=!!p.wantsOut||unhappy||seekingRole,
+    reason=p.wantsOut?'선수의 이적 희망':unhappy?'현재 구단 생활에 대한 불만':
+      seekingRole?'다른 구단에서 주전 기회 탐색':'선수가 현재 계약 유지를 희망합니다',
+    // Reuse the protection tiers: departure intent can trade some guaranteed
+    // compensation for immediate freedom; other unhappy players keep it all.
+    fraction=p.wantsOut?.5:seekingRole?.75:1,
+    minimumAmount=Math.min(guaranteedAmount,Math.ceil(guaranteedAmount*fraction*10)/10);
+  return {ok:true,willing,reason,guaranteedAmount,minimumAmount};
+}
