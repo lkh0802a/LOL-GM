@@ -20,7 +20,7 @@ export const MUTATION_OWNERSHIP={
 export function mutationInventory(source){
   // Include literal bracket-property spelling as well as dot-property spelling.
   const text=source.replace(/\[\s*(['"])(finance|cash|worldDate)\1\s*\]/g,'.$2');
-  const write='(?:\\+\\+|--|(?:\\*\\*|&&|\\|\\||\\?\\?|[+\\-*/%&|^])?=(?!=|>))';
+  const write='(?:\\+\\+|--|(?:(?:\\*\\*|&&|\\|\\||\\?\\?|[+\\-*/%&|^])=|(?<![=!<>])=(?![=>])))';
   const patterns={
     cash:new RegExp('\\.\\s*finance\\s*\\.\\s*cash\\s*'+write,'g'),
     date:new RegExp('\\.\\s*worldDate\\s*'+write,'g'),

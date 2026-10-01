@@ -19,7 +19,7 @@ test('caller migration must shrink its old inventory and declare its new owner',
 });
 
 test('reads/comparisons/function definitions are not writer calls',()=>{
-  assert.deepEqual(mutationInventory('t.finance.cash===0; db.worldDate==day; x=>x.finance.cash; function assignPlayerToTeam(db,p,t){} function removePlayerFromTeam(db,p){}'),{});
+  assert.deepEqual(mutationInventory('t.finance.cash===0; t.finance.cash<=0; t.finance.cash>=1; db.worldDate==day; db.worldDate<=day; x=>x.finance.cash; function assignPlayerToTeam(db,p,t){} function removePlayerFromTeam(db,p){}'),{});
   assert.deepEqual(mutationInventory('assignPlayerToTeam(db,p,t); removePlayerFromTeam(db,p);'),{assign:1,remove:1});
 });
 
