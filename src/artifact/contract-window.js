@@ -121,6 +121,8 @@ function contractWindowContactError(db,p,t,kind){
   return null;
 }
 function recordContractAgreement(db,p,t,terms,kind='renewal',actor='manager'){
+  if(!contractGuaranteeTermsValid(terms))
+    return {ok:false,msg:'유효하지 않은 방출 보장률입니다'};
   const auth=playerActionAuthority(db,actor,t);
   if(auth)return {ok:false,msg:auth.errors?.join(' · ')||'구단 계약 권한이 없습니다'};
   const err=contractWindowContactError(db,p,t,kind);if(err)return {ok:false,msg:err};

@@ -48,6 +48,21 @@ function contractDurationFit(db,p,t,years){
   // by player preference, not the magnitude of contract-term utility.
   return Math.max(.055,.165-distance*.055);
 }
+function contractGuaranteePolicy(p){
+  const goal=p?playerCareerGoal(p):null;
+  return {defaultRate:.5,choices:[.5,.75,1],
+    preferred:goal==='stability'?1:goal==='development'?.75:.5};
+}
+function contractGuaranteeRate(contract){
+  // Missing terms in old saves retain the historical half-salary protection.
+  const policy=contractGuaranteePolicy(null);
+  return policy.choices.includes(contract?.releaseGuaranteeRate)
+    ?contract.releaseGuaranteeRate:policy.defaultRate;
+}
+function contractGuaranteeTermsValid(terms){
+  return terms?.releaseGuaranteeRate==null||
+    contractGuaranteePolicy(null).choices.includes(terms.releaseGuaranteeRate);
+}
 function normalizeContractTerms(db,p,t,salary,years,terms={}){
   const duration=contractDurationPolicy(db,p,t),
     requestedYears=years==null||years===''?duration.preferred:+years;
@@ -59,7 +74,9 @@ function normalizeContractTerms(db,p,t,salary,years,terms={}){
   const optionType=['team','player'].includes(terms.option?.type)?terms.option.type:'none',until=db.year+years-1;
   const option=optionType==='none'?null:{type:optionType,year:until+1,salary:Math.round((terms.option?.salary??salary)*10)/10};
   const buyout=terms.buyout==null||+terms.buyout<=0?null:Math.round(+terms.buyout*10)/10;
-  return {salary,years,signingBonus:sign,bonuses,buyout,option,promisedRole:SQUAD_ROLES.includes(terms.promisedRole)?terms.promisedRole:defaultPromisedRole(db,p,t)};
+  return {salary,years,signingBonus:sign,bonuses,buyout,option,
+    releaseGuaranteeRate:contractGuaranteeRate(terms),
+    promisedRole:SQUAD_ROLES.includes(terms.promisedRole)?terms.promisedRole:defaultPromisedRole(db,p,t)};
 }
 function contractExpectedValue(c){if(!c)return 0;const b=c.bonuses||{};return c.salary+(c.signingBonus||0)/Math.max(1,c.years||1)+(b.performance||0)*.35+(b.title||0)*.14+(b.international||0)*.2}
 function teamInternationalAppeal(db,t){const R=db.regions[t.region],power=db.global?.power?.[R.id]||1;return clamp((R.slots||1)/4*.55+(teamStrength(db,t.id)-R.strength)/18*.3+(t.fans||30)/180+power*.08,0,1.25)}
@@ -70,7 +87,11 @@ function offerUtility(db,p,t,offer,opt={}){
   let careerFit=0;if(career==='development')careerFit=fac+coach+(role==='prospect'||role==='competition'?.16:0);else if(career==='starter')careerFit=['core','starter'].includes(role)?.22:-.12;else if(career==='international')careerFit=intl*.18;else if(career==='titles')careerFit=Math.max(0,strength)*.16+intl*.1;else careerFit=durationFit;
   const option=offer.option?.type==='player'?.07:offer.option?.type==='team'?-.025:0,buyout=offer.buyout?clamp(offer.buyout/Math.max(.2,playerMarketValue(db,p)),.4,4)*-.018:0;
   const currentPenalty=opt.renewal?(p.satisfaction-50)/170+(p.managerTrust-50)/105+(p.managerRelationship-50)/190-(p.wantsOut?.4:0):0;
-  return moneyScore*1.05+roleScore+strength*amb*.18+intl*amb*.22+(t.fans||30)/250+fac+coach+careerFit+durationFit+home+option+buyout+currentPenalty;
+  // Reuse the duration utility unit per protection tier; default 50% offers
+  // preserve their prior utility. Stability/development goals value security.
+  const guarantee=(contractGuaranteeRate(offer)-.5)/.25*.055*
+    (career==='stability'||career==='development'?1:.5);
+  return moneyScore*1.05+roleScore+strength*amb*.18+intl*amb*.22+(t.fans||30)/250+fac+coach+careerFit+durationFit+home+option+buyout+currentPenalty+guarantee;
 }
 function contractBonusCost(db,t,year){
   let sum=0;for(const id of t.roster){const p=db.players[id],c=p&&p.contract;if(!c||!c.bonuses)continue;const rows=(p.career||[]).filter(x=>x.year===year),g=rows.reduce((a,x)=>a+(x.g||0),0),rating=g?rows.reduce((a,x)=>a+(x.rating||6.5)*(x.g||0),0)/g:0;
@@ -79,10 +100,10 @@ function contractBonusCost(db,t,year){
 }
 function signContract(db,p,t,salary,years,terms={}){
   const old=p.team,offer=normalizeContractTerms(db,p,t,salary,years,terms);assignPlayerToTeam(db,p,t);invalidateMarketDemand(db);p.faYears=0;
-  p.contract={salary:offer.salary,until:db.year+offer.years-1,signed:db.year,years:offer.years,signingBonus:offer.signingBonus,bonuses:offer.bonuses,buyout:offer.buyout,option:offer.option,promisedRole:offer.promisedRole};
+  p.contract={salary:offer.salary,until:db.year+offer.years-1,signed:db.year,years:offer.years,signingBonus:offer.signingBonus,bonuses:offer.bonuses,buyout:offer.buyout,option:offer.option,releaseGuaranteeRate:offer.releaseGuaranteeRate,promisedRole:offer.promisedRole};
   if(offer.signingBonus&&t.finance)payFinancePrepaid(t,'signingBonus',offer.signingBonus);
   setRosterRole(db,p,offer.promisedRole,'contract',true);ensureSatisfaction(p);if(old!==t.id){p.satisfaction=clamp(Math.max(p.satisfaction,58),0,100);p.managerRelationship=55;p.managerTrust=52;p.concernStreak=0;p.wantsOut=false;p.wantsOutReason=null}else{p.managerRelationship=clamp(p.managerRelationship+2,0,100);p.managerTrust=clamp(p.managerTrust+3,0,100)}
-  if(db.world)recordPlayerEvent(p,'contract',db.year,{team:t.id,salary:p.contract.salary,years:offer.years,until:p.contract.until,renewal:old===t.id,rosterRole:p.rosterRole,signingBonus:offer.signingBonus,buyout:offer.buyout,option:offer.option,date:db.worldDate});
+  if(db.world)recordPlayerEvent(p,'contract',db.year,{team:t.id,salary:p.contract.salary,years:offer.years,until:p.contract.until,renewal:old===t.id,rosterRole:p.rosterRole,releaseGuaranteeRate:offer.releaseGuaranteeRate,signingBonus:offer.signingBonus,buyout:offer.buyout,option:offer.option,date:db.worldDate});
   return p.contract;
 }
 function contractReleaseCost(db,p,mode='manager'){
@@ -92,7 +113,7 @@ function contractReleaseSettlement(db,p,mode='manager'){
   const contract=p.contract;
   const remainingYears=contract&&contract.until>=db.year?contract.until-db.year+1:0,
     exempt=mode==='initial'||mode==='medical_end'||!!contract?.medicalReplacement,
-    guaranteeRate=.5,
+    guaranteeRate=contractGuaranteeRate(contract),
     amount=exempt?0:remainingYears?(contract.salary*remainingYears*guaranteeRate):0;
   return {pid:p.id,playerName:p.name,date:db.worldDate||null,year:db.year,mode,
     salary:contract?.salary||0,contractUntil:contract?.until??null,
@@ -146,6 +167,7 @@ function commitMarketPlayerAction(db,command){
   return result;
 }
 function signMarketContract(db,p,t,salary,years,terms={},kind='fa',actor='ai'){
+  terms={releaseGuaranteeRate:contractGuaranteePolicy(p).preferred,...terms};
   return commitMarketPlayerAction(db,{type:'player.sign',pid:p.id,teamId:t.id,salary,years,terms,kind,actor}).contract;
 }
 function aiMarketOfferCandidates(db,t,fas,role,budgetRoom,year=db.year){
@@ -168,6 +190,7 @@ function aiRenewalDecision(db,p,t,rng){
     yrs=contractYearsForPlayer(db,p,rng),
     proposal=normalizeContractTerms(db,p,t,
       ask*rng.range(.96,1.08)*(1-medicalContractRisk(db,p)*.4),yrs,{
+        releaseGuaranteeRate:contractGuaranteePolicy(p).preferred,
         promisedRole:recommendedRosterRole(db,p,t),
         option:rng.chance(.18)?{type:rng.chance(.55)?'team':'player'}:null
       });
@@ -233,6 +256,7 @@ function contractMarket(db,rng,rep,ev){
       if(!best)continue;
       const t=best.o.t,yrs=best.o.years?best.o.years:contractYearsForPlayer(db,p,rng),
         offer=normalizeContractTerms(db,p,t,best.o.sal,yrs,{
+          releaseGuaranteeRate:contractGuaranteePolicy(p).preferred,
           promisedRole:best.o.starter?'starter':defaultPromisedRole(db,p,t)});
       if(!contractOfferReasonable(db,p,t,offer,'fa')||
         offerUtility(db,p,t,offer)<offerAcceptanceThreshold(db,p,{kind:'fa'}))continue;
@@ -240,7 +264,8 @@ function contractMarket(db,rng,rep,ev){
       // Multiple market offers can be based on the same earlier import count.
       // Recheck with the shared action validator and skip an obsolete offer.
       const signed=commitWorldAction(db,{type:'player.sign',pid:p.id,teamId:t.id,
-        salary:best.o.sal,years:yrs,kind:'fa',actor:best.o.mine?'manager':'ai',terms:{}});
+        salary:best.o.sal,years:yrs,kind:'fa',actor:best.o.mine?'manager':'ai',
+        terms:{releaseGuaranteeRate:offer.releaseGuaranteeRate}});
       if(!signed.ok)continue;
       if(best.o.mine)w.marketLog.push(`${p.name}: ${best.o.t.id===mine?'영입 성공':'다른 구단 선택'}`);
       budgetLeft[t.id]-=best.o.sal;
@@ -295,6 +320,7 @@ function reconcileMinimumRosterAfterExpiry(db,rng,rep){
         const years=contractYearsForPlayer(db,fa,rng,t),ask=asking(db,fa,t.region);
         for(const mult of [1,1.05,1.15]){
           const terms=normalizeContractTerms(db,fa,t,ask*mult,years,{
+            releaseGuaranteeRate:contractGuaranteePolicy(fa).preferred,
             promisedRole:defaultPromisedRole(db,fa,t)});
           if(contractOfferReasonable(db,fa,t,terms,'fa')&&
             offerUtility(db,fa,t,terms)>=offerAcceptanceThreshold(db,fa,{kind:'fa'})){

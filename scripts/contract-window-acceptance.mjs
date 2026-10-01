@@ -73,6 +73,7 @@ const fixture=String.raw`(()=>{
       for(let k=10;k<=22;k++){
         const offer=normalizeContractTerms(db,p,t,
           asking(db,p,t.region)*k/10,years,{
+            releaseGuaranteeRate:kind==='renewal'?1:.75,
             signingBonus:0,bonuses:{performance:0,title:0,international:0},
             promisedRole:role,option:null,buyout:null
           }),
@@ -108,6 +109,8 @@ const fixture=String.raw`(()=>{
   ownRenew=db.players[ownRenew.id];ownWaive=db.players[ownWaive.id];
   target=db.players[target.id];cw=db.world.contractWindow;
   assert(cw.contactWaivers[ownWaive.id]&&
+    contractAgreementFor(db,target.id)?.terms.releaseGuaranteeRate===.75&&
+    contractAgreementFor(db,ownRenew.id)?.terms.releaseGuaranteeRate===1&&
     contractAgreementFor(db,target.id)?.status==='agreed'&&
     contractAgreementFor(db,ownRenew.id)?.status==='agreed',
     'contract-window state failed save/restore');
@@ -125,9 +128,11 @@ const fixture=String.raw`(()=>{
   assert(settled.ok&&cw.stage==='fa'&&db.worldDate==='2027-12-01'&&
     settled.settlement.expiryDate==='2027-11-30',
     'exclusive close did not use day-14 expiry / day-15 opening');
-  assert(ownRenew.team===mine.id&&ownRenew.contract.signed===2028,
+  assert(ownRenew.team===mine.id&&ownRenew.contract.signed===2028&&
+    ownRenew.contract.releaseGuaranteeRate===1,
     'accepted incumbent renewal did not activate for next season');
   assert(target.team===mine.id&&target.contract.signed===2028&&
+    target.contract.releaseGuaranteeRate===.75&&
     contractAgreementFor(db,target.id).status==='effective'&&
     contractAgreementFor(db,target.id).appliedDate==='2027-12-01',
     'early agreement did not activate immediately after old contract expired');
