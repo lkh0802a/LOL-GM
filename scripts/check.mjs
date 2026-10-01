@@ -1,23 +1,37 @@
 import { readFile, readdir } from 'node:fs/promises';
-import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
+import vm from 'node:vm';
 import { ARTIFACT_MODULES } from './artifact-modules.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const artifact = resolve(root, 'src', 'artifact');
 const modules = ARTIFACT_MODULES;
+const artifactSources = new Map(await Promise.all([...modules, 'shell.html'].map(async file => {
+  const path = resolve(artifact, file);
+  return [path, await readFile(path, 'utf8')];
+})));
+const sourceOf = file => {
+  const path = resolve(artifact, file);
+  const source = artifactSources.get(path);
+  if (source === undefined) throw new Error(`Artifact source was not preloaded: ${file}`);
+  return source;
+};
 
 let failed = false;
 const globalSymbols = new Map();
 for (const file of modules) {
   const path = resolve(artifact, file);
-  const result = spawnSync(process.execPath, ['--check', path], { encoding: 'utf8' });
-  if (result.status !== 0) {
+  const source = sourceOf(file);
+  try {
+    // Artifact modules are concatenated global scripts at runtime. Parse them
+    // with Script grammar in-process instead of starting a Node --check
+    // subprocess for every file.
+    new vm.Script(source, { filename: path, displayErrors: true });
+  } catch (error) {
     failed = true;
     console.error(`Syntax check failed: ${file}`);
-    console.error(result.stderr || result.stdout);
+    console.error(error?.stack || error);
   }
-  const source = await readFile(path, 'utf8');
   const symbols = [
     ...[...source.matchAll(/(?:^|\n)function\s+([A-Za-z_$][\w$]*)\s*\(/g)].map(m=>m[1]),
     ...[...source.matchAll(/(?:^|\n)(?:const|let|class)\s+([A-Za-z_$][\w$]*)/g)].map(m=>m[1]),
@@ -96,7 +110,7 @@ const maintainabilityBudgets = {
   'ui-season.js': 30000,
 };
 for (const [file, maxBytes] of Object.entries(maintainabilityBudgets)) {
-  const source = await readFile(resolve(artifact, file), 'utf8');
+  const source = sourceOf(file);
   if (source.length > maxBytes) {
     failed = true;
     console.error(`Maintainability budget exceeded: ${file} > ${maxBytes} characters; split the domain UI instead of growing the monolith`);
@@ -118,23 +132,23 @@ const stage2Ownership = [
   ['ui-market-staff.js','ui-market.js','function coachBlock('],
 ];
 for (const [owner,former,marker] of stage2Ownership) {
-  const ownerSource = await readFile(resolve(artifact,owner),'utf8');
-  const formerSource = await readFile(resolve(artifact,former),'utf8');
+  const ownerSource = sourceOf(owner);
+  const formerSource = sourceOf(former);
   if (!ownerSource.includes(marker) || formerSource.includes(marker)) {
     failed=true;
     console.error('Stage 11.5/2 domain boundary violated: '+marker+' must belong to '+owner);
   }
 }
 
-const transactionSource = await readFile(resolve(artifact,'state-transaction.js'),'utf8');
+const transactionSource = sourceOf('state-transaction.js');
 for (const marker of ['function validateWorldAction(','function previewWorldAction(','function applyWorldAction(','roster.plan']) {
   if (!transactionSource.includes(marker)) {
     failed = true;
     console.error('Shared world transaction capability missing: '+marker);
   }
 }
-const rosterSourceForTransactions = await readFile(resolve(artifact,'roster.js'),'utf8');
-const rosterUiForTransactions = await readFile(resolve(artifact,'ui-roster.js'),'utf8');
+const rosterSourceForTransactions = sourceOf('roster.js');
+const rosterUiForTransactions = sourceOf('ui-roster.js');
 for(const [owner,marker] of [[rosterSourceForTransactions,"actor:'ai'"],[rosterUiForTransactions,"actor:'manager'"]]){
   if(!owner.includes('previewWorldAction(')||!owner.includes('applyWorldAction(')||!owner.includes(marker)){
     failed = true;
@@ -142,7 +156,7 @@ for(const [owner,marker] of [[rosterSourceForTransactions,"actor:'ai'"],[rosterU
   }
 }
 
-const rollbackSource=await readFile(resolve(artifact,'state-rollback.js'),'utf8');
+const rollbackSource=sourceOf('state-rollback.js');
 for(const marker of ['function captureWorldActionJournal(','function worldActionScopeErrors(',
   'function actionJournalRestoreObject(','function actionJournalRestoreTeam(']){
   if(!rollbackSource.includes(marker)){
@@ -156,7 +170,7 @@ if(!transactionSource.includes('journal=captureWorldActionJournal(')||
   failed=true;console.error('11.5/3-4 guarded commit/rollback or save ownership marker missing');
 }
 
-const playerActionSource = await readFile(resolve(artifact,'state-player-actions.js'),'utf8');
+const playerActionSource = sourceOf('state-player-actions.js');
 for(const marker of ['function validatePlayerSignAction(','function validatePlayerTransferAction(',
   'function validatePlayerReleaseAction(','function validatePlayerOptionAction(',
   'function playerActionSnapshot(','function applyPlayerSignAction(','function applyPlayerTransferAction(',
@@ -167,7 +181,7 @@ for(const marker of ['function validatePlayerSignAction(','function validatePlay
   }
 }
 for(const file of ['contracts.js','transfer.js','career.js']){
-  const owner=await readFile(resolve(artifact,file),'utf8');
+  const owner=sourceOf(file);
   if(!owner.includes('commitWorldAction(')){
     failed=true;console.error('Stage 11.5/3-2 missing command-gateway client: '+file);
   }
@@ -177,10 +191,10 @@ if(!transactionSource.includes('function commitWorldAction(')){
 }
 
 // 11.5/3-3: a separately versioned save-encoding migration and non-destructive restore.
-const saveMigrationSource=await readFile(resolve(artifact,'save-migration.js'),'utf8');
-const saveSerializationSource=await readFile(resolve(artifact,'save.js'),'utf8');
-const appSaveSource=await readFile(resolve(artifact,'app.js'),'utf8');
-const rosterIntegritySource=await readFile(resolve(artifact,'roster.js'),'utf8');
+const saveMigrationSource=sourceOf('save-migration.js');
+const saveSerializationSource=sourceOf('save.js');
+const appSaveSource=sourceOf('app.js');
+const rosterIntegritySource=sourceOf('roster.js');
 for(const marker of ['const SAVE_FORMAT_VERSION=2','function validateSaveEnvelope(',
   'function normalizeRestoredSave(','function migrateSaveState(',
   'function unpackPlayerSaveFields(']){
@@ -199,20 +213,20 @@ if(rosterIntegritySource.includes('if(db.metaHistoryPacked)')){
   failed=true;console.error('Roster integrity check must be pure: save restoration belongs to save-migration');
 }
 
-const draftUiSource = await readFile(resolve(artifact, 'ui-draft.js'), 'utf8');
+const draftUiSource = sourceOf('ui-draft.js');
 const draftShellMarkers = ['du-series-meta','du-fearless','du-last-card','du-ban-img','du-pick-img','du-mobile-tabs','safe-area-inset-bottom'];
 const draftUiMarkers = ['officialLastGameCard','draftUiSeriesMeta','draftUiFearlessStrip','draftUiAnalysisPanel','draftUiStaffAdvice','draftUiOpponentIntent','draftUiEvidenceSources','draftUiPoolTop','data-du-info','du-info-panel',"reason:'Fearless'"];
 for (const marker of draftUiMarkers) if (!draftUiSource.includes(marker)) {
   failed = true;
   console.error(`Interactive draft UI contract missing marker: ${marker}`);
 }
-const shellSource = await readFile(resolve(artifact, 'shell.html'), 'utf8');
+const shellSource = sourceOf('shell.html');
 for (const marker of draftShellMarkers) if (!shellSource.includes(marker)) {
   failed = true;
   console.error(`Interactive draft shell contract missing marker: ${marker}`);
 }
 
-const setupUiSource = await readFile(resolve(artifact, 'ui-season.js'), 'utf8');
+const setupUiSource = sourceOf('ui-season.js');
 for (const obsoleteId of ['addreg','addintl']) {
   if (setupUiSource.includes(`#${obsoleteId}`)) {
     failed = true;
@@ -221,38 +235,38 @@ for (const obsoleteId of ['addreg','addintl']) {
 }
 
 for (const file of modules.filter(file => !['save.js','save-migration.js'].includes(file))) {
-  const source = await readFile(resolve(artifact, file), 'utf8');
+  const source = sourceOf(file);
   for (const marker of ['secondaryRoles','roleFamiliarity','trainSecondaryRole','officialRoleEligible']) if (source.includes(marker)) {
     failed = true;
     console.error(`Deprecated secondary-role model leaked into ${file}: ${marker}`);
   }
 }
-const uiSetupSource = await readFile(resolve(artifact, 'ui-setup.js'), 'utf8');
-const uiMatchSource = await readFile(resolve(artifact, 'ui-match.js'), 'utf8');
-const uiManagerSource = await readFile(resolve(artifact, 'ui-manager.js'), 'utf8');
-const uiDataSource = await readFile(resolve(artifact, 'ui-data.js'), 'utf8');
-const appSource = await readFile(resolve(artifact, 'app.js'), 'utf8');
-const playerSource = await readFile(resolve(artifact, 'player.js'), 'utf8');
-const developmentSource = await readFile(resolve(artifact, 'development.js'), 'utf8');
-const seasonSource = await readFile(resolve(artifact, 'season.js'), 'utf8');
-const offseasonSource = await readFile(resolve(artifact, 'offseason.js'), 'utf8');
-const saveSource = await readFile(resolve(artifact, 'save.js'), 'utf8');
-const worldSource = await readFile(resolve(artifact, 'world.js'), 'utf8');
-const rosterSource = await readFile(resolve(artifact, 'roster.js'), 'utf8');
-const metaSource = await readFile(resolve(artifact, 'meta.js'), 'utf8');
-const patchSource = await readFile(resolve(artifact, 'patch.js'), 'utf8');
-const draftSource = await readFile(resolve(artifact, 'draft.js'), 'utf8');
-const seriesSource = await readFile(resolve(artifact, 'series.js'), 'utf8');
-const competitionSource = await readFile(resolve(artifact, 'competition.js'), 'utf8');
-const financeSource = await readFile(resolve(artifact, 'finance.js'), 'utf8');
-const contractsSource = await readFile(resolve(artifact, 'contracts.js'), 'utf8');
-const scoutingSource = await readFile(resolve(artifact, 'scouting.js'), 'utf8');
-const transferSource = await readFile(resolve(artifact, 'transfer.js'), 'utf8');
-const staffSource = await readFile(resolve(artifact, 'staff.js'), 'utf8');
-const relationsSource = await readFile(resolve(artifact, 'player-relations.js'), 'utf8');
-const scrimSource = await readFile(resolve(artifact, 'scrim.js'), 'utf8');
-const featuresSource = await readFile(resolve(artifact, 'features.js'), 'utf8');
-const draftAnalysisSource = await readFile(resolve(artifact, 'draft-analysis.js'), 'utf8');
+const uiSetupSource = sourceOf('ui-setup.js');
+const uiMatchSource = sourceOf('ui-match.js');
+const uiManagerSource = sourceOf('ui-manager.js');
+const uiDataSource = sourceOf('ui-data.js');
+const appSource = sourceOf('app.js');
+const playerSource = sourceOf('player.js');
+const developmentSource = sourceOf('development.js');
+const seasonSource = sourceOf('season.js');
+const offseasonSource = sourceOf('offseason.js');
+const saveSource = sourceOf('save.js');
+const worldSource = sourceOf('world.js');
+const rosterSource = sourceOf('roster.js');
+const metaSource = sourceOf('meta.js');
+const patchSource = sourceOf('patch.js');
+const draftSource = sourceOf('draft.js');
+const seriesSource = sourceOf('series.js');
+const competitionSource = sourceOf('competition.js');
+const financeSource = sourceOf('finance.js');
+const contractsSource = sourceOf('contracts.js');
+const scoutingSource = sourceOf('scouting.js');
+const transferSource = sourceOf('transfer.js');
+const staffSource = sourceOf('staff.js');
+const relationsSource = sourceOf('player-relations.js');
+const scrimSource = sourceOf('scrim.js');
+const featuresSource = sourceOf('features.js');
+const draftAnalysisSource = sourceOf('draft-analysis.js');
 const legacySaveLines = saveSource.split('\n').filter(line => /secondaryRoles|roleFamiliarity/.test(line));
 for (const line of legacySaveLines) if (!/delete\s+[^;]*(secondaryRoles|roleFamiliarity)/.test(line)) {
   failed = true;
@@ -400,8 +414,8 @@ if (!Number.isInteger(saveVersion) || !Number.isInteger(worldVersion) || saveVer
 }
 
 // 11.5/4: keep long-career indexes bounded, incremental, and non-persistent.
-const balanceIndexSource=await readFile(resolve(artifact,'patch-balance.js'),'utf8');
-const patchUiIndexSource=await readFile(resolve(artifact,'ui-patch.js'),'utf8');
+const balanceIndexSource=sourceOf('patch-balance.js');
+const patchUiIndexSource=sourceOf('ui-patch.js');
 const perfIndexSource=await readFile(resolve(root,'scripts','perf.mjs'),'utf8');
 for(const [source,marker] of [
   [metaSource,'const META_FILTER_CACHE_LIMIT=64'],
@@ -422,10 +436,10 @@ for(const [source,marker] of [
 }
 
 // 11.5/5: one canonical regional/transfer-registration rule path, no dead wrappers.
-const stage5Finance=await readFile(resolve(artifact,'finance.js'),'utf8');
-const stage5Transfer=await readFile(resolve(artifact,'transfer.js'),'utf8');
-const stage5Contracts=await readFile(resolve(artifact,'contracts.js'),'utf8');
-const stage5Roster=await readFile(resolve(artifact,'roster.js'),'utf8');
+const stage5Finance=sourceOf('finance.js');
+const stage5Transfer=sourceOf('transfer.js');
+const stage5Contracts=sourceOf('contracts.js');
+const stage5Roster=sourceOf('roster.js');
 const stage5Smoke=await readFile(resolve(root,'scripts','smoke.mjs'),'utf8');
 for(const marker of ['function detachPlayerFromRosters(',
   'function localRegistrationError(','function contractedMoveError(',
@@ -470,12 +484,12 @@ const stage52Hooks=[
   ['career.js','function setupTeamsForManager(']
 ];
 for(const [file,marker] of stage52Hooks){
-  const s=await readFile(resolve(artifact,file),'utf8');
+  const s=sourceOf(file);
   if(!s.includes(marker)){failed=true;console.error('11.5/5-2 required engine API missing: '+file+' '+marker)}
 }
 const obsoleteDomainGuards=/typeof\s+(?:SYSTEM_EFFECT_KEYS|adaptPlayerPoolsToPatch|playerOvr|ensureSatisfaction|staffProfile|resetRoleConversionSeasonLoad|recordRoleConversionUsage|onSquadMoveSatisfaction|pState|migrateLegacyStaffState|initialSalaryBudget|setupTeamsForManager|initialOfferCheck)\s*(?:===|!==)\s*['"](?:function|undefined)['"]/;
 for(const file of modules.filter(f=>!['app.js','shell.html'].includes(f))){
-  const s=await readFile(resolve(artifact,file),'utf8');
+  const s=sourceOf(file);
   if(obsoleteDomainGuards.test(s)||s.includes('resetRoleConversionSeasonLoad(')){
     failed=true;console.error('11.5/5-2 obsolete optional hook fallback: '+file);
   }
@@ -489,7 +503,7 @@ const stage53Removed=[
   'scheduledOpeningDraft','movePlayerBetweenSquads','mOffer'
 ];
 for(const file of modules){
-  const src=await readFile(resolve(artifact,file),'utf8');
+  const src=sourceOf(file);
   for(const name of stage53Removed)
     if(new RegExp('\\b'+name+'\\b').test(src)){
       failed=true;console.error('11.5/5-3 obsolete/unreachable API returned in '+file+': '+name);
@@ -503,7 +517,7 @@ for(const [file,marker] of [
   ['state-transaction.js','function previewWorldAction('],
   ['transfer.js','function startNegotiation(']
 ]){
-  const src=await readFile(resolve(artifact,file),'utf8');
+  const src=sourceOf(file);
   if(!src.includes(marker)){
     failed=true;console.error('11.5/5-3 actively used entrypoint missing in '+file+': '+marker);
   }
@@ -529,7 +543,7 @@ if (!String(packageJson.scripts?.check||'').includes('scripts/regression.mjs')) 
 // rookie/market cycles must be a required check, not an optional smoke run.
 // Newly founded professional leagues may come from speculative markets,
 // not solely from fixed historical-region labels.
-const officeWorldSource=await readFile(resolve(artifact,'office-international.js'),'utf8');
+const officeWorldSource=sourceOf('office-international.js');
 for(const text of ['FUTURE_LEAGUE_MARKETS','newLeagueIdentity(','futureLeagueCandidates(db)',
   'historic.length&&future.length','db.global.foundedLeagueNames']){
   if(!officeWorldSource.includes(text)){
@@ -551,7 +565,7 @@ if(!String(packageJson.scripts?.check||'').includes('scripts/career-acceptance.m
 }
 
 
-const shell = await readFile(resolve(artifact, 'shell.html'), 'utf8');
+const shell = sourceOf('shell.html');
 if (!shell.includes('<meta name="viewport"')) {
   failed = true;
   console.error('Missing mobile viewport meta tag');
@@ -579,7 +593,7 @@ const brandTargets = [
   ...docFiles,
 ];
 for (const path of brandTargets) {
-  const source = await readFile(path, 'utf8');
+  const source = artifactSources.get(path) ?? await readFile(path, 'utf8');
   for (const [label, pattern] of forbiddenBranding) {
     if (pattern.test(source)) {
       failed = true;
