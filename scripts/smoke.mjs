@@ -23,6 +23,18 @@ source += `\n(()=>{
     phases:__smokeTimings
   }));
   const db=buildWorld();
+  const __smokeStableState=()=>{
+    const snap=JSON.parse(JSON.stringify(db));
+    delete snap.saveId;
+    for(const key of ['_marketDemandCache','initialPayrollFloorCache','_pre'])delete snap[key];
+    return {
+      hash:hashStr(JSON.stringify(snap)),
+      players:Object.keys(db.players).length,
+      teams:Object.keys(db.teams).length,
+      metaGames:db.metaGames||0,
+      metaHistory:(db.metaHistory||[]).length
+    };
+  };
   if(Object.values(CHAMPION_SOURCE_SNAPSHOT.champions).length!==173||Object.values(CHAMPION_SOURCE_SNAPSHOT.champions).some(c=>!c.nameKo)||Object.values(CHAMPION_SOURCE_SNAPSHOT.champions).filter(c=>c.passive?.nameKo&&c.spells?.length===4).length!==173||db.patch.championSource.matched<170||db.patch.championSource.matched!==db.patch.championSource.total)throw new Error('Authoritative champion baseline coverage incomplete: '+JSON.stringify(db.patch.championSource));
   if(!db||db.version!==15) throw new Error('Unexpected save schema');
   if(!db.worldDate||!db.worldConfig.universalLanguage) throw new Error('World bootstrap settings failed');
@@ -90,13 +102,7 @@ source += `\n(()=>{
   const metaProbe=buildWorld(),mc=Object.values(metaProbe.patch.champions)[0];mc.proEligibleDate='2027-02-01';metaProbe.worldDate='2027-01-20';if(championProEligible(metaProbe,mc))throw new Error('Global pro ban failed before eligibility date');metaProbe.worldDate='2027-02-01';if(!championProEligible(metaProbe,mc))throw new Error('Champion did not unlock on pro eligibility date');const lockProbe=buildWorld(),lc=Object.values(lockProbe.patch.champions)[0];lc.proEligibleDate='2027-02-01';lockProbe.worldDate='2027-01-20';const lockTeams=activeTeams(lockProbe).slice(0,2).map(t=>t.id),lockComp={id:'LOCK',teams:lockTeams,stages:[{id:'rr',name:'RR',type:'round_robin',legs:1,bo:1}]};lockProbe.competitions={LOCK:lockComp};newSeason(lockProbe,'LOCK',2027,'lock','2027-01-20');if(lockComp.championPool.includes(lc.id))throw new Error('Tournament pool included globally banned champion');lockProbe.worldDate='2027-02-05';if(!championProEligible(lockProbe,lc)||lockComp.championPool.includes(lc.id))throw new Error('Tournament pool did not remain locked after global unlock');lockProbe.worldDate='2027-01-20';if(!championAvailableForContext(lockProbe,lc,{practice:true})||championAvailableForContext(lockProbe,lc,{championPool:lockComp.championPool}))throw new Error('Practice/global-ban champion availability rules failed');
   const mA=activeTeams(metaProbe)[0],mB=activeTeams(metaProbe).find(t=>t.region!==mA.region);if(mA&&mB){const fake={winner:0,sides:[{team:mA,ps:[{champ:mc}]},{team:mB,ps:[{champ:mc}]}],draft:{bans:[[mc.id],[]]}};recordMeta(metaProbe,fake);if(!metaProbe.regionMetaStats[mA.region]?.[mc.id]||!metaProbe.regionMetaStats[mB.region]?.[mc.id])throw new Error('Regional meta tracking failed');if(metaTable(metaProbe,mA.region)[0].sample<1)throw new Error('Regional meta sample missing');const before=metaTable(metaProbe,mA.region).find(x=>x.c.id===mc.id);if(!before||before.p<1||before.b<1)throw new Error('Regional meta detail counts missing')}
   const patchDates=['2027-01-01','2027-01-15','2027-01-29'];const pDb=buildWorld();const prng=new RNG('patch-realism','p');seasonPatch(pDb,patchDates[0],prng);const p0=pDb.patches.list.length;patchTick(pDb,patchDates[1],prng);patchTick(pDb,patchDates[2],prng);if(pDb.patches.list.length<p0+1)throw new Error('Biweekly patch cadence failed');
-  __smokeMark('bootstrap-policy-rookie');\n  const __patchDbBefore=__SMOKE_COMPARE_STATE?{
-    hash:hashStr(packDB(db)),
-    players:Object.keys(db.players).length,
-    teams:Object.keys(db.teams).length,
-    metaGames:db.metaGames||0,
-    metaHistory:(db.metaHistory||[]).length
-  }:null;
+  __smokeMark('bootstrap-policy-rookie');\n  const __patchDbBefore=__SMOKE_COMPARE_STATE?__smokeStableState():null;
   if(__SMOKE_MODE!=='core'){
   // Patch engine: complete 26.19 item/rune source coverage and real build/rune-tree consumption.
   const sourceItems=Object.keys(SYSTEM_SOURCE_SNAPSHOT.items||{}),sourceRunes=Object.keys(SYSTEM_SOURCE_SNAPSHOT.runes||{}),sourceStyles=SYSTEM_SOURCE_SNAPSHOT.runeStyles||[];
@@ -186,13 +192,7 @@ source += `\n(()=>{
   }
   __smokeMark('patch-system-cache');\n  if(__SMOKE_COMPARE_STATE&&__SMOKE_MODE==='full')console.log('SMOKE_PATCH_STATE '+JSON.stringify({
     before:__patchDbBefore,
-    after:{
-      hash:hashStr(packDB(db)),
-      players:Object.keys(db.players).length,
-      teams:Object.keys(db.teams).length,
-      metaGames:db.metaGames||0,
-      metaHistory:(db.metaHistory||[]).length
-    }
+    after:__smokeStableState()
   }));
   if(__SMOKE_MODE==='patch-system'){
     __smokeReport();
@@ -645,11 +645,9 @@ source += `\n(()=>{
   __smokeReport();
   if(__SMOKE_COMPARE_STATE)console.log('SMOKE_STATE_FINGERPRINT '+JSON.stringify({
     mode:__SMOKE_MODE,
-    hash:hashStr(packDB(db)),
+    ...__smokeStableState(),
     year:db.year,
-    worldDate:db.worldDate,
-    players:Object.keys(db.players).length,
-    teams:Object.keys(db.teams).length
+    worldDate:db.worldDate
   }));
   console.log('World smoke test: OK — blank rosters, global FA, roster rules, engine-owned regional policy, workforce-backed rookie intake/scouting reports, no emergency roster generation, offseason market closure, player identity/role ratings/state/value/development/champion learning/full match metrics/fixed depth charts/roster roles/satisfaction, season bootstrap and Bo1 simulation');
 })()`;
