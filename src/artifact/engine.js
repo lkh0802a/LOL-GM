@@ -437,7 +437,7 @@ function simulateMatch(db,blueId,redId,seed,ctx,quiet){
     jgNext:[2.6+rng.dec.range(0,1),2.6+rng.dec.range(0,1)],mods:[(ctx&&ctx.mods&&ctx.mods[blueId])||0,(ctx&&ctx.mods&&ctx.mods[redId])||0],log:[],expl:[...d.expl],firsts:{},goldHist:[],winner:-1};
   for(const s of st.sides){s.ps.forEach(p=>{p.items=[]})}
   // 경기 당일 컨디션: 기복(consistency)이 낮은 팀일수록 편차가 크다
-  st.mods=st.mods.map((m,i)=>m+(i===((ctx&&ctx.firstPick)||0)?BAL.first:0)+(teamSynergy(st.sides[i].team)-50)/1000+rng.mech.normal(0,0.07*(1.25-avg(st.sides[i].ps.map(p=>at(p,'consistency'))))));
+  st.mods=st.mods.map((m,i)=>m+(i===((ctx&&ctx.firstPick)||0)?BAL.first:0)+(lineupSynergy(db,st.sides[i].team,st.sides[i].ps.map(p=>p.p.id))-50)/1000+rng.mech.normal(0,0.07*(1.25-avg(st.sides[i].ps.map(p=>at(p,'consistency'))))));
   let t;
   for(t=1;t<=70;t++){
     st.t=t; st.cur=rng.log.int(0,12);

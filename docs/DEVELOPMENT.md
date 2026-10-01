@@ -1210,3 +1210,54 @@ Remaining: broader staff/AI career and balance evidence in D11, D04 remaining
 agency/insolvency mechanisms, D08 relationships, D09 resource commitments,
 D10 controlled patch/match experiments, D12/D13 complete task acceptance.
 The full D stage remains open.
+
+
+### D08/D09 connected cohesion and practice batch (2026-10-02)
+
+Base: latest validated main 167a5d3 (generated standalone after #112).
+Current lineup cohesion derives a bounded 15–85 target from teammate bonds,
+team adaptation and manager trust. Official and private matches use the actual
+five, so a replacement does not inherit the departing lineup's entire bonus.
+Series and daily recovery approach the target; market close no longer awards
+an unconditional seasonal bonus. Severe teammate conflict affects satisfaction,
+renewal willingness and prolonged transfer requests using existing state.
+Relationship reads are pure, preserving preview/rollback boundaries. AI uses
+its own observed bonds/adaptation to choose practice focus, with saved reasons.
+
+practice-resources.js owns the daily 100-point time budget. A scrim set consumes
+10 points for both clubs; remaining points are split among individual drills,
+champion practice, tactics and teamwork. Existing 100-point attribute allocation
+subdivides individual drills. Focus is selectable in squad editing. Daily time
+commitments persist through save/reload and cannot run twice or admit a later
+scrim after drills consume the day. Individual time contributes to seasonal
+growth; champion drills replace the free seasonal training grant for careers
+with daily practice evidence. Rest/rehab players skip drills; official days do
+not provide drills. Old plans retain attribute allocations and use balanced
+focus, with old current-day scrim logs counted as spent time.
+
+International participants use the existing event's host region/time zone from
+five days before the first fixture through one day after the last fixture.
+Partner assessment, AI candidates and actual clock overlap share that venue;
+remote home clubs remain inaccessible unless located in the same host region.
+The existing near-official-rival embargo and mutual acceptance remain intact.
+This is bounded tournament attendance, not a new flight/visa/travel simulator.
+
+Files: player-relations, engine, offseason, development, calendar, scrim,
+scrim-partner, timezone-calendar, practice-resources, ui-roster and test manifest.
+Local evidence: same-seed real match changes under different bonds, no neutral
+cohesion buff, bounded recovery, new-lineup penalty, satisfaction/renewal, AI
+response, resource tradeoffs/idempotence/restore and international entry/exit.
+Shared runner 33 acceptances/29 contexts, calendar/scouting 7, regression and
+95-module static/build passed. Full required CI remains the merge gate.
+
+Remaining D08/D09: broader relationship-aware recruitment/selection scenarios,
+long-term conflict and recovery balance, explicit player-specific conversion
+time accounting, manual partner request workflows and actual mobile focus
+editing. Do not mark whole D08/D09 or D complete from this bounded batch.
+
+D11 observation: #112's local PID40204 is absent and exec session55031 no longer
+exists. Original JSON still says running, but only 34 seasons through 2060 and
+an after-restore checkpoint in 2061 exist. No stderr error identifies the cause.
+Preserve original files and daily-staff-main-1.observation.json. This is an
+interrupted, incomplete run, not a proven OOM or a passing 100 seasons. Do not
+restart the same engine automatically or use it for this newer batch.

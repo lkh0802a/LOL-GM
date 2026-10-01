@@ -64,8 +64,19 @@ function fixtureTimeInfo(match){
   return local+' '+(match.time||venueClockParts(match.utcAt,match.timeZone).time)+
     ' '+match.timeZone+' · 한국 '+kst.date+' '+kst.time+' KST';
 }
+function teamPracticeVenue(db,team,date=db.worldDate){
+  const visits=Object.values(db.world?.seasons||{}).filter(s=>{
+    const comp=db.competitions[s.comp],dates=(s.days||[]).map(d=>d.date).sort();
+    return comp?.international&&comp.teams?.includes(team.id)&&dates.length&&
+      date>=addDays(dates[0],-5)&&date<=addDays(dates.at(-1),1);
+  }).sort((a,b)=>String(a.id).localeCompare(String(b.id)));
+  const season=visits[0];
+  if(season){const venue=competitionVenue(db,db.competitions[season.comp]);
+    return {region:venue.region,timeZone:venue.timeZone,competition:season.comp};}
+  return {region:team.region,timeZone:team.practiceTimeZone||venueZone(db,team.region),competition:null};
+}
 function scrimUtcRange(db,team,date,slot){
-  const zone=team.practiceTimeZone||venueZone(db,team.region),
+  const zone=teamPracticeVenue(db,team,date).timeZone,
     localTime=slot==='afternoon'?'14:00':slot==='evening'?'19:00':null;
   if(!localTime)return null;
   const startsAt=venueToUtc(date,localTime,zone),

@@ -14,6 +14,7 @@ function normalizeTraining(plan){
   const total=keys.reduce((s,k)=>s+result[k],0);
   if(total>TRAIN_POINTS)for(const k of keys)result[k]=Math.floor(result[k]*TRAIN_POINTS/total);
   if(['light','normal','high'].includes(plan?.intensity))result.intensity=plan.intensity;
+  if(Object.hasOwn(PRACTICE_FOCUS,plan?.focus))result.focus=plan.focus;
   return result;
 }
 function setTrainingAllocation(plan,key,value){
@@ -24,7 +25,14 @@ function setTrainingAllocation(plan,key,value){
   return result;
 }
 function trainingIntensity(t){const x=t?.training?.intensity||'normal';return x==='light'?{growth:.9,fatigue:.45,condition:.25}:x==='high'?{growth:1.08,fatigue:1.35,condition:-.35}:{growth:1,fatigue:.8,condition:0}}
-function aiManageTraining(db,t){if(!t||t.id===managedTeamId(db))return;t.training=normalizeTraining(t.training);t.training.intensity=trainingRecommendation(db,t).intensity}
+function aiManageTraining(db,t){
+  if(!t||t.id===managedTeamId(db))return;
+  t.training=normalizeTraining(t.training);t.training.intensity=trainingRecommendation(db,t).intensity;
+  const cohesion=lineupCohesion(db,t),adaptation=avg(t.roster.map(id=>db.players[id]?.tacticalAdaptation??60));
+  t.training.focus=cohesion.relationship<40||cohesion.adaptation<65?'teamwork':adaptation<65?'tactics':t.philosophy==='youth'?'individual':'balanced';
+  t.practiceDecision={date:db.worldDate,focus:t.training.focus,
+    reason:t.training.focus==='teamwork'?'관계·새 조합 적응':t.training.focus==='tactics'?'전술 적응':t.training.focus==='individual'?'육성 우선':'균형 유지'};
+}
 const FACILITY_TYPES=['training','analysis','recovery','youth','scouting'];
 const FACILITY_LABELS={training:'훈련',analysis:'데이터 분석',recovery:'회복',youth:'유소년 육성',scouting:'스카우팅'};
 function ensureFacilities(t){
@@ -116,14 +124,14 @@ function growPlayer(db,p,rng,games,champGames){
     pState(p);
     let d=base>0?base*dev.growthRate*(0.45+room*0.6)*(0.7+0.6*prof)*(0.8+0.4*coach)*(0.65+0.55*play)*trainingGrowthMul(team)*facilityMul(team,p.age)*intensity.growth*(0.9+0.2*p.morale/100):base*dev.declineRate*(1.3-0.6*prof);
     d+=train*(base>0?1:0.5);
-    if(d>0)d*=youthMul(p.age)*conversionMul*practiceFactor;
+    if(d>0)d*=youthMul(p.age)*conversionMul*practiceFactor*trainingTimeMultiplier(team,db.year);
     d=Math.min(d,growthCap(p.age)); // 한 시즌 영역별 성장 상한 (어릴수록 높음)
     const ceil=Math.min(99,p.pot+6); // 잠재력 + 6을 넘는 능력치는 더 오르지 않음
     for(const a of ATTR_GROUPS[g]){const v=p.attrs[a]+d+rng.normal(0,1.3);p.attrs[a]=Math.round(clamp(d>0&&p.attrs[a]>=ceil?Math.min(v,p.attrs[a]):d>0?Math.min(v,Math.max(ceil,p.attrs[a])):v,20,99))}
   }
   // 챔피언 폭: 공식전 + 스크림 + 훈련 + 난이도 + 학습 능력을 함께 반영
   for(const c in champGames)ensureChampionProfile(db,p,c);
-  if(team&&p.pool){const practice=Math.max(2,Math.round((tr.combat+tr.mental)/12*(.7+coach*.5)));Object.entries(p.pool).sort((a,b)=>b[1].mastery-a[1].mastery).slice(0,6).forEach(([c])=>practiceChampion(db,p,c,'training',practice))}
+  if(team&&p.pool&&!team.practiceUsage?.days){const practice=Math.max(2,Math.round((tr.combat+tr.mental)/12*(.7+coach*.5)));Object.entries(p.pool).sort((a,b)=>b[1].mastery-a[1].mastery).slice(0,6).forEach(([c])=>practiceChampion(db,p,c,'training',practice))}
   for(const c of Object.keys(p.pool||{})){const n=champGames[c]||0,pr=ensureChampionProfile(db,p,c),learn=championLearningMultiplier(db,p,c),practiceGain=(pr.scrimSeason||0)*.16+(pr.trainingSeason||0)*.09,officialGain=Math.min(7,n*.42),gain=Math.min(8,(officialGain+practiceGain)*learn*(p.age<22?1.12:1));
     if(n||practiceGain){pr.mastery=Math.round(clamp(pr.mastery+gain,20,99));pr.experience=Math.round(clamp(pr.experience+n*1.5,0,999));pr.confidence=Math.round(clamp(pr.confidence+rng.normal(n?2:1,3),10,99))}
     else {pr.mastery=Math.round(clamp(pr.mastery-rng.range(0,1.8)*(1-(p.attrs.meta_adaptation||50)/180),20,99));if(pr.mastery<36&&Object.keys(p.pool).length>12)delete p.pool[c]}

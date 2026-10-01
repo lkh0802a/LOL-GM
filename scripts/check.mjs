@@ -331,7 +331,7 @@ const transferSource = sourceOf('transfer.js');
 const negotiationSource = sourceOf('contract-negotiation.js');
 const staffSource = sourceOf('staff.js');
 const relationsSource = sourceOf('player-relations.js');
-const scrimSource = sourceOf('scrim.js');
+const scrimSource = sourceOf('scrim.js')+'\n'+sourceOf('practice-resources.js');
 const featuresSource = sourceOf('features.js');
 const draftAnalysisSource = sourceOf('draft-analysis.js');
 const legacySaveLines = saveSource.split('\n').filter(line => /secondaryRoles|roleFamiliarity/.test(line));

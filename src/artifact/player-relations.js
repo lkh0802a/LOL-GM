@@ -4,13 +4,35 @@
 function pState(p){if(p.form===undefined)p.form=0;if(p.fatigue===undefined)p.fatigue=10;if(p.morale===undefined)p.morale=65;if(p.condition===undefined)p.condition=96;if(p.sharpness===undefined)p.sharpness=55;if(p.teamAdaptation===undefined)p.teamAdaptation=p.team?60:50;if(p.tacticalAdaptation===undefined)p.tacticalAdaptation=p.team?60:50;return p}
 // 상태는 기본 실력을 보정하지만 압도하지 않도록 총합을 제한한다.
 function playerMod(p){pState(p);const v=p.form/250-p.fatigue/900+(p.condition-92)/1200+(p.morale-65)/1800+(p.sharpness-60)/1700+((p.teamAdaptation+p.tacticalAdaptation)/2-60)/2200;return clamp(v,-.11,.09)-medicalPerformancePenalty(p)}
-function teamSynergy(t){return t.synergy??50}
+function teamSynergy(t){return Number.isFinite(t?.synergy)?clamp(t.synergy,0,100):50}
+function lineupCohesion(db,t,ids=null){
+  const players=[...new Set(ids||ROLES.map(r=>starterFor(db,t,r)?.id))]
+    .map(id=>db.players[id]).filter(p=>p&&p.team===t.id&&!p.retired);
+  if(players.length<2)return {target:50,relationship:50,adaptation:50,trust:60};
+  let sum=0,count=0;
+  for(let i=0;i<players.length;i++)for(let j=i+1;j<players.length;j++){
+    sum+=playerRelationship(db,players[i],players[j]);count++;
+  }
+  const relationship=sum/count,adaptation=avg(players.map(p=>p.teamAdaptation??60)),
+    trust=avg(players.map(p=>p.managerTrust??60));
+  return {relationship,adaptation,trust,
+    target:clamp(50+(relationship-50)*.55+(adaptation-60)*.25+(trust-60)*.15,15,85)};
+}
+function lineupSynergy(db,t,ids=null){
+  // The current five cannot inherit all the cohesion of a departed lineup.
+  return clamp(teamSynergy(t)*.4+lineupCohesion(db,t,ids).target*.6,15,85);
+}
+function recoverTeamCohesion(db,t,ids=null,rate=.015){
+  const target=lineupCohesion(db,t,ids).target;
+  t.synergy=clamp(teamSynergy(t)+(target-teamSynergy(t))*rate,15,85);
+  return t.synergy;
+}
 function playerRelationKey(a,b){const x=typeof a==='string'?a:a?.id,y=typeof b==='string'?b:b?.id;if(!x||!y||x===y)return null;return x<y?x+'|'+y:y+'|'+x}
-function playerRelationship(db,a,b){const k=playerRelationKey(a,b);if(!k)return 50;db.playerRelations=db.playerRelations||{};return db.playerRelations[k]??50}
+function playerRelationship(db,a,b){const k=playerRelationKey(a,b);if(!k)return 50;return db.playerRelations?.[k]??50}
 function adjustPlayerRelationship(db,a,b,delta){const k=playerRelationKey(a,b);if(!k)return 50;db.playerRelations=db.playerRelations||{};const v=clamp((db.playerRelations[k]??50)+delta,0,100);db.playerRelations[k]=Math.round(v*10)/10;return db.playerRelations[k]}
 function teamRelationshipScore(db,t){const ids=(t?.roster||[]).filter(id=>db.players[id]&&!db.players[id].retired);if(ids.length<2)return 50;let sum=0,n=0;for(let i=0;i<ids.length;i++)for(let j=i+1;j<ids.length;j++){sum+=playerRelationship(db,ids[i],ids[j]);n++}return n?sum/n:50}
 const CAREER_GOAL_KO={development:'성장 기회',starter:'주전 정착',international:'국제대회 출전',titles:'우승 경쟁',stability:'안정적인 커리어'};
-const SAT_REASON_KO={playing_time:'출전 시간 부족',promise_role:'역할 약속 불이행',reserve:'2군 배치',contract:'계약/연봉 불만',team_results:'팀 성적 불만',role:'역할 불만',international:'국제대회 기회 부족',career_goal:'커리어 목표 불일치'};
+const SAT_REASON_KO={teammates:'동료와의 불화',playing_time:'출전 시간 부족',promise_role:'역할 약속 불이행',reserve:'2군 배치',contract:'계약/연봉 불만',team_results:'팀 성적 불만',role:'역할 불만',international:'국제대회 기회 부족',career_goal:'커리어 목표 불일치'};
 function startContractRolePromise(db,p,t){
   if(!p.contract)return;
   closeOralRolePromise(db,p,'new_contract_or_transfer');
@@ -52,6 +74,9 @@ function satisfactionLabel(v){return v>=80?'매우 만족':v>=65?'만족':v>=48?
 function satisfactionIssues(db,p,opt={}){
   ensureSatisfaction(p);const t=p.team&&db.teams[p.team],usageYear=opt.year??db.year,u=p.usage&&p.usage.year===usageYear?p.usage:null,out=[];
   if(!t)return out;
+  const teammates=t.roster.filter(id=>id!==p.id&&db.players[id]&&!db.players[id].retired);
+  const bonds=teammates.map(id=>playerRelationship(db,p,id));
+  if(bonds.length&&avg(bonds)<30)out.push({code:'teammates',severity:clamp((30-avg(bonds))/5,2,6)});
   const promise=effectiveRolePromiseStatus(db,p,usageYear),role=promise?.role||p.rosterRole,
     games=promise?.teamGames??u?.teamGames??0,
     exp=promise?.expected??expectedPlayShare(p,t),
@@ -91,7 +116,7 @@ function applySatisfaction(db,p,opt={}){
   const promisedRole=effectiveRolePromiseStatus(db,p,usageYear)?.role||p.rosterRole;
   if(p.satisfaction<24&&issues.length&&['core','starter'].includes(promisedRole))p.concernStreak=(p.concernStreak||0)+1;else p.concernStreak=Math.max(0,(p.concernStreak||0)-1);
   const severeBreakdown=p.satisfaction<=8&&p.concernStreak>=18&&p.managerRelationship<=25&&p.managerTrust<=20&&p.personality.ambition>=70;
-  if(!p.wantsOut&&severeBreakdown&&issues.length){p.wantsOut=true;p.wantsOutReason=issues[0].code;recordPlayerEvent(p,'transfer_request',db.year,{reason:p.wantsOutReason,team:p.team,date:db.worldDate})}
+  if(!p.wantsOut&&(severeBreakdown||(p.satisfaction<=16&&p.concernStreak>=18&&p.personality.ambition>=70&&issues.some(x=>x.code==='teammates'&&x.severity>=5)))&&issues.length){p.wantsOut=true;p.wantsOutReason=issues[0].code;recordPlayerEvent(p,'transfer_request',db.year,{reason:p.wantsOutReason,team:p.team,date:db.worldDate})}
   else if(p.wantsOut&&(p.satisfaction>=50||p.managerTrust>=52)){p.wantsOut=false;const why=p.wantsOutReason;p.wantsOutReason=null;p.concernStreak=0;recordPlayerEvent(p,'transfer_request_withdrawn',db.year,{reason:why,team:p.team,date:db.worldDate})}
   const target=52+p.satisfaction*.2;p.morale=clamp(p.morale+(target-p.morale)*.05,0,100);
   return {delta,issues};
@@ -139,6 +164,6 @@ function afterSeries(db,lines,rec){
     for(const id of t.roster){if(by[id])continue;const p=db.players[id];if(p){pState(p);p.morale=clamp(p.morale-1,0,100);p.sharpness=clamp(p.sharpness-.8,0,100);p.teamAdaptation=clamp(p.teamAdaptation+.18,0,100);p.tacticalAdaptation=clamp(p.tacticalAdaptation+.12,0,100)}}
     const active=Object.keys(by).filter(id=>db.players[id]?.team===tid),relDelta=rec.winner===tid?.18:-.08;
     for(let i=0;i<active.length;i++)for(let j=i+1;j<active.length;j++)adjustPlayerRelationship(db,active[i],active[j],relDelta);
-    const rel=teamRelationshipScore(db,t);t.synergy=clamp(teamSynergy(t)+0.4+(rel-50)/140,0,100);}
+    recoverTeamCohesion(db,t,active,.025);}
 }
 // 매 경기일: 기본 피로 회복. 훈련은 아래의 희소 포인트 배분으로만 관리한다
