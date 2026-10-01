@@ -71,18 +71,21 @@ function completeRoleConversion(db,p){
   recordPlayerEvent(p,'role_conversion_completed',db.year,{from:old,to:target,team:p.team,date:db.worldDate,trainingDays:x.trainingDays||0,officialGames:x.officialGames||0,scrimGames:x.scrimGames||0});
   return {from:old,to:target};
 }
-function advanceRoleConversionPlayer(db,p){
-  const x=ensureRoleConversionState(p);if(!x||p.retired||!p.team)return null;const eff=roleConversionEffectiveness(db,p);
+function advanceRoleConversionPlayer(db,p,practiceFraction=1){
+  const x=ensureRoleConversionState(p);if(!x||p.retired||!p.team||!Number.isFinite(practiceFraction)||practiceFraction<=0)return null;const eff=roleConversionEffectiveness(db,p)*clamp(practiceFraction,0,2);
   x.trainingDays=(x.trainingDays||0)+1;p.roleConversionTrainingDaysYear=(p.roleConversionTrainingDaysYear||0)+1;x.progress=clamp((x.progress||0)+.42*eff,0,100);
   const keys=ROLE_KEY_ATTRS[x.targetRole]||[];for(const a of keys.slice(0,4))if(p.attrs?.[a]!=null)p.attrs[a]=Math.round(clamp(p.attrs[a]+.008*eff,20,99)*100)/100;
   if(x.trainingDays%7===0)roleConversionPracticeChampion(db,p,x);if(x.progress>=100)return completeRoleConversion(db,p);return null;
 }
-function advanceRoleConversionsDay(db){const done=[];for(const p of Object.values(db.players||{})){const r=advanceRoleConversionPlayer(db,p);if(r)done.push({pid:p.id,...r})}return done}
 function recordRoleConversionUsage(db,lines,kind='official'){
   const seen={};for(const l of lines||[]){const p=db.players[l.pid],x=p&&p.roleConversion;if(!x||l.role!==x.targetRole)continue;const k=p.id+'|'+kind;seen[k]=(seen[k]||0)+1}
   for(const [key,n] of Object.entries(seen)){const pid=key.split('|')[0],p=db.players[pid],x=p&&p.roleConversion;if(!x)continue;if(kind==='scrim'){x.scrimGames=(x.scrimGames||0)+n;x.progress=clamp((x.progress||0)+n*.32,0,100)}else{x.officialGames=(x.officialGames||0)+n;x.progress=clamp((x.progress||0)+n*1.05,0,100)}if(x.progress>=100)completeRoleConversion(db,p)}
 }
-function roleConversionGrowthMultiplier(p){const days=p.roleConversionTrainingDaysYear||0;return clamp(1-Math.min(.12,days/220*.12),.88,1)}
+function roleConversionGrowthMultiplier(p){
+  // Daily accounting already subtracts conversion time from individual work.
+  if(p.practiceUsage&&p.practiceUsage.year===p.roleConversionCostYear&&p.practiceUsage.days)return 1;
+  const days=p.roleConversionTrainingDaysYear||0;return clamp(1-Math.min(.12,days/220*.12),.88,1);
+}
 function aiReviewRoleConversions(db,t){
   const team=teamRef(db,t);if(!team||team.id===managedTeamId(db)||hashStr((db.worldDate||db.year)+'|role-review|'+team.id)%24!==0)return null;
   for(const role of ROLES){const p=team.depthChart?.[role]&&db.players[team.depthChart[role]];if(!p||p.role===role||p.roleConversion)continue;const fit=roleConversionFit(db,p,role),natural=roleConversionFit(db,p,p.role);if(p.age<=29&&fit>=natural-7)return proposeRoleConversion(db,p.id,role,'ai')}

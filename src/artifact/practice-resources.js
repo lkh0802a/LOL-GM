@@ -21,8 +21,8 @@ function consumeScrimPractice(db,t,games){
   if(!Number.isInteger(games)||games<1||cost>day.remaining)throw Error('오늘 남은 연습 시간이 부족합니다');
   t.practiceDay={...day,scrim:day.scrim+cost,remaining:day.remaining-cost};
 }
-function trainingTimeMultiplier(t,year){
-  const usage=t?.practiceUsage;
+function trainingTimeMultiplier(t,year,p=null){
+  const usage=p?.practiceUsage?.year===year?p.practiceUsage:t?.practiceUsage;
   if(!usage||usage.year!==year||!usage.days)return 1; // legacy seasonal saves
   return clamp(.8+usage.individual/(usage.days*PRACTICE_POINTS)*.4,.8,1.12);
 }
@@ -42,6 +42,14 @@ function runDailyPractice(db){
     for(const p of players){
       pState(p);
       const light=medicalPlanFor(db,p)==='light'?.4:1;
+      const individual=points*shares.individual*light,
+        conversion=p.roleConversion?individual*.25:0;
+      p.practiceDay={date:db.worldDate,individual:individual-conversion,conversion,
+        champions:points*shares.champions*light,tactics:points*shares.tactics*light,
+        teamwork:points*shares.teamwork*light};
+      if(!p.practiceUsage||p.practiceUsage.year!==db.year)p.practiceUsage={year:db.year,days:0,individual:0,conversion:0};
+      if(points){p.practiceUsage.days++;p.practiceUsage.individual+=individual-conversion;p.practiceUsage.conversion+=conversion}
+      if(conversion){p.roleConversionCostYear=db.year;advanceRoleConversionPlayer(db,p,conversion/12.5)}
       p.teamAdaptation=clamp(p.teamAdaptation+points*shares.teamwork*.008*light,0,100);
       p.tacticalAdaptation=clamp(p.tacticalAdaptation+points*shares.tactics*.01*light,0,100);
       if(points){
