@@ -36,6 +36,30 @@ function contractOfferReasonable(db,p,t,offer,kind='fa'){
   return guaranteed>=ask*establishedFloor;
 }
 
+// Club agreement does not authorize a player's permanent move. Evaluate the
+// same personal-terms policy as negotiation against a detached decision view.
+function contractTransferConsent(db,p,t,offer=null){
+  if(!p?.team||p.retired||!p.contract||p.contract.until<db.year||
+    p.contract.medicalReplacement||!t||t.active===false||t.id===p.team)
+    return {ok:false,willing:false,reason:'이적 가능한 일반 선수 계약과 다른 구단이 필요합니다'};
+  if(db.world?.contractAgreements?.[p.id]?.status==='agreed')
+    return {ok:false,willing:false,reason:'이미 합의한 다음 계약을 먼저 처리해야 합니다'};
+  const player=JSON.parse(JSON.stringify(p)),team=JSON.parse(JSON.stringify(t)),
+    view={...db,players:{...db.players,[p.id]:player},
+      teams:{...db.teams,[t.id]:team},_marketDemandCache:{}},
+    terms=offer?JSON.parse(JSON.stringify(offer)):{...player.contract,
+      years:Math.max(1,player.contract.until-db.year+1),
+      signingBonus:0,
+      promisedRole:player.contract.promisedRole||player.rosterRole||defaultPromisedRole(view,player,team)},
+    utility=offerUtility(view,player,team,terms),
+    threshold=offerAcceptanceThreshold(view,player,{kind:'transfer'}),
+    reasonable=!offer||contractOfferReasonable(view,player,team,terms,'transfer'),
+    willing=Number.isFinite(utility)&&Number.isFinite(threshold)&&reasonable&&utility>=threshold;
+  return {ok:true,willing,utility,threshold,terms,
+    reason:willing?'선수가 이적 조건에 동의했습니다':
+      '선수가 이적 조건을 거절했습니다. 연봉·역할·커리어에 맞는 개인 조건을 협상하세요'};
+}
+
 // Offseason departure consent is a player decision, not a second release writer.
 function contractMutualTerminationTerms(db,p){
   if(!['offseason','market'].includes(db.world?.phase))

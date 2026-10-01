@@ -524,7 +524,7 @@ The current Worlds+14 model remains the fictional game's policy; this source
 must not trigger an automatic migration to real-world calendar dates. Revisit
 only where the fictional design needs a more coherent rule.
 
-Current unit: D04-B4d3. Main files: club-closure.js, finance.js, office.js,
+Current unit: D04-B4e1. Main files: club-closure.js, finance.js, office.js,
 state-player-actions.js, state-rollback.js and closure/player finance UI.
 Focused acceptance covers authority, parent/reserve scope, stale previews, late
 rollback, paid/unpaid balances, legacy claims, agreements, UI and save restore.
@@ -575,3 +575,13 @@ history; closed statements and UI distinguish returns from support. Focused
 closure acceptance verifies cash/debt conservation, rollback, save/UI and annual
 accounting. Remaining insolvency work includes independent assets and other claims;
 next gameplay candidates include transfer consent and D05 loans.
+
+
+D04-B4e1 unit: shared pure permanent-transfer consent now guards retained-contract
+moves and new transfer contracts for all actors. Use existing negotiation utility
+and acceptance/fair-pay policy; do not invent a second player preference formula.
+Personal decision evidence is revalidated in canonical previews and saved with
+transfer events. AI checks both purchases and proposed swaps before committing.
+Focused transfer-consent, owned-reserve-coach and static checks pass; full Actions
+is the acceptance gate. Next candidates: AI negotiating new personal terms,
+agent/promises, remaining insolvency claims and D05 loans.

@@ -48,11 +48,12 @@ function closeOpenNegotiationsForDeadline(db){
 }
 // ---- 이적료 / 직접 운영 ----
 function transferFee(db,p){const left=p.contract?Math.max(1,p.contract.until-db.year+1):1;return Math.round(playerMarketValue(db,p)*(.62+.18*Math.min(3,left))*(p.wantsOut?.75:1)*10)/10}
-function doTransfer(db,p,from,to,fee){
+function doTransfer(db,p,from,to,fee,consent=null){
   const moveErr=contractedMoveError(db,p),localErr=localRegistrationError(db,to,p);if(moveErr||localErr)throw new Error(moveErr||localErr);
   recordContractedMove(db,p,'permanent',from,to,{fee});assignPlayerToTeam(db,p,to);
   receiveFinancePrepaidTransfer(from,fee);payFinancePrepaid(to,'transferPaid',fee);
-  recordPlayerEvent(p,'transfer',db.year,{from:from.id,to:to.id,fee,date:db.worldDate});
+  recordPlayerEvent(p,'transfer',db.year,{from:from.id,to:to.id,fee,date:db.worldDate,
+    ...(consent?{consent}:{})});
   news(db,`이적: ${p.name} ${from.name} → ${to.name} (이적료 ${money(fee)})`);
 }
 function myT(db){return managedTeam(db)}
