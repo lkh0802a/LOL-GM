@@ -36,6 +36,7 @@ export const ENGINE_MODULES = [
   'state-rollback.js',
   'office.js',
   'office-international.js',
+  'region-continuity.js',
   'finance.js',
   'contracts.js',
   'contract-market-behavior.js',

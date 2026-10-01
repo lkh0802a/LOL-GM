@@ -72,7 +72,8 @@ function worldDecisions(db,rng,f,ev){
     if(c.par){
       // 모리그에서 팬덤이 약한 구단 2곳이 새 리그로 이적 (연고 이전) — 모리그는 신규 창단으로 짝수 유지
       const mv=activeTeams(db,c.par.id,1).filter(t=>!t.franchised).sort((a,b)=>(a.fans||0)-(b.fans||0)).slice(0,activeTeams(db,c.par.id,1).length>=8?2:0);
-      for(const t of mv){t.region=id;t.division=1;activeTeams(db,c.par.id,2).filter(a=>a.parent===t.id).forEach(a=>foldTeam(db,a))}
+      for(const t of mv)moveClubForRegionReorganization(db,t,id,'regional-independence');
+      recordRegionSuccession(db,c.par.id,[c.par.id,id],'regional-independence');
       // 새 리그 팀 수는 짝수로 맞춘다
       const extra=activeTeams(db,id,1).length-cfg.teams; for(let k=0;k<extra;k++){const w=activeTeams(db,id,1).filter(t=>!mv.includes(t)).sort((a,b)=>(a.fans||0)-(b.fans||0))[0];if(w)foldTeam(db,w)}
       why=`${c.par.leagueName}에서 분리 독립 — ${mv.length?mv.map(t=>t.name).join(', ')+' 연고 이전, ':''}모리그 흥행 ${(c.par.metrics||[]).slice(-1)[0]?.hype??'-'}`;
@@ -85,19 +86,21 @@ function worldDecisions(db,rng,f,ev){
         // 권역의 모든 지역이 독립 → 모리그는 역할을 다하고 해체, 남은 구단은 팀 수가 적은 리그부터 나눠 합류, 진출권도 나눠 승계
         const rest=activeTeams(db,P.id,1).sort((a,b)=>(b.fans||0)-(a.fans||0)), got={};
         for(const t of rest){const dst=kids.map(k=>db.regions[k]).sort((a,b)=>activeTeams(db,a.id,1).length-activeTeams(db,b.id,1).length)[0];
-          t.region=dst.id;t.division=1;(got[dst.leagueName]=got[dst.leagueName]||[]).push(t.name)}
+          moveClubForRegionReorganization(db,t,dst.id,'parent-region-dissolution');(got[dst.leagueName]=got[dst.leagueName]||[]).push(t.name)}
         for(const t of activeTeams(db,P.id,2))foldTeam(db,t);
         const heirs=kids.map(k=>db.regions[k]).sort((a,b)=>b.strength-a.strength);
         for(let k=0;k<P.slots;k++)heirs[k%heirs.length].slots++;
         for(const k of kids)db.regions[k].parent=null;
+        recordRegionSuccession(db,P.id,kids,'parent-region-dissolution',true);
         delete db.regions[P.id];(db.global.dissolved=db.global.dissolved||[]).push(P.id);
         why+=` · 권역의 모든 지역이 독립해 ${P.leagueName} 해체 — 잔여 구단 분산(${Object.entries(got).map(([l,n])=>`${l}: ${n.length}팀`).join(', ')}), 진출권 ${P.slots}장 승계`;
       } else if(activeTeams(db,P.id,1).length<6){
         const rest=activeTeams(db,P.id,1);
-        for(const t of rest){t.region=id}
+        for(const t of rest)moveClubForRegionReorganization(db,t,id,'parent-region-dissolution');
         for(const t of activeTeams(db,P.id,2))foldTeam(db,t);
         R.slots=Math.max(R.slots,P.slots);
         for(const k of Object.keys(REGION_PRESETS))if(REGION_PRESETS[k].parent===P.id&&db.regions[k])db.regions[k].parent=null;
+        recordRegionSuccession(db,P.id,[id],'parent-region-dissolution',true);
         delete db.regions[P.id];
         why+=` · ${P.leagueName} 해체 — 잔여 ${rest.length}팀과 진출권 ${P.slots}장을 ${cfg.leagueName}이 승계`;
       }
@@ -109,15 +112,17 @@ function worldDecisions(db,rng,f,ev){
   if(lowE.length&&rng.chance(0.5*f)){ // 신흥 리그가 2년 연속 침체하면 모리그로 재통합
     const g=lowE[0], host=db.regions[g.parent];
     const ts=activeTeams(db,g.id,1).sort((a,b)=>(b.fans||0)-(a.fans||0)), keep=ts.slice(0,2);
-    for(const t of ts){if(keep.includes(t)){t.region=host.id;t.division=1}else foldTeam(db,t)}
+    for(const t of ts){if(keep.includes(t))moveClubForRegionReorganization(db,t,host.id,'regional-reintegration');else foldTeam(db,t)}
     for(const t of activeTeams(db,g.id))foldTeam(db,t);
+    recordRegionSuccession(db,g.id,[host.id],'regional-reintegration',true);
     delete db.regions[g.id];
     gev(`${g.leagueName} 해체 — ${host.leagueName}로 재통합 (${keep.map(t=>t.name).join(', ')} 합류)`,'2년 연속 흥행 침체');
   }
   const low=Object.values(db.regions).filter(R=>(R.metrics||[]).length>=2&&R.metrics.slice(-2).every(m=>m.hype<30)).sort((a,b)=>a.strength-b.strength);
   if(Object.keys(db.regions).length>=5&&low.length>=2&&low.every(R=>R.tier!=='major')&&rng.chance(0.4*f)){
     const [A,B]=low, host=A.strength>=B.strength?A:B, gone=host===A?B:A;
-    for(const t of activeTeams(db,gone.id)){t.region=host.id;t.division=1;t.parent=null}
+    for(const t of activeTeams(db,gone.id))if(t.region===gone.id)moveClubForRegionReorganization(db,t,host.id,'regional-merger');
+    recordRegionSuccession(db,gone.id,[host.id],'regional-merger',true);
     const old=host.leagueName;host.leagueName=`${host.name}·${gone.name} 연합 리그`;host.name=`${host.name}·${gone.name}`;host.slots=Math.min(4,host.slots+1);
     delete db.regions[gone.id];
     gev(`리그 통합: ${old} + ${gone.leagueName} → ${host.leagueName}`,'두 지역 모두 2년 연속 흥행 침체');

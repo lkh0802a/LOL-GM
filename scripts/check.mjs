@@ -125,6 +125,7 @@ const maintainabilityBudgets = {
   'state-rollback.js': 8000,
   'state-player-actions.js': 17000,
   'finance.js': 18000,
+  'region-continuity.js': 4500,
   'contracts.js': 26000,
   'contract-market-behavior.js': 5000,
   'contract-transfer-market.js': 6500,

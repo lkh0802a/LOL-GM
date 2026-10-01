@@ -869,3 +869,32 @@ partial old plans; valid zero/underallocated plans and intensity remain intact.
 Opponent training controls are disabled. Focused acceptance exercises all three
 intensities, invalid saved fields and actual player growth, preventing poisoned
 attributes instead of only hiding NaN in the UI.
+
+## D06 region/club organization continuity (2026-10-02)
+
+Region mergers previously promoted every moved second team to division one and
+removed its parent; independence could instead close an owned reserve merely
+because its parent changed region. All five office-directed relocation paths now
+share region-continuity.js: continuing clubs retain IDs, division and employment
+organization, with owned reserves moving alongside parents. Destinations retain
+second-division support. Each relocated club records a dated same-club region
+history. Regional succession records preserve predecessor names and successor
+IDs before dissolved region objects are removed, without self-predecessor links.
+Ordinary voluntary relocation is not introduced by this administrative path.
+
+Focused acceptance triggers the actual production merger, then checks splitting,
+contracts/staff/financial/history continuity, reserve parent/division, successor
+save restoration and invalid-destination rejection. Static checks (91 modules)
+and the seven-case calendar/scouting runner pass. Whole-D/D06 are not complete:
+player successor-local choice, current-contract legacy eligibility and license
+approval remain the next connected work. Do not infer that preserving a club
+also grants a player new local status; those policies require explicit commands.
+
+The GitHub account execution block persists; this change must remain a draft
+until full CI can run. Preserve PR #106 (long careers) and #107 (owners) and their
+independent branches. The running process 26248 still targets #106's prior engine,
+not this change: 12 seasons through 2038 passed at last observation, with save
+size about 25 MB and year-boundary heap about 511 MB. The process working set was
+about 2.9 GB, materially higher than heap: later runner reporting should include
+RSS/external allocations, and mobile performance acceptance remains unproven.
+No duplicate 100-season run should be started while this process is active.
