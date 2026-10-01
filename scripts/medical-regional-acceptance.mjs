@@ -2,19 +2,29 @@
 // cup medical audit. B10.1 measures actual overload/auto-rest exposure without
 // manufacturing medical incidents or tuning their odds.
 // Do not interpret rare simulated clinical events as population prevalence.
-import {readFile} from 'node:fs/promises';
+import {readFile,writeFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import vm from 'node:vm';
 import {ENGINE_MODULES} from './artifact-modules.mjs';
 
 const root=resolve(import.meta.dirname,'..','src','artifact');
-let source='';
+const shardRaw=process.env.MEDICAL_REGIONAL_SHARD;
+const shardIndex=shardRaw===undefined?null:Number(shardRaw);
+if(shardIndex!==null&&(!Number.isInteger(shardIndex)||shardIndex<0||shardIndex>1))
+  throw new Error('MEDICAL_REGIONAL_SHARD must be 0 or 1');
+const shardOutput=process.env.MEDICAL_SHARD_OUTPUT||null;
+let source='const __MEDICAL_REGIONAL_SHARD='+JSON.stringify(shardIndex)+';\n';
 for(const file of ENGINE_MODULES)source+=await readFile(resolve(root,file),'utf8')+'\n';
 source+=String.raw`(()=>{
   const assert=(test,message)=>{if(!test)throw new Error('D02_REGIONAL_MEDICAL '+message)};
-  const cases=['injury','illness','burnout'],seedNames=[
-    'd02-b9-calendar-NA','d02-b9-calendar-EU'
-  ],rows=[];
+  const cases=['injury','illness','burnout'],
+    allSeedCases=[
+      {seed:'d02-b9-calendar-NA',index:0},
+      {seed:'d02-b9-calendar-EU',index:1}
+    ],
+    seedCases=__MEDICAL_REGIONAL_SHARD===null?allSeedCases:
+      [allSeedCases[__MEDICAL_REGIONAL_SHARD]],
+    seedNames=seedCases.map(x=>x.seed),rows=[];
   const inc=()=>({days:0,injury:0,illness:0,burnout:0,unavailableDays:0});
   // Test-only observer: intercept the real lottery's exact numeric odds after
   // dailyRecovery but before scrims. Preserve the same probability object and
@@ -70,8 +80,8 @@ source+=String.raw`(()=>{
     if(evt&&cases.includes(evt.kind))row[evt.kind]++;
   };
   const ageGroup=p=>p.age>=29?'veteran':p.age>=23?'prime':'young';
-  for(let k=0;k<seedNames.length;k++){
-    const seed=seedNames[k],cfg=defaultWorldConfig();
+  for(const {seed,index:k} of seedCases){
+    const cfg=defaultWorldConfig();
     cfg.regions=[
       regionCfg('NA',{teams:10,splits:3,legs:2,regularBo:1,
         playoffBo:1,playoffTake:4,format:'rr_po',
@@ -268,48 +278,51 @@ source+=String.raw`(()=>{
       saves,yearAfterOffseason:db.year,managedIntensity,
       weightedFacilityBands:['basic','supported']});
   }
-  assert(rows.length===seedNames.length&&grand.official>800&&
-    grand.internationalMatches>=10&&grand.events.days>=35000,
-    'regional full-season sample too small');
-  assert(grand.byCare.supported.days>5000&&grand.byCare.basic.days>5000,
-    'did not cover both medical support levels');
-  assert(grand.byAge.veteran.days>1500&&
-    grand.byAge.young.days>2000&&grand.byAge.prime.days>2000,
-    'veteran/prime/youth age cohorts not all represented');
-  assert(grand.byIntensity.light.days>0&&
-    grand.byIntensity.normal.days>0&&grand.byIntensity.high.days>0,
-    'training intensity distribution did not span all three modes');
-  assert(grand.events.injury+grand.events.illness+grand.events.burnout>=1,
-    'no medical incidents in a substantial observed real-calendar sample');
   const observed=grand.burnoutExposure;
-  assert(observed.playerDays===grand.events.days&&
-    observed.peakOverloadDays>=0&&observed.peakOverloadDays<=120&&
-    observed.healthyDays<=observed.playerDays&&
-    observed.sameDayRegistrations<=observed.playerDays&&
-    observed.eligibleBurnoutDays<=observed.healthyDays&&
-    observed.modeledBurnoutEvents>=0&&
-    observed.modeledBurnoutEvents<=observed.eligibleBurnoutDays*.00032+1e-8,
-    'risk exposure totals or per-eligible-day upper bound are invalid');
-  assert(grand.byOperator.manager.playerDays+
-    grand.byOperator.ai.playerDays===observed.playerDays&&
-    grand.byOperator.manager.playerDays>0&&
-    grand.byOperator.ai.playerDays>0,
-    'manager/AI medical workload exposure is not partitioned correctly');
-  assert(['normal','light','rest','rehab'].every(plan=>
-    grand.planDays[plan]===observed[plan]),
-    'medical plan exposure counts contradict the previously measured plans');
+  if(__MEDICAL_REGIONAL_SHARD===null){
+    assert(rows.length===allSeedCases.length&&grand.official>800&&
+      grand.internationalMatches>=10&&grand.events.days>=35000,
+      'regional full-season sample too small');
+    assert(grand.byCare.supported.days>5000&&grand.byCare.basic.days>5000,
+      'did not cover both medical support levels');
+    assert(grand.byAge.veteran.days>1500&&
+      grand.byAge.young.days>2000&&grand.byAge.prime.days>2000,
+      'veteran/prime/youth age cohorts not all represented');
+    assert(grand.byIntensity.light.days>0&&
+      grand.byIntensity.normal.days>0&&grand.byIntensity.high.days>0,
+      'training intensity distribution did not span all three modes');
+    assert(grand.events.injury+grand.events.illness+grand.events.burnout>=1,
+      'no medical incidents in a substantial observed real-calendar sample');
+    assert(observed.playerDays===grand.events.days&&
+      observed.peakOverloadDays>=0&&observed.peakOverloadDays<=120&&
+      observed.healthyDays<=observed.playerDays&&
+      observed.sameDayRegistrations<=observed.playerDays&&
+      observed.eligibleBurnoutDays<=observed.healthyDays&&
+      observed.modeledBurnoutEvents>=0&&
+      observed.modeledBurnoutEvents<=observed.eligibleBurnoutDays*.00032+1e-8,
+      'risk exposure totals or per-eligible-day upper bound are invalid');
+    assert(grand.byOperator.manager.playerDays+
+      grand.byOperator.ai.playerDays===observed.playerDays&&
+      grand.byOperator.manager.playerDays>0&&
+      grand.byOperator.ai.playerDays>0,
+      'manager/AI medical workload exposure is not partitioned correctly');
+    assert(['normal','light','rest','rehab'].every(plan=>
+      grand.planDays[plan]===observed[plan]),
+      'medical plan exposure counts contradict the previously measured plans');
+  }
   const eventRate=row=>Math.round((row.injury+row.illness+row.burnout)/
     Math.max(1,row.days)*365*1000)/10;
   const combinedRate=eventRate(grand.events);
-  assert(combinedRate>=0&&combinedRate<50,
+  if(__MEDICAL_REGIONAL_SHARD===null)assert(combinedRate>=0&&combinedRate<50,
     'medical incidence in realistic schedule exceeded sanity bound');
   const buckets=xs=>Object.fromEntries(Object.entries(xs).map(([key,row])=>[
     key,{playerDays:row.days,injuries:row.injury,illnesses:row.illness,
       burnout:row.burnout,unavailableDays:row.unavailableDays,
       eventsPer100Year:eventRate(row)}
   ]));
-  console.log('D02_REGIONAL_MEDICAL '+JSON.stringify({
-    seeds:seedNames.length,worldVersion:15,saveFormat:2,
+  const report={
+    shardIndex:__MEDICAL_REGIONAL_SHARD,seeds:seedNames.length,
+    worldVersion:15,saveFormat:2,
     actualCalendarDays:grand.days,officialMatches:grand.official,
     internationalMatches:grand.internationalMatches,scrimBlocks:grand.scrimBlocks,
     rosteredPlayerDays:grand.events.days,medicalEvents:{
@@ -335,8 +348,11 @@ source+=String.raw`(()=>{
       ai:{athleteDays:grand.byOperator.ai.playerDays,
         burnoutRiskDays:grand.byOperator.ai.eligibleBurnoutDays,
         recoveryDays:grand.byOperator.ai.light+grand.byOperator.ai.rest}},
-    saveRestores:grand.saves,runs:rows
-  }));
+    saveRestores:grand.saves,runs:rows,aggregateRaw:grand
+  };
+  console.log('D02_REGIONAL_MEDICAL '+JSON.stringify(report));
+  return report;
 })();`;
-vm.runInNewContext(source,{console,Date,Math,JSON,Set,Map,WeakMap,Object,
+const report=vm.runInNewContext(source,{console,Date,Math,JSON,Set,Map,WeakMap,Object,
   Array,String,Number,Boolean,RegExp,Error,Intl,performance,crypto},{timeout:330000});
+if(shardOutput)await writeFile(shardOutput,JSON.stringify(report)+'\n','utf8');
