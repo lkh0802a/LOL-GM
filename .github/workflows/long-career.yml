@@ -1,0 +1,47 @@
+name: Long daily-clock careers
+
+on:
+  workflow_dispatch:
+    inputs:
+      seasons:
+        description: Seasons per seed (100 for D11 evidence)
+        type: number
+        default: 100
+
+permissions:
+  contents: read
+
+concurrency:
+  group: long-career-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  daily-career:
+    runs-on: ubuntu-latest
+    timeout-minutes: 125
+    strategy:
+      fail-fast: false
+      matrix:
+        seed: [daily-1, daily-2, daily-3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Actual daily clock, official drafts and saved phases
+        env:
+          CAREER_SEASONS: ${{ inputs.seasons }}
+          CAREER_SEED: ${{ matrix.seed }}
+          CAREER_MEMORY_MB: 1536
+          CAREER_RESULT_FILE: reports/${{ matrix.seed }}.json
+          NODE_OPTIONS: --max-old-space-size=2048
+        run: node scripts/daily-career-acceptance.mjs
+      - name: Preserve partial reports even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: long-career-${{ matrix.seed }}
+          path: reports/
+          retention-days: 14
+          if-no-files-found: error
+          compression-level: 1
