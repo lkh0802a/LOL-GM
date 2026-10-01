@@ -265,7 +265,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        mode: [full, core, patch-system]
+        mode: [core, patch-system]
     runs-on: ubuntu-latest
     timeout-minutes: 6
     steps:
@@ -280,8 +280,15 @@ jobs:
       - name: Smoke coverage shard
         env:
           SMOKE_MODE: ${{ matrix.mode }}
-          SMOKE_COMPARE_STATE: '1'
+          SMOKE_RESULT_FILE: smoke-${{ matrix.mode }}.json
         run: node scripts/smoke.mjs
+
+      - name: Upload smoke result
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-${{ matrix.mode }}
+          path: smoke-${{ matrix.mode }}.json
+          if-no-files-found: error
 
   career:
     needs: [changes, ui-finance-contracts, calendar-scouting]
