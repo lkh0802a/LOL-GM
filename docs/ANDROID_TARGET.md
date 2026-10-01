@@ -10,8 +10,8 @@ must work offline. iOS expansion should remain possible, but is secondary.
 
 ## Required sequence
 
-1. Finish the evidenced development-efficiency checklist in Issue #57.
-2. Incrementally refactor ownership/boundaries under Issue #62.
+1. **Complete:** development-efficiency checklist in Issue #57.
+2. **Current:** incrementally refactor ownership/boundaries under Issue #62.
 3. Remove only fully replaced legacy callers/adapters; retain needed migrations.
 4. Continue the first unfinished item in the actual roadmap/audit.
 5. Complete mobile UX and mobile CPU/RAM/battery/save performance.

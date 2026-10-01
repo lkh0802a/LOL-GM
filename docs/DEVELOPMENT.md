@@ -3,24 +3,23 @@
 Latest delivery direction: [Android app acceptance](ANDROID_TARGET.md).
 Use the focused development map below and [CI result guide](CI_RESULTS.md)
 to select minimal local checks and reuse Actions evidence. Development-efficiency
-Issue #57 precedes structural Issue #62, then unfinished gameplay, mobile UX and
-performance, Android packaging and real-device installation validation.
+Issue #57 is complete; structural Issue #62 is the current stage, followed by
+fully replaced legacy removal, unfinished gameplay, mobile UX/performance,
+Android packaging and real-device installation validation.
 
 ## Development ownership and handoff
 
-The user owns game direction and final design. Codex is the primary developer
-for implementation, multi-file changes, refactoring, debugging, mobile UI,
-Android code and tests while its allowance remains. ChatGPT owns project
-priorities, design review, scope, code review, Actions management and result
-verification. It may implement when Codex allowance is exhausted, the user
-explicitly requests it, or a tiny fix makes a separate handoff inefficient.
-Do not independently implement the same change in both conversations.
+The user owns game direction and final design. ChatGPT owns project priorities,
+technical direction, architecture decisions, code review, Actions management and
+result verification, and implements changes directly when that is efficient.
+Codex is primarily assigned larger multi-file, structurally complex or repetitive
+implementation work. Work is divided by task scope, not by an exclusive developer
+role. Do not independently implement the same change in parallel.
 
-Actions handles repeated full regression, long simulation and builds. Codex
-uses focused reproduction for actual code changes; avoid repeated full-source
-analysis and routine full local runs. This separation does not limit Codex to
-optimization: continue through refactoring, legacy removal, gameplay, mobile UX
-and Android delivery in the agreed order.
+Actions handles repeated full regression, long simulation and builds. Whoever
+implements a change should use focused reproduction instead of repeated
+full-source analysis and routine full local runs. Codex work remains subject to
+the same repository review, acceptance and CI gates as direct ChatGPT changes.
 
 Keep each step independently reviewable and commit-ready. At a step boundary,
 record the goal, finished/remaining work, changed files, tests and failures,
@@ -412,9 +411,10 @@ are real callers. Structural ownership and legacy removal remain Issue #62 work.
 
 ### Current sequence
 
-Issue #57 is closed with the evidence and deferred-risk decisions recorded in
-its completion comment. Manual full/parity support is a follow-up convenience,
-not a new optimization phase. Continue Issue #62 ownership/refactoring work.
-Preserve accepted D04-B3; recheck D04-B4 and the depth audit
-before choosing subsequent gameplay work. Follow ANDROID_TARGET.md through mobile
+Issue #57 is complete. Issue #62 R01 now has a code-backed ownership baseline in
+REFACTOR_R01_AUDIT.md; continue with small R02 guardrail/boundary changes, then
+R03–R07 and remove legacy only after caller parity is proven. Preserve accepted
+D04-B3; after the refactor, recheck D04-B4 and the latest depth audit before
+choosing subsequent gameplay work. Follow ANDROID_TARGET.md through mobile
 UX/performance, production packaging and real-device offline/save validation.
+Manual full/parity support is a follow-up convenience, not a new optimization phase.

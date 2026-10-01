@@ -25,12 +25,12 @@ For implementation decisions, use this priority:
 4. `docs/ARTIFACT_INTEGRATION.md` for Artifact/UI migration work
 5. intentional working behavior already in the repository
 
-Codex is the primary implementation agent while its usage allowance remains.
-ChatGPT manages direction, priorities, design/review and CI, and may take over
-implementation when Codex is exhausted, explicitly requested, or a tiny change
-does not justify a separate handoff. GitHub Actions runs repeatable validation
-and builds. All contributors continue the same implementation and coordinate
-ownership before editing overlapping areas; see docs/DEVELOPMENT.md.
+ChatGPT acts as project/technical lead, code reviewer and Actions manager, and
+implements repository changes directly when that is the efficient path. Codex is
+used primarily for larger multi-file, complex or repetitive implementation work.
+Choose one owner per task and review the result before integration; do not build
+parallel versions of the same change. GitHub Actions runs repeatable validation
+and builds. See docs/DEVELOPMENT.md.
 
 ## Architecture principles
 
