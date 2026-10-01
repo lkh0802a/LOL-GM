@@ -3211,6 +3211,29 @@ function playerRelationKey(a,b){const x=typeof a==='string'?a:a?.id,y=typeof b==
 function playerRelationship(db,a,b){const k=playerRelationKey(a,b);if(!k)return 50;return db.playerRelations?.[k]??50}
 function adjustPlayerRelationship(db,a,b,delta){const k=playerRelationKey(a,b);if(!k)return 50;db.playerRelations=db.playerRelations||{};const v=clamp((db.playerRelations[k]??50)+delta,0,100);db.playerRelations[k]=Math.round(v*10)/10;return db.playerRelations[k]}
 function teamRelationshipScore(db,t){const ids=(t?.roster||[]).filter(id=>db.players[id]&&!db.players[id].retired);if(ids.length<2)return 50;let sum=0,n=0;for(let i=0;i<ids.length;i++)for(let j=i+1;j<ids.length;j++){sum+=playerRelationship(db,ids[i],ids[j]);n++}return n?sum/n:50}
+function rememberTeamRelationships(db,t,ids){
+  t.relationshipReports=t.relationshipReports||{};
+  const members=[...new Set(ids)].filter(id=>db.players[id]?.team===t.id);
+  for(let i=0;i<members.length;i++)for(let j=i+1;j<members.length;j++){
+    const key=playerRelationKey(members[i],members[j]);
+    t.relationshipReports[key]={value:playerRelationship(db,members[i],members[j]),date:db.worldDate};
+  }
+  const entries=Object.entries(t.relationshipReports);
+  if(entries.length>512)t.relationshipReports=Object.fromEntries(entries.sort((a,b)=>String(b[1].date).localeCompare(String(a[1].date))||a[0].localeCompare(b[0])).slice(0,512));
+}
+function knownRecruitRelationship(db,t,p){
+  const values=(t.roster||[]).filter(id=>id!==p.id).map(id=>{
+    const report=t.relationshipReports?.[playerRelationKey(p.id,id)];
+    if(!report||!Number.isFinite(report.value)||!report.date)return 50;
+    const days=Math.max(0,(Date.parse(db.worldDate)-Date.parse(report.date))/86400000);
+    return Number.isFinite(days)?50+(clamp(report.value,0,100)-50)*Math.max(0,1-days/730):50;
+  });
+  return values.length?avg(values):50;
+}
+function playerTeamRelationship(db,p,t){
+  const ids=(t.roster||[]).filter(id=>id!==p.id&&db.players[id]&&!db.players[id].retired);
+  return ids.length?avg(ids.map(id=>playerRelationship(db,p,id))):50;
+}
 const CAREER_GOAL_KO={development:'성장 기회',starter:'주전 정착',international:'국제대회 출전',titles:'우승 경쟁',stability:'안정적인 커리어'};
 const SAT_REASON_KO={teammates:'동료와의 불화',playing_time:'출전 시간 부족',promise_role:'역할 약속 불이행',reserve:'2군 배치',contract:'계약/연봉 불만',team_results:'팀 성적 불만',role:'역할 불만',international:'국제대회 기회 부족',career_goal:'커리어 목표 불일치'};
 function startContractRolePromise(db,p,t){
@@ -3344,7 +3367,7 @@ function afterSeries(db,lines,rec){
     for(const id of t.roster){if(by[id])continue;const p=db.players[id];if(p){pState(p);p.morale=clamp(p.morale-1,0,100);p.sharpness=clamp(p.sharpness-.8,0,100);p.teamAdaptation=clamp(p.teamAdaptation+.18,0,100);p.tacticalAdaptation=clamp(p.tacticalAdaptation+.12,0,100)}}
     const active=Object.keys(by).filter(id=>db.players[id]?.team===tid),relDelta=rec.winner===tid?.18:-.08;
     for(let i=0;i<active.length;i++)for(let j=i+1;j<active.length;j++)adjustPlayerRelationship(db,active[i],active[j],relDelta);
-    recoverTeamCohesion(db,t,active,.025);}
+    rememberTeamRelationships(db,t,active);recoverTeamCohesion(db,t,active,.025);}
 }
 // 매 경기일: 기본 피로 회복. 훈련은 아래의 희소 포인트 배분으로만 관리한다
 
@@ -4878,6 +4901,7 @@ function bestStartingLineup(db,t,locked={},scrim=false){
   const players=(team.roster||[]).map(id=>db.players[id]).filter(eligible),base={},used=new Set();
   for(const role of ROLES){const p=locked[role]&&db.players[locked[role]];if(eligible(p)&&!used.has(p.id)){base[role]=p.id;used.add(p.id)}}
   const roles=ROLES.filter(r=>!base[r]),available=players.filter(p=>!used.has(p.id));if(available.length<roles.length)return base;
+  if(!roles.length)return base;
   const scores=Object.fromEntries(available.map(p=>[p.id,Object.fromEntries(roles.map(role=>[role,lineupRoleScore(p,role)]))]));
   let dp=new Map([[0,{score:0,map:{...base}}]]);
   for(const p of available){
@@ -4888,7 +4912,19 @@ function bestStartingLineup(db,t,locked={},scrim=false){
     }
     dp=next;
   }
-  return dp.get((1<<roles.length)-1)?.map||base;
+  let best=dp.get((1<<roles.length)-1)?.map||base,bestScore=lineupAssignmentScore(db,team,best);
+  // Pair interactions are not additive, so keep the role-fit DP and refine
+  // its legal five with bounded bench substitutions rather than changing DP.
+  for(let pass=0;pass<2;pass++){
+    let improved=false;
+    for(const role of roles)for(const p of available){
+      if(Object.values(best).includes(p.id))continue;
+      const next={...best,[role]:p.id},score=lineupAssignmentScore(db,team,next);
+      if(score>bestScore+.01){best=next;bestScore=score;improved=true}
+    }
+    if(!improved)break;
+  }
+  return best;
 }
 function initializeDepthChart(db,t,force=false){
   const team=teamRef(db,t);if(!team)return;team.depthChart=team.depthChart||{};
@@ -4912,13 +4948,17 @@ function setDepthStarter(db,t,role,p,source='manager',silent=false){
   return {ok:true,old,to:player.id};
 }
 function lineupAssignmentScore(db,t,map){
-  const team=teamRef(db,t);return ROLES.reduce((sum,role)=>{const p=map&&map[role]&&db.players[map[role]];return sum+(validLineupPlayer(db,team,p)?lineupRoleScore(p,role):0)},0);
+  const team=teamRef(db,t),ids=ROLES.map(role=>map?.[role]).filter(id=>validLineupPlayer(db,team,db.players[id]));
+  const skill=ROLES.reduce((sum,role)=>{const p=map&&map[role]&&db.players[map[role]];return sum+(validLineupPlayer(db,team,p)?lineupRoleScore(p,role):0)},0);
+  return skill+(ids.length===5?(lineupCohesion(db,team,ids).relationship-50)*.2:0);
 }
 function aiReviewDepthChart(db,t){
   const team=teamRef(db,t);if(!team||team.id===managedTeamId(db))return;initializeDepthChart(db,team,false);
   const cur={...team.depthChart},best=bestStartingLineup(db,team,{}),curScore=lineupAssignmentScore(db,team,cur),bestScore=lineupAssignmentScore(db,team,best);
   const troubled=ROLES.some(role=>{const p=cur[role]&&db.players[cur[role]];return p&&((p.form||0)<=-6||p.condition<60||p.wantsOut)});
   if(!validateStartingLineup(db,team,cur).ok||bestScore-curScore>=5||(troubled&&bestScore-curScore>=3)){
+    team.lineupDecision={date:db.worldDate,before:cur,after:{...best},scoreChange:bestScore-curScore,
+      reason:'포지션 전력·동료 관계',relationship:lineupCohesion(db,team,Object.values(best)).relationship};
     team.depthChart=best;for(const role of ROLES){const pid=best[role];if(pid&&cur[role]!==pid)recordPlayerEvent(db.players[pid],'starter_change',db.year,{team:team.id,role,from:cur[role]||null,to:pid,date:db.worldDate,source:'ai'})}
   }
 }
@@ -6057,7 +6097,7 @@ function offerUtility(db,p,t,offer,opt={}){
   // preserve their prior utility. Stability/development goals value security.
   const guarantee=(contractGuaranteeRate(offer)-.5)/.25*.055*
     (career==='stability'||career==='development'?1:.5);
-  return moneyScore*1.05+roleScore+strength*amb*.18+intl*amb*.22+(t.fans||30)/250+fac+coach+careerFit+durationFit+home+option+buyout+currentPenalty+guarantee;
+  return moneyScore*1.05+roleScore+strength*amb*.18+intl*amb*.22+(t.fans||30)/250+fac+coach+careerFit+durationFit+home+option+buyout+currentPenalty+guarantee+clamp((playerTeamRelationship(db,p,t)-50)/250,-.2,.2);
 }
 function contractBonusCost(db,t,year){
   let sum=0;for(const id of t.roster){const p=db.players[id],c=p&&p.contract;if(!c||!c.bonuses)continue;const rows=(p.career||[]).filter(x=>x.year===year),g=rows.reduce((a,x)=>a+(x.g||0),0),rating=g?rows.reduce((a,x)=>a+(x.rating||6.5)*(x.g||0),0)/g:0;
@@ -6116,7 +6156,7 @@ function aiMarketObservation(db,p,t){
   // scouting-domain reports. Initial dossiers are seeded once by scouting.js.
   return aiScoutReport(db,t,p);
 }
-function aiMarketValue(db,p,t){const est=aiMarketObservation(db,p,t),up=Math.max(0,est.potential-est.ability),w={'win-now':0.1,'youth':0.6,'balanced':0.3,'superstar':0.15,'cost':0.35}[t.philosophy]||0.3;return est.ability+up*w-(t.philosophy==='youth'&&p.age>26?2:0)-medicalContractRisk(db,p)*18}
+function aiMarketValue(db,p,t){const est=aiMarketObservation(db,p,t),up=Math.max(0,est.potential-est.ability),w={'win-now':0.1,'youth':0.6,'balanced':0.3,'superstar':0.15,'cost':0.35}[t.philosophy]||0.3;return est.ability+up*w-(t.philosophy==='youth'&&p.age>26?2:0)-medicalContractRisk(db,p)*18+clamp((knownRecruitRelationship(db,t,p)-50)/25,-2,2)}
 function pFillScore(db,p,t){const domestic=projectedPlayerIsLocal(db,p,t)?2:0,age=p.age<=21?1:0,cost=Math.min(4,asking(db,p,t.region)/Math.max(.2,psOf(db,t.region)));return aiMarketValue(db,p,t)+domestic+age-cost*.15}
 function optionDecision(db,p,t){
   const o=p.contract&&p.contract.option;if(!o||o.year!==db.year)return false;
@@ -6839,6 +6879,7 @@ function negotiationSituationSnapshot(db,p,t,kind){
     satisfactionBand:satisfactionLabel(p.satisfaction),
     trustBand:p.managerTrust>=65?'strong':p.managerTrust>=55?'ok':'low',
     relationshipBand:p.managerRelationship>=45?'ok':'low',
+    teammateBand:playerTeamRelationship(db,p,t)>=65?'strong':playerTeamRelationship(db,p,t)<=35?'low':'neutral',
     issues,intlGames,titles,contractUntil:p.contract?.until??null
   };
 }
@@ -6846,7 +6887,7 @@ function negotiationSituationChanges(before,after){
   if(!before||!after)return [];
   const keys=['playerTeamId','teamId','wantsOut','wantsOutReason','careerGoal',
     'rosterRole','satisfactionBand','trustBand','relationshipBand',
-    'intlGames','titles','contractUntil'];
+    'intlGames','titles','contractUntil','teammateBand'];
   const changed=keys.filter(k=>before[k]!==after[k]);
   if(JSON.stringify(before.issues||[])!==JSON.stringify(after.issues||[]))changed.push('issues');
   return changed;
@@ -7541,7 +7582,7 @@ function playerActionSnapshot(db,action){
       return t?{id,active:t.active!==false,roster:(t.roster||[]).slice().sort(),
         cash:t.finance?.cash??null,buyout:t.finance?.buyout??null,
         deals:JSON.parse(JSON.stringify(t.finance?.transferDeals||null)),
-        foreign:teamNonLocalCount(db,t)}
+        foreign:teamNonLocalCount(db,t),relationship:p?playerTeamRelationship(db,p,t):50}
       :{id,missing:true};
     })
   };
@@ -9469,6 +9510,7 @@ function runDailyPractice(db){
       if(points&&Math.abs(target-bond)>=.1)adjustPlayerRelationship(db,a,b,
         Math.sign(next-bond)*Math.max(.1,Math.abs(next-bond)));
     }
+    if(points)rememberTeamRelationships(db,t,ids);
     recoverTeamCohesion(db,t,null,.008+points*shares.teamwork/10000);
   }
 }
