@@ -18,6 +18,19 @@ function recordFinancePrepaid(t,key,amount){
   const p=financePrepaid(t),digits=key==='medicalReplacementWage'?1000:10;
   p[key]=Math.round(((p[key]||0)+amount)*digits)/digits;
 }
+function payFinancePrepaid(t,key,amount){
+  if(!FINANCE_PREPAID_KEYS.includes(key)||key==='transferReceived'||!Number.isFinite(amount)||amount<0)
+    throw new Error('잘못된 선지급 지출 항목');
+  if(!t?.finance)throw new Error('구단 재정 정보가 없습니다');
+  t.finance.cash=Math.round((t.finance.cash-amount)*10)/10;
+  recordFinancePrepaid(t,key,amount);
+}
+function receiveFinancePrepaidTransfer(t,amount){
+  if(!Number.isFinite(amount)||amount<0)throw new Error('잘못된 이적료 수입');
+  if(!t?.finance)throw new Error('구단 재정 정보가 없습니다');
+  t.finance.cash=Math.round((t.finance.cash+amount)*10)/10;
+  recordFinancePrepaid(t,'transferReceived',amount);
+}
 function sumFinanceRows(rows){return Object.values(rows).reduce((a,v)=>a+v,0)}
 function financeSeasonWins(db,t,w=db.world){if(!w?.seasons)return 0;
   return Object.values(w.seasons).reduce((n,s)=>{
