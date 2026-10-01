@@ -242,11 +242,11 @@ jobs:
       - name: Aggregate calendar medical invariant
         run: node scripts/medical-shard-aggregate.mjs calendar medical-shards/calendar-0.json medical-shards/calendar-1.json
 
-  regression-smoke-career:
+  regression:
     needs: [changes, ui-finance-contracts, calendar-scouting]
     if: needs.changes.outputs.run_full == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 6
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -256,8 +256,61 @@ jobs:
         with:
           node-version: 22
 
-      - name: Regression smoke and career full gate
-        run: npm run check:regression-smoke-career
+      - name: System snapshot and regression
+        run: npm run validate:systems && npm run regression
+
+  smoke:
+    needs: [changes, ui-finance-contracts, calendar-scouting]
+    if: needs.changes.outputs.run_full == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Full smoke coverage
+        run: node scripts/smoke.mjs
+
+  career:
+    needs: [changes, ui-finance-contracts, calendar-scouting]
+    if: needs.changes.outputs.run_full == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Career acceptance
+        run: npm run career:acceptance
+
+  regression-smoke-career:
+    needs: [changes, regression, smoke, career]
+    if: always() && needs.changes.outputs.run_full == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Aggregate regression smoke career gate
+        shell: bash
+        env:
+          REGRESSION_RESULT: ${{ needs.regression.result }}
+          SMOKE_RESULT: ${{ needs.smoke.result }}
+          CAREER_RESULT: ${{ needs.career.result }}
+        run: |
+          set -euo pipefail
+          [[ "$REGRESSION_RESULT" == "success" ]]
+          [[ "$SMOKE_RESULT" == "success" ]]
+          [[ "$CAREER_RESULT" == "success" ]]
+          echo "Regression/smoke/career aggregate gate passed."
 
   perf-build:
     needs: [changes, ui-finance-contracts, calendar-scouting]
