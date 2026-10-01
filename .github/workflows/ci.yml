@@ -132,7 +132,7 @@ jobs:
 
   calendar-scouting:
     needs: [changes, static-fast]
-    if: needs.changes.outputs.docs_only != 'true'
+    if: needs.changes.outputs.run_calendar == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:

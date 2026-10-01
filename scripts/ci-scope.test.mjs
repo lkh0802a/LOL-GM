@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {validationScope} from './ci-scope.mjs';
+import {readFileSync} from 'node:fs';
 test('engine and unknown changes retain all required validation',()=>{
   for(const file of ['src/artifact/club-license.js','scripts/test-harness.mjs','package.json','unknown']){
     const s=validationScope('pull_request','false',[file]);
@@ -26,4 +27,11 @@ test('main publishes the validated merge without repeating season suites',()=>{
   const s=validationScope('push','false',['src/artifact/world.js']);
   assert.deepEqual(s,{docs_only:false,run_full:false,run_ui:false,run_calendar:false,run_build:true});
   assert.equal(validationScope('push','false',['docs/DEVELOPMENT.md']).run_build,false);
+});
+test('workflow domain jobs use the selected scope rather than docs-only',()=>{
+  const workflow=readFileSync(new URL('../.github/workflows/ci.yml',import.meta.url),'utf8');
+  for(const [job,output] of [['ui-finance-contracts','run_ui'],['calendar-scouting','run_calendar'],['perf-build','run_build'],['medical','run_full'],['daily-career-smoke','run_full']]){
+    const block=workflow.match(new RegExp('^  '+job+':[\\s\\S]*?(?=^  [a-z][a-z-]*:|$(?![\\s\\S]))','m'))?.[0];
+    assert(block?.includes("if: needs.changes.outputs."+output+" == 'true'"),job);
+  }
 });
