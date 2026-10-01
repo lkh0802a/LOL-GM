@@ -188,7 +188,9 @@ retains its existing affordability check and action flow; zero-cost severance
 still does not create a prepaid row. The guard inventory now shows zero direct
 cash writes in those caller modules too.
 
-Medical replacement wages keep their finer medical-specific rounding and need a
-dedicated follow-up. Accounting paths that use a local `cash` alias are outside
-this conservative guard. Search the actual callers and ledger categories before
-each migration; do not claim all finance mutation is centralized yet.
+Medical replacement signing and daily conditional wages now use
+`finance.js::payMedicalReplacementWage`, which preserves their three-decimal
+cash and prepaid rounding. The medical acceptance continues to cover the
+conditional-pay rules. Accounting paths that use a local `cash` alias remain
+outside this conservative guard. Search actual callers and ledger categories
+before each migration; do not claim all finance mutation is centralized yet.

@@ -152,8 +152,7 @@ function medicalReplacementCharge(db,p,through){
   if(due){
     // An explicit conditional daily extension is a payroll liability even if
     // the club's cash has since run out; never make a player work for free.
-    t.finance.cash=medicalWageRound(t.finance.cash-due);
-    recordFinancePrepaid(t,'medicalReplacementWage',due);
+    payMedicalReplacementWage(t,due);
   }
   c.paid=medicalWageRound(c.paid+due);c.paidThrough=through;
   return due;

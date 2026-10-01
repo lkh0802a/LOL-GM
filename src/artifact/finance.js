@@ -31,6 +31,12 @@ function receiveFinancePrepaidTransfer(t,amount){
   t.finance.cash=Math.round((t.finance.cash+amount)*10)/10;
   recordFinancePrepaid(t,'transferReceived',amount);
 }
+function payMedicalReplacementWage(t,amount){
+  if(!Number.isFinite(amount)||amount<0)throw new Error('잘못된 의료 대체 급여');
+  if(!t?.finance)throw new Error('구단 재정 정보가 없습니다');
+  t.finance.cash=Math.round((t.finance.cash-amount)*1000)/1000;
+  recordFinancePrepaid(t,'medicalReplacementWage',amount);
+}
 function sumFinanceRows(rows){return Object.values(rows).reduce((a,v)=>a+v,0)}
 function financeSeasonWins(db,t,w=db.world){if(!w?.seasons)return 0;
   return Object.values(w.seasons).reduce((n,s)=>{
