@@ -2875,7 +2875,7 @@ function rookieClassLabel(w){
 function rookieGlobalCohort(db){
   db.global=db.global||{};db.global.rookieCycles=db.global.rookieCycles||{};
   if(db.global.rookieCycles[db.year])return db.global.rookieCycles[db.year];
-  const rng=new RNG((db.world?.seed||db.saveId||'world')+'/'+db.year,'rookie-global');
+  const rng=new RNG(worldSimulationSeed(db)+'/'+db.year,'rookie-global');
   let quality=Math.exp(rng.normal(0,.14)),volume=Math.exp(rng.normal(0,.07));
   const shock=rng.next();if(shock<.045)quality*=rng.range(1.22,1.48);else if(shock>.955)quality*=rng.range(.68,.84);
   quality=clamp(quality,.58,1.62);volume=clamp(volume,.86,1.16);
@@ -3530,6 +3530,10 @@ function medicalOffseasonRecovery(db,date){
 
 /* ==== FILE: world.js ==== */
 // ===== LOL GM: 월드 (Phase 5 성장 + 월드 확장) =====
+const WORLD_GENERATION_SEED='world-v7';
+// Before a career starts, simulation belongs to the canonical generated world.
+// saveId identifies storage/transactions and must never seed gameplay.
+function worldSimulationSeed(db){return db.world?.seed||WORLD_GENERATION_SEED}
 function genTactics(rng){return {aggression:rng.int(35,80),risk_tolerance:rng.int(30,75),objective_priority:rng.int(45,80),vision_investment:rng.int(45,80),scaling_preference:rng.int(30,75)}}
 const PHILOSOPHIES=['win-now','youth','balanced','superstar','cost'];
 const PHIL_KO={'win-now':'즉시 전력','youth':'유망주 육성','balanced':'균형','superstar':'스타 영입','cost':'효율 중시'};
@@ -3722,7 +3726,7 @@ function addRegion(db,rng,cfg){
 function buildWorld(cfg){
   cfg=JSON.parse(JSON.stringify(cfg||defaultWorldConfig()));
   const db={version:15,saveId:'save-'+Date.now().toString(36),manager:{id:'manager-human',teamId:null,startMode:null,careerStartedAt:null},worldDate:`${cfg.startYear||2027}-01-01`,awards:[],hof:[],global:{decisions:[],power:{}},patch:buildPatch(),teams:{},players:{},regions:{},competitions:{},worldConfig:cfg,world:null,history:[],news:[],year:cfg.startYear||2027,configDirty:false,scout:{}};
-  const rng=new RNG('world-v7','gen');
+  const rng=new RNG(WORLD_GENERATION_SEED,'gen');
   initPatches(db);
   for(const r of cfg.regions) addRegion(db,rng,r);
   for(const t of activeTeams(db))ensureTeamStaff(db,t,rng);genStaffPool(db,rng)
@@ -7509,7 +7513,7 @@ function roleConversionAcceptance(db,p,targetRole,source='manager'){
   const assigned=team&&ROLES.find(r=>team.depthChart?.[r]===p.id),opportunity=assigned===targetRole?10:assigned&&assigned!==p.role?3:0;
   const history=roleHistoryBonus(p,targetRole)?9:0,activePenalty=p.roleConversion&&p.roleConversion.targetRole!==targetRole?Math.min(14,(p.roleConversion.progress||0)*.14):0;
   const repeated=Math.min(14,Math.max(0,(p.roleProposalCount||0)-2)*2.5),score=38+adapt*.22+prof*.1+(trust-50)*.18+(relation-50)*.08+fitDelta*.6+opportunity+history-agePenalty-activePenalty-repeated;
-  const threshold=58+((hashStr((db.world?.seed||db.saveId)+'|role-proposal|'+p.id+'|'+targetRole+'|'+(db.worldDate||db.year)+'|'+p.roleProposalCount)%1001)/1000-0.5)*12;
+  const threshold=58+((hashStr(worldSimulationSeed(db)+'|role-proposal|'+p.id+'|'+targetRole+'|'+(db.worldDate||db.year)+'|'+p.roleProposalCount)%1001)/1000-0.5)*12;
   return {ok:true,accepted:score>=threshold,score,threshold,targetFit,currentFit,reason:score>=threshold?'선수가 전향 계획을 수락했습니다':'선수가 현재 커리어 계획과 맞지 않는다며 전향을 거절했습니다'};
 }
 function proposeRoleConversion(db,pid,targetRole,source='manager'){
@@ -7757,7 +7761,7 @@ function initialReleasePlayer(db,pid){
 function initialCandidateScore(db,p,t,key='',salary=null){
   const ps=Math.max(.2,psOf(db,t.region)),cost=(salary??asking(db,p,t.region))/ps,costWeight={cost:.55,balanced:.28,youth:.3,'win-now':.16,superstar:.1}[t.philosophy]??.28;
   const star=t.philosophy==='superstar'?(p.reputation||0)*.025:0,covered=(t.roster||[]).some(id=>db.players[id]?.role===p.role),coverage=covered?0:1.25;
-  const noise=((hashStr((db.world?.seed||db.saveId)+'|initial|'+t.id+'|'+p.id+'|'+key)%2001)/1000-1)*1.2;
+  const noise=((hashStr(worldSimulationSeed(db)+'|initial|'+t.id+'|'+p.id+'|'+key)%2001)/1000-1)*1.2;
   return aiMarketValue(db,p,t)+star+coverage-cost*costWeight+noise;
 }
 function initialMarketSnapshot(db,teams){
