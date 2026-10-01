@@ -566,7 +566,7 @@ jobs:
 
   standalone-sync:
     needs: [changes, perf-build, verify]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.outputs.run_full == 'true' && needs.verify.result == 'success'
+    if: ${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.result == 'success' && needs.changes.outputs.run_full == 'true' && needs.perf-build.result == 'success' && needs.verify.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 3
     permissions:

@@ -40,6 +40,13 @@ push. It downloads that run's HTML preview artifact; the build job verifies
 byte equality with root `index.html`. Only the publishing job can write repository
 contents. PR validation never publishes standalone files.
 
+Publication evaluates with an explicit status-check function and independently
+requires successful changes, perf-build and verify results. Optional skipped
+parity jobs must not suppress publication after a green main gate. A failure or
+cancellation in a required job still prevents publication. PR/manual/docs-only
+runs cannot publish. Real Actions evidence must include a completed publishing
+job, not just a successful overall run.
+
 ## Explicit full and parity runs
 
 Use Actions → CI → Run workflow with the intended branch/ref. Manual dispatch
