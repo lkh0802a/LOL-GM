@@ -20,19 +20,23 @@ Generated root `index.html` is not source. Canonical runtime source is `src/arti
 | Domain | Current owners | Runtime entry / writer path | R01 finding |
 | --- | --- | --- | --- |
 | World action gateway | `state-transaction.js`, `state-player-actions.js`, `state-rollback.js` | `validateWorldAction → previewWorldAction/applyWorldAction → commitWorldAction` | Player sign/transfer/release/option already have a shared gateway and rollback scope. Preserve it. |
-| Contracts | `contracts.js`, `contract-window.js`, `contract-agreement.js`, `contract-contact-ai.js`, `contract-market-behavior.js` | negotiation/market/window → `commitWorldAction(player.sign/player.option/player.release)` → `signContract` | B1–B3 rules are already implemented. Do not rebuild. Ownership is split across several modules and negotiation state still lives in `transfer.js`. |
-| Transfers / recruitment | `transfer.js` | recruitment/negotiation → `commitWorldAction(player.transfer/player.sign/player.release/player.option)` → `doTransfer` / player action writer | `transfer.js` currently owns recruitment, generic negotiation state and permanent transfer execution helpers. Boundary with contracts is broader than the filename suggests. |
-| Finance | `finance.js` for forecasts, statements and prepaid ledger | domain writer mutates cash + `recordFinancePrepaid` | Cash ownership is distributed. Direct `team.finance.cash` writes exist in contracts, transfer, medical, scouting, scouting AI and facilities/development. This is the clearest R03 consolidation target. |
-| Roster / registration | `roster.js`, `lineup.js` | roster plan / eligibility helpers; low-level `assignPlayerToTeam`, `removePlayerFromTeam` | Most permanent player movement uses shared helpers. One important bypass remains: AI reserve call-up inside `contracts.js` directly calls `assignPlayerToTeam` instead of the roster-plan transaction path. |
-| Calendar / world day | `season.js` for normal daily progression; `timezone-calendar.js`, `broadcast-calendar.js` for schedule construction | `playWorldDay → nextCalendarDate → applyWorldDailyEffects` | Normal-season ownership is clear, but `contract-window.js` and `offseason.js` directly assign `db.worldDate`. The post-Worlds contract clock is a second mutation path that R04 must converge without changing B3 date semantics. |
+| Contracts | `contracts.js`, `contract-negotiation.js`, `contract-window.js`, `contract-agreement.js`, `contract-contact-ai.js`, `contract-market-behavior.js` | negotiation/market/window → `commitWorldAction(player.sign/player.option/player.release)` → domain writer | Negotiation state moved out of transfer; release preview/application/UI share contractReleaseCost. Accepted B1–B3 rules remain intact. |
+| Transfers / recruitment | `transfer.js` | seller fee/recruitment → player negotiation → `commitWorldAction(player.transfer)` → `doTransfer` | Seller and player terms have explicit owners; permanent movement uses the existing player gateway. |
+| Finance | `finance.js` | expense/transfer/wage APIs → cash + prepaid ledger; release obligation → annual settlement | Callers no longer write club cash directly. Payroll, obligations, forecast and closeout consume the same contract state. |
+| Roster / registration | `roster.js`, `lineup.js` | shared gateway → roster.plan or roster.market-callup → roster writers | AI market maintenance now uses its own atomic command, preserving underfilled-market semantics and manager authority. Lineup owns match slots. |
+| Calendar / world day | `calendar.js`, `timezone-calendar.js`, `broadcast-calendar.js` | season/window/offseason → setWorldCalendarDate; season → applyWorldDailyEffects | One raw date writer; raw positioning remains separate from daily effects. Worlds+14/day-15 boundaries are preserved. |
 | Competition | `competition.js`, `league-aggregation.js`, `series.js` | season creates/advances competition state | No direct roster/cash/world-date mutation hotspot was found in the competition module scan. This boundary is comparatively clean. |
-| Scouting | `scouting.js`, `scouting-ai*.js` | observation/report APIs and AI operations | Scouting knowledge ownership is localized. Manual and AI scouting both debit club cash directly, so finance integration is cross-domain. |
-| Medical | `medical.js` | medical state + replacement actions; replacement sign/release uses world action gateway | Player medical state is localized, but replacement wages directly mutate club cash before recording prepaid finance rows. |
-| Development / facilities | `development.js` | training/facility state | Facility investment directly mutates club cash and records prepaid finance rows. |
+| Scouting | `scouting.js`, `scouting-ai*.js` | observation/report APIs and AI operations → finance expense API | Knowledge stays in scouting; dated operations consume calendar state; manual and AI costs use finance. |
+| Medical | `medical.js` | exposure/recovery + player replacement gateway → finance wage API | Medical owns deterministic exposure; calendar orders daily effects; three-decimal replacement wages remain finance-owned. |
+| Development / facilities | `development.js` | training/construction state → finance expense API | Board chooses investment; calendar activates completed construction; no UI copy of facility rules. |
 | UI | `ui-*.js`, `app.js` | UI calls domain/controller APIs; `app.js` owns storage controller | Sampled management UI has no direct roster/cash writer. `ui-negotiations.js` consumes the engine `contractDurationPolicy` instead of copying duration rules. Keep UI as consumer, not rule owner. |
 | Persistence | `save.js`, `save-migration.js`, `app.js` | `saveDB → packDB → IndexedDB/local fallback`; load → migration/normalization → `unpackDB` | World schema v15 / save format 2 compatibility is active product behavior, not removable legacy. |
 
-## Code-backed mutation hotspots
+## R01 baseline mutation findings (resolved below)
+
+This section records the original findings, not the current caller graph.
+R03 resolved cash/release ownership, R04 resolved clock ownership and R05
+resolved the market-callup bypass. The final map above describes current code.
 
 ### 1. Finance mutation is not actually finance-owned
 
@@ -93,11 +97,16 @@ The refactor target is unauthorized caller count, not the existence of low-level
 
 ### Roster planning
 
-Canonical path is `roster plan validation/preview/apply` with `roster.js` owning local-registration and move-limit rules. The AI reserve call-up in `contracts.js` is the known exception to remove after parity coverage.
+Canonical path is `commitWorldAction(roster.plan) → roster validation/application`.
+AI market replenishment uses `commitWorldAction(roster.market-callup)` with the
+same gateway/rollback and its own market-specific validator. Weekly move events
+and full-roster registration requirements do not apply to market replenishment.
 
 ### World-day progression
 
-Canonical in-season path is `season::playWorldDay → nextCalendarDate → applyWorldDailyEffects`. Offseason contract-window date mutation is the known parallel path.
+Canonical in-season path is `season::playWorldDay → calendar::nextCalendarDate →
+calendar::applyWorldDailyEffects`. Season/window/offseason raw positioning uses
+calendar::setWorldCalendarDate without replaying daily effects.
 
 ### Save/load
 
@@ -298,3 +307,48 @@ engine references to application UI/storage globals. These are conservative
 source-text checks, not an alias-aware dependency proof. The ordered classic-
 script runtime remains a deliberate build mechanism; directory/ESM conversion
 is not required for domain ownership and is not fabricated as completed.
+
+## R08 complete manifest / dependency and change map
+
+All 73 manifest modules belong to the cohorts below. Dependencies are public
+classic-script APIs, not ES imports. Manifest order controls top-level evaluation;
+cross-domain function calls can resolve later declarations. Consequently this
+table is an ownership/change map, not a claim of an acyclic import graph.
+
+| Change area | Modules to inspect | Dependencies / consumers |
+| --- | --- | --- |
+| Pinned external snapshots | champion-source, system-source | Data normalization consumes snapshots; generated HTML is never source. |
+| RNG and match rules | random, engine, draft, systems | Series/competition consume deterministic simulation; UI supplies commands. |
+| Data and content naming | data, champion-data, system-data, champs2, content-naming | World/patch consume normalized templates and procedural naming. |
+| Meta and patch | meta, patch, patch-balance, patch-content | Match evidence informs diagnosis; calendar triggers dated patch events. |
+| Competition results | series, competition, league-aggregation | Consume simulation, roster/lineup eligibility and calendar schedule helpers; season orchestrates lifecycle. |
+| Schedule construction | timezone-calendar, broadcast-calendar | Competition/season consume date/time helpers; no world-clock writer. |
+| Player state and growth | player, development, player-relations, medical, role-conversion | Consume RNG, contracts, roster, staff and finance APIs; calendar orders daily effects. |
+| World lifecycle | world, calendar, season, offseason, career | Compose domain APIs; world owns bootstrap, calendar owns clock, season owns phase orchestration. |
+| Serialization | save, save-migration | Read domain state; migrate supported encoding; app owns storage I/O. |
+| Player commands and membership | roster, lineup, state-transaction, state-rollback, state-player-actions | UI/AI share command gateway; domain application consumes contracts/finance; lineup owns match slots. |
+| Governance | office, office-international | World/offseason consume regional/topology governance; retirement/restructure use intentional low-level roster removal. |
+| Economy and contracts | finance, contracts, contract-market-behavior, contract-negotiation, transfer, contract-window, contract-contact-ai, contract-agreement | Contract terms feed finance; recruitment consumes scouting; persistent player changes enter shared gateway. |
+| Scouting | scouting, scouting-ai, scouting-ai-ops, scouting-ai-reassessment | Consume calendar/player/finance; contract and draft queries consume observed knowledge. |
+| Staff, practice and club features | staff, scrim-partner, scrim, features, draft-analysis | Consume player/roster/scouting/finance/simulation; draft-analysis does not own draft legality. |
+| Contract UI | ui-negotiations, ui-market-initial, ui-market-staff, ui-market | Consume engine policy/previews and issue commands; no duplicate settlement rule. |
+| Setup and information UI | ui-patch, ui-champion, ui-setup, ui-data, ui-player | Consume engine state; save-slot operations go through app controller. |
+| Play and management UI | ui-match, ui-manager, ui-roster, ui-draft, ui-season | Consume domain commands and observed information; manager batches cancellable simulation. |
+| UI lifecycle and storage | ui-overlay, ui-state, app | Overlay owns focus/modal lifecycle, state owns routing, app owns storage/async ownership tokens. Engine does not reference their globals. |
+
+Names in the table have the `.js` suffix omitted. Conservative static checks
+guard duplicate globals, mandatory dependencies, mutation ownership and engine
+UI/storage isolation. Behavioral gates cover what text checks cannot: late
+failure rollback, pure previews, save restoration and canonical seed results.
+
+`scripts/refactor-parity.mjs` runs the same current full smoke and two-season
+career oracle against the pinned R01 engine and current HEAD. It requires exact
+SHA-256 equality for five smoke runtime/persisted result sets and ten career
+runtime/persisted checkpoints, including two format-1 restores. Only saveId
+(wall-clock storage identity) is excluded; no gameplay field or RNG state is
+excluded. Existing assertions, seeds, match counts and seasons are unchanged.
+This opt-in Actions evidence is in validation-smoke-parity/refactor-parity.json.
+
+Completion requires the final PR full CI and explicitly dispatched parity gate
+to succeed before merge, followed by main full CI. Issue #62 is the authoritative
+completion status. D04-B4 and Android delivery remain subsequent work.
