@@ -1,11 +1,17 @@
 // ===== LOL GM: Club goals / sponsorship / awards domain =====
-const GOAL_KO={title:'리그 우승',final:'결승 진출',playoffs:'플레이오프 진출',top_half:'상위권 (중위 이상)',survive:'강등 피하기'};
+const GOAL_KO={title:'리그 우승',final:'결승 진출',playoffs:'플레이오프 진출',top_half:'상위권 (중위 이상)',survive:'강등 피하기',avoid_bottom:'하위권 탈출'};
 
+function clubCanBeRelegated(db,t){
+  const r=db.regions[t.region];
+  return !!r&&['relegation','mixed'].includes(r.system)&&!t.parent&&
+    !(r.system==='mixed'&&t.franchised);
+}
+function realisticClubGoal(db,t,goal){return goal==='survive'&&!clubCanBeRelegated(db,t)?'avoid_bottom':goal}
 // ---- 구단주 목표 ----
 function setGoals(db){
   for(const R of Object.values(db.regions)){
     const ts=activeTeams(db,R.id,1).sort((a,b)=>teamStrength(db,b.id)-teamStrength(db,a.id)), n=ts.length;
-    ts.forEach((t,i)=>{t.goal=i<1?'title':i<2?'final':i<Math.min(R.playoffTake||4,n)-1?'playoffs':i<n/2?'top_half':'survive'});
+    ts.forEach((t,i)=>{t.goal=i<1?'title':i<2?'final':i<Math.min(R.playoffTake||4,n)-1?'playoffs':i<n/2?'top_half':realisticClubGoal(db,t,'survive')});
   }
 }
 function evalGoals(db,w,rep,ev){
@@ -13,8 +19,9 @@ function evalGoals(db,w,rep,ev){
     const s=finalSeason(w,R); if(!s||!s.done)continue;
     const reg=standings(db,s,'regular').map(x=>x.tid), po=s.stageData.playoffs, inPO=po?(po.seeds||[]):reg.slice(0,4);
     for(const t of activeTeams(db,R.id,1)){ if(!t.goal)continue;
+      t.goal=realisticClubGoal(db,t,t.goal);
       const rank=reg.indexOf(t.id), n=reg.length;
-      const ok={title:s.champion===t.id,final:s.champion===t.id||s.runnerUp===t.id,playoffs:inPO.includes(t.id),top_half:rank>=0&&rank<n/2,survive:rank>=0&&rank<n-(R.relegate||1)}[t.goal];
+      const ok={title:s.champion===t.id,final:s.champion===t.id||s.runnerUp===t.id,playoffs:inPO.includes(t.id),top_half:rank>=0&&rank<n/2,survive:rank>=0&&rank<n-(R.relegate||1),avoid_bottom:rank>=0&&rank<Math.ceil(n*.75)}[t.goal];
       t.goalLog=[...(t.goalLog||[]),{year:w.year,goal:t.goal,ok}].slice(-6);
       if(ok){t.owner.patience=Math.min(3,(t.owner.patience??2)+1);t.owner.wealth=Math.min(99,t.owner.wealth+2)}
       else t.owner.patience=(t.owner.patience??2)-1;
@@ -33,7 +40,7 @@ function sponsorMarketStrength(db,t){
 function sponsorGoalFor(t){
   if(['title','final'].includes(t.goal))return 'final';
   if(t.goal==='playoffs')return 'playoffs';
-  if(t.goal==='top_half'||(t.goal==='survive'&&(t.franchised||t.license==='franchise')))return 'top_half';
+  if(t.goal==='avoid_bottom'||t.goal==='top_half'||(t.goal==='survive'&&(t.franchised||t.license==='franchise')))return 'top_half';
   return 'survive';
 }
 function sponsorGoalLabel(goal){

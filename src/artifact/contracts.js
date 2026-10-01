@@ -49,9 +49,15 @@ function contractDurationFit(db,p,t,years){
   return Math.max(.055,.165-distance*.055);
 }
 function contractGuaranteePolicy(p){
-  const goal=p?playerCareerGoal(p):null;
-  return {defaultRate:.5,choices:[.5,.75,1],
-    preferred:goal==='stability'?1:goal==='development'?.75:.5};
+  return {defaultRate:.5,choices:[.5,.75,1],preferred:.5};
+}
+function regionalContractGuaranteeRate(db,t){
+  const rate=db.regions[t.region]?.releaseGuaranteeRate;
+  return contractGuaranteePolicy(null).choices.includes(rate)?rate:.5;
+}
+function bindingAgreementTerms(db,p,t,a){
+  return {...normalizeContractTerms(db,p,t,a.salary,a.years,a.terms),
+    releaseGuaranteeRate:contractGuaranteeRate(a.terms)};
 }
 function contractGuaranteeRate(contract){
   // Missing terms in old saves retain the historical half-salary protection.
@@ -63,7 +69,7 @@ function contractGuaranteeTermsValid(terms){
   return terms?.releaseGuaranteeRate==null||
     contractGuaranteePolicy(null).choices.includes(terms.releaseGuaranteeRate);
 }
-function normalizeContractTerms(db,p,t,salary,years,terms={}){
+function normalizeContractTerms(db,p,t,salary,years,terms={},opt={}){
   const duration=contractDurationPolicy(db,p,t),
     requestedYears=years==null||years===''?duration.preferred:+years;
   salary=Math.max(.1,Math.round(+salary*10)/10);
@@ -75,7 +81,7 @@ function normalizeContractTerms(db,p,t,salary,years,terms={}){
   const option=optionType==='none'?null:{type:optionType,year:until+1,salary:Math.round((terms.option?.salary??salary)*10)/10};
   const buyout=terms.buyout==null||+terms.buyout<=0?null:Math.round(+terms.buyout*10)/10;
   return {salary,years,signingBonus:sign,bonuses,buyout,option,
-    releaseGuaranteeRate:contractGuaranteeRate(terms),
+    releaseGuaranteeRate:opt.preserveGuarantee?contractGuaranteeRate(terms):regionalContractGuaranteeRate(db,t),
     promisedRole:SQUAD_ROLES.includes(terms.promisedRole)?terms.promisedRole:defaultPromisedRole(db,p,t)};
 }
 function contractExpectedValue(c){if(!c)return 0;const b=c.bonuses||{};return c.salary+(c.signingBonus||0)/Math.max(1,c.years||1)+(b.performance||0)*.35+(b.title||0)*.14+(b.international||0)*.2}
@@ -99,7 +105,7 @@ function contractBonusCost(db,t,year){
   return Math.round(sum*10)/10;
 }
 function signContract(db,p,t,salary,years,terms={}){
-  const old=p.team,offer=normalizeContractTerms(db,p,t,salary,years,terms);assignPlayerToTeam(db,p,t);invalidateMarketDemand(db);p.faYears=0;
+  const old=p.team,offer=normalizeContractTerms(db,p,t,salary,years,terms,{preserveGuarantee:true});assignPlayerToTeam(db,p,t);invalidateMarketDemand(db);p.faYears=0;
   p.contract={salary:offer.salary,until:db.year+offer.years-1,signed:db.year,years:offer.years,signingBonus:offer.signingBonus,bonuses:offer.bonuses,buyout:offer.buyout,option:offer.option,releaseGuaranteeRate:offer.releaseGuaranteeRate,promisedRole:offer.promisedRole};
   startContractRolePromise(db,p,t);ensurePlayerAgent(p);
   if(offer.signingBonus&&t.finance)payFinancePrepaid(t,'signingBonus',offer.signingBonus);

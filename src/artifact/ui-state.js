@@ -17,7 +17,6 @@ const UI_ROUTES=Object.freeze({
   match:{render:viewMatch,bind:bindMatch},
   squad:{render:viewSquad,bind:bindSquad},
   patch:{render:viewPatch,bind:bindPatch},
-  mc:{render:viewMC,bind:bindMC},
   data:{render:viewData,bind:bindData}
 });
 // Cooperative UI work is scoped to its world, save slot and render generation.

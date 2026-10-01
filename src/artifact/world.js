@@ -172,7 +172,7 @@ function inferRegionPolicy(db,R){
 }
 
 function addRegion(db,rng,cfg){
-  const R={...cfg,talent:cfg.strength,joined:db.year,lastPlacement:null,metrics:[],decisions:[]};
+  const R={...cfg,releaseGuaranteeRate:.5,talent:cfg.strength,joined:db.year,lastPlacement:null,metrics:[],decisions:[]};
   R.payScale=deriveRegionPayScale(R);
   db.regions[R.id]=R;
   let made=0;

@@ -1,8 +1,8 @@
 // ===== LOL GM: Save-slot / import-export UI =====
 function slotMeta(n){try{return JSON.parse(localStorage.getItem(STORAGE_NS+'-meta-'+n)||'null')}catch(e){return null}}
 function viewData(){
-  return `<section class="teamhead"><h2>저장 슬롯</h2><p>커리어를 3개까지 따로 저장할 수 있습니다. 진행 상황은 자동 저장됩니다.</p></section>
-  <section class="cfgs">${['1','2','3'].map(n=>{const m=slotMeta(n);return `<div class="cfgcard compact ${n===SLOT?'cur':''}"><div class="cfghead"><b>슬롯 ${n}${n===SLOT?' · 사용 중':''}</b>${n===SLOT?'':`<button class="ghost sm2" data-slot="${n}">불러오기</button>`}</div><p class="hint">${m&&m.team?`${esc(m.team)} · ${m.year} 시즌`:'비어 있음 — 불러오면 새 세계를 만듭니다'}</p></div>`}).join('')}</section>
+  return `<section class="teamhead"><h2>저장 슬롯</h2><p>커리어를 10개까지 따로 저장할 수 있습니다. 진행 상황은 자동 저장됩니다.</p></section>
+  <section class="cfgs">${SAVE_SLOTS.map(n=>{const m=slotMeta(n);return `<div class="cfgcard compact ${n===SLOT?'cur':''}"><div class="cfghead"><b>슬롯 ${n}${n===SLOT?' · 사용 중':''}</b>${n===SLOT?'':`<button class="ghost sm2" data-slot="${n}">불러오기</button>`}</div><p class="hint">${m&&m.team?`${esc(m.team)} · ${m.year} 시즌`:'비어 있음 — 불러오면 새 세계를 만듭니다'}</p></div>`}).join('')}</section>
   <section class="teamhead"><h2>데이터 내보내기·가져오기</h2><p>선수, 팀, 챔피언, 패치, 기록이 모두 들어 있는 JSON입니다. 복사해 두었다가 다른 기기나 슬롯에 붙여 넣을 수 있습니다.</p></section>
   <section class="controls"><button class="ghost" id="dshow">JSON 열기</button><button class="primary" id="dapply">붙여 넣은 JSON 적용</button><button class="ghost" id="dcopy">복사</button><button class="ghost" id="dreset">이 슬롯 초기화</button></section>
   <p id="dmsg" class="hint" role="status"></p>

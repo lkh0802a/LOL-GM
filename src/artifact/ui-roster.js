@@ -1,5 +1,6 @@
 // ===== LOL GM: Roster / player management UI =====
 // Squad editing, free match-role assignment, player detail and scouting surfaces.
+const TACTIC_AXES={aggression:['교전 회피','교전 주도'],risk_tolerance:['안정 지향','위험 감수'],objective_priority:['킬·교전 지향','오브젝트 지향'],vision_investment:['성장 투자','시야 투자'],scaling_preference:['초반 지향','후반 지향']};
 
 function squadEditState(t){
   const root=parentTeamOf(DB,t)||t;
@@ -29,7 +30,7 @@ function viewSquad(){
   <section class="teamhead"><h2>${esc(t.name)}</h2><p>${t.formerNames&&t.formerNames.length?'전신 '+t.formerNames.map(esc).join(', ')+' · ':''}${esc(DB.regions[t.region].leagueName)} · 감독 ${t.id===managedTeamId(DB)?'플레이어':'구단 AI'} · 운영 철학 ${PHIL_KO[t.philosophy]||'균형'} · 팬덤 ${t.fans??'—'} · 팀 호흡 ${Math.round(teamSynergy(t))}${t.goal?` · 구단주 목표: ${GOAL_KO[t.goal]}`:''}</p><p class="hint">전문 스태프가 밴픽·분석·육성·회복을 지원하며, 관리 구단의 최종 스포츠 결정은 플레이어가 내립니다.</p></section>
   ${officialRegistrationPanel(t)}
   <section><h3>팀 전술</h3><div class="tac">
-    ${Object.keys(TAC_KO).map(k=>`<label><span>${TAC_KO[k]}<output>${tac[k]}</output></span><input type="range" min="0" max="100" value="${tac[k]}" data-tac="${k}"></label>`).join('')}
+    ${Object.keys(TAC_KO).map(k=>`<label><span>${TAC_KO[k]}<output>${tac[k]}</output></span><input type="range" min="0" max="100" value="${tac[k]}" data-tac="${k}" aria-label="${TAC_KO[k]}"${mineOrg?"":" disabled"}><span class="tactic-axis"><small>${TACTIC_AXES[k][0]}</small><small>${TACTIC_AXES[k][1]}</small></span></label>`).join('')}
   </div></section>
   ${financePanel(t)}
   ${squadLoanPanel(t)}

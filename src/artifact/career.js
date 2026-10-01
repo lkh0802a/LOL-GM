@@ -1,5 +1,5 @@
 // ===== LOL GM: first-season blank roster setup =====
-const INITIAL_GOAL_KO={title:'리그 우승 도전',final:'결승권 진입',playoffs:'플레이오프 진출',top_half:'상위권 정착',survive:'1부 잔류',promotion:'1부 승격 도전',develop:'유망주 육성과 경쟁력 확보'};
+const INITIAL_GOAL_KO={title:'리그 우승 도전',final:'결승권 진입',playoffs:'플레이오프 진출',top_half:'상위권 정착',survive:'1부 잔류',avoid_bottom:'하위권 탈출',promotion:'1부 승격 도전',develop:'유망주 육성과 경쟁력 확보'};
 
 function prepareFirstSeasonFreeAgency(db){
   const strength={};
@@ -12,8 +12,8 @@ function prepareFirstSeasonFreeAgency(db){
   for(const R of Object.values(db.regions))for(const div of R.div2?[1,2]:[1]){
     const ts=activeTeams(db,R.id,div).slice().sort((a,b)=>(b.reputation||0)-(a.reputation||0)),n=ts.length;
     ts.forEach((t,i)=>{
-      if(div===2)t.setupGoal=t.parent?'develop':i<Math.min(2,n)?'promotion':i<Math.ceil(n/2)?'playoffs':'develop';
-      else t.setupGoal=i<1?'title':i<2?'final':i<Math.min(R.playoffTake||4,n)-1?'playoffs':i<n/2?'top_half':'survive';
+      if(div===2)t.setupGoal=t.parent?'develop':i<Math.min(2,n)&&['relegation','mixed'].includes(R.system)?'promotion':i<Math.ceil(n/2)?'playoffs':'develop';
+      else t.setupGoal=i<1?'title':i<2?'final':i<Math.min(R.playoffTake||4,n)-1?'playoffs':i<n/2?'top_half':realisticClubGoal(db,t,'survive');
     });
   }
   for(const p of Object.values(db.players)){p.initialTeam=p.team||null;p.team=null;p.contract=null;p.faYears=0}
@@ -21,7 +21,7 @@ function prepareFirstSeasonFreeAgency(db){
   db.firstSeasonSetup={blankRosters:true,universalLanguage:true,preparedAt:db.worldDate,completed:false};
   return db;
 }
-function initialGoalLabel(t){return INITIAL_GOAL_KO[t&&t.setupGoal]||'경쟁력 있는 첫 시즌'}
+function initialGoalLabel(t,db=null){return INITIAL_GOAL_KO[t&&(db?realisticClubGoal(db,t,t.setupGoal):t.setupGoal)]||'경쟁력 있는 첫 시즌'}
 function promotionStatus(db,t){
   const team=teamRef(db,t);if(!team)return '—';const R=db.regions[team.region];
   if(team.parent)return '승격 불가 · 모구단 산하 2군';
@@ -55,7 +55,7 @@ function initialRosterTarget(db,t){
   const cheapExtra=Math.max(.1,(floor/Math.max(5,lim.min))*.55),affordable=Math.max(0,Math.floor(room/cheapExtra)),goal=team.setupGoal||'top_half';
   if(team.parent)return clamp(lim.min+Math.min(3,Math.max(0,affordable)),lim.min,lim.max);
   if(['title','final'].includes(goal))return clamp(lim.min+(team.philosophy==='youth'&&affordable>=2?1:0),lim.min,lim.max);
-  if(['survive','develop','promotion'].includes(goal)){
+  if(['survive','avoid_bottom','develop','promotion'].includes(goal)){
     const intent=1+(['youth','cost'].includes(team.philosophy)?1:0)+(affordable>=3?1:0);
     return clamp(lim.min+Math.min(3,Math.min(affordable,intent)),lim.min,Math.min(8,lim.max));
   }
@@ -174,7 +174,7 @@ function autoBuildInitialWorld(db,excludedIds,seed){
 }
 function beginInitialRosterPhase(db,teamId,seed){
   if(!isManagerSelectableTeam(db,teamId))throw new Error('감독 시작 팀으로 선택할 수 없는 구단입니다');setManagedTeam(db,teamId);seedInitialPayrollBudgets(db);db.manager.startMode='blank_roster';db.manager.careerStartedAt=null;
-  db.world={year:db.year,seed,manage:db.worldConfig.manage||'manual',phase:'initial_roster',seasons:{},steps:[],step:-1,report:null,lastDate:db.worldDate,offers:[],negotiations:{},recruitment:{targets:{}},marketLog:[]};
+  db.world={year:db.year,seed,manage:'manual',phase:'initial_roster',seasons:{},steps:[],step:-1,report:null,lastDate:db.worldDate,offers:[],negotiations:{},recruitment:{targets:{}},marketLog:[]};
   if(managedTeam(db).parent){
     db.manager.startMode='academy_coach';
     autoBuildInitialWorld(db,[],seed);

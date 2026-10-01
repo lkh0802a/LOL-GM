@@ -8,7 +8,7 @@ import { UI_MODULES } from './artifact-modules.mjs';
 const root=resolve(import.meta.dirname,'..','src','artifact');
 const source=await readFile(resolve(root,'ui-state.js'),'utf8');
 assert(UI_MODULES.indexOf('ui-state.js')===UI_MODULES.length-2,'UI state must load immediately before app bootstrap');
-const calls=[],frames=[],tabs=['season','match','squad','patch','mc','data'].map(v=>({
+const calls=[],frames=[],tabs=['season','match','squad','patch','data'].map(v=>({
   dataset:{v},attrs:{},setAttribute(k,value){this.attrs[k]=value}
 }));
 const main={innerHTML:''};
@@ -21,7 +21,7 @@ const context=vm.createContext({
   clearInterval:n=>calls.push('interval:'+n),
   requestAnimationFrame:f=>frames.push(f),
   freshInternalSeed:()=> 'test-world-seed',
-  ...Object.fromEntries(['season','match','squad','patch','mc','data'].flatMap(v=>[
+  ...Object.fromEntries(['season','match','squad','patch','data'].flatMap(v=>[
     ['view'+({season:'Season',match:'Match',squad:'Squad',patch:'Patch',mc:'MC',data:'Data'}[v]),()=>{calls.push('render:'+v);return '<section>'+v+'</section>'}],
     ['bind'+({season:'Season',match:'Match',squad:'Squad',patch:'Patch',mc:'MC',data:'Data'}[v]),()=>calls.push('bind:'+v)]
   ]))
@@ -32,7 +32,7 @@ const value=s=>vm.runInContext(s,context);
 
 assert.equal(value('VIEW'),'season');
 assert.equal(value('SSET.seed'),'test-world-seed');
-assert.deepEqual(Array.from(value('Object.keys(UI_ROUTES)')),['season','match','squad','patch','mc','data']);
+assert.deepEqual(Array.from(value('Object.keys(UI_ROUTES)')),['season','match','squad','patch','data']);
 run('LIVE=42;nav()');
 assert.equal(main.innerHTML,'<section>season</section>');
 assert(calls.includes('interval:42'),'rerender must clear match playback interval');
@@ -44,9 +44,10 @@ assert.equal(value("navigateTo('data')"),true);
 assert.equal(value('VIEW'),'data');
 assert.equal(main.innerHTML,'<section>data</section>');
 assert.equal(window.scrollY,0);
-assert.equal(tabs[5].attrs['aria-current'],'page');
+assert.equal(tabs[4].attrs['aria-current'],'page');
 const count=calls.length;
 assert.equal(value("navigateTo('nonexistent')"),false);
+assert.equal(value("navigateTo('mc')"),false,'removed simulation screen cannot be opened');
 assert.equal(value('VIEW'),'data');
 assert.equal(calls.length,count,'invalid route must not rerender or scroll');
 
