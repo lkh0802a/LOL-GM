@@ -33,15 +33,17 @@ jobs:
           CAREER_SEASONS: ${{ inputs.seasons }}
           CAREER_SEED: ${{ matrix.seed }}
           CAREER_MEMORY_MB: 1536
+          CAREER_RSS_MB: 4096
           CAREER_RESULT_FILE: reports/${{ matrix.seed }}.json
+          CI_RESULTS_DIR: reports
           NODE_OPTIONS: --max-old-space-size=2048
-        run: node scripts/daily-career-acceptance.mjs
+        run: node scripts/ci-run.mjs daily-career -- node scripts/daily-career-acceptance.mjs
       - name: Preserve partial reports even on failure
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: long-career-${{ matrix.seed }}
           path: reports/
-          retention-days: 14
+          retention-days: 3
           if-no-files-found: error
           compression-level: 1

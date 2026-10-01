@@ -1365,3 +1365,28 @@ Calendar/scouting8 acceptances pass locally. Full mandatory CI remains the merge
 gate; D09 long-term scheduling balance and D13 real mobile task evidence remain
 open. D11 supervised execution and actual multi-seed100seasons are still pending;
 no long run was started or duplicated by this change.
+
+### D11 supervised run evidence (2026-10-02)
+
+The existing ci-run observer now writes an atomic `<label>.process.json` before
+completion: parent/child PID, start time, tracked source revision/dirty status,
+runtime and career seed/budgets. Daily-career commands also fingerprint the engine
+module source at spawn with SHA-256. Keep the checkout stable during startup:
+this fingerprint identifies the pre-spawn source, not edits made while a child
+loads its own VM. A 30-second unreferenced timer records liveness without busy
+polling. Normal child closure records end time, exact exit code/signal and spawn
+error; the existing final JSON/log, evidence markers and command exit behavior
+remain available. If the observer itself disappears, a stale `running` record is
+still incomplete evidence: check both PIDs and logs, and retain unknown cause.
+
+The manual long-career workflow uses this observer, explicit1536MiB heap and
+4096MiB RSS limits, and3-day report retention. It does not dispatch automatically.
+Files: scripts/ci-run.mjs, scripts/ci-run.test.mjs and long-career workflow.
+Tests cover success, failure, failed spawn, a live child observed before completion
+and forced child termination on Windows. All10 runner/scope checks and97-module
+static checks pass locally. A Windows unsigned process exit differs from the
+signed child error code; lifecycle tests compare the exact recorded child outcome.
+CI orchestration changes use the existing static/scope gate, without repeating
+game suites. Before a real run, check that prior PIDs are absent, use a fresh label
+and reports directory under preserved .diagnostics, and run a single validated
+engine. This change does not prove100seasons or explain the earlier missing parent.
