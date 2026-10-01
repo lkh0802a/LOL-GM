@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtemp,readFile,rm} from 'node:fs/promises';
-import {spawnSync} from 'node:child_process';
+import {spawnSync,spawn} from 'node:child_process';
 import {tmpdir} from 'node:os';
 import {join,dirname,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -16,6 +16,12 @@ async function run(command,args,verify){
     });
     await verify(proc,JSON.parse(await readFile(join(dir,'probe.json'),'utf8')),
       await readFile(summary,'utf8'),await readFile(join(dir,'probe.log'),'utf8'));
+    const lifecycle=JSON.parse(await readFile(join(dir,'probe.process.json'),'utf8'));
+    assert.equal(lifecycle.exitCode,JSON.parse(await readFile(join(dir,'probe.json'),'utf8')).exitCode);
+    assert.equal(lifecycle.status,proc.status===0?'success':'failure');
+    assert(lifecycle.parentPid>0);assert(lifecycle.startedUtc&&lifecycle.endedUtc);
+    assert.equal(lifecycle.childPid,JSON.parse(await readFile(join(dir,'probe.json'),'utf8')).childPid);
+    assert(lifecycle.revision===null||/^[0-9a-f]{40}$/.test(lifecycle.revision));
   }finally{
     assert.equal(dirname(resolve(dir)),resolve(tmpdir()));
     await rm(dir,{recursive:true,force:true});
@@ -39,4 +45,31 @@ test('failed spawn cannot report green',async()=>{
   await run('lol-gm-missing-command',[],(proc,result)=>{
     assert.notEqual(proc.status,0);assert.equal(result.status,'failure');assert(result.error.includes('ENOENT'));
   });
+});
+test('records a live child before completion and preserves forced termination',async()=>{
+  const dir=await mkdtemp(join(tmpdir(),'lol-gm-ci-lifecycle-'));
+  const proc=spawn(process.execPath,[runner,'probe','--','node','-e','setTimeout(()=>{},30000)'],{
+    stdio:'ignore',env:{...process.env,CI_RESULTS_DIR:dir}
+  });
+  const closed=new Promise(resolve=>proc.on('close',(code,signal)=>resolve({code,signal})));
+  let childPid=null;
+  try{
+    let live;
+    for(let i=0;i<250;i++){
+      try{live=JSON.parse(await readFile(join(dir,'probe.process.json'),'utf8'));break}catch{}
+      await new Promise(resolve=>setTimeout(resolve,20));
+    }
+    assert.equal(live?.status,'running');assert.equal(live.parentPid,proc.pid);
+    childPid=live.childPid;assert(childPid>0);assert.equal(live.exitCode,undefined);
+    process.kill(childPid,'SIGTERM');
+    const outcome=await closed;childPid=null;assert.notEqual(outcome.code,0);
+    const final=JSON.parse(await readFile(join(dir,'probe.process.json'),'utf8'));
+    assert.equal(final.status,'failure');assert.notEqual(final.exitCode,0);
+    assert(final.endedUtc);assert(final.signal!==undefined);
+  }finally{
+    if(childPid){try{process.kill(childPid)}catch{}}
+    if(proc.exitCode===null)proc.kill();
+    await closed;
+    assert.equal(dirname(resolve(dir)),resolve(tmpdir()));await rm(dir,{recursive:true,force:true});
+  }
 });
