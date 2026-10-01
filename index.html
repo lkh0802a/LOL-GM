@@ -4035,6 +4035,7 @@ function applyWorldDailyEffects(db,date){
   dailyRecovery(db);
   medicalDailyTick(db,date);
   for(const t of activeTeams(db))aiReviewRoleConversions(db,t);
+  runScheduledScrims(db);
   aiRunScrims(db,new RNG(w.seed+date,'scrim'));
   runDailyPractice(db);
   for(const t of activeTeams(db,null,1))aiManageOwnedReserve(db,t);
@@ -5169,6 +5170,7 @@ function actionJournalTargets(db,command){
 }
 
 function captureWorldActionJournal(db,command){
+  if(command.type.startsWith('scrim.'))return captureScrimPlanJournal(db);
   if(command.type.startsWith('staff.'))return captureStaffActionJournal(db,command);
   const staffJournal=command.type==='club.close'?captureStaffActionJournal(db,command):null;
   const {playerIds,teamIds}=actionJournalTargets(db,command);
@@ -9442,6 +9444,82 @@ function recordScrimPractice(db,rec,lines){
   return {players:seen.size,games};
 }
 
+/* ==== FILE: scrim-plans.js ==== */
+// Future bookings reserve both clubs. The calendar rechecks health and fixtures
+// before spending practice time; a reservation is never a free practice grant.
+function scrimPlans(db){return db.world?.scrimPlans||[]}
+function scrimPlanCheck(db,a){
+  const t=db.teams[a.teamId],o=db.teams[a.opponentId];
+  if(!db.world||db.world.phase!=='season'||!t||!o||t.id===o.id)
+    return worldActionError('invalid_team','시즌 중 다른 구단에 요청하세요');
+  if(a.actor==='manager'&&!managerControlsSquad(db,t)||a.actor==='ai'&&managerControlsSquad(db,t))
+    return worldActionError('unauthorized','관리 구단의 연습만 결정할 수 있습니다');
+  if(a.actor==='ai'&&managerControlsSquad(db,o))
+    return worldActionError('manager_consent','관리 구단의 예약은 감독이 직접 요청해야 합니다');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(a.date||'')||!Number.isFinite(Date.parse(a.date+'T00:00:00Z'))||new Date(a.date+'T00:00:00Z').toISOString().slice(0,10)!==a.date||a.date<addDays(db.worldDate,1)||a.date>addDays(db.worldDate,7)||
+    !['afternoon','evening'].includes(a.slot)||!Number.isInteger(a.games)||a.games<1||a.games>3)
+    return worldActionError('invalid_schedule','내일부터 7일 이내, 오후/저녁 1~3세트를 선택하세요');
+  const pair=[t.id,o.id].sort().join('|'),id=pair+'|'+a.date+'|'+a.slot;
+  // Changing sets, reversing clubs or cancelling must not reroll consent.
+  if(scrimPlans(db).some(p=>p.id===id))return worldActionError('duplicate','이미 요청한 상대·시간입니다');
+  const future={...db,worldDate:a.date},booked=officialBookedTeams(future),
+    offer=scrimPartnerAssessment(future,t,o),overlap=scrimTimeOverlap(future,t,o,a.date,a.slot);
+  if(!offer.allowed)return worldActionError('partner_unavailable',offer.reason);
+  if(!overlap||a.games>scrimOverlapGames(overlap))return worldActionError('no_overlap','양팀 연습 시간이 겹치지 않습니다');
+  for(const club of [t,o]){
+    const ready=scrimReadiness(future,club,booked),reservations=scrimPlans(db).filter(p=>p.status==='accepted'&&p.date===a.date&&(p.teamId===club.id||p.opponentId===club.id));
+    if(!ready.ok||!ready.availableSlots.includes(a.slot)||reservations.some(p=>p.slot===a.slot)||
+      reservations.reduce((n,p)=>n+p.games,0)+a.games>ready.remaining)
+      return worldActionError('busy','공식전·회복·다른 연습 일정과 충돌합니다');
+  }
+  const secrecy=offer.rivalDays>7&&offer.rivalDays<=14?.68:1,
+    accepted=new RNG(db.world.seed+'|'+id,'manual-scrim-consent').chance(offer.right.approval*secrecy);
+  return {ok:true,id,accepted,reason:accepted?offer.right.reason:'상대 구단이 훈련 목적·전력 차이를 고려해 거절했습니다',startsAt:overlap.startsAt,endsAt:overlap.endsAt};
+}
+function scrimPlanSnapshot(db,c){
+  const teams=[c.teamId,c.opponentId].map(id=>db.teams[id]),future={...db,worldDate:c.date};
+  return {date:db.worldDate,phase:db.world?.phase,manager:managedTeamId(db),
+    plans:scrimPlans(db).map(p=>({...p})),
+    readiness:teams.map(t=>t?{id:t.id,roster:t.roster.slice(),ready:scrimReadiness(future,t)}:null),
+    offer:teams.every(Boolean)?scrimPartnerAssessment(future,...teams):null};
+}
+WORLD_ACTION_HANDLERS['scrim.request']={
+  validate:scrimPlanCheck,
+  canonical(db,a){return {type:a.type,actor:a.actor,teamId:a.teamId,opponentId:a.opponentId,date:a.date,slot:a.slot,games:a.games}},
+  snapshot:scrimPlanSnapshot,
+  changes(db,c,v){return [{id:v.id,status:v.accepted?'accepted':'declined',reason:v.reason,startsAt:v.startsAt,endsAt:v.endsAt}]},
+  apply(db,c){const v=scrimPlanCheck(db,c);if(!v.ok)return v;
+    db.world.scrimPlans=[...scrimPlans(db),{...c,id:v.id,status:v.accepted?'accepted':'declined',reason:v.reason,requestedOn:db.worldDate}];
+    return {ok:true,accepted:v.accepted,reason:v.reason};}
+};
+WORLD_ACTION_HANDLERS['scrim.cancel']={
+  validate(db,a){const p=scrimPlans(db).find(p=>p.id===a.id);
+    if(!p||p.status!=='accepted'||p.date<=db.worldDate)return worldActionError('not_pending','취소할 예정 스크림이 없습니다');
+    if(a.actor==='manager'&&!managerControlsSquad(db,p.teamId)&&!managerControlsSquad(db,p.opponentId))return worldActionError('unauthorized','내 구단 일정만 취소할 수 있습니다');
+    if(a.actor==='ai'&&(managerControlsSquad(db,p.teamId)||managerControlsSquad(db,p.opponentId)))return worldActionError('unauthorized','관리 구단 일정을 AI가 취소할 수 없습니다');
+    return {ok:true};},
+  canonical(db,a){return {type:a.type,actor:a.actor,id:a.id}},
+  snapshot(db){return {date:db.worldDate,manager:managedTeamId(db),plans:scrimPlans(db).map(p=>({...p}))}},
+  changes(db,c){return [{id:c.id,status:'cancelled'}]},
+  apply(db,c){db.world.scrimPlans=scrimPlans(db).map(p=>p.id===c.id?{...p,status:'cancelled',reason:'구단이 연습을 취소했습니다'}:p);return {ok:true};}
+};
+function captureScrimPlanJournal(db){
+  const present=Object.hasOwn(db.world,'scrimPlans'),ref=db.world.scrimPlans;
+  return {playerIds:[],rollback(){if(present)db.world.scrimPlans=ref;else delete db.world.scrimPlans}};
+}
+function runScheduledScrims(db){
+  const booked=officialBookedTeams(db);
+  for(const p of scrimPlans(db).filter(p=>p.status==='accepted'&&p.date<=db.worldDate).sort((a,b)=>a.date.localeCompare(b.date)||a.slot.localeCompare(b.slot)||a.id.localeCompare(b.id))){
+    const t=db.teams[p.teamId],o=db.teams[p.opponentId],rec=p.date===db.worldDate&&t&&o?
+      simulateBackgroundScrim(db,t,o,p.games,new RNG(db.world.seed+'|'+p.id,'booked-scrim'),p.slot,booked):null;
+    p.status=rec?'completed':'blocked';p.playedGames=rec?.games.length||0;
+    p.reason=rec?'예정 스크림 완료':'공식전·회복·구단 이동 등으로 연습 불가';
+  }
+  // Preserve upcoming reservations and recent responses, never season-sized logs.
+  const plans=scrimPlans(db);
+  db.world.scrimPlans=[...plans.filter(p=>p.date<db.worldDate&&p.status!=='accepted'&&p.date>=addDays(db.worldDate,-14)).slice(-128),...plans.filter(p=>p.date>=db.worldDate||p.status==='accepted')];
+}
+
 /* ==== FILE: practice-resources.js ==== */
 // Daily time is shared by scrims and drills. Attribute allocations subdivide
 // individual drills, rather than providing another independent time budget.
@@ -10974,6 +11052,7 @@ function viewSquad(){
   </div></section>
   ${financePanel(t)}
   ${squadLoanPanel(t)}
+  ${scrimPlansPanel(t)}
   ${DB.world?.phase==='season'?`<section><h3>공식전·스크림 일정</h3><p class="hint">오늘 ${esc(DB.worldDate)} · ${officialBookedTeams(DB).has(t.id)?'공식 경기 예정/진행 · 스크림 불가':scrimReadiness(DB,t).ok?'스크림 가능 ('+scrimReadiness(DB,t).availableSlots.map(x=>x==='afternoon'?'오후':'저녁').join('·')+') · 잔여 '+scrimReadiness(DB,t).remaining+'세트':esc(scrimReadiness(DB,t).reason)} · 양팀 모두 같은 연습 시간이 비어야 하며, 7일 내 공식전 상대는 피하고 전력 격차·연패·자신감 회복 목적을 반영해 상호 수락해야 편성됩니다.</p><p class="hint">다음 공식전: ${esc(nextTeamMatch(DB,t.id)?.date||'미정')} / 최근 스크림: ${(t.scrimLog||[]).slice(-4).reverse().map(x=>esc(x.date)+' '+(x.slot==='afternoon'?'오후':x.slot==='evening'?'저녁':'연습')+' '+esc(DB.teams[x.opponent]?.short||x.opponent)+' '+x.games+'세트'+(x.purpose?' · '+esc(x.purpose):'')).join(' · ')||'없음'}</p></section>`:''}
   ${mineOrg?rosterPlanPanel(t):''}
   ${(()=>{const r=trainingRecommendation(DB,t),ko={light:'가볍게',normal:'보통',high:'강하게'};return `<p class="hint">추천: ${ko[r.intensity]} 훈련 · ${r.next?`다음 공식전 ${r.days}일 전`:'공식전 일정 없음'} · 평균 피로 ${Math.round(r.fat)} / 컨디션 ${Math.round(r.cond)}</p>`})()}
@@ -10987,6 +11066,7 @@ function viewSquad(){
   <div id="pdetail">${OPEN_P&&DB.players[OPEN_P]&&DB.players[OPEN_P].team===SQUAD?playerDetail(DB.players[OPEN_P]):''}</div>${mineOrg?scoutingSearchBlock():''}`;
 }
 function bindSquad(){
+  bindScrimPlans();
   const focus=$('#practicefocus');if(focus)focus.onchange=e=>{const d=squadEditState(DB.teams[SQUAD_EDIT.teamId]);d.training.focus=e.target.value;d.dirty=true};
   const ti=$('#trint');if(ti)ti.onchange=e=>{const d=squadEditState(DB.teams[SQUAD_EDIT.teamId]);d.training.intensity=e.target.value;d.dirty=true};
   $('#sq').onchange=e=>{const next=DB.teams[e.target.value],same=SQUAD_EDIT&&parentTeamOf(DB,next)?.id===SQUAD_EDIT.parentId;if(!same)SQUAD_EDIT=null;SQUAD=e.target.value;OPEN_P=null;nav()};
@@ -11028,6 +11108,25 @@ function bindSquad(){
   });
 }
 // ---------- 몬테카를로 ----------
+
+/* ==== FILE: ui-scrim-plans.js ==== */
+function scrimPlansPanel(t){
+  if(DB.world?.phase!=='season'||!managerControlsSquad(DB,t))return '';
+  const status={accepted:'예약 확정',declined:'상대 거절',cancelled:'취소',completed:'완료',blocked:'진행 불가'},
+    rows=scrimPlans(DB).filter(p=>p.teamId===t.id||p.opponentId===t.id).slice(-12).reverse();
+  return `<section><h3>스크림 요청</h3><div class="controls"><label>날짜<input id="scrimdate" type="date" min="${addDays(DB.worldDate,1)}" max="${addDays(DB.worldDate,7)}" value="${addDays(DB.worldDate,1)}"></label><label>상대<select id="scrimpartner">${activeTeams(DB).filter(o=>o.id!==t.id).map(o=>`<option value="${esc(o.id)}">${esc(o.name)}</option>`).join('')}</select></label><label>시간<select id="scrimslot"><option value="afternoon">오후</option><option value="evening">저녁</option></select></label><label>세트<select id="scrimgames">${[1,2,3].map(n=>`<option>${n}</option>`).join('')}</select></label><button class="primary" id="scrimrequest">상대에게 요청</button></div><p class="hint">상대가 수락하면 양팀 시간을 예약합니다. 경기·회복 상황이 바뀌면 당일 취소될 수 있습니다.</p>${rows.map(p=>`<div class="mrow"><span>${esc(p.date)} ${p.slot==='afternoon'?'오후':'저녁'} · ${esc(DB.teams[p.teamId===t.id?p.opponentId:p.teamId]?.short||'구단')} · ${p.games}세트 · ${status[p.status]||'확인 중'}<small class="hint"> ${esc(p.reason)}</small></span>${p.status==='accepted'&&p.date>DB.worldDate?`<button class="ghost" data-scrim-cancel="${esc(p.id)}">취소</button>`:''}</div>`).join('')}</section>`;
+}
+function bindScrimPlans(){
+  const submit=command=>{
+    const preview=previewWorldAction(DB,command);
+    if(!preview.ok){MSG=preview.errors.join(' · ');navKeepScroll();return}
+    const result=applyWorldAction(DB,preview);
+    MSG=result.ok?(result.reason||'스크림 일정을 취소했습니다'):result.errors.join(' · ');
+    if(result.ok)saveDB();navKeepScroll();
+  };
+  if($('#scrimrequest'))$('#scrimrequest').onclick=()=>submit({type:'scrim.request',teamId:SQUAD,opponentId:$('#scrimpartner').value,date:$('#scrimdate').value,slot:$('#scrimslot').value,games:+$('#scrimgames').value});
+  document.querySelectorAll('[data-scrim-cancel]').forEach(b=>b.onclick=()=>submit({type:'scrim.cancel',id:b.dataset.scrimCancel}));
+}
 
 /* ==== FILE: ui-registration.js ==== */
 function officialRegistrationPanel(t){
