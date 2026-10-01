@@ -439,6 +439,34 @@ through playable desktop/mobile HTML acceptance before Android production
 packaging and real-device offline/save validation.
 Manual full/parity support is a follow-up convenience, not a new optimization phase.
 
+### Optimization ownership during development
+
+User decision, 2026-10-01: the development-efficiency optimization phase and
+planned ownership refactor are complete. Continue unfinished roadmap features;
+do not restart a separate general optimization phase before implementing them.
+
+Remaining engine performance work belongs to the feature being developed.
+When implementing or changing season progression, AI clubs, player growth,
+match simulation, contracts/market, patch/meta, schedules, statistics or saves,
+measure the affected path and fix demonstrated bottlenecks in that work unit.
+Avoid speculative caches or rewrites without evidence. Behavior-preserving
+optimizations must retain deterministic results, RNG consumption and save
+compatibility; intentional gameplay changes use their own acceptance tests.
+
+During mobile HTML UX development, include rendering, CPU/RAM, battery/heat,
+idle/background behavior, batching, cache invalidation, save size/load time and
+long-career memory retention in the relevant feature work. During Android
+packaging, validate lifecycle, forced termination/recovery and those resource
+constraints in release mode on an actual device. This is remaining development
+and platform acceptance work, not evidence that all game performance is done.
+
+Use focused local measurements and related checks; delegate repeatable full
+regression, long simulations and builds to Actions. Record the measured issue,
+change, validation and remaining limitations in existing phase/work records.
+Complete desktop/mobile standalone HTML acceptance before APK delivery; the
+complete Items 1–23 and D follow-up scope remains unchanged. See
+[ANDROID_TARGET.md](ANDROID_TARGET.md#performance-work-during-mobile-development).
+
 ### Measured engine optimization — rune selection
 
 The existing CI probe measured item/rune selection at about 0.895ms per pair
