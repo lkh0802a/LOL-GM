@@ -124,6 +124,7 @@ function officeDecisions(db,rng,f,ev,mid){
     for(const p of props){if(p.u<thr||done>=1)break;
       if(props.slice(0,props.indexOf(p)).some(q=>grp(q.key)===grp(p.key)))continue;
       const what=p.apply(); R.decisions=[...(R.decisions||[]),{year:db.world.year,key:grp(p.key),what,why:p.why,mid:!!mid}].slice(-12);
+      syncCompetitionLicenses(db,'regional-office-'+grp(p.key));
       ev(`${R.leagueName} 사무국${mid?' (시즌 중 점검)':''}: ${what} — ${p.why}`); done++; }
   }
 }

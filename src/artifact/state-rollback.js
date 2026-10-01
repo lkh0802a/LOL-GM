@@ -18,7 +18,7 @@ function actionJournalTeamSnapshot(team){
   const hasRoster=Object.prototype.hasOwnProperty.call(team,'roster');
   return {
     team,hasDepth,hasFinance,hasRoster,
-    lifecycle:['active','folded'].map(key=>({key,
+    lifecycle:['active','folded','license','competitionLicense'].map(key=>({key,
       present:Object.prototype.hasOwnProperty.call(team,key),value:team[key]})),
     rosterRef:team.roster,roster:(team.roster||[]).slice(),
     depthRef:team.depthChart,depth:hasDepth?actionJournalClone(team.depthChart):null,

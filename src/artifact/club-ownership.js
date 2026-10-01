@@ -12,6 +12,8 @@ function transferClubOwnership(db,t,{name,wealth,reason,year=db.year}){
   if(!t||t.active===false||t.parent||typeof name!=='string'||!name.trim()||!Number.isFinite(wealth))
     throw new Error('구단 인수 조건이 올바르지 않습니다');
   const oldName=t.name,previous={...ensureClubOwnership(t)};
+  ensureClubLicense(db,t);
+  for(const reserve of reserveTeamsOf(db,t))ensureClubLicense(db,reserve);
   t.ownershipSerial++;
   t.name=name.trim();t.formerNames=[...(t.formerNames||[]),oldName];
   t.owner={id:t.id+':owner:'+t.ownershipSerial,name:t.name+' 운영법인',
@@ -20,5 +22,7 @@ function transferClubOwnership(db,t,{name,wealth,reason,year=db.year}){
     region:t.region,division:t.division||1,license:t.license||(t.franchised?'franchise':'open'),
     previousName:oldName,name:t.name,previousOwner:previous,owner:{...t.owner},reason};
   t.ownershipHistory.push(record);
+  syncClubLicense(db,t,reason);
+  for(const reserve of reserveTeamsOf(db,t))syncClubLicense(db,reserve,reason);
   return record;
 }

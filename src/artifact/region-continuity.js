@@ -6,6 +6,7 @@ function moveClubForRegionReorganization(db,t,destination,reason){
   if(from===destination)return [];
   const records=[];
   for(const club of clubs){
+    ensureClubLicense(db,club);
     const previous=club.region;
     for(const pid of [...(club.roster||[]),...loanOutgoingPlayers(db,club).map(p=>p.id)]){
       const p=db.players[pid];if(!p||!p.contract||!isLocalPlayer(p,previous,club.id))continue;
@@ -20,6 +21,7 @@ function moveClubForRegionReorganization(db,t,destination,reason){
     const record={year:db.year,date:db.worldDate,clubId:club.id,continuity:'same-club',
       from:previous,to:destination,division:club.division||1,parent:club.parent||null,reason};
     club.regionHistory=[...(club.regionHistory||[]),record];records.push(record);
+    syncClubLicense(db,club,reason);
   }
   return records;
 }

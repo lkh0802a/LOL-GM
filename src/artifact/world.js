@@ -88,6 +88,7 @@ function genTeam(db,rng,regionId,strength,o={}){
   for(const role of ROLES){const age=o.parent?rng.int(17,20):rng.int(18,27);genPlayer(db,rng,{role,age,base:tb+(age<20?-4:0),region:regionId,team:t.id})}
   for(let i=0;i<subs;i++){const age=rng.int(17,20);genPlayer(db,rng,{role:rng.pick(ROLES),age,base:tb-7,region:regionId,team:t.id})}
   initFinance(db,t,rng);t.roster.forEach(id=>signContract(db,db.players[id],t,marketSalary(db,db.players[id],regionId),rng.int(1,3)));
+  ensureClubLicense(db,t);
   return t;
 }
 function makeAcademy(db,rng,parent){
@@ -123,6 +124,7 @@ function createDiv2(db,rng,R){
     for(let i=0;i<n;i++)genTeam(db,rng,R.id,R.strength-8,{div:2});
   }
   if(R.policyMode==='engine'&&!R.policyLocks?.rosterRuleProfile)R.rosterRuleProfile=activeTeams(db,R.id,2).some(t=>t.parent)?'ENGINE_OWNED_RESERVE':'STANDARD_TIER1_2026';
+  for(const t of activeTeams(db,R.id))syncClubLicense(db,t,'tier2-structure-review');
 }
 function abolishDiv2(db,R){R.div2=false;for(const t of activeTeams(db,R.id,2))foldTeam(db,t);if(R.policyMode==='engine'&&!R.policyLocks?.rosterRuleProfile)R.rosterRuleProfile='STANDARD_TIER1_2026'}
 function reconcileTier2Structure(db,rng,R,ev=()=>{}){
@@ -143,6 +145,7 @@ function reconcileTier2Structure(db,rng,R,ev=()=>{}){
     }
   }
   if(R.policyMode==='engine'&&!R.policyLocks?.rosterRuleProfile)R.rosterRuleProfile=activeTeams(db,R.id,2).some(t=>t.parent)?'ENGINE_OWNED_RESERVE':'STANDARD_TIER1_2026';
+  for(const t of activeTeams(db,R.id))syncClubLicense(db,t,'tier2-structure-review');
 }
 function markFranchised(db,R){const ts=activeTeams(db,R.id,1).sort((a,b)=>(b.fans||0)-(a.fans||0));ts.forEach((t,i)=>t.franchised=i<Math.ceil(ts.length/2))}
 function deriveRegionPayScale(R){
@@ -201,6 +204,7 @@ function buildWorld(cfg){
   for(const r of cfg.regions) addRegion(db,rng,r);
   for(const t of activeTeams(db))ensureTeamStaff(db,t,rng);genStaffPool(db,rng)
   prepareFirstSeasonFreeAgency(db);
+  syncCompetitionLicenses(db,'initial-office-approval');
   return db;
 }
 function managedTeamId(db){return db.manager&&db.manager.teamId||null}

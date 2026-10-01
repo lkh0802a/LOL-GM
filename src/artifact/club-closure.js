@@ -93,6 +93,7 @@ function clubClosureSnapshot(db,c){
     teams:c.financeTeamIds.map(id=>{
       const t=db.teams[id];
       return {id,active:t?.active,parent:t?.parent||null,roster:t?.roster,
+        license:t?.competitionLicense?.current,owner:t?.owner?.id,
         finance:t?.finance,players:(t?.roster||[]).map(pid=>({pid,
           team:db.players[pid]?.team,contract:db.players[pid]?.contract}))};
     }),negotiations:c.negotiationIds.map(id=>w?.negotiations?.[id]),
@@ -109,7 +110,8 @@ function applyClubClosure(db,c){
       applyPlayerReleaseAction(db,{pid,teamId:id,mode:'club_closure',actor:'system'});
     const funding=plan.changes.find(row=>row.teamId===id).funding,
       settlement=settleClubClosureFinance(t,db.year,db.worldDate||null,funding);
-    t.active=false;t.folded=db.year;
+    ensureClubLicense(db,t);t.active=false;t.folded=db.year;
+    syncClubLicense(db,t,'club-closure');
     settlements.push({teamId:id,...settlement});
   }
   for(const id of c.negotiationIds){

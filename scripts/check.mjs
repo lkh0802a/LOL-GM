@@ -126,6 +126,7 @@ const maintainabilityBudgets = {
   'state-player-actions.js': 17000,
   'finance.js': 18000,
   'club-ownership.js': 4500,
+  'club-license.js': 4500,
   'region-continuity.js': 4500,
   'contracts.js': 26000,
   'contract-market-behavior.js': 5000,

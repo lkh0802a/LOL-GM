@@ -1041,3 +1041,38 @@ Next connected work: D06 license approval/transfer lifecycle, then remaining
 D04/D07-D10 mechanisms and D12/D13 acceptance. D11 requires completed multiple
 100-season seeds, and D13 still needs real mobile core tasks/TalkBack evidence.
 Neither D06 nor the whole D stage is marked complete by this consolidation.
+
+## D06 competition license lifecycle (2026-10-02)
+
+The integration batch now records a stable same-club competitionLicense ID and
+current office approval, region, division, parent, legal holder and policy kind.
+Existing franchise/mixed/open/reserve rules determine these states; this does
+not add a player-managed license market or change the configured league model.
+Ownership changes transfer the legal holder for the parent and owned reserves
+without replacing the club's license identity. Region moves, office system
+changes and actual promotion/relegation append dated transitions. Closed clubs
+return their license alongside existing financial and employment settlement.
+Unchanged reviews do not append history. Legacy saves get current approval state
+without fabricated prior events, while existing saved history is preserved.
+
+club-license.js owns this record; existing world/office/offseason/ownership/
+region/closure writers call it rather than introducing competing actions. Closure
+previews reject a changed owner/license state, and the operation-scoped rollback
+journal restores license data on a late failure. The acceptance case exercises
+franchise/mixed/open policies, a continuing parent/reserve sale and regional move,
+production promotion in two regions, mixed protection, reserve exclusion,
+old-owner preview rejection, closure rollback and current/legacy save restoration.
+
+Local validation: all 31 shared acceptance cases / 27 fresh engine contexts,
+seven calendar/scouting cases and 93-module static/build checks pass. The actual
+daily-career seed d-license-integration passed one year, 128 daily ticks, 258
+fixtures, 46 managed official games and phase save restoration; boundary save
+about 5.9 MB, heap 131 MB / RSS 352 MB. The untracked D preview is updated, while
+the verified latest HTML remains #105. The prior-engine process 26248 reached
+25 seasons through 2051, about 92 MB save and 942 MB boundary heap, still running;
+neither its partial run nor this bounded new-code year proves complete D11.
+
+Continue remaining D04/D07-D10 mechanisms and D12/D13 acceptance. D06 still needs
+wider repeated policy/succession acceptance in long careers. Full CI remains an
+unexecuted account-blocked merge gate for #109, and real mobile/TalkBack evidence
+remains required before whole-D completion.
