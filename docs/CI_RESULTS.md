@@ -64,6 +64,12 @@ refactors: new gameplay state intentionally differs from the R01 baseline and
 must not be judged against its historical exact hashes. Either requested parity
 checkbox makes the shared parity job required by `verify`.
 
+For engine optimizations after gameplay additions, set `refactor_baseline` to
+the full 40-character commit SHA immediately before the optimization. The default
+remains the original R01 SHA for historical refactor verification. The comparison
+uses the same current smoke/career oracle against both engines and reports the
+chosen baseline in its evidence; no state field, seed or season is relaxed.
+
 Manual runs never publish standalone files. Their concurrency group is separate
 from push/PR validation so a diagnostic run cannot cancel main publication.
 New runs of the same event/ref still cancel stale runs. Seeds, seasons and

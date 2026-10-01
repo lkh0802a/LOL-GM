@@ -1,4 +1,4 @@
-// Run the same current acceptance oracle against the pinned R01 engine and HEAD.
+// Run the same current acceptance oracle against a pinned baseline engine and HEAD.
 // This is an opt-in Actions gate; fixtures, seeds and acceptance assertions stay intact.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -6,7 +6,8 @@ import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promi
 import { tmpdir } from 'node:os';
 import { resolve, join, relative, isAbsolute, sep } from 'node:path';
 
-const baseline='0331ffa50a20fce7a4d4e2cd2e032e5c37221e95';
+const baseline=process.env.REFACTOR_PARITY_BASELINE||'0331ffa50a20fce7a4d4e2cd2e032e5c37221e95';
+assert(/^[a-f0-9]{40}$/.test(baseline),'parity baseline must be a full commit SHA');
 const root=resolve(import.meta.dirname,'..');
 const temporaryRoot=resolve(tmpdir());
 const workspace=await mkdtemp(join(temporaryRoot,'lol-gm-refactor-parity-'));
@@ -56,7 +57,7 @@ try{
     results[label]={smoke:smoke.state,career:career.checkpoints};
   }
   // Canonical hashes omit only saveId (wall-clock storage identity), not game state.
-  assert.deepEqual(results.current,results.baseline,'R01/current state parity failed');
+  assert.deepEqual(results.current,results.baseline,'baseline/current state parity failed');
   const head=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim();
   console.log('REFACTOR_PARITY '+JSON.stringify({baseline,head,exact:true,
     smoke:results.current.smoke,career:results.current.career}));

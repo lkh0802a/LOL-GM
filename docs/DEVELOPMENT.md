@@ -427,7 +427,7 @@ R06/R07 remove six unused wrappers and required-UI fallbacks while retaining sup
 save compatibility. R08 documents all 73 modules and adds exact R01/current
 full-smoke and two-season/save checkpoint parity in the opt-in Actions gate.
 Final-head full CI, explicit parity and post-merge main CI passed (PR #85).
-Preserve accepted D04-B3. The next small step, D04-B4a, records pending and
+Preserve accepted D04-B3. Accepted D04-B4a (PR #86) records pending and
 settled player release liabilities, preserves aggregate balances in older saves
 and exposes the contractual basis in touch-friendly disclosure cards. It keeps
 the existing 50% compensation rule. Negotiable guarantees, mutual termination
@@ -436,3 +436,20 @@ Continue the complete numbered roadmap and D follow-ups. Follow ANDROID_TARGET.m
 through playable desktop/mobile HTML acceptance before Android production
 packaging and real-device offline/save validation.
 Manual full/parity support is a follow-up convenience, not a new optimization phase.
+
+### Measured engine optimization — rune selection
+
+The existing CI probe measured item/rune selection at about 0.895ms per pair
+(run 36836633358), so optimize repeated selector work rather than adding caches
+without evidence. Secondary rune selection now reuses the primary ranking's
+per-slot winners. It preserves scores, stable ties, rune IDs/order and RNG;
+it adds no persistent cache or save fields. The focused acceptance compares the
+frozen pre-change selector across every champion/role, player/null context,
+save restoration, disabled/incomplete styles, ties and caller mutation.
+
+Local focused evidence: 1,783 exact cases, 98→62 score calls per representative
+selection (36.7% less score work); median 200-call sample 61.91→39.13ms (1.58x).
+This is selector-level evidence, not a claim that the whole game or CI is 1.58x
+faster. Full Actions performance plus exact pre-change smoke/two-season/save
+parity are required before accepting the optimization. D04-B4 remains unfinished;
+resume its next independent gameplay unit after this bounded optimization.
