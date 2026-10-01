@@ -1,13 +1,7 @@
 // D04-B1: one 1-3 year duration policy shared by normalization, player preference, AI negotiation and UI.
-import {readFile} from 'node:fs/promises';
-import {resolve} from 'node:path';
-import vm from 'node:vm';
-import {ENGINE_MODULES} from './artifact-modules.mjs';
+import {artifactSource,runEngineFixture} from './test-harness.mjs';
 
-const root=resolve(import.meta.dirname,'..','src','artifact');
-let source='';
-for(const file of ENGINE_MODULES)source+=await readFile(resolve(root,file),'utf8')+'\n';
-source+=String.raw`(()=>{
+const fixture=String.raw`(()=>{
   const assert=(x,m)=>{if(!x)throw new Error('D04_DURATION '+m)};
   let db=buildWorld(),team=activeTeams(db,null,1)[0],
     free=Object.values(db.players).filter(p=>!p.retired&&!p.team).slice(0,2);
@@ -71,10 +65,9 @@ source+=String.raw`(()=>{
     saveFormat:JSON.parse(packed).saveFormat
   }));
 })();`;
-vm.runInNewContext(source,{console,Date,Math,JSON,Set,Map,WeakMap,Object,
-  Array,String,Number,Boolean,RegExp,Error,Intl,performance,crypto},{timeout:30000});
+await runEngineFixture(fixture,{timeout:30000,filename:'contract-duration-acceptance.fixture.js'});
 
-const ui=await readFile(resolve(root,'ui-negotiations.js'),'utf8');
+const ui=await artifactSource('ui-negotiations.js');
 if(!ui.includes('contractDurationPolicy(DB,p,team)')||ui.includes('[1,2,3,4].map'))
   throw new Error('D04_DURATION negotiation UI does not consume engine duration choices');
 console.log('D04_CONTRACT_DURATION_UI_ACCEPTANCE '+JSON.stringify({enginePolicy:true,legacyFourYearChoice:false}));
