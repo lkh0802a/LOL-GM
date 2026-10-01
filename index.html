@@ -2320,7 +2320,30 @@ function teamPracticeVenue(db,team,date=db.worldDate){
     return {region:venue.region,timeZone:venue.timeZone,competition:season.comp};}
   return {region:team.region,timeZone:team.practiceTimeZone||venueZone(db,team.region),competition:null};
 }
-function scrimUtcRange(db,team,date,slot){
+function scrimScheduleContext(db,teams,date=db.worldDate){
+  const venues=Object.fromEntries(teams.map(t=>[t.id,{region:t.region,
+    timeZone:t.practiceTimeZone||venueZone(db,t.region),competition:null}]));
+  for(const s of Object.values(db.world?.seasons||{}).sort((a,b)=>String(a.id).localeCompare(String(b.id)))){
+    const comp=db.competitions[s.comp];if(!comp?.international)continue;
+    const dates=(s.days||[]).map(d=>d.date).sort();
+    if(!dates.length||date<addDays(dates[0],-5)||date>addDays(dates.at(-1),1))continue;
+    const venue=competitionVenue(db,comp);
+    for(const id of comp.teams||[])if(venues[id]&&!venues[id].competition)
+      venues[id]={region:venue.region,timeZone:venue.timeZone,competition:s.comp};
+  }
+  const ranges={},zoneRanges=new Map();
+  for(const t of teams){ranges[t.id]={};for(const slot of ['afternoon','evening']){
+    const zone=venues[t.id].timeZone,key=zone+'|'+slot;
+    if(!zoneRanges.has(key)){
+      const startsAt=venueToUtc(date,slot==='afternoon'?'14:00':'19:00',zone);
+      zoneRanges.set(key,{startsAt,endsAt:new Date(Date.parse(startsAt)+3*3600000).toISOString(),timeZone:zone});
+    }
+    ranges[t.id][slot]=zoneRanges.get(key);
+  }}
+  return {date,venues,ranges};
+}
+function scrimUtcRange(db,team,date,slot,schedule=null){
+  if(schedule?.date===date&&schedule.ranges[team.id]?.[slot])return schedule.ranges[team.id][slot];
   const zone=teamPracticeVenue(db,team,date).timeZone,
     localTime=slot==='afternoon'?'14:00':slot==='evening'?'19:00':null;
   if(!localTime)return null;
@@ -2328,9 +2351,9 @@ function scrimUtcRange(db,team,date,slot){
     endsAt=new Date(Date.parse(startsAt)+3*3600000).toISOString();
   return {startsAt,endsAt,timeZone:zone};
 }
-function scrimTimeOverlap(db,first,second,date,slot){
-  const a=scrimUtcRange(db,first,date,slot),
-    b=scrimUtcRange(db,second,date,slot);
+function scrimTimeOverlap(db,first,second,date,slot,schedule=null){
+  const a=scrimUtcRange(db,first,date,slot,schedule),
+    b=scrimUtcRange(db,second,date,slot,schedule);
   if(!a||!b)return null;
   const start=Math.max(Date.parse(a.startsAt),Date.parse(b.startsAt)),
     end=Math.min(Date.parse(a.endsAt),Date.parse(b.endsAt));
@@ -3120,7 +3143,7 @@ function growPlayer(db,p,rng,games,champGames){
     pState(p);
     let d=base>0?base*dev.growthRate*(0.45+room*0.6)*(0.7+0.6*prof)*(0.8+0.4*coach)*(0.65+0.55*play)*trainingGrowthMul(team)*facilityMul(team,p.age)*intensity.growth*(0.9+0.2*p.morale/100):base*dev.declineRate*(1.3-0.6*prof);
     d+=train*(base>0?1:0.5);
-    if(d>0)d*=youthMul(p.age)*conversionMul*practiceFactor*trainingTimeMultiplier(team,db.year);
+    if(d>0)d*=youthMul(p.age)*conversionMul*practiceFactor*trainingTimeMultiplier(team,db.year,p);
     d=Math.min(d,growthCap(p.age)); // 한 시즌 영역별 성장 상한 (어릴수록 높음)
     const ceil=Math.min(99,p.pot+6); // 잠재력 + 6을 넘는 능력치는 더 오르지 않음
     for(const a of ATTR_GROUPS[g]){const v=p.attrs[a]+d+rng.normal(0,1.3);p.attrs[a]=Math.round(clamp(d>0&&p.attrs[a]>=ceil?Math.min(v,p.attrs[a]):d>0?Math.min(v,Math.max(ceil,p.attrs[a])):v,20,99))}
@@ -3989,7 +4012,6 @@ function applyWorldDailyEffects(db,date){
   dailyRecovery(db);
   medicalDailyTick(db,date);
   for(const t of activeTeams(db))aiReviewRoleConversions(db,t);
-  advanceRoleConversionsDay(db);
   aiRunScrims(db,new RNG(w.seed+date,'scrim'));
   runDailyPractice(db);
   for(const t of activeTeams(db,null,1))aiManageOwnedReserve(db,t);
@@ -9190,10 +9212,11 @@ function scrimPartnerInterest(db,t,other,intent=null,strength=null,otherStrength
   return {approval,desire,reason,goal:intent.goal,
     confidence:intent.confidence,relativeStrength:gap};
 }
-function scrimPartnerAssessment(db,t,other,intents=null,strengths=null,rivals=null){
+function scrimPartnerAssessment(db,t,other,intents=null,strengths=null,rivals=null,schedule=null){
   if(!t||!other||t.id===other.id||t.active===false||other.active===false)
     return {allowed:false,reason:'참가 불가 팀'};
-  const firstVenue=teamPracticeVenue(db,t),secondVenue=teamPracticeVenue(db,other);
+  const current=schedule?.date===db.worldDate?schedule:null,
+    firstVenue=current?.venues[t.id]||teamPracticeVenue(db,t),secondVenue=current?.venues[other.id]||teamPracticeVenue(db,other);
   if(firstVenue.region!==secondVenue.region)
     return {allowed:false,reason:'현지 훈련권역이 다릅니다'};
   const key=[t.id,other.id].sort().join('|'),rivalDays=rivals?
@@ -9246,13 +9269,13 @@ function backgroundScrimChampion(db,p,role,rng){
 // inputs to resolve each private set. It does not forge official match rows,
 // meta sample counts, or public statistics. Interactive scrims (D09) can still
 // use simulateSeries to generate full draft/match replays.
-function simulateBackgroundScrim(db,t,opp,games,rng,slot,booked=null,proposal=null){
+function simulateBackgroundScrim(db,t,opp,games,rng,slot,booked=null,proposal=null,schedule=null){
   // Negotiated partner selection must also clear the competitive secrecy
   // embargo. Booking checks remain independent of AI acceptance probability.
-  const assessment=scrimPartnerAssessment(db,t,opp);
+  const assessment=scrimPartnerAssessment(db,t,opp,null,null,null,schedule);
   if(!assessment.allowed)return null;
   const first=scrimReadiness(db,t,booked),second=scrimReadiness(db,opp,booked),
-    sharedTime=scrimTimeOverlap(db,t,opp,db.worldDate,slot);
+    sharedTime=scrimTimeOverlap(db,t,opp,db.worldDate,slot,schedule);
   if(!sharedTime||games>scrimOverlapGames(sharedTime)||!first.ok||!second.ok||!first.availableSlots.includes(slot)||
     !second.availableSlots.includes(slot)||games>first.remaining||games>second.remaining)return null;
   const participants=[t,opp],lines=[],results=[],wins={[t.id]:0,[opp.id]:0};
@@ -9302,6 +9325,7 @@ function aiRunScrims(db,rng){
   const booked=officialBookedTeams(db),rivals=scrimRivalCalendar(db);
   const eligible=activeTeams(db,null,1).filter(t=>trainingRecommendation(db,t).scrim&&
     scrimReadiness(db,t,booked).ok);
+  const schedule=scrimScheduleContext(db,eligible);
   const intents=Object.fromEntries(eligible.map(t=>[t.id,scrimClubIntent(db,t)])),
     strengths=Object.fromEntries(eligible.map(t=>[t.id,teamStrength(db,t.id)]));
   let blocks=0,sets=0;
@@ -9314,12 +9338,12 @@ function aiRunScrims(db,rng){
       const first=scrimReadiness(db,t,booked);
       if(busy.has(t.id)||!first.ok||!first.availableSlots.includes(slot)||!rng.chance(.84))continue;
       const candidates=order.filter(o=>o.id!==t.id&&!busy.has(o.id)&&
-        teamPracticeVenue(db,o).region===teamPracticeVenue(db,t).region&&
+        schedule.venues[o.id].region===schedule.venues[t.id].region&&
         scrimReadiness(db,o,booked).availableSlots?.includes(slot)&&
-        !!scrimTimeOverlap(db,t,o,db.worldDate,slot));
+        !!scrimTimeOverlap(db,t,o,db.worldDate,slot,schedule));
       if(!candidates.length)continue;
       const ranked=candidates.map(o=>({team:o,
-        offer:scrimPartnerAssessment(db,t,o,intents,strengths,rivals)}))
+        offer:scrimPartnerAssessment(db,t,o,intents,strengths,rivals,schedule)}))
         .filter(x=>x.offer.allowed).map(x=>({...x,
           weight:x.offer.weight*Math.max(.2,scrimValue(db,t.id,x.team.id))}));
       let attempts=0;
@@ -9334,10 +9358,10 @@ function aiRunScrims(db,rng){
         const opponent=chosen.team;
         const second=scrimReadiness(db,opponent,booked),
           games=Math.min(3,first.remaining,second.remaining,
-            scrimOverlapGames(scrimTimeOverlap(db,t,opponent,db.worldDate,slot)));
+            scrimOverlapGames(scrimTimeOverlap(db,t,opponent,db.worldDate,slot,schedule)));
         if(games<1||!rng.chance(chosen.offer.acceptance))continue;
         const rec=simulateBackgroundScrim(db,t,opponent,games,rng,
-          slot,booked,chosen.offer);
+          slot,booked,chosen.offer,schedule);
         if(!rec)continue;
         busy.add(t.id);busy.add(opponent.id);
         blocks++;sets+=rec.games.length;
@@ -9401,8 +9425,8 @@ function consumeScrimPractice(db,t,games){
   if(!Number.isInteger(games)||games<1||cost>day.remaining)throw Error('오늘 남은 연습 시간이 부족합니다');
   t.practiceDay={...day,scrim:day.scrim+cost,remaining:day.remaining-cost};
 }
-function trainingTimeMultiplier(t,year){
-  const usage=t?.practiceUsage;
+function trainingTimeMultiplier(t,year,p=null){
+  const usage=p?.practiceUsage?.year===year?p.practiceUsage:t?.practiceUsage;
   if(!usage||usage.year!==year||!usage.days)return 1; // legacy seasonal saves
   return clamp(.8+usage.individual/(usage.days*PRACTICE_POINTS)*.4,.8,1.12);
 }
@@ -9422,6 +9446,14 @@ function runDailyPractice(db){
     for(const p of players){
       pState(p);
       const light=medicalPlanFor(db,p)==='light'?.4:1;
+      const individual=points*shares.individual*light,
+        conversion=p.roleConversion?individual*.25:0;
+      p.practiceDay={date:db.worldDate,individual:individual-conversion,conversion,
+        champions:points*shares.champions*light,tactics:points*shares.tactics*light,
+        teamwork:points*shares.teamwork*light};
+      if(!p.practiceUsage||p.practiceUsage.year!==db.year)p.practiceUsage={year:db.year,days:0,individual:0,conversion:0};
+      if(points){p.practiceUsage.days++;p.practiceUsage.individual+=individual-conversion;p.practiceUsage.conversion+=conversion}
+      if(conversion){p.roleConversionCostYear=db.year;advanceRoleConversionPlayer(db,p,conversion/12.5)}
       p.teamAdaptation=clamp(p.teamAdaptation+points*shares.teamwork*.008*light,0,100);
       p.tacticalAdaptation=clamp(p.tacticalAdaptation+points*shares.tactics*.01*light,0,100);
       if(points){
@@ -9685,18 +9717,21 @@ function completeRoleConversion(db,p){
   recordPlayerEvent(p,'role_conversion_completed',db.year,{from:old,to:target,team:p.team,date:db.worldDate,trainingDays:x.trainingDays||0,officialGames:x.officialGames||0,scrimGames:x.scrimGames||0});
   return {from:old,to:target};
 }
-function advanceRoleConversionPlayer(db,p){
-  const x=ensureRoleConversionState(p);if(!x||p.retired||!p.team)return null;const eff=roleConversionEffectiveness(db,p);
+function advanceRoleConversionPlayer(db,p,practiceFraction=1){
+  const x=ensureRoleConversionState(p);if(!x||p.retired||!p.team||!Number.isFinite(practiceFraction)||practiceFraction<=0)return null;const eff=roleConversionEffectiveness(db,p)*clamp(practiceFraction,0,2);
   x.trainingDays=(x.trainingDays||0)+1;p.roleConversionTrainingDaysYear=(p.roleConversionTrainingDaysYear||0)+1;x.progress=clamp((x.progress||0)+.42*eff,0,100);
   const keys=ROLE_KEY_ATTRS[x.targetRole]||[];for(const a of keys.slice(0,4))if(p.attrs?.[a]!=null)p.attrs[a]=Math.round(clamp(p.attrs[a]+.008*eff,20,99)*100)/100;
   if(x.trainingDays%7===0)roleConversionPracticeChampion(db,p,x);if(x.progress>=100)return completeRoleConversion(db,p);return null;
 }
-function advanceRoleConversionsDay(db){const done=[];for(const p of Object.values(db.players||{})){const r=advanceRoleConversionPlayer(db,p);if(r)done.push({pid:p.id,...r})}return done}
 function recordRoleConversionUsage(db,lines,kind='official'){
   const seen={};for(const l of lines||[]){const p=db.players[l.pid],x=p&&p.roleConversion;if(!x||l.role!==x.targetRole)continue;const k=p.id+'|'+kind;seen[k]=(seen[k]||0)+1}
   for(const [key,n] of Object.entries(seen)){const pid=key.split('|')[0],p=db.players[pid],x=p&&p.roleConversion;if(!x)continue;if(kind==='scrim'){x.scrimGames=(x.scrimGames||0)+n;x.progress=clamp((x.progress||0)+n*.32,0,100)}else{x.officialGames=(x.officialGames||0)+n;x.progress=clamp((x.progress||0)+n*1.05,0,100)}if(x.progress>=100)completeRoleConversion(db,p)}
 }
-function roleConversionGrowthMultiplier(p){const days=p.roleConversionTrainingDaysYear||0;return clamp(1-Math.min(.12,days/220*.12),.88,1)}
+function roleConversionGrowthMultiplier(p){
+  // Daily accounting already subtracts conversion time from individual work.
+  if(p.practiceUsage&&p.practiceUsage.year===p.roleConversionCostYear&&p.practiceUsage.days)return 1;
+  const days=p.roleConversionTrainingDaysYear||0;return clamp(1-Math.min(.12,days/220*.12),.88,1);
+}
 function aiReviewRoleConversions(db,t){
   const team=teamRef(db,t);if(!team||team.id===managedTeamId(db)||hashStr((db.worldDate||db.year)+'|role-review|'+team.id)%24!==0)return null;
   for(const role of ROLES){const p=team.depthChart?.[role]&&db.players[team.depthChart[role]];if(!p||p.role===role||p.roleConversion)continue;const fit=roleConversionFit(db,p,role),natural=roleConversionFit(db,p,p.role);if(p.age<=29&&fit>=natural-7)return proposeRoleConversion(db,p.id,role,'ai')}
