@@ -23,6 +23,7 @@ function bestStartingLineup(db,t,locked={},scrim=false){
   const players=(team.roster||[]).map(id=>db.players[id]).filter(eligible),base={},used=new Set();
   for(const role of ROLES){const p=locked[role]&&db.players[locked[role]];if(eligible(p)&&!used.has(p.id)){base[role]=p.id;used.add(p.id)}}
   const roles=ROLES.filter(r=>!base[r]),available=players.filter(p=>!used.has(p.id));if(available.length<roles.length)return base;
+  if(!roles.length)return base;
   const scores=Object.fromEntries(available.map(p=>[p.id,Object.fromEntries(roles.map(role=>[role,lineupRoleScore(p,role)]))]));
   let dp=new Map([[0,{score:0,map:{...base}}]]);
   for(const p of available){
@@ -33,7 +34,19 @@ function bestStartingLineup(db,t,locked={},scrim=false){
     }
     dp=next;
   }
-  return dp.get((1<<roles.length)-1)?.map||base;
+  let best=dp.get((1<<roles.length)-1)?.map||base,bestScore=lineupAssignmentScore(db,team,best);
+  // Pair interactions are not additive, so keep the role-fit DP and refine
+  // its legal five with bounded bench substitutions rather than changing DP.
+  for(let pass=0;pass<2;pass++){
+    let improved=false;
+    for(const role of roles)for(const p of available){
+      if(Object.values(best).includes(p.id))continue;
+      const next={...best,[role]:p.id},score=lineupAssignmentScore(db,team,next);
+      if(score>bestScore+.01){best=next;bestScore=score;improved=true}
+    }
+    if(!improved)break;
+  }
+  return best;
 }
 function initializeDepthChart(db,t,force=false){
   const team=teamRef(db,t);if(!team)return;team.depthChart=team.depthChart||{};
@@ -57,13 +70,17 @@ function setDepthStarter(db,t,role,p,source='manager',silent=false){
   return {ok:true,old,to:player.id};
 }
 function lineupAssignmentScore(db,t,map){
-  const team=teamRef(db,t);return ROLES.reduce((sum,role)=>{const p=map&&map[role]&&db.players[map[role]];return sum+(validLineupPlayer(db,team,p)?lineupRoleScore(p,role):0)},0);
+  const team=teamRef(db,t),ids=ROLES.map(role=>map?.[role]).filter(id=>validLineupPlayer(db,team,db.players[id]));
+  const skill=ROLES.reduce((sum,role)=>{const p=map&&map[role]&&db.players[map[role]];return sum+(validLineupPlayer(db,team,p)?lineupRoleScore(p,role):0)},0);
+  return skill+(ids.length===5?(lineupCohesion(db,team,ids).relationship-50)*.2:0);
 }
 function aiReviewDepthChart(db,t){
   const team=teamRef(db,t);if(!team||team.id===managedTeamId(db))return;initializeDepthChart(db,team,false);
   const cur={...team.depthChart},best=bestStartingLineup(db,team,{}),curScore=lineupAssignmentScore(db,team,cur),bestScore=lineupAssignmentScore(db,team,best);
   const troubled=ROLES.some(role=>{const p=cur[role]&&db.players[cur[role]];return p&&((p.form||0)<=-6||p.condition<60||p.wantsOut)});
   if(!validateStartingLineup(db,team,cur).ok||bestScore-curScore>=5||(troubled&&bestScore-curScore>=3)){
+    team.lineupDecision={date:db.worldDate,before:cur,after:{...best},scoreChange:bestScore-curScore,
+      reason:'포지션 전력·동료 관계',relationship:lineupCohesion(db,team,Object.values(best)).relationship};
     team.depthChart=best;for(const role of ROLES){const pid=best[role];if(pid&&cur[role]!==pid)recordPlayerEvent(db.players[pid],'starter_change',db.year,{team:team.id,role,from:cur[role]||null,to:pid,date:db.worldDate,source:'ai'})}
   }
 }

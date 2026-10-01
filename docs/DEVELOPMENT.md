@@ -1298,3 +1298,38 @@ validation complete.
 Next connected work: manual partner request/consent/scheduling workflow,
 relationship-aware recruitment/selection scenarios and supervised long-QA exit
 records. No 100-season run was duplicated or restarted during this batch.
+
+
+### D08 relationship decisions batch (2026-10-02)
+
+Base main261587e, published after verified #114. The role-fit assignment DP
+remains additive and deterministic. Two bounded bench-substitution passes then
+compare full lineups with at most +/-10 total score from average teammate bonds.
+This avoids pretending pair interactions are additive DP terms. Large role-fit
+gaps still win; explicit locked starters are preserved and the human club's
+selection is never overwritten by AI. Production AI records before/after, score
+change and observed relationship reason when it changes the starting five.
+This is a bounded local refinement, not an exact globally optimal pair solver.
+
+After real own-team official play or joint drills, clubs record observed pair
+relationships. These saved reports belong to one club, retain at most512 recent
+pairs, and lose certainty toward neutral over730days. AI recruitment adds at
+most +/-2 points using only that club's recorded evidence. Unknown pairs are
+neutral and current hidden relationship changes cannot silently update a report.
+A player independently remembers their own teammate bonds; these change offer
+utility by at most +/-0.2. Changed teammate bands enter negotiation situation
+reopening and player action snapshots, preserving stale consent protection.
+Personal relationship history itself is not pruned by observation retention.
+
+Files: lineup, player-relations, practice-resources, contracts,
+contract-negotiation, state-player-actions, relationship-decisions acceptance
+and existing runner/package wiring. The new acceptance checks near-equal bench
+choice, strong ability gaps, locks/human authority, actual AI changes, club report
+isolation, stale evidence, player willingness, snapshot/reopening and saves.
+Shared runner34 acceptances/30contexts, calendar/scouting7, regression and
+95-module static/build pass locally. Final whole mandatory CI is the merge gate.
+
+Remaining: D08 long-term conflict/retention/recruitment balance and mobile
+workflows, D09 manual partner request/consent/schedule, D11 supervised process
+exit evidence and actual multi-seed100seasons. Existing failed/interrupted
+diagnostics remain preserved; no long run was duplicated. Whole D remains open.

@@ -97,7 +97,7 @@ function offerUtility(db,p,t,offer,opt={}){
   // preserve their prior utility. Stability/development goals value security.
   const guarantee=(contractGuaranteeRate(offer)-.5)/.25*.055*
     (career==='stability'||career==='development'?1:.5);
-  return moneyScore*1.05+roleScore+strength*amb*.18+intl*amb*.22+(t.fans||30)/250+fac+coach+careerFit+durationFit+home+option+buyout+currentPenalty+guarantee;
+  return moneyScore*1.05+roleScore+strength*amb*.18+intl*amb*.22+(t.fans||30)/250+fac+coach+careerFit+durationFit+home+option+buyout+currentPenalty+guarantee+clamp((playerTeamRelationship(db,p,t)-50)/250,-.2,.2);
 }
 function contractBonusCost(db,t,year){
   let sum=0;for(const id of t.roster){const p=db.players[id],c=p&&p.contract;if(!c||!c.bonuses)continue;const rows=(p.career||[]).filter(x=>x.year===year),g=rows.reduce((a,x)=>a+(x.g||0),0),rating=g?rows.reduce((a,x)=>a+(x.rating||6.5)*(x.g||0),0)/g:0;
@@ -156,7 +156,7 @@ function aiMarketObservation(db,p,t){
   // scouting-domain reports. Initial dossiers are seeded once by scouting.js.
   return aiScoutReport(db,t,p);
 }
-function aiMarketValue(db,p,t){const est=aiMarketObservation(db,p,t),up=Math.max(0,est.potential-est.ability),w={'win-now':0.1,'youth':0.6,'balanced':0.3,'superstar':0.15,'cost':0.35}[t.philosophy]||0.3;return est.ability+up*w-(t.philosophy==='youth'&&p.age>26?2:0)-medicalContractRisk(db,p)*18}
+function aiMarketValue(db,p,t){const est=aiMarketObservation(db,p,t),up=Math.max(0,est.potential-est.ability),w={'win-now':0.1,'youth':0.6,'balanced':0.3,'superstar':0.15,'cost':0.35}[t.philosophy]||0.3;return est.ability+up*w-(t.philosophy==='youth'&&p.age>26?2:0)-medicalContractRisk(db,p)*18+clamp((knownRecruitRelationship(db,t,p)-50)/25,-2,2)}
 function pFillScore(db,p,t){const domestic=projectedPlayerIsLocal(db,p,t)?2:0,age=p.age<=21?1:0,cost=Math.min(4,asking(db,p,t.region)/Math.max(.2,psOf(db,t.region)));return aiMarketValue(db,p,t)+domestic+age-cost*.15}
 function optionDecision(db,p,t){
   const o=p.contract&&p.contract.option;if(!o||o.year!==db.year)return false;

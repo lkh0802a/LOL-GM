@@ -65,6 +65,7 @@ function runDailyPractice(db){
       if(points&&Math.abs(target-bond)>=.1)adjustPlayerRelationship(db,a,b,
         Math.sign(next-bond)*Math.max(.1,Math.abs(next-bond)));
     }
+    if(points)rememberTeamRelationships(db,t,ids);
     recoverTeamCohesion(db,t,null,.008+points*shares.teamwork/10000);
   }
 }

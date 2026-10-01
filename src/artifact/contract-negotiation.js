@@ -22,6 +22,7 @@ function negotiationSituationSnapshot(db,p,t,kind){
     satisfactionBand:satisfactionLabel(p.satisfaction),
     trustBand:p.managerTrust>=65?'strong':p.managerTrust>=55?'ok':'low',
     relationshipBand:p.managerRelationship>=45?'ok':'low',
+    teammateBand:playerTeamRelationship(db,p,t)>=65?'strong':playerTeamRelationship(db,p,t)<=35?'low':'neutral',
     issues,intlGames,titles,contractUntil:p.contract?.until??null
   };
 }
@@ -29,7 +30,7 @@ function negotiationSituationChanges(before,after){
   if(!before||!after)return [];
   const keys=['playerTeamId','teamId','wantsOut','wantsOutReason','careerGoal',
     'rosterRole','satisfactionBand','trustBand','relationshipBand',
-    'intlGames','titles','contractUntil'];
+    'intlGames','titles','contractUntil','teammateBand'];
   const changed=keys.filter(k=>before[k]!==after[k]);
   if(JSON.stringify(before.issues||[])!==JSON.stringify(after.issues||[]))changed.push('issues');
   return changed;
