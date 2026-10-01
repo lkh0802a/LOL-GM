@@ -524,14 +524,14 @@ The current Worlds+14 model remains the fictional game's policy; this source
 must not trigger an automatic migration to real-world calendar dates. Revisit
 only where the fictional design needs a more coherent rule.
 
-Current unit: D04-B4e2 — AI permanent-transfer personal terms. Main files:
-contract-transfer-market.js, contracts.js and transfer-consent acceptance.
-D04-B4e1 passed final-head CI 36864244067 and merged as PR #97.
-B4e2 preserves the shared consent/transaction path, adds affordable new terms,
-and never counts an unconfirmed reciprocal move as available payroll.
-Full regression, long simulation and build remain Actions-owned. Remaining
-D04 scope includes insolvency assets/other claims, agents and promises; D05
-loans and Items 13–23 stay on the full roadmap.
+Current unit: D04-B4f1 — contractual role promise enforcement. Main files:
+player-relations.js, contracts.js, transfer.js, ui-player.js and the focused
+contract-role-promise acceptance. B4e2 passed CI 36865728151 and merged as PR #98.
+B4f1 preserves the signed role when club roster labels change; real official
+usage drives satisfaction, trust and renewal willingness. New contracts and
+permanent transfers start a fresh observation window, with medical absences
+excluded. Full Actions remains the acceptance gate. Remaining D04 work includes
+agents, oral promises, insolvency assets/other claims; D05 and Items 13–23 follow.
 
 Local D04-B4d1 evidence: static check (74 modules) and the focused UI/finance/contract runner passed (17 acceptances, 13 isolated engine contexts, one engine compile). Full CI acceptance is required before merge.
 
@@ -607,3 +607,26 @@ Focused coverage includes pure proposals/budget view, retained preference,
 no-budget refusal, production AI new contracts and save restore. Static and
 focused transfer/owned-coach checks pass; Actions is the final acceptance gate.
 Next independent work: agent/promises and remaining insolvency before D05 loans.
+
+
+D04-B4f1 handoff: contract promisedRole is independent of the club's current
+rosterRole. A downgrade is a visible promise issue; insufficient real official
+playing time is judged against the signed role using the existing thresholds and
+severity scales. Satisfaction/trust and the existing renewal policy consume the
+same issue. The baseline starts at actual signing/retained transfer, not earlier
+club usage. Internal first/reserve movement does not create a new agreement.
+Unavailable medical games with no appearance are excluded from opportunities;
+actual appearances still count. Baselines and absence counters are optional
+legacy-compatible fields, pure queries do not invent historic dates. Player UI
+separates current role from contract role and shows contract-relative usage.
+Focused checks pass for official usage, fulfilled/broken promises, role edits,
+medical absences, renewal disposition, resets, pure status and save/legacy data.
+The shared runner now has 20 acceptances / 16 isolated engine contexts.
+This is contractual role enforcement only: oral promises, agents and complete
+promise lifecycle/history remain independent unfinished work. No D04 completion.
+
+B4f1 first CI core smoke found a bench fixture copied a starter contract while
+changing only rosterRole to backup. It now explicitly agrees a backup contract;
+the no-playing-time-complaint assertion remains. The new focused acceptance
+separately covers the opposite case: a backup label cannot erase a starter promise.
+Local smoke passed after the fixture correction; final-head Actions is required.

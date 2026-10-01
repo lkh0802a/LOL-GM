@@ -10,7 +10,28 @@ function playerRelationship(db,a,b){const k=playerRelationKey(a,b);if(!k)return 
 function adjustPlayerRelationship(db,a,b,delta){const k=playerRelationKey(a,b);if(!k)return 50;db.playerRelations=db.playerRelations||{};const v=clamp((db.playerRelations[k]??50)+delta,0,100);db.playerRelations[k]=Math.round(v*10)/10;return db.playerRelations[k]}
 function teamRelationshipScore(db,t){const ids=(t?.roster||[]).filter(id=>db.players[id]&&!db.players[id].retired);if(ids.length<2)return 50;let sum=0,n=0;for(let i=0;i<ids.length;i++)for(let j=i+1;j<ids.length;j++){sum+=playerRelationship(db,ids[i],ids[j]);n++}return n?sum/n:50}
 const CAREER_GOAL_KO={development:'성장 기회',starter:'주전 정착',international:'국제대회 출전',titles:'우승 경쟁',stability:'안정적인 커리어'};
-const SAT_REASON_KO={playing_time:'출전 시간 부족',reserve:'2군 배치',contract:'계약/연봉 불만',team_results:'팀 성적 불만',role:'역할 불만',international:'국제대회 기회 부족',career_goal:'커리어 목표 불일치'};
+const SAT_REASON_KO={playing_time:'출전 시간 부족',promise_role:'계약 역할 약속 불이행',reserve:'2군 배치',contract:'계약/연봉 불만',team_results:'팀 성적 불만',role:'역할 불만',international:'국제대회 기회 부족',career_goal:'커리어 목표 불일치'};
+function startContractRolePromise(db,p,t){
+  if(!p.contract)return;
+  const u=p.usage?.year===db.year?p.usage:null;
+  p.contract.rolePromiseStart={year:db.year,teamId:t.id,date:db.worldDate||null,
+    games:u?.games||0,teamGames:u?.teamGames||0,
+    unavailableTeamGames:u?.unavailableTeamGames||0};
+}
+function contractRolePromiseStatus(db,p,year=db.year){
+  const role=p.contract?.promisedRole;
+  if(!SQUAD_ROLES.includes(role)||p.contract.until<year)return null;
+  const t=p.team&&db.teams[p.team],u=p.usage?.year===year?p.usage:null,
+    baseline=p.contract.rolePromiseStart,
+    sameYear=baseline?.year===year,
+    games=Math.max(0,(u?.games||0)-(sameYear?baseline.games:0)),
+    unavailable=Math.max(0,(u?.unavailableTeamGames||0)-
+      (sameYear?baseline.unavailableTeamGames||0:0)),
+    teamGames=Math.max(0,(u?.teamGames||0)-(sameYear?baseline.teamGames:0)-unavailable);
+  return {role,expected:expectedPlayShare({rosterRole:role},t),games,teamGames,
+    actual:teamGames?games/teamGames:0,start:baseline?.date||null,
+    downgraded:(SQUAD_ROLE_ORDER[role]??0)>(SQUAD_ROLE_ORDER[p.rosterRole]??0)};
+}
 function ensureSatisfaction(p){
   pState(p);if(p.satisfaction===undefined)p.satisfaction=70;if(!Array.isArray(p.satisfactionReasons))p.satisfactionReasons=[];
   if(p.managerRelationship===undefined)p.managerRelationship=60;if(p.managerTrust===undefined)p.managerTrust=60;
@@ -27,10 +48,15 @@ function satisfactionLabel(v){return v>=80?'매우 만족':v>=65?'만족':v>=48?
 function satisfactionIssues(db,p,opt={}){
   ensureSatisfaction(p);const t=p.team&&db.teams[p.team],usageYear=opt.year??db.year,u=p.usage&&p.usage.year===usageYear?p.usage:null,out=[];
   if(!t)return out;
-  const exp=expectedPlayShare(p,t),actual=u&&u.teamGames>=8?actualPlayShare(p):null;
-  if(actual!==null&&u.teamGames>=14&&p.rosterRole==='core'&&exp-actual>.28)out.push({code:'playing_time',severity:clamp((exp-actual)*24,3,10)});
-  else if(actual!==null&&u.teamGames>=16&&p.rosterRole==='starter'&&exp-actual>.32)out.push({code:'playing_time',severity:clamp((exp-actual)*20,3,9)});
-  else if(actual!==null&&u.teamGames>=24&&p.rosterRole==='competition'&&actual<.03&&p.personality.ambition>=80)out.push({code:'playing_time',severity:3});
+  const promise=contractRolePromiseStatus(db,p,usageYear),role=promise?.role||p.rosterRole,
+    games=promise?.teamGames??u?.teamGames??0,
+    exp=promise?.expected??expectedPlayShare(p,t),
+    actual=games>=8?(promise?.actual??actualPlayShare(p)):null;
+  if(actual!==null&&games>=14&&role==='core'&&exp-actual>.28)out.push({code:'playing_time',severity:clamp((exp-actual)*24,3,10)});
+  else if(actual!==null&&games>=16&&role==='starter'&&exp-actual>.32)out.push({code:'playing_time',severity:clamp((exp-actual)*20,3,9)});
+  else if(actual!==null&&games>=24&&role==='competition'&&actual<.03&&p.personality.ambition>=80)out.push({code:'playing_time',severity:3});
+  if(promise?.downgraded)out.push({code:'promise_role',severity:Math.min(6,
+    ((SQUAD_ROLE_ORDER[role]??0)-(SQUAD_ROLE_ORDER[p.rosterRole]??0))*2)});
   if(t.parent&&p.rosterRole!=='prospect'&&(p.age>=23||(p.reputation||0)>=74)&&p.personality.ambition>=62)out.push({code:'reserve',severity:3+Math.max(0,(p.reputation||60)-72)/8});
   if(p.contract){const fair=marketSalary(db,p,t.region);if(fair>0&&p.contract.salary/fair<.62&&p.personality.ambition>=60)out.push({code:'contract',severity:clamp((.62-p.contract.salary/fair)*20,2,7)})}
   if(u&&u.teamGames>=18&&u.teamWins/u.teamGames<.35&&p.personality.ambition>=76)out.push({code:'team_results',severity:clamp((.35-u.teamWins/u.teamGames)*20+2,2,6)});
@@ -50,7 +76,7 @@ function applySatisfaction(db,p,opt={}){
   let delta=issues.length?-Math.min(opt.offseason?7:1.4,issues.reduce((a,x)=>a+x.severity,0)*(opt.offseason?.16:.035)):0;
   if(!issues.length&&u&&u.teamGames>=4){const actual=actualPlayShare(p),exp=expectedPlayShare(p);delta=Math.min(opt.offseason?5:1.2,1+(actual-exp)*3)}
   p.satisfaction=clamp(p.satisfaction+delta,0,100);p.satisfactionReasons=issues.map(x=>x.code);
-  const severity=issues.reduce((a,x)=>a+x.severity,0),trustSeverity=issues.filter(x=>['playing_time','reserve','contract','role','career_goal'].includes(x.code)).reduce((a,x)=>a+x.severity,0);
+  const severity=issues.reduce((a,x)=>a+x.severity,0),trustSeverity=issues.filter(x=>['playing_time','promise_role','reserve','contract','role','career_goal'].includes(x.code)).reduce((a,x)=>a+x.severity,0);
   if(issues.length){
     p.managerRelationship=clamp(p.managerRelationship-Math.min(opt.offseason?5:1.1,severity*(opt.offseason?.12:.025)),0,100);
     p.managerTrust=clamp(p.managerTrust-Math.min(opt.offseason?7:1.4,trustSeverity*(opt.offseason?.16:.035)),0,100);
@@ -58,7 +84,8 @@ function applySatisfaction(db,p,opt={}){
     p.managerRelationship=clamp(p.managerRelationship+(60-p.managerRelationship)*.025,0,100);
     p.managerTrust=clamp(p.managerTrust+(60-p.managerTrust)*.02,0,100);
   }
-  if(p.satisfaction<24&&issues.length&&['core','starter'].includes(p.rosterRole))p.concernStreak=(p.concernStreak||0)+1;else p.concernStreak=Math.max(0,(p.concernStreak||0)-1);
+  const promisedRole=contractRolePromiseStatus(db,p,usageYear)?.role||p.rosterRole;
+  if(p.satisfaction<24&&issues.length&&['core','starter'].includes(promisedRole))p.concernStreak=(p.concernStreak||0)+1;else p.concernStreak=Math.max(0,(p.concernStreak||0)-1);
   const severeBreakdown=p.satisfaction<=8&&p.concernStreak>=18&&p.managerRelationship<=25&&p.managerTrust<=20&&p.personality.ambition>=70;
   if(!p.wantsOut&&severeBreakdown&&issues.length){p.wantsOut=true;p.wantsOutReason=issues[0].code;recordPlayerEvent(p,'transfer_request',db.year,{reason:p.wantsOutReason,team:p.team,date:db.worldDate})}
   else if(p.wantsOut&&(p.satisfaction>=50||p.managerTrust>=52)){p.wantsOut=false;const why=p.wantsOutReason;p.wantsOutReason=null;p.concernStreak=0;recordPlayerEvent(p,'transfer_request_withdrawn',db.year,{reason:why,team:p.team,date:db.worldDate})}
@@ -69,7 +96,9 @@ function updatePlayerUsage(db,s,rec,lines){
   const comp=db.competitions[s.comp],n=rec.games.length,by={};for(const l of lines)(by[l.pid]=by[l.pid]||[]).push(l);
   for(const tid of [rec.a,rec.b]){const t=db.teams[tid];if(!t)continue;const teamWins=rec.games.filter(g=>g.winner===tid).length;
     for(const id of t.roster){const p=db.players[id];if(!p)continue;ensureSatisfaction(p);const u=usageFor(p,s.year);u.teamGames+=n;u.teamWins+=teamWins;if(comp.international)u.teamIntlGames+=n;
-      const ls=by[id]||[];u.games+=ls.length;u.series++;u.wins+=ls.filter(x=>x.win).length;if(comp.international)u.intlGames+=ls.length;if(t.parent)u.reserveGames+=ls.length;else u.firstTeamGames+=ls.length;
+      const ls=by[id]||[];
+      if(medicalOut(p)&&!ls.length)u.unavailableTeamGames=(u.unavailableTeamGames||0)+n;
+      u.games+=ls.length;u.series++;u.wins+=ls.filter(x=>x.win).length;if(comp.international)u.intlGames+=ls.length;if(t.parent)u.reserveGames+=ls.length;else u.firstTeamGames+=ls.length;
       if(u.teamGames>=16&&u.series%6===0)applySatisfaction(db,p);
     }
   }

@@ -178,3 +178,11 @@ contracts to the existing atomic commands. Payroll room is computed from actual
 contracts and cash after the fee, with no speculative swap credit. Proposal views
 clone player/team data; contracts retains FA/renewal processing and invokes this
 module once. Both standalone and engine manifests include the module.
+
+
+D04-B4f1: player-relations owns signed-role promise status and its usage baseline.
+Contract/transfer writers start the baseline inside existing atomic actions;
+roster role edits leave promisedRole intact. Official usage tracks unavailable
+medical games and satisfaction consumes eligible contract-relative appearances.
+The current-role and contractual-role UI are distinct. Optional baseline fields
+persist with existing player/contract saves and rollback snapshots.
