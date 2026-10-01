@@ -131,7 +131,8 @@ function worldDecisions(db,rng,f,ev){
   for(const t of activeTeams(db).filter(t=>!t.parent)){
     const R=db.regions[t.region], s=teamStrength(db,t.id);
     const p=(.004+(t.fans>=45&&s<R.strength-3?.018:0)+(t.fans<12?.015:0))*f;
-    if(rng.chance(p)){const old=t.name,on=orgName(db,rng);t.name=on.name;t.formerNames=[...(t.formerNames||[]),old];t.fans=Math.round(t.fans*0.85);
+    if(rng.chance(p)){const old=t.name,on=orgName(db,rng),ownerRng=new RNG(worldSimulationSeed(db)+'/'+db.year+'/'+t.id+'/'+(t.ownershipSerial||0),'ownership');
+      transferClubOwnership(db,t,{name:on.name,wealth:ownerRng.int(30,95),reason:'office-approved-acquisition'});t.fans=Math.round(t.fans*0.85);
       ev(`구단 인수: ${old} → ${t.name} (${t.fans>=45?'인기 구단 매각':'저조한 팬덤으로 매각'})`)}
   }
 }

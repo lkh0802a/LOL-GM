@@ -912,3 +912,32 @@ This is an account execution block, not a test failure. Do not merge this PR or
 claim full CI success. Do not change billing or spending settings automatically.
 Local bounded checks remain available; retain long-run partial reports and keep
 implementation work independent of this external block.
+
+## D06 ownership continuity (2026-10-02)
+
+Ordinary office-approved acquisitions previously only changed the club name,
+leaving the same owner in place. Both those acquisitions and financial rescue
+sales now create distinct stable owner identities and append a dated ownership
+chain identifying the same continuing club, region/division and license.
+They retain the club ID, employment/staff contracts, registration, parent links,
+finances and results. Rescue equity remains capital in the existing statement;
+ordinary acquisitions do not invent cash revenue. A new board starts with a
+fresh patience budget. Owned reserves cannot be sold independently through this
+path. Legacy saves gain a current identity without fabricated past acquisitions.
+
+Owners: club-ownership.js, finance.js, office-international.js and save-migration.js.
+Focused acceptance covers continuity, sequential identities, legacy/current save
+restore, reserve rejection, ordinary production acquisition and real financial
+recapitalization/accounting. Finance, the 29-acceptance shared runner (25 engine contexts) and static checks (91 modules) pass.
+Remaining D06: license approval/transfer lifecycle and region merge/split successor
+history/local eligibility; this batch does not complete those boundaries.
+
+External execution block: PR #106's CI failed before any step on GitHub account
+billing/spending restrictions (run 36899884255), not a test failure. Preserve its
+branch and do not merge without full CI. Its follow-up local documentation commit
+is 115a2c6. A local single-seed 100-season fallback is running as process 26248,
+with reports .diagnostics/daily-local-1.json and stdout/stderr files. It loaded
+PR #106's engine revision before this ownership change; do not attribute its
+results to the new ownership code. Early actual daily-clock seasons passed;
+completion and remaining two seeds are still unverified. Do not change account
+billing settings automatically. Continue implementation independently.

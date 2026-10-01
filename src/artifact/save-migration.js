@@ -93,6 +93,7 @@ function normalizeRestoredSave(db){
   for(const t of Object.values(db.teams)){
     ensureFacilities(t);
     t.training=normalizeTraining(t.training);
+    ensureClubOwnership(t);
     delete t._pre;
   }
   for(const p of Object.values(db.players)){
