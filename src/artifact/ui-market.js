@@ -12,6 +12,60 @@ function renderRecruitmentBoard(){
   if(!rows.length)return '<p class="hint">아직 영입 후보가 없습니다. FA나 이적 대상에서 관심 등록 후 스카우팅과 내부 평가를 진행하세요.</p>';
   return rows.sort((a,b)=>(rank[a.priority]??9)-(rank[b.priority]??9)).map(e=>{const p=DB.players[e.pid],ev=e.evaluation,where=p.team?esc(tshort(p.team)):'FA';return `<div class="mrow"><span><b>${e.priority}</b> <span class="role">${ROLE_KO[p.role]}</span> <b>${esc(p.name)}</b> · ${where} · ${recruitStageLabel(e)} · 정보 ${knowledge(DB,p)}%${ev?` · 적합도 <b>${ev.fit}</b>/100 · 능력 ${ev.ability[0]}–${ev.ability[1]} · 잠재 ${ev.potential[0]}–${ev.potential[1]} · 예상 역할 ${SQUAD_ROLE_KO[ev.expectedRole]||ev.expectedRole} · 의료 가용성 위험 ${Math.round(medicalContractRisk(DB,p)*100)}%`:''}</span><span>${recruitButtons(p,e)}${e.stage==='evaluated'&&!p.team?`<button class="primary sm2" data-start-fa="${p.id}">공식 협상</button>`:''}</span></div>`}).join('');
 }
+function renderContractWindow(){
+  const w=DB.world,cw=w?.contractWindow,t=DB.teams[managedTeamId(DB)];
+  if(!cw||!t)return '';
+  const exclusive=cw.stage==='exclusive',
+    own=(t.roster||[]).map(id=>DB.players[id]).filter(p=>contractExpiresThisSeason(DB,p)),
+    waived=exclusive?Object.values(cw.contactWaivers||{}).map(x=>DB.players[x.pid])
+      .filter(p=>p&&!p.retired&&p.team&&p.team!==t.id&&!contractAgreementFor(DB,p.id)):[],
+    fas=!exclusive?Object.values(DB.players).filter(p=>!p.retired&&!p.team)
+      .sort((a,b)=>obsOvr(DB,b)-obsOvr(DB,a)).slice(0,25):[];
+  const ownRows=own.map(p=>{
+    const a=contractAgreementFor(DB,p.id),waiver=cw.contactWaivers?.[p.id],
+      n=negotiationStore(DB)[negotiationId(DB,p.id,'renewal')],
+      o=p.contract?.option,option=o&&o.year===cw.startSeason?o:null;
+    let action;
+    if(a?.status==='agreed')action=`<small class="hi">재계약 합의 · ${a.effectiveDate} 새 계약 시작</small>`;
+    else if(waiver)action='<small class="hint">타 구단 조기 접촉 허용됨 · 재계약 독점권 포기</small>';
+    else if(option?.type==='team')action=`<button class="ghost sm2" data-exercise-window-option="${p.id}">팀 옵션 행사</button>`;
+    else if(option?.type==='player')action='<small class="hint">선수 옵션은 독점기간 종료 때 선수 측 결정</small>';
+    else if(n?.status==='open')action='<small class="hi">협상 중</small>';
+    else action=`<button class="primary sm2" data-start-renew="${p.id}">재계약 협상</button><button class="ghost sm2" data-allow-contact="${p.id}">재계약 안 함 · 타 구단 접촉 허용</button>`;
+    return `<div class="mrow"><span><span class="role">${ROLE_KO[p.role]}</span> <b>${esc(p.name)}</b> · 현재 ${money(p.contract.salary)} · ${cw.contractExpiryDate} 계약 종료${option?` · ${option.type==='team'?'팀':'선수'} 옵션 ${money(option.salary)}`:''}</span><span>${action}</span></div>`;
+  }).join('');
+  const earlyRows=waived.map(p=>{
+    const e=recruitmentTarget(DB,p.id),a=contractAgreementFor(DB,p.id),
+      n=negotiationStore(DB)[negotiationId(DB,p.id,'early_fa',t.id)];
+    return `<div class="mrow"><span><span class="role">${ROLE_KO[p.role]}</span> <b>${esc(p.name)}</b> · ${esc(tshort(p.team))} · ${p.age}세 · 종합 ${obsOvr(DB,p)}${knowledge(DB,p)<100?'?':''} · ${cw.contractExpiryDate}까지 현 계약 유지 · <small>${recruitStageLabel(e)}</small></span><span>${a?.status==='agreed'?'<small class="hint">다음 계약 합의 완료</small>':`${recruitButtons(p,e)}${e?.stage==='evaluated'&&!(n&&n.status==='open')?`<button class="primary sm2" data-start-early="${p.id}">조기 계약 협상</button>`:''}`}</span></div>`;
+  }).join('');
+  const faRows=fas.map(p=>{
+    const e=recruitmentTarget(DB,p.id),n=negotiationStore(DB)[negotiationId(DB,p.id,'fa')];
+    return `<div class="mrow"><span><span class="role">${ROLE_KO[p.role]}</span> <b>${esc(p.name)}</b> · ${p.age}세 · 종합 ${obsOvr(DB,p)}${knowledge(DB,p)<100?'?':''} · <small>${recruitStageLabel(e)}</small></span><span>${recruitButtons(p,e)}${e?.stage==='evaluated'&&!(n&&n.status==='open')?`<button class="primary sm2" data-start-fa="${p.id}">FA 협상</button>`:''}</span></div>`;
+  }).join('');
+  return `<section class="market contractwindow"><h3>월즈 종료 후 계약 협상 — ${esc(t.name)}</h3>
+    <p class="hint">최종 경기 ${cw.seasonEndDate} · 원소속 독점 ${cw.startDate}~${cw.exclusiveThrough} · 기존 계약 만료 ${cw.contractExpiryDate} · FA 접촉 ${cw.outsideContactDate}부터</p>
+    <p class="${exclusive?'warn':'hi'}">${exclusive?'기존 계약은 14일 유지됩니다. 원소속은 독점 재계약권을 갖지만 재계약 의사가 없으면 해당 선수의 타 구단 조기 접촉을 허용할 수 있습니다.':'독점기간과 기존 계약이 끝났습니다. 미재계약 선수는 FA이며 모든 구단이 협상할 수 있습니다.'}</p>
+    <h4>진행 중인 협상</h4>${renderNegotiations()}
+    ${exclusive?`<h4>우리 팀 만료 예정 계약</h4>${ownRows||'<p class="hint">이번 독점기간 만료 예정 선수가 없습니다.</p>'}<h4>타 구단이 조기 접촉을 허용한 선수</h4>${earlyRows||'<p class="hint">현재 조기 접촉 허용 선수가 없습니다.</p>'}`:
+      `<h4>FA 시장</h4>${faRows||'<p class="hint">현재 협상 가능한 FA가 없습니다.</p>'}`}
+  </section>`;
+}
+function bindContractWindow(){
+  const act=m=>{MSG=m;saveDB();nav();const e=document.querySelector('.contractwindow');e&&e.scrollIntoView({block:'start'})};
+  document.querySelectorAll('[data-start-renew]').forEach(b=>b.onclick=()=>act(startNegotiation(DB,b.dataset.startRenew,'renewal').msg));
+  document.querySelectorAll('[data-allow-contact]').forEach(b=>b.onclick=()=>act(grantEarlyContact(DB,b.dataset.allowContact,'manager').msg));
+  document.querySelectorAll('[data-exercise-window-option]').forEach(b=>b.onclick=()=>act(exerciseExclusiveTeamOption(DB,b.dataset.exerciseWindowOption).msg));
+  document.querySelectorAll('[data-start-early]').forEach(b=>b.onclick=()=>act(startNegotiation(DB,b.dataset.startEarly,'early_fa',{teamId:managedTeamId(DB)}).msg));
+  document.querySelectorAll('[data-start-fa]').forEach(b=>b.onclick=()=>act(startNegotiation(DB,b.dataset.startFa,'fa').msg));
+  document.querySelectorAll('[data-interest]').forEach(b=>b.onclick=()=>act(mInterest(DB,b.dataset.interest,'B')));
+  document.querySelectorAll('[data-priority]').forEach(el=>el.onchange=()=>act(mInterest(DB,el.dataset.priority,el.value)));
+  document.querySelectorAll('[data-evaluate]').forEach(b=>b.onclick=()=>act(mEvaluateTarget(DB,b.dataset.evaluate)));
+  document.querySelectorAll('[data-drop]').forEach(b=>b.onclick=()=>act(mDropInterest(DB,b.dataset.drop)));
+  document.querySelectorAll('[data-scout]').forEach(b=>b.onclick=()=>act(scoutPlayers(DB,[b.dataset.scout],40,0.1*psOf(DB,DB.teams[managedTeamId(DB)].region))));
+  bindNegotiationControls(act);
+}
+
 function renderMarket(){
   const w=DB.world,t=DB.teams[managedTeamId(DB)],R=DB.regions[t.region],pay=payroll(DB,t),budget=salaryBudget(DB,t);
   const exp=t.roster.map(id=>DB.players[id]).filter(p=>!p.contract||!p.contract.medicalReplacement&&p.contract.until<DB.year);

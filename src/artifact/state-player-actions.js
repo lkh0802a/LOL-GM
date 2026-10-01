@@ -51,17 +51,40 @@ function validatePlayerSignAction(db,a){
   const auth=playerActionAuthority(db,a.actor,t);
   if(auth)return auth;
   const kind=a.kind||'fa',from=p.team&&playerActionTeam(db,p.team);
-  if(!['fa','renewal','initial','transfer','medical_replacement'].includes(kind))
+  if(!['fa','renewal','initial','transfer','medical_replacement',
+      'renewal_agreement','early_fa_agreement'].includes(kind))
     return worldActionError('invalid_action','지원하지 않는 계약 유형입니다');
+  const futureAgreement=['renewal_agreement','early_fa_agreement'].includes(kind)
+    ?contractAgreementFor(db,p.id):null;
+  if(kind==='renewal_agreement'){
+    if(a.actor!=='system'||!futureAgreement||futureAgreement.status!=='agreed'||
+      futureAgreement.kind!=='renewal'||futureAgreement.teamId!==t.id||
+      p.team!==futureAgreement.fromTeamId||futureAgreement.effectiveDate>db.worldDate||
+      (p.contract&&p.contract.until>=db.year))
+      return worldActionError('invalid_contract','발효 가능한 원소속 재계약 합의가 아닙니다');
+  }
+  if(kind==='early_fa_agreement'){
+    if(a.actor!=='system'||!futureAgreement||futureAgreement.status!=='agreed'||
+      futureAgreement.kind!=='early_fa'||futureAgreement.teamId!==t.id||
+      p.team||p.contract||futureAgreement.effectiveDate>db.worldDate)
+      return worldActionError('invalid_contract','발효 가능한 조기접촉 계약 합의가 아닙니다');
+  }
   if(kind==='renewal'&&p.team!==t.id)
     return worldActionError('invalid_contract','기존 소속 구단에서만 재계약할 수 있습니다');
-  if((kind==='fa'||kind==='initial'||kind==='medical_replacement')&&p.team)
+  if((kind==='fa'||kind==='initial'||kind==='medical_replacement'||kind==='early_fa_agreement')&&p.team)
     return worldActionError('invalid_contract','FA가 아닌 선수는 신규 계약할 수 없습니다');
   if(kind==='transfer'&&(!from||from.id===t.id||a.fromId!==from.id))
     return worldActionError('invalid_transfer','원소속 구단 정보가 일치하지 않습니다');
   if(!Number.isFinite(+a.salary)||+a.salary<=0||!Number.isFinite(+a.years)||+a.years<=0)
     return worldActionError('invalid_terms','연봉과 계약 기간은 양수여야 합니다');
   const terms=playerActionTerms(db,p,t,a);
+  if(futureAgreement){
+    const agreed=normalizeContractTerms(db,p,t,futureAgreement.salary,
+      futureAgreement.years,futureAgreement.terms);
+    if(+a.salary!==futureAgreement.salary||+a.years!==futureAgreement.years||
+      JSON.stringify(terms)!==JSON.stringify(agreed))
+      return worldActionError('invalid_terms','미래 계약 발효 조건은 원래 합의한 조건과 같아야 합니다');
+  }
   let replacement=null;
   if(kind==='medical_replacement'){
     const original=db.players[a.replacement?.forPid],days=+a.replacement?.absenceDays;
@@ -80,7 +103,7 @@ function validatePlayerSignAction(db,a){
   if(!allNumbers.every(Number.isFinite))
     return worldActionError('invalid_terms','유효하지 않은 계약 금액입니다');
   if(!playerActionFinance(t))return worldActionError('invalid_finance','구단 재정 정보가 없습니다');
-  if(kind!=='renewal'){
+  if(kind!=='renewal'&&kind!=='renewal_agreement'){
     const registration=localRegistrationError(db,t,p);
     if(registration)return worldActionError('registration_limit',registration);
   }
@@ -166,7 +189,13 @@ function playerActionChanges(db,c,v){
 function applyPlayerSignAction(db,c){
   const p=db.players[c.pid],t=db.teams[c.teamId];
   if(c.kind==='transfer')doTransfer(db,p,db.teams[c.fromId],t,c.fee);
+  const cw=db.world?.contractWindow,
+    offseasonFaSeason=c.kind==='fa'&&db.world?.phase==='offseason'&&
+      cw?.stage==='fa'?cw.startSeason:null,
+    beforeYear=db.year;
+  if(offseasonFaSeason)db.year=offseasonFaSeason;
   const contract=signContract(db,p,t,c.salary,c.years,c.terms);
+  if(offseasonFaSeason)db.year=beforeYear;
   if(c.kind==='medical_replacement'){
     contract.medicalReplacement={...c.replacement};
     t.finance.cash=medicalWageRound(t.finance.cash-c.replacement.paid);

@@ -123,7 +123,18 @@ function bindSeason(){
   document.querySelectorAll('[data-chap]').forEach(b=>b.onclick=()=>{const i=+b.dataset.chap;SSET.chap=(SSET.chap??w.step)===i?-1:i;const s=Object.values(w.seasons).find(x=>stepOf(DB,x)===i&&(x.region===DB.teams[managedTeamId(DB)].region||DB.competitions[x.comp].international));if(s)SSET.view=s.key;nav()});
   document.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>{SSET.tab=b.dataset.st;$('#stab').innerHTML=seasonTab();document.querySelectorAll('[data-st]').forEach(x=>x.setAttribute('aria-pressed',x===b));bindSeasonTab()});
   bindSeasonTab();
-  if(w.phase==='offseason'){$('#soff').onclick=()=>{runOffseason(DB);saveDB();nav();window.scrollTo(0,0)};return}
+  if(w.phase==='offseason'){
+    if(!w.contractWindow){
+      $('#soff').onclick=()=>{initOffseasonContractWindow(DB);saveDB();nav();window.scrollTo(0,0)};
+    }else if(w.contractWindow.stage==='exclusive'){
+      $('#scontractday').onclick=()=>{advanceOffseasonContractDay(DB);saveDB();nav()};
+      $('#scontractopen').onclick=()=>{advanceOffseasonContractWindow(DB);saveDB();nav();window.scrollTo(0,0)};
+    }else{
+      $('#soff').onclick=()=>{runOffseason(DB);saveDB();nav();window.scrollTo(0,0)};
+    }
+    if(w.manage==='manual'&&w.contractWindow)bindContractWindow();
+    return;
+  }
   if(w.phase==='market'){
     $('#smkt').onclick=()=>{closeMarket(DB);MSG='';saveDB();nav();window.scrollTo(0,0)};
     $('#smanage').onchange=e=>{w.manage=e.target.value;saveDB();nav()};

@@ -48,16 +48,22 @@ function financeCommercialIncome(db,t,w=db.world,forecast=false,prize=0){
     owner:ownerSupport(db,t),
     transfer:pre.transferReceived||0};
 }
+function financeSeasonPayroll(db,t,w=db.world){
+  const snap=w&&w.contractWindow?.seasonYear===w.year?
+    w.contractWindow.financePayroll?.[t.id]:null;
+  return snap||{salary:payroll(db,t),regulated:regulatedPayroll(db,t)};
+}
 function financeOperatingExpense(db,t,w=db.world){
-  const pre=t.finance?.prepaid||{},ps=psTeam(db,t);
+  const pre=t.finance?.prepaid||{},ps=psTeam(db,t),
+    seasonPayroll=financeSeasonPayroll(db,t,w);
   const international=w?.seasons?Object.values(w.seasons).filter(s=>
     db.competitions[s.comp]?.international&&s.teams?.includes(t.id)).length:0;
-  return {salary:payroll(db,t),medicalReplacementWage:pre.medicalReplacementWage||0,
+  return {salary:seasonPayroll.salary,medicalReplacementWage:pre.medicalReplacementWage||0,
     bonuses:w&&w.year<=db.year?contractBonusCost(db,t,w.year):0,
     staff:staffCost(db,t),ops:opsCost(db,t),facility:facilityUpkeep(db,t),
     travel:international*.55*ps,
     interest:Math.max(0,-(t.finance?.cash||0))*.06,
-    buyout:t.finance?.buyout||0,tax:spendingTax(db,t),
+    buyout:t.finance?.buyout||0,tax:spendingTaxForPayroll(db,t,seasonPayroll.regulated),
     facilityInvestment:pre.facilityInvestment||0,signingBonus:pre.signingBonus||0,
     transfer:pre.transferPaid||0,staffSeverance:pre.staffSeverance||0,
     scouting:pre.scoutingExpense||0};
@@ -124,11 +130,11 @@ function closeFinances(db,w,rng,ev){
   }
   const taxPool={};
   const recs=activeTeams(db).map(t=>{
-    const R=db.regions[t.region];
+    const R=db.regions[t.region],payrollBasis=financeSeasonPayroll(db,t,w);
     const rev=financeCommercialIncome(db,t,w,false,prize[t.id]||0);
     const exp=financeOperatingExpense(db,t,w);
     if(exp.tax>0)taxPool[R.id]=(taxPool[R.id]||0)+exp.tax*(R.sfrTeamShare??1);
-    return {t,R,rev,exp,settled:financePrepaidSettlement(t)};
+    return {t,R,rev,exp,payrollBasis,settled:financePrepaidSettlement(t)};
   });
   // Any tax redistribution is financed by collected liabilities in the same
   // regional office; it is not added to the league from nowhere.
@@ -136,8 +142,8 @@ function closeFinances(db,w,rng,ev){
     const share=taxPool[R.id]||0;if(!share)continue;
     const under=recs.filter(row=>row.R===R&&R.spendingRule==='sfr_top5'&&
       row.exp.tax===0&&(row.t.division||1)===1&&
-      regulatedPayroll(db,row.t)>=(R.salaryFloor||0)&&
-      regulatedPayroll(db,row.t)<=(R.salaryCap||Infinity));
+      row.payrollBasis.regulated>=(R.salaryFloor||0)&&
+      row.payrollBasis.regulated<=(R.salaryCap||Infinity));
     if(under.length)for(const row of under)row.rev.tax=share/under.length;
   }
   // An academy deficit is funded by its parent club, and both sides show that
@@ -164,7 +170,7 @@ function closeFinances(db,w,rng,ev){
     f.buyout=0;f.prepaid={};
     f.history=[...f.history,{year:w.year,rev:roundRows(row.rev),
       exp:roundRows(row.exp),net:round(net),cash:f.cash}].slice(-10);
-    if(row.exp.tax>0)ev(`${row.t.name} 균형지출 부담금 ${money(row.exp.tax)} 납부 (상위 5인 기준 ${money(regulatedPayroll(db,row.t))}, 기준선 ${money(row.R.salaryCap)})`);
+    if(row.exp.tax>0)ev(`${row.t.name} 균형지출 부담금 ${money(row.exp.tax)} 납부 (상위 5인 기준 ${money(row.payrollBasis.regulated)}, 기준선 ${money(row.R.salaryCap)})`);
     if(row.t.parent)continue;
     const losses=f.history.slice(-2).filter(y=>y.net<0).length;
     if(f.cash<-12*psTeam(db,row.t)&&losses>=2){

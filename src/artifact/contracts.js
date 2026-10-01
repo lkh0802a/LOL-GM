@@ -72,7 +72,6 @@ function offerUtility(db,p,t,offer,opt={}){
   const currentPenalty=opt.renewal?(p.satisfaction-50)/170+(p.managerTrust-50)/105+(p.managerRelationship-50)/190-(p.wantsOut?.4:0):0;
   return moneyScore*1.05+roleScore+strength*amb*.18+intl*amb*.22+(t.fans||30)/250+fac+coach+careerFit+durationFit+home+option+buyout+currentPenalty;
 }
-function offerAcceptanceThreshold(db,p){const rep=(p.reputation||playerOvr(p)),amb=p.personality.ambition/100;return 1.04+rep/520+amb*.12+(p.age<=20?.04:0)}
 function contractBonusCost(db,t,year){
   let sum=0;for(const id of t.roster){const p=db.players[id],c=p&&p.contract;if(!c||!c.bonuses)continue;const rows=(p.career||[]).filter(x=>x.year===year),g=rows.reduce((a,x)=>a+(x.g||0),0),rating=g?rows.reduce((a,x)=>a+(x.rating||6.5)*(x.g||0),0)/g:0;
     if(g>=10&&rating>=7.2)sum+=c.bonuses.performance||0;if(rows.some(x=>x.international&&x.g>=3))sum+=c.bonuses.international||0;if((p.careerEvents||[]).some(e=>e.year===year&&e.type==='title'))sum+=c.bonuses.title||0}
@@ -89,13 +88,14 @@ function signContract(db,p,t,salary,years,terms={}){
 function payroll(db,t){return t.roster.reduce((a,id)=>{const c=db.players[id]?.contract;return a+(c&&!c.medicalReplacement?c.salary:0)},0)}
 function topFivePayroll(db,t){const top=[];for(const id of t.roster){const p=db.players[id];if(!p||!p.contract||p.contract.medicalReplacement)continue;const s=p.contract.salary;let i=0;while(i<top.length&&top[i]>=s)i++;top.splice(i,0,s);if(top.length>5)top.pop()}return top.reduce((a,b)=>a+b,0)}
 function regulatedPayroll(db,t){const R=db.regions[t.region];return R&&R.spendingRule==='sfr_top5'?topFivePayroll(db,t):payroll(db,t)}
-function spendingTax(db,t){
+function spendingTaxForPayroll(db,t,spend){
   const R=db.regions[t.region];if(!R||R.spendingRule!=='sfr_top5'||!R.salaryCap||(t.division||1)!==1)return 0;
-  const spend=regulatedPayroll(db,t),over=Math.max(0,spend-R.salaryCap);if(!over)return 0;
+  const over=Math.max(0,spend-R.salaryCap);if(!over)return 0;
   if(R.sfrMode==='lec_50_100'){const first=Math.min(over,R.salaryCap*.5),rest=Math.max(0,over-first);return first*.5+rest}
   const a=Math.min(over,R.salaryCap*.1),b=Math.min(Math.max(0,over-a),R.salaryCap*.15),c=Math.max(0,over-a-b);
   return a*.25+b*.5+c*(R.luxuryTax||1);
 }
+function spendingTax(db,t){return spendingTaxForPayroll(db,t,regulatedPayroll(db,t))}
 function medicalContractYears(db,p,years){
   const risk=medicalContractRisk(db,p);
   return risk>=.115?Math.min(years,1):risk>=.065?Math.min(years,2):years;
@@ -159,6 +159,24 @@ function aiMarketOfferCandidates(db,t,fas,role,budgetRoom,year=db.year){
     .sort((a,b)=>b.v-a.v||a.p.id.localeCompare(b.p.id));
 }
 
+function aiRenewalDecision(db,p,t,rng){
+  const want=aiWantsRenewal(db,p,t),
+    ask=asking(db,p,t.region),
+    room=salaryBudget(db,t)-payroll(db,t)+(p.contract?.salary||0),
+    yrs=contractYearsForPlayer(db,p,rng),
+    proposal=normalizeContractTerms(db,p,t,
+      ask*rng.range(.96,1.08)*(1-medicalContractRisk(db,p)*.4),yrs,{
+        promisedRole:recommendedRosterRole(db,p,t),
+        option:rng.chance(.18)?{type:rng.chance(.55)?'team':'player'}:null
+      });
+  ensureSatisfaction(p);
+  const stay=contractOfferReasonable(db,p,t,proposal,'renewal')&&
+    offerUtility(db,p,t,proposal,{renewal:true})+
+      rng.normal(0,.06)>=offerAcceptanceThreshold(db,p,{kind:'renewal'});
+  return {want,ask,room,yrs,proposal,stay,
+    accepted:want&&proposal.salary<=room&&stay};
+}
+
 function contractMarket(db,rng,rep,ev){
   const year=db.year, size=5+(db.worldConfig.subs||0), w=db.world, mine=w&&w.manage==='manual'?managedTeamId(db):null;
   const imports=t=>teamNonLocalCount(db,t);
@@ -173,11 +191,19 @@ function contractMarket(db,rng,rep,ev){
     if(!p.contract){release(t,p);rep.expired.push({pid:p.id,team:t.id,why:'무계약 상태 — FA 전환'});continue}
     if(p.contract.medicalReplacement||p.contract.until>=year)continue;
     if(t.id===mine){release(t,p);rep.expired.push({pid:p.id,team:t.id,why:'재계약하지 않음'});continue}
-    const isStarter=starterFor(db,t,p.role)===p,want=isStarter||p.rosterRole==='competition'||(p.age<=21&&p.pot-playerOvr(p)>=6)||(p.rosterRole==='backup'&&t.roster.length<7&&p.satisfaction>=50);
-    const ask=asking(db,p,t.region),room=salaryBudget(db,t)-payroll(db,t)+p.contract.salary,yrs=contractYearsForPlayer(db,p,rng),proposal=normalizeContractTerms(db,p,t,ask*rng.range(.96,1.08)*(1-medicalContractRisk(db,p)*.4),yrs,{promisedRole:recommendedRosterRole(db,p,t),option:rng.chance(.18)?{type:rng.chance(.55)?'team':'player'}:null});
-    ensureSatisfaction(p);const stay=offerUtility(db,p,t,proposal,{renewal:true})+rng.normal(0,.06)>=offerAcceptanceThreshold(db,p);
-    if(want&&proposal.salary<=room&&stay){signMarketContract(db,p,t,proposal.salary,yrs,proposal,'renewal','ai');rep.resign.push({pid:p.id,team:t.id,salary:proposal.salary,years:yrs,terms:proposal})}
-    else {release(t,p);rep.expired.push({pid:p.id,team:t.id,why:!want?'재계약 제안 없음':proposal.salary>room?'연봉 이견':'FA 시장 도전'})}
+    const decision=aiRenewalDecision(db,p,t,rng);
+    if(w.contractWindow?.completed){
+      release(t,p);rep.expired.push({pid:p.id,team:t.id,why:'우선협상 기간 종료 — FA 전환'});
+    }else if(decision.accepted){
+      signMarketContract(db,p,t,decision.proposal.salary,decision.yrs,
+        decision.proposal,'renewal','ai');
+      rep.resign.push({pid:p.id,team:t.id,salary:decision.proposal.salary,
+        years:decision.yrs,terms:decision.proposal});
+    }else{
+      release(t,p);rep.expired.push({pid:p.id,team:t.id,
+        why:!decision.want?'재계약 제안 없음':
+          decision.proposal.salary>decision.room?'연봉 이견':'FA 시장 도전'});
+    }
   }
   // 2) FA 시장 (3라운드: 제안 → 선수 선택)
   // 2군 콜업: 프랜차이즈 구단은 자기 2군에서 먼저 올린다
@@ -208,7 +234,11 @@ function contractMarket(db,rng,rep,ev){
       const best=os.map(o=>({o,v:u(o)})).sort((a,b)=>b.v-a.v)
         .find(x=>budgetLeft[x.o.t.id]>=x.o.sal&&!localRegistrationError(db,x.o.t,p));
       if(!best)continue;
-      const t=best.o.t,yrs=best.o.years?best.o.years:contractYearsForPlayer(db,p,rng);
+      const t=best.o.t,yrs=best.o.years?best.o.years:contractYearsForPlayer(db,p,rng),
+        offer=normalizeContractTerms(db,p,t,best.o.sal,yrs,{
+          promisedRole:best.o.starter?'starter':defaultPromisedRole(db,p,t)});
+      if(!contractOfferReasonable(db,p,t,offer,'fa')||
+        offerUtility(db,p,t,offer)<offerAcceptanceThreshold(db,p,{kind:'fa'}))continue;
       const prev=starterFor(db,t,p.role);
       // Multiple market offers can be based on the same earlier import count.
       // Recheck with the shared action validator and skip an obsolete offer.
@@ -255,4 +285,38 @@ function contractMarket(db,rng,rep,ev){
     // SFR 하한은 강제 연봉 인상이 아니라 분배 자격 기준으로만 사용한다.
   }
 }
+function reconcileMinimumRosterAfterExpiry(db,rng,rep){
+  // Contracts now legally expire on Worlds+14 rather than waiting for the
+  // later market-close routine. Never leave an active organization below the
+  // same five-available-player invariant protected by medical acceptance.
+  const rows=[];
+  for(const t of activeTeams(db)){
+    let guard=0;
+    while(medicalAvailable(db,t)<5&&guard++<8){
+      let accepted=null;
+      for(const fa of eligibleFillFAs(db,t)){
+        const years=contractYearsForPlayer(db,fa,rng,t),ask=asking(db,fa,t.region);
+        for(const mult of [1,1.05,1.15]){
+          const terms=normalizeContractTerms(db,fa,t,ask*mult,years,{
+            promisedRole:defaultPromisedRole(db,fa,t)});
+          if(contractOfferReasonable(db,fa,t,terms,'fa')&&
+            offerUtility(db,fa,t,terms)>=offerAcceptanceThreshold(db,fa,{kind:'fa'})){
+            accepted={fa,terms};break;
+          }
+        }
+        if(accepted)break;
+      }
+      if(!accepted)throw new Error('No willing eligible free agent for post-expiry minimum roster: '+t.id);
+      const {fa,terms}=accepted;
+      signMarketContract(db,fa,t,terms.salary,terms.years,terms,'fa','system');
+      const row={pid:fa.id,team:t.id,salary:terms.salary,years:terms.years,
+        compliance:true,reason:'post_expiry_minimum_roster'};
+      rows.push(row);if(rep)rep.signings.push(row);
+    }
+    if(medicalAvailable(db,t)<5)
+      throw new Error('Post-expiry roster reconciliation failed: '+t.id);
+  }
+  return rows;
+}
+
 // 리그 팀 수를 짝수로 유지 (1부·2부 각각)

@@ -20,7 +20,11 @@ function ensureEven(db,rng,ev){
 
 // ---------- 오프시즌 1단계: 기록·성장·은퇴·승강·흥행·재정·사무국 ----------
 function runOffseason(db){
-  const w=db.world, rng=new RNG(w.seed+'/'+w.year,'offseason'), f=CHANGE_F[db.worldConfig.changes]??1;
+  const w=db.world,cw=initOffseasonContractWindow(db);
+  // Headless/AI callers historically advanced offseason in one call. Preserve
+  // that contract while the interactive UI exposes both real window stages.
+  if(cw?.stage==='exclusive')advanceOffseasonContractWindow(db);
+  const rng=new RNG(w.seed+'/'+w.year,'offseason'), f=CHANGE_F[db.worldConfig.changes]??1;
   const rep={year:w.year,growth:[],retired:[],signings:[],resign:[],expired:[],transfers:[],events:[]};
   const ev=t=>{rep.events.push(t);news(db,t)};
   const games={}, champGames={};
@@ -53,15 +57,18 @@ function runOffseason(db){
       delete p.pool;delete p.tend;delete p.attrs;}
   }
   db.year=w.year+1;
-  // Resolve offseason calendar gaps before the contract market appraises
-  // medical availability; otherwise an already-recovered December absence
-  // is incorrectly priced as an active January injury.
+  // B3 exposes the 14-day contract window as real world dates, but no training
+  // or matches occur there. Preserve B10's full passive recovery from the last
+  // competitive date instead of shortening recovery by the displayed window.
   const medicalRolloverDate=`${db.year}-01-06`;
+  if(cw?.seasonEndDate)db.worldDate=cw.seasonEndDate;
   medicalOffseasonRecovery(db,medicalRolloverDate);
   db.worldDate=medicalRolloverDate;
   promotionRelegation(db,w,rng,ev);
   updateHype(db,w);
   closeFinances(db,w,rng,ev);
+  rep.contractWindow=settleOffseasonContractRollover(db,rep);
+  db.worldDate=medicalRolloverDate;
   if(f>0){
     officeDecisions(db,rng,f,ev);
     globalOffice(db,w,rng,f,ev);
@@ -69,6 +76,7 @@ function runOffseason(db){
   ensureEven(db,rng,ev);
   rep.rookies=[];rep.rookieGlobal=rookieGlobalCohort(db);
   for(const R of Object.values(db.regions)){const cls=generateRookieClass(db,R,rng),ri=R.rookieIntake[R.rookieIntake.length-1];rep.rookies.push({region:R.id,count:cls.length,ids:cls.map(p=>p.id),label:ri.label,tiers:ri.tiers,profile:ri.profile})}
+  rep.expiryComplianceSignings=reconcileMinimumRosterAfterExpiry(db,rng,rep);
   const supplyErrs=talentSupplyErrors(db);if(supplyErrs.length)throw new Error('Talent supply invariant failed before market: '+supplyErrs.slice(0,8).join(' | '));
   for(const t of activeTeams(db)){if(t.id===managedTeamId(db))ensureStaffRoster(t);else ensureTeamStaff(db,t,rng)}ageStaff(db,rng);genStaffPool(db,rng);
   ageScoutReports(db);

@@ -139,7 +139,12 @@ function nextMine(){
   for(const s of Object.values(w.seasons)){if(s.done)continue;for(const d of s.days.slice(s.cur)){const m=d.matches.find(m=>m.a===me||m.b===me);if(m){if(!best||d.date<best.d.date)best={s,d,m};break}}}
   return best;
 }
-function phaseText(w){if(w.phase==='season'){const st=w.steps[w.step];return (st?st.label+' 진행 중':'')+` · 패치 ${DB.patch.id}`}return w.phase==='offseason'?'시즌 종료':w.phase==='market'?'이적 시장':'오프시즌'}
+function phaseText(w){
+  if(w.phase==='season'){const st=w.steps[w.step];return (st?st.label+' 진행 중':'')+` · 패치 ${DB.patch.id}`}
+  if(w.phase==='offseason'&&w.contractWindow)
+    return w.contractWindow.stage==='exclusive'?'원소속 독점 재계약':'FA 시장';
+  return w.phase==='offseason'?'시즌 종료':w.phase==='market'?'이적 시장':'오프시즌';
+}
 function viewSeason(){
   const w=DB.world;
   if(!w) return seasonSetup();
@@ -157,6 +162,7 @@ function viewSeason(){
   ${SAVEFAIL?'<p class="warn">브라우저 저장 공간이 부족해 진행 상황을 저장하지 못했습니다. 데이터 탭에서 JSON을 복사해 두세요.</p>':''}
   <section class="controls">${controlsFor(w)}<span id="sprog" class="hint" role="status"></span></section>
   ${w.phase==='market'&&w.manage==='manual'?renderMarket():''}
+  ${w.phase==='offseason'&&w.manage==='manual'&&w.contractWindow?renderContractWindow():''}
   ${(w.phase==='preseason'||w.phase==='market')&&w.report?renderReport(w.report):''}
   ${chapters(w)}
   <div class="seg tabs">${[['table','순위'],['sched','일정·결과'],['bracket','토너먼트'],['stats','기록'],['hist','세계·역대']].map(([k,l])=>`<button data-st="${k}" aria-pressed="${SSET.tab===k}">${l}</button>`).join('')}</div>
@@ -175,7 +181,12 @@ function chapters(w){
       ${isOpen&&!ss.length?'<p class="hint">아직 시작 전입니다.</p>':''}</section>`}).join('')}</div>`;
 }
 function controlsFor(w){
-  if(w.phase==='offseason') return `<button class="primary" id="soff">오프시즌 진행</button><span class="hint">성장·노쇠, 은퇴, 승강, 세계 변화, 신인, 로스터 정비가 처리됩니다.</span>`;
+  if(w.phase==='offseason'){
+    const cw=w.contractWindow;
+    if(!cw)return `<button class="primary" id="soff">계약 협상 기간 열기</button><span class="hint">시즌 종료 후 원소속 구단 14일 독점 재계약 기간을 시작합니다.</span>`;
+    if(cw.stage==='exclusive')return `<button class="primary" id="scontractday">하루 진행</button><button class="ghost" id="scontractopen">독점 기간 끝까지</button><span class="hint">현재 ${DB.worldDate} · ${cw.startDate}~${cw.exclusiveThrough} 원소속 구단만 재계약 가능 · ${cw.outsideContactDate}부터 타 구단 접촉</span>`;
+    return `<button class="primary" id="soff">오프시즌 진행</button><span class="hint">${cw.contractExpiryDate}에 기존 계약이 끝났고 ${cw.outsideContactDate}부터 FA 시장이 열렸습니다. 영입을 마친 뒤 다음 시즌 시장 단계로 진행합니다.</span>`;
+  }
   if(w.phase==='market') return `<button class="primary" id="smkt">이적 시장 마감</button><label class="inl">내 팀 운영 <select id="smanage">${[['manual','직접'],['ai','AI 위임']].map(([k,l])=>`<option value="${k}"${w.manage===k?' selected':''}>${l}</option>`).join('')}</select></label><span class="hint">${w.manage==='manual'?'재계약·방출·FA 제안·이적 제안을 마친 뒤 마감하세요.':'AI가 내 팀 계약을 처리합니다.'}</span>`;
   if(w.phase==='preseason') return w.fired?`<button class="primary" id="sreset">새 팀 고르기</button>`:`<button class="primary" id="snew">${DB.year} 시즌 시작</button><button class="ghost" id="sreset">맡을 팀 바꾸기</button>`;
   return `<button class="primary" id="sday">하루 진행</button><button class="ghost" id="sfixture">다음 경기일</button><button class="ghost" id="smine"${nextMine()?'':' disabled'}>내 경기까지</button><button class="ghost" id="sstep">이번 단계 끝까지</button><button class="ghost" id="send">시즌 끝까지</button>`;

@@ -47,7 +47,12 @@ function advanceStep(db){
   for(const s of Object.values(w.seasons)){const d=seasonLastDate(s);if(d>w.lastDate)w.lastDate=d}
   while(true){
     w.step++;
-    if(w.step>=w.steps.length){w.phase='offseason';news(db,`${w.year} 시즌 일정이 모두 끝났습니다`);return}
+    if(w.step>=w.steps.length){
+      w.phase='offseason';
+      initOffseasonContractWindow(db);
+      news(db,`${w.year} 시즌 일정이 모두 끝났습니다`);
+      return;
+    }
     const st=w.steps[w.step], start=addDays(w.lastDate,st.kind==='intl'?18:(w.step===0?7:14));
     if(st.kind==='league'){
       if(st.split>1&&w.step>0){
