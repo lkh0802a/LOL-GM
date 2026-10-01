@@ -48,7 +48,10 @@ export async function runEngineFixture(fixture,{
   // Every acceptance gets a new Realm/context. Only immutable engine source and
   // the compiled Script are shared; DB/global state never crosses test cases.
   contexts++;
-  const context=vm.createContext({console,performance,crypto});
+  const context=vm.createContext({
+    console,Date,Math,JSON,Set,Map,WeakMap,Object,Array,String,Number,Boolean,
+    RegExp,Error,Intl,performance,crypto
+  });
   const started=performance.now();
   engine.runInContext(context,{timeout});
   const elapsed=Math.max(0,Math.ceil(performance.now()-started));
