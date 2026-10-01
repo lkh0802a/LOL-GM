@@ -3065,6 +3065,7 @@ function startContractRolePromise(db,p,t){
     unavailableTeamGames:u?.unavailableTeamGames||0};
 }
 function contractRolePromiseStatus(db,p,year=db.year){
+  if(p.loan)return {...rolePromiseUsageStatus(db,p,p.loan.promisedRole,p.loan.promiseStart,year),source:'loan'};
   const role=p.contract?.promisedRole;
   if(!SQUAD_ROLES.includes(role)||p.contract.until<year)return null;
   return {...rolePromiseUsageStatus(db,p,role,p.contract.rolePromiseStart,year),source:'contract'};
@@ -3820,6 +3821,8 @@ function applyWorldDailyEffects(db,date){
   if(w.lastDailyTick===date)return false;
   if(w.lastDailyTick&&w.lastDailyTick>date)throw new Error('이미 처리한 날짜를 다시 진행할 수 없습니다');
   setWorldCalendarDate(db,date);
+  processLoanDaily(db);
+  aiReviewLoanMarket(db);
   // A scheduled patch is effective *on* its intended date, never during the
   // preceding break. Then every actual day runs exactly once.
   applyCalendarPatchEvents(db,date);
@@ -3888,6 +3891,7 @@ function advanceStep(db){
     w.step++;
     if(w.step>=w.steps.length){
       w.phase='offseason';
+      processLoanDaily(db);
       initOffseasonContractWindow(db);
       news(db,`${w.year} 시즌 일정이 모두 끝났습니다`);
       return;
@@ -4271,6 +4275,19 @@ function validateSaveEnvelope(db){
     // without generated attributes; preserve them for the domain layer.
     if(!saveObject(p)||p.attrs!=null&&!saveObject(p.attrs)&&!Array.isArray(p.attrs))
       throw new Error('선수 데이터가 손상되었습니다: '+id);
+    if(p.loan){
+      const l=p.loan,owner=db.teams[l.ownerId],borrower=db.teams[l.borrowerId];
+      if(!saveObject(l)||!owner||!borrower||owner===borrower||!p.contract||
+        p.team!==l.borrowerId||!borrower.roster.includes(id)||owner.roster.includes(id)||
+        !['half','season'].includes(l.duration)||!SQUAD_ROLES.includes(l.promisedRole)||
+        !Number.isInteger(l.season)||typeof l.recall!=='boolean'||
+        !Number.isFinite(l.salaryShare)||l.salaryShare<0||l.salaryShare>1||
+        !Number.isFinite(l.fee)||l.fee<0||
+        ![l.startDate,l.lastWageDate,l.endDate].every(d=>typeof d==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&
+          Number.isFinite(Date.parse(d))&&new Date(d+'T00:00:00Z').toISOString().slice(0,10)===d)||
+        l.startDate>l.lastWageDate||l.lastWageDate>l.endDate)
+        throw new Error('선수 임대 데이터가 손상되었습니다: '+id);
+    }
   }
   return format;
 }
@@ -4291,6 +4308,7 @@ function unpackPlayerSaveFields(p){
 }
 
 function normalizeRestoredSave(db){
+  LOAN_INDEX.delete(db);
   // World schema v15, format 1: pre-migration JSON saves and packed exports.
   // Format 2 uses the same runtime object model, but strips derived caches.
   for(const k of SAVE_TRANSIENT_ROOT_FIELDS)delete db[k];
@@ -4382,7 +4400,8 @@ function localRegistrationError(db,t,p){
   const team=teamRef(db,t),player=playerRef(db,p);if(!team||!player)return '등록 대상을 찾을 수 없습니다';
   if(isLocalPlayer(player,team.region))return null;
   if((team.roster||[]).includes(player.id))return null;
-  return teamNonLocalCount(db,team)>=nonLocalLimitForTeam(db,team)?'비로컬 선수 등록 상한을 넘습니다':null;
+  const reserved=loanOutgoingPlayers(db,team).filter(p=>p.id!==player.id&&!isLocalPlayer(p,team.region)).length;
+  return teamNonLocalCount(db,team)+reserved>=nonLocalLimitForTeam(db,team)?'임대 복귀 인원 포함 비로컬 선수 등록 상한을 넘습니다':null;
 }
 function contractedMoveSeason(db){return db?.world?.year??db?.year}
 function contractedMoveCount(db,p){const y=contractedMoveSeason(db),moves=Array.isArray(p?.contractedMoves)?p.contractedMoves:[];return moves.filter(x=>x.season===y&&x.counts!==false).length}
@@ -4439,8 +4458,19 @@ function validateRosterPlan(db,t,plan){
     if(!p){errors.push('존재하지 않는 선수가 로스터에 포함되어 있습니다: '+pid);continue}
     if(!teamIds.has(dst)){errors.push(p.name+': 같은 구단의 1군/2군에만 배치할 수 있습니다');continue}
     counts[dst]=(counts[dst]||0)+1;
+    if(p.loan&&dst!==p.team)errors.push(p.name+': 임대 선수는 다른 스쿼드로 이동할 수 없습니다');
   }
   for(const pid of Object.keys(assign))if(!baseSet.has(pid))errors.push('구단 통합 로스터 밖의 선수를 이동할 수 없습니다: '+pid);
+  for(const team of teams){
+    const reserved=loanOutgoingPlayers(db,team),max=team.parent?rules.reserveTeamMax:rules.firstTeamMax;
+    if(reserved.length&&(counts[team.id]||0)+reserved.length>max)errors.push(team.name+': 임대 복귀 자리를 유지해야 합니다');
+    if(reserved.length){
+      const foreign=base.filter(pid=>assign[pid]===team.id||!assign[pid]&&db.players[pid].team===team.id)
+        .filter(pid=>!isLocalPlayer(db.players[pid],team.region)).length+
+        reserved.filter(p=>!isLocalPlayer(p,team.region)).length;
+      if(foreign>nonLocalLimitForTeam(db,team))errors.push(team.name+': 임대 복귀 비로컬 자리를 유지해야 합니다');
+    }
+  }
   const first=parent,firstN=counts[first.id]||0;
   if(firstN<rules.firstTeamMin)errors.push('1군은 최소 '+rules.firstTeamMin+'명이어야 합니다 (현재 계획 '+firstN+'명)');
   if(firstN>rules.firstTeamMax)errors.push('1군은 최대 '+rules.firstTeamMax+'명까지 가능합니다 (현재 계획 '+firstN+'명)');
@@ -4885,6 +4915,7 @@ function captureWorldActionJournal(db,command){
         actionJournalRestoreObject(player,record);
         db.players[pid]=player;
       }
+      LOAN_INDEX.delete(db);
       if(newsRows){
         newsRef.splice(0,newsRef.length,...newsRows);
         db.news=newsRef;
@@ -5343,8 +5374,39 @@ function settleClubClosureFinance(t,year,date,funding=null){
     ...(funding?{funding}:{})};
   return f.closureSettlement;
 }
-function payroll(db,t){return t.roster.reduce((a,id)=>{const c=db.players[id]?.contract;return a+(c&&!c.medicalReplacement?c.salary:0)},0)}
-function topFivePayroll(db,t){const top=[];for(const id of t.roster){const p=db.players[id];if(!p||!p.contract||p.contract.medicalReplacement)continue;const s=p.contract.salary;let i=0;while(i<top.length&&top[i]>=s)i++;top.splice(i,0,s);if(top.length>5)top.pop()}return top.reduce((a,b)=>a+b,0)}
+function payroll(db,t){
+  const current=t.roster.reduce((sum,id)=>{const p=db.players[id],c=p?.contract;
+    return sum+(c&&!c.medicalReplacement?c.salary*(p.loan?p.loan.salaryShare:1):0)},0);
+  return current+loanOutgoingPlayers(db,t).reduce((sum,p)=>sum+p.contract.salary*(1-p.loan.salaryShare),0);
+}
+function ownedContractPayroll(db,t){
+  return t.roster.reduce((sum,id)=>{const p=db.players[id];
+    return sum+(p?.contract&&!p.contract.medicalReplacement&&!p.loan?p.contract.salary:0)},0)+
+    loanOutgoingPlayers(db,t).reduce((sum,p)=>sum+p.contract.salary,0);
+}
+function recordLoanWageAdjustment(t,year,amount,pid){
+  if(!Number.isFinite(amount)||!t?.finance)throw new Error('임대 급여 정산 정보가 유효하지 않습니다');
+  const f=t.finance;
+  if(f.loanWages&&f.loanWages.year!==year)throw new Error('미정산 임대 급여 연도가 다릅니다');
+  f.loanWages=f.loanWages||{year,amount:0,players:{}};f.loanWages.amount+=amount;
+  f.loanWages.players[pid]=(f.loanWages.players[pid]||0)+amount;
+}
+function topFivePayroll(db,t){
+  const salaries=t.roster.map(id=>db.players[id]).filter(p=>p?.contract&&!p.contract.medicalReplacement)
+    .map(p=>p.contract.salary*(p.loan?p.loan.salaryShare:1));
+  salaries.push(...loanOutgoingPlayers(db,t).map(p=>p.contract.salary*(1-p.loan.salaryShare)));
+  return salaries.sort((a,b)=>b-a).slice(0,5).reduce((sum,n)=>sum+n,0);
+}
+function loanAnnualRegulatedPayroll(db,t,year=contractedMoveSeason(db)){
+  const wages={};
+  for(const p of [...t.roster.map(id=>db.players[id]),...loanOutgoingPlayers(db,t)])
+    if(p?.contract&&!p.contract.medicalReplacement&&(!p.loan||p.loan.ownerId===t.id))wages[p.id]=p.contract.salary;
+  if(t.finance?.loanWages?.year===year)
+    for(const [pid,amount] of Object.entries(t.finance.loanWages.players))wages[pid]=(wages[pid]||0)+amount;
+  const values=Object.values(wages);
+  return (db.regions[t.region]?.spendingRule==='sfr_top5'?values.sort((a,b)=>b-a).slice(0,5):values)
+    .reduce((sum,n)=>sum+n,0);
+}
 function regulatedPayroll(db,t){const R=db.regions[t.region];return R&&R.spendingRule==='sfr_top5'?topFivePayroll(db,t):payroll(db,t)}
 function spendingTaxForPayroll(db,t,spend){
   const R=db.regions[t.region];if(!R||R.spendingRule!=='sfr_top5'||!R.salaryCap||(t.division||1)!==1)return 0;
@@ -5386,14 +5448,16 @@ function financeCommercialIncome(db,t,w=db.world,forecast=false,prize=0){
 function financeSeasonPayroll(db,t,w=db.world){
   const snap=w&&w.contractWindow?.seasonYear===w.year?
     w.contractWindow.financePayroll?.[t.id]:null;
-  return snap||{salary:payroll(db,t),regulated:regulatedPayroll(db,t)};
+  return snap||{salary:ownedContractPayroll(db,t),regulated:loanAnnualRegulatedPayroll(db,t,w?.year??db.year)};
 }
 function financeOperatingExpense(db,t,w=db.world){
   const pre=t.finance?.prepaid||{},ps=psTeam(db,t),
     seasonPayroll=financeSeasonPayroll(db,t,w);
   const international=w?.seasons?Object.values(w.seasons).filter(s=>
     db.competitions[s.comp]?.international&&s.teams?.includes(t.id)).length:0;
-  return {salary:seasonPayroll.salary,medicalReplacementWage:pre.medicalReplacementWage||0,
+  return {salary:seasonPayroll.salary,
+    ...(t.finance?.loanWages?.year===(w?.year??db.year)?{loanWages:t.finance.loanWages.amount}:{}),
+    medicalReplacementWage:pre.medicalReplacementWage||0,
     bonuses:w&&w.year<=db.year?contractBonusCost(db,t,w.year):0,
     staff:staffCost(db,t),ops:opsCost(db,t),facility:facilityUpkeep(db,t),
     travel:international*.55*ps,
@@ -5504,6 +5568,7 @@ function closeFinances(db,w,rng,ev){
     f.cash=round(f.cash+net-row.settled.income+row.settled.expense);
     const releases=financeReleaseObligations(row.t);
     f.buyout=0;f.prepaid={};
+    if(f.loanWages?.year===w.year)delete f.loanWages;
     if(f.releaseObligations)f.releaseObligations=[];
     f.history=[...f.history,{year:w.year,rev:roundRows(row.rev),
       exp:roundRows(row.exp),net:round(net),cash:f.cash,
@@ -5913,6 +5978,7 @@ function contractOfferReasonable(db,p,t,offer,kind='fa'){
 // Club agreement does not authorize a player's permanent move. Evaluate the
 // same personal-terms policy as negotiation against a detached decision view.
 function contractTransferConsent(db,p,t,offer=null){
+  if(p?.loan)return {ok:false,willing:false,reason:'임대 복귀 후 이적을 협상해야 합니다'};
   if(!p?.team||p.retired||!p.contract||p.contract.until<db.year||
     p.contract.medicalReplacement||!t||t.active===false||t.id===p.team)
     return {ok:false,willing:false,reason:'이적 가능한 일반 선수 계약과 다른 구단이 필요합니다'};
@@ -6728,7 +6794,7 @@ function contractAgreementFor(db,pid){return contractAgreementStore(db)[pid]||nu
 function contractClosingPayrollSnapshot(db){
   const rows={};
   for(const t of activeTeams(db))rows[t.id]={
-    salary:payroll(db,t),regulated:regulatedPayroll(db,t)
+    salary:ownedContractPayroll(db,t),regulated:loanAnnualRegulatedPayroll(db,t)
   };
   return rows;
 }
@@ -7114,6 +7180,7 @@ function playerActionTerms(db,p,t,action){
 function validatePlayerSignAction(db,a){
   const p=db.players[a.pid],t=playerActionTeam(db,a.teamId);
   if(!p||p.retired||!t)return worldActionError('missing_target','계약할 선수 또는 구단을 찾을 수 없습니다');
+  if(p.loan)return worldActionError('active_loan','임대 중에는 원계약을 변경할 수 없습니다');
   const auth=playerActionAuthority(db,a.actor,t);
   if(auth)return auth;
   const kind=a.kind||'fa',from=p.team&&playerActionTeam(db,p.team);
@@ -7172,6 +7239,8 @@ function validatePlayerSignAction(db,a){
     return worldActionError('invalid_terms','유효하지 않은 계약 금액입니다');
   if(!playerActionFinance(t))return worldActionError('invalid_finance','구단 재정 정보가 없습니다');
   if(kind!=='renewal'&&kind!=='renewal_agreement'){
+    const capacity=loanOutgoingPlayers(db,t).length&&loanRosterCapacityError(db,t,p);
+    if(capacity)return worldActionError('registration_limit',capacity);
     const registration=localRegistrationError(db,t,p);
     if(registration)return worldActionError('registration_limit',registration);
   }
@@ -7193,6 +7262,7 @@ function validatePlayerSignAction(db,a){
 }
 function validatePlayerTransferAction(db,a){
   const p=db.players[a.pid],from=playerActionTeam(db,a.fromId),to=playerActionTeam(db,a.teamId);
+  if(p?.loan)return worldActionError('active_loan','임대 중에는 다른 구단으로 이적할 수 없습니다');
   if(!p||p.retired||!from||!to||from.id===to.id||p.team!==from.id)
     return worldActionError('invalid_transfer','이적 구단 또는 소속 선수 정보가 일치하지 않습니다');
   const auth=playerActionAuthority(db,a.actor,to);
@@ -7206,12 +7276,15 @@ function validatePlayerTransferAction(db,a){
   if(a.fee>0&&to.finance.cash+1e-8<a.fee)return worldActionError('insufficient_cash','이적료를 지급할 현금이 부족합니다');
   const move=contractedMoveError(db,p)||localRegistrationError(db,to,p);
   if(move)return worldActionError('invalid_transfer',move);
+  const capacity=loanOutgoingPlayers(db,to).length&&loanRosterCapacityError(db,to,p);
+  if(capacity)return worldActionError('registration_limit',capacity);
   const consent=contractTransferConsent(db,p,to);
   if(!consent.ok||!consent.willing)return worldActionError('player_consent',consent.reason);
   return {ok:true,pid:p.id,fromId:from.id,teamId:to.id,fee:a.fee,consent};
 }
 function validatePlayerReleaseAction(db,a){
   const p=db.players[a.pid],t=playerActionTeam(db,a.teamId),mode=a.mode||'manager';
+  if(p?.loan)return worldActionError('active_loan','임대 선수의 계약은 임대 구단이 방출할 수 없습니다');
   if(!p||!t||p.team!==t.id)return worldActionError('invalid_release','방출할 소속 선수를 찾을 수 없습니다');
   if(!['manager','market','initial','expired','medical_end','mutual'].includes(mode))
     return worldActionError('invalid_action','지원하지 않는 방출 유형입니다');
@@ -7240,6 +7313,7 @@ function validatePlayerReleaseAction(db,a){
 }
 function validatePlayerOptionAction(db,a){
   const p=db.players[a.pid],t=playerActionTeam(db,a.teamId),option=p?.contract?.option;
+  if(p?.loan)return worldActionError('active_loan','임대 복귀 후 원소속 구단에서 옵션을 처리합니다');
   if(!p||!t||p.team!==t.id||!option||option.year!==db.year)
     return worldActionError('invalid_option','행사할 수 있는 계약 옵션이 없습니다');
   if(a.actor==='manager'&&option.type!=='team')
@@ -7353,6 +7427,7 @@ function ensurePlayerAgent(p){
 function negotiationRepresentativeProfile(p){return playerAgent(p)?.profile||p.personality}
 function playerRepresentativeText(p){return playerAgent(p)?.name||'선수 직접 협상'}
 function oralRolePromiseStatus(db,p,year=db.year){
+  if(p.loan)return null;
   const promise=p.rolePromise;
   if(!promise||!p.team||!p.contract||p.contract.until<year||promise.until<year)return null;
   return {...rolePromiseUsageStatus(db,p,promise.role,promise.start,year),source:'oral'};
@@ -7377,7 +7452,7 @@ function rolePromiseActionSnapshot(db,a){
 WORLD_ACTION_HANDLERS['player.promise']={
   validate(db,a){
     const p=db.players[a.pid],t=db.teams[a.teamId];
-    if(!p||p.retired||!t||t.active===false||p.team!==t.id||!p.contract||
+    if(!p||p.loan||p.retired||!t||t.active===false||p.team!==t.id||!p.contract||
       p.contract.until<db.year||p.contract.medicalReplacement)
       return worldActionError('invalid_promise','현재 소속의 유효한 일반 계약 선수가 필요합니다');
     if(a.actor==='system'||a.actor==='manager'&&!managerControlsSquad(db,t)||
@@ -7408,11 +7483,222 @@ WORLD_ACTION_HANDLERS['player.promise']={
   }
 };
 function aiSportingRolePromise(db,p,t){
-  if(!p?.contract||p.contract.medicalReplacement||oralRolePromiseStatus(db,p))return;
+  if(!p?.contract||p.loan||p.contract.medicalReplacement||oralRolePromiseStatus(db,p))return;
   const role=recommendedRosterRole(db,p,t);
   if(starterFor(db,t,p.role)!==p||SQUAD_ROLE_ORDER[role]<=
     Math.max(SQUAD_ROLE_ORDER[p.contract.promisedRole]??0,SQUAD_ROLE_ORDER[p.rosterRole]??0))return;
   return commitWorldAction(db,{type:'player.promise',pid:p.id,teamId:t.id,role,actor:'ai'});
+}
+
+/* ==== FILE: player-loans.js ==== */
+// Temporary sporting registration; the original contract remains with the lender.
+// All starts, recalls and accruals use the same scoped transaction journal.
+const LOAN_INDEX=new WeakMap();
+function loanIndex(db){
+  let index=LOAN_INDEX.get(db);
+  if(!index){index={players:[],owners:new Map()};
+    for(const p of Object.values(db.players))if(p.loan&&!p.retired){
+      index.players.push(p.id);
+      const ids=index.owners.get(p.loan.ownerId)||[];ids.push(p.id);index.owners.set(p.loan.ownerId,ids);
+    }
+    LOAN_INDEX.set(db,index);
+  }
+  return index;
+}
+function loanOutgoingPlayers(db,t){return (loanIndex(db).owners.get(t.id)||[]).map(id=>db.players[id])}
+function loanRosterCapacityError(db,t,p){
+  if(t.roster.includes(p.id))return null;
+  const reserved=loanOutgoingPlayers(db,t).filter(x=>x.id!==p.id),
+    rules=rosterRulesForTeam(db,t),max=t.parent||(t.division||1)===2?rules.reserveTeamMax:rules.firstTeamMax;
+  return t.roster.length+reserved.length>=max?'임대 복귀 자리 포함 선수단 상한을 넘습니다':null;
+}
+function loanMarketOpen(db,t){
+  if(db.world?.phase!=='season')return false;
+  const md=(db.worldDate||'').slice(5),windows=db.regions[t.region]?.loanWindows||
+    [{from:'01-07',through:'01-31'},{from:'07-01',through:'07-14'}];
+  return windows.some(w=>md>=w.from&&md<=w.through);
+}
+function loanEndDate(db,duration){
+  const year=contractedMoveSeason(db),half=year+'-07-01';
+  return duration==='half'&&db.worldDate<half?half:year+'-12-31';
+}
+function loanPlayerConsent(db,p,t,role){
+  // Salary is retained, not renegotiated. Only sporting opportunities change.
+  const player=JSON.parse(JSON.stringify(p));
+  player.contract={...player.contract,promisedRole:role};
+  return contractTransferConsent({...db,players:{...db.players,[p.id]:player}},player,t);
+}
+function loanSnapshot(db,c){
+  const p=db.players[c.pid];
+  return JSON.parse(JSON.stringify({base:playerActionSnapshot(db,c),loan:p?.loan||null,
+    usage:p?.usage||null,rolePromise:p?.rolePromise||null,
+    finances:[c.fromId,c.teamId].map(id=>db.teams[id]?.finance),
+    reservations:[c.fromId,c.teamId].map(id=>loanOutgoingPlayers(db,db.teams[id]).map(p=>p.id)),
+    phase:db.world?.phase,windows:db.regions[db.teams[c.teamId]?.region]?.loanWindows||null}));
+}
+function validateLoanStart(db,a){
+  const p=db.players[a.pid],from=playerActionTeam(db,a.fromId),to=playerActionTeam(db,a.teamId);
+  if(!p||p.retired||!from||!to||p.team!==from.id||parentTeamOf(db,from).id===parentTeamOf(db,to).id)
+    return worldActionError('invalid_loan','다른 구단 소속 선수가 필요합니다');
+  if(p.loan||!p.contract||p.contract.medicalReplacement||p.contract.until<contractedMoveSeason(db)||
+    !Number.isFinite(p.contract.salary)||p.contract.salary<=0)
+    return worldActionError('invalid_contract','임대 가능한 일반 계약이 필요합니다');
+  if(a.actor==='system')return worldActionError('unauthorized','시스템이 새 임대를 강제할 수 없습니다');
+  const managingSource=a.actor==='manager'&&!playerActionAuthority(db,'manager',from),
+    auth=playerActionAuthority(db,a.actor,to);if(auth&&!managingSource)return auth;
+  if(a.actor==='ai'){const sourceAuth=playerActionAuthority(db,'ai',from);if(sourceAuth)return sourceAuth}
+  if(!loanMarketOpen(db,to))return worldActionError('market_closed','도착 지역의 임대 시장이 닫혔습니다');
+  if(!['half','season'].includes(a.duration)||!SQUAD_ROLES.includes(a.promisedRole)||
+    typeof a.recall!=='boolean'||!Number.isFinite(a.salaryShare)||a.salaryShare<0||a.salaryShare>1||
+    !Number.isFinite(a.fee)||a.fee<0)
+    return worldActionError('invalid_terms','기간·역할·리콜·급여 분담·임대료 조건이 유효하지 않습니다');
+  if(!playerActionFinance(from)||!playerActionFinance(to)||to.finance.cash+1e-8<a.fee)
+    return worldActionError('invalid_finance','임대료를 지급할 재정 정보 또는 현금이 부족합니다');
+  const rules=rosterRulesForTeam(db,from),minimum=from.parent||(from.division||1)===2?rules.reserveTeamMin:rules.firstTeamMin;
+  if(from.roster.length<=minimum||(reserveTeamsOf(db,from).length&&organizationRoster(db,from).length<=rules.integratedMin))
+    return worldActionError('roster_minimum','원소속 선수단의 최소 인원을 유지해야 합니다');
+  const error=contractedMoveError(db,p)||localRegistrationError(db,to,p)||loanRosterCapacityError(db,to,p);
+  if(error)return worldActionError('registration_limit',error);
+  // The AI lender protects starters and requires wages in exchange for a free loan.
+  const detached=JSON.parse(JSON.stringify(from)),view={...db,teams:{...db.teams,[from.id]:detached}},
+    starter=starterFor(view,detached,p.role)?.id===p.id;
+  if(!managingSource&&(starter&&!p.wantsOut||a.salaryShare<.5&&a.fee<p.contract.salary*.25))
+    return worldActionError('club_consent','원소속 구단이 출전 계획 또는 비용 분담 조건을 거절했습니다');
+  if(managingSource){
+    const destination=JSON.parse(JSON.stringify(to)),decisionView={...db,teams:{...db.teams,[to.id]:destination}},
+      current=starterFor(decisionView,destination,p.role);
+    if(p.contract.salary*a.salaryShare>aiTransferSalaryRoom(db,to,a.fee)||
+      current&&aiMarketValue(db,p,to)<=aiMarketValue(db,current,to)+3)
+      return worldActionError('club_consent','도착 구단이 급여 예산 또는 전력 보강 조건을 거절했습니다');
+  }
+  const consent=loanPlayerConsent(db,p,to,a.promisedRole);
+  if(!consent.ok||!consent.willing)return worldActionError('player_consent','선수가 임대 기회와 조건에 동의하지 않았습니다. '+consent.reason);
+  return {ok:true,pid:p.id,fromId:from.id,teamId:to.id,duration:a.duration,
+    promisedRole:a.promisedRole,recall:a.recall,salaryShare:a.salaryShare,fee:a.fee,
+    endDate:loanEndDate(db,a.duration),consent};
+}
+function loanWageAmount(db,p,date){
+  const loan=p.loan,year=loan.season,start=loan.lastWageDate,
+    end=date<loan.endDate?date:loan.endDate,
+    days=Math.max(0,(Date.parse(end+'T00:00:00Z')-Date.parse(start+'T00:00:00Z'))/86400000),
+    yearDays=(Date.UTC(year+1,0,1)-Date.UTC(year,0,1))/86400000;
+  return p.contract.salary*loan.salaryShare*days/yearDays;
+}
+function accrueLoanWages(db,p,date){
+  const loan=p.loan,amount=loanWageAmount(db,p,date);
+  if(amount){recordLoanWageAdjustment(db.teams[loan.ownerId],loan.season,-amount,p.id);
+    recordLoanWageAdjustment(db.teams[loan.borrowerId],loan.season,amount,p.id)}
+  if(date>loan.lastWageDate)loan.lastWageDate=date<loan.endDate?date:loan.endDate;
+}
+function loanMovePlayer(db,p,t){LOAN_INDEX.delete(db);assignPlayerToTeam(db,p,t);initializeDepthChart(db,t,true)}
+function applyLoanStart(db,c){
+  const p=db.players[c.pid],from=db.teams[c.fromId],to=db.teams[c.teamId],
+    u=p.usage?.year===db.year?p.usage:null;
+  p.loan={ownerId:from.id,borrowerId:to.id,season:contractedMoveSeason(db),
+    startDate:db.worldDate,lastWageDate:db.worldDate,endDate:c.endDate,
+    duration:c.duration,recall:c.recall,salaryShare:c.salaryShare,fee:c.fee,
+    promisedRole:c.promisedRole,originalRole:p.rosterRole,
+    usageStart:JSON.parse(JSON.stringify(u||null)),
+    promiseStart:{year:db.year,date:db.worldDate,games:u?.games||0,
+      teamGames:u?.teamGames||0,unavailableTeamGames:u?.unavailableTeamGames||0}};
+  recordContractedMove(db,p,'loan',from,to,{fee:c.fee});
+  loanMovePlayer(db,p,to);p.rosterRole=c.promisedRole;initializeDepthChart(db,from,true);
+  receiveFinancePrepaidTransfer(from,c.fee);payFinancePrepaid(to,'transferPaid',c.fee);
+  recordPlayerEvent(p,'loan_start',db.year,{...p.loan,consent:c.consent});
+  news(db,p.name+' 임대: '+from.short+' → '+to.short);
+  return {pid:p.id,loan:p.loan};
+}
+function validateLoanExisting(db,a){
+  const p=db.players[a.pid],loan=p?.loan;
+  if(!loan||p.team!==loan.borrowerId||a.fromId!==loan.borrowerId||a.teamId!==loan.ownerId||
+    !p.contract||!playerActionFinance(db.teams[loan.ownerId])||!playerActionFinance(db.teams[loan.borrowerId]))
+    return worldActionError('invalid_loan','진행 중인 임대 구단 정보가 일치하지 않습니다');
+  const due=db.worldDate>=loan.endDate||db.world?.phase==='offseason';
+  if(a.type==='player.loan-accrue'){
+    if(a.actor!=='system')return worldActionError('unauthorized','급여 정산은 달력에서 처리합니다');
+  }else if(!due){
+    if(!loan.recall)return worldActionError('no_recall','계약에 조기 복귀 조항이 없습니다');
+    const auth=playerActionAuthority(db,a.actor,db.teams[loan.ownerId]);if(auth)return auth;
+    if(a.actor==='system')return worldActionError('unauthorized','만료 전 강제 복귀는 허용되지 않습니다');
+  }else if(a.actor!=='system'){
+    const auth=playerActionAuthority(db,a.actor,db.teams[loan.ownerId]);if(auth)return auth;
+  }
+  if(a.type==='player.loan-return'&&db.teams[loan.ownerId].active===false)
+    return worldActionError('club_closed','해체 구단 계약은 해체 정산에서 처리해야 합니다');
+  return {ok:true,pid:p.id,fromId:loan.borrowerId,teamId:loan.ownerId};
+}
+function applyLoanReturn(db,c){
+  const p=db.players[c.pid],loan=p.loan,from=db.teams[loan.borrowerId],to=db.teams[loan.ownerId];
+  accrueLoanWages(db,p,db.worldDate);
+  // Suspend owner promises during the loan; borrower games cannot satisfy or
+  // breach the original promise. Aggregate career usage remains intact.
+  for(const baseline of [p.contract.rolePromiseStart,p.rolePromise?.start]){
+    if(baseline?.year!==db.year)continue;
+    for(const key of ['games','teamGames','unavailableTeamGames'])
+      baseline[key]=(baseline[key]||0)+Math.max(0,(p.usage?.[key]||0)-(loan.usageStart?.[key]||0));
+  }
+  delete p.loan;loanMovePlayer(db,p,to);p.rosterRole=loan.originalRole;
+  initializeDepthChart(db,from,true);
+  recordPlayerEvent(p,'loan_return',db.year,{from:from.id,to:to.id,date:db.worldDate});
+  news(db,p.name+' 임대 종료 · '+to.short+' 복귀');
+  return {pid:p.id,teamId:to.id};
+}
+for(const [type,validate,apply] of [
+  ['player.loan',validateLoanStart,applyLoanStart],
+  ['player.loan-return',validateLoanExisting,applyLoanReturn],
+  ['player.loan-accrue',validateLoanExisting,(db,c)=>{accrueLoanWages(db,db.players[c.pid],db.worldDate);return {pid:c.pid}}]
+])WORLD_ACTION_HANDLERS[type]={validate,apply,snapshot:loanSnapshot,
+  canonical(db,a,v){const {ok,...terms}=v;return {type:a.type,actor:a.actor,...terms}},
+  changes(db,c){return [{pid:c.pid,kind:c.type,from:c.fromId,to:c.teamId,
+    ...(c.type==='player.loan'?{fee:c.fee,salaryShare:c.salaryShare,endDate:c.endDate}:{})}]}};
+function processLoanDaily(db){
+  for(const pid of loanIndex(db).players.slice()){
+    const p=db.players[pid];
+    const result=commitWorldAction(db,{type:db.worldDate>=p.loan.endDate||db.world?.phase==='offseason'
+      ?'player.loan-return':'player.loan-accrue',pid:p.id,fromId:p.loan.borrowerId,
+      teamId:p.loan.ownerId,actor:'system'});
+    if(!result.ok)throw new Error((result.errors||[]).join(' · '));
+  }
+}
+
+/* ==== FILE: player-loan-market.js ==== */
+// Review once per regional window, never on a background timer. AI uses its
+// existing observations and the same club/player consent gateway as the manager.
+function aiReviewLoanMarket(db){
+  const w=db.world;if(w?.phase!=='season')return 0;
+  const date=db.worldDate,md=date.slice(5),regions=Object.values(db.regions)
+    .filter(R=>(R.loanWindows||[{from:'01-07',through:'01-31'},{from:'07-01',through:'07-14'}])
+      .some(period=>md>=period.from&&md<=period.through));
+  let deals=0;
+  for(const R of regions){
+    const period=(R.loanWindows||[{from:'01-07',through:'01-31'},{from:'07-01',through:'07-14'}])
+      .find(period=>md>=period.from&&md<=period.through),key=R.id+'/'+w.year+'/'+period.from;
+    if(w.loanMarketReviews?.[key])continue;
+    w.loanMarketReviews=w.loanMarketReviews||{};w.loanMarketReviews[key]=date;
+    const borrowers=activeTeams(db,R.id,1).filter(t=>!playerActionAuthority(db,'ai',t));
+    for(const to of borrowers){
+      if(deals>=2)break;
+      const role=ROLES.slice().sort((a,b)=>{
+        const pa=starterFor(db,to,a),pb=starterFor(db,to,b);
+        return (pa?aiMarketValue(db,pa,to):0)-(pb?aiMarketValue(db,pb,to):0);
+      })[0],current=starterFor(db,to,role),room=Math.max(0,salaryBudget(db,to)-payroll(db,to));
+      const candidates=Object.values(db.players).filter(p=>p.team&&!p.loan&&!p.retired&&p.role===role&&
+        p.contract&&!p.contract.medicalReplacement&&p.contract.salary<=room&&
+        p.team!==to.id&&!playerActionAuthority(db,'ai',db.teams[p.team])&&
+        db.teams[p.team]?.active!==false&&db.teams[p.team]?.roster.length>5&&
+        !contractedMoveError(db,p)&&!localRegistrationError(db,to,p))
+        .map(p=>({p,value:aiMarketValue(db,p,to)}))
+        .filter(x=>!current||x.value>aiMarketValue(db,current,to)+3)
+        .sort((a,b)=>b.value-a.value||a.p.id.localeCompare(b.p.id)).slice(0,8);
+      for(const {p} of candidates){
+        const result=commitWorldAction(db,{type:'player.loan',actor:'ai',pid:p.id,
+          fromId:p.team,teamId:to.id,duration:md<'07-01'?'half':'season',
+          salaryShare:1,fee:0,promisedRole:'starter',recall:false});
+        if(result.ok){deals++;break}
+      }
+    }
+  }
+  return deals;
 }
 
 /* ==== FILE: club-closure.js ==== */
@@ -7478,12 +7764,16 @@ function validateClubClosure(db,a){
       playerIds.push(pid);
     }
   }
+  const affectedLoans=loanIndex(db).players.map(id=>db.players[id])
+    .filter(p=>teamIds.includes(p.loan.ownerId)||teamIds.includes(p.loan.borrowerId));
+  for(const p of affectedLoans)if(!playerIds.includes(p.id))playerIds.push(p.id);
   const w=db.world,negotiationIds=Object.entries(w?.negotiations||{})
     .filter(([,n])=>n.status==='open'&&(teamIds.includes(n.teamId)||playerIds.includes(n.pid)))
     .map(([id])=>id),agreementIds=Object.keys(w?.contractAgreements||{})
     .filter(pid=>w.contractAgreements[pid].status==='agreed'&&
       teamIds.includes(w.contractAgreements[pid].teamId));
-  const financeTeams=clubClosureFinanceTeams(db,teams);
+  const financeTeams=Array.from(new Set([...clubClosureFinanceTeams(db,teams).map(t=>t.id),
+    ...affectedLoans.flatMap(p=>[p.loan.ownerId,p.loan.borrowerId])])).map(id=>db.teams[id]);
   if(financeTeams.some(team=>!playerActionFinance(team)))
     return worldActionError('invalid_finance','모구단 지원 재정 정보가 유효하지 않습니다');
   try{clubClosureFundingPlan(db,{teamIds})}
@@ -7492,7 +7782,8 @@ function validateClubClosure(db,a){
     playerIds,negotiationIds,agreementIds};
 }
 function clubClosureAllocation(db,t){
-  const pending=financeReleaseObligations(t),newItems=t.roster.map(pid=>
+  const ownedIds=[...t.roster.filter(pid=>!db.players[pid]?.loan),...loanOutgoingPlayers(db,t).map(p=>p.id)],
+    pending=financeReleaseObligations(t),newItems=ownedIds.map(pid=>
     contractReleaseSettlement(db,db.players[pid],'club_closure')).filter(row=>row.amount>0),
     items=[...pending.items,...newItems],amount=pending.amount+
       newItems.reduce((sum,row)=>sum+row.amount,0);
@@ -7502,6 +7793,7 @@ function clubClosureAllocation(db,t){
 function clubClosureSnapshot(db,c){
   const w=db.world;
   return JSON.parse(JSON.stringify({date:db.worldDate||null,year:db.year,saveId:db.saveId,
+    loans:c.playerIds.map(pid=>({pid,loan:db.players[pid]?.loan,usage:db.players[pid]?.usage})),
     teams:c.financeTeamIds.map(id=>{
       const t=db.teams[id];
       return {id,active:t?.active,parent:t?.parent||null,roster:t?.roster,
@@ -7512,6 +7804,8 @@ function clubClosureSnapshot(db,c){
 }
 function applyClubClosure(db,c){
   const w=db.world,settlements=[],plan=clubClosureFundingPlan(db,c);
+  for(const pid of c.playerIds){const p=db.players[pid];if(p.loan)
+    applyLoanReturn(db,{pid,fromId:p.loan.borrowerId,teamId:p.loan.ownerId,actor:'system'})}
   applyClubClosureFunding(db,plan.transfers,c.teamIds,db.year,db.worldDate||null);
   for(const id of c.teamIds){
     const t=db.teams[id];
@@ -8731,7 +9025,7 @@ function renderMarket(){
   <h4>진행 중인 협상</h4>${renderNegotiations()}
   <h4>영입 후보 A/B/C</h4>${renderRecruitmentBoard()}
   ${exp.length?`<h4>계약 결정 — 헤드코치 직접 확정</h4>${exp.map(p=>{const n=negotiationStore(DB)[negotiationId(DB,p.id,'renewal')],o=p.contract?.option,opt=o&&o.year===DB.year?o:null;return `<div class="mrow"><span><span class="role">${ROLE_KO[p.role]}</span> <b>${esc(p.name)}</b> ${p.age}세 · 종합 ${playerOvr(p)} · ${p.contract?`현재 ${money(p.contract.salary)} · 시장 요구 약 ${money(asking(DB,p,t.region))}`:'무계약 상태 · 정식 계약 필요'}${opt?` · ${opt.type==='team'?'팀':'선수'} 옵션 ${money(opt.salary)}`:''}</span><span>${opt?.type==='team'?`<button class="ghost sm2" data-exercise-option="${p.id}">팀 옵션 행사</button>`:opt?.type==='player'?'<small class="hint">선수 측 옵션 결정</small>':''}${n&&n.status==='open'?'<small class="hi">협상 중</small>':`<button class="primary sm2" data-start-renew="${p.id}">재계약 협상</button>`}</span></div>`}).join('')}`:''}
-  <h4>현재 로스터</h4>${roster.map(p=>`<div class="mrow"><span><span class="role">${ROLE_KO[p.role]}</span> <b>${esc(p.name)}</b> ${p.age}세 · 종합 ${playerOvr(p)} · ${p.contract?.medicalReplacement?'의료 대체 · 연 환산 '+money(p.contract.salary)+' · 보장 '+p.contract.medicalReplacement.guaranteedThrough+' · 조건 종료 '+p.contract.medicalReplacement.expiresOn:p.contract?money(p.contract.salary)+' ~'+p.contract.until:''}${starterFor(DB,t,p.role)===p?'':' <small class="hint">후보</small>'}</span><button class="ghost sm2" data-release="${p.id}">방출</button></div>`).join('')}
+  <h4>현재 로스터</h4>${roster.map(p=>`<div class="mrow"><span><span class="role">${ROLE_KO[p.role]}</span> <b>${esc(p.name)}</b> ${p.age}세 · 종합 ${playerOvr(p)} · ${p.contract?.medicalReplacement?'의료 대체 · 연 환산 '+money(p.contract.salary)+' · 보장 '+p.contract.medicalReplacement.guaranteedThrough+' · 조건 종료 '+p.contract.medicalReplacement.expiresOn:p.contract?money(p.contract.salary)+' ~'+p.contract.until:''}${starterFor(DB,t,p.role)===p?'':' <small class="hint">후보</small>'}</span>${!p.loan?`<button class="ghost sm2" data-release="${p.id}">방출</button>`:''}</div>`).join('')}
   ${sponsorBlock(t)}
   <div class="controls" style="margin-top:12px"><div class="seg"><button data-mk="fa" aria-pressed="${MK.tab==='fa'}">FA</button><button data-mk="tr" aria-pressed="${MK.tab==='tr'}">이적 대상</button><button data-mk="coach" aria-pressed="${MK.tab==='coach'}">스태프</button></div>
     <label>포지션<select id="mkrole"><option value="ALL">전체</option>${ROLES.map(r=>`<option value="${r}"${MK.role===r?' selected':''}>${ROLE_KO[r]}</option>`).join('')}</select></label>
@@ -9163,6 +9457,7 @@ function playerDetail(p){
   <div class="fin"><div><span>국적</span><b>${esc(nat?nat.name:(p.nationality||p.region||'—'))}</b><small>${playerSquadLabel(DB,p)}${team?` · ${esc(team.name)}`:''}</small></div><div><span>주포지션</span><b>${ROLE_KO[p.role]}</b><small>현재 전문 역할 · 경기 슬롯 제한 아님</small></div><div><span>명성</span><b>${p.reputation??'—'}</b><small>실력과 별도 · 성과 기반</small></div><div><span>시장가치</span><b>${money(playerMarketValue(DB,p))}</b><small>${p.contract?.medicalReplacement?`의료 대체 · 연 환산 ${money(p.contract.salary)} · 최소 보장 ${p.contract.medicalReplacement.guaranteedThrough} · 예정 종료 ${p.contract.medicalReplacement.expiresOn} · 지급 ${money(p.contract.medicalReplacement.paid)}`:p.contract?`연봉 ${money(p.contract.salary)} · ~${p.contract.until} · 방출 보장 ${Math.round(contractGuaranteeRate(p.contract)*100)}%`:'FA'}</small></div></div>
   ${scoutReportSummary(p)}
   ${playerCommitmentsPanel(p)}
+  ${playerLoanPanel(p)}
    <h4>건강 / 재활</h4><p class="hint">${esc(medicalSummary(p))}${p.medical?.daysLeft>0?' · 회복 시설·전문 스태프와 가벼운 훈련이 복귀에 도움을 줍니다.':''}</p>
   <div class="fin"><div><span>폼</span><b>${st.form>0?'+':''}${st.form.toFixed(1)}</b></div><div><span>컨디션</span><b>${Math.round(st.condition)}</b></div><div><span>경기 감각</span><b>${Math.round(st.sharpness)}</b></div><div><span>피로</span><b>${Math.round(st.fatigue)}</b></div><div><span>사기</span><b>${Math.round(st.morale)}</b></div><div><span>팀 적응</span><b>${Math.round(st.teamAdaptation)}</b><small>전술 ${Math.round(st.tacticalAdaptation)}</small></div></div>
   ${(()=>{ensureSatisfaction(p);const assigned=team&&ROLES.find(role=>starterFor(DB,team,role)===p),u=p.usage&&p.usage.year===DB.year?p.usage:null,actual=u&&u.teamGames?Math.round(actualPlayShare(p)*100):0,exp=Math.round(expectedPlayShare(p,team)*100),reasons=p.satisfactionReasons.map(x=>SAT_REASON_KO[x]||x);return `<h4>역할 / 만족도</h4><div class="fin"><div><span>현재 선발</span><b>${assigned?ROLE_KO[assigned]:'후보'}</b><small>Depth Chart 고정</small></div><div><span>현재 역할</span><b>${SQUAD_ROLE_KO[p.rosterRole]||'—'}</b><small>기대 출전 ${exp}%</small></div><div><span>실제 기용</span><b>${u?`${actual}%`:'기록 없음'}</b><small>${u?`${u.games}/${u.teamGames}게임`:'시즌 시작 전'}</small></div><div><span>만족도</span><b class="${p.satisfaction<35?'lo':p.satisfaction>=70?'hi':''}">${Math.round(p.satisfaction)} · ${satisfactionLabel(p.satisfaction)}</b><small>${reasons.length?reasons.map(esc).join(' · '):'주요 불만 없음'}</small></div><div><span>커리어 목표</span><b>${CAREER_GOAL_KO[playerCareerGoal(p)]}</b><small>${p.wantsOut?`이적 요청 · ${SAT_REASON_KO[p.wantsOutReason]||'불만'}`:'잔류 상태'}</small></div></div>`})()}
@@ -9174,7 +9469,7 @@ function playerDetail(p){
   <h4>챔피언 폭</h4><div class="scroll"><table class="pool"><thead><tr><th>챔피언</th><th>숙련도</th><th>공식 경험</th><th>스크림</th><th>훈련</th><th>상성 이해</th><th>자신감</th></tr></thead><tbody>${Object.entries(p.pool||{}).sort((x,y)=>y[1].mastery-x[1].mastery).map(([c,v])=>`<tr><td>${esc(championLabel(DB,c))}</td><td>${ovrTag(v.mastery)}</td><td class="num">${Math.round(v.experience||0)}</td><td class="num">${Math.round(v.scrimExperience||0)}</td><td class="num">${Math.round(v.trainingExperience||0)}</td><td class="num">${v.matchup_knowledge}</td><td class="num">${v.confidence}</td></tr>`).join('')}</tbody></table></div>
   ${p.career.length?`<h4 style="margin-top:14px">커리어</h4><div class="scroll"><table class="pool"><thead><tr><th>시즌</th><th>대회</th><th>팀</th><th>구분</th><th>종합</th><th>경기</th><th>평점</th><th>KDA</th><th>KP</th><th>GPM</th><th>DPM</th><th>CS차</th><th>골드차</th><th>받은 피해</th><th>시야</th><th>옵젝</th><th>라인 우위</th><th>한타 기여</th><th>POG</th><th>당시 계약</th></tr></thead><tbody>${p.career.slice().reverse().map(c=>`<tr><td class="num">${c.year}</td><td>${esc(c.cname||c.comp)}${c.international?' · 국제':''}</td><td>${esc(c.team?tshort(c.team):'FA')}</td><td>${c.squad||''}${c.division?` · ${c.division}부`:''}</td><td class="num">${c.ovr||''}</td><td class="num">${c.g}</td><td class="num">${c.rating?c.rating.toFixed(2):'—'}</td><td class="num">${((c.k+c.a)/Math.max(1,c.d)).toFixed(2)}</td><td class="num">${c.kp!==undefined?Math.round(c.kp*100)+'%':'—'}</td><td class="num">${c.min&&c.gold?(c.gold/c.min).toFixed(0):'—'}</td><td class="num">${c.min&&c.dmg?(c.dmg/c.min).toFixed(0):'—'}</td><td class="num">${c.g?Math.round((c.csDiff||0)/c.g):'—'}</td><td class="num">${c.g?Math.round((c.goldDiff||0)/c.g):'—'}</td><td class="num">${c.g?Math.round((c.dmgTaken||0)/c.g):'—'}</td><td class="num">${c.g?((c.vision||0)/c.g).toFixed(1):'—'}</td><td class="num">${c.objectives||0}</td><td class="num">${c.laneAdv!==undefined?c.laneAdv.toFixed(2):'—'}</td><td class="num">${c.teamfights?Math.round((c.teamfightWins||0)/c.teamfights*100)+'% · '+Math.round(c.teamfightShare*100)+'%':'—'}</td><td class="num">${c.mvp}</td><td class="num">${c.salary!==null&&c.salary!==undefined?`${money(c.salary)} ~${c.contractUntil}`:'—'}</td></tr>`).join('')}</tbody></table></div>`:''}
   ${(()=>{const promise=contractRolePromiseStatus(DB,p);return promise?`<h4>계약 역할 약속</h4><p class="hint">${SQUAD_ROLE_KO[promise.role]} · 기대 출전 ${Math.round(promise.expected*100)}% · 계약 이후 ${promise.games}/${promise.teamGames}게임${promise.start?' · '+esc(promise.start)+'부터':''}${promise.downgraded?' · 현재 역할이 계약 약속보다 낮습니다':''}</p>`:''})()}
-  ${ev.length?`<h4 style="margin-top:14px">커리어 이벤트</h4><div class="scroll"><table class="pool"><thead><tr><th>시즌</th><th>유형</th><th>내용</th></tr></thead><tbody>${ev.map(e=>{const detail=e.type==='contract'?`${esc(tshort(e.team))} · ${money(e.salary)} · ~${e.until}`:e.type==='transfer'?`${esc(tshort(e.from))} → ${esc(tshort(e.to))} · ${money(e.fee)}${e.consent?.willing?' · 선수 동의':''}`:e.type==='award'?`${esc(e.competition)} · ${esc(e.award)}`:e.type==='title'?`${esc(e.competition)} 우승`:e.type==='squad_move'?`${esc(tshort(e.from))} → ${esc(tshort(e.to))}`:e.type==='retirement'?`${e.age}세 은퇴 · 전성기 종합 ${e.peak}`:e.type==='club_closure'?`${esc(tshort(e.team))} 구단 해체 · 계약 보상 ${money(e.cost)}`:e.type==='mutual_termination'?`${esc(tshort(e.team))} 상호 해지 · 합의금 ${money(e.cost)}`:e.type==='release'?`${esc(tshort(e.team))} 방출`:e.type==='role_promise'?`${SQUAD_ROLE_KO[e.role]} 구두 약속 · ~${e.until}`:e.type==='role_promise_closed'?`${SQUAD_ROLE_KO[e.role]} 구두 약속 종료`:e.type==='roster_role'?`${SQUAD_ROLE_KO[e.from]||e.from} → ${SQUAD_ROLE_KO[e.to]||e.to}`:e.type==='transfer_request'?`${SAT_REASON_KO[e.reason]||e.reason} · 이적 요청`:e.type==='transfer_request_withdrawn'?'이적 요청 철회':e.type==='role_conversion_started'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 전향 시작`:e.type==='role_conversion_completed'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 전향 완료`:e.type==='role_conversion_rejected'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 전향 거절`:e.type==='role_conversion_cancelled'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 전향 중단`:e.type==='role_conversion_redirected'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 계획 변경`:e.type==='medical_start'?`${esc(MEDICAL_LABELS[e.site]||e.kind)} · ${e.days}일 · ${e.out?'결장':'제한 출전'}`:e.type==='medical_return'?'치료 후 복귀':e.type==='medical_scar'?'중증 부상 후유증':e.type==='medical_emergency_fa'?`의료 대체 계약 · ${e.guaranteedThrough} 보장 · ${e.expiresOn} 조건 종료`:e.type==='medical_replacement_end'?`대체 계약 종료 · 지급 ${money(e.paid)}`:'—';return `<tr><td class="num">${e.year}</td><td>${({contract:'계약',transfer:'이적',award:'개인상',title:'우승',squad_move:'1·2군 이동',retirement:'은퇴',release:'방출',mutual_termination:'상호 해지',club_closure:'구단 해체',role_promise:'구두 약속',role_promise_closed:'약속 종료',roster_role:'역할 변경',transfer_request:'이적 요청',transfer_request_withdrawn:'요청 철회',role_conversion_started:'전향 시작',role_conversion_completed:'전향 완료',role_conversion_rejected:'전향 거절',role_conversion_cancelled:'전향 중단',role_conversion_redirected:'전향 변경',medical_start:'부상·건강',medical_return:'복귀',medical_scar:'후유증',medical_emergency_fa:'의료 대체 계약',medical_replacement_end:'의료 대체 종료'}[e.type]||e.type)}</td><td>${detail}</td></tr>`}).join('')}</tbody></table></div>`:''}</section>`;
+  ${ev.length?`<h4 style="margin-top:14px">커리어 이벤트</h4><div class="scroll"><table class="pool"><thead><tr><th>시즌</th><th>유형</th><th>내용</th></tr></thead><tbody>${ev.map(e=>{const detail=e.type==='contract'?`${esc(tshort(e.team))} · ${money(e.salary)} · ~${e.until}`:e.type==='transfer'?`${esc(tshort(e.from))} → ${esc(tshort(e.to))} · ${money(e.fee)}${e.consent?.willing?' · 선수 동의':''}`:e.type==='award'?`${esc(e.competition)} · ${esc(e.award)}`:e.type==='title'?`${esc(e.competition)} 우승`:e.type==='squad_move'?`${esc(tshort(e.from))} → ${esc(tshort(e.to))}`:e.type==='retirement'?`${e.age}세 은퇴 · 전성기 종합 ${e.peak}`:e.type==='club_closure'?`${esc(tshort(e.team))} 구단 해체 · 계약 보상 ${money(e.cost)}`:e.type==='mutual_termination'?`${esc(tshort(e.team))} 상호 해지 · 합의금 ${money(e.cost)}`:e.type==='release'?`${esc(tshort(e.team))} 방출`:e.type==='loan_start'?`${esc(tshort(e.ownerId))} → ${esc(tshort(e.borrowerId))} · ~${e.endDate} · 급여 ${Math.round(e.salaryShare*100)}%`:e.type==='loan_return'?`${esc(tshort(e.from))} → ${esc(tshort(e.to))} 복귀`:e.type==='role_promise'?`${SQUAD_ROLE_KO[e.role]} 구두 약속 · ~${e.until}`:e.type==='role_promise_closed'?`${SQUAD_ROLE_KO[e.role]} 구두 약속 종료`:e.type==='roster_role'?`${SQUAD_ROLE_KO[e.from]||e.from} → ${SQUAD_ROLE_KO[e.to]||e.to}`:e.type==='transfer_request'?`${SAT_REASON_KO[e.reason]||e.reason} · 이적 요청`:e.type==='transfer_request_withdrawn'?'이적 요청 철회':e.type==='role_conversion_started'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 전향 시작`:e.type==='role_conversion_completed'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 전향 완료`:e.type==='role_conversion_rejected'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 전향 거절`:e.type==='role_conversion_cancelled'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 전향 중단`:e.type==='role_conversion_redirected'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 계획 변경`:e.type==='medical_start'?`${esc(MEDICAL_LABELS[e.site]||e.kind)} · ${e.days}일 · ${e.out?'결장':'제한 출전'}`:e.type==='medical_return'?'치료 후 복귀':e.type==='medical_scar'?'중증 부상 후유증':e.type==='medical_emergency_fa'?`의료 대체 계약 · ${e.guaranteedThrough} 보장 · ${e.expiresOn} 조건 종료`:e.type==='medical_replacement_end'?`대체 계약 종료 · 지급 ${money(e.paid)}`:'—';return `<tr><td class="num">${e.year}</td><td>${({contract:'계약',transfer:'이적',award:'개인상',title:'우승',squad_move:'1·2군 이동',retirement:'은퇴',release:'방출',mutual_termination:'상호 해지',club_closure:'구단 해체',loan_start:'임대',loan_return:'임대 복귀',role_promise:'구두 약속',role_promise_closed:'약속 종료',roster_role:'역할 변경',transfer_request:'이적 요청',transfer_request_withdrawn:'요청 철회',role_conversion_started:'전향 시작',role_conversion_completed:'전향 완료',role_conversion_rejected:'전향 거절',role_conversion_cancelled:'전향 중단',role_conversion_redirected:'전향 변경',medical_start:'부상·건강',medical_return:'복귀',medical_scar:'후유증',medical_emergency_fa:'의료 대체 계약',medical_replacement_end:'의료 대체 종료'}[e.type]||e.type)}</td><td>${detail}</td></tr>`}).join('')}</tbody></table></div>`:''}</section>`;
 }
 
 /* ==== FILE: ui-player-commitments.js ==== */
@@ -9183,7 +9478,7 @@ function playerCommitmentsPanel(p){
   const agent=playerAgent(p),oral=oralRolePromiseStatus(DB,p),t=DB.teams[p.team],
     floor=Math.max(SQUAD_ROLE_ORDER[p.contract?.promisedRole]??0,SQUAD_ROLE_ORDER[p.rosterRole]??0),
     roles=SQUAD_ROLES.filter(r=>SQUAD_ROLE_ORDER[r]>floor),
-    canPromise=managerControlsSquad(DB,t)&&p.contract&&!p.contract.medicalReplacement&&
+    canPromise=!p.loan&&managerControlsSquad(DB,t)&&p.contract&&!p.contract.medicalReplacement&&
       p.contract.until>=DB.year&&!oral&&roles.length;
   return `<h4>협상 / 구두 약속</h4><p class="hint">${esc(playerRepresentativeText(p))}${agent?` · ${esc(CAREER_GOAL_KO[agent.focus]||agent.focus)}`:''}</p>
     ${oral?`<p>구두 약속 · <b>${SQUAD_ROLE_KO[oral.role]}</b> · ${oral.games}/${oral.teamGames}게임 · 기대 출전 ${Math.round(oral.expected*100)}% · ~${p.rolePromise.until}</p>`:'<p class="hint">진행 중인 구두 역할 약속이 없습니다.</p>'}
@@ -9201,6 +9496,60 @@ function bindRolePromiseControls(){
     MSG=result.ok?'구두 역할 약속을 확정했습니다':(result.errors||[]).join(' · ');
     if(result.ok)saveDB();navKeepScroll();
   });
+}
+
+/* ==== FILE: ui-player-loans.js ==== */
+// Touch controls use a pure preview followed by explicit confirmation.
+function playerLoanPanel(p){
+  const mine=managedTeam(DB),loan=p.loan;
+  if(loan){
+    const owner=DB.teams[loan.ownerId],borrower=DB.teams[loan.borrowerId],
+      canRecall=loan.recall&&!mine?.parent&&parentTeamOf(DB,owner)?.id===mine?.id;
+    return `<h4>임대</h4><p>계약 구단 ${esc(owner.short)} · 출전 구단 ${esc(borrower.short)}</p>
+      <p>~${loan.endDate}${loan.duration==='season'?' · 시즌 종료 시 복귀':''} · ${SQUAD_ROLE_KO[loan.promisedRole]} · 임대료 ${money(loan.fee)} · 임대 구단 급여 ${Math.round(loan.salaryShare*100)}% · ${loan.recall?'조기 복귀 가능':'조기 복귀 불가'}</p>
+      ${canRecall?`<button class="ghost" data-loan-return="${p.id}">조기 복귀 내용 확인</button>`:''}`;
+  }
+  if(!mine||mine.parent||!p.team||!p.contract||p.retired)return '';
+  const outgoing=parentTeamOf(DB,DB.teams[p.team])?.id===mine.id,
+    targets=outgoing?activeTeams(DB).filter(t=>parentTeamOf(DB,t)?.id!==mine.id&&loanMarketOpen(DB,t)):[];
+  if(outgoing?!targets.length:!loanMarketOpen(DB,mine))return '';
+  return `<h4>임대 제안</h4><div class="controls">
+    ${outgoing?`<label>도착 구단<select data-loan-target="${p.id}">${targets.map(t=>`<option value="${t.id}">${esc(t.name)}</option>`).join('')}</select></label>`:''}
+    <label>기간<select data-loan-duration="${p.id}"><option value="half">반 시즌</option><option value="season">이번 시즌</option></select></label>
+    <label>기회<select data-loan-role="${p.id}">${SQUAD_ROLES.map(r=>`<option value="${r}"${r==='starter'?' selected':''}>${SQUAD_ROLE_KO[r]}</option>`).join('')}</select></label>
+    <label>급여 부담 (%)<input data-loan-share="${p.id}" type="number" min="0" max="100" value="100" inputmode="decimal"></label>
+    <label>임대료 (억)<input data-loan-fee="${p.id}" type="number" min="0" step="0.1" value="0" inputmode="decimal"></label>
+    <label><input data-loan-recall="${p.id}" type="checkbox">원소속 조기 리콜 허용</label>
+    <button class="primary" data-loan-preview="${p.id}">제안 내용 확인</button></div>
+    <p class="hint">원계약과 연봉은 유지됩니다. 선수와 원소속 구단 동의가 필요합니다. 반 시즌은 7월 1일 또는 이번 시즌 종료까지입니다. 임대 중에는 방출·재계약·다른 구단 이적이 제한됩니다.</p>`;
+}
+function bindLoanControls(){
+  const read=(key,id)=>document.querySelector(`[data-loan-${key}="${id}"]`);
+  const apply=preview=>{
+    if(!preview.ok){MSG=(preview.errors||[]).join(' · ');navKeepScroll();return}
+    const c=preview.command,p=DB.players[c.pid],returning=c.type==='player.loan-return';
+    if(!confirm(returning?`${p.name} 선수를 원소속으로 즉시 복귀시킬까요?`:
+      `${p.name} 임대 · ${c.endDate}까지 (시즌이 먼저 끝나면 복귀)\n임대료 ${money(c.fee)} · 급여 ${Math.round(c.salaryShare*100)}%\n${SQUAD_ROLE_KO[c.promisedRole]} · ${c.recall?'원소속 조기 리콜 허용':'조기 리콜 없음'}\n확정할까요?`))return;
+    const result=applyWorldAction(DB,preview);
+    MSG=result.ok?(returning?'임대 복귀 완료':'임대 계약 완료'):(result.errors||[]).join(' · ');
+    if(result.ok)saveDB();navKeepScroll();
+  };
+  document.querySelectorAll('[data-loan-preview]').forEach(b=>b.onclick=e=>{
+    e.stopPropagation();const id=b.dataset.loanPreview,p=DB.players[id];
+    apply(previewWorldAction(DB,{type:'player.loan',pid:id,fromId:p.team,
+      teamId:read('target',id)?.value||managedTeamId(DB),actor:'manager',duration:read('duration',id).value,
+      promisedRole:read('role',id).value,salaryShare:Number(read('share',id).value)/100,
+      fee:Number(read('fee',id).value),recall:read('recall',id).checked}));
+  });
+  document.querySelectorAll('[data-loan-return]').forEach(b=>b.onclick=e=>{
+    e.stopPropagation();const p=DB.players[b.dataset.loanReturn];
+    apply(previewWorldAction(DB,{type:'player.loan-return',pid:p.id,
+      fromId:p.loan.borrowerId,teamId:p.loan.ownerId,actor:'manager'}));
+  });
+}
+function squadLoanPanel(t){
+  const players=loanOutgoingPlayers(DB,t);if(!players.length)return '';
+  return `<section><h3>임대 중인 선수</h3>${players.map(p=>`<div class="mrow"><span><b>${esc(p.name)}</b> · ${esc(DB.teams[p.team].short)} · ~${p.loan.endDate} · 급여 부담 ${Math.round((1-p.loan.salaryShare)*100)}%</span>${p.loan.recall&&managerControlsSquad(DB,t)&&!managedTeam(DB)?.parent?`<button class="ghost" data-loan-return="${p.id}">조기 복귀</button>`:''}</div>`).join('')}<p class="hint">계약은 원소속 구단이 유지하며 복귀 인원과 비로컬 자리를 확보합니다.</p></section>`;
 }
 
 /* ==== FILE: ui-roster.js ==== */
@@ -9237,6 +9586,7 @@ function viewSquad(){
     ${Object.keys(TAC_KO).map(k=>`<label><span>${TAC_KO[k]}<output>${tac[k]}</output></span><input type="range" min="0" max="100" value="${tac[k]}" data-tac="${k}"></label>`).join('')}
   </div></section>
   ${financePanel(t)}
+  ${squadLoanPanel(t)}
   ${DB.world?.phase==='season'?`<section><h3>공식전·스크림 일정</h3><p class="hint">오늘 ${esc(DB.worldDate)} · ${officialBookedTeams(DB).has(t.id)?'공식 경기 예정/진행 · 스크림 불가':scrimReadiness(DB,t).ok?'스크림 가능 ('+scrimReadiness(DB,t).availableSlots.map(x=>x==='afternoon'?'오후':'저녁').join('·')+') · 잔여 '+scrimReadiness(DB,t).remaining+'세트':esc(scrimReadiness(DB,t).reason)} · 양팀 모두 같은 연습 시간이 비어야 하며, 7일 내 공식전 상대는 피하고 전력 격차·연패·자신감 회복 목적을 반영해 상호 수락해야 편성됩니다.</p><p class="hint">다음 공식전: ${esc(nextTeamMatch(DB,t.id)?.date||'미정')} / 최근 스크림: ${(t.scrimLog||[]).slice(-4).reverse().map(x=>esc(x.date)+' '+(x.slot==='afternoon'?'오후':x.slot==='evening'?'저녁':'연습')+' '+esc(DB.teams[x.opponent]?.short||x.opponent)+' '+x.games+'세트'+(x.purpose?' · '+esc(x.purpose):'')).join(' · ')||'없음'}</p></section>`:''}
   ${mineOrg?rosterPlanPanel(t):''}
   ${(()=>{const r=trainingRecommendation(DB,t),ko={light:'가볍게',normal:'보통',high:'강하게'};return `<p class="hint">추천: ${ko[r.intensity]} 훈련 · ${r.next?`다음 공식전 ${r.days}일 전`:'공식전 일정 없음'} · 평균 피로 ${Math.round(r.fat)} / 컨디션 ${Math.round(r.cond)}</p>`})()}
@@ -9263,6 +9613,7 @@ function bindSquad(){
   document.querySelectorAll('[data-lineup-player]').forEach(el=>{el.onclick=e=>e.stopPropagation();el.onchange=e=>{e.stopPropagation();const d=squadEditState(DB.teams[SQUAD]),pid=el.dataset.lineupPlayer,next=el.value;for(const r of ROLES)if(d.starters[r]===pid)delete d.starters[r];if(next)d.starters[next]=pid;d.dirty=true;navKeepScroll()}});
   document.querySelectorAll('[data-srole]').forEach(el=>{el.onclick=e=>e.stopPropagation();el.onchange=e=>{e.stopPropagation();const p=DB.players[el.dataset.srole];if(p){const d=squadEditState(DB.teams[SQUAD]);d.roles[p.id]=el.value;d.dirty=true}}});
   bindRolePromiseControls();
+  bindLoanControls();
   document.querySelectorAll('[data-role-convert]').forEach(b=>b.onclick=e=>{e.stopPropagation();const r=proposeRoleConversion(DB,b.dataset.roleConvert,b.dataset.targetRole,'manager');MSG=r.reason;saveDB();navKeepScroll()});
   document.querySelectorAll('[data-role-convert-cancel]').forEach(b=>b.onclick=e=>{e.stopPropagation();const r=cancelRoleConversion(DB,b.dataset.roleConvert,'manager');MSG=r.reason;saveDB();navKeepScroll()});
   document.querySelectorAll('[data-tac]').forEach(el=>el.oninput=el.onchange=e=>{const k=el.dataset.tac;const d=squadEditState(DB.teams[SQUAD]);d.tactics[k]=+el.value;d.dirty=true;if(el.previousElementSibling)el.previousElementSibling.querySelector('output').textContent=el.value});
