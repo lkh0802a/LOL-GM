@@ -59,7 +59,10 @@ const document={
 const bodyClasses=new Set();
 document.body={classList:{add(name){bodyClasses.add(name)},remove(name){bodyClasses.delete(name)}}};
 active=trigger;
-const context=vm.createContext({document});
+let scrollEnhancements=0;
+const context=vm.createContext({document,uiEnhanceScrollRegions(root){
+  assert.equal(root,overlay);scrollEnhancements++;
+}});
 vm.runInContext(source,context,{filename:'ui-overlay.js'});
 const execute=code=>vm.runInContext(code,context);
 assert.equal(listeners.length,1,'exactly one overlay keyboard listener');
@@ -128,4 +131,5 @@ for(const [name,code] of [['ui-draft.js',draft],['ui-season.js',season]]){
   assert(!code.includes("document.body.classList.add('lock')"),'duplicated dialog lifecycle in '+name);
   assert(!code.includes("ov.hidden=false"),'direct overlay writes in '+name);
 }
+assert(scrollEnhancements>0,'overlay must use its required scroll enhancement dependency');
 console.log('Stage 11.5/6-2 overlay acceptance: PASS (report, practice, official lock, focus trap/return, render refresh, modal ownership)');

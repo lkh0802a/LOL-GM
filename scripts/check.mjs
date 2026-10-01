@@ -1,7 +1,7 @@
 import { readFile, readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import vm from 'node:vm';
-import { ARTIFACT_MODULES } from './artifact-modules.mjs';
+import { ARTIFACT_MODULES, ENGINE_MODULES } from './artifact-modules.mjs';
 import { assertMutationOwnership } from './mutation-ownership.mjs';
 
 const root = resolve(import.meta.dirname, '..');
@@ -46,6 +46,21 @@ for(const name of ['payroll','topFivePayroll','regulatedPayroll','spendingTaxFor
 for(const file of ['state-player-actions.js','ui-market.js']) {
   if(!sourceOf(file).includes('contractReleaseCost(')) {
     failed=true;console.error('Release cost must consume the contract source of truth: '+file);
+  }
+}
+for(const file of ENGINE_MODULES) {
+  const hit=sourceOf(file).match(/\b(?:DB|document|localStorage|indexedDB|UI_[A-Z_]+)\b/);
+  if(hit){failed=true;console.error('Engine must not own UI/storage globals: '+file+' '+hit[0]);}
+}
+for(const file of ['ui-overlay.js','ui-state.js']) {
+  if(/typeof (?:uiEnhanceScrollRegions|UI_OVERLAY)/.test(sourceOf(file))) {
+    failed=true;console.error('Required UI dependencies must not use optional fallback: '+file);
+  }
+}
+for(const file of modules)for(const name of ['mulberry32','monteCarlo','ensureChampionVisual',
+  'seriesOpeningDraft','spendingTax','potLabel']) {
+  if(new RegExp('\\b'+name+'\\b').test(sourceOf(file))) {
+    failed=true;console.error('R06 removed unused API returned: '+file+' '+name);
   }
 }
 const globalSymbols = new Map();
