@@ -407,7 +407,8 @@ When the shell does not expand globs, pass an explicit directory and `-g` filter
 Avoid searching generated `index.html`, `dist/`, and the large champion/system
 snapshots unless the change concerns generated output or pinned source data.
 Do not infer dead code from name counts: HTML handlers and global concatenation
-are real callers. Structural ownership and legacy removal remain Issue #62 work.
+are real callers. The complete manifest ownership/change map is in
+[REFACTOR_R01_AUDIT.md](REFACTOR_R01_AUDIT.md#r08-complete-manifest--dependency-and-change-map).
 
 ### Current sequence
 
@@ -418,7 +419,10 @@ contract-negotiation.js. R04 now centralizes raw calendar positioning and in-sea
 R05 AI market callups now use the shared action gateway with exact baseline parity;
 release cost and finance accrual/payroll now have single owners.
 R06/R07 remove six unused wrappers and required-UI fallbacks while retaining supported
-save compatibility. Next complete final ownership/dependency documentation and full/parity QA. Preserve accepted
+save compatibility. R08 documents all 73 modules and adds exact R01/current
+full-smoke and two-season/save checkpoint parity in the opt-in Actions gate.
+Issue #62 closes only after full CI and that explicit parity run pass for the
+final code head. Main verification remains required after merge. Preserve accepted
 D04-B3; after the refactor, recheck D04-B4 and the latest depth audit before
 choosing subsequent gameplay work. Follow ANDROID_TARGET.md through mobile
 UX/performance, production packaging and real-device offline/save validation.

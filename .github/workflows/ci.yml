@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       smoke_parity:
-        description: Also prove full/core smoke state and coverage parity
+        description: Also prove smoke shard and R01/current career state parity
         type: boolean
         default: false
   push:
@@ -486,6 +486,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -494,6 +496,9 @@ jobs:
 
       - name: Prove smoke shard parity
         run: node scripts/ci-run.mjs smoke-parity -- node scripts/smoke-shard-acceptance.mjs
+
+      - name: Prove R01 to current engine parity
+        run: node scripts/ci-run.mjs refactor-parity -- node scripts/refactor-parity.mjs
 
       - name: Upload parity evidence
         if: always()

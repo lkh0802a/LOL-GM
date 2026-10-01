@@ -1,10 +1,19 @@
 // 11.5/5-4b: bounded multi-year career + save/legacy restore acceptance.
 // Deliberately uses the canonical standalone engine modules and real league
 // simulation/market writers, not hand-crafted season winners or fake rosters.
-import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { ENGINE_MODULES } from './artifact-modules.mjs';
 import vm from 'node:vm';
+
+const resultPath=process.env.CAREER_RESULT_FILE;
+const checkpoints=[];
+const fingerprint=value=>createHash('sha256').update(JSON.stringify(value,(key,item)=>{
+  if(key==='saveId')return undefined;
+  return item&&typeof item==='object'&&!Array.isArray(item)
+    ?Object.fromEntries(Object.keys(item).sort().map(k=>[k,item[k]])):item;
+})).digest('hex');
 
 const artifact=resolve(import.meta.dirname,'..','src','artifact');
 let source='';
@@ -50,6 +59,7 @@ source+=String.raw`
     assert(!Object.prototype.hasOwnProperty.call(db,'_marketDemandCache')&&
       !Object.prototype.hasOwnProperty.call(db,'initialPayrollFloorCache'),
       'transient caches leaked into resumed save at '+why);
+    if(__careerObserve)__careerCheckpoint(why,legacy,db,JSON.parse(packDB(db)));
     return db;
   };
   checkpoint('first season bootstrap');
@@ -126,4 +136,9 @@ source+=String.raw`
 })();
 `;
 vm.runInNewContext(source,{console,Date,Math,JSON,Set,Map,WeakMap,Object,Array,String,
-  Number,Boolean,RegExp,Error,Intl,performance,crypto},{timeout:120000});
+  Number,Boolean,RegExp,Error,Intl,performance,crypto,
+  __careerObserve:!!resultPath,
+  __careerCheckpoint:(phase,legacy,db,persisted)=>{
+    checkpoints.push({phase,legacy,runtime:fingerprint(db),persisted:fingerprint(persisted)});
+  }},{timeout:120000});
+if(resultPath)await writeFile(resultPath,JSON.stringify({checkpoints},null,2)+'\n');
