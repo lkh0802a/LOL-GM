@@ -29,7 +29,7 @@ function roleConversionAcceptance(db,p,targetRole,source='manager'){
   const assigned=team&&ROLES.find(r=>team.depthChart?.[r]===p.id),opportunity=assigned===targetRole?10:assigned&&assigned!==p.role?3:0;
   const history=roleHistoryBonus(p,targetRole)?9:0,activePenalty=p.roleConversion&&p.roleConversion.targetRole!==targetRole?Math.min(14,(p.roleConversion.progress||0)*.14):0;
   const repeated=Math.min(14,Math.max(0,(p.roleProposalCount||0)-2)*2.5),score=38+adapt*.22+prof*.1+(trust-50)*.18+(relation-50)*.08+fitDelta*.6+opportunity+history-agePenalty-activePenalty-repeated;
-  const threshold=58+((hashStr((db.world?.seed||db.saveId)+'|role-proposal|'+p.id+'|'+targetRole+'|'+(db.worldDate||db.year)+'|'+p.roleProposalCount)%1001)/1000-0.5)*12;
+  const threshold=58+((hashStr(worldSimulationSeed(db)+'|role-proposal|'+p.id+'|'+targetRole+'|'+(db.worldDate||db.year)+'|'+p.roleProposalCount)%1001)/1000-0.5)*12;
   return {ok:true,accepted:score>=threshold,score,threshold,targetFit,currentFit,reason:score>=threshold?'선수가 전향 계획을 수락했습니다':'선수가 현재 커리어 계획과 맞지 않는다며 전향을 거절했습니다'};
 }
 function proposeRoleConversion(db,pid,targetRole,source='manager'){

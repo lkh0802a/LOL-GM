@@ -1,4 +1,8 @@
 // ===== LOL GM: 월드 (Phase 5 성장 + 월드 확장) =====
+const WORLD_GENERATION_SEED='world-v7';
+// Before a career starts, simulation belongs to the canonical generated world.
+// saveId identifies storage/transactions and must never seed gameplay.
+function worldSimulationSeed(db){return db.world?.seed||WORLD_GENERATION_SEED}
 function genTactics(rng){return {aggression:rng.int(35,80),risk_tolerance:rng.int(30,75),objective_priority:rng.int(45,80),vision_investment:rng.int(45,80),scaling_preference:rng.int(30,75)}}
 const PHILOSOPHIES=['win-now','youth','balanced','superstar','cost'];
 const PHIL_KO={'win-now':'즉시 전력','youth':'유망주 육성','balanced':'균형','superstar':'스타 영입','cost':'효율 중시'};
@@ -191,7 +195,7 @@ function addRegion(db,rng,cfg){
 function buildWorld(cfg){
   cfg=JSON.parse(JSON.stringify(cfg||defaultWorldConfig()));
   const db={version:15,saveId:'save-'+Date.now().toString(36),manager:{id:'manager-human',teamId:null,startMode:null,careerStartedAt:null},worldDate:`${cfg.startYear||2027}-01-01`,awards:[],hof:[],global:{decisions:[],power:{}},patch:buildPatch(),teams:{},players:{},regions:{},competitions:{},worldConfig:cfg,world:null,history:[],news:[],year:cfg.startYear||2027,configDirty:false,scout:{}};
-  const rng=new RNG('world-v7','gen');
+  const rng=new RNG(WORLD_GENERATION_SEED,'gen');
   initPatches(db);
   for(const r of cfg.regions) addRegion(db,rng,r);
   for(const t of activeTeams(db))ensureTeamStaff(db,t,rng);genStaffPool(db,rng)
