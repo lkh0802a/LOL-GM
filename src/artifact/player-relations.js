@@ -10,9 +10,10 @@ function playerRelationship(db,a,b){const k=playerRelationKey(a,b);if(!k)return 
 function adjustPlayerRelationship(db,a,b,delta){const k=playerRelationKey(a,b);if(!k)return 50;db.playerRelations=db.playerRelations||{};const v=clamp((db.playerRelations[k]??50)+delta,0,100);db.playerRelations[k]=Math.round(v*10)/10;return db.playerRelations[k]}
 function teamRelationshipScore(db,t){const ids=(t?.roster||[]).filter(id=>db.players[id]&&!db.players[id].retired);if(ids.length<2)return 50;let sum=0,n=0;for(let i=0;i<ids.length;i++)for(let j=i+1;j<ids.length;j++){sum+=playerRelationship(db,ids[i],ids[j]);n++}return n?sum/n:50}
 const CAREER_GOAL_KO={development:'성장 기회',starter:'주전 정착',international:'국제대회 출전',titles:'우승 경쟁',stability:'안정적인 커리어'};
-const SAT_REASON_KO={playing_time:'출전 시간 부족',promise_role:'계약 역할 약속 불이행',reserve:'2군 배치',contract:'계약/연봉 불만',team_results:'팀 성적 불만',role:'역할 불만',international:'국제대회 기회 부족',career_goal:'커리어 목표 불일치'};
+const SAT_REASON_KO={playing_time:'출전 시간 부족',promise_role:'역할 약속 불이행',reserve:'2군 배치',contract:'계약/연봉 불만',team_results:'팀 성적 불만',role:'역할 불만',international:'국제대회 기회 부족',career_goal:'커리어 목표 불일치'};
 function startContractRolePromise(db,p,t){
   if(!p.contract)return;
+  closeOralRolePromise(db,p,'new_contract_or_transfer');
   const u=p.usage?.year===db.year?p.usage:null;
   p.contract.rolePromiseStart={year:db.year,teamId:t.id,date:db.worldDate||null,
     games:u?.games||0,teamGames:u?.teamGames||0,
@@ -21,8 +22,10 @@ function startContractRolePromise(db,p,t){
 function contractRolePromiseStatus(db,p,year=db.year){
   const role=p.contract?.promisedRole;
   if(!SQUAD_ROLES.includes(role)||p.contract.until<year)return null;
+  return {...rolePromiseUsageStatus(db,p,role,p.contract.rolePromiseStart,year),source:'contract'};
+}
+function rolePromiseUsageStatus(db,p,role,baseline,year){
   const t=p.team&&db.teams[p.team],u=p.usage?.year===year?p.usage:null,
-    baseline=p.contract.rolePromiseStart,
     sameYear=baseline?.year===year,
     games=Math.max(0,(u?.games||0)-(sameYear?baseline.games:0)),
     unavailable=Math.max(0,(u?.unavailableTeamGames||0)-
@@ -48,7 +51,7 @@ function satisfactionLabel(v){return v>=80?'매우 만족':v>=65?'만족':v>=48?
 function satisfactionIssues(db,p,opt={}){
   ensureSatisfaction(p);const t=p.team&&db.teams[p.team],usageYear=opt.year??db.year,u=p.usage&&p.usage.year===usageYear?p.usage:null,out=[];
   if(!t)return out;
-  const promise=contractRolePromiseStatus(db,p,usageYear),role=promise?.role||p.rosterRole,
+  const promise=effectiveRolePromiseStatus(db,p,usageYear),role=promise?.role||p.rosterRole,
     games=promise?.teamGames??u?.teamGames??0,
     exp=promise?.expected??expectedPlayShare(p,t),
     actual=games>=8?(promise?.actual??actualPlayShare(p)):null;
@@ -84,7 +87,7 @@ function applySatisfaction(db,p,opt={}){
     p.managerRelationship=clamp(p.managerRelationship+(60-p.managerRelationship)*.025,0,100);
     p.managerTrust=clamp(p.managerTrust+(60-p.managerTrust)*.02,0,100);
   }
-  const promisedRole=contractRolePromiseStatus(db,p,usageYear)?.role||p.rosterRole;
+  const promisedRole=effectiveRolePromiseStatus(db,p,usageYear)?.role||p.rosterRole;
   if(p.satisfaction<24&&issues.length&&['core','starter'].includes(promisedRole))p.concernStreak=(p.concernStreak||0)+1;else p.concernStreak=Math.max(0,(p.concernStreak||0)-1);
   const severeBreakdown=p.satisfaction<=8&&p.concernStreak>=18&&p.managerRelationship<=25&&p.managerTrust<=20&&p.personality.ambition>=70;
   if(!p.wantsOut&&severeBreakdown&&issues.length){p.wantsOut=true;p.wantsOutReason=issues[0].code;recordPlayerEvent(p,'transfer_request',db.year,{reason:p.wantsOutReason,team:p.team,date:db.worldDate})}

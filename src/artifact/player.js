@@ -60,7 +60,7 @@ function setRosterRole(db,p,role,source='club',silent=false){
 function initializeTeamRosterRoles(db,t,force=false){const team=teamRef(db,t);if(!team)return;initializeDepthChart(db,team,force);for(const id of team.roster||[]){const p=db.players[id];if(p&&(force||!SQUAD_ROLES.includes(p.rosterRole)))setRosterRole(db,p,recommendedRosterRole(db,p,team),'club',true)}}
 function rebalanceAiRosterRoles(db,t){
   const team=teamRef(db,t);if(!team||team.id===managedTeamId(db))return;
-  for(const id of team.roster||[]){const p=db.players[id];if(!p)continue;const r=recommendedRosterRole(db,p,team);if(r!==p.rosterRole)setRosterRole(db,p,r,'club',false)}
+  for(const id of team.roster||[]){const p=db.players[id];if(!p)continue;const r=recommendedRosterRole(db,p,team);if(r!==p.rosterRole){aiSportingRolePromise(db,p,team);setRosterRole(db,p,r,'club',false)}}
 }
 function playerCoreMetrics(p){
   const A=p.attrs,T=p.tend||{},m=(...xs)=>Math.round(avg(xs.map(x=>typeof x==='string'?(A[x]??50):x)));
@@ -127,6 +127,7 @@ function genPlayer(db,rng,o){
   const ovr=playerOvr(p);p.pot=Math.round(clamp(o.pot!==undefined?o.pot:ovr+Math.max(0,24-age)*rng.range(0.8,2.4)+rng.normal(2,3),ovr,99));
   p.reputation=Math.round(clamp(ovr*.82+Math.max(0,age-19)*.65+rng.normal(0,3),20,95));
   p.developmentTrail=[{year:db.year,ovr}];
+  ensurePlayerAgent(p);
   db.players[p.id]=p;
   if(o.team)assignPlayerToTeam(db,p,o.team);
   return p;

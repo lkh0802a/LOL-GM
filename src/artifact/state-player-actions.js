@@ -237,6 +237,7 @@ function applyPlayerReleaseAction(db,c){
   recordContractReleaseObligation(t,cost,settlement);
   removePlayerFromTeam(db,p);
   if(['manager','medical_end','mutual','club_closure'].includes(c.mode))invalidateMarketDemand(db);
+  closeOralRolePromise(db,p,'release');
   p.contract=null;p.faYears=0;
   if(['manager','mutual','club_closure'].includes(c.mode)||cost>0)
     recordPlayerEvent(p,c.mode==='mutual'?'mutual_termination':
