@@ -2131,12 +2131,12 @@ function seriesResultLines(r,wId,mvp){
 function playSeriesSessionGame(db,sess,forcedDraft=null,quiet=true){
   const cur=seriesSessionPrepareGame(db,sess);if(!cur)throw new Error('Series already complete');
   const snap=seriesDraftSnapshot(sess.ctx);snap.firstPick=cur.fpTeam===cur.blue?0:1;if(forcedDraft)snap.forced=forcedDraft;
-  const r=simulateMatch(db,cur.blue,cur.red,cur.gseed,snap,quiet);r.comp=sess.opt.compId||null;r.date=db.worldDate;r.metaContext=sess.opt.metaContext||null;
+  const matchDb=seriesOfficialView(db,sess),r=simulateMatch(matchDb,cur.blue,cur.red,cur.gseed,snap,quiet);r.comp=sess.opt.compId||null;r.date=db.worldDate;r.metaContext=sess.opt.metaContext||null;
   if(!sess.opt.replay&&!sess.opt.practice)recordMeta(db,r);
   const wId=r.winner===0?cur.blue:cur.red,lId=wId===cur.blue?cur.red:cur.blue;sess.wins[wId]++;
   const pk=[0,1].map(i=>ROLES.map(x=>r.draft.picks[i][x]));
   sess.ctx.used.push(...pk[0],...pk[1]);sess.ctx.byTeam[wId].won.push(...pk[r.winner]);sess.ctx.byTeam[lId].lost.push(...pk[1-r.winner]);
-  sess.ctx.mods[lId]=clamp(sess.ctx.mods[lId]-0.035*(1.2-teamComposure(db,lId)),-0.08,0.05);sess.ctx.mods[wId]=clamp(sess.ctx.mods[wId]+0.015,-0.08,0.05);
+  sess.ctx.mods[lId]=clamp(sess.ctx.mods[lId]-0.035*(1.2-teamComposure(matchDb,lId)),-0.08,0.05);sess.ctx.mods[wId]=clamp(sess.ctx.mods[wId]+0.015,-0.08,0.05);
   const mvp=gameMVP(r);
   sess.games.push({n:sess.g,blue:cur.blue,red:cur.red,seed:cur.gseed,mods:cur.snap.mods,winner:wId,bans:r.draft.bans,sideBy:cur.chooser,sideWhy:cur.sc.why,firstPick:cur.fpTeam,kills:[r.sides[0].kills,r.sides[1].kills],dur:r.durationStr,duration:r.duration,picks:pk,mvp});
   sess.lines.push(...seriesResultLines(r,wId,mvp));sess.chooser=lId;sess.g++;sess.current=null;
@@ -2150,7 +2150,7 @@ function simulateSeries(db,aId,bId,bestOf,seed,opt={}){
   const sess=createSeriesSession(db,aId,bId,bestOf,seed,opt);
   while(!seriesSessionDone(sess)){
     const cur=seriesSessionPrepareGame(db,sess),forced=opt.forced&&opt.forced[sess.g-1]||null;
-    if(opt.capture===sess.g){const snap=seriesDraftSnapshot(sess.ctx);snap.firstPick=cur.fpTeam===cur.blue?0:1;if(forced)snap.forced=forced;const r=simulateMatch(db,cur.blue,cur.red,cur.gseed,snap,false);r.comp=opt.compId||null;r.date=db.worldDate;r.metaContext=opt.metaContext||null;return {captured:r}}
+    if(opt.capture===sess.g){const snap=seriesDraftSnapshot(sess.ctx);snap.firstPick=cur.fpTeam===cur.blue?0:1;if(forced)snap.forced=forced;const r=simulateMatch(seriesOfficialView(db,sess),cur.blue,cur.red,cur.gseed,snap,false);r.comp=opt.compId||null;r.date=db.worldDate;r.metaContext=opt.metaContext||null;return {captured:r}}
     playSeriesSessionGame(db,sess,forced,true);
   }
   return seriesSessionResult(db,sess);
@@ -2421,6 +2421,7 @@ function newSeason(db,compId,year,seed,start,instanceKey=compId){
   if(st0.id==='playin'){const nx=comp.stages[1];order=comp.teams.filter(t=>!(nx.direct||[]).includes(t))}
   else if(st0.type!=='round_robin'&&st0.take)order=order.slice(0,st0.take);
   addStageDays(db,s,0,order,start||`${year}-01-14`);
+  snapshotInternationalEntries(db,s);
   return s;
 }
 function pushDay(s,date,stage,label,pairs,bo,timeSlots=null){
@@ -2553,6 +2554,8 @@ function playDay(db,s,opt={}){
   if(!s||s.done)return null;
   const day=s.days[s.cur],comp=db.competitions[s.comp],cfgIdx=comp.stages.findIndex(x=>x.id===day.stage),cfg=comp.stages[cfgIdx],pending=[];
   for(const m of day.matches){if(m.res)continue;
+    const forfeit=scheduledRegistrationForfeit(db,s,m);
+    if(forfeit){commitScheduledSeries(db,s,m,forfeit);continue}
     if(opt.deferTeam&&(m.a===opt.deferTeam||m.b===opt.deferTeam)){pending.push({matchId:m.id});continue}
     commitScheduledSeries(db,s,m,simulateScheduledSeries(db,s,day,m,cfg));
   }
@@ -3282,21 +3285,26 @@ function medicalExposure(db,p,kind='scrim',games=1){
 function medicalEmergencyCallup(db,t,injured){
   if(!t||medicalAvailable(db,t)!==5)return null;
   const rules=rosterRulesForTeam(db,t),cap=t.parent?rules.reserveTeamMax:rules.firstTeamMax;
-  if((t.roster||[]).length>=cap)return null;
+  if((officialRegistrationEnabled(db)?t.registration?.players||[]:t.roster||[]).length>=cap)return null;
   const from=t.parent?[db.teams[t.parent]]:reserveTeamsOf(db,t);
   for(const source of from){
     if(!source||medicalAvailable(db,source)<=5)continue;
     const candidates=(source.roster||[]).map(id=>db.players[id])
       .filter(p=>p&&!p.retired&&!medicalOut(p)&&p.team===source.id&&
+        officialMedicalReplacementAllowed(db,t,injured,p)&&
         !localRegistrationError(db,t,p))
       .sort((a,b)=>lineupRoleScore(b,injured.role)-lineupRoleScore(a,injured.role));
     for(const replacement of candidates){
       const plan=rosterPlanState(db,t);
       if(!plan)break;
       plan.assignments[replacement.id]=t.id;
-      const result=commitWorldAction(db,{type:'roster.plan',parentId:plan.parentId,
-        assignments:plan.assignments,actor:'system'});
+      const intent={type:'roster.plan',parentId:plan.parentId,assignments:plan.assignments,actor:'system'},
+        journal=officialRegistrationEnabled(db)?captureWorldActionJournal(db,{...intent,emergencyRegistration:true}):null;
+      const result=commitWorldAction(db,intent);
       if(!result.ok)continue;
+      try{registerMedicalOfficialReplacement(db,t,injured,replacement)}catch(e){
+        if(!journal)throw e;journal.rollback();continue;
+      }
       recordPlayerEvent(replacement,'medical_callup',db.year,
         {date:db.worldDate,for:injured.id,from:source.id,to:t.id});
       if(t.id===managedTeamId(db))news(db,
@@ -3370,13 +3378,14 @@ function medicalReplacementDailyTick(db,date,projectedReturns={}){
 function medicalEmergencyFASigning(db,t,injured,days){
   if(!t||medicalAvailable(db,t)!==5)return null;
   const rules=rosterRulesForTeam(db,t),cap=t.parent?rules.reserveTeamMax:rules.firstTeamMax;
-  if((t.roster||[]).length>=cap||!t.finance||t.finance.cash<=0)return null;
+  if((officialRegistrationEnabled(db)?t.registration?.players||[]:t.roster||[]).length>=cap||!t.finance||t.finance.cash<=0)return null;
   const parent=parentTeamOf(db,t);
-  if(reserveTeamsOf(db,parent).length&&organizationRoster(db,parent).length>=rules.integratedMax)return null;
+  if(!officialRegistrationEnabled(db)&&reserveTeamsOf(db,parent).length&&organizationRoster(db,parent).length>=rules.integratedMax)return null;
   const budget=salaryBudget(db,t)-payroll(db,t);
   if(!Number.isFinite(budget)||budget<=0)return null;
   const choices=Object.values(db.players).filter(p=>
     p&&!p.retired&&!p.team&&!medicalOut(p)&&!(p.medical?.daysLeft>0)&&
+    officialMedicalReplacementAllowed(db,t,injured,p)&&
     !localRegistrationError(db,t,p))
     .map(p=>({p,salary:asking(db,p,t.region)}))
     .filter(x=>Number.isFinite(x.salary)&&x.salary<=budget+1e-8&&
@@ -3387,11 +3396,16 @@ function medicalEmergencyFASigning(db,t,injured,days){
       return fit(b)-fit(a)||a.salary-b.salary||a.p.id.localeCompare(b.p.id);
     });
   for(const {p,salary} of choices){
-    const result=commitWorldAction(db,{type:'player.sign',pid:p.id,teamId:t.id,
+    const intent={type:'player.sign',pid:p.id,teamId:t.id,
       salary,years:1,terms:{promisedRole:'competition'},
       replacement:{forPid:injured.id,absenceDays:days},
-      kind:'medical_replacement',actor:'system'});
+      kind:'medical_replacement',actor:'system'},
+      journal=officialRegistrationEnabled(db)?captureWorldActionJournal(db,intent):null,
+      result=commitWorldAction(db,intent);
     if(!result.ok)continue;
+    try{registerMedicalOfficialReplacement(db,t,injured,p)}catch(e){
+      if(!journal)throw e;journal.rollback();continue;
+    }
     if(parentTeamOf(db,t)?.id===managedTeamId(db))news(db,
       injured.name+'의 결장에 대비해 FA '+p.name+' 긴급 영입 ('+t.short+')');
     return p;
@@ -3840,6 +3854,7 @@ function applyWorldDailyEffects(db,date){
   advanceRoleConversionsDay(db);
   aiRunScrims(db,new RNG(w.seed+date,'scrim'));
   for(const t of activeTeams(db,null,1))aiManageOwnedReserve(db,t);
+  aiReviewOfficialRegistrations(db);
   w.lastDailyTick=date;
   return true;
 }
@@ -3878,6 +3893,7 @@ function startWorldSeason(db,myTeam,seed){
   }
   const manage=db.world?db.world.manage:(db.worldConfig.manage||'manual');
   db.world={year:db.year,seed,manage,phase:'season',seasons:{},steps,step:-1,report:null,pendingOfficial:null,lastDate:`${db.year}-01-07`,lastDailyTick:null,majorPatchEvents:[],offers:[],marketLog:[]};
+  db.world.registrationVersion=1;initializeOfficialRegistrations(db);
   seasonPatch(db,`${db.year}-01-02`,new RNG(seed+db.year,'patch'));
   setGoals(db);
   advanceStep(db);
@@ -4319,6 +4335,7 @@ function normalizeRestoredSave(db){
   LOAN_INDEX.delete(db);
   validateStoredTransferState(db);
   validateStoredLocalService(db);
+  validateStoredRegistrations(db);
   // World schema v15, format 1: pre-migration JSON saves and packed exports.
   // Format 2 uses the same runtime object model, but strips derived caches.
   for(const k of SAVE_TRANSIENT_ROOT_FIELDS)delete db[k];
@@ -4409,6 +4426,11 @@ function teamNonLocalCount(db,t,excludePid=null){
 function localRegistrationError(db,t,p){
   const team=teamRef(db,t),player=playerRef(db,p);if(!team||!player)return '등록 대상을 찾을 수 없습니다';
   if(projectedPlayerLocal(db,player)===team.region)return null;
+  if(officialRegistrationEnabled(db)){
+    const ids=(team.registration?.players||[]).filter(id=>officialPlayerCanRepresent(db,db.players[id],team));
+    return ids.includes(player.id)||ids.filter(id=>projectedPlayerLocal(db,db.players[id])!==team.region).length<nonLocalLimitForTeam(db,team)
+      ?null:'공식 명단 비로컬 상한을 넘습니다';
+  }
   if((team.roster||[]).includes(player.id))return null;
   const reserved=loanOutgoingPlayers(db,team).filter(p=>p.id!==player.id&&projectedPlayerLocal(db,p)!==team.region).length,
     foreign=team.roster.filter(id=>projectedPlayerLocal(db,db.players[id])!==team.region).length;
@@ -4462,6 +4484,7 @@ function rosterPlanState(db,t){
 function validateRosterPlan(db,t,plan){
   const parent=parentTeamOf(db,t),errors=[];if(!parent)return {ok:false,errors:['구단을 찾을 수 없습니다']};
   const teams=organizationTeams(db,parent),teamIds=new Set(teams.map(x=>x.id)),rules=rosterRulesForTeam(db,parent);
+  const blocked=internalSquadMoveError(db,parent,plan?.assignments);if(blocked)errors.push(blocked);
   if(!reserveTeamsOf(db,parent).length)errors.push('이 구단은 산하 2군을 운영하지 않습니다');
   const base=organizationRoster(db,parent),baseSet=new Set(base),assign=plan&&plan.assignments||{},counts=Object.fromEntries(teams.map(x=>[x.id,0]));
   for(const pid of base){
@@ -4474,8 +4497,8 @@ function validateRosterPlan(db,t,plan){
   for(const pid of Object.keys(assign))if(!baseSet.has(pid))errors.push('구단 통합 로스터 밖의 선수를 이동할 수 없습니다: '+pid);
   for(const team of teams){
     const reserved=loanOutgoingPlayers(db,team),max=team.parent?rules.reserveTeamMax:rules.firstTeamMax;
-    if(reserved.length&&(counts[team.id]||0)+reserved.length>max)errors.push(team.name+': 임대 복귀 자리를 유지해야 합니다');
-    if(reserved.length){
+    if(!officialRegistrationEnabled(db)&&reserved.length&&(counts[team.id]||0)+reserved.length>max)errors.push(team.name+': 임대 복귀 자리를 유지해야 합니다');
+    if(!officialRegistrationEnabled(db)&&reserved.length){
       const foreign=base.filter(pid=>assign[pid]===team.id||!assign[pid]&&db.players[pid].team===team.id)
         .filter(pid=>!isLocalPlayer(db.players[pid],team.region)).length+
         reserved.filter(p=>!isLocalPlayer(p,team.region)).length;
@@ -4484,14 +4507,14 @@ function validateRosterPlan(db,t,plan){
   }
   const first=parent,firstN=counts[first.id]||0;
   if(firstN<rules.firstTeamMin)errors.push('1군은 최소 '+rules.firstTeamMin+'명이어야 합니다 (현재 계획 '+firstN+'명)');
-  if(firstN>rules.firstTeamMax)errors.push('1군은 최대 '+rules.firstTeamMax+'명까지 가능합니다 (현재 계획 '+firstN+'명)');
+  if(!officialRegistrationEnabled(db)&&firstN>rules.firstTeamMax)errors.push('1군은 최대 '+rules.firstTeamMax+'명까지 가능합니다 (현재 계획 '+firstN+'명)');
   for(const reserve of teams.filter(x=>x.parent)){
     const n=counts[reserve.id]||0;
     if(n<rules.reserveTeamMin)errors.push(reserve.name+'은 최소 '+rules.reserveTeamMin+'명이어야 합니다 (현재 계획 '+n+'명)');
-    if(n>rules.reserveTeamMax)errors.push(reserve.name+'은 최대 '+rules.reserveTeamMax+'명까지 가능합니다 (현재 계획 '+n+'명)');
+    if(!officialRegistrationEnabled(db)&&n>rules.reserveTeamMax)errors.push(reserve.name+'은 최대 '+rules.reserveTeamMax+'명까지 가능합니다 (현재 계획 '+n+'명)');
   }
   const total=Object.values(counts).reduce((x,y)=>x+y,0);
-  if(total<rules.integratedMin||total>rules.integratedMax)errors.push('통합 로스터는 '+rules.integratedMin+'~'+rules.integratedMax+'명이어야 합니다 (현재 '+total+'명)');
+  if(total<rules.integratedMin||!officialRegistrationEnabled(db)&&total>rules.integratedMax)errors.push('통합 로스터는 '+rules.integratedMin+'~'+rules.integratedMax+'명이어야 합니다 (현재 '+total+'명)');
   return {ok:errors.length===0,errors,counts,total,parentId:parent.id,assignments:Object.fromEntries(base.map(pid=>[pid,assign[pid]||db.players[pid].team]))};
 }
 function applyRosterPlan(db,t,plan,source='manager'){
@@ -4499,7 +4522,8 @@ function applyRosterPlan(db,t,plan,source='manager'){
   const parent=db.teams[checked.parentId],before=Object.fromEntries(Object.keys(checked.assignments).map(pid=>[pid,db.players[pid].team])),moves=[];
   for(const [pid,dst] of Object.entries(checked.assignments))if(before[pid]!==dst)moves.push({pid,from:before[pid],to:dst,kind:dst===parent.id?'callup':'senddown'});
   for(const team of organizationTeams(db,parent))team.roster=(team.roster||[]).filter(pid=>!moves.some(m=>m.pid===pid));
-  for(const m of moves){const p=db.players[m.pid],dst=db.teams[m.to];dst.roster.push(p.id);p.team=dst.id}
+  for(const m of moves){const p=db.players[m.pid],dst=db.teams[m.to];dst.roster.push(p.id);p.team=dst.id;
+    if(officialRegistrationEnabled(db))p.lastInternalMoveDate=db.worldDate}
   if(db.world)for(const m of moves){const p=db.players[m.pid];recordPlayerEvent(p,'squad_move',db.year,{from:m.from,to:m.to,kind:m.kind,date:db.worldDate,source});onSquadMoveSatisfaction(db,p,m)}
   for(const team of organizationTeams(db,parent))initializeDepthChart(db,team,true);
   return {...checked,moves};
@@ -4636,13 +4660,14 @@ function rosterIntegrityErrors(db){
 // role-fit lineup construction and starter assignment; p.role remains the player's primary identity.
 
 function lineupRoleScore(p,role){return playerRoleRating(p,role)-medicalPerformancePenalty(p)*100}
-function validLineupPlayer(db,team,p){return !!p&&!p.retired&&!medicalOut(p)&&p.team===team.id&&(team.roster||[]).includes(p.id)}
+function validLineupPlayer(db,team,p){return !!p&&!p.retired&&!medicalOut(p)&&
+  (team.officialRosterView?officialPlayerCanRepresent(db,p,team):p.team===team.id)&&(team.roster||[]).includes(p.id)}
 function validateStartingLineup(db,t,assignment=null,rosterOverride=null){
   const team=teamRef(db,t);if(!team)return {ok:false,errors:['팀을 찾을 수 없습니다']};
   const roster=new Set(rosterOverride||team.roster||[]),map=assignment||team.depthChart||{},errors=[],used=new Set(),planned=Array.isArray(rosterOverride);
   for(const role of ROLES){
     const pid=map[role],p=pid&&db.players[pid];
-    if(!p||!roster.has(pid)||(!planned&&p.team!==team.id))errors.push(ROLE_KO[role]+' 슬롯에 등록 선수가 필요합니다');
+    if(!p||!roster.has(pid)||(!planned&&!(team.officialRosterView?officialPlayerCanRepresent(db,p,team):p.team===team.id)))errors.push(ROLE_KO[role]+' 슬롯에 등록 선수가 필요합니다');
     else if(medicalOut(p))errors.push(p.name+' 선수는 치료 중이어서 출전할 수 없습니다');
     else if(used.has(pid))errors.push(p.name+' 선수를 두 포지션에 동시에 선발할 수 없습니다');
     else used.add(pid);
@@ -4848,12 +4873,14 @@ function actionJournalTeamSnapshot(team){
       present:Object.prototype.hasOwnProperty.call(team,key),value:team[key]})),
     rosterRef:team.roster,roster:(team.roster||[]).slice(),
     depthRef:team.depthChart,depth:hasDepth?actionJournalClone(team.depthChart):null,
-    financeRef:team.finance,finance:hasFinance?actionJournalClone(team.finance):null
+    financeRef:team.finance,finance:hasFinance?actionJournalClone(team.finance):null,
+    registration:team.registration?actionJournalClone(team.registration):null
   };
 }
 
 function actionJournalRestoreTeam(entry){
   const {team}=entry;
+  if(entry.registration)team.registration=entry.registration;else delete team.registration;
   for(const {key,present,value} of entry.lifecycle)
     if(present)team[key]=value;else delete team[key];
   if(entry.hasRoster){
@@ -4878,6 +4905,11 @@ function actionJournalTargets(db,command){
   if(command.type==='club.close'){
     for(const id of command.financeTeamIds)teamIds.add(id);
     for(const pid of command.playerIds)playerIds.add(pid);
+  }else if(command.type==='roster.register'||command.type==='roster.official-lineup'){
+    teamIds.add(command.teamId);
+    for(const id of Object.keys(command.registrations||{}))teamIds.add(id);
+    if(command.type==='roster.register')for(const id of Object.keys(command.registrations))
+      for(const pid of [...(db.teams[id].registration?.players||[]),...command.registrations[id]])playerIds.add(pid);
   }else if(command.type==='roster.plan'||command.type==='roster.market-callup'){
     for(const team of organizationTeams(db,command.parentId)){
       teamIds.add(team.id);
@@ -4914,9 +4946,12 @@ function captureWorldActionJournal(db,command){
       ...command.agreementIds.map(id=>[w.contractAgreements,id])]
       .map(([store,id])=>({store,id,ref:store[id],record:actionJournalClone(store[id])}))
   }:null;
+  const entries=(command.type==='roster.register'||command.emergencyRegistration||command.kind==='medical_replacement')?Object.values(w?.seasons||{}).map(s=>({s,
+    value:s.entries?actionJournalClone(s.entries):null})):[];
   return {
     playerIds,
     rollback(){
+      for(const row of entries)if(row.value)row.s.entries=row.value;else delete row.s.entries;
       if(closure){
         if(closure.firedPresent)w.fired=closure.fired;else delete w.fired;
         for(const {store,id,ref,record} of closure.rows){
@@ -7259,7 +7294,7 @@ function validatePlayerSignAction(db,a){
   if(kind!=='renewal'&&kind!=='renewal_agreement'){
     const capacity=loanOutgoingPlayers(db,t).length&&loanRosterCapacityError(db,t,p);
     if(capacity)return worldActionError('registration_limit',capacity);
-    const registration=localRegistrationError(db,t,p);
+    const registration=officialRegistrationEnabled(db)&&kind!=='medical_replacement'?null:localRegistrationError(db,t,p);
     if(registration)return worldActionError('registration_limit',registration);
   }
   let fee=0;
@@ -7298,7 +7333,7 @@ function validatePlayerTransferAction(db,a){
   const feePlan=normalizeTransferFeePlan(db,a.fee,a.feePlan);
   if(!feePlan.ok)return worldActionError('invalid_terms',feePlan.reason);
   if(feePlan.upfront>0&&to.finance.cash+1e-8<feePlan.upfront)return worldActionError('insufficient_cash','선지급 이적료를 지급할 현금이 부족합니다');
-  const move=contractedMoveError(db,p)||localRegistrationError(db,to,p);
+  const move=contractedMoveError(db,p)||(!officialRegistrationEnabled(db)&&localRegistrationError(db,to,p));
   if(move)return worldActionError('invalid_transfer',move);
   const capacity=loanOutgoingPlayers(db,to).length&&loanRosterCapacityError(db,to,p);
   if(capacity)return worldActionError('registration_limit',capacity);
@@ -7532,6 +7567,7 @@ function loanIndex(db){
 }
 function loanOutgoingPlayers(db,t){return (loanIndex(db).owners.get(t.id)||[]).map(id=>db.players[id])}
 function loanRosterCapacityError(db,t,p){
+  if(officialRegistrationEnabled(db))return null;
   if(t.roster.includes(p.id))return null;
   const reserved=loanOutgoingPlayers(db,t).filter(x=>x.id!==p.id),
     rules=rosterRulesForTeam(db,t),max=t.parent||(t.division||1)===2?rules.reserveTeamMax:rules.firstTeamMax;
@@ -7956,7 +7992,8 @@ function localServicePolicy(db,rid){
   return {seasons:Math.max(1,Math.round(r.seasons??4)),days:Math.max(0,Math.round(r.days??0)),
     choiceYears:Math.max(1,Math.round(r.choiceYears??2)),effectiveYear:r.effectiveYear??db.year};
 }
-function localServiceRegistration(db,p,t){
+function localServiceRegistration(db,p,t,official=false){
+  if(t&&officialRegistrationEnabled(db)&&!official)return;
   ensurePlayerEligibility(p);const e=p.localEligibility,date=db.worldDate||db.year+'-01-01';
   if(e.service){const s=e.service,days=Math.max(0,(Date.parse(date)-Date.parse(s.lastDate))/86400000);
     if(!s.paused&&Number.isFinite(days))s.days+=days;
@@ -7979,10 +8016,12 @@ function checkLocalServiceQualification(db,p){
 }
 function processLocalServiceDaily(db){
   const date=db.worldDate;if(!date)return;
+  const registered=officialRegistrationEnabled(db)?new Map(activeTeams(db).flatMap(t=>(t.registration?.players||[])
+    .filter(id=>officialPlayerCanRepresent(db,db.players[id],t)).map(id=>[id,t]))):null;
   for(const p of Object.values(db.players)){
     if(p.retired)continue;
-    const t=p.team&&db.teams[p.team],e=p.localEligibility;
-    if(!e?.service){if(t)localServiceRegistration(db,p,t);continue}
+    const t=registered?registered.get(p.id):p.team&&db.teams[p.team],e=p.localEligibility;
+    if(!e?.service){if(t)localServiceRegistration(db,p,t,true);continue}
     const s=e.service,owner=p.loan&&db.teams[p.loan.ownerId],paused=!t||!!(owner&&owner.region!==t.region);
     const elapsed=Math.max(0,(Date.parse(date+'T00:00:00Z')-Date.parse(s.lastDate+'T00:00:00Z'))/86400000);
     if(!paused&&!s.paused&&Number.isFinite(elapsed))s.days+=elapsed;
@@ -8056,6 +8095,234 @@ function aiChooseLocalEligibility(db){
     const t=p.team&&db.teams[p.team];if(!t||p.retired||playerActionAuthority(db,'ai',t))continue;
     if(localChoiceOptions(db,p).includes(t.region))commitWorldAction(db,{type:'player.local-choice',actor:'ai',pid:p.id,region:t.region});
   }
+}
+
+/* ==== FILE: registration.js ==== */
+// Employment/training squads remain team.roster. Only these submitted lists
+// determine official participation; an internal move does not rewrite them.
+function officialRegistrationEnabled(db){return db.world?.registrationVersion===1}
+function officialPlayerCanRepresent(db,p,t){
+  if(!p||p.retired||!p.contract||!p.team||t?.active===false)return false;
+  if(p.loan)return p.loan.borrowerId===t.id&&p.team===t.id;
+  const assigned=db.teams[p.team];return !!assigned&&(assigned.parent||assigned.id)===(t.parent||t.id);
+}
+function officialRosterCap(db,t){return (t.division||1)===1?10:rosterRulesForTeam(db,t).reserveTeamMax}
+function initialOfficialRoster(db,t){
+  const candidates=t.roster.filter(id=>officialPlayerCanRepresent(db,db.players[id],t)),selected=[],limit=nonLocalLimitForTeam(db,t);
+  const preferred=Array.from(new Set([...ROLES.map(r=>t.depthChart?.[r]),...candidates])).filter(id=>candidates.includes(id));
+  for(const id of preferred){const p=db.players[id];
+    if(selected.length>=officialRosterCap(db,t))break;
+    if(!isLocalPlayer(p,t.region)&&selected.filter(x=>!isLocalPlayer(db.players[x],t.region)).length>=limit)continue;
+    selected.push(id);
+  }
+  return selected;
+}
+function initializeOfficialRegistrations(db){
+  if(!officialRegistrationEnabled(db))return;
+  for(const t of activeTeams(db))if(t.registration?.year!==db.world.year){
+    t.registration={year:db.world.year,players:initialOfficialRoster(db,t),date:db.worldDate,depthChart:{},history:[]};
+    for(const id of t.registration.players)localServiceRegistration(db,db.players[id],t,true);
+  }
+}
+function internationalRegistrationSeasons(db,t){
+  return Object.values(db.world?.seasons||{}).filter(s=>!s.done&&db.competitions[s.comp]?.international&&
+    db.competitions[s.comp].teams.includes(t.id));
+}
+function internationalRosterLocked(db,t){
+  return internationalRegistrationSeasons(db,t).some(s=>db.worldDate>=s.days[0]?.date);
+}
+function officialRegistrationOpen(db,t){
+  if(!officialRegistrationEnabled(db))return true;
+  if(db.world.pendingOfficial)return false;
+  if(internationalRosterLocked(db,t))return false;
+  if(db.world.phase!=='season')return true;
+  const R=db.regions[t.region],periods=R.registrationWindows||R.transferWindows||
+    [{from:'01-07',through:'01-31'},{from:'07-01',through:'07-14'}],md=db.worldDate.slice(5);
+  return periods.some(w=>(!w.phase||w.phase==='season')&&md>=w.from&&md<=w.through);
+}
+function internalSquadMoveError(db,parent,assignments){
+  if(!officialRegistrationEnabled(db))return null;
+  const moving=Object.entries(assignments||{}).filter(([pid,dst])=>db.players[pid]?.team!==dst);
+  if(!moving.length)return null;
+  if(organizationTeams(db,parent).some(t=>internationalRosterLocked(db,t)))return '국제대회 진행 중에는 1군·2군 소속도 고정됩니다';
+  if(db.world.pendingOfficial)return '진행 중인 공식 시리즈를 먼저 완료해야 합니다';
+  const R=db.regions[parent.region],md=db.worldDate.slice(5),windows=R.internalMoveWindows;
+  if(db.world.phase==='season'&&windows&&!windows.some(w=>md>=w.from&&md<=w.through))return '지역의 내부 이동 기간이 닫혔습니다';
+  const days=Math.max(0,R.internalMoveWaitDays||0);
+  if(moving.some(([pid])=>db.players[pid].lastInternalMoveDate&&
+    addDays(db.players[pid].lastInternalMoveDate,days)>db.worldDate))return '내부 이동 후 지역 규정의 대기기간이 남아 있습니다';
+  return null;
+}
+function officialRegistrationErrors(db,t,players,proposed={}){
+  const errors=[];
+  if(!Array.isArray(players)||players.some(id=>typeof id!=='string'))return ['유효한 등록 명단이 필요합니다'];
+  if(new Set(players).size!==players.length)errors.push('같은 선수를 중복 등록할 수 없습니다');
+  if(players.length<5||players.length>officialRosterCap(db,t))errors.push('공식 명단은 5~'+officialRosterCap(db,t)+'명이어야 합니다');
+  if(players.some(id=>!officialPlayerCanRepresent(db,db.players[id],t)))errors.push('계약 또는 임대 권한이 없는 선수가 포함되었습니다');
+  if(players.filter(id=>!isLocalPlayer(db.players[id],t.region)).length>nonLocalLimitForTeam(db,t))errors.push('공식 명단 비로컬 상한을 넘었습니다');
+  for(const other of activeTeams(db))if(other.id!==t.id&&
+    (proposed[other.id]||other.registration?.players||[]).some(id=>players.includes(id)&&officialPlayerCanRepresent(db,db.players[id],other)))
+    errors.push('다른 공식 스쿼드에 등록된 선수는 먼저 등록 해제해야 합니다');
+  return errors;
+}
+function officialRegistrationSnapshot(db,c){
+  return JSON.parse(JSON.stringify({date:db.worldDate,phase:db.world.phase,pending:!!db.world.pendingOfficial,
+    teams:Object.values(db.teams).map(t=>[t.id,t.active,t.parent,t.registration]),
+    players:c.players.map(id=>[id,db.players[id]?.team,db.players[id]?.contract,db.players[id]?.loan,db.players[id]?.medical,playerActiveLocalRegion(db.players[id])]),
+    policy:db.regions[db.teams[c.teamId].region],international:internationalRegistrationSeasons(db,db.teams[c.teamId]).map(s=>[s.id,s.done,s.days[0]?.date,s.entries])}));
+}
+function writeOfficialRegistration(db,t,players,source='manager'){
+  const prior=t.registration;
+  t.registration={year:db.world.year,players:players.slice(),date:db.worldDate,
+    depthChart:Object.fromEntries(ROLES.map(r=>[r,players.includes(prior?.depthChart?.[r])?prior.depthChart[r]:null])),
+    history:[...(prior?.history||[]),{date:db.worldDate,source,players:players.slice()}].slice(-8)};
+  for(const s of internationalRegistrationSeasons(db,t))if(db.worldDate<s.days[0]?.date&&s.entries)
+    s.entries[t.id]=players.slice();
+  return t.registration;
+}
+WORLD_ACTION_HANDLERS['roster.register']={
+  validate(db,a){
+    const t=db.teams[a.teamId];
+    if(!t||t.active===false||!officialRegistrationEnabled(db))return worldActionError('invalid_registration','공식 등록 대상을 찾을 수 없습니다');
+    if(a.actor==='system')return worldActionError('unauthorized','일반 등록은 구단의 결정을 통해 제출합니다');
+    if(a.actor==='manager'&&!managerControlsSquad(db,t)||a.actor==='ai'&&managerControlsSquad(db,t))
+      return worldActionError('unauthorized','관리 권한이 없는 스쿼드입니다');
+    if(!officialRegistrationOpen(db,t))return worldActionError('registration_closed','공식 등록 기간이 닫혔습니다');
+    const registrations=a.registrations||{[t.id]:a.players},errors=[];
+    if(!registrations||typeof registrations!=='object'||Array.isArray(registrations)||!Object.hasOwn(registrations,t.id))
+      return worldActionError('invalid_registration','유효한 공식 등록 계획이 필요합니다');
+    for(const [id,ids] of Object.entries(registrations)){
+      const target=db.teams[id];
+      if(!target||parentTeamOf(db,target)?.id!==parentTeamOf(db,t)?.id||
+        a.actor==='manager'&&!managerControlsSquad(db,target)||a.actor==='ai'&&managerControlsSquad(db,target))
+        return worldActionError('unauthorized','같은 관리 조직의 등록 계획만 제출할 수 있습니다');
+      if(!officialRegistrationOpen(db,target))return worldActionError('registration_closed','일부 스쿼드의 등록 기간이 닫혔습니다');
+      errors.push(...officialRegistrationErrors(db,target,ids,registrations));
+    }
+    if(a.lineup){
+      const check=validateStartingLineup(db,t,a.lineup,registrations[t.id]);errors.push(...check.errors);
+    }
+    return errors.length?{ok:false,reason:'invalid_registration',errors}:{ok:true,teamId:t.id,
+      players:Array.from(new Set(Object.values(registrations).flat())),registrations:JSON.parse(JSON.stringify(registrations)),lineup:a.lineup||null};
+  },
+  canonical(db,a,v){return {type:a.type,actor:a.actor,teamId:v.teamId,players:v.players.slice(),
+    registrations:v.registrations,lineup:v.lineup}},
+  snapshot:officialRegistrationSnapshot,
+  changes(db,c){return [{kind:'official_registration',teamId:c.teamId,players:c.players.slice()}]},
+  apply(db,c){
+    const affected=Array.from(new Set(Object.keys(c.registrations).flatMap(id=>[
+      ...(db.teams[id].registration?.players||[]),...c.registrations[id]])));
+    for(const [id,players] of Object.entries(c.registrations))writeOfficialRegistration(db,db.teams[id],players,c.actor);
+    for(const id of affected){const p=db.players[id],t=activeTeams(db).find(t=>t.registration?.players.includes(id)&&officialPlayerCanRepresent(db,p,t));
+      localServiceRegistration(db,p,t||null,true);
+    }
+    if(c.lineup)db.teams[c.teamId].registration.depthChart={...c.lineup};
+    return {registration:db.teams[c.teamId].registration};
+  }
+};
+function aiReviewOfficialRegistrations(db){
+  if(!officialRegistrationEnabled(db))return;
+  initializeOfficialRegistrations(db);
+  for(const t of activeTeams(db).filter(t=>!t.parent)){
+    const teams=organizationTeams(db,t).filter(x=>!managerControlsSquad(db,x)&&officialRegistrationOpen(db,x));
+    if(!teams.length)continue;
+    const registrations=Object.fromEntries(teams.map(x=>[x.id,initialOfficialRoster(db,x)]));
+    if(teams.some(x=>JSON.stringify(registrations[x.id])!==JSON.stringify(x.registration.players)))
+      commitWorldAction(db,{type:'roster.register',actor:'ai',teamId:teams[0].id,registrations});
+  }
+}
+function validateStoredRegistrations(db){
+  if(!officialRegistrationEnabled(db))return;
+  const seen=new Map();
+  for(const t of Object.values(db.teams))if(t.registration){
+    const r=t.registration;
+    if(!Number.isInteger(r.year)||!Array.isArray(r.players)||new Set(r.players).size!==r.players.length||
+      r.players.length>officialRosterCap(db,t)||r.players.some(id=>typeof id!=='string')||!r.depthChart||!Array.isArray(r.history))
+      throw Error('공식 등록 저장 데이터가 손상되었습니다');
+    for(const id of r.players)if(officialPlayerCanRepresent(db,db.players[id],t)){
+      if(seen.has(id))throw Error('선수가 두 공식 스쿼드에 중복 등록되었습니다');seen.set(id,t.id);
+    }
+  }
+  for(const s of Object.values(db.world.seasons||{}))if(s.entries)
+    for(const [tid,ids] of Object.entries(s.entries))if(!db.teams[tid]||!Array.isArray(ids)||
+      new Set(ids).size!==ids.length||ids.length>officialRosterCap(db,db.teams[tid])||ids.some(id=>typeof id!=='string'))
+      throw Error('국제대회 최종 엔트리 저장 데이터가 손상되었습니다');
+}
+
+/* ==== FILE: registration-match.js ==== */
+// Official match views and emergency entries never mutate employment rosters.
+function officialSeasonRoster(db,t,s=null){
+  if(!officialRegistrationEnabled(db))return t.roster;
+  return s&&db.competitions[s.comp]?.international?s.entries?.[t.id]||[]:t.registration?.players||[];
+}
+WORLD_ACTION_HANDLERS['roster.official-lineup']={
+  validate(db,a){
+    const t=db.teams[a.teamId];
+    if(!t||!officialRegistrationEnabled(db)||a.actor==='system'||
+      a.actor==='manager'&&!managerControlsSquad(db,t)||a.actor==='ai'&&managerControlsSquad(db,t))
+      return worldActionError('unauthorized','공식 선발 변경 권한이 없습니다');
+    const q=db.world.pendingOfficial?.queue?.[0];
+    if(q?.session?.current)return worldActionError('series_locked','현재 세트의 밴픽과 경기를 먼저 완료해야 합니다');
+    const s=internationalRegistrationSeasons(db,t).find(x=>db.worldDate>=x.days[0]?.date),
+      players=officialSeasonRoster(db,t,s),view=officialMatchView(db,s,t.id,t.id),
+      checked=validateStartingLineup(view,view.teams[t.id],a.lineup);
+    if(!checked.ok)return {ok:false,reason:'invalid_lineup',errors:checked.errors};
+    return {ok:true,teamId:t.id,players:players.slice(),lineup:checked.assignment};
+  },
+  canonical(db,a,v){return {type:a.type,actor:a.actor,teamId:v.teamId,players:v.players,lineup:v.lineup}},
+  snapshot:officialRegistrationSnapshot,
+  changes(db,c){return [{kind:'official_lineup',teamId:c.teamId,lineup:c.lineup}]},
+  apply(db,c){db.teams[c.teamId].registration.depthChart={...c.lineup};return {lineup:c.lineup}}
+};
+function officialMatchView(db,s,a,b){
+  if(!officialRegistrationEnabled(db))return db;
+  const teams={...db.teams};
+  for(const id of [a,b]){
+    const t=db.teams[id],players=officialSeasonRoster(db,t,s).filter(pid=>officialPlayerCanRepresent(db,db.players[pid],t));
+    teams[id]={...t,roster:players,officialRosterView:true,depthChart:{...t.depthChart,
+      ...Object.fromEntries(Object.entries(t.registration?.depthChart||{}).filter(([,pid])=>players.includes(pid)))}};
+  }
+  const view={...db,teams};for(const id of [a,b])initializeDepthChart(view,teams[id],false);
+  return view;
+}
+function seriesOfficialView(db,sess){
+  const s=Object.values(db.world?.seasons||{}).find(x=>x.id===sess.opt.metaContext?.season);
+  return s&&!sess.opt.practice&&!sess.opt.replay?officialMatchView(db,s,sess.a,sess.b):db;
+}
+function officialMedicalReplacementAllowed(db,t,injured,p){
+  if(!officialRegistrationEnabled(db))return true;
+  const lists=[t.registration?.players||[],...internationalRegistrationSeasons(db,t).map(s=>s.entries?.[t.id]||[])];
+  if(db.regions[t.region]?.emergencyRegistration===false||internationalRegistrationSeasons(db,t)
+    .some(s=>db.competitions[s.comp].rules?.emergencyRegistration===false))return false;
+  if(activeTeams(db).some(other=>other.id!==t.id&&other.registration?.players.includes(p.id)&&
+    other.registration.players.filter(id=>id!==p.id&&officialPlayerCanRepresent(db,db.players[id],other)&&
+      !medicalOut(db.players[id])).length<5))return false;
+  return lists.every(ids=>ids.includes(injured.id)&&ids.length<officialRosterCap(db,t)&&
+    (isLocalPlayer(p,t.region)||ids.filter(id=>!isLocalPlayer(db.players[id],t.region)).length<nonLocalLimitForTeam(db,t)));
+}
+function registerMedicalOfficialReplacement(db,t,injured,p){
+  if(!officialRegistrationEnabled(db))return;
+  const prior=t.registration;t.registration={...prior,players:Array.from(new Set([...prior.players,p.id])),
+    history:[...(prior.history||[]),{date:db.worldDate,source:'medical',for:injured.id,players:[...prior.players,p.id]}].slice(-8)};
+  for(const other of activeTeams(db))if(other.id!==t.id&&other.registration?.players.includes(p.id))
+    other.registration={...other.registration,players:other.registration.players.filter(id=>id!==p.id)};
+  for(const s of internationalRegistrationSeasons(db,t))if(s.entries)
+    s.entries[t.id]=Array.from(new Set([...(s.entries[t.id]||[]),p.id]));
+  localServiceRegistration(db,p,t,true);
+}
+function scheduledRegistrationForfeit(db,s,m){
+  if(!officialRegistrationEnabled(db))return null;
+  const view=officialMatchView(db,s,m.a,m.b),counts=[m.a,m.b].map(id=>medicalAvailable(view,view.teams[id]));
+  if(counts.every(n=>n>=5))return null;
+  const winner=counts[0]>=5?m.a:counts[1]>=5?m.b:m.a,need=Math.ceil(m.bo/2);
+  // No played games or appearance statistics are invented. A double shortage
+  // retains the scheduled bracket order for administrative advancement.
+  return {rec:{a:m.a,b:m.b,bestOf:m.bo,score:winner===m.a?[need,0]:[0,need],winner,
+    games:[],forfeit:true,doubleForfeit:counts.every(n=>n<5),reason:'공식 등록 출전 가능 선수 5명 미만'},lines:[]};
+}
+function snapshotInternationalEntries(db,s){
+  if(officialRegistrationEnabled(db)&&db.competitions[s.comp]?.international)
+    s.entries=Object.fromEntries(db.competitions[s.comp].teams.map(id=>[id,(db.teams[id].registration?.players||[]).slice()]));
 }
 
 /* ==== FILE: player-loan-market.js ==== */
@@ -10105,6 +10372,7 @@ function viewSquad(){
   const edit=mineOrg?squadEditState(t):null,tr=edit?edit.training:(t.training||defaultTraining()),tac=edit?edit.tactics:t.tactics;
   return `<section class="controls"><label>팀<select id="sq">${teamOpts(SQUAD)}</select></label></section>
   <section class="teamhead"><h2>${esc(t.name)}</h2><p>${t.formerNames&&t.formerNames.length?'전신 '+t.formerNames.map(esc).join(', ')+' · ':''}${esc(DB.regions[t.region].leagueName)} · 감독 ${t.id===managedTeamId(DB)?'플레이어':'구단 AI'} · 운영 철학 ${PHIL_KO[t.philosophy]||'균형'} · 팬덤 ${t.fans??'—'} · 팀 호흡 ${Math.round(teamSynergy(t))}${t.goal?` · 구단주 목표: ${GOAL_KO[t.goal]}`:''}</p><p class="hint">전문 스태프가 밴픽·분석·육성·회복을 지원하며, 관리 구단의 최종 스포츠 결정은 플레이어가 내립니다.</p></section>
+  ${officialRegistrationPanel(t)}
   <section><h3>팀 전술</h3><div class="tac">
     ${Object.keys(TAC_KO).map(k=>`<label><span>${TAC_KO[k]}<output>${tac[k]}</output></span><input type="range" min="0" max="100" value="${tac[k]}" data-tac="${k}"></label>`).join('')}
   </div></section>
@@ -10139,6 +10407,7 @@ function bindSquad(){
   bindLoanControls();
   bindLoanPurchaseControls();
   bindLocalServiceControls();
+  bindOfficialRegistrationControls();
   document.querySelectorAll('[data-role-convert]').forEach(b=>b.onclick=e=>{e.stopPropagation();const r=proposeRoleConversion(DB,b.dataset.roleConvert,b.dataset.targetRole,'manager');MSG=r.reason;saveDB();navKeepScroll()});
   document.querySelectorAll('[data-role-convert-cancel]').forEach(b=>b.onclick=e=>{e.stopPropagation();const r=cancelRoleConversion(DB,b.dataset.roleConvert,'manager');MSG=r.reason;saveDB();navKeepScroll()});
   document.querySelectorAll('[data-tac]').forEach(el=>el.oninput=el.onchange=e=>{const k=el.dataset.tac;const d=squadEditState(DB.teams[SQUAD]);d.tactics[k]=+el.value;d.dirty=true;if(el.previousElementSibling)el.previousElementSibling.querySelector('output').textContent=el.value});
@@ -10162,6 +10431,46 @@ function bindSquad(){
 }
 // ---------- 몬테카를로 ----------
 
+/* ==== FILE: ui-registration.js ==== */
+function officialRegistrationPanel(t){
+  if(!officialRegistrationEnabled(DB))return '';
+  const mine=managerControlsSquad(DB,t),open=officialRegistrationOpen(DB,t),
+    root=parentTeamOf(DB,t),teams=managedTeam(DB)?.parent?[t]:organizationTeams(DB,root),
+    players=mine?Array.from(new Set(teams.flatMap(x=>[...x.roster,...(x.registration?.players||[])]))):t.registration?.players||[],
+    current=t.registration?.players||[],view=officialMatchView(DB,null,t.id,t.id),depth=view.teams[t.id].depthChart;
+  return `<section><h3>공식 등록 · ${current.length}/${officialRosterCap(DB,t)}명</h3>
+    <p class="hint">${open?'등록 기간 열림':'등록 기간 닫힘'} · 계약·훈련 소속과 공식 출전 명단은 별개입니다. 미등록 선수도 훈련·스크림에 참여합니다.</p>
+    <details class="cfgcard"><summary>공식 명단 확인 / 변경</summary>
+      ${players.map(id=>{const p=DB.players[id];if(!p)return '';const registered=teams.find(x=>x.registration?.players.includes(id));
+        return `<label class="cfgcard"><b>${esc(p.name)}</b> · 훈련 ${esc(DB.teams[p.team]?.short||'무소속')}
+          ${mine&&open?`<select data-official-destination="${id}"><option value="">미등록</option>${teams.map(x=>`<option value="${x.id}"${registered?.id===x.id?' selected':''}>${esc(x.short)} 공식 명단</option>`).join('')}</select>`:
+          `<span>${registered?esc(registered.short)+' 등록':'미등록'}</span>`}</label>`}).join('')}
+      ${mine&&open?`<button class="primary" data-official-submit="${t.id}">공식 명단 변경 확인</button>`:''}</details>
+    ${mine?`<details class="cfgcard"><summary>공식전 선발 5명</summary><p class="hint">등록된 선수 안의 선발 변경은 등록 기간 밖에도 가능합니다. 훈련 그룹 선발과 별도로 적용됩니다.</p>
+      ${ROLES.map(role=>`<label>${ROLE_KO[role]}<select data-official-role="${role}">${current.filter(id=>officialPlayerCanRepresent(DB,DB.players[id],t)).map(id=>`<option value="${id}"${depth[role]===id?' selected':''}>${esc(DB.players[id].name)} · 적합 ${playerRoleRating(DB.players[id],role)}</option>`).join('')}</select></label>`).join('')}
+      <button class="ghost" data-official-lineup="${t.id}">공식 선발 적용</button></details>`:''}</section>`;
+}
+function bindOfficialRegistrationControls(){
+  document.querySelectorAll('[data-official-submit]').forEach(b=>b.onclick=()=>{
+    const t=DB.teams[b.dataset.officialSubmit],teams=managedTeam(DB)?.parent?[t]:organizationTeams(DB,t),
+      registrations=Object.fromEntries(teams.map(x=>[x.id,[]]));
+    document.querySelectorAll('[data-official-destination]').forEach(el=>{
+      if(Object.hasOwn(registrations,el.value))registrations[el.value].push(el.dataset.officialDestination);
+    });
+    const preview=previewWorldAction(DB,{type:'roster.register',actor:'manager',teamId:t.id,registrations});
+    if(!preview.ok){MSG=preview.errors.join(' · ');navKeepScroll();return}
+    if(!confirm('공식 명단을 제출할까요?\n'+teams.map(x=>x.short+' '+registrations[x.id].length+'명').join(' · ')+
+      '\n계약·훈련 배치는 유지됩니다. 제출 즉시 출전 자격이 변경됩니다.'))return;
+    const result=applyWorldAction(DB,preview);MSG=result.ok?'공식 명단 제출 완료':result.errors.join(' · ');
+    if(result.ok)saveDB();navKeepScroll();
+  });
+  document.querySelectorAll('[data-official-lineup]').forEach(b=>b.onclick=()=>{
+    const lineup=Object.fromEntries(Array.from(document.querySelectorAll('[data-official-role]')).map(el=>[el.dataset.officialRole,el.value]));
+    const result=commitWorldAction(DB,{type:'roster.official-lineup',actor:'manager',teamId:b.dataset.officialLineup,lineup});
+    MSG=result.ok?'공식 선발 변경 완료':result.errors.join(' · ');if(result.ok)saveDB();navKeepScroll();
+  });
+}
+
 /* ==== FILE: ui-draft.js ==== */
 // ===== LOL GM: 인터랙티브 밴픽 UI =====
 // 드래프트 규칙은 draft.js의 단계형 코어를 사용한다. 이 파일은 화면 상태와 입력만 담당한다.
@@ -10172,7 +10481,8 @@ function openInteractiveDraft(db,teamIds,playerTeamId,opt={}){
   const playerSide=teamIds.indexOf(playerTeamId);if(playerSide<0)throw new Error('Managed team is not part of draft');
   const seed=opt.seed||freshInternalSeed('draft-ui'),ctx=opt.ctx||{used:[],byTeam:{},fearless:true,practice:true,firstPick:0};
   for(const tid of teamIds)if(!ctx.byTeam[tid])ctx.byTeam[tid]={won:[],lost:[]};
-  const state=createDraftSession(db,teamIds,new RNG(seed,'draft'),ctx);
+  const matchDb=opt.officialSession?seriesOfficialView(db,opt.officialSession):db,
+    state=createDraftSession(matchDb,teamIds,new RNG(seed,'draft'),ctx);
   DRAFT_UI={db,state,playerSide,seed,title:opt.title||'밴픽',filter:'ALL',query:'',selected:null,infoTab:'analysis',locked:!!opt.locked,finishLabel:opt.finishLabel||null,doneText:opt.doneText||null,meta:opt.meta||null,onComplete:typeof opt.onComplete==='function'?opt.onComplete:null};
   openUiOverlay({kind:'draft',label:DRAFT_UI.title,html:'',dismissible:!DRAFT_UI.locked,onDismiss:draftUiClose});
   draftUiAdvanceAi();draftUiRender();
@@ -10224,7 +10534,7 @@ function openPendingOfficialDraft(db){
   const aScore=score[0],bScore=score[1],meScore=setup.m.a===me?aScore:bScore,oppScore=setup.m.a===me?bScore:aScore;
   const locked=setup.fearlessUsed?.length||0,title=`${setup.comp.name} · ${mine.short} ${meScore} : ${oppScore} ${opp.short} · ${setup.game}세트 밴픽`;
   const fearlessText=locked?` · Fearless 잠금 ${locked}개`:'';
-  openInteractiveDraft(db,[setup.blue,setup.red],me,{seed:setup.gseed,title,locked:true,finishLabel:`${setup.game}세트 진행`,doneText:`${setup.game}세트 밴픽이 확정되었습니다${fearlessText}. 경기 결과에 따라 다음 세트 선택권과 Fearless 잠금이 갱신됩니다.`,ctx:setup.draftCtx,meta:{official:true,game:setup.game,competition:setup.comp.name,score:[meScore,oppScore],me:mine.short,opp:opp.short,firstSelectionTeam:db.teams[setup.chooser]?.short||setup.chooser,firstSelectionWhy:setup.sc?.why||'',fearlessUsed:setup.fearlessUsed||[]},onComplete:result=>{
+  openInteractiveDraft(db,[setup.blue,setup.red],me,{officialSession:setup.session,seed:setup.gseed,title,locked:true,finishLabel:`${setup.game}세트 진행`,doneText:`${setup.game}세트 밴픽이 확정되었습니다${fearlessText}. 경기 결과에 따라 다음 세트 선택권과 Fearless 잠금이 갱신됩니다.`,ctx:setup.draftCtx,meta:{official:true,game:setup.game,competition:setup.comp.name,score:[meScore,oppScore],me:mine.short,opp:opp.short,firstSelectionTeam:db.teams[setup.chooser]?.short||setup.chooser,firstSelectionWhy:setup.sc?.why||'',fearlessUsed:setup.fearlessUsed||[]},onComplete:result=>{
     const out=resolvePendingOfficialMatch(DB,result);LAST=out.game||null;LASTSER=out.done?out.rec:null;saveDB();nav();
   }});
   return true;
