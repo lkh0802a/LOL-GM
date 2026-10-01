@@ -80,6 +80,7 @@ function actionJournalTargets(db,command){
 }
 
 function captureWorldActionJournal(db,command){
+  if(command.type.startsWith('scrim.'))return captureScrimPlanJournal(db);
   if(command.type.startsWith('staff.'))return captureStaffActionJournal(db,command);
   const staffJournal=command.type==='club.close'?captureStaffActionJournal(db,command):null;
   const {playerIds,teamIds}=actionJournalTargets(db,command);
