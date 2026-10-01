@@ -145,3 +145,31 @@ A candidate is deletable only after:
 - no save schema bump
 - no Android wrapper/framework selection
 - no large directory move until the above caller boundaries are stable
+
+## R02 source ownership guard
+
+`scripts/mutation-ownership.mjs`, invoked by the existing static check using its
+already-loaded sources, records 26 recognized sites across 13 runtime modules:
+10 direct `.finance.cash` writes, 8 `.worldDate` writes, 5 assignment calls and
+3 removal calls. The initial inventory also includes two staff cash writes and
+the medical-replacement cash writer in `state-player-actions.js`; these were
+missing from the R01 hotspot list and must be considered during migration.
+
+The baseline is a migration ledger, not approval of each bypass. New modules,
+additional recognized sites, removed sites and removed owner modules require an
+explicit baseline review. Move the implementation, establish behavioral parity,
+switch callers and shrink the old owner's counts in the same change. Bootstrap,
+rollback and supported migration behavior must remain intact.
+
+This is a conservative source-text guard: it recognizes direct dot/literal-bracket
+cash/date assignments and calls to the two low-level roster writers. It does not
+resolve aliases (`f.cash`), dynamic property names, indirect calls or equivalent
+site replacement within one module. It also scans matching text inside comments
+and strings. It complements code review and behavioral/save/rollback tests; it
+does not prove a complete dependency graph or transaction correctness.
+
+Focused guard tests cover a new UI cash writer, growth within an existing owner,
+caller migration/removal, reads versus writes and literal bracket spelling.
+Runtime code, RNG, save format and game rules are unchanged in this R02 step.
+Next: centralize finance cash/ledger writers while preserving operation order,
+rounding and the existing transaction rollback scope.
