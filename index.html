@@ -4762,6 +4762,8 @@ function actionJournalTeamSnapshot(team){
   const hasRoster=Object.prototype.hasOwnProperty.call(team,'roster');
   return {
     team,hasDepth,hasFinance,hasRoster,
+    lifecycle:['active','folded'].map(key=>({key,
+      present:Object.prototype.hasOwnProperty.call(team,key),value:team[key]})),
     rosterRef:team.roster,roster:(team.roster||[]).slice(),
     depthRef:team.depthChart,depth:hasDepth?actionJournalClone(team.depthChart):null,
     financeRef:team.finance,finance:hasFinance?actionJournalClone(team.finance):null
@@ -4770,6 +4772,8 @@ function actionJournalTeamSnapshot(team){
 
 function actionJournalRestoreTeam(entry){
   const {team}=entry;
+  for(const {key,present,value} of entry.lifecycle)
+    if(present)team[key]=value;else delete team[key];
   if(entry.hasRoster){
     if(Array.isArray(entry.rosterRef)){
       entry.rosterRef.splice(0,entry.rosterRef.length,...entry.roster);
@@ -4789,7 +4793,10 @@ function actionJournalRestoreTeam(entry){
 
 function actionJournalTargets(db,command){
   const playerIds=new Set(),teamIds=new Set();
-  if(command.type==='roster.plan'||command.type==='roster.market-callup'){
+  if(command.type==='club.close'){
+    for(const id of command.teamIds)teamIds.add(id);
+    for(const pid of command.playerIds)playerIds.add(pid);
+  }else if(command.type==='roster.plan'||command.type==='roster.market-callup'){
     for(const team of organizationTeams(db,command.parentId)){
       teamIds.add(team.id);
     }
@@ -4819,9 +4826,21 @@ function captureWorldActionJournal(db,command){
   const newsRef=db.news,newsRows=Array.isArray(newsRef)?newsRef.slice():null;
   const hasDemand=Object.prototype.hasOwnProperty.call(db,'_marketDemandCache');
   const demandRef=db._marketDemandCache;
+  const w=db.world,closure=command.type==='club.close'&&w?{
+    firedPresent:Object.prototype.hasOwnProperty.call(w,'fired'),fired:w.fired,
+    rows:[...command.negotiationIds.map(id=>[w.negotiations,id]),
+      ...command.agreementIds.map(id=>[w.contractAgreements,id])]
+      .map(([store,id])=>({store,id,ref:store[id],record:actionJournalClone(store[id])}))
+  }:null;
   return {
     playerIds,
     rollback(){
+      if(closure){
+        if(closure.firedPresent)w.fired=closure.fired;else delete w.fired;
+        for(const {store,id,ref,record} of closure.rows){
+          actionJournalRestoreObject(ref,record);store[id]=ref;
+        }
+      }
       for(const entry of teams)actionJournalRestoreTeam(entry);
       for(const {pid,player,record} of players){
         actionJournalRestoreObject(player,record);
@@ -4985,7 +5004,12 @@ function officeDecisions(db,rng,f,ev,mid){
   }
 }
 function officeMidSeason(db,rng,f){officeDecisions(db,rng,f,t=>news(db,t),true)}
-function foldTeam(db,t){t.active=false;t.folded=db.year;for(const pid of t.roster.slice()){const p=db.players[pid];if(p){removePlayerFromTeam(db,p);p.faYears=0}}t.roster=[]}
+function foldTeam(db,t){
+  if(t.active===false)return;
+  const result=commitWorldAction(db,{type:'club.close',teamId:t.id,actor:'system'});
+  if(!result.ok)throw new Error('구단 해체 실패: '+result.errors.join(' · '));
+  return result;
+}
 
 // 세계 단위 결정: 새 지역, 새 국제대회, 구단 인수
 
@@ -5235,6 +5259,31 @@ function financeReleaseObligations(t){
     items=(t.finance?.releaseObligations||[]).map(row=>({...row})),
     detailed=items.reduce((sum,row)=>sum+row.amount,0);
   return {amount,items,unattributedAmount:Math.max(0,amount-detailed)};
+}
+function financeClosureAllocation(cash,claims){
+  const amount=claims.amount,detailed=claims.items.reduce((n,row)=>n+row.amount,0);
+  if(!Number.isFinite(cash)||!Number.isFinite(amount)||amount<0||
+    claims.items.some(row=>!Number.isFinite(row.amount)||row.amount<0)||detailed>amount+1e-8)
+    throw new Error('구단 해체 채무 또는 현금 정보가 유효하지 않습니다');
+  const paidAmount=Math.min(Math.max(0,cash),amount),unpaidAmount=amount-paidAmount,
+    ratio=amount?paidAmount/amount:0,
+    items=claims.items.map(row=>({...row,paidAmount:row.amount*ratio,
+      unpaidAmount:paidAmount===amount?0:row.amount*(1-ratio)}));
+  return {amount,paidAmount,unpaidAmount,items,
+    unattributedAmount:claims.unattributedAmount,
+    unattributedPaid:claims.unattributedAmount*ratio,
+    unattributedUnpaid:paidAmount===amount?0:claims.unattributedAmount*(1-ratio)};
+}
+function settleClubClosureFinance(t,year,date){
+  const f=t.finance;
+  if(f.closureSettlement)throw new Error('이미 정산한 구단 해체입니다');
+  const cashBefore=f.cash,allocation=financeClosureAllocation(cashBefore,financeReleaseObligations(t));
+  t.finance.cash-=allocation.paidAmount;
+  f.buyout=allocation.unpaidAmount;
+  f.releaseObligations=allocation.items.filter(row=>row.unpaidAmount>0)
+    .map(row=>({...row,originalAmount:row.amount,amount:row.unpaidAmount}));
+  f.closureSettlement={year,date,cashBefore,cashAfter:f.cash,...allocation};
+  return f.closureSettlement;
 }
 function payroll(db,t){return t.roster.reduce((a,id)=>{const c=db.players[id]?.contract;return a+(c&&!c.medicalReplacement?c.salary:0)},0)}
 function topFivePayroll(db,t){const top=[];for(const id of t.roster){const p=db.players[id];if(!p||!p.contract||p.contract.medicalReplacement)continue;const s=p.contract.salary;let i=0;while(i<top.length&&top[i]>=s)i++;top.splice(i,0,s);if(top.length>5)top.pop()}return top.reduce((a,b)=>a+b,0)}
@@ -7106,10 +7155,11 @@ function applyPlayerReleaseAction(db,c){
     settlement=contractReleaseSettlement(db,p,c.mode,c.amount),cost=settlement.amount;
   recordContractReleaseObligation(t,cost,settlement);
   removePlayerFromTeam(db,p);
-  if(c.mode==='manager'||c.mode==='medical_end'||c.mode==='mutual')invalidateMarketDemand(db);
+  if(['manager','medical_end','mutual','club_closure'].includes(c.mode))invalidateMarketDemand(db);
   p.contract=null;p.faYears=0;
-  if(c.mode==='manager'||c.mode==='mutual'||cost>0)
-    recordPlayerEvent(p,c.mode==='mutual'?'mutual_termination':'release',db.year,
+  if(['manager','mutual','club_closure'].includes(c.mode)||cost>0)
+    recordPlayerEvent(p,c.mode==='mutual'?'mutual_termination':
+      c.mode==='club_closure'?'club_closure':'release',db.year,
     {team:t.id,cost,date:db.worldDate,settlement});
   if(c.mode==='medical_end'){
     recordPlayerEvent(p,'medical_replacement_end',db.year,{
@@ -7140,6 +7190,88 @@ for(const [type,validate,apply] of [
     apply
   };
 }
+
+/* ==== FILE: club-closure.js ==== */
+// Club closure composes the existing player release and finance writers.
+// Closing a parent also closes its owned reserves; closing a reserve is local.
+function clubClosureTeams(db,t){
+  return [t,...(t.parent?[]:activeTeams(db).filter(x=>x.parent===t.id))];
+}
+function validateClubClosure(db,a){
+  if(a.actor!=='system')return worldActionError('unauthorized','구단 해체는 사무국이 결정합니다');
+  const t=playerActionTeam(db,a.teamId);
+  if(!t)return worldActionError('missing_team','해체할 활성 구단을 찾을 수 없습니다');
+  const teams=clubClosureTeams(db,t),teamIds=teams.map(x=>x.id),playerIds=[];
+  for(const team of teams){
+    if(!playerActionFinance(team)||team.finance.closureSettlement||!Array.isArray(team.roster))
+      return worldActionError('invalid_finance','구단 해체 재정 정보가 유효하지 않습니다');
+    for(const pid of team.roster){
+      const p=db.players[pid];
+      if(!p||p.team!==team.id||playerIds.includes(pid))
+        return worldActionError('invalid_roster','해체할 선수단 소속이 일치하지 않습니다');
+      const settlement=contractReleaseSettlement(db,p,'club_closure');
+      if(!Number.isFinite(settlement.amount)||settlement.amount<0)
+        return worldActionError('invalid_contract','해체 시 계약 보장액이 유효하지 않습니다');
+      playerIds.push(pid);
+    }
+  }
+  const w=db.world,negotiationIds=Object.entries(w?.negotiations||{})
+    .filter(([,n])=>n.status==='open'&&(teamIds.includes(n.teamId)||playerIds.includes(n.pid)))
+    .map(([id])=>id),agreementIds=Object.keys(w?.contractAgreements||{})
+    .filter(pid=>w.contractAgreements[pid].status==='agreed'&&
+      teamIds.includes(w.contractAgreements[pid].teamId));
+  try{for(const team of teams)clubClosureAllocation(db,team)}
+  catch(e){return worldActionError('invalid_finance',e.message)}
+  return {ok:true,teamId:t.id,teamIds,playerIds,negotiationIds,agreementIds};
+}
+function clubClosureAllocation(db,t){
+  const pending=financeReleaseObligations(t),newItems=t.roster.map(pid=>
+    contractReleaseSettlement(db,db.players[pid],'club_closure')).filter(row=>row.amount>0),
+    items=[...pending.items,...newItems],amount=pending.amount+
+      newItems.reduce((sum,row)=>sum+row.amount,0);
+  return financeClosureAllocation(t.finance.cash,{amount,items,
+    unattributedAmount:pending.unattributedAmount});
+}
+function clubClosureSnapshot(db,c){
+  const w=db.world;
+  return JSON.parse(JSON.stringify({date:db.worldDate||null,year:db.year,saveId:db.saveId,
+    teams:c.teamIds.map(id=>{
+      const t=db.teams[id];
+      return {id,active:t?.active,parent:t?.parent||null,roster:t?.roster,
+        finance:t?.finance,players:(t?.roster||[]).map(pid=>({pid,
+          team:db.players[pid]?.team,contract:db.players[pid]?.contract}))};
+    }),negotiations:c.negotiationIds.map(id=>w?.negotiations?.[id]),
+    agreements:c.agreementIds.map(id=>w?.contractAgreements?.[id])}));
+}
+function applyClubClosure(db,c){
+  const w=db.world,settlements=[];
+  for(const id of c.teamIds){
+    const t=db.teams[id];
+    for(const pid of t.roster.slice())
+      applyPlayerReleaseAction(db,{pid,teamId:id,mode:'club_closure',actor:'system'});
+    const settlement=settleClubClosureFinance(t,db.year,db.worldDate||null);
+    t.active=false;t.folded=db.year;
+    settlements.push({teamId:id,...settlement});
+  }
+  for(const id of c.negotiationIds){
+    const n=w.negotiations[id];n.status='cancelled';n.reason='club_closed';n.closedDate=db.worldDate;
+  }
+  for(const id of c.agreementIds){
+    const a=w.contractAgreements[id];a.status='cancelled';a.reason='club_closed';a.closedDate=db.worldDate;
+  }
+  if(w&&c.teamIds.includes(managedTeamId(db)))w.fired=true;
+  return {teamIds:c.teamIds,settlements};
+}
+WORLD_ACTION_HANDLERS['club.close']={
+  validate:validateClubClosure,
+  canonical(db,a,v){return {type:a.type,actor:a.actor,teamId:v.teamId,
+    teamIds:v.teamIds.slice(),playerIds:v.playerIds.slice(),
+    negotiationIds:v.negotiationIds.slice(),agreementIds:v.agreementIds.slice()}},
+  snapshot:clubClosureSnapshot,
+  changes(db,c){return c.teamIds.map(id=>({teamId:id,kind:'club_closure',
+    settlement:clubClosureAllocation(db,db.teams[id])}))},
+  apply:applyClubClosure
+};
 
 /* ==== FILE: staff.js ==== */
 // ===== LOL GM: Staff domain =====
@@ -8590,6 +8722,20 @@ function releaseObligationsPanel(releases,title){
 }
 function financePanel(t){
   const f=t.finance; if(!f)return '';
+  if(t.active===false&&f.closureSettlement){
+    const closure=f.closureSettlement;
+    return `<section><h3>해체 구단 계약 정산 · ${esc(t.name)}</h3>
+      <div class="fin"><div><span>계약 보상 청구</span><b>${money(closure.amount)}</b></div>
+      <div><span>지급 완료</span><b>${money(closure.paidAmount)}</b></div>
+      <div><span>미지급</span><b>${money(closure.unpaidAmount)}</b></div></div>
+      <p class="hint">${esc(closure.date||String(closure.year))} 해체 시 가용 현금을 청구액 비율로 배분했습니다. 미지급 채무는 기록에 보존되며 다음 시즌 운영비로 중복 청구하지 않습니다.</p>
+      ${releaseObligationsPanel(financeReleaseObligations(t),'해체 구단 미지급 보상')}
+      <details class="cfgcard release-settlements"><summary>선수별 지급 내역</summary>
+      ${closure.items.map(row=>`<div class="cfgcard"><b>${esc(row.playerName||row.pid)}</b>
+        <p>청구 ${money(row.amount)} · 지급 ${money(row.paidAmount)} · 미지급 ${money(row.unpaidAmount)}</p></div>`).join('')}
+      ${closure.unattributedAmount?`<p class="hint">상세 미기록 청구 ${money(closure.unattributedAmount)} · 지급 ${money(closure.unattributedPaid)} · 미지급 ${money(closure.unattributedUnpaid)}</p>`:''}
+      </details></section>`;
+  }
   const R=DB.regions[t.region], last=f.history.slice(-1)[0], pay=payroll(DB,t), outlook=financeForecast(DB,t);
   const RK={league:'중계권 분배',sponsor:'스폰서',merch:'굿즈',prize:'상금',owner:'구단주 지원',tax:'사치세 분배',transfer:'이적료 수입',sponsorMilestone:'스폰서 목표 달성',academyFunding:'모구단 지원금'}, EK={salary:'연봉',staff:'코칭 스태프',ops:'운영비',facility:'훈련 시설',floor:'플로어 부담금',buyout:'선수 방출 비용',tax:'사치세',facilityInvestment:'시설 증설비',signingBonus:'계약금',transfer:'이적료 지출',staffSeverance:'스태프 해지금',travel:'해외 대회 출장비',interest:'재정 부족 부담금',scouting:'스카우팅 비용',academySupport:'2군 운영 지원'};
   return `<section><h3>재정</h3><div class="fin">
@@ -8732,7 +8878,7 @@ function playerDetail(p){
   <div class="agroup"><h4>플레이 성향</h4>${TENDENCIES.map(x=>`<div class="arow"><span>${TEND_KO[x]}</span><span class="bar"><i style="width:${p.tend[x]}%"></i></span></div>`).join('')}<h4 style="margin-top:12px">성격 / 성장</h4><div class="arow"><span>프로의식</span>${ovrTag(p.personality.professionalism)}</div><div class="arow"><span>야망</span>${ovrTag(p.personality.ambition)}</div><div class="arow"><span>전성기 예상</span><b>${Math.round(ensurePlayerDevelopment(p).peakAge-1)}~${Math.round(ensurePlayerDevelopment(p).peakAge+1)}세</b></div></div></div>
   <h4>챔피언 폭</h4><div class="scroll"><table class="pool"><thead><tr><th>챔피언</th><th>숙련도</th><th>공식 경험</th><th>스크림</th><th>훈련</th><th>상성 이해</th><th>자신감</th></tr></thead><tbody>${Object.entries(p.pool||{}).sort((x,y)=>y[1].mastery-x[1].mastery).map(([c,v])=>`<tr><td>${esc(championLabel(DB,c))}</td><td>${ovrTag(v.mastery)}</td><td class="num">${Math.round(v.experience||0)}</td><td class="num">${Math.round(v.scrimExperience||0)}</td><td class="num">${Math.round(v.trainingExperience||0)}</td><td class="num">${v.matchup_knowledge}</td><td class="num">${v.confidence}</td></tr>`).join('')}</tbody></table></div>
   ${p.career.length?`<h4 style="margin-top:14px">커리어</h4><div class="scroll"><table class="pool"><thead><tr><th>시즌</th><th>대회</th><th>팀</th><th>구분</th><th>종합</th><th>경기</th><th>평점</th><th>KDA</th><th>KP</th><th>GPM</th><th>DPM</th><th>CS차</th><th>골드차</th><th>받은 피해</th><th>시야</th><th>옵젝</th><th>라인 우위</th><th>한타 기여</th><th>POG</th><th>당시 계약</th></tr></thead><tbody>${p.career.slice().reverse().map(c=>`<tr><td class="num">${c.year}</td><td>${esc(c.cname||c.comp)}${c.international?' · 국제':''}</td><td>${esc(c.team?tshort(c.team):'FA')}</td><td>${c.squad||''}${c.division?` · ${c.division}부`:''}</td><td class="num">${c.ovr||''}</td><td class="num">${c.g}</td><td class="num">${c.rating?c.rating.toFixed(2):'—'}</td><td class="num">${((c.k+c.a)/Math.max(1,c.d)).toFixed(2)}</td><td class="num">${c.kp!==undefined?Math.round(c.kp*100)+'%':'—'}</td><td class="num">${c.min&&c.gold?(c.gold/c.min).toFixed(0):'—'}</td><td class="num">${c.min&&c.dmg?(c.dmg/c.min).toFixed(0):'—'}</td><td class="num">${c.g?Math.round((c.csDiff||0)/c.g):'—'}</td><td class="num">${c.g?Math.round((c.goldDiff||0)/c.g):'—'}</td><td class="num">${c.g?Math.round((c.dmgTaken||0)/c.g):'—'}</td><td class="num">${c.g?((c.vision||0)/c.g).toFixed(1):'—'}</td><td class="num">${c.objectives||0}</td><td class="num">${c.laneAdv!==undefined?c.laneAdv.toFixed(2):'—'}</td><td class="num">${c.teamfights?Math.round((c.teamfightWins||0)/c.teamfights*100)+'% · '+Math.round(c.teamfightShare*100)+'%':'—'}</td><td class="num">${c.mvp}</td><td class="num">${c.salary!==null&&c.salary!==undefined?`${money(c.salary)} ~${c.contractUntil}`:'—'}</td></tr>`).join('')}</tbody></table></div>`:''}
-  ${ev.length?`<h4 style="margin-top:14px">커리어 이벤트</h4><div class="scroll"><table class="pool"><thead><tr><th>시즌</th><th>유형</th><th>내용</th></tr></thead><tbody>${ev.map(e=>{const detail=e.type==='contract'?`${esc(tshort(e.team))} · ${money(e.salary)} · ~${e.until}`:e.type==='transfer'?`${esc(tshort(e.from))} → ${esc(tshort(e.to))} · ${money(e.fee)}`:e.type==='award'?`${esc(e.competition)} · ${esc(e.award)}`:e.type==='title'?`${esc(e.competition)} 우승`:e.type==='squad_move'?`${esc(tshort(e.from))} → ${esc(tshort(e.to))}`:e.type==='retirement'?`${e.age}세 은퇴 · 전성기 종합 ${e.peak}`:e.type==='mutual_termination'?`${esc(tshort(e.team))} 상호 해지 · 합의금 ${money(e.cost)}`:e.type==='release'?`${esc(tshort(e.team))} 방출`:e.type==='roster_role'?`${SQUAD_ROLE_KO[e.from]||e.from} → ${SQUAD_ROLE_KO[e.to]||e.to}`:e.type==='transfer_request'?`${SAT_REASON_KO[e.reason]||e.reason} · 이적 요청`:e.type==='transfer_request_withdrawn'?'이적 요청 철회':e.type==='role_conversion_started'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 전향 시작`:e.type==='role_conversion_completed'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 전향 완료`:e.type==='role_conversion_rejected'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 전향 거절`:e.type==='role_conversion_cancelled'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 전향 중단`:e.type==='role_conversion_redirected'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 계획 변경`:e.type==='medical_start'?`${esc(MEDICAL_LABELS[e.site]||e.kind)} · ${e.days}일 · ${e.out?'결장':'제한 출전'}`:e.type==='medical_return'?'치료 후 복귀':e.type==='medical_scar'?'중증 부상 후유증':e.type==='medical_emergency_fa'?`의료 대체 계약 · ${e.guaranteedThrough} 보장 · ${e.expiresOn} 조건 종료`:e.type==='medical_replacement_end'?`대체 계약 종료 · 지급 ${money(e.paid)}`:'—';return `<tr><td class="num">${e.year}</td><td>${({contract:'계약',transfer:'이적',award:'개인상',title:'우승',squad_move:'1·2군 이동',retirement:'은퇴',release:'방출',mutual_termination:'상호 해지',roster_role:'역할 변경',transfer_request:'이적 요청',transfer_request_withdrawn:'요청 철회',role_conversion_started:'전향 시작',role_conversion_completed:'전향 완료',role_conversion_rejected:'전향 거절',role_conversion_cancelled:'전향 중단',role_conversion_redirected:'전향 변경',medical_start:'부상·건강',medical_return:'복귀',medical_scar:'후유증',medical_emergency_fa:'의료 대체 계약',medical_replacement_end:'의료 대체 종료'}[e.type]||e.type)}</td><td>${detail}</td></tr>`}).join('')}</tbody></table></div>`:''}</section>`;
+  ${ev.length?`<h4 style="margin-top:14px">커리어 이벤트</h4><div class="scroll"><table class="pool"><thead><tr><th>시즌</th><th>유형</th><th>내용</th></tr></thead><tbody>${ev.map(e=>{const detail=e.type==='contract'?`${esc(tshort(e.team))} · ${money(e.salary)} · ~${e.until}`:e.type==='transfer'?`${esc(tshort(e.from))} → ${esc(tshort(e.to))} · ${money(e.fee)}`:e.type==='award'?`${esc(e.competition)} · ${esc(e.award)}`:e.type==='title'?`${esc(e.competition)} 우승`:e.type==='squad_move'?`${esc(tshort(e.from))} → ${esc(tshort(e.to))}`:e.type==='retirement'?`${e.age}세 은퇴 · 전성기 종합 ${e.peak}`:e.type==='club_closure'?`${esc(tshort(e.team))} 구단 해체 · 계약 보상 ${money(e.cost)}`:e.type==='mutual_termination'?`${esc(tshort(e.team))} 상호 해지 · 합의금 ${money(e.cost)}`:e.type==='release'?`${esc(tshort(e.team))} 방출`:e.type==='roster_role'?`${SQUAD_ROLE_KO[e.from]||e.from} → ${SQUAD_ROLE_KO[e.to]||e.to}`:e.type==='transfer_request'?`${SAT_REASON_KO[e.reason]||e.reason} · 이적 요청`:e.type==='transfer_request_withdrawn'?'이적 요청 철회':e.type==='role_conversion_started'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 전향 시작`:e.type==='role_conversion_completed'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 전향 완료`:e.type==='role_conversion_rejected'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 전향 거절`:e.type==='role_conversion_cancelled'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 전향 중단`:e.type==='role_conversion_redirected'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 계획 변경`:e.type==='medical_start'?`${esc(MEDICAL_LABELS[e.site]||e.kind)} · ${e.days}일 · ${e.out?'결장':'제한 출전'}`:e.type==='medical_return'?'치료 후 복귀':e.type==='medical_scar'?'중증 부상 후유증':e.type==='medical_emergency_fa'?`의료 대체 계약 · ${e.guaranteedThrough} 보장 · ${e.expiresOn} 조건 종료`:e.type==='medical_replacement_end'?`대체 계약 종료 · 지급 ${money(e.paid)}`:'—';return `<tr><td class="num">${e.year}</td><td>${({contract:'계약',transfer:'이적',award:'개인상',title:'우승',squad_move:'1·2군 이동',retirement:'은퇴',release:'방출',mutual_termination:'상호 해지',club_closure:'구단 해체',roster_role:'역할 변경',transfer_request:'이적 요청',transfer_request_withdrawn:'요청 철회',role_conversion_started:'전향 시작',role_conversion_completed:'전향 완료',role_conversion_rejected:'전향 거절',role_conversion_cancelled:'전향 중단',role_conversion_redirected:'전향 변경',medical_start:'부상·건강',medical_return:'복귀',medical_scar:'후유증',medical_emergency_fa:'의료 대체 계약',medical_replacement_end:'의료 대체 종료'}[e.type]||e.type)}</td><td>${detail}</td></tr>`}).join('')}</tbody></table></div>`:''}</section>`;
 }
 
 /* ==== FILE: ui-roster.js ==== */
