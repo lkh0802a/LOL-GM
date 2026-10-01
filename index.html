@@ -760,7 +760,7 @@ function simulateMatch(db,blueId,redId,seed,ctx,quiet){
     jgNext:[2.6+rng.dec.range(0,1),2.6+rng.dec.range(0,1)],mods:[(ctx&&ctx.mods&&ctx.mods[blueId])||0,(ctx&&ctx.mods&&ctx.mods[redId])||0],log:[],expl:[...d.expl],firsts:{},goldHist:[],winner:-1};
   for(const s of st.sides){s.ps.forEach(p=>{p.items=[]})}
   // 경기 당일 컨디션: 기복(consistency)이 낮은 팀일수록 편차가 크다
-  st.mods=st.mods.map((m,i)=>m+(i===((ctx&&ctx.firstPick)||0)?BAL.first:0)+(teamSynergy(st.sides[i].team)-50)/1000+rng.mech.normal(0,0.07*(1.25-avg(st.sides[i].ps.map(p=>at(p,'consistency'))))));
+  st.mods=st.mods.map((m,i)=>m+(i===((ctx&&ctx.firstPick)||0)?BAL.first:0)+(lineupSynergy(db,st.sides[i].team,st.sides[i].ps.map(p=>p.p.id))-50)/1000+rng.mech.normal(0,0.07*(1.25-avg(st.sides[i].ps.map(p=>at(p,'consistency'))))));
   let t;
   for(t=1;t<=70;t++){
     st.t=t; st.cur=rng.log.int(0,12);
@@ -2309,8 +2309,19 @@ function fixtureTimeInfo(match){
   return local+' '+(match.time||venueClockParts(match.utcAt,match.timeZone).time)+
     ' '+match.timeZone+' · 한국 '+kst.date+' '+kst.time+' KST';
 }
+function teamPracticeVenue(db,team,date=db.worldDate){
+  const visits=Object.values(db.world?.seasons||{}).filter(s=>{
+    const comp=db.competitions[s.comp],dates=(s.days||[]).map(d=>d.date).sort();
+    return comp?.international&&comp.teams?.includes(team.id)&&dates.length&&
+      date>=addDays(dates[0],-5)&&date<=addDays(dates.at(-1),1);
+  }).sort((a,b)=>String(a.id).localeCompare(String(b.id)));
+  const season=visits[0];
+  if(season){const venue=competitionVenue(db,db.competitions[season.comp]);
+    return {region:venue.region,timeZone:venue.timeZone,competition:season.comp};}
+  return {region:team.region,timeZone:team.practiceTimeZone||venueZone(db,team.region),competition:null};
+}
 function scrimUtcRange(db,team,date,slot){
-  const zone=team.practiceTimeZone||venueZone(db,team.region),
+  const zone=teamPracticeVenue(db,team,date).timeZone,
     localTime=slot==='afternoon'?'14:00':slot==='evening'?'19:00':null;
   if(!localTime)return null;
   const startsAt=venueToUtc(date,localTime,zone),
@@ -2999,6 +3010,7 @@ function normalizeTraining(plan){
   const total=keys.reduce((s,k)=>s+result[k],0);
   if(total>TRAIN_POINTS)for(const k of keys)result[k]=Math.floor(result[k]*TRAIN_POINTS/total);
   if(['light','normal','high'].includes(plan?.intensity))result.intensity=plan.intensity;
+  if(Object.hasOwn(PRACTICE_FOCUS,plan?.focus))result.focus=plan.focus;
   return result;
 }
 function setTrainingAllocation(plan,key,value){
@@ -3009,7 +3021,14 @@ function setTrainingAllocation(plan,key,value){
   return result;
 }
 function trainingIntensity(t){const x=t?.training?.intensity||'normal';return x==='light'?{growth:.9,fatigue:.45,condition:.25}:x==='high'?{growth:1.08,fatigue:1.35,condition:-.35}:{growth:1,fatigue:.8,condition:0}}
-function aiManageTraining(db,t){if(!t||t.id===managedTeamId(db))return;t.training=normalizeTraining(t.training);t.training.intensity=trainingRecommendation(db,t).intensity}
+function aiManageTraining(db,t){
+  if(!t||t.id===managedTeamId(db))return;
+  t.training=normalizeTraining(t.training);t.training.intensity=trainingRecommendation(db,t).intensity;
+  const cohesion=lineupCohesion(db,t),adaptation=avg(t.roster.map(id=>db.players[id]?.tacticalAdaptation??60));
+  t.training.focus=cohesion.relationship<40||cohesion.adaptation<65?'teamwork':adaptation<65?'tactics':t.philosophy==='youth'?'individual':'balanced';
+  t.practiceDecision={date:db.worldDate,focus:t.training.focus,
+    reason:t.training.focus==='teamwork'?'관계·새 조합 적응':t.training.focus==='tactics'?'전술 적응':t.training.focus==='individual'?'육성 우선':'균형 유지'};
+}
 const FACILITY_TYPES=['training','analysis','recovery','youth','scouting'];
 const FACILITY_LABELS={training:'훈련',analysis:'데이터 분석',recovery:'회복',youth:'유소년 육성',scouting:'스카우팅'};
 function ensureFacilities(t){
@@ -3101,14 +3120,14 @@ function growPlayer(db,p,rng,games,champGames){
     pState(p);
     let d=base>0?base*dev.growthRate*(0.45+room*0.6)*(0.7+0.6*prof)*(0.8+0.4*coach)*(0.65+0.55*play)*trainingGrowthMul(team)*facilityMul(team,p.age)*intensity.growth*(0.9+0.2*p.morale/100):base*dev.declineRate*(1.3-0.6*prof);
     d+=train*(base>0?1:0.5);
-    if(d>0)d*=youthMul(p.age)*conversionMul*practiceFactor;
+    if(d>0)d*=youthMul(p.age)*conversionMul*practiceFactor*trainingTimeMultiplier(team,db.year);
     d=Math.min(d,growthCap(p.age)); // 한 시즌 영역별 성장 상한 (어릴수록 높음)
     const ceil=Math.min(99,p.pot+6); // 잠재력 + 6을 넘는 능력치는 더 오르지 않음
     for(const a of ATTR_GROUPS[g]){const v=p.attrs[a]+d+rng.normal(0,1.3);p.attrs[a]=Math.round(clamp(d>0&&p.attrs[a]>=ceil?Math.min(v,p.attrs[a]):d>0?Math.min(v,Math.max(ceil,p.attrs[a])):v,20,99))}
   }
   // 챔피언 폭: 공식전 + 스크림 + 훈련 + 난이도 + 학습 능력을 함께 반영
   for(const c in champGames)ensureChampionProfile(db,p,c);
-  if(team&&p.pool){const practice=Math.max(2,Math.round((tr.combat+tr.mental)/12*(.7+coach*.5)));Object.entries(p.pool).sort((a,b)=>b[1].mastery-a[1].mastery).slice(0,6).forEach(([c])=>practiceChampion(db,p,c,'training',practice))}
+  if(team&&p.pool&&!team.practiceUsage?.days){const practice=Math.max(2,Math.round((tr.combat+tr.mental)/12*(.7+coach*.5)));Object.entries(p.pool).sort((a,b)=>b[1].mastery-a[1].mastery).slice(0,6).forEach(([c])=>practiceChampion(db,p,c,'training',practice))}
   for(const c of Object.keys(p.pool||{})){const n=champGames[c]||0,pr=ensureChampionProfile(db,p,c),learn=championLearningMultiplier(db,p,c),practiceGain=(pr.scrimSeason||0)*.16+(pr.trainingSeason||0)*.09,officialGain=Math.min(7,n*.42),gain=Math.min(8,(officialGain+practiceGain)*learn*(p.age<22?1.12:1));
     if(n||practiceGain){pr.mastery=Math.round(clamp(pr.mastery+gain,20,99));pr.experience=Math.round(clamp(pr.experience+n*1.5,0,999));pr.confidence=Math.round(clamp(pr.confidence+rng.normal(n?2:1,3),10,99))}
     else {pr.mastery=Math.round(clamp(pr.mastery-rng.range(0,1.8)*(1-(p.attrs.meta_adaptation||50)/180),20,99));if(pr.mastery<36&&Object.keys(p.pool).length>12)delete p.pool[c]}
@@ -3142,13 +3161,35 @@ function dailyRecovery(db){
 function pState(p){if(p.form===undefined)p.form=0;if(p.fatigue===undefined)p.fatigue=10;if(p.morale===undefined)p.morale=65;if(p.condition===undefined)p.condition=96;if(p.sharpness===undefined)p.sharpness=55;if(p.teamAdaptation===undefined)p.teamAdaptation=p.team?60:50;if(p.tacticalAdaptation===undefined)p.tacticalAdaptation=p.team?60:50;return p}
 // 상태는 기본 실력을 보정하지만 압도하지 않도록 총합을 제한한다.
 function playerMod(p){pState(p);const v=p.form/250-p.fatigue/900+(p.condition-92)/1200+(p.morale-65)/1800+(p.sharpness-60)/1700+((p.teamAdaptation+p.tacticalAdaptation)/2-60)/2200;return clamp(v,-.11,.09)-medicalPerformancePenalty(p)}
-function teamSynergy(t){return t.synergy??50}
+function teamSynergy(t){return Number.isFinite(t?.synergy)?clamp(t.synergy,0,100):50}
+function lineupCohesion(db,t,ids=null){
+  const players=[...new Set(ids||ROLES.map(r=>starterFor(db,t,r)?.id))]
+    .map(id=>db.players[id]).filter(p=>p&&p.team===t.id&&!p.retired);
+  if(players.length<2)return {target:50,relationship:50,adaptation:50,trust:60};
+  let sum=0,count=0;
+  for(let i=0;i<players.length;i++)for(let j=i+1;j<players.length;j++){
+    sum+=playerRelationship(db,players[i],players[j]);count++;
+  }
+  const relationship=sum/count,adaptation=avg(players.map(p=>p.teamAdaptation??60)),
+    trust=avg(players.map(p=>p.managerTrust??60));
+  return {relationship,adaptation,trust,
+    target:clamp(50+(relationship-50)*.55+(adaptation-60)*.25+(trust-60)*.15,15,85)};
+}
+function lineupSynergy(db,t,ids=null){
+  // The current five cannot inherit all the cohesion of a departed lineup.
+  return clamp(teamSynergy(t)*.4+lineupCohesion(db,t,ids).target*.6,15,85);
+}
+function recoverTeamCohesion(db,t,ids=null,rate=.015){
+  const target=lineupCohesion(db,t,ids).target;
+  t.synergy=clamp(teamSynergy(t)+(target-teamSynergy(t))*rate,15,85);
+  return t.synergy;
+}
 function playerRelationKey(a,b){const x=typeof a==='string'?a:a?.id,y=typeof b==='string'?b:b?.id;if(!x||!y||x===y)return null;return x<y?x+'|'+y:y+'|'+x}
-function playerRelationship(db,a,b){const k=playerRelationKey(a,b);if(!k)return 50;db.playerRelations=db.playerRelations||{};return db.playerRelations[k]??50}
+function playerRelationship(db,a,b){const k=playerRelationKey(a,b);if(!k)return 50;return db.playerRelations?.[k]??50}
 function adjustPlayerRelationship(db,a,b,delta){const k=playerRelationKey(a,b);if(!k)return 50;db.playerRelations=db.playerRelations||{};const v=clamp((db.playerRelations[k]??50)+delta,0,100);db.playerRelations[k]=Math.round(v*10)/10;return db.playerRelations[k]}
 function teamRelationshipScore(db,t){const ids=(t?.roster||[]).filter(id=>db.players[id]&&!db.players[id].retired);if(ids.length<2)return 50;let sum=0,n=0;for(let i=0;i<ids.length;i++)for(let j=i+1;j<ids.length;j++){sum+=playerRelationship(db,ids[i],ids[j]);n++}return n?sum/n:50}
 const CAREER_GOAL_KO={development:'성장 기회',starter:'주전 정착',international:'국제대회 출전',titles:'우승 경쟁',stability:'안정적인 커리어'};
-const SAT_REASON_KO={playing_time:'출전 시간 부족',promise_role:'역할 약속 불이행',reserve:'2군 배치',contract:'계약/연봉 불만',team_results:'팀 성적 불만',role:'역할 불만',international:'국제대회 기회 부족',career_goal:'커리어 목표 불일치'};
+const SAT_REASON_KO={teammates:'동료와의 불화',playing_time:'출전 시간 부족',promise_role:'역할 약속 불이행',reserve:'2군 배치',contract:'계약/연봉 불만',team_results:'팀 성적 불만',role:'역할 불만',international:'국제대회 기회 부족',career_goal:'커리어 목표 불일치'};
 function startContractRolePromise(db,p,t){
   if(!p.contract)return;
   closeOralRolePromise(db,p,'new_contract_or_transfer');
@@ -3190,6 +3231,9 @@ function satisfactionLabel(v){return v>=80?'매우 만족':v>=65?'만족':v>=48?
 function satisfactionIssues(db,p,opt={}){
   ensureSatisfaction(p);const t=p.team&&db.teams[p.team],usageYear=opt.year??db.year,u=p.usage&&p.usage.year===usageYear?p.usage:null,out=[];
   if(!t)return out;
+  const teammates=t.roster.filter(id=>id!==p.id&&db.players[id]&&!db.players[id].retired);
+  const bonds=teammates.map(id=>playerRelationship(db,p,id));
+  if(bonds.length&&avg(bonds)<30)out.push({code:'teammates',severity:clamp((30-avg(bonds))/5,2,6)});
   const promise=effectiveRolePromiseStatus(db,p,usageYear),role=promise?.role||p.rosterRole,
     games=promise?.teamGames??u?.teamGames??0,
     exp=promise?.expected??expectedPlayShare(p,t),
@@ -3229,7 +3273,7 @@ function applySatisfaction(db,p,opt={}){
   const promisedRole=effectiveRolePromiseStatus(db,p,usageYear)?.role||p.rosterRole;
   if(p.satisfaction<24&&issues.length&&['core','starter'].includes(promisedRole))p.concernStreak=(p.concernStreak||0)+1;else p.concernStreak=Math.max(0,(p.concernStreak||0)-1);
   const severeBreakdown=p.satisfaction<=8&&p.concernStreak>=18&&p.managerRelationship<=25&&p.managerTrust<=20&&p.personality.ambition>=70;
-  if(!p.wantsOut&&severeBreakdown&&issues.length){p.wantsOut=true;p.wantsOutReason=issues[0].code;recordPlayerEvent(p,'transfer_request',db.year,{reason:p.wantsOutReason,team:p.team,date:db.worldDate})}
+  if(!p.wantsOut&&(severeBreakdown||(p.satisfaction<=16&&p.concernStreak>=18&&p.personality.ambition>=70&&issues.some(x=>x.code==='teammates'&&x.severity>=5)))&&issues.length){p.wantsOut=true;p.wantsOutReason=issues[0].code;recordPlayerEvent(p,'transfer_request',db.year,{reason:p.wantsOutReason,team:p.team,date:db.worldDate})}
   else if(p.wantsOut&&(p.satisfaction>=50||p.managerTrust>=52)){p.wantsOut=false;const why=p.wantsOutReason;p.wantsOutReason=null;p.concernStreak=0;recordPlayerEvent(p,'transfer_request_withdrawn',db.year,{reason:why,team:p.team,date:db.worldDate})}
   const target=52+p.satisfaction*.2;p.morale=clamp(p.morale+(target-p.morale)*.05,0,100);
   return {delta,issues};
@@ -3277,7 +3321,7 @@ function afterSeries(db,lines,rec){
     for(const id of t.roster){if(by[id])continue;const p=db.players[id];if(p){pState(p);p.morale=clamp(p.morale-1,0,100);p.sharpness=clamp(p.sharpness-.8,0,100);p.teamAdaptation=clamp(p.teamAdaptation+.18,0,100);p.tacticalAdaptation=clamp(p.tacticalAdaptation+.12,0,100)}}
     const active=Object.keys(by).filter(id=>db.players[id]?.team===tid),relDelta=rec.winner===tid?.18:-.08;
     for(let i=0;i<active.length;i++)for(let j=i+1;j<active.length;j++)adjustPlayerRelationship(db,active[i],active[j],relDelta);
-    const rel=teamRelationshipScore(db,t);t.synergy=clamp(teamSynergy(t)+0.4+(rel-50)/140,0,100);}
+    recoverTeamCohesion(db,t,active,.025);}
 }
 // 매 경기일: 기본 피로 회복. 훈련은 아래의 희소 포인트 배분으로만 관리한다
 
@@ -3947,6 +3991,7 @@ function applyWorldDailyEffects(db,date){
   for(const t of activeTeams(db))aiReviewRoleConversions(db,t);
   advanceRoleConversionsDay(db);
   aiRunScrims(db,new RNG(w.seed+date,'scrim'));
+  runDailyPractice(db);
   for(const t of activeTeams(db,null,1))aiManageOwnedReserve(db,t);
   aiReviewOfficialRegistrations(db);
   w.lastDailyTick=date;
@@ -4275,7 +4320,7 @@ function closeMarket(db){
   for(const t of activeTeams(db,null,1))aiManageOwnedReserve(db,t);
   for(const t of activeTeams(db)){aiReviewDepthChart(db,t);rebalanceAiRosterRoles(db,t)}
   for(const t of activeTeams(db)){const pre=t._pre||[];const now=ROLES.map(r=>starterFor(db,t,r)).filter(Boolean).map(p=>p.id);const changed=now.filter(id=>!pre.includes(id)).length;
-    t.synergy=clamp(teamSynergy(t)*0.85+15-changed*8,10,100);delete t._pre;
+    t.synergy=clamp(teamSynergy(t)-changed*5,15,85);recoverTeamCohesion(db,t,now,.08);delete t._pre;
     if(t.id!==managedTeamId(db)&&!t.parent&&(!t.sponsor||t.sponsor.until<db.year)){const chosen=aiSelectSponsor(db,t);if(chosen)ev(`${t.name} ${chosen.type} 스폰서 계약 · ${chosen.years}년`)}}
   for(const R of Object.values(db.regions)){const ts=activeTeams(db,R.id,1);R.teams=ts.length;if(ts.length)R.strength=Math.round(avg(ts.map(t=>teamStrength(db,t.id))))}
   rep.retired.slice(0,3).forEach(r=>news(db,`${db.players[r.pid].name} 은퇴 (${r.age}세)`));
@@ -9148,7 +9193,8 @@ function scrimPartnerInterest(db,t,other,intent=null,strength=null,otherStrength
 function scrimPartnerAssessment(db,t,other,intents=null,strengths=null,rivals=null){
   if(!t||!other||t.id===other.id||t.active===false||other.active===false)
     return {allowed:false,reason:'참가 불가 팀'};
-  if(t.region!==other.region)
+  const firstVenue=teamPracticeVenue(db,t),secondVenue=teamPracticeVenue(db,other);
+  if(firstVenue.region!==secondVenue.region)
     return {allowed:false,reason:'현지 훈련권역이 다릅니다'};
   const key=[t.id,other.id].sort().join('|'),rivalDays=rivals?
     (rivals.get(key)??null):scrimOfficialRivalWindow(db,t.id,other.id);
@@ -9164,7 +9210,7 @@ function scrimPartnerAssessment(db,t,other,intents=null,strengths=null,rivals=nu
   const secrecy=rivalDays!==null&&rivalDays>7&&rivalDays<=14?.68:1;
   const acceptance=clamp(left.approval*right.approval*secrecy,.015,.97),
     weight=Math.max(.01,left.desire*right.desire*acceptance);
-  return {allowed:true,reason:'양팀 훈련 목적에 부합',acceptance,weight,
+  return {allowed:true,reason:'양팀 훈련 목적에 부합',venue:firstVenue.region,acceptance,weight,
     left,right,rivalDays};
 }
 
@@ -9175,41 +9221,6 @@ function scrimPartnerAssessment(db,t,other,intents=null,strengths=null,rivals=nu
 function scrimAnalysisBonus(t){
   const p=staffProfile(t);
   return clamp((p.analysis-50)/500+facilityAnalysisBonus(t),0,.14);
-}
-function scrimDailyCapacity(db,t,booked=null){
-  if(!t||t.active===false)return 0;
-  // Check the complete official calendar, not merely the next *unplayed*
-  // match: an already completed televised series still books the full day.
-  if((booked||officialBookedTeams(db)).has(t.id))return 0;
-  const days=daysUntil(db,nextTeamMatch(db,t.id)?.date);
-  if(days===0)return 0; // No practice blocks on an official fixture day.
-  const roster=(t.roster||[]).map(id=>db.players[id]).filter(p=>p&&!p.retired&&!medicalOut(p)&&!medicalScrimRest(db,p));
-  if(roster.length<5)return 0;
-  const fatigue=avg(roster.map(p=>p.fatigue||0));
-  const condition=avg(roster.map(p=>p.condition??96));
-  if(fatigue>=60||condition<=67)return 0;
-  // Weekly double-header: lighter taper the night before, two blocks otherwise.
-  const scheduleCap=days===1?2:days===2?4:6;
-  const fatigueCap=fatigue>=49?2:fatigue>=38?4:6;
-  const conditionCap=condition<=77?2:condition<=85?4:6;
-  return Math.min(scheduleCap,fatigueCap,conditionCap);
-}
-function scrimReadiness(db,t,booked=null){
-  if(!t)return {ok:false,reason:'팀 없음'};
-  const roster=(t.roster||[]).map(id=>db.players[id]).filter(p=>p&&!p.retired&&!medicalOut(p)&&!medicalScrimRest(db,p));
-  const avgFatigue=avg(roster.map(p=>p.fatigue||0));
-  const avgCondition=avg(roster.map(p=>p.condition??96));
-  const capacity=scrimDailyCapacity(db,t,booked),today=db.worldDate||'';
-  const log=(t.scrimLog||[]).filter(x=>x.date===today);
-  const games=log.reduce((a,x)=>a+(x.games||0),0);
-  // Two distinct booking blocks. Old saved scrims did not have a block field;
-  // retain their occupied sessions in recorded order.
-  const occupied=new Set(log.map((x,i)=>x.slot||(['afternoon','evening'][Math.min(1,i)])));
-  const availableSlots=['afternoon','evening'].filter(slot=>!occupied.has(slot));
-  if(capacity===0)return {ok:false,reason:'공식 경기 또는 회복 우선',avgFatigue,avgCondition,games,capacity,availableSlots:[]};
-  if(games>=capacity||!availableSlots.length)
-    return {ok:false,reason:'오늘 스크림 연습량 완료',avgFatigue,avgCondition,games,capacity,availableSlots:[]};
-  return {ok:true,reason:'가능',avgFatigue,avgCondition,games,capacity,remaining:capacity-games,availableSlots};
 }
 function scrimValue(db,tid,oppId){
   const t=db.teams[tid],opp=db.teams[oppId];if(!t||!opp)return .5;
@@ -9262,7 +9273,7 @@ function simulateBackgroundScrim(db,t,opp,games,rng,slot,booked=null,proposal=nu
         x.mastery*.095+champStrength(x.champ,db.patch)*4.1-
         (x.player.fatigue||0)*.13+
         (x.player.condition??96)*.035,0)/5;
-      return effective+teamSynergy(club)*.035+scrimAnalysisBonus(club)*14;
+      return effective+lineupSynergy(db,club,side.map(x=>x.player.id))*.035+scrimAnalysisBonus(club)*14;
     });
     const winner=(values[0]-values[1]+rng.normal(0,8.5))>=0?t.id:opp.id;
     wins[winner]++;
@@ -9303,7 +9314,7 @@ function aiRunScrims(db,rng){
       const first=scrimReadiness(db,t,booked);
       if(busy.has(t.id)||!first.ok||!first.availableSlots.includes(slot)||!rng.chance(.84))continue;
       const candidates=order.filter(o=>o.id!==t.id&&!busy.has(o.id)&&
-        o.region===t.region&&
+        teamPracticeVenue(db,o).region===teamPracticeVenue(db,t).region&&
         scrimReadiness(db,o,booked).availableSlots?.includes(slot)&&
         !!scrimTimeOverlap(db,t,o,db.worldDate,slot));
       if(!candidates.length)continue;
@@ -9339,6 +9350,9 @@ function aiRunScrims(db,rng){
 function recordScrimPractice(db,rec,lines){
   if(!rec||!lines)return {players:0,games:0};
   const teams=new Set([rec.a,rec.b]),seen=new Set(),games=(rec.games||[]).length;
+  if(games<1)return {players:0,games:0};
+  for(const tid of teams){const t=db.teams[tid];if(!t||games*SCRIM_PRACTICE_COST>practiceDay(db,t).remaining)throw Error('오늘 남은 연습 시간이 부족합니다')}
+  for(const tid of teams)consumeScrimPractice(db,db.teams[tid],games);
   for(const l of lines){
     const p=db.players[l.pid];if(!p||!teams.has(l.tid))continue;
     const opp=l.tid===rec.a?rec.b:rec.a,value=scrimValue(db,l.tid,opp);
@@ -9361,6 +9375,107 @@ function recordScrimPractice(db,rec,lines){
   }
   recordRoleConversionUsage(db,lines,'scrim');
   return {players:seen.size,games};
+}
+
+/* ==== FILE: practice-resources.js ==== */
+// Daily time is shared by scrims and drills. Attribute allocations subdivide
+// individual drills, rather than providing another independent time budget.
+const PRACTICE_POINTS=100,SCRIM_PRACTICE_COST=10;
+const PRACTICE_FOCUS={
+  balanced:{individual:.5,champions:.2,tactics:.15,teamwork:.15},
+  individual:{individual:.8,champions:.1,tactics:.05,teamwork:.05},
+  champions:{individual:.3,champions:.5,tactics:.1,teamwork:.1},
+  tactics:{individual:.3,champions:.15,tactics:.45,teamwork:.1},
+  teamwork:{individual:.3,champions:.1,tactics:.15,teamwork:.45}
+};
+const PRACTICE_FOCUS_KO={balanced:'균형',individual:'개인 기량',champions:'챔피언 폭',tactics:'전술 숙련',teamwork:'팀 호흡'};
+function practiceDay(db,t){
+  if(t.practiceDay?.date===db.worldDate)return t.practiceDay;
+  // Old saves already consumed their recorded scrims on the current date.
+  const scrim=Math.min(PRACTICE_POINTS,(t.scrimLog||[])
+    .filter(x=>x.date===db.worldDate).reduce((n,x)=>n+(x.games||0)*SCRIM_PRACTICE_COST,0));
+  return {date:db.worldDate,scrim,drills:0,remaining:PRACTICE_POINTS-scrim};
+}
+function consumeScrimPractice(db,t,games){
+  const day=practiceDay(db,t),cost=games*SCRIM_PRACTICE_COST;
+  if(!Number.isInteger(games)||games<1||cost>day.remaining)throw Error('오늘 남은 연습 시간이 부족합니다');
+  t.practiceDay={...day,scrim:day.scrim+cost,remaining:day.remaining-cost};
+}
+function trainingTimeMultiplier(t,year){
+  const usage=t?.practiceUsage;
+  if(!usage||usage.year!==year||!usage.days)return 1; // legacy seasonal saves
+  return clamp(.8+usage.individual/(usage.days*PRACTICE_POINTS)*.4,.8,1.12);
+}
+function runDailyPractice(db){
+  const booked=officialBookedTeams(db);
+  for(const t of activeTeams(db)){
+    const day=practiceDay(db,t);
+    if(day.completed)continue;
+    const focus=Object.hasOwn(PRACTICE_FOCUS,t.training?.focus)?t.training.focus:'balanced',
+      shares=PRACTICE_FOCUS[focus],points=booked.has(t.id)?0:day.remaining;
+    t.practiceDay={...day,drills:points,remaining:0,completed:true,focus};
+    let u=t.practiceUsage;
+    if(!u||u.year!==db.year)u=t.practiceUsage={year:db.year,days:0,individual:0,champions:0,tactics:0,teamwork:0,scrim:0};
+    if(!booked.has(t.id)){u.days++;for(const key of Object.keys(shares))u[key]+=points*shares[key];u.scrim+=day.scrim}
+    const players=t.roster.map(id=>db.players[id]).filter(p=>p&&!p.retired&&!medicalOut(p)&&
+      !['rest','rehab'].includes(medicalPlanFor(db,p)));
+    for(const p of players){
+      pState(p);
+      const light=medicalPlanFor(db,p)==='light'?.4:1;
+      p.teamAdaptation=clamp(p.teamAdaptation+points*shares.teamwork*.008*light,0,100);
+      p.tacticalAdaptation=clamp(p.tacticalAdaptation+points*shares.tactics*.01*light,0,100);
+      if(points){
+        const pool=Object.entries(p.pool||{}).sort((a,b)=>b[1].mastery-a[1].mastery).slice(0,3);
+        for(const [champ] of pool)practiceChampion(db,p,champ,'training',points*shares.champions/300*light);
+      }
+    }
+    const ids=ROLES.map(r=>starterFor(db,t,r)?.id).filter(id=>players.some(p=>p.id===id));
+    for(let i=0;i<ids.length;i++)for(let j=i+1;j<ids.length;j++){
+      const a=db.players[ids[i]],b=db.players[ids[j]],bond=playerRelationship(db,a,b),
+        target=clamp(50+((a.managerTrust??60)+(b.managerTrust??60)-120)*.15,35,65),
+        next=bond+(target-bond)*points*shares.teamwork/15000;
+      if(points&&Math.abs(target-bond)>=.1)adjustPlayerRelationship(db,a,b,
+        Math.sign(next-bond)*Math.max(.1,Math.abs(next-bond)));
+    }
+    recoverTeamCohesion(db,t,null,.008+points*shares.teamwork/10000);
+  }
+}
+
+function scrimDailyCapacity(db,t,booked=null){
+  if(!t||t.active===false)return 0;
+  // Check the complete official calendar, not merely the next *unplayed*
+  // match: an already completed televised series still books the full day.
+  if((booked||officialBookedTeams(db)).has(t.id))return 0;
+  const days=daysUntil(db,nextTeamMatch(db,t.id)?.date);
+  if(days===0)return 0; // No practice blocks on an official fixture day.
+  const roster=(t.roster||[]).map(id=>db.players[id]).filter(p=>p&&!p.retired&&!medicalOut(p)&&!medicalScrimRest(db,p));
+  if(roster.length<5)return 0;
+  const fatigue=avg(roster.map(p=>p.fatigue||0));
+  const condition=avg(roster.map(p=>p.condition??96));
+  if(fatigue>=60||condition<=67)return 0;
+  // Weekly double-header: lighter taper the night before, two blocks otherwise.
+  const scheduleCap=days===1?2:days===2?4:6;
+  const fatigueCap=fatigue>=49?2:fatigue>=38?4:6;
+  const conditionCap=condition<=77?2:condition<=85?4:6;
+  const day=practiceDay(db,t),spent=(t.scrimLog||[]).filter(x=>x.date===db.worldDate).reduce((n,x)=>n+(x.games||0),0);
+  return Math.min(scheduleCap,fatigueCap,conditionCap,spent+Math.floor(day.remaining/SCRIM_PRACTICE_COST));
+}
+function scrimReadiness(db,t,booked=null){
+  if(!t)return {ok:false,reason:'팀 없음'};
+  const roster=(t.roster||[]).map(id=>db.players[id]).filter(p=>p&&!p.retired&&!medicalOut(p)&&!medicalScrimRest(db,p));
+  const avgFatigue=avg(roster.map(p=>p.fatigue||0));
+  const avgCondition=avg(roster.map(p=>p.condition??96));
+  const capacity=scrimDailyCapacity(db,t,booked),today=db.worldDate||'';
+  const log=(t.scrimLog||[]).filter(x=>x.date===today);
+  const games=log.reduce((a,x)=>a+(x.games||0),0);
+  // Two distinct booking blocks. Old saved scrims did not have a block field;
+  // retain their occupied sessions in recorded order.
+  const occupied=new Set(log.map((x,i)=>x.slot||(['afternoon','evening'][Math.min(1,i)])));
+  const availableSlots=['afternoon','evening'].filter(slot=>!occupied.has(slot));
+  if(capacity===0)return {ok:false,reason:'공식 경기 또는 회복 우선',avgFatigue,avgCondition,games,capacity,availableSlots:[]};
+  if(games>=capacity||!availableSlots.length)
+    return {ok:false,reason:'오늘 스크림 연습량 완료',avgFatigue,avgCondition,games,capacity,availableSlots:[]};
+  return {ok:true,reason:'가능',avgFatigue,avgCondition,games,capacity,remaining:capacity-games,availableSlots};
 }
 
 /* ==== FILE: features.js ==== */
@@ -10785,7 +10900,7 @@ function viewSquad(){
   ${DB.world?.phase==='season'?`<section><h3>공식전·스크림 일정</h3><p class="hint">오늘 ${esc(DB.worldDate)} · ${officialBookedTeams(DB).has(t.id)?'공식 경기 예정/진행 · 스크림 불가':scrimReadiness(DB,t).ok?'스크림 가능 ('+scrimReadiness(DB,t).availableSlots.map(x=>x==='afternoon'?'오후':'저녁').join('·')+') · 잔여 '+scrimReadiness(DB,t).remaining+'세트':esc(scrimReadiness(DB,t).reason)} · 양팀 모두 같은 연습 시간이 비어야 하며, 7일 내 공식전 상대는 피하고 전력 격차·연패·자신감 회복 목적을 반영해 상호 수락해야 편성됩니다.</p><p class="hint">다음 공식전: ${esc(nextTeamMatch(DB,t.id)?.date||'미정')} / 최근 스크림: ${(t.scrimLog||[]).slice(-4).reverse().map(x=>esc(x.date)+' '+(x.slot==='afternoon'?'오후':x.slot==='evening'?'저녁':'연습')+' '+esc(DB.teams[x.opponent]?.short||x.opponent)+' '+x.games+'세트'+(x.purpose?' · '+esc(x.purpose):'')).join(' · ')||'없음'}</p></section>`:''}
   ${mineOrg?rosterPlanPanel(t):''}
   ${(()=>{const r=trainingRecommendation(DB,t),ko={light:'가볍게',normal:'보통',high:'강하게'};return `<p class="hint">추천: ${ko[r.intensity]} 훈련 · ${r.next?`다음 공식전 ${r.days}일 전`:'공식전 일정 없음'} · 평균 피로 ${Math.round(r.fat)} / 컨디션 ${Math.round(r.cond)}</p>`})()}
-  <section><h3>훈련 배분 <small class="hint" id="trleft">남은 포인트 ${TRAIN_POINTS-['mechanical','laning','combat','macro','mental'].reduce((x,k)=>x+(+tr[k]||0),0)} / ${TRAIN_POINTS}</small></h3>${mineOrg?`<label>훈련 강도<select id="trint"><option value="light"${tr.intensity==='light'?' selected':''}>가볍게 · 회복 우선</option><option value="normal"${!tr.intensity||tr.intensity==='normal'?' selected':''}>보통 · 균형</option><option value="high"${tr.intensity==='high'?' selected':''}>강하게 · 성장 우선</option></select></label>`:`<p class="hint">훈련 강도: ${tr.intensity==='high'?'강하게':tr.intensity==='light'?'가볍게':'보통'}</p>`}<div class="tac training-grid">
+  <section><h3>훈련 배분 <small class="hint" id="trleft">남은 포인트 ${TRAIN_POINTS-['mechanical','laning','combat','macro','mental'].reduce((x,k)=>x+(+tr[k]||0),0)} / ${TRAIN_POINTS}</small></h3>${mineOrg?`<label>훈련 강도<select id="trint"><option value="light"${tr.intensity==='light'?' selected':''}>가볍게 · 회복 우선</option><option value="normal"${!tr.intensity||tr.intensity==='normal'?' selected':''}>보통 · 균형</option><option value="high"${tr.intensity==='high'?' selected':''}>강하게 · 성장 우선</option></select></label>`:`<p class="hint">훈련 강도: ${tr.intensity==='high'?'강하게':tr.intensity==='light'?'가볍게':'보통'}</p>`}<label>연습 중점<select id="practicefocus"${mineOrg?'':' disabled'}>${Object.entries(PRACTICE_FOCUS_KO).map(([key,label])=>'<option value="'+key+'"'+((tr.focus||'balanced')===key?' selected':'')+'>'+label+'</option>').join('')}</select></label><p class="hint">하루 연습 시간 ${PRACTICE_POINTS}점 · 스크림 1세트당 ${SCRIM_PRACTICE_COST}점 · 개인 기량·챔피언·전술·팀 호흡이 남은 시간을 나눠 씁니다.</p><div class="tac training-grid">
     ${Object.keys(ATTR_GROUPS).map(g=>`<label><span>${GROUP_KO[g]}<output>${tr[g]}</output></span><input type="range" min="0" max="${TRAIN_POINTS}" value="${tr[g]}" data-tr="${g}"${mineOrg?"":" disabled"}></label>`).join('')}
   </div>${mineOrg?'<div class="controls"><button class="primary" id="sqapply">변경사항 적용</button><button class="ghost" id="sqdiscard">변경 취소</button><span class="hint">주전·역할·전술·훈련을 여러 개 조정한 뒤 한 번에 적용합니다.</span></div>':''}<p class="hint">훈련 포인트는 총 ${TRAIN_POINTS}점입니다. 한 영역에 몰면 그 영역은 크게 오르지만 나머지는 덜 오르거나 떨어지고, 배분하지 않은 포인트는 버려집니다. 한 시즌에 영역별로 오를 수 있는 폭과, 잠재력보다 한참 높게 오르는 것에도 한계가 있습니다.</p>
   <div class="fin">${(()=>{const f=ensureFacilities(t),names={training:'훈련',analysis:'분석',recovery:'회복',youth:'유소년'};return Object.keys(names).map(k=>`<div><span>${names[k]} 시설</span><b>${f[k]} / 5</b><small>구단 자동 관리 </small></div>`).join('')})()}</div><p class="hint">훈련·유소년 시설은 성장, 분석 시설은 상대/메타 분석, 회복 시설은 피로 회복에 직접 적용됩니다. 연 유지비 ${money(facilityUpkeep(DB,t))}</p></section>
@@ -10795,6 +10910,7 @@ function viewSquad(){
   <div id="pdetail">${OPEN_P&&DB.players[OPEN_P]&&DB.players[OPEN_P].team===SQUAD?playerDetail(DB.players[OPEN_P]):''}</div>${mineOrg?scoutingSearchBlock():''}`;
 }
 function bindSquad(){
+  const focus=$('#practicefocus');if(focus)focus.onchange=e=>{const d=squadEditState(DB.teams[SQUAD_EDIT.teamId]);d.training.focus=e.target.value;d.dirty=true};
   const ti=$('#trint');if(ti)ti.onchange=e=>{const d=squadEditState(DB.teams[SQUAD_EDIT.teamId]);d.training.intensity=e.target.value;d.dirty=true};
   $('#sq').onchange=e=>{const next=DB.teams[e.target.value],same=SQUAD_EDIT&&parentTeamOf(DB,next)?.id===SQUAD_EDIT.parentId;if(!same)SQUAD_EDIT=null;SQUAD=e.target.value;OPEN_P=null;nav()};
   document.querySelectorAll('[data-medical-plan]').forEach(el=>el.onchange=e=>{
