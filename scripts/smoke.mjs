@@ -90,7 +90,14 @@ source += `\n(()=>{
   const metaProbe=buildWorld(),mc=Object.values(metaProbe.patch.champions)[0];mc.proEligibleDate='2027-02-01';metaProbe.worldDate='2027-01-20';if(championProEligible(metaProbe,mc))throw new Error('Global pro ban failed before eligibility date');metaProbe.worldDate='2027-02-01';if(!championProEligible(metaProbe,mc))throw new Error('Champion did not unlock on pro eligibility date');const lockProbe=buildWorld(),lc=Object.values(lockProbe.patch.champions)[0];lc.proEligibleDate='2027-02-01';lockProbe.worldDate='2027-01-20';const lockTeams=activeTeams(lockProbe).slice(0,2).map(t=>t.id),lockComp={id:'LOCK',teams:lockTeams,stages:[{id:'rr',name:'RR',type:'round_robin',legs:1,bo:1}]};lockProbe.competitions={LOCK:lockComp};newSeason(lockProbe,'LOCK',2027,'lock','2027-01-20');if(lockComp.championPool.includes(lc.id))throw new Error('Tournament pool included globally banned champion');lockProbe.worldDate='2027-02-05';if(!championProEligible(lockProbe,lc)||lockComp.championPool.includes(lc.id))throw new Error('Tournament pool did not remain locked after global unlock');lockProbe.worldDate='2027-01-20';if(!championAvailableForContext(lockProbe,lc,{practice:true})||championAvailableForContext(lockProbe,lc,{championPool:lockComp.championPool}))throw new Error('Practice/global-ban champion availability rules failed');
   const mA=activeTeams(metaProbe)[0],mB=activeTeams(metaProbe).find(t=>t.region!==mA.region);if(mA&&mB){const fake={winner:0,sides:[{team:mA,ps:[{champ:mc}]},{team:mB,ps:[{champ:mc}]}],draft:{bans:[[mc.id],[]]}};recordMeta(metaProbe,fake);if(!metaProbe.regionMetaStats[mA.region]?.[mc.id]||!metaProbe.regionMetaStats[mB.region]?.[mc.id])throw new Error('Regional meta tracking failed');if(metaTable(metaProbe,mA.region)[0].sample<1)throw new Error('Regional meta sample missing');const before=metaTable(metaProbe,mA.region).find(x=>x.c.id===mc.id);if(!before||before.p<1||before.b<1)throw new Error('Regional meta detail counts missing')}
   const patchDates=['2027-01-01','2027-01-15','2027-01-29'];const pDb=buildWorld();const prng=new RNG('patch-realism','p');seasonPatch(pDb,patchDates[0],prng);const p0=pDb.patches.list.length;patchTick(pDb,patchDates[1],prng);patchTick(pDb,patchDates[2],prng);if(pDb.patches.list.length<p0+1)throw new Error('Biweekly patch cadence failed');
-  __smokeMark('bootstrap-policy-rookie');\n  if(__SMOKE_MODE!=='core'){
+  __smokeMark('bootstrap-policy-rookie');\n  const __patchDbBefore=__SMOKE_COMPARE_STATE?{
+    hash:hashStr(packDB(db)),
+    players:Object.keys(db.players).length,
+    teams:Object.keys(db.teams).length,
+    metaGames:db.metaGames||0,
+    metaHistory:(db.metaHistory||[]).length
+  }:null;
+  if(__SMOKE_MODE!=='core'){
   // Patch engine: complete 26.19 item/rune source coverage and real build/rune-tree consumption.
   const sourceItems=Object.keys(SYSTEM_SOURCE_SNAPSHOT.items||{}),sourceRunes=Object.keys(SYSTEM_SOURCE_SNAPSHOT.runes||{}),sourceStyles=SYSTEM_SOURCE_SNAPSHOT.runeStyles||[];
   if(SYSTEM_SOURCE_SNAPSHOT.version!=='16.19.1'||sourceItems.length!==254||sourceRunes.length!==62||sourceStyles.length!==5)throw new Error('Pinned 26.19 item/rune source coverage drift: '+sourceItems.length+'/'+sourceRunes.length+'/'+sourceStyles.length);
@@ -177,7 +184,17 @@ source += `\n(()=>{
   const cacheItem=(sysProfile0.roles[cacheChamp.roles[0]]?.items||[])[0];if(cacheItem){const d=cacheDb.patch.itemDefs[cacheItem],old=d.cost;applyNote(cacheDb.patch,{type:'item',id:cacheItem,field:'cost',old,new:old+100,dir:-1});const sysProfile2=championSystemMetaProfile(cacheDb.patch,cacheChamp);if(sysProfile2===sysProfile1)throw new Error('System-meta cache did not invalidate after item patch')}
   const strength0=champStrength(cacheChamp,cacheDb.patch),oldHp=cacheChamp.base.hp;applyNote(cacheDb.patch,{type:'base',c:cacheChamp.id,key:'hp',old:oldHp,new:oldHp+25,dir:1});const strength1=champStrength(cacheChamp,cacheDb.patch);if(!(strength1>strength0))throw new Error('Champion strength cache did not invalidate after champion patch');
   }
-  __smokeMark('patch-system-cache');\n  if(__SMOKE_MODE==='patch-system'){
+  __smokeMark('patch-system-cache');\n  if(__SMOKE_COMPARE_STATE&&__SMOKE_MODE==='full')console.log('SMOKE_PATCH_STATE '+JSON.stringify({
+    before:__patchDbBefore,
+    after:{
+      hash:hashStr(packDB(db)),
+      players:Object.keys(db.players).length,
+      teams:Object.keys(db.teams).length,
+      metaGames:db.metaGames||0,
+      metaHistory:(db.metaHistory||[]).length
+    }
+  }));
+  if(__SMOKE_MODE==='patch-system'){
     __smokeReport();
     console.log('SMOKE_SHARD_OK '+JSON.stringify({mode:__SMOKE_MODE}));
     return;
