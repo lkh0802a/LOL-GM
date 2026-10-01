@@ -44,6 +44,41 @@ await runEngineFixture(String.raw`(()=>{
   const eventId='COHESION_TEST';db.competitions[eventId]={id:eventId,international:true,teams:[t.id,other.id],venueRegion:'KR',timeZone:'Asia/Seoul'};
   db.world.seasons[eventId]={id:eventId,comp:eventId,days:[{date:addDays(db.worldDate,4),matches:[]},{date:addDays(db.worldDate,10),matches:[]}]};
   check(scrimPartnerAssessment(db,t,other).allowed&&scrimTimeOverlap(db,t,other,db.worldDate,'afternoon'),'international visit did not open local scrims');
+  const clubs=activeTeams(db),schedule=scrimScheduleContext(db,clubs);
+  for(const club of clubs){
+    check(JSON.stringify(schedule.venues[club.id])===JSON.stringify(teamPracticeVenue(db,club)),'batched venue differs from direct venue');
+    for(const slot of ['afternoon','evening'])check(JSON.stringify(scrimTimeOverlap(db,t,club,db.worldDate,slot,schedule))===JSON.stringify(scrimTimeOverlap(db,t,club,db.worldDate,slot)),'cached slot changes real time overlap');
+  }
+  const clock=venueToUtc;let clockCalls=0;
+  venueToUtc=(...args)=>{clockCalls++;return clock(...args)};
+  const cached=scrimScheduleContext(db,clubs),cachedCalls=clockCalls;
+  for(const club of clubs)for(const slot of ['afternoon','evening'])scrimTimeOverlap(db,t,club,db.worldDate,slot,cached);
+  check(clockCalls===cachedCalls,'batch repeated clock conversions for each candidate');
+  clockCalls=0;for(const club of clubs)for(const slot of ['afternoon','evening'])scrimTimeOverlap(db,t,club,db.worldDate,slot);
+  check(cachedCalls*5<clockCalls,'clock conversion work was not meaningfully reduced');venueToUtc=clock;
   db.worldDate=addDays(db.worldDate,12);check(!scrimPartnerAssessment(db,t,other).allowed,'foreign practice visit never ended');
+  check(!scrimPartnerAssessment(db,t,other,null,null,null,schedule).allowed,'expired batch context ignored a venue change');
+  const fresh=unpackDB(packDB(base)),light=unpackDB(packDB(base));
+  for(const world of [fresh,light]){
+    world.manager.teamId=t.id;delete world.teams[t.id].practiceDay;
+    world.teams[t.id].scrimLog=[];world.teams[t.id].training.focus='balanced';
+    world.players[p.id].medicalPlan='normal';
+    world.players[p.id].roleConversion={fromRole:p.role,targetRole:ROLES.find(r=>r!==p.role),progress:0,trainingDays:0};
+  }
+  consumeScrimPractice(light,light.teams[t.id],6);
+  runDailyPractice(fresh);runDailyPractice(light);
+  const fp=fresh.players[p.id],lp=light.players[p.id];
+  check(fp.practiceDay.individual+fp.practiceDay.conversion===50&&fp.practiceDay.conversion===12.5,'conversion received unbudgeted time');
+  check(lp.practiceDay.conversion===5&&lp.roleConversion.progress<fp.roleConversion.progress*.41,'heavy scrims did not reduce conversion work');
+  check(trainingTimeMultiplier(fresh.teams[t.id],fresh.year,fp)<trainingTimeMultiplier(fresh.teams[t.id],fresh.year),'conversion did not displace personal growth');
+  check(roleConversionGrowthMultiplier(fp)===1,'daily conversion time charged twice');
+  const convertSave=unpackDB(packDB(fresh)),progress=convertSave.players[p.id].roleConversion.progress;
+  runDailyPractice(convertSave);check(convertSave.players[p.id].roleConversion.progress===progress,'reload repeated conversion practice');
+  fresh.worldDate=addDays(fresh.worldDate,1);fp.medicalPlan='rest';const days=fp.roleConversion.trainingDays;
+  runDailyPractice(fresh);check(fp.roleConversion.trainingDays===days,'resting player trained conversion');
+  fresh.worldDate=addDays(fresh.worldDate,1);fp.medicalPlan='normal';
+  Object.values(fresh.world.seasons)[0].days.push({date:fresh.worldDate,matches:[{a:t.id,b:opponent.id,bo:1}]});
+  Object.values(fresh.world.seasons)[0].days.sort((a,b)=>a.date.localeCompare(b.date));
+  runDailyPractice(fresh);check(fp.roleConversion.trainingDays===days&&fp.practiceDay.conversion===0,'official day minted conversion time');
   console.log('COHESION_PRACTICE_ACCEPTANCE: PASS (bounded conflict/recovery, renewal, observed AI response, shared time, focus tradeoff, reload, tournament travel)');
 })();`);

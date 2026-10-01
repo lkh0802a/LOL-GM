@@ -103,10 +103,11 @@ function scrimPartnerInterest(db,t,other,intent=null,strength=null,otherStrength
   return {approval,desire,reason,goal:intent.goal,
     confidence:intent.confidence,relativeStrength:gap};
 }
-function scrimPartnerAssessment(db,t,other,intents=null,strengths=null,rivals=null){
+function scrimPartnerAssessment(db,t,other,intents=null,strengths=null,rivals=null,schedule=null){
   if(!t||!other||t.id===other.id||t.active===false||other.active===false)
     return {allowed:false,reason:'참가 불가 팀'};
-  const firstVenue=teamPracticeVenue(db,t),secondVenue=teamPracticeVenue(db,other);
+  const current=schedule?.date===db.worldDate?schedule:null,
+    firstVenue=current?.venues[t.id]||teamPracticeVenue(db,t),secondVenue=current?.venues[other.id]||teamPracticeVenue(db,other);
   if(firstVenue.region!==secondVenue.region)
     return {allowed:false,reason:'현지 훈련권역이 다릅니다'};
   const key=[t.id,other.id].sort().join('|'),rivalDays=rivals?

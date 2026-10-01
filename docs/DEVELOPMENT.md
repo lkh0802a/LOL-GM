@@ -1261,3 +1261,40 @@ an after-restore checkpoint in 2061 exist. No stderr error identifies the cause.
 Preserve original files and daily-staff-main-1.observation.json. This is an
 interrupted, incomplete run, not a proven OOM or a passing 100 seasons. Do not
 restart the same engine automatically or use it for this newer batch.
+
+
+### D09 conversion time and scrim scheduling batch (2026-10-02)
+
+Base main79aaa5f, after #113's verified engine and standalone publication.
+Role conversion now uses 25% of each converting player's individual drill
+allocation, rather than an independent pre-scrim daily tick. A normal balanced
+100-point day supplies 12.5 conversion points; six scrims leave 5. Progress
+scales with available time, while training-day counters count actual attended
+days. Rest/rehab and official days do not grant conversion drills. Player-level
+remaining individual time is accumulated and used by seasonal growth; the old
+flat conversion growth penalty is retained only for legacy accounting, avoiding
+a second charge for recorded daily conversion work. Save/reload preserves time
+and progress. Remove the unused advanceRoleConversionsDay bypass.
+
+The daily AI scrim batch precomputes tournament venues once and shares two
+clock ranges per time zone among candidates. It does not persist a stale cache
+in the save. Direct partner assessment and booking still use canonical venue
+and time checks; a context from another date falls back to fresh calculation.
+Tests compare all clubs and both blocks against uncached venue/time results,
+including international visits, and count clock conversions: cached comparisons
+add no clock conversions, with over fivefold fewer conversions in the fixture.
+This is a reduction in repeated work, not Android battery/performance proof.
+
+Files: practice-resources, role-conversion, development, calendar, scrim,
+scrim-partner, timezone-calendar and existing cohesion/practice/partner tests.
+Local tests cover time conservation, heavy-scrim opportunity cost, player-level
+growth factor, no double penalty, rest/official exclusion and reload idempotence.
+Shared 33 acceptances/29 contexts, calendar/scouting7, regression and static
+95 modules/build pass. A missing legacy practiceUsage field found by the
+training acceptance was fixed before posting final CI. Final required CI is
+still the merge gate; do not mark whole D09/D or actual long-career/mobile
+validation complete.
+
+Next connected work: manual partner request/consent/scheduling workflow,
+relationship-aware recruitment/selection scenarios and supervised long-QA exit
+records. No 100-season run was duplicated or restarted during this batch.

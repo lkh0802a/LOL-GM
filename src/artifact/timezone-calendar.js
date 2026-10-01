@@ -75,7 +75,30 @@ function teamPracticeVenue(db,team,date=db.worldDate){
     return {region:venue.region,timeZone:venue.timeZone,competition:season.comp};}
   return {region:team.region,timeZone:team.practiceTimeZone||venueZone(db,team.region),competition:null};
 }
-function scrimUtcRange(db,team,date,slot){
+function scrimScheduleContext(db,teams,date=db.worldDate){
+  const venues=Object.fromEntries(teams.map(t=>[t.id,{region:t.region,
+    timeZone:t.practiceTimeZone||venueZone(db,t.region),competition:null}]));
+  for(const s of Object.values(db.world?.seasons||{}).sort((a,b)=>String(a.id).localeCompare(String(b.id)))){
+    const comp=db.competitions[s.comp];if(!comp?.international)continue;
+    const dates=(s.days||[]).map(d=>d.date).sort();
+    if(!dates.length||date<addDays(dates[0],-5)||date>addDays(dates.at(-1),1))continue;
+    const venue=competitionVenue(db,comp);
+    for(const id of comp.teams||[])if(venues[id]&&!venues[id].competition)
+      venues[id]={region:venue.region,timeZone:venue.timeZone,competition:s.comp};
+  }
+  const ranges={},zoneRanges=new Map();
+  for(const t of teams){ranges[t.id]={};for(const slot of ['afternoon','evening']){
+    const zone=venues[t.id].timeZone,key=zone+'|'+slot;
+    if(!zoneRanges.has(key)){
+      const startsAt=venueToUtc(date,slot==='afternoon'?'14:00':'19:00',zone);
+      zoneRanges.set(key,{startsAt,endsAt:new Date(Date.parse(startsAt)+3*3600000).toISOString(),timeZone:zone});
+    }
+    ranges[t.id][slot]=zoneRanges.get(key);
+  }}
+  return {date,venues,ranges};
+}
+function scrimUtcRange(db,team,date,slot,schedule=null){
+  if(schedule?.date===date&&schedule.ranges[team.id]?.[slot])return schedule.ranges[team.id][slot];
   const zone=teamPracticeVenue(db,team,date).timeZone,
     localTime=slot==='afternoon'?'14:00':slot==='evening'?'19:00':null;
   if(!localTime)return null;
@@ -83,9 +106,9 @@ function scrimUtcRange(db,team,date,slot){
     endsAt=new Date(Date.parse(startsAt)+3*3600000).toISOString();
   return {startsAt,endsAt,timeZone:zone};
 }
-function scrimTimeOverlap(db,first,second,date,slot){
-  const a=scrimUtcRange(db,first,date,slot),
-    b=scrimUtcRange(db,second,date,slot);
+function scrimTimeOverlap(db,first,second,date,slot,schedule=null){
+  const a=scrimUtcRange(db,first,date,slot,schedule),
+    b=scrimUtcRange(db,second,date,slot,schedule);
   if(!a||!b)return null;
   const start=Math.max(Date.parse(a.startsAt),Date.parse(b.startsAt)),
     end=Math.min(Date.parse(a.endsAt),Date.parse(b.endsAt));

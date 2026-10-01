@@ -157,7 +157,7 @@ const assert=(condition,msg)=>{if(!condition)throw new Error('Scrim UI: '+msg)};
 assert(owner.includes('scrimOfficialRivalWindow')&&
   owner.includes('scrimClubIntent')&&owner.includes('scrimPartnerAssessment')&&
   owner.includes('losingStreak'),'market must assess rivals, results and confidence');
-assert(practice.includes('scrimPartnerAssessment(db,t,opp)')&&
+assert(practice.includes('scrimPartnerAssessment(db,t,opp,')&&
   practice.includes("purpose:rec.goals?.[tid]")&&
   practice.includes('chosen.offer.acceptance'),
   'both direct booking and AI negotiation must use the acceptance engine');

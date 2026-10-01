@@ -73,3 +73,5 @@
 D07 최신 연결 구현과 D11 23시즌 AI 정원 오류의 근거·수정·검증 한계는 DEVELOPMENT.md의 D07 기록을 따른다. 기존 7번 행의 즉시 고용/정확 등급 차이는 이 구현으로 보완되며, 장기 증거가 확보되기 전 전체 D 완료로 해석하지 않는다.
 
 D08/D09 connected batch: bounded current-lineup cohesion, conflict satisfaction/renewal, observed AI practice focus, a shared scrim/drill day budget and bounded international-host access are implemented. See DEVELOPMENT.md for tests, remaining player-specific conversion/manual-request scenarios and D11 interrupted 34-season evidence. Full D remains open.
+
+D09 follow-up connects individual conversion time to the shared drill allocation and personal growth accounting, excludes medical rest/official days, and precomputes daily venues/time ranges with uncached parity tests. Manual partner workflows and long/mobile evidence remain open; see DEVELOPMENT.md.

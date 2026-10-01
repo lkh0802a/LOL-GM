@@ -29,13 +29,13 @@ function backgroundScrimChampion(db,p,role,rng){
 // inputs to resolve each private set. It does not forge official match rows,
 // meta sample counts, or public statistics. Interactive scrims (D09) can still
 // use simulateSeries to generate full draft/match replays.
-function simulateBackgroundScrim(db,t,opp,games,rng,slot,booked=null,proposal=null){
+function simulateBackgroundScrim(db,t,opp,games,rng,slot,booked=null,proposal=null,schedule=null){
   // Negotiated partner selection must also clear the competitive secrecy
   // embargo. Booking checks remain independent of AI acceptance probability.
-  const assessment=scrimPartnerAssessment(db,t,opp);
+  const assessment=scrimPartnerAssessment(db,t,opp,null,null,null,schedule);
   if(!assessment.allowed)return null;
   const first=scrimReadiness(db,t,booked),second=scrimReadiness(db,opp,booked),
-    sharedTime=scrimTimeOverlap(db,t,opp,db.worldDate,slot);
+    sharedTime=scrimTimeOverlap(db,t,opp,db.worldDate,slot,schedule);
   if(!sharedTime||games>scrimOverlapGames(sharedTime)||!first.ok||!second.ok||!first.availableSlots.includes(slot)||
     !second.availableSlots.includes(slot)||games>first.remaining||games>second.remaining)return null;
   const participants=[t,opp],lines=[],results=[],wins={[t.id]:0,[opp.id]:0};
@@ -85,6 +85,7 @@ function aiRunScrims(db,rng){
   const booked=officialBookedTeams(db),rivals=scrimRivalCalendar(db);
   const eligible=activeTeams(db,null,1).filter(t=>trainingRecommendation(db,t).scrim&&
     scrimReadiness(db,t,booked).ok);
+  const schedule=scrimScheduleContext(db,eligible);
   const intents=Object.fromEntries(eligible.map(t=>[t.id,scrimClubIntent(db,t)])),
     strengths=Object.fromEntries(eligible.map(t=>[t.id,teamStrength(db,t.id)]));
   let blocks=0,sets=0;
@@ -97,12 +98,12 @@ function aiRunScrims(db,rng){
       const first=scrimReadiness(db,t,booked);
       if(busy.has(t.id)||!first.ok||!first.availableSlots.includes(slot)||!rng.chance(.84))continue;
       const candidates=order.filter(o=>o.id!==t.id&&!busy.has(o.id)&&
-        teamPracticeVenue(db,o).region===teamPracticeVenue(db,t).region&&
+        schedule.venues[o.id].region===schedule.venues[t.id].region&&
         scrimReadiness(db,o,booked).availableSlots?.includes(slot)&&
-        !!scrimTimeOverlap(db,t,o,db.worldDate,slot));
+        !!scrimTimeOverlap(db,t,o,db.worldDate,slot,schedule));
       if(!candidates.length)continue;
       const ranked=candidates.map(o=>({team:o,
-        offer:scrimPartnerAssessment(db,t,o,intents,strengths,rivals)}))
+        offer:scrimPartnerAssessment(db,t,o,intents,strengths,rivals,schedule)}))
         .filter(x=>x.offer.allowed).map(x=>({...x,
           weight:x.offer.weight*Math.max(.2,scrimValue(db,t.id,x.team.id))}));
       let attempts=0;
@@ -117,10 +118,10 @@ function aiRunScrims(db,rng){
         const opponent=chosen.team;
         const second=scrimReadiness(db,opponent,booked),
           games=Math.min(3,first.remaining,second.remaining,
-            scrimOverlapGames(scrimTimeOverlap(db,t,opponent,db.worldDate,slot)));
+            scrimOverlapGames(scrimTimeOverlap(db,t,opponent,db.worldDate,slot,schedule)));
         if(games<1||!rng.chance(chosen.offer.acceptance))continue;
         const rec=simulateBackgroundScrim(db,t,opponent,games,rng,
-          slot,booked,chosen.offer);
+          slot,booked,chosen.offer,schedule);
         if(!rec)continue;
         busy.add(t.id);busy.add(opponent.id);
         blocks++;sets+=rec.games.length;
