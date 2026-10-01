@@ -6,12 +6,22 @@ import vm from 'node:vm';
 const root = resolve(import.meta.dirname, '..');
 const artifact = resolve(root, 'src', 'artifact');
 const modules = ENGINE_MODULES;
+const smokeMode=process.env.SMOKE_MODE||'full';
+if(!['full','core','patch-system'].includes(smokeMode))
+  throw new Error('SMOKE_MODE must be full, core, or patch-system');
+const smokeCompareState=process.env.SMOKE_COMPARE_STATE==='1';
 
 let source = '';
 for (const file of modules) source += `${await readFile(resolve(artifact, file), 'utf8')}\n`;
 source += `\n(()=>{
+  const __SMOKE_MODE=${JSON.stringify(smokeMode)},__SMOKE_COMPARE_STATE=${JSON.stringify(smokeCompareState)};
   const __smokeStarted=performance.now(),__smokeTimings=[];let __smokeMarkAt=__smokeStarted;
   const __smokeMark=name=>{const now=performance.now();__smokeTimings.push({name,ms:Math.round((now-__smokeMarkAt)*10)/10});__smokeMarkAt=now};
+  const __smokeReport=()=>console.log('SMOKE_PHASE_TIMINGS '+JSON.stringify({
+    mode:__SMOKE_MODE,
+    totalMs:Math.round(__smokeTimings.reduce((n,x)=>n+x.ms,0)*10)/10,
+    phases:__smokeTimings
+  }));
   const db=buildWorld();
   if(Object.values(CHAMPION_SOURCE_SNAPSHOT.champions).length!==173||Object.values(CHAMPION_SOURCE_SNAPSHOT.champions).some(c=>!c.nameKo)||Object.values(CHAMPION_SOURCE_SNAPSHOT.champions).filter(c=>c.passive?.nameKo&&c.spells?.length===4).length!==173||db.patch.championSource.matched<170||db.patch.championSource.matched!==db.patch.championSource.total)throw new Error('Authoritative champion baseline coverage incomplete: '+JSON.stringify(db.patch.championSource));
   if(!db||db.version!==15) throw new Error('Unexpected save schema');
@@ -80,7 +90,8 @@ source += `\n(()=>{
   const metaProbe=buildWorld(),mc=Object.values(metaProbe.patch.champions)[0];mc.proEligibleDate='2027-02-01';metaProbe.worldDate='2027-01-20';if(championProEligible(metaProbe,mc))throw new Error('Global pro ban failed before eligibility date');metaProbe.worldDate='2027-02-01';if(!championProEligible(metaProbe,mc))throw new Error('Champion did not unlock on pro eligibility date');const lockProbe=buildWorld(),lc=Object.values(lockProbe.patch.champions)[0];lc.proEligibleDate='2027-02-01';lockProbe.worldDate='2027-01-20';const lockTeams=activeTeams(lockProbe).slice(0,2).map(t=>t.id),lockComp={id:'LOCK',teams:lockTeams,stages:[{id:'rr',name:'RR',type:'round_robin',legs:1,bo:1}]};lockProbe.competitions={LOCK:lockComp};newSeason(lockProbe,'LOCK',2027,'lock','2027-01-20');if(lockComp.championPool.includes(lc.id))throw new Error('Tournament pool included globally banned champion');lockProbe.worldDate='2027-02-05';if(!championProEligible(lockProbe,lc)||lockComp.championPool.includes(lc.id))throw new Error('Tournament pool did not remain locked after global unlock');lockProbe.worldDate='2027-01-20';if(!championAvailableForContext(lockProbe,lc,{practice:true})||championAvailableForContext(lockProbe,lc,{championPool:lockComp.championPool}))throw new Error('Practice/global-ban champion availability rules failed');
   const mA=activeTeams(metaProbe)[0],mB=activeTeams(metaProbe).find(t=>t.region!==mA.region);if(mA&&mB){const fake={winner:0,sides:[{team:mA,ps:[{champ:mc}]},{team:mB,ps:[{champ:mc}]}],draft:{bans:[[mc.id],[]]}};recordMeta(metaProbe,fake);if(!metaProbe.regionMetaStats[mA.region]?.[mc.id]||!metaProbe.regionMetaStats[mB.region]?.[mc.id])throw new Error('Regional meta tracking failed');if(metaTable(metaProbe,mA.region)[0].sample<1)throw new Error('Regional meta sample missing');const before=metaTable(metaProbe,mA.region).find(x=>x.c.id===mc.id);if(!before||before.p<1||before.b<1)throw new Error('Regional meta detail counts missing')}
   const patchDates=['2027-01-01','2027-01-15','2027-01-29'];const pDb=buildWorld();const prng=new RNG('patch-realism','p');seasonPatch(pDb,patchDates[0],prng);const p0=pDb.patches.list.length;patchTick(pDb,patchDates[1],prng);patchTick(pDb,patchDates[2],prng);if(pDb.patches.list.length<p0+1)throw new Error('Biweekly patch cadence failed');
-  __smokeMark('bootstrap-policy-rookie');\n  // Patch engine: complete 26.19 item/rune source coverage and real build/rune-tree consumption.
+  __smokeMark('bootstrap-policy-rookie');\n  if(__SMOKE_MODE!=='core'){
+  // Patch engine: complete 26.19 item/rune source coverage and real build/rune-tree consumption.
   const sourceItems=Object.keys(SYSTEM_SOURCE_SNAPSHOT.items||{}),sourceRunes=Object.keys(SYSTEM_SOURCE_SNAPSHOT.runes||{}),sourceStyles=SYSTEM_SOURCE_SNAPSHOT.runeStyles||[];
   if(SYSTEM_SOURCE_SNAPSHOT.version!=='16.19.1'||sourceItems.length!==254||sourceRunes.length!==62||sourceStyles.length!==5)throw new Error('Pinned 26.19 item/rune source coverage drift: '+sourceItems.length+'/'+sourceRunes.length+'/'+sourceStyles.length);
   if(db.patch.systemSource?.itemCount!==254||db.patch.systemSource?.runeCount!==62||db.patch.systemSource?.runeStyleCount!==5)throw new Error('Runtime system source coverage mismatch');
@@ -165,7 +176,13 @@ source += `\n(()=>{
   const snapCtx={used:['A'],byTeam:{T1:{won:['W'],lost:[]},T2:{won:[],lost:['L']}},fearless:true,mods:{T1:.01,T2:-.02},practice:false,championPool:['A','B']},snapCopy=seriesDraftSnapshot(snapCtx);snapCopy.used.push('B');snapCopy.byTeam.T1.won.push('X');snapCopy.mods.T1=.5;if(snapCtx.used.length!==1||snapCtx.byTeam.T1.won.length!==1||snapCtx.mods.T1!==.01)throw new Error('Series draft snapshot shares mutable context state');
   const cacheItem=(sysProfile0.roles[cacheChamp.roles[0]]?.items||[])[0];if(cacheItem){const d=cacheDb.patch.itemDefs[cacheItem],old=d.cost;applyNote(cacheDb.patch,{type:'item',id:cacheItem,field:'cost',old,new:old+100,dir:-1});const sysProfile2=championSystemMetaProfile(cacheDb.patch,cacheChamp);if(sysProfile2===sysProfile1)throw new Error('System-meta cache did not invalidate after item patch')}
   const strength0=champStrength(cacheChamp,cacheDb.patch),oldHp=cacheChamp.base.hp;applyNote(cacheDb.patch,{type:'base',c:cacheChamp.id,key:'hp',old:oldHp,new:oldHp+25,dir:1});const strength1=champStrength(cacheChamp,cacheDb.patch);if(!(strength1>strength0))throw new Error('Champion strength cache did not invalidate after champion patch');
-  __smokeMark('patch-system-cache');\n  if(players.some(p=>!p.nationality||!p.development||p.reputation===undefined||!Array.isArray(p.careerEvents)||Object.prototype.hasOwnProperty.call(p,'secondaryRoles')||Object.prototype.hasOwnProperty.call(p,'roleFamiliarity'))) throw new Error('Player identity/position schema failed');
+  }
+  __smokeMark('patch-system-cache');\n  if(__SMOKE_MODE==='patch-system'){
+    __smokeReport();
+    console.log('SMOKE_SHARD_OK '+JSON.stringify({mode:__SMOKE_MODE}));
+    return;
+  }
+  if(players.some(p=>!p.nationality||!p.development||p.reputation===undefined||!Array.isArray(p.careerEvents)||Object.prototype.hasOwnProperty.call(p,'secondaryRoles')||Object.prototype.hasOwnProperty.call(p,'roleFamiliarity'))) throw new Error('Player identity/position schema failed');
   const sample=players[0];pState(sample);
   for(const key of ['form','condition','fatigue','morale','sharpness','teamAdaptation','tacticalAdaptation']) if(sample[key]===undefined) throw new Error('Player state missing: '+key);
   if(playerMod(sample)<-.111||playerMod(sample)>.091) throw new Error('Player state modifier escaped bounded range');
@@ -608,9 +625,14 @@ source += `\n(()=>{
   if(Object.values(marketDb.players).some(p=>p.entryPath==='emergency'))throw new Error('Emergency-generated player exists after market');
 
   __smokeMark('series-offseason-market');
-  console.log('SMOKE_PHASE_TIMINGS '+JSON.stringify({
-    totalMs:Math.round((performance.now()-__smokeStarted)*10)/10,
-    phases:__smokeTimings
+  __smokeReport();
+  if(__SMOKE_COMPARE_STATE)console.log('SMOKE_STATE_FINGERPRINT '+JSON.stringify({
+    mode:__SMOKE_MODE,
+    hash:hashStr(packDB(db)),
+    year:db.year,
+    worldDate:db.worldDate,
+    players:Object.keys(db.players).length,
+    teams:Object.keys(db.teams).length
   }));
   console.log('World smoke test: OK — blank rosters, global FA, roster rules, engine-owned regional policy, workforce-backed rookie intake/scouting reports, no emergency roster generation, offseason market closure, player identity/role ratings/state/value/development/champion learning/full match metrics/fixed depth charts/roster roles/satisfaction, season bootstrap and Bo1 simulation');
 })()`;
