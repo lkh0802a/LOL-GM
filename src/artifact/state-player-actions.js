@@ -198,8 +198,7 @@ function applyPlayerSignAction(db,c){
   if(offseasonFaSeason)db.year=beforeYear;
   if(c.kind==='medical_replacement'){
     contract.medicalReplacement={...c.replacement};
-    t.finance.cash=medicalWageRound(t.finance.cash-c.replacement.paid);
-    recordFinancePrepaid(t,'medicalReplacementWage',c.replacement.paid);
+    payMedicalReplacementWage(t,c.replacement.paid);
     recordPlayerEvent(p,'medical_emergency_fa',db.year,{date:db.worldDate,
       for:c.replacement.forPid,to:t.id,salary:contract.salary,
       guaranteedThrough:c.replacement.guaranteedThrough,
