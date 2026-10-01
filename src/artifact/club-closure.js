@@ -60,12 +60,16 @@ function validateClubClosure(db,a){
       playerIds.push(pid);
     }
   }
+  const affectedLoans=loanIndex(db).players.map(id=>db.players[id])
+    .filter(p=>teamIds.includes(p.loan.ownerId)||teamIds.includes(p.loan.borrowerId));
+  for(const p of affectedLoans)if(!playerIds.includes(p.id))playerIds.push(p.id);
   const w=db.world,negotiationIds=Object.entries(w?.negotiations||{})
     .filter(([,n])=>n.status==='open'&&(teamIds.includes(n.teamId)||playerIds.includes(n.pid)))
     .map(([id])=>id),agreementIds=Object.keys(w?.contractAgreements||{})
     .filter(pid=>w.contractAgreements[pid].status==='agreed'&&
       teamIds.includes(w.contractAgreements[pid].teamId));
-  const financeTeams=clubClosureFinanceTeams(db,teams);
+  const financeTeams=Array.from(new Set([...clubClosureFinanceTeams(db,teams).map(t=>t.id),
+    ...affectedLoans.flatMap(p=>[p.loan.ownerId,p.loan.borrowerId])])).map(id=>db.teams[id]);
   if(financeTeams.some(team=>!playerActionFinance(team)))
     return worldActionError('invalid_finance','모구단 지원 재정 정보가 유효하지 않습니다');
   try{clubClosureFundingPlan(db,{teamIds})}
@@ -74,7 +78,8 @@ function validateClubClosure(db,a){
     playerIds,negotiationIds,agreementIds};
 }
 function clubClosureAllocation(db,t){
-  const pending=financeReleaseObligations(t),newItems=t.roster.map(pid=>
+  const ownedIds=[...t.roster.filter(pid=>!db.players[pid]?.loan),...loanOutgoingPlayers(db,t).map(p=>p.id)],
+    pending=financeReleaseObligations(t),newItems=ownedIds.map(pid=>
     contractReleaseSettlement(db,db.players[pid],'club_closure')).filter(row=>row.amount>0),
     items=[...pending.items,...newItems],amount=pending.amount+
       newItems.reduce((sum,row)=>sum+row.amount,0);
@@ -84,6 +89,7 @@ function clubClosureAllocation(db,t){
 function clubClosureSnapshot(db,c){
   const w=db.world;
   return JSON.parse(JSON.stringify({date:db.worldDate||null,year:db.year,saveId:db.saveId,
+    loans:c.playerIds.map(pid=>({pid,loan:db.players[pid]?.loan,usage:db.players[pid]?.usage})),
     teams:c.financeTeamIds.map(id=>{
       const t=db.teams[id];
       return {id,active:t?.active,parent:t?.parent||null,roster:t?.roster,
@@ -94,6 +100,8 @@ function clubClosureSnapshot(db,c){
 }
 function applyClubClosure(db,c){
   const w=db.world,settlements=[],plan=clubClosureFundingPlan(db,c);
+  for(const pid of c.playerIds){const p=db.players[pid];if(p.loan)
+    applyLoanReturn(db,{pid,fromId:p.loan.borrowerId,teamId:p.loan.ownerId,actor:'system'})}
   applyClubClosureFunding(db,plan.transfers,c.teamIds,db.year,db.worldDate||null);
   for(const id of c.teamIds){
     const t=db.teams[id];

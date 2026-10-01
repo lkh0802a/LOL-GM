@@ -654,3 +654,53 @@ Focused acceptance and the 21-acceptance / 17-context runner pass; static checks
 cover 77 modules. Full final-head Actions is required. No D04 completion claim:
 agencies with multiple clients, commissions/representative changes, lower-role
 mutual renegotiation and broader insolvency remain distinct future work.
+
+
+## D05-B1 loan gameplay batch (2026-10-01)
+
+Implemented temporary registration as optional player.loan: player.team is the
+playing squad, loan.ownerId retains original contract responsibility. Incoming
+and outgoing manager proposals, AI window reviews, salary shares 0–100%, zero
+fees, half/full-season periods, agreed recalls, automatic returns, roster return
+reservations, career history, confirmation UI and packed saves share the existing
+command/journal and daily calendar. No second persisted roster ledger. A derived
+WeakMap index avoids player scans on every payroll lookup; starts/returns, load
+and rollback invalidate it.
+
+Configurable region.loanWindows defaults to Jan 7–31 / Jul 1–14. This is a
+fictional game calendar policy, not a real league rule. Only the destination
+window matters. Half-season returns July 1 for first-half starts; otherwise at
+season end. Full season returns before incumbent-window payroll snapshots;
+Dec 31 is the final-date safeguard. AI reviews once per regional window, uses
+existing scouting observations, commits at most two deals across the review and
+protects manually controlled club economics. AI lenders protect current starters
+unless they want out and require half salary or a quarter annual salary as fee.
+Manager outgoing proposals instead require AI borrower wage room and sporting
+improvement. These are game policies, not universal esports laws.
+
+Budget payroll uses current shares. Annual salary remains with the owner, with
+matching day-prorated borrower expense/owner credit recorded by player; no daily
+cash writer or double annual/prepaid fee charge. Annual regulated top-five
+spending uses accrued shares; close clears settled rows. Borrower games use the
+loan opportunity promise and do not satisfy/breach suspended owner contract/oral
+promises. Aggregate career usage remains. Borrowers cannot release, renew,
+transfer or redistribute players. Return does not consume another seasonal move.
+Closure journals both counterparts: borrower closure returns the player; lender
+closure terminates its own contract and preserves existing release liability,
+including outbound players. Broader insolvency wage/asset claims remain pending.
+
+Major owners: player-loans.js, player-loan-market.js, ui-player-loans.js, finance,
+roster, calendar/season, save migration and club-closure composition. Focused
+loan acceptance covers pure/stale/late-failure rollback, both manager directions,
+production AI, destination windows, 0%/50%/100% wages, matching annual settlement
+and no duplicate fee, registration/move caps, reserved places, half/full-season
+orchestration, both closure sides, corrupt/legacy saves and real cancel/confirm
+UI. Shared runner: 22 acceptances / 18 isolated contexts; static: 80 modules.
+Focused checks pass. Final-head Actions remains the merge gate.
+
+This is the first connected loan batch, not all D05. Next: purchase option and
+obligation/conversion without another move; conditional/installment transfer
+fees; deeper regional market/calendar integration. Continuous local service
+accrual remains unimplemented: loans preserve existing qualification without
+inventing residence progress. Strategic AI recall and broader insolvency remain
+unfinished. HTML/mobile-first delivery and all roadmap Items 1–23 remain in scope.

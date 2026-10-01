@@ -20,6 +20,7 @@ function startContractRolePromise(db,p,t){
     unavailableTeamGames:u?.unavailableTeamGames||0};
 }
 function contractRolePromiseStatus(db,p,year=db.year){
+  if(p.loan)return {...rolePromiseUsageStatus(db,p,p.loan.promisedRole,p.loan.promiseStart,year),source:'loan'};
   const role=p.contract?.promisedRole;
   if(!SQUAD_ROLES.includes(role)||p.contract.until<year)return null;
   return {...rolePromiseUsageStatus(db,p,role,p.contract.rolePromiseStart,year),source:'contract'};

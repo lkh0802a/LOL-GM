@@ -102,6 +102,7 @@ function captureWorldActionJournal(db,command){
         actionJournalRestoreObject(player,record);
         db.players[pid]=player;
       }
+      LOAN_INDEX.delete(db);
       if(newsRows){
         newsRef.splice(0,newsRef.length,...newsRows);
         db.news=newsRef;

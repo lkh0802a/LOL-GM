@@ -50,6 +50,7 @@ function playerActionTerms(db,p,t,action){
 function validatePlayerSignAction(db,a){
   const p=db.players[a.pid],t=playerActionTeam(db,a.teamId);
   if(!p||p.retired||!t)return worldActionError('missing_target','계약할 선수 또는 구단을 찾을 수 없습니다');
+  if(p.loan)return worldActionError('active_loan','임대 중에는 원계약을 변경할 수 없습니다');
   const auth=playerActionAuthority(db,a.actor,t);
   if(auth)return auth;
   const kind=a.kind||'fa',from=p.team&&playerActionTeam(db,p.team);
@@ -108,6 +109,8 @@ function validatePlayerSignAction(db,a){
     return worldActionError('invalid_terms','유효하지 않은 계약 금액입니다');
   if(!playerActionFinance(t))return worldActionError('invalid_finance','구단 재정 정보가 없습니다');
   if(kind!=='renewal'&&kind!=='renewal_agreement'){
+    const capacity=loanOutgoingPlayers(db,t).length&&loanRosterCapacityError(db,t,p);
+    if(capacity)return worldActionError('registration_limit',capacity);
     const registration=localRegistrationError(db,t,p);
     if(registration)return worldActionError('registration_limit',registration);
   }
@@ -129,6 +132,7 @@ function validatePlayerSignAction(db,a){
 }
 function validatePlayerTransferAction(db,a){
   const p=db.players[a.pid],from=playerActionTeam(db,a.fromId),to=playerActionTeam(db,a.teamId);
+  if(p?.loan)return worldActionError('active_loan','임대 중에는 다른 구단으로 이적할 수 없습니다');
   if(!p||p.retired||!from||!to||from.id===to.id||p.team!==from.id)
     return worldActionError('invalid_transfer','이적 구단 또는 소속 선수 정보가 일치하지 않습니다');
   const auth=playerActionAuthority(db,a.actor,to);
@@ -142,12 +146,15 @@ function validatePlayerTransferAction(db,a){
   if(a.fee>0&&to.finance.cash+1e-8<a.fee)return worldActionError('insufficient_cash','이적료를 지급할 현금이 부족합니다');
   const move=contractedMoveError(db,p)||localRegistrationError(db,to,p);
   if(move)return worldActionError('invalid_transfer',move);
+  const capacity=loanOutgoingPlayers(db,to).length&&loanRosterCapacityError(db,to,p);
+  if(capacity)return worldActionError('registration_limit',capacity);
   const consent=contractTransferConsent(db,p,to);
   if(!consent.ok||!consent.willing)return worldActionError('player_consent',consent.reason);
   return {ok:true,pid:p.id,fromId:from.id,teamId:to.id,fee:a.fee,consent};
 }
 function validatePlayerReleaseAction(db,a){
   const p=db.players[a.pid],t=playerActionTeam(db,a.teamId),mode=a.mode||'manager';
+  if(p?.loan)return worldActionError('active_loan','임대 선수의 계약은 임대 구단이 방출할 수 없습니다');
   if(!p||!t||p.team!==t.id)return worldActionError('invalid_release','방출할 소속 선수를 찾을 수 없습니다');
   if(!['manager','market','initial','expired','medical_end','mutual'].includes(mode))
     return worldActionError('invalid_action','지원하지 않는 방출 유형입니다');
@@ -176,6 +183,7 @@ function validatePlayerReleaseAction(db,a){
 }
 function validatePlayerOptionAction(db,a){
   const p=db.players[a.pid],t=playerActionTeam(db,a.teamId),option=p?.contract?.option;
+  if(p?.loan)return worldActionError('active_loan','임대 복귀 후 원소속 구단에서 옵션을 처리합니다');
   if(!p||!t||p.team!==t.id||!option||option.year!==db.year)
     return worldActionError('invalid_option','행사할 수 있는 계약 옵션이 없습니다');
   if(a.actor==='manager'&&option.type!=='team')

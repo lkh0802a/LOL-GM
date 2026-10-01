@@ -102,8 +102,39 @@ function settleClubClosureFinance(t,year,date,funding=null){
     ...(funding?{funding}:{})};
   return f.closureSettlement;
 }
-function payroll(db,t){return t.roster.reduce((a,id)=>{const c=db.players[id]?.contract;return a+(c&&!c.medicalReplacement?c.salary:0)},0)}
-function topFivePayroll(db,t){const top=[];for(const id of t.roster){const p=db.players[id];if(!p||!p.contract||p.contract.medicalReplacement)continue;const s=p.contract.salary;let i=0;while(i<top.length&&top[i]>=s)i++;top.splice(i,0,s);if(top.length>5)top.pop()}return top.reduce((a,b)=>a+b,0)}
+function payroll(db,t){
+  const current=t.roster.reduce((sum,id)=>{const p=db.players[id],c=p?.contract;
+    return sum+(c&&!c.medicalReplacement?c.salary*(p.loan?p.loan.salaryShare:1):0)},0);
+  return current+loanOutgoingPlayers(db,t).reduce((sum,p)=>sum+p.contract.salary*(1-p.loan.salaryShare),0);
+}
+function ownedContractPayroll(db,t){
+  return t.roster.reduce((sum,id)=>{const p=db.players[id];
+    return sum+(p?.contract&&!p.contract.medicalReplacement&&!p.loan?p.contract.salary:0)},0)+
+    loanOutgoingPlayers(db,t).reduce((sum,p)=>sum+p.contract.salary,0);
+}
+function recordLoanWageAdjustment(t,year,amount,pid){
+  if(!Number.isFinite(amount)||!t?.finance)throw new Error('임대 급여 정산 정보가 유효하지 않습니다');
+  const f=t.finance;
+  if(f.loanWages&&f.loanWages.year!==year)throw new Error('미정산 임대 급여 연도가 다릅니다');
+  f.loanWages=f.loanWages||{year,amount:0,players:{}};f.loanWages.amount+=amount;
+  f.loanWages.players[pid]=(f.loanWages.players[pid]||0)+amount;
+}
+function topFivePayroll(db,t){
+  const salaries=t.roster.map(id=>db.players[id]).filter(p=>p?.contract&&!p.contract.medicalReplacement)
+    .map(p=>p.contract.salary*(p.loan?p.loan.salaryShare:1));
+  salaries.push(...loanOutgoingPlayers(db,t).map(p=>p.contract.salary*(1-p.loan.salaryShare)));
+  return salaries.sort((a,b)=>b-a).slice(0,5).reduce((sum,n)=>sum+n,0);
+}
+function loanAnnualRegulatedPayroll(db,t,year=contractedMoveSeason(db)){
+  const wages={};
+  for(const p of [...t.roster.map(id=>db.players[id]),...loanOutgoingPlayers(db,t)])
+    if(p?.contract&&!p.contract.medicalReplacement&&(!p.loan||p.loan.ownerId===t.id))wages[p.id]=p.contract.salary;
+  if(t.finance?.loanWages?.year===year)
+    for(const [pid,amount] of Object.entries(t.finance.loanWages.players))wages[pid]=(wages[pid]||0)+amount;
+  const values=Object.values(wages);
+  return (db.regions[t.region]?.spendingRule==='sfr_top5'?values.sort((a,b)=>b-a).slice(0,5):values)
+    .reduce((sum,n)=>sum+n,0);
+}
 function regulatedPayroll(db,t){const R=db.regions[t.region];return R&&R.spendingRule==='sfr_top5'?topFivePayroll(db,t):payroll(db,t)}
 function spendingTaxForPayroll(db,t,spend){
   const R=db.regions[t.region];if(!R||R.spendingRule!=='sfr_top5'||!R.salaryCap||(t.division||1)!==1)return 0;
@@ -145,14 +176,16 @@ function financeCommercialIncome(db,t,w=db.world,forecast=false,prize=0){
 function financeSeasonPayroll(db,t,w=db.world){
   const snap=w&&w.contractWindow?.seasonYear===w.year?
     w.contractWindow.financePayroll?.[t.id]:null;
-  return snap||{salary:payroll(db,t),regulated:regulatedPayroll(db,t)};
+  return snap||{salary:ownedContractPayroll(db,t),regulated:loanAnnualRegulatedPayroll(db,t,w?.year??db.year)};
 }
 function financeOperatingExpense(db,t,w=db.world){
   const pre=t.finance?.prepaid||{},ps=psTeam(db,t),
     seasonPayroll=financeSeasonPayroll(db,t,w);
   const international=w?.seasons?Object.values(w.seasons).filter(s=>
     db.competitions[s.comp]?.international&&s.teams?.includes(t.id)).length:0;
-  return {salary:seasonPayroll.salary,medicalReplacementWage:pre.medicalReplacementWage||0,
+  return {salary:seasonPayroll.salary,
+    ...(t.finance?.loanWages?.year===(w?.year??db.year)?{loanWages:t.finance.loanWages.amount}:{}),
+    medicalReplacementWage:pre.medicalReplacementWage||0,
     bonuses:w&&w.year<=db.year?contractBonusCost(db,t,w.year):0,
     staff:staffCost(db,t),ops:opsCost(db,t),facility:facilityUpkeep(db,t),
     travel:international*.55*ps,
@@ -263,6 +296,7 @@ function closeFinances(db,w,rng,ev){
     f.cash=round(f.cash+net-row.settled.income+row.settled.expense);
     const releases=financeReleaseObligations(row.t);
     f.buyout=0;f.prepaid={};
+    if(f.loanWages?.year===w.year)delete f.loanWages;
     if(f.releaseObligations)f.releaseObligations=[];
     f.history=[...f.history,{year:w.year,rev:roundRows(row.rev),
       exp:roundRows(row.exp),net:round(net),cash:f.cash,

@@ -49,6 +49,7 @@ function advanceStep(db){
     w.step++;
     if(w.step>=w.steps.length){
       w.phase='offseason';
+      processLoanDaily(db);
       initOffseasonContractWindow(db);
       news(db,`${w.year} 시즌 일정이 모두 끝났습니다`);
       return;

@@ -33,6 +33,19 @@ function validateSaveEnvelope(db){
     // without generated attributes; preserve them for the domain layer.
     if(!saveObject(p)||p.attrs!=null&&!saveObject(p.attrs)&&!Array.isArray(p.attrs))
       throw new Error('선수 데이터가 손상되었습니다: '+id);
+    if(p.loan){
+      const l=p.loan,owner=db.teams[l.ownerId],borrower=db.teams[l.borrowerId];
+      if(!saveObject(l)||!owner||!borrower||owner===borrower||!p.contract||
+        p.team!==l.borrowerId||!borrower.roster.includes(id)||owner.roster.includes(id)||
+        !['half','season'].includes(l.duration)||!SQUAD_ROLES.includes(l.promisedRole)||
+        !Number.isInteger(l.season)||typeof l.recall!=='boolean'||
+        !Number.isFinite(l.salaryShare)||l.salaryShare<0||l.salaryShare>1||
+        !Number.isFinite(l.fee)||l.fee<0||
+        ![l.startDate,l.lastWageDate,l.endDate].every(d=>typeof d==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&
+          Number.isFinite(Date.parse(d))&&new Date(d+'T00:00:00Z').toISOString().slice(0,10)===d)||
+        l.startDate>l.lastWageDate||l.lastWageDate>l.endDate)
+        throw new Error('선수 임대 데이터가 손상되었습니다: '+id);
+    }
   }
   return format;
 }
@@ -53,6 +66,7 @@ function unpackPlayerSaveFields(p){
 }
 
 function normalizeRestoredSave(db){
+  LOAN_INDEX.delete(db);
   // World schema v15, format 1: pre-migration JSON saves and packed exports.
   // Format 2 uses the same runtime object model, but strips derived caches.
   for(const k of SAVE_TRANSIENT_ROOT_FIELDS)delete db[k];

@@ -39,6 +39,7 @@ function contractOfferReasonable(db,p,t,offer,kind='fa'){
 // Club agreement does not authorize a player's permanent move. Evaluate the
 // same personal-terms policy as negotiation against a detached decision view.
 function contractTransferConsent(db,p,t,offer=null){
+  if(p?.loan)return {ok:false,willing:false,reason:'임대 복귀 후 이적을 협상해야 합니다'};
   if(!p?.team||p.retired||!p.contract||p.contract.until<db.year||
     p.contract.medicalReplacement||!t||t.active===false||t.id===p.team)
     return {ok:false,willing:false,reason:'이적 가능한 일반 선수 계약과 다른 구단이 필요합니다'};
