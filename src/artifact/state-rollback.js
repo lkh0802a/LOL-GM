@@ -50,7 +50,7 @@ function actionJournalRestoreTeam(entry){
 function actionJournalTargets(db,command){
   const playerIds=new Set(),teamIds=new Set();
   if(command.type==='club.close'){
-    for(const id of command.teamIds)teamIds.add(id);
+    for(const id of command.financeTeamIds)teamIds.add(id);
     for(const pid of command.playerIds)playerIds.add(pid);
   }else if(command.type==='roster.plan'||command.type==='roster.market-callup'){
     for(const team of organizationTeams(db,command.parentId)){

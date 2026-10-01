@@ -524,11 +524,18 @@ The current Worlds+14 model remains the fictional game's policy; this source
 must not trigger an automatic migration to real-world calendar dates. Revisit
 only where the fictional design needs a more coherent rule.
 
-Current unit: D04-B4d1. Main files: club-closure.js, finance.js, office.js,
+Current unit: D04-B4d2. Main files: club-closure.js, finance.js, office.js,
 state-player-actions.js, state-rollback.js and closure/player finance UI.
 Focused acceptance covers authority, parent/reserve scope, stale previews, late
 rollback, paid/unpaid balances, legacy claims, agreements, UI and save restore.
 Full regression, long simulation and build remain Actions-owned. Next candidates:
-closure funding/recovery, transfer consent, D05 loans and remaining Items 13–23.
+remaining closure recovery, transfer consent, D05 loans and remaining Items 13–23.
 
 Local D04-B4d1 evidence: static check (74 modules) and the focused UI/finance/contract runner passed (17 acceptances, 13 isolated engine contexts, one engine compile). Full CI acceptance is required before merge.
+
+
+D04-B4d2 extends existing parent-to-reserve support to closure liabilities using
+actual spare cash after protecting parent claims. Parent finance is included in
+preview invalidation and rollback; both transfer sides persist and the active
+parent UI exposes recent support. No second annual charge or arbitrary equity.
+Remaining insolvency scope includes residual cash/asset recovery and other claims.
