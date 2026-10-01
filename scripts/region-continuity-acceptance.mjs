@@ -28,5 +28,40 @@ await runEngineFixture(String.raw`(()=>{
   const snap=JSON.stringify(parent);let rejected=false;
   try{moveClubForRegionReorganization(db,parent,'missing','test')}catch{rejected=true}
   check(rejected&&JSON.stringify(parent)===snap,'invalid destination partly moved club');
+  // A five-player official squad must retain its current contracts' local
+  // protection, without turning that exception into a transferable local.
+  const c2=defaultWorldConfig();c2.regions=['KR','EU','NA'].map(id=>regionCfg(id,{teams:10,div2:false}));c2.internationals=[];
+  const d=buildWorld(c2),club=activeTeams(d,'KR',1)[0],other=activeTeams(d,'EU',1)[0];
+  d.world={year:d.year,phase:'offseason',seed:'successor-local',seasons:{},registrationVersion:1};
+  setManagedTeam(d,club.id);
+  for(const role of ROLES){const q=Object.values(d.players).find(x=>!x.team&&!x.retired&&x.role===role&&playerActiveLocalRegion(x)==='KR');signContract(d,q,club,3,2);}
+  const player=d.players[club.roster[0]],contract={...player.contract};
+  player.localEligibility.service={region:'KR',days:300,seasons:[2026,2027],lastDate:d.worldDate,paused:false,rule:{seasons:4,days:365,choiceYears:2,effectiveYear:2026}};
+  moveClubForRegionReorganization(d,club,'EU','split');recordRegionSuccession(d,'KR',['KR','EU'],'split');
+  check(teamNonLocalCount(d,club)===0&&!officialRegistrationErrors(d,club,club.roster).length,'legacy squad exceeds official import cap');
+  check(!isLocalPlayer(player,'EU',other.id)&&!isLocalPlayer(player,'EU'),'legacy exception became portable eligibility');
+  const employment=player.team;player.loan={ownerId:club.id,borrowerId:other.id};player.team=other.id;
+  check(isLocalPlayer(player,'EU',club.id)&&!isLocalPlayer(player,'EU',other.id),'loan exported contract exception');
+  delete player.loan;player.team=employment;
+  check(player.localEligibility.service.days===300&&player.localEligibility.service.rule.effectiveYear===2026&&player.localEligibility.service.region==='EU','regional move reset service progress or old rules');
+  player.contract.until++;
+  check(!isLocalPlayer(player,'EU',club.id),'renewal extended legacy contract rights');player.contract={...contract};
+  const restored=unpackDB(packDB(d));check(teamNonLocalCount(restored,restored.teams[club.id])===0,'save lost contract exception');
+  check(localChoiceOptions(d,player).includes('EU'),'successor origin not selectable');
+  const decision=commitWorldAction(d,{type:'player.local-choice',actor:'manager',pid:player.id,region:'EU'});
+  check(decision.ok,'managed successor choice rejected');activateLocalChoices(d,2028);
+  check(playerActiveLocalRegion(player)==='EU'&&player.localEligibility.successorOrigin==='EU'&&!localChoiceOptions(d,player).includes('KR'),'successor choice not exclusive');
+  const free=Object.values(d.players).find(x=>!x.team&&!x.retired&&playerActiveLocalRegion(x)==='KR');
+  aiChooseLocalEligibility(d);check(free.localEligibility.pending?.region==='EU','free agent could not select successor');
+  // A second reorganization before the first choice activates must not lose
+  // a native player's ancestry or retain deleted intermediate choices.
+  recordRegionSuccession(d,'EU',['NA'],'second-merger',true);
+  delete d.regions.EU;
+  const nested=Object.values(d.players).find(x=>!x.team&&!x.retired&&playerActiveLocalRegion(x)==='KR'&&x.localEligibility.qualifications.NA);
+  const nestedDecision=commitWorldAction(d,{type:'player.local-choice',actor:'ai',pid:nested.id,region:'NA'});
+  check(nestedDecision.ok,'chained successor consent rejected');activateLocalChoices(d,2028);
+  check(nested.localEligibility.successorOrigin==='NA'&&!localChoiceOptions(d,nested).includes('KR'),'chained native choice not exclusive');
+  const malformed=JSON.parse(packDB(restored));malformed.players[player.id].localEligibility.legacyContracts[0].teams=null;
+  let bad=false;try{unpackDB(JSON.stringify(malformed))}catch{bad=true}check(bad,'malformed legacy save accepted');
   console.log('REGION_CONTINUITY_ACCEPTANCE: PASS (production merger, split organization, owned reserves, contracts/history, saved succession, invalid destination)');
 })();`);

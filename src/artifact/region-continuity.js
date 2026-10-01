@@ -7,6 +7,13 @@ function moveClubForRegionReorganization(db,t,destination,reason){
   const records=[];
   for(const club of clubs){
     const previous=club.region;
+    for(const pid of [...(club.roster||[]),...loanOutgoingPlayers(db,club).map(p=>p.id)]){
+      const p=db.players[pid];if(!p||!p.contract||!isLocalPlayer(p,previous,club.id))continue;
+      ensurePlayerEligibility(p);
+      const rows=p.localEligibility.legacyContracts=p.localEligibility.legacyContracts||[];
+      if(!rows.some(q=>q.region===destination&&q.signed===p.contract.signed&&q.until===p.contract.until&&q.teams.includes(club.id)))
+        rows.push({region:destination,teams:clubs.map(x=>x.id),signed:p.contract.signed,until:p.contract.until,source:previous});
+    }
     club.region=destination;
     if(club.parent)club.division=2;
     if((club.division||1)===2)db.regions[destination].div2=true;
@@ -24,5 +31,19 @@ function recordRegionSuccession(db,source,successors,reason,retired=false){
     previousName:region.name,previousLeagueName:region.leagueName};
   db.global.regionHistory=[...(db.global.regionHistory||[]),record];
   for(const id of ids)if(id!==source)db.regions[id].predecessors=Array.from(new Set([...(db.regions[id].predecessors||[]),source]));
+  const season=localChoiceSeason(db);
+  for(const p of Object.values(db.players)){
+    if(p.retired)continue;ensurePlayerEligibility(p);const e=p.localEligibility;
+    const service=e.service,successor=p.team&&db.teams[p.team]?.region;
+    if(service?.region===source&&successor!==source&&ids.includes(successor))service.region=successor;
+    else if(retired&&ids.length===1&&service?.region===source)service.region=ids[0];
+    const origin=(e.successorOrigin||p.originLocalRegion)===source,earned=e.qualifications[source];
+    if(!origin&&playerActiveLocalRegion(p)!==source&&(!earned||earned.expiresAfter<season))continue;
+    for(const id of ids)if(id!==source&&(!e.qualifications[id]||origin))e.qualifications[id]={
+      ...(e.qualifications[id]||{}),
+      successorOf:source,successorRoot:earned?.successorRoot||source,
+      originSuccessor:origin||!!earned?.originSuccessor,earnedYear:db.year,availableFrom:season,
+      expiresAfter:origin?9999:Math.max(season,earned?.expiresAfter??season+localServicePolicy(db,source).choiceYears)};
+  }
   return record;
 }

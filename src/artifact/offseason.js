@@ -72,8 +72,10 @@ function runOffseason(db){
   rep.contractWindow=settleOffseasonContractRollover(db,rep);
   setWorldCalendarDate(db,medicalRolloverDate);
   if(f>0){
+    const successionCount=db.global?.regionHistory?.length||0;
     officeDecisions(db,rng,f,ev);
     globalOffice(db,w,rng,f,ev);
+    if((db.global?.regionHistory?.length||0)!==successionCount)aiChooseLocalEligibility(db);
   }
   ensureEven(db,rng,ev);
   rep.rookies=[];rep.rookieGlobal=rookieGlobalCohort(db);

@@ -148,7 +148,7 @@ function contractYearsForPlayer(db,p,rng,t=null){
 
 function eligibleFillFAs(db,t,role=null){
   const room=Math.max(0,nonLocalLimitForTeam(db,t)-teamNonLocalCount(db,t));
-  return Object.values(db.players).filter(p=>!p.retired&&!p.team&&(!role||p.role===role)&&(isLocalPlayer(p,t.region)||room>0))
+  return Object.values(db.players).filter(p=>!p.retired&&!p.team&&(!role||p.role===role)&&(projectedPlayerIsLocal(db,p,t)||room>0))
     .sort((a,b)=>(pFillScore(db,b,t)-pFillScore(db,a,t)));
 }
 function aiMarketObservation(db,p,t){
@@ -157,7 +157,7 @@ function aiMarketObservation(db,p,t){
   return aiScoutReport(db,t,p);
 }
 function aiMarketValue(db,p,t){const est=aiMarketObservation(db,p,t),up=Math.max(0,est.potential-est.ability),w={'win-now':0.1,'youth':0.6,'balanced':0.3,'superstar':0.15,'cost':0.35}[t.philosophy]||0.3;return est.ability+up*w-(t.philosophy==='youth'&&p.age>26?2:0)-medicalContractRisk(db,p)*18}
-function pFillScore(db,p,t){const domestic=isLocalPlayer(p,t.region)?2:0,age=p.age<=21?1:0,cost=Math.min(4,asking(db,p,t.region)/Math.max(.2,psOf(db,t.region)));return aiMarketValue(db,p,t)+domestic+age-cost*.15}
+function pFillScore(db,p,t){const domestic=projectedPlayerIsLocal(db,p,t)?2:0,age=p.age<=21?1:0,cost=Math.min(4,asking(db,p,t.region)/Math.max(.2,psOf(db,t.region)));return aiMarketValue(db,p,t)+domestic+age-cost*.15}
 function optionDecision(db,p,t){
   const o=p.contract&&p.contract.option;if(!o||o.year!==db.year)return false;
   const next={...p.contract,salary:o.salary,years:1,signingBonus:0,bonuses:p.contract.bonuses||{},option:null,promisedRole:p.contract.promisedRole||p.rosterRole};
@@ -188,7 +188,7 @@ function aiMarketOfferCandidates(db,t,fas,role,budgetRoom,year=db.year){
     cv=cur?playerValue(db,cur,t):-99,importGap=R.importRecruitMinGap??3,
     imports=teamNonLocalCount(db,t);
   return fas.filter(p=>p.role===role&&
-      (isLocalPlayer(p,t.region)||(playerOvr(p)>=R.strength+importGap&&
+      (projectedPlayerIsLocal(db,p,t)||(playerOvr(p)>=R.strength+importGap&&
         imports<nonLocalLimitForTeam(db,t))))
     .map(p=>({p,v:aiMarketValue(db,p,t),ask:asking(db,p,t.region)}))
     .filter(x=>x.ask<=budgetRoom&&
@@ -286,7 +286,7 @@ function contractMarket(db,rng,rep,ev){
       if(!signed.ok)continue;
       if(best.o.mine)w.marketLog.push(`${p.name}: ${best.o.t.id===mine?'영입 성공':'다른 구단 선택'}`);
       budgetLeft[t.id]-=best.o.sal;
-      rep.signings.push({pid:p.id,team:t.id,salary:best.o.sal,years:yrs,rookie:p.age<=19&&!p.career.length,import:!isLocalPlayer(p,t.region),offers:os.length,out:null});
+      rep.signings.push({pid:p.id,team:t.id,salary:best.o.sal,years:yrs,rookie:p.age<=19&&!p.career.length,import:!projectedPlayerIsLocal(db,p,t),offers:os.length,out:null});
       if(t.roster.length>size+1){const bench=t.roster.map(id=>db.players[id]).filter(x=>x!==p&&!x.contract?.medicalReplacement&&starterFor(db,t,x.role)!==x).sort((a,b)=>playerValue(db,a,t)-playerValue(db,b,t))[0];
         if(bench){release(t,bench);rep.signings[rep.signings.length-1].out=bench.id}}
       else if(prev)rep.signings[rep.signings.length-1].out=null;
