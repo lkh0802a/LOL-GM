@@ -1062,7 +1062,9 @@ function selectRunePage(patch,c,p,role){
   const bestIn=(style,slot)=>((style.slots&&style.slots[slot])||[]).filter(id=>patch.runeDefs?.[id]?.active!==false).map(id=>({id,s:runeChoiceScore(patch,c,p,role,id),slot})).sort((x,y)=>y.s-x.s)[0]||null;
   const ranked=styles.map(style=>{const picks=[0,1,2,3].map(slot=>bestIn(style,slot));return {style,picks,score:picks.every(Boolean)?picks.reduce((z,x)=>z+x.s,0):-Infinity}}).filter(x=>Number.isFinite(x.score)).sort((x,y)=>y.score-x.score);
   const primary=ranked[0];if(!primary)return [];
-  const secondary=ranked.slice(1).map(x=>{const picks=[1,2,3].map(slot=>bestIn(x.style,slot)).filter(Boolean).sort((u,v)=>v.s-u.s).slice(0,2);return {style:x.style,picks,score:picks.length===2?picks.reduce((z,y)=>z+y.s,0):-Infinity}}).filter(x=>Number.isFinite(x.score)).sort((x,y)=>y.score-x.score)[0];
+  // Primary ranking already computed each style's best pick in all four slots.
+  // Reuse slots 1–3 without repeating scoring/hash/sort work for the secondary.
+  const secondary=ranked.slice(1).map(x=>{const picks=x.picks.slice(1).filter(Boolean).sort((u,v)=>v.s-u.s).slice(0,2);return {style:x.style,picks,score:picks.length===2?picks.reduce((z,y)=>z+y.s,0):-Infinity}}).filter(x=>Number.isFinite(x.score)).sort((x,y)=>y.score-x.score)[0];
   return [...primary.picks.map(x=>x.id),...(secondary?secondary.picks.map(x=>x.id):[])];
 }
 function applyItemCraftAction(ps,a){
