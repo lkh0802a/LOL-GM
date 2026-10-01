@@ -6,7 +6,7 @@ import { ARTIFACT_MODULES } from './artifact-modules.mjs';
 const root = resolve(import.meta.dirname, '..');
 const artifact = resolve(root, 'src', 'artifact');
 const modules = ARTIFACT_MODULES;
-const artifactSources = new Map(await Promise.all(modules.map(async file => {
+const artifactSources = new Map(await Promise.all([...modules, 'shell.html'].map(async file => {
   const path = resolve(artifact, file);
   return [path, await readFile(path, 'utf8')];
 })));
