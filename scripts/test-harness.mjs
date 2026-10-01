@@ -5,7 +5,7 @@ import {ENGINE_MODULES} from './artifact-modules.mjs';
 
 const root=resolve(import.meta.dirname,'..','src','artifact');
 const sources=new Map();
-let reads=0,engineCompiles=0;
+let reads=0,engineCompiles=0,contexts=0;
 let engineSourcePromise=null,engineScriptPromise=null;
 
 export function artifactSource(file){
@@ -47,6 +47,7 @@ export async function runEngineFixture(fixture,{
   const engine=await compiledEngine();
   // Every acceptance gets a new Realm/context. Only immutable engine source and
   // the compiled Script are shared; DB/global state never crosses test cases.
+  contexts++;
   const context=vm.createContext({console,performance,crypto});
   const started=performance.now();
   engine.runInContext(context,{timeout});
@@ -57,5 +58,5 @@ export async function runEngineFixture(fixture,{
 }
 
 export function testHarnessStats(){
-  return {reads,cachedArtifacts:sources.size,engineCompiles};
+  return {reads,cachedArtifacts:sources.size,engineCompiles,contexts};
 }
