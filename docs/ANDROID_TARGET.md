@@ -1,0 +1,68 @@
+# Final platform target — Android first
+
+User decision, 2026-10-01. This supersedes descriptions of a web page/standalone
+HTML as the final product. HTML remains a useful development preview.
+
+Final acceptance is an installable production Android APK/app that works without
+a development server: create a world, manage a club, simulate multiple seasons,
+save, terminate/relaunch and continue. Core single-player simulation and saves
+must work offline. iOS expansion should remain possible, but is secondary.
+
+## Required sequence
+
+1. Finish the evidenced development-efficiency checklist in Issue #57.
+2. Incrementally refactor ownership/boundaries under Issue #62.
+3. Remove only fully replaced legacy callers/adapters; retain needed migrations.
+4. Continue the first unfinished item in the actual roadmap/audit.
+5. Complete mobile UX and mobile CPU/RAM/battery/save performance.
+6. Select and implement Android packaging, build a release APK and validate it.
+
+Neither CI setup nor optimization alone is project completion. Do not rebuild
+already accepted contracts, patch/meta or medical behavior from their names.
+
+## Current evidence and technology decision boundary
+
+The repository has dependency-free JavaScript global modules concatenated by
+`scripts/build.mjs` into HTML. There is no Android project or native build yet.
+The engine is local; app.js uses IndexedDB with localStorage fallback and serialized
+slot writes, and save-migration.js validates world v15/encoding format 2.
+These are reusable components, not proof of crash-safe Android persistence.
+The shell still requests Google Fonts. Explicit visibility/pagehide app suspension
+handling was not found in app.js/ui-state.js during this audit.
+
+Choose the app architecture after evaluating reuse, long-simulation performance,
+durable local storage, lifecycle, offline assets, touch UX and release tooling.
+Do not assume a temporary WebView wrapper satisfies those requirements. No mobile
+framework, package ID, signing identity or store account is selected by this doc.
+
+## Mobile acceptance checklist — not yet complete
+
+- Portrait-first, one-handed touch navigation; readable typography, useful tap
+  targets, safe areas and device-size adaptation. No required hover/right-click
+  or keyboard shortcuts. Replace wide dense tables with cards/lists/disclosure.
+- Layer information across home, schedule, squad/player, tactics, matches,
+  scrims, contracts/market, patch/meta, standings/competitions, finance and news.
+- Offline new game, load/save, calendar, match/AI/development/contracts/market,
+  patches and competitions; optional network services isolated from those paths.
+- Autosave, manual save and multiple slots; atomic writes/recovery after forced
+  termination, versioned migration and update compatibility with bounded size.
+- Pause expensive work in the background; checkpoint safely on lifecycle events.
+  Cover home/lock/calls/background/OS kill/force-stop and resumption. Do not rely
+  on an async shutdown callback being guaranteed to complete.
+- Measure seasons/AI/market/schedules/stats/rendering/save-load over long careers:
+  CPU, RAM, battery, heat, save size and resume time. No idle polling/render loop;
+  batch heavy simulation, reuse valid computations and check retained memory.
+- Produce a release-mode APK through a conditional Android Actions workflow;
+  upload installable artifacts. Validate installation, offline cold start,
+  save/load, season advancement, kill/relaunch, touch screens and long sessions
+  on a real Android device. Emulator-only success is insufficient.
+
+## Validation ownership
+
+Use focused local reproduction for diagnosis. Actions owns repeatable full
+regression, long simulations and builds. Add Android/long-career workflows only
+when their actual implementation exists; trigger expensive runs explicitly or
+by relevant changes, use dependency caches when measured useful, cancel stale
+runs, and retain summaries/artifacts. Never reduce seeds/seasons/assertions to
+manufacture a green check. Real-device evidence must be reported separately from
+hosted CI; no APK or real-device validation is claimed today.

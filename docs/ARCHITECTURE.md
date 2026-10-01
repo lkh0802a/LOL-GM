@@ -2,7 +2,7 @@
 
 ## Purpose
 
-LOL GM remains a standalone-first simulation, but standalone delivery does not justify a single monolithic source file. Canonical source is split by simulation domain and concatenated only at build time.
+LOL GM currently uses a standalone HTML development preview. The final delivery target is an offline-capable Android app (see ANDROID_TARGET.md). Canonical source is split by simulation domain and concatenated only at build time; mobile packaging must preserve clear engine/UI/storage boundaries.
 
 ## Module boundaries
 
