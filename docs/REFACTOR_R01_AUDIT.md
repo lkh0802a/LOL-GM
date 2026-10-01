@@ -6,9 +6,9 @@ This audit is the entry point for Issue #62. It does not change game rules. The 
 
 ## Runtime shape
 
-The standalone runtime now concatenates **72 classic-script modules** in the order declared by `scripts/artifact-modules.mjs`:
+The standalone runtime now concatenates **73 classic-script modules** in the order declared by `scripts/artifact-modules.mjs`:
 
-- 55 engine/domain modules
+- 56 engine/domain modules
 - 17 UI/application modules
 
 The files are physically split, but dependencies remain implicit browser globals. Therefore file size alone is not the main refactor criterion. Mutation ownership, transaction entry points and caller count take priority.
@@ -211,3 +211,20 @@ and reject their return to transfer/contracts/finance. Existing negotiation-stat
 contract-window, save/rollback and regression coverage remain the behavioral gate.
 Next: converge offseason world-date writers while preserving B3 boundaries,
 then address the AI reserve-callup bypass with parity coverage.
+
+## R04 calendar clock owner
+
+`calendar.js` owns `nextCalendarDate`, dated patch processing and
+`applyWorldDailyEffects`, moved from season orchestration. All eight direct date
+assignment sites in season/window/offseason now use `setWorldCalendarDate`; the
+conservative mutation inventory has one raw date writer in calendar.js.
+
+Raw positioning does not run daily effects. Contract exclusivity dates remain
+Worlds+1 through Worlds+14, with outside contact on day 15. Offseason medical
+recovery still positions at the last competition date before its full passive
+recovery calculation, then moves to January 6. No additional daily tick, RNG
+call or training/scouting/medical event is introduced. In-season daily effect
+ordering and the lastDailyTick duplicate/backward guards remain intact.
+
+Next: remove the AI reserve-callup bypass through roster-plan parity coverage,
+then audit replacement-complete helpers for deletion and final compatibility QA.

@@ -1,5 +1,5 @@
 // ===== LOL GM: Season / competition orchestration =====
-// Owns league and international season construction, calendar progression,
+// Owns league and international season construction,
 // managed official-match pauses and day-by-day world competition execution.
 
 // 그 해 마지막 스플릿 시즌 (승강·시상·목표 판정 기준)
@@ -14,7 +14,7 @@ function leagueComp(db,rid,div=1){
 function startWorldSeason(db,myTeam,seed){
   const medicalRolloverDate=`${db.year}-01-06`;
   medicalOffseasonRecovery(db,medicalRolloverDate);
-  if(!db.worldDate||db.worldDate<medicalRolloverDate)db.worldDate=medicalRolloverDate;
+  if(!db.worldDate||db.worldDate<medicalRolloverDate)setWorldCalendarDate(db,medicalRolloverDate);
   setManagedTeam(db,myTeam);
   const regs=Object.values(db.regions), I=db.worldConfig.internationals, maxK=Math.max(...regs.map(r=>r.splits||1));
   const steps=[];
@@ -157,51 +157,6 @@ function resolvePendingOfficialMatch(db,forcedDraft){
   const finalized=finalizeCompetitionDay(db,refs.s,refs.day,refs.cfgIdx,refs.cfg);if(finalized)scoutFromDay(db,refs.s,refs.day);
   p.queue.shift();if(!p.queue.length){w.pendingOfficial=null;if(!activeSeasons(db).length)advanceStep(db)}
   return {game:played.game,done:true,score:played.score,rec:series.rec,lines:series.lines,finalized,pending:w.pendingOfficial};
-}
-// Match dates are fixtures; the authoritative world clock moves through every
-// intervening calendar date, including rest days and inter-stage breaks.
-function nextCalendarDate(db){
-  const fixture=nextDate(db);
-  if(fixture===null)return null;
-  const previous=db.worldDate||`${db.year}-01-01`;
-  if(previous>fixture)throw new Error('월드 날짜가 미진행 공식 경기일보다 늦습니다: '+previous+' > '+fixture);
-  if(previous===fixture)return fixture; // legacy saves may be parked on an unplayed match date
-  return addDays(previous,1);
-}
-function applyCalendarPatchEvents(db,date){
-  const w=db.world;
-  if(!w.majorPatchEvents?.length)return;
-  const remaining=[];
-  for(const e of w.majorPatchEvents){
-    if(e.date>date){remaining.push(e);continue}
-    const rng=new RNG(w.seed+w.year+'|'+e.step,'mid');
-    const p=newPatch(db,e.date,true,rng);
-    db.patches.nextDate=addDays(e.date,db.patches.cadence||14);
-    const nc=p.notes.find(n=>n.type==='new');
-    news(db,`${SPLIT_NAME[e.split]} 개막 패치 ${p.id}${nc?` — 신규 챔피언 ${nc.def.nameKo||nc.def.name} 출시`:''}`);
-    officeMidSeason(db,rng,CHANGE_F[db.worldConfig.changes]??1);
-  }
-  w.majorPatchEvents=remaining;
-}
-function applyWorldDailyEffects(db,date){
-  const w=db.world;
-  if(w.lastDailyTick===date)return false;
-  if(w.lastDailyTick&&w.lastDailyTick>date)throw new Error('이미 처리한 날짜를 다시 진행할 수 없습니다');
-  db.worldDate=date;
-  // A scheduled patch is effective *on* its intended date, never during the
-  // preceding break. Then every actual day runs exactly once.
-  applyCalendarPatchEvents(db,date);
-  patchTick(db,date,new RNG(w.seed+date,'patch'));
-  advanceFacilityConstruction(db,date);
-  for(const t of activeTeams(db))aiManageTraining(db,t);
-  dailyRecovery(db);
-  medicalDailyTick(db,date);
-  for(const t of activeTeams(db))aiReviewRoleConversions(db,t);
-  advanceRoleConversionsDay(db);
-  aiRunScrims(db,new RNG(w.seed+date,'scrim'));
-  for(const t of activeTeams(db,null,1))aiManageOwnedReserve(db,t);
-  w.lastDailyTick=date;
-  return true;
 }
 function playWorldDay(db){
   const w=db.world;if(w.phase!=='season')return null;

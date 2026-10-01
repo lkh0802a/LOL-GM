@@ -60,7 +60,7 @@ function initOffseasonContractWindow(db){
   w.contractWindow={...d,stage:'exclusive',incumbentProcessed:false,
     completed:false,contactWaivers:{},financePayroll:contractClosingPayrollSnapshot(db)};
   contractAgreementStore(db);
-  if(!db.worldDate||db.worldDate<d.startDate)db.worldDate=d.startDate;
+  if(!db.worldDate||db.worldDate<d.startDate)setWorldCalendarDate(db,d.startDate);
   aiGrantEarlyContact(db);
   return w.contractWindow;
 }
@@ -188,7 +188,7 @@ function closeExclusiveContractWindow(db){
   if(cw.stage!=='exclusive')return {ok:true,stage:cw.stage,date:db.worldDate,
     settlement:cw.settlement||null,msg:'원소속 독점기간이 이미 끝났습니다'};
   const renewals=aiRunExclusiveRenewals(db),earlyOffers=aiRunEarlyContactOffers(db);
-  db.worldDate=cw.outsideContactDate;
+  setWorldCalendarDate(db,cw.outsideContactDate);
   const settlement=finalizeExclusiveContractExpiry(db);
   cw.stage='fa';cw.completed=true;cw.settlement=settlement;
   return {ok:true,stage:'fa',date:db.worldDate,renewals,earlyOffers,settlement,
@@ -201,7 +201,7 @@ function advanceOffseasonContractDay(db){
     msg:'원소속 독점기간이 이미 끝났습니다'};
   const next=addDays(db.worldDate,1);
   if(next>=cw.outsideContactDate)return closeExclusiveContractWindow(db);
-  db.worldDate=next;aiRunEarlyContactOffers(db);
+  setWorldCalendarDate(db,next);aiRunEarlyContactOffers(db);
   return {ok:true,stage:'exclusive',date:db.worldDate,
     msg:'원소속 독점 재계약 기간 · '+db.worldDate};
 }

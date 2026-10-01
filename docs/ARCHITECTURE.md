@@ -19,6 +19,7 @@ The authoritative module order lives in `scripts/artifact-modules.mjs`.
 - series engine: `series.js` (First Selection, Fearless, best-of sessions, replay)
 - competition engine: `competition.js` (schedules, stages, standings, scheduled-series orchestration)
 - world configuration/bootstrap: `world.js`
+- calendar: `calendar.js` (world clock positioning, next calendar day, dated patches and once-per-day effects)
 - season orchestration: `season.js` (league/international calendar, official-match pause/resume, day progression)
 - offseason orchestration: `offseason.js` (season closeout, market close, promotion/relegation)
 - persistence: `save.js` (non-mutating compact save view and parse handoff), `save-migration.js` (versioned encoding migration, legacy v15 normalization and transient cache cleanup)
@@ -67,7 +68,7 @@ Read-only eligibility lookups and contracted-move counting belong exclusively to
 
 Player generation and rookie-supply rules belong in `player.js`. Training/facilities/seasonal attribute growth belong in `development.js`.
 
-World bootstrap must not own season execution, offseason processing or persistence. `season.js` owns competition/calendar orchestration, `offseason.js` owns year-transition processing, and `save.js` owns serialization. `world.js` is limited to configuration, region/team topology and career bootstrap.
+World bootstrap must not own season execution, offseason processing or persistence. `season.js` owns competition orchestration, `calendar.js` owns world-clock positioning and daily effects, `offseason.js` owns year-transition processing, and `save.js` owns serialization. `world.js` is limited to configuration, region/team topology and career bootstrap.
 
 
 Persistent game state lives under the world DB object. Module-level caches must never own persistent state.
