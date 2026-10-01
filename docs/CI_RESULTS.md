@@ -25,3 +25,12 @@ structured output, failed exit-code propagation, preserved errors and failed
 process startup. They are also in static/full checks. This wrapper adds one small
 Node process per observed command and artifact upload overhead; its purpose is
 cheaper diagnosis and evidence retrieval, not faster engine execution.
+
+Standalone publication reuses `index.html` from the production build of the
+current run. `scripts/sync-standalone.mjs` checks the checkout against
+`GITHUB_SHA`, then fetches main before committing only that file. If main has
+advanced, publication is skipped: the newer main run owns its build. Push races
+also skip stale publication; other push failures remain failures. No reset,
+rebuild, force push or retry against unvalidated source is performed.
+Focused tests cover publication, unchanged files, stale runs, push races and
+failure propagation, including a disposable real Git remote.
