@@ -3548,8 +3548,8 @@ const INTL_PRESETS=[
   {id:'EASTERN_CUP',name:'Eastern Cup',short:'EC',phase:2,tier:2,timing:'mid',zone:'east',teams:8,format:'regional_cup',groupBo:3,knockoutBo:5,prestige:1},
   {id:'WESTERN_CUP',name:'Western Cup',short:'WEC',phase:2,tier:2,timing:'mid',zone:'west',teams:8,format:'regional_cup',groupBo:3,knockoutBo:5,prestige:1},
   {id:'WORLD_CHAMPIONSHIP',name:'World Championship',short:'Worlds',phase:3,tier:1,timing:'end',teams:24,baseSlots:4,maxSlots:4,format:'worlds_league_phase',pots:3,potSize:8,leagueMatches:6,leagueBo:3,knockoutTake:16,knockoutBo:5,prestige:3},
-  {id:'MASTERS',name:'Masters',short:'Masters',phase:3,tier:2,timing:'end',teams:16,baseSlots:2,maxSlots:3,extraSlots:4,format:'masters_groups',groupBo:3,groupLegs:2,knockoutBo:5,prestige:2},
-  {id:'OPEN',name:'Open',short:'Open',phase:3,tier:3,timing:'end',teams:12,baseSlots:2,maxSlots:2,format:'open_groups',groupBo:3,groupLegs:1,knockoutBo:5,prestige:1},
+  {id:'MASTERS',name:'Worlds Masters',short:'Worlds Masters',phase:3,tier:2,timing:'end',teams:16,baseSlots:2,maxSlots:3,extraSlots:4,format:'masters_groups',groupBo:3,groupLegs:2,knockoutBo:5,prestige:2},
+  {id:'OPEN',name:'Worlds Open',short:'Worlds Open',phase:3,tier:3,timing:'end',teams:12,baseSlots:2,maxSlots:2,format:'open_groups',groupBo:3,groupLegs:1,knockoutBo:5,prestige:1},
 ];
 const INTL_ZONES={east:['KR','CN','AP','VN','JP','TW','OC','SEA'],west:['EU','NA','BR','TR','ME','CIS','LA']};
 const ZONE_KO={east:'Eastern',west:'Western'};
@@ -3566,7 +3566,7 @@ function defaultWorldConfig(){return {
   internationals:INTL_PRESETS.map(x=>({...x})),
   subs:1, changes:'normal', startYear:2027, manage:'manual', universalLanguage:true
 }}
-const CHANGE_F={none:0,low:0.5,normal:1,high:1.8};
+const WORLD_CHANGE_FREQUENCY=1; // Always the normal office/world evolution rate.
 
 // ---------- 프로게임단 이름 ----------
 const ORG_BRANDS=[['넥서스','Nexus','NX'],['반타','Vanta','VT'],['오닉스','Onyx','OX'],['크림슨','Crimson','CR'],['오로라','Aurora','AU'],['제니스','Zenith','ZN'],['헬릭스','Helix','HX'],['솔스티스','Solstice','SL'],['패러곤','Paragon','PG'],['버텍스','Vertex','VX'],['이클립스','Eclipse','EC'],['아펙스','Apex','AP'],['레디언트','Radiant','RD'],['보텍스','Vortex','VO'],['세이블','Sable','SB'],['템페스트','Tempest','TP'],['루멘','Lumen','LU'],['스펙터','Specter','SP'],['코발트','Cobalt','CB'],['아르고스','Argos','AR'],['미라지','Mirage','MR'],['케스트럴','Kestrel','KS'],['오블리비언','Oblivion','OB'],['인피니티','Infinity','IF'],['퀘이사','Quasar','QS'],['블랙쏜','Blackthorn','BT'],['하이드라','Hydra','HY'],['세라프','Seraph','SR'],['엠버','Ember','EM'],['글레이셔','Glacier','GL'],['노스타','Northstar','NS'],['프리즘','Prism','PZ']];
@@ -3707,6 +3707,7 @@ function addRegion(db,rng,cfg){
 }
 function buildWorld(cfg){
   cfg=JSON.parse(JSON.stringify(cfg||defaultWorldConfig()));
+  cfg.changes='normal';
   const db={version:15,saveId:'save-'+Date.now().toString(36),manager:{id:'manager-human',teamId:null,startMode:null,careerStartedAt:null},worldDate:`${cfg.startYear||2027}-01-01`,awards:[],hof:[],global:{decisions:[],power:{}},patch:buildPatch(),teams:{},players:{},regions:{},competitions:{},worldConfig:cfg,world:null,history:[],news:[],year:cfg.startYear||2027,configDirty:false,scout:{}};
   const rng=new RNG(WORLD_GENERATION_SEED,'gen');
   initPatches(db);
@@ -3771,7 +3772,7 @@ function applyCalendarPatchEvents(db,date){
     db.patches.nextDate=addDays(e.date,db.patches.cadence||14);
     const nc=p.notes.find(n=>n.type==='new');
     news(db,`${SPLIT_NAME[e.split]} 개막 패치 ${p.id}${nc?` — 신규 챔피언 ${nc.def.nameKo||nc.def.name} 출시`:''}`);
-    officeMidSeason(db,rng,CHANGE_F[db.worldConfig.changes]??1);
+    officeMidSeason(db,rng,WORLD_CHANGE_FREQUENCY);
   }
   w.majorPatchEvents=remaining;
 }
@@ -4013,7 +4014,7 @@ function runOffseason(db){
   // Headless/AI callers historically advanced offseason in one call. Preserve
   // that contract while the interactive UI exposes both real window stages.
   if(cw?.stage==='exclusive')advanceOffseasonContractWindow(db);
-  const rng=new RNG(w.seed+'/'+w.year,'offseason'), f=CHANGE_F[db.worldConfig.changes]??1;
+  const rng=new RNG(w.seed+'/'+w.year,'offseason'), f=WORLD_CHANGE_FREQUENCY;
   const rep={year:w.year,growth:[],retired:[],signings:[],resign:[],expired:[],transfers:[],events:[]};
   const ev=t=>{rep.events.push(t);news(db,t)};
   const games={}, champGames={};
@@ -4254,7 +4255,23 @@ function normalizeRestoredSave(db){
   // World schema v15, format 1: pre-migration JSON saves and packed exports.
   // Format 2 uses the same runtime object model, but strips derived caches.
   for(const k of SAVE_TRANSIENT_ROOT_FIELDS)delete db[k];
+  db.worldConfig.changes='normal';
   db.metaHistory=unpackMetaHistory(db.metaHistory||[]);
+  // Rename only former defaults; IDs, custom names and tournament rules stay.
+  for(const [id,oldName] of [['MASTERS','Masters'],['OPEN','Open']]){
+    const preset=INTL_PRESETS.find(x=>x.id===id);
+    for(const row of [...(db.worldConfig.internationals||[]),
+      ...Object.values(db.competitions||{})]){
+      if(row.id!==id)continue;
+      if(row.name===oldName)row.name=preset.name;
+      if(row.short===oldName)row.short=preset.short;
+    }
+    for(const row of db.history||[])
+      if(row.comp===id&&row.compName===oldName)row.compName=preset.name;
+    for(const step of db.world?.steps||[])
+      if(step.kind==='intl'&&(step.ids||[step.id]).includes(id)&&step.label)
+        step.label=step.label.split(' · ').map(x=>x===oldName?preset.name:x).join(' · ');
+  }
   for(const t of Object.values(db.teams)){
     ensureFacilities(t);
     delete t._pre;
@@ -8360,8 +8377,7 @@ function seasonSetup(){
   return `<section class="teamhead"><h2>세계 만들기</h2><p>LOL GM은 고정된 글로벌 프로 생태계에서 시작합니다. 리그와 국제대회는 새 게임에서 임의로 추가·삭제하지 않으며, 이후 구조 변화는 게임 내 사무국과 세계 변화 시스템이 처리합니다.</p></section>
   <section><h3>리그 구조</h3><p class="hint">스플릿 기간 수와 성적 집계 방식은 각 지역 리그 사무국이 독립적으로 결정합니다. 감독이 직접 선택하지 않습니다. 사무국은 시즌 종료 후 흥행·경쟁 균형·운영 부담에 따라 다음 시즌 구조를 변경할 수 있으며, 결정은 세계 뉴스와 사무국 기록에 남습니다.</p><div class="cfgs">${cfg.regions.map(regionCard).join('')}</div></section>
   <section><h3>국제대회</h3><div class="cfgs">${cfg.internationals.map(intlCard).join('')}</div><p class="hint">퍼스트 스탠드 · MSI · 월드 챔피언십과 권역별 마스터즈/챌린저급 국제대회가 세계 일정에 포함됩니다.</p></section>
-  <section><h3>세계 변화와 운영</h3><div class="controls">
-    <label>세계 변화 빈도${sel('g.changes',cfg.changes,{none:'없음',low:'낮음',normal:'보통',high:'높음'})}</label>
+  <section><h3>구단 운영</h3><div class="controls">
     <label>내 팀 운영${sel('g.manage',cfg.manage||'manual',{manual:'직접 (계약·영입)',ai:'AI 위임'})}</label>
   </div></section>
   <section class="controls"><button class="primary" id="regen">이 설정으로 세계 생성</button><button class="ghost" id="cfgdef">기본 설정으로</button>
