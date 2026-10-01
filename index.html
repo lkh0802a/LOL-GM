@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
+.release-settlements summary{min-height:44px;padding:12px 4px;cursor:pointer;overflow-wrap:anywhere}
 :root{--bg:#ECEFF2;--surf:#FFFFFF;--ink:#18212B;--mut:#5D6B78;--line:#D5DBE1;--brass:#84601D;--blue:#2F6CD4;--red:#C9412F;--blue-t:rgba(47,108,212,.14);--red-t:rgba(201,65,47,.13);
   --on-brass:#FFFFFF;--hi:#1F7A4D;--mi:#8A6A1C;--lo:#9A3B2E;
   box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -300,7 +301,6 @@ const SYSTEM_SOURCE_SNAPSHOT={"schema":1,"version":"16.19.1","sourceCommit":"1cf
 function clamp(v,a,b){return v<a?a:v>b?b:v}
 function avg(a){return a.length?a.reduce((s,x)=>s+x,0)/a.length:0}
 function hashStr(s){let h=2166136261>>>0;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
-function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 class RNG{
   constructor(seed,name){this.a=hashStr(String(seed)+'::'+name)|0;this.sp=null}
   next(){let a=this.a=(this.a+0x6D2B79F5)|0;let t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;return ((t^(t>>>14))>>>0)/4294967296}
@@ -774,19 +774,6 @@ function simulateMatch(db,blueId,redId,seed,ctx,quiet){
   st.log.sort((a,b)=>a.t-b.t||a.sec-b.sec);
   const last=st.log[st.log.length-1]; if(last&&last.kind==='nexus')last.sec=endSec;
   return {seed,winner:st.winner,duration:t+endSec/60,durationStr:fmtTime(t,endSec),draft:d,sides:st.sides,log:st.log,expl:st.expl,goldHist:st.goldHist,firsts:st.firsts};
-}
-
-function monteCarlo(db,blueId,redId,n,baseSeed){
-  const acc={wins:0,time:0,gd15:0,fd:0,ft:0,fb:0,baron:[0,0],kills:[0,0],towers:[0,0],dragons:[0,0],fights:[0,0],n:0,times:[]};
-  for(let i=0;i<n;i++){
-    const r=simulateMatch(db,blueId,redId,baseSeed+'#'+i);
-    acc.n++; if(r.winner===0)acc.wins++; acc.time+=r.duration; acc.times.push(r.duration);
-    acc.gd15+=r.goldHist[14]??r.goldHist[r.goldHist.length-1];
-    if(r.firsts.dragon===0)acc.fd++; if(r.firsts.tower===0)acc.ft++; if(r.firsts.blood===0)acc.fb++;
-    for(const i2 of [0,1]){acc.baron[i2]+=r.sides[i2].barons>0?1:0;acc.kills[i2]+=r.sides[i2].kills;acc.towers[i2]+=r.sides[i2].towersTaken;acc.dragons[i2]+=r.sides[i2].dragons.length}
-    for(const l of r.log) if(l.kind==='fight') acc.fights[l.side]++;
-  }
-  return acc;
 }
 
 /* ==== FILE: draft.js ==== */
@@ -1277,7 +1264,6 @@ function generatedChampionVisual(def){
   const pool=(def?.dmg==='AP'?['arcane','celestial','verdant','void','frost','hex']:['infernal','storm','shadow','solar','frost','hex']),theme=pool[(seed>>>3)%pool.length];
   return {version:CHAMPION_VISUAL_VERSION,seed,revision:0,theme,silhouette,weapon,ornament:CHAMPION_VISUAL_ORNAMENTS[(seed>>>7)%CHAMPION_VISUAL_ORNAMENTS.length],pose:['front','threeQuarter','profile'][(seed>>>11)%3],aura:CHAMPION_VISUAL_THEMES[(seed>>>15)%CHAMPION_VISUAL_THEMES.length]};
 }
-function ensureChampionVisual(c){if(!c)return null;if(!c.visual)c.visual=generatedChampionVisual(c);return c.visual}
 const DETAIL_BASE_KEYS=['resource','resourceg','resourceRegen','mr','mrg','asg'];
 const CHAMPION_SOURCE_PATCH='16.19.1';
 function cleanChampionSourceText(v){return String(v||'').replace(/<br\s*\/?>/gi,' ').replace(/<[^>]*>/g,'').replace(/&nbsp;/gi,' ').replace(/&amp;/gi,'&').replace(/&lt;/gi,'<').replace(/&gt;/gi,'>').replace(/&#39;/g,"'").replace(/&quot;/gi,'"').replace(/\s+/g,' ').trim()}
@@ -2158,10 +2144,6 @@ function seriesSessionResult(db,sess){
   if(!seriesSessionDone(sess))return null;const tac={[sess.a]:{...db.teams[sess.a].tactics},[sess.b]:{...db.teams[sess.b].tactics}};
   return {rec:{a:sess.a,b:sess.b,bestOf:sess.bestOf,seed:sess.seed,patch:db.patch.id,fearless:!!sess.opt.fearless,firstChoice:sess.opt.firstChoice,score:[sess.wins[sess.a],sess.wins[sess.b]],winner:sess.wins[sess.a]>sess.wins[sess.b]?sess.a:sess.b,games:sess.games,tac},lines:sess.lines};
 }
-function seriesOpeningDraft(db,aId,bId,bestOf,seed,opt={}){
-  const session=createSeriesSession(db,aId,bId,bestOf,seed,opt),x=seriesSessionPrepareGame(db,session);
-  return {...x,chooser:x.chooser,draftCtx:x.snap,session};
-}
 function simulateSeries(db,aId,bId,bestOf,seed,opt={}){
   const sess=createSeriesSession(db,aId,bId,bestOf,seed,opt);
   while(!seriesSessionDone(sess)){
@@ -2980,8 +2962,7 @@ function upgradeFacility(db,t,key,opt={}){
   if((t.facilityProjects||[]).some(p=>p.key===key))throw new Error('이미 증설 중인 시설입니다');
   const cost=facilityCost(db,t,key);
   if(!t.finance||t.finance.cash<cost)throw new Error('시설 증설 자금이 부족합니다');
-  t.finance.cash=Math.round((t.finance.cash-cost)*10)/10;
-  recordFinancePrepaid(t,'facilityInvestment',cost);
+  payFinancePrepaid(t,'facilityInvestment',cost);
   if(opt.deferDays>0){
     t.facilityProjects=t.facilityProjects||[];
     t.facilityProjects.push({key,from:f[key],to:f[key]+1,cost,started:db.worldDate,
@@ -3324,8 +3305,7 @@ function medicalReplacementCharge(db,p,through){
   if(due){
     // An explicit conditional daily extension is a payroll liability even if
     // the club's cash has since run out; never make a player work for free.
-    t.finance.cash=medicalWageRound(t.finance.cash-due);
-    recordFinancePrepaid(t,'medicalReplacementWage',due);
+    payMedicalReplacementWage(t,due);
   }
   c.paid=medicalWageRound(c.paid+due);c.paidThrough=through;
   return due;
@@ -3760,9 +3740,63 @@ function validateConfig(cfg){
   return errs;
 }
 
+/* ==== FILE: calendar.js ==== */
+// ===== LOL GM: World calendar domain =====
+// Owns raw clock positioning and in-season daily effects. Positioning alone
+// intentionally does not run training, patches or medical daily ticks: the
+// contract window and offseason recovery have their own accepted semantics.
+// Recovery may temporarily position the clock at the last competition date.
+function setWorldCalendarDate(db,date){db.worldDate=date}
+
+// Match dates are fixtures; the authoritative world clock moves through every
+// intervening calendar date, including rest days and inter-stage breaks.
+function nextCalendarDate(db){
+  const fixture=nextDate(db);
+  if(fixture===null)return null;
+  const previous=db.worldDate||`${db.year}-01-01`;
+  if(previous>fixture)throw new Error('월드 날짜가 미진행 공식 경기일보다 늦습니다: '+previous+' > '+fixture);
+  if(previous===fixture)return fixture; // legacy saves may be parked on an unplayed match date
+  return addDays(previous,1);
+}
+function applyCalendarPatchEvents(db,date){
+  const w=db.world;
+  if(!w.majorPatchEvents?.length)return;
+  const remaining=[];
+  for(const e of w.majorPatchEvents){
+    if(e.date>date){remaining.push(e);continue}
+    const rng=new RNG(w.seed+w.year+'|'+e.step,'mid');
+    const p=newPatch(db,e.date,true,rng);
+    db.patches.nextDate=addDays(e.date,db.patches.cadence||14);
+    const nc=p.notes.find(n=>n.type==='new');
+    news(db,`${SPLIT_NAME[e.split]} 개막 패치 ${p.id}${nc?` — 신규 챔피언 ${nc.def.nameKo||nc.def.name} 출시`:''}`);
+    officeMidSeason(db,rng,CHANGE_F[db.worldConfig.changes]??1);
+  }
+  w.majorPatchEvents=remaining;
+}
+function applyWorldDailyEffects(db,date){
+  const w=db.world;
+  if(w.lastDailyTick===date)return false;
+  if(w.lastDailyTick&&w.lastDailyTick>date)throw new Error('이미 처리한 날짜를 다시 진행할 수 없습니다');
+  setWorldCalendarDate(db,date);
+  // A scheduled patch is effective *on* its intended date, never during the
+  // preceding break. Then every actual day runs exactly once.
+  applyCalendarPatchEvents(db,date);
+  patchTick(db,date,new RNG(w.seed+date,'patch'));
+  advanceFacilityConstruction(db,date);
+  for(const t of activeTeams(db))aiManageTraining(db,t);
+  dailyRecovery(db);
+  medicalDailyTick(db,date);
+  for(const t of activeTeams(db))aiReviewRoleConversions(db,t);
+  advanceRoleConversionsDay(db);
+  aiRunScrims(db,new RNG(w.seed+date,'scrim'));
+  for(const t of activeTeams(db,null,1))aiManageOwnedReserve(db,t);
+  w.lastDailyTick=date;
+  return true;
+}
+
 /* ==== FILE: season.js ==== */
 // ===== LOL GM: Season / competition orchestration =====
-// Owns league and international season construction, calendar progression,
+// Owns league and international season construction,
 // managed official-match pauses and day-by-day world competition execution.
 
 // 그 해 마지막 스플릿 시즌 (승강·시상·목표 판정 기준)
@@ -3777,7 +3811,7 @@ function leagueComp(db,rid,div=1){
 function startWorldSeason(db,myTeam,seed){
   const medicalRolloverDate=`${db.year}-01-06`;
   medicalOffseasonRecovery(db,medicalRolloverDate);
-  if(!db.worldDate||db.worldDate<medicalRolloverDate)db.worldDate=medicalRolloverDate;
+  if(!db.worldDate||db.worldDate<medicalRolloverDate)setWorldCalendarDate(db,medicalRolloverDate);
   setManagedTeam(db,myTeam);
   const regs=Object.values(db.regions), I=db.worldConfig.internationals, maxK=Math.max(...regs.map(r=>r.splits||1));
   const steps=[];
@@ -3921,51 +3955,6 @@ function resolvePendingOfficialMatch(db,forcedDraft){
   p.queue.shift();if(!p.queue.length){w.pendingOfficial=null;if(!activeSeasons(db).length)advanceStep(db)}
   return {game:played.game,done:true,score:played.score,rec:series.rec,lines:series.lines,finalized,pending:w.pendingOfficial};
 }
-// Match dates are fixtures; the authoritative world clock moves through every
-// intervening calendar date, including rest days and inter-stage breaks.
-function nextCalendarDate(db){
-  const fixture=nextDate(db);
-  if(fixture===null)return null;
-  const previous=db.worldDate||`${db.year}-01-01`;
-  if(previous>fixture)throw new Error('월드 날짜가 미진행 공식 경기일보다 늦습니다: '+previous+' > '+fixture);
-  if(previous===fixture)return fixture; // legacy saves may be parked on an unplayed match date
-  return addDays(previous,1);
-}
-function applyCalendarPatchEvents(db,date){
-  const w=db.world;
-  if(!w.majorPatchEvents?.length)return;
-  const remaining=[];
-  for(const e of w.majorPatchEvents){
-    if(e.date>date){remaining.push(e);continue}
-    const rng=new RNG(w.seed+w.year+'|'+e.step,'mid');
-    const p=newPatch(db,e.date,true,rng);
-    db.patches.nextDate=addDays(e.date,db.patches.cadence||14);
-    const nc=p.notes.find(n=>n.type==='new');
-    news(db,`${SPLIT_NAME[e.split]} 개막 패치 ${p.id}${nc?` — 신규 챔피언 ${nc.def.nameKo||nc.def.name} 출시`:''}`);
-    officeMidSeason(db,rng,CHANGE_F[db.worldConfig.changes]??1);
-  }
-  w.majorPatchEvents=remaining;
-}
-function applyWorldDailyEffects(db,date){
-  const w=db.world;
-  if(w.lastDailyTick===date)return false;
-  if(w.lastDailyTick&&w.lastDailyTick>date)throw new Error('이미 처리한 날짜를 다시 진행할 수 없습니다');
-  db.worldDate=date;
-  // A scheduled patch is effective *on* its intended date, never during the
-  // preceding break. Then every actual day runs exactly once.
-  applyCalendarPatchEvents(db,date);
-  patchTick(db,date,new RNG(w.seed+date,'patch'));
-  advanceFacilityConstruction(db,date);
-  for(const t of activeTeams(db))aiManageTraining(db,t);
-  dailyRecovery(db);
-  medicalDailyTick(db,date);
-  for(const t of activeTeams(db))aiReviewRoleConversions(db,t);
-  advanceRoleConversionsDay(db);
-  aiRunScrims(db,new RNG(w.seed+date,'scrim'));
-  for(const t of activeTeams(db,null,1))aiManageOwnedReserve(db,t);
-  w.lastDailyTick=date;
-  return true;
-}
 function playWorldDay(db){
   const w=db.world;if(w.phase!=='season')return null;
   // An unfinished managed Bo3/Bo5 must be resumed before advancing another
@@ -4059,14 +4048,14 @@ function runOffseason(db){
   // or matches occur there. Preserve B10's full passive recovery from the last
   // competitive date instead of shortening recovery by the displayed window.
   const medicalRolloverDate=`${db.year}-01-06`;
-  if(cw?.seasonEndDate)db.worldDate=cw.seasonEndDate;
+  if(cw?.seasonEndDate)setWorldCalendarDate(db,cw.seasonEndDate);
   medicalOffseasonRecovery(db,medicalRolloverDate);
-  db.worldDate=medicalRolloverDate;
+  setWorldCalendarDate(db,medicalRolloverDate);
   promotionRelegation(db,w,rng,ev);
   updateHype(db,w);
   closeFinances(db,w,rng,ev);
   rep.contractWindow=settleOffseasonContractRollover(db,rep);
-  db.worldDate=medicalRolloverDate;
+  setWorldCalendarDate(db,medicalRolloverDate);
   if(f>0){
     officeDecisions(db,rng,f,ev);
     globalOffice(db,w,rng,f,ev);
@@ -4445,6 +4434,54 @@ function aiManageOwnedReserve(db,t){
   rebalanceAiRosterRoles(db,parent);rebalanceAiRosterRoles(db,reserve);
   return [{pid:up.id,kind:'callup',swap:down.id},{pid:down.id,kind:'senddown',swap:up.id}];
 }
+// Market callups precede FA replenishment, so the organization may temporarily
+// be below registration minima. Preserve this maintenance policy separately from
+// user/weekly roster.plan, including its historical no-squad-event behavior.
+function marketReserveCallupDecision(db,parent,reserve,role,updateDepth=false){
+  const view=updateDepth?parent:{...parent,depthChart:{...parent.depthChart}};
+  const cur=starterFor(db,view,role),cand=reserve.roster.map(id=>db.players[id])
+    .filter(p=>p.role===role).sort((x,y)=>playerOvr(y)-playerOvr(x))[0];
+  if(!cand||!(!cur||playerOvr(cand)>=playerOvr(cur)+5||
+    (playerOvr(cand)>=playerOvr(cur)+3&&((cur.form??0)<=-6||cur.wantsOut))))return null;
+  const size=5+(db.worldConfig.subs||0),senddown=!!(cur&&new Set([...parent.roster,cand.id]).size>size),
+    assignments={[cand.id]:parent.id};
+  if(senddown)assignments[cur.id]=reserve.id;
+  return {pid:cand.id,downId:senddown?cur.id:null,assignments};
+}
+function validateMarketReserveCallup(db,a){
+  const parent=db.teams[a.parentId],reserve=db.teams[a.reserveId];
+  if(db.world?.phase!=='market'||a.actor!=='ai'||!parent||parent.active===false||
+    !reserve||reserve.active===false||reserve.parent!==parent.id||!ROLES.includes(a.role))
+    return worldActionError('invalid_action','AI 시장 콜업 대상 또는 시점이 일치하지 않습니다');
+  const mine=db.world.manage==='manual'?managedTeamId(db):null;
+  if(parent.id===mine)return worldActionError('unauthorized','관리 구단의 콜업은 AI가 확정할 수 없습니다');
+  const decision=marketReserveCallupDecision(db,parent,reserve,a.role);
+  if(!decision)return worldActionError('no_callup','현재 시장 콜업 조건에 맞는 선수가 없습니다');
+  const moves=Object.entries(decision.assignments).map(([pid,to])=>({
+    pid,from:db.players[pid].team,to,kind:to===parent.id?'callup':'senddown'}));
+  return {ok:true,parentId:parent.id,reserveId:reserve.id,role:a.role,...decision,moves};
+}
+function applyMarketReserveCallup(db,c){
+  assignPlayerToTeam(db,db.players[c.pid],db.teams[c.parentId]);
+  if(c.downId)assignPlayerToTeam(db,db.players[c.downId],db.teams[c.reserveId]);
+  return {pid:c.pid,downId:c.downId};
+}
+function aiMarketReserveCallups(db,rep){
+  const year=db.year,w=db.world,mine=w&&w.manage==='manual'?managedTeamId(db):null;
+  for(const a of activeTeams(db).filter(t=>t.parent)){
+    const t=db.teams[a.parent];if(!t||t.active===false||t.id===mine)continue;
+    for(const role of ROLES){
+      if(!marketReserveCallupDecision(db,t,a,role,true))continue;
+      const result=commitWorldAction(db,{type:'roster.market-callup',actor:'ai',
+        parentId:t.id,reserveId:a.id,role});
+      if(!result.ok)throw new Error('AI market callup failed: '+result.errors.join(' · '));
+      const cand=db.players[result.pid];
+      rep.signings.push({pid:cand.id,team:t.id,salary:cand.contract?cand.contract.salary:0,
+        years:cand.contract?cand.contract.until-year+1:1,callup:true});
+    }
+  }
+}
+
 function playerRef(db,p){return typeof p==='string'?db.players[p]:p}
 function teamRef(db,t){return typeof t==='string'?db.teams[t]:t}
 function detachPlayerFromRosters(db,pid,exceptId=null){
@@ -4583,6 +4620,15 @@ function rosterActionSnapshot(db,parentId){
 }
 
 const WORLD_ACTION_HANDLERS={
+  'roster.market-callup':{
+    validate:validateMarketReserveCallup,
+    canonical(db,a,v){return {type:a.type,actor:a.actor,parentId:v.parentId,
+      reserveId:v.reserveId,role:v.role,pid:v.pid,downId:v.downId,
+      assignments:{...v.assignments}}},
+    snapshot(db,c){return rosterActionSnapshot(db,c.parentId)},
+    changes(db,c,v){return v.moves.map(m=>({...m}))},
+    apply:applyMarketReserveCallup
+  },
   'roster.plan':{
     validate(db,action){
       const parent=parentTeamOf(db,action.parentId);
@@ -4724,7 +4770,7 @@ function actionJournalRestoreTeam(entry){
 
 function actionJournalTargets(db,command){
   const playerIds=new Set(),teamIds=new Set();
-  if(command.type==='roster.plan'){
+  if(command.type==='roster.plan'||command.type==='roster.market-callup'){
     for(const team of organizationTeams(db,command.parentId)){
       teamIds.add(team.id);
     }
@@ -5131,6 +5177,56 @@ function recordFinancePrepaid(t,key,amount){
   const p=financePrepaid(t),digits=key==='medicalReplacementWage'?1000:10;
   p[key]=Math.round(((p[key]||0)+amount)*digits)/digits;
 }
+function payFinancePrepaid(t,key,amount){
+  if(!FINANCE_PREPAID_KEYS.includes(key)||key==='transferReceived'||!Number.isFinite(amount)||amount<0)
+    throw new Error('잘못된 선지급 지출 항목');
+  if(!t?.finance)throw new Error('구단 재정 정보가 없습니다');
+  t.finance.cash=Math.round((t.finance.cash-amount)*10)/10;
+  recordFinancePrepaid(t,key,amount);
+}
+function receiveFinancePrepaidTransfer(t,amount){
+  if(!Number.isFinite(amount)||amount<0)throw new Error('잘못된 이적료 수입');
+  if(!t?.finance)throw new Error('구단 재정 정보가 없습니다');
+  t.finance.cash=Math.round((t.finance.cash+amount)*10)/10;
+  recordFinancePrepaid(t,'transferReceived',amount);
+}
+function payMedicalReplacementWage(t,amount){
+  if(!Number.isFinite(amount)||amount<0)throw new Error('잘못된 의료 대체 급여');
+  if(!t?.finance)throw new Error('구단 재정 정보가 없습니다');
+  t.finance.cash=Math.round((t.finance.cash-amount)*1000)/1000;
+  recordFinancePrepaid(t,'medicalReplacementWage',amount);
+}
+// Release liability is accrued for season closeout, not paid from cash twice.
+function recordContractReleaseObligation(t,amount,settlement=null){
+  if(amount===0)return;
+  if(!Number.isFinite(amount)||amount<0||!t?.finance)
+    throw new Error('잘못된 선수 방출 채무');
+  if(settlement&&settlement.amount!==amount)
+    throw new Error('방출 채무와 계약 정산액이 다릅니다');
+  t.finance.buyout=(t.finance.buyout||0)+amount;
+  if(settlement){
+    t.finance.releaseObligations=t.finance.releaseObligations||[];
+    t.finance.releaseObligations.push({...settlement});
+  }
+}
+// buyout remains the balance source of truth. Older saves can have a balance
+// without player-level detail; never invent a claimant or charge that debt twice.
+function financeReleaseObligations(t){
+  const amount=t.finance?.buyout||0,
+    items=(t.finance?.releaseObligations||[]).map(row=>({...row})),
+    detailed=items.reduce((sum,row)=>sum+row.amount,0);
+  return {amount,items,unattributedAmount:Math.max(0,amount-detailed)};
+}
+function payroll(db,t){return t.roster.reduce((a,id)=>{const c=db.players[id]?.contract;return a+(c&&!c.medicalReplacement?c.salary:0)},0)}
+function topFivePayroll(db,t){const top=[];for(const id of t.roster){const p=db.players[id];if(!p||!p.contract||p.contract.medicalReplacement)continue;const s=p.contract.salary;let i=0;while(i<top.length&&top[i]>=s)i++;top.splice(i,0,s);if(top.length>5)top.pop()}return top.reduce((a,b)=>a+b,0)}
+function regulatedPayroll(db,t){const R=db.regions[t.region];return R&&R.spendingRule==='sfr_top5'?topFivePayroll(db,t):payroll(db,t)}
+function spendingTaxForPayroll(db,t,spend){
+  const R=db.regions[t.region];if(!R||R.spendingRule!=='sfr_top5'||!R.salaryCap||(t.division||1)!==1)return 0;
+  const over=Math.max(0,spend-R.salaryCap);if(!over)return 0;
+  if(R.sfrMode==='lec_50_100'){const first=Math.min(over,R.salaryCap*.5),rest=Math.max(0,over-first);return first*.5+rest}
+  const a=Math.min(over,R.salaryCap*.1),b=Math.min(Math.max(0,over-a),R.salaryCap*.15),c=Math.max(0,over-a-b);
+  return a*.25+b*.5+c*(R.luxuryTax||1);
+}
 function sumFinanceRows(rows){return Object.values(rows).reduce((a,v)=>a+v,0)}
 function financeSeasonWins(db,t,w=db.world){if(!w?.seasons)return 0;
   return Object.values(w.seasons).reduce((n,s)=>{
@@ -5280,9 +5376,12 @@ function closeFinances(db,w,rng,ev){
     const inc=sumFinanceRows(row.rev),out=sumFinanceRows(row.exp),f=row.t.finance;
     const net=inc-out;
     f.cash=round(f.cash+net-row.settled.income+row.settled.expense);
+    const releases=financeReleaseObligations(row.t);
     f.buyout=0;f.prepaid={};
+    if(f.releaseObligations)f.releaseObligations=[];
     f.history=[...f.history,{year:w.year,rev:roundRows(row.rev),
-      exp:roundRows(row.exp),net:round(net),cash:f.cash}].slice(-10);
+      exp:roundRows(row.exp),net:round(net),cash:f.cash,
+      ...(releases.amount?{releaseSettlement:releases}:{})}].slice(-10);
     if(row.exp.tax>0)ev(`${row.t.name} 균형지출 부담금 ${money(row.exp.tax)} 납부 (상위 5인 기준 ${money(row.payrollBasis.regulated)}, 기준선 ${money(row.R.salaryCap)})`);
     if(row.t.parent)continue;
     const losses=f.history.slice(-2).filter(y=>y.net<0).length;
@@ -5386,22 +5485,24 @@ function contractBonusCost(db,t,year){
 function signContract(db,p,t,salary,years,terms={}){
   const old=p.team,offer=normalizeContractTerms(db,p,t,salary,years,terms);assignPlayerToTeam(db,p,t);invalidateMarketDemand(db);p.faYears=0;
   p.contract={salary:offer.salary,until:db.year+offer.years-1,signed:db.year,years:offer.years,signingBonus:offer.signingBonus,bonuses:offer.bonuses,buyout:offer.buyout,option:offer.option,promisedRole:offer.promisedRole};
-  if(offer.signingBonus&&t.finance){t.finance.cash=Math.round((t.finance.cash-offer.signingBonus)*10)/10;recordFinancePrepaid(t,'signingBonus',offer.signingBonus)}
+  if(offer.signingBonus&&t.finance)payFinancePrepaid(t,'signingBonus',offer.signingBonus);
   setRosterRole(db,p,offer.promisedRole,'contract',true);ensureSatisfaction(p);if(old!==t.id){p.satisfaction=clamp(Math.max(p.satisfaction,58),0,100);p.managerRelationship=55;p.managerTrust=52;p.concernStreak=0;p.wantsOut=false;p.wantsOutReason=null}else{p.managerRelationship=clamp(p.managerRelationship+2,0,100);p.managerTrust=clamp(p.managerTrust+3,0,100)}
   if(db.world)recordPlayerEvent(p,'contract',db.year,{team:t.id,salary:p.contract.salary,years:offer.years,until:p.contract.until,renewal:old===t.id,rosterRole:p.rosterRole,signingBonus:offer.signingBonus,buyout:offer.buyout,option:offer.option,date:db.worldDate});
   return p.contract;
 }
-function payroll(db,t){return t.roster.reduce((a,id)=>{const c=db.players[id]?.contract;return a+(c&&!c.medicalReplacement?c.salary:0)},0)}
-function topFivePayroll(db,t){const top=[];for(const id of t.roster){const p=db.players[id];if(!p||!p.contract||p.contract.medicalReplacement)continue;const s=p.contract.salary;let i=0;while(i<top.length&&top[i]>=s)i++;top.splice(i,0,s);if(top.length>5)top.pop()}return top.reduce((a,b)=>a+b,0)}
-function regulatedPayroll(db,t){const R=db.regions[t.region];return R&&R.spendingRule==='sfr_top5'?topFivePayroll(db,t):payroll(db,t)}
-function spendingTaxForPayroll(db,t,spend){
-  const R=db.regions[t.region];if(!R||R.spendingRule!=='sfr_top5'||!R.salaryCap||(t.division||1)!==1)return 0;
-  const over=Math.max(0,spend-R.salaryCap);if(!over)return 0;
-  if(R.sfrMode==='lec_50_100'){const first=Math.min(over,R.salaryCap*.5),rest=Math.max(0,over-first);return first*.5+rest}
-  const a=Math.min(over,R.salaryCap*.1),b=Math.min(Math.max(0,over-a),R.salaryCap*.15),c=Math.max(0,over-a-b);
-  return a*.25+b*.5+c*(R.luxuryTax||1);
+function contractReleaseCost(db,p,mode='manager'){
+  return contractReleaseSettlement(db,p,mode).amount;
 }
-function spendingTax(db,t){return spendingTaxForPayroll(db,t,regulatedPayroll(db,t))}
+function contractReleaseSettlement(db,p,mode='manager'){
+  const contract=p.contract;
+  const remainingYears=contract&&contract.until>=db.year?contract.until-db.year+1:0,
+    exempt=mode==='initial'||mode==='medical_end'||!!contract?.medicalReplacement,
+    guaranteeRate=.5,
+    amount=exempt?0:remainingYears?(contract.salary*remainingYears*guaranteeRate):0;
+  return {pid:p.id,playerName:p.name,date:db.worldDate||null,year:db.year,mode,
+    salary:contract?.salary||0,contractUntil:contract?.until??null,
+    remainingYears,guaranteeRate,exempt,amount};
+}
 function medicalContractYears(db,p,years){
   const risk=medicalContractRisk(db,p);
   return risk>=.115?Math.min(years,1):risk>=.065?Math.min(years,2):years;
@@ -5512,12 +5613,7 @@ function contractMarket(db,rng,rep,ev){
     }
   }
   // 2) FA 시장 (3라운드: 제안 → 선수 선택)
-  // 2군 콜업: 프랜차이즈 구단은 자기 2군에서 먼저 올린다
-  for(const a of activeTeams(db).filter(t=>t.parent)){const t=db.teams[a.parent];if(!t||t.active===false||t.id===mine)continue;
-    for(const role of ROLES){const cur=starterFor(db,t,role),cand=a.roster.map(id=>db.players[id]).filter(p=>p.role===role).sort((x,y)=>playerOvr(y)-playerOvr(x))[0];
-      if(cand&&(!cur||playerOvr(cand)>=playerOvr(cur)+5||(playerOvr(cand)>=playerOvr(cur)+3&&((cur.form??0)<=-6||cur.wantsOut)))){assignPlayerToTeam(db,cand,t);
-        if(cur&&t.roster.length>size)assignPlayerToTeam(db,cur,a)
-        rep.signings.push({pid:cand.id,team:t.id,salary:cand.contract?cand.contract.salary:0,years:cand.contract?cand.contract.until-year+1:1,callup:true});}}}
+  aiMarketReserveCallups(db,rep);
   const budgetLeft={};activeTeams(db).forEach(t=>budgetLeft[t.id]=salaryBudget(db,t)-payroll(db,t));
   for(let round=0;round<3;round++){
     const fas=Object.values(db.players).filter(p=>!p.retired&&!p.team);
@@ -5712,7 +5808,7 @@ function scoutAbilityRange(db,p){const k=knowledge(db,p),c=obsOvr(db,p),w=Math.m
 function scoutPotentialRange(db,p){const k=knowledge(db,p),risk=scoutingRisk(db,p),noise=((hashStr(p.id+'pot')%2001)/1000-1)*Math.max(1,(100-k)/13),center=clamp(p.pot+noise,playerOvr(p),99),w=Math.max(3,Math.ceil((100-k)/8+risk*.45));return [Math.max(playerOvr(p),Math.round(center-w)),Math.min(99,Math.round(center+w))]}
 function scoutGrowthTrend(p){const a=(p.developmentTrail||[]).slice(-3);if(a.length<2)return {delta:null,label:'표본 부족'};const d=a[a.length-1].ovr-a[0].ovr;return {delta:d,label:d>=3?'빠른 상승':d>=1?'상승':d<=-2?'하락':d<0?'소폭 하락':'정체'}}
 function scoutReport(db,p){const r=ensureScoutReport(db,p),sample=scoutSample(db,p),ability=scoutAbilityRange(db,p),potential=scoutPotentialRange(db,p),growth=scoutGrowthTrend(p),champions=Object.entries(p.pool||{}).sort((a,b)=>b[1].mastery-a[1].mastery).slice(0,5).map(([id,v])=>({id,mastery:Math.round(clamp(v.mastery+((hashStr(p.id+id)%1001)/1000-.5)*(100-knowledge(db,p))*.12,20,99))}));return {knowledge:knowledge(db,p),ability,potential,sample,growth,champions,lastSeenDate:r.lastSeenDate,staleYears:r.staleYears||0,observations:r.observations||0,gamesSeen:r.gamesSeen||0}}
-function scoutPlayers(db,ids,amt,cost){const t=myT(db);if(t.finance.cash<cost)return '보유 자금이 부족합니다';t.finance.cash=Math.round((t.finance.cash-cost)*10)/10;recordFinancePrepaid(t,'scoutingExpense',cost);for(const id of ids){const p=db.players[id];if(p){observePlayer(db,p,Math.min(24,amt*.55),{games:0,comp:'manual'});syncRecruitmentObservation(db,id)}}return `스카우팅 보고서 갱신 (${money(cost)})`}
+function scoutPlayers(db,ids,amt,cost){const t=myT(db);if(t.finance.cash<cost)return '보유 자금이 부족합니다';payFinancePrepaid(t,'scoutingExpense',cost);for(const id of ids){const p=db.players[id];if(p){observePlayer(db,p,Math.min(24,amt*.55),{games:0,comp:'manual'});syncRecruitmentObservation(db,id)}}return `스카우팅 보고서 갱신 (${money(cost)})`}
 
 /* ==== FILE: scouting-ai.js ==== */
 // ===== LOL GM: AI scouting ownership / market observation =====
@@ -5981,8 +6077,7 @@ function aiRunScoutingOperation(db,t){
     });
   }
   const charge=aiScoutingBatchCharge(unitCost,targets.length);
-  owner.finance.cash=Math.round((cashBefore-charge)*10)/10;
-  if(charge)recordFinancePrepaid(owner,'scoutingExpense',charge);
+  if(charge)payFinancePrepaid(owner,'scoutingExpense',charge);
   const spent=Math.round((cashBefore-owner.finance.cash)*10)/10,
     operation={year:db.year,date:db.worldDate,capacity,targetLimit,unitCost,
       reserve:Math.round(reserve*1000)/1000,runway:runway.severity,
@@ -6027,37 +6122,10 @@ function aiMarketOfferRankSnapshot(db,t,p){
     value:Math.round(aiMarketValue(db,p,t)*10)/10,offerable:i>=0};
 }
 
-/* ==== FILE: transfer.js ==== */
-// ===== LOL GM: Recruitment / negotiation / transfer domain =====
-// Owns recruitment board workflow, player negotiations, seller negotiations and permanent transfers.
-
-const RECRUIT_PRIORITY=['A','B','C'];
-function recruitmentStore(db){const w=db.world;if(!w)return {};w.recruitment=w.recruitment||{};w.recruitment.targets=w.recruitment.targets||{};return w.recruitment.targets}
-function recruitmentTarget(db,pid){return recruitmentStore(db)[pid]||null}
-function setRecruitmentPriority(db,pid,priority='B'){
-  const p=db.players[pid];if(!p||p.retired)return {ok:false,msg:'영입 대상을 찾을 수 없습니다'};
-  priority=RECRUIT_PRIORITY.includes(priority)?priority:'B';const store=recruitmentStore(db),prev=store[pid];
-  store[pid]={pid,priority,stage:prev?.stage||'interest',addedDate:prev?.addedDate||db.worldDate,knowledge:knowledge(db,p),evaluation:prev?.evaluation||null,negotiationId:prev?.negotiationId||null,result:prev?.result||null};
-  syncRecruitmentObservation(db,pid);return {ok:true,target:store[pid],msg:`${p.name} 영입 후보 ${priority}로 등록했습니다`};
-}
-function removeRecruitmentTarget(db,pid){const store=recruitmentStore(db),e=store[pid];if(!e)return '영입 후보에 없는 선수입니다';const n=e.negotiationId&&negotiationStore(db)[e.negotiationId];if(n&&n.status==='open')return '진행 중인 협상을 먼저 종료해야 합니다';const name=db.players[pid]?.name||pid;delete store[pid];return name+' 영입 후보 등록을 해제했습니다'}
-function syncRecruitmentObservation(db,pid){
-  const e=recruitmentTarget(db,pid),p=db.players[pid];if(!e||!p)return e;const k=knowledge(db,p);e.knowledge=k;
-  if(e.stage==='interest'&&k>=35)e.stage='observed';return e;
-}
-function recruitmentEvaluation(db,pid,teamId=null){
-  const t=teamId?db.teams[teamId]:myT(db),p=db.players[pid],e=recruitmentTarget(db,pid);if(!t||!p)return {ok:false,msg:'영입 대상을 찾을 수 없습니다'};if(!e)return {ok:false,msg:'먼저 관심목록에 등록해야 합니다'};
-  syncRecruitmentObservation(db,pid);const k=knowledge(db,p);if(k<35)return {ok:false,msg:`관찰 정보가 부족합니다 (현재 ${k}%, 내부 평가에는 35% 이상 필요)`};
-  const r=scoutReport(db,p),ability=Math.round(avg(r.ability)),potential=Math.round(avg(r.potential)),cur=starterFor(db,t,p.role),gap=cur?ability-playerOvr(cur):8,baseBudget=(db.world?.phase==='initial_roster')?initialSalaryBudget(db,t):salaryBudget(db,t),room=Math.max(.1,baseBudget-payroll(db,t)),cost=asking(db,p,t.region)/room;
-  const fit=Math.round(clamp(50+gap*4+(potential-ability)*.9+(p.age<=21?5:0)+teamInternationalAppeal(db,t)*5-Math.max(0,cost-1)*18-medicalContractRisk(db,p)*22,0,100));
-  e.stage='evaluated';e.knowledge=k;e.evaluation={teamId:t.id,date:db.worldDate,knowledge:k,ability:r.ability,potential:r.potential,fit,expectedRole:defaultPromisedRole(db,p,t),salaryAsk:asking(db,p,t.region),marketValue:playerMarketValue(db,p),risk:Math.round(scoutingRisk(db,p)*10)/10,medicalRiskPct:Math.round(medicalContractRisk(db,p)*1000)/10};
-  return {ok:true,target:e,msg:`${p.name} 내부 평가 완료 · 적합도 ${fit}/100`};
-}
-function recruitmentReady(db,pid,teamId=null){const e=syncRecruitmentObservation(db,pid);return !!(e&&['evaluated','negotiating'].includes(e.stage)&&(!teamId||!e.evaluation?.teamId||e.evaluation.teamId===teamId))}
-function recruitmentBoard(db){const rank={A:0,B:1,C:2};return Object.values(recruitmentStore(db)).sort((a,b)=>(rank[a.priority]??9)-(rank[b.priority]??9)||String(a.addedDate||'').localeCompare(String(b.addedDate||'')))}
-function mInterest(db,pid,priority='B'){return setRecruitmentPriority(db,pid,priority).msg}
-function mEvaluateTarget(db,pid,teamId=null){return recruitmentEvaluation(db,pid,teamId).msg}
-function mDropInterest(db,pid){return removeRecruitmentTarget(db,pid)}
+/* ==== FILE: contract-negotiation.js ==== */
+// ===== LOL GM: Player contract negotiation domain =====
+// Owns shared negotiation state, player terms, rounds, reopening and contract agreement.
+// Recruitment tracking and seller fee negotiation remain transfer-domain consumers.
 
 // ---- 선수 계약 협상 엔진 ----
 function negotiationStore(db){const w=db.world;if(!w)return {};w.negotiations=w.negotiations||{};return w.negotiations}
@@ -6267,6 +6335,40 @@ function submitNegotiationOffer(db,nid,terms){
 }
 function acceptNegotiationCounter(db,nid){const neg=negotiationStore(db)[nid];if(!neg||neg.status!=='open'||!neg.counter)return {ok:false,msg:'수락할 역제안이 없습니다'};return submitNegotiationOffer(db,nid,neg.counter)}
 function cancelNegotiation(db,nid){const neg=negotiationStore(db)[nid];if(!neg||neg.status!=='open')return '진행 중인 협상이 아닙니다';neg.status='cancelled';neg.closedDate=db.worldDate;const target=recruitmentTarget(db,neg.pid);if(target){target.stage='evaluated';target.result='cancelled';target.negotiationId=null}return db.players[neg.pid].name+' 협상을 종료했습니다'}
+
+/* ==== FILE: transfer.js ==== */
+// ===== LOL GM: Recruitment / negotiation / transfer domain =====
+// Owns recruitment board workflow, seller fee negotiations and permanent transfers.
+
+const RECRUIT_PRIORITY=['A','B','C'];
+function recruitmentStore(db){const w=db.world;if(!w)return {};w.recruitment=w.recruitment||{};w.recruitment.targets=w.recruitment.targets||{};return w.recruitment.targets}
+function recruitmentTarget(db,pid){return recruitmentStore(db)[pid]||null}
+function setRecruitmentPriority(db,pid,priority='B'){
+  const p=db.players[pid];if(!p||p.retired)return {ok:false,msg:'영입 대상을 찾을 수 없습니다'};
+  priority=RECRUIT_PRIORITY.includes(priority)?priority:'B';const store=recruitmentStore(db),prev=store[pid];
+  store[pid]={pid,priority,stage:prev?.stage||'interest',addedDate:prev?.addedDate||db.worldDate,knowledge:knowledge(db,p),evaluation:prev?.evaluation||null,negotiationId:prev?.negotiationId||null,result:prev?.result||null};
+  syncRecruitmentObservation(db,pid);return {ok:true,target:store[pid],msg:`${p.name} 영입 후보 ${priority}로 등록했습니다`};
+}
+function removeRecruitmentTarget(db,pid){const store=recruitmentStore(db),e=store[pid];if(!e)return '영입 후보에 없는 선수입니다';const n=e.negotiationId&&negotiationStore(db)[e.negotiationId];if(n&&n.status==='open')return '진행 중인 협상을 먼저 종료해야 합니다';const name=db.players[pid]?.name||pid;delete store[pid];return name+' 영입 후보 등록을 해제했습니다'}
+function syncRecruitmentObservation(db,pid){
+  const e=recruitmentTarget(db,pid),p=db.players[pid];if(!e||!p)return e;const k=knowledge(db,p);e.knowledge=k;
+  if(e.stage==='interest'&&k>=35)e.stage='observed';return e;
+}
+function recruitmentEvaluation(db,pid,teamId=null){
+  const t=teamId?db.teams[teamId]:myT(db),p=db.players[pid],e=recruitmentTarget(db,pid);if(!t||!p)return {ok:false,msg:'영입 대상을 찾을 수 없습니다'};if(!e)return {ok:false,msg:'먼저 관심목록에 등록해야 합니다'};
+  syncRecruitmentObservation(db,pid);const k=knowledge(db,p);if(k<35)return {ok:false,msg:`관찰 정보가 부족합니다 (현재 ${k}%, 내부 평가에는 35% 이상 필요)`};
+  const r=scoutReport(db,p),ability=Math.round(avg(r.ability)),potential=Math.round(avg(r.potential)),cur=starterFor(db,t,p.role),gap=cur?ability-playerOvr(cur):8,baseBudget=(db.world?.phase==='initial_roster')?initialSalaryBudget(db,t):salaryBudget(db,t),room=Math.max(.1,baseBudget-payroll(db,t)),cost=asking(db,p,t.region)/room;
+  const fit=Math.round(clamp(50+gap*4+(potential-ability)*.9+(p.age<=21?5:0)+teamInternationalAppeal(db,t)*5-Math.max(0,cost-1)*18-medicalContractRisk(db,p)*22,0,100));
+  e.stage='evaluated';e.knowledge=k;e.evaluation={teamId:t.id,date:db.worldDate,knowledge:k,ability:r.ability,potential:r.potential,fit,expectedRole:defaultPromisedRole(db,p,t),salaryAsk:asking(db,p,t.region),marketValue:playerMarketValue(db,p),risk:Math.round(scoutingRisk(db,p)*10)/10,medicalRiskPct:Math.round(medicalContractRisk(db,p)*1000)/10};
+  return {ok:true,target:e,msg:`${p.name} 내부 평가 완료 · 적합도 ${fit}/100`};
+}
+function recruitmentReady(db,pid,teamId=null){const e=syncRecruitmentObservation(db,pid);return !!(e&&['evaluated','negotiating'].includes(e.stage)&&(!teamId||!e.evaluation?.teamId||e.evaluation.teamId===teamId))}
+function recruitmentBoard(db){const rank={A:0,B:1,C:2};return Object.values(recruitmentStore(db)).sort((a,b)=>(rank[a.priority]??9)-(rank[b.priority]??9)||String(a.addedDate||'').localeCompare(String(b.addedDate||'')))}
+function mInterest(db,pid,priority='B'){return setRecruitmentPriority(db,pid,priority).msg}
+function mEvaluateTarget(db,pid,teamId=null){return recruitmentEvaluation(db,pid,teamId).msg}
+function mDropInterest(db,pid){return removeRecruitmentTarget(db,pid)}
+
+// ---- 구단 간 이적료 협상 ----
 function sellerTransferAsk(db,p,from){if(p.contract?.buyout)return p.contract.buyout;const base=transferFee(db,p),starter=starterFor(db,from,p.role)===p,financeNeed=from.finance.cash<0?.88:1,exit=p.wantsOut?.82:1;return Math.round(base*(starter?1.12:.96)*financeNeed*exit*10)/10}
 function mTransferBid(db,pid,fee){
   const t=myT(db),p=db.players[pid],from=p&&db.teams[p.team];if(!p||!from||from.id===t.id)return '이적 대상을 찾을 수 없습니다';if(fee>t.finance.cash)return '보유 자금이 부족합니다';
@@ -6288,8 +6390,7 @@ function transferFee(db,p){const left=p.contract?Math.max(1,p.contract.until-db.
 function doTransfer(db,p,from,to,fee){
   const moveErr=contractedMoveError(db,p),localErr=localRegistrationError(db,to,p);if(moveErr||localErr)throw new Error(moveErr||localErr);
   recordContractedMove(db,p,'permanent',from,to,{fee});assignPlayerToTeam(db,p,to);
-  from.finance.cash=Math.round((from.finance.cash+fee)*10)/10;to.finance.cash=Math.round((to.finance.cash-fee)*10)/10;
-  recordFinancePrepaid(from,'transferReceived',fee);recordFinancePrepaid(to,'transferPaid',fee);
+  receiveFinancePrepaidTransfer(from,fee);payFinancePrepaid(to,'transferPaid',fee);
   recordPlayerEvent(p,'transfer',db.year,{from:from.id,to:to.id,fee,date:db.worldDate});
   news(db,`이적: ${p.name} ${from.name} → ${to.name} (이적료 ${money(fee)})`);
 }
@@ -6374,7 +6475,7 @@ function initOffseasonContractWindow(db){
   w.contractWindow={...d,stage:'exclusive',incumbentProcessed:false,
     completed:false,contactWaivers:{},financePayroll:contractClosingPayrollSnapshot(db)};
   contractAgreementStore(db);
-  if(!db.worldDate||db.worldDate<d.startDate)db.worldDate=d.startDate;
+  if(!db.worldDate||db.worldDate<d.startDate)setWorldCalendarDate(db,d.startDate);
   aiGrantEarlyContact(db);
   return w.contractWindow;
 }
@@ -6502,7 +6603,7 @@ function closeExclusiveContractWindow(db){
   if(cw.stage!=='exclusive')return {ok:true,stage:cw.stage,date:db.worldDate,
     settlement:cw.settlement||null,msg:'원소속 독점기간이 이미 끝났습니다'};
   const renewals=aiRunExclusiveRenewals(db),earlyOffers=aiRunEarlyContactOffers(db);
-  db.worldDate=cw.outsideContactDate;
+  setWorldCalendarDate(db,cw.outsideContactDate);
   const settlement=finalizeExclusiveContractExpiry(db);
   cw.stage='fa';cw.completed=true;cw.settlement=settlement;
   return {ok:true,stage:'fa',date:db.worldDate,renewals,earlyOffers,settlement,
@@ -6515,7 +6616,7 @@ function advanceOffseasonContractDay(db){
     msg:'원소속 독점기간이 이미 끝났습니다'};
   const next=addDays(db.worldDate,1);
   if(next>=cw.outsideContactDate)return closeExclusiveContractWindow(db);
-  db.worldDate=next;aiRunEarlyContactOffers(db);
+  setWorldCalendarDate(db,next);aiRunEarlyContactOffers(db);
   return {ok:true,stage:'exclusive',date:db.worldDate,
     msg:'원소속 독점 재계약 기간 · '+db.worldDate};
 }
@@ -6847,8 +6948,7 @@ function validatePlayerReleaseAction(db,a){
   if(mode==='expired'&&p.contract?.until>=db.year)
     return worldActionError('invalid_release','만료되지 않은 계약은 자동 종료할 수 없습니다');
   if(!playerActionFinance(t))return worldActionError('invalid_finance','구단 재정 정보가 없습니다');
-  const cost=mode==='initial'||mode==='medical_end'||p.contract?.medicalReplacement?0:
-    p.contract&&p.contract.until>=db.year?p.contract.salary*(p.contract.until-db.year+1)*.5:0;
+  const cost=contractReleaseCost(db,p,mode);
   if(!Number.isFinite(cost))return worldActionError('invalid_contract','방출 비용을 계산할 수 없습니다');
   return {ok:true,pid:p.id,teamId:t.id,mode,cost,date};
 }
@@ -6878,7 +6978,8 @@ function playerActionChanges(db,c,v){
   if(c.type==='player.sign')return [{pid:c.pid,kind:c.kind,from,to:c.teamId,
     salary:c.salary,years:c.years,signingBonus:c.terms.signingBonus,fee:c.fee}];
   if(c.type==='player.transfer')return [{pid:c.pid,kind:'transfer',from,to:c.teamId,fee:c.fee}];
-  if(c.type==='player.release')return [{pid:c.pid,kind:'release',from,to:null,cost:v.cost}];
+  if(c.type==='player.release')return [{pid:c.pid,kind:'release',from,to:null,cost:v.cost,
+    settlement:contractReleaseSettlement(db,db.players[c.pid],c.mode)}];
   return [{pid:c.pid,kind:'option',team:c.teamId,type:v.option.type,
     salary:v.option.salary}];
 }
@@ -6894,8 +6995,7 @@ function applyPlayerSignAction(db,c){
   if(offseasonFaSeason)db.year=beforeYear;
   if(c.kind==='medical_replacement'){
     contract.medicalReplacement={...c.replacement};
-    t.finance.cash=medicalWageRound(t.finance.cash-c.replacement.paid);
-    recordFinancePrepaid(t,'medicalReplacementWage',c.replacement.paid);
+    payMedicalReplacementWage(t,c.replacement.paid);
     recordPlayerEvent(p,'medical_emergency_fa',db.year,{date:db.worldDate,
       for:c.replacement.forPid,to:t.id,salary:contract.salary,
       guaranteedThrough:c.replacement.guaranteedThrough,
@@ -6909,13 +7009,13 @@ function applyPlayerTransferAction(db,c){
 }
 function applyPlayerReleaseAction(db,c){
   const p=db.players[c.pid],t=db.teams[c.teamId],contract=p.contract,
-    cost=c.mode==='initial'||c.mode==='medical_end'||contract?.medicalReplacement?0:
-      contract&&contract.until>=db.year?contract.salary*(contract.until-db.year+1)*.5:0;
-  if(cost)t.finance.buyout=(t.finance.buyout||0)+cost;
+    settlement=contractReleaseSettlement(db,p,c.mode),cost=settlement.amount;
+  recordContractReleaseObligation(t,cost,settlement);
   removePlayerFromTeam(db,p);
   if(c.mode==='manager'||c.mode==='medical_end')invalidateMarketDemand(db);
   p.contract=null;p.faYears=0;
-  if(c.mode==='manager')recordPlayerEvent(p,'release',db.year,{team:t.id,cost,date:db.worldDate});
+  if(c.mode==='manager'||cost>0)recordPlayerEvent(p,'release',db.year,
+    {team:t.id,cost,date:db.worldDate,settlement});
   if(c.mode==='medical_end'){
     recordPlayerEvent(p,'medical_replacement_end',db.year,{
       date:c.date,team:t.id,for:contract.medicalReplacement.forPid,
@@ -7017,7 +7117,7 @@ function aiManageStaff(db,t,rng){
   if(!t||t.id===managedTeamId(db)||!t.finance)return false;ensureTeamStaff(db,t,rng);
   const ps=psOf(db,t.region),cash=t.finance.cash||0,reserve=(t.philosophy==='cost'?8:5)*ps,cands=db.staffPool||[],liquidity=financeRunway(db,t);if(['critical','strained'].includes(liquidity.severity)||financeForecast(db,t).closingCash<reserve*2)return false;let best=null;
   for(const s of cands){if(!STAFF_ROLES[s.role])continue;const dept=staffDepartment(s.role),members=teamStaffMembers(t,dept),same=members.filter(x=>x.role===s.role).sort((a,b)=>a.rating-b.rating),room=members.length<(STAFF_DEPT_LIMITS[dept]||0),replace=room?null:(same[0]||members.slice().sort((a,b)=>a.rating-b.rating)[0]);const base=replace?.rating||(same.length?Math.max(...same.map(x=>x.rating)):45),gain=(s.rating-base)*staffRoleWeight(t,s.role),fee=replace?staffSalary(replace,ps):0,annual=staffSalary(s,ps);if(gain>=6&&cash>fee+annual+reserve&&(!best||gain>best.gain))best={s,gain,fee,replace}}
-  if(!best)return false;t.finance.cash=Math.round((t.finance.cash-best.fee)*10)/10;if(best.fee)recordFinancePrepaid(t,'staffSeverance',best.fee);if(best.replace)releaseStaff(db,t,best.replace.id);hireStaff(db,t,best.s);return true;
+  if(!best)return false;if(best.fee)payFinancePrepaid(t,'staffSeverance',best.fee);if(best.replace)releaseStaff(db,t,best.replace.id);hireStaff(db,t,best.s);return true;
 }
 function ageStaff(db,rng){
   const mine=managedTeamId(db);db.staffPool=db.staffPool||[];
@@ -7029,7 +7129,7 @@ function ageStaff(db,rng){
 }
 
 function mHireStaff(db,sid){const t=myT(db),s=(db.staffPool||[]).find(x=>x.id===sid);if(!s)return '스태프를 찾을 수 없습니다';if(!staffCanHire(t,s))return (STAFF_DEPT_LABEL[staffDepartment(s.role)]||'스태프')+' 고용 상한에 도달했습니다';const annual=staffSalary(s,psOf(db,t.region));if(t.finance.cash<annual)return '보유 자금이 부족합니다';hireStaff(db,t,s);return `${STAFF_ROLES[s.role]} ${s.name} 선임 · ${STAFF_DEPT_LABEL[staffDepartment(s.role)]} ${staffDeptCount(t,staffDepartment(s.role))}/${STAFF_DEPT_LIMITS[staffDepartment(s.role)]}`}
-function mReleaseStaff(db,sid){const t=myT(db),s=teamStaffMembers(t).find(x=>x.id===sid);if(!s)return '스태프를 찾을 수 없습니다';const fee=staffSalary(s,psOf(db,t.region));if(t.finance.cash<fee)return '계약 해지 비용이 부족합니다';t.finance.cash=Math.round((t.finance.cash-fee)*10)/10;recordFinancePrepaid(t,'staffSeverance',fee);releaseStaff(db,t,sid);return `${STAFF_ROLES[s.role]} ${s.name} 계약 해지 · 비용 ${money(fee)}`}
+function mReleaseStaff(db,sid){const t=myT(db),s=teamStaffMembers(t).find(x=>x.id===sid);if(!s)return '스태프를 찾을 수 없습니다';const fee=staffSalary(s,psOf(db,t.region));if(t.finance.cash<fee)return '계약 해지 비용이 부족합니다';payFinancePrepaid(t,'staffSeverance',fee);releaseStaff(db,t,sid);return `${STAFF_ROLES[s.role]} ${s.name} 계약 해지 · 비용 ${money(fee)}`}
 
 /* ==== FILE: scrim-partner.js ==== */
 // ===== LOL GM: competitive scrim partner market =====
@@ -8105,7 +8205,7 @@ function bindMarket(){
   bindClubOfficeControls(act);
   document.querySelectorAll('[data-exercise-option]').forEach(b=>b.onclick=()=>act(mExerciseTeamOption(DB,b.dataset.exerciseOption)));
   document.querySelectorAll('[data-start-renew]').forEach(b=>b.onclick=()=>act(startNegotiation(DB,b.dataset.startRenew,'renewal').msg));
-  document.querySelectorAll('[data-release]').forEach(b=>b.onclick=()=>{const p=DB.players[b.dataset.release],cost=p.contract?.medicalReplacement?0:p.contract&&p.contract.until>=DB.year?p.contract.salary*(p.contract.until-DB.year+1)*.5:0;if(confirm(`${p.name} 선수를 방출할까요?\n해지금 ${money(cost)}${p.contract?` · 계약 ${p.contract.until}년까지`:''}\n방출 후 즉시 FA가 됩니다.`))act(mRelease(DB,b.dataset.release))});
+  document.querySelectorAll('[data-release]').forEach(b=>b.onclick=()=>{const p=DB.players[b.dataset.release],cost=contractReleaseCost(DB,p);if(confirm(`${p.name} 선수를 방출할까요?\n해지금 ${money(cost)}${p.contract?` · 계약 ${p.contract.until}년까지`:''}\n방출 후 즉시 FA가 됩니다.`))act(mRelease(DB,b.dataset.release))});
   document.querySelectorAll('[data-interest]').forEach(b=>b.onclick=()=>act(mInterest(DB,b.dataset.interest,'B')));
   document.querySelectorAll('[data-priority]').forEach(el=>el.onchange=()=>act(mInterest(DB,el.dataset.priority,el.value)));
   document.querySelectorAll('[data-evaluate]').forEach(b=>b.onclick=()=>act(mEvaluateTarget(DB,b.dataset.evaluate)));
@@ -8354,6 +8454,16 @@ function bindSeries(root,rec){
 
 /* ==== FILE: ui-manager.js ==== */
 // ===== LOL GM: Finance / Monte Carlo manager UI =====
+function releaseObligationsPanel(releases,title){
+  if(!releases?.amount)return '';
+  return `<details class="cfgcard release-settlements"><summary>${esc(title)} · ${money(releases.amount)}</summary>
+    <p class="hint">연봉·잔여 연수·보상 비율은 방출 당시 계약 기준입니다.</p>
+    ${releases.items.map(row=>`<div class="cfgcard"><b>${esc(row.playerName||row.pid)}</b>
+      <p>${money(row.amount)} · ${esc(row.date||String(row.year))}</p>
+      <p class="hint">연봉 ${money(row.salary)} · 잔여 ${row.remainingYears}년 · 보상 ${Math.round(row.guaranteeRate*100)}%</p></div>`).join('')}
+    ${releases.unattributedAmount>0?`<p class="hint">기존 기록의 상세 미기록 채무 ${money(releases.unattributedAmount)}</p>`:''}
+  </details>`;
+}
 function financePanel(t){
   const f=t.finance; if(!f)return '';
   const R=DB.regions[t.region], last=f.history.slice(-1)[0], pay=payroll(DB,t), outlook=financeForecast(DB,t);
@@ -8371,6 +8481,8 @@ function financePanel(t){
   </div><div class="rgrid"><div><h4>예상 수입 내역</h4>${Object.entries(outlook.rev).filter(([,v])=>v>0).map(([k,v])=>`<div class="arow"><span>${RK[k]||k}</span><b>${money(v)}</b></div>`).join('')}</div><div><h4>예상 지출 내역</h4>${Object.entries(outlook.exp).filter(([,v])=>v>0).map(([k,v])=>`<div class="arow"><span>${EK[k]||k}</span><b>${money(v)}</b></div>`).join('')}</div></div>
   <p class="hint">현재 시즌 출전·팬덤·지역 흥행·스폰서 조건을 기준으로 한 추정치입니다. 확정되지 않은 상금·추가 승리 수당·성과급·스폰서 목표 보너스·향후 거래·지출부담금 재분배는 미포함입니다. 이미 지급한 비용은 중복 차감하지 않습니다.</p>
   ${outlook.closingCash<0?'<p class="warn">예상 결산 현금이 적자입니다. 추가 지출에 주의하세요.</p>':''}
+  ${releaseObligationsPanel(financeReleaseObligations(t),'결산 예정 선수 방출 보상')}
+  ${releaseObligationsPanel(last?.releaseSettlement,'지난 결산 선수 방출 보상')}
   ${last?.capital?`<p class="hint">${last.year}년 구단 매각/외부 자본 투입: ${money(last.capital.newOwner||0)} (영업손익과 구분)</p>`:''}
   ${last?`<div class="rgrid"><div><h4>${last.year} 수입 ${money(Object.values(last.rev).reduce((a,b)=>a+b,0))}</h4>${Object.entries(last.rev).filter(([,v])=>v).map(([k,v])=>`<div class="arow"><span>${RK[k]||k}</span><span class="num">${money(v)}</span></div>`).join('')}</div>
   <div><h4>${last.year} 지출 ${money(Object.values(last.exp).reduce((a,b)=>a+b,0))}</h4>${Object.entries(last.exp).filter(([,v])=>v).map(([k,v])=>`<div class="arow"><span>${EK[k]||k}</span><span class="num">${money(v)}</span></div>`).join('')}<div class="arow"><span><b>순이익</b></span><span class="num ${last.net<0?'lo':'hi'}"><b>${money(last.net)}</b></span></div></div></div>`:'<p class="hint">첫 시즌이 끝나면 결산이 나옵니다.</p>'}</section>`;
@@ -8503,7 +8615,6 @@ function playerDetail(p){
 // ===== LOL GM: Roster / player management UI =====
 // Squad editing, free match-role assignment, player detail and scouting surfaces.
 
-function potLabel(p){const r=p.pot-playerOvr(p);return r>=8?'높음':r>=3?'보통':'낮음'}
 function squadEditState(t){
   const root=parentTeamOf(DB,t)||t;
   if(!SQUAD_EDIT||SQUAD_EDIT.parentId!==root.id)SQUAD_EDIT={parentId:root.id,teamId:t.id,starters:{...(t.depthChart||{})},roles:Object.fromEntries(organizationRoster(DB,root).map(id=>[id,DB.players[id]?.rosterRole||recommendedRosterRole(DB,DB.players[id],DB.teams[DB.players[id].team])])),tactics:{...t.tactics},training:{...(t.training||defaultTraining())},rosterPlan:rosterPlanState(DB,root),dirty:false};
@@ -9011,7 +9122,7 @@ function openUiOverlay({kind,label,html,dismissible=false,onDismiss=null,focusSe
   root.hidden=false;
   root.setAttribute('aria-label',label);
   root.innerHTML=html;
-  if(typeof uiEnhanceScrollRegions==='function')uiEnhanceScrollRegions(root);
+  uiEnhanceScrollRegions(root);
   document.body.classList.add('lock');
   uiOverlayBackground(true);
   uiOverlayFocus(root,focusSelector);
@@ -9023,7 +9134,7 @@ function refreshUiOverlay(html,{label=null,focusSelector=null}={}){
   const key=root.contains(current)?uiOverlayFocusKey(current):null;
   if(label!==null){UI_OVERLAY.label=label;root.setAttribute('aria-label',label)}
   root.innerHTML=html;
-  if(typeof uiEnhanceScrollRegions==='function')uiEnhanceScrollRegions(root);
+  uiEnhanceScrollRegions(root);
   uiOverlayFocus(root,focusSelector,key);
 }
 function closeUiOverlay({force=false,restoreFocus=true}={}){
@@ -9128,7 +9239,7 @@ function uiEnhanceScrollRegions(root){
 }
 window.addEventListener?.('resize',()=>{
   uiEnhanceScrollRegions(document.querySelector('#main'));
-  if(typeof UI_OVERLAY!=='undefined'&&UI_OVERLAY)uiEnhanceScrollRegions(document.querySelector('#overlay'));
+  if(UI_OVERLAY)uiEnhanceScrollRegions(document.querySelector('#overlay'));
 });
 function nav(){
   const route=UI_ROUTES[VIEW];
