@@ -25,6 +25,23 @@ await runEngineFixture(String.raw`(()=>{
     'new-terms transfer bypassed consent');
   const salary=Math.ceil(asking(db,p,buyer.region)*2*10)/10,
     command={...cheap,salary,terms:{promisedRole:'starter',releaseGuaranteeRate:1}};
+  const planBefore=JSON.stringify(db),personal=aiTransferPersonalTerms(db,p,buyer,salary);
+  check(personal?.kind==='new'&&personal.consent.willing&&personal.salary<=salary&&
+    personal.terms.signingBonus===0&&JSON.stringify(db)===planBefore,
+    'AI new terms are not a pure, affordable, consenting proposal');
+  check(!aiTransferPersonalTerms(db,p,buyer,0)&&JSON.stringify(db)===planBefore,
+    'AI promised a wage without payroll room');
+  const postFeeRoom=aiTransferSalaryRoom(db,buyer,50),cashBefore=buyer.finance.cash;
+  buyer.finance.cash-=50;
+  check(postFeeRoom===Math.max(0,salaryBudget(db,buyer)-payroll(db,buyer)),
+    'AI budget failed to account for actual transfer fee');
+  buyer.finance.cash=cashBefore;
+  check(JSON.stringify(db)===planBefore,'AI post-fee budget preview mutated world');
+  const retainedContract=p.contract;
+  p.contract={...p.contract,salary,promisedRole:'starter'};
+  check(aiTransferPersonalTerms(db,p,buyer,salary)?.kind==='retained',
+    'AI unnecessarily replaced an affordable accepted contract');
+  p.contract=retainedContract;
   const previewBefore=JSON.stringify(db),preview=previewWorldAction(db,command);
   check(preview.ok&&preview.command.consent.willing&&JSON.stringify(db)===previewBefore,
     'consenting transfer preview mutated world');
@@ -46,7 +63,7 @@ await runEngineFixture(String.raw`(()=>{
   check(!contractTransferConsent(db,p,seller).ok,'pending next contract was bypassed');
   db.world.contractAgreements={};p.contract.medicalReplacement={};
   check(!contractTransferConsent(db,p,seller).ok,'medical replacement was transferred');
-  // Production AI cannot purchase a player who refuses retained terms.
+  // Production AI must renegotiate, rather than force refused retained terms.
   const market=buildWorld(cfg),[vendor,rich,managed]=activeTeams(market),rng=new RNG('consent-supply');
   setManagedTeam(market,managed.id);
   market.world={phase:'market',manage:'manual',year:market.year,marketLog:[]};
@@ -64,10 +81,19 @@ await runEngineFixture(String.raw`(()=>{
     'fixture stars did not reject transfer');
   const report={resign:[],expired:[],signings:[],transfers:[]};
   contractMarket(market,new RNG('consent-production-market'),report,()=>{});
-  check(stars.every(p=>p.team===vendor.id)&&
-    !report.transfers.some(row=>stars.some(p=>p.id===row.pid)),
-    'production AI forced a refused purchase');
+  const starDeals=report.transfers.filter(row=>stars.some(p=>p.id===row.pid));
+  check(starDeals.length>0,'production AI never negotiated a new transfer contract');
+  for(const deal of starDeals){
+    const moved=market.players[deal.pid],event=moved.careerEvents.find(e=>e.type==='transfer');
+    check(deal.personalTerms==='new'&&moved.contract.salary>.1&&event.consent.willing&&
+      event.consent.terms.salary===moved.contract.salary&&moved.contract.signingBonus===0,
+      'production AI forced refused retained terms or lost actual agreed contract');
+  }
+  const marketLoaded=unpackDB(packDB(market));
+  check(starDeals.every(row=>marketLoaded.players[row.pid].contract.salary===row.salary),
+    'AI personal contract did not survive save');
   console.log('TRANSFER_CONSENT_ACCEPTANCE '+JSON.stringify({pure:true,
     allActors:true,retainedAndNewTerms:true,paidBonusExcluded:true,stalePreference:true,
-    rollback:true,eventSave:true,futureMedicalGuards:true,productionAi:true}));
+    rollback:true,eventSave:true,futureMedicalGuards:true,productionAi:true,
+    aiNewTerms:true,actualPayrollRoom:true,retainedPreferred:true}));
 })();`,{filename:'transfer-consent.fixture.js'});

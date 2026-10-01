@@ -524,12 +524,14 @@ The current Worlds+14 model remains the fictional game's policy; this source
 must not trigger an automatic migration to real-world calendar dates. Revisit
 only where the fictional design needs a more coherent rule.
 
-Current unit: D04-B4e1. Main files: club-closure.js, finance.js, office.js,
-state-player-actions.js, state-rollback.js and closure/player finance UI.
-Focused acceptance covers authority, parent/reserve scope, stale previews, late
-rollback, paid/unpaid balances, legacy claims, agreements, UI and save restore.
-Full regression, long simulation and build remain Actions-owned. Next candidates:
-remaining closure recovery, transfer consent, D05 loans and remaining Items 13–23.
+Current unit: D04-B4e2 — AI permanent-transfer personal terms. Main files:
+contract-transfer-market.js, contracts.js and transfer-consent acceptance.
+D04-B4e1 passed final-head CI 36864244067 and merged as PR #97.
+B4e2 preserves the shared consent/transaction path, adds affordable new terms,
+and never counts an unconfirmed reciprocal move as available payroll.
+Full regression, long simulation and build remain Actions-owned. Remaining
+D04 scope includes insolvency assets/other claims, agents and promises; D05
+loans and Items 13–23 stay on the full roadmap.
 
 Local D04-B4d1 evidence: static check (74 modules) and the focused UI/finance/contract runner passed (17 acceptances, 13 isolated engine contexts, one engine compile). Full CI acceptance is required before merge.
 
@@ -592,3 +594,16 @@ retained-contract and rollback fixtures now use agreed salary relative to the
 actual player asking price; all original financial, stale, move-limit and rollback
 assertions remain. Local regression passed after this fixture correction. Full
 final-head Actions remains the merge gate.
+
+
+D04-B4e2 handoff: AI first tries affordable retained terms. If refused or outside
+payroll room, it proposes the player's preferred duration, actual squad role and
+guarantee preference using the existing expiry-market salary ladder (1/1.05/1.15
+of ask). Every proposal uses the shared fair-pay/utility consent and transaction
+writer. No fee or contract is written on refusal. Salary room uses actual payroll
+and the club's cash after the proposed fee; a possible swap supplies no wage credit.
+A dedicated contract-transfer-market module keeps existing domain size limits.
+Focused coverage includes pure proposals/budget view, retained preference,
+no-budget refusal, production AI new contracts and save restore. Static and
+focused transfer/owned-coach checks pass; Actions is the final acceptance gate.
+Next independent work: agent/promises and remaining insolvency before D05 loans.
