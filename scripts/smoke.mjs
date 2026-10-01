@@ -194,6 +194,16 @@ source += `\n(()=>{
     before:__patchDbBefore,
     after:__smokeStableState()
   }));
+  if(__SMOKE_COMPARE_STATE&&__SMOKE_MODE!=='patch-system'){
+    const __probePatch=buildPatch();
+    console.log('SMOKE_PATCH_GLOBAL '+JSON.stringify({
+      mode:__SMOKE_MODE,
+      hash:hashStr(JSON.stringify(__probePatch)),
+      champions:Object.keys(__probePatch.champions||{}).length,
+      items:Object.keys(__probePatch.itemDefs||{}).length,
+      runes:Object.keys(__probePatch.runeDefs||{}).length
+    }));
+  }
   if(__SMOKE_MODE==='patch-system'){
     __smokeReport();
     console.log('SMOKE_SHARD_OK '+JSON.stringify({mode:__SMOKE_MODE}));
@@ -643,12 +653,19 @@ source += `\n(()=>{
 
   __smokeMark('series-offseason-market');
   __smokeReport();
-  if(__SMOKE_COMPARE_STATE)console.log('SMOKE_STATE_FINGERPRINT '+JSON.stringify({
-    mode:__SMOKE_MODE,
-    ...__smokeStableState(),
-    year:db.year,
-    worldDate:db.worldDate
-  }));
+  if(__SMOKE_COMPARE_STATE){
+    console.log('SMOKE_STATE_FINGERPRINT '+JSON.stringify({
+      mode:__SMOKE_MODE,
+      ...__smokeStableState(),
+      year:db.year,
+      worldDate:db.worldDate,
+      patchHash:hashStr(JSON.stringify(db.patch))
+    }));
+    console.log('SMOKE_PLAYER_IDS '+JSON.stringify({
+      mode:__SMOKE_MODE,
+      ids:Object.keys(db.players).sort()
+    }));
+  }
   console.log('World smoke test: OK — blank rosters, global FA, roster rules, engine-owned regional policy, workforce-backed rookie intake/scouting reports, no emergency roster generation, offseason market closure, player identity/role ratings/state/value/development/champion learning/full match metrics/fixed depth charts/roster roles/satisfaction, season bootstrap and Bo1 simulation');
 })()`;
 
