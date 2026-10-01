@@ -5,7 +5,8 @@ function localServicePolicy(db,rid){
   return {seasons:Math.max(1,Math.round(r.seasons??4)),days:Math.max(0,Math.round(r.days??0)),
     choiceYears:Math.max(1,Math.round(r.choiceYears??2)),effectiveYear:r.effectiveYear??db.year};
 }
-function localServiceRegistration(db,p,t){
+function localServiceRegistration(db,p,t,official=false){
+  if(t&&officialRegistrationEnabled(db)&&!official)return;
   ensurePlayerEligibility(p);const e=p.localEligibility,date=db.worldDate||db.year+'-01-01';
   if(e.service){const s=e.service,days=Math.max(0,(Date.parse(date)-Date.parse(s.lastDate))/86400000);
     if(!s.paused&&Number.isFinite(days))s.days+=days;
@@ -28,10 +29,12 @@ function checkLocalServiceQualification(db,p){
 }
 function processLocalServiceDaily(db){
   const date=db.worldDate;if(!date)return;
+  const registered=officialRegistrationEnabled(db)?new Map(activeTeams(db).flatMap(t=>(t.registration?.players||[])
+    .filter(id=>officialPlayerCanRepresent(db,db.players[id],t)).map(id=>[id,t]))):null;
   for(const p of Object.values(db.players)){
     if(p.retired)continue;
-    const t=p.team&&db.teams[p.team],e=p.localEligibility;
-    if(!e?.service){if(t)localServiceRegistration(db,p,t);continue}
+    const t=registered?registered.get(p.id):p.team&&db.teams[p.team],e=p.localEligibility;
+    if(!e?.service){if(t)localServiceRegistration(db,p,t,true);continue}
     const s=e.service,owner=p.loan&&db.teams[p.loan.ownerId],paused=!t||!!(owner&&owner.region!==t.region);
     const elapsed=Math.max(0,(Date.parse(date+'T00:00:00Z')-Date.parse(s.lastDate+'T00:00:00Z'))/86400000);
     if(!paused&&!s.paused&&Number.isFinite(elapsed))s.days+=elapsed;

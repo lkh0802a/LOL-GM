@@ -31,6 +31,7 @@ function startWorldSeason(db,myTeam,seed){
   }
   const manage=db.world?db.world.manage:(db.worldConfig.manage||'manual');
   db.world={year:db.year,seed,manage,phase:'season',seasons:{},steps,step:-1,report:null,pendingOfficial:null,lastDate:`${db.year}-01-07`,lastDailyTick:null,majorPatchEvents:[],offers:[],marketLog:[]};
+  db.world.registrationVersion=1;initializeOfficialRegistrations(db);
   seasonPatch(db,`${db.year}-01-02`,new RNG(seed+db.year,'patch'));
   setGoals(db);
   advanceStep(db);

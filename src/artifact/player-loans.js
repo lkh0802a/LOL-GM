@@ -14,6 +14,7 @@ function loanIndex(db){
 }
 function loanOutgoingPlayers(db,t){return (loanIndex(db).owners.get(t.id)||[]).map(id=>db.players[id])}
 function loanRosterCapacityError(db,t,p){
+  if(officialRegistrationEnabled(db))return null;
   if(t.roster.includes(p.id))return null;
   const reserved=loanOutgoingPlayers(db,t).filter(x=>x.id!==p.id),
     rules=rosterRulesForTeam(db,t),max=t.parent||(t.division||1)===2?rules.reserveTeamMax:rules.firstTeamMax;

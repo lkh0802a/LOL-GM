@@ -24,6 +24,7 @@ function newSeason(db,compId,year,seed,start,instanceKey=compId){
   if(st0.id==='playin'){const nx=comp.stages[1];order=comp.teams.filter(t=>!(nx.direct||[]).includes(t))}
   else if(st0.type!=='round_robin'&&st0.take)order=order.slice(0,st0.take);
   addStageDays(db,s,0,order,start||`${year}-01-14`);
+  snapshotInternationalEntries(db,s);
   return s;
 }
 function pushDay(s,date,stage,label,pairs,bo,timeSlots=null){
@@ -156,6 +157,8 @@ function playDay(db,s,opt={}){
   if(!s||s.done)return null;
   const day=s.days[s.cur],comp=db.competitions[s.comp],cfgIdx=comp.stages.findIndex(x=>x.id===day.stage),cfg=comp.stages[cfgIdx],pending=[];
   for(const m of day.matches){if(m.res)continue;
+    const forfeit=scheduledRegistrationForfeit(db,s,m);
+    if(forfeit){commitScheduledSeries(db,s,m,forfeit);continue}
     if(opt.deferTeam&&(m.a===opt.deferTeam||m.b===opt.deferTeam)){pending.push({matchId:m.id});continue}
     commitScheduledSeries(db,s,m,simulateScheduledSeries(db,s,day,m,cfg));
   }

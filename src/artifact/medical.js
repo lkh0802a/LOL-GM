@@ -91,21 +91,26 @@ function medicalExposure(db,p,kind='scrim',games=1){
 function medicalEmergencyCallup(db,t,injured){
   if(!t||medicalAvailable(db,t)!==5)return null;
   const rules=rosterRulesForTeam(db,t),cap=t.parent?rules.reserveTeamMax:rules.firstTeamMax;
-  if((t.roster||[]).length>=cap)return null;
+  if((officialRegistrationEnabled(db)?t.registration?.players||[]:t.roster||[]).length>=cap)return null;
   const from=t.parent?[db.teams[t.parent]]:reserveTeamsOf(db,t);
   for(const source of from){
     if(!source||medicalAvailable(db,source)<=5)continue;
     const candidates=(source.roster||[]).map(id=>db.players[id])
       .filter(p=>p&&!p.retired&&!medicalOut(p)&&p.team===source.id&&
+        officialMedicalReplacementAllowed(db,t,injured,p)&&
         !localRegistrationError(db,t,p))
       .sort((a,b)=>lineupRoleScore(b,injured.role)-lineupRoleScore(a,injured.role));
     for(const replacement of candidates){
       const plan=rosterPlanState(db,t);
       if(!plan)break;
       plan.assignments[replacement.id]=t.id;
-      const result=commitWorldAction(db,{type:'roster.plan',parentId:plan.parentId,
-        assignments:plan.assignments,actor:'system'});
+      const intent={type:'roster.plan',parentId:plan.parentId,assignments:plan.assignments,actor:'system'},
+        journal=officialRegistrationEnabled(db)?captureWorldActionJournal(db,{...intent,emergencyRegistration:true}):null;
+      const result=commitWorldAction(db,intent);
       if(!result.ok)continue;
+      try{registerMedicalOfficialReplacement(db,t,injured,replacement)}catch(e){
+        if(!journal)throw e;journal.rollback();continue;
+      }
       recordPlayerEvent(replacement,'medical_callup',db.year,
         {date:db.worldDate,for:injured.id,from:source.id,to:t.id});
       if(t.id===managedTeamId(db))news(db,
@@ -179,13 +184,14 @@ function medicalReplacementDailyTick(db,date,projectedReturns={}){
 function medicalEmergencyFASigning(db,t,injured,days){
   if(!t||medicalAvailable(db,t)!==5)return null;
   const rules=rosterRulesForTeam(db,t),cap=t.parent?rules.reserveTeamMax:rules.firstTeamMax;
-  if((t.roster||[]).length>=cap||!t.finance||t.finance.cash<=0)return null;
+  if((officialRegistrationEnabled(db)?t.registration?.players||[]:t.roster||[]).length>=cap||!t.finance||t.finance.cash<=0)return null;
   const parent=parentTeamOf(db,t);
-  if(reserveTeamsOf(db,parent).length&&organizationRoster(db,parent).length>=rules.integratedMax)return null;
+  if(!officialRegistrationEnabled(db)&&reserveTeamsOf(db,parent).length&&organizationRoster(db,parent).length>=rules.integratedMax)return null;
   const budget=salaryBudget(db,t)-payroll(db,t);
   if(!Number.isFinite(budget)||budget<=0)return null;
   const choices=Object.values(db.players).filter(p=>
     p&&!p.retired&&!p.team&&!medicalOut(p)&&!(p.medical?.daysLeft>0)&&
+    officialMedicalReplacementAllowed(db,t,injured,p)&&
     !localRegistrationError(db,t,p))
     .map(p=>({p,salary:asking(db,p,t.region)}))
     .filter(x=>Number.isFinite(x.salary)&&x.salary<=budget+1e-8&&
@@ -196,11 +202,16 @@ function medicalEmergencyFASigning(db,t,injured,days){
       return fit(b)-fit(a)||a.salary-b.salary||a.p.id.localeCompare(b.p.id);
     });
   for(const {p,salary} of choices){
-    const result=commitWorldAction(db,{type:'player.sign',pid:p.id,teamId:t.id,
+    const intent={type:'player.sign',pid:p.id,teamId:t.id,
       salary,years:1,terms:{promisedRole:'competition'},
       replacement:{forPid:injured.id,absenceDays:days},
-      kind:'medical_replacement',actor:'system'});
+      kind:'medical_replacement',actor:'system'},
+      journal=officialRegistrationEnabled(db)?captureWorldActionJournal(db,intent):null,
+      result=commitWorldAction(db,intent);
     if(!result.ok)continue;
+    try{registerMedicalOfficialReplacement(db,t,injured,p)}catch(e){
+      if(!journal)throw e;journal.rollback();continue;
+    }
     if(parentTeamOf(db,t)?.id===managedTeamId(db))news(db,
       injured.name+'의 결장에 대비해 FA '+p.name+' 긴급 영입 ('+t.short+')');
     return p;

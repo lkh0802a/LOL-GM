@@ -7,7 +7,8 @@ function openInteractiveDraft(db,teamIds,playerTeamId,opt={}){
   const playerSide=teamIds.indexOf(playerTeamId);if(playerSide<0)throw new Error('Managed team is not part of draft');
   const seed=opt.seed||freshInternalSeed('draft-ui'),ctx=opt.ctx||{used:[],byTeam:{},fearless:true,practice:true,firstPick:0};
   for(const tid of teamIds)if(!ctx.byTeam[tid])ctx.byTeam[tid]={won:[],lost:[]};
-  const state=createDraftSession(db,teamIds,new RNG(seed,'draft'),ctx);
+  const matchDb=opt.officialSession?seriesOfficialView(db,opt.officialSession):db,
+    state=createDraftSession(matchDb,teamIds,new RNG(seed,'draft'),ctx);
   DRAFT_UI={db,state,playerSide,seed,title:opt.title||'밴픽',filter:'ALL',query:'',selected:null,infoTab:'analysis',locked:!!opt.locked,finishLabel:opt.finishLabel||null,doneText:opt.doneText||null,meta:opt.meta||null,onComplete:typeof opt.onComplete==='function'?opt.onComplete:null};
   openUiOverlay({kind:'draft',label:DRAFT_UI.title,html:'',dismissible:!DRAFT_UI.locked,onDismiss:draftUiClose});
   draftUiAdvanceAi();draftUiRender();
@@ -59,7 +60,7 @@ function openPendingOfficialDraft(db){
   const aScore=score[0],bScore=score[1],meScore=setup.m.a===me?aScore:bScore,oppScore=setup.m.a===me?bScore:aScore;
   const locked=setup.fearlessUsed?.length||0,title=`${setup.comp.name} · ${mine.short} ${meScore} : ${oppScore} ${opp.short} · ${setup.game}세트 밴픽`;
   const fearlessText=locked?` · Fearless 잠금 ${locked}개`:'';
-  openInteractiveDraft(db,[setup.blue,setup.red],me,{seed:setup.gseed,title,locked:true,finishLabel:`${setup.game}세트 진행`,doneText:`${setup.game}세트 밴픽이 확정되었습니다${fearlessText}. 경기 결과에 따라 다음 세트 선택권과 Fearless 잠금이 갱신됩니다.`,ctx:setup.draftCtx,meta:{official:true,game:setup.game,competition:setup.comp.name,score:[meScore,oppScore],me:mine.short,opp:opp.short,firstSelectionTeam:db.teams[setup.chooser]?.short||setup.chooser,firstSelectionWhy:setup.sc?.why||'',fearlessUsed:setup.fearlessUsed||[]},onComplete:result=>{
+  openInteractiveDraft(db,[setup.blue,setup.red],me,{officialSession:setup.session,seed:setup.gseed,title,locked:true,finishLabel:`${setup.game}세트 진행`,doneText:`${setup.game}세트 밴픽이 확정되었습니다${fearlessText}. 경기 결과에 따라 다음 세트 선택권과 Fearless 잠금이 갱신됩니다.`,ctx:setup.draftCtx,meta:{official:true,game:setup.game,competition:setup.comp.name,score:[meScore,oppScore],me:mine.short,opp:opp.short,firstSelectionTeam:db.teams[setup.chooser]?.short||setup.chooser,firstSelectionWhy:setup.sc?.why||'',fearlessUsed:setup.fearlessUsed||[]},onComplete:result=>{
     const out=resolvePendingOfficialMatch(DB,result);LAST=out.game||null;LASTSER=out.done?out.rec:null;saveDB();nav();
   }});
   return true;

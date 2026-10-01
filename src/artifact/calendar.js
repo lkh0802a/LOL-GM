@@ -52,6 +52,7 @@ function applyWorldDailyEffects(db,date){
   advanceRoleConversionsDay(db);
   aiRunScrims(db,new RNG(w.seed+date,'scrim'));
   for(const t of activeTeams(db,null,1))aiManageOwnedReserve(db,t);
+  aiReviewOfficialRegistrations(db);
   w.lastDailyTick=date;
   return true;
 }
