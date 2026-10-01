@@ -62,6 +62,8 @@
 
 ## 검사 근거 및 한계
 
+- **D11 최신 실패/수정 근거 (2026-10-02):** 이전 엔진의 단일 100시즌 실행은 2056년/30시즌 후 V8 메모리 부족으로 종료했다. 원본 `.diagnostics/daily-local-1` 보고서/로그를 보존한다. 복원 시 반복 메타 문자열과 불변 아이템·룬 목록 공유, QA의 이전 경기/저장 문자열 참조 해제 및 단계별 메모리 기록을 추가했다. 6만 경기 합성 표본의 복원 후 메모리는 약 382→77MB, 6000경기 기록/조회/재저장 회귀 및 실제 일일 1시즌은 통과했다. **복수 시드 실제 100시즌 및 모바일 메모리 검증은 여전히 미완료**다. 상세 근거와 한계는 `DEVELOPMENT.md`의 D11 기록을 따른다.
+
 - 조사한 코드: `world.js`, `season.js`, `competition.js`, `player.js`, `player-relations.js`, `role-conversion.js`, `development.js`, `scouting.js`, `contracts.js`, `transfer.js`, `staff.js`, `scrim.js`, `draft.js`, `series.js`, `engine.js`, `features.js`, `ui-market-staff.js`, `ui-season.js` 및 기존 회귀 문서와 `scripts/career-acceptance.mjs`.
 - 확실히 관찰된 코드 경로 예: `season.js::nextDate/playWorldDay` → 점검 당시 다음 경기일로 점프했고 D01 패치에서 실제 일일 시계로 보완; `scrim.js::aiRunScrims` → 같은 지역 조건; `staff.js::genStaffMember/mHireStaff/mReleaseStaff`와 `ui-market-staff.js::coachBlock` → 즉시 영입·정확 등급; `contracts.js::normalizeContractTerms` → 1~3년; `contracts.js::aiMarketObservation` → 실제 `playerOvr`에 노이즈; `scouting.js::ensureScoutReport` → 관리 구단 전용 선수 관찰 키; `series.js::draftPrefs` → 수치 상수; `draft.js::championSkillProfile`와 `engine.js::combatStats0` → 집계 능력치 모델.
 - `scripts/regression.mjs`, `scripts/smoke.mjs`는 **정해진 규칙의 회귀 방지**에 유효하나 전 기능의 충분한 현실성이나 장기 안정성을 증명하지 않는다. `scripts/career-acceptance.mjs`의 2시즌/186경기 검증 역시 100시즌 대체재가 아니다.
