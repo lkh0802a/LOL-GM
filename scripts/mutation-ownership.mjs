@@ -5,7 +5,7 @@ export const MUTATION_OWNERSHIP={
   'calendar.js':{date:1},
   'contract-window.js':{},
   'contracts.js':{assign:1},
-  'finance.js':{cash:3},
+  'finance.js':{cash:3,obligation:1},
   'medical.js':{},
   'office.js':{remove:1},
   'offseason.js':{remove:1},
@@ -21,10 +21,11 @@ export const MUTATION_OWNERSHIP={
 
 export function mutationInventory(source){
   // Include literal bracket-property spelling as well as dot-property spelling.
-  const text=source.replace(/\[\s*(['"])(finance|cash|worldDate)\1\s*\]/g,'.$2');
+  const text=source.replace(/\[\s*(['"])(finance|cash|buyout|worldDate)\1\s*\]/g,'.$2');
   const write='(?:\\+\\+|--|(?:(?:\\*\\*|&&|\\|\\||\\?\\?|[+\\-*/%&|^])=|(?<![=!<>])=(?![=>])))';
   const patterns={
     cash:new RegExp('\\.\\s*finance\\s*\\.\\s*cash\\s*'+write,'g'),
+    obligation:new RegExp('\\.\\s*finance\\s*\\.\\s*buyout\\s*'+write,'g'),
     date:new RegExp('\\.\\s*worldDate\\s*'+write,'g'),
     assign:/\bassignPlayerToTeam\s*\(/g,
     remove:/\bremovePlayerFromTeam\s*\(/g

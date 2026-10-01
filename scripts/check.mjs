@@ -36,6 +36,18 @@ if(!sourceOf('roster.js').includes('function aiMarketReserveCallups(')||
   !sourceOf('contracts.js').includes('aiMarketReserveCallups(db,rep)')) {
   failed=true;console.error('AI market roster callup must use the shared action journal and roster owner');
 }
+for(const name of ['payroll','topFivePayroll','regulatedPayroll','spendingTaxForPayroll',
+  'recordContractReleaseObligation']) {
+  if(!sourceOf('finance.js').includes('function '+name+'(')||
+    sourceOf('contracts.js').includes('function '+name+'(')) {
+    failed=true;console.error('Finance source of truth missing or duplicated: '+name);
+  }
+}
+for(const file of ['state-player-actions.js','ui-market.js']) {
+  if(!sourceOf(file).includes('contractReleaseCost(')) {
+    failed=true;console.error('Release cost must consume the contract source of truth: '+file);
+  }
+}
 const globalSymbols = new Map();
 for (const file of modules) {
   const path = resolve(artifact, file);

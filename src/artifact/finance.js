@@ -37,6 +37,21 @@ function payMedicalReplacementWage(t,amount){
   t.finance.cash=Math.round((t.finance.cash-amount)*1000)/1000;
   recordFinancePrepaid(t,'medicalReplacementWage',amount);
 }
+// Release liability is accrued for season closeout, not paid from cash twice.
+function recordContractReleaseObligation(t,amount){
+  if(amount)t.finance.buyout=(t.finance.buyout||0)+amount;
+}
+function payroll(db,t){return t.roster.reduce((a,id)=>{const c=db.players[id]?.contract;return a+(c&&!c.medicalReplacement?c.salary:0)},0)}
+function topFivePayroll(db,t){const top=[];for(const id of t.roster){const p=db.players[id];if(!p||!p.contract||p.contract.medicalReplacement)continue;const s=p.contract.salary;let i=0;while(i<top.length&&top[i]>=s)i++;top.splice(i,0,s);if(top.length>5)top.pop()}return top.reduce((a,b)=>a+b,0)}
+function regulatedPayroll(db,t){const R=db.regions[t.region];return R&&R.spendingRule==='sfr_top5'?topFivePayroll(db,t):payroll(db,t)}
+function spendingTaxForPayroll(db,t,spend){
+  const R=db.regions[t.region];if(!R||R.spendingRule!=='sfr_top5'||!R.salaryCap||(t.division||1)!==1)return 0;
+  const over=Math.max(0,spend-R.salaryCap);if(!over)return 0;
+  if(R.sfrMode==='lec_50_100'){const first=Math.min(over,R.salaryCap*.5),rest=Math.max(0,over-first);return first*.5+rest}
+  const a=Math.min(over,R.salaryCap*.1),b=Math.min(Math.max(0,over-a),R.salaryCap*.15),c=Math.max(0,over-a-b);
+  return a*.25+b*.5+c*(R.luxuryTax||1);
+}
+function spendingTax(db,t){return spendingTaxForPayroll(db,t,regulatedPayroll(db,t))}
 function sumFinanceRows(rows){return Object.values(rows).reduce((a,v)=>a+v,0)}
 function financeSeasonWins(db,t,w=db.world){if(!w?.seasons)return 0;
   return Object.values(w.seasons).reduce((n,s)=>{
