@@ -8,9 +8,13 @@ on:
         type: boolean
         default: false
       refactor_parity:
-        description: Compare R01/current state (only for behavior-preserving refactors)
+        description: Compare baseline/current state (only for behavior-preserving changes)
         type: boolean
         default: false
+      refactor_baseline:
+        description: Full baseline commit SHA for refactor/engine parity
+        type: string
+        default: '0331ffa50a20fce7a4d4e2cd2e032e5c37221e95'
   push:
     branches: [main]
   pull_request:
@@ -501,8 +505,10 @@ jobs:
       - name: Prove smoke shard parity
         run: node scripts/ci-run.mjs smoke-parity -- node scripts/smoke-shard-acceptance.mjs
 
-      - name: Prove R01 to current engine parity
+      - name: Prove baseline to current engine parity
         if: inputs.refactor_parity
+        env:
+          REFACTOR_PARITY_BASELINE: ${{ inputs.refactor_baseline }}
         run: node scripts/ci-run.mjs refactor-parity -- node scripts/refactor-parity.mjs
 
       - name: Upload parity evidence
