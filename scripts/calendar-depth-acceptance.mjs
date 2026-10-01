@@ -1,11 +1,5 @@
 // D01: per-day world clock, development, patch dates and official-match pause.
-import {readFile} from 'node:fs/promises';
-import {resolve} from 'node:path';
-import vm from 'node:vm';
-import {ENGINE_MODULES} from './artifact-modules.mjs';
-const artifact=resolve(import.meta.dirname,'..','src','artifact');
-let engine='';
-for(const file of ENGINE_MODULES)engine+=await readFile(resolve(artifact,file),'utf8')+'\n';
+import {artifactSources,runEngineFixture} from './test-harness.mjs';
 const fixture=String.raw`(()=>{
   const assert=(value,message)=>{if(!value)throw new Error('D01 calendar: '+message)};
   const cfg=defaultWorldConfig();
@@ -295,9 +289,9 @@ const fixture=String.raw`(()=>{
     saveFormat:oldSave.saveFormat,managedDraftHeld:true
   }));
 })()`;
-vm.runInNewContext(engine+'\n'+fixture,{console,Date,Math,JSON,Set,Map,Object,Array,String,Number,Boolean,RegExp,Error,Intl,performance,crypto},{timeout:40000});
-const [ui,home,season,scrim]=await Promise.all(
-  ['ui-season.js','app.js','season.js','scrim.js'].map(file=>readFile(resolve(artifact,file),'utf8'))
+await runEngineFixture(fixture,{timeout:40000,filename:'calendar-depth-acceptance.fixture.js'});
+const [ui,home,season,scrim]=await artifactSources(
+  ['ui-season.js','app.js','season.js','scrim.js']
 );
 const check=(value,message)=>{if(!value)throw new Error('D01 UI contract: '+message)};
 check(ui.includes("'#sfixture'")&&ui.includes('run(r=>r.played.length>0)')&&ui.includes("'#sday'"),
