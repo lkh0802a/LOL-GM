@@ -624,3 +624,8 @@ medical absences, renewal disposition, resets, pure status and save/legacy data.
 The shared runner now has 20 acceptances / 16 isolated engine contexts.
 This is contractual role enforcement only: oral promises, agents and complete
 promise lifecycle/history remain independent unfinished work. No D04 completion.
+
+B4f1 first CI core smoke found a bench fixture copied a starter contract while
+changing only rosterRole to backup. It now explicitly agrees a backup contract;
+the no-playing-time-complaint assertion remains. The new focused acceptance
+separately covers the opposite case: a backup label cannot erase a starter promise.
