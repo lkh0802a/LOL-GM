@@ -4,7 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       smoke_parity:
-        description: Also prove smoke shard and R01/current career state parity
+        description: Also prove full/core smoke state and coverage parity
+        type: boolean
+        default: false
+      refactor_parity:
+        description: Compare R01/current state (only for behavior-preserving refactors)
         type: boolean
         default: false
   push:
@@ -480,7 +484,7 @@ jobs:
 
   smoke-parity:
     needs: static-fast
-    if: github.event_name == 'workflow_dispatch' && inputs.smoke_parity
+    if: github.event_name == 'workflow_dispatch' && (inputs.smoke_parity || inputs.refactor_parity)
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
@@ -498,6 +502,7 @@ jobs:
         run: node scripts/ci-run.mjs smoke-parity -- node scripts/smoke-shard-acceptance.mjs
 
       - name: Prove R01 to current engine parity
+        if: inputs.refactor_parity
         run: node scripts/ci-run.mjs refactor-parity -- node scripts/refactor-parity.mjs
 
       - name: Upload parity evidence
@@ -535,7 +540,7 @@ jobs:
           MEDICAL_RESULT: ${{ needs.medical.result }}
           REGRESSION_RESULT: ${{ needs.regression-smoke-career.result }}
           PERF_BUILD_RESULT: ${{ needs.perf-build.result }}
-          PARITY_REQUIRED: ${{ github.event_name == 'workflow_dispatch' && inputs.smoke_parity }}
+          PARITY_REQUIRED: ${{ github.event_name == 'workflow_dispatch' && (inputs.smoke_parity || inputs.refactor_parity) }}
           PARITY_RESULT: ${{ needs.smoke-parity.result }}
         run: |
           set -euo pipefail

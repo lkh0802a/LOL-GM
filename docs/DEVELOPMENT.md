@@ -1,11 +1,11 @@
 # LOL GM — Development Guide
 
-Latest delivery direction: [Android app acceptance](ANDROID_TARGET.md).
+Latest delivery direction: [playable desktop/mobile HTML first, then Android](ANDROID_TARGET.md).
 Use the focused development map below and [CI result guide](CI_RESULTS.md)
 to select minimal local checks and reuse Actions evidence. Development-efficiency
-Issue #57 is complete; structural Issue #62 is the current stage, followed by
-fully replaced legacy removal, unfinished gameplay, mobile UX/performance,
-Android packaging and real-device installation validation.
+Issues #57 and #62 are complete. Continue unfinished gameplay and mobile
+UX/performance, deliver playable standalone HTML on desktop/mobile browsers,
+then complete Android packaging and real-device installation validation.
 
 ## Development ownership and handoff
 
@@ -37,7 +37,12 @@ The Artifact migration is complete and accepted. GitHub is now the primary devel
 
 Current Phase 1 goal: replace prototype-only state with coherent persistent game state and complete the first real gameplay loop.
 
-Development progress is tracked by the 22 major LOL GM systems. Finish one major system completely before moving to the next.
+Development progress covers the user's full numbered roadmap through Item 23.
+Finish each major system's accepted gameplay loop before advancing. D01–D13
+are depth corrections to that roadmap, not a replacement or a stopping point.
+Items 13–23 remain in scope; an omitted status row is not evidence of completion.
+Use the full specification to verify their names, dependencies and actual code
+before assigning acceptance status. Deliver desktop/mobile playable HTML before APK.
 
 - `1. 새 게임 / 팀 선택` — COMPLETE (2026-09-27)
 - `2. 선수` — COMPLETE (2026-09-27)
@@ -104,7 +109,7 @@ Items 1–5 remain engine-complete, but COMPLETE no longer means their current i
 - destructive/financial actions should continue to show consequences before commitment; multi-term negotiations already use an explicit offer form and should keep that pattern
 - validation messages must explain the violated rule and, where practical, the required correction instead of only disabling progression
 
-This is now a standing acceptance rule for all 22 systems: functional correctness, persistence and CI are necessary but not sufficient; ordinary management workflows must also be low-friction on smartphone portrait.
+This is a standing acceptance rule for the entire numbered roadmap through Item 23 and its D-depth follow-ups: functional correctness, persistence and CI are necessary but not sufficient; ordinary management workflows must also be low-friction on smartphone portrait.
 
 Item 6 acceptance (2026-09-27): Tier-2 ownership, reserve requirements and promotion eligibility are explicit engine rules. Franchise systems maintain required owned reserves; mixed systems combine certified clubs' owned reserves with independent Tier-2 clubs; open/relegation systems preserve independent promotion paths. Owned reserves use stable parent IDs, are never manager-selectable as independent clubs, and are never promotion-eligible. Independent Tier-2 clubs can promote through the same promotion/relegation engine, with repeated-cycle smoke coverage verifying that owned reserves cannot leak into the first division and required reserves are reconciled after structural changes. First/reserve player movement is staged as a final-state roster plan: the UI previews projected squad counts, validation reports exact failures, invalid plans have no side effects, and valid plans apply atomically. AI reserve management uses the same validator/apply path, evaluates visible current ability/performance rather than hidden potential, and has a review cooldown. Reserve closure routes players cleanly to free agency while preserving contract terms. Five-year lifecycle checks cover roster integrity, required reserve count, promotion boundaries and reserve recreation. Standalone HTML is synchronized and latest-head CI passes.
 
@@ -412,7 +417,7 @@ are real callers. The complete manifest ownership/change map is in
 
 ### Current sequence
 
-Issue #57 is complete. Issue #62 R01 now has a code-backed ownership baseline in
+Issues #57 and #62 are complete. R01 has a code-backed ownership baseline in
 REFACTOR_R01_AUDIT.md. R02 mutation ownership guards are in place; R03 has moved
 expense/transfer settlements into finance and player negotiation into
 contract-negotiation.js. R04 now centralizes raw calendar positioning and in-season daily effects;
@@ -421,9 +426,13 @@ release cost and finance accrual/payroll now have single owners.
 R06/R07 remove six unused wrappers and required-UI fallbacks while retaining supported
 save compatibility. R08 documents all 73 modules and adds exact R01/current
 full-smoke and two-season/save checkpoint parity in the opt-in Actions gate.
-Issue #62 closes only after full CI and that explicit parity run pass for the
-final code head. Main verification remains required after merge. Preserve accepted
-D04-B3; after the refactor, recheck D04-B4 and the latest depth audit before
-choosing subsequent gameplay work. Follow ANDROID_TARGET.md through mobile
-UX/performance, production packaging and real-device offline/save validation.
+Final-head full CI, explicit parity and post-merge main CI passed (PR #85).
+Preserve accepted D04-B3. The next small step, D04-B4a, records pending and
+settled player release liabilities, preserves aggregate balances in older saves
+and exposes the contractual basis in touch-friendly disclosure cards. It keeps
+the existing 50% compensation rule. Negotiable guarantees, mutual termination
+and insolvency handling remain later B4 work; D04 is not complete.
+Continue the complete numbered roadmap and D follow-ups. Follow ANDROID_TARGET.md
+through playable desktop/mobile HTML acceptance before Android production
+packaging and real-device offline/save validation.
 Manual full/parity support is a follow-up convenience, not a new optimization phase.

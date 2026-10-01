@@ -1,4 +1,14 @@
 // ===== LOL GM: Finance / Monte Carlo manager UI =====
+function releaseObligationsPanel(releases,title){
+  if(!releases?.amount)return '';
+  return `<details class="cfgcard release-settlements"><summary>${esc(title)} · ${money(releases.amount)}</summary>
+    <p class="hint">연봉·잔여 연수·보상 비율은 방출 당시 계약 기준입니다.</p>
+    ${releases.items.map(row=>`<div class="cfgcard"><b>${esc(row.playerName||row.pid)}</b>
+      <p>${money(row.amount)} · ${esc(row.date||String(row.year))}</p>
+      <p class="hint">연봉 ${money(row.salary)} · 잔여 ${row.remainingYears}년 · 보상 ${Math.round(row.guaranteeRate*100)}%</p></div>`).join('')}
+    ${releases.unattributedAmount>0?`<p class="hint">기존 기록의 상세 미기록 채무 ${money(releases.unattributedAmount)}</p>`:''}
+  </details>`;
+}
 function financePanel(t){
   const f=t.finance; if(!f)return '';
   const R=DB.regions[t.region], last=f.history.slice(-1)[0], pay=payroll(DB,t), outlook=financeForecast(DB,t);
@@ -16,6 +26,8 @@ function financePanel(t){
   </div><div class="rgrid"><div><h4>예상 수입 내역</h4>${Object.entries(outlook.rev).filter(([,v])=>v>0).map(([k,v])=>`<div class="arow"><span>${RK[k]||k}</span><b>${money(v)}</b></div>`).join('')}</div><div><h4>예상 지출 내역</h4>${Object.entries(outlook.exp).filter(([,v])=>v>0).map(([k,v])=>`<div class="arow"><span>${EK[k]||k}</span><b>${money(v)}</b></div>`).join('')}</div></div>
   <p class="hint">현재 시즌 출전·팬덤·지역 흥행·스폰서 조건을 기준으로 한 추정치입니다. 확정되지 않은 상금·추가 승리 수당·성과급·스폰서 목표 보너스·향후 거래·지출부담금 재분배는 미포함입니다. 이미 지급한 비용은 중복 차감하지 않습니다.</p>
   ${outlook.closingCash<0?'<p class="warn">예상 결산 현금이 적자입니다. 추가 지출에 주의하세요.</p>':''}
+  ${releaseObligationsPanel(financeReleaseObligations(t),'결산 예정 선수 방출 보상')}
+  ${releaseObligationsPanel(last?.releaseSettlement,'지난 결산 선수 방출 보상')}
   ${last?.capital?`<p class="hint">${last.year}년 구단 매각/외부 자본 투입: ${money(last.capital.newOwner||0)} (영업손익과 구분)</p>`:''}
   ${last?`<div class="rgrid"><div><h4>${last.year} 수입 ${money(Object.values(last.rev).reduce((a,b)=>a+b,0))}</h4>${Object.entries(last.rev).filter(([,v])=>v).map(([k,v])=>`<div class="arow"><span>${RK[k]||k}</span><span class="num">${money(v)}</span></div>`).join('')}</div>
   <div><h4>${last.year} 지출 ${money(Object.values(last.exp).reduce((a,b)=>a+b,0))}</h4>${Object.entries(last.exp).filter(([,v])=>v).map(([k,v])=>`<div class="arow"><span>${EK[k]||k}</span><span class="num">${money(v)}</span></div>`).join('')}<div class="arow"><span><b>순이익</b></span><span class="num ${last.net<0?'lo':'hi'}"><b>${money(last.net)}</b></span></div></div></div>`:'<p class="hint">첫 시즌이 끝나면 결산이 나옵니다.</p>'}</section>`;
