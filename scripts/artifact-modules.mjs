@@ -64,6 +64,7 @@ export const ENGINE_MODULES = [
   'player-loan-market.js',
   'club-closure.js',
   'staff.js',
+  'staff-contracts.js',
   'scrim-partner.js',
   'scrim.js',
   'features.js',

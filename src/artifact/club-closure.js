@@ -81,8 +81,8 @@ function clubClosureAllocation(db,t){
   const ownedIds=[...t.roster.filter(pid=>!db.players[pid]?.loan),...loanOutgoingPlayers(db,t).map(p=>p.id)],
     pending=financeReleaseObligations(t),newItems=ownedIds.map(pid=>
     contractReleaseSettlement(db,db.players[pid],'club_closure')).filter(row=>row.amount>0),
-    items=[...pending.items,...newItems],amount=pending.amount+
-      newItems.reduce((sum,row)=>sum+row.amount,0);
+    staffItems=staffClosureClaims(db,t),items=[...pending.items,...newItems,...staffItems],amount=pending.amount+
+      [...newItems,...staffItems].reduce((sum,row)=>sum+row.amount,0);
   return financeClosureAllocation(t.finance.cash,{amount,items,
     unattributedAmount:pending.unattributedAmount});
 }
@@ -94,7 +94,7 @@ function clubClosureSnapshot(db,c){
       const t=db.teams[id];
       return {id,active:t?.active,parent:t?.parent||null,roster:t?.roster,
         license:t?.competitionLicense?.current,owner:t?.owner?.id,
-        finance:t?.finance,players:(t?.roster||[]).map(pid=>({pid,
+        finance:t?.finance,staff:t?.staffRoster,players:(t?.roster||[]).map(pid=>({pid,
           team:db.players[pid]?.team,contract:db.players[pid]?.contract}))};
     }),negotiations:c.negotiationIds.map(id=>w?.negotiations?.[id]),
     agreements:c.agreementIds.map(id=>w?.contractAgreements?.[id])}));
@@ -108,6 +108,7 @@ function applyClubClosure(db,c){
     const t=db.teams[id];
     for(const pid of t.roster.slice())
       applyPlayerReleaseAction(db,{pid,teamId:id,mode:'club_closure',actor:'system'});
+    releaseClosingStaff(db,t);
     const funding=plan.changes.find(row=>row.teamId===id).funding,
       settlement=settleClubClosureFinance(t,db.year,db.worldDate||null,funding);
     ensureClubLicense(db,t);t.active=false;t.folded=db.year;

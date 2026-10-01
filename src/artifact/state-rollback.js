@@ -80,6 +80,8 @@ function actionJournalTargets(db,command){
 }
 
 function captureWorldActionJournal(db,command){
+  if(command.type.startsWith('staff.'))return captureStaffActionJournal(db,command);
+  const staffJournal=command.type==='club.close'?captureStaffActionJournal(db,command):null;
   const {playerIds,teamIds}=actionJournalTargets(db,command);
   const players=Array.from(playerIds, pid=>{
     const player=db.players[pid];
@@ -100,6 +102,7 @@ function captureWorldActionJournal(db,command){
   return {
     playerIds,
     rollback(){
+      if(staffJournal)staffJournal.rollback();
       for(const row of entries)if(row.value)row.s.entries=row.value;else delete row.s.entries;
       if(closure){
         if(closure.firedPresent)w.fired=closure.fired;else delete w.fired;
@@ -125,7 +128,8 @@ function captureWorldActionJournal(db,command){
 }
 
 function worldActionScopeErrors(db,command,playerIds){
-  const errors=[];
+  if(command.type.startsWith('staff.'))return staffStateErrors(db);
+  const errors=command.type==='club.close'?staffStateErrors(db):[];
   for(const pid of playerIds){
     const p=db.players[pid];
     if(!p){errors.push('선수 정보 누락: '+pid);continue}

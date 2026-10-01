@@ -4,7 +4,10 @@ const [ui,app]=await artifactSources(['ui-manager.js','app.js']);
 const escapeDeclaration=app.match(/^const esc=.*$/m)?.[0];assert(escapeDeclaration);
 await runEngineFixture(String.raw`(()=>{
   const check=(ok,msg)=>{if(!ok)throw Error('CLUB_CLOSURE '+msg)},near=(a,b)=>Math.abs(a-b)<1e-8;
-  let db=buildWorld();
+  // This suite isolates player/parent claim arithmetic. Staff creditors have
+  // their own funded/insolvent closure acceptance; expired contracts owe zero.
+  const playerClosureWorld=cfg=>{const world=buildWorld(cfg);for(const t of Object.values(world.teams))for(const s of t.staffRoster||[])s.contract.until=world.year-1;return world};
+  let db=playerClosureWorld();
   const [parent,other]=activeTeams(db,null,1),reserve=reserveTeamsOf(db,parent)[0],
     players=Object.values(db.players).filter(p=>!p.team&&!p.retired).slice(0,4),
     [a,b,c,medical]=players;
@@ -78,7 +81,7 @@ await runEngineFixture(String.raw`(()=>{
     pid:b.id,teamId:other.id,salary:1,years:1,terms:{}});
   check(sign.ok&&db.players[b.id].contract.until===db.year,'released player could not sign anew');
   // A reserve closure cannot dissolve its parent or fire its manager.
-  const reserveWorld=buildWorld(),first=activeTeams(reserveWorld,null,1)[0],
+  const reserveWorld=playerClosureWorld(),first=activeTeams(reserveWorld,null,1)[0],
     academy=reserveTeamsOf(reserveWorld,first)[0];
   setManagedTeam(reserveWorld,first.id);
   reserveWorld.world={phase:'offseason',fired:false};
@@ -90,7 +93,7 @@ await runEngineFixture(String.raw`(()=>{
     academy.active===false&&!reserveWorld.world.fired,'reserve closure dissolved parent');
   // Existing parent support also funds reserve termination, with actual cash.
   for(const parentCash of [10,2,0,-1]){
-    const world=buildWorld(),parent=activeTeams(world,null,1)[0],
+    const world=playerClosureWorld(),parent=activeTeams(world,null,1)[0],
       reserve=reserveTeamsOf(world,parent)[0],
       p=Object.values(world.players).find(x=>!x.team&&!x.retired);
     signContract(world,p,reserve,4,2,{releaseGuaranteeRate:1});
@@ -131,7 +134,7 @@ await runEngineFixture(String.raw`(()=>{
       'annual finance charged funding history again');
   }
   // Closing the organization can fund a reserve after protecting parent claims.
-  const group=buildWorld(),head=activeTeams(group,null,1)[0],
+  const group=playerClosureWorld(),head=activeTeams(group,null,1)[0],
     child=reserveTeamsOf(group,head)[0],free=Object.values(group.players).filter(x=>!x.team&&!x.retired);
   signContract(group,free[0],head,1,2,{releaseGuaranteeRate:1});
   signContract(group,free[1],child,3,2,{releaseGuaranteeRate:1});
@@ -140,7 +143,7 @@ await runEngineFixture(String.raw`(()=>{
     child.finance.closureSettlement.paidAmount===3&&child.finance.buyout===3&&
     head.finance.cash===0&&child.finance.cash===0,'whole organization funding failed');
   // Return a closed reserve's surplus even when its continuing parent is in debt.
-  const recovery=buildWorld(),owner=activeTeams(recovery,null,1)[0],
+  const recovery=playerClosureWorld(),owner=activeTeams(recovery,null,1)[0],
     closing=reserveTeamsOf(recovery,owner)[0],
     athlete=Object.values(recovery.players).find(p=>!p.team&&!p.retired);
   signContract(recovery,athlete,closing,4,2,{releaseGuaranteeRate:1});
@@ -175,7 +178,7 @@ await runEngineFixture(String.raw`(()=>{
   check(recovery.teams[owner.id].finance.cash===recoveryControl.teams[owner.id].finance.cash,
     'recovery was counted as annual income again');
   for(const ownerCash of [10,2]){
-    const deficitWorld=buildWorld(),head=activeTeams(deficitWorld,null,1)[0],
+    const deficitWorld=playerClosureWorld(),head=activeTeams(deficitWorld,null,1)[0],
       squad=reserveTeamsOf(deficitWorld,head)[0],
       p=Object.values(deficitWorld.players).find(p=>!p.team&&!p.retired);
     signContract(deficitWorld,p,squad,1,2,{releaseGuaranteeRate:1});
@@ -190,7 +193,7 @@ await runEngineFixture(String.raw`(()=>{
   }
   // Recover before support: cash from a solvent owned squad pays parent claims
   // and can support another closed squad without creating outside equity.
-  const organization=buildWorld(),principal=activeTeams(organization,null,1)[0],
+  const organization=playerClosureWorld(),principal=activeTeams(organization,null,1)[0],
     donor=reserveTeamsOf(organization,principal)[0],
     recipient=activeTeams(organization).find(t=>t.parent&&t.parent!==principal.id),
     cohort=Object.values(organization.players).filter(p=>!p.team&&!p.retired).slice(0,3);
@@ -211,7 +214,7 @@ await runEngineFixture(String.raw`(()=>{
   for(const cash of [7,0,-3]){
     const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:2,div2:false})];
     cfg.internationals=[];
-    const world=buildWorld(cfg),t=activeTeams(world)[0],
+    const world=playerClosureWorld(cfg),t=activeTeams(world)[0],
       p=Object.values(world.players).find(x=>!x.team&&!x.retired);
     signContract(world,p,t,2,2);t.finance.cash=cash;
     const quote=previewWorldAction(world,{type:'club.close',actor:'system',teamId:t.id});

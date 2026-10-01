@@ -114,6 +114,7 @@ function normalizeRestoredSave(db){
   }
   if(!saveObject(db.manager))db.manager={id:'manager-human',teamId:null,startMode:null,careerStartedAt:null};
   migrateLegacyStaffState(db);
+  const staffErrors=staffStateErrors(db);if(staffErrors.length)throw new Error('스태프 저장 데이터 오류: '+staffErrors.slice(0,3).join(' · '));
   db.saveFormat=SAVE_FORMAT_VERSION;
   return db;
 }
