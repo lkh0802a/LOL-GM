@@ -266,3 +266,35 @@ save restoration are covered in contract-release-acceptance.mjs, included in the
 shared CI runner. D04-B4 guarantees/termination remain feature work, not part of
 this structural refactor. Next: remove proven unused wrappers and close the
 compatibility/dependency audit with final full/parity QA.
+
+## R06/R07 unused API and compatibility closure
+
+Runtime + shell candidate inventory was followed by repository-wide source,
+script/test and document searches. These private, unexported helpers had no
+callers or persisted references and are removed:
+
+| Removed helper | Former owner | Retained canonical path / evidence |
+| --- | --- | --- |
+| mulberry32 | random.js | RNG class; actual stream implementation unchanged |
+| monteCarlo | engine.js | cancellable UI manager batches call simulateMatch |
+| ensureChampionVisual | champion-data.js | creation/release/patch uses generatedChampionVisual directly |
+| seriesOpeningDraft | series.js | createSeriesSession / seriesSessionPrepareGame, including managed resumable series |
+| spendingTax | finance.js | actual accounting calls spendingTaxForPayroll |
+| potLabel | ui-roster.js | observed player/scouting surfaces; no template or handler caller |
+
+No supported runtime module is now empty, so there is no legacy file to delete.
+The optional guards for UI_OVERLAY / uiEnhanceScrollRegions are removed: both
+are mandatory manifest-owned dependencies. Overlay tests now explicitly supply
+and observe this dependency. Browser API capability checks stay intact.
+
+Retained low-frequency APIs have real acceptance callers: renewalDisposition,
+rosterMoveCheck, rosterIntegrityErrors and autoBuildInitialSquad. World v15,
+format-1-to-2 restoration, facility/staff normalization, parked fixture dates,
+three local save slots, IndexedDB and local fallback are supported behavior,
+not dead shims. No save compatibility path is removed.
+
+Static checks reject the six removed names, required-UI optional fallback and
+engine references to application UI/storage globals. These are conservative
+source-text checks, not an alias-aware dependency proof. The ordered classic-
+script runtime remains a deliberate build mechanism; directory/ESM conversion
+is not required for domain ownership and is not fabricated as completed.

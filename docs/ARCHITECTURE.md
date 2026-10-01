@@ -116,3 +116,9 @@ manager/weekly reserve swaps retain full `roster.plan` validation.
 Release cost is read from `contracts.js::contractReleaseCost` by both the UI
 and player commands. `finance.js` owns release liability accrual, payroll and
 spending-tax calculations; current contract state remains their only input.
+
+R06/R07 remove unused mulberry32, monteCarlo, ensureChampionVisual,
+seriesOpeningDraft, spendingTax and potLabel. The supported RNG, batched
+simulation, generated visuals, resumable series and finance payroll queries
+remain canonical. UI overlay/state dependencies are required by the manifest;
+engine modules may not consume application UI/storage globals.

@@ -64,7 +64,7 @@ function uiEnhanceScrollRegions(root){
 }
 window.addEventListener?.('resize',()=>{
   uiEnhanceScrollRegions(document.querySelector('#main'));
-  if(typeof UI_OVERLAY!=='undefined'&&UI_OVERLAY)uiEnhanceScrollRegions(document.querySelector('#overlay'));
+  if(UI_OVERLAY)uiEnhanceScrollRegions(document.querySelector('#overlay'));
 });
 function nav(){
   const route=UI_ROUTES[VIEW];

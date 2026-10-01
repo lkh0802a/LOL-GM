@@ -43,7 +43,7 @@ function openUiOverlay({kind,label,html,dismissible=false,onDismiss=null,focusSe
   root.hidden=false;
   root.setAttribute('aria-label',label);
   root.innerHTML=html;
-  if(typeof uiEnhanceScrollRegions==='function')uiEnhanceScrollRegions(root);
+  uiEnhanceScrollRegions(root);
   document.body.classList.add('lock');
   uiOverlayBackground(true);
   uiOverlayFocus(root,focusSelector);
@@ -55,7 +55,7 @@ function refreshUiOverlay(html,{label=null,focusSelector=null}={}){
   const key=root.contains(current)?uiOverlayFocusKey(current):null;
   if(label!==null){UI_OVERLAY.label=label;root.setAttribute('aria-label',label)}
   root.innerHTML=html;
-  if(typeof uiEnhanceScrollRegions==='function')uiEnhanceScrollRegions(root);
+  uiEnhanceScrollRegions(root);
   uiOverlayFocus(root,focusSelector,key);
 }
 function closeUiOverlay({force=false,restoreFocus=true}={}){

@@ -458,16 +458,3 @@ function simulateMatch(db,blueId,redId,seed,ctx,quiet){
   const last=st.log[st.log.length-1]; if(last&&last.kind==='nexus')last.sec=endSec;
   return {seed,winner:st.winner,duration:t+endSec/60,durationStr:fmtTime(t,endSec),draft:d,sides:st.sides,log:st.log,expl:st.expl,goldHist:st.goldHist,firsts:st.firsts};
 }
-
-function monteCarlo(db,blueId,redId,n,baseSeed){
-  const acc={wins:0,time:0,gd15:0,fd:0,ft:0,fb:0,baron:[0,0],kills:[0,0],towers:[0,0],dragons:[0,0],fights:[0,0],n:0,times:[]};
-  for(let i=0;i<n;i++){
-    const r=simulateMatch(db,blueId,redId,baseSeed+'#'+i);
-    acc.n++; if(r.winner===0)acc.wins++; acc.time+=r.duration; acc.times.push(r.duration);
-    acc.gd15+=r.goldHist[14]??r.goldHist[r.goldHist.length-1];
-    if(r.firsts.dragon===0)acc.fd++; if(r.firsts.tower===0)acc.ft++; if(r.firsts.blood===0)acc.fb++;
-    for(const i2 of [0,1]){acc.baron[i2]+=r.sides[i2].barons>0?1:0;acc.kills[i2]+=r.sides[i2].kills;acc.towers[i2]+=r.sides[i2].towersTaken;acc.dragons[i2]+=r.sides[i2].dragons.length}
-    for(const l of r.log) if(l.kind==='fight') acc.fights[l.side]++;
-  }
-  return acc;
-}

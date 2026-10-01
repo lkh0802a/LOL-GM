@@ -124,10 +124,6 @@ function seriesSessionResult(db,sess){
   if(!seriesSessionDone(sess))return null;const tac={[sess.a]:{...db.teams[sess.a].tactics},[sess.b]:{...db.teams[sess.b].tactics}};
   return {rec:{a:sess.a,b:sess.b,bestOf:sess.bestOf,seed:sess.seed,patch:db.patch.id,fearless:!!sess.opt.fearless,firstChoice:sess.opt.firstChoice,score:[sess.wins[sess.a],sess.wins[sess.b]],winner:sess.wins[sess.a]>sess.wins[sess.b]?sess.a:sess.b,games:sess.games,tac},lines:sess.lines};
 }
-function seriesOpeningDraft(db,aId,bId,bestOf,seed,opt={}){
-  const session=createSeriesSession(db,aId,bId,bestOf,seed,opt),x=seriesSessionPrepareGame(db,session);
-  return {...x,chooser:x.chooser,draftCtx:x.snap,session};
-}
 function simulateSeries(db,aId,bId,bestOf,seed,opt={}){
   const sess=createSeriesSession(db,aId,bId,bestOf,seed,opt);
   while(!seriesSessionDone(sess)){

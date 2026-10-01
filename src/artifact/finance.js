@@ -51,7 +51,6 @@ function spendingTaxForPayroll(db,t,spend){
   const a=Math.min(over,R.salaryCap*.1),b=Math.min(Math.max(0,over-a),R.salaryCap*.15),c=Math.max(0,over-a-b);
   return a*.25+b*.5+c*(R.luxuryTax||1);
 }
-function spendingTax(db,t){return spendingTaxForPayroll(db,t,regulatedPayroll(db,t))}
 function sumFinanceRows(rows){return Object.values(rows).reduce((a,v)=>a+v,0)}
 function financeSeasonWins(db,t,w=db.world){if(!w?.seasons)return 0;
   return Object.values(w.seasons).reduce((n,s)=>{

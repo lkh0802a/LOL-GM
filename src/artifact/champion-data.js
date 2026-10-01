@@ -17,7 +17,6 @@ function generatedChampionVisual(def){
   const pool=(def?.dmg==='AP'?['arcane','celestial','verdant','void','frost','hex']:['infernal','storm','shadow','solar','frost','hex']),theme=pool[(seed>>>3)%pool.length];
   return {version:CHAMPION_VISUAL_VERSION,seed,revision:0,theme,silhouette,weapon,ornament:CHAMPION_VISUAL_ORNAMENTS[(seed>>>7)%CHAMPION_VISUAL_ORNAMENTS.length],pose:['front','threeQuarter','profile'][(seed>>>11)%3],aura:CHAMPION_VISUAL_THEMES[(seed>>>15)%CHAMPION_VISUAL_THEMES.length]};
 }
-function ensureChampionVisual(c){if(!c)return null;if(!c.visual)c.visual=generatedChampionVisual(c);return c.visual}
 const DETAIL_BASE_KEYS=['resource','resourceg','resourceRegen','mr','mrg','asg'];
 const CHAMPION_SOURCE_PATCH='16.19.1';
 function cleanChampionSourceText(v){return String(v||'').replace(/<br\s*\/?>/gi,' ').replace(/<[^>]*>/g,'').replace(/&nbsp;/gi,' ').replace(/&amp;/gi,'&').replace(/&lt;/gi,'<').replace(/&gt;/gi,'>').replace(/&#39;/g,"'").replace(/&quot;/gi,'"').replace(/\s+/g,' ').trim()}
