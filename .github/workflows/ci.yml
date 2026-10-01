@@ -449,39 +449,7 @@ jobs:
         run: node scripts/ci-run.mjs build -- npm run build
 
       - name: Verify production artifact
-        run: test -s dist/index.html
-
-      - name: Sync generated standalone
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          if git diff --quiet -- index.html; then
-            exit 0
-          fi
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          for attempt in 1 2 3; do
-            git fetch origin main
-            git reset --hard origin/main
-            npm run build
-
-            if git diff --quiet -- index.html; then
-              exit 0
-            fi
-
-            git add index.html
-            git commit -m "build: sync generated standalone"
-
-            if git push origin HEAD:main; then
-              exit 0
-            fi
-
-            echo "Standalone sync raced with a newer main commit; retrying ($attempt/3)."
-          done
-
-          echo "Standalone sync failed after 3 attempts."
-          exit 1
+        run: test -s dist/index.html && cmp -s index.html dist/index.html
 
       - name: Upload HTML preview
         uses: actions/upload-artifact@v4
@@ -542,3 +510,63 @@ jobs:
           fi
 
           echo "Required CI gate passed: docs_only=$DOCS_ONLY run_full=$RUN_FULL"
+
+  standalone-sync:
+    needs: [changes, perf-build, verify]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.outputs.run_full == 'true' && needs.verify.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout validated commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Download validated standalone
+        uses: actions/download-artifact@v4
+        with:
+          name: lol-gm-html-preview
+          path: validated-standalone
+
+      - name: Sync validated standalone
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp validated-standalone/index.html index.html
+
+          if git diff --quiet -- index.html; then
+            echo "Generated standalone is already synchronized."
+            exit 0
+          fi
+
+          validated_sha="$GITHUB_SHA"
+          git fetch origin main
+          remote_sha="$(git rev-parse origin/main)"
+
+          if [[ "$remote_sha" != "$validated_sha" ]]; then
+            echo "main advanced from $validated_sha to $remote_sha; the newer validated run owns standalone sync."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "build: sync generated standalone"
+
+          if git push origin HEAD:main; then
+            exit 0
+          fi
+
+          git fetch origin main
+          remote_sha="$(git rev-parse origin/main)"
+          if [[ "$remote_sha" != "$validated_sha" ]]; then
+            echo "main advanced while syncing; skipping stale standalone publication."
+            exit 0
+          fi
+
+          echo "Standalone sync push failed without main advancing."
+          exit 1
+
