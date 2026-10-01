@@ -58,6 +58,31 @@ function financeReleaseObligations(t){
     detailed=items.reduce((sum,row)=>sum+row.amount,0);
   return {amount,items,unattributedAmount:Math.max(0,amount-detailed)};
 }
+function financeClosureAllocation(cash,claims){
+  const amount=claims.amount,detailed=claims.items.reduce((n,row)=>n+row.amount,0);
+  if(!Number.isFinite(cash)||!Number.isFinite(amount)||amount<0||
+    claims.items.some(row=>!Number.isFinite(row.amount)||row.amount<0)||detailed>amount+1e-8)
+    throw new Error('구단 해체 채무 또는 현금 정보가 유효하지 않습니다');
+  const paidAmount=Math.min(Math.max(0,cash),amount),unpaidAmount=amount-paidAmount,
+    ratio=amount?paidAmount/amount:0,
+    items=claims.items.map(row=>({...row,paidAmount:row.amount*ratio,
+      unpaidAmount:paidAmount===amount?0:row.amount*(1-ratio)}));
+  return {amount,paidAmount,unpaidAmount,items,
+    unattributedAmount:claims.unattributedAmount,
+    unattributedPaid:claims.unattributedAmount*ratio,
+    unattributedUnpaid:paidAmount===amount?0:claims.unattributedAmount*(1-ratio)};
+}
+function settleClubClosureFinance(t,year,date){
+  const f=t.finance;
+  if(f.closureSettlement)throw new Error('이미 정산한 구단 해체입니다');
+  const cashBefore=f.cash,allocation=financeClosureAllocation(cashBefore,financeReleaseObligations(t));
+  t.finance.cash-=allocation.paidAmount;
+  f.buyout=allocation.unpaidAmount;
+  f.releaseObligations=allocation.items.filter(row=>row.unpaidAmount>0)
+    .map(row=>({...row,originalAmount:row.amount,amount:row.unpaidAmount}));
+  f.closureSettlement={year,date,cashBefore,cashAfter:f.cash,...allocation};
+  return f.closureSettlement;
+}
 function payroll(db,t){return t.roster.reduce((a,id)=>{const c=db.players[id]?.contract;return a+(c&&!c.medicalReplacement?c.salary:0)},0)}
 function topFivePayroll(db,t){const top=[];for(const id of t.roster){const p=db.players[id];if(!p||!p.contract||p.contract.medicalReplacement)continue;const s=p.contract.salary;let i=0;while(i<top.length&&top[i]>=s)i++;top.splice(i,0,s);if(top.length>5)top.pop()}return top.reduce((a,b)=>a+b,0)}
 function regulatedPayroll(db,t){const R=db.regions[t.region];return R&&R.spendingRule==='sfr_top5'?topFivePayroll(db,t):payroll(db,t)}

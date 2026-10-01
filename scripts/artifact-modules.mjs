@@ -48,6 +48,7 @@ export const ENGINE_MODULES = [
   'contract-contact-ai.js',
   'contract-agreement.js',
   'state-player-actions.js',
+  'club-closure.js',
   'staff.js',
   'scrim-partner.js',
   'scrim.js',

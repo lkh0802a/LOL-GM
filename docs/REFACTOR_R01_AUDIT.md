@@ -6,9 +6,9 @@ This audit is the entry point for Issue #62. It does not change game rules. The 
 
 ## Runtime shape
 
-The standalone runtime now concatenates **73 classic-script modules** in the order declared by `scripts/artifact-modules.mjs`:
+The standalone runtime now concatenates **74 classic-script modules** in the order declared by `scripts/artifact-modules.mjs`:
 
-- 56 engine/domain modules
+- 57 engine/domain modules
 - 17 UI/application modules
 
 The files are physically split, but dependencies remain implicit browser globals. Therefore file size alone is not the main refactor criterion. Mutation ownership, transaction entry points and caller count take priority.
@@ -310,7 +310,7 @@ is not required for domain ownership and is not fabricated as completed.
 
 ## R08 complete manifest / dependency and change map
 
-All 73 manifest modules belong to the cohorts below. Dependencies are public
+The 73 modules at the R08 acceptance snapshot belong to the cohorts below. Dependencies are public
 classic-script APIs, not ES imports. Manifest order controls top-level evaluation;
 cross-domain function calls can resolve later declarations. Consequently this
 table is an ownership/change map, not a claim of an acyclic import graph.
@@ -352,3 +352,9 @@ This opt-in Actions evidence is in validation-smoke-parity/refactor-parity.json.
 Completion requires the final PR full CI and explicitly dispatched parity gate
 to succeed before merge, followed by main full CI. Issue #62 is the authoritative
 completion status. D04-B4 and Android delivery remain subsequent work.
+
+
+D04-B4d1 adds club-closure.js to player-command/governance composition.
+Current manifest: 74 modules (57 engine, 17 UI). Office-directed closure uses
+the gateway instead of direct roster removal; finance owns cash and unpaid claims.
+This subsequent feature does not change the historical R08 acceptance evidence.

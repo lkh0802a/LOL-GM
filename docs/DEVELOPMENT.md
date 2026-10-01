@@ -436,7 +436,9 @@ activation, save/restore and the same transactional finance settlement.
 B4c adds offseason mutual termination through the shared release transaction,
 player consent/compensation demands, manager UI and AI cleanup, with preserved
 medical/future-contract boundaries, rollback, saves and single annual settlement.
-Insolvency settlement remains later B4 work; D04 is not complete.
+B4d1 adds atomic office-directed closure, cash-limited player claim payments,
+preserved unpaid balances and cancellation of closed-club commitments. Remaining
+B4 work includes funding/recovery and player consent/agents/promises; D04 is not complete.
 Continue the complete numbered roadmap and D follow-ups. Follow ANDROID_TARGET.md
 through playable desktop/mobile HTML acceptance before Android production
 packaging and real-device offline/save validation.
@@ -504,3 +506,29 @@ implemented and tested in custom worlds, but no independent Tier-2 club exists
 in the default starting world. A playable default Tier-2 start is therefore
 unfinished; decide the regional independent league composition before adding
 clubs. Do not treat an owned Academy/Challengers squad as an independent club.
+
+
+## Realism reference and fictional league priority (2026-10-01)
+
+The user specifies actual LoL esports as the realism reference, while explicitly
+preserving this game's fictional league. User-approved fictional formats, world
+evolution, competitions and rules take priority. Difference from real leagues
+alone is not a defect and does not authorize converting the game to a replica.
+Improve internally implausible consequences using real esports as a reference;
+verify dated regional official rules before claiming they are actual rules.
+Private contract terms and simulation policies must remain clearly distinguished.
+
+The [2026 LCK update](https://lolesports.com/ko-KR/lolesports/news/2026-lck-rulebook-update-notice)
+permits some end dates outside the global date, with multi-year constraints.
+The current Worlds+14 model remains the fictional game's policy; this source
+must not trigger an automatic migration to real-world calendar dates. Revisit
+only where the fictional design needs a more coherent rule.
+
+Current unit: D04-B4d1. Main files: club-closure.js, finance.js, office.js,
+state-player-actions.js, state-rollback.js and closure/player finance UI.
+Focused acceptance covers authority, parent/reserve scope, stale previews, late
+rollback, paid/unpaid balances, legacy claims, agreements, UI and save restore.
+Full regression, long simulation and build remain Actions-owned. Next candidates:
+closure funding/recovery, transfer consent, D05 loans and remaining Items 13–23.
+
+Local D04-B4d1 evidence: static check (74 modules) and the focused UI/finance/contract runner passed (17 acceptances, 13 isolated engine contexts, one engine compile). Full CI acceptance is required before merge.

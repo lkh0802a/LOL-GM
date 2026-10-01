@@ -536,12 +536,17 @@ source += `\n(()=>{
     if(independent.some(t=>!promotionEligible(db,t)))throw new Error('Independent Tier-2 club incorrectly blocked from promotion');
     const parent=db.teams[owned[0].parent];
     if(reserveRequirement(db,parent)!=='required')throw new Error('Certified mixed-system club lost mandatory reserve requirement');
-    const ownedId=owned[0].id,parentId=owned[0].parent,foldedPlayers=owned[0].roster.map(id=>db.players[id]).filter(Boolean),foldedContracts=new Map(foldedPlayers.map(p=>[p.id,p.contract&&{...p.contract}]));
+    const ownedId=owned[0].id,parentId=owned[0].parent,foldedPlayers=owned[0].roster.map(id=>db.players[id]).filter(Boolean),foldedClaim=foldedPlayers.reduce((sum,p)=>sum+contractReleaseSettlement(db,p,'club_closure').amount,0);
     db.teams[parentId].division=2;
     reconcileTier2Structure(db,new RNG('smoke-tier2-reconcile'),mixedRegion);
     if(db.teams[ownedId]&&db.teams[ownedId].active!==false)throw new Error('Reserve survived after parent lost first-division eligibility');
     if(foldedPlayers.some(p=>p.team!==null||p.faYears!==0))throw new Error('Folded reserve players did not become clean free agents');
-    if(foldedPlayers.some(p=>JSON.stringify(p.contract)!==JSON.stringify(foldedContracts.get(p.id))))throw new Error('Folded reserve unexpectedly destroyed player contract terms');
+    if(foldedPlayers.some(p=>p.contract!==null||p.careerEvents.at(-1)?.type!=='club_closure'))throw new Error('Folded reserve kept a live contract or lost closure history');
+    const closedFinance=db.teams[ownedId].finance,closedSettlement=closedFinance.closureSettlement;
+    if(!closedSettlement||closedSettlement.amount+1e-8<foldedClaim||
+      Math.abs(closedSettlement.paidAmount+closedSettlement.unpaidAmount-closedSettlement.amount)>1e-8||
+      Math.abs(closedFinance.buyout-closedSettlement.unpaidAmount)>1e-8)
+      throw new Error('Folded reserve lost player claim settlement');
     db.teams[parentId].division=1;db.teams[parentId].franchised=true;
     reconcileTier2Structure(db,new RNG('smoke-tier2-recreate'),mixedRegion);
     if(!reserveTeamsOf(db,parentId).length)throw new Error('Required reserve was not restored after first-division certification');

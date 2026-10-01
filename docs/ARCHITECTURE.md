@@ -122,3 +122,13 @@ seriesOpeningDraft, spendingTax and potLabel. The supported RNG, batched
 simulation, generated visuals, resumable series and finance payroll queries
 remain canonical. UI overlay/state dependencies are required by the manifest;
 engine modules may not consume application UI/storage globals.
+
+
+Club closure is composed by club-closure.js through the system-only club.close
+action. Office calls this gateway; roster release remains player-writer-owned
+and cash/debt allocation finance-owned. The action journal additionally restores
+club lifecycle, selected agreements/negotiations and the managed club fired flag.
+Preview snapshots organization membership, contracts, finance and commitments.
+Paid/unpaid closure statements persist; annual close excludes inactive clubs.
+Separate club cash pools and player-only claims are explicit current scope,
+not an assertion about insolvency law or parent guarantees.
