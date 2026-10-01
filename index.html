@@ -4794,7 +4794,7 @@ function actionJournalRestoreTeam(entry){
 function actionJournalTargets(db,command){
   const playerIds=new Set(),teamIds=new Set();
   if(command.type==='club.close'){
-    for(const id of command.teamIds)teamIds.add(id);
+    for(const id of command.financeTeamIds)teamIds.add(id);
     for(const pid of command.playerIds)playerIds.add(pid);
   }else if(command.type==='roster.plan'||command.type==='roster.market-callup'){
     for(const team of organizationTeams(db,command.parentId)){
@@ -5274,7 +5274,20 @@ function financeClosureAllocation(cash,claims){
     unattributedPaid:claims.unattributedAmount*ratio,
     unattributedUnpaid:paidAmount===amount?0:claims.unattributedAmount*(1-ratio)};
 }
-function settleClubClosureFinance(t,year,date){
+function applyClubClosureFunding(db,transfers,closingIds,year,date){
+  for(const row of transfers){
+    const from=db.teams[row.fromId],to=db.teams[row.toId];
+    if(!Number.isFinite(row.amount)||row.amount<0||from.finance.cash+1e-8<row.amount)
+      throw new Error('구단 해체 지원금이 가용 현금을 초과합니다');
+    from.finance.cash-=row.amount;to.finance.cash+=row.amount;
+    if(!closingIds.includes(from.id)){
+      const f=from.finance;
+      f.closureSupportHistory=[...(f.closureSupportHistory||[]),
+        {year,date,...row,cashAfter:f.cash}].slice(-20);
+    }
+  }
+}
+function settleClubClosureFinance(t,year,date,funding=null){
   const f=t.finance;
   if(f.closureSettlement)throw new Error('이미 정산한 구단 해체입니다');
   const cashBefore=f.cash,allocation=financeClosureAllocation(cashBefore,financeReleaseObligations(t));
@@ -5282,7 +5295,8 @@ function settleClubClosureFinance(t,year,date){
   f.buyout=allocation.unpaidAmount;
   f.releaseObligations=allocation.items.filter(row=>row.unpaidAmount>0)
     .map(row=>({...row,originalAmount:row.amount,amount:row.unpaidAmount}));
-  f.closureSettlement={year,date,cashBefore,cashAfter:f.cash,...allocation};
+  f.closureSettlement={year,date,cashBefore,cashAfter:f.cash,...allocation,
+    ...(funding?{funding}:{})};
   return f.closureSettlement;
 }
 function payroll(db,t){return t.roster.reduce((a,id)=>{const c=db.players[id]?.contract;return a+(c&&!c.medicalReplacement?c.salary:0)},0)}
@@ -7197,6 +7211,34 @@ for(const [type,validate,apply] of [
 function clubClosureTeams(db,t){
   return [t,...(t.parent?[]:activeTeams(db).filter(x=>x.parent===t.id))];
 }
+function clubClosureFinanceTeams(db,teams){
+  const parent=teams[0].parent&&playerActionTeam(db,teams[0].parent);
+  return parent?[...teams,parent]:teams;
+}
+function clubClosureFundingPlan(db,c){
+  const teams=c.teamIds.map(id=>db.teams[id]),
+    original=new Map(teams.map(t=>[t.id,clubClosureAllocation(db,t)])),
+    parent=db.teams[teams[0].parent||teams[0].id],transfers=[];
+  if(parent&&parent.active!==false){
+    const own=original.get(parent.id)||financeReleaseObligations(parent);
+    financeClosureAllocation(parent.finance.cash,own);
+    const needs=teams.filter(t=>t.parent===parent.id)
+      .map(t=>({t,need:original.get(t.id).unpaidAmount})).filter(row=>row.need>0),
+      total=needs.reduce((n,row)=>n+row.need,0),
+      available=Math.min(total,Math.max(0,parent.finance.cash-own.amount));
+    if(available>0)for(const {t,need} of needs)
+      transfers.push({fromId:parent.id,toId:t.id,amount:available*need/total});
+  }
+  const changes=teams.map(t=>{
+    const received=transfers.filter(x=>x.toId===t.id).reduce((n,x)=>n+x.amount,0),
+      provided=transfers.filter(x=>x.fromId===t.id).reduce((n,x)=>n+x.amount,0),
+      claims=original.get(t.id),funding={received,provided,cashBefore:t.finance.cash,
+        transfers:transfers.filter(x=>x.fromId===t.id||x.toId===t.id)};
+    return {teamId:t.id,kind:'club_closure',funding,
+      settlement:financeClosureAllocation(t.finance.cash+received-provided,claims)};
+  });
+  return {transfers,changes};
+}
 function validateClubClosure(db,a){
   if(a.actor!=='system')return worldActionError('unauthorized','구단 해체는 사무국이 결정합니다');
   const t=playerActionTeam(db,a.teamId);
@@ -7220,9 +7262,13 @@ function validateClubClosure(db,a){
     .map(([id])=>id),agreementIds=Object.keys(w?.contractAgreements||{})
     .filter(pid=>w.contractAgreements[pid].status==='agreed'&&
       teamIds.includes(w.contractAgreements[pid].teamId));
-  try{for(const team of teams)clubClosureAllocation(db,team)}
+  const financeTeams=clubClosureFinanceTeams(db,teams);
+  if(financeTeams.some(team=>!playerActionFinance(team)))
+    return worldActionError('invalid_finance','모구단 지원 재정 정보가 유효하지 않습니다');
+  try{clubClosureFundingPlan(db,{teamIds})}
   catch(e){return worldActionError('invalid_finance',e.message)}
-  return {ok:true,teamId:t.id,teamIds,playerIds,negotiationIds,agreementIds};
+  return {ok:true,teamId:t.id,teamIds,financeTeamIds:financeTeams.map(x=>x.id),
+    playerIds,negotiationIds,agreementIds};
 }
 function clubClosureAllocation(db,t){
   const pending=financeReleaseObligations(t),newItems=t.roster.map(pid=>
@@ -7235,7 +7281,7 @@ function clubClosureAllocation(db,t){
 function clubClosureSnapshot(db,c){
   const w=db.world;
   return JSON.parse(JSON.stringify({date:db.worldDate||null,year:db.year,saveId:db.saveId,
-    teams:c.teamIds.map(id=>{
+    teams:c.financeTeamIds.map(id=>{
       const t=db.teams[id];
       return {id,active:t?.active,parent:t?.parent||null,roster:t?.roster,
         finance:t?.finance,players:(t?.roster||[]).map(pid=>({pid,
@@ -7244,12 +7290,14 @@ function clubClosureSnapshot(db,c){
     agreements:c.agreementIds.map(id=>w?.contractAgreements?.[id])}));
 }
 function applyClubClosure(db,c){
-  const w=db.world,settlements=[];
+  const w=db.world,settlements=[],plan=clubClosureFundingPlan(db,c);
+  applyClubClosureFunding(db,plan.transfers,c.teamIds,db.year,db.worldDate||null);
   for(const id of c.teamIds){
     const t=db.teams[id];
     for(const pid of t.roster.slice())
       applyPlayerReleaseAction(db,{pid,teamId:id,mode:'club_closure',actor:'system'});
-    const settlement=settleClubClosureFinance(t,db.year,db.worldDate||null);
+    const funding=plan.changes.find(row=>row.teamId===id).funding,
+      settlement=settleClubClosureFinance(t,db.year,db.worldDate||null,funding);
     t.active=false;t.folded=db.year;
     settlements.push({teamId:id,...settlement});
   }
@@ -7265,11 +7313,10 @@ function applyClubClosure(db,c){
 WORLD_ACTION_HANDLERS['club.close']={
   validate:validateClubClosure,
   canonical(db,a,v){return {type:a.type,actor:a.actor,teamId:v.teamId,
-    teamIds:v.teamIds.slice(),playerIds:v.playerIds.slice(),
+    teamIds:v.teamIds.slice(),financeTeamIds:v.financeTeamIds.slice(),playerIds:v.playerIds.slice(),
     negotiationIds:v.negotiationIds.slice(),agreementIds:v.agreementIds.slice()}},
   snapshot:clubClosureSnapshot,
-  changes(db,c){return c.teamIds.map(id=>({teamId:id,kind:'club_closure',
-    settlement:clubClosureAllocation(db,db.teams[id])}))},
+  changes(db,c){return clubClosureFundingPlan(db,c).changes},
   apply:applyClubClosure
 };
 
@@ -8729,6 +8776,8 @@ function financePanel(t){
       <div><span>지급 완료</span><b>${money(closure.paidAmount)}</b></div>
       <div><span>미지급</span><b>${money(closure.unpaidAmount)}</b></div></div>
       <p class="hint">${esc(closure.date||String(closure.year))} 해체 시 가용 현금을 청구액 비율로 배분했습니다. 미지급 채무는 기록에 보존되며 다음 시즌 운영비로 중복 청구하지 않습니다.</p>
+      ${closure.funding?.received?`<p>모구단 정산 지원 ${money(closure.funding.received)}</p>`:''}
+      ${closure.funding?.provided?`<p>소유 2군 정산 지원 ${money(closure.funding.provided)}</p>`:''}
       ${releaseObligationsPanel(financeReleaseObligations(t),'해체 구단 미지급 보상')}
       <details class="cfgcard release-settlements"><summary>선수별 지급 내역</summary>
       ${closure.items.map(row=>`<div class="cfgcard"><b>${esc(row.playerName||row.pid)}</b>
@@ -8753,6 +8802,9 @@ function financePanel(t){
   ${outlook.closingCash<0?'<p class="warn">예상 결산 현금이 적자입니다. 추가 지출에 주의하세요.</p>':''}
   ${releaseObligationsPanel(financeReleaseObligations(t),'결산 예정 선수 방출 보상')}
   ${releaseObligationsPanel(last?.releaseSettlement,'지난 결산 선수 방출 보상')}
+  ${f.closureSupportHistory?.length?`<details class="cfgcard release-settlements"><summary>2군 종료 정산 지원 내역</summary>
+    <p class="hint">이미 현금에 반영된 내부 지원금입니다. 다음 결산에서 다시 차감하지 않습니다.</p>
+    ${f.closureSupportHistory.map(row=>`<p>${esc(row.date||String(row.year))} · ${esc(DB.teams[row.toId]?.name||row.toId)} · ${money(row.amount)}</p>`).join('')}</details>`:''}
   ${last?.capital?`<p class="hint">${last.year}년 구단 매각/외부 자본 투입: ${money(last.capital.newOwner||0)} (영업손익과 구분)</p>`:''}
   ${last?`<div class="rgrid"><div><h4>${last.year} 수입 ${money(Object.values(last.rev).reduce((a,b)=>a+b,0))}</h4>${Object.entries(last.rev).filter(([,v])=>v).map(([k,v])=>`<div class="arow"><span>${RK[k]||k}</span><span class="num">${money(v)}</span></div>`).join('')}</div>
   <div><h4>${last.year} 지출 ${money(Object.values(last.exp).reduce((a,b)=>a+b,0))}</h4>${Object.entries(last.exp).filter(([,v])=>v).map(([k,v])=>`<div class="arow"><span>${EK[k]||k}</span><span class="num">${money(v)}</span></div>`).join('')}<div class="arow"><span><b>순이익</b></span><span class="num ${last.net<0?'lo':'hi'}"><b>${money(last.net)}</b></span></div></div></div>`:'<p class="hint">첫 시즌이 끝나면 결산이 나옵니다.</p>'}</section>`;
