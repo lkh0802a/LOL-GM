@@ -1,0 +1,40 @@
+import assert from 'node:assert/strict';
+import {runEngineFixture} from './test-harness.mjs';
+
+const result=await runEngineFixture(String.raw`(()=>{
+  const db=buildWorld(),p=Object.values(db.players)[0],t=activeTeams(db)[0];
+  const probe=saveId=>{
+    const x=JSON.parse(JSON.stringify(db));x.saveId=saveId;
+    const player=x.players[p.id],team=x.teams[t.id];
+    const cohort=rookieGlobalCohort(x);
+    const score=initialCandidateScore(x,player,team,'seed-probe');
+    const role=ROLES.find(r=>r!==player.role);
+    const conversion=roleConversionAcceptance(x,player,role);
+    const rookies=generateRookieClass(x,x.regions[team.region],new RNG('bootstrap-probe','class'));
+    return {cohort,score,conversion,rookies};
+  };
+  const before=probe('save-clock-a'),after=probe('save-clock-b');
+  db.world={seed:'explicit-career-seed'};
+  const seededA=probe('save-clock-a'),seededB=probe('save-clock-b');
+  db.world.seed='another-career-seed';
+  const otherSeed=probe('save-clock-a');
+  db.world.seed='explicit-career-seed';
+  const rng=new RNG('explicit-career-seed/'+db.year,'rookie-global');
+  let quality=Math.exp(rng.normal(0,.14)),volume=Math.exp(rng.normal(0,.07));
+  const shock=rng.next();if(shock<.045)quality*=rng.range(1.22,1.48);else if(shock>.955)quality*=rng.range(.68,.84);
+  const expected={year:db.year,quality:Math.round(clamp(quality,.58,1.62)*100)/100,volume:Math.round(clamp(volume,.86,1.16)*100)/100};
+  const saved=unpackDB(packDB(db));
+  const persisted={year:db.year,quality:1.17,volume:.96};
+  saved.global.rookieCycles={[db.year]:persisted};
+  const preserved=rookieGlobalCohort(saved)===persisted;
+  const restoredSeed=worldSimulationSeed(saved);
+  return JSON.stringify({before,after,seededA,seededB,otherSeed,expected,preserved,restoredSeed});
+})()`,{filename:'bootstrap-seed-acceptance.js'});
+const {before,after,seededA,seededB,otherSeed,expected,preserved,restoredSeed}=JSON.parse(result);
+assert.deepEqual(before,after,'pre-season simulation must not depend on the save identifier');
+assert.deepEqual(seededA,seededB,'explicit career seeds must ignore the save identifier');
+assert.deepEqual(seededA.cohort,expected,'explicit-seed cohort RNG sequence must remain unchanged');
+assert.notDeepEqual(seededA,otherSeed,'different career seeds must still change simulation');
+assert.equal(restoredSeed,'explicit-career-seed','save/restore must preserve the active seed');
+assert(preserved,'existing saved cohort must not be regenerated');
+console.log('BOOTSTRAP_SEED_ACCEPTANCE '+JSON.stringify({saveIdIndependent:true,explicitSeedParity:true,persistedCohortPreserved:true,rookies:before.rookies.length}));

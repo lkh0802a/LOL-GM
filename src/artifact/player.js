@@ -163,7 +163,7 @@ function rookieClassLabel(w){
 function rookieGlobalCohort(db){
   db.global=db.global||{};db.global.rookieCycles=db.global.rookieCycles||{};
   if(db.global.rookieCycles[db.year])return db.global.rookieCycles[db.year];
-  const rng=new RNG((db.world?.seed||db.saveId||'world')+'/'+db.year,'rookie-global');
+  const rng=new RNG(worldSimulationSeed(db)+'/'+db.year,'rookie-global');
   let quality=Math.exp(rng.normal(0,.14)),volume=Math.exp(rng.normal(0,.07));
   const shock=rng.next();if(shock<.045)quality*=rng.range(1.22,1.48);else if(shock>.955)quality*=rng.range(.68,.84);
   quality=clamp(quality,.58,1.62);volume=clamp(volume,.86,1.16);

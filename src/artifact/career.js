@@ -100,7 +100,7 @@ function initialReleasePlayer(db,pid){
 function initialCandidateScore(db,p,t,key='',salary=null){
   const ps=Math.max(.2,psOf(db,t.region)),cost=(salary??asking(db,p,t.region))/ps,costWeight={cost:.55,balanced:.28,youth:.3,'win-now':.16,superstar:.1}[t.philosophy]??.28;
   const star=t.philosophy==='superstar'?(p.reputation||0)*.025:0,covered=(t.roster||[]).some(id=>db.players[id]?.role===p.role),coverage=covered?0:1.25;
-  const noise=((hashStr((db.world?.seed||db.saveId)+'|initial|'+t.id+'|'+p.id+'|'+key)%2001)/1000-1)*1.2;
+  const noise=((hashStr(worldSimulationSeed(db)+'|initial|'+t.id+'|'+p.id+'|'+key)%2001)/1000-1)*1.2;
   return aiMarketValue(db,p,t)+star+coverage-cost*costWeight+noise;
 }
 function initialMarketSnapshot(db,teams){
