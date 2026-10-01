@@ -10,6 +10,7 @@ export const MUTATION_OWNERSHIP={
   'office.js':{},
   'offseason.js':{remove:1},
   'player.js':{assign:1},
+  'player-loans.js':{assign:1},
   'roster.js':{assign:2},
   'scouting-ai-ops.js':{},
   'scouting.js':{},

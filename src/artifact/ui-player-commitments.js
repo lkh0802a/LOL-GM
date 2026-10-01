@@ -3,7 +3,7 @@ function playerCommitmentsPanel(p){
   const agent=playerAgent(p),oral=oralRolePromiseStatus(DB,p),t=DB.teams[p.team],
     floor=Math.max(SQUAD_ROLE_ORDER[p.contract?.promisedRole]??0,SQUAD_ROLE_ORDER[p.rosterRole]??0),
     roles=SQUAD_ROLES.filter(r=>SQUAD_ROLE_ORDER[r]>floor),
-    canPromise=managerControlsSquad(DB,t)&&p.contract&&!p.contract.medicalReplacement&&
+    canPromise=!p.loan&&managerControlsSquad(DB,t)&&p.contract&&!p.contract.medicalReplacement&&
       p.contract.until>=DB.year&&!oral&&roles.length;
   return `<h4>협상 / 구두 약속</h4><p class="hint">${esc(playerRepresentativeText(p))}${agent?` · ${esc(CAREER_GOAL_KO[agent.focus]||agent.focus)}`:''}</p>
     ${oral?`<p>구두 약속 · <b>${SQUAD_ROLE_KO[oral.role]}</b> · ${oral.games}/${oral.teamGames}게임 · 기대 출전 ${Math.round(oral.expected*100)}% · ~${p.rolePromise.until}</p>`:'<p class="hint">진행 중인 구두 역할 약속이 없습니다.</p>'}

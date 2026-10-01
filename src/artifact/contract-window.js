@@ -49,7 +49,7 @@ function contractAgreementFor(db,pid){return contractAgreementStore(db)[pid]||nu
 function contractClosingPayrollSnapshot(db){
   const rows={};
   for(const t of activeTeams(db))rows[t.id]={
-    salary:payroll(db,t),regulated:regulatedPayroll(db,t)
+    salary:ownedContractPayroll(db,t),regulated:loanAnnualRegulatedPayroll(db,t)
   };
   return rows;
 }

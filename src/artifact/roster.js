@@ -38,7 +38,8 @@ function localRegistrationError(db,t,p){
   const team=teamRef(db,t),player=playerRef(db,p);if(!team||!player)return '등록 대상을 찾을 수 없습니다';
   if(isLocalPlayer(player,team.region))return null;
   if((team.roster||[]).includes(player.id))return null;
-  return teamNonLocalCount(db,team)>=nonLocalLimitForTeam(db,team)?'비로컬 선수 등록 상한을 넘습니다':null;
+  const reserved=loanOutgoingPlayers(db,team).filter(p=>p.id!==player.id&&!isLocalPlayer(p,team.region)).length;
+  return teamNonLocalCount(db,team)+reserved>=nonLocalLimitForTeam(db,team)?'임대 복귀 인원 포함 비로컬 선수 등록 상한을 넘습니다':null;
 }
 function contractedMoveSeason(db){return db?.world?.year??db?.year}
 function contractedMoveCount(db,p){const y=contractedMoveSeason(db),moves=Array.isArray(p?.contractedMoves)?p.contractedMoves:[];return moves.filter(x=>x.season===y&&x.counts!==false).length}
@@ -95,8 +96,19 @@ function validateRosterPlan(db,t,plan){
     if(!p){errors.push('존재하지 않는 선수가 로스터에 포함되어 있습니다: '+pid);continue}
     if(!teamIds.has(dst)){errors.push(p.name+': 같은 구단의 1군/2군에만 배치할 수 있습니다');continue}
     counts[dst]=(counts[dst]||0)+1;
+    if(p.loan&&dst!==p.team)errors.push(p.name+': 임대 선수는 다른 스쿼드로 이동할 수 없습니다');
   }
   for(const pid of Object.keys(assign))if(!baseSet.has(pid))errors.push('구단 통합 로스터 밖의 선수를 이동할 수 없습니다: '+pid);
+  for(const team of teams){
+    const reserved=loanOutgoingPlayers(db,team),max=team.parent?rules.reserveTeamMax:rules.firstTeamMax;
+    if(reserved.length&&(counts[team.id]||0)+reserved.length>max)errors.push(team.name+': 임대 복귀 자리를 유지해야 합니다');
+    if(reserved.length){
+      const foreign=base.filter(pid=>assign[pid]===team.id||!assign[pid]&&db.players[pid].team===team.id)
+        .filter(pid=>!isLocalPlayer(db.players[pid],team.region)).length+
+        reserved.filter(p=>!isLocalPlayer(p,team.region)).length;
+      if(foreign>nonLocalLimitForTeam(db,team))errors.push(team.name+': 임대 복귀 비로컬 자리를 유지해야 합니다');
+    }
+  }
   const first=parent,firstN=counts[first.id]||0;
   if(firstN<rules.firstTeamMin)errors.push('1군은 최소 '+rules.firstTeamMin+'명이어야 합니다 (현재 계획 '+firstN+'명)');
   if(firstN>rules.firstTeamMax)errors.push('1군은 최대 '+rules.firstTeamMax+'명까지 가능합니다 (현재 계획 '+firstN+'명)');

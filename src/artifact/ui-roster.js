@@ -31,6 +31,7 @@ function viewSquad(){
     ${Object.keys(TAC_KO).map(k=>`<label><span>${TAC_KO[k]}<output>${tac[k]}</output></span><input type="range" min="0" max="100" value="${tac[k]}" data-tac="${k}"></label>`).join('')}
   </div></section>
   ${financePanel(t)}
+  ${squadLoanPanel(t)}
   ${DB.world?.phase==='season'?`<section><h3>공식전·스크림 일정</h3><p class="hint">오늘 ${esc(DB.worldDate)} · ${officialBookedTeams(DB).has(t.id)?'공식 경기 예정/진행 · 스크림 불가':scrimReadiness(DB,t).ok?'스크림 가능 ('+scrimReadiness(DB,t).availableSlots.map(x=>x==='afternoon'?'오후':'저녁').join('·')+') · 잔여 '+scrimReadiness(DB,t).remaining+'세트':esc(scrimReadiness(DB,t).reason)} · 양팀 모두 같은 연습 시간이 비어야 하며, 7일 내 공식전 상대는 피하고 전력 격차·연패·자신감 회복 목적을 반영해 상호 수락해야 편성됩니다.</p><p class="hint">다음 공식전: ${esc(nextTeamMatch(DB,t.id)?.date||'미정')} / 최근 스크림: ${(t.scrimLog||[]).slice(-4).reverse().map(x=>esc(x.date)+' '+(x.slot==='afternoon'?'오후':x.slot==='evening'?'저녁':'연습')+' '+esc(DB.teams[x.opponent]?.short||x.opponent)+' '+x.games+'세트'+(x.purpose?' · '+esc(x.purpose):'')).join(' · ')||'없음'}</p></section>`:''}
   ${mineOrg?rosterPlanPanel(t):''}
   ${(()=>{const r=trainingRecommendation(DB,t),ko={light:'가볍게',normal:'보통',high:'강하게'};return `<p class="hint">추천: ${ko[r.intensity]} 훈련 · ${r.next?`다음 공식전 ${r.days}일 전`:'공식전 일정 없음'} · 평균 피로 ${Math.round(r.fat)} / 컨디션 ${Math.round(r.cond)}</p>`})()}
@@ -57,6 +58,7 @@ function bindSquad(){
   document.querySelectorAll('[data-lineup-player]').forEach(el=>{el.onclick=e=>e.stopPropagation();el.onchange=e=>{e.stopPropagation();const d=squadEditState(DB.teams[SQUAD]),pid=el.dataset.lineupPlayer,next=el.value;for(const r of ROLES)if(d.starters[r]===pid)delete d.starters[r];if(next)d.starters[next]=pid;d.dirty=true;navKeepScroll()}});
   document.querySelectorAll('[data-srole]').forEach(el=>{el.onclick=e=>e.stopPropagation();el.onchange=e=>{e.stopPropagation();const p=DB.players[el.dataset.srole];if(p){const d=squadEditState(DB.teams[SQUAD]);d.roles[p.id]=el.value;d.dirty=true}}});
   bindRolePromiseControls();
+  bindLoanControls();
   document.querySelectorAll('[data-role-convert]').forEach(b=>b.onclick=e=>{e.stopPropagation();const r=proposeRoleConversion(DB,b.dataset.roleConvert,b.dataset.targetRole,'manager');MSG=r.reason;saveDB();navKeepScroll()});
   document.querySelectorAll('[data-role-convert-cancel]').forEach(b=>b.onclick=e=>{e.stopPropagation();const r=cancelRoleConversion(DB,b.dataset.roleConvert,'manager');MSG=r.reason;saveDB();navKeepScroll()});
   document.querySelectorAll('[data-tac]').forEach(el=>el.oninput=el.onchange=e=>{const k=el.dataset.tac;const d=squadEditState(DB.teams[SQUAD]);d.tactics[k]=+el.value;d.dirty=true;if(el.previousElementSibling)el.previousElementSibling.querySelector('output').textContent=el.value});

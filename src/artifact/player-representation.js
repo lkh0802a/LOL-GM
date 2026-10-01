@@ -13,6 +13,7 @@ function ensurePlayerAgent(p){
 function negotiationRepresentativeProfile(p){return playerAgent(p)?.profile||p.personality}
 function playerRepresentativeText(p){return playerAgent(p)?.name||'선수 직접 협상'}
 function oralRolePromiseStatus(db,p,year=db.year){
+  if(p.loan)return null;
   const promise=p.rolePromise;
   if(!promise||!p.team||!p.contract||p.contract.until<year||promise.until<year)return null;
   return {...rolePromiseUsageStatus(db,p,promise.role,promise.start,year),source:'oral'};
@@ -37,7 +38,7 @@ function rolePromiseActionSnapshot(db,a){
 WORLD_ACTION_HANDLERS['player.promise']={
   validate(db,a){
     const p=db.players[a.pid],t=db.teams[a.teamId];
-    if(!p||p.retired||!t||t.active===false||p.team!==t.id||!p.contract||
+    if(!p||p.loan||p.retired||!t||t.active===false||p.team!==t.id||!p.contract||
       p.contract.until<db.year||p.contract.medicalReplacement)
       return worldActionError('invalid_promise','현재 소속의 유효한 일반 계약 선수가 필요합니다');
     if(a.actor==='system'||a.actor==='manager'&&!managerControlsSquad(db,t)||
@@ -68,7 +69,7 @@ WORLD_ACTION_HANDLERS['player.promise']={
   }
 };
 function aiSportingRolePromise(db,p,t){
-  if(!p?.contract||p.contract.medicalReplacement||oralRolePromiseStatus(db,p))return;
+  if(!p?.contract||p.loan||p.contract.medicalReplacement||oralRolePromiseStatus(db,p))return;
   const role=recommendedRosterRole(db,p,t);
   if(starterFor(db,t,p.role)!==p||SQUAD_ROLE_ORDER[role]<=
     Math.max(SQUAD_ROLE_ORDER[p.contract.promisedRole]??0,SQUAD_ROLE_ORDER[p.rosterRole]??0))return;
