@@ -16,7 +16,7 @@
     "career:acceptance": "node scripts/career-acceptance.mjs",
     "check:static": "node scripts/check.mjs",
     "check:ui-finance-contracts": "node scripts/ui-finance-contracts-runner.mjs",
-    "check:calendar-scouting": "node scripts/calendar-depth-acceptance.mjs && node scripts/timezone-calendar-acceptance.mjs && node scripts/scrim-partner-acceptance.mjs && node scripts/split-standings-acceptance.mjs && node scripts/scouting-depth-acceptance.mjs && node scripts/scouting-operations-acceptance.mjs && node scripts/scouting-reassessment-acceptance.mjs",
+    "check:calendar-scouting": "node scripts/calendar-scouting-runner.mjs",
     "check:medical": "node scripts/medical-acceptance.mjs && node scripts/medical-balance-acceptance.mjs && node scripts/medical-calendar-acceptance.mjs && node scripts/medical-regional-acceptance.mjs",
     "check:regression-smoke-career": "node scripts/validate-system-snapshot.mjs && node scripts/regression.mjs && node scripts/smoke.mjs && node scripts/career-acceptance.mjs",
     "check:medical-core": "node scripts/medical-acceptance.mjs && node scripts/medical-balance-acceptance.mjs"
