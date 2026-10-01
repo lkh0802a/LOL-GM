@@ -1076,3 +1076,29 @@ Continue remaining D04/D07-D10 mechanisms and D12/D13 acceptance. D06 still need
 wider repeated policy/succession acceptance in long careers. Full CI remains an
 unexecuted account-blocked merge gate for #109, and real mobile/TalkBack evidence
 remains required before whole-D completion.
+
+## Paid Actions cost policy (2026-10-02)
+
+The user approved an account-wide Actions monthly paid budget of $10, with stop
+usage enabled at the limit. Payment registration and budget setup restored CI;
+#109 passed the full run 36910119137 and merged as
+1cd51d8fd80c5dbf2748b2cdb8470fe372534580. No additional budget increase is authorized.
+
+Minimize billed runner minutes: drafts run static/scope checks; documentation and
+CI orchestration edits avoid game simulations; UI-only changes select the shared
+UI acceptance suite and production build. Engine/unknown ready-PR changes retain
+the full required suites. Explicit workflow_dispatch still runs full validation.
+All engine changes must merge through a validated PR; direct unvalidated engine
+pushes to main are not supported by this publication-only push policy. After a
+validated PR merges, main runs static checks/build/publication instead of repeating
+the same season and medical suites. Manual long-career runs remain separate and
+must not duplicate an active run. Do not retry successful unchanged commits.
+
+Medical core, four seed shards and both aggregate invariants now share one runner
+without dropping seeds/assertions. Validation reports expire after three days.
+Scope policy is tested for engine/unknown, mixed, UI-only, draft, documentation,
+CI tooling, manual dispatch and main publication. The workflow's verify gate still
+requires every suite selected by its scope; selected failures cannot be skipped.
+The old-policy duplicate main run 36910992603 was canceled to avoid paying for
+already successful PR verification. This requires the subsequent lightweight
+main publication to refresh the committed standalone HTML.
