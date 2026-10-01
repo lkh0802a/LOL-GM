@@ -38,8 +38,25 @@ function payMedicalReplacementWage(t,amount){
   recordFinancePrepaid(t,'medicalReplacementWage',amount);
 }
 // Release liability is accrued for season closeout, not paid from cash twice.
-function recordContractReleaseObligation(t,amount){
-  if(amount)t.finance.buyout=(t.finance.buyout||0)+amount;
+function recordContractReleaseObligation(t,amount,settlement=null){
+  if(amount===0)return;
+  if(!Number.isFinite(amount)||amount<0||!t?.finance)
+    throw new Error('잘못된 선수 방출 채무');
+  if(settlement&&settlement.amount!==amount)
+    throw new Error('방출 채무와 계약 정산액이 다릅니다');
+  t.finance.buyout=(t.finance.buyout||0)+amount;
+  if(settlement){
+    t.finance.releaseObligations=t.finance.releaseObligations||[];
+    t.finance.releaseObligations.push({...settlement});
+  }
+}
+// buyout remains the balance source of truth. Older saves can have a balance
+// without player-level detail; never invent a claimant or charge that debt twice.
+function financeReleaseObligations(t){
+  const amount=t.finance?.buyout||0,
+    items=(t.finance?.releaseObligations||[]).map(row=>({...row})),
+    detailed=items.reduce((sum,row)=>sum+row.amount,0);
+  return {amount,items,unattributedAmount:Math.max(0,amount-detailed)};
 }
 function payroll(db,t){return t.roster.reduce((a,id)=>{const c=db.players[id]?.contract;return a+(c&&!c.medicalReplacement?c.salary:0)},0)}
 function topFivePayroll(db,t){const top=[];for(const id of t.roster){const p=db.players[id];if(!p||!p.contract||p.contract.medicalReplacement)continue;const s=p.contract.salary;let i=0;while(i<top.length&&top[i]>=s)i++;top.splice(i,0,s);if(top.length>5)top.pop()}return top.reduce((a,b)=>a+b,0)}
@@ -200,9 +217,12 @@ function closeFinances(db,w,rng,ev){
     const inc=sumFinanceRows(row.rev),out=sumFinanceRows(row.exp),f=row.t.finance;
     const net=inc-out;
     f.cash=round(f.cash+net-row.settled.income+row.settled.expense);
+    const releases=financeReleaseObligations(row.t);
     f.buyout=0;f.prepaid={};
+    if(f.releaseObligations)f.releaseObligations=[];
     f.history=[...f.history,{year:w.year,rev:roundRows(row.rev),
-      exp:roundRows(row.exp),net:round(net),cash:f.cash}].slice(-10);
+      exp:roundRows(row.exp),net:round(net),cash:f.cash,
+      ...(releases.amount?{releaseSettlement:releases}:{})}].slice(-10);
     if(row.exp.tax>0)ev(`${row.t.name} 균형지출 부담금 ${money(row.exp.tax)} 납부 (상위 5인 기준 ${money(row.payrollBasis.regulated)}, 기준선 ${money(row.R.salaryCap)})`);
     if(row.t.parent)continue;
     const losses=f.history.slice(-2).filter(y=>y.net<0).length;

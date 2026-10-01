@@ -86,9 +86,17 @@ function signContract(db,p,t,salary,years,terms={}){
   return p.contract;
 }
 function contractReleaseCost(db,p,mode='manager'){
+  return contractReleaseSettlement(db,p,mode).amount;
+}
+function contractReleaseSettlement(db,p,mode='manager'){
   const contract=p.contract;
-  return mode==='initial'||mode==='medical_end'||contract?.medicalReplacement?0:
-    contract&&contract.until>=db.year?contract.salary*(contract.until-db.year+1)*.5:0;
+  const remainingYears=contract&&contract.until>=db.year?contract.until-db.year+1:0,
+    exempt=mode==='initial'||mode==='medical_end'||!!contract?.medicalReplacement,
+    guaranteeRate=.5,
+    amount=exempt?0:remainingYears?(contract.salary*remainingYears*guaranteeRate):0;
+  return {pid:p.id,playerName:p.name,date:db.worldDate||null,year:db.year,mode,
+    salary:contract?.salary||0,contractUntil:contract?.until??null,
+    remainingYears,guaranteeRate,exempt,amount};
 }
 function medicalContractYears(db,p,years){
   const risk=medicalContractRisk(db,p);

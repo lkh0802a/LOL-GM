@@ -1,7 +1,23 @@
 # Final platform target — Android first
 
 User decision, 2026-10-01. This supersedes descriptions of a web page/standalone
-HTML as the final product. HTML remains a useful development preview.
+HTML as the final product. Updated user direction: before APK packaging,
+deliver a playable standalone HTML game on desktop and mobile browsers.
+
+## First delivery milestone — desktop and mobile HTML
+
+The HTML version is a playable milestone, not just a development page. It must
+open without a development server and support new games, club management,
+multiple seasons, save/load and resumption. Mobile-browser acceptance includes
+portrait touch workflows at 320/360/390px, readable controls, layered information
+and no required hover, right-click or keyboard shortcuts. Build all game code
+and required assets into the standalone artifact so core play works offline.
+Browser-local saves and exported saves must support continuing a career; verify
+storage behavior on the actual supported mobile browser/file-opening path.
+
+Complete and verify this HTML milestone before Android packaging. Keep the
+engine/UI/storage boundaries reusable for Android. Browser acceptance does not
+substitute for later APK lifecycle or actual-device installation evidence.
 
 Final acceptance is an installable production Android APK/app that works without
 a development server: create a world, manage a club, simulate multiple seasons,
@@ -11,11 +27,12 @@ must work offline. iOS expansion should remain possible, but is secondary.
 ## Required sequence
 
 1. **Complete:** development-efficiency checklist in Issue #57.
-2. **Current:** incrementally refactor ownership/boundaries under Issue #62.
-3. Remove only fully replaced legacy callers/adapters; retain needed migrations.
+2. **Complete:** incremental ownership refactor under Issue #62.
+3. **Complete:** remove fully replaced legacy callers/adapters; retain needed migrations.
 4. Continue the first unfinished item in the actual roadmap/audit.
 5. Complete mobile UX and mobile CPU/RAM/battery/save performance.
-6. Select and implement Android packaging, build a release APK and validate it.
+6. Deliver and validate the playable desktop/mobile standalone HTML milestone.
+7. Select and implement Android packaging, build a release APK and validate it.
 
 Neither CI setup nor optimization alone is project completion. Do not rebuild
 already accepted contracts, patch/meta or medical behavior from their names.

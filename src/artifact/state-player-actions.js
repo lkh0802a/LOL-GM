@@ -181,7 +181,8 @@ function playerActionChanges(db,c,v){
   if(c.type==='player.sign')return [{pid:c.pid,kind:c.kind,from,to:c.teamId,
     salary:c.salary,years:c.years,signingBonus:c.terms.signingBonus,fee:c.fee}];
   if(c.type==='player.transfer')return [{pid:c.pid,kind:'transfer',from,to:c.teamId,fee:c.fee}];
-  if(c.type==='player.release')return [{pid:c.pid,kind:'release',from,to:null,cost:v.cost}];
+  if(c.type==='player.release')return [{pid:c.pid,kind:'release',from,to:null,cost:v.cost,
+    settlement:contractReleaseSettlement(db,db.players[c.pid],c.mode)}];
   return [{pid:c.pid,kind:'option',team:c.teamId,type:v.option.type,
     salary:v.option.salary}];
 }
@@ -211,12 +212,13 @@ function applyPlayerTransferAction(db,c){
 }
 function applyPlayerReleaseAction(db,c){
   const p=db.players[c.pid],t=db.teams[c.teamId],contract=p.contract,
-    cost=contractReleaseCost(db,p,c.mode);
-  recordContractReleaseObligation(t,cost);
+    settlement=contractReleaseSettlement(db,p,c.mode),cost=settlement.amount;
+  recordContractReleaseObligation(t,cost,settlement);
   removePlayerFromTeam(db,p);
   if(c.mode==='manager'||c.mode==='medical_end')invalidateMarketDemand(db);
   p.contract=null;p.faYears=0;
-  if(c.mode==='manager')recordPlayerEvent(p,'release',db.year,{team:t.id,cost,date:db.worldDate});
+  if(c.mode==='manager'||cost>0)recordPlayerEvent(p,'release',db.year,
+    {team:t.id,cost,date:db.worldDate,settlement});
   if(c.mode==='medical_end'){
     recordPlayerEvent(p,'medical_replacement_end',db.year,{
       date:c.date,team:t.id,for:contract.medicalReplacement.forPid,

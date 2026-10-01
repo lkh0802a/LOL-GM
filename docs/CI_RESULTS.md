@@ -46,13 +46,16 @@ Use Actions → CI → Run workflow with the intended branch/ref. Manual dispatc
 always runs the complete gate even when the last commit changes only docs.
 The optional `smoke_parity` checkbox additionally runs the existing full/core/
 patch-system comparison, asserts identical runtime/persisted/RNG fingerprints
-and coverage union. It also runs the same current full smoke and two-season
+and coverage union. The separate `refactor_parity` checkbox runs the same current full smoke and two-season
 career fixtures against the pinned R01 engine and current engine, asserting
 exact runtime/persisted fingerprints (only wall-clock saveId is omitted).
 Checkout includes history for the pinned baseline. Evidence is uploaded in
 `validation-smoke-parity`, including `refactor-parity.json` and its log. A requested parity
 failure fails `verify`. Leave it off for normal full regression; enable it when
-changing shard boundaries or deliberately reconfirming refactor equivalence.
+changing shard boundaries. Enable `refactor_parity` only for behavior-preserving
+refactors: new gameplay state intentionally differs from the R01 baseline and
+must not be judged against its historical exact hashes. Either requested parity
+checkbox makes the shared parity job required by `verify`.
 
 Manual runs never publish standalone files. Their concurrency group is separate
 from push/PR validation so a diagnostic run cannot cancel main publication.
