@@ -101,6 +101,7 @@ function contractBonusCost(db,t,year){
 function signContract(db,p,t,salary,years,terms={}){
   const old=p.team,offer=normalizeContractTerms(db,p,t,salary,years,terms);assignPlayerToTeam(db,p,t);invalidateMarketDemand(db);p.faYears=0;
   p.contract={salary:offer.salary,until:db.year+offer.years-1,signed:db.year,years:offer.years,signingBonus:offer.signingBonus,bonuses:offer.bonuses,buyout:offer.buyout,option:offer.option,releaseGuaranteeRate:offer.releaseGuaranteeRate,promisedRole:offer.promisedRole};
+  startContractRolePromise(db,p,t);
   if(offer.signingBonus&&t.finance)payFinancePrepaid(t,'signingBonus',offer.signingBonus);
   setRosterRole(db,p,offer.promisedRole,'contract',true);ensureSatisfaction(p);if(old!==t.id){p.satisfaction=clamp(Math.max(p.satisfaction,58),0,100);p.managerRelationship=55;p.managerTrust=52;p.concernStreak=0;p.wantsOut=false;p.wantsOutReason=null}else{p.managerRelationship=clamp(p.managerRelationship+2,0,100);p.managerTrust=clamp(p.managerTrust+3,0,100)}
   if(db.world)recordPlayerEvent(p,'contract',db.year,{team:t.id,salary:p.contract.salary,years:offer.years,until:p.contract.until,renewal:old===t.id,rosterRole:p.rosterRole,releaseGuaranteeRate:offer.releaseGuaranteeRate,signingBonus:offer.signingBonus,buyout:offer.buyout,option:offer.option,date:db.worldDate});

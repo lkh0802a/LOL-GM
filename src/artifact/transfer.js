@@ -51,6 +51,7 @@ function transferFee(db,p){const left=p.contract?Math.max(1,p.contract.until-db.
 function doTransfer(db,p,from,to,fee,consent=null){
   const moveErr=contractedMoveError(db,p),localErr=localRegistrationError(db,to,p);if(moveErr||localErr)throw new Error(moveErr||localErr);
   recordContractedMove(db,p,'permanent',from,to,{fee});assignPlayerToTeam(db,p,to);
+  startContractRolePromise(db,p,to);
   receiveFinancePrepaidTransfer(from,fee);payFinancePrepaid(to,'transferPaid',fee);
   recordPlayerEvent(p,'transfer',db.year,{from:from.id,to:to.id,fee,date:db.worldDate,
     ...(consent?{consent}:{})});
