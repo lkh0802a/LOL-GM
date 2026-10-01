@@ -2,6 +2,11 @@
 
 Mobile-first esports management simulation.
 
+The final product is an offline-capable **Android game app**, installable without
+a development server. HTML is the current development preview, not the final
+delivery target. See [Android acceptance](docs/ANDROID_TARGET.md) and the
+[focused development map](docs/DEVELOPMENT.md#focused-development-map).
+
 ## Current stage
 
 Items **1–11**, the **11.5 architecture refactor**, and **12/12-B facilities and finance** have passed their scoped engine/CI acceptance and are incorporated into the canonical standalone game. Work on Item 13 has not started.
@@ -20,7 +25,12 @@ For implementation decisions, use this priority:
 4. `docs/ARTIFACT_INTEGRATION.md` for Artifact/UI migration work
 5. intentional working behavior already in the repository
 
-ChatGPT is the current primary implementation/review agent for this repository. Any future external AI contribution must continue the same implementation rather than creating an alternative version.
+Codex is the primary implementation agent while its usage allowance remains.
+ChatGPT manages direction, priorities, design/review and CI, and may take over
+implementation when Codex is exhausted, explicitly requested, or a tiny change
+does not justify a separate handoff. GitHub Actions runs repeatable validation
+and builds. All contributors continue the same implementation and coordinate
+ownership before editing overlapping areas; see docs/DEVELOPMENT.md.
 
 ## Architecture principles
 

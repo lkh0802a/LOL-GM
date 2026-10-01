@@ -1,5 +1,35 @@
 # LOL GM — Development Guide
 
+Latest delivery direction: [Android app acceptance](ANDROID_TARGET.md).
+Use the focused development map below and [CI result guide](CI_RESULTS.md)
+to select minimal local checks and reuse Actions evidence. Development-efficiency
+Issue #57 precedes structural Issue #62, then unfinished gameplay, mobile UX and
+performance, Android packaging and real-device installation validation.
+
+## Development ownership and handoff
+
+The user owns game direction and final design. Codex is the primary developer
+for implementation, multi-file changes, refactoring, debugging, mobile UI,
+Android code and tests while its allowance remains. ChatGPT owns project
+priorities, design review, scope, code review, Actions management and result
+verification. It may implement when Codex allowance is exhausted, the user
+explicitly requests it, or a tiny fix makes a separate handoff inefficient.
+Do not independently implement the same change in both conversations.
+
+Actions handles repeated full regression, long simulation and builds. Codex
+uses focused reproduction for actual code changes; avoid repeated full-source
+analysis and routine full local runs. This separation does not limit Codex to
+optimization: continue through refactoring, legacy removal, gameplay, mobile UX
+and Android delivery in the agreed order.
+
+Keep each step independently reviewable and commit-ready. At a step boundary,
+record the goal, finished/remaining work, changed files, tests and failures,
+next candidate, temporary code/TODOs and important decisions in the PR and this
+existing guide as needed. Never assume allowance remains long enough to finish
+a broad rewrite. Prefer explicit ownership and clear code over temporary hacks,
+unexplained constants and session-only knowledge; preserve work for takeover
+without continually adding new status documents.
+
 ## Current Phase
 
 `CURRENT_PHASE = PHASE_1_CORE_FOUNDATION`
@@ -329,3 +359,60 @@ Loans are half-season or full-season deals. Recall requires a clause; fees may b
 Match eligibility is the official registered roster, with no second matchday mini-roster. Between-game substitutions are legal, in-game player substitutions are not, and fewer than five eligible players forfeits absent a valid emergency exception. Injuries are rare relative to condition/fatigue/illness.
 
 The staff target is now departmental: no generic senior assistant, up to 9 coaches, 4 analysts and 6 scouts employed by a club. Competition staff accreditation limits remain office-owned. Legacy `team.coach` must be migrated rather than abruptly deleted because development, drafting and finance still depend on it.
+
+## Focused development map
+
+Start from latest main and the relevant unfinished row in DEVELOPMENT.md / the
+depth audit. Do not reread every source or repeat accepted gameplay work.
+`scripts/artifact-modules.mjs` is the executable source-order manifest;
+ARCHITECTURE.md records ownership. Canonical code is in `src/artifact/`.
+
+### Entry points and first checks
+
+These are initial local reproductions, not a proof that other domains are
+unaffected. Cross-domain changes need their union; unknown/shared engine changes
+require full Actions validation. Ready code PRs keep the complete CI gate.
+
+| Change | Read first | First focused command |
+| --- | --- | --- |
+| World/bootstrap seed | world.js `buildWorld`, player.js, career.js | `node scripts/bootstrap-seed-acceptance.mjs` |
+| Navigation/async UI | ui-state.js, ui-overlay.js, app.js | relevant `ui-state`, `ui-overlay`, `ui-async` or `ui-mobile-a11y` acceptance in scripts/ |
+| Save slots/storage | app.js `loadDB` / `switchSaveSlot`, ui-data.js | `node scripts/ui-async-acceptance.mjs` |
+| Save encoding/migration | save.js `packDB` / `unpackDB`, save-migration.js | Actions regression + career; preserve legacy resume |
+| Finance/contracts/market | finance.js, contracts.js, contract-*.js, transfer.js | `node scripts/ui-finance-contracts-runner.mjs` |
+| Player transactions | state-transaction.js, state-player-actions.js, state-rollback.js, roster.js | Actions regression + contract domain + career |
+| Calendar/scouting/scrim | season.js `advanceStep`, timezone-calendar.js, scouting*.js, scrim-partner.js | `node scripts/calendar-scouting-runner.mjs` |
+| Medical/development | medical.js, development.js, season.js | Actions medical core/regional/calendar; reproduce only failing seed locally |
+| Match/draft/series/patch | engine.js, draft.js, series.js, meta.js, patch*.js | Actions regression + both smoke shards + career |
+| Build/module manifest/shared RNG | scripts/build.mjs, artifact-modules.mjs, random.js | `node scripts/check.mjs`, then full Actions |
+| CI report/publisher | scripts/ci-run.mjs, sync-standalone.mjs | corresponding `node --test scripts/<name>.test.mjs` |
+| Documentation only | relevant doc and referenced code | links/diff review; CI static gate |
+
+For one known invariant, run its individual acceptance instead of the whole
+domain runner. `npm run check` remains the complete serial local fallback, not
+the routine edit loop. Use CI_RESULTS.md for small JSON summaries and failed
+logs. Actions owns repeated heavy simulations and production builds.
+
+### Narrow discovery
+
+Find paths with `rg --files src/artifact scripts docs`; then search only the
+owning modules and relevant acceptance. For example:
+
+```sh
+rg -n 'applyWorldAction|validateWorldAction' src/artifact/state-*.js
+rg -n 'switchSaveSlot|loadDB|saveDB' src/artifact/app.js scripts/ui-async-acceptance.mjs
+```
+
+When the shell does not expand globs, pass an explicit directory and `-g` filter:
+`rg -n 'applyWorldAction' src/artifact -g 'state-*.js'`.
+Avoid searching generated `index.html`, `dist/`, and the large champion/system
+snapshots unless the change concerns generated output or pinned source data.
+Do not infer dead code from name counts: HTML handlers and global concatenation
+are real callers. Structural ownership and legacy removal remain Issue #62 work.
+
+### Current sequence
+
+Finish Issue #57's remaining manual-run support and evidence checklist before
+Issue #62 refactoring. Preserve accepted D04-B3; recheck D04-B4 and the depth audit
+before choosing subsequent gameplay work. Follow ANDROID_TARGET.md through mobile
+UX/performance, production packaging and real-device offline/save validation.
