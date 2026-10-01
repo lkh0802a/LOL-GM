@@ -117,8 +117,7 @@ function aiRunScoutingOperation(db,t){
     });
   }
   const charge=aiScoutingBatchCharge(unitCost,targets.length);
-  owner.finance.cash=Math.round((cashBefore-charge)*10)/10;
-  if(charge)recordFinancePrepaid(owner,'scoutingExpense',charge);
+  if(charge)payFinancePrepaid(owner,'scoutingExpense',charge);
   const spent=Math.round((cashBefore-owner.finance.cash)*10)/10,
     operation={year:db.year,date:db.worldDate,capacity,targetLimit,unitCost,
       reserve:Math.round(reserve*1000)/1000,runway:runway.severity,

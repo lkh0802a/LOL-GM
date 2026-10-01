@@ -182,7 +182,13 @@ preserved. Player action transaction snapshots still own rollback. The ownership
 guard now expects zero direct cash writes in `contracts.js` and `transfer.js`,
 and records their two new writers in `finance.js`.
 
-Remaining direct writers are staged for separate follow-ups: staff severance,
-medical replacement wages, scouting expense, facilities, the unlisted AI / other
-contract paths, and roster/date migration. Check the guard inventory and direct
-callers before each step. Do not claim finance is fully centralized yet.
+The follow-up moves facility investment, manual/AI scouting expenses and AI /
+manager staff severance onto the same finance-owned expense API. Each caller
+retains its existing affordability check and action flow; zero-cost severance
+still does not create a prepaid row. The guard inventory now shows zero direct
+cash writes in those caller modules too.
+
+Medical replacement wages keep their finer medical-specific rounding and need a
+dedicated follow-up. Accounting paths that use a local `cash` alias are outside
+this conservative guard. Search the actual callers and ledger categories before
+each migration; do not claim all finance mutation is centralized yet.

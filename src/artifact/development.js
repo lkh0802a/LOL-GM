@@ -58,8 +58,7 @@ function upgradeFacility(db,t,key,opt={}){
   if((t.facilityProjects||[]).some(p=>p.key===key))throw new Error('이미 증설 중인 시설입니다');
   const cost=facilityCost(db,t,key);
   if(!t.finance||t.finance.cash<cost)throw new Error('시설 증설 자금이 부족합니다');
-  t.finance.cash=Math.round((t.finance.cash-cost)*10)/10;
-  recordFinancePrepaid(t,'facilityInvestment',cost);
+  payFinancePrepaid(t,'facilityInvestment',cost);
   if(opt.deferDays>0){
     t.facilityProjects=t.facilityProjects||[];
     t.facilityProjects.push({key,from:f[key],to:f[key]+1,cost,started:db.worldDate,
