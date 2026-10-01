@@ -262,6 +262,10 @@ jobs:
   smoke:
     needs: [changes, ui-finance-contracts, calendar-scouting]
     if: needs.changes.outputs.run_full == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [full, core, patch-system]
     runs-on: ubuntu-latest
     timeout-minutes: 6
     steps:
@@ -273,7 +277,10 @@ jobs:
         with:
           node-version: 22
 
-      - name: Full smoke coverage
+      - name: Smoke coverage shard
+        env:
+          SMOKE_MODE: ${{ matrix.mode }}
+          SMOKE_COMPARE_STATE: '1'
         run: node scripts/smoke.mjs
 
   career:
