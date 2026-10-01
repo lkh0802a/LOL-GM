@@ -18,6 +18,15 @@ function rosterActionSnapshot(db,parentId){
 }
 
 const WORLD_ACTION_HANDLERS={
+  'roster.market-callup':{
+    validate:validateMarketReserveCallup,
+    canonical(db,a,v){return {type:a.type,actor:a.actor,parentId:v.parentId,
+      reserveId:v.reserveId,role:v.role,pid:v.pid,downId:v.downId,
+      assignments:{...v.assignments}}},
+    snapshot(db,c){return rosterActionSnapshot(db,c.parentId)},
+    changes(db,c,v){return v.moves.map(m=>({...m}))},
+    apply:applyMarketReserveCallup
+  },
   'roster.plan':{
     validate(db,action){
       const parent=parentTeamOf(db,action.parentId);

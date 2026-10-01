@@ -148,6 +148,54 @@ function aiManageOwnedReserve(db,t){
   rebalanceAiRosterRoles(db,parent);rebalanceAiRosterRoles(db,reserve);
   return [{pid:up.id,kind:'callup',swap:down.id},{pid:down.id,kind:'senddown',swap:up.id}];
 }
+// Market callups precede FA replenishment, so the organization may temporarily
+// be below registration minima. Preserve this maintenance policy separately from
+// user/weekly roster.plan, including its historical no-squad-event behavior.
+function marketReserveCallupDecision(db,parent,reserve,role,updateDepth=false){
+  const view=updateDepth?parent:{...parent,depthChart:{...parent.depthChart}};
+  const cur=starterFor(db,view,role),cand=reserve.roster.map(id=>db.players[id])
+    .filter(p=>p.role===role).sort((x,y)=>playerOvr(y)-playerOvr(x))[0];
+  if(!cand||!(!cur||playerOvr(cand)>=playerOvr(cur)+5||
+    (playerOvr(cand)>=playerOvr(cur)+3&&((cur.form??0)<=-6||cur.wantsOut))))return null;
+  const size=5+(db.worldConfig.subs||0),senddown=!!(cur&&new Set([...parent.roster,cand.id]).size>size),
+    assignments={[cand.id]:parent.id};
+  if(senddown)assignments[cur.id]=reserve.id;
+  return {pid:cand.id,downId:senddown?cur.id:null,assignments};
+}
+function validateMarketReserveCallup(db,a){
+  const parent=db.teams[a.parentId],reserve=db.teams[a.reserveId];
+  if(db.world?.phase!=='market'||a.actor!=='ai'||!parent||parent.active===false||
+    !reserve||reserve.active===false||reserve.parent!==parent.id||!ROLES.includes(a.role))
+    return worldActionError('invalid_action','AI 시장 콜업 대상 또는 시점이 일치하지 않습니다');
+  const mine=db.world.manage==='manual'?managedTeamId(db):null;
+  if(parent.id===mine)return worldActionError('unauthorized','관리 구단의 콜업은 AI가 확정할 수 없습니다');
+  const decision=marketReserveCallupDecision(db,parent,reserve,a.role);
+  if(!decision)return worldActionError('no_callup','현재 시장 콜업 조건에 맞는 선수가 없습니다');
+  const moves=Object.entries(decision.assignments).map(([pid,to])=>({
+    pid,from:db.players[pid].team,to,kind:to===parent.id?'callup':'senddown'}));
+  return {ok:true,parentId:parent.id,reserveId:reserve.id,role:a.role,...decision,moves};
+}
+function applyMarketReserveCallup(db,c){
+  assignPlayerToTeam(db,db.players[c.pid],db.teams[c.parentId]);
+  if(c.downId)assignPlayerToTeam(db,db.players[c.downId],db.teams[c.reserveId]);
+  return {pid:c.pid,downId:c.downId};
+}
+function aiMarketReserveCallups(db,rep){
+  const year=db.year,w=db.world,mine=w&&w.manage==='manual'?managedTeamId(db):null;
+  for(const a of activeTeams(db).filter(t=>t.parent)){
+    const t=db.teams[a.parent];if(!t||t.active===false||t.id===mine)continue;
+    for(const role of ROLES){
+      if(!marketReserveCallupDecision(db,t,a,role,true))continue;
+      const result=commitWorldAction(db,{type:'roster.market-callup',actor:'ai',
+        parentId:t.id,reserveId:a.id,role});
+      if(!result.ok)throw new Error('AI market callup failed: '+result.errors.join(' · '));
+      const cand=db.players[result.pid];
+      rep.signings.push({pid:cand.id,team:t.id,salary:cand.contract?cand.contract.salary:0,
+        years:cand.contract?cand.contract.until-year+1:1,callup:true});
+    }
+  }
+}
+
 function playerRef(db,p){return typeof p==='string'?db.players[p]:p}
 function teamRef(db,t){return typeof t==='string'?db.teams[t]:t}
 function detachPlayerFromRosters(db,pid,exceptId=null){

@@ -30,6 +30,12 @@ for(const marker of ['function setWorldCalendarDate(','function nextCalendarDate
       failed=true;console.error('Calendar responsibility leaked into '+file+': '+marker);
     }
 }
+if(!sourceOf('roster.js').includes('function aiMarketReserveCallups(')||
+  !sourceOf('state-transaction.js').includes("'roster.market-callup':")||
+  !sourceOf('state-rollback.js').includes("command.type==='roster.market-callup'")||
+  !sourceOf('contracts.js').includes('aiMarketReserveCallups(db,rep)')) {
+  failed=true;console.error('AI market roster callup must use the shared action journal and roster owner');
+}
 const globalSymbols = new Map();
 for (const file of modules) {
   const path = resolve(artifact, file);

@@ -415,7 +415,8 @@ Issue #57 is complete. Issue #62 R01 now has a code-backed ownership baseline in
 REFACTOR_R01_AUDIT.md. R02 mutation ownership guards are in place; R03 has moved
 expense/transfer settlements into finance and player negotiation into
 contract-negotiation.js. R04 now centralizes raw calendar positioning and in-season daily effects;
-next converge AI roster callers, then remove legacy only after caller parity is proven. Preserve accepted
+R05 AI market callups now use the shared action gateway with exact baseline parity;
+next finish settlement ownership and the legacy/compatibility audit. Preserve accepted
 D04-B3; after the refactor, recheck D04-B4 and the latest depth audit before
 choosing subsequent gameplay work. Follow ANDROID_TARGET.md through mobile
 UX/performance, production packaging and real-device offline/save validation.
