@@ -27,11 +27,14 @@ assert.equal(stats.engineCompiles,1,
   'shared domain runner must compile the engine exactly once');
 assert(stats.cachedArtifacts>=ENGINE_MODULES.length,
   'shared domain runner did not cache the complete engine source');
+assert.equal(stats.contexts,5,
+  'five engine acceptances must each receive a fresh VM context');
 
 console.log('UI_FINANCE_CONTRACTS_RUNNER '+JSON.stringify({
   acceptances:rows.length,
   engineModules:ENGINE_MODULES.length,
   engineCompiles:stats.engineCompiles,
+  freshContexts:stats.contexts,
   artifactReads:stats.reads,
   cachedArtifacts:stats.cachedArtifacts,
   totalMs:Math.round(rows.reduce((n,row)=>n+row.ms,0)*10)/10,
