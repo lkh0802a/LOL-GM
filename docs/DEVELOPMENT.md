@@ -869,3 +869,38 @@ partial old plans; valid zero/underallocated plans and intensity remain intact.
 Opponent training controls are disabled. Focused acceptance exercises all three
 intensities, invalid saved fields and actual player growth, preventing poisoned
 attributes instead of only hiding NaN in the UI.
+
+## D11 actual daily-clock long-career runner (2026-10-02)
+
+PR #105 passed full final-head CI and merged as
+`71256de44aecdae0f7ea0aa1807c8b44b13a9d35`. Training input/apply also passed
+in a real Edge viewport for all intensities, with five controls on one desktop
+row and no mobile horizontal overflow. Latest standalone HTML includes this fix.
+
+`scripts/daily-career-acceptance.mjs` follows `playWorldDay`, daily effects,
+managed First Selection and canonical interactive draft/result writers. It never
+positions the clock directly on fixtures. Save/resume covers pending official
+series, completed season and market boundaries. The bounded starting world has
+closed NA, open EU with second division and an eight-team international Swiss
+event; ordinary world evolution remains enabled. It exercises real AI operation
+and promotion without substituting fabricated champions. Two domestic years and
+one international year passed locally; these are short-path evidence only.
+
+Ordinary full CI adds one international career year to its required gate. The
+separate manual `long-career.yml` runs three independent seeds for 100 years each
+by default, without repeating the expensive run on every PR. Reports checkpoint
+each completed year and retain partial progress/error on failure. They include
+day/fixture counts, official pending games, champions, patches, active/total
+players, team count, ability/cash/salary/value quantiles, champion pick diversity,
+save size, runtime and heap use. Review warnings flag a champion winning over
+70% of the last ten editions, a champion exceeding 8% of all recorded picks,
+median ability rising over 8 points in ten years, or median salary tripling in
+ten years. These are investigation triggers, not claims of a realistic target
+distribution or automatic balance changes. Budget: 120-minute engine deadline, 125-minute
+Actions job, 1.5 GiB observed heap threshold (2 GiB Node heap).
+
+Remaining D11: execute the final merged revision's three 100-season jobs, repair
+actual failures and review long-run monopoly/inflation/meta warning trends.
+This small-world scenario is not proof of default
+six-region Android performance. Whole-D remains active; D04/D06 ownership and
+economic boundaries, D07–D10 and D13 real mobile tasks still remain.
