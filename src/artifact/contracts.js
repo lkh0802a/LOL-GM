@@ -109,15 +109,21 @@ function signContract(db,p,t,salary,years,terms={}){
 function contractReleaseCost(db,p,mode='manager'){
   return contractReleaseSettlement(db,p,mode).amount;
 }
-function contractReleaseSettlement(db,p,mode='manager'){
+function contractReleaseSettlement(db,p,mode='manager',agreedAmount=null){
   const contract=p.contract;
   const remainingYears=contract&&contract.until>=db.year?contract.until-db.year+1:0,
     exempt=mode==='initial'||mode==='medical_end'||!!contract?.medicalReplacement,
     guaranteeRate=contractGuaranteeRate(contract),
     amount=exempt?0:remainingYears?(contract.salary*remainingYears*guaranteeRate):0;
-  return {pid:p.id,playerName:p.name,date:db.worldDate||null,year:db.year,mode,
+  const settlement={pid:p.id,playerName:p.name,date:db.worldDate||null,year:db.year,mode,
     salary:contract?.salary||0,contractUntil:contract?.until??null,
     remainingYears,guaranteeRate,exempt,amount};
+  if(mode==='mutual'&&Number.isFinite(agreedAmount)){
+    const consent=contractMutualTerminationTerms(db,p);
+    return {...settlement,amount:agreedAmount,guaranteedAmount:amount,
+      minimumAmount:consent.minimumAmount,consentReason:consent.reason};
+  }
+  return settlement;
 }
 function medicalContractYears(db,p,years){
   const risk=medicalContractRisk(db,p);
@@ -205,8 +211,12 @@ function aiRenewalDecision(db,p,t,rng){
 function contractMarket(db,rng,rep,ev){
   const year=db.year, size=5+(db.worldConfig.subs||0), w=db.world, mine=w&&w.manage==='manual'?managedTeamId(db):null;
   const imports=t=>teamNonLocalCount(db,t);
-  const release=(t,p,why)=>commitMarketPlayerAction(db,{type:'player.release',pid:p.id,teamId:t.id,
-    mode:t.id===mine&&(!p.contract||p.contract.until<year)?'expired':'market',actor:'system'});
+  const release=(t,p,why)=>{
+    const terms=contractMutualTerminationTerms(db,p),mutual=terms.ok&&terms.willing;
+    return commitMarketPlayerAction(db,{type:'player.release',pid:p.id,teamId:t.id,
+      mode:mutual?'mutual':t.id===mine&&(!p.contract||p.contract.until<year)?'expired':'market',
+      ...(mutual?{amount:terms.minimumAmount}:{}),actor:'system'});
+  };
   // 1) 옵션 및 만료 계약 처리
   for(const t of activeTeams(db))for(const id of t.roster.slice()){const p=db.players[id];if(!p||!p.contract||p.contract.medicalReplacement||p.contract.until>=year)continue;const opt=p.contract.option;
     if(opt&&opt.year===year&&shouldAutoExerciseOption(db,p,t,mine))commitMarketPlayerAction(db,{type:'player.option',pid:p.id,teamId:t.id,actor:opt.type==='player'?'system':'ai'});
