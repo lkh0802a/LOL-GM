@@ -26,3 +26,10 @@ test('reads/comparisons/function definitions are not writer calls',()=>{
 test('tracks compound writes and literal bracket properties',()=>{
   assert.deepEqual(mutationInventory('t["finance"]["cash"] -= cost; t.finance.cash++; db["worldDate"] ||= day; db.worldDate = next;'),{cash:2,date:2});
 });
+
+test('release liabilities may only be written by the finance owner',()=>{
+  assert.deepEqual(mutationInventory('t["finance"]["buyout"] += fee;'),{obligation:1});
+  assert.throws(()=>assertMutationOwnership(new Map([
+    ['ui-market.js','t.finance.buyout += fee;']
+  ]),{}),/ui-market.js: obligation expected 0, found 1/);
+});

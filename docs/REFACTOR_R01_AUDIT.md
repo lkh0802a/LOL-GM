@@ -250,3 +250,19 @@ and save/restore state. It also verifies pure previews, late-writer rollback and
 manager authority. This acceptance is part of local check and the existing
 shared Actions domain runner. Next: release-settlement ownership and final
 legacy/dependency/compatibility audit.
+
+## R03 final release / payroll source of truth
+
+UI release confirmation, command preview and command application now consume
+contracts.js::contractReleaseCost. Its existing medical/initial exemptions,
+half-remaining-salary formula and unrounded precision are retained. Finance owns
+release-obligation accrual plus payroll, top-five payroll and spending-tax reads;
+these read helpers move verbatim and still consume the current contract state.
+Immediate cash is unchanged; closeFinances remains the sole annual settlement.
+
+The source ownership guard now covers direct finance.buyout assignments as well
+as cash/date/roster mutations. Thirty cost cases and actual preview/apply/accrual/
+save restoration are covered in contract-release-acceptance.mjs, included in the
+shared CI runner. D04-B4 guarantees/termination remain feature work, not part of
+this structural refactor. Next: remove proven unused wrappers and close the
+compatibility/dependency audit with final full/parity QA.

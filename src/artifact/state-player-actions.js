@@ -151,8 +151,7 @@ function validatePlayerReleaseAction(db,a){
   if(mode==='expired'&&p.contract?.until>=db.year)
     return worldActionError('invalid_release','만료되지 않은 계약은 자동 종료할 수 없습니다');
   if(!playerActionFinance(t))return worldActionError('invalid_finance','구단 재정 정보가 없습니다');
-  const cost=mode==='initial'||mode==='medical_end'||p.contract?.medicalReplacement?0:
-    p.contract&&p.contract.until>=db.year?p.contract.salary*(p.contract.until-db.year+1)*.5:0;
+  const cost=contractReleaseCost(db,p,mode);
   if(!Number.isFinite(cost))return worldActionError('invalid_contract','방출 비용을 계산할 수 없습니다');
   return {ok:true,pid:p.id,teamId:t.id,mode,cost,date};
 }
@@ -212,9 +211,8 @@ function applyPlayerTransferAction(db,c){
 }
 function applyPlayerReleaseAction(db,c){
   const p=db.players[c.pid],t=db.teams[c.teamId],contract=p.contract,
-    cost=c.mode==='initial'||c.mode==='medical_end'||contract?.medicalReplacement?0:
-      contract&&contract.until>=db.year?contract.salary*(contract.until-db.year+1)*.5:0;
-  if(cost)t.finance.buyout=(t.finance.buyout||0)+cost;
+    cost=contractReleaseCost(db,p,c.mode);
+  recordContractReleaseObligation(t,cost);
   removePlayerFromTeam(db,p);
   if(c.mode==='manager'||c.mode==='medical_end')invalidateMarketDemand(db);
   p.contract=null;p.faYears=0;

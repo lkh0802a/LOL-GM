@@ -112,3 +112,7 @@ maintenance operation precedes complete registration and preserves historical
 market behavior (including no squad-move satisfaction/event changes); it is
 AI-only, market-only and cannot operate on a manually managed club. Ordinary
 manager/weekly reserve swaps retain full `roster.plan` validation.
+
+Release cost is read from `contracts.js::contractReleaseCost` by both the UI
+and player commands. `finance.js` owns release liability accrual, payroll and
+spending-tax calculations; current contract state remains their only input.
