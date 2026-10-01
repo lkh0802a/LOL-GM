@@ -1,5 +1,6 @@
 // ===== LOL GM: UI =====
 const SAVE_VERSION=15;
+const SAVE_SLOTS=Object.freeze(Array.from({length:10},(_,i)=>String(i+1)));
 const STORAGE_NS='lol-gm-v15';
 const DIRECT_FILE_PREVIEW=location.protocol==='file:'||location.origin==='null';
 let SLOT=(()=>{try{return localStorage.getItem(STORAGE_NS+'-slot')||'1'}catch(e){return '1'}})();
@@ -84,7 +85,7 @@ function saveDB(){
   },150);
 }
 async function switchSaveSlot(nextSlot){
-  if(SLOT_SWITCHING||nextSlot===SLOT||!['1','2','3'].includes(nextSlot))
+  if(SLOT_SWITCHING||nextSlot===SLOT||!SAVE_SLOTS.includes(nextSlot))
     return {ok:false,error:'이미 슬롯을 전환 중이거나 올바르지 않은 슬롯입니다.'};
   SLOT_SWITCHING=true;
   cancelUiTasks();

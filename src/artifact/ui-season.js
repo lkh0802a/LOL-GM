@@ -12,9 +12,18 @@ function globalCard(){const g=DB.global||{decisions:[],power:{}};const P=Object.
   ${P.length?`<div class="arow"><span>국제 경쟁력 지수</span><span class="hint">${P.map(([R,v])=>`${esc(R.name)} ${v}`).join(' · ')}</span></div>`:''}
   ${g.decisions.slice().reverse().slice(0,6).map(d=>`<div class="dec"><time>${d.year}</time> <b>${esc(d.what)}</b><br><small>${esc(d.why)}</small></div>`).join('')||'<p class="hint">첫 시즌이 끝나면 국제대회 성적을 보고 결정합니다.</p>'}</div>`}
 function fmtRegion(r){const fin=r.spendingRule==='sfr_top5'?` · 엔진 SFR 상위5 ${r.salaryCap}억`:' · 균형지출 규제 없음',p=r.policyBasis,pol=p?.source==='engine'?` · 정책엔진(팬 ${p.fanAvg??'-'}·자금 ${p.ownerAvg??'-'}·인재 ${p.localDepth??'-'})`:'';return `${LEAGUE_FORMATS[r.format||'rr_po']} · ${SEL_KO.splits[r.splits]} · ${SPLIT_STANDINGS_MODES[r.standingsMode||'independent']||SPLIT_STANDINGS_MODES.independent} · 정규 Bo${Math.max(3,r.regularBo)} · PO ${r.playoffTake}팀 Bo${r.playoffBo} · ${SEL_KO.system[r.system]}${r.div2?' · 하부 리그':''}${fin}${pol}`}
+function regionalLevelIndex(db){
+  const rows=Object.values(db.regions).map(r=>{
+    const ts=activeTeams(db,r.id,1),ready=ts.length&&ts.every(t=>(t.roster||[]).filter(id=>db.players[id]&&!db.players[id].retired).length>=5);
+    return [r.id,Math.max(0,ready?avg(ts.map(t=>teamStrength(db,t.id))):Number(r.strength)||0)];
+  });
+  const highest=Math.max(1,...rows.map(([,v])=>v));
+  return Object.fromEntries(rows.map(([id,v])=>[id,Math.round(v/highest*100)]));
+}
 function worldTable(){
-  return `<div class="scroll"><table><thead><tr><th>지역</th><th>리그</th><th>구분</th><th>팀</th><th>수준</th><th>흥행</th><th>균형</th><th>사무국</th><th>진출권</th><th>방식</th></tr></thead><tbody>
-  ${Object.values(DB.regions).map(r=>{const ts=activeTeams(DB,r.id,1),m=(r.metrics||[]).slice(-1)[0];return `<tr><td><b>${esc(r.name)}</b></td><td>${esc(r.leagueName)}</td><td>${r.tier==='major'?'메이저':'신흥'}${r.parent&&DB.regions[r.parent]?`<small class="hint"> (${esc(DB.regions[r.parent].leagueName)} 권역)</small>`:''}</td><td class="num">${ts.length}</td><td class="num">${Math.round(avg(ts.map(t=>teamStrength(DB,t.id))))}</td><td class="num">${m?m.hype+' <small class="hint">'+hypeLabel(m.hype)+'</small>':'—'}</td><td class="num">${m?m.balance.toFixed(2):'—'}</td><td>${esc((OFFICE_STYLES[r.office]||{}).label||'')}</td><td class="num">${r.slots}</td><td class="fmt">${fmtRegion(r)}</td></tr>`}).join('')}
+  const levels=regionalLevelIndex(DB);
+  return `<div class="scroll"><table><thead><tr><th>지역</th><th>리그</th><th>구분</th><th>팀</th><th>수준 (최고 100)</th><th>흥행</th><th>균형</th><th>사무국</th><th>진출권</th><th>방식</th></tr></thead><tbody>
+  ${Object.values(DB.regions).map(r=>{const ts=activeTeams(DB,r.id,1),m=(r.metrics||[]).slice(-1)[0];return `<tr><td><b>${esc(r.name)}</b></td><td>${esc(r.leagueName)}</td><td>${r.tier==='major'?'메이저':'신흥'}${r.parent&&DB.regions[r.parent]?`<small class="hint"> (${esc(DB.regions[r.parent].leagueName)} 권역)</small>`:''}</td><td class="num">${ts.length}</td><td class="num">${levels[r.id]}</td><td class="num">${m?m.hype+' <small class="hint">'+hypeLabel(m.hype)+'</small>':'—'}</td><td class="num">${m?m.balance.toFixed(2):'—'}</td><td>${esc((OFFICE_STYLES[r.office]||{}).label||'')}</td><td class="num">${r.slots}</td><td class="fmt">${fmtRegion(r)}</td></tr>`}).join('')}
   </tbody></table></div><p class="hint">국제대회: ${DB.worldConfig.internationals.map(i=>`${esc(i.name)} (${ISEL_KO.timing[i.timing]}, ${ISEL_KO.entry[i.entry]}, ${ISEL_KO.format[i.format]})`).join(' · ')||'없음'}</p>`;
 }
 function seasonTab(){
@@ -108,8 +117,8 @@ function bindSetup(){
     else cfg[a]=v;
     dirty();
   });
-  $('#cfgdef').onclick=()=>{DB.worldConfig=defaultWorldConfig();dirty()};
-  $('#regen').onclick=()=>{const errs=validateConfig(cfg);if(errs.length){$('#cfgmsg').className='warn';$('#cfgmsg').textContent=errs.join(' / ');return}
+  if($('#cfgdef'))$('#cfgdef').onclick=()=>{DB.worldConfig=defaultWorldConfig();dirty()};
+  if($('#regen'))$('#regen').onclick=()=>{const errs=validateConfig(cfg);if(errs.length){$('#cfgmsg').className='warn';$('#cfgmsg').textContent=errs.join(' / ');return}
     resetUiForWorld();DB=buildWorld(cfg);const first=managerSelectableTeams(DB)[0];SSET.team=first?first.id:null;SSET.region=first?first.region:null;SSET.division=first?(first.division||1):1;LAST=null;LASTSER=null;MC.res=null;saveDB();nav()};
   bindManagerTeamPicker();
   $('#sstart').onclick=()=>{if(!isManagerSelectableTeam(DB,SSET.team)){const first=managerSelectableTeams(DB)[0];SSET.team=first?first.id:null}if(!SSET.team)return;SSET.view=null;startCareer(DB,SSET.team,freshInternalSeed('world'));saveDB();nav()};

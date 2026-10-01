@@ -85,9 +85,9 @@ function validatePlayerSignAction(db,a){
   if(!contractGuaranteeTermsValid(a.terms))
     return worldActionError('invalid_terms','방출 보장률은 50%, 75%, 100% 중 선택해야 합니다');
   const terms=playerActionTerms(db,p,t,a);
+  if(futureAgreement)terms.releaseGuaranteeRate=contractGuaranteeRate(futureAgreement.terms);
   if(futureAgreement){
-    const agreed=normalizeContractTerms(db,p,t,futureAgreement.salary,
-      futureAgreement.years,futureAgreement.terms);
+    const agreed=bindingAgreementTerms(db,p,t,futureAgreement);
     if(+a.salary!==futureAgreement.salary||+a.years!==futureAgreement.years||
       JSON.stringify(terms)!==JSON.stringify(agreed))
       return worldActionError('invalid_terms','미래 계약 발효 조건은 원래 합의한 조건과 같아야 합니다');

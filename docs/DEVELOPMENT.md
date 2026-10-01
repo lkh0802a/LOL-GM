@@ -786,3 +786,56 @@ Full final-head Actions remains the merge gate. D06 is not complete: license and
 owner transitions, split/merge successor local choice/history and long-run reserve
 regeneration/promotion evidence remain. D04 representation/insolvency and later
 D07–D13 work also remain; the whole-D objective stays active.
+
+## Player review corrections and whole-D continuation (2026-10-02)
+
+PR #103 official-registration batch passed all CI and merged as
+`7e02d46997af8f40d834cd47d4ec77d0fd515b49`. Continue D01–D13 as the active
+objective; finish the requested UI corrections, then prioritize game mechanics.
+Do not infer whole-D completion from this review batch or a passing short career.
+
+New games start with manual contract/recruitment operation. The redundant world
+generation/reset controls and setup delegation selector are removed; delegation
+remains available in the later career market. The standalone repeated-simulation
+screen and its route/bindings are removed. Public player estimates exist before
+paid scouting, and observation narrows their uncertainty. World strength is a
+relative display index whose highest region is 100; blank-roster regions use
+their ecosystem strength, without rewriting the player/match balance scale.
+
+New contract protection follows the signing region's common office rule
+(default 50%). It is no longer a player preference or selectable contract term.
+Existing signed contracts and binding future agreements retain their agreed
+rights. Both manager and AI use the same command normalization. Closed/protected
+clubs receive an achievable lower-table target rather than fictitious survival;
+season-end evaluation uses that same target. The low-table founding roster
+strategy retains its previous recruitment target despite the renamed goal.
+
+Champion range audit: 173 source champions / 692 Q/W/E/R entries were compared
+against patch-pinned 16.19 client files, with no download/mapping failures.
+38 source entries contain a 25000 sentinel and 15 contain zero. Cast limits,
+targeting indicators, effect areas and dash distances are distinct quantities;
+a numeric disagreement is not automatically a balance bug. Full evidence is in
+`src/data/champion-range-audit-16.19.1.json`; rerun with
+`node scripts/audit-champion-ranges.mjs`. Rendering uses reviewed descriptions
+for global/self/variable skills, including Aatrox's 300 dash and ultimate's 600
+fear radius, without replacing a multi-hit attack with its indicator length.
+The game currently includes 172 of those source champions (Locke is not in its
+curated roster), plus future generated content. Fictional range patches invalidate
+source labels rather than showing stale numbers. The audit is a data/semantics
+review, not proof of frame-exact reproduction of every live LoL ability.
+
+Champion tiers appear before the first match from current patch strength; actual
+competition samples replace the preview basis. Empty historical filters do not
+leak unrelated match samples. Dark-theme champion buttons, opposing tactic labels
+and 10 isolated save slots are implemented; lengthy implementation annotations
+and empty detailed insights are removed from player screens.
+
+Validation: focused office-protection acceptance covers both actors, old rights,
+settlement/rollback/save restoration; public-information acceptance checks setup,
+goals, estimates, tiers and range changes. Existing contract/UI/registry and
+calendar/scouting runners pass. A real Edge browser at 390px in dark mode passed
+new game, public estimates, tier display, corrected Aatrox labels and loading
+slot 10. This desktop mobile viewport is not real Android/TalkBack acceptance.
+Full final-head Actions remains the merge gate. Next: remaining D04 insolvency/
+representation, D06 ownership/license/regional history, then D07–D13. Keep the
+existing whole-D automation; do not create duplicate recurring jobs.

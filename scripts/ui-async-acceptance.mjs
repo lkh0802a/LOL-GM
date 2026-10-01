@@ -35,7 +35,7 @@ const later=()=>new Promise(resolve=>setImmediate(resolve));
     setTimeout:fn=>{const id=++timerId;timers.set(id,fn);return id},
     clearTimeout:id=>timers.delete(id)
   });
-  vm.runInContext("let DB={version:15,world:{year:2027},teams:{T:{name:'old'}},players:{}};let SLOT='1';const STORE_BASE='base-';let STORE='base-1';const STORAGE_NS='storage';let SAVEFAIL=false,SLOT_SWITCHING=false;",context);
+  vm.runInContext("let DB={version:15,world:{year:2027},teams:{T:{name:'old'}},players:{}};let SLOT='1';const STORE_BASE='base-';let STORE='base-1';const STORAGE_NS='storage';const SAVE_SLOTS=Array.from({length:10},(_,i)=>String(i+1));let SAVEFAIL=false,SLOT_SWITCHING=false;",context);
   const start=app.indexOf('async function loadDB('),end=app.indexOf('const $=s=>',start);
   assert(start>0&&end>start,'storage controller was not found');
   vm.runInContext(app.slice(start,end),context,{filename:'app storage functions'});
@@ -115,7 +115,6 @@ const later=()=>new Promise(resolve=>setImmediate(resolve));
   });
   context.$=selector=>node(selector.slice(1));
   vm.runInContext(season.slice(season.lastIndexOf('function bindSeason(){')),context,{filename:'bindSeason()'});
-  vm.runInContext(manager.slice(manager.lastIndexOf('function bindMC(){')),context,{filename:'bindMC()'});
   vm.runInContext(state,context,{filename:'ui-state.js'});
   const run=js=>vm.runInContext(js,context);
   const flush=()=>{const work=callbacks.splice(0);work.forEach(fn=>fn())};
@@ -133,20 +132,7 @@ const later=()=>new Promise(resolve=>setImmediate(resolve));
   run("navigateTo('data')");frames.shift()();
   assert.equal(official,0,'stale official-draft frame must never reopen a different screen');
   run('DB.world.pendingOfficial=null');
-  run("navigateTo('mc');MC.blue='T';MC.red='U';MC.n=100;bindMC()");
-  run("document.querySelector('#mrun').onclick()");
-  assert.equal(matches,25);
-  assert.equal(run('MC.running'),true);
-  run("navigateTo('season')");flush();
-  assert.equal(matches,25,'Monte Carlo must stop on navigation');
-  assert.equal(run('MC.running'),false,'navigation must release the Monte Carlo running lock');
-  assert.equal(run('MC.res'),null,'discard incomplete Monte Carlo results');
-  run("navigateTo('mc');bindMC();document.querySelector('#mrun').onclick()");
-  flush();flush();flush();
-  assert.equal(matches,125);
-  assert.equal(run('MC.res.n'),100,'uninterrupted Monte Carlo must still complete');
-  assert.equal(run('MC.running'),false);
-  assert.equal(node('mcout').innerHTML,'<section>completed 100</section>');
+  assert.equal(run("navigateTo('mc')"),false,'removed simulation route must be inaccessible');
   assert.equal(unexpected.length,0,'an acceptance case must not hide an exception');
   run("UI_OVERLAY={dismissible:false}");
   assert.equal(run("navigateTo('season')"),false,'locked official draft must block route changes');
@@ -160,8 +146,6 @@ for(const [name,fragment] of [
   ['ui-state.js','cancelUiTasks();'],
   ['ui-season.js',"beginUiTask('season-days'"],
   ['ui-season.js','UI_RENDER_ID!==renderId'],
-  ['ui-manager.js',"beginUiTask('monte-carlo'"],
-  ['ui-manager.js','simulateMatch(db,blue,red']
 ])assert(({ 'app.js':app,'ui-data.js':data,'ui-state.js':state,'ui-season.js':season,'ui-manager.js':manager})[name].includes(fragment),
   'missing active async guard '+name+' '+fragment);
-console.log('Stage 11.5/6-3 async acceptance: PASS (slot sequencing/fallback, load rollback, date batch cancel, stale draft frame, Monte Carlo cancellation, route locks)');
+console.log('Stage 11.5/6-3 async acceptance: PASS (slot sequencing/fallback, load rollback, date batch cancel, stale draft frame, route locks)');

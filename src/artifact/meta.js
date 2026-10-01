@@ -104,7 +104,7 @@ function recordMeta(db,r){
 }
 function metaTableFiltered(db,filter={}){
   const rows=metaRowsFiltered(db,filter);
-  if(!rows.length)return metaTable(db,filter.region||null);
+  if(!rows.length)return metaTable(db,filter.region||null).map(x=>({...x,p:0,b:0,w:0,pres:0,wr:null,sample:0}));
   const st={},add=(cid,key)=>{const x=st[cid]||(st[cid]={p:0,w:0,b:0});x[key]++};
   for(const r of rows){for(const side of r.sides){if(filter.region&&side.region!==filter.region)continue;for(const pick of side.picks){const p=typeof pick==='string'?{champ:pick}:pick;if(filter.position&&p.role!==filter.position)continue;add(p.champ,'p');if(side.win)add(p.champ,'w')}}for(const cid of r.bans)add(cid,'b')}
   const G=Math.max(1,rows.length);return Object.values(db.patch.champions).map(c=>{const s=st[c.id]||{p:0,w:0,b:0};return {c,p:s.p,b:s.b,w:s.w,pres:(s.p+s.b)/G,wr:s.p?s.w/s.p:null,sample:G,eligible:championProEligible(db,c)}}).sort((a,b)=>b.pres-a.pres);
