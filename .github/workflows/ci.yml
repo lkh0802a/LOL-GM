@@ -100,7 +100,17 @@ jobs:
           node-version: 22
 
       - name: Static syntax and structure
-        run: npm run check:static
+        run: node scripts/ci-run.mjs static -- npm run check:static
+
+      - name: Upload validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-static-fast
+          path: ci-results/
+          retention-days: 7
+          compression-level: 1
+          if-no-files-found: warn
 
   ui-finance-contracts:
     needs: [changes, static-fast]
@@ -117,7 +127,17 @@ jobs:
           node-version: 22
 
       - name: UI finance and contract acceptances
-        run: npm run check:ui-finance-contracts
+        run: node scripts/ci-run.mjs ui-finance-contracts -- npm run check:ui-finance-contracts
+
+      - name: Upload validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-ui-finance-contracts
+          path: ci-results/
+          retention-days: 7
+          compression-level: 1
+          if-no-files-found: warn
 
   calendar-scouting:
     needs: [changes, static-fast]
@@ -134,7 +154,17 @@ jobs:
           node-version: 22
 
       - name: Calendar and scouting acceptances
-        run: npm run check:calendar-scouting
+        run: node scripts/ci-run.mjs calendar-scouting -- npm run check:calendar-scouting
+
+      - name: Upload validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-calendar-scouting
+          path: ci-results/
+          retention-days: 7
+          compression-level: 1
+          if-no-files-found: warn
 
   medical-core:
     needs: [changes, ui-finance-contracts, calendar-scouting]
@@ -151,7 +181,17 @@ jobs:
           node-version: 22
 
       - name: Medical core gate
-        run: npm run check:medical-core
+        run: node scripts/ci-run.mjs medical-core -- npm run check:medical-core
+
+      - name: Upload validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-medical-core
+          path: ci-results/
+          retention-days: 7
+          compression-level: 1
+          if-no-files-found: warn
 
   medical-regional:
     needs: [changes, ui-finance-contracts, calendar-scouting]
@@ -175,7 +215,7 @@ jobs:
         env:
           MEDICAL_REGIONAL_SHARD: ${{ matrix.shard }}
           MEDICAL_SHARD_OUTPUT: regional-${{ matrix.shard }}.json
-        run: node scripts/medical-regional-acceptance.mjs
+        run: node scripts/ci-run.mjs medical-regional -- node scripts/medical-regional-acceptance.mjs
 
       - name: Upload regional shard summary
         uses: actions/upload-artifact@v4
@@ -183,6 +223,16 @@ jobs:
           name: medical-regional-${{ matrix.shard }}
           path: regional-${{ matrix.shard }}.json
           if-no-files-found: error
+
+      - name: Upload validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-medical-regional-${{ matrix.shard }}
+          path: ci-results/
+          retention-days: 7
+          compression-level: 1
+          if-no-files-found: warn
 
   medical-calendar:
     needs: [changes, ui-finance-contracts, calendar-scouting]
@@ -206,7 +256,7 @@ jobs:
         env:
           MEDICAL_CALENDAR_SHARD: ${{ matrix.shard }}
           MEDICAL_SHARD_OUTPUT: calendar-${{ matrix.shard }}.json
-        run: node scripts/medical-calendar-acceptance.mjs
+        run: node scripts/ci-run.mjs medical-calendar -- node scripts/medical-calendar-acceptance.mjs
 
       - name: Upload calendar shard summary
         uses: actions/upload-artifact@v4
@@ -214,6 +264,16 @@ jobs:
           name: medical-calendar-${{ matrix.shard }}
           path: calendar-${{ matrix.shard }}.json
           if-no-files-found: error
+
+      - name: Upload validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-medical-calendar-${{ matrix.shard }}
+          path: ci-results/
+          retention-days: 7
+          compression-level: 1
+          if-no-files-found: warn
 
   medical:
     needs: [changes, medical-core, medical-regional, medical-calendar]
@@ -237,10 +297,20 @@ jobs:
           merge-multiple: true
 
       - name: Aggregate regional medical invariant
-        run: node scripts/medical-shard-aggregate.mjs regional medical-shards/regional-0.json medical-shards/regional-1.json
+        run: node scripts/ci-run.mjs medical-regional-aggregate -- node scripts/medical-shard-aggregate.mjs regional medical-shards/regional-0.json medical-shards/regional-1.json
 
       - name: Aggregate calendar medical invariant
-        run: node scripts/medical-shard-aggregate.mjs calendar medical-shards/calendar-0.json medical-shards/calendar-1.json
+        run: node scripts/ci-run.mjs medical-calendar-aggregate -- node scripts/medical-shard-aggregate.mjs calendar medical-shards/calendar-0.json medical-shards/calendar-1.json
+
+      - name: Upload validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-medical
+          path: ci-results/
+          retention-days: 7
+          compression-level: 1
+          if-no-files-found: warn
 
   regression:
     needs: [changes, ui-finance-contracts, calendar-scouting]
@@ -257,7 +327,17 @@ jobs:
           node-version: 22
 
       - name: System snapshot and regression
-        run: npm run validate:systems && npm run regression
+        run: node scripts/ci-run.mjs system-snapshot -- npm run validate:systems && node scripts/ci-run.mjs regression -- npm run regression
+
+      - name: Upload validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-regression
+          path: ci-results/
+          retention-days: 7
+          compression-level: 1
+          if-no-files-found: warn
 
   smoke:
     needs: [changes, ui-finance-contracts, calendar-scouting]
@@ -281,7 +361,7 @@ jobs:
         env:
           SMOKE_MODE: ${{ matrix.mode }}
           SMOKE_RESULT_FILE: smoke-${{ matrix.mode }}.json
-        run: node scripts/smoke.mjs
+        run: node scripts/ci-run.mjs smoke -- node scripts/smoke.mjs
 
       - name: Upload smoke result
         uses: actions/upload-artifact@v4
@@ -289,6 +369,16 @@ jobs:
           name: smoke-${{ matrix.mode }}
           path: smoke-${{ matrix.mode }}.json
           if-no-files-found: error
+
+      - name: Upload validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-smoke-${{ matrix.mode }}
+          path: ci-results/
+          retention-days: 7
+          compression-level: 1
+          if-no-files-found: warn
 
   career:
     needs: [changes, ui-finance-contracts, calendar-scouting]
@@ -305,7 +395,17 @@ jobs:
           node-version: 22
 
       - name: Career acceptance
-        run: npm run career:acceptance
+        run: node scripts/ci-run.mjs career -- npm run career:acceptance
+
+      - name: Upload validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-career
+          path: ci-results/
+          retention-days: 7
+          compression-level: 1
+          if-no-files-found: warn
 
   regression-smoke-career:
     needs: [changes, regression, smoke, career]
@@ -343,10 +443,10 @@ jobs:
           node-version: 22
 
       - name: Performance probe
-        run: npm run perf
+        run: node scripts/ci-run.mjs perf -- npm run perf
 
       - name: Production build
-        run: npm run build
+        run: node scripts/ci-run.mjs build -- npm run build
 
       - name: Verify production artifact
         run: test -s dist/index.html
@@ -389,6 +489,16 @@ jobs:
           name: lol-gm-html-preview
           path: dist/index.html
           if-no-files-found: error
+
+      - name: Upload validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-perf-build
+          path: ci-results/
+          retention-days: 7
+          compression-level: 1
+          if-no-files-found: warn
 
   verify:
     needs:
