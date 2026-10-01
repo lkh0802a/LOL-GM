@@ -42,7 +42,8 @@ export function compiledEngine(){
 
 export async function runEngineFixture(fixture,{
   timeout=30000,
-  filename='acceptance-fixture.js'
+  filename='acceptance-fixture.js',
+  setupSources=[]
 }={}){
   const engine=await compiledEngine();
   // Every acceptance gets a new Realm/context. Only immutable engine source and
@@ -54,7 +55,16 @@ export async function runEngineFixture(fixture,{
   });
   const started=performance.now();
   engine.runInContext(context,{timeout});
-  const elapsed=Math.max(0,Math.ceil(performance.now()-started));
+  let elapsed=Math.max(0,Math.ceil(performance.now()-started));
+  for(let index=0;index<setupSources.length;index++){
+    const remaining=Math.max(1,timeout-elapsed);
+    const setup=new vm.Script(setupSources[index],{
+      filename:filename+'.setup-'+index,
+      displayErrors:true
+    });
+    setup.runInContext(context,{timeout:remaining});
+    elapsed=Math.max(0,Math.ceil(performance.now()-started));
+  }
   const remaining=Math.max(1,timeout-elapsed);
   const test=new vm.Script(fixture,{filename,displayErrors:true});
   return test.runInContext(context,{timeout:remaining});
