@@ -5,17 +5,91 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  verify:
+  changes:
     runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      docs_only: ${{ steps.scope.outputs.docs_only }}
+      run_full: ${{ steps.scope.outputs.run_full }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Classify validation scope
+        id: scope
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_DRAFT: ${{ github.event.pull_request.draft }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            base="$PR_BASE_SHA"
+            head="$PR_HEAD_SHA"
+          else
+            base="$BEFORE_SHA"
+            head="$GITHUB_SHA"
+            if [[ -z "$base" || "$base" =~ ^0+$ ]]; then
+              base="$(git rev-parse "$head^" 2>/dev/null || true)"
+            fi
+          fi
+
+          if [[ -n "$base" ]]; then
+            mapfile -t changed < <(git diff --name-only "$base" "$head")
+          else
+            mapfile -t changed < <(git diff-tree --no-commit-id --name-only -r "$head")
+          fi
+
+          docs_only=true
+          if (( ${#changed[@]} == 0 )); then
+            docs_only=false
+          fi
+          for file in "${changed[@]}"; do
+            if [[ "$file" == docs/* ]]; then
+              continue
+            fi
+            if [[ "$file" != */* && "$file" == *.md ]]; then
+              continue
+            fi
+            docs_only=false
+            break
+          done
+
+          run_full=false
+          if [[ "$docs_only" != "true" ]]; then
+            if [[ "$EVENT_NAME" == "push" || "$PR_DRAFT" != "true" ]]; then
+              run_full=true
+            fi
+          fi
+
+          {
+            echo "docs_only=$docs_only"
+            echo "run_full=$run_full"
+          } >> "$GITHUB_OUTPUT"
+
+          printf 'Changed files (%d):\n' "${#changed[@]}"
+          printf '  %s\n' "${changed[@]}"
+          echo "docs_only=$docs_only run_full=$run_full"
+
+  static-fast:
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,8 +99,92 @@ jobs:
         with:
           node-version: 22
 
-      - name: Syntax and structure checks
-        run: npm run check
+      - name: Static syntax and structure
+        run: npm run check:static
+
+  ui-finance-contracts:
+    needs: [changes, static-fast]
+    if: needs.changes.outputs.docs_only != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: UI finance and contract acceptances
+        run: npm run check:ui-finance-contracts
+
+  calendar-scouting:
+    needs: [changes, static-fast]
+    if: needs.changes.outputs.docs_only != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Calendar and scouting acceptances
+        run: npm run check:calendar-scouting
+
+  medical:
+    needs: [changes, ui-finance-contracts, calendar-scouting]
+    if: needs.changes.outputs.run_full == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Medical full gate
+        run: npm run check:medical
+
+  regression-smoke-career:
+    needs: [changes, ui-finance-contracts, calendar-scouting]
+    if: needs.changes.outputs.run_full == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Regression smoke and career full gate
+        run: npm run check:regression-smoke-career
+
+  perf-build:
+    needs: [changes, ui-finance-contracts, calendar-scouting]
+    if: needs.changes.outputs.run_full == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
       - name: Performance probe
         run: npm run perf
@@ -70,9 +228,51 @@ jobs:
           exit 1
 
       - name: Upload HTML preview
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: lol-gm-html-preview
           path: dist/index.html
           if-no-files-found: error
+
+  verify:
+    needs:
+      - changes
+      - static-fast
+      - ui-finance-contracts
+      - calendar-scouting
+      - medical
+      - regression-smoke-career
+      - perf-build
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Aggregate required validation
+        shell: bash
+        env:
+          DOCS_ONLY: ${{ needs.changes.outputs.docs_only }}
+          RUN_FULL: ${{ needs.changes.outputs.run_full }}
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          STATIC_RESULT: ${{ needs.static-fast.result }}
+          UI_RESULT: ${{ needs.ui-finance-contracts.result }}
+          CALENDAR_RESULT: ${{ needs.calendar-scouting.result }}
+          MEDICAL_RESULT: ${{ needs.medical.result }}
+          REGRESSION_RESULT: ${{ needs.regression-smoke-career.result }}
+          PERF_BUILD_RESULT: ${{ needs.perf-build.result }}
+        run: |
+          set -euo pipefail
+          [[ "$CHANGES_RESULT" == "success" ]]
+          [[ "$STATIC_RESULT" == "success" ]]
+
+          if [[ "$DOCS_ONLY" != "true" ]]; then
+            [[ "$UI_RESULT" == "success" ]]
+            [[ "$CALENDAR_RESULT" == "success" ]]
+          fi
+
+          if [[ "$RUN_FULL" == "true" ]]; then
+            [[ "$MEDICAL_RESULT" == "success" ]]
+            [[ "$REGRESSION_RESULT" == "success" ]]
+            [[ "$PERF_BUILD_RESULT" == "success" ]]
+          fi
+
+          echo "Required CI gate passed: docs_only=$DOCS_ONLY run_full=$RUN_FULL"
