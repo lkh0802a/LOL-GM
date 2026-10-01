@@ -290,15 +290,15 @@ const fixture=String.raw`(()=>{
   }));
 })()`;
 await runEngineFixture(fixture,{timeout:40000,filename:'calendar-depth-acceptance.fixture.js'});
-const [ui,home,season,scrim]=await artifactSources(
-  ['ui-season.js','app.js','season.js','scrim.js']
+const [ui,home,season,calendar,scrim]=await artifactSources(
+  ['ui-season.js','app.js','season.js','calendar.js','scrim.js']
 );
 const check=(value,message)=>{if(!value)throw new Error('D01 UI contract: '+message)};
 check(ui.includes("'#sfixture'")&&ui.includes('run(r=>r.played.length>0)')&&ui.includes("'#sday'"),
   'single calendar day and next fixture actions are missing');
 check(home.includes('id="sday">하루 진행')&&home.includes('id="sfixture">다음 경기일'),
   'day-advance controls are not labelled truthfully');
-check(season.includes('lastDailyTick===date')&&season.includes('majorPatchEvents.push'),
+check(calendar.includes('lastDailyTick===date')&&season.includes('majorPatchEvents.push'),
   'idempotent dates and deferred patch processing missing');
 check(scrim.includes('officialBookedTeams(db)')&&scrim.includes('availableSlots')&&
   scrim.includes('simulateBackgroundScrim')&&scrim.includes('slice(-39)'),

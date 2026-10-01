@@ -61,14 +61,14 @@ function runOffseason(db){
   // or matches occur there. Preserve B10's full passive recovery from the last
   // competitive date instead of shortening recovery by the displayed window.
   const medicalRolloverDate=`${db.year}-01-06`;
-  if(cw?.seasonEndDate)db.worldDate=cw.seasonEndDate;
+  if(cw?.seasonEndDate)setWorldCalendarDate(db,cw.seasonEndDate);
   medicalOffseasonRecovery(db,medicalRolloverDate);
-  db.worldDate=medicalRolloverDate;
+  setWorldCalendarDate(db,medicalRolloverDate);
   promotionRelegation(db,w,rng,ev);
   updateHype(db,w);
   closeFinances(db,w,rng,ev);
   rep.contractWindow=settleOffseasonContractRollover(db,rep);
-  db.worldDate=medicalRolloverDate;
+  setWorldCalendarDate(db,medicalRolloverDate);
   if(f>0){
     officeDecisions(db,rng,f,ev);
     globalOffice(db,w,rng,f,ev);

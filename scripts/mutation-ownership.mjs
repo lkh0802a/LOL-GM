@@ -2,16 +2,17 @@
 // Shrink this inventory when a caller moves to its canonical domain API.
 // This is a conservative source-text guard, not an alias-aware JS call graph.
 export const MUTATION_OWNERSHIP={
-  'contract-window.js':{date:3},
+  'calendar.js':{date:1},
+  'contract-window.js':{},
   'contracts.js':{assign:3},
   'finance.js':{cash:3},
   'medical.js':{},
   'office.js':{remove:1},
-  'offseason.js':{date:3,remove:1},
+  'offseason.js':{remove:1},
   'player.js':{assign:1},
   'scouting-ai-ops.js':{},
   'scouting.js':{},
-  'season.js':{date:2},
+  'season.js':{},
   'staff.js':{},
   'state-player-actions.js':{remove:1},
   'transfer.js':{assign:1}

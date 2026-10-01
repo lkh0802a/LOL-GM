@@ -20,6 +20,16 @@ const sourceOf = file => {
 
 let failed = false;
 assertMutationOwnership(new Map(modules.map(file=>[file,sourceOf(file)])));
+for(const marker of ['function setWorldCalendarDate(','function nextCalendarDate(',
+  'function applyCalendarPatchEvents(','function applyWorldDailyEffects(']) {
+  if(!sourceOf('calendar.js').includes(marker)) {
+    failed=true;console.error('Calendar-domain helper missing: '+marker);
+  }
+  for(const file of ['season.js','contract-window.js','offseason.js'])
+    if(sourceOf(file).includes(marker)) {
+      failed=true;console.error('Calendar responsibility leaked into '+file+': '+marker);
+    }
+}
 const globalSymbols = new Map();
 for (const file of modules) {
   const path = resolve(artifact, file);
@@ -70,6 +80,7 @@ const maintainabilityBudgets = {
   'player-relations.js': 16000,
   'world.js': 28000,
   'season.js': 24000,
+  'calendar.js': 5000,
   'offseason.js': 16000,
   'save.js': 10000,
   'save-migration.js': 8000,

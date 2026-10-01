@@ -24,6 +24,7 @@ export const ENGINE_MODULES = [
   'player-relations.js',
   'medical.js',
   'world.js',
+  'calendar.js',
   'season.js',
   'offseason.js',
   'save.js',

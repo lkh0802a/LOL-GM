@@ -380,8 +380,8 @@ require full Actions validation. Ready code PRs keep the complete CI gate.
 | Save encoding/migration | save.js `packDB` / `unpackDB`, save-migration.js | Actions regression + career; preserve legacy resume |
 | Finance/contracts/market | finance.js, contracts.js, contract-*.js, transfer.js | `node scripts/ui-finance-contracts-runner.mjs` |
 | Player transactions | state-transaction.js, state-player-actions.js, state-rollback.js, roster.js | Actions regression + contract domain + career |
-| Calendar/scouting/scrim | season.js `advanceStep`, timezone-calendar.js, scouting*.js, scrim-partner.js | `node scripts/calendar-scouting-runner.mjs` |
-| Medical/development | medical.js, development.js, season.js | Actions medical core/regional/calendar; reproduce only failing seed locally |
+| Calendar/scouting/scrim | calendar.js, season.js `advanceStep`, timezone-calendar.js, scouting*.js, scrim-partner.js | `node scripts/calendar-scouting-runner.mjs` |
+| Medical/development | medical.js, development.js, calendar.js, season.js | Actions medical core/regional/calendar; reproduce only failing seed locally |
 | Match/draft/series/patch | engine.js, draft.js, series.js, meta.js, patch*.js | Actions regression + both smoke shards + career |
 | Build/module manifest/shared RNG | scripts/build.mjs, artifact-modules.mjs, random.js | `node scripts/check.mjs`, then full Actions |
 | CI report/publisher | scripts/ci-run.mjs, sync-standalone.mjs | corresponding `node --test scripts/<name>.test.mjs` |
@@ -414,8 +414,8 @@ are real callers. Structural ownership and legacy removal remain Issue #62 work.
 Issue #57 is complete. Issue #62 R01 now has a code-backed ownership baseline in
 REFACTOR_R01_AUDIT.md. R02 mutation ownership guards are in place; R03 has moved
 expense/transfer settlements into finance and player negotiation into
-contract-negotiation.js. Next converge offseason calendar writers and AI roster
-callers, then remove legacy only after caller parity is proven. Preserve accepted
+contract-negotiation.js. R04 now centralizes raw calendar positioning and in-season daily effects;
+next converge AI roster callers, then remove legacy only after caller parity is proven. Preserve accepted
 D04-B3; after the refactor, recheck D04-B4 and the latest depth audit before
 choosing subsequent gameplay work. Follow ANDROID_TARGET.md through mobile
 UX/performance, production packaging and real-device offline/save validation.
