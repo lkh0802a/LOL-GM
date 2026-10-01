@@ -1,17 +1,10 @@
 // Standings aggregation and schedule-period selection are orthogonal.
 // Regression fixtures use canonical generated bracket schedules, and change
 // a small number of match outcomes to make exact standings assertions.
-import {readFile} from 'node:fs/promises';
-import {resolve} from 'node:path';
-import vm from 'node:vm';
-import {ENGINE_MODULES} from './artifact-modules.mjs';
+import {artifactSources,runEngineFixture} from './test-harness.mjs';
 
-const root=resolve(import.meta.dirname,'..','src','artifact');
-let source='';
-for(const file of [...ENGINE_MODULES,'ui-season.js','ui-setup.js'])
-  source+=await readFile(resolve(root,file),'utf8')+'\n';
-source+='function esc(x){return String(x)}\n';
-source+=String.raw`(()=>{
+const [uiSeasonSource,uiSetupSource]=await artifactSources(['ui-season.js','ui-setup.js']);
+const fixture=String.raw`(()=>{
   const check=(yes,message)=>{if(!yes)throw new Error('SPLIT_AGGREGATION '+message)};
   const cfg=defaultWorldConfig();
   cfg.regions=[regionCfg('NA',{teams:10,splits:3,legs:1,
@@ -199,5 +192,8 @@ source+=String.raw`(()=>{
     newYearReset:true,saveFormat:2
   }));
 })();`;
-vm.runInNewContext(source,{console,Date,Math,JSON,Set,Map,WeakMap,Object,
-  Array,String,Number,Boolean,RegExp,Error,Intl,performance,crypto},{timeout:120000});
+await runEngineFixture(fixture,{
+  timeout:120000,
+  filename:'split-standings-acceptance.fixture.js',
+  setupSources:[uiSeasonSource,uiSetupSource,'function esc(x){return String(x)}\n']
+});
