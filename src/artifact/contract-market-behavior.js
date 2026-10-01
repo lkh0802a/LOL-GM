@@ -55,6 +55,6 @@ function contractMutualTerminationTerms(db,p){
     // Reuse the protection tiers: departure intent can trade some guaranteed
     // compensation for immediate freedom; other unhappy players keep it all.
     fraction=p.wantsOut?.5:seekingRole?.75:1,
-    minimumAmount=Math.min(guaranteedAmount,Math.ceil(guaranteedAmount*fraction*10)/10);
+    minimumAmount=Math.min(guaranteedAmount,Math.ceil(guaranteedAmount*fraction*10-1e-8)/10);
   return {ok:true,willing,reason,guaranteedAmount,minimumAmount};
 }

@@ -25,6 +25,9 @@ await runEngineFixture(String.raw`(()=>{
   role.rosterRole='core';role.satisfaction=49;
   check(contractMutualTerminationTerms(db,role).minimumAmount===5.1,
     'unhappy player lost guarantee without departure intent');
+  const decimal={...leaver,contract:{...leaver.contract,salary:.4}};
+  check(contractMutualTerminationTerms(db,decimal).minimumAmount===.6,
+    'floating-point residue added an extra compensation step');
   const command={type:'player.release',actor:'manager',pid:leaver.id,
     teamId:mine.id,mode:'mutual',amount:quote.minimumAmount};
   const denied=(c,msg)=>{const before=JSON.stringify(db);check(!commitWorldAction(db,c).ok&&
