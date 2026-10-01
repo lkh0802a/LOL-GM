@@ -1,13 +1,5 @@
 // Phase 12 depth: commercial performance, solvency, facilities, academy cash and UI contracts.
-import {readFile} from 'node:fs/promises';
-import {resolve} from 'node:path';
-import vm from 'node:vm';
-
-import {ENGINE_MODULES} from './artifact-modules.mjs';
-
-let code='';
-const root=resolve(import.meta.dirname,'..','src','artifact');
-for(const file of ENGINE_MODULES)code+=await readFile(resolve(root,file),'utf8')+'\n';
+import {artifactSources,runEngineFixture} from './test-harness.mjs';
 const tests=String.raw`(()=>{
   const check=(value,message)=>{if(!value)throw new Error(message)};
   const near=(a,b)=>Math.abs(a-b)<.11;
@@ -98,9 +90,8 @@ const tests=String.raw`(()=>{
     sponsorBonus:all[1].milestoneBonus,academySupport:aYear.rev.academyFunding,
     worldVersion:copy.version,saveFormat:copy.saveFormat}));
 })()`;
-vm.runInNewContext(code+'\n'+tests,{console,Date,Math,JSON,Set,Map,Object,Array,String,Number,Boolean,RegExp,Error,Intl,performance,crypto},{timeout:35000});
-const ui=await Promise.all(['ui-manager.js','ui-market-staff.js','ui-season.js'].map(
-  path=>readFile(resolve(root,path),'utf8')));
+await runEngineFixture(tests,{timeout:35000,filename:'finance-depth-acceptance.fixture.js'});
+const ui=await artifactSources(['ui-manager.js','ui-market-staff.js','ui-season.js']);
 const require=(check,message)=>{if(!check)throw new Error(message)};
 require(ui[0].includes('outlook.runway.months')&&ui[0].includes('sponsorMilestone'),
   'club finance screen lacks solvency and earned sponsor payout display');

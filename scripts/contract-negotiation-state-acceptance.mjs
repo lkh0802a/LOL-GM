@@ -1,13 +1,7 @@
 // D04-B2: renewal rejection cooldown and hard-breakdown reopening conditions.
-import {readFile} from 'node:fs/promises';
-import {resolve} from 'node:path';
-import vm from 'node:vm';
-import {ENGINE_MODULES} from './artifact-modules.mjs';
+import {runEngineFixture} from './test-harness.mjs';
 
-const root=resolve(import.meta.dirname,'..','src','artifact');
-let source='';
-for(const file of ENGINE_MODULES)source+=await readFile(resolve(root,file),'utf8')+'\n';
-source+=String.raw`(()=>{
+const fixture=String.raw`(()=>{
   const assert=(x,m)=>{if(!x)throw new Error('D04_NEGOTIATION_STATE '+m)};
   let db=buildWorld(),team=activeTeams(db,null,1)[0],
     player=Object.values(db.players).find(p=>!p.retired&&!p.team&&p.age>=22&&p.age<=27);
@@ -141,5 +135,4 @@ source+=String.raw`(()=>{
     saveFormat:JSON.parse(packed).saveFormat
   }));
 })();`;
-vm.runInNewContext(source,{console,Date,Math,JSON,Set,Map,WeakMap,Object,
-  Array,String,Number,Boolean,RegExp,Error,Intl,performance,crypto},{timeout:30000});
+await runEngineFixture(fixture,{timeout:30000,filename:'contract-negotiation-state-acceptance.fixture.js'});
