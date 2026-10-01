@@ -96,6 +96,10 @@ span.num.hi{color:var(--hi);font-weight:700}span.num.mid{color:var(--mi);font-we
 .tac label span{display:flex;justify-content:space-between}
 .tac output{font-variant-numeric:tabular-nums;font-weight:700}
 .tac input[type=range]{accent-color:var(--brass);width:100%}
+.tac.training-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:8px 16px}
+.training-grid label{min-width:0}
+.training-grid input[type=range]{min-height:44px;margin:0}
+@media(max-width:760px){.tac.training-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 16px}.training-grid label:last-child{grid-column:1/-1}}
 .tac select{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px}
 .roster tr[data-p]{cursor:default}.roster tr[data-p]:hover,.roster tr.open{background:var(--bg)}
 .pdet{background:var(--surf);border:1px solid var(--line);border-radius:10px;padding:14px}
@@ -2021,6 +2025,75 @@ function maybeNewChampion(db,date,major,rng){
   def.releaseDate=date;def.proEligibleDate=addDays(date,14);def.visual=generatedChampionVisual(def);db.patches.releasesByYear[year]=released+1;return {type:'new',def,c:def.id,why:'신규 챔피언 출시 · 프로 대회 14일 사용 제한'};
 }
 
+/* ==== FILE: first-selection.js ==== */
+// First Selection uses the available patch and bounded opponent scouting.
+function selectionLineup(db,tid){
+  const t=db.teams[tid],copy={...t,roster:(t.roster||[]).slice(),depthChart:{...(t.depthChart||{})}};
+  return Object.fromEntries(ROLES.map(r=>[r,starterFor(db,copy,r)]));
+}
+function selectionPatchValues(db,tid,pool){
+  const t=db.teams[tid],prof=staffProfile(t),st=db.metaStats||{},regional=db.regionMetaStats?.[t.region]||{};
+  return Object.fromEntries(pool.champs.map(c=>{
+    let v=(pool.strengths[c.id]-pool.mn)/(pool.mx-pool.mn||1);
+    for(const [sample,games,weight] of [[st[c.id],db.metaGames,.45],[regional[c.id],db.regionMetaGames?.[t.region],.75]]){
+      if(!sample||!games)continue;
+      const n=(sample.p||0)+(sample.b||0),confidence=n/(n+18*(1.35-prof.analysis/100)),wr=((sample.w||0)+2)/((sample.p||0)+4);
+      v+=(clamp(.5+(wr-.5)*2+(n/games-.1)*.3,0,1)-v)*confidence*weight;
+    }
+    return [c.id,clamp(v+(t.metaKnowledge?.[c.id]||0)*.08-(t.metaCounter?.[c.id]||0)*.035,0,1)];
+  }));
+}
+function firstSelectionEvidence(db,tid,opp,ctx={}){
+  const pool=draftPoolSnapshot(db,ctx),used=new Set(ctx.fearless?ctx.used||[]:[]),mine=selectionLineup(db,tid),enemy=selectionLineup(db,opp||tid),meta=selectionPatchValues(db,tid,pool),state={db,ctx,teamIds:[tid,opp||tid],roster:[mine,enemy]};
+  const roles=ROLES.map(role=>{
+    const rows=(pool.byRole[role]||[]).filter(c=>!used.has(c.id)).map(c=>{
+      const mastery=draftMasteryObservation(state,0,0,mine[role],c.id).value,
+        opponent=draftMasteryObservation(state,0,1,enemy[role],c.id),
+        fit=(meta[c.id]||0)*.35+mastery/100*.5;
+      return {id:c.id,fit,mastery,opponent:opponent.value,confidence:opponent.confidence,meta:meta[c.id]||0,c};
+    }).sort((a,b)=>b.fit-a.fit||a.id.localeCompare(b.id));
+    const best=rows[0],second=rows[1],viable=rows.filter(x=>x.mastery>=65);
+    if(!best)return {role,available:0,scarcity:0,contested:0,counter:0,breadth:0,flex:0};
+    const opponentBest=rows.slice().sort((a,b)=>b.opponent-a.opponent||b.meta-a.meta)[0];
+    const laneExposure=opponentBest?Math.max(0,(opponentBest.c.kit.early-best.c.kit.early+(opponentBest.c.kit.poke-best.c.kit.poke)*.5)/15):0;
+    return {role,available:rows.length,priority:best.id,
+      scarcity:clamp((best.fit-(second?.fit??best.fit))/.25,0,1),
+      contested:clamp((best.opponent-65)/34,0,1)*best.meta,
+      counter:laneExposure*clamp(viable.length/3,0,1),
+      breadth:clamp(viable.length/6,0,1),flex:Math.min(1,(best.c.roles.length-1)/2),
+      confidence:best.confidence};
+  });
+  const active=roles.filter(r=>r.available),average=key=>active.length?avg(active.map(r=>r[key])):0;
+  return {version:1,available:pool.champs.filter(c=>!used.has(c.id)).length,roles,
+    scarcity:Math.max(0,...roles.map(r=>r.scarcity)),contested:Math.max(0,...roles.map(r=>r.contested)),
+    counter:average('counter'),breadth:average('breadth'),flex:average('flex'),
+    exhausted:pool.champs.length?used.size/Math.max(1,pool.champs.length):0};
+}
+function draftPrefs(db,tid,ctx,g,bestOf,rng,opp=null){
+  const t=db.teams[tid],prof=staffProfile(t),an=prof.analysis/100,noise=()=>rng.normal(0,.03*(1.1-an)),e=firstSelectionEvidence(db,tid,opp,ctx),fl=ctx.fearless?Math.min(1,(ctx.used||[]).length/40):0;
+  return {blue:BAL.blue+noise(),red:noise(),
+    first:BAL.first+e.scarcity*.09+e.contested*.05+e.flex*.025+noise(),
+    last:.02+prof.draft/100*.03+e.counter*.09+e.breadth*.025+fl*e.breadth*.025+noise(),fl,evidence:e};
+}
+function selectionDecisionReason(prefs,order){
+  const e=prefs.evidence;
+  if(order==='first')return e.scarcity>=e.contested?'대체하기 어려운 주력 픽 선점':'상대 핵심 픽 견제';
+  return e.counter>.1?'상대 라인전 조합에 후픽 대응':'남은 챔피언 폭을 활용한 후픽 대응';
+}
+function selectionDecisionSummary(me,op,options){
+  const compact=p=>({first:p.first,last:p.last,blue:p.blue,red:p.red,
+    scarcity:p.evidence.scarcity,contested:p.evidence.contested,
+    counter:p.evidence.counter,breadth:p.evidence.breadth,
+    priority:p.evidence.roles.filter(r=>r.priority).map(r=>({role:r.role,champ:r.priority,confidence:r.confidence}))});
+  return {version:1,self:compact(me),opponent:compact(op),options};
+}
+function recordedSelectionEvidence(e){
+  if(!e)return null;
+  const compact=p=>Object.fromEntries(['first','last','scarcity','contested','counter','breadth']
+    .map(k=>[k,Math.round((p[k]||0)*1000)/1000]));
+  return {version:e.version,self:compact(e.self),opponent:compact(e.opponent)};
+}
+
 /* ==== FILE: series.js ==== */
 // ===== LOL GM: Series / First Selection / Fearless domain =====
 // Owns best-of session state, side/order selection, series-level Fearless context and replay.
@@ -2034,13 +2107,8 @@ function gameMVP(r){
 function playerGameRating(ps,side,win,mvp,duration){const min=Math.max(1,duration),kp=(ps.k+ps.a)/Math.max(1,side.kills),kda=(ps.k+ps.a)/Math.max(1,ps.d),csm=ps.cs/min,dpm=ps.dmg/min,vis=ps.vision/min,obj=ps.objectives||0,lane=ps.laneSamples?ps.laneAdv/ps.laneSamples:0,tf=ps.teamfights?ps.teamfightDmg/ps.teamfights/1000:0,role=ps.role;let v=4.55+(win?.42:0)+(mvp?.55:0)-ps.d*.08;if(role==='TOP')v+=kda*.35+csm*.105+dpm*.00068+kp*.4+lane*.18+tf*.12;else if(role==='JGL')v+=kda*.36+csm*.045+dpm*.00048+kp*.64+vis*.08+obj*.12+tf*.1;else if(role==='MID')v+=kda*.37+csm*.1+dpm*.00074+kp*.46+lane*.16+tf*.13;else if(role==='ADC')v+=kda*.33+csm*.12+dpm*.00084+kp*.44+lane*.12+tf*.15;else v+=kda*.3+csm*.02+dpm*.00036+kp*.78+vis*.14+obj*.1+tf*.1;return Math.round(clamp(v,3,10)*100)/100}
 // 선택권(진영 vs 픽 순서): 선택권을 가진 팀이 '진영'이나 '픽 순서' 중 하나를 고르면, 상대가 나머지를 고른다
 // 진영 가치: 블루 = 맵 이점(시야·오브젝트 동선). 순서 가치: 선픽 = 최고 챔피언 선점, 후픽 = 마지막 카운터픽(피어리스 후반 세트일수록 커짐)
-function draftPrefs(db,tid,ctx,g,bestOf,rng){
-  const t=db.teams[tid], prof=staffProfile(t),an=prof.analysis/100, noise=()=>rng.normal(0,0.03*(1.1-an));
-  const fl=ctx.fearless?Math.min(1,ctx.used.length/40):0;
-  return {blue:0.03+noise(),red:noise(),first:0.05+noise(),last:0.02+0.03*prof.draft/100+0.05*fl+(g===bestOf?0.02:0)+noise(),fl};
-}
 function chooseSide(db,tid,opp,ctx,g,bestOf,rng){
-  const me=draftPrefs(db,tid,ctx,g,bestOf,rng), op=draftPrefs(db,opp,ctx,g,bestOf,rng);
+  const me=draftPrefs(db,tid,ctx,g,bestOf,rng,opp), op=draftPrefs(db,opp,ctx,g,bestOf,rng,tid);
   const bestSide=v=>v.blue>=v.red?'blue':'red', bestOrd=v=>v.first>=v.last?'first':'last', flip={blue:'red',red:'blue',first:'last',last:'first'};
   // 선택권을 가진 팀은 현재 패치·코치·피어리스 상황을 보고 진영 또는 픽 순서 중 가치가 높은 쪽을 고른다.
   const sA=bestSide(me), oA=flip[bestOrd(op)], vA=me[sA]+me[oA];
@@ -2048,20 +2116,20 @@ function chooseSide(db,tid,opp,ctx,g,bestOf,rng){
   let side,order,chose;
   if(vA>=vB){side=sA;order=oA;chose='side'}else{side=sB;order=oB;chose='order'}
   const why=chose==='side'?`진영 선택 → ${side==='blue'?'블루':'레드'} (상대가 ${order==='first'?'후픽':'선픽'} 선택)`:`픽 순서 선택 → ${order==='first'?'선픽':'후픽'}${order==='last'&&me.fl>0.3?' (피어리스로 줄어든 챔피언 폭 — 마지막 카운터픽)':''} (상대가 ${side==='blue'?'레드':'블루'} 선택)`;
-  return {side,order,chose,why};
+  return {side,order,chose,why:why+" · "+selectionDecisionReason(me,order),evidence:selectionDecisionSummary(me,op,{side:vA,order:vB})};
 }
 function resolveFirstSelection(db,chooser,other,ctx,g,bestOf,rng,choice){
   if(!choice)return chooseSide(db,chooser,other,ctx,g,bestOf,rng);
-  const me=draftPrefs(db,chooser,ctx,g,bestOf,rng),op=draftPrefs(db,other,ctx,g,bestOf,rng),bestSide=v=>v.blue>=v.red?'blue':'red',bestOrd=v=>v.first>=v.last?'first':'last',flip={blue:'red',red:'blue',first:'last',last:'first'};
+  const me=draftPrefs(db,chooser,ctx,g,bestOf,rng,other),op=draftPrefs(db,other,ctx,g,bestOf,rng,chooser),bestSide=v=>v.blue>=v.red?'blue':'red',bestOrd=v=>v.first>=v.last?'first':'last',flip={blue:'red',red:'blue',first:'last',last:'first'};
   if(choice.kind==='side'){
     if(!['blue','red'].includes(choice.value))throw new Error('Invalid First Selection side');
     const side=choice.value,order=flip[bestOrd(op)];
-    return {side,order,chose:'side',why:`첫 번째 선택권 → ${side==='blue'?'블루':'레드'} · 상대가 ${order==='first'?'후픽':'선픽'} 선택`};
+    return {side,order,chose:'side',evidence:selectionDecisionSummary(me,op,{manual:true}),why:`첫 번째 선택권 → ${side==='blue'?'블루':'레드'} · 상대가 ${order==='first'?'후픽':'선픽'} 선택`};
   }
   if(choice.kind==='order'){
     if(!['first','last'].includes(choice.value))throw new Error('Invalid First Selection order');
     const order=choice.value,side=flip[bestSide(op)];
-    return {side,order,chose:'order',why:`첫 번째 선택권 → ${order==='first'?'선픽':'후픽'} · 상대가 ${side==='blue'?'레드':'블루'} 선택`};
+    return {side,order,chose:'order',evidence:selectionDecisionSummary(me,op,{manual:true}),why:`첫 번째 선택권 → ${order==='first'?'선픽':'후픽'} · 상대가 ${side==='blue'?'레드':'블루'} 선택`};
   }
   throw new Error('Invalid First Selection choice');
 }
@@ -2070,8 +2138,8 @@ function seriesSelectionPrompt(db,sess,managedId){
   const chooser=sess.chooser,other=chooser===sess.a?sess.b:sess.a;
   if(chooser===managedId)return {mode:'first',game:sess.g,chooser,other,team:managedId};
   if(!sess.selectionLead){
-    const rng=seriesSessionRng(sess),sc=chooseSide(db,chooser,other,sess.ctx,sess.g,sess.bestOf,rng);
-    sess.sideRng={a:rng.a,sp:rng.sp};sess.selectionLead={chooser,other,chose:sc.chose,side:sc.side,order:sc.order,why:sc.why};
+    const rng=seriesSessionRng(sess),sc=chooseSide(seriesOfficialView(db,sess),chooser,other,sess.ctx,sess.g,sess.bestOf,rng);
+    sess.sideRng={a:rng.a,sp:rng.sp};sess.selectionLead={chooser,other,chose:sc.chose,side:sc.side,order:sc.order,why:sc.why,evidence:sc.evidence};
   }
   const lead=sess.selectionLead,remaining=lead.chose==='side'?'order':'side';
   return {mode:'remaining',game:sess.g,chooser,other,team:managedId,remaining,lead:{chose:lead.chose,value:lead.chose==='side'?lead.side:lead.order,why:lead.why}};
@@ -2079,7 +2147,7 @@ function seriesSelectionPrompt(db,sess,managedId){
 function seriesApplyManagedSelection(db,sess,managedId,choice){
   const chooser=sess.chooser,other=chooser===sess.a?sess.b:sess.a;
   if(chooser===managedId){
-    const rng=seriesSessionRng(sess),sc=resolveFirstSelection(db,chooser,other,sess.ctx,sess.g,sess.bestOf,rng,choice);
+    const rng=seriesSessionRng(sess),sc=resolveFirstSelection(seriesOfficialView(db,sess),chooser,other,sess.ctx,sess.g,sess.bestOf,rng,choice);
     sess.sideRng={a:rng.a,sp:rng.sp};sess.selectionResolved=sc;sess.selectionLead=null;return sc;
   }
   const prompt=seriesSelectionPrompt(db,sess,managedId),lead=sess.selectionLead;if(!prompt||prompt.mode!=='remaining'||!lead)throw new Error('No remaining First Selection choice');
@@ -2091,7 +2159,7 @@ function seriesApplyManagedSelection(db,sess,managedId,choice){
     if(choice.kind!=='side'||!['blue','red'].includes(choice.value))throw new Error('Invalid remaining side choice');
     side=flip[choice.value];
   }
-  const sc={side,order,chose:lead.chose,why:`${lead.why} · 상대 선택 반영`};sess.selectionResolved=sc;sess.selectionLead=null;return sc;
+  const sc={side,order,chose:lead.chose,evidence:lead.evidence,why:`${lead.why} · 상대 선택 반영`};sess.selectionResolved=sc;sess.selectionLead=null;return sc;
 }
 
 // a = 상위 시드
@@ -2110,14 +2178,19 @@ function createSeriesSession(db,aId,bId,bestOf,seed,opt={}){
   const chooser=firstChoice==='coin'?(srng.chance(.5)?aId:bId):aId;
   return {a:aId,b:bId,bestOf,seed,need:Math.ceil(bestOf/2),g:1,chooser,wins:{[aId]:0,[bId]:0},games:[],lines:[],
     ctx:{used:[],byTeam:{[aId]:{won:[],lost:[]},[bId]:{won:[],lost:[]}},fearless:!!opt.fearless,mods:{[aId]:0,[bId]:0},practice:!!opt.practice,championPool:opt.championPool||null},
-    opt:{fearless:!!opt.fearless,firstChoice,compId:opt.compId||null,metaContext:opt.metaContext||null,replay:!!opt.replay,practice:!!opt.practice},
+    opt:{fearless:!!opt.fearless,firstChoice,compId:opt.compId||null,metaContext:opt.metaContext||null,replay:!!opt.replay,practice:!!opt.practice,selections:opt.replay?opt.selections||null:null},
     sideRng:{a:srng.a,sp:srng.sp},selectionLead:null,selectionResolved:null,current:null};
 }
 function seriesSessionRng(sess){const r=new RNG(sess.seed,'side');r.a=sess.sideRng.a;r.sp=sess.sideRng.sp;return r}
 function seriesSessionDone(sess){return sess.wins[sess.a]>=sess.need||sess.wins[sess.b]>=sess.need}
 function seriesSessionPrepareGame(db,sess){
   if(seriesSessionDone(sess))return null;if(sess.current)return sess.current;
-  const srng=seriesSessionRng(sess),x=seriesGameSetup(db,sess.a,sess.b,sess.bestOf,sess.seed,sess.ctx,sess.g,sess.chooser,srng,sess.selectionResolved);
+  const recorded=sess.opt.replay&&sess.opt.selections?.[sess.g-1];
+  if(recorded&&[sess.a,sess.b].includes(recorded.blue)&&[sess.a,sess.b].includes(recorded.firstPick)){
+    sess.chooser=[sess.a,sess.b].includes(recorded.sideBy)?recorded.sideBy:sess.chooser;
+    sess.selectionResolved={side:recorded.blue===sess.chooser?'blue':'red',order:recorded.firstPick===sess.chooser?'first':'last',chose:'replay',why:recorded.sideWhy||'당시 선택권 재현',evidence:recorded.selectionEvidence||null};
+  }
+  const srng=seriesSessionRng(sess),x=seriesGameSetup(seriesOfficialView(db,sess),sess.a,sess.b,sess.bestOf,sess.seed,sess.ctx,sess.g,sess.chooser,srng,sess.selectionResolved);
   sess.sideRng={a:srng.a,sp:srng.sp};sess.selectionResolved=null;sess.selectionLead=null;
   sess.current={g:sess.g,chooser:sess.chooser,blue:x.blue,red:x.red,gseed:x.gseed,fpTeam:x.fpTeam,sc:x.sc,snap:x.snap};
   return sess.current;
@@ -2140,7 +2213,7 @@ function playSeriesSessionGame(db,sess,forcedDraft=null,quiet=true){
   sess.ctx.used.push(...pk[0],...pk[1]);sess.ctx.byTeam[wId].won.push(...pk[r.winner]);sess.ctx.byTeam[lId].lost.push(...pk[1-r.winner]);
   sess.ctx.mods[lId]=clamp(sess.ctx.mods[lId]-0.035*(1.2-teamComposure(matchDb,lId)),-0.08,0.05);sess.ctx.mods[wId]=clamp(sess.ctx.mods[wId]+0.015,-0.08,0.05);
   const mvp=gameMVP(r);
-  sess.games.push({n:sess.g,blue:cur.blue,red:cur.red,seed:cur.gseed,mods:cur.snap.mods,winner:wId,bans:r.draft.bans,sideBy:cur.chooser,sideWhy:cur.sc.why,firstPick:cur.fpTeam,kills:[r.sides[0].kills,r.sides[1].kills],dur:r.durationStr,duration:r.duration,picks:pk,mvp});
+  sess.games.push({n:sess.g,blue:cur.blue,red:cur.red,seed:cur.gseed,mods:cur.snap.mods,winner:wId,bans:r.draft.bans,sideBy:cur.chooser,sideWhy:cur.sc.why,selectionEvidence:recordedSelectionEvidence(cur.sc.evidence),firstPick:cur.fpTeam,kills:[r.sides[0].kills,r.sides[1].kills],dur:r.durationStr,duration:r.duration,picks:pk,mvp});
   sess.lines.push(...seriesResultLines(r,wId,mvp));sess.chooser=lId;sess.g++;sess.current=null;
   return {game:r,winner:wId,loser:lId,done:seriesSessionDone(sess),score:[sess.wins[sess.a],sess.wins[sess.b]]};
 }
@@ -2162,7 +2235,7 @@ function replayGame(db,rec,g){
   const keep={};for(const t in rec.tac){keep[t]=db.teams[t].tactics;db.teams[t].tactics=rec.tac[t]}
   const cur=db.patch; if(rec.patch&&rec.patch!==cur.id)db.patch=getPatch(db,rec.patch);
   const forced=rec.games.map(x=>({picks:[0,1].map(i=>Object.fromEntries(ROLES.map((r,j)=>[r,x.picks[i][j]]))),bans:x.bans||[[],[]]}));
-  try{return simulateSeries(db,rec.a,rec.b,rec.bestOf,rec.seed,{fearless:rec.fearless,firstChoice:rec.firstChoice,capture:g.n,forced,replay:true}).captured}
+  try{return simulateSeries(db,rec.a,rec.b,rec.bestOf,rec.seed,{fearless:rec.fearless,firstChoice:rec.firstChoice,capture:g.n,forced,selections:rec.games,replay:true}).captured}
   finally{for(const t in keep)db.teams[t].tactics=keep[t];db.patch=cur}
 }
 
@@ -2920,8 +2993,23 @@ const TRAIN_POINTS=100;
 function youthMul(age){return age<=18?1.4:age<=20?1.25:age<=22?1.1:age<=24?1:0.85}
 function growthCap(age){return age<=18?4.2:age<=20?3.5:age<=22?2.8:age<=24?2.1:age<=26?1.5:1.0}
 function defaultTraining(){return {mechanical:20,laning:20,combat:20,macro:20,mental:20,intensity:'normal'}}
+function normalizeTraining(plan){
+  const result=defaultTraining(),keys=Object.keys(ATTR_GROUPS);
+  for(const k of keys){const v=plan?.[k];result[k]=v!==null&&v!==''&&Number.isFinite(Number(v))?Math.round(clamp(Number(v),0,TRAIN_POINTS)):20}
+  const total=keys.reduce((s,k)=>s+result[k],0);
+  if(total>TRAIN_POINTS)for(const k of keys)result[k]=Math.floor(result[k]*TRAIN_POINTS/total);
+  if(['light','normal','high'].includes(plan?.intensity))result.intensity=plan.intensity;
+  return result;
+}
+function setTrainingAllocation(plan,key,value){
+  const result=normalizeTraining(plan);
+  if(!Object.hasOwn(ATTR_GROUPS,key))return result;
+  const others=Object.keys(ATTR_GROUPS).filter(k=>k!==key).reduce((s,k)=>s+result[k],0);
+  if(Number.isFinite(Number(value)))result[key]=Math.round(clamp(Number(value),0,TRAIN_POINTS-others));
+  return result;
+}
 function trainingIntensity(t){const x=t?.training?.intensity||'normal';return x==='light'?{growth:.9,fatigue:.45,condition:.25}:x==='high'?{growth:1.08,fatigue:1.35,condition:-.35}:{growth:1,fatigue:.8,condition:0}}
-function aiManageTraining(db,t){if(!t||t.id===managedTeamId(db))return;t.training=t.training||defaultTraining();t.training.intensity=trainingRecommendation(db,t).intensity}
+function aiManageTraining(db,t){if(!t||t.id===managedTeamId(db))return;t.training=normalizeTraining(t.training);t.training.intensity=trainingRecommendation(db,t).intensity}
 const FACILITY_TYPES=['training','analysis','recovery','youth','scouting'];
 const FACILITY_LABELS={training:'훈련',analysis:'데이터 분석',recovery:'회복',youth:'유소년 육성',scouting:'스카우팅'};
 function ensureFacilities(t){
@@ -3006,7 +3094,7 @@ function growPlayer(db,p,rng,games,champGames){
     practiceFactor=Math.max(.82,1-Math.min(280,p.medicalRestDays||0)*.00065);
   const room=clamp((p.pot-before)/10,-0.5,1.5), prof=p.personality.professionalism/100,ageShift=dev.peakAge-25;
   const coach=team?staffDevelopmentFor(team,p.role)/100:0.45, play=clamp(games/30,0,1);
-  const tr=team?team.training:defaultTraining(), intensity=trainingIntensity(team),conversionMul=roleConversionGrowthMultiplier(p),tsum=['mechanical','laning','combat','macro','mental'].reduce((a,k)=>a+(+tr[k]||0),0)||1;
+  const tr=normalizeTraining(team?.training), intensity=trainingIntensity(team),conversionMul=roleConversionGrowthMultiplier(p),tsum=['mechanical','laning','combat','macro','mental'].reduce((a,k)=>a+tr[k],0)||1;
   for(const g in ATTR_GROUPS){
     // 훈련 포인트는 총 100점 한도: 배분하지 않은 포인트는 버려진다 (나눠 쓰는 만큼만 효과)
     const base=ageCurve(p.age-ageShift,g), train=team?(Math.min(TRAIN_POINTS,tr[g])/TRAIN_POINTS*5-1)*0.9:-0.3;
@@ -3653,6 +3741,7 @@ function genTeam(db,rng,regionId,strength,o={}){
   for(const role of ROLES){const age=o.parent?rng.int(17,20):rng.int(18,27);genPlayer(db,rng,{role,age,base:tb+(age<20?-4:0),region:regionId,team:t.id})}
   for(let i=0;i<subs;i++){const age=rng.int(17,20);genPlayer(db,rng,{role:rng.pick(ROLES),age,base:tb-7,region:regionId,team:t.id})}
   initFinance(db,t,rng);t.roster.forEach(id=>signContract(db,db.players[id],t,marketSalary(db,db.players[id],regionId),rng.int(1,3)));
+  ensureClubLicense(db,t);
   return t;
 }
 function makeAcademy(db,rng,parent){
@@ -3688,6 +3777,7 @@ function createDiv2(db,rng,R){
     for(let i=0;i<n;i++)genTeam(db,rng,R.id,R.strength-8,{div:2});
   }
   if(R.policyMode==='engine'&&!R.policyLocks?.rosterRuleProfile)R.rosterRuleProfile=activeTeams(db,R.id,2).some(t=>t.parent)?'ENGINE_OWNED_RESERVE':'STANDARD_TIER1_2026';
+  for(const t of activeTeams(db,R.id))syncClubLicense(db,t,'tier2-structure-review');
 }
 function abolishDiv2(db,R){R.div2=false;for(const t of activeTeams(db,R.id,2))foldTeam(db,t);if(R.policyMode==='engine'&&!R.policyLocks?.rosterRuleProfile)R.rosterRuleProfile='STANDARD_TIER1_2026'}
 function reconcileTier2Structure(db,rng,R,ev=()=>{}){
@@ -3708,6 +3798,7 @@ function reconcileTier2Structure(db,rng,R,ev=()=>{}){
     }
   }
   if(R.policyMode==='engine'&&!R.policyLocks?.rosterRuleProfile)R.rosterRuleProfile=activeTeams(db,R.id,2).some(t=>t.parent)?'ENGINE_OWNED_RESERVE':'STANDARD_TIER1_2026';
+  for(const t of activeTeams(db,R.id))syncClubLicense(db,t,'tier2-structure-review');
 }
 function markFranchised(db,R){const ts=activeTeams(db,R.id,1).sort((a,b)=>(b.fans||0)-(a.fans||0));ts.forEach((t,i)=>t.franchised=i<Math.ceil(ts.length/2))}
 function deriveRegionPayScale(R){
@@ -3766,6 +3857,7 @@ function buildWorld(cfg){
   for(const r of cfg.regions) addRegion(db,rng,r);
   for(const t of activeTeams(db))ensureTeamStaff(db,t,rng);genStaffPool(db,rng)
   prepareFirstSeasonFreeAgency(db);
+  syncCompetitionLicenses(db,'initial-office-approval');
   return db;
 }
 function managedTeamId(db){return db.manager&&db.manager.teamId||null}
@@ -4067,6 +4159,7 @@ function ensureEven(db,rng,ev){
     if(R.div2&&R.system==='franchise'){for(const t of activeTeams(db,R.id,1))if(!activeTeams(db,R.id,2).some(a=>a.parent===t.id))makeAcademy(db,rng,t)}
     R.teams=activeTeams(db,R.id,1).length;
   }
+  syncCompetitionLicenses(db,'office-structure-review');
 }
 
 // ---- 영입 후보 / 관심 → 관찰 → 내부평가 ----
@@ -4129,8 +4222,10 @@ function runOffseason(db){
   rep.contractWindow=settleOffseasonContractRollover(db,rep);
   setWorldCalendarDate(db,medicalRolloverDate);
   if(f>0){
+    const successionCount=db.global?.regionHistory?.length||0;
     officeDecisions(db,rng,f,ev);
     globalOffice(db,w,rng,f,ev);
+    if((db.global?.regionHistory?.length||0)!==successionCount)aiChooseLocalEligibility(db);
   }
   ensureEven(db,rng,ev);
   rep.rookies=[];rep.rookieGlobal=rookieGlobalCohort(db);
@@ -4201,7 +4296,7 @@ function promotionRelegation(db,w,rng,ev){
         .filter(t=>promotionEligible(db,t)).slice(0,k):[];
     down.forEach((tid,i)=>{
       const t=db.teams[tid];
-      if(up[i]){const u=db.teams[up[i]];t.division=2;u.division=1;u.franchised=false;u.license='open';t.fans=Math.round((t.fans||20)*0.8);u.fans=Math.round((u.fans||10)+8);ev(`${R.leagueName} 승강: ${u.name} 승격 ↔ ${t.name} 강등`)}
+      if(up[i]){const u=db.teams[up[i]];ensureClubLicense(db,t);ensureClubLicense(db,u);t.division=2;u.division=1;u.franchised=false;u.license='open';syncClubLicense(db,t,'relegation');syncClubLicense(db,u,'promotion');t.fans=Math.round((t.fans||20)*0.8);u.fans=Math.round((u.fans||10)+8);ev(`${R.leagueName} 승강: ${u.name} 승격 ↔ ${t.name} 강등`)}
       else{foldTeam(db,t);const nt=genTeam(db,rng,R.id,R.strength-3);if(R.system==='mixed'){nt.franchised=false;nt.license='open'}ev(`${R.leagueName} 강등: ${t.name} → 신생팀 ${nt.name} 합류`)}
     });
     reconcileTier2Structure(db,rng,R,ev);
@@ -4360,6 +4455,9 @@ function normalizeRestoredSave(db){
   }
   for(const t of Object.values(db.teams)){
     ensureFacilities(t);
+    t.training=normalizeTraining(t.training);
+    ensureClubOwnership(t);
+    ensureClubLicense(db,t);
     delete t._pre;
   }
   for(const p of Object.values(db.players)){
@@ -4415,7 +4513,14 @@ function playerOriginRegion(p){return ensurePlayerEligibility(p)?.originRegion||
 function playerActiveLocalRegion(p){
   return p&&(p.activeLocalRegion||p.originLocalRegion||p.originRegion||p.region||p.nationality||null);
 }
-function isLocalPlayer(p,regionId){return !!p&&!!regionId&&playerActiveLocalRegion(p)===regionId}
+function legacyLocalForClub(p,regionId,teamId){
+  const c=p?.contract,owner=p?.loan?.ownerId||p?.team;
+  return !!c&&!!teamId&&(p.localEligibility?.legacyContracts||[]).some(q=>
+    q.region===regionId&&Array.isArray(q.teams)&&q.teams.includes(teamId)&&q.teams.includes(owner)&&
+    q.signed===c.signed&&q.until===c.until);
+}
+function isLocalPlayer(p,regionId,teamId=null){return !!p&&!!regionId&&
+  (playerActiveLocalRegion(p)===regionId||legacyLocalForClub(p,regionId,teamId))}
 function nonLocalLimitForTeam(db,t){
   const team=teamRef(db,t);if(!team)return FIRST_TEAM_NON_LOCAL_LIMIT;
   if((team.division||1)===1)return FIRST_TEAM_NON_LOCAL_LIMIT;
@@ -4423,19 +4528,19 @@ function nonLocalLimitForTeam(db,t){
 }
 function teamNonLocalCount(db,t,excludePid=null){
   const team=teamRef(db,t);if(!team)return 0;
-  return (team.roster||[]).reduce((n,id)=>{if(id===excludePid)return n;const p=db.players[id];return n+(p&&!isLocalPlayer(p,team.region)?1:0)},0);
+  return (team.roster||[]).reduce((n,id)=>{if(id===excludePid)return n;const p=db.players[id];return n+(p&&!projectedPlayerIsLocal(db,p,team)?1:0)},0);
 }
 function localRegistrationError(db,t,p){
   const team=teamRef(db,t),player=playerRef(db,p);if(!team||!player)return '등록 대상을 찾을 수 없습니다';
-  if(projectedPlayerLocal(db,player)===team.region)return null;
+  if(projectedPlayerIsLocal(db,player,team))return null;
   if(officialRegistrationEnabled(db)){
     const ids=(team.registration?.players||[]).filter(id=>officialPlayerCanRepresent(db,db.players[id],team));
-    return ids.includes(player.id)||ids.filter(id=>projectedPlayerLocal(db,db.players[id])!==team.region).length<nonLocalLimitForTeam(db,team)
+    return ids.includes(player.id)||ids.filter(id=>!projectedPlayerIsLocal(db,db.players[id],team)).length<nonLocalLimitForTeam(db,team)
       ?null:'공식 명단 비로컬 상한을 넘습니다';
   }
   if((team.roster||[]).includes(player.id))return null;
-  const reserved=loanOutgoingPlayers(db,team).filter(p=>p.id!==player.id&&projectedPlayerLocal(db,p)!==team.region).length,
-    foreign=team.roster.filter(id=>projectedPlayerLocal(db,db.players[id])!==team.region).length;
+  const reserved=loanOutgoingPlayers(db,team).filter(p=>p.id!==player.id&&!projectedPlayerIsLocal(db,p,team)).length,
+    foreign=team.roster.filter(id=>!projectedPlayerIsLocal(db,db.players[id],team)).length;
   return foreign+reserved>=nonLocalLimitForTeam(db,team)?'임대 복귀 인원 포함 비로컬 선수 등록 상한을 넘습니다':null;
 }
 function contractedMoveSeason(db){return db?.world?.year??db?.year}
@@ -4502,8 +4607,8 @@ function validateRosterPlan(db,t,plan){
     if(!officialRegistrationEnabled(db)&&reserved.length&&(counts[team.id]||0)+reserved.length>max)errors.push(team.name+': 임대 복귀 자리를 유지해야 합니다');
     if(!officialRegistrationEnabled(db)&&reserved.length){
       const foreign=base.filter(pid=>assign[pid]===team.id||!assign[pid]&&db.players[pid].team===team.id)
-        .filter(pid=>!isLocalPlayer(db.players[pid],team.region)).length+
-        reserved.filter(p=>!isLocalPlayer(p,team.region)).length;
+        .filter(pid=>!projectedPlayerIsLocal(db,db.players[pid],team)).length+
+        reserved.filter(p=>!projectedPlayerIsLocal(db,p,team)).length;
       if(foreign>nonLocalLimitForTeam(db,team))errors.push(team.name+': 임대 복귀 비로컬 자리를 유지해야 합니다');
     }
   }
@@ -4871,7 +4976,7 @@ function actionJournalTeamSnapshot(team){
   const hasRoster=Object.prototype.hasOwnProperty.call(team,'roster');
   return {
     team,hasDepth,hasFinance,hasRoster,
-    lifecycle:['active','folded'].map(key=>({key,
+    lifecycle:['active','folded','license','competitionLicense'].map(key=>({key,
       present:Object.prototype.hasOwnProperty.call(team,key),value:team[key]})),
     rosterRef:team.roster,roster:(team.roster||[]).slice(),
     depthRef:team.depthChart,depth:hasDepth?actionJournalClone(team.depthChart):null,
@@ -5120,6 +5225,7 @@ function officeDecisions(db,rng,f,ev,mid){
     for(const p of props){if(p.u<thr||done>=1)break;
       if(props.slice(0,props.indexOf(p)).some(q=>grp(q.key)===grp(p.key)))continue;
       const what=p.apply(); R.decisions=[...(R.decisions||[]),{year:db.world.year,key:grp(p.key),what,why:p.why,mid:!!mid}].slice(-12);
+      syncCompetitionLicenses(db,'regional-office-'+grp(p.key));
       ev(`${R.leagueName} 사무국${mid?' (시즌 중 점검)':''}: ${what} — ${p.why}`); done++; }
   }
 }
@@ -5208,7 +5314,8 @@ function worldDecisions(db,rng,f,ev){
     if(c.par){
       // 모리그에서 팬덤이 약한 구단 2곳이 새 리그로 이적 (연고 이전) — 모리그는 신규 창단으로 짝수 유지
       const mv=activeTeams(db,c.par.id,1).filter(t=>!t.franchised).sort((a,b)=>(a.fans||0)-(b.fans||0)).slice(0,activeTeams(db,c.par.id,1).length>=8?2:0);
-      for(const t of mv){t.region=id;t.division=1;activeTeams(db,c.par.id,2).filter(a=>a.parent===t.id).forEach(a=>foldTeam(db,a))}
+      for(const t of mv)moveClubForRegionReorganization(db,t,id,'regional-independence');
+      recordRegionSuccession(db,c.par.id,[c.par.id,id],'regional-independence');
       // 새 리그 팀 수는 짝수로 맞춘다
       const extra=activeTeams(db,id,1).length-cfg.teams; for(let k=0;k<extra;k++){const w=activeTeams(db,id,1).filter(t=>!mv.includes(t)).sort((a,b)=>(a.fans||0)-(b.fans||0))[0];if(w)foldTeam(db,w)}
       why=`${c.par.leagueName}에서 분리 독립 — ${mv.length?mv.map(t=>t.name).join(', ')+' 연고 이전, ':''}모리그 흥행 ${(c.par.metrics||[]).slice(-1)[0]?.hype??'-'}`;
@@ -5221,19 +5328,21 @@ function worldDecisions(db,rng,f,ev){
         // 권역의 모든 지역이 독립 → 모리그는 역할을 다하고 해체, 남은 구단은 팀 수가 적은 리그부터 나눠 합류, 진출권도 나눠 승계
         const rest=activeTeams(db,P.id,1).sort((a,b)=>(b.fans||0)-(a.fans||0)), got={};
         for(const t of rest){const dst=kids.map(k=>db.regions[k]).sort((a,b)=>activeTeams(db,a.id,1).length-activeTeams(db,b.id,1).length)[0];
-          t.region=dst.id;t.division=1;(got[dst.leagueName]=got[dst.leagueName]||[]).push(t.name)}
+          moveClubForRegionReorganization(db,t,dst.id,'parent-region-dissolution');(got[dst.leagueName]=got[dst.leagueName]||[]).push(t.name)}
         for(const t of activeTeams(db,P.id,2))foldTeam(db,t);
         const heirs=kids.map(k=>db.regions[k]).sort((a,b)=>b.strength-a.strength);
         for(let k=0;k<P.slots;k++)heirs[k%heirs.length].slots++;
         for(const k of kids)db.regions[k].parent=null;
+        recordRegionSuccession(db,P.id,kids,'parent-region-dissolution',true);
         delete db.regions[P.id];(db.global.dissolved=db.global.dissolved||[]).push(P.id);
         why+=` · 권역의 모든 지역이 독립해 ${P.leagueName} 해체 — 잔여 구단 분산(${Object.entries(got).map(([l,n])=>`${l}: ${n.length}팀`).join(', ')}), 진출권 ${P.slots}장 승계`;
       } else if(activeTeams(db,P.id,1).length<6){
         const rest=activeTeams(db,P.id,1);
-        for(const t of rest){t.region=id}
+        for(const t of rest)moveClubForRegionReorganization(db,t,id,'parent-region-dissolution');
         for(const t of activeTeams(db,P.id,2))foldTeam(db,t);
         R.slots=Math.max(R.slots,P.slots);
         for(const k of Object.keys(REGION_PRESETS))if(REGION_PRESETS[k].parent===P.id&&db.regions[k])db.regions[k].parent=null;
+        recordRegionSuccession(db,P.id,[id],'parent-region-dissolution',true);
         delete db.regions[P.id];
         why+=` · ${P.leagueName} 해체 — 잔여 ${rest.length}팀과 진출권 ${P.slots}장을 ${cfg.leagueName}이 승계`;
       }
@@ -5245,15 +5354,17 @@ function worldDecisions(db,rng,f,ev){
   if(lowE.length&&rng.chance(0.5*f)){ // 신흥 리그가 2년 연속 침체하면 모리그로 재통합
     const g=lowE[0], host=db.regions[g.parent];
     const ts=activeTeams(db,g.id,1).sort((a,b)=>(b.fans||0)-(a.fans||0)), keep=ts.slice(0,2);
-    for(const t of ts){if(keep.includes(t)){t.region=host.id;t.division=1}else foldTeam(db,t)}
+    for(const t of ts){if(keep.includes(t))moveClubForRegionReorganization(db,t,host.id,'regional-reintegration');else foldTeam(db,t)}
     for(const t of activeTeams(db,g.id))foldTeam(db,t);
+    recordRegionSuccession(db,g.id,[host.id],'regional-reintegration',true);
     delete db.regions[g.id];
     gev(`${g.leagueName} 해체 — ${host.leagueName}로 재통합 (${keep.map(t=>t.name).join(', ')} 합류)`,'2년 연속 흥행 침체');
   }
   const low=Object.values(db.regions).filter(R=>(R.metrics||[]).length>=2&&R.metrics.slice(-2).every(m=>m.hype<30)).sort((a,b)=>a.strength-b.strength);
   if(Object.keys(db.regions).length>=5&&low.length>=2&&low.every(R=>R.tier!=='major')&&rng.chance(0.4*f)){
     const [A,B]=low, host=A.strength>=B.strength?A:B, gone=host===A?B:A;
-    for(const t of activeTeams(db,gone.id)){t.region=host.id;t.division=1;t.parent=null}
+    for(const t of activeTeams(db,gone.id))if(t.region===gone.id)moveClubForRegionReorganization(db,t,host.id,'regional-merger');
+    recordRegionSuccession(db,gone.id,[host.id],'regional-merger',true);
     const old=host.leagueName;host.leagueName=`${host.name}·${gone.name} 연합 리그`;host.name=`${host.name}·${gone.name}`;host.slots=Math.min(4,host.slots+1);
     delete db.regions[gone.id];
     gev(`리그 통합: ${old} + ${gone.leagueName} → ${host.leagueName}`,'두 지역 모두 2년 연속 흥행 침체');
@@ -5267,7 +5378,8 @@ function worldDecisions(db,rng,f,ev){
   for(const t of activeTeams(db).filter(t=>!t.parent)){
     const R=db.regions[t.region], s=teamStrength(db,t.id);
     const p=(.004+(t.fans>=45&&s<R.strength-3?.018:0)+(t.fans<12?.015:0))*f;
-    if(rng.chance(p)){const old=t.name,on=orgName(db,rng);t.name=on.name;t.formerNames=[...(t.formerNames||[]),old];t.fans=Math.round(t.fans*0.85);
+    if(rng.chance(p)){const old=t.name,on=orgName(db,rng),ownerRng=new RNG(worldSimulationSeed(db)+'/'+db.year+'/'+t.id+'/'+(t.ownershipSerial||0),'ownership');
+      transferClubOwnership(db,t,{name:on.name,wealth:ownerRng.int(30,95),reason:'office-approved-acquisition'});t.fans=Math.round(t.fans*0.85);
       ev(`구단 인수: ${old} → ${t.name} (${t.fans>=45?'인기 구단 매각':'저조한 팬덤으로 매각'})`)}
   }
 }
@@ -5319,6 +5431,116 @@ function globalOffice(db,w,rng,f,ev){
   worldDecisions(db,rng,f,ev);
 }
 
+/* ==== FILE: club-ownership.js ==== */
+// Acquisition changes the owner of an existing club, preserving its license,
+// registration, employment contracts and historical results under the same ID.
+function ensureClubOwnership(t){
+  t.ownershipSerial=Number.isInteger(t.ownershipSerial)&&t.ownershipSerial>=0?t.ownershipSerial:0;
+  t.owner=t.owner||{wealth:50};
+  t.owner.id=t.owner.id||t.id+':owner:'+t.ownershipSerial;
+  t.owner.name=t.owner.name||t.name+' 운영법인';
+  t.ownershipHistory=t.ownershipHistory||[];
+  return t.owner;
+}
+function transferClubOwnership(db,t,{name,wealth,reason,year=db.year}){
+  if(!t||t.active===false||t.parent||typeof name!=='string'||!name.trim()||!Number.isFinite(wealth))
+    throw new Error('구단 인수 조건이 올바르지 않습니다');
+  const oldName=t.name,previous={...ensureClubOwnership(t)};
+  ensureClubLicense(db,t);
+  for(const reserve of reserveTeamsOf(db,t))ensureClubLicense(db,reserve);
+  t.ownershipSerial++;
+  t.name=name.trim();t.formerNames=[...(t.formerNames||[]),oldName];
+  t.owner={id:t.id+':owner:'+t.ownershipSerial,name:t.name+' 운영법인',
+    wealth:Math.round(clamp(wealth,10,95)),patience:2};
+  const record={year,date:db.worldDate,clubId:t.id,continuity:'same-club',
+    region:t.region,division:t.division||1,license:t.license||(t.franchised?'franchise':'open'),
+    previousName:oldName,name:t.name,previousOwner:previous,owner:{...t.owner},reason};
+  t.ownershipHistory.push(record);
+  syncClubLicense(db,t,reason);
+  for(const reserve of reserveTeamsOf(db,t))syncClubLicense(db,reserve,reason);
+  return record;
+}
+
+/* ==== FILE: club-license.js ==== */
+function clubLicenseState(db,t){
+  const R=db.regions[t.region],parent=t.parent&&db.teams[t.parent];
+  const owner=ensureClubOwnership(parent||t);
+  const division=t.division||1,status=t.active===false?'returned':'approved';
+  const kind=t.parent?'reserve':division===2?'open':R?.system==='franchise'?'franchise':
+    R?.system==='mixed'&&t.franchised?'certified':'open';
+  return {region:t.region,division,parent:t.parent||null,kind,status,holder:owner.id};
+}
+function ensureClubLicense(db,t){
+  if(!t.competitionLicense)t.competitionLicense={id:t.id+':license',clubId:t.id,
+    current:clubLicenseState(db,t),history:[]};
+  return t.competitionLicense;
+}
+function syncClubLicense(db,t,reason){
+  const previous=ensureClubLicense(db,t),current=clubLicenseState(db,t);
+  t.license=current.kind;
+  if(JSON.stringify(previous.current)===JSON.stringify(current))return previous;
+  const event={year:db.year,date:db.worldDate,reason,previous:previous.current,current};
+  // Replace the record so action rollback can restore its untouched predecessor.
+  t.competitionLicense={...previous,current,history:[...previous.history,event]};
+  return t.competitionLicense;
+}
+function syncCompetitionLicenses(db,reason){
+  for(const t of Object.values(db.teams))syncClubLicense(db,t,reason);
+}
+
+/* ==== FILE: region-continuity.js ==== */
+// Office-directed reorganization preserves the legal club and employment
+// organization. A reserve cannot become an independent first team by relocation.
+function moveClubForRegionReorganization(db,t,destination,reason){
+  if(!t||t.active===false||!db.regions[destination])throw Error('지역 개편 대상이 올바르지 않습니다');
+  const clubs=[t,...activeTeams(db).filter(a=>a.parent===t.id)],from=t.region;
+  if(from===destination)return [];
+  const records=[];
+  for(const club of clubs){
+    ensureClubLicense(db,club);
+    const previous=club.region;
+    for(const pid of [...(club.roster||[]),...loanOutgoingPlayers(db,club).map(p=>p.id)]){
+      const p=db.players[pid];if(!p||!p.contract||!isLocalPlayer(p,previous,club.id))continue;
+      ensurePlayerEligibility(p);
+      const rows=p.localEligibility.legacyContracts=p.localEligibility.legacyContracts||[];
+      if(!rows.some(q=>q.region===destination&&q.signed===p.contract.signed&&q.until===p.contract.until&&q.teams.includes(club.id)))
+        rows.push({region:destination,teams:clubs.map(x=>x.id),signed:p.contract.signed,until:p.contract.until,source:previous});
+    }
+    club.region=destination;
+    if(club.parent)club.division=2;
+    if((club.division||1)===2)db.regions[destination].div2=true;
+    const record={year:db.year,date:db.worldDate,clubId:club.id,continuity:'same-club',
+      from:previous,to:destination,division:club.division||1,parent:club.parent||null,reason};
+    club.regionHistory=[...(club.regionHistory||[]),record];records.push(record);
+    syncClubLicense(db,club,reason);
+  }
+  return records;
+}
+function recordRegionSuccession(db,source,successors,reason,retired=false){
+  const region=db.regions[source],ids=Array.from(new Set(successors));
+  if(!region||!ids.length||ids.some(id=>!db.regions[id]))throw Error('후속 지역이 올바르지 않습니다');
+  db.global=db.global||{};
+  const record={year:db.year,date:db.worldDate,source,successors:ids,reason,retired,
+    previousName:region.name,previousLeagueName:region.leagueName};
+  db.global.regionHistory=[...(db.global.regionHistory||[]),record];
+  for(const id of ids)if(id!==source)db.regions[id].predecessors=Array.from(new Set([...(db.regions[id].predecessors||[]),source]));
+  const season=localChoiceSeason(db);
+  for(const p of Object.values(db.players)){
+    if(p.retired)continue;ensurePlayerEligibility(p);const e=p.localEligibility;
+    const service=e.service,successor=p.team&&db.teams[p.team]?.region;
+    if(service?.region===source&&successor!==source&&ids.includes(successor))service.region=successor;
+    else if(retired&&ids.length===1&&service?.region===source)service.region=ids[0];
+    const origin=(e.successorOrigin||p.originLocalRegion)===source,earned=e.qualifications[source];
+    if(!origin&&playerActiveLocalRegion(p)!==source&&(!earned||earned.expiresAfter<season))continue;
+    for(const id of ids)if(id!==source&&(!e.qualifications[id]||origin))e.qualifications[id]={
+      ...(e.qualifications[id]||{}),
+      successorOf:source,successorRoot:earned?.successorRoot||source,
+      originSuccessor:origin||!!earned?.originSuccessor,earnedYear:db.year,availableFrom:season,
+      expiresAfter:origin?9999:Math.max(season,earned?.expiresAfter??season+localServicePolicy(db,source).choiceYears)};
+  }
+  return record;
+}
+
 /* ==== FILE: finance.js ==== */
 // ===== LOL GM: Club finance / economy domain (unit: 100M KRW) =====
 const money=v=>(Math.round(v*10)/10).toFixed(1)+'억';
@@ -5328,6 +5550,7 @@ function psTeam(db,t){return psOf(db,t.region)*((t.division||1)===2?0.35:1)}
 function initFinance(db,t,rng){
   const ps=psTeam(db,t);
   t.owner=t.owner||{wealth:Math.round(clamp(rng.normal(55,18),10,95))};
+  ensureClubOwnership(t);
   t.facility=t.facility||clamp(Math.round(1+t.owner.wealth/30),1,4);ensureFacilities(t);
   t.finance=t.finance||{cash:Math.round((25+rng.range(0,35))*ps*10)/10,history:[],buyout:0};
 }
@@ -5625,8 +5848,7 @@ function closeFinances(db,w,rng,ev){
     const losses=f.history.slice(-2).filter(y=>y.net<0).length;
     if(f.cash<-12*psTeam(db,row.t)&&losses>=2){
       const old=row.t.name,renamed=orgName(db,rng),before=f.cash;
-      row.t.name=renamed.name;row.t.formerNames=[...(row.t.formerNames||[]),old];
-      row.t.owner={wealth:Math.round(clamp(rng.normal(65,15),30,95))};
+      transferClubOwnership(db,row.t,{name:renamed.name,wealth:Math.round(clamp(rng.normal(65,15),30,95)),reason:'financial-recapitalization',year:w.year});
       f.cash=round(25*psTeam(db,row.t));row.t.fans=Math.round((row.t.fans||30)*.88);
       // Equity recapitalization is a capital movement, not an operating profit.
       const year=f.history.at(-1);
@@ -5791,7 +6013,7 @@ function contractYearsForPlayer(db,p,rng,t=null){
 
 function eligibleFillFAs(db,t,role=null){
   const room=Math.max(0,nonLocalLimitForTeam(db,t)-teamNonLocalCount(db,t));
-  return Object.values(db.players).filter(p=>!p.retired&&!p.team&&(!role||p.role===role)&&(isLocalPlayer(p,t.region)||room>0))
+  return Object.values(db.players).filter(p=>!p.retired&&!p.team&&(!role||p.role===role)&&(projectedPlayerIsLocal(db,p,t)||room>0))
     .sort((a,b)=>(pFillScore(db,b,t)-pFillScore(db,a,t)));
 }
 function aiMarketObservation(db,p,t){
@@ -5800,7 +6022,7 @@ function aiMarketObservation(db,p,t){
   return aiScoutReport(db,t,p);
 }
 function aiMarketValue(db,p,t){const est=aiMarketObservation(db,p,t),up=Math.max(0,est.potential-est.ability),w={'win-now':0.1,'youth':0.6,'balanced':0.3,'superstar':0.15,'cost':0.35}[t.philosophy]||0.3;return est.ability+up*w-(t.philosophy==='youth'&&p.age>26?2:0)-medicalContractRisk(db,p)*18}
-function pFillScore(db,p,t){const domestic=isLocalPlayer(p,t.region)?2:0,age=p.age<=21?1:0,cost=Math.min(4,asking(db,p,t.region)/Math.max(.2,psOf(db,t.region)));return aiMarketValue(db,p,t)+domestic+age-cost*.15}
+function pFillScore(db,p,t){const domestic=projectedPlayerIsLocal(db,p,t)?2:0,age=p.age<=21?1:0,cost=Math.min(4,asking(db,p,t.region)/Math.max(.2,psOf(db,t.region)));return aiMarketValue(db,p,t)+domestic+age-cost*.15}
 function optionDecision(db,p,t){
   const o=p.contract&&p.contract.option;if(!o||o.year!==db.year)return false;
   const next={...p.contract,salary:o.salary,years:1,signingBonus:0,bonuses:p.contract.bonuses||{},option:null,promisedRole:p.contract.promisedRole||p.rosterRole};
@@ -5831,7 +6053,7 @@ function aiMarketOfferCandidates(db,t,fas,role,budgetRoom,year=db.year){
     cv=cur?playerValue(db,cur,t):-99,importGap=R.importRecruitMinGap??3,
     imports=teamNonLocalCount(db,t);
   return fas.filter(p=>p.role===role&&
-      (isLocalPlayer(p,t.region)||(playerOvr(p)>=R.strength+importGap&&
+      (projectedPlayerIsLocal(db,p,t)||(playerOvr(p)>=R.strength+importGap&&
         imports<nonLocalLimitForTeam(db,t))))
     .map(p=>({p,v:aiMarketValue(db,p,t),ask:asking(db,p,t.region)}))
     .filter(x=>x.ask<=budgetRoom&&
@@ -5929,7 +6151,7 @@ function contractMarket(db,rng,rep,ev){
       if(!signed.ok)continue;
       if(best.o.mine)w.marketLog.push(`${p.name}: ${best.o.t.id===mine?'영입 성공':'다른 구단 선택'}`);
       budgetLeft[t.id]-=best.o.sal;
-      rep.signings.push({pid:p.id,team:t.id,salary:best.o.sal,years:yrs,rookie:p.age<=19&&!p.career.length,import:!isLocalPlayer(p,t.region),offers:os.length,out:null});
+      rep.signings.push({pid:p.id,team:t.id,salary:best.o.sal,years:yrs,rookie:p.age<=19&&!p.career.length,import:!projectedPlayerIsLocal(db,p,t),offers:os.length,out:null});
       if(t.roster.length>size+1){const bench=t.roster.map(id=>db.players[id]).filter(x=>x!==p&&!x.contract?.medicalReplacement&&starterFor(db,t,x.role)!==x).sort((a,b)=>playerValue(db,a,t)-playerValue(db,b,t))[0];
         if(bench){release(t,bench);rep.signings[rep.signings.length-1].out=bench.id}}
       else if(prev)rep.signings[rep.signings.length-1].out=null;
@@ -6223,7 +6445,7 @@ function aiScoutUncertainty(db,t,p,k,stale=0){
 }
 function aiPublicMarketObservation(db,p,t){
   const perf=recentMarketPerformance(db,p),sample=Math.min(30,perf.games),
-    foreign=!isLocalPlayer(p,t.region),uncertainty=(foreign?5:3)+(sample<6?3:sample<15?1.5:0),
+    foreign=!isLocalPlayer(p,t.region,t.id),uncertainty=(foreign?5:3)+(sample<6?3:sample<15?1.5:0),
     noise=((hashStr(t.id+'|'+p.id+'|'+db.year+'|public')%2001)/1000-1),
     performance=(perf.rating-6.5)*4+Math.min(3,perf.intl*.08)+Math.min(3,perf.titles*.8),
     ability=Math.round(clamp((p.reputation??60)+performance+noise*uncertainty,20,99)),
@@ -6235,7 +6457,7 @@ function aiPublicMarketObservation(db,p,t){
 }
 function initialAiMarketDossierSignal(db,p,t){
   const perf=recentMarketPerformance(db,p),sample=Math.min(30,perf.games),
-    foreign=!isLocalPlayer(p,t.region),
+    foreign=!isLocalPlayer(p,t.region,t.id),
     uncertainty=(foreign?4.5:2.5)+(sample<6?3:sample<15?1.5:0),
     n=((hashStr(t.id+'|'+p.id+'|'+db.year+'|ability')%2001)/1000-1),
     ability=Math.round(clamp(playerOvr(p)+n*uncertainty,20,99)),
@@ -6358,7 +6580,7 @@ function aiScoutingPublicFit(db,t,p){
     star=t.philosophy==='superstar'&&p.reputation>=78?4:0,
     winNow=t.philosophy==='win-now'?Math.max(0,view.ability-68)*.15:0,
     info=Math.min(4,view.uncertainty*.35),
-    local=isLocalPlayer(p,t.region)?1.5:0;
+    local=isLocalPlayer(p,t.region,t.id)?1.5:0;
   return view.ability+Math.max(0,view.potential-view.ability)*
     (t.philosophy==='youth'?.45:.18)+need+youth+star+winNow+info+local;
 }
@@ -8044,15 +8266,22 @@ function projectedPlayerLocal(db,p){
   return ['offseason','market'].includes(db.world?.phase)&&pending?.season===localChoiceSeason(db)
     ?pending.region:playerActiveLocalRegion(p);
 }
+function projectedPlayerIsLocal(db,p,t){return !!p&&!!t&&
+  (projectedPlayerLocal(db,p)===t.region||legacyLocalForClub(p,t.region,t.id))}
 function localChoiceOptions(db,p){
-  const season=localChoiceSeason(db),e=p.localEligibility||{},options=[p.originLocalRegion||playerActiveLocalRegion(p)];
+  const season=localChoiceSeason(db),e=p.localEligibility||{},options=[e.successorOrigin||p.originLocalRegion||playerActiveLocalRegion(p)];
   for(const [rid,q] of Object.entries(e.qualifications||{}))
     if(q?.availableFrom<=season&&q.expiresAfter>=season)options.push(rid);
-  return Array.from(new Set(options)).filter(rid=>rid&&rid!==playerActiveLocalRegion(p));
+  return Array.from(new Set(options)).filter(rid=>db.regions[rid]&&
+    (rid!==playerActiveLocalRegion(p)||e.qualifications[rid]?.originSuccessor&&e.successorOrigin!==rid));
 }
 function validateStoredLocalService(db){
   for(const p of Object.values(db.players)){
     const e=p.localEligibility,s=e?.service,q=e?.pending;
+    if(e?.legacyContracts&&(!Array.isArray(e.legacyContracts)||e.legacyContracts.some(row=>
+      !row||typeof row.region!=='string'||!Array.isArray(row.teams)||row.teams.some(id=>typeof id!=='string')||
+      !Number.isInteger(row.until)||(row.signed!==undefined&&!Number.isInteger(row.signed)))))
+      throw Error('지역 개편 계약 로컬 보호 데이터가 손상되었습니다');
     if(s&&(!Number.isFinite(s.days)||s.days<0||!Array.isArray(s.seasons)||
       s.seasons.some(y=>!Number.isInteger(y))||!s.rule||!Number.isInteger(s.rule.seasons)||s.rule.seasons<1||
       !Number.isInteger(s.rule.days)||s.rule.days<0||!Number.isInteger(s.rule.choiceYears)||s.rule.choiceYears<1||
@@ -8070,12 +8299,15 @@ WORLD_ACTION_HANDLERS['player.local-choice']={
     if(a.actor==='system')return worldActionError('unauthorized','시스템이 로컬 선택을 강제할 수 없습니다');
     if(t){const auth=playerActionAuthority(db,a.actor,t);if(auth)return auth}
     else if(a.actor!=='ai')return worldActionError('unauthorized','무소속 선수의 결정은 선수가 직접 합니다');
-    const willing=t?.region===a.region||a.region===p.originLocalRegion&&
+    const qualification=p.localEligibility?.qualifications?.[a.region],successor=qualification?.successorOf,
+      willing=successor&&[successor,qualification.successorRoot].some(source=>
+        [p.localEligibility?.successorOrigin||p.originLocalRegion,playerActiveLocalRegion(p)].includes(source))||
+      t?.region===a.region||a.region===(p.localEligibility?.successorOrigin||p.originLocalRegion)&&
       (p.careerGoal==='stability'||(p.personality?.ambition??50)<50);
     if(!willing)return worldActionError('player_consent','선수가 현재 커리어와 맞지 않는 로컬 전환을 거절했습니다');
     if(t&&a.region!==t.region){
-      const count=t.roster.filter(id=>id!==p.id&&projectedPlayerLocal(db,db.players[id])!==t.region).length+
-        loanOutgoingPlayers(db,t).filter(x=>projectedPlayerLocal(db,x)!==t.region).length;
+      const count=t.roster.filter(id=>id!==p.id&&!projectedPlayerIsLocal(db,db.players[id],t)).length+
+        loanOutgoingPlayers(db,t).filter(x=>!projectedPlayerIsLocal(db,x,t)).length;
       if(count>=nonLocalLimitForTeam(db,t))return worldActionError('registration_limit','다음 시즌 비로컬 자리를 확보해야 합니다');
     }
     return {ok:true,pid:p.id,teamId:p.team||null,region:a.region,season:localChoiceSeason(db)};
@@ -8090,6 +8322,14 @@ function activateLocalChoices(db,year){
   for(const p of Object.values(db.players)){
     const e=p.localEligibility,q=e?.pending;if(!q||q.season>year)continue;
     const previous=playerActiveLocalRegion(p);
+    const qualification=e.qualifications[q.region];
+    if(qualification?.successorOf){
+      const source=qualification.successorOf;
+      if(qualification.originSuccessor||source===(e.successorOrigin||p.originLocalRegion))e.successorOrigin=q.region;
+      for(const [rid,entry] of Object.entries(e.qualifications))if(entry.successorOf===source||
+        qualification.successorRoot&&entry.successorRoot===qualification.successorRoot)delete e.qualifications[rid];
+      e.successorChoices=[...(e.successorChoices||[]),{year,source,region:q.region}];
+    }
     if(previous!==p.originLocalRegion)delete e.qualifications[previous];
     p.activeLocalRegion=q.region;e.active=q.region;delete e.pending;
     if(e.service&&e.service.region===previous&&previous!==q.region){
@@ -8100,7 +8340,10 @@ function activateLocalChoices(db,year){
 }
 function aiChooseLocalEligibility(db){
   for(const p of Object.values(db.players)){
-    const t=p.team&&db.teams[p.team];if(!t||p.retired||playerActionAuthority(db,'ai',t))continue;
+    const t=p.team&&db.teams[p.team];if(p.retired||t&&playerActionAuthority(db,'ai',t))continue;
+    if(!t){const options=localChoiceOptions(db,p).filter(rid=>p.localEligibility?.qualifications[rid]?.successorOf);
+      if(options.length&&p.localEligibility?.pending?.region!==options[0])commitWorldAction(db,{type:'player.local-choice',actor:'ai',pid:p.id,region:options[0]});continue;}
+    if(p.localEligibility?.pending?.region===t.region&&p.localEligibility.pending.season===localChoiceSeason(db))continue;
     if(localChoiceOptions(db,p).includes(t.region))commitWorldAction(db,{type:'player.local-choice',actor:'ai',pid:p.id,region:t.region});
   }
 }
@@ -8120,7 +8363,7 @@ function initialOfficialRoster(db,t){
   const preferred=Array.from(new Set([...ROLES.map(r=>t.depthChart?.[r]),...candidates])).filter(id=>candidates.includes(id));
   for(const id of preferred){const p=db.players[id];
     if(selected.length>=officialRosterCap(db,t))break;
-    if(!isLocalPlayer(p,t.region)&&selected.filter(x=>!isLocalPlayer(db.players[x],t.region)).length>=limit)continue;
+    if(!isLocalPlayer(p,t.region,t.id)&&selected.filter(x=>!isLocalPlayer(db.players[x],t.region,t.id)).length>=limit)continue;
     selected.push(id);
   }
   return selected;
@@ -8167,7 +8410,7 @@ function officialRegistrationErrors(db,t,players,proposed={}){
   if(new Set(players).size!==players.length)errors.push('같은 선수를 중복 등록할 수 없습니다');
   if(players.length<5||players.length>officialRosterCap(db,t))errors.push('공식 명단은 5~'+officialRosterCap(db,t)+'명이어야 합니다');
   if(players.some(id=>!officialPlayerCanRepresent(db,db.players[id],t)))errors.push('계약 또는 임대 권한이 없는 선수가 포함되었습니다');
-  if(players.filter(id=>!isLocalPlayer(db.players[id],t.region)).length>nonLocalLimitForTeam(db,t))errors.push('공식 명단 비로컬 상한을 넘었습니다');
+  if(players.filter(id=>!isLocalPlayer(db.players[id],t.region,t.id)).length>nonLocalLimitForTeam(db,t))errors.push('공식 명단 비로컬 상한을 넘었습니다');
   for(const other of activeTeams(db))if(other.id!==t.id&&
     (proposed[other.id]||other.registration?.players||[]).some(id=>players.includes(id)&&officialPlayerCanRepresent(db,db.players[id],other)))
     errors.push('다른 공식 스쿼드에 등록된 선수는 먼저 등록 해제해야 합니다');
@@ -8306,7 +8549,7 @@ function officialMedicalReplacementAllowed(db,t,injured,p){
     other.registration.players.filter(id=>id!==p.id&&officialPlayerCanRepresent(db,db.players[id],other)&&
       !medicalOut(db.players[id])).length<5))return false;
   return lists.every(ids=>ids.includes(injured.id)&&ids.length<officialRosterCap(db,t)&&
-    (isLocalPlayer(p,t.region)||ids.filter(id=>!isLocalPlayer(db.players[id],t.region)).length<nonLocalLimitForTeam(db,t)));
+    (isLocalPlayer(p,t.region,t.id)||ids.filter(id=>!isLocalPlayer(db.players[id],t.region,t.id)).length<nonLocalLimitForTeam(db,t)));
 }
 function registerMedicalOfficialReplacement(db,t,injured,p){
   if(!officialRegistrationEnabled(db))return;
@@ -8498,6 +8741,7 @@ function clubClosureSnapshot(db,c){
     teams:c.financeTeamIds.map(id=>{
       const t=db.teams[id];
       return {id,active:t?.active,parent:t?.parent||null,roster:t?.roster,
+        license:t?.competitionLicense?.current,owner:t?.owner?.id,
         finance:t?.finance,players:(t?.roster||[]).map(pid=>({pid,
           team:db.players[pid]?.team,contract:db.players[pid]?.contract}))};
     }),negotiations:c.negotiationIds.map(id=>w?.negotiations?.[id]),
@@ -8514,7 +8758,8 @@ function applyClubClosure(db,c){
       applyPlayerReleaseAction(db,{pid,teamId:id,mode:'club_closure',actor:'system'});
     const funding=plan.changes.find(row=>row.teamId===id).funding,
       settlement=settleClubClosureFinance(t,db.year,db.worldDate||null,funding);
-    t.active=false;t.folded=db.year;
+    ensureClubLicense(db,t);t.active=false;t.folded=db.year;
+    syncClubLicense(db,t,'club-closure');
     settlements.push({teamId:id,...settlement});
   }
   for(const id of c.negotiationIds){
@@ -9289,7 +9534,7 @@ function promotionStatus(db,t){
 function setupTeamsForManager(db){const root=managedTeam(db);if(!root)return [];return root.parent?[root]:[root,...reserveTeamsOf(db,root)]}
 function initialPayrollFloorKey(db,team){const lim=initialSquadLimits(db,team);return [team.region,lim.min,nonLocalLimitForTeam(db,team)].join('|')}
 function cheapestInitialRows(db,team){
-  const rows=Object.values(db.players).filter(p=>!p.retired&&!p.team).map(p=>({id:p.id,s:asking(db,p,team.region),nonLocal:!isLocalPlayer(p,team.region)}));
+  const rows=Object.values(db.players).filter(p=>!p.retired&&!p.team).map(p=>({id:p.id,s:asking(db,p,team.region),nonLocal:!projectedPlayerIsLocal(db,p,team)}));
   return {local:rows.filter(x=>!x.nonLocal).sort((a,b)=>a.s-b.s),foreign:rows.filter(x=>x.nonLocal).sort((a,b)=>a.s-b.s)};
 }
 function minimumViableInitialPayroll(db,t){
@@ -9340,7 +9585,7 @@ function initialOfferCheck(db,p,target,terms={}){
   const player=playerRef(db,p),team=teamRef(db,target);if(!player||player.retired)return {ok:false,reason:'계약할 수 없는 선수입니다'};if(player.team)return {ok:false,reason:'이미 소속팀이 있는 선수입니다'};if(!team||team.active===false)return {ok:false,reason:'대상 팀이 없습니다'};
   const limits=initialSquadLimits(db,team);if((team.roster||[]).length>=limits.max)return {ok:false,reason:'스쿼드 최대 '+limits.max+'명입니다'};
   const root=parentTeamOf(db,team),rules=rosterRulesForTeam(db,root);if(root&&reserveTeamsOf(db,root).length&&organizationRoster(db,root).length>=rules.integratedMax)return {ok:false,reason:'통합 로스터 최대 '+rules.integratedMax+'명입니다'};
-  const imports=teamNonLocalCount(db,team),cap=nonLocalLimitForTeam(db,team);if(!isLocalPlayer(player,team.region)&&imports>=cap)return {ok:false,reason:'비로컬 등록 한도에 도달했습니다'};
+  const imports=teamNonLocalCount(db,team),cap=nonLocalLimitForTeam(db,team);if(!projectedPlayerIsLocal(db,player,team)&&imports>=cap)return {ok:false,reason:'비로컬 등록 한도에 도달했습니다'};
   const salary=Math.max(.1,+terms.salary||asking(db,player,team.region)),projected=payroll(db,team)+salary,ceiling=initialSalaryCeiling(db,team);if(projected>ceiling+0.001)return {ok:false,reason:'연봉 예산을 초과합니다'};
   return {ok:true,salary};
 }
@@ -9370,7 +9615,7 @@ function initialMarketSnapshot(db,teams){
 function initialCheapestCost(rows,excludeId,n){if(n<=0)return 0;let cost=0,count=0;for(const x of rows){if(x.id===excludeId)continue;cost+=x.s;if(++count>=n)break}return count===n?cost:Infinity}
 function initialFutureFeasible(db,t,candidate,salary,snap=null){
   const team=teamRef(db,t),lim=initialSquadLimits(db,team),projected=(team.roster||[]).length+1,need=Math.max(0,lim.min-projected);
-  const usedImports=teamNonLocalCount(db,team)+(isLocalPlayer(candidate,team.region)?0:1),cap=nonLocalLimitForTeam(db,team),budget=initialSalaryCeiling(db,team)-payroll(db,team)-salary;
+  const usedImports=teamNonLocalCount(db,team)+(projectedPlayerIsLocal(db,candidate,team)?0:1),cap=nonLocalLimitForTeam(db,team),budget=initialSalaryCeiling(db,team)-payroll(db,team)-salary;
   if(projected>lim.max||usedImports>cap||budget<-.001)return false;if(!need)return true;
   const market=snap||initialMarketSnapshot(db,[team]),rows=market.byRegion[team.region],room=cap-usedImports;let best=Infinity;
   for(let foreignN=0;foreignN<=Math.min(room,need);foreignN++){const localN=need-foreignN,cost=initialCheapestCost(rows.local,candidate.id,localN)+initialCheapestCost(rows.foreign,candidate.id,foreignN);best=Math.min(best,cost)}
@@ -10313,7 +10558,7 @@ const TACTIC_AXES={aggression:['교전 회피','교전 주도'],risk_tolerance:[
 
 function squadEditState(t){
   const root=parentTeamOf(DB,t)||t;
-  if(!SQUAD_EDIT||SQUAD_EDIT.parentId!==root.id)SQUAD_EDIT={parentId:root.id,teamId:t.id,starters:{...(t.depthChart||{})},roles:Object.fromEntries((managedTeam(DB)?.parent?t.roster:organizationRoster(DB,root)).map(id=>[id,DB.players[id]?.rosterRole||recommendedRosterRole(DB,DB.players[id],DB.teams[DB.players[id].team])])),tactics:{...t.tactics},training:{...(t.training||defaultTraining())},rosterPlan:rosterPlanState(DB,root),dirty:false};
+  if(!SQUAD_EDIT||SQUAD_EDIT.parentId!==root.id)SQUAD_EDIT={parentId:root.id,teamId:t.id,starters:{...(t.depthChart||{})},roles:Object.fromEntries((managedTeam(DB)?.parent?t.roster:organizationRoster(DB,root)).map(id=>[id,DB.players[id]?.rosterRole||recommendedRosterRole(DB,DB.players[id],DB.teams[DB.players[id].team])])),tactics:{...t.tactics},training:normalizeTraining(t.training),rosterPlan:rosterPlanState(DB,root),dirty:false};
   SQUAD_EDIT.teamId=t.id;return SQUAD_EDIT;
 }
 function rosterPlanPanel(t){const root=parentTeamOf(DB,t),res=reserveTeamsOf(DB,root);if(!root||!res.length)return '';if(managedTeam(DB)?.parent)return '<section><h3>모구단 선수 배치</h3><p class="hint">1·2군 이동과 선수 영입·계약은 모구단이 결정합니다. 현재 배정된 선수의 경기·훈련을 관리하세요.</p></section>';const e=squadEditState(t),v=validateRosterPlan(DB,root,e.rosterPlan),teams=organizationTeams(DB,root),counts=teams.map(x=>'<div><span>'+(x.parent?'2군':'1군')+'</span><b>'+(v.counts?.[x.id]??0)+'명</b><small>'+esc(x.name)+'</small></div>').join(''),rows=organizationRoster(DB,root).map(pid=>{const p=DB.players[pid],cur=DB.teams[p.team],dst=e.rosterPlan.assignments[pid]||p.team,opts=teams.map(x=>'<option value="'+x.id+'"'+(dst===x.id?' selected':'')+'>'+(x.parent?'2군':'1군')+' · '+esc(x.short)+'</option>').join('');return '<tr><td><b>'+esc(p.name)+'</b></td><td>'+ROLE_KO[p.role]+'</td><td>'+(cur.parent?'2군':'1군')+'</td><td><select data-squad-dst="'+p.id+'">'+opts+'</select></td></tr>'}).join('');return '<section><h3>1군 · 2군 배치</h3><p class="hint">바꾸고 싶은 선수만 선택하고 변경사항 적용을 누르면 최종 상태 전체를 한 번에 검증합니다.</p><div class="fin">'+counts+'</div>'+(v.ok?'':'<p class="lo">'+v.errors.map(esc).join(' · ')+'</p>')+'<div class="scroll"><table><thead><tr><th>선수</th><th>포지션</th><th>현재</th><th>변경 후</th></tr></thead><tbody>'+rows+'</tbody></table></div></section>'}
@@ -10328,13 +10573,13 @@ function applySquadEdit(){
   t.depthChart={};
   for(const r of ROLES){const p=DB.players[e.starters[r]];if(p&&p.team===t.id)setDepthStarter(DB,t,r,p,'manager',false)}
   for(const [id,role] of Object.entries(e.roles)){const p=DB.players[id];if(p&&(!managedTeam(DB)?.parent||p.team===t.id)&&p.rosterRole!==role)setRosterRole(DB,p,role,'manager',false)}
-  t.tactics={...e.tactics};t.training={...e.training};SQUAD_EDIT=null;MSG='';saveDB();nav();
+  t.tactics={...e.tactics};t.training=normalizeTraining(e.training);SQUAD_EDIT=null;MSG='';saveDB();nav();
 }
 function viewSquad(){
   SQUAD=SQUAD&&DB.teams[SQUAD]&&DB.teams[SQUAD].active!==false?SQUAD:(DB.world?managedTeamId(DB):activeTeams(DB)[0].id);
   const t=DB.teams[SQUAD], ps=t.roster.map(id=>DB.players[id]).sort((a,b)=>ROLES.indexOf(a.role)-ROLES.indexOf(b.role)||playerOvr(b)-playerOvr(a));
   const mineOrg=DB.world&&(t.id===managedTeamId(DB)||t.parent===managedTeamId(DB)), kAvg=Math.round(avg(ps.map(p=>knowledge(DB,p))));
-  const edit=mineOrg?squadEditState(t):null,tr=edit?edit.training:(t.training||defaultTraining()),tac=edit?edit.tactics:t.tactics;
+  const edit=mineOrg?squadEditState(t):null,tr=normalizeTraining(edit?edit.training:t.training),tac=edit?edit.tactics:t.tactics;
   return `<section class="controls"><label>팀<select id="sq">${teamOpts(SQUAD)}</select></label></section>
   <section class="teamhead"><h2>${esc(t.name)}</h2><p>${t.formerNames&&t.formerNames.length?'전신 '+t.formerNames.map(esc).join(', ')+' · ':''}${esc(DB.regions[t.region].leagueName)} · 감독 ${t.id===managedTeamId(DB)?'플레이어':'구단 AI'} · 운영 철학 ${PHIL_KO[t.philosophy]||'균형'} · 팬덤 ${t.fans??'—'} · 팀 호흡 ${Math.round(teamSynergy(t))}${t.goal?` · 구단주 목표: ${GOAL_KO[t.goal]}`:''}</p><p class="hint">전문 스태프가 밴픽·분석·육성·회복을 지원하며, 관리 구단의 최종 스포츠 결정은 플레이어가 내립니다.</p></section>
   ${officialRegistrationPanel(t)}
@@ -10346,8 +10591,8 @@ function viewSquad(){
   ${DB.world?.phase==='season'?`<section><h3>공식전·스크림 일정</h3><p class="hint">오늘 ${esc(DB.worldDate)} · ${officialBookedTeams(DB).has(t.id)?'공식 경기 예정/진행 · 스크림 불가':scrimReadiness(DB,t).ok?'스크림 가능 ('+scrimReadiness(DB,t).availableSlots.map(x=>x==='afternoon'?'오후':'저녁').join('·')+') · 잔여 '+scrimReadiness(DB,t).remaining+'세트':esc(scrimReadiness(DB,t).reason)} · 양팀 모두 같은 연습 시간이 비어야 하며, 7일 내 공식전 상대는 피하고 전력 격차·연패·자신감 회복 목적을 반영해 상호 수락해야 편성됩니다.</p><p class="hint">다음 공식전: ${esc(nextTeamMatch(DB,t.id)?.date||'미정')} / 최근 스크림: ${(t.scrimLog||[]).slice(-4).reverse().map(x=>esc(x.date)+' '+(x.slot==='afternoon'?'오후':x.slot==='evening'?'저녁':'연습')+' '+esc(DB.teams[x.opponent]?.short||x.opponent)+' '+x.games+'세트'+(x.purpose?' · '+esc(x.purpose):'')).join(' · ')||'없음'}</p></section>`:''}
   ${mineOrg?rosterPlanPanel(t):''}
   ${(()=>{const r=trainingRecommendation(DB,t),ko={light:'가볍게',normal:'보통',high:'강하게'};return `<p class="hint">추천: ${ko[r.intensity]} 훈련 · ${r.next?`다음 공식전 ${r.days}일 전`:'공식전 일정 없음'} · 평균 피로 ${Math.round(r.fat)} / 컨디션 ${Math.round(r.cond)}</p>`})()}
-  <section><h3>훈련 배분 <small class="hint" id="trleft">남은 포인트 ${TRAIN_POINTS-['mechanical','laning','combat','macro','mental'].reduce((x,k)=>x+(+tr[k]||0),0)} / ${TRAIN_POINTS}</small></h3>${mineOrg?`<label>훈련 강도<select id="trint"><option value="light"${tr.intensity==='light'?' selected':''}>가볍게 · 회복 우선</option><option value="normal"${!tr.intensity||tr.intensity==='normal'?' selected':''}>보통 · 균형</option><option value="high"${tr.intensity==='high'?' selected':''}>강하게 · 성장 우선</option></select></label>`:`<p class="hint">훈련 강도: ${tr.intensity==='high'?'강하게':tr.intensity==='light'?'가볍게':'보통'}</p>`}<div class="tac">
-    ${Object.keys(ATTR_GROUPS).map(g=>`<label><span>${GROUP_KO[g]}<output>${tr[g]}</output></span><input type="range" min="0" max="${TRAIN_POINTS}" value="${tr[g]}" data-tr="${g}"></label>`).join('')}
+  <section><h3>훈련 배분 <small class="hint" id="trleft">남은 포인트 ${TRAIN_POINTS-['mechanical','laning','combat','macro','mental'].reduce((x,k)=>x+(+tr[k]||0),0)} / ${TRAIN_POINTS}</small></h3>${mineOrg?`<label>훈련 강도<select id="trint"><option value="light"${tr.intensity==='light'?' selected':''}>가볍게 · 회복 우선</option><option value="normal"${!tr.intensity||tr.intensity==='normal'?' selected':''}>보통 · 균형</option><option value="high"${tr.intensity==='high'?' selected':''}>강하게 · 성장 우선</option></select></label>`:`<p class="hint">훈련 강도: ${tr.intensity==='high'?'강하게':tr.intensity==='light'?'가볍게':'보통'}</p>`}<div class="tac training-grid">
+    ${Object.keys(ATTR_GROUPS).map(g=>`<label><span>${GROUP_KO[g]}<output>${tr[g]}</output></span><input type="range" min="0" max="${TRAIN_POINTS}" value="${tr[g]}" data-tr="${g}"${mineOrg?"":" disabled"}></label>`).join('')}
   </div>${mineOrg?'<div class="controls"><button class="primary" id="sqapply">변경사항 적용</button><button class="ghost" id="sqdiscard">변경 취소</button><span class="hint">주전·역할·전술·훈련을 여러 개 조정한 뒤 한 번에 적용합니다.</span></div>':''}<p class="hint">훈련 포인트는 총 ${TRAIN_POINTS}점입니다. 한 영역에 몰면 그 영역은 크게 오르지만 나머지는 덜 오르거나 떨어지고, 배분하지 않은 포인트는 버려집니다. 한 시즌에 영역별로 오를 수 있는 폭과, 잠재력보다 한참 높게 오르는 것에도 한계가 있습니다.</p>
   <div class="fin">${(()=>{const f=ensureFacilities(t),names={training:'훈련',analysis:'분석',recovery:'회복',youth:'유소년'};return Object.keys(names).map(k=>`<div><span>${names[k]} 시설</span><b>${f[k]} / 5</b><small>구단 자동 관리 </small></div>`).join('')})()}</div><p class="hint">훈련·유소년 시설은 성장, 분석 시설은 상대/메타 분석, 회복 시설은 피로 회복에 직접 적용됩니다. 연 유지비 ${money(facilityUpkeep(DB,t))}</p></section>
   <section><h3>로스터</h3><div class="scroll"><table class="roster"><thead><tr><th>포지션</th><th>선수</th><th>경기 슬롯</th><th>역할</th><th>회복 계획</th><th>만족도</th><th>나이</th><th>종합</th><th>성장 여지</th><th>명성</th><th>시장가치</th><th>폼</th><th>컨디션</th><th>경기 감각</th><th>피로</th><th>사기</th><th>연봉</th><th>계약</th>${Object.keys(ATTR_GROUPS).map(g=>`<th>${GROUP_KO[g]}</th>`).join('')}</tr></thead><tbody>
@@ -10377,7 +10622,8 @@ function bindSquad(){
   document.querySelectorAll('[data-role-convert-cancel]').forEach(b=>b.onclick=e=>{e.stopPropagation();const r=cancelRoleConversion(DB,b.dataset.roleConvert,'manager');MSG=r.reason;saveDB();navKeepScroll()});
   document.querySelectorAll('[data-tac]').forEach(el=>el.oninput=el.onchange=e=>{const k=el.dataset.tac;const d=squadEditState(DB.teams[SQUAD]);d.tactics[k]=+el.value;d.dirty=true;if(el.previousElementSibling)el.previousElementSibling.querySelector('output').textContent=el.value});
   document.querySelectorAll('[data-tr]').forEach(el=>el.oninput=()=>{const t=DB.teams[SQUAD],d=squadEditState(t);const k=el.dataset.tr;
-    const others=Object.entries(d.training).filter(([g])=>g!==k).reduce((s,[,v])=>s+v,0), v=Math.min(+el.value,TRAIN_POINTS-others);
+    if(!managerControlsSquad(DB,t))return;
+    d.training=setTrainingAllocation(d.training,k,el.value);const v=d.training[k],others=Object.keys(ATTR_GROUPS).filter(g=>g!==k).reduce((s,g)=>s+d.training[g],0);
     el.value=v;d.training[k]=v;d.dirty=true;el.previousElementSibling.querySelector('output').textContent=v;$('#trleft').textContent=`남은 포인트 ${TRAIN_POINTS-others-v} / ${TRAIN_POINTS}`});
   const scRefresh=()=>{SCOUTSET.region=$('#screg')?.value||SCOUTSET.region;SCOUTSET.role=$('#scrole')?.value||SCOUTSET.role;SCOUTSET.contract=$('#sccontract')?.value||SCOUTSET.contract;SCOUTSET.competition=$('#sccomp')?.value||SCOUTSET.competition;SCOUTSET.undervalued=!!$('#scunder')?.checked;SCOUTSET.q=$('#scq')?.value||'';nav()};
   for(const id of ['#screg','#scrole','#sccontract','#sccomp','#scunder','#scq'])if($(id))$(id).onchange=scRefresh;
