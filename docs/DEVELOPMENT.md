@@ -524,14 +524,13 @@ The current Worlds+14 model remains the fictional game's policy; this source
 must not trigger an automatic migration to real-world calendar dates. Revisit
 only where the fictional design needs a more coherent rule.
 
-Current unit: D04-B4f1 — contractual role promise enforcement. Main files:
-player-relations.js, contracts.js, transfer.js, ui-player.js and the focused
-contract-role-promise acceptance. B4e2 passed CI 36865728151 and merged as PR #98.
-B4f1 preserves the signed role when club roster labels change; real official
-usage drives satisfaction, trust and renewal willingness. New contracts and
-permanent transfers start a fresh observation window, with medical absences
-excluded. Full Actions remains the acceptance gate. Remaining D04 work includes
-agents, oral promises, insolvency assets/other claims; D05 and Items 13–23 follow.
+Current batch: D04-B4f2/B4g1 — oral role promises, persistent player agents,
+and compact confirmation/status UI. B4f1 passed CI 36870500337 and merged as PR #99.
+Main files: player-representation, negotiation, relation/contract lifecycle,
+player-commitments UI, roster bindings and representation acceptance. Shared
+player consent, atomic journal and usage evidence remain authoritative.
+Remaining D04: broader representative/agency lifecycle, promise renegotiation,
+insolvency assets/other claims and transfer payment terms; D05 and Items 13–23 follow.
 
 Local D04-B4d1 evidence: static check (74 modules) and the focused UI/finance/contract runner passed (17 acceptances, 13 isolated engine contexts, one engine compile). Full CI acceptance is required before merge.
 
@@ -630,3 +629,28 @@ changing only rosterRole to backup. It now explicitly agrees a backup contract;
 the no-playing-time-complaint assertion remains. The new focused acceptance
 separately covers the opposite case: a backup label cannot erase a starter promise.
 Local smoke passed after the fixture correction; final-head Actions is required.
+
+
+## Development batching (2026-10-01 user direction)
+The user requests larger connected batches and detailed reports only on request.
+Group related state/engine/UI/save work into one reviewable PR and one final-head
+Actions validation. Keep focused local tests; do not run full CI for tiny dependent
+substeps. Split unrelated or risky work when independence improves recovery.
+
+D04-B4f2/B4g1 handoff: high-reputation players receive persistent identified
+representatives; ordinary players negotiate directly. Independent representative
+profiles reuse the existing personality generator distribution and a stable local
+RNG stream, leaving world RNG untouched. Representative traits materially control
+existing demand premiums/options/buyouts and round patience; final player utility
+and consent remain the player's. Negotiations snapshot the representative.
+Oral role promises are additional opportunities without rewriting contracts.
+They use a new atomic player.promise command with own-squad coaching authority,
+pure preview, stale usage checks, rollback and repeat-reset protection. The stricter
+contract/oral role shares actual usage/medical evidence and trust/renewal effects.
+New agreements/transfers/releases close oral commitments with career evidence;
+internal squad moves retain them. AI creates commitments before earned starter
+promotions; manager decisions use a compact preview/confirm/cancel surface.
+Focused acceptance and the 21-acceptance / 17-context runner pass; static checks
+cover 77 modules. Full final-head Actions is required. No D04 completion claim:
+agencies with multiple clients, commissions/representative changes, lower-role
+mutual renegotiation and broader insolvency remain distinct future work.

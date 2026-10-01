@@ -186,3 +186,13 @@ roster role edits leave promisedRole intact. Official usage tracks unavailable
 medical games and satisfaction consumes eligible contract-relative appearances.
 The current-role and contractual-role UI are distinct. Optional baseline fields
 persist with existing player/contract saves and rollback snapshots.
+
+
+D04-B4f2/B4g1: player-representation owns embedded stable agent entities and
+oral role promises. It registers player.promise with the existing atomic handler
+registry after player actions. The player journal already captures promise/agent
+fields and career events. Satisfaction selects the stronger commitment and reuses
+one usage evaluator. Representatives shape negotiating demands and patience, not
+client utility. UI-player-commitments owns compact status and confirm/cancel
+controls; player detail/roster delegate to it. Agents/promises are optional save
+fields; no second contract, roster, finance or preview ledger is introduced.
