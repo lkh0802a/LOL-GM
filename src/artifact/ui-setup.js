@@ -31,9 +31,9 @@ function managerTeamPicker(disabled=false){
     <div><span>구단 목표</span><b>${esc(initialGoalLabel(team))}</b></div>
     <div><span>승강</span><b>${esc(promotionStatus(DB,team))}</b></div>
   </div>`:''}
-  <p class="hint">첫 시즌은 모든 구단이 백지 로스터로 시작합니다. 팀을 고른 뒤 전 세계 FA 풀에서 예산과 등록 규정에 맞춰 직접 선수단을 구성합니다.</p>
+  <p class="hint">첫 시즌은 모든 구단이 백지 로스터로 시작합니다. 독립 구단은 직접 선수단을 구성하고, 소유 2군은 모구단이 구성한 선수단으로 시작합니다.</p>
   <p class="hint">가상 프로씬 공용어가 정착된 세계이므로 국적에 따른 언어 장벽은 없습니다. 국적/출신지역은 신인 생성·스카우팅 정체성에 사용되고, 공식 등록의 비로컬 판정은 별도 활성 로컬 자격을 사용합니다.</p>
-  <p class="hint">Academy/Challengers 등 모구단 소속 2군은 감독 시작 팀으로 선택할 수 없습니다.</p></div>`;
+  <p class="hint">소유 2군도 감독할 수 있습니다. 선수 영입·계약·방출·1·2군 이동은 모구단이 담당하고, 2군 감독은 경기·전술·훈련·육성을 맡습니다.</p></div>`;
 }
 function bindManagerTeamPicker(){
   const r=$('#steam-region'),d=$('#steam-division'),t=$('#steam');
@@ -65,7 +65,7 @@ function seasonSetup(){
   <section class="controls"><button class="primary" id="regen">이 설정으로 세계 생성</button><button class="ghost" id="cfgdef">기본 설정으로</button>
     <span id="cfgmsg" class="${dirty?'warn':'hint'}" role="status">${dirty?'설정이 바뀌었습니다. 세계를 다시 생성해야 반영됩니다.':'현재 세계가 설정과 일치합니다.'}</span></section>
   <section><h3>생성된 세계</h3>${worldTable()}</section>
-  <section><h3>팀 선택</h3>${managerTeamPicker(dirty)}<div class="controls"><button class="primary" id="sstart"${dirty?' disabled':''}>이 팀으로 로스터 구성 시작</button></div></section>
+  <section><h3>팀 선택</h3>${managerTeamPicker(dirty)}<div class="controls"><button class="primary" id="sstart"${dirty?' disabled':''}>${DB.teams[SSET.team]?.parent?'소유 2군 감독 시작':'이 팀으로 로스터 구성 시작'}</button></div></section>
   ${DB.history.length?`<section><h3>역대 기록</h3>${histTable()}</section>`:''}`;
 }
 // 시즌/세계/진행 UI는 ui-season.js에 분리되어 있다.

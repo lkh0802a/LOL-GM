@@ -499,13 +499,13 @@ entirely, including advanced settings. New worlds and restored saves use normal
 frequency; calendar/offseason evolution always uses the normal multiplier (1).
 The manager/AI delegation control remains a separate setting.
 
-Default-world gap identified (2026-10-01): Korea/China create only owned reserve
-teams in Tier 2, excluded from manager selection by design. Other default core
-regions do not currently create Tier-2 leagues. Independent Tier-2 selection is
-implemented and tested in custom worlds, but no independent Tier-2 club exists
-in the default starting world. A playable default Tier-2 start is therefore
-unfinished; decide the regional independent league composition before adding
-clubs. Do not treat an owned Academy/Challengers squad as an independent club.
+Default-world selection update (2026-10-01): Korea/China create owned Tier-2
+reserves. The user's revised rule now permits coaching these squads with parent-
+controlled recruitment, resolving the prior default Tier-2 selection gap without
+inventing independent clubs or changing ownership/promotion rules. Independent
+Tier-2 clubs remain selectable in custom worlds; there are currently no such
+clubs in the default starting world. Other default core regions lack Tier-2
+leagues. Further league composition remains separate design work.
 
 
 ## Realism reference and fictional league priority (2026-10-01)
@@ -539,3 +539,29 @@ actual spare cash after protecting parent claims. Parent finance is included in
 preview invalidation and rollback; both transfer sides persist and the active
 parent UI exposes recent support. No second annual charge or arbitrary equity.
 Remaining insolvency scope includes residual cash/asset recovery and other claims.
+
+
+## Owned reserve coach career (2026-10-01 user rule change)
+
+The user supersedes the prior owned-Academy selection ban: active owned reserves
+are selectable coaching jobs, including default KR/CN second divisions. These
+remain parent-owned and promotion-ineligible. Their coach controls their own
+lineup, tactics, training, recovery and player development. The parent AI owns
+player recruitment, contracts, releases and first/reserve movement; the coach
+cannot change the parent's squad or bypass recruitment restrictions through commands.
+
+At a first-year academy start, the real initial world market builds all squads.
+The coach sees the provided roster and confirms season start instead of recruiting.
+Independent-club setup stays manual. Economic AI exclusion uses
+managedRecruitmentTeamId rather than the match-coaching team id. Saves continue
+using the managed reserve team id so official matches still pause for its draft.
+
+Current implementation files: world/career, transaction and negotiation authority,
+contract AI exclusions, medical/role-conversion scope and setup/roster/market UI.
+owned-reserve-coach-acceptance covers the real picker, actual initial start button,
+provided legal rosters, forbidden economic commands/negotiations, own squad apply,
+parent isolation, recovery, official-match pause, real AI contract market and saves.
+Full regression and build are Actions-owned. The former independent-only smoke
+expectation is replaced with coverage of active independent and parent-owned teams.
+
+Local academy-coach validation: static check and focused UI/finance/contracts runner passed (18 acceptances, 14 engine contexts). Full Actions required before acceptance.

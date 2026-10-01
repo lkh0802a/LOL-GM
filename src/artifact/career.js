@@ -174,7 +174,12 @@ function autoBuildInitialWorld(db,excludedIds,seed){
 }
 function beginInitialRosterPhase(db,teamId,seed){
   if(!isManagerSelectableTeam(db,teamId))throw new Error('감독 시작 팀으로 선택할 수 없는 구단입니다');setManagedTeam(db,teamId);seedInitialPayrollBudgets(db);db.manager.startMode='blank_roster';db.manager.careerStartedAt=null;
-  db.world={year:db.year,seed,manage:db.worldConfig.manage||'manual',phase:'initial_roster',seasons:{},steps:[],step:-1,report:null,lastDate:db.worldDate,offers:[],negotiations:{},recruitment:{targets:{}},marketLog:[]};return db.world;
+  db.world={year:db.year,seed,manage:db.worldConfig.manage||'manual',phase:'initial_roster',seasons:{},steps:[],step:-1,report:null,lastDate:db.worldDate,offers:[],negotiations:{},recruitment:{targets:{}},marketLog:[]};
+  if(managedTeam(db).parent){
+    db.manager.startMode='academy_coach';
+    autoBuildInitialWorld(db,[],seed);
+  }
+  return db.world;
 }
 // The first-year blind auction can exhaust the unsigned player pool.
 // Replenish only after the legitimate initial roster market has closed:
@@ -210,7 +215,7 @@ function seedFirstSeasonFreeAgentDepth(db){
 function finalizeInitialRosters(db){
   const root=managedTeam(db);if(!root)throw new Error('관리 구단이 없습니다');const mine=setupTeamsForManager(db),errors=initialOrganizationErrors(db,root);if(errors.length)throw new Error(errors[0]);
   const mineIds=new Set(mine.map(t=>t.id)),pending=Object.values(negotiationStore(db)).filter(n=>n.status==='open'&&n.kind==='initial'&&mineIds.has(n.teamId));if(pending.length)throw new Error('진행 중인 창단 계약 협상을 먼저 마무리해야 합니다');
-  autoBuildInitialWorld(db,mine.map(t=>t.id),db.world.seed);
+  if(!root.parent)autoBuildInitialWorld(db,mine.map(t=>t.id),db.world.seed);
   const allErrors=[];for(const t of activeTeams(db))for(const e of initialSquadErrors(db,t))allErrors.push(t.name+': '+e);
   for(const t of activeTeams(db).filter(t=>!t.parent&&reserveTeamsOf(db,t).length)){const rules=rosterRulesForTeam(db,t),n=organizationRoster(db,t).length;if(n<rules.integratedMin||n>rules.integratedMax)allErrors.push(t.name+': 통합 로스터 '+n+'명')}
   if(allErrors.length)throw new Error('AI 초기 로스터 구성 실패 · '+allErrors[0]);for(const t of activeTeams(db))initializeTeamRosterRoles(db,t,true);seedFirstSeasonFreeAgentDepth(db);db.manager.careerStartedAt=db.worldDate;db.firstSeasonSetup.completed=true;const seed=db.world.seed,teamId=root.id;startWorldSeason(db,teamId,seed);return db.world;

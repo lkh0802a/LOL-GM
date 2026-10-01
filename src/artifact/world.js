@@ -77,7 +77,7 @@ function orgName(db,rng){
 function activeTeams(db,rid,div){return Object.values(db.teams).filter(t=>t.active!==false&&(!rid||t.region===rid)&&(!div||(t.division||1)===div))}
 function isManagerSelectableTeam(db,t){
   const team=typeof t==='string'?db.teams[t]:t;
-  return !!team&&team.active!==false&&!team.parent;
+  return !!team&&team.active!==false&&(!team.parent||db.teams[team.parent]?.active!==false&&!!db.teams[team.parent]);
 }
 function managerSelectableTeams(db,rid,div){return activeTeams(db,rid,div).filter(t=>isManagerSelectableTeam(db,t))}
 function genTeam(db,rng,regionId,strength,o={}){
@@ -205,6 +205,12 @@ function buildWorld(cfg){
 }
 function managedTeamId(db){return db.manager&&db.manager.teamId||null}
 function managedTeam(db){const id=managedTeamId(db);return id&&db.teams[id]?db.teams[id]:null}
+function managedRecruitmentTeamId(db){return managedTeam(db)?.parent?null:managedTeamId(db)}
+function managerControlsSquad(db,t){
+  const team=teamRef(db,t),mine=managedTeam(db);
+  return !!team&&!!mine&&(mine.parent?team.id===mine.id:
+    team.id===mine.id||team.parent===mine.id);
+}
 function setManagedTeam(db,teamId){
   if(teamId!==null&&(!db.teams[teamId]||db.teams[teamId].active===false))throw new Error('관리할 수 없는 팀입니다');
   db.manager.teamId=teamId;return teamId;

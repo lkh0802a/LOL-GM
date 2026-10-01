@@ -8,7 +8,7 @@ const MEDICAL_PLAN_LABELS={auto:'자동',normal:'일반 훈련',light:'훈련 �
 // rival clubs decide independently, even after a player is transferred.
 function medicalPlanFor(db,p){
   if(!p)return 'normal';
-  const team=p.team&&db.teams[p.team],owned=team&&parentTeamOf(db,team)?.id===managedTeamId(db);
+  const team=p.team&&db.teams[p.team],owned=managerControlsSquad(db,team);
   const selected=owned?p.medicalPlan:'auto';
   if(['normal','light','rest'].includes(selected))return selected;
   if(selected==='rehab')return p.medical?.daysLeft>0||p.medicalResidual?.daysLeft>0?'rehab':'rest';

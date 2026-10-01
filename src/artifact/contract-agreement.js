@@ -71,7 +71,7 @@ function finalizeExclusiveContractExpiry(db){
   const w=db.world,cw=w?.contractWindow;
   if(!cw)return {applied:[],released:[],options:[]};
   const renewals=applyDueRenewalAgreements(db),released=[],options=[],
-    mine=w.manage==='manual'?managedTeamId(db):null;
+    mine=w.manage==='manual'?managedRecruitmentTeamId(db):null;
   for(const t of activeTeams(db))for(const id of (t.roster||[]).slice()){
     const p=db.players[id];
     if(!p?.contract||p.contract.medicalReplacement||

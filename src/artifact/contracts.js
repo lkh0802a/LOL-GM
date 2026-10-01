@@ -209,7 +209,7 @@ function aiRenewalDecision(db,p,t,rng){
 }
 
 function contractMarket(db,rng,rep,ev){
-  const year=db.year, size=5+(db.worldConfig.subs||0), w=db.world, mine=w&&w.manage==='manual'?managedTeamId(db):null;
+  const year=db.year, size=5+(db.worldConfig.subs||0), w=db.world, mine=w&&w.manage==='manual'?managedRecruitmentTeamId(db):null;
   const imports=t=>teamNonLocalCount(db,t);
   const release=(t,p,why)=>{
     const terms=contractMutualTerminationTerms(db,p),mutual=terms.ok&&terms.willing;

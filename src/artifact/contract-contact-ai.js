@@ -11,7 +11,7 @@ function aiWantsRenewal(db,p,t){
 function aiGrantEarlyContact(db){
   const cw=db.world?.contractWindow;
   if(!cw||cw.aiWaiversProcessed)return [];
-  const mine=db.world?.manage==='manual'?managedTeamId(db):null,waivers=[];
+  const mine=db.world?.manage==='manual'?managedRecruitmentTeamId(db):null,waivers=[];
   for(const t of activeTeams(db)){
     if(mine&&parentTeamOf(db,t)?.id===mine)continue;
     for(const id of (t.roster||[])){
@@ -34,7 +34,7 @@ function aiGrantEarlyContact(db){
 function aiRunEarlyContactOffers(db){
   const cw=db.world?.contractWindow;
   if(!cw||cw.stage!=='exclusive')return [];
-  const mine=db.world.manage==='manual'?managedTeamId(db):null,rows=[],
+  const mine=db.world.manage==='manual'?managedRecruitmentTeamId(db):null,rows=[],
     rng=new RNG(db.world.seed+'/'+db.worldDate,'early-contact');
   for(const waiver of Object.values(cw.contactWaivers||{})){
     const p=db.players[waiver.pid];if(!p||!contractExpiresThisSeason(db,p)||

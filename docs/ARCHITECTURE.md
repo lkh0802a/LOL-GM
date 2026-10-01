@@ -140,3 +140,13 @@ funding plan protects parent claims, proposes matched cash transfers and then
 reuses claim allocation. Finance owns both transfer sides; an active parent's
 bounded closureSupportHistory is a settled cash record, not annual operating cost.
 Closed statements retain funding details; old statements without funding remain valid.
+
+
+Match/coaching ownership and recruitment ownership are distinct for owned-reserve
+careers. managedTeamId remains the actual coached squad for match pauses and saves;
+managedRecruitmentTeamId is null for an owned reserve so parent AI continues its
+economic work. managerControlsSquad permits only that reserve's sporting controls.
+Player-action and negotiation entry points independently reject academy-coach
+recruitment; hiding controls alone is insufficient. Parent organization roster.plan
+remains AI-owned. First-year academy start uses the shared global initial market,
+then the coach confirms the provided roster without rebuilding it at finalization.
