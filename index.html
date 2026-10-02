@@ -5323,7 +5323,7 @@ function actionJournalTeamSnapshot(team){
   const hasRoster=Object.prototype.hasOwnProperty.call(team,'roster');
   return {
     team,hasDepth,hasFinance,hasRoster,
-    lifecycle:['active','folded','license','competitionLicense'].map(key=>({key,
+    lifecycle:['active','folded','license','competitionLicense','officePreferences'].map(key=>({key,
       present:Object.prototype.hasOwnProperty.call(team,key),value:team[key]})),
     rosterRef:team.roster,roster:(team.roster||[]).slice(),
     depthRef:team.depthChart,depth:hasDepth?actionJournalClone(team.depthChart):null,
@@ -5372,7 +5372,7 @@ function actionJournalTargets(db,command){
       if(db.players[pid]?.team!==dst)playerIds.add(pid);
     }
   }else{
-    if(!['finance.transfer-payment','finance.estate-recovery'].includes(command.type))playerIds.add(command.pid);
+    if(command.pid&&!['finance.transfer-payment','finance.estate-recovery'].includes(command.type))playerIds.add(command.pid);
     for(const id of [command.teamId,command.fromId,db.players[command.pid]?.team])
       if(id)teamIds.add(id);
   }
@@ -5516,7 +5516,13 @@ function officeDecisions(db,rng,f,ev,mid){
     const H=M.hype, B=M.balance, props=[];
     const grp=k=>({relegation:'system',franchise:'system',mixed:'system'}[k]||k);
     const structural=new Set(['system','expand','contract','div2','format','splits','standingsMode','cap','floor','tax','import']);
-    const add=(key,u,apply,why)=>{const g=grp(key),cool=structural.has(g)?4:3,last=(R.decisions||[]).filter(d=>d.key===g).slice(-1)[0];if(!last||db.world.year-last.year>=cool)props.push({key,u:u+(S.w[key]||0)+rng.normal(0,.12),apply,why})};
+    const add=(key,u,apply,why,formatChange=null)=>{
+      const g=grp(key),cool=structural.has(g)?4:3,last=(R.decisions||[]).filter(d=>d.key===g).slice(-1)[0];
+      if(last&&db.world.year-last.year<cool)return;
+      const consultation=formatChange?officeFormatConsultation(db,R,...formatChange):null,
+        officeUtility=u+(S.w[key]||0)+rng.normal(0,.12);
+      props.push({key,u:officeUtility+(consultation?.adjustment||0),officeUtility,consultation,apply,why});
+    };
     const takes=[4,6,8].filter(x=>x<=n), up=takes.find(x=>x>R.playoffTake);
     if(!mid){
       if(n<=12) add('expand',(H-55)/18+faDepth*0.3+trend/20-Math.max(0,n-8)*0.3,()=>{const nm=[];for(let i=0;i<2;i++){const t=genTeam(db,rng,R.id,R.strength-3);nm.push(t.name);if(R.system==='mixed')t.franchised=true;if(R.div2&&R.system==='franchise')makeAcademy(db,rng,t)}return `확장팀 ${nm.join(', ')} 창단`},`흥행 ${H}, 영입 가능한 인재 풀 충분`);
@@ -5541,8 +5547,8 @@ function officeDecisions(db,rng,f,ev,mid){
       add('import',(1.2-regPow)+(45-H)/25,()=>{const o=R.importRecruitMinGap??2;R.importRecruitMinGap=Math.max(0,o-1);return `비로컬 영입 기준 완화 ${o} → ${R.importRecruitMinGap}`},`국제 경쟁력 보강·해외 스타 유치 (1군 비로컬 상한 2명은 고정)`);
       add('import',faDepth-1.8+(regPow-1.5),()=>{const o=R.importRecruitMinGap??2;R.importRecruitMinGap=Math.min(4,o+1);return `비로컬 영입 기준 강화 ${o} → ${R.importRecruitMinGap}`},`자국 유망주 출전 기회 확대 (1군 비로컬 상한 2명은 고정)`);
       const SPL={1:'단일 시즌제',2:'2스플릿제',3:'3스플릿제'};
-      if((R.splits||1)<3) add('splits',(H-58)/15+trend/25,()=>{const o=R.splits||1;R.splits=o+1;return `${SPL[o]} → ${SPL[R.splits]} 전환`},`흥행 호조로 시즌 콘텐츠 확대`);
-      if((R.splits||1)>1) add('splits',(38-H)/15-trend/25,()=>{const o=R.splits;R.splits=o-1;return `${SPL[o]} → ${SPL[R.splits]} 전환`},`흥행 부진, 일정 피로도 완화`);
+      if((R.splits||1)<3) add('splits',(H-58)/15+trend/25,()=>{const o=R.splits||1;R.splits=o+1;return `${SPL[o]} → ${SPL[R.splits]} 전환`},`흥행 호조로 시즌 콘텐츠 확대`,['splits',R.splits||1,(R.splits||1)+1]);
+      if((R.splits||1)>1) add('splits',(38-H)/15-trend/25,()=>{const o=R.splits;R.splits=o-1;return `${SPL[o]} → ${SPL[R.splits]} 전환`},`흥행 부진, 일정 피로도 완화`,['splits',R.splits,R.splits-1]);
       // The league office—not the manager—may independently revise how
       // completed split results determine annual qualification. Changes are
       // offseason-only, cooldown-governed and effective next season.
@@ -5561,7 +5567,7 @@ function officeDecisions(db,rng,f,ev,mid){
             const old=R.standingsMode||'independent';
             R.standingsMode=scheme.key;
             return `성적 집계 방식 변경: ${SPLIT_STANDINGS_MODES[old]} → ${SPLIT_STANDINGS_MODES[scheme.key]} (다음 시즌부터)`;
-          },scheme.why);
+          },scheme.why,['standingsMode',mode,scheme.key]);
       }
     }
     if(up!==undefined) add('playoffs',(0.55-B)*3+(H<45?0.2:0),()=>{const o=R.playoffTake;R.playoffTake=up;return `플레이오프 ${o}팀 → ${up}팀 확대`},`순위 경쟁 약화 (균형 ${B})`);
@@ -5570,13 +5576,15 @@ function officeDecisions(db,rng,f,ev,mid){
     const fmtU={rr_de:(0.5-B)*2+(H>50?0.2:0),groups_po:(n>=12?0.6:n>=10?0.1:-9)+(H-50)/40,rr_po:(42-H)/20+(B-0.6)};
     const fmt=Object.entries(fmtU).filter(([k])=>k!==(R.format||'rr_po')).sort((a,b)=>b[1]-a[1])[0];
     if(fmt) add('format',fmt[1]-0.1,()=>{const o=R.format||'rr_po';R.format=fmt[0];if(!R.playoffTake)R.playoffTake=4;return `진행 방식 변경: ${LEAGUE_FORMATS[o]} → ${LEAGUE_FORMATS[fmt[0]]}`},fmt[0]==='rr_de'?`하위 시드에 두 번째 기회 — 흥행 반전 기대 (균형 ${B})`:fmt[0]==='groups_po'?`참가 팀 증가로 일정 압축 (${n}팀)`:'단순한 방식으로 복귀');
-    if(R.playoffBo===3) add('bo',(H-50)/15,()=>{R.playoffBo=5;return '플레이오프 Bo5 도입'},`흥행 호조 — 결승 무대 강화`);
-    else add('bo',(33-H)/15,()=>{R.playoffBo=3;return '플레이오프 초반 라운드 Bo3로 축소'},`제작 비용 절감`);
+    if(R.playoffBo===3) add('bo',(H-50)/15,()=>{R.playoffBo=5;return '플레이오프 Bo5 도입'},`흥행 호조 — 결승 무대 강화`,['playoffBo',3,5]);
+    else add('bo',(33-H)/15,()=>{R.playoffBo=3;return '플레이오프 초반 라운드 Bo3로 축소'},`제작 비용 절감`,['playoffBo',R.playoffBo,3]);
     props.sort((a,b)=>b.u-a.u);
     let done=0;
     for(const p of props){if(p.u<thr||done>=1)break;
       if(props.slice(0,props.indexOf(p)).some(q=>grp(q.key)===grp(p.key)))continue;
-      const what=p.apply(); R.decisions=[...(R.decisions||[]),{year:db.world.year,key:grp(p.key),what,why:p.why,mid:!!mid}].slice(-12);
+      const what=p.apply(); R.decisions=[...(R.decisions||[]),{year:db.world.year,key:grp(p.key),what,why:p.why,mid:!!mid,
+        announcedDate:db.worldDate||null,effectiveYear:db.world.year+1,
+        ...(p.consultation?{consultation:p.consultation,officeUtility:p.officeUtility}:{})}].slice(-12);
       syncCompetitionLicenses(db,'regional-office-'+grp(p.key));
       ev(`${R.leagueName} 사무국${mid?' (시즌 중 점검)':''}: ${what} — ${p.why}`); done++; }
   }
@@ -5590,6 +5598,60 @@ function foldTeam(db,t){
 }
 
 // 세계 단위 결정: 새 지역, 새 국제대회, 구단 인수
+
+/* ==== FILE: office-consultation.js ==== */
+// Sporting-format opinions are advisory. The office retains final authority.
+const OFFICE_OPINION_FIELDS={splits:[1,2,3],playoffBo:[3,5],standingsMode:['independent','points','cumulative']};
+const OFFICE_OPINION_LABELS={splits:'연간 스플릿',playoffBo:'플레이오프 세트',standingsMode:'성적 집계'};
+function clubFormatPreferences(db,t){
+  const p=t.officePreferences;
+  if(p?.year!==db.world?.year||p.region!==t.region)return {};
+  return Object.fromEntries(Object.entries(p.values||{}).filter(([k,v])=>OFFICE_OPINION_FIELDS[k]?.includes(v)));
+}
+function officeFormatConsultation(db,R,field,current,target){
+  if(!OFFICE_OPINION_FIELDS[field])return null;
+  const clubs=activeTeams(db,R.id,1),votes=clubs.map(t=>{
+    const manual=db.world?.manage==='manual'&&managedTeamId(db)===t.id,
+      stated=clubFormatPreferences(db,t)[field];
+    let preferred=stated??null,reason='구단이 제출한 운영 의견';
+    if(!manual&&preferred===null){
+      const fatigued=avg((t.roster||[]).map(id=>db.players[id]?.fatigue||0))>=34;
+      preferred=field==='splits'?(t.finance.cash<0||fatigued?1:(t.fans||30)>=70?3:2):
+        field==='playoffBo'?((t.fans||30)>=55&&t.finance.cash>=0?5:3):
+        ((R.metrics||[]).at(-1)?.balance<.55?'points':'independent');
+      reason=field==='standingsMode'?'공개 경쟁 균형에 따른 구단 의견':
+        t.finance.cash<0||fatigued?'운영 여력과 선수 피로 고려':'팬 관심과 경기 콘텐츠 고려';
+    }
+    const distance=v=>field==='standingsMode'?(v===preferred?0:1):Math.abs(v-preferred),
+      vote=preferred===null?0:Math.sign(distance(current)-distance(target));
+    return {teamId:t.id,preferred,vote,source:stated!==undefined?'submitted':manual?'abstain':'club',reason};
+  });
+  const support=votes.filter(v=>v.vote>0).length,oppose=votes.filter(v=>v.vote<0).length;
+  // Reuse the existing office utility noise scale as a bounded advisory unit.
+  return {field,current,target,effectiveYear:db.world.year+1,votes,support,oppose,
+    abstain:votes.length-support-oppose,adjustment:(support-oppose)/Math.max(1,votes.length)*.12};
+}
+WORLD_ACTION_HANDLERS['office.opinion']={
+  validate(db,a){
+    const t=db.teams[a.teamId];
+    if(!db.world||!t||t.active===false||t.parent||(t.division||1)!==1||!db.regions[t.region])
+      return worldActionError('invalid_club','리그 참가 1군 구단의 운영 의견이 필요합니다');
+    if(a.actor==='system'||a.actor==='manager'&&managedTeamId(db)!==t.id||
+      a.actor==='ai'&&db.world.manage==='manual'&&managedTeamId(db)===t.id)
+      return worldActionError('unauthorized','관리 구단의 의견만 직접 제출할 수 있습니다');
+    const values=a.values;
+    if(!values||typeof values!=='object'||Array.isArray(values)||Object.entries(values).some(([k,v])=>
+      !OFFICE_OPINION_FIELDS[k]?.includes(v)))return worldActionError('invalid_opinion','유효한 리그 운영 의견이 필요합니다');
+    return {ok:true,teamId:t.id,region:t.region,year:db.world.year,values:{...values}};
+  },
+  canonical(db,a,v){return {type:a.type,actor:a.actor,teamId:v.teamId,region:v.region,year:v.year,values:v.values}},
+  snapshot(db,a){const t=db.teams[a.teamId];return {saveId:db.saveId,year:db.world.year,
+    managed:managedTeamId(db),manage:db.world.manage,active:t.active,parent:t.parent||null,
+    region:t.region,division:t.division||1,previous:t.officePreferences||null}},
+  changes(db,a){return [{kind:'office_opinion',teamId:a.teamId,effectiveYear:a.year+1,values:a.values}]},
+  apply(db,a){db.teams[a.teamId].officePreferences={year:a.year,region:a.region,date:db.worldDate||null,values:{...a.values}};
+    return {preferences:db.teams[a.teamId].officePreferences}}
+};
 
 /* ==== FILE: office-international.js ==== */
 // ===== LOL GM: global esports office, region/competition governance =====
@@ -11702,7 +11764,8 @@ function spark(vals){if(vals.length<2)return '';const W=90,H=24,mx=100,x=i=>i/(v
 function officeCard(r){const M=r.metrics||[],m=M.slice(-1)[0];
   return `<div class="cfgcard"><div class="cfghead"><b>${esc(r.leagueName)}</b><span class="hint">${esc((OFFICE_STYLES[r.office]||{}).label||'')}</span></div>
   ${m?`<div class="arow"><span>흥행 ${m.hype} (${hypeLabel(m.hype)}) · 균형 ${m.balance.toFixed(2)} · 스타 ${m.stars}명</span>${spark(M.map(x=>x.hype))}</div>`:'<p class="hint">첫 시즌이 끝나면 지표가 집계됩니다.</p>'}
-  ${(r.decisions||[]).slice().reverse().slice(0,4).map(d=>`<div class="dec"><time>${d.year}</time> <b>${esc(d.what)}</b><br><small>${esc(d.why)}</small></div>`).join('')||'<p class="hint">아직 결정한 안건이 없습니다.</p>'}</div>`}
+  ${officeOpinionPanel(r)}
+  ${(r.decisions||[]).slice().reverse().slice(0,4).map(d=>`<div class="dec"><time>${d.year}</time> <b>${esc(d.what)}</b><br><small>${esc(d.why)}${d.consultation?` · 구단 의견 찬성 ${d.consultation.support} / 반대 ${d.consultation.oppose} / 기권 ${d.consultation.abstain}`:''}${d.effectiveYear?` · ${d.effectiveYear}시즌 적용`:''}</small></div>`).join('')||'<p class="hint">아직 결정한 안건이 없습니다.</p>'}</div>`}
 function globalCard(){const g=DB.global||{decisions:[],power:{}};const P=Object.values(DB.regions).map(R=>[R,g.power[R.id]]).filter(x=>x[1]!==undefined).sort((a,b)=>b[1]-a[1]);
   return `<div class="cfgcard"><div class="cfghead"><b>국제대회 · 진출권 · 패치 주기 · 지역 승인</b><span class="hint">패치 주기 ${DB.patches.cadence||14}일</span></div>
   ${P.length?`<div class="arow"><span>국제 경쟁력 지수</span><span class="hint">${P.map(([R,v])=>`${esc(R.name)} ${v}`).join(' · ')}</span></div>`:''}
@@ -11828,6 +11891,7 @@ function bindSeason(){
   document.querySelectorAll('[data-chap]').forEach(b=>b.onclick=()=>{const i=+b.dataset.chap;SSET.chap=(SSET.chap??w.step)===i?-1:i;const s=Object.values(w.seasons).find(x=>stepOf(DB,x)===i&&(x.region===DB.teams[managedTeamId(DB)].region||DB.competitions[x.comp].international));if(s)SSET.view=s.key;nav()});
   document.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>{SSET.tab=b.dataset.st;$('#stab').innerHTML=seasonTab();document.querySelectorAll('[data-st]').forEach(x=>x.setAttribute('aria-pressed',x===b));bindSeasonTab()});
   bindSeasonTab();
+  bindOfficeOpinionControls();
   if(w.phase==='offseason'){
     if(!w.contractWindow){
       $('#soff').onclick=()=>{initOffseasonContractWindow(DB);saveDB();nav();window.scrollTo(0,0)};
@@ -11889,6 +11953,31 @@ function bindSeason(){
   $('#smine').onclick=()=>run(r=>r.played.some(x=>x.day.matches.some(m=>m.a===me||m.b===me)));
   $('#sstep').onclick=()=>run(()=>DB.world.step!==st0);
   $('#send').onclick=()=>run(()=>false);
+}
+
+/* ==== FILE: ui-office-consultation.js ==== */
+function officeOpinionPanel(R){
+  const t=managedTeam(DB);if(!t||t.parent||t.active===false||(t.division||1)!==1||t.region!==R.id)return '';
+  const current=clubFormatPreferences(DB,t),label=(field,v)=>field==='splits'?v+'스플릿':
+    field==='playoffBo'?'Bo'+v:SPLIT_STANDINGS_MODES[v];
+  return `<details class="cfgcard"><summary>내 구단의 리그 운영 의견</summary><div class="controls">
+    ${Object.entries(OFFICE_OPINION_FIELDS).map(([field,values])=>`<label>${OFFICE_OPINION_LABELS[field]}
+      <select data-office-field="${field}" data-office-club="${t.id}" aria-label="${OFFICE_OPINION_LABELS[field]} 의견">
+      <option value="">의견 없음</option>${values.map(v=>`<option value="${v}" ${current[field]===v?'selected':''}>${esc(label(field,v))}</option>`).join('')}</select></label>`).join('')}
+    <button class="ghost" data-office-opinion="${t.id}">의견 제출</button></div>
+    <p class="hint">다음 시즌 운영 논의에 반영됩니다. 최종 결정은 사무국이 내립니다.</p></details>`;
+}
+function bindOfficeOpinionControls(){
+  document.querySelectorAll('[data-office-opinion]').forEach(b=>b.onclick=()=>{
+    const values={};document.querySelectorAll(`[data-office-club="${b.dataset.officeOpinion}"]`).forEach(s=>{
+      if(s.value)values[s.dataset.officeField]=s.dataset.officeField==='standingsMode'?s.value:Number(s.value);
+    });
+    const preview=previewWorldAction(DB,{type:'office.opinion',actor:'manager',teamId:b.dataset.officeOpinion,values});
+    if(!preview.ok){MSG=(preview.errors||[]).join(' · ');navKeepScroll();return}
+    if(!confirm('다음 시즌 리그 운영 의견을 제출할까요? 최종 결정은 사무국이 내립니다.'))return;
+    const result=applyWorldAction(DB,preview);MSG=result.ok?'구단 운영 의견을 제출했습니다':(result.errors||[]).join(' · ');
+    if(result.ok)saveDB();navKeepScroll();
+  });
 }
 
 /* ==== FILE: ui-overlay.js ==== */
