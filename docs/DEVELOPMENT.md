@@ -31,6 +31,61 @@ without continually adding new status documents.
 
 ## Current Phase
 
+### Current implementation slice — observed AI on-site staff coverage (2026-10-02)
+
+Scope estimate: 50 minutes, single worker, clean main baseline `34f9dfd`.
+Fetched origin/main and inspected open PRs: only unrelated historical #27/#28;
+no duplicate implementation or agents. Re-read fixed staff rules and traced
+official draft/series effects before changing selection.
+
+AI now chooses positive marginal official coverage rather than raw estimate top-N.
+Public observed primary ability, public secondary field names, existing .35
+secondary weight/specialty dispersion, analysis focus and duplicate diminishing
+returns feed strategy, three analysis contexts and scouting channels. Explicit
+fictional objective weights are 1, 1/3 each and .25 respectively. No hidden rating
+or secondary ability numbers, staffing quotas, new event caps or global optimum
+claims. Training/recovery-only staff do not displace useful field staff; full
+employment/payroll/practice stay unchanged. Existing official views consume the
+resulting entry. IDs break ties; selection stops when no positive gain remains.
+
+The existing manager/AI registration command remains the only writer, preserving
+published zero caps, deadlines, manual authority, historical records, departure
+eligibility and save compatibility. Unchanged selections do not rewrite records.
+Snapshot now guards submitted identity and, for AI, observed coverage inputs;
+changed public evaluation/focus/specialties reject stale previews. Late failures
+restore entry and evidence through the existing rollback journal. UI explains
+manual choice versus observed AI policy and displays registered analyst focus.
+
+Files: `staff-registration.js`, `ui-registration.js`, existing
+`staff-registration-acceptance.mjs`, `STAFF_RULES.md` and this guide. Focused
+acceptance checks deterministic complementary selection, context duplication,
+specialty dispersion, report changes, hidden-primary/secondary independence,
+scout observation, actual official draft/match/career, employment/practice,
+zero/unpublished caps, shared writer, stale/late rollback, departure/history/save.
+Initial local new fixture called adviser output on the wrong draft turn and got
+null; advance through the actual legal draft action to the AI's turn. A subsequent
+scout contrast initially had no player because this fixture had not populated a
+roster; generate/sign the observed player before checking actual confidence. These
+are fixture corrections, not changed production behavior, removed assertions or budgets.
+Required full exact-head CI remains the merge gate; long100-season/device/mobile/
+TalkBack final QA remains deferred until implementation plus playtest feedback.
+Local staff registration/coverage, staff contracts, 105-module static checks and
+calendar-scouting (17) passed; `git diff --check` is clean. UI-finance-contracts
+ran its domain cases but its final harness assertion failed: the new independent
+coverage fixture creates a 36th fresh VM, while the runner expected 35. Updated
+the exact expected context count to 36, retaining compile-once and context-isolation
+guards; the corrected full runner must pass before merge. No long final QA or
+new infrastructure was started.
+
+Precise next slice (estimate 50 minutes): staff negotiated contract duration.
+Fixed `STAFF_RULES.md` says terms are freely negotiated, whereas current contract
+validation/UI still offers only 1–3 years. Inspect actual latest command, consent,
+exit liability, AI budget and save constraints; replace that fixed restriction
+with safe explicit negotiated terms through the same atomic writer, test user/AI
+authority, salary/remaining-term compensation and stale/late/save cases. Do not
+invent a mandatory agency fee, rewrite existing contracts or claim all D07/23
+stages complete. If another PR already implements it, inspect the next real gap.
+
 ### Current implementation slice — analyst context specialization (2026-10-02)
 
 Scope estimate: 50 minutes, single worker, baseline `db2a152`. Rechecked clean
