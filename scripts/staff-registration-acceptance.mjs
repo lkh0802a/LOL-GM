@@ -29,9 +29,26 @@ await runEngineFixture(String.raw`(()=>{
  const adviceAfter=draftStaffAdvice(enteredDraft,0);
  check(adviceAfter.available&&adviceAfter.confidence<adviceBefore.confidence&&JSON.stringify(adviceAfter.suggestions)!==JSON.stringify(adviceBefore.suggestions),'actual draft advice bypassed specialization allocation');
  advisers.forEach((s,i)=>s.specialties=specialtyBefore[i]);
+ const focusBefore=analyst.analysisFocus,metaDraft=()=>createDraftSession(seriesOfficialView(db,session),[mine.id,ai.id],new RNG('analysis-context','draft'),ctx);
+ analyst.analysisFocus='meta';const metaState=metaDraft(),metaAdvice=draftStaffAdvice(metaState,0),metaEvidence=draftMetaEvidence(metaState,0,metaState.champs[0].id);
+ analyst.analysisFocus='data';const dataState=metaDraft(),dataAdvice=draftStaffAdvice(dataState,0),cid=dataState.champs[0].id;
+ check(metaAdvice.confidence>dataAdvice.confidence&&JSON.stringify(metaState.vhat[0])!==JSON.stringify(dataState.vhat[0]),'meta specialist did not change actual draft evaluation/advice');
+ check(draftMetaEvidence(dataState,0,cid).confidence>metaEvidence.confidence,'data specialist did not change actual sample evidence');
+ analyst.analysisFocus=focusBefore;
  check(seriesOfficialView(db,{...session,opt:{...session.opt,practice:true}})===db,'practice lost club staff');
  const stage=db.competitions[s.comp].stages[0],match={a:mine.id,b:ai.id,bo:1,id:'staff-field-game'},result=simulateScheduledSeries(db,s,s.days[0],match,stage);
  check(result.lines.length===10&&result.rec.games.length===1,'registered staff path failed actual scheduled game');
+ check(Object.values(mine.metaKnowledge||{}).some(v=>v>0),'registered-view opponent learning was not persisted to actual team');
+ const observedMatch=simulateMatch(db,mine.id,ai.id,'analysis-observation',null,true),observeWorld=(focus,managerId)=>{
+   const w=unpackDB(packDB(db));w.manager.teamId=managerId;
+   for(const tid of [mine.id,ai.id]){delete w.teams[tid].metaKnowledge;delete w.teams[tid].metaCounter}
+   const observed={...observedMatch,sides:observedMatch.sides.map(x=>({...x,team:{...w.teams[x.team.id],staffRoster:[{...analyst,rating:70,specialties:{},analysisFocus:focus}]}}))};
+   recordMeta(w,observed);return w;
+ };
+ const opponentWorld=observeWorld('opponent',mine.id),dataWorld=observeWorld('data',mine.id),aiObserved=observeWorld('opponent',ai.id),observedCid=observedMatch.sides.find(x=>x.team.id===ai.id).ps[0].champ.id;
+ check(opponentWorld.teams[mine.id].metaKnowledge[observedCid]>dataWorld.teams[mine.id].metaKnowledge[observedCid],'opponent specialty did not affect actual recorded observation');
+ check(JSON.stringify(opponentWorld.teams[mine.id].metaKnowledge)===JSON.stringify(aiObserved.teams[mine.id].metaKnowledge),'human/AI observation differs');
+ check(JSON.stringify(unpackDB(packDB(opponentWorld)).teams[mine.id].metaKnowledge)===JSON.stringify(opponentWorld.teams[mine.id].metaKnowledge),'save lost observed learning');
  check(!coach.career,'simulation before commit invented career');
  commitScheduledSeries(db,s,match,result);check(coach.career[0].series===1&&analyst.career[0].series===1&&coach.career[0].wins===(result.rec.winner===mine.id?1:0),'committed official results lost staff career');
  let duplicateBlocked=false;try{commitScheduledSeries(db,s,match,result)}catch{duplicateBlocked=true}check(duplicateBlocked&&coach.career[0].series===1,'duplicate match doubled staff career');

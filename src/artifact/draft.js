@@ -68,12 +68,12 @@ function createDraftSession(db,teamIds,rng,ctx){
   ctx=ctx||{used:[],byTeam:{}};
   const evalBase=draftPoolSnapshot(db,ctx),{champs,strengths,mn,mx,byRole}=evalBase;
   const MS=db.metaStats||{},G=db.metaGames||0,RMS=db.regionMetaStats||{},RMG=db.regionMetaGames||{};
-  const vhat=teamIds.map(tid=>{const team=db.teams[tid],rid=team.region,an=Math.min(1,staffProfile(team).analysis/100+scrimAnalysisBonus(team)),m={};
+  const vhat=teamIds.map(tid=>{const team=db.teams[tid],rid=team.region,an=Math.min(1,staffAnalysisFor(team,'meta')/100+scrimAnalysisBonus(team)),data=Math.min(1,staffAnalysisFor(team,'data')/100+scrimAnalysisBonus(team)),m={};
     const nk=tid+'|'+an,noiseCache=draftNoiseBucket(db);let NZ=noiseCache.get(nk);if(!NZ){NZ={};noiseCache.set(nk,NZ)}
     champs.forEach(c=>{if(NZ[c.id]===undefined)NZ[c.id]=((hashStr(tid+db.patch.id+c.id)%2000)/1000-1)*0.35*(1.1-an);const noise=NZ[c.id];
       let v=clamp((strengths[c.id]-mn)/(mx-mn||1)+noise,0,1);
       const gst=MS[c.id],rst=(RMS[rid]||{})[c.id],rg=RMG[rid]||0,know=((team.metaKnowledge||{})[c.id]||0),counter=((team.metaCounter||{})[c.id]||0);
-      const observe=(base,st,g,weight)=>{if(!st||!g)return base;const n=st.p+st.b,w=n/(n+18*(1.35-an)),wr=(st.w+2)/(st.p+4),obs=clamp(0.5+(wr-0.5)*2.2+(n/g)*0.5-0.1,0,1);return base*(1-w*weight)+obs*w*weight};
+      const observe=(base,st,g,weight)=>{if(!st||!g)return base;const n=st.p+st.b,w=n/(n+18*(1.35-data)),wr=(st.w+2)/(st.p+4),obs=clamp(0.5+(wr-0.5)*2.2+(n/g)*0.5-0.1,0,1);return base*(1-w*weight)+obs*w*weight};
       v=observe(v,gst,G,.45);v=observe(v,rst,rg,.75);const prePro=c.proEligibleDate&&!championProEligible(db,c),uncertainty=prePro?(know-.5)*.12:0;m[c.id]=clamp(v+know*.08-counter*.035+uncertainty,0,1);
     });return m;
   });
@@ -133,9 +133,9 @@ function draftCandidateAnalysis(state,side,champ){
 }
 function draftStaffAdvice(state,side){
   const turn=draftTurn(state);if(!turn||turn.side!==side)return null;
-  const team=state.db.teams[state.teamIds[side]],strategic=staffByRole(team,'strategicCoach').sort((a,b)=>staffRoleAbility(b,'strategicCoach')-staffRoleAbility(a,'strategicCoach'))[0]||null,analyst=staffByRole(team,'analyst').sort((a,b)=>staffRoleAbility(b,'analyst')-staffRoleAbility(a,'analyst'))[0]||null;
+  const team=state.db.teams[state.teamIds[side]],strategic=staffByRole(team,'strategicCoach').sort((a,b)=>staffRoleAbility(b,'strategicCoach')-staffRoleAbility(a,'strategicCoach'))[0]||null,analyst=staffByRole(team,'analyst').sort((a,b)=>staffAnalysisAbility(b,'meta')-staffAnalysisAbility(a,'meta'))[0]||null;
   if(!strategic&&!analyst)return {available:false,kind:turn.kind,confidence:0,suggestions:[]};
-  const prof=staffProfile(team),quality=clamp(((strategic?staffRoleAbility(strategic,'strategicCoach'):45)+(analyst?staffRoleAbility(analyst,'analyst'):45))/200,.35,.95),legal=draftLegalChampions(state),opp=1-side,oppHist=state.ctx.byTeam[state.teamIds[opp]]||{won:[],lost:[]},mine=state.pickList[side].map(id=>state.db.patch.champions[id]).filter(Boolean);
+  const prof={...staffProfile(team),analysis:staffAnalysisFor(team,'meta')},quality=clamp(((strategic?staffRoleAbility(strategic,'strategicCoach'):45)+(analyst?staffAnalysisAbility(analyst,'meta'):45))/200,.35,.95),legal=draftLegalChampions(state),opp=1-side,oppHist=state.ctx.byTeam[state.teamIds[opp]]||{won:[],lost:[]},mine=state.pickList[side].map(id=>state.db.patch.champions[id]).filter(Boolean);
   const rows=legal.map(c=>{
     let score=0,factors={meta:Math.round((state.vhat[side][c.id]||0)*100),mastery:null,comp:null,counter:null,revealed:false};
     if(turn.kind==='P'){

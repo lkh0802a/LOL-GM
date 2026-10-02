@@ -14,6 +14,11 @@ await runEngineFixture(String.raw`(()=>{
  check(buyer.staffRoster.includes(free)&&!db.staffPool.includes(free)&&free.contract.until===db.year+2&&buyer.finance.cash===cash,'FA identity/terms or wage charged up front');
  check(free.history.at(-1).type==='signing'&&Math.abs(staffCost(db,buyer)-(2*psTeam(db,buyer)+buyer.staffRoster.reduce((v,s)=>v+staffSalary(s,psTeam(db,buyer)),0)))<1e-8,'career or fixed payroll missing');
  const publicBefore=staffObservation(db,buyer,free);free.rating=90;
+ const focusBefore=free.analysisFocus;free.analysisFocus='opponent';
+ check(staffAnalysisFor(buyer,'opponent')>staffAnalysisFor(buyer,'meta'),'opponent expertise has no contrasting effect');
+ const focusSave=unpackDB(packDB(db)).teams[buyer.id].staffRoster.find(s=>s.id===free.id);
+ check(focusSave.analysisFocus==='opponent','save lost analysis focus');
+ free.analysisFocus='unknown';check(staffStateErrors(db).some(x=>x.includes('분석가 전문성')),'unknown analysis focus accepted');free.analysisFocus=focusBefore;
  check(staffObservation(db,buyer,free).estimate===publicBefore.estimate,'public estimate secretly read current hidden rating');
  check(commitWorldAction(db,{type:'staff.interview',actor:'manager',teamId:buyer.id,sid:free.id}).ok,'interview failed');
  const report=staffObservation(db,buyer,free);free.rating=35;
@@ -24,6 +29,7 @@ await runEngineFixture(String.raw`(()=>{
  db.year=free.contract.until;const renewed=commitWorldAction(db,renew);
  check(renewed.ok&&free.contract.until===db.year+2&&free.history.at(-1).type==='renewal','period renewal not recorded');
  const released=commitWorldAction(db,{type:'staff.release',actor:'manager',teamId:buyer.id,sid:free.id});
+ check(free.analysisFocus===focusBefore,'release lost analysis focus');
  check(released.ok&&db.staffPool.includes(free)&&!free.contract&&free.history.at(-1).type==='release','release did not return same person to market');
  check(Math.abs(buyer.finance.cash-(cash-released.fee))<1e-8&&buyer.finance.prepaid.staffSeverance===released.fee,'severance not charged once');
  const target=seller.staffRoster.find(s=>s.role==='scout');target.contract.until=db.year+1;target.age=35;
@@ -60,6 +66,12 @@ await runEngineFixture(String.raw`(()=>{
  ai.staffRoster.find(s=>s.role==='analyst').publicEstimate=35;
  check(aiManageStaff(db,ai,new RNG('staff-ai','staff'))&&elite.history.length>0,'AI did not use employment writer');
  const multi={staffRoster:[{id:'MULTI',role:'strategicCoach',rating:80,specialties:{analyst:80}}]},single={staffRoster:[{id:'SINGLE',role:'strategicCoach',rating:80}]};
+ check(Object.keys(ANALYSIS_CONTEXTS).every(k=>staffAnalysisFor(multi,k)===staffProfile(multi).analysis),'legacy analysis changed without explicit focus');
+ const equal={id:'ANALYSIS_PAIR',role:'analyst',rating:70,publicEstimate:75,specialties:{},analysisFocus:'meta'},dataOnly={...equal,analysisFocus:'data'},opponentOnly={...equal,analysisFocus:'opponent'};
+ const complement={...ai,staffRoster:[equal],staffReports:{}};
+ check(staffObservedPrimary(db,complement,dataOnly)>staffObservedPrimary(db,complement,equal),'observed hiring failed to complement missing analysis context');
+ equal.rating=1;check(staffObservedPrimary(db,complement,dataOnly)>staffObservedPrimary(db,complement,equal),'hiring context leaked hidden rating');equal.rating=70;
+ check(staffAnalysisFor({staffRoster:[equal]},'meta')>staffAnalysisFor({staffRoster:[dataOnly]},'meta')&&staffAnalysisFor({staffRoster:[dataOnly]},'data')>staffAnalysisFor({staffRoster:[opponentOnly]},'data'),'context specialists have no distinct causal contribution');
  check(staffProfile(multi).analysis>staffProfile(single).analysis&&staffProfile(multi).draft<staffProfile(single).draft,'secondary expertise has no distributed weighted effect');
  const broad={...multi.staffRoster[0],specialties:{analyst:80,scout:80}},narrow=multi.staffRoster[0];
  check(Math.abs(staffRoleAbility(narrow,'strategicCoach')-80/1.35)<1e-9&&staffRoleAbility(broad,'strategicCoach')<staffRoleAbility(narrow,'strategicCoach')&&staffRoleAbility(broad,'analyst')<staffRoleAbility(narrow,'analyst'),'additional fields did not distribute every contribution');
@@ -79,6 +91,11 @@ await runEngineFixture(String.raw`(()=>{
  db.staffPool.push(focusedCandidate,broadCandidate);for(const s of ai.staffRoster.filter(s=>s.role==='analyst'))s.publicEstimate=10;
  const marketSource=staffMarketCandidates;staffMarketCandidates=()=>[broadCandidate,focusedCandidate];
  try{check(aiManageStaff(db,ai,new RNG('allocation-choice'))&&ai.staffRoster.includes(focusedCandidate)&&db.staffPool.includes(broadCandidate),'actual AI ignored public distributed contribution')}finally{staffMarketCandidates=marketSource}
+ const metaCandidate=genStaffMember(new RNG('meta-context-candidate'),'analyst',70),dataCandidate=genStaffMember(new RNG('data-context-candidate'),'analyst',70);
+ Object.assign(metaCandidate,{publicEstimate:80,specialties:{},analysisFocus:'meta'});Object.assign(dataCandidate,{publicEstimate:80,specialties:{},analysisFocus:'data'});
+ db.staffPool.push(metaCandidate,dataCandidate);for(const s of ai.staffRoster.filter(s=>s.role==='analyst'))Object.assign(s,{publicEstimate:20,analysisFocus:'meta'});
+ staffMarketCandidates=()=>[metaCandidate,dataCandidate];
+ try{check(aiManageStaff(db,ai,new RNG('context-choice'))&&ai.staffRoster.includes(dataCandidate)&&db.staffPool.includes(metaCandidate),'actual AI hire failed to complement analysis context')}finally{staffMarketCandidates=marketSource}
  const expiry=buyer.staffRoster.find(s=>s.role==='developmentCoach');expiry.contract.until=db.year-1;
  buyer.staffRoster.find(s=>s.role==='analyst').contract.until=db.year+2;
  const oldAge=expiry.age;ageStaff(db,new RNG('staff-expiry','staff'));
