@@ -247,9 +247,14 @@ const fixture=String.raw`(()=>{
   const mutual=unpackDB(packDB(checkpoint));
   mutual.worldDate=addDays(firstFixture,-4);
   const freeTeams=activeTeams(mutual,null,1).filter(team=>
-    !officialBookedTeams(mutual).has(team.id)),
+    !officialBookedTeams(mutual).has(team.id)&&
+    scrimReadiness(mutual,team).ok&&
+    scrimReadiness(mutual,team).availableSlots.includes('afternoon')),
     pair=freeTeams.flatMap((first,i)=>freeTeams.slice(i+1)
-      .filter(second=>scrimPartnerAssessment(mutual,first,second).allowed)
+      .filter(second=>scrimReadiness(mutual,second).ok&&
+        scrimReadiness(mutual,second).availableSlots.includes('afternoon')&&
+        !!scrimTimeOverlap(mutual,first,second,mutual.worldDate,'afternoon')&&
+        scrimPartnerAssessment(mutual,first,second).allowed)
       .map(second=>[first,second]))[0];
   assert(pair&&pair.every(team=>!officialBookedTeams(mutual).has(team.id)),
     'the test setup must use two unbooked teams not facing each other within a week');
