@@ -1645,3 +1645,12 @@ records the user-requested reason. The last report had at least11 completed
 seasons; the original running career JSON is partial, not success. This is a
 cancelled validation run, not a newly diagnosed engine/memory failure. Preserve
 all existing reports and leave full D acceptance pending until final validation.
+
+
+User clarified the final sequence: complete the entire roadmap through phase23,
+provide the playable HTML for their playtest, receive and address their feedback,
+then run the deferred final long-career and actual mobile/TalkBack validation.
+D-stage feature completion alone must not trigger those deferred tests. Keep
+short change-specific checks and minimal required CI during implementation.
+Android packaging/installation final evidence remains required at the appropriate
+roadmap/final validation step; do not call the game fully complete beforehand.
