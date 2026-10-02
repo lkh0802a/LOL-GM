@@ -1420,3 +1420,34 @@ draft/meta/item/rune controlled experiments and multi-patch balance remain open.
 The existing single100season QA continues with the source loaded before this
 change and must not be used as evidence for these new fight mechanics. D remains
 open, including actual mobile/TalkBack and multi-seed100season proof.
+
+### D11 observed save peak and bounded encoding (2026-10-02)
+
+The supervised #116-engine run completed32seasons through2058 and failed during
+2059 offseason at before-restore: heap1,644,354,104bytes exceeded the unchanged
+1536MiB QA budget; RSS2,226,302,976bytes remained below4096MiB. The observer
+recorded exit1/signal null at2026-10-02T00:17:36.099Z, so this failure has a known
+invariant cause rather than unexplained disappearance or native V8 OOM.
+Original .diagnostics/daily-supervised-main-1 reports/logs remain preserved.
+This was not100seasons and did not exercise the later #118 fight changes.
+
+packDB previously expanded the entire history into encoded arrays alongside the
+live history and complete JSON output. It now serializes at most512 history rows
+per batch and appends their JSON array content to the root JSON. packMetaHistory
+remains the ordinary array API; stringifyMetaHistory owns bounded packing. Format2,
+metaHistoryPacked1, every row and nested item/rune evidence remain unchanged;
+root property order may differ. No forced GC, archive truncation or memory-budget
+increase is used in production. A Proxy prototype produced no measurable peak
+improvement and is absent from the final implementation.
+
+Separate Node24 processes with60,000 synthetic rows produced identical140,220,001
+byte history text and SHA256. Observed additional heap fell230.35→144.52MB;
+total observed heap388.01→302.18MB, elapsed714→635ms. This desktop synthetic
+fixture measures encoding, not mobile performance or100season retained memory.
+The benchmark uses forced GC only before measurement; production does not.
+Dedicated acceptance covers exact history JSON parity across batch boundaries,
+512-row limits, source purity and full current-save restoration. Existing6000-row
+archive/legacy/current regression and97-module static/build pass. Calendar/scouting
+runner now10acceptances. Full mandatory CI remains the merge gate. Another actual
+long run is only meaningful after the corrected engine is validated; do not erase
+the32season failure or claim this change proves100seasons.

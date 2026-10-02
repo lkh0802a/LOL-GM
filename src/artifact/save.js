@@ -3,12 +3,26 @@
 // Save packing must not mutate live runtime state.
 
 // ---- 저장용 압축: 능력치·성향·챔피언 폭을 배열로 ----
-function packMetaHistory(rows){
-  return (rows||[]).map(r=>[
+function packMetaHistoryRow(r){
+  return [
     r.date,r.patch,r.comp,r.season,r.year,r.split,r.stage,r.league,r.international?1:0,r.regions||[],
     (r.sides||[]).map(s=>[s.team,s.region,s.win?1:0,(s.picks||[]).map(p=>{const x=typeof p==='string'?{champ:p}:p;return [x.champ,x.role||null,x.player||null,x.items||[],x.runes||[]]})]),
     r.bans||[]
-  ]);
+  ];
+}
+function packMetaHistory(rows){
+  return (rows||[]).map(packMetaHistoryRow);
+}
+function stringifyMetaHistory(rows){
+  // Keep only a bounded encoded batch beside live history and output text.
+  // String concatenation avoids collecting all encoded rows or a second list
+  // of output chunks. This preserves the existing array storage format.
+  let text='[';
+  for(let i=0;i<rows.length;i+=512){
+    const chunk=JSON.stringify(packMetaHistory(rows.slice(i,i+512)));
+    text+=(i?',':'')+chunk.slice(1,-1);
+  }
+  return text+']';
 }
 function unpackMetaHistory(rows){
   const strings=new Map(),loadouts=new Map();
@@ -64,13 +78,15 @@ function packDB(db){
   }
   const scout=Object.fromEntries(Object.entries(db.scout||{}).filter(([id,r])=>db.players[id]&&!db.players[id].retired&&(typeof r==='number'||(r.knowledge||0)>baseScoutKnowledge(db,db.players[id])||(r.observations||0)>0)));
   const teams=Object.fromEntries(Object.entries(db.teams).map(([id,t])=>{const q={...t};delete q._pre;delete q.coach;delete q.staff;if(q.facilities)delete q.facility;return [id,q]}));
-  const patches={...(db.patches||{})};delete patches.base;delete patches.initialBase;const metaHistory=packMetaHistory(db.metaHistory||[]);
+  const patches={...(db.patches||{})};delete patches.base;delete patches.initialBase;
   const root={...db};
   // Format/revision fields are storage metadata. Runtime caches, legacy staff pools,
   // transaction previews and historical full patch baselines never enter exports.
   for(const key of SAVE_TRANSIENT_ROOT_FIELDS)delete root[key];
-  return JSON.stringify({...root,world,teams,players,scout,patches,metaHistory,
+  delete root.metaHistory;
+  const body=JSON.stringify({...root,world,teams,players,scout,patches,
     saveFormat:SAVE_FORMAT_VERSION,metaHistoryPacked:1,packed:1});
+  return body.slice(0,-1)+',"metaHistory":'+stringifyMetaHistory(db.metaHistory||[])+'}';
 }
 function unpackDB(str){
   return migrateSaveState(JSON.parse(str));

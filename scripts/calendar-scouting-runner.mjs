@@ -8,6 +8,7 @@ const acceptances=[
   'scrim-partner-acceptance.mjs',
   'scrim-plans-acceptance.mjs',
   'fight-skill-acceptance.mjs',
+  'save-history-acceptance.mjs',
   'split-standings-acceptance.mjs',
   'scouting-depth-acceptance.mjs',
   'scouting-operations-acceptance.mjs',
