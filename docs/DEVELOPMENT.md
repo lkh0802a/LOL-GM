@@ -1765,3 +1765,29 @@ invoice rejection and late rollback. Existing closure/estate tests pass locally.
 General insolvency restructuring, asset recovery and representative/promise
 extensions remain open. Final required CI gates merge; long/mobile checks wait
 until phase23 implementation and user playtest feedback as directed.
+
+### D04 consensual oral role revision (2026-10-02)
+
+An active oral role commitment can now be reduced only through explicit player
+consent under the existing renewal utility/market-floor policy. Same/higher-role
+requests cannot reset the usage window, signed role rights cannot be reduced by
+an oral agreement, loan/medical contracts and unauthorized callers remain blocked.
+Current salary and remaining contract terms are evaluated without a new signing
+bonus, cash payment or invented agency commission. Player decisions use detached
+views; the preview snapshots the consent result as well as ownership and usage.
+
+The player/coach confirmation surface uses the shared guarded action, and AI role
+balancing uses the same consent when a player loses their starting opportunity.
+AI proposals stop at the signed role floor. Accepted revisions begin future usage
+at the agreement date; the old fulfilled/broken usage evidence and consent are
+preserved in a career event, while already-earned satisfaction/trust consequences,
+salary and signed contract remain unchanged. New contracts still use the existing
+negotiated writer. No promise can be silently replaced to erase prior evidence.
+
+Short fixtures cover accept/refuse, signed floor, same-role reset protection,
+manual/AI/owned-squad authority, stale willingness, late rollback/player identity,
+prior medical-adjusted usage, current saves, UI cancel/confirm/save and production
+AI roster adjustment. Existing signed-role acceptance passes. Full CI gates merge;
+long-season/mobile validation remains deferred until23 and playtest feedback.
+This addresses oral revision, not unspecified multi-client agency fees or all
+remaining insolvency and later-roadmap functionality.

@@ -35,8 +35,7 @@ function rolePromiseActionSnapshot(db,a){
     usage:p?.usage?JSON.parse(JSON.stringify(p.usage)):null,
     promise:p?.rolePromise?JSON.parse(JSON.stringify(p.rolePromise)):null};
 }
-WORLD_ACTION_HANDLERS['player.promise']={
-  validate(db,a){
+function validateRolePromiseOwner(db,a){
     const p=db.players[a.pid],t=db.teams[a.teamId];
     if(!p||p.loan||p.retired||!t||t.active===false||p.team!==t.id||!p.contract||
       p.contract.until<db.year||p.contract.medicalReplacement)
@@ -45,32 +44,83 @@ WORLD_ACTION_HANDLERS['player.promise']={
       a.actor==='ai'&&db.world?.manage==='manual'&&managerControlsSquad(db,t))
       return worldActionError('unauthorized','관리하는 선수의 역할 약속만 결정할 수 있습니다');
     if(!SQUAD_ROLES.includes(a.role))return worldActionError('invalid_terms','유효한 역할이 필요합니다');
+    return {ok:true,pid:p.id,teamId:t.id,role:a.role,until:p.contract.until};
+}
+WORLD_ACTION_HANDLERS['player.promise']={
+  validate(db,a){
+    const checked=validateRolePromiseOwner(db,a);if(!checked.ok)return checked;
+    const p=db.players[a.pid];
     if(oralRolePromiseStatus(db,p))
       return worldActionError('active_promise','기존 구두 약속은 새 약속으로 초기화할 수 없습니다');
     const floor=Math.max(SQUAD_ROLE_ORDER[p.contract.promisedRole]??0,
       SQUAD_ROLE_ORDER[p.rosterRole]??0);
     if(SQUAD_ROLE_ORDER[a.role]<=floor)
       return worldActionError('player_consent','현재 역할과 계약보다 높은 기회를 약속해야 합니다');
-    return {ok:true,pid:p.id,teamId:t.id,role:a.role,until:p.contract.until};
+    return checked;
   },
   canonical(db,a,v){return {type:a.type,actor:a.actor,pid:v.pid,teamId:v.teamId,
     role:v.role,until:v.until}},
   snapshot:rolePromiseActionSnapshot,
   changes(db,a){return [{pid:a.pid,role:a.role,until:a.until,
     expected:expectedPlayShare({rosterRole:a.role},db.teams[a.teamId])}]},
-  apply(db,a){
+  apply:applyOralRolePromise
+};
+function applyOralRolePromise(db,a,eventType='role_promise',detail={}){
     const p=db.players[a.pid],u=p.usage?.year===db.year?p.usage:null;
     p.rolePromise={role:a.role,teamId:a.teamId,until:a.until,issuer:a.actor,
       start:{year:db.year,date:db.worldDate||null,games:u?.games||0,
         teamGames:u?.teamGames||0,unavailableTeamGames:u?.unavailableTeamGames||0}};
-    recordPlayerEvent(p,'role_promise',db.year,{role:a.role,team:a.teamId,
-      until:a.until,date:db.worldDate,source:a.actor});
+    recordPlayerEvent(p,eventType,db.year,{role:a.role,team:a.teamId,
+      until:a.until,date:db.worldDate,source:a.actor,...detail});
     return {promise:p.rolePromise};
+}
+function oralRoleRevisionConsent(db,p,t,role){
+  const player=JSON.parse(JSON.stringify(p)),team=JSON.parse(JSON.stringify(t)),
+    view={...db,players:{...db.players,[p.id]:player},teams:{...db.teams,[t.id]:team},_marketDemandCache:{}},
+    terms={...player.contract,years:Math.max(1,player.contract.until-db.year+1),
+      signingBonus:0,promisedRole:role},
+    utility=offerUtility(view,player,team,terms,{renewal:true}),
+    threshold=offerAcceptanceThreshold(view,player,{kind:'renewal'}),
+    willing=contractOfferReasonable(view,player,team,terms,'renewal')&&
+      Number.isFinite(utility)&&utility>=threshold;
+  return {willing,utility,threshold,representative:playerAgent(player)?.id||null};
+}
+WORLD_ACTION_HANDLERS['player.promise-revise']={
+  validate(db,a){
+    const checked=validateRolePromiseOwner(db,a);if(!checked.ok)return checked;
+    const p=db.players[a.pid],status=oralRolePromiseStatus(db,p);
+    if(!status||SQUAD_ROLE_ORDER[a.role]>=SQUAD_ROLE_ORDER[status.role])
+      return worldActionError('invalid_revision','현재 구두 약속보다 낮은 역할을 재협상해야 합니다');
+    if(SQUAD_ROLE_ORDER[a.role]<(SQUAD_ROLE_ORDER[p.contract.promisedRole]??0))
+      return worldActionError('contract_protected','계약에 보장된 역할은 계약 재협상이 필요합니다');
+    const consent=oralRoleRevisionConsent(db,p,db.teams[a.teamId],a.role);
+    if(!consent.willing)return worldActionError('player_consent','선수가 역할 축소를 거절했습니다. 기존 약속을 이행하거나 계약을 재협상하세요');
+    return {...checked,fromRole:status.role,consent};
+  },
+  canonical(db,a,v){return {type:a.type,actor:a.actor,pid:v.pid,teamId:v.teamId,
+    role:v.role,until:v.until,fromRole:v.fromRole}},
+  snapshot(db,a){return {...rolePromiseActionSnapshot(db,a),
+    consent:oralRoleRevisionConsent(db,db.players[a.pid],db.teams[a.teamId],a.role)}},
+  changes(db,a){return [{pid:a.pid,fromRole:a.fromRole,role:a.role,until:a.until,
+    prior:oralRolePromiseStatus(db,db.players[a.pid]),
+    expected:expectedPlayShare({rosterRole:a.role},db.teams[a.teamId])}]},
+  apply(db,a){
+    const p=db.players[a.pid],prior=oralRolePromiseStatus(db,p),
+      consent=oralRoleRevisionConsent(db,p,db.teams[a.teamId],a.role);
+    // Agreement changes future usage only; preserve the old evidence and all
+    // already-earned satisfaction/trust consequences instead of clearing them.
+    applyOralRolePromise(db,a,'role_promise_revised',{from:a.fromRole,prior,consent});
+    return {promise:p.rolePromise,prior};
   }
 };
 function aiSportingRolePromise(db,p,t){
-  if(!p?.contract||p.loan||p.contract.medicalReplacement||oralRolePromiseStatus(db,p))return;
-  const role=recommendedRosterRole(db,p,t);
+  if(!p?.contract||p.loan||p.contract.medicalReplacement)return;
+  const oral=oralRolePromiseStatus(db,p),role=recommendedRosterRole(db,p,t),
+    revisionRole=SQUAD_ROLE_ORDER[role]<(SQUAD_ROLE_ORDER[p.contract.promisedRole]??0)
+      ?p.contract.promisedRole:role;
+  if(oral&&SQUAD_ROLE_ORDER[revisionRole]<SQUAD_ROLE_ORDER[oral.role])
+    return commitWorldAction(db,{type:'player.promise-revise',pid:p.id,teamId:t.id,role:revisionRole,actor:'ai'});
+  if(oral)return;
   if(starterFor(db,t,p.role)!==p||SQUAD_ROLE_ORDER[role]<=
     Math.max(SQUAD_ROLE_ORDER[p.contract.promisedRole]??0,SQUAD_ROLE_ORDER[p.rosterRole]??0))return;
   return commitWorldAction(db,{type:'player.promise',pid:p.id,teamId:t.id,role,actor:'ai'});
