@@ -142,3 +142,10 @@ are reused. Saved global history survives regional dissolution. The three/four/
 five-season policy is a documented fictional game assumption, not a real-world
 regulation. This closes a missing production policy writer; deferred long-career
 and real-mobile acceptance remains open under the user's final-check sequence.
+
+D10 source-only control is now conservatively classified from the checked-in
+Data Dragon Korean action descriptions, preserving explicit numeric precedence
+and legacy saved champions. Xerath stun/slow now reach the bounded aggregate
+profile and actual matches; self restriction/immunity/minion fear are excluded.
+These are presence tags, not exact durations or full spell reproduction. See
+DEVELOPMENT.md for patch/save/paired-match checks and remaining final gates.
