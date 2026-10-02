@@ -50,8 +50,11 @@ Focused acceptance covers same-role/wrong-role, human/AI, raw work equality,
 real release, saved earned learning, legacy no-backfill, invalid saved values,
 actual mastery/research settlement, cap/reset, rehire, scrim coefficients and rest.
 Focused cohesion-practice, static, UI-finance-contracts (38 acceptances) and
-calendar-scouting (17 acceptances) passed. Required CI/head/merge evidence will
-be recorded at delivery; no long/device/TalkBack QA started.
+calendar-scouting (17 acceptances) passed. PR #138 final head
+`6835e536c3caa80843ac31176668345daf092e75` passed complete CI run `37039060781`,
+including medical core, four seeds, two aggregates and `verify`. Merged as
+`84a272eff31a7a8abafc1a24dfd7f8ce769f53d2`; standalone HTML rebuilt from this
+integrated source. No long/device/TalkBack QA started.
 Initial calendar regression found that appending default zero fields to untouched
 legacy champion pools changed the pure control-experiment clone. Preserve absent
 fields and old eight-value tuples until actual practice creates earned learning;
