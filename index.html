@@ -384,7 +384,7 @@ function expl(st,title,factors,extra={}){if(st.quiet)return;st.expl.push({t:st.t
 function pname(st,ps){return `${st.sides[ps.side].team.short} ${ps.p.name}(${ps.champ.name})`}
 
 function addGold(ps,g){ps.gold+=g;ps.goldEarned+=g;
-  while(ps.itemActionIndex<(ps.itemActions||[]).length&&ps.goldEarned>=ps.itemActions[ps.itemActionIndex].threshold){applyItemCraftAction(ps,ps.itemActions[ps.itemActionIndex]);ps.itemActionIndex++}
+  advanceItemPurchases(ps);
 }
 function addXp(ps,x){ps.xp+=x;let l=1;for(let i=1;i<XP_TABLE.length;i++)if(ps.xp>=XP_TABLE[i])l=i+1;ps.lvl=Math.min(18,l)}
 
@@ -776,7 +776,6 @@ function simulateMatch(db,blueId,redId,seed,ctx,quiet){
   const st={t:0,cur:0,quiet:!!quiet,seed,rng,patch,sides:[mkSide(blueId,0),mkSide(redId,1)],lanePush:{top:0,mid:0,bot:0},vision:{top:0,mid:0,bot:0,dragon:0,baron:0},
     obj:{dragonAt:patch.rules.dragonSpawn,dragonIdx:0,dragonTypes:rng.dec.chance(0.5)?['화염','대지','바다','바람']:['바다','바람','화염','대지'],soul:false,elderAt:0,heraldDone:false,baronAt:patch.rules.baronSpawn,wait:{}},
     jgNext:[2.6+rng.dec.range(0,1),2.6+rng.dec.range(0,1)],mods:[(ctx&&ctx.mods&&ctx.mods[blueId])||0,(ctx&&ctx.mods&&ctx.mods[redId])||0],log:[],expl:[...d.expl],firsts:{},goldHist:[],winner:-1};
-  for(const s of st.sides){s.ps.forEach(p=>{p.items=[]})}
   // 경기 당일 컨디션: 기복(consistency)이 낮은 팀일수록 편차가 크다
   st.mods=st.mods.map((m,i)=>m+(i===((ctx&&ctx.firstPick)||0)?BAL.first:0)+(lineupSynergy(db,st.sides[i].team,st.sides[i].ps.map(p=>p.p.id))-50)/1000+rng.mech.normal(0,0.07*(1.25-avg(st.sides[i].ps.map(p=>at(p,'consistency'))))));
   let t;
@@ -1095,6 +1094,19 @@ function applyItemCraftAction(ps,a){
   for(const id of a.consume||[]){const i=ps.items.indexOf(id);if(i>=0)ps.items.splice(i,1)}
   ps.items.push(a.id);
   if(ps.items.length>6){const i=ps.items.findIndex(id=>['starter','consumable'].includes(ps.patchRef?.itemDefs?.[id]?.tier));if(i>=0)ps.items.splice(i,1)}
+}
+function advanceItemPurchases(ps){
+  const actions=ps.itemActions||[];
+  while(ps.itemActionIndex<actions.length&&ps.goldEarned>=actions[ps.itemActionIndex].threshold){
+    const start=ps.itemActionIndex,preview={items:ps.items.slice(),patchRef:ps.patchRef};let end=start;
+    // With a full inventory, wait until enough gold can combine the remaining
+    // components atomically. Intermediate ingredients never occupy extra slots.
+    for(;end<actions.length&&ps.goldEarned>=actions[end].threshold;end++){
+      applyItemCraftAction(preview,actions[end]);if(preview.items.length<=6)break;
+    }
+    if(end>=actions.length||ps.goldEarned<actions[end].threshold)break;
+    for(;ps.itemActionIndex<=end;ps.itemActionIndex++)applyItemCraftAction(ps,actions[ps.itemActionIndex]);
+  }
 }
 
 /* ==== FILE: data.js ==== */
@@ -1750,7 +1762,7 @@ function applyNote(P,n){
   else if(n.type==='new'){const nc=archChampion(n.def.name,n.def.roles,n.def.arch,n.def.dmg,null,n.def.id||championId(n.def.name));nc.releaseDate=n.def.releaseDate||null;nc.proEligibleDate=n.def.proEligibleDate||null;nc.nameKo=n.def.nameKo||nc.nameKo;nc.naming=n.def.naming?JSON.parse(JSON.stringify(n.def.naming)):null;nc.visual=JSON.parse(JSON.stringify(n.def.visual||generatedChampionVisual(n.def)));P.champions[nc.id]=nc}
   else if(n.type==='rework'&&c&&c.visual){c.visual={...c.visual,revision:(c.visual.revision||0)+(n.scope==='major'?1:0)}}
   else if(n.type==='rule')P.rules[n.key]=n.v;
-  else if(n.type==='item'&&P.itemDefs&&P.itemDefs[n.id]){const d=P.itemDefs[n.id];if(n.field==='cost'){const delta=Number(n.new)-Number(d.cost||0);d.cost=n.new;d.recipeCost=Math.max(0,Math.round((Number(d.recipeCost??d.cost)+delta)*100)/100)}else{d.effects=d.effects||{};d.effects[n.field]=n.new}}
+  else if(n.type==='item'&&P.itemDefs&&P.itemDefs[n.id]){const d=P.itemDefs[n.id];if(n.field==='cost'){const oldCost=Number(d.cost||0),recipeCost=Number(d.recipeCost??oldCost),delta=Number(n.new)-oldCost;d.cost=n.new;d.recipeCost=Math.max(0,Math.round((recipeCost+delta)*100)/100)}else{d.effects=d.effects||{};d.effects[n.field]=n.new}}
   else if(n.type==='item_new'){P.itemDefs=P.itemDefs||{};P.itemDefs[n.def.id]=JSON.parse(JSON.stringify(n.def));P.items=P.items||{};for(const cls of n.def.classes||[]){P.items[cls]=P.items[cls]||[];if(!P.items[cls].includes(n.def.id))P.items[cls].push(n.def.id)}}
   else if(n.type==='item_remove'&&P.itemDefs&&P.itemDefs[n.id])P.itemDefs[n.id].active=false;
   else if(n.type==='rune'&&P.runeDefs&&P.runeDefs[n.id]){const d=P.runeDefs[n.id];d.effects=d.effects||{};d.effects[n.field]=n.new}
