@@ -2,6 +2,7 @@
 // Owns match-derived meta history, indexes, filtered queries and champion meta insights.
 
 const META_HISTORY_CACHE=new WeakMap();
+const META_PATCH_SAMPLE_INDEX_CACHE=new WeakMap(); // Official views share immutable recorded history arrays.
 const EMPTY_META_HISTORY=[];
 const META_FILTER_CACHE_LIMIT=64, META_PATCH_SORT_LIMIT=12, PATCH_REPLAY_CACHE_LIMIT=8;
 function patchCache(db){let c=PATCH_CACHE.get(db);if(!c){c=new Map();PATCH_CACHE.set(db,c)}return c}
@@ -69,7 +70,10 @@ function metaCacheRemember(cache,key,value,limit){
   return value;
 }
 function currentPatchMetaSamples(db){
+  const rowsRef=db.metaHistory||EMPTY_META_HISTORY,shared=META_PATCH_SAMPLE_INDEX_CACHE.get(rowsRef);
+  if(shared)META_HISTORY_CACHE.set(db,shared);
   const index=metaHistoryIndex(db),patch=db.patch.id;
+  META_PATCH_SAMPLE_INDEX_CACHE.set(rowsRef,index);
   if(index.patchSamples.has(patch))return index.patchSamples.get(patch);
   const rows=index.byPatch.get(patch)||EMPTY_META_HISTORY,stats={},regional={},regionGames={},
     add=(bag,cid,key)=>{if(typeof cid!=='string')return;const x=bag[cid]||(bag[cid]={p:0,w:0,b:0});x[key]++};

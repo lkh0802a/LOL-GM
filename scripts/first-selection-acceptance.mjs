@@ -87,6 +87,8 @@ await runEngineFixture(String.raw`(()=>{
  const cid=game.sides[0].ps[0].champ.id,oldPatch=db.patch.id,oldHistory=JSON.stringify(db.metaHistory),oldSamples=currentPatchMetaSamples(db);
  check(oldSamples.games===1&&oldSamples.stats[cid].p===1&&oldSamples.regionGames.NA===1,'real recorded match missing from patch samples');
  check(currentPatchMetaSamples(db)===oldSamples,'unchanged patch aggregation missed cache');
+ const fieldView={...db,teams:{...db.teams}};
+ check(currentPatchMetaSamples(fieldView)===oldSamples&&metaHistoryIndex(fieldView)===metaHistoryIndex(db),'official shallow view rebuilt the complete history index');
  newPatch(db,addDays(db.worldDate,14),false,new RNG('patch-provenance-change'));
  const empty=currentPatchMetaSamples(db),ctx={used:[],byTeam:{}},draft=()=>createDraftSession(db,[mine.id,enemy.id],new RNG('patch-evidence-draft'),ctx),before=draft(),pool=draftPoolSnapshot(db,ctx),selectionBefore=selectionPatchValues(db,mine.id,pool);
  check(empty.games===0&&JSON.stringify(db.metaHistory)===oldHistory,'new patch reused old samples or rewrote historical games');

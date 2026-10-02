@@ -45,6 +45,8 @@ games from existing professional `metaHistory` and its patch index. Recorded
 game-time regions remain authoritative. The derived cache lives only on the
 existing WeakMap index, uses the existing 12-entry patch cache bound, invalidates
 on append/replacement/truncation and does not change saves or raw history.
+Official shallow DB views share the history array's WeakMap-backed index, avoiding
+full historical reindex per view; the focused test proves shared cache identity.
 Legacy counters without recorded patch provenance supply zero attributed games,
 not invented current-patch observations. String-shaped older pick records remain
 supported. Official recording still excludes practice and replay.
