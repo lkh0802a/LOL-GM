@@ -131,11 +131,11 @@ function growPlayer(db,p,rng,games,champGames){
   }
   // 챔피언 폭: 공식전 + 스크림 + 훈련 + 난이도 + 학습 능력을 함께 반영
   for(const c in champGames)ensureChampionProfile(db,p,c);
-  if(team&&p.pool&&!team.practiceUsage?.days){const practice=Math.max(2,Math.round((tr.combat+tr.mental)/12*(.7+coach*.5)));Object.entries(p.pool).sort((a,b)=>b[1].mastery-a[1].mastery).slice(0,6).forEach(([c])=>practiceChampion(db,p,c,'training',practice))}
-  for(const c of Object.keys(p.pool||{})){const n=champGames[c]||0,pr=ensureChampionProfile(db,p,c),learn=championLearningMultiplier(db,p,c),practiceGain=(pr.scrimSeason||0)*.16+(pr.trainingSeason||0)*.09,officialGain=Math.min(7,n*.42),gain=Math.min(8,(officialGain+practiceGain)*learn*(p.age<22?1.12:1));
+  if(team&&p.pool&&!team.practiceUsage?.days){const practice=Math.max(2,Math.round((tr.combat+tr.mental)/12*(.7+coach*.5)));Object.entries(p.pool).sort((a,b)=>b[1].mastery-a[1].mastery).slice(0,6).forEach(([c])=>practiceChampion(db,p,c,'training',practice,false))}
+  for(const c of Object.keys(p.pool||{})){const n=champGames[c]||0,pr=ensureChampionProfile(db,p,c),learn=championLearningMultiplier(db,p,c),practiceGain=(pr.scrimSeason||0)*.16+(pr.trainingSeason||0)*.09+(pr.coachingMastery||0),officialGain=Math.min(7,n*.42),gain=Math.min(8,(officialGain+practiceGain)*learn*(p.age<22?1.12:1));
     if(n||practiceGain){pr.mastery=Math.round(clamp(pr.mastery+gain,20,99));pr.experience=Math.round(clamp(pr.experience+n*1.5,0,999));pr.confidence=Math.round(clamp(pr.confidence+rng.normal(n?2:1,3),10,99))}
     else {pr.mastery=Math.round(clamp(pr.mastery-rng.range(0,1.8)*(1-(p.attrs.meta_adaptation||50)/180),20,99));if(pr.mastery<36&&Object.keys(p.pool).length>12)delete p.pool[c]}
-    if(p.pool[c]){pr.matchup_knowledge=Math.round(clamp(pr.matchup_knowledge+(n?1.5:.35),20,99));pr.scrimSeason=0;pr.trainingSeason=0}}
+    if(p.pool[c]){pr.matchup_knowledge=Math.round(clamp(pr.matchup_knowledge+(n?1.5:.35)+(pr.coachingResearch||0)*learn,20,99));pr.scrimSeason=0;pr.trainingSeason=0;pr.coachingMastery=0;pr.coachingResearch=0}}
   if(games>0)p.proSeasons=(p.proSeasons||0)+1;p.age++;p.medicalRestDays=0;
   return playerOvr(p)-before;
 }

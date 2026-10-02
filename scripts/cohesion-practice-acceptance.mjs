@@ -38,6 +38,46 @@ await runEngineFixture(String.raw`(()=>{
   const ap=a.players[p.id],bp=b.players[p.id],champ=Object.keys(ap.pool)[0];
   check(a.teams[t.id].practiceUsage.individual>b.teams[t.id].practiceUsage.individual&&bp.pool[champ].trainingSeason>ap.pool[champ].trainingSeason,'focus has no opportunity cost');
   check(trainingTimeMultiplier(a.teams[t.id],db.year)>trainingTimeMultiplier(b.teams[t.id],db.year),'individual time not linked to real growth');
+  // Current role, actual practice time and employment boundary; no inflated raw work.
+  const learningWorld=()=>{const w=unpackDB(packDB(base)),club=w.teams[t.id];club.staffRoster=[];delete club.practiceDay;club.scrimLog=[];club.training.focus='champions';w.manager.teamId=t.id;w.players[p.id].medicalPlan='normal';return w};
+  const coached=learningWorld(),plain=learningWorld(),wrong=learningWorld(),aiLearning=learningWorld();
+  const specialist={id:'LEARNING_COACH',role:positionCoachRole(p.role),rating:99,age:35,specialties:{},department:'coach',publicEstimate:80};
+  for(const w of [coached,aiLearning]){w.teams[t.id].staffRoster=[JSON.parse(JSON.stringify(specialist))];initializeStaffContract(w,w.teams[t.id],w.teams[t.id].staffRoster[0])}
+  wrong.teams[t.id].staffRoster=[{...specialist,role:positionCoachRole(ROLES.find(r=>r!==p.role))}];
+  aiLearning.manager.teamId=other.id;
+  for(const w of [coached,plain,wrong,aiLearning])runDailyPractice(w);
+  const cp=coached.players[p.id],np=plain.players[p.id],wp=wrong.players[p.id],ipr=aiLearning.players[p.id],learnChamp=Object.keys(cp.pool).sort((x,y)=>cp.pool[y].mastery-cp.pool[x].mastery)[0];
+  check(cp.pool[learnChamp].trainingSeason===np.pool[learnChamp].trainingSeason&&JSON.stringify(cp.practiceDay)===JSON.stringify(np.practiceDay),'coach minted practice resources');
+  check(cp.pool[learnChamp].coachingMastery>0&&!wp.pool[learnChamp].coachingMastery&&positionPracticeBonus(coached,cp)===.3,'wrong role or bounded learning effect');
+  check(JSON.stringify(cp.pool)===JSON.stringify(ipr.pool),'AI/human practice differs');
+  const earned=cp.pool[learnChamp].coachingMastery;
+  check(commitWorldAction(coached,{type:'staff.release',actor:'manager',teamId:t.id,sid:specialist.id}).ok,'real coach release failed');
+  practiceChampion(coached,cp,learnChamp,'training',1);
+  check(cp.pool[learnChamp].coachingMastery===earned&&positionPracticeBonus(coached,cp)===0,'departure erased earned learning or applied future coaching');
+  const stored=unpackDB(packDB(coached));check(stored.players[p.id].pool[learnChamp].coachingMastery===earned,'save lost earned learning');
+  const freeCoach=coached.staffPool.find(s=>s.id===specialist.id);
+  check(commitWorldAction(coached,{type:'staff.sign',actor:'manager',teamId:t.id,sid:freeCoach.id,years:2,salary:staffAskingSalary(coached,coached.teams[t.id],freeCoach)}).ok,'real coach rehire failed');
+  check(cp.pool[learnChamp].coachingMastery===earned,'rehire backfilled earlier practice');
+  const scrimWork=cp.pool[learnChamp].scrimSeason,trainingWork=cp.pool[learnChamp].trainingSeason;
+  practiceChampion(coached,cp,learnChamp,'scrim',2);
+  check(Math.abs(cp.pool[learnChamp].coachingMastery-earned-.096)<1e-9&&cp.pool[learnChamp].scrimSeason===scrimWork+2&&cp.pool[learnChamp].trainingSeason===trainingWork,'scrim learning inflated or used wrong work coefficient');
+  const historic=learningWorld(),hp=historic.players[p.id];delete hp.pool[learnChamp].coachingMastery;delete hp.pool[learnChamp].coachingResearch;
+  const legacy=JSON.parse(packDB(historic));legacy.players[p.id].pool[learnChamp]=legacy.players[p.id].pool[learnChamp].slice(0,8);
+  check(!unpackDB(JSON.stringify(legacy)).players[p.id].pool[learnChamp].coachingMastery,'legacy save fabricated coach practice');
+  legacy.players[p.id].pool[learnChamp][8]=9;let invalidCoach=false;try{unpackDB(JSON.stringify(legacy))}catch{invalidCoach=true}check(invalidCoach,'invalid coaching save accepted');
+  // Observe a substantial real practice block, then settle once under the same RNG.
+  for(const w of [coached,plain]){const q=w.players[p.id],pr=q.pool[learnChamp];Object.assign(pr,{mastery:40,matchup_knowledge:40,scrimSeason:0,trainingSeason:0,coachingMastery:0,coachingResearch:0});w.teams[t.id].practiceUsage={year:w.year,days:1};}
+  coached.teams[t.id].staffRoster=[JSON.parse(JSON.stringify(specialist))];
+  practiceChampion(coached,cp,learnChamp,'training',40);practiceChampion(plain,np,learnChamp,'training',40);
+  coached.teams[t.id].staffRoster=[];
+  growPlayer(coached,cp,new RNG('learning-settlement'),0,{});growPlayer(plain,np,new RNG('learning-settlement'),0,{});
+  check(cp.pool[learnChamp].mastery>np.pool[learnChamp].mastery&&cp.pool[learnChamp].matchup_knowledge>np.pool[learnChamp].matchup_knowledge,'earned coaching did not affect actual mastery/research');
+  check(cp.pool[learnChamp].mastery<=48&&cp.pool[learnChamp].coachingMastery===0&&cp.pool[learnChamp].coachingResearch===0,'settlement cap or reset violated');
+  const excess=learningWorld(),ep=excess.players[p.id];excess.teams[t.id].staffRoster=[specialist];practiceChampion(excess,ep,learnChamp,'training',10000);
+  check(ep.pool[learnChamp].coachingMastery===8&&ep.pool[learnChamp].coachingResearch===5,'earned assistance unbounded');
+  const rested=learningWorld();rested.teams[t.id].staffRoster=[specialist];rested.players[p.id].medicalPlan='rest';runDailyPractice(rested);
+  check(!rested.players[p.id].pool[learnChamp].coachingMastery,'rest minted coached practice');
+  let invalidAmount=false;try{practiceChampion(rested,rested.players[p.id],learnChamp,'training',Infinity)}catch{invalidAmount=true}check(invalidAmount,'infinite practice accepted');
   const restored=unpackDB(packDB(db));check(JSON.stringify(restored.teams[t.id].practiceDay)===JSON.stringify(t.practiceDay),'spent resources lost on reload');
   const snapshot=JSON.stringify(restored);runDailyPractice(restored);check(JSON.stringify(restored)===snapshot,'reload minted extra practice');
   check(!scrimPartnerAssessment(db,t,other).allowed,'remote club bypassed travel');

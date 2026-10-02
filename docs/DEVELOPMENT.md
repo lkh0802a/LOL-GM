@@ -31,6 +31,44 @@ without continually adding new status documents.
 
 ## Current Phase
 
+### Current implementation slice — position coaching / champion learning (2026-10-02)
+
+Scope estimate: 50 minutes, single worker, baseline `a82baac`; current main and
+open PRs inspected before changes (only unrelated historical #27/#28). Connect
+the confirmed position-coach rule to actual champion practice, not extra practice
+time or a season-end staffing bonus. `practiceChampion` records bounded earned
+mastery/research assistance using current-role staff expertise at practice time;
+`growPlayer` settles it with player learning/difficulty and existing growth caps.
+Raw work, official game experience, shared daily points, rest and medical gates
+remain unchanged. Departure does not erase earned work or apply future bonuses.
+Packed champion saves append two optional bounded fields; old eight-field saves
+restore neutral zero. UI explains actual practice and employment boundaries.
+
+Files: `staff.js`, `player.js`, `development.js`, `save.js`, `save-migration.js`,
+`ui-roster.js`, existing cohesion-practice acceptance and `STAFF_RULES.md`.
+Focused acceptance covers same-role/wrong-role, human/AI, raw work equality,
+real release, saved earned learning, legacy no-backfill, invalid saved values,
+actual mastery/research settlement, cap/reset, rehire, scrim coefficients and rest.
+Focused cohesion-practice, static, UI-finance-contracts (38 acceptances) and
+calendar-scouting (17 acceptances) passed. Required CI/head/merge evidence will
+be recorded at delivery; no long/device/TalkBack QA started.
+Initial calendar regression found that appending default zero fields to untouched
+legacy champion pools changed the pure control-experiment clone. Preserve absent
+fields and old eight-value tuples until actual practice creates earned learning;
+missing values are read as neutral zero without mutating historical profiles.
+Existing seasonal legacy practice estimation is preserved but explicitly opts
+out of new coaching assistance because its actual practice-time staffing is unknown.
+
+Precise next slice (estimate 50 minutes): audit and implement confirmed staff
+multi-specialty effect dispersion. `staffRoleAbility` currently returns primary
+rating regardless of additional specialties and a fixed 0.35 secondary multiplier;
+the confirmed rule requires more fields to distribute each effect. Define bounded
+virtual allocation at the common role-ability boundary, preserve role/department
+limits and duplicate diminishing returns, and verify downstream coaching,
+scouting, analysis, employment/AI/save and public UI without leaking true ratings.
+Recheck current code/PRs first; do not rewrite completed registration or regional
+expertise. No temporary code for this next slice has been added.
+
 ### Current implementation slice — scout regional expertise (2026-10-02)
 
 Scope estimate: 50 minutes, single worker, baseline `8e8b9ba`. Rechecked current
@@ -75,17 +113,8 @@ No long 100-season, device or TalkBack QA started. Remaining limits: no fabricat
 historical expertise, no extra travel/camp mechanics, no new manual administrative
 assignment clicks, no claim that every roadmap system is complete.
 
-Precise next implementation slice (estimate 50 minutes, single worker): connect
-current-role position coaching to actual champion practice/mastery and matchup
-learning. `practice-resources.js::runDailyPractice` currently assigns champion
-practice without position-coach influence; `player.js::championLearningMultiplier`
-uses player learning/adaptability only, and `development.js::growPlayer` applies
-coaches to attribute growth but not the final champion/matchup learning path.
-Use the confirmed position-coach rule, preserve shared 100-point practice,
-fatigue/medical/rest, growth caps and official/scrim records, and pair human/AI
-and correct-role/wrong-role tests. Cover employment changes, save and concise UI
-explanation without fabricating legacy practice. No temporary implementation or
-new long QA was left running for that next slice.
+The recorded position-coaching continuation is implemented in the newer slice
+above; keep its original scope and acceptance evidence rather than repeating it.
 
 ### Current implementation slice — staff career / retirement (2026-10-02)
 
