@@ -1628,3 +1628,20 @@ Original1536MiB heap/4096MiB RSS QA budgets remain. The initial restored2027
 checkpoint passed. All .diagnostics output remains preserved. This running VM
 cannot validate subsequent role-quest code; do not start a second long run or
 interpret running/partial reports as100season completion.
+
+
+### Validation sequencing changed by user (2026-10-02)
+
+The user explicitly instructed: finish all feature implementation first, then
+perform100season and actual mobile/TalkBack validation. Do not launch further
+long-career or real-device/TalkBack runs during feature development. Retain short
+change-specific correctness checks and the minimal required CI merge gates.
+Prioritize patchable role quests and remaining D game mechanisms.
+
+The live daily-rolling-history-main-1 was deliberately stopped at the user's
+request on02:22:10UTC. Child21132 and observer33552 are now absent. The observer
+captured forced termination exit4294967295/signal null; the cancellation.json
+records the user-requested reason. The last report had at least11 completed
+seasons; the original running career JSON is partial, not success. This is a
+cancelled validation run, not a newly diagnosed engine/memory failure. Preserve
+all existing reports and leave full D acceptance pending until final validation.
