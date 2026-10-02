@@ -1731,3 +1731,12 @@ champion and requires both a profile change and an actual damage/gold/duration
 change. It does not lower the eight paired seeds. The observed source-profile
 limitation remains a follow-up for richer skill inference, not a claim that
 Xerath has no crowd control in real LoL. The diagnostic probe is preserved.
+
+PR124's first full CI36959095461 passed the quest, calendar, regression and other
+game checks but the regional medical observer crashed on its same-day emergency
+registration fallback: trackExposure referenced a DB outside its lexical scope.
+The observer now receives the current DB explicitly. A short real-engine fixture
+exercises missing daily-plan fallback and verifies one registered athlete-day
+without fabricating prior healthy exposure or lottery odds. The original medical
+seeds and aggregate acceptance requirements are unchanged; final CI remains a
+merge gate. Long-season and mobile validation remain deferred by user request.
