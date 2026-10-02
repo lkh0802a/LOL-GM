@@ -1555,3 +1555,35 @@ run was used. The next memory investigation should distinguish retained history,
 save encoding/materialization and the extra TextEncoder size-measurement buffer
 without treating removal of a measurement as proof of mobile or100season safety.
 This old-source execution is not evidence for estate recovery or this D10 change.
+
+
+### D11 rolling restoration windows (2026-10-02)
+
+The short cohort probe reproduced a restoration defect: the first4096 unique
+loadouts filled the dictionary permanently, so later seasons never shared new
+recurring builds. Restoration now evicts the oldest dictionary insertion at4096
+loadouts and8192 canonical player/champion pick records. These temporary FIFO
+windows disappear after loading; every historical row remains present. Shared
+records and loadouts are immutable. Extended legacy records retain separate
+identity and all extra fields; restoring already-frozen evidence works again.
+No save schema, archive retention, production GC or QA memory budget changes.
+
+The preserved desktop probe uses54000 rows, nine successive512-build cohorts.
+Original versus final restored retained heap after benchmark-only GC was
+138132176 versus49430960 bytes (about64% less). Output remains120586801 bytes
+with identical SHA256 ab510b4ba8fbf149b1508672afde59a6983c32a4f1c22cf1dbab52bf789ea3fa.
+Combined restoration/serialization/size-measurement elapsed time increased from
+2808 to4052ms in these single runs; sharing trades extra lookup work for lower
+retained memory. Automatic GC timing differed during TextEncoder measurement,
+so those samples are not a reliable peak reduction claim. The extra120MB buffer
+still exists. This synthetic cohort fixture does not prove that the preserved
+36-season failure is solved, nor establish100season or mobile memory safety.
+The reference source, probe and final JSON remain in .diagnostics; no new long
+run has been started before validating the engine change.
+
+save.js owns restoration sharing. save-history-acceptance covers late cohorts
+beyond both window sizes, exact evidence and item order/duplicates, separate
+players, frozen repeated restoration, extended legacy identity, format parity
+and full-save restore. Related acceptance, regression and98-module static/build
+passed locally; final required CI must pass before merge. D11 actual multi-seed
+100seasons and D13 real mobile tasks, plus other documented D gaps, remain open.

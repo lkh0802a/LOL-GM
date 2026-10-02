@@ -16,5 +16,23 @@ await runEngineFixture(String.raw`(()=>{
   let chunked;try{chunked=stringifyMetaHistory(many)}finally{JSON.stringify=original}
   check(batches.length===3&&Math.max(...batches)<=512,'unbounded encoded batch');
   check(chunked===original(packMetaHistory(many)),'batch boundaries changed history');
+  const archive=[];
+  const evidence=(n,player='p')=>({date:'2027-01-01',regions:[],bans:[],sides:[{picks:[{champ:'c',role:'MID',player,items:['i'+n,'i'+n],runes:['r'+n]}]}]});
+  // Fill both bounded windows with old builds, then repeat a new cohort.
+  for(let i=0;i<9000;i++)archive.push(evidence(i));
+  for(let i=0;i<1024;i++)archive.push(evidence(9000+i%512));
+  const before=JSON.stringify(archive),decoded=unpackMetaHistory(archive);
+  const pickAt=i=>decoded[i].sides[0].picks[0];
+  check(pickAt(9000)===pickAt(9512),'recent pick sharing stopped after old window filled');
+  check(pickAt(9000).items===pickAt(9512).items&&pickAt(9000).runes===pickAt(9512).runes,'recent loadout sharing');
+  check(Object.isFrozen(pickAt(9000))&&Object.isFrozen(pickAt(9000).items),'shared evidence mutable');
+  check(JSON.stringify(decoded)===before,'archive evidence lost');
+  check(JSON.stringify(unpackMetaHistory(decoded))===before,'repeated restoration changed frozen evidence');
+  const different=[evidence(1,'a'),evidence(1,'b'),evidence(2,'a')];different[2].sides[0].picks[0].items=['i1','i2'];
+  unpackMetaHistory(different);check(different[0].sides[0].picks[0]!==different[1].sides[0].picks[0],'players collapsed');
+  check(different[2].sides[0].picks[0].items.join(',')==='i1,i2','item order or duplicates lost');
+  const extended=[evidence(1),evidence(1)];for(const row of extended)row.sides[0].picks[0].extra={note:'legacy'};
+  const legacyBefore=JSON.stringify(extended);unpackMetaHistory(extended);
+  check(JSON.stringify(extended)===legacyBefore&&extended[0].sides[0].picks[0]!==extended[1].sides[0].picks[0],'extended legacy record aliased or lost');
   console.log('SAVE_HISTORY_ACCEPTANCE PASS (bounded batches, exact format parity, pure packing, archive/full-save restore)');
 })()`,{filename:'save-history-acceptance.vm.js',timeout:120000});
