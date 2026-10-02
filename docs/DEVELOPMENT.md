@@ -54,6 +54,12 @@ stale motivation, annual deduplication, official/practice distinction, actual
 committed results, repeated-match rejection, departed pending staff and save errors.
 No long final QA started. Head CI / merge evidence is recorded after completion.
 
+Initial head `f29172f` CI run `37024929296` failed core smoke: its copied staff
+world had already reviewed that same year, so the new annual idempotence guard
+correctly skipped the artificial retirement. Corrected the fixture to advance
+one year before its retirement scenario; retained the exact no-auto-replacement
+assertion. Failed run/log/artifact remain preserved; a new full-head CI is required.
+
 Limits: historical events without captured employees are not reconstructed;
 series wins describe team results, not isolated staff causal credit. The model
 weights are fictional and documented, not claimed to be real league regulations.

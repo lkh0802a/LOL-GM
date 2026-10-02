@@ -480,7 +480,9 @@ source += `\n(()=>{
 
   const staffControlDb=JSON.parse(JSON.stringify(db)),managedStaffProbe=staffControlDb.teams[managedTeamId(staffControlDb)];ensureTeamStaff(staffControlDb,managedStaffProbe,new RNG('managed-staff-control','staff'));
   const retiringAnalyst=teamStaffMembers(managedStaffProbe).find(x=>x.role==='analyst');if(!retiringAnalyst)throw new Error('Managed analyst retirement probe missing');
-  retiringAnalyst.age=100;const managedAnalystsBefore=staffDeptCount(managedStaffProbe,'analyst');ageStaff(staffControlDb,new RNG('managed-staff-retire','staff'));
+  // The copied world has already reviewed staff this year. A second annual
+  // lifecycle must advance the year; keep the vacancy/no-auto-hire assertion.
+  staffControlDb.year++;retiringAnalyst.age=100;const managedAnalystsBefore=staffDeptCount(managedStaffProbe,'analyst');ageStaff(staffControlDb,new RNG('managed-staff-retire','staff'));
   if(teamStaffMembers(managedStaffProbe).some(x=>x.id===retiringAnalyst.id)||staffDeptCount(managedStaffProbe,'analyst')!==managedAnalystsBefore-1)throw new Error('Managed staff retirement auto-replaced a strategic appointment');
 
   const legacySave=JSON.parse(JSON.stringify(db)),legacySaveTeam=legacySave.teams[staffTeam.id],legacyRoster=(legacySaveTeam.staffRoster||[]).slice(),legacyMap={};
