@@ -133,3 +133,12 @@ acceptance includes actual opposing outcomes under identical office inputs,
 rollback/save, cooldown and confirmation. This closes a sporting consultation
 feature gap, not all governance functionality or deferred long-career/mobile
 acceptance. Full roadmap implementation and user feedback precede final checks.
+
+D06 joint local-service policy now has a production offseason review, regional
+proposal and international agreement/counter with preserved evidence. Announced
+next-season rules apply only to new service runs; prior copied terms and earned
+rights remain unchanged. Existing inactive-choice expiry and local-choice systems
+are reused. Saved global history survives regional dissolution. The three/four/
+five-season policy is a documented fictional game assumption, not a real-world
+regulation. This closes a missing production policy writer; deferred long-career
+and real-mobile acceptance remains open under the user's final-check sequence.

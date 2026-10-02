@@ -1,7 +1,8 @@
 // Eligibility is earned through actual registration, not nationality or guessed
 // pre-save history. Each service run snapshots its region's agreed game policy.
 function localServicePolicy(db,rid){
-  const r=db.regions[rid]?.localServiceRule||{};
+  const region=db.regions[rid],pending=region?.localServicePending,
+    r=pending&&pending.effectiveYear<=db.year?pending:region?.localServiceRule||{};
   return {seasons:Math.max(1,Math.round(r.seasons??4)),days:Math.max(0,Math.round(r.days??0)),
     choiceYears:Math.max(1,Math.round(r.choiceYears??2)),effectiveYear:r.effectiveYear??db.year};
 }
@@ -59,6 +60,7 @@ function localChoiceOptions(db,p){
     (rid!==playerActiveLocalRegion(p)||e.qualifications[rid]?.originSuccessor&&e.successorOrigin!==rid));
 }
 function validateStoredLocalService(db){
+  validateStoredLocalPolicies(db);
   for(const p of Object.values(db.players)){
     const e=p.localEligibility,s=e?.service,q=e?.pending;
     if(e?.legacyContracts&&(!Array.isArray(e.legacyContracts)||e.legacyContracts.some(row=>

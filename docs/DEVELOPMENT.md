@@ -1821,3 +1821,38 @@ real office submission is exercised separately. Existing 14 calendar/scouting
 contexts, regression and 102-module static/build checks pass locally. Required
 CI remains the merge gate; long-season and real-device/TalkBack validation stays
 deferred until phase23 implementation and user playtest feedback.
+
+### D06 joint local-service policy (2026-10-02)
+
+The international office now reviews a regional local-service proposal in the
+existing offseason path after two observed regional seasons. The game baseline
+is four service seasons; regional scarcity/abundance may propose one fewer/more
+season (three/five), while the international office counters a shortening from
+a competitively strong region at the four-season baseline. This is an explicit
+fictional policy, not a claim about real Riot residency requirements. Candidate
+depth uses the existing office's local FA strength threshold and per-club depth
+measure; abundance uses the existing 1.8 import-policy depth boundary and the
+international counter uses the existing 1.2 weak-region strength boundary. Days
+and inactive-choice validity stay as already agreed; no invented fee or cash.
+
+Reviews are deterministic, require a changed regional request, use a four-year
+review cooldown and retain both the regional proposal and international response
+with evidence, announcement date, previous terms and next effective season. The
+current rule remains available before that year; new service runs then consume
+the pending rule. Existing service-run snapshots, earned qualifications, progress
+and active local choice remain unchanged. Subsequent reviews promote the active
+terms before announcing their next rule. Regional history and a permanent global
+archive preserve agreements even if their region later dissolves. Legacy saves
+without scheduled rules retain their original behavior; invalid pending/history
+records are rejected on load. The office card shows the current requirement and
+latest proposed/agreed terms and effective season.
+
+Focused tests cover shortage agreement, competitive-region counter, abundant
+local protection, no early application, old/new entrants with grandfathered
+terms, no duplicate review, disabled changes, real global-office invocation,
+current/legacy/corrupt saves, global archive and UI. Existing local-service and
+region-continuity acceptance,15 calendar/scouting contexts, regression and103
+module static/build checks pass locally. Required final-head CI gates merge;
+100-season and real-device/TalkBack checks stay deferred until all23 stages and
+user playtest feedback. This adds joint service-rule administration, not every
+remaining office disciplinary or insolvency feature.
