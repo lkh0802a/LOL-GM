@@ -7,6 +7,8 @@ function staffAggregate(ms,role){const xs=(ms||[]).filter(Boolean).map(s=>role?s
 function staffByRole(t,role){return teamStaffMembers(t).filter(s=>s.role===role||s.specialties?.[role]>0)}
 function positionCoachRole(role){return {TOP:'topCoach',JGL:'jglCoach',MID:'midCoach',ADC:'adcCoach',SUP:'supCoach'}[role]||null}
 function roleCoachRating(t,role){const key=positionCoachRole(role);return key?staffAggregate(staffByRole(t,key),key):0}
+// Fictional learning policy; appointment at practice time, not season-end staffing.
+function positionPracticeBonus(db,p){const t=db.teams[p.team];return t?clamp(roleCoachRating(t,p.role)/99*.3,0,.3):0}
 function staffProfile(t){
   const strategic=staffAggregate(staffByRole(t,'strategicCoach'),'strategicCoach'),analysis=staffAggregate(staffByRole(t,'analyst'),'analyst'),development=staffAggregate(staffByRole(t,'developmentCoach'),'developmentCoach'),performance=staffAggregate(staffByRole(t,'performanceCoach'),'performanceCoach'),scouting=staffAggregate(staffByRole(t,'scout'),'scout');
   return {draft:clamp(42+strategic*.52,35,96),analysis:clamp(42+analysis*.52,35,96),development:clamp(42+development*.52,35,96),recovery:clamp(45+performance*.5,40,93),scouting:clamp(40+scouting*.5,35,96)};

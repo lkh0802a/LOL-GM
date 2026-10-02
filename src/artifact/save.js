@@ -80,7 +80,7 @@ function packDB(db){
     const q={...p};delete q.secondaryRoles;delete q.roleFamiliarity;
     if(p.attrs)q.attrs=ALL_ATTRS.map(a=>p.attrs[a]);
     if(p.tend)q.tend=TENDENCIES.map(t=>p.tend[t]);
-    if(p.pool)q.pool=Object.fromEntries(Object.entries(p.pool).map(([c,v])=>[c,[v.mastery,v.experience,v.matchup_knowledge,v.confidence,v.scrimExperience||0,v.trainingExperience||0,v.scrimSeason||0,v.trainingSeason||0]]));
+    if(p.pool)q.pool=Object.fromEntries(Object.entries(p.pool).map(([c,v])=>[c,[v.mastery,v.experience,v.matchup_knowledge,v.confidence,v.scrimExperience||0,v.trainingExperience||0,v.scrimSeason||0,v.trainingSeason||0,...(v.coachingMastery!==undefined||v.coachingResearch!==undefined?[v.coachingMastery??0,v.coachingResearch??0]:[])]]));
     players[id]=q;
   }
   const scout=Object.fromEntries(Object.entries(db.scout||{}).filter(([id,r])=>db.players[id]&&!db.players[id].retired&&(typeof r==='number'||(r.knowledge||0)>baseScoutKnowledge(db,db.players[id])||(r.observations||0)>0)));

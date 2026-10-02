@@ -60,8 +60,11 @@ function unpackPlayerSaveFields(p){
       mastery:v[0],experience:v[1],matchup_knowledge:v[2],
       confidence:v[3],scrimExperience:v[4]||0,
       trainingExperience:v[5]||0,scrimSeason:v[6]||0,
-      trainingSeason:v[7]||0
+      trainingSeason:v[7]||0,...(v.length>8?{coachingMastery:v[8],coachingResearch:v.length>9?v[9]:0}:{})
     };
+  }
+  for(const pr of Object.values(p.pool||{}))for(const [key,max] of [['coachingMastery',8],['coachingResearch',5]]){
+    if(pr[key]!==undefined&&(!Number.isFinite(pr[key])||pr[key]<0||pr[key]>max))throw Error('Invalid saved champion coaching: '+key);
   }
 }
 
