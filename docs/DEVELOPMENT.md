@@ -55,7 +55,7 @@ interpretation score, not a probability or a statistical interval.
 
 Files: `draft-analysis.js`, `ui-draft.js`, new focused
 `opponent-intent-acceptance.mjs`, shared UI runner and the existing staff rules.
-Acceptance drives eight legal draft turns with both sides, proves unrelated
+Acceptance drives eight legal draft turns with both sides and a manual pick, proves unrelated
 managed scout reports cannot affect AI observations, tests both sides' specialty
 effects and own-report range narrowing, series evidence, a real recorded match,
 save/reconstructed legal choices, poisoned hidden log fields, pure observation,
@@ -74,6 +74,10 @@ chronology separately. Official filtering fixtures initially lacked the publishe
 policy and an employed valid contract; existing employed analysts and the real
 published-policy view now exercise inclusion/exclusion. No production validation,
 history, medical coverage or budget was weakened to conceal these failures.
+Final review added a manual legal choice and removed the unsupported fallback
+claim that an opponent deliberately hides its composition. The manual fixture
+first looked for an unpersisted source field; it now verifies the chosen champion
+in the real public log. Focused/static checks pass after these review changes.
 
 Precise next slice (estimate 50 minutes): region-specific ban provenance for
 Item 13/21 analysis. Actual inspection finds `recordMeta`, current patch samples

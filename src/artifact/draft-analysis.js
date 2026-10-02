@@ -83,7 +83,7 @@ function draftOpponentIntent(state,observerSide,limit=3){
       info=observations.length?Math.round(avg(observations.map(r=>r.confidence))):0;confidence=Math.round(clamp(analysis*.55+info*.45,20,95));
       if(meta>=65)reasons.push('현재 패치 평가에서 우선도가 높은 픽');if(roles.length>1)reasons.push('복수 포지션 가능성을 남기는 픽');if(observations.some(r=>r.range[0]>=65))reasons.push('관찰 숙련 범위가 높은 챔피언 선택');
       if(opponentHistory.won.includes(x.champ)||opponentHistory.lost.includes(x.champ)){reasons.unshift('이번 시리즈에서 공개된 상대 픽 재선택');sources.push('이번 시리즈 상대 공개 픽')}
-      if(!reasons.length)reasons.push('조합 방향을 숨기며 챔피언을 선점한 선택');
+      if(!reasons.length)reasons.push('공개 정보만으로 선택 의도 구분 어려움');
     }else{
       const ownMastery=roles.map(role=>draftMastery(state.roster[observerSide][role],x.champ));if(ownMastery.some(v=>v>=70)){reasons.push('우리 선수의 높은 숙련 챔피언 견제 가능성');sources.push('구단 내부 훈련·스크림 데이터')}
       if(hist.won.includes(x.champ)){reasons.push('이전 세트 승리 픽 재사용 차단 가능성');sources.push('이번 시리즈 우리 승리 픽')}

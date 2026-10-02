@@ -10,7 +10,9 @@ await runEngineFixture(String.raw`(()=>{
  }
  const ctx={practice:true,used:[],fearless:false,byTeam:{[a.id]:{won:[],lost:[]},[b.id]:{won:[],lost:[]}}};
  const state=createDraftSession(db,teams.map(t=>t.id),new RNG('intent-legal'),ctx);
- while(draftTurn(state)&&!teams.every((t,i)=>state.log.some(x=>x.side===i&&x.kind==='P'))){const choice=draftAiChoice(state);check(draftValidateChoice(state,choice).ok,'legal fixture rejected');draftApplyChoice(state,choice)}
+ let manualChamp=null;
+ while(draftTurn(state)&&!teams.every((t,i)=>state.log.some(x=>x.side===i&&x.kind==='P'))){let choice=draftAiChoice(state);if(choice.kind==='P'&&!manualChamp){manualChamp=draftLegalChampions(state).at(-1).id;choice={champ:manualChamp,side:choice.side,source:'player'}}check(draftValidateChoice(state,choice).ok,'legal fixture rejected');draftApplyChoice(state,choice)}
+ check(state.log.some(x=>x.kind==='P'&&x.champ===manualChamp),'manual legal pick was overridden');
  const original=JSON.stringify(db),rng=JSON.stringify(state.rng),beforeLog=JSON.stringify(state.log),rows=[0,1].map(side=>draftOpponentIntent(state,side,20));
  check(JSON.stringify(db)===original&&JSON.stringify(state.rng)===rng&&JSON.stringify(state.log)===beforeLog,'explanation mutated game/history/random state');
  for(const side of [0,1]){
