@@ -21,10 +21,18 @@ const DETAIL_BASE_KEYS=['resource','resourceg','resourceRegen','mr','mrg','asg']
 const CHAMPION_SOURCE_PATCH='16.19.1';
 function cleanChampionSourceText(v){return String(v||'').replace(/<br\s*\/?>/gi,' ').replace(/<[^>]*>/g,'').replace(/&nbsp;/gi,' ').replace(/&amp;/gi,'&').replace(/&lt;/gi,'<').replace(/&gt;/gi,'>').replace(/&#39;/g,"'").replace(/&quot;/gi,'"').replace(/\s+/g,' ').trim()}
 function sourceSkillControl(raw){
-  const text=cleanChampionSourceText(raw?.descriptionKo||'');
-  const patterns=[['stun',/기절시/],['root',/속박(?:하|시)|발을 묶/],['airborne',/공중(?:으로|에) 띄|공중으로 날려/],['displacement',/적(?:을|들을) 밀어|뒤로 밀어|중앙으로 끌려/],['sleep',/잠들게/],['taunt',/도발(?:하|시)/],['fear',/공포에 (?:빠|질)|공포를 (?:주|느끼게)/],['silence',/침묵시/],['slow',/둔화(?:시|됩|시키)|(?:적|대상)[^.]*속도를 늦추|이동 속도를 (?:감소시|줄이거나|훔)/]];
-  const clauses=text.split(/[.!?]/).filter(clause=>!/기절시키지|속박하지|둔화시키지/.test(clause)&&(!/(?:미니언|몬스터)(?:에게|를|들을)/.test(clause)||/챔피언/.test(clause)));
-  const types=patterns.filter(([,pattern])=>clauses.some(clause=>pattern.test(clause))).map(([type])=>type);
+  const ko=cleanChampionSourceText(raw?.descriptionKo||''),en=cleanChampionSourceText(raw?.descriptionEn||'');
+  const koPatterns=[['stun',/기절시/],['root',/속박(?:하|시)|발을 묶/],['airborne',/공중(?:으로|에) 띄|공중으로 날려/],['displacement',/적(?:을|들을) 밀어|뒤로 밀어|중앙으로 끌려/],['sleep',/잠들게/],['taunt',/도발(?:하|시)/],['fear',/공포에 (?:빠|질)|공포를 (?:주|느끼게)/],['silence',/침묵시/],['slow',/둔화(?:시|됩|시키)|(?:적|대상)[^.]*속도를 늦추|이동 속도를 (?:감소시|줄이거나|훔)/],['suppression',/제압(?:하|시)/],['disarm',/무장 해제(?:하|시)/]];
+  const enPatterns=[['stun',/\bstuns?\b|\bstunned\b|\bstunning\b/i],['root',/\broots?\b|\brooted\b|\bsnares?\b|\bsnared\b|\bimmobiliz(?:e|es|ed|ing)\b/i],['airborne',/\bairborne\b|\bknocks?\s+(?:them\s+)?up\b/i],['displacement',/\b(?:knocks?|pushes?)\s+(?:them\s+)?back\b|\bpulls?\s+(?:them\s+)?(?:in|toward|towards)\b|\bdisplaces?\b/i],['sleep',/\bsleeps?\b|\basleep\b/i],['taunt',/\btaunts?\b|\btaunted\b/i],['fear',/\bfears?\b|\bfeared\b|\bflee\b/i],['silence',/\bsilences?\b|\bsilenced\b/i],['slow',/\bslows?\b|\bslowed\b|\breduces?\s+(?:their\s+)?movement speed\b/i],['suppression',/\bsuppress(?:es|ed|ing)?\b/i],['disarm',/\bdisarms?\b|\bdisarmed\b/i]];
+  const koClauses=ko.split(/[.!?;]/).filter(clause=>!/기절시키지|속박하지|둔화시키지|제압하지|무장 해제하지/.test(clause)&&(!/(?:미니언|몬스터)(?:에게|를|들을)/.test(clause)||/챔피언/.test(clause)));
+  const enClauses=en.split(/[.!?;]/).filter(clause=>
+    !/\b(?:cannot|can't)\b[^,]{0,90}\b(?:stun|root|snare|immobil|airborne|knock|sleep|taunt|fear|silence|slow|suppress|disarm)/i.test(clause)&&
+    !/(?<!not )\b(?:immune to|unaffected by)\b[^,]{0,90}\b(?:stun|root|snare|immobil|airborne|knock|sleep|taunt|fear|silence|slow|suppress|disarm)/i.test(clause)&&
+    (!/\b(?:minions?|monsters?)\b/i.test(clause)||/\bchampions?\b/i.test(clause)));
+  const types=[...new Set([
+    ...koPatterns.filter(([,pattern])=>koClauses.some(clause=>pattern.test(clause))).map(([type])=>type),
+    ...enPatterns.filter(([,pattern])=>enClauses.some(clause=>pattern.test(clause))).map(([type])=>type)
+  ])];
   return types.length?{version:1,types,provider:'Riot Data Dragon description',aggregate:true}:null;
 }
 function normalizeSourceSkill(slot,raw,fallback){

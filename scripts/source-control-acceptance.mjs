@@ -3,6 +3,19 @@ await runEngineFixture(String.raw`(()=>{
   const check=(x,m)=>{if(!x)throw Error('SOURCE_CONTROL '+m)};
   const source=CHAMPION_SOURCE_SNAPSHOT.champions;
   const skill=(id,slot)=>source[id].spells.find(s=>s.slot===slot);
+  const english=sourceSkillControl({descriptionEn:'This ability roots and then disarms enemy champions.'});
+  check(english?.types.includes('root')&&english.types.includes('disarm'),'English-only control descriptions');
+  check(sourceSkillControl({descriptionKo:'적을 기절시킵니다.',descriptionEn:'This ability stuns an enemy.'}).types.length===1,
+    'bilingual descriptions double-counted one control');
+  check(sourceSkillControl({descriptionEn:'The caster becomes immune to stuns and slows.'})===null,
+    'English self-immunity classified as enemy control');
+  check(sourceSkillControl({descriptionEn:'Enemies are not immune to stuns.'})?.types.includes('stun'),
+    'English negated immunity dropped an enemy control effect');
+  check(sourceSkillControl({descriptionEn:'Deals damage to minions and monsters.'})===null,
+    'English minion-only clause classified as champion control');
+  const englishNormalized=normalizeSourceSkill('Q',{descriptionKo:'',descriptionEn:'This spell suppresses enemy champions.',cooldown:[10],range:[700]},{});
+  check(englishNormalized.sourceDescription.includes('suppresses')&&englishNormalized.sourceControl?.types.includes('suppression'),
+    'English fallback normalization');
   for(const [id,slot,type] of [['Xerath','E','stun'],['Xerath','W','slow'],['Morgana','Q','root'],['Malphite','R','airborne'],['Alistar','W','displacement'],['Zoe','E','sleep']])
     check(sourceSkillControl(skill(id,slot))?.types.includes(type),id+' '+slot+' source classification');
   for(const [id,slot] of [['Xerath','R'],['Olaf','R'],['MasterYi','R'],['Morgana','E'],['Alistar','R'],['Aatrox','R']])
@@ -52,7 +65,25 @@ await runEngineFixture(String.raw`(()=>{
     results.push(JSON.stringify(baseline.goldHist)!==JSON.stringify(current.goldHist)||baseline.duration!==current.duration);
   }
   check(results.some(Boolean),'source control had no actual match effect');
+  const englishMatch=unpackDB(save),localizedMatch=unpackDB(save),englishSkills=englishMatch.patch.champions[xerath.id].skills,
+    localizedSkills=localizedMatch.patch.champions[xerath.id].skills;
+  for(const s of Object.values(englishSkills))delete s.sourceControl;
+  for(const s of Object.values(localizedSkills))delete s.sourceControl;
+  englishSkills.E.descriptionKo='';englishSkills.E.descriptionEn='This spell stuns enemy champions.';
+  englishSkills.W.descriptionKo='';englishSkills.W.descriptionEn='This spell slows enemy champions.';
+  localizedSkills.E.descriptionKo='적을 기절시키고 피해를 입힙니다.';localizedSkills.E.descriptionEn='';
+  localizedSkills.W.descriptionKo='적을 둔화시킵니다.';localizedSkills.W.descriptionEn='';
+  for(const slot of ['E','W']){
+    englishSkills[slot].sourceControl=sourceSkillControl(englishSkills[slot]);
+    localizedSkills[slot].sourceControl=sourceSkillControl(localizedSkills[slot]);
+  }
+  check(JSON.stringify(championSkillProfile(englishMatch.patch.champions[xerath.id]))===
+    JSON.stringify(championSkillProfile(localizedMatch.patch.champions[xerath.id])),'English tags did not reach the same aggregate profile');
+  const englishResults=Array.from({length:4},(_,i)=>simulateMatch(englishMatch,a.id,b.id,'english-control-'+i,{forced},true)),
+    localizedResults=Array.from({length:4},(_,i)=>simulateMatch(localizedMatch,a.id,b.id,'english-control-'+i,{forced},true));
+  check(JSON.stringify(englishResults.map(m=>[m.goldHist,m.duration]))===
+    JSON.stringify(localizedResults.map(m=>[m.goldHist,m.duration])),'English source changed actual match semantics');
   check(packDB(db)===save,'source inspection/matches mutated world');
   let recognized=0;for(const c of Object.values(source))for(const s of c.spells)if(sourceSkillControl(s))recognized++;
-  console.log('SOURCE_CONTROL_ACCEPTANCE '+JSON.stringify({champions:Object.keys(source).length,recognized,pairs:4,profile,oldProfile,legacy:true}));
+  console.log('SOURCE_CONTROL_ACCEPTANCE '+JSON.stringify({champions:Object.keys(source).length,recognized,pairs:4,profile,oldProfile,englishOnly:true,bilingualDedup:true,negativeClauses:true,legacy:true}));
 })()`,{filename:'source-control.fixture.js',timeout:120000});
