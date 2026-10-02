@@ -70,8 +70,8 @@ function goldChart(r){
   </svg></div>`;
 }
 function playerTable(s,i){
-  return `<div class="scroll"><table class="pt ${i?'red':'blue'}"><thead><tr><th>${esc(s.team.short)}</th><th>챔피언</th><th>K/D/A</th><th>CS</th><th>골드</th><th>레벨</th><th>피해량</th><th>아이템</th></tr></thead><tbody>
-  ${s.ps.map(p=>`<tr><td><span class="role">${ROLE_KO[p.role]}</span> ${esc(p.p.name)}</td><td>${esc(championDisplayName(p.champ))}</td><td class="num">${p.k}/${p.d}/${p.a}</td><td class="num">${Math.round(p.cs)}</td><td class="num">${(p.goldEarned/1000).toFixed(1)}k</td><td class="num">${p.lvl}</td><td class="num">${(p.dmg/1000).toFixed(1)}k</td><td class="items">${p.items.map(esc).join(', ')}</td></tr>`).join('')}
+  return `<div class="scroll"><table class="pt ${i?'red':'blue'}"><thead><tr><th>${esc(s.team.short)}</th><th>챔피언</th><th>K/D/A</th><th>CS</th><th>골드</th><th>레벨</th><th>피해량</th><th>아이템</th><th>퀘스트</th></tr></thead><tbody>
+  ${s.ps.map(p=>`<tr><td><span class="role">${ROLE_KO[p.role]}</span> ${esc(p.p.name)}</td><td>${esc(championDisplayName(p.champ))}</td><td class="num">${p.k}/${p.d}/${p.a}</td><td class="num">${Math.round(p.cs)}</td><td class="num">${(p.goldEarned/1000).toFixed(1)}k</td><td class="num">${p.lvl}</td><td class="num">${(p.dmg/1000).toFixed(1)}k</td><td class="items">${matchQuestItems(p).map(id=>esc(DB.patch.itemDefs?.[id]?.name||id)).join(', ')}</td><td>${p.quest?(p.quest.completed?`완료 · ${p.quest.completedAt}분`:`${Math.floor(p.quest.progress)} / ${p.quest.rules.threshold}`):'—'}</td></tr>`).join('')}
   </tbody></table></div>`;
 }
 function renderLog(r){

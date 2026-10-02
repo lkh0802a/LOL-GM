@@ -32,10 +32,13 @@ function systemChoiceBase(patch,c,role){
   const out={items,starters,runes};cache.set(key,out);return out;
 }
 function selectItemBuild(patch,c,p,role){
-  const ranked=systemChoiceBase(patch,c,role).items.map(x=>{const noise=((hashStr((p&&p.id||'')+'|'+c.id+'|'+role+'|'+x.id)%1000)/1000-.5)*.012;return {id:x.id,tier:x.tier,s:x.fit+noise-x.cost/140000+(x.tier==='boots'?.006:0)}}).sort((x,y)=>y.s-x.s);
-  const out=[];let boots=false;for(const x of ranked){if(x.tier==='boots'&&boots)continue;out.push(x.id);if(x.tier==='boots')boots=true;if(out.length>=6)break}return out;
+  const base=systemChoiceBase(patch,c,role),quest=!!patch.roleQuests?.roles?.[role];
+  const options=quest?[...base.items.filter(x=>!patch.itemDefs[x.id]?.tags?.includes('Boots')&&!patch.itemDefs[x.id]?.from?.includes('3867')),...Object.values(patch.itemDefs||{}).filter(d=>d.active!==false&&d.shopActive!==false&&d.tags?.includes('Boots')&&d.from?.includes('1001')&&c.name!=='Cassiopeia').map(d=>({id:d.id,tier:'boots',fit:systemChoiceScore(c,d.effects||{},role),cost:d.cost}))]:base.items;
+  const ranked=options.map(x=>{const noise=((hashStr((p&&p.id||'')+'|'+c.id+'|'+role+'|'+x.id)%1000)/1000-.5)*.012;return {id:x.id,tier:x.tier,s:x.fit+noise-x.cost/140000+(x.tier==='boots'?.006:0)}}).sort((x,y)=>y.s-x.s);
+  const bestBoot=quest?ranked.find(x=>x.tier==='boots'):null;const out=bestBoot?[bestBoot.id]:[];let boots=!!bestBoot;if(quest&&role==='SUP'&&patch.itemDefs['3865'])out.push('3865');for(const x of ranked){if(x.tier==='boots'&&boots)continue;out.push(x.id);if(x.tier==='boots')boots=true;if(out.length>=6)break}return out;
 }
 function selectStarterItem(patch,c,p,role){
+  if(role==='SUP'&&patch.roleQuests?.roles?.SUP&&patch.itemDefs?.['3865']?.active!==false&&patch.itemDefs?.['3865'])return '3865';
   const rows=systemChoiceBase(patch,c,role).starters.map(d=>({id:d.id,s:d.fit+d.roleFit+((hashStr((p&&p.id||'')+'|start|'+d.id)%1000)/1000-.5)*.008-d.cost/40000})).sort((a,b)=>b.s-a.s);
   return rows[0]?.id||null;
 }
@@ -46,7 +49,7 @@ function itemCraftActions(patch,finalBuild){
   return actions;
 }
 function itemPurchasePlan(patch,finalBuild,starterId){
-  const actions=itemCraftActions(patch,finalBuild);let spent=starterId&&patch.itemDefs?.[starterId]?patch.itemDefs[starterId].cost||0:0;
+  const actions=itemCraftActions(patch,patch.roleQuests?finalBuild.filter(id=>id!=='3865'):finalBuild);let spent=starterId&&patch.itemDefs?.[starterId]?patch.itemDefs[starterId].cost||0:0;
   for(const a of actions){spent+=a.cost;a.threshold=500+spent}
   return actions;
 }
@@ -68,19 +71,19 @@ function selectRunePage(patch,c,p,role){
 }
 function applyItemCraftAction(ps,a){
   for(const id of a.consume||[]){const i=ps.items.indexOf(id);if(i>=0)ps.items.splice(i,1)}
-  ps.items.push(a.id);
-  if(ps.items.length>6){const i=ps.items.findIndex(id=>['starter','consumable'].includes(ps.patchRef?.itemDefs?.[id]?.tier));if(i>=0)ps.items.splice(i,1)}
+  ps.items.push(a.id);syncRoleQuestEquipment(ps);
+  if(ps.items.length>6){const i=ps.items.findIndex(id=>['starter','consumable'].includes(ps.patchRef?.itemDefs?.[id]?.tier)&&!(id==='3865'&&ps.quest?.role==='SUP'));if(i>=0)ps.items.splice(i,1)}
 }
 function advanceItemPurchases(ps){
   const actions=ps.itemActions||[];
-  while(ps.itemActionIndex<actions.length&&ps.goldEarned>=actions[ps.itemActionIndex].threshold){
-    const start=ps.itemActionIndex,preview={items:ps.items.slice(),patchRef:ps.patchRef};let end=start;
+  while(ps.itemActionIndex<actions.length&&ps.goldEarned-(ps.questWardSpent||0)>=actions[ps.itemActionIndex].threshold){
+    const start=ps.itemActionIndex,preview={...ps,items:ps.items.slice()};let end=start;
     // With a full inventory, wait until enough gold can combine the remaining
     // components atomically. Intermediate ingredients never occupy extra slots.
-    for(;end<actions.length&&ps.goldEarned>=actions[end].threshold;end++){
+    for(;end<actions.length&&ps.goldEarned-(ps.questWardSpent||0)>=actions[end].threshold;end++){
       applyItemCraftAction(preview,actions[end]);if(preview.items.length<=6)break;
     }
-    if(end>=actions.length||ps.goldEarned<actions[end].threshold)break;
+    if(end>=actions.length||ps.goldEarned-(ps.questWardSpent||0)<actions[end].threshold)break;
     for(;ps.itemActionIndex<=end;ps.itemActionIndex++)applyItemCraftAction(ps,actions[ps.itemActionIndex]);
   }
 }

@@ -10,6 +10,7 @@ const acceptances=[
   'fight-skill-acceptance.mjs',
   'system-patch-acceptance.mjs',
   'role-quest-rules-acceptance.mjs',
+  'role-quest-match-acceptance.mjs',
   'save-history-acceptance.mjs',
   'split-standings-acceptance.mjs',
   'scouting-depth-acceptance.mjs',

@@ -7,15 +7,23 @@ const ROLE_QUEST_FIELDS=Object.freeze({
   xpReward:[0,2000],xpBonus:[0,.5],takedownXp:[0,500],levelCap:[18,20],
   teleportCooldown:[1,20],bonusPower:[0,.25],goldReward:[0,1000],
   csGold:[0,10],takedownGold:[0,200],monsterGold:[0,100],monsterXp:[0,100],
-  smiteDamage:[0,2000],controlWardCost:[0,100],controlWardCapacity:[0,4]
+  smiteDamage:[0,2000],jungleMobility:[0,.2],controlWardCost:[0,100],controlWardCapacity:[0,4]
 });
+const ROLE_QUEST_LABELS={threshold:'완료 요구량',csPoints:'CS 진척',takedownPoints:'처치 관여 진척',epicPoints:'오브젝트 진척',towerPoints:'포탑 진척',platePoints:'방패 진척',lanePerSecond:'라인 체류 진척',awayPerSecond:'로밍 진척',xpReward:'완료 경험치',xpBonus:'추가 경험치 비율',takedownXp:'처치 관여 경험치',levelCap:'최대 레벨',teleportCooldown:'순간이동 재사용(분)',bonusPower:'추가 공격력·주문력 비율',goldReward:'완료 골드',csGold:'CS 추가 골드',takedownGold:'처치 관여 추가 골드',monsterGold:'대형 몬스터 추가 골드',monsterXp:'대형 몬스터 추가 경험치',smiteDamage:'강타 피해',controlWardCost:'제어 와드 가격',controlWardCapacity:'제어 와드 슬롯',jungleMobility:'정글·강가 이동 속도 비율'};
+function maybeRoleQuestChange(db,major,rng){
+  if(!db.patch.roleQuests||!rng.chance(major?.25:.015))return null;
+  const role=rng.pick(ROLES),fields={TOP:['threshold','xpBonus','teleportCooldown'],MID:['threshold','bonusPower'],ADC:['threshold','goldReward','csGold'],JGL:['threshold','monsterGold'],SUP:['threshold','controlWardCost']},field=rng.pick(fields[role]),old=db.patch.roleQuests.roles[role][field],base=defaultRoleQuestRules().roles[role][field];
+  const step=field==='threshold'?(role==='JGL'?1:25):field==='bonusPower'||field==='xpBonus'?.005:field==='teleportCooldown'?.25:field==='csGold'?.25:field==='goldReward'?25:1;
+  const value=Math.round(clamp(old+(rng.chance(.5)?step:-step),base*.7,base*1.3)*1000)/1000;
+  return value===old?null:{type:'role_quest',role,field,old,new:value,why:'포지션별 성장 시점과 보상 조정'};
+}
 function defaultRoleQuestRules(){
   const lane={csPoints:2,takedownPoints:15,epicPoints:30,towerPoints:50,platePoints:40,lanePerSecond:1.5,awayPerSecond:1/3,roamBankCap:60};
   return {version:1,sourcePatch:'26.19',roles:{
     TOP:{...lane,threshold:1200,xpReward:600,xpBonus:.11,takedownXp:80,levelCap:20,teleportCooldown:6.5},
     MID:{...lane,threshold:1350,takedownPoints:25,damageRanged:.015,damageMelee:.03,bonusPower:.08},
     ADC:{...lane,threshold:1350,csPoints:3,goldReward:300,csGold:2,takedownGold:40},
-    JGL:{threshold:35,monsterGold:10,monsterXp:10,smiteDamage:1400},
+    JGL:{threshold:35,monsterGold:10,monsterXp:10,smiteDamage:1400,jungleMobility:.04},
     SUP:{threshold:1000,controlWardCost:40,controlWardCapacity:2}
   }};
 }

@@ -1680,3 +1680,54 @@ slots, update combat cache identity after rewards, implement generated patch
 changes and concise match/patch UI, and prove actual paired match causality.
 Confirm full official reward/boot data and legacy historical-rule policy before
 marking runtime complete. Final ready PR bundles this with those adapters.
+
+
+### Role quests connected to actual matches (2026-10-02)
+
+The five-role domain now receives actual income/CS, champion damage and takedown,
+structure and epic-objective events. Completion changes match experience/levels,
+item-derived mid power, bot bonus income and separate boot slot, jungle income/
+smite/river-fight mobility, support reward selection and paid control-ward vision,
+and top objective-call teleport joins. No extra random stream is introduced.
+Generated seasonal/minor patch notes can adjust progress requirements and rewards
+within bounded baseline-relative ranges. Patch UI names these changes; player
+results show progress or completion minute. Match rule copies remain isolated
+from later patch notes; initial quest baseline is persisted for historical replay.
+
+Quest upgrades exposed an existing data issue: source tier3 boots and support
+reward items were treated as ordinary shop purchases. New quest-enabled games
+select tier2 boots; mid upgrades them free after completion (including later
+purchase), bot moves boots out of six regular slots and extends its final build,
+and support reserves its World Atlas slot and replaces it with a source reward.
+Bootless Cassiopeia does not gain an extra normal slot. Ward expenses reduce the
+existing purchase threshold budget rather than providing unearned spending.
+All quest equipment participates in combat and archived item evidence.
+
+This remains the existing minute-based aggregate model. Lane absence is inferred
+from actual off-lane fights and recalls; jungle camps are CS-derived equivalents
+plus a bounded treat proxy; support charge consumption is a live-partner proxy.
+There is no geometric lane-swap, spell choice/shield or precise pet/ward placement
+simulation. Mid bonus AP/AD uses the model's item-derived offensive-stat surrogate.
+These assumptions are explicit rather than literal client parity claims. Existing
+old saves without role rules stay on their legacy behavior, including historical
+patch replay; fresh games use26.19 rules. Future compatibility changes must not
+silently rewrite those old matches.
+
+Short fixtures cover all-five-role completion timing changes in four paired
+actual games, isolated career state, current-save exact trajectory, legacy absence,
+normal six-slot/quest-boot separation, support upgrades/paid wards, top level20/
+takedown XP/teleport cooldown and same-tick combat-cache reward invalidation.
+Rules and system-patch fixtures plus100-module static/build passed locally.
+Full required CI gates final merge; no100season/mobile/TalkBack run is scheduled
+until phase23 implementation and the user's playtest feedback have been addressed.
+Remaining broader D work and final balance acceptance are still open.
+
+
+Connected calendar/scouting validation passed13 isolated contexts. A prior skill
+fixture implicitly selected Xerath (current aggregate CC profile0), so a scalar
+CC buff was mathematically a no-op; it also required every cooldown change to
+change gold instead of damage. The fixture now explicitly picks a nonzero-control
+champion and requires both a profile change and an actual damage/gold/duration
+change. It does not lower the eight paired seeds. The observed source-profile
+limitation remains a follow-up for richer skill inference, not a claim that
+Xerath has no crowd control in real LoL. The diagnostic probe is preserved.
