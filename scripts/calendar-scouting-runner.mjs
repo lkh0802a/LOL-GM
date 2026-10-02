@@ -7,6 +7,7 @@ const acceptances=[
   'timezone-calendar-acceptance.mjs',
   'scrim-partner-acceptance.mjs',
   'scrim-plans-acceptance.mjs',
+  'fight-skill-acceptance.mjs',
   'split-standings-acceptance.mjs',
   'scouting-depth-acceptance.mjs',
   'scouting-operations-acceptance.mjs',
