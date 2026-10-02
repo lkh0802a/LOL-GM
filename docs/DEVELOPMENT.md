@@ -1485,3 +1485,10 @@ rather than declaring a general creditor-priority or accelerated-invoice policy.
 The single daily-batch-save-main-1 long QA remains on its original #119 source;
 it does not validate this estate change. No second long run or paid long workflow
 was launched. Long-career balance, other D work and real mobile evidence remain.
+
+Estate UI follow-up shows cumulative initial plus recovered payouts and the current
+unpaid balance. Initial itemized distributions are explicitly historical; recent
+additional payouts appear separately. A local render fixture checks current totals,
+escaping and read-only rendering; existing closure acceptance and build pass.
+This separate UI-only change uses selected UI/build CI, preserving the successful
+engine validation instead of repeating paid medical and seasonal suites.
