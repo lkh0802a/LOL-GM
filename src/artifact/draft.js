@@ -39,7 +39,8 @@ function championSkillProfile(c){
   const healMod=avg(ss.map(s=>s.healMod??1)),shieldMod=avg(ss.map(s=>s.shieldMod??1));
   const cds=ss.map(s=>Number(s.cooldown)).filter(x=>Number.isFinite(x)&&x>0),ranges=ss.flatMap(s=>(s.range||[]).map(Number)).filter(x=>Number.isFinite(x)&&x>=100&&x<5000),costs=ss.flatMap(s=>(s.cost||[]).map(Number)).filter(x=>Number.isFinite(x)&&x>0);
   const uptime=clamp(cds.reduce((z,x)=>z+1/x,0)*2.2,0,1.25),reach=clamp((avgNum(ranges,450)-300)/900,0,1),economy=costs.length?clamp(1-avgNum(costs)/230,.62,1):1;
-  const ccStructured=structured.reduce((z,s)=>z+(s.cc?(s.cc.duration||1):0),0)/n,utilStructured=structured.filter(s=>s.heal||s.shield).length/n;
+  const sourceControl=ss.reduce((z,s)=>z+(!s.cc&&s.sourceControl?.types?.length?1:0),0)/n;
+  const ccStructured=structured.reduce((z,s)=>z+(s.cc?(s.cc.duration||1):0),0)/n+sourceControl,utilStructured=structured.filter(s=>s.heal||s.shield).length/n;
   return {
     power:clamp((ss.reduce((z,s)=>z+(s.power||0),0)/n/10+dmg*.18+ratio*.08)*dmgMod,0,1.7),
     uptime:clamp(uptime*(2-dmgMod*.15),0,1.35),

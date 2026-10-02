@@ -10,6 +10,7 @@ const acceptances=[
   'scrim-partner-acceptance.mjs',
   'scrim-plans-acceptance.mjs',
   'fight-skill-acceptance.mjs',
+  'source-control-acceptance.mjs',
   'system-patch-acceptance.mjs',
   'role-quest-rules-acceptance.mjs',
   'role-quest-match-acceptance.mjs',

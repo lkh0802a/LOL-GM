@@ -1856,3 +1856,32 @@ module static/build checks pass locally. Required final-head CI gates merge;
 100-season and real-device/TalkBack checks stay deferred until all23 stages and
 user playtest feedback. This adds joint service-rule administration, not every
 remaining office disciplinary or insolvency feature.
+
+### D10 source-described control effects (2026-10-02)
+
+Source normalization now records conservative Korean Data Dragon control-action
+tags for stun/root/airborne/displacement/sleep/taunt/fear/silence/slow. The existing
+snapshot contains173 champions and162 recognized spell descriptions. This is not
+a claim that every source ability is detected. Xerath E/W previously had no
+structured CC and no generated CC effects, leaving its aggregate control at zero.
+Source tags now feed the existing bounded profile and actual fight phases.
+
+Explicit numeric CC retains priority and is never counted twice. Missing numeric
+duration is not filled with invented seconds: each recognized source-only spell
+uses the profile's existing one-unit fallback before its averaging/0.5 conversion
+and CC patch multiplier. Multiple control types in one spell do not multiply that
+unit. This is an aggregate presence assumption; slow and hard control timings,
+conditional casts, hit chance and geometry are not individually reproduced.
+Self restriction, immunity, protective shields and Aatrox's minion-only fear do
+not create opponent champion control. Conditional enemy effects remain aggregate.
+
+Newly normalized champions retain source provenance; current saves preserve it.
+Existing saved patch champions without tags remain unchanged, preserving their
+historical outcomes rather than silently rewriting them on load. Short fixtures
+cover known positive/negative source cases, explicit numeric precedence, patch
+effect/reversal, current/legacy restoration, pure assessment and four paired
+actual matches. Existing eight-pair fight patches and103-module static checks
+pass; broader regression and final required CI remain gates. No long QA or actual
+mobile/TalkBack checks are started. All23 features, user feedback and fixes still
+precede final verification. Public standard runner CI is used after the user's
+authorized visibility change; GitHub payment/card and billing details are removed.
