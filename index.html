@@ -9301,6 +9301,7 @@ function aiReviewLoanDecisions(db){
   if(Number((db.worldDate||'').slice(-2))%7!==0)return;
   for(const pid of loanIndex(db).players.slice()){
     const p=db.players[pid],l=p.loan,owner=db.teams[l.ownerId],borrower=db.teams[l.borrowerId];
+    if(!owner||!borrower||owner.active===false||borrower.active===false)continue;
     if(l.purchase?.type==='option'&&!playerActionAuthority(db,'ai',borrower)){
       const starter=borrower.depthChart?.[p.role]===p.id,quote=l.purchase,
         room=salaryBudget(db,borrower)-payroll(db,borrower)+p.contract.salary*l.salaryShare;
@@ -9310,9 +9311,17 @@ function aiReviewLoanDecisions(db){
           fromId:owner.id,teamId:borrower.id});if(result.ok)continue;
       }
     }
-    if(l.recall&&!playerActionAuthority(db,'ai',owner)){
-      const current=owner.depthChart?.[p.role]&&db.players[owner.depthChart[p.role]];
-      if(current&&medicalOut(current)&&medicalAvailable(db,owner)<5)
+    if(l.recall&&l.purchase?.type!=='obligation'&&!playerActionAuthority(db,'ai',owner)){
+      const role=p.role,current=owner.depthChart?.[role]&&db.players[owner.depthChart[role]],
+        ownsCurrent=current&&current.team===owner.id&&!current.loan&&
+          owner.roster.includes(current.id)&&!current.retired,
+        shortage=ownsCurrent&&medicalOut(current)&&medicalAvailable(db,owner)<5,
+        stronger=ownsCurrent&&!medicalOut(current)&&
+          aiMarketValue(db,p,owner)>aiMarketValue(db,current,owner)+3;
+      // A return clause also lets an AI lender restore a materially stronger
+      // role fit. Reuse the existing AI recruitment margin; do not invent a
+      // second quality scale or override a binding purchase obligation.
+      if(shortage||stronger)
         commitWorldAction(db,{type:'player.loan-return',actor:'ai',pid,fromId:borrower.id,teamId:owner.id});
     }
   }
