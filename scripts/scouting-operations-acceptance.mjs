@@ -90,6 +90,13 @@ const fixture=String.raw`(()=>{
   observePlayer=(state,p,gain,opt)=>{observeOriginal(state,p,gain,opt);throw Error('injected scouting failure')};
   const fault=scoutPlayers(db,[naTarget.id],40,cost);observePlayer=observeOriginal;
   assert(fault.includes('처리 실패')&&JSON.stringify(db)===humanBefore&&staffByRole(manager,'scout')[0]===humanScout,'manual failure lost cash/report/expertise or staff identity');
+  // An owned-reserve coach uses parent investigators but the existing manual
+  // call charges the managed squad. Both ownership layers must be journaled.
+  const reserve={...manager,id:'SCOUT_RESERVE',parent:manager.id,division:2,roster:[],staffRoster:[],finance:JSON.parse(JSON.stringify(manager.finance))};db.teams[reserve.id]=reserve;db.manager.teamId=reserve.id;
+  assert(scoutingRegionalPower(db,reserve,naTarget).owner===manager,'owned reserve failed real parent lookup');
+  const reserveBefore=JSON.stringify(db);observePlayer=(state,p,gain,opt)=>{observeOriginal(state,p,gain,opt);throw Error('reserve observation failure')};
+  const reserveFault=scoutPlayers(db,[naTarget.id],40,cost);observePlayer=observeOriginal;
+  assert(reserveFault.includes('처리 실패')&&JSON.stringify(db)===reserveBefore,'reserve cash/human report/parent experience was not rolled back together');db.manager.teamId=manager.id;delete db.teams[reserve.id];
   const aiBefore=JSON.stringify(db),payOriginal=payFinancePrepaid;payFinancePrepaid=(t,key,amount)=>{payOriginal(t,key,amount);if(key==='scoutingExpense')throw Error('injected AI payment failure')};
   let aiFailed=false;try{aiRunScoutingOperation(db,strong)}catch{aiFailed=true}payFinancePrepaid=payOriginal;
   assert(aiFailed&&JSON.stringify(db)===aiBefore,'AI late payment failure lost reports, expertise, audit or cash');

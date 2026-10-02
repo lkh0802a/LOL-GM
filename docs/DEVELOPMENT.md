@@ -57,6 +57,10 @@ error and audit-reference replacement during rollback; changed the scoped journa
 to preserve original object graph references. A near-full AI operations module
 exceeded its existing budget; moved shared batch finance helpers into scouting
 without increasing budgets. These failures are documented, not hidden.
+Self-review added an owned-reserve boundary case: parent investigators and the
+managed reserve's existing manual cash/report path must both be journaled.
+Corrected owner-vs-actor detection and captured both finance layers; fault-injection
+acceptance verifies the parent experience and reserve cash/report restore together.
 
 Files: `scouting.js`, `scouting-ai.js`, `scouting-ai-ops.js`, `staff-contracts.js`,
 three UI modules, artifact manifest/check, existing scouting/staff acceptances and

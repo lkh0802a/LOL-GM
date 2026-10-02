@@ -41,9 +41,9 @@ function regionalScoutingAssignments(db,t,regions){
   }).filter(a=>a.scoutIds.length||a.region===t.region);
 }
 function scoutingOperationAtomically(db,t,work){
-  const owner=aiScoutingOwner(db,t),human=owner.id===managedTeamId(db),rows=[],nodes=[],seen=new Set();
+  const owner=aiScoutingOwner(db,t),human=t.id===managedTeamId(db),rows=[],nodes=[],seen=new Set();
   const capture=ref=>{if(!ref||typeof ref!=='object'||seen.has(ref))return;seen.add(ref);const entries=Object.entries(ref);nodes.push({ref,record:Object.fromEntries(entries),length:Array.isArray(ref)?ref.length:null});for(const [,child] of entries)capture(child)};
-  for(const [object,key] of [[owner,'finance'],[owner,'scoutingState'],...(human?[[db,'scout'],[db.world||{},'recruitment']]:[]),...staffByRole(owner,'scout').map(s=>[s,'scoutRegions'])]){rows.push({object,key,present:Object.hasOwn(object,key),ref:object[key]});capture(object[key])}
+  for(const [object,key] of [[t,'finance'],[owner,'finance'],[owner,'scoutingState'],...(human?[[db,'scout'],[db.world||{},'recruitment']]:[]),...staffByRole(owner,'scout').map(s=>[s,'scoutRegions'])]){rows.push({object,key,present:Object.hasOwn(object,key),ref:object[key]});capture(object[key])}
   try{return work()}catch(error){
     for(const node of nodes){actionJournalRestoreObject(node.ref,node.record);if(node.length!==null)node.ref.length=node.length}
     for(const r of rows){if(!r.present)delete r.object[r.key];else r.object[r.key]=r.ref}
