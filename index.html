@@ -9925,7 +9925,8 @@ function staffRegistrationSnapshot(db,c){
   const s=staffRegistrationSeason(db,c.seasonId);return {date:db.worldDate,seasonId:c.seasonId,
     done:s?.done,policy:competitionStaffPolicy(db,s),participants:db.competitions[s?.comp]?.teams,
     entries:s?.staffEntries?JSON.parse(JSON.stringify(s.staffEntries)):null,
-    roster:(db.teams[c.teamId]?.staffRoster||[]).map(x=>[x.id,x.contract?.until||null,x.retired||false]),
+    roster:(db.teams[c.teamId]?.staffRoster||[]).map(x=>[x.id,x.contract?.until||null,x.retired||false,x.name,x.role,
+      ...(c.actor==='ai'?[competitionStaffObservedContributions(db,db.teams[c.teamId],x)]:[])]),
     active:db.teams[c.teamId]?.active,manager:managedTeamId(db)};
 }
 WORLD_ACTION_HANDLERS['competition.staff-register']={
@@ -9948,12 +9949,37 @@ function initializeCompetitionStaffRegistrations(db,s){
   const p=competitionStaffPolicy(db,s);if(!p)return;
   s.staffRegistrationPolicy={...p};s.staffEntries=s.staffEntries||{};
 }
+// Fictional selection policy, not staffing quotas or real-world effect sizes.
+// Only contexts used by the official draft/observation view count. Club-only
+// training/recovery remain available from the full employment roster.
+const COMPETITION_STAFF_COVERAGE_WEIGHTS=[1,1/3,1/3,1/3,.25];
+function competitionStaffObservedContributions(db,t,x){
+  const secondary=staffSecondaryRoles(x),base=clamp(staffObservation(db,t,x).estimate,0,99)*staffSpecialtyAllocation(x),
+    role=r=>x.role===r?base:secondary.includes(r)?base*STAFF_SECONDARY_WEIGHT:0;
+  // Secondary field names are public; their hidden numeric ability is not.
+  return [role('strategicCoach'),...Object.keys(ANALYSIS_CONTEXTS).map(k=>clamp(role('analyst')*staffAnalysisMultiplier(x,k),0,99)),role('scout')];
+}
+function competitionStaffCoverageScore(contributions){
+  return COMPETITION_STAFF_COVERAGE_WEIGHTS.reduce((n,w,i)=>n+w*staffWeightedValues(contributions.map(xs=>xs[i]).sort((a,b)=>b-a)),0);
+}
+function aiCompetitionStaffPlan(db,s,t){
+  const p=competitionStaffPolicy(db,s);if(!p)return [];
+  const candidates=(t.staffRoster||[]).filter(x=>!x.retired&&x.contract?.until>=db.year)
+    .map(x=>({id:x.id,values:competitionStaffObservedContributions(db,t,x)})).sort((a,b)=>a.id.localeCompare(b.id)),chosen=[],values=[];
+  let score=0;
+  while(chosen.length<p.max){
+    let best=null,gain=0;
+    for(const x of candidates){if(chosen.includes(x.id))continue;const marginal=competitionStaffCoverageScore([...values,x.values])-score;
+      if(marginal>gain+1e-8){best=x;gain=marginal}}
+    if(!best)break;chosen.push(best.id);values.push(best.values);score+=gain;
+  }
+  return chosen;
+}
 function aiReviewCompetitionStaffRegistrations(db){
   for(const s of Object.values(db.world?.seasons||{})){
-    if(!staffRegistrationOpen(db,s))continue;const p=competitionStaffPolicy(db,s);
+    if(!staffRegistrationOpen(db,s))continue;
     for(const tid of db.competitions[s.comp].teams){const t=db.teams[tid];if(!t||t.active===false||managerControlsSquad(db,t))continue;
-      const staffIds=(t.staffRoster||[]).filter(x=>!x.retired&&x.contract?.until>=db.year)
-        .slice().sort((a,b)=>staffObservation(db,t,b).estimate-staffObservation(db,t,a).estimate||a.id.localeCompare(b.id)).slice(0,p.max).map(x=>x.id);
+      const staffIds=aiCompetitionStaffPlan(db,s,t);
       if(!Object.hasOwn(s.staffEntries||{},tid)||JSON.stringify(competitionStaffEntry(db,s,tid))!==JSON.stringify(staffIds))
         commitWorldAction(db,{type:'competition.staff-register',actor:'ai',seasonId:s.id,teamId:tid,staffIds});
     }
@@ -12035,7 +12061,7 @@ function competitionStaffRegistrationPanel(t){
   return seasons.map(s=>{
     const p=competitionStaffPolicy(DB,s),open=managerControlsSquad(DB,t)&&staffRegistrationOpen(DB,s),selected=new Set(competitionStaffEntry(DB,s,t.id)),members=teamStaffMembers(t),
       departed=(s.staffEntryRecords?.[t.id]?.staff||[]).filter(x=>!members.some(m=>m.id===x.id));
-    return `<details class="cfgcard"><summary>${esc(DB.competitions[s.comp].name)} 현장 스태프 · ${selected.size}/${p.max}명</summary><p class="hint">${s.done?'대회 종료':open?'마감 전 변경 가능':'등록 마감됨'} · 마감 ${esc(p.lockAt)} · 공식전 코칭·분석은 현재 고용 중인 등록 직원이 담당합니다.</p>${members.map(x=>`<label><input type="checkbox" data-competition-staff="${esc(s.id)}" value="${esc(x.id)}"${selected.has(x.id)?' checked':''}${!open?' disabled':''}> ${esc(x.name)} · ${esc(STAFF_ROLES[x.role])}</label>`).join('')}${departed.map(x=>`<p class="hint">${esc(x.name)} · ${esc(STAFF_ROLES[x.role]||x.role)} · 제출 후 퇴사</p>`).join('')}${open?`<button class="primary" data-competition-staff-submit="${esc(s.id)}" data-team-id="${esc(t.id)}">현장 명단 제출</button>`:''}</details>`;
+    return `<details class="cfgcard"><summary>${esc(DB.competitions[s.comp].name)} 현장 스태프 · ${selected.size}/${p.max}명</summary><p class="hint">${s.done?'대회 종료':open?'마감 전 변경 가능':'등록 마감됨'} · 마감 ${esc(p.lockAt)} · 공식전 코칭·분석은 현재 고용 중인 등록 직원이 담당합니다. AI는 관측 평가·공개 전문성의 보완 효과로 선택하며 필수 직무 할당은 없습니다. 구단 훈련·회복은 전체 고용 인원이 담당합니다.</p>${members.map(x=>`<label><input type="checkbox" data-competition-staff="${esc(s.id)}" value="${esc(x.id)}"${selected.has(x.id)?' checked':''}${!open?' disabled':''}> ${esc(x.name)} · ${esc(STAFF_ROLES[x.role])}${x.role==='analyst'||staffSecondaryRoles(x).includes('analyst')?' · '+(ANALYSIS_CONTEXTS[x.analysisFocus]||'범용'):''}</label>`).join('')}${departed.map(x=>`<p class="hint">${esc(x.name)} · ${esc(STAFF_ROLES[x.role]||x.role)} · 제출 후 퇴사</p>`).join('')}${open?`<button class="primary" data-competition-staff-submit="${esc(s.id)}" data-team-id="${esc(t.id)}">현장 명단 제출</button>`:''}</details>`;
   }).join('');
 }
 

@@ -74,7 +74,14 @@ calendar-scouting (17) passed; `git diff --check` is clean. UI-finance-contracts
 ran its domain cases but its final harness assertion failed: the new independent
 coverage fixture creates a 36th fresh VM, while the runner expected 35. Updated
 the exact expected context count to 36, retaining compile-once and context-isolation
-guards; the corrected full runner must pass before merge. No long final QA or
+guards. Corrected UI-finance-contracts passed all 38 acceptances with 36 fresh
+contexts and one engine compile. PR #141 final head
+`7a03743ffee901c9b761b334406b861e20f3d4b4` passed complete Actions
+`37059471843`: medical core, four seed shards, both aggregates and final `verify`
+all succeeded. Exact current PR head matched that run before sequential merge
+as `e2490f01d727200f944677773b8569281187e99e`. Standalone HTML was rebuilt
+from integrated main. Initial run `37059343401` and local failure notes remain;
+they are not represented as successful final-head evidence. No long final QA or
 new infrastructure was started.
 
 Precise next slice (estimate 50 minutes): staff negotiated contract duration.
@@ -85,6 +92,16 @@ with safe explicit negotiated terms through the same atomic writer, test user/AI
 authority, salary/remaining-term compensation and stale/late/save cases. Do not
 invent a mandatory agency fee, rewrite existing contracts or claim all D07/23
 stages complete. If another PR already implements it, inspect the next real gap.
+Read-only continuation checks located the fixed range in `staff-contracts.js`
+offer validation and saved-state validation, plus `ui-market-staff.js`'s 1/2/3
+selector. `aiManageStaff` and annual renewal both currently submit two years;
+`staffConsent` currently evaluates salary/move only. `staffExitFee` already uses
+actual remaining years at the common 50% guarantee. Keep that existing policy,
+initial two-year contracts and old records intact; test expanded manager/AI terms
+through sign/renew/poach, annual expiry, closure claims, pure preview and actual UI
+confirm/cancel. Do not merely relax the offer check while save still rejects it.
+This next connected slice remains estimated 50 minutes including acceptance and
+required CI; it is not split into a tiny post-merge patch to fill the current run.
 
 ### Current implementation slice — analyst context specialization (2026-10-02)
 
