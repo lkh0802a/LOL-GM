@@ -1876,8 +1876,10 @@ Self restriction, immunity, protective shields and Aatrox's minion-only fear do
 not create opponent champion control. Conditional enemy effects remain aggregate.
 
 Newly normalized champions retain source provenance; current saves preserve it.
-Existing saved patch champions without tags remain unchanged, preserving their
-historical outcomes rather than silently rewriting them on load. Short fixtures
+Existing saved patch champions without tags remain unchanged. New worlds record
+sourceControlBaseline=1; old worlds without it strip the new tags when rebuilding
+historical patch baselines, preventing replay from silently acquiring new effects.
+Short fixtures
 cover known positive/negative source cases, explicit numeric precedence, patch
 effect/reversal, current/legacy restoration, pure assessment and four paired
 actual matches. Existing eight-pair fight patches and103-module static checks

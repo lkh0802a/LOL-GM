@@ -32,7 +32,13 @@ await runEngineFixture(String.raw`(()=>{
   forced.bans=forced.bans.map(rows=>rows.filter(id=>!used.has(id)));
   const save=packDB(db),loaded=unpackDB(save);
   check(JSON.stringify(loaded.patch.champions[xerath.id].skills.E.sourceControl)===JSON.stringify(xerath.skills.E.sourceControl),'current source provenance save');
-  const legacy=unpackDB(save);for(const s of Object.values(legacy.patch.champions[xerath.id].skills))delete s.sourceControl;
+  const legacy=unpackDB(save);delete legacy.patches.sourceControlBaseline;
+  for(const s of Object.values(legacy.patch.champions[xerath.id].skills))delete s.sourceControl;
+  legacy.patch.id='legacy-current';
+  check(!getPatch(legacy,'26.19').champions[xerath.id].skills.E.sourceControl,'legacy historical rebuild acquired new control tags');
+  loaded.patch.id='new-current';
+  check(getPatch(loaded,'26.19').champions[xerath.id].skills.E.sourceControl?.types.includes('stun'),'new historical rebuild lost source baseline');
+  loaded.patch.id=db.patch.id;
   const oldProfile=championSkillProfile(legacy.patch.champions[xerath.id]),profile=championSkillProfile(xerath);
   applyNote(loaded.patch,{type:'skill',c:xerath.id,slot:'E',field:'ccMod',old:1,new:2});
   check(championSkillProfile(loaded.patch.champions[xerath.id]).cc>profile.cc,'source control ignored CC patch');

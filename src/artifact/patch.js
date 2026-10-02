@@ -9,6 +9,7 @@ function initPatches(db){
   db.patches={list:[],history:[],prev:[],nextDate:null,newIdx:0,y:0,n:0,releasesByYear:{},releaseTargets:{},reworksByYear:{},majorReworksByYear:{},systemLifeByYear:{},cadence:14};
   db.metaStats={};db.metaGames=0;db.regionMetaStats={};db.regionMetaGames={};
   db.patches.roleQuestBaseline=JSON.parse(JSON.stringify(db.patch.roleQuests||null));
+  db.patches.sourceControlBaseline=1;
 }
 function applyNote(P,n){
   if(n.type==='role_quest')applyRoleQuestNote(P,n);
@@ -31,6 +32,7 @@ function getPatch(db,id){
   if(db.patch&&db.patch.id===id)return db.patch;
   const cached=historicPatchCacheHit(db,id);if(cached)return cached;
   const P=buildPatch();
+  if(db.patches.sourceControlBaseline!==1)for(const c of Object.values(P.champions))for(const s of Object.values(c.skills||{}))delete s.sourceControl;
   if(db.patches.roleQuestBaseline!==undefined)P.roleQuests=JSON.parse(JSON.stringify(db.patches.roleQuestBaseline));
   else if(!db.patch?.roleQuests)delete P.roleQuests;
   if(P.id===id)return rememberHistoricPatch(db,id,P);
