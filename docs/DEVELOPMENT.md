@@ -1993,4 +1993,10 @@ recall is optimal in every career, or complete D05 or the 23-stage roadmap.
 The deferred long-run, mobile and TalkBack checks remain after all features and
 user playtest fixes.
 
-D05 follow-up test note: D01 calendar acceptance now selects mutually ready clubs with a shared time block before asserting practice reservation; see the latest PR run.
+D05 follow-up test note: D01 calendar acceptance now selects mutually ready
+clubs with a shared time block before asserting practice reservation. Initial
+exact-head Actions run 36999290633 failed because its fixture selected an allowed
+but not practice-ready pair after AI roster changes; the same acceptance passed
+against the pre-change engine. The original run and artifact remain in Actions.
+The corrected focused acceptance passes locally; the current full-head run is
+recorded in the PR checks.
