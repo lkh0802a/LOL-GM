@@ -133,6 +133,8 @@ exact PR head passed: PR #142 head
 including medical core, four seeds, both aggregates and `verify`. Exact head
 matched before sequential merge as `bd85a78ea65d22b08f410a74fbf33ec3db8da7c3`;
 standalone HTML rebuilt from integrated main. Long100-season/real-device/
+Published main `35c86a22ca367a43f756a591ce99b688f40ed7d0` then passed
+complete post-publication CI `37065400906` while the next implementation proceeded.
 mobile/TalkBack final QA remains after all feature implementation and playtest
 feedback/fixes. This closes the fixed staff-duration discrepancy, not all D07
 or all 23 stages.

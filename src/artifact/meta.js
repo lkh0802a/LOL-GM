@@ -2,7 +2,7 @@
 // Owns match-derived meta history, indexes, filtered queries and champion meta insights.
 
 const META_HISTORY_CACHE=new WeakMap();
-const META_PATCH_SAMPLE_INDEX_CACHE=new WeakMap(); // Official views share immutable recorded history arrays.
+const META_PATCH_SAMPLE_INDEX_CACHE=new WeakMap(); // Official views share append-only recorded history.
 const EMPTY_META_HISTORY=[];
 const META_FILTER_CACHE_LIMIT=64, META_PATCH_SORT_LIMIT=12, PATCH_REPLAY_CACHE_LIMIT=8;
 function patchCache(db){let c=PATCH_CACHE.get(db);if(!c){c=new Map();PATCH_CACHE.set(db,c)}return c}
