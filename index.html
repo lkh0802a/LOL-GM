@@ -10819,17 +10819,28 @@ function draftCandidateEvidence(state,side,cid,out){
   return out;
 }
 function draftOpponentIntent(state,observerSide,limit=3){
-  if(!state)return [];const db=state.db,opp=1-observerSide,observer=db.teams[state.teamIds[observerSide]],prof=staffProfile(observer),hist=state.ctx.byTeam[state.teamIds[observerSide]]||{won:[],lost:[]};
+  if(!state||![0,1].includes(observerSide)||!Number.isSafeInteger(limit)||limit<=0)return [];
+  const db=state.db,opp=1-observerSide,observer=db.teams[state.teamIds[observerSide]],analysis=staffAnalysisFor(observer,'opponent'),hist=state.ctx.byTeam?.[state.teamIds[observerSide]]||{won:[],lost:[]},opponentHistory=state.ctx.byTeam?.[state.teamIds[opp]]||{won:[],lost:[]};
   return state.log.filter(x=>x.side===opp).slice(-limit).reverse().map(x=>{
-    const c=db.patch.champions[x.champ],meta=Math.round(clamp(state.vhat[observerSide]?.[x.champ]||0,0,1)*100),roles=(c?.roles||[]).filter(r=>ROLES.includes(r)),reasons=[];let info=prof.analysis,confidence=prof.analysis;
+    const c=db.patch.champions[x.champ],evidence=draftMetaEvidence(state,observerSide,x.champ),patchStats=currentPatchMetaSamples(db).stats[x.champ],patchPicks=patchStats?.p||0,patchBans=patchStats?.b||0,meta=evidence.score,roles=(c?.roles||[]).filter(r=>ROLES.includes(r)),reasons=[],sources=['공개 밴픽','상대 분석팀 '+Math.round(analysis),...evidence.sources];let info=analysis,confidence=analysis,observations=[];
+    if(evidence.globalSample)sources.push('현재 패치 공개 기록 '+patchPicks+'픽 · '+patchBans+'밴');
     if(x.kind==='P'){
-      const reports=roles.map(role=>state.roster[opp][role]).filter(Boolean).map(p=>{const r=scoutReport(db,p),cm=r.champions.find(z=>z.id===x.champ);return {knowledge:r.knowledge,mastery:cm?.mastery||0}});info=reports.length?Math.round(avg(reports.map(r=>r.knowledge))):0;confidence=Math.round(clamp(prof.analysis*.55+info*.45,20,95));
-      if(meta>=65)reasons.push('현재 메타 우선도가 높은 픽');if(roles.length>1)reasons.push('복수 포지션 가능성을 남기는 픽');if(reports.some(r=>r.mastery>=65))reasons.push('스카우팅에서 확인된 챔피언 폭과 부합');if(!reasons.length)reasons.push('조합 방향을 숨기며 챔피언을 선점한 선택');
+      observations=roles.filter(role=>state.roster[opp][role]).map(role=>{
+        const obs=draftMasteryObservation(state,observerSide,opp,state.roster[opp][role],x.champ),width=Math.max(2,Math.ceil((100-obs.confidence)/12));
+        return {role,confidence:obs.confidence,range:[Math.max(20,obs.value-width),Math.min(99,obs.value+width)],sources:obs.sources};
+      });
+      info=observations.length?Math.round(avg(observations.map(r=>r.confidence))):0;confidence=Math.round(clamp(analysis*.55+info*.45,20,95));
+      if(meta>=65)reasons.push('현재 패치 평가에서 우선도가 높은 픽');if(roles.length>1)reasons.push('복수 포지션 가능성을 남기는 픽');if(observations.some(r=>r.range[0]>=65))reasons.push('관찰 숙련 범위가 높은 챔피언 선택');
+      if(opponentHistory.won.includes(x.champ)||opponentHistory.lost.includes(x.champ)){reasons.unshift('이번 시리즈에서 공개된 상대 픽 재선택');sources.push('이번 시리즈 상대 공개 픽')}
+      if(!reasons.length)reasons.push('공개 정보만으로 선택 의도 구분 어려움');
     }else{
-      const ownMastery=roles.map(role=>draftMastery(state.roster[observerSide][role],x.champ));if(ownMastery.some(v=>v>=70))reasons.push('우리 선수의 높은 숙련 챔피언 견제 가능성');if(hist.won.includes(x.champ))reasons.push('이전 세트 승리 픽 재사용 차단 가능성');if(meta>=65)reasons.push('메타 우선 챔피언 제거 가능성');if(roles.length>1)reasons.push('플렉스 선택지 차단 가능성');if(!reasons.length)reasons.push('일반적인 밴 우선순위에 따른 견제 가능성');
-      confidence=Math.round(clamp(prof.analysis+(hist.won.includes(x.champ)?8:0),20,96));
+      const ownMastery=roles.map(role=>draftMastery(state.roster[observerSide][role],x.champ));if(ownMastery.some(v=>v>=70)){reasons.push('우리 선수의 높은 숙련 챔피언 견제 가능성');sources.push('구단 내부 훈련·스크림 데이터')}
+      if(hist.won.includes(x.champ)){reasons.push('이전 세트 승리 픽 재사용 차단 가능성');sources.push('이번 시리즈 우리 승리 픽')}
+      if(meta>=65)reasons.push('현재 패치 우선 챔피언 제거 가능성');if(roles.length>1)reasons.push('플렉스 선택지 차단 가능성');if(!reasons.length)reasons.push('일반적인 밴 우선순위에 따른 견제 가능성');
+      confidence=Math.round(clamp(analysis+(hist.won.includes(x.champ)?8:0),20,96));
     }
-    return {kind:x.kind,champ:x.champ,meta,roles,confidence,information:Math.round(info),reasons:reasons.slice(0,3)};
+    if(!evidence.globalSample)reasons.push('현재 패치 표본 부족 · 패치 평가와 관찰 기반 추정');
+    return {kind:x.kind,champ:x.champ,meta,roles,confidence,information:Math.round(info),analysis:Math.round(analysis),observations,patch:evidence.patch,patchPicks,patchBans,globalSample:evidence.globalSample,regionalSample:evidence.regionalSample,sources:[...new Set(sources)],reasons:reasons.slice(0,3)};
   });
 }
 
@@ -12234,7 +12245,7 @@ function draftUiStaffAdvice(){
 }
 function draftUiOpponentIntent(){
   if(!DRAFT_UI)return '';const rows=draftOpponentIntent(DRAFT_UI.state,DRAFT_UI.playerSide,3);if(!rows.length)return '';
-  return `<section class="du-intent"><div class="du-intent-head"><b>상대 의도 추정</b><span>공개 밴픽 + 우리 분석/스카우팅 기준</span></div><div class="du-intent-list">${rows.map(x=>{const c=DRAFT_UI.state.db.patch.champions[x.champ],roles=x.roles.map(r=>ROLE_KO[r]||r).join(' · ');return `<div class="du-intent-row"><div><small>${x.kind==='P'?'PICK':'BAN'} · 신뢰 ${x.confidence}</small><b>${esc(championDisplayName(c))}</b><span>${esc(roles)}</span></div><p>${x.reasons.map(esc).join(' · ')}</p></div>`}).join('')}</div><small class="du-intent-note">실제 AI 내부 역할 지정이나 비공개 선수 데이터가 아니라 현재 확인 가능한 정보에서 추정한 설명입니다.</small></section>`;
+  return `<section class="du-intent"><div class="du-intent-head"><b>상대 의도 추정</b><span>공개 밴픽 + 우리 상대 분석/스카우팅 기준</span></div><div class="du-intent-list">${rows.map(x=>{const c=DRAFT_UI.state.db.patch.champions[x.champ],roles=x.roles.map(r=>ROLE_KO[r]||r).join(' · '),ranges=x.observations.map(o=>(ROLE_KO[o.role]||o.role)+' 관찰 숙련 '+o.range.join('~')).join(' · ');return `<div class="du-intent-row"><div><small>${x.kind==='P'?'PICK':'BAN'} · 해석 신뢰 ${x.confidence}</small><b>${esc(championDisplayName(c))}</b><span>${esc(roles)}</span></div><p>${x.reasons.map(esc).join(' · ')}${ranges?'<br>'+esc(ranges):''}<br><small>${x.sources.map(esc).join(' · ')}</small></p></div>`}).join('')}</div><small class="du-intent-note">공개 역할 후보와 관찰 범위에 따른 추정입니다. 해석 신뢰는 분석 능력·정보량을 반영한 게임 지표이며 통계적 확률이나 실제 상대 의도는 아닙니다.</small></section>`;
 }
 function draftUiGrid(){
   const s=DRAFT_UI.state,rows=Object.values(s.db.patch.champions).filter(draftUiMatch).sort((a,b)=>championDisplayName(a).localeCompare(championDisplayName(b),'ko'));

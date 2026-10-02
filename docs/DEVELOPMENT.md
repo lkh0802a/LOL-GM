@@ -78,6 +78,12 @@ Final review added a manual legal choice and removed the unsupported fallback
 claim that an opponent deliberately hides its composition. The manual fixture
 first looked for an unpersisted source field; it now verifies the chosen champion
 in the real public log. Focused/static checks pass after these review changes.
+PR #144 final head `66944f02550e08f5c22515b2f7cc0d95c6cdb938` passed
+full Actions `37070772459`: medical core, all four seed shards, both aggregates
+and final `verify` succeeded and the exact PR/run heads matched. It merged
+sequentially as `ebc30a05b55eef3cf20cd9c8dae947602fd2163e`; standalone
+HTML was rebuilt from integrated main. Earlier run `37070603813` was cancelled
+after review changes and is not final-head evidence.
 
 Precise next slice (estimate 50 minutes): region-specific ban provenance for
 Item 13/21 analysis. Actual inspection finds `recordMeta`, current patch samples
