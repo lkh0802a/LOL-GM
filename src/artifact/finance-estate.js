@@ -1,3 +1,9 @@
+function financeClosureReservedAllocation(cash,claims,reservedTransferAmount=0){
+  if(!Number.isFinite(reservedTransferAmount)||reservedTransferAmount<0)
+    throw new Error('구단 해체 이적료 예약액이 유효하지 않습니다');
+  return {...financeClosureAllocation(cash-reservedTransferAmount,claims),
+    reservedTransferAmount,totalClaimAmount:claims.amount+reservedTransferAmount};
+}
 function settleClubEstateRecovery(t,date,reservedAmount){
   const f=t.finance,cashBefore=f.cash,
     allocation=financeClosureAllocation(Math.max(0,cashBefore-reservedAmount),financeReleaseObligations(t));

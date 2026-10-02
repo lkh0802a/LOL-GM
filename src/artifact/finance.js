@@ -91,10 +91,11 @@ function applyClubClosureFunding(db,transfers,closingIds,year,date){
     }
   }
 }
-function settleClubClosureFinance(t,year,date,funding=null){
+function settleClubClosureFinance(t,year,date,funding=null,reservedTransferAmount=0){
   const f=t.finance;
   if(f.closureSettlement)throw new Error('이미 정산한 구단 해체입니다');
-  const cashBefore=f.cash,allocation=financeClosureAllocation(cashBefore,financeReleaseObligations(t));
+  const cashBefore=f.cash,allocation=financeClosureReservedAllocation(cashBefore,
+    financeReleaseObligations(t),reservedTransferAmount);
   t.finance.cash-=allocation.paidAmount;
   f.buyout=allocation.unpaidAmount;
   f.releaseObligations=allocation.items.filter(row=>row.unpaidAmount>0)
