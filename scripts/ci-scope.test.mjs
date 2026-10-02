@@ -2,6 +2,28 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {validationScope} from './ci-scope.mjs';
 import {readFileSync} from 'node:fs';
+import {mkdtempSync,writeFileSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join,resolve,sep} from 'node:path';
+import {execFileSync} from 'node:child_process';
+
+test('PR scope excludes publication commits that advanced only the base',()=>{
+  const dir=mkdtempSync(join(tmpdir(),'lol-gm-scope-'));
+  const git=(...args)=>execFileSync('git',args,{cwd:dir,encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
+  try{
+    git('init','-b','main');git('config','user.name','scope-test');git('config','user.email','scope@example.invalid');
+    writeFileSync(join(dir,'index.html'),'old');git('add','.');git('commit','-m','base');
+    git('switch','-c','ui');writeFileSync(join(dir,'ui.js'),'new');git('add','.');git('commit','-m','ui');
+    git('switch','main');writeFileSync(join(dir,'index.html'),'published');git('add','.');git('commit','-m','publish');
+    assert(git('diff','--name-only','main','ui').split('\n').includes('index.html'));
+    const mergeBase=git('merge-base','main','ui');
+    assert.deepEqual(git('diff','--name-only',mergeBase,'ui').split('\n'),['ui.js']);
+    const workflow=readFileSync(new URL('../.github/workflows/ci.yml',import.meta.url),'utf8');
+    assert(workflow.includes('base="$(git merge-base "$PR_BASE_SHA" "$PR_HEAD_SHA")"'));
+  }finally{
+    assert(resolve(dir).startsWith(resolve(tmpdir())+sep));rmSync(dir,{recursive:true,force:true});
+  }
+});
 test('engine and unknown changes retain all required validation',()=>{
   for(const file of ['src/artifact/club-license.js','scripts/test-harness.mjs','package.json','unknown']){
     const s=validationScope('pull_request','false',[file]);
