@@ -58,5 +58,57 @@ await runEngineFixture(String.raw`(()=>{
   check(JSON.stringify(restored)===done,'fully paid estate repeated payout');
   check(JSON.stringify(t.finance.closureSettlement)===closure,'original closure history changed');
   check(near(unpackDB(packDB(restored)).teams[estate.id].finance.cash,.037),'fractional cash failed save restoration');
-  console.log('CLUB_ESTATE_ACCEPTANCE actual closure / mirrored recoveries / reserved invoices / proportional staff-player-legacy / save / rollback / stale / no double payment');
+  // Initial support and reserve cash recovery must obey the same invoice
+  // reservation policy as later estate recoveries, without early payment.
+  const createOrganization=()=>{
+    const c=defaultWorldConfig();c.regions=[regionCfg('NA',{teams:3,div2:true})];c.internationals=[];
+    const w=buildWorld(c),head=activeTeams(w,null,1)[0],child=reserveTeamsOf(w,head)[0],
+      seller=activeTeams(w,null,1)[1],player=Object.values(w.players).find(p=>!p.team);
+    w.world={phase:'season',year:w.year,manage:'manual',seasons:{}};
+    setWorldCalendarDate(w,w.year+'-01-10');
+    for(const t of Object.values(w.teams))for(const s of t.staffRoster||[])s.contract.until=w.year-1;
+    const debt=(buyer,amount)=>writeTransferDeal(w,{id:buyer.id+'/closure-debt',pid:player.id,
+      fromId:seller.id,teamId:buyer.id,date:w.worldDate,fee:amount,upfront:0,
+      rows:[{kind:'installment',date:w.year+'-02-01',amount,paid:0,status:'pending'}]});
+    return {w,head,child,seller,debt};
+  };
+  const org=createOrganization();
+  org.head.finance.cash=5;org.head.finance.buyout=0;org.debt(org.head,2);
+  org.child.finance.cash=3;org.child.finance.buyout=2;org.debt(org.child,4);
+  const closeChild={type:'club.close',actor:'system',teamId:org.child.id},
+    quote=previewWorldAction(org.w,closeChild),beforeOrg=JSON.stringify(org.w),ref=org.child.finance;
+  check(quote.ok&&JSON.stringify(org.w)===beforeOrg,'reserved initial funding preview mutated');
+  check(near(quote.changes[0].funding.received,3)&&quote.changes[0].settlement.reservedTransferAmount===4,
+    'active parent spent its invoices or failed to fund reserve creditor exposure');
+  const scope=worldActionScopeErrors;
+  worldActionScopeErrors=(w,c,ids)=>c.type==='club.close'?['late reserved closure']:scope(w,c,ids);
+  check(!applyWorldAction(org.w,quote).ok&&JSON.stringify(org.w)===beforeOrg&&org.child.finance===ref,
+    'reserved closure late failure lost financial references');
+  worldActionScopeErrors=scope;
+  org.debt(org.child,4.1);
+  check(!applyWorldAction(org.w,quote).ok,'changed invoice accepted stale support');
+  org.debt(org.child,4);
+  check(commitWorldAction(org.w,closeChild).ok&&near(org.head.finance.cash,2)&&
+    near(org.child.finance.cash,4)&&near(org.child.finance.buyout,0),
+    'initial support consumed protected invoice cash');
+  check(transferDealRows(org.child).every(d=>d.rows[0].paid===0&&d.rows[0].status==='pending'),
+    'closure accelerated agreed invoice date');
+  const group=createOrganization();
+  group.head.finance.cash=0;group.head.finance.buyout=1;
+  group.child.finance.cash=5;group.child.finance.buyout=1;group.debt(group.child,4);
+  group.seller.finance.cash=0;
+  check(commitWorldAction(group.w,{type:'club.close',actor:'system',teamId:group.head.id}).ok,
+    'whole organization closure failed');
+  check(near(group.head.finance.buyout,1)&&near(group.child.finance.cash,4)&&
+    near(group.child.finance.closureSettlement.paidAmount,1)&&
+    near(group.child.finance.closureSettlement.funding.provided,0),
+    'closing parent recovered reserve invoice money as surplus');
+  const saved=unpackDB(packDB(group.w)),savedChild=saved.teams[group.child.id];
+  check(savedChild.finance.closureSettlement.reservedTransferAmount===4&&near(savedChild.finance.cash,4),
+    'save lost initial protected cash');
+  setWorldCalendarDate(saved,saved.year+'-02-01');processTransferPayments(saved);
+  check(near(savedChild.finance.cash,0)&&near(saved.teams[group.seller.id].finance.cash,4)&&
+    near(saved.teams[group.head.id].finance.buyout,1),
+    'reserved cash failed its original mirrored payment date');
+  console.log('CLUB_ESTATE_ACCEPTANCE actual closure / initial parent-reserve invoice protection / mirrored recoveries / proportional staff-player-legacy / save / rollback / stale / no early or double payment');
 })()`);

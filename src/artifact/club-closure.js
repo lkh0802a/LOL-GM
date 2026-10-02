@@ -12,22 +12,23 @@ function clubClosureFundingPlan(db,c){
     original=new Map(teams.map(t=>[t.id,clubClosureAllocation(db,t)])),
     parent=db.teams[teams[0].parent||teams[0].id],transfers=[];
   if(parent&&parent.active!==false){
-    const own=original.get(parent.id)||financeReleaseObligations(parent);
-    financeClosureAllocation(parent.finance.cash,own);
+    const own=original.get(parent.id)||{...financeReleaseObligations(parent),
+      reservedTransferAmount:financeCommittedTransferCash(db,parent)};
+    financeClosureReservedAllocation(parent.finance.cash,own,own.reservedTransferAmount);
     // Owned squads return only cash left after protecting their own claims.
     // Recover it before calculating support, so a closing organization does
     // not strand reserve cash while its parent has unpaid player obligations.
     for(const t of teams.filter(t=>t.parent===parent.id)){
-      const surplus=Math.max(0,t.finance.cash-original.get(t.id).amount);
+      const claims=original.get(t.id),surplus=Math.max(0,t.finance.cash-claims.totalClaimAmount);
       if(surplus>0)transfers.push({fromId:t.id,toId:parent.id,
         amount:surplus,kind:'cash_recovery'});
     }
     const recovered=transfers.reduce((n,row)=>n+row.amount,0);
     const needs=teams.filter(t=>t.parent===parent.id)
-      .map(t=>({t,need:original.get(t.id).amount>0?
-        Math.max(0,original.get(t.id).amount-t.finance.cash):0})).filter(row=>row.need>0),
+      .map(t=>({t,need:original.get(t.id).totalClaimAmount>0?
+        Math.max(0,original.get(t.id).totalClaimAmount-t.finance.cash):0})).filter(row=>row.need>0),
       total=needs.reduce((n,row)=>n+row.need,0),
-      available=Math.min(total,Math.max(0,parent.finance.cash+recovered-own.amount));
+      available=Math.min(total,Math.max(0,parent.finance.cash+recovered-own.amount-own.reservedTransferAmount));
     if(available>0)for(const {t,need} of needs)
       transfers.push({fromId:parent.id,toId:t.id,amount:available*need/total,
         kind:'reserve_support'});
@@ -38,7 +39,8 @@ function clubClosureFundingPlan(db,c){
       claims=original.get(t.id),funding={received,provided,cashBefore:t.finance.cash,
         transfers:transfers.filter(x=>x.fromId===t.id||x.toId===t.id)};
     return {teamId:t.id,kind:'club_closure',funding,
-      settlement:financeClosureAllocation(t.finance.cash+received-provided,claims)};
+      settlement:financeClosureReservedAllocation(t.finance.cash+received-provided,claims,
+        claims.reservedTransferAmount)};
   });
   return {transfers,changes};
 }
@@ -83,8 +85,11 @@ function clubClosureAllocation(db,t){
     contractReleaseSettlement(db,db.players[pid],'club_closure')).filter(row=>row.amount>0),
     staffItems=staffClosureClaims(db,t),items=[...pending.items,...newItems,...staffItems],amount=pending.amount+
       [...newItems,...staffItems].reduce((sum,row)=>sum+row.amount,0);
-  return financeClosureAllocation(t.finance.cash,{amount,items,
-    unattributedAmount:pending.unattributedAmount});
+  // Retain agreed transfer dates rather than accelerating invoices on closure.
+  // Closing loans return before settlement, so their unactivated purchases are
+  // not included; existing mirrored guaranteed transfer invoices remain owed.
+  return financeClosureReservedAllocation(t.finance.cash,{amount,items,
+    unattributedAmount:pending.unattributedAmount},transferPaymentExposure(t).guaranteed);
 }
 function clubClosureSnapshot(db,c){
   const w=db.world;
@@ -110,7 +115,8 @@ function applyClubClosure(db,c){
       applyPlayerReleaseAction(db,{pid,teamId:id,mode:'club_closure',actor:'system'});
     releaseClosingStaff(db,t);
     const funding=plan.changes.find(row=>row.teamId===id).funding,
-      settlement=settleClubClosureFinance(t,db.year,db.worldDate||null,funding);
+      settlement=settleClubClosureFinance(t,db.year,db.worldDate||null,funding,
+        transferPaymentExposure(t).guaranteed);
     ensureClubLicense(db,t);t.active=false;t.folded=db.year;
     syncClubLicense(db,t,'club-closure');
     settlements.push({teamId:id,...settlement});

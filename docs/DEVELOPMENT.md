@@ -1740,3 +1740,28 @@ exercises missing daily-plan fallback and verifies one registered athlete-day
 without fabricating prior healthy exposure or lottery odds. The original medical
 seeds and aggregate acceptance requirements are unchanged; final CI remains a
 merge gate. Long-season and mobile validation remain deferred by user request.
+
+### D04 initial closure funding protects transfer commitments (2026-10-02)
+
+Initial club closure now reserves existing guaranteed mirrored transfer invoices
+before proportional player/staff/legacy release payments. Parent support needs
+include those invoice commitments, and closing reserves cannot return protected
+invoice cash as surplus. An active parent protects its own committed transfers
+and obligatory loan purchases before supporting a closing reserve. Closing loans
+return first; their unactivated purchase obligations are not invented as debt.
+No invoices are accelerated or written off, contingent unearned bonuses remain
+contingent, and no asset price or cash is fabricated. This extends the existing
+fictional reservation policy used by post-closure estate recovery, not a claim
+about real insolvency law or a new general creditor priority waterfall.
+
+The closure statement records reservedTransferAmount and totalClaimAmount beside
+the unchanged release-payment totals; missing legacy fields remain compatible.
+Preview includes funding and reservation, current finance snapshots reject stale
+invoice changes, and existing rollback keeps original finance object references.
+Short fixtures cover active-parent support with both parties owing invoices,
+whole-organization closure without stealing reserve invoice cash, the original
+payment date and mirrored creditor receipt, current-save restoration, stale
+invoice rejection and late rollback. Existing closure/estate tests pass locally.
+General insolvency restructuring, asset recovery and representative/promise
+extensions remain open. Final required CI gates merge; long/mobile checks wait
+until phase23 implementation and user playtest feedback as directed.
