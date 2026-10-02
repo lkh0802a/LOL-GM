@@ -85,6 +85,16 @@ Final review strengthened full-page propagation, sample labels and the distinct
 opponent condition; focused/static checks pass afterward. No new test failures,
 diagnostic removal, budget increases or long/device/TalkBack QA occurred.
 
+Delivery: PR #146 final head `9819d12e1e25bd0c3f06c4385466ff77bb3c2332`
+passed complete Actions `37076870010`, including medical core, four seed
+samples, two aggregates, UI acceptance and verify. The exact-head gate passed
+before sequential merge `fe748476c444cda688f152f1ca5d1b3c28cdc3f7`.
+The integrated standalone HTML was rebuilt from all 105 modules for publication;
+its publication head remains subject to complete main CI. Implementation and
+focused acceptance are this run's delivered slice; merge/build follow-through
+does not count as another slice. Remaining hourly time cannot fit another
+coherent 45–55-minute implementation, so the precise continuation is below.
+
 Precise next slice (estimate 50 minutes): Item 21 blue/red analysis. Current
 match construction maps side 0 to blue and side 1 to red, but professional
 history/compact side tuples lack explicit color provenance, and meta queries/UI
