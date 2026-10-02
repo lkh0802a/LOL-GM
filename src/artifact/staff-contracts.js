@@ -21,7 +21,7 @@ function staffClosureClaims(db,t){return (t.staffRoster||[]).map(s=>({claimantKi
 function releaseClosingStaff(db,t){
   for(const claim of staffClosureClaims(db,t))recordContractReleaseObligation(t,claim.amount,claim);
   db.staffPool=db.staffPool||[];
-  for(const s of t.staffRoster||[]){s.contract=null;recordStaffEvent(db,s,'club_closure',{from:t.id});db.staffPool.push(s)}
+  for(const s of t.staffRoster||[]){const fromYear=s.since??s.contract?.from;s.contract=null;recordStaffEvent(db,s,'club_closure',{from:t.id,fromYear});db.staffPool.push(s)}
   t.staffRoster=[];
 }
 function staffObservation(db,t,s){
@@ -43,19 +43,20 @@ function staffConsent(db,t,s,salary){
 }
 function validateStaffAction(db,a){
   const t=db.teams[a.teamId],found=locateStaff(db,a.sid),system=a.actor==='system';
-  if(!t||t.active===false||!found||found.staff.retired)return worldActionError('missing_staff','구단 또는 스태프를 찾을 수 없습니다');
+  const freeRetirement=a.type==='staff.retire'&&system&&!a.teamId&&found&&!found.team;
+  if((!t||t.active===false)&&!freeRetirement||!found||found.staff.retired)return worldActionError('missing_staff','구단 또는 스태프를 찾을 수 없습니다');
   const mine=managedTeamId(db);
-  if(a.actor==='manager'&&mine!==t.id||a.actor==='ai'&&mine===t.id)return worldActionError('unauthorized','관리 권한이 없는 스태프 계약입니다');
-  const s=found.staff,own=found.team?.id===t.id;
+  if(a.actor==='manager'&&mine!==t?.id||a.actor==='ai'&&mine===t?.id)return worldActionError('unauthorized','관리 권한이 없는 스태프 계약입니다');
+  const s=found.staff,own=!!t&&found.team?.id===t.id;
   if(!STAFF_ROLES[s.role])return worldActionError('invalid_staff','유효하지 않은 스태프 직무입니다');
   if(a.type==='staff.sign'&&found.team&&found.team.id===mine&&a.actor==='ai')return worldActionError('protected_staff','관리 구단 스태프는 AI가 데려갈 수 없습니다');
-  if(['staff.renew','staff.release','staff.expire','staff.retire'].includes(a.type)&&!own)return worldActionError('not_employer','현재 고용 구단만 처리할 수 있습니다');
+  if(['staff.renew','staff.release','staff.expire','staff.retire'].includes(a.type)&&!own&&!freeRetirement)return worldActionError('not_employer','현재 고용 구단만 처리할 수 있습니다');
   if(['staff.expire','staff.retire'].includes(a.type)&&!system)return worldActionError('system_only','시스템 처리만 허용됩니다');
   if(a.type==='staff.expire'&&(!s.contract||s.contract.until>=db.year))return worldActionError('not_expired','아직 계약이 만료되지 않았습니다');
-  if(a.type==='staff.retire'&&s.age<62)return worldActionError('not_retiring','은퇴 연령이 아닙니다');
+  if(a.type==='staff.retire'&&(!Number.isFinite(s.age)||s.age<STAFF_RETIREMENT_MODEL.minimumAge))return worldActionError('not_retiring','은퇴 연령이 아닙니다');
   if(a.type==='staff.sign'&&own)return worldActionError('already_employed','재계약을 사용하세요');
   if(a.type==='staff.renew'&&s.contract?.until>db.year)return worldActionError('renewal_window','계약 마지막 연도부터 재계약할 수 있습니다');
-  const replacement=a.replaceSid?(t.staffRoster||[]).find(x=>x.id===a.replaceSid):null;
+  const replacement=a.replaceSid?(t?.staffRoster||[]).find(x=>x.id===a.replaceSid):null;
   if(a.replaceSid&&(a.type!=='staff.sign'||!replacement||replacement.id===s.id||staffDepartment(replacement.role)!==staffDepartment(s.role)))return worldActionError('invalid_replacement','같은 부서의 현재 스태프만 교체할 수 있습니다');
   if(a.type==='staff.sign'&&!replacement&&!staffCanHire(t,s))return worldActionError('staff_cap','해당 부서 정원에 도달했습니다');
   let salary=null,years=null,fee=0,poachFee=0,releaseFee=0;
@@ -72,7 +73,7 @@ function validateStaffAction(db,a){
   }else if(a.type==='staff.release'){
     fee=staffExitFee(db,s);if(!Number.isFinite(t.finance?.cash)||t.finance.cash<fee)return worldActionError('insufficient_cash','스태프 해지 보상 자금이 부족합니다');
   }
-  return {ok:true,teamId:t.id,sid:s.id,fromId:found.team?.id||null,replaceSid:replacement?.id||null,salary,years,fee,poachFee,releaseFee};
+  return {ok:true,teamId:t?.id||null,sid:s.id,fromId:found.team?.id||null,replaceSid:replacement?.id||null,salary,years,fee,poachFee,releaseFee};
 }
 function staffActionSnapshot(db,c){
   const f=locateStaff(db,c.sid),teams=[...new Set([c.teamId,f?.team?.id].filter(Boolean))];
@@ -89,19 +90,21 @@ function applyStaffAction(db,c){
     return {sid:s.id,observation:staffObservation(db,t,s)};
   }
   if(c.type==='staff.sign'||c.type==='staff.renew'){
+    const previousSince=f.team?s.since??s.contract?.from:null;
     if(c.type==='staff.sign'){
-      if(c.replaceSid){const replaced=t.staffRoster.find(x=>x.id===c.replaceSid);if(c.releaseFee)payFinancePrepaid(t,'staffSeverance',c.releaseFee);t.staffRoster.splice(t.staffRoster.indexOf(replaced),1);replaced.contract=null;recordStaffEvent(db,replaced,'release',{from:t.id,fee:c.releaseFee});db.staffPool=db.staffPool||[];db.staffPool.push(replaced)}
+      if(c.replaceSid){const replaced=t.staffRoster.find(x=>x.id===c.replaceSid);if(c.releaseFee)payFinancePrepaid(t,'staffSeverance',c.releaseFee);t.staffRoster.splice(t.staffRoster.indexOf(replaced),1);const fromYear=replaced.since??replaced.contract?.from;replaced.contract=null;recordStaffEvent(db,replaced,'release',{from:t.id,fromYear,fee:c.releaseFee});db.staffPool=db.staffPool||[];db.staffPool.push(replaced)}
       if(f.team){payFinancePrepaid(t,'transferPaid',c.poachFee);receiveFinancePrepaidTransfer(f.team,c.poachFee);f.team.staffRoster.splice(f.team.staffRoster.indexOf(s),1)}
       else db.staffPool.splice(db.staffPool.indexOf(s),1);
       ensureStaffRoster(t).push(s);s.since=db.year;
     }
     s.contract={salary:c.salary,years:c.years,from:db.year,until:db.year+c.years-1};
-    recordStaffEvent(db,s,c.type==='staff.renew'?'renewal':'signing',{from:c.fromId,to:t.id,salary:c.salary,until:s.contract.until,fee:c.fee,poachFee:c.poachFee,releaseFee:c.releaseFee,replaceSid:c.replaceSid});
+    recordStaffEvent(db,s,c.type==='staff.renew'?'renewal':'signing',{from:c.fromId,to:t.id,previousSince,salary:c.salary,until:s.contract.until,fee:c.fee,poachFee:c.poachFee,releaseFee:c.releaseFee,replaceSid:c.replaceSid});
   }else{
     if(c.fee)payFinancePrepaid(t,'staffSeverance',c.fee);
-    t.staffRoster.splice(t.staffRoster.indexOf(s),1);s.contract=null;
-    recordStaffEvent(db,s,c.type.slice(6),{from:t.id,fee:c.fee});
-    if(c.type==='staff.retire'){s.retired=true;db.staffRetired=db.staffRetired||[];db.staffRetired.push(s)}
+    const fromYear=t?s.since??s.contract?.from:null;
+    if(t)t.staffRoster.splice(t.staffRoster.indexOf(s),1);else db.staffPool.splice(db.staffPool.indexOf(s),1);s.contract=null;
+    recordStaffEvent(db,s,c.type.slice(6),{from:t?.id||null,fromYear,fee:c.fee,...(c.type==='staff.retire'?{review:staffRetirementReview(db,s,t)}:{})});
+    if(c.type==='staff.retire'){s.retired=true;s.retiredYear=db.year;db.staffRetired=db.staffRetired||[];db.staffRetired.push(s)}
     else{db.staffPool=db.staffPool||[];db.staffPool.push(s)}
   }
   return {sid:s.id,fee:c.fee};
@@ -115,6 +118,16 @@ function staffStateErrors(db){
     if(!STAFF_ROLES[s.role]||s.retired||!s.contract||!Number.isFinite(s.contract.salary)||s.contract.salary<=0||!Number.isInteger(s.contract.until)||!Number.isInteger(s.contract.years)||s.contract.years<1||s.contract.years>3)errors.push('잘못된 스태프 계약: '+s.id);
   }
   for(const s of db.staffPool||[]){if(ids.has(s.id)||s.contract||s.retired)errors.push('잘못된 자유 스태프: '+s.id);ids.add(s.id)}
+  for(const s of db.staffRetired||[]){if(ids.has(s.id)||s.contract||!s.retired)errors.push('잘못된 은퇴 스태프: '+s.id);ids.add(s.id)}
+  const all=[...Object.values(db.teams).flatMap(t=>t.staffRoster||[]),...(db.staffPool||[]),...(db.staffRetired||[])];
+  for(const s of all){
+    if(s.career!==undefined&&(!Array.isArray(s.career)||s.career.some(r=>!r||!Number.isInteger(r.year)||typeof r.seasonId!=='string'||typeof r.teamId!=='string'||!STAFF_ROLES[r.role]||!Number.isInteger(r.series)||r.series<0||!Number.isInteger(r.wins)||r.wins<0||r.wins>r.series)))errors.push('잘못된 스태프 경기 경력: '+s.id);
+    if(Array.isArray(s.career)&&new Set(s.career.map(r=>r&&JSON.stringify([r.seasonId,r.teamId,r.role]))).size!==s.career.length)errors.push('중복 스태프 경기 경력: '+s.id);
+    const r=s.retirementReview;
+    if(r!==undefined&&(!r||!Number.isInteger(r.year)||!Number.isFinite(r.age)||!Number.isInteger(r.careerYears)||r.careerYears<0||!Number.isInteger(r.series)||r.series<0||!Number.isInteger(r.wins)||r.wins<0||r.wins>r.series||!Number.isFinite(r.motivation)||r.motivation<0||r.motivation>100||!Number.isFinite(r.probability)||r.probability<0||r.probability>1))errors.push('잘못된 스태프 활동 검토: '+s.id);
+    if(r&&(r.winRate!==(r.series?r.wins/r.series:null)||!Number.isInteger(r.unemployedYears)||r.unemployedYears<0))errors.push('잘못된 스태프 활동 근거: '+s.id);
+    if(s.ageReviewYear!==undefined&&!Number.isInteger(s.ageReviewYear))errors.push('잘못된 스태프 검토 연도: '+s.id);
+  }
   return errors;
 }
 function captureStaffActionJournal(db,c){

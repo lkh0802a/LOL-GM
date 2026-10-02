@@ -33,6 +33,8 @@ function staffEmploymentCard(t,s,own){
   return `<details class="cfgcard"><summary>${esc(s.name)} · ${STAFF_ROLES[s.role]} · 추정 ${seen.min}~${seen.max}</summary>
     <p>${s.age}세 · ${employer?esc(employer.name):'자유 계약'}${s.contract?' · '+s.contract.until+'년까지 · 연봉 '+money(s.contract.salary):''}</p>
     <p>보조 전문 분야: ${Object.keys(s.specialties||{}).map(r=>STAFF_ROLES[r]).filter(Boolean).join(' · ')||'없음'}</p>
+    ${s.retirementReview?`<p class="hint">${s.retirementReview.year}년 활동 검토 · ${staffRetirementExplanation(s.retirementReview)} (가상 엔진 판단, 은퇴 확정 예고가 아님)</p>`:''}
+    ${(s.career||[]).slice(-2).map(r=>`<p class="hint">${r.year} · ${esc(DB.teams[r.teamId]?.name||r.teamId)} · 현장 ${r.series}시리즈 ${r.wins}승 (팀 결과)</p>`).join('')}
     ${!own?`<button class="ghost" data-interview-staff="${s.id}"${seen.interviewed?' disabled':''}>${seen.interviewed?'면접 완료':'면접'}</button>`:''}
     ${!own&&!staffCanHire(t,s)?`<label>교체 대상<select data-staff-replace="${s.id}"><option value="">대상 선택</option>${teamStaffMembers(t,staffDepartment(s.role)).map(x=>`<option value="${x.id}">${esc(x.name)} · ${STAFF_ROLES[x.role]}</option>`).join('')}</select></label>`:''}
     ${canOffer?`<div class="controls"><label>연봉 (억)<input type="number" min="0.1" step="0.1" inputmode="decimal" data-staff-salary="${s.id}" value="${staffAskingSalary(DB,t,s)}"></label><label>기간<select data-staff-years="${s.id}">${[1,2,3].map(y=>`<option value="${y}"${y===2?' selected':''}>${y}년</option>`).join('')}</select></label><button class="primary" data-hire-staff="${s.id}">${own?'재계약':'계약 제안'}</button></div>`:''}

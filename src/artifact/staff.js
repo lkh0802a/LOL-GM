@@ -83,9 +83,66 @@ function ageStaff(db,rng){
   const mine=managedTeamId(db);db.staffPool=db.staffPool||[];const freeAtStart=db.staffPool.slice();
   for(const t of activeTeams(db)){
     const roster=t.id===mine?ensureStaffRoster(t):ensureTeamStaff(db,t,rng);
-    for(const s of roster.slice()){s.age=(s.age||35)+1;if(s.age>=62&&rng.chance(.12+(s.age-62)*.04)){commitWorldAction(db,{type:'staff.retire',actor:'system',teamId:t.id,sid:s.id});if(t.id===mine&&db.world){db.world.marketLog=db.world.marketLog||[];db.world.marketLog.push((STAFF_ROLES[s.role]||s.role)+' '+s.name+' 은퇴 · 후임을 직접 선임하세요')}}else if(s.contract?.until<db.year){if(t.id!==mine){const renewed=commitWorldAction(db,{type:'staff.renew',actor:'ai',teamId:t.id,sid:s.id,years:2,salary:staffAskingSalary(db,t,s)});if(renewed.ok)continue}commitWorldAction(db,{type:'staff.expire',actor:'system',teamId:t.id,sid:s.id})}}
+    for(const s of roster.slice()){
+      if(s.ageReviewYear===db.year)continue;s.ageReviewYear=db.year;s.age=(s.age||35)+1;
+      const review=staffRetirementReview(db,s,t);s.retirementReview=review;
+      if(rng.chance(review.probability)){
+        const retired=commitWorldAction(db,{type:'staff.retire',actor:'system',teamId:t.id,sid:s.id});
+        if(!retired.ok)throw Error(retired.errors.join(' · '));
+        if(t.id===mine&&db.world){db.world.marketLog=db.world.marketLog||[];db.world.marketLog.push((STAFF_ROLES[s.role]||s.role)+' '+s.name+' 은퇴 · '+staffRetirementExplanation(review)+' · 후임을 직접 선임하세요')}
+      }else if(s.contract?.until<db.year){if(t.id!==mine){const renewed=commitWorldAction(db,{type:'staff.renew',actor:'ai',teamId:t.id,sid:s.id,years:2,salary:staffAskingSalary(db,t,s)});if(renewed.ok)continue}commitWorldAction(db,{type:'staff.expire',actor:'system',teamId:t.id,sid:s.id})}
+    }
   }
-  for(const s of freeAtStart){s.age=(s.age||35)+1;if(s.age>=68){s.retired=true;recordStaffEvent(db,s,'retire');db.staffRetired=db.staffRetired||[];db.staffRetired.push(s)}}db.staffPool=db.staffPool.filter(s=>!s.retired);
+  for(const s of freeAtStart){
+    if(s.ageReviewYear===db.year)continue;s.ageReviewYear=db.year;s.age=(s.age||35)+1;s.retirementReview=staffRetirementReview(db,s,null);
+    if(rng.chance(s.retirementReview.probability)){const out=commitWorldAction(db,{type:'staff.retire',actor:'system',teamId:null,sid:s.id});if(!out.ok)throw Error(out.errors.join(' · '))}
+  }
+}
+
+// These are explicit fictional simulation weights, not real staff retirement statistics.
+const STAFF_RETIREMENT_MODEL={minimumAge:62,base:.12,ageStep:.04,careerCap:.08,motivationWeight:.002,unemployedYearWeight:.025};
+function staffRetirementReview(db,s,t){
+  const rows=(s.career||[]).filter(r=>r.year<db.year),recent=rows.filter(r=>r.year>=db.year-3),series=recent.reduce((v,r)=>v+r.series,0),wins=recent.reduce((v,r)=>v+r.wins,0);
+  const exits=(s.history||[]).filter(h=>['release','expire','club_closure'].includes(h.type)),exit=exits.at(-1);
+  const unemployedYears=t?0:exit?Math.max(0,db.year-exit.year):0;
+  const spans=rows.map(r=>[r.year,r.year+1]);
+  const addSpan=(from,to)=>{if(Number.isInteger(from)&&Number.isInteger(to)&&from<to)spans.push([from,Math.min(to,db.year)])};
+  const start=Number.isInteger(s.since)?s.since:null,end=t?db.year:exit?.year;
+  addSpan(start,end);
+  let stint=null;
+  for(const h of s.history||[]){
+    if(h.from&&['release','expire','club_closure','retire'].includes(h.type))addSpan(h.fromYear,h.year);
+    if(h.from&&h.type==='signing')addSpan(h.previousSince,h.year);
+    if(['release','expire','club_closure','signing'].includes(h.type)&&stint!==null){addSpan(stint,h.year);stint=null}
+    if(h.type==='signing')stint=h.year;
+  }
+  if(t)addSpan(stint,db.year);
+  let careerYears=0,covered=-Infinity;
+  for(const [from,to] of spans.sort((a,b)=>a[0]-b[0])){careerYears+=Math.max(0,to-Math.max(from,covered));covered=Math.max(covered,to)}
+  const winRate=series?wins/series:null;
+  const motivation=Math.round(clamp((s.ambition??50)+(winRate===null?0:(winRate-.5)*40)-unemployedYears*8,0,100));
+  const m=STAFF_RETIREMENT_MODEL,probability=s.age<m.minimumAge?0:clamp(m.base+(s.age-m.minimumAge)*m.ageStep+Math.min(m.careerCap,careerYears*.004)+(50-motivation)*m.motivationWeight+unemployedYears*m.unemployedYearWeight,0,1);
+  return {year:db.year,age:s.age,careerYears,series,wins,winRate,motivation,unemployedYears,probability};
+}
+function staffRetirementExplanation(r){return `확인 경력 ${r.careerYears}년 · 최근 현장 ${r.series}시리즈${r.series?' '+Math.round(r.winRate*100)+'% 승률':''} · 활동 동기 ${r.motivation}/100${r.unemployedYears?' · 미고용 '+r.unemployedYears+'년':''}`}
+function officialStaffServiceSnapshot(db,a,b,opt){
+  const s=opt.metaContext?.season&&staffRegistrationSeason(db,opt.metaContext.season);
+  if(!s||opt.practice||opt.replay)return null;
+  return Object.fromEntries([a,b].map(id=>[id,competitionStaffMatchRoster(db,s,db.teams[id]).map(x=>({id:x.id,role:x.role}))]));
+}
+function recordStaffMatchService(db,s,rec){
+  // Only series captured by the new engine provide evidence. Never backfill
+  // legacy matches using today's employees or infer individual causal credit.
+  if(!rec.staffService)return;
+  const people=new Map();for(const t of Object.values(db.teams))for(const person of t.staffRoster||[])people.set(person.id,person);
+  for(const person of [...(db.staffPool||[]),...(db.staffRetired||[])])people.set(person.id,person);
+  for(const [teamId,staff] of Object.entries(rec.staffService))for(const item of staff){
+    const person=people.get(item.id);if(!person)continue;
+    person.career=person.career||[];
+    let row=person.career.find(r=>r.seasonId===s.id&&r.teamId===teamId&&r.role===item.role);
+    if(!row){row={year:s.year,seasonId:s.id,compId:s.comp,teamId,role:item.role,series:0,wins:0};person.career.push(row)}
+    row.series++;if(rec.winner===teamId)row.wins++;
+  }
 }
 
 function mHireStaff(db,sid,terms={}){const t=myT(db),found=locateStaff(db,sid);if(!found)return '스태프를 찾을 수 없습니다';const out=commitWorldAction(db,{type:found.team?.id===t.id?'staff.renew':'staff.sign',actor:'manager',teamId:t.id,sid,replaceSid:terms.replaceSid,years:terms.years??2,salary:terms.salary??staffAskingSalary(db,t,found.staff)});return out.ok?found.staff.name+' 계약 완료':out.errors.join(' · ')}
