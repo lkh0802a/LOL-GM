@@ -1390,3 +1390,33 @@ CI orchestration changes use the existing static/scope gate, without repeating
 game suites. Before a real run, check that prior PIDs are absent, use a fresh label
 and reports directory under preserved .diagnostics, and run a single validated
 engine. This change does not prove100seasons or explain the earlier missing parent.
+
+### D10 aggregate skill interactions across fight phases (2026-10-02)
+
+Fight entry now compares each side's current skill control and mobility profile,
+including equipped item/rune mobility. The existing cached combat calculation
+exposes its skill profile; this avoids a second skill extraction per participant.
+Entry probability changes by at most0.08. Burst exchanges give reach more weight
+when engagement fails, control contests opposing mobility, extended exchanges
+compare cooldown uptime and escape/control, and cleanup compares mobility.
+Every phase multiplier stays within0.92–1.08. These are explicit game simulation
+assumptions layered onto the existing kit model, not Riot damage/cast formulas,
+spell cooldown clocks, hitbox geometry or full individual Q/W/E/R reproduction.
+No additional random stream is consumed, and saved career data needs no migration.
+
+The dedicated acceptance checks opposing control/mobility, failed-entry reach,
+extended cooldown effects, cleanup, bounds and finite profiles for172 current
+champions. Eight paired seeds preserve players, draft, RNG seed and base kit while
+actual applyNote skill patches alter control, range and cooldown independently.
+Each patch changes actual match gold trajectories; combined and separate metrics
+report damage, duration and wins. These small causal fixtures do not prove win-rate
+balance or that damage totals must rise after a buff: fights may end earlier.
+Patch profile save/restore and match isolation are also covered.
+
+Files: engine.js, fight-skill acceptance, calendar/scouting runner and package.
+Local calendar/scouting9 acceptances, shared34 acceptances/30contexts, regression,
+97-module static/build pass; final whole mandatory CI gates merge. Further D10
+draft/meta/item/rune controlled experiments and multi-patch balance remain open.
+The existing single100season QA continues with the source loaded before this
+change and must not be used as evidence for these new fight mechanics. D remains
+open, including actual mobile/TalkBack and multi-seed100season proof.

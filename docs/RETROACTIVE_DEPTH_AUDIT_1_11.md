@@ -83,3 +83,9 @@ health and practice-resource policies with automatic scrims. Both-party bookings
 refusal/cancellation persistence, guarded actions and real daily execution have
 dedicated acceptance evidence. See DEVELOPMENT.md for the implementation and
 remaining long-term/mobile verification. Whole D remains open.
+
+D10 fight-phase follow-up connects the existing skill profile to control/mobility
+entry, failed-entry reach, cooldown-sensitive extended exchanges and cleanup,
+with explicit bounded aggregate assumptions. Paired fixed-draft actual matches
+compare independent skill patches; this is causal fixture evidence, not proof
+of full spell reproduction or long win-rate/meta balance. See DEVELOPMENT.md.
