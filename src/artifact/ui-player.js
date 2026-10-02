@@ -1,5 +1,5 @@
 // ===== LOL GM: Player detail / scouting UI =====
-// Player profile, scouting search/report surfaces, and role-conversion controls.
+// Player profiles and role controls.
 
 function potText(p){const r=scoutPotentialRange(DB,p);return r[0]===r[1]?String(r[0]):`${r[0]}~${r[1]}`}
 function playerCompetitionIds(p){const ids=new Set();if(DB.world)for(const s of Object.values(DB.world.seasons)){if(s.pstats&&s.pstats[p.id]&&s.pstats[p.id].g)ids.add(s.comp)}for(const c of p.career||[])if(c.comp)ids.add(c.comp);return [...ids]}
@@ -16,7 +16,7 @@ function playerDetail(p){
   const k=knowledge(DB,p),team=p.team&&DB.teams[p.team],st=pState(p),nat=DB.regions[p.nationality||p.region],ev=(p.careerEvents||[]).slice().reverse().slice(0,16);
   return `<section class="pdet"><h3>${esc(p.name)} <small>${ROLE_KO[p.role]} · ${p.age}세 · ${careerStage(p)} · 종합 ${obsOvr(DB,p)}${k<100?` (스카우팅 ${k}%)`:''} · 잠재 ${potText(p)}</small></h3>
   <div class="fin"><div><span>국적</span><b>${esc(nat?nat.name:(p.nationality||p.region||'—'))}</b><small>${playerSquadLabel(DB,p)}${team?` · ${esc(team.name)}`:''}</small></div><div><span>주포지션</span><b>${ROLE_KO[p.role]}</b><small>현재 전문 역할 · 경기 슬롯 제한 아님</small></div><div><span>명성</span><b>${p.reputation??'—'}</b><small>실력과 별도 · 성과 기반</small></div><div><span>시장가치</span><b>${money(playerMarketValue(DB,p))}</b><small>${p.contract?.medicalReplacement?`의료 대체 · 연 환산 ${money(p.contract.salary)} · 최소 보장 ${p.contract.medicalReplacement.guaranteedThrough} · 예정 종료 ${p.contract.medicalReplacement.expiresOn} · 지급 ${money(p.contract.medicalReplacement.paid)}`:p.contract?`연봉 ${money(p.contract.salary)} · ~${p.contract.until} · 방출 보장 ${Math.round(contractGuaranteeRate(p.contract)*100)}%`:'FA'}</small></div></div>
-  ${scoutReportSummary(p)}
+  ${scoutReportSummary(p)}${scoutRegionalSummary(DB,p)}
   ${playerCommitmentsPanel(p)}
   ${playerLoanPanel(p)}
   ${localServicePanel(p)}

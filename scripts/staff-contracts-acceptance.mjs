@@ -1,6 +1,6 @@
 import {runEngineFixture,artifactSource} from './test-harness.mjs';
 import assert from 'node:assert/strict';
-const [ui,managerUi,app]=await Promise.all(['ui-market-staff.js','ui-manager.js','app.js'].map(artifactSource));
+const [ui,managerUi,app,regionUi]=await Promise.all(['ui-market-staff.js','ui-manager.js','app.js','ui-scouting-regions.js'].map(artifactSource));
 await runEngineFixture(String.raw`(()=>{
  const check=(x,m)=>{if(!x)throw Error('STAFF_CONTRACTS '+m)};
  const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:10,div2:true,system:'franchise'})];cfg.internationals=[];
@@ -120,7 +120,7 @@ await runEngineFixture(String.raw`(()=>{
  let message='';confirm=()=>false;bindClubOfficeControls(text=>{message=text});const beforeCancel=JSON.stringify(db);button.onclick();check(JSON.stringify(db)===beforeCancel,'cancelled UI staff offer mutated state');
  confirm=()=>true;button.onclick();check(locateStaff(db,free.id).team===buyer&&message==='스태프 계약 완료','UI did not execute the previewed offer');
  console.log('STAFF_CONTRACTS_ACCEPTANCE PASS (FA, renewal, interviews, specialties, consent, cash conservation, authority, rollback, expiry, retirement, saves)');
-})();`,{setupSources:[app.match(/^const esc=.*$/m)[0],managerUi,ui]});
+})();`,{setupSources:[app.match(/^const esc=.*$/m)[0],managerUi,regionUi,ui]});
 assert(!/能力|능력 \$\{[xs]\.rating\}/.test(ui));
 assert(ui.includes('staffObservation(DB,t,s)')&&ui.includes('data-interview-staff')&&ui.includes('data-staff-years')&&ui.includes('data-staff-salary')&&ui.includes('previewWorldAction(DB')&&ui.includes('applyWorldAction(DB,preview)'));
 console.log('STAFF_CONTRACTS_UI PASS (estimated ability, interviews, offer terms, guarded confirmation)');

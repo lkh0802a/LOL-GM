@@ -158,6 +158,7 @@ const maintainabilityBudgets = {
   'ui-data.js': 12000,
   'ui-champion.js': 18000,
   'ui-player.js': 18000,
+  'ui-scouting-regions.js': 3000,
   'ui-player-commitments.js': 5000,
   'player-loans.js': 14000,
   'player-loan-market.js': 6000,
