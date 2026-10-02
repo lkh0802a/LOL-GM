@@ -25,12 +25,13 @@ function stringifyMetaHistory(rows){
   return text+']';
 }
 function unpackMetaHistory(rows){
-  const strings=new Map(),loadouts=new Map();
+  const strings=new Map(),loadouts=new Map(),pickRecords=new Map();
   const intern=x=>{if(typeof x!=='string')return x;const old=strings.get(x);if(old!==undefined)return old;strings.set(x,x);return x};
   const ids=xs=>(xs||[]).map(intern);
   // Historical loadouts are immutable evidence. Share repeated combinations,
   // without retaining an unbounded dictionary of unique builds during loading.
-  const loadout=xs=>{const values=ids(xs),key=JSON.stringify(values),old=loadouts.get(key);if(old)return old;Object.freeze(values);if(loadouts.size<4096)loadouts.set(key,values);return values};
+  const remember=(cache,key,value,limit)=>{cache.set(key,value);if(cache.size>limit)cache.delete(cache.keys().next().value);return value};
+  const loadout=xs=>{const values=ids(xs),key=JSON.stringify(values),old=loadouts.get(key);if(old)return old;return remember(loadouts,key,Object.freeze(values),4096)};
   rows=rows||[];
   // Restoration owns these parsed rows; replace each encoded row immediately
   // so GC can reclaim it before the entire history has been expanded.
@@ -41,10 +42,16 @@ function unpackMetaHistory(rows){
     row.regions=ids(row.regions);row.bans=ids(row.bans);
     for(const side of row.sides||[]){
       side.team=intern(side.team);side.region=intern(side.region);
-      for(const pick of side.picks||[])if(typeof pick==='object'&&pick){
+      for(let j=0;j<(side.picks||[]).length;j++){let pick=side.picks[j];if(typeof pick==='object'&&pick){
+        if(Object.isFrozen(pick))pick={...pick};
         pick.champ=intern(pick.champ);pick.role=intern(pick.role);pick.player=intern(pick.player);
         pick.items=loadout(pick.items);pick.runes=loadout(pick.runes);
-      }
+        // Only canonical immutable evidence is shared. Extended legacy records
+        // retain their own fields and nested values without new aliases.
+        const canonical=Object.keys(pick).length===5&&['champ','role','player','items','runes'].every(k=>Object.hasOwn(pick,k))&&['champ','role','player'].every(k=>pick[k]==null||typeof pick[k]==='string')&&[pick.items,pick.runes].every(xs=>xs.every(x=>typeof x==='string'));
+        if(canonical){const key=JSON.stringify(pick),old=pickRecords.get(key);side.picks[j]=old||remember(pickRecords,key,Object.freeze(pick),8192)}
+        else side.picks[j]=pick;
+      }}
     }
     rows[i]=row;
   }

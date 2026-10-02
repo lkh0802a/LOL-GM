@@ -112,3 +112,13 @@ legacy recipe-cost delta; these actual match/patch paths are corrected. All
 source-champion role purchase thresholds, warm/cold caches, current saves and
 public meta evidence are checked. Small causal fixtures do not establish roster
 or long-run win-rate balance. The live old-source QA is not proof for these fixes.
+
+
+D11 restoration now uses rolling bounded loadout and canonical pick windows;
+the old first4096 builds prevented later cohorts from sharing. A54000-row desktop
+cohort fixture preserves identical serialized evidence while reducing retained
+heap by about64%, at increased lookup cost. Legacy extra fields and repeated
+frozen restoration are covered. This is a short synthetic measurement with
+benchmark-only GC, not resolution evidence for the preserved36-season failure,
+actual100seasons or mobile memory. Budgets and all records remain unchanged.
+See DEVELOPMENT.md for measurements, remaining costs and validation status.
