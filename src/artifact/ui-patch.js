@@ -11,7 +11,7 @@ function skillRangeText(skill,champion){
 // ---------- 패치·메타 ----------
 function patchValueText(v,field){
   if(Array.isArray(v))return v.join('/');
-  if(['damageMod','utilityMod','healMod','shieldMod','ccMod','mobilityMod'].includes(field))return Math.round(Number(v)*100)+'%';
+  if(['damageMod','utilityMod','healMod','shieldMod','ccMod','mobilityMod','xpBonus','bonusPower','jungleMobility'].includes(field))return Math.round(Number(v)*100)+'%';
   return Number.isFinite(Number(v))?String(Math.round(Number(v)*100)/100):String(v??'');
 }
 function patchFieldLabel(field){
@@ -21,6 +21,7 @@ function noteText(n){
   const why=n.why?` <small>${esc((n.size?PATCH_SIZE_KO[n.size]+' 조정 · ':'')+n.why)}</small>`:'';
   if(n.type==='new')return `<b>신규 챔피언 ${esc(n.def.name)}</b> <small>${n.def.roles.map(r=>ROLE_KO[r]).join('/')} · ${esc(CLASS_KO[ARCH[n.def.arch][0]])} · ${esc(n.def.proEligibleDate)}부터 프로 사용 가능</small>`;
   if(n.type==='rework')return `<b>${esc(championLabel(DB,n.c))}</b> ${n.scope==='major'?'대규모 챔피언 업데이트':'미드스코프 업데이트'} <small>안정 ID ${esc(n.stableId)} 유지 · ${esc(n.why||'')}</small>`;
+  if(n.type==='role_quest')return `<b>${esc(ROLE_KO[n.role])} 퀘스트</b> ${esc(ROLE_QUEST_LABELS[n.field]||n.field)} ${patchValueText(n.old,n.field)} → ${patchValueText(n.new,n.field)}${why}`;
   if(n.type==='rule')return `<b>${esc(RULE_KO[n.key]||n.key)}</b> ${patchValueText(n.old,n.key)} → ${patchValueText(n.v,n.key)}${why}`;
   if(n.type==='kit')return `<b>${esc(championLabel(DB,n.c))}</b> ${esc(KIT_KO[n.key]||n.key)} ${patchValueText(n.old,n.key)} → ${patchValueText(n.new,n.key)}${why}`;
   if(n.type==='skill')return `<b>${esc(championLabel(DB,n.c))} ${esc(n.slot)}</b> ${esc(patchFieldLabel(n.field))} ${patchValueText(n.old,n.field)} → ${patchValueText(n.new,n.field)}${why}`;

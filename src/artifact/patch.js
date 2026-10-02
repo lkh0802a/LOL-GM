@@ -8,8 +8,10 @@ const RULE_KO={dragonRespawn:'드래곤 재생성(분)',baronBuff:'바론 버프
 function initPatches(db){
   db.patches={list:[],history:[],prev:[],nextDate:null,newIdx:0,y:0,n:0,releasesByYear:{},releaseTargets:{},reworksByYear:{},majorReworksByYear:{},systemLifeByYear:{},cadence:14};
   db.metaStats={};db.metaGames=0;db.regionMetaStats={};db.regionMetaGames={};
+  db.patches.roleQuestBaseline=JSON.parse(JSON.stringify(db.patch.roleQuests||null));
 }
 function applyNote(P,n){
+  if(n.type==='role_quest')applyRoleQuestNote(P,n);
   const c=P.champions[n.c];
   P._revision=(P._revision||0)+1;if(/^item/.test(n.type)||/^rune/.test(n.type))P._systemRevision=(P._systemRevision||0)+1;
   if(n.type==='skill'&&c&&c.skills&&c.skills[n.slot]){c.skills[n.slot][n.field]=JSON.parse(JSON.stringify(n.new));if(n.field==='range')delete c.skills[n.slot].rangeDisplay;}
@@ -29,6 +31,8 @@ function getPatch(db,id){
   if(db.patch&&db.patch.id===id)return db.patch;
   const cached=historicPatchCacheHit(db,id);if(cached)return cached;
   const P=buildPatch();
+  if(db.patches.roleQuestBaseline!==undefined)P.roleQuests=JSON.parse(JSON.stringify(db.patches.roleQuestBaseline));
+  else if(!db.patch?.roleQuests)delete P.roleQuests;
   if(P.id===id)return rememberHistoricPatch(db,id,P);
   const hist=db.patches.history&&db.patches.history.length?db.patches.history:db.patches.list;
   for(const p of hist){for(const n of p.notes||[])applyNote(P,n);P.id=p.id;if(P.id===id)return rememberHistoricPatch(db,id,P)}
@@ -48,6 +52,7 @@ function newPatch(db,date,major,rng){
   notes.push(...chooseSystemBalanceChanges(db,diag,major,rng));
   notes.push(...maybeSystemLifecycle(db,date,major,rng,diag));
   const rule=maybeRuleChange(db,major,rng);if(rule)notes.push(rule);
+  const quest=maybeRoleQuestChange(db,major,rng);if(quest)notes.push(quest);
   const nc=maybeNewChampion(db,date,major,rng);if(nc)notes.push(nc);
   notes.forEach(n=>applyNote(P,n));
   adaptPlayerPoolsToPatch(db,notes,!!major);

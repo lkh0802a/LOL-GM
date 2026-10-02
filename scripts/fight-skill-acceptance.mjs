@@ -14,7 +14,9 @@ await runEngineFixture(String.raw`(()=>{
   const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:10,div2:false})];cfg.internationals=[];
   const db=buildWorld(cfg),teams=activeTeams(db,null,1),a=teams[0],b=teams[1];startCareer(db,a.id,'skill-phase');autoBuildInitialSquad(db,a,new RNG('skill-start','squad'),5);finalizeInitialRosters(db);
   const champs=Object.values(db.patch.champions);for(const c of champs)for(const v of Object.values(championSkillProfile(c)))check(Number.isFinite(v),'finite source profile '+c.id);
-  const initial=simulateMatch(db,a.id,b.id,'fixed-draft',null,true),forced={bans:initial.draft.bans,picks:initial.draft.picks},before=packDB(db);
+  const initial=simulateMatch(db,a.id,b.id,'fixed-draft',null,true),forced={bans:initial.draft.bans,picks:initial.draft.picks};
+  const occupied=[...forced.bans.flat(),...Object.values(forced.picks[0]),...Object.values(forced.picks[1])],controlled=champs.find(c=>c.roles.includes('MID')&&championSkillProfile(c).cc>.1&&championSkillProfile(c).cc<.8&&!occupied.includes(c.id));
+  check(controlled,'missing eligible nonzero-control fixture');forced.picks[0].MID=controlled.id;const before=packDB(db);
   const baseline=Array.from({length:8},(_,i)=>simulateMatch(db,a.id,b.id,'skill-paired-'+i,{forced},true));
   check(packDB(db)===before,'isolated matches changed career state');
   const patched=unpackDB(before),cid=forced.picks[0].MID,c=patched.patch.champions[cid],profile=championSkillProfile(c),power=c.kit.burst;
@@ -33,7 +35,9 @@ await runEngineFixture(String.raw`(()=>{
   for(const [field,value] of [['ccMod',2],['range',[1200]],['cooldown',20]]){
     const variant=unpackDB(before);for(const slot of Object.keys(variant.patch.champions[cid].skills))applyNote(variant.patch,{type:'skill',c:cid,slot,field,new:value});
     const games=Array.from({length:8},(_,i)=>simulateMatch(variant,a.id,b.id,'skill-paired-'+i,{forced},true));
-    check(games.some((m,i)=>JSON.stringify(m.goldHist)!==JSON.stringify(baseline[i].goldHist)),'individual '+field+' patch did not reach actual match');
+    check(JSON.stringify(championSkillProfile(variant.patch.champions[cid]))!==JSON.stringify(profile),'individual '+field+' did not change fixture profile');
+    const outcome=m=>({gold:m.goldHist,damage:m.sides.map(s=>s.ps.map(p=>p.dmg)),duration:m.duration});
+    check(games.some((m,i)=>JSON.stringify(outcome(m))!==JSON.stringify(outcome(baseline[i]))),'individual '+field+' patch did not reach actual match');
     experiments.push({field,profile:championSkillProfile(variant.patch.champions[cid]),metrics:metrics(games)});
   }
   console.log('FIGHT_SKILL_ACCEPTANCE '+JSON.stringify({champions:champs.length,pairs:8,champion:cid,before:profile,after,baseline:metrics(baseline),patched:metrics(changed),experiments,fixedDraft:true,sourceAssumption:'bounded aggregate phase interactions; no individual casts'}));

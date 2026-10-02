@@ -1,6 +1,6 @@
 // ===== LOL GM: isolated one-game match simulation =====
 
-const XP_TABLE=[0,280,660,1140,1720,2400,3180,4060,5040,6120,7300,8580,9960,11440,13020,14700,16480,18360];
+const XP_TABLE=[0,280,660,1140,1720,2400,3180,4060,5040,6120,7300,8580,9960,11440,13020,14700,16480,18360,20340,22420];
 const ITEM_CONV={fighter:{hp:.18,arm:.012,ad:.028},tank:{hp:.32,arm:.028,ad:.011},mage:{hp:.05,arm:.004,ad:.05},assassin:{hp:.06,arm:.005,ad:.047},marksman:{hp:.035,arm:.003,ad:.047},enchanter:{hp:.09,arm:.01,ad:.018}};
 const ITEM_COST=[3000,6000,9000,12000,15000,18000];
 
@@ -10,20 +10,20 @@ const td=(ps,t)=>ps.p.tend[t]/100;
 
 function newPS(p,side,role,champ,patch){
   const pr=p.pool[champ]||{mastery:25,confidence:40,experience:10},c=patch.champions[champ],itemPlan=selectItemBuild(patch,c,p,role),starterItem=selectStarterItem(patch,c,p,role),itemActions=itemPurchasePlan(patch,itemPlan,starterItem),runes=selectRunePage(patch,c,p,role);
-  return {p,side,role,champ:c,prof:pr,lvl:1,xp:0,gold:starterItem?Math.max(0,500-(patch.itemDefs?.[starterItem]?.cost||0)):500,goldEarned:500,cs:0,k:0,d:0,a:0,dmg:0,dmgTaken:0,vision:0,objectives:0,laneAdv:0,laneSamples:0,teamfightDmg:0,teamfights:0,teamfightWins:0,deadUntil:0,hp:1,flashAt:0,penalty:0,items:starterItem?[starterItem]:[],starterItem,itemPlan,itemActions,itemActionIndex:0,runes,patchRef:patch,recall:false};
+  return {p,side,role,champ:c,prof:pr,quest:createRoleQuest(patch,role),questRevision:0,lvl:1,xp:0,gold:starterItem?Math.max(0,500-(patch.itemDefs?.[starterItem]?.cost||0)):500,goldEarned:500,cs:0,k:0,d:0,a:0,dmg:0,dmgTaken:0,vision:0,objectives:0,laneAdv:0,laneSamples:0,teamfightDmg:0,teamfights:0,teamfightWins:0,deadUntil:0,hp:1,flashAt:0,penalty:0,items:starterItem?[starterItem]:[],starterItem,itemPlan,itemActions,itemActionIndex:0,runes,patchRef:patch,recall:false};
 }
 function alive(st,ps){return ps.deadUntil<=st.t}
 function aliveOf(st,side){return st.sides[side].ps.filter(x=>alive(st,x))}
 
 function combatStats(st,ps){
-  const sd=st.sides[ps.side], key=st.t*1e6+ps.goldEarned*10+ps.lvl+(sd.baronUntil>st.t?0.1:0)+(sd.elderUntil>st.t?0.2:0)+(sd.soul?0.4:0);
+  const sd=st.sides[ps.side], key=st.t*1e6+ps.goldEarned*10+ps.lvl+(ps.questRevision||0)*.00001+(sd.baronUntil>st.t?0.1:0)+(sd.elderUntil>st.t?0.2:0)+(sd.soul?0.4:0);
   if(ps._ck===key)return ps._cs; ps._ck=key; return ps._cs=combatStats0(st,ps);
 }
 function combatStats0(st,ps){
   const c=ps.champ,b=c.base,L=ps.lvl,g=Math.max(0,ps.goldEarned-500),cv=ITEM_CONV[c.cls],k=c.kit,sp=championSkillProfile(c);
-  const ie=systemEffects(st.patch.itemDefs,ps.items),re=systemEffects(st.patch.runeDefs,ps.runes),phaseEarly=st.t<15?1:0,phaseLate=st.t>=28?1:0;
+  const ie=systemEffects(st.patch.itemDefs,matchQuestItems(ps)),re=systemEffects(st.patch.runeDefs,ps.runes),phaseEarly=st.t<15?1:0,phaseLate=st.t>=28?1:0;
   const ph=st.t<14?k.early:st.t<26?k.mid:k.late,pm=.8+.04*ph,phaseSystem=1+(ie.early+re.early)*phaseEarly+(ie.scaling+re.scaling)*phaseLate;
-  const hp=b.hp+b.hpg*(L-1)+g*cv.hp,arm=b.arm+b.armg*(L-1)+g*cv.arm,mr=(b.mr||30)+(b.mrg||1.3)*(L-1)+g*cv.arm*.65,ad=b.ad+b.adg*(L-1)+g*cv.ad;
+  const hp=b.hp+b.hpg*(L-1)+g*cv.hp,arm=b.arm+b.armg*(L-1)+g*cv.arm,mr=(b.mr||30)+(b.mrg||1.3)*(L-1)+g*cv.arm*.65,ad=b.ad+b.adg*(L-1)+g*cv.ad*(1+(ps.quest?.completed?ps.quest.rules.bonusPower||0:0));
   const asp=(b.as||.65)*(1+(b.asg||0)*(L-1)/100),resource=(b.resource?clamp((b.resource+(b.resourceg||0)*(L-1))/800+(b.resourceRegen||0)/30,.65,1.18):1)*sp.economy;
   const sysOff=1+ie.offense+re.offense+(ie.haste+re.haste)*.35+(ie.mobility+re.mobility)*.16,sysDef=1+ie.defense+re.defense+(ie.sustain+re.sustain)*.55+(ie.utility+re.utility)*.25+(ie.mobility+re.mobility)*.08;
   let off=ad*(.52+.042*(k.burst+k.dps))*pm*(b.range>400?1.1:1)*(.88+asp*.18)*(.94+sp.power*.07+sp.uptime*.04+sp.reach*.025+sp.mobility*.012)*resource*sysOff*phaseSystem;
@@ -40,9 +40,9 @@ function teamPower(st,side){return aliveOf(st,side).reduce((s,x)=>s+power(st,x)*
 
 // Bounded aggregate interactions, not per-spell casts or geometric hitboxes.
 // The same profile used for draft evaluation also affects when a fight pays off.
-function fightSkillProfile(st,players){
+function fightSkillProfile(st,players,zone){
   const profiles=players.map(p=>{const c=combatStats(st,p);return {...c.skillProfile,
-    mobility:clamp(c.skillProfile.mobility+c.itemEffects.mobility+c.runeEffects.mobility,0,1.7)}});
+    mobility:clamp(c.skillProfile.mobility+c.itemEffects.mobility+c.runeEffects.mobility+(['dragon','baron'].includes(zone)&&p.role==='JGL'&&p.quest?.completed?p.quest.rules.jungleMobility||0:0),0,1.7)}});
   return Object.fromEntries(['cc','reach','mobility','uptime'].map(k=>[k,avg(profiles.map(p=>p[k]))]));
 }
 function fightSkillEngage(attacker,defender){
@@ -63,16 +63,16 @@ function pname(st,ps){return `${st.sides[ps.side].team.short} ${ps.p.name}(${ps.
 function addGold(ps,g){ps.gold+=g;ps.goldEarned+=g;
   advanceItemPurchases(ps);
 }
-function addXp(ps,x){ps.xp+=x;let l=1;for(let i=1;i<XP_TABLE.length;i++)if(ps.xp>=XP_TABLE[i])l=i+1;ps.lvl=Math.min(18,l)}
+function addXp(ps,x,source='ordinary'){ps.xp+=x*(source==='ordinary'&&ps.quest?.completed?1+(ps.quest.rules.xpBonus||0):1);let l=1;for(let i=1;i<XP_TABLE.length;i++)if(ps.xp>=XP_TABLE[i])l=i+1;ps.lvl=Math.min(ps.quest?.completed?ps.quest.rules.levelCap||18:18,l)}
 
 function killPlayer(st,killer,victim,assists,reason){
   const R=st.patch.rules;
   victim.d++; victim.hp=1;
   const sec=victim.lvl*2.5+6+Math.max(0,st.t-15)*0.9;
   victim.deadUntil=st.t+sec/60; victim.penalty=Math.min(1,(sec+25)/60);
-  if(killer){killer.k++; addGold(killer,R.killGold); addXp(killer,140+victim.lvl*20); st.sides[killer.side].kills++;}
+  if(killer){killer.k++; addGold(killer,R.killGold); addXp(killer,140+victim.lvl*20,'champion'); st.sides[killer.side].kills++;roleQuestTakedown(st,killer);}
   const as=assists.filter(a=>a!==killer&&a.side!==victim.side);
-  as.forEach(a=>{a.a++; addGold(a,Math.round(R.assistGold/as.length)); addXp(a,70)});
+  as.forEach(a=>{a.a++; addGold(a,Math.round(R.assistGold/as.length)); addXp(a,70,'champion');roleQuestTakedown(st,a)});
   const lane=LANES.find(l=>LANE_ROLES[l].includes(victim.role))||'mid';
   st.lanePush[lane]+= victim.side===0?-0.35:0.35; st.lanePush[lane]=clamp(st.lanePush[lane],-1,1);
   const fb=st.firsts.blood===undefined; if(fb) st.firsts.blood=killer?killer.side:1-victim.side;
@@ -83,6 +83,7 @@ function killPlayer(st,killer,victim,assists,reason){
 function fight(st,zone,sideArrs,ctx={}){
   const R=st.rng;
   if(!sideArrs[0].length||!sideArrs[1].length) return null;
+  for(const ps of sideArrs.flat()){const lane=LANES.find(l=>LANE_ROLES[l].includes(ps.role));if(lane&&zone!==lane)ps.questAwayUntil=st.t+1}
   const vis=st.vision[zone]||0,isTeamfight=sideArrs[0].length+sideArrs[1].length>=6;
   const initScore=[0,1].map(i=>{const a=sideArrs[i];
     return avg(a.map(p=>(at(p,'anticipation')+at(p,'map_awareness')+at(p,'teamfight_awareness'))/3))*1.0
@@ -90,7 +91,7 @@ function fight(st,zone,sideArrs,ctx={}){
   const init=initScore[0]>=initScore[1]?0:1, def=1-init;
   const engager=sideArrs[init].reduce((b,p)=>p.champ.kit.engage*at(p,'engage')>b.champ.kit.engage*at(b,'engage')?p:b);
   const defAvoid=avg(sideArrs[def].map(p=>(at(p,'dodging')+at(p,'positioning'))/2));
-  const skillProfiles=sideArrs.map(a=>fightSkillProfile(st,a)),skillEngage=fightSkillEngage(skillProfiles[init],skillProfiles[def]);
+  const skillProfiles=sideArrs.map(a=>fightSkillProfile(st,a,zone)),skillEngage=fightSkillEngage(skillProfiles[init],skillProfiles[def]);
   const engP=clamp(0.3+0.45*engager.champ.kit.engage/10*at(engager,'engage')+0.25*(initScore[init]-initScore[def])-0.35*(defAvoid-0.6)+skillEngage,0.08,0.92);
   const engOk=R.exec.chance(engP);
   const mult=[1,1]; mult[init]*=engOk?1.2:0.9; if(!engOk) mult[def]*=1.05;
@@ -127,7 +128,7 @@ function fight(st,zone,sideArrs,ctx={}){
       dmgs.push([f,tgt,d]);
     }
     for(let i=dmgs.length-1;i>0;i--){const j=Math.floor(R.mech.next()*(i+1));[dmgs[i],dmgs[j]]=[dmgs[j],dmgs[i]]}
-    for(const [f,t,d] of dmgs){if(t.hp<=0)continue;const dealt=Math.round(d*.9);t.hp-=d;t.hitters.add(f);f.ps.dmg+=dealt;t.ps.dmgTaken+=dealt;if(isTeamfight)f.ps.teamfightDmg+=dealt;if(t.hp<=0)t.last=f;}
+    for(const [f,t,d] of dmgs){if(t.hp<=0)continue;const dealt=Math.round(d*.9);t.hp-=d;t.hitters.add(f);f.ps.dmg+=dealt;matchQuestEvent(st,f.ps,{damage:dealt});t.ps.dmgTaken+=dealt;if(isTeamfight)f.ps.teamfightDmg+=dealt;if(t.hp<=0)t.last=f;}
     for(const t of F) if(t.alive&&t.hp<=0){t.alive=false;}
     if(rd==='clean')break;
   }
@@ -173,7 +174,7 @@ function takeStructure(st,side,opt={}){
   else{ st.sides[side].towersTaken++;
     const ft=st.firsts.tower===undefined; if(ft)st.firsts.tower=side;
     const gold=idx===0?250:idx===1?300:350;
-    aliveOf(st,side).forEach(p=>addGold(p,Math.round(gold/2)));
+    aliveOf(st,side).forEach(p=>{addGold(p,Math.round(gold/2));const lane=LANES.find(x=>LANE_ROLES[x].includes(p.role));matchQuestEvent(st,p,{towers:lane===l?1:.5})});
     log(st,`${st.sides[side].team.short} ${LANE_KO[l]} ${names[idx]} 파괴${ft?' (첫 포탑)':''}`,{side,major:true,kind:'tower'});
   }
   return l;
@@ -189,19 +190,20 @@ function incomeTick(st){
     if(st.t===1)cs*=ps.role==='JGL'?0.4:0.15;
     const ln=LANES.find(l=>LANE_ROLES[l].includes(ps.role));
     if(lane&&ln){const push=st.lanePush[ln]*(ps.side===0?1:-1); cs*=1+0.12*push}
-    if(ps.recall){cs*=0.6;ps.recall=false}
+    const recalled=ps.recall;if(recalled){cs*=0.6;ps.recall=false}
     cs*=(1-ps.penalty)*st.rng.mech.range(0.93,1.07); ps.penalty=0;
     ps.cs+=cs;
-    addGold(ps,cs*R.csGold+R.passiveGold+(ps.role==='SUP'?35:0));
+    addGold(ps,cs*R.csGold+R.passiveGold+(ps.role==='SUP'&&!ps.quest?35:0));
     addXp(ps,cs*58+(ps.role==='JGL'?60:0)+(ps.role==='SUP'?(lane?230:320):0)+(!lane&&ps.role!=='SUP'?40:0));
+    roleQuestIncome(st,ps,cs,recalled);
     ps.hp=Math.min(1,ps.hp+0.12);
   }
 }
 const ZONES=['top','mid','bot','dragon','baron'];
 function visionTick(st){
   const inv=[0,1].map(i=>{const s=st.sides[i],a=aliveOf(st,i),tac=.7+.6*s.team.tactics.vision_investment/100;
-    for(const p of a)p.vision+=(at(p,'vision_understanding')*(p.role==='SUP'||p.role==='JGL'?1.5:.8))*tac*.65;
-    return avg(a.map(p=>at(p,'vision_understanding')*(p.role==='SUP'||p.role==='JGL'?1.5:.8)))*(a.length/5)*tac});
+    let questVision=0;for(const p of a){const ward=roleQuestWard(st,p);questVision+=ward;p.vision+=ward+(at(p,'vision_understanding')*(p.role==='SUP'||p.role==='JGL'?1.5:.8))*tac*.65}
+    return avg(a.map(p=>at(p,'vision_understanding')*(p.role==='SUP'||p.role==='JGL'?1.5:.8)))*(a.length/5)*tac+questVision*.1});
   for(const z of ZONES){const tgt=(inv[0]-inv[1])*1.6;st.vision[z]=clamp(st.vision[z]+(tgt-st.vision[z])*.35+st.rng.info.normal(0,.08),-1,1)}
 }
 function visFor(st,side,z){return side===0?st.vision[z]:-st.vision[z]}
@@ -304,7 +306,7 @@ function teamCall(st,side,obj,stakeBonus){
   }
   const go=U/W>0.05;
   const part=votes.filter(([p,u])=>(u>0.05)===go||st.rng.dec.chance(0.55+0.4*avg([at(p,'communication'),td(p,'teamplay')]))).map(v=>v[0]);
-  return {go,part:go?part:[],votes,base,pr};
+  return {go,part:go?roleQuestObjectiveJoin(st,side,part):[],votes,base,pr};
 }
 
 function objectiveTick(st){
@@ -321,7 +323,7 @@ function objectiveTick(st){
       if(wa.length){
         taker=w;
         const lj=st.sides[1-w].ps.find(p=>p.role==='JGL');
-        if(alive(st,lj)&&R.exec.chance(0.04+0.12*at(lj,'smite_execution')*(r.deaths[1-w]<=1?1:0.3))){taker=1-w;log(st,`${pname(st,lj)} ${label} 스틸!`,{side:1-w,major:true,kind:'obj'})}
+        if(alive(st,lj)&&R.exec.chance(clamp(0.04+0.12*at(lj,'smite_execution')*(r.deaths[1-w]<=1?1:0.3)+(roleQuestSmite(lj)-roleQuestSmite(st.sides[w].ps.find(p=>p.role==='JGL')))/1400*.04,.01,.25))){taker=1-w;log(st,`${pname(st,lj)} ${label} 스틸!`,{side:1-w,major:true,kind:'obj'})}
       }
     } else if(c[0].go!==c[1].go){
       taker=c[0].go?0:1;
@@ -331,7 +333,7 @@ function objectiveTick(st){
         takeStructure(st,giver,{lane:key==='baron'||key==='herald'?'bot':'top'});
       }
     }
-    if(taker>=0){o.wait[key]=0;const involved=c[taker]&&c[taker].part&&c[taker].part.length?c[taker].part:aliveOf(st,taker);involved.forEach(p=>p.objectives++);reward(taker);}
+    if(taker>=0){o.wait[key]=0;const involved=c[taker]&&c[taker].part&&c[taker].part.length?c[taker].part:aliveOf(st,taker);involved.forEach(p=>{p.objectives++;matchQuestEvent(st,p,{epics:1,jungleStacks:p.role==='JGL'?1:0})});reward(taker);}
   };
   if(!o.soul&&o.dragonAt&&st.t>=o.dragonAt){
     const type=o.dragonTypes[o.dragonIdx%o.dragonTypes.length];

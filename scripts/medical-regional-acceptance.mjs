@@ -43,7 +43,7 @@ source+=String.raw`(()=>{
   // Probabilities here are sums of the *same* live model's per-player daily
   // odds among players healthy before the day's tick (no ongoing rehab).
   // They are risk exposure diagnostics, not a prediction of observed cases.
-  const trackExposure=(row,p,prior,date,burnoutOdds)=>{
+  const trackExposure=(db,row,p,prior,date,burnoutOdds)=>{
     row.playerDays++;
     const load=p.medicalLoad||0,overload=p.medicalOverloadDays||0,
       plan=p.medicalPlanDate===date?p.medicalDayPlan:medicalPlanFor(db,p);
@@ -66,6 +66,16 @@ source+=String.raw`(()=>{
     if(burnoutOdds>0)row.eligibleBurnoutDays++;
     row.modeledBurnoutEvents+=burnoutOdds;
   };
+  // Newly registered emergency players have no plan from today's earlier tick.
+  // Exercise the fallback without inventing a preceding medical lottery draw.
+  const newRegistration=exposure(),probeDate='2027-01-21';
+  trackExposure({teams:{},manager:{teamId:null},worldDate:probeDate},
+    newRegistration,{id:'exposure-probe',medicalPlanDate:'2027-01-20'},
+    {load:0,healthy:false,sameDayRegistration:true},probeDate,0);
+  assert(newRegistration.playerDays===1&&newRegistration.normal===1&&
+    newRegistration.sameDayRegistrations===1&&newRegistration.healthyDays===0&&
+    newRegistration.modeledBurnoutEvents===0,
+    'same-day registration fallback exposure was not preserved');
   const grand={days:0,official:0,scrimBlocks:0,internationalMatches:0,
     events:inc(),byRegion:{NA:inc(),EU:inc()},
     byCare:{supported:inc(),basic:inc()},
@@ -174,7 +184,7 @@ source+=String.raw`(()=>{
           const prior=before.get(p.id)||{load:0,healthy:false,sameDayRegistration:true};
           for(const row of [grand.burnoutExposure,seasonExposure,
             grand.byOperator[parentTeamOf(db,t)?.id===owner.id?'manager':'ai']])
-            trackExposure(row,p,prior,date,dailyOdds.get(p.id)||0);
+            trackExposure(db,row,p,prior,date,dailyOdds.get(p.id)||0);
           if(p.medicalLoad>maxLoad)maxLoad=p.medicalLoad;
           if(p.medicalLoad>grand.peakLoad)grand.peakLoad=p.medicalLoad;
         }

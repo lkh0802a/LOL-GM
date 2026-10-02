@@ -1587,3 +1587,156 @@ players, frozen repeated restoration, extended legacy identity, format parity
 and full-save restore. Related acceptance, regression and98-module static/build
 passed locally; final required CI must pass before merge. D11 actual multi-seed
 100seasons and D13 real mobile tasks, plus other documented D gaps, remain open.
+
+
+### User priority: patchable role quests (2026-10-02)
+
+The user explicitly requires LoL role quests for TOP/JGL/MID/ADC/SUP, and their
+progression conditions and rewards must change through the game's patch system.
+This is the next D10 connected implementation, not a completed feature. Use
+existing match income, damage/takedowns, objectives, equipment and vision events;
+do not complete quests merely at a fixed match minute. Quests belong to the
+selected match role, including off-role champions. Rewards must affect actual
+experience/level limits, equipment/economy and relevant combat/map decisions.
+Expose progress/completion in the existing match UI without restoring the removed
+simulation menu. Preserve deterministic seeds, current/legacy saves and official
+series restoration; prove one-time rewards, changed completion timing, patch
+rollback and historical rules retained after later patches.
+
+Keep quest rules in the patch-owned baseline/notes/snapshot pipeline, rather than
+hard-coded per-role buffs. Respect existing immutable patch history and cache
+invalidation; old saves need an explicit compatible default. Match-local quest
+state and reward equipment must remain separate from permanent player growth.
+The aggregate engine has minute ticks rather than geometric lane positions:
+document measured lane/roam proxies and avoid claiming literal client parity.
+
+Official sources checked: Riot26.1 introduces quests;
+https://www.leagueoflegends.com/en-us/news/game-updates/patch-26-1-notes/
+Riot26.9 changes lane/roam progression, top XP, mid reward and bot takedown gold;
+https://www.leagueoflegends.com/en-us/news/game-updates/league-of-legends-patch-26-9-notes/
+Riot26.11 updates mid bonus AD/AP;26.16 updates boots/support progression;
+https://www.leagueoflegends.com/en-us/news/game-updates/league-of-legends-patch-26-11-notes/
+https://www.leagueoflegends.com/en-us/news/game-updates/league-of-legends-patch-26-16-notes/
+Riot26.19 updates top quest teleport cooldown. Read full relevant source sections
+before finalizing constants; do not ship26.1 rewards as current26.19 rules.
+https://www.leagueoflegends.com/en-us/news/game-updates/league-of-legends-patch-26-19-notes/
+
+Memory PR123 passed all required CI36954074617 and merged as91ca28db9c9260e746ae7cf4d3696037024ef036.
+A single same-seed local100season run now uses that source: daily-rolling-history-main-1,
+parent33552/child21132, started02:13:19.199UTC, source hash012a48fa3c5186c99bcbef3cc7cad76a5b740fd3a63768222c95e70ec24fe3e0.
+Original1536MiB heap/4096MiB RSS QA budgets remain. The initial restored2027
+checkpoint passed. All .diagnostics output remains preserved. This running VM
+cannot validate subsequent role-quest code; do not start a second long run or
+interpret running/partial reports as100season completion.
+
+
+### Validation sequencing changed by user (2026-10-02)
+
+The user explicitly instructed: finish all feature implementation first, then
+perform100season and actual mobile/TalkBack validation. Do not launch further
+long-career or real-device/TalkBack runs during feature development. Retain short
+change-specific correctness checks and the minimal required CI merge gates.
+Prioritize patchable role quests and remaining D game mechanisms.
+
+The live daily-rolling-history-main-1 was deliberately stopped at the user's
+request on02:22:10UTC. Child21132 and observer33552 are now absent. The observer
+captured forced termination exit4294967295/signal null; the cancellation.json
+records the user-requested reason. The last report had at least11 completed
+seasons; the original running career JSON is partial, not success. This is a
+cancelled validation run, not a newly diagnosed engine/memory failure. Preserve
+all existing reports and leave full D acceptance pending until final validation.
+
+
+User clarified the final sequence: complete the entire roadmap through phase23,
+provide the playable HTML for their playtest, receive and address their feedback,
+then run the deferred final long-career and actual mobile/TalkBack validation.
+D-stage feature completion alone must not trigger those deferred tests. Keep
+short change-specific checks and minimal required CI during implementation.
+Android packaging/installation final evidence remains required at the appropriate
+roadmap/final validation step; do not call the game fully complete beforehand.
+
+
+### Role-quest domain foundation (2026-10-02, work in progress)
+
+feature/patchable-role-quests now contains role-quests.js with patch-owned rules
+for all five roles, bounded validated role_quest notes, per-match immutable rule
+snapshots and action-derived progress. Sequenced events reject duplicate awards;
+malformed events are rejected before state mutation. Lane/roam bank, melee/ranged
+damage coefficients and role-specific gold/stacks are domain inputs, not a
+fixed-time completion shortcut. buildPatch owns default26.19 role data and
+applyNote participates in historical replay/reversal. Missing old quest rules
+remain absent rather than being silently enabled by createRoleQuest.
+
+Short acceptance passes all five action transitions, no-action/no-completion,
+patch snapshot isolation/exact reversal/invalid atomicity, duplicate rewards,
+roam banking, historical patch isolation and current-save restoration.99-module
+static checks pass. The new fixture joins the existing calendar/scouting runner.
+No new paid CI or long/mobile validation was launched.
+
+This is a commit-ready domain foundation, not a playable quest feature. Next:
+wire engine events and one-time rewards into actual income/experience/damage/
+objectives and inventory; handle boots/reward slots without breaking six normal
+slots, update combat cache identity after rewards, implement generated patch
+changes and concise match/patch UI, and prove actual paired match causality.
+Confirm full official reward/boot data and legacy historical-rule policy before
+marking runtime complete. Final ready PR bundles this with those adapters.
+
+
+### Role quests connected to actual matches (2026-10-02)
+
+The five-role domain now receives actual income/CS, champion damage and takedown,
+structure and epic-objective events. Completion changes match experience/levels,
+item-derived mid power, bot bonus income and separate boot slot, jungle income/
+smite/river-fight mobility, support reward selection and paid control-ward vision,
+and top objective-call teleport joins. No extra random stream is introduced.
+Generated seasonal/minor patch notes can adjust progress requirements and rewards
+within bounded baseline-relative ranges. Patch UI names these changes; player
+results show progress or completion minute. Match rule copies remain isolated
+from later patch notes; initial quest baseline is persisted for historical replay.
+
+Quest upgrades exposed an existing data issue: source tier3 boots and support
+reward items were treated as ordinary shop purchases. New quest-enabled games
+select tier2 boots; mid upgrades them free after completion (including later
+purchase), bot moves boots out of six regular slots and extends its final build,
+and support reserves its World Atlas slot and replaces it with a source reward.
+Bootless Cassiopeia does not gain an extra normal slot. Ward expenses reduce the
+existing purchase threshold budget rather than providing unearned spending.
+All quest equipment participates in combat and archived item evidence.
+
+This remains the existing minute-based aggregate model. Lane absence is inferred
+from actual off-lane fights and recalls; jungle camps are CS-derived equivalents
+plus a bounded treat proxy; support charge consumption is a live-partner proxy.
+There is no geometric lane-swap, spell choice/shield or precise pet/ward placement
+simulation. Mid bonus AP/AD uses the model's item-derived offensive-stat surrogate.
+These assumptions are explicit rather than literal client parity claims. Existing
+old saves without role rules stay on their legacy behavior, including historical
+patch replay; fresh games use26.19 rules. Future compatibility changes must not
+silently rewrite those old matches.
+
+Short fixtures cover all-five-role completion timing changes in four paired
+actual games, isolated career state, current-save exact trajectory, legacy absence,
+normal six-slot/quest-boot separation, support upgrades/paid wards, top level20/
+takedown XP/teleport cooldown and same-tick combat-cache reward invalidation.
+Rules and system-patch fixtures plus100-module static/build passed locally.
+Full required CI gates final merge; no100season/mobile/TalkBack run is scheduled
+until phase23 implementation and the user's playtest feedback have been addressed.
+Remaining broader D work and final balance acceptance are still open.
+
+
+Connected calendar/scouting validation passed13 isolated contexts. A prior skill
+fixture implicitly selected Xerath (current aggregate CC profile0), so a scalar
+CC buff was mathematically a no-op; it also required every cooldown change to
+change gold instead of damage. The fixture now explicitly picks a nonzero-control
+champion and requires both a profile change and an actual damage/gold/duration
+change. It does not lower the eight paired seeds. The observed source-profile
+limitation remains a follow-up for richer skill inference, not a claim that
+Xerath has no crowd control in real LoL. The diagnostic probe is preserved.
+
+PR124's first full CI36959095461 passed the quest, calendar, regression and other
+game checks but the regional medical observer crashed on its same-day emergency
+registration fallback: trackExposure referenced a DB outside its lexical scope.
+The observer now receives the current DB explicitly. A short real-engine fixture
+exercises missing daily-plan fallback and verifies one registered athlete-day
+without fabricating prior healthy exposure or lottery odds. The original medical
+seeds and aggregate acceptance requirements are unchanged; final CI remains a
+merge gate. Long-season and mobile validation remain deferred by user request.
