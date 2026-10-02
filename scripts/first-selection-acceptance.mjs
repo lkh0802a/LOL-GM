@@ -77,3 +77,42 @@ await runEngineFixture(String.raw`(()=>{
   check(replayGame.blue===enemy.id&&replayGame.fpTeam===mine.id&&replayGame.sc.why==='saved decision','replay recomputed historical selection from current pools');
   console.log('FIRST_SELECTION_ACCEPTANCE '+JSON.stringify({pure:true,ownPool:true,opponentBounded:true,changedActualChoice:changed,fearless:true,patch:true,manual:true,bo3Bo5Resume:true,officialRoster:true,aiLead:true,limited:limitedChoice.order,wide:wideChoice.order}));
 })();`);
+
+await runEngineFixture(String.raw`(()=>{
+ const check=(x,m)=>{if(!x)throw Error('PATCH_EVIDENCE '+m)};
+ const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:4,system:'franchise'})];cfg.internationals=[];
+ const db=buildWorld(cfg),[mine,enemy]=activeTeams(db,'NA',1);setManagedTeam(db,mine.id);
+ for(const t of [mine,enemy])for(const role of ROLES){const p=Object.values(db.players).find(p=>!p.team&&!p.retired&&p.role===role);signContract(db,p,t,1,3);t.depthChart[role]=p.id}
+ const game=simulateMatch(db,mine.id,enemy.id,'patch-provenance-old',null,true);recordMeta(db,game);
+ const cid=game.sides[0].ps[0].champ.id,oldPatch=db.patch.id,oldHistory=JSON.stringify(db.metaHistory),oldSamples=currentPatchMetaSamples(db);
+ check(oldSamples.games===1&&oldSamples.stats[cid].p===1&&oldSamples.regionGames.NA===1,'real recorded match missing from patch samples');
+ check(currentPatchMetaSamples(db)===oldSamples,'unchanged patch aggregation missed cache');
+ newPatch(db,addDays(db.worldDate,14),false,new RNG('patch-provenance-change'));
+ const empty=currentPatchMetaSamples(db),ctx={used:[],byTeam:{}},draft=()=>createDraftSession(db,[mine.id,enemy.id],new RNG('patch-evidence-draft'),ctx),before=draft(),pool=draftPoolSnapshot(db,ctx),selectionBefore=selectionPatchValues(db,mine.id,pool);
+ check(empty.games===0&&JSON.stringify(db.metaHistory)===oldHistory,'new patch reused old samples or rewrote historical games');
+ // Legacy/mixed decay counters have no exact patch provenance. Even large
+ // counter values must not become current-patch statistical evidence.
+ db.metaStats[cid]={p:100000,b:100000,w:100000};db.metaGames=100000;db.regionMetaStats.NA[cid]={p:100000,b:100000,w:100000};db.regionMetaGames.NA=100000;
+ const after=draft(),evidence=draftMetaEvidence(after,0,cid);
+ check(evidence.globalSample===0&&evidence.regionalSample===0&&evidence.historicalEffectiveSample===200000&&evidence.sources.some(x=>x.includes('표본 없음')),'mixed counter mislabeled as current patch');
+ check(JSON.stringify(before.vhat)===JSON.stringify(after.vhat)&&JSON.stringify(selectionBefore)===JSON.stringify(selectionPatchValues(db,mine.id,pool)),'mixed/old counters still affected actual draft/First Selection');
+ const currentGame=simulateMatch(db,mine.id,enemy.id,'patch-provenance-current',null,true);recordMeta(db,currentGame);
+ const currentCid=currentGame.sides[0].ps[0].champ.id,samples=currentPatchMetaSamples(db),fresh=draft(),freshEvidence=draftMetaEvidence(fresh,0,currentCid);
+ check(samples!==empty&&samples.games===1&&samples.stats[currentCid].p===1&&freshEvidence.globalSample===1&&freshEvidence.regionalSample===1,'new actual match failed to invalidate cache/update evidence');
+ check(JSON.stringify(after.vhat)!==JSON.stringify(fresh.vhat)&&JSON.stringify(selectionBefore)!==JSON.stringify(selectionPatchValues(db,mine.id,pool)),'current samples had no actual draft/selection effect');
+ const saved=unpackDB(packDB(db));check(JSON.stringify(currentPatchMetaSamples(saved))===JSON.stringify(samples),'save lost patch evidence or used mixed counters');
+ saved.manager.teamId=enemy.id;check(JSON.stringify(currentPatchMetaSamples(saved))===JSON.stringify(samples),'manager/AI changed public statistical sample');
+ const legacy=unpackDB(packDB(db));delete legacy.metaHistory;
+ check(currentPatchMetaSamples(legacy).games===0&&JSON.stringify(legacy.metaStats)===JSON.stringify(db.metaStats),'legacy counters fabricated patch games or were erased');
+ const historyRef=db.metaHistory;db.metaHistory=[];check(currentPatchMetaSamples(db).games===0,'replaced history reused stale cache');db.metaHistory=historyRef;
+ // Recorded region belongs to that game, not the club's later location.
+ mine.region='MOVED';check(currentPatchMetaSamples(db).regionGames.NA===1&&!currentPatchMetaSamples(db).regionGames.MOVED,'past regional sample moved with club');mine.region='NA';
+ // A synthetic recorded cross-region row isolates attribution arithmetic;
+ // it is not evidence of a played international season.
+ const international=JSON.parse(JSON.stringify(db.metaHistory[db.metaHistory.length-1]));international.regions=['NA','KR'];international.sides[1].region='KR';db.metaHistory.push(international);
+ const regional=currentPatchMetaSamples(db);check(regional.regionGames.NA===2&&regional.regionGames.KR===1&&regional.regional.KR[international.sides[1].picks[0].champ].p===1,'international regional attribution lost');
+ for(let i=0;i<20;i++){db.patch.id='cache-'+i;currentPatchMetaSamples(db)}
+ check(metaHistoryIndex(db).patchSamples.size<=META_PATCH_SORT_LIMIT,'patch sample cache grew without bound');
+ check(metaTableFiltered(db,{patch:oldPatch}).some(x=>x.p>0),'historical patch table lost actual older records');
+ console.log('PATCH_EVIDENCE: PASS (real match/new patch, mixed counters, draft/First Selection, cache invalidation/bounds, save, legacy, public actor parity, historical regions)');
+})();`);

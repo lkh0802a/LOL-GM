@@ -21,13 +21,15 @@ function draftMasteryObservation(state,observerSide,targetSide,p,cid){
   return {value,confidence,sources};
 }
 function draftMetaEvidence(state,side,cid){
-  const db=state.db,team=db.teams[state.teamIds[side]],rid=team.region,gst=(db.metaStats||{})[cid],rst=((db.regionMetaStats||{})[rid]||{})[cid],globalSample=gst?(gst.p||0)+(gst.b||0):0,regionalSample=rst?(rst.p||0)+(rst.b||0):0,study=clamp(((team.metaKnowledge||{})[cid]||0),0,1),analysis=staffAnalysisFor(team,'data'),sources=[];
-  if(regionalSample)sources.push((db.regions[rid]?.short||rid)+' 프로 표본 '+regionalSample);
-  if(globalSample)sources.push('글로벌 프로 표본 '+globalSample);
+  const db=state.db,team=db.teams[state.teamIds[side]],rid=team.region,samples=currentPatchMetaSamples(db),gst=samples.stats[cid],rst=samples.regional[rid]?.[cid],globalSample=gst?(gst.p||0)+(gst.b||0):0,regionalSample=rst?(rst.p||0)+(rst.b||0):0,study=clamp(((team.metaKnowledge||{})[cid]||0),0,1),analysis=staffAnalysisFor(team,'data'),sources=['현재 패치 '+samples.patch];
+  if(regionalSample)sources.push((db.regions[rid]?.short||rid)+' 현재 패치 프로 표본 '+regionalSample);
+  if(globalSample)sources.push('글로벌 현재 패치 프로 표본 '+globalSample);else sources.push('현재 패치 표본 없음');
+  const mixed=db.metaStats?.[cid],historicalEffectiveSample=(mixed?.p||0)+(mixed?.b||0);
+  if(historicalEffectiveSample)sources.push('누적/감쇠 참고 '+historicalEffectiveSample+' · 현재 패치 신뢰도에 미반영');
   if(study>.01)sources.push('구단 챔피언 연구 '+Math.round(study*100));
   sources.push('분석팀 '+Math.round(analysis));
   const confidence=Math.round(clamp(analysis*.55+Math.min(34,Math.sqrt(globalSample+regionalSample*1.35)*5)+(study*12),20,98));
-  return {score:Math.round(clamp(state.vhat[side]?.[cid]||0,0,1)*100),confidence,globalSample,regionalSample,teamStudy:Math.round(study*100),sources};
+  return {score:Math.round(clamp(state.vhat[side]?.[cid]||0,0,1)*100),confidence,patch:samples.patch,globalSample,regionalSample,historicalEffectiveSample,teamStudy:Math.round(study*100),sources};
 }
 function draftManagedChampionPoolEvidence(db,p,cid){
   const me=managedTeam(db),base=baseScoutKnowledge(db,p),raw=(db.scout||{})[p.id],stored=typeof raw==='number'?raw:(raw?.knowledge||0),knowledge=Math.round(clamp(Math.max(base,stored),0,98)),estimate=id=>Math.round(clamp(draftMastery(p,id)+((hashStr((me?.id||'M')+'|pool|'+p.id+'|'+id)%2001)/1000-1)*(100-knowledge)*.12,20,99)),width=Math.max(2,Math.ceil((100-knowledge)/12)),range=id=>{const v=estimate(id);return [Math.max(20,v-width),Math.min(99,v+width)]},sources=[];

@@ -67,7 +67,7 @@ const DRAFT_ORDER=[['B',0],['B',1],['B',0],['B',1],['B',0],['B',1],['P',0],['P',
 function createDraftSession(db,teamIds,rng,ctx){
   ctx=ctx||{used:[],byTeam:{}};
   const evalBase=draftPoolSnapshot(db,ctx),{champs,strengths,mn,mx,byRole}=evalBase;
-  const MS=db.metaStats||{},G=db.metaGames||0,RMS=db.regionMetaStats||{},RMG=db.regionMetaGames||{};
+  const samples=currentPatchMetaSamples(db),MS=samples.stats,G=samples.games,RMS=samples.regional,RMG=samples.regionGames;
   const vhat=teamIds.map(tid=>{const team=db.teams[tid],rid=team.region,an=Math.min(1,staffAnalysisFor(team,'meta')/100+scrimAnalysisBonus(team)),data=Math.min(1,staffAnalysisFor(team,'data')/100+scrimAnalysisBonus(team)),m={};
     const nk=tid+'|'+an,noiseCache=draftNoiseBucket(db);let NZ=noiseCache.get(nk);if(!NZ){NZ={};noiseCache.set(nk,NZ)}
     champs.forEach(c=>{if(NZ[c.id]===undefined)NZ[c.id]=((hashStr(tid+db.patch.id+c.id)%2000)/1000-1)*0.35*(1.1-an);const noise=NZ[c.id];
