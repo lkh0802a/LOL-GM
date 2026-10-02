@@ -25,6 +25,8 @@ function metaIndexAdd(map,key,row){
 function metaIndexAddRow(index,row){
   metaIndexAdd(index.byPatch,row.patch,row);
   metaIndexAdd(index.byComp,row.comp,row);
+  for(const tid of new Set((row.sides||[]).map(s=>s.team).filter(Boolean)))metaIndexAdd(index.byTeam,tid,row);
+  for(const pid of new Set((row.sides||[]).flatMap(s=>(s.picks||[]).map(p=>typeof p==='object'?p.player:null)).filter(Boolean)))metaIndexAdd(index.byPlayer,pid,row);
   for(const region of row.regions||[])metaIndexAdd(index.byRegion,region,row);
   for(const key of ['comp','patch','season','split','league']){
     const value=row[key];
@@ -47,7 +49,7 @@ function metaHistoryIndex(db){
   }
   // Array replacement/truncation or changed tail identity: full safe rebuild.
   c={rows,length:rows.length,tail:rows[rows.length-1],
-    byPatch:new Map(),byComp:new Map(),byRegion:new Map(),banAttribution:new Map(),
+    byPatch:new Map(),byComp:new Map(),byRegion:new Map(),byTeam:new Map(),byPlayer:new Map(),banAttribution:new Map(),
     filtered:new Map(),patchSorted:new Map(),patchSamples:new Map(),facets:null,
     facetSets:Object.fromEntries(['comp','patch','season','split','league'].map(k=>[k,new Set()]))};
   for(const row of rows)metaIndexAddRow(c,row);
@@ -60,7 +62,7 @@ function metaHistoryFacets(db){
   return c.facets={
     comps:sorted('comp'),patches:sorted('patch').reverse(),
     seasons:sorted('season').reverse(),splits:sorted('split'),
-    leagues:sorted('league')
+    leagues:sorted('league'),teams:[...c.byTeam.keys()].sort(),players:[...c.byPlayer.keys()].sort()
   };
 }
 function metaCacheRemember(cache,key,value,limit){
@@ -91,7 +93,12 @@ function currentPatchMetaSamples(db){
   return metaCacheRemember(index.patchSamples,patch,{patch,stats,games:rows.length,regional,regionGames},META_PATCH_SORT_LIMIT);
 }
 function metaFilterKey(filter){
-  return ['region','patch','comp','season','year','split','league','scope','from','to','position'].map(k=>String(filter[k]??'')).join('|');
+  return JSON.stringify(['region','patch','comp','season','year','split','league','scope','from','to','position','team','player','opponent'].map(k=>String(filter[k]??'')));
+}
+function metaSideMatches(row,side,filter){
+  return (!filter.region||side.region===filter.region)&&(!filter.team||side.team===filter.team)&&
+    (!filter.player||(side.picks||[]).some(p=>typeof p==='object'&&p.player===filter.player&&(!filter.position||p.role===filter.position)))&&
+    (!filter.opponent||(row.sides||[]).some(other=>other!==side&&other.team===filter.opponent&&other.team!==side.team));
 }
 function metaRowsFiltered(db,filter={}){
   const c=metaHistoryIndex(db),key=metaFilterKey(filter);
@@ -101,8 +108,9 @@ function metaRowsFiltered(db,filter={}){
     return hit;
   }
   const choices=[c.rows];if(filter.patch)choices.push(c.byPatch.get(filter.patch)||EMPTY_META_HISTORY);if(filter.comp)choices.push(c.byComp.get(filter.comp)||EMPTY_META_HISTORY);if(filter.region)choices.push(c.byRegion.get(filter.region)||EMPTY_META_HISTORY);
+  if(filter.team)choices.push(c.byTeam.get(filter.team)||EMPTY_META_HISTORY);if(filter.player)choices.push(c.byPlayer.get(filter.player)||EMPTY_META_HISTORY);if(filter.opponent)choices.push(c.byTeam.get(filter.opponent)||EMPTY_META_HISTORY);
   const base=choices.reduce((a,b)=>b.length<a.length?b:a),rows=base.filter(r=>(!filter.region||(r.regions||[]).includes(filter.region))&&(!filter.patch||r.patch===filter.patch)&&(!filter.comp||r.comp===filter.comp)&&(!filter.season||r.season===filter.season)&&(!filter.year||r.year===+filter.year)&&(!filter.split||String(r.split)===String(filter.split))&&(!filter.league||r.league===filter.league)&&(!filter.scope||(filter.scope==='INTL'?r.international:!r.international))&&(!filter.from||r.date>=filter.from)&&(!filter.to||r.date<=filter.to));
-  return metaCacheRemember(c.filtered,key,rows,META_FILTER_CACHE_LIMIT);
+  return metaCacheRemember(c.filtered,key,filter.team||filter.player||filter.opponent?rows.filter(row=>(row.sides||[]).some(side=>metaSideMatches(row,side,filter))):rows,META_FILTER_CACHE_LIMIT);
 }
 
 function recordMeta(db,r){
@@ -128,7 +136,7 @@ function metaTableFiltered(db,filter={}){
   const rows=metaRowsFiltered(db,filter);
   if(!rows.length)return metaTable(db,filter.region||null).map(x=>({...x,p:0,b:0,w:0,pres:0,wr:null,sample:0}));
   const st={},add=(cid,key)=>{const x=st[cid]||(st[cid]={p:0,w:0,b:0});x[key]++};
-  for(const r of rows){for(const side of r.sides){if(filter.region&&side.region!==filter.region)continue;for(const pick of side.picks){const p=typeof pick==='string'?{champ:pick}:pick;if(filter.position&&p.role!==filter.position)continue;add(p.champ,'p');if(side.win)add(p.champ,'w')}}for(const cid of r.bans)add(cid,'b')}
+  for(const r of rows){for(const side of r.sides){if(!metaSideMatches(r,side,filter))continue;for(const pick of side.picks){const p=typeof pick==='string'?{champ:pick}:pick;if(filter.position&&p.role!==filter.position||filter.player&&p.player!==filter.player)continue;add(p.champ,'p');if(side.win)add(p.champ,'w')}}for(const cid of r.bans)add(cid,'b')}
   const G=Math.max(1,rows.length);return Object.values(db.patch.champions).map(c=>{const s=st[c.id]||{p:0,w:0,b:0};return {c,p:s.p,b:s.b,w:s.w,pres:(s.p+s.b)/G,wr:s.p?s.w/s.p:null,sample:G,eligible:championProEligible(db,c)}}).sort((a,b)=>b.pres-a.pres);
 }
 
@@ -141,7 +149,7 @@ function metaBanAttribution(db,filter={}){
     const sides=row.sides||[],flat=row.bans||[],known=sides.length===2&&sides.every(s=>typeof s.region==='string'&&(row.regions||[]).includes(s.region)&&Array.isArray(s.bans)&&s.bans.every(x=>typeof x==='string'))&&JSON.stringify(sides.flatMap(s=>s.bans).slice().sort())===JSON.stringify(flat.slice().sort());
     if(!known){out.unknownGames++;for(const cid of flat)add(cid,'unknown');continue}
     out.knownGames++;
-    for(const side of sides)for(const cid of side.bans)add(cid,!filter.region||side.region===filter.region?'own':'opponent');
+    for(const side of sides)for(const cid of side.bans)add(cid,metaSideMatches(row,side,filter)?'own':'opponent');
   }
   // Separate attribution from existing all-match regional ban exposure. Legacy
   // and inconsistent rows remain unknown; no inferred side or history rewrite.
@@ -149,7 +157,7 @@ function metaBanAttribution(db,filter={}){
 }
 function championMetaInsights(db,cid,filter={}){
   const players={},teams={},matchups={},recent=[],rows=metaRowsFiltered(db,filter);
-  for(const r of rows)for(const side of r.sides||[]){if(filter.region&&side.region!==filter.region)continue;const picks=(side.picks||[]).map(p=>typeof p==='string'?{champ:p}:p),me=picks.find(p=>p.champ===cid&&(!filter.position||p.role===filter.position));if(!me)continue;if(me.player){const x=players[me.player]||(players[me.player]={g:0,w:0});x.g++;if(side.win)x.w++}if(side.team){const x=teams[side.team]||(teams[side.team]={g:0,w:0});x.g++;if(side.win)x.w++}const opp=(r.sides||[]).find(x=>x!==side);if(opp&&me.role){const op=(opp.picks||[]).map(p=>typeof p==='string'?{champ:p}:p).find(p=>p.role===me.role);if(op){const x=matchups[op.champ]||(matchups[op.champ]={g:0,w:0});x.g++;if(side.win)x.w++}}recent.push({date:r.date,win:side.win})}
+  for(const r of rows)for(const side of r.sides||[]){if(!metaSideMatches(r,side,filter))continue;const picks=(side.picks||[]).map(p=>typeof p==='string'?{champ:p}:p),me=picks.find(p=>p.champ===cid&&(!filter.position||p.role===filter.position)&&(!filter.player||p.player===filter.player));if(!me)continue;if(me.player){const x=players[me.player]||(players[me.player]={g:0,w:0});x.g++;if(side.win)x.w++}if(side.team){const x=teams[side.team]||(teams[side.team]={g:0,w:0});x.g++;if(side.win)x.w++}const opp=(r.sides||[]).find(x=>x!==side);if(opp&&me.role){const op=(opp.picks||[]).map(p=>typeof p==='string'?{champ:p}:p).find(p=>p.role===me.role);if(op){const x=matchups[op.champ]||(matchups[op.champ]={g:0,w:0});x.g++;if(side.win)x.w++}}recent.push({date:r.date,win:side.win})}
   const top=o=>Object.entries(o).sort((a,b)=>b[1].g-a[1].g||b[1].w-a[1].w).slice(0,5);return {players:top(players),teams:top(teams),matchups:top(matchups),recent:recent.sort((a,b)=>a.date.localeCompare(b.date)).slice(-10)};
 }
 function metaTable(db,regionId=null){

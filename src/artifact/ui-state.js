@@ -8,7 +8,7 @@ let SEL={blue:'HTG',red:'SBZ',bo:1,fearless:true};
 let LIVE=null;
 let MK={role:'ALL',scope:'region',tab:'fa'};
 let MC={blue:'HTG',red:'SBZ',n:300,res:null,running:false};
-let PSET={role:'ALL',q:'',region:'GLOBAL',patch:'ALL',comp:'ALL',period:'ALL',year:'',season:'ALL',split:'ALL',league:'ALL',scope:'ALL',position:'ALL',champ:null};
+let PSET={role:'ALL',q:'',region:'GLOBAL',patch:'ALL',comp:'ALL',period:'ALL',year:'',season:'ALL',split:'ALL',league:'ALL',scope:'ALL',position:'ALL',team:'ALL',player:'ALL',opponent:'ALL',playerSearch:'',champ:null};
 let DRAFT_UI=null;
 
 // Keep the supported screen map and its binding ownership in one place.
@@ -103,4 +103,5 @@ function resetUiForWorld(){
   DRAFT_UI=null;
   LAST=null;LASTSER=null;OPEN_P=null;SQUAD_EDIT=null;MSG='';
   MC.res=null;MC.running=false;SSET.view=null;
+  PSET.team='ALL';PSET.player='ALL';PSET.opponent='ALL';PSET.playerSearch='';
 }
