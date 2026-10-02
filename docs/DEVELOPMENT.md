@@ -1884,6 +1884,29 @@ mobile/TalkBack checks are started. All23 features, user feedback and fixes stil
 precede final verification. Public standard runner CI is used after the user's
 authorized visibility change; GitHub payment/card and billing details are removed.
 
+
+### D10 source-control bilingual fallback (2026-10-02)
+
+Pinned spell descriptions can now be classified from Korean or English source
+text. When both are present, recognized types are deduplicated. The classifier
+adds source-presence tags for suppression and disarm without assigning them
+invented durations or treating multiple tags in one spell as extra control.
+English self-immunity, negated control, and minion-only descriptions are checked
+separately; “not immune to stun” remains a positive enemy effect.
+
+The source-control acceptance covers English-only normalization, mixed-language
+deduplication, negative clauses, suppression/disarm, the existing numeric-CC
+precedence, patch reversal and legacy save behavior. A paired Xerath fixture
+produces the same aggregate profile and actual match trajectory from equivalent
+English and Korean descriptions. Existing four-seed source-only versus legacy
+matches still demonstrate delivery into combat. The pinned snapshot remains173
+champions; source detection now recognizes163 spell descriptions, up from162.
+This does not claim full textual coverage or per-spell timing, cast choice, hit
+chance, or geometry. Focused source-control, regression/smoke, static/build and
+exact-head required Actions remain the validation path; final long/mobile QA is
+still deferred until all23 features and user playtest fixes are complete.
+
+
 ## Cloud continuation — transfer clauses, international coefficients and CI (2026-10-02)
 
 Current source baseline is `main` 0c9b8ab, matching cloud checkout commit
