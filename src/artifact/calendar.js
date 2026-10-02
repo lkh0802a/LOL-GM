@@ -54,6 +54,7 @@ function applyWorldDailyEffects(db,date){
   runDailyPractice(db);
   for(const t of activeTeams(db,null,1))aiManageOwnedReserve(db,t);
   aiReviewOfficialRegistrations(db);
+  aiReviewCompetitionStaffRegistrations(db);
   w.lastDailyTick=date;
   return true;
 }

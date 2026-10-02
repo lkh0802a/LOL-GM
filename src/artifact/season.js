@@ -75,8 +75,8 @@ function advanceStep(db){
           w.seasons[key]=s;any=true;
         }
       }
-      if(any)return;
-    } else {let any=false;const taken=new Set();for(const id of (st.ids||[st.id]))if(startInternational(db,id,start,taken))any=true;if(any)return}
+      if(any){aiReviewCompetitionStaffRegistrations(db);return}
+    } else {let any=false;const taken=new Set();for(const id of (st.ids||[st.id]))if(startInternational(db,id,start,taken))any=true;if(any){aiReviewCompetitionStaffRegistrations(db);return}}
   }
 }
 function placements(db,s){

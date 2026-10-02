@@ -45,5 +45,9 @@ function bindOfficialRegistrationControls(){
 }
 function competitionStaffRegistrationPanel(t){
   const seasons=Object.values(DB.world?.seasons||{}).filter(s=>DB.competitions[s.comp]?.teams.includes(t.id)&&competitionStaffPolicy(DB,s));if(!seasons.length)return '';
-  return seasons.map(s=>{const p=competitionStaffPolicy(DB,s),open=staffRegistrationOpen(DB,s),selected=new Set(competitionStaffEntry(DB,s,t.id));return `<details class="cfgcard"><summary>${esc(DB.competitions[s.comp].name)} 현장 스태프 · ${selected.size}/${p.max}명</summary><p class="hint">${open?'마감 전 변경 가능':'등록 마감됨'} · 구단 고용 정원과 별개인 대회 현장 명단입니다.</p>${teamStaffMembers(t).map(x=>`<label><input type="checkbox" data-competition-staff="${s.id}" value="${x.id}"${selected.has(x.id)?' checked':''}${!open?' disabled':''}> ${esc(x.name)} · ${esc(STAFF_ROLES[x.role])}</label>`).join('')}${open?`<button class="primary" data-competition-staff-submit="${s.id}" data-team-id="${t.id}">현장 명단 제출</button>`:''}</details>`}).join('');
+  return seasons.map(s=>{
+    const p=competitionStaffPolicy(DB,s),open=managerControlsSquad(DB,t)&&staffRegistrationOpen(DB,s),selected=new Set(competitionStaffEntry(DB,s,t.id)),members=teamStaffMembers(t),
+      departed=(s.staffEntryRecords?.[t.id]?.staff||[]).filter(x=>!members.some(m=>m.id===x.id));
+    return `<details class="cfgcard"><summary>${esc(DB.competitions[s.comp].name)} 현장 스태프 · ${selected.size}/${p.max}명</summary><p class="hint">${s.done?'대회 종료':open?'마감 전 변경 가능':'등록 마감됨'} · 마감 ${esc(p.lockAt)} · 공식전 코칭·분석은 현재 고용 중인 등록 직원이 담당합니다.</p>${members.map(x=>`<label><input type="checkbox" data-competition-staff="${esc(s.id)}" value="${esc(x.id)}"${selected.has(x.id)?' checked':''}${!open?' disabled':''}> ${esc(x.name)} · ${esc(STAFF_ROLES[x.role])}</label>`).join('')}${departed.map(x=>`<p class="hint">${esc(x.name)} · ${esc(STAFF_ROLES[x.role]||x.role)} · 제출 후 퇴사</p>`).join('')}${open?`<button class="primary" data-competition-staff-submit="${esc(s.id)}" data-team-id="${esc(t.id)}">현장 명단 제출</button>`:''}</details>`;
+  }).join('');
 }

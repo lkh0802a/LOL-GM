@@ -1,4 +1,4 @@
-import {runEngineFixture} from './test-harness.mjs';
+import {runEngineFixture,artifactSource} from './test-harness.mjs';
 await runEngineFixture(String.raw`(()=>{
  const check=(x,m)=>{if(!x)throw Error('STAFF_REGISTRATION '+m)};
  const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:4,system:'franchise',staffRegistration:{max:2}})];cfg.internationals=[];
@@ -9,6 +9,61 @@ await runEngineFixture(String.raw`(()=>{
  check(!previewWorldAction(db,{type:'competition.staff-register',actor:'manager',seasonId:s.id,teamId:mine.id,staffIds:mine.staffRoster.slice(0,3).map(x=>x.id)}).ok,'published cap bypassed');
  check(!previewWorldAction(db,{type:'competition.staff-register',actor:'manager',seasonId:s.id,teamId:mine.id,staffIds:[ai.staffRoster[0].id]}).ok,'other club employee registered');
  const original=JSON.stringify(db),handler=WORLD_ACTION_HANDLERS['competition.staff-register'],writer=handler.apply;handler.apply=(state,c)=>{writer(state,c);throw Error('late failure')};const fault=applyWorldAction(db,previewWorldAction(db,{type:'competition.staff-register',actor:'manager',seasonId:s.id,teamId:mine.id,staffIds:[]}));handler.apply=writer;check(!fault.ok&&JSON.stringify(db)===original,'late failure did not restore entries');
- const saved=unpackDB(packDB(db)),savedSeason=staffRegistrationSeason(saved,s.id);check(competitionStaffEntry(saved,savedSeason,mine.id).join(',')===ids.join(','),'save lost staff entries');db.worldDate=s.days[0].date;
+ const saved=unpackDB(packDB(db)),savedSeason=staffRegistrationSeason(saved,s.id);check(competitionStaffEntry(saved,savedSeason,mine.id).join(',')===ids.join(','),'save lost staff entries');
+ // Submitted staff must affect the real official draft; unregistered staff
+ // remain employed and available for ordinary club training and practice.
+ for(const t of [mine,ai]){for(const role of ROLES){const p=genPlayer(db,new RNG(t.id+role,'staff-entry-player'),{region:t.region,role,age:22,base:65});signContract(db,p,t,1,2,{})}initializeDepthChart(db,t,true);delete t.registration}
+ initializeOfficialRegistrations(db);
+ const staffCommand={type:'competition.staff-register',actor:'manager',seasonId:s.id,teamId:mine.id,staffIds:[]};
+ check(commitWorldAction(db,staffCommand).ok,'empty on-site list refused');
+ const session=createSeriesSession(db,mine.id,ai.id,1,'staff-official',{compId:s.comp,metaContext:{season:s.id}}),view=seriesOfficialView(db,session),ctx=session.ctx;
+ check(view.teams[mine.id].staffRoster.length===0&&mine.staffRoster.length>0,'on-site view changed employment or ignored entry');
+ const emptyDraft=createDraftSession(view,[mine.id,ai.id],new RNG('staff-draft','draft'),ctx);
+ check(!draftStaffAdvice(emptyDraft,0).available,'unregistered advisers appeared in official draft');
+ const coach=mine.staffRoster.find(x=>x.role==='strategicCoach'),analyst=mine.staffRoster.find(x=>x.role==='analyst');
+ check(commitWorldAction(db,{...staffCommand,staffIds:[coach.id,analyst.id]}).ok,'coach/analyst entry failed');
+ const enteredView=seriesOfficialView(db,session),enteredDraft=createDraftSession(enteredView,[mine.id,ai.id],new RNG('staff-draft','draft'),ctx);
+ check(draftStaffAdvice(enteredDraft,0).available&&staffProfile(enteredView.teams[mine.id]).analysis>staffProfile(view.teams[mine.id]).analysis,'registered analysis did not reach actual draft');
+ check(seriesOfficialView(db,{...session,opt:{...session.opt,practice:true}})===db,'practice lost club staff');
+ const stage=db.competitions[s.comp].stages[0],match={a:mine.id,b:ai.id,bo:1,id:'staff-field-game'},result=simulateScheduledSeries(db,s,s.days[0],match,stage);
+ check(result.lines.length===10&&result.rec.games.length===1,'registered staff path failed actual scheduled game');
+ // AI rechecks changed employees before the deadline through the shared gate.
+ const submit=WORLD_ACTION_HANDLERS['competition.staff-register'].apply;let aiSubmissions=0;
+ WORLD_ACTION_HANDLERS['competition.staff-register'].apply=(state,c)=>{if(c.actor==='ai')aiSubmissions++;return submit(state,c)};
+ delete s.staffEntries[ai.id];aiReviewCompetitionStaffRegistrations(db);
+ WORLD_ACTION_HANDLERS['competition.staff-register'].apply=submit;
+ check(aiSubmissions>0&&s.staffEntryRecords[ai.id].source==='ai'&&!s.staffEntryRecords[mine.id]?.source?.includes('ai'),'AI bypassed shared gateway or changed manager entry');
+ const stale=previewWorldAction(db,staffCommand);s.staffRegistrationPolicy.max=1;check(applyWorldAction(db,stale).reason==='stale_preview','changed published policy accepted old preview');s.staffRegistrationPolicy.max=2;
+ for(const bad of [undefined,null,{},'bad',[coach.id,coach.id],[7]])check(!previewWorldAction(db,{...staffCommand,staffIds:bad}).ok,'malformed submission accepted or threw');
+ // UI cancellation and authority are exercised on the same production command.
+ globalThis.DB=db;globalThis.esc=x=>String(x).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('"','&quot;');globalThis.MSG='';let saves=0;globalThis.saveDB=()=>saves++;globalThis.navKeepScroll=()=>{};
+ const button={dataset:{competitionStaffSubmit:s.id,teamId:mine.id}};
+ globalThis.document={querySelectorAll:q=>q==='[data-competition-staff-submit]'?[button]:q.includes(':checked')?[{value:coach.id}]:[]};
+ globalThis.confirm=()=>false;bindOfficialRegistrationControls();const cancelled=packDB(db);button.onclick();check(packDB(db)===cancelled&&!saves,'cancelled UI mutated entries');
+ globalThis.confirm=()=>true;button.onclick();check(saves===1&&competitionStaffEntry(db,s,mine.id).length===1,'confirmed UI did not submit/save');
+ check(!competitionStaffRegistrationPanel(ai).includes('data-competition-staff-submit'),'other team UI offered manager submission');
+ check(commitWorldAction(db,{...staffCommand,staffIds:[coach.id,analyst.id]}).ok,'restore two on-site staff failed');
+ db.worldDate=s.days[0].date;
+ const lockedAi=JSON.stringify(s.staffEntries[ai.id]);ai.staffRoster[0].publicEstimate=100;aiReviewCompetitionStaffRegistrations(db);check(JSON.stringify(s.staffEntries[ai.id])===lockedAi,'AI changed locked on-site entry');
  check(!previewWorldAction(db,{type:'competition.staff-register',actor:'manager',seasonId:s.id,teamId:mine.id,staffIds:[]}).ok,'opening fixture did not lock entry');console.log('STAFF_REGISTRATION_ACCEPTANCE '+JSON.stringify({manager:ids.length}));
-})();`,{timeout:30000,filename:'staff-registration-acceptance.fixture.js'});
+ // Departures may reduce active field staff but never invalidate historical
+ // entry evidence or allow a replacement after the published lock.
+ coach.name='<staff-history>';check(commitWorldAction(db,{type:'staff.release',actor:'manager',teamId:mine.id,sid:coach.id}).ok,'staff departure failed');
+ check(competitionStaffEntry(db,s,mine.id).includes(coach.id)&&!competitionStaffMatchRoster(db,s,mine).includes(coach),'departure erased history or retained field effect');
+ const departedSave=unpackDB(packDB(db));check(competitionStaffEntry(departedSave,staffRegistrationSeason(departedSave,s.id),mine.id).includes(coach.id),'departure made save unloadable');
+ s.done=true;db.worldDate=addDays(s.days[0].date,-1);check(!previewWorldAction(db,staffCommand).ok,'completed event allowed resubmission');
+ const damaged=JSON.parse(packDB(db));Object.values(damaged.world.seasons)[0].staffEntries[mine.id]={bad:true};let rejected=false;try{unpackDB(JSON.stringify(damaged))}catch{rejected=true}check(rejected,'malformed stored entries accepted');
+ // The current competition object may be replaced by a later split. The old
+ // season retains its published cap and deadline.
+ db.competitions[s.comp].rules.staffRegistration={max:0};check(competitionStaffPolicy(db,s).max===2,'historical policy changed with current competition');
+ check(unpackDB(packDB(db)),'historical policy prevented restore');
+ // International policy belongs to that event and can publish a deadline
+ // earlier than its first fixture; it does not inherit regional staff limits.
+ db.competitions.STAFF_INT={id:'STAFF_INT',international:true,name:'Staff international',teams:[mine.id,ai.id],rules:{staffRegistration:{max:1,lockAt:db.year+'-02-01'}},stages:[{id:'rr',type:'round_robin',legs:1,bestOf:1,name:'Test'}]};
+ const intl=newSeason(db,'STAFF_INT',db.year,'staff-int',db.year+'-02-07');db.world.seasons.STAFF_INT=intl;db.worldDate=db.year+'-01-25';aiReviewCompetitionStaffRegistrations(db);
+ check(competitionStaffEntry(db,intl,ai.id).length===1&&competitionStaffPolicy(db,intl).lockAt===db.year+'-02-01','international policy inherited regional cap or deadline');
+ check(commitWorldAction(db,{...staffCommand,seasonId:intl.id,staffIds:[analyst.id]}).ok,'international submission failed');
+ db.worldDate=db.year+'-02-01';check(!previewWorldAction(db,{...staffCommand,seasonId:intl.id,staffIds:[]}).ok,'published early deadline ignored');
+ check(unpackDB(packDB(db)),'international entries failed restore');
+ console.log('STAFF_REGISTRATION_GAMEPLAY: PASS (official draft, practice, AI command, authority, policy snapshot, UI, departed-staff history and saves)');
+})();`,{timeout:30000,filename:'staff-registration-acceptance.fixture.js',setupSources:[await artifactSource('ui-registration.js')]});
