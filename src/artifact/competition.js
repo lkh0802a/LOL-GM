@@ -129,7 +129,7 @@ function simulateScheduledSeries(db,s,day,m,cfg,extra={}){
 }
 function commitScheduledSeries(db,s,m,series){
   if(m.res)throw new Error('Scheduled match already resolved: '+m.id);
-  m.res=series.rec;recordLines(s,series.lines);afterSeries(db,series.lines,series.rec);updatePlayerUsage(db,s,series.rec,series.lines);return m.res;
+  m.res=series.rec;recordLines(s,series.lines);afterSeries(db,series.lines,series.rec);updatePlayerUsage(db,s,series.rec,series.lines);recordStaffMatchService(db,s,series.rec);return m.res;
 }
 function finalizeCompetitionDay(db,s,day,cfgIdx,cfg){
   if(day.matches.some(m=>!m.res))return false;

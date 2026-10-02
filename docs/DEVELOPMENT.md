@@ -31,6 +31,35 @@ without continually adding new status documents.
 
 ## Current Phase
 
+### Current implementation slice — staff career / retirement (2026-10-02)
+
+Scope estimate: 50 minutes, single worker, baseline `3203bbf`. Existing D07
+retirement only read age; the fixed staff rules require age, known career,
+performance and motivation. This slice records actual official on-site series
+service at the shared committed-result boundary, including pending-series staff
+snapshots, and uses recent team results plus observed employment spans and
+existing ambition in an explicit fictional annual retirement model.
+
+Employed and free staff share the system-only retirement command, identity/history
+preservation, stale-preview protection and rollback journal. Annual repeat calls
+do not age/review the same person twice. Managed vacancies remain manual choices;
+active cards and retirement notices explain evidence without exposing hidden skill.
+Save validation includes archived staff identity and result/review bounds.
+
+Files: `staff.js`, `staff-contracts.js`, `series.js`, `competition.js`,
+`ui-market-staff.js`, both existing staff acceptance fixtures and `STAFF_RULES.md`.
+Focused acceptance covers each retirement input independently, unemployment,
+recorded employment gaps, legacy no-backfill, free/managed authority, late rollback,
+stale motivation, annual deduplication, official/practice distinction, actual
+committed results, repeated-match rejection, departed pending staff and save errors.
+No long final QA started. Head CI / merge evidence is recorded after completion.
+
+Limits: historical events without captured employees are not reconstructed;
+series wins describe team results, not isolated staff causal credit. The model
+weights are fictional and documented, not claimed to be real league regulations.
+Next selection must inspect remaining roadmap rules against current code; this
+slice does not certify every D07 rule or all Items 13–23 as complete.
+
 `CURRENT_PHASE = PHASE_1_CORE_FOUNDATION`
 
 The Artifact migration is complete and accepted. GitHub is now the primary development codebase.

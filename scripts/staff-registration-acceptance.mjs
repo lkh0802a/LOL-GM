@@ -27,6 +27,12 @@ await runEngineFixture(String.raw`(()=>{
  check(seriesOfficialView(db,{...session,opt:{...session.opt,practice:true}})===db,'practice lost club staff');
  const stage=db.competitions[s.comp].stages[0],match={a:mine.id,b:ai.id,bo:1,id:'staff-field-game'},result=simulateScheduledSeries(db,s,s.days[0],match,stage);
  check(result.lines.length===10&&result.rec.games.length===1,'registered staff path failed actual scheduled game');
+ check(!coach.career,'simulation before commit invented career');
+ commitScheduledSeries(db,s,match,result);check(coach.career[0].series===1&&analyst.career[0].series===1&&coach.career[0].wins===(result.rec.winner===mine.id?1:0),'committed official results lost staff career');
+ let duplicateBlocked=false;try{commitScheduledSeries(db,s,match,result)}catch{duplicateBlocked=true}check(duplicateBlocked&&coach.career[0].series===1,'duplicate match doubled staff career');
+ check(!officialStaffServiceSnapshot(db,mine.id,ai.id,{practice:true,metaContext:{season:s.id}}),'practice invented professional career');
+ const pendingSnapshot=officialStaffServiceSnapshot(db,mine.id,ai.id,{metaContext:{season:s.id}});
+ check(pendingSnapshot[mine.id].length===2&&!pendingSnapshot[mine.id].some(x=>x.id===mine.staffRoster.find(x=>x.role==='scout').id),'non-registered staff received match service');
  // AI rechecks changed employees before the deadline through the shared gate.
  const submit=WORLD_ACTION_HANDLERS['competition.staff-register'].apply;let aiSubmissions=0;
  WORLD_ACTION_HANDLERS['competition.staff-register'].apply=(state,c)=>{if(c.actor==='ai')aiSubmissions++;return submit(state,c)};
@@ -49,6 +55,7 @@ await runEngineFixture(String.raw`(()=>{
  // Departures may reduce active field staff but never invalidate historical
  // entry evidence or allow a replacement after the published lock.
  coach.name='<staff-history>';check(commitWorldAction(db,{type:'staff.release',actor:'manager',teamId:mine.id,sid:coach.id}).ok,'staff departure failed');
+ recordStaffMatchService(db,s,{staffService:pendingSnapshot,winner:mine.id});check(coach.career[0].series===2&&analyst.career[0].series===2,'pending series reassigned departed staff contribution');
  check(competitionStaffEntry(db,s,mine.id).includes(coach.id)&&!competitionStaffMatchRoster(db,s,mine).includes(coach),'departure erased history or retained field effect');
  const departedSave=unpackDB(packDB(db));check(competitionStaffEntry(departedSave,staffRegistrationSeason(departedSave,s.id),mine.id).includes(coach.id),'departure made save unloadable');
  s.done=true;db.worldDate=addDays(s.days[0].date,-1);check(!previewWorldAction(db,staffCommand).ok,'completed event allowed resubmission');

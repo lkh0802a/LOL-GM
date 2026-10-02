@@ -66,10 +66,35 @@ await runEngineFixture(String.raw`(()=>{
  const oldAge=expiry.age;ageStaff(db,new RNG('staff-expiry','staff'));
  check(db.staffPool.includes(expiry)&&expiry.age===oldAge+1&&expiry.history.at(-1).type==='expire','expiry lost identity or aged twice');
  check(ai.staffRoster.some(s=>s.history.some(h=>h.type==='renewal'))&&ai.staffRoster.every(s=>s.contract.until>=db.year),'AI expiry did not use ordinary renewal contracts');
- const retiring=buyer.staffRoster.find(s=>s.role==='analyst');retiring.age=100;const n=buyer.staffRoster.length;
+ db.year++;const retiring=buyer.staffRoster.find(s=>s.role==='analyst');retiring.age=100;const n=buyer.staffRoster.length;
  ageStaff(db,new RNG('staff-retirement','staff'));
  check(db.staffRetired.includes(retiring)&&!locateStaff(db,retiring.id)&&buyer.staffRoster.length<n&&retiring.history.at(-1).type==='retire','retirement silently deleted/replaced managed person');
  const saved=unpackDB(packDB(db));check(!staffStateErrors(saved).length&&saved.staffRetired.some(s=>s.id===retiring.id)&&JSON.stringify(saved.teams[buyer.id].staffReports)===JSON.stringify(buyer.staffReports),'save lost staff contracts/interviews/retired careers');
+ // The declared fictional model must respond to all four confirmed inputs,
+ // without reading hidden skill or inventing absent historical results.
+ const veteran={id:'review',age:65,ambition:50,since:db.year-10,history:[],career:[{year:db.year-1,seasonId:'past',teamId:buyer.id,role:'analyst',series:10,wins:5}]};
+ const baseReview=staffRetirementReview(db,veteran,buyer);
+ check(staffRetirementReview(db,{...veteran,age:70},buyer).probability>baseReview.probability,'age has no retirement effect');
+ check(staffRetirementReview(db,{...veteran,since:db.year-20},buyer).probability>baseReview.probability,'known career has no retirement effect');
+ check(staffRetirementReview(db,{...veteran,ambition:90},buyer).probability<baseReview.probability,'motivation has no retirement effect');
+ check(staffRetirementReview(db,{...veteran,career:[{...veteran.career[0],wins:9}]},buyer).probability<baseReview.probability,'actual recent results have no retirement effect');
+ const idle={...veteran,history:[{type:'expire',year:db.year-3}]};
+ check(staffRetirementReview(db,idle,null).probability>staffRetirementReview(db,idle,buyer).probability,'unemployment has no motivation/retirement effect');
+ check(staffRetirementReview(db,{age:40,ambition:0,history:[]},null).probability===0&&staffRetirementReview(db,{age:65,ambition:50,history:[]},null).series===0,'young staff retired or legacy results invented');
+ const reviewedAge=retiring.age,stableAge=buyer.staffRoster[0].age;ageStaff(db,new RNG('same-year','staff'));check(retiring.age===reviewedAge&&buyer.staffRoster[0].age===stableAge,'annual review aged existing people twice');
+ const freeVeteran=db.staffPool.find(s=>s.ageReviewYear!==db.year)||genStaffMember(new RNG('free-retire','staff'),'analyst');if(!db.staffPool.includes(freeVeteran))db.staffPool.push(freeVeteran);
+ freeVeteran.age=100;const retireIntent={type:'staff.retire',actor:'system',teamId:null,sid:freeVeteran.id},retirePreview=previewWorldAction(db,retireIntent),retireWriter=WORLD_ACTION_HANDLERS['staff.retire'].apply,retireBefore=JSON.stringify(db);
+ check(retirePreview.ok&&!previewWorldAction(db,{...retireIntent,actor:'manager',teamId:buyer.id}).ok,'free staff retirement authority incorrect');
+ WORLD_ACTION_HANDLERS['staff.retire'].apply=(state,c)=>{retireWriter(state,c);throw Error('late retirement failure')};const retireFault=applyWorldAction(db,retirePreview);WORLD_ACTION_HANDLERS['staff.retire'].apply=retireWriter;
+ check(!retireFault.ok&&JSON.stringify(db)===retireBefore&&locateStaff(db,freeVeteran.id).staff===freeVeteran,'free retirement failed identity/history/pool rollback');
+ freeVeteran.ambition=99;check(applyWorldAction(db,retirePreview).reason==='stale_preview','changed motivation accepted stale retirement');
+ check(commitWorldAction(db,retireIntent).ok&&db.staffRetired.includes(freeVeteran)&&!db.staffPool.includes(freeVeteran)&&freeVeteran.history.at(-1).review.motivation===99,'free retirement bypassed history/review gateway');
+ check(unpackDB(packDB(db)).staffRetired.find(s=>s.id===freeVeteran.id).retiredYear===db.year,'free retired identity lost in save');
+ const automaticFree=genStaffMember(new RNG('auto-free-retire','staff'),'scout');automaticFree.age=100;db.staffPool.push(automaticFree);ageStaff(db,new RNG('auto-free-review','staff'));
+ check(automaticFree.age===101&&db.staffRetired.includes(automaticFree)&&automaticFree.history.at(-1).review&&automaticFree.retirementReview.year===db.year,'free annual retirement skipped shared system action');
+ const stints={age:65,ambition:50,history:[{type:'signing',year:db.year-12},{type:'release',year:db.year-10},{type:'signing',year:db.year-2}],since:db.year-2};
+ check(staffRetirementReview(db,stints,buyer).careerYears===4,'career counted unemployed gap or dropped earlier recorded stint');
+ const corruptStaff=JSON.parse(packDB(db));corruptStaff.staffRetired[0].career=[{year:db.year,seasonId:'bad',teamId:buyer.id,role:'analyst',series:1,wins:2}];let corruptRejected=false;try{unpackDB(JSON.stringify(corruptStaff))}catch{corruptRejected=true}check(corruptRejected,'impossible staff results accepted from save');
  const legacy=JSON.parse(packDB(db));const ls=legacy.teams[seller.id].staffRoster[0];delete ls.contract;delete ls.publicEstimate;delete ls.history;delete legacy.teams[seller.id].staffInitialized;
  const migrated=unpackDB(JSON.stringify(legacy)),ms=migrated.teams[seller.id].staffRoster[0];check(ms.contract&&Number.isFinite(ms.publicEstimate)&&ms.history.length===0,'legacy migration fabricated past or omitted current employment');
  const closed=buildWorld(cfg),club=activeTeams(closed,'NA',1)[0],reserves=reserveTeamsOf(closed,club),employee=club.staffRoster[0],claim=staffExitFee(closed,employee);
