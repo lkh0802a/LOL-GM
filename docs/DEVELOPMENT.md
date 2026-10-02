@@ -31,6 +31,70 @@ without continually adding new status documents.
 
 ## Current Phase
 
+### Continued implementation slice — current-patch draft evidence (2026-10-02)
+
+After PR #142 passed its exact-head gate, merged and standalone was synchronized,
+remaining run time allowed a second connected implementation slice. Scope
+estimate: 50 minutes, single worker, baseline `35c86a2`. Actual inspection found
+`newPatch` divides both global/regional counters by three; it does not reset
+them. Existing draft evaluation, First Selection and evidence interpreted those
+mixed effective observations without distinguishing current-patch records.
+
+`currentPatchMetaSamples` derives current-patch picks/wins/bans and regional
+games from existing professional `metaHistory` and its patch index. Recorded
+game-time regions remain authoritative. The derived cache lives only on the
+existing WeakMap index, uses the existing 12-entry patch cache bound, invalidates
+on append/replacement/truncation and does not change saves or raw history.
+Official shallow DB views share the history array's WeakMap-backed index, avoiding
+full historical reindex per view; the focused test proves shared cache identity.
+Legacy counters without recorded patch provenance supply zero attributed games,
+not invented current-patch observations. String-shaped older pick records remain
+supported. Official recording still excludes practice and replay.
+
+Actual draft sample weighting and First Selection now use that same current-patch
+source; First Selection's sample weight uses eligible data analysis expertise.
+Patch strength, observation noise, own research/counter knowledge and registered
+staff effects remain. This is an intentional decision-behavior change, not a
+baseline-parity refactor or a claim of optimal picks. Raw decay counters remain
+for existing patch diagnosis and historical reference. Evidence UI identifies
+the current patch, current global/regional pick/ban observations, missing samples
+and separately labelled mixed/decay reference. Old counts do not inflate current
+statistical sample weight or confidence. Existing bounded analyst/research
+confidence is a simulated interpretation score, not a statistical interval.
+
+Files: `meta.js`, `draft.js`, `draft-analysis.js`, `first-selection.js`, existing
+First Selection acceptance, shared runner count and this guide. A second isolated
+fixture runs real matches and a real patch transition, verifies old counters do
+not change current actual vhat/selection values, then verifies newly recorded
+current games change them. Save, legacy unknown provenance, public actor parity,
+cache hits/invalidation/bounds and historical regional attribution are covered.
+Synthetic injected mixed counters and a synthetic cross-region history row only
+test arithmetic/provenance; they are not played-season or international QA.
+Shared runner now expects exactly 37 fresh contexts for its 38 acceptances;
+compile-once and context isolation guards remain. No seed/budget/history removal.
+Focused First Selection/patch evidence, staff registration/coverage and static
+105-module checks pass. UI-finance-contracts 38/37 isolated VMs,
+calendar-scouting 17, engine regressions and `git diff --check` also pass locally.
+Final-head full Actions including medical core/four seeds/two aggregates/verify
+remains the merge gate.
+No new long100-season, device/mobile/TalkBack QA is started.
+Review strengthened the current-sample contrast: `recordMeta` also updates own
+research, so a detached comparison view holds that prior research/counter state
+fixed while preserving live recorded learning and history. This independently
+isolates sample effects on actual draft/selection. Initial Actions `37066410343`
+is superseded by the strengthened acceptance head and is not final-head evidence.
+
+Precise next slice (estimate 50 minutes): real patch evidence in opponent-intent
+reasoning. Current `draftOpponentIntent` uses generic `staffProfile.analysis`
+rather than opponent specialty and calls managed-club `scoutReport` even though
+it accepts an arbitrary observer side. Recheck those actual call/authority paths,
+then use existing observer-aware mastery evidence and connect revealed series picks,
+public current-patch tendencies and bounded mastery observations to distinct
+reasons/confidence, preserving hidden roles/abilities and manager manual choices.
+Verify causes in legal draft turns, public human/AI/save continuity and history,
+rather than adding a cosmetic confidence badge. If already complete in current
+main, select the next real Item 13–23/D gap; do not infer completion from labels.
+
 ### Current implementation slice — freely negotiated staff duration (2026-10-02)
 
 Scope estimate: 50 minutes, one implementation worker, baseline main `37fbe8b`.
@@ -73,8 +137,10 @@ exact PR head passed: PR #142 head
 `9c1bc52ee23728f7ccf82d84315cb068aa0163c9`, full Actions `37064610607`,
 including medical core, four seeds, both aggregates and `verify`. Exact head
 matched before sequential merge as `bd85a78ea65d22b08f410a74fbf33ec3db8da7c3`;
-standalone HTML rebuilt from integrated main. Long100-season/real-device/
-mobile/TalkBack final QA remains after all feature implementation and playtest
+standalone HTML rebuilt from integrated main.
+Published main `35c86a22ca367a43f756a591ce99b688f40ed7d0` then passed
+complete post-publication CI `37065400906` while the next implementation proceeded.
+Long100-season/real-device/mobile/TalkBack final QA remains after all feature implementation and playtest
 feedback/fixes. This closes the fixed staff-duration discrepancy, not all D07
 or all 23 stages.
 

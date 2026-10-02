@@ -2,6 +2,7 @@
 // Owns match-derived meta history, indexes, filtered queries and champion meta insights.
 
 const META_HISTORY_CACHE=new WeakMap();
+const META_PATCH_SAMPLE_INDEX_CACHE=new WeakMap(); // Official views share append-only recorded history.
 const EMPTY_META_HISTORY=[];
 const META_FILTER_CACHE_LIMIT=64, META_PATCH_SORT_LIMIT=12, PATCH_REPLAY_CACHE_LIMIT=8;
 function patchCache(db){let c=PATCH_CACHE.get(db);if(!c){c=new Map();PATCH_CACHE.set(db,c)}return c}
@@ -40,14 +41,14 @@ function metaHistoryIndex(db){
     if(c.length<rows.length&&c.tail===rows[c.length-1]){
       for(let i=c.length;i<rows.length;i++)metaIndexAddRow(c,rows[i]);
       c.length=rows.length;c.tail=rows[rows.length-1];
-      c.filtered.clear();c.patchSorted.clear();c.facets=null;
+      c.filtered.clear();c.patchSorted.clear();c.patchSamples.clear();c.facets=null;
       return c;
     }
   }
   // Array replacement/truncation or changed tail identity: full safe rebuild.
   c={rows,length:rows.length,tail:rows[rows.length-1],
     byPatch:new Map(),byComp:new Map(),byRegion:new Map(),
-    filtered:new Map(),patchSorted:new Map(),facets:null,
+    filtered:new Map(),patchSorted:new Map(),patchSamples:new Map(),facets:null,
     facetSets:Object.fromEntries(['comp','patch','season','split','league'].map(k=>[k,new Set()]))};
   for(const row of rows)metaIndexAddRow(c,row);
   META_HISTORY_CACHE.set(db,c);return c;
@@ -67,6 +68,27 @@ function metaCacheRemember(cache,key,value,limit){
   cache.set(key,value);
   if(cache.size>limit)cache.delete(cache.keys().next().value);
   return value;
+}
+function currentPatchMetaSamples(db){
+  const rowsRef=db.metaHistory||EMPTY_META_HISTORY,shared=META_PATCH_SAMPLE_INDEX_CACHE.get(rowsRef);
+  if(shared)META_HISTORY_CACHE.set(db,shared);
+  const index=metaHistoryIndex(db),patch=db.patch.id;
+  META_PATCH_SAMPLE_INDEX_CACHE.set(rowsRef,index);
+  if(index.patchSamples.has(patch))return index.patchSamples.get(patch);
+  const rows=index.byPatch.get(patch)||EMPTY_META_HISTORY,stats={},regional={},regionGames={},
+    add=(bag,cid,key)=>{if(typeof cid!=='string')return;const x=bag[cid]||(bag[cid]={p:0,w:0,b:0});x[key]++};
+  for(const row of rows){
+    for(const side of row.sides||[])for(const pick of side.picks||[]){const cid=typeof pick==='string'?pick:pick.champ;add(stats,cid,'p');if(side.win)add(stats,cid,'w')}
+    for(const cid of row.bans||[])add(stats,cid,'b');
+    for(const rid of new Set(row.regions||[])){
+      const bag=regional[rid]||(regional[rid]={});regionGames[rid]=(regionGames[rid]||0)+1;
+      for(const side of row.sides||[]){if(side.region!==rid)continue;for(const pick of side.picks||[]){const cid=typeof pick==='string'?pick:pick.champ;add(bag,cid,'p');if(side.win)add(bag,cid,'w')}}
+      for(const cid of row.bans||[])add(bag,cid,'b');
+    }
+  }
+  // Derived, bounded and never persisted. Unknown legacy patch provenance is
+  // not backfilled from the decay counters or today's team region.
+  return metaCacheRemember(index.patchSamples,patch,{patch,stats,games:rows.length,regional,regionGames},META_PATCH_SORT_LIMIT);
 }
 function metaFilterKey(filter){
   return ['region','patch','comp','season','year','split','league','scope','from','to','position'].map(k=>String(filter[k]??'')).join('|');

@@ -4,12 +4,12 @@ function selectionLineup(db,tid){
   return Object.fromEntries(ROLES.map(r=>[r,starterFor(db,copy,r)]));
 }
 function selectionPatchValues(db,tid,pool){
-  const t=db.teams[tid],prof=staffProfile(t),st=db.metaStats||{},regional=db.regionMetaStats?.[t.region]||{};
+  const t=db.teams[tid],samples=currentPatchMetaSamples(db),data=staffAnalysisFor(t,'data')/100,st=samples.stats,regional=samples.regional[t.region]||{};
   return Object.fromEntries(pool.champs.map(c=>{
     let v=(pool.strengths[c.id]-pool.mn)/(pool.mx-pool.mn||1);
-    for(const [sample,games,weight] of [[st[c.id],db.metaGames,.45],[regional[c.id],db.regionMetaGames?.[t.region],.75]]){
+    for(const [sample,games,weight] of [[st[c.id],samples.games,.45],[regional[c.id],samples.regionGames[t.region],.75]]){
       if(!sample||!games)continue;
-      const n=(sample.p||0)+(sample.b||0),confidence=n/(n+18*(1.35-prof.analysis/100)),wr=((sample.w||0)+2)/((sample.p||0)+4);
+      const n=(sample.p||0)+(sample.b||0),confidence=n/(n+18*(1.35-data)),wr=((sample.w||0)+2)/((sample.p||0)+4);
       v+=(clamp(.5+(wr-.5)*2+(n/games-.1)*.3,0,1)-v)*confidence*weight;
     }
     return [c.id,clamp(v+(t.metaKnowledge?.[c.id]||0)*.08-(t.metaCounter?.[c.id]||0)*.035,0,1)];
