@@ -6625,25 +6625,6 @@ function aiMarketOfferCandidates(db,t,fas,role,budgetRoom,year=db.year){
     .sort((a,b)=>b.v-a.v||a.p.id.localeCompare(b.p.id));
 }
 
-function aiRenewalDecision(db,p,t,rng){
-  const want=aiWantsRenewal(db,p,t),
-    ask=asking(db,p,t.region),
-    room=salaryBudget(db,t)-payroll(db,t)+(p.contract?.salary||0),
-    yrs=contractYearsForPlayer(db,p,rng),
-    proposal=normalizeContractTerms(db,p,t,
-      ask*rng.range(.96,1.08)*(1-medicalContractRisk(db,p)*.4),yrs,{
-        releaseGuaranteeRate:contractGuaranteePolicy(p).preferred,
-        promisedRole:recommendedRosterRole(db,p,t),
-        option:rng.chance(.18)?{type:rng.chance(.55)?'team':'player'}:null
-      });
-  ensureSatisfaction(p);
-  const stay=contractOfferReasonable(db,p,t,proposal,'renewal')&&
-    offerUtility(db,p,t,proposal,{renewal:true})+
-      rng.normal(0,.06)>=offerAcceptanceThreshold(db,p,{kind:'renewal'});
-  return {want,ask,room,yrs,proposal,stay,
-    accepted:want&&proposal.salary<=room&&stay};
-}
-
 function contractMarket(db,rng,rep,ev){
   const year=db.year, size=5+(db.worldConfig.subs||0), w=db.world, mine=w&&w.manage==='manual'?managedRecruitmentTeamId(db):null;
   const imports=t=>teamNonLocalCount(db,t);
@@ -6669,7 +6650,8 @@ function contractMarket(db,rng,rep,ev){
       signMarketContract(db,p,t,decision.proposal.salary,decision.yrs,
         decision.proposal,'renewal','ai');
       rep.resign.push({pid:p.id,team:t.id,salary:decision.proposal.salary,
-        years:decision.yrs,terms:decision.proposal});
+        years:decision.yrs,terms:decision.proposal,
+        representative:decision.representative,negotiationRounds:decision.rounds});
     }else{
       release(t,p);rep.expired.push({pid:p.id,team:t.id,
         why:!decision.want?'재계약 제안 없음':
@@ -6704,18 +6686,27 @@ function contractMarket(db,rng,rep,ev){
         offer=normalizeContractTerms(db,p,t,best.o.sal,yrs,{
           releaseGuaranteeRate:contractGuaranteePolicy(p).preferred,
           promisedRole:best.o.starter?'starter':defaultPromisedRole(db,p,t)});
+      let finalOffer=offer,counterRounds=0;
       if(!contractOfferReasonable(db,p,t,offer,'fa')||
-        offerUtility(db,p,t,offer)<offerAcceptanceThreshold(db,p,{kind:'fa'}))continue;
+        offerUtility(db,p,t,offer)<offerAcceptanceThreshold(db,p,{kind:'fa'})){
+        if(best.o.mine)continue;
+        ensurePlayerAgent(p);
+        const counter=aiRepresentativeCounterTerms(db,p,t,'fa',offer,
+          Math.min(budgetLeft[t.id],best.o.sal*1.15),t.finance.cash);
+        if(!counter.terms)continue;
+        finalOffer=counter.terms;counterRounds=1+counter.rounds;
+      }
       const prev=starterFor(db,t,p.role);
       // Multiple market offers can be based on the same earlier import count.
       // Recheck with the shared action validator and skip an obsolete offer.
       const signed=commitWorldAction(db,{type:'player.sign',pid:p.id,teamId:t.id,
-        salary:best.o.sal,years:yrs,kind:'fa',actor:best.o.mine?'manager':'ai',
-        terms:{releaseGuaranteeRate:offer.releaseGuaranteeRate}});
+        salary:best.o.mine?best.o.sal:finalOffer.salary,
+        years:best.o.mine?yrs:finalOffer.years,kind:'fa',actor:best.o.mine?'manager':'ai',
+        terms:best.o.mine?{releaseGuaranteeRate:offer.releaseGuaranteeRate}:finalOffer});
       if(!signed.ok)continue;
       if(best.o.mine)w.marketLog.push(`${p.name}: ${best.o.t.id===mine?'영입 성공':'다른 구단 선택'}`);
-      budgetLeft[t.id]-=best.o.sal;
-      rep.signings.push({pid:p.id,team:t.id,salary:best.o.sal,years:yrs,rookie:p.age<=19&&!p.career.length,import:!projectedPlayerIsLocal(db,p,t),offers:os.length,out:null});
+      budgetLeft[t.id]-=finalOffer.salary;
+      rep.signings.push({pid:p.id,team:t.id,salary:finalOffer.salary,years:finalOffer.years,rookie:p.age<=19&&!p.career.length,import:!projectedPlayerIsLocal(db,p,t),offers:os.length,out:null,representative:playerAgent(p)?.id||null,negotiationRounds:counterRounds});
       if(t.roster.length>size+1){const bench=t.roster.map(id=>db.players[id]).filter(x=>x!==p&&!x.contract?.medicalReplacement&&starterFor(db,t,x.role)!==x).sort((a,b)=>playerValue(db,a,t)-playerValue(db,b,t))[0];
         if(bench){release(t,bench);rep.signings[rep.signings.length-1].out=bench.id}}
       else if(prev)rep.signings[rep.signings.length-1].out=null;
@@ -6866,14 +6857,16 @@ function contractMutualTerminationTerms(db,p){
 // ===== LOL GM: AI permanent-transfer personal terms =====
 function buyoutTransferError(player,fee){const c=normalizeBuyoutClause(player.contract?.buyout);return c?.type==='release'&&fee+1e-8<c.amount?worldActionError('release_clause','구단 거부 불가 바이아웃 전액이 필요합니다'):null}
 // AI uses the same personal-terms decision and actual available payroll.
-function aiTransferPersonalTerms(db,p,t,salaryRoom){
+function aiTransferPersonalTerms(db,p,t,salaryRoom,cashRoom=t?.finance?.cash??0){
   if(!Number.isFinite(salaryRoom)||salaryRoom<0)return null;
   const retained=contractTransferConsent(db,p,t);
   if(!retained.ok)return null;
   if(retained.willing&&p.contract.salary<=salaryRoom)
     return {kind:'retained',salary:p.contract.salary,consent:retained};
   // Normalize on detached entities: legacy career/lineup defaults may write.
-  const player=JSON.parse(JSON.stringify(p)),team=JSON.parse(JSON.stringify(t)),
+  const player=JSON.parse(JSON.stringify(p)),team=JSON.parse(JSON.stringify(t));
+  ensurePlayerAgent(player);
+  const
     view={...db,players:{...db.players,[p.id]:player},
       teams:{...db.teams,[t.id]:team},_marketDemandCache:{}},
     ask=asking(view,player,team.region),years=contractDurationPolicy(view,player,team).preferred,
@@ -6885,6 +6878,12 @@ function aiTransferPersonalTerms(db,p,t,salaryRoom){
     if(terms.salary>salaryRoom)continue;
     const consent=contractTransferConsent(db,p,t,terms);
     if(consent.willing)return {kind:'new',salary:terms.salary,years,terms,consent};
+    const counter=aiRepresentativeCounterTerms(view,player,team,'transfer',terms,
+      Math.min(salaryRoom,ask*1.15),cashRoom);
+    if(counter.terms){const counterConsent=contractTransferConsent(db,p,t,counter.terms);
+      if(counterConsent.willing)return {kind:'new',salary:counter.terms.salary,
+        years:counter.terms.years,terms:counter.terms,consent:counterConsent,
+        rounds:1+counter.rounds,representative:counter.representative};}
   }
   return null;
 }
@@ -6907,7 +6906,8 @@ function aiMarketPermanentTransfers(db,rng,rep,mine){
     // A reciprocal move may be refused. Never spend its hypothetical wage saving.
     const cand=activeTeams(db,t.region,1).filter(o=>o.id!==t.id&&o.id!==mine).map(o=>starterFor(db,o,role)).filter(p=>p&&p.contract&&!contractedMoveError(db,p)&&aiMarketValue(db,p,t)>playerValue(db,cur,t)+5)
       .map(p=>({p,fee:sellerTransferAsk(db,p,db.teams[p.team])})).filter(x=>x.fee<=t.finance.cash*0.6)
-      .map(x=>({...x,personal:aiTransferPersonalTerms(db,x.p,t,aiTransferSalaryRoom(db,t,x.fee))}))
+      .map(x=>({...x,personal:aiTransferPersonalTerms(db,x.p,t,
+        aiTransferSalaryRoom(db,t,x.fee),Math.max(0,t.finance.cash-x.fee))}))
       .filter(x=>x.personal).sort((a,b)=>aiMarketValue(db,b.p,t)-aiMarketValue(db,a.p,t))[0];
     if(!cand)continue;
     const seller=db.teams[cand.p.team];
@@ -6919,7 +6919,9 @@ function aiMarketPermanentTransfers(db,rng,rep,mine){
       ...(personal.kind==='new'?{kind:'transfer',salary:personal.salary,
         years:personal.years,terms:personal.terms}:{})});deals++;
     rep.transfers.push({pid:cand.p.id,from:seller.id,to:t.id,fee:cand.fee,
-      personalTerms:personal.kind,salary:cand.p.contract.salary});
+      personalTerms:personal.kind,salary:cand.p.contract.salary,
+      representative:personal.representative||playerAgent(cand.p)?.id||null,
+      negotiationRounds:personal.rounds||0});
     if(t.roster.length>size&&contractTransferConsent(db,cur,seller).willing){commitMarketPlayerAction(db,{type:'player.transfer',pid:cur.id,fromId:t.id,teamId:seller.id,fee:0,actor:'ai'});rep.transfers[rep.transfers.length-1].swap=cur.id}
   }
 }
@@ -7435,6 +7437,22 @@ function negotiationCounter(db,neg,offer){
     buyout=demandedBuyout?{amount:Math.min(offeredBuyout?.amount||demandedBuyout.amount,demandedBuyout.amount),type:demandedBuyout.type}:offeredBuyout;
   return normalizeContractTerms(db,p,t,Math.max(offer.salary*1.025,blend(offer.salary,d.salary,.68)),years,{releaseGuaranteeRate:Math.max(contractGuaranteeRate(offer),contractGuaranteeRate(d)),signingBonus:Math.max(offer.signingBonus||0,blend(offer.signingBonus||0,d.signingBonus||0,.72)),bonuses:{performance:Math.max(offer.bonuses?.performance||0,(d.bonuses?.performance||0)*.78),title:Math.max(offer.bonuses?.title||0,(d.bonuses?.title||0)*.78),international:Math.max(offer.bonuses?.international||0,(d.bonuses?.international||0)*.78)},promisedRole:role,option,buyout});
 }
+function aiRepresentativeCounterTerms(db,p,t,kind,offer,maxSalary,cashRoom=Infinity){
+  const demand=negotiationDemand(db,p,t,kind,null,[]),representative=playerAgent(p),
+    maxRounds=Math.max(0,negotiationRoundLimit(p)-1),threshold=offerAcceptanceThreshold(db,p,{kind});
+  let counter=offer,rounds=0;
+  for(let round=1;round<=maxRounds;round++){
+    rounds=round;
+    counter=negotiationCounter(db,{demand,pid:p.id,teamId:t.id},counter);
+    if(counter.salary>maxSalary+1e-8||(counter.signingBonus||0)>cashRoom+1e-8)break;
+    const utility=offerUtility(db,p,t,counter,{renewal:kind==='renewal'}),
+      reasonable=!['fa','early_fa','renewal','transfer'].includes(kind)||
+        contractOfferReasonable(db,p,t,counter,kind);
+    if(reasonable&&utility>=threshold)return {terms:counter,rounds:round,
+      demand,representative:representative?.id||null};
+  }
+  return {terms:null,rounds,demand,representative:representative?.id||null};
+}
 function finalizeNegotiation(db,neg,terms){
   const p=db.players[neg.pid],t=db.teams[neg.teamId];
   if(!p||!t)return {ok:false,msg:'협상 선수 또는 구단이 존재하지 않습니다'};
@@ -7857,16 +7875,53 @@ function aiRunEarlyContactOffers(db){
             releaseGuaranteeRate:contractGuaranteePolicy(p).preferred,
             promisedRole:defaultPromisedRole(db,p,t)});
         if(negotiationBudgetError(db,p,t,offer,'early_fa'))return null;
-        return {t,offer,utility:offerUtility(db,p,t,offer)};
+        let terms=offer,rounds=1,utility=offerUtility(db,p,t,terms);
+        if(!contractOfferReasonable(db,p,t,terms,'early_fa')||
+          utility<offerAcceptanceThreshold(db,p,{kind:'early_fa'})){
+          ensurePlayerAgent(p);
+          const counter=aiRepresentativeCounterTerms(db,p,t,'early_fa',terms,room,t.finance.cash);
+          if(!counter.terms||negotiationBudgetError(db,p,t,counter.terms,'early_fa'))return null;
+          terms=counter.terms;rounds+=counter.rounds;utility=offerUtility(db,p,t,terms);
+        }
+        return {t,offer:terms,utility,rounds,representative:playerAgent(p)?.id||null};
       }).filter(Boolean).sort((a,b)=>b.utility-a.utility||
         a.t.id.localeCompare(b.t.id));
     const best=candidates[0];
     if(!best||!contractOfferReasonable(db,p,best.t,best.offer,'early_fa')||
       best.utility<offerAcceptanceThreshold(db,p,{kind:'early_fa'}))continue;
     const r=recordContractAgreement(db,p,best.t,best.offer,'early_fa','ai');
-    if(r.ok)rows.push(r.agreement);
+    if(r.ok)rows.push({...r.agreement,representative:best.representative,
+      negotiationRounds:best.rounds});
   }
   return rows;
+}
+
+function aiRenewalDecision(db,p,t,rng){
+  const want=aiWantsRenewal(db,p,t),
+    ask=asking(db,p,t.region),
+    room=salaryBudget(db,t)-payroll(db,t)+(p.contract?.salary||0),
+    yrs=contractYearsForPlayer(db,p,rng),
+    initialProposal=normalizeContractTerms(db,p,t,
+      ask*rng.range(.96,1.08)*(1-medicalContractRisk(db,p)*.4),yrs,{
+        releaseGuaranteeRate:contractGuaranteePolicy(p).preferred,
+        promisedRole:recommendedRosterRole(db,p,t),
+        option:rng.chance(.18)?{type:rng.chance(.55)?'team':'player'}:null
+      });
+  ensureSatisfaction(p);
+  let proposal=initialProposal;
+  const noise=rng.normal(0,.06),threshold=offerAcceptanceThreshold(db,p,{kind:'renewal'});
+  let stay=contractOfferReasonable(db,p,t,proposal,'renewal')&&
+    offerUtility(db,p,t,proposal,{renewal:true})+noise>=threshold,rounds=1;
+  if(want&&!stay&&proposal.salary<=room){
+    ensurePlayerAgent(p);
+    const counter=aiRepresentativeCounterTerms(db,p,t,'renewal',proposal,room,t.finance.cash);
+    rounds+=counter.rounds;
+    if(counter.terms){proposal=counter.terms;stay=contractOfferReasonable(db,p,t,proposal,'renewal')&&
+      offerUtility(db,p,t,proposal,{renewal:true})+noise>=threshold}
+  }
+  return {want,ask,room,yrs:proposal.years,proposal,stay,rounds,
+    representative:playerAgent(p)?.id||null,
+    accepted:want&&proposal.salary<=room&&stay};
 }
 
 /* ==== FILE: contract-agreement.js ==== */
