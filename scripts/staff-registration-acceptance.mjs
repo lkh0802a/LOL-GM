@@ -96,3 +96,76 @@ await runEngineFixture(String.raw`(()=>{
  check(unpackDB(packDB(db)),'international entries failed restore');
  console.log('STAFF_REGISTRATION_GAMEPLAY: PASS (official draft, practice, AI command, authority, policy snapshot, UI, departed-staff history and saves)');
 })();`,{timeout:30000,filename:'staff-registration-acceptance.fixture.js',setupSources:[await artifactSource('ui-registration.js')]});
+
+await runEngineFixture(String.raw`(()=>{
+ const check=(x,m)=>{if(!x)throw Error('STAFF_COVERAGE '+m)};
+ const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:4,system:'franchise',staffRegistration:{max:2}})];cfg.internationals=[];
+ const db=buildWorld(cfg),[mine,ai]=activeTeams(db,'NA',1);db.manager.teamId=mine.id;startWorldSeason(db,mine.id,'staff-coverage');
+ const s=Object.values(db.world.seasons)[0],rng=new RNG('staff-coverage'),make=(id,role,estimate,focus)=>{
+  const x=genStaffMember(rng,role,estimate);x.id=id;x.rating=estimate;x.publicEstimate=estimate;x.specialties={};
+  if(focus===undefined)delete x.analysisFocus;else x.analysisFocus=focus;
+  initializeStaffContract(db,ai,x);return x;
+ };
+ // The highest raw estimates are a club-only trainer and duplicated strategy.
+ const trainer=make('Scoverage-training','developmentCoach',99),coach=make('Scoverage-strategy','strategicCoach',90),duplicate=make('Scoverage-duplicate','strategicCoach',89),analyst=make('Scoverage-analysis','analyst',80);
+ ai.staffRoster=[trainer,duplicate,coach,analyst];ai.staffReports={};
+ const before=JSON.stringify(db),plan=aiCompetitionStaffPlan(db,s,ai);
+ check(plan.join(',')===[coach.id,analyst.id].join(','),'raw estimate defeated complementary coverage');
+ check(JSON.stringify(db)===before,'read-only planning mutated state');
+ ai.staffRoster.reverse();check(JSON.stringify(aiCompetitionStaffPlan(db,s,ai))===JSON.stringify(plan),'roster ordering changed deterministic selection');
+ coach.rating=1;analyst.rating=1;duplicate.rating=99;
+ check(JSON.stringify(aiCompetitionStaffPlan(db,s,ai))===JSON.stringify(plan),'selection read hidden primary truth');
+ coach.rating=90;analyst.rating=80;
+ const managed=JSON.stringify(s.staffEntries[mine.id]);aiReviewCompetitionStaffRegistrations(db);
+ check(JSON.stringify(competitionStaffEntry(db,s,ai.id))===JSON.stringify(plan)&&s.staffEntryRecords[ai.id].source==='ai','actual AI review did not use the common writer');
+ const records=JSON.stringify(s.staffEntryRecords);aiReviewCompetitionStaffRegistrations(db);check(JSON.stringify(s.staffEntryRecords)===records,'unchanged plan rewrote history');
+ check(JSON.stringify(s.staffEntries[mine.id])===managed,'AI altered manual entry');
+ const command={type:'competition.staff-register',actor:'ai',seasonId:s.id,teamId:ai.id,staffIds:plan},preview=previewWorldAction(db,command);
+ ai.staffReports[analyst.id]={year:db.year,estimate:5,min:1,max:10};
+ check(applyWorldAction(db,preview).reason==='stale_preview','changed observed evidence accepted stale AI plan');
+ check(aiCompetitionStaffPlan(db,s,ai).includes(duplicate.id)&&!aiCompetitionStaffPlan(db,s,ai).includes(analyst.id),'fresh report did not change actual planner preference');
+ delete ai.staffReports[analyst.id];
+ const focusPreview=previewWorldAction(db,command);analyst.analysisFocus='meta';check(applyWorldAction(db,focusPreview).reason==='stale_preview','changed public analysis context accepted stale plan');delete analyst.analysisFocus;
+ const specialization=previewWorldAction(db,command);coach.specialties={topCoach:90,midCoach:90,adcCoach:90,supCoach:90};
+ check(applyWorldAction(db,specialization).reason==='stale_preview'&&aiCompetitionStaffPlan(db,s,ai)[0]===duplicate.id,'dispersion ignored by planning/stale guard');
+ const hiddenSecondary=JSON.stringify(aiCompetitionStaffPlan(db,s,ai));coach.specialties={topCoach:1,midCoach:1,adcCoach:1,supCoach:1};
+ check(JSON.stringify(aiCompetitionStaffPlan(db,s,ai))===hiddenSecondary,'selection read hidden secondary magnitudes');coach.specialties={};
+ const meta=make('Scoverage-meta','analyst',90,'meta'),metaCopy=make('Scoverage-meta-copy','analyst',89,'meta'),data=make('Scoverage-data','analyst',80,'data');
+ ai.staffRoster=[metaCopy,data,meta];check(aiCompetitionStaffPlan(db,s,ai).join(',')===[meta.id,data.id].join(','),'duplicate analysis displaced complementary context');
+ const secondary=make('Scoverage-secondary','topCoach',99);secondary.specialties={analyst:1};
+ ai.staffRoster=[trainer,secondary];check(aiCompetitionStaffPlan(db,s,ai).join(',')===secondary.id,'public secondary role failed to support an official context');
+ const scout=make('Scoverage-scout','scout',80),tieA=make('Scoverage-tie-a','strategicCoach',80),tieB=make('Scoverage-tie-b','strategicCoach',80);
+ ai.staffRoster=[tieB,tieA];s.staffRegistrationPolicy.max=1;check(aiCompetitionStaffPlan(db,s,ai).join(',')===tieA.id,'equal contribution tie was not ID-stable');s.staffRegistrationPolicy.max=2;
+ ai.staffRoster=[trainer,scout];check(aiCompetitionStaffPlan(db,s,ai).join(',')===scout.id,'official scouting context omitted');
+ const player=genPlayer(db,new RNG('coverage-observed-player'),{region:mine.region,role:'TOP',age:22,base:65});signContract(db,player,mine,1,2,{});
+ const probe={db,teamIds:[ai.id,mine.id],ctx:{byTeam:{}},vhat:[{},{}]},cid=Object.keys(db.patch.champions)[0];
+ const scouted=draftMasteryObservation(probe,0,1,player,cid);ai.staffRoster=[trainer];
+ check(scouted.confidence>draftMasteryObservation(probe,0,1,player,cid).confidence,'scout selection had no real draft observation effect');
+ ai.staffRoster=[trainer];check(aiCompetitionStaffPlan(db,s,ai).length===0,'club-only role invented on-site quota');
+ ai.staffRoster=[coach,analyst];coach.retired=true;analyst.contract.until=db.year-1;check(aiCompetitionStaffPlan(db,s,ai).length===0,'retired/expired employees selected');
+ delete coach.retired;analyst.contract.until=db.year+1;
+ s.staffRegistrationPolicy.max=0;aiReviewCompetitionStaffRegistrations(db);check(competitionStaffEntry(db,s,ai.id).length===0,'published zero cap ignored');s.staffRegistrationPolicy.max=2;
+ check(aiCompetitionStaffPlan(db,{comp:'unpublished'},ai).length===0,'unpublished policy invented a cap');
+ aiReviewCompetitionStaffRegistrations(db);
+ const original=JSON.stringify(db),handler=WORLD_ACTION_HANDLERS['competition.staff-register'],writer=handler.apply;
+ handler.apply=(state,c)=>{writer(state,c);throw Error('late selection failure')};
+ const fault=applyWorldAction(db,previewWorldAction(db,{...command,staffIds:[]}));handler.apply=writer;
+ check(!fault.ok&&JSON.stringify(db)===original,'AI late failure lost registration/history or changed employment');
+ // Real official sessions consume the selected staff, not a planner-only score.
+ for(const t of [mine,ai]){for(const role of ROLES){const p=genPlayer(db,new RNG(t.id+role,'coverage-player'),{region:t.region,role,age:22,base:65});signContract(db,p,t,1,2,{})}initializeDepthChart(db,t,true);delete t.registration}
+ initializeOfficialRegistrations(db);
+ const session=createSeriesSession(db,mine.id,ai.id,1,'coverage-official',{compId:s.comp,metaContext:{season:s.id}}),view=seriesOfficialView(db,session),draft=createDraftSession(view,[mine.id,ai.id],new RNG('coverage-draft'),session.ctx);
+ while(draftTurn(draft)?.side!==1)draftApplyChoice(draft,draftAiChoice(draft));
+ check(view.teams[ai.id].staffRoster.length===2&&draftStaffAdvice(draft,1).available&&staffAnalysisFor(view.teams[ai.id],'data')>42,'observed AI plan did not reach real official draft');
+ check(ai.staffRoster.length===2&&seriesOfficialView(db,{...session,opt:{...session.opt,practice:true}})===db,'planning changed employment/practice staffing');
+ const stage=db.competitions[s.comp].stages[0],match={a:mine.id,b:ai.id,bo:1,id:'coverage-field-game'},result=simulateScheduledSeries(db,s,s.days[0],match,stage);
+ check(result.lines.length===10&&result.rec.games.length===1,'planned official roster failed scheduled match');commitScheduledSeries(db,s,match,result);
+ check(coach.career[0].series===1&&analyst.career[0].series===1,'AI selected staff missing from actual career');
+ const restored=unpackDB(packDB(db)),rs=staffRegistrationSeason(restored,s.id);
+ check(JSON.stringify(competitionStaffEntry(restored,rs,ai.id))===JSON.stringify(plan)&&JSON.stringify(restored.teams[ai.id].staffRoster)===JSON.stringify(ai.staffRoster),'save lost planned entry/employment');
+ db.worldDate=s.days[0].date;const locked=JSON.stringify(s.staffEntries[ai.id]);analyst.publicEstimate=1;aiReviewCompetitionStaffRegistrations(db);check(JSON.stringify(s.staffEntries[ai.id])===locked,'observed change bypassed deadline');
+ check(commitWorldAction(db,{type:'staff.release',actor:'ai',teamId:ai.id,sid:analyst.id}).ok,'AI departure failed');
+ check(competitionStaffEntry(db,s,ai.id).includes(analyst.id)&&!competitionStaffMatchRoster(db,s,ai).includes(analyst),'departure erased submission or retained field effect');
+ check(unpackDB(packDB(db)),'saved history invalid after planned staff departed');
+ console.log('STAFF_COVERAGE: PASS (public-only selection, complementarity, dispersion, shared writer, actual draft/match, zero/unpublished cap, locks, stale/late rollback, departure/history/save)');
+})();`,{timeout:30000,filename:'staff-coverage-acceptance.fixture.js'});
