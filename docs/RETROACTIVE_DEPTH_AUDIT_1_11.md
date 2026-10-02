@@ -122,3 +122,14 @@ frozen restoration are covered. This is a short synthetic measurement with
 benchmark-only GC, not resolution evidence for the preserved36-season failure,
 actual100seasons or mobile memory. Budgets and all records remain unchanged.
 See DEVELOPMENT.md for measurements, remaining costs and validation status.
+
+### D06 consultation implementation update (2026-10-02)
+
+Annual club preferences now affect the existing offseason decisions for splits,
+playoff Bo and standings aggregation, with saved advisory evidence and retained
+office authority. The human club submits explicitly; current-region/year opinions
+expire naturally and academy teams cannot speak for their parent. Focused
+acceptance includes actual opposing outcomes under identical office inputs,
+rollback/save, cooldown and confirmation. This closes a sporting consultation
+feature gap, not all governance functionality or deferred long-career/mobile
+acceptance. Full roadmap implementation and user feedback precede final checks.

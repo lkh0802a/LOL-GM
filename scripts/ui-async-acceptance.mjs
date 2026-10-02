@@ -103,6 +103,7 @@ const later=()=>new Promise(resolve=>setImmediate(resolve));
     nextDate:()=> '2030-02-01',
     managedTeamId:()=> 'T',
     bindSeasonTab:()=>{},
+    bindOfficeOpinionControls:()=>{},
     playWorldDay:world=>{world.world.count++;days++;return {played:[],pending:false}},
     openPendingOfficialDraft:()=>{official++},
     simulateMatch:()=>{matches++;return {winner:0,duration:30,goldHist:[0],firsts:{dragon:0,tower:0,blood:0},sides:[{barons:0,kills:4,towersTaken:3,dragons:[]},{barons:0,kills:3,towersTaken:1,dragons:[]}],log:[]}},
