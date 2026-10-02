@@ -1,5 +1,9 @@
 // Staff employment uses the same preview, finance and rollback gate as players.
 const STAFF_EXIT_GUARANTEE=.5; // One common staff compensation policy; not an individually negotiated clause.
+// Freely negotiated whole years; bounds protect JS year/money arithmetic,
+// rather than inventing a league-wide maximum duration. Salary is annual.
+function staffTermYearsValid(years,salary){return Number.isSafeInteger(years)&&years>=1&&Number.isFinite(salary)&&salary>0&&Number.isSafeInteger(Math.ceil(salary*10)*years)}
+function staffTermUntil(from,years){const until=from+years-1;return Number.isSafeInteger(from)&&from>0&&Number.isSafeInteger(until)?until:null}
 function initializeStaffContract(db,t,s){
   if(!s.contract)s.contract={salary:staffSalary(s,psTeam(db,t)),from:db.year,until:db.year+1,years:2};
   s.history=s.history||[];s.since=s.since??db.year;
@@ -62,8 +66,9 @@ function validateStaffAction(db,a){
   let salary=null,years=null,fee=0,poachFee=0,releaseFee=0;
   if(a.type==='staff.sign'||a.type==='staff.renew'){
     salary=Number(a.salary);years=Number(a.years);
-    if(!Number.isInteger(years)||years<1||years>3||!Number.isFinite(salary)||salary<=0||salary>10000)return worldActionError('invalid_terms','계약 기간은 1~3년, 연봉은 양수여야 합니다');
+    if(!Number.isFinite(salary)||salary<=0||salary>10000)return worldActionError('invalid_terms','연봉은 양수이며 기존 계약 금액 범위 안이어야 합니다');
     salary=Math.round(salary*10)/10;
+    if(!staffTermYearsValid(years,salary)||staffTermUntil(db.year,years)===null)return worldActionError('invalid_terms','기간은 1년 이상 정수, 연봉은 0.1 이상이어야 하며 종료 연도·총액을 안전하게 계산할 수 있어야 합니다');
     const consent=staffConsent(db,t,s,salary);if(!consent.ok)return consent;
     poachFee=a.type==='staff.sign'&&found.team?staffExitFee(db,s):0;releaseFee=replacement?staffExitFee(db,replacement):0;fee=poachFee+releaseFee;
     if(!Number.isFinite(t.finance?.cash)||t.finance.cash<fee+salary)return worldActionError('insufficient_cash','위약금과 1년 연봉을 감당할 자금이 부족합니다');
@@ -97,7 +102,7 @@ function applyStaffAction(db,c){
       else db.staffPool.splice(db.staffPool.indexOf(s),1);
       ensureStaffRoster(t).push(s);s.since=db.year;
     }
-    s.contract={salary:c.salary,years:c.years,from:db.year,until:db.year+c.years-1};
+    s.contract={salary:c.salary,years:c.years,from:db.year,until:staffTermUntil(db.year,c.years)};
     recordStaffEvent(db,s,c.type==='staff.renew'?'renewal':'signing',{from:c.fromId,to:t.id,previousSince,salary:c.salary,until:s.contract.until,fee:c.fee,poachFee:c.poachFee,releaseFee:c.releaseFee,replaceSid:c.replaceSid});
   }else{
     if(c.fee)payFinancePrepaid(t,'staffSeverance',c.fee);
@@ -115,7 +120,7 @@ function staffStateErrors(db){
   for(const t of Object.values(db.teams))for(const s of t.staffRoster||[]){
     if(t.active===false)errors.push('해체 구단의 고용 스태프: '+s.id);
     if(ids.has(s.id))errors.push('중복 스태프 소속: '+s.id);ids.add(s.id);
-    if(!STAFF_ROLES[s.role]||s.retired||!s.contract||!Number.isFinite(s.contract.salary)||s.contract.salary<=0||!Number.isInteger(s.contract.until)||!Number.isInteger(s.contract.years)||s.contract.years<1||s.contract.years>3)errors.push('잘못된 스태프 계약: '+s.id);
+    if(!STAFF_ROLES[s.role]||s.retired||!s.contract||!Number.isSafeInteger(s.contract.until)||s.contract.until<1||!staffTermYearsValid(s.contract.years,s.contract.salary))errors.push('잘못된 스태프 계약: '+s.id);
   }
   for(const s of db.staffPool||[]){if(ids.has(s.id)||s.contract||s.retired)errors.push('잘못된 자유 스태프: '+s.id);ids.add(s.id)}
   for(const s of db.staffRetired||[]){if(ids.has(s.id)||s.contract||!s.retired)errors.push('잘못된 은퇴 스태프: '+s.id);ids.add(s.id)}

@@ -23,7 +23,7 @@ function bindClubOfficeControls(act){
     const sid=b.dataset.hireStaff,t=managedTeam(DB),found=locateStaff(DB,sid);if(!found)return;
     const preview=previewWorldAction(DB,{type:found.team?.id===t.id?'staff.renew':'staff.sign',actor:'manager',teamId:t.id,sid,replaceSid:document.querySelector(`[data-staff-replace="${sid}"]`)?.value||undefined,years:Number(document.querySelector(`[data-staff-years="${sid}"]`).value),salary:Number(document.querySelector(`[data-staff-salary="${sid}"]`).value)});
     if(!preview.ok){act(preview.errors.join(' · '));return}
-    if(!confirm(found.staff.name+' 계약\n연봉 '+money(preview.command.salary)+' · '+preview.command.years+'년\n위약금·해지 보상 '+money(preview.command.fee)+(preview.command.replaceSid?'\n교체: '+locateStaff(DB,preview.command.replaceSid).staff.name:'')+'\n확정할까요?'))return;
+    if(!confirm(found.staff.name+' 계약\n연봉 '+money(preview.command.salary)+' · '+preview.command.years+'년 · '+staffTermUntil(DB.year,preview.command.years)+'년까지\n총 약정 연봉 '+money(preview.command.salary*preview.command.years)+' (일시 선납 아님)\n위약금·해지 보상 '+money(preview.command.fee)+(preview.command.replaceSid?'\n교체: '+locateStaff(DB,preview.command.replaceSid).staff.name:'')+'\n계약 해지 시 남은 연봉의 '+Math.round(STAFF_EXIT_GUARANTEE*100)+'% 보상\n확정할까요?'))return;
     const result=applyWorldAction(DB,preview);act(result.ok?'스태프 계약 완료':result.errors.join(' · '));
   });
   document.querySelectorAll('[data-fire-staff]').forEach(b=>b.onclick=()=>{const s=teamStaffMembers(managedTeam(DB)).find(x=>x.id===b.dataset.fireStaff);if(s&&confirm(`${STAFF_ROLES[s.role]} ${s.name}의 계약을 해지할까요?\n해지 보상 ${money(staffExitFee(DB,s))}`))act(mReleaseStaff(DB,b.dataset.fireStaff))});
@@ -38,7 +38,7 @@ function staffEmploymentCard(t,s,own){
     ${(s.career||[]).slice(-2).map(r=>`<p class="hint">${r.year} · ${esc(DB.teams[r.teamId]?.name||r.teamId)} · 현장 ${r.series}시리즈 ${r.wins}승 (팀 결과)</p>`).join('')}
     ${!own?`<button class="ghost" data-interview-staff="${s.id}"${seen.interviewed?' disabled':''}>${seen.interviewed?'면접 완료':'면접'}</button>`:''}
     ${!own&&!staffCanHire(t,s)?`<label>교체 대상<select data-staff-replace="${s.id}"><option value="">대상 선택</option>${teamStaffMembers(t,staffDepartment(s.role)).map(x=>`<option value="${x.id}">${esc(x.name)} · ${STAFF_ROLES[x.role]}</option>`).join('')}</select></label>`:''}
-    ${canOffer?`<div class="controls"><label>연봉 (억)<input type="number" min="0.1" step="0.1" inputmode="decimal" data-staff-salary="${s.id}" value="${staffAskingSalary(DB,t,s)}"></label><label>기간<select data-staff-years="${s.id}">${[1,2,3].map(y=>`<option value="${y}"${y===2?' selected':''}>${y}년</option>`).join('')}</select></label><button class="primary" data-hire-staff="${s.id}">${own?'재계약':'계약 제안'}</button></div>`:''}
+    ${canOffer?`<div class="controls"><label>연봉 (억)<input type="number" min="0.1" step="0.1" inputmode="decimal" data-staff-salary="${s.id}" value="${staffAskingSalary(DB,t,s)}"></label><label>기간 (년)<input type="number" min="1" step="1" inputmode="numeric" data-staff-years="${s.id}" value="2"></label><button class="primary" data-hire-staff="${s.id}">${own?'재계약':'계약 제안'}</button></div><p class="hint">기간은 1년 이상 정수로 협상합니다. 긴 계약은 남은 연봉과 해지 보상 부담이 커집니다.</p>`:''}
     ${own?`<button class="ghost" data-fire-staff="${s.id}">계약 해지 · ${money(staffExitFee(DB,s))}</button>`:''}
     ${(s.history||[]).slice(-3).map(h=>`<p class="hint">${h.year} · ${({signing:'계약',renewal:'재계약',release:'해지',expire:'만료',retire:'은퇴'})[h.type]||esc(h.type)}${h.to?' · '+esc(DB.teams[h.to]?.name||h.to):''}</p>`).join('')}</details>`;
 }

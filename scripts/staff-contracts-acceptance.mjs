@@ -7,11 +7,20 @@ await runEngineFixture(String.raw`(()=>{
  const db=buildWorld(cfg),[buyer,seller,ai]=activeTeams(db,'NA',1);db.manager.teamId=buyer.id;
  for(const t of activeTeams(db))t.finance.cash=1000;
  const free=db.staffPool.find(s=>s.role==='analyst');
- const intent={type:'staff.sign',actor:'manager',teamId:buyer.id,sid:free.id,years:3,salary:staffAskingSalary(db,buyer,free)};
+ const intent={type:'staff.sign',actor:'manager',teamId:buyer.id,sid:free.id,years:7,salary:staffAskingSalary(db,buyer,free)};
  const before=JSON.stringify(db),preview=previewWorldAction(db,intent);
  check(preview.ok&&JSON.stringify(db)===before,'preview mutated employment/finance');
  const cash=buyer.finance.cash;check(applyWorldAction(db,preview).ok,'free contract failed');
- check(buyer.staffRoster.includes(free)&&!db.staffPool.includes(free)&&free.contract.until===db.year+2&&buyer.finance.cash===cash,'FA identity/terms or wage charged up front');
+ check(buyer.staffRoster.includes(free)&&!db.staffPool.includes(free)&&free.contract.until===db.year+6&&free.contract.years===7&&buyer.finance.cash===cash,'negotiated FA identity/terms or wage charged up front');
+ check(staffExitFee(db,free)===Math.round(free.contract.salary*7*STAFF_EXIT_GUARANTEE*10)/10&&unpackDB(packDB(db)).teams[buyer.id].staffRoster.find(s=>s.id===free.id).contract.years===7,'long-term liability/save still used three-year limit');
+ const termStable=JSON.stringify(db);for(const years of [0,-1,1.5,NaN,Infinity,Number.MAX_SAFE_INTEGER,Number.MAX_SAFE_INTEGER+1]){
+  check(previewWorldAction(db,{...intent,sid:db.staffPool.find(s=>s.role==='analyst').id,years}).reason==='invalid_terms','invalid/unsafe duration accepted: '+years);
+ }
+ check(JSON.stringify(db)===termStable,'invalid term mutated state');
+ const centuryCandidate=db.staffPool.find(s=>s.role==='analyst'),century=previewWorldAction(db,{...intent,sid:centuryCandidate.id,years:100,salary:staffAskingSalary(db,buyer,centuryCandidate)});
+ check(century.ok,'shared offer writer rejected valid long duration: '+(century.errors||[]).join(' · '));
+ check(previewWorldAction(db,{...intent,sid:db.staffPool.find(s=>s.role==='analyst').id,salary:.01}).reason==='invalid_terms','rounded zero salary accepted');
+ check(!staffTermYearsValid(1e12,10000)&&staffTermYearsValid(100,1)&&staffTermUntil(db.year,100)===db.year+99,'arithmetic bounds became an arbitrary term cap');
  check(free.history.at(-1).type==='signing'&&Math.abs(staffCost(db,buyer)-(2*psTeam(db,buyer)+buyer.staffRoster.reduce((v,s)=>v+staffSalary(s,psTeam(db,buyer)),0)))<1e-8,'career or fixed payroll missing');
  const publicBefore=staffObservation(db,buyer,free);free.rating=90;
  const focusBefore=free.analysisFocus;free.analysisFocus='opponent';
@@ -24,17 +33,17 @@ await runEngineFixture(String.raw`(()=>{
  const report=staffObservation(db,buyer,free);free.rating=35;
  check(report.max-report.min<publicBefore.max-publicBefore.min&&staffObservation(db,buyer,free).estimate===report.estimate,'stored interview changed with hidden rating');
  check(!staffObservation(db,seller,free).interviewed,'interview leaked between clubs');
- const renew={...intent,type:'staff.renew',salary:staffAskingSalary(db,buyer,free)};
+ const renew={...intent,type:'staff.renew',years:5,salary:staffAskingSalary(db,buyer,free)};
  check(!previewWorldAction(db,renew).ok,'renewal shortened a non-final-year contract');
  db.year=free.contract.until;const renewed=commitWorldAction(db,renew);
- check(renewed.ok&&free.contract.until===db.year+2&&free.history.at(-1).type==='renewal','period renewal not recorded');
+ check(renewed.ok&&free.contract.until===db.year+4&&free.contract.years===5&&free.history.at(-1).type==='renewal','negotiated renewal not recorded');
  const released=commitWorldAction(db,{type:'staff.release',actor:'manager',teamId:buyer.id,sid:free.id});
  check(free.analysisFocus===focusBefore,'release lost analysis focus');
  check(released.ok&&db.staffPool.includes(free)&&!free.contract&&free.history.at(-1).type==='release','release did not return same person to market');
  check(Math.abs(buyer.finance.cash-(cash-released.fee))<1e-8&&buyer.finance.prepaid.staffSeverance===released.fee,'severance not charged once');
  const target=seller.staffRoster.find(s=>s.role==='scout');target.contract.until=db.year+1;target.age=35;
  seller.reputation=99;buyer.reputation=10;
- const poach={type:'staff.sign',actor:'manager',teamId:buyer.id,sid:target.id,years:2,salary:staffAskingSalary(db,buyer,target)};
+ const poach={type:'staff.sign',actor:'manager',teamId:buyer.id,sid:target.id,years:8,salary:staffAskingSalary(db,buyer,target)};
  check(previewWorldAction(db,poach).reason==='move_refused','employed person moved without consent');
  poach.salary=Math.round(target.contract.salary*3*10)/10;
  const total=buyer.finance.cash+seller.finance.cash,offer=previewWorldAction(db,poach);
@@ -45,6 +54,7 @@ await runEngineFixture(String.raw`(()=>{
  const fault=applyWorldAction(db,stable);handler.apply=writer;
  check(!fault.ok&&JSON.stringify(db)===original&&locateStaff(db,target.id).staff===staffRef,'late failure did not restore person/cash/pool/history');
  check(commitWorldAction(db,poach).ok&&locateStaff(db,target.id).team===buyer&&Math.abs(buyer.finance.cash+seller.finance.cash-total)<1e-8,'poaching did not conserve cash or employment');
+ check(target.contract.years===8&&target.contract.until===db.year+7,'poach silently shortened negotiated term');
  check(target.history.at(-1).from===seller.id&&target.history.at(-1).to===buyer.id,'career lost employer transition');
  check(previewWorldAction(db,{...poach,actor:'ai',teamId:ai.id}).reason==='protected_staff','AI removed managed staff without approval');
  const capRng=new RNG('staff-cap','staff');while(staffDeptCount(buyer,'scout')<STAFF_DEPT_LIMITS.scout){const extra=genStaffMember(capRng,'scout');initializeStaffContract(db,buyer,extra);buyer.staffRoster.push(extra)}
@@ -59,7 +69,13 @@ await runEngineFixture(String.raw`(()=>{
  const fullCount=fullAi.staffRoster.length;fullAi.finance.cash=1000;check(aiManageStaff(db,fullAi,fullRng)&&fullAi.staffRoster.some(s=>s.history.at(-1)?.replaceSid)&&fullAi.staffRoster.length===fullCount&&!staffStateErrors(db).length,'production AI replacement threw or exceeded a full department');
  const poorClub=activeTeams(db,'NA',1)[3],expensivePlayer=Object.values(db.players).find(p=>!p.team&&!p.retired);signContract(db,expensivePlayer,poorClub,500,1);poorClub.finance.cash=100;
  check(previewWorldAction(db,{...intent,actor:'ai',teamId:poorClub.id,sid:free.id,salary:staffAskingSalary(db,poorClub,free)}).reason==='staff_budget','staff contract bypassed forecast payroll budget');
- const poor=previewWorldAction(db,{...intent,sid:free.id,teamId:ai.id,actor:'ai',years:4});check(poor.reason==='invalid_terms','four-year staff contract accepted');
+ const aiLong=genStaffMember(new RNG('long-staff-ai'),'performanceCoach',40);db.staffPool.push(aiLong);
+ const aiLongIntent={type:'staff.sign',actor:'ai',teamId:ai.id,sid:aiLong.id,years:12,salary:staffAskingSalary(db,ai,aiLong)},aiLongPreview=previewWorldAction(db,aiLongIntent),aiBefore=JSON.stringify(db);
+ check(aiLongPreview.ok,'AI rejected duration accepted for manager');
+ const aiSalary=aiLongPreview.command.salary;aiLong.publicEstimate+=1;check(applyWorldAction(db,aiLongPreview).reason==='stale_preview','long AI contract bypassed stale source guard');aiLong.publicEstimate-=1;
+ check(commitWorldAction(db,aiLongIntent).ok&&aiLong.contract.years===12&&aiLong.contract.salary===aiSalary&&ai.finance.cash===JSON.parse(aiBefore).teams[ai.id].finance.cash,'AI negotiated writer changed term/prepaid salary');
+ const corruptTerm=JSON.parse(packDB(db));corruptTerm.teams[ai.id].staffRoster.find(s=>s.id===aiLong.id).contract.years=Number.MAX_SAFE_INTEGER;
+ let invalidTermRejected=false;try{unpackDB(JSON.stringify(corruptTerm))}catch{invalidTermRejected=true}check(invalidTermRejected,'unsafe total term loaded from save');
  const candidate=db.staffPool.find(s=>s.role==='analyst');ai.finance.cash=0;
  check(previewWorldAction(db,{...intent,sid:candidate.id,teamId:ai.id,actor:'ai',salary:staffAskingSalary(db,ai,candidate)}).reason==='insufficient_cash','AI spent absent cash');ai.finance.cash=1000;
  const elite=genStaffMember(new RNG('staff-ai-candidate','staff'),'analyst',95);elite.rating=95;elite.publicEstimate=95;elite.specialties={scout:90};db.staffPool.push(elite);
@@ -101,6 +117,7 @@ await runEngineFixture(String.raw`(()=>{
  const oldAge=expiry.age;ageStaff(db,new RNG('staff-expiry','staff'));
  check(db.staffPool.includes(expiry)&&expiry.age===oldAge+1&&expiry.history.at(-1).type==='expire','expiry lost identity or aged twice');
  check(ai.staffRoster.some(s=>s.history.some(h=>h.type==='renewal'))&&ai.staffRoster.every(s=>s.contract.until>=db.year),'AI expiry did not use ordinary renewal contracts');
+ check(aiLong.contract.years===12&&aiLong.history.filter(h=>h.type==='signing').length===1&&!aiLong.history.some(h=>h.type==='renewal'),'annual review prematurely renewed/shortened long AI term');
  db.year++;const retiring=buyer.staffRoster.find(s=>s.role==='analyst');retiring.age=100;const n=buyer.staffRoster.length;
  ageStaff(db,new RNG('staff-retirement','staff'));
  check(db.staffRetired.includes(retiring)&&!locateStaff(db,retiring.id)&&buyer.staffRoster.length<n&&retiring.history.at(-1).type==='retire','retirement silently deleted/replaced managed person');
@@ -136,6 +153,7 @@ await runEngineFixture(String.raw`(()=>{
  const legacy=JSON.parse(packDB(db));const ls=legacy.teams[seller.id].staffRoster[0];delete ls.contract;delete ls.publicEstimate;delete ls.history;delete legacy.teams[seller.id].staffInitialized;
  const migrated=unpackDB(JSON.stringify(legacy)),ms=migrated.teams[seller.id].staffRoster[0];check(ms.contract&&Number.isFinite(ms.publicEstimate)&&ms.history.length===0,'legacy migration fabricated past or omitted current employment');
  const closed=buildWorld(cfg),club=activeTeams(closed,'NA',1)[0],reserves=reserveTeamsOf(closed,club),employee=club.staffRoster[0],claim=staffExitFee(closed,employee);
+ employee.contract.years=9;employee.contract.until=closed.year+8;const longClaim=staffExitFee(closed,employee);
  employee.name='<img onerror="staff-creditor">';club.finance.cash=2;for(const r of reserves)r.finance.cash=0;
  const closeIntent={type:'club.close',actor:'system',teamId:club.id},closePreview=previewWorldAction(closed,closeIntent),closeBefore=JSON.stringify(closed);
  check(closePreview.ok&&JSON.stringify(closed)===closeBefore&&closePreview.changes[0].settlement.items.some(r=>r.sid===employee.id),'closure preview omitted staff creditor');
@@ -145,15 +163,16 @@ await runEngineFixture(String.raw`(()=>{
  employee.contract.salary+=.1;check(applyWorldAction(closed,closePreview).reason==='stale_preview','closure accepted changed staff contract');employee.contract.salary-=.1;
  check(commitWorldAction(closed,closeIntent).ok,'staff creditor closure failed');
  const paid=club.finance.closureSettlement.items.find(r=>r.sid===employee.id);
- check(paid.amount===claim&&paid.unpaidAmount>0&&Math.abs(paid.paidAmount+paid.unpaidAmount-claim)<1e-8&&club.staffRoster.length===0&&locateStaff(closed,employee.id).team===null,'closure lost staff identity or unpaid compensation');
+ check(longClaim>claim&&paid.amount===longClaim&&paid.unpaidAmount>0&&Math.abs(paid.paidAmount+paid.unpaidAmount-longClaim)<1e-8&&club.staffRoster.length===0&&locateStaff(closed,employee.id).team===null,'closure lost long-term staff identity or unpaid compensation');
  check(!staffStateErrors(closed).length&&!staffStateErrors(unpackDB(packDB(closed))).length,'closed employment survived restoration');
  DB=closed;const closureHtml=financePanel(club);check(closureHtml.includes('선수·스태프별 지급 내역')&&closureHtml.includes('&lt;img')&&!closureHtml.includes(employee.name),'closure UI omitted/failed to escape staff creditor');
  const noRepeat=JSON.stringify(closed);commitWorldAction(closed,closeIntent);check(JSON.stringify(closed)===noRepeat,'closure paid staff twice');
  DB=db;const card=staffEmploymentCard(buyer,free,false);check(card.includes('추정')&&card.includes('data-staff-years')&&!card.includes('능력 '+free.rating),'staff card leaked exact hidden ability');
- const button={dataset:{hireStaff:free.id}},fields={'data-staff-years':{value:'2'},'data-staff-salary':{value:String(staffAskingSalary(db,buyer,free))}};
+ const button={dataset:{hireStaff:free.id}},fields={'data-staff-years':{value:'6'},'data-staff-salary':{value:String(staffAskingSalary(db,buyer,free))}};
  document={querySelectorAll:selector=>selector==='[data-hire-staff]'?[button]:[],querySelector:selector=>Object.entries(fields).find(([key])=>selector.includes(key))?.[1]};
  let message='';confirm=()=>false;bindClubOfficeControls(text=>{message=text});const beforeCancel=JSON.stringify(db);button.onclick();check(JSON.stringify(db)===beforeCancel,'cancelled UI staff offer mutated state');
- confirm=()=>true;button.onclick();check(locateStaff(db,free.id).team===buyer&&message==='스태프 계약 완료','UI did not execute the previewed offer');
+ let confirmation='';confirm=text=>{confirmation=text;return true};button.onclick();check(locateStaff(db,free.id).team===buyer&&free.contract.years===6&&message==='스태프 계약 완료','UI did not execute negotiated years');
+ check(confirmation.includes('6년')&&confirmation.includes('총 약정 연봉')&&confirmation.includes('선납 아님')&&confirmation.includes('50%'),'UI confirmation omitted duration/liability distinction');
  console.log('STAFF_CONTRACTS_ACCEPTANCE PASS (FA, renewal, interviews, specialties, consent, cash conservation, authority, rollback, expiry, retirement, saves)');
 })();`,{setupSources:[app.match(/^const esc=.*$/m)[0],managerUi,regionUi,ui]});
 assert(!/能力|능력 \$\{[xs]\.rating\}/.test(ui));
