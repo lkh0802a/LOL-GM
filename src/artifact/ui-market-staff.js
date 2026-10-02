@@ -32,7 +32,7 @@ function staffEmploymentCard(t,s,own){
   const seen=staffObservation(DB,t,s),employer=locateStaff(DB,s.id)?.team,canOffer=!own||s.contract?.until<=DB.year;
   return `<details class="cfgcard"><summary>${esc(s.name)} · ${STAFF_ROLES[s.role]} · 추정 ${seen.min}~${seen.max}</summary>
     <p>${s.age}세 · ${employer?esc(employer.name):'자유 계약'}${s.contract?' · '+s.contract.until+'년까지 · 연봉 '+money(s.contract.salary):''}</p>
-    <p>보조 전문 분야: ${staffSecondaryRoles(s).map(r=>STAFF_ROLES[r]).join(' · ')||'없음'} · 전문분야가 많을수록 각 효과가 분산됩니다.</p>
+    <p>보조 전문 분야: ${staffSecondaryRoles(s).map(r=>STAFF_ROLES[r]).join(' · ')||'없음'} · 전문분야가 많을수록 각 효과가 분산됩니다.${s.role==='analyst'||s.specialties?.analyst>0?' · 분석 전문: '+(ANALYSIS_CONTEXTS[s.analysisFocus]||'범용'):''}</p>
     ${staffRegionalKnowledgeSummary(s)}
     ${s.retirementReview?`<p class="hint">${s.retirementReview.year}년 활동 검토 · ${staffRetirementExplanation(s.retirementReview)} (가상 엔진 판단, 은퇴 확정 예고가 아님)</p>`:''}
     ${(s.career||[]).slice(-2).map(r=>`<p class="hint">${r.year} · ${esc(DB.teams[r.teamId]?.name||r.teamId)} · 현장 ${r.series}시리즈 ${r.wins}승 (팀 결과)</p>`).join('')}

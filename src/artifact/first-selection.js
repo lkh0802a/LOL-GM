@@ -42,7 +42,7 @@ function firstSelectionEvidence(db,tid,opp,ctx={}){
     exhausted:pool.champs.length?used.size/Math.max(1,pool.champs.length):0};
 }
 function draftPrefs(db,tid,ctx,g,bestOf,rng,opp=null){
-  const t=db.teams[tid],prof=staffProfile(t),an=prof.analysis/100,noise=()=>rng.normal(0,.03*(1.1-an)),e=firstSelectionEvidence(db,tid,opp,ctx),fl=ctx.fearless?Math.min(1,(ctx.used||[]).length/40):0;
+  const t=db.teams[tid],prof=staffProfile(t),an=staffAnalysisFor(t,'meta')/100,noise=()=>rng.normal(0,.03*(1.1-an)),e=firstSelectionEvidence(db,tid,opp,ctx),fl=ctx.fearless?Math.min(1,(ctx.used||[]).length/40):0;
   return {blue:BAL.blue+noise(),red:noise(),
     first:BAL.first+e.scarcity*.09+e.contested*.05+e.flex*.025+noise(),
     last:.02+prof.draft/100*.03+e.counter*.09+e.breadth*.025+fl*e.breadth*.025+noise(),fl,evidence:e};

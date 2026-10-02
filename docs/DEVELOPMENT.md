@@ -31,6 +31,51 @@ without continually adding new status documents.
 
 ## Current Phase
 
+### Current implementation slice — analyst context specialization (2026-10-02)
+
+Scope estimate: 50 minutes, single worker, baseline `db2a152`. Rechecked clean
+main, origin, open PRs and fixed staff rules; only unrelated historical #27/#28
+remain. Explicit optional `analysisFocus` distinguishes opponent, meta and data.
+New generated analysts receive a deterministic ID-derived focus without changing
+other RNG draws. Legacy missing focus remains generic and numerically neutral.
+Context contribution uses existing specialty dispersion and duplicate diminishing
+returns, then virtual matching 1.2/nonmatching 0.75 and existing bounds.
+
+Opponent expertise affects real committed-match observation learning; meta affects
+draft evaluation noise, recommendations and First Selection; data affects public
+sample weight and draft evidence confidence. Existing scrim analysis bonus stays
+in both meta/data paths. Official registered views remain authoritative. Inspection
+found first learning could be assigned only on the shallow filtered team view;
+keep eligible staff calculation on the view but write learned state to real team.
+No history backfill, hidden opponent truth, new fees or administrative clicks.
+
+AI public evaluation weights the currently undersupported analysis contexts;
+true ratings are not used in hiring comparison. UI displays focus or generic,
+including secondary analyst expertise. Employment/save validation preserves known
+focus and rejects malformed explicit values; department cap 4 and existing
+contract/rollback writers stay in use.
+
+Files: `staff.js`, `staff-contracts.js`, `meta.js`, `draft.js`, `draft-analysis.js`,
+`first-selection.js`, `ui-market-staff.js`, existing staff contract/registration
+acceptances and `STAFF_RULES.md`. Tests cover context contrast, legacy equality,
+public AI complementarity, saved focus, malformed values, release retention,
+actual draft vhat/advice/evidence, observed match learning, human/AI parity and
+save persistence. Initial evidence test read two states sharing current employee
+references after changing focus; capture evidence at each actual appointment
+boundary rather than comparing both under the same later focus. No production
+threshold or budget changed for that fixture correction. CI/head/merge evidence
+will be recorded at delivery. Long100-season/device/mobile/TalkBack QA deferred.
+
+Precise next slice (estimate 50 minutes): observed AI competition staff allocation.
+`aiReviewCompetitionStaffRegistrations` currently sorts only public raw estimate
+and takes the first cap; this can fill a scarce official list with duplicated
+training/scouting expertise while excluding complementary strategy/analysis.
+Use observed allocated role contributions and published event constraints to
+score marginal lineup coverage, keep identical registration command/locks and
+managed manual authority, and validate real official draft/match effects, cap,
+departure/stale rollback, save/history and current-head CI. Do not change the
+employment roster or fabricate a required adviser quota; recheck latest PRs first.
+
 ### Current implementation slice — staff multi-specialty dispersion (2026-10-02)
 
 Scope estimate: 50 minutes, single worker, baseline `5af4ee4`. Rechecked clean
@@ -77,15 +122,7 @@ per-player damage difference (as the existing controlled skill-patch acceptance
 already measures). No engine CC multiplier, budget, sample count or production
 record was changed to hide this failure; gold/duration differences remain recorded.
 
-Precise next slice (estimate 50 minutes): analyst context specialization. The
-confirmed staff rules distinguish opponent, draft/meta and data analysis, but
-`staffProfile` currently aggregates all analysts into one analysis score. Recheck
-current PRs/rules, add explicit bounded virtual analysis expertise and select the
-relevant contribution at opponent-observation versus draft/meta evidence paths.
-Preserve analyst cap 4, existing registered-staff views, observed hiring, source
-privacy and legacy neutral behavior; cover real contrasting context effects,
-employment, AI, save and rollback. Split at a natural context boundary if the full
-connection exceeds 55 minutes. No new subtype code or long QA is left running.
+The analyst-context continuation is implemented in the newer slice above.
 
 ### Current implementation slice — position coaching / champion learning (2026-10-02)
 

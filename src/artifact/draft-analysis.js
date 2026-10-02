@@ -21,7 +21,7 @@ function draftMasteryObservation(state,observerSide,targetSide,p,cid){
   return {value,confidence,sources};
 }
 function draftMetaEvidence(state,side,cid){
-  const db=state.db,team=db.teams[state.teamIds[side]],rid=team.region,gst=(db.metaStats||{})[cid],rst=((db.regionMetaStats||{})[rid]||{})[cid],globalSample=gst?(gst.p||0)+(gst.b||0):0,regionalSample=rst?(rst.p||0)+(rst.b||0):0,study=clamp(((team.metaKnowledge||{})[cid]||0),0,1),analysis=staffProfile(team).analysis,sources=[];
+  const db=state.db,team=db.teams[state.teamIds[side]],rid=team.region,gst=(db.metaStats||{})[cid],rst=((db.regionMetaStats||{})[rid]||{})[cid],globalSample=gst?(gst.p||0)+(gst.b||0):0,regionalSample=rst?(rst.p||0)+(rst.b||0):0,study=clamp(((team.metaKnowledge||{})[cid]||0),0,1),analysis=staffAnalysisFor(team,'data'),sources=[];
   if(regionalSample)sources.push((db.regions[rid]?.short||rid)+' 프로 표본 '+regionalSample);
   if(globalSample)sources.push('글로벌 프로 표본 '+globalSample);
   if(study>.01)sources.push('구단 챔피언 연구 '+Math.round(study*100));

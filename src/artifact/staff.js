@@ -5,8 +5,14 @@ const STAFF_SECONDARY_WEIGHT=.35; // Secondary expertise supplements, rather tha
 function staffSecondaryRoles(s){return Object.keys(s.specialties||{}).filter(r=>r!==s.role&&Object.hasOwn(STAFF_ROLES,r)&&Number.isFinite(s.specialties[r])&&s.specialties[r]>0)}
 function staffSpecialtyAllocation(s){return 1/(1+STAFF_SECONDARY_WEIGHT*staffSecondaryRoles(s).length)}
 function staffRoleAbility(s,role){const raw=role===s.role?(s.rating||50):staffSecondaryRoles(s).includes(role)?s.specialties[role]*STAFF_SECONDARY_WEIGHT:0;return clamp(raw*staffSpecialtyAllocation(s),0,99)}
-function staffObservedPrimary(db,t,s){return staffObservation(db,t,s).estimate*staffSpecialtyAllocation(s)}
-function staffAggregate(ms,role){const xs=(ms||[]).filter(Boolean).map(s=>role?staffRoleAbility(s,role):s.rating||50).sort((a,b)=>b-a);if(!xs.length)return 0;const weights=[1,.28,.16,.1,.07,.05];let v=0;for(let i=0;i<xs.length;i++)v+=xs[i]*(weights[i]||.03);return clamp(v,0,99)}
+const ANALYSIS_CONTEXTS={opponent:'상대 분석',meta:'밴픽/메타',data:'데이터 분석'};
+function staffAnalysisMultiplier(s,context){return s.analysisFocus===undefined?1:s.analysisFocus===context?1.2:.75}
+function staffAnalysisAbility(s,context){return clamp(staffRoleAbility(s,'analyst')*staffAnalysisMultiplier(s,context),0,99)}
+function staffAnalysisFor(t,context){const xs=staffByRole(t,'analyst').map(s=>staffAnalysisAbility(s,context)).sort((a,b)=>b-a);return clamp(42+staffWeightedValues(xs)*.52,35,96)}
+function staffAnalysisHiringWeights(db,t){const members=teamStaffMembers(t).filter(s=>s.role==='analyst');return Object.fromEntries(Object.keys(ANALYSIS_CONTEXTS).map(k=>[k,1/(50+members.reduce((n,s)=>n+staffObservation(db,t,s).estimate*staffSpecialtyAllocation(s)*staffAnalysisMultiplier(s,k),0))]))}
+function staffObservedPrimary(db,t,s){const base=staffObservation(db,t,s).estimate*staffSpecialtyAllocation(s);if(s.role!=='analyst')return base;const weights=staffAnalysisHiringWeights(db,t),total=Object.values(weights).reduce((n,v)=>n+v,0);return base*Object.entries(weights).reduce((n,[k,v])=>n+staffAnalysisMultiplier(s,k)*v,0)/total}
+function staffWeightedValues(xs){const weights=[1,.28,.16,.1,.07,.05];return clamp(xs.reduce((n,v,i)=>n+v*(weights[i]||.03),0),0,99)}
+function staffAggregate(ms,role){return staffWeightedValues((ms||[]).filter(Boolean).map(s=>role?staffRoleAbility(s,role):s.rating||50).sort((a,b)=>b-a))}
 function staffByRole(t,role){return teamStaffMembers(t).filter(s=>s.role===role||s.specialties?.[role]>0)}
 function positionCoachRole(role){return {TOP:'topCoach',JGL:'jglCoach',MID:'midCoach',ADC:'adcCoach',SUP:'supCoach'}[role]||null}
 function roleCoachRating(t,role){const key=positionCoachRole(role);return key?staffAggregate(staffByRole(t,key),key):0}
@@ -50,7 +56,7 @@ function migrateLegacyStaffState(db){
 function teamStaffMembers(t,dept=null){const xs=ensureStaffRoster(t);return dept?xs.filter(s=>staffDepartment(s.role)===dept):xs}
 function staffDeptCount(t,dept){return teamStaffMembers(t,dept).length}
 function staffCanHire(t,s){const d=staffDepartment(s.role);return staffDeptCount(t,d)<(STAFF_DEPT_LIMITS[d]||0)}
-function genStaffMember(rng,role,base=60){const nm=rng.pick(NICK_A)+rng.pick(NICK_B),rating=Math.round(clamp(base+rng.normal(0,9),35,95)),secondary=rng.pick(Object.keys(STAFF_ROLES).filter(r=>r!==role));return {id:'S'+hashStr(role+nm+rng.int(0,99999)),name:nm.charAt(0).toUpperCase()+nm.slice(1),role,department:staffDepartment(role),rating,publicEstimate:Math.round(clamp(rating+rng.range(-10,10),1,100)),age:rng.int(27,52),specialties:{[secondary]:Math.round(clamp(rating+rng.normal(-8,7),25,90))},ambition:rng.int(25,85),history:[]}}
+function genStaffMember(rng,role,base=60){const nm=rng.pick(NICK_A)+rng.pick(NICK_B),rating=Math.round(clamp(base+rng.normal(0,9),35,95)),secondary=rng.pick(Object.keys(STAFF_ROLES).filter(r=>r!==role)),s={id:'S'+hashStr(role+nm+rng.int(0,99999)),name:nm.charAt(0).toUpperCase()+nm.slice(1),role,department:staffDepartment(role),rating,publicEstimate:Math.round(clamp(rating+rng.range(-10,10),1,100)),age:rng.int(27,52),specialties:{[secondary]:Math.round(clamp(rating+rng.normal(-8,7),25,90))},ambition:rng.int(25,85),history:[]};if(role==='analyst')s.analysisFocus=Object.keys(ANALYSIS_CONTEXTS)[hashStr(s.id+'|analysis-focus')%3];return s}
 function ensureTeamStaff(db,t,rng){
   const roster=ensureStaffRoster(t),base=clamp((db.regions[t.region]?.strength||62)-4,50,72),need={strategicCoach:1,developmentCoach:1,performanceCoach:1,analyst:1,scout:2};
   if(t.staffInitialized)return roster;
