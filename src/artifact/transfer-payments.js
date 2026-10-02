@@ -105,6 +105,7 @@ function processTransferPayments(db){
       pid:d.pid,fromId:d.fromId,teamId:d.teamId,dealId:d.id});
     if(!result.ok)throw new Error((result.errors||[]).join(' · '));
   }
+  processClubEstateRecoveries(db);
 }
 function transferPaymentExposure(t){
   const deals=transferDealRows(t).filter(d=>d.teamId===t.id);

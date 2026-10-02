@@ -162,6 +162,7 @@ const maintainabilityBudgets = {
   'player-loans.js': 14000,
   'player-loan-market.js': 6000,
   'transfer-payments.js': 11000,
+  'finance-estate.js': 6000,
   'transfer-market-rules.js': 3000,
   'loan-purchase.js': 10000,
   'local-service.js': 11000,

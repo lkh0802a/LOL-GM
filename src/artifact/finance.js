@@ -23,13 +23,13 @@ function payFinancePrepaid(t,key,amount){
   if(!FINANCE_PREPAID_KEYS.includes(key)||key==='transferReceived'||!Number.isFinite(amount)||amount<0)
     throw new Error('잘못된 선지급 지출 항목');
   if(!t?.finance)throw new Error('구단 재정 정보가 없습니다');
-  t.finance.cash=Math.round((t.finance.cash-amount)*10)/10;
+  t.finance.cash=t.finance.closureSettlement?t.finance.cash-amount:Math.round((t.finance.cash-amount)*10)/10;
   recordFinancePrepaid(t,key,amount);
 }
 function receiveFinancePrepaidTransfer(t,amount){
   if(!Number.isFinite(amount)||amount<0)throw new Error('잘못된 이적료 수입');
   if(!t?.finance)throw new Error('구단 재정 정보가 없습니다');
-  t.finance.cash=Math.round((t.finance.cash+amount)*10)/10;
+  t.finance.cash=t.finance.closureSettlement?t.finance.cash+amount:Math.round((t.finance.cash+amount)*10)/10;
   recordFinancePrepaid(t,'transferReceived',amount);
 }
 function payMedicalReplacementWage(t,amount){

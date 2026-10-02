@@ -6,6 +6,7 @@ export const MUTATION_OWNERSHIP={
   'contract-window.js':{},
   'contracts.js':{assign:1},
   'finance.js':{cash:6,obligation:1},
+  'finance-estate.js':{cash:1,obligation:1},
   'medical.js':{},
   'office.js':{},
   'offseason.js':{remove:1},
