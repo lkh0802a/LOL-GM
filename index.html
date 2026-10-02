@@ -8093,8 +8093,7 @@ function rolePromiseActionSnapshot(db,a){
     usage:p?.usage?JSON.parse(JSON.stringify(p.usage)):null,
     promise:p?.rolePromise?JSON.parse(JSON.stringify(p.rolePromise)):null};
 }
-WORLD_ACTION_HANDLERS['player.promise']={
-  validate(db,a){
+function validateRolePromiseOwner(db,a){
     const p=db.players[a.pid],t=db.teams[a.teamId];
     if(!p||p.loan||p.retired||!t||t.active===false||p.team!==t.id||!p.contract||
       p.contract.until<db.year||p.contract.medicalReplacement)
@@ -8103,32 +8102,83 @@ WORLD_ACTION_HANDLERS['player.promise']={
       a.actor==='ai'&&db.world?.manage==='manual'&&managerControlsSquad(db,t))
       return worldActionError('unauthorized','관리하는 선수의 역할 약속만 결정할 수 있습니다');
     if(!SQUAD_ROLES.includes(a.role))return worldActionError('invalid_terms','유효한 역할이 필요합니다');
+    return {ok:true,pid:p.id,teamId:t.id,role:a.role,until:p.contract.until};
+}
+WORLD_ACTION_HANDLERS['player.promise']={
+  validate(db,a){
+    const checked=validateRolePromiseOwner(db,a);if(!checked.ok)return checked;
+    const p=db.players[a.pid];
     if(oralRolePromiseStatus(db,p))
       return worldActionError('active_promise','기존 구두 약속은 새 약속으로 초기화할 수 없습니다');
     const floor=Math.max(SQUAD_ROLE_ORDER[p.contract.promisedRole]??0,
       SQUAD_ROLE_ORDER[p.rosterRole]??0);
     if(SQUAD_ROLE_ORDER[a.role]<=floor)
       return worldActionError('player_consent','현재 역할과 계약보다 높은 기회를 약속해야 합니다');
-    return {ok:true,pid:p.id,teamId:t.id,role:a.role,until:p.contract.until};
+    return checked;
   },
   canonical(db,a,v){return {type:a.type,actor:a.actor,pid:v.pid,teamId:v.teamId,
     role:v.role,until:v.until}},
   snapshot:rolePromiseActionSnapshot,
   changes(db,a){return [{pid:a.pid,role:a.role,until:a.until,
     expected:expectedPlayShare({rosterRole:a.role},db.teams[a.teamId])}]},
-  apply(db,a){
+  apply:applyOralRolePromise
+};
+function applyOralRolePromise(db,a,eventType='role_promise',detail={}){
     const p=db.players[a.pid],u=p.usage?.year===db.year?p.usage:null;
     p.rolePromise={role:a.role,teamId:a.teamId,until:a.until,issuer:a.actor,
       start:{year:db.year,date:db.worldDate||null,games:u?.games||0,
         teamGames:u?.teamGames||0,unavailableTeamGames:u?.unavailableTeamGames||0}};
-    recordPlayerEvent(p,'role_promise',db.year,{role:a.role,team:a.teamId,
-      until:a.until,date:db.worldDate,source:a.actor});
+    recordPlayerEvent(p,eventType,db.year,{role:a.role,team:a.teamId,
+      until:a.until,date:db.worldDate,source:a.actor,...detail});
     return {promise:p.rolePromise};
+}
+function oralRoleRevisionConsent(db,p,t,role){
+  const player=JSON.parse(JSON.stringify(p)),team=JSON.parse(JSON.stringify(t)),
+    view={...db,players:{...db.players,[p.id]:player},teams:{...db.teams,[t.id]:team},_marketDemandCache:{}},
+    terms={...player.contract,years:Math.max(1,player.contract.until-db.year+1),
+      signingBonus:0,promisedRole:role},
+    utility=offerUtility(view,player,team,terms,{renewal:true}),
+    threshold=offerAcceptanceThreshold(view,player,{kind:'renewal'}),
+    willing=contractOfferReasonable(view,player,team,terms,'renewal')&&
+      Number.isFinite(utility)&&utility>=threshold;
+  return {willing,utility,threshold,representative:playerAgent(player)?.id||null};
+}
+WORLD_ACTION_HANDLERS['player.promise-revise']={
+  validate(db,a){
+    const checked=validateRolePromiseOwner(db,a);if(!checked.ok)return checked;
+    const p=db.players[a.pid],status=oralRolePromiseStatus(db,p);
+    if(!status||SQUAD_ROLE_ORDER[a.role]>=SQUAD_ROLE_ORDER[status.role])
+      return worldActionError('invalid_revision','현재 구두 약속보다 낮은 역할을 재협상해야 합니다');
+    if(SQUAD_ROLE_ORDER[a.role]<(SQUAD_ROLE_ORDER[p.contract.promisedRole]??0))
+      return worldActionError('contract_protected','계약에 보장된 역할은 계약 재협상이 필요합니다');
+    const consent=oralRoleRevisionConsent(db,p,db.teams[a.teamId],a.role);
+    if(!consent.willing)return worldActionError('player_consent','선수가 역할 축소를 거절했습니다. 기존 약속을 이행하거나 계약을 재협상하세요');
+    return {...checked,fromRole:status.role,consent};
+  },
+  canonical(db,a,v){return {type:a.type,actor:a.actor,pid:v.pid,teamId:v.teamId,
+    role:v.role,until:v.until,fromRole:v.fromRole}},
+  snapshot(db,a){return {...rolePromiseActionSnapshot(db,a),
+    consent:oralRoleRevisionConsent(db,db.players[a.pid],db.teams[a.teamId],a.role)}},
+  changes(db,a){return [{pid:a.pid,fromRole:a.fromRole,role:a.role,until:a.until,
+    prior:oralRolePromiseStatus(db,db.players[a.pid]),
+    expected:expectedPlayShare({rosterRole:a.role},db.teams[a.teamId])}]},
+  apply(db,a){
+    const p=db.players[a.pid],prior=oralRolePromiseStatus(db,p),
+      consent=oralRoleRevisionConsent(db,p,db.teams[a.teamId],a.role);
+    // Agreement changes future usage only; preserve the old evidence and all
+    // already-earned satisfaction/trust consequences instead of clearing them.
+    applyOralRolePromise(db,a,'role_promise_revised',{from:a.fromRole,prior,consent});
+    return {promise:p.rolePromise,prior};
   }
 };
 function aiSportingRolePromise(db,p,t){
-  if(!p?.contract||p.loan||p.contract.medicalReplacement||oralRolePromiseStatus(db,p))return;
-  const role=recommendedRosterRole(db,p,t);
+  if(!p?.contract||p.loan||p.contract.medicalReplacement)return;
+  const oral=oralRolePromiseStatus(db,p),role=recommendedRosterRole(db,p,t),
+    revisionRole=SQUAD_ROLE_ORDER[role]<(SQUAD_ROLE_ORDER[p.contract.promisedRole]??0)
+      ?p.contract.promisedRole:role;
+  if(oral&&SQUAD_ROLE_ORDER[revisionRole]<SQUAD_ROLE_ORDER[oral.role])
+    return commitWorldAction(db,{type:'player.promise-revise',pid:p.id,teamId:t.id,role:revisionRole,actor:'ai'});
+  if(oral)return;
   if(starterFor(db,t,p.role)!==p||SQUAD_ROLE_ORDER[role]<=
     Math.max(SQUAD_ROLE_ORDER[p.contract.promisedRole]??0,SQUAD_ROLE_ORDER[p.rosterRole]??0))return;
   return commitWorldAction(db,{type:'player.promise',pid:p.id,teamId:t.id,role,actor:'ai'});
@@ -11183,7 +11233,7 @@ function playerDetail(p){
   <h4>챔피언 폭</h4><div class="scroll"><table class="pool"><thead><tr><th>챔피언</th><th>숙련도</th><th>공식 경험</th><th>스크림</th><th>훈련</th><th>상성 이해</th><th>자신감</th></tr></thead><tbody>${Object.entries(p.pool||{}).sort((x,y)=>y[1].mastery-x[1].mastery).map(([c,v])=>`<tr><td>${esc(championLabel(DB,c))}</td><td>${ovrTag(v.mastery)}</td><td class="num">${Math.round(v.experience||0)}</td><td class="num">${Math.round(v.scrimExperience||0)}</td><td class="num">${Math.round(v.trainingExperience||0)}</td><td class="num">${v.matchup_knowledge}</td><td class="num">${v.confidence}</td></tr>`).join('')}</tbody></table></div>
   ${p.career.length?`<h4 style="margin-top:14px">커리어</h4><div class="scroll"><table class="pool"><thead><tr><th>시즌</th><th>대회</th><th>팀</th><th>구분</th><th>종합</th><th>경기</th><th>평점</th><th>KDA</th><th>KP</th><th>GPM</th><th>DPM</th><th>CS차</th><th>골드차</th><th>받은 피해</th><th>시야</th><th>옵젝</th><th>라인 우위</th><th>한타 기여</th><th>POG</th><th>당시 계약</th></tr></thead><tbody>${p.career.slice().reverse().map(c=>`<tr><td class="num">${c.year}</td><td>${esc(c.cname||c.comp)}${c.international?' · 국제':''}</td><td>${esc(c.team?tshort(c.team):'FA')}</td><td>${c.squad||''}${c.division?` · ${c.division}부`:''}</td><td class="num">${c.ovr||''}</td><td class="num">${c.g}</td><td class="num">${c.rating?c.rating.toFixed(2):'—'}</td><td class="num">${((c.k+c.a)/Math.max(1,c.d)).toFixed(2)}</td><td class="num">${c.kp!==undefined?Math.round(c.kp*100)+'%':'—'}</td><td class="num">${c.min&&c.gold?(c.gold/c.min).toFixed(0):'—'}</td><td class="num">${c.min&&c.dmg?(c.dmg/c.min).toFixed(0):'—'}</td><td class="num">${c.g?Math.round((c.csDiff||0)/c.g):'—'}</td><td class="num">${c.g?Math.round((c.goldDiff||0)/c.g):'—'}</td><td class="num">${c.g?Math.round((c.dmgTaken||0)/c.g):'—'}</td><td class="num">${c.g?((c.vision||0)/c.g).toFixed(1):'—'}</td><td class="num">${c.objectives||0}</td><td class="num">${c.laneAdv!==undefined?c.laneAdv.toFixed(2):'—'}</td><td class="num">${c.teamfights?Math.round((c.teamfightWins||0)/c.teamfights*100)+'% · '+Math.round(c.teamfightShare*100)+'%':'—'}</td><td class="num">${c.mvp}</td><td class="num">${c.salary!==null&&c.salary!==undefined?`${money(c.salary)} ~${c.contractUntil}`:'—'}</td></tr>`).join('')}</tbody></table></div>`:''}
   ${(()=>{const promise=contractRolePromiseStatus(DB,p);return promise?`<h4>계약 역할 약속</h4><p class="hint">${SQUAD_ROLE_KO[promise.role]} · 기대 출전 ${Math.round(promise.expected*100)}% · 계약 이후 ${promise.games}/${promise.teamGames}게임${promise.start?' · '+esc(promise.start)+'부터':''}${promise.downgraded?' · 현재 역할이 계약 약속보다 낮습니다':''}</p>`:''})()}
-  ${ev.length?`<h4 style="margin-top:14px">커리어 이벤트</h4><div class="scroll"><table class="pool"><thead><tr><th>시즌</th><th>유형</th><th>내용</th></tr></thead><tbody>${ev.map(e=>{const detail=e.type==='contract'?`${esc(tshort(e.team))} · ${money(e.salary)} · ~${e.until}`:e.type==='transfer'?`${esc(tshort(e.from))} → ${esc(tshort(e.to))} · ${money(e.fee)}${e.consent?.willing?' · 선수 동의':''}`:e.type==='award'?`${esc(e.competition)} · ${esc(e.award)}`:e.type==='title'?`${esc(e.competition)} 우승`:e.type==='squad_move'?`${esc(tshort(e.from))} → ${esc(tshort(e.to))}`:e.type==='retirement'?`${e.age}세 은퇴 · 전성기 종합 ${e.peak}`:e.type==='club_closure'?`${esc(tshort(e.team))} 구단 해체 · 계약 보상 ${money(e.cost)}`:e.type==='mutual_termination'?`${esc(tshort(e.team))} 상호 해지 · 합의금 ${money(e.cost)}`:e.type==='release'?`${esc(tshort(e.team))} 방출`:e.type==='loan_start'?`${esc(tshort(e.ownerId))} → ${esc(tshort(e.borrowerId))} · ~${e.endDate} · 급여 ${Math.round(e.salaryShare*100)}%`:e.type==='loan_return'?`${esc(tshort(e.from))} → ${esc(tshort(e.to))} 복귀`:e.type==='role_promise'?`${SQUAD_ROLE_KO[e.role]} 구두 약속 · ~${e.until}`:e.type==='role_promise_closed'?`${SQUAD_ROLE_KO[e.role]} 구두 약속 종료`:e.type==='roster_role'?`${SQUAD_ROLE_KO[e.from]||e.from} → ${SQUAD_ROLE_KO[e.to]||e.to}`:e.type==='transfer_request'?`${SAT_REASON_KO[e.reason]||e.reason} · 이적 요청`:e.type==='transfer_request_withdrawn'?'이적 요청 철회':e.type==='role_conversion_started'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 전향 시작`:e.type==='role_conversion_completed'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 전향 완료`:e.type==='role_conversion_rejected'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 전향 거절`:e.type==='role_conversion_cancelled'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 전향 중단`:e.type==='role_conversion_redirected'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 계획 변경`:e.type==='medical_start'?`${esc(MEDICAL_LABELS[e.site]||e.kind)} · ${e.days}일 · ${e.out?'결장':'제한 출전'}`:e.type==='medical_return'?'치료 후 복귀':e.type==='medical_scar'?'중증 부상 후유증':e.type==='medical_emergency_fa'?`의료 대체 계약 · ${e.guaranteedThrough} 보장 · ${e.expiresOn} 조건 종료`:e.type==='medical_replacement_end'?`대체 계약 종료 · 지급 ${money(e.paid)}`:'—';return `<tr><td class="num">${e.year}</td><td>${({contract:'계약',transfer:'이적',award:'개인상',title:'우승',squad_move:'1·2군 이동',retirement:'은퇴',release:'방출',mutual_termination:'상호 해지',club_closure:'구단 해체',loan_start:'임대',loan_return:'임대 복귀',role_promise:'구두 약속',role_promise_closed:'약속 종료',roster_role:'역할 변경',transfer_request:'이적 요청',transfer_request_withdrawn:'요청 철회',role_conversion_started:'전향 시작',role_conversion_completed:'전향 완료',role_conversion_rejected:'전향 거절',role_conversion_cancelled:'전향 중단',role_conversion_redirected:'전향 변경',medical_start:'부상·건강',medical_return:'복귀',medical_scar:'후유증',medical_emergency_fa:'의료 대체 계약',medical_replacement_end:'의료 대체 종료'}[e.type]||e.type)}</td><td>${detail}</td></tr>`}).join('')}</tbody></table></div>`:''}</section>`;
+  ${ev.length?`<h4 style="margin-top:14px">커리어 이벤트</h4><div class="scroll"><table class="pool"><thead><tr><th>시즌</th><th>유형</th><th>내용</th></tr></thead><tbody>${ev.map(e=>{const detail=e.type==='contract'?`${esc(tshort(e.team))} · ${money(e.salary)} · ~${e.until}`:e.type==='transfer'?`${esc(tshort(e.from))} → ${esc(tshort(e.to))} · ${money(e.fee)}${e.consent?.willing?' · 선수 동의':''}`:e.type==='award'?`${esc(e.competition)} · ${esc(e.award)}`:e.type==='title'?`${esc(e.competition)} 우승`:e.type==='squad_move'?`${esc(tshort(e.from))} → ${esc(tshort(e.to))}`:e.type==='retirement'?`${e.age}세 은퇴 · 전성기 종합 ${e.peak}`:e.type==='club_closure'?`${esc(tshort(e.team))} 구단 해체 · 계약 보상 ${money(e.cost)}`:e.type==='mutual_termination'?`${esc(tshort(e.team))} 상호 해지 · 합의금 ${money(e.cost)}`:e.type==='release'?`${esc(tshort(e.team))} 방출`:e.type==='loan_start'?`${esc(tshort(e.ownerId))} → ${esc(tshort(e.borrowerId))} · ~${e.endDate} · 급여 ${Math.round(e.salaryShare*100)}%`:e.type==='loan_return'?`${esc(tshort(e.from))} → ${esc(tshort(e.to))} 복귀`:e.type==='role_promise'?`${SQUAD_ROLE_KO[e.role]} 구두 약속 · ~${e.until}`:e.type==='role_promise_revised'?`${SQUAD_ROLE_KO[e.from]} → ${SQUAD_ROLE_KO[e.role]} · 선수 동의 · 이전 ${e.prior?.games||0}/${e.prior?.teamGames||0}게임`:e.type==='role_promise_closed'?`${SQUAD_ROLE_KO[e.role]} 구두 약속 종료`:e.type==='roster_role'?`${SQUAD_ROLE_KO[e.from]||e.from} → ${SQUAD_ROLE_KO[e.to]||e.to}`:e.type==='transfer_request'?`${SAT_REASON_KO[e.reason]||e.reason} · 이적 요청`:e.type==='transfer_request_withdrawn'?'이적 요청 철회':e.type==='role_conversion_started'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 전향 시작`:e.type==='role_conversion_completed'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 전향 완료`:e.type==='role_conversion_rejected'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 전향 거절`:e.type==='role_conversion_cancelled'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 전향 중단`:e.type==='role_conversion_redirected'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 계획 변경`:e.type==='medical_start'?`${esc(MEDICAL_LABELS[e.site]||e.kind)} · ${e.days}일 · ${e.out?'결장':'제한 출전'}`:e.type==='medical_return'?'치료 후 복귀':e.type==='medical_scar'?'중증 부상 후유증':e.type==='medical_emergency_fa'?`의료 대체 계약 · ${e.guaranteedThrough} 보장 · ${e.expiresOn} 조건 종료`:e.type==='medical_replacement_end'?`대체 계약 종료 · 지급 ${money(e.paid)}`:'—';return `<tr><td class="num">${e.year}</td><td>${({contract:'계약',transfer:'이적',award:'개인상',title:'우승',squad_move:'1·2군 이동',retirement:'은퇴',release:'방출',mutual_termination:'상호 해지',club_closure:'구단 해체',loan_start:'임대',loan_return:'임대 복귀',role_promise:'구두 약속',role_promise_closed:'약속 종료',role_promise_revised:'약속 재협상',roster_role:'역할 변경',transfer_request:'이적 요청',transfer_request_withdrawn:'요청 철회',role_conversion_started:'전향 시작',role_conversion_completed:'전향 완료',role_conversion_rejected:'전향 거절',role_conversion_cancelled:'전향 중단',role_conversion_redirected:'전향 변경',medical_start:'부상·건강',medical_return:'복귀',medical_scar:'후유증',medical_emergency_fa:'의료 대체 계약',medical_replacement_end:'의료 대체 종료'}[e.type]||e.type)}</td><td>${detail}</td></tr>`}).join('')}</tbody></table></div>`:''}</section>`;
 }
 
 /* ==== FILE: ui-player-commitments.js ==== */
@@ -11192,22 +11242,25 @@ function playerCommitmentsPanel(p){
   const agent=playerAgent(p),oral=oralRolePromiseStatus(DB,p),t=DB.teams[p.team],
     floor=Math.max(SQUAD_ROLE_ORDER[p.contract?.promisedRole]??0,SQUAD_ROLE_ORDER[p.rosterRole]??0),
     roles=SQUAD_ROLES.filter(r=>SQUAD_ROLE_ORDER[r]>floor),
-    canPromise=!p.loan&&managerControlsSquad(DB,t)&&p.contract&&!p.contract.medicalReplacement&&
-      p.contract.until>=DB.year&&!oral&&roles.length;
+    canManage=!p.loan&&managerControlsSquad(DB,t)&&p.contract&&!p.contract.medicalReplacement&&p.contract.until>=DB.year,
+    revisions=oral?SQUAD_ROLES.filter(r=>SQUAD_ROLE_ORDER[r]<SQUAD_ROLE_ORDER[oral.role]&&
+      SQUAD_ROLE_ORDER[r]>=(SQUAD_ROLE_ORDER[p.contract?.promisedRole]??0)):[],
+    canPromise=canManage&&!oral&&roles.length;
   return `<h4>협상 / 구두 약속</h4><p class="hint">${esc(playerRepresentativeText(p))}${agent?` · ${esc(CAREER_GOAL_KO[agent.focus]||agent.focus)}`:''}</p>
     ${oral?`<p>구두 약속 · <b>${SQUAD_ROLE_KO[oral.role]}</b> · ${oral.games}/${oral.teamGames}게임 · 기대 출전 ${Math.round(oral.expected*100)}% · ~${p.rolePromise.until}</p>`:'<p class="hint">진행 중인 구두 역할 약속이 없습니다.</p>'}
-    ${canPromise?`<div class="controls"><label>추가 역할 약속 <select data-promise-role="${p.id}" aria-label="구두 약속 역할">${roles.map(r=>`<option value="${r}">${SQUAD_ROLE_KO[r]}</option>`).join('')}</select></label><button class="ghost" data-promise-preview="${p.id}">약속 내용 확인</button></div><p class="hint">계약을 바꾸지 않는 추가 기회 약속입니다. 기용하지 않으면 신뢰와 재계약 의향에 영향을 줍니다. 기존 약속은 반복 제안으로 초기화할 수 없습니다.</p>`:''}`;
+    ${canPromise?`<div class="controls"><label>추가 역할 약속 <select data-promise-role="${p.id}" aria-label="구두 약속 역할">${roles.map(r=>`<option value="${r}">${SQUAD_ROLE_KO[r]}</option>`).join('')}</select></label><button class="ghost" data-promise-preview="${p.id}">약속 내용 확인</button></div><p class="hint">계약을 바꾸지 않는 추가 기회 약속입니다. 기용하지 않으면 신뢰와 재계약 의향에 영향을 줍니다. 기존 약속은 반복 제안으로 초기화할 수 없습니다.</p>`:''}
+    ${canManage&&revisions.length?`<div class="controls"><label>역할 축소 협의 <select data-promise-revision-role="${p.id}" aria-label="재협상 역할">${revisions.map(r=>`<option value="${r}">${SQUAD_ROLE_KO[r]}</option>`).join('')}</select></label><button class="ghost" data-promise-revise="${p.id}">선수 동의 확인</button></div>`:''}`;
 }
 function bindRolePromiseControls(){
-  document.querySelectorAll('[data-promise-preview]').forEach(b=>b.onclick=e=>{
+  document.querySelectorAll('[data-promise-preview], [data-promise-revise]').forEach(b=>b.onclick=e=>{
     e.stopPropagation();
-    const p=DB.players[b.dataset.promisePreview],role=document.querySelector(
-      `[data-promise-role="${p.id}"]`).value,
-      preview=previewWorldAction(DB,{type:'player.promise',pid:p.id,teamId:p.team,role,actor:'manager'});
+    const revision=!!b.dataset.promiseRevise,p=DB.players[b.dataset.promiseRevise||b.dataset.promisePreview],role=document.querySelector(
+      `[data-promise-${revision?'revision-role':'role'}="${p.id}"]`).value,
+      preview=previewWorldAction(DB,{type:revision?'player.promise-revise':'player.promise',pid:p.id,teamId:p.team,role,actor:'manager'});
     if(!preview.ok){MSG=(preview.errors||[]).join(' · ');navKeepScroll();return}
-    if(!confirm(`${p.name} · ${SQUAD_ROLE_KO[role]} 구두 약속\n기대 출전 ${Math.round(preview.changes[0].expected*100)}% · ${preview.command.until}년 계약 종료까지\n약속 불이행은 감독 신뢰와 재계약에 영향을 줍니다. 확정할까요?`))return;
+    if(!confirm(`${p.name} · ${SQUAD_ROLE_KO[role]} 구두 약속\n기대 출전 ${Math.round(preview.changes[0].expected*100)}% · ${preview.command.until}년 계약 종료까지\n${revision?'선수가 역할 축소에 동의했습니다. 이전 기용 기록과 신뢰 변화는 유지됩니다.':'약속 불이행은 감독 신뢰와 재계약에 영향을 줍니다.'} 확정할까요?`))return;
     const result=applyWorldAction(DB,preview);
-    MSG=result.ok?'구두 역할 약속을 확정했습니다':(result.errors||[]).join(' · ');
+    MSG=result.ok?(revision?'구두 역할 약속을 재협상했습니다':'구두 역할 약속을 확정했습니다'):(result.errors||[]).join(' · ');
     if(result.ok)saveDB();navKeepScroll();
   });
 }
