@@ -31,6 +31,63 @@ without continually adding new status documents.
 
 ## Current Phase
 
+### Current implementation slice — observer-specific opponent intent (2026-10-02)
+
+Scope estimate: 50 minutes, one implementation worker, baseline main `e86bfef9`.
+Cloud became ready; the checkout was clean and origin/latest main matched.
+Only historical PRs #27/#28 were open, with no competing intent implementation.
+The runtime network policy was inspected; Git fetch and GitHub reads succeeded.
+No local/unpushed files, secrets or migrated scheduler state were assumed.
+
+The preceding precise continuation is implemented: `draftOpponentIntent` no
+longer calls the managed club's `scoutReport` for every observer. It consumes
+the existing observer-aware `draftMasteryObservation`, retains public champion
+role candidates, and exposes uncertainty ranges using the existing scouting
+width policy. The lower end of the range, rather than a hidden/exact mastery,
+supports the high-mastery explanation. Opponent analysis expertise uses the
+common specialty/secondary/diminishing-return calculation. Existing interpretation
+weights and caps remain; official series views exclude unregistered staff.
+Public opposing series picks and the observing club's earlier winning picks
+support separate reasons. Current-patch actual pick/ban counts and missing
+samples are explicit provenance, separate from the perceived patch evaluation.
+The UI shows ranges and sources and labels confidence as a simulated
+interpretation score, not a probability or a statistical interval.
+
+Files: `draft-analysis.js`, `ui-draft.js`, new focused
+`opponent-intent-acceptance.mjs`, shared UI runner and the existing staff rules.
+Acceptance drives eight legal draft turns with both sides, proves unrelated
+managed scout reports cannot affect AI observations, tests both sides' specialty
+effects and own-report range narrowing, series evidence, a real recorded match,
+save/reconstructed legal choices, poisoned hidden log fields, pure observation,
+visible UI provenance and real official series staff filtering. Existing bounded
+mastery estimation remains a simulation heuristic, not independent real scouting
+measurement. Draft choice algorithms, manual authority, raw history, save schema
+and legal/Fearless rules are unchanged. This does not declare all 23 stages done.
+
+Focused acceptance, First Selection/patch evidence, static 105-module check,
+and UI/finance/contracts 39 acceptances in 38 isolated engine contexts pass.
+Failures preserved: the initial fixture replaced complete champion profiles with
+mastery-only objects, producing invalid quest damage; complete fields are now
+preserved. Save comparison initially mixed a frozen pre-match draft evaluation
+with newly recorded match learning; the save case now tests the actual pre-match
+chronology separately. Official filtering fixtures initially lacked the published
+policy and an employed valid contract; existing employed analysts and the real
+published-policy view now exercise inclusion/exclusion. No production validation,
+history, medical coverage or budget was weakened to conceal these failures.
+
+Precise next slice (estimate 50 minutes): region-specific ban provenance for
+Item 13/21 analysis. Actual inspection finds `recordMeta`, current patch samples
+and filtered tables count all international match bans as exposure for each
+participating region, while history only stores a flattened ban list. Preserve
+that historical exposure meaning; add explicit side/region ban attribution for
+new records and queries so regional preferences can be distinguished from
+opponent bans. Show unknown attribution for legacy rows instead of inventing it.
+Check actual draft side order, global count conservation, region moves, shared
+cache/save/compact history continuity and UI explanation. Recheck latest rules
+and other PRs before editing; do not silently redefine prior statistics. Final
+100-season/device/mobile/TalkBack QA remains deferred until features and playtest
+feedback/fixes are complete.
+
 ### Continued implementation slice — current-patch draft evidence (2026-10-02)
 
 After PR #142 passed its exact-head gate, merged and standalone was synchronized,
