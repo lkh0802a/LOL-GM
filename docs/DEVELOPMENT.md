@@ -69,7 +69,11 @@ policy. No failed evidence is counted as success and no budgets were raised.
 Focused staff contracts/registration/coverage and static 105-module/diff checks
 pass. UI-finance-contracts (38 acceptances, 36 isolated contexts) and
 calendar-scouting (17) passed locally. Complete required Actions on the final
-exact PR head remains the delivery gate. Long100-season/real-device/
+exact PR head passed: PR #142 head
+`9c1bc52ee23728f7ccf82d84315cb068aa0163c9`, full Actions `37064610607`,
+including medical core, four seeds, both aggregates and `verify`. Exact head
+matched before sequential merge as `bd85a78ea65d22b08f410a74fbf33ec3db8da7c3`;
+standalone HTML rebuilt from integrated main. Long100-season/real-device/
 mobile/TalkBack final QA remains after all feature implementation and playtest
 feedback/fixes. This closes the fixed staff-duration discrepancy, not all D07
 or all 23 stages.

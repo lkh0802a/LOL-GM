@@ -9753,6 +9753,10 @@ function mReleaseStaff(db,sid){const out=commitWorldAction(db,{type:'staff.relea
 /* ==== FILE: staff-contracts.js ==== */
 // Staff employment uses the same preview, finance and rollback gate as players.
 const STAFF_EXIT_GUARANTEE=.5; // One common staff compensation policy; not an individually negotiated clause.
+// Freely negotiated whole years; bounds protect JS year/money arithmetic,
+// rather than inventing a league-wide maximum duration. Salary is annual.
+function staffTermYearsValid(years,salary){return Number.isSafeInteger(years)&&years>=1&&Number.isFinite(salary)&&salary>0&&Number.isSafeInteger(Math.ceil(salary*10)*years)}
+function staffTermUntil(from,years){const until=from+years-1;return Number.isSafeInteger(from)&&from>0&&Number.isSafeInteger(until)?until:null}
 function initializeStaffContract(db,t,s){
   if(!s.contract)s.contract={salary:staffSalary(s,psTeam(db,t)),from:db.year,until:db.year+1,years:2};
   s.history=s.history||[];s.since=s.since??db.year;
@@ -9815,8 +9819,9 @@ function validateStaffAction(db,a){
   let salary=null,years=null,fee=0,poachFee=0,releaseFee=0;
   if(a.type==='staff.sign'||a.type==='staff.renew'){
     salary=Number(a.salary);years=Number(a.years);
-    if(!Number.isInteger(years)||years<1||years>3||!Number.isFinite(salary)||salary<=0||salary>10000)return worldActionError('invalid_terms','계약 기간은 1~3년, 연봉은 양수여야 합니다');
+    if(!Number.isFinite(salary)||salary<=0||salary>10000)return worldActionError('invalid_terms','연봉은 양수이며 기존 계약 금액 범위 안이어야 합니다');
     salary=Math.round(salary*10)/10;
+    if(!staffTermYearsValid(years,salary)||staffTermUntil(db.year,years)===null)return worldActionError('invalid_terms','기간은 1년 이상 정수, 연봉은 0.1 이상이어야 하며 종료 연도·총액을 안전하게 계산할 수 있어야 합니다');
     const consent=staffConsent(db,t,s,salary);if(!consent.ok)return consent;
     poachFee=a.type==='staff.sign'&&found.team?staffExitFee(db,s):0;releaseFee=replacement?staffExitFee(db,replacement):0;fee=poachFee+releaseFee;
     if(!Number.isFinite(t.finance?.cash)||t.finance.cash<fee+salary)return worldActionError('insufficient_cash','위약금과 1년 연봉을 감당할 자금이 부족합니다');
@@ -9850,7 +9855,7 @@ function applyStaffAction(db,c){
       else db.staffPool.splice(db.staffPool.indexOf(s),1);
       ensureStaffRoster(t).push(s);s.since=db.year;
     }
-    s.contract={salary:c.salary,years:c.years,from:db.year,until:db.year+c.years-1};
+    s.contract={salary:c.salary,years:c.years,from:db.year,until:staffTermUntil(db.year,c.years)};
     recordStaffEvent(db,s,c.type==='staff.renew'?'renewal':'signing',{from:c.fromId,to:t.id,previousSince,salary:c.salary,until:s.contract.until,fee:c.fee,poachFee:c.poachFee,releaseFee:c.releaseFee,replaceSid:c.replaceSid});
   }else{
     if(c.fee)payFinancePrepaid(t,'staffSeverance',c.fee);
@@ -9868,7 +9873,7 @@ function staffStateErrors(db){
   for(const t of Object.values(db.teams))for(const s of t.staffRoster||[]){
     if(t.active===false)errors.push('해체 구단의 고용 스태프: '+s.id);
     if(ids.has(s.id))errors.push('중복 스태프 소속: '+s.id);ids.add(s.id);
-    if(!STAFF_ROLES[s.role]||s.retired||!s.contract||!Number.isFinite(s.contract.salary)||s.contract.salary<=0||!Number.isInteger(s.contract.until)||!Number.isInteger(s.contract.years)||s.contract.years<1||s.contract.years>3)errors.push('잘못된 스태프 계약: '+s.id);
+    if(!STAFF_ROLES[s.role]||s.retired||!s.contract||!Number.isSafeInteger(s.contract.until)||s.contract.until<1||!staffTermYearsValid(s.contract.years,s.contract.salary))errors.push('잘못된 스태프 계약: '+s.id);
   }
   for(const s of db.staffPool||[]){if(ids.has(s.id)||s.contract||s.retired)errors.push('잘못된 자유 스태프: '+s.id);ids.add(s.id)}
   for(const s of db.staffRetired||[]){if(ids.has(s.id)||s.contract||!s.retired)errors.push('잘못된 은퇴 스태프: '+s.id);ids.add(s.id)}
@@ -11249,7 +11254,7 @@ function bindClubOfficeControls(act){
     const sid=b.dataset.hireStaff,t=managedTeam(DB),found=locateStaff(DB,sid);if(!found)return;
     const preview=previewWorldAction(DB,{type:found.team?.id===t.id?'staff.renew':'staff.sign',actor:'manager',teamId:t.id,sid,replaceSid:document.querySelector(`[data-staff-replace="${sid}"]`)?.value||undefined,years:Number(document.querySelector(`[data-staff-years="${sid}"]`).value),salary:Number(document.querySelector(`[data-staff-salary="${sid}"]`).value)});
     if(!preview.ok){act(preview.errors.join(' · '));return}
-    if(!confirm(found.staff.name+' 계약\n연봉 '+money(preview.command.salary)+' · '+preview.command.years+'년\n위약금·해지 보상 '+money(preview.command.fee)+(preview.command.replaceSid?'\n교체: '+locateStaff(DB,preview.command.replaceSid).staff.name:'')+'\n확정할까요?'))return;
+    if(!confirm(found.staff.name+' 계약\n연봉 '+money(preview.command.salary)+' · '+preview.command.years+'년 · '+staffTermUntil(DB.year,preview.command.years)+'년까지\n총 약정 연봉 '+money(preview.command.salary*preview.command.years)+' (일시 선납 아님)\n위약금·해지 보상 '+money(preview.command.fee)+(preview.command.replaceSid?'\n교체: '+locateStaff(DB,preview.command.replaceSid).staff.name:'')+'\n계약 해지 시 남은 연봉의 '+Math.round(STAFF_EXIT_GUARANTEE*100)+'% 보상\n확정할까요?'))return;
     const result=applyWorldAction(DB,preview);act(result.ok?'스태프 계약 완료':result.errors.join(' · '));
   });
   document.querySelectorAll('[data-fire-staff]').forEach(b=>b.onclick=()=>{const s=teamStaffMembers(managedTeam(DB)).find(x=>x.id===b.dataset.fireStaff);if(s&&confirm(`${STAFF_ROLES[s.role]} ${s.name}의 계약을 해지할까요?\n해지 보상 ${money(staffExitFee(DB,s))}`))act(mReleaseStaff(DB,b.dataset.fireStaff))});
@@ -11264,7 +11269,7 @@ function staffEmploymentCard(t,s,own){
     ${(s.career||[]).slice(-2).map(r=>`<p class="hint">${r.year} · ${esc(DB.teams[r.teamId]?.name||r.teamId)} · 현장 ${r.series}시리즈 ${r.wins}승 (팀 결과)</p>`).join('')}
     ${!own?`<button class="ghost" data-interview-staff="${s.id}"${seen.interviewed?' disabled':''}>${seen.interviewed?'면접 완료':'면접'}</button>`:''}
     ${!own&&!staffCanHire(t,s)?`<label>교체 대상<select data-staff-replace="${s.id}"><option value="">대상 선택</option>${teamStaffMembers(t,staffDepartment(s.role)).map(x=>`<option value="${x.id}">${esc(x.name)} · ${STAFF_ROLES[x.role]}</option>`).join('')}</select></label>`:''}
-    ${canOffer?`<div class="controls"><label>연봉 (억)<input type="number" min="0.1" step="0.1" inputmode="decimal" data-staff-salary="${s.id}" value="${staffAskingSalary(DB,t,s)}"></label><label>기간<select data-staff-years="${s.id}">${[1,2,3].map(y=>`<option value="${y}"${y===2?' selected':''}>${y}년</option>`).join('')}</select></label><button class="primary" data-hire-staff="${s.id}">${own?'재계약':'계약 제안'}</button></div>`:''}
+    ${canOffer?`<div class="controls"><label>연봉 (억)<input type="number" min="0.1" step="0.1" inputmode="decimal" data-staff-salary="${s.id}" value="${staffAskingSalary(DB,t,s)}"></label><label>기간 (년)<input type="number" min="1" step="1" inputmode="numeric" data-staff-years="${s.id}" value="2"></label><button class="primary" data-hire-staff="${s.id}">${own?'재계약':'계약 제안'}</button></div><p class="hint">기간은 1년 이상 정수로 협상합니다. 긴 계약은 남은 연봉과 해지 보상 부담이 커집니다.</p>`:''}
     ${own?`<button class="ghost" data-fire-staff="${s.id}">계약 해지 · ${money(staffExitFee(DB,s))}</button>`:''}
     ${(s.history||[]).slice(-3).map(h=>`<p class="hint">${h.year} · ${({signing:'계약',renewal:'재계약',release:'해지',expire:'만료',retire:'은퇴'})[h.type]||esc(h.type)}${h.to?' · '+esc(DB.teams[h.to]?.name||h.to):''}</p>`).join('')}</details>`;
 }
