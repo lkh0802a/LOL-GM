@@ -9,7 +9,7 @@ function finalSeason(w,R,div=1){let best=null;for(const s of Object.values(w.sea
 function divName(R){return R.system==='franchise'?`${R.leagueName} 챌린저스`:`${R.leagueName} 2부`}
 function leagueComp(db,rid,div=1){
   const R=db.regions[rid], teams=activeTeams(db,rid,div).filter(t=>div===1||true).map(t=>t.id);
-  return {id:div===2?R.short+'2':R.short,name:div===2?divName(R):R.leagueName,short:div===2?R.short+'2':R.short,region:rid,div,teams,rules:{fearless:true},stages:leagueStages(R,teams.length,div)};
+  return {id:div===2?R.short+'2':R.short,name:div===2?divName(R):R.leagueName,short:div===2?R.short+'2':R.short,region:rid,div,teams,rules:{fearless:true,staffRegistration:R.staffRegistration||null},stages:leagueStages(R,teams.length,div)};
 }
 function startWorldSeason(db,myTeam,seed){
   const medicalRolloverDate=`${db.year}-01-06`;
@@ -105,7 +105,7 @@ function startInternational(db,id,start,taken=new Set()){
   const teams=[];for(let k=0;k<6;k++)for(const l of lists)if(l[k])teams.push(l[k]);
   if(teams.length<4)return false;
   teams.forEach(t=>taken.add(t));
-  db.competitions[id]={id,name:it.name,short:it.short||id,teams,rules:{fearless:true},international:true,tier:it.tier||'top',stages:intlStages(it.format,teams,it.bo)};
+  db.competitions[id]={id,name:it.name,short:it.short||id,teams,rules:{fearless:true,staffRegistration:it.staffRegistration||null},international:true,tier:it.tier||'top',stages:intlStages(it.format,teams,it.bo)};
   const s=newSeason(db,id,w.year,`${w.seed}/${w.year}/${id}`,start,id);
   s.key=id;s.label='';s.step=w.step;w.seasons[id]=s;
   // A region can later move or merge. Preserve the participant's event-time

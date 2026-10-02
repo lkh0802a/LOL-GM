@@ -54,7 +54,7 @@ function actionJournalTargets(db,command){
   if(command.type==='club.close'){
     for(const id of command.financeTeamIds)teamIds.add(id);
     for(const pid of command.playerIds)playerIds.add(pid);
-  }else if(command.type==='roster.register'||command.type==='roster.official-lineup'){
+  }else if(command.type==='roster.register'||command.type==='roster.official-lineup'||command.type==='competition.staff-register'){
     teamIds.add(command.teamId);
     for(const id of Object.keys(command.registrations||{}))teamIds.add(id);
     if(command.type==='roster.register')for(const id of Object.keys(command.registrations))
@@ -98,13 +98,13 @@ function captureWorldActionJournal(db,command){
       ...command.agreementIds.map(id=>[w.contractAgreements,id])]
       .map(([store,id])=>({store,id,ref:store[id],record:actionJournalClone(store[id])}))
   }:null;
-  const entries=(command.type==='roster.register'||command.emergencyRegistration||command.kind==='medical_replacement')?Object.values(w?.seasons||{}).map(s=>({s,
-    value:s.entries?actionJournalClone(s.entries):null})):[];
+  const entries=(command.type==='roster.register'||command.type==='competition.staff-register'||command.emergencyRegistration||command.kind==='medical_replacement')?Object.values(w?.seasons||{}).map(s=>({s,
+    value:s.entries?actionJournalClone(s.entries):null,staffValue:s.staffEntries?actionJournalClone(s.staffEntries):null})):[];
   return {
     playerIds,
     rollback(){
       if(staffJournal)staffJournal.rollback();
-      for(const row of entries)if(row.value)row.s.entries=row.value;else delete row.s.entries;
+      for(const row of entries){if(row.value)row.s.entries=row.value;else delete row.s.entries;if(row.staffValue)row.s.staffEntries=row.staffValue;else delete row.s.staffEntries}
       if(closure){
         if(closure.firedPresent)w.fired=closure.fired;else delete w.fired;
         for(const {store,id,ref,record} of closure.rows){

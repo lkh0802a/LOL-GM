@@ -70,6 +70,7 @@ function normalizeRestoredSave(db){
   validateStoredTransferState(db);
   validateStoredLocalService(db);
   validateStoredRegistrations(db);
+  validateStoredStaffRegistrations(db);
   // World schema v15, format 1: pre-migration JSON saves and packed exports.
   // Format 2 uses the same runtime object model, but strips derived caches.
   for(const k of SAVE_TRANSIENT_ROOT_FIELDS)delete db[k];
