@@ -89,3 +89,9 @@ entry, failed-entry reach, cooldown-sensitive extended exchanges and cleanup,
 with explicit bounded aggregate assumptions. Paired fixed-draft actual matches
 compare independent skill patches; this is causal fixture evidence, not proof
 of full spell reproduction or long win-rate/meta balance. See DEVELOPMENT.md.
+
+D11 supervised run completed32seasons before a known1536MiB heap invariant failed
+during save in2059. Bounded512-row history encoding preserves all evidence and
+the existing save format while reducing a60,000-row synthetic encoding peak.
+Original failure reports remain; neither that run nor the synthetic benchmark
+proves100seasons or mobile memory. See DEVELOPMENT.md for exact measurements.
