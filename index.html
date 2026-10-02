@@ -323,7 +323,7 @@ function makeStreams(seed){return {mech:new RNG(seed,'mechanical'),dec:new RNG(s
 /* ==== FILE: engine.js ==== */
 // ===== LOL GM: isolated one-game match simulation =====
 
-const XP_TABLE=[0,280,660,1140,1720,2400,3180,4060,5040,6120,7300,8580,9960,11440,13020,14700,16480,18360];
+const XP_TABLE=[0,280,660,1140,1720,2400,3180,4060,5040,6120,7300,8580,9960,11440,13020,14700,16480,18360,20340,22420];
 const ITEM_CONV={fighter:{hp:.18,arm:.012,ad:.028},tank:{hp:.32,arm:.028,ad:.011},mage:{hp:.05,arm:.004,ad:.05},assassin:{hp:.06,arm:.005,ad:.047},marksman:{hp:.035,arm:.003,ad:.047},enchanter:{hp:.09,arm:.01,ad:.018}};
 const ITEM_COST=[3000,6000,9000,12000,15000,18000];
 
@@ -333,20 +333,20 @@ const td=(ps,t)=>ps.p.tend[t]/100;
 
 function newPS(p,side,role,champ,patch){
   const pr=p.pool[champ]||{mastery:25,confidence:40,experience:10},c=patch.champions[champ],itemPlan=selectItemBuild(patch,c,p,role),starterItem=selectStarterItem(patch,c,p,role),itemActions=itemPurchasePlan(patch,itemPlan,starterItem),runes=selectRunePage(patch,c,p,role);
-  return {p,side,role,champ:c,prof:pr,lvl:1,xp:0,gold:starterItem?Math.max(0,500-(patch.itemDefs?.[starterItem]?.cost||0)):500,goldEarned:500,cs:0,k:0,d:0,a:0,dmg:0,dmgTaken:0,vision:0,objectives:0,laneAdv:0,laneSamples:0,teamfightDmg:0,teamfights:0,teamfightWins:0,deadUntil:0,hp:1,flashAt:0,penalty:0,items:starterItem?[starterItem]:[],starterItem,itemPlan,itemActions,itemActionIndex:0,runes,patchRef:patch,recall:false};
+  return {p,side,role,champ:c,prof:pr,quest:createRoleQuest(patch,role),questRevision:0,lvl:1,xp:0,gold:starterItem?Math.max(0,500-(patch.itemDefs?.[starterItem]?.cost||0)):500,goldEarned:500,cs:0,k:0,d:0,a:0,dmg:0,dmgTaken:0,vision:0,objectives:0,laneAdv:0,laneSamples:0,teamfightDmg:0,teamfights:0,teamfightWins:0,deadUntil:0,hp:1,flashAt:0,penalty:0,items:starterItem?[starterItem]:[],starterItem,itemPlan,itemActions,itemActionIndex:0,runes,patchRef:patch,recall:false};
 }
 function alive(st,ps){return ps.deadUntil<=st.t}
 function aliveOf(st,side){return st.sides[side].ps.filter(x=>alive(st,x))}
 
 function combatStats(st,ps){
-  const sd=st.sides[ps.side], key=st.t*1e6+ps.goldEarned*10+ps.lvl+(sd.baronUntil>st.t?0.1:0)+(sd.elderUntil>st.t?0.2:0)+(sd.soul?0.4:0);
+  const sd=st.sides[ps.side], key=st.t*1e6+ps.goldEarned*10+ps.lvl+(ps.questRevision||0)*.00001+(sd.baronUntil>st.t?0.1:0)+(sd.elderUntil>st.t?0.2:0)+(sd.soul?0.4:0);
   if(ps._ck===key)return ps._cs; ps._ck=key; return ps._cs=combatStats0(st,ps);
 }
 function combatStats0(st,ps){
   const c=ps.champ,b=c.base,L=ps.lvl,g=Math.max(0,ps.goldEarned-500),cv=ITEM_CONV[c.cls],k=c.kit,sp=championSkillProfile(c);
-  const ie=systemEffects(st.patch.itemDefs,ps.items),re=systemEffects(st.patch.runeDefs,ps.runes),phaseEarly=st.t<15?1:0,phaseLate=st.t>=28?1:0;
+  const ie=systemEffects(st.patch.itemDefs,matchQuestItems(ps)),re=systemEffects(st.patch.runeDefs,ps.runes),phaseEarly=st.t<15?1:0,phaseLate=st.t>=28?1:0;
   const ph=st.t<14?k.early:st.t<26?k.mid:k.late,pm=.8+.04*ph,phaseSystem=1+(ie.early+re.early)*phaseEarly+(ie.scaling+re.scaling)*phaseLate;
-  const hp=b.hp+b.hpg*(L-1)+g*cv.hp,arm=b.arm+b.armg*(L-1)+g*cv.arm,mr=(b.mr||30)+(b.mrg||1.3)*(L-1)+g*cv.arm*.65,ad=b.ad+b.adg*(L-1)+g*cv.ad;
+  const hp=b.hp+b.hpg*(L-1)+g*cv.hp,arm=b.arm+b.armg*(L-1)+g*cv.arm,mr=(b.mr||30)+(b.mrg||1.3)*(L-1)+g*cv.arm*.65,ad=b.ad+b.adg*(L-1)+g*cv.ad*(1+(ps.quest?.completed?ps.quest.rules.bonusPower||0:0));
   const asp=(b.as||.65)*(1+(b.asg||0)*(L-1)/100),resource=(b.resource?clamp((b.resource+(b.resourceg||0)*(L-1))/800+(b.resourceRegen||0)/30,.65,1.18):1)*sp.economy;
   const sysOff=1+ie.offense+re.offense+(ie.haste+re.haste)*.35+(ie.mobility+re.mobility)*.16,sysDef=1+ie.defense+re.defense+(ie.sustain+re.sustain)*.55+(ie.utility+re.utility)*.25+(ie.mobility+re.mobility)*.08;
   let off=ad*(.52+.042*(k.burst+k.dps))*pm*(b.range>400?1.1:1)*(.88+asp*.18)*(.94+sp.power*.07+sp.uptime*.04+sp.reach*.025+sp.mobility*.012)*resource*sysOff*phaseSystem;
@@ -363,9 +363,9 @@ function teamPower(st,side){return aliveOf(st,side).reduce((s,x)=>s+power(st,x)*
 
 // Bounded aggregate interactions, not per-spell casts or geometric hitboxes.
 // The same profile used for draft evaluation also affects when a fight pays off.
-function fightSkillProfile(st,players){
+function fightSkillProfile(st,players,zone){
   const profiles=players.map(p=>{const c=combatStats(st,p);return {...c.skillProfile,
-    mobility:clamp(c.skillProfile.mobility+c.itemEffects.mobility+c.runeEffects.mobility,0,1.7)}});
+    mobility:clamp(c.skillProfile.mobility+c.itemEffects.mobility+c.runeEffects.mobility+(['dragon','baron'].includes(zone)&&p.role==='JGL'&&p.quest?.completed?p.quest.rules.jungleMobility||0:0),0,1.7)}});
   return Object.fromEntries(['cc','reach','mobility','uptime'].map(k=>[k,avg(profiles.map(p=>p[k]))]));
 }
 function fightSkillEngage(attacker,defender){
@@ -386,16 +386,16 @@ function pname(st,ps){return `${st.sides[ps.side].team.short} ${ps.p.name}(${ps.
 function addGold(ps,g){ps.gold+=g;ps.goldEarned+=g;
   advanceItemPurchases(ps);
 }
-function addXp(ps,x){ps.xp+=x;let l=1;for(let i=1;i<XP_TABLE.length;i++)if(ps.xp>=XP_TABLE[i])l=i+1;ps.lvl=Math.min(18,l)}
+function addXp(ps,x,source='ordinary'){ps.xp+=x*(source==='ordinary'&&ps.quest?.completed?1+(ps.quest.rules.xpBonus||0):1);let l=1;for(let i=1;i<XP_TABLE.length;i++)if(ps.xp>=XP_TABLE[i])l=i+1;ps.lvl=Math.min(ps.quest?.completed?ps.quest.rules.levelCap||18:18,l)}
 
 function killPlayer(st,killer,victim,assists,reason){
   const R=st.patch.rules;
   victim.d++; victim.hp=1;
   const sec=victim.lvl*2.5+6+Math.max(0,st.t-15)*0.9;
   victim.deadUntil=st.t+sec/60; victim.penalty=Math.min(1,(sec+25)/60);
-  if(killer){killer.k++; addGold(killer,R.killGold); addXp(killer,140+victim.lvl*20); st.sides[killer.side].kills++;}
+  if(killer){killer.k++; addGold(killer,R.killGold); addXp(killer,140+victim.lvl*20,'champion'); st.sides[killer.side].kills++;roleQuestTakedown(st,killer);}
   const as=assists.filter(a=>a!==killer&&a.side!==victim.side);
-  as.forEach(a=>{a.a++; addGold(a,Math.round(R.assistGold/as.length)); addXp(a,70)});
+  as.forEach(a=>{a.a++; addGold(a,Math.round(R.assistGold/as.length)); addXp(a,70,'champion');roleQuestTakedown(st,a)});
   const lane=LANES.find(l=>LANE_ROLES[l].includes(victim.role))||'mid';
   st.lanePush[lane]+= victim.side===0?-0.35:0.35; st.lanePush[lane]=clamp(st.lanePush[lane],-1,1);
   const fb=st.firsts.blood===undefined; if(fb) st.firsts.blood=killer?killer.side:1-victim.side;
@@ -406,6 +406,7 @@ function killPlayer(st,killer,victim,assists,reason){
 function fight(st,zone,sideArrs,ctx={}){
   const R=st.rng;
   if(!sideArrs[0].length||!sideArrs[1].length) return null;
+  for(const ps of sideArrs.flat()){const lane=LANES.find(l=>LANE_ROLES[l].includes(ps.role));if(lane&&zone!==lane)ps.questAwayUntil=st.t+1}
   const vis=st.vision[zone]||0,isTeamfight=sideArrs[0].length+sideArrs[1].length>=6;
   const initScore=[0,1].map(i=>{const a=sideArrs[i];
     return avg(a.map(p=>(at(p,'anticipation')+at(p,'map_awareness')+at(p,'teamfight_awareness'))/3))*1.0
@@ -413,7 +414,7 @@ function fight(st,zone,sideArrs,ctx={}){
   const init=initScore[0]>=initScore[1]?0:1, def=1-init;
   const engager=sideArrs[init].reduce((b,p)=>p.champ.kit.engage*at(p,'engage')>b.champ.kit.engage*at(b,'engage')?p:b);
   const defAvoid=avg(sideArrs[def].map(p=>(at(p,'dodging')+at(p,'positioning'))/2));
-  const skillProfiles=sideArrs.map(a=>fightSkillProfile(st,a)),skillEngage=fightSkillEngage(skillProfiles[init],skillProfiles[def]);
+  const skillProfiles=sideArrs.map(a=>fightSkillProfile(st,a,zone)),skillEngage=fightSkillEngage(skillProfiles[init],skillProfiles[def]);
   const engP=clamp(0.3+0.45*engager.champ.kit.engage/10*at(engager,'engage')+0.25*(initScore[init]-initScore[def])-0.35*(defAvoid-0.6)+skillEngage,0.08,0.92);
   const engOk=R.exec.chance(engP);
   const mult=[1,1]; mult[init]*=engOk?1.2:0.9; if(!engOk) mult[def]*=1.05;
@@ -450,7 +451,7 @@ function fight(st,zone,sideArrs,ctx={}){
       dmgs.push([f,tgt,d]);
     }
     for(let i=dmgs.length-1;i>0;i--){const j=Math.floor(R.mech.next()*(i+1));[dmgs[i],dmgs[j]]=[dmgs[j],dmgs[i]]}
-    for(const [f,t,d] of dmgs){if(t.hp<=0)continue;const dealt=Math.round(d*.9);t.hp-=d;t.hitters.add(f);f.ps.dmg+=dealt;t.ps.dmgTaken+=dealt;if(isTeamfight)f.ps.teamfightDmg+=dealt;if(t.hp<=0)t.last=f;}
+    for(const [f,t,d] of dmgs){if(t.hp<=0)continue;const dealt=Math.round(d*.9);t.hp-=d;t.hitters.add(f);f.ps.dmg+=dealt;matchQuestEvent(st,f.ps,{damage:dealt});t.ps.dmgTaken+=dealt;if(isTeamfight)f.ps.teamfightDmg+=dealt;if(t.hp<=0)t.last=f;}
     for(const t of F) if(t.alive&&t.hp<=0){t.alive=false;}
     if(rd==='clean')break;
   }
@@ -496,7 +497,7 @@ function takeStructure(st,side,opt={}){
   else{ st.sides[side].towersTaken++;
     const ft=st.firsts.tower===undefined; if(ft)st.firsts.tower=side;
     const gold=idx===0?250:idx===1?300:350;
-    aliveOf(st,side).forEach(p=>addGold(p,Math.round(gold/2)));
+    aliveOf(st,side).forEach(p=>{addGold(p,Math.round(gold/2));const lane=LANES.find(x=>LANE_ROLES[x].includes(p.role));matchQuestEvent(st,p,{towers:lane===l?1:.5})});
     log(st,`${st.sides[side].team.short} ${LANE_KO[l]} ${names[idx]} 파괴${ft?' (첫 포탑)':''}`,{side,major:true,kind:'tower'});
   }
   return l;
@@ -512,19 +513,20 @@ function incomeTick(st){
     if(st.t===1)cs*=ps.role==='JGL'?0.4:0.15;
     const ln=LANES.find(l=>LANE_ROLES[l].includes(ps.role));
     if(lane&&ln){const push=st.lanePush[ln]*(ps.side===0?1:-1); cs*=1+0.12*push}
-    if(ps.recall){cs*=0.6;ps.recall=false}
+    const recalled=ps.recall;if(recalled){cs*=0.6;ps.recall=false}
     cs*=(1-ps.penalty)*st.rng.mech.range(0.93,1.07); ps.penalty=0;
     ps.cs+=cs;
-    addGold(ps,cs*R.csGold+R.passiveGold+(ps.role==='SUP'?35:0));
+    addGold(ps,cs*R.csGold+R.passiveGold+(ps.role==='SUP'&&!ps.quest?35:0));
     addXp(ps,cs*58+(ps.role==='JGL'?60:0)+(ps.role==='SUP'?(lane?230:320):0)+(!lane&&ps.role!=='SUP'?40:0));
+    roleQuestIncome(st,ps,cs,recalled);
     ps.hp=Math.min(1,ps.hp+0.12);
   }
 }
 const ZONES=['top','mid','bot','dragon','baron'];
 function visionTick(st){
   const inv=[0,1].map(i=>{const s=st.sides[i],a=aliveOf(st,i),tac=.7+.6*s.team.tactics.vision_investment/100;
-    for(const p of a)p.vision+=(at(p,'vision_understanding')*(p.role==='SUP'||p.role==='JGL'?1.5:.8))*tac*.65;
-    return avg(a.map(p=>at(p,'vision_understanding')*(p.role==='SUP'||p.role==='JGL'?1.5:.8)))*(a.length/5)*tac});
+    let questVision=0;for(const p of a){const ward=roleQuestWard(st,p);questVision+=ward;p.vision+=ward+(at(p,'vision_understanding')*(p.role==='SUP'||p.role==='JGL'?1.5:.8))*tac*.65}
+    return avg(a.map(p=>at(p,'vision_understanding')*(p.role==='SUP'||p.role==='JGL'?1.5:.8)))*(a.length/5)*tac+questVision*.1});
   for(const z of ZONES){const tgt=(inv[0]-inv[1])*1.6;st.vision[z]=clamp(st.vision[z]+(tgt-st.vision[z])*.35+st.rng.info.normal(0,.08),-1,1)}
 }
 function visFor(st,side,z){return side===0?st.vision[z]:-st.vision[z]}
@@ -627,7 +629,7 @@ function teamCall(st,side,obj,stakeBonus){
   }
   const go=U/W>0.05;
   const part=votes.filter(([p,u])=>(u>0.05)===go||st.rng.dec.chance(0.55+0.4*avg([at(p,'communication'),td(p,'teamplay')]))).map(v=>v[0]);
-  return {go,part:go?part:[],votes,base,pr};
+  return {go,part:go?roleQuestObjectiveJoin(st,side,part):[],votes,base,pr};
 }
 
 function objectiveTick(st){
@@ -644,7 +646,7 @@ function objectiveTick(st){
       if(wa.length){
         taker=w;
         const lj=st.sides[1-w].ps.find(p=>p.role==='JGL');
-        if(alive(st,lj)&&R.exec.chance(0.04+0.12*at(lj,'smite_execution')*(r.deaths[1-w]<=1?1:0.3))){taker=1-w;log(st,`${pname(st,lj)} ${label} 스틸!`,{side:1-w,major:true,kind:'obj'})}
+        if(alive(st,lj)&&R.exec.chance(clamp(0.04+0.12*at(lj,'smite_execution')*(r.deaths[1-w]<=1?1:0.3)+(roleQuestSmite(lj)-roleQuestSmite(st.sides[w].ps.find(p=>p.role==='JGL')))/1400*.04,.01,.25))){taker=1-w;log(st,`${pname(st,lj)} ${label} 스틸!`,{side:1-w,major:true,kind:'obj'})}
       }
     } else if(c[0].go!==c[1].go){
       taker=c[0].go?0:1;
@@ -654,7 +656,7 @@ function objectiveTick(st){
         takeStructure(st,giver,{lane:key==='baron'||key==='herald'?'bot':'top'});
       }
     }
-    if(taker>=0){o.wait[key]=0;const involved=c[taker]&&c[taker].part&&c[taker].part.length?c[taker].part:aliveOf(st,taker);involved.forEach(p=>p.objectives++);reward(taker);}
+    if(taker>=0){o.wait[key]=0;const involved=c[taker]&&c[taker].part&&c[taker].part.length?c[taker].part:aliveOf(st,taker);involved.forEach(p=>{p.objectives++;matchQuestEvent(st,p,{epics:1,jungleStacks:p.role==='JGL'?1:0})});reward(taker);}
   };
   if(!o.soul&&o.dragonAt&&st.t>=o.dragonAt){
     const type=o.dragonTypes[o.dragonIdx%o.dragonTypes.length];
@@ -1056,10 +1058,13 @@ function systemChoiceBase(patch,c,role){
   const out={items,starters,runes};cache.set(key,out);return out;
 }
 function selectItemBuild(patch,c,p,role){
-  const ranked=systemChoiceBase(patch,c,role).items.map(x=>{const noise=((hashStr((p&&p.id||'')+'|'+c.id+'|'+role+'|'+x.id)%1000)/1000-.5)*.012;return {id:x.id,tier:x.tier,s:x.fit+noise-x.cost/140000+(x.tier==='boots'?.006:0)}}).sort((x,y)=>y.s-x.s);
-  const out=[];let boots=false;for(const x of ranked){if(x.tier==='boots'&&boots)continue;out.push(x.id);if(x.tier==='boots')boots=true;if(out.length>=6)break}return out;
+  const base=systemChoiceBase(patch,c,role),quest=!!patch.roleQuests?.roles?.[role];
+  const options=quest?[...base.items.filter(x=>!patch.itemDefs[x.id]?.tags?.includes('Boots')&&!patch.itemDefs[x.id]?.from?.includes('3867')),...Object.values(patch.itemDefs||{}).filter(d=>d.active!==false&&d.shopActive!==false&&d.tags?.includes('Boots')&&d.from?.includes('1001')&&c.name!=='Cassiopeia').map(d=>({id:d.id,tier:'boots',fit:systemChoiceScore(c,d.effects||{},role),cost:d.cost}))]:base.items;
+  const ranked=options.map(x=>{const noise=((hashStr((p&&p.id||'')+'|'+c.id+'|'+role+'|'+x.id)%1000)/1000-.5)*.012;return {id:x.id,tier:x.tier,s:x.fit+noise-x.cost/140000+(x.tier==='boots'?.006:0)}}).sort((x,y)=>y.s-x.s);
+  const bestBoot=quest?ranked.find(x=>x.tier==='boots'):null;const out=bestBoot?[bestBoot.id]:[];let boots=!!bestBoot;if(quest&&role==='SUP'&&patch.itemDefs['3865'])out.push('3865');for(const x of ranked){if(x.tier==='boots'&&boots)continue;out.push(x.id);if(x.tier==='boots')boots=true;if(out.length>=6)break}return out;
 }
 function selectStarterItem(patch,c,p,role){
+  if(role==='SUP'&&patch.roleQuests?.roles?.SUP&&patch.itemDefs?.['3865']?.active!==false&&patch.itemDefs?.['3865'])return '3865';
   const rows=systemChoiceBase(patch,c,role).starters.map(d=>({id:d.id,s:d.fit+d.roleFit+((hashStr((p&&p.id||'')+'|start|'+d.id)%1000)/1000-.5)*.008-d.cost/40000})).sort((a,b)=>b.s-a.s);
   return rows[0]?.id||null;
 }
@@ -1070,7 +1075,7 @@ function itemCraftActions(patch,finalBuild){
   return actions;
 }
 function itemPurchasePlan(patch,finalBuild,starterId){
-  const actions=itemCraftActions(patch,finalBuild);let spent=starterId&&patch.itemDefs?.[starterId]?patch.itemDefs[starterId].cost||0:0;
+  const actions=itemCraftActions(patch,patch.roleQuests?finalBuild.filter(id=>id!=='3865'):finalBuild);let spent=starterId&&patch.itemDefs?.[starterId]?patch.itemDefs[starterId].cost||0:0;
   for(const a of actions){spent+=a.cost;a.threshold=500+spent}
   return actions;
 }
@@ -1092,21 +1097,172 @@ function selectRunePage(patch,c,p,role){
 }
 function applyItemCraftAction(ps,a){
   for(const id of a.consume||[]){const i=ps.items.indexOf(id);if(i>=0)ps.items.splice(i,1)}
-  ps.items.push(a.id);
-  if(ps.items.length>6){const i=ps.items.findIndex(id=>['starter','consumable'].includes(ps.patchRef?.itemDefs?.[id]?.tier));if(i>=0)ps.items.splice(i,1)}
+  ps.items.push(a.id);syncRoleQuestEquipment(ps);
+  if(ps.items.length>6){const i=ps.items.findIndex(id=>['starter','consumable'].includes(ps.patchRef?.itemDefs?.[id]?.tier)&&!(id==='3865'&&ps.quest?.role==='SUP'));if(i>=0)ps.items.splice(i,1)}
 }
 function advanceItemPurchases(ps){
   const actions=ps.itemActions||[];
-  while(ps.itemActionIndex<actions.length&&ps.goldEarned>=actions[ps.itemActionIndex].threshold){
-    const start=ps.itemActionIndex,preview={items:ps.items.slice(),patchRef:ps.patchRef};let end=start;
+  while(ps.itemActionIndex<actions.length&&ps.goldEarned-(ps.questWardSpent||0)>=actions[ps.itemActionIndex].threshold){
+    const start=ps.itemActionIndex,preview={...ps,items:ps.items.slice()};let end=start;
     // With a full inventory, wait until enough gold can combine the remaining
     // components atomically. Intermediate ingredients never occupy extra slots.
-    for(;end<actions.length&&ps.goldEarned>=actions[end].threshold;end++){
+    for(;end<actions.length&&ps.goldEarned-(ps.questWardSpent||0)>=actions[end].threshold;end++){
       applyItemCraftAction(preview,actions[end]);if(preview.items.length<=6)break;
     }
-    if(end>=actions.length||ps.goldEarned<actions[end].threshold)break;
+    if(end>=actions.length||ps.goldEarned-(ps.questWardSpent||0)<actions[end].threshold)break;
     for(;ps.itemActionIndex<=end;ps.itemActionIndex++)applyItemCraftAction(ps,actions[ps.itemActionIndex]);
   }
+}
+
+/* ==== FILE: role-quests.js ==== */
+// Patch-owned role rules and match-local quest transitions. Engine adapters
+// supply measured events; this module never awards permanent player growth.
+const ROLE_QUEST_FIELDS=Object.freeze({
+  threshold:[1,10000],csPoints:[0,10],takedownPoints:[0,200],epicPoints:[0,200],
+  towerPoints:[0,200],platePoints:[0,200],lanePerSecond:[0,5],awayPerSecond:[0,5],
+  damageRanged:[0,.1],damageMelee:[0,.1],roamBankCap:[0,120],
+  xpReward:[0,2000],xpBonus:[0,.5],takedownXp:[0,500],levelCap:[18,20],
+  teleportCooldown:[1,20],bonusPower:[0,.25],goldReward:[0,1000],
+  csGold:[0,10],takedownGold:[0,200],monsterGold:[0,100],monsterXp:[0,100],
+  smiteDamage:[0,2000],jungleMobility:[0,.2],controlWardCost:[0,100],controlWardCapacity:[0,4]
+});
+const ROLE_QUEST_LABELS={threshold:'완료 요구량',csPoints:'CS 진척',takedownPoints:'처치 관여 진척',epicPoints:'오브젝트 진척',towerPoints:'포탑 진척',platePoints:'방패 진척',lanePerSecond:'라인 체류 진척',awayPerSecond:'로밍 진척',xpReward:'완료 경험치',xpBonus:'추가 경험치 비율',takedownXp:'처치 관여 경험치',levelCap:'최대 레벨',teleportCooldown:'순간이동 재사용(분)',bonusPower:'추가 공격력·주문력 비율',goldReward:'완료 골드',csGold:'CS 추가 골드',takedownGold:'처치 관여 추가 골드',monsterGold:'대형 몬스터 추가 골드',monsterXp:'대형 몬스터 추가 경험치',smiteDamage:'강타 피해',controlWardCost:'제어 와드 가격',controlWardCapacity:'제어 와드 슬롯',jungleMobility:'정글·강가 이동 속도 비율'};
+function maybeRoleQuestChange(db,major,rng){
+  if(!db.patch.roleQuests||!rng.chance(major?.25:.015))return null;
+  const role=rng.pick(ROLES),fields={TOP:['threshold','xpBonus','teleportCooldown'],MID:['threshold','bonusPower'],ADC:['threshold','goldReward','csGold'],JGL:['threshold','monsterGold'],SUP:['threshold','controlWardCost']},field=rng.pick(fields[role]),old=db.patch.roleQuests.roles[role][field],base=defaultRoleQuestRules().roles[role][field];
+  const step=field==='threshold'?(role==='JGL'?1:25):field==='bonusPower'||field==='xpBonus'?.005:field==='teleportCooldown'?.25:field==='csGold'?.25:field==='goldReward'?25:1;
+  const value=Math.round(clamp(old+(rng.chance(.5)?step:-step),base*.7,base*1.3)*1000)/1000;
+  return value===old?null:{type:'role_quest',role,field,old,new:value,why:'포지션별 성장 시점과 보상 조정'};
+}
+function defaultRoleQuestRules(){
+  const lane={csPoints:2,takedownPoints:15,epicPoints:30,towerPoints:50,platePoints:40,lanePerSecond:1.5,awayPerSecond:1/3,roamBankCap:60};
+  return {version:1,sourcePatch:'26.19',roles:{
+    TOP:{...lane,threshold:1200,xpReward:600,xpBonus:.11,takedownXp:80,levelCap:20,teleportCooldown:6.5},
+    MID:{...lane,threshold:1350,takedownPoints:25,damageRanged:.015,damageMelee:.03,bonusPower:.08},
+    ADC:{...lane,threshold:1350,csPoints:3,goldReward:300,csGold:2,takedownGold:40},
+    JGL:{threshold:35,monsterGold:10,monsterXp:10,smiteDamage:1400,jungleMobility:.04},
+    SUP:{threshold:1000,controlWardCost:40,controlWardCapacity:2}
+  }};
+}
+function validateRoleQuestNote(note){
+  const limits=ROLE_QUEST_FIELDS[note.field];
+  if(!ROLES.includes(note.role)||!limits||!Number.isFinite(note.new)||note.new<limits[0]||note.new>limits[1]||(['levelCap','controlWardCapacity'].includes(note.field)&&!Number.isInteger(note.new)))throw Error('Invalid role quest patch note');
+}
+function applyRoleQuestNote(patch,note){
+  validateRoleQuestNote(note);
+  if(!patch.roleQuests?.roles?.[note.role])throw Error('Role quest rules absent from patch');
+  patch.roleQuests.roles[note.role][note.field]=note.new;
+}
+function createRoleQuest(patch,role){
+  const rules=patch.roleQuests?.roles?.[role];if(!rules)return null;
+  return {role,patchId:patch.id,rules:Object.freeze({...rules}),progress:0,completed:false,
+    completedAt:null,rewardClaimed:false,lastSequence:-1,roamBank:0};
+}
+function advanceRoleQuest(quest,event){
+  if(!quest)return null;
+  if(!Number.isSafeInteger(event.sequence)||event.sequence<0)throw Error('Role quest event sequence required');
+  if(event.sequence<=quest.lastSequence)return null;
+  const amount=k=>{const n=event[k]??0;if(!Number.isFinite(n)||n<0)throw Error('Invalid role quest event '+k);return n};
+  // Validate before mutating so malformed/stale adapters cannot half-advance.
+  const cs=amount('cs'),takedowns=amount('takedowns'),epics=amount('epics'),towers=amount('towers'),plates=amount('plates'),damage=amount('damage'),lane=amount('laneSeconds'),away=amount('awaySeconds'),stacks=amount('jungleStacks'),support=amount('supportGold');
+  if(!Number.isFinite(event.minute)||event.minute<0)throw Error('Invalid quest minute');
+  const r=quest.rules;let points=0,bank=quest.roamBank;
+  if(quest.role==='JGL')points=stacks;
+  else if(quest.role==='SUP')points=support;
+  else{
+    if(event.level>=3)bank=Math.min(r.roamBankCap??0,bank+lane/2);
+    const banked=Math.min(bank,away);bank-=banked;
+    points=cs*(r.csPoints||0)+takedowns*(r.takedownPoints||0)+epics*(r.epicPoints||0)+towers*(r.towerPoints||0)+plates*(r.platePoints||0)+damage*(event.melee?r.damageMelee||0:r.damageRanged||0)+(lane+banked)*(r.lanePerSecond||0)+(away-banked)*(r.awayPerSecond||0);
+  }
+  quest.lastSequence=event.sequence;quest.roamBank=bank;
+  if(quest.completed)return null;
+  quest.progress=Math.min(r.threshold,quest.progress+points);
+  if(quest.progress<r.threshold)return null;
+  quest.completed=true;quest.completedAt=event.minute;quest.rewardClaimed=true;
+  return {role:quest.role,patchId:quest.patchId,rules:{...r}};
+}
+
+/* ==== FILE: role-quest-match.js ==== */
+// Adapters for the minute-based match engine. Lane time, camp equivalents,
+// ward placement and teleport joins are aggregate proxies, not map geometry.
+function matchQuestItems(ps){const items=ps.items||[];return ps.questBoots?[...items,ps.questBoots]:items}
+function roleQuestBootUpgrade(patch,id){return Object.values(patch.itemDefs||{}).find(d=>d.active!==false&&d.tags?.includes('Boots')&&d.from?.length===1&&d.from[0]===id&&patch.itemDefs[id]?.tags?.includes('Boots'))?.id||null}
+function syncRoleQuestEquipment(ps){
+  if(!ps.quest?.completed)return;
+  const i=ps.items.findIndex(id=>ps.patchRef.itemDefs[id]?.tags?.includes('Boots'));if(i<0)return;
+  if(ps.role==='ADC'){ps.questBoots=ps.items.splice(i,1)[0];ps.questRevision=(ps.questRevision||0)+1}
+  else if(ps.role==='MID'){const upgrade=roleQuestBootUpgrade(ps.patchRef,ps.items[i]);if(upgrade){ps.items[i]=upgrade;ps.questRevision=(ps.questRevision||0)+1}}
+}
+function matchQuestEvent(st,ps,event){
+  if(!ps.quest)return;
+  const reward=advanceRoleQuest(ps.quest,{sequence:ps.quest.lastSequence+1,minute:st.t,level:ps.lvl,melee:ps.champ.base.range<=300,...event});
+  if(!reward)return;
+  ps.questRevision=(ps.questRevision||0)+1;
+  const r=reward.rules;
+  if(r.goldReward)addGold(ps,r.goldReward);
+  if(r.xpReward)addXp(ps,r.xpReward,'quest');
+  syncRoleQuestEquipment(ps);
+  if(ps.role==='ADC')extendBotQuestBuild(ps);
+  if(ps.role==='SUP')upgradeSupportQuestItem(ps);
+  log(st,`${pname(st,ps)} ${ROLE_KO[ps.role]} 퀘스트 완료`,{side:ps.side,major:true,kind:'quest'});
+}
+function extendBotQuestBuild(ps){
+  if(ps.questBuildExtended||!ps.itemPlan.some(id=>ps.patchRef.itemDefs[id]?.tags?.includes('Boots')))return;
+  ps.questBuildExtended=true;
+  const choice=systemChoiceBase(ps.patchRef,ps.champ,ps.role).items.filter(x=>!ps.itemPlan.includes(x.id)&&!ps.patchRef.itemDefs[x.id]?.tags?.includes('Boots')&&!ps.patchRef.itemDefs[x.id]?.from?.includes('3867')).sort((a,b)=>b.fit-a.fit)[0];
+  if(!choice)return;
+  const extra=itemCraftActions(ps.patchRef,[choice.id]);let threshold=ps.itemActions.at(-1)?.threshold||500;
+  for(const action of extra){threshold+=action.cost;action.threshold=threshold}
+  ps.itemPlan.push(choice.id);ps.itemActions.push(...extra);
+}
+function roleQuestIncome(st,ps,cs,recalled){
+  if(!ps.quest)return;
+  const away=ps.questAwayUntil>=st.t,seconds=st.t<2?0:Math.max(0,(st.t===2?55:60)-(recalled?12:0));
+  const r=ps.quest.rules,wasComplete=ps.quest.completed;
+  const campEquivalent=ps.role==='JGL'?cs/4:0;
+  // Supports consume at most three regenerated charges per minute alongside
+  // their live bot partner. Existing passive gold is not counted as quest gold.
+  const partner=st.sides[ps.side].ps.find(p=>p.role==='ADC');
+  const supportGold=ps.role==='SUP'&&!wasComplete&&partner&&alive(st,partner)?3*(ps.quest.progress>=500?21:18)*(away&&ps.lvl<5?2/3:1):0;
+  if(supportGold)addGold(ps,supportGold);
+  const offFactor=away?1-.75*(1-ps.quest.progress/r.threshold):1;
+  matchQuestEvent(st,ps,{cs:ps.role==='JGL'||ps.role==='SUP'?0:cs*offFactor,laneSeconds:away?0:seconds,awaySeconds:away?seconds:0,jungleStacks:campEquivalent+Math.min(1,campEquivalent),supportGold});
+  // Benefits start on subsequent income/events, never retroactively on the
+  // CS or monster which completed a quest.
+  if(wasComplete){
+    if(ps.role==='ADC')addGold(ps,cs*(r.csGold||0));
+    if(ps.role==='JGL'){addGold(ps,campEquivalent*(r.monsterGold||0));addXp(ps,campEquivalent*(r.monsterXp||0),'quest')}
+    if(ps.role==='SUP')addGold(ps,54);
+  }
+}
+function roleQuestTakedown(st,ps){
+  const r=ps.quest?.completed?ps.quest.rules:null;
+  if(r?.takedownGold)addGold(ps,r.takedownGold);
+  if(r?.takedownXp)addXp(ps,r.takedownXp,'quest');
+  matchQuestEvent(st,ps,{takedowns:1});
+}
+function roleQuestWard(st,ps){
+  if(ps.role!=='SUP'||!ps.quest?.completed)return 0;
+  const price=ps.quest.rules.controlWardCost,capacity=ps.quest.rules.controlWardCapacity;
+  const spent=(ps.itemActions?.[ps.itemActionIndex-1]?.threshold||500+(ps.patchRef.itemDefs?.[ps.starterItem]?.cost||0))-500;
+  if(!capacity||ps.goldEarned-spent-(ps.questWardSpent||0)<price||st.t<(ps.questWardAt||0))return 0;
+  ps.gold-=price;ps.questWardSpent=(ps.questWardSpent||0)+price;ps.questWardAt=st.t+Math.max(1,3-capacity);ps.questWards=(ps.questWards||0)+1;
+  return .25+st.sides[ps.side].team.tactics.vision_investment/200;
+}
+function roleQuestObjectiveJoin(st,side,part){
+  const top=st.sides[side].ps.find(p=>p.role==='TOP');
+  if(!top?.quest?.completed||!alive(st,top)||part.includes(top)||st.t<(top.questTeleportAt||0))return part;
+  top.questTeleportAt=st.t+top.quest.rules.teleportCooldown;top.questTeleports=(top.questTeleports||0)+1;
+  log(st,`${pname(st,top)} 퀘스트 순간이동으로 합류`,{side,kind:'quest'});
+  return [...part,top];
+}
+function roleQuestSmite(ps){return ps?.quest?.completed?ps.quest.rules.smiteDamage:ps?.quest?.progress>=15?1000:600}
+
+function upgradeSupportQuestItem(ps){
+  const reward=Object.values(ps.patchRef.itemDefs||{}).filter(d=>d.active!==false&&d.from?.includes('3867')).sort((a,b)=>systemChoiceScore(ps.champ,b.effects||{},ps.role)-systemChoiceScore(ps.champ,a.effects||{},ps.role))[0];
+  const i=ps.items.indexOf('3865');if(!reward||i<0)return;
+  ps.items[i]=reward.id;const plan=ps.itemPlan.indexOf('3865');if(plan>=0)ps.itemPlan[plan]=reward.id;
+  ps.questSupportItem=reward.id;ps.questRevision=(ps.questRevision||0)+1;
 }
 
 /* ==== FILE: data.js ==== */
@@ -1240,6 +1396,7 @@ function buildPatch(championSnapshot=CHAMPION_SOURCE_SNAPSHOT,systemSnapshot=SYS
   const sourceCoverage=applyChampionSource(champions,championSnapshot),itemSystem=buildItemSystems(systemSnapshot),runeSystem=buildRuneSystems(systemSnapshot);
   return {
     id:'26.19',
+    roleQuests:defaultRoleQuestRules(),
     championSource:{version:CHAMPION_SOURCE_PATCH,...sourceCoverage},systemSource:{provider:systemSnapshot.provider,version:systemSnapshot.version,mapId:systemSnapshot.mapId,itemCount:Object.keys(systemSnapshot.items||{}).length,runeCount:Object.keys(systemSnapshot.runes||{}).length,runeStyleCount:(systemSnapshot.runeStyles||[]).length},
     rules:{ csGold:23, passiveGold:122, killGold:300, assistGold:150, dragonSpawn:5, dragonRespawn:5, heraldSpawn:14, baronSpawn:20, baronRespawn:6, baronBuff:3, elderBuff:2.5, inhibRespawn:5 },
     champions, items:itemSystem.pool, itemDefs:itemSystem.defs, runes:runeSystem.styles, runeDefs:runeSystem.defs
@@ -1719,7 +1876,7 @@ function recordMeta(db,r){
   }
   db.metaHistory=db.metaHistory||[];
   const mc=r.metaContext||{};
-  db.metaHistory.push({date:r.date||db.worldDate,patch:r.patch||db.patch.id,comp:r.comp||r.competitionId||null,season:mc.season||null,year:mc.year||+(r.date||db.worldDate).slice(0,4),split:mc.split||null,stage:mc.stage||null,league:mc.league||null,international:!!mc.international,regions,sides:r.sides.map((s,i)=>({team:s.team?.id||null,region:s.team?.region||null,win:r.winner===i,picks:s.ps.map(x=>({champ:x.champ.id,role:x.role||null,player:x.p?.id||null,items:(x.items||[]).slice(),runes:(x.runes||[]).slice()}))})),bans:r.draft.bans.flat()});
+  db.metaHistory.push({date:r.date||db.worldDate,patch:r.patch||db.patch.id,comp:r.comp||r.competitionId||null,season:mc.season||null,year:mc.year||+(r.date||db.worldDate).slice(0,4),split:mc.split||null,stage:mc.stage||null,league:mc.league||null,international:!!mc.international,regions,sides:r.sides.map((s,i)=>({team:s.team?.id||null,region:s.team?.region||null,win:r.winner===i,picks:s.ps.map(x=>({champ:x.champ.id,role:x.role||null,player:x.p?.id||null,items:matchQuestItems(x).slice(),runes:(x.runes||[]).slice()}))})),bans:r.draft.bans.flat()});
   const international=regions.length>1;
   for(const side of r.sides){const t=side.team;if(!t)continue;t.metaKnowledge=t.metaKnowledge||{};t.metaCounter=t.metaCounter||{};for(const os of r.sides){if(os===side)continue;for(const pick of os.ps){const cid=pick.champ.id,success=r.winner===r.sides.indexOf(os),novel=((db.regionMetaStats?.[t.region]||{})[cid]?.p||0)<3,analysis=.65+staffProfile(t).analysis/140,learn=(success?.055:.018)*(novel?1.6:1)*(international?1.35:1)*analysis;t.metaKnowledge[cid]=clamp((t.metaKnowledge[cid]||0)+learn,0,1);if(r.winner!==r.sides.indexOf(side))t.metaCounter[cid]=clamp((t.metaCounter[cid]||0)+.02*analysis,0,1)}}}
 }
@@ -1752,8 +1909,10 @@ const RULE_KO={dragonRespawn:'드래곤 재생성(분)',baronBuff:'바론 버프
 function initPatches(db){
   db.patches={list:[],history:[],prev:[],nextDate:null,newIdx:0,y:0,n:0,releasesByYear:{},releaseTargets:{},reworksByYear:{},majorReworksByYear:{},systemLifeByYear:{},cadence:14};
   db.metaStats={};db.metaGames=0;db.regionMetaStats={};db.regionMetaGames={};
+  db.patches.roleQuestBaseline=JSON.parse(JSON.stringify(db.patch.roleQuests||null));
 }
 function applyNote(P,n){
+  if(n.type==='role_quest')applyRoleQuestNote(P,n);
   const c=P.champions[n.c];
   P._revision=(P._revision||0)+1;if(/^item/.test(n.type)||/^rune/.test(n.type))P._systemRevision=(P._systemRevision||0)+1;
   if(n.type==='skill'&&c&&c.skills&&c.skills[n.slot]){c.skills[n.slot][n.field]=JSON.parse(JSON.stringify(n.new));if(n.field==='range')delete c.skills[n.slot].rangeDisplay;}
@@ -1773,6 +1932,8 @@ function getPatch(db,id){
   if(db.patch&&db.patch.id===id)return db.patch;
   const cached=historicPatchCacheHit(db,id);if(cached)return cached;
   const P=buildPatch();
+  if(db.patches.roleQuestBaseline!==undefined)P.roleQuests=JSON.parse(JSON.stringify(db.patches.roleQuestBaseline));
+  else if(!db.patch?.roleQuests)delete P.roleQuests;
   if(P.id===id)return rememberHistoricPatch(db,id,P);
   const hist=db.patches.history&&db.patches.history.length?db.patches.history:db.patches.list;
   for(const p of hist){for(const n of p.notes||[])applyNote(P,n);P.id=p.id;if(P.id===id)return rememberHistoricPatch(db,id,P)}
@@ -1792,6 +1953,7 @@ function newPatch(db,date,major,rng){
   notes.push(...chooseSystemBalanceChanges(db,diag,major,rng));
   notes.push(...maybeSystemLifecycle(db,date,major,rng,diag));
   const rule=maybeRuleChange(db,major,rng);if(rule)notes.push(rule);
+  const quest=maybeRoleQuestChange(db,major,rng);if(quest)notes.push(quest);
   const nc=maybeNewChampion(db,date,major,rng);if(nc)notes.push(nc);
   notes.forEach(n=>applyNote(P,n));
   adaptPlayerPoolsToPatch(db,notes,!!major);
@@ -10280,7 +10442,7 @@ function skillRangeText(skill,champion){
 // ---------- 패치·메타 ----------
 function patchValueText(v,field){
   if(Array.isArray(v))return v.join('/');
-  if(['damageMod','utilityMod','healMod','shieldMod','ccMod','mobilityMod'].includes(field))return Math.round(Number(v)*100)+'%';
+  if(['damageMod','utilityMod','healMod','shieldMod','ccMod','mobilityMod','xpBonus','bonusPower','jungleMobility'].includes(field))return Math.round(Number(v)*100)+'%';
   return Number.isFinite(Number(v))?String(Math.round(Number(v)*100)/100):String(v??'');
 }
 function patchFieldLabel(field){
@@ -10290,6 +10452,7 @@ function noteText(n){
   const why=n.why?` <small>${esc((n.size?PATCH_SIZE_KO[n.size]+' 조정 · ':'')+n.why)}</small>`:'';
   if(n.type==='new')return `<b>신규 챔피언 ${esc(n.def.name)}</b> <small>${n.def.roles.map(r=>ROLE_KO[r]).join('/')} · ${esc(CLASS_KO[ARCH[n.def.arch][0]])} · ${esc(n.def.proEligibleDate)}부터 프로 사용 가능</small>`;
   if(n.type==='rework')return `<b>${esc(championLabel(DB,n.c))}</b> ${n.scope==='major'?'대규모 챔피언 업데이트':'미드스코프 업데이트'} <small>안정 ID ${esc(n.stableId)} 유지 · ${esc(n.why||'')}</small>`;
+  if(n.type==='role_quest')return `<b>${esc(ROLE_KO[n.role])} 퀘스트</b> ${esc(ROLE_QUEST_LABELS[n.field]||n.field)} ${patchValueText(n.old,n.field)} → ${patchValueText(n.new,n.field)}${why}`;
   if(n.type==='rule')return `<b>${esc(RULE_KO[n.key]||n.key)}</b> ${patchValueText(n.old,n.key)} → ${patchValueText(n.v,n.key)}${why}`;
   if(n.type==='kit')return `<b>${esc(championLabel(DB,n.c))}</b> ${esc(KIT_KO[n.key]||n.key)} ${patchValueText(n.old,n.key)} → ${patchValueText(n.new,n.key)}${why}`;
   if(n.type==='skill')return `<b>${esc(championLabel(DB,n.c))} ${esc(n.slot)}</b> ${esc(patchFieldLabel(n.field))} ${patchValueText(n.old,n.field)} → ${patchValueText(n.new,n.field)}${why}`;
@@ -10838,8 +11001,8 @@ function goldChart(r){
   </svg></div>`;
 }
 function playerTable(s,i){
-  return `<div class="scroll"><table class="pt ${i?'red':'blue'}"><thead><tr><th>${esc(s.team.short)}</th><th>챔피언</th><th>K/D/A</th><th>CS</th><th>골드</th><th>레벨</th><th>피해량</th><th>아이템</th></tr></thead><tbody>
-  ${s.ps.map(p=>`<tr><td><span class="role">${ROLE_KO[p.role]}</span> ${esc(p.p.name)}</td><td>${esc(championDisplayName(p.champ))}</td><td class="num">${p.k}/${p.d}/${p.a}</td><td class="num">${Math.round(p.cs)}</td><td class="num">${(p.goldEarned/1000).toFixed(1)}k</td><td class="num">${p.lvl}</td><td class="num">${(p.dmg/1000).toFixed(1)}k</td><td class="items">${p.items.map(esc).join(', ')}</td></tr>`).join('')}
+  return `<div class="scroll"><table class="pt ${i?'red':'blue'}"><thead><tr><th>${esc(s.team.short)}</th><th>챔피언</th><th>K/D/A</th><th>CS</th><th>골드</th><th>레벨</th><th>피해량</th><th>아이템</th><th>퀘스트</th></tr></thead><tbody>
+  ${s.ps.map(p=>`<tr><td><span class="role">${ROLE_KO[p.role]}</span> ${esc(p.p.name)}</td><td>${esc(championDisplayName(p.champ))}</td><td class="num">${p.k}/${p.d}/${p.a}</td><td class="num">${Math.round(p.cs)}</td><td class="num">${(p.goldEarned/1000).toFixed(1)}k</td><td class="num">${p.lvl}</td><td class="num">${(p.dmg/1000).toFixed(1)}k</td><td class="items">${matchQuestItems(p).map(id=>esc(DB.patch.itemDefs?.[id]?.name||id)).join(', ')}</td><td>${p.quest?(p.quest.completed?`완료 · ${p.quest.completedAt}분`:`${Math.floor(p.quest.progress)} / ${p.quest.rules.threshold}`):'—'}</td></tr>`).join('')}
   </tbody></table></div>`;
 }
 function renderLog(r){
