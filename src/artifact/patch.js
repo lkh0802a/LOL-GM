@@ -18,7 +18,7 @@ function applyNote(P,n){
   else if(n.type==='new'){const nc=archChampion(n.def.name,n.def.roles,n.def.arch,n.def.dmg,null,n.def.id||championId(n.def.name));nc.releaseDate=n.def.releaseDate||null;nc.proEligibleDate=n.def.proEligibleDate||null;nc.nameKo=n.def.nameKo||nc.nameKo;nc.naming=n.def.naming?JSON.parse(JSON.stringify(n.def.naming)):null;nc.visual=JSON.parse(JSON.stringify(n.def.visual||generatedChampionVisual(n.def)));P.champions[nc.id]=nc}
   else if(n.type==='rework'&&c&&c.visual){c.visual={...c.visual,revision:(c.visual.revision||0)+(n.scope==='major'?1:0)}}
   else if(n.type==='rule')P.rules[n.key]=n.v;
-  else if(n.type==='item'&&P.itemDefs&&P.itemDefs[n.id]){const d=P.itemDefs[n.id];if(n.field==='cost'){const delta=Number(n.new)-Number(d.cost||0);d.cost=n.new;d.recipeCost=Math.max(0,Math.round((Number(d.recipeCost??d.cost)+delta)*100)/100)}else{d.effects=d.effects||{};d.effects[n.field]=n.new}}
+  else if(n.type==='item'&&P.itemDefs&&P.itemDefs[n.id]){const d=P.itemDefs[n.id];if(n.field==='cost'){const oldCost=Number(d.cost||0),recipeCost=Number(d.recipeCost??oldCost),delta=Number(n.new)-oldCost;d.cost=n.new;d.recipeCost=Math.max(0,Math.round((recipeCost+delta)*100)/100)}else{d.effects=d.effects||{};d.effects[n.field]=n.new}}
   else if(n.type==='item_new'){P.itemDefs=P.itemDefs||{};P.itemDefs[n.def.id]=JSON.parse(JSON.stringify(n.def));P.items=P.items||{};for(const cls of n.def.classes||[]){P.items[cls]=P.items[cls]||[];if(!P.items[cls].includes(n.def.id))P.items[cls].push(n.def.id)}}
   else if(n.type==='item_remove'&&P.itemDefs&&P.itemDefs[n.id])P.itemDefs[n.id].active=false;
   else if(n.type==='rune'&&P.runeDefs&&P.runeDefs[n.id]){const d=P.runeDefs[n.id];d.effects=d.effects||{};d.effects[n.field]=n.new}

@@ -1500,3 +1500,58 @@ uses before/after. A real temporary Git-branch fixture reproduces base-only
 publication and verifies it is excluded without hiding unknown head changes.
 The superseded UI run is cancelled by concurrency when this correction is pushed;
 the estate engine's already successful mandatory run is not repeated.
+
+### D10 controlled item/rune patches and actual inventory (2026-10-02)
+
+The reusable system-patch experiment runs8 paired seeds in both side orders.
+Players, teams and fixed drafts stay unchanged across no-op, item effect, item
+cost, rune effect, combined and exact reverse-patch scenarios. An additional
+adaptive draft path reports changed champion selections without requiring every
+small adjustment to cross a pick threshold. Warm system/profile/strength/selector
+caches are compared with cold equivalent patches. Save restoration must reproduce
+the same actual match trajectories, inventories and rune pages; isolated runs
+must not mutate the career. Completed matches feed the existing public meta
+evidence. Damage, duration, wins and changed-match counts are descriptive causal
+fixtures; this intentionally fixed roster is not a balanced population, and its
+16/16 team wins cannot estimate real win rates or prove long-term patch balance.
+
+These experiments exposed three equipment issues. simulateMatch discarded every
+starter immediately after newPS had selected and charged for it. Starters now
+remain equipped. Component crafting could expose seven or more items when a game
+ended midway through a recipe. advanceItemPurchases now waits for sufficient gold
+to combine a full-inventory component chain atomically into at most six items;
+an affordable final build must still complete. Finally, cost patches with missing
+legacy recipeCost applied the price delta twice. applyNote now bases the fallback
+recipe on the old total price, and forward/reverse changes preserve it exactly.
+Starter disposal uses the existing inventory rule without inventing resale cash.
+
+Acceptance covers160 actual first-tick player inventories and8181 source-champion/
+role purchase thresholds, full affordable builds, an explicit blocked-seventh-slot
+recipe, exact gold threshold and repeated-income idempotence. The four independent/
+combined treatments each change actual fixed-draft matches; no-op and rollback
+reproduce the baseline exactly. The default experiment finishes locally in about
+8seconds; npm run qa:system-patches accepts LOL_GM_PATCH_SEEDS=2..64 for explicit
+additional paired samples. It is developer QA, not a restored simulation game menu.
+Calendar/scouting11 acceptance contexts, regression and98-module static/build
+pass locally; the final mandatory CI gates merge. No balance constants change.
+
+The live single100season run still loads the #119 engine and cannot prove this
+equipment change or estate recovery. D10 long-run balance, D11 multi-seed100season
+proof and D13 real mobile tasks remain incomplete, as do other documented D gaps.
+
+### D11 batch-save long-run failure preserved (2026-10-02)
+
+daily-batch-save-main-1 on #119 completed36 annual rows through2062 and failed
+the1536MiB heap invariant after the2062 annual report/market-save-size measurement.
+The observer recorded exit1/signal null at01:34:37.989UTC; both processes14124/3280
+are gone. The final row has53873 history rows,116444134 save bytes, heap1732736088
+bytes (memory.heapUsed1732736352), RSS2420989952 and arrayBuffers116587745.
+The preceding2063-01-06 market after-restore checkpoint had heap1366938560 and
+RSS1917472768. Thus the stale last checkpoint is not the over-budget sample;
+the annual row is. This is a known explicit QA failure, not native V8 OOM or
+unknown termination. All original .diagnostics/daily-batch-save-main-1 files are
+preserved; no budget increase, forced GC, archive removal or replacement long
+run was used. The next memory investigation should distinguish retained history,
+save encoding/materialization and the extra TextEncoder size-measurement buffer
+without treating removal of a measurement as proof of mobile or100season safety.
+This old-source execution is not evidence for estate recovery or this D10 change.
