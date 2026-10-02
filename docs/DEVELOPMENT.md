@@ -1992,3 +1992,5 @@ implement a general agency/insolvency policy, alter loan clauses, promise that a
 recall is optimal in every career, or complete D05 or the 23-stage roadmap.
 The deferred long-run, mobile and TalkBack checks remain after all features and
 user playtest fixes.
+
+D05 follow-up test note: D01 calendar acceptance now selects mutually ready clubs with a shared time block before asserting practice reservation; see the latest PR run.
