@@ -61,7 +61,7 @@ function expl(st,title,factors,extra={}){if(st.quiet)return;st.expl.push({t:st.t
 function pname(st,ps){return `${st.sides[ps.side].team.short} ${ps.p.name}(${ps.champ.name})`}
 
 function addGold(ps,g){ps.gold+=g;ps.goldEarned+=g;
-  while(ps.itemActionIndex<(ps.itemActions||[]).length&&ps.goldEarned>=ps.itemActions[ps.itemActionIndex].threshold){applyItemCraftAction(ps,ps.itemActions[ps.itemActionIndex]);ps.itemActionIndex++}
+  advanceItemPurchases(ps);
 }
 function addXp(ps,x){ps.xp+=x;let l=1;for(let i=1;i<XP_TABLE.length;i++)if(ps.xp>=XP_TABLE[i])l=i+1;ps.lvl=Math.min(18,l)}
 
@@ -453,7 +453,6 @@ function simulateMatch(db,blueId,redId,seed,ctx,quiet){
   const st={t:0,cur:0,quiet:!!quiet,seed,rng,patch,sides:[mkSide(blueId,0),mkSide(redId,1)],lanePush:{top:0,mid:0,bot:0},vision:{top:0,mid:0,bot:0,dragon:0,baron:0},
     obj:{dragonAt:patch.rules.dragonSpawn,dragonIdx:0,dragonTypes:rng.dec.chance(0.5)?['화염','대지','바다','바람']:['바다','바람','화염','대지'],soul:false,elderAt:0,heraldDone:false,baronAt:patch.rules.baronSpawn,wait:{}},
     jgNext:[2.6+rng.dec.range(0,1),2.6+rng.dec.range(0,1)],mods:[(ctx&&ctx.mods&&ctx.mods[blueId])||0,(ctx&&ctx.mods&&ctx.mods[redId])||0],log:[],expl:[...d.expl],firsts:{},goldHist:[],winner:-1};
-  for(const s of st.sides){s.ps.forEach(p=>{p.items=[]})}
   // 경기 당일 컨디션: 기복(consistency)이 낮은 팀일수록 편차가 크다
   st.mods=st.mods.map((m,i)=>m+(i===((ctx&&ctx.firstPick)||0)?BAL.first:0)+(lineupSynergy(db,st.sides[i].team,st.sides[i].ps.map(p=>p.p.id))-50)/1000+rng.mech.normal(0,0.07*(1.25-avg(st.sides[i].ps.map(p=>at(p,'consistency'))))));
   let t;

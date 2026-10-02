@@ -71,3 +71,16 @@ function applyItemCraftAction(ps,a){
   ps.items.push(a.id);
   if(ps.items.length>6){const i=ps.items.findIndex(id=>['starter','consumable'].includes(ps.patchRef?.itemDefs?.[id]?.tier));if(i>=0)ps.items.splice(i,1)}
 }
+function advanceItemPurchases(ps){
+  const actions=ps.itemActions||[];
+  while(ps.itemActionIndex<actions.length&&ps.goldEarned>=actions[ps.itemActionIndex].threshold){
+    const start=ps.itemActionIndex,preview={items:ps.items.slice(),patchRef:ps.patchRef};let end=start;
+    // With a full inventory, wait until enough gold can combine the remaining
+    // components atomically. Intermediate ingredients never occupy extra slots.
+    for(;end<actions.length&&ps.goldEarned>=actions[end].threshold;end++){
+      applyItemCraftAction(preview,actions[end]);if(preview.items.length<=6)break;
+    }
+    if(end>=actions.length||ps.goldEarned<actions[end].threshold)break;
+    for(;ps.itemActionIndex<=end;ps.itemActionIndex++)applyItemCraftAction(ps,actions[ps.itemActionIndex]);
+  }
+}

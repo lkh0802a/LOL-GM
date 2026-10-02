@@ -104,3 +104,11 @@ are recorded separately, and stale/late failures roll back the financial journal
 Current-save restoration and fractional cash conservation are covered. Initial
 combined creditor insolvency policy and asset liquidation remain unimplemented;
 this is partial D04 progress, not full completion. See DEVELOPMENT.md.
+
+D10 item/rune follow-up adds reusable paired fixed/adaptive draft experiments
+across independent effect/cost notes, combinations and exact rollback. They
+exposed discarded paid starters, seven-slot component inventories and a doubled
+legacy recipe-cost delta; these actual match/patch paths are corrected. All
+source-champion role purchase thresholds, warm/cold caches, current saves and
+public meta evidence are checked. Small causal fixtures do not establish roster
+or long-run win-rate balance. The live old-source QA is not proof for these fixes.
