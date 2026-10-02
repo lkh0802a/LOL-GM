@@ -63,7 +63,13 @@ function officeDecisions(db,rng,f,ev,mid){
     const H=M.hype, B=M.balance, props=[];
     const grp=k=>({relegation:'system',franchise:'system',mixed:'system'}[k]||k);
     const structural=new Set(['system','expand','contract','div2','format','splits','standingsMode','cap','floor','tax','import']);
-    const add=(key,u,apply,why)=>{const g=grp(key),cool=structural.has(g)?4:3,last=(R.decisions||[]).filter(d=>d.key===g).slice(-1)[0];if(!last||db.world.year-last.year>=cool)props.push({key,u:u+(S.w[key]||0)+rng.normal(0,.12),apply,why})};
+    const add=(key,u,apply,why,formatChange=null)=>{
+      const g=grp(key),cool=structural.has(g)?4:3,last=(R.decisions||[]).filter(d=>d.key===g).slice(-1)[0];
+      if(last&&db.world.year-last.year<cool)return;
+      const consultation=formatChange?officeFormatConsultation(db,R,...formatChange):null,
+        officeUtility=u+(S.w[key]||0)+rng.normal(0,.12);
+      props.push({key,u:officeUtility+(consultation?.adjustment||0),officeUtility,consultation,apply,why});
+    };
     const takes=[4,6,8].filter(x=>x<=n), up=takes.find(x=>x>R.playoffTake);
     if(!mid){
       if(n<=12) add('expand',(H-55)/18+faDepth*0.3+trend/20-Math.max(0,n-8)*0.3,()=>{const nm=[];for(let i=0;i<2;i++){const t=genTeam(db,rng,R.id,R.strength-3);nm.push(t.name);if(R.system==='mixed')t.franchised=true;if(R.div2&&R.system==='franchise')makeAcademy(db,rng,t)}return `확장팀 ${nm.join(', ')} 창단`},`흥행 ${H}, 영입 가능한 인재 풀 충분`);
@@ -88,8 +94,8 @@ function officeDecisions(db,rng,f,ev,mid){
       add('import',(1.2-regPow)+(45-H)/25,()=>{const o=R.importRecruitMinGap??2;R.importRecruitMinGap=Math.max(0,o-1);return `비로컬 영입 기준 완화 ${o} → ${R.importRecruitMinGap}`},`국제 경쟁력 보강·해외 스타 유치 (1군 비로컬 상한 2명은 고정)`);
       add('import',faDepth-1.8+(regPow-1.5),()=>{const o=R.importRecruitMinGap??2;R.importRecruitMinGap=Math.min(4,o+1);return `비로컬 영입 기준 강화 ${o} → ${R.importRecruitMinGap}`},`자국 유망주 출전 기회 확대 (1군 비로컬 상한 2명은 고정)`);
       const SPL={1:'단일 시즌제',2:'2스플릿제',3:'3스플릿제'};
-      if((R.splits||1)<3) add('splits',(H-58)/15+trend/25,()=>{const o=R.splits||1;R.splits=o+1;return `${SPL[o]} → ${SPL[R.splits]} 전환`},`흥행 호조로 시즌 콘텐츠 확대`);
-      if((R.splits||1)>1) add('splits',(38-H)/15-trend/25,()=>{const o=R.splits;R.splits=o-1;return `${SPL[o]} → ${SPL[R.splits]} 전환`},`흥행 부진, 일정 피로도 완화`);
+      if((R.splits||1)<3) add('splits',(H-58)/15+trend/25,()=>{const o=R.splits||1;R.splits=o+1;return `${SPL[o]} → ${SPL[R.splits]} 전환`},`흥행 호조로 시즌 콘텐츠 확대`,['splits',R.splits||1,(R.splits||1)+1]);
+      if((R.splits||1)>1) add('splits',(38-H)/15-trend/25,()=>{const o=R.splits;R.splits=o-1;return `${SPL[o]} → ${SPL[R.splits]} 전환`},`흥행 부진, 일정 피로도 완화`,['splits',R.splits,R.splits-1]);
       // The league office—not the manager—may independently revise how
       // completed split results determine annual qualification. Changes are
       // offseason-only, cooldown-governed and effective next season.
@@ -108,7 +114,7 @@ function officeDecisions(db,rng,f,ev,mid){
             const old=R.standingsMode||'independent';
             R.standingsMode=scheme.key;
             return `성적 집계 방식 변경: ${SPLIT_STANDINGS_MODES[old]} → ${SPLIT_STANDINGS_MODES[scheme.key]} (다음 시즌부터)`;
-          },scheme.why);
+          },scheme.why,['standingsMode',mode,scheme.key]);
       }
     }
     if(up!==undefined) add('playoffs',(0.55-B)*3+(H<45?0.2:0),()=>{const o=R.playoffTake;R.playoffTake=up;return `플레이오프 ${o}팀 → ${up}팀 확대`},`순위 경쟁 약화 (균형 ${B})`);
@@ -117,13 +123,15 @@ function officeDecisions(db,rng,f,ev,mid){
     const fmtU={rr_de:(0.5-B)*2+(H>50?0.2:0),groups_po:(n>=12?0.6:n>=10?0.1:-9)+(H-50)/40,rr_po:(42-H)/20+(B-0.6)};
     const fmt=Object.entries(fmtU).filter(([k])=>k!==(R.format||'rr_po')).sort((a,b)=>b[1]-a[1])[0];
     if(fmt) add('format',fmt[1]-0.1,()=>{const o=R.format||'rr_po';R.format=fmt[0];if(!R.playoffTake)R.playoffTake=4;return `진행 방식 변경: ${LEAGUE_FORMATS[o]} → ${LEAGUE_FORMATS[fmt[0]]}`},fmt[0]==='rr_de'?`하위 시드에 두 번째 기회 — 흥행 반전 기대 (균형 ${B})`:fmt[0]==='groups_po'?`참가 팀 증가로 일정 압축 (${n}팀)`:'단순한 방식으로 복귀');
-    if(R.playoffBo===3) add('bo',(H-50)/15,()=>{R.playoffBo=5;return '플레이오프 Bo5 도입'},`흥행 호조 — 결승 무대 강화`);
-    else add('bo',(33-H)/15,()=>{R.playoffBo=3;return '플레이오프 초반 라운드 Bo3로 축소'},`제작 비용 절감`);
+    if(R.playoffBo===3) add('bo',(H-50)/15,()=>{R.playoffBo=5;return '플레이오프 Bo5 도입'},`흥행 호조 — 결승 무대 강화`,['playoffBo',3,5]);
+    else add('bo',(33-H)/15,()=>{R.playoffBo=3;return '플레이오프 초반 라운드 Bo3로 축소'},`제작 비용 절감`,['playoffBo',R.playoffBo,3]);
     props.sort((a,b)=>b.u-a.u);
     let done=0;
     for(const p of props){if(p.u<thr||done>=1)break;
       if(props.slice(0,props.indexOf(p)).some(q=>grp(q.key)===grp(p.key)))continue;
-      const what=p.apply(); R.decisions=[...(R.decisions||[]),{year:db.world.year,key:grp(p.key),what,why:p.why,mid:!!mid}].slice(-12);
+      const what=p.apply(); R.decisions=[...(R.decisions||[]),{year:db.world.year,key:grp(p.key),what,why:p.why,mid:!!mid,
+        announcedDate:db.worldDate||null,effectiveYear:db.world.year+1,
+        ...(p.consultation?{consultation:p.consultation,officeUtility:p.officeUtility}:{})}].slice(-12);
       syncCompetitionLicenses(db,'regional-office-'+grp(p.key));
       ev(`${R.leagueName} 사무국${mid?' (시즌 중 점검)':''}: ${what} — ${p.why}`); done++; }
   }

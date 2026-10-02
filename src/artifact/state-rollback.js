@@ -18,7 +18,7 @@ function actionJournalTeamSnapshot(team){
   const hasRoster=Object.prototype.hasOwnProperty.call(team,'roster');
   return {
     team,hasDepth,hasFinance,hasRoster,
-    lifecycle:['active','folded','license','competitionLicense'].map(key=>({key,
+    lifecycle:['active','folded','license','competitionLicense','officePreferences'].map(key=>({key,
       present:Object.prototype.hasOwnProperty.call(team,key),value:team[key]})),
     rosterRef:team.roster,roster:(team.roster||[]).slice(),
     depthRef:team.depthChart,depth:hasDepth?actionJournalClone(team.depthChart):null,
@@ -67,7 +67,7 @@ function actionJournalTargets(db,command){
       if(db.players[pid]?.team!==dst)playerIds.add(pid);
     }
   }else{
-    if(!['finance.transfer-payment','finance.estate-recovery'].includes(command.type))playerIds.add(command.pid);
+    if(command.pid&&!['finance.transfer-payment','finance.estate-recovery'].includes(command.type))playerIds.add(command.pid);
     for(const id of [command.teamId,command.fromId,db.players[command.pid]?.team])
       if(id)teamIds.add(id);
   }

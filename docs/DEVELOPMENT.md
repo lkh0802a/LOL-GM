@@ -1791,3 +1791,33 @@ AI roster adjustment. Existing signed-role acceptance passes. Full CI gates merg
 long-season/mobile validation remains deferred until23 and playtest feedback.
 This addresses oral revision, not unspecified multi-client agency fees or all
 remaining insolvency and later-roadmap functionality.
+
+### D06 club sporting-format consultation (2026-10-02)
+
+Independent first-division clubs can submit annual regional preferences for
+number of splits, playoff series length and standings aggregation. Human clubs
+abstain unless they explicitly submit; AI clubs use their own operating funds,
+roster fatigue and public fan/balance indicators. Reserves do not cast an extra
+parent vote. Moving regions or advancing the year expires old preferences, and
+legacy saves without preferences remain compatible.
+
+The existing offseason office proposals consume these advisory opinions with
+a bounded +/-0.12 utility adjustment, reusing the existing noise scale. Final
+office authority, reasons, original adoption threshold, cooldowns and one-decision
+limit remain. Adopted changes record club support/opposition/abstention, the
+announcement date and next effective season. There is no midseason change or
+binding majority veto. This is a fictional implementation of the confirmed
+consultation rule, currently scoped to three sporting-format fields; it does not
+claim all financial/ownership regulations have a consultation workflow.
+
+The season office card exposes a compact opinion form with guarded preview and
+confirmation. Opinion submission cannot itself change league rules. Detached
+assignment and the existing action journal restore the original preferences
+reference after late failures. Short fixtures cover authority, purity, invalid
+values, stale year/region, save restoration, same-group cooldown, midseason
+protection, actual close-proposal adoption versus rejection, and UI cancel/submit.
+The isolated async-route fixture now supplies the added office binder dependency;
+real office submission is exercised separately. Existing 14 calendar/scouting
+contexts, regression and 102-module static/build checks pass locally. Required
+CI remains the merge gate; long-season and real-device/TalkBack validation stays
+deferred until phase23 implementation and user playtest feedback.
