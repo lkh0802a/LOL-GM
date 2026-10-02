@@ -50,14 +50,51 @@ function aiRunEarlyContactOffers(db){
             releaseGuaranteeRate:contractGuaranteePolicy(p).preferred,
             promisedRole:defaultPromisedRole(db,p,t)});
         if(negotiationBudgetError(db,p,t,offer,'early_fa'))return null;
-        return {t,offer,utility:offerUtility(db,p,t,offer)};
+        let terms=offer,rounds=1,utility=offerUtility(db,p,t,terms);
+        if(!contractOfferReasonable(db,p,t,terms,'early_fa')||
+          utility<offerAcceptanceThreshold(db,p,{kind:'early_fa'})){
+          ensurePlayerAgent(p);
+          const counter=aiRepresentativeCounterTerms(db,p,t,'early_fa',terms,room,t.finance.cash);
+          if(!counter.terms||negotiationBudgetError(db,p,t,counter.terms,'early_fa'))return null;
+          terms=counter.terms;rounds+=counter.rounds;utility=offerUtility(db,p,t,terms);
+        }
+        return {t,offer:terms,utility,rounds,representative:playerAgent(p)?.id||null};
       }).filter(Boolean).sort((a,b)=>b.utility-a.utility||
         a.t.id.localeCompare(b.t.id));
     const best=candidates[0];
     if(!best||!contractOfferReasonable(db,p,best.t,best.offer,'early_fa')||
       best.utility<offerAcceptanceThreshold(db,p,{kind:'early_fa'}))continue;
     const r=recordContractAgreement(db,p,best.t,best.offer,'early_fa','ai');
-    if(r.ok)rows.push(r.agreement);
+    if(r.ok)rows.push({...r.agreement,representative:best.representative,
+      negotiationRounds:best.rounds});
   }
   return rows;
+}
+
+function aiRenewalDecision(db,p,t,rng){
+  const want=aiWantsRenewal(db,p,t),
+    ask=asking(db,p,t.region),
+    room=salaryBudget(db,t)-payroll(db,t)+(p.contract?.salary||0),
+    yrs=contractYearsForPlayer(db,p,rng),
+    initialProposal=normalizeContractTerms(db,p,t,
+      ask*rng.range(.96,1.08)*(1-medicalContractRisk(db,p)*.4),yrs,{
+        releaseGuaranteeRate:contractGuaranteePolicy(p).preferred,
+        promisedRole:recommendedRosterRole(db,p,t),
+        option:rng.chance(.18)?{type:rng.chance(.55)?'team':'player'}:null
+      });
+  ensureSatisfaction(p);
+  let proposal=initialProposal;
+  const noise=rng.normal(0,.06),threshold=offerAcceptanceThreshold(db,p,{kind:'renewal'});
+  let stay=contractOfferReasonable(db,p,t,proposal,'renewal')&&
+    offerUtility(db,p,t,proposal,{renewal:true})+noise>=threshold,rounds=1;
+  if(want&&!stay&&proposal.salary<=room){
+    ensurePlayerAgent(p);
+    const counter=aiRepresentativeCounterTerms(db,p,t,'renewal',proposal,room,t.finance.cash);
+    rounds+=counter.rounds;
+    if(counter.terms){proposal=counter.terms;stay=contractOfferReasonable(db,p,t,proposal,'renewal')&&
+      offerUtility(db,p,t,proposal,{renewal:true})+noise>=threshold}
+  }
+  return {want,ask,room,yrs:proposal.years,proposal,stay,rounds,
+    representative:playerAgent(p)?.id||null,
+    accepted:want&&proposal.salary<=room&&stay};
 }

@@ -16,6 +16,7 @@
     "career:acceptance": "node scripts/career-acceptance.mjs",
     "check:static": "node --test scripts/ci-run.test.mjs scripts/sync-standalone.test.mjs scripts/mutation-ownership.test.mjs && node scripts/check.mjs",
     "check:ui-finance-contracts": "node scripts/ui-finance-contracts-runner.mjs",
+    "check:agent-negotiation-parity": "node scripts/agent-negotiation-parity-acceptance.mjs",
     "check:calendar-scouting": "node scripts/calendar-scouting-runner.mjs",
     "check:medical": "node scripts/medical-acceptance.mjs && node scripts/medical-balance-acceptance.mjs && node scripts/medical-calendar-acceptance.mjs && node scripts/medical-regional-acceptance.mjs",
     "check:regression-smoke-career": "node scripts/validate-system-snapshot.mjs && node scripts/regression.mjs && node scripts/smoke.mjs && node scripts/career-acceptance.mjs",
