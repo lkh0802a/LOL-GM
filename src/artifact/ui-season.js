@@ -3,10 +3,11 @@
 // 시뮬레이션 규칙은 competition.js / world.js에 유지한다.
 
 function spark(vals){if(vals.length<2)return '';const W=90,H=24,mx=100,x=i=>i/(vals.length-1)*W,y=v=>H-v/mx*H;return `<svg class="spark" viewBox="0 0 ${W} ${H}" aria-hidden="true"><polyline points="${vals.map((v,i)=>x(i).toFixed(1)+','+y(v).toFixed(1)).join(' ')}"/></svg>`}
-function officeCard(r){const M=r.metrics||[],m=M.slice(-1)[0];
+function officeCard(r){const M=r.metrics||[],m=M.slice(-1)[0],local=localServicePolicy(DB,r.id),agreement=(r.localServiceAgreements||[]).at(-1);
   return `<div class="cfgcard"><div class="cfghead"><b>${esc(r.leagueName)}</b><span class="hint">${esc((OFFICE_STYLES[r.office]||{}).label||'')}</span></div>
   ${m?`<div class="arow"><span>흥행 ${m.hype} (${hypeLabel(m.hype)}) · 균형 ${m.balance.toFixed(2)} · 스타 ${m.stars}명</span>${spark(M.map(x=>x.hype))}</div>`:'<p class="hint">첫 시즌이 끝나면 지표가 집계됩니다.</p>'}
   ${officeOpinionPanel(r)}
+  <p class="hint">신규 로컬 취득 근속 ${local.seasons}시즌${local.days?` · ${local.days}일`:''}${agreement?` · 공동 합의 ${agreement.effectiveYear}시즌 적용 (지역 제안 ${agreement.regionalProposal.seasons} → 합의 ${agreement.rule.seasons})`:''}</p>
   ${(r.decisions||[]).slice().reverse().slice(0,4).map(d=>`<div class="dec"><time>${d.year}</time> <b>${esc(d.what)}</b><br><small>${esc(d.why)}${d.consultation?` · 구단 의견 찬성 ${d.consultation.support} / 반대 ${d.consultation.oppose} / 기권 ${d.consultation.abstain}`:''}${d.effectiveYear?` · ${d.effectiveYear}시즌 적용`:''}</small></div>`).join('')||'<p class="hint">아직 결정한 안건이 없습니다.</p>'}</div>`}
 function globalCard(){const g=DB.global||{decisions:[],power:{}};const P=Object.values(DB.regions).map(R=>[R,g.power[R.id]]).filter(x=>x[1]!==undefined).sort((a,b)=>b[1]-a[1]);
   return `<div class="cfgcard"><div class="cfghead"><b>국제대회 · 진출권 · 패치 주기 · 지역 승인</b><span class="hint">패치 주기 ${DB.patches.cadence||14}일</span></div>

@@ -38,6 +38,7 @@ export const ENGINE_MODULES = [
   'state-rollback.js',
   'office.js',
   'office-consultation.js',
+  'local-policy.js',
   'office-international.js',
   'club-ownership.js',
   'club-license.js',

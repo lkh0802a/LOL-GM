@@ -186,5 +186,6 @@ function globalOffice(db,w,rng,f,ev){
     if(want!==it.format){const o=it.format;it.format=want;gev(`${it.name} 방식 변경: ${INTL_FORMATS[o]} → ${INTL_FORMATS[want]}`,why)}
   }
   // 패치 주기는 리그 사무국이 변경하지 않는다. 게임 개발사 패치 캘린더를 따른다.
+  reviewLocalServiceAgreements(db,w,f,ev);
   worldDecisions(db,rng,f,ev);
 }
