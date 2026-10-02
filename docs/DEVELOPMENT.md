@@ -78,6 +78,11 @@ calendar-scouting 17, engine regressions and `git diff --check` also pass locall
 Final-head full Actions including medical core/four seeds/two aggregates/verify
 remains the merge gate.
 No new long100-season, device/mobile/TalkBack QA is started.
+Review strengthened the current-sample contrast: `recordMeta` also updates own
+research, so a detached comparison view holds that prior research/counter state
+fixed while preserving live recorded learning and history. This independently
+isolates sample effects on actual draft/selection. Initial Actions `37066410343`
+is superseded by the strengthened acceptance head and is not final-head evidence.
 
 Precise next slice (estimate 50 minutes): real patch evidence in opponent-intent
 reasoning. Current `draftOpponentIntent` uses generic `staffProfile.analysis`

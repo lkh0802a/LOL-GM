@@ -98,10 +98,14 @@ await runEngineFixture(String.raw`(()=>{
  const after=draft(),evidence=draftMetaEvidence(after,0,cid);
  check(evidence.globalSample===0&&evidence.regionalSample===0&&evidence.historicalEffectiveSample===200000&&evidence.sources.some(x=>x.includes('표본 없음')),'mixed counter mislabeled as current patch');
  check(JSON.stringify(before.vhat)===JSON.stringify(after.vhat)&&JSON.stringify(selectionBefore)===JSON.stringify(selectionPatchValues(db,mine.id,pool)),'mixed/old counters still affected actual draft/First Selection');
+ const research=Object.fromEntries([mine,enemy].map(t=>[t.id,JSON.parse(JSON.stringify({knowledge:t.metaKnowledge||{},counter:t.metaCounter||{}}))]));
  const currentGame=simulateMatch(db,mine.id,enemy.id,'patch-provenance-current',null,true);recordMeta(db,currentGame);
- const currentCid=currentGame.sides[0].ps[0].champ.id,samples=currentPatchMetaSamples(db),fresh=draft(),freshEvidence=draftMetaEvidence(fresh,0,currentCid);
+ // Hold the observer's prior research fixed on a detached comparison view:
+ // recordMeta also learns matchups, which must not explain this sample effect.
+ const evidenceView={...db,teams:{...db.teams}};for(const t of [mine,enemy])evidenceView.teams[t.id]={...t,metaKnowledge:research[t.id].knowledge,metaCounter:research[t.id].counter};
+ const currentCid=currentGame.sides[0].ps[0].champ.id,samples=currentPatchMetaSamples(db),fresh=createDraftSession(evidenceView,[mine.id,enemy.id],new RNG('patch-evidence-draft'),ctx),freshEvidence=draftMetaEvidence(fresh,0,currentCid);
  check(samples!==empty&&samples.games===1&&samples.stats[currentCid].p===1&&freshEvidence.globalSample===1&&freshEvidence.regionalSample===1,'new actual match failed to invalidate cache/update evidence');
- check(JSON.stringify(after.vhat)!==JSON.stringify(fresh.vhat)&&JSON.stringify(selectionBefore)!==JSON.stringify(selectionPatchValues(db,mine.id,pool)),'current samples had no actual draft/selection effect');
+ check(JSON.stringify(after.vhat)!==JSON.stringify(fresh.vhat)&&JSON.stringify(selectionBefore)!==JSON.stringify(selectionPatchValues(evidenceView,mine.id,pool)),'current samples had no actual draft/selection effect with fixed observer research');
  const saved=unpackDB(packDB(db));check(JSON.stringify(currentPatchMetaSamples(saved))===JSON.stringify(samples),'save lost patch evidence or used mixed counters');
  const stringPicks={...db,metaHistory:db.metaHistory.map(r=>({...r,sides:r.sides.map(s=>({...s,picks:s.picks.map(p=>p.champ)}))}))};
  check(JSON.stringify(currentPatchMetaSamples(stringPicks))===JSON.stringify(samples),'legacy string picks changed recorded sample counts');
