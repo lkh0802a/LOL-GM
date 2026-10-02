@@ -69,9 +69,13 @@ roster; generate/sign the observed player before checking actual confidence. The
 are fixture corrections, not changed production behavior, removed assertions or budgets.
 Required full exact-head CI remains the merge gate; long100-season/device/mobile/
 TalkBack final QA remains deferred until implementation plus playtest feedback.
-Local staff registration/coverage, staff contracts, 105-module static checks,
-UI-finance-contracts (38 acceptances) and calendar-scouting (17) passed;
-`git diff --check` is clean. No long final QA or new infrastructure was started.
+Local staff registration/coverage, staff contracts, 105-module static checks and
+calendar-scouting (17) passed; `git diff --check` is clean. UI-finance-contracts
+ran its domain cases but its final harness assertion failed: the new independent
+coverage fixture creates a 36th fresh VM, while the runner expected 35. Updated
+the exact expected context count to 36, retaining compile-once and context-isolation
+guards; the corrected full runner must pass before merge. No long final QA or
+new infrastructure was started.
 
 Precise next slice (estimate 50 minutes): staff negotiated contract duration.
 Fixed `STAFF_RULES.md` says terms are freely negotiated, whereas current contract
