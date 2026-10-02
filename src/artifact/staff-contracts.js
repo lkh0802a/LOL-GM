@@ -121,6 +121,7 @@ function staffStateErrors(db){
   for(const s of db.staffRetired||[]){if(ids.has(s.id)||s.contract||!s.retired)errors.push('잘못된 은퇴 스태프: '+s.id);ids.add(s.id)}
   const all=[...Object.values(db.teams).flatMap(t=>t.staffRoster||[]),...(db.staffPool||[]),...(db.staffRetired||[])];
   for(const s of all){
+    if(s.specialties!==undefined&&(!s.specialties||typeof s.specialties!=='object'||Array.isArray(s.specialties)||Object.entries(s.specialties).some(([r,v])=>Object.hasOwn(STAFF_ROLES,r)&&(!Number.isFinite(v)||v<0||v>100))))errors.push('잘못된 스태프 전문분야: '+s.id);
     if(s.scoutRegions!==undefined&&(!s.scoutRegions||typeof s.scoutRegions!=='object'||Array.isArray(s.scoutRegions)||Object.values(s.scoutRegions).some(r=>!r||!Number.isFinite(r.knowledge)||r.knowledge<0||r.knowledge>100||!Number.isInteger(r.observations)||r.observations<1||!Number.isInteger(r.lastYear)||r.lastDate!==null&&typeof r.lastDate!=='string')))errors.push('잘못된 스카우터 지역 경험: '+s.id);
     if(s.career!==undefined&&(!Array.isArray(s.career)||s.career.some(r=>!r||!Number.isInteger(r.year)||typeof r.seasonId!=='string'||typeof r.teamId!=='string'||!STAFF_ROLES[r.role]||!Number.isInteger(r.series)||r.series<0||!Number.isInteger(r.wins)||r.wins<0||r.wins>r.series)))errors.push('잘못된 스태프 경기 경력: '+s.id);
     if(Array.isArray(s.career)&&new Set(s.career.map(r=>r&&JSON.stringify([r.seasonId,r.teamId,r.role]))).size!==s.career.length)errors.push('중복 스태프 경기 경력: '+s.id);
