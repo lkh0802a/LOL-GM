@@ -56,11 +56,18 @@ authoritative. A real draft acceptance verifies confidence and recommendations
 change under broader expertise without adding unregistered advisers.
 
 Files: `staff.js`, `staff-contracts.js`, `draft.js`, `ui-market-staff.js`, existing
-staff contract/registration acceptances and `STAFF_RULES.md`. Acceptance covers primary/secondary
+staff contract/registration and source-control acceptances, and `STAFF_RULES.md`.
+Acceptance covers primary/secondary
 dispersion, total equal-rating contribution, single/legacy fields, duplicate
 returns, coaching/scouting/analysis, observed AI, save and corruption, alongside
-existing real employment/rollback tests. Focused/CI/head/merge evidence follows
-at delivery. No long 100-season, device/mobile or TalkBack QA started.
+existing real employment/rollback tests. Static 105 modules, staff contracts,
+registration, cohesion practice, UI-finance-contracts 38 and calendar-scouting 17
+passed. PR #139 final head `292533bfe1f6d13b6957dad78c5dcba2679f38e6` passed
+complete CI run `37045694410`, including medical core, four seeds, two aggregates
+and `verify`. Merged as `90ab08ed5c01c6386ad96b0fcc4229fffc29f785`; standalone
+HTML rebuilt from integrated source. No long 100-season, device/mobile or TalkBack
+QA started. The failed earlier-head job remains documented below, not counted as
+final-head success.
 Initial head `3f9e849` CI run `37045308644` failed source-control acceptance:
 under the changed staffing/draft equilibrium all four source-CC pairs retained
 the same gold/duration. Reproduction confirms those coarse outcomes are not an
