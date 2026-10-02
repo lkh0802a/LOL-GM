@@ -213,25 +213,6 @@ function aiMarketOfferCandidates(db,t,fas,role,budgetRoom,year=db.year){
     .sort((a,b)=>b.v-a.v||a.p.id.localeCompare(b.p.id));
 }
 
-function aiRenewalDecision(db,p,t,rng){
-  const want=aiWantsRenewal(db,p,t),
-    ask=asking(db,p,t.region),
-    room=salaryBudget(db,t)-payroll(db,t)+(p.contract?.salary||0),
-    yrs=contractYearsForPlayer(db,p,rng),
-    proposal=normalizeContractTerms(db,p,t,
-      ask*rng.range(.96,1.08)*(1-medicalContractRisk(db,p)*.4),yrs,{
-        releaseGuaranteeRate:contractGuaranteePolicy(p).preferred,
-        promisedRole:recommendedRosterRole(db,p,t),
-        option:rng.chance(.18)?{type:rng.chance(.55)?'team':'player'}:null
-      });
-  ensureSatisfaction(p);
-  const stay=contractOfferReasonable(db,p,t,proposal,'renewal')&&
-    offerUtility(db,p,t,proposal,{renewal:true})+
-      rng.normal(0,.06)>=offerAcceptanceThreshold(db,p,{kind:'renewal'});
-  return {want,ask,room,yrs,proposal,stay,
-    accepted:want&&proposal.salary<=room&&stay};
-}
-
 function contractMarket(db,rng,rep,ev){
   const year=db.year, size=5+(db.worldConfig.subs||0), w=db.world, mine=w&&w.manage==='manual'?managedRecruitmentTeamId(db):null;
   const imports=t=>teamNonLocalCount(db,t);
@@ -257,7 +238,8 @@ function contractMarket(db,rng,rep,ev){
       signMarketContract(db,p,t,decision.proposal.salary,decision.yrs,
         decision.proposal,'renewal','ai');
       rep.resign.push({pid:p.id,team:t.id,salary:decision.proposal.salary,
-        years:decision.yrs,terms:decision.proposal});
+        years:decision.yrs,terms:decision.proposal,
+        representative:decision.representative,negotiationRounds:decision.rounds});
     }else{
       release(t,p);rep.expired.push({pid:p.id,team:t.id,
         why:!decision.want?'재계약 제안 없음':
@@ -292,18 +274,27 @@ function contractMarket(db,rng,rep,ev){
         offer=normalizeContractTerms(db,p,t,best.o.sal,yrs,{
           releaseGuaranteeRate:contractGuaranteePolicy(p).preferred,
           promisedRole:best.o.starter?'starter':defaultPromisedRole(db,p,t)});
+      let finalOffer=offer,counterRounds=0;
       if(!contractOfferReasonable(db,p,t,offer,'fa')||
-        offerUtility(db,p,t,offer)<offerAcceptanceThreshold(db,p,{kind:'fa'}))continue;
+        offerUtility(db,p,t,offer)<offerAcceptanceThreshold(db,p,{kind:'fa'})){
+        if(best.o.mine)continue;
+        ensurePlayerAgent(p);
+        const counter=aiRepresentativeCounterTerms(db,p,t,'fa',offer,
+          Math.min(budgetLeft[t.id],best.o.sal*1.15),t.finance.cash);
+        if(!counter.terms)continue;
+        finalOffer=counter.terms;counterRounds=1+counter.rounds;
+      }
       const prev=starterFor(db,t,p.role);
       // Multiple market offers can be based on the same earlier import count.
       // Recheck with the shared action validator and skip an obsolete offer.
       const signed=commitWorldAction(db,{type:'player.sign',pid:p.id,teamId:t.id,
-        salary:best.o.sal,years:yrs,kind:'fa',actor:best.o.mine?'manager':'ai',
-        terms:{releaseGuaranteeRate:offer.releaseGuaranteeRate}});
+        salary:best.o.mine?best.o.sal:finalOffer.salary,
+        years:best.o.mine?yrs:finalOffer.years,kind:'fa',actor:best.o.mine?'manager':'ai',
+        terms:best.o.mine?{releaseGuaranteeRate:offer.releaseGuaranteeRate}:finalOffer});
       if(!signed.ok)continue;
       if(best.o.mine)w.marketLog.push(`${p.name}: ${best.o.t.id===mine?'영입 성공':'다른 구단 선택'}`);
-      budgetLeft[t.id]-=best.o.sal;
-      rep.signings.push({pid:p.id,team:t.id,salary:best.o.sal,years:yrs,rookie:p.age<=19&&!p.career.length,import:!projectedPlayerIsLocal(db,p,t),offers:os.length,out:null});
+      budgetLeft[t.id]-=finalOffer.salary;
+      rep.signings.push({pid:p.id,team:t.id,salary:finalOffer.salary,years:finalOffer.years,rookie:p.age<=19&&!p.career.length,import:!projectedPlayerIsLocal(db,p,t),offers:os.length,out:null,representative:playerAgent(p)?.id||null,negotiationRounds:counterRounds});
       if(t.roster.length>size+1){const bench=t.roster.map(id=>db.players[id]).filter(x=>x!==p&&!x.contract?.medicalReplacement&&starterFor(db,t,x.role)!==x).sort((a,b)=>playerValue(db,a,t)-playerValue(db,b,t))[0];
         if(bench){release(t,bench);rep.signings[rep.signings.length-1].out=bench.id}}
       else if(prev)rep.signings[rep.signings.length-1].out=null;

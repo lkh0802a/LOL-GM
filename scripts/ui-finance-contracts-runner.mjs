@@ -24,6 +24,7 @@ const acceptances=[
   'transfer-consent-acceptance.mjs',
   'contract-role-promise-acceptance.mjs',
   'player-representation-acceptance.mjs',
+  'agent-negotiation-parity-acceptance.mjs',
   'player-loan-acceptance.mjs',
   'transfer-stage-acceptance.mjs',
   'local-service-acceptance.mjs',

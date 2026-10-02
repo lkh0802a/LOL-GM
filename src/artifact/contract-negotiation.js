@@ -148,6 +148,22 @@ function negotiationCounter(db,neg,offer){
     buyout=demandedBuyout?{amount:Math.min(offeredBuyout?.amount||demandedBuyout.amount,demandedBuyout.amount),type:demandedBuyout.type}:offeredBuyout;
   return normalizeContractTerms(db,p,t,Math.max(offer.salary*1.025,blend(offer.salary,d.salary,.68)),years,{releaseGuaranteeRate:Math.max(contractGuaranteeRate(offer),contractGuaranteeRate(d)),signingBonus:Math.max(offer.signingBonus||0,blend(offer.signingBonus||0,d.signingBonus||0,.72)),bonuses:{performance:Math.max(offer.bonuses?.performance||0,(d.bonuses?.performance||0)*.78),title:Math.max(offer.bonuses?.title||0,(d.bonuses?.title||0)*.78),international:Math.max(offer.bonuses?.international||0,(d.bonuses?.international||0)*.78)},promisedRole:role,option,buyout});
 }
+function aiRepresentativeCounterTerms(db,p,t,kind,offer,maxSalary,cashRoom=Infinity){
+  const demand=negotiationDemand(db,p,t,kind,null,[]),representative=playerAgent(p),
+    maxRounds=Math.max(0,negotiationRoundLimit(p)-1),threshold=offerAcceptanceThreshold(db,p,{kind});
+  let counter=offer,rounds=0;
+  for(let round=1;round<=maxRounds;round++){
+    rounds=round;
+    counter=negotiationCounter(db,{demand,pid:p.id,teamId:t.id},counter);
+    if(counter.salary>maxSalary+1e-8||(counter.signingBonus||0)>cashRoom+1e-8)break;
+    const utility=offerUtility(db,p,t,counter,{renewal:kind==='renewal'}),
+      reasonable=!['fa','early_fa','renewal','transfer'].includes(kind)||
+        contractOfferReasonable(db,p,t,counter,kind);
+    if(reasonable&&utility>=threshold)return {terms:counter,rounds:round,
+      demand,representative:representative?.id||null};
+  }
+  return {terms:null,rounds,demand,representative:representative?.id||null};
+}
 function finalizeNegotiation(db,neg,terms){
   const p=db.players[neg.pid],t=db.teams[neg.teamId];
   if(!p||!t)return {ok:false,msg:'협상 선수 또는 구단이 존재하지 않습니다'};
