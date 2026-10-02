@@ -61,6 +61,14 @@ dispersion, total equal-rating contribution, single/legacy fields, duplicate
 returns, coaching/scouting/analysis, observed AI, save and corruption, alongside
 existing real employment/rollback tests. Focused/CI/head/merge evidence follows
 at delivery. No long 100-season, device/mobile or TalkBack QA started.
+Initial head `3f9e849` CI run `37045308644` failed source-control acceptance:
+under the changed staffing/draft equilibrium all four source-CC pairs retained
+the same gold/duration. Reproduction confirms those coarse outcomes are not an
+adequate observation of continuous fight effects. Keep four pairs, require
+identical draft picks, isolate patch identity, and explicitly require an actual
+per-player damage difference (as the existing controlled skill-patch acceptance
+already measures). No engine CC multiplier, budget, sample count or production
+record was changed to hide this failure; gold/duration differences remain recorded.
 
 Precise next slice (estimate 50 minutes): analyst context specialization. The
 confirmed staff rules distinguish opponent, draft/meta and data analysis, but

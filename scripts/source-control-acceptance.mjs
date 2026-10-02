@@ -59,12 +59,15 @@ await runEngineFixture(String.raw`(()=>{
   check(JSON.stringify(championSkillProfile(loaded.patch.champions[xerath.id]))===JSON.stringify(profile),'source CC reversal');
   check(profile.cc>oldProfile.cc,'source-only control failed to reach profile');
   check(!unpackDB(packDB(legacy)).patch.champions[xerath.id].skills.E.sourceControl,'legacy save retroactively rewritten');
+  legacy.patch.id=db.patch.id; // Isolate source tags, not patch identity.
   const results=[];
   for(let i=0;i<4;i++){
     const baseline=simulateMatch(legacy,a.id,b.id,'control-pair-'+i,{forced},true),current=simulateMatch(db,a.id,b.id,'control-pair-'+i,{forced},true);
-    results.push(JSON.stringify(baseline.goldHist)!==JSON.stringify(current.goldHist)||baseline.duration!==current.duration);
+    check(JSON.stringify(baseline.draft.picks)===JSON.stringify(current.draft.picks),'paired source-control drafts differ');
+    results.push({gold:JSON.stringify(baseline.goldHist)!==JSON.stringify(current.goldHist),duration:baseline.duration!==current.duration,
+      damage:JSON.stringify(baseline.sides.map(s=>s.ps.map(p=>p.dmg)))!==JSON.stringify(current.sides.map(s=>s.ps.map(p=>p.dmg)))});
   }
-  check(results.some(Boolean),'source control had no actual match effect');
+  check(results.some(x=>x.damage),'source control had no actual damage effect');
   const englishMatch=unpackDB(save),localizedMatch=unpackDB(save),englishSkills=englishMatch.patch.champions[xerath.id].skills,
     localizedSkills=localizedMatch.patch.champions[xerath.id].skills;
   for(const s of Object.values(englishSkills))delete s.sourceControl;
@@ -81,9 +84,9 @@ await runEngineFixture(String.raw`(()=>{
     JSON.stringify(championSkillProfile(localizedMatch.patch.champions[xerath.id])),'English tags did not reach the same aggregate profile');
   const englishResults=Array.from({length:4},(_,i)=>simulateMatch(englishMatch,a.id,b.id,'english-control-'+i,{forced},true)),
     localizedResults=Array.from({length:4},(_,i)=>simulateMatch(localizedMatch,a.id,b.id,'english-control-'+i,{forced},true));
-  check(JSON.stringify(englishResults.map(m=>[m.goldHist,m.duration]))===
-    JSON.stringify(localizedResults.map(m=>[m.goldHist,m.duration])),'English source changed actual match semantics');
+  check(JSON.stringify(englishResults.map(m=>[m.goldHist,m.duration,m.sides.map(s=>s.ps.map(p=>p.dmg))]))===
+    JSON.stringify(localizedResults.map(m=>[m.goldHist,m.duration,m.sides.map(s=>s.ps.map(p=>p.dmg))])),'English source changed actual match semantics');
   check(packDB(db)===save,'source inspection/matches mutated world');
   let recognized=0;for(const c of Object.values(source))for(const s of c.spells)if(sourceSkillControl(s))recognized++;
-  console.log('SOURCE_CONTROL_ACCEPTANCE '+JSON.stringify({champions:Object.keys(source).length,recognized,pairs:4,profile,oldProfile,englishOnly:true,bilingualDedup:true,negativeClauses:true,legacy:true}));
+  console.log('SOURCE_CONTROL_ACCEPTANCE '+JSON.stringify({champions:Object.keys(source).length,recognized,pairs:4,results,profile,oldProfile,englishOnly:true,bilingualDedup:true,negativeClauses:true,legacy:true}));
 })()`,{filename:'source-control.fixture.js',timeout:120000});
