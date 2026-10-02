@@ -2,7 +2,10 @@
 // Owns staff departments, staffing limits, derived coaching profile, staff generation/AI management and manager staff actions.
 
 const STAFF_SECONDARY_WEIGHT=.35; // Secondary expertise supplements, rather than replaces, the primary appointment.
-function staffRoleAbility(s,role){return role===s.role?(s.rating||50):Math.max(0,Number(s.specialties?.[role]||0))*STAFF_SECONDARY_WEIGHT}
+function staffSecondaryRoles(s){return Object.keys(s.specialties||{}).filter(r=>r!==s.role&&Object.hasOwn(STAFF_ROLES,r)&&Number.isFinite(s.specialties[r])&&s.specialties[r]>0)}
+function staffSpecialtyAllocation(s){return 1/(1+STAFF_SECONDARY_WEIGHT*staffSecondaryRoles(s).length)}
+function staffRoleAbility(s,role){const raw=role===s.role?(s.rating||50):staffSecondaryRoles(s).includes(role)?s.specialties[role]*STAFF_SECONDARY_WEIGHT:0;return clamp(raw*staffSpecialtyAllocation(s),0,99)}
+function staffObservedPrimary(db,t,s){return staffObservation(db,t,s).estimate*staffSpecialtyAllocation(s)}
 function staffAggregate(ms,role){const xs=(ms||[]).filter(Boolean).map(s=>role?staffRoleAbility(s,role):s.rating||50).sort((a,b)=>b-a);if(!xs.length)return 0;const weights=[1,.28,.16,.1,.07,.05];let v=0;for(let i=0;i<xs.length;i++)v+=xs[i]*(weights[i]||.03);return clamp(v,0,99)}
 function staffByRole(t,role){return teamStaffMembers(t).filter(s=>s.role===role||s.specialties?.[role]>0)}
 function positionCoachRole(role){return {TOP:'topCoach',JGL:'jglCoach',MID:'midCoach',ADC:'adcCoach',SUP:'supCoach'}[role]||null}
@@ -78,7 +81,7 @@ function staffRoleWeight(t,role){
 function aiManageStaff(db,t,rng){
   if(!t||t.id===managedTeamId(db)||!t.finance)return false;ensureTeamStaff(db,t,rng);
   const ps=psOf(db,t.region),cash=t.finance.cash||0,reserve=(t.philosophy==='cost'?8:5)*ps,cands=staffMarketCandidates(db,t),liquidity=financeRunway(db,t);if(['critical','strained'].includes(liquidity.severity)||financeForecast(db,t).closingCash<reserve*2)return false;let best=null;
-  for(const s of cands){if(!STAFF_ROLES[s.role])continue;const same=teamStaffMembers(t).filter(x=>x.role===s.role).sort((a,b)=>staffObservation(db,t,a).estimate-staffObservation(db,t,b).estimate),replace=staffCanHire(t,s)?null:same[0];if(!staffCanHire(t,s)&&!replace)continue;const base=replace?staffObservation(db,t,replace).estimate:same.length?Math.max(...same.map(x=>staffObservation(db,t,x).estimate)):45,gain=(staffObservation(db,t,s).estimate-base)*staffRoleWeight(t,s.role),annual=staffAskingSalary(db,t,s);if(gain>=6&&cash>annual+reserve&&(!best||gain>best.gain)&&previewWorldAction(db,{type:'staff.sign',actor:'ai',teamId:t.id,sid:s.id,replaceSid:replace?.id,years:2,salary:annual}).ok)best={s,gain,annual,replace}}
+  for(const s of cands){if(!STAFF_ROLES[s.role])continue;const same=teamStaffMembers(t).filter(x=>x.role===s.role).sort((a,b)=>staffObservedPrimary(db,t,a)-staffObservedPrimary(db,t,b)),replace=staffCanHire(t,s)?null:same[0];if(!staffCanHire(t,s)&&!replace)continue;const base=replace?staffObservedPrimary(db,t,replace):same.length?Math.max(...same.map(x=>staffObservedPrimary(db,t,x))):45,gain=(staffObservedPrimary(db,t,s)-base)*staffRoleWeight(t,s.role),annual=staffAskingSalary(db,t,s);if(gain>=6&&cash>annual+reserve&&(!best||gain>best.gain)&&previewWorldAction(db,{type:'staff.sign',actor:'ai',teamId:t.id,sid:s.id,replaceSid:replace?.id,years:2,salary:annual}).ok)best={s,gain,annual,replace}}
   if(!best)return false;return commitWorldAction(db,{type:'staff.sign',actor:'ai',teamId:t.id,sid:best.s.id,replaceSid:best.replace?.id,years:2,salary:best.annual}).ok;
 }
 function ageStaff(db,rng){

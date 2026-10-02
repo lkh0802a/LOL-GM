@@ -133,9 +133,9 @@ function draftCandidateAnalysis(state,side,champ){
 }
 function draftStaffAdvice(state,side){
   const turn=draftTurn(state);if(!turn||turn.side!==side)return null;
-  const team=state.db.teams[state.teamIds[side]],members=teamStaffMembers(team),strategic=members.filter(s=>s.role==='strategicCoach').sort((a,b)=>b.rating-a.rating)[0]||null,analysts=members.filter(s=>s.role==='analyst').sort((a,b)=>b.rating-a.rating),analyst=analysts[0]||null;
+  const team=state.db.teams[state.teamIds[side]],strategic=staffByRole(team,'strategicCoach').sort((a,b)=>staffRoleAbility(b,'strategicCoach')-staffRoleAbility(a,'strategicCoach'))[0]||null,analyst=staffByRole(team,'analyst').sort((a,b)=>staffRoleAbility(b,'analyst')-staffRoleAbility(a,'analyst'))[0]||null;
   if(!strategic&&!analyst)return {available:false,kind:turn.kind,confidence:0,suggestions:[]};
-  const prof=staffProfile(team),quality=clamp(((strategic?.rating||45)+(analyst?.rating||45))/200,.35,.95),legal=draftLegalChampions(state),opp=1-side,oppHist=state.ctx.byTeam[state.teamIds[opp]]||{won:[],lost:[]},mine=state.pickList[side].map(id=>state.db.patch.champions[id]).filter(Boolean);
+  const prof=staffProfile(team),quality=clamp(((strategic?staffRoleAbility(strategic,'strategicCoach'):45)+(analyst?staffRoleAbility(analyst,'analyst'):45))/200,.35,.95),legal=draftLegalChampions(state),opp=1-side,oppHist=state.ctx.byTeam[state.teamIds[opp]]||{won:[],lost:[]},mine=state.pickList[side].map(id=>state.db.patch.champions[id]).filter(Boolean);
   const rows=legal.map(c=>{
     let score=0,factors={meta:Math.round((state.vhat[side][c.id]||0)*100),mastery:null,comp:null,counter:null,revealed:false};
     if(turn.kind==='P'){

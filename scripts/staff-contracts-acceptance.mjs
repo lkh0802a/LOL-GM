@@ -60,7 +60,25 @@ await runEngineFixture(String.raw`(()=>{
  ai.staffRoster.find(s=>s.role==='analyst').publicEstimate=35;
  check(aiManageStaff(db,ai,new RNG('staff-ai','staff'))&&elite.history.length>0,'AI did not use employment writer');
  const multi={staffRoster:[{id:'MULTI',role:'strategicCoach',rating:80,specialties:{analyst:80}}]},single={staffRoster:[{id:'SINGLE',role:'strategicCoach',rating:80}]};
- check(staffProfile(multi).analysis>staffProfile(single).analysis&&staffProfile(multi).draft===staffProfile(single).draft,'secondary expertise has no separate weighted effect');
+ check(staffProfile(multi).analysis>staffProfile(single).analysis&&staffProfile(multi).draft<staffProfile(single).draft,'secondary expertise has no distributed weighted effect');
+ const broad={...multi.staffRoster[0],specialties:{analyst:80,scout:80}},narrow=multi.staffRoster[0];
+ check(Math.abs(staffRoleAbility(narrow,'strategicCoach')-80/1.35)<1e-9&&staffRoleAbility(broad,'strategicCoach')<staffRoleAbility(narrow,'strategicCoach')&&staffRoleAbility(broad,'analyst')<staffRoleAbility(narrow,'analyst'),'additional fields did not distribute every contribution');
+ check(Math.abs(['strategicCoach','analyst','scout'].reduce((n,r)=>n+staffRoleAbility(broad,r),0)-80)<1e-9,'equal expertise minted unlimited total effect');
+ const legacySpecialist={role:'scout',rating:80,specialties:{scout:90,unknown:99,analyst:0}};
+ check(staffRoleAbility(legacySpecialist,'scout')===80&&staffRoleAbility(legacySpecialist,'unknown')===0&&staffSecondaryRoles(legacySpecialist).length===0,'duplicate/unknown/zero diluted legacy appointment');
+ check(staffAggregate([narrow,narrow],'analyst')>staffAggregate([narrow],'analyst')&&staffAggregate([narrow,narrow],'analyst')<2*staffAggregate([narrow],'analyst'),'duplicate diminishing returns lost');
+ const position={staffRoster:[{role:'topCoach',rating:90}]},positionWide={staffRoster:[{role:'topCoach',rating:90,specialties:{scout:80,analyst:80}}]};
+ check(roleCoachRating(positionWide,'TOP')<roleCoachRating(position,'TOP')&&staffProfile(positionWide).scouting>staffProfile(position).scouting&&staffProfile(positionWide).analysis>staffProfile(position).analysis,'position/scouting/analysis bypassed shared allocation');
+ const known=staffObservedPrimary(db,ai,elite);elite.rating=1;
+ check(staffObservedPrimary(db,ai,elite)===known,'AI allocation leaked hidden primary rating');elite.rating=95;
+ const retained=JSON.stringify(elite.specialties),allocated=staffRoleAbility(elite,'analyst'),savedStaff=unpackDB(packDB(db)).teams[ai.id].staffRoster.find(s=>s.id===elite.id);
+ check(JSON.stringify(savedStaff.specialties)===retained&&staffRoleAbility(savedStaff,'analyst')===allocated,'save changed specialty allocation');
+ const oldSpecialties=elite.specialties;elite.specialties={analyst:Infinity};check(staffStateErrors(db).some(x=>x.includes('전문분야')),'invalid specialties accepted');elite.specialties=oldSpecialties;
+ const focusedCandidate=genStaffMember(new RNG('focused-candidate'),'analyst',60),broadCandidate=genStaffMember(new RNG('broad-candidate'),'analyst',95);
+ Object.assign(focusedCandidate,{rating:35,publicEstimate:80,specialties:{}});Object.assign(broadCandidate,{rating:95,publicEstimate:95,specialties:{scout:90,topCoach:90,jglCoach:90,midCoach:90,adcCoach:90,supCoach:90}});
+ db.staffPool.push(focusedCandidate,broadCandidate);for(const s of ai.staffRoster.filter(s=>s.role==='analyst'))s.publicEstimate=10;
+ const marketSource=staffMarketCandidates;staffMarketCandidates=()=>[broadCandidate,focusedCandidate];
+ try{check(aiManageStaff(db,ai,new RNG('allocation-choice'))&&ai.staffRoster.includes(focusedCandidate)&&db.staffPool.includes(broadCandidate),'actual AI ignored public distributed contribution')}finally{staffMarketCandidates=marketSource}
  const expiry=buyer.staffRoster.find(s=>s.role==='developmentCoach');expiry.contract.until=db.year-1;
  buyer.staffRoster.find(s=>s.role==='analyst').contract.until=db.year+2;
  const oldAge=expiry.age;ageStaff(db,new RNG('staff-expiry','staff'));

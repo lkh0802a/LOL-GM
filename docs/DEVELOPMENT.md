@@ -31,6 +31,55 @@ without continually adding new status documents.
 
 ## Current Phase
 
+### Current implementation slice — staff multi-specialty dispersion (2026-10-02)
+
+Scope estimate: 50 minutes, single worker, baseline `5af4ee4`. Rechecked clean
+main, origin and open PRs; only unrelated historical #27/#28 remain. The confirmed
+staff rule requires each contribution to spread across fields; the previous
+primary rating ignored every secondary field. Common `staffRoleAbility` now
+applies bounded virtual allocation `1/(1+0.35*valid secondary count)` to primary
+and secondary contributions while retaining secondary weighting and duplicate
+diminishing returns. Single-field employees keep their prior effect. Unknown,
+zero and duplicate-primary legacy fields do not dilute or create an effect.
+
+AI compares publicly observed primary contributions under the same allocation,
+not hidden rating. User employment remains manual; UI explains the tradeoff.
+Known specialty bounds are validated for employed/free/retired staff. No source
+ratings or original specialty records are rewritten; historical player reports
+and earned champion assistance remain untouched. Contracts, department caps,
+registration selection, fees and original costs remain in use.
+
+Self-review found a raw-rating bypass in draft-advice adviser selection and
+recommendation noise. Select primary/secondary advisers and compute advice quality
+through the common allocated role ability; official registered-staff views remain
+authoritative. A real draft acceptance verifies confidence and recommendations
+change under broader expertise without adding unregistered advisers.
+
+Files: `staff.js`, `staff-contracts.js`, `draft.js`, `ui-market-staff.js`, existing
+staff contract/registration acceptances and `STAFF_RULES.md`. Acceptance covers primary/secondary
+dispersion, total equal-rating contribution, single/legacy fields, duplicate
+returns, coaching/scouting/analysis, observed AI, save and corruption, alongside
+existing real employment/rollback tests. Focused/CI/head/merge evidence follows
+at delivery. No long 100-season, device/mobile or TalkBack QA started.
+Initial head `3f9e849` CI run `37045308644` failed source-control acceptance:
+under the changed staffing/draft equilibrium all four source-CC pairs retained
+the same gold/duration. Reproduction confirms those coarse outcomes are not an
+adequate observation of continuous fight effects. Keep four pairs, require
+identical draft picks, isolate patch identity, and explicitly require an actual
+per-player damage difference (as the existing controlled skill-patch acceptance
+already measures). No engine CC multiplier, budget, sample count or production
+record was changed to hide this failure; gold/duration differences remain recorded.
+
+Precise next slice (estimate 50 minutes): analyst context specialization. The
+confirmed staff rules distinguish opponent, draft/meta and data analysis, but
+`staffProfile` currently aggregates all analysts into one analysis score. Recheck
+current PRs/rules, add explicit bounded virtual analysis expertise and select the
+relevant contribution at opponent-observation versus draft/meta evidence paths.
+Preserve analyst cap 4, existing registered-staff views, observed hiring, source
+privacy and legacy neutral behavior; cover real contrasting context effects,
+employment, AI, save and rollback. Split at a natural context boundary if the full
+connection exceeds 55 minutes. No new subtype code or long QA is left running.
+
 ### Current implementation slice — position coaching / champion learning (2026-10-02)
 
 Scope estimate: 50 minutes, single worker, baseline `a82baac`; current main and
@@ -62,15 +111,7 @@ missing values are read as neutral zero without mutating historical profiles.
 Existing seasonal legacy practice estimation is preserved but explicitly opts
 out of new coaching assistance because its actual practice-time staffing is unknown.
 
-Precise next slice (estimate 50 minutes): audit and implement confirmed staff
-multi-specialty effect dispersion. `staffRoleAbility` currently returns primary
-rating regardless of additional specialties and a fixed 0.35 secondary multiplier;
-the confirmed rule requires more fields to distribute each effect. Define bounded
-virtual allocation at the common role-ability boundary, preserve role/department
-limits and duplicate diminishing returns, and verify downstream coaching,
-scouting, analysis, employment/AI/save and public UI without leaking true ratings.
-Recheck current code/PRs first; do not rewrite completed registration or regional
-expertise. No temporary code for this next slice has been added.
+The multi-specialty continuation is implemented in the newer slice above.
 
 ### Current implementation slice — scout regional expertise (2026-10-02)
 

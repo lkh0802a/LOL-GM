@@ -24,6 +24,11 @@ await runEngineFixture(String.raw`(()=>{
  check(commitWorldAction(db,{...staffCommand,staffIds:[coach.id,analyst.id]}).ok,'coach/analyst entry failed');
  const enteredView=seriesOfficialView(db,session),enteredDraft=createDraftSession(enteredView,[mine.id,ai.id],new RNG('staff-draft','draft'),ctx);
  check(draftStaffAdvice(enteredDraft,0).available&&staffProfile(enteredView.teams[mine.id]).analysis>staffProfile(view.teams[mine.id]).analysis,'registered analysis did not reach actual draft');
+ const advisers=enteredDraft.db.teams[mine.id].staffRoster,adviceBefore=draftStaffAdvice(enteredDraft,0),specialtyBefore=advisers.map(s=>s.specialties);
+ for(const s of advisers)s.specialties={topCoach:90,jglCoach:90,midCoach:90,adcCoach:90,supCoach:90};
+ const adviceAfter=draftStaffAdvice(enteredDraft,0);
+ check(adviceAfter.available&&adviceAfter.confidence<adviceBefore.confidence&&JSON.stringify(adviceAfter.suggestions)!==JSON.stringify(adviceBefore.suggestions),'actual draft advice bypassed specialization allocation');
+ advisers.forEach((s,i)=>s.specialties=specialtyBefore[i]);
  check(seriesOfficialView(db,{...session,opt:{...session.opt,practice:true}})===db,'practice lost club staff');
  const stage=db.competitions[s.comp].stages[0],match={a:mine.id,b:ai.id,bo:1,id:'staff-field-game'},result=simulateScheduledSeries(db,s,s.days[0],match,stage);
  check(result.lines.length===10&&result.rec.games.length===1,'registered staff path failed actual scheduled game');
