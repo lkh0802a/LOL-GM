@@ -1,0 +1,47 @@
+import {runEngineFixture,artifactSource} from './test-harness.mjs';
+
+await runEngineFixture(String.raw`(()=>{
+ const check=(x,m)=>{if(!x)throw Error('BAN_ATTRIBUTION '+m)};
+ const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:4,system:'franchise'}),regionCfg('EU',{teams:4,system:'franchise'})];cfg.internationals=[];
+ const db=buildWorld(cfg),a=activeTeams(db,'NA',1)[0],b=activeTeams(db,'EU',1)[0];
+ for(const t of [a,b])for(const role of ROLES){const p=genPlayer(db,new RNG(t.id+role),{region:t.region,role,age:22,base:65});signContract(db,p,t,1,3);t.depthChart[role]=p.id}
+ // Reverse the club order and first-pick order to prove actual blue/red indices.
+ const game=simulateMatch(db,b.id,a.id,'ban-actual-sides',{used:[],byTeam:{},firstPick:1},true);
+ game.metaContext={international:true,year:db.year,season:'BAN_TEST',split:1};recordMeta(db,game);
+ const row=db.metaHistory[0],original=JSON.stringify(row),raw=JSON.stringify(db.regionMetaStats),filter={region:'NA',patch:db.patch.id,scope:'INTL'};
+ check(row.sides[0].team===b.id&&row.sides[0].region==='EU'&&JSON.stringify(row.sides[0].bans)===JSON.stringify(game.draft.bans[0]),'blue-side ban attribution wrong');
+ check(row.sides[1].team===a.id&&row.sides[1].region==='NA'&&JSON.stringify(row.sides[1].bans)===JSON.stringify(game.draft.bans[1]),'red-side ban attribution wrong');
+ check(row.sides.every((s,i)=>s.bans!==game.draft.bans[i]),'history aliases mutable draft ban arrays');
+ const na=metaBanAttribution(db,filter),eu=metaBanAttribution(db,{...filter,region:'EU'}),global=metaBanAttribution(db,{patch:db.patch.id});
+ check(na.own===5&&na.opponent===5&&na.unknown===0&&na.knownGames===1,'regional ban split wrong');
+ check(eu.own+na.own===global.own&&global.own===10&&global.opponent===0,'global ban conservation failed');
+ for(const cid of game.draft.bans[1])check(na.champions[cid].own===1&&eu.champions[cid].opponent===1,'champion region attribution reversed');
+ check(metaBanAttribution(db,filter)===na,'unchanged filter missed bounded cache');
+ check(JSON.stringify(row)===original&&JSON.stringify(db.regionMetaStats)===raw,'query rewrote raw history/exposure');
+ a.region='EU';check(metaBanAttribution(db,filter)===na,'current club region rewrote recorded historical region');a.region='NA';
+ const legacy=JSON.parse(original);for(const side of legacy.sides)delete side.bans;db.metaHistory.push(legacy);
+ const mixed=metaBanAttribution(db,filter),table=metaTableFiltered(db,filter);
+ check(mixed!==na&&mixed.knownGames===1&&mixed.unknownGames===1&&mixed.unknown===10&&mixed.own===5,'legacy row fabricated attribution or append cache stale');
+ check(table.reduce((n,x)=>n+x.b,0)===mixed.own+mixed.opponent+mixed.unknown,'existing regional exposure semantics changed');
+ check(metaBanAttribution(db,{...filter,position:'MID'}).own===mixed.own,'ban assigned an invented lane');
+ check(metaBanAttribution(db,{...filter,scope:'DOM'}).games===0&&metaBanAttribution(db,{...filter,season:'other'}).games===0&&metaBanAttribution(db,{...filter,from:'2999-01-01'}).games===0,'scope/season/date filter ignored');
+ const view={...db,teams:{...db.teams}};currentPatchMetaSamples(db);currentPatchMetaSamples(view);
+ check(metaBanAttribution(view,filter)===metaBanAttribution(db,filter),'official shallow view missed shared history index');
+ const packedRows=packMetaHistory(db.metaHistory),saved=packDB(db),restored=unpackDB(saved);
+ check(packedRows[0][10][0].length===5&&packedRows[1][10][0].length===4,'new attribution not optional or legacy layout rewritten');
+ check(JSON.parse(saved).saveFormat===2&&JSON.parse(saved).metaHistoryPacked===1,'save envelope version changed');
+ check(JSON.stringify(packMetaHistory(restored.metaHistory))===JSON.stringify(packedRows),'compact roundtrip changed historical evidence');
+ check(JSON.stringify(metaBanAttribution(restored,filter))===JSON.stringify(mixed),'full save lost ban attribution');
+ check(!Object.hasOwn(restored.metaHistory[1].sides[0],'bans'),'unknown legacy side gained invented bans');
+ const many=Array.from({length:520},()=>row),streamed=stringifyMetaHistory(many);
+ check(streamed===JSON.stringify(packMetaHistory(many))&&unpackMetaHistory(JSON.parse(streamed)).every(x=>x.sides[0].bans.length===5),'512-row batch boundary lost side bans');
+ const html=patchBanAttributionCard(db,filter,game.draft.bans[1][0]);
+ check(html.includes('선택 지역 직접 밴 5회')&&html.includes('상대 지역 밴 5회')&&html.includes('귀속 미상 10회')&&html.includes('기존 밴 통계'),'UI hid attribution or historical exposure meaning');
+ const inconsistent=JSON.parse(original);inconsistent.sides[0].bans=[];db.metaHistory=[inconsistent];
+ const bad=metaBanAttribution(db,filter);check(bad.knownGames===0&&bad.unknown===10,'inconsistent side lists silently attributed');
+ db.metaHistory=[row];check(metaBanAttribution(db,filter).unknown===0,'array replacement retained stale attribution');
+ db.metaHistory.length=0;check(metaBanAttribution(db,filter).games===0,'truncation retained stale attribution');
+ for(let i=0;i<90;i++)metaBanAttribution(db,{year:2100+i});
+ check(metaHistoryIndex(db).banAttribution.size<=META_FILTER_CACHE_LIMIT,'derived attribution cache grew unbounded');
+ console.log('BAN_ATTRIBUTION_ACCEPTANCE '+JSON.stringify({actualMatch:true,blueRedAndFirstPick:true,regionalConservation:true,legacyUnknown:true,unchangedExposure:true,oldRegion:true,filterCache:true,saveFormat2:true,boundedStreaming:true,visibleUi:true,inconsistentUnknown:true}));
+})();`,{setupSources:["const esc=x=>String(x).replaceAll('&','&amp;').replaceAll('<','&lt;');",await artifactSource('ui-patch.js')]});

@@ -6,7 +6,7 @@
 function packMetaHistoryRow(r){
   return [
     r.date,r.patch,r.comp,r.season,r.year,r.split,r.stage,r.league,r.international?1:0,r.regions||[],
-    (r.sides||[]).map(s=>[s.team,s.region,s.win?1:0,(s.picks||[]).map(p=>{const x=typeof p==='string'?{champ:p}:p;return [x.champ,x.role||null,x.player||null,x.items||[],x.runes||[]]})]),
+    (r.sides||[]).map(s=>{const side=[s.team,s.region,s.win?1:0,(s.picks||[]).map(p=>{const x=typeof p==='string'?{champ:p}:p;return [x.champ,x.role||null,x.player||null,x.items||[],x.runes||[]]})];if(Object.hasOwn(s,'bans'))side.push(s.bans);return side}),
     r.bans||[]
   ];
 }
@@ -37,11 +37,12 @@ function unpackMetaHistory(rows){
   // so GC can reclaim it before the entire history has been expanded.
   for(let i=0;i<rows.length;i++){
     const r=rows[i];
-    const row=Array.isArray(r)?{date:r[0],patch:r[1],comp:r[2],season:r[3],year:r[4],split:r[5],stage:r[6],league:r[7],international:!!r[8],regions:r[9]||[],sides:(r[10]||[]).map(s=>({team:s[0],region:s[1],win:!!s[2],picks:(s[3]||[]).map(p=>({champ:p[0],role:p[1],player:p[2],items:p[3]||[],runes:p[4]||[]}))})),bans:r[11]||[]}:r;
+    const row=Array.isArray(r)?{date:r[0],patch:r[1],comp:r[2],season:r[3],year:r[4],split:r[5],stage:r[6],league:r[7],international:!!r[8],regions:r[9]||[],sides:(r[10]||[]).map(s=>({team:s[0],region:s[1],win:!!s[2],picks:(s[3]||[]).map(p=>({champ:p[0],role:p[1],player:p[2],items:p[3]||[],runes:p[4]||[]})),...(s.length>4?{bans:s[4]}:{})})),bans:r[11]||[]}:r;
     for(const key of ['date','patch','comp','season','stage','league'])row[key]=intern(row[key]);
     row.regions=ids(row.regions);row.bans=ids(row.bans);
     for(const side of row.sides||[]){
       side.team=intern(side.team);side.region=intern(side.region);
+      if(Array.isArray(side.bans))side.bans=ids(side.bans);
       for(let j=0;j<(side.picks||[]).length;j++){let pick=side.picks[j];if(typeof pick==='object'&&pick){
         if(Object.isFrozen(pick))pick={...pick};
         pick.champ=intern(pick.champ);pick.role=intern(pick.role);pick.player=intern(pick.player);
