@@ -31,6 +31,44 @@ without continually adding new status documents.
 
 ## Current Phase
 
+### Current implementation slice — scout regional expertise (2026-10-02)
+
+Scope estimate: 50 minutes, single worker, baseline `8e8b9ba`. Rechecked current
+main and open PRs (#27/#28 are unrelated historical branches). Implemented the
+confirmed staff-rule gap: real investigator observations create personal bounded
+regional knowledge; current player location, personal specialization/knowledge
+and bounded individual multi-region capacity drive investigator assignment.
+The existing D03 capacity, public target ranking, report memory, costs, liquidity
+and founding dossier remain in use. Human and AI observations share the same
+regional power/learning functions. Missing legacy experience remains neutral.
+
+Employment changes keep the person's expertise; former employers lose the active
+employee effect, not their previously recorded player reports. Saves validate
+regional bounds for employed/free/retired staff. Compact UI explanations show
+recorded knowledge and observations without hidden staff ratings; an extracted
+`ui-scouting-regions.js` stays inside a separate small maintainability budget.
+
+Focused existing operations acceptance now covers neutral legacy values, actual
+assigned employee learning, personal capacity, regional allocation, human/AI gain
+parity, current vs origin region, manual/AI late failure rollback, invalid batches,
+cash/report/audit/staff-reference preservation, escaped UI, release/re-hire and
+saved expertise corruption. Preliminary tests found an absent-field JSON clone
+error and audit-reference replacement during rollback; changed the scoped journal
+to preserve original object graph references. A near-full AI operations module
+exceeded its existing budget; moved shared batch finance helpers into scouting
+without increasing budgets. These failures are documented, not hidden.
+Self-review added an owned-reserve boundary case: parent investigators and the
+managed reserve's existing manual cash/report path must both be journaled.
+Corrected owner-vs-actor detection and captured both finance layers; fault-injection
+acceptance verifies the parent experience and reserve cash/report restore together.
+
+Files: `scouting.js`, `scouting-ai.js`, `scouting-ai-ops.js`, `staff-contracts.js`,
+three UI modules, artifact manifest/check, existing scouting/staff acceptances and
+`STAFF_RULES.md`. Focused checks/CI/head/merge evidence is recorded at delivery.
+No long 100-season, device or TalkBack QA started. Remaining limits: no fabricated
+historical expertise, no extra travel/camp mechanics, no new manual administrative
+assignment clicks, no claim that every roadmap system is complete.
+
 ### Current implementation slice — staff career / retirement (2026-10-02)
 
 Scope estimate: 50 minutes, single worker, baseline `3203bbf`. Existing D07

@@ -1,10 +1,10 @@
-// ===== LOL GM: club staff/sponsor market panels and actions =====
+// ===== Staff/sponsor market =====
 function sponsorBlock(t){
   const cur=t.sponsor&&t.sponsor.until>=DB.year?t.sponsor:null, offers=DB.world.sponsorOffers||[];
   return `<h4>메인 스폰서</h4>${cur?`<p>${esc(cur.name)} ${esc(cur.type)} — 기본 ${money(cur.base)}${cur.perWin?` + 국내 1승당 ${money(cur.perWin)}`:''}${cur.milestone?` + ${sponsorGoalLabel(cur.milestone)} 달성 시 ${money(cur.milestoneBonus)}`:''} (${cur.until}년까지)</p>`:offers.map(o=>`<div class="mrow"><span><b>${esc(o.name)}</b> ${esc(o.type)} · 보장 ${money(o.base)}${o.perWin?` + 국내 1승당 ${money(o.perWin)}`:''}${o.milestone?` + ${sponsorGoalLabel(o.milestone)} 보너스 ${money(o.milestoneBonus)}`:''} · ${o.years}년 <small class="hint">예상 연간 ${money(sponsorExpectedValue(DB,t,o))}</small></span><button class="ghost sm2" data-spon="${o.id}">계약</button></div>`).join('')+'<p class="hint">기본 계약과 성과형 보너스의 확실성이 다릅니다. 계약 전 조건을 비교해 선택하세요. 제안은 시장 연도에만 유효합니다.</p>'}`;
 }
 function coachBlock(t){
-  const ps=psOf(DB,t.region),members=teamStaffMembers(t);ensureFacilities(t);const profile=staffProfile(t);
+  const members=teamStaffMembers(t);ensureFacilities(t);const profile=staffProfile(t);
   const dept=(d)=>members.filter(s=>staffDepartment(s.role)===d),cards=members.slice().sort((a,b)=>staffDepartment(a.role).localeCompare(staffDepartment(b.role))).map(x=>staffEmploymentCard(t,x,true)).join('');
   const limits=`코칭팀 ${dept('coach').length}/${STAFF_DEPT_LIMITS.coach} · 분석팀 ${dept('analyst').length}/${STAFF_DEPT_LIMITS.analyst} · 스카우팅팀 ${dept('scout').length}/${STAFF_DEPT_LIMITS.scout}`;
   const labels=FACILITY_LABELS;
@@ -33,6 +33,7 @@ function staffEmploymentCard(t,s,own){
   return `<details class="cfgcard"><summary>${esc(s.name)} · ${STAFF_ROLES[s.role]} · 추정 ${seen.min}~${seen.max}</summary>
     <p>${s.age}세 · ${employer?esc(employer.name):'자유 계약'}${s.contract?' · '+s.contract.until+'년까지 · 연봉 '+money(s.contract.salary):''}</p>
     <p>보조 전문 분야: ${Object.keys(s.specialties||{}).map(r=>STAFF_ROLES[r]).filter(Boolean).join(' · ')||'없음'}</p>
+    ${staffRegionalKnowledgeSummary(s)}
     ${s.retirementReview?`<p class="hint">${s.retirementReview.year}년 활동 검토 · ${staffRetirementExplanation(s.retirementReview)} (가상 엔진 판단, 은퇴 확정 예고가 아님)</p>`:''}
     ${(s.career||[]).slice(-2).map(r=>`<p class="hint">${r.year} · ${esc(DB.teams[r.teamId]?.name||r.teamId)} · 현장 ${r.series}시리즈 ${r.wins}승 (팀 결과)</p>`).join('')}
     ${!own?`<button class="ghost" data-interview-staff="${s.id}"${seen.interviewed?' disabled':''}>${seen.interviewed?'면접 완료':'면접'}</button>`:''}

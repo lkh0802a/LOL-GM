@@ -94,6 +94,7 @@ export const UI_MODULES = [
   'ui-manager.js',
   'ui-data.js',
   'ui-player.js',
+  'ui-scouting-regions.js',
   'ui-player-commitments.js',
   'ui-player-loans.js',
   'ui-local-service.js',

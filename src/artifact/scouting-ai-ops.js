@@ -43,8 +43,7 @@ function aiScoutingLeagueKeys(db,region){
   return R?.div2?[region+':DIV1',region+':DIV2']:[region+':DIV1'];
 }
 function aiScoutingCoveragePlan(db,t,candidates,capacity){
-  const scouts=staffByRole(t,'scout').slice().sort((a,b)=>(b.rating||0)-(a.rating||0)),
-    f=ensureFacilities(t),
+  const f=ensureFacilities(t),
     slots=Math.min(Object.keys(db.regions).length,Math.max(1,Math.ceil(capacity/3))),
     grouped={};
   for(const p of candidates){
@@ -60,24 +59,20 @@ function aiScoutingCoveragePlan(db,t,candidates,capacity){
     .filter(r=>r!==t.region)
     .sort((a,b)=>regionScore(b)-regionScore(a)||a.localeCompare(b))]
     .filter((r,i,x)=>x.indexOf(r)===i).slice(0,slots);
-  return regions.map((region,i)=>({
+  return regionalScoutingAssignments(db,t,regions).map(({region,scoutIds})=>({
     region,
     leagues:aiScoutingLeagueKeys(db,region),
-    scoutIds:scouts.length?scouts.filter((_,j)=>j%regions.length===i).map(s=>s.id):[],
+    scoutIds,
     scoutingFacility:f.scouting,
     publicPool:(grouped[region]||[]).length
   }));
 }
-function aiScoutingBatchCharge(unitCost,count){
-  return Math.round(unitCost*Math.max(0,count)*10)/10;
-}
-function aiScoutingAffordableTargets(available,unitCost,capacity){
-  for(let n=capacity;n>0;n--)if(aiScoutingBatchCharge(unitCost,n)<=available+.001)return n;
-  return 0;
-}
 function aiRunScoutingOperation(db,t){
-  const owner=aiScoutingOwner(db,t);if(!owner||owner.parent||
-    owner.id===managedTeamId(db)||!owner.finance)return null;
+  const owner=aiScoutingOwner(db,t);if(!owner||owner.parent||owner.id===managedTeamId(db)||!owner.finance)return null;
+  return scoutingOperationAtomically(db,owner,()=>performAiScoutingOperation(db,owner));
+}
+function performAiScoutingOperation(db,t){
+  const owner=t; // The public atomic wrapper validates ownership.
   const state=ensureAiScoutingState(db,owner),f=ensureFacilities(owner),
     scouts=staffByRole(owner,'scout'),
     capacity=Math.max(1,Math.min(10,scouts.length+f.scouting)),
@@ -100,7 +95,8 @@ function aiRunScoutingOperation(db,t){
       staleBefore=before.staleYears||0,
       marketBefore=staleBefore>0?aiMarketOfferRankSnapshot(db,owner,p):null;
     const report=observeAiPlayer(db,owner,p,aiScoutingVisitGain(),{
-      comp:'SCOUT:'+aiScoutingTargetRegion(db,p),games:0});
+      comp:'SCOUT:'+aiScoutingTargetRegion(db,p),games:0,
+      scoutIds:assignments.find(a=>a.region===aiScoutingTargetRegion(db,p))?.scoutIds||[]});
     if(!report)continue;
     const marketAfter=staleBefore>0?aiMarketOfferRankSnapshot(db,owner,p):null;
     targets.push({pid:p.id,region:aiScoutingTargetRegion(db,p),role:p.role,

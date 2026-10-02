@@ -71,8 +71,8 @@ function seedInitialAiScoutReport(db,t,p){
 function observeAiPlayer(db,t,p,gain,opt={}){
   const owner=aiScoutingOwner(db,t);if(!owner||!p||p.retired||
     owner.id===managedTeamId(db)||aiBaseScoutKnowledge(db,owner,p)>=100)return null;
-  const r=ensureAiScoutReport(db,owner,p),before=r.knowledge||0,
-    power=scoutingPowerForTeam(owner),diminish=.55+.45*(1-before/100);
+  const r=ensureAiScoutReport(db,owner,p),before=r.knowledge||0,view=scoutingRegionalPower(db,owner,p,opt),
+    power=view.power,diminish=.55+.45*(1-before/100);
   r.knowledge=clamp(before+gain*power*diminish,0,98);r.source='scouted';
   r.observations=(r.observations||0)+1;r.gamesSeen=(r.gamesSeen||0)+(opt.games||0);
   r.lastSeenDate=db.worldDate;r.lastSeenYear=db.year;r.staleYears=0;
@@ -93,7 +93,7 @@ function observeAiPlayer(db,t,p,gain,opt={}){
   r.uncertainty=uncertainty;
   r.snapshots.push({year:db.year,date:db.worldDate,knowledge:Math.round(r.knowledge),
     ability:r.ability,potential:r.potential,uncertainty});
-  r.snapshots=r.snapshots.slice(-8);return r;
+  r.snapshots=r.snapshots.slice(-8);recordScoutRegionalObservation(db,view,gain);return r;
 }
 function aiScoutReport(db,t,p){
   const owner=aiScoutingOwner(db,t);if(!owner)return aiPublicMarketObservation(db,p,t);
