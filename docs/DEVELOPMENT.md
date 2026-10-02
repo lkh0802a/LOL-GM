@@ -31,6 +31,70 @@ without continually adding new status documents.
 
 ## Current Phase
 
+### Current implementation slice — participant and head-to-head meta queries (2026-10-02)
+
+Scope estimate: 50 minutes, one implementation worker, baseline main `4f91a47`.
+Managed environment became ready; origin/latest main matched a clean checkout,
+no AGENTS.md was found and only old unrelated PRs #27/#28 were open. Restricted
+runtime network policy was checked and Git fetch/GitHub reads succeeded. Previous
+publication `4f91a479e508cf5856cc53ad700e1adbae7e308d` passed complete main
+Actions `37072853692`; no local/unpushed work or scheduler migration was assumed.
+
+`metaRowsFiltered` now accepts recorded team, player and opponent IDs. A common
+side predicate intersects team/player/region/opponent conditions on the same
+side; player/position must identify the same recorded pick. Opponent-only queries
+select the side facing that opponent. Self-opponent and incompatible conditions
+yield no matches. Filtered tables and champion player/team/matchup/recent insights
+count only selected-side/player picks and their wins; the denominator is the
+matching recorded games. Ban table counts retain full-match exposure. Existing
+ban attribution separates the selected side's club bans from opposing club bans;
+player selection does not assert that an individual player made those decisions.
+No default raw/decaying counters, current-patch draft weighting, legal/manual
+draft actions, save schema or archived observations are rewritten.
+
+Recorded team/player indexes and facets are transient on the existing shared
+WeakMap history index. Appends are incremental, replacement/truncation rebuild,
+query caches retain the existing 64-entry limit and JSON-encoded dimension keys
+avoid separator collisions. These extra indexes hold references proportional to
+history, not a fixed-memory archive; final 100-season resource proof remains
+deferred. Missing legacy player/team IDs are not inferred from current rosters;
+unselected older string-shaped picks still count. Historical IDs remain selectable
+even when the current registry no longer supplies a name.
+
+The actual patch page and controls propagate all three dimensions. Player search
+examines all recorded IDs/names, displays up to 80 matching choices and keeps an
+already selected player outside that window. This is a UI rendering bound, not a
+history/gameplay cap. New-world replacement clears participant selections/search.
+Sample labels distinguish recorded filters from the mixed/decaying reference view
+instead of calling every selected statistic a current-patch game. The UI explains
+which side supplies picks/wins, all-match ban exposure and unknown-ID exclusion.
+
+Files: `meta.js`, `ui-patch.js`, `ui-state.js`, new focused
+`participant-meta-acceptance.mjs`, shared runner and existing UI state acceptance.
+Three real simulated matches with both club orders and two different opponents
+prove denominators, wins, selected player/position, reverse/opponent-only queries,
+incompatible filters, attributed bans, save continuity and source purity. Fixture
+dates are advanced directly for these matches, not a played calendar/season.
+A synthetic current player club edit, restored immediately, proves archival
+independence rather than a real transfer. Injected legacy/archived/search records
+exercise ID provenance and UI bounds, not played historical seasons. The real
+page renderer and input handlers, world reset, append/replacement/truncation and
+cache bounds are tested. Focused/static/UI-state/old ban attribution checks,
+UI/finance/contracts 41 acceptances in 40 fresh VMs and engine regression pass.
+Final review strengthened full-page propagation, sample labels and the distinct
+opponent condition; focused/static checks pass afterward. No new test failures,
+diagnostic removal, budget increases or long/device/TalkBack QA occurred.
+
+Precise next slice (estimate 50 minutes): Item 21 blue/red analysis. Current
+match construction maps side 0 to blue and side 1 to red, but professional
+history/compact side tuples lack explicit color provenance, and meta queries/UI
+have no side filter. Recheck current main, rules and competing PRs. Add explicit
+new-record side attribution, compatible optional saved data and a common side
+filter across participant statistics/insights/ban ownership with sample coverage.
+Do not infer uncertain legacy colors merely from current club/order, alter old
+raw counts or claim all 23 stages complete. Preserve standalone/CI gates and
+defer final QA until features and user playtest feedback/fixes are complete.
+
 ### Continued implementation slice — regional ban provenance (2026-10-02)
 
 After PR #144 merged and its HTML was published, remaining time allowed a
