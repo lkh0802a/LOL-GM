@@ -67,7 +67,7 @@ function actionJournalTargets(db,command){
       if(db.players[pid]?.team!==dst)playerIds.add(pid);
     }
   }else{
-    if(command.type!=='finance.transfer-payment')playerIds.add(command.pid);
+    if(!['finance.transfer-payment','finance.estate-recovery'].includes(command.type))playerIds.add(command.pid);
     for(const id of [command.teamId,command.fromId,db.players[command.pid]?.team])
       if(id)teamIds.add(id);
   }

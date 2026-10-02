@@ -95,3 +95,12 @@ during save in2059. Bounded512-row history encoding preserves all evidence and
 the existing save format while reducing a60,000-row synthetic encoding peak.
 Original failure reports remain; neither that run nor the synthetic benchmark
 proves100seasons or mobile memory. See DEVELOPMENT.md for exact measurements.
+
+D04 estate recovery now uses actual post-closure cash to reduce remaining
+player/staff/legacy claims proportionally after protecting existing guaranteed
+transfer commitments. Mirrored invoices keep their dates; unearned bonuses do
+not invent debt. Original closure history remains immutable, later distributions
+are recorded separately, and stale/late failures roll back the financial journal.
+Current-save restoration and fractional cash conservation are covered. Initial
+combined creditor insolvency policy and asset liquidation remain unimplemented;
+this is partial D04 progress, not full completion. See DEVELOPMENT.md.

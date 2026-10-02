@@ -56,6 +56,7 @@ export const ENGINE_MODULES = [
   'player-representation.js',
   'player-loans.js',
   'transfer-payments.js',
+  'finance-estate.js',
   'transfer-market-rules.js',
   'loan-purchase.js',
   'local-service.js',

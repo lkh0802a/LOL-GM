@@ -1451,3 +1451,37 @@ archive/legacy/current regression and97-module static/build pass. Calendar/scout
 runner now10acceptances. Full mandatory CI remains the merge gate. Another actual
 long run is only meaningful after the corrected engine is validated; do not erase
 the32season failure or claim this change proves100seasons.
+
+### D04 recovered cash after club closure (2026-10-02)
+
+Closed clubs retain mirrored transfer receivables and payables. The existing
+daily transfer-payment pass now follows collection/payment with a system-only
+estate distribution. Actual remaining cash above existing guaranteed transfer
+commitments pays remaining player, staff and unattributed legacy release claims
+in the same proportions as the initial closure policy. Pending, unearned bonuses
+do not become guaranteed debt; agreed installment dates remain unchanged.
+No facility valuation, owner donation, debt cancellation or fictional cash is
+introduced. Closed estate cash retains fractional proportional balances when
+receiving or paying decimal invoices, avoiding rounding money into existence.
+
+finance-estate.js owns the recovery plan, command and accounting. The original
+closure settlement stays immutable; cumulative recovered payouts and a bounded
+20-entry distribution journal are separate. Remaining obligations and legacy
+unattributed balances continue to be the unpaid balance source of truth. Pure
+previews, authority checks, financial snapshots and the existing rollback journal
+prevent stale or partially applied distributions. Saves need no schema migration;
+repeated dates cannot repeat completed payouts.
+
+Acceptance exercises actual closure, two later receivable installments, an outgoing
+guaranteed installment and an unearned bonus, proportional player/staff/legacy
+payouts, fractional conservation, complete payment, current save, stale plans and
+injected late failures restoring the original finance reference. Shared35
+acceptances/31 engine contexts and98-module static/build pass locally; final full
+mandatory CI gates merge. D04 remains open: initial closure funding does not yet
+combine all transfer creditors into one insolvency waterfall or liquidate assets.
+This recovery policy protects existing guaranteed commitments after closure
+rather than declaring a general creditor-priority or accelerated-invoice policy.
+
+The single daily-batch-save-main-1 long QA remains on its original #119 source;
+it does not validate this estate change. No second long run or paid long workflow
+was launched. Long-career balance, other D work and real mobile evidence remain.
