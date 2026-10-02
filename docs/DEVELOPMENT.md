@@ -1966,3 +1966,29 @@ Next connected candidates remain unfinished D04 representation/insolvency work,
 D05 purchase options/conditional transfers, then remaining D06/D07–D13 and Items
 13–23. All23 roadmap features still precede user playtest feedback and fixes;
 100-season and real mobile/TalkBack verification remain last.
+
+
+## D05 strategic AI loan recall follow-up (2026-10-02)
+
+During its existing weekly loan review, an AI lender may now recall a loaned
+player with an agreed recall clause when the current owned starter is materially
+weaker according to that lender's saved scouting observations. The comparison
+reuses the existing AI recruitment margin of three points; it does not inspect
+hidden player ability or add a second quality scale. Existing medical-shortage
+recall remains. A missing or invalid current owned starter cannot trigger the
+quality comparison. No-recall terms, binding purchase obligations, inactive
+clubs, and human-controlled lender authority remain protected by the same
+command validation.
+
+The existing `transfer-stage-acceptance.mjs` now checks actual weekly AI
+execution for a better observed player, no sporting need, no recall permission,
+and a human-controlled lender, alongside the prior medical shortage, purchase,
+loan, transfer-payment, save and rollback cases. Local evidence: transfer-stage
+and player-loan acceptances, regression, smoke, 103-module static validation and
+`git diff --check` pass. Required exact-PR-head CI remains the merge gate.
+
+This changes the AI lender's use of a negotiated recall clause; it does not
+implement a general agency/insolvency policy, alter loan clauses, promise that a
+recall is optimal in every career, or complete D05 or the 23-stage roadmap.
+The deferred long-run, mobile and TalkBack checks remain after all features and
+user playtest fixes.
