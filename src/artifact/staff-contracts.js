@@ -21,7 +21,7 @@ function staffClosureClaims(db,t){return (t.staffRoster||[]).map(s=>({claimantKi
 function releaseClosingStaff(db,t){
   for(const claim of staffClosureClaims(db,t))recordContractReleaseObligation(t,claim.amount,claim);
   db.staffPool=db.staffPool||[];
-  for(const s of t.staffRoster||[]){s.contract=null;recordStaffEvent(db,s,'club_closure',{from:t.id});db.staffPool.push(s)}
+  for(const s of t.staffRoster||[]){const fromYear=s.since??s.contract?.from;s.contract=null;recordStaffEvent(db,s,'club_closure',{from:t.id,fromYear});db.staffPool.push(s)}
   t.staffRoster=[];
 }
 function staffObservation(db,t,s){
@@ -90,18 +90,20 @@ function applyStaffAction(db,c){
     return {sid:s.id,observation:staffObservation(db,t,s)};
   }
   if(c.type==='staff.sign'||c.type==='staff.renew'){
+    const previousSince=f.team?s.since??s.contract?.from:null;
     if(c.type==='staff.sign'){
-      if(c.replaceSid){const replaced=t.staffRoster.find(x=>x.id===c.replaceSid);if(c.releaseFee)payFinancePrepaid(t,'staffSeverance',c.releaseFee);t.staffRoster.splice(t.staffRoster.indexOf(replaced),1);replaced.contract=null;recordStaffEvent(db,replaced,'release',{from:t.id,fee:c.releaseFee});db.staffPool=db.staffPool||[];db.staffPool.push(replaced)}
+      if(c.replaceSid){const replaced=t.staffRoster.find(x=>x.id===c.replaceSid);if(c.releaseFee)payFinancePrepaid(t,'staffSeverance',c.releaseFee);t.staffRoster.splice(t.staffRoster.indexOf(replaced),1);const fromYear=replaced.since??replaced.contract?.from;replaced.contract=null;recordStaffEvent(db,replaced,'release',{from:t.id,fromYear,fee:c.releaseFee});db.staffPool=db.staffPool||[];db.staffPool.push(replaced)}
       if(f.team){payFinancePrepaid(t,'transferPaid',c.poachFee);receiveFinancePrepaidTransfer(f.team,c.poachFee);f.team.staffRoster.splice(f.team.staffRoster.indexOf(s),1)}
       else db.staffPool.splice(db.staffPool.indexOf(s),1);
       ensureStaffRoster(t).push(s);s.since=db.year;
     }
     s.contract={salary:c.salary,years:c.years,from:db.year,until:db.year+c.years-1};
-    recordStaffEvent(db,s,c.type==='staff.renew'?'renewal':'signing',{from:c.fromId,to:t.id,salary:c.salary,until:s.contract.until,fee:c.fee,poachFee:c.poachFee,releaseFee:c.releaseFee,replaceSid:c.replaceSid});
+    recordStaffEvent(db,s,c.type==='staff.renew'?'renewal':'signing',{from:c.fromId,to:t.id,previousSince,salary:c.salary,until:s.contract.until,fee:c.fee,poachFee:c.poachFee,releaseFee:c.releaseFee,replaceSid:c.replaceSid});
   }else{
     if(c.fee)payFinancePrepaid(t,'staffSeverance',c.fee);
+    const fromYear=t?s.since??s.contract?.from:null;
     if(t)t.staffRoster.splice(t.staffRoster.indexOf(s),1);else db.staffPool.splice(db.staffPool.indexOf(s),1);s.contract=null;
-    recordStaffEvent(db,s,c.type.slice(6),{from:t?.id||null,fee:c.fee,...(c.type==='staff.retire'?{review:staffRetirementReview(db,s,t)}:{})});
+    recordStaffEvent(db,s,c.type.slice(6),{from:t?.id||null,fromYear,fee:c.fee,...(c.type==='staff.retire'?{review:staffRetirementReview(db,s,t)}:{})});
     if(c.type==='staff.retire'){s.retired=true;s.retiredYear=db.year;db.staffRetired=db.staffRetired||[];db.staffRetired.push(s)}
     else{db.staffPool=db.staffPool||[];db.staffPool.push(s)}
   }

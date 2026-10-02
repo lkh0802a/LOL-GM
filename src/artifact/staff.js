@@ -111,6 +111,8 @@ function staffRetirementReview(db,s,t){
   addSpan(start,end);
   let stint=null;
   for(const h of s.history||[]){
+    if(h.from&&['release','expire','club_closure','retire'].includes(h.type))addSpan(h.fromYear,h.year);
+    if(h.from&&h.type==='signing')addSpan(h.previousSince,h.year);
     if(['release','expire','club_closure','signing'].includes(h.type)&&stint!==null){addSpan(stint,h.year);stint=null}
     if(h.type==='signing')stint=h.year;
   }

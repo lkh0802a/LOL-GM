@@ -94,6 +94,9 @@ await runEngineFixture(String.raw`(()=>{
  check(automaticFree.age===101&&db.staffRetired.includes(automaticFree)&&automaticFree.history.at(-1).review&&automaticFree.retirementReview.year===db.year,'free annual retirement skipped shared system action');
  const stints={age:65,ambition:50,history:[{type:'signing',year:db.year-12},{type:'release',year:db.year-10},{type:'signing',year:db.year-2}],since:db.year-2};
  check(staffRetirementReview(db,stints,buyer).careerYears===4,'career counted unemployed gap or dropped earlier recorded stint');
+ const priorEmployment={age:65,ambition:50,since:db.year-1,history:[{type:'release',from:seller.id,fromYear:db.year-10,year:db.year-7},{type:'signing',from:null,year:db.year-1}]};
+ check(staffRetirementReview(db,priorEmployment,buyer).careerYears===4,'later FA signing erased saved earlier tenure or counted unemployment');
+ const poachedEmployment={age:65,ambition:50,since:db.year,history:[{type:'signing',from:seller.id,previousSince:db.year-4,year:db.year}]};check(staffRetirementReview(db,poachedEmployment,buyer).careerYears===4,'poaching erased incumbent tenure');
  const corruptStaff=JSON.parse(packDB(db));corruptStaff.staffRetired[0].career=[{year:db.year,seasonId:'bad',teamId:buyer.id,role:'analyst',series:1,wins:2}];let corruptRejected=false;try{unpackDB(JSON.stringify(corruptStaff))}catch{corruptRejected=true}check(corruptRejected,'impossible staff results accepted from save');
  const legacy=JSON.parse(packDB(db));const ls=legacy.teams[seller.id].staffRoster[0];delete ls.contract;delete ls.publicEstimate;delete ls.history;delete legacy.teams[seller.id].staffInitialized;
  const migrated=unpackDB(JSON.stringify(legacy)),ms=migrated.teams[seller.id].staffRoster[0];check(ms.contract&&Number.isFinite(ms.publicEstimate)&&ms.history.length===0,'legacy migration fabricated past or omitted current employment');

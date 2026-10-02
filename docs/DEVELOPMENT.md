@@ -59,6 +59,9 @@ world had already reviewed that same year, so the new annual idempotence guard
 correctly skipped the artificial retirement. Corrected the fixture to advance
 one year before its retirement scenario; retained the exact no-auto-replacement
 assertion. Failed run/log/artifact remain preserved; a new full-head CI is required.
+Self-review also preserved known departure/employer tenure bounds in staff events:
+poaching, expiry, release, atomic replacement and closure must not lose existing
+tenure when a later signing resets `since`. Focused employment-gap tests passed.
 
 Limits: historical events without captured employees are not reconstructed;
 series wins describe team results, not isolated staff causal credit. The model
