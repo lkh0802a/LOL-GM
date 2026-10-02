@@ -1587,3 +1587,44 @@ players, frozen repeated restoration, extended legacy identity, format parity
 and full-save restore. Related acceptance, regression and98-module static/build
 passed locally; final required CI must pass before merge. D11 actual multi-seed
 100seasons and D13 real mobile tasks, plus other documented D gaps, remain open.
+
+
+### User priority: patchable role quests (2026-10-02)
+
+The user explicitly requires LoL role quests for TOP/JGL/MID/ADC/SUP, and their
+progression conditions and rewards must change through the game's patch system.
+This is the next D10 connected implementation, not a completed feature. Use
+existing match income, damage/takedowns, objectives, equipment and vision events;
+do not complete quests merely at a fixed match minute. Quests belong to the
+selected match role, including off-role champions. Rewards must affect actual
+experience/level limits, equipment/economy and relevant combat/map decisions.
+Expose progress/completion in the existing match UI without restoring the removed
+simulation menu. Preserve deterministic seeds, current/legacy saves and official
+series restoration; prove one-time rewards, changed completion timing, patch
+rollback and historical rules retained after later patches.
+
+Keep quest rules in the patch-owned baseline/notes/snapshot pipeline, rather than
+hard-coded per-role buffs. Respect existing immutable patch history and cache
+invalidation; old saves need an explicit compatible default. Match-local quest
+state and reward equipment must remain separate from permanent player growth.
+The aggregate engine has minute ticks rather than geometric lane positions:
+document measured lane/roam proxies and avoid claiming literal client parity.
+
+Official sources checked: Riot26.1 introduces quests;
+https://www.leagueoflegends.com/en-us/news/game-updates/patch-26-1-notes/
+Riot26.9 changes lane/roam progression, top XP, mid reward and bot takedown gold;
+https://www.leagueoflegends.com/en-us/news/game-updates/league-of-legends-patch-26-9-notes/
+Riot26.11 updates mid bonus AD/AP;26.16 updates boots/support progression;
+https://www.leagueoflegends.com/en-us/news/game-updates/league-of-legends-patch-26-11-notes/
+https://www.leagueoflegends.com/en-us/news/game-updates/league-of-legends-patch-26-16-notes/
+Riot26.19 updates top quest teleport cooldown. Read full relevant source sections
+before finalizing constants; do not ship26.1 rewards as current26.19 rules.
+https://www.leagueoflegends.com/en-us/news/game-updates/league-of-legends-patch-26-19-notes/
+
+Memory PR123 passed all required CI36954074617 and merged as91ca28db9c9260e746ae7cf4d3696037024ef036.
+A single same-seed local100season run now uses that source: daily-rolling-history-main-1,
+parent33552/child21132, started02:13:19.199UTC, source hash012a48fa3c5186c99bcbef3cc7cad76a5b740fd3a63768222c95e70ec24fe3e0.
+Original1536MiB heap/4096MiB RSS QA budgets remain. The initial restored2027
+checkpoint passed. All .diagnostics output remains preserved. This running VM
+cannot validate subsequent role-quest code; do not start a second long run or
+interpret running/partial reports as100season completion.
