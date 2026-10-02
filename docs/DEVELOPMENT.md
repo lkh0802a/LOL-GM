@@ -64,10 +64,28 @@ acceptance verifies the parent experience and reserve cash/report restore togeth
 
 Files: `scouting.js`, `scouting-ai.js`, `scouting-ai-ops.js`, `staff-contracts.js`,
 three UI modules, artifact manifest/check, existing scouting/staff acceptances and
-`STAFF_RULES.md`. Focused checks/CI/head/merge evidence is recorded at delivery.
+`STAFF_RULES.md`. Focused scouting depth/operations/reassessment, staff contracts,
+core smoke, calendar-scouting, UI-finance-contracts and static checks passed.
+PR #137 final head `6a0a42e33c975343ad5c778c48840b55a99f1e0a` passed full CI
+run `37033029237`, including medical core, four seeds, two aggregates and `verify`.
+Merged as `105d3009fc3a39426041aefa90c6140e99adb685`; standalone HTML rebuilt
+from that integrated source. The superseded initial-head CI was cancelled after
+the owned-reserve self-review correction; it is not final-head evidence.
 No long 100-season, device or TalkBack QA started. Remaining limits: no fabricated
 historical expertise, no extra travel/camp mechanics, no new manual administrative
 assignment clicks, no claim that every roadmap system is complete.
+
+Precise next implementation slice (estimate 50 minutes, single worker): connect
+current-role position coaching to actual champion practice/mastery and matchup
+learning. `practice-resources.js::runDailyPractice` currently assigns champion
+practice without position-coach influence; `player.js::championLearningMultiplier`
+uses player learning/adaptability only, and `development.js::growPlayer` applies
+coaches to attribute growth but not the final champion/matchup learning path.
+Use the confirmed position-coach rule, preserve shared 100-point practice,
+fatigue/medical/rest, growth caps and official/scrim records, and pair human/AI
+and correct-role/wrong-role tests. Cover employment changes, save and concise UI
+explanation without fabricating legacy practice. No temporary implementation or
+new long QA was left running for that next slice.
 
 ### Current implementation slice — staff career / retirement (2026-10-02)
 

@@ -6938,6 +6938,54 @@ function aiMarketPermanentTransfers(db,rng,rep,mine){
 function sameScoutZone(a,b){if(a===b)return true;return Object.values(INTL_ZONES).some(z=>z.includes(a)&&z.includes(b))}
 function scoutingPowerForTeam(t){if(!t)return 1;return clamp(.78+facilityScoutingBonus(t)+staffProfile(t).scouting/250,.8,1.46)}
 function scoutingPower(db){return scoutingPowerForTeam(managedTeam(db))}
+// Fictional, bounded regional experience; absent legacy records mean unknown,
+// not an invented nationality, home-region expertise or historical service.
+function scoutRegionalKnowledge(s,region){return s.scoutRegions?.[region]?.knowledge||0}
+function scoutRegionalCapacity(s){const known=Object.values(s.scoutRegions||{}).map(r=>r.knowledge);return Math.min(3,1+Math.floor((clamp(staffRoleAbility(s,'scout'),0,99)+Math.min(30,known.length?avg(known)*.3:0))/45))}
+function scoutRegionalMembers(db,t,region,ids=null){
+  const owner=aiScoutingOwner(db,t),allowed=ids?new Set(ids):null;
+  return staffByRole(owner,'scout').filter(s=>!s.retired&&(!s.contract||s.contract.until>=db.year)&&(!allowed||allowed.has(s.id)))
+    .sort((a,b)=>(scoutRegionalKnowledge(b,region)-scoutRegionalKnowledge(a,region))||staffRoleAbility(b,'scout')-staffRoleAbility(a,'scout')||a.id.localeCompare(b.id));
+}
+function scoutingRegionalPower(db,t,p,opt={}){
+  const owner=aiScoutingOwner(db,t),region=aiScoutingTargetRegion(db,p),members=scoutRegionalMembers(db,owner,region,opt.scoutIds);
+  const expertise=Math.min(1,members.reduce((v,s,i)=>v+scoutRegionalKnowledge(s,region)*([1,.28,.16][i]||.1),0)/100);
+  return {owner,region,members,power:clamp(scoutingPowerForTeam(owner)*(1+expertise*.15),.8,1.65)};
+}
+function recordScoutRegionalObservation(db,view,gain){
+  if(!db.regions[view.region]||gain<=0)return;
+  // Select the actual responsible investigator, not every employee in the club.
+  const s=view.members[0];if(!s)return;
+  s.scoutRegions=s.scoutRegions||{};
+  const row=s.scoutRegions[view.region]||{knowledge:0,observations:0};
+  row.knowledge=clamp(row.knowledge+Math.min(2,gain/20)*(1-row.knowledge/100),0,100);
+  row.observations++;row.lastYear=db.year;row.lastDate=db.worldDate||null;s.scoutRegions[view.region]=row;
+}
+function regionalScoutingAssignments(db,t,regions){
+  const assigned=new Map();
+  return regions.map(region=>{
+    const members=scoutRegionalMembers(db,t,region).filter(s=>(assigned.get(s.id)||0)<scoutRegionalCapacity(s)).sort((a,b)=>{
+      const fit=s=>scoutRegionalKnowledge(s,region)-Math.max(0,...regions.filter(r=>r!==region).map(r=>scoutRegionalKnowledge(s,r)))*.5-(assigned.get(s.id)||0)*10;
+      return fit(b)-fit(a)||staffRoleAbility(b,'scout')-staffRoleAbility(a,'scout')||a.id.localeCompare(b.id);
+    });
+    // Staff are allocated to the best-fit region first; each person's capacity
+    // is bounded by their own expertise rather than a round-robin ID counter.
+    const chosen=members.slice(0,1);for(const s of chosen)assigned.set(s.id,(assigned.get(s.id)||0)+1);
+    return {region,scoutIds:chosen.map(s=>s.id)};
+  }).filter(a=>a.scoutIds.length||a.region===t.region);
+}
+function scoutingOperationAtomically(db,t,work){
+  const owner=aiScoutingOwner(db,t),human=t.id===managedTeamId(db),rows=[],nodes=[],seen=new Set();
+  const capture=ref=>{if(!ref||typeof ref!=='object'||seen.has(ref))return;seen.add(ref);const entries=Object.entries(ref);nodes.push({ref,record:Object.fromEntries(entries),length:Array.isArray(ref)?ref.length:null});for(const [,child] of entries)capture(child)};
+  for(const [object,key] of [[t,'finance'],[owner,'finance'],[owner,'scoutingState'],...(human?[[db,'scout'],[db.world||{},'recruitment']]:[]),...staffByRole(owner,'scout').map(s=>[s,'scoutRegions'])]){rows.push({object,key,present:Object.hasOwn(object,key),ref:object[key]});capture(object[key])}
+  try{return work()}catch(error){
+    for(const node of nodes){actionJournalRestoreObject(node.ref,node.record);if(node.length!==null)node.ref.length=node.length}
+    for(const r of rows){if(!r.present)delete r.object[r.key];else r.object[r.key]=r.ref}
+    throw error;
+  }
+}
+function aiScoutingBatchCharge(unitCost,count){return Math.round(unitCost*Math.max(0,count)*10)/10}
+function aiScoutingAffordableTargets(available,unitCost,capacity){for(let n=capacity;n>0;n--)if(aiScoutingBatchCharge(unitCost,n)<=available+.001)return n;return 0}
 function baseScoutKnowledge(db,p){const me=managedTeam(db);if(!me)return 0;if(p.team===me.id||(p.team&&db.teams[p.team]&&db.teams[p.team].parent===me.id))return 100;if(p.region===me.region)return 35;return sameScoutZone(p.region,me.region)?30:25}
 function ensureScoutReport(db,p){db.scout=db.scout||{};let r=db.scout[p.id];if(typeof r==='number')r=db.scout[p.id]={knowledge:r,lastSeenYear:db.year-1,lastSeenDate:null,observations:0,gamesSeen:0,competitions:{},snapshots:[]};if(!r)r=db.scout[p.id]={knowledge:baseScoutKnowledge(db,p),lastSeenYear:null,lastSeenDate:null,observations:0,gamesSeen:0,competitions:{},snapshots:[]};r.competitions=r.competitions||{};r.snapshots=r.snapshots||[];return r}
 function knowledge(db,p){if(!db.world)return 100;const base=baseScoutKnowledge(db,p);if(base>=100)return 100;const r=ensureScoutReport(db,p);return Math.round(clamp(Math.max(base,r.knowledge||0),0,98))}
@@ -6945,7 +6993,7 @@ function scoutSample(db,p){let g=0,k=0,d=0,a=0,min=0,dmg=0,rating=0,csd=0,gd=0;c
 function scoutingRisk(db,p){const me=managedTeam(db),k=knowledge(db,p),sample=scoutSample(db,p),tm=p.team&&db.teams[p.team];return (p.age<=20?2.5:0)+(me&&p.region!==me.region?2:0)+(tm&&(tm.division||1)===2?2:0)+(sample.g<8?3:sample.g<20?1.5:0)+(100-k)/20}
 function obsAttr(db,p,a,k=knowledge(db,p)){if(k>=99)return p.attrs[a];const risk=scoutingRisk(db,p),n=((hashStr(p.id+a)%2001)/1000-1)*((1-k/100)*11+risk*.3);return Math.round(clamp(p.attrs[a]+n,20,99))}
 function obsOvr(db,p,raw=false){const k=raw?Math.min(98,Math.max(knowledge(db,p),30)):knowledge(db,p);if(k>=99)return playerOvr(p);const role=p.role,gw=ROLE_GROUP_WEIGHTS[role]||ROLE_GROUP_WEIGHTS.MID,gs=g=>{const keys=ATTR_GROUPS[g].filter(a=>!(a==='smite_execution'&&role!=='JGL')&&!(a==='csing'&&role==='SUP'));return avg(keys.map(a=>obsAttr(db,p,a,k)))};let base=0,w=0;for(const [g,x] of Object.entries(gw)){base+=gs(g)*x;w+=x}base/=w||1;const keys=ROLE_KEY_ATTRS[role]||[],key=keys.length?avg(keys.map(a=>obsAttr(db,p,a,k))):base;return Math.round(clamp(base*.82+key*.18,20,99))}
-function observePlayer(db,p,gain,opt={}){if(!p||p.retired)return;const r=ensureScoutReport(db,p),power=scoutingPower(db),diminish=.55+.45*(1-(r.knowledge||0)/100);r.knowledge=clamp((r.knowledge||0)+gain*power*diminish,0,98);r.observations=(r.observations||0)+1;r.gamesSeen=(r.gamesSeen||0)+(opt.games||0);if(opt.comp)r.competitions[opt.comp]=(r.competitions[opt.comp]||0)+(opt.games||1);r.lastSeenDate=db.worldDate;r.lastSeenYear=db.year;r.snapshots.push({year:db.year,date:db.worldDate,estimate:obsOvr(db,p,true),games:scoutSample(db,p).g});r.snapshots=r.snapshots.slice(-8)}
+function observePlayer(db,p,gain,opt={}){if(!p||p.retired||baseScoutKnowledge(db,p)>=100)return;const r=ensureScoutReport(db,p),view=scoutingRegionalPower(db,managedTeam(db),p,opt),power=view.power,diminish=.55+.45*(1-(r.knowledge||0)/100);r.knowledge=clamp((r.knowledge||0)+gain*power*diminish,0,98);r.observations=(r.observations||0)+1;r.gamesSeen=(r.gamesSeen||0)+(opt.games||0);if(opt.comp)r.competitions[opt.comp]=(r.competitions[opt.comp]||0)+(opt.games||1);r.lastSeenDate=db.worldDate;r.lastSeenYear=db.year;r.snapshots.push({year:db.year,date:db.worldDate,estimate:obsOvr(db,p,true),games:scoutSample(db,p).g});r.snapshots=r.snapshots.slice(-8);recordScoutRegionalObservation(db,view,gain)}
 
 function ageScoutReports(db){
   for(const [id,r0] of Object.entries(db.scout||{})){
@@ -6977,7 +7025,12 @@ function scoutAbilityRange(db,p){const k=knowledge(db,p),c=obsOvr(db,p),w=Math.m
 function scoutPotentialRange(db,p){const k=knowledge(db,p),risk=scoutingRisk(db,p),noise=((hashStr(p.id+'pot')%2001)/1000-1)*Math.max(1,(100-k)/13),center=clamp(p.pot+noise,playerOvr(p),99),w=Math.max(3,Math.ceil((100-k)/8+risk*.45));return [Math.max(playerOvr(p),Math.round(center-w)),Math.min(99,Math.round(center+w))]}
 function scoutGrowthTrend(p){const a=(p.developmentTrail||[]).slice(-3);if(a.length<2)return {delta:null,label:'표본 부족'};const d=a[a.length-1].ovr-a[0].ovr;return {delta:d,label:d>=3?'빠른 상승':d>=1?'상승':d<=-2?'하락':d<0?'소폭 하락':'정체'}}
 function scoutReport(db,p){const r=ensureScoutReport(db,p),sample=scoutSample(db,p),ability=scoutAbilityRange(db,p),potential=scoutPotentialRange(db,p),growth=scoutGrowthTrend(p),champions=Object.entries(p.pool||{}).sort((a,b)=>b[1].mastery-a[1].mastery).slice(0,5).map(([id,v])=>({id,mastery:Math.round(clamp(v.mastery+((hashStr(p.id+id)%1001)/1000-.5)*(100-knowledge(db,p))*.12,20,99))}));return {knowledge:knowledge(db,p),ability,potential,sample,growth,champions,lastSeenDate:r.lastSeenDate,staleYears:r.staleYears||0,observations:r.observations||0,gamesSeen:r.gamesSeen||0}}
-function scoutPlayers(db,ids,amt,cost){const t=myT(db);if(t.finance.cash<cost)return '보유 자금이 부족합니다';payFinancePrepaid(t,'scoutingExpense',cost);for(const id of ids){const p=db.players[id];if(p){observePlayer(db,p,Math.min(24,amt*.55),{games:0,comp:'manual'});syncRecruitmentObservation(db,id)}}return `스카우팅 보고서 갱신 (${money(cost)})`}
+function scoutPlayers(db,ids,amt,cost){
+  const t=myT(db);
+  if(!Array.isArray(ids)||!ids.length||new Set(ids).size!==ids.length||ids.some(id=>!db.players[id]||db.players[id].retired||baseScoutKnowledge(db,db.players[id])>=100)||!Number.isFinite(amt)||amt<=0||!Number.isFinite(cost)||cost<0)return '유효한 외부 선수와 관찰 비용을 선택하세요';
+  if(t.finance.cash<cost)return '보유 자금이 부족합니다';
+  try{return scoutingOperationAtomically(db,t,()=>{payFinancePrepaid(t,'scoutingExpense',cost);for(const id of ids){observePlayer(db,db.players[id],Math.min(24,amt*.55),{games:0,comp:'manual'});syncRecruitmentObservation(db,id)}return `스카우팅 보고서 갱신 (${money(cost)})`})}catch(error){return '스카우팅 처리 실패 · '+error.message}
+}
 
 /* ==== FILE: scouting-ai.js ==== */
 // ===== LOL GM: AI scouting ownership / market observation =====
@@ -7053,8 +7106,8 @@ function seedInitialAiScoutReport(db,t,p){
 function observeAiPlayer(db,t,p,gain,opt={}){
   const owner=aiScoutingOwner(db,t);if(!owner||!p||p.retired||
     owner.id===managedTeamId(db)||aiBaseScoutKnowledge(db,owner,p)>=100)return null;
-  const r=ensureAiScoutReport(db,owner,p),before=r.knowledge||0,
-    power=scoutingPowerForTeam(owner),diminish=.55+.45*(1-before/100);
+  const r=ensureAiScoutReport(db,owner,p),before=r.knowledge||0,view=scoutingRegionalPower(db,owner,p,opt),
+    power=view.power,diminish=.55+.45*(1-before/100);
   r.knowledge=clamp(before+gain*power*diminish,0,98);r.source='scouted';
   r.observations=(r.observations||0)+1;r.gamesSeen=(r.gamesSeen||0)+(opt.games||0);
   r.lastSeenDate=db.worldDate;r.lastSeenYear=db.year;r.staleYears=0;
@@ -7075,7 +7128,7 @@ function observeAiPlayer(db,t,p,gain,opt={}){
   r.uncertainty=uncertainty;
   r.snapshots.push({year:db.year,date:db.worldDate,knowledge:Math.round(r.knowledge),
     ability:r.ability,potential:r.potential,uncertainty});
-  r.snapshots=r.snapshots.slice(-8);return r;
+  r.snapshots=r.snapshots.slice(-8);recordScoutRegionalObservation(db,view,gain);return r;
 }
 function aiScoutReport(db,t,p){
   const owner=aiScoutingOwner(db,t);if(!owner)return aiPublicMarketObservation(db,p,t);
@@ -7172,8 +7225,7 @@ function aiScoutingLeagueKeys(db,region){
   return R?.div2?[region+':DIV1',region+':DIV2']:[region+':DIV1'];
 }
 function aiScoutingCoveragePlan(db,t,candidates,capacity){
-  const scouts=staffByRole(t,'scout').slice().sort((a,b)=>(b.rating||0)-(a.rating||0)),
-    f=ensureFacilities(t),
+  const f=ensureFacilities(t),
     slots=Math.min(Object.keys(db.regions).length,Math.max(1,Math.ceil(capacity/3))),
     grouped={};
   for(const p of candidates){
@@ -7189,24 +7241,20 @@ function aiScoutingCoveragePlan(db,t,candidates,capacity){
     .filter(r=>r!==t.region)
     .sort((a,b)=>regionScore(b)-regionScore(a)||a.localeCompare(b))]
     .filter((r,i,x)=>x.indexOf(r)===i).slice(0,slots);
-  return regions.map((region,i)=>({
+  return regionalScoutingAssignments(db,t,regions).map(({region,scoutIds})=>({
     region,
     leagues:aiScoutingLeagueKeys(db,region),
-    scoutIds:scouts.length?scouts.filter((_,j)=>j%regions.length===i).map(s=>s.id):[],
+    scoutIds,
     scoutingFacility:f.scouting,
     publicPool:(grouped[region]||[]).length
   }));
 }
-function aiScoutingBatchCharge(unitCost,count){
-  return Math.round(unitCost*Math.max(0,count)*10)/10;
-}
-function aiScoutingAffordableTargets(available,unitCost,capacity){
-  for(let n=capacity;n>0;n--)if(aiScoutingBatchCharge(unitCost,n)<=available+.001)return n;
-  return 0;
-}
 function aiRunScoutingOperation(db,t){
-  const owner=aiScoutingOwner(db,t);if(!owner||owner.parent||
-    owner.id===managedTeamId(db)||!owner.finance)return null;
+  const owner=aiScoutingOwner(db,t);if(!owner||owner.parent||owner.id===managedTeamId(db)||!owner.finance)return null;
+  return scoutingOperationAtomically(db,owner,()=>performAiScoutingOperation(db,owner));
+}
+function performAiScoutingOperation(db,t){
+  const owner=t; // The public atomic wrapper validates ownership.
   const state=ensureAiScoutingState(db,owner),f=ensureFacilities(owner),
     scouts=staffByRole(owner,'scout'),
     capacity=Math.max(1,Math.min(10,scouts.length+f.scouting)),
@@ -7229,7 +7277,8 @@ function aiRunScoutingOperation(db,t){
       staleBefore=before.staleYears||0,
       marketBefore=staleBefore>0?aiMarketOfferRankSnapshot(db,owner,p):null;
     const report=observeAiPlayer(db,owner,p,aiScoutingVisitGain(),{
-      comp:'SCOUT:'+aiScoutingTargetRegion(db,p),games:0});
+      comp:'SCOUT:'+aiScoutingTargetRegion(db,p),games:0,
+      scoutIds:assignments.find(a=>a.region===aiScoutingTargetRegion(db,p))?.scoutIds||[]});
     if(!report)continue;
     const marketAfter=staleBefore>0?aiMarketOfferRankSnapshot(db,owner,p):null;
     targets.push({pid:p.id,region:aiScoutingTargetRegion(db,p),role:p.role,
@@ -9805,6 +9854,7 @@ function staffStateErrors(db){
   for(const s of db.staffRetired||[]){if(ids.has(s.id)||s.contract||!s.retired)errors.push('잘못된 은퇴 스태프: '+s.id);ids.add(s.id)}
   const all=[...Object.values(db.teams).flatMap(t=>t.staffRoster||[]),...(db.staffPool||[]),...(db.staffRetired||[])];
   for(const s of all){
+    if(s.scoutRegions!==undefined&&(!s.scoutRegions||typeof s.scoutRegions!=='object'||Array.isArray(s.scoutRegions)||Object.values(s.scoutRegions).some(r=>!r||!Number.isFinite(r.knowledge)||r.knowledge<0||r.knowledge>100||!Number.isInteger(r.observations)||r.observations<1||!Number.isInteger(r.lastYear)||r.lastDate!==null&&typeof r.lastDate!=='string')))errors.push('잘못된 스카우터 지역 경험: '+s.id);
     if(s.career!==undefined&&(!Array.isArray(s.career)||s.career.some(r=>!r||!Number.isInteger(r.year)||typeof r.seasonId!=='string'||typeof r.teamId!=='string'||!STAFF_ROLES[r.role]||!Number.isInteger(r.series)||r.series<0||!Number.isInteger(r.wins)||r.wins<0||r.wins>r.series)))errors.push('잘못된 스태프 경기 경력: '+s.id);
     if(Array.isArray(s.career)&&new Set(s.career.map(r=>r&&JSON.stringify([r.seasonId,r.teamId,r.role]))).size!==s.career.length)errors.push('중복 스태프 경기 경력: '+s.id);
     const r=s.retirementReview;
@@ -11126,13 +11176,13 @@ function bindInitialRosterMarket(){
 }
 
 /* ==== FILE: ui-market-staff.js ==== */
-// ===== LOL GM: club staff/sponsor market panels and actions =====
+// ===== Staff/sponsor market =====
 function sponsorBlock(t){
   const cur=t.sponsor&&t.sponsor.until>=DB.year?t.sponsor:null, offers=DB.world.sponsorOffers||[];
   return `<h4>메인 스폰서</h4>${cur?`<p>${esc(cur.name)} ${esc(cur.type)} — 기본 ${money(cur.base)}${cur.perWin?` + 국내 1승당 ${money(cur.perWin)}`:''}${cur.milestone?` + ${sponsorGoalLabel(cur.milestone)} 달성 시 ${money(cur.milestoneBonus)}`:''} (${cur.until}년까지)</p>`:offers.map(o=>`<div class="mrow"><span><b>${esc(o.name)}</b> ${esc(o.type)} · 보장 ${money(o.base)}${o.perWin?` + 국내 1승당 ${money(o.perWin)}`:''}${o.milestone?` + ${sponsorGoalLabel(o.milestone)} 보너스 ${money(o.milestoneBonus)}`:''} · ${o.years}년 <small class="hint">예상 연간 ${money(sponsorExpectedValue(DB,t,o))}</small></span><button class="ghost sm2" data-spon="${o.id}">계약</button></div>`).join('')+'<p class="hint">기본 계약과 성과형 보너스의 확실성이 다릅니다. 계약 전 조건을 비교해 선택하세요. 제안은 시장 연도에만 유효합니다.</p>'}`;
 }
 function coachBlock(t){
-  const ps=psOf(DB,t.region),members=teamStaffMembers(t);ensureFacilities(t);const profile=staffProfile(t);
+  const members=teamStaffMembers(t);ensureFacilities(t);const profile=staffProfile(t);
   const dept=(d)=>members.filter(s=>staffDepartment(s.role)===d),cards=members.slice().sort((a,b)=>staffDepartment(a.role).localeCompare(staffDepartment(b.role))).map(x=>staffEmploymentCard(t,x,true)).join('');
   const limits=`코칭팀 ${dept('coach').length}/${STAFF_DEPT_LIMITS.coach} · 분석팀 ${dept('analyst').length}/${STAFF_DEPT_LIMITS.analyst} · 스카우팅팀 ${dept('scout').length}/${STAFF_DEPT_LIMITS.scout}`;
   const labels=FACILITY_LABELS;
@@ -11161,6 +11211,7 @@ function staffEmploymentCard(t,s,own){
   return `<details class="cfgcard"><summary>${esc(s.name)} · ${STAFF_ROLES[s.role]} · 추정 ${seen.min}~${seen.max}</summary>
     <p>${s.age}세 · ${employer?esc(employer.name):'자유 계약'}${s.contract?' · '+s.contract.until+'년까지 · 연봉 '+money(s.contract.salary):''}</p>
     <p>보조 전문 분야: ${Object.keys(s.specialties||{}).map(r=>STAFF_ROLES[r]).filter(Boolean).join(' · ')||'없음'}</p>
+    ${staffRegionalKnowledgeSummary(s)}
     ${s.retirementReview?`<p class="hint">${s.retirementReview.year}년 활동 검토 · ${staffRetirementExplanation(s.retirementReview)} (가상 엔진 판단, 은퇴 확정 예고가 아님)</p>`:''}
     ${(s.career||[]).slice(-2).map(r=>`<p class="hint">${r.year} · ${esc(DB.teams[r.teamId]?.name||r.teamId)} · 현장 ${r.series}시리즈 ${r.wins}승 (팀 결과)</p>`).join('')}
     ${!own?`<button class="ghost" data-interview-staff="${s.id}"${seen.interviewed?' disabled':''}>${seen.interviewed?'면접 완료':'면접'}</button>`:''}
@@ -11642,7 +11693,7 @@ function bindData(){
 
 /* ==== FILE: ui-player.js ==== */
 // ===== LOL GM: Player detail / scouting UI =====
-// Player profile, scouting search/report surfaces, and role-conversion controls.
+// Player profiles and role controls.
 
 function potText(p){const r=scoutPotentialRange(DB,p);return r[0]===r[1]?String(r[0]):`${r[0]}~${r[1]}`}
 function playerCompetitionIds(p){const ids=new Set();if(DB.world)for(const s of Object.values(DB.world.seasons)){if(s.pstats&&s.pstats[p.id]&&s.pstats[p.id].g)ids.add(s.comp)}for(const c of p.career||[])if(c.comp)ids.add(c.comp);return [...ids]}
@@ -11659,7 +11710,7 @@ function playerDetail(p){
   const k=knowledge(DB,p),team=p.team&&DB.teams[p.team],st=pState(p),nat=DB.regions[p.nationality||p.region],ev=(p.careerEvents||[]).slice().reverse().slice(0,16);
   return `<section class="pdet"><h3>${esc(p.name)} <small>${ROLE_KO[p.role]} · ${p.age}세 · ${careerStage(p)} · 종합 ${obsOvr(DB,p)}${k<100?` (스카우팅 ${k}%)`:''} · 잠재 ${potText(p)}</small></h3>
   <div class="fin"><div><span>국적</span><b>${esc(nat?nat.name:(p.nationality||p.region||'—'))}</b><small>${playerSquadLabel(DB,p)}${team?` · ${esc(team.name)}`:''}</small></div><div><span>주포지션</span><b>${ROLE_KO[p.role]}</b><small>현재 전문 역할 · 경기 슬롯 제한 아님</small></div><div><span>명성</span><b>${p.reputation??'—'}</b><small>실력과 별도 · 성과 기반</small></div><div><span>시장가치</span><b>${money(playerMarketValue(DB,p))}</b><small>${p.contract?.medicalReplacement?`의료 대체 · 연 환산 ${money(p.contract.salary)} · 최소 보장 ${p.contract.medicalReplacement.guaranteedThrough} · 예정 종료 ${p.contract.medicalReplacement.expiresOn} · 지급 ${money(p.contract.medicalReplacement.paid)}`:p.contract?`연봉 ${money(p.contract.salary)} · ~${p.contract.until} · 방출 보장 ${Math.round(contractGuaranteeRate(p.contract)*100)}%`:'FA'}</small></div></div>
-  ${scoutReportSummary(p)}
+  ${scoutReportSummary(p)}${scoutRegionalSummary(DB,p)}
   ${playerCommitmentsPanel(p)}
   ${playerLoanPanel(p)}
   ${localServicePanel(p)}
@@ -11675,6 +11726,17 @@ function playerDetail(p){
   ${p.career.length?`<h4 style="margin-top:14px">커리어</h4><div class="scroll"><table class="pool"><thead><tr><th>시즌</th><th>대회</th><th>팀</th><th>구분</th><th>종합</th><th>경기</th><th>평점</th><th>KDA</th><th>KP</th><th>GPM</th><th>DPM</th><th>CS차</th><th>골드차</th><th>받은 피해</th><th>시야</th><th>옵젝</th><th>라인 우위</th><th>한타 기여</th><th>POG</th><th>당시 계약</th></tr></thead><tbody>${p.career.slice().reverse().map(c=>`<tr><td class="num">${c.year}</td><td>${esc(c.cname||c.comp)}${c.international?' · 국제':''}</td><td>${esc(c.team?tshort(c.team):'FA')}</td><td>${c.squad||''}${c.division?` · ${c.division}부`:''}</td><td class="num">${c.ovr||''}</td><td class="num">${c.g}</td><td class="num">${c.rating?c.rating.toFixed(2):'—'}</td><td class="num">${((c.k+c.a)/Math.max(1,c.d)).toFixed(2)}</td><td class="num">${c.kp!==undefined?Math.round(c.kp*100)+'%':'—'}</td><td class="num">${c.min&&c.gold?(c.gold/c.min).toFixed(0):'—'}</td><td class="num">${c.min&&c.dmg?(c.dmg/c.min).toFixed(0):'—'}</td><td class="num">${c.g?Math.round((c.csDiff||0)/c.g):'—'}</td><td class="num">${c.g?Math.round((c.goldDiff||0)/c.g):'—'}</td><td class="num">${c.g?Math.round((c.dmgTaken||0)/c.g):'—'}</td><td class="num">${c.g?((c.vision||0)/c.g).toFixed(1):'—'}</td><td class="num">${c.objectives||0}</td><td class="num">${c.laneAdv!==undefined?c.laneAdv.toFixed(2):'—'}</td><td class="num">${c.teamfights?Math.round((c.teamfightWins||0)/c.teamfights*100)+'% · '+Math.round(c.teamfightShare*100)+'%':'—'}</td><td class="num">${c.mvp}</td><td class="num">${c.salary!==null&&c.salary!==undefined?`${money(c.salary)} ~${c.contractUntil}`:'—'}</td></tr>`).join('')}</tbody></table></div>`:''}
   ${(()=>{const promise=contractRolePromiseStatus(DB,p);return promise?`<h4>계약 역할 약속</h4><p class="hint">${SQUAD_ROLE_KO[promise.role]} · 기대 출전 ${Math.round(promise.expected*100)}% · 계약 이후 ${promise.games}/${promise.teamGames}게임${promise.start?' · '+esc(promise.start)+'부터':''}${promise.downgraded?' · 현재 역할이 계약 약속보다 낮습니다':''}</p>`:''})()}
   ${ev.length?`<h4 style="margin-top:14px">커리어 이벤트</h4><div class="scroll"><table class="pool"><thead><tr><th>시즌</th><th>유형</th><th>내용</th></tr></thead><tbody>${ev.map(e=>{const detail=e.type==='contract'?`${esc(tshort(e.team))} · ${money(e.salary)} · ~${e.until}`:e.type==='transfer'?`${esc(tshort(e.from))} → ${esc(tshort(e.to))} · ${money(e.fee)}${e.consent?.willing?' · 선수 동의':''}`:e.type==='award'?`${esc(e.competition)} · ${esc(e.award)}`:e.type==='title'?`${esc(e.competition)} 우승`:e.type==='squad_move'?`${esc(tshort(e.from))} → ${esc(tshort(e.to))}`:e.type==='retirement'?`${e.age}세 은퇴 · 전성기 종합 ${e.peak}`:e.type==='club_closure'?`${esc(tshort(e.team))} 구단 해체 · 계약 보상 ${money(e.cost)}`:e.type==='mutual_termination'?`${esc(tshort(e.team))} 상호 해지 · 합의금 ${money(e.cost)}`:e.type==='release'?`${esc(tshort(e.team))} 방출`:e.type==='loan_start'?`${esc(tshort(e.ownerId))} → ${esc(tshort(e.borrowerId))} · ~${e.endDate} · 급여 ${Math.round(e.salaryShare*100)}%`:e.type==='loan_return'?`${esc(tshort(e.from))} → ${esc(tshort(e.to))} 복귀`:e.type==='role_promise'?`${SQUAD_ROLE_KO[e.role]} 구두 약속 · ~${e.until}`:e.type==='role_promise_revised'?`${SQUAD_ROLE_KO[e.from]} → ${SQUAD_ROLE_KO[e.role]} · 선수 동의 · 이전 ${e.prior?.games||0}/${e.prior?.teamGames||0}게임`:e.type==='role_promise_closed'?`${SQUAD_ROLE_KO[e.role]} 구두 약속 종료`:e.type==='roster_role'?`${SQUAD_ROLE_KO[e.from]||e.from} → ${SQUAD_ROLE_KO[e.to]||e.to}`:e.type==='transfer_request'?`${SAT_REASON_KO[e.reason]||e.reason} · 이적 요청`:e.type==='transfer_request_withdrawn'?'이적 요청 철회':e.type==='role_conversion_started'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 전향 시작`:e.type==='role_conversion_completed'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 전향 완료`:e.type==='role_conversion_rejected'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 전향 거절`:e.type==='role_conversion_cancelled'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 전향 중단`:e.type==='role_conversion_redirected'?`${ROLE_KO[e.from]} → ${ROLE_KO[e.to]} 계획 변경`:e.type==='medical_start'?`${esc(MEDICAL_LABELS[e.site]||e.kind)} · ${e.days}일 · ${e.out?'결장':'제한 출전'}`:e.type==='medical_return'?'치료 후 복귀':e.type==='medical_scar'?'중증 부상 후유증':e.type==='medical_emergency_fa'?`의료 대체 계약 · ${e.guaranteedThrough} 보장 · ${e.expiresOn} 조건 종료`:e.type==='medical_replacement_end'?`대체 계약 종료 · 지급 ${money(e.paid)}`:'—';return `<tr><td class="num">${e.year}</td><td>${({contract:'계약',transfer:'이적',award:'개인상',title:'우승',squad_move:'1·2군 이동',retirement:'은퇴',release:'방출',mutual_termination:'상호 해지',club_closure:'구단 해체',loan_start:'임대',loan_return:'임대 복귀',role_promise:'구두 약속',role_promise_closed:'약속 종료',role_promise_revised:'약속 재협상',roster_role:'역할 변경',transfer_request:'이적 요청',transfer_request_withdrawn:'요청 철회',role_conversion_started:'전향 시작',role_conversion_completed:'전향 완료',role_conversion_rejected:'전향 거절',role_conversion_cancelled:'전향 중단',role_conversion_redirected:'전향 변경',medical_start:'부상·건강',medical_return:'복귀',medical_scar:'후유증',medical_emergency_fa:'의료 대체 계약',medical_replacement_end:'의료 대체 종료'}[e.type]||e.type)}</td><td>${detail}</td></tr>`}).join('')}</tbody></table></div>`:''}</section>`;
+}
+
+/* ==== FILE: ui-scouting-regions.js ==== */
+// Recorded regional evidence, never exact hidden staff ability.
+function staffRegionalKnowledgeSummary(s){
+  const rows=Object.entries(s.scoutRegions||{}).sort((a,b)=>b[1].knowledge-a[1].knowledge).slice(0,3);
+  return rows.length?'<p class="hint">지역 관찰 경험 · '+rows.map(([id,r])=>esc(DB.regions[id]?.name||id)+' '+Math.round(r.knowledge)+'% / '+r.observations+'회').join(' · ')+'</p>':'';
+}
+function scoutRegionalSummary(db,p){
+  const view=scoutingRegionalPower(db,managedTeam(db),p),s=view.members[0],row=s?.scoutRegions?.[view.region];
+  return '<p class="hint">관찰 지역 '+esc(db.regions[view.region]?.name||view.region)+' · '+(s?esc(s.name)+' · 기록된 지역 지식 '+Math.round(row?.knowledge||0)+'% ('+(row?.observations||0)+'회)':'개인 담당자 없음')+' · 실제 관찰로 경험이 쌓여 조사 효율에 반영됩니다. 과거 경험은 소급 생성하지 않습니다.</p>';
 }
 
 /* ==== FILE: ui-player-commitments.js ==== */
