@@ -1485,3 +1485,18 @@ rather than declaring a general creditor-priority or accelerated-invoice policy.
 The single daily-batch-save-main-1 long QA remains on its original #119 source;
 it does not validate this estate change. No second long run or paid long workflow
 was launched. Long-career balance, other D work and real mobile evidence remain.
+
+Estate UI follow-up shows cumulative initial plus recovered payouts and the current
+unpaid balance. Initial itemized distributions are explicitly historical; recent
+additional payouts appear separately. A local render fixture checks current totals,
+escaping and read-only rendering; existing closure acceptance and build pass.
+This separate UI-only change uses selected UI/build CI, preserving the successful
+engine validation instead of repeating paid medical and seasonal suites.
+
+The first UI run exposed a scope bug: a newer standalone publication on main
+appeared in a two-tip diff as a change from the older UI branch, selecting full
+CI unnecessarily. PR scope now diffs its merge base to its head; push scope still
+uses before/after. A real temporary Git-branch fixture reproduces base-only
+publication and verifies it is excluded without hiding unknown head changes.
+The superseded UI run is cancelled by concurrency when this correction is pushed;
+the estate engine's already successful mandatory run is not repeated.
