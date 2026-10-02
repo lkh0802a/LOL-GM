@@ -2079,3 +2079,8 @@ the merge gate. This completes the configured on-site registration connection;
 default office cap selection, wider staff career balance and deferred final
 device/100-season checks remain outside this slice. Continue the 23-stage
 implementation before user playtest and final QA.
+
+PR #135 head `c5fdcf4483e5627c980508ab42b082b4ff470524` passed complete
+Actions run `37020614180`, including medical core, all four seed shards,
+both aggregate checks and final verify. It merged as `f401a579b6070c04c827d11f9bf2e51367514ccd`.
+Standalone HTML was then rebuilt from merged main.

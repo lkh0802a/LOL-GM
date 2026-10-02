@@ -4256,6 +4256,7 @@ function applyWorldDailyEffects(db,date){
   runDailyPractice(db);
   for(const t of activeTeams(db,null,1))aiManageOwnedReserve(db,t);
   aiReviewOfficialRegistrations(db);
+  aiReviewCompetitionStaffRegistrations(db);
   w.lastDailyTick=date;
   return true;
 }
@@ -4338,8 +4339,8 @@ function advanceStep(db){
           w.seasons[key]=s;any=true;
         }
       }
-      if(any)return;
-    } else {let any=false;const taken=new Set();for(const id of (st.ids||[st.id]))if(startInternational(db,id,start,taken))any=true;if(any)return}
+      if(any){aiReviewCompetitionStaffRegistrations(db);return}
+    } else {let any=false;const taken=new Set();for(const id of (st.ids||[st.id]))if(startInternational(db,id,start,taken))any=true;if(any){aiReviewCompetitionStaffRegistrations(db);return}}
   }
 }
 function placements(db,s){
@@ -5479,12 +5480,13 @@ function captureWorldActionJournal(db,command){
       .map(([store,id])=>({store,id,ref:store[id],record:actionJournalClone(store[id])}))
   }:null;
   const entries=(command.type==='roster.register'||command.type==='competition.staff-register'||command.emergencyRegistration||command.kind==='medical_replacement')?Object.values(w?.seasons||{}).map(s=>({s,
-    value:s.entries?actionJournalClone(s.entries):null,staffValue:s.staffEntries?actionJournalClone(s.staffEntries):null})):[];
+    value:s.entries?actionJournalClone(s.entries):null,staffValue:s.staffEntries?actionJournalClone(s.staffEntries):null,
+    staffRecords:s.staffEntryRecords?actionJournalClone(s.staffEntryRecords):null})):[];
   return {
     playerIds,
     rollback(){
       if(staffJournal)staffJournal.rollback();
-      for(const row of entries){if(row.value)row.s.entries=row.value;else delete row.s.entries;if(row.staffValue)row.s.staffEntries=row.staffValue;else delete row.s.staffEntries}
+      for(const row of entries){if(row.value)row.s.entries=row.value;else delete row.s.entries;if(row.staffValue)row.s.staffEntries=row.staffValue;else delete row.s.staffEntries;if(row.staffRecords)row.s.staffEntryRecords=row.staffRecords;else delete row.s.staffEntryRecords}
       if(closure){
         if(closure.firedPresent)w.fired=closure.fired;else delete w.fired;
         for(const {store,id,ref,record} of closure.rows){
@@ -9260,7 +9262,7 @@ function officialMatchView(db,s,a,b){
   const teams={...db.teams};
   for(const id of [a,b]){
     const t=db.teams[id],players=officialSeasonRoster(db,t,s).filter(pid=>officialPlayerCanRepresent(db,db.players[pid],t));
-    teams[id]={...t,roster:players,officialRosterView:true,depthChart:{...t.depthChart,
+    teams[id]={...t,roster:players,staffRoster:competitionStaffMatchRoster(db,s,t),officialRosterView:true,depthChart:{...t.depthChart,
       ...Object.fromEntries(Object.entries(t.registration?.depthChart||{}).filter(([,pid])=>players.includes(pid)))}};
   }
   const view={...db,teams};for(const id of [a,b])initializeDepthChart(view,teams[id],false);
@@ -9760,47 +9762,84 @@ for(const type of ['staff.sign','staff.renew','staff.release','staff.expire','st
 // Competition on-site staff entries are separate from club employment. A
 // competition limits them only when its office publishes a policy.
 function competitionStaffPolicy(db,s){
-  const raw=db.competitions[s?.comp]?.rules?.staffRegistration;
+  const raw=s?.staffRegistrationPolicy||db.competitions[s?.comp]?.rules?.staffRegistration;
   if(!raw||!Number.isInteger(raw.max)||raw.max<0)return null;
   return {max:raw.max,lockAt:raw.lockAt||s.days[0]?.date||null};
 }
 function staffRegistrationSeason(db,id){return Object.values(db.world?.seasons||{}).find(s=>s.id===id||s.key===id)||null}
 function competitionStaffEntry(db,s,tid){return s.staffEntries?.[tid]||[]}
-function staffRegistrationOpen(db,s){const p=competitionStaffPolicy(db,s);return !!p&&!!p.lockAt&&(db.worldDate||'')<p.lockAt}
+function staffRegistrationOpen(db,s){const p=competitionStaffPolicy(db,s);return !!p&&!s.done&&!!p.lockAt&&(db.worldDate||'')<p.lockAt}
 function staffRegistrationErrors(db,s,t,staffIds){
   const p=competitionStaffPolicy(db,s),errors=[];
   if(!p)return ['이 대회는 현장 스태프 등록 정책을 공표하지 않았습니다'];
-  if(!Array.isArray(staffIds)||new Set(staffIds).size!==staffIds.length)errors.push('중복 없는 스태프 명단이 필요합니다');
+  if(!Array.isArray(staffIds)||staffIds.some(id=>typeof id!=='string')||new Set(staffIds).size!==staffIds.length)return ['중복 없는 스태프 명단이 필요합니다'];
   if(staffIds.length>p.max)errors.push('현장 등록 인원은 최대 '+p.max+'명입니다');
-  const ids=new Set((t.staffRoster||[]).map(x=>x.id));
-  if((staffIds||[]).some(id=>!ids.has(id)))errors.push('현재 구단이 고용한 스태프만 등록할 수 있습니다');
+  const ids=new Set((t.staffRoster||[]).filter(x=>!x.retired&&x.contract?.until>=db.year).map(x=>x.id));
+  if(staffIds.some(id=>!ids.has(id)))errors.push('현재 구단이 고용한 스태프만 등록할 수 있습니다');
   return errors;
 }
 function staffRegistrationSnapshot(db,c){
   const s=staffRegistrationSeason(db,c.seasonId);return {date:db.worldDate,seasonId:c.seasonId,
+    done:s?.done,policy:competitionStaffPolicy(db,s),participants:db.competitions[s?.comp]?.teams,
     entries:s?.staffEntries?JSON.parse(JSON.stringify(s.staffEntries)):null,
-    roster:(db.teams[c.teamId]?.staffRoster||[]).map(x=>[x.id,x.contract?.until||null])};
+    roster:(db.teams[c.teamId]?.staffRoster||[]).map(x=>[x.id,x.contract?.until||null,x.retired||false]),
+    active:db.teams[c.teamId]?.active,manager:managedTeamId(db)};
 }
 WORLD_ACTION_HANDLERS['competition.staff-register']={
   validate(db,a){
     const s=staffRegistrationSeason(db,a.seasonId),t=db.teams[a.teamId];
-    if(!s||!t||!db.competitions[s.comp]?.teams.includes(t.id))return worldActionError('missing_competition','대회 또는 참가 구단을 찾을 수 없습니다');
+    if(!s||!t||t.active===false||!db.competitions[s.comp]?.teams.includes(t.id))return worldActionError('missing_competition','대회 또는 참가 구단을 찾을 수 없습니다');
     if(a.actor==='system'||a.actor==='manager'&&!managerControlsSquad(db,t)||a.actor==='ai'&&managerControlsSquad(db,t))return worldActionError('unauthorized','현장 등록 권한이 없습니다');
     if(!staffRegistrationOpen(db,s))return worldActionError('staff_registration_closed','현장 등록 마감 이후에는 변경할 수 없습니다');
-    const errors=staffRegistrationErrors(db,s,t,a.staffIds||[]);return errors.length?{ok:false,reason:'invalid_staff_registration',errors}:{ok:true,seasonId:s.id,teamId:t.id,staffIds:a.staffIds.slice()};
+    const errors=staffRegistrationErrors(db,s,t,a.staffIds);return errors.length?{ok:false,reason:'invalid_staff_registration',errors}:{ok:true,seasonId:s.id,teamId:t.id,staffIds:a.staffIds.slice()};
   },
   canonical(db,a,v){return {type:a.type,actor:a.actor,seasonId:v.seasonId,teamId:v.teamId,staffIds:v.staffIds.slice()}},
   snapshot:staffRegistrationSnapshot,
   changes(db,c){return [{kind:'competition_staff_registration',seasonId:c.seasonId,teamId:c.teamId,staffIds:c.staffIds.slice()}]},
-  apply(db,c){const s=staffRegistrationSeason(db,c.seasonId);s.staffEntries={...(s.staffEntries||{}),[c.teamId]:c.staffIds.slice()};return {staffIds:c.staffIds.slice()}}
+  apply(db,c){const s=staffRegistrationSeason(db,c.seasonId),t=db.teams[c.teamId];s.staffEntries={...(s.staffEntries||{}),[c.teamId]:c.staffIds.slice()};
+    s.staffEntryRecords={...(s.staffEntryRecords||{}),[c.teamId]:{date:db.worldDate,source:c.actor,
+      staff:c.staffIds.map(id=>{const x=t.staffRoster.find(x=>x.id===id);return {id,name:x.name,role:x.role}})}};
+    return {staffIds:c.staffIds.slice()}}
 };
 function initializeCompetitionStaffRegistrations(db,s){
-  const p=competitionStaffPolicy(db,s);if(!p)return;s.staffEntries=s.staffEntries||{};
-  for(const tid of db.competitions[s.comp].teams){const t=db.teams[tid];if(!t||managerControlsSquad(db,t))continue;
-    s.staffEntries[tid]=(t.staffRoster||[]).slice().sort((a,b)=>staffObservation(db,t,b).estimate-staffObservation(db,t,a).estimate).slice(0,p.max).map(x=>x.id);
+  const p=competitionStaffPolicy(db,s);if(!p)return;
+  s.staffRegistrationPolicy={...p};s.staffEntries=s.staffEntries||{};
+}
+function aiReviewCompetitionStaffRegistrations(db){
+  for(const s of Object.values(db.world?.seasons||{})){
+    if(!staffRegistrationOpen(db,s))continue;const p=competitionStaffPolicy(db,s);
+    for(const tid of db.competitions[s.comp].teams){const t=db.teams[tid];if(!t||t.active===false||managerControlsSquad(db,t))continue;
+      const staffIds=(t.staffRoster||[]).filter(x=>!x.retired&&x.contract?.until>=db.year)
+        .slice().sort((a,b)=>staffObservation(db,t,b).estimate-staffObservation(db,t,a).estimate||a.id.localeCompare(b.id)).slice(0,p.max).map(x=>x.id);
+      if(!Object.hasOwn(s.staffEntries||{},tid)||JSON.stringify(competitionStaffEntry(db,s,tid))!==JSON.stringify(staffIds))
+        commitWorldAction(db,{type:'competition.staff-register',actor:'ai',seasonId:s.id,teamId:tid,staffIds});
+    }
   }
 }
-function validateStoredStaffRegistrations(db){for(const s of Object.values(db.world?.seasons||{})){const p=competitionStaffPolicy(db,s);if(!p)continue;for(const [tid,ids] of Object.entries(s.staffEntries||{})){const t=db.teams[tid];if(!t||staffRegistrationErrors(db,s,t,ids).length)throw Error('대회 현장 스태프 등록 저장 데이터가 손상되었습니다')}}}
+function competitionStaffMatchRoster(db,s,t){
+  if(!s||!competitionStaffPolicy(db,s)||!s.staffEntries)return t.staffRoster;
+  const selected=new Set(competitionStaffEntry(db,s,t.id));
+  return (t.staffRoster||[]).filter(x=>selected.has(x.id)&&!x.retired&&x.contract?.until>=db.year);
+}
+function validateStoredStaffRegistrations(db){
+  for(const s of Object.values(db.world?.seasons||{})){
+    const p=competitionStaffPolicy(db,s);if(!p)continue;
+    if(!p.lockAt||!/^\d{4}-\d{2}-\d{2}$/.test(p.lockAt)||!Number.isFinite(Date.parse(p.lockAt)))throw Error('대회 현장 스태프 마감 데이터가 손상되었습니다');
+    // Submitted IDs are historical evidence. An employee may leave after the
+    // lock or after the event; current employment is checked only on submission
+    // and when deriving the match roster, never against old saved entries.
+    if(s.staffEntries&&(!saveObject(s.staffEntries)))throw Error('대회 현장 스태프 등록 저장 데이터가 손상되었습니다');
+    for(const [tid,ids] of Object.entries(s.staffEntries||{}))if(!db.teams[tid]||!Array.isArray(ids)||
+      ids.some(id=>typeof id!=='string')||new Set(ids).size!==ids.length||ids.length>p.max)
+      throw Error('대회 현장 스태프 등록 저장 데이터가 손상되었습니다');
+    if(s.staffEntryRecords){
+      if(!saveObject(s.staffEntryRecords))throw Error('대회 현장 스태프 이력이 손상되었습니다');
+      for(const [tid,r] of Object.entries(s.staffEntryRecords))if(!r||!Array.isArray(r.staff)||
+        JSON.stringify(r.staff.map(x=>x?.id))!==JSON.stringify(s.staffEntries?.[tid])||
+        r.staff.some(x=>typeof x.name!=='string'||typeof x.role!=='string'))throw Error('대회 현장 스태프 이력이 손상되었습니다');
+    }
+  }
+}
 
 /* ==== FILE: scrim-partner.js ==== */
 // ===== LOL GM: competitive scrim partner market =====
@@ -11835,7 +11874,11 @@ function bindOfficialRegistrationControls(){
 }
 function competitionStaffRegistrationPanel(t){
   const seasons=Object.values(DB.world?.seasons||{}).filter(s=>DB.competitions[s.comp]?.teams.includes(t.id)&&competitionStaffPolicy(DB,s));if(!seasons.length)return '';
-  return seasons.map(s=>{const p=competitionStaffPolicy(DB,s),open=staffRegistrationOpen(DB,s),selected=new Set(competitionStaffEntry(DB,s,t.id));return `<details class="cfgcard"><summary>${esc(DB.competitions[s.comp].name)} 현장 스태프 · ${selected.size}/${p.max}명</summary><p class="hint">${open?'마감 전 변경 가능':'등록 마감됨'} · 구단 고용 정원과 별개인 대회 현장 명단입니다.</p>${teamStaffMembers(t).map(x=>`<label><input type="checkbox" data-competition-staff="${s.id}" value="${x.id}"${selected.has(x.id)?' checked':''}${!open?' disabled':''}> ${esc(x.name)} · ${esc(STAFF_ROLES[x.role])}</label>`).join('')}${open?`<button class="primary" data-competition-staff-submit="${s.id}" data-team-id="${t.id}">현장 명단 제출</button>`:''}</details>`}).join('');
+  return seasons.map(s=>{
+    const p=competitionStaffPolicy(DB,s),open=managerControlsSquad(DB,t)&&staffRegistrationOpen(DB,s),selected=new Set(competitionStaffEntry(DB,s,t.id)),members=teamStaffMembers(t),
+      departed=(s.staffEntryRecords?.[t.id]?.staff||[]).filter(x=>!members.some(m=>m.id===x.id));
+    return `<details class="cfgcard"><summary>${esc(DB.competitions[s.comp].name)} 현장 스태프 · ${selected.size}/${p.max}명</summary><p class="hint">${s.done?'대회 종료':open?'마감 전 변경 가능':'등록 마감됨'} · 마감 ${esc(p.lockAt)} · 공식전 코칭·분석은 현재 고용 중인 등록 직원이 담당합니다.</p>${members.map(x=>`<label><input type="checkbox" data-competition-staff="${esc(s.id)}" value="${esc(x.id)}"${selected.has(x.id)?' checked':''}${!open?' disabled':''}> ${esc(x.name)} · ${esc(STAFF_ROLES[x.role])}</label>`).join('')}${departed.map(x=>`<p class="hint">${esc(x.name)} · ${esc(STAFF_ROLES[x.role]||x.role)} · 제출 후 퇴사</p>`).join('')}${open?`<button class="primary" data-competition-staff-submit="${esc(s.id)}" data-team-id="${esc(t.id)}">현장 명단 제출</button>`:''}</details>`;
+  }).join('');
 }
 
 /* ==== FILE: ui-draft.js ==== */
