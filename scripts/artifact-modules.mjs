@@ -70,6 +70,7 @@ export const ENGINE_MODULES = [
   'club-closure.js',
   'staff.js',
   'staff-contracts.js',
+  'staff-registration.js',
   'scrim-partner.js',
   'scrim.js',
   'scrim-plans.js',

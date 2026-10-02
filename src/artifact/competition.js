@@ -25,6 +25,7 @@ function newSeason(db,compId,year,seed,start,instanceKey=compId){
   else if(st0.type!=='round_robin'&&st0.take)order=order.slice(0,st0.take);
   addStageDays(db,s,0,order,start||`${year}-01-14`);
   snapshotInternationalEntries(db,s);
+  initializeCompetitionStaffRegistrations(db,s);
   return s;
 }
 function pushDay(s,date,stage,label,pairs,bo,timeSlots=null){

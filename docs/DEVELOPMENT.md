@@ -1207,6 +1207,27 @@ agency/insolvency mechanisms, D08 relationships, D09 resource commitments,
 D10 controlled patch/match experiments, D12/D13 complete task acceptance.
 The full D stage remains open.
 
+## D07 competition staff registration (2026-10-02)
+
+Club employment and tournament on-site registration are now separate state.
+An office may publish a per-region or international `staffRegistration.max`
+policy; no cap is fabricated when the policy is absent. Before the first
+fixture, managers select only their current employees in the roster screen and
+AI clubs submit their own bounded list from the same employment roster. The
+entry locks at the first fixture, so an international event remains fixed for
+its duration. Existing employment, salaries, department limits and player
+registration stay unchanged.
+
+The guarded `competition.staff-register` command validates authority, club
+employment, duplicate IDs and the published cap. Its preview is read-only;
+late writer failure restores every season's staff entry. Current saves retain
+entries and malformed stored entries are rejected. Focused acceptance covers
+AI/manual authority, cap and foreign-employer rejection, preview/rollback,
+save restore and first-fixture lock. The shared UI/finance/contracts runner
+passes 38 acceptances in 35 isolated engine contexts, and static validation
+checks 104 modules. This records registration administration; field-effect
+balance and long-career/mobile evidence remain D07/D11/D13 work.
+
 
 ### D08/D09 connected cohesion and practice batch (2026-10-02)
 

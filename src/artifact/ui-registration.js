@@ -12,6 +12,7 @@ function officialRegistrationPanel(t){
           ${mine&&open?`<select data-official-destination="${id}"><option value="">미등록</option>${teams.map(x=>`<option value="${x.id}"${registered?.id===x.id?' selected':''}>${esc(x.short)} 공식 명단</option>`).join('')}</select>`:
           `<span>${registered?esc(registered.short)+' 등록':'미등록'}</span>`}</label>`}).join('')}
       ${mine&&open?`<button class="primary" data-official-submit="${t.id}">공식 명단 변경 확인</button>`:''}</details>
+    ${competitionStaffRegistrationPanel(t)}
     ${mine?`<details class="cfgcard"><summary>공식전 선발 5명</summary><p class="hint">등록된 선수 안의 선발 변경은 등록 기간 밖에도 가능합니다. 훈련 그룹 선발과 별도로 적용됩니다.</p>
       ${ROLES.map(role=>`<label>${ROLE_KO[role]}<select data-official-role="${role}">${current.filter(id=>officialPlayerCanRepresent(DB,DB.players[id],t)).map(id=>`<option value="${id}"${depth[role]===id?' selected':''}>${esc(DB.players[id].name)} · 적합 ${playerRoleRating(DB.players[id],role)}</option>`).join('')}</select></label>`).join('')}
       <button class="ghost" data-official-lineup="${t.id}">공식 선발 적용</button></details>`:''}</section>`;
@@ -35,4 +36,14 @@ function bindOfficialRegistrationControls(){
     const result=commitWorldAction(DB,{type:'roster.official-lineup',actor:'manager',teamId:b.dataset.officialLineup,lineup});
     MSG=result.ok?'공식 선발 변경 완료':result.errors.join(' · ');if(result.ok)saveDB();navKeepScroll();
   });
+  document.querySelectorAll('[data-competition-staff-submit]').forEach(b=>b.onclick=()=>{
+    const ids=Array.from(document.querySelectorAll(`[data-competition-staff="${b.dataset.competitionStaffSubmit}"]:checked`)).map(x=>x.value),preview=previewWorldAction(DB,{type:'competition.staff-register',actor:'manager',seasonId:b.dataset.competitionStaffSubmit,teamId:b.dataset.teamId,staffIds:ids});
+    if(!preview.ok){MSG=preview.errors.join(' · ');navKeepScroll();return}
+    if(!confirm('대회 현장 스태프 '+ids.length+'명을 등록할까요?\n마감 뒤에는 변경할 수 없습니다.'))return;
+    const result=applyWorldAction(DB,preview);MSG=result.ok?'대회 현장 스태프 등록 완료':result.errors.join(' · ');if(result.ok)saveDB();navKeepScroll();
+  });
+}
+function competitionStaffRegistrationPanel(t){
+  const seasons=Object.values(DB.world?.seasons||{}).filter(s=>DB.competitions[s.comp]?.teams.includes(t.id)&&competitionStaffPolicy(DB,s));if(!seasons.length)return '';
+  return seasons.map(s=>{const p=competitionStaffPolicy(DB,s),open=staffRegistrationOpen(DB,s),selected=new Set(competitionStaffEntry(DB,s,t.id));return `<details class="cfgcard"><summary>${esc(DB.competitions[s.comp].name)} 현장 스태프 · ${selected.size}/${p.max}명</summary><p class="hint">${open?'마감 전 변경 가능':'등록 마감됨'} · 구단 고용 정원과 별개인 대회 현장 명단입니다.</p>${teamStaffMembers(t).map(x=>`<label><input type="checkbox" data-competition-staff="${s.id}" value="${x.id}"${selected.has(x.id)?' checked':''}${!open?' disabled':''}> ${esc(x.name)} · ${esc(STAFF_ROLES[x.role])}</label>`).join('')}${open?`<button class="primary" data-competition-staff-submit="${s.id}" data-team-id="${t.id}">현장 명단 제출</button>`:''}</details>`}).join('');
 }
