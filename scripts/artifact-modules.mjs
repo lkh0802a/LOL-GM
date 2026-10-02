@@ -5,6 +5,7 @@ export const ENGINE_MODULES = [
   'engine.js',
   'draft.js',
   'systems.js',
+  'role-quests.js',
   'data.js',
   'champion-data.js',
   'system-data.js',

@@ -10,6 +10,7 @@ function initPatches(db){
   db.metaStats={};db.metaGames=0;db.regionMetaStats={};db.regionMetaGames={};
 }
 function applyNote(P,n){
+  if(n.type==='role_quest')applyRoleQuestNote(P,n);
   const c=P.champions[n.c];
   P._revision=(P._revision||0)+1;if(/^item/.test(n.type)||/^rune/.test(n.type))P._systemRevision=(P._systemRevision||0)+1;
   if(n.type==='skill'&&c&&c.skills&&c.skills[n.slot]){c.skills[n.slot][n.field]=JSON.parse(JSON.stringify(n.new));if(n.field==='range')delete c.skills[n.slot].rangeDisplay;}

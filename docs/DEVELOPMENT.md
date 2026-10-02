@@ -1654,3 +1654,29 @@ D-stage feature completion alone must not trigger those deferred tests. Keep
 short change-specific checks and minimal required CI during implementation.
 Android packaging/installation final evidence remains required at the appropriate
 roadmap/final validation step; do not call the game fully complete beforehand.
+
+
+### Role-quest domain foundation (2026-10-02, work in progress)
+
+feature/patchable-role-quests now contains role-quests.js with patch-owned rules
+for all five roles, bounded validated role_quest notes, per-match immutable rule
+snapshots and action-derived progress. Sequenced events reject duplicate awards;
+malformed events are rejected before state mutation. Lane/roam bank, melee/ranged
+damage coefficients and role-specific gold/stacks are domain inputs, not a
+fixed-time completion shortcut. buildPatch owns default26.19 role data and
+applyNote participates in historical replay/reversal. Missing old quest rules
+remain absent rather than being silently enabled by createRoleQuest.
+
+Short acceptance passes all five action transitions, no-action/no-completion,
+patch snapshot isolation/exact reversal/invalid atomicity, duplicate rewards,
+roam banking, historical patch isolation and current-save restoration.99-module
+static checks pass. The new fixture joins the existing calendar/scouting runner.
+No new paid CI or long/mobile validation was launched.
+
+This is a commit-ready domain foundation, not a playable quest feature. Next:
+wire engine events and one-time rewards into actual income/experience/damage/
+objectives and inventory; handle boots/reward slots without breaking six normal
+slots, update combat cache identity after rewards, implement generated patch
+changes and concise match/patch UI, and prove actual paired match causality.
+Confirm full official reward/boot data and legacy historical-rule policy before
+marking runtime complete. Final ready PR bundles this with those adapters.

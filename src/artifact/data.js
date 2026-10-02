@@ -128,6 +128,7 @@ function buildPatch(championSnapshot=CHAMPION_SOURCE_SNAPSHOT,systemSnapshot=SYS
   const sourceCoverage=applyChampionSource(champions,championSnapshot),itemSystem=buildItemSystems(systemSnapshot),runeSystem=buildRuneSystems(systemSnapshot);
   return {
     id:'26.19',
+    roleQuests:defaultRoleQuestRules(),
     championSource:{version:CHAMPION_SOURCE_PATCH,...sourceCoverage},systemSource:{provider:systemSnapshot.provider,version:systemSnapshot.version,mapId:systemSnapshot.mapId,itemCount:Object.keys(systemSnapshot.items||{}).length,runeCount:Object.keys(systemSnapshot.runes||{}).length,runeStyleCount:(systemSnapshot.runeStyles||[]).length},
     rules:{ csGold:23, passiveGold:122, killGold:300, assistGold:150, dragonSpawn:5, dragonRespawn:5, heraldSpawn:14, baronSpawn:20, baronRespawn:6, baronBuff:3, elderBuff:2.5, inhibRespawn:5 },
     champions, items:itemSystem.pool, itemDefs:itemSystem.defs, runes:runeSystem.styles, runeDefs:runeSystem.defs
