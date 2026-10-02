@@ -2004,10 +2004,11 @@ recorded in the PR checks.
 
 ### D04 AI representative negotiation parity (2026-10-02)
 
-Autonomous AI renewals, free-agent offers and permanent-transfer personal terms now
-use the existing player-side demand, counter and round-limit functions when their
-first offer fails the current player-utility/reasonableness check. The player keeps
-final acceptance authority through the same utility and transfer-consent rules.
+Autonomous AI renewals, free-agent and early-FA offers, and permanent-transfer
+personal terms now use the existing player-side demand, counter and round-limit
+functions when their first offer fails the current player-utility/reasonableness
+check. The player keeps final acceptance authority through the same utility and
+transfer-consent rules.
 Counters remain inside each path's existing salary/cash budget. The AI reuses the
 existing random draw sequence; representative generation uses its established
 stable player-keyed stream. A managed club's submitted FA offer is never rewritten
@@ -2018,7 +2019,7 @@ The AI report records representative identity and counter rounds in its transien
 decision report; no new persisted negotiation fields were introduced. Transfer
 counter evaluation works on detached player/team views, so rejected offers do not
 create a live agent or change cash. `agent-negotiation-parity-acceptance.mjs` runs
-the actual AI renewal, FA market and AI transfer-term paths, then checks managed
+the actual AI renewal, FA market, early-FA and AI transfer-term paths, then checks managed
 offer authority, the player-facing transfer representative, cancellation without
 fees/cash changes, save/legacy fallback, malformed representative fallback and
 read-only consent purity. The broader agency market, agent authority/fees, insolvency

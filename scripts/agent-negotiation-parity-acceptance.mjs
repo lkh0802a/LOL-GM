@@ -117,3 +117,82 @@ await runEngineFixture(String.raw`(()=>{
     samePlayerConsent:true,liveTransferUi:true,saveLegacyFallback:true,
     malformedFallback:true,cancelNoFee:true,noPreviewCashMutation:true}));
 })();`,{filename:'agent-negotiation-parity.fixture.js',setupSources:ui});
+
+await runEngineFixture(String.raw`(()=>{
+  const check=(ok,msg)=>{if(!ok)throw Error('AGENT_EARLY_FA '+msg)};
+  const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:3,div2:false})];cfg.internationals=[];
+  const db=buildWorld(cfg),[incumbent,buyer,other]=activeTeams(db),year=db.year;
+  for(const t of [incumbent,buyer,other])t.finance.cash=1000000;
+  const p=Object.values(db.players).find(x=>!x.team&&!x.retired);
+  check(p,'fixture has no player');signContract(db,p,incumbent,asking(db,p,incumbent.region),1,
+    {promisedRole:'starter'});
+  p.reputation=95;p.personality={professionalism:50,ambition:90};p.careerGoal='stability';
+  delete p.agent;
+  const waiver={pid:p.id,incumbentId:incumbent.id,playerId:p.id};
+  db.world={year,phase:'offseason',manage:'ai',seed:'early-agent',lastDate:year+'-11-16',
+    contractWindow:{stage:'exclusive',seasonYear:year,startSeason:year+1,
+      contractExpiryDate:year+'-11-30',effectiveDate:year+'-12-01',
+      contactWaivers:{[p.id]:waiver}},contractAgreements:{},negotiations:{},
+    recruitment:{targets:{}}};
+  setWorldCalendarDate(db,year+'-11-17');
+  check(contractExpiresThisSeason(db,p)&&earlyContactAllowed(db,p,buyer),
+    'early-contact window fixture did not grant the AI destination contact');
+  const initialContract=JSON.stringify(p.contract),cashBefore=JSON.stringify(
+    [incumbent.finance,buyer.finance,other.finance]),originalCandidates=aiMarketOfferCandidates,
+    originalUtility=offerUtility,originalBudget=salaryBudget;
+  let earlyShortlistCalls=0;
+  aiMarketOfferCandidates=(view,t,fas,role,room)=>{earlyShortlistCalls++;
+    return t.id===buyer.id&&fas.includes(p)&&role===p.role
+      ?[{p,v:1000,ask:asking(view,p,t.region)}]:[]};
+  offerUtility=(view,player,t,terms)=>terms.signingBonus>0
+    ?offerAcceptanceThreshold(view,player,{kind:'early_fa'})+1:0;
+  const accepted=aiRunEarlyContactOffers(db),agreement=contractAgreementFor(db,p.id);
+  offerUtility=originalUtility;aiMarketOfferCandidates=originalCandidates;
+  check(accepted.length===1&&agreement?.status==='agreed'&&agreement.teamId===buyer.id&&
+    accepted[0].representative===playerAgent(p)?.id&&accepted[0].negotiationRounds>1&&
+    accepted[0].terms.signingBonus>0,
+    'actual early-contact AI offer skipped the representative counter: '+
+      JSON.stringify({accepted,agreement,agent:p.agent,team:p.team,date:db.worldDate,
+        earlyShortlistCalls,room:salaryBudget(db,buyer)-payroll(db,buyer),ask:asking(db,p,buyer.region),
+        window:db.world.contractWindow}));
+  check(p.team===incumbent.id&&JSON.stringify(p.contract)===initialContract&&
+    JSON.stringify([incumbent.finance,buyer.finance,other.finance])===cashBefore,
+    'future early-contact agreement moved the player or charged a fee before its effective date');
+
+  const refuseDb=unpackDB(packDB(db)),rp=refuseDb.players[p.id];
+  delete refuseDb.world.contractAgreements[rp.id];
+  refuseDb.world.contractWindow.contactWaivers[rp.id]=waiver;
+  offerUtility=(view,player,t,terms)=>0;
+  aiMarketOfferCandidates=(view,t,fas,role)=>t.id===buyer.id&&fas.includes(rp)&&role===rp.role
+    ?[{p:rp,v:1000,ask:asking(view,rp,t.region)}]:[];
+  const refused=aiRunEarlyContactOffers(refuseDb);
+  offerUtility=originalUtility;aiMarketOfferCandidates=originalCandidates;
+  check(!refused.length&&!contractAgreementFor(refuseDb,rp.id)&&rp.team===incumbent.id,
+    'player refusal was bypassed on the early-contact counter path');
+
+  const lowBudget=unpackDB(packDB(db)),bp=lowBudget.players[p.id];
+  delete lowBudget.world.contractAgreements[bp.id];
+  lowBudget.world.contractWindow.contactWaivers[bp.id]=waiver;
+  salaryBudget=(_db,_team)=>payroll(_db,_team);
+  aiMarketOfferCandidates=(view,t,fas,role)=>t.id===buyer.id&&fas.includes(bp)&&role===bp.role
+    ?[{p:bp,v:1000,ask:asking(view,bp,t.region)}]:[];
+  const blocked=aiRunEarlyContactOffers(lowBudget);
+  salaryBudget=originalBudget;aiMarketOfferCandidates=originalCandidates;
+  check(!blocked.length&&!contractAgreementFor(lowBudget,bp.id)&&bp.team===incumbent.id,
+    'early-contact representative counter exceeded the actual salary budget');
+
+  const managed=unpackDB(packDB(db)),mp=managed.players[p.id];
+  delete managed.world.contractAgreements[mp.id];managed.world.contractWindow.contactWaivers[mp.id]=waiver;
+  setManagedTeam(managed,buyer.id);managed.world.manage='manual';
+  delete mp.agent;
+  aiMarketOfferCandidates=(view,t,fas,role)=>t.id===buyer.id&&fas.includes(mp)&&role===mp.role
+    ?[{p:mp,v:1000,ask:asking(view,mp,t.region)}]:[];
+  const managerBefore=JSON.stringify(managed.world.contractAgreements),managerRows=
+    aiRunEarlyContactOffers(managed);
+  aiMarketOfferCandidates=originalCandidates;
+  check(!managerRows.length&&JSON.stringify(managed.world.contractAgreements)===managerBefore&&
+    !mp.agent,'AI early contact signed a future deal for the managed club');
+  console.log('AGENT_EARLY_FA_ACCEPTANCE '+JSON.stringify({
+    actualCounterAndFutureAgreement:true,playerRefusal:true,salaryBudget:true,
+    managedClubAuthority:true,noEarlyFeeOrMove:true}));
+})();`,{filename:'agent-early-contact.fixture.js'});
