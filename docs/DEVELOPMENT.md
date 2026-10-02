@@ -2045,3 +2045,37 @@ offer authority, the player-facing transfer representative, cancellation without
 fees/cash changes, save/legacy fallback, malformed representative fallback and
 read-only consent purity. The broader agency market, agent authority/fees, insolvency
 claims/assets and remaining D04/D05 work stay open. This does not complete D04.
+
+### D07 on-site staff gameplay and historical continuity (2026-10-02)
+
+Base: main `541f237`, including PR #134. That batch stored an on-site list,
+but official matches still used every employed coach/analyst. Its save validator
+also compared historical entries to today's employer, making saves unloadable
+after registered staff left a club.
+
+Official series and draft views now derive staff from the submitted entry and
+current employment. Registered coaches/analysts supply existing advice, draft
+quality and analysis effects; departed staff no longer supply field effects.
+Club employment, payroll, ordinary training and private practice keep their
+full staff. Events without an explicitly published policy keep prior behavior.
+Legacy seasons without an entry snapshot remain compatible.
+
+Each new event snapshots its published cap and deadline so a later split's
+competition object cannot rewrite earlier rules. AI submits and refreshes
+its list before the deadline through the same guarded action as managers;
+manual lists remain user decisions. Submission preserves employee ID, name and
+role as compact evidence. Completed/locked events cannot be resubmitted.
+Historical entries survive departures without requiring their IDs to match
+current employment. Rollback restores both lists and records on late failure.
+Policy and authority changes invalidate a pending preview.
+
+Focused acceptance runs an actual scheduled game and official draft, compares
+advice/analysis with and without registered staff, preserves practice staffing,
+exercises AI through the shared writer, UI cancel/confirm, malformed inputs,
+late rollback, locked AI, departure/save restore, old policy snapshots and
+international deadlines. Shared UI/finance/contracts checks and 104-module
+static validation passed locally. Required CI on the current PR head remains
+the merge gate. This completes the configured on-site registration connection;
+default office cap selection, wider staff career balance and deferred final
+device/100-season checks remain outside this slice. Continue the 23-stage
+implementation before user playtest and final QA.

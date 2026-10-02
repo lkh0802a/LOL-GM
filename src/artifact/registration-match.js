@@ -27,7 +27,7 @@ function officialMatchView(db,s,a,b){
   const teams={...db.teams};
   for(const id of [a,b]){
     const t=db.teams[id],players=officialSeasonRoster(db,t,s).filter(pid=>officialPlayerCanRepresent(db,db.players[pid],t));
-    teams[id]={...t,roster:players,officialRosterView:true,depthChart:{...t.depthChart,
+    teams[id]={...t,roster:players,staffRoster:competitionStaffMatchRoster(db,s,t),officialRosterView:true,depthChart:{...t.depthChart,
       ...Object.fromEntries(Object.entries(t.registration?.depthChart||{}).filter(([,pid])=>players.includes(pid)))}};
   }
   const view={...db,teams};for(const id of [a,b])initializeDepthChart(view,teams[id],false);

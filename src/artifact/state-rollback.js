@@ -99,12 +99,13 @@ function captureWorldActionJournal(db,command){
       .map(([store,id])=>({store,id,ref:store[id],record:actionJournalClone(store[id])}))
   }:null;
   const entries=(command.type==='roster.register'||command.type==='competition.staff-register'||command.emergencyRegistration||command.kind==='medical_replacement')?Object.values(w?.seasons||{}).map(s=>({s,
-    value:s.entries?actionJournalClone(s.entries):null,staffValue:s.staffEntries?actionJournalClone(s.staffEntries):null})):[];
+    value:s.entries?actionJournalClone(s.entries):null,staffValue:s.staffEntries?actionJournalClone(s.staffEntries):null,
+    staffRecords:s.staffEntryRecords?actionJournalClone(s.staffEntryRecords):null})):[];
   return {
     playerIds,
     rollback(){
       if(staffJournal)staffJournal.rollback();
-      for(const row of entries){if(row.value)row.s.entries=row.value;else delete row.s.entries;if(row.staffValue)row.s.staffEntries=row.staffValue;else delete row.s.staffEntries}
+      for(const row of entries){if(row.value)row.s.entries=row.value;else delete row.s.entries;if(row.staffValue)row.s.staffEntries=row.staffValue;else delete row.s.staffEntries;if(row.staffRecords)row.s.staffEntryRecords=row.staffRecords;else delete row.s.staffEntryRecords}
       if(closure){
         if(closure.firedPresent)w.fired=closure.fired;else delete w.fired;
         for(const {store,id,ref,record} of closure.rows){
