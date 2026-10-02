@@ -37,6 +37,10 @@ await runEngineFixture(String.raw`(()=>{
  check(streamed===JSON.stringify(packMetaHistory(many))&&unpackMetaHistory(JSON.parse(streamed)).every(x=>x.sides[0].bans.length===5),'512-row batch boundary lost side bans');
  const html=patchBanAttributionCard(db,filter,game.draft.bans[1][0]);
  check(html.includes('선택 지역 직접 밴 5회')&&html.includes('상대 지역 밴 5회')&&html.includes('귀속 미상 10회')&&html.includes('기존 밴 통계'),'UI hid attribution or historical exposure meaning');
+ const domestic=JSON.parse(original);domestic.international=false;domestic.regions=['NA'];for(const side of domestic.sides)side.region='NA';db.metaHistory=[domestic];
+ const local=metaBanAttribution(db,{region:'NA',scope:'DOM'});check(local.knownGames===1&&local.own===10&&local.opponent===0,'same-region sides lost bans or counted each other as foreign');
+ const empty=JSON.parse(original);empty.bans=[];for(const side of empty.sides)side.bans=[];db.metaHistory=[empty];
+ check(metaBanAttribution(db,filter).knownGames===1&&metaBanAttribution(db,filter).unknownGames===0,'known empty bans mistaken for unknown attribution');
  const inconsistent=JSON.parse(original);inconsistent.sides[0].bans=[];db.metaHistory=[inconsistent];
  const bad=metaBanAttribution(db,filter);check(bad.knownGames===0&&bad.unknown===10,'inconsistent side lists silently attributed');
  db.metaHistory=[row];check(metaBanAttribution(db,filter).unknown===0,'array replacement retained stale attribution');

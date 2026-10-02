@@ -74,6 +74,8 @@ shared-view cache identity and append/replacement/truncation/bounds. A synthetic
 current club region edit only verifies archival attribution independence, not
 a played regional migration; it is restored immediately. Injected legacy and
 inconsistent rows only test provenance fallback, not historical seasons.
+Synthetic same-region and empty-ban rows also check aggregation boundaries;
+they are not claims of played domestic seasons.
 Focused attribution/save/First Selection/opponent intent/static checks, shared
 UI/finance/contracts 40 acceptances in 39 isolated VMs and engine regression
 pass. Review separated the attribution cache from generic filtered-row entries;
