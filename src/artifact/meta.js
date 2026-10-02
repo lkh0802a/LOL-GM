@@ -41,13 +41,13 @@ function metaHistoryIndex(db){
     if(c.length<rows.length&&c.tail===rows[c.length-1]){
       for(let i=c.length;i<rows.length;i++)metaIndexAddRow(c,rows[i]);
       c.length=rows.length;c.tail=rows[rows.length-1];
-      c.filtered.clear();c.patchSorted.clear();c.patchSamples.clear();c.facets=null;
+      c.filtered.clear();c.patchSorted.clear();c.patchSamples.clear();c.banAttribution.clear();c.facets=null;
       return c;
     }
   }
   // Array replacement/truncation or changed tail identity: full safe rebuild.
   c={rows,length:rows.length,tail:rows[rows.length-1],
-    byPatch:new Map(),byComp:new Map(),byRegion:new Map(),
+    byPatch:new Map(),byComp:new Map(),byRegion:new Map(),banAttribution:new Map(),
     filtered:new Map(),patchSorted:new Map(),patchSamples:new Map(),facets:null,
     facetSets:Object.fromEntries(['comp','patch','season','split','league'].map(k=>[k,new Set()]))};
   for(const row of rows)metaIndexAddRow(c,row);
@@ -120,7 +120,7 @@ function recordMeta(db,r){
   }
   db.metaHistory=db.metaHistory||[];
   const mc=r.metaContext||{};
-  db.metaHistory.push({date:r.date||db.worldDate,patch:r.patch||db.patch.id,comp:r.comp||r.competitionId||null,season:mc.season||null,year:mc.year||+(r.date||db.worldDate).slice(0,4),split:mc.split||null,stage:mc.stage||null,league:mc.league||null,international:!!mc.international,regions,sides:r.sides.map((s,i)=>({team:s.team?.id||null,region:s.team?.region||null,win:r.winner===i,picks:s.ps.map(x=>({champ:x.champ.id,role:x.role||null,player:x.p?.id||null,items:matchQuestItems(x).slice(),runes:(x.runes||[]).slice()}))})),bans:r.draft.bans.flat()});
+  db.metaHistory.push({date:r.date||db.worldDate,patch:r.patch||db.patch.id,comp:r.comp||r.competitionId||null,season:mc.season||null,year:mc.year||+(r.date||db.worldDate).slice(0,4),split:mc.split||null,stage:mc.stage||null,league:mc.league||null,international:!!mc.international,regions,sides:r.sides.map((s,i)=>({team:s.team?.id||null,region:s.team?.region||null,win:r.winner===i,bans:r.draft.bans[i].slice(),picks:s.ps.map(x=>({champ:x.champ.id,role:x.role||null,player:x.p?.id||null,items:matchQuestItems(x).slice(),runes:(x.runes||[]).slice()}))})),bans:r.draft.bans.flat()});
   const international=regions.length>1;
   for(const side of r.sides){if(!side.team)continue;const t=db.teams[side.team.id]||side.team;t.metaKnowledge=t.metaKnowledge||{};t.metaCounter=t.metaCounter||{};for(const os of r.sides){if(os===side)continue;for(const pick of os.ps){const cid=pick.champ.id,success=r.winner===r.sides.indexOf(os),novel=((db.regionMetaStats?.[t.region]||{})[cid]?.p||0)<3,analysis=.65+staffAnalysisFor(side.team,'opponent')/140,learn=(success?.055:.018)*(novel?1.6:1)*(international?1.35:1)*analysis;t.metaKnowledge[cid]=clamp((t.metaKnowledge[cid]||0)+learn,0,1);if(r.winner!==r.sides.indexOf(side))t.metaCounter[cid]=clamp((t.metaCounter[cid]||0)+.02*analysis,0,1)}}}
 }
@@ -132,6 +132,21 @@ function metaTableFiltered(db,filter={}){
   const G=Math.max(1,rows.length);return Object.values(db.patch.champions).map(c=>{const s=st[c.id]||{p:0,w:0,b:0};return {c,p:s.p,b:s.b,w:s.w,pres:(s.p+s.b)/G,wr:s.p?s.w/s.p:null,sample:G,eligible:championProEligible(db,c)}}).sort((a,b)=>b.pres-a.pres);
 }
 
+function metaBanAttribution(db,filter={}){
+  const index=metaHistoryIndex(db),key=metaFilterKey(filter),cache=index.banAttribution;
+  if(cache.has(key)){const hit=cache.get(key);cache.delete(key);cache.set(key,hit);return hit}
+  const rows=metaRowsFiltered(db,filter),out={games:rows.length,knownGames:0,unknownGames:0,own:0,opponent:0,unknown:0,champions:{}};
+  const add=(cid,kind)=>{const x=out.champions[cid]||(out.champions[cid]={own:0,opponent:0,unknown:0});x[kind]++;out[kind]++};
+  for(const row of rows){
+    const sides=row.sides||[],flat=row.bans||[],known=sides.length===2&&sides.every(s=>typeof s.region==='string'&&(row.regions||[]).includes(s.region)&&Array.isArray(s.bans)&&s.bans.every(x=>typeof x==='string'))&&JSON.stringify(sides.flatMap(s=>s.bans).slice().sort())===JSON.stringify(flat.slice().sort());
+    if(!known){out.unknownGames++;for(const cid of flat)add(cid,'unknown');continue}
+    out.knownGames++;
+    for(const side of sides)for(const cid of side.bans)add(cid,!filter.region||side.region===filter.region?'own':'opponent');
+  }
+  // Separate attribution from existing all-match regional ban exposure. Legacy
+  // and inconsistent rows remain unknown; no inferred side or history rewrite.
+  return metaCacheRemember(cache,key,out,META_FILTER_CACHE_LIMIT);
+}
 function championMetaInsights(db,cid,filter={}){
   const players={},teams={},matchups={},recent=[],rows=metaRowsFiltered(db,filter);
   for(const r of rows)for(const side of r.sides||[]){if(filter.region&&side.region!==filter.region)continue;const picks=(side.picks||[]).map(p=>typeof p==='string'?{champ:p}:p),me=picks.find(p=>p.champ===cid&&(!filter.position||p.role===filter.position));if(!me)continue;if(me.player){const x=players[me.player]||(players[me.player]={g:0,w:0});x.g++;if(side.win)x.w++}if(side.team){const x=teams[side.team]||(teams[side.team]={g:0,w:0});x.g++;if(side.win)x.w++}const opp=(r.sides||[]).find(x=>x!==side);if(opp&&me.role){const op=(opp.picks||[]).map(p=>typeof p==='string'?{champ:p}:p).find(p=>p.role===me.role);if(op){const x=matchups[op.champ]||(matchups[op.champ]={g:0,w:0});x.g++;if(side.win)x.w++}}recent.push({date:r.date,win:side.win})}

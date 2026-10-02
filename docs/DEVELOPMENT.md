@@ -31,6 +31,67 @@ without continually adding new status documents.
 
 ## Current Phase
 
+### Continued implementation slice — regional ban provenance (2026-10-02)
+
+After PR #144 merged and its HTML was published, remaining time allowed a
+second connected implementation slice, estimate 50 minutes, single worker,
+baseline `b98ae9d`. That first publication's full main Actions `37071469950`
+passed on exact head `b98ae9dbd4951c1a353f2c660ae188c39e75eec3` while
+implementation continued. No parallel implementation agents were used.
+
+Existing regional bans mean exposure to every ban in a match that region
+participated in. `recordMeta`, filtered tables, raw/decaying counters and
+current-patch draft weighting retain that meaning. New professional history
+also stores each actual blue/red side's own bans with its game-time club/region.
+`metaBanAttribution` distinguishes selected-region bans, other-region bans and
+unknown attribution across existing patch/season/split/league/date/scope filters.
+Global attributed bans conserve the total; domestic sides in the same region
+both contribute to that region. No lane is inferred for bans. Complete side
+lists must match the flattened archive before attribution is trusted; legacy,
+partial or inconsistent lists remain unknown and retain their original counts.
+
+Compact side tuples gain an optional fifth ban slot; older four-slot rows stay
+four-slot rows and receive no invented attribution. Save format 2/envelope and
+512-row streaming remain. Current engine backward reading and new-field
+roundtrips are tested; older engines have not been taught the optional field.
+The derived cache stays transient on the existing shared WeakMap index, is
+bounded by the existing 64-query limit, and clears on append/replacement/truncate.
+Its own map avoids mixing array query results and attribution objects or region
+key collisions. No persisted derived cache or history deletion is introduced.
+
+The existing patch page shows a separate recorded-game attribution summary,
+selected-region preferred bans and selected-champion counts with known/unknown
+coverage. It explicitly explains that the original ban table measures exposure.
+This summary uses the filtered archive, separately from any mixed/decaying raw
+counter view. It does not retroactively change the game's draft weighting or
+assert analyst omniscience. Files: `meta.js`, `save.js`, `ui-patch.js`, new
+`ban-attribution-acceptance.mjs`, shared UI runner and this guide.
+
+Acceptance records a real cross-region match with reversed club/first-pick
+order; proves side attribution, global conservation, unchanged regional ban
+exposure, unknown legacy coverage, save/compact batch continuity, UI wording,
+shared-view cache identity and append/replacement/truncation/bounds. A synthetic
+current club region edit only verifies archival attribution independence, not
+a played regional migration; it is restored immediately. Injected legacy and
+inconsistent rows only test provenance fallback, not historical seasons.
+Synthetic same-region and empty-ban rows also check aggregation boundaries;
+they are not claims of played domestic seasons.
+Focused attribution/save/First Selection/opponent intent/static checks, shared
+UI/finance/contracts 40 acceptances in 39 isolated VMs and engine regression
+pass. Review separated the attribution cache from generic filtered-row entries;
+focused/static checks pass after that change. No new test failure, budget/seed
+change, production GC, diagnostic removal or final long/device QA occurred.
+
+Precise next implementation slice (estimate 50 minutes): Item 13/21 team/player
+and head-to-head meta queries. `metaFilterKey`/`metaRowsFiltered` currently lack
+team/player/opponent filters; the page shows aggregate top teams/players but
+cannot select their observed picks against a specific opponent. Recheck latest
+main/rules/PRs, then connect recorded game-time team/player identifiers to a
+coherent filtered view, distinguish selected-side picks/own bans from opponent
+exposure, and preserve legacy unknown identifiers, historical transfers,
+cache/save conservation and UI sample explanations. Do not infer completion of
+all 23 stages; stop for playtest only after actual remaining features are done.
+
 ### Current implementation slice — observer-specific opponent intent (2026-10-02)
 
 Scope estimate: 50 minutes, one implementation worker, baseline main `e86bfef9`.
