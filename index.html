@@ -356,10 +356,27 @@ function combatStats0(st,ps){
   const mf=.82+.26*ps.prof.mastery/100+.04*(ps.prof.confidence-50)/50;
   const sk=.84+.32*avg(['positioning','target_selection','teamfight_awareness','combo_execution','reaction','burst_execution','extended_fight'].map(a=>at(ps,a)));
   const fm=1+playerMod(ps.p),md=1+(st.mods?st.mods[ps.side]:0);
-  return {off:off*buff*mf*sk*md*fm,ehp:ehp*buff*Math.sqrt(mf),mf,sk,itemEffects:ie,runeEffects:re};
+  return {off:off*buff*mf*sk*md*fm,ehp:ehp*buff*Math.sqrt(mf),mf,sk,itemEffects:ie,runeEffects:re,skillProfile:sp};
 }
 function power(st,ps){const c=combatStats(st,ps);return Math.sqrt(c.off*c.ehp)}
 function teamPower(st,side){return aliveOf(st,side).reduce((s,x)=>s+power(st,x)*x.hp**0.5,0)}
+
+// Bounded aggregate interactions, not per-spell casts or geometric hitboxes.
+// The same profile used for draft evaluation also affects when a fight pays off.
+function fightSkillProfile(st,players){
+  const profiles=players.map(p=>{const c=combatStats(st,p);return {...c.skillProfile,
+    mobility:clamp(c.skillProfile.mobility+c.itemEffects.mobility+c.runeEffects.mobility,0,1.7)}});
+  return Object.fromEntries(['cc','reach','mobility','uptime'].map(k=>[k,avg(profiles.map(p=>p[k]))]));
+}
+function fightSkillEngage(attacker,defender){
+  return clamp((attacker.cc-defender.cc)*.035+(attacker.mobility-defender.mobility)*.02,-.08,.08);
+}
+function fightSkillPhase(own,enemy,round,engaged){
+  const advantage=round==='burst'?(own.reach-enemy.reach)*.06*(engaged?.25:1)+(own.cc-enemy.mobility)*.025:
+    round==='ext'?(own.uptime-enemy.uptime)*.035+(own.mobility-enemy.cc)*.015:
+    (own.mobility-enemy.mobility)*.03;
+  return 1+clamp(advantage,-.08,.08);
+}
 
 function fmtTime(m,sec){return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`}
 function log(st,text,opt={}){if(st.quiet)return;if(opt.sec===undefined)st.cur=Math.min(59,st.cur+st.rng.log.int(2,7));st.log.push({t:st.t,sec:opt.sec??st.cur,text,side:opt.side??-1,major:!!opt.major,kind:opt.kind||''})}
@@ -396,7 +413,8 @@ function fight(st,zone,sideArrs,ctx={}){
   const init=initScore[0]>=initScore[1]?0:1, def=1-init;
   const engager=sideArrs[init].reduce((b,p)=>p.champ.kit.engage*at(p,'engage')>b.champ.kit.engage*at(b,'engage')?p:b);
   const defAvoid=avg(sideArrs[def].map(p=>(at(p,'dodging')+at(p,'positioning'))/2));
-  const engP=clamp(0.3+0.45*engager.champ.kit.engage/10*at(engager,'engage')+0.25*(initScore[init]-initScore[def])-0.35*(defAvoid-0.6),0.08,0.92);
+  const skillProfiles=sideArrs.map(a=>fightSkillProfile(st,a)),skillEngage=fightSkillEngage(skillProfiles[init],skillProfiles[def]);
+  const engP=clamp(0.3+0.45*engager.champ.kit.engage/10*at(engager,'engage')+0.25*(initScore[init]-initScore[def])-0.35*(defAvoid-0.6)+skillEngage,0.08,0.92);
   const engOk=R.exec.chance(engP);
   const mult=[1,1]; mult[init]*=engOk?1.2:0.9; if(!engOk) mult[def]*=1.05;
   if(ctx.defender!==undefined) mult[ctx.defender]*=1.15;
@@ -427,7 +445,7 @@ function fight(st,zone,sideArrs,ctx={}){
       const k=f.ps.champ.kit;
       const w=rd==='burst'?0.55+0.09*k.burst:rd==='ext'?0.4+0.07*k.dps:0.5;
       const execRoll=Math.max(0.3,R.mech.normal(1,0.13*(1.25-at(f.ps,'consistency'))));
-      let d=f.off*K*w*execRoll*mult[f.side];
+      let d=f.off*K*w*execRoll*mult[f.side]*fightSkillPhase(skillProfiles[f.side],skillProfiles[1-f.side],rd,engOk);
       if(['ADC','MID'].includes(tgt.ps.role)) d*=1-0.3*peel[tgt.side];
       dmgs.push([f,tgt,d]);
     }
@@ -446,7 +464,7 @@ function fight(st,zone,sideArrs,ctx={}){
   if(deaths[0]===deaths[1]&&disengaged<0) winner = pw0[0]>=pw0[1]?0:1;
   st.vision[zone]=clamp((st.vision[zone]||0)+(winner===0?0.3:-0.3),-1,1);
   if(isTeamfight)for(const f of F){f.ps.teamfights++;if(f.side===winner)f.ps.teamfightWins++}
-  const res={winner,deaths,sur,init,engOk,disengaged,n:[sideArrs[0].length,sideArrs[1].length]};
+  const res={winner,deaths,sur,init,engOk,disengaged,skillEngage,n:[sideArrs[0].length,sideArrs[1].length]};
   expl(st,`교전 (${ctx.label||zone}) ${sideArrs[0].length}v${sideArrs[1].length}`,[
     ['선공권 Blue',initScore[0]],['선공권 Red',initScore[1]],['진입 성공확률',engP],['교전 전 전력 Blue',pw0[0]/1000],['교전 전 전력 Red',pw0[1]/1000]],
     {prob:engP,result:`${engOk?'진입 성공':'진입 실패'} · ${['Blue','Red'][winner]} 승리 ${deaths[1]}–${deaths[0]}${disengaged>=0?' (후퇴)':''}`});
