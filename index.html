@@ -10876,18 +10876,20 @@ function releaseObligationsPanel(releases,title){
 function financePanel(t){
   const f=t.finance; if(!f)return '';
   if(t.active===false&&f.closureSettlement){
-    const closure=f.closureSettlement;
+    const closure=f.closureSettlement,recovery=f.estateRecovery;
     return `<section><h3>해체 구단 계약 정산 · ${esc(t.name)}</h3>
       <div class="fin"><div><span>계약 보상 청구</span><b>${money(closure.amount)}</b></div>
-      <div><span>지급 완료</span><b>${money(closure.paidAmount)}</b></div>
-      <div><span>미지급</span><b>${money(closure.unpaidAmount)}</b></div></div>
+      <div><span>지급 완료</span><b>${money(closure.paidAmount+(recovery?.paidAmount||0))}</b></div>
+      <div><span>미지급</span><b>${money(f.buyout)}</b></div></div>
       <p class="hint">${esc(closure.date||String(closure.year))} 해체 시 가용 현금을 청구액 비율로 배분했습니다. 미지급 채무는 기록에 보존되며 다음 시즌 운영비로 중복 청구하지 않습니다.</p>
       ${(closure.funding?.transfers||[]).map(row=>`<p>${row.kind==='cash_recovery'?
         row.toId===t.id?'2군 잔여 자금 회수':'모구단에 잔여 자금 반환':
         row.toId===t.id?'모구단 정산 지원':'소유 2군 정산 지원'} ${money(row.amount)}</p>`).join('')}
       ${transferDealRows(t).length?transferPaymentsPanel(t):''}
+      ${recovery?.distributions?`<details class="cfgcard"><summary>해체 후 추가 지급 · ${money(recovery.paidAmount)}</summary>
+        ${recovery.history.map(row=>`<p>${esc(row.date)} · ${money(row.paidAmount)} 지급</p>`).join('')}</details>`:''}
   ${releaseObligationsPanel(financeReleaseObligations(t),'해체 구단 미지급 보상')}
-      <details class="cfgcard release-settlements"><summary>${closure.items.some(r=>r.claimantKind==='staff')?'선수·스태프별 지급 내역':'선수별 지급 내역'}</summary>
+      <details class="cfgcard release-settlements"><summary>해체 당시 ${closure.items.some(r=>r.claimantKind==='staff')?'선수·스태프별 지급 내역':'선수별 지급 내역'}</summary>
       ${closure.items.map(row=>`<div class="cfgcard"><b>${esc(row.staffName||row.playerName||row.sid||row.pid)}</b>
         <p>청구 ${money(row.amount)} · 지급 ${money(row.paidAmount)} · 미지급 ${money(row.unpaidAmount)}</p></div>`).join('')}
       ${closure.unattributedAmount?`<p class="hint">상세 미기록 청구 ${money(closure.unattributedAmount)} · 지급 ${money(closure.unattributedPaid)} · 미지급 ${money(closure.unattributedUnpaid)}</p>`:''}
