@@ -3996,6 +3996,11 @@ function regionCfg(id,over={}){
 function defaultWorldConfig(){return {
   regions:['KR','CN','EU','NA','AP','BR'].map(id=>regionCfg(id)),
   internationals:INTL_PRESETS.map(x=>({...x})),
+  // Fictional game balance inputs; these are not Riot scoring values.
+  internationalPolicy:{version:1,windowYears:3,weights:{
+    FIRST_STAND:1,MID_SEASON_INVITATIONAL:2,EASTERN_CUP:1,WESTERN_CUP:1,
+    WORLD_CHAMPIONSHIP:3,MASTERS:2,OPEN:1
+  },placementPoints:{champion:8,runnerUp:6,topFour:4,topEight:2,participant:1}},
   subs:1, changes:'normal', startYear:2027, manage:'manual', universalLanguage:true
 }}
 const WORLD_CHANGE_FREQUENCY=1; // Always the normal office/world evolution rate.
@@ -4357,9 +4362,59 @@ function startInternational(db,id,start,taken=new Set()){
   db.competitions[id]={id,name:it.name,short:it.short||id,teams,rules:{fearless:true},international:true,tier:it.tier||'top',stages:intlStages(it.format,teams,it.bo)};
   const s=newSeason(db,id,w.year,`${w.seed}/${w.year}/${id}`,start,id);
   s.key=id;s.label='';s.step=w.step;w.seasons[id]=s;
+  // A region can later move or merge. Preserve the participant's event-time
+  // region on the season so archived coefficients never inherit a new region.
+  s.internationalRegionSnapshot=Object.fromEntries(teams.map(t=>[t,db.teams[t]?.region||null]));
   s.stagesInfo=db.competitions[id].stages.map(x=>x.name).join(' → ');
   news(db,`${it.name} 개막 — ${teams.length}팀 참가 (${INTL_FORMATS[it.format]||it.format})`);
   return true;
+}
+const INTERNATIONAL_POLICY_DEFAULTS={version:1,windowYears:3,weights:{
+  FIRST_STAND:1,MID_SEASON_INVITATIONAL:2,EASTERN_CUP:1,WESTERN_CUP:1,
+  WORLD_CHAMPIONSHIP:3,MASTERS:2,OPEN:1
+},placementPoints:{champion:8,runnerUp:6,topFour:4,topEight:2,participant:1}};
+function internationalPolicy(db){
+  const c=db.worldConfig.internationalPolicy||{};
+  db.worldConfig.internationalPolicy={version:1,windowYears:3,
+    weights:{...INTERNATIONAL_POLICY_DEFAULTS.weights,...(c.weights||{})},
+    placementPoints:{...INTERNATIONAL_POLICY_DEFAULTS.placementPoints,...(c.placementPoints||{})}};
+  return db.worldConfig.internationalPolicy;
+}
+function recordInternationalResults(db,w){
+  const policy=internationalPolicy(db),history=db.global.internationalResults||[],known=new Set(history.map(x=>x.eventId));
+  for(const s of Object.values(w.seasons||{})){
+    const comp=db.competitions[s.comp];if(!comp?.international||!s.done||!s.champion)continue;
+    const eventId=`${s.year}:${s.id||s.key||s.comp}`;if(known.has(eventId))continue;
+    // Older saves may contain completed events without event-time regions.
+    // Do not invent their history from today's team regions or policy.
+    if(!s.internationalRegionSnapshot||comp.teams.some(teamId=>!Object.hasOwn(s.internationalRegionSnapshot,teamId)))continue;
+    const base=placements(db,s),rankOrder=comp.teams.filter(t=>t!==s.champion&&t!==s.runnerUp)
+      .sort((a,b)=>elimReach(db,s,b)-elimReach(db,s,a)||(base.indexOf(a)-base.indexOf(b)));
+    const ordered=[...new Set([s.champion,s.runnerUp,...rankOrder])].filter(t=>comp.teams.includes(t));
+    const teams=ordered.map((teamId,i)=>({teamId,regionId:s.internationalRegionSnapshot[teamId],
+      rank:i+1,points:i===0?policy.placementPoints.champion:i===1?policy.placementPoints.runnerUp:
+        i<4?policy.placementPoints.topFour:i<8?policy.placementPoints.topEight:policy.placementPoints.participant}));
+    history.push({eventId,year:s.year,competitionId:s.comp,weight:Math.max(0,Number(policy.weights[s.comp]??1)),teams});known.add(eventId);
+  }
+  db.global.internationalResults=history;
+}
+function internationalRegionRatings(db,year){
+  const from=year-internationalPolicy(db).windowYears+1,rollup={};
+  for(const event of db.global.internationalResults||[]){if(event.year<from||event.year>year||!Number.isFinite(event.weight)||event.weight<=0)continue;
+    const regions={};for(const x of event.teams||[]){if(!x.regionId)continue;const r=regions[x.regionId]||(regions[x.regionId]={p:0,n:0});r.p+=x.points;r.n++}
+    for(const [id,r] of Object.entries(regions)){const v=rollup[id]||(rollup[id]={score:0,weight:0});
+      v.score+=event.weight*r.p/r.n/2;v.weight+=event.weight;}}
+  return Object.fromEntries(Object.entries(rollup).map(([id,v])=>[id,Math.round(v.score/v.weight*100)/100]));
+}
+function latestWorldsRank(db,id,year){
+  const from=year-internationalPolicy(db).windowYears+1;
+  const rows=(db.global.internationalResults||[]).filter(e=>e.year>=from&&e.year<=year&&['WORLD_CHAMPIONSHIP','WORLDS','World Championship'].includes(e.competitionId));
+  if(!rows.length)return Infinity;const newestYear=Math.max(...rows.map(e=>e.year)),e=rows.filter(x=>x.year===newestYear).sort((a,b)=>a.eventId.localeCompare(b.eventId)).at(-1);
+  return Math.min(...(e.teams||[]).filter(x=>x.regionId===id).map(x=>x.rank),Infinity);
+}
+function compareInternationalRegions(db,ratings,a,b,year=db.world?.year){
+  const d=(ratings[b.id]||0)-(ratings[a.id]||0);if(Math.abs(d)>1e-9)return d;
+  const w=latestWorldsRank(db,a.id,year)-latestWorldsRank(db,b.id,year);return w||a.id.localeCompare(b.id);
 }
 function activeSeasons(db){return Object.values(db.world.seasons).filter(s=>!s.done)}
 function nextDate(db){let next=null;for(const s of Object.values(db.world.seasons)){if(s.done)continue;const d=s.days[s.cur].date;if(next===null||d<next)next=d}return next}
@@ -5871,12 +5926,11 @@ function worldDecisions(db,rng,f,ev){
 function globalOffice(db,w,rng,f,ev){
   db.global=db.global||{decisions:[],power:{}};
   const gev=(what,why)=>{db.global.decisions=[...db.global.decisions,{year:w.year,what,why}].slice(-15);ev(`국제 e스포츠 사무국: ${what} — ${why}`)};
-  // 1) 지역 국제 경쟁력 지수 (최근 국제대회 성적, 명성 가중)
-  const score={}, cnt={};
-  for(const s of Object.values(w.seasons)){const c=db.competitions[s.comp];if(!c.international||!s.done)continue;
-    const it=db.worldConfig.internationals.find(i=>i.id===c.id)||{prestige:1};
-    for(const t of c.teams){const rid=db.teams[t].region;score[rid]=(score[rid]||0)+(0.5+elimReach(db,s,t))*(it.prestige||1);cnt[rid]=(cnt[rid]||0)+(it.prestige||1)}}
-  for(const R of Object.values(db.regions)){const v=cnt[R.id]?score[R.id]/cnt[R.id]:null;const old=db.global.power[R.id];db.global.power[R.id]=v===null?(old??R.strength/20):Math.round(((old??v)*0.5+v*0.5)*100)/100}
+  // Archive completed events once, then calculate only the configured rolling
+  // window. Event-time regions, weights and source results remain in the save.
+  recordInternationalResults(db,w);
+  const ratings=internationalRegionRatings(db,w.year);
+  for(const R of Object.values(db.regions))if(ratings[R.id]!==undefined)db.global.power[R.id]=ratings[R.id];else delete db.global.power[R.id];
   // 1-2) 월즈 총원 상한·중하위권 대회 규모: 세계 흥행에 따라 확대/축소
   const nReg=Object.keys(db.regions).length, avgHype=avg(Object.values(db.regions).map(R=>((R.metrics||[]).slice(-1)[0]||{hype:45}).hype));
   if(db.global.wcCap===undefined)db.global.wcCap=Math.max(20,Object.values(db.regions).reduce((a,R)=>a+R.slots,0));
@@ -5887,7 +5941,7 @@ function globalOffice(db,w,rng,f,ev){
     else if(avgHype<28&&(it.per||2)>1&&rng.chance(.1*f)){it.per=(it.per||2)-1;gev(`${it.name} 지역당 ${it.per}팀으로 축소`,`세계 흥행 부진 (평균 ${Math.round(avgHype)})`)}
   }
   // 2) 월드 진출권 재배분: 국제 성적 상위 지역 +1, 하위 지역 -1 (넉넉하게: 최소 1, 최대 5)
-  const rk=Object.values(db.regions).filter(R=>cnt[R.id]).sort((a,b)=>db.global.power[b.id]-db.global.power[a.id]);
+  const rk=Object.values(db.regions).filter(R=>ratings[R.id]!==undefined).sort((a,b)=>compareInternationalRegions(db,ratings,a,b,w.year));
   if(rk.length>=3&&rng.chance(.2*f)){
     const up=rk[0],dn=rk[rk.length-1];
     const total=()=>Object.values(db.regions).reduce((a,R)=>a+R.slots,0), cap=db.global.wcCap;
@@ -6351,6 +6405,11 @@ function mSponsor(db,id){const t=myT(db);if(!t)return '구단을 찾을 수 없�
 // ===== LOL GM: Player contract / FA market domain =====
 // Owns market valuation, contract terms, options, signing and AI contract/FA market behavior.
 
+function invalidContractNumericTerms(terms){
+  const values=[terms.salary,terms.years,terms.signingBonus,terms.buyout?.amount??0,terms.option?.salary??0,...Object.values(terms.bonuses||{})];
+  return values.every(Number.isFinite)?null:worldActionError('invalid_terms','유효하지 않은 계약 금액입니다');
+}
+
 function recentMarketPerformance(db,p){
   const rows=(p.career||[]).slice(-6),g=rows.reduce((a,c)=>a+(c.g||0),0);if(!g)return {games:0,rating:6.5,intl:0,titles:0};
   const rating=rows.reduce((a,c)=>a+(c.rating||6.5)*(c.g||0),0)/g,intl=rows.filter(c=>c.international).reduce((a,c)=>a+(c.g||0),0),titles=(p.careerEvents||[]).filter(e=>e.type==='title'&&e.year>=db.year-2).length;
@@ -6419,6 +6478,16 @@ function contractGuaranteeTermsValid(terms){
   return terms?.releaseGuaranteeRate==null||
     contractGuaranteePolicy(null).choices.includes(terms.releaseGuaranteeRate);
 }
+// Numeric buyouts in existing saves were ordinary seller asks, because the
+// old engine never distinguished a release clause from a negotiated fee.
+// Keep that meaning on read. New contracts persist the explicit clause kind.
+function normalizeBuyoutClause(value){
+  if(value==null)return null;
+  const row=typeof value==='number'?{amount:value,type:'negotiation'}:value;
+  const amount=+row.amount,type=['release','negotiation'].includes(row.type)?row.type:'negotiation';
+  return Number.isFinite(amount)&&amount>0
+    ?{amount:Math.round(amount*10)/10,type}:null;
+}
 function normalizeContractTerms(db,p,t,salary,years,terms={},opt={}){
   const duration=contractDurationPolicy(db,p,t),
     requestedYears=years==null||years===''?duration.preferred:+years;
@@ -6429,7 +6498,7 @@ function normalizeContractTerms(db,p,t,salary,years,terms={},opt={}){
   const bonuses={performance:Math.max(0,Math.round((terms.bonuses?.performance??0)*10)/10),title:Math.max(0,Math.round((terms.bonuses?.title??0)*10)/10),international:Math.max(0,Math.round((terms.bonuses?.international??0)*10)/10)};
   const optionType=['team','player'].includes(terms.option?.type)?terms.option.type:'none',until=db.year+years-1;
   const option=optionType==='none'?null:{type:optionType,year:until+1,salary:Math.round((terms.option?.salary??salary)*10)/10};
-  const buyout=terms.buyout==null||+terms.buyout<=0?null:Math.round(+terms.buyout*10)/10;
+  const buyout=normalizeBuyoutClause(terms.buyout);
   return {salary,years,signingBonus:sign,bonuses,buyout,option,
     releaseGuaranteeRate:opt.preserveGuarantee?contractGuaranteeRate(terms):regionalContractGuaranteeRate(db,t),
     promisedRole:SQUAD_ROLES.includes(terms.promisedRole)?terms.promisedRole:defaultPromisedRole(db,p,t)};
@@ -6441,7 +6510,9 @@ function offerUtility(db,p,t,offer,opt={}){
   const strength=(teamStrength(db,t.id)-db.regions[t.region].strength)/12,facilities=ensureFacilities(t),fac=(facilities.training-2)*.055+(p.age<=22?(facilities.youth-2)*.075:(facilities.recovery-2)*.018),coach=(staffProfile(t).development-55)/160,intl=teamInternationalAppeal(db,t),durationFit=contractDurationFit(db,p,t,offer.years);
   const home=db.worldConfig.universalLanguage?(p.region===t.region?.04:0):(p.region===t.region?.22:-.08),amb=p.personality.ambition/100,career=playerCareerGoal(p);
   let careerFit=0;if(career==='development')careerFit=fac+coach+(role==='prospect'||role==='competition'?.16:0);else if(career==='starter')careerFit=['core','starter'].includes(role)?.22:-.12;else if(career==='international')careerFit=intl*.18;else if(career==='titles')careerFit=Math.max(0,strength)*.16+intl*.1;else careerFit=durationFit;
-  const option=offer.option?.type==='player'?.07:offer.option?.type==='team'?-.025:0,buyout=offer.buyout?clamp(offer.buyout/Math.max(.2,playerMarketValue(db,p)),.4,4)*-.018:0;
+  const option=offer.option?.type==='player'?.07:offer.option?.type==='team'?-.025:0,
+    buyoutClause=normalizeBuyoutClause(offer.buyout),
+    buyout=buyoutClause?clamp(buyoutClause.amount/Math.max(.2,playerMarketValue(db,p)),.4,4)*-.018:0;
   const currentPenalty=opt.renewal?(p.satisfaction-50)/170+(p.managerTrust-50)/105+(p.managerRelationship-50)/190-(p.wantsOut?.4:0):0;
   // Reuse the duration utility unit per protection tier; default 50% offers
   // preserve their prior utility. Stability/development goals value security.
@@ -6785,6 +6856,7 @@ function contractMutualTerminationTerms(db,p){
 
 /* ==== FILE: contract-transfer-market.js ==== */
 // ===== LOL GM: AI permanent-transfer personal terms =====
+function buyoutTransferError(player,fee){const c=normalizeBuyoutClause(player.contract?.buyout);return c?.type==='release'&&fee+1e-8<c.amount?worldActionError('release_clause','구단 거부 불가 바이아웃 전액이 필요합니다'):null}
 // AI uses the same personal-terms decision and actual available payroll.
 function aiTransferPersonalTerms(db,p,t,salaryRoom){
   if(!Number.isFinite(salaryRoom)||salaryRoom<0)return null;
@@ -6826,7 +6898,7 @@ function aiMarketPermanentTransfers(db,rng,rep,mine){
     if(contractedMoveError(db,cur))continue;
     // A reciprocal move may be refused. Never spend its hypothetical wage saving.
     const cand=activeTeams(db,t.region,1).filter(o=>o.id!==t.id&&o.id!==mine).map(o=>starterFor(db,o,role)).filter(p=>p&&p.contract&&!contractedMoveError(db,p)&&aiMarketValue(db,p,t)>playerValue(db,cur,t)+5)
-      .map(p=>({p,fee:transferFee(db,p)})).filter(x=>x.fee<=t.finance.cash*0.6)
+      .map(p=>({p,fee:sellerTransferAsk(db,p,db.teams[p.team])})).filter(x=>x.fee<=t.finance.cash*0.6)
       .map(x=>({...x,personal:aiTransferPersonalTerms(db,x.p,t,aiTransferSalaryRoom(db,t,x.fee))}))
       .filter(x=>x.personal).sort((a,b)=>aiMarketValue(db,b.p,t)-aiMarketValue(db,a.p,t))[0];
     if(!cand)continue;
@@ -7350,7 +7422,9 @@ function negotiationBudgetError(db,p,t,terms,kind){
 function negotiationCounter(db,neg,offer){
   const p=db.players[neg.pid],t=db.teams[neg.teamId],d=neg.demand,blend=(a,b,w)=>Math.round((a+(b-a)*w)*10)/10,rank={backup:0,prospect:1,competition:2,starter:3,core:4};
   const role=(rank[offer.promisedRole]||0)>=(rank[d.promisedRole]||0)?offer.promisedRole:d.promisedRole,years=offer.years===d.years?offer.years:(Math.abs(offer.years-d.years)<=1?d.years:Math.round((offer.years+d.years)/2));
-  const option=d.option?.type==='player'?{type:'player',salary:blend(offer.salary,d.salary,.55)}:(offer.option?.type==='team'&&p.personality.ambition>=72?null:offer.option),buyout=d.buyout?Math.min(offer.buyout||d.buyout,d.buyout):offer.buyout;
+  const option=d.option?.type==='player'?{type:'player',salary:blend(offer.salary,d.salary,.55)}:(offer.option?.type==='team'&&p.personality.ambition>=72?null:offer.option),
+    offeredBuyout=normalizeBuyoutClause(offer.buyout),demandedBuyout=normalizeBuyoutClause(d.buyout),
+    buyout=demandedBuyout?{amount:Math.min(offeredBuyout?.amount||demandedBuyout.amount,demandedBuyout.amount),type:demandedBuyout.type}:offeredBuyout;
   return normalizeContractTerms(db,p,t,Math.max(offer.salary*1.025,blend(offer.salary,d.salary,.68)),years,{releaseGuaranteeRate:Math.max(contractGuaranteeRate(offer),contractGuaranteeRate(d)),signingBonus:Math.max(offer.signingBonus||0,blend(offer.signingBonus||0,d.signingBonus||0,.72)),bonuses:{performance:Math.max(offer.bonuses?.performance||0,(d.bonuses?.performance||0)*.78),title:Math.max(offer.bonuses?.title||0,(d.bonuses?.title||0)*.78),international:Math.max(offer.bonuses?.international||0,(d.bonuses?.international||0)*.78)},promisedRole:role,option,buyout});
 }
 function finalizeNegotiation(db,neg,terms){
@@ -7459,7 +7533,7 @@ function mEvaluateTarget(db,pid,teamId=null){return recruitmentEvaluation(db,pid
 function mDropInterest(db,pid){return removeRecruitmentTarget(db,pid)}
 
 // ---- 구단 간 이적료 협상 ----
-function sellerTransferAsk(db,p,from){if(p.contract?.buyout)return p.contract.buyout;const base=transferFee(db,p),starter=starterFor(db,from,p.role)===p,financeNeed=from.finance.cash<0?.88:1,exit=p.wantsOut?.82:1;return Math.round(base*(starter?1.12:.96)*financeNeed*exit*10)/10}
+function sellerTransferAsk(db,p,from){const clause=normalizeBuyoutClause(p.contract?.buyout);if(clause)return clause.amount;const base=transferFee(db,p),starter=starterFor(db,from,p.role)===p,financeNeed=from.finance.cash<0?.88:1,exit=p.wantsOut?.82:1;return Math.round(base*(starter?1.12:.96)*financeNeed*exit*10)/10}
 function mTransferBid(db,pid,fee,feePlan=null){
   const t=myT(db),p=db.players[pid],from=p&&db.teams[p.team];if(!p||!from||from.id===t.id)return '이적 대상을 찾을 수 없습니다';
   const window=permanentTransferWindowError(db,p,t);if(window)return window;
@@ -7469,8 +7543,9 @@ function mTransferBid(db,pid,fee,feePlan=null){
   const id=negotiationId(db,pid,'transfer'),store=negotiationStore(db),ask=sellerTransferAsk(db,p,from);let neg=store[id];
   if(!neg||neg.status!=='open'){const st=startNegotiation(db,pid,'transfer',{sellerId:from.id});if(!st.ok)return st.msg;neg=st.neg;neg.stage='club';neg.clubRounds=0}
   neg.clubRounds=(neg.clubRounds||0)+1;neg.history.push({round:neg.clubRounds,stage:'club',side:'buyer',fee});
-  const acceptAt=ask*(from.finance.cash<0?.9:1);
-  if(fee-(fee-payment.upfront)*.05>=acceptAt){neg.fee=Math.round(fee*10)/10;neg.feePlan=payment.plan;neg.stage='player';neg.clubCounter=null;neg.history.push({round:neg.clubRounds,stage:'club',side:'seller',result:'accept',fee:neg.fee,feePlan:payment.plan});return from.name+'과 이적료 '+money(neg.fee)+' 합의 · 이제 '+p.name+' 측과 개인조건을 협상하세요'}
+  const clause=normalizeBuyoutClause(p.contract?.buyout),releasePrice=clause?.type==='release'&&fee+1e-8>=clause.amount,
+    acceptAt=ask*(from.finance.cash<0?.9:1),sellerAccepted=releasePrice||fee-(fee-payment.upfront)*.05>=acceptAt;
+  if(sellerAccepted){neg.fee=Math.round(fee*10)/10;neg.feePlan=payment.plan;neg.releaseClause=!!releasePrice;neg.stage='player';neg.clubCounter=null;neg.history.push({round:neg.clubRounds,stage:'club',side:'seller',result:releasePrice?'release_clause':'accept',fee:neg.fee,feePlan:payment.plan});return releasePrice?p.name+'의 구단 거부 불가 바이아웃 '+money(clause.amount)+' 충족 · 선수 동의를 협상하세요':from.name+'과 이적료 '+money(neg.fee)+' 합의 · 이제 '+p.name+' 측과 개인조건을 협상하세요'}
   if(neg.clubRounds>=3&&fee<ask*.82){neg.status='withdrawn';neg.reason='이적료 협상 결렬';return from.name+': 이적료 협상 종료'}
   neg.clubCounter=Math.round(Math.max(fee*1.06,(fee+ask)/2)*10)/10;neg.history.push({round:neg.clubRounds,stage:'club',side:'seller',result:'counter',fee:neg.clubCounter});return from.name+' 역제안: '+money(neg.clubCounter);
 }
@@ -8003,9 +8078,7 @@ function validatePlayerSignAction(db,a){
       return worldActionError('insufficient_cash','긴급 대체 계약의 보장급을 지급할 현금이 부족합니다');
   }else if(a.replacement)
     return worldActionError('invalid_contract','일반 선수 계약에는 의료 대체 조건을 붙일 수 없습니다');
-  const allNumbers=[terms.salary,terms.years,terms.signingBonus,terms.buyout??0,terms.option?.salary??0,...Object.values(terms.bonuses||{})];
-  if(!allNumbers.every(Number.isFinite))
-    return worldActionError('invalid_terms','유효하지 않은 계약 금액입니다');
+  const termsError=invalidContractNumericTerms(terms);if(termsError)return termsError;
   if(!playerActionFinance(t))return worldActionError('invalid_finance','구단 재정 정보가 없습니다');
   if(kind!=='renewal'&&kind!=='renewal_agreement'){
     const capacity=loanOutgoingPlayers(db,t).length&&loanRosterCapacityError(db,t,p);
@@ -8019,6 +8092,7 @@ function validatePlayerSignAction(db,a){
     if(!playerActionFinance(from))return worldActionError('invalid_finance','원소속 구단 재정 정보가 없습니다');
     if(!Number.isFinite(a.fee)||a.fee<0)return worldActionError('invalid_fee','이적료는 0 이상의 유효한 금액이어야 합니다');
     fee=a.fee;
+    const clauseError=buyoutTransferError(p,fee);if(clauseError)return clauseError;
     const move=contractedMoveError(db,p);if(move)return worldActionError('move_limit',move);
   }
   const feePlan=normalizeTransferFeePlan(db,fee,a.feePlan);
@@ -8045,6 +8119,7 @@ function validatePlayerTransferAction(db,a){
     if(fromAuth)return fromAuth;
   }
   if(!Number.isFinite(a.fee)||a.fee<0)return worldActionError('invalid_fee','이적료는 0 이상의 유효한 금액이어야 합니다');
+  const clauseError=buyoutTransferError(p,a.fee);if(clauseError)return clauseError;
   if(!playerActionFinance(from)||!playerActionFinance(to))return worldActionError('invalid_finance','구단 재정 정보가 없습니다');
   const feePlan=normalizeTransferFeePlan(db,a.fee,a.feePlan);
   if(!feePlan.ok)return worldActionError('invalid_terms',feePlan.reason);
@@ -10692,7 +10767,7 @@ function bindPatch(){document.querySelectorAll('[data-champ]').forEach(b=>b.oncl
 
 /* ==== FILE: ui-negotiations.js ==== */
 // ===== LOL GM: negotiation cards, contract terms and event binding =====
-function contractTermsText(c){if(!c)return '';const b=c.bonuses||{},xs=[money(c.salary)+' 연봉',c.years+'년','방출 보장 '+Math.round(contractGuaranteeRate(c)*100)+'%'];if(c.signingBonus)xs.push('계약금 '+money(c.signingBonus));if(b.performance)xs.push('성과 '+money(b.performance));if(b.title)xs.push('우승 '+money(b.title));if(b.international)xs.push('국제전 '+money(b.international));if(c.buyout)xs.push('바이아웃 '+money(c.buyout));if(c.option)xs.push((c.option.type==='player'?'선수':'팀')+' 옵션');if(c.promisedRole)xs.push(SQUAD_ROLE_KO[c.promisedRole]||c.promisedRole);return xs.join(' · ')}
+function contractTermsText(c){if(!c)return '';const b=c.bonuses||{},buyout=normalizeBuyoutClause(c.buyout),xs=[money(c.salary)+' 연봉',c.years+'년','방출 보장 '+Math.round(contractGuaranteeRate(c)*100)+'%'];if(c.signingBonus)xs.push('계약금 '+money(c.signingBonus));if(b.performance)xs.push('성과 '+money(b.performance));if(b.title)xs.push('우승 '+money(b.title));if(b.international)xs.push('국제전 '+money(b.international));if(buyout)xs.push((buyout.type==='release'?'구단 거부 불가 바이아웃 ':'협상 개시권 바이아웃 ')+money(buyout.amount));if(c.option)xs.push((c.option.type==='player'?'선수':'팀')+' 옵션');if(c.promisedRole)xs.push(SQUAD_ROLE_KO[c.promisedRole]||c.promisedRole);return xs.join(' · ')}
 function renderNegotiations(teamIds=null){
   const allowed=new Set(teamIds||[managedTeamId(DB)]),negs=Object.values(negotiationStore(DB)).filter(n=>allowed.has(n.teamId)&&n.status==='open');
   if(!negs.length)return '<p class="hint">진행 중인 공식 협상이 없습니다.</p>';
@@ -10700,9 +10775,9 @@ function renderNegotiations(teamIds=null){
       duration=contractDurationPolicy(DB,p,team);
     if(n.stage==='club'){const ask=n.clubCounter||sellerTransferAsk(DB,p,DB.teams[n.sellerId]);return `<div class="cfgcard"><div class="cfghead"><b>${esc(p.name)} · 이적료 협상</b><span class="hint">${esc(DB.teams[n.sellerId]?.name||'원소속 구단')} · ${n.clubRounds||0}/3라운드</span></div><p class="hint">상대 역제안이 있을 때만 정확한 요구액을 확인할 수 있습니다.</p><div class="controls"><label>이적료 <input type="number" step="0.5" min="0" value="${ask}" data-neg-fee="${n.id}">억</label><button class="primary" data-neg-bid="${n.id}">제안</button>${n.clubCounter?`<button class="ghost" data-accept-seller="${n.id}">역제안 수락</button>`:''}<button class="ghost" data-neg-cancel="${n.id}">협상 종료</button></div>${transferFeeOfferFields(n.id)}</div>`}
     const c=n.counter||n.demand,b=c.bonuses||{};
-    return `<div class="cfgcard"><div class="cfghead"><b>${esc(p.name)} · ${n.kind==='renewal'?'재계약':n.kind==='early_fa'?'조기 계약':n.kind==='initial'?(esc(DB.teams[n.teamId]?.name||'')+' 창단 계약'):'개인조건'} 협상</b><span class="hint">${n.round}/${n.maxRounds}라운드 · 경쟁 관심 ${rivals}곳</span></div><p class="hint">협상 담당 · ${esc(n.representative?.name||playerRepresentativeText(p))}</p><p><b>${n.counter?'선수 측 역제안':'선수 측 초기 요구'}</b> · ${esc(contractTermsText(c))}</p>${n.feePlan?`<p class="hint">${esc(transferFeePlanText(n.feePlan))}</p>`:''}<div class="controls"><label>연봉 <input type="number" step="0.1" min="0.1" value="${c.salary}" data-neg-sal="${n.id}">억</label><label>기간 <select data-neg-years="${n.id}">${duration.choices.map(y=>`<option value="${y}"${c.years===y?' selected':''}>${y}년</option>`).join('')}</select></label><label>계약금 <input type="number" step="0.1" min="0" value="${c.signingBonus||0}" data-neg-sign="${n.id}">억</label><label>성과 보너스 <input type="number" step="0.1" min="0" value="${b.performance||0}" data-neg-perf="${n.id}">억</label><label>우승 보너스 <input type="number" step="0.1" min="0" value="${b.title||0}" data-neg-title="${n.id}">억</label><label>국제전 보너스 <input type="number" step="0.1" min="0" value="${b.international||0}" data-neg-intl="${n.id}">억</label><label>바이아웃 <input type="number" step="0.5" min="0" value="${c.buyout||0}" data-neg-buyout="${n.id}">억</label><label>옵션 <select data-neg-option="${n.id}"><option value="none"${!c.option?' selected':''}>없음</option><option value="team"${c.option?.type==='team'?' selected':''}>팀 옵션</option><option value="player"${c.option?.type==='player'?' selected':''}>선수 옵션</option></select></label><label>약속 역할 <select data-neg-role="${n.id}">${SQUAD_ROLES.map(x=>`<option value="${x}"${c.promisedRole===x?' selected':''}>${SQUAD_ROLE_KO[x]}</option>`).join('')}</select></label></div><div class="controls"><button class="primary" data-neg-submit="${n.id}">제안 보내기</button>${n.counter?`<button class="ghost" data-neg-accept="${n.id}">역제안 그대로 수락</button>`:''}<button class="ghost" data-neg-cancel="${n.id}">협상 종료</button></div><p class="hint">방출 보상은 지역 사무국 공통 규정을 따릅니다.</p></div>`}).join('');
+    return `<div class="cfgcard"><div class="cfghead"><b>${esc(p.name)} · ${n.kind==='renewal'?'재계약':n.kind==='early_fa'?'조기 계약':n.kind==='initial'?(esc(DB.teams[n.teamId]?.name||'')+' 창단 계약'):'개인조건'} 협상</b><span class="hint">${n.round}/${n.maxRounds}라운드 · 경쟁 관심 ${rivals}곳</span></div><p class="hint">협상 담당 · ${esc(n.representative?.name||playerRepresentativeText(p))}</p><p><b>${n.counter?'선수 측 역제안':'선수 측 초기 요구'}</b> · ${esc(contractTermsText(c))}</p>${n.feePlan?`<p class="hint">${esc(transferFeePlanText(n.feePlan))}</p>`:''}<div class="controls"><label>연봉 <input type="number" step="0.1" min="0.1" value="${c.salary}" data-neg-sal="${n.id}">억</label><label>기간 <select data-neg-years="${n.id}">${duration.choices.map(y=>`<option value="${y}"${c.years===y?' selected':''}>${y}년</option>`).join('')}</select></label><label>계약금 <input type="number" step="0.1" min="0" value="${c.signingBonus||0}" data-neg-sign="${n.id}">억</label><label>성과 보너스 <input type="number" step="0.1" min="0" value="${b.performance||0}" data-neg-perf="${n.id}">억</label><label>우승 보너스 <input type="number" step="0.1" min="0" value="${b.title||0}" data-neg-title="${n.id}">억</label><label>국제전 보너스 <input type="number" step="0.1" min="0" value="${b.international||0}" data-neg-intl="${n.id}">억</label><label>바이아웃 유형 <select data-neg-buyout-type="${n.id}"><option value="negotiation"${normalizeBuyoutClause(c.buyout)?.type!=='release'?' selected':''}>협상 개시권</option><option value="release"${normalizeBuyoutClause(c.buyout)?.type==='release'?' selected':''}>구단 거부 불가</option></select></label><label>바이아웃 금액 <input type="number" step="0.5" min="0" value="${normalizeBuyoutClause(c.buyout)?.amount||0}" data-neg-buyout="${n.id}">억</label><label>옵션 <select data-neg-option="${n.id}"><option value="none"${!c.option?' selected':''}>없음</option><option value="team"${c.option?.type==='team'?' selected':''}>팀 옵션</option><option value="player"${c.option?.type==='player'?' selected':''}>선수 옵션</option></select></label><label>약속 역할 <select data-neg-role="${n.id}">${SQUAD_ROLES.map(x=>`<option value="${x}"${c.promisedRole===x?' selected':''}>${SQUAD_ROLE_KO[x]}</option>`).join('')}</select></label></div><div class="controls"><button class="primary" data-neg-submit="${n.id}">제안 보내기</button>${n.counter?`<button class="ghost" data-neg-accept="${n.id}">역제안 그대로 수락</button>`:''}<button class="ghost" data-neg-cancel="${n.id}">협상 종료</button></div><p class="hint">방출 보상은 지역 사무국 공통 규정을 따릅니다.</p></div>`}).join('');
 }
-function negotiationTermsFromDom(nid){return {salary:+document.querySelector(`[data-neg-sal="${nid}"]`).value,years:+document.querySelector(`[data-neg-years="${nid}"]`).value,signingBonus:+document.querySelector(`[data-neg-sign="${nid}"]`).value,bonuses:{performance:+document.querySelector(`[data-neg-perf="${nid}"]`).value,title:+document.querySelector(`[data-neg-title="${nid}"]`).value,international:+document.querySelector(`[data-neg-intl="${nid}"]`).value},buyout:+document.querySelector(`[data-neg-buyout="${nid}"]`).value||null,option:document.querySelector(`[data-neg-option="${nid}"]`).value==='none'?null:{type:document.querySelector(`[data-neg-option="${nid}"]`).value},promisedRole:document.querySelector(`[data-neg-role="${nid}"]`).value}}
+function negotiationTermsFromDom(nid){return {salary:+document.querySelector(`[data-neg-sal="${nid}"]`).value,years:+document.querySelector(`[data-neg-years="${nid}"]`).value,signingBonus:+document.querySelector(`[data-neg-sign="${nid}"]`).value,bonuses:{performance:+document.querySelector(`[data-neg-perf="${nid}"]`).value,title:+document.querySelector(`[data-neg-title="${nid}"]`).value,international:+document.querySelector(`[data-neg-intl="${nid}"]`).value},buyout:(+document.querySelector(`[data-neg-buyout="${nid}"]`).value||0)>0?{amount:+document.querySelector(`[data-neg-buyout="${nid}"]`).value,type:document.querySelector(`[data-neg-buyout-type="${nid}"]`).value}:null,option:document.querySelector(`[data-neg-option="${nid}"]`).value==='none'?null:{type:document.querySelector(`[data-neg-option="${nid}"]`).value},promisedRole:document.querySelector(`[data-neg-role="${nid}"]`).value}}
 function bindNegotiationControls(act){
   document.querySelectorAll('[data-neg-bid]').forEach(b=>b.onclick=()=>{const n=negotiationStore(DB)[b.dataset.negBid];act(mTransferBid(DB,n.pid,+document.querySelector(`[data-neg-fee="${n.id}"]`).value,transferFeePlanFromDom(n.id,+document.querySelector(`[data-neg-fee="${n.id}"]`).value)))});
   document.querySelectorAll('[data-accept-seller]').forEach(b=>b.onclick=()=>act(acceptSellerCounter(DB,b.dataset.acceptSeller)));
