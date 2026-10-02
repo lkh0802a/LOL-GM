@@ -63,6 +63,25 @@ Self-review also preserved known departure/employer tenure bounds in staff event
 poaching, expiry, release, atomic replacement and closure must not lose existing
 tenure when a later signing resets `since`. Focused employment-gap tests passed.
 
+Delivery: PR #136 final head `dc27443726bdcdc802649bf9fdd3cec4d52a3cf1`,
+full CI `37025660839` **success**, including static, UI/finance/contracts,
+calendar/scouting, regression, core/patch smoke, daily career, career, perf/build,
+medical core, regional/calendar shards 0/1, both medical aggregates and `verify`.
+Merged sequentially as `9074eea54e84e9c01b3efeddd0e041b1133a46ce`; standalone
+HTML rebuilt from that merged source. Previous failed/cancelled runs remain intact.
+
+Precise next slice (estimated 50 minutes): individual scout regional expertise.
+Confirmed gap: `STAFF_RULES.md` requires personal regional knowledge to affect
+coverage/accuracy; `aiScoutingCoveragePlan` currently distributes IDs by modulo
+and region slots depend on team-wide capacity, while `scoutingPowerForTeam` has
+no target-region/personal-knowledge input. Reuse the existing D03 operations,
+reports, costs and liquidity gates; do not rewrite accepted market scouting.
+Next run should inspect current main/PRs again, then connect real recorded regional
+observation knowledge to personal coverage allocation and shared human/AI scouting
+effects, with neutral legacy migration, ownership changes, save preservation and
+focused existing scouting/staff fixtures. Main is the continuation baseline;
+no unfinished code, staged edits, extra worker or new long QA is left running.
+
 Limits: historical events without captured employees are not reconstructed;
 series wins describe team results, not isolated staff causal credit. The model
 weights are fictional and documented, not claimed to be real league regulations.
