@@ -103,6 +103,8 @@ await runEngineFixture(String.raw`(()=>{
  check(samples!==empty&&samples.games===1&&samples.stats[currentCid].p===1&&freshEvidence.globalSample===1&&freshEvidence.regionalSample===1,'new actual match failed to invalidate cache/update evidence');
  check(JSON.stringify(after.vhat)!==JSON.stringify(fresh.vhat)&&JSON.stringify(selectionBefore)!==JSON.stringify(selectionPatchValues(db,mine.id,pool)),'current samples had no actual draft/selection effect');
  const saved=unpackDB(packDB(db));check(JSON.stringify(currentPatchMetaSamples(saved))===JSON.stringify(samples),'save lost patch evidence or used mixed counters');
+ const stringPicks={...db,metaHistory:db.metaHistory.map(r=>({...r,sides:r.sides.map(s=>({...s,picks:s.picks.map(p=>p.champ)}))}))};
+ check(JSON.stringify(currentPatchMetaSamples(stringPicks))===JSON.stringify(samples),'legacy string picks changed recorded sample counts');
  saved.manager.teamId=enemy.id;check(JSON.stringify(currentPatchMetaSamples(saved))===JSON.stringify(samples),'manager/AI changed public statistical sample');
  const legacy=unpackDB(packDB(db));delete legacy.metaHistory;
  check(currentPatchMetaSamples(legacy).games===0&&JSON.stringify(legacy.metaStats)===JSON.stringify(db.metaStats),'legacy counters fabricated patch games or were erased');
