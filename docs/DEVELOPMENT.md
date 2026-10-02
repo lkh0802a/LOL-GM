@@ -31,6 +31,61 @@ without continually adding new status documents.
 
 ## Current Phase
 
+### Current implementation slice — freely negotiated staff duration (2026-10-02)
+
+Scope estimate: 50 minutes, one implementation worker, baseline main `37fbe8b`.
+Managed runtime/network policy, clean checkout/origin and latest open PRs were
+rechecked; only unrelated historical #27/#28 remain. Fixed staff rules require
+free term negotiation; both offer and save validation plus UI still capped 1–3.
+
+The same sign/renew command now accepts positive whole-year negotiated duration
+while guarding safe integer year and nominal salary arithmetic. There is no new
+league maximum; a valid 100-year preview proves absence of an artificial cap,
+not a recommendation or forecast of century-long employment. Annual salary is
+normalized before validity checks, so rounding to zero is rejected. Existing
+salary ceiling, salary/move consent, department limits, annual cash/forecast
+gate, atomic replacement, snapshots and rollback remain authoritative.
+
+Stored duration uses the same safety helper and safe positive end year, allowing
+longer contracts to reload. Existing legacy terms, missing original start year,
+initial two-year contracts and autonomous AI two-year offers remain unchanged;
+no historical terms or future results are fabricated. The annual budget check
+does not establish affordability in all future years. UI uses a whole-year
+number input and confirms end year, nominal total (not prepaid) and existing
+50% remaining-salary release guarantee. Actual remaining term still determines
+poach/release/closure liabilities through existing finance writers.
+
+Files: `staff-contracts.js`, `ui-market-staff.js`, existing staff-contracts
+acceptance and fixed staff rules/this guide. Focused cases now execute manager
+7-year FA/5-year renewal/8-year poach, AI 12-year sign and annual continuity,
+9-year closure claims with partial/unpaid balances, 6-year UI confirm/cancel,
+long-term saves, invalid fraction/negative/unsafe years and malformed saved terms,
+stale/late rollback, budget/authority/cap and legacy migration. Existing true
+ratings remain hidden. One added 100-year fixture initially reused another
+candidate's salary and was refused by the correct salary-consent gate; use the
+actual candidate's asking salary, retain the consent assertion and production
+policy. No failed evidence is counted as success and no budgets were raised.
+
+Focused staff contracts/registration/coverage and static 105-module/diff checks
+pass. UI-finance-contracts (38 acceptances, 36 isolated contexts) and
+calendar-scouting (17) passed locally. Complete required Actions on the final
+exact PR head remains the delivery gate. Long100-season/real-device/
+mobile/TalkBack final QA remains after all feature implementation and playtest
+feedback/fixes. This closes the fixed staff-duration discrepancy, not all D07
+or all 23 stages.
+
+Precise next coherent slice (estimate 50 minutes): patch-scoped public draft
+analysis evidence. Inspection finds `draftMetaEvidence` reads global/regional
+aggregate `metaStats`, while `recordMeta` also stores per-game patch in the
+existing indexed `metaHistory`. Recheck whether any patch transition resets the
+aggregates before selecting the scope; do not duplicate an implemented reset.
+If aggregate evidence spans older patches, connect current-patch public sample
+counts/uncertainty to actual draft evidence and evaluation, retaining separate
+historical information, legacy unknown provenance and registered analyst effects.
+Use existing history indexes/bounded caches, test old-vs-current patch samples,
+new-patch low evidence, manager/AI/save parity and real draft consequences. No
+invented historical games, deletion of records, hidden opponent truth or long QA.
+
 ### Current implementation slice — observed AI on-site staff coverage (2026-10-02)
 
 Scope estimate: 50 minutes, single worker, clean main baseline `34f9dfd`.
