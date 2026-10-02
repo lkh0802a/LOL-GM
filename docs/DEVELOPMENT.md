@@ -1897,9 +1897,12 @@ scheduled; the player must still consent and negotiate personal terms. Negotiati
 clauses keep the fee as the seller's asking basis. Existing numeric saved values
 remain asking-fee clauses; they do not gain a new veto-free right retroactively.
 Shared manager/AI transaction validation, split settlement, stale checks, rollback
-and save restoration have a focused fixture. The fixture is registered in the
-UI/finance/contract runner and full local check; final combined runner and Actions
-evidence remain pending. This closes one D04 contract-rule gap, not all D04.
+and save restoration have a focused fixture. Exact-head Actions run 36988106693
+exposed two older assertions that expected numeric buyouts after the contract
+schema began persisting `{amount, type}`. Regression save/restore and core smoke
+expectations now assert the explicit negotiation type as well as amount. Both
+focused reruns pass locally; updated exact-head Actions remain pending. This closes
+one D04 contract-rule gap, not all D04.
 
 International coefficients now use explicit fictional weights in
 `worldConfig.internationalPolicy`, immutable completed-event snapshots, event-time
@@ -1917,8 +1920,9 @@ The acceptance now changes a participant region before archive, verifies legacy
 skip behavior, and proves an out-of-window Worlds result cannot change the tie.
 The acceptance is registered in both the calendar/scouting runner and full check.
 `node scripts/check.mjs`, `node scripts/ui-finance-contracts-runner.mjs`,
-`node scripts/calendar-scouting-runner.mjs`, and `git diff --check` pass locally.
-Required exact-head GitHub Actions remain pending.
+`node scripts/calendar-scouting-runner.mjs`, and `git diff --check` passed before
+the first PR run. The stale buyout-shape assertions have been updated; rerun both
+failed suites and required exact-head GitHub Actions before merge.
 
 The user removed GitHub payment details while explicitly authorizing standard
 public `ubuntu-latest` Actions. Cost-driven path/draft skipping and the main-only
