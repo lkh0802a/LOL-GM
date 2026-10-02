@@ -843,7 +843,8 @@ function championSkillProfile(c){
   const healMod=avg(ss.map(s=>s.healMod??1)),shieldMod=avg(ss.map(s=>s.shieldMod??1));
   const cds=ss.map(s=>Number(s.cooldown)).filter(x=>Number.isFinite(x)&&x>0),ranges=ss.flatMap(s=>(s.range||[]).map(Number)).filter(x=>Number.isFinite(x)&&x>=100&&x<5000),costs=ss.flatMap(s=>(s.cost||[]).map(Number)).filter(x=>Number.isFinite(x)&&x>0);
   const uptime=clamp(cds.reduce((z,x)=>z+1/x,0)*2.2,0,1.25),reach=clamp((avgNum(ranges,450)-300)/900,0,1),economy=costs.length?clamp(1-avgNum(costs)/230,.62,1):1;
-  const ccStructured=structured.reduce((z,s)=>z+(s.cc?(s.cc.duration||1):0),0)/n,utilStructured=structured.filter(s=>s.heal||s.shield).length/n;
+  const sourceControl=ss.reduce((z,s)=>z+(!s.cc&&s.sourceControl?.types?.length?1:0),0)/n;
+  const ccStructured=structured.reduce((z,s)=>z+(s.cc?(s.cc.duration||1):0),0)/n+sourceControl,utilStructured=structured.filter(s=>s.heal||s.shield).length/n;
   return {
     power:clamp((ss.reduce((z,s)=>z+(s.power||0),0)/n/10+dmg*.18+ratio*.08)*dmgMod,0,1.7),
     uptime:clamp(uptime*(2-dmgMod*.15),0,1.35),
@@ -1462,10 +1463,17 @@ function generatedChampionVisual(def){
 const DETAIL_BASE_KEYS=['resource','resourceg','resourceRegen','mr','mrg','asg'];
 const CHAMPION_SOURCE_PATCH='16.19.1';
 function cleanChampionSourceText(v){return String(v||'').replace(/<br\s*\/?>/gi,' ').replace(/<[^>]*>/g,'').replace(/&nbsp;/gi,' ').replace(/&amp;/gi,'&').replace(/&lt;/gi,'<').replace(/&gt;/gi,'>').replace(/&#39;/g,"'").replace(/&quot;/gi,'"').replace(/\s+/g,' ').trim()}
+function sourceSkillControl(raw){
+  const text=cleanChampionSourceText(raw?.descriptionKo||'');
+  const patterns=[['stun',/기절시/],['root',/속박(?:하|시)|발을 묶/],['airborne',/공중(?:으로|에) 띄|공중으로 날려/],['displacement',/적(?:을|들을) 밀어|뒤로 밀어|중앙으로 끌려/],['sleep',/잠들게/],['taunt',/도발(?:하|시)/],['fear',/공포에 (?:빠|질)|공포를 (?:주|느끼게)/],['silence',/침묵시/],['slow',/둔화(?:시|됩|시키)|(?:적|대상)[^.]*속도를 늦추|이동 속도를 (?:감소시|줄이거나|훔)/]];
+  const clauses=text.split(/[.!?]/).filter(clause=>!/기절시키지|속박하지|둔화시키지/.test(clause)&&(!/(?:미니언|몬스터)(?:에게|를|들을)/.test(clause)||/챔피언/.test(clause)));
+  const types=patterns.filter(([,pattern])=>clauses.some(clause=>pattern.test(clause))).map(([type])=>type);
+  return types.length?{version:1,types,provider:'Riot Data Dragon description',aggregate:true}:null;
+}
 function normalizeSourceSkill(slot,raw,fallback){
   if(!raw)return fallback;
   const cds=(raw.cooldown||[]).filter(Number.isFinite), cd=cds.length?cds[0]:fallback.cooldown;
-  const numeric=raw.numeric||{};return {...fallback,slot,name:raw.nameKo||raw.nameEn||fallback.name||slot,sourceName:raw.nameEn||'',sourceDescription:cleanChampionSourceText(raw.descriptionKo||raw.descriptionEn||''),cooldown:cd,baseDamage:numeric.baseDamage||fallback.baseDamage||[],ratios:numeric.ratios||fallback.ratios||{},cost:(raw.cost||[]).filter(Number.isFinite),range:(raw.range||[]).filter(Number.isFinite),rangeDisplay:raw.rangeDisplay||null,sourceEffect:raw.effectBurn||[],sourceVars:raw.vars||[],cc:numeric.cc||fallback.cc||null,heal:numeric.heal||fallback.heal||null,shield:numeric.shield||fallback.shield||null,charges:numeric.charges||fallback.charges||null,recast:!!numeric.recast,source:{version:CHAMPION_SOURCE_PATCH,provider:raw.provider||'Riot Data Dragon'}};
+  const numeric=raw.numeric||{};return {...fallback,slot,name:raw.nameKo||raw.nameEn||fallback.name||slot,sourceName:raw.nameEn||'',sourceDescription:cleanChampionSourceText(raw.descriptionKo||raw.descriptionEn||''),cooldown:cd,baseDamage:numeric.baseDamage||fallback.baseDamage||[],ratios:numeric.ratios||fallback.ratios||{},cost:(raw.cost||[]).filter(Number.isFinite),range:(raw.range||[]).filter(Number.isFinite),rangeDisplay:raw.rangeDisplay||null,sourceEffect:raw.effectBurn||[],sourceVars:raw.vars||[],cc:numeric.cc||fallback.cc||null,sourceControl:sourceSkillControl(raw),heal:numeric.heal||fallback.heal||null,shield:numeric.shield||fallback.shield||null,charges:numeric.charges||fallback.charges||null,recast:!!numeric.recast,source:{version:CHAMPION_SOURCE_PATCH,provider:raw.provider||'Riot Data Dragon'}};
 }
 function mergeChampionSource(c,raw){
   if(!raw)return c;
@@ -1910,6 +1918,7 @@ function initPatches(db){
   db.patches={list:[],history:[],prev:[],nextDate:null,newIdx:0,y:0,n:0,releasesByYear:{},releaseTargets:{},reworksByYear:{},majorReworksByYear:{},systemLifeByYear:{},cadence:14};
   db.metaStats={};db.metaGames=0;db.regionMetaStats={};db.regionMetaGames={};
   db.patches.roleQuestBaseline=JSON.parse(JSON.stringify(db.patch.roleQuests||null));
+  db.patches.sourceControlBaseline=1;
 }
 function applyNote(P,n){
   if(n.type==='role_quest')applyRoleQuestNote(P,n);
@@ -1932,6 +1941,7 @@ function getPatch(db,id){
   if(db.patch&&db.patch.id===id)return db.patch;
   const cached=historicPatchCacheHit(db,id);if(cached)return cached;
   const P=buildPatch();
+  if(db.patches.sourceControlBaseline!==1)for(const c of Object.values(P.champions))for(const s of Object.values(c.skills||{}))delete s.sourceControl;
   if(db.patches.roleQuestBaseline!==undefined)P.roleQuests=JSON.parse(JSON.stringify(db.patches.roleQuestBaseline));
   else if(!db.patch?.roleQuests)delete P.roleQuests;
   if(P.id===id)return rememberHistoricPatch(db,id,P);
