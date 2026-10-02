@@ -90,7 +90,7 @@ source += `
     assert(terms.option?.type==='player'&&terms.promisedRole==='competition','contract clause normalization drift');
     signContract(db,p,t,terms.salary,terms.years,terms);
     const loaded=unpackDB(packDB(db)),q=loaded.players[p.id];
-    assert(q.contract?.years===3&&q.contract?.buyout===8&&q.contract?.option?.type==='player','contract save round-trip drift');
+    assert(q.contract?.years===3&&q.contract?.buyout?.amount===8&&q.contract?.buyout?.type==='negotiation'&&q.contract?.option?.type==='player','contract save round-trip drift');
   });
 
   test('06-owned-reserve-roster',()=>{

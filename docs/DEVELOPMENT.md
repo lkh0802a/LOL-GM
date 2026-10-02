@@ -1077,38 +1077,34 @@ wider repeated policy/succession acceptance in long careers. Full CI remains an
 unexecuted account-blocked merge gate for #109, and real mobile/TalkBack evidence
 remains required before whole-D completion.
 
-## Paid Actions cost policy (2026-10-02)
+## CI validation policy (user-directed update, 2026-10-02)
 
-The user approved an account-wide Actions monthly paid budget of $10, with stop
-usage enabled at the limit. Payment registration and budget setup restored CI;
-#109 passed the full run 36910119137 and merged as
-1cd51d8fd80c5dbf2748b2cdb8470fe372534580. No additional budget increase is authorized.
+The earlier cost-based scope and main-only-lightweight restrictions are retired.
+Every PR, including draft, documentation, UI, CI and engine changes, runs static,
+UI/contract, calendar/scouting, medical, regression, smoke, career, performance,
+build and verify jobs. Main pushes repeat the same required gate before standalone
+publication. PRs validate the exact proposed head; main publication remains a
+separate action after the validated merge. Required jobs run in parallel, matrix
+shards stay enabled, and new runs cancel stale runs for the same event/ref.
 
-Minimize billed runner minutes: drafts run static/scope checks; documentation and
-CI orchestration edits avoid game simulations; UI-only changes select the shared
-UI acceptance suite and production build. Engine/unknown ready-PR changes retain
-the full required suites. Explicit workflow_dispatch still runs full validation.
-All engine changes must merge through a validated PR; direct unvalidated engine
-pushes to main are not supported by this publication-only push policy. After a
-validated PR merges, main runs static checks/build/publication instead of repeating
-the same season and medical suites. Manual long-career runs remain separate and
-must not duplicate an active run. Do not retry successful unchanged commits.
-
-Medical core, four seed shards and both aggregate invariants now share one runner
-without dropping seeds/assertions. Validation reports expire after three days.
-Scope policy is tested for engine/unknown, mixed, UI-only, draft, documentation,
-CI tooling, manual dispatch and main publication. The workflow's verify gate still
-requires every suite selected by its scope; selected failures cannot be skipped.
-The old-policy duplicate main run 36910992603 was canceled to avoid paying for
-already successful PR verification. This requires the subsequent lightweight
-main publication to refresh the committed standalone HTML.
+Preserve medical core, four seed shards and both aggregate invariants. The medical
+workflow currently covers core plus two regional and two calendar shards and both
+aggregators. `validation-<job>` report artifacts expire after three days.
+`scripts/ci-scope.mjs`
+reports paths for evidence only; path category and draft state never skip a job.
+The user removed GitHub payment details and explicitly authorized standard public
+`ubuntu-latest` Actions use. Do not register a card, change billing/budget, use
+paid runner classes or assert usage is free. If GitHub blocks a run, report the
+actual restriction. Long-career 100-season and real-device/TalkBack acceptance
+remain deferred until all roadmap features and user playtest feedback.
 
 ## D11 long-career memory recovery (2026-10-02)
 
 PR #110 passed its selected three-job run 36912057493 and merged as
 4572b15ee9806e8dd403c264377bd50f37f13131. Lightweight main publication
 36912274078 succeeded; generated standalone commit 960f46d is the new baseline.
-The $10/month stop-at-limit policy and minimal CI selection remain in force.
+Those Actions settings describe the policy at that time and are superseded by the
+full-run validation policy above.
 
 The prior-engine 100-season process 26248 terminated with native V8 heap exhaustion
 after 30 completed seasons through 2056. Its last boundary save was 124,761,960
@@ -1887,3 +1883,63 @@ pass; broader regression and final required CI remain gates. No long QA or actua
 mobile/TalkBack checks are started. All23 features, user feedback and fixes still
 precede final verification. Public standard runner CI is used after the user's
 authorized visibility change; GitHub payment/card and billing details are removed.
+
+## Cloud continuation — transfer clauses, international coefficients and CI (2026-10-02)
+
+Current source baseline is `main` 0c9b8ab, matching cloud checkout commit
+0c9b8ab. The latest merged PR #129 head 4a9e596 has completed required run
+36971949894 successfully. Current work is integrated locally on
+`codex/cloud-continuation`; exact-head PR validation is still pending.
+
+D04 contract buyouts now store amount and type separately. Release clauses let a
+transfer proceed without separate seller assent only after the full amount is
+scheduled; the player must still consent and negotiate personal terms. Negotiation
+clauses keep the fee as the seller's asking basis. Existing numeric saved values
+remain asking-fee clauses; they do not gain a new veto-free right retroactively.
+Shared manager/AI transaction validation, split settlement, stale checks, rollback
+and save restoration have a focused fixture. Exact-head Actions run 36988106693
+exposed two older assertions that expected numeric buyouts after the contract
+schema began persisting `{amount, type}`. Regression save/restore and core smoke
+expectations now assert the explicit negotiation type as well as amount. Both
+focused reruns pass locally; updated exact-head Actions remain pending. This closes
+one D04 contract-rule gap, not all D04.
+
+International coefficients now use explicit fictional weights in
+`worldConfig.internationalPolicy`, immutable completed-event snapshots, event-time
+region attribution and a current-plus-prior-two-year weighted result window.
+The actual Worlds slot reallocation uses most-recent Worlds ranks on rating ties,
+then region ID. Missing history in old saves is not invented. Dedicated acceptance
+covers configuration, archive idempotency, region changes, save/restore, aging,
+tournament weights and slot order; it is registered in calendar/scouting and full
+checks. This does not claim any real Riot coefficient values.
+
+Independent review caught two boundary cases; both are fixed. The newest Worlds
+tie-break now uses the same three-year window as ratings, and completed legacy
+events without a full event-time region snapshot are skipped rather than inferred.
+The acceptance now changes a participant region before archive, verifies legacy
+skip behavior, and proves an out-of-window Worlds result cannot change the tie.
+The acceptance is registered in both the calendar/scouting runner and full check.
+`node scripts/check.mjs`, `node scripts/ui-finance-contracts-runner.mjs`,
+`node scripts/calendar-scouting-runner.mjs`, and `git diff --check` passed before
+the first PR run. The stale buyout-shape assertions have been updated; rerun both
+failed suites and required exact-head GitHub Actions before merge.
+
+The user removed GitHub payment details while explicitly authorizing standard
+public `ubuntu-latest` Actions. Cost-driven path/draft skipping and the main-only
+light gate are removed: every PR and main push selects all required validation,
+with parallel shards and stale-run cancellation preserved. Docs-only main pushes
+also validate/build before standalone publication. `node --test
+scripts/ci-scope.test.mjs` passes locally; the full current-head Actions run is still
+required before merge. No billing, budget or paid-runner setting is changed.
+
+Cloud runtime and repository were confirmed running/connected; GitHub API access
+reports administrator permissions. Shell GitHub transport failed because the
+configured proxy port 8080 did not accept connections, so use the authenticated
+GitHub connector for branch/PR operations if that remains unavailable. No
+`.diagnostics` source was found in this checkout; do not recreate, delete or claim
+to preserve the prior machine's original diagnostics.
+
+Next connected candidates remain unfinished D04 representation/insolvency work,
+D05 purchase options/conditional transfers, then remaining D06/D07–D13 and Items
+13–23. All23 roadmap features still precede user playtest feedback and fixes;
+100-season and real mobile/TalkBack verification remain last.

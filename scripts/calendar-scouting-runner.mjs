@@ -5,6 +5,7 @@ import {ENGINE_MODULES} from './artifact-modules.mjs';
 const acceptances=[
   'calendar-depth-acceptance.mjs',
   'office-consultation-acceptance.mjs',
+  'international-coefficients-acceptance.mjs',
   'local-policy-acceptance.mjs',
   'timezone-calendar-acceptance.mjs',
   'scrim-partner-acceptance.mjs',

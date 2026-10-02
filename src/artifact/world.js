@@ -51,6 +51,11 @@ function regionCfg(id,over={}){
 function defaultWorldConfig(){return {
   regions:['KR','CN','EU','NA','AP','BR'].map(id=>regionCfg(id)),
   internationals:INTL_PRESETS.map(x=>({...x})),
+  // Fictional game balance inputs; these are not Riot scoring values.
+  internationalPolicy:{version:1,windowYears:3,weights:{
+    FIRST_STAND:1,MID_SEASON_INVITATIONAL:2,EASTERN_CUP:1,WESTERN_CUP:1,
+    WORLD_CHAMPIONSHIP:3,MASTERS:2,OPEN:1
+  },placementPoints:{champion:8,runnerUp:6,topFour:4,topEight:2,participant:1}},
   subs:1, changes:'normal', startYear:2027, manage:'manual', universalLanguage:true
 }}
 const WORLD_CHANGE_FREQUENCY=1; // Always the normal office/world evolution rate.
