@@ -871,7 +871,7 @@ const DRAFT_ORDER=[['B',0],['B',1],['B',0],['B',1],['B',0],['B',1],['P',0],['P',
 function createDraftSession(db,teamIds,rng,ctx){
   ctx=ctx||{used:[],byTeam:{}};
   const evalBase=draftPoolSnapshot(db,ctx),{champs,strengths,mn,mx,byRole}=evalBase;
-  const MS=db.metaStats||{},G=db.metaGames||0,RMS=db.regionMetaStats||{},RMG=db.regionMetaGames||{};
+  const samples=currentPatchMetaSamples(db),MS=samples.stats,G=samples.games,RMS=samples.regional,RMG=samples.regionGames;
   const vhat=teamIds.map(tid=>{const team=db.teams[tid],rid=team.region,an=Math.min(1,staffAnalysisFor(team,'meta')/100+scrimAnalysisBonus(team)),data=Math.min(1,staffAnalysisFor(team,'data')/100+scrimAnalysisBonus(team)),m={};
     const nk=tid+'|'+an,noiseCache=draftNoiseBucket(db);let NZ=noiseCache.get(nk);if(!NZ){NZ={};noiseCache.set(nk,NZ)}
     champs.forEach(c=>{if(NZ[c.id]===undefined)NZ[c.id]=((hashStr(tid+db.patch.id+c.id)%2000)/1000-1)*0.35*(1.1-an);const noise=NZ[c.id];
@@ -1796,6 +1796,7 @@ function generateRuneContentName(db,rng,spec){
 // Owns match-derived meta history, indexes, filtered queries and champion meta insights.
 
 const META_HISTORY_CACHE=new WeakMap();
+const META_PATCH_SAMPLE_INDEX_CACHE=new WeakMap(); // Official views share append-only recorded history.
 const EMPTY_META_HISTORY=[];
 const META_FILTER_CACHE_LIMIT=64, META_PATCH_SORT_LIMIT=12, PATCH_REPLAY_CACHE_LIMIT=8;
 function patchCache(db){let c=PATCH_CACHE.get(db);if(!c){c=new Map();PATCH_CACHE.set(db,c)}return c}
@@ -1834,14 +1835,14 @@ function metaHistoryIndex(db){
     if(c.length<rows.length&&c.tail===rows[c.length-1]){
       for(let i=c.length;i<rows.length;i++)metaIndexAddRow(c,rows[i]);
       c.length=rows.length;c.tail=rows[rows.length-1];
-      c.filtered.clear();c.patchSorted.clear();c.facets=null;
+      c.filtered.clear();c.patchSorted.clear();c.patchSamples.clear();c.facets=null;
       return c;
     }
   }
   // Array replacement/truncation or changed tail identity: full safe rebuild.
   c={rows,length:rows.length,tail:rows[rows.length-1],
     byPatch:new Map(),byComp:new Map(),byRegion:new Map(),
-    filtered:new Map(),patchSorted:new Map(),facets:null,
+    filtered:new Map(),patchSorted:new Map(),patchSamples:new Map(),facets:null,
     facetSets:Object.fromEntries(['comp','patch','season','split','league'].map(k=>[k,new Set()]))};
   for(const row of rows)metaIndexAddRow(c,row);
   META_HISTORY_CACHE.set(db,c);return c;
@@ -1861,6 +1862,27 @@ function metaCacheRemember(cache,key,value,limit){
   cache.set(key,value);
   if(cache.size>limit)cache.delete(cache.keys().next().value);
   return value;
+}
+function currentPatchMetaSamples(db){
+  const rowsRef=db.metaHistory||EMPTY_META_HISTORY,shared=META_PATCH_SAMPLE_INDEX_CACHE.get(rowsRef);
+  if(shared)META_HISTORY_CACHE.set(db,shared);
+  const index=metaHistoryIndex(db),patch=db.patch.id;
+  META_PATCH_SAMPLE_INDEX_CACHE.set(rowsRef,index);
+  if(index.patchSamples.has(patch))return index.patchSamples.get(patch);
+  const rows=index.byPatch.get(patch)||EMPTY_META_HISTORY,stats={},regional={},regionGames={},
+    add=(bag,cid,key)=>{if(typeof cid!=='string')return;const x=bag[cid]||(bag[cid]={p:0,w:0,b:0});x[key]++};
+  for(const row of rows){
+    for(const side of row.sides||[])for(const pick of side.picks||[]){const cid=typeof pick==='string'?pick:pick.champ;add(stats,cid,'p');if(side.win)add(stats,cid,'w')}
+    for(const cid of row.bans||[])add(stats,cid,'b');
+    for(const rid of new Set(row.regions||[])){
+      const bag=regional[rid]||(regional[rid]={});regionGames[rid]=(regionGames[rid]||0)+1;
+      for(const side of row.sides||[]){if(side.region!==rid)continue;for(const pick of side.picks||[]){const cid=typeof pick==='string'?pick:pick.champ;add(bag,cid,'p');if(side.win)add(bag,cid,'w')}}
+      for(const cid of row.bans||[])add(bag,cid,'b');
+    }
+  }
+  // Derived, bounded and never persisted. Unknown legacy patch provenance is
+  // not backfilled from the decay counters or today's team region.
+  return metaCacheRemember(index.patchSamples,patch,{patch,stats,games:rows.length,regional,regionGames},META_PATCH_SORT_LIMIT);
 }
 function metaFilterKey(filter){
   return ['region','patch','comp','season','year','split','league','scope','from','to','position'].map(k=>String(filter[k]??'')).join('|');
@@ -2242,12 +2264,12 @@ function selectionLineup(db,tid){
   return Object.fromEntries(ROLES.map(r=>[r,starterFor(db,copy,r)]));
 }
 function selectionPatchValues(db,tid,pool){
-  const t=db.teams[tid],prof=staffProfile(t),st=db.metaStats||{},regional=db.regionMetaStats?.[t.region]||{};
+  const t=db.teams[tid],samples=currentPatchMetaSamples(db),data=staffAnalysisFor(t,'data')/100,st=samples.stats,regional=samples.regional[t.region]||{};
   return Object.fromEntries(pool.champs.map(c=>{
     let v=(pool.strengths[c.id]-pool.mn)/(pool.mx-pool.mn||1);
-    for(const [sample,games,weight] of [[st[c.id],db.metaGames,.45],[regional[c.id],db.regionMetaGames?.[t.region],.75]]){
+    for(const [sample,games,weight] of [[st[c.id],samples.games,.45],[regional[c.id],samples.regionGames[t.region],.75]]){
       if(!sample||!games)continue;
-      const n=(sample.p||0)+(sample.b||0),confidence=n/(n+18*(1.35-prof.analysis/100)),wr=((sample.w||0)+2)/((sample.p||0)+4);
+      const n=(sample.p||0)+(sample.b||0),confidence=n/(n+18*(1.35-data)),wr=((sample.w||0)+2)/((sample.p||0)+4);
       v+=(clamp(.5+(wr-.5)*2+(n/games-.1)*.3,0,1)-v)*confidence*weight;
     }
     return [c.id,clamp(v+(t.metaKnowledge?.[c.id]||0)*.08-(t.metaCounter?.[c.id]||0)*.035,0,1)];
@@ -10748,13 +10770,15 @@ function draftMasteryObservation(state,observerSide,targetSide,p,cid){
   return {value,confidence,sources};
 }
 function draftMetaEvidence(state,side,cid){
-  const db=state.db,team=db.teams[state.teamIds[side]],rid=team.region,gst=(db.metaStats||{})[cid],rst=((db.regionMetaStats||{})[rid]||{})[cid],globalSample=gst?(gst.p||0)+(gst.b||0):0,regionalSample=rst?(rst.p||0)+(rst.b||0):0,study=clamp(((team.metaKnowledge||{})[cid]||0),0,1),analysis=staffAnalysisFor(team,'data'),sources=[];
-  if(regionalSample)sources.push((db.regions[rid]?.short||rid)+' 프로 표본 '+regionalSample);
-  if(globalSample)sources.push('글로벌 프로 표본 '+globalSample);
+  const db=state.db,team=db.teams[state.teamIds[side]],rid=team.region,samples=currentPatchMetaSamples(db),gst=samples.stats[cid],rst=samples.regional[rid]?.[cid],globalSample=gst?(gst.p||0)+(gst.b||0):0,regionalSample=rst?(rst.p||0)+(rst.b||0):0,study=clamp(((team.metaKnowledge||{})[cid]||0),0,1),analysis=staffAnalysisFor(team,'data'),sources=['현재 패치 '+samples.patch];
+  if(regionalSample)sources.push((db.regions[rid]?.short||rid)+' 현재 패치 프로 표본 '+regionalSample);
+  if(globalSample)sources.push('글로벌 현재 패치 프로 표본 '+globalSample);else sources.push('현재 패치 표본 없음');
+  const mixed=db.metaStats?.[cid],historicalEffectiveSample=(mixed?.p||0)+(mixed?.b||0);
+  if(historicalEffectiveSample)sources.push('누적/감쇠 참고 '+historicalEffectiveSample+' · 현재 패치 신뢰도에 미반영');
   if(study>.01)sources.push('구단 챔피언 연구 '+Math.round(study*100));
   sources.push('분석팀 '+Math.round(analysis));
   const confidence=Math.round(clamp(analysis*.55+Math.min(34,Math.sqrt(globalSample+regionalSample*1.35)*5)+(study*12),20,98));
-  return {score:Math.round(clamp(state.vhat[side]?.[cid]||0,0,1)*100),confidence,globalSample,regionalSample,teamStudy:Math.round(study*100),sources};
+  return {score:Math.round(clamp(state.vhat[side]?.[cid]||0,0,1)*100),confidence,patch:samples.patch,globalSample,regionalSample,historicalEffectiveSample,teamStudy:Math.round(study*100),sources};
 }
 function draftManagedChampionPoolEvidence(db,p,cid){
   const me=managedTeam(db),base=baseScoutKnowledge(db,p),raw=(db.scout||{})[p.id],stored=typeof raw==='number'?raw:(raw?.knowledge||0),knowledge=Math.round(clamp(Math.max(base,stored),0,98)),estimate=id=>Math.round(clamp(draftMastery(p,id)+((hashStr((me?.id||'M')+'|pool|'+p.id+'|'+id)%2001)/1000-1)*(100-knowledge)*.12,20,99)),width=Math.max(2,Math.ceil((100-knowledge)/12)),range=id=>{const v=estimate(id);return [Math.max(20,v-width),Math.min(99,v+width)]},sources=[];

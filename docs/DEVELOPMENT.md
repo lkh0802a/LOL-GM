@@ -75,8 +75,12 @@ compile-once and context isolation guards remain. No seed/budget/history removal
 Focused First Selection/patch evidence, staff registration/coverage and static
 105-module checks pass. UI-finance-contracts 38/37 isolated VMs,
 calendar-scouting 17, engine regressions and `git diff --check` also pass locally.
-Final-head full Actions including medical core/four seeds/two aggregates/verify
-remains the merge gate.
+PR #143 strengthened final head `886a674a432cafaed9dc8fff83cd7b4cc2755f24`
+passed full Actions `37066936654`, including medical core, four seed shards,
+both aggregates and final `verify`. Exact current PR head matched before
+sequential merge as `8563bffdb809add45fb7f5004bbb84cfada52629`. Standalone
+HTML rebuilt from integrated main. Both coherent implementation slices were
+delivered by the single worker; merge/HTML sync alone was not counted as a slice.
 No new long100-season, device/mobile/TalkBack QA is started.
 Review strengthened the current-sample contrast: `recordMeta` also updates own
 research, so a detached comparison view holds that prior research/counter state
