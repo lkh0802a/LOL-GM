@@ -19,7 +19,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
 
 permissions:
   contents: read
@@ -52,7 +52,6 @@ jobs:
           BEFORE_SHA: ${{ github.event.before }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          PR_DRAFT: ${{ github.event.pull_request.draft }}
         run: |
           set -euo pipefail
           if [[ "$EVENT_NAME" == "pull_request" ]]; then
@@ -72,7 +71,7 @@ jobs:
             mapfile -t changed < <(git diff-tree --no-commit-id --name-only -r "$head")
           fi
 
-          node scripts/ci-scope.mjs "$EVENT_NAME" "$PR_DRAFT" "${changed[@]}"
+          node scripts/ci-scope.mjs "$EVENT_NAME" "${changed[@]}"
 
   static-fast:
     needs: changes

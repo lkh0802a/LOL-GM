@@ -13,6 +13,7 @@ const acceptances=[
   'finance-depth-acceptance.mjs',
   'contract-duration-acceptance.mjs',
   'contract-negotiation-state-acceptance.mjs',
+  'contract-buyout-acceptance.mjs',
   'contract-window-acceptance.mjs',
   'market-reserve-acceptance.mjs',
   'owned-reserve-coach-acceptance.mjs',
@@ -53,8 +54,8 @@ assert.equal(stats.engineCompiles,1,
   'shared domain runner must compile the engine exactly once');
 assert(stats.cachedArtifacts>=ENGINE_MODULES.length,
   'shared domain runner did not cache the complete engine source');
-assert.equal(stats.contexts,31,
-  'thirty-one engine acceptances must each receive a fresh VM context');
+assert.equal(stats.contexts,32,
+  'thirty-two engine acceptances must each receive a fresh VM context');
 
 console.log('UI_FINANCE_CONTRACTS_RUNNER '+JSON.stringify({
   acceptances:rows.length,

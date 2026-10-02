@@ -1,6 +1,11 @@
 // ===== LOL GM: Player contract / FA market domain =====
 // Owns market valuation, contract terms, options, signing and AI contract/FA market behavior.
 
+function invalidContractNumericTerms(terms){
+  const values=[terms.salary,terms.years,terms.signingBonus,terms.buyout?.amount??0,terms.option?.salary??0,...Object.values(terms.bonuses||{})];
+  return values.every(Number.isFinite)?null:worldActionError('invalid_terms','유효하지 않은 계약 금액입니다');
+}
+
 function recentMarketPerformance(db,p){
   const rows=(p.career||[]).slice(-6),g=rows.reduce((a,c)=>a+(c.g||0),0);if(!g)return {games:0,rating:6.5,intl:0,titles:0};
   const rating=rows.reduce((a,c)=>a+(c.rating||6.5)*(c.g||0),0)/g,intl=rows.filter(c=>c.international).reduce((a,c)=>a+(c.g||0),0),titles=(p.careerEvents||[]).filter(e=>e.type==='title'&&e.year>=db.year-2).length;
@@ -69,6 +74,16 @@ function contractGuaranteeTermsValid(terms){
   return terms?.releaseGuaranteeRate==null||
     contractGuaranteePolicy(null).choices.includes(terms.releaseGuaranteeRate);
 }
+// Numeric buyouts in existing saves were ordinary seller asks, because the
+// old engine never distinguished a release clause from a negotiated fee.
+// Keep that meaning on read. New contracts persist the explicit clause kind.
+function normalizeBuyoutClause(value){
+  if(value==null)return null;
+  const row=typeof value==='number'?{amount:value,type:'negotiation'}:value;
+  const amount=+row.amount,type=['release','negotiation'].includes(row.type)?row.type:'negotiation';
+  return Number.isFinite(amount)&&amount>0
+    ?{amount:Math.round(amount*10)/10,type}:null;
+}
 function normalizeContractTerms(db,p,t,salary,years,terms={},opt={}){
   const duration=contractDurationPolicy(db,p,t),
     requestedYears=years==null||years===''?duration.preferred:+years;
@@ -79,7 +94,7 @@ function normalizeContractTerms(db,p,t,salary,years,terms={},opt={}){
   const bonuses={performance:Math.max(0,Math.round((terms.bonuses?.performance??0)*10)/10),title:Math.max(0,Math.round((terms.bonuses?.title??0)*10)/10),international:Math.max(0,Math.round((terms.bonuses?.international??0)*10)/10)};
   const optionType=['team','player'].includes(terms.option?.type)?terms.option.type:'none',until=db.year+years-1;
   const option=optionType==='none'?null:{type:optionType,year:until+1,salary:Math.round((terms.option?.salary??salary)*10)/10};
-  const buyout=terms.buyout==null||+terms.buyout<=0?null:Math.round(+terms.buyout*10)/10;
+  const buyout=normalizeBuyoutClause(terms.buyout);
   return {salary,years,signingBonus:sign,bonuses,buyout,option,
     releaseGuaranteeRate:opt.preserveGuarantee?contractGuaranteeRate(terms):regionalContractGuaranteeRate(db,t),
     promisedRole:SQUAD_ROLES.includes(terms.promisedRole)?terms.promisedRole:defaultPromisedRole(db,p,t)};
@@ -91,7 +106,9 @@ function offerUtility(db,p,t,offer,opt={}){
   const strength=(teamStrength(db,t.id)-db.regions[t.region].strength)/12,facilities=ensureFacilities(t),fac=(facilities.training-2)*.055+(p.age<=22?(facilities.youth-2)*.075:(facilities.recovery-2)*.018),coach=(staffProfile(t).development-55)/160,intl=teamInternationalAppeal(db,t),durationFit=contractDurationFit(db,p,t,offer.years);
   const home=db.worldConfig.universalLanguage?(p.region===t.region?.04:0):(p.region===t.region?.22:-.08),amb=p.personality.ambition/100,career=playerCareerGoal(p);
   let careerFit=0;if(career==='development')careerFit=fac+coach+(role==='prospect'||role==='competition'?.16:0);else if(career==='starter')careerFit=['core','starter'].includes(role)?.22:-.12;else if(career==='international')careerFit=intl*.18;else if(career==='titles')careerFit=Math.max(0,strength)*.16+intl*.1;else careerFit=durationFit;
-  const option=offer.option?.type==='player'?.07:offer.option?.type==='team'?-.025:0,buyout=offer.buyout?clamp(offer.buyout/Math.max(.2,playerMarketValue(db,p)),.4,4)*-.018:0;
+  const option=offer.option?.type==='player'?.07:offer.option?.type==='team'?-.025:0,
+    buyoutClause=normalizeBuyoutClause(offer.buyout),
+    buyout=buyoutClause?clamp(buyoutClause.amount/Math.max(.2,playerMarketValue(db,p)),.4,4)*-.018:0;
   const currentPenalty=opt.renewal?(p.satisfaction-50)/170+(p.managerTrust-50)/105+(p.managerRelationship-50)/190-(p.wantsOut?.4:0):0;
   // Reuse the duration utility unit per protection tier; default 50% offers
   // preserve their prior utility. Stability/development goals value security.

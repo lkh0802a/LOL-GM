@@ -1,4 +1,5 @@
 // ===== LOL GM: AI permanent-transfer personal terms =====
+function buyoutTransferError(player,fee){const c=normalizeBuyoutClause(player.contract?.buyout);return c?.type==='release'&&fee+1e-8<c.amount?worldActionError('release_clause','구단 거부 불가 바이아웃 전액이 필요합니다'):null}
 // AI uses the same personal-terms decision and actual available payroll.
 function aiTransferPersonalTerms(db,p,t,salaryRoom){
   if(!Number.isFinite(salaryRoom)||salaryRoom<0)return null;
@@ -40,7 +41,7 @@ function aiMarketPermanentTransfers(db,rng,rep,mine){
     if(contractedMoveError(db,cur))continue;
     // A reciprocal move may be refused. Never spend its hypothetical wage saving.
     const cand=activeTeams(db,t.region,1).filter(o=>o.id!==t.id&&o.id!==mine).map(o=>starterFor(db,o,role)).filter(p=>p&&p.contract&&!contractedMoveError(db,p)&&aiMarketValue(db,p,t)>playerValue(db,cur,t)+5)
-      .map(p=>({p,fee:transferFee(db,p)})).filter(x=>x.fee<=t.finance.cash*0.6)
+      .map(p=>({p,fee:sellerTransferAsk(db,p,db.teams[p.team])})).filter(x=>x.fee<=t.finance.cash*0.6)
       .map(x=>({...x,personal:aiTransferPersonalTerms(db,x.p,t,aiTransferSalaryRoom(db,t,x.fee))}))
       .filter(x=>x.personal).sort((a,b)=>aiMarketValue(db,b.p,t)-aiMarketValue(db,a.p,t))[0];
     if(!cand)continue;

@@ -24,36 +24,28 @@ test('PR scope excludes publication commits that advanced only the base',()=>{
     assert(resolve(dir).startsWith(resolve(tmpdir())+sep));rmSync(dir,{recursive:true,force:true});
   }
 });
-test('engine and unknown changes retain all required validation',()=>{
-  for(const file of ['src/artifact/club-license.js','scripts/test-harness.mjs','package.json','unknown']){
-    const s=validationScope('pull_request','false',[file]);
-    for(const key of ['run_full','run_ui','run_calendar','run_build'])assert.equal(s[key],true,file+key);
+test('every PR, including drafts, documentation and CI edits, runs all required validation',()=>{
+  for(const files of [['src/artifact/world.js'],['docs/DEVELOPMENT.md'],['.github/workflows/ci.yml','scripts/ci-scope.test.mjs'],['.github/workflows/ci.yml','scripts/ci-scope.mjs','docs/DEVELOPMENT.md']]){
+    const s=validationScope('pull_request',files);
+    assert.equal(s.docs_only,files.every(f=>f.startsWith('docs/')||!f.includes('/')&&f.endsWith('.md')));
+    for(const key of ['run_full','run_ui','run_calendar','run_build'])assert.equal(s[key],true,key);
   }
 });
-test('draft, documentation and CI orchestration avoid game simulations',()=>{
-  for(const [draft,files] of [['true',['src/artifact/world.js']],['false',['docs/DEVELOPMENT.md']],['false',['.github/workflows/ci.yml','scripts/ci-scope.test.mjs']],['false',['.github/workflows/ci.yml','scripts/ci-scope.mjs','docs/DEVELOPMENT.md']]]){
-    const s=validationScope('pull_request',draft,files);
-    for(const key of ['run_full','run_ui','run_calendar','run_build'])assert.equal(s[key],false,key);
-  }
+test('main pushes also run the full gate before standalone publication',()=>{
+  const s=validationScope('push',['src/artifact/world.js']);
+  assert.deepEqual(s,{docs_only:false,run_full:true,run_ui:true,run_calendar:true,run_build:true});
+  assert.equal(validationScope('push',['docs/DEVELOPMENT.md']).run_full,true);
 });
-test('UI selects acceptance and build; mixed engine changes broaden coverage',()=>{
-  const s=validationScope('pull_request','false',['src/artifact/ui-season.js']);
-  assert.deepEqual(s,{docs_only:false,run_full:false,run_ui:true,run_calendar:false,run_build:true});
-  assert.equal(validationScope('pull_request','false',['src/artifact/ui-season.js','src/artifact/world.js']).run_full,true);
+test('manual runs keep the complete gate and unknown diffs stay conservative',()=>{
+  assert.equal(validationScope('workflow_dispatch',['docs/a.md']).run_full,true);
+  assert.equal(validationScope('pull_request',[]).run_full,true);
 });
-test('explicit full dispatch and uncertain diffs stay conservative',()=>{
-  assert.equal(validationScope('workflow_dispatch','true',['docs/a.md']).run_full,true);
-  assert.equal(validationScope('pull_request','false',[]).run_full,true);
-});
-test('main publishes the validated merge without repeating season suites',()=>{
-  const s=validationScope('push','false',['src/artifact/world.js']);
-  assert.deepEqual(s,{docs_only:false,run_full:false,run_ui:false,run_calendar:false,run_build:true});
-  assert.equal(validationScope('push','false',['docs/DEVELOPMENT.md']).run_build,false);
-});
-test('workflow domain jobs use the selected scope rather than docs-only',()=>{
+test('workflow runs all domains regardless of paths or draft state',()=>{
   const workflow=readFileSync(new URL('../.github/workflows/ci.yml',import.meta.url),'utf8');
   for(const [job,output] of [['ui-finance-contracts','run_ui'],['calendar-scouting','run_calendar'],['perf-build','run_build'],['medical','run_full'],['daily-career-smoke','run_full']]){
     const block=workflow.match(new RegExp('^  '+job+':[\\s\\S]*?(?=^  [a-z][a-z-]*:|$(?![\\s\\S]))','m'))?.[0];
     assert(block?.includes("if: needs.changes.outputs."+output+" == 'true'"),job);
   }
+  assert(!workflow.includes('PR_DRAFT'));
+  assert(workflow.includes('converted_to_draft'));
 });

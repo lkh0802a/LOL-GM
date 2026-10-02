@@ -30,7 +30,7 @@ function mEvaluateTarget(db,pid,teamId=null){return recruitmentEvaluation(db,pid
 function mDropInterest(db,pid){return removeRecruitmentTarget(db,pid)}
 
 // ---- 구단 간 이적료 협상 ----
-function sellerTransferAsk(db,p,from){if(p.contract?.buyout)return p.contract.buyout;const base=transferFee(db,p),starter=starterFor(db,from,p.role)===p,financeNeed=from.finance.cash<0?.88:1,exit=p.wantsOut?.82:1;return Math.round(base*(starter?1.12:.96)*financeNeed*exit*10)/10}
+function sellerTransferAsk(db,p,from){const clause=normalizeBuyoutClause(p.contract?.buyout);if(clause)return clause.amount;const base=transferFee(db,p),starter=starterFor(db,from,p.role)===p,financeNeed=from.finance.cash<0?.88:1,exit=p.wantsOut?.82:1;return Math.round(base*(starter?1.12:.96)*financeNeed*exit*10)/10}
 function mTransferBid(db,pid,fee,feePlan=null){
   const t=myT(db),p=db.players[pid],from=p&&db.teams[p.team];if(!p||!from||from.id===t.id)return '이적 대상을 찾을 수 없습니다';
   const window=permanentTransferWindowError(db,p,t);if(window)return window;
@@ -40,8 +40,9 @@ function mTransferBid(db,pid,fee,feePlan=null){
   const id=negotiationId(db,pid,'transfer'),store=negotiationStore(db),ask=sellerTransferAsk(db,p,from);let neg=store[id];
   if(!neg||neg.status!=='open'){const st=startNegotiation(db,pid,'transfer',{sellerId:from.id});if(!st.ok)return st.msg;neg=st.neg;neg.stage='club';neg.clubRounds=0}
   neg.clubRounds=(neg.clubRounds||0)+1;neg.history.push({round:neg.clubRounds,stage:'club',side:'buyer',fee});
-  const acceptAt=ask*(from.finance.cash<0?.9:1);
-  if(fee-(fee-payment.upfront)*.05>=acceptAt){neg.fee=Math.round(fee*10)/10;neg.feePlan=payment.plan;neg.stage='player';neg.clubCounter=null;neg.history.push({round:neg.clubRounds,stage:'club',side:'seller',result:'accept',fee:neg.fee,feePlan:payment.plan});return from.name+'과 이적료 '+money(neg.fee)+' 합의 · 이제 '+p.name+' 측과 개인조건을 협상하세요'}
+  const clause=normalizeBuyoutClause(p.contract?.buyout),releasePrice=clause?.type==='release'&&fee+1e-8>=clause.amount,
+    acceptAt=ask*(from.finance.cash<0?.9:1),sellerAccepted=releasePrice||fee-(fee-payment.upfront)*.05>=acceptAt;
+  if(sellerAccepted){neg.fee=Math.round(fee*10)/10;neg.feePlan=payment.plan;neg.releaseClause=!!releasePrice;neg.stage='player';neg.clubCounter=null;neg.history.push({round:neg.clubRounds,stage:'club',side:'seller',result:releasePrice?'release_clause':'accept',fee:neg.fee,feePlan:payment.plan});return releasePrice?p.name+'의 구단 거부 불가 바이아웃 '+money(clause.amount)+' 충족 · 선수 동의를 협상하세요':from.name+'과 이적료 '+money(neg.fee)+' 합의 · 이제 '+p.name+' 측과 개인조건을 협상하세요'}
   if(neg.clubRounds>=3&&fee<ask*.82){neg.status='withdrawn';neg.reason='이적료 협상 결렬';return from.name+': 이적료 협상 종료'}
   neg.clubCounter=Math.round(Math.max(fee*1.06,(fee+ask)/2)*10)/10;neg.history.push({round:neg.clubRounds,stage:'club',side:'seller',result:'counter',fee:neg.clubCounter});return from.name+' 역제안: '+money(neg.clubCounter);
 }

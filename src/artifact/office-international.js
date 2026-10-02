@@ -146,12 +146,11 @@ function worldDecisions(db,rng,f,ev){
 function globalOffice(db,w,rng,f,ev){
   db.global=db.global||{decisions:[],power:{}};
   const gev=(what,why)=>{db.global.decisions=[...db.global.decisions,{year:w.year,what,why}].slice(-15);ev(`국제 e스포츠 사무국: ${what} — ${why}`)};
-  // 1) 지역 국제 경쟁력 지수 (최근 국제대회 성적, 명성 가중)
-  const score={}, cnt={};
-  for(const s of Object.values(w.seasons)){const c=db.competitions[s.comp];if(!c.international||!s.done)continue;
-    const it=db.worldConfig.internationals.find(i=>i.id===c.id)||{prestige:1};
-    for(const t of c.teams){const rid=db.teams[t].region;score[rid]=(score[rid]||0)+(0.5+elimReach(db,s,t))*(it.prestige||1);cnt[rid]=(cnt[rid]||0)+(it.prestige||1)}}
-  for(const R of Object.values(db.regions)){const v=cnt[R.id]?score[R.id]/cnt[R.id]:null;const old=db.global.power[R.id];db.global.power[R.id]=v===null?(old??R.strength/20):Math.round(((old??v)*0.5+v*0.5)*100)/100}
+  // Archive completed events once, then calculate only the configured rolling
+  // window. Event-time regions, weights and source results remain in the save.
+  recordInternationalResults(db,w);
+  const ratings=internationalRegionRatings(db,w.year);
+  for(const R of Object.values(db.regions))if(ratings[R.id]!==undefined)db.global.power[R.id]=ratings[R.id];else delete db.global.power[R.id];
   // 1-2) 월즈 총원 상한·중하위권 대회 규모: 세계 흥행에 따라 확대/축소
   const nReg=Object.keys(db.regions).length, avgHype=avg(Object.values(db.regions).map(R=>((R.metrics||[]).slice(-1)[0]||{hype:45}).hype));
   if(db.global.wcCap===undefined)db.global.wcCap=Math.max(20,Object.values(db.regions).reduce((a,R)=>a+R.slots,0));
@@ -162,7 +161,7 @@ function globalOffice(db,w,rng,f,ev){
     else if(avgHype<28&&(it.per||2)>1&&rng.chance(.1*f)){it.per=(it.per||2)-1;gev(`${it.name} 지역당 ${it.per}팀으로 축소`,`세계 흥행 부진 (평균 ${Math.round(avgHype)})`)}
   }
   // 2) 월드 진출권 재배분: 국제 성적 상위 지역 +1, 하위 지역 -1 (넉넉하게: 최소 1, 최대 5)
-  const rk=Object.values(db.regions).filter(R=>cnt[R.id]).sort((a,b)=>db.global.power[b.id]-db.global.power[a.id]);
+  const rk=Object.values(db.regions).filter(R=>ratings[R.id]!==undefined).sort((a,b)=>compareInternationalRegions(db,ratings,a,b,w.year));
   if(rk.length>=3&&rng.chance(.2*f)){
     const up=rk[0],dn=rk[rk.length-1];
     const total=()=>Object.values(db.regions).reduce((a,R)=>a+R.slots,0), cap=db.global.wcCap;

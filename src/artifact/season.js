@@ -108,9 +108,59 @@ function startInternational(db,id,start,taken=new Set()){
   db.competitions[id]={id,name:it.name,short:it.short||id,teams,rules:{fearless:true},international:true,tier:it.tier||'top',stages:intlStages(it.format,teams,it.bo)};
   const s=newSeason(db,id,w.year,`${w.seed}/${w.year}/${id}`,start,id);
   s.key=id;s.label='';s.step=w.step;w.seasons[id]=s;
+  // A region can later move or merge. Preserve the participant's event-time
+  // region on the season so archived coefficients never inherit a new region.
+  s.internationalRegionSnapshot=Object.fromEntries(teams.map(t=>[t,db.teams[t]?.region||null]));
   s.stagesInfo=db.competitions[id].stages.map(x=>x.name).join(' → ');
   news(db,`${it.name} 개막 — ${teams.length}팀 참가 (${INTL_FORMATS[it.format]||it.format})`);
   return true;
+}
+const INTERNATIONAL_POLICY_DEFAULTS={version:1,windowYears:3,weights:{
+  FIRST_STAND:1,MID_SEASON_INVITATIONAL:2,EASTERN_CUP:1,WESTERN_CUP:1,
+  WORLD_CHAMPIONSHIP:3,MASTERS:2,OPEN:1
+},placementPoints:{champion:8,runnerUp:6,topFour:4,topEight:2,participant:1}};
+function internationalPolicy(db){
+  const c=db.worldConfig.internationalPolicy||{};
+  db.worldConfig.internationalPolicy={version:1,windowYears:3,
+    weights:{...INTERNATIONAL_POLICY_DEFAULTS.weights,...(c.weights||{})},
+    placementPoints:{...INTERNATIONAL_POLICY_DEFAULTS.placementPoints,...(c.placementPoints||{})}};
+  return db.worldConfig.internationalPolicy;
+}
+function recordInternationalResults(db,w){
+  const policy=internationalPolicy(db),history=db.global.internationalResults||[],known=new Set(history.map(x=>x.eventId));
+  for(const s of Object.values(w.seasons||{})){
+    const comp=db.competitions[s.comp];if(!comp?.international||!s.done||!s.champion)continue;
+    const eventId=`${s.year}:${s.id||s.key||s.comp}`;if(known.has(eventId))continue;
+    // Older saves may contain completed events without event-time regions.
+    // Do not invent their history from today's team regions or policy.
+    if(!s.internationalRegionSnapshot||comp.teams.some(teamId=>!Object.hasOwn(s.internationalRegionSnapshot,teamId)))continue;
+    const base=placements(db,s),rankOrder=comp.teams.filter(t=>t!==s.champion&&t!==s.runnerUp)
+      .sort((a,b)=>elimReach(db,s,b)-elimReach(db,s,a)||(base.indexOf(a)-base.indexOf(b)));
+    const ordered=[...new Set([s.champion,s.runnerUp,...rankOrder])].filter(t=>comp.teams.includes(t));
+    const teams=ordered.map((teamId,i)=>({teamId,regionId:s.internationalRegionSnapshot[teamId],
+      rank:i+1,points:i===0?policy.placementPoints.champion:i===1?policy.placementPoints.runnerUp:
+        i<4?policy.placementPoints.topFour:i<8?policy.placementPoints.topEight:policy.placementPoints.participant}));
+    history.push({eventId,year:s.year,competitionId:s.comp,weight:Math.max(0,Number(policy.weights[s.comp]??1)),teams});known.add(eventId);
+  }
+  db.global.internationalResults=history;
+}
+function internationalRegionRatings(db,year){
+  const from=year-internationalPolicy(db).windowYears+1,rollup={};
+  for(const event of db.global.internationalResults||[]){if(event.year<from||event.year>year||!Number.isFinite(event.weight)||event.weight<=0)continue;
+    const regions={};for(const x of event.teams||[]){if(!x.regionId)continue;const r=regions[x.regionId]||(regions[x.regionId]={p:0,n:0});r.p+=x.points;r.n++}
+    for(const [id,r] of Object.entries(regions)){const v=rollup[id]||(rollup[id]={score:0,weight:0});
+      v.score+=event.weight*r.p/r.n/2;v.weight+=event.weight;}}
+  return Object.fromEntries(Object.entries(rollup).map(([id,v])=>[id,Math.round(v.score/v.weight*100)/100]));
+}
+function latestWorldsRank(db,id,year){
+  const from=year-internationalPolicy(db).windowYears+1;
+  const rows=(db.global.internationalResults||[]).filter(e=>e.year>=from&&e.year<=year&&['WORLD_CHAMPIONSHIP','WORLDS','World Championship'].includes(e.competitionId));
+  if(!rows.length)return Infinity;const newestYear=Math.max(...rows.map(e=>e.year)),e=rows.filter(x=>x.year===newestYear).sort((a,b)=>a.eventId.localeCompare(b.eventId)).at(-1);
+  return Math.min(...(e.teams||[]).filter(x=>x.regionId===id).map(x=>x.rank),Infinity);
+}
+function compareInternationalRegions(db,ratings,a,b,year=db.world?.year){
+  const d=(ratings[b.id]||0)-(ratings[a.id]||0);if(Math.abs(d)>1e-9)return d;
+  const w=latestWorldsRank(db,a.id,year)-latestWorldsRank(db,b.id,year);return w||a.id.localeCompare(b.id);
 }
 function activeSeasons(db){return Object.values(db.world.seasons).filter(s=>!s.done)}
 function nextDate(db){let next=null;for(const s of Object.values(db.world.seasons)){if(s.done)continue;const d=s.days[s.cur].date;if(next===null||d<next)next=d}return next}
