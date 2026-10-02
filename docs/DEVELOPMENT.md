@@ -63,8 +63,13 @@ actual draft vhat/advice/evidence, observed match learning, human/AI parity and
 save persistence. Initial evidence test read two states sharing current employee
 references after changing focus; capture evidence at each actual appointment
 boundary rather than comparing both under the same later focus. No production
-threshold or budget changed for that fixture correction. CI/head/merge evidence
-will be recorded at delivery. Long100-season/device/mobile/TalkBack QA deferred.
+threshold or budget changed for that fixture correction. Static 105 modules,
+staff contracts/registration, UI-finance-contracts 38 and calendar-scouting 17
+passed. PR #140 final head `b34d6edd5d3ce61db8242acaaff422ebfa852e0d` passed
+complete CI run `37052643677`, including medical core, four seeds, two aggregates
+and `verify`. Merged as `d07c532ed0bb5180faffee237da6c58fe21b6305`; standalone
+HTML rebuilt from integrated source. Long100-season/device/mobile/TalkBack QA
+remains deferred until feature implementation and user playtest feedback/fixes.
 
 Precise next slice (estimate 50 minutes): observed AI competition staff allocation.
 `aiReviewCompetitionStaffRegistrations` currently sorts only public raw estimate

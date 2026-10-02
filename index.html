@@ -872,12 +872,12 @@ function createDraftSession(db,teamIds,rng,ctx){
   ctx=ctx||{used:[],byTeam:{}};
   const evalBase=draftPoolSnapshot(db,ctx),{champs,strengths,mn,mx,byRole}=evalBase;
   const MS=db.metaStats||{},G=db.metaGames||0,RMS=db.regionMetaStats||{},RMG=db.regionMetaGames||{};
-  const vhat=teamIds.map(tid=>{const team=db.teams[tid],rid=team.region,an=Math.min(1,staffProfile(team).analysis/100+scrimAnalysisBonus(team)),m={};
+  const vhat=teamIds.map(tid=>{const team=db.teams[tid],rid=team.region,an=Math.min(1,staffAnalysisFor(team,'meta')/100+scrimAnalysisBonus(team)),data=Math.min(1,staffAnalysisFor(team,'data')/100+scrimAnalysisBonus(team)),m={};
     const nk=tid+'|'+an,noiseCache=draftNoiseBucket(db);let NZ=noiseCache.get(nk);if(!NZ){NZ={};noiseCache.set(nk,NZ)}
     champs.forEach(c=>{if(NZ[c.id]===undefined)NZ[c.id]=((hashStr(tid+db.patch.id+c.id)%2000)/1000-1)*0.35*(1.1-an);const noise=NZ[c.id];
       let v=clamp((strengths[c.id]-mn)/(mx-mn||1)+noise,0,1);
       const gst=MS[c.id],rst=(RMS[rid]||{})[c.id],rg=RMG[rid]||0,know=((team.metaKnowledge||{})[c.id]||0),counter=((team.metaCounter||{})[c.id]||0);
-      const observe=(base,st,g,weight)=>{if(!st||!g)return base;const n=st.p+st.b,w=n/(n+18*(1.35-an)),wr=(st.w+2)/(st.p+4),obs=clamp(0.5+(wr-0.5)*2.2+(n/g)*0.5-0.1,0,1);return base*(1-w*weight)+obs*w*weight};
+      const observe=(base,st,g,weight)=>{if(!st||!g)return base;const n=st.p+st.b,w=n/(n+18*(1.35-data)),wr=(st.w+2)/(st.p+4),obs=clamp(0.5+(wr-0.5)*2.2+(n/g)*0.5-0.1,0,1);return base*(1-w*weight)+obs*w*weight};
       v=observe(v,gst,G,.45);v=observe(v,rst,rg,.75);const prePro=c.proEligibleDate&&!championProEligible(db,c),uncertainty=prePro?(know-.5)*.12:0;m[c.id]=clamp(v+know*.08-counter*.035+uncertainty,0,1);
     });return m;
   });
@@ -937,9 +937,9 @@ function draftCandidateAnalysis(state,side,champ){
 }
 function draftStaffAdvice(state,side){
   const turn=draftTurn(state);if(!turn||turn.side!==side)return null;
-  const team=state.db.teams[state.teamIds[side]],strategic=staffByRole(team,'strategicCoach').sort((a,b)=>staffRoleAbility(b,'strategicCoach')-staffRoleAbility(a,'strategicCoach'))[0]||null,analyst=staffByRole(team,'analyst').sort((a,b)=>staffRoleAbility(b,'analyst')-staffRoleAbility(a,'analyst'))[0]||null;
+  const team=state.db.teams[state.teamIds[side]],strategic=staffByRole(team,'strategicCoach').sort((a,b)=>staffRoleAbility(b,'strategicCoach')-staffRoleAbility(a,'strategicCoach'))[0]||null,analyst=staffByRole(team,'analyst').sort((a,b)=>staffAnalysisAbility(b,'meta')-staffAnalysisAbility(a,'meta'))[0]||null;
   if(!strategic&&!analyst)return {available:false,kind:turn.kind,confidence:0,suggestions:[]};
-  const prof=staffProfile(team),quality=clamp(((strategic?staffRoleAbility(strategic,'strategicCoach'):45)+(analyst?staffRoleAbility(analyst,'analyst'):45))/200,.35,.95),legal=draftLegalChampions(state),opp=1-side,oppHist=state.ctx.byTeam[state.teamIds[opp]]||{won:[],lost:[]},mine=state.pickList[side].map(id=>state.db.patch.champions[id]).filter(Boolean);
+  const prof={...staffProfile(team),analysis:staffAnalysisFor(team,'meta')},quality=clamp(((strategic?staffRoleAbility(strategic,'strategicCoach'):45)+(analyst?staffAnalysisAbility(analyst,'meta'):45))/200,.35,.95),legal=draftLegalChampions(state),opp=1-side,oppHist=state.ctx.byTeam[state.teamIds[opp]]||{won:[],lost:[]},mine=state.pickList[side].map(id=>state.db.patch.champions[id]).filter(Boolean);
   const rows=legal.map(c=>{
     let score=0,factors={meta:Math.round((state.vhat[side][c.id]||0)*100),mastery:null,comp:null,counter:null,revealed:false};
     if(turn.kind==='P'){
@@ -1894,7 +1894,7 @@ function recordMeta(db,r){
   const mc=r.metaContext||{};
   db.metaHistory.push({date:r.date||db.worldDate,patch:r.patch||db.patch.id,comp:r.comp||r.competitionId||null,season:mc.season||null,year:mc.year||+(r.date||db.worldDate).slice(0,4),split:mc.split||null,stage:mc.stage||null,league:mc.league||null,international:!!mc.international,regions,sides:r.sides.map((s,i)=>({team:s.team?.id||null,region:s.team?.region||null,win:r.winner===i,picks:s.ps.map(x=>({champ:x.champ.id,role:x.role||null,player:x.p?.id||null,items:matchQuestItems(x).slice(),runes:(x.runes||[]).slice()}))})),bans:r.draft.bans.flat()});
   const international=regions.length>1;
-  for(const side of r.sides){const t=side.team;if(!t)continue;t.metaKnowledge=t.metaKnowledge||{};t.metaCounter=t.metaCounter||{};for(const os of r.sides){if(os===side)continue;for(const pick of os.ps){const cid=pick.champ.id,success=r.winner===r.sides.indexOf(os),novel=((db.regionMetaStats?.[t.region]||{})[cid]?.p||0)<3,analysis=.65+staffProfile(t).analysis/140,learn=(success?.055:.018)*(novel?1.6:1)*(international?1.35:1)*analysis;t.metaKnowledge[cid]=clamp((t.metaKnowledge[cid]||0)+learn,0,1);if(r.winner!==r.sides.indexOf(side))t.metaCounter[cid]=clamp((t.metaCounter[cid]||0)+.02*analysis,0,1)}}}
+  for(const side of r.sides){if(!side.team)continue;const t=db.teams[side.team.id]||side.team;t.metaKnowledge=t.metaKnowledge||{};t.metaCounter=t.metaCounter||{};for(const os of r.sides){if(os===side)continue;for(const pick of os.ps){const cid=pick.champ.id,success=r.winner===r.sides.indexOf(os),novel=((db.regionMetaStats?.[t.region]||{})[cid]?.p||0)<3,analysis=.65+staffAnalysisFor(side.team,'opponent')/140,learn=(success?.055:.018)*(novel?1.6:1)*(international?1.35:1)*analysis;t.metaKnowledge[cid]=clamp((t.metaKnowledge[cid]||0)+learn,0,1);if(r.winner!==r.sides.indexOf(side))t.metaCounter[cid]=clamp((t.metaCounter[cid]||0)+.02*analysis,0,1)}}}
 }
 function metaTableFiltered(db,filter={}){
   const rows=metaRowsFiltered(db,filter);
@@ -2280,7 +2280,7 @@ function firstSelectionEvidence(db,tid,opp,ctx={}){
     exhausted:pool.champs.length?used.size/Math.max(1,pool.champs.length):0};
 }
 function draftPrefs(db,tid,ctx,g,bestOf,rng,opp=null){
-  const t=db.teams[tid],prof=staffProfile(t),an=prof.analysis/100,noise=()=>rng.normal(0,.03*(1.1-an)),e=firstSelectionEvidence(db,tid,opp,ctx),fl=ctx.fearless?Math.min(1,(ctx.used||[]).length/40):0;
+  const t=db.teams[tid],prof=staffProfile(t),an=staffAnalysisFor(t,'meta')/100,noise=()=>rng.normal(0,.03*(1.1-an)),e=firstSelectionEvidence(db,tid,opp,ctx),fl=ctx.fearless?Math.min(1,(ctx.used||[]).length/40):0;
   return {blue:BAL.blue+noise(),red:noise(),
     first:BAL.first+e.scarcity*.09+e.contested*.05+e.flex*.025+noise(),
     last:.02+prof.draft/100*.03+e.counter*.09+e.breadth*.025+fl*e.breadth*.025+noise(),fl,evidence:e};
@@ -9596,8 +9596,14 @@ const STAFF_SECONDARY_WEIGHT=.35; // Secondary expertise supplements, rather tha
 function staffSecondaryRoles(s){return Object.keys(s.specialties||{}).filter(r=>r!==s.role&&Object.hasOwn(STAFF_ROLES,r)&&Number.isFinite(s.specialties[r])&&s.specialties[r]>0)}
 function staffSpecialtyAllocation(s){return 1/(1+STAFF_SECONDARY_WEIGHT*staffSecondaryRoles(s).length)}
 function staffRoleAbility(s,role){const raw=role===s.role?(s.rating||50):staffSecondaryRoles(s).includes(role)?s.specialties[role]*STAFF_SECONDARY_WEIGHT:0;return clamp(raw*staffSpecialtyAllocation(s),0,99)}
-function staffObservedPrimary(db,t,s){return staffObservation(db,t,s).estimate*staffSpecialtyAllocation(s)}
-function staffAggregate(ms,role){const xs=(ms||[]).filter(Boolean).map(s=>role?staffRoleAbility(s,role):s.rating||50).sort((a,b)=>b-a);if(!xs.length)return 0;const weights=[1,.28,.16,.1,.07,.05];let v=0;for(let i=0;i<xs.length;i++)v+=xs[i]*(weights[i]||.03);return clamp(v,0,99)}
+const ANALYSIS_CONTEXTS={opponent:'상대 분석',meta:'밴픽/메타',data:'데이터 분석'};
+function staffAnalysisMultiplier(s,context){return s.analysisFocus===undefined?1:s.analysisFocus===context?1.2:.75}
+function staffAnalysisAbility(s,context){return clamp(staffRoleAbility(s,'analyst')*staffAnalysisMultiplier(s,context),0,99)}
+function staffAnalysisFor(t,context){const xs=staffByRole(t,'analyst').map(s=>staffAnalysisAbility(s,context)).sort((a,b)=>b-a);return clamp(42+staffWeightedValues(xs)*.52,35,96)}
+function staffAnalysisHiringWeights(db,t){const members=teamStaffMembers(t).filter(s=>s.role==='analyst');return Object.fromEntries(Object.keys(ANALYSIS_CONTEXTS).map(k=>[k,1/(50+members.reduce((n,s)=>n+staffObservation(db,t,s).estimate*staffSpecialtyAllocation(s)*staffAnalysisMultiplier(s,k),0))]))}
+function staffObservedPrimary(db,t,s){const base=staffObservation(db,t,s).estimate*staffSpecialtyAllocation(s);if(s.role!=='analyst')return base;const weights=staffAnalysisHiringWeights(db,t),total=Object.values(weights).reduce((n,v)=>n+v,0);return base*Object.entries(weights).reduce((n,[k,v])=>n+staffAnalysisMultiplier(s,k)*v,0)/total}
+function staffWeightedValues(xs){const weights=[1,.28,.16,.1,.07,.05];return clamp(xs.reduce((n,v,i)=>n+v*(weights[i]||.03),0),0,99)}
+function staffAggregate(ms,role){return staffWeightedValues((ms||[]).filter(Boolean).map(s=>role?staffRoleAbility(s,role):s.rating||50).sort((a,b)=>b-a))}
 function staffByRole(t,role){return teamStaffMembers(t).filter(s=>s.role===role||s.specialties?.[role]>0)}
 function positionCoachRole(role){return {TOP:'topCoach',JGL:'jglCoach',MID:'midCoach',ADC:'adcCoach',SUP:'supCoach'}[role]||null}
 function roleCoachRating(t,role){const key=positionCoachRole(role);return key?staffAggregate(staffByRole(t,key),key):0}
@@ -9641,7 +9647,7 @@ function migrateLegacyStaffState(db){
 function teamStaffMembers(t,dept=null){const xs=ensureStaffRoster(t);return dept?xs.filter(s=>staffDepartment(s.role)===dept):xs}
 function staffDeptCount(t,dept){return teamStaffMembers(t,dept).length}
 function staffCanHire(t,s){const d=staffDepartment(s.role);return staffDeptCount(t,d)<(STAFF_DEPT_LIMITS[d]||0)}
-function genStaffMember(rng,role,base=60){const nm=rng.pick(NICK_A)+rng.pick(NICK_B),rating=Math.round(clamp(base+rng.normal(0,9),35,95)),secondary=rng.pick(Object.keys(STAFF_ROLES).filter(r=>r!==role));return {id:'S'+hashStr(role+nm+rng.int(0,99999)),name:nm.charAt(0).toUpperCase()+nm.slice(1),role,department:staffDepartment(role),rating,publicEstimate:Math.round(clamp(rating+rng.range(-10,10),1,100)),age:rng.int(27,52),specialties:{[secondary]:Math.round(clamp(rating+rng.normal(-8,7),25,90))},ambition:rng.int(25,85),history:[]}}
+function genStaffMember(rng,role,base=60){const nm=rng.pick(NICK_A)+rng.pick(NICK_B),rating=Math.round(clamp(base+rng.normal(0,9),35,95)),secondary=rng.pick(Object.keys(STAFF_ROLES).filter(r=>r!==role)),s={id:'S'+hashStr(role+nm+rng.int(0,99999)),name:nm.charAt(0).toUpperCase()+nm.slice(1),role,department:staffDepartment(role),rating,publicEstimate:Math.round(clamp(rating+rng.range(-10,10),1,100)),age:rng.int(27,52),specialties:{[secondary]:Math.round(clamp(rating+rng.normal(-8,7),25,90))},ambition:rng.int(25,85),history:[]};if(role==='analyst')s.analysisFocus=Object.keys(ANALYSIS_CONTEXTS)[hashStr(s.id+'|analysis-focus')%3];return s}
 function ensureTeamStaff(db,t,rng){
   const roster=ensureStaffRoster(t),base=clamp((db.regions[t.region]?.strength||62)-4,50,72),need={strategicCoach:1,developmentCoach:1,performanceCoach:1,analyst:1,scout:2};
   if(t.staffInitialized)return roster;
@@ -9868,6 +9874,7 @@ function staffStateErrors(db){
   for(const s of db.staffRetired||[]){if(ids.has(s.id)||s.contract||!s.retired)errors.push('잘못된 은퇴 스태프: '+s.id);ids.add(s.id)}
   const all=[...Object.values(db.teams).flatMap(t=>t.staffRoster||[]),...(db.staffPool||[]),...(db.staffRetired||[])];
   for(const s of all){
+    if(s.analysisFocus!==undefined&&!Object.hasOwn(ANALYSIS_CONTEXTS,s.analysisFocus))errors.push('잘못된 분석가 전문성: '+s.id);
     if(s.specialties!==undefined&&(!s.specialties||typeof s.specialties!=='object'||Array.isArray(s.specialties)||Object.entries(s.specialties).some(([r,v])=>Object.hasOwn(STAFF_ROLES,r)&&(!Number.isFinite(v)||v<0||v>100))))errors.push('잘못된 스태프 전문분야: '+s.id);
     if(s.scoutRegions!==undefined&&(!s.scoutRegions||typeof s.scoutRegions!=='object'||Array.isArray(s.scoutRegions)||Object.values(s.scoutRegions).some(r=>!r||!Number.isFinite(r.knowledge)||r.knowledge<0||r.knowledge>100||!Number.isInteger(r.observations)||r.observations<1||!Number.isInteger(r.lastYear)||r.lastDate!==null&&typeof r.lastDate!=='string')))errors.push('잘못된 스카우터 지역 경험: '+s.id);
     if(s.career!==undefined&&(!Array.isArray(s.career)||s.career.some(r=>!r||!Number.isInteger(r.year)||typeof r.seasonId!=='string'||typeof r.teamId!=='string'||!STAFF_ROLES[r.role]||!Number.isInteger(r.series)||r.series<0||!Number.isInteger(r.wins)||r.wins<0||r.wins>r.series)))errors.push('잘못된 스태프 경기 경력: '+s.id);
@@ -10710,7 +10717,7 @@ function draftMasteryObservation(state,observerSide,targetSide,p,cid){
   return {value,confidence,sources};
 }
 function draftMetaEvidence(state,side,cid){
-  const db=state.db,team=db.teams[state.teamIds[side]],rid=team.region,gst=(db.metaStats||{})[cid],rst=((db.regionMetaStats||{})[rid]||{})[cid],globalSample=gst?(gst.p||0)+(gst.b||0):0,regionalSample=rst?(rst.p||0)+(rst.b||0):0,study=clamp(((team.metaKnowledge||{})[cid]||0),0,1),analysis=staffProfile(team).analysis,sources=[];
+  const db=state.db,team=db.teams[state.teamIds[side]],rid=team.region,gst=(db.metaStats||{})[cid],rst=((db.regionMetaStats||{})[rid]||{})[cid],globalSample=gst?(gst.p||0)+(gst.b||0):0,regionalSample=rst?(rst.p||0)+(rst.b||0):0,study=clamp(((team.metaKnowledge||{})[cid]||0),0,1),analysis=staffAnalysisFor(team,'data'),sources=[];
   if(regionalSample)sources.push((db.regions[rid]?.short||rid)+' 프로 표본 '+regionalSample);
   if(globalSample)sources.push('글로벌 프로 표본 '+globalSample);
   if(study>.01)sources.push('구단 챔피언 연구 '+Math.round(study*100));
@@ -11225,7 +11232,7 @@ function staffEmploymentCard(t,s,own){
   const seen=staffObservation(DB,t,s),employer=locateStaff(DB,s.id)?.team,canOffer=!own||s.contract?.until<=DB.year;
   return `<details class="cfgcard"><summary>${esc(s.name)} · ${STAFF_ROLES[s.role]} · 추정 ${seen.min}~${seen.max}</summary>
     <p>${s.age}세 · ${employer?esc(employer.name):'자유 계약'}${s.contract?' · '+s.contract.until+'년까지 · 연봉 '+money(s.contract.salary):''}</p>
-    <p>보조 전문 분야: ${staffSecondaryRoles(s).map(r=>STAFF_ROLES[r]).join(' · ')||'없음'} · 전문분야가 많을수록 각 효과가 분산됩니다.</p>
+    <p>보조 전문 분야: ${staffSecondaryRoles(s).map(r=>STAFF_ROLES[r]).join(' · ')||'없음'} · 전문분야가 많을수록 각 효과가 분산됩니다.${s.role==='analyst'||s.specialties?.analyst>0?' · 분석 전문: '+(ANALYSIS_CONTEXTS[s.analysisFocus]||'범용'):''}</p>
     ${staffRegionalKnowledgeSummary(s)}
     ${s.retirementReview?`<p class="hint">${s.retirementReview.year}년 활동 검토 · ${staffRetirementExplanation(s.retirementReview)} (가상 엔진 판단, 은퇴 확정 예고가 아님)</p>`:''}
     ${(s.career||[]).slice(-2).map(r=>`<p class="hint">${r.year} · ${esc(DB.teams[r.teamId]?.name||r.teamId)} · 현장 ${r.series}시리즈 ${r.wins}승 (팀 결과)</p>`).join('')}
