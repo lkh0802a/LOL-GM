@@ -31,8 +31,94 @@ without continually adding new status documents.
 
 ## Current Phase
 
+### Current implementation slice — team-specific atomic preparation (2026-10-03)
 
-### Current implementation slice — observer-safe squad preparation (2026-10-03)
+Scope estimate: 50–55 minutes, one implementation worker, clean baseline
+`56a812ff1498707fa57ffbb7384a4e6c9d727ce5`, fetched origin/main agrees.
+Only historical PR #27/#28 are open. Managed runtime revision 122 is connected
+with enforced restricted networking; no runtime secrets or outbound identities.
+Git fetch and connected GitHub reads work. No AGENTS.md/competing edits found.
+Previous publication Actions `37122840373` passed required main checks.
+This implements a verified Item 21/22 connection gap, not completion of all 23.
+
+**Trigger/evidence:** `ui-roster.js::squadEditState` only keyed the shared draft
+by parent ID. Switching first team to owned reserve changed teamId but retained
+first-team starters/tactics/training. The existing binding reproduction recorded
+aggression 13 versus the reserve's real 40, and a parent MID in the reserve editor.
+The old apply committed roster movement before direct preparation writes without
+an encompassing journal. A later exception could leave partial state. Its roster
+rows were actual-membership-only, so an incoming player could not be selected
+for the destination lineup before committing the move.
+
+**Implemented:** Keep separate transient starters/tactics/training per squad;
+share organization roles and the pending roster plan. Visiting another squad
+or public opponent preserves pending edits; world/slot replacement resets them.
+Explicit buttons apply/cancel all management edits. The roster renders planned
+membership, with incoming player lineup/role/detail controls and outgoing rows
+removed from source. For example, send a first-team backup to the reserve, pick
+that player in the reserve MID selector, and commit movement plus both squads'
+coaching together. All roster, role and lineup validation precedes writing.
+`squad.preparation` is a manager-confirmation command; AI continues its existing
+shared low-level roster/lineup/role APIs rather than this UI-specific intent.
+Reserve-only coaches retain their assigned squad's coaching and cannot change
+parent preparation or internal movement. Fired managers are rejected in-domain.
+
+Source baselines include save/world date, manager, roster, role and preparation;
+stale intent requires explicit discard/re-edit rather than silently overwriting
+new game state. Preview remains pure; failed validation retains drafts. The
+scoped preparation journal composes the existing roster journal with coaching,
+all affected player histories/satisfaction and a deep cache snapshot. Late
+roster/lineup/role exceptions restore memberships, references, histories,
+preparation and market-demand cache. Unchanged starters do not add false events.
+No save format or league/balance policy changes; drafts stay outside save state.
+Tradeoff: applying includes all pending squads and shared role/movement choices,
+so an invalid edited sibling blocks the complete unit; feedback names that team.
+The explicit all-apply/all-cancel labels explain that scope. Existing immediate
+medical/registration/scrim actions keep their established separate contracts.
+
+**Files/checks:** ui-roster, ui-squad-preparation, new squad-preparation domain,
+state-rollback routing, module manifest/budget, squad-staging acceptance, actual
+observer renderer acceptance, UI reset and shared runner. Existing budgets stay
+unchanged; the new domain is bounded at 8,000 characters. Focused checks cover
+actual team/slider/training/role/destination/lineup/apply/discard bindings,
+independent drafts/public navigation, incoming/outgoing planned rows, complete
+failure rollback with identities/history/cache, stale date/membership/state,
+pure valid/invalid previews, reserve/fired authority and modern save replacement.
+Shared UI/finance/contracts passes 55 acceptances / 54 fresh contexts, one engine
+compile. Static/build checks cover 119 modules, with canonical mutation owners.
+Full exact-current-head CI, medical core + four seeds + two aggregates + verify
+must pass before sequential merge; publication main CI/HTML synchronization
+is required follow-through, separate from the implementation slice.
+
+**Preserved failures/limits:** `/tmp/squad-staging-*` contains original/rerun logs.
+The existing reserve fixture exposed a missing dirty flag for programmatic edits;
+actual value differences now count. A moved-roster injected failure exposed a
+nested market-demand-cache change; journal cloning now restores it. An initial
+journal extension exceeded the unchanged 8k rollback budget and was extracted
+into its domain owner. Local default-sandbox ci-run output probes produced no
+child stdout/stderr; the same unchanged tests pass with the supported additional
+network execution profile. Both outcomes/logs remain; no checks were weakened.
+No 100-season, device/mobile, TalkBack or final QA was started. Browser/layout
+coverage here is actual generated markup and DOM bindings, not real-device QA.
+
+**Precise next substantial slice (50–55 minutes, priority high):** manual owned
+reserve coaching versus automatic daily/offseason review. A bounded reproduction
+`/tmp/squad-staging-ai-continuation.mjs` / `.log` confirms
+`managerControlsSquad` true while `aiManageTraining` changes the parent's owned
+reserve from light/champions to high/teamwork. `calendar.js:48` invokes this daily;
+`development.js::aiManageTraining` skips only managedTeamId, as do
+`lineup.js::aiReviewDepthChart` and `player.js::rebalanceAiRosterRoles` in the
+offseason route. Reproduce real daily/offseason calls, protect authorized manual
+coaching, preserve opponent AI and parent authority over a reserve-only coach's
+economic roster, and verify deterministic causes/results, save/rollback/history.
+Inspect delegation policy first; do not invent default delegation. This existing
+engine integration issue remains after atomic UI application. Roadmap gaps take
+precedence over optional additions and final QA. No new balance proposal is
+silently implemented; major design alternatives remain proposals for the user.
+
+
+
+### Prior implementation slice — observer-safe squad preparation (2026-10-03)
 
 Scope estimate: 55 minutes, one implementation worker, clean main baseline
 `d77dc57b2dd38e36d8c673b2c34dd2ff1597812c`. Requested origin and fetched main

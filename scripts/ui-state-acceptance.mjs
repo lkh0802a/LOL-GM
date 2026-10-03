@@ -65,7 +65,7 @@ assert.equal(value("navigateTo('match')"),true);
 frames.shift()();
 assert.equal(window.scrollY,0,'stale animation frame must not move a newer screen');
 
-run("LAST={x:1};LASTSER={x:2};OPEN_P='p1';SQUAD_EDIT={x:3};MSG='error';MC.res={n:5};SSET.view='sample';PSET.team='old-team';PSET.player='old-player';PSET.opponent='old-opponent';PSET.playerSearch='old';resetUiForWorld()");
+run("LAST={x:1};LASTSER={x:2};OPEN_P='p1';SQUAD_EDIT={parentId:'old',squads:{first:{starters:{MID:'old'},tactics:{aggression:13}},reserve:{training:{intensity:'high'}}},rosterPlan:{assignments:{old:'reserve'}}};MSG='error';MC.res={n:5};SSET.view='sample';PSET.team='old-team';PSET.player='old-player';PSET.opponent='old-opponent';PSET.playerSearch='old';resetUiForWorld()");
 for(const key of ['team','player','opponent','color'])assert.equal(value('PSET.'+key),'ALL','new world retained old participant '+key);
 assert.equal(value('PSET.playerSearch'),'');
 run("PSET.color='BLUE';PSET.prepTeam='old-rival';resetUiForWorld()");
