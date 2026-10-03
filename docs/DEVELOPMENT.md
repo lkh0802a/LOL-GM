@@ -31,6 +31,76 @@ without continually adding new status documents.
 
 ## Current Phase
 
+### Current implementation slice — draft opponent information boundary (2026-10-03)
+
+Scope estimate: 55 minutes, one implementation worker, baseline main
+`2993ba34344bdacb0ab5a18bec1d1d6e5d5f33e5`. Actual clean checkout and fetched
+origin/main agree; requested origin matches. Only historical PR #27/#28 are open,
+no AGENTS.md or competing feature was found. Managed observations are current/
+connected with enforced restricted networking and no configured runtime secrets
+or outbound identities. Git fetch and connector reads work. Prior publication
+Actions `37112486250` passed fully, including standalone sync. All 23 stages are
+not declared complete.
+
+Item 22 draft observation previously read actual opposing champion mastery,
+added noise, and called it scouting. The managed ban explanation also ranked all
+hidden opponent pool keys. AI ban shortlists consulted the opponent's actual pool
+before scoring, then scored its private tactics and meta research. These paths
+now respect the observer boundary. Own mastery, tactics, meta and pick shortlist
+remain internal inputs; foreign shortlists/scoring use the observer's meta view,
+neutral unknown mastery and neutral opponent scaling preference. Existing public
+picks, feasible role alternatives, counters and series won/lost evidence remain.
+These changes can change AI bans, later picks and match outcomes; this is an
+intentional information correction, not a behavior-preserving optimization.
+No RNG algorithm, budget, finance or save schema is changed.
+
+`draftMasteryObservation` returns `known:false` for foreign numerical mastery.
+No existing saved scouting report contains a champion-mastery snapshot, so a
+knowledge counter, analyst rating, region or public pick cannot manufacture one.
+The old no-pool calculation fallback of 25 is reused uniformly for unknown
+foreign scoring; it is not presented as estimated mastery. Compatibility range
+[20,99] represents the entire legal unknown range, never a confidence interval.
+General observer/scouting/staff confidence still describes interpretation context,
+but higher knowledge never narrows unknown mastery. `draftManagedChampionPoolEvidence`
+uses dated player-attributed public champions and frequencies, not latent pool
+sorting. `ui-draft.js` explicitly shows numerical mastery as unobserved and
+public appearances as counts. Revealed series picks support interpretation but
+never create player-specific mastery or hidden role assignment.
+
+Focused `draft-observer-information-acceptance.mjs` completes all 20 legal turns
+with a manual pick and actual AI choices on both sides. At every turn, foreign
+pool getters and foreign tactic/meta proxies throw on access. First Selection,
+AI choice, candidate UI and intention explanation remain usable; own mastery
+stays exact. The finalized sequence is validated and an actual simulated match
+uses exactly its picks/bans, then produces the second public record. Checks also
+cover latent-pool invariance, pure evidence/RNG reads, public counts, full save
+restore and legacy knowledge-only reports with no fabricated champion information.
+Own-pool/manual/Fearless/patch/Bo3/Bo5 First Selection acceptance remains.
+
+Failure preserved: the first shared runner failed at First Selection's old
+assertion that increasing hidden opponent mastery must increase contested
+priority. `/tmp/draft-observer-shared.log` retains it. That expectation conflicts
+with the authorized information correction; it is replaced with an explicit
+invariance requirement when public evidence is unchanged. Focused First Selection
+and opponent intent tests pass. Intention acceptance retains staff/knowledge
+confidence effects while checking that unknown mastery does not narrow. Shared
+runner now includes 52 acceptances in 51 fresh VMs with one engine compilation;
+its rerun passes, and required exact-current-head CI must pass before merge. Local
+115-module validation, regression and save-history pass. No new long 100-season,
+real-device/mobile or TalkBack final QA was started.
+
+Precise next substantial slice (estimated 55 minutes): Item 22 saved champion
+observation signals. At actual human/AI scouting observation time, evaluate and
+persist bounded champion-specific estimates only for justified observed champion
+identities, with observer/date/source/uncertainty and ageing. Draft consumers
+must read those saved signals rather than recompute live latent skill; public
+counts remain separate and old numeric knowledge stays unknown. Connect manual/
+official/AI observation, observer isolation, stale behavior, save/legacy and
+rollback before restoring any numerical opponent mastery contribution. Do not
+invent estimates from appearance counts or expose unobserved pool membership.
+The wider 23-stage roadmap and authorized UI/engine review still precede user
+playtest feedback/fixes and final long/device QA.
+
 ### Current implementation slice — observer-safe player profile (2026-10-03)
 
 Scope estimate: 50 minutes, one implementation worker, baseline main

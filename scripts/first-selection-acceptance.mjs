@@ -29,7 +29,7 @@ await runEngineFixture(String.raw`(()=>{
   check(changed,'AI never changed actual selection across different own pools');
   const observed=firstSelectionEvidence(db,mine.id,enemy.id,ctx);
   setMastery(enemy,99);const threat=firstSelectionEvidence(db,mine.id,enemy.id,ctx);
-  check(threat.contested>observed.contested,'opponent pool did not affect contested priority');
+  check(threat.contested===observed.contested,'hidden opponent pool changed contested priority without mastery evidence');
   const player=db.players[enemy.depthChart.MID],low=firstSelectionEvidence(db,mine.id,enemy.id,ctx).roles.find(r=>r.role==='MID').confidence;
   db.scout={[player.id]:{knowledge:98}};
   const high=firstSelectionEvidence(db,mine.id,enemy.id,ctx).roles.find(r=>r.role==='MID').confidence;
