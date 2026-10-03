@@ -1,5 +1,5 @@
 import {artifactSources,runEngineFixture} from './test-harness.mjs';
-const [app,setup,season,patch,player,opponent,opponentDraft]=await artifactSources(['app.js','ui-setup.js','ui-season.js','ui-patch.js','ui-player.js','ui-opponent-report.js','ui-opponent-draft.js']);
+const [app,setup,season,patch,player,champions,opponent,opponentDraft]=await artifactSources(['app.js','ui-setup.js','ui-season.js','ui-patch.js','ui-player.js','ui-player-champions.js','ui-opponent-report.js','ui-opponent-draft.js']);
 const esc=app.match(/^const esc=.*$/m)[0];
 await runEngineFixture(String.raw`(()=>{
   const check=(x,m)=>{if(!x)throw Error('PUBLIC_INFORMATION '+m)};
@@ -31,4 +31,4 @@ await runEngineFixture(String.raw`(()=>{
   check(skillRangeText(a.skills.W,a)!==old&&skillRangeText(a.skills.W,a).includes('850'),'fictional patch displays stale source range');
   check(metaTableFiltered(db,{comp:'missing'}).every(x=>x.sample===0&&x.p===0),'empty history filter leaked unrelated data');
   console.log('CAREER_PUBLIC_INFORMATION_ACCEPTANCE: PASS (new game, manual default, relative levels, valid goals, public estimates, 692 skill labels, tiers, patch changes)');
-})();`,{setupSources:[esc,setup,season,patch,player,opponent,opponentDraft]});
+})();`,{setupSources:[esc,setup,season,patch,player,champions,opponent,opponentDraft]});

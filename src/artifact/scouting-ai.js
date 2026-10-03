@@ -93,7 +93,7 @@ function observeAiPlayer(db,t,p,gain,opt={}){
   r.uncertainty=uncertainty;
   r.snapshots.push({year:db.year,date:db.worldDate,knowledge:Math.round(r.knowledge),
     ability:r.ability,potential:r.potential,uncertainty});
-  r.snapshots=r.snapshots.slice(-8);recordScoutRegionalObservation(db,view,gain);return r;
+  r.snapshots=r.snapshots.slice(-8);recordChampionScoutObservation(db,owner,p,r,opt);recordScoutRegionalObservation(db,view,gain);return r;
 }
 function aiScoutReport(db,t,p){
   const owner=aiScoutingOwner(db,t);if(!owner)return aiPublicMarketObservation(db,p,t);
