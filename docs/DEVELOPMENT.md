@@ -46,8 +46,8 @@ Each substantial work unit uses a dotted number and a coherent 45–55-minute bo
 
 **Immediate numbered work and evidence:**
 
-- 8.1 Nexus-based match ending: implemented/local acceptance; current-head CI
-  pending. No gold-timeout winner; transparent computation guard, ordinary-match
+- 8.1 Nexus-based match ending: PR #163 passed required exact-head CI and merged;
+  publication-head main validation remains the delivery gate. No gold-timeout winner; transparent computation guard, ordinary-match
   parity, post-70 natural resolution and failure without official result.
 - 8.2 Item purchase legality: pinned unique/exclusive groups and actual writer
   checks, allowed repeated materials/consumables, recipes, slots, costs/quest/champion
@@ -161,7 +161,7 @@ Prioritize reproducible causes over adding variables for their own sake:
 
 1. Match ending: the 70-minute gold fallback is removed in this slice. Preserve
    normal tick/nexus resolution and transparent bounded unresolved failures;
-   required exact-head CI still gates delivery. Never fabricate an official winner.
+   required exact-head PR CI passed; publication validation still gates delivery. Never fabricate an official winner.
 2. Economy/combat: separate earned, unspent and spent gold; inspect actual recipe
    purchase effects and power spikes for double-counting. Compare equal gold with
    different roles/items, uneven carry allocation, casualties and scaling phases.
@@ -360,3 +360,20 @@ export/import remains the supported handoff. Hosting permission/status must be
 verified before reporting a public URL as live.
 
 Ordinary-match before/after parity: 32 seeded games retain full result/log/stats/items exactly. The first parity runner hit sandbox spawnSync git EPERM; original log preserved, baseline source then read via a shell snapshot and the read-only rerun passed. Site assembly checks verify online and downloadable game bytes equal the validated standalone. Hosting API reads are unavailable through the connector endpoint allowlist and shell gh returned Forbidden; actual Pages enablement remains to be verified in its deployment workflow.
+
+Delivery follow-through: PR #163 final head
+`de3f451ece5ca061c37d6326039cae1e2c2959a6` passed all 13 required checks in
+Actions `37131935751`, including medical core/four seeds/two aggregates and verify.
+All seven medical CI_RESULT records succeed. PR/run head, unchanged main and
+mergeability were checked before sequential merge
+`441169555e249be9c69a26a3a6e38ec1da43ae85`. Standalone HTML is rebuilt from
+integrated main. Publication-head CI and actual playable-site deployment still
+require success before reporting a live website. This slice does not complete
+item exclusive groups, coordinated counters or camp/wave modeling.
+
+Pinned static-source follow-up: the original Data Dragon mirror commit is
+confirmed in noxelisdev/LoL_DDragon at `1cf34d485c572a9894c223efd3d66c1e5ad7f22f`.
+Its en_US item.json reports version 16.19.1 and 870 cross-mode entries; it has
+no explicit exclusive-group fields. Raw file remains `/tmp/items-ddragon-16.19.1-en.json`.
+Do not treat all cross-mode entries or absent stack metadata as accepted Summoner's
+Rift restrictions. Competition-only source collection remains separate.
