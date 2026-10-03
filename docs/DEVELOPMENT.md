@@ -101,6 +101,20 @@ invent estimates from appearance counts or expose unobserved pool membership.
 The wider 23-stage roadmap and authorized UI/engine review still precede user
 playtest feedback/fixes and final long/device QA.
 
+Delivery: PR #158 head `d22704d44020295156e7481c5f07cd6a437be45f` passed
+full Actions `37115222225`, including all 13 required jobs, medical core, four
+seed shards, two aggregates and verify. Exact current head and unchanged main
+baseline were checked before sequential merge
+`d4b482c6f183668cbe9ff30bfa96b160d1bc17d2`. The full manual/AI draft acceptance,
+unknown mastery contract and revised First Selection invariance pass. The first
+local shared-runner failure remains preserved and documented. Standalone HTML
+is rebuilt from the integrated 115-module manifest and matches `dist/index.html`;
+publication CI must pass on the actual publication head. Implementation,
+acceptance and docs constitute this slice; CI/merge/HTML are follow-through.
+The next coherent 55-minute saved champion-observation slice above is the precise
+continuation; no numerical observations or calibrated estimates are claimed yet.
+Final long/device/TalkBack QA remains after all features and user playtest fixes.
+
 ### Current implementation slice — observer-safe player profile (2026-10-03)
 
 Scope estimate: 50 minutes, one implementation worker, baseline main
