@@ -115,30 +115,12 @@ function draftUiSeriesMeta(){
 function draftUiSigned(v){return (v>0?'+':'')+v}
 function draftUiEvidenceSources(xs){return (xs||[]).map(x=>`<span>${esc(x)}</span>`).join('')}
 function draftUiPoolTop(xs,scouted=false){return (xs||[]).map(x=>{const c=DRAFT_UI.state.db.patch.champions[x.champ];if(!c)return '';const v=scouted?`공개 ${x.g||0}G`:`${x.mastery}`;return `${esc(championDisplayName(c))} ${v}`}).filter(Boolean).join(' · ')}
-function draftUiAnalysisContent(){
-  if(!DRAFT_UI?.selected)return '<div class="du-analysis-empty"><b>후보 분석</b><span>챔피언을 선택하면 현재 팀 기준 평가와 정보 출처를 표시합니다.</span></div>';
-  const s=DRAFT_UI.state,turn=draftTurn(s),a=turn&&draftCandidateAnalysis(s,DRAFT_UI.playerSide,DRAFT_UI.selected),c=s.db.patch.champions[DRAFT_UI.selected];if(!a||!c)return '';
-  const roles=a.roles.map(r=>ROLE_KO[r]||r).join(' · ')||'—',meta=a.metaEvidence||{};
-  const metaBlock=`<div class="du-evidence-block"><div class="du-evidence-title"><b>메타 판단</b><span>신뢰 ${meta.confidence??'—'} · 평가 ${a.meta}</span></div><div class="du-source-chips">${draftUiEvidenceSources(meta.sources)}</div></div>`;
-  if(a.kind==='B'){
-    const targets=(a.opponentPool||[]).map(x=>`<div class="du-player-evidence"><div><b>${ROLE_KO[x.role]||x.role} · ${esc(x.player)}</b><span>선수 정보 ${x.knowledge}% · ${x.known?'숙련 추정 '+x.selectedRange.join('~'):'숙련도 수치 미관측'}</span></div><small>확인 챔프폭: ${draftUiPoolTop(x.top,true)||'표본 부족'}</small><div class="du-source-chips">${draftUiEvidenceSources(x.sources)}</div></div>`).join('');
-    return `<div class="du-analysis-head"><div><b>${esc(championDisplayName(c))}</b><span>${esc(roles)}</span></div><small>밴 후보 · 숨은 역할/실제 숙련도는 사용하지 않음</small></div><div class="du-analysis-metrics"><div><span>메타 인식</span><b>${a.meta}</b></div><div><span>초반</span><b>${a.early}/10</b></div><div><span>중반</span><b>${a.mid}/10</b></div><div><span>후반</span><b>${a.late}/10</b></div></div><div class="du-evidence-grid">${metaBlock}<div class="du-evidence-block"><div class="du-evidence-title"><b>상대 챔피언 폭</b><span>공개 라인업 + 스카우팅</span></div>${targets||'<small>확인 가능한 상대 선수 정보가 없습니다.</small>'}</div></div>`;
-  }
-  const comp=a.compositionEvidence||{},roleRows=(a.roleFits||[]).map(x=>`<div class="du-player-evidence"><div><b>${ROLE_KO[x.role]||x.role} · ${esc(x.player||'—')}</b><span>숙련 ${x.mastery}${x.pool?.rank?` · 챔프폭 ${x.pool.rank}/${x.pool.total}`:' · 비주력'}</span></div><small>상위 챔프: ${draftUiPoolTop(x.pool?.top)||'기록 없음'}</small><small>상성 기준: ${x.matchups?.length?x.matchups.map(m=>esc(m.name)).join(' · '):'상대 픽 미공개'} · ${esc(x.matchupSource||'')}</small><div class="du-source-chips"><span>${esc(x.pool?.source||'팀 내부 데이터')}</span><span>조합 ${draftUiSigned(x.comp)}</span><span>상성 ${draftUiSigned(x.counter)}</span></div></div>`).join('');
-  return `<div class="du-analysis-head"><div><b>${esc(championDisplayName(c))}</b><span>${esc(roles)}</span></div><small>우리 팀 기준 · 최종 포지션은 드래프트 종료 후 확정</small></div><div class="du-analysis-metrics"><div><span>메타 인식</span><b>${a.meta}</b></div><div><span>최고 숙련</span><b>${a.mastery}</b></div><div><span>조합 보정</span><b>${draftUiSigned(a.comp)}</b></div><div><span>상성 보정</span><b>${draftUiSigned(a.counter)}</b></div></div><div class="du-evidence-grid">${metaBlock}<div class="du-evidence-block"><div class="du-evidence-title"><b>조합 분석</b><span>${esc(comp.source||'')}</span></div><p>${(comp.reasons||[]).map(esc).join(' · ')}</p>${draftUiCompositionHistory(comp.observed)}</div><div class="du-evidence-block du-evidence-wide"><div class="du-evidence-title"><b>선수 챔피언 폭 · 상성</b><span>팀 내부 데이터 + 상대 공개 픽</span></div><div class="du-player-grid">${roleRows}</div></div></div>`;
-}
-function draftUiAnalysisPanel(){return `<aside class="du-analysis" id="du-analysis">${draftUiAnalysisContent()}</aside>`}
 function draftUiStaffAdvice(){
   if(!DRAFT_UI)return '';const a=draftStaffAdvice(DRAFT_UI.state,DRAFT_UI.playerSide);if(!a)return '';
   if(!a.available)return '<section class="du-advice"><div class="du-advice-head"><b>스태프 조언</b><span>전략 코치/분석가 없음</span></div><p>전문 스태프를 선임하면 현재 밴픽 후보에 대한 조언을 받을 수 있습니다.</p></section>';
   const staff=[a.strategic&&`전략 코치 ${esc(a.strategic.name)}`,a.analyst&&`분석가 ${esc(a.analyst.name)}`].filter(Boolean).join(' · ');
   const cards=a.suggestions.map((x,i)=>{const c=DRAFT_UI.state.db.patch.champions[x.champ],f=x.factors,why=a.kind==='P'?`메타 ${f.meta} · 숙련 ${f.mastery} · 조합 ${draftUiSigned(f.comp)} · 상성 ${draftUiSigned(f.counter)}`:`메타 ${f.meta}${f.revealed?' · 이번 시리즈 공개 정보 반영':''}`;return `<button data-du-advice="${x.champ}"><small>${i+1}순위 검토</small><b>${esc(championDisplayName(c))}</b><span>${why}</span></button>`}).join('');
   return `<section class="du-advice"><div class="du-advice-head"><b>스태프 조언</b><span>${staff} · 신뢰 ${a.confidence}</span></div><div class="du-advice-grid">${cards}</div><p>조언은 현재 공개 정보와 우리 팀 데이터만 사용하며 선택을 자동 실행하지 않습니다.</p></section>`;
-}
-function draftUiCompositionHistory(observed){
-  if(!observed)return '';
-  const rows=(observed.pairs||[]).map(x=>esc(championLabel(DRAFT_UI.state.db,x.champ))+' '+x.g+'전 '+x.w+'승').join(' · ')||'상위 동시 픽 기록 중 현재 공개 픽과 겹치는 표본 없음';
-  return `<p>이번 패치 우리 구단의 후보 출전 ${observed.sample}쪽 · 5픽 확인 ${observed.complete}쪽 · 불완전 ${observed.partial}쪽<br>${rows}</p><small>후보의 동시 픽 빈도 상위 8명과 현재 공개 픽의 교집합입니다. 미표시는 함께한 적 없음을 뜻하지 않습니다. 관측 성적은 시너지·승리 확률이나 추천 점수로 환산하지 않습니다.</small>`;
 }
 function draftUiOpponentIntent(){
   if(!DRAFT_UI)return '';const rows=draftOpponentIntent(DRAFT_UI.state,DRAFT_UI.playerSide,3);if(!rows.length)return '';
@@ -163,9 +145,11 @@ function draftUiRender(){
       <div class="du-tools"><input id="du-search" aria-label="챔피언 검색" type="search" autocomplete="off" placeholder="챔피언 검색" value="${esc(DRAFT_UI.query)}"><div class="chips">${DRAFT_UI_FILTERS.map(r=>`<button data-du-role="${r}" aria-pressed="${DRAFT_UI.filter===r}">${r==='ALL'?'전체':ROLE_KO[r]}</button>`).join('')}</div></div>
       <div class="du-mobile-tabs" role="group" aria-label="밴픽 정보">
         <button data-du-info="analysis" aria-controls="du-info-analysis" aria-pressed="${DRAFT_UI.infoTab==='analysis'}">후보 분석</button>
+        <button data-du-info="preparation" aria-controls="du-info-preparation" aria-pressed="${DRAFT_UI.infoTab==='preparation'}">후보 비교</button>
         <button data-du-info="advice" aria-controls="du-info-advice" aria-pressed="${DRAFT_UI.infoTab==='advice'}">스태프 조언</button>
         <button data-du-info="intent" aria-controls="du-info-intent" aria-pressed="${DRAFT_UI.infoTab==='intent'}">상대 의도</button>
       </div>
+      <div class="du-info-panel ${DRAFT_UI.infoTab==='preparation'?'active':''}" id="du-info-preparation" data-du-panel="preparation">${draftUiPreparationContent()}</div>
       <div class="du-info-panel ${DRAFT_UI.infoTab==='advice'?'active':''}" id="du-info-advice" data-du-panel="advice">${draftUiStaffAdvice()}</div>
       <div class="du-info-panel ${DRAFT_UI.infoTab==='intent'?'active':''}" id="du-info-intent" data-du-panel="intent">${draftUiOpponentIntent()}</div>
       <div class="du-info-panel ${DRAFT_UI.infoTab==='analysis'?'active':''}" id="du-info-analysis" data-du-panel="analysis">${draftUiAnalysisPanel()}</div>
@@ -180,11 +164,11 @@ function draftUiBind(){
   if(!DRAFT_UI)return;
   const close=$('#du-close');if(close)close.onclick=draftUiClose;
   const finish=$('#du-finish');if(finish)finish.onclick=()=>{const result=draftResult(DRAFT_UI.state),cb=DRAFT_UI.onComplete;if(cb){DRAFT_UI=null;closeUiOverlay({force:true,restoreFocus:false});cb(result)}else draftUiClose()};
-  const search=$('#du-search');if(search)search.oninput=e=>{DRAFT_UI.query=e.target.value;const box=$('#du-grid');if(box)box.innerHTML=draftUiGrid();draftUiBindGrid()};
+  const search=$('#du-search');if(search)search.oninput=e=>{DRAFT_UI.query=e.target.value;const box=$('#du-grid');if(box)box.innerHTML=draftUiGrid();draftUiBindGrid();const prep=$('#du-info-preparation');if(prep){prep.innerHTML=draftUiPreparationContent();draftUiPreparationBind()}};
   document.querySelectorAll('[data-du-role]').forEach(b=>b.onclick=()=>{DRAFT_UI.filter=b.dataset.duRole;DRAFT_UI.selected=null;draftUiRender()});
   document.querySelectorAll('[data-du-info]').forEach(b=>b.onclick=()=>{DRAFT_UI.infoTab=b.dataset.duInfo;draftUiRender()});
   document.querySelectorAll('[data-du-advice]').forEach(b=>b.onclick=()=>{DRAFT_UI.selected=b.dataset.duAdvice;DRAFT_UI.infoTab='analysis';draftUiRender()});
-  draftUiBindGrid();
+  draftUiBindGrid();draftUiPreparationBind();
   const lock=$('#du-lock');if(lock)lock.onclick=()=>draftUiLock();
 }
 function draftUiBindGrid(){
@@ -192,7 +176,14 @@ function draftUiBindGrid(){
 }
 function draftUiLock(){
   if(!DRAFT_UI||!DRAFT_UI.selected)return;const s=DRAFT_UI.state,turn=draftTurn(s);if(!turn||turn.side!==DRAFT_UI.playerSide)return;
+  const team=s.db.teams[s.teamIds[DRAFT_UI.playerSide]];
+  if(s.db.world?.fired||!team||!managerControlsSquad(s.db,team))return;
   const choice={champ:DRAFT_UI.selected,side:turn.side,source:'player'};
   const valid=draftValidateChoice(s,choice);if(!valid.ok){DRAFT_UI.selected=null;draftUiRender();return}
+  if(turn.kind==='P'){
+    const report=draftPreparationReport(s,DRAFT_UI.playerSide),row=report.rows.find(x=>x.champ===choice.champ);
+    if(!row)return;
+    choice.f=row.best.factors;choice.v=row.best.score;
+  }
   draftApplyChoice(s,choice);DRAFT_UI.selected=null;draftUiAdvanceAi();draftUiRender();
 }

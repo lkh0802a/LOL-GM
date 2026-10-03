@@ -158,6 +158,9 @@ const maintainabilityBudgets = {
   'features.js': 14000,
   'role-conversion.js': 14000,
   'draft-analysis.js': 18000,
+  'draft-preparation.js': 5000,
+  'ui-draft-preparation.js': 6000,
+  'ui-draft-analysis.js': 9000,
   'ui-patch.js': 30000,
   'ui-analysis.js': 6500,
   'analysis-tiers.js': 6500,
@@ -300,7 +303,7 @@ if(rosterIntegritySource.includes('if(db.metaHistoryPacked)')){
   failed=true;console.error('Roster integrity check must be pure: save restoration belongs to save-migration');
 }
 
-const draftUiSource = sourceOf('ui-draft.js');
+const draftUiSource = sourceOf('ui-draft.js')+'\n'+sourceOf('ui-draft-analysis.js');
 const draftShellMarkers = ['du-series-meta','du-fearless','du-last-card','du-ban-img','du-pick-img','du-mobile-tabs','safe-area-inset-bottom'];
 const draftUiMarkers = ['officialLastGameCard','draftUiSeriesMeta','draftUiFearlessStrip','draftUiAnalysisPanel','draftUiStaffAdvice','draftUiOpponentIntent','draftUiEvidenceSources','draftUiPoolTop','data-du-info','du-info-panel',"reason:'Fearless'"];
 for (const marker of draftUiMarkers) if (!draftUiSource.includes(marker)) {

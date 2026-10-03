@@ -234,7 +234,7 @@ td.fmt{font-size:12px;color:var(--mut);white-space:normal;min-width:200px}
 .du-picks{display:grid;gap:5px}.du-pick{display:grid;grid-template-columns:32px 42px 1fr;gap:7px;align-items:center;min-height:52px;border:1px solid var(--line);border-radius:7px;padding:5px 8px;overflow:hidden}.du-pick.filled{background:var(--bg)}.du-pick div{display:flex;flex-direction:column;min-width:0}.du-pick b,.du-pick small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.du-pick small{font-size:11px;color:var(--mut)}.du-role{font-size:11px;font-weight:700;color:var(--brass)}.du-pick-img,.du-pick-empty{display:block;width:42px;height:42px;border-radius:5px;object-fit:cover;background:var(--line)}
 .du-center{align-self:center;text-align:center;display:flex;flex-direction:column;gap:2px}.du-center strong{font:400 18px "Black Han Sans",sans-serif}.du-center span{font-size:11px;color:var(--mut)}
 .du-pool{background:var(--surf);border:1px solid var(--line);border-radius:12px;padding:12px}.du-tools{display:flex;gap:10px;align-items:flex-start;justify-content:space-between}.du-tools input{width:min(280px,100%);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:8px 10px}.du-tools .chips{margin:0}
-.du-mobile-tabs{display:none}.du-info-panel{display:block}
+.du-preparation{border-top:1px solid var(--line);padding:12px 0;margin:10px 0}.du-preparation summary{font-weight:700;cursor:pointer;min-height:44px;display:flex;align-items:center}.du-preparation small{display:block;line-height:1.6;overflow-wrap:anywhere}.du-preparation-scroll{max-height:34vh;margin:10px 0}.du-preparation table{width:100%;font-size:12px;table-layout:fixed}.du-preparation th:first-child{width:38%}.du-preparation td{vertical-align:top;white-space:normal}.du-preparation button{min-height:44px;text-align:left;white-space:normal;background:transparent;color:var(--ink);border:0;padding:4px 0;font-weight:600}.du-mobile-tabs{display:none}.du-info-panel{display:block}
 .du-intent{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-top:9px}.du-intent-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}.du-intent-head span,.du-intent-note{font-size:10px;color:var(--mut)}.du-intent-list{display:grid;gap:5px;margin-top:7px}.du-intent-row{display:grid;grid-template-columns:minmax(130px,.45fr) 1fr;gap:10px;align-items:center;border-top:1px solid var(--line);padding-top:5px}.du-intent-row:first-child{border-top:0;padding-top:0}.du-intent-row>div{display:flex;gap:6px;align-items:baseline;min-width:0}.du-intent-row small,.du-intent-row span,.du-intent-row p{font-size:9px;color:var(--mut)}.du-intent-row p{margin:0}.du-intent-note{display:block;margin-top:6px}
 .du-advice{background:color-mix(in srgb,var(--brass) 6%,var(--bg));border:1px solid color-mix(in srgb,var(--brass) 36%,var(--line));border-radius:9px;padding:9px 11px;margin-top:9px}.du-advice-head{display:flex;justify-content:space-between;gap:10px;align-items:baseline}.du-advice-head span,.du-advice p{font-size:10px;color:var(--mut)}.du-advice p{margin:6px 0 0}.du-advice-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:7px}.du-advice-grid button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;background:var(--surf);border:1px solid var(--line);border-radius:7px;padding:7px 8px;text-align:left;cursor:pointer}.du-advice-grid button:hover{border-color:var(--brass)}.du-advice-grid small,.du-advice-grid span{font-size:9px;color:var(--mut)}.du-advice-grid b{font-size:12px}
 .du-evidence-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:7px}.du-evidence-block{border:1px solid var(--line);border-radius:7px;padding:7px 8px;min-width:0}.du-evidence-wide{grid-column:1/-1}.du-evidence-title{display:flex;justify-content:space-between;gap:8px;align-items:baseline}.du-evidence-title span,.du-evidence-block>small,.du-evidence-block p{font-size:9px;color:var(--mut)}.du-evidence-block p{margin:5px 0 0}.du-source-chips{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}.du-source-chips span{font-size:9px;color:var(--mut);border:1px solid var(--line);border-radius:10px;padding:2px 5px}.du-player-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin-top:5px}.du-player-evidence{border-top:1px solid var(--line);padding-top:5px;min-width:0}.du-player-evidence:first-child{border-top:0}.du-player-evidence>div:first-child{display:flex;justify-content:space-between;gap:8px}.du-player-evidence span,.du-player-evidence small{font-size:9px;color:var(--mut)}.du-player-evidence>small{display:block;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -243,7 +243,7 @@ td.fmt{font-size:12px;color:var(--mut);white-space:normal;min-width:200px}
 .du-champ{position:relative;min-height:118px;text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:0;cursor:pointer;overflow:hidden}.du-champ-img{display:block;width:100%;aspect-ratio:1/1;object-fit:cover;background:var(--line)}.du-champ-meta{display:block;padding:6px 7px 7px}.du-champ b,.du-champ small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.du-champ small{font-size:10px;color:var(--mut);margin-top:2px}.du-champ em{position:absolute;inset:5px 5px auto auto;font-style:normal;font-size:9px;color:var(--ink);background:color-mix(in srgb,var(--bg) 82%,transparent);border-radius:4px;padding:2px 4px}.du-champ.sel{border-color:var(--brass);box-shadow:inset 0 0 0 2px var(--brass)}.du-champ:disabled{opacity:.38;cursor:default}.du-champ:disabled .du-champ-img{filter:grayscale(1) brightness(.55)}
 .du-lock{position:sticky;bottom:0;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--surf);border-top:1px solid var(--line);padding:10px 0 0}.du-lock>div{display:flex;flex-direction:column;min-width:0}.du-lock small{color:var(--mut);font-size:11px}.du-series-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}.du-series-meta>div{display:flex;flex-direction:column;background:var(--surf);border:1px solid var(--line);border-radius:9px;padding:9px 11px}.du-series-meta small{font-size:10px;color:var(--mut);letter-spacing:.05em}.du-series-meta strong{font-size:18px}.du-series-meta span{font-size:10px;color:var(--mut);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.du-fearless{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 8px;margin-bottom:8px;overflow:hidden}.du-fearless>b{font-size:10px;white-space:nowrap;color:var(--brass)}.du-fearless>div{display:flex;gap:3px;overflow-x:auto}.du-fearless-img{width:28px;height:28px;object-fit:cover;border-radius:4px;filter:grayscale(.7) brightness(.68);flex:none}.du-choice-wrap{max-width:760px}.du-last-card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:10px 0}.du-last-head{display:flex;align-items:center;gap:12px;margin-bottom:8px}.du-last-head span,.du-last-head small{color:var(--mut);font-size:12px}.du-last-head b{margin-left:auto}.du-last-team{display:grid;grid-template-columns:52px 1fr 28px;gap:8px;align-items:center;padding:4px 0}.du-last-team.win>b,.du-last-team.win>span{color:var(--brass)}.du-last-picks{display:flex;gap:4px}.du-last-pick{width:30px;height:30px;border-radius:4px;object-fit:cover}.du-last-team>span{font-size:10px;color:var(--mut);text-align:right}.du-choice-card{background:var(--surf);border:1px solid var(--line);border-radius:12px;padding:22px}.du-choice-card>small{color:var(--brass);font-weight:700}.du-choice-card h3{margin:6px 0 4px}.du-choice-card p{color:var(--mut);margin:0 0 16px}.du-choice-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.du-choice{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:16px;text-align:left;cursor:pointer}.du-choice:hover{border-color:var(--brass)}.du-choice b,.du-choice span{display:block}.du-choice span{font-size:11px;color:var(--mut);margin-top:3px}@media(max-width:520px){.du-choice-grid{grid-template-columns:1fr}.du-choice-card{padding:14px}.du-last{gap:7px}}
 .du-done{text-align:center;background:var(--surf);border:1px solid var(--line);border-radius:12px;padding:24px}.du-done p{color:var(--mut)}
-@media (max-width:760px){.du-wrap{padding-left:10px;padding-right:10px;padding-bottom:calc(86px + env(safe-area-inset-bottom,0px))}.du-mobile-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;position:sticky;top:56px;z-index:1;background:var(--surf);padding:7px 0 2px}.du-mobile-tabs button{min-height:40px;border:1px solid var(--line);border-radius:7px;background:var(--bg);font-size:11px;font-weight:700;cursor:pointer}.du-mobile-tabs button[aria-pressed="true"]{border-color:var(--brass);box-shadow:inset 0 0 0 1px var(--brass)}.du-info-panel{display:none}.du-info-panel.active{display:block}.du-evidence-grid,.du-player-grid{grid-template-columns:1fr}.du-evidence-wide{grid-column:auto}.du-player-evidence>div:first-child{align-items:flex-start;flex-direction:column}.du-intent-head{align-items:flex-start;flex-direction:column}.du-intent-row{grid-template-columns:1fr}.du-advice-head{align-items:flex-start;flex-direction:column}.du-advice-grid{grid-template-columns:1fr}.du-analysis-empty,.du-analysis-head{align-items:flex-start;flex-direction:column}.du-analysis-metrics{grid-template-columns:repeat(2,1fr)}.du-board{grid-template-columns:1fr 52px 1fr;gap:5px}.du-side{padding:7px}.du-team h3{font-size:14px}.du-team>b{display:none}.du-bans{gap:2px}.du-bans span{font-size:0;min-height:21px}.du-bans span.filled{font-size:8px}.du-pick{grid-template-columns:24px 34px minmax(0,1fr);padding:4px;min-height:42px}.du-pick-img,.du-pick-empty{width:34px;height:34px}.du-pick small{display:none}.du-center strong{font-size:13px}.du-center span{font-size:9px}.du-tools{display:block}.du-tools input{width:100%;min-height:42px;margin-bottom:8px}.du-tools .chips{display:flex;overflow-x:auto;flex-wrap:nowrap;padding-bottom:2px}.du-tools .chips button{min-height:38px;flex:none}.du-grid{grid-template-columns:repeat(3,minmax(0,1fr));max-height:42vh}.du-champ{min-height:44px;padding:0}.du-champ-meta{padding:4px 5px}.du-champ small{display:none}.du-lock{align-items:flex-end;bottom:0;margin:0 -2px;padding:9px 2px calc(8px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 12px color-mix(in srgb,var(--bg) 82%,transparent)}.du-lock .primary{flex:none;min-height:44px;padding:9px 12px}}
+@media (max-width:760px){.du-wrap{padding-left:10px;padding-right:10px;padding-bottom:calc(86px + env(safe-area-inset-bottom,0px))}.du-mobile-tabs{display:grid;grid-template-columns:repeat(2,1fr);gap:4px;position:sticky;top:56px;z-index:1;background:var(--surf);padding:7px 0 2px}.du-mobile-tabs button{min-height:40px;border:1px solid var(--line);border-radius:7px;background:var(--bg);font-size:11px;font-weight:700;cursor:pointer}.du-mobile-tabs button[aria-pressed="true"]{border-color:var(--brass);box-shadow:inset 0 0 0 1px var(--brass)}.du-info-panel{display:none}.du-info-panel.active{display:block}.du-evidence-grid,.du-player-grid{grid-template-columns:1fr}.du-evidence-wide{grid-column:auto}.du-player-evidence>div:first-child{align-items:flex-start;flex-direction:column}.du-intent-head{align-items:flex-start;flex-direction:column}.du-intent-row{grid-template-columns:1fr}.du-advice-head{align-items:flex-start;flex-direction:column}.du-advice-grid{grid-template-columns:1fr}.du-analysis-empty,.du-analysis-head{align-items:flex-start;flex-direction:column}.du-analysis-metrics{grid-template-columns:repeat(2,1fr)}.du-board{grid-template-columns:1fr 52px 1fr;gap:5px}.du-side{padding:7px}.du-team h3{font-size:14px}.du-team>b{display:none}.du-bans{gap:2px}.du-bans span{font-size:0;min-height:21px}.du-bans span.filled{font-size:8px}.du-pick{grid-template-columns:24px 34px minmax(0,1fr);padding:4px;min-height:42px}.du-pick-img,.du-pick-empty{width:34px;height:34px}.du-pick small{display:none}.du-center strong{font-size:13px}.du-center span{font-size:9px}.du-tools{display:block}.du-tools input{width:100%;min-height:42px;margin-bottom:8px}.du-tools .chips{display:flex;overflow-x:auto;flex-wrap:nowrap;padding-bottom:2px}.du-tools .chips button{min-height:38px;flex:none}.du-grid{grid-template-columns:repeat(3,minmax(0,1fr));max-height:42vh}.du-champ{min-height:44px;padding:0}.du-champ-meta{padding:4px 5px}.du-champ small{display:none}.du-lock{align-items:flex-end;bottom:0;margin:0 -2px;padding:9px 2px calc(8px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 12px color-mix(in srgb,var(--bg) 82%,transparent)}.du-lock .primary{flex:none;min-height:44px;padding:9px 12px}}
 @media (max-width:520px){.du-board{grid-template-columns:1fr 1fr;gap:5px}.du-center{grid-column:1/-1;grid-row:1;flex-direction:row;justify-content:center;align-items:center;gap:8px;min-height:28px}.du-side{grid-row:2}.du-series-meta{grid-template-columns:1fr}.du-last-team{grid-template-columns:44px 1fr 24px}.du-last-pick{width:26px;height:26px}.du-choice{min-height:58px}.du-choice-card{padding:14px}.du-pool{padding:9px}.du-grid{gap:5px}.du-champ em{inset:3px 3px auto auto}.du-analysis,.du-advice,.du-intent{margin-top:6px}}
 @media (max-width:390px){.du-center span{display:inline}.du-role{font-size:9px}.du-team h3{font-size:12px}.du-pick{grid-template-columns:20px 30px minmax(0,1fr)}.du-pick-img,.du-pick-empty{width:30px;height:30px}.du-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:340px){.du-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -11500,6 +11500,39 @@ function draftOpponentIntent(state,observerSide,limit=3){
   });
 }
 
+/* ==== FILE: draft-preparation.js ==== */
+// Read the real live pick context; never create a speculative opponent session.
+// This is an explanation consumer of draftPickValue, not another selection policy.
+function draftPreparationReport(state,side,{role=null}={}){
+  const base={allowed:false,reason:'no-authority',rows:[]};
+  if(!state||![0,1].includes(side))return base;
+  const db=state.db,team=db.teams[state.teamIds[side]];
+  if(db.world?.fired||!team||team.active===false||!managerControlsSquad(db,team))return base;
+  const turn=draftTurn(state);
+  if(!turn)return {...base,allowed:true,reason:'complete'};
+  if(turn.side!==side)return {...base,allowed:true,reason:'other-turn'};
+  if(turn.kind!=='P')return {...base,allowed:true,reason:'ban-turn'};
+  if(role!==null&&!ROLES.includes(role))return {...base,allowed:true,reason:'invalid-role'};
+  // Use the session's actual lineup (including official registration view),
+  // without starterFor repairs or private opponent player access.
+  const ids=new Set();
+  for(const r of ROLES){const p=state.roster[side]?.[r];
+    if(!p||db.players[p.id]!==p||!(team.roster||[]).includes(p.id)||ids.has(p.id))return {...base,allowed:true,reason:'missing-lineup'};
+    ids.add(p.id);
+  }
+  const mine=state.pickList[side].map(id=>db.patch.champions[id]).filter(Boolean),rows=[];
+  for(const c of draftLegalChampions(state,role)){
+    const fits=draftFeasibleRoles(state,side,c.id).filter(r=>!role||r===role).map(r=>{
+      const factors=draftPickValue(state,side,r,c.id,mine),player=state.roster[side][r];
+      return {role:r,player:player.id,factors,score:factors.total,opponentPicks:draftRolePossibilities(state,1-side,r)};
+    }).sort((a,b)=>b.score-a.score||ROLES.indexOf(a.role)-ROLES.indexOf(b.role));
+    if(fits.length)rows.push({champ:c.id,best:fits[0],fits});
+  }
+  rows.sort((a,b)=>b.best.score-a.best.score||a.champ.localeCompare(b.champ));
+  return {...base,allowed:true,reason:null,rows,cursor:state.cursor,patch:db.patch.id,
+    practice:!!state.ctx.practice,ownPicks:state.pickList[side].slice(),opponentPicks:state.pickList[1-side].slice()};
+}
+
 /* ==== FILE: analysis-tiers.js ==== */
 // Descriptive tiers reuse established labels and actual draft evaluation.
 // No new draft coefficient, game state, observation or random draw is created.
@@ -13227,30 +13260,12 @@ function draftUiSeriesMeta(){
 function draftUiSigned(v){return (v>0?'+':'')+v}
 function draftUiEvidenceSources(xs){return (xs||[]).map(x=>`<span>${esc(x)}</span>`).join('')}
 function draftUiPoolTop(xs,scouted=false){return (xs||[]).map(x=>{const c=DRAFT_UI.state.db.patch.champions[x.champ];if(!c)return '';const v=scouted?`공개 ${x.g||0}G`:`${x.mastery}`;return `${esc(championDisplayName(c))} ${v}`}).filter(Boolean).join(' · ')}
-function draftUiAnalysisContent(){
-  if(!DRAFT_UI?.selected)return '<div class="du-analysis-empty"><b>후보 분석</b><span>챔피언을 선택하면 현재 팀 기준 평가와 정보 출처를 표시합니다.</span></div>';
-  const s=DRAFT_UI.state,turn=draftTurn(s),a=turn&&draftCandidateAnalysis(s,DRAFT_UI.playerSide,DRAFT_UI.selected),c=s.db.patch.champions[DRAFT_UI.selected];if(!a||!c)return '';
-  const roles=a.roles.map(r=>ROLE_KO[r]||r).join(' · ')||'—',meta=a.metaEvidence||{};
-  const metaBlock=`<div class="du-evidence-block"><div class="du-evidence-title"><b>메타 판단</b><span>신뢰 ${meta.confidence??'—'} · 평가 ${a.meta}</span></div><div class="du-source-chips">${draftUiEvidenceSources(meta.sources)}</div></div>`;
-  if(a.kind==='B'){
-    const targets=(a.opponentPool||[]).map(x=>`<div class="du-player-evidence"><div><b>${ROLE_KO[x.role]||x.role} · ${esc(x.player)}</b><span>선수 정보 ${x.knowledge}% · ${x.known?'숙련 추정 '+x.selectedRange.join('~'):'숙련도 수치 미관측'}</span></div><small>확인 챔프폭: ${draftUiPoolTop(x.top,true)||'표본 부족'}</small><div class="du-source-chips">${draftUiEvidenceSources(x.sources)}</div></div>`).join('');
-    return `<div class="du-analysis-head"><div><b>${esc(championDisplayName(c))}</b><span>${esc(roles)}</span></div><small>밴 후보 · 숨은 역할/실제 숙련도는 사용하지 않음</small></div><div class="du-analysis-metrics"><div><span>메타 인식</span><b>${a.meta}</b></div><div><span>초반</span><b>${a.early}/10</b></div><div><span>중반</span><b>${a.mid}/10</b></div><div><span>후반</span><b>${a.late}/10</b></div></div><div class="du-evidence-grid">${metaBlock}<div class="du-evidence-block"><div class="du-evidence-title"><b>상대 챔피언 폭</b><span>공개 라인업 + 스카우팅</span></div>${targets||'<small>확인 가능한 상대 선수 정보가 없습니다.</small>'}</div></div>`;
-  }
-  const comp=a.compositionEvidence||{},roleRows=(a.roleFits||[]).map(x=>`<div class="du-player-evidence"><div><b>${ROLE_KO[x.role]||x.role} · ${esc(x.player||'—')}</b><span>숙련 ${x.mastery}${x.pool?.rank?` · 챔프폭 ${x.pool.rank}/${x.pool.total}`:' · 비주력'}</span></div><small>상위 챔프: ${draftUiPoolTop(x.pool?.top)||'기록 없음'}</small><small>상성 기준: ${x.matchups?.length?x.matchups.map(m=>esc(m.name)).join(' · '):'상대 픽 미공개'} · ${esc(x.matchupSource||'')}</small><div class="du-source-chips"><span>${esc(x.pool?.source||'팀 내부 데이터')}</span><span>조합 ${draftUiSigned(x.comp)}</span><span>상성 ${draftUiSigned(x.counter)}</span></div></div>`).join('');
-  return `<div class="du-analysis-head"><div><b>${esc(championDisplayName(c))}</b><span>${esc(roles)}</span></div><small>우리 팀 기준 · 최종 포지션은 드래프트 종료 후 확정</small></div><div class="du-analysis-metrics"><div><span>메타 인식</span><b>${a.meta}</b></div><div><span>최고 숙련</span><b>${a.mastery}</b></div><div><span>조합 보정</span><b>${draftUiSigned(a.comp)}</b></div><div><span>상성 보정</span><b>${draftUiSigned(a.counter)}</b></div></div><div class="du-evidence-grid">${metaBlock}<div class="du-evidence-block"><div class="du-evidence-title"><b>조합 분석</b><span>${esc(comp.source||'')}</span></div><p>${(comp.reasons||[]).map(esc).join(' · ')}</p>${draftUiCompositionHistory(comp.observed)}</div><div class="du-evidence-block du-evidence-wide"><div class="du-evidence-title"><b>선수 챔피언 폭 · 상성</b><span>팀 내부 데이터 + 상대 공개 픽</span></div><div class="du-player-grid">${roleRows}</div></div></div>`;
-}
-function draftUiAnalysisPanel(){return `<aside class="du-analysis" id="du-analysis">${draftUiAnalysisContent()}</aside>`}
 function draftUiStaffAdvice(){
   if(!DRAFT_UI)return '';const a=draftStaffAdvice(DRAFT_UI.state,DRAFT_UI.playerSide);if(!a)return '';
   if(!a.available)return '<section class="du-advice"><div class="du-advice-head"><b>스태프 조언</b><span>전략 코치/분석가 없음</span></div><p>전문 스태프를 선임하면 현재 밴픽 후보에 대한 조언을 받을 수 있습니다.</p></section>';
   const staff=[a.strategic&&`전략 코치 ${esc(a.strategic.name)}`,a.analyst&&`분석가 ${esc(a.analyst.name)}`].filter(Boolean).join(' · ');
   const cards=a.suggestions.map((x,i)=>{const c=DRAFT_UI.state.db.patch.champions[x.champ],f=x.factors,why=a.kind==='P'?`메타 ${f.meta} · 숙련 ${f.mastery} · 조합 ${draftUiSigned(f.comp)} · 상성 ${draftUiSigned(f.counter)}`:`메타 ${f.meta}${f.revealed?' · 이번 시리즈 공개 정보 반영':''}`;return `<button data-du-advice="${x.champ}"><small>${i+1}순위 검토</small><b>${esc(championDisplayName(c))}</b><span>${why}</span></button>`}).join('');
   return `<section class="du-advice"><div class="du-advice-head"><b>스태프 조언</b><span>${staff} · 신뢰 ${a.confidence}</span></div><div class="du-advice-grid">${cards}</div><p>조언은 현재 공개 정보와 우리 팀 데이터만 사용하며 선택을 자동 실행하지 않습니다.</p></section>`;
-}
-function draftUiCompositionHistory(observed){
-  if(!observed)return '';
-  const rows=(observed.pairs||[]).map(x=>esc(championLabel(DRAFT_UI.state.db,x.champ))+' '+x.g+'전 '+x.w+'승').join(' · ')||'상위 동시 픽 기록 중 현재 공개 픽과 겹치는 표본 없음';
-  return `<p>이번 패치 우리 구단의 후보 출전 ${observed.sample}쪽 · 5픽 확인 ${observed.complete}쪽 · 불완전 ${observed.partial}쪽<br>${rows}</p><small>후보의 동시 픽 빈도 상위 8명과 현재 공개 픽의 교집합입니다. 미표시는 함께한 적 없음을 뜻하지 않습니다. 관측 성적은 시너지·승리 확률이나 추천 점수로 환산하지 않습니다.</small>`;
 }
 function draftUiOpponentIntent(){
   if(!DRAFT_UI)return '';const rows=draftOpponentIntent(DRAFT_UI.state,DRAFT_UI.playerSide,3);if(!rows.length)return '';
@@ -13275,9 +13290,11 @@ function draftUiRender(){
       <div class="du-tools"><input id="du-search" aria-label="챔피언 검색" type="search" autocomplete="off" placeholder="챔피언 검색" value="${esc(DRAFT_UI.query)}"><div class="chips">${DRAFT_UI_FILTERS.map(r=>`<button data-du-role="${r}" aria-pressed="${DRAFT_UI.filter===r}">${r==='ALL'?'전체':ROLE_KO[r]}</button>`).join('')}</div></div>
       <div class="du-mobile-tabs" role="group" aria-label="밴픽 정보">
         <button data-du-info="analysis" aria-controls="du-info-analysis" aria-pressed="${DRAFT_UI.infoTab==='analysis'}">후보 분석</button>
+        <button data-du-info="preparation" aria-controls="du-info-preparation" aria-pressed="${DRAFT_UI.infoTab==='preparation'}">후보 비교</button>
         <button data-du-info="advice" aria-controls="du-info-advice" aria-pressed="${DRAFT_UI.infoTab==='advice'}">스태프 조언</button>
         <button data-du-info="intent" aria-controls="du-info-intent" aria-pressed="${DRAFT_UI.infoTab==='intent'}">상대 의도</button>
       </div>
+      <div class="du-info-panel ${DRAFT_UI.infoTab==='preparation'?'active':''}" id="du-info-preparation" data-du-panel="preparation">${draftUiPreparationContent()}</div>
       <div class="du-info-panel ${DRAFT_UI.infoTab==='advice'?'active':''}" id="du-info-advice" data-du-panel="advice">${draftUiStaffAdvice()}</div>
       <div class="du-info-panel ${DRAFT_UI.infoTab==='intent'?'active':''}" id="du-info-intent" data-du-panel="intent">${draftUiOpponentIntent()}</div>
       <div class="du-info-panel ${DRAFT_UI.infoTab==='analysis'?'active':''}" id="du-info-analysis" data-du-panel="analysis">${draftUiAnalysisPanel()}</div>
@@ -13292,11 +13309,11 @@ function draftUiBind(){
   if(!DRAFT_UI)return;
   const close=$('#du-close');if(close)close.onclick=draftUiClose;
   const finish=$('#du-finish');if(finish)finish.onclick=()=>{const result=draftResult(DRAFT_UI.state),cb=DRAFT_UI.onComplete;if(cb){DRAFT_UI=null;closeUiOverlay({force:true,restoreFocus:false});cb(result)}else draftUiClose()};
-  const search=$('#du-search');if(search)search.oninput=e=>{DRAFT_UI.query=e.target.value;const box=$('#du-grid');if(box)box.innerHTML=draftUiGrid();draftUiBindGrid()};
+  const search=$('#du-search');if(search)search.oninput=e=>{DRAFT_UI.query=e.target.value;const box=$('#du-grid');if(box)box.innerHTML=draftUiGrid();draftUiBindGrid();const prep=$('#du-info-preparation');if(prep){prep.innerHTML=draftUiPreparationContent();draftUiPreparationBind()}};
   document.querySelectorAll('[data-du-role]').forEach(b=>b.onclick=()=>{DRAFT_UI.filter=b.dataset.duRole;DRAFT_UI.selected=null;draftUiRender()});
   document.querySelectorAll('[data-du-info]').forEach(b=>b.onclick=()=>{DRAFT_UI.infoTab=b.dataset.duInfo;draftUiRender()});
   document.querySelectorAll('[data-du-advice]').forEach(b=>b.onclick=()=>{DRAFT_UI.selected=b.dataset.duAdvice;DRAFT_UI.infoTab='analysis';draftUiRender()});
-  draftUiBindGrid();
+  draftUiBindGrid();draftUiPreparationBind();
   const lock=$('#du-lock');if(lock)lock.onclick=()=>draftUiLock();
 }
 function draftUiBindGrid(){
@@ -13304,9 +13321,71 @@ function draftUiBindGrid(){
 }
 function draftUiLock(){
   if(!DRAFT_UI||!DRAFT_UI.selected)return;const s=DRAFT_UI.state,turn=draftTurn(s);if(!turn||turn.side!==DRAFT_UI.playerSide)return;
+  const team=s.db.teams[s.teamIds[DRAFT_UI.playerSide]];
+  if(s.db.world?.fired||!team||!managerControlsSquad(s.db,team))return;
   const choice={champ:DRAFT_UI.selected,side:turn.side,source:'player'};
   const valid=draftValidateChoice(s,choice);if(!valid.ok){DRAFT_UI.selected=null;draftUiRender();return}
+  if(turn.kind==='P'){
+    const report=draftPreparationReport(s,DRAFT_UI.playerSide),row=report.rows.find(x=>x.champ===choice.champ);
+    if(!row)return;
+    choice.f=row.best.factors;choice.v=row.best.score;
+  }
   draftApplyChoice(s,choice);DRAFT_UI.selected=null;draftUiAdvanceAi();draftUiRender();
+}
+
+/* ==== FILE: ui-draft-analysis.js ==== */
+// Candidate detail presentation; shared rules and evidence remain engine-owned.
+function draftUiAnalysisContent(){
+  if(!DRAFT_UI?.selected)return '<div class="du-analysis-empty"><b>후보 분석</b><span>챔피언을 선택하면 현재 팀 기준 평가와 정보 출처를 표시합니다.</span></div>';
+  const s=DRAFT_UI.state,turn=draftTurn(s),a=turn&&draftCandidateAnalysis(s,DRAFT_UI.playerSide,DRAFT_UI.selected),c=s.db.patch.champions[DRAFT_UI.selected];if(!a||!c)return '';
+  const roles=a.roles.map(r=>ROLE_KO[r]||r).join(' · ')||'—',meta=a.metaEvidence||{};
+  const metaBlock=`<div class="du-evidence-block"><div class="du-evidence-title"><b>메타 판단</b><span>신뢰 ${meta.confidence??'—'} · 평가 ${a.meta}</span></div><div class="du-source-chips">${draftUiEvidenceSources(meta.sources)}</div></div>`;
+  if(a.kind==='B'){
+    const targets=(a.opponentPool||[]).map(x=>`<div class="du-player-evidence"><div><b>${ROLE_KO[x.role]||x.role} · ${esc(x.player)}</b><span>선수 정보 ${x.knowledge}% · ${x.known?'숙련 추정 '+x.selectedRange.join('~'):'숙련도 수치 미관측'}</span></div><small>확인 챔프폭: ${draftUiPoolTop(x.top,true)||'표본 부족'}</small><div class="du-source-chips">${draftUiEvidenceSources(x.sources)}</div></div>`).join('');
+    return `<div class="du-analysis-head"><div><b>${esc(championDisplayName(c))}</b><span>${esc(roles)}</span></div><small>밴 후보 · 숨은 역할/실제 숙련도는 사용하지 않음</small></div><div class="du-analysis-metrics"><div><span>메타 인식</span><b>${a.meta}</b></div><div><span>초반</span><b>${a.early}/10</b></div><div><span>중반</span><b>${a.mid}/10</b></div><div><span>후반</span><b>${a.late}/10</b></div></div><div class="du-evidence-grid">${metaBlock}<div class="du-evidence-block"><div class="du-evidence-title"><b>상대 챔피언 폭</b><span>공개 라인업 + 스카우팅</span></div>${targets||'<small>확인 가능한 상대 선수 정보가 없습니다.</small>'}</div></div>`;
+  }
+  const comp=a.compositionEvidence||{},roleRows=(a.roleFits||[]).map(x=>`<div class="du-player-evidence"><div><b>${ROLE_KO[x.role]||x.role} · ${esc(x.player||'—')}</b><span>숙련 ${x.mastery}${x.pool?.rank?` · 챔프폭 ${x.pool.rank}/${x.pool.total}`:' · 비주력'}</span></div><small>상위 챔프: ${draftUiPoolTop(x.pool?.top)||'기록 없음'}</small><small>상성 기준: ${x.matchups?.length?x.matchups.map(m=>esc(m.name)).join(' · '):'상대 픽 미공개'} · ${esc(x.matchupSource||'')}</small><div class="du-source-chips"><span>${esc(x.pool?.source||'팀 내부 데이터')}</span><span>조합 ${draftUiSigned(x.comp)}</span><span>상성 ${draftUiSigned(x.counter)}</span></div></div>`).join('');
+  return `<div class="du-analysis-head"><div><b>${esc(championDisplayName(c))}</b><span>${esc(roles)}</span></div><small>우리 팀 기준 · 최종 포지션은 드래프트 종료 후 확정</small></div><div class="du-analysis-metrics"><div><span>메타 인식</span><b>${a.meta}</b></div><div><span>최고 숙련</span><b>${a.mastery}</b></div><div><span>조합 보정</span><b>${draftUiSigned(a.comp)}</b></div><div><span>상성 보정</span><b>${draftUiSigned(a.counter)}</b></div></div><div class="du-evidence-grid">${metaBlock}<div class="du-evidence-block"><div class="du-evidence-title"><b>조합 분석</b><span>${esc(comp.source||'')}</span></div><p>${(comp.reasons||[]).map(esc).join(' · ')}</p>${draftUiCompositionHistory(comp.observed)}</div><div class="du-evidence-block du-evidence-wide"><div class="du-evidence-title"><b>선수 챔피언 폭 · 상성</b><span>팀 내부 데이터 + 상대 공개 픽</span></div><div class="du-player-grid">${roleRows}</div></div></div>`;
+}
+function draftUiAnalysisPanel(){return `<aside class="du-analysis" id="du-analysis">${draftUiAnalysisContent()}</aside>`}
+function draftUiCompositionHistory(observed){
+  if(!observed)return '';
+  const rows=(observed.pairs||[]).map(x=>esc(championLabel(DRAFT_UI.state.db,x.champ))+' '+x.g+'전 '+x.w+'승').join(' · ')||'상위 동시 픽 기록 중 현재 공개 픽과 겹치는 표본 없음';
+  return `<p>이번 패치 우리 구단의 후보 출전 ${observed.sample}쪽 · 5픽 확인 ${observed.complete}쪽 · 불완전 ${observed.partial}쪽<br>${rows}</p><small>후보의 동시 픽 빈도 상위 8명과 현재 공개 픽의 교집합입니다. 미표시는 함께한 적 없음을 뜻하지 않습니다. 관측 성적은 시너지·승리 확률이나 추천 점수로 환산하지 않습니다.</small>`;
+}
+
+/* ==== FILE: ui-draft-preparation.js ==== */
+// Live draft presentation owns no lineup, score coefficient or purchase/match writer.
+function draftUiPreparationContent(){
+  if(!DRAFT_UI)return '';
+  const s=DRAFT_UI.state,report=draftPreparationReport(s,DRAFT_UI.playerSide,{role:DRAFT_UI.filter==='ALL'?null:DRAFT_UI.filter}),
+    reasons={'no-authority':'이 구단의 내부 후보 비교를 볼 권한이 없습니다.',complete:'밴픽이 끝났습니다.',
+      'other-turn':'우리 팀의 픽 차례에 후보를 비교할 수 있습니다.','ban-turn':'픽 단계에서 현재 조합에 맞는 후보를 비교합니다.',
+      'invalid-role':'유효한 포지션을 선택하세요.','missing-lineup':'현재 밴픽의 우리 선수 배치를 확인할 수 없습니다.'};
+  if(report.reason)return `<section class="du-preparation"><b>현재 조합 후보 비교</b><p>${reasons[report.reason]}</p></section>`;
+  const rows=report.rows.filter(x=>draftUiMatch(s.db.patch.champions[x.champ])),visible=rows.slice(0,12),
+    labels=xs=>xs.map(id=>esc(championLabel(s.db,id))).join(' · ')||'아직 공개된 픽 없음';
+  return `<details class="du-preparation" id="du-preparation-details" ${DRAFT_UI.infoTab==='preparation'||DRAFT_UI.preparationOpen?'open':''}><summary>현재 조합 후보 비교 · ${rows.length}명</summary>
+    <p>${report.practice?'연습':'공식'} · 패치 ${esc(report.patch)}<br>우리 픽: ${labels(report.ownPicks)}<br>상대 공개 픽: ${labels(report.opponentPicks)}</p>
+    <small>기존 밴픽 효용의 높은 순서입니다. 승리 확률이나 스태프 추천이 아니며 AI의 후보 제한·선택 변동은 반영하지 않습니다. 역할은 가능한 배치이고 최종 확정이 아닙니다. 검색·포지션 조건 중 상위 12명을 표시합니다.</small>
+    <div class="scroll du-preparation-scroll"><table><thead><tr><th>후보 · 가능 배치</th><th>밴픽 효용 · 실제 기여</th></tr></thead><tbody>${visible.map(x=>{
+      const f=x.best.factors,points=v=>draftUiSigned(Math.round(v*1000)/10);
+      return `<tr><td><button data-du-preparation="${esc(x.champ)}">${esc(championLabel(s.db,x.champ))}</button><small>${x.fits.map(y=>ROLE_KO[y.role]).join(' · ')}<br>비교 기준: ${ROLE_KO[x.best.role]}</small></td>
+        <td><b>${(x.best.score*100).toFixed(1)}</b><small>메타 ${points(f.meta)} · 숙련 ${points(f.mastery)}<br>조합 ${points(f.comp)} · 상성 ${points(f.counter)}<br>플렉스 ${points(f.flex)} · 시리즈 ${points(f.series)}<br>상성 입력: ${labels(x.best.opponentPicks)}</small></td></tr>`;
+    }).join('')}</tbody></table></div>${rows.length?'':'<p role="status">검색·포지션 조건에 맞는 합법적인 픽 후보가 없습니다.</p>'}
+    <small>후보를 누르면 기존 상세 분석을 엽니다. 픽 확정을 눌러야 선택이 반영됩니다. 상대 비공개 숙련·전술은 사용하지 않습니다.</small></details>`;
+}
+function draftUiPreparationSelect(champ){
+  if(!DRAFT_UI)return false;
+  const s=DRAFT_UI.state,report=draftPreparationReport(s,DRAFT_UI.playerSide,{role:DRAFT_UI.filter==='ALL'?null:DRAFT_UI.filter});
+  if(report.reason||!report.rows.some(x=>x.champ===champ)||!draftValidateChoice(s,{champ,side:DRAFT_UI.playerSide}).ok)return false;
+  DRAFT_UI.selected=champ;DRAFT_UI.infoTab='analysis';draftUiRender();
+  const panel=$('#du-analysis');if(panel){panel.tabIndex=-1;panel.focus()}
+  return true;
+}
+function draftUiPreparationBind(){
+  const details=$('#du-preparation-details');if(details)details.ontoggle=()=>{if(DRAFT_UI)DRAFT_UI.preparationOpen=details.open};
+  document.querySelectorAll('[data-du-preparation]').forEach(b=>b.onclick=()=>draftUiPreparationSelect(b.dataset.duPreparation));
 }
 
 /* ==== FILE: ui-season.js ==== */
@@ -13551,7 +13630,7 @@ function uiOverlayFocusables(root){
 function uiOverlayFocusKey(el){
   if(!el)return null;
   if(el.id)return {id:el.id};
-  const keys=['duChamp','duRole','duInfo','duAdvice','choiceKind','choiceValue'];
+  const keys=['duChamp','duRole','duInfo','duAdvice','duPreparation','choiceKind','choiceValue'];
   const data=keys.filter(k=>el.dataset?.[k]!==undefined).map(k=>[k,el.dataset[k]]);
   return data.length?{data}:null;
 }

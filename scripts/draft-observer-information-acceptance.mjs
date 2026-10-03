@@ -33,4 +33,4 @@ await runEngineFixture(String.raw`(()=>{
  const copy=unpackDB(packDB(db));check(JSON.stringify(draftManagedChampionPoolEvidence(copy,copy.players[p.id],cid))===JSON.stringify(draftManagedChampionPoolEvidence(db,p,cid)),'save changes public pool');
  const empty=unpackDB(packDB(db));empty.metaHistory=[];empty.scout={[p.id]:98};const legacy=draftManagedChampionPoolEvidence(empty,empty.players[p.id],cid);check(!legacy.top.length&&!legacy.known&&legacy.selectedRange[0]===20&&legacy.selectedRange[1]===99,'legacy counter reveals pool or mastery');
  console.log('DRAFT_OBSERVER_INFORMATION_ACCEPTANCE PASS full 20-turn manual/AI draft, opponent pool/tactics/meta traps, own mastery, latent invariance, unknown/legacy/public/save, actual played match');
-})();`,{timeout:60000,setupSources:["let DRAFT_UI;const esc=x=>String(x).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');",await artifactSource('ui-draft.js')]});
+})();`,{timeout:60000,setupSources:["let DRAFT_UI;const esc=x=>String(x).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');",await artifactSource('ui-draft.js'),await artifactSource('ui-draft-analysis.js')]});

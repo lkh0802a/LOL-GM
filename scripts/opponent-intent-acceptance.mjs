@@ -66,4 +66,4 @@ await runEngineFixture(String.raw`(()=>{
  const entered=createDraftSession(seriesOfficialView(db,session),[a.id,b.id],new RNG('intent-field'),ctx);entered.log=state.log;
  check(draftOpponentIntent(entered,0,20).some((x,i)=>x.confidence>absent[i].confidence),'registered opponent analyst did not reach official interpretation');
  console.log('OPPONENT_INTENT_ACCEPTANCE '+JSON.stringify({legalTurns:state.cursor,bothObservers:true,foreignReportIsolation:true,specialty:true,boundedScouting:true,publicSeries:true,currentPatch:true,pure:true,save:true,registeredStaff:true}));
-})();`,{setupSources:["let DRAFT_UI=null;const esc=x=>String(x).replaceAll('&','&amp;').replaceAll('<','&lt;');",await artifactSource('ui-draft.js')]});
+})();`,{setupSources:["let DRAFT_UI=null;const esc=x=>String(x).replaceAll('&','&amp;').replaceAll('<','&lt;');",await artifactSource('ui-draft.js'),await artifactSource('ui-draft-analysis.js')]});

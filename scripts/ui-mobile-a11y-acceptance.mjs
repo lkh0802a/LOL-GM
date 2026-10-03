@@ -131,7 +131,7 @@ assert(contrast(darkBg,darkFg)>=4.5,'dark primary text/background contrast below
   assert(html.includes('aria-label="테스트 챔피언 · 미드"'));
   assert(draft.includes("x.setAttribute('aria-pressed',String(x===b))"),
     'selecting another champion must update the ARIA pressed state');
-  for(const kind of ['analysis','advice','intent'])
+  for(const kind of ['analysis','preparation','advice','intent'])
     assert(draft.includes('aria-controls="du-info-'+kind+'"')&&draft.includes('id="du-info-'+kind+'"'));
   assert(draft.includes('role="status" aria-live="polite"'),'draft turn changes need an accessible status');
 }
