@@ -150,7 +150,7 @@ function draftStaffAdvice(state,side){
   return {available:true,kind:turn.kind,confidence:Math.round(clamp((prof.draft+prof.analysis)/2,0,99)),strategic:strategic?{name:strategic.name,rating:strategic.rating}:null,analyst:analyst?{name:analyst.name,rating:analyst.rating}:null,suggestions:rows};
 }
 function draftShortlist(state,side,role,observerSide=side){
-  const k=observerSide+'|'+side+role;if(!state.shortlists[k]){const p=state.roster[side][role];state.shortlists[k]=state.byRole[role].map(c=>({c,q:state.vhat[observerSide][c.id]*0.35+(observerSide===side?draftMastery(p,c.id):25)/200})).sort((a,b)=>b.q-a.q).map(x=>x.c)}
+  const k=observerSide+'|'+side+role;if(!state.shortlists[k]){const p=state.roster[side][role];state.shortlists[k]=state.byRole[role].map(c=>({c,q:state.vhat[observerSide][c.id]*0.35+draftMasteryObservation(state,observerSide,side,p,c.id).value/200})).sort((a,b)=>b.q-a.q).map(x=>x.c)}
   return state.shortlists[k].filter(c=>!state.taken.has(c.id)).slice(0,10);
 }
 function draftValidateChoice(state,choice){

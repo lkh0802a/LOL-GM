@@ -5,7 +5,8 @@
 function draftMasteryObservation(state,observerSide,targetSide,p,cid){
   if(!p)return {value:25,known:false,range:[20,99],confidence:0,sources:['선수 정보 없음']};
   if(observerSide===targetSide)return {value:draftMastery(p,cid),known:true,range:null,confidence:100,sources:['구단 내부 훈련·스크림 데이터']};
-  const db=state.db,observer=db.teams[state.teamIds[observerSide]],target=db.teams[state.teamIds[targetSide]],managed=managedTeamId(db)===observer?.id;
+  const db=state.db,observer=db.teams[state.teamIds[observerSide]],target=db.teams[state.teamIds[targetSide]],managed=managedTeamId(db)===observer?.id,signal=championScoutObservation(db,observer,p,cid);
+  if(signal.known)return signal;
   if(managed){
     const base=baseScoutKnowledge(db,p),raw=(db.scout||{})[p.id],stored=typeof raw==='number'?raw:(raw?.knowledge||0),knowledge=Math.round(clamp(Math.max(base,stored),0,98));
     const sources=['숙련도 수치 미관측 · 공개 출전은 숙련도와 다름'];
@@ -36,10 +37,10 @@ function draftMetaEvidence(state,side,cid){
 function draftManagedChampionPoolEvidence(db,p,cid){
   const raw=(db.scout||{})[p.id],stored=typeof raw==='number'?raw:raw?.knowledge||0,
     knowledge=Math.round(clamp(Math.max(baseScoutKnowledge(db,p),stored),0,98)),publicPool=publicPlayerChampions(db,p),selected=publicPool.champions.find(x=>x.id===cid),
-    sources=['숙련도 수치 미관측 · 공개 출전은 숙련도와 다름'];
+    signal=championScoutObservation(db,managedTeam(db),p,cid),sources=[...signal.sources];
   if(selected)sources.push('선수 ID로 확인한 공개 출전 '+selected.g+'G');
-  if(typeof raw==='object'&&raw?.observations)sources.push('선수 관찰 '+raw.observations+'회 · 챔피언 숙련 수치 없음');
-  return {knowledge,known:false,selectedRange:[20,99],appearances:selected?.g||0,top:publicPool.champions.slice(0,4).map(x=>({champ:x.id,g:x.g,range:[20,99]})),sources,lastSeenDate:typeof raw==='object'?raw?.lastSeenDate||null:null};
+  if(typeof raw==='object'&&raw?.observations)sources.push('선수 관찰 '+raw.observations+'회');
+  return {knowledge,known:signal.known,selectedRange:signal.range,appearances:selected?.g||0,top:publicPool.champions.slice(0,4).map(x=>({champ:x.id,g:x.g,range:[20,99]})),sources,lastSeenDate:signal.date||(typeof raw==='object'?raw?.lastSeenDate||null:null)};
 }
 function draftOwnChampionPoolEvidence(state,side,role,cid){
   const p=state.roster[side][role];if(!p)return null;const rows=Object.entries(p.pool||{}).map(([id,v])=>({champ:id,mastery:Math.round(v.mastery||25)})).sort((a,b)=>b.mastery-a.mastery),idx=rows.findIndex(x=>x.champ===cid);

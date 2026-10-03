@@ -143,6 +143,7 @@ const maintainabilityBudgets = {
   'contract-transfer-market.js': 6500,
   'scouting.js': 14000,
   'scouting-ai.js': 10000,
+  'scouting-champions.js': 5500,
   'scouting-ai-ops.js': 7000,
   'scouting-ai-reassessment.js': 5000,
   'transfer.js': 26000,

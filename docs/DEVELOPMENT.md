@@ -31,7 +31,97 @@ without continually adding new status documents.
 
 ## Current Phase
 
-### Current implementation slice — draft opponent information boundary (2026-10-03)
+
+### Current implementation slice — saved champion scouting signals (2026-10-03)
+
+Scope estimate: 55 minutes, one worker, clean main baseline
+`51568f1b0d5b54c53b0ec5f3c6c08fa3356e7f92`. Fetched origin/main agrees;
+only historical PR #27/#28 are open. Current managed runtime is connected,
+restricted networking is enforced, no runtime secrets or outbound identities
+are configured; Git fetch and GitHub connector reads work. No AGENTS.md or
+competing implementation was found. All 23 stages are not declared complete.
+
+**Roadmap gap, now connected:** Item 22 previously correctly withheld numerical
+opponent mastery, but actual human/AI observation still did not persist a
+champion-specific signal for the draft to use. `scouting-champions.js` now writes
+observer/player/champion/date/source/competition/public-evidence provenance,
+knowledge, estimate and uncertainty inside the existing scouting report. Human
+paid scouting and real AI finance-backed operations reuse their existing actual
+observation hooks; finalized official days reuse `scoutFromDay`/`scoutAiFromDay`.
+Only publicly player-attributed, dated champion identities are eligible. Paid
+investigation can revisit those identities; official observation uses identities
+that actually appeared on the current day. Hidden pool keys are never enumerated;
+absent numerical mastery is not synthesized. Founding dossiers and legacy
+knowledge counters do not create champion observations.
+
+The signal reuses D03's bounded uncertainty model and club/player hash noise,
+adding champion/date/observation identity without consuming the seeded match RNG.
+This is fictional scouting evidence, not statistical probability or real Riot
+policy. Observation-time writers can sample latent mastery; every reader consumes
+only the saved signal. A player training from 70 to 25 after a visit therefore
+leaves the old report unchanged until an actual new investigation. A two-year-old
+report retains its center, widens its radius by 1.25 per elapsed 365-day year and
+loses eight confidence points per year, using D03's existing ageing rates. The
+range is bounded 20–99 and uncertainty never disappears. Numerical estimates
+restore a deliberate opponent-draft/shortlist contribution; this is a realism
+connection, not an output-parity performance optimization.
+
+Human reports are attributed to the actual managed club; AI reports belong to
+that club's parent scouting department. An AI reserve shares that department,
+unrelated clubs remain isolated, and a fired manager cannot read the human report.
+Missing, legacy, future, malformed or incorrectly attributed records remain
+unknown, with the prior `[20,99]` range and neutral scoring fallback. Validation
+is fail-closed at consumption; malformed optional evidence is retained rather
+than deleting history or rejecting an otherwise supported save. World v15/save
+format 2 persist the additive report fields without a format bump.
+
+**Player-facing connection:** Ban evidence and opponent-intent analysis use saved
+ranges with dated sources. The player report summary and public champion table
+show saved mastery estimates separately from public appearance counts, including
+an old-observation label. Public counts never become mastery and unobserved
+champion identities remain absent. Existing controls and meaningful choices are
+retained. No gameplay fees, league rules or private preparation values were added.
+
+Changed files: `scouting-champions.js`, human/AI scouting writers, draft observation
+and shortlist consumers, draft/player UI, manifest and new-module budget,
+`champion-scout-observation-acceptance.mjs`, shared acceptance registration, this
+guide and D03 documentation. The new module has its own bounded 5,500-character
+budget; no existing budget is raised.
+
+Focused acceptance passes actual paid human and real AI operations, independent
+observer reports and parent-reserve sharing, hidden-key exclusion, live pool
+getter traps in human/AI draft, saved shortlist/First Selection access, player/ban
+UI, modern save round trips, invalid/future/legacy unknown behavior, ageing and
+reobservation. Late human batch failure restores original nested snapshot/map/
+report identities together with cash/staff expertise; late real AI payment failure
+restores reports, operations and finance. Actual scheduled series followed by the
+production finalized-day hook creates human and AI official champion records.
+Local shared UI/finance/contract runner passes 53 acceptances/52 isolated contexts;
+calendar/scouting passes 17/17, regression passes, static check/build passes all
+116 artifact modules. Initial fixture syntax and wrong `draftPickValue` argument
+errors are fixed; original and rerun logs remain under `/tmp/champion-scout-*`.
+The final fixture also checks actual AI draft choice against its saved report.
+Required CI still must pass on the exact final PR head before sequential merge;
+standalone HTML is rebuilt again after integration and publication CI is checked.
+No 100-season, real-device/mobile or TalkBack final QA was started.
+
+**Limits and precise next substantial slice (55 minutes):** Item 21/22 squad-view
+observer privacy. Actual `ui-roster.js::viewSquad` still reads and renders foreign
+`t.tactics` and `t.training` in disabled controls, sorts foreign players by latent
+`playerOvr`, and displays raw `playerMarketValue` rather than the established
+observer value. Reproduce those paths with foreign property getter traps, then
+render observer-safe roster ranking/value and public preparation context. Guard
+private squad training/tactics, practice and internal readiness panels at the
+current manager/owned-reserve authority boundary; preserve public schedule,
+roster, official registration and meaningful manager edits. Verify fired/parent/
+reserve boundaries, renderer purity, supported saves and action bindings in
+focused UI fixtures. Broader medical/finance disclosure policies need source
+review rather than silently redesigning settled rules. This evidence is an
+unfinished roadmap gap, not a new optional balance policy. The 23-stage roadmap
+and authorized bounded refinement continue before user playtest and final QA.
+
+
+### Prior implementation slice — draft opponent information boundary (2026-10-03)
 
 Scope estimate: 55 minutes, one implementation worker, baseline main
 `2993ba34344bdacb0ab5a18bec1d1d6e5d5f33e5`. Actual clean checkout and fetched
