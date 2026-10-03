@@ -79,7 +79,7 @@ function officeDecisions(db,rng,f,ev,mid){
       if(R.system!=='franchise') add('franchise',(45-H)/15+0.1,()=>{R.system='franchise';return '프랜차이즈 전환 (강등 폐지)'},`스폰서 안정성 확보 (흥행 ${hypeLabel(H)})`);
       if(R.system!=='mixed') add('mixed',(0.55-B)*1.2+(H-45)/30,()=>{R.system='mixed';markFranchised(db,R);return '혼합 리그 전환 — 팬덤 상위 절반은 프랜차이즈 보호, 나머지는 승강 경쟁'},`인기 구단의 안정성과 하위권 경쟁을 함께 확보`);
       if(!R.div2) add('div2',(H-50)/15+faDepth*0.5+(n>=10?0.3:0)-0.2,()=>{createDiv2(db,rng,R);return R.system==='franchise'?`${divName(R)} 창설 — 구단별 2군 참가`:`${divName(R)} 창설 — 승강 연결`},`유망주 육성 무대 필요 (FA 인재 ${faDepth.toFixed(1)}명/팀)`);
-      else add('div2',(32-H)/12-0.2,()=>{abolishDiv2(db,R);return `${divName(R)} 폐지`},`흥행 부진으로 운영비 절감`);
+      else if(!R.tier2Required) add('div2',(32-H)/12-0.2,()=>{abolishDiv2(db,R);return `${divName(R)} 폐지`},`흥행 부진으로 운영비 절감`);
       // 재정 규정은 하드캡이 아니라 상위 5명 기준의 완만한 균형지출 제도로만 진화한다.
       const pays=activeTeams(db,R.id,1).map(t=>topFivePayroll(db,t)).sort((a,b)=>a-b),med=pays[Math.floor(pays.length/2)]||1,disp=(pays[pays.length-1]||1)/Math.max(.1,pays[0]||.1);
       const cashes=activeTeams(db,R.id,1).map(t=>t.finance.cash),neg=cashes.filter(c=>c<0).length/Math.max(1,cashes.length),ps=psOf(db,R.id),rc=v=>Math.round(v);

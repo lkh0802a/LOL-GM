@@ -6,27 +6,30 @@ function worldSimulationSeed(db){return db.world?.seed||WORLD_GENERATION_SEED}
 function genTactics(rng){return {aggression:rng.int(35,80),risk_tolerance:rng.int(30,75),objective_priority:rng.int(45,80),vision_investment:rng.int(45,80),scaling_preference:rng.int(30,75)}}
 const PHILOSOPHIES=['win-now','youth','balanced','superstar','cost'];
 const PHIL_KO={'win-now':'즉시 전력','youth':'유망주 육성','balanced':'균형','superstar':'스타 영입','cost':'효율 중시'};
-const SPLIT_NAME={1:'윈터',2:'스프링',3:'서머'};
+const SPLIT_NAME={1:'스플릿 1',2:'스플릿 2',3:'스플릿 3'};
+function splitName(region,split){return region.splitNames?.[split]||SPLIT_NAME[split]||('스플릿 '+split)}
 // Scheduling periods and season-result aggregation are separate rules.
 const SPLIT_STANDINGS_MODES={independent:'스플릿별 독립',cumulative:'정규시즌 전적 누적',points:'챔피언십 포인트 누적'};
 // ---------- 지역 프리셋 / 월드 설정 ----------
-// 실제 LoL e스포츠 구조를 본뜬 기본 리그 (리그 수준·시장 규모는 고정, 구조만 편집 가능)
+// Fictional competition ecosystem: familiar three-letter top-tier abbreviations.
+// BR/LA persist as identity keys; new careers model South America and Central America/Caribbean.
+// They are geographic eligibility regions, not country-by-country nationality records.
 const REGION_PRESETS = {
-  KR:{name:'한국',leagueName:'LCK',short:'LCK',strength:75,templates:true,tier:'major',d:{teams:12,splits:3,format:'rr_de',playoffTake:6,div2:true,system:'franchise',slots:4}},
-  CN:{name:'중국',leagueName:'LPL',short:'LPL',strength:74,tier:'major',d:{teams:16,splits:3,format:'groups_po',playoffTake:8,div2:true,system:'franchise',slots:4}},
-  EU:{name:'유럽',leagueName:'LEC',short:'LEC',strength:71,tier:'major',d:{teams:12,splits:3,format:'rr_de',playoffTake:8,system:'franchise',slots:3}},
-  NA:{name:'북미',leagueName:'LCS',short:'LCS',strength:68,tier:'major',d:{teams:10,splits:3,format:'rr_de',playoffTake:6,system:'franchise',slots:3}},
-  AP:{name:'아시아태평양',leagueName:'LCP',short:'LCP',strength:67,tier:'major',d:{teams:12,splits:3,format:'rr_po',playoffTake:6,system:'mixed',slots:3}},
-  BR:{name:'브라질',leagueName:'CBLOL',short:'CBLOL',strength:65,tier:'major',d:{teams:10,splits:3,format:'rr_po',playoffTake:6,system:'franchise',slots:3}},
-  VN:{name:'베트남',leagueName:'VCS',short:'VCS',strength:66,tier:'emerging',parent:'AP',d:{teams:10,splits:2,format:'rr_po',playoffTake:6,system:'relegation',slots:3}},
-  JP:{name:'일본',leagueName:'LJL',short:'LJL',strength:62,tier:'emerging',parent:'AP',d:{teams:10,splits:2,format:'rr_po',playoffTake:4,system:'franchise',slots:3}},
-  TW:{name:'대만·홍콩·마카오',leagueName:'PCS',short:'PCS',strength:64,tier:'emerging',parent:'AP',d:{teams:10,splits:2,format:'rr_po',playoffTake:6,system:'relegation',slots:3}},
-  OC:{name:'오세아니아',leagueName:'LCO',short:'LCO',strength:60,tier:'emerging',parent:'AP',d:{teams:10,splits:2,format:'rr_po',playoffTake:4,system:'relegation',slots:3}},
-  SEA:{name:'동남아시아',leagueName:'SEA League',short:'SEAL',strength:61,tier:'emerging',parent:'AP',d:{teams:10,splits:2,format:'rr_po',playoffTake:6,system:'relegation',slots:3}},
-  TR:{name:'튀르키예',leagueName:'TCL',short:'TCL',strength:62,tier:'emerging',parent:'EU',d:{teams:10,splits:2,format:'rr_po',playoffTake:6,system:'relegation',slots:3}},
-  ME:{name:'중동·북아프리카',leagueName:'Arabian League',short:'AL',strength:60,tier:'emerging',parent:'EU',d:{teams:10,splits:2,format:'rr_po',playoffTake:6,system:'franchise',slots:3}},
-  CIS:{name:'독립국가연합',leagueName:'LCL',short:'LCL',strength:63,tier:'emerging',parent:'EU',d:{teams:10,splits:2,format:'rr_po',playoffTake:6,system:'relegation',slots:3}},
-  LA:{name:'라틴 아메리카',leagueName:'LLA',short:'LLA',strength:62,tier:'emerging',parent:'BR',d:{teams:10,splits:2,format:'rr_po',playoffTake:6,system:'franchise',slots:3}}
+  KR:{name:'한국',leagueName:'LCK',short:'LCK',tier2Short:'LKC',strength:75,templates:true,tier:'major',d:{teams:12,splits:3,format:'rr_de',playoffTake:6,div2:true,system:'franchise',slots:4}},
+  CN:{name:'중국',leagueName:'LPL',short:'LPL',tier2Short:'LDL',strength:74,tier:'major',d:{teams:16,splits:3,format:'groups_po',playoffTake:8,div2:true,system:'franchise',slots:4}},
+  EU:{name:'유럽',leagueName:'LEC',short:'LEC',tier2Short:'LEA',strength:71,tier:'major',d:{teams:12,splits:3,format:'rr_de',playoffTake:8,div2:true,system:'franchise',slots:3}},
+  NA:{name:'북미',leagueName:'LCS',short:'LCS',tier2Short:'LNA',strength:68,tier:'major',d:{retainParentOnIndependence:true,teams:10,splits:3,format:'rr_de',playoffTake:6,div2:true,system:'franchise',slots:3}},
+  AP:{name:'아시아태평양',leagueName:'LCP',short:'LCP',tier2Short:'LPA',strength:67,tier:'major',d:{teams:12,splits:3,format:'rr_po',playoffTake:6,div2:true,system:'mixed',slots:3}},
+  BR:{name:'남미',leagueName:'LSA',short:'LSA',tier2Short:'LSC',strength:65,tier:'major',d:{teams:10,splits:3,format:'rr_po',playoffTake:6,div2:true,system:'franchise',slots:3}},
+  VN:{name:'베트남',leagueName:'LVN',short:'LVN',tier2Short:'LVA',strength:66,tier:'emerging',parent:'AP',d:{teams:10,splits:2,format:'rr_po',playoffTake:6,system:'relegation',slots:3}},
+  JP:{name:'일본',leagueName:'LJL',short:'LJL',tier2Short:'LJA',strength:62,tier:'emerging',parent:'AP',d:{teams:10,splits:2,format:'rr_po',playoffTake:4,system:'franchise',slots:3}},
+  TW:{name:'대만·홍콩·마카오',leagueName:'LPC',short:'LPC',tier2Short:'LTA',strength:64,tier:'emerging',parent:'AP',d:{teams:10,splits:2,format:'rr_po',playoffTake:6,system:'relegation',slots:3}},
+  OC:{name:'오세아니아',leagueName:'LCO',short:'LCO',tier2Short:'LOA',strength:60,tier:'emerging',parent:'AP',d:{teams:10,splits:2,format:'rr_po',playoffTake:4,system:'relegation',slots:3}},
+  SEA:{name:'동남아시아',leagueName:'LSE',short:'LSE',tier2Short:'LSF',strength:61,tier:'emerging',parent:'AP',d:{teams:10,splits:2,format:'rr_po',playoffTake:6,system:'relegation',slots:3}},
+  TR:{name:'튀르키예',leagueName:'LTR',short:'LTR',tier2Short:'LTF',strength:62,tier:'emerging',parent:'EU',d:{teams:10,splits:2,format:'rr_po',playoffTake:6,system:'relegation',slots:3}},
+  ME:{name:'중동·북아프리카',leagueName:'LME',short:'LME',tier2Short:'LMF',strength:60,tier:'emerging',parent:'EU',d:{teams:10,splits:2,format:'rr_po',playoffTake:6,system:'franchise',slots:3}},
+  CIS:{name:'독립국가연합',leagueName:'LCL',short:'LCL',tier2Short:'LCF',strength:63,tier:'emerging',parent:'EU',d:{teams:10,splits:2,format:'rr_po',playoffTake:6,system:'relegation',slots:3}},
+  LA:{name:'중미·카리브',leagueName:'LCA',short:'LCA',tier2Short:'LAC',strength:62,tier:'emerging',parent:'NA',d:{teams:10,splits:2,format:'rr_po',playoffTake:6,system:'franchise',slots:3}}
 };
 const INTL_PRESETS=[
   // 국제대회는 1부 프로팀 전용이다. 내부 ID는 공식 명칭을 사용하고 표시 약칭은 별도 보관한다.
@@ -43,9 +46,10 @@ const ZONE_KO={east:'Eastern',west:'Western'};
 
 function regionCfg(id,over={}){
   const P=REGION_PRESETS[id]||{name:'새 지역',leagueName:'새 리그',short:'NEW',strength:63,d:{}},d=P.d||{};
-  return {id,name:P.name,leagueName:P.leagueName,short:P.short,strength:P.strength,templates:!!P.templates,tier:P.tier||'emerging',parent:P.parent||null,
+  return {id,name:P.name,leagueName:P.leagueName,short:P.short,tier2Short:P.tier2Short||null,strength:P.strength,templates:!!P.templates,tier:P.tier||'emerging',parent:P.parent||null,
     format:'rr_po',div2:false,div2Teams:8,teams:10,splits:2,standingsMode:'independent',legs:2,regularBo:3,playoffTake:6,playoffBo:5,system:'franchise',relegate:1,slots:3,office:null,
     fearless:true,payScale:null,spendingRule:null,sfrMode:null,sfrTeamShare:0,salaryCap:0,salaryFloor:0,luxuryTax:.5,importLimit:null,importRecruitMinGap:null,rosterRuleProfile:null,marketProfile:null,policyMode:'engine',policyLocks:{},...d,...over,
+    tier2Required:over.tier2Required??true,
     spendingRule:null,sfrMode:null,sfrTeamShare:0,salaryCap:0,salaryFloor:0,importLimit:null,importRecruitMinGap:null,rosterRuleProfile:null,marketProfile:null,office:null,payScale:null};
 }
 function defaultWorldConfig(){return {
@@ -79,7 +83,23 @@ function orgName(db,rng){
   }
   const n='T'+rng.int(100,999);return {name:n+' Gaming',short:n};
 }
-function activeTeams(db,rid,div){return Object.values(db.teams).filter(t=>t.active!==false&&(!rid||t.region===rid)&&(!div||(t.division||1)===div))}
+// Synchronous reads of unchanged membership only. Returned arrays remain
+// caller-owned, including callers that sort/reverse their selection.
+const ACTIVE_TEAM_READ_INDEX=new WeakMap();
+function withActiveTeamReadIndex(db,read){
+  if(ACTIVE_TEAM_READ_INDEX.has(db))return read();
+  ACTIVE_TEAM_READ_INDEX.set(db,{teams:Object.values(db.teams).filter(t=>t.active!==false),queries:new Map()});
+  try{return read()}finally{ACTIVE_TEAM_READ_INDEX.delete(db)}
+}
+function activeTeams(db,rid,div){
+  const index=ACTIVE_TEAM_READ_INDEX.get(db);
+  if(!index)return Object.values(db.teams).filter(t=>t.active!==false&&(!rid||t.region===rid)&&(!div||(t.division||1)===div));
+  const region=rid||null,division=div||null;
+  if(!index.queries.has(region))index.queries.set(region,new Map());
+  const queries=index.queries.get(region);
+  if(!queries.has(division))queries.set(division,index.teams.filter(t=>(!rid||t.region===rid)&&(!div||(t.division||1)===div)));
+  return queries.get(division).slice();
+}
 function isManagerSelectableTeam(db,t){
   const team=typeof t==='string'?db.teams[t]:t;
   return !!team&&team.active!==false&&(!team.parent||db.teams[team.parent]?.active!==false&&!!db.teams[team.parent]);
@@ -131,7 +151,7 @@ function createDiv2(db,rng,R){
   if(R.policyMode==='engine'&&!R.policyLocks?.rosterRuleProfile)R.rosterRuleProfile=activeTeams(db,R.id,2).some(t=>t.parent)?'ENGINE_OWNED_RESERVE':'STANDARD_TIER1_2026';
   for(const t of activeTeams(db,R.id))syncClubLicense(db,t,'tier2-structure-review');
 }
-function abolishDiv2(db,R){R.div2=false;for(const t of activeTeams(db,R.id,2))foldTeam(db,t);if(R.policyMode==='engine'&&!R.policyLocks?.rosterRuleProfile)R.rosterRuleProfile='STANDARD_TIER1_2026'}
+function abolishDiv2(db,R){if(R.tier2Required)throw new Error('이 지역은 2부 운영이 필수입니다');R.div2=false;for(const t of activeTeams(db,R.id,2))foldTeam(db,t);if(R.policyMode==='engine'&&!R.policyLocks?.rosterRuleProfile)R.rosterRuleProfile='STANDARD_TIER1_2026'}
 function reconcileTier2Structure(db,rng,R,ev=()=>{}){
   if(!R||!R.div2)return;
   const first=activeTeams(db,R.id,1);
@@ -200,17 +220,29 @@ function addRegion(db,rng,cfg){
   inferRegionPolicy(db,R);
   return R;
 }
+// The canonical world is deterministic for normalized config and static patch
+// input. Keep one serialized template, never a mutable database or an unbounded map.
+const INITIAL_WORLD_TEMPLATE={key:null,json:null};
 function buildWorld(cfg){
   cfg=JSON.parse(JSON.stringify(cfg||defaultWorldConfig()));
   cfg.changes='normal';
-  const db={version:15,saveId:'save-'+Date.now().toString(36),manager:{id:'manager-human',teamId:null,startMode:null,careerStartedAt:null},worldDate:`${cfg.startYear||2027}-01-01`,awards:[],hof:[],global:{decisions:[],power:{}},patch:buildPatch(),teams:{},players:{},regions:{},competitions:{},worldConfig:cfg,world:null,history:[],news:[],year:cfg.startYear||2027,configDirty:false,scout:{}};
+  const patch=buildPatch(),templateKey=JSON.stringify([WORLD_GENERATION_SEED,cfg,patch]);
+  if(INITIAL_WORLD_TEMPLATE.key===templateKey){
+    const fresh=JSON.parse(INITIAL_WORLD_TEMPLATE.json);
+    fresh.saveId='save-'+Date.now().toString(36);return fresh;
+  }
+  const db={version:15,saveId:'save-'+Date.now().toString(36),manager:{id:'manager-human',teamId:null,startMode:null,careerStartedAt:null},worldDate:`${cfg.startYear||2027}-01-01`,awards:[],hof:[],global:{decisions:[],power:{}},patch,teams:{},players:{},regions:{},competitions:{},worldConfig:cfg,world:null,history:[],news:[],year:cfg.startYear||2027,configDirty:false,scout:{}};
   const rng=new RNG(WORLD_GENERATION_SEED,'gen');
+  return withPlayerGenerationIndex(db,()=>{
   initPatches(db);
   for(const r of cfg.regions) addRegion(db,rng,r);
   for(const t of activeTeams(db))ensureTeamStaff(db,t,rng);genStaffPool(db,rng)
+  seedInitialRegionalSupply(db);
   prepareFirstSeasonFreeAgency(db);
   syncCompetitionLicenses(db,'initial-office-approval');
+  INITIAL_WORLD_TEMPLATE.key=templateKey;INITIAL_WORLD_TEMPLATE.json=JSON.stringify(db);
   return db;
+  });
 }
 function managedTeamId(db){return db.manager&&db.manager.teamId||null}
 function managedTeam(db){const id=managedTeamId(db);return id&&db.teams[id]?db.teams[id]:null}

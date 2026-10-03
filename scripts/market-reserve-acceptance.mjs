@@ -70,6 +70,92 @@ await runEngineFixture(String.raw`(()=>{
     'AI modified the managed club');
   assert(!previewWorldAction(protectedClub.db,{...command,parentId:protectedClub.parent.id,
     reserveId:protectedClub.reserve.id}).ok,'direct AI command bypassed manager authority');
+  // Market closure already reconciles minimum rosters through system actions.
+  // Owned reserves need the same actor as their manually managed parent;
+  // ordinary AI offers/options must remain unauthorized for that organization.
+  const compliance=fixture(5,0),cd=compliance.db,ct=compliance.parent,cr=compliance.reserve;
+  for(const t of activeTeams(cd))if(t.id!==ct.id&&t.id!==cr.id)t.active=false;
+  cd.world.manage='manual';cd.world.offers=[];setManagedTeam(cd,ct.id);
+  for(const t of [ct,cr])for(const id of t.roster){
+    const p=cd.players[id];p.contract=normalizeContractTerms(cd,p,t,.3,2,{});
+  }
+  const absent=starterFor(cd,cr,'TOP');removePlayerFromTeam(cd,absent);absent.contract=null;
+  const optionPlayer=starterFor(cd,cr,'MID');
+  optionPlayer.contract.option={type:'team',year:cd.year,salary:.3};
+  assert(!shouldAutoExerciseOption(cd,optionPlayer,cr,ct.id),'AI exercised reserve team option');
+  const report={expired:[],resign:[],signings:[]};
+  contractMarket(cd,new RNG('reserve-market-compliance','fixture'),report,()=>{});
+  assert(cr.roster.length===5&&starterFor(cd,cr,'TOP'),'managed reserve minimum reconciliation failed');
+  assert(report.signings.some(x=>x.team===cr.id&&x.fill),'reserve fill missing from market report');
+  const target=Object.values(cd.players).find(p=>!p.team&&!p.retired&&isLocalPlayer(p,cr.region));
+  assert(target,'no free authority probe');
+  assert(!previewWorldAction(cd,{type:'player.sign',pid:target.id,teamId:cr.id,
+    actor:'ai',kind:'fa',salary:asking(cd,target,cr.region),years:1}).ok,
+    'normal AI signing bypassed reserve contract authority');
+  // Read indexes preserve every price and the existing cache keys. They end
+  // before mutations, so player-count/year/top-tier changes remain visible.
+  const pricing=buildWorld(),plain=buildWorld(),plainRead=withMarketDemandReadIndex;
+  const snapshotSignature=x=>JSON.stringify(Object.fromEntries(Object.entries(x.byRegion)
+    .map(([rid,row])=>[rid,{local:row.local.map(p=>[p.id,p.s]),foreign:row.foreign.map(p=>[p.id,p.s])}])));
+  let expectedPricing;const baselinePricingStarted=performance.now();
+  try{withMarketDemandReadIndex=(db,read)=>read();expectedPricing=initialMarketSnapshot(plain,activeTeams(plain))}
+  finally{withMarketDemandReadIndex=plainRead}
+  const baselinePricingMs=Math.round(performance.now()-baselinePricingStarted);
+  const pricingStarted=performance.now(),actualPricing=initialMarketSnapshot(pricing,activeTeams(pricing));
+  const pricingMs=Math.round(performance.now()-pricingStarted);
+  assert(snapshotSignature(actualPricing)===snapshotSignature(expectedPricing),'read index changed regional salaries/order');
+  assert(JSON.stringify(pricing._marketDemandCache)===JSON.stringify(plain._marketDemandCache),'read index changed persisted cache inputs');
+  const pricingTeam=activeTeams(pricing,'KR',1)[0],plainTeam=plain.teams[pricingTeam.id];
+  let expectedFill,expectedOffers;
+  try{
+    withMarketDemandReadIndex=(db,read)=>read();
+    expectedFill=eligibleFillFAs(plain,plainTeam).map(p=>p.id);
+    expectedOffers=aiMarketOfferCandidates(plain,plainTeam,expectedPricing.free,'TOP',500);
+  }finally{withMarketDemandReadIndex=plainRead}
+  assert(JSON.stringify(eligibleFillFAs(pricing,pricingTeam).map(p=>p.id))===JSON.stringify(expectedFill),
+    'read index changed fill candidate order');
+  assert(JSON.stringify(aiMarketOfferCandidates(pricing,pricingTeam,actualPricing.free,'TOP',500))===JSON.stringify(expectedOffers),
+    'read index changed AI candidate prices/values/order');
+  assert(JSON.stringify({...pricing,saveId:'storage-only'})===JSON.stringify({...plain,saveId:'storage-only'}),
+    'pricing/fill/offer batch changed full generated state');
+  assert(!MARKET_DEMAND_READ_INDEX.has(pricing)&&!ACTIVE_TEAM_READ_INDEX.has(pricing),'read index escaped pricing batch');
+  const originalTeamOrder=activeTeams(pricing).map(t=>t.id);
+  withActiveTeamReadIndex(pricing,()=>{
+    activeTeams(pricing).reverse();
+    assert(JSON.stringify(activeTeams(pricing).map(t=>t.id))===JSON.stringify(originalTeamOrder),
+      'caller array mutation changed cached team order');
+    for(const rid of [null,'KR','missing'])for(const div of [null,1,2,'1']){
+      const expected=Object.values(pricing.teams).filter(t=>t.active!==false&&(!rid||t.region===rid)&&(!div||(t.division||1)===div)).map(t=>t.id);
+      assert(JSON.stringify(activeTeams(pricing,rid,div).map(t=>t.id))===JSON.stringify(expected),
+        'active-team read index changed filter semantics');
+    }
+  });
+  for(const rid of [null,'KR','missing','ALL']){
+    invalidateMarketDemand(pricing);const expected=JSON.stringify(marketDemandSnapshot(pricing,rid));
+    invalidateMarketDemand(pricing);
+    assert(withMarketDemandReadIndex(pricing,()=>JSON.stringify(marketDemandSnapshot(pricing,rid)))===expected,
+      'global/unknown-region read parity failed');
+  }
+  try{withMarketDemandReadIndex(pricing,()=>withMarketDemandReadIndex(pricing,()=>{throw Error('read failed')}))}catch(e){}
+  assert(!MARKET_DEMAND_READ_INDEX.has(pricing)&&!ACTIVE_TEAM_READ_INDEX.has(pricing),'throw/nested read leaked index');
+  const rng=new RNG('pricing-topology-change','fixture');
+  genPlayer(pricing,rng,{role:'TOP',age:19,base:50,region:'KR'});
+  activeTeams(pricing,'KR',1)[0].active=false;pricing.year++;
+  marketDemandSnapshot(pricing,'KR');
+  assert(pricing._marketDemandCache.KR.key===[pricing.year,'KR',Object.keys(pricing.players).length,
+    activeTeams(pricing,'KR',1).length].join('|'),'post-batch topology change remained stale');
+  const roundPlain=buildWorld(),roundIndexed=buildWorld();let plainRound;
+  const contenders=x=>activeTeams(x,'KR',1).slice(0,6);
+  try{
+    withMarketDemandReadIndex=(db,read)=>read();
+    plainRound=resolveInitialOfferRound(roundPlain,contenders(roundPlain),0,'pricing-round-parity',()=>5);
+  }finally{withMarketDemandReadIndex=plainRead}
+  const indexedRound=resolveInitialOfferRound(roundIndexed,contenders(roundIndexed),0,'pricing-round-parity',()=>5);
+  assert(indexedRound.signed>0&&JSON.stringify(indexedRound)===JSON.stringify(plainRound),
+    'read index changed auction offer/signing outcomes');
+  assert(JSON.stringify({...roundIndexed,saveId:'storage-only'})===JSON.stringify({...roundPlain,saveId:'storage-only'}),
+    'read index changed committed auction world state');
   console.log('MARKET_RESERVE_ACCEPTANCE '+JSON.stringify({parityCases:5,callups:moves,
-    purePreview:true,rollback:true,managerProtected:true,saveRestore:true}));
+    purePreview:true,rollback:true,managerProtected:true,saveRestore:true,
+    reserveMarketCompliance:true,pricingParity:true,auctionRoundParity:true,baselinePricingMs,pricingMs}));
 })();`,{timeout:30000,filename:'market-reserve-acceptance.fixture.js'});

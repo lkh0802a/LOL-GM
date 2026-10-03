@@ -79,6 +79,13 @@ function normalizeRestoredSave(db){
   for(const k of SAVE_TRANSIENT_ROOT_FIELDS)delete db[k];
   db.worldConfig.changes='normal';
   db.metaHistory=unpackMetaHistory(db.metaHistory||[]);
+  for(const c of Object.values(db.competitions||{})){
+    const r=db.regions?.[c.region];
+    if(!r||c.international||c.div!==2)continue;
+    const prior=[`${r.leagueName} 챌린저스`,`${r.leagueName} 2부`];
+    if(prior.includes(c.name))c.name=divName(r);
+    if(c.short===r.short+'2')c.short=divName(r);
+  }
   // Rename only former defaults; IDs, custom names and tournament rules stay.
   for(const [id,oldName] of [['MASTERS','Masters'],['OPEN','Open']]){
     const preset=INTL_PRESETS.find(x=>x.id===id);

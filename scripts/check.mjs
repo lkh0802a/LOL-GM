@@ -140,6 +140,7 @@ const maintainabilityBudgets = {
   'club-license.js': 4500,
   'region-continuity.js': 4500,
   'contracts.js': 26000,
+  'contract-market-pricing.js': 5500,
   'contract-market-behavior.js': 5000,
   'contract-transfer-market.js': 6500,
   'scouting.js': 14000,

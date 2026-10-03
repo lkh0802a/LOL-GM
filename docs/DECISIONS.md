@@ -257,7 +257,7 @@ This baseline is a calibration pass, not completion of later dedicated systems s
 - LCS uses a wider full-roster profile and an open-market recruiting bias instead of inheriting LCK integrated-roster rules
 - LCP uses a multi-region/promotion-relegation identity and its own roster profile
 - LPL remains a high-spending, high-competition market without silently inheriting Korean SFR parameters
-- CBLOL remains a distinct Brazilian ecosystem with a stronger domestic-development bias
+- Historical baseline: CBLOL was a distinct Brazilian ecosystem. The confirmed 2026-10-04 new-career South American LSA identity supersedes this geography; legacy saves retain their recorded region identities.
 - when a current rule cannot be verified, LOL GM uses a neutral global baseline and records the uncertainty rather than copying another region's rule
 - fictional regions can choose any model explicitly, but named real-world regions must not receive another region's rules by default
 
@@ -779,3 +779,110 @@ public draft/series information remain legitimate inputs. This intentionally
 changes decisions and outcomes. A later bounded scouting-time saved signal may
 restore justified numerical estimates; no live foreign skill or unobserved pool
 membership is consulted by the corrected draft paths.
+
+## Regional league naming and new-career geography — 2026-10-04
+
+Confirmed by the user: keep familiar LCK/LPL-style identities, use three-letter
+L-prefixed league abbreviations, and give tier two distinct names without an
+all-D pattern. Initial major pairs: LCK/LKC, LPL/LDL, LEC/LEA, LCS/LNA,
+LCP/LPA, LSA/LSC. Newly named competitions are fictional aliases, not asserted
+real esports policy. Minor presets also use distinct L-prefixed abbreviations.
+
+New careers include all six major tier-twos. Existing franchise/mixed governance,
+owned-reserve authority and independent promotion eligibility determine teams;
+a league alias must not assign Korean financial or registration policies.
+North America retains LCS; South America replaces Brazil-only CBLOL with LSA.
+The LA expansion key becomes Central America/Caribbean, attached to North America.
+Its independence does not exhaust or automatically dissolve North America.
+Player origin/local identity remains region-based; no country list was fabricated.
+
+Stable BR/LA keys and top-short + 2 competition IDs remain compatible. Loading
+old saves only repairs generated default tier-two display names/shorts, keeping
+custom names, prior geography, player contracts/eligibility, season keys and
+archived result names. Existing careers do not gain new reserve clubs on load.
+
+Every newly founded regional league must create a real tier two and retain it;
+only legacy optional structures may still abolish theirs. New founded leagues
+receive distinct, collision-checked three-letter L-prefixed aliases for both tiers.
+
+Confirmed next vertical boundary: integrated regions keep a shared top tier but
+run country-level tier-two leagues. Add explicit club home-country identity and
+country competition membership/schedules/standings; preserve umbrella local
+eligibility, owned-club recruitment authority and international regional attribution.
+This is authorized but pending; current region-wide tier-twos do not prove it done.
+
+The expanded initial ecosystem reproduced an exhausted local pool during the
+first auction. New-world generation now fills a deterministic regional FA supply
+shortfall before bidding, using the actual sum of legal minimum targets plus
+maximum outside-region non-local capacity. Existing players are retained and
+normal generation/salary rules apply. This conservative bound protects roster
+formation without changing import caps, minimum squad sizes or club budgets,
+but creates a larger FA pool; it is capacity support, not measured pro talent supply.
+No athletes are fabricated mid-auction to rescue a failing bid.
+
+2026-10-04 추가 확인: 통합 1부/국가별 2부 연결에서 승강제 규칙은 리그 사무국이
+결정한다. 개발자는 참가 자격·승강 인원·선발전·시행 시점의 데이터와 실제 다음 시즌
+편성을 연결하며 임의의 고정 승강 규칙을 대신 확정하지 않는다. 소유 2군은
+모구단과 같은 1부로 승격할 수 없다. 국가별 하부 편성과 이 사무국 연결은 후속 10.2 범위다.
+
+Country affiliation refinement, confirmed 2026-10-04: club home-country and
+reserve development/operating country are independently selectable. Reserves
+may develop abroad; league participation needs office approval, and a training
+location does not grant athlete nationality or local registration eligibility.
+This supersedes the proposed compulsory parent-country reserve assignment.
+
+Broadcast scope correction, confirmed 2026-10-04: prohibit overlapping official
+international series broadcasts globally and overlapping series within the same
+domestic league. Different domestic leagues may run in parallel. Whole tournament
+periods may overlap; Eastern/Western Cup are equal-standing events, not an ordered
+higher/lower pair. Add planned-window reservation and actual overrun shifts; merely
+staggering starts is insufficient. Preserve venue time zones and UTC/KST views.
+This scheduler/overrun connection is pending 10.3, not implemented by whole-event
+serialization in the current naming/governance slice.
+
+Default official domestic labels are 스플릿 1/2/3. Regional office `splitNames`
+overrides affect generated domestic season labels; historical aliases stay.
+
+## UI 전면 재설계 승인 — 2026-10-04 (Asia/Seoul)
+
+사용자는 내부 구현과 UI 사이의 괴리를 이유로 기존 화면에 부분 수정만 누적하는 대신 UI 전면 재설계를 승인했다. 개발 범위와 순서는 [개발 가이드의 12.3–12.5](DEVELOPMENT.md#ui-전면-재설계--승인된-현재-범위)를 따른다. 구단 운영 흐름 중심으로 정보 구조와 내비게이션, 각 도메인의 화면을 새로 구성하되 검증된 엔진/공유 명령과 저장·기록 호환성을 유지한다.
+
+내부 기능 존재나 시각적 개편만으로 완료로 보지 않는다. 실제 조작, 조건/권한 안내, 엔진 상태 반영, 결과와 이유 표시, 저장·재접속의 일관성이 각 화면 교체의 완료 기준이다. 의미 있는 경영 선택과 직접 운영 권한을 보존하면서 반복 입력/이동/알림을 줄인다. 기능 연결이 검증된 화면부터 순차 교체하고 UI 변경으로 새로운 규칙이나 밸런스 정책을 몰래 도입하지 않는다. 현재 상태는 승인/구현 예정이며 리그 선택 UI 수정은 전면 재설계의 완료 증거가 아니다.
+
+UI 재설계의 추가 확정 기준은 수정 용이성이다. 공통 표현/스타일은 중앙 관리하고 화면별 책임과 엔진 명령 경계를 명확히 하며, 불필요한 프레임워크·깊은 추상화·규칙 복제를 피한다. 화면별 수정 위치와 집중 검증 진입점을 개발 문서에 유지한다.
+
+## 아마추어 생태계의 이야기 활용 — 2026-10-04 (Asia/Seoul)
+
+사용자는 정식 3부 리그가 아닌 아마추어 생태계를 선수 배경과 사건의 기반으로 추가하도록 승인했다. 아마추어 경기 시뮬레이션은 수행하지 않는다. 가상 생성 배경/보존된 실제 게임 이력을 스카우팅 제보·테스트·영입 기회와 선택적 프로필 이야기에 연결한다. 긴 필수 이야기나 반복 입력/알림을 추가하지 않고, 미계산 경기의 상세 결과를 계산한 것처럼 제시하지 않는다. 능력·관계·성공·2부 참가권을 이야기만으로 부여하지 않는다. [작업 3.1과 전체 승인 디테일](DEVELOPMENT.md#31-아마추어-배경과-선수-이야기--승인된-구현-예정-범위)를 따른다. 현재는 구현 예정이다.
+
+## 뉴스 보강 승인 — 2026-10-04 (Asia/Seoul)
+
+실제 공개 게임 사건에 근거한 짧은 뉴스와 관련 화면 연결, 관심 대상/종류 필터를 추가·보강한다. 기존 뉴스/이력 체계를 재사용하며 처리할 업무 알림과 선택적 뉴스는 구분한다. 중복 알림을 줄이고 비공개 정보·가짜 경기 결과를 노출하지 않는다. 소문 정책은 별도 제안이다. 구현 예정 범위와 검증은 [개발 작업 12.6](DEVELOPMENT.md#126-뉴스와-실제-사건-연결)을 따른다.
+
+## 이야기 디테일 전체 승인 — 2026-10-04 (Asia/Seoul)
+
+사용자가 아마추어 배경, 선수 경력, 육성 발자취, 동료의 진로, 재대결, 라이벌, 구단 역사, 영입 평가, 운영 결정의 후속, 은퇴 이후 경로, 팬 기대/반응, 뉴스, 시즌 회고를 모두 승인했다. 이전 후보/제안 표기는 이 결정으로 대체된다. 구현 예정 범위는 개발 가이드 3.1/12.6/12.7/12.8을 따른다. 우선순위는 순서이며 범위 축소가 아니다. 향후 후보 보고는 전체 목록과 승인/구현/보류 상태를 구분해 제공한다. 실제 기록·가상 배경 출처·관측 권한을 보존하고 추가 조작 부담, 임의 능력/승패 보정, 감정 페널티/여론 업무를 도입하지 않는다.
+
+## 전 부문 현실성 검토와 사무국 개정 엔진 — 2026-10-04 (Asia/Seoul)
+
+사용자는 제시된 전 부문 현실성/편의성 항목 전체 문서화와 사무국이 규정을 개정하는 엔진 연결·보강을 요청했다. 전체 검토표와 구현/새 정책 구분은 [개발 가이드](DEVELOPMENT.md#전-부문-현실성편의성-검토-목록--전체-문서화), 개정 엔진은 [10.4](DEVELOPMENT.md#104-사무국-규정-개정-엔진--승인된-연결고도화-범위)를 따른다. 기존 효용/의견 수렴/간격 제한/시행 기록을 재사용하며 관할→실제 근거→영향 검토→공표→시행→writer/consumer→UI/save를 연결한다. 확정 규칙을 임의로 뒤집거나 과거 대회/계약을 소급 변경하지 않는다. 새 정책과 계수의 타당성은 구현 결함과 구분하며 단순 문서화는 구현 완료가 아니다.
+
+## 추가 현실성 항목 승인과 중복 제안 방지 — 2026-10-04 (Asia/Seoul)
+
+직전 제시한 추가/수정/삭제 항목 전체가 승인됐다. 기존 전 부문 범위와 겹치는 항목은 별도 기능으로 중복 등록하지 않고 [단일 담당 단계와 완료 조건](DEVELOPMENT.md#추가-승인-항목의-단일-배치와-중복-방지)에 통합한다. 선수 경력 목표·수급·비상 계획·국제 준비·계약 연속성·소유주 변화 등 기존 연결을 검토하고, 사무국 개정은 시행 후 평가까지 확장한다. 신규 후보 제시 전 승인 목록과 대조하며 실제 신규/기존 보강/중복 제외를 구분한다. 승인된 목적은 임의 효과·가격·승패 보정 허가가 아니며 실제 상태/권한/저장/검증 근거를 유지한다.
+
+## 세부 검토 목록 전체 승인과 수량 제한 없는 누락 검토 — 2026-10-04 (Asia/Seoul)
+
+직전 선수/전술/경기/시장·구단/뉴스/편의성 세부 목록 전체가 승인됐다. [개발 가이드의 담당 단계별 전체 내용](DEVELOPMENT.md#세부-연결완료-조건-전체-승인)에 통합하며 새 기능 수로 중복 계산하지 않는다. 이후 후보는 개수를 정하거나 채우지 않고 기존 승인과 대조해 필요한 누락을 제시한다. 기존 판정/정보/권한/저장·모델 한계를 유지하며 정책 근거와 실제 완료 증거를 기록한다.
+
+## 지속적인 발굴/등록과 정확도 개선 — 2026-10-04 (Asia/Seoul)
+
+사용자는 아이디어를 계속 발굴·등록하고 판정 정확도를 높이도록 명시했다. 개발 중 새 발견을 전체 등록하며 기존 항목의 중복은 합치고 새 근거/조건은 보존한다. 직전 선수 선택/세계 연속성/동시 판정/정보 신뢰/편의성 후보 전체는 [개발 가이드](DEVELOPMENT.md#지속적인-아이디어-발굴등록과-판정-정확도-개선)에 등록됐다. 실제 근거·작성자/소비자·검증·비용·UI·저장/권한 영향과 상태를 명시한다. 계속 발굴하되 목록 작성만 반복하지 않고 합의 내 검증 가능한 구현을 진행한다. 임의 수치·확정 규칙의 무단 변경·모델 능력 과장은 정확도 개선으로 간주하지 않는다.
+
+## 분석실 독립 탭 승인 — 2026-10-04 (Asia/Seoul)
+
+분석실을 메인 내비게이션의 독립 탭으로 추가한다. 우리 팀/상대/경기 복기/밴픽·메타/선수 비교를 실제 관측·공개 자료와 기존 집계로 연결하며 대중 티어와 팀 내부 티어를 구분한다. 지원되는 기록·권한·패치/표본/출처를 표시하고 관련 근거 화면으로 이동한다. 전술/훈련 반영은 기존 명령/설정으로 연결하고 별도 필수 업무나 숨은 정보 노출을 만들지 않는다. [개발 작업 12.9](DEVELOPMENT.md#129-분석실-독립-탭--승인된-구현-예정-범위)가 구현/집중 검증 기준이며 현재는 구현 예정이다.
+
+## 감독 커리어/분석 도구/효과 판정/사용성 목록 전체 승인 — 2026-10-04 (Asia/Seoul)
+
+직전 제시한 감독 커리어, 분석실 도구, 경기 효과 판정, 장기 운영 도구와 제거/경계 목록 전체를 사용자 승인으로 기존 단계에 통합했다. [전체 목록](DEVELOPMENT.md#감독-커리어분석-도구효과-판정사용성-전체-승인)이 단일 작업 기준이다. 기존 소스/권한/저장·메커니즘을 조사해 실제 연결과 집중 검증을 진행하며 문서화와 구현 완료를 구분한다. 효과를 발명하거나 모든 경기 판정을 정확한 시전/좌표 모델로 주장하지 않는다.

@@ -98,10 +98,19 @@ function practiceChampion(db,p,cid,kind='training',amount=1,coached=true){
 }
 function championLearningMultiplier(db,p,cid){const c=db.patch.champions[cid],diff=c&&c.kit?c.kit.difficulty||5:5;return (.65+.7*(p.attrs.champion_learning||50)/100)*(.92+.2*(p.attrs.adaptability||50)/100)/(1+Math.max(0,diff-5)*.045)}
 function adaptPlayerPoolsToPatch(db,notes,major=false){const changed={};for(const n of notes||[]){if(['kit','base','skill'].includes(n.type)&&n.c)changed[n.c]=(changed[n.c]||0)+1;else if(n.type==='rework'&&n.c)changed[n.c]=(changed[n.c]||0)+(n.scope==='major'?3:2)}for(const p of Object.values(db.players))if(!p.retired&&p.pool)for(const [cid,count] of Object.entries(changed)){const pr=p.pool[cid];if(!pr)continue;const adapt=(p.attrs.meta_adaptation||p.attrs.adaptability||50)/100,loss=Math.min(5,Math.max(0,Math.round(count*(major?1.25:.55)*(1.25-adapt))));pr.mastery=Math.round(clamp(pr.mastery-loss,20,99));pr.confidence=Math.round(clamp(pr.confidence-Math.ceil(loss/2),10,99))}}
-function uniqNick(db,rng){for(let i=0;i<200;i++){let n=rng.pick(NICK_A)+rng.pick(NICK_B);if(rng.chance(0.2))n+=rng.pick(['','x','z','9','7']);const taken=Object.values(db.players).some(p=>p.name===n);if(!taken)return n}return 'P'+rng.int(100,999)}
-function uniqId(db,prefix){let i=Object.keys(db.players).length;while(db.players[prefix+i])i++;return prefix+i}
+// Append-only world construction owns this short-lived lookup. Runtime edits,
+// loaded saves and later generations always rebuild their own index.
+const PLAYER_GENERATION_INDEX=new WeakMap();
+function withPlayerGenerationIndex(db,fn){
+  if(PLAYER_GENERATION_INDEX.has(db))return fn();
+  PLAYER_GENERATION_INDEX.set(db,{count:Object.keys(db.players).length,names:new Set(Object.values(db.players).map(p=>p.name))});
+  try{return fn()}finally{PLAYER_GENERATION_INDEX.delete(db)}
+}
+function uniqNick(db,rng,index=null){for(let i=0;i<200;i++){let n=rng.pick(NICK_A)+rng.pick(NICK_B);if(rng.chance(0.2))n+=rng.pick(['','x','z','9','7']);const taken=index?index.names.has(n):Object.values(db.players).some(p=>p.name===n);if(!taken)return n}return 'P'+rng.int(100,999)}
+function uniqId(db,prefix,index=null){let i=index?index.count:Object.keys(db.players).length;while(db.players[prefix+i])i++;return prefix+i}
 
-function genPlayer(db,rng,o){
+function genPlayer(db,rng,o,identityIndex=null){
+  identityIndex=identityIndex||PLAYER_GENERATION_INDEX.get(db)||null;
   const {role,age,base}=o, style=o.style||rng.pick(STYLES), bias=STYLE_BIAS[style], sig=o.sig||[];
   const attrs={};
   for(const g in ATTR_GROUPS)for(const a of ATTR_GROUPS[g]){
@@ -126,7 +135,7 @@ function genPlayer(db,rng,o){
       matchup_knowledge:Math.round(clamp(base-10+rng.normal(0,10)+(age-20),20,99)),confidence:Math.round(clamp(s?72+rng.normal(0,8):50+rng.normal(0,10),10,99)),scrimExperience:0,trainingExperience:0,scrimSeason:0,trainingSeason:0};}
   const peakBase={TOP:24.5,JGL:24,MID:25,ADC:25,SUP:26}[role]||25;
   const originRegion=o.region,originLocalRegion=o.originLocalRegion||originRegion;
-  const p={id:o.id||uniqId(db,(o.region||'X')+'_'),name:o.name||uniqNick(db,rng),role,age,team:null,region:originRegion,originRegion,nationality:o.nationality||originRegion,originLocalRegion,activeLocalRegion:o.activeLocalRegion||originLocalRegion,localEligibility:{origin:originLocalRegion,active:o.activeLocalRegion||originLocalRegion,qualifications:{}},contractedMoves:[],attrs,tend,pool,
+  const p={id:o.id||uniqId(db,(o.region||'X')+'_',identityIndex),name:o.name||uniqNick(db,rng,identityIndex),role,age,team:null,region:originRegion,originRegion,nationality:o.nationality||originRegion,originLocalRegion,activeLocalRegion:o.activeLocalRegion||originLocalRegion,localEligibility:{origin:originLocalRegion,active:o.activeLocalRegion||originLocalRegion,qualifications:{}},contractedMoves:[],attrs,tend,pool,
     pot:0,reputation:0,personality:{professionalism:Math.round(clamp(rng.normal(60,15),10,99)),ambition:Math.round(clamp(rng.normal(60,15),10,99))},
     development:{growthRate:Math.round(clamp(rng.normal(1,.1),.78,1.22)*100)/100,peakAge:Math.round(clamp(rng.normal(peakBase,1.15),21.5,29)*10)/10,declineRate:Math.round(clamp(rng.normal(1,.12),.72,1.35)*100)/100},
     career:[],careerEvents:[],titles:[],proSeasons:0,rosterRole:null,careerGoal:null,satisfaction:70,satisfactionReasons:[],concernStreak:0,wantsOut:false,wantsOutReason:null,retired:false,faYears:0,entryYear:o.entryYear??db.year,entryPath:o.entryPath||'generated',rookieClass:o.rookieClass||null,rookieTier:o.rookieTier||null,developmentTrail:[]};
@@ -134,7 +143,9 @@ function genPlayer(db,rng,o){
   p.reputation=Math.round(clamp(ovr*.82+Math.max(0,age-19)*.65+rng.normal(0,3),20,95));
   p.developmentTrail=[{year:db.year,ovr}];
   ensurePlayerAgent(p);
+  const replaced=Object.hasOwn(db.players,p.id);
   db.players[p.id]=p;
+  if(identityIndex){identityIndex.names.add(p.name);if(!replaced)identityIndex.count++}
   if(o.team)assignPlayerToTeam(db,p,o.team);
   return p;
 }

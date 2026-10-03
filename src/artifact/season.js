@@ -6,10 +6,19 @@
 function finalSeason(w,R,div=1){let best=null;for(const s of Object.values(w.seasons))if(s.region===R.id&&(s.div||1)===div&&s.split&&(!best||s.split>best.split))best=s;return best}
 
 // ---------- 리그/시즌 구성 ----------
-function divName(R){return R.system==='franchise'?`${R.leagueName} 챌린저스`:`${R.leagueName} 2부`}
+function divName(R){
+  if(R.tier2Short)return R.tier2Short;
+  // Legacy national defaults gain display aliases without rewriting IDs/history.
+  const preset=REGION_PRESETS[R.id];
+  if(preset&&R.short===preset.short)return preset.tier2Short;
+  const legacy={BR:'CBLOL',LA:'LLA',VN:'VCS',TW:'PCS',SEA:'SEAL',TR:'TCL',ME:'AL'};
+  if(preset&&R.short===legacy[R.id])return preset.tier2Short;
+  // Custom/founded leagues keep their own distinct identity.
+  return `${R.short||R.leagueName} CL`;
+}
 function leagueComp(db,rid,div=1){
   const R=db.regions[rid], teams=activeTeams(db,rid,div).filter(t=>div===1||true).map(t=>t.id);
-  return {id:div===2?R.short+'2':R.short,name:div===2?divName(R):R.leagueName,short:div===2?R.short+'2':R.short,region:rid,div,teams,rules:{fearless:true,staffRegistration:R.staffRegistration||null},stages:leagueStages(R,teams.length,div)};
+  return {id:div===2?R.short+'2':R.short,name:div===2?divName(R):R.leagueName,short:div===2?divName(R):R.short,region:rid,div,teams,rules:{fearless:true,staffRegistration:R.staffRegistration||null},stages:leagueStages(R,teams.length,div)};
 }
 function startWorldSeason(db,myTeam,seed){
   const medicalRolloverDate=`${db.year}-01-06`;
@@ -71,7 +80,7 @@ function advanceStep(db){
           if(activeTeams(db,R.id,div).length<2)continue;
           const comp=leagueComp(db,R.id,div); db.competitions[comp.id]=comp;
           const key=comp.id+'-'+st.split, s=newSeason(db,comp.id,w.year,`${w.seed}/${w.year}/${key}`,start,key);
-          s.key=key;s.split=st.split;s.region=R.id;s.div=div;s.step=w.step;s.label=(R.splits||1)>1?SPLIT_NAME[st.split]:'';
+          s.key=key;s.split=st.split;s.region=R.id;s.div=div;s.step=w.step;s.label=(R.splits||1)>1?splitName(R,st.split):'';
           w.seasons[key]=s;any=true;
         }
       }

@@ -34,9 +34,19 @@ function newLeagueIdentity(db,rng,market){
     while(usedNames.has(market.brand+' Frontier League '+n))n++;
     leagueName=market.brand+' Frontier League '+n;
   }
-  let short=market.short,n=2;
-  while(usedShorts.has(short))short=market.short+n++;
-  return {leagueName,short};
+  const occupied=new Set([...usedShorts,...usedNames,
+    ...Object.values(REGION_PRESETS).map(r=>r.tier2Short).filter(Boolean),
+    ...Object.values(db.regions).map(r=>r.tier2Short).filter(Boolean),
+    ...Object.values(db.competitions||{}).flatMap(c=>[c.name,c.short])]);
+  const choose=preferred=>{
+    if(/^L[A-Z]{2}$/.test(preferred)&&!occupied.has(preferred)){occupied.add(preferred);return preferred}
+    for(const a of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ')for(const b of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'){
+      const next='L'+a+b;if(!occupied.has(next)){occupied.add(next);return next}
+    }
+    throw new Error('No distinct three-letter league abbreviation available');
+  };
+  const short=choose('L'+market.id.slice(0,2).toUpperCase()),tier2Short=choose('L'+market.id.slice(-2).toUpperCase());
+  return {leagueName:short,short,tier2Short,fullName:leagueName};
 }
 function futureLeagueCandidates(db){
   return FUTURE_LEAGUE_MARKETS.filter(m=>!db.regions[m.id]&&
@@ -60,9 +70,9 @@ function worldDecisions(db,rng,f,ev){
     const nSlots=clamp(Math.round((P.strength-58)/3.5),1,3);
     const fictional=c.fictional?newLeagueIdentity(db,rng,P):null;
     const cfg=regionCfg(id,c.fictional?{id,name:P.name,leagueName:fictional.leagueName,
-      short:fictional.short,strength:P.strength,tier:'emerging',teams:10,
-      system:P.system,div2:false,office:off,slots:nSlots}
-      :{div2:false,office:off,slots:nSlots});
+      short:fictional.short,tier2Short:fictional.tier2Short,fullLeagueName:fictional.fullName,strength:P.strength,tier:'emerging',teams:10,
+      system:P.system,div2:true,tier2Required:true,office:off,slots:nSlots}
+      :{div2:true,tier2Required:true,office:off,slots:nSlots});
     const R=addRegion(db,rng,cfg);
     if(c.fictional){
       (db.global.foundedLeagueNames=db.global.foundedLeagueNames||[]).push(R.leagueName);
@@ -82,7 +92,7 @@ function worldDecisions(db,rng,f,ev){
       if(mv.length&&ph>=40){const nt=[];for(let k=0;k<mv.length;k++){const t=genTeam(db,rng,P.id,P.strength-3);if(P.system==='mixed')t.franchised=false;nt.push(t.name)}why+=` · ${P.leagueName}는 시드권 신규 판매로 ${nt.join(', ')} 창단`}
       else if(mv.length)why+=` · ${P.leagueName}는 흥행 부진으로 ${activeTeams(db,P.id,1).length}팀 체제로 축소`;
       const kids=Object.keys(REGION_PRESETS).filter(k=>REGION_PRESETS[k].parent===P.id);
-      if(kids.length&&kids.every(k=>db.regions[k])&&REGION_PRESETS[P.id]&&REGION_PRESETS[P.id].tier==='major'){
+      if(!P.retainParentOnIndependence&&kids.length&&kids.every(k=>db.regions[k])&&REGION_PRESETS[P.id]&&REGION_PRESETS[P.id].tier==='major'){
         // 권역의 모든 지역이 독립 → 모리그는 역할을 다하고 해체, 남은 구단은 팀 수가 적은 리그부터 나눠 합류, 진출권도 나눠 승계
         const rest=activeTeams(db,P.id,1).sort((a,b)=>(b.fans||0)-(a.fans||0)), got={};
         for(const t of rest){const dst=kids.map(k=>db.regions[k]).sort((a,b)=>activeTeams(db,a.id,1).length-activeTeams(db,b.id,1).length)[0];
@@ -128,7 +138,7 @@ function worldDecisions(db,rng,f,ev){
     gev(`리그 통합: ${old} + ${gone.leagueName} → ${host.leagueName}`,'두 지역 모두 2년 연속 흥행 침체');
   }
   const I=db.worldConfig.internationals, cand=INTL_PRESETS.filter(p=>!I.some(i=>i.id===p.id));
-  if(cand.length&&I.length<5&&rng.chance(clamp((avgH-48)/50,0,0.3)*f)){const it={...rng.pick(cand)};I.push(it);gev(`새 국제대회 신설: ${it.name} (${({early:'윈터 이후',mid:'스프링 이후',end:'서머 이후'})[it.timing]})`,`세계 흥행 평균 ${Math.round(avgH)}`)}
+  if(cand.length&&I.length<5&&rng.chance(clamp((avgH-48)/50,0,0.3)*f)){const it={...rng.pick(cand)};I.push(it);gev(`새 국제대회 신설: ${it.name} (${({early:'스플릿 1 이후',mid:'스플릿 2 이후',end:'스플릿 3 이후'})[it.timing]})`,`세계 흥행 평균 ${Math.round(avgH)}`)}
   const weakI=I.filter(i=>i.id!=='WORLDS'&&(i.prestige||1)<=1).sort((a,b)=>(a.prestige||1)-(b.prestige||1));
   const avgPrev=Object.values(db.regions).map(R=>(R.metrics||[]).slice(-2)[0]).filter(Boolean).reduce((a,m,_,arr)=>a+m.hype/arr.length,0);
   if(weakI.length&&avgH<32&&avgPrev<32&&rng.chance(0.3*f)){const it=weakI[0];I.splice(I.indexOf(it),1);gev(`${it.name} 폐지`,`세계 흥행 부진 (평균 ${Math.round(avgH)}) — 일정 과밀 해소`)}

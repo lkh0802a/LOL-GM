@@ -1,6 +1,30 @@
 // ===== LOL GM: first-season blank roster setup =====
 const INITIAL_GOAL_KO={title:'리그 우승 도전',final:'결승권 진입',playoffs:'플레이오프 진출',top_half:'상위권 정착',survive:'1부 잔류',avoid_bottom:'하위권 탈출',promotion:'1부 승격 도전',develop:'유망주 육성과 경쟁력 확보'};
 
+// Populate the generated world before any bids. Keep existing players, legal
+// minima, import caps and budgets; no mid-auction rescue athletes are created.
+// Each region must be able to fill its legal minimum even if every external
+// non-local slot recruits there. This conservative bound is derived from actual
+// roster rules, not an arbitrary headcount or a lowered registration requirement.
+function seedInitialRegionalSupply(db){
+  const teams=activeTeams(db),created=[];
+  // Scoped to this append-only generation batch; never retained in live/save state.
+  const identityIndex=PLAYER_GENERATION_INDEX.get(db)||{count:Object.keys(db.players).length,names:new Set(Object.values(db.players).map(p=>p.name))};
+  for(const r of Object.values(db.regions)){
+    const own=teams.filter(t=>t.region===r.id),minimum=own.reduce((n,t)=>n+initialLegalMinimumTarget(db,t),0);
+    const exports=teams.filter(t=>t.region!==r.id).reduce((n,t)=>n+nonLocalLimitForTeam(db,t),0);
+    const local=Object.values(db.players).filter(p=>!p.retired&&isLocalPlayer(p,r.id));
+    const missing=Math.max(0,minimum+exports-local.length),counts=Object.fromEntries(ROLES.map(role=>[role,local.filter(p=>p.role===role).length]));
+    const rng=new RNG(WORLD_GENERATION_SEED+'|'+r.id,'initial-regional-supply');
+    for(let i=0;i<missing;i++){
+      const role=ROLES.slice().sort((a,b)=>counts[a]-counts[b]||ROLES.indexOf(a)-ROLES.indexOf(b))[0];
+      const p=genPlayer(db,rng,{role,age:rng.int(18,27),base:r.strength-12+clamp(rng.normal(0,3),-6,6),region:r.id,entryYear:db.year,entryPath:'open_qualifier'},identityIndex);
+      counts[role]++;created.push(p.id);
+    }
+  }
+  db.initialRegionalSupply={version:1,created:created.length,basis:'legal-minimum-plus-external-import-capacity'};
+  return created;
+}
 function prepareFirstSeasonFreeAgency(db){
   const strength={};
   for(const t of activeTeams(db))strength[t.id]=teamStrength(db,t.id);
@@ -106,7 +130,11 @@ function initialCandidateScore(db,p,t,key='',salary=null){
 function initialMarketSnapshot(db,teams){
   const free=Object.values(db.players).filter(p=>!p.retired&&!p.team),priceCache=new Map(),regions=[...new Set((teams||activeTeams(db)).map(t=>t.region))],byRegion={};
   const price=(p,region)=>{const k=region+'|'+p.id;if(!priceCache.has(k))priceCache.set(k,asking(db,p,region));return priceCache.get(k)};
-  for(const region of regions){const rows=free.map(p=>({p,id:p.id,s:price(p,region),nonLocal:!isLocalPlayer(p,region)}));byRegion[region]={local:rows.filter(x=>!x.nonLocal).sort((a,b)=>a.s-b.s),foreign:rows.filter(x=>x.nonLocal).sort((a,b)=>a.s-b.s)}}
+  // asking() only reads player/team topology here; bidding and signing happen
+  // after this scope has ended, so their invalidations remain live.
+  withMarketDemandReadIndex(db,()=>{
+    for(const region of regions){const rows=free.map(p=>({p,id:p.id,s:price(p,region),nonLocal:!isLocalPlayer(p,region)}));byRegion[region]={local:rows.filter(x=>!x.nonLocal).sort((a,b)=>a.s-b.s),foreign:rows.filter(x=>x.nonLocal).sort((a,b)=>a.s-b.s)}}
+  });
   return {free,price,byRegion};
 }
 function initialCheapestCost(rows,excludeId,n){if(n<=0)return 0;let cost=0,count=0;for(const x of rows){if(x.id===excludeId)continue;cost+=x.s;if(++count>=n)break}return count===n?cost:Infinity}
@@ -126,20 +154,24 @@ function initialCandidateShortlist(db,team,market,softMax){
   for(const x of publicTop)add(x.p);return out;
 }
 function initialPickCandidate(db,t,key='',snap=null){
+  return withMarketDemandReadIndex(db,()=>{
   const team=teamRef(db,t),market=snap||initialMarketSnapshot(db,[team]),target=team.initialRosterTarget||initialRosterTarget(db,team),room=Math.max(0,initialSalaryCeiling(db,team)-payroll(db,team)),slotsLeft=Math.max(1,target-team.roster.length),softMax=room/slotsLeft*1.35,rows=[];
   for(const p of initialCandidateShortlist(db,team,market,softMax)){const salary=market.price(p,team.region),chk=initialOfferCheck(db,p,team,{salary});if(!chk.ok)continue;rows.push({p,salary,score:initialCandidateScore(db,p,team,key,salary)})}
   rows.sort((a,b)=>(a.salary<=softMax)!==(b.salary<=softMax)?(a.salary<=softMax?-1:1):b.score-a.score||a.salary-b.salary);
   for(const row of rows)if(initialFutureFeasible(db,team,row.p,row.salary,market))return row.p;return null;
+  });
 }
 function aiInitialContractTerms(db,p,t,rng){
   const ask=asking(db,p,t.region),years=contractYearsForPlayer(db,p,rng),premium=rng.range(.96,1.08),role=defaultPromisedRole(db,p,t),room=Math.max(.1,initialSalaryCeiling(db,t)-payroll(db,t)),salary=Math.min(room,ask*premium);
   return normalizeContractTerms(db,p,t,salary,years,{releaseGuaranteeRate:contractGuaranteePolicy(p).preferred,signingBonus:rng.chance(.28)?ask*rng.range(.04,.12):0,bonuses:rng.chance(.32)?{performance:ask*.05,title:ask*.08,international:ask*.05}:{},promisedRole:role,option:rng.chance(.15)?{type:rng.chance(.55)?'team':'player'}:null,buyout:p.personality.ambition>=86&&rng.chance(.35)?playerMarketValue(db,p)*1.8:null});
 }
 function initialOfferForTeam(db,t,round,seed,market,target){
+  return withMarketDemandReadIndex(db,()=>{
   const want=target??t.initialRosterTarget??initialRosterTarget(db,t);if(t.roster.length>=want)return null;
   const key='market|'+round+'|'+want,p=initialPickCandidate(db,t,key,market);if(!p)return null;
   const rng=new RNG((seed||'initial-market')+'|'+t.id+'|'+key,'initial-offer'),terms=aiInitialContractTerms(db,p,t,rng),chk=initialOfferCheck(db,p,t,terms);if(!chk.ok)return null;
   return {team:t,player:p,terms,value:offerUtility(db,p,t,terms)+((hashStr((seed||'initial-market')+'|choose|'+p.id+'|'+t.id+'|'+round)%1001)/1000-.5)*.08};
+  });
 }
 function resolveInitialOfferRound(db,teams,round,seed,targetFn){
   const market=initialMarketSnapshot(db,teams),offers=teams.map(t=>initialOfferForTeam(db,t,round,seed,market,targetFn(t))).filter(Boolean),byPlayer={};for(const o of offers)(byPlayer[o.player.id]=byPlayer[o.player.id]||[]).push(o);

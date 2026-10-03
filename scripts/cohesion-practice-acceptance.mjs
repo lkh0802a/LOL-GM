@@ -35,8 +35,11 @@ await runEngineFixture(String.raw`(()=>{
   const a=unpackDB(packDB(base)),b=unpackDB(packDB(base));
   a.teams[t.id].training.focus='individual';b.teams[t.id].training.focus='champions';
   runDailyPractice(a);runDailyPractice(b);
-  const ap=a.players[p.id],bp=b.players[p.id],champ=Object.keys(ap.pool)[0];
-  check(a.teams[t.id].practiceUsage.individual>b.teams[t.id].practiceUsage.individual&&bp.pool[champ].trainingSeason>ap.pool[champ].trainingSeason,'focus has no opportunity cost');
+  const ap=a.players[p.id],bp=b.players[p.id],
+    championWork=q=>Object.values(q.pool).reduce((n,c)=>n+(c.trainingSeason||0),0);
+  // A pool's insertion-first champion need not be selected for today's work.
+  // Compare actual aggregate work, not an unrelated champion's untouched row.
+  check(a.teams[t.id].practiceUsage.individual>b.teams[t.id].practiceUsage.individual&&championWork(bp)>championWork(ap),'focus has no opportunity cost');
   check(trainingTimeMultiplier(a.teams[t.id],db.year)>trainingTimeMultiplier(b.teams[t.id],db.year),'individual time not linked to real growth');
   // Current role, actual practice time and employment boundary; no inflated raw work.
   const learningWorld=()=>{const w=unpackDB(packDB(base)),club=w.teams[t.id];club.staffRoster=[];delete club.practiceDay;club.scrimLog=[];club.training.focus='champions';w.manager.teamId=t.id;w.players[p.id].medicalPlan='normal';return w};
