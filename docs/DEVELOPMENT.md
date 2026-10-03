@@ -32,7 +32,7 @@ files or another worker's unpushed changes exist in Cloud.
 
 각 교체 단위의 완료 조건은 **화면 조작 → 권한/조건 확인 → 실제 공유 명령·엔진 반영 → 관련 화면의 상태와 결과/이유 표시 → 저장·재접속 상태 유지**다. 실패·취소 시 rollback과 중복 실행 방지도 필요한 경로에서 확인한다. 내부 함수만 있거나 화면만 있는 기능은 완료가 아니다. 기능/권한/저장 의미 변경은 UI 정리로 숨기지 않는다.
 
-한 명의 구현 담당자가 기존 시간당 45–55분 단위로 진행한다. 현재 열린 PR의 실패를 보존·해결하고 중복 작업을 피한다. 기존 PR #164의 head `575d6203d605672173777411c32f19a6807755bc` 필수 CI에서 smoke(core)가 35초 제한으로 실패했으므로, 해당 변경은 아직 병합/배포 완료가 아니다. 재설계 구현은 별도 검토 가능한 작업 단위/PR로 진행하고 정확한 현재 head의 필수 CI 성공 후 순차 병합·HTML/웹 배포한다. 다음 재설계 단위는 12.3이며, 전면 교체가 끝났다는 선언보다 실제 화면별 연결 증거를 기록한다.
+한 명의 구현 담당자가 기존 시간당 45–55분 단위로 진행한다. 현재 열린 PR의 실패를 보존·해결하고 중복 작업을 피한다. PR #164의 초기 head `575d6203d605672173777411c32f19a6807755bc`에서 발생한 35초 core 실패는 보존한다. 최종 head `45e55e3d1eb75785cf80b5feafe9c39130c031fa`의 필수 CI `37147718717` 전체 성공(의료 4시드·2집계 포함)을 확인한 뒤 main `606b3d63eca2e6923ef4b004ae26b575dac2c4f2`로 병합했다. main 재검증·웹 배포는 별도 gate이며 분석실 첫 흐름은 PR #165에서 검증한다. 재설계 구현은 별도 검토 가능한 작업 단위/PR로 진행하고 정확한 현재 head의 필수 CI 성공 후 순차 병합·HTML/웹 배포한다. 다음 재설계 단위는 12.3이며, 전면 교체가 끝났다는 선언보다 실제 화면별 연결 증거를 기록한다.
 
 ## Unified numeric roadmap
 
@@ -44,7 +44,7 @@ Each substantial work unit uses a dotted number and a coherent 45–55-minute bo
 
 | Stage | Current scope | Acceptance boundary |
 | --- | --- | --- |
-| 1. Foundation and new game | world/team selection, initial FA supply, identity/calendar | Previously verified foundation; reproduce legal starts, budgets/registration and save; confirmed zero-substitute supply defect remains |
+| 1. Foundation and new game | world/team selection, initial FA supply, identity/calendar | Previously verified foundation; reproduce legal starts, budgets/registration and save; legal initial supply now verified in PR #164; preserve roster minimums/import limits and recheck future starts |
 | 2. Players, medical and development | ability, roles, relationships, fatigue/recovery, growth/retirement | Existing medical and relationship systems; observed causes, actual practice/match effects, save/AI parity |
 | 3. Scouting and prospects | cohorts, observation uncertainty, stale reports, shortlist comparisons | Existing observation systems; no hidden-information shortcuts, legitimate observed AI decisions |
 | 4. Contracts and transfer market | consent, negotiations, representatives, loans, payments, insolvency | Existing contracts and loans; full command/UI/finance/save/rollback and remaining claim/lifecycle scope |
@@ -98,8 +98,9 @@ Each substantial work unit uses a dotted number and a coherent 45–55-minute bo
   chronological holdouts and compare distributions. Source networking is blocked.
 - 12.1 Document navigation/status consolidation and 12.2 stable web/offline HTML:
   current delivery work. Review existing behavior before declaring every domain complete.
-- 1.1 Legal initial FA supply: already reproduced and independent of blocked
-  professional/group data; continue if external acquisition remains unavailable.
+- 1.1 Legal initial FA supply: PR #164 implements deterministic pre-auction
+  supply with actual roster/import constraints; focused acceptance and exact-head
+  required CI passed. External professional/group data remains independently blocked.
 
 This is a unified scope/trace, not an accepted global completion count. Each stage
 updates actual implementation, tests, failures and remaining work; repeated new
@@ -685,7 +686,7 @@ broadcast follow-through is still pending and must not be marked delivered.
 
 ## 10.1 연결 검증 / 초기·후속 시장 병목과 조직 권한 보강
 
-현재 PR #164의 이전 head `3385154d2dfb77076ef549790e07a2494e88f83a` 필수 CI `37143840624`에서 core smoke의 35초 제한 및 ui-finance-contracts의 훈련 기회비용 검사가 실패했다. 이 실패는 그대로 보존하며 현재 변경을 병합/배포 완료로 보지 않는다.
+PR #164의 이전 head `3385154d2dfb77076ef549790e07a2494e88f83a` 필수 CI `37143840624`에서 core smoke의 35초 제한 및 ui-finance-contracts의 훈련 기회비용 검사가 실패했다. 이 실패는 그대로 보존한다. 최종 head의 성공·병합 상태는 위 현재 방향에 기록하며 이전 실패를 성공으로 바꾸지 않는다.
 
 - 원인/측정: `/tmp/league-smoke.cpuprofile`에서 `marketDemandSnapshot`과 `activeTeams`가 주요 CPU 소비였다. 수요 캐시가 적중해도 가격 조회마다 전체 선수 키와 활성 1부 목록을 다시 만들었다. 확대된 초기/후속 시장의 가격·후보 정렬에서 반복됐으며 제한을 올리지 않았다.
 - 구현: `contract-market-pricing.js`가 시장 수요/가격과 동기적인 topology-read 인덱스를 소유한다. `initialMarketSnapshot`, `eligibleFillFAs`, `aiMarketOfferCandidates`의 선수/팀 구성 불변 조회 범위에서 기존 키의 연도·선수 수·지역별 1부 수를 한 번 구한다. WeakMap 인덱스는 finally로 제거되고 세계/save에 저장하지 않는다. 입찰·계약·추가/은퇴/시즌 변경은 범위 밖에서 기존 재검증/캐시 무효화를 유지한다. 새 모듈은 5500자 제한이며 기존 contracts.js의 26000자 제한은 유지한다.
@@ -695,7 +696,7 @@ broadcast follow-through is still pending and must not be marked delivered.
 - 테스트의 별도 원인: `cohesion-practice-acceptance`가 풀의 첫 삽입 챔피언을 실제 훈련 대상으로 가정했다. 확대 세계의 선택 선수에서는 해당 챔피언이 훈련되지 않아 실패했다. 대상 하나를 임의 고르지 않고 실제 전체 챔피언 훈련량과 개인 훈련의 상반된 변화가 모두 있는지 검증한다. 공유 시간/연간 성장 소비/코칭/AI/저장 검증은 유지했고 production 훈련 판정은 바꾸지 않았다.
 - 로컬 증거: 시장/입찰 동일성·조직 권한, 훈련 기회비용, 리그 표시/6개 실제 2부/최초 합법 로스터, 기존 30초 회귀, 120모듈 검사·standalone 빌드 통과. 필수 전체 CI는 최종 커밋 head에서 별도 성공해야 한다. 아직 국가별 2부/중계 충돌/분석실/전면 UI 재설계가 구현됐다는 증거는 아니다.
 
-다음은 이 head의 필수 CI와 순차 병합/검증된 main 배포를 완료하고, 10.2/10.3과 12.3/12.9 중 실제 연결 경계가 명확한 한 단위를 이어간다. 이미 승인된 전 범위·지속 발견은 유지하며 장기/실기기/TalkBack QA는 보류한다.
+이 head의 필수 CI·순차 병합은 완료했다. 검증된 main 배포를 확인하고 10.2/10.3과 12.3/12.9 중 실제 연결 경계가 명확한 한 단위를 이어간다. 분석실 첫 조회 흐름은 아래 12.9 증거와 PR #165로 구분한다. 이미 승인된 전 범위·지속 발견은 유지하며 장기/실기기/TalkBack QA는 보류한다.
 
 ### 동일 Node 22 러너 기준 추가 병목 보강
 
