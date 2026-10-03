@@ -26,7 +26,7 @@ function metaIndexAddRow(index,row){
   metaIndexAdd(index.byPatch,row.patch,row);
   metaIndexAdd(index.byComp,row.comp,row);
   for(const tid of new Set((row.sides||[]).map(s=>s.team).filter(Boolean)))metaIndexAdd(index.byTeam,tid,row);
-  for(const pid of new Set((row.sides||[]).flatMap(s=>(s.picks||[]).map(p=>typeof p==='object'?p.player:null)).filter(Boolean)))metaIndexAdd(index.byPlayer,pid,row);
+  for(const pid of new Set((row.sides||[]).flatMap(s=>(s.picks||[]).map(p=>p&&typeof p==='object'?p.player:null)).filter(Boolean)))metaIndexAdd(index.byPlayer,pid,row);
   for(const region of row.regions||[])metaIndexAdd(index.byRegion,region,row);
   for(const key of ['comp','patch','season','split','league']){
     const value=row[key];
@@ -97,7 +97,7 @@ function metaFilterKey(filter){
 }
 function metaSideMatches(row,side,filter){
   return (!filter.color||metaSideColor(row,side)===filter.color)&&(!filter.region||side.region===filter.region)&&(!filter.team||side.team===filter.team)&&
-    (!filter.player||(side.picks||[]).some(p=>typeof p==='object'&&p.player===filter.player&&(!filter.position||p.role===filter.position)))&&
+    (!filter.player||(side.picks||[]).some(p=>p&&typeof p==='object'&&p.player===filter.player&&(!filter.position||p.role===filter.position)))&&
     (!filter.opponent||(row.sides||[]).some(other=>other!==side&&other.team===filter.opponent&&other.team!==side.team));
 }
 function metaRowsFiltered(db,filter={}){

@@ -50,7 +50,8 @@ function draftCompositionEvidence(state,side,cid,score){
   if(mine.length>=2){const ap=mine.filter(x=>x.dmg==='AP').length,ad=mine.length-ap;if(ap===0&&c.dmg==='AP')reasons.push('AP 피해 비중 보완');if(ad===0&&c.dmg==='AD')reasons.push('AD 피해 비중 보완')}
   const scaling=(t.scaling_preference-50)/50*(c.kit.late-c.kit.early);if(Math.abs(scaling)>=.8)reasons.push(scaling>0?'팀 시간대 선호와 부합':'팀 시간대 선호와 충돌');
   if(!reasons.length)reasons.push('현재 조합에서 뚜렷한 구조 보정 없음');
-  return {score,currentPicks:mine.map(x=>x.id),reasons,source:'현재 우리 공개 픽 + 팀 전술'};
+  const history=championCompositionInsights(state.db,cid,{team:state.teamIds[side],patch:state.db.patch.id});
+  return {score,currentPicks:mine.map(x=>x.id),reasons,source:'현재 우리 공개 픽 + 팀 전술',observed:{sample:history.sample,complete:history.complete,partial:history.partial,pairs:history.pairs.filter(x=>mine.some(c=>c.id===x.champ))}};
 }
 function draftCandidateEvidence(state,side,cid,out){
   out.metaEvidence=draftMetaEvidence(state,side,cid);
