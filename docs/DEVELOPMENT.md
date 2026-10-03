@@ -102,6 +102,18 @@ as full engine matches or pollute public professional meta counters. Focused
 manual/background practice acceptance and save restoration precede CI. Final
 100-season/device/TalkBack QA remains after implementation and playtest fixes.
 
+Delivery: PR #150 final head `30a406907b444522a8a1e803fd435776234e3ea6`
+passed complete Actions `37092724012` with all 13 required jobs, medical core,
+four seed samples, two aggregates and verify successful. Exact PR head and
+unchanged main baseline were checked before sequential merge
+`945e8190a2c067f9c1214012d5b48fedf6f017f6`. Standalone HTML was rebuilt from the
+integrated 109-module manifest and matches `dist/index.html`; publication is
+gated by complete main CI, including standalone sync, on its actual commit.
+Implementation, acceptance and docs deliver this slice; merge/HTML/CI are
+additional follow-through. The remaining hourly time cannot fit another coherent
+45–55-minute implementation; the precise practice-comparison slice is recorded
+above for continuation. No final long-season/device/TalkBack QA has started.
+
 ### Current implementation slice — actual public draft chronology (2026-10-03)
 
 Scope estimate: 50 minutes, one implementation worker, baseline main

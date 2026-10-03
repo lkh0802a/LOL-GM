@@ -774,7 +774,7 @@ function simulateMatch(db,blueId,redId,seed,ctx,quiet){
   const patch=db.patch;
   const d=runDraft(db,[blueId,redId],rng.draft,ctx);
   const mkSide=(tid,i)=>{const team=db.teams[tid],check=validateStartingLineup(db,team);if(!check.ok)throw new Error('Official lineup invalid: '+tid+' '+check.errors.join(', '));const ps=ROLES.map(r=>newPS(starterFor(db,team,r),i,r,d.picks[i][r],patch));
-    return {team,ps,color:i===0?'BLUE':'RED',towers:{top:[1,1,1,1],mid:[1,1,1,1],bot:[1,1,1,1]},inhibAt:{top:0,mid:0,bot:0},nexusT:2,nexus:true,dragons:[],soul:false,baronUntil:0,elderUntil:0,herald:0,heraldCharge:false,barons:0,kills:0,towersTaken:0}};
+    return {team,ps,tacticContext:matchTacticSnapshot(db,team),color:i===0?'BLUE':'RED',towers:{top:[1,1,1,1],mid:[1,1,1,1],bot:[1,1,1,1]},inhibAt:{top:0,mid:0,bot:0},nexusT:2,nexus:true,dragons:[],soul:false,baronUntil:0,elderUntil:0,herald:0,heraldCharge:false,barons:0,kills:0,towersTaken:0}};
   const st={t:0,cur:0,quiet:!!quiet,seed,rng,patch,sides:[mkSide(blueId,0),mkSide(redId,1)],lanePush:{top:0,mid:0,bot:0},vision:{top:0,mid:0,bot:0,dragon:0,baron:0},
     obj:{dragonAt:patch.rules.dragonSpawn,dragonIdx:0,dragonTypes:rng.dec.chance(0.5)?['화염','대지','바다','바람']:['바다','바람','화염','대지'],soul:false,elderAt:0,heraldDone:false,baronAt:patch.rules.baronSpawn,wait:{}},
     jgNext:[2.6+rng.dec.range(0,1),2.6+rng.dec.range(0,1)],mods:[(ctx&&ctx.mods&&ctx.mods[blueId])||0,(ctx&&ctx.mods&&ctx.mods[redId])||0],log:[],expl:[...d.expl],firsts:{},goldHist:[],winner:-1};
@@ -1923,7 +1923,7 @@ function recordMeta(db,r){
   }
   db.metaHistory=db.metaHistory||[];
   const mc=r.metaContext||{},sequence=validDraftSequence(r.draft.sequence,r.sides.map(s=>s.ps.map(p=>p.champ.id)),r.draft.bans)?{draftSequence:copyDraftSequence(r.draft.sequence)}:{};
-  db.metaHistory.push({date:r.date||db.worldDate,patch:r.patch||db.patch.id,comp:r.comp||r.competitionId||null,season:mc.season||null,year:mc.year||+(r.date||db.worldDate).slice(0,4),split:mc.split||null,stage:mc.stage||null,league:mc.league||null,international:!!mc.international,regions,...sequence,sides:r.sides.map((s,i)=>({team:s.team?.id||null,region:s.team?.region||null,color:s.color==='BLUE'||s.color==='RED'?s.color:null,win:r.winner===i,bans:r.draft.bans[i].slice(),picks:s.ps.map(x=>({champ:x.champ.id,role:x.role||null,player:x.p?.id||null,items:matchQuestItems(x).slice(),runes:(x.runes||[]).slice()}))})),bans:r.draft.bans.flat()});
+  db.metaHistory.push({date:r.date||db.worldDate,patch:r.patch||db.patch.id,comp:r.comp||r.competitionId||null,season:mc.season||null,year:mc.year||+(r.date||db.worldDate).slice(0,4),split:mc.split||null,stage:mc.stage||null,league:mc.league||null,international:!!mc.international,regions,...sequence,sides:r.sides.map((s,i)=>({team:s.team?.id||null,region:s.team?.region||null,color:s.color==='BLUE'||s.color==='RED'?s.color:null,...archivedMatchTactics(s),win:r.winner===i,bans:r.draft.bans[i].slice(),picks:s.ps.map(x=>({champ:x.champ.id,role:x.role||null,player:x.p?.id||null,items:matchQuestItems(x).slice(),runes:(x.runes||[]).slice()}))})),bans:r.draft.bans.flat()});
   const international=regions.length>1;
   for(const side of r.sides){if(!side.team)continue;const t=db.teams[side.team.id]||side.team;t.metaKnowledge=t.metaKnowledge||{};t.metaCounter=t.metaCounter||{};for(const os of r.sides){if(os===side)continue;for(const pick of os.ps){const cid=pick.champ.id,success=r.winner===r.sides.indexOf(os),novel=((db.regionMetaStats?.[t.region]||{})[cid]?.p||0)<3,analysis=.65+staffAnalysisFor(side.team,'opponent')/140,learn=(success?.055:.018)*(novel?1.6:1)*(international?1.35:1)*analysis;t.metaKnowledge[cid]=clamp((t.metaKnowledge[cid]||0)+learn,0,1);if(r.winner!==r.sides.indexOf(side))t.metaCounter[cid]=clamp((t.metaCounter[cid]||0)+.02*analysis,0,1)}}}
 }
@@ -2041,6 +2041,44 @@ function draftOrderInsights(db,cid,filter={}){
     for(const e of own.slice(0,slot)){let x=partners.get(e[3]);if(!x){x={champ:e[3],g:0};partners.set(e[3],x)}x.g++}
   }
   out.preceding=[...partners.values()].sort((a,b)=>b.g-a.g||a.champ.localeCompare(b.champ)).slice(0,8);
+  return metaCacheRemember(state.queries,key,out,META_FILTER_CACHE_LIMIT);
+}
+
+/* ==== FILE: meta-tactics.js ==== */
+// Internal, game-time tactical context for currently controlled squads only.
+const MATCH_TACTIC_FIELDS=['aggression','risk_tolerance','objective_priority','vision_investment','scaling_preference'];
+const META_TACTIC_CACHE=new WeakMap();
+function validMatchTactics(context,team){
+  return !!context&&context.version===1&&context.team===team&&typeof context.observer==='string'&&!!context.observer&&Array.isArray(context.values)&&context.values.length===5&&context.values.every(x=>typeof x==='number'&&Number.isFinite(x)&&x>=0&&x<=100);
+}
+function matchTacticSnapshot(db,team){
+  if(db.world?.fired||!managerControlsSquad(db,team))return null;
+  const context={version:1,team:team.id,observer:managedTeamId(db),values:MATCH_TACTIC_FIELDS.map(k=>team.tactics?.[k])};
+  return validMatchTactics(context,team.id)?Object.freeze({...context,values:Object.freeze(context.values)}):null;
+}
+function archivedMatchTactics(side){
+  const c=side.tacticContext;
+  return validMatchTactics(c,side.team?.id)?{tacticContext:{...c,values:c.values.slice()}}:{};
+}
+function ownTacticInsights(db,filter={},cid=null){
+  const team=filter.team||managedTeamId(db),out={allowed:false,team,sample:0,known:0,unknown:0,axes:[]};
+  // Recheck authority before cache access, including firing and club changes.
+  if(db.world?.fired||!managerControlsSquad(db,db.teams[team]))return out;
+  out.allowed=true;const scoped={...filter,team},index=metaHistoryIndex(db),key=JSON.stringify([managedTeamId(db),metaFilterKey(scoped),cid]);
+  let state=META_TACTIC_CACHE.get(index);
+  if(!state||state.length!==index.length||state.tail!==index.tail){state={length:index.length,tail:index.tail,queries:new Map()};META_TACTIC_CACHE.set(index,state)}
+  if(state.queries.has(key)){const hit=state.queries.get(key);state.queries.delete(key);state.queries.set(key,hit);return hit}
+  const axes=MATCH_TACTIC_FIELDS.map(()=>new Map());
+  for(const row of metaRowsFiltered(db,scoped))for(const side of row.sides||[]){
+    if(!metaSideMatches(row,side,scoped))continue;
+    if((cid||scoped.position)&&!(side.picks||[]).some(p=>{const x=typeof p==='string'?{champ:p}:p;return x&&(!cid||x.champ===cid)&&(!scoped.position||x.role===scoped.position)&&(!scoped.player||x.player===scoped.player)}))continue;
+    out.sample++;const c=side.tacticContext;
+    if(!validMatchTactics(c,side.team)){out.unknown++;continue}out.known++;
+    for(let i=0;i<axes.length;i++){let x=axes[i].get(c.values[i]);if(!x){x={value:c.values[i],g:0,w:0};axes[i].set(c.values[i],x)}x.g++;if(side.win)x.w++}
+  }
+  // Exact settings, ranked by frequency rather than win rate. Display bounds
+  // do not remove history or change sample/win denominators.
+  out.axes=axes.map((axis,i)=>({key:MATCH_TACTIC_FIELDS[i],distinct:axis.size,settings:[...axis.values()].sort((a,b)=>b.g-a.g||a.value-b.value).slice(0,6).map(x=>({...x,wr:x.w/x.g}))}));
   return metaCacheRemember(state.queries,key,out,META_FILTER_CACHE_LIMIT);
 }
 
@@ -4808,7 +4846,7 @@ function promotionRelegation(db,w,rng,ev){
 function packMetaHistoryRow(r){
   const row=[
     r.date,r.patch,r.comp,r.season,r.year,r.split,r.stage,r.league,r.international?1:0,r.regions||[],
-    (r.sides||[]).map(s=>{const side=[s.team,s.region,s.win?1:0,(s.picks||[]).map(p=>{const x=typeof p==='string'?{champ:p}:p;return [x.champ,x.role||null,x.player||null,x.items||[],x.runes||[]]})];if(Object.hasOwn(s,'bans')||Object.hasOwn(s,'color'))side.push(s.bans??null);if(Object.hasOwn(s,'color')){side.push(s.color);if(!Object.hasOwn(s,'bans'))side.push(1)}return side}),
+    (r.sides||[]).map(s=>{const side=[s.team,s.region,s.win?1:0,(s.picks||[]).map(p=>{const x=typeof p==='string'?{champ:p}:p;return [x.champ,x.role||null,x.player||null,x.items||[],x.runes||[]]})];if(Object.hasOwn(s,'bans')||Object.hasOwn(s,'color'))side.push(s.bans??null);if(Object.hasOwn(s,'color')){side.push(s.color);if(!Object.hasOwn(s,'bans'))side.push(1)}if(Object.hasOwn(s,'tacticContext')){while(side.length<7)side.push(null);side[6]=(!Object.hasOwn(s,'bans')?1:0)|(!Object.hasOwn(s,'color')?2:0);side.push(s.tacticContext)}return side}),
     r.bans||[]
   ];
   if(Object.hasOwn(r,'draftSequence'))row.push(r.draftSequence);
@@ -4841,7 +4879,7 @@ function unpackMetaHistory(rows){
   // so GC can reclaim it before the entire history has been expanded.
   for(let i=0;i<rows.length;i++){
     const r=rows[i];
-    const row=Array.isArray(r)?{date:r[0],patch:r[1],comp:r[2],season:r[3],year:r[4],split:r[5],stage:r[6],league:r[7],international:!!r[8],regions:r[9]||[],sides:(r[10]||[]).map(s=>({team:s[0],region:s[1],win:!!s[2],picks:(s[3]||[]).map(p=>({champ:p[0],role:p[1],player:p[2],items:p[3]||[],runes:p[4]||[]})),...(s.length>4&&s[6]!==1?{bans:s[4]}:{}),...(s.length>5?{color:s[5]}:{})})),bans:r[11]||[]}:r;
+    const row=Array.isArray(r)?{date:r[0],patch:r[1],comp:r[2],season:r[3],year:r[4],split:r[5],stage:r[6],league:r[7],international:!!r[8],regions:r[9]||[],sides:(r[10]||[]).map(s=>({team:s[0],region:s[1],win:!!s[2],picks:(s[3]||[]).map(p=>({champ:p[0],role:p[1],player:p[2],items:p[3]||[],runes:p[4]||[]})),...(s.length>4&&!(s[6]&1)?{bans:s[4]}:{}),...(s.length>5&&!(s[6]&2)?{color:s[5]}:{}),...(s.length>7?{tacticContext:s[7]}:{})})),bans:r[11]||[]}:r;
     for(const key of ['date','patch','comp','season','stage','league'])row[key]=intern(row[key]);
     if(Array.isArray(r)&&r.length>12)row.draftSequence=r[12];
     row.regions=ids(row.regions);row.bans=ids(row.bans);
@@ -11242,6 +11280,12 @@ function patchDraftOrderCard(db,cid,filter){
   const before=a.preceding.map(x=>esc(name(x.champ))+' '+x.g+'회').join(' · ')||'확인 표본 없음';
   return `<section id="champdraftorder"><h4>기록된 실제 픽 순서</h4><p>선택 챔피언 출전 ${a.appearances}쪽 · 순서 확인 ${a.known}쪽 · 미상 ${a.unknown}쪽</p><p>드래프트 전체 첫 픽 ${a.opening}전 ${a.openingWins}승 (${rate(a.opening,a.openingWins)}) · 그 외 후속 픽 ${a.followup}전 ${a.followupWins}승 (${rate(a.followup,a.followupWins)})</p><p>선택 챔피언 쪽의 픽 순번: ${a.slots.map((n,i)=>(i+1)+'번째 '+n+'회').join(' · ')}</p><p>앞서 선택된 같은 팀 챔피언: ${before}</p><small>실제 공개 픽·밴 선택 로그가 최종 픽·밴과 일치하는 기록만 사용합니다. 전체 첫 픽은 블루나 구단의 첫 픽과 다를 수 있습니다. 기존 역할순 배열과 출처 없는 재현 순서는 미상으로 남깁니다. 조건은 선택한 챔피언 출전에 적용하며 앞선 동료의 포지션은 제한하지 않습니다. 승률 분모는 각 확인된 첫픽/후속픽 출전 수이며 적은 표본·패치·상대 차이가 영향을 줍니다. 선택 순서의 인과적 우위나 상대의 숨은 의도를 뜻하지 않습니다.</small></section>`;
 }
+function patchOwnTacticCard(db,filter,cid=null){
+  const a=ownTacticInsights(db,filter,cid);if(!a.allowed)return '<section id="owntacticmeta"><h3>우리 구단의 기록 전술</h3><p>현재 관리 권한이 있는 구단·2군만 조회할 수 있습니다.</p></section>';
+  const labels={aggression:'교전 회피 ↔ 교전 주도',risk_tolerance:'안정 지향 ↔ 위험 감수',objective_priority:'킬·교전 지향 ↔ 오브젝트 지향',vision_investment:'성장 투자 ↔ 시야 투자',scaling_preference:'초반 지향 ↔ 후반 지향'},name=db.teams[a.team]?.name||a.team;
+  const axes=a.axes.map(x=>`<article class="card"><b>${esc(labels[x.key])}</b><p>${x.settings.length?x.settings.map(s=>s.value+' · '+s.g+'전 '+s.w+'승 ('+Math.round(s.wr*100)+'%)').join('<br>'):'확인 표본 없음'}</p><small>확인된 설정 ${x.distinct}종 · 빈도순 상위 6종</small></article>`).join('');
+  return `<section id="owntacticmeta"><h3>우리 구단의 기록 전술 · ${esc(name)}</h3><p>${cid?'선택 챔피언 출전 · ':''}필터 출전 ${a.sample}쪽 · 전술 확인 ${a.known}쪽 · 미상 ${a.unknown}쪽</p><div class="cards">${axes}</div><small>0은 왼쪽, 100은 오른쪽 성향입니다. 경기 시작 시 관리 권한 아래 기록한 설정만 사용하며 현재 값으로 과거를 채우지 않습니다. 승률 분모는 각 설정의 확인된 출전 수입니다. 상대 전술의 정확한 값은 조회하지 않습니다. 적은 표본·패치·상대·다른 전술 축이 영향을 주므로 개별 설정의 인과적 효과나 추천 점수를 뜻하지 않습니다.</small></section>`;
+}
 function viewPatch(){
   const pt=DB.patches, list=[...pt.list].reverse(), prev=[...(pt.prev||[])].reverse();
   const rid=PSET.region==='GLOBAL'?null:PSET.region,{comps,patches,seasons,splits,leagues}=metaHistoryFacets(DB),today=DB.worldDate,from=PSET.period==='30'?addDays(today,-30):PSET.period==='90'?addDays(today,-90):PSET.period==='YEAR'?today.slice(0,4)+'-01-01':null,filter={region:rid||undefined,patch:PSET.patch==='ALL'?undefined:PSET.patch,comp:PSET.comp==='ALL'?undefined:PSET.comp,season:PSET.season==='ALL'?undefined:PSET.season,year:PSET.year||undefined,split:PSET.split==='ALL'?undefined:PSET.split,league:PSET.league==='ALL'?undefined:PSET.league,scope:PSET.scope==='ALL'?undefined:PSET.scope,position:PSET.position==='ALL'?undefined:PSET.position,team:PSET.team&&PSET.team!=='ALL'?PSET.team:undefined,player:PSET.player&&PSET.player!=='ALL'?PSET.player:undefined,opponent:PSET.opponent&&PSET.opponent!=='ALL'?PSET.opponent:undefined,color:PSET.color&&PSET.color!=='ALL'?PSET.color:undefined,from:from||undefined,to:PSET.period==='ALL'?undefined:today},filtered=!!(filter.patch||filter.comp||filter.season||filter.year||filter.split||filter.league||filter.scope||filter.position||filter.from||filter.team||filter.player||filter.opponent||filter.color),mt=filtered?metaTableFiltered(DB,filter):metaTable(DB,rid),G=mt[0]?.sample||0;
@@ -11260,7 +11304,7 @@ function viewPatch(){
   const systemMeta=`<section><h3>아이템 / 룬 메타</h3><div class="cards"><article class="card"><b>아이템 ${activeItems.length}개 활성</b><p>${topSystem('item',activeItems)}</p><small>시작 ${tierCount.starter} · 조합 ${tierCount.component} · 장화 ${tierCount.boots} · 완성 ${tierCount.final} · 소모품 ${tierCount.consumable} · 특수 ${tierCount.special}. </small></article><article class="card"><b>룬 ${activeRunes.length}개 활성</b><p>${topSystem('rune',activeRunes)}</p><small>${runeTree}. </small></article></div></section>`;
 
   return `<section class="teamhead"><h2>패치 ${esc(DB.patch.id)}</h2><p class="hint">챔피언 ${Object.keys(DB.patch.champions).length}명 · 공식 데이터 ${DB.patch.championSource?.matched||0}/${DB.patch.championSource?.total||Object.keys(DB.patch.champions).length} · 한국어 설명 ${DB.patch.championSource?.localized||0}/${DB.patch.championSource?.total||Object.keys(DB.patch.champions).length} · 아이템 ${activeItems.length} · 룬 ${activeRunes.length} · ${filtered?'기록 필터':'누적/감쇠 참고'} 표본 ${G}판${pt.nextDate?` · 다음 패치 ${esc(pt.nextDate)}`:''}</p></section>
-  ${detail}${insight}${dc?patchCompositionCard(DB,dc.id,filter)+patchDraftOrderCard(DB,dc.id,filter):''}${systemMeta}${patchParticipantControls(DB,PSET)}${patchSideCoverageCard(DB,filter)}<p class="hint">${filtered?'기록 필터':'누적/감쇠 참고'} 표본 ${G}판. 픽·승률은 선택한 쪽${filter.player?'의 선택 선수':''} 기준이며 밴은 경기 전체 노출입니다. 조건이 맞지 않거나 ID가 미상인 기록을 임의로 포함하지 않습니다.</p>${patchBanAttributionCard(DB,filter,PSET.champ)}
+  ${detail}${insight}${dc?patchCompositionCard(DB,dc.id,filter)+patchDraftOrderCard(DB,dc.id,filter):''}${systemMeta}${patchParticipantControls(DB,PSET)}${patchSideCoverageCard(DB,filter)}${patchOwnTacticCard(DB,filter,PSET.champ)}<p class="hint">${filtered?'기록 필터':'누적/감쇠 참고'} 표본 ${G}판. 픽·승률은 선택한 쪽${filter.player?'의 선택 선수':''} 기준이며 밴은 경기 전체 노출입니다. 조건이 맞지 않거나 ID가 미상인 기록을 임의로 포함하지 않습니다.</p>${patchBanAttributionCard(DB,filter,PSET.champ)}
   <section><h3>챔피언 티어리스트</h3><p class="hint">${observed?"대회 밴픽 기준":"현재 패치 예상 티어"}</p><div class="controls"><label>지역<select id="pregion"><option value="GLOBAL">글로벌</option>${Object.values(DB.regions).map(r=>`<option value="${r.id}"${PSET.region===r.id?' selected':''}>${esc(r.name||r.leagueName||r.id)}</option>`).join('')}</select></label><label>패치<select id="ppatch"><option value="ALL">전체</option>${patches.map(x=>`<option value="${esc(x)}"${PSET.patch===x?' selected':''}>${esc(x)}</option>`).join('')}</select></label><label>대회<select id="pcomp"><option value="ALL">전체</option>${comps.map(x=>`<option value="${esc(x)}"${PSET.comp===x?' selected':''}>${esc(x)}</option>`).join('')}</select></label><label>기간<select id="pperiod"><option value="ALL">전체</option><option value="30"${PSET.period==='30'?' selected':''}>최근 30일</option><option value="90"${PSET.period==='90'?' selected':''}>최근 90일</option><option value="YEAR"${PSET.period==='YEAR'?' selected':''}>올해</option></select></label><label>연도<input id="pyear" type="number" min="2026" value="${esc(PSET.year)}" placeholder="전체"></label><label>시즌<select id="pseason"><option value="ALL">전체</option>${seasons.map(x=>`<option value="${esc(x)}"${PSET.season===x?' selected':''}>${esc(x)}</option>`).join('')}</select></label><label>스플릿<select id="psplit"><option value="ALL">전체</option>${splits.map(x=>`<option value="${esc(x)}"${String(PSET.split)===String(x)?' selected':''}>${esc(SPLIT_NAME?.[x]||x)}</option>`).join('')}</select></label><label>리그<select id="pleague"><option value="ALL">전체</option>${leagues.map(x=>`<option value="${esc(x)}"${PSET.league===x?' selected':''}>${esc((DB.regions[x]&&DB.regions[x].leagueName)||x)}</option>`).join('')}</select></label><label>범위<select id="pscope"><option value="ALL">전체</option><option value="DOM"${PSET.scope==='DOM'?' selected':''}>국내</option><option value="INTL"${PSET.scope==='INTL'?' selected':''}>국제</option></select></label><label>실제 픽<select id="pposition"><option value="ALL">전체</option><option value="TOP"${PSET.position==='TOP'?' selected':''}>탑</option><option value="JGL"${PSET.position==='JGL'?' selected':''}>정글</option><option value="MID"${PSET.position==='MID'?' selected':''}>미드</option><option value="ADC"${PSET.position==='ADC'?' selected':''}>원딜</option><option value="SUP"${PSET.position==='SUP'?' selected':''}>서포터</option></select></label><label>포지션<select id="prole"><option value="ALL">전체</option>${ROLES.map(r=>`<option value="${r}"${PSET.role===r?' selected':''}>${ROLE_KO[r]}</option>`).join('')}</select></label><label>검색<input id="pq" value="${esc(PSET.q)}" placeholder="챔피언 이름"></label></div>
   <div class="scroll"><table class="champs"><thead><tr><th>티어</th><th>챔피언</th><th>포지션</th><th>역할군</th><th>밴픽률</th><th>픽</th><th>밴</th><th>승률</th><th>프로 사용</th><th>초반</th><th>후반</th><th>CC</th><th>폭딜</th></tr></thead><tbody>
   ${rows.slice(0,60).map(x=>`<tr><td><b class="tier t${tier(x)}">${tier(x)}</b></td><td><button class="linklike" data-champ="${x.c.id}"><b>${esc(championDisplayName(x.c))}</b></button></td><td>${x.c.roles.map(r=>ROLE_KO[r]).join('/')}</td><td>${CLASS_KO[x.c.cls]}</td><td class="num">${Math.round(x.pres*100)}%</td><td class="num">${x.p}</td><td class="num">${x.b}</td><td class="num">${x.wr===null?'—':Math.round(x.wr*100)+'%'}</td><td>${x.eligible?'<span class="hi">가능</span>':`<span class="lo">제한</span><small>${esc(x.c.proEligibleDate||'')}</small>`}</td><td><span class="pip" style="--v:${x.c.kit.early}">${x.c.kit.early}</span></td><td><span class="pip" style="--v:${x.c.kit.late}">${x.c.kit.late}</span></td><td><span class="pip" style="--v:${x.c.kit.cc}">${x.c.kit.cc}</span></td><td><span class="pip" style="--v:${x.c.kit.burst}">${x.c.kit.burst}</span></td></tr>`).join('')}
