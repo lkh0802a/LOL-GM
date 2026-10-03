@@ -104,6 +104,7 @@ const maintainabilityBudgets = {
   'meta.js': 14000,
   'meta-side.js': 5000,
   'meta-composition.js': 6500,
+  'meta-draft-order.js': 7000,
   'patch.js': 9000,
   'patch-balance.js': 22000,
   'patch-content.js': 12500,

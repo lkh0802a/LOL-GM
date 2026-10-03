@@ -31,6 +31,85 @@ without continually adding new status documents.
 
 ## Current Phase
 
+### Current implementation slice — actual public draft chronology (2026-10-03)
+
+Scope estimate: 50 minutes, one implementation worker, baseline main
+`2039fa7332e515d3f243cadf5483c39635b94050`. The clean managed checkout matched
+actual origin/fetched main; no AGENTS.md or competing feature PR was found.
+Only historical unrelated #27/#28 remain open. Runtime policy and Git/GitHub
+reads were checked. Previous publication passed full main Actions `37085863186`.
+No local-only files or automatic scheduler migration were assumed.
+
+Item 21 actual first/follow-up analysis starts at `draftApplyChoice`: each
+successful public pick/ban retains its real turn number. Completed draft results
+include versioned first-pick side and explicit turn/kind/side/champion events.
+Validation requires the complete 20-turn format, actual firstPick (independent of
+blue), unique champion IDs and exact agreement with both sides' final picks/bans.
+Incomplete, inconsistent and absent logs remain unknown. `runDraft` preserves a
+validated captured manual sequence through its forced-match path; role-order-only
+legacy/replay inputs do not acquire synthetic chronology. Choice legality,
+recommendation scores, RNG streams and game balance are unchanged.
+
+`recordMeta` copies the validated sequence and event arrays into the archive;
+mutable live draft objects cannot rewrite prior evidence. Optional row slot 13
+(zero-based index 12) stores chronology; older compact rows stay at 12 entries,
+save-format-2 and 512-row streaming remain intact. Object/compact/full-save
+restoration preserves optional data; inconsistent saved evidence is displayed
+as unknown rather than erased or inferred. New chronology adds archival storage;
+this does not claim fixed memory or deferred long-career resource proof.
+
+`draftOrderInsights` intersects existing participant, position, region, opponent,
+color and temporal conditions on the selected champion's own recorded side.
+It separates the whole draft's first pick from all subsequent picks, records
+own-side ordinal slots, actual match wins and preceding same-side champions.
+Wins divide by each known opening/follow-up appearance; unknown appearances
+remain separately visible. Preceding teammates retain their other positions.
+Transient shared-index WeakMap caches hold at most 64 result keys and invalidate
+on append/replacement/truncation. No raw/decaying pick/ban counters are changed.
+
+The actual champion patch page now shows these counts, wins, own slots,
+preceding teammate frequencies, empty states and known/unknown coverage using
+its live participant/color controls. It explains that first pick is distinct
+from blue or a club's own first pick, and that patches/opponents/small samples
+confound results. It does not assert causal order advantage or hidden intent.
+
+Files: `draft.js`, new `meta-draft-order.js`, record/save wiring, patch UI,
+module/static-budget registration and focused/shared acceptance. Three real
+short matches cover AI firstPick=1, a manual-API draft completed with 20 legal
+choices (legal AI candidates selected through the manual choice API), and an
+old forced match without provenance. Dates advance directly, not played seasons.
+Manual choices are engine acceptance, not human playtest/device evidence.
+Synthetic legacy/conflicting/skipped-event variants prove compatibility and
+uncertainty, not played historical drafts. Checks cover actual turn events,
+opening/follow-up wins/slots, actor/color contradictions, mutable alias isolation,
+full save, old row shape, 520-row streaming boundary, source purity, current
+roster independence, actual full-page rendering and bounded cache invalidation.
+
+Failures retained: first static check found a stray closing parenthesis in the
+new query; corrected before acceptance. A cache test compared a reference across
+a legitimate earlier match append; changed it to test unchanged current queries.
+The expanded old-forced fixture initially omitted its international context and
+was excluded by its INTL filter; the fixture now supplies its actual context.
+Focused acceptance and 108-module static checks pass afterward. Shared runner
+passed 44 acceptances in 43 fresh VMs, save-history and engine regression pass;
+expanded final focused assertions still require full exact-head CI before merge.
+Final UI review names the ordinal slots as the selected champion's side rather
+than our club, since global queries can include many clubs.
+Diagnostics and records are preserved; no budgets/billing were increased,
+paid runners added or long/device/TalkBack QA started.
+
+Precise next slice (estimate 50 minutes): Item 21 recorded tactical context.
+Actual engine decisions read team tactics (vision investment, aggression,
+objective priority, scaling preference and risk tolerance), but professional
+history has no game-time tactic snapshot and current team settings can change.
+Recheck main/rules/PRs. Capture immutable game-time own-side settings, retain
+compatible optional saved data, and show own managed-club outcome/sample reports
+against those settings with existing participant/color filters. Unknown old
+settings stay unknown; do not expose an opponent's hidden exact sliders, infer
+past tactics from today's club, or assert causal benefits from observational wins.
+Verify human/AI capture parity and save/current-setting independence with short
+matches. All 23 stages are not declared done; final QA follows user feedback/fixes.
+
 ### Current implementation slice — observed champion co-picks (2026-10-03)
 
 Scope estimate: 50 minutes, one implementation worker, baseline main
