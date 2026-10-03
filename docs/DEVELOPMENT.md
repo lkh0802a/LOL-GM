@@ -32,7 +32,101 @@ without continually adding new status documents.
 ## Current Phase
 
 
-### Current implementation slice — saved champion scouting signals (2026-10-03)
+### Current implementation slice — observer-safe squad preparation (2026-10-03)
+
+Scope estimate: 55 minutes, one implementation worker, clean main baseline
+`d77dc57b2dd38e36d8c673b2c34dd2ff1597812c`. Requested origin and fetched main
+agree. Only historical PR #27/#28 are open; no AGENTS.md or competing feature
+was found. Managed runtime observations are current and connected, restricted
+networking is enforced, and no runtime secrets/outbound identities are configured.
+Git fetch and GitHub reads work. The prior publication CI `37119425477` passed
+all required jobs including medical/verify/standalone sync. All 23 stages are
+not declared complete; this remains an Item 21/22 UI integration gap.
+
+**Verified defect and reproduction:** `ui-roster.js::viewSquad` displayed an
+opponent's live tactics/training as disabled controls, training recommendation,
+exact team synergy, private scrim log/readiness, internal lineup/role, satisfaction
+and live condition/form/fatigue/morale. Disabled controls did not protect hidden
+information. It sorted foreign roster rows by latent `playerOvr` and displayed
+raw `playerMarketValue`, contradicting the established observer-safe profile.
+The real bundled renderer with a foreign `training` getter trap reproduced the
+read before changes (`/tmp/squad-observer-reproduction.log`). Spec §18 permits
+opponent observation/analysis; STAFF_RULES public preparation rules exclude
+hidden plans and explicitly distinguish roster membership from confirmed lineup.
+
+**Implemented correction:** Use the current controlled-squad boundary together
+with a fired-manager guard, rather than the previous ownership shortcut.
+`ui-squad-preparation.js` renders tactics/training/facility preparation only for
+an authorized squad. Foreign screens retain the public roster, official registered
+list, names/contracts/reputation, observed ability/potential/value, public schedule
+and player-detail/scouting controls. A concise public-preparation explanation
+replaces disabled private sliders. Foreign tables omit internal-state columns
+instead of filling a wide table with unavailable values. Existing medical event
+summaries and the broader finance/contract disclosure policy are retained; this
+slice does not invent new disclosure rules or modify the match engine.
+
+A player viewing a rival can still open its players and see observed estimates,
+but cannot read next training-group starters, fatigue-based practice readiness,
+private practice or the club's exact tactical axes. A parent manager retains
+1st-team and owned-reserve coaching; a reserve-only manager can coach that
+reserve but does not obtain parent preparation. Fired managers receive the
+public view, without preparation/scouting/official-lineup controls. Explicit
+fired guards also remove direct scrim-plan and staff-registration edit surfaces.
+Preparation event handlers check authority before creating transient editors;
+lineup/role handlers also check the selected player's actual training squad.
+The existing staged apply path/transaction validation remains in use.
+
+Foreign roster ranking and valuation use the established observation helpers,
+not a new scouting/balance model. `squadObservationDb` isolates legacy report
+initialization and market-demand caching in a roster-scoped view. Read-only
+profile expansion adapts legacy synchronous UI widgets to that view and restores
+the live DB identity in `finally`, including a deliberately thrown renderer error.
+Optional default initialization uses detached player records. Rendering does not
+change public history or manufacture a real scouting visit. No production cache,
+GC, history retention, save encoding or simulation rules are changed; no measured
+performance optimization or whole-game information completeness is claimed.
+
+Changed files: squad UI and new preparation UI owner, registration/scrim UI fired
+boundaries, manifest and new-module budget, `squad-observer-information-acceptance`,
+shared acceptance registration, this guide and STAFF_RULES. The new UI module has
+an 8,000-character budget; existing budgets are unchanged.
+
+Focused acceptance passes actual full renderer traps for foreign tactics,
+training, scrims, depth chart, synergy and player pool/role/live state; public
+order/value, privacy invariance, public registry/schedule, names and keyboard
+open controls; whole-world renderer purity including expanded player details;
+parent/owned-reserve/reserve-only/fired boundaries; crafted DOM events, real
+coaching handlers and actual staged apply; supported save restoration. Local
+shared UI/finance/contract runner passes 54 acceptances/53 isolated contexts;
+calendar/scouting passes 17/17, static checks all 118 modules. Final build and
+exact-current-head required CI must pass before merge. Errors in the extended
+fixture (overbroad explanatory-text assertion, missing UI binder dependency,
+fixture organization with 10 rather than the required 11 players) were corrected
+without loosening production rules. Cache-mutation failure and all original/
+rerun diagnostics remain under `/tmp/squad-observer-*`; the legal roster rule
+was preserved. No long 100-season, device/mobile or TalkBack final QA started.
+
+**Precise next substantial slice (55 minutes):** Item 21/22 multi-squad staged
+editor ownership. A separate bounded real-binding reproduction
+`/tmp/squad-switch-reproduction.mjs` / `/tmp/squad-switch-evidence.log` shows
+switching from parent to owned reserve reuses the same `SQUAD_EDIT` because its
+key only checks `parentId`: staged aggression 13 is displayed for a reserve whose
+actual aggression is 40; staged MID `NA_66` belongs to the parent while the real
+reserve MID is `NA_75`. The team ID changes but coaching fields remain from the
+previous squad. This is a pre-existing verified UI defect, not a new policy.
+Keep per-squad transient starters/tactics/training distinct while preserving the
+organization's pending roster-plan/role choices. Define and verify what apply
+and discard affect in that existing UI contract, avoid silently losing pending
+edits on navigation, and reject stale players/rosters before applying. Cover real
+selector events, independent pending edits, parent/reserve authority, validation
+failure/rollback, save-slot/world replacement resets and keyboard feedback.
+Existing reset/UI state instructions and squad transaction rules are dependencies.
+The roadmap and authorized refinements still precede user playtest/fixes and
+final long/device QA. No optional balance policy is implemented by this slice.
+
+
+
+### Prior implementation slice — saved champion scouting signals (2026-10-03)
 
 Scope estimate: 55 minutes, one worker, clean main baseline
 `51568f1b0d5b54c53b0ec5f3c6c08fa3356e7f92`. Fetched origin/main agrees;
