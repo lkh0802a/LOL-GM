@@ -1,137 +1,54 @@
 # LOL GM
 
-Mobile-first esports management simulation.
+Mobile-first esports management simulation, playable as offline standalone HTML.
+Desktop/mobile HTML comes first; Android packaging follows later.
 
-The final product is an offline-capable **Android game app**, installable without
-a development server. HTML is the current development preview, not the final
-delivery target. See [Android acceptance](docs/ANDROID_TARGET.md) and the
-[focused development map](docs/DEVELOPMENT.md#focused-development-map).
+## Current work
 
-## Current stage
+Continue the authorized 23-stage roadmap and depth follow-ups, then verified
+product/UI/engine refinements. Current priorities and delivery evidence live in
+[DEVELOPMENT](docs/DEVELOPMENT.md); the complete design is [LOL_GM_SPEC](docs/LOL_GM_SPEC.md).
+Historical scoped acceptance is not whole-game completion. No current global
+completion percentage is claimed.
 
-Items **1–11**, the **11.5 architecture refactor**, and **12/12-B facilities and finance** have passed their scoped engine/CI acceptance and are incorporated into the canonical standalone game. Work on Item 13 has not started.
+Use [document navigation](docs/README.md) for confirmed rules, code ownership,
+data provenance and historical evidence. Latest explicit user instructions take
+precedence over dated phase/handoff records. One implementation worker owns each
+coherent slice; preserve direct management and the confirmed fictional leagues.
 
-**Scoped engine acceptance is not the same as fully fleshed-out gameplay.** A retroactive, code-backed review identified follow-up work across Items 1–11, including the world day clock, player availability, scouting intelligence, contract/loan agreements, staff negotiations, scrim geography, champion differentiation and First Selection strategy. Read [the retrospective gameplay-depth audit](docs/RETROACTIVE_DEPTH_AUDIT_1_11.md) before planning additional feature work; preserve existing game engines and accepted rules rather than starting a rewrite.
+## Run and build
 
-The canonical current implementation status and acceptance rules are in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). The consolidated design target remains [docs/LOL_GM_SPEC.md](docs/LOL_GM_SPEC.md).
+Node.js 20+; dependency-free browser application.
 
-## Source of truth
-
-For implementation decisions, use this priority:
-
-1. latest explicit user direction
-2. `docs/LOL_GM_SPEC.md`
-3. `docs/DEVELOPMENT.md`
-4. `docs/ARTIFACT_INTEGRATION.md` for Artifact/UI migration work
-5. intentional working behavior already in the repository
-
-ChatGPT acts as project/technical lead, code reviewer and Actions manager, and
-implements repository changes directly when that is the efficient path. Codex is
-used primarily for larger multi-file, complex or repetitive implementation work.
-Choose one owner per task and review the result before integration; do not build
-parallel versions of the same change. GitHub Actions runs repeatable validation
-and builds. See docs/DEVELOPMENT.md.
-
-## Architecture principles
-
-- Mobile-first, smartphone portrait first.
-- Preserve approved Artifact UI/UX during migration unless a concrete technical or product reason requires change.
-- Keep UI/features separate from simulation/game-engine logic.
-- Stable IDs are used for entities; names are display data.
-- Teams, players, champions, leagues, tournaments, patches and rules should be data/config driven.
-- Phase 0 may use explicit mock data.
-- Phase 1+ replaces mock state with real game state and simulation.
-- Do not implement fake buttons or placeholder features that look complete.
-- Human and AI clubs will ultimately follow the same core rules.
-- Do not force the user to manually edit code, CSS, Git files or project configuration when an AI can perform the task.
-
-## Planned source layout
-
-```text
-src/
-├─ app/            # routes, app shell, navigation
-├─ artifact/       # temporary landing zone only when useful during migration
-├─ components/     # reusable UI
-├─ features/       # user-facing game features
-│  ├─ game/
-│  ├─ teams/
-│  ├─ players/
-│  ├─ leagues/
-│  ├─ champions/
-│  ├─ draft/
-│  ├─ matches/
-│  ├─ transfers/
-│  └─ statistics/
-├─ engine/         # pure simulation/domain logic
-│  ├─ calendar/
-│  ├─ draft/
-│  ├─ match/
-│  └─ simulation/
-├─ data/           # configs and initial/mock data
-├─ types/          # shared domain types
-├─ stores/         # application/game state
-└─ utils/
-docs/
-├─ LOL_GM_SPEC.md
-├─ DEVELOPMENT.md
-├─ ARTIFACT_INTEGRATION.md
-├─ POST_ARTIFACT_ROADMAP.md
-└─ CORE_DOMAIN_MODEL.md
-```
-
-The folders above are architectural boundaries, not a requirement to create empty directories.
-
-## Run the migrated app
-
-The current Phase 0 app is a dependency-free browser application migrated from the approved Claude Artifact.
-
-Requirements: Node.js 20+.
-
-```bash
-npm run check
-npm run build
+```sh
 npm run dev
+npm run build
 ```
 
-Then open the local address printed by the dev server.
+Open the address printed by the development server. Canonical code is under
+`src/artifact/`; `scripts/artifact-modules.mjs` defines ordered module ownership.
+`scripts/build.mjs` generates root `index.html` and `dist/index.html`; do not edit
+generated HTML manually. Use the [focused checks](docs/DEVELOPMENT.md#focused-development-map)
+for the changed domain; `npm run check` is the full serial local fallback.
+All PRs and main pushes receive required complete Actions validation.
 
-Canonical migrated Artifact source lives in `src/artifact/`. The root `index.html` and production `dist/index.html` are generated by `scripts/build.mjs`.
+## Data and simulation
 
-GitHub Actions runs the syntax/structure checks and production build on every push to `main`.
+Champion/item/rune static mechanics are patch-pinned Riot source data; reviewed
+supplements and derived simulation fields retain explicit provenance. Draft/match
+calibration uses **organized competition records only**, never solo-queue/ranked
+statistics. See [source policy](docs/CHAMPION_DATA.md#competition-only-calibration).
+Professional source acquisition and validation are not yet complete. The engine
+is an aggregate simulation; it does not claim exact spell casts or geometry.
 
-## Active saves and compatibility
+## Saves and delivery
 
-The active world schema is **v15** with compact save format **2**, and the browser storage namespace is `lol-gm-v15` with three save slots. The game normalizes supported older v15 save-format encodings on import/load; arbitrary earlier world schemas and forward/unknown save formats are **not** guaranteed compatible. Do not follow the superseded Phase-0/early-Phase-1 schema descriptions in historical documents when editing persistence.
+Active world schema v15, compact save format 2, storage namespace `lol-gm-v15`,
+three save slots. Supported older v15 encodings normalize on load; arbitrary old
+schemas and unknown forward formats are not guaranteed compatible. Save files,
+source history and failures are preserved. No runtime external API is required
+for offline play.
 
-`src/artifact/save-migration.js`, `src/artifact/save.js`, `scripts/regression.mjs` and `scripts/career-acceptance.mjs` define/verify the current persistence contract. The generated root `index.html` is built from `src/artifact/`; do not edit it manually.
-
-## Development phases
-
-1. **Phase 0 — Artifact Migration & App Foundation:** migrate the existing prototype, preserve UI/UX parity, establish a runnable app and clean boundaries.
-2. **Phase 1 — Core Foundation:** real game state and the complete season gameplay loop.
-3. **Phase 2 — Management Simulation:** transfers, contracts, scouting, growth, training, scrims, reserves, facilities, finance and club AI.
-4. **Phase 3 — Living World:** worldwide leagues, internationals, patches, regional meta, new champions and long-term history.
-5. **Phase 4 — Production:** backend/API, database, server saves, deployment, PWA, security and production migrations.
-
-## Key project documents
-
-- `docs/LOL_GM_SPEC.md` — canonical full game specification
-- `docs/DEVELOPMENT.md` — current phase and development rules
-- `docs/RETROACTIVE_DEPTH_AUDIT_1_11.md` — code-backed gaps and follow-up acceptance plan for completed Items 1–11/11.5
-- `docs/PHASE_12_FINANCE.md` — facilities and economy implementation and known depth limits
-- `docs/ARTIFACT_INTEGRATION.md` — current Artifact migration rules
-- `docs/CLAUDE_HANDOFF.md` — concise implementation handoff for Claude
-- `docs/PHASE_0_ACCEPTANCE_CHECKLIST.md` — migration acceptance criteria
-- `docs/POST_ARTIFACT_ROADMAP.md` — first playable core roadmap
-- `docs/CORE_DOMAIN_MODEL.md` — domain-model guardrails
-- `docs/DECISIONS.md` — high-impact decisions that should not be repeatedly reopened
-
-## Working rule for AI coding assistants
-
-Read `docs/LOL_GM_SPEC.md` and `docs/DEVELOPMENT.md` before substantial implementation.
-
-During the current migration, also read `docs/ARTIFACT_INTEGRATION.md`.
-
-After the Artifact is integrated, follow `docs/POST_ARTIFACT_ROADMAP.md` for the first playable core loop and `docs/CORE_DOMAIN_MODEL.md` for domain-boundary guidance.
-
-Work primarily on the current phase. Do not prematurely implement later-phase systems, but do not make architectural decisions that block them.
+Read [Android delivery](docs/ANDROID_TARGET.md) for later packaging. Long
+100-season, device and TalkBack final QA follow implementation and user playtest
+feedback/fixes; focused acceptance is not that final QA.

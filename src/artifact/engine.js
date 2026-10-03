@@ -3,6 +3,8 @@
 const XP_TABLE=[0,280,660,1140,1720,2400,3180,4060,5040,6120,7300,8580,9960,11440,13020,14700,16480,18360,20340,22420];
 const ITEM_CONV={fighter:{hp:.18,arm:.012,ad:.028},tank:{hp:.32,arm:.028,ad:.011},mage:{hp:.05,arm:.004,ad:.05},assassin:{hp:.06,arm:.005,ad:.047},marksman:{hp:.035,arm:.003,ad:.047},enchanter:{hp:.09,arm:.01,ad:.018}};
 const ITEM_COST=[3000,6000,9000,12000,15000,18000];
+// Computation guard, not a tournament time limit or a victory rule.
+const MATCH_SIMULATION_MAX_MINUTES=180;
 
 // ---------- 경기 엔진 ----------
 const at=(ps,a)=>ps.p.attrs[a]/100;
@@ -458,7 +460,7 @@ function simulateMatch(db,blueId,redId,seed,ctx,quiet){
   // 경기 당일 컨디션: 기복(consistency)이 낮은 팀일수록 편차가 크다
   st.mods=st.mods.map((m,i)=>m+(i===((ctx&&ctx.firstPick)||0)?BAL.first:0)+(lineupSynergy(db,st.sides[i].team,st.sides[i].ps.map(p=>p.p.id))-50)/1000+rng.mech.normal(0,0.07*(1.25-avg(st.sides[i].ps.map(p=>at(p,'consistency'))))));
   let t;
-  for(t=1;t<=70;t++){
+  for(t=1;t<=MATCH_SIMULATION_MAX_MINUTES;t++){
     st.t=t; st.cur=rng.log.int(0,12);
     incomeTick(st); visionTick(st);
     if(t>=2&&t<14) laningTick(st);
@@ -470,8 +472,9 @@ function simulateMatch(db,blueId,redId,seed,ctx,quiet){
     for(const s of st.sides) for(const l of LANES) if(!s.towers[l][3]&&s.inhibAt[l]&&t>=s.inhibAt[l]){s.towers[l][3]=true;s.inhibAt[l]=0}
     const g=st.sides.map(s=>s.ps.reduce((a,p)=>a+p.goldEarned,0)); st.goldHist.push(g[0]-g[1]);
     const dead=st.sides.findIndex(s=>!s.nexus); if(dead>=0){st.winner=1-dead;break}
-    if(t===70){st.winner=g[0]>=g[1]?0:1; log(st,'시간 제한 — 골드 우위 팀 승리 처리',{major:true})}
+
   }
+  if(st.winner<0)throw new Error('Match unresolved: neither nexus was destroyed within '+MATCH_SIMULATION_MAX_MINUTES+' simulated minutes; no official result produced (seed '+seed+')');
   const endSec=Math.min(59,(st.cur||0)+1);
   st.log.sort((a,b)=>a.t-b.t||a.sec-b.sec);
   const last=st.log[st.log.length-1]; if(last&&last.kind==='nexus')last.sec=endSec;

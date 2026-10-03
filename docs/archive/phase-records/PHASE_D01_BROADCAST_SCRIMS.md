@@ -1,3 +1,8 @@
+> Documentation review 2026-10-03: [navigation](../../README.md), [active priorities and validation](../../DEVELOPMENT.md). Latest explicit user direction and later confirmed decisions supersede dated instructions; historical evidence is retained.
+
+> Dated scope/acceptance record. For current priorities and validation sequencing,
+> read [DEVELOPMENT.md](../../DEVELOPMENT.md). This record does not establish whole-game completion.
+
 # D01 — 방송 편성형 리그 일정 · 상호 가용 스크림
 
 기준: 2026-09-29. 기존 실제 일일 시계와 스크림 훈련/세이브/국제대회 규칙을 보존하면서, 정규리그의 **경기일 배분**과 실제 스크림 예약 조건을 확장한다.

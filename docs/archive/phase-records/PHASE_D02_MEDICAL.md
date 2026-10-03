@@ -1,3 +1,8 @@
+> Documentation review 2026-10-03: [navigation](../../README.md), [active priorities and validation](../../DEVELOPMENT.md). Latest explicit user direction and later confirmed decisions supersede dated instructions; historical evidence is retained.
+
+> Dated scope/acceptance record. For current priorities and validation sequencing,
+> read [DEVELOPMENT.md](../../DEVELOPMENT.md). This record does not establish whole-game completion.
+
 # D02-A — 선수 건강 사건과 일 단위 재활 (2026-09-29)
 
 ## 구현 범위

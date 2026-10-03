@@ -1,3 +1,5 @@
+> Documentation review 2026-10-03: [navigation](README.md), [active priorities and validation](DEVELOPMENT.md). Latest explicit user direction and later confirmed decisions supersede dated instructions; historical evidence is retained.
+
 # 방송 편성 UTC 날짜 경계 처리 및 국제대회 라운드 분산
 
 ## 시차 기준

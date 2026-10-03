@@ -1,0 +1,11 @@
+import {mkdir,readFile,writeFile,copyFile} from 'node:fs/promises';
+import {resolve} from 'node:path';
+const [input='index.html',output='_site']=process.argv.slice(2),target=resolve(output);
+const html=await readFile(resolve(input),'utf8');
+if(!html.includes('SAVE_VERSION')||!html.includes('</html>'))throw Error('Missing validated standalone game');
+const date=new Date().toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul'});
+const landing=(await readFile(new URL('../site/index.html',import.meta.url),'utf8')).replaceAll('__BUILD_DATE__',date);
+await mkdir(target,{recursive:true});await writeFile(resolve(target,'index.html'),landing);
+await copyFile(resolve(input),resolve(target,'play.html'));await copyFile(resolve(input),resolve(target,'LOL-GM.html'));
+await writeFile(resolve(target,'.nojekyll'),'');
+console.log('Built playable site with identical online/offline game files');

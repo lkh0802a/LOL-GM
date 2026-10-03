@@ -1,0 +1,57 @@
+name: Publish playable game
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: playable-pages
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout the fully validated main commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Reject superseded validation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VALIDATED_HEAD: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          current_head=$(gh api "repos/${GITHUB_REPOSITORY}/branches/main" --jq .commit.sha)
+          test "$current_head" = "$VALIDATED_HEAD" || { echo "Main advanced; publish its successful run instead."; exit 1; }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Download this successful run's standalone
+        uses: actions/download-artifact@v4
+        with:
+          name: lol-gm-html-preview
+          path: validated-standalone
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+      - name: Build game launcher and offline download
+        run: node scripts/build-play-site.mjs validated-standalone/index.html _site
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - name: Publish verified game
+        id: deployment
+        uses: actions/deploy-pages@v4

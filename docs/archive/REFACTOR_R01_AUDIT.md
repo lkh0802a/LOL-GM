@@ -1,3 +1,5 @@
+> Documentation review 2026-10-03: [navigation](../README.md), [active priorities and validation](../DEVELOPMENT.md). Latest explicit user direction and later confirmed decisions supersede dated instructions; historical evidence is retained.
+
 # R01 Dependency / Ownership Audit
 
 Baseline: `main@0331ffa50a20fce7a4d4e2cd2e032e5c37221e95`

@@ -15,7 +15,11 @@ Canonical module ownership after 11.5 Stage 5:
 - `save.js` packs persistable views; `save-migration.js` restores legacy world-v15 format-1 and format-2 saves, without overwriting malformed or unsupported records.
 - `office-international.js` may found speculative geographic leagues as well as historically modeled regions; speculative league names and abbreviations are procedurally created, collision checked and persisted.
 
-These remain ordered, concatenated classic JavaScript source files. Step 4 introduced incremental/bounded meta indexes, indexed item/rune evidence and an LRU for historical patch replay without discarding saved history. Step 5-1 consolidated foreign-slot/season-move checks and permanent roster detachment under `roster.js`, removing obsolete finance and renewal aliases. Stage 5-2 removes dead optional guards around required engine APIs (patch pool adaptation, item/rune effects, satisfaction/role conversion, staff migration and initial market policies) and adds focused acceptance tests. Stage 5-3 removes six unreachable legacy wrappers identified by a full source/caller audit, while retaining the smoke-used initial-squad and roster-preflight APIs. Stage 5-4a covers negotiation/series/roster critical-path regression; Stage 5-4b runs real consecutive domestic seasons and world-v15 format-1/format-2 save resumes in `scripts/career-acceptance.mjs`. Stage 5-4c is verified complete: PR #15 and main CI #36406723092 passed the complete suite including two-season save-resume acceptance, production build and generated standalone parity. **11.5 Stage 5 is complete.** **Stage 6 (UI-state consolidation) remains unfinished.** Keep version-15 save migrations intact. Build and verification commands:
+These are ordered, concatenated classic JavaScript source files. The current
+manifest and ARCHITECTURE ownership are authoritative; old Stage 5/6 snapshots
+do not determine remaining roadmap work. Preserve version-15 save migrations.
+Current continuation and focused validation: [DEVELOPMENT](../../docs/DEVELOPMENT.md).
+Full fallback/build commands:
 
 ```bash
 npm run check

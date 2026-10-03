@@ -1,3 +1,5 @@
+> Documentation review 2026-10-03: [navigation](../README.md), [active priorities and validation](../DEVELOPMENT.md). Latest explicit user direction and later confirmed decisions supersede dated instructions; historical evidence is retained.
+
 # Bootstrap determinism investigation — Issue #57
 
 Baseline: main `580956b3e6979749a89c333fa1b354370cf7f717`.

@@ -1,3 +1,5 @@
+> Documentation review 2026-10-03: [navigation](README.md), [active priorities and validation](DEVELOPMENT.md). Latest explicit user direction and later confirmed decisions supersede dated instructions; historical evidence is retained.
+
 # LOL GM Item / Rune Data
 
 ## Canonical starting source
@@ -39,3 +41,41 @@ Historical patch reconstruction starts from the pinned baseline and reapplies re
 ## Validation
 
 `scripts/validate-system-snapshot.mjs` hard-fails if the pinned source drifts from 254 items, 62 runes or five complete rune styles. Smoke tests additionally require source consumption, recipe purchase timing, legal six-rune pages, item/rune creation/removal, combat integration and patch-history reconstruction.
+
+## Item legality review — current limit (2026-10-03)
+
+Do not claim all real item restrictions are implemented. `selectItemBuild` avoids
+multiple boots, and purchase execution caps inventory at six using atomic recipe
+combination. These guarantees do not establish all unique-item/group restrictions.
+`applyItemCraftAction` currently appends the purchased ID; `systemEffects` sums
+effects per inventory entry. Runtime normalization does not carry reviewed
+exclusive-group rules, and automatic selection alone is not a shared legality gate.
+
+Next bounded acceptance must check duplicate final items, mutually exclusive
+groups, legal repeated components/consumables, missing ingredients, six-slot
+combines, starter/quest transformation, champion-specific boots, affordability
+and sale/refund behavior actually supported by the engine. Do not ban all repeated
+components to emulate unique final items. Acquire patch-specific documented
+restrictions before adding group mappings; unknown mappings remain explicit.
+Item shopping stays engine-owned; this review does not add player micromanagement.
+Static mechanics are distinct from professional-only match calibration described
+in [CHAMPION_DATA](CHAMPION_DATA.md#competition-only-calibration).
+
+## Team counter-item and world-rule continuation
+
+User direction: team utility is coordinated, not five independent maximum-score
+builds. Healing reduction and applied armor reduction need eligible applicators,
+coverage/uptime, patch-specific stacking, opponent sustain/resistances, damage type
+and opportunity cost. Personal armor penetration is not team armor reduction.
+The current independent `selectItemBuild` and summed `systemEffects` do not prove
+this team-level coordination exists. Acquire reviewed mechanics before assigning
+coefficients/exclusive groups; add real consumers in fight evaluation and AI.
+
+Minions, jungle monsters, lane waves, camps, towers and neutral objectives must
+have rules consumed by the match engine and writable by balance patches where
+applicable. `csGold` and several objective spawn/buff rules already have consumers;
+current CS/XP approximations, jungle cadence and hardcoded objective rewards are
+not a complete camp/wave model. Review spawn/respawn, rewards, health/resistance,
+clear/arrival cost, availability, vision, waves and conversion separately.
+Documented rules must reach actual income, levels, purchases, pressure and macro
+decisions; do not label aggregate camp/CS proxies as exact monster simulation.
