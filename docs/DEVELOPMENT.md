@@ -126,6 +126,19 @@ final long/device QA. No optional balance policy is implemented by this slice.
 
 
 
+Delivery: PR #160 head `217fefc53867655baa98681dfd64825db2336a0a`
+passed full Actions `37122413862`, all 13 required jobs including medical core,
+four seed shards, two aggregate invariants and verify. Exact PR/run heads and
+unchanged main baseline were checked before sequential merge
+`a331c95144732eb8597e85f5dd3e8751df7be4d6`. Full renderer/coaching/save acceptance,
+54 shared fixtures, calendar/scouting and 118-module build/static pass. Original
+private-read, cache-purity and fixture failures remain recorded. Standalone HTML
+is rebuilt from the integrated manifest and matches `dist/index.html`; actual
+publication-head CI must also pass, including standalone synchronization.
+The next substantial 55-minute multi-squad staged-editor slice above remains
+the precise continuation. Implementation, acceptance and docs constitute the
+feature slice; CI/merge/HTML are follow-through. Long/device final QA stays deferred.
+
 ### Prior implementation slice — saved champion scouting signals (2026-10-03)
 
 Scope estimate: 55 minutes, one worker, clean main baseline
