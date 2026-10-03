@@ -31,6 +31,65 @@ without continually adding new status documents.
 
 ## Current Phase
 
+### Current implementation slice — player champion information boundary (2026-10-03)
+
+Scope estimate: 50 minutes, one implementation worker, baseline main
+`da260051154d184d779a34f69627d8469d91bf9f`. Actual clean checkout, fetched
+origin/main and requested origin agree. Open PRs are historical #27/#28 only;
+no AGENTS.md or competing feature work was found. Current managed observations
+are connected with enforced restricted networking; no runtime secrets or outbound
+identities are configured. Git fetch and GitHub connector reads work.
+
+Item 21/22 player details previously exposed every foreign player's latent
+champion pool, exact mastery, private scrim/training experience, matchup knowledge
+and confidence. The scouting summary also selected its top five from hidden
+mastery even when the champion had never appeared publicly. `scouting.js` now
+uses dated public match appearances for foreign champion lists; `ui-player.js`
+connects the same evidence to the actual player detail and scouting summary.
+Counts, known wins/results and observed date ranges are factual records, not
+mastery estimates. Missing records do not imply inability to play a champion.
+No champion estimate is fabricated from games or a high scouting percentage.
+
+Current controlled squads retain internal preparation, including owned reserves
+and incoming loans. A reserve-only manager cannot inspect the parent; outgoing
+loan ownership does not expose the borrower's private preparation, and firing
+removes internal access. These tests model roster/loan access states directly;
+they do not claim a new loan transaction was executed. Public history follows
+recorded player identity through moves, FA and retirement. Invalid/future dates,
+missing champion identity and duplicate player appearances are excluded with
+explicit unknown counts. Legacy arrays without player attribution are not
+assigned to today's roster. Unknown results never become losses. The panel
+shows at most 30 champions with an explicit total; the complete evidence remains
+available. Existing public archive indexes handle append/reset/save restore.
+
+Focused `player-champion-information-acceptance.mjs` plays one actual match and
+renders the actual full player detail with a throwing foreign-pool getter, then
+checks latent mutation/scouting invariance, own/reserve/loan/fired access, FA/
+retirement history, malformed/legacy/date/result cases and save restore. Shared
+runner includes it: 50 acceptances, 49 fresh VMs, one engine compilation. Local
+115-module static validation, regression and save-history acceptance pass.
+The first two fixture runs failed because the test Realm lacked `ovrTag` and
+`structuredClone`; their original logs remain under `/tmp/player-champion-*`.
+The fixture now supplies the UI tag helper and JSON clone; the full popup passes.
+Required full CI on the exact current PR head remains the merge gate.
+
+Limits: this fixes champion disclosure, not all foreign-player attributes.
+Core derived metrics, raw tendencies/personality/development peak and several
+live state fields still need an observer-information boundary; they were found
+in the same actual popup and must not be described as fully protected. No match
+AI, RNG, balance, save schema or simulation performance is changed. No long
+100-season, real-device/mobile or TalkBack final QA was started.
+
+Precise next substantial slice (estimated 50 minutes): Item 22 observer-safe
+player profile derived metrics and traits. Connect core metric calculation to
+observed attributes for foreign players; determine which tendencies/personality/
+peak/live state fields have defensible public/report evidence and label or hide
+unsupported exact values. Preserve controlled-squad management, reserve/loan/
+firing authority, save compatibility and focused actual-popup acceptance.
+Optional realism additions/removals remain proposals; after all 23 stages,
+continue the authorized UI/engine refinement and measured optimization phase,
+then user playtest feedback/fixes before final long/device QA.
+
 ### Current implementation slice — opponent-team draft preparation (2026-10-03)
 
 Scope estimate: 50 minutes, one implementation worker, baseline main

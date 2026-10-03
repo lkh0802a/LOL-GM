@@ -1,0 +1,37 @@
+import {runEngineFixture,artifactSource} from './test-harness.mjs';
+await runEngineFixture(String.raw`(()=>{
+ const structuredClone=x=>JSON.parse(JSON.stringify(x));
+ const check=(x,m)=>{if(!x)throw Error('PLAYER_CHAMPION_INFORMATION '+m)};
+ const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:6,div2:true,system:'franchise'})];cfg.internationals=[];cfg.subs=0;cfg.changes='none';
+ const db=buildWorld(cfg),a=activeTeams(db,'NA',1)[0],b=activeTeams(db,'NA',1)[1];
+ for(const t of [a,b])for(const role of ROLES){const p=genPlayer(db,new RNG(t.id+role),{region:t.region,role,age:22,base:65});signContract(db,p,t,1,3);t.depthChart[role]=p.id}
+ startWorldSeason(db,a.id,'champion-information');DB=db;
+ const target=db.players[b.depthChart.MID],own=db.players[a.depthChart.MID];
+ check(!scoutReport(db,target).champions.length,'unobserved pool exposed');
+ const result=simulateMatch(db,a.id,b.id,'public-champion-match',null,true);recordMeta(db,result);
+ const side=db.metaHistory[0].sides.find(s=>s.team===b.id),cid=side.picks.find(p=>p.player===target.id).champ;
+ const before=JSON.stringify(publicPlayerChampions(db,target));check(publicPlayerChampions(db,target).champions[0].id===cid&&publicPlayerChampions(db,target).champions[0].g===1,'actual match attribution');
+ const pool=target.pool;Object.defineProperty(target,'pool',{configurable:true,get(){throw Error('private pool read')}});
+ const report=scoutReport(db,target),html=playerDetail(target),summary=scoutReportSummary(target);
+ check(report.champions.length===1&&!Object.hasOwn(report.champions[0],'mastery')&&html.includes('공개 출전 기록')&&summary.includes('1G'),'public render or report reads mastery');
+ check(!html.includes('<th>스크림</th>')&&!html.includes('<th>자신감</th>'),'private columns remain');
+ Object.defineProperty(target,'pool',{configurable:true,writable:true,value:pool});
+ for(const v of Object.values(pool)){v.mastery=99;v.scrimExperience=9999;v.trainingExperience=9999;v.confidence=99}
+ check(JSON.stringify(publicPlayerChampions(db,target))===before,'latent mutation changes public evidence');
+ observePlayer(db,target,80);check(JSON.stringify(publicPlayerChampions(db,target))===before&&!Object.hasOwn(scoutReport(db,target).champions[0],'mastery'),'scouting turns count into mastery');
+ check(playerChampionPanel(own).includes('<th>스크림</th>')&&scoutReport(db,own).championSource==='internal','own preparation lost');
+ const reserve=reserveTeamsOf(db,a)[0];own.team=reserve.id;check(playerChampionInternalAccess(db,own),'parent cannot inspect owned reserve');setManagedTeam(db,reserve.id);check(playerChampionInternalAccess(db,own),'reserve self access lost');own.team=a.id;check(!playerChampionInternalAccess(db,own),'reserve manager sees parent private data');setManagedTeam(db,a.id);
+ own.team=b.id;own.loan={ownerId:a.id,borrowerId:b.id};check(!playerChampionInternalAccess(db,own),'outgoing loan ownership reveals borrower practice');target.team=a.id;check(playerChampionInternalAccess(db,target),'incoming squad private preparation refused');target.team=b.id;own.team=a.id;delete own.loan;
+ db.world.fired=true;check(!playerChampionInternalAccess(db,own)&&scoutReport(db,own).championSource==='public','fired private access');db.world.fired=false;
+ target.team=null;check(!playerChampionInternalAccess(db,target)&&JSON.stringify(publicPlayerChampions(db,target))===before,'FA lost attributable public history');target.retired=true;check(JSON.stringify(publicPlayerChampions(db,target))===before,'retirement loses public history');target.retired=false;target.team=b.id;
+ const restored=unpackDB(packDB(db));check(JSON.stringify(publicPlayerChampions(restored,restored.players[target.id]))===before,'save changes public evidence');
+ const base=structuredClone(db.metaHistory[0]);const targetSide=row=>row.sides.find(s=>s.team===b.id);
+ const unknown=structuredClone(base);delete targetSide(unknown).win;db.metaHistory.push(unknown);
+ const duplicate=structuredClone(base);targetSide(duplicate).picks.push({...targetSide(duplicate).picks.find(p=>p.player===target.id)});db.metaHistory.push(duplicate);
+ const future=structuredClone(base);future.date=addDays(db.worldDate,1);db.metaHistory.push(future);
+ const invalid=structuredClone(base);invalid.date='2026-02-30';db.metaHistory.push(invalid);
+ const legacy=structuredClone(base);for(const s of legacy.sides)s.picks=s.picks.map(p=>p.champ);db.metaHistory.push(legacy);
+ const evidence=publicPlayerChampions(db,target);check(evidence.champions[0].g===2&&evidence.champions[0].results===1&&evidence.unknown===3,'duplicate/future/invalid/unknown handling');
+ db.metaHistory=[];check(!publicPlayerChampions(db,target).champions.length&&playerChampionPanel(target).includes('확인된 공개 챔피언 출전 기록이 없습니다.'),'archive reset or empty feedback');
+ console.log('PLAYER_CHAMPION_INFORMATION_ACCEPTANCE PASS actual match/public-only/private getter/knowledge/internal reserve/loan/firing/save/legacy/date/results');
+})();`,{timeout:60000,setupSources:["let DB;const tshort=id=>DB.teams[id]?.short||id;const ovrTag=x=>'<b>'+x+'</b>';const esc=x=>String(x).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');",await artifactSource('ui-player.js'),await artifactSource('ui-scouting-regions.js'),await artifactSource('ui-player-commitments.js'),await artifactSource('ui-player-loans.js'),await artifactSource('ui-local-service.js')]});

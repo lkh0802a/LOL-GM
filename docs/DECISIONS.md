@@ -742,3 +742,14 @@ Implementation must keep these decisions separate from temporary tuning constant
 - Conversion spam is discouraged by training opportunity cost, adaptation/champion-preparation loss and possible relationship/satisfaction effects, not by a hard system cooldown or a match-eligibility lock.
 - Once sustained training and real usage establish the new specialization, the player's primary-role identity may change; this identity update is not tied to a registration window.
 - **Role-conversion implementation status:** manager proposals can be accepted or rejected; accepted conversions accumulate daily training plus target-role official/scrim usage, prepare target-role champion pools, consume part of general development opportunity, can be cancelled or redirected with sunk costs, and persist role-change history. AI clubs use the same conversion API and may propose conversions for players they are already using off-role.
+
+## Player champion disclosure refinement (2026-10-03)
+
+Foreign player champion information is public observed identity/count/result/date
+history, never hidden pool membership or a mastery ranking. Scouting knowledge
+alone cannot turn appearance counts into numerical mastery. Current controlled
+squads retain private preparation; owned reserves follow manager scope, outgoing
+loans follow their current borrower, and fired managers lose internal access.
+Missing player-attributed legacy records remain unknown rather than inferred.
+This refinement does not claim the rest of foreign player profiles are protected;
+derived traits and exact live fields remain the next documented implementation.

@@ -90,7 +90,26 @@ function scoutFromDay(db,s,day){
 function scoutAbilityRange(db,p){const k=knowledge(db,p),c=obsOvr(db,p),w=Math.max(1,Math.ceil((100-k)/10+scoutingRisk(db,p)*.35));return [Math.max(20,c-w),Math.min(99,c+w)]}
 function scoutPotentialRange(db,p){const k=knowledge(db,p),risk=scoutingRisk(db,p),noise=((hashStr(p.id+'pot')%2001)/1000-1)*Math.max(1,(100-k)/13),center=clamp(p.pot+noise,playerOvr(p),99),w=Math.max(3,Math.ceil((100-k)/8+risk*.45));return [Math.max(playerOvr(p),Math.round(center-w)),Math.min(99,Math.round(center+w))]}
 function scoutGrowthTrend(p){const a=(p.developmentTrail||[]).slice(-3);if(a.length<2)return {delta:null,label:'표본 부족'};const d=a[a.length-1].ovr-a[0].ovr;return {delta:d,label:d>=3?'빠른 상승':d>=1?'상승':d<=-2?'하락':d<0?'소폭 하락':'정체'}}
-function scoutReport(db,p){const r=ensureScoutReport(db,p),sample=scoutSample(db,p),ability=scoutAbilityRange(db,p),potential=scoutPotentialRange(db,p),growth=scoutGrowthTrend(p),champions=Object.entries(p.pool||{}).sort((a,b)=>b[1].mastery-a[1].mastery).slice(0,5).map(([id,v])=>({id,mastery:Math.round(clamp(v.mastery+((hashStr(p.id+id)%1001)/1000-.5)*(100-knowledge(db,p))*.12,20,99))}));return {knowledge:knowledge(db,p),ability,potential,sample,growth,champions,lastSeenDate:r.lastSeenDate,staleYears:r.staleYears||0,observations:r.observations||0,gamesSeen:r.gamesSeen||0}}
+// Internal preparation belongs to the current controlled squad, including an
+// incoming loan. Parent ownership alone does not reveal an outgoing loan's work.
+function playerChampionInternalAccess(db,p){return !db.world?.fired&&managerControlsSquad(db,p.team&&db.teams[p.team])}
+function publicPlayerChampions(db,p){
+  const groups=new Map();let unknown=0;
+  for(const row of metaRowsFiltered(db,{player:p.id})){
+    if(!observedMetaDate(db,row)){unknown++;continue}
+    const picks=(row.sides||[]).flatMap(side=>(side.picks||[]).filter(x=>x&&typeof x==='object'&&x.player===p.id).map(pick=>({side,pick})));
+    if(picks.length!==1){unknown++;continue}
+    const {side,pick}=picks[0];if(typeof pick.champ!=='string'||!pick.champ){unknown++;continue}
+    let g=groups.get(pick.champ);if(!g){g={id:pick.champ,g:0,w:0,results:0,from:row.date,to:row.date};groups.set(g.id,g)}
+    g.g++;if(typeof side.win==='boolean'){g.results++;if(side.win)g.w++}
+    if(row.date<g.from)g.from=row.date;if(row.date>g.to)g.to=row.date;
+  }
+  return {champions:[...groups.values()].sort((a,b)=>b.g-a.g||b.to.localeCompare(a.to)||a.id.localeCompare(b.id)),unknown};
+}
+function scoutReport(db,p){
+  const r=ensureScoutReport(db,p),sample=scoutSample(db,p),ability=scoutAbilityRange(db,p),potential=scoutPotentialRange(db,p),growth=scoutGrowthTrend(p),internal=playerChampionInternalAccess(db,p),publicPool=internal?null:publicPlayerChampions(db,p),champions=internal?Object.entries(p.pool||{}).sort((a,b)=>b[1].mastery-a[1].mastery).slice(0,5).map(([id,v])=>({id,mastery:Math.round(v.mastery)})):publicPool.champions.slice(0,5);
+  return {knowledge:knowledge(db,p),ability,potential,sample,growth,champions,championSource:internal?'internal':'public',championUnknown:publicPool?.unknown||0,lastSeenDate:r.lastSeenDate,staleYears:r.staleYears||0,observations:r.observations||0,gamesSeen:r.gamesSeen||0};
+}
 function scoutPlayers(db,ids,amt,cost){
   const t=myT(db);
   if(!Array.isArray(ids)||!ids.length||new Set(ids).size!==ids.length||ids.some(id=>!db.players[id]||db.players[id].retired||baseScoutKnowledge(db,db.players[id])>=100)||!Number.isFinite(amt)||amt<=0||!Number.isFinite(cost)||cost<0)return '유효한 외부 선수와 관찰 비용을 선택하세요';
