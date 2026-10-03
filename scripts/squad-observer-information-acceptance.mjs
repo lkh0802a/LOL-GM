@@ -43,6 +43,13 @@ await runEngineFixture(String.raw`(()=>{
  SQUAD=a.id;SQUAD_EDIT=null;const editable=squadEditState(a),key='aggression',prior=a.tactics[key];tac.oninput(event);check(editable.tactics[key]===17&&editable.dirty&&a.tactics[key]===prior,'real tactic handler failed transient edit');
  elements.practicefocus.onchange({target:{value:'balanced'}});elements.trint.onchange({target:{value:'light'}});train.oninput(event);
  applySquadEdit();if(a.tactics[key]!==17)console.log('APPLY_REASON',MSG);check(a.tactics[key]===17&&a.training.intensity==='light','actual apply did not commit authorized preparation');
+ const pending=squadEditState(a);pending.rosterPlan.assignments[backup.id]=reserve.id;
+ SQUAD=reserve.id;const destinationEdit=squadEditState(reserve),destinationHtml=viewSquad();
+ check(destinationHtml.includes('data-lineup-player="'+backup.id+'"')&&backup.team===a.id,'incoming player absent from planned roster or moved before apply');
+ lineup.dataset.lineupPlayer=backup.id;lineup.value='MID';bindSquad();lineup.onchange(event);
+ check(destinationEdit.starters.MID===backup.id,'incoming starter selector rejected planned membership');
+ SQUAD=a.id;check(!viewSquad().includes('data-lineup-player="'+backup.id+'"'),'outgoing player retained source lineup control');
+ applySquadEdit();check(backup.team===reserve.id&&reserve.depthChart.MID===backup.id,'incoming starter and squad move did not commit together');
  db.world.fired=true;SQUAD_EDIT={teamId:a.id,tactics:{aggression:99}};const deny=JSON.stringify(db);tac.oninput(event);train.oninput(event);applySquadEdit();check(JSON.stringify(db)===deny,'fired crafted apply altered world');db.world.fired=false;SQUAD_EDIT=null;
  // Supported saves restore the same public boundary and private management controls.
  const packed=packDB(db),restored=unpackDB(packed);DB=restored;SQUAD=b.id;SQUAD_EDIT=null;const publicRestored=viewSquad();check(publicRestored.includes('공개 로스터')&&!publicRestored.includes('data-tac=')&&publicRestored.includes('시장가치 추정'),'restored public boundary lost');

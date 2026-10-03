@@ -133,6 +133,7 @@ const maintainabilityBudgets = {
   'lineup.js': 12000,
   'state-transaction.js': 9000,
   'state-rollback.js': 8000,
+  'squad-preparation.js': 8000,
   'state-player-actions.js': 17000,
   'finance.js': 18000,
   'club-ownership.js': 4500,

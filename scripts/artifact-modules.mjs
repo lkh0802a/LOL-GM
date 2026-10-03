@@ -44,6 +44,7 @@ export const ENGINE_MODULES = [
   'lineup.js',
   'state-transaction.js',
   'state-rollback.js',
+  'squad-preparation.js',
   'office.js',
   'office-consultation.js',
   'local-policy.js',
