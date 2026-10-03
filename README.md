@@ -5,7 +5,7 @@ Desktop/mobile HTML comes first; Android packaging follows later.
 
 ## Current work
 
-Continue the authorized 23-stage roadmap and depth follow-ups, then verified
+Continue the complete game scope in the unified numeric development plan, then verified
 product/UI/engine refinements. Current priorities and delivery evidence live in
 [DEVELOPMENT](docs/DEVELOPMENT.md); the complete design is [LOL_GM_SPEC](docs/LOL_GM_SPEC.md).
 Historical scoped acceptance is not whole-game completion. No current global

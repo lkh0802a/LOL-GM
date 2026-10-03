@@ -24,7 +24,7 @@ files or another worker's unpushed changes exist in Cloud.
 
 This is the development task hierarchy, not a change to internal game architecture.
 Current work uses numeric stages, task names, goals, completion criteria and
-precise remaining work. No old/new correspondence table is required. Existing
+precise remaining work. Existing
 implementation and validation evidence remain preserved in the historical archive.
 Each substantial work unit uses a dotted number and a coherent 45–55-minute boundary.
 
@@ -205,7 +205,7 @@ acceptance와 현재 head CI다. 장기/기기/TalkBack 최종 QA는 계속 유�
 - 소유 2군/권한: 이번 수동 코칭 수정 후 임대 이동의 force=true 선발 재작성
   가설을 재현한다. 의료·등록상 불가능한 선수만 교체하고, 유효한 수동 선택은
   보존하는지 확인한다. 임대 코드 결함이라고 아직 단정하지 않는다.
-- 완료 근거: 23단계별 실제 플레이 경로/AI/save/실패 증거와 남은 연결을
+- 완료 근거: 각 기능의 실제 플레이 경로/AI/save/실패 증거와 남은 연결을
   통합한다. 문서의 단계 이름이나 기존 함수 존재만으로 완료 처리하지 않는다.
 
 **P1 — 먼저 검토할 운영·설명·편의성 연결**
@@ -259,7 +259,7 @@ acceptance와 현재 head CI다. 장기/기기/TalkBack 최종 QA는 계속 유�
 
 각 후보는 재현 트리거/현재 행동, 파일·규칙 근거, 사용자 예, 이익·단점,
 범위·의존성·우선순위·근거 수준을 기록하며 구현 전 실제 누락을 좁힌다.
-당장은 P0 초기 FA 공급 → 23단계 남은 연결 확인 → P1 브리핑/원인 설명/
+당장은 P0 초기 FA 공급 → 전체 기능의 남은 연결 확인 → P1 브리핑/원인 설명/
 반복 조작 축소를 우선한다. 전 부문 검토가 모든 후보를 플레이 피드백 전에
 구현하겠다는 약속은 아니다. 주요 확장은 피드백/설계 우선순위를 받아 선택하며,
 검증된 수정과 연결 보완은 승인된 범위에서 계속한다.

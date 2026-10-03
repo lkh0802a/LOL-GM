@@ -34,4 +34,4 @@ Do not treat historical next-work instructions as the active plan.
 
 ## Unified stage hierarchy
 
-Use [numeric stages 1–13 and dotted work units](DEVELOPMENT.md#unified-numeric-roadmap) for current tasks. No old/new correspondence table is used in the active development plan. Phase records now live in archive/phase-records; current guidance remains here.
+Use [numeric stages 1–13 and dotted work units](DEVELOPMENT.md#unified-numeric-roadmap) for current tasks. Phase records now live in archive/phase-records; current guidance remains here.
