@@ -118,7 +118,18 @@ await runEngineFixture(String.raw`(()=>{
     'read index changed AI candidate prices/values/order');
   assert(JSON.stringify({...pricing,saveId:'storage-only'})===JSON.stringify({...plain,saveId:'storage-only'}),
     'pricing/fill/offer batch changed full generated state');
-  assert(!MARKET_DEMAND_READ_INDEX.has(pricing),'read index escaped pricing batch');
+  assert(!MARKET_DEMAND_READ_INDEX.has(pricing)&&!ACTIVE_TEAM_READ_INDEX.has(pricing),'read index escaped pricing batch');
+  const originalTeamOrder=activeTeams(pricing).map(t=>t.id);
+  withActiveTeamReadIndex(pricing,()=>{
+    activeTeams(pricing).reverse();
+    assert(JSON.stringify(activeTeams(pricing).map(t=>t.id))===JSON.stringify(originalTeamOrder),
+      'caller array mutation changed cached team order');
+    for(const rid of [null,'KR','missing'])for(const div of [null,1,2,'1']){
+      const expected=Object.values(pricing.teams).filter(t=>t.active!==false&&(!rid||t.region===rid)&&(!div||(t.division||1)===div)).map(t=>t.id);
+      assert(JSON.stringify(activeTeams(pricing,rid,div).map(t=>t.id))===JSON.stringify(expected),
+        'active-team read index changed filter semantics');
+    }
+  });
   for(const rid of [null,'KR','missing','ALL']){
     invalidateMarketDemand(pricing);const expected=JSON.stringify(marketDemandSnapshot(pricing,rid));
     invalidateMarketDemand(pricing);
@@ -126,7 +137,7 @@ await runEngineFixture(String.raw`(()=>{
       'global/unknown-region read parity failed');
   }
   try{withMarketDemandReadIndex(pricing,()=>withMarketDemandReadIndex(pricing,()=>{throw Error('read failed')}))}catch(e){}
-  assert(!MARKET_DEMAND_READ_INDEX.has(pricing),'throw/nested read leaked index');
+  assert(!MARKET_DEMAND_READ_INDEX.has(pricing)&&!ACTIVE_TEAM_READ_INDEX.has(pricing),'throw/nested read leaked index');
   const rng=new RNG('pricing-topology-change','fixture');
   genPlayer(pricing,rng,{role:'TOP',age:19,base:50,region:'KR'});
   activeTeams(pricing,'KR',1)[0].active=false;pricing.year++;

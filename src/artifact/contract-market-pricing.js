@@ -12,12 +12,14 @@ function recentMarketPerformance(db,p){
 const MARKET_DEMAND_READ_INDEX=new WeakMap();
 function withMarketDemandReadIndex(db,read){
   if(MARKET_DEMAND_READ_INDEX.has(db))return read();
+  return withActiveTeamReadIndex(db,()=>{
   const topCounts=new Map();let totalTop=0;
-  for(const team of Object.values(db.teams))if(team.active!==false&&(team.division||1)===1){
+  for(const team of activeTeams(db,null,1)){
     totalTop++;topCounts.set(team.region,(topCounts.get(team.region)||0)+1);
   }
   MARKET_DEMAND_READ_INDEX.set(db,{year:db.year,playerCount:Object.keys(db.players).length,topCounts,totalTop});
   try{return read()}finally{MARKET_DEMAND_READ_INDEX.delete(db)}
+  });
 }
 function marketDemandSnapshot(db,rid){
   db._marketDemandCache=db._marketDemandCache||{};

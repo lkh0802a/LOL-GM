@@ -83,7 +83,23 @@ function orgName(db,rng){
   }
   const n='T'+rng.int(100,999);return {name:n+' Gaming',short:n};
 }
-function activeTeams(db,rid,div){return Object.values(db.teams).filter(t=>t.active!==false&&(!rid||t.region===rid)&&(!div||(t.division||1)===div))}
+// Synchronous reads of unchanged membership only. Returned arrays remain
+// caller-owned, including callers that sort/reverse their selection.
+const ACTIVE_TEAM_READ_INDEX=new WeakMap();
+function withActiveTeamReadIndex(db,read){
+  if(ACTIVE_TEAM_READ_INDEX.has(db))return read();
+  ACTIVE_TEAM_READ_INDEX.set(db,{teams:Object.values(db.teams).filter(t=>t.active!==false),queries:new Map()});
+  try{return read()}finally{ACTIVE_TEAM_READ_INDEX.delete(db)}
+}
+function activeTeams(db,rid,div){
+  const index=ACTIVE_TEAM_READ_INDEX.get(db);
+  if(!index)return Object.values(db.teams).filter(t=>t.active!==false&&(!rid||t.region===rid)&&(!div||(t.division||1)===div));
+  const region=rid||null,division=div||null;
+  if(!index.queries.has(region))index.queries.set(region,new Map());
+  const queries=index.queries.get(region);
+  if(!queries.has(division))queries.set(division,index.teams.filter(t=>(!rid||t.region===rid)&&(!div||(t.division||1)===div)));
+  return queries.get(division).slice();
+}
 function isManagerSelectableTeam(db,t){
   const team=typeof t==='string'?db.teams[t]:t;
   return !!team&&team.active!==false&&(!team.parent||db.teams[team.parent]?.active!==false&&!!db.teams[team.parent]);

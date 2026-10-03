@@ -154,20 +154,24 @@ function initialCandidateShortlist(db,team,market,softMax){
   for(const x of publicTop)add(x.p);return out;
 }
 function initialPickCandidate(db,t,key='',snap=null){
+  return withMarketDemandReadIndex(db,()=>{
   const team=teamRef(db,t),market=snap||initialMarketSnapshot(db,[team]),target=team.initialRosterTarget||initialRosterTarget(db,team),room=Math.max(0,initialSalaryCeiling(db,team)-payroll(db,team)),slotsLeft=Math.max(1,target-team.roster.length),softMax=room/slotsLeft*1.35,rows=[];
   for(const p of initialCandidateShortlist(db,team,market,softMax)){const salary=market.price(p,team.region),chk=initialOfferCheck(db,p,team,{salary});if(!chk.ok)continue;rows.push({p,salary,score:initialCandidateScore(db,p,team,key,salary)})}
   rows.sort((a,b)=>(a.salary<=softMax)!==(b.salary<=softMax)?(a.salary<=softMax?-1:1):b.score-a.score||a.salary-b.salary);
   for(const row of rows)if(initialFutureFeasible(db,team,row.p,row.salary,market))return row.p;return null;
+  });
 }
 function aiInitialContractTerms(db,p,t,rng){
   const ask=asking(db,p,t.region),years=contractYearsForPlayer(db,p,rng),premium=rng.range(.96,1.08),role=defaultPromisedRole(db,p,t),room=Math.max(.1,initialSalaryCeiling(db,t)-payroll(db,t)),salary=Math.min(room,ask*premium);
   return normalizeContractTerms(db,p,t,salary,years,{releaseGuaranteeRate:contractGuaranteePolicy(p).preferred,signingBonus:rng.chance(.28)?ask*rng.range(.04,.12):0,bonuses:rng.chance(.32)?{performance:ask*.05,title:ask*.08,international:ask*.05}:{},promisedRole:role,option:rng.chance(.15)?{type:rng.chance(.55)?'team':'player'}:null,buyout:p.personality.ambition>=86&&rng.chance(.35)?playerMarketValue(db,p)*1.8:null});
 }
 function initialOfferForTeam(db,t,round,seed,market,target){
+  return withMarketDemandReadIndex(db,()=>{
   const want=target??t.initialRosterTarget??initialRosterTarget(db,t);if(t.roster.length>=want)return null;
   const key='market|'+round+'|'+want,p=initialPickCandidate(db,t,key,market);if(!p)return null;
   const rng=new RNG((seed||'initial-market')+'|'+t.id+'|'+key,'initial-offer'),terms=aiInitialContractTerms(db,p,t,rng),chk=initialOfferCheck(db,p,t,terms);if(!chk.ok)return null;
   return {team:t,player:p,terms,value:offerUtility(db,p,t,terms)+((hashStr((seed||'initial-market')+'|choose|'+p.id+'|'+t.id+'|'+round)%1001)/1000-.5)*.08};
+  });
 }
 function resolveInitialOfferRound(db,teams,round,seed,targetFn){
   const market=initialMarketSnapshot(db,teams),offers=teams.map(t=>initialOfferForTeam(db,t,round,seed,market,targetFn(t))).filter(Boolean),byPlayer={};for(const o of offers)(byPlayer[o.player.id]=byPlayer[o.player.id]||[]).push(o);
