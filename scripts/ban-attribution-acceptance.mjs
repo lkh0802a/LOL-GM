@@ -19,7 +19,7 @@ await runEngineFixture(String.raw`(()=>{
  check(metaBanAttribution(db,filter)===na,'unchanged filter missed bounded cache');
  check(JSON.stringify(row)===original&&JSON.stringify(db.regionMetaStats)===raw,'query rewrote raw history/exposure');
  a.region='EU';check(metaBanAttribution(db,filter)===na,'current club region rewrote recorded historical region');a.region='NA';
- const legacy=JSON.parse(original);for(const side of legacy.sides)delete side.bans;db.metaHistory.push(legacy);
+ const legacy=JSON.parse(original);for(const side of legacy.sides){delete side.bans;delete side.color}db.metaHistory.push(legacy);
  const mixed=metaBanAttribution(db,filter),table=metaTableFiltered(db,filter);
  check(mixed!==na&&mixed.knownGames===1&&mixed.unknownGames===1&&mixed.unknown===10&&mixed.own===5,'legacy row fabricated attribution or append cache stale');
  check(table.reduce((n,x)=>n+x.b,0)===mixed.own+mixed.opponent+mixed.unknown,'existing regional exposure semantics changed');
@@ -28,7 +28,7 @@ await runEngineFixture(String.raw`(()=>{
  const view={...db,teams:{...db.teams}};currentPatchMetaSamples(db);currentPatchMetaSamples(view);
  check(metaBanAttribution(view,filter)===metaBanAttribution(db,filter),'official shallow view missed shared history index');
  const packedRows=packMetaHistory(db.metaHistory),saved=packDB(db),restored=unpackDB(saved);
- check(packedRows[0][10][0].length===5&&packedRows[1][10][0].length===4,'new attribution not optional or legacy layout rewritten');
+ check(packedRows[0][10][0].length===6&&packedRows[0][10][0][5]==='BLUE'&&packedRows[1][10][0].length===4,'new provenance not optional or legacy layout rewritten');
  check(JSON.parse(saved).saveFormat===2&&JSON.parse(saved).metaHistoryPacked===1,'save envelope version changed');
  check(JSON.stringify(packMetaHistory(restored.metaHistory))===JSON.stringify(packedRows),'compact roundtrip changed historical evidence');
  check(JSON.stringify(metaBanAttribution(restored,filter))===JSON.stringify(mixed),'full save lost ban attribution');
