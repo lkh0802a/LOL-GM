@@ -110,6 +110,16 @@ past tactics from today's club, or assert causal benefits from observational win
 Verify human/AI capture parity and save/current-setting independence with short
 matches. All 23 stages are not declared done; final QA follows user feedback/fixes.
 
+Delivery: PR #149 exact final head `9930b32e10683ef86faf8562b8a07dddfcaeb952`
+passed complete Actions `37089043773`, including medical core, four seed samples,
+two aggregates, final 44 UI acceptances and verify. The head/main-baseline gates
+passed before sequential merge `1fcbad00f45c19d7962562edb830705514a09504`.
+Standalone HTML was rebuilt from the integrated 108-module manifest and its
+publication head remains subject to complete main CI. Implementation, focused
+acceptance and docs are this run's delivered slice; CI/merge/HTML are additional
+follow-through. Remaining hourly time cannot fit another coherent 45–55-minute
+implementation; the precise next tactical-context slice above is retained.
+
 ### Current implementation slice — observed champion co-picks (2026-10-03)
 
 Scope estimate: 50 minutes, one implementation worker, baseline main
