@@ -1,9 +1,9 @@
 function officialRegistrationPanel(t){
   if(!officialRegistrationEnabled(DB))return '';
-  const mine=managerControlsSquad(DB,t),open=officialRegistrationOpen(DB,t),
+  const mine=!DB.world?.fired&&managerControlsSquad(DB,t),open=officialRegistrationOpen(DB,t),
     root=parentTeamOf(DB,t),teams=managedTeam(DB)?.parent?[t]:organizationTeams(DB,root),
     players=mine?Array.from(new Set(teams.flatMap(x=>[...x.roster,...(x.registration?.players||[])]))):t.registration?.players||[],
-    current=t.registration?.players||[],view=officialMatchView(DB,null,t.id,t.id),depth=view.teams[t.id].depthChart;
+    current=t.registration?.players||[],depth=mine?officialMatchView(DB,null,t.id,t.id).teams[t.id].depthChart:{};
   return `<section><h3>공식 등록 · ${current.length}/${officialRosterCap(DB,t)}명</h3>
     <p class="hint">${open?'등록 기간 열림':'등록 기간 닫힘'} · 계약·훈련 소속과 공식 출전 명단은 별개입니다. 미등록 선수도 훈련·스크림에 참여합니다.</p>
     <details class="cfgcard"><summary>공식 명단 확인 / 변경</summary>
@@ -46,7 +46,7 @@ function bindOfficialRegistrationControls(){
 function competitionStaffRegistrationPanel(t){
   const seasons=Object.values(DB.world?.seasons||{}).filter(s=>DB.competitions[s.comp]?.teams.includes(t.id)&&competitionStaffPolicy(DB,s));if(!seasons.length)return '';
   return seasons.map(s=>{
-    const p=competitionStaffPolicy(DB,s),open=managerControlsSquad(DB,t)&&staffRegistrationOpen(DB,s),selected=new Set(competitionStaffEntry(DB,s,t.id)),members=teamStaffMembers(t),
+    const p=competitionStaffPolicy(DB,s),open=!DB.world?.fired&&managerControlsSquad(DB,t)&&staffRegistrationOpen(DB,s),selected=new Set(competitionStaffEntry(DB,s,t.id)),members=teamStaffMembers(t),
       departed=(s.staffEntryRecords?.[t.id]?.staff||[]).filter(x=>!members.some(m=>m.id===x.id));
     return `<details class="cfgcard"><summary>${esc(DB.competitions[s.comp].name)} 현장 스태프 · ${selected.size}/${p.max}명</summary><p class="hint">${s.done?'대회 종료':open?'마감 전 변경 가능':'등록 마감됨'} · 마감 ${esc(p.lockAt)} · 공식전 코칭·분석은 현재 고용 중인 등록 직원이 담당합니다. AI는 관측 평가·공개 전문성의 보완 효과로 선택하며 필수 직무 할당은 없습니다. 구단 훈련·회복은 전체 고용 인원이 담당합니다.</p>${members.map(x=>`<label><input type="checkbox" data-competition-staff="${esc(s.id)}" value="${esc(x.id)}"${selected.has(x.id)?' checked':''}${!open?' disabled':''}> ${esc(x.name)} · ${esc(STAFF_ROLES[x.role])}${x.role==='analyst'||staffSecondaryRoles(x).includes('analyst')?' · '+(ANALYSIS_CONTEXTS[x.analysisFocus]||'범용'):''}</label>`).join('')}${departed.map(x=>`<p class="hint">${esc(x.name)} · ${esc(STAFF_ROLES[x.role]||x.role)} · 제출 후 퇴사</p>`).join('')}${open?`<button class="primary" data-competition-staff-submit="${esc(s.id)}" data-team-id="${esc(t.id)}">현장 명단 제출</button>`:''}</details>`;
   }).join('');

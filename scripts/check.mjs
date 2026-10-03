@@ -186,6 +186,7 @@ const maintainabilityBudgets = {
   'ui-transfer-terms.js': 10000,
   'ui-local-service.js': 4500,
   'ui-roster.js': 18000,
+  'ui-squad-preparation.js': 8000,
   'ui-draft.js': 22000,
   'ui-season.js': 30000,
 };

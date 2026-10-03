@@ -111,6 +111,7 @@ export const UI_MODULES = [
   'ui-player-loans.js',
   'ui-local-service.js',
   'ui-roster.js',
+  'ui-squad-preparation.js',
   'ui-scrim-plans.js',
   'ui-registration.js',
   'ui-draft.js',

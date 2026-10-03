@@ -33,6 +33,7 @@ const acceptances=[
   'opponent-intent-acceptance.mjs',
   'draft-observer-information-acceptance.mjs',
   'champion-scout-observation-acceptance.mjs',
+  'squad-observer-information-acceptance.mjs',
   'ban-attribution-acceptance.mjs',
   'participant-meta-acceptance.mjs',
   'side-meta-acceptance.mjs',
@@ -71,8 +72,8 @@ assert.equal(stats.engineCompiles,1,
   'shared domain runner must compile the engine exactly once');
 assert(stats.cachedArtifacts>=ENGINE_MODULES.length,
   'shared domain runner did not cache the complete engine source');
-assert.equal(stats.contexts,52,
-  'fifty-two engine fixtures, including independent staff and public opponent draft coverage, must each receive a fresh VM context');
+assert.equal(stats.contexts,53,
+  'fifty-three engine fixtures, including independent staff and public opponent draft coverage, must each receive a fresh VM context');
 
 console.log('UI_FINANCE_CONTRACTS_RUNNER '+JSON.stringify({
   acceptances:rows.length,
