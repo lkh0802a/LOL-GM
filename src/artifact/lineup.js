@@ -75,7 +75,7 @@ function lineupAssignmentScore(db,t,map){
   return skill+(ids.length===5?(lineupCohesion(db,team,ids).relationship-50)*.2:0);
 }
 function aiReviewDepthChart(db,t){
-  const team=teamRef(db,t);if(!team||team.id===managedTeamId(db))return;initializeDepthChart(db,team,false);
+  const team=teamRef(db,t);if(!team||managerControlsSquad(db,team))return;initializeDepthChart(db,team,false);
   const cur={...team.depthChart},best=bestStartingLineup(db,team,{}),curScore=lineupAssignmentScore(db,team,cur),bestScore=lineupAssignmentScore(db,team,best);
   const troubled=ROLES.some(role=>{const p=cur[role]&&db.players[cur[role]];return p&&((p.form||0)<=-6||p.condition<60||p.wantsOut)});
   if(!validateStartingLineup(db,team,cur).ok||bestScore-curScore>=5||(troubled&&bestScore-curScore>=3)){

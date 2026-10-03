@@ -143,7 +143,8 @@ function applyRosterPlan(db,t,plan,source='manager'){
   for(const m of moves){const p=db.players[m.pid],dst=db.teams[m.to];dst.roster.push(p.id);p.team=dst.id;
     if(officialRegistrationEnabled(db))p.lastInternalMoveDate=db.worldDate}
   if(db.world)for(const m of moves){const p=db.players[m.pid];recordPlayerEvent(p,'squad_move',db.year,{from:m.from,to:m.to,kind:m.kind,date:db.worldDate,source});onSquadMoveSatisfaction(db,p,m)}
-  for(const team of organizationTeams(db,parent))initializeDepthChart(db,team,true);
+  // Internal movement repairs missing slots without replacing surviving manual starters.
+  for(const team of organizationTeams(db,parent))initializeDepthChart(db,team,!managerControlsSquad(db,team));
   return {...checked,moves};
 }
 function rosterMoveCheck(db,p,target){

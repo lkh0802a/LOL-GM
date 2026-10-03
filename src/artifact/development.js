@@ -26,7 +26,7 @@ function setTrainingAllocation(plan,key,value){
 }
 function trainingIntensity(t){const x=t?.training?.intensity||'normal';return x==='light'?{growth:.9,fatigue:.45,condition:.25}:x==='high'?{growth:1.08,fatigue:1.35,condition:-.35}:{growth:1,fatigue:.8,condition:0}}
 function aiManageTraining(db,t){
-  if(!t||t.id===managedTeamId(db))return;
+  if(!t||managerControlsSquad(db,t))return;
   t.training=normalizeTraining(t.training);t.training.intensity=trainingRecommendation(db,t).intensity;
   const cohesion=lineupCohesion(db,t),adaptation=avg(t.roster.map(id=>db.players[id]?.tacticalAdaptation??60));
   t.training.focus=cohesion.relationship<40||cohesion.adaptation<65?'teamwork':adaptation<65?'tactics':t.philosophy==='youth'?'individual':'balanced';
