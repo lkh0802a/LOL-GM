@@ -31,6 +31,73 @@ without continually adding new status documents.
 
 ## Current Phase
 
+### Current implementation slice — observer-safe player profile (2026-10-03)
+
+Scope estimate: 50 minutes, one implementation worker, baseline main
+`4514588a0db7887cc8a6ec6d60ba4cd0698236e0`. Clean actual checkout and fetched
+origin/main agree. Only historical PR #27/#28 are open; no AGENTS.md or competing
+implementation was found. Current managed runtime observations are connected,
+restricted network policy is enforced, and no runtime secrets/outbound identities
+are configured. Git fetch and connector reads work. The previous publication
+Actions `37109313459` passed fully, including standalone sync. All 23 roadmap
+stages are not declared complete.
+
+Item 22 observer boundaries now reach the player popup's derived metrics and
+private management panels. Previously, individual attributes used observation
+noise, but core metrics read raw attributes/tendencies; lifecycle labels and peak
+age exposed internal development plans, and live form/fatigue/morale/adaptation,
+satisfaction, depth-chart choices, conversion work and oral promises were visible
+for foreign players. `observedPlayerAttributes` and `observedPlayerCoreMetrics`
+in `scouting.js` reuse existing observation signals without adding another noise
+policy. Unsupported numerical aggression is omitted. `ui-player.js` labels
+foreign metrics as estimates and displays explicit private-information notices
+instead of personality, tendencies, peak forecasts or current management state.
+Own controlled squads retain their existing metrics and management controls.
+
+Profile market value also used exact ability/potential and hidden current form.
+Its foreign display now uses the same observed attributes, the midpoint of the
+existing displayed potential range, and neutral form in a detached view passed
+to the unchanged valuation formula. It is labelled an estimate. Own valuation,
+AI transfer prices, finance, match outcomes and RNG are unchanged. Existing
+medical status/risk and contract visibility policies remain; this does not claim
+a new public medical/financial disclosure model or a calibrated appraisal.
+
+Private management events are filtered only in foreign rendering, so archived
+conversion/promise/role/request records cannot restore the hidden information.
+Original histories remain in saves. Foreign historical exact OVR and retirement
+peak OVR are not displayed. Public awards and career/match statistics remain.
+Firing no longer grants 100-percent owned-club observation knowledge, preventing
+exact derived attributes from bypassing the private-panel guard. Existing stored
+observations and uncertainty remain; no report is deleted to conceal a failure.
+Reserve/incoming/outgoing squad and fired-manager boundaries follow PR #156.
+
+Focused `observer-player-profile-acceptance.mjs` plays one actual match and
+renders the full popup with throwing getters for 17 private fields. It checks
+observed-vs-raw derived metrics, private-state invariance of metrics/value,
+source/history purity, public award retention, own metric/value/control parity,
+reserve and loan squad states, fired uncertainty, save restore, retired FA and
+high-knowledge behavior. Loan boundary fixtures directly set squad states; no
+new loan transaction is claimed. The acceptance joins the shared runner, which
+now expects 51 acceptances in 50 fresh VMs with one engine compilation.
+Focused profile and previous champion-profile checks, 115-module validation,
+scouting-depth acceptance, regression, save-history and the shared runner pass
+locally; required exact-current-head CI must pass before merge. Diagnostics remain
+under `/tmp/observer-profile-*`; no final 100-season/device/TalkBack QA started.
+
+Precise next substantial slice (estimated 50–55 minutes): Item 22 draft opponent
+information. `draftMasteryObservation` currently reads actual foreign mastery
+before adding noise, and `draftManagedChampionPoolEvidence` ranks all hidden
+pool keys. Connect opponent draft explanations and scoring to justified public
+appearances and saved observer evidence, preserving own internal mastery and
+human/AI shared authority. Establish explicit unknown/legacy/series-revealed
+behavior instead of inferring unobserved mastery from pick counts. Verify actual
+manual and AI drafts, opponent-pool getter traps, save/legacy behavior and seeded
+outcome implications; this is a behavior change requiring focused acceptance,
+not a performance optimization. Broader trait inference, medical/contract
+visibility and stale report signal modeling remain distinct follow-ups.
+After all 23 stages, perform the authorized UI/engine refinement and measured
+optimization phase, then user playtest/fixes before final long/device QA.
+
 ### Current implementation slice — player champion information boundary (2026-10-03)
 
 Scope estimate: 50 minutes, one implementation worker, baseline main

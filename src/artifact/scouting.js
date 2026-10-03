@@ -52,7 +52,7 @@ function scoutingOperationAtomically(db,t,work){
 }
 function aiScoutingBatchCharge(unitCost,count){return Math.round(unitCost*Math.max(0,count)*10)/10}
 function aiScoutingAffordableTargets(available,unitCost,capacity){for(let n=capacity;n>0;n--)if(aiScoutingBatchCharge(unitCost,n)<=available+.001)return n;return 0}
-function baseScoutKnowledge(db,p){const me=managedTeam(db);if(!me)return 0;if(p.team===me.id||(p.team&&db.teams[p.team]&&db.teams[p.team].parent===me.id))return 100;if(p.region===me.region)return 35;return sameScoutZone(p.region,me.region)?30:25}
+function baseScoutKnowledge(db,p){const me=managedTeam(db);if(!me)return 0;if(!db.world?.fired&&(p.team===me.id||(p.team&&db.teams[p.team]&&db.teams[p.team].parent===me.id)))return 100;if(p.region===me.region)return 35;return sameScoutZone(p.region,me.region)?30:25}
 function ensureScoutReport(db,p){db.scout=db.scout||{};let r=db.scout[p.id];if(typeof r==='number')r=db.scout[p.id]={knowledge:r,lastSeenYear:db.year-1,lastSeenDate:null,observations:0,gamesSeen:0,competitions:{},snapshots:[]};if(!r)r=db.scout[p.id]={knowledge:baseScoutKnowledge(db,p),lastSeenYear:null,lastSeenDate:null,observations:0,gamesSeen:0,competitions:{},snapshots:[]};r.competitions=r.competitions||{};r.snapshots=r.snapshots||[];return r}
 function knowledge(db,p){if(!db.world)return 100;const base=baseScoutKnowledge(db,p);if(base>=100)return 100;const r=ensureScoutReport(db,p);return Math.round(clamp(Math.max(base,r.knowledge||0),0,98))}
 function scoutSample(db,p){let g=0,k=0,d=0,a=0,min=0,dmg=0,rating=0,csd=0,gd=0;const comps=new Set(),seasons=db.world?Object.values(db.world.seasons):[];for(const s of seasons){const st=s.pstats&&s.pstats[p.id];if(!st||!st.g)continue;g+=st.g;k+=st.k;d+=st.d;a+=st.a;min+=st.min||0;dmg+=st.dmg||0;rating+=st.ratingSum||0;csd+=st.csDiff||0;gd+=st.goldDiff||0;comps.add(s.comp)}if(!g&&p.career&&p.career.length){for(const st of p.career.slice(-3)){g+=st.g||0;k+=st.k||0;d+=st.d||0;a+=st.a||0;min+=st.min||0;dmg+=st.dmg||0;rating+=(st.rating||0)*(st.g||0);csd+=st.csDiff||0;gd+=st.goldDiff||0;if(st.comp)comps.add(st.comp)}}return {g,k,d,a,min,dmg,rating:g?rating/g:null,kda:(k+a)/Math.max(1,d),dpm:min?dmg/min:0,csDiff:g?csd/g:0,goldDiff:g?gd/g:0,competitions:[...comps]}}
@@ -93,6 +93,22 @@ function scoutGrowthTrend(p){const a=(p.developmentTrail||[]).slice(-3);if(a.len
 // Internal preparation belongs to the current controlled squad, including an
 // incoming loan. Parent ownership alone does not reveal an outgoing loan's work.
 function playerChampionInternalAccess(db,p){return !db.world?.fired&&managerControlsSquad(db,p.team&&db.teams[p.team])}
+// Reuse the established observation signal; no separate trait noise or scouting
+// policy is introduced by rendering derived metrics.
+function observedPlayerAttributes(db,p,k=knowledge(db,p)){
+  return Object.fromEntries([...new Set(Object.values(ATTR_GROUPS).flat())].map(a=>[a,obsAttr(db,p,a,k)]));
+}
+function observedPlayerCoreMetrics(db,p,k=knowledge(db,p)){
+  if(playerChampionInternalAccess(db,p))return playerCoreMetrics(p);
+  const metrics=playerCoreMetrics({role:p.role,attrs:observedPlayerAttributes(db,p,k),tend:{}});
+  delete metrics.aggression;return metrics;
+}
+function observedPlayerMarketValue(db,p,k=knowledge(db,p)){
+  if(playerChampionInternalAccess(db,p))return playerMarketValue(db,p);
+  const potential=scoutPotentialRange(db,p),view=Object.create(p);
+  Object.defineProperties(view,{attrs:{value:observedPlayerAttributes(db,p,k)},pot:{value:avg(potential)},form:{value:0}});
+  return playerMarketValue(db,view);
+}
 function publicPlayerChampions(db,p){
   const groups=new Map();let unknown=0;
   for(const row of metaRowsFiltered(db,{player:p.id})){
