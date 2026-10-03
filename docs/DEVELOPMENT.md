@@ -31,6 +31,99 @@ without continually adding new status documents.
 
 ## Current Phase
 
+### Current implementation slice — opponent-team draft preparation (2026-10-03)
+
+Scope estimate: 50 minutes, one implementation worker, baseline main
+`7dfe031db81c1d79033d4097c593aeb15394c90b`. Clean actual checkout and fetched
+origin/main agree; origin is the requested LOL-GM repository. Only historical
+PR #27/#28 are open and no AGENTS.md or competing implementation was found.
+Managed runtime observations are current/connected with enforced restricted
+networking and no configured secrets/identities; Git and connector reads work.
+Previous final publication Actions `37103267050` completed successfully, including
+standalone sync. The spec, applicable staff/source rules and current code were
+inspected; no local-only files or scheduler migration were assumed. All 23 stages
+are not declared complete.
+
+Item 21 now connects whole-team public choices to the same actual/explicit
+preparation rival as the player evidence report. Shared `opponentReportContext`
+and `observedMetaDate` preserve existing manager/reserve/firing, staff and dated
+evidence behavior. New `meta-opponent-draft.js` reads target-club public history
+only: current members' previous-club appearances remain in the player report and
+are not imported into the target team's draft sample. Actor/actual-role/champion
+conditions select one matching appearance on the target side; its entire recorded
+team composition, chronology and bans are then summarized. Region/event/patch/
+date/side filters keep their recorded provenance. Generic head-to-head opponent
+does not overwrite the separate preparation target.
+
+Raw frequency groups keep patch, historical region, explicit color, appearances,
+known-result denominator, observed wins and earliest/latest dates. The club's
+first pick is distinguished from the whole draft's first pick, and each of four
+later own choices retains its own/global pick slot. Only existing validated
+`recordedDraftSequence` (actual 20 turns matching both final picks/bans) establishes
+chronology. Legacy role arrays, absent/inconsistent logs and unknown colors remain
+unknown; firstPick is not assumed blue. Same-side unordered champion pairs count
+once per appearance, including only known fragments in incomplete compositions.
+Club bans require consistent unique side-owned lists matching the flat total;
+missing/contradictory ownership is not reconstructed from all-match ban exposure.
+
+Coverage distinguishes known/unknown chronology, composition, color, lineup,
+patch, region, results, ban ownership and invalid/absent/future dates. Five recorded
+player IDs are classified as all still in today's public roster, some changed,
+or unknown/duplicate IDs. This labels historical evidence, not a predicted next
+lineup. Current opponent specialist support uses the same 55+/75+ fictional
+policy: extra patch/opening/co-pick explanations, identical source arrays/counts
+and mandatory weak/mixed/incomplete/historical caution at every ability level.
+No hidden opponent pools/potential/private practice/tactics, scouting estimates,
+match outcomes/RNG, staff contracts/caps or save v15/format2 are changed.
+
+`ui-opponent-draft.js` renders the actual patch-page preparation context with
+separate first/follow-up/pair/own-ban lists. Each list displays at most 12
+frequency-ranked groups with full totals and explicit truncation. All full raw
+groups remain available; detailed patterns are bounded to three per kind. The
+existing selector/world-reset behavior is reused. Manifest/static registration
+and each affected patch UI fixture load the new engine/UI modules.
+
+Focused acceptance uses deterministic legal squads and the actual scheduler,
+one real AI match with red firstPick=1, one real manually completed draft match
+with blue choosing second overall, and an actual patch transition. Synthetic
+roster/region moves, malformed/legacy rows and repeated patches test attribution
+and compatibility, not transfer execution or played additional seasons. Checks
+cover same-appearance whole-team filters, side/period/patch intersections, known
+target wins, other-club exclusion, inconsistent bans, raw staff-invariant samples,
+hidden-field access traps, pure legacy staff reads, full-save parity, firing/
+club/reserve authority, actual page rendering and bounded display/index reset.
+115-module source checks, regression and save-history pass. Shared runner passes
+49 acceptances in 48 fresh VMs with one engine compilation (88 engine modules);
+the subsequent expanded target-win/foreign-history/inconsistent-ban assertions
+pass focused acceptance and require full exact-head CI before merge.
+
+Failures preserved: the first acceptance indexed `draftResult.picks[0]` as a
+numeric array, but the existing API returns a role-keyed final assignment. The
+fixture now reads the actual final chronological choice from captured events and
+intersects its current patch; production draft assignment was not changed. Initial
+diagnostic remains `/tmp/opponent-draft-focused.log`; passing shared evidence is
+`/tmp/opponent-draft-shared.log`. Local unchanged CI observer tests again fail
+because child output arrives empty (`/tmp/opponent-draft-static.log`), as in the
+previous run. Source checks pass separately; this is not relabeled a successful
+local full static run, and original observer tests remain mandatory in Actions.
+No records/diagnostics deleted, budgets/billing raised, paid runners added or long
+100-season/device/mobile/TalkBack final QA started.
+
+Precise next slice (estimate 50 minutes): Item 21/22 champion-information boundary
+on the actual player popup. Recheck main/PRs/rules. `ui-player.js` currently renders
+all `p.pool` entries with exact mastery, private scrim/training experience, matchup
+knowledge and confidence even for opponents, while `scoutReport` already supplies
+observer estimates and public archives now retain observed champion appearances.
+Keep legitimate own-controlled squad details; replace foreign/private pool detail
+with explicitly separate public observed evidence and existing scouting estimates.
+Do not expose latent unobserved champions by sorting a raw opponent pool, invent
+mastery from pick counts, replace historical affiliation, claim potential becomes
+exact, or rewrite match/simulation pool ownership. Include manager/owned-reserve/
+firing/loan/control boundaries, observer changes, save and actual popup acceptance.
+Inspect applicable scouting policy before changing report estimates. All stages
+remain subject to actual code/acceptance coverage; final QA follows feature
+implementation and user playtest feedback/fixes.
+
 ### Current implementation slice — opponent public player preparation (2026-10-03)
 
 Scope estimate: 50 minutes, one implementation worker, baseline main

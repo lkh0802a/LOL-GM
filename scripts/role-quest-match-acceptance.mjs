@@ -30,4 +30,4 @@ await runEngineFixture(String.raw`(()=>{
  const old=unpackDB(saved);delete old.patch.roleQuests;delete old.patches.roleQuestBaseline;
  check(!getPatch(old,'26.19').roleQuests&&!simulateMatch(old,a.id,b.id,'legacy',{forced},true).sides[0].ps[0].quest,'legacy silently enabled quests');
  console.log('ROLE_QUEST_MATCH_ACCEPTANCE PASS (actual paired effects, five roles, slots/wards/teleport/XP/cache, save and legacy)');
-})()`,{filename:'role-quest-match.vm.js',timeout:120000,setupSources:[await artifactSource('ui-match.js'),await artifactSource('ui-patch.js'),await artifactSource('ui-opponent-report.js')]});
+})()`,{filename:'role-quest-match.vm.js',timeout:120000,setupSources:[await artifactSource('ui-match.js'),await artifactSource('ui-patch.js'),await artifactSource('ui-opponent-report.js'),await artifactSource('ui-opponent-draft.js')]});
