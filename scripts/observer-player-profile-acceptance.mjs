@@ -1,5 +1,5 @@
 import {runEngineFixture,artifactSources} from './test-harness.mjs';
-const ui=await artifactSources(['ui-player.js','ui-scouting-regions.js','ui-player-commitments.js','ui-player-loans.js','ui-local-service.js']);
+const ui=await artifactSources(['ui-player.js','ui-player-champions.js','ui-scouting-regions.js','ui-player-commitments.js','ui-player-loans.js','ui-local-service.js']);
 await runEngineFixture(String.raw`(()=>{
  const check=(x,m)=>{if(!x)throw Error('OBSERVER_PROFILE '+m)};
  const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:6,div2:true,system:'franchise'})];cfg.internationals=[];cfg.changes='none';

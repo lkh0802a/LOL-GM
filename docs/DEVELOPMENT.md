@@ -85,8 +85,8 @@ retained. No gameplay fees, league rules or private preparation values were adde
 Changed files: `scouting-champions.js`, human/AI scouting writers, draft observation
 and shortlist consumers, draft/player UI, manifest and new-module budget,
 `champion-scout-observation-acceptance.mjs`, shared acceptance registration, this
-guide and D03 documentation. The new module has its own bounded 5,500-character
-budget; no existing budget is raised.
+guide and D03 documentation. New engine and champion-evidence UI modules have bounded 5,500-character
+budgets; no existing budget is raised.
 
 Focused acceptance passes actual paid human and real AI operations, independent
 observer reports and parent-reserve sharing, hidden-key exclusion, live pool
@@ -98,7 +98,11 @@ restores reports, operations and finance. Actual scheduled series followed by th
 production finalized-day hook creates human and AI official champion records.
 Local shared UI/finance/contract runner passes 53 acceptances/52 isolated contexts;
 calendar/scouting passes 17/17, regression passes, static check/build passes all
-116 artifact modules. Initial fixture syntax and wrong `draftPickValue` argument
+117 artifact modules. First Actions `37118881414` failed the unchanged 18k `ui-player.js` budget;
+the local final static log also recorded that failure. Champion summary/table
+rendering was split into `ui-player-champions.js`, retaining the original budget
+and updating every isolated UI fixture that consumes those functions. The failed
+CI/logs are preserved; the corrected full head must be checked. Initial fixture syntax and wrong `draftPickValue` argument
 errors are fixed; original and rerun logs remain under `/tmp/champion-scout-*`.
 The final fixture also checks actual AI draft choice against its saved report.
 Required CI still must pass on the exact final PR head before sequential merge;
