@@ -20,7 +20,11 @@ await runEngineFixture(String.raw`(()=>{
   check(summary.engine.games===1&&summary.official.games===1&&summary.aggregate.games===0,'actual engine practice/public denominators');
   check(packDB(db)===before&&JSON.stringify(db.metaHistory)===history,'room rendering changed saved/source evidence');
   bindAnalysis();
+  document.activeElement={id:'analysis-period'};
+  nodes['#analysis-period'].focus=()=>focusRestores++;
   nodes['#analysis-period'].onchange({target:{value:'ALL'}});
+  check(focusRestores===1,'filter rerender lost keyboard focus');
+  document.activeElement=null;
   nodes['#analysis-position'].onchange({target:{value:'MID'}});
   check(ANALYSIS_SET.period==='ALL'&&analysisFilter(db,a).position==='MID'&&rerenders===2,'real filter bindings');
   nodes['#analysis-patch'].onchange({target:{value:'no-such-patch'}});
@@ -56,7 +60,7 @@ await runEngineFixture(String.raw`(()=>{
 })()`,{timeout:30000,setupSources:[String.raw`
 let DB=null,SQUAD=null,ANALYSIS_SET={mode:'own',team:'AUTO',period:'90',patch:'CURRENT',position:'ALL',prepTeam:'AUTO'};
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
-let rerenders=0;const navigation=[],nodes={};
+let rerenders=0,focusRestores=0;const navigation=[],nodes={};
 const modeButtons=['own','opponent'].map(mode=>({dataset:{analysisMode:mode}}));
 const openButtons=['squad','season','patch'].map(view=>({dataset:{analysisOpen:view}}));
 const document={querySelectorAll:s=>s==='[data-analysis-mode]'?modeButtons:s==='[data-analysis-open]'?openButtons:[]};

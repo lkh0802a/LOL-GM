@@ -11925,14 +11925,20 @@ function viewAnalysis(){
   const links='<section aria-label="관련 운영 화면"><h3>관련 화면</h3><div class="controls analysis-controls"><button class="ghost" type="button" data-analysis-open="squad">선수단·훈련·전술</button><button class="ghost" type="button" data-analysis-open="season">일정·경기 기록</button><button class="ghost" type="button" data-analysis-open="patch">패치·메타 자료</button></div><p class="hint">분석은 기록의 비교입니다. 승률만으로 원인을 단정하거나 설정을 자동 적용하지 않습니다.</p></section>';
   return '<div class="analysis-room">'+header+controls+reports+links+'</div>';
 }
+function analysisRefresh(){
+  const active=document.activeElement,id=active?.id,mode=active?.dataset?.analysisMode;
+  navKeepScroll();
+  const replacement=id?$('#'+id):['own','opponent'].includes(mode)?document.querySelector('[data-analysis-mode="'+mode+'"]'):null;
+  replacement?.focus?.({preventScroll:true});
+}
 function bindAnalysis(){
   document.querySelectorAll('[data-analysis-mode]').forEach(button=>button.onclick=()=>{
     if(!['own','opponent'].includes(button.dataset.analysisMode))return;
-    ANALYSIS_SET.mode=button.dataset.analysisMode;navKeepScroll();
+    ANALYSIS_SET.mode=button.dataset.analysisMode;analysisRefresh();
   });
   for(const [id,key] of [['analysis-team','team'],['analysis-period','period'],['analysis-patch','patch'],['analysis-position','position'],['pprepteam','prepTeam']]){
     const node=$('#'+id);if(!node)continue;
-    node.onchange=e=>{ANALYSIS_SET[key]=e.target.value;navKeepScroll()};
+    node.onchange=e=>{ANALYSIS_SET[key]=e.target.value;analysisRefresh()};
   }
   document.querySelectorAll('[data-analysis-open]').forEach(button=>button.onclick=()=>{
     const view=button.dataset.analysisOpen;
