@@ -20,6 +20,7 @@ export const ENGINE_MODULES = [
   'meta-practice.js',
   'meta-analyst.js',
   'meta-opponent.js',
+  'meta-opponent-draft.js',
   'patch.js',
   'patch-balance.js',
   'patch-content.js',
@@ -91,6 +92,7 @@ export const ENGINE_MODULES = [
 export const UI_MODULES = [
   'ui-patch.js',
   'ui-opponent-report.js',
+  'ui-opponent-draft.js',
   'ui-negotiations.js',
   'ui-transfer-terms.js',
   'ui-market-initial.js',

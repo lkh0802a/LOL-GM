@@ -48,4 +48,4 @@ await runEngineFixture(String.raw`(()=>{
  for(let i=0;i<90;i++)metaBanAttribution(db,{year:2100+i});
  check(metaHistoryIndex(db).banAttribution.size<=META_FILTER_CACHE_LIMIT,'derived attribution cache grew unbounded');
  console.log('BAN_ATTRIBUTION_ACCEPTANCE '+JSON.stringify({actualMatch:true,blueRedAndFirstPick:true,regionalConservation:true,legacyUnknown:true,unchangedExposure:true,oldRegion:true,filterCache:true,saveFormat2:true,boundedStreaming:true,visibleUi:true,inconsistentUnknown:true}));
-})();`,{setupSources:["const esc=x=>String(x).replaceAll('&','&amp;').replaceAll('<','&lt;');",await artifactSource('ui-patch.js'),await artifactSource('ui-opponent-report.js')]});
+})();`,{setupSources:["const esc=x=>String(x).replaceAll('&','&amp;').replaceAll('<','&lt;');",await artifactSource('ui-patch.js'),await artifactSource('ui-opponent-report.js'),await artifactSource('ui-opponent-draft.js')]});

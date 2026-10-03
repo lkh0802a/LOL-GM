@@ -1,11 +1,17 @@
 // Public, observed preparation evidence. Never consult a player's latent pool,
 // private practice, scouting estimate or the opponent's hidden match plans.
+function opponentReportContext(db,{observer=managedTeamId(db),target=null}={}){
+  const out={allowed:false,observer,target:null,next:null,selected:!!target,available:false,level:0,warnings:[]},club=db.teams[observer];
+  if(db.world?.fired||!club||!managerControlsSquad(db,club))return out;
+  out.allowed=true;Object.assign(out,analystReportSupport(club,'opponent'));out.next=nextTeamMatch(db,observer);out.target=target||out.next?.opponent||null;
+  if(!db.teams[out.target]||out.target===observer)out.warnings.push(out.target?'invalid-target':'no-next-match');
+  return out;
+}
+function observedMetaDate(db,row){return typeof row.date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(row.date)&&Number.isFinite(Date.parse(row.date))&&new Date(row.date).toISOString().slice(0,10)===row.date&&row.date<=db.worldDate}
 function opponentPreparation(db,{observer=managedTeamId(db),target=null,filter={},champ=null}={}){
   const out={allowed:false,observer,target:null,next:null,selected:!!target,available:false,level:0,players:[],groups:[],patterns:[],warnings:[],coverage:{teamGames:0,appearances:0,atTarget:0,elsewhere:0,unknownPlayer:0,unknownChampion:0,unknownRole:0,unknownPatch:0,unknownAffiliation:0,unknownResult:0,undatedSides:0,duplicatePlayers:0}};
-  const club=db.teams[observer];if(db.world?.fired||!club||!managerControlsSquad(db,club))return out;
-  out.allowed=true;Object.assign(out,analystReportSupport(club,'opponent'));
-  out.next=nextTeamMatch(db,observer);out.target=target||out.next?.opponent||null;
-  const rival=db.teams[out.target];if(!rival||rival.id===observer){out.warnings.push(out.target?'invalid-target':'no-next-match');return out}
+  Object.assign(out,opponentReportContext(db,{observer,target}));if(!out.allowed||out.warnings.length)return out;
+  const rival=db.teams[out.target];
   // Roster membership is public context, not a prediction of the next lineup.
   const roster=new Set((rival.roster||[]).filter(id=>typeof id==='string'&&id)),players=new Map(),groups=new Map(),patches=new Set(),c=out.coverage;
   const player=id=>{let p=players.get(id);if(!p){p={id,current:roster.has(id),appearances:0,atTarget:0,elsewhere:0,from:null,to:null};players.set(id,p)}return p};
@@ -19,7 +25,7 @@ function opponentPreparation(db,{observer=managedTeamId(db),target=null,filter={
     if(!metaSideMatches(row,side,scoped))continue;
     const atTarget=side.team===rival.id,picks=side.picks||[];
     if(!atTarget&&!picks.some(p=>p&&typeof p==='object'&&roster.has(p.player)))continue;
-    if(typeof row.date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(row.date)||!Number.isFinite(Date.parse(row.date))||new Date(row.date).toISOString().slice(0,10)!==row.date||row.date>db.worldDate){c.undatedSides++;continue}
+    if(!observedMetaDate(db,row)){c.undatedSides++;continue}
     if(atTarget)c.teamGames++;
     const seen=new Set();
     for(const pick of picks){
