@@ -98,6 +98,19 @@ visibility and stale report signal modeling remain distinct follow-ups.
 After all 23 stages, perform the authorized UI/engine refinement and measured
 optimization phase, then user playtest/fixes before final long/device QA.
 
+Delivery: PR #157 final head `3a1390963784ece4a54bed48e12299ad1f935ae5`
+passed full Actions `37112088250`, including all 13 required jobs, medical core,
+four seed shards, two aggregates and verify. Expanded historical OVR/retirement
+peak getter traps pass. Exact current head and unchanged main baseline were
+checked before sequential merge `9fe804b58e4149d6283d47b77e18c5221f6334e3`.
+Standalone HTML is rebuilt from the integrated 115-module manifest and matches
+`dist/index.html`; publication CI must succeed on the actual publication head.
+No new local acceptance failure occurred in this slice; earlier diagnostics and
+Actions runs remain preserved. Implementation, focused acceptance and docs are
+this slice; CI/merge/HTML are follow-through. The next coherent 50–55-minute
+draft observer-information slice above is the precise continuation, with its
+behavior-change implications explicitly recorded. Final QA remains deferred.
+
 ### Current implementation slice — player champion information boundary (2026-10-03)
 
 Scope estimate: 50 minutes, one implementation worker, baseline main
