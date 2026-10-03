@@ -91,6 +91,20 @@ Optional realism additions/removals remain proposals; after all 23 stages,
 continue the authorized UI/engine refinement and measured optimization phase,
 then user playtest feedback/fixes before final long/device QA.
 
+Delivery: PR #156 final head `f19343b4e57a97f17bc8c6d628f188312fef2a24`
+passed full Actions `37108862242`, including all 13 required jobs, medical core,
+four seed shards, two aggregate invariants and verify. The current PR head and
+main baseline were checked before sequential merge
+`968be0ffcf13f836a5ac123ba0c1bdb7b47fe900`. Standalone HTML is rebuilt from the
+integrated 115-module manifest and matches `dist/index.html`; publication CI
+must pass on the actual publication head. Expanded display/purity/archive tests
+pass. Local Node 24 CI observer tests still fail with empty child output/records;
+original `/tmp/player-champion-static-observers.log` and direct diagnostic log
+remain. The same unchanged observer tests pass in Actions Node 22. Production
+instrumentation and budgets were not changed. Implementation, acceptance and
+documentation are this slice; merge/HTML/CI are follow-through. The next coherent
+50-minute observer-profile slice above remains the precise continuation.
+
 ### Current implementation slice — opponent-team draft preparation (2026-10-03)
 
 Scope estimate: 50 minutes, one implementation worker, baseline main
