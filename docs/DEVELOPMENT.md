@@ -100,6 +100,17 @@ Do not invent draft chronology, hidden opponent skill or causal synergy from
 observed wins. This does not declare all 23 stages complete; final QA remains
 after implementation and user playtest feedback/fixes.
 
+Delivery: PR #147 exact final head
+`82d4285e9ca1a62b7165ca5aeaaf083e17156e33` passed complete Actions
+`37080526269`, including medical core, four seed samples, two aggregates,
+42 UI acceptances and verify. Main still matched the inspected baseline before
+sequential merge `992f3795111d0fe264e2b255acef0e6d64fdb8e8`.
+Standalone HTML was rebuilt from the integrated 106-module manifest and its
+publication head must pass complete main CI. The code/acceptance/docs slice,
+rather than CI wait/merge/HTML alone, is this run's implementation delivery.
+The precise next 50-minute composition slice above is retained for the next run;
+another complete 45–55-minute unit cannot fit this hourly run's remaining time.
+
 ### Current implementation slice — participant and head-to-head meta queries (2026-10-02)
 
 Scope estimate: 50 minutes, one implementation worker, baseline main `4f91a47`.
