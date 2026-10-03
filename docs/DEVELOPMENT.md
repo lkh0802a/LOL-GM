@@ -93,6 +93,8 @@ was excluded by its INTL filter; the fixture now supplies its actual context.
 Focused acceptance and 108-module static checks pass afterward. Shared runner
 passed 44 acceptances in 43 fresh VMs, save-history and engine regression pass;
 expanded final focused assertions still require full exact-head CI before merge.
+Final UI review names the ordinal slots as the selected champion's side rather
+than our club, since global queries can include many clubs.
 Diagnostics and records are preserved; no budgets/billing were increased,
 paid runners added or long/device/TalkBack QA started.
 
