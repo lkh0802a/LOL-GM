@@ -16,6 +16,7 @@ export const ENGINE_MODULES = [
   'meta-side.js',
   'meta-composition.js',
   'meta-draft-order.js',
+  'meta-tactics.js',
   'patch.js',
   'patch-balance.js',
   'patch-content.js',

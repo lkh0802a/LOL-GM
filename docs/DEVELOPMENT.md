@@ -31,6 +31,77 @@ without continually adding new status documents.
 
 ## Current Phase
 
+### Current implementation slice — recorded own-squad tactics (2026-10-03)
+
+Scope estimate: 50 minutes, one implementation worker, baseline main
+`a77bd32415ee5685773879bb24ddc7915a8ef619`. The clean managed checkout matched
+fetched origin/main; only unrelated historical PRs #27/#28 were open. Applicable
+specification/rules and runtime access were inspected; no AGENTS.md, competing
+implementation or assumed local-only source was used. The previous publication
+passed complete main Actions `37089474241`, including medical and standalone sync.
+
+Item 21 now captures the five actual tactical slider settings when a match side
+is constructed. Only squads controlled by the current manager receive this
+immutable snapshot, including an owned reserve through existing roster authority.
+Manual/automatic management modes use the same capture path. The record retains
+its club and original observing controller; delayed recording after a club or
+slider change does not substitute today's settings. Foreign exact sliders are
+not archived. This adds observations without changing match decisions, RNG,
+scoring, ownership or registration rules.
+
+`ownTacticInsights` rechecks current squad authority and firing before cached
+access. Recorded settings and actual wins intersect existing patch/time,
+participant/position, opponent, color and region filters; selected champions
+must occur on the same matching player/position appearance. Each exact setting
+has its own game/win denominator. Settings are listed by frequency, with at most
+six visible values per axis, complete distinct-value/sample counts and a bounded
+64-key transient cache. Append/replacement/truncation invalidates results.
+
+The actual patch page displays both ends of all five tactical axes, known/unknown
+coverage and own-club outcomes. Legacy, malformed and mismatched-club contexts
+remain unknown; they are not filled from current sliders or deleted. The page
+explains observational limits, patch/opponent/sample confounding and that these
+are not causal benefits or recommended tactical scores. A reserve coach cannot
+read the parent club's exact values, and a transferred/fired manager cannot use
+an old cached query to bypass current authority.
+
+An optional side tuple slot (index 7) preserves the versioned context in existing
+save-format-2 archives. Existing absent-context side shapes remain unchanged;
+absence bits preserve missing bans/color when context is present. Copies avoid
+live-object aliases; the 512-row streaming boundary, full-save restoration,
+raw counters and source records remain intact. Additional archived context uses
+storage; this is not long-career memory or final device QA evidence.
+
+Files: new `meta-tactics.js`, engine capture, meta record/save wiring, patch UI,
+module/static registration and new focused/shared tactic acceptance. Two actual
+short matches test both management-mode values, colors and delayed recording;
+the fixture supplies a minimal world state without advancing calendar seasons.
+Real generated reserve ownership tests parent/reserve authority. Synthetic
+legacy/invalid contexts and 520-row repetition test compatibility and streaming,
+not played historical games. Static 109-module, focused tactic, save-history and
+engine regression checks pass. Shared runner passes 45 acceptances in 44 fresh
+VM contexts; exact-head full CI remains the pre-merge gate.
+
+Failure retained: the first acceptance assumed `buildWorld` supplied a live
+world and failed while setting its management mode. It actually returns a null
+world before career start. The focused fixture now explicitly supplies its
+world state; production initialization was not changed. Diagnostics/records
+remain preserved; no budget/billing changes, paid runners or long/device/TalkBack
+QA were started. The 23-stage roadmap is not declared complete.
+
+Precise next slice (estimate 50 minutes): Item 21 own-club practice versus official
+evidence. Recheck main/rules/open PRs. Current `recordScrimPractice` stores a
+40-session club summary with counts, opponent and patch, while practice game
+picks/player appearances remain only in the live session record and professional
+history deliberately excludes practice. Implement a compatible private own-club
+session evidence path and first comparison page using actual recorded picks,
+players, patch and results, with explicitly separate practice/official samples.
+Retain existing daily resource/authority/rollback behavior, unknown old details,
+and model labels for aggregate automatic practice; do not present those results
+as full engine matches or pollute public professional meta counters. Focused
+manual/background practice acceptance and save restoration precede CI. Final
+100-season/device/TalkBack QA remains after implementation and playtest fixes.
+
 ### Current implementation slice — actual public draft chronology (2026-10-03)
 
 Scope estimate: 50 minutes, one implementation worker, baseline main
