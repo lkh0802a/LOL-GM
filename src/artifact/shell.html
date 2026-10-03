@@ -32,6 +32,9 @@ h4{font-size:13px;margin:0 0 6px;color:var(--brass)}
 button,select,input,textarea{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--brass);outline-offset:2px}
 .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;background:var(--surf);border:1px solid var(--line);border-radius:10px;padding:12px}
+.analysis-controls label{flex:1 1 160px}
+.analysis-room #opponentpreparation>label{display:flex;flex-direction:column;gap:4px;max-width:360px;margin-bottom:12px;color:var(--mut);font-size:12px}
+.analysis-room #pprepteam{background:var(--surf);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:16px;color:var(--ink);width:100%;min-width:0}
 .controls label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--mut);min-width:0}
 .controls select,.controls input{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:15px;color:var(--ink);min-width:0}
 .seedrow{display:flex;gap:4px}.seedrow input{width:130px}
@@ -289,7 +292,7 @@ td.fmt{font-size:12px;color:var(--mut);white-space:normal;min-width:200px}
 </head>
 <body>
 <header><a class="skip-link" href="#main">게임 콘텐츠로 건너뛰기</a><h1>LOL <span>GM</span></h1><p>살아 움직이는 e스포츠 세계</p></header>
-<nav aria-label="주요 화면"><div><button type="button" data-v="season">시즌</button><button type="button" data-v="match">스크림</button><button type="button" data-v="squad">선수단</button><button type="button" data-v="patch">패치·메타</button><button type="button" data-v="data">저장</button></div></nav>
+<nav aria-label="주요 화면"><div><button type="button" data-v="season">시즌</button><button type="button" data-v="match">스크림</button><button type="button" data-v="squad">선수단</button><button type="button" data-v="analysis">분석실</button><button type="button" data-v="patch">패치·메타</button><button type="button" data-v="data">저장</button></div></nav>
 <main id="main" tabindex="-1" aria-label="게임 콘텐츠"></main>
 <div id="overlay" hidden role="dialog" aria-modal="true" aria-label="시리즈 상세" tabindex="-1"></div>
 <script>

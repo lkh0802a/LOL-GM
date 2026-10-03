@@ -19,7 +19,7 @@ for(const marker of [
   '@media(max-width:360px)','@media(max-width:640px)',
   'font-size:16px','prefers-reduced-motion:reduce'
 ]) assert(shell.includes(marker),'missing responsive/accessible shell contract: '+marker);
-for(const view of ['season','match','squad','patch','data'])
+for(const view of ['season','match','squad','patch','analysis','data'])
   assert(shell.includes('type="button" data-v="'+view+'"'),'missing accessible navigation button: '+view);
 assert(!/user-scalable\s*=\s*no|maximum-scale\s*=\s*1\b/i.test(shell),'pinch zoom must not be disabled');
 assert(shell.includes('.du-last-picks{min-width:0;overflow-x:auto}'),'official draft images must scroll when zoomed');
@@ -43,7 +43,7 @@ assert(contrast(darkBg,darkFg)>=4.5,'dark primary text/background contrast below
 
 // Real router code: focus destination and selectively expose overflowing regions.
 {
-  const tabs=['season','match','squad','patch','data'].map(v=>({
+  const tabs=['season','match','squad','patch','analysis','data'].map(v=>({
     dataset:{v},setAttribute(k,x){this[k]=x}
   }));
   const regions=[{scrollWidth:880,clientWidth:320,dataset:{}},{scrollWidth:180,clientWidth:320,dataset:{}}];
@@ -63,8 +63,8 @@ assert(contrast(darkBg,darkFg)>=4.5,'dark primary text/background contrast below
     DB:{},SLOT:'1',SLOT_SWITCHING:false,UI_OVERLAY:null,
     freshInternalSeed:()=> 'seed',clearInterval:()=>{},
     requestAnimationFrame:()=>{},
-    ...Object.fromEntries(['season','match','squad','patch','data'].flatMap(v=>{
-      const title={season:'Season',match:'Match',squad:'Squad',patch:'Patch',mc:'MC',data:'Data'}[v];
+    ...Object.fromEntries(['season','match','squad','patch','analysis','data'].flatMap(v=>{
+      const title={season:'Season',match:'Match',squad:'Squad',patch:'Patch',analysis:'Analysis',mc:'MC',data:'Data'}[v];
       return [['view'+title,()=>'<section>'+v+'</section>'],['bind'+title,()=>{}]];
     }))
   });

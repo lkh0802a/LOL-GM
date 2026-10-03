@@ -32,6 +32,9 @@ h4{font-size:13px;margin:0 0 6px;color:var(--brass)}
 button,select,input,textarea{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--brass);outline-offset:2px}
 .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;background:var(--surf);border:1px solid var(--line);border-radius:10px;padding:12px}
+.analysis-controls label{flex:1 1 160px}
+.analysis-room #opponentpreparation>label{display:flex;flex-direction:column;gap:4px;max-width:360px;margin-bottom:12px;color:var(--mut);font-size:12px}
+.analysis-room #pprepteam{background:var(--surf);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:16px;color:var(--ink);width:100%;min-width:0}
 .controls label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--mut);min-width:0}
 .controls select,.controls input{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:15px;color:var(--ink);min-width:0}
 .seedrow{display:flex;gap:4px}.seedrow input{width:130px}
@@ -289,7 +292,7 @@ td.fmt{font-size:12px;color:var(--mut);white-space:normal;min-width:200px}
 </head>
 <body>
 <header><a class="skip-link" href="#main">게임 콘텐츠로 건너뛰기</a><h1>LOL <span>GM</span></h1><p>살아 움직이는 e스포츠 세계</p></header>
-<nav aria-label="주요 화면"><div><button type="button" data-v="season">시즌</button><button type="button" data-v="match">스크림</button><button type="button" data-v="squad">선수단</button><button type="button" data-v="patch">패치·메타</button><button type="button" data-v="data">저장</button></div></nav>
+<nav aria-label="주요 화면"><div><button type="button" data-v="season">시즌</button><button type="button" data-v="match">스크림</button><button type="button" data-v="squad">선수단</button><button type="button" data-v="analysis">분석실</button><button type="button" data-v="patch">패치·메타</button><button type="button" data-v="data">저장</button></div></nav>
 <main id="main" tabindex="-1" aria-label="게임 콘텐츠"></main>
 <div id="overlay" hidden role="dialog" aria-modal="true" aria-label="시리즈 상세" tabindex="-1"></div>
 <script>
@@ -11877,6 +11880,68 @@ function patchOpponentDraftReport(db,options={}){
   return `<section id="opponentdraftreport"><h4>상대 구단 공개 드래프트 준비</h4><p>조건 경기 ${c.sample}쪽 · 실제 순서 확인 ${c.knownOrder}쪽 / 미상 ${c.unknownOrder}쪽 · 전체 첫 픽을 한 쪽 ${c.globalOpening}회</p><p>5챔피언 조합 확인 ${c.completeComposition}쪽 / 불완전 ${c.partialComposition}쪽 · 챔피언 미상 ${c.unknownChampion}픽 · 구단 밴 귀속 확인 ${c.knownBans}쪽 / 미상 ${c.unknownBans}쪽</p><p>진영 확인 ${c.knownColor}쪽 / 미상 ${c.unknownColor}쪽 · 당시 출전 5명이 현재 공개 로스터에 모두 있음 ${c.allCurrent}쪽 / 일부 바뀜 ${c.changedLineup}쪽 / 선수 ID 미상 ${c.unknownLineup}쪽</p><small>패치 미상 ${c.unknownPatch} · 당시 지역 미상 ${c.unknownRegion} · 결과 미상 ${c.unknownResult} · 유효 날짜 없는 쪽 ${c.undated}</small><ul>${a.warnings.map(w=>'<li>'+warnings[w]+'</li>').join('')}</ul><h4>기록 구단의 첫 픽</h4>${list(a.firstPicks,g=>name(g.champ)+' · 구단 1번째 / 전체 '+g.globalSlot+'번째'+(g.opening?' · 드래프트 전체 첫 픽':''))}<h4>구단 첫 픽 이후 실제 후속 선택</h4>${list(a.followups,g=>name(g.first)+' → '+name(g.champ)+' · 구단 '+g.ownSlot+'번째 / 전체 '+g.globalSlot+'번째')}<h4>기록된 같은 쪽 동시 조합</h4>${list(a.pairs,g=>g.champs.map(name).join(' + '))}<h4>기록 구단의 실제 밴</h4>${list(a.bans,g=>name(g.champ))}${patterns?'<h4>분석가의 드래프트 기록 해석</h4><ul>'+patterns+'</ul>':''}<small>선수·역할·선택 챔피언 조건은 같은 출전 픽으로 경기를 고르고, 구단 전체 조합·순서·밴을 보여줍니다. 같은 쪽 두 챔피언은 경기당 한 번 집계하며 불완전 조합도 확인된 조각만 셉니다. 후속 선택은 실제 로그의 구단 첫 픽 이후 선택입니다. 전체 첫 픽은 블루와 같다고 추정하지 않습니다. 순서 없는 역할 배열, 현재 로스터, 전체 밴 목록으로 미상 순서나 밴 귀속을 채우지 않습니다. 다른 구단에서 남긴 현재 선수의 기록은 위 선수 보고서에만 포함합니다. 모든 빈도는 관찰된 선택이며 추천 점수·인과적 시너지·상대의 숨은 다음 의도가 아닙니다. 승수는 결과 확인 표본만 세며 능력 차이는 설명 범위에만 적용합니다.</small></section>`;
 }
 
+/* ==== FILE: ui-analysis.js ==== */
+// Analysis-room presentation. Evidence and authority remain engine-owned;
+// the screen keeps only transient filters and calls existing reports.
+function analysisControlledTeams(db){
+  return db.world?.fired?[]:activeTeams(db).filter(t=>managerControlsSquad(db,t));
+}
+function analysisSelectedTeam(db){
+  const teams=analysisControlledTeams(db);
+  return teams.find(t=>t.id===ANALYSIS_SET.team)||teams.find(t=>t.id===managedTeamId(db))||teams[0]||null;
+}
+function analysisFilter(db,team){
+  const today=db.worldDate,validDate=/^\d{4}-\d{2}-\d{2}$/.test(today||''),
+    period=['30','90'].includes(ANALYSIS_SET.period)?Number(ANALYSIS_SET.period):null;
+  return {team:team?.id,patch:ANALYSIS_SET.patch==='CURRENT'?db.patch.id:
+    ANALYSIS_SET.patch==='ALL'?undefined:ANALYSIS_SET.patch,
+    position:ROLES.includes(ANALYSIS_SET.position)?ANALYSIS_SET.position:undefined,
+    from:validDate&&period?addDays(today,-period):undefined,
+    to:validDate&&period?today:undefined};
+}
+function analysisPatchChoices(db,team){
+  // Public official facets plus the selected authorized squad's own practice.
+  const patches=new Set(metaHistoryFacets(db).patches);
+  for(const row of team.practiceEvidence||[])if(typeof row.patch==='string')patches.add(row.patch);
+  return [...patches].sort();
+}
+function viewAnalysis(){
+  const team=analysisSelectedTeam(DB),teams=analysisControlledTeams(DB);
+  const header='<section><h2>분석실</h2><p class="hint">우리 팀의 관측 기록과 상대의 공개 자료를 확인합니다. 표본이 없는 정보는 추정값으로 채우지 않습니다.</p></section>';
+  if(!team)return header+'<section><h3>분석할 관리 구단이 없습니다</h3><p>커리어를 시작하거나 새 구단에 취임하면 해당 구단의 분석을 이용할 수 있습니다.</p><button class="ghost" type="button" data-analysis-open="season">시즌 화면으로</button></section>';
+  const filter=analysisFilter(DB,team),patches=analysisPatchChoices(DB,team),
+    option=(value,label,selected)=>`<option value="${esc(value)}"${selected?' selected':''}>${esc(label)}</option>`,
+    mode=ANALYSIS_SET.mode==='opponent'?'opponent':'own';
+  const controls=`<section aria-label="분석 조건"><div class="seg tabs">
+    <button type="button" data-analysis-mode="own" aria-pressed="${mode==='own'}">우리 팀</button>
+    <button type="button" data-analysis-mode="opponent" aria-pressed="${mode==='opponent'}">상대 준비</button></div>
+    <div class="controls analysis-controls"><label>관찰 구단<select id="analysis-team">${teams.map(t=>option(t.id,t.name,t.id===team.id)).join('')}</select></label>
+    <label>기간<select id="analysis-period">${[['30','최근 30일'],['90','최근 90일'],['ALL','전체 기록']].map(([v,l])=>option(v,l,ANALYSIS_SET.period===v)).join('')}</select></label>
+    <label>패치<select id="analysis-patch">${option('CURRENT','현재 패치 · '+DB.patch.id,ANALYSIS_SET.patch==='CURRENT')}${option('ALL','전체 패치',ANALYSIS_SET.patch==='ALL')}${patches.map(p=>option(p,p,ANALYSIS_SET.patch===p)).join('')}${!['CURRENT','ALL',...patches].includes(ANALYSIS_SET.patch)?option(ANALYSIS_SET.patch,ANALYSIS_SET.patch+' · 기록 없음',true):''}</select></label>
+    <label>기록 역할<select id="analysis-position">${option('ALL','전체',ANALYSIS_SET.position==='ALL')}${ROLES.map(r=>option(r,ROLE_KO[r],ANALYSIS_SET.position===r)).join('')}</select></label></div>
+    <p class="hint">${esc(team.name)} · ${filter.from?esc(filter.from)+' ~ '+esc(filter.to):'전체 기간'} · ${filter.patch?esc(filter.patch):'여러 패치 포함'}. 역할 조건은 기록된 출전에 적용합니다. 공개 원자료는 분석가가 없어도 확인할 수 있습니다.</p></section>`;
+  const reports=mode==='opponent'?patchOpponentReport(DB,ANALYSIS_SET,filter):
+    patchPracticeComparisonCard(DB,filter)+patchOwnTacticCard(DB,filter)+patchAnalystCard(DB,filter);
+  const links='<section aria-label="관련 운영 화면"><h3>관련 화면</h3><div class="controls analysis-controls"><button class="ghost" type="button" data-analysis-open="squad">선수단·훈련·전술</button><button class="ghost" type="button" data-analysis-open="season">일정·경기 기록</button><button class="ghost" type="button" data-analysis-open="patch">패치·메타 자료</button></div><p class="hint">분석은 기록의 비교입니다. 승률만으로 원인을 단정하거나 설정을 자동 적용하지 않습니다.</p></section>';
+  return '<div class="analysis-room">'+header+controls+reports+links+'</div>';
+}
+function bindAnalysis(){
+  document.querySelectorAll('[data-analysis-mode]').forEach(button=>button.onclick=()=>{
+    if(!['own','opponent'].includes(button.dataset.analysisMode))return;
+    ANALYSIS_SET.mode=button.dataset.analysisMode;navKeepScroll();
+  });
+  for(const [id,key] of [['analysis-team','team'],['analysis-period','period'],['analysis-patch','patch'],['analysis-position','position'],['pprepteam','prepTeam']]){
+    const node=$('#'+id);if(!node)continue;
+    node.onchange=e=>{ANALYSIS_SET[key]=e.target.value;navKeepScroll()};
+  }
+  document.querySelectorAll('[data-analysis-open]').forEach(button=>button.onclick=()=>{
+    const view=button.dataset.analysisOpen;
+    if(!['squad','season','patch'].includes(view))return;
+    if(view==='squad')SQUAD=analysisSelectedTeam(DB)?.id||null;
+    navigateTo(view);
+  });
+}
+
 /* ==== FILE: ui-negotiations.js ==== */
 // ===== LOL GM: negotiation cards, contract terms and event binding =====
 function contractTermsText(c){if(!c)return '';const b=c.bonuses||{},buyout=normalizeBuyoutClause(c.buyout),xs=[money(c.salary)+' 연봉',c.years+'년','방출 보장 '+Math.round(contractGuaranteeRate(c)*100)+'%'];if(c.signingBonus)xs.push('계약금 '+money(c.signingBonus));if(b.performance)xs.push('성과 '+money(b.performance));if(b.title)xs.push('우승 '+money(b.title));if(b.international)xs.push('국제전 '+money(b.international));if(buyout)xs.push((buyout.type==='release'?'구단 거부 불가 바이아웃 ':'협상 개시권 바이아웃 ')+money(buyout.amount));if(c.option)xs.push((c.option.type==='player'?'선수':'팀')+' 옵션');if(c.promisedRole)xs.push(SQUAD_ROLE_KO[c.promisedRole]||c.promisedRole);return xs.join(' · ')}
@@ -13433,6 +13498,7 @@ let MK={role:'ALL',scope:'region',tab:'fa'};
 let MC={blue:'HTG',red:'SBZ',n:300,res:null,running:false};
 let PSET={role:'ALL',q:'',region:'GLOBAL',patch:'ALL',comp:'ALL',period:'ALL',year:'',season:'ALL',split:'ALL',league:'ALL',scope:'ALL',position:'ALL',team:'ALL',player:'ALL',opponent:'ALL',color:'ALL',playerSearch:'',prepTeam:'AUTO',champ:null};
 let DRAFT_UI=null;
+let ANALYSIS_SET={mode:'own',team:'AUTO',period:'90',patch:'CURRENT',position:'ALL',prepTeam:'AUTO'};
 
 // Keep the supported screen map and its binding ownership in one place.
 const UI_ROUTES=Object.freeze({
@@ -13440,6 +13506,7 @@ const UI_ROUTES=Object.freeze({
   match:{render:viewMatch,bind:bindMatch},
   squad:{render:viewSquad,bind:bindSquad},
   patch:{render:viewPatch,bind:bindPatch},
+  analysis:{render:viewAnalysis,bind:bindAnalysis},
   data:{render:viewData,bind:bindData}
 });
 // Cooperative UI work is scoped to its world, save slot and render generation.
@@ -13527,6 +13594,7 @@ function resetUiForWorld(){
   LAST=null;LASTSER=null;OPEN_P=null;SQUAD_EDIT=null;MSG='';
   MC.res=null;MC.running=false;SSET.view=null;
   PSET.team='ALL';PSET.player='ALL';PSET.opponent='ALL';PSET.color='ALL';PSET.playerSearch='';PSET.prepTeam='AUTO';
+  ANALYSIS_SET={mode:'own',team:'AUTO',period:'90',patch:'CURRENT',position:'ALL',prepTeam:'AUTO'};
 }
 
 /* ==== FILE: app.js ==== */
