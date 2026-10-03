@@ -111,6 +111,19 @@ replace scouting estimates, invent scheduled rivals or duplicate existing generi
 filters. Connect the report to current observer/analyst authority and focused
 save/filter/UI checks. Final QA remains after all features and playtest fixes.
 
+Delivery: PR #153 exact head `6d24900b20d20a0942ab4cdf026d3cd756b071de`
+passed full Actions `37098990138` with all 13 required jobs, final 47 shared
+acceptances, medical core, four seed samples, two aggregates and verify. Exact
+PR head and unchanged main baseline were checked before sequential merge
+`b827d96c6071a502089e1a8aa54c5be54163f4a4`. Standalone HTML was rebuilt from
+the integrated 111-module manifest and matches `dist/index.html`; publication
+requires complete main CI including standalone sync on its actual new head.
+Implementation, focused acceptance and documentation deliver this slice;
+CI/merge/HTML are additional follow-through. Remaining hourly time cannot fit
+another coherent 45–55-minute implementation, so the precise public-opponent
+continuation above remains for the next run. Final long/device/TalkBack QA stays
+deferred until all features and user playtest feedback/fixes.
+
 ### Current implementation slice — private practice/official comparison (2026-10-03)
 
 Scope estimate: 50 minutes, one implementation worker, baseline main
