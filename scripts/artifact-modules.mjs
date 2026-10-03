@@ -99,6 +99,7 @@ export const UI_MODULES = [
   'ui-opponent-draft.js',
   'ui-analysis.js',
   'ui-analysis-tiers.js',
+  'ui-analysis-comparison.js',
   'ui-negotiations.js',
   'ui-transfer-terms.js',
   'ui-market-initial.js',

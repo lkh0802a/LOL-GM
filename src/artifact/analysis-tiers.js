@@ -50,3 +50,21 @@ function internalChampionTiers(db,{team=managedTeamId(db),role=null,patch=db.pat
   rows.forEach((row,i)=>{const rank=i/Math.max(1,rows.length);row.tier=rank<.15?'S':rank<.4?'A':rank<.7?'B':'C';row.rank=i+1});
   return {...base,allowed:true,reason:rows.length?null:'no-valid-lineup',rows};
 }
+
+// Compare different evidence scopes without subtracting incompatible grades.
+function championTierComparison(db,{team=managedTeamId(db),filter={},role=null}={}){
+  const publicReport=publicChampionTiers(db,filter,role),internalReport=internalChampionTiers(db,{team,role,patch:filter.patch||db.patch.id}),
+    own=new Map(internalReport.rows.map(row=>[row.champ,row]));
+  const rows=publicReport.rows.map(publicRow=>({champ:publicRow.champ,public:publicRow,internal:own.get(publicRow.champ)||null}));
+  if(!internalReport.reason)rows.sort((a,b)=>(a.internal?.rank??Infinity)-(b.internal?.rank??Infinity)||a.champ.localeCompare(b.champ));
+  return {public:publicReport,internal:internalReport,rows};
+}
+function publicTierSourceGroups(db,filter={}){
+  const report=publicChampionTiers(db,filter),groups=new Map(),unverified=new Set(metaRowsFiltered(db,{...report.filter,from:undefined,to:undefined}).filter(row=>!observedMetaDate(db,row)).map(row=>JSON.stringify([row.comp||null,row.patch||null])));
+  for(const row of metaRowsFiltered(db,report.filter)){
+    if(!observedMetaDate(db,row))continue;
+    const key=JSON.stringify([row.comp||null,row.patch||null]),group=groups.get(key)||{comp:row.comp||null,patch:row.patch||null,games:0,from:row.date,to:row.date,navigationSafe:!unverified.has(key)};
+    group.games++;if(row.date<group.from)group.from=row.date;if(row.date>group.to)group.to=row.date;groups.set(key,group);
+  }
+  return [...groups.values()].sort((a,b)=>b.games-a.games||String(a.comp).localeCompare(String(b.comp))||String(a.patch).localeCompare(String(b.patch)));
+}
