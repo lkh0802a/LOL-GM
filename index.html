@@ -11554,6 +11554,24 @@ function internalChampionTiers(db,{team=managedTeamId(db),role=null,patch=db.pat
   return {...base,allowed:true,reason:rows.length?null:'no-valid-lineup',rows};
 }
 
+// Compare different evidence scopes without subtracting incompatible grades.
+function championTierComparison(db,{team=managedTeamId(db),filter={},role=null}={}){
+  const publicReport=publicChampionTiers(db,filter,role),internalReport=internalChampionTiers(db,{team,role,patch:filter.patch||db.patch.id}),
+    own=new Map(internalReport.rows.map(row=>[row.champ,row]));
+  const rows=publicReport.rows.map(publicRow=>({champ:publicRow.champ,public:publicRow,internal:own.get(publicRow.champ)||null}));
+  if(!internalReport.reason)rows.sort((a,b)=>(a.internal?.rank??Infinity)-(b.internal?.rank??Infinity)||a.champ.localeCompare(b.champ));
+  return {public:publicReport,internal:internalReport,rows};
+}
+function publicTierSourceGroups(db,filter={}){
+  const report=publicChampionTiers(db,filter),groups=new Map(),unverified=new Set(metaRowsFiltered(db,{...report.filter,from:undefined,to:undefined}).filter(row=>!observedMetaDate(db,row)).map(row=>JSON.stringify([row.comp||null,row.patch||null])));
+  for(const row of metaRowsFiltered(db,report.filter)){
+    if(!observedMetaDate(db,row))continue;
+    const key=JSON.stringify([row.comp||null,row.patch||null]),group=groups.get(key)||{comp:row.comp||null,patch:row.patch||null,games:0,from:row.date,to:row.date,navigationSafe:!unverified.has(key)};
+    group.games++;if(row.date<group.from)group.from=row.date;if(row.date>group.to)group.to=row.date;groups.set(key,group);
+  }
+  return [...groups.values()].sort((a,b)=>b.games-a.games||String(a.comp).localeCompare(String(b.comp))||String(a.patch).localeCompare(String(b.patch)));
+}
+
 /* ==== FILE: career.js ==== */
 // ===== LOL GM: first-season blank roster setup =====
 const INITIAL_GOAL_KO={title:'리그 우승 도전',final:'결승권 진입',playoffs:'플레이오프 진출',top_half:'상위권 정착',survive:'1부 잔류',avoid_bottom:'하위권 탈출',promotion:'1부 승격 도전',develop:'유망주 육성과 경쟁력 확보'};
@@ -11952,7 +11970,7 @@ function analysisSelectedTeam(db){
 function analysisFilter(db,team){
   const today=db.worldDate,validDate=/^\d{4}-\d{2}-\d{2}$/.test(today||''),
     period=['30','90'].includes(ANALYSIS_SET.period)?Number(ANALYSIS_SET.period):null;
-  return {team:team?.id,patch:ANALYSIS_SET.patch==='CURRENT'?db.patch.id:
+  return {team:team?.id,comp:ANALYSIS_SET.comp&&ANALYSIS_SET.comp!=='ALL'?ANALYSIS_SET.comp:undefined,patch:ANALYSIS_SET.patch==='CURRENT'?db.patch.id:
     ANALYSIS_SET.patch==='ALL'?undefined:ANALYSIS_SET.patch,
     position:ROLES.includes(ANALYSIS_SET.position)?ANALYSIS_SET.position:undefined,
     from:validDate&&period?addDays(today,-period):undefined,
@@ -11968,7 +11986,7 @@ function viewAnalysis(){
   const team=analysisSelectedTeam(DB),teams=analysisControlledTeams(DB);
   const header='<section><h2>분석실</h2><p class="hint">우리 팀의 관측 기록과 상대의 공개 자료를 확인합니다. 관측 기록과 모델 평가를 구분하고, 자료가 없으면 표시합니다.</p></section>';
   if(!team)return header+'<section><h3>분석할 관리 구단이 없습니다</h3><p>커리어를 시작하거나 새 구단에 취임하면 해당 구단의 분석을 이용할 수 있습니다.</p><button class="ghost" type="button" data-analysis-open="season">시즌 화면으로</button></section>';
-  const filter=analysisFilter(DB,team),patches=analysisPatchChoices(DB,team),
+  const filter=analysisFilter(DB,team),patches=analysisPatchChoices(DB,team),comps=[...new Set(publicTierSourceGroups(DB).map(g=>g.comp).filter(Boolean))].sort(),
     option=(value,label,selected)=>`<option value="${esc(value)}"${selected?' selected':''}>${esc(label)}</option>`,
     mode=['opponent','tiers'].includes(ANALYSIS_SET.mode)?ANALYSIS_SET.mode:'own';
   const controls=`<section aria-label="분석 조건"><div class="seg tabs">
@@ -11976,7 +11994,7 @@ function viewAnalysis(){
     <button type="button" data-analysis-mode="opponent" aria-pressed="${mode==='opponent'}">상대 준비</button><button type="button" data-analysis-mode="tiers" aria-pressed="${mode==='tiers'}">밴픽·메타</button></div>
     <div class="controls analysis-controls"><label>관찰 구단<select id="analysis-team">${teams.map(t=>option(t.id,t.name,t.id===team.id)).join('')}</select></label>
     <label>기간<select id="analysis-period">${[['30','최근 30일'],['90','최근 90일'],['ALL','전체 기록']].map(([v,l])=>option(v,l,ANALYSIS_SET.period===v)).join('')}</select></label>
-    <label>패치<select id="analysis-patch">${option('CURRENT','현재 패치 · '+DB.patch.id,ANALYSIS_SET.patch==='CURRENT')}${option('ALL','전체 패치',ANALYSIS_SET.patch==='ALL')}${patches.map(p=>option(p,p,ANALYSIS_SET.patch===p)).join('')}${!['CURRENT','ALL',...patches].includes(ANALYSIS_SET.patch)?option(ANALYSIS_SET.patch,ANALYSIS_SET.patch+' · 기록 없음',true):''}</select></label>
+    <label>대회<select id="analysis-comp">${option('ALL','전체 대회',!ANALYSIS_SET.comp||ANALYSIS_SET.comp==='ALL')}${comps.map(c=>option(c,DB.competitions[c]?.name||c,ANALYSIS_SET.comp===c)).join('')}${ANALYSIS_SET.comp&&ANALYSIS_SET.comp!=='ALL'&&!comps.includes(ANALYSIS_SET.comp)?option(ANALYSIS_SET.comp,ANALYSIS_SET.comp+' · 기록 없음',true):''}</select></label><label>패치<select id="analysis-patch">${option('CURRENT','현재 패치 · '+DB.patch.id,ANALYSIS_SET.patch==='CURRENT')}${option('ALL','전체 패치',ANALYSIS_SET.patch==='ALL')}${patches.map(p=>option(p,p,ANALYSIS_SET.patch===p)).join('')}${!['CURRENT','ALL',...patches].includes(ANALYSIS_SET.patch)?option(ANALYSIS_SET.patch,ANALYSIS_SET.patch+' · 기록 없음',true):''}</select></label>
     <label>${mode==='tiers'?'후보 역할':'기록 역할'}<select id="analysis-position">${option('ALL','전체',ANALYSIS_SET.position==='ALL')}${ROLES.map(r=>option(r,ROLE_KO[r],ANALYSIS_SET.position===r)).join('')}</select></label></div>
     <p class="hint">${esc(team.name)} · ${filter.from?esc(filter.from)+' ~ '+esc(filter.to):'전체 기간'} · ${filter.patch?esc(filter.patch):'여러 패치 포함'}. ${mode==='tiers'?'후보 역할은 현재 챔피언 설정을 사용합니다. 기간·패치 조건은 공개 표본 조회에 적용하며 내부 준비도는 현재 상태만 평가합니다.':'역할 조건은 기록된 출전에 적용합니다.'} 공개 원자료는 분석가가 없어도 확인할 수 있습니다.</p></section>`;
   const reports=mode==='tiers'?analysisTiersPanel(DB,team,filter):mode==='opponent'?patchOpponentReport(DB,ANALYSIS_SET,filter):
@@ -11987,7 +12005,7 @@ function viewAnalysis(){
 function analysisRefresh(){
   const active=document.activeElement,id=active?.id,mode=active?.dataset?.analysisMode,tier=active?.dataset?.analysisTier;
   navKeepScroll();
-  const replacement=id?$('#'+id):['own','opponent','tiers'].includes(mode)?document.querySelector('[data-analysis-mode="'+mode+'"]'):['public','internal'].includes(tier)?document.querySelector('[data-analysis-tier="'+tier+'"]'):null;
+  const replacement=id?$('#'+id):['own','opponent','tiers'].includes(mode)?document.querySelector('[data-analysis-mode="'+mode+'"]'):['public','internal','compare'].includes(tier)?document.querySelector('[data-analysis-tier="'+tier+'"]'):null;
   replacement?.focus?.({preventScroll:true});
 }
 function bindAnalysis(){
@@ -11996,7 +12014,7 @@ function bindAnalysis(){
     if(!['own','opponent','tiers'].includes(button.dataset.analysisMode))return;
     ANALYSIS_SET.mode=button.dataset.analysisMode;analysisRefresh();
   });
-  for(const [id,key] of [['analysis-team','team'],['analysis-period','period'],['analysis-patch','patch'],['analysis-position','position'],['pprepteam','prepTeam']]){
+  for(const [id,key] of [['analysis-team','team'],['analysis-period','period'],['analysis-patch','patch'],['analysis-position','position'],['analysis-comp','comp'],['pprepteam','prepTeam']]){
     const node=$('#'+id);if(!node)continue;
     node.onchange=e=>{ANALYSIS_SET[key]=e.target.value;analysisRefresh()};
   }
@@ -12011,12 +12029,13 @@ function bindAnalysis(){
 /* ==== FILE: ui-analysis-tiers.js ==== */
 // Two evidence scopes; screen code never owns ranking weights or game writes.
 function analysisTiersPanel(db,team,filter){
-  const internal=ANALYSIS_SET.tierView==='internal',role=filter.position||null,
+  const internal=ANALYSIS_SET.tierView==='internal',compare=ANALYSIS_SET.tierView==='compare',role=filter.position||null,
     query=String(ANALYSIS_SET.tierQ||'').trim().toLowerCase(),
-    tabs=`<div class="seg tabs"><button type="button" data-analysis-tier="public" aria-pressed="${!internal}">대중 티어</button><button type="button" data-analysis-tier="internal" aria-pressed="${internal}">팀 내부 티어</button></div>`,
+    tabs=`<div class="seg tabs"><button type="button" data-analysis-tier="public" aria-pressed="${!internal&&!compare}">대중 티어</button><button type="button" data-analysis-tier="internal" aria-pressed="${internal}">팀 내부 티어</button><button type="button" data-analysis-tier="compare" aria-pressed="${compare}">나란히 비교</button></div>`,
     search=`<div class="controls"><label>챔피언 검색<input id="analysis-tier-search" value="${esc(ANALYSIS_SET.tierQ||'')}" placeholder="챔피언 이름"></label></div>`,
     name=id=>championLabel(db,id),matches=row=>!query||name(row.champ).toLowerCase().includes(query),
     champion=row=>`<button type="button" class="linklike" data-analysis-champion="${esc(row.champ)}">${esc(name(row.champ))}</button>`;
+  if(compare)return analysisTierComparisonPanel(db,team,filter,{tabs,search,query,role,champion});
   if(!internal){
     const report=publicChampionTiers(db,filter,role),rows=report.rows.filter(matches),visible=rows.slice(0,40);
     return `<section id="analysis-tiers"><h3>밴픽·메타</h3>${tabs}${search}<p>${esc(report.source)} · 공식 경기 ${report.sample}전 · 규칙 패치 ${esc(report.patch)}</p><p class="hint">대중 티어에는 구단의 비공개 훈련·숙련·전술을 사용하지 않습니다. 역할은 현재 챔피언 설정의 후보군을 좁힙니다. 픽·밴은 경기 전체 기록이며 밴을 특정 역할에 귀속하지 않습니다.</p>${report.observed&&report.sample<10?'<p>공식 표본이 10전 미만입니다. 현재 관측 빈도 등급을 안정적인 강함으로 단정하지 마세요.</p>':''}${!report.observed?'<p>조건에 맞는 대회 표본이 없어 기존 패치 예상 순위를 표시합니다. 대회 성적이나 검증된 승률 예측이 아닙니다.</p>':''}<div class="scroll"><table><thead><tr><th>티어</th><th>챔피언</th><th>역할</th><th>픽</th><th>밴</th><th>밴픽률</th><th>승률</th></tr></thead><tbody>${visible.map(row=>`<tr><td>${esc(row.tier)}</td><td>${champion(row)}</td><td>${row.roles.map(r=>esc(ROLE_KO[r])).join('/')}</td><td>${row.picks}</td><td>${row.bans}</td><td>${Math.round(row.presence*100)}%</td><td>${row.winRate===null?'표본 없음':Math.round(row.winRate*100)+'%'}</td></tr>`).join('')}</tbody></table></div>${!rows.length?'<p>검색·역할 조건에 맞는 챔피언이 없습니다.</p>':''}<p class="hint">${rows.length}명 중 ${visible.length}명 표시 · 날짜 미확인·미도래 제외 ${report.excluded}건. 자료 출처는 게임 내 공식 기록과 공개 패치 규칙입니다. 외부 대회 보정 자료 수집은 아직 검증되지 않았습니다.</p></section>`;
@@ -12029,9 +12048,10 @@ function analysisTiersPanel(db,team,filter){
 }
 function bindAnalysisTiers(){
   document.querySelectorAll('[data-analysis-tier]').forEach(button=>button.onclick=()=>{
-    if(!['public','internal'].includes(button.dataset.analysisTier))return;
+    if(!['public','internal','compare'].includes(button.dataset.analysisTier))return;
     ANALYSIS_SET.tierView=button.dataset.analysisTier;analysisRefresh();
   });
+  bindAnalysisTierSources();
   const search=$('#analysis-tier-search');if(search)search.onchange=e=>{ANALYSIS_SET.tierQ=e.target.value;analysisRefresh()};
   document.querySelectorAll('[data-analysis-champion]').forEach(button=>button.onclick=()=>{
     const id=button.dataset.analysisChampion;if(!DB.patch.champions[id])return;
@@ -12041,6 +12061,30 @@ function bindAnalysisTiers(){
     const team=analysisSelectedTeam(DB),p=DB.players[button.dataset.analysisPlayer];
     if(!p||p.team!==team?.id||DB.world?.fired)return;
     SQUAD=team.id;OPEN_P=p.id;navigateTo('squad');
+  });
+}
+
+/* ==== FILE: ui-analysis-comparison.js ==== */
+// Read-only comparison and navigation; evaluation stays in analysis-tiers.
+function analysisTierComparisonPanel(db,team,filter,{tabs,search,query,role,champion}){
+  const report=championTierComparison(db,{team:team.id,filter,role}),pub=report.public,own=report.internal,
+    rows=report.rows.filter(row=>!query||championLabel(db,row.champ).toLowerCase().includes(query)),visible=rows.slice(0,40),
+    point=n=>(n*100).toFixed(1),reasons={'no-authority':'내부 자료 조회 권한 없음','historical-state-unavailable':'과거 내부 상태 미보관','unverified-current-evidence':'현재 패치 자료 날짜 검토 필요','no-valid-lineup':'유효 주전 배치 없음'},
+    scope=filter.comp?(db.competitions[filter.comp]?.name||filter.comp):'전체 대회',groups=publicTierSourceGroups(db,filter),
+    publicCell=row=>`${esc(row.tier)} · ${pub.observed?'관측 빈도':'패치 예상'}<br><small>픽 ${row.picks} · 밴 ${row.bans} · 밴픽률 ${Math.round(row.presence*100)}%<br>승률 ${row.winRate===null?'표본 없음':Math.round(row.winRate*100)+'%'}</small>`,
+    ownCell=row=>{if(!row)return esc(reasons[own.reason]||'해당 후보의 유효 주전 배치 없음');const f=row.best;
+      return `${row.rank}위 · ${row.tier}<br><button type="button" class="linklike" data-analysis-player="${esc(f.player)}">${esc(db.players[f.player].name)}</button> · ${esc(ROLE_KO[f.role])}<br>숙련 ${f.trained?Math.round(f.mastery):'미훈련 · 기본 평가값 '+f.mastery}<br>밴픽 효용 × 100: ${point(f.score)}`},
+    evidence=row=>{if(!row)return '<p>현재 주전·패치·조회 권한을 확인하세요. 없는 내부 자료를 추정하지 않습니다.</p>';const f=row.best.factors;
+      return `<p>실제 내부 평가 기여: 메타 ${point(f.meta)} · 숙련 ${point(f.mastery)} · 조합·전술 ${point(f.comp)} · 유연성 ${point(f.flex)}</p><p>${row.meta.sources.map(esc).join(' · ')}</p><p>내부 메타의 현재 패치 공개 표본 ${row.meta.globalSample}건 / 지역 ${row.meta.regionalSample}건 · 구단 연구 ${row.meta.teamStudy}</p><p>공개 대회 빈도와 현재 선수·구단 준비도를 서로 다른 기준으로 평가한 결과입니다. 이 차이만으로 특정 요인의 인과적 효과를 단정하지 않습니다.</p>`};
+  return `<section id="analysis-tiers"><h3>대중·팀 내부 티어 비교</h3>${tabs}${search}<p>대중: ${esc(scope)} · 공식 ${pub.sample}전 · 기록 패치 ${esc(pub.filter.patch||'여러 패치 포함')} · ${esc(pub.source)}<br>내부: ${esc(team.name)} · 현재 ${esc(own.patch)} · ${esc(own.date)}</p><p class="hint">두 등급은 척도가 다릅니다. 등급을 빼거나 더하지 않고 같은 후보의 출처와 평가 요인을 나란히 확인합니다. 대회·기간 조건은 대중 표본에만 적용합니다. 내부 메타 연구는 현재 패치 전체·지역 표본을 사용하며 선택 대회의 재평가가 아닙니다. 후보 역할은 현재 챔피언 설정 기준이며 공개 밴의 역할을 추정하지 않습니다.</p>${!pub.observed?'<p>조건에 맞는 공개 표본이 없어 대중 열은 현재 패치 규칙 기반 예상입니다.</p>':pub.sample<10?'<p>공개 표본이 10전 미만입니다. 관측 빈도를 안정적인 강함으로 단정하지 마세요.</p>':''}${own.reason?'<p>내부 평가: '+esc(reasons[own.reason])+'</p>':''}<div class="scroll"><table><thead><tr><th>챔피언</th><th>대중 티어·표본</th><th>우리 팀 준비도</th><th>차이의 근거</th></tr></thead><tbody>${visible.map(row=>`<tr><td>${champion(row)}</td><td>${publicCell(row.public)}</td><td>${ownCell(row.internal)}</td><td><details><summary>기준과 요인 확인</summary>${evidence(row.internal)}</details></td></tr>`).join('')}</tbody></table></div>${rows.length?'':'<p>검색·역할 조건에 맞는 챔피언이 없습니다.</p>'}<p class="hint">${rows.length}명 중 ${visible.length}명 표시 · ${own.reason?'공개 표 정렬':'내부 순위'} 기준. 상대 픽·선택 중인 조합·Fearless·시리즈 맥락은 아직 연결하지 않았습니다. 내부 값은 승리 확률이 아닙니다.</p><h4>실제 공개 표본 출처</h4>${groups.length?'<div class="scroll"><table><thead><tr><th>대회</th><th>기록 패치</th><th>경기·기간</th><th>원자료</th></tr></thead><tbody>'+groups.map(g=>`<tr><td>${esc(g.comp?(db.competitions[g.comp]?.name||g.comp):'대회 미상')}</td><td>${esc(g.patch||'패치 미상')}</td><td>${g.games}전 · ${esc(g.from)} ~ ${esc(g.to)}</td><td>${g.comp&&g.patch&&g.navigationSafe?'<button type="button" class="linklike" data-analysis-source-comp="'+esc(g.comp)+'" data-analysis-source-patch="'+esc(g.patch)+'">공개 기록 보기</button>':!g.navigationSafe?'원자료 날짜 검토 필요':'상세 조건 미상'}</td></tr>`).join('')+'</tbody></table></div>':'<p>조건에 맞는 공개 원자료가 없습니다.</p>'}<small>자료는 게임 내 공식 기록입니다. 외부 대회 보정 수집은 아직 검증되지 않았습니다. 날짜 미확인·미도래 제외 ${pub.excluded}건. 대회·패치 미상 원자료는 출처를 추정하지 않으며 정확한 하위 조건 이동을 제공하지 않습니다.</small></section>`;
+}
+function bindAnalysisTierSources(){
+  document.querySelectorAll('[data-analysis-source-comp]').forEach(button=>button.onclick=()=>{
+    const team=analysisSelectedTeam(DB);if(!team)return;
+    const filter=analysisFilter(DB,team),groups=publicTierSourceGroups(DB,filter),comp=button.dataset.analysisSourceComp,patch=button.dataset.analysisSourcePatch;
+    if(!comp||!patch||!groups.some(g=>g.comp===comp&&g.patch===patch&&g.navigationSafe))return;
+    Object.assign(PSET,{comp,patch,period:['30','90'].includes(ANALYSIS_SET.period)?ANALYSIS_SET.period:'ALL',region:'GLOBAL',role:ROLES.includes(ANALYSIS_SET.position)?ANALYSIS_SET.position:'ALL',position:'ALL',team:'ALL',player:'ALL',opponent:'ALL',color:'ALL',season:'ALL',split:'ALL',league:'ALL',scope:'ALL',year:'',q:'',champ:null});
+    navigateTo('patch');
   });
 }
 
@@ -13600,7 +13644,7 @@ let MK={role:'ALL',scope:'region',tab:'fa'};
 let MC={blue:'HTG',red:'SBZ',n:300,res:null,running:false};
 let PSET={role:'ALL',q:'',region:'GLOBAL',patch:'ALL',comp:'ALL',period:'ALL',year:'',season:'ALL',split:'ALL',league:'ALL',scope:'ALL',position:'ALL',team:'ALL',player:'ALL',opponent:'ALL',color:'ALL',playerSearch:'',prepTeam:'AUTO',champ:null};
 let DRAFT_UI=null;
-let ANALYSIS_SET={mode:'own',team:'AUTO',period:'90',patch:'CURRENT',position:'ALL',prepTeam:'AUTO',tierView:'public',tierQ:''};
+let ANALYSIS_SET={mode:'own',team:'AUTO',period:'90',patch:'CURRENT',position:'ALL',prepTeam:'AUTO',tierView:'public',tierQ:'',comp:'ALL'};
 
 // Keep the supported screen map and its binding ownership in one place.
 const UI_ROUTES=Object.freeze({
@@ -13696,7 +13740,7 @@ function resetUiForWorld(){
   LAST=null;LASTSER=null;OPEN_P=null;SQUAD_EDIT=null;MSG='';
   MC.res=null;MC.running=false;SSET.view=null;
   PSET.team='ALL';PSET.player='ALL';PSET.opponent='ALL';PSET.color='ALL';PSET.playerSearch='';PSET.prepTeam='AUTO';
-  ANALYSIS_SET={mode:'own',team:'AUTO',period:'90',patch:'CURRENT',position:'ALL',prepTeam:'AUTO',tierView:'public',tierQ:''};
+  ANALYSIS_SET={mode:'own',team:'AUTO',period:'90',patch:'CURRENT',position:'ALL',prepTeam:'AUTO',tierView:'public',tierQ:'',comp:'ALL'};
 }
 
 /* ==== FILE: app.js ==== */

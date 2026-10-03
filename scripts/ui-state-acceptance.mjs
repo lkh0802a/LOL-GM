@@ -65,7 +65,7 @@ assert.equal(value("navigateTo('match')"),true);
 frames.shift()();
 assert.equal(window.scrollY,0,'stale animation frame must not move a newer screen');
 
-run("LAST={x:1};LASTSER={x:2};OPEN_P='p1';SQUAD_EDIT={parentId:'old',squads:{first:{starters:{MID:'old'},tactics:{aggression:13}},reserve:{training:{intensity:'high'}}},rosterPlan:{assignments:{old:'reserve'}}};MSG='error';MC.res={n:5};SSET.view='sample';PSET.team='old-team';PSET.player='old-player';PSET.opponent='old-opponent';PSET.playerSearch='old';ANALYSIS_SET={mode:'opponent',team:'old',prepTeam:'old-rival',period:'ALL',patch:'old',position:'MID',tierView:'internal',tierQ:'old'};resetUiForWorld()");
+run("LAST={x:1};LASTSER={x:2};OPEN_P='p1';SQUAD_EDIT={parentId:'old',squads:{first:{starters:{MID:'old'},tactics:{aggression:13}},reserve:{training:{intensity:'high'}}},rosterPlan:{assignments:{old:'reserve'}}};MSG='error';MC.res={n:5};SSET.view='sample';PSET.team='old-team';PSET.player='old-player';PSET.opponent='old-opponent';PSET.playerSearch='old';ANALYSIS_SET={mode:'opponent',team:'old',prepTeam:'old-rival',period:'ALL',patch:'old',position:'MID',tierView:'internal',tierQ:'old',comp:'old'};resetUiForWorld()");
 for(const key of ['team','player','opponent','color'])assert.equal(value('PSET.'+key),'ALL','new world retained old participant '+key);
 assert.equal(value('PSET.playerSearch'),'');
 run("PSET.color='BLUE';PSET.prepTeam='old-rival';resetUiForWorld()");
@@ -73,7 +73,7 @@ assert.equal(value('PSET.color'),'ALL','new world retained old side selection');
 assert.equal(value('PSET.prepTeam'),'AUTO','new world retained selected preparation rival');
 for(const expression of ['LAST','LASTSER','OPEN_P','SQUAD_EDIT','MC.res','SSET.view'])assert.equal(value(expression),null,expression+' must be reset on world replacement');
 assert.equal(value('MSG'),'');
-assert.deepEqual(JSON.parse(value('JSON.stringify(ANALYSIS_SET)')),{mode:'own',team:'AUTO',period:'90',patch:'CURRENT',position:'ALL',prepTeam:'AUTO',tierView:'public',tierQ:''},'world replacement resets every analysis filter');
+assert.deepEqual(JSON.parse(value('JSON.stringify(ANALYSIS_SET)')),{mode:'own',team:'AUTO',period:'90',patch:'CURRENT',position:'ALL',prepTeam:'AUTO',tierView:'public',tierQ:'',comp:'ALL'},'world replacement resets every analysis filter');
 assert.equal(value('ANALYSIS_SET.team'),'AUTO');
 assert.equal(value('ANALYSIS_SET.prepTeam'),'AUTO');
 assert.equal(value('VIEW'),'match','world replacement does not silently navigate');

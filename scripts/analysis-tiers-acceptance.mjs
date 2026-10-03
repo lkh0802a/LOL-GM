@@ -1,6 +1,6 @@
 import {readFile} from 'node:fs/promises';
 import {runEngineFixture,artifactSources} from './test-harness.mjs';
-const ui=await artifactSources(['ui-patch.js','ui-opponent-report.js','ui-opponent-draft.js','ui-analysis.js','ui-analysis-tiers.js']);
+const ui=await artifactSources(['ui-patch.js','ui-opponent-report.js','ui-opponent-draft.js','ui-analysis.js','ui-analysis-tiers.js','ui-analysis-comparison.js']);
 const baseline=await readFile(new URL('./fixtures/draft-meta-baseline.js',import.meta.url),'utf8');
 await runEngineFixture(String.raw`(()=>{
   const check=(ok,msg)=>{if(!ok)throw Error('ANALYSIS_TIERS '+msg)};

@@ -1,11 +1,12 @@
 // Two evidence scopes; screen code never owns ranking weights or game writes.
 function analysisTiersPanel(db,team,filter){
-  const internal=ANALYSIS_SET.tierView==='internal',role=filter.position||null,
+  const internal=ANALYSIS_SET.tierView==='internal',compare=ANALYSIS_SET.tierView==='compare',role=filter.position||null,
     query=String(ANALYSIS_SET.tierQ||'').trim().toLowerCase(),
-    tabs=`<div class="seg tabs"><button type="button" data-analysis-tier="public" aria-pressed="${!internal}">대중 티어</button><button type="button" data-analysis-tier="internal" aria-pressed="${internal}">팀 내부 티어</button></div>`,
+    tabs=`<div class="seg tabs"><button type="button" data-analysis-tier="public" aria-pressed="${!internal&&!compare}">대중 티어</button><button type="button" data-analysis-tier="internal" aria-pressed="${internal}">팀 내부 티어</button><button type="button" data-analysis-tier="compare" aria-pressed="${compare}">나란히 비교</button></div>`,
     search=`<div class="controls"><label>챔피언 검색<input id="analysis-tier-search" value="${esc(ANALYSIS_SET.tierQ||'')}" placeholder="챔피언 이름"></label></div>`,
     name=id=>championLabel(db,id),matches=row=>!query||name(row.champ).toLowerCase().includes(query),
     champion=row=>`<button type="button" class="linklike" data-analysis-champion="${esc(row.champ)}">${esc(name(row.champ))}</button>`;
+  if(compare)return analysisTierComparisonPanel(db,team,filter,{tabs,search,query,role,champion});
   if(!internal){
     const report=publicChampionTiers(db,filter,role),rows=report.rows.filter(matches),visible=rows.slice(0,40);
     return `<section id="analysis-tiers"><h3>밴픽·메타</h3>${tabs}${search}<p>${esc(report.source)} · 공식 경기 ${report.sample}전 · 규칙 패치 ${esc(report.patch)}</p><p class="hint">대중 티어에는 구단의 비공개 훈련·숙련·전술을 사용하지 않습니다. 역할은 현재 챔피언 설정의 후보군을 좁힙니다. 픽·밴은 경기 전체 기록이며 밴을 특정 역할에 귀속하지 않습니다.</p>${report.observed&&report.sample<10?'<p>공식 표본이 10전 미만입니다. 현재 관측 빈도 등급을 안정적인 강함으로 단정하지 마세요.</p>':''}${!report.observed?'<p>조건에 맞는 대회 표본이 없어 기존 패치 예상 순위를 표시합니다. 대회 성적이나 검증된 승률 예측이 아닙니다.</p>':''}<div class="scroll"><table><thead><tr><th>티어</th><th>챔피언</th><th>역할</th><th>픽</th><th>밴</th><th>밴픽률</th><th>승률</th></tr></thead><tbody>${visible.map(row=>`<tr><td>${esc(row.tier)}</td><td>${champion(row)}</td><td>${row.roles.map(r=>esc(ROLE_KO[r])).join('/')}</td><td>${row.picks}</td><td>${row.bans}</td><td>${Math.round(row.presence*100)}%</td><td>${row.winRate===null?'표본 없음':Math.round(row.winRate*100)+'%'}</td></tr>`).join('')}</tbody></table></div>${!rows.length?'<p>검색·역할 조건에 맞는 챔피언이 없습니다.</p>':''}<p class="hint">${rows.length}명 중 ${visible.length}명 표시 · 날짜 미확인·미도래 제외 ${report.excluded}건. 자료 출처는 게임 내 공식 기록과 공개 패치 규칙입니다. 외부 대회 보정 자료 수집은 아직 검증되지 않았습니다.</p></section>`;
@@ -18,9 +19,10 @@ function analysisTiersPanel(db,team,filter){
 }
 function bindAnalysisTiers(){
   document.querySelectorAll('[data-analysis-tier]').forEach(button=>button.onclick=()=>{
-    if(!['public','internal'].includes(button.dataset.analysisTier))return;
+    if(!['public','internal','compare'].includes(button.dataset.analysisTier))return;
     ANALYSIS_SET.tierView=button.dataset.analysisTier;analysisRefresh();
   });
+  bindAnalysisTierSources();
   const search=$('#analysis-tier-search');if(search)search.onchange=e=>{ANALYSIS_SET.tierQ=e.target.value;analysisRefresh()};
   document.querySelectorAll('[data-analysis-champion]').forEach(button=>button.onclick=()=>{
     const id=button.dataset.analysisChampion;if(!DB.patch.champions[id])return;
