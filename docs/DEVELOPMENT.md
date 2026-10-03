@@ -130,6 +130,16 @@ The failing focused assertion is retained and passes after correction. This is
 part of the same practice-comparison slice, not a second implementation slice;
 the follow-up branch/PR must pass its own full exact-head CI before integration.
 
+Follow-up delivery: initial publication `2b40a5b152a0914c715170135ee1fb0481ed40ba`
+passed complete main Actions `37096448849` with all 14 jobs and standalone sync.
+PR #152 exact head `c18a62b117935c310d4b8657213915797bdd89a5` then passed
+full Actions `37096826826`, including medical core, four seeds, two aggregates
+and verify. Head/main gates passed before sequential merge
+`34b766b9f660df903a5522ed0415654594c1baa0`. HTML was rebuilt with the compatible
+reader and matches the dist copy; final publication still requires complete main
+CI on its actual new head. The reproduced failing legacy assertion and source
+records remain preserved; this closes the same feature's compatibility boundary.
+
 ### Current implementation slice — recorded own-squad tactics (2026-10-03)
 
 Scope estimate: 50 minutes, one implementation worker, baseline main

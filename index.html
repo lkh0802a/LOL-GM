@@ -2106,7 +2106,7 @@ function practiceRowMatches(row,filter){
   return (!filter.region||row.region===filter.region)&&(!filter.patch||row.patch===filter.patch)&&(!filter.year||+String(row.date).slice(0,4)===+filter.year)&&(!filter.from||row.date>=filter.from)&&(!filter.to||row.date<=filter.to)&&(!filter.opponent||row.opponent===filter.opponent);
 }
 function practicePickMatches(picks,filter,cid){
-  return !(cid||filter.player||filter.position)||(picks||[]).some(p=>p&&typeof p==='object'&&(!cid||p.champ===cid)&&(!filter.player||p.player===filter.player)&&(!filter.position||p.role===filter.position));
+  return !(cid||filter.player||filter.position)||(picks||[]).some(p=>{const x=typeof p==='string'?{champ:p}:p;return x&&(!cid||x.champ===cid)&&(!filter.player||x.player===filter.player)&&(!filter.position||x.role===filter.position)});
 }
 function ownPracticeComparison(db,filter={},cid=null){
   const team=filter.team||managedTeamId(db),out={allowed:false,team,engine:{games:0,wins:0},aggregate:{games:0,wins:0},official:{games:0,wins:0},unknownGames:0,legacyGames:0,officialOnly:!!(filter.comp||filter.season||filter.split||filter.league||filter.scope)};
