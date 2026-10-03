@@ -109,6 +109,19 @@ current authority, four-analyst caps and specialty/overlap logic; do not duplica
 the existing draft weighting. Short ability/authority/save/UI acceptances and
 required CI precede delivery. Final QA follows all features and user feedback.
 
+Delivery: PR #151 exact final head `4c976a2484990c6e33e11a1256925735b2b4a490`
+passed full Actions `37096003152`, including the final 46 shared acceptances,
+medical core, four seed samples, two aggregates and verify. Earlier-head runs
+were superseded by final guards/docs; they are not this merge's success evidence.
+Exact final PR head and unchanged main baseline were checked before sequential
+merge `f0ebac6b428b34633bb24aed92a6d70670c168cb`. Standalone HTML was rebuilt
+from the integrated 110-module manifest and matches `dist/index.html`. Publication
+is gated by complete main CI and standalone sync on the actual publication head.
+The implementation, focused acceptance and documentation deliver this slice;
+CI/merge/HTML are additional follow-through. Remaining hourly time cannot fit
+another coherent 45–55-minute implementation; the exact analyst-interpretation
+continuation above is retained. No final long-season/device/TalkBack QA started.
+
 ### Current implementation slice — recorded own-squad tactics (2026-10-03)
 
 Scope estimate: 50 minutes, one implementation worker, baseline main
