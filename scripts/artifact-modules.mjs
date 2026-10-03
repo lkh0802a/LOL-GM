@@ -90,6 +90,7 @@ export const ENGINE_MODULES = [
   'role-conversion.js',
   'draft-analysis.js',
   'draft-preparation.js',
+  'draft-history.js',
   'analysis-tiers.js',
   'career.js',
 ];
@@ -124,6 +125,7 @@ export const UI_MODULES = [
   'ui-draft.js',
   'ui-draft-analysis.js',
   'ui-draft-preparation.js',
+  'ui-draft-history.js',
   'ui-season.js',
   'ui-office-consultation.js',
   'ui-overlay.js',
