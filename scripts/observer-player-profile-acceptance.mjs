@@ -12,6 +12,10 @@ await runEngineFixture(String.raw`(()=>{
  const archive=JSON.stringify(p.careerEvents),raw=playerCoreMetrics(p),observed=observedPlayerCoreMetrics(db,p);
  check(!Object.hasOwn(observed,'aggression')&&Object.keys(observed).some(k=>observed[k]!==raw[k]),'derived profile shows raw metrics');
  const agrid=playerDetail(p);check(agrid.includes('관찰 능력치 기반 추정')&&agrid.includes('시장가치 추정')&&agrid.includes('Public award')&&!agrid.includes('전향 시작')&&!agrid.includes('구두 약속 ·')&&!agrid.includes('현재 선발'),'foreign UI has private events/lineup');
+ const priorCareer=p.career,priorEvents=p.careerEvents;
+ const historical={year:db.year,comp:'public-fixture',team:b.id,g:1,k:1,d:1,a:1};Object.defineProperty(historical,'ovr',{get(){throw Error('historical raw OVR read')}});
+ const retirement={type:'retirement',year:db.year,age:31};Object.defineProperty(retirement,'peak',{get(){throw Error('private peak read')}});
+ p.career=[historical];p.careerEvents=[...priorEvents,retirement];check(playerDetail(p).includes('31세 은퇴'),'historical public retirement lost');p.career=priorCareer;p.careerEvents=priorEvents;
  const keys=['tend','personality','development','form','condition','fatigue','morale','sharpness','teamAdaptation','tacticalAdaptation','satisfaction','satisfactionReasons','rosterRole','rolePromise','roleConversion','wantsOut','wantsOutReason'],descriptors=new Map(keys.map(k=>[k,Object.getOwnPropertyDescriptor(p,k)]));
  for(const k of keys)Object.defineProperty(p,k,{configurable:true,get(){throw Error('private '+k+' read')}});
  const guarded=playerDetail(p);check(guarded.includes('공개 출전 기록')&&!guarded.includes('width:')&&!guarded.includes('전성기 예상')&&!guarded.includes('data-role-convert='),'guarded popup lost public information');
