@@ -59,7 +59,7 @@ function setRosterRole(db,p,role,source='club',silent=false){
 }
 function initializeTeamRosterRoles(db,t,force=false){const team=teamRef(db,t);if(!team)return;initializeDepthChart(db,team,force);for(const id of team.roster||[]){const p=db.players[id];if(p&&(force||!SQUAD_ROLES.includes(p.rosterRole)))setRosterRole(db,p,recommendedRosterRole(db,p,team),'club',true)}}
 function rebalanceAiRosterRoles(db,t){
-  const team=teamRef(db,t);if(!team||team.id===managedTeamId(db))return;
+  const team=teamRef(db,t);if(!team||managerControlsSquad(db,team))return;
   for(const id of team.roster||[]){const p=db.players[id];if(!p)continue;const r=recommendedRosterRole(db,p,team);if(r!==p.rosterRole){aiSportingRolePromise(db,p,team);setRosterRole(db,p,r,'club',false)}}
 }
 function playerCoreMetrics(p){

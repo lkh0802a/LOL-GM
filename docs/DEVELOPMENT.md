@@ -31,7 +31,106 @@ without continually adding new status documents.
 
 ## Current Phase
 
-### Current implementation slice — team-specific atomic preparation (2026-10-03)
+### Current implementation slice — preserve manual owned-squad coaching (2026-10-03)
+
+Scope estimate: 50–55 minutes, one implementation worker. Clean main baseline
+`63fe6ea4408964122a3bca14815e7c3e196dd342` agrees with fetched origin/main;
+its publication Actions `37126086637` passed all required checks. Only historic
+PR #27/#28 are open; no AGENTS.md or conflicting edits. Managed runtime revision
+127 is connected with enforced restricted networking, no runtime secrets or
+outbound identities; Git fetch and connected GitHub reads work. This is a
+verified management/engine integration gap, not completion of all 23 stages.
+
+**Defect / source and rules:** `development.js::aiManageTraining`,
+`lineup.js::aiReviewDepthChart`, `player.js::rebalanceAiRosterRoles` and
+`role-conversion.js::aiReviewRoleConversions` only excluded managedTeamId.
+The parent's owned reserve is controlled by `managerControlsSquad` but still
+received automatic coaching. Actual `applyWorldDailyEffects` on a legal career
+changed light/champions to high/teamwork and then performed teamwork drills
+(`/tmp/owned-coaching-reproduction-supported.log`). STAFF_RULES explicitly lets
+parents manage owned reserve coaching. Spec §2 lets a reserve-only coach manage
+matches/tactics/training/development while the AI parent owns economic moves.
+No implemented delegation switch authorizes automatic owned-squad coaching.
+
+**Implemented / player example:** Use the existing controlled-squad boundary
+for automatic training, lineup, roster-role and conversion reviews; direct AI
+conversion proposals also reject controlled players before mutation. A parent's
+reserve keeps the chosen light/champion practice on the next actual day and
+through offseason training review. Existing meaningful manual choices are
+preserved even if AI would prefer stronger players or different roles. Other
+clubs keep their AI policies and observed decisions; a reserve-only coach does
+not take over the AI parent's coaching, recruitment, contracts or internal moves.
+The squad header now correctly labels owned reserve coaching as player-managed
+and its preparation controls explain that AI does not change manual training.
+
+`applyRosterPlan` still validates and carries out economic membership changes.
+For controlled squads it repairs invalid/missing slots while locking surviving
+legal starters, rather than rebuilding every slot after any internal movement.
+For example, the AI parent swapping reserve bench players leaves the reserve
+coach's five chosen starters intact; moving the chosen MID repairs that slot
+while retaining the other four legal choices. Unmanaged squads retain the
+existing automatic best-lineup rebuild. Tradeoff: a deliberately weaker legal
+lineup and manual high-fatigue training are the user's responsibility; existing
+medical eligibility and membership repair still apply. No new delegation,
+league rule, simulation bonus, balance redesign or save format was introduced.
+
+**Focused acceptance:** `manual-owned-coaching-acceptance.mjs` starts a legal
+owned-reserve career and exercises the real daily effects including resulting
+practice, duplicate-day idempotence and deterministic modern-save resume.
+Controlled review/proposal calls leave state/history untouched; opponent daily
+AI and conversion proposals remain active. Actual competition writers complete
+121 official matches in one bounded small-world season, then actual runOffseason
+and closeMarket preserve training, legal deliberately off-role lineups and roles
+of retained players. This is targeted route acceptance, not long/final QA.
+A reserve-only save exercises AI-parent roster.plan preview/commit, injected
+late repair failure with exact world rollback, economic movement, locking of
+unaffected manual slots, repair of a departed starter and restored authority.
+Existing market minimum-fill/trim and new contract-role effects are preserved;
+coaching assertions compare retained players rather than forbidding legitimate
+membership changes. The shared calendar runner registers this fixture with a
+fresh context. Existing maintainability budgets and mutation owners are unchanged.
+Full exact-head CI, medical core/four shards/two aggregates/verify, sequential
+merge and standalone publication gates still apply. No 100-season, mobile/device
+or TalkBack final QA; UI checks use existing real renderer/binding acceptance.
+
+Local validation completed: calendar/scouting passes 18 acceptances / 18 fresh
+contexts (one compile), including the 121-match focused route; UI/finance/contracts
+passes 55 acceptances / 54 contexts. Static/build checks cover 119 modules and
+root index.html matches dist/index.html. Full CI on the current PR head still
+gates merge; local successes do not substitute for required medical/verify jobs.
+
+**Files / failures / limits:** development, lineup, player, role-conversion,
+roster, ui-roster, ui-squad-preparation, focused acceptance, calendar runner,
+STAFF_RULES and this guide. All `/tmp/owned-coaching-*` originals/reruns remain.
+The first market-close assertion wrongly compared entire roster membership;
+existing market maintenance adds/trims bench players. It now verifies actual
+coaching and all retained choices, preserving the established market behavior.
+The AI-parent injected rollback passes without changing journals or hiding
+cache/state differences. No performance optimization is claimed; this is an
+intentional manual-control correction. Player-choice outcomes can consequently
+differ from the previous unauthorized AI behavior.
+
+**Verified roadmap gap / precise next substantial slice (50–55 minutes, high):**
+first-career FA supply with owned reserves and zero configured substitutes.
+The KR eight-parent/eight-reserve setup with subs=0 generates 85 available
+players for a required 88 (eight organizations × confirmed integrated minimum
+11) and fails in autoBuildInitialWorld before career start. NA six-parent
+zero-substitute setup also fails. Keep both original failures; the coaching
+acceptance uses the already supported default substitute setting, so it does
+not assert the zero-substitute case works. Evidence is in
+`/tmp/owned-coaching-zero-subs-evidence.log` and the two original reproductions.
+Inspect bootstrap player generation and initial minimum/depth market, apply the
+confirmed global-FA/legal-roster policies, and provide sufficient legitimate
+initial supply without weakening the 11-player organization minimum, deleting
+players/records, bypassing costs or inventing transfers. Cover zero/default subs,
+parent/reserve/independent starts, actual registration, budget, save and failures.
+This prerequisite gap must be implemented before claiming all 23 stages complete.
+A separate untested source hypothesis is loan movement's force=true depth repair
+in player-loans; reproduce before changing it. No new optional balance policy
+has been approved or silently introduced by this correction.
+
+
+### Prior implementation slice — team-specific atomic preparation (2026-10-03)
 
 Scope estimate: 50–55 minutes, one implementation worker, clean baseline
 `56a812ff1498707fa57ffbb7384a4e6c9d727ce5`, fetched origin/main agrees.

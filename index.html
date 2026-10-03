@@ -3464,7 +3464,7 @@ function setRosterRole(db,p,role,source='club',silent=false){
 }
 function initializeTeamRosterRoles(db,t,force=false){const team=teamRef(db,t);if(!team)return;initializeDepthChart(db,team,force);for(const id of team.roster||[]){const p=db.players[id];if(p&&(force||!SQUAD_ROLES.includes(p.rosterRole)))setRosterRole(db,p,recommendedRosterRole(db,p,team),'club',true)}}
 function rebalanceAiRosterRoles(db,t){
-  const team=teamRef(db,t);if(!team||team.id===managedTeamId(db))return;
+  const team=teamRef(db,t);if(!team||managerControlsSquad(db,team))return;
   for(const id of team.roster||[]){const p=db.players[id];if(!p)continue;const r=recommendedRosterRole(db,p,team);if(r!==p.rosterRole){aiSportingRolePromise(db,p,team);setRosterRole(db,p,r,'club',false)}}
 }
 function playerCoreMetrics(p){
@@ -3648,7 +3648,7 @@ function setTrainingAllocation(plan,key,value){
 }
 function trainingIntensity(t){const x=t?.training?.intensity||'normal';return x==='light'?{growth:.9,fatigue:.45,condition:.25}:x==='high'?{growth:1.08,fatigue:1.35,condition:-.35}:{growth:1,fatigue:.8,condition:0}}
 function aiManageTraining(db,t){
-  if(!t||t.id===managedTeamId(db))return;
+  if(!t||managerControlsSquad(db,t))return;
   t.training=normalizeTraining(t.training);t.training.intensity=trainingRecommendation(db,t).intensity;
   const cohesion=lineupCohesion(db,t),adaptation=avg(t.roster.map(id=>db.players[id]?.tacticalAdaptation??60));
   t.training.focus=cohesion.relationship<40||cohesion.adaptation<65?'teamwork':adaptation<65?'tactics':t.philosophy==='youth'?'individual':'balanced';
@@ -5437,7 +5437,8 @@ function applyRosterPlan(db,t,plan,source='manager'){
   for(const m of moves){const p=db.players[m.pid],dst=db.teams[m.to];dst.roster.push(p.id);p.team=dst.id;
     if(officialRegistrationEnabled(db))p.lastInternalMoveDate=db.worldDate}
   if(db.world)for(const m of moves){const p=db.players[m.pid];recordPlayerEvent(p,'squad_move',db.year,{from:m.from,to:m.to,kind:m.kind,date:db.worldDate,source});onSquadMoveSatisfaction(db,p,m)}
-  for(const team of organizationTeams(db,parent))initializeDepthChart(db,team,true);
+  // Internal movement repairs missing slots without replacing surviving manual starters.
+  for(const team of organizationTeams(db,parent))initializeDepthChart(db,team,!managerControlsSquad(db,team));
   return {...checked,moves};
 }
 function rosterMoveCheck(db,p,target){
@@ -5644,7 +5645,7 @@ function lineupAssignmentScore(db,t,map){
   return skill+(ids.length===5?(lineupCohesion(db,team,ids).relationship-50)*.2:0);
 }
 function aiReviewDepthChart(db,t){
-  const team=teamRef(db,t);if(!team||team.id===managedTeamId(db))return;initializeDepthChart(db,team,false);
+  const team=teamRef(db,t);if(!team||managerControlsSquad(db,team))return;initializeDepthChart(db,team,false);
   const cur={...team.depthChart},best=bestStartingLineup(db,team,{}),curScore=lineupAssignmentScore(db,team,cur),bestScore=lineupAssignmentScore(db,team,best);
   const troubled=ROLES.some(role=>{const p=cur[role]&&db.players[cur[role]];return p&&((p.form||0)<=-6||p.condition<60||p.wantsOut)});
   if(!validateStartingLineup(db,team,cur).ok||bestScore-curScore>=5||(troubled&&bestScore-curScore>=3)){
@@ -11233,6 +11234,7 @@ function roleConversionAcceptance(db,p,targetRole,source='manager'){
 }
 function proposeRoleConversion(db,pid,targetRole,source='manager'){
   const p=playerRef(db,pid);if(!p||p.retired)return {ok:false,accepted:false,reason:'전향을 제안할 수 없는 선수입니다'};
+  if(source==='ai'&&p.team&&managerControlsSquad(db,p.team))return {ok:false,accepted:false,reason:'관리 선수의 전향은 감독이 직접 제안합니다'};
   if(source==='manager'&&p.team&&!managerControlsSquad(db,p.team))return {ok:false,accepted:false,reason:'내 구단 선수에게만 전향을 제안할 수 있습니다'};
   ensureRoleConversionState(p);if(p.roleConversion?.targetRole===targetRole)return {ok:true,accepted:true,reason:'이미 해당 포지션 전향을 진행 중입니다',conversion:p.roleConversion};
   p.roleProposalCount=(p.roleProposalCount||0)+1;const res=roleConversionAcceptance(db,p,targetRole,source);if(!res.ok)return res;
@@ -11286,7 +11288,7 @@ function roleConversionGrowthMultiplier(p){
   const days=p.roleConversionTrainingDaysYear||0;return clamp(1-Math.min(.12,days/220*.12),.88,1);
 }
 function aiReviewRoleConversions(db,t){
-  const team=teamRef(db,t);if(!team||team.id===managedTeamId(db)||hashStr((db.worldDate||db.year)+'|role-review|'+team.id)%24!==0)return null;
+  const team=teamRef(db,t);if(!team||managerControlsSquad(db,team)||hashStr((db.worldDate||db.year)+'|role-review|'+team.id)%24!==0)return null;
   for(const role of ROLES){const p=team.depthChart?.[role]&&db.players[team.depthChart[role]];if(!p||p.role===role||p.roleConversion)continue;const fit=roleConversionFit(db,p,role),natural=roleConversionFit(db,p,p.role);if(p.age<=29&&fit>=natural-7)return proposeRoleConversion(db,p.id,role,'ai')}
   return null;
 }
@@ -12612,7 +12614,7 @@ function viewSquad(){
     ps=roster.map(id=>DB.players[id]).filter(Boolean).sort((a,b)=>ROLES.indexOf(a.role)-ROLES.indexOf(b.role)||obsOvr(observationDb,b)-obsOvr(observationDb,a)||a.id.localeCompare(b.id)),
     kAvg=Math.round(avg(ps.map(p=>knowledge(observationDb,p))));
   return `<section class="controls"><label>팀<select id="sq">${teamOpts(SQUAD)}</select></label></section>
-  <section class="teamhead"><h2>${esc(t.name)}</h2><p>${t.formerNames&&t.formerNames.length?'전신 '+t.formerNames.map(esc).join(', ')+' · ':''}${esc(DB.regions[t.region].leagueName)} · 감독 ${t.id===managedTeamId(DB)?'플레이어':'구단 AI'} · 운영 철학 ${PHIL_KO[t.philosophy]||'균형'} · 팬덤 ${t.fans??'—'}${mineOrg?' · 팀 호흡 '+Math.round(teamSynergy(t)):''}${t.goal?` · 구단주 목표: ${GOAL_KO[t.goal]}`:''}</p><p class="hint">전문 스태프가 밴픽·분석·육성·회복을 지원하며, 관리 구단의 최종 스포츠 결정은 플레이어가 내립니다.</p></section>
+  <section class="teamhead"><h2>${esc(t.name)}</h2><p>${t.formerNames&&t.formerNames.length?'전신 '+t.formerNames.map(esc).join(', ')+' · ':''}${esc(DB.regions[t.region].leagueName)} · 감독 ${mineOrg?'플레이어':'구단 AI'} · 운영 철학 ${PHIL_KO[t.philosophy]||'균형'} · 팬덤 ${t.fans??'—'}${mineOrg?' · 팀 호흡 '+Math.round(teamSynergy(t)):''}${t.goal?` · 구단주 목표: ${GOAL_KO[t.goal]}`:''}</p><p class="hint">전문 스태프가 밴픽·분석·육성·회복을 지원하며, 관리 구단의 최종 스포츠 결정은 플레이어가 내립니다.</p></section>
   ${officialRegistrationPanel(t)}
   ${mineOrg?squadPreparationTactics(t,edit):squadPublicPreparation(t)}
   ${financePanel(t)}
@@ -12689,7 +12691,7 @@ function squadPreparationTraining(t,edit){
   ${(()=>{const r=trainingRecommendation(DB,t),ko={light:'가볍게',normal:'보통',high:'강하게'};return `<p class="hint">추천: ${ko[r.intensity]} 훈련 · ${r.next?`다음 공식전 ${r.days}일 전`:'공식전 일정 없음'} · 평균 피로 ${Math.round(r.fat)} / 컨디션 ${Math.round(r.cond)}</p>`})()}
   <section><h3>훈련 배분 <small class="hint" id="trleft">남은 포인트 ${TRAIN_POINTS-['mechanical','laning','combat','macro','mental'].reduce((x,k)=>x+(+tr[k]||0),0)} / ${TRAIN_POINTS}</small></h3><label>훈련 강도<select id="trint"><option value="light"${tr.intensity==='light'?' selected':''}>가볍게 · 회복 우선</option><option value="normal"${!tr.intensity||tr.intensity==='normal'?' selected':''}>보통 · 균형</option><option value="high"${tr.intensity==='high'?' selected':''}>강하게 · 성장 우선</option></select></label><label>연습 중점<select id="practicefocus">${Object.entries(PRACTICE_FOCUS_KO).map(([key,label])=>'<option value="'+key+'"'+((tr.focus||'balanced')===key?' selected':'')+'>'+label+'</option>').join('')}</select></label><p class="hint">하루 연습 시간 ${PRACTICE_POINTS}점 · 스크림 1세트당 ${SCRIM_PRACTICE_COST}점 · 개인 기량·챔피언·전술·팀 호흡이 남은 시간을 나눠 씁니다.</p><div class="tac training-grid">
     ${Object.keys(ATTR_GROUPS).map(g=>`<label><span>${GROUP_KO[g]}<output>${tr[g]}</output></span><input type="range" min="0" max="${TRAIN_POINTS}" value="${tr[g]}" data-tr="${g}"></label>`).join('')}
-  </div><div class="controls"><button class="primary" id="sqapply">구단 변경사항 모두 적용</button><button class="ghost" id="sqdiscard">구단 변경사항 모두 취소</button><span class="hint">1·2군의 임시 편집은 팀별로 보존됩니다. 로스터는 변경 후 배치를 미리 보여줍니다. 배치·역할과 각 팀의 주전·전술·훈련을 함께 적용하거나 모두 취소합니다.</span></div><p class="hint">훈련 포인트는 총 ${TRAIN_POINTS}점입니다. 한 영역에 몰면 그 영역은 크게 오르지만 나머지는 덜 오르거나 떨어지고, 배분하지 않은 포인트는 버려집니다. 한 시즌에 영역별로 오를 수 있는 폭과, 잠재력보다 한참 높게 오르는 것에도 한계가 있습니다.</p>
+  </div><div class="controls"><button class="primary" id="sqapply">구단 변경사항 모두 적용</button><button class="ghost" id="sqdiscard">구단 변경사항 모두 취소</button><span class="hint">관리하는 1·2군의 코칭은 직접 결정하며 AI가 훈련을 자동 변경하지 않습니다. 임시 편집은 팀별로 보존됩니다. 로스터는 변경 후 배치를 미리 보여줍니다. 배치·역할과 각 팀의 주전·전술·훈련을 함께 적용하거나 모두 취소합니다.</span></div><p class="hint">훈련 포인트는 총 ${TRAIN_POINTS}점입니다. 한 영역에 몰면 그 영역은 크게 오르지만 나머지는 덜 오르거나 떨어지고, 배분하지 않은 포인트는 버려집니다. 한 시즌에 영역별로 오를 수 있는 폭과, 잠재력보다 한참 높게 오르는 것에도 한계가 있습니다.</p>
   <div class="fin">${(()=>{const f=ensureFacilities(t),names={training:'훈련',analysis:'분석',recovery:'회복',youth:'유소년'};return Object.keys(names).map(k=>`<div><span>${names[k]} 시설</span><b>${f[k]} / 5</b><small>구단 자동 관리 </small></div>`).join('')})()}</div><p class="hint">훈련·유소년 시설은 성장, 분석 시설은 상대/메타 분석, 회복 시설은 피로 회복에 직접 적용됩니다. 연 유지비 ${money(facilityUpkeep(DB,t))}</p></section>
 `;
 }

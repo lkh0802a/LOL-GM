@@ -34,6 +34,7 @@ function roleConversionAcceptance(db,p,targetRole,source='manager'){
 }
 function proposeRoleConversion(db,pid,targetRole,source='manager'){
   const p=playerRef(db,pid);if(!p||p.retired)return {ok:false,accepted:false,reason:'전향을 제안할 수 없는 선수입니다'};
+  if(source==='ai'&&p.team&&managerControlsSquad(db,p.team))return {ok:false,accepted:false,reason:'관리 선수의 전향은 감독이 직접 제안합니다'};
   if(source==='manager'&&p.team&&!managerControlsSquad(db,p.team))return {ok:false,accepted:false,reason:'내 구단 선수에게만 전향을 제안할 수 있습니다'};
   ensureRoleConversionState(p);if(p.roleConversion?.targetRole===targetRole)return {ok:true,accepted:true,reason:'이미 해당 포지션 전향을 진행 중입니다',conversion:p.roleConversion};
   p.roleProposalCount=(p.roleProposalCount||0)+1;const res=roleConversionAcceptance(db,p,targetRole,source);if(!res.ok)return res;
@@ -87,7 +88,7 @@ function roleConversionGrowthMultiplier(p){
   const days=p.roleConversionTrainingDaysYear||0;return clamp(1-Math.min(.12,days/220*.12),.88,1);
 }
 function aiReviewRoleConversions(db,t){
-  const team=teamRef(db,t);if(!team||team.id===managedTeamId(db)||hashStr((db.worldDate||db.year)+'|role-review|'+team.id)%24!==0)return null;
+  const team=teamRef(db,t);if(!team||managerControlsSquad(db,team)||hashStr((db.worldDate||db.year)+'|role-review|'+team.id)%24!==0)return null;
   for(const role of ROLES){const p=team.depthChart?.[role]&&db.players[team.depthChart[role]];if(!p||p.role===role||p.roleConversion)continue;const fit=roleConversionFit(db,p,role),natural=roleConversionFit(db,p,p.role);if(p.age<=29&&fit>=natural-7)return proposeRoleConversion(db,p.id,role,'ai')}
   return null;
 }
