@@ -6,35 +6,6 @@ function invalidContractNumericTerms(terms){
   return values.every(Number.isFinite)?null:worldActionError('invalid_terms','유효하지 않은 계약 금액입니다');
 }
 
-function recentMarketPerformance(db,p){
-  const rows=(p.career||[]).slice(-6),g=rows.reduce((a,c)=>a+(c.g||0),0);if(!g)return {games:0,rating:6.5,intl:0,titles:0};
-  const rating=rows.reduce((a,c)=>a+(c.rating||6.5)*(c.g||0),0)/g,intl=rows.filter(c=>c.international).reduce((a,c)=>a+(c.g||0),0),titles=(p.careerEvents||[]).filter(e=>e.type==='title'&&e.year>=db.year-2).length;
-  return {games:g,rating,intl,titles};
-}
-function marketDemandSnapshot(db,rid){
-  db._marketDemandCache=db._marketDemandCache||{};
-  const teams=activeTeams(db,rid,1),key=[db.year,rid||'ALL',Object.keys(db.players).length,teams.length].join('|'),slot=rid||'ALL',cached=db._marketDemandCache[slot];
-  if(cached&&cached.key===key)return cached.values;
-  const counts=Object.fromEntries(ROLES.map(r=>[r,0]));
-  for(const p of Object.values(db.players))if(!p.retired&&(!rid||p.region===rid)&&(p.age<=30||p.team))counts[p.role]=(counts[p.role]||0)+1;
-  const values=Object.fromEntries(ROLES.map(role=>[role,clamp(Math.max(1,teams.length*1.35)/Math.max(1,counts[role]||0),.72,1.38)]));
-  db._marketDemandCache[slot]={key,values};return values;
-}
-function invalidateMarketDemand(db){if(db)db._marketDemandCache={}}
-function roleMarketDemand(db,role,rid){return marketDemandSnapshot(db,rid)[role]??1}
-function marketSalary(db,p,rid){
-  const o=playerOvr(p),region=rid||p.region,ps=psOf(db,region),up=Math.max(0,p.pot-o),perf=recentMarketPerformance(db,p),demand=roleMarketDemand(db,p.role,region);
-  const repMul=.82+(p.reputation??o)/220,perfMul=clamp(1+(perf.rating-6.5)*.08+Math.min(.1,perf.intl*.004)+Math.min(.08,perf.titles*.035),.82,1.28),ageMul=p.age<=21?1.02:p.age>=29?.88:1;
-  return Math.max(.3*ps,Math.round(.41*Math.exp((o-60)*.13)*(1+up*(p.age<=21?.035:.008))*ps*repMul*perfMul*demand*ageMul*10)/10);
-}
-function playerMarketValue(db,p){
-  const o=playerOvr(p),rep=p.reputation??o,up=Math.max(0,p.pot-o),rid=p.team&&db.teams[p.team]?db.teams[p.team].region:p.region,ps=psOf(db,rid),perf=recentMarketPerformance(db,p),demand=roleMarketDemand(db,p.role,rid);
-  const ageMul=p.age<=20?1.25:p.age<=23?1.16:p.age<=26?1:p.age<=29?.82:.58,left=p.contract?Math.max(0,p.contract.until-db.year+1):0,contractMul=p.contract?1+Math.min(3,left)*.14:.68;
-  const perfMul=clamp(1+(perf.rating-6.5)*.09+Math.min(.13,perf.intl*.004)+Math.min(.12,perf.titles*.045)+(p.form||0)*.008,.75,1.35);
-  const raw=.62*Math.exp((o-60)*.115)*ps*(.76+rep/175)*(1+up*(p.age<=22?.047:.018))*ageMul*contractMul*perfMul*demand*(1-medicalContractRisk(db,p)*.75);
-  return Math.round(Math.max(.2*ps,raw)*10)/10;
-}
-function asking(db,p,rid){return Math.round(marketSalary(db,p,rid)*(1+p.personality.ambition/420)*(.95+(p.reputation??playerOvr(p))/1700)*10)/10}
 function defaultPromisedRole(db,p,t){const cur=starterFor(db,t,p.role);if(!cur)return 'starter';const gap=playerOvr(p)-playerOvr(cur);return gap>=3?'starter':gap>=-2?'competition':p.age<=21?'prospect':'backup'}
 function contractDurationPolicy(db,p,t=null){
   const goal=playerCareerGoal(p),amb=p.personality?.ambition??50;
@@ -165,8 +136,9 @@ function contractYearsForPlayer(db,p,rng,t=null){
 
 function eligibleFillFAs(db,t,role=null){
   const room=Math.max(0,nonLocalLimitForTeam(db,t)-teamNonLocalCount(db,t));
-  return Object.values(db.players).filter(p=>!p.retired&&!p.team&&(!role||p.role===role)&&(projectedPlayerIsLocal(db,p,t)||room>0))
-    .sort((a,b)=>(pFillScore(db,b,t)-pFillScore(db,a,t)));
+  return withMarketDemandReadIndex(db,()=>Object.values(db.players)
+    .filter(p=>!p.retired&&!p.team&&(!role||p.role===role)&&(projectedPlayerIsLocal(db,p,t)||room>0))
+    .sort((a,b)=>(pFillScore(db,b,t)-pFillScore(db,a,t))));
 }
 function aiMarketObservation(db,p,t){
   // All AI recruitment paths, including the first-season auction, consume
@@ -184,7 +156,7 @@ function optionDecision(db,p,t){
 }
 function shouldAutoExerciseOption(db,p,t,mine){
   const o=p.contract&&p.contract.option;if(!o||o.year!==db.year)return false;
-  if(t.id===mine&&o.type==='team')return false;
+  if(mine&&parentTeamOf(db,t)?.id===mine&&o.type==='team')return false;
   return optionDecision(db,p,t);
 }
 function exerciseContractOption(db,p,t,source='engine'){
@@ -204,22 +176,23 @@ function aiMarketOfferCandidates(db,t,fas,role,budgetRoom,year=db.year){
   const R=db.regions[t.region],cur=starterFor(db,t,role),
     cv=cur?playerValue(db,cur,t):-99,importGap=R.importRecruitMinGap??3,
     imports=teamNonLocalCount(db,t);
-  return fas.filter(p=>p.role===role&&
+  return withMarketDemandReadIndex(db,()=>fas.filter(p=>p.role===role&&
       (projectedPlayerIsLocal(db,p,t)||(playerOvr(p)>=R.strength+importGap&&
         imports<nonLocalLimitForTeam(db,t))))
     .map(p=>({p,v:aiMarketValue(db,p,t),ask:asking(db,p,t.region)}))
     .filter(x=>x.ask<=budgetRoom&&
       (!cur||cur.wantsOut||cur.contract.until<=year||x.v>cv+5))
-    .sort((a,b)=>b.v-a.v||a.p.id.localeCompare(b.p.id));
+    .sort((a,b)=>b.v-a.v||a.p.id.localeCompare(b.p.id)));
 }
 
 function contractMarket(db,rng,rep,ev){
   const year=db.year, size=5+(db.worldConfig.subs||0), w=db.world, mine=w&&w.manage==='manual'?managedRecruitmentTeamId(db):null;
+  const manuallyManaged=t=>!!(mine&&parentTeamOf(db,t)?.id===mine);
   const imports=t=>teamNonLocalCount(db,t);
   const release=(t,p,why)=>{
     const terms=contractMutualTerminationTerms(db,p),mutual=terms.ok&&terms.willing;
     return commitMarketPlayerAction(db,{type:'player.release',pid:p.id,teamId:t.id,
-      mode:mutual?'mutual':t.id===mine&&(!p.contract||p.contract.until<year)?'expired':'market',
+      mode:mutual?'mutual':manuallyManaged(t)&&(!p.contract||p.contract.until<year)?'expired':'market',
       ...(mutual?{amount:terms.minimumAmount}:{}),actor:'system'});
   };
   // 1) 옵션 및 만료 계약 처리
@@ -230,7 +203,7 @@ function contractMarket(db,rng,rep,ev){
     const p=db.players[id]; if(!p||p.retired)continue;
     if(!p.contract){release(t,p);rep.expired.push({pid:p.id,team:t.id,why:'무계약 상태 — FA 전환'});continue}
     if(p.contract.medicalReplacement||p.contract.until>=year)continue;
-    if(t.id===mine){release(t,p);rep.expired.push({pid:p.id,team:t.id,why:'재계약하지 않음'});continue}
+    if(manuallyManaged(t)){release(t,p);rep.expired.push({pid:p.id,team:t.id,why:'재계약하지 않음'});continue}
     const decision=aiRenewalDecision(db,p,t,rng);
     if(w.contractWindow?.completed){
       release(t,p);rep.expired.push({pid:p.id,team:t.id,why:'우선협상 기간 종료 — FA 전환'});
@@ -306,12 +279,12 @@ function contractMarket(db,rng,rep,ev){
     for(const role of ROLES) if(!starterFor(db,t,role)){
       const fa=eligibleFillFAs(db,t,role)[0];
       if(!fa)throw new Error('Talent supply invariant failed during market: '+t.id+' '+role+' has no eligible free agent');
-      signMarketContract(db,fa,t,asking(db,fa,t.region),contractYearsForPlayer(db,fa,rng),{},'fa',t.id===mine?'system':'ai');rep.signings.push({pid:fa.id,team:t.id,salary:fa.contract.salary,years:fa.contract.until-year+1,rookie:fa.age<=19,fill:true});
+      signMarketContract(db,fa,t,asking(db,fa,t.region),contractYearsForPlayer(db,fa,rng),{},'fa',manuallyManaged(t)?'system':'ai');rep.signings.push({pid:fa.id,team:t.id,salary:fa.contract.salary,years:fa.contract.until-year+1,rookie:fa.age<=19,fill:true});
     }
     while(t.roster.length<size){
       const fa=eligibleFillFAs(db,t)[0];
       if(!fa)throw new Error('Talent supply invariant failed during market: '+t.id+' has no eligible free agent for bench slot');
-      signMarketContract(db,fa,t,asking(db,fa,t.region),contractYearsForPlayer(db,fa,rng),{},'fa',t.id===mine?'system':'ai');rep.signings.push({pid:fa.id,team:t.id,salary:fa.contract.salary,years:fa.contract.until-year+1,rookie:fa.age<=19,fill:true});
+      signMarketContract(db,fa,t,asking(db,fa,t.region),contractYearsForPlayer(db,fa,rng),{},'fa',manuallyManaged(t)?'system':'ai');rep.signings.push({pid:fa.id,team:t.id,salary:fa.contract.salary,years:fa.contract.until-year+1,rookie:fa.age<=19,fill:true});
     }
     while(t.roster.length>size){const b=t.roster.map(id=>db.players[id]).filter(x=>!x.contract?.medicalReplacement&&starterFor(db,t,x.role)!==x).sort((a,b)=>playerValue(db,a,t)-playerValue(db,b,t))[0];if(!b)break;release(t,b)}
     // SFR 하한은 강제 연봉 인상이 아니라 분배 자격 기준으로만 사용한다.

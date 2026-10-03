@@ -130,7 +130,11 @@ function initialCandidateScore(db,p,t,key='',salary=null){
 function initialMarketSnapshot(db,teams){
   const free=Object.values(db.players).filter(p=>!p.retired&&!p.team),priceCache=new Map(),regions=[...new Set((teams||activeTeams(db)).map(t=>t.region))],byRegion={};
   const price=(p,region)=>{const k=region+'|'+p.id;if(!priceCache.has(k))priceCache.set(k,asking(db,p,region));return priceCache.get(k)};
-  for(const region of regions){const rows=free.map(p=>({p,id:p.id,s:price(p,region),nonLocal:!isLocalPlayer(p,region)}));byRegion[region]={local:rows.filter(x=>!x.nonLocal).sort((a,b)=>a.s-b.s),foreign:rows.filter(x=>x.nonLocal).sort((a,b)=>a.s-b.s)}}
+  // asking() only reads player/team topology here; bidding and signing happen
+  // after this scope has ended, so their invalidations remain live.
+  withMarketDemandReadIndex(db,()=>{
+    for(const region of regions){const rows=free.map(p=>({p,id:p.id,s:price(p,region),nonLocal:!isLocalPlayer(p,region)}));byRegion[region]={local:rows.filter(x=>!x.nonLocal).sort((a,b)=>a.s-b.s),foreign:rows.filter(x=>x.nonLocal).sort((a,b)=>a.s-b.s)}}
+  });
   return {free,price,byRegion};
 }
 function initialCheapestCost(rows,excludeId,n){if(n<=0)return 0;let cost=0,count=0;for(const x of rows){if(x.id===excludeId)continue;cost+=x.s;if(++count>=n)break}return count===n?cost:Infinity}
