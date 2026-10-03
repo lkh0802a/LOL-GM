@@ -1,6 +1,6 @@
 function patchOpponentDraftReport(db,options={}){
   const a=opponentDraftPreparation(db,options);if(!a.allowed||!a.target||a.warnings.includes('invalid-target'))return '';
-  const c=a.coverage,name=id=>esc(championLabel(db,id)),unknown=x=>esc(x||'미상'),context=g=>unknown(g.patch)+' · '+unknown(g.region)+' · '+(g.color==='BLUE'?'블루':g.color==='RED'?'레드':'진영 미상'),result=g=>g.g+'회 · '+g.w+'승 / 결과 확인 '+g.results;
+  const c=a.coverage,name=id=>esc(championLabel(db,id)),unknown=x=>esc(x||'미상'),context=g=>unknown(g.patch)+' · '+unknown(g.region)+' · '+(g.color==='BLUE'?'블루':g.color==='RED'?'레드':'진영 미상')+' · '+esc(g.from)+' ~ '+esc(g.to),result=g=>g.g+'회 · '+g.w+'승 / 결과 확인 '+g.results;
   const list=(rows,line)=>rows.length?'<ul>'+rows.slice(0,12).map(g=>'<li>'+line(g)+' · '+context(g)+' · '+result(g)+'</li>').join('')+'</ul>'+(rows.length>12?'<p>'+rows.length+'개 묶음 중 빈도순 12개 표시 · 기간/패치/선수로 좁히세요.</p>':''):'<p>확인된 표본 없음</p>';
   const warnings={'historic-lineup':'기록은 당시 선수단의 선택이며 현재 로스터의 다음 픽을 예측하지 않습니다.','no-sample':'조건에 맞는 상대 구단 공식 표본이 없습니다.','small-sample':'공식 10전 미만으로 근거가 약합니다.','mixed-patches':'여러 패치의 선택이 섞여 있습니다.','incomplete-source':'일부 순서·조합·진영·선수 ID·패치·밴 출처가 미상입니다.','no-next-match':'예정된 다음 상대가 없습니다.'};
   const patterns=a.patterns.map(p=>'<li>'+(p.kind==='patch'?unknown(p.patch)+' · '+p.g+'전':p.kind==='first'?name(p.champ)+' · '+(p.opening?'전체 첫 픽':'구단 첫 픽')+' 기록 '+p.g+'회':p.champs.map(name).join(' + ')+' · 같은 쪽 동시 선택 '+p.g+'회')+'</li>').join('');
