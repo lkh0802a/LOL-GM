@@ -117,6 +117,22 @@ from role arrays, assume firstPick is blue, or read hidden private drafts/pools.
 Connect opponent-specialist explanations and focused real-engine/filter/save/UI
 acceptance. Final QA remains after all features and user playtest feedback/fixes.
 
+Delivery: PR #154 final head `a0378250038bbc51e7e48481d8be41499e4d46a5`
+passed complete Actions `37102912502` with all 13 required jobs, including the
+unchanged CI observer tests, 48 shared acceptances, medical core, four seed samples,
+two aggregate invariants and verify. Extra historic region/date/patch/side/event
+intersection assertions passed on this head. Exact PR head and unchanged main
+baseline were checked before sequential merge
+`5f0dcf3e70404ceeaab5ba833b0873c5d5f66100`. Standalone HTML is rebuilt from
+the integrated 113-module manifest and matches `dist/index.html`; publication
+requires complete main CI including standalone sync on its actual publication
+head. Local observer-output failure remains documented rather than relabeled a
+pass; Actions provides the successful required evidence. Implementation, focused
+acceptance and documentation are the delivered slice; CI/merge/HTML are additional
+follow-through. Remaining hourly time cannot fit another coherent 45–55-minute
+implementation, so the precise opponent-team draft continuation above remains.
+Final long/device/TalkBack QA stays deferred until all features and playtest fixes.
+
 ### Current implementation slice — own-club analyst interpretation (2026-10-03)
 
 Scope estimate: 50 minutes, one implementation worker, baseline main

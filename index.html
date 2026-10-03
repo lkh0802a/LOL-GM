@@ -2149,16 +2149,17 @@ function ownPracticeFacets(db){
 /* ==== FILE: meta-analyst.js ==== */
 // Fictional interpretation policy, not probabilities or altered source samples.
 const ANALYST_REPORT_POLICY=Object.freeze({patchDetail:55,patternDetail:75,smallSample:10,visiblePatches:3});
+function analystReportSupport(club,context){
+  const members=Array.isArray(club.staffRoster)?club.staffRoster:(club.staff&&typeof club.staff==='object'?Object.values(club.staff).filter(Boolean):[]),view={...club,staffRoster:members.slice()},available=staffByRole(view,'analyst').length>0,ability=staffAnalysisFor(view,context);
+  return {available,level:available?(ability>=ANALYST_REPORT_POLICY.patternDetail?2:ability>=ANALYST_REPORT_POLICY.patchDetail?1:0):0};
+}
 function ownAnalystInterpretation(db,filter={},cid=null){
   const team=filter.team||managedTeamId(db),out={allowed:false,team,level:0,available:false,evidence:null,warnings:[],patterns:[]};
   if(db.world?.fired||!managerControlsSquad(db,db.teams[team]))return out;
   out.allowed=true;const club=db.teams[team],scoped={...filter,team};
   // The staff reader normally migrates legacy rosters. A shallow view keeps
   // this report pure while reusing the existing specialty/overlap calculation.
-  const members=Array.isArray(club.staffRoster)?club.staffRoster:(club.staff&&typeof club.staff==='object'?Object.values(club.staff).filter(Boolean):[]),view={...club,staffRoster:members.slice()};
-  out.available=staffByRole(view,'analyst').length>0;
-  const ability=staffAnalysisFor(view,'data');
-  out.level=out.available?(ability>=ANALYST_REPORT_POLICY.patternDetail?2:ability>=ANALYST_REPORT_POLICY.patchDetail?1:0):0;
+  Object.assign(out,analystReportSupport(club,'data'));
   const practice=ownPracticeComparison(db,scoped,cid),tactics=ownTacticInsights(db,scoped,cid),composition=cid?championCompositionInsights(db,cid,scoped):null,order=cid?draftOrderInsights(db,cid,scoped):null,patches=new Map();
   let official=0,unknownPatch=0;
   for(const row of metaRowsFiltered(db,scoped))for(const side of row.sides||[]){
@@ -2188,6 +2189,63 @@ function ownAnalystInterpretation(db,filter={},cid=null){
     if(composition)for(const p of composition.pairs.slice(0,3))out.patterns.push({kind:'copick',champ:p.champ,g:p.g,w:p.w});
     if(order?.known)out.patterns.push({kind:'order',opening:order.opening,openingWins:order.openingWins,followup:order.followup,followupWins:order.followupWins});
     const variable=tactics.axes.filter(x=>x.distinct>1).map(x=>({axis:x.key,settings:x.distinct}));if(variable.length)out.patterns.push({kind:'tactic-context',known:tactics.known,axes:variable});
+  }
+  return out;
+}
+
+/* ==== FILE: meta-opponent.js ==== */
+// Public, observed preparation evidence. Never consult a player's latent pool,
+// private practice, scouting estimate or the opponent's hidden match plans.
+function opponentPreparation(db,{observer=managedTeamId(db),target=null,filter={},champ=null}={}){
+  const out={allowed:false,observer,target:null,next:null,selected:!!target,available:false,level:0,players:[],groups:[],patterns:[],warnings:[],coverage:{teamGames:0,appearances:0,atTarget:0,elsewhere:0,unknownPlayer:0,unknownChampion:0,unknownRole:0,unknownPatch:0,unknownAffiliation:0,unknownResult:0,undatedSides:0,duplicatePlayers:0}};
+  const club=db.teams[observer];if(db.world?.fired||!club||!managerControlsSquad(db,club))return out;
+  out.allowed=true;Object.assign(out,analystReportSupport(club,'opponent'));
+  out.next=nextTeamMatch(db,observer);out.target=target||out.next?.opponent||null;
+  const rival=db.teams[out.target];if(!rival||rival.id===observer){out.warnings.push(out.target?'invalid-target':'no-next-match');return out}
+  // Roster membership is public context, not a prediction of the next lineup.
+  const roster=new Set((rival.roster||[]).filter(id=>typeof id==='string'&&id)),players=new Map(),groups=new Map(),patches=new Set(),c=out.coverage;
+  const player=id=>{let p=players.get(id);if(!p){p={id,current:roster.has(id),appearances:0,atTarget:0,elsewhere:0,from:null,to:null};players.set(id,p)}return p};
+  for(const id of roster)player(id);
+  // The report has its own target. Generic team/opponent controls retain their
+  // original meaning elsewhere; time/patch/region/player/role/side still apply.
+  const scoped={...filter};delete scoped.team;delete scoped.opponent;
+  const rows=new Set(metaRowsFiltered(db,{...scoped,team:rival.id}));
+  for(const id of roster)if(!scoped.player||scoped.player===id)for(const row of metaRowsFiltered(db,{...scoped,player:id}))rows.add(row);
+  for(const row of rows)for(const side of row.sides||[]){
+    if(!metaSideMatches(row,side,scoped))continue;
+    const atTarget=side.team===rival.id,picks=side.picks||[];
+    if(!atTarget&&!picks.some(p=>p&&typeof p==='object'&&roster.has(p.player)))continue;
+    if(typeof row.date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(row.date)||!Number.isFinite(Date.parse(row.date))||new Date(row.date).toISOString().slice(0,10)!==row.date||row.date>db.worldDate){c.undatedSides++;continue}
+    if(atTarget)c.teamGames++;
+    const seen=new Set();
+    for(const pick of picks){
+      const p=typeof pick==='string'?{champ:pick}:pick;if(!p||scoped.position&&p.role!==scoped.position||scoped.player&&p.player!==scoped.player||champ&&p.champ!==champ)continue;
+      const id=typeof p.player==='string'&&p.player?p.player:null;
+      if(!atTarget&&!roster.has(id))continue;
+      if(!id){c.unknownPlayer++;continue}
+      if(seen.has(id)){c.duplicatePlayers++;continue}seen.add(id);
+      const actor=player(id);actor.appearances++;actor[atTarget?'atTarget':'elsewhere']++;actor.from=!actor.from||row.date<actor.from?row.date:actor.from;actor.to=!actor.to||row.date>actor.to?row.date:actor.to;
+      c.appearances++;c[atTarget?'atTarget':'elsewhere']++;
+      const cid=typeof p.champ==='string'&&p.champ?p.champ:null,role=ROLES.includes(p.role)?p.role:null,patch=typeof row.patch==='string'&&row.patch?row.patch:null,team=typeof side.team==='string'&&side.team?side.team:null,region=typeof side.region==='string'&&side.region?side.region:null,knownResult=typeof side.win==='boolean';
+      if(!role)c.unknownRole++;if(!patch)c.unknownPatch++;else patches.add(patch);if(!team||!region)c.unknownAffiliation++;if(!knownResult)c.unknownResult++;
+      if(!cid){c.unknownChampion++;continue}
+      // Recorded affiliation is part of the key: a move never transfers old
+      // appearances to today's club or region. Missing fields remain null.
+      const key=JSON.stringify([id,cid,role,patch,team,region]);let g=groups.get(key);
+      if(!g){g={player:id,champ:cid,role,patch,team,region,g:0,w:0,results:0,from:row.date,to:row.date};groups.set(key,g)}g.g++;if(knownResult){g.results++;if(side.win)g.w++}if(row.date<g.from)g.from=row.date;if(row.date>g.to)g.to=row.date;
+    }
+  }
+  out.players=[...players.values()].filter(p=>!scoped.player||p.id===scoped.player).sort((a,b)=>Number(b.current)-Number(a.current)||b.appearances-a.appearances||a.id.localeCompare(b.id));
+  out.groups=[...groups.values()].sort((a,b)=>b.g-a.g||b.to.localeCompare(a.to)||JSON.stringify(a).localeCompare(JSON.stringify(b)));
+  out.warnings.push('roster-not-lineup');
+  if(!c.teamGames)out.warnings.push('no-team-sample');else if(c.teamGames<ANALYST_REPORT_POLICY.smallSample)out.warnings.push('small-team-sample');
+  if(out.players.some(p=>p.current&&p.appearances<ANALYST_REPORT_POLICY.smallSample))out.warnings.push('small-player-sample');
+  if(patches.size>1)out.warnings.push('mixed-patches');
+  if(c.unknownPlayer||c.unknownChampion||c.unknownRole||c.unknownPatch||c.unknownAffiliation||c.unknownResult||c.undatedSides||c.duplicatePlayers)out.warnings.push('incomplete-source');
+  if(out.level>=1)for(const g of out.groups.slice(0,3))out.patterns.push({kind:'recorded-patch',player:g.player,champ:g.champ,patch:g.patch,g:g.g});
+  if(out.level>=2){
+    const frequencies=new Map();for(const g of out.groups){const key=JSON.stringify([g.player,g.champ,g.role]);let f=frequencies.get(key);if(!f){f={kind:'observed-choice',player:g.player,champ:g.champ,role:g.role,g:0,patches:new Set()};frequencies.set(key,f)}f.g+=g.g;if(g.patch)f.patches.add(g.patch)}
+    for(const f of [...frequencies.values()].sort((a,b)=>b.g-a.g||a.player.localeCompare(b.player)||a.champ.localeCompare(b.champ)).slice(0,3))out.patterns.push({...f,patches:f.patches.size});
   }
   return out;
 }
@@ -11427,7 +11485,7 @@ function viewPatch(){
   const systemMeta=`<section><h3>아이템 / 룬 메타</h3><div class="cards"><article class="card"><b>아이템 ${activeItems.length}개 활성</b><p>${topSystem('item',activeItems)}</p><small>시작 ${tierCount.starter} · 조합 ${tierCount.component} · 장화 ${tierCount.boots} · 완성 ${tierCount.final} · 소모품 ${tierCount.consumable} · 특수 ${tierCount.special}. </small></article><article class="card"><b>룬 ${activeRunes.length}개 활성</b><p>${topSystem('rune',activeRunes)}</p><small>${runeTree}. </small></article></div></section>`;
 
   return `<section class="teamhead"><h2>패치 ${esc(DB.patch.id)}</h2><p class="hint">챔피언 ${Object.keys(DB.patch.champions).length}명 · 공식 데이터 ${DB.patch.championSource?.matched||0}/${DB.patch.championSource?.total||Object.keys(DB.patch.champions).length} · 한국어 설명 ${DB.patch.championSource?.localized||0}/${DB.patch.championSource?.total||Object.keys(DB.patch.champions).length} · 아이템 ${activeItems.length} · 룬 ${activeRunes.length} · ${filtered?'기록 필터':'누적/감쇠 참고'} 표본 ${G}판${pt.nextDate?` · 다음 패치 ${esc(pt.nextDate)}`:''}</p></section>
-  ${detail}${insight}${dc?patchCompositionCard(DB,dc.id,filter)+patchDraftOrderCard(DB,dc.id,filter):''}${systemMeta}${patchParticipantControls(DB,PSET)}${patchSideCoverageCard(DB,filter)}${patchOwnTacticCard(DB,filter,PSET.champ)}${patchPracticeComparisonCard(DB,filter,PSET.champ)}${patchAnalystCard(DB,filter,PSET.champ)}<p class="hint">${filtered?'기록 필터':'누적/감쇠 참고'} 표본 ${G}판. 픽·승률은 선택한 쪽${filter.player?'의 선택 선수':''} 기준이며 밴은 경기 전체 노출입니다. 조건이 맞지 않거나 ID가 미상인 기록을 임의로 포함하지 않습니다.</p>${patchBanAttributionCard(DB,filter,PSET.champ)}
+  ${detail}${insight}${dc?patchCompositionCard(DB,dc.id,filter)+patchDraftOrderCard(DB,dc.id,filter):''}${systemMeta}${patchOpponentReport(DB,PSET,filter,PSET.champ)}${patchParticipantControls(DB,PSET)}${patchSideCoverageCard(DB,filter)}${patchOwnTacticCard(DB,filter,PSET.champ)}${patchPracticeComparisonCard(DB,filter,PSET.champ)}${patchAnalystCard(DB,filter,PSET.champ)}<p class="hint">${filtered?'기록 필터':'누적/감쇠 참고'} 표본 ${G}판. 픽·승률은 선택한 쪽${filter.player?'의 선택 선수':''} 기준이며 밴은 경기 전체 노출입니다. 조건이 맞지 않거나 ID가 미상인 기록을 임의로 포함하지 않습니다.</p>${patchBanAttributionCard(DB,filter,PSET.champ)}
   <section><h3>챔피언 티어리스트</h3><p class="hint">${observed?"대회 밴픽 기준":"현재 패치 예상 티어"}</p><div class="controls"><label>지역<select id="pregion"><option value="GLOBAL">글로벌</option>${Object.values(DB.regions).map(r=>`<option value="${r.id}"${PSET.region===r.id?' selected':''}>${esc(r.name||r.leagueName||r.id)}</option>`).join('')}</select></label><label>패치<select id="ppatch"><option value="ALL">전체</option>${patches.map(x=>`<option value="${esc(x)}"${PSET.patch===x?' selected':''}>${esc(x)}</option>`).join('')}</select></label><label>대회<select id="pcomp"><option value="ALL">전체</option>${comps.map(x=>`<option value="${esc(x)}"${PSET.comp===x?' selected':''}>${esc(x)}</option>`).join('')}</select></label><label>기간<select id="pperiod"><option value="ALL">전체</option><option value="30"${PSET.period==='30'?' selected':''}>최근 30일</option><option value="90"${PSET.period==='90'?' selected':''}>최근 90일</option><option value="YEAR"${PSET.period==='YEAR'?' selected':''}>올해</option></select></label><label>연도<input id="pyear" type="number" min="2026" value="${esc(PSET.year)}" placeholder="전체"></label><label>시즌<select id="pseason"><option value="ALL">전체</option>${seasons.map(x=>`<option value="${esc(x)}"${PSET.season===x?' selected':''}>${esc(x)}</option>`).join('')}</select></label><label>스플릿<select id="psplit"><option value="ALL">전체</option>${splits.map(x=>`<option value="${esc(x)}"${String(PSET.split)===String(x)?' selected':''}>${esc(SPLIT_NAME?.[x]||x)}</option>`).join('')}</select></label><label>리그<select id="pleague"><option value="ALL">전체</option>${leagues.map(x=>`<option value="${esc(x)}"${PSET.league===x?' selected':''}>${esc((DB.regions[x]&&DB.regions[x].leagueName)||x)}</option>`).join('')}</select></label><label>범위<select id="pscope"><option value="ALL">전체</option><option value="DOM"${PSET.scope==='DOM'?' selected':''}>국내</option><option value="INTL"${PSET.scope==='INTL'?' selected':''}>국제</option></select></label><label>실제 픽<select id="pposition"><option value="ALL">전체</option><option value="TOP"${PSET.position==='TOP'?' selected':''}>탑</option><option value="JGL"${PSET.position==='JGL'?' selected':''}>정글</option><option value="MID"${PSET.position==='MID'?' selected':''}>미드</option><option value="ADC"${PSET.position==='ADC'?' selected':''}>원딜</option><option value="SUP"${PSET.position==='SUP'?' selected':''}>서포터</option></select></label><label>포지션<select id="prole"><option value="ALL">전체</option>${ROLES.map(r=>`<option value="${r}"${PSET.role===r?' selected':''}>${ROLE_KO[r]}</option>`).join('')}</select></label><label>검색<input id="pq" value="${esc(PSET.q)}" placeholder="챔피언 이름"></label></div>
   <div class="scroll"><table class="champs"><thead><tr><th>티어</th><th>챔피언</th><th>포지션</th><th>역할군</th><th>밴픽률</th><th>픽</th><th>밴</th><th>승률</th><th>프로 사용</th><th>초반</th><th>후반</th><th>CC</th><th>폭딜</th></tr></thead><tbody>
   ${rows.slice(0,60).map(x=>`<tr><td><b class="tier t${tier(x)}">${tier(x)}</b></td><td><button class="linklike" data-champ="${x.c.id}"><b>${esc(championDisplayName(x.c))}</b></button></td><td>${x.c.roles.map(r=>ROLE_KO[r]).join('/')}</td><td>${CLASS_KO[x.c.cls]}</td><td class="num">${Math.round(x.pres*100)}%</td><td class="num">${x.p}</td><td class="num">${x.b}</td><td class="num">${x.wr===null?'—':Math.round(x.wr*100)+'%'}</td><td>${x.eligible?'<span class="hi">가능</span>':`<span class="lo">제한</span><small>${esc(x.c.proEligibleDate||'')}</small>`}</td><td><span class="pip" style="--v:${x.c.kit.early}">${x.c.kit.early}</span></td><td><span class="pip" style="--v:${x.c.kit.late}">${x.c.kit.late}</span></td><td><span class="pip" style="--v:${x.c.kit.cc}">${x.c.kit.cc}</span></td><td><span class="pip" style="--v:${x.c.kit.burst}">${x.c.kit.burst}</span></td></tr>`).join('')}
@@ -11436,7 +11494,20 @@ function viewPatch(){
   ${prev.length?`<details class="pnote"><summary>지난 시즌 패치 ${prev.length}개</summary>${prev.map(p=>`<p><b>${esc(p.id)}</b> <small>${esc(p.date)}</small><br>${p.notes.map(noteText).join(' · ')}</p>`).join('')}</details>`:''}</section>`;
 }
 function bindPatchParticipants(){for(const [id,key] of [['pteam','team'],['pplayer','player'],['popponent','opponent'],['pcolor','color'],['pplayersearch','playerSearch']])$('#'+id).onchange=e=>{PSET[key]=e.target.value;nav()}}
-function bindPatch(){bindPatchParticipants();document.querySelectorAll('[data-champ]').forEach(b=>b.onclick=()=>{PSET.champ=b.dataset.champ;nav()});if($('#pclose'))$('#pclose').onclick=()=>{PSET.champ=null;nav()};$('#pregion').onchange=e=>{PSET.region=e.target.value;nav()};$('#ppatch').onchange=e=>{PSET.patch=e.target.value;nav()};$('#pcomp').onchange=e=>{PSET.comp=e.target.value;nav()};$('#pperiod').onchange=e=>{PSET.period=e.target.value;nav()};$('#pyear').onchange=e=>{PSET.year=e.target.value;nav()};$('#pseason').onchange=e=>{PSET.season=e.target.value;nav()};$('#psplit').onchange=e=>{PSET.split=e.target.value;nav()};$('#pleague').onchange=e=>{PSET.league=e.target.value;nav()};$('#pscope').onchange=e=>{PSET.scope=e.target.value;nav()};$('#pposition').onchange=e=>{PSET.position=e.target.value;nav()};$('#prole').onchange=e=>{PSET.role=e.target.value;nav()};$('#pq').onchange=e=>{PSET.q=e.target.value;nav()}}
+function bindPatch(){bindPatchParticipants();bindOpponentPreparation();document.querySelectorAll('[data-champ]').forEach(b=>b.onclick=()=>{PSET.champ=b.dataset.champ;nav()});if($('#pclose'))$('#pclose').onclick=()=>{PSET.champ=null;nav()};$('#pregion').onchange=e=>{PSET.region=e.target.value;nav()};$('#ppatch').onchange=e=>{PSET.patch=e.target.value;nav()};$('#pcomp').onchange=e=>{PSET.comp=e.target.value;nav()};$('#pperiod').onchange=e=>{PSET.period=e.target.value;nav()};$('#pyear').onchange=e=>{PSET.year=e.target.value;nav()};$('#pseason').onchange=e=>{PSET.season=e.target.value;nav()};$('#psplit').onchange=e=>{PSET.split=e.target.value;nav()};$('#pleague').onchange=e=>{PSET.league=e.target.value;nav()};$('#pscope').onchange=e=>{PSET.scope=e.target.value;nav()};$('#pposition').onchange=e=>{PSET.position=e.target.value;nav()};$('#prole').onchange=e=>{PSET.role=e.target.value;nav()};$('#pq').onchange=e=>{PSET.q=e.target.value;nav()}}
+
+/* ==== FILE: ui-opponent-report.js ==== */
+function patchOpponentReport(db,state,filter={},champ=null){
+  const observer=filter.team||managedTeamId(db),target=state.prepTeam&&state.prepTeam!=='AUTO'?state.prepTeam:null,a=opponentPreparation(db,{observer,target,filter,champ});
+  if(!a.allowed)return '<section id="opponentpreparation"><h3>상대 선수 공개 출전 보고서</h3><p>현재 관리 구단·소유 2군을 관찰 구단으로 선택하세요.</p></section>';
+  const name=id=>db.teams[id]?.name||id,person=id=>db.players[id]?.name||id,unknown=x=>x||'미상',labels=['기본 확인','패치 구분','빈도 패턴'],choices=Object.values(db.teams).filter(t=>t.id!==observer).sort((x,y)=>x.name.localeCompare(y.name)),warnings={'invalid-target':'조회 가능한 상대 구단을 선택하세요.','no-next-match':'예정된 다음 상대가 없습니다. 직접 상대를 선택할 수 있습니다.','roster-not-lineup':'현재 공개 로스터는 다음 경기의 확정 출전 명단이 아닙니다.','no-team-sample':'조건에 맞는 상대 구단 공식 기록이 없습니다.','small-team-sample':'상대 구단 공식 표본이 10전 미만으로 근거가 약합니다.','small-player-sample':'현재 로스터에 공개 출전 표본이 10전 미만인 선수가 있습니다.','mixed-patches':'서로 다른 패치의 출전이 섞여 있습니다.','incomplete-source':'미상·날짜 누락·중복 기록이 있어 확인된 출전만 해석합니다.'};
+  const controls=`<label>준비 상대<select id="pprepteam"><option value="AUTO"${!target?' selected':''}>실제 다음 경기 상대</option>${choices.map(t=>`<option value="${esc(t.id)}"${target===t.id?' selected':''}>${esc(t.name)} · ${esc(t.region)}</option>`).join('')}</select></label>`,c=a.coverage;
+  const actors=a.players.slice(0,20).map(p=>`<li>${esc(person(p.id))} · ${p.current?'현재 공개 로스터':'상대 구단 과거 출전 선수'} · 공개 ${p.appearances}회 (상대 구단 ${p.atTarget} · 다른/미상 소속 ${p.elsewhere})${p.to?' · 최근 '+esc(p.to):' · 확인 출전 없음'}</li>`).join('');
+  const rows=a.groups.slice(0,60).map(g=>`<tr><td>${esc(person(g.player))}</td><td>${esc(championLabel(db,g.champ))}</td><td>${esc(ROLE_KO[g.role]||'미상')}</td><td>${esc(unknown(g.patch))}</td><td>${esc(g.team?name(g.team):'미상')} · ${esc(unknown(g.region))}</td><td>${g.g}회 · ${g.w}승 / 결과 확인 ${g.results}</td><td>${esc(g.from)} ~ ${esc(g.to)}</td></tr>`).join('');
+  const patterns=a.patterns.map(p=>`<li>${esc(person(p.player))} · ${esc(championLabel(db,p.champ))} · ${p.kind==='recorded-patch'?esc(unknown(p.patch))+' 기록 '+p.g+'회':esc(ROLE_KO[p.role]||'미상')+' 관찰 '+p.g+'회 · 확인 패치 '+p.patches+'종'}</li>`).join('');
+  return `<section id="opponentpreparation"><h3>상대 선수 공개 출전 보고서${a.target?' · '+esc(name(a.target)):''}</h3>${controls}<p>관찰 구단 ${esc(name(observer))} · ${a.selected?'직접 선택한 상대':a.next?'실제 다음 경기 '+esc(a.next.localDate||a.next.date)+' · '+esc(a.next.comp):'다음 경기 없음'}${a.selected&&a.next?' · 실제 다음 상대 '+esc(name(a.next.opponent)):''}</p><p>해석 범위: ${labels[a.level]}${a.available?'':' · 분석가 지원 없음'}</p>${a.warnings.length?'<ul>'+a.warnings.map(w=>'<li>'+warnings[w]+'</li>').join('') :''}<p>상대 구단 조건 경기 ${c.teamGames}쪽 · 선수 ID 확인 ${c.appearances}출전 (당시 상대 구단 ${c.atTarget} · 다른/미상 소속 ${c.elsewhere}) · 선수 ID 미상 ${c.unknownPlayer}픽</p><small>챔피언 미상 ${c.unknownChampion} · 역할 미상 ${c.unknownRole} · 패치 미상 ${c.unknownPatch} · 소속/지역 미상 ${c.unknownAffiliation} · 결과 미상 ${c.unknownResult} · 유효 날짜 없는 쪽 ${c.undatedSides} · 같은 쪽 중복 선수 ${c.duplicatePlayers}</small>${actors?'<ul>'+actors+'</ul>':'<p>조건에 맞는 선수 기록 없음</p>'}${a.players.length>20?'<p>선수 '+a.players.length+'명 중 20명 표시 · 기록 선수 필터로 좁히세요.</p>':''}${rows?'<div class="scroll"><table class="pool"><thead><tr><th>선수</th><th>공개 선택 챔피언</th><th>당시 역할</th><th>패치</th><th>당시 소속/지역</th><th>출전/결과</th><th>기간</th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<p>확인된 선수·챔피언 출전 없음</p>'}${a.groups.length>60?'<p>'+a.groups.length+'개 묶음 중 빈도순 60개 표시 · 패치/기간/선수로 좁히세요.</p>':''}${patterns?'<h4>분석가의 공개 기록 해석</h4><ul>'+patterns+'</ul>':''}<small>기간·패치·대회·지역·선수·실제 역할·진영 조건을 사용합니다. 기록 팀은 관찰 구단을 고르며 맞대결 상대 필터는 이 보고서에 적용하지 않습니다. 선택 챔피언은 선수 출전만 좁히며 구단 경기 수는 그대로입니다. 현재 로스터의 다른 구단 출전과 상대 구단 과거 선수 출전을 구분하고, 당시 소속을 현재 구단으로 바꾸지 않습니다. 출전 빈도는 숨은 숙련도·전체 챔피언 폭·상대의 다음 픽 확률이 아닙니다. 적은 표본과 패치·상대 차이에 유의하세요. 비공개 연습과 스카우팅 추정은 이 표본에 포함하지 않습니다. 분석가 지원은 기존 상대 전문성의 가상 해석 정책이며 원자료·주의점은 동일합니다.</small></section>`;
+}
+function bindOpponentPreparation(){const node=$('#pprepteam');if(node)node.onchange=e=>{PSET.prepTeam=e.target.value;nav()}}
 
 /* ==== FILE: ui-negotiations.js ==== */
 // ===== LOL GM: negotiation cards, contract terms and event binding =====
@@ -12943,7 +13014,7 @@ let SEL={blue:'HTG',red:'SBZ',bo:1,fearless:true};
 let LIVE=null;
 let MK={role:'ALL',scope:'region',tab:'fa'};
 let MC={blue:'HTG',red:'SBZ',n:300,res:null,running:false};
-let PSET={role:'ALL',q:'',region:'GLOBAL',patch:'ALL',comp:'ALL',period:'ALL',year:'',season:'ALL',split:'ALL',league:'ALL',scope:'ALL',position:'ALL',team:'ALL',player:'ALL',opponent:'ALL',color:'ALL',playerSearch:'',champ:null};
+let PSET={role:'ALL',q:'',region:'GLOBAL',patch:'ALL',comp:'ALL',period:'ALL',year:'',season:'ALL',split:'ALL',league:'ALL',scope:'ALL',position:'ALL',team:'ALL',player:'ALL',opponent:'ALL',color:'ALL',playerSearch:'',prepTeam:'AUTO',champ:null};
 let DRAFT_UI=null;
 
 // Keep the supported screen map and its binding ownership in one place.
@@ -13038,7 +13109,7 @@ function resetUiForWorld(){
   DRAFT_UI=null;
   LAST=null;LASTSER=null;OPEN_P=null;SQUAD_EDIT=null;MSG='';
   MC.res=null;MC.running=false;SSET.view=null;
-  PSET.team='ALL';PSET.player='ALL';PSET.opponent='ALL';PSET.color='ALL';PSET.playerSearch='';
+  PSET.team='ALL';PSET.player='ALL';PSET.opponent='ALL';PSET.color='ALL';PSET.playerSearch='';PSET.prepTeam='AUTO';
 }
 
 /* ==== FILE: app.js ==== */
