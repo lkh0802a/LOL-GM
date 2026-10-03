@@ -31,6 +31,75 @@ without continually adding new status documents.
 
 ## Current Phase
 
+### Current implementation slice — explicit blue/red analysis (2026-10-03)
+
+Scope estimate: 50 minutes, one implementation worker, baseline main
+`1e677d9a8778b87f92222e7d248cab772ae224e1`. The managed runtime became ready,
+origin/fetched main matched the clean checkout and only unrelated old PRs
+#27/#28 were open. No AGENTS.md was found. Runtime policy and actual Git/GitHub
+access were inspected; no prior local-only files or automatic scheduler transfer
+were assumed. Previous publication passed complete main Actions `37077741071`.
+
+Item 21's blue/red dimension now starts at actual `simulateMatch` construction,
+independently of club identity and first-pick choice. `recordMeta` copies explicit
+color provenance rather than backfilling uncertain history from array order.
+Queries require two explicitly complementary colors; missing, partial, invalid
+or duplicate colors remain unknown. The common side predicate intersects color
+with recorded region/team/player/opponent and the same player's actual position.
+Filtered picks, wins, champion player/team/matchup/recent insights and direct club
+bans use the selected side; table bans retain existing full-match exposure.
+Unselected raw/decaying counters and draft weights remain unchanged.
+
+New compact side tuples optionally append color after the existing ban slot.
+Four-slot old records and five-slot ban records retain their old shape when they
+lack color; the save-format-2 envelope and bounded 512-row streaming stay intact.
+A color-only side uses a null ban placeholder plus an optional trailing absence
+marker, preserving the difference between absent and explicitly invalid null
+bans rather than inventing an empty list. Object/compact history and saves keep
+explicit colors while unknown legacy sides stay unknown. This is forward loading
+compatibility; old clients cannot display the new dimension.
+
+The actual patch page binds a blue/red/all control, propagates it through all
+query consumers and clears it on world replacement. An observational comparison
+uses the same non-color conditions, gives each side's match wins/games, and shows
+known/unknown provenance coverage. Position comparison requires a matching
+recorded pick; legacy unknown positions are not inferred. Explanations separate
+selected-side picks/direct bans from full-match ban exposure and warn that small
+samples, patch/opponent differences and observed win rates do not establish
+causal side advantage. No hidden AI/player information is exposed or changed.
+
+Files: `engine.js`, `meta.js`, new `meta-side.js`, `save.js`, patch/UI state,
+module manifest, static budget, focused side acceptance, existing ban/state tests
+and shared UI runner. Two actual simulated matches reverse club order with
+firstPick=1. Focused checks cover actual color, actor/position intersections,
+wins/ban conservation, insights, coverage, conflicting/partial legacy records,
+explicit-color array reversal, old compact layouts, full-save/streaming parity,
+actual page/handler behavior, reset and bounded query-cache invalidation. Fixture
+dates advance directly; these are short matches, not a played season/device QA.
+Synthetic history variants prove compatibility, not a real historical career.
+
+Failures retained: initial static check exceeded `meta.js`'s 14,000-character
+budget; color/coverage moved to `meta-side.js` with its own 5,000-character budget,
+without increasing existing budgets. Initial shared UI run exposed the old ban
+test's fixed tuple-length assumption: its legacy fixture now removes both new
+fields, preserving its four-slot check, while new tuples are checked at six
+slots with actual color. Focused acceptance/static checks pass; the shared runner
+then passed 42 acceptances in 41 fresh VMs with 81 engine modules compiled once.
+Archive restoration and engine regression acceptance pass. Final review adds
+explicit-null-ban preservation and unknown-position comparison coverage.
+No diagnostics/records were removed,
+billing changed, paid runners added or final long/device/TalkBack QA started.
+
+Precise next slice (estimate 50 minutes): Item 21 recorded composition analysis.
+Current `draftCompositionEvidence` explains current public picks/kit/tactic fit;
+it is not a historical co-pick/outcome report. Recheck main/rules/competing PRs,
+then derive observed teammate champion pairs from recorded same-side picks using
+the shared participant/color filters, expose counts/wins and sample limits in
+champion insights, and prove save/filter/legacy purity with actual short matches.
+Do not invent draft chronology, hidden opponent skill or causal synergy from
+observed wins. This does not declare all 23 stages complete; final QA remains
+after implementation and user playtest feedback/fixes.
+
 ### Current implementation slice — participant and head-to-head meta queries (2026-10-02)
 
 Scope estimate: 50 minutes, one implementation worker, baseline main `4f91a47`.

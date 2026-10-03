@@ -13,6 +13,7 @@ export const ENGINE_MODULES = [
   'champs2.js',
   'content-naming.js',
   'meta.js',
+  'meta-side.js',
   'patch.js',
   'patch-balance.js',
   'patch-content.js',
