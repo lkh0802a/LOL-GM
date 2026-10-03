@@ -65,7 +65,8 @@ available. Existing public archive indexes handle append/reset/save restore.
 Focused `player-champion-information-acceptance.mjs` plays one actual match and
 renders the actual full player detail with a throwing foreign-pool getter, then
 checks latent mutation/scouting invariance, own/reserve/loan/fired access, FA/
-retirement history, malformed/legacy/date/result cases and save restore. Shared
+retirement history, malformed/legacy/date/result cases, bounded/escaped display,
+source purity, archive append/reset and save restore. Shared
 runner includes it: 50 acceptances, 49 fresh VMs, one engine compilation. Local
 115-module static validation, regression and save-history acceptance pass.
 The first two fixture runs failed because the test Realm lacked `ovrTag` and
