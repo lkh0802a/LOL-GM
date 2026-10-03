@@ -18,6 +18,7 @@ export const ENGINE_MODULES = [
   'meta-draft-order.js',
   'meta-tactics.js',
   'meta-practice.js',
+  'meta-analyst.js',
   'patch.js',
   'patch-balance.js',
   'patch-content.js',

@@ -31,6 +31,85 @@ without continually adding new status documents.
 
 ## Current Phase
 
+### Current implementation slice — own-club analyst interpretation (2026-10-03)
+
+Scope estimate: 50 minutes, one implementation worker, baseline main
+`0822f45a2f748c3c0f6776afb563a6412a08e8a1`. Clean checkout matched fetched
+origin/main; no AGENTS.md or competing feature PR was found, only historical
+#27/#28. Runtime/GitHub reads and existing rules/specification were checked.
+Previous final publication passed full main Actions `37097279871`, including
+medical, verify and standalone sync. No local-only source or scheduler migration
+was assumed. All 23 stages are not declared complete.
+
+Item 21 now connects current data-specialist support to interpretation of the
+recorded own-club reports. `ownAnalystInterpretation` checks present manager/
+reserve/firing authority before reading evidence or staff. It reuses existing
+`staffAnalysisFor(...,'data')`, including generic legacy specialists, primary/
+secondary allocation and bounded overlap. A shallow staff view keeps legacy
+roster migration out of this read path. No contracts, staff caps, match-time
+registration, actual match outcomes, RNG or draft sample weighting change.
+
+Fictional policy: support below 55 gives basic confirmation, 55+ adds patch
+stratification, 75+ adds recorded co-picks, actual chronology and variable tactic
+context. No analyst gives basic confirmation. Exact internal ability is not
+returned/displayed. All abilities see identical source counts and mandatory
+weak-sample/mixed-patch/unknown-context/model cautions; official samples below
+10 receive a weak-evidence notice. These thresholds and explanation levels are
+game policy, not success probabilities or measured analyst productivity.
+
+Official patch counts intersect the same recorded side/player/role/champion
+filters as the source panels. Practice patch coverage follows the same private
+comparison conditions, including official-only exclusions and unknown colors.
+Known/unknown source counts and current-patch official appearances are explicit.
+Displayed patches and co-picks are frequency-ranked with at most three each;
+complete patch/sample counts remain unchanged. Detailed tactic context explains
+that other settings varied too, so an individual slider effect is not isolated.
+No score ranks winning settings, recommends a best composition or exposes hidden
+opponent private practice/tactics. Reports are recomputed against current staff
+without persisting interpretation or rewriting historical records.
+
+The actual patch page renders these explanations, coverage, empty states and
+authority refusals alongside existing raw panels. New `meta-analyst.js`, patch UI,
+module/static/shared runner registration and focused acceptance implement the
+slice; STAFF_RULES records the virtual policy and post-match interpretation
+boundary. Existing world-v15/save-format-2 and source archives are unchanged.
+Transient source indexes remain bounded as before; interpretation scans current
+filtered evidence and does not claim final long-career performance proof.
+
+Focused acceptance uses two actual short official matches, an actual generated
+patch transition, two aggregate practice games and no calendar season progress.
+Synthetic employee abilities/generalists/multiple roles and repeated/legacy
+rows test interpretation policy, not real staff contracts or played seasons.
+Checks cover identical counts/cautions across support levels, live staff changes,
+specialization/overlap/caps, same-appearance filters, missing context/patch,
+12-patch display bounds, foreign private access traps, firing/club/reserve
+authority, legacy read purity, full-save parity and actual page rendering.
+Focused 111-module checks, engine regression and save-history pass; shared runner
+passes 47 acceptances in 46 fresh VMs. Final expanded generic/multi-role assertions
+still require complete exact-head CI before merge.
+
+Failure retained: the first save fixture exported a raw legacy `team.staff`
+structure directly. Existing `packDB` intentionally excludes that temporary
+field, so restored staff support disappeared while all sample counts remained
+identical. The fixture now follows supported legacy migration before export;
+production serialization was not changed. The earlier diagnostic remains in
+`/tmp/analyst-focused.log` for this runtime and the assertion/logging is retained.
+No diagnostics/records were deleted, budgets/billing raised, paid runners added
+or long 100-season/device/mobile/TalkBack QA started.
+
+Precise next slice (estimate 50 minutes): Item 21 targeted opponent-player public
+champion evidence. Recheck main/rules/PRs. Generic public player/champion filters
+already exist, while `scoutReport` also offers estimated latent mastery and the
+player page presents the current pool. Build a distinct preparation report for
+the actual `nextTeamMatch` opponent (or an explicitly selected opponent), grouping
+dated public professional appearances by player/champion/role/patch with sample
+and unknown-ID coverage. Preserve historical team/region attribution after moves
+and distinguish current public roster membership from old appearances. Do not
+read hidden mastery, potential or private practice to fill observed counts,
+replace scouting estimates, invent scheduled rivals or duplicate existing generic
+filters. Connect the report to current observer/analyst authority and focused
+save/filter/UI checks. Final QA remains after all features and playtest fixes.
+
 ### Current implementation slice — private practice/official comparison (2026-10-03)
 
 Scope estimate: 50 minutes, one implementation worker, baseline main
