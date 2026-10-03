@@ -1,15 +1,16 @@
 // Fictional interpretation policy, not probabilities or altered source samples.
 const ANALYST_REPORT_POLICY=Object.freeze({patchDetail:55,patternDetail:75,smallSample:10,visiblePatches:3});
+function analystReportSupport(club,context){
+  const members=Array.isArray(club.staffRoster)?club.staffRoster:(club.staff&&typeof club.staff==='object'?Object.values(club.staff).filter(Boolean):[]),view={...club,staffRoster:members.slice()},available=staffByRole(view,'analyst').length>0,ability=staffAnalysisFor(view,context);
+  return {available,level:available?(ability>=ANALYST_REPORT_POLICY.patternDetail?2:ability>=ANALYST_REPORT_POLICY.patchDetail?1:0):0};
+}
 function ownAnalystInterpretation(db,filter={},cid=null){
   const team=filter.team||managedTeamId(db),out={allowed:false,team,level:0,available:false,evidence:null,warnings:[],patterns:[]};
   if(db.world?.fired||!managerControlsSquad(db,db.teams[team]))return out;
   out.allowed=true;const club=db.teams[team],scoped={...filter,team};
   // The staff reader normally migrates legacy rosters. A shallow view keeps
   // this report pure while reusing the existing specialty/overlap calculation.
-  const members=Array.isArray(club.staffRoster)?club.staffRoster:(club.staff&&typeof club.staff==='object'?Object.values(club.staff).filter(Boolean):[]),view={...club,staffRoster:members.slice()};
-  out.available=staffByRole(view,'analyst').length>0;
-  const ability=staffAnalysisFor(view,'data');
-  out.level=out.available?(ability>=ANALYST_REPORT_POLICY.patternDetail?2:ability>=ANALYST_REPORT_POLICY.patchDetail?1:0):0;
+  Object.assign(out,analystReportSupport(club,'data'));
   const practice=ownPracticeComparison(db,scoped,cid),tactics=ownTacticInsights(db,scoped,cid),composition=cid?championCompositionInsights(db,cid,scoped):null,order=cid?draftOrderInsights(db,cid,scoped):null,patches=new Map();
   let official=0,unknownPatch=0;
   for(const row of metaRowsFiltered(db,scoped))for(const side of row.sides||[]){
