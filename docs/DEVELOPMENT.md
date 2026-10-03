@@ -31,6 +31,84 @@ without continually adding new status documents.
 
 ## Current Phase
 
+### Current implementation slice — private practice/official comparison (2026-10-03)
+
+Scope estimate: 50 minutes, one implementation worker, baseline main
+`38e28ed90db3fbad42ad5533680c24c860841752`. Clean local main matched fetched
+origin/main; no AGENTS.md or competing feature PR was found, only historical
+#27/#28. Existing runtime/GitHub access is usable. Prior publication passed full
+main Actions `37093220658`, including medical/verify/standalone sync. Item 21,
+AI secrecy and applicable staff/practice rules were inspected; no local-only
+files or automatic scheduler migration were assumed.
+
+Item 21 now keeps a private own-squad `practiceEvidence` archive when practice
+recording succeeds. Each session records original club/region, opponent, date,
+patch, observing manager and separate numbered game appearances/wins. The
+manual practice series tags actual engine game numbers; background practice
+tags actual selection-loop numbers and explicitly identifies its aggregate
+model. Five complete own-side player/role/champion appearances are copied per
+game. No foreign private picks or exact sliders are retained. Existing public
+meta/statistics, game decisions, RNG, registration and daily practice costs are
+unchanged. Reserve authority uses the same existing parent/coach boundary.
+
+Preparation follows both clubs' resource preflight; archive commit follows the
+existing writers. Insufficient resources and an injected late writer failure
+leave no new evidence. This is evidence-commit protection, not a claim that the
+pre-existing practice recorder rolls back all earlier fatigue/resource writes
+after arbitrary exceptions. Existing booking action journals remain unchanged.
+New summary links avoid double-counting detailed sessions as old summaries.
+The existing 40-session summary policy is unchanged; the new detailed archive
+retains all newly observed sessions rather than deleting historical records.
+
+`ownPracticeComparison` checks current squad/firing authority, then shows actual
+engine practice, aggregate practice and official outcomes separately. Filters
+intersect recorded patch/date/year/region/opponent and the same player/champion/
+position appearance. Actual engine blue/red is preserved; background color
+remains unknown and is excluded by explicit color filters. Official-only
+competition/season/split/league/scope conditions exclude practice with a visible
+explanation. Missing or malformed details/model stay unknown; legacy summaries
+are counted separately before detailed appearance/color filters. Their missing
+historical region is not inferred. No current roster reconstructs old records.
+
+The actual patch page presents separate denominators and the limits of model,
+sample, patch and opponent differences. Own historical practice players and
+known participant IDs are available in its existing selectors without reading
+foreign practice archives. Save-format-2/world-v15 use existing team-field
+serialization; copied evidence survives full save restoration without live
+aliases or changed public counters. New archival storage and linear private
+query work are not proof of deferred long-career memory/device performance.
+
+Files: new `meta-practice.js`, `scrim.js`/`series.js` provenance and record wiring,
+patch UI, module/static registration and new focused/shared acceptance. Real
+short fixtures cover one engine practice game, a three-game Bo3, two aggregate
+practice games and one official game, with minimal world state and no calendar
+season advancement. Synthetic malformed/legacy variants and deliberate writer
+fault injection test uncertainty/failure boundaries, not played seasons. No
+unexpected focused failures occurred. Static 110-module, focused comparison,
+save-history, engine regression, real partner and scheduled-scrim checks pass.
+
+Final review found that selector traversal needed the same array-shape guards as
+the report for malformed optional containers; guards and a preservation fixture
+were added before the final head. Uncountable malformed containers remain
+preserved but are excluded, rather than assigned invented game counts.
+Shared runner passes 46 acceptances in 45 fresh VMs; expanded final multi-game
+assertions still require full exact-head CI before merge. Diagnostics/records
+are retained; no budget/billing/paid runner changes or final long/device/TalkBack
+QA were started. All 23 stages are not declared complete.
+
+Precise next slice (estimate 50 minutes): Item 21 analyst interpretation of the
+recorded own-club reports. Recheck main/rules/PRs. Existing data specialization
+already affects professional sample weight in drafting, while the new outcome,
+co-pick, chronology and practice panels expose raw evidence without a connected
+analyst interpretation. Add one shared own-club interpretation path using the
+existing bounded data-specialist contribution and recorded sample/patch/model
+coverage. Keep identical source counts for all staff abilities; vary detection/
+explanation detail rather than forging data or declaring causal advantages.
+Make weak samples, mixed patches and model differences explicit. Preserve
+current authority, four-analyst caps and specialty/overlap logic; do not duplicate
+the existing draft weighting. Short ability/authority/save/UI acceptances and
+required CI precede delivery. Final QA follows all features and user feedback.
+
 ### Current implementation slice — recorded own-squad tactics (2026-10-03)
 
 Scope estimate: 50 minutes, one implementation worker, baseline main

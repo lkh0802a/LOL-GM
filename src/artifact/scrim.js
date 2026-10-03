@@ -64,7 +64,7 @@ function simulateBackgroundScrim(db,t,opp,games,rng,slot,booked=null,proposal=nu
     for(let i=0;i<2;i++){
       picks[participants[i].id]=selections[i].map(x=>x.champ.id);
       for(const x of selections[i])lines.push({
-        tid:participants[i].id,pid:x.player.id,role:x.role,
+        tid:participants[i].id,pid:x.player.id,role:x.role,practiceGame:g+1,
         champ:x.champ.id,win:participants[i].id===winner
       });
     }
@@ -72,7 +72,7 @@ function simulateBackgroundScrim(db,t,opp,games,rng,slot,booked=null,proposal=nu
   }
   if(!results.length)return null;
   const plan=proposal?.allowed?proposal:assessment;
-  const rec={a:t.id,b:opp.id,games:results,wins,practice:true,patch:db.patch.id,
+  const rec={a:t.id,b:opp.id,games:results,wins,practice:true,practiceModel:'aggregate',patch:db.patch.id,
     date:db.worldDate,slot,startsAt:sharedTime.startsAt,
     endsAt:sharedTime.endsAt,goals:{[t.id]:plan.left.reason,
       [opp.id]:plan.right.reason}};
@@ -136,6 +136,7 @@ function recordScrimPractice(db,rec,lines){
   const teams=new Set([rec.a,rec.b]),seen=new Set(),games=(rec.games||[]).length;
   if(games<1)return {players:0,games:0};
   for(const tid of teams){const t=db.teams[tid];if(!t||games*SCRIM_PRACTICE_COST>practiceDay(db,t).remaining)throw Error('오늘 남은 연습 시간이 부족합니다')}
+  const evidence=preparePracticeEvidence(db,rec,lines);
   for(const tid of teams)consumeScrimPractice(db,db.teams[tid],games);
   for(const l of lines){
     const p=db.players[l.pid];if(!p||!teams.has(l.tid))continue;
@@ -155,8 +156,9 @@ function recordScrimPractice(db,rec,lines){
       wins:rec.wins?.[tid]??null,losses:rec.wins?games-(rec.wins[tid]||0):null,
       patch:rec.patch||db.patch.id,slot:rec.slot||null,
       startsAt:rec.startsAt||null,endsAt:rec.endsAt||null,
-      purpose:rec.goals?.[tid]||'팀 연습'});
+      purpose:rec.goals?.[tid]||'팀 연습',...(evidence.some(e=>e.team.id===tid)?{practiceEvidenceId:evidence.find(e=>e.team.id===tid).entry.id}:{})});
   }
   recordRoleConversionUsage(db,lines,'scrim');
+  for(const {team,entry} of evidence)team.practiceEvidence=[...(team.practiceEvidence||[]),entry];
   return {players:seen.size,games};
 }
