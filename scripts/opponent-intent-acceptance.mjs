@@ -33,7 +33,7 @@ await runEngineFixture(String.raw`(()=>{
  setManagedTeam(db,a.id);db.scout={};const low=draftOpponentIntent(state,0,20).find(x=>x.kind==='P');
  db.scout=Object.fromEntries(b.roster.map(id=>[id,{knowledge:98,gamesSeen:12,observations:3}]));
  const high=draftOpponentIntent(state,0,20).find(x=>x.kind==='P');
- check(high.information>low.information&&high.confidence>low.confidence&&high.observations.every((o,i)=>o.range[1]-o.range[0]<low.observations[i].range[1]-low.observations[i].range[0]),'own scouting did not narrow ranges and improve interpretation');
+ check(high.information>low.information&&high.confidence>low.confidence&&high.observations.every((o,i)=>!o.known&&JSON.stringify(o.range)===JSON.stringify(low.observations[i].range)),'scouting fabricated mastery or lost interpretation context');
  ctx.byTeam[b.id].lost.push(high.champ);const revealed=draftOpponentIntent(state,0,20).find(x=>x.kind==='P');
  check(revealed.reasons.some(x=>x.includes('공개된 상대 픽 재선택')),'revealed opponent series pick ignored');
  const ban=draftOpponentIntent(state,0,20).find(x=>x.kind==='B');ctx.byTeam[a.id].won.push(ban.champ);

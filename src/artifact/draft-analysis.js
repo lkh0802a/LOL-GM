@@ -3,22 +3,22 @@
 // scouting provenance, composition evidence and opponent-intent explanations used by draft UX.
 
 function draftMasteryObservation(state,observerSide,targetSide,p,cid){
-  if(!p)return {value:25,confidence:0,sources:['선수 정보 없음']};
-  const actual=draftMastery(p,cid);if(observerSide===targetSide)return {value:actual,confidence:100,sources:['구단 내부 훈련·스크림 데이터']};
+  if(!p)return {value:25,known:false,range:[20,99],confidence:0,sources:['선수 정보 없음']};
+  if(observerSide===targetSide)return {value:draftMastery(p,cid),known:true,range:null,confidence:100,sources:['구단 내부 훈련·스크림 데이터']};
   const db=state.db,observer=db.teams[state.teamIds[observerSide]],target=db.teams[state.teamIds[targetSide]],managed=managedTeamId(db)===observer?.id;
   if(managed){
     const base=baseScoutKnowledge(db,p),raw=(db.scout||{})[p.id],stored=typeof raw==='number'?raw:(raw?.knowledge||0),knowledge=Math.round(clamp(Math.max(base,stored),0,98));
-    const noise=((hashStr(observer.id+'|draft-scout|'+p.id+'|'+cid)%2001)/1000-1)*(100-knowledge)*.12,value=Math.round(clamp(actual+noise,20,99)),sources=[];
+    const sources=['숙련도 수치 미관측 · 공개 출전은 숙련도와 다름'];
     if(raw&&typeof raw==='object'&&(raw.gamesSeen||0)>0)sources.push('공식 경기 관찰 '+raw.gamesSeen+'G');
     if(raw&&typeof raw==='object'&&(raw.observations||0)>0)sources.push('스카우팅 관찰 '+raw.observations+'회');
     if(!sources.length)sources.push(p.region===observer.region?'동일 지역 기본 정보':sameScoutZone(p.region,observer.region)?'동일 권역 기본 정보':'해외 기본 정보');
     sources.push('스카우팅팀 '+Math.round(staffProfile(observer).scouting));
-    return {value,confidence:knowledge,sources};
+    return {value:25,known:false,range:[20,99],confidence:knowledge,sources};
   }
   const prof=staffProfile(observer),sameRegion=observer?.region===target?.region,sameZone=!sameRegion&&sameScoutZone(observer?.region,target?.region),hist=state.ctx.byTeam[state.teamIds[targetSide]]||{won:[],lost:[]},revealed=hist.won.includes(cid)||hist.lost.includes(cid);
-  const confidence=Math.round(clamp(18+prof.scouting*.34+prof.analysis*.23+(sameRegion?15:sameZone?7:0)+(revealed?12:0),25,92)),noise=((hashStr((observer?.id||'AI')+'|opp-mastery|'+p.id+'|'+cid)%2001)/1000-1)*(100-confidence)*.16,value=Math.round(clamp(actual+noise,20,99));
-  const sources=['스카우팅팀 '+Math.round(prof.scouting),'분석팀 '+Math.round(prof.analysis)];if(sameRegion)sources.push('동일 지역 관찰');else if(sameZone)sources.push('동일 권역 관찰');if(revealed)sources.push('이번 시리즈 공개 픽');
-  return {value,confidence,sources};
+  const confidence=Math.round(clamp(18+prof.scouting*.34+prof.analysis*.23+(sameRegion?15:sameZone?7:0)+(revealed?12:0),25,92));
+  const sources=['숙련도 수치 미관측 · 공개 출전은 숙련도와 다름','스카우팅팀 '+Math.round(prof.scouting),'분석팀 '+Math.round(prof.analysis)];if(sameRegion)sources.push('동일 지역 관찰');else if(sameZone)sources.push('동일 권역 관찰');if(revealed)sources.push('이번 시리즈 공개 픽');
+  return {value:25,known:false,range:[20,99],confidence,sources};
 }
 function draftMetaEvidence(state,side,cid){
   const db=state.db,team=db.teams[state.teamIds[side]],rid=team.region,samples=currentPatchMetaSamples(db),gst=samples.stats[cid],rst=samples.regional[rid]?.[cid],globalSample=gst?(gst.p||0)+(gst.b||0):0,regionalSample=rst?(rst.p||0)+(rst.b||0):0,study=clamp(((team.metaKnowledge||{})[cid]||0),0,1),analysis=staffAnalysisFor(team,'data'),sources=['현재 패치 '+samples.patch];
@@ -31,13 +31,15 @@ function draftMetaEvidence(state,side,cid){
   const confidence=Math.round(clamp(analysis*.55+Math.min(34,Math.sqrt(globalSample+regionalSample*1.35)*5)+(study*12),20,98));
   return {score:Math.round(clamp(state.vhat[side]?.[cid]||0,0,1)*100),confidence,patch:samples.patch,globalSample,regionalSample,historicalEffectiveSample,teamStudy:Math.round(study*100),sources};
 }
+// Public champion identity/frequency is not a numerical mastery observation.
+// Old scouting knowledge counters contain no champion mastery snapshot.
 function draftManagedChampionPoolEvidence(db,p,cid){
-  const me=managedTeam(db),base=baseScoutKnowledge(db,p),raw=(db.scout||{})[p.id],stored=typeof raw==='number'?raw:(raw?.knowledge||0),knowledge=Math.round(clamp(Math.max(base,stored),0,98)),estimate=id=>Math.round(clamp(draftMastery(p,id)+((hashStr((me?.id||'M')+'|pool|'+p.id+'|'+id)%2001)/1000-1)*(100-knowledge)*.12,20,99)),width=Math.max(2,Math.ceil((100-knowledge)/12)),range=id=>{const v=estimate(id);return [Math.max(20,v-width),Math.min(99,v+width)]},sources=[];
-  if(raw&&typeof raw==='object'&&(raw.gamesSeen||0)>0)sources.push('공식 경기 관찰 '+raw.gamesSeen+'G');
-  if(raw&&typeof raw==='object'&&(raw.observations||0)>0)sources.push('스카우팅 관찰 '+raw.observations+'회');
-  if(!sources.length)sources.push(p.region===me?.region?'동일 지역 기본 정보':sameScoutZone(p.region,me?.region)?'동일 권역 기본 정보':'해외 기본 정보');
-  const top=Object.keys(p.pool||{}).map(id=>({champ:id,estimate:estimate(id),range:range(id)})).sort((a,b)=>b.estimate-a.estimate).slice(0,4).map(x=>({champ:x.champ,range:x.range}));
-  return {knowledge,selectedRange:range(cid),top,sources,lastSeenDate:typeof raw==='object'?raw.lastSeenDate||null:null};
+  const raw=(db.scout||{})[p.id],stored=typeof raw==='number'?raw:raw?.knowledge||0,
+    knowledge=Math.round(clamp(Math.max(baseScoutKnowledge(db,p),stored),0,98)),publicPool=publicPlayerChampions(db,p),selected=publicPool.champions.find(x=>x.id===cid),
+    sources=['숙련도 수치 미관측 · 공개 출전은 숙련도와 다름'];
+  if(selected)sources.push('선수 ID로 확인한 공개 출전 '+selected.g+'G');
+  if(typeof raw==='object'&&raw?.observations)sources.push('선수 관찰 '+raw.observations+'회 · 챔피언 숙련 수치 없음');
+  return {knowledge,known:false,selectedRange:[20,99],appearances:selected?.g||0,top:publicPool.champions.slice(0,4).map(x=>({champ:x.id,g:x.g,range:[20,99]})),sources,lastSeenDate:typeof raw==='object'?raw?.lastSeenDate||null:null};
 }
 function draftOwnChampionPoolEvidence(state,side,role,cid){
   const p=state.roster[side][role];if(!p)return null;const rows=Object.entries(p.pool||{}).map(([id,v])=>({champ:id,mastery:Math.round(v.mastery||25)})).sort((a,b)=>b.mastery-a.mastery),idx=rows.findIndex(x=>x.champ===cid);
@@ -66,7 +68,7 @@ function draftCandidateEvidence(state,side,cid,out){
     }
   }else{
     const opp=1-side;
-    out.opponentPool=(out.roles||[]).map(role=>{const p=state.roster[opp][role];if(!p)return null;const managed=managedTeamId(state.db)===state.teamIds[side],pool=managed?draftManagedChampionPoolEvidence(state.db,p,cid):null,obs=draftMasteryObservation(state,side,opp,p,cid);return {role,player:p.name,knowledge:pool?.knowledge??obs.confidence,selectedRange:pool?.selectedRange||[Math.max(20,obs.value-6),Math.min(99,obs.value+6)],top:pool?.top||[],sources:pool?.sources||obs.sources,lastSeenDate:pool?.lastSeenDate||null}}).filter(Boolean);
+    out.opponentPool=(out.roles||[]).map(role=>{const p=state.roster[opp][role];if(!p)return null;const managed=managedTeamId(state.db)===state.teamIds[side],pool=managed?draftManagedChampionPoolEvidence(state.db,p,cid):null,obs=draftMasteryObservation(state,side,opp,p,cid);return {role,player:p.name,knowledge:pool?.knowledge??obs.confidence,known:obs.known,appearances:pool?.appearances||0,selectedRange:pool?.selectedRange||obs.range,top:pool?.top||[],sources:pool?.sources||obs.sources,lastSeenDate:pool?.lastSeenDate||null}}).filter(Boolean);
   }
   return out;
 }
@@ -78,11 +80,11 @@ function draftOpponentIntent(state,observerSide,limit=3){
     if(evidence.globalSample)sources.push('현재 패치 공개 기록 '+patchPicks+'픽 · '+patchBans+'밴');
     if(x.kind==='P'){
       observations=roles.filter(role=>state.roster[opp][role]).map(role=>{
-        const obs=draftMasteryObservation(state,observerSide,opp,state.roster[opp][role],x.champ),width=Math.max(2,Math.ceil((100-obs.confidence)/12));
-        return {role,confidence:obs.confidence,range:[Math.max(20,obs.value-width),Math.min(99,obs.value+width)],sources:obs.sources};
+        const obs=draftMasteryObservation(state,observerSide,opp,state.roster[opp][role],x.champ);
+        return {role,known:obs.known,confidence:obs.confidence,range:obs.range,sources:obs.sources};
       });
       info=observations.length?Math.round(avg(observations.map(r=>r.confidence))):0;confidence=Math.round(clamp(analysis*.55+info*.45,20,95));
-      if(meta>=65)reasons.push('현재 패치 평가에서 우선도가 높은 픽');if(roles.length>1)reasons.push('복수 포지션 가능성을 남기는 픽');if(observations.some(r=>r.range[0]>=65))reasons.push('관찰 숙련 범위가 높은 챔피언 선택');
+      if(meta>=65)reasons.push('현재 패치 평가에서 우선도가 높은 픽');if(roles.length>1)reasons.push('복수 포지션 가능성을 남기는 픽');if(observations.some(r=>r.known&&r.range[0]>=65))reasons.push('관찰 숙련 범위가 높은 챔피언 선택');
       if(opponentHistory.won.includes(x.champ)||opponentHistory.lost.includes(x.champ)){reasons.unshift('이번 시리즈에서 공개된 상대 픽 재선택');sources.push('이번 시리즈 상대 공개 픽')}
       if(!reasons.length)reasons.push('공개 정보만으로 선택 의도 구분 어려움');
     }else{

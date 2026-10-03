@@ -764,3 +764,16 @@ market decisions remain unchanged. Private management events are filtered from
 foreign display without deleting history. Firing removes automatic 100-percent
 owned-club knowledge. Draft mastery/pool observation still requires the next
 separate information-boundary slice; the whole game is not declared leak-free.
+
+## Draft opponent information refinement (2026-10-03)
+
+Foreign mastery has no saved numerical observation yet. Legacy scouting
+knowledge, staff context and public appearances do not imply a mastery estimate.
+Use the existing 25 calculation fallback uniformly for unknown foreign mastery,
+retain [20,99] only as a compatibility representation of the whole unknown range,
+and display unobserved numerical skill explicitly. Ban shortlists and scores use
+the observer's meta and neutral unknown opponent scaling, while own skill and
+public draft/series information remain legitimate inputs. This intentionally
+changes decisions and outcomes. A later bounded scouting-time saved signal may
+restore justified numerical estimates; no live foreign skill or unobserved pool
+membership is consulted by the corrected draft paths.
