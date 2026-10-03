@@ -6,7 +6,7 @@ function preparePracticeEvidence(db,rec,lines){
   if(db.world?.fired)return [];
   const prepared=[];
   for(const tid of new Set([rec.a,rec.b])){
-    const team=db.teams[tid];if(!managerControlsSquad(db,team))continue;
+    const team=db.teams[tid];if(!managerControlsSquad(db,team)||(team.practiceEvidence!==undefined&&!Array.isArray(team.practiceEvidence)))continue;
     const id=tid+'|practice|'+((team.practiceEvidence||[]).length+1),model=['engine','aggregate'].includes(rec.practiceModel)?rec.practiceModel:null;
     const games=(rec.games||[]).map((g,i)=>{
       const entries=lines.filter(l=>l.tid===tid&&l.practiceGame===i+1),picks=entries.map(l=>({player:l.pid,role:l.role,champ:l.champ}));
@@ -32,7 +32,7 @@ function ownPracticeComparison(db,filter={},cid=null){
   }
   if(out.officialOnly)return out;
   const ids=new Set();
-  for(const row of club.practiceEvidence||[]){
+  for(const row of Array.isArray(club.practiceEvidence)?club.practiceEvidence:[]){
     if(row?.version!==1||row.team!==team||typeof row.observer!=='string'||!Array.isArray(row.games))continue;
     ids.add(row.id);if(!practiceRowMatches(row,scoped))continue;
     for(const game of row.games){
@@ -56,7 +56,7 @@ function ownPracticeFacets(db){
   if(!mine||db.world?.fired)return {teams,players:[]};
   for(const team of Object.values(db.teams))if(managerControlsSquad(db,team)){
     teams.push(team.id);
-    for(const row of team.practiceEvidence||[])if(row?.version===1&&row.team===team.id){if(typeof row.opponent==='string'&&!teams.includes(row.opponent))teams.push(row.opponent);for(const g of row.games||[])for(const p of g.picks||[])if(p?.player)players.add(p.player)}
+    for(const row of Array.isArray(team.practiceEvidence)?team.practiceEvidence:[])if(row?.version===1&&row.team===team.id&&Array.isArray(row.games)){if(typeof row.opponent==='string'&&!teams.includes(row.opponent))teams.push(row.opponent);for(const g of row.games)if(validPracticePicks(g?.picks))for(const p of g.picks)players.add(p.player)}
   }
   return {teams,players:[...players].sort()};
 }

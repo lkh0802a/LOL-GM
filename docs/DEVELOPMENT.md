@@ -85,6 +85,10 @@ practice games and one official game, with minimal world state and no calendar
 season advancement. Synthetic malformed/legacy variants and deliberate writer
 fault injection test uncertainty/failure boundaries, not played seasons. No
 unexpected focused failures occurred. Static 110-module, focused comparison,
+Final review found that selector traversal needed the same array-shape guards as
+the report for malformed optional containers; guards and a preservation fixture
+were added before the final head. Uncountable malformed containers remain
+preserved but are excluded, rather than assigned invented game counts.
 save-history, engine regression, real partner and scheduled-scrim checks pass.
 Shared runner passes 46 acceptances in 45 fresh VMs; expanded final multi-game
 assertions still require full exact-head CI before merge. Diagnostics/records
