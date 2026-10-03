@@ -108,6 +108,8 @@ const maintainabilityBudgets = {
   'meta-tactics.js': 6500,
   'meta-practice.js': 8500,
   'meta-analyst.js': 9000,
+  'meta-opponent.js': 9000,
+  'ui-opponent-report.js': 8500,
   'patch.js': 9000,
   'patch-balance.js': 22000,
   'patch-content.js': 12500,

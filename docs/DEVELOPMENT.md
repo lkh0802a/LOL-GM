@@ -31,6 +31,92 @@ without continually adding new status documents.
 
 ## Current Phase
 
+### Current implementation slice — opponent public player preparation (2026-10-03)
+
+Scope estimate: 50 minutes, one implementation worker, baseline main
+`c69693c9a27992e038f029da496da0ee6342e01c`. Actual clean checkout, fetched
+origin/main and repository origin agree. Only historical PR #27/#28 are open;
+no AGENTS.md or competing feature branch work was found. Runtime observations
+are current/connected with enforced restricted networking, no runtime secrets
+or outbound identities configured; Git fetch and GitHub connector reads work.
+Prior publication Actions `37099369850` completed successfully. No local-only
+files or scheduler migration were assumed; all 23 stages remain uncompleted.
+
+Item 21 now provides an independent preparation target: actual `nextTeamMatch`
+opponent or an explicitly selected public club, without inventing a fixture.
+`meta-opponent.js` reads only dated public `metaHistory` and current public
+roster membership. Indexed team/current-player queries form a deduplicated row
+union. Each player's recorded champion/role/patch/team/region group has observed
+appearances, wins, known-result denominator and earliest/latest dates. Current
+members' previous-club appearances and the target club's former participants
+remain distinct; moves never rewrite historical club/region. Unknown profiles
+retain recorded IDs, legacy string picks retain unknown player counts, and
+unobserved current members get zero observed appearances rather than a fabricated
+pool. Missing champion/role/patch/affiliation/result, invalid/absent/future dates
+and duplicate player picks have explicit coverage. No source archive is changed.
+
+The report checks current manager/owned-reserve/firing authority before using
+the observing club's staff. Shared pure `analystReportSupport` reuses existing
+specialty, secondary allocation and bounded overlap calculation: opponent focus
+for preparation, data focus for the previous own-club report. Basic/55+/75+
+fictional interpretation thresholds and 10-game weak-sample policy are retained.
+All levels share identical raw groups/counts/cautions; added patch/frequency
+explanations do not estimate mastery, next-pick probability or causal advantage.
+No opponent hidden pool/potential, private practice or tactics are read. Existing
+scouting estimates, match outcomes/RNG, contracts, staff caps and save v15/format2
+remain unchanged. Interpretations are transient, not persisted or cached by staff.
+
+The actual patch page connects `ui-opponent-report.js`, observer/next-game context,
+explicit rival selection and unknown/sample coverage. Display bounds of 20 actors
+and 60 frequency-sorted groups disclose full totals; complete evidence counts
+are retained. Time/patch/event/region/player/actual-role/side filters apply.
+Generic record-team chooses the observer, while generic head-to-head opponent
+does not replace preparation target. Selected champion narrows player appearances
+but not target-team game coverage, stated on screen. A world/slot replacement
+resets the rival selector to actual-next-match mode. Manifest, static budgets and
+all affected UI fixture dependencies register the two new modules.
+
+Focused acceptance constructs deterministic squads and invokes the real season
+scheduler, then records two actual short matches and an actual patch transition.
+Controlled roster moves/partial/repeated rows test compatibility, not real
+transfer execution or additional played seasons. It checks actual/explicit/empty
+calendar targets, same-appearance filters, foreign hidden-field access traps,
+immutable staff-independent counts/cautions, original affiliation, missing IDs,
+duplicate/invalid-date coverage, pure legacy reads, full-save parity, club/reserve/
+firing authority, rendered page, selector binding/escaping and bounded display.
+113-module source checks, regression, save-history and shared domain runner pass:
+48 acceptances, 47 fresh contexts, one engine compilation (87 engine modules).
+The last world-reset assertion also passes independently; exact-head complete CI
+is still required before merge and standalone publication.
+
+Failures preserved: initial focused setup attempted first-season market assembly
+with owned reserves and failed to supply its legal minimum roster; after removing
+reserves the unrelated initial AI market fixture also failed. The acceptance now
+builds deterministic legal squads and tests actual scheduling directly. Its first
+calendar had NA single-split versus EU default three-split, so no NA next fixture
+existed yet; both test regions now explicitly use one split. No production market,
+calendar policy, budgets or records were changed to suppress these failures.
+The first shared run missed the new UI module in public-information fixture setup
+(`/tmp/opponent-shared.log`); dependency registration fixed it and the second run
+passes (`/tmp/opponent-shared-2.log`). Initial focused diagnostic remains at
+`/tmp/opponent-focused.log`. Local unchanged `ci-run.test.mjs` also fails because
+child stdout/stderr arrives empty (probe records zero despite child exit zero;
+`/tmp/opponent-ci-probe`); the failure is not a successful static test run. No
+instrumentation is removed: source/static checks pass separately and Actions must
+validate the original CI observer tests before merge. No long 100-season/device/
+mobile/TalkBack QA, diagnostics deletion, budget/billing increase or paid runner.
+
+Precise next slice (estimate 50 minutes): Item 21 opponent-team public draft
+preparation. Recheck main/PRs/rules. Reuse this explicit/actual rival context and
+existing validated `draftSequence`, same-side composition and side helpers to
+summarize the rival's recorded whole-draft opening/follow-up and co-pick choices
+across champions, with chronology/color/patch/source coverage. Existing generic
+champion-anchor panels already work; do not duplicate them. Keep historical team
+lineups separate from today's public roster and never reconstruct unknown order
+from role arrays, assume firstPick is blue, or read hidden private drafts/pools.
+Connect opponent-specialist explanations and focused real-engine/filter/save/UI
+acceptance. Final QA remains after all features and user playtest feedback/fixes.
+
 ### Current implementation slice — own-club analyst interpretation (2026-10-03)
 
 Scope estimate: 50 minutes, one implementation worker, baseline main
