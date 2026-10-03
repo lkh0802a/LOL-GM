@@ -130,6 +130,43 @@ in player-loans; reproduce before changing it. No new optional balance policy
 has been approved or silently introduced by this correction.
 
 
+Delivery: PR #162 head `92ce5a9b29d86af69d4573056c32302a7cbba774`
+passed full Actions `37128893953`, all 13 required checks including medical
+core, four seed shards, two aggregate invariants and verify. The seven medical
+CI_RESULT records all report success. Exact PR/run head, unchanged main and
+mergeability were checked before sequential merge
+`abed56c8d7467c022a1ea2d21db294914bf00a49`. GitHub job reads temporarily
+returned three ReadTimeout responses; original failures were recorded in
+`/tmp/owned-coaching-github-read-failures.log`. Successful per_page=30 retrieval
+and final run/job/log evidence resolved the read issue; no conclusions were
+inferred from timeouts. Integrated standalone HTML is rebuilt and matches dist;
+publication-head main CI and standalone-sync still must pass. Another coherent
+45–55-minute implementation cannot fit this hourly run's remaining window;
+continue the precise zero-substitute initial-FA slice above. Merge/publication
+is follow-through, not another feature slice. Long/final QA remains deferred.
+
+**User-requested optional product proposals (2026-10-03, not settled rules):**
+After verified roadmap defects, prioritize (P1) a seven-day schedule/training/
+recovery comparison using actual engine inputs, clearly labeled forecasts;
+(P1) stronger explanation of known playing-time/role-promise/relationship/
+contract outcomes using existing observed records rather than hidden scores;
+and (P1) one weekly operational briefing for upcoming fixtures, deadlines,
+medical risks, finance and pending manager decisions. Expected benefit is
+clearer cause-and-effect and less repeated navigation, retaining manual choices.
+Dependencies are existing calendar/medical/practice, player relationship and
+contract evidence, save/authority boundaries, and actual UI-flow review to avoid
+adding a duplicate screen. These are proposals; scope/acceptance must first
+identify concrete missing connections. (P2) contextual fan/board reaction to
+major transfers and sustained results is a possible realism addition; quantify
+tradeoffs and proposed effects before changing existing fan/owner balance rules.
+Do not silently implement new penalties or default delegation. The user's
+requested schedule estimate of 1–2 days before playtest/final QA is provisional,
+conditional on usage/CI availability and no large new feature gaps. An accepted
+23-item completion inventory is not yet consolidated, so no global percentage
+or guaranteed completion date is claimed. Original prototype had 10 preserved
+JS modules; current 119-module size and acceptance counts measure work/evidence,
+not a percent of feature completion.
+
 ### Prior implementation slice — team-specific atomic preparation (2026-10-03)
 
 Scope estimate: 50–55 minutes, one implementation worker, clean baseline
