@@ -125,6 +125,19 @@ unfinished roadmap gap, not a new optional balance policy. The 23-stage roadmap
 and authorized bounded refinement continue before user playtest and final QA.
 
 
+Delivery: PR #159 final head `3d092cab757a664a507e9fb9b41bb65f27dda031`
+passed full Actions `37119048439`, all 13 required jobs including medical core,
+four seed shards, two aggregate invariants and verify. PR head and successful
+run head agreed, and main remained the inspected baseline before sequential
+merge `f4165fa887cfc89945443a7bf79a53a8bb0faabd`. Failed first head CI
+`37118881414` remains recorded; the existing player UI budget was retained and
+champion evidence was split into its own UI module. Corrected shared acceptance,
+117-module static/build and full head CI pass. Standalone HTML is rebuilt from
+the integrated manifest and matches `dist/index.html`; publication CI must also
+pass on the actual publication head. Implementation, acceptance and docs are
+this run's feature slice; CI/merge/publication are follow-through. The next
+coherent 55-minute squad-view observer slice above remains the continuation.
+
 ### Prior implementation slice — draft opponent information boundary (2026-10-03)
 
 Scope estimate: 55 minutes, one implementation worker, baseline main
