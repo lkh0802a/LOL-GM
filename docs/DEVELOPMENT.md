@@ -31,6 +31,73 @@ without continually adding new status documents.
 
 ## Current Phase
 
+### Current implementation slice — observed champion co-picks (2026-10-03)
+
+Scope estimate: 50 minutes, one implementation worker, baseline main
+`01d66dba860d46be2b4f9220b3c6a1f323ab5834`. Actual origin/fetched main matched
+the clean managed checkout. No AGENTS.md or competing implementation PR was
+found; only historical unrelated #27/#28 remain open. Runtime network policy
+and actual Git/GitHub reads were checked. Previous publication passed complete
+main Actions `37080932372`. No local-only source or scheduler migration was assumed.
+
+Item 21 now derives observed champion teammates from professional same-side
+picks. `championCompositionInsights` uses shared row and side predicates across
+patch/date/season/scope/region/team/player/opponent/color. Player/position selects
+the anchor champion's recorded appearance; teammates retain their other roles.
+Each side contributes one appearance and each distinct teammate contributes one
+co-pick/win, even if a malformed source duplicates an ID. Self/opposing picks are
+excluded. Co-pick win-rate denominators are the pair appearances; presence uses
+all selected-anchor side appearances. Five distinct valid picks mark complete
+records; incomplete/unknown picks are counted and never inferred or rewritten.
+Known string-shaped legacy co-picks remain usable without invented actor/role/
+color provenance. Current roster changes do not reattribute historical pairs.
+
+Results show up to eight teammates by observed frequency, with deterministic
+ID tie order rather than win-rate promotion. The display bound does not limit
+history or denominators. A transient WeakMap keyed by shared history indexes
+holds at most 64 query results and invalidates on append/replacement/truncation.
+No save-format, raw/decaying counter, legal draft, scoring or patch weight changes
+are introduced. Complete save restoration rederives identical reports.
+
+The actual champion detail shows pair counts/wins/frequency and complete/partial/
+unknown-pick coverage, empty states and escaped archived IDs. Explanations warn
+that partial evidence does not establish a missing teammate, that patches and
+opponents confound results, and that co-pick outcomes imply neither causal
+synergy nor draft chronology. The real draft candidate explanation reuses this
+report for our club/current patch, intersecting the displayed top eight with
+current public picks. No displayed overlap does not mean never played together.
+It exposes no hidden opponent mastery and does not convert outcomes into scores.
+
+Files: new `meta-composition.js`, common index/side null guards, draft analysis,
+patch/draft UI, module manifest and new bounded-module check, new focused
+acceptance and shared UI runner. Three actual short simulated matches include a
+controlled repeat of the first match's legal draft with reversed clubs; the third
+has another opponent. Fixture dates advance directly, not through played seasons.
+Injected partial/string/archive/search variants are compatibility fixtures, not
+played history. An injected public-pick draft state exercises the real candidate
+and UI path, not a completed manual draft sequence. Checks cover pairs/wins/
+denominators, actor/color/temporal contradictions, save, source purity, current
+roster independence, archived-ID escaping, actual page/draft rendering, hidden
+mastery independence, eight-row rendering and 64-result cache bounds.
+
+Failure retained: the first focused test with a null pick exposed a preexisting
+participant-index null dereference. Common index and player-side selection now
+skip null identifiers without altering the source archive. Focused acceptance
+and the 107-module static check pass after the fix. An earlier shared run passed
+43 acceptances in 42 fresh VMs; the final live-draft integration is under the
+same full head CI gate. Preserve diagnostics; no budgets/billing were raised,
+paid runners added or long/device/TalkBack QA started.
+
+Precise next slice (estimate 50 minutes): Item 21 actual draft chronology analysis.
+`draftResult` has real choice logs and side-specific pick order, while the forced
+replay path synthesizes role order and `recordMeta` does not archive chronology.
+Recheck main/rules/PRs. Capture explicit actual public pick/ban events and first/
+follow-up provenance on newly played drafts, retain optional compact-save fields,
+and expose filtered opening/follow-up counts with unknown legacy/forced coverage.
+Do not infer chronology from final role assignments or a forced replay's synthetic
+order. Verify manual/AI, firstPick=1 and save continuity with short real drafts.
+All 23 stages are not declared complete; final QA follows features and user feedback.
+
 ### Current implementation slice — explicit blue/red analysis (2026-10-03)
 
 Scope estimate: 50 minutes, one implementation worker, baseline main
