@@ -958,10 +958,11 @@ source += `
     assert(added.length===1,'world office did not found a speculative region');
     const fresh=added[0];
     assert(!REGION_PRESETS[fresh.id]&&!originalNames.has(fresh.leagueName)&&
-      fresh.leagueName.startsWith(FUTURE_LEAGUE_MARKETS.find(m=>m.id===fresh.id).brand+' ')&&
-      fresh.leagueName!==fresh.name&&fresh.leagueName.split(' ').length>=3,
+      fresh.fullLeagueName.startsWith(FUTURE_LEAGUE_MARKETS.find(m=>m.id===fresh.id).brand+' ')&&
+      /^L[A-Z]{2}$/.test(fresh.leagueName)&&fresh.leagueName!==fresh.name&&
+      /^L[A-Z]{2}$/.test(fresh.tier2Short)&&fresh.tier2Short!==fresh.short,
       'new league reused a historical brand instead of an invented identity');
-    assert(activeTeams(db,fresh.id,1).length===10&&fresh.slots>=1&&
+    assert(activeTeams(db,fresh.id,1).length===10&&activeTeams(db,fresh.id,2).length>0&&fresh.tier2Required&&fresh.slots>=1&&
       db.global.foundedLeagueNames.includes(fresh.leagueName)&&
       db.global.foundedLeagueShorts.includes(fresh.short),
       'invented league did not create a valid region, teams and slot allocation');

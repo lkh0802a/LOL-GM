@@ -42,7 +42,7 @@ function seasonTab(){
       `<section><h3>${esc(region.leagueName)} · 연간 챔피언십 포인트</h3>
       <p class="hint">완료된 ${doneSplits}개 스플릿만 합산 · 우승 100 / 준우승 70 / 4강 45 / 플레이오프 진출 20점. 동점은 최근 완료 스플릿 순위로 정합니다. 현재 스플릿 승패/플레이오프는 별도 진행합니다.</p>
       ${pointRows.length?`<div class="scroll"><table class="stand"><thead><tr><th>순위</th><th>팀</th><th>총점</th><th>스플릿별</th></tr></thead><tbody>
-      ${pointRows.map((r,i)=>`<tr class="${r.tid===me?'mine':''}"><td class="num">${i+1}</td><td><b>${esc(tname(r.tid))}</b></td><td class="num">${r.points}</td><td>${Object.entries(r.bySplit).map(([sp,pt])=>`${SPLIT_NAME[sp]||sp} ${pt}점`).join(' · ')}</td></tr>`).join('')}
+      ${pointRows.map((r,i)=>`<tr class="${r.tid===me?'mine':''}"><td class="num">${i+1}</td><td><b>${esc(tname(r.tid))}</b></td><td class="num">${r.points}</td><td>${Object.entries(r.bySplit).map(([sp,pt])=>`${esc(splitName(DB.regions[comp.region]||{},sp))} ${pt}점`).join(' · ')}</td></tr>`).join('')}
       </tbody></table></div>`:'<p class="empty">첫 스플릿 종료 후 누적 포인트가 표시됩니다.</p>'}</section>`:'';
     const sw=comp.stages.filter(x=>x.type==='swiss'&&s.stageData[x.id]).map(cfg=>{const sd=s.stageData[cfg.id];const rows=standings(DB,s,cfg.id);
       return `<section><h3>${esc(sName(s))} · ${esc(cfg.name)} <small class="hint">${sd.W}승 진출 · ${sd.L}패 탈락</small></h3><div class="scroll"><table class="stand"><thead><tr><th>팀</th><th>전적</th><th>상태</th></tr></thead><tbody>

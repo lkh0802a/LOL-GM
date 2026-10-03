@@ -1,6 +1,30 @@
 // ===== LOL GM: first-season blank roster setup =====
 const INITIAL_GOAL_KO={title:'리그 우승 도전',final:'결승권 진입',playoffs:'플레이오프 진출',top_half:'상위권 정착',survive:'1부 잔류',avoid_bottom:'하위권 탈출',promotion:'1부 승격 도전',develop:'유망주 육성과 경쟁력 확보'};
 
+// Populate the generated world before any bids. Keep existing players, legal
+// minima, import caps and budgets; no mid-auction rescue athletes are created.
+// Each region must be able to fill its legal minimum even if every external
+// non-local slot recruits there. This conservative bound is derived from actual
+// roster rules, not an arbitrary headcount or a lowered registration requirement.
+function seedInitialRegionalSupply(db){
+  const teams=activeTeams(db),created=[];
+  // Scoped to this append-only generation batch; never retained in live/save state.
+  const identityIndex=PLAYER_GENERATION_INDEX.get(db)||{count:Object.keys(db.players).length,names:new Set(Object.values(db.players).map(p=>p.name))};
+  for(const r of Object.values(db.regions)){
+    const own=teams.filter(t=>t.region===r.id),minimum=own.reduce((n,t)=>n+initialLegalMinimumTarget(db,t),0);
+    const exports=teams.filter(t=>t.region!==r.id).reduce((n,t)=>n+nonLocalLimitForTeam(db,t),0);
+    const local=Object.values(db.players).filter(p=>!p.retired&&isLocalPlayer(p,r.id));
+    const missing=Math.max(0,minimum+exports-local.length),counts=Object.fromEntries(ROLES.map(role=>[role,local.filter(p=>p.role===role).length]));
+    const rng=new RNG(WORLD_GENERATION_SEED+'|'+r.id,'initial-regional-supply');
+    for(let i=0;i<missing;i++){
+      const role=ROLES.slice().sort((a,b)=>counts[a]-counts[b]||ROLES.indexOf(a)-ROLES.indexOf(b))[0];
+      const p=genPlayer(db,rng,{role,age:rng.int(18,27),base:r.strength-12+clamp(rng.normal(0,3),-6,6),region:r.id,entryYear:db.year,entryPath:'open_qualifier'},identityIndex);
+      counts[role]++;created.push(p.id);
+    }
+  }
+  db.initialRegionalSupply={version:1,created:created.length,basis:'legal-minimum-plus-external-import-capacity'};
+  return created;
+}
 function prepareFirstSeasonFreeAgency(db){
   const strength={};
   for(const t of activeTeams(db))strength[t.id]=teamStrength(db,t.id);

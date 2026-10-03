@@ -46,6 +46,25 @@ Each substantial work unit uses a dotted number and a coherent 45–55-minute bo
 
 **Immediate numbered work and evidence:**
 
+- 10.1 League identities and Americas: current implementation uses L-prefixed
+  three-letter major pairs LCK/LKC, LPL/LDL, LEC/LEA, LCS/LNA, LCP/LPA,
+  LSA/LSC. New careers have real tier twos in all six major regions; newly
+  founded leagues must create and retain tier two. South America replaces the
+  Brazil-only preset; Central America/Caribbean is a North American child market.
+  Legacy geography, competition keys, player local identities/contracts and
+  historical labels remain; generated display aliases alone are repaired.
+  Evidence: `league-identity-acceptance.mjs` covers legal initial formation,
+  actual scheduled tier-twos, displayed picker labels, save keys/history/custom
+  names, new regional/future league formation and required-tier abolition guard.
+  Exact-head CI and validated publication remain required before completion.
+- 10.2 Country-level tier twos under integrated regions: confirmed next slice.
+  Add independently selectable club home-country, reserve development/operating country and country league membership; build separate
+  real tier-two schedules/standings and selection while retaining umbrella top
+  tier, regional local eligibility, parent authority and event-time attribution. Reserve development may be outside the parent home country; admission belongs to the office and location alone cannot rewrite athlete nationality/local eligibility.
+  League offices own promotion/relegation eligibility, places, qualifiers and effective dates; the developer connects decisions to actual next-season membership. Owned reserves cannot join their parent in tier one. No inferred nationality from region codes or copied real league policies.
+  Current region-wide tier-two leagues are not acceptance for this country scope.
+
+
 - 8.1 Nexus-based match ending: PR #163 passed required exact-head CI and merged;
   publication-head main validation remains the delivery gate. No gold-timeout winner; transparent computation guard, ordinary-match
   parity, post-70 natural resolution and failure without official result.
@@ -377,3 +396,73 @@ Its en_US item.json reports version 16.19.1 and 870 cross-mode entries; it has
 no explicit exclusive-group fields. Raw file remains `/tmp/items-ddragon-16.19.1-en.json`.
 Do not treat all cross-mode entries or absent stack metadata as accepted Summoner's
 Rift restrictions. Competition-only source collection remains separate.
+
+## League integration evidence and limits — 2026-10-04
+
+Trigger: the picker mixed numeric first division and generic Challengers second
+division, China displayed the wrong alias, and only KR/CN enabled tier two.
+Current slice unifies abbreviations and connects all six starting regions to actual
+reserve competitions, with new-region mandatory tier twos and L-prefixed naming.
+
+The expanded default first auction failed with KR/CN local pools exhausted:
+142 active squads / 898 athletes, 136 still unsigned globally, five squads below
+minimum. Original `/tmp/league-initial-market-probe.log` and earlier fixture errors
+remain preserved. Generation now adds a source-defined capacity shortfall before
+FA conversion: legal squad minimums plus maximum external import capacity.
+Existing legal registration/import/budget constraints stay; no mid-bid creation.
+The larger initial FA pool is a deliberate capacity tradeoff, not an optimization
+or empirical estimate of real professional player populations.
+
+The first fixture also incorrectly required every mixed-league second-tier club
+to have a parent. Corrected acceptance permits legitimate independent clubs;
+the original failure log remains. Current country origin is still region-coded;
+country-level competitions are separately authorized pending work (10.2).
+Neither a country-by-country model nor complete roadmap coverage is claimed.
+
+Latest confirmed 10.2 state: club home-country and reserve development/operating
+country are separate selectable identities. The reserve need not train in its
+parent's country. Domestic tier-two participation is office-approved, not inferred
+from a training address; athlete nationality/origin/local eligibility are separate.
+The interface, licensed country competition membership, scheduling, office
+promotion decisions and save compatibility form the next coherent vertical slice.
+
+Measured generation bottleneck: the added 948 athletes made full default world
+generation about 1.8 seconds (1811/1829/1748 ms, 1846 total athletes), and the
+unchanged 30-second regression guard rejected the run. Append-only initial supply
+now uses a scoped nickname set and player count instead of repeatedly scanning
+the entire roster. The index is not saved or retained in live state. Representative
+three-world before/after parity compares all players, teams, regions and supply
+metadata; focused acceptance also compares ordinary/indexed athlete generation.
+Original timeout and baseline evidence are preserved in /tmp/league-* logs.
+
+- 10.3 Broadcast-window connection, confirmed after scope correction: viewers
+  must be able to follow all international official series, and each domestic
+  league must run one series at a time. Different domestic leagues may overlap.
+  Event periods can overlap: Eastern/Western Cup are equal-prestige peers and
+  may share a period. Starts alone are insufficient; planned series windows and
+  actual overruns must sequence broadcasts and preserve absolute UTC/venue/KST
+  display, one daily tick, team availability and saved/pending match references.
+  The current scheduler provides venue start slots but lacks verified end-window/
+  overrun collision protection. This is pending authorized implementation; do not
+  claim that serializing entire tournaments satisfies the corrected requirement.
+- Official domestic split defaults now read 스플릿 1/스플릿 2/스플릿 3.
+  `region.splitNames` provides office-configured display overrides for each
+  region's generated season. Timing/qualification IDs remain numeric. Historical
+  saved names stay intact.
+
+Repeated default-world construction remained a measured bottleneck after the
+scoped identity index (about 0.65–0.75 seconds per full world). One bounded
+serialized initial-world template now keys normalized configuration, generation
+seed and fresh static patch input. Each hit parses a separate world and refreshes
+only its storage identity; live edits cannot alter the template, different config
+or static patch input replaces it, and the cache never grows beyond one entry.
+Whole-generated-state seeded parity and mutation-isolation acceptance are required.
+The existing regression's old long-brand-only assertion was updated for the user-
+confirmed three-letter display alias, still retaining/verifying full invented brand.
+The 30-second guard is unchanged; timeouts remain in their original logs.
+
+Whole-generated-state parity passed before/after: baseline 1796/1615/1598 ms;
+indexed/template generation 809 ms cold then 102/97 ms warm. Full regression
+passes its unchanged 30-second guard after caching. This measures generated-world
+creation only, not match speed or end-to-end frame performance. Focused country/
+broadcast follow-through is still pending and must not be marked delivered.

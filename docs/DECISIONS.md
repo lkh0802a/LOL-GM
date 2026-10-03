@@ -257,7 +257,7 @@ This baseline is a calibration pass, not completion of later dedicated systems s
 - LCS uses a wider full-roster profile and an open-market recruiting bias instead of inheriting LCK integrated-roster rules
 - LCP uses a multi-region/promotion-relegation identity and its own roster profile
 - LPL remains a high-spending, high-competition market without silently inheriting Korean SFR parameters
-- CBLOL remains a distinct Brazilian ecosystem with a stronger domestic-development bias
+- Historical baseline: CBLOL was a distinct Brazilian ecosystem. The confirmed 2026-10-04 new-career South American LSA identity supersedes this geography; legacy saves retain their recorded region identities.
 - when a current rule cannot be verified, LOL GM uses a neutral global baseline and records the uncertainty rather than copying another region's rule
 - fictional regions can choose any model explicitly, but named real-world regions must not receive another region's rules by default
 
@@ -779,3 +779,66 @@ public draft/series information remain legitimate inputs. This intentionally
 changes decisions and outcomes. A later bounded scouting-time saved signal may
 restore justified numerical estimates; no live foreign skill or unobserved pool
 membership is consulted by the corrected draft paths.
+
+## Regional league naming and new-career geography — 2026-10-04
+
+Confirmed by the user: keep familiar LCK/LPL-style identities, use three-letter
+L-prefixed league abbreviations, and give tier two distinct names without an
+all-D pattern. Initial major pairs: LCK/LKC, LPL/LDL, LEC/LEA, LCS/LNA,
+LCP/LPA, LSA/LSC. Newly named competitions are fictional aliases, not asserted
+real esports policy. Minor presets also use distinct L-prefixed abbreviations.
+
+New careers include all six major tier-twos. Existing franchise/mixed governance,
+owned-reserve authority and independent promotion eligibility determine teams;
+a league alias must not assign Korean financial or registration policies.
+North America retains LCS; South America replaces Brazil-only CBLOL with LSA.
+The LA expansion key becomes Central America/Caribbean, attached to North America.
+Its independence does not exhaust or automatically dissolve North America.
+Player origin/local identity remains region-based; no country list was fabricated.
+
+Stable BR/LA keys and top-short + 2 competition IDs remain compatible. Loading
+old saves only repairs generated default tier-two display names/shorts, keeping
+custom names, prior geography, player contracts/eligibility, season keys and
+archived result names. Existing careers do not gain new reserve clubs on load.
+
+Every newly founded regional league must create a real tier two and retain it;
+only legacy optional structures may still abolish theirs. New founded leagues
+receive distinct, collision-checked three-letter L-prefixed aliases for both tiers.
+
+Confirmed next vertical boundary: integrated regions keep a shared top tier but
+run country-level tier-two leagues. Add explicit club home-country identity and
+country competition membership/schedules/standings; preserve umbrella local
+eligibility, owned-club recruitment authority and international regional attribution.
+This is authorized but pending; current region-wide tier-twos do not prove it done.
+
+The expanded initial ecosystem reproduced an exhausted local pool during the
+first auction. New-world generation now fills a deterministic regional FA supply
+shortfall before bidding, using the actual sum of legal minimum targets plus
+maximum outside-region non-local capacity. Existing players are retained and
+normal generation/salary rules apply. This conservative bound protects roster
+formation without changing import caps, minimum squad sizes or club budgets,
+but creates a larger FA pool; it is capacity support, not measured pro talent supply.
+No athletes are fabricated mid-auction to rescue a failing bid.
+
+2026-10-04 추가 확인: 통합 1부/국가별 2부 연결에서 승강제 규칙은 리그 사무국이
+결정한다. 개발자는 참가 자격·승강 인원·선발전·시행 시점의 데이터와 실제 다음 시즌
+편성을 연결하며 임의의 고정 승강 규칙을 대신 확정하지 않는다. 소유 2군은
+모구단과 같은 1부로 승격할 수 없다. 국가별 하부 편성과 이 사무국 연결은 후속 10.2 범위다.
+
+Country affiliation refinement, confirmed 2026-10-04: club home-country and
+reserve development/operating country are independently selectable. Reserves
+may develop abroad; league participation needs office approval, and a training
+location does not grant athlete nationality or local registration eligibility.
+This supersedes the proposed compulsory parent-country reserve assignment.
+
+Broadcast scope correction, confirmed 2026-10-04: prohibit overlapping official
+international series broadcasts globally and overlapping series within the same
+domestic league. Different domestic leagues may run in parallel. Whole tournament
+periods may overlap; Eastern/Western Cup are equal-standing events, not an ordered
+higher/lower pair. Add planned-window reservation and actual overrun shifts; merely
+staggering starts is insufficient. Preserve venue time zones and UTC/KST views.
+This scheduler/overrun connection is pending 10.3, not implemented by whole-event
+serialization in the current naming/governance slice.
+
+Default official domestic labels are 스플릿 1/2/3. Regional office `splitNames`
+overrides affect generated domestic season labels; historical aliases stay.
