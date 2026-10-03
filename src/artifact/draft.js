@@ -186,13 +186,13 @@ function draftApplyChoice(state,choice){
   const {turn}=valid,{kind,side}=turn,tn=state.db.teams[state.teamIds[side]],champ=choice.champ;
   if(kind==='P'){
     state.pickList[side].push(champ);state.taken.add(champ);
-    state.log.push({kind,side,champ,role:null,player:null});
+    state.log.push({kind,side,champ,turn:turn.index,role:null,player:null});
     const f=choice.f||{meta:0,mastery:0,comp:0,counter:0,flex:0,series:0};
     state.expl.push({t:0,title:`${tn.short} 픽: ${championLabel(state.db,champ)}`,factors:[['메타 인식',f.meta||0],['숙련도',f.mastery||0],['조합',f.comp||0],['상성',f.counter||0],['유연성',f.flex||0],['시리즈 경험',f.series||0]],utility:choice.v??f.total??0,result:'PICK'});
   }else{
     state.bans[side].push(champ);state.taken.add(champ);
     const role=choice.intentRole||valid.champion.roles[0]||null,target=role&&state.roster[1-side][role];
-    state.log.push({kind,side,champ,role:null,player:null});
+    state.log.push({kind,side,champ,turn:turn.index,role:null,player:null});
     const f=choice.f||{total:0,reveal:0};
     state.expl.push({t:0,title:choice.source==='ai'&&role?`${tn.short} 밴: ${championLabel(state.db,champ)} (상대 ${ROLE_KO[role]} 우선 견제)`:`${tn.short} 밴: ${championLabel(state.db,champ)}`,factors:[['상대 픽 가치',f.total||0],['이전 세트 활약',f.reveal||0]],utility:choice.v??0,result:'BAN'});
   }
@@ -210,11 +210,12 @@ function draftFinalAssignment(state,side){
 function draftResult(state){
   const picks=[draftFinalAssignment(state,0),draftFinalAssignment(state,1)],roleByChamp=picks.map(a=>Object.fromEntries(ROLES.map(r=>[a[r],r])));
   const log=state.log.map(x=>x.kind==='P'?{...x,role:roleByChamp[x.side][x.champ],player:state.roster[x.side][roleByChamp[x.side][x.champ]]?.name||null}:x);
-  return {bans:state.bans,picks,log,expl:state.expl,pickOrder:state.pickList.map(x=>x.slice())};
+  const sequence={version:1,firstPick:state.firstPick,events:state.log.map(x=>[x.turn,x.kind,x.side,x.champ])};
+  return {bans:state.bans,picks,log,expl:state.expl,pickOrder:state.pickList.map(x=>x.slice()),...(validDraftSequence(sequence,picks.map(p=>Object.values(p)),state.bans)?{sequence}:{})};
 }
 function runDraft(db,teamIds,rng,ctx){
   ctx=ctx||{used:[],byTeam:{}};
-  if(ctx.forced){const f=ctx.forced;return {bans:f.bans,picks:f.picks,log:[],expl:[{t:0,title:'기록된 밴픽 재현',factors:[],result:''}],pickOrder:[ROLES.map(r=>f.picks[0][r]),ROLES.map(r=>f.picks[1][r])]}}
+  if(ctx.forced){const f=ctx.forced;return {...(validDraftSequence(f.sequence,f.picks.map(p=>Object.values(p)),f.bans)?{sequence:copyDraftSequence(f.sequence)}:{}),bans:f.bans,picks:f.picks,log:[],expl:[{t:0,title:'기록된 밴픽 재현',factors:[],result:''}],pickOrder:[ROLES.map(r=>f.picks[0][r]),ROLES.map(r=>f.picks[1][r])]}}
   const state=createDraftSession(db,teamIds,rng,ctx);
   while(draftTurn(state)){const choice=draftAiChoice(state);if(choice)draftApplyChoice(state,choice);else draftSkipTurn(state)}
   return draftResult(state);

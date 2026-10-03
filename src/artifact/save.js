@@ -4,11 +4,13 @@
 
 // ---- 저장용 압축: 능력치·성향·챔피언 폭을 배열로 ----
 function packMetaHistoryRow(r){
-  return [
+  const row=[
     r.date,r.patch,r.comp,r.season,r.year,r.split,r.stage,r.league,r.international?1:0,r.regions||[],
     (r.sides||[]).map(s=>{const side=[s.team,s.region,s.win?1:0,(s.picks||[]).map(p=>{const x=typeof p==='string'?{champ:p}:p;return [x.champ,x.role||null,x.player||null,x.items||[],x.runes||[]]})];if(Object.hasOwn(s,'bans')||Object.hasOwn(s,'color'))side.push(s.bans??null);if(Object.hasOwn(s,'color')){side.push(s.color);if(!Object.hasOwn(s,'bans'))side.push(1)}return side}),
     r.bans||[]
   ];
+  if(Object.hasOwn(r,'draftSequence'))row.push(r.draftSequence);
+  return row;
 }
 function packMetaHistory(rows){
   return (rows||[]).map(packMetaHistoryRow);
@@ -39,6 +41,7 @@ function unpackMetaHistory(rows){
     const r=rows[i];
     const row=Array.isArray(r)?{date:r[0],patch:r[1],comp:r[2],season:r[3],year:r[4],split:r[5],stage:r[6],league:r[7],international:!!r[8],regions:r[9]||[],sides:(r[10]||[]).map(s=>({team:s[0],region:s[1],win:!!s[2],picks:(s[3]||[]).map(p=>({champ:p[0],role:p[1],player:p[2],items:p[3]||[],runes:p[4]||[]})),...(s.length>4&&s[6]!==1?{bans:s[4]}:{}),...(s.length>5?{color:s[5]}:{})})),bans:r[11]||[]}:r;
     for(const key of ['date','patch','comp','season','stage','league'])row[key]=intern(row[key]);
+    if(Array.isArray(r)&&r.length>12)row.draftSequence=r[12];
     row.regions=ids(row.regions);row.bans=ids(row.bans);
     for(const side of row.sides||[]){
       side.team=intern(side.team);side.region=intern(side.region);
