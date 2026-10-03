@@ -118,6 +118,11 @@ function playSeriesSessionGame(db,sess,forcedDraft=null,quiet=true){
   sess.ctx.mods[lId]=clamp(sess.ctx.mods[lId]-0.035*(1.2-teamComposure(matchDb,lId)),-0.08,0.05);sess.ctx.mods[wId]=clamp(sess.ctx.mods[wId]+0.015,-0.08,0.05);
   const mvp=gameMVP(r);
   sess.games.push({n:sess.g,blue:cur.blue,red:cur.red,seed:cur.gseed,mods:cur.snap.mods,winner:wId,bans:r.draft.bans,sideBy:cur.chooser,sideWhy:cur.sc.why,selectionEvidence:recordedSelectionEvidence(cur.sc.evidence),firstPick:cur.fpTeam,kills:[r.sides[0].kills,r.sides[1].kills],dur:r.durationStr,duration:r.duration,picks:pk,mvp});
+  const recordedGame=sess.games[sess.games.length-1];recordedGame.date=r.date;recordedGame.patch=matchDb.patch.id;
+  if(r.draft.sequence)recordedGame.draftSequence=copyDraftSequence(r.draft.sequence);
+  const manualEvidence=(Array.isArray(forcedDraft?.manualEvidence)?forcedDraft.manualEvidence:[]).filter(e=>!db.world?.fired&&managerControlsSquad(db,db.teams[e?.team]));
+  const evidence=recordedManualDraftEvidence({manualEvidence},recordedGame);
+  if(evidence)recordedGame.draftEvidence=evidence;
   sess.lines.push(...seriesResultLines(r,wId,mvp).map(l=>sess.opt.practice?{...l,practiceGame:sess.g}:l));sess.chooser=lId;sess.g++;sess.current=null;
   return {game:r,winner:wId,loser:lId,done:seriesSessionDone(sess),score:[sess.wins[sess.a],sess.wins[sess.b]]};
 }

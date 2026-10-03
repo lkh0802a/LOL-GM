@@ -6,7 +6,7 @@ function viewMatch(){
   if(!DB.teams[SEL.red]||DB.teams[SEL.red].active===false||SEL.red===own)SEL.red=(act.find(t=>t.id!==own)||act[0]).id;
   const oppOpts=Object.values(DB.regions).flatMap(r=>(r.div2?[1,2]:[1]).map(d=>`<optgroup label="${esc(d===2?divName(r):r.leagueName)}">${activeTeams(DB,r.id,d).filter(t=>t.id!==own).map(t=>`<option value="${t.id}"${t.id===SEL.red?' selected':''}>${esc(t.name)} · 연습가치 ${Math.round(scrimValue(DB,own,t.id)*100)}%</option>`).join('')}</optgroup>`)).join('');
   const ready=scrimReadiness(DB,DB.teams[own]),rec=trainingRecommendation(DB,DB.teams[own]);
-  return `${detail}<section class="teamhead"><h2>스크림</h2><p>내 팀과 실제 구단을 골라 비공식 연습 경기를 진행합니다. 결과는 공식 전적·리그 순위에 반영되지 않습니다.</p><p class="hint">현재 평균 피로 ${Math.round(ready.avgFatigue||0)} · 컨디션 ${Math.round(ready.avgCondition||0)} · 오늘 ${ready.games||0}게임 · ${ready.reason}</p><p class="hint">${rec.next?`다음 공식전까지 ${rec.days}일 · ${esc(DB.teams[rec.next.opponent]?.name||'상대 미정')}`:'예정된 공식전 없음'} · 스크림 추천 ${rec.scrim?'진행':'휴식'}</p></section>
+  return `<section class="teamhead"><h2>스크림</h2><p>내 팀과 실제 구단을 골라 비공식 연습 경기를 진행합니다. 결과는 공식 전적·리그 순위에 반영되지 않습니다.</p><p class="hint">현재 평균 피로 ${Math.round(ready.avgFatigue||0)} · 컨디션 ${Math.round(ready.avgCondition||0)} · 오늘 ${ready.games||0}게임 · ${ready.reason}</p><p class="hint">${rec.next?`다음 공식전까지 ${rec.days}일 · ${esc(DB.teams[rec.next.opponent]?.name||'상대 미정')}`:'예정된 공식전 없음'} · 스크림 추천 ${rec.scrim?'진행':'휴식'}</p></section>
   <section class="controls">
     <label>내 팀 <b>${esc(DB.teams[own].name)}</b></label>
     <label>상대팀<select id="red">${oppOpts}</select></label>
@@ -99,11 +99,12 @@ function renderSeries(rec,big){
     <span class="gw">${esc(tshort(g.winner))} 승 · ${g.dur}</span>
     ${g.picks?`<span class="gp">블루 ${g.picks[0].map(c=>esc(championLabel(DB,c))).join(', ')}<br>레드 ${g.picks[1].map(c=>esc(championLabel(DB,c))).join(', ')}</span>`:''}
     <span class="gm">${g.sideBy?`${esc(tshort(g.sideBy))} 선택권: ${esc(g.sideWhy||'')} · 선픽 ${esc(tshort(g.firstPick||g.blue))} · `:''}POG ${esc(pnm(g.mvp))}${g.mods&&(Math.abs(g.mods[g.blue]||0)+Math.abs(g.mods[g.red]||0))>0?` · 멘탈 보정 ${esc(tshort(g.blue))} ${fmtMod(g.mods[g.blue])} / ${esc(tshort(g.red))} ${fmtMod(g.mods[g.red])}`:''}</span>
-  </button></li>`).join('')}</ol><p class="hint">세트를 누르면 전체 경기 기록이 열립니다.</p></section>
+  </button>${renderRecordedDraftReview(DB,rec,g)}</li>`).join('')}</ol><p class="hint">세트를 누르면 전체 경기 기록이 열립니다.</p></section>
   <div class="gamedetail"></div>`;
 }
 function fmtMod(v){v=v||0;return (v>=0?'+':'')+(v*100).toFixed(1)+'%'}
 function bindSeries(root,rec){
+  bindRecordedDraftReview(root,rec);
   root.querySelectorAll('.game').forEach(b=>b.onclick=()=>{
     if(rec.lite){root.querySelector('.gamedetail').innerHTML='<p class="hint">저장 공간을 아끼려고 다른 지역 리그 경기는 세트 요약만 보관합니다. 전체 기록은 내 지역 리그와 국제대회에서 볼 수 있습니다.</p>';return}
     root.querySelectorAll('.game').forEach(x=>x.classList.toggle('sel',x===b));

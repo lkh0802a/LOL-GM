@@ -187,6 +187,7 @@ function draftAiChoice(state){
 function draftApplyChoice(state,choice){
   const valid=draftValidateChoice(state,choice);if(!valid.ok)throw new Error('Invalid draft choice: '+valid.reason);
   const {turn}=valid,{kind,side}=turn,tn=state.db.teams[state.teamIds[side]],champ=choice.champ;
+  const evidence=manualDraftEvidence(state,choice);
   if(kind==='P'){
     state.pickList[side].push(champ);state.taken.add(champ);
     state.log.push({kind,side,champ,turn:turn.index,role:null,player:null});
@@ -199,6 +200,7 @@ function draftApplyChoice(state,choice){
     const f=choice.f||{total:0,reveal:0};
     state.expl.push({t:0,title:choice.source==='ai'&&role?`${tn.short} 밴: ${championLabel(state.db,champ)} (상대 ${ROLE_KO[role]} 우선 견제)`:`${tn.short} 밴: ${championLabel(state.db,champ)}`,factors:[['상대 픽 가치',f.total||0],['이전 세트 활약',f.reveal||0]],utility:choice.v??0,result:'BAN'});
   }
+  if(evidence)(state.manualEvidence||(state.manualEvidence=[])).push(evidence);
   state.cursor++;return state;
 }
 function draftSkipTurn(state){if(draftTurn(state))state.cursor++;return state}
@@ -214,7 +216,7 @@ function draftResult(state){
   const picks=[draftFinalAssignment(state,0),draftFinalAssignment(state,1)],roleByChamp=picks.map(a=>Object.fromEntries(ROLES.map(r=>[a[r],r])));
   const log=state.log.map(x=>x.kind==='P'?{...x,role:roleByChamp[x.side][x.champ],player:state.roster[x.side][roleByChamp[x.side][x.champ]]?.name||null}:x);
   const sequence={version:1,firstPick:state.firstPick,events:state.log.map(x=>[x.turn,x.kind,x.side,x.champ])};
-  return {bans:state.bans,picks,log,expl:state.expl,pickOrder:state.pickList.map(x=>x.slice()),...(validDraftSequence(sequence,picks.map(p=>Object.values(p)),state.bans)?{sequence}:{})};
+  return {bans:state.bans,picks,log,expl:state.expl,...(state.manualEvidence?.length?{manualEvidence:state.manualEvidence.map(e=>JSON.parse(JSON.stringify(e)))}:{}),pickOrder:state.pickList.map(x=>x.slice()),...(validDraftSequence(sequence,picks.map(p=>Object.values(p)),state.bans)?{sequence}:{})};
 }
 function runDraft(db,teamIds,rng,ctx){
   ctx=ctx||{used:[],byTeam:{}};

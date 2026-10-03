@@ -213,7 +213,7 @@ function resolvePendingOfficialMatch(db,forcedDraft){
   const w=db.world,p=w&&w.pendingOfficial,q=p&&p.queue&&p.queue[0];if(!q)throw new Error('No pending official match');
   const refs=pendingOfficialRefs(db,q);if(!refs)throw new Error('Pending official match is stale');
   if(!q.session)q.session=scheduledSeriesSession(db,refs.s,refs.m).session;
-  const played=playSeriesSessionGame(db,q.session,{bans:forcedDraft.bans,picks:forcedDraft.picks},false);
+  const played=playSeriesSessionGame(db,q.session,forcedDraft,false);
   if(!played.done)return {game:played.game,done:false,score:played.score,pending:w.pendingOfficial};
   const series=seriesSessionResult(db,q.session);commitScheduledSeries(db,refs.s,refs.m,series);
   const finalized=finalizeCompetitionDay(db,refs.s,refs.day,refs.cfgIdx,refs.cfg);if(finalized)scoutFromDay(db,refs.s,refs.day);
