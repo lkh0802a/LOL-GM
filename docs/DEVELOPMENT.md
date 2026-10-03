@@ -118,6 +118,26 @@ silently implemented; major design alternatives remain proposals for the user.
 
 
 
+Delivery: PR #161 head `9e8ef93a2319002586d85869678a84e299c68a63`
+passed full Actions `37125517200`, all 13 required jobs including medical core,
+four seed shards, two aggregate invariants and verify. PR/run head equality,
+unchanged baseline and mergeability were checked before sequential merge
+`2a0598a98c12af863b2f85ac328ed9ad26d92758`. Medical evidence contains seven
+successful CI_RESULT records, not partial-seed success. Static, 55 shared
+acceptances / 54 fresh contexts, focused binding/renderer/rollback/save checks,
+and 119-module build pass. Original failures remain preserved. Standalone HTML
+is rebuilt from the integrated code and matches dist/index.html; publication
+main's exact-head required CI, including standalone synchronization, must pass.
+Implementation/acceptance/docs are the substantive slice; CI/merge/publication
+are follow-through. Another complete 45–55-minute implementation cannot fit
+this hourly run's remaining window. The precise next manual-owned-reserve AI
+coaching slice above is the continuation; do not repeat this merge as a feature.
+The actual daily route also runs medical recovery, practice and squad movement;
+its integration acceptance must exercise that route rather than only the AI
+helper. Offseason closeMarket reviews depth/roles and still leaves economic
+roster authority with an AI parent when the user coaches only its reserve.
+Long/device final QA remains deferred until implementation and playtest fixes.
+
 ### Prior implementation slice — observer-safe squad preparation (2026-10-03)
 
 Scope estimate: 55 minutes, one implementation worker, clean main baseline
