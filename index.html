@@ -2196,12 +2196,18 @@ function ownAnalystInterpretation(db,filter={},cid=null){
 /* ==== FILE: meta-opponent.js ==== */
 // Public, observed preparation evidence. Never consult a player's latent pool,
 // private practice, scouting estimate or the opponent's hidden match plans.
+function opponentReportContext(db,{observer=managedTeamId(db),target=null}={}){
+  const out={allowed:false,observer,target:null,next:null,selected:!!target,available:false,level:0,warnings:[]},club=db.teams[observer];
+  if(db.world?.fired||!club||!managerControlsSquad(db,club))return out;
+  out.allowed=true;Object.assign(out,analystReportSupport(club,'opponent'));out.next=nextTeamMatch(db,observer);out.target=target||out.next?.opponent||null;
+  if(!db.teams[out.target]||out.target===observer)out.warnings.push(out.target?'invalid-target':'no-next-match');
+  return out;
+}
+function observedMetaDate(db,row){return typeof row.date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(row.date)&&Number.isFinite(Date.parse(row.date))&&new Date(row.date).toISOString().slice(0,10)===row.date&&row.date<=db.worldDate}
 function opponentPreparation(db,{observer=managedTeamId(db),target=null,filter={},champ=null}={}){
   const out={allowed:false,observer,target:null,next:null,selected:!!target,available:false,level:0,players:[],groups:[],patterns:[],warnings:[],coverage:{teamGames:0,appearances:0,atTarget:0,elsewhere:0,unknownPlayer:0,unknownChampion:0,unknownRole:0,unknownPatch:0,unknownAffiliation:0,unknownResult:0,undatedSides:0,duplicatePlayers:0}};
-  const club=db.teams[observer];if(db.world?.fired||!club||!managerControlsSquad(db,club))return out;
-  out.allowed=true;Object.assign(out,analystReportSupport(club,'opponent'));
-  out.next=nextTeamMatch(db,observer);out.target=target||out.next?.opponent||null;
-  const rival=db.teams[out.target];if(!rival||rival.id===observer){out.warnings.push(out.target?'invalid-target':'no-next-match');return out}
+  Object.assign(out,opponentReportContext(db,{observer,target}));if(!out.allowed||out.warnings.length)return out;
+  const rival=db.teams[out.target];
   // Roster membership is public context, not a prediction of the next lineup.
   const roster=new Set((rival.roster||[]).filter(id=>typeof id==='string'&&id)),players=new Map(),groups=new Map(),patches=new Set(),c=out.coverage;
   const player=id=>{let p=players.get(id);if(!p){p={id,current:roster.has(id),appearances:0,atTarget:0,elsewhere:0,from:null,to:null};players.set(id,p)}return p};
@@ -2215,7 +2221,7 @@ function opponentPreparation(db,{observer=managedTeamId(db),target=null,filter={
     if(!metaSideMatches(row,side,scoped))continue;
     const atTarget=side.team===rival.id,picks=side.picks||[];
     if(!atTarget&&!picks.some(p=>p&&typeof p==='object'&&roster.has(p.player)))continue;
-    if(typeof row.date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(row.date)||!Number.isFinite(Date.parse(row.date))||new Date(row.date).toISOString().slice(0,10)!==row.date||row.date>db.worldDate){c.undatedSides++;continue}
+    if(!observedMetaDate(db,row)){c.undatedSides++;continue}
     if(atTarget)c.teamGames++;
     const seen=new Set();
     for(const pick of picks){
@@ -2247,6 +2253,49 @@ function opponentPreparation(db,{observer=managedTeamId(db),target=null,filter={
     const frequencies=new Map();for(const g of out.groups){const key=JSON.stringify([g.player,g.champ,g.role]);let f=frequencies.get(key);if(!f){f={kind:'observed-choice',player:g.player,champ:g.champ,role:g.role,g:0,patches:new Set()};frequencies.set(key,f)}f.g+=g.g;if(g.patch)f.patches.add(g.patch)}
     for(const f of [...frequencies.values()].sort((a,b)=>b.g-a.g||a.player.localeCompare(b.player)||a.champ.localeCompare(b.champ)).slice(0,3))out.patterns.push({...f,patches:f.patches.size});
   }
+  return out;
+}
+
+/* ==== FILE: meta-opponent-draft.js ==== */
+// Recorded target-club choices, independent of a champion-anchor meta panel.
+// Current roster membership labels history; it never rewrites past lineups.
+function opponentDraftPreparation(db,{observer=managedTeamId(db),target=null,filter={},champ=null}={}){
+  const out={...opponentReportContext(db,{observer,target}),coverage:{sample:0,undated:0,knownOrder:0,unknownOrder:0,globalOpening:0,completeComposition:0,partialComposition:0,unknownChampion:0,knownColor:0,unknownColor:0,allCurrent:0,changedLineup:0,unknownLineup:0,unknownPatch:0,unknownRegion:0,unknownResult:0,knownBans:0,unknownBans:0},firstPicks:[],followups:[],pairs:[],bans:[],patches:[],patterns:[]};
+  if(!out.allowed||out.warnings.length)return out;
+  const rival=db.teams[out.target],roster=new Set(rival.roster||[]),scoped={...filter,team:rival.id};delete scoped.opponent;
+  const c=out.coverage,bags={firstPicks:new Map(),followups:new Map(),pairs:new Map(),bans:new Map()},patches=new Map();
+  const add=(kind,fields,row,side,context)=>{const key=JSON.stringify([fields,context]);let g=bags[kind].get(key);if(!g){g={...fields,...context,g:0,w:0,results:0,from:row.date,to:row.date};bags[kind].set(key,g)}g.g++;if(typeof side.win==='boolean'){g.results++;if(side.win)g.w++}if(row.date<g.from)g.from=row.date;if(row.date>g.to)g.to=row.date};
+  for(const row of metaRowsFiltered(db,scoped))for(let index=0;index<(row.sides||[]).length;index++){
+    const side=row.sides[index];if(!metaSideMatches(row,side,scoped))continue;
+    const picks=(side.picks||[]).map(p=>typeof p==='string'?{champ:p}:p);
+    // Actor/role/champion conditions select one matching appearance on this
+    // target side. The resulting whole-team report keeps all its teammates.
+    if((scoped.player||scoped.position||champ)&&!picks.some(p=>p&&(!scoped.player||p.player===scoped.player)&&(!scoped.position||p.role===scoped.position)&&(!champ||p.champ===champ)))continue;
+    if(!observedMetaDate(db,row)){c.undated++;continue}c.sample++;
+    const ids=[...new Set(picks.filter(p=>typeof p?.champ==='string'&&p.champ).map(p=>p.champ))].sort(),players=picks.map(p=>typeof p?.player==='string'&&p.player?p.player:null),color=metaSideColor(row,side),patch=typeof row.patch==='string'&&row.patch?row.patch:null,region=typeof side.region==='string'&&side.region?side.region:null,context={patch,region,color};
+    if(color)c.knownColor++;else c.unknownColor++;if(!patch)c.unknownPatch++;if(!region)c.unknownRegion++;if(typeof side.win!=='boolean')c.unknownResult++;
+    c.unknownChampion+=picks.filter(p=>typeof p?.champ!=='string'||!p.champ).length;
+    if(picks.length===5&&ids.length===5)c.completeComposition++;else c.partialComposition++;
+    if(players.length===5&&players.every(Boolean)&&new Set(players).size===5){if(players.every(id=>roster.has(id)))c.allCurrent++;else c.changedLineup++}else c.unknownLineup++;
+    let p=patches.get(patch);if(!p){p={patch,g:0,w:0,results:0};patches.set(patch,p)}p.g++;if(typeof side.win==='boolean'){p.results++;if(side.win)p.w++}
+    for(let i=0;i<ids.length;i++)for(let j=i+1;j<ids.length;j++)add('pairs',{champs:[ids[i],ids[j]]},row,side,context);
+    const sequence=recordedDraftSequence(row);
+    if(sequence){
+      c.knownOrder++;const events=sequence.events.filter(e=>e[1]==='P'),own=events.filter(e=>e[2]===index),first=own[0],opening=events[0][2]===index;
+      if(opening)c.globalOpening++;
+      add('firstPicks',{champ:first[3],opening,globalSlot:events.indexOf(first)+1},row,side,context);
+      for(let slot=1;slot<own.length;slot++)add('followups',{first:first[3],champ:own[slot][3],ownSlot:slot+1,globalSlot:events.indexOf(own[slot])+1},row,side,context);
+    }else c.unknownOrder++;
+    const sides=row.sides||[],flat=sides.flatMap(s=>Array.isArray(s.bans)?s.bans:[]),knownBans=sides.length===2&&sides.every(s=>Array.isArray(s.bans)&&s.bans.length===5&&s.bans.every(id=>typeof id==='string'&&id))&&new Set(flat).size===10&&Array.isArray(row.bans)&&JSON.stringify(flat.slice().sort())===JSON.stringify(row.bans.slice().sort());
+    if(knownBans){c.knownBans++;for(const id of side.bans)add('bans',{champ:id},row,side,context)}else c.unknownBans++;
+  }
+  const sort=(a,b)=>b.g-a.g||b.to.localeCompare(a.to)||JSON.stringify(a).localeCompare(JSON.stringify(b));for(const key of Object.keys(bags))out[key]=[...bags[key].values()].sort(sort);
+  out.patches=[...patches.values()].sort((a,b)=>b.g-a.g||String(a.patch).localeCompare(String(b.patch)));
+  out.warnings.push('historic-lineup');if(!c.sample)out.warnings.push('no-sample');else if(c.sample<ANALYST_REPORT_POLICY.smallSample)out.warnings.push('small-sample');
+  if([...patches.keys()].filter(Boolean).length>1)out.warnings.push('mixed-patches');
+  if(c.unknownOrder||c.partialComposition||c.unknownColor||c.unknownLineup||c.unknownPatch||c.unknownRegion||c.unknownResult||c.unknownBans||c.undated)out.warnings.push('incomplete-source');
+  if(out.level>=1)for(const p of out.patches.slice(0,3))out.patterns.push({kind:'patch',...p});
+  if(out.level>=2){for(const p of out.firstPicks.slice(0,3))out.patterns.push({kind:'first',...p});for(const p of out.pairs.slice(0,3))out.patterns.push({kind:'pair',...p})}
   return out;
 }
 
@@ -11505,9 +11554,19 @@ function patchOpponentReport(db,state,filter={},champ=null){
   const actors=a.players.slice(0,20).map(p=>`<li>${esc(person(p.id))} · ${p.current?'현재 공개 로스터':'상대 구단 과거 출전 선수'} · 공개 ${p.appearances}회 (상대 구단 ${p.atTarget} · 다른/미상 소속 ${p.elsewhere})${p.to?' · 최근 '+esc(p.to):' · 확인 출전 없음'}</li>`).join('');
   const rows=a.groups.slice(0,60).map(g=>`<tr><td>${esc(person(g.player))}</td><td>${esc(championLabel(db,g.champ))}</td><td>${esc(ROLE_KO[g.role]||'미상')}</td><td>${esc(unknown(g.patch))}</td><td>${esc(g.team?name(g.team):'미상')} · ${esc(unknown(g.region))}</td><td>${g.g}회 · ${g.w}승 / 결과 확인 ${g.results}</td><td>${esc(g.from)} ~ ${esc(g.to)}</td></tr>`).join('');
   const patterns=a.patterns.map(p=>`<li>${esc(person(p.player))} · ${esc(championLabel(db,p.champ))} · ${p.kind==='recorded-patch'?esc(unknown(p.patch))+' 기록 '+p.g+'회':esc(ROLE_KO[p.role]||'미상')+' 관찰 '+p.g+'회 · 확인 패치 '+p.patches+'종'}</li>`).join('');
-  return `<section id="opponentpreparation"><h3>상대 선수 공개 출전 보고서${a.target?' · '+esc(name(a.target)):''}</h3>${controls}<p>관찰 구단 ${esc(name(observer))} · ${a.selected?'직접 선택한 상대':a.next?'실제 다음 경기 '+esc(a.next.localDate||a.next.date)+' · '+esc(a.next.comp):'다음 경기 없음'}${a.selected&&a.next?' · 실제 다음 상대 '+esc(name(a.next.opponent)):''}</p><p>해석 범위: ${labels[a.level]}${a.available?'':' · 분석가 지원 없음'}</p>${a.warnings.length?'<ul>'+a.warnings.map(w=>'<li>'+warnings[w]+'</li>').join('') :''}<p>상대 구단 조건 경기 ${c.teamGames}쪽 · 선수 ID 확인 ${c.appearances}출전 (당시 상대 구단 ${c.atTarget} · 다른/미상 소속 ${c.elsewhere}) · 선수 ID 미상 ${c.unknownPlayer}픽</p><small>챔피언 미상 ${c.unknownChampion} · 역할 미상 ${c.unknownRole} · 패치 미상 ${c.unknownPatch} · 소속/지역 미상 ${c.unknownAffiliation} · 결과 미상 ${c.unknownResult} · 유효 날짜 없는 쪽 ${c.undatedSides} · 같은 쪽 중복 선수 ${c.duplicatePlayers}</small>${actors?'<ul>'+actors+'</ul>':'<p>조건에 맞는 선수 기록 없음</p>'}${a.players.length>20?'<p>선수 '+a.players.length+'명 중 20명 표시 · 기록 선수 필터로 좁히세요.</p>':''}${rows?'<div class="scroll"><table class="pool"><thead><tr><th>선수</th><th>공개 선택 챔피언</th><th>당시 역할</th><th>패치</th><th>당시 소속/지역</th><th>출전/결과</th><th>기간</th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<p>확인된 선수·챔피언 출전 없음</p>'}${a.groups.length>60?'<p>'+a.groups.length+'개 묶음 중 빈도순 60개 표시 · 패치/기간/선수로 좁히세요.</p>':''}${patterns?'<h4>분석가의 공개 기록 해석</h4><ul>'+patterns+'</ul>':''}<small>기간·패치·대회·지역·선수·실제 역할·진영 조건을 사용합니다. 기록 팀은 관찰 구단을 고르며 맞대결 상대 필터는 이 보고서에 적용하지 않습니다. 선택 챔피언은 선수 출전만 좁히며 구단 경기 수는 그대로입니다. 현재 로스터의 다른 구단 출전과 상대 구단 과거 선수 출전을 구분하고, 당시 소속을 현재 구단으로 바꾸지 않습니다. 출전 빈도는 숨은 숙련도·전체 챔피언 폭·상대의 다음 픽 확률이 아닙니다. 적은 표본과 패치·상대 차이에 유의하세요. 비공개 연습과 스카우팅 추정은 이 표본에 포함하지 않습니다. 분석가 지원은 기존 상대 전문성의 가상 해석 정책이며 원자료·주의점은 동일합니다.</small></section>`;
+  return `<section id="opponentpreparation"><h3>상대 선수 공개 출전 보고서${a.target?' · '+esc(name(a.target)):''}</h3>${controls}<p>관찰 구단 ${esc(name(observer))} · ${a.selected?'직접 선택한 상대':a.next?'실제 다음 경기 '+esc(a.next.localDate||a.next.date)+' · '+esc(a.next.comp):'다음 경기 없음'}${a.selected&&a.next?' · 실제 다음 상대 '+esc(name(a.next.opponent)):''}</p><p>해석 범위: ${labels[a.level]}${a.available?'':' · 분석가 지원 없음'}</p>${a.warnings.length?'<ul>'+a.warnings.map(w=>'<li>'+warnings[w]+'</li>').join('') :''}<p>상대 구단 조건 경기 ${c.teamGames}쪽 · 선수 ID 확인 ${c.appearances}출전 (당시 상대 구단 ${c.atTarget} · 다른/미상 소속 ${c.elsewhere}) · 선수 ID 미상 ${c.unknownPlayer}픽</p><small>챔피언 미상 ${c.unknownChampion} · 역할 미상 ${c.unknownRole} · 패치 미상 ${c.unknownPatch} · 소속/지역 미상 ${c.unknownAffiliation} · 결과 미상 ${c.unknownResult} · 유효 날짜 없는 쪽 ${c.undatedSides} · 같은 쪽 중복 선수 ${c.duplicatePlayers}</small>${actors?'<ul>'+actors+'</ul>':'<p>조건에 맞는 선수 기록 없음</p>'}${a.players.length>20?'<p>선수 '+a.players.length+'명 중 20명 표시 · 기록 선수 필터로 좁히세요.</p>':''}${rows?'<div class="scroll"><table class="pool"><thead><tr><th>선수</th><th>공개 선택 챔피언</th><th>당시 역할</th><th>패치</th><th>당시 소속/지역</th><th>출전/결과</th><th>기간</th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<p>확인된 선수·챔피언 출전 없음</p>'}${a.groups.length>60?'<p>'+a.groups.length+'개 묶음 중 빈도순 60개 표시 · 패치/기간/선수로 좁히세요.</p>':''}${patterns?'<h4>분석가의 공개 기록 해석</h4><ul>'+patterns+'</ul>':''}<small>기간·패치·대회·지역·선수·실제 역할·진영 조건을 사용합니다. 기록 팀은 관찰 구단을 고르며 맞대결 상대 필터는 이 보고서에 적용하지 않습니다. 선택 챔피언은 선수 출전만 좁히며 구단 경기 수는 그대로입니다. 현재 로스터의 다른 구단 출전과 상대 구단 과거 선수 출전을 구분하고, 당시 소속을 현재 구단으로 바꾸지 않습니다. 출전 빈도는 숨은 숙련도·전체 챔피언 폭·상대의 다음 픽 확률이 아닙니다. 적은 표본과 패치·상대 차이에 유의하세요. 비공개 연습과 스카우팅 추정은 이 표본에 포함하지 않습니다. 분석가 지원은 기존 상대 전문성의 가상 해석 정책이며 원자료·주의점은 동일합니다.</small>${patchOpponentDraftReport(db,{observer,target,filter,champ})}</section>`;
 }
 function bindOpponentPreparation(){const node=$('#pprepteam');if(node)node.onchange=e=>{PSET.prepTeam=e.target.value;nav()}}
+
+/* ==== FILE: ui-opponent-draft.js ==== */
+function patchOpponentDraftReport(db,options={}){
+  const a=opponentDraftPreparation(db,options);if(!a.allowed||!a.target||a.warnings.includes('invalid-target'))return '';
+  const c=a.coverage,name=id=>esc(championLabel(db,id)),unknown=x=>esc(x||'미상'),context=g=>unknown(g.patch)+' · '+unknown(g.region)+' · '+(g.color==='BLUE'?'블루':g.color==='RED'?'레드':'진영 미상')+' · '+esc(g.from)+' ~ '+esc(g.to),result=g=>g.g+'회 · '+g.w+'승 / 결과 확인 '+g.results;
+  const list=(rows,line)=>rows.length?'<ul>'+rows.slice(0,12).map(g=>'<li>'+line(g)+' · '+context(g)+' · '+result(g)+'</li>').join('')+'</ul>'+(rows.length>12?'<p>'+rows.length+'개 묶음 중 빈도순 12개 표시 · 기간/패치/선수로 좁히세요.</p>':''):'<p>확인된 표본 없음</p>';
+  const warnings={'historic-lineup':'기록은 당시 선수단의 선택이며 현재 로스터의 다음 픽을 예측하지 않습니다.','no-sample':'조건에 맞는 상대 구단 공식 표본이 없습니다.','small-sample':'공식 10전 미만으로 근거가 약합니다.','mixed-patches':'여러 패치의 선택이 섞여 있습니다.','incomplete-source':'일부 순서·조합·진영·선수 ID·패치·밴 출처가 미상입니다.','no-next-match':'예정된 다음 상대가 없습니다.'};
+  const patterns=a.patterns.map(p=>'<li>'+(p.kind==='patch'?unknown(p.patch)+' · '+p.g+'전':p.kind==='first'?name(p.champ)+' · '+(p.opening?'전체 첫 픽':'구단 첫 픽')+' 기록 '+p.g+'회':p.champs.map(name).join(' + ')+' · 같은 쪽 동시 선택 '+p.g+'회')+'</li>').join('');
+  return `<section id="opponentdraftreport"><h4>상대 구단 공개 드래프트 준비</h4><p>조건 경기 ${c.sample}쪽 · 실제 순서 확인 ${c.knownOrder}쪽 / 미상 ${c.unknownOrder}쪽 · 전체 첫 픽을 한 쪽 ${c.globalOpening}회</p><p>5챔피언 조합 확인 ${c.completeComposition}쪽 / 불완전 ${c.partialComposition}쪽 · 챔피언 미상 ${c.unknownChampion}픽 · 구단 밴 귀속 확인 ${c.knownBans}쪽 / 미상 ${c.unknownBans}쪽</p><p>진영 확인 ${c.knownColor}쪽 / 미상 ${c.unknownColor}쪽 · 당시 출전 5명이 현재 공개 로스터에 모두 있음 ${c.allCurrent}쪽 / 일부 바뀜 ${c.changedLineup}쪽 / 선수 ID 미상 ${c.unknownLineup}쪽</p><small>패치 미상 ${c.unknownPatch} · 당시 지역 미상 ${c.unknownRegion} · 결과 미상 ${c.unknownResult} · 유효 날짜 없는 쪽 ${c.undated}</small><ul>${a.warnings.map(w=>'<li>'+warnings[w]+'</li>').join('')}</ul><h4>기록 구단의 첫 픽</h4>${list(a.firstPicks,g=>name(g.champ)+' · 구단 1번째 / 전체 '+g.globalSlot+'번째'+(g.opening?' · 드래프트 전체 첫 픽':''))}<h4>구단 첫 픽 이후 실제 후속 선택</h4>${list(a.followups,g=>name(g.first)+' → '+name(g.champ)+' · 구단 '+g.ownSlot+'번째 / 전체 '+g.globalSlot+'번째')}<h4>기록된 같은 쪽 동시 조합</h4>${list(a.pairs,g=>g.champs.map(name).join(' + '))}<h4>기록 구단의 실제 밴</h4>${list(a.bans,g=>name(g.champ))}${patterns?'<h4>분석가의 드래프트 기록 해석</h4><ul>'+patterns+'</ul>':''}<small>선수·역할·선택 챔피언 조건은 같은 출전 픽으로 경기를 고르고, 구단 전체 조합·순서·밴을 보여줍니다. 같은 쪽 두 챔피언은 경기당 한 번 집계하며 불완전 조합도 확인된 조각만 셉니다. 후속 선택은 실제 로그의 구단 첫 픽 이후 선택입니다. 전체 첫 픽은 블루와 같다고 추정하지 않습니다. 순서 없는 역할 배열, 현재 로스터, 전체 밴 목록으로 미상 순서나 밴 귀속을 채우지 않습니다. 다른 구단에서 남긴 현재 선수의 기록은 위 선수 보고서에만 포함합니다. 모든 빈도는 관찰된 선택이며 추천 점수·인과적 시너지·상대의 숨은 다음 의도가 아닙니다. 승수는 결과 확인 표본만 세며 능력 차이는 설명 범위에만 적용합니다.</small></section>`;
+}
 
 /* ==== FILE: ui-negotiations.js ==== */
 // ===== LOL GM: negotiation cards, contract terms and event binding =====

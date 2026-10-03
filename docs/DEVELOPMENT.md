@@ -124,6 +124,21 @@ Inspect applicable scouting policy before changing report estimates. All stages
 remain subject to actual code/acceptance coverage; final QA follows feature
 implementation and user playtest feedback/fixes.
 
+Delivery: PR #155 final head `d12634a310cfacf6733e4f44b00a01578de3cb5a`
+passed complete Actions `37105530916` with all 13 required jobs, original CI
+observer tests, 49 shared acceptances, medical core, four seeds, two aggregates
+and verify. Final date-range presentation and partial duplicate/unknown-result
+pair assertions also pass. Exact current PR head and unchanged main baseline
+were checked before sequential merge `915bc01cbdbd797e80fdd9edf40f4cd937e57156`.
+Standalone HTML is rebuilt from the integrated 115-module manifest and matches
+`dist/index.html`; publication requires full main CI including standalone sync
+on its actual publication head. Local observer-output failure remains retained;
+Actions supplies successful required observer evidence. Implementation, focused
+acceptance and documentation constitute this slice; CI/merge/HTML are follow-through.
+Remaining hourly time cannot fit another coherent 45–55-minute implementation,
+so the precise player-popup champion-information continuation above remains.
+Final long/device/TalkBack QA remains after all features and user playtest fixes.
+
 ### Current implementation slice — opponent public player preparation (2026-10-03)
 
 Scope estimate: 50 minutes, one implementation worker, baseline main
