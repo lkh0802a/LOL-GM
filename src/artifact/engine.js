@@ -451,7 +451,7 @@ function simulateMatch(db,blueId,redId,seed,ctx,quiet){
   const patch=db.patch;
   const d=runDraft(db,[blueId,redId],rng.draft,ctx);
   const mkSide=(tid,i)=>{const team=db.teams[tid],check=validateStartingLineup(db,team);if(!check.ok)throw new Error('Official lineup invalid: '+tid+' '+check.errors.join(', '));const ps=ROLES.map(r=>newPS(starterFor(db,team,r),i,r,d.picks[i][r],patch));
-    return {team,ps,color:i===0?'BLUE':'RED',towers:{top:[1,1,1,1],mid:[1,1,1,1],bot:[1,1,1,1]},inhibAt:{top:0,mid:0,bot:0},nexusT:2,nexus:true,dragons:[],soul:false,baronUntil:0,elderUntil:0,herald:0,heraldCharge:false,barons:0,kills:0,towersTaken:0}};
+    return {team,ps,tacticContext:matchTacticSnapshot(db,team),color:i===0?'BLUE':'RED',towers:{top:[1,1,1,1],mid:[1,1,1,1],bot:[1,1,1,1]},inhibAt:{top:0,mid:0,bot:0},nexusT:2,nexus:true,dragons:[],soul:false,baronUntil:0,elderUntil:0,herald:0,heraldCharge:false,barons:0,kills:0,towersTaken:0}};
   const st={t:0,cur:0,quiet:!!quiet,seed,rng,patch,sides:[mkSide(blueId,0),mkSide(redId,1)],lanePush:{top:0,mid:0,bot:0},vision:{top:0,mid:0,bot:0,dragon:0,baron:0},
     obj:{dragonAt:patch.rules.dragonSpawn,dragonIdx:0,dragonTypes:rng.dec.chance(0.5)?['화염','대지','바다','바람']:['바다','바람','화염','대지'],soul:false,elderAt:0,heraldDone:false,baronAt:patch.rules.baronSpawn,wait:{}},
     jgNext:[2.6+rng.dec.range(0,1),2.6+rng.dec.range(0,1)],mods:[(ctx&&ctx.mods&&ctx.mods[blueId])||0,(ctx&&ctx.mods&&ctx.mods[redId])||0],log:[],expl:[...d.expl],firsts:{},goldHist:[],winner:-1};
