@@ -753,3 +753,14 @@ loans follow their current borrower, and fired managers lose internal access.
 Missing player-attributed legacy records remain unknown rather than inferred.
 This refinement does not claim the rest of foreign player profiles are protected;
 derived traits and exact live fields remain the next documented implementation.
+
+## Observer-safe player profile refinement (2026-10-03)
+
+Foreign derived metrics reuse the existing observed attribute signal; unsupported
+exact tendencies/personality/development and live management state are private.
+Foreign displayed market value uses observed ability, the displayed potential
+range midpoint and neutral form with the existing formula; own values and AI
+market decisions remain unchanged. Private management events are filtered from
+foreign display without deleting history. Firing removes automatic 100-percent
+owned-club knowledge. Draft mastery/pool observation still requires the next
+separate information-boundary slice; the whole game is not declared leak-free.
