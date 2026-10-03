@@ -51,7 +51,8 @@ registration, actual match outcomes, RNG or draft sample weighting change.
 
 Fictional policy: support below 55 gives basic confirmation, 55+ adds patch
 stratification, 75+ adds recorded co-picks, actual chronology and variable tactic
-context. No analyst gives basic confirmation. Exact internal ability is not
+context. No effective primary/secondary analyst support gives basic confirmation.
+Exact internal ability is not
 returned/displayed. All abilities see identical source counts and mandatory
 weak-sample/mixed-patch/unknown-context/model cautions; official samples below
 10 receive a weak-evidence notice. These thresholds and explanation levels are
