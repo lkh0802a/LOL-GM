@@ -40,6 +40,7 @@ await runEngineFixture(String.raw`(()=>{
   for(const restore of restores.reverse())restore();
   DB=db;ANALYSIS_SET.mode='tiers';ANALYSIS_SET.tierView='compare';ANALYSIS_SET.position='MID';ANALYSIS_SET.comp=comp;
   const futureOnly={...future,comp:'future-only'};db.metaHistory.push(futureOnly);check(!viewAnalysis().includes('<option value="future-only"'),'future-only competition leaked through selector');db.metaHistory.pop();
+  const blocked=unpackDB(before);blocked.patch.champions[eligible].proEligibleDate=addDays(blocked.worldDate,10);DB=blocked;ANALYSIS_SET.tierQ=championLabel(blocked,eligible);check(viewAnalysis().includes('현재 공식 경기 사용 제한'),'ineligible champion mislabeled as missing lineup');DB=db;ANALYSIS_SET.tierQ='';
   const html=viewAnalysis();check(html.includes('대중·팀 내부 티어 비교')&&html.includes('공식 1전')&&html.includes('실제 공개 표본 출처')&&html.includes('밴픽 효용'),'actual compared screen');
   bindAnalysis();document.activeElement={id:'analysis-comp'};nodes['#analysis-comp'].focus=()=>focus++;
   nodes['#analysis-comp'].onchange({target:{value:'absent'}});
