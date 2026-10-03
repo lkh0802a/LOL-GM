@@ -109,9 +109,9 @@ const later=()=>new Promise(resolve=>setImmediate(resolve));
     simulateMatch:()=>{matches++;return {winner:0,duration:30,goldHist:[0],firsts:{dragon:0,tower:0,blood:0},sides:[{barons:0,kills:4,towersTaken:3,dragons:[]},{barons:0,kills:3,towersTaken:1,dragons:[]}],log:[]}},
     viewSeason:()=>'<section>season</section>',viewMatch:()=>'<section>match</section>',
     viewSquad:()=>'<section>squad</section>',viewPatch:()=>'<section>patch</section>',
-    viewMC:()=>'<section>mc</section>',viewData:()=>'<section>data</section>',
+    viewAnalysis:()=>'<section>analysis</section>',viewMC:()=>'<section>mc</section>',viewData:()=>'<section>data</section>',
     renderMC:acc=>'<section>completed '+acc.n+'</section>',
-    bindMatch:()=>{},bindSquad:()=>{},bindPatch:()=>{},bindData:()=>{},
+    bindMatch:()=>{},bindSquad:()=>{},bindPatch:()=>{},bindAnalysis:()=>{},bindData:()=>{},
     closeUiOverlay:()=>{},console:{error:(...args)=>unexpected.push(args)}
   });
   context.$=selector=>node(selector.slice(1));

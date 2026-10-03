@@ -32,7 +32,7 @@ files or another worker's unpushed changes exist in Cloud.
 
 각 교체 단위의 완료 조건은 **화면 조작 → 권한/조건 확인 → 실제 공유 명령·엔진 반영 → 관련 화면의 상태와 결과/이유 표시 → 저장·재접속 상태 유지**다. 실패·취소 시 rollback과 중복 실행 방지도 필요한 경로에서 확인한다. 내부 함수만 있거나 화면만 있는 기능은 완료가 아니다. 기능/권한/저장 의미 변경은 UI 정리로 숨기지 않는다.
 
-한 명의 구현 담당자가 기존 시간당 45–55분 단위로 진행한다. 현재 열린 PR의 실패를 보존·해결하고 중복 작업을 피한다. 기존 PR #164의 head `575d6203d605672173777411c32f19a6807755bc` 필수 CI에서 smoke(core)가 35초 제한으로 실패했으므로, 해당 변경은 아직 병합/배포 완료가 아니다. 재설계 구현은 별도 검토 가능한 작업 단위/PR로 진행하고 정확한 현재 head의 필수 CI 성공 후 순차 병합·HTML/웹 배포한다. 다음 재설계 단위는 12.3이며, 전면 교체가 끝났다는 선언보다 실제 화면별 연결 증거를 기록한다.
+한 명의 구현 담당자가 기존 시간당 45–55분 단위로 진행한다. 현재 열린 PR의 실패를 보존·해결하고 중복 작업을 피한다. PR #164의 초기 head `575d6203d605672173777411c32f19a6807755bc`에서 발생한 35초 core 실패는 보존한다. 최종 head `45e55e3d1eb75785cf80b5feafe9c39130c031fa`의 필수 CI `37147718717` 전체 성공(의료 4시드·2집계 포함)을 확인한 뒤 main `606b3d63eca2e6923ef4b004ae26b575dac2c4f2`로 병합했다. main 재검증·웹 배포는 별도 gate이며 분석실 첫 흐름은 PR #165에서 검증한다. 재설계 구현은 별도 검토 가능한 작업 단위/PR로 진행하고 정확한 현재 head의 필수 CI 성공 후 순차 병합·HTML/웹 배포한다. 다음 재설계 단위는 12.3이며, 전면 교체가 끝났다는 선언보다 실제 화면별 연결 증거를 기록한다.
 
 ## Unified numeric roadmap
 
@@ -44,7 +44,7 @@ Each substantial work unit uses a dotted number and a coherent 45–55-minute bo
 
 | Stage | Current scope | Acceptance boundary |
 | --- | --- | --- |
-| 1. Foundation and new game | world/team selection, initial FA supply, identity/calendar | Previously verified foundation; reproduce legal starts, budgets/registration and save; confirmed zero-substitute supply defect remains |
+| 1. Foundation and new game | world/team selection, initial FA supply, identity/calendar | Previously verified foundation; reproduce legal starts, budgets/registration and save; legal initial supply now verified in PR #164; preserve roster minimums/import limits and recheck future starts |
 | 2. Players, medical and development | ability, roles, relationships, fatigue/recovery, growth/retirement | Existing medical and relationship systems; observed causes, actual practice/match effects, save/AI parity |
 | 3. Scouting and prospects | cohorts, observation uncertainty, stale reports, shortlist comparisons | Existing observation systems; no hidden-information shortcuts, legitimate observed AI decisions |
 | 4. Contracts and transfer market | consent, negotiations, representatives, loans, payments, insolvency | Existing contracts and loans; full command/UI/finance/save/rollback and remaining claim/lifecycle scope |
@@ -98,8 +98,9 @@ Each substantial work unit uses a dotted number and a coherent 45–55-minute bo
   chronological holdouts and compare distributions. Source networking is blocked.
 - 12.1 Document navigation/status consolidation and 12.2 stable web/offline HTML:
   current delivery work. Review existing behavior before declaring every domain complete.
-- 1.1 Legal initial FA supply: already reproduced and independent of blocked
-  professional/group data; continue if external acquisition remains unavailable.
+- 1.1 Legal initial FA supply: PR #164 implements deterministic pre-auction
+  supply with actual roster/import constraints; focused acceptance and exact-head
+  required CI passed. External professional/group data remains independently blocked.
 
 This is a unified scope/trace, not an accepted global completion count. Each stage
 updates actual implementation, tests, failures and remaining work; repeated new
@@ -637,9 +638,9 @@ broadcast follow-through is still pending and must not be marked delivered.
 
 아마추어 경기 시뮬레이션 금지, 프로 대회 데이터만 경험적 보정, 확정 가상 규칙, 원본/진단/게임 역사 보존, 한 담당자·시간당 45–55분 구현 단위, 정확한 PR head 필수 CI·순차 병합·검증된 웹/HTML 배포와 최종 QA 보류는 유지한다. 변경 없는 검토를 반복하지 않고 개발에서 새 근거와 재현을 찾는다. 의미 있는 새 발견·구현·실패만 보고하며 문서 등록과 배포된 기능을 구분한다.
 
-## 12.9 분석실 독립 탭 — 승인된 구현 예정 범위
+## 12.9 분석실 독립 탭 — 첫 조회 흐름 구현, 확장 진행 중
 
-사용자는 FM처럼 별도 분석실 탭에서 분석 기능을 사용할 수 있게 요청했다. 분석실을 메인 내비게이션의 독립 화면으로 추가하고 실제 자료와 근거를 한곳에서 비교한다. 기존 `ui-patch.js:patchAnalystCard`, `ui-opponent-report.js`, `ui-opponent-draft.js` 및 분석/관측 집계를 먼저 재사용한다. 현재 `ui-state.js:UI_ROUTES`에는 season/match/squad/patch/data만 있어 독립 분석실은 아직 미구현이다. 실제 패치 노트/규칙과 분석 화면을 혼동하지 않게 구분하며 기존 명령·저장 원본을 복제하지 않는다.
+사용자는 FM처럼 별도 분석실 탭에서 분석 기능을 사용할 수 있게 요청했다. 분석실을 메인 내비게이션의 독립 화면으로 추가하고 실제 자료와 근거를 한곳에서 비교한다. 기존 `ui-patch.js:patchAnalystCard`, `ui-opponent-report.js`, `ui-opponent-draft.js` 및 분석/관측 집계를 먼저 재사용한다. `ui-state.js:UI_ROUTES`에 analysis 경로와 메인 분석실 탭을 추가했다. 첫 구현은 관리 구단의 기존 관측 보고서와 상대 공개 보고서의 실제 조회 흐름이며, 아래 전체 분석 영역의 완료를 뜻하지 않는다. 실제 패치 노트/규칙과 분석 화면을 혼동하지 않게 구분하며 기존 명령·저장 원본을 복제하지 않는다.
 
 | 분석실 영역 | 실제 연결 기준 |
 | --- | --- |
@@ -685,7 +686,7 @@ broadcast follow-through is still pending and must not be marked delivered.
 
 ## 10.1 연결 검증 / 초기·후속 시장 병목과 조직 권한 보강
 
-현재 PR #164의 이전 head `3385154d2dfb77076ef549790e07a2494e88f83a` 필수 CI `37143840624`에서 core smoke의 35초 제한 및 ui-finance-contracts의 훈련 기회비용 검사가 실패했다. 이 실패는 그대로 보존하며 현재 변경을 병합/배포 완료로 보지 않는다.
+PR #164의 이전 head `3385154d2dfb77076ef549790e07a2494e88f83a` 필수 CI `37143840624`에서 core smoke의 35초 제한 및 ui-finance-contracts의 훈련 기회비용 검사가 실패했다. 이 실패는 그대로 보존한다. 최종 head의 성공·병합 상태는 위 현재 방향에 기록하며 이전 실패를 성공으로 바꾸지 않는다.
 
 - 원인/측정: `/tmp/league-smoke.cpuprofile`에서 `marketDemandSnapshot`과 `activeTeams`가 주요 CPU 소비였다. 수요 캐시가 적중해도 가격 조회마다 전체 선수 키와 활성 1부 목록을 다시 만들었다. 확대된 초기/후속 시장의 가격·후보 정렬에서 반복됐으며 제한을 올리지 않았다.
 - 구현: `contract-market-pricing.js`가 시장 수요/가격과 동기적인 topology-read 인덱스를 소유한다. `initialMarketSnapshot`, `eligibleFillFAs`, `aiMarketOfferCandidates`의 선수/팀 구성 불변 조회 범위에서 기존 키의 연도·선수 수·지역별 1부 수를 한 번 구한다. WeakMap 인덱스는 finally로 제거되고 세계/save에 저장하지 않는다. 입찰·계약·추가/은퇴/시즌 변경은 범위 밖에서 기존 재검증/캐시 무효화를 유지한다. 새 모듈은 5500자 제한이며 기존 contracts.js의 26000자 제한은 유지한다.
@@ -695,7 +696,7 @@ broadcast follow-through is still pending and must not be marked delivered.
 - 테스트의 별도 원인: `cohesion-practice-acceptance`가 풀의 첫 삽입 챔피언을 실제 훈련 대상으로 가정했다. 확대 세계의 선택 선수에서는 해당 챔피언이 훈련되지 않아 실패했다. 대상 하나를 임의 고르지 않고 실제 전체 챔피언 훈련량과 개인 훈련의 상반된 변화가 모두 있는지 검증한다. 공유 시간/연간 성장 소비/코칭/AI/저장 검증은 유지했고 production 훈련 판정은 바꾸지 않았다.
 - 로컬 증거: 시장/입찰 동일성·조직 권한, 훈련 기회비용, 리그 표시/6개 실제 2부/최초 합법 로스터, 기존 30초 회귀, 120모듈 검사·standalone 빌드 통과. 필수 전체 CI는 최종 커밋 head에서 별도 성공해야 한다. 아직 국가별 2부/중계 충돌/분석실/전면 UI 재설계가 구현됐다는 증거는 아니다.
 
-다음은 이 head의 필수 CI와 순차 병합/검증된 main 배포를 완료하고, 10.2/10.3과 12.3/12.9 중 실제 연결 경계가 명확한 한 단위를 이어간다. 이미 승인된 전 범위·지속 발견은 유지하며 장기/실기기/TalkBack QA는 보류한다.
+이 head의 필수 CI·순차 병합은 완료했다. 검증된 main 배포를 확인하고 10.2/10.3과 12.3/12.9 중 실제 연결 경계가 명확한 한 단위를 이어간다. 분석실 첫 조회 흐름은 아래 12.9 증거와 PR #165로 구분한다. 이미 승인된 전 범위·지속 발견은 유지하며 장기/실기기/TalkBack QA는 보류한다.
 
 ### 동일 Node 22 러너 기준 추가 병목 보강
 
@@ -706,3 +707,18 @@ Node 22 CPU 프로파일에서 `activeTeams`가 가장 큰 누적 소비였다. 
 같은 Node 22에서 대표 core smoke가 29675.3ms(수요 read 범위)에서 24583ms(활성 팀 read 포함)로 줄었다. 최초 로스터 구간은 13017.9→8379.2ms였다. 프로파일 오버헤드/런너 환경이 달라 CI 시간 보장이나 전체 경기 속도 비율로 일반화하지 않는다. 정확한 최신 head 필수 CI가 통과하기 전에는 여전히 병합/배포 완료가 아니다. 원래 실패와 원본 측정을 보존한다.
 
 최종 Node 22 전체/핵심 smoke는 각각 26725.7/26591.3ms에 통과했고 live 세계·후속 시장·시리즈·저장 세계·저장 시장의 canonical fingerprint가 모두 동일했다. 이 실행은 fingerprint 작성 비용을 포함한다. 필수 CI 최종 head 확인은 여전히 별도 gate다.
+
+
+### 12.9 첫 분석실 구현 증거와 다음 경계
+
+- 화면 소유: `src/artifact/ui-analysis.js`의 `viewAnalysis`/`bindAnalysis`. 내비게이션과 일시적 `ANALYSIS_SET`은 `ui-state.js`, 메인 탭은 `shell.html`이다. 기존 보고서와 엔진 원본을 복제하거나 새 게임 저장 필드를 만들지 않았다.
+- 실제 경로: 분석실 → 우리 팀/상대 준비 → 관리 권한이 있는 1군·소유 2군 선택 → 최근 30/90일·전체 기간, 패치, 기록 역할 필터 → 공식전/엔진 스크림/집계 연습 구분, 전술 및 분석가 관측, 상대 공개 선수/픽밴 보고서. 없는 패치/표본은 자료 없음으로 표시한다.
+- 운영 연결: 선수단·훈련·전술, 일정·경기 기록, 패치·메타 자료로 공통 라우터를 통해 이동한다. 소유 2군을 선택한 경우 선수단 화면도 같은 구단을 선택한다. 기존 실제 명령에서 사용자가 직접 설정하며 분석이 자동으로 전술/훈련을 바꾸지 않는다.
+- 권한/연속성: 조작된 외부 관찰 구단 ID는 권한 있는 구단으로 되돌린다. 2군 감독은 관리 2군만 조회하고 부모 구단 비공개 연습에 접근하지 않는다. 해임 후 비공개 보고서를 제공하지 않는다. 세계/저장 슬롯 교체 시 모든 분석 조건을 초기화하고 다시 권한을 확인한다. 단순 조회/필터/이동은 게임 원본을 변경하지 않으며 저장·재로드 뒤 기존 보고서를 다시 읽는다.
+- 집중 검증: `scripts/analysis-room-acceptance.mjs`는 실제 공식 경기·연습 기록과 렌더러/이벤트 바인딩을 이용해 필터, 외부 ID, 상대 비공개 자료/숨은 능력 접근 차단, 2군/해임 권한, 이동, 원본 불변성과 저장 연속성을 확인한다. 공통 라우팅·비동기·기본 접근성 계약 검사도 통과했다. 추가로 실제 Chromium에서 필터/상대 선택/보고서 표시와 키보드 이동, 1280px·320px 문서 가로 넘침 없음 및 페이지 오류 없음을 확인했다. 실행 환경 정책이 file URL 탐색을 막아 동일 standalone HTML을 브라우저 문서에 주입했다. 실제 호스팅·실기기·TalkBack 최종 검증 완료를 의미하지 않는다.
+- 남음: 경기별 전환점 복기, 대중/팀 내부 티어의 독립 평가와 근거, 맥락을 맞춘 선수 비교, 보고서 고정/관심 목록/메모/조건 저장/권한 내 내보내기. 기존 보고서의 직접 선수·경기 근거 링크와 대회별 필터도 해당 영역 구현에서 연결해야 한다. 전체 분석실이나 전면 UI 재설계가 완료된 것은 아니다.
+- 새 확인점: 기존 보고서 조회를 한곳에 모으는 것과 평가 소비자·권한 있는 근거 이동을 완성하는 것은 별도 경계다. 이를 새 중복 기능으로 늘리지 않고 기존 12.9 완료 조건으로 유지한다. 정확한 신규 PR head CI·순차 병합 및 main 배포가 성공하기 전에는 배포된 기능으로 표시하지 않는다.
+
+검증 실패 원본: 첫 통합 검사는 신규 fixture 추가 후 고정 VM context 수가 54→55로 바뀌어 실패했다. 기존 검증을 제거하지 않고 새 fixture를 포함한 정확한 기대 수로 수정해 Node 22 통합 검사가 성공했다. sandbox의 프로세스 생명주기 검사/Chromium 소켓 제한과 file URL 탐색 제한도 기록하며, 허용 네트워크 실행에서 프로세스 검사와 동일 HTML 브라우저 주입 검사를 수행했다.
+
+첫 화면 브라우저 점검에서 필터 재렌더링으로 기존 입력 요소가 교체되는 것을 확인하여, 동일 필터/조회 모드의 키보드 포커스를 새 요소에 복원했다. 공통 컨트롤 스타일을 재사용해 좁은 화면의 조건 선택을 세로로 배치했고, 필터 포커스 연속성을 실제 Chromium과 이벤트 검사에 추가했다.
