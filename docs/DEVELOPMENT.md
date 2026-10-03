@@ -122,6 +122,14 @@ CI/merge/HTML are additional follow-through. Remaining hourly time cannot fit
 another coherent 45–55-minute implementation; the exact analyst-interpretation
 continuation above is retained. No final long-season/device/TalkBack QA started.
 
+Publication compatibility follow-up: a synthetic legacy official side containing
+only string champion IDs reproduced an omitted known champion when selecting
+that champion. The query now preserves that known ID using the same normalization
+as other professional meta readers; absent player/role still fails those filters.
+The failing focused assertion is retained and passes after correction. This is
+part of the same practice-comparison slice, not a second implementation slice;
+the follow-up branch/PR must pass its own full exact-head CI before integration.
+
 ### Current implementation slice — recorded own-squad tactics (2026-10-03)
 
 Scope estimate: 50 minutes, one implementation worker, baseline main
