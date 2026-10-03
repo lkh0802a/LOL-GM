@@ -1,3 +1,5 @@
+> Documentation review 2026-10-03: [navigation](README.md), [active priorities and validation](DEVELOPMENT.md). Latest explicit user direction and later confirmed decisions supersede dated instructions; historical evidence is retained.
+
 # Final platform target — Android first
 
 User decision, 2026-10-01. This supersedes descriptions of a web page/standalone

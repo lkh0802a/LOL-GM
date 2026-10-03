@@ -1,3 +1,8 @@
+> Documentation review 2026-10-03: [navigation](../../README.md), [active priorities and validation](../../DEVELOPMENT.md). Latest explicit user direction and later confirmed decisions supersede dated instructions; historical evidence is retained.
+
+> Dated scope/acceptance record. For current priorities and validation sequencing,
+> read [DEVELOPMENT.md](../../DEVELOPMENT.md). This record does not establish whole-game completion.
+
 # D01 — Real world calendar / daily simulation acceptance
 
 The retrospective found that `playWorldDay` formerly assigned `db.worldDate = nextDate(db)` directly, meaning a two-week break granted exactly **one** recovery/practice/infrastructure tick. This implementation fixes the underlying world timeline, not only the calendar display.

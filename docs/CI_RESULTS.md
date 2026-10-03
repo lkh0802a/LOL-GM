@@ -1,3 +1,5 @@
+> Documentation review 2026-10-03: [navigation](README.md), [active priorities and validation](DEVELOPMENT.md). Latest explicit user direction and later confirmed decisions supersede dated instructions; historical evidence is retained.
+
 # Reading validation results
 
 Every pull request and main push runs the full required gate, including draft,

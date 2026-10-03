@@ -1,3 +1,5 @@
+> Documentation review 2026-10-03: [navigation](README.md), [active priorities and validation](DEVELOPMENT.md). Latest explicit user direction and later confirmed decisions supersede dated instructions; historical evidence is retained.
+
 # LOL GM — Core Domain Model
 
 ## Status
@@ -8,17 +10,14 @@ It exists to prevent the migrated UI from accidentally becoming the permanent ga
 
 The rule is: model only what the current vertical slice needs, while keeping identity and ownership compatible with the long-term specification.
 
-## Implemented in Phase 1 foundation
+## Current persistence contract
 
-The migrated runtime now has:
-
-- save schema version 9
-- a root `manager` entity separate from club/world state
-- `manager.teamId` as the authoritative managed-club reference
-- a root `worldDate` field for the shared world timeline
-- fresh `lol-gm` browser-storage namespace with no legacy-save import path
-
-Remaining identity normalization work is tracked in `docs/PHASE_1_STATE_AUDIT.md`.
+World schema v15, compact save format 2, browser namespace `lol-gm-v15`, three
+save slots. Supported older v15 encodings normalize on load; arbitrary older
+world schemas/unknown forward formats are not supported by default.
+`save.js`, `save-migration.js`, `world.js` and focused regression/career acceptance
+are authoritative for actual shapes. Examples below are architectural sketches,
+not an instruction to restore the obsolete schema-9/Phase-1 persistence model.
 
 ## Identity conventions
 

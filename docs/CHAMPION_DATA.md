@@ -1,3 +1,5 @@
+> Documentation review 2026-10-03: [navigation](README.md), [active priorities and validation](DEVELOPMENT.md). Latest explicit user direction and later confirmed decisions supersede dated instructions; historical evidence is retained.
+
 # Champion source pipeline
 
 LOL GM must not silently treat generated archetype values as authoritative champion data.
@@ -21,3 +23,60 @@ Each P/Q/W/E/R entry can carry structured mechanics: per-rank `baseDamage`, coef
 ## Runtime coverage
 
 The embedded 16.19.1 / 26.19 snapshot now covers all 173 initial champions with Korean passive and Q/W/E/R names/descriptions plus the exposed base/spell source fields. Runtime normalization strips presentation markup from descriptions without changing the pinned raw snapshot, reports localized coverage separately from source-match coverage, and keeps provenance explicit: Data Dragon supplies pinned source fields, while mechanics not represented by that source remain simulation-derived rather than being presented as authoritative Riot numeric data.
+
+## Competition-only calibration
+
+User direction, 2026-10-03: draft, match and balance calibration must use organized
+competition records only. Solo queue, ranked ladders, mixed professional/solo-queue
+aggregates and sites' unexplained tier lists are excluded. A professional player
+appearing in ranked play does not make that record a competition record.
+
+This does not exclude patch-pinned Riot static champion/item/rune data, which are
+mechanics sources rather than match observations. Reviewed mechanics supplements
+retain provenance. Private scrims are not external professional match evidence;
+existing simulated official/private histories retain their separate meanings.
+
+### Acquisition and acceptance
+
+No validated external professional-match dataset has been collected in this run.
+Oracle's Elixir downloads are a candidate, not an accepted imported source. The
+managed proxy returned HTTP 403 / CONNECT tunnel failed for its download host;
+network policy currently permits package-manager/GitHub destinations. Access to
+the chosen source and any actual download host must use supported configuration.
+Do not bypass the proxy or substitute solo-queue data. A permitted licensed
+professional-data mirror can be evaluated without assuming its coverage/freshness.
+
+Preserve raw files and record provider URL, retrieved-at timestamp, license/usage
+terms, file hash, version, coverage dates, leagues/tournaments and schema. Verify
+the event is an organized competition and explicitly classify tier/stage/patch;
+unclassified rows are quarantined, not silently accepted. Preserve missing values.
+Deduplicate by provider/game ID + side + player/role, check exactly two teams and
+valid participant rows, units and winner consistency. Canceled/remade games need
+an explicit treatment; bans/draft order/timelines may be absent and must not be
+invented from final picks. Stable champion IDs map reviewed aliases; unknown IDs
+fail or quarantine. Keep raw evidence and rejection reasons.
+
+Required core dimensions: game ID/date/patch/event/stage, teams, side, result,
+role/champion and duration. Collect ordered picks/bans, item snapshots, gold/XP/CS
+checkpoints, objectives and events only where the actual source provides them.
+Aggregate data does not establish individual spell casts, coordinates, vision
+paths, target selection or exact item-purchase chronology. VOD/event review is a
+separate evidence path; derived assumptions must be labeled as such.
+
+### Calibration rather than copying outcomes
+
+Separate patch/role/side/event level/series format/team strength and sample size.
+Use chronological holdouts and group series together to avoid fitting and testing
+on adjacent games of the same series. Compare distributions of duration, kills,
+gold/CS gaps, objective timings/control, comeback by checkpoint advantage and
+conditional champion priority; averages and raw win rate alone are insufficient.
+Professional champion win rate is association under selective drafting, not a
+causal buff multiplier. Report sample counts and uncertainty; no invented target
+values. Future fictional-world patches/meta develop from simulated official
+results, not a live feed that overwrites saves or historical patches.
+
+Engine scenarios must trace state → decision → action → reward → next state.
+Gold advantage must operate through resources/items/tempo rather than guarantee
+a win. Champion stats/skills, item price/effects/recipes, rune effects and objective
+spawn/reward/buff changes must reach real draft and combat consumers. Existing
+aggregate proxies cannot be described as exact real-game recreation.

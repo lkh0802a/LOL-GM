@@ -1,3 +1,5 @@
+> Documentation review 2026-10-03: [navigation](README.md), [active priorities and validation](DEVELOPMENT.md). Latest explicit user direction and later confirmed decisions supersede dated instructions; historical evidence is retained.
+
 # Smoke coverage and shard boundary
 
 Prerequisite: #67 fixes pre-career wall-clock seed leakage; its main merge

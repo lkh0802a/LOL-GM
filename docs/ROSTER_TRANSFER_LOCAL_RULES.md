@@ -1,3 +1,5 @@
+> Documentation review 2026-10-03: [navigation](README.md), [active priorities and validation](DEVELOPMENT.md). Latest explicit user direction and later confirmed decisions supersede dated instructions; historical evidence is retained.
+
 # LOL GM — 로컬 자격 / 이적 / 로스터 등록 규칙
 
 상태: **확정 규칙 문서**

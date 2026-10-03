@@ -1,7 +1,9 @@
+> Documentation review 2026-10-03: [navigation](README.md), [active priorities and validation](DEVELOPMENT.md). Latest explicit user direction and later confirmed decisions supersede dated instructions; historical evidence is retained.
+
 # LOL GM — 1~11 / 11.5 소급 게임플레이 깊이 감사
 
 > 기준: 2026-09-29, `main` commit `ef1ef9c20e1edd58e5677e476265af7d4fff2425`.
-> 추후 구현 상태: **D01 실제 일일 시계 및 D02 선수 의료 깊이는 후속 구현·CI 검증으로 수락 완료**, D03~D13은 계속 미완. [D01 수락 근거](PHASE_D01_CALENDAR.md), [D02 수락 근거](PHASE_D02_MEDICAL.md).
+> 현재 해석: D01·D02와 D03의 개별 수락 및 D04~D12 후속 연결 근거가 아래와 보존 기록에 있다. 구형 “D03~D13 미완” 요약으로 후속 구현을 지우거나 전체 D 완료로 단정하지 않는다. 현재 숫자 단계 대응·후속 계획은 [DEVELOPMENT.md](DEVELOPMENT.md#unified-numeric-roadmap)를 따른다. [D01 수락 근거](archive/phase-records/PHASE_D01_CALENDAR.md), [D02 수락 근거](archive/phase-records/PHASE_D02_MEDICAL.md).
 > **문서/코드 조사 보고서**다. 이 변경 자체는 아래 기능을 구현하거나 테스트를 추가하지 않는다.
 > 기존 COMPLETE는 해당 시점의 **최소 엔진·회귀 계약이 수용됨**을 뜻하며, 전체 기획서의 사실적·장기적 깊이가 모두 완성됐다는 뜻이 아니다.
 
@@ -38,10 +40,10 @@
 
 | ID / 긴급도 | 기능 연결 | 실행할 심화 작업 | 완료로 인정할 테스트 |
 |---|---|---|---|
-| **D01 / 완료** | 1·2·6·8·11 | [일일 시계 구현/수락](PHASE_D01_CALENDAR.md): 기존 경기일 건너뛰기 제거. 경기 없는 날도 모든 회복·전향·시설·패치가 하루씩 처리되고, 일정까지 이동은 이를 반복 호출. 기존 수동 밴픽·공식경기 저장 차단 보존. 경기일·로스터 마감·패치·스크림·휴식·시설 공사·역할 전향·중요 협상 일정을 독립된 이벤트로 취급하고 결정 대기에서 중단. 성능을 위해 빈 날만 안전하게 건너뛰되 모든 일일 효과의 횟수·순서는 일치시킬 것. | 전용 `calendar-depth-acceptance`로 13일 공백/시설 공사/일일 회복·전향·패치 발효일·공식 Bo 대기·v15 저장/복원·스크림 이력 및 일일 처리 동등성 검증. 기존 전체 회귀·2시즌 공식 경기 검사와 병행. 100시즌 전체 월드 시간 성능은 D11에서 별도 확인. |
+| **D01 / 완료** | 1·2·6·8·11 | [일일 시계 구현/수락](archive/phase-records/PHASE_D01_CALENDAR.md): 기존 경기일 건너뛰기 제거. 경기 없는 날도 모든 회복·전향·시설·패치가 하루씩 처리되고, 일정까지 이동은 이를 반복 호출. 기존 수동 밴픽·공식경기 저장 차단 보존. 경기일·로스터 마감·패치·스크림·휴식·시설 공사·역할 전향·중요 협상 일정을 독립된 이벤트로 취급하고 결정 대기에서 중단. 성능을 위해 빈 날만 안전하게 건너뛰되 모든 일일 효과의 횟수·순서는 일치시킬 것. | 전용 `calendar-depth-acceptance`로 13일 공백/시설 공사/일일 회복·전향·패치 발효일·공식 Bo 대기·v15 저장/복원·스크림 이력 및 일일 처리 동등성 검증. 기존 전체 회귀·2시즌 공식 경기 검사와 병행. 100시즌 전체 월드 시간 성능은 D11에서 별도 확인. |
 | **D02 / P1** | 2·3·8·11 | 손목/허리/목 등 **희귀 부상**, 질병, 과부하에 따른 번아웃과 휴식. 발생 빈도·훈련/스크림 노출·선수 성향·치료/회복·후유증을 확률 엔진에 연결하고 대체 로스터/대회 등록/재계약과 상호작용. | 장기 발생률/연령 편향/회복 분포, 결장 시 라인업 규칙·경기력 변화, 저장 일관성, AI와 관리 구단의 동일 판정. |
-| **D03 / P0 · COMPLETE** | 4·5·7 | [D03 스카우팅 심화](PHASE_D03_SCOUTING.md): 구단별 영구 보고서, 실제 경기 관찰/노후화, 창단 dossier, 능동 타깃·지역/리그/담당 배분, 실제 비용·유동성, stale report 재조사와 생산용 FA shortlist 재평가까지 완료. | B1~B4 acceptance에서 같은 선수의 구단별 상이한 정보, 관찰 후 불확실성 감소, 연간 감쇠, 시설/스태프 효과, 실제 비용/커버리지, stale 오판→fresh 순위 반전·서로 다른 계약 실행, save/restore를 검증. 전체 D02/regression/smoke/career/perf/build 동시 통과. |
-| **D04 / P0 · B1/B2/B3 완료, B4 진행** | 5 | [D04 계약 심화](PHASE_D04_CONTRACTS.md): 단일 기간 정책·날짜 냉각·의미 있는 상황 변화 재개에 이어 B3의 14일 독점/15일째 FA, 선수별 조기 접촉 및 미래 계약 발효를 완료했다. B4a는 현행 50% 방출 보상의 미결제/결산 근거와 구버전 합계를 추적한다. B4b는 실제 보장 조건 협상과 미래 계약 발효를 동일 정산에 연결한다. B4c는 선수 동의·합의금·UI/AI 시장 정리·원자적 상호 해지를 추가한다. B4d1은 해체 시 계약 종료·현금 한도 지급·미지급 보존을 추가하고 B4d2는 모구단 가용 현금 지원과 원자적 복구를 연결하고 B4d3는 종료 2군의 잔여 현금 회수와 음수 잔고 지원을 보강한다. B4e1은 완전이적 선수 동의와 AI 교환 거절 보호를 추가한다. B4e2는 실제 지급 여력 내 AI 새 개인 조건 제안과 계약 저장을 추가한다. B4f1은 계약 역할 약속을 실제 공식 기용·신뢰·재계약과 연결한다. B4f2/B4g1은 구두 약속·실체 협상 담당자·확인 UI를 연결한다. **잔여:** 지급불능 추가 채무/자산, 에이전트/약속. | B1/B2/B3 acceptance가 기간/냉각/날짜 경계/권한/미래 계약 및 save/restore를 검증한다. B4a acceptance는 관리자/AI 동일 처리, 순수 preview, 늦은 실패 rollback, 미결제/결산 복원, 구버전 합계 보존, 중복 청구 방지를 검증한다. D04 전체 완료에는 나머지 회계/동의 상태가 필요하다. |
+| **D03 / P0 · COMPLETE** | 4·5·7 | [D03 스카우팅 심화](archive/phase-records/PHASE_D03_SCOUTING.md): 구단별 영구 보고서, 실제 경기 관찰/노후화, 창단 dossier, 능동 타깃·지역/리그/담당 배분, 실제 비용·유동성, stale report 재조사와 생산용 FA shortlist 재평가까지 완료. | B1~B4 acceptance에서 같은 선수의 구단별 상이한 정보, 관찰 후 불확실성 감소, 연간 감쇠, 시설/스태프 효과, 실제 비용/커버리지, stale 오판→fresh 순위 반전·서로 다른 계약 실행, save/restore를 검증. 전체 D02/regression/smoke/career/perf/build 동시 통과. |
+| **D04 / P0 · B1/B2/B3 완료, B4 진행** | 5 | [D04 계약 심화](archive/phase-records/PHASE_D04_CONTRACTS.md): 단일 기간 정책·날짜 냉각·의미 있는 상황 변화 재개에 이어 B3의 14일 독점/15일째 FA, 선수별 조기 접촉 및 미래 계약 발효를 완료했다. B4a는 현행 50% 방출 보상의 미결제/결산 근거와 구버전 합계를 추적한다. B4b는 실제 보장 조건 협상과 미래 계약 발효를 동일 정산에 연결한다. B4c는 선수 동의·합의금·UI/AI 시장 정리·원자적 상호 해지를 추가한다. B4d1은 해체 시 계약 종료·현금 한도 지급·미지급 보존을 추가하고 B4d2는 모구단 가용 현금 지원과 원자적 복구를 연결하고 B4d3는 종료 2군의 잔여 현금 회수와 음수 잔고 지원을 보강한다. B4e1은 완전이적 선수 동의와 AI 교환 거절 보호를 추가한다. B4e2는 실제 지급 여력 내 AI 새 개인 조건 제안과 계약 저장을 추가한다. B4f1은 계약 역할 약속을 실제 공식 기용·신뢰·재계약과 연결한다. B4f2/B4g1은 구두 약속·실체 협상 담당자·확인 UI를 연결한다. **잔여:** 지급불능 추가 채무/자산, 에이전트/약속. | B1/B2/B3 acceptance가 기간/냉각/날짜 경계/권한/미래 계약 및 save/restore를 검증한다. B4a acceptance는 관리자/AI 동일 처리, 순수 preview, 늦은 실패 rollback, 미결제/결산 복원, 구버전 합계 보존, 중복 청구 방지를 검증한다. D04 전체 완료에는 나머지 회계/동의 상태가 필요하다. |
 | **D05 / P0 · B1 임대 기본 흐름 구현, 후속 진행** | 5·6 | B1은 임대 구단/계약 구단 분리, 급여 분담·일별 정산·리콜·복귀·선수/구단 동의·AI·확인 UI·저장·해체 경계를 연결했다. **잔여:** D05-B2에서 완전이적 옵션/의무, 조건부/분할 이적료와 로컬 근무 누적을 연결했고, 2026-10-02 follow-up에서 기존 관측 AI 기준에 따른 전략적 리콜을 추가했다. 지급불능/장기 검증은 D04/D11 추적을 따른다. **임대·가계약·조건부 이적** 독립 트랜잭션. 원 소속과 임대 소속/연봉 분담, 리콜, 완전이적 옵션·의무, 분할/성과 이적료, 횟수 제한, 실효일 및 이동 시 로스터/로컬 자격을 일관되게 관리. | 기간 중 회수 금지/허용, 재임대 및 임대→이적 이력, 분할금 정산 불변식, 2군·타지역 등록, 이적시장 마감 전후 재개, 실패 시 원자적 롤백. |
 
 ### D04 대표자 협상 프로필의 AI 적용 (2026-10-02)
@@ -87,16 +89,16 @@
 
 D07 최신 연결 구현과 D11 23시즌 AI 정원 오류의 근거·수정·검증 한계는 DEVELOPMENT.md의 D07 기록을 따른다. 기존 7번 행의 즉시 고용/정확 등급 차이는 이 구현으로 보완되며, 장기 증거가 확보되기 전 전체 D 완료로 해석하지 않는다.
 
-D08/D09 connected batch: bounded current-lineup cohesion, conflict satisfaction/renewal, observed AI practice focus, a shared scrim/drill day budget and bounded international-host access are implemented. See DEVELOPMENT.md for tests, remaining player-specific conversion/manual-request scenarios and D11 interrupted 34-season evidence. Full D remains open.
+D08/D09 connected batch: bounded current-lineup cohesion, conflict satisfaction/renewal, observed AI practice focus, a shared scrim/drill day budget and bounded international-host access are implemented. See [preserved development evidence](archive/DEVELOPMENT_HISTORY_2026_10_03.md) for tests, remaining player-specific conversion/manual-request scenarios and D11 interrupted 34-season evidence. Full D remains open.
 
 D09 follow-up connects individual conversion time to the shared drill allocation and personal growth accounting, excludes medical rest/official days, and precomputes daily venues/time ranges with uncached parity tests. Manual partner workflows and long/mobile evidence remain open; see DEVELOPMENT.md.
 
-D08 decision follow-up preserves role-fit DP and human locks while adding bounded pair-aware bench refinement, production AI decision evidence, scoped/stale club relationship reports for recruitment, player personal offer willingness and snapshot/reopening guards. See DEVELOPMENT.md for tests and remaining long-term/mobile evidence; this does not finish whole D.
+D08 decision follow-up preserves role-fit DP and human locks while adding bounded pair-aware bench refinement, production AI decision evidence, scoped/stale club relationship reports for recruitment, player personal offer willingness and snapshot/reopening guards. See [preserved development evidence](archive/DEVELOPMENT_HISTORY_2026_10_03.md) for tests and remaining long-term/mobile evidence; this does not finish whole D.
 
 D09 manual partner requests now share actual calendar, consent, venue, reservation,
 health and practice-resource policies with automatic scrims. Both-party bookings,
 refusal/cancellation persistence, guarded actions and real daily execution have
-dedicated acceptance evidence. See DEVELOPMENT.md for the implementation and
+dedicated acceptance evidence. See [preserved development evidence](archive/DEVELOPMENT_HISTORY_2026_10_03.md) for the implementation and
 remaining long-term/mobile verification. Whole D remains open.
 
 D10 fight-phase follow-up connects the existing skill profile to control/mobility
@@ -109,7 +111,7 @@ D11 supervised run completed32seasons before a known1536MiB heap invariant faile
 during save in2059. Bounded512-row history encoding preserves all evidence and
 the existing save format while reducing a60,000-row synthetic encoding peak.
 Original failure reports remain; neither that run nor the synthetic benchmark
-proves100seasons or mobile memory. See DEVELOPMENT.md for exact measurements.
+proves100seasons or mobile memory. See [preserved development evidence](archive/DEVELOPMENT_HISTORY_2026_10_03.md) for exact measurements.
 
 D04 estate recovery now uses actual post-closure cash to reduce remaining
 player/staff/legacy claims proportionally after protecting existing guaranteed
@@ -136,7 +138,7 @@ heap by about64%, at increased lookup cost. Legacy extra fields and repeated
 frozen restoration are covered. This is a short synthetic measurement with
 benchmark-only GC, not resolution evidence for the preserved36-season failure,
 actual100seasons or mobile memory. Budgets and all records remain unchanged.
-See DEVELOPMENT.md for measurements, remaining costs and validation status.
+See [preserved development evidence](archive/DEVELOPMENT_HISTORY_2026_10_03.md) for measurements, remaining costs and validation status.
 
 ### D06 consultation implementation update (2026-10-02)
 

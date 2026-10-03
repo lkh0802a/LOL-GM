@@ -1,3 +1,8 @@
+> Documentation review 2026-10-03: [navigation](../../README.md), [active priorities and validation](../../DEVELOPMENT.md). Latest explicit user direction and later confirmed decisions supersede dated instructions; historical evidence is retained.
+
+> Dated scope/acceptance record. For current priorities and validation sequencing,
+> read [DEVELOPMENT.md](../../DEVELOPMENT.md). This record does not establish whole-game completion.
+
 # D03 — 구단별 스카우팅 관찰 메모리 심화
 
 > 출처: `docs/RETROACTIVE_DEPTH_AUDIT_1_11.md`의 D03/P0.

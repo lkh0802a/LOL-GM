@@ -1,3 +1,8 @@
+> Documentation review 2026-10-03: [navigation](../../README.md), [active priorities and validation](../../DEVELOPMENT.md). Latest explicit user direction and later confirmed decisions supersede dated instructions; historical evidence is retained.
+
+> Dated scope/acceptance record. For current priorities and validation sequencing,
+> read [DEVELOPMENT.md](../../DEVELOPMENT.md). This record does not establish whole-game completion.
+
 # LOL GM 11.5 / Stage 6 — UI consolidation
 
 Stage 6 preserves world schema **v15**, compact save format **2**, existing engine rules and the supported historical save migrators. Only canonical `src/artifact/*` and test/manifest files are edited; `index.html` is generated from `scripts/build.mjs`.
