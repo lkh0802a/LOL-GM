@@ -20,6 +20,18 @@ publication are required follow-through, not the implementation slice itself.
 Check branch/PR/current main and ownership before editing; do not assume local
 files or another worker's unpushed changes exist in Cloud.
 
+## UI 전면 재설계 — 승인된 현재 범위
+
+사용자는 기존 내부 기능과 화면의 괴리가 크다고 지적했고, 부분적인 외형 수정 대신 UI 전면 재설계를 승인했다. 이 결정은 구현 예정 범위이며, 현재 리그 선택 표시 수정만으로 재설계 완료를 주장하지 않는다. 기존 엔진, 공유 명령, 권한, AI 동등성, 저장 호환성과 게임 기록을 유지하면서 사용자 작업 흐름과 화면 구조를 다시 설계한다.
+
+- **12.3 운영 흐름과 화면 구조:** 실제 현재 화면/명령을 전수 연결 점검하고 구단 현황 → 필요한 일 → 선수·계약·훈련·대회/경기 → 결정 → 결과 확인 흐름을 설계한다. 현재 상태, 가능한 행동, 조건·비용·제한 및 결과의 이유를 일관되게 배치한다. 메뉴 이름만 바꾸거나 가짜 버튼을 추가하지 않는다. 산출물은 기존 문서 내 화면/기능 연결 목록, 우선순위 및 실제 첫 운영 화면 구현이다.
+- **12.4 화면별 교체와 기능 연결:** 구단 현황과 내비게이션부터 선수/로스터·계약/시장·스태프/훈련·대회/일정·밴픽/경기·결과/통계·재정/사무국·저장/설정까지 자연스러운 세로 단위로 교체한다. 모든 영역을 검토하되 실제 확인한 의존성과 결함에 따라 순서를 조정한다. 국가별 2부/연고국/육성 거점과 중계 일정도 해당 엔진 구현과 함께 UI에 연결한다. 기존 화면은 동등한 필수 기능이 새 화면에서 작동하는 것을 확인한 뒤 교체한다.
+- **12.5 일관성·편의성과 집중 검증:** 반복 입력·불필요한 이동·중복 알림을 줄이고 검색/필터/선택 맥락을 유지한다. 반응형 정보 배치, 표·스크롤, 키보드/포커스, 폼 오류, 로딩/빈 상태/저장 피드백을 검증한다. 직접 운영 기본값과 의미 있는 선택은 보존한다. 집중 브라우저/레이아웃 검사는 허용하며 최종 장기/실기기/TalkBack QA는 계속 보류한다.
+
+각 교체 단위의 완료 조건은 **화면 조작 → 권한/조건 확인 → 실제 공유 명령·엔진 반영 → 관련 화면의 상태와 결과/이유 표시 → 저장·재접속 상태 유지**다. 실패·취소 시 rollback과 중복 실행 방지도 필요한 경로에서 확인한다. 내부 함수만 있거나 화면만 있는 기능은 완료가 아니다. 기능/권한/저장 의미 변경은 UI 정리로 숨기지 않는다.
+
+한 명의 구현 담당자가 기존 시간당 45–55분 단위로 진행한다. 현재 열린 PR의 실패를 보존·해결하고 중복 작업을 피한다. 기존 PR #164의 head `575d6203d605672173777411c32f19a6807755bc` 필수 CI에서 smoke(core)가 35초 제한으로 실패했으므로, 해당 변경은 아직 병합/배포 완료가 아니다. 재설계 구현은 별도 검토 가능한 작업 단위/PR로 진행하고 정확한 현재 head의 필수 CI 성공 후 순차 병합·HTML/웹 배포한다. 다음 재설계 단위는 12.3이며, 전면 교체가 끝났다는 선언보다 실제 화면별 연결 증거를 기록한다.
+
 ## Unified numeric roadmap
 
 This is the development task hierarchy, not a change to internal game architecture.
@@ -41,7 +53,7 @@ Each substantial work unit uses a dotted number and a coherent 45–55-minute bo
 | 9. Balance patches and meta | champion/item/rune and minion/camp/objective rules, diagnosis/adaptation | Existing patch systems; real consumers, dated snapshots, avoid unjustified buff/nerf oscillation |
 | 10. Leagues, competition and history | domestic/international slots, registration/license, seasons, standings, records | Existing competition/world work; confirmed fictional rules and historical attribution |
 | 11. Finance and club strategy | cash, liabilities, sponsor/operating flows, AI budgets/medium-term choices | Existing finance/insolvency work; affordability, shared settlements, no invented prices/fees |
-| 12. Product, UI, saves, performance and delivery | all-domain convenience, accessibility, offline HTML/web, save integrity, measured bottlenecks | Existing integration/UI work; useful decisions, working controls, parity/rollback and stable delivery |
+| 12. Product, UI, saves, performance and delivery | all-domain convenience, accessibility, offline HTML/web, save integrity, measured bottlenecks | Authorized full UI redesign (12.3–12.5); actual screen→command→engine→result→save acceptance, useful decisions, parity/rollback and stable delivery |
 | 13. Playtest fixes and final verification | user playtest → feedback fixes → final long/device/TalkBack QA → Android | Final acceptance; 100-season/device QA cannot start before feedback/fixes |
 
 **Immediate numbered work and evidence:**

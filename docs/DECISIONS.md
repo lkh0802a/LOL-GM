@@ -842,3 +842,9 @@ serialization in the current naming/governance slice.
 
 Default official domestic labels are 스플릿 1/2/3. Regional office `splitNames`
 overrides affect generated domestic season labels; historical aliases stay.
+
+## UI 전면 재설계 승인 — 2026-10-04 (Asia/Seoul)
+
+사용자는 내부 구현과 UI 사이의 괴리를 이유로 기존 화면에 부분 수정만 누적하는 대신 UI 전면 재설계를 승인했다. 개발 범위와 순서는 [개발 가이드의 12.3–12.5](DEVELOPMENT.md#ui-전면-재설계--승인된-현재-범위)를 따른다. 구단 운영 흐름 중심으로 정보 구조와 내비게이션, 각 도메인의 화면을 새로 구성하되 검증된 엔진/공유 명령과 저장·기록 호환성을 유지한다.
+
+내부 기능 존재나 시각적 개편만으로 완료로 보지 않는다. 실제 조작, 조건/권한 안내, 엔진 상태 반영, 결과와 이유 표시, 저장·재접속의 일관성이 각 화면 교체의 완료 기준이다. 의미 있는 경영 선택과 직접 운영 권한을 보존하면서 반복 입력/이동/알림을 줄인다. 기능 연결이 검증된 화면부터 순차 교체하고 UI 변경으로 새로운 규칙이나 밸런스 정책을 몰래 도입하지 않는다. 현재 상태는 승인/구현 예정이며 리그 선택 UI 수정은 전면 재설계의 완료 증거가 아니다.
