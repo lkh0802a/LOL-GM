@@ -13,7 +13,7 @@ function uiOverlayFocusables(root){
 function uiOverlayFocusKey(el){
   if(!el)return null;
   if(el.id)return {id:el.id};
-  const keys=['duChamp','duRole','duInfo','duAdvice','choiceKind','choiceValue'];
+  const keys=['duChamp','duRole','duInfo','duAdvice','duPreparation','choiceKind','choiceValue'];
   const data=keys.filter(k=>el.dataset?.[k]!==undefined).map(k=>[k,el.dataset[k]]);
   return data.length?{data}:null;
 }

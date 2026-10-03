@@ -66,4 +66,4 @@ await runEngineFixture(String.raw`(()=>{
  db.world.fired=true;check(!championScoutObservation(db,a,p,cid).known,'fired manager retains private report access');db.world.fired=false;
  const legacy=copy(db.scout[p.id]);db.scout[p.id]=98;check(!championScoutObservation(db,a,p,cid).known,'legacy knowledge becomes numerical estimate');db.scout[p.id]=legacy;
  console.log('CHAMPION_SCOUT_OBSERVATION_ACCEPTANCE PASS paid human/AI snapshots, public identity boundary, independent observers, live pool traps, draft/player UI, save invalid/legacy/future, ageing/reobserve, nested rollback, actual scheduled day hooks');
-})();`,{timeout:60000,setupSources:["let DB,DRAFT_UI;const esc=x=>String(x).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');",...(await artifactSources(['ui-draft.js','ui-player.js','ui-player-champions.js']))]});
+})();`,{timeout:60000,setupSources:["let DB,DRAFT_UI;const esc=x=>String(x).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');",...(await artifactSources(['ui-draft.js','ui-draft-analysis.js','ui-player.js','ui-player-champions.js']))]});
