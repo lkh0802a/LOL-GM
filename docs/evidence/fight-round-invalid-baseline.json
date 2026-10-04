@@ -1,0 +1,37 @@
+{
+  "provenance": "Synthetic actual writer boundary, not observed natural invalid packets",
+  "rows": [
+    {
+      "kind": "friendly",
+      "paid": 18,
+      "targetHP": 80,
+      "attackerDamage": 18,
+      "taken": 18,
+      "hitters": 1
+    },
+    {
+      "kind": "foreign",
+      "paid": 18,
+      "targetHP": 80,
+      "attackerDamage": 18,
+      "taken": 18,
+      "hitters": 1
+    },
+    {
+      "kind": "unprepared-zero",
+      "paid": 18,
+      "targetHP": 80,
+      "attackerDamage": 18,
+      "taken": 18,
+      "hitters": 1
+    },
+    {
+      "kind": "infinite",
+      "paid": 90,
+      "targetHP": 0,
+      "attackerDamage": 90,
+      "taken": 90,
+      "hitters": 1
+    }
+  ]
+}

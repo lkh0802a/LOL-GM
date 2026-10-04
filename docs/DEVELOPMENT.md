@@ -22,6 +22,12 @@ files or another worker's unpushed changes exist in Cloud.
 
 ## 현재 검증된 출시와 이번 구현 경계 — 2026-10-04
 
+PR #183 최종 head `54bd08216adf70ab9cad43136f64c0351b7d7f8e` 전체CI `37212450588`(의료4시드·두집계·core·verify) 성공 후 main `6e7f3b5e4fb8eafa14e9cb537a9af08a31d235c6`에 순차 병합됐다. 같은 main 전체CI/standalone `37212986820`와 Pages `37213498615`/job `111469241076`는 validated checkout/head guard/artifact `11307222654` digest·download/동일 online·offline 조립/실제 게시 성공으로 확인됐다. native attachment는 응답 중단으로 성공 미확인, direct productionHTTP는 정책상 별도 미검증이다. #164–#183 원본·실패·역사와 #180 캡처 덮어쓰기 한계를 보호한다.
+
+이번 실제 구현은 **8.4.3 준비된 라운드 피해와 잘못된 입력의 자원·기록 경계**(예상45–55분)다. 기존 같은 라운드의 준비된 공격을 사망 후 일괄 취소하는 정책을 도입하지 않는다. 새 PR/current-main/게시 gates는 확인 전 성공으로 쓰지 않는다. 전체 승인 inventory와 source-blocked shop·XP/장기 QA 보류를 유지한다.
+
+### 이전 #182·8.6.4 출시 헤더 원문 (보존)
+
 PR #182 최종 head `84fe343eed0bae1cb91d159fd7df2e3151b428a7` 전체CI `37208769320`(의료4시드·두집계·core·verify) 성공 뒤 main `9c775db7091dee8b85a8e386e8d21d70b57cfcb6`에 순차 병합됐다. 같은 main 전체CI/standalone `37209044929`와 Pages `37209470858`/job `111457523392`는 validated checkout/head guard/artifact `11305942798` digest·download/동일 online·offline 조립/실제 게시 성공으로 재확인했다. native attachment는 응답 중단으로 성공 미확인, direct productionHTTP는 정책상 별도 미검증이다. #164–#182 원본·실패·역사를 보호한다. 첫 b743185/CI37208548063은 기존 UI8000자 제한 초과로 실패했고 잘못 집계한 로컬 static 결과를 정정한 기록도 보존한다. 최종 파일 분리 후 exacthead CI가 통과한 것이며 초기 실패를 성공으로 바꾸지 않는다.
 
 이번 실제 구현은 **8.6.4 macro 끊기 참여자 선택·시드 순서와 당시 기록**(예상45–55분)이다. 새 PR/current-main/게시 gates는 실제 결과 확인 전 성공으로 쓰지 않는다. 전체 승인 inventory/source-blocked shop·XP/장기 QA 보류를 유지한다.
@@ -1471,3 +1477,24 @@ Node 22 CPU 프로파일에서 `activeTeams`가 가장 큰 누적 소비였다. 
 **새 source 발견·정확한 다음:** 다음 coherent45–55분은 **8.4.3 queued 피해 패킷의 실제 시간·생존·동시 처리 경계**다. `fight`는 round 시작 alive에서 모든 packet을 준비하고 mech shuffle 후 `applyFightDamage`를 호출하며 alive 표시는 round 끝에 갱신한다. writer는 target remaining HP를 검증하지만 이미 HP0인 attacker의 예정 packet은 취소하지 않는다. 이는 source 가설이지 실제 잘못된 동시 규칙으로 재현·확정한 결함이 아니다. actual 준비/적용/HP/kill-credit/quest·last·양측 상호 처치·초과 피해/죽은 target 반례를 bounded observer와 paired scenario로 재현하고, 기존 aggregate round 의도/결정/선행 승인과 비교해 실제 불일치만 교정한다. 물리적 동시 서버 규칙·cast duration·새 우선순위/계수를 발명하거나 사망 후 이미 날아간 스킬을 일괄 금지하지 않는다. settled policy 변경이 필요하면 근거/상충과 별도 제안으로 구분하고 독립적인 승인 source-backed writer 교정을 이어간다. genuine source가 없는 shop8.2.2/XP8.5.1의 unchanged 조사는 반복하지 않으며 전체 승인 범위는 남는다.
 
 8.6.4 최종 로컬 수용: UI72수용/71독립VM·101engine, calendar20수용, static/build138module, Node22 regression/smoke30957.1ms(기존35초)/두시즌186공식경기, 실제Chromium1280/320 공식Bo3세경기/새참여details Enter/당시 source/save/Analysis filter/권한/넘침·pageerror없음. 새 원본 진단·구현 이후 gates는 아직 별도다.
+
+
+### 8.4.3 준비된 라운드 피해·소유·생존·입력 경계 — 2026-10-04
+
+**상태·근거:** 승인된45–55분 구현 단위다. 실제 `fight`는 라운드 시작의 살아 있는 참가자가 피해를 준비하고 mech shuffle 순서로 적용한 뒤 라운드 끝에 alive 표시를 갱신한다. [원본4경기](evidence/fight-round-original.json)의 실제 read-only packet observer는1361패킷 중 같은 라운드에서 HP0이 된 공격자의 준비된 유효 피해79건과 이미 HP0인 대상의 무효 패킷202건을 보존한다. 이 경로는 기존 aggregate-round 의도와 일치하며 잘못된 시전으로 확정하지 않는다. 정확한 서버 동시성·시전/투사체 시간·물리적 도달·상호 처치 우선순위는 이 자료로 정의할 수 없다.
+
+**재현된 독립 결함:** [합성 actual-writer 입력](evidence/fight-round-invalid-baseline.json)에서 아군, 경기 밖 fake ps, 준비되지 않은HP0 공격자, Infinity 피해를 원래 writer가 받았다. 각각18/18/18/90 recorded damage와 hitters/quest/stat에 접근했다. 자연 경기에서 이 잘못된 입력들이 발생했다고 주장하지 않는다. 입력 소유·생존·유한 값 경계를 강화하는 승인된 writer correction이며 새 확률·보상·시전 정책이 아니다.
+
+**구현·source/writer/consumer:** `combat-resources.js:applyPreparedFightRound`가 실제 actor의 라운드 시작 자원을 Set으로 고정하고 전체 packet의 경기 소유·서로 다른 side·시작 생존·유한 양수 피해를 적용 전 검증한다. `applyFightDamage`는 actual side.ps 소유와 alive/deadline, target remaining HP, 유한 양수 packet을 확인한다. 같은 라운드에 HP0이 된 공격자는 준비된 Set에 있을 때만 기존 피해를 적용하고 새 direct 공격/다음 라운드 준비는 거절한다. 실제 engine 준비·shuffle→공통 writer→실효 dealt/taken/teamfight/MID quest/hitters/last→기존 kill/보상/구매 경로를 유지한다. invalid whole input batch/terminal은 mutation·RNG 없이 취소한다. 서로 다른 정상 패킷을 같은 이벤트로 간주하는 새 중복정책이나 callback exception 전체 rollback은 구현하지 않는다.
+
+**플레이어 예·UI/저장:** 새 실제 결과의 `combatRoundBasis:prepared-round-budget-v1`만 optional 공식 publicRecord에 복사해 공식 복기/Analysis에서 “같은 라운드에서 체력이 소진돼도 이미 준비된 피해는 남고, 다음 라운드의 새 공격에는 참여하지 않습니다”를 표시한다. 관측 가능한 당시 판정 설명이며 정확한 개별 스킬 실행이라는 뜻이 아니다. archived 선수/기록, pending/full/lite save를 통과하고 marker 없는 원래 기록은 설명을 추정하거나 재계산하지 않는다. 미지원 marker는 source reject. 검증은 로컬 source checking이며 cryptographic authentication이 아니다. match item column 제거·top navigation·엔진 소유 구매는 유지한다.
+
+**수용·변화·tradeoff:** `fight-round-acceptance.mjs`가 양측 상호 예정 피해, HP0 다음 공격, dead target/친선/외부/Infinity/NaN/음수/terminal과 whole-batch 무변경, 실제4logged/quiet 양side pairs·world purity·실제 official pending/full-lite/history·legacy/malformed/Korean source를 확인한다. [최종교정4경기](evidence/fight-round-final.json)의 모든 준비/적용 패킷·선수통계·quest·gold/items/XP·전체log·winner/ending/duration은 원본과 동일하다. bounded 실제 경계의 parity이지 전체 엔진 최적화 또는 professional calibration은 아니다. 공격을 순차 준비·처리한다는 aggregate 한계와 기존 .9 reporting/rounding·RNG·처치 자격/계수는 남는다. 새 invalid-input 차단은 의도된 동작 교정이다.
+
+**실패 보호·검증 구분:** 기존 combat fixture는 side.ps와 actor.side/alive/HP를 생략해 새 ownership 검증에서 실패했다. 원본 fixture/로그를 보존하고 실제 state 모양을 공급했으며 기존 damage90·별도target·quest/assertions를 유지했다. 최초 static child-process/socket sandbox 실패와 UI/calendar/browser를 함께 실행한 Node22 smoke 기존35초 초과도 보호한다. 같은 검사를 격리하거나 명시 권한 검토 후 재실행하며 한도/assertions/instrumentation/예산을 바꾸지 않는다. focused·전체local·정확head CI·병합·게시를 [진단](evidence/fight-round-diagnostics.json)에 구분한다. /tmp/fight-round-* 원본source/log/초기·최종 별도캡처를 보호한다. 최종100season/device/mobile/TalkBack QA·professional calibration은 보류다.
+
+**발견·정확한 다음:** 다음 coherent45–55분은 **8.4.4 라인전 교환의 실제 HP 자원 보존**이다. 실제 `laningTick`의 패자 `Math.max(0.05, hp-loss)`/승자 `Math.max(0.1, hp-0.07)`/올인 실패 floor도 저체력 상태를 올릴 수 있는 별도 source 후보다. 이번 round 교정이 이를 고쳤다는 뜻은 아니다. source observer로 실제 low-HP 교환 전후와 all-in/귀환/킬 분기를 재현하고 기존 교환·kill/recall 규칙·계수를 보존하는 자연 vertical boundary로 수정한다. HP0 처리에서 새 정책이 필요한지 기존 규칙/반례를 먼저 검사하며 임의 death policy·계수·timing·보상을 만들지 않는다. actual HP→올인/귀환/fight→official/source/UI/save, logged/quiet/AI/terminal/history와 tradeoff를 확인한다. genuine metadata 없는8.2.2상점/8.5.1XP 조사는 반복하지 않고 전체 승인 inventory를 유지한다.
+
+8.4.3 최종 로컬 수용: UI73수용/72독립VM·101engine, calendar20, static/build138module, 격리Node22 regression/smoke27489.8ms(기존35초)/두시즌186공식경기, 실제Chromium1280/320 공식Bo3세경기/당시round설명·source·Enter·Analysis filter·pending/history save·권한·넘침/pageerror없음. exacthead CI/main/Pages는 별도 gates다.
+
+8.4.3 source 검증에서 초기 교정 trace의 combat-resources hash가 마지막 optional ownership/음수HP guard 전 상태임을 발견했다. 초기 fight-round-correction.json과 hash를 그대로 보존하고 현재 최종source hash·동일4경기를 fight-round-final.json으로 별도 기록했다. 첫 head c3dec2e/CI37216028963은 이 evidence 최신화 전 실행이며 final 성공이라고 집계하지 않는다. 코드·검사/budget 변경 없이 최종head에서 다시 모든 CI를 확인한다.

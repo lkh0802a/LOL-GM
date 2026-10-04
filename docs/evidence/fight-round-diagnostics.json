@@ -1,0 +1,58 @@
+{
+  "task": "8.4.3",
+  "baseMain": "6e7f3b5e4fb8eafa14e9cb537a9af08a31d235c6",
+  "status": "implemented and locally accepted; PR/main/publication pending",
+  "actualTraceParity": true,
+  "actualMatches": 4,
+  "packets": 1361,
+  "preparedZeroHpPaid": 79,
+  "deadTargetInert": 202,
+  "notAClaim": "No exact physical casts or global parity; invalid writer cases are synthetic, not naturally observed invalid packets",
+  "local": {
+    "focused": "/tmp/fight-round-focused-initial.log",
+    "ui": {
+      "acceptances": 73,
+      "freshVMs": 72,
+      "engineModules": 101
+    },
+    "calendar": 20,
+    "staticModules": 138,
+    "isolatedNode22SmokeMs": 27489.8,
+    "unchangedSmokeLimitMs": 35000,
+    "twoSeasonOfficialMatches": 186,
+    "browser": "Chromium1280/320 real scheduled manual draft/officialBo3 three games, source/analysis/Enter/filter/save/fired/no overflow/pageerror; identical rebuilt HTML injection, not productionHTTP/finaldeviceQA"
+  },
+  "failuresPreserved": [
+    {
+      "path": "/tmp/fight-round-old-fixture-failure.log",
+      "reason": "Original minimal combat fixture omitted real side.ps/actor.side/alive/hp; actual fixture shape supplied with same assertions",
+      "originalFixture": "/tmp/fight-round-original-combat-fixture.mjs"
+    },
+    {
+      "path": "/tmp/fight-round-static-initial.log",
+      "reason": "Default child-process sandbox; same checks passed explicit permission review in /tmp/fight-round-static-reviewed.log"
+    },
+    {
+      "path": "/tmp/fight-round-browser-initial.log",
+      "reason": "Default browser socket sandbox; same script passed explicit permission review in /tmp/fight-round-browser-reviewed.log"
+    },
+    {
+      "path": "/tmp/fight-round-regression-smoke-career-initial.log",
+      "reason": "Parallel local smoke exceeded unchanged35s; same full chain isolated passed /tmp/fight-round-regression-smoke-career-isolated.log"
+    }
+  ],
+  "capturePaths": "Unique /tmp/fight-round-browser-initial-*; no overwritten prior screenshot paths",
+  "historicalCaptureLimitation": "#180 final rerun overwrote first successful screenshot bytes; first logs/code and distinct final captures remain. Never relabel final captures as original.",
+  "unfinished": "Full callback-exception rollback/geometry/cast timing/simultaneity/item AP AS crit/conditional effects/shop/waves/full approved domains remain pending",
+  "next": "8.4.4 real laning trade HP-floor source reproduction and resource preservation, without invented death or timing policy",
+  "finalSourceHashParity": true,
+  "retainedIntermediateTrace": {
+    "path": "fight-round-correction.json",
+    "reason": "Trace generated before final optional side.ps/negative HP guard hardening; retain its real intermediate hash. Final same outcomes/current source hashes are fight-round-final.json"
+  },
+  "supersededCI": {
+    "head": "c3dec2e09b9b3809d55445069dcd5111171a7daa",
+    "run": 37216028963,
+    "status": "in progress at hardening evidence refresh; not final CI success"
+  }
+}
