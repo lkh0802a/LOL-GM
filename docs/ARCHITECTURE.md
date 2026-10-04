@@ -238,3 +238,8 @@ fields; no second contract, roster, finance or preview ledger is introduced.
 ## 8.4.2 실제 처치 보상과 당시 설명
 
 `takedown-rewards.js`는 기존 `killPlayer` actual writer와 preflight actor ownership/availability·unique assist·기존 gold/XP/quest를 소유한다. `engine.js`의 fight/라인/갱킹은 실제 actors를 공급하고 결과 receipt를 반환한다. `match-history.js`의 optional bounded takedowns v1 검증/복사→`ui-takedown-history.js` 순수 표현을 official/Analysis에서 호출→기존 full/lite save로 이어진다. 새 UI module의 의존 fixture를 명시적으로 로드하며 budget을 올리지 않는다. takedown-reward-acceptance와 existing domain/regression/browser에서 actual writer/normal parity/source/권한/save를 확인한다. 반올림·거리·simultaneous policy와 exception rollback의 미완료 범위는 DEVELOPMENT8.4.2를 따른다.
+
+
+### 8.3.3 실제 아이템 수치 패치
+
+`system-data.js:itemRawStatFields/applyItemRawStatNote`는 pinned source provenance와 raw AD/HP/armor/MR old/new·단위를 검증하고 stats/effects/source split을 함께 작성한다. `patch.js:applyNote`가 성공한 노트의 patch/system revision을 갱신한다. `patch-balance.js`는 기존 stat size profile/관측 meta 정책을 재사용하며 private planning copy로 같은 패치 내 노트 순서를 구성하고 stat 타입을 기존 cooldown에 포함한다. owned gear/combat·choice/draft의 기존 consumers/caches, 역사 replay/save는 동일 note 경로를 사용한다. `ui-patch.js:noteText`가 당시 이름/수치/기준 source와 fictional 조정을 표현한다. 검증 위치는 `scripts/item-stat-patch-acceptance.mjs`와 `scripts/item-stat-patch-scenarios.mjs`, 근거/한계/정확한 다음은 DEVELOPMENT8.3.3이다. AP/AS/crit/조건 효과·exact spell execution은 별도 미완료 범위다.

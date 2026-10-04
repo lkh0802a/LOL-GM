@@ -1,0 +1,200 @@
+{
+  "provenance": "24 actually simulated fictional matches recorded through recordMeta; 16 independent seeded patch decisions, not professional calibration/frequency target",
+  "matches": 24,
+  "patches": [
+    {
+      "seed": 0,
+      "id": "27.1",
+      "sample": 24,
+      "statNotes": [
+        {
+          "type": "item_stat",
+          "id": "2051",
+          "name": "수호자의 뿔피리",
+          "field": "FlatHPPoolMod",
+          "old": 150,
+          "new": 151.01,
+          "source": {
+            "provider": "Riot Data Dragon",
+            "version": "16.19.1",
+            "mapId": 11
+          },
+          "dir": 1,
+          "size": "micro",
+          "why": "아이템 사용률 0% · 승률 50%"
+        }
+      ],
+      "itemChanges": [
+        "663193",
+        "2051"
+      ]
+    },
+    {
+      "seed": 1,
+      "id": "27.1",
+      "sample": 24,
+      "statNotes": [],
+      "itemChanges": [
+        "3046",
+        "2051"
+      ]
+    },
+    {
+      "seed": 2,
+      "id": "27.1",
+      "sample": 24,
+      "statNotes": [],
+      "itemChanges": [
+        "3046",
+        "2051"
+      ]
+    },
+    {
+      "seed": 3,
+      "id": "27.1",
+      "sample": 24,
+      "statNotes": [],
+      "itemChanges": [
+        "3046",
+        "2051"
+      ]
+    },
+    {
+      "seed": 4,
+      "id": "27.1",
+      "sample": 24,
+      "statNotes": [],
+      "itemChanges": [
+        "3046",
+        "2051"
+      ]
+    },
+    {
+      "seed": 5,
+      "id": "27.1",
+      "sample": 24,
+      "statNotes": [],
+      "itemChanges": [
+        "3046",
+        "2051"
+      ]
+    },
+    {
+      "seed": 6,
+      "id": "27.1",
+      "sample": 24,
+      "statNotes": [],
+      "itemChanges": [
+        "663193",
+        "2051"
+      ]
+    },
+    {
+      "seed": 7,
+      "id": "27.1",
+      "sample": 24,
+      "statNotes": [],
+      "itemChanges": [
+        "3046",
+        "2051"
+      ]
+    },
+    {
+      "seed": 8,
+      "id": "27.1",
+      "sample": 24,
+      "statNotes": [],
+      "itemChanges": [
+        "3046",
+        "2051"
+      ]
+    },
+    {
+      "seed": 9,
+      "id": "27.1",
+      "sample": 24,
+      "statNotes": [],
+      "itemChanges": [
+        "3046",
+        "2051"
+      ]
+    },
+    {
+      "seed": 10,
+      "id": "27.1",
+      "sample": 24,
+      "statNotes": [
+        {
+          "type": "item_stat",
+          "id": "3087",
+          "name": "스태틱의 단검",
+          "field": "FlatPhysicalDamageMod",
+          "old": 45,
+          "new": 42.27,
+          "source": {
+            "provider": "Riot Data Dragon",
+            "version": "16.19.1",
+            "mapId": 11
+          },
+          "dir": -1,
+          "size": "large",
+          "why": "아이템 사용률 95% · 승률 54%"
+        }
+      ],
+      "itemChanges": [
+        "3087",
+        "2051"
+      ]
+    },
+    {
+      "seed": 11,
+      "id": "27.1",
+      "sample": 24,
+      "statNotes": [],
+      "itemChanges": [
+        "3046",
+        "2051"
+      ]
+    },
+    {
+      "seed": 12,
+      "id": "27.1",
+      "sample": 24,
+      "statNotes": [],
+      "itemChanges": [
+        "663193",
+        "2051"
+      ]
+    },
+    {
+      "seed": 13,
+      "id": "27.1",
+      "sample": 24,
+      "statNotes": [],
+      "itemChanges": [
+        "3100",
+        "2051"
+      ]
+    },
+    {
+      "seed": 14,
+      "id": "27.1",
+      "sample": 24,
+      "statNotes": [],
+      "itemChanges": [
+        "3046",
+        "2051"
+      ]
+    },
+    {
+      "seed": 15,
+      "id": "27.1",
+      "sample": 24,
+      "statNotes": [],
+      "itemChanges": [
+        "3046",
+        "2051"
+      ]
+    }
+  ]
+}

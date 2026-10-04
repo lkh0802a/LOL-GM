@@ -12,6 +12,7 @@ function initPatches(db){
   db.patches.sourceControlBaseline=1;
 }
 function applyNote(P,n){
+  if(n.type==='item_stat'){if(!applyItemRawStatNote(P,n))return false;P._revision=(P._revision||0)+1;P._systemRevision=(P._systemRevision||0)+1;return true}
   if(n.type==='role_quest')applyRoleQuestNote(P,n);
   const c=P.champions[n.c];
   P._revision=(P._revision||0)+1;if(/^item/.test(n.type)||/^rune/.test(n.type))P._systemRevision=(P._systemRevision||0)+1;
