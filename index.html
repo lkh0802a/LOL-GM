@@ -568,7 +568,9 @@ function alive(st,ps){return ps.deadUntil<=st.t}
 function aliveOf(st,side){return st.sides[side].ps.filter(x=>alive(st,x))}
 
 function combatStats(st,ps){
-  const sd=st.sides[ps.side], key=st.t*1e6+ps.goldEarned*10+ps.lvl+(ps.questRevision||0)*.00001+(sd.baronUntil>st.t?0.1:0)+(sd.elderUntil>st.t?0.2:0)+(sd.soul?0.4:0);
+  // Match profiles/modifiers are fixed during this isolated simulation. Cash
+  // is not an input; actual equipment, quest and patch writers have revisions.
+  const sd=st.sides[ps.side], buffs=(sd.baronUntil>st.t?1:0)+(sd.elderUntil>st.t?2:0)+(sd.soul?4:0),key=st.t+':'+ps.lvl+':'+(ps.questRevision||0)+':'+buffs;
   const revision=draftPatchRevisionKey(st.patch);
   if(ps._ck===key&&ps._itemRevision===ps.itemRevision&&ps._combatPatch===st.patch&&ps._combatRevision===revision)return ps._cs;
   ps._combatPatch=st.patch;ps._combatRevision=revision;ps._itemRevision=ps.itemRevision;ps._ck=key;return ps._cs=combatStats0(st,ps);
