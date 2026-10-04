@@ -647,8 +647,19 @@ function fight(st,zone,sideArrs,ctx={}){
 
 // ----- 구조물 -----
 function laneProgress(s,l){return s.towers[l].filter(x=>!x).length}
+// Progress remains primary: the old comparator noise was bounded below one
+// structure step. Only equal-progress choices consume seeded tie keys.
+function selectStructureLane(st,en,candidates){
+  const canonical=LANES.filter(l=>candidates.includes(l));
+  if(!canonical.length)return null;
+  const progress=Math.max(...canonical.map(l=>laneProgress(en,l))),tied=canonical.filter(l=>laneProgress(en,l)===progress);
+  if(tied.length===1)return tied[0];
+  const ranked=tied.map(l=>({lane:l,key:(st.rng.dec.next()-.5)*1.5}));
+  return ranked.reduce((best,x)=>x.key>best.key?x:best).lane;
+}
 function takeStructure(st,side,opt={}){
   if(matchEnded(st))return;
+  if(![0,1].includes(side)||opt.lane&&!LANES.includes(opt.lane))return null;
   const en=st.sides[1-side];
   // 억제기 재생성 처리
   for(const l of LANES) if(!en.towers[l][3]&&en.inhibAt[l]&&st.t>=en.inhibAt[l]){en.towers[l][3]=true;en.inhibAt[l]=0;log(st,`${en.team.short} ${LANE_KO[l]} 억제기 재생성`,{side:1-side})}
@@ -660,8 +671,9 @@ function takeStructure(st,side,opt={}){
   let lanes=opt.lane?[opt.lane]:LANES.slice();
   lanes=lanes.filter(l=>en.towers[l].some(x=>x));
   if(!lanes.length){ if(opt.lane) return takeStructure(st,side,{...opt,lane:null}); return null; }
-  lanes.sort((a,b)=>laneProgress(en,b)-laneProgress(en,a)+(st.rng.dec.next()-0.5)*1.5);
-  const l=lanes[0], idx=en.towers[l].findIndex(x=>x);
+  lanes=lanes.filter(l=>opt.allowInhib||en.towers[l].findIndex(x=>x)<3);
+  if(!lanes.length)return null;
+  const l=selectStructureLane(st,en,lanes),idx=en.towers[l].findIndex(x=>x);
   if(idx===3&&!opt.allowInhib) return null;
   en.towers[l][idx]=false;
   const names=['1차 포탑','2차 포탑','억제기 포탑','억제기'];
@@ -964,7 +976,7 @@ function simulateMatch(db,blueId,redId,seed,ctx,quiet){
   if(st.winner<0)throw new Error('Match unresolved: neither nexus was destroyed within '+MATCH_SIMULATION_MAX_MINUTES+' simulated minutes; no official result produced (seed '+seed+')');
   const endSec=st.ending.second;
   st.log.sort((a,b)=>a.t-b.t||a.sec-b.sec);
-  return {seed,winner:st.winner,ending:{...st.ending},damageBasis:'effective-aggregate-v1',objectiveEvents:st.objectiveEvents||[],takedownEvents:st.takedownEvents||[],duration:t+endSec/60,durationStr:fmtTime(t,endSec),draft:d,sides:st.sides,log:st.log,expl:st.expl,goldHist:st.goldHist,firsts:st.firsts};
+  return {seed,winner:st.winner,ending:{...st.ending},damageBasis:'effective-aggregate-v1',structureSelectionBasis:'progress-seeded-ties-v1',objectiveEvents:st.objectiveEvents||[],takedownEvents:st.takedownEvents||[],duration:t+endSec/60,durationStr:fmtTime(t,endSec),draft:d,sides:st.sides,log:st.log,expl:st.expl,goldHist:st.goldHist,firsts:st.firsts};
 }
 
 /* ==== FILE: draft.js ==== */
@@ -11849,7 +11861,7 @@ function recordedDraftReview(db,rec,game,team=managedTeamId(db)){
 function publicMatchRecord(r,patch){
   const events=(r.log||[]).filter(e=>['kill','fight','obj','tower','nexus'].includes(e.kind)),limit=24,
     selected=events.length>limit?[...events.slice(0,12),...events.slice(-12)]:events;
-  return {version:1,...(Array.isArray(r.takedownEvents)?{takedowns:{version:1,count:r.takedownEvents.length,events:(r.takedownEvents.length>24?[...r.takedownEvents.slice(0,12),...r.takedownEvents.slice(-12)]:r.takedownEvents).map(e=>({...e,payouts:e.payouts.map(x=>({...x}))}))}}:{}),...(Array.isArray(r.objectiveEvents)?{objectives:{version:1,events:r.objectiveEvents.map(e=>({...e,participants:e.participants.slice()}))}}:{}),...(r.damageBasis==='effective-aggregate-v1'?{damageBasis:r.damageBasis}:{}),...(r.ending?{ending:{...r.ending,winner:r.sides[r.ending.winner].team.id}}:{}),resources:{version:1,players:Object.fromEntries(r.sides.flatMap(s=>s.ps.map(p=>[p.p.id,matchGoldLedger(p)])))},date:r.date,patch,winner:r.sides[r.winner].team.id,duration:r.duration,
+  return {version:1,...(r.structureSelectionBasis==='progress-seeded-ties-v1'?{structureSelectionBasis:r.structureSelectionBasis}:{}),...(Array.isArray(r.takedownEvents)?{takedowns:{version:1,count:r.takedownEvents.length,events:(r.takedownEvents.length>24?[...r.takedownEvents.slice(0,12),...r.takedownEvents.slice(-12)]:r.takedownEvents).map(e=>({...e,payouts:e.payouts.map(x=>({...x}))}))}}:{}),...(Array.isArray(r.objectiveEvents)?{objectives:{version:1,events:r.objectiveEvents.map(e=>({...e,participants:e.participants.slice()}))}}:{}),...(r.damageBasis==='effective-aggregate-v1'?{damageBasis:r.damageBasis}:{}),...(r.ending?{ending:{...r.ending,winner:r.sides[r.ending.winner].team.id}}:{}),resources:{version:1,players:Object.fromEntries(r.sides.flatMap(s=>s.ps.map(p=>[p.p.id,matchGoldLedger(p)])))},date:r.date,patch,winner:r.sides[r.winner].team.id,duration:r.duration,
     sides:r.sides.map(s=>({team:s.team.id,name:s.team.name,players:s.ps.map(p=>[p.p.id,p.p.name,p.role,p.champ.id,p.k,p.d,p.a,Math.round(p.cs),Math.round(p.goldEarned),Math.round(p.dmg),p.lvl,matchQuestItems(p).slice()])})),
     championNames:Object.fromEntries(r.sides.flatMap(s=>s.ps.map(p=>[p.champ.id,championDisplayName(p.champ)]))),
     itemNames:Object.fromEntries(r.sides.flatMap(s=>s.ps.flatMap(p=>matchQuestItems(p).map(id=>[id,p.patchRef?.itemDefs?.[id]?.name||id])))),
@@ -11865,6 +11877,7 @@ function recordedPublicMatch(db,rec,game){
   if(rec.practiceModel&&(db.world?.fired||![game?.blue,game?.red].some(id=>managerControlsSquad(db,id))))return {reason:'no-authority',record:null};
   const p=game?.publicRecord;
   if(!p)return {reason:'not-recorded',record:null};
+  if(p.structureSelectionBasis!==undefined&&p.structureSelectionBasis!=='progress-seeded-ties-v1')return {reason:'unverified-source',record:null};
   if(p.damageBasis!==undefined&&p.damageBasis!=='effective-aggregate-v1')return {reason:'unverified-source',record:null};
   if(!recordedGoldLedgerValid(p)||!recordedObjectivesValid(p)||!recordedTakedownsValid(p))return {reason:'unverified-source',record:null};
   if(!recordedEndingValid(p)||p.version!==1||!['championNames','itemNames'].every(k=>p[k]&&typeof p[k]==='object'&&!Array.isArray(p[k])&&Object.values(p[k]).every(x=>typeof x==='string'))||p.date!==game.date||p.patch!==game.patch||p.patch!==rec.patch||!observedMetaDate(db,p)||p.winner!==game.winner||!Number.isFinite(p.duration)||p.duration<=0||!Array.isArray(p.sides)||p.sides.length!==2||p.sides.some((s,i)=>!s||typeof s!=='object'||s.team!==[game.blue,game.red][i]||typeof s.name!=='string'||!Array.isArray(s.players)||s.players.length!==5||new Set(s.players.map(x=>x?.[2])).size!==5||s.players.some(x=>!Array.isArray(x)||x.length!==12||typeof x[0]!=='string'||typeof x[1]!=='string'||!ROLES.includes(x[2])||typeof x[3]!=='string'||!x.slice(4,11).every(Number.isFinite)||!Array.isArray(x[11])||x[11].length>7||!x[11].every(id=>typeof id==='string')))||!Array.isArray(p.events)||p.events.length>24||!Number.isInteger(p.eventCount)||p.eventCount<p.events.length||p.events.some(e=>!Array.isArray(e)||e.length!==5||!Number.isFinite(e[0])||!Number.isFinite(e[1])||![-1,0,1].includes(e[3])||typeof e[4]!=='string'||!['kill','fight','obj','tower','nexus'].includes(e[2])||e[0]<0||e[0]>Math.ceil(p.duration)||e[1]<0||e[1]>=60))return {reason:'unverified-source',record:null};
@@ -13777,7 +13790,7 @@ function bindRecordedDraftReview(root,rec){
 function renderPublicMatchReview(db,rec,game,filter={}){
   const read=recordedPublicMatch(db,rec,game),p=read.record;
   if(!p)return `<section><h3>저장된 경기 기록</h3><p class="hint">${read.reason==='no-authority'?'이 연습 경기 기록의 조회 권한이 없습니다.':read.reason==='not-recorded'?'이 경기의 당시 상세 기록이 없습니다. 세트 요약과 기록된 밴픽 근거만 확인할 수 있습니다.':'경기 기록의 출처를 확인할 수 없습니다.'} 현재 선수 상태로 과거 기록을 다시 만들지 않습니다.</p></section>`;
-  return `<section><h3>${rec.practiceModel?'연습 당시 관측된 경기 기록':'당시 확정된 경기 기록'}</h3><p class="hint">${esc(p.date)} · 패치 ${esc(p.patch)} · ${p.duration.toFixed(1)}분${p.ending?` · 넥서스 파괴 ${fmtTime(p.ending.minute,p.ending.second)}`:''}. ${rec.practiceModel?'참가 구단의 비공개 연습 관측입니다.':'공개 경기 결과입니다.'} 숨은 능력·숙련 추정이나 승패 원인 판정이 아닙니다.</p><p class="hint">${p.damageBasis==='effective-aggregate-v1'?'피해량은 남은 체력 예산 안에서 집계한 값이며, 실제 스킬별 피해 판정은 아닙니다.':'이전 기록의 피해 집계 방식은 저장되지 않았습니다. 현재 계산으로 바꾸지 않습니다.'}</p>${p.sides.map(s=>`<h4>${esc(s.name)}</h4><div class="scroll"><table><thead><tr><th>선수·역할</th><th>챔피언</th><th>K/D/A</th><th>CS</th><th>획득 골드</th><th>피해량</th><th>레벨</th></tr></thead><tbody>${s.players.filter(x=>!filter.position||x[2]===filter.position).map(x=>`<tr><td>${esc(x[1])} · ${ROLE_KO[x[2]]}</td><td>${esc(p.championNames[x[3]]||x[3])}</td><td>${x[4]}/${x[5]}/${x[6]}</td><td>${x[7]}</td><td>${x[8]}</td><td>${x[9]}</td><td>${x[10]}</td></tr>`).join('')}</tbody></table></div>`).join('')}${renderRecordedGoldUse(p,filter)}${renderRecordedObjectives(p)}${renderRecordedTakedowns(p)}${filter.events===false?'':`<h4>실제 주요 사건</h4><p class="hint">${p.events.length?'당시 로그의 공개 처치·교전·오브젝트·구조물 사건 '+p.events.length+'건 / '+p.eventCount+'건'+(p.eventCount>p.events.length?' · 중간 사건은 저장 크기를 제한하기 위해 생략했습니다.':''): '당시 주요 사건 로그를 수집하지 않았습니다. 결과로 사건을 추정하지 않습니다.'}</p><ol>${p.events.map(e=>`<li><time>${fmtTime(e[0],e[1])}</time> ${esc(e[4])}</li>`).join('')}</ol>`}</section>`;
+  return `<section><h3>${rec.practiceModel?'연습 당시 관측된 경기 기록':'당시 확정된 경기 기록'}</h3><p class="hint">${esc(p.date)} · 패치 ${esc(p.patch)} · ${p.duration.toFixed(1)}분${p.ending?` · 넥서스 파괴 ${fmtTime(p.ending.minute,p.ending.second)}`:''}. ${rec.practiceModel?'참가 구단의 비공개 연습 관측입니다.':'공개 경기 결과입니다.'} 숨은 능력·숙련 추정이나 승패 원인 판정이 아닙니다.</p><p class="hint">${p.damageBasis==='effective-aggregate-v1'?'피해량은 남은 체력 예산 안에서 집계한 값이며, 실제 스킬별 피해 판정은 아닙니다.':'이전 기록의 피해 집계 방식은 저장되지 않았습니다. 현재 계산으로 바꾸지 않습니다.'}</p>${p.structureSelectionBasis==='progress-seeded-ties-v1'?'<p class="hint">구조물 대상은 공격이 허용된 라인의 진행도를 우선하고, 동률은 당시 시드로 선택했습니다. 정확한 이동·거리 판정은 아닙니다.</p>':''}${p.sides.map(s=>`<h4>${esc(s.name)}</h4><div class="scroll"><table><thead><tr><th>선수·역할</th><th>챔피언</th><th>K/D/A</th><th>CS</th><th>획득 골드</th><th>피해량</th><th>레벨</th></tr></thead><tbody>${s.players.filter(x=>!filter.position||x[2]===filter.position).map(x=>`<tr><td>${esc(x[1])} · ${ROLE_KO[x[2]]}</td><td>${esc(p.championNames[x[3]]||x[3])}</td><td>${x[4]}/${x[5]}/${x[6]}</td><td>${x[7]}</td><td>${x[8]}</td><td>${x[9]}</td><td>${x[10]}</td></tr>`).join('')}</tbody></table></div>`).join('')}${renderRecordedGoldUse(p,filter)}${renderRecordedObjectives(p)}${renderRecordedTakedowns(p)}${filter.events===false?'':`<h4>실제 주요 사건</h4><p class="hint">${p.events.length?'당시 로그의 공개 처치·교전·오브젝트·구조물 사건 '+p.events.length+'건 / '+p.eventCount+'건'+(p.eventCount>p.events.length?' · 중간 사건은 저장 크기를 제한하기 위해 생략했습니다.':''): '당시 주요 사건 로그를 수집하지 않았습니다. 결과로 사건을 추정하지 않습니다.'}</p><ol>${p.events.map(e=>`<li><time>${fmtTime(e[0],e[1])}</time> ${esc(e[4])}</li>`).join('')}</ol>`}</section>`;
 }
 function renderRecordedGoldUse(p,filter){
   if(!p.resources)return '<p class="hint">이 경기의 당시 골드 사용 내역은 저장되지 않았습니다.</p>';

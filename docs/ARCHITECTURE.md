@@ -247,3 +247,7 @@ fields; no second contract, roster, finance or preview ledger is introduced.
 ## 8.6.2 실제 스틸 실행자 source
 
 `engine.js:objectiveTick`가 실제 lj 스틸 성공 때 actor를 `objective-awards.js`에 전달한다. 공통 writer는 소유/alive JGL을 기존 participant와 중복 없이 합치고 quest를 작성하며 optional receipt.stealer를 기록한다. `match-history.js`는 실제 source를 복사하고 `recordedObjectivesValid`는 archived JGL/participant 포함을 검증한다. `ui-match-history.js:renderRecordedObjectives`는 당시 이름을 optional details에 표시한다. 구형/일반 receipt에 actor를 추정하지 않는다. focused source/official/save/UI/거절 검증은 `objective-steal-acceptance.mjs`, bounded 자연 재현은 `objective-steal-probe.mjs`이며 확률/보상/위치 규칙은 변경하지 않는다.
+
+## 8.6.3 구조물 선택의 실제 rule/source
+
+`engine.js:selectStructureLane`가 허용 후보의 progress 우선·canonical seeded tie를 소유하며 `takeStructure`가 opt.lane/allowInhib/terminal과 실제 tier/기존 gold/quest writer를 소유한다. 실제 result.structureSelectionBasis→match-history 복사/지원 marker 검증→ui-match-history의 당시 한국어 rule 설명→기존 full/lite save. `structure-selection-acceptance.mjs`가 permutation/RNG·양측 자원/거절·official/legacy/save/UI를, `structure-selection-probe.mjs`가 bounded actual trace를 검증한다. 기존 RNG 순서/결과는 의도적으로 바뀌며 macro hunters comparator와 정확한 geometry는 미완료다.

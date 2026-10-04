@@ -1,0 +1,569 @@
+{
+  "runs": [
+    {
+      "i": 0,
+      "winner": 1,
+      "gold": [
+        82145.22394821247,
+        80865.9624405465
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 45,
+        "second": 43
+      },
+      "duration": 45.71666666666667,
+      "behind": true
+    },
+    {
+      "i": 1,
+      "winner": 0,
+      "gold": [
+        43162.935613810194,
+        37286.40898149238
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 21,
+        "second": 59
+      },
+      "duration": 21.983333333333334,
+      "behind": false
+    },
+    {
+      "i": 2,
+      "winner": 1,
+      "gold": [
+        57049.91341836177,
+        64021.543127416706
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 32,
+        "second": 48
+      },
+      "duration": 32.8,
+      "behind": false
+    },
+    {
+      "i": 3,
+      "winner": 1,
+      "gold": [
+        56752.900981773506,
+        73299.146705619
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 36,
+        "second": 42
+      },
+      "duration": 36.7,
+      "behind": false
+    },
+    {
+      "i": 4,
+      "winner": 1,
+      "gold": [
+        47634.56722406617,
+        59908.83956913284
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 30,
+        "second": 33
+      },
+      "duration": 30.55,
+      "behind": false
+    },
+    {
+      "i": 5,
+      "winner": 1,
+      "gold": [
+        47517.96120184331,
+        49188.75477319391
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 25,
+        "second": 59
+      },
+      "duration": 25.983333333333334,
+      "behind": false
+    },
+    {
+      "i": 6,
+      "winner": 1,
+      "gold": [
+        62768.09132250046,
+        68822.90978689345
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 35,
+        "second": 58
+      },
+      "duration": 35.96666666666667,
+      "behind": false
+    },
+    {
+      "i": 7,
+      "winner": 1,
+      "gold": [
+        67748.18296616944,
+        76357.61144198597
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 38,
+        "second": 46
+      },
+      "duration": 38.766666666666666,
+      "behind": false
+    },
+    {
+      "i": 8,
+      "winner": 0,
+      "gold": [
+        70568.71203997539,
+        58267.29265649793
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 33,
+        "second": 59
+      },
+      "duration": 33.983333333333334,
+      "behind": false
+    },
+    {
+      "i": 9,
+      "winner": 1,
+      "gold": [
+        58716.219635658854,
+        71813.31377269517
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 37,
+        "second": 22
+      },
+      "duration": 37.36666666666667,
+      "behind": false
+    },
+    {
+      "i": 10,
+      "winner": 1,
+      "gold": [
+        65039.40600554842,
+        76749.50928273419
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 39,
+        "second": 59
+      },
+      "duration": 39.983333333333334,
+      "behind": false
+    },
+    {
+      "i": 11,
+      "winner": 1,
+      "gold": [
+        44859.35969011602,
+        56866.072108412474
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 27,
+        "second": 51
+      },
+      "duration": 27.85,
+      "behind": false
+    },
+    {
+      "i": 12,
+      "winner": 1,
+      "gold": [
+        43780.53112999901,
+        53676.72846182106
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 26,
+        "second": 56
+      },
+      "duration": 26.933333333333334,
+      "behind": false
+    },
+    {
+      "i": 13,
+      "winner": 0,
+      "gold": [
+        65114.89249305976,
+        54930.119268463604
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 32,
+        "second": 59
+      },
+      "duration": 32.983333333333334,
+      "behind": false
+    },
+    {
+      "i": 14,
+      "winner": 1,
+      "gold": [
+        60225.4814281071,
+        65715.33880469279
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 32,
+        "second": 59
+      },
+      "duration": 32.983333333333334,
+      "behind": false
+    },
+    {
+      "i": 15,
+      "winner": 1,
+      "gold": [
+        44543.18765330487,
+        49065.684176719806
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 25,
+        "second": 42
+      },
+      "duration": 25.7,
+      "behind": false
+    },
+    {
+      "i": 16,
+      "winner": 0,
+      "gold": [
+        75956.79691348999,
+        61563.73334747459
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 39,
+        "second": 37
+      },
+      "duration": 39.61666666666667,
+      "behind": false
+    },
+    {
+      "i": 17,
+      "winner": 1,
+      "gold": [
+        42579.984568269174,
+        50445.51707222173
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 25,
+        "second": 59
+      },
+      "duration": 25.983333333333334,
+      "behind": false
+    },
+    {
+      "i": 18,
+      "winner": 0,
+      "gold": [
+        83799.27407010099,
+        68668.14183182055
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 41,
+        "second": 31
+      },
+      "duration": 41.516666666666666,
+      "behind": false
+    },
+    {
+      "i": 19,
+      "winner": 1,
+      "gold": [
+        47195.80165433492,
+        55710.13234200986
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 26,
+        "second": 59
+      },
+      "duration": 26.983333333333334,
+      "behind": false
+    },
+    {
+      "i": 20,
+      "winner": 1,
+      "gold": [
+        62826.50062570724,
+        60168.30387739485
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 33,
+        "second": 8
+      },
+      "duration": 33.13333333333333,
+      "behind": true
+    },
+    {
+      "i": 21,
+      "winner": 0,
+      "gold": [
+        47709.3501333621,
+        40679.30678762422
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 23,
+        "second": 59
+      },
+      "duration": 23.983333333333334,
+      "behind": false
+    },
+    {
+      "i": 22,
+      "winner": 1,
+      "gold": [
+        51622.53306050265,
+        53447.94407632487
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 28,
+        "second": 56
+      },
+      "duration": 28.933333333333334,
+      "behind": false
+    },
+    {
+      "i": 23,
+      "winner": 1,
+      "gold": [
+        65678.13152660614,
+        66603.67448604047
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 36,
+        "second": 13
+      },
+      "duration": 36.21666666666667,
+      "behind": false
+    },
+    {
+      "i": 24,
+      "winner": 1,
+      "gold": [
+        51769.25354315122,
+        53237.28010551742
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 28,
+        "second": 48
+      },
+      "duration": 28.8,
+      "behind": false
+    },
+    {
+      "i": 25,
+      "winner": 1,
+      "gold": [
+        71056.00577359558,
+        81652.44430463815
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 43,
+        "second": 51
+      },
+      "duration": 43.85,
+      "behind": false
+    },
+    {
+      "i": 26,
+      "winner": 0,
+      "gold": [
+        55809.5762743395,
+        44052.692522762176
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 27,
+        "second": 49
+      },
+      "duration": 27.816666666666666,
+      "behind": false
+    },
+    {
+      "i": 27,
+      "winner": 1,
+      "gold": [
+        46373.12720185402,
+        50257.97601948769
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 26,
+        "second": 56
+      },
+      "duration": 26.933333333333334,
+      "behind": false
+    },
+    {
+      "i": 28,
+      "winner": 0,
+      "gold": [
+        48560.21623903694,
+        45785.42525989434
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 25,
+        "second": 59
+      },
+      "duration": 25.983333333333334,
+      "behind": false
+    },
+    {
+      "i": 29,
+      "winner": 1,
+      "gold": [
+        41964.74356652432,
+        49326.50815666158
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 25,
+        "second": 59
+      },
+      "duration": 25.983333333333334,
+      "behind": false
+    },
+    {
+      "i": 30,
+      "winner": 1,
+      "gold": [
+        46555.44793764085,
+        56727.227811584475
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 26,
+        "second": 59
+      },
+      "duration": 26.983333333333334,
+      "behind": false
+    },
+    {
+      "i": 31,
+      "winner": 0,
+      "gold": [
+        74304.20133596216,
+        58132.09528711699
+      ],
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 35,
+        "second": 40
+      },
+      "duration": 35.666666666666664,
+      "behind": false
+    }
+  ],
+  "conversion": [
+    {
+      "i": 17,
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "events": [
+        {
+          "t": 27,
+          "sec": 31,
+          "text": "CR 한타 승리 후 바론 처치",
+          "side": 0,
+          "major": true,
+          "kind": "obj"
+        }
+      ]
+    }
+  ],
+  "baselineCommit": "83a8fd53d844065c2fbca12846dc4967a716006a",
+  "date": "2026-10-04"
+}
