@@ -1,0 +1,3342 @@
+{
+  "date": "2026-10-04",
+  "setup": "same NA franchise four-team fixture as match-adjudication-acceptance; first 32 existing scenario seeds, no coefficient/winner manipulation; fictional source, not professional comeback target",
+  "checked": [
+    {
+      "seed": "nexus-resource-scenario-0",
+      "winner": 0,
+      "gold": [
+        62296.02608117362,
+        53986.14095516332
+      ],
+      "duration": 31.983333333333334
+    },
+    {
+      "seed": "nexus-resource-scenario-1",
+      "winner": 0,
+      "gold": [
+        50796.41419684746,
+        42074.983881716325
+      ],
+      "duration": 24.933333333333334
+    },
+    {
+      "seed": "nexus-resource-scenario-2",
+      "winner": 0,
+      "gold": [
+        63033.18671030589,
+        53697.79201364152
+      ],
+      "duration": 31.816666666666666
+    },
+    {
+      "seed": "nexus-resource-scenario-3",
+      "winner": 1,
+      "gold": [
+        62262.266988185766,
+        68793.29200831881
+      ],
+      "duration": 36.88333333333333
+    },
+    {
+      "seed": "nexus-resource-scenario-4",
+      "winner": 1,
+      "gold": [
+        39870.158746243025,
+        44414.353597128684
+      ],
+      "duration": 22.916666666666668
+    },
+    {
+      "seed": "nexus-resource-scenario-5",
+      "winner": 0,
+      "gold": [
+        71580.77305891733,
+        68584.34833823168
+      ],
+      "duration": 36.983333333333334
+    },
+    {
+      "seed": "nexus-resource-scenario-6",
+      "winner": 0,
+      "gold": [
+        81608.69525372743,
+        75161.27084721309
+      ],
+      "duration": 45.25
+    },
+    {
+      "seed": "nexus-resource-scenario-7",
+      "winner": 1,
+      "gold": [
+        64006.434437907636,
+        77047.02548711712
+      ],
+      "duration": 38.983333333333334
+    },
+    {
+      "seed": "nexus-resource-scenario-8",
+      "winner": 1,
+      "gold": [
+        66144.87579828016,
+        57995.21222062503
+      ],
+      "duration": 32.516666666666666
+    },
+    {
+      "seed": "nexus-resource-scenario-9",
+      "winner": 1,
+      "gold": [
+        45958.31229269863,
+        53152.51088575111
+      ],
+      "duration": 26.95
+    },
+    {
+      "seed": "nexus-resource-scenario-10",
+      "winner": 1,
+      "gold": [
+        60720.19122166099,
+        60355.76986019312
+      ],
+      "duration": 32.8
+    },
+    {
+      "seed": "nexus-resource-scenario-11",
+      "winner": 0,
+      "gold": [
+        67371.55841777037,
+        61936.40706275846
+      ],
+      "duration": 34.86666666666667
+    },
+    {
+      "seed": "nexus-resource-scenario-12",
+      "winner": 0,
+      "gold": [
+        59482.008356242615,
+        52573.00921795562
+      ],
+      "duration": 29.716666666666665
+    },
+    {
+      "seed": "nexus-resource-scenario-13",
+      "winner": 0,
+      "gold": [
+        63189.40308333242,
+        55514.77499980248
+      ],
+      "duration": 32.983333333333334
+    },
+    {
+      "seed": "nexus-resource-scenario-14",
+      "winner": 0,
+      "gold": [
+        58006.442505384635,
+        51502.28782607042
+      ],
+      "duration": 27.85
+    },
+    {
+      "seed": "nexus-resource-scenario-15",
+      "winner": 0,
+      "gold": [
+        76001.45745215287,
+        77889.42402547429
+      ],
+      "duration": 42.45
+    },
+    {
+      "seed": "nexus-resource-scenario-16",
+      "winner": 1,
+      "gold": [
+        50673.91266705936,
+        62031.252589202944
+      ],
+      "duration": 31.9
+    },
+    {
+      "seed": "nexus-resource-scenario-17",
+      "winner": 0,
+      "gold": [
+        67165.71524019672,
+        54800.65153200598
+      ],
+      "duration": 33.3
+    },
+    {
+      "seed": "nexus-resource-scenario-18",
+      "winner": 0,
+      "gold": [
+        53582.02795938718,
+        44359.12149155934
+      ],
+      "duration": 26.9
+    },
+    {
+      "seed": "nexus-resource-scenario-19",
+      "winner": 1,
+      "gold": [
+        47832.5944222746,
+        54222.50889714909
+      ],
+      "duration": 26.983333333333334
+    },
+    {
+      "seed": "nexus-resource-scenario-20",
+      "winner": 1,
+      "gold": [
+        63313.589606001595,
+        74532.8426602465
+      ],
+      "duration": 39.88333333333333
+    },
+    {
+      "seed": "nexus-resource-scenario-21",
+      "winner": 0,
+      "gold": [
+        57404.37009247536,
+        43217.33253606901
+      ],
+      "duration": 27.983333333333334
+    },
+    {
+      "seed": "nexus-resource-scenario-22",
+      "winner": 1,
+      "gold": [
+        64209.24500923369,
+        78205.69223478908
+      ],
+      "duration": 39.483333333333334
+    },
+    {
+      "seed": "nexus-resource-scenario-23",
+      "winner": 0,
+      "gold": [
+        64444.52682855906,
+        53921.223698563976
+      ],
+      "duration": 32.483333333333334
+    },
+    {
+      "seed": "nexus-resource-scenario-24",
+      "winner": 1,
+      "gold": [
+        49092.25109576078,
+        58167.27840464294
+      ],
+      "duration": 29.6
+    },
+    {
+      "seed": "nexus-resource-scenario-25",
+      "winner": 0,
+      "gold": [
+        60344.648081949446,
+        53616.64317984815
+      ],
+      "duration": 29.95
+    },
+    {
+      "seed": "nexus-resource-scenario-26",
+      "winner": 0,
+      "gold": [
+        55220.766478781996,
+        45524.29430807789
+      ],
+      "duration": 27.933333333333334
+    },
+    {
+      "seed": "nexus-resource-scenario-27",
+      "winner": 1,
+      "gold": [
+        58966.375648471396,
+        61551.35304720833
+      ],
+      "duration": 32.95
+    },
+    {
+      "seed": "nexus-resource-scenario-28",
+      "winner": 0,
+      "gold": [
+        60562.400908696465,
+        53124.33629778617
+      ],
+      "duration": 31.65
+    },
+    {
+      "seed": "nexus-resource-scenario-29",
+      "winner": 1,
+      "gold": [
+        54132.62131111639,
+        66416.3558646592
+      ],
+      "duration": 33.666666666666664
+    },
+    {
+      "seed": "nexus-resource-scenario-30",
+      "winner": 1,
+      "gold": [
+        52057.67586299607,
+        57527.311243803415
+      ],
+      "duration": 28.75
+    },
+    {
+      "seed": "nexus-resource-scenario-31",
+      "winner": 0,
+      "gold": [
+        47427.77027609637,
+        33850.027326449475
+      ],
+      "duration": 21.65
+    }
+  ],
+  "scenarios": [
+    {
+      "seed": "nexus-resource-scenario-8",
+      "winner": 1,
+      "teams": [
+        "VXG",
+        "CR"
+      ],
+      "gold": [
+        66144.87579828016,
+        57995.21222062503
+      ],
+      "duration": 32.516666666666666,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 32,
+        "second": 31
+      },
+      "alive": [
+        "NA_56",
+        "NA_57",
+        "NA_58",
+        "NA_59",
+        "NA_60"
+      ],
+      "enemyNexus": false,
+      "enemyNexusT": 0,
+      "enemyTowers": {
+        "top": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "mid": [
+          false,
+          false,
+          1,
+          1
+        ],
+        "bot": [
+          false,
+          false,
+          false,
+          1
+        ]
+      },
+      "events": [
+        {
+          "t": 3,
+          "sec": 15,
+          "text": "VXG Tiskx(Poppy) 바텀 갱킹 — Valvy 점멸로 생존",
+          "side": 0,
+          "major": false,
+          "kind": "gank"
+        },
+        {
+          "t": 3,
+          "sec": 22,
+          "text": "CR Jodan(Jarvan IV) 바텀 갱킹 → Tiskx 카운터 정글",
+          "side": 1,
+          "major": true,
+          "kind": "gank"
+        },
+        {
+          "t": 3,
+          "sec": 25,
+          "text": "CR Caezo(Leona) → VXG Sylor(Zilean) 처치 (퍼스트 블러드) · 바텀 카운터 정글",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 3,
+          "sec": 27,
+          "text": "VXG Gorth(Tristana) → CR Jodan(Jarvan IV) 처치 · 바텀 카운터 정글",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 3,
+          "sec": 33,
+          "text": "VXG Sylor(Zilean) → CR Valvy(Nilah) 처치 · 바텀 카운터 정글",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 3,
+          "sec": 35,
+          "text": "바텀 카운터 정글: VXG 승리 (2킬 / 1데스)",
+          "side": 0,
+          "major": true,
+          "kind": "fight"
+        },
+        {
+          "t": 4,
+          "sec": 4,
+          "text": "CR Caezo(Leona) 귀환",
+          "side": 1,
+          "major": false,
+          "kind": "recall"
+        },
+        {
+          "t": 5,
+          "sec": 9,
+          "text": "VXG 바다 드래곤 처치 (1스택)",
+          "side": 0,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 6,
+          "sec": 12,
+          "text": "VXG Tiskx(Poppy) 바텀 갱킹 → Jodan 카운터 정글",
+          "side": 0,
+          "major": true,
+          "kind": "gank"
+        },
+        {
+          "t": 6,
+          "sec": 16,
+          "text": "VXG Sylor(Zilean) → CR Valvy(Nilah) 처치 · 바텀 카운터 정글",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 6,
+          "sec": 19,
+          "text": "바텀 카운터 정글: VXG 승리 (1킬 / 0데스) · 패배 측 후퇴",
+          "side": 0,
+          "major": true,
+          "kind": "fight"
+        },
+        {
+          "t": 6,
+          "sec": 24,
+          "text": "CR Jodan(Jarvan IV) 바텀 갱킹",
+          "side": 1,
+          "major": false,
+          "kind": "gank"
+        },
+        {
+          "t": 6,
+          "sec": 31,
+          "text": "CR Jodan(Jarvan IV) → VXG Sylor(Zilean) 처치 · 바텀 갱킹",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 9,
+          "sec": 9,
+          "text": "CR Jolyx(Yone) 점멸 사용",
+          "side": 1,
+          "major": false,
+          "kind": "flash"
+        },
+        {
+          "t": 9,
+          "sec": 13,
+          "text": "VXG Ulra(Diana) → CR Jolyx(Yone) 처치 · 미드 라인전",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 9,
+          "sec": 18,
+          "text": "VXG Tiskx(Poppy) 바텀 갱킹",
+          "side": 0,
+          "major": false,
+          "kind": "gank"
+        },
+        {
+          "t": 9,
+          "sec": 23,
+          "text": "VXG Tiskx(Poppy) → CR Caezo(Leona) 처치 · 바텀 갱킹",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 10,
+          "sec": 5,
+          "text": "CR Jodan(Jarvan IV) 바텀 갱킹",
+          "side": 1,
+          "major": false,
+          "kind": "gank"
+        },
+        {
+          "t": 10,
+          "sec": 7,
+          "text": "CR Jodan(Jarvan IV) → VXG Gorth(Tristana) 처치 · 바텀 갱킹",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 10,
+          "sec": 14,
+          "text": "VXG 바람 드래곤 포기 → 반대편 교환",
+          "side": 0,
+          "major": false,
+          "kind": ""
+        },
+        {
+          "t": 10,
+          "sec": 21,
+          "text": "VXG 탑 1차 포탑 파괴 (첫 포탑)",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 10,
+          "sec": 27,
+          "text": "CR 바람 드래곤 처치 (1스택)",
+          "side": 1,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 12,
+          "sec": 7,
+          "text": "VXG Nyro(Yasuo) 탑 퀘스트 완료",
+          "side": 0,
+          "major": true,
+          "kind": "quest"
+        },
+        {
+          "t": 12,
+          "sec": 13,
+          "text": "VXG Tiskx(Poppy) 미드 갱킹",
+          "side": 0,
+          "major": false,
+          "kind": "gank"
+        },
+        {
+          "t": 12,
+          "sec": 19,
+          "text": "VXG Tiskx(Poppy) → CR Jolyx(Yone) 처치 · 미드 갱킹",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 12,
+          "sec": 26,
+          "text": "VXG Gorth(Tristana) 원딜 퀘스트 완료",
+          "side": 0,
+          "major": true,
+          "kind": "quest"
+        },
+        {
+          "t": 12,
+          "sec": 30,
+          "text": "VXG 미드 1차 포탑 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 13,
+          "sec": 5,
+          "text": "VXG Ulra(Diana) 미드 퀘스트 완료",
+          "side": 0,
+          "major": true,
+          "kind": "quest"
+        },
+        {
+          "t": 13,
+          "sec": 8,
+          "text": "CR Zerro(Aatrox) 탑 퀘스트 완료",
+          "side": 1,
+          "major": true,
+          "kind": "quest"
+        },
+        {
+          "t": 13,
+          "sec": 12,
+          "text": "CR Valvy(Nilah) 원딜 퀘스트 완료",
+          "side": 1,
+          "major": true,
+          "kind": "quest"
+        },
+        {
+          "t": 13,
+          "sec": 14,
+          "text": "CR Jodan(Jarvan IV) 바텀 갱킹 → Tiskx 카운터 정글",
+          "side": 1,
+          "major": true,
+          "kind": "gank"
+        },
+        {
+          "t": 13,
+          "sec": 17,
+          "text": "VXG Gorth(Tristana) → CR Jodan(Jarvan IV) 처치 · 바텀 카운터 정글",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 13,
+          "sec": 19,
+          "text": "VXG Gorth(Tristana) → CR Valvy(Nilah) 처치 · 바텀 카운터 정글",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 13,
+          "sec": 23,
+          "text": "VXG Gorth(Tristana) → CR Caezo(Leona) 처치 · 바텀 카운터 정글",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 13,
+          "sec": 29,
+          "text": "바텀 카운터 정글: VXG 승리 (3킬 / 0데스)",
+          "side": 0,
+          "major": true,
+          "kind": "fight"
+        },
+        {
+          "t": 13,
+          "sec": 31,
+          "text": "VXG 바텀 1차 포탑 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 14,
+          "sec": 10,
+          "text": "CR Jolyx(Yone) 미드 퀘스트 완료",
+          "side": 1,
+          "major": true,
+          "kind": "quest"
+        },
+        {
+          "t": 14,
+          "sec": 13,
+          "text": "VXG Tiskx(Poppy) 정글 퀘스트 완료",
+          "side": 0,
+          "major": true,
+          "kind": "quest"
+        },
+        {
+          "t": 14,
+          "sec": 17,
+          "text": "VXG 협곡의 전령 획득",
+          "side": 0,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 14,
+          "sec": 20,
+          "text": "VXG 전령 사용 (미드)",
+          "side": 0,
+          "major": false,
+          "kind": ""
+        },
+        {
+          "t": 14,
+          "sec": 22,
+          "text": "VXG 미드 2차 포탑 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 15,
+          "sec": 10,
+          "text": "CR 화염 드래곤 포기 → 반대편 교환",
+          "side": 1,
+          "major": false,
+          "kind": ""
+        },
+        {
+          "t": 15,
+          "sec": 14,
+          "text": "CR 탑 1차 포탑 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 15,
+          "sec": 21,
+          "text": "VXG 화염 드래곤 처치 (2스택)",
+          "side": 0,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 16,
+          "sec": 6,
+          "text": "CR Jodan(Jarvan IV) 정글 퀘스트 완료",
+          "side": 1,
+          "major": true,
+          "kind": "quest"
+        },
+        {
+          "t": 16,
+          "sec": 9,
+          "text": "VXG 탑 2차 포탑 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 17,
+          "sec": 14,
+          "text": "VXG 바텀 2차 포탑 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 18,
+          "sec": 15,
+          "text": "VXG Sylor(Zilean) 서폿 퀘스트 완료",
+          "side": 0,
+          "major": true,
+          "kind": "quest"
+        },
+        {
+          "t": 18,
+          "sec": 21,
+          "text": "CR Caezo(Leona) 서폿 퀘스트 완료",
+          "side": 1,
+          "major": true,
+          "kind": "quest"
+        },
+        {
+          "t": 18,
+          "sec": 26,
+          "text": "VXG 탑 억제기 포탑 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 19,
+          "sec": 6,
+          "text": "CR Zerro(Aatrox) → VXG Gorth(Tristana) 처치 · 수성 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 19,
+          "sec": 8,
+          "text": "CR Jodan(Jarvan IV) → VXG Sylor(Zilean) 처치 · 수성 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 19,
+          "sec": 15,
+          "text": "VXG Gorth(Tristana) → CR Jolyx(Yone) 처치 · 수성 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 19,
+          "sec": 19,
+          "text": "VXG Sylor(Zilean) → CR Valvy(Nilah) 처치 · 수성 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 19,
+          "sec": 25,
+          "text": "수성 한타: VXG 승리 (2킬 / 2데스)",
+          "side": 0,
+          "major": true,
+          "kind": "fight"
+        },
+        {
+          "t": 20,
+          "sec": 16,
+          "text": "VXG 대지 드래곤 처치 (3스택)",
+          "side": 0,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 20,
+          "sec": 18,
+          "text": "VXG 바론 처치",
+          "side": 0,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 23,
+          "sec": 6,
+          "text": "CR Zerro(Aatrox) → VXG Gorth(Tristana) 처치 · 수성 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 23,
+          "sec": 12,
+          "text": "CR Valvy(Nilah) → VXG Sylor(Zilean) 처치 · 수성 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 23,
+          "sec": 15,
+          "text": "VXG Gorth(Tristana) → CR Zerro(Aatrox) 처치 · 수성 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 23,
+          "sec": 19,
+          "text": "VXG Gorth(Tristana) → CR Jolyx(Yone) 처치 · 수성 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 23,
+          "sec": 21,
+          "text": "VXG Nyro(Yasuo) → CR Valvy(Nilah) 처치 · 수성 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 23,
+          "sec": 24,
+          "text": "수성 한타: VXG 승리 (3킬 / 2데스)",
+          "side": 0,
+          "major": true,
+          "kind": "fight"
+        },
+        {
+          "t": 24,
+          "sec": 12,
+          "text": "CR Valvy(Nilah) → VXG Gorth(Tristana) 처치 · 수성 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 24,
+          "sec": 19,
+          "text": "CR Zerro(Aatrox) → VXG Sylor(Zilean) 처치 · 수성 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 24,
+          "sec": 26,
+          "text": "VXG Sylor(Zilean) → CR Jolyx(Yone) 처치 · 수성 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 24,
+          "sec": 32,
+          "text": "VXG Sylor(Zilean) → CR Valvy(Nilah) 처치 · 수성 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 24,
+          "sec": 37,
+          "text": "수성 한타: VXG 승리 (2킬 / 2데스)",
+          "side": 0,
+          "major": true,
+          "kind": "fight"
+        },
+        {
+          "t": 25,
+          "sec": 11,
+          "text": "CR 바다 드래곤 포기 → 반대편 교환",
+          "side": 1,
+          "major": false,
+          "kind": ""
+        },
+        {
+          "t": 25,
+          "sec": 13,
+          "text": "CR 탑 2차 포탑 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 25,
+          "sec": 19,
+          "text": "VXG 바다 드래곤 처치 (4스택)",
+          "side": 0,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 25,
+          "sec": 24,
+          "text": "VXG 드래곤 영혼 획득",
+          "side": 0,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 26,
+          "sec": 8,
+          "text": "CR 바론 포기 → 반대편 교환",
+          "side": 1,
+          "major": false,
+          "kind": ""
+        },
+        {
+          "t": 26,
+          "sec": 10,
+          "text": "CR 바텀 1차 포탑 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 26,
+          "sec": 12,
+          "text": "VXG 바론 처치",
+          "side": 0,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 26,
+          "sec": 17,
+          "text": "VXG Gorth(Tristana) → CR Zerro(Aatrox) 처치 · 탑 끊기",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 27,
+          "sec": 19,
+          "text": "VXG Gorth(Tristana) → CR Valvy(Nilah) 처치 · 바텀 끊기",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 27,
+          "sec": 24,
+          "text": "VXG 탑 억제기 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 28,
+          "sec": 6,
+          "text": "VXG 미드 억제기 포탑 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 29,
+          "sec": 8,
+          "text": "CR Caezo(Leona) → VXG Sylor(Zilean) 처치 · 탑 끊기",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 29,
+          "sec": 15,
+          "text": "VXG Nyro(Yasuo) → CR Zerro(Aatrox) 처치 · 탑 끊기",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 29,
+          "sec": 19,
+          "text": "VXG Sylor(Zilean) → CR Valvy(Nilah) 처치 · 탑 끊기",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 29,
+          "sec": 25,
+          "text": "탑 끊기: VXG 승리 (2킬 / 1데스)",
+          "side": 0,
+          "major": true,
+          "kind": "fight"
+        },
+        {
+          "t": 29,
+          "sec": 27,
+          "text": "CR 미드 1차 포탑 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 30,
+          "sec": 15,
+          "text": "CR Jodan(Jarvan IV) → VXG Gorth(Tristana) 처치 · 수성 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 30,
+          "sec": 22,
+          "text": "CR Valvy(Nilah) → VXG Sylor(Zilean) 처치 · 수성 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 30,
+          "sec": 29,
+          "text": "VXG Ulra(Diana) → CR Zerro(Aatrox) 처치 · 수성 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 30,
+          "sec": 32,
+          "text": "VXG Gorth(Tristana) → CR Jodan(Jarvan IV) 처치 · 수성 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 30,
+          "sec": 35,
+          "text": "VXG Sylor(Zilean) → CR Jolyx(Yone) 처치 · 수성 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 30,
+          "sec": 41,
+          "text": "수성 한타: VXG 승리 (3킬 / 2데스) · 패배 측 후퇴",
+          "side": 0,
+          "major": true,
+          "kind": "fight"
+        },
+        {
+          "t": 31,
+          "sec": 7,
+          "text": "CR Jodan(Jarvan IV) → VXG Nyro(Yasuo) 처치 · 장로 드래곤 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 31,
+          "sec": 13,
+          "text": "CR Jodan(Jarvan IV) → VXG Ulra(Diana) 처치 · 장로 드래곤 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 31,
+          "sec": 16,
+          "text": "CR Jodan(Jarvan IV) → VXG Sylor(Zilean) 처치 · 장로 드래곤 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 31,
+          "sec": 19,
+          "text": "VXG Ulra(Diana) → CR Jolyx(Yone) 처치 · 장로 드래곤 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 31,
+          "sec": 22,
+          "text": "장로 드래곤 한타: CR 승리 (3킬 / 1데스)",
+          "side": 1,
+          "major": true,
+          "kind": "fight"
+        },
+        {
+          "t": 31,
+          "sec": 25,
+          "text": "CR 장로 드래곤 처치",
+          "side": 1,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 31,
+          "sec": 28,
+          "text": "CR Valvy(Nilah) → VXG Tiskx(Poppy) 처치 · 수성 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 31,
+          "sec": 30,
+          "text": "CR 탑 억제기 포탑 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 31,
+          "sec": 33,
+          "text": "CR 탑 억제기 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 31,
+          "sec": 35,
+          "text": "CR 쌍둥이 포탑 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 31,
+          "sec": 37,
+          "text": "CR 쌍둥이 포탑 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 31,
+          "sec": 44,
+          "text": "CR 바텀 2차 포탑 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 32,
+          "sec": 7,
+          "text": "VXG 바론 포기 → 반대편 교환",
+          "side": 0,
+          "major": false,
+          "kind": ""
+        },
+        {
+          "t": 32,
+          "sec": 10,
+          "text": "CR 탑 억제기 재생성",
+          "side": 1,
+          "major": false,
+          "kind": ""
+        },
+        {
+          "t": 32,
+          "sec": 17,
+          "text": "VXG 바텀 억제기 포탑 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 32,
+          "sec": 21,
+          "text": "CR 바론 처치",
+          "side": 1,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 32,
+          "sec": 24,
+          "text": "CR 미드 2차 포탑 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 32,
+          "sec": 28,
+          "text": "CR 바텀 억제기 포탑 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 32,
+          "sec": 31,
+          "text": "CR 넥서스 파괴 — 승리",
+          "side": 1,
+          "major": true,
+          "kind": "nexus"
+        }
+      ]
+    },
+    {
+      "seed": "nexus-resource-scenario-10",
+      "winner": 1,
+      "teams": [
+        "VXG",
+        "CR"
+      ],
+      "gold": [
+        60720.19122166099,
+        60355.76986019312
+      ],
+      "duration": 32.8,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 32,
+        "second": 48
+      },
+      "alive": [
+        "NA_57",
+        "NA_59",
+        "NA_60"
+      ],
+      "enemyNexus": false,
+      "enemyNexusT": 0,
+      "enemyTowers": {
+        "top": [
+          false,
+          false,
+          1,
+          1
+        ],
+        "mid": [
+          false,
+          false,
+          false,
+          1
+        ],
+        "bot": [
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "events": [
+        {
+          "t": 3,
+          "sec": 8,
+          "text": "VXG Tiskx(Xin Zhao) 탑 갱킹 → Jodan 카운터 정글",
+          "side": 0,
+          "major": true,
+          "kind": "gank"
+        },
+        {
+          "t": 3,
+          "sec": 12,
+          "text": "CR Zerro(Aatrox) → VXG Nyro(Yasuo) 처치 (퍼스트 블러드) · 탑 카운터 정글",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 3,
+          "sec": 16,
+          "text": "VXG Tiskx(Xin Zhao) → CR Zerro(Aatrox) 처치 · 탑 카운터 정글",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 4,
+          "sec": 6,
+          "text": "CR Jodan(Jarvan IV) 바텀 갱킹 — Gorth 점멸로 생존",
+          "side": 1,
+          "major": false,
+          "kind": "gank"
+        },
+        {
+          "t": 5,
+          "sec": 10,
+          "text": "CR 바다 드래곤 처치 (1스택)",
+          "side": 1,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 6,
+          "sec": 7,
+          "text": "VXG Tiskx(Xin Zhao) 미드 갱킹 — Jolyx 점멸로 생존",
+          "side": 0,
+          "major": false,
+          "kind": "gank"
+        },
+        {
+          "t": 7,
+          "sec": 13,
+          "text": "CR Jodan(Jarvan IV) 바텀 갱킹 실패",
+          "side": 1,
+          "major": false,
+          "kind": "gank"
+        },
+        {
+          "t": 9,
+          "sec": 18,
+          "text": "VXG Tiskx(Xin Zhao) 미드 갱킹 실패",
+          "side": 0,
+          "major": false,
+          "kind": "gank"
+        },
+        {
+          "t": 10,
+          "sec": 10,
+          "text": "CR Jodan(Jarvan IV) 바텀 갱킹 — Gorth 점멸로 생존",
+          "side": 1,
+          "major": false,
+          "kind": "gank"
+        },
+        {
+          "t": 10,
+          "sec": 13,
+          "text": "VXG 바람 드래곤 처치 (1스택)",
+          "side": 0,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 10,
+          "sec": 16,
+          "text": "VXG 탑 1차 포탑 파괴 (첫 포탑)",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 12,
+          "sec": 8,
+          "text": "VXG Nyro(Yasuo) 탑 퀘스트 완료",
+          "side": 0,
+          "major": true,
+          "kind": "quest"
+        },
+        {
+          "t": 12,
+          "sec": 12,
+          "text": "VXG Tiskx(Xin Zhao) 바텀 갱킹 — Valvy 점멸로 생존",
+          "side": 0,
+          "major": false,
+          "kind": "gank"
+        },
+        {
+          "t": 13,
+          "sec": 2,
+          "text": "VXG Gorth(Tristana) 원딜 퀘스트 완료",
+          "side": 0,
+          "major": true,
+          "kind": "quest"
+        },
+        {
+          "t": 13,
+          "sec": 5,
+          "text": "CR Zerro(Aatrox) 탑 퀘스트 완료",
+          "side": 1,
+          "major": true,
+          "kind": "quest"
+        },
+        {
+          "t": 13,
+          "sec": 8,
+          "text": "CR Valvy(Nilah) 원딜 퀘스트 완료",
+          "side": 1,
+          "major": true,
+          "kind": "quest"
+        },
+        {
+          "t": 13,
+          "sec": 13,
+          "text": "CR Jodan(Jarvan IV) 바텀 갱킹 실패",
+          "side": 1,
+          "major": false,
+          "kind": "gank"
+        },
+        {
+          "t": 14,
+          "sec": 9,
+          "text": "VXG Ulra(Diana) 미드 퀘스트 완료",
+          "side": 0,
+          "major": true,
+          "kind": "quest"
+        },
+        {
+          "t": 14,
+          "sec": 15,
+          "text": "CR Jolyx(Katarina) 미드 퀘스트 완료",
+          "side": 1,
+          "major": true,
+          "kind": "quest"
+        },
+        {
+          "t": 14,
+          "sec": 17,
+          "text": "CR 협곡의 전령 포기 → 반대편 교환",
+          "side": 1,
+          "major": false,
+          "kind": ""
+        },
+        {
+          "t": 14,
+          "sec": 19,
+          "text": "CR 바텀 1차 포탑 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 14,
+          "sec": 24,
+          "text": "VXG 협곡의 전령 획득",
+          "side": 0,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 14,
+          "sec": 29,
+          "text": "CR Zerro(Aatrox) → VXG Gorth(Tristana) 처치 · 중앙 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 14,
+          "sec": 31,
+          "text": "CR Jolyx(Katarina) → VXG Sylor(Zilean) 처치 · 중앙 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 14,
+          "sec": 36,
+          "text": "VXG Sylor(Zilean) → CR Jolyx(Katarina) 처치 · 중앙 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 14,
+          "sec": 38,
+          "text": "VXG Tiskx(Xin Zhao) → CR Valvy(Nilah) 처치 · 중앙 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 14,
+          "sec": 40,
+          "text": "VXG Gorth(Tristana) → CR Caezo(Pyke) 처치 · 중앙 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 14,
+          "sec": 47,
+          "text": "중앙 한타: VXG 승리 (3킬 / 2데스)",
+          "side": 0,
+          "major": true,
+          "kind": "fight"
+        },
+        {
+          "t": 14,
+          "sec": 53,
+          "text": "VXG 탑 2차 포탑 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 14,
+          "sec": 59,
+          "text": "VXG 전령 사용 (미드)",
+          "side": 0,
+          "major": false,
+          "kind": ""
+        },
+        {
+          "t": 14,
+          "sec": 59,
+          "text": "VXG 미드 1차 포탑 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 14,
+          "sec": 59,
+          "text": "CR 탑 1차 포탑 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 15,
+          "sec": 8,
+          "text": "VXG Tiskx(Xin Zhao) 정글 퀘스트 완료",
+          "side": 0,
+          "major": true,
+          "kind": "quest"
+        },
+        {
+          "t": 15,
+          "sec": 12,
+          "text": "CR Jodan(Jarvan IV) 정글 퀘스트 완료",
+          "side": 1,
+          "major": true,
+          "kind": "quest"
+        },
+        {
+          "t": 15,
+          "sec": 17,
+          "text": "VXG Tiskx(Xin Zhao) 바텀 갱킹",
+          "side": 0,
+          "major": false,
+          "kind": "gank"
+        },
+        {
+          "t": 15,
+          "sec": 24,
+          "text": "VXG Tiskx(Xin Zhao) → CR Valvy(Nilah) 처치 · 바텀 갱킹",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 15,
+          "sec": 27,
+          "text": "VXG 화염 드래곤 처치 (2스택)",
+          "side": 0,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 17,
+          "sec": 16,
+          "text": "CR Caezo(Pyke) → VXG Gorth(Tristana) 처치 · 중앙 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 17,
+          "sec": 22,
+          "text": "CR Jodan(Jarvan IV) → VXG Sylor(Zilean) 처치 · 중앙 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 17,
+          "sec": 28,
+          "text": "VXG Gorth(Tristana) → CR Jolyx(Katarina) 처치 · 중앙 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 17,
+          "sec": 33,
+          "text": "VXG Ulra(Diana) → CR Caezo(Pyke) 처치 · 중앙 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 17,
+          "sec": 37,
+          "text": "중앙 한타: VXG 승리 (2킬 / 2데스)",
+          "side": 0,
+          "major": true,
+          "kind": "fight"
+        },
+        {
+          "t": 17,
+          "sec": 42,
+          "text": "CR 바텀 2차 포탑 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 18,
+          "sec": 15,
+          "text": "VXG Sylor(Zilean) 서폿 퀘스트 완료",
+          "side": 0,
+          "major": true,
+          "kind": "quest"
+        },
+        {
+          "t": 18,
+          "sec": 22,
+          "text": "CR Caezo(Pyke) 서폿 퀘스트 완료",
+          "side": 1,
+          "major": true,
+          "kind": "quest"
+        },
+        {
+          "t": 20,
+          "sec": 8,
+          "text": "CR Jodan(Jarvan IV) → VXG Ulra(Diana) 처치 · 바론 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 20,
+          "sec": 10,
+          "text": "CR Jodan(Jarvan IV) → VXG Gorth(Tristana) 처치 · 바론 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 20,
+          "sec": 16,
+          "text": "CR Zerro(Aatrox) → VXG Sylor(Zilean) 처치 · 바론 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 20,
+          "sec": 23,
+          "text": "VXG Tiskx(Xin Zhao) → CR Jolyx(Katarina) 처치 · 바론 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 20,
+          "sec": 30,
+          "text": "VXG Tiskx(Xin Zhao) → CR Valvy(Nilah) 처치 · 바론 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 20,
+          "sec": 34,
+          "text": "바론 한타: CR 승리 (3킬 / 2데스)",
+          "side": 1,
+          "major": true,
+          "kind": "fight"
+        },
+        {
+          "t": 20,
+          "sec": 40,
+          "text": "CR 바론 처치",
+          "side": 1,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 20,
+          "sec": 46,
+          "text": "CR 미드 1차 포탑 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 20,
+          "sec": 49,
+          "text": "CR 바텀 억제기 포탑 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 21,
+          "sec": 6,
+          "text": "VXG 대지 드래곤 포기 → 반대편 교환",
+          "side": 0,
+          "major": false,
+          "kind": ""
+        },
+        {
+          "t": 21,
+          "sec": 8,
+          "text": "VXG 탑 억제기 포탑 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 21,
+          "sec": 10,
+          "text": "CR 대지 드래곤 처치 (2스택)",
+          "side": 1,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 21,
+          "sec": 14,
+          "text": "CR Jolyx(Katarina) → VXG Tiskx(Xin Zhao) 처치 · 수성 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 21,
+          "sec": 17,
+          "text": "CR Valvy(Nilah) → VXG Ulra(Diana) 처치 · 수성 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 21,
+          "sec": 19,
+          "text": "CR Jolyx(Katarina) → VXG Gorth(Tristana) 처치 · 수성 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 21,
+          "sec": 26,
+          "text": "CR Caezo(Pyke) → VXG Sylor(Zilean) 처치 · 수성 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 21,
+          "sec": 28,
+          "text": "VXG Ulra(Diana) → CR Jolyx(Katarina) 처치 · 수성 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 21,
+          "sec": 30,
+          "text": "수성 한타: CR 승리 (4킬 / 1데스)",
+          "side": 1,
+          "major": true,
+          "kind": "fight"
+        },
+        {
+          "t": 21,
+          "sec": 35,
+          "text": "CR 바텀 억제기 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 21,
+          "sec": 41,
+          "text": "CR 쌍둥이 포탑 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 21,
+          "sec": 48,
+          "text": "CR 쌍둥이 포탑 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 21,
+          "sec": 54,
+          "text": "CR 탑 2차 포탑 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 21,
+          "sec": 59,
+          "text": "CR 미드 2차 포탑 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 22,
+          "sec": 12,
+          "text": "CR Valvy(Nilah) → VXG Gorth(Tristana) 처치 · 수성 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 22,
+          "sec": 19,
+          "text": "CR Caezo(Pyke) → VXG Sylor(Zilean) 처치 · 수성 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 22,
+          "sec": 25,
+          "text": "VXG Tiskx(Xin Zhao) → CR Zerro(Aatrox) 처치 · 수성 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 22,
+          "sec": 32,
+          "text": "VXG Ulra(Diana) → CR Jolyx(Katarina) 처치 · 수성 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 22,
+          "sec": 38,
+          "text": "VXG Sylor(Zilean) → CR Valvy(Nilah) 처치 · 수성 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 22,
+          "sec": 40,
+          "text": "수성 한타: VXG 승리 (3킬 / 2데스)",
+          "side": 0,
+          "major": true,
+          "kind": "fight"
+        },
+        {
+          "t": 22,
+          "sec": 46,
+          "text": "CR 미드 억제기 포탑 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 23,
+          "sec": 12,
+          "text": "VXG Sylor(Zilean) → CR Zerro(Aatrox) 처치 · 탑 끊기",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 26,
+          "sec": 10,
+          "text": "VXG 바다 드래곤 포기 → 반대편 교환",
+          "side": 0,
+          "major": false,
+          "kind": ""
+        },
+        {
+          "t": 26,
+          "sec": 13,
+          "text": "CR 바다 드래곤 처치 (3스택)",
+          "side": 1,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 26,
+          "sec": 15,
+          "text": "CR 콜 불일치 — 1명 합류 실패",
+          "side": 1,
+          "major": false,
+          "kind": ""
+        },
+        {
+          "t": 26,
+          "sec": 19,
+          "text": "CR Jolyx(Katarina) → VXG Gorth(Tristana) 처치 · 바론 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 26,
+          "sec": 21,
+          "text": "CR Jodan(Jarvan IV) → VXG Sylor(Zilean) 처치 · 바론 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 26,
+          "sec": 26,
+          "text": "VXG Tiskx(Xin Zhao) → CR Jolyx(Katarina) 처치 · 바론 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 26,
+          "sec": 31,
+          "text": "VXG Tiskx(Xin Zhao) → CR Valvy(Nilah) 처치 · 바론 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 26,
+          "sec": 37,
+          "text": "바론 한타: VXG 승리 (2킬 / 2데스)",
+          "side": 0,
+          "major": true,
+          "kind": "fight"
+        },
+        {
+          "t": 26,
+          "sec": 44,
+          "text": "VXG 바론 처치",
+          "side": 0,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 26,
+          "sec": 51,
+          "text": "CR Zerro(Aatrox) → VXG Tiskx(Xin Zhao) 처치 · 탑 끊기",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 26,
+          "sec": 55,
+          "text": "VXG Ulra(Diana) → CR Zerro(Aatrox) 처치 · 탑 끊기",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 26,
+          "sec": 58,
+          "text": "VXG Tiskx(Xin Zhao) → CR Jodan(Jarvan IV) 처치 · 탑 끊기",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 26,
+          "sec": 59,
+          "text": "VXG 탑 억제기 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 26,
+          "sec": 59,
+          "text": "VXG 미드 2차 포탑 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 26,
+          "sec": 59,
+          "text": "VXG 바텀 억제기 재생성",
+          "side": 0,
+          "major": false,
+          "kind": ""
+        },
+        {
+          "t": 26,
+          "sec": 59,
+          "text": "CR 바텀 억제기 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 28,
+          "sec": 16,
+          "text": "CR Valvy(Nilah) → VXG Gorth(Tristana) 처치 · 바텀 끊기",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 28,
+          "sec": 22,
+          "text": "VXG Tiskx(Xin Zhao) → CR Jolyx(Katarina) 처치 · 바텀 끊기",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 28,
+          "sec": 29,
+          "text": "VXG 바텀 1차 포탑 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 31,
+          "sec": 10,
+          "text": "CR Valvy(Nilah) → VXG Nyro(Yasuo) 처치 · 바람 드래곤 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 31,
+          "sec": 14,
+          "text": "CR Jodan(Jarvan IV) → VXG Gorth(Tristana) 처치 · 바람 드래곤 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 31,
+          "sec": 19,
+          "text": "CR Jodan(Jarvan IV) → VXG Sylor(Zilean) 처치 · 바람 드래곤 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 31,
+          "sec": 24,
+          "text": "VXG Tiskx(Xin Zhao) → CR Zerro(Aatrox) 처치 · 바람 드래곤 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 31,
+          "sec": 31,
+          "text": "VXG Sylor(Zilean) → CR Jolyx(Katarina) 처치 · 바람 드래곤 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 31,
+          "sec": 35,
+          "text": "바람 드래곤 한타: CR 승리 (3킬 / 2데스)",
+          "side": 1,
+          "major": true,
+          "kind": "fight"
+        },
+        {
+          "t": 31,
+          "sec": 37,
+          "text": "CR 바람 드래곤 처치 (4스택)",
+          "side": 1,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 31,
+          "sec": 41,
+          "text": "CR 드래곤 영혼 획득",
+          "side": 1,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 31,
+          "sec": 48,
+          "text": "CR 탑 억제기 재생성",
+          "side": 1,
+          "major": false,
+          "kind": ""
+        },
+        {
+          "t": 31,
+          "sec": 52,
+          "text": "VXG 바텀 2차 포탑 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 32,
+          "sec": 17,
+          "text": "CR 바론 포기 → 반대편 교환",
+          "side": 1,
+          "major": false,
+          "kind": ""
+        },
+        {
+          "t": 32,
+          "sec": 20,
+          "text": "VXG 바론 처치",
+          "side": 0,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 32,
+          "sec": 24,
+          "text": "CR Valvy(Nilah) → VXG Ulra(Diana) 처치 · 수성 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 32,
+          "sec": 27,
+          "text": "CR Jolyx(Katarina) → VXG Gorth(Tristana) 처치 · 수성 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 32,
+          "sec": 33,
+          "text": "CR Valvy(Nilah) → VXG Sylor(Zilean) 처치 · 수성 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 32,
+          "sec": 38,
+          "text": "VXG Ulra(Diana) → CR Jolyx(Katarina) 처치 · 수성 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 32,
+          "sec": 41,
+          "text": "수성 한타: CR 승리 (3킬 / 1데스)",
+          "side": 1,
+          "major": true,
+          "kind": "fight"
+        },
+        {
+          "t": 32,
+          "sec": 43,
+          "text": "CR 바텀 억제기 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 32,
+          "sec": 48,
+          "text": "CR 넥서스 파괴 — 승리",
+          "side": 1,
+          "major": true,
+          "kind": "nexus"
+        }
+      ]
+    },
+    {
+      "seed": "nexus-resource-scenario-15",
+      "winner": 0,
+      "teams": [
+        "VXG",
+        "CR"
+      ],
+      "gold": [
+        76001.45745215287,
+        77889.42402547429
+      ],
+      "duration": 42.45,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 42,
+        "second": 27
+      },
+      "alive": [
+        "NA_51",
+        "NA_52",
+        "NA_53",
+        "NA_55"
+      ],
+      "enemyNexus": false,
+      "enemyNexusT": 0,
+      "enemyTowers": {
+        "top": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "mid": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "bot": [
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      "events": [
+        {
+          "t": 3,
+          "sec": 6,
+          "text": "VXG Tiskx(Poppy) 미드 갱킹 — Jolyx 점멸로 생존",
+          "side": 0,
+          "major": false,
+          "kind": "gank"
+        },
+        {
+          "t": 3,
+          "sec": 10,
+          "text": "CR Jodan(Jarvan IV) 바텀 갱킹 — Gorth 점멸로 생존",
+          "side": 1,
+          "major": false,
+          "kind": "gank"
+        },
+        {
+          "t": 5,
+          "sec": 16,
+          "text": "CR 바다 드래곤 처치 (1스택)",
+          "side": 1,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 6,
+          "sec": 5,
+          "text": "VXG Tiskx(Poppy) 미드 갱킹",
+          "side": 0,
+          "major": false,
+          "kind": "gank"
+        },
+        {
+          "t": 6,
+          "sec": 7,
+          "text": "VXG Tiskx(Poppy) → CR Jolyx(Taliyah) 처치 (퍼스트 블러드) · 미드 갱킹",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 6,
+          "sec": 10,
+          "text": "CR Jodan(Jarvan IV) 바텀 갱킹 실패",
+          "side": 1,
+          "major": false,
+          "kind": "gank"
+        },
+        {
+          "t": 8,
+          "sec": 10,
+          "text": "CR Valvy(Nilah) 점멸 사용",
+          "side": 1,
+          "major": false,
+          "kind": "flash"
+        },
+        {
+          "t": 8,
+          "sec": 12,
+          "text": "VXG Gorth(Tristana) → CR Valvy(Nilah) 처치 · 바텀 라인전",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 8,
+          "sec": 15,
+          "text": "CR Caezo(Leona) 귀환",
+          "side": 1,
+          "major": false,
+          "kind": "recall"
+        },
+        {
+          "t": 8,
+          "sec": 19,
+          "text": "CR 미드 1차 포탑 파괴 (첫 포탑)",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 9,
+          "sec": 12,
+          "text": "VXG Tiskx(Poppy) 미드 갱킹 — Jolyx 점멸로 생존",
+          "side": 0,
+          "major": false,
+          "kind": "gank"
+        },
+        {
+          "t": 9,
+          "sec": 17,
+          "text": "CR Jodan(Jarvan IV) 바텀 갱킹",
+          "side": 1,
+          "major": false,
+          "kind": "gank"
+        },
+        {
+          "t": 9,
+          "sec": 23,
+          "text": "CR Jodan(Jarvan IV) → VXG Gorth(Tristana) 처치 · 바텀 갱킹",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 10,
+          "sec": 14,
+          "text": "CR 바람 드래곤 포기 → 반대편 교환",
+          "side": 1,
+          "major": false,
+          "kind": ""
+        },
+        {
+          "t": 10,
+          "sec": 19,
+          "text": "CR 탑 1차 포탑 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 10,
+          "sec": 23,
+          "text": "VXG 바람 드래곤 처치 (1스택)",
+          "side": 0,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 12,
+          "sec": 18,
+          "text": "CR Zerro(Aatrox) 탑 퀘스트 완료",
+          "side": 1,
+          "major": true,
+          "kind": "quest"
+        },
+        {
+          "t": 12,
+          "sec": 22,
+          "text": "VXG Tiskx(Poppy) 바텀 갱킹",
+          "side": 0,
+          "major": false,
+          "kind": "gank"
+        },
+        {
+          "t": 12,
+          "sec": 27,
+          "text": "VXG Tiskx(Poppy) → CR Valvy(Nilah) 처치 · 바텀 갱킹",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 12,
+          "sec": 31,
+          "text": "CR Jodan(Jarvan IV) 바텀 갱킹",
+          "side": 1,
+          "major": false,
+          "kind": "gank"
+        },
+        {
+          "t": 12,
+          "sec": 33,
+          "text": "CR Jodan(Jarvan IV) → VXG Gorth(Tristana) 처치 · 바텀 갱킹",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 12,
+          "sec": 39,
+          "text": "CR Caezo(Leona) → VXG Sylor(Zilean) 처치 · 더블 킬 갱킹",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 13,
+          "sec": 10,
+          "text": "VXG Nyro(Yasuo) 탑 퀘스트 완료",
+          "side": 0,
+          "major": true,
+          "kind": "quest"
+        },
+        {
+          "t": 13,
+          "sec": 12,
+          "text": "VXG Gorth(Tristana) 원딜 퀘스트 완료",
+          "side": 0,
+          "major": true,
+          "kind": "quest"
+        },
+        {
+          "t": 13,
+          "sec": 15,
+          "text": "CR Jolyx(Taliyah) 미드 퀘스트 완료",
+          "side": 1,
+          "major": true,
+          "kind": "quest"
+        },
+        {
+          "t": 13,
+          "sec": 20,
+          "text": "CR Valvy(Nilah) 원딜 퀘스트 완료",
+          "side": 1,
+          "major": true,
+          "kind": "quest"
+        },
+        {
+          "t": 14,
+          "sec": 17,
+          "text": "VXG Ulra(Diana) 미드 퀘스트 완료",
+          "side": 0,
+          "major": true,
+          "kind": "quest"
+        },
+        {
+          "t": 14,
+          "sec": 20,
+          "text": "CR 협곡의 전령 획득",
+          "side": 1,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 14,
+          "sec": 24,
+          "text": "CR 전령 사용 (바텀)",
+          "side": 1,
+          "major": false,
+          "kind": ""
+        },
+        {
+          "t": 14,
+          "sec": 27,
+          "text": "CR 바텀 1차 포탑 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 15,
+          "sec": 10,
+          "text": "VXG Tiskx(Poppy) 정글 퀘스트 완료",
+          "side": 0,
+          "major": true,
+          "kind": "quest"
+        },
+        {
+          "t": 15,
+          "sec": 16,
+          "text": "CR Jodan(Jarvan IV) 정글 퀘스트 완료",
+          "side": 1,
+          "major": true,
+          "kind": "quest"
+        },
+        {
+          "t": 15,
+          "sec": 18,
+          "text": "VXG Tiskx(Poppy) 바텀 갱킹 — Valvy 점멸로 생존",
+          "side": 0,
+          "major": false,
+          "kind": "gank"
+        },
+        {
+          "t": 16,
+          "sec": 2,
+          "text": "CR Valvy(Nilah) → VXG Sylor(Zilean) 처치 · 화염 드래곤 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 16,
+          "sec": 6,
+          "text": "VXG Ulra(Diana) → CR Jolyx(Taliyah) 처치 · 화염 드래곤 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 16,
+          "sec": 8,
+          "text": "VXG Ulra(Diana) → CR Valvy(Nilah) 처치 · 화염 드래곤 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 16,
+          "sec": 12,
+          "text": "화염 드래곤 한타: VXG 승리 (2킬 / 1데스)",
+          "side": 0,
+          "major": true,
+          "kind": "fight"
+        },
+        {
+          "t": 16,
+          "sec": 19,
+          "text": "VXG 화염 드래곤 처치 (2스택)",
+          "side": 0,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 16,
+          "sec": 25,
+          "text": "VXG 바텀 1차 포탑 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 17,
+          "sec": 11,
+          "text": "CR Zerro(Aatrox) → VXG Nyro(Yasuo) 처치 · 탑 끊기",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 17,
+          "sec": 18,
+          "text": "CR Valvy(Nilah) → VXG Sylor(Zilean) 처치 · 탑 끊기",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 17,
+          "sec": 24,
+          "text": "VXG Sylor(Zilean) → CR Jodan(Jarvan IV) 처치 · 탑 끊기",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 17,
+          "sec": 26,
+          "text": "탑 끊기: CR 승리 (2킬 / 1데스)",
+          "side": 1,
+          "major": true,
+          "kind": "fight"
+        },
+        {
+          "t": 17,
+          "sec": 33,
+          "text": "CR 탑 2차 포탑 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 18,
+          "sec": 6,
+          "text": "VXG Sylor(Zilean) 서폿 퀘스트 완료",
+          "side": 0,
+          "major": true,
+          "kind": "quest"
+        },
+        {
+          "t": 18,
+          "sec": 13,
+          "text": "CR Caezo(Leona) 서폿 퀘스트 완료",
+          "side": 1,
+          "major": true,
+          "kind": "quest"
+        },
+        {
+          "t": 20,
+          "sec": 6,
+          "text": "CR Valvy(Nilah) → VXG Gorth(Tristana) 처치 · 바론 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 20,
+          "sec": 10,
+          "text": "CR Valvy(Nilah) → VXG Sylor(Zilean) 처치 · 바론 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 20,
+          "sec": 16,
+          "text": "VXG Ulra(Diana) → CR Jolyx(Taliyah) 처치 · 바론 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 20,
+          "sec": 21,
+          "text": "바론 한타: CR 승리 (2킬 / 1데스)",
+          "side": 1,
+          "major": true,
+          "kind": "fight"
+        },
+        {
+          "t": 20,
+          "sec": 28,
+          "text": "CR 바론 처치",
+          "side": 1,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 20,
+          "sec": 32,
+          "text": "CR 탑 억제기 포탑 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 21,
+          "sec": 10,
+          "text": "CR 대지 드래곤 처치 (2스택)",
+          "side": 1,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 21,
+          "sec": 12,
+          "text": "VXG 미드 1차 포탑 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 21,
+          "sec": 16,
+          "text": "CR 미드 2차 포탑 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 22,
+          "sec": 18,
+          "text": "CR 탑 억제기 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 24,
+          "sec": 12,
+          "text": "CR 미드 억제기 포탑 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 25,
+          "sec": 15,
+          "text": "CR Zerro(Aatrox) → VXG Gorth(Tristana) 처치 · 수성 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 25,
+          "sec": 21,
+          "text": "CR Zerro(Aatrox) → VXG Sylor(Zilean) 처치 · 수성 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 25,
+          "sec": 25,
+          "text": "VXG Ulra(Diana) → CR Jolyx(Taliyah) 처치 · 수성 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 25,
+          "sec": 27,
+          "text": "VXG Gorth(Tristana) → CR Valvy(Nilah) 처치 · 수성 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 25,
+          "sec": 31,
+          "text": "VXG Nyro(Yasuo) → CR Caezo(Leona) 처치 · 수성 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 25,
+          "sec": 37,
+          "text": "수성 한타: VXG 승리 (3킬 / 2데스)",
+          "side": 0,
+          "major": true,
+          "kind": "fight"
+        },
+        {
+          "t": 25,
+          "sec": 39,
+          "text": "VXG 바텀 2차 포탑 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 26,
+          "sec": 7,
+          "text": "CR Jolyx(Taliyah) → VXG Gorth(Tristana) 처치 · 바다 드래곤 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 26,
+          "sec": 13,
+          "text": "CR Caezo(Leona) → VXG Sylor(Zilean) 처치 · 바다 드래곤 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 26,
+          "sec": 19,
+          "text": "VXG Sylor(Zilean) → CR Zerro(Aatrox) 처치 · 바다 드래곤 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 26,
+          "sec": 24,
+          "text": "VXG Nyro(Yasuo) → CR Jolyx(Taliyah) 처치 · 바다 드래곤 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 26,
+          "sec": 31,
+          "text": "바다 드래곤 한타: CR 승리 (2킬 / 2데스)",
+          "side": 1,
+          "major": true,
+          "kind": "fight"
+        },
+        {
+          "t": 26,
+          "sec": 36,
+          "text": "CR 바다 드래곤 처치 (3스택)",
+          "side": 1,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 26,
+          "sec": 39,
+          "text": "VXG 바론 포기 → 반대편 교환",
+          "side": 0,
+          "major": false,
+          "kind": ""
+        },
+        {
+          "t": 26,
+          "sec": 43,
+          "text": "VXG 바텀 억제기 포탑 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 26,
+          "sec": 46,
+          "text": "CR 바론 처치",
+          "side": 1,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 26,
+          "sec": 53,
+          "text": "CR Valvy(Nilah) → VXG Nyro(Yasuo) 처치 · 수성 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 26,
+          "sec": 58,
+          "text": "CR Valvy(Nilah) → VXG Tiskx(Poppy) 처치 · 수성 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 26,
+          "sec": 59,
+          "text": "CR Jodan(Jarvan IV) → VXG Ulra(Diana) 처치 · 수성 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 26,
+          "sec": 59,
+          "text": "VXG Nyro(Yasuo) → CR Valvy(Nilah) 처치 · 수성 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 26,
+          "sec": 59,
+          "text": "수성 한타: CR 승리 (3킬 / 1데스)",
+          "side": 1,
+          "major": true,
+          "kind": "fight"
+        },
+        {
+          "t": 26,
+          "sec": 59,
+          "text": "CR 미드 억제기 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 26,
+          "sec": 59,
+          "text": "CR 쌍둥이 포탑 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 26,
+          "sec": 59,
+          "text": "CR 쌍둥이 포탑 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 29,
+          "sec": 11,
+          "text": "CR Jodan(Jarvan IV) → VXG Ulra(Diana) 처치 · 수성 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 29,
+          "sec": 16,
+          "text": "CR Jolyx(Taliyah) → VXG Gorth(Tristana) 처치 · 수성 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 29,
+          "sec": 21,
+          "text": "CR Valvy(Nilah) → VXG Sylor(Zilean) 처치 · 수성 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 29,
+          "sec": 24,
+          "text": "VXG Nyro(Yasuo) → CR Jolyx(Taliyah) 처치 · 수성 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 29,
+          "sec": 29,
+          "text": "수성 한타: CR 승리 (3킬 / 1데스) · 패배 측 후퇴",
+          "side": 1,
+          "major": true,
+          "kind": "fight"
+        },
+        {
+          "t": 29,
+          "sec": 36,
+          "text": "CR 탑 억제기 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 29,
+          "sec": 38,
+          "text": "CR 바텀 2차 포탑 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 30,
+          "sec": 8,
+          "text": "VXG 교전 회피 — CR 압박",
+          "side": 1,
+          "major": false,
+          "kind": ""
+        },
+        {
+          "t": 30,
+          "sec": 11,
+          "text": "CR 바텀 억제기 포탑 파괴",
+          "side": 1,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 31,
+          "sec": 11,
+          "text": "CR Caezo(Leona) → VXG Ulra(Diana) 처치 · 바람 드래곤 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 31,
+          "sec": 16,
+          "text": "CR Zerro(Aatrox) → VXG Gorth(Tristana) 처치 · 바람 드래곤 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 31,
+          "sec": 18,
+          "text": "CR Valvy(Nilah) → VXG Sylor(Zilean) 처치 · 바람 드래곤 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 31,
+          "sec": 22,
+          "text": "VXG Gorth(Tristana) → CR Jolyx(Taliyah) 처치 · 바람 드래곤 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 31,
+          "sec": 24,
+          "text": "VXG Ulra(Diana) → CR Valvy(Nilah) 처치 · 바람 드래곤 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 31,
+          "sec": 31,
+          "text": "바람 드래곤 한타: CR 승리 (3킬 / 2데스)",
+          "side": 1,
+          "major": true,
+          "kind": "fight"
+        },
+        {
+          "t": 31,
+          "sec": 34,
+          "text": "CR 바람 드래곤 처치 (4스택)",
+          "side": 1,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 31,
+          "sec": 36,
+          "text": "CR 드래곤 영혼 획득",
+          "side": 1,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 32,
+          "sec": 5,
+          "text": "CR Jodan(Jarvan IV) → VXG Gorth(Tristana) 처치 · 바론 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 32,
+          "sec": 9,
+          "text": "CR Caezo(Leona) → VXG Sylor(Zilean) 처치 · 바론 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 32,
+          "sec": 11,
+          "text": "VXG Nyro(Yasuo) → CR Jodan(Jarvan IV) 처치 · 바론 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 32,
+          "sec": 13,
+          "text": "VXG Gorth(Tristana) → CR Jolyx(Taliyah) 처치 · 바론 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 32,
+          "sec": 17,
+          "text": "바론 한타: VXG 승리 (2킬 / 2데스)",
+          "side": 0,
+          "major": true,
+          "kind": "fight"
+        },
+        {
+          "t": 32,
+          "sec": 20,
+          "text": "VXG 바론 처치",
+          "side": 0,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 32,
+          "sec": 23,
+          "text": "VXG 미드 2차 포탑 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 32,
+          "sec": 30,
+          "text": "VXG 바텀 억제기 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 33,
+          "sec": 9,
+          "text": "VXG 탑 1차 포탑 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 33,
+          "sec": 16,
+          "text": "VXG 미드 억제기 포탑 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 33,
+          "sec": 18,
+          "text": "VXG 미드 억제기 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 34,
+          "sec": 8,
+          "text": "VXG 탑 2차 포탑 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 35,
+          "sec": 12,
+          "text": "VXG 탑 억제기 포탑 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 37,
+          "sec": 15,
+          "text": "CR Valvy(Nilah) → VXG Gorth(Tristana) 처치 · 장로 드래곤 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 37,
+          "sec": 22,
+          "text": "CR Jodan(Jarvan IV) → VXG Sylor(Zilean) 처치 · 장로 드래곤 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 37,
+          "sec": 25,
+          "text": "VXG Ulra(Diana) → CR Jodan(Jarvan IV) 처치 · 장로 드래곤 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 37,
+          "sec": 28,
+          "text": "VXG Gorth(Tristana) → CR Jolyx(Taliyah) 처치 · 장로 드래곤 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 37,
+          "sec": 33,
+          "text": "VXG Tiskx(Poppy) → CR Valvy(Nilah) 처치 · 장로 드래곤 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 37,
+          "sec": 40,
+          "text": "장로 드래곤 한타: VXG 승리 (3킬 / 2데스)",
+          "side": 0,
+          "major": true,
+          "kind": "fight"
+        },
+        {
+          "t": 37,
+          "sec": 42,
+          "text": "VXG 장로 드래곤 처치",
+          "side": 0,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 38,
+          "sec": 10,
+          "text": "CR 바론 포기 → 반대편 교환",
+          "side": 1,
+          "major": false,
+          "kind": ""
+        },
+        {
+          "t": 38,
+          "sec": 14,
+          "text": "VXG 바론 처치",
+          "side": 0,
+          "major": true,
+          "kind": "obj"
+        },
+        {
+          "t": 38,
+          "sec": 21,
+          "text": "CR 미드 억제기 재생성",
+          "side": 1,
+          "major": false,
+          "kind": ""
+        },
+        {
+          "t": 38,
+          "sec": 28,
+          "text": "VXG 탑 억제기 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 38,
+          "sec": 31,
+          "text": "VXG 쌍둥이 포탑 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 38,
+          "sec": 34,
+          "text": "VXG 미드 억제기 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 39,
+          "sec": 12,
+          "text": "CR Jodan(Jarvan IV) → VXG Ulra(Diana) 처치 · 수성 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 39,
+          "sec": 18,
+          "text": "CR Valvy(Nilah) → VXG Gorth(Tristana) 처치 · 수성 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 39,
+          "sec": 22,
+          "text": "CR Zerro(Aatrox) → VXG Sylor(Zilean) 처치 · 수성 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 39,
+          "sec": 28,
+          "text": "VXG Ulra(Diana) → CR Jolyx(Taliyah) 처치 · 수성 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 39,
+          "sec": 32,
+          "text": "VXG Ulra(Diana) → CR Valvy(Nilah) 처치 · 수성 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 39,
+          "sec": 34,
+          "text": "수성 한타: CR 승리 (3킬 / 2데스)",
+          "side": 1,
+          "major": true,
+          "kind": "fight"
+        },
+        {
+          "t": 39,
+          "sec": 41,
+          "text": "VXG 바텀 억제기 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 40,
+          "sec": 7,
+          "text": "VXG 교전 회피 — CR 압박",
+          "side": 1,
+          "major": false,
+          "kind": ""
+        },
+        {
+          "t": 40,
+          "sec": 14,
+          "text": "VXG 쌍둥이 포탑 파괴",
+          "side": 0,
+          "major": true,
+          "kind": "tower"
+        },
+        {
+          "t": 42,
+          "sec": 6,
+          "text": "CR Valvy(Nilah) → VXG Gorth(Tristana) 처치 · 수성 한타",
+          "side": 1,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 42,
+          "sec": 8,
+          "text": "VXG Gorth(Tristana) → CR Zerro(Aatrox) 처치 · 수성 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 42,
+          "sec": 15,
+          "text": "VXG Sylor(Zilean) → CR Jolyx(Taliyah) 처치 · 수성 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 42,
+          "sec": 20,
+          "text": "VXG Ulra(Diana) → CR Valvy(Nilah) 처치 · 수성 한타",
+          "side": 0,
+          "major": true,
+          "kind": "kill"
+        },
+        {
+          "t": 42,
+          "sec": 23,
+          "text": "수성 한타: VXG 승리 (3킬 / 1데스) · 패배 측 후퇴",
+          "side": 0,
+          "major": true,
+          "kind": "fight"
+        },
+        {
+          "t": 42,
+          "sec": 27,
+          "text": "VXG 넥서스 파괴 — 승리",
+          "side": 0,
+          "major": true,
+          "kind": "nexus"
+        }
+      ]
+    }
+  ]
+}

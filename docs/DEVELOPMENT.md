@@ -20,6 +20,12 @@ publication are required follow-through, not the implementation slice itself.
 Check branch/PR/current main and ownership before editing; do not assume local
 files or another worker's unpushed changes exist in Cloud.
 
+## 현재 검증된 출시와 이번 구현 경계 — 2026-10-04
+
+PR #174 최종 head `54fccb1bbe71f976e20633a503d78ae410a6d387`은 전체 CI `37182526543`(의료 네 시드·두 집계·verify 포함) 성공 후 main `ff8b275ab608256476131de66a6039853cf71ebe`로 병합됐다. 같은 main의 전체 CI/standalone `37182947669` 및 검증 artifact를 사용한 Pages `37183286127`의 실제 게시 성공을 확인했다. 초기 head의 취소된 CI는 최종 통과가 아니다. native PR attachment는 호출했지만 응답이 중단돼 성공 여부 미확인이다. 직접 github.io HTTP는 Cloud 정책상 별도 검증되지 않았다. #173도 main CI/standalone `37178547630` 및 Pages `37178753632` 성공이 확인됐다. 아래 전 영역 조사표의 `173 open` 등은 그 조사 당시의 상태이며 현재 출시 상태는 이 절을 따른다. 원 조사·실패·근거는 보존한다.
+
+이번 실제 구현은 **8.3.1 장비 기반 방어 수치**이며 8.3 전체 완료가 아니다. 미사용 골드의 공격력 전환, AP/스킬 계수, 구매 장소·귀환 연결 및 전체 승인 inventory는 남는다. 새 구현의 PR/CI/병합/게시 성공은 확인 전까지 주장하지 않는다.
+
 ## UI 전면 재설계 — 승인된 현재 범위
 
 사용자는 기존 내부 기능과 화면의 괴리가 크다고 지적했고, 부분적인 외형 수정 대신 UI 전면 재설계를 승인했다. 이 결정은 구현 예정 범위이며, 현재 리그 선택 표시 수정만으로 재설계 완료를 주장하지 않는다. 기존 엔진, 공유 명령, 권한, AI 동등성, 저장 호환성과 게임 기록을 유지하면서 사용자 작업 흐름과 화면 구조를 다시 설계한다.
@@ -1272,4 +1278,19 @@ Node 22 CPU 프로파일에서 `activeTeams`가 가장 큰 누적 소비였다. 
 **정확한 다음 구현:** 고정 패치의 귀환 완료·중단, 부활 후 기지와 복귀, 이동 가용성·오른 제작 조건의 검토 가능한 원자료를 확보하고 단위/출처를 기존 자료 체계에 등록한다. 실제 상태 작성자 → 공유 구매 장소 판정 → 장비 조합/와드의 골드 writer → 실제 효과 시점과 가용성 소비 → 공식 결과/저장·복기까지 연결한다. 반례는 일반 전장 구매 거절, 귀환 중 피격 취소, 기지에서 정확한 잔액·6칸 조합, 사망·부활 경계, 오른의 합법 비소모품/소모품 구분, 같은 시각 중복/실패 원자성, 종료 후 불변, 기록/무기록·AI/선수 동등성, 공식 pending/full/lite 저장이다. 자료 제한이 계속되면 안전한 독립 엔진 단위 8.3의 earned 골드·실제 장비 이중 전투력 소비를 조사·교정하고, 구매 장소 연결은 미완료로 유지한다. 8.5.1 출처 기반 웨이브/경험치 및 전체 승인 범위도 유지한다. 장기·실기기·TalkBack 최종 QA는 아직 시작하지 않는다.
 
 
-**8.3의 다음 경계에 대한 추가 실제 재현(8.2.2 조사 중):** [고정 장비·레벨/미사용 골드 소비 원본](evidence/unspent-gold-power-source-probe.json). 같은 합성 자르반 참가자/레벨1/빈 장비/분12에서 `addGold`로 미사용 골드만 500→6,500으로 늘리자 실제 `combatStats`의 offense는 39.036→141.506, EHP는845.056→3,297.647로 증가했다. 장비 효과는 모두0이며 실제 350골드 롱소드 writer 구매 후 offense146.256/EHP3,338.210으로 다시 늘었다. 원인은 `combatStats0`의 `goldEarned-500` 전환과 `systemEffects`의 동시 소비다. 이 수치는 실제 초당 피해량/체력이나 전문 경기 보정 목표가 아닌 엔진 내부 대리지표다. **기존 승인8.3 가설을 실제 소비 재현으로 승격했고 아직 수정하지 않았다.** 구매를 기지로 제한해도 이 미사용 골드 전투력 경로가 남으면 귀환·구매의 비용이 왜곡될 수 있다. 검토된 raw item stats/패치 효과/챔피언 damage 소비 경계 및 오래된 generic 계수 의존을 먼저 대조하고, 새 arbitrary 수치 없이 실제 보유 장비·레벨·효과만 소비하도록 substantial 자연 경계에서 교정한다. 기존 결과 변화는 의도적 판정 교정으로 기록하며 역사를 다시 계산하지 않는다.
+**8.3의 다음 경계에 대한 추가 실제 재현(8.2.2 조사 중):** [고정 장비·레벨/미사용 골드 소비 원본](evidence/unspent-gold-power-source-probe.json). 같은 합성 자르반 참가자/레벨1/빈 장비/분12에서 `addGold`로 미사용 골드만 500→6,500으로 늘리자 실제 `combatStats`의 offense는 39.036→141.506, EHP는845.056→3,297.647로 증가했다. 장비 효과는 모두0이며 실제 350골드 롱소드 writer 구매 후 offense146.256/EHP3,338.210으로 다시 늘었다. 원인은 `combatStats0`의 `goldEarned-500` 전환과 `systemEffects`의 동시 소비다. 이 수치는 실제 초당 피해량/체력이나 전문 경기 보정 목표가 아닌 엔진 내부 대리지표다. **조사 당시 기존 승인8.3 가설을 실제 소비 재현으로 승격했다. 이후 방어 부분만 8.3.1에서 교정하며 공격 부분은 미완료다.** 구매를 기지로 제한해도 이 미사용 골드 전투력 경로가 남으면 귀환·구매의 비용이 왜곡될 수 있다. 검토된 raw item stats/패치 효과/챔피언 damage 소비 경계 및 오래된 generic 계수 의존을 먼저 대조하고, 새 arbitrary 수치 없이 실제 보유 장비·레벨·효과만 소비하도록 substantial 자연 경계에서 교정한다. 기존 결과 변화는 의도적 판정 교정으로 기록하며 역사를 다시 계산하지 않는다.
+
+
+### 8.3.1 실제 보유 장비의 체력·저항력 소비 — 2026-10-04
+
+**목표·규모·우선순위:** P0 경기 엔진의 45–55분 세로 단위. 같은 레벨/장비에서 미사용 골드가 HP·방어력·마법 저항력을 올리는 재현 결함을 교정하고 실제 구매 → 재료 소비/장비 → 교전 → 공식 기록/복기 → 저장까지 확인한다. 공격/AP 전체를 출처 없는 비율로 대체하지 않고 별도 자연 경계로 남긴다. 큰 8.3를 분할했으며 기능 수를 추가로 부풀리지 않는다.
+
+**출처와 writer/consumer:** 고정 Riot DDragon 16.19.1의 `system-source.js` 및 기존 `itemDefs.stats`에 있는 `FlatHPPoolMod`(HP), `FlatArmorMod`(방어력), `FlatSpellBlockMod`(MR)를 사용한다. `item-purchases.js`의 원자적 장부/레시피 writer와 퀘스트 장비 변환은 유지한다. `systems.js:inventoryDefenseStats`는 `matchQuestItems`의 실제 소유 항목만 합산한다. `engine.js:combatStats0`는 챔피언 기본값/레벨 성장 + 그 장비 수치를 소비하고 골드 기반 방어 전환을 제거한다. 기존 EHP의 가중 저항력·전투 시간·숙련 등 집계식은 유지한다. 실제 피해 유형별 공식/주문/거리/CC 전체 구현이라는 주장은 하지 않는다.
+
+**중복·패치·호환성:** 기존 `system-data.js`의 동일 raw stat 방어 proxy를 원래 rounding/clamp 식으로 분리해 전투 방어 보너스에서 한 번만 제외한다. draft 선택의 전체 effects는 유지한다. 보호막 텍스트 proxy·기존 방어 효과 패치의 delta는 지우지 않는다. `defenseStatEffect`는 원래 source 기여분이며 가격 변경은 장비 HP/저항력을 직접 바꾸지 않는다. 이전 저장의 누락 필드는 동일한 기존 source 정규화로 읽기 시 계산하며 원본 저장을 변형하지 않는다. patch revision을 기존 실제 전투 캐시 판정에 연결해 같은 분의 효과 변경/되돌리기도 반영한다. 이 경로는 양 팀/AI/수동 동일하며 새로운 감독 구매 명령은 없다.
+
+**재현·플레이 예·수용:** [원본과 교정된 고정 시나리오](evidence/inventory-defense-correction.json)는 baseline main, source hashes, 같은 fixture/seed와 실제 이벤트를 보존한다. 레벨1/분12/빈 장비 자르반의 미사용 골드 500→6,500에서 이전 내부 EHP 845.056→3,297.647, 교정 후 845.056→845.056이다. 실제 루비 수정 400골드 구매는 장비 HP +150으로 이어져 EHP 1,055.947이 된다. 내부 지표이지 실제 HP/초당 피해·전문 경기 목표가 아니다. 다섯 챔피언의 레벨1/11, 실제 체력·방어·MR 구매, 재료 소모/최종 장비 중복 없음, out-of-slot 퀘스트 신발, 거절 원자성, 모든 정규화 항목의 legacy 동등성, 기존 effect patch/price/rollback/cache, 두 시드·양쪽 순서의 네 기록/무기록 paired outcome, 공식 공개 source와 full/lite 저장/역사 불변 및 기존 복기의 아이템 열 없음까지 `inventory-defense-acceptance.mjs`로 검증한다. local focused·장부/patch, UI 64수용/63독립VM, 달력·스카우팅20수용, Node22 regression·smoke(27,031ms; 기존35초 제한 유지)가 통과했다. 병행 Node24 smoke35초 timeout 원 로그와 단독 Node22 성공을 diagnostics에 함께 보존하며 CI·출시는 별도 gate다.
+
+**의도적 변화·진단:** 이 수정은 동등 최적화가 아니라 잘못된 방어 입력 교정이다. 네 대표 경기의 승패/시간 변화와 전 이벤트를 삭제하지 않고 보존한다. 기존 골드 열세 승리 19/22 fixture는 해당 구버전의 결과이며 이번 변화 후 assertion 실패를 `/tmp/inventory-defense-ending.log`에 보존했다. [같은 설정의 제한된 32시드 관측](evidence/inventory-defense-resource-scenarios.json)은 현재 seed8/15의 실제 열세 승리·살아 있는 공격자·열린 기지·교전/오브젝트→넥서스를 확인한다. 원래 assertions를 유지하며 승률·컴백 목표를 정하거나 승자를 조작하지 않는다. 초기 champion identity와 재료 전체 조합을 빠뜨린 새 fixture 오류도 focused 로그1–3에 보존했다. 이전 근거는 그대로 둔다.
+
+**상충·한계·정확한 다음 단위:** 장비 구매 전후의 방어 차이가 실제 재고에 연결되는 이익이 있다. 승패/교전 시간은 의도적으로 달라지고 전체 밸런스 검증은 남는다. AP/스킬 damage의 검토된 계수가 충분하지 않아 **미사용 earned 골드의 offense 전환은 아직 존재**하며 attack/AS/AP/치명타·penetration·효과 가용성은 다음 **8.3.2 공격 장비와 실제 피해 소비** 단위에서 원본 writer/consumer를 대조해 자연 경계로 교정한다. 가격을 공격력으로 바꾸거나 임의 AP→AD 계수를 만들지 않는다. 장비 stats 패치 writer 전체, 조건부 보호막/회복, 팀 armor reduction/개인 penetration, 퀘스트 bonus, 구매 장소/귀환 metadata 및 8.5.1 XP/waves도 미완료다. 이미 저장된 공식 결과는 재계산하지 않는다. draft 중 pending save의 새 엔진 재실행은 아직 완전한 과거 엔진 버전 고정이 아니며 그 한계를 숨기지 않는다. 장기/실기기/TalkBack 최종 QA와 외부 전문 보정은 수행하지 않았다. 전체 언어/UI/분석실/서사/사무국 및 승인된 범위는 그대로 유지한다.

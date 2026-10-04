@@ -414,15 +414,20 @@ function aliveOf(st,side){return st.sides[side].ps.filter(x=>alive(st,x))}
 
 function combatStats(st,ps){
   const sd=st.sides[ps.side], key=st.t*1e6+ps.goldEarned*10+ps.lvl+(ps.questRevision||0)*.00001+(sd.baronUntil>st.t?0.1:0)+(sd.elderUntil>st.t?0.2:0)+(sd.soul?0.4:0);
-  if(ps._ck===key&&ps._itemRevision===ps.itemRevision)return ps._cs;ps._itemRevision=ps.itemRevision;ps._ck=key;return ps._cs=combatStats0(st,ps);
+  const revision=draftPatchRevisionKey(st.patch);
+  if(ps._ck===key&&ps._itemRevision===ps.itemRevision&&ps._combatPatch===st.patch&&ps._combatRevision===revision)return ps._cs;
+  ps._combatPatch=st.patch;ps._combatRevision=revision;ps._itemRevision=ps.itemRevision;ps._ck=key;return ps._cs=combatStats0(st,ps);
 }
 function combatStats0(st,ps){
+  // Defense now uses owned raw equipment stats. The earned-gold offense proxy
+  // remains an explicit separate correction boundary (DEVELOPMENT 8.3.2).
   const c=ps.champ,b=c.base,L=ps.lvl,g=Math.max(0,ps.goldEarned-500),cv=ITEM_CONV[c.cls],k=c.kit,sp=championSkillProfile(c);
   const ie=systemEffects(st.patch.itemDefs,matchQuestItems(ps)),re=systemEffects(st.patch.runeDefs,ps.runes),phaseEarly=st.t<15?1:0,phaseLate=st.t>=28?1:0;
+  const gear=inventoryDefenseStats(st.patch.itemDefs,matchQuestItems(ps));
   const ph=st.t<14?k.early:st.t<26?k.mid:k.late,pm=.8+.04*ph,phaseSystem=1+(ie.early+re.early)*phaseEarly+(ie.scaling+re.scaling)*phaseLate;
-  const hp=b.hp+b.hpg*(L-1)+g*cv.hp,arm=b.arm+b.armg*(L-1)+g*cv.arm,mr=(b.mr||30)+(b.mrg||1.3)*(L-1)+g*cv.arm*.65,ad=b.ad+b.adg*(L-1)+g*cv.ad*(1+(ps.quest?.completed?ps.quest.rules.bonusPower||0:0));
+  const hp=b.hp+b.hpg*(L-1)+gear.hp,arm=b.arm+b.armg*(L-1)+gear.armor,mr=(b.mr||30)+(b.mrg||1.3)*(L-1)+gear.mr,ad=b.ad+b.adg*(L-1)+g*cv.ad*(1+(ps.quest?.completed?ps.quest.rules.bonusPower||0:0));
   const asp=(b.as||.65)*(1+(b.asg||0)*(L-1)/100),resource=(b.resource?clamp((b.resource+(b.resourceg||0)*(L-1))/800+(b.resourceRegen||0)/30,.65,1.18):1)*sp.economy;
-  const sysOff=1+ie.offense+re.offense+(ie.haste+re.haste)*.35+(ie.mobility+re.mobility)*.16,sysDef=1+ie.defense+re.defense+(ie.sustain+re.sustain)*.55+(ie.utility+re.utility)*.25+(ie.mobility+re.mobility)*.08;
+  const sysOff=1+ie.offense+re.offense+(ie.haste+re.haste)*.35+(ie.mobility+re.mobility)*.16,sysDef=1+ie.defense-gear.statEffect+re.defense+(ie.sustain+re.sustain)*.55+(ie.utility+re.utility)*.25+(ie.mobility+re.mobility)*.08;
   let off=ad*(.52+.042*(k.burst+k.dps))*pm*(b.range>400?1.1:1)*(.88+asp*.18)*(.94+sp.power*.07+sp.uptime*.04+sp.reach*.025+sp.mobility*.012)*resource*sysOff*phaseSystem;
   const defense=arm*.55+mr*.45;let ehp=hp*(1+defense/100)*(.83+.028*k.sustain)*(.98+sp.utility*.04+sp.cc*.025)*Math.sqrt(pm)*sysDef*Math.sqrt(phaseSystem);
   const s=st.sides[ps.side];
@@ -430,7 +435,7 @@ function combatStats0(st,ps){
   const mf=.82+.26*ps.prof.mastery/100+.04*(ps.prof.confidence-50)/50;
   const sk=.84+.32*avg(['positioning','target_selection','teamfight_awareness','combo_execution','reaction','burst_execution','extended_fight'].map(a=>at(ps,a)));
   const fm=1+playerMod(ps.p),md=1+(st.mods?st.mods[ps.side]:0);
-  return {off:off*buff*mf*sk*md*fm,ehp:ehp*buff*Math.sqrt(mf),mf,sk,itemEffects:ie,runeEffects:re,skillProfile:sp};
+  return {off:off*buff*mf*sk*md*fm,ehp:ehp*buff*Math.sqrt(mf),mf,sk,itemEffects:ie,runeEffects:re,skillProfile:sp,defenseStats:{hp,armor:arm,mr,gear}};
 }
 function power(st,ps){const c=combatStats(st,ps);return Math.sqrt(c.off*c.ehp)}
 function teamPower(st,side){return aliveOf(st,side).reduce((s,x)=>s+power(st,x)*x.hp**0.5,0)}
@@ -1137,6 +1142,19 @@ function systemEffects(defs,ids){
   for(const id of ids||[]){const d=defs&&defs[id];if(!d||d.active===false)continue;for(const k in out)out[k]+=Number(d.effects&&d.effects[k])||0}
   return out;
 }
+function inventoryDefenseStats(defs,ids){
+  const out={hp:0,armor:0,mr:0,statEffect:0};
+  for(const id of ids||[]){
+    const d=defs?.[id];if(!d||d.active===false)continue;
+    const s=d.stats||{};
+    out.hp+=Number(s.FlatHPPoolMod)||0;
+    out.armor+=Number(s.FlatArmorMod)||0;
+    out.mr+=Number(s.FlatSpellBlockMod)||0;
+    out.statEffect+=Number.isFinite(d.defenseStatEffect)?d.defenseStatEffect:
+      d.source?.provider===SYSTEM_SOURCE_SNAPSHOT.provider?itemDefenseStatEffect({...d,gold:{total:d.cost||0}}):0;
+  }
+  return out;
+}
 function systemChoiceScore(c,e,role){
   const k=c.kit||{},front=['fighter','tank'].includes(c.cls),support=role==='SUP'||c.cls==='enchanter';
   return (e.offense||0)*(.8+(k.burst+k.dps)/16)+(e.defense||0)*(front?1.35:.75)+(e.sustain||0)*(.7+(k.sustain||5)/8)+(e.utility||0)*(support?1.5:.7)+(e.haste||0)*(.8+(k.cc+k.poke)/18)+(e.mobility||0)*(.75+(k.mobility||5)/8)+(e.early||0)*(.65+(k.early||5)/8)+(e.scaling||0)*(.65+(k.late||5)/8);
@@ -1694,9 +1712,17 @@ function itemClassesFromSource(raw,e){
   const max=Math.max(...Object.values(score));if(max<=0)return ['fighter','tank','mage','assassin','marksman','enchanter'];
   return Object.keys(score).filter(k=>score[k]>=Math.max(1,max*.5));
 }
+// Keep the original normalized stat contribution separate from effect-patch
+// deltas. Combat consumes these three stats directly; draft scoring still uses
+// the complete existing effects. Older saves derive this split without mutation.
+function itemDefenseStatEffect(raw){
+  const stats={...(raw.stats||{}),FlatHPPoolMod:0,FlatArmorMod:0,FlatSpellBlockMod:0};
+  return itemEffectsFromSource(raw).defense-itemEffectsFromSource({...raw,stats}).defense;
+}
 function buildItemSystems(snapshot=SYSTEM_SOURCE_SNAPSHOT){
   const defs={},pool={fighter:[],tank:[],mage:[],assassin:[],marksman:[],enchanter:[]};
   for(const [id,raw] of Object.entries(snapshot.items||{})){const tier=itemTier(raw),effects=itemEffectsFromSource(raw),classes=itemClassesFromSource(raw,effects),d={id,name:raw.nameKo,nameKo:raw.nameKo,descriptionKo:raw.descriptionKo,plaintextKo:raw.plaintextKo,cost:raw.gold?.total||0,recipeCost:raw.gold?.base??raw.gold?.total??0,sell:raw.gold?.sell||0,tags:(raw.tags||[]).slice(),stats:{...(raw.stats||{})},from:(raw.from||[]).slice(),into:(raw.into||[]).slice(),tier,classes,effects,active:true,shopActive:!raw.hideFromAll&&!raw.requiredChampion&&raw.inStore!==false,requiredChampion:raw.requiredChampion||null,source:{provider:snapshot.provider,version:snapshot.version,mapId:snapshot.mapId}};
+    d.defenseStatEffect=itemDefenseStatEffect(raw);
     defs[id]=d;if(d.shopActive&&['final','boots'].includes(tier))for(const cls of classes)pool[cls].push(id)}
   for(const cls of Object.keys(pool))pool[cls].sort((a,b)=>(defs[a].cost-defs[b].cost)||defs[a].name.localeCompare(defs[b].name));
   return {defs,pool};

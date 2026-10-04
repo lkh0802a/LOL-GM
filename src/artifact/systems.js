@@ -19,6 +19,19 @@ function systemEffects(defs,ids){
   for(const id of ids||[]){const d=defs&&defs[id];if(!d||d.active===false)continue;for(const k in out)out[k]+=Number(d.effects&&d.effects[k])||0}
   return out;
 }
+function inventoryDefenseStats(defs,ids){
+  const out={hp:0,armor:0,mr:0,statEffect:0};
+  for(const id of ids||[]){
+    const d=defs?.[id];if(!d||d.active===false)continue;
+    const s=d.stats||{};
+    out.hp+=Number(s.FlatHPPoolMod)||0;
+    out.armor+=Number(s.FlatArmorMod)||0;
+    out.mr+=Number(s.FlatSpellBlockMod)||0;
+    out.statEffect+=Number.isFinite(d.defenseStatEffect)?d.defenseStatEffect:
+      d.source?.provider===SYSTEM_SOURCE_SNAPSHOT.provider?itemDefenseStatEffect({...d,gold:{total:d.cost||0}}):0;
+  }
+  return out;
+}
 function systemChoiceScore(c,e,role){
   const k=c.kit||{},front=['fighter','tank'].includes(c.cls),support=role==='SUP'||c.cls==='enchanter';
   return (e.offense||0)*(.8+(k.burst+k.dps)/16)+(e.defense||0)*(front?1.35:.75)+(e.sustain||0)*(.7+(k.sustain||5)/8)+(e.utility||0)*(support?1.5:.7)+(e.haste||0)*(.8+(k.cc+k.poke)/18)+(e.mobility||0)*(.75+(k.mobility||5)/8)+(e.early||0)*(.65+(k.early||5)/8)+(e.scaling||0)*(.65+(k.late||5)/8);

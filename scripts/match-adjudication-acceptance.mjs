@@ -16,9 +16,10 @@ await runEngineFixture(String.raw`(()=>{
   check(quiet.log.length===0&&!quiet.sides[1-quiet.winner].nexus&&quiet.sides[quiet.winner].nexus,'quiet ended without lawful nexus');
   check(JSON.stringify(seriesResultLines(logged,logged.sides[logged.winner].team.id,null))===JSON.stringify(seriesResultLines(quiet,quiet.sides[quiet.winner].team.id,null)),'ratings or rate consumers differ');
  }
- // Reviewed real behind-resource conversions after purchase timing correction.
- // Prior 13/21 source traces remain preserved for their original engine head.
- for(const seed of ['nexus-resource-scenario-19','nexus-resource-scenario-22']){
+ // Reviewed behind-resource conversions after actual inventory defense correction.
+ // Prior 13/21 and 19/22 traces/failures remain tied to their original heads.
+ // Bounded 32-seed evidence is preserved in inventory-defense-resource-scenarios.json.
+ for(const seed of ['nexus-resource-scenario-8','nexus-resource-scenario-15']){
   const r=simulateMatch(db,a.id,b.id,seed,null,false),gold=r.sides.map(s=>s.ps.reduce((v,p)=>v+p.goldEarned,0)),w=r.winner;
   check(gold[w]<gold[1-w]&&!r.sides[1-w].nexus&&r.sides[w].nexus,'resource lead alone won or missing natural behind win');
   check(r.sides[w].ps.some(p=>p.deadUntil<=r.ending.minute)&&r.sides[1-w].nexusT===0&&LANES.some(l=>!r.sides[1-w].towers[l][3]),'no surviving conversion or open base');
