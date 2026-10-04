@@ -1,0 +1,1825 @@
+{
+  "provenance": "Synthetic identical equal-progress candidates permuted through actual original comparator expression, default Node22 V8; not proof across browsers/pro targets",
+  "cases": [
+    {
+      "seed": 0,
+      "rows": [
+        {
+          "order": [
+            "top",
+            "mid",
+            "bot"
+          ],
+          "selected": "bot",
+          "comparisons": [
+            {
+              "a": "mid",
+              "b": "top",
+              "value": -0.19617898750584573
+            },
+            {
+              "a": "bot",
+              "b": "mid",
+              "value": -0.7226081901462749
+            }
+          ],
+          "draws": 2,
+          "rng": 80105195
+        },
+        {
+          "order": [
+            "top",
+            "bot",
+            "mid"
+          ],
+          "selected": "mid",
+          "comparisons": [
+            {
+              "a": "bot",
+              "b": "top",
+              "value": -0.19617898750584573
+            },
+            {
+              "a": "mid",
+              "b": "bot",
+              "value": -0.7226081901462749
+            }
+          ],
+          "draws": 2,
+          "rng": 80105195
+        },
+        {
+          "order": [
+            "mid",
+            "top",
+            "bot"
+          ],
+          "selected": "bot",
+          "comparisons": [
+            {
+              "a": "top",
+              "b": "mid",
+              "value": -0.19617898750584573
+            },
+            {
+              "a": "bot",
+              "b": "top",
+              "value": -0.7226081901462749
+            }
+          ],
+          "draws": 2,
+          "rng": 80105195
+        },
+        {
+          "order": [
+            "mid",
+            "bot",
+            "top"
+          ],
+          "selected": "top",
+          "comparisons": [
+            {
+              "a": "bot",
+              "b": "mid",
+              "value": -0.19617898750584573
+            },
+            {
+              "a": "top",
+              "b": "bot",
+              "value": -0.7226081901462749
+            }
+          ],
+          "draws": 2,
+          "rng": 80105195
+        },
+        {
+          "order": [
+            "bot",
+            "top",
+            "mid"
+          ],
+          "selected": "mid",
+          "comparisons": [
+            {
+              "a": "top",
+              "b": "bot",
+              "value": -0.19617898750584573
+            },
+            {
+              "a": "mid",
+              "b": "top",
+              "value": -0.7226081901462749
+            }
+          ],
+          "draws": 2,
+          "rng": 80105195
+        },
+        {
+          "order": [
+            "bot",
+            "mid",
+            "top"
+          ],
+          "selected": "top",
+          "comparisons": [
+            {
+              "a": "mid",
+              "b": "bot",
+              "value": -0.19617898750584573
+            },
+            {
+              "a": "top",
+              "b": "mid",
+              "value": -0.7226081901462749
+            }
+          ],
+          "draws": 2,
+          "rng": 80105195
+        }
+      ]
+    },
+    {
+      "seed": 1,
+      "rows": [
+        {
+          "order": [
+            "top",
+            "mid",
+            "bot"
+          ],
+          "selected": "bot",
+          "comparisons": [
+            {
+              "a": "mid",
+              "b": "top",
+              "value": -0.7165169346844777
+            },
+            {
+              "a": "bot",
+              "b": "mid",
+              "value": -0.13439394836314023
+            }
+          ],
+          "draws": 2,
+          "rng": 75723604
+        },
+        {
+          "order": [
+            "top",
+            "bot",
+            "mid"
+          ],
+          "selected": "mid",
+          "comparisons": [
+            {
+              "a": "bot",
+              "b": "top",
+              "value": -0.7165169346844777
+            },
+            {
+              "a": "mid",
+              "b": "bot",
+              "value": -0.13439394836314023
+            }
+          ],
+          "draws": 2,
+          "rng": 75723604
+        },
+        {
+          "order": [
+            "mid",
+            "top",
+            "bot"
+          ],
+          "selected": "bot",
+          "comparisons": [
+            {
+              "a": "top",
+              "b": "mid",
+              "value": -0.7165169346844777
+            },
+            {
+              "a": "bot",
+              "b": "top",
+              "value": -0.13439394836314023
+            }
+          ],
+          "draws": 2,
+          "rng": 75723604
+        },
+        {
+          "order": [
+            "mid",
+            "bot",
+            "top"
+          ],
+          "selected": "top",
+          "comparisons": [
+            {
+              "a": "bot",
+              "b": "mid",
+              "value": -0.7165169346844777
+            },
+            {
+              "a": "top",
+              "b": "bot",
+              "value": -0.13439394836314023
+            }
+          ],
+          "draws": 2,
+          "rng": 75723604
+        },
+        {
+          "order": [
+            "bot",
+            "top",
+            "mid"
+          ],
+          "selected": "mid",
+          "comparisons": [
+            {
+              "a": "top",
+              "b": "bot",
+              "value": -0.7165169346844777
+            },
+            {
+              "a": "mid",
+              "b": "top",
+              "value": -0.13439394836314023
+            }
+          ],
+          "draws": 2,
+          "rng": 75723604
+        },
+        {
+          "order": [
+            "bot",
+            "mid",
+            "top"
+          ],
+          "selected": "top",
+          "comparisons": [
+            {
+              "a": "mid",
+              "b": "bot",
+              "value": -0.7165169346844777
+            },
+            {
+              "a": "top",
+              "b": "mid",
+              "value": -0.13439394836314023
+            }
+          ],
+          "draws": 2,
+          "rng": 75723604
+        }
+      ]
+    },
+    {
+      "seed": 2,
+      "rows": [
+        {
+          "order": [
+            "top",
+            "mid",
+            "bot"
+          ],
+          "selected": "mid",
+          "comparisons": [
+            {
+              "a": "mid",
+              "b": "top",
+              "value": -0.5813820980256423
+            },
+            {
+              "a": "bot",
+              "b": "mid",
+              "value": 0.014105256646871567
+            },
+            {
+              "a": "bot",
+              "b": "top",
+              "value": 0.04330207023303956
+            }
+          ],
+          "draws": 3,
+          "rng": 661892606
+        },
+        {
+          "order": [
+            "top",
+            "bot",
+            "mid"
+          ],
+          "selected": "bot",
+          "comparisons": [
+            {
+              "a": "bot",
+              "b": "top",
+              "value": -0.5813820980256423
+            },
+            {
+              "a": "mid",
+              "b": "bot",
+              "value": 0.014105256646871567
+            },
+            {
+              "a": "mid",
+              "b": "top",
+              "value": 0.04330207023303956
+            }
+          ],
+          "draws": 3,
+          "rng": 661892606
+        },
+        {
+          "order": [
+            "mid",
+            "top",
+            "bot"
+          ],
+          "selected": "top",
+          "comparisons": [
+            {
+              "a": "top",
+              "b": "mid",
+              "value": -0.5813820980256423
+            },
+            {
+              "a": "bot",
+              "b": "top",
+              "value": 0.014105256646871567
+            },
+            {
+              "a": "bot",
+              "b": "mid",
+              "value": 0.04330207023303956
+            }
+          ],
+          "draws": 3,
+          "rng": 661892606
+        },
+        {
+          "order": [
+            "mid",
+            "bot",
+            "top"
+          ],
+          "selected": "bot",
+          "comparisons": [
+            {
+              "a": "bot",
+              "b": "mid",
+              "value": -0.5813820980256423
+            },
+            {
+              "a": "top",
+              "b": "bot",
+              "value": 0.014105256646871567
+            },
+            {
+              "a": "top",
+              "b": "mid",
+              "value": 0.04330207023303956
+            }
+          ],
+          "draws": 3,
+          "rng": 661892606
+        },
+        {
+          "order": [
+            "bot",
+            "top",
+            "mid"
+          ],
+          "selected": "top",
+          "comparisons": [
+            {
+              "a": "top",
+              "b": "bot",
+              "value": -0.5813820980256423
+            },
+            {
+              "a": "mid",
+              "b": "top",
+              "value": 0.014105256646871567
+            },
+            {
+              "a": "mid",
+              "b": "bot",
+              "value": 0.04330207023303956
+            }
+          ],
+          "draws": 3,
+          "rng": 661892606
+        },
+        {
+          "order": [
+            "bot",
+            "mid",
+            "top"
+          ],
+          "selected": "mid",
+          "comparisons": [
+            {
+              "a": "mid",
+              "b": "bot",
+              "value": -0.5813820980256423
+            },
+            {
+              "a": "top",
+              "b": "mid",
+              "value": 0.014105256646871567
+            },
+            {
+              "a": "top",
+              "b": "bot",
+              "value": 0.04330207023303956
+            }
+          ],
+          "draws": 3,
+          "rng": 661892606
+        }
+      ]
+    },
+    {
+      "seed": 3,
+      "rows": [
+        {
+          "order": [
+            "top",
+            "mid",
+            "bot"
+          ],
+          "selected": "top",
+          "comparisons": [
+            {
+              "a": "mid",
+              "b": "top",
+              "value": 0.013025419902987778
+            },
+            {
+              "a": "bot",
+              "b": "mid",
+              "value": -0.48372136673424393
+            },
+            {
+              "a": "bot",
+              "b": "mid",
+              "value": 0.28020115988329053
+            }
+          ],
+          "draws": 3,
+          "rng": 1036149367
+        },
+        {
+          "order": [
+            "top",
+            "bot",
+            "mid"
+          ],
+          "selected": "top",
+          "comparisons": [
+            {
+              "a": "bot",
+              "b": "top",
+              "value": 0.013025419902987778
+            },
+            {
+              "a": "mid",
+              "b": "bot",
+              "value": -0.48372136673424393
+            },
+            {
+              "a": "mid",
+              "b": "bot",
+              "value": 0.28020115988329053
+            }
+          ],
+          "draws": 3,
+          "rng": 1036149367
+        },
+        {
+          "order": [
+            "mid",
+            "top",
+            "bot"
+          ],
+          "selected": "mid",
+          "comparisons": [
+            {
+              "a": "top",
+              "b": "mid",
+              "value": 0.013025419902987778
+            },
+            {
+              "a": "bot",
+              "b": "top",
+              "value": -0.48372136673424393
+            },
+            {
+              "a": "bot",
+              "b": "top",
+              "value": 0.28020115988329053
+            }
+          ],
+          "draws": 3,
+          "rng": 1036149367
+        },
+        {
+          "order": [
+            "mid",
+            "bot",
+            "top"
+          ],
+          "selected": "mid",
+          "comparisons": [
+            {
+              "a": "bot",
+              "b": "mid",
+              "value": 0.013025419902987778
+            },
+            {
+              "a": "top",
+              "b": "bot",
+              "value": -0.48372136673424393
+            },
+            {
+              "a": "top",
+              "b": "bot",
+              "value": 0.28020115988329053
+            }
+          ],
+          "draws": 3,
+          "rng": 1036149367
+        },
+        {
+          "order": [
+            "bot",
+            "top",
+            "mid"
+          ],
+          "selected": "bot",
+          "comparisons": [
+            {
+              "a": "top",
+              "b": "bot",
+              "value": 0.013025419902987778
+            },
+            {
+              "a": "mid",
+              "b": "top",
+              "value": -0.48372136673424393
+            },
+            {
+              "a": "mid",
+              "b": "top",
+              "value": 0.28020115988329053
+            }
+          ],
+          "draws": 3,
+          "rng": 1036149367
+        },
+        {
+          "order": [
+            "bot",
+            "mid",
+            "top"
+          ],
+          "selected": "bot",
+          "comparisons": [
+            {
+              "a": "mid",
+              "b": "bot",
+              "value": 0.013025419902987778
+            },
+            {
+              "a": "top",
+              "b": "mid",
+              "value": -0.48372136673424393
+            },
+            {
+              "a": "top",
+              "b": "mid",
+              "value": 0.28020115988329053
+            }
+          ],
+          "draws": 3,
+          "rng": 1036149367
+        }
+      ]
+    },
+    {
+      "seed": 4,
+      "rows": [
+        {
+          "order": [
+            "top",
+            "mid",
+            "bot"
+          ],
+          "selected": "mid",
+          "comparisons": [
+            {
+              "a": "mid",
+              "b": "top",
+              "value": -0.091038161306642
+            },
+            {
+              "a": "bot",
+              "b": "mid",
+              "value": 0.19381295749917626
+            },
+            {
+              "a": "bot",
+              "b": "top",
+              "value": 0.47014369815588
+            }
+          ],
+          "draws": 3,
+          "rng": -996201940
+        },
+        {
+          "order": [
+            "top",
+            "bot",
+            "mid"
+          ],
+          "selected": "bot",
+          "comparisons": [
+            {
+              "a": "bot",
+              "b": "top",
+              "value": -0.091038161306642
+            },
+            {
+              "a": "mid",
+              "b": "bot",
+              "value": 0.19381295749917626
+            },
+            {
+              "a": "mid",
+              "b": "top",
+              "value": 0.47014369815588
+            }
+          ],
+          "draws": 3,
+          "rng": -996201940
+        },
+        {
+          "order": [
+            "mid",
+            "top",
+            "bot"
+          ],
+          "selected": "top",
+          "comparisons": [
+            {
+              "a": "top",
+              "b": "mid",
+              "value": -0.091038161306642
+            },
+            {
+              "a": "bot",
+              "b": "top",
+              "value": 0.19381295749917626
+            },
+            {
+              "a": "bot",
+              "b": "mid",
+              "value": 0.47014369815588
+            }
+          ],
+          "draws": 3,
+          "rng": -996201940
+        },
+        {
+          "order": [
+            "mid",
+            "bot",
+            "top"
+          ],
+          "selected": "bot",
+          "comparisons": [
+            {
+              "a": "bot",
+              "b": "mid",
+              "value": -0.091038161306642
+            },
+            {
+              "a": "top",
+              "b": "bot",
+              "value": 0.19381295749917626
+            },
+            {
+              "a": "top",
+              "b": "mid",
+              "value": 0.47014369815588
+            }
+          ],
+          "draws": 3,
+          "rng": -996201940
+        },
+        {
+          "order": [
+            "bot",
+            "top",
+            "mid"
+          ],
+          "selected": "top",
+          "comparisons": [
+            {
+              "a": "top",
+              "b": "bot",
+              "value": -0.091038161306642
+            },
+            {
+              "a": "mid",
+              "b": "top",
+              "value": 0.19381295749917626
+            },
+            {
+              "a": "mid",
+              "b": "bot",
+              "value": 0.47014369815588
+            }
+          ],
+          "draws": 3,
+          "rng": -996201940
+        },
+        {
+          "order": [
+            "bot",
+            "mid",
+            "top"
+          ],
+          "selected": "mid",
+          "comparisons": [
+            {
+              "a": "mid",
+              "b": "bot",
+              "value": -0.091038161306642
+            },
+            {
+              "a": "top",
+              "b": "mid",
+              "value": 0.19381295749917626
+            },
+            {
+              "a": "top",
+              "b": "bot",
+              "value": 0.47014369815588
+            }
+          ],
+          "draws": 3,
+          "rng": -996201940
+        }
+      ]
+    },
+    {
+      "seed": 5,
+      "rows": [
+        {
+          "order": [
+            "top",
+            "mid",
+            "bot"
+          ],
+          "selected": "top",
+          "comparisons": [
+            {
+              "a": "mid",
+              "b": "top",
+              "value": 0.6001248937100172
+            },
+            {
+              "a": "bot",
+              "b": "mid",
+              "value": 0.09700416529085487
+            }
+          ],
+          "draws": 2,
+          "rng": 358736304
+        },
+        {
+          "order": [
+            "top",
+            "bot",
+            "mid"
+          ],
+          "selected": "top",
+          "comparisons": [
+            {
+              "a": "bot",
+              "b": "top",
+              "value": 0.6001248937100172
+            },
+            {
+              "a": "mid",
+              "b": "bot",
+              "value": 0.09700416529085487
+            }
+          ],
+          "draws": 2,
+          "rng": 358736304
+        },
+        {
+          "order": [
+            "mid",
+            "top",
+            "bot"
+          ],
+          "selected": "mid",
+          "comparisons": [
+            {
+              "a": "top",
+              "b": "mid",
+              "value": 0.6001248937100172
+            },
+            {
+              "a": "bot",
+              "b": "top",
+              "value": 0.09700416529085487
+            }
+          ],
+          "draws": 2,
+          "rng": 358736304
+        },
+        {
+          "order": [
+            "mid",
+            "bot",
+            "top"
+          ],
+          "selected": "mid",
+          "comparisons": [
+            {
+              "a": "bot",
+              "b": "mid",
+              "value": 0.6001248937100172
+            },
+            {
+              "a": "top",
+              "b": "bot",
+              "value": 0.09700416529085487
+            }
+          ],
+          "draws": 2,
+          "rng": 358736304
+        },
+        {
+          "order": [
+            "bot",
+            "top",
+            "mid"
+          ],
+          "selected": "bot",
+          "comparisons": [
+            {
+              "a": "top",
+              "b": "bot",
+              "value": 0.6001248937100172
+            },
+            {
+              "a": "mid",
+              "b": "top",
+              "value": 0.09700416529085487
+            }
+          ],
+          "draws": 2,
+          "rng": 358736304
+        },
+        {
+          "order": [
+            "bot",
+            "mid",
+            "top"
+          ],
+          "selected": "bot",
+          "comparisons": [
+            {
+              "a": "mid",
+              "b": "bot",
+              "value": 0.6001248937100172
+            },
+            {
+              "a": "top",
+              "b": "mid",
+              "value": 0.09700416529085487
+            }
+          ],
+          "draws": 2,
+          "rng": 358736304
+        }
+      ]
+    },
+    {
+      "seed": 6,
+      "rows": [
+        {
+          "order": [
+            "top",
+            "mid",
+            "bot"
+          ],
+          "selected": "bot",
+          "comparisons": [
+            {
+              "a": "mid",
+              "b": "top",
+              "value": -0.7327793167205527
+            },
+            {
+              "a": "bot",
+              "b": "mid",
+              "value": -0.6099947195034474
+            }
+          ],
+          "draws": 2,
+          "rng": -2111084667
+        },
+        {
+          "order": [
+            "top",
+            "bot",
+            "mid"
+          ],
+          "selected": "mid",
+          "comparisons": [
+            {
+              "a": "bot",
+              "b": "top",
+              "value": -0.7327793167205527
+            },
+            {
+              "a": "mid",
+              "b": "bot",
+              "value": -0.6099947195034474
+            }
+          ],
+          "draws": 2,
+          "rng": -2111084667
+        },
+        {
+          "order": [
+            "mid",
+            "top",
+            "bot"
+          ],
+          "selected": "bot",
+          "comparisons": [
+            {
+              "a": "top",
+              "b": "mid",
+              "value": -0.7327793167205527
+            },
+            {
+              "a": "bot",
+              "b": "top",
+              "value": -0.6099947195034474
+            }
+          ],
+          "draws": 2,
+          "rng": -2111084667
+        },
+        {
+          "order": [
+            "mid",
+            "bot",
+            "top"
+          ],
+          "selected": "top",
+          "comparisons": [
+            {
+              "a": "bot",
+              "b": "mid",
+              "value": -0.7327793167205527
+            },
+            {
+              "a": "top",
+              "b": "bot",
+              "value": -0.6099947195034474
+            }
+          ],
+          "draws": 2,
+          "rng": -2111084667
+        },
+        {
+          "order": [
+            "bot",
+            "top",
+            "mid"
+          ],
+          "selected": "mid",
+          "comparisons": [
+            {
+              "a": "top",
+              "b": "bot",
+              "value": -0.7327793167205527
+            },
+            {
+              "a": "mid",
+              "b": "top",
+              "value": -0.6099947195034474
+            }
+          ],
+          "draws": 2,
+          "rng": -2111084667
+        },
+        {
+          "order": [
+            "bot",
+            "mid",
+            "top"
+          ],
+          "selected": "top",
+          "comparisons": [
+            {
+              "a": "mid",
+              "b": "bot",
+              "value": -0.7327793167205527
+            },
+            {
+              "a": "top",
+              "b": "mid",
+              "value": -0.6099947195034474
+            }
+          ],
+          "draws": 2,
+          "rng": -2111084667
+        }
+      ]
+    },
+    {
+      "seed": 7,
+      "rows": [
+        {
+          "order": [
+            "top",
+            "mid",
+            "bot"
+          ],
+          "selected": "bot",
+          "comparisons": [
+            {
+              "a": "mid",
+              "b": "top",
+              "value": -0.25173928029835224
+            },
+            {
+              "a": "bot",
+              "b": "mid",
+              "value": -0.5226674869190902
+            }
+          ],
+          "draws": 2,
+          "rng": -744687218
+        },
+        {
+          "order": [
+            "top",
+            "bot",
+            "mid"
+          ],
+          "selected": "mid",
+          "comparisons": [
+            {
+              "a": "bot",
+              "b": "top",
+              "value": -0.25173928029835224
+            },
+            {
+              "a": "mid",
+              "b": "bot",
+              "value": -0.5226674869190902
+            }
+          ],
+          "draws": 2,
+          "rng": -744687218
+        },
+        {
+          "order": [
+            "mid",
+            "top",
+            "bot"
+          ],
+          "selected": "bot",
+          "comparisons": [
+            {
+              "a": "top",
+              "b": "mid",
+              "value": -0.25173928029835224
+            },
+            {
+              "a": "bot",
+              "b": "top",
+              "value": -0.5226674869190902
+            }
+          ],
+          "draws": 2,
+          "rng": -744687218
+        },
+        {
+          "order": [
+            "mid",
+            "bot",
+            "top"
+          ],
+          "selected": "top",
+          "comparisons": [
+            {
+              "a": "bot",
+              "b": "mid",
+              "value": -0.25173928029835224
+            },
+            {
+              "a": "top",
+              "b": "bot",
+              "value": -0.5226674869190902
+            }
+          ],
+          "draws": 2,
+          "rng": -744687218
+        },
+        {
+          "order": [
+            "bot",
+            "top",
+            "mid"
+          ],
+          "selected": "mid",
+          "comparisons": [
+            {
+              "a": "top",
+              "b": "bot",
+              "value": -0.25173928029835224
+            },
+            {
+              "a": "mid",
+              "b": "top",
+              "value": -0.5226674869190902
+            }
+          ],
+          "draws": 2,
+          "rng": -744687218
+        },
+        {
+          "order": [
+            "bot",
+            "mid",
+            "top"
+          ],
+          "selected": "top",
+          "comparisons": [
+            {
+              "a": "mid",
+              "b": "bot",
+              "value": -0.25173928029835224
+            },
+            {
+              "a": "top",
+              "b": "mid",
+              "value": -0.5226674869190902
+            }
+          ],
+          "draws": 2,
+          "rng": -744687218
+        }
+      ]
+    },
+    {
+      "seed": 8,
+      "rows": [
+        {
+          "order": [
+            "top",
+            "mid",
+            "bot"
+          ],
+          "selected": "bot",
+          "comparisons": [
+            {
+              "a": "mid",
+              "b": "top",
+              "value": -0.3626529296161607
+            },
+            {
+              "a": "bot",
+              "b": "mid",
+              "value": -0.5775627891998738
+            }
+          ],
+          "draws": 2,
+          "rng": -2009331309
+        },
+        {
+          "order": [
+            "top",
+            "bot",
+            "mid"
+          ],
+          "selected": "mid",
+          "comparisons": [
+            {
+              "a": "bot",
+              "b": "top",
+              "value": -0.3626529296161607
+            },
+            {
+              "a": "mid",
+              "b": "bot",
+              "value": -0.5775627891998738
+            }
+          ],
+          "draws": 2,
+          "rng": -2009331309
+        },
+        {
+          "order": [
+            "mid",
+            "top",
+            "bot"
+          ],
+          "selected": "bot",
+          "comparisons": [
+            {
+              "a": "top",
+              "b": "mid",
+              "value": -0.3626529296161607
+            },
+            {
+              "a": "bot",
+              "b": "top",
+              "value": -0.5775627891998738
+            }
+          ],
+          "draws": 2,
+          "rng": -2009331309
+        },
+        {
+          "order": [
+            "mid",
+            "bot",
+            "top"
+          ],
+          "selected": "top",
+          "comparisons": [
+            {
+              "a": "bot",
+              "b": "mid",
+              "value": -0.3626529296161607
+            },
+            {
+              "a": "top",
+              "b": "bot",
+              "value": -0.5775627891998738
+            }
+          ],
+          "draws": 2,
+          "rng": -2009331309
+        },
+        {
+          "order": [
+            "bot",
+            "top",
+            "mid"
+          ],
+          "selected": "mid",
+          "comparisons": [
+            {
+              "a": "top",
+              "b": "bot",
+              "value": -0.3626529296161607
+            },
+            {
+              "a": "mid",
+              "b": "top",
+              "value": -0.5775627891998738
+            }
+          ],
+          "draws": 2,
+          "rng": -2009331309
+        },
+        {
+          "order": [
+            "bot",
+            "mid",
+            "top"
+          ],
+          "selected": "top",
+          "comparisons": [
+            {
+              "a": "mid",
+              "b": "bot",
+              "value": -0.3626529296161607
+            },
+            {
+              "a": "top",
+              "b": "mid",
+              "value": -0.5775627891998738
+            }
+          ],
+          "draws": 2,
+          "rng": -2009331309
+        }
+      ]
+    },
+    {
+      "seed": 9,
+      "rows": [
+        {
+          "order": [
+            "top",
+            "mid",
+            "bot"
+          ],
+          "selected": "bot",
+          "comparisons": [
+            {
+              "a": "mid",
+              "b": "top",
+              "value": -0.727969421306625
+            },
+            {
+              "a": "bot",
+              "b": "mid",
+              "value": -0.48009912308771163
+            }
+          ],
+          "draws": 2,
+          "rng": 1964806332
+        },
+        {
+          "order": [
+            "top",
+            "bot",
+            "mid"
+          ],
+          "selected": "mid",
+          "comparisons": [
+            {
+              "a": "bot",
+              "b": "top",
+              "value": -0.727969421306625
+            },
+            {
+              "a": "mid",
+              "b": "bot",
+              "value": -0.48009912308771163
+            }
+          ],
+          "draws": 2,
+          "rng": 1964806332
+        },
+        {
+          "order": [
+            "mid",
+            "top",
+            "bot"
+          ],
+          "selected": "bot",
+          "comparisons": [
+            {
+              "a": "top",
+              "b": "mid",
+              "value": -0.727969421306625
+            },
+            {
+              "a": "bot",
+              "b": "top",
+              "value": -0.48009912308771163
+            }
+          ],
+          "draws": 2,
+          "rng": 1964806332
+        },
+        {
+          "order": [
+            "mid",
+            "bot",
+            "top"
+          ],
+          "selected": "top",
+          "comparisons": [
+            {
+              "a": "bot",
+              "b": "mid",
+              "value": -0.727969421306625
+            },
+            {
+              "a": "top",
+              "b": "bot",
+              "value": -0.48009912308771163
+            }
+          ],
+          "draws": 2,
+          "rng": 1964806332
+        },
+        {
+          "order": [
+            "bot",
+            "top",
+            "mid"
+          ],
+          "selected": "mid",
+          "comparisons": [
+            {
+              "a": "top",
+              "b": "bot",
+              "value": -0.727969421306625
+            },
+            {
+              "a": "mid",
+              "b": "top",
+              "value": -0.48009912308771163
+            }
+          ],
+          "draws": 2,
+          "rng": 1964806332
+        },
+        {
+          "order": [
+            "bot",
+            "mid",
+            "top"
+          ],
+          "selected": "top",
+          "comparisons": [
+            {
+              "a": "mid",
+              "b": "bot",
+              "value": -0.727969421306625
+            },
+            {
+              "a": "top",
+              "b": "mid",
+              "value": -0.48009912308771163
+            }
+          ],
+          "draws": 2,
+          "rng": 1964806332
+        }
+      ]
+    },
+    {
+      "seed": 10,
+      "rows": [
+        {
+          "order": [
+            "top",
+            "mid",
+            "bot"
+          ],
+          "selected": "top",
+          "comparisons": [
+            {
+              "a": "mid",
+              "b": "top",
+              "value": 0.12204911943990737
+            },
+            {
+              "a": "bot",
+              "b": "mid",
+              "value": 0.19349713891278952
+            }
+          ],
+          "draws": 2,
+          "rng": 104297588
+        },
+        {
+          "order": [
+            "top",
+            "bot",
+            "mid"
+          ],
+          "selected": "top",
+          "comparisons": [
+            {
+              "a": "bot",
+              "b": "top",
+              "value": 0.12204911943990737
+            },
+            {
+              "a": "mid",
+              "b": "bot",
+              "value": 0.19349713891278952
+            }
+          ],
+          "draws": 2,
+          "rng": 104297588
+        },
+        {
+          "order": [
+            "mid",
+            "top",
+            "bot"
+          ],
+          "selected": "mid",
+          "comparisons": [
+            {
+              "a": "top",
+              "b": "mid",
+              "value": 0.12204911943990737
+            },
+            {
+              "a": "bot",
+              "b": "top",
+              "value": 0.19349713891278952
+            }
+          ],
+          "draws": 2,
+          "rng": 104297588
+        },
+        {
+          "order": [
+            "mid",
+            "bot",
+            "top"
+          ],
+          "selected": "mid",
+          "comparisons": [
+            {
+              "a": "bot",
+              "b": "mid",
+              "value": 0.12204911943990737
+            },
+            {
+              "a": "top",
+              "b": "bot",
+              "value": 0.19349713891278952
+            }
+          ],
+          "draws": 2,
+          "rng": 104297588
+        },
+        {
+          "order": [
+            "bot",
+            "top",
+            "mid"
+          ],
+          "selected": "bot",
+          "comparisons": [
+            {
+              "a": "top",
+              "b": "bot",
+              "value": 0.12204911943990737
+            },
+            {
+              "a": "mid",
+              "b": "top",
+              "value": 0.19349713891278952
+            }
+          ],
+          "draws": 2,
+          "rng": 104297588
+        },
+        {
+          "order": [
+            "bot",
+            "mid",
+            "top"
+          ],
+          "selected": "bot",
+          "comparisons": [
+            {
+              "a": "mid",
+              "b": "bot",
+              "value": 0.12204911943990737
+            },
+            {
+              "a": "top",
+              "b": "mid",
+              "value": 0.19349713891278952
+            }
+          ],
+          "draws": 2,
+          "rng": 104297588
+        }
+      ]
+    },
+    {
+      "seed": 11,
+      "rows": [
+        {
+          "order": [
+            "top",
+            "mid",
+            "bot"
+          ],
+          "selected": "top",
+          "comparisons": [
+            {
+              "a": "mid",
+              "b": "top",
+              "value": 0.7451687125721946
+            },
+            {
+              "a": "bot",
+              "b": "mid",
+              "value": -0.30370363604743034
+            },
+            {
+              "a": "bot",
+              "b": "mid",
+              "value": -0.7096841388847679
+            },
+            {
+              "a": "bot",
+              "b": "top",
+              "value": 0.74425290862564
+            }
+          ],
+          "draws": 4,
+          "rng": 219277301
+        },
+        {
+          "order": [
+            "top",
+            "bot",
+            "mid"
+          ],
+          "selected": "top",
+          "comparisons": [
+            {
+              "a": "bot",
+              "b": "top",
+              "value": 0.7451687125721946
+            },
+            {
+              "a": "mid",
+              "b": "bot",
+              "value": -0.30370363604743034
+            },
+            {
+              "a": "mid",
+              "b": "bot",
+              "value": -0.7096841388847679
+            },
+            {
+              "a": "mid",
+              "b": "top",
+              "value": 0.74425290862564
+            }
+          ],
+          "draws": 4,
+          "rng": 219277301
+        },
+        {
+          "order": [
+            "mid",
+            "top",
+            "bot"
+          ],
+          "selected": "mid",
+          "comparisons": [
+            {
+              "a": "top",
+              "b": "mid",
+              "value": 0.7451687125721946
+            },
+            {
+              "a": "bot",
+              "b": "top",
+              "value": -0.30370363604743034
+            },
+            {
+              "a": "bot",
+              "b": "top",
+              "value": -0.7096841388847679
+            },
+            {
+              "a": "bot",
+              "b": "mid",
+              "value": 0.74425290862564
+            }
+          ],
+          "draws": 4,
+          "rng": 219277301
+        },
+        {
+          "order": [
+            "mid",
+            "bot",
+            "top"
+          ],
+          "selected": "mid",
+          "comparisons": [
+            {
+              "a": "bot",
+              "b": "mid",
+              "value": 0.7451687125721946
+            },
+            {
+              "a": "top",
+              "b": "bot",
+              "value": -0.30370363604743034
+            },
+            {
+              "a": "top",
+              "b": "bot",
+              "value": -0.7096841388847679
+            },
+            {
+              "a": "top",
+              "b": "mid",
+              "value": 0.74425290862564
+            }
+          ],
+          "draws": 4,
+          "rng": 219277301
+        },
+        {
+          "order": [
+            "bot",
+            "top",
+            "mid"
+          ],
+          "selected": "bot",
+          "comparisons": [
+            {
+              "a": "top",
+              "b": "bot",
+              "value": 0.7451687125721946
+            },
+            {
+              "a": "mid",
+              "b": "top",
+              "value": -0.30370363604743034
+            },
+            {
+              "a": "mid",
+              "b": "top",
+              "value": -0.7096841388847679
+            },
+            {
+              "a": "mid",
+              "b": "bot",
+              "value": 0.74425290862564
+            }
+          ],
+          "draws": 4,
+          "rng": 219277301
+        },
+        {
+          "order": [
+            "bot",
+            "mid",
+            "top"
+          ],
+          "selected": "bot",
+          "comparisons": [
+            {
+              "a": "mid",
+              "b": "bot",
+              "value": 0.7451687125721946
+            },
+            {
+              "a": "top",
+              "b": "mid",
+              "value": -0.30370363604743034
+            },
+            {
+              "a": "top",
+              "b": "mid",
+              "value": -0.7096841388847679
+            },
+            {
+              "a": "top",
+              "b": "bot",
+              "value": 0.74425290862564
+            }
+          ],
+          "draws": 4,
+          "rng": 219277301
+        }
+      ]
+    }
+  ],
+  "blocked": {
+    "selected": null,
+    "available": {
+      "top": [
+        false,
+        false,
+        false,
+        true
+      ],
+      "mid": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "bot": [
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    "resourceUnchanged": true
+  },
+  "baselineCommit": "83a8fd53d844065c2fbca12846dc4967a716006a",
+  "date": "2026-10-04"
+}

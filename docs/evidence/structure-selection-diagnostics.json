@@ -1,0 +1,48 @@
+{
+  "date": "2026-10-04",
+  "failures": [
+    {
+      "file": "/tmp/structure-selection-ui-initial.log",
+      "trigger": "old fixed behind-gold fixture5/18 under intentionally corrected RNG/target selection",
+      "correction": "same-setup bounded32 actual trace gives0/20; original assertions retained and old fixture preserved"
+    },
+    {
+      "file": "/tmp/structure-selection-original-objective-failure.log",
+      "trigger": "original natural conversion13 no longer observed under corrected selection",
+      "correction": "same tactics32x2 bounded source gives actual conversion17; original fixture retained"
+    },
+    {
+      "file": "/tmp/structure-selection-static-initial.log",
+      "trigger": "sandbox child process",
+      "correction": "unchanged command passed with explicit permission review"
+    },
+    {
+      "file": "/tmp/structure-selection-browser-initial.log",
+      "trigger": "Chromium socket sandbox",
+      "correction": "identical rebuilt HTML passed reviewed focused browser"
+    }
+  ],
+  "acceptance": {
+    "permutationSeeds": 12,
+    "permutations": 6,
+    "actualMatches": 8,
+    "originalBlockedLegalAlternative": 16,
+    "correctedBlockedLegalAlternative": 0,
+    "loggedQuietPairs": 4,
+    "Node22SmokeMs": 27089.6,
+    "unchangedSmokeLimitMs": 35000,
+    "careerOfficialMatches": 186,
+    "browser": "actual officialBo3threegames, source marker/Korean explanation, pending/history/full save, keyboard1280/320, no document overflow/page errors",
+    "captures": "distinct structure-selection-browser-initial-* paths; no previous capture overwrites",
+    "externalProfessionalCalibration": false,
+    "finalDeviceQA": "deferred"
+  },
+  "scope": "Intentional causal/RNG outcome change, not behavior-preserving optimization; geometry/HP/lane travel/hunter comparator and queued attacker availability remain unfinished",
+  "prFirstHeadStaticFailure": {
+    "head": "b743185d0b35214a72b1e95d8a63335cc7569cdb",
+    "run": 37208548063,
+    "job": 111454814400,
+    "reason": "ui-match-history.js exceeded unchanged 8000-character budget",
+    "localCorrection": "Earlier local static-reviewed log also failed; previous pass summary was inaccurate. Extracted archived adjudication explanation into existing ui-takedown-history.js presentation module; no budget changes."
+  }
+}

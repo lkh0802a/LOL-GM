@@ -7,7 +7,7 @@ await runEngineFixture(String.raw`(()=>{
  db.world={year:db.year,manage:'manual',phase:'season',seasons:{}};
  const saved=packDB(db),signature=r=>JSON.stringify({winner:r.winner,ending:r.ending,duration:r.duration,gold:r.goldHist,firsts:r.firsts,sides:r.sides.map(s=>({nexus:s.nexus,towers:s.towers,kills:s.kills,players:s.ps.map(p=>({id:p.p.id,k:p.k,d:p.d,a:p.a,cs:p.cs,gold:p.goldEarned,xp:p.xp,lvl:p.lvl,dmg:p.dmg,hp:p.hp,items:p.items,quest:p.quest,vision:p.vision,objectives:p.objectives}))}))});
  const winners=new Set();let pairs=0;
- for(const seed of ['record-official','ending-clock-1','nexus-resource-scenario-0'])for(const ids of [[a.id,b.id],[b.id,a.id]]){
+ for(const seed of ['record-official','ending-clock-1','nexus-resource-scenario-1'])for(const ids of [[a.id,b.id],[b.id,a.id]]){
   const logged=simulateMatch(db,...ids,seed,null,false),quiet=simulateMatch(db,...ids,seed,null,true);pairs++;
   check(signature(logged)===signature(quiet),'quiet/logged actual state, XP/items, clock or history differs');
   const n=logged.log.filter(e=>e.kind==='nexus'),last=logged.log.at(-1);winners.add(logged.winner);
@@ -18,8 +18,8 @@ await runEngineFixture(String.raw`(()=>{
  }
  // Reviewed behind-resource conversions after actual inventory offense correction.
  // Prior 13/21, 19/22 and 8/15 traces/failures remain tied to their original heads.
- // Bounded 32-seed evidence is preserved in inventory-offense-resource-scenarios.json.
- for(const seed of ['nexus-resource-scenario-5','nexus-resource-scenario-18']){
+ // New structure-selection bounded32-seed evidence is preserved in structure-selection-resource-scenarios.json; original fixtures/failures remain.
+ for(const seed of ['nexus-resource-scenario-0','nexus-resource-scenario-20']){
   const r=simulateMatch(db,a.id,b.id,seed,null,false),gold=r.sides.map(s=>s.ps.reduce((v,p)=>v+p.goldEarned,0)),w=r.winner;
   check(gold[w]<gold[1-w]&&!r.sides[1-w].nexus&&r.sides[w].nexus,'resource lead alone won or missing natural behind win');
   check(r.sides[w].ps.some(p=>p.deadUntil<=r.ending.minute)&&r.sides[1-w].nexusT===0&&LANES.some(l=>!r.sides[1-w].towers[l][3]),'no surviving conversion or open base');

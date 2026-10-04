@@ -147,8 +147,19 @@ function fight(st,zone,sideArrs,ctx={}){
 
 // ----- 구조물 -----
 function laneProgress(s,l){return s.towers[l].filter(x=>!x).length}
+// Progress remains primary: the old comparator noise was bounded below one
+// structure step. Only equal-progress choices consume seeded tie keys.
+function selectStructureLane(st,en,candidates){
+  const canonical=LANES.filter(l=>candidates.includes(l));
+  if(!canonical.length)return null;
+  const progress=Math.max(...canonical.map(l=>laneProgress(en,l))),tied=canonical.filter(l=>laneProgress(en,l)===progress);
+  if(tied.length===1)return tied[0];
+  const ranked=tied.map(l=>({lane:l,key:(st.rng.dec.next()-.5)*1.5}));
+  return ranked.reduce((best,x)=>x.key>best.key?x:best).lane;
+}
 function takeStructure(st,side,opt={}){
   if(matchEnded(st))return;
+  if(![0,1].includes(side)||opt.lane&&!LANES.includes(opt.lane))return null;
   const en=st.sides[1-side];
   // 억제기 재생성 처리
   for(const l of LANES) if(!en.towers[l][3]&&en.inhibAt[l]&&st.t>=en.inhibAt[l]){en.towers[l][3]=true;en.inhibAt[l]=0;log(st,`${en.team.short} ${LANE_KO[l]} 억제기 재생성`,{side:1-side})}
@@ -160,8 +171,9 @@ function takeStructure(st,side,opt={}){
   let lanes=opt.lane?[opt.lane]:LANES.slice();
   lanes=lanes.filter(l=>en.towers[l].some(x=>x));
   if(!lanes.length){ if(opt.lane) return takeStructure(st,side,{...opt,lane:null}); return null; }
-  lanes.sort((a,b)=>laneProgress(en,b)-laneProgress(en,a)+(st.rng.dec.next()-0.5)*1.5);
-  const l=lanes[0], idx=en.towers[l].findIndex(x=>x);
+  lanes=lanes.filter(l=>opt.allowInhib||en.towers[l].findIndex(x=>x)<3);
+  if(!lanes.length)return null;
+  const l=selectStructureLane(st,en,lanes),idx=en.towers[l].findIndex(x=>x);
   if(idx===3&&!opt.allowInhib) return null;
   en.towers[l][idx]=false;
   const names=['1차 포탑','2차 포탑','억제기 포탑','억제기'];
@@ -464,5 +476,5 @@ function simulateMatch(db,blueId,redId,seed,ctx,quiet){
   if(st.winner<0)throw new Error('Match unresolved: neither nexus was destroyed within '+MATCH_SIMULATION_MAX_MINUTES+' simulated minutes; no official result produced (seed '+seed+')');
   const endSec=st.ending.second;
   st.log.sort((a,b)=>a.t-b.t||a.sec-b.sec);
-  return {seed,winner:st.winner,ending:{...st.ending},damageBasis:'effective-aggregate-v1',objectiveEvents:st.objectiveEvents||[],takedownEvents:st.takedownEvents||[],duration:t+endSec/60,durationStr:fmtTime(t,endSec),draft:d,sides:st.sides,log:st.log,expl:st.expl,goldHist:st.goldHist,firsts:st.firsts};
+  return {seed,winner:st.winner,ending:{...st.ending},damageBasis:'effective-aggregate-v1',structureSelectionBasis:'progress-seeded-ties-v1',objectiveEvents:st.objectiveEvents||[],takedownEvents:st.takedownEvents||[],duration:t+endSec/60,durationStr:fmtTime(t,endSec),draft:d,sides:st.sides,log:st.log,expl:st.expl,goldHist:st.goldHist,firsts:st.firsts};
 }
