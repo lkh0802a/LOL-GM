@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {artifactSources,runEngineFixture} from './test-harness.mjs';
-const sources=await artifactSources(['ui-market.js','ui-market-initial.js','ui-roster.js','ui-setup.js','ui-negotiations.js','app.js']);
+const sources=await artifactSources(['ui-market.js','ui-initial-candidates.js','ui-market-initial.js','ui-roster.js','ui-setup.js','ui-negotiations.js','app.js']);
 const esc=sources.pop().match(/^const esc=.*$/m)?.[0];assert(esc);
 await runEngineFixture(String.raw`(()=>{
   const check=(ok,msg)=>{if(!ok)throw Error('OWNED_RESERVE_COACH '+msg)};
