@@ -104,6 +104,7 @@ export const UI_MODULES = [
   'ui-analysis.js',
   'ui-analysis-tiers.js',
   'ui-analysis-comparison.js',
+  'ui-initial-offer-preview.js',
   'ui-negotiations.js',
   'ui-transfer-terms.js',
   'ui-observed-radar.js',

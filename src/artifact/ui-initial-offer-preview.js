@@ -1,0 +1,32 @@
+// Conditional initial agreement projection. Only a private copy runs the writer.
+function initialOfferImpact(db,pid,tid,input=null){
+ const target=db.teams[tid],p=db.players[pid];
+ if(!p||!initialCandidateAllowed(db,target,p))return {ok:false,reason:'현재 FA 또는 대상 스쿼드의 영입 권한이 없습니다'};
+ const raw=input||{salary:asking(initialCandidateView(db),p,target.region),years:contractDurationPolicy(db,p,target).preferred,signingBonus:0};
+ if(!Number.isFinite(+raw.salary)||+raw.salary<=0||!Number.isFinite(+raw.years)||+raw.years<=0||!Number.isFinite(+(raw.signingBonus||0))||+(raw.signingBonus||0)<0||Object.values(raw.bonuses||{}).some(x=>!Number.isFinite(+x)||+x<0))return {ok:false,reason:'연봉·기간·계약금·보너스에 유효한 금액을 입력하세요'};
+ if(!Number.isFinite(target.finance?.cash))return {ok:false,reason:'구단 현금 정보가 없습니다'};
+ const view=JSON.parse(JSON.stringify(db)),team=view.teams[tid],player=view.players[pid],terms=playerActionTerms(view,player,team,{salary:+raw.salary,years:+raw.years,terms:raw});
+ const command={type:'player.sign',actor:'manager',kind:'initial',pid,teamId:tid,salary:terms.salary,years:terms.years,terms};
+ const snapshot=()=>({count:team.roster.length,imports:teamNonLocalCount(view,team),pay:payroll(view,team),budget:initialSalaryBudget(view,team),cash:team.finance.cash,roles:Object.fromEntries(ROLES.map(r=>[r,team.roster.filter(id=>view.players[id]?.role===r).length])),organization:organizationRoster(view,parentTeamOf(view,team)).length,errors:initialOrganizationErrors(view,team),tax:spendingTaxForPayroll(view,team,regulatedPayroll(view,team))});
+ const before=snapshot(),limits=initialSquadLimits(view,team),local=projectedPlayerIsLocal(view,player,team),error=negotiationBudgetError(view,player,team,terms,'initial'),preview=error?{ok:false,errors:[error]}:previewWorldAction(view,command);
+ if(!preview.ok)return {ok:false,reason:(preview.errors||['계약 조건을 확인하세요']).join(' · '),before,terms};
+ const applied=applyWorldAction(view,preview);if(!applied.ok)return {ok:false,reason:applied.errors.join(' · '),before,terms};
+ return {ok:true,showRole:!!input&&SQUAD_ROLES.includes(raw.promisedRole),pid,tid,name:p.name,team:target.name,date:db.worldDate,terms,before,after:snapshot(),limits,importLimit:nonLocalLimitForTeam(view,team),local,source:input?'작성 조건':'요구 연봉 기준'};
+}
+function initialOfferImpactMarkup(model){
+ if(!model.ok)return `<p class="warn" role="status">${esc(model.reason)}</p>`;
+ const b=model.before,a=model.after,row=(label,x,y)=>`<tr><th scope="row">${label}</th><td>${x}</td><td>${y}</td></tr>`;
+ return `<p>${esc(model.name)} → ${esc(model.team)} · ${esc(model.date)} · ${esc(model.source)}</p><p class="hint">영입에 합의했을 때의 조건부 미리보기입니다. 지금 선수단·현금은 바뀌지 않습니다. 선수 수락·경기 출전 자격을 보장하지 않으며 실제 제안 시 최신 조건을 다시 확인합니다.</p><p>${esc(contractTermsText({...model.terms,promisedRole:model.showRole?model.terms.promisedRole:null}))}</p><div class="scroll"><table><thead><tr><th>항목</th><th>현재</th><th>합의 성공 시</th></tr></thead><tbody>${row('스쿼드 인원 (허용 '+model.limits.min+'–'+model.limits.max+'명)',b.count+'명',a.count+'명')}${row('비로컬 (상한 '+model.importLimit+'명)',b.imports+'명',a.imports+'명')}${row('구단 조직 인원',b.organization+'명',a.organization+'명')}${row('연간 연봉 부담',money(b.pay),money(a.pay))}${row('연봉 예산',money(b.budget),money(a.budget))}${row('예산 여유',money(b.budget-b.pay),money(a.budget-a.pay))}${row('현재 현금 · 계약금 반영',money(b.cash),money(a.cash))}${row('현재 규칙 기준 연간 부담금 추정',money(b.tax),money(a.tax))}${ROLES.map(r=>row(ROLE_KO[r]+' 전문 역할 인원 (배치 참고)',b.roles[r]+'명',a.roles[r]+'명')).join('')}</tbody></table></div><p class="hint">이 스쿼드에서 ${model.local?'로컬':'비로컬'}로 판정합니다. 국적·출신·언어와 별개입니다. 전문 역할 인원은 등록 요건이 아니며 약속 역할과 실제 주전 배치는 다릅니다. 작성하지 않은 약속 역할은 표시하지 않습니다. 조건부 성과·우승·국제전 보너스는 지금 현금에서 차감하지 않습니다. 다른 진행 중 제안은 확정 의무로 합산하지 않습니다.</p><details><summary>합의 성공 후 개막까지 남은 조직 조건 ${a.errors.length}건</summary>${a.errors.length?'<ul>'+a.errors.map(e=>'<li>'+esc(e)+'</li>').join('')+'</ul>':'<p>현재 초기 조직 인원·비로컬·연봉 조건을 충족합니다. 대회 등록과 공식 출전은 별도 절차입니다.</p>'}</details>`;
+}
+function initialOfferImpactPanel(db,state){const x=state.impact;if(!x)return '';let model;
+ if(x.nid){const n=db.world?.negotiations?.[x.nid];if(!n||n.status!=='open'||n.kind!=='initial'||n.pid!==x.pid||n.teamId!==state.target||(x.round!=null&&n.round!==x.round)||(x.attempt!=null&&n.attempt!==x.attempt))model={ok:false,reason:'협상 상태가 바뀌었습니다. 현재 조건을 다시 확인하세요'};}
+ model=model||initialOfferImpact(db,x.pid,state.target,x.terms);if(model.ok&&x.basis)model.source=x.basis;
+ return `<section id="init-offer-impact" tabindex="-1" aria-labelledby="init-impact-title"><h3 id="init-impact-title">영입 전후 미리보기</h3><button class="ghost" id="init-impact-close">검토 위치로 돌아가기</button>${initialOfferImpactMarkup(model)}</section>`;
+}
+function bindInitialOfferImpact(current){
+ const saved=INITMK.impact,n=saved?.nid?DB.world.negotiations[saved.nid]:null;if(n?.status==='open'&&n.round===saved.round&&n.attempt===saved.attempt)initialNegotiationDraft(n.id,saved.draft);
+ const open=(pid,nid,terms,selector)=>{if(!current())return;INITMK.impact={pid,nid,terms,selector,draft:nid?initialNegotiationDraft(nid):null,round:nid?DB.world.negotiations[nid].round:null,attempt:nid?DB.world.negotiations[nid].attempt:null,basis:nid?(selector.includes('-counter')?'현재 선수 요구·역제안 기준':'열 때 작성한 제안 기준'):'요구 연봉 기준',y:window.scrollY};navKeepScroll();requestAnimationFrame(()=>{if(current()){const el=document.getElementById('init-offer-impact');el?.focus();el?.scrollIntoView({block:'start'})}})};
+ document.querySelectorAll('[data-init-impact]').forEach(b=>b.onclick=()=>open(b.dataset.initImpact,null,null,'[data-init-impact="'+b.dataset.initImpact+'"]'));
+ for(const mode of ['form','counter'])document.querySelectorAll('[data-init-impact-'+mode+']').forEach(b=>b.onclick=()=>{if(!current())return;const nid=b.dataset[mode==='form'?'initImpactForm':'initImpactCounter'],n=DB.world?.negotiations?.[nid];if(!n||n.status!=='open'||n.kind!=='initial'||n.teamId!==INITMK.target)return;open(n.pid,nid,mode==='form'?negotiationTermsFromDom(nid):JSON.parse(JSON.stringify(n.counter||n.demand)),'[data-init-impact-'+mode+'="'+nid+'"]')});
+ const close=document.getElementById('init-impact-close');if(close)close.onclick=()=>{if(!current())return;const x=INITMK.impact;INITMK.impact=null;navKeepScroll();const n=DB.world?.negotiations?.[x.nid];if(n?.status==='open'&&n.round===x.round&&n.attempt===x.attempt)initialNegotiationDraft(x.nid,x.draft);requestAnimationFrame(()=>{if(current()){document.querySelector(x.selector)?.focus({preventScroll:true});window.scrollTo(0,x.y)}})};
+}

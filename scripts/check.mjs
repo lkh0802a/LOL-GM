@@ -177,6 +177,7 @@ const maintainabilityBudgets = {
   'ui-initial-comparison.js': 8000,
   'ui-initial-candidates.js': 9500,
   'ui-market-initial.js': 15000,
+  'ui-initial-offer-preview.js': 7000,
   'ui-negotiations.js': 9500,
   'ui-market-staff.js': 8500,
   'office-international.js': 18000,
