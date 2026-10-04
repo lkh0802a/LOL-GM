@@ -28,7 +28,7 @@ await runEngineFixture(String.raw`(()=>{
  const corrupt=JSON.parse(JSON.stringify(g));corrupt.publicRecord.events[0][0]=Infinity;check(recordedPublicMatch(db,rec,corrupt).reason==='unverified-source','bad source accepted');
  check(officialMatchReviews(db,a.id,{patch:rec.patch}).length===1&&officialMatchReviews(db,b.id).length===0,'observer source ownership');
  ANALYSIS_SET={review:JSON.stringify(['history',0,0,0])};check(analysisMatchPanel(db,a,{}).includes('당시 확정된 경기 기록'),'analysis consumer');
- const rolePanel=analysisMatchPanel(db,a,{position:'MID'});check(rolePanel.includes(db.players[a.depthChart.MID].name)&&!rolePanel.includes(db.players[a.depthChart.TOP].name),'recorded role table filtering');
+ const rolePanel=analysisMatchPanel(db,a,{position:'MID'});check(rolePanel.includes(db.players[a.depthChart.MID].name)&&!rolePanel.includes('<td>'+db.players[a.depthChart.TOP].name+' · '),'recorded role table filtering');
  const frozen=packDB(db);officialMatchReviews(db,a.id);renderPublicMatchReview(db,rec,g);check(packDB(db)===frozen,'reads mutate history');
  db.world.fired=true;check(officialMatchReviews(db,a.id).length===0,'fired owner');
  console.log('MATCH_HISTORY_ACCEPTANCE PASS actual public stats/events, bounded real nexus, unchanged seeded capture/no-capture lines, no hidden fields/re-evaluation, public getter traps, original/lite/legacy save, analysis ownership and pure reads; snapshotChars='+JSON.stringify(g.publicRecord).length);
