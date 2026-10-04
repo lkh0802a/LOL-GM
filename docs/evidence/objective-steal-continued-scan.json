@@ -1,0 +1,4298 @@
+{
+  "setup": "NA4 franchise, default tactics, genPlayer match-history|team.id+role age22/base65",
+  "provenance": "Seeded fictional match execution with read-only wrappers, no injected outcomes/professional frequency target",
+  "runs": [
+    {
+      "seed": "objective-steal-source-32",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 26,
+        "second": 59
+      },
+      "duration": 26.983333333333334,
+      "steals": [
+        {
+          "actor": "NA_57",
+          "side": 1,
+          "minute": 25,
+          "calls": {
+            "dragon": [
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ],
+              [
+                "NA_56",
+                "NA_57",
+                "NA_59",
+                "NA_60"
+              ]
+            ],
+            "herald": [
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ],
+              []
+            ],
+            "baron": [
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ],
+              []
+            ]
+          },
+          "before": {
+            "objectives": 1,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 15,
+              "rewardClaimed": true,
+              "lastSequence": 56,
+              "roamBank": 0
+            }
+          },
+          "key": "dragon",
+          "part": [
+            "NA_56",
+            "NA_57",
+            "NA_59",
+            "NA_60"
+          ],
+          "accepted": true,
+          "after": {
+            "objectives": 2,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 15,
+              "rewardClaimed": true,
+              "lastSequence": 57,
+              "roamBank": 0
+            }
+          },
+          "receipt": {
+            "id": "dragon:25:4",
+            "key": "dragon",
+            "side": 1,
+            "minute": 25,
+            "second": 32,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_59",
+              "NA_60"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "seed": "objective-steal-source-32",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 38,
+        "second": 42
+      },
+      "duration": 38.7,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-33",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 37,
+        "second": 33
+      },
+      "duration": 37.55,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-33",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 31,
+        "second": 59
+      },
+      "duration": 31.983333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-34",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 31,
+        "second": 56
+      },
+      "duration": 31.933333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-34",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 28,
+        "second": 44
+      },
+      "duration": 28.733333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-35",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 31,
+        "second": 48
+      },
+      "duration": 31.8,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-35",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 33,
+        "second": 35
+      },
+      "duration": 33.583333333333336,
+      "steals": [
+        {
+          "actor": "NA_52",
+          "side": 1,
+          "minute": 5,
+          "calls": {
+            "dragon": [
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59"
+              ],
+              [
+                "NA_51",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ]
+            ]
+          },
+          "before": {
+            "objectives": 0,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 10.839829670258979,
+              "completed": false,
+              "completedAt": null,
+              "rewardClaimed": false,
+              "lastSequence": 6,
+              "roamBank": 0
+            }
+          },
+          "key": "dragon",
+          "part": [
+            "NA_51",
+            "NA_53",
+            "NA_54",
+            "NA_55"
+          ],
+          "accepted": true,
+          "after": {
+            "objectives": 0,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 10.839829670258979,
+              "completed": false,
+              "completedAt": null,
+              "rewardClaimed": false,
+              "lastSequence": 6,
+              "roamBank": 0
+            }
+          },
+          "receipt": {
+            "id": "dragon:5:0",
+            "key": "dragon",
+            "side": 1,
+            "minute": 5,
+            "second": 49,
+            "participants": [
+              "NA_51",
+              "NA_53",
+              "NA_54",
+              "NA_55"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "seed": "objective-steal-source-36",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 41,
+        "second": 50
+      },
+      "duration": 41.833333333333336,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-36",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 44,
+        "second": 59
+      },
+      "duration": 44.983333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-37",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 35,
+        "second": 50
+      },
+      "duration": 35.833333333333336,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-37",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 33,
+        "second": 36
+      },
+      "duration": 33.6,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-38",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 32,
+        "second": 24
+      },
+      "duration": 32.4,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-38",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 38,
+        "second": 59
+      },
+      "duration": 38.983333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-39",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 22,
+        "second": 23
+      },
+      "duration": 22.383333333333333,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-39",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 31,
+        "second": 57
+      },
+      "duration": 31.95,
+      "steals": [
+        {
+          "actor": "NA_57",
+          "side": 0,
+          "minute": 30,
+          "calls": {
+            "dragon": [
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59",
+                "NA_60"
+              ],
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ]
+            ],
+            "herald": [
+              [],
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54"
+              ]
+            ],
+            "baron": [
+              [],
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ]
+            ]
+          },
+          "before": {
+            "objectives": 2,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 15,
+              "rewardClaimed": true,
+              "lastSequence": 87,
+              "roamBank": 0
+            }
+          },
+          "key": "dragon",
+          "part": [
+            "NA_56",
+            "NA_57",
+            "NA_58",
+            "NA_59",
+            "NA_60"
+          ],
+          "accepted": true,
+          "after": {
+            "objectives": 3,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 15,
+              "rewardClaimed": true,
+              "lastSequence": 88,
+              "roamBank": 0
+            }
+          },
+          "receipt": {
+            "id": "dragon:30:5",
+            "key": "dragon",
+            "side": 0,
+            "minute": 30,
+            "second": 32,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_59",
+              "NA_60"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "seed": "objective-steal-source-40",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 32,
+        "second": 53
+      },
+      "duration": 32.88333333333333,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-40",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 28,
+        "second": 39
+      },
+      "duration": 28.65,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-41",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 32,
+        "second": 39
+      },
+      "duration": 32.65,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-41",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 38,
+        "second": 46
+      },
+      "duration": 38.766666666666666,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-42",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 32,
+        "second": 43
+      },
+      "duration": 32.71666666666667,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-42",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 37,
+        "second": 59
+      },
+      "duration": 37.983333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-43",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 35,
+        "second": 54
+      },
+      "duration": 35.9,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-43",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 41,
+        "second": 48
+      },
+      "duration": 41.8,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-44",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 29,
+        "second": 32
+      },
+      "duration": 29.533333333333335,
+      "steals": [
+        {
+          "actor": "NA_57",
+          "side": 1,
+          "minute": 20,
+          "calls": {
+            "dragon": [
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ],
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59",
+                "NA_60"
+              ]
+            ],
+            "herald": [
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_55"
+              ],
+              []
+            ]
+          },
+          "before": {
+            "objectives": 0,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 15,
+              "rewardClaimed": true,
+              "lastSequence": 36,
+              "roamBank": 0
+            }
+          },
+          "key": "dragon",
+          "part": [
+            "NA_56",
+            "NA_57",
+            "NA_58",
+            "NA_59",
+            "NA_60"
+          ],
+          "accepted": true,
+          "after": {
+            "objectives": 1,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 15,
+              "rewardClaimed": true,
+              "lastSequence": 37,
+              "roamBank": 0
+            }
+          },
+          "receipt": {
+            "id": "dragon:20:3",
+            "key": "dragon",
+            "side": 1,
+            "minute": 20,
+            "second": 44,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_59",
+              "NA_60"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "seed": "objective-steal-source-44",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 34,
+        "second": 30
+      },
+      "duration": 34.5,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-45",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 20,
+        "second": 59
+      },
+      "duration": 20.983333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-45",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 42,
+        "second": 43
+      },
+      "duration": 42.71666666666667,
+      "steals": [
+        {
+          "actor": "NA_57",
+          "side": 0,
+          "minute": 15,
+          "calls": {
+            "dragon": [
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59",
+                "NA_60"
+              ],
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ]
+            ],
+            "herald": [
+              [],
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ]
+            ]
+          },
+          "before": {
+            "objectives": 1,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 34.83135075571884,
+              "completed": false,
+              "completedAt": null,
+              "rewardClaimed": false,
+              "lastSequence": 37,
+              "roamBank": 0
+            }
+          },
+          "key": "dragon",
+          "part": [
+            "NA_56",
+            "NA_57",
+            "NA_58",
+            "NA_59",
+            "NA_60"
+          ],
+          "accepted": true,
+          "after": {
+            "objectives": 2,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 15,
+              "rewardClaimed": true,
+              "lastSequence": 38,
+              "roamBank": 0
+            }
+          },
+          "receipt": {
+            "id": "dragon:15:2",
+            "key": "dragon",
+            "side": 0,
+            "minute": 15,
+            "second": 51,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_59",
+              "NA_60"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "seed": "objective-steal-source-46",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 40,
+        "second": 14
+      },
+      "duration": 40.233333333333334,
+      "steals": [
+        {
+          "actor": "NA_57",
+          "side": 1,
+          "minute": 32,
+          "calls": {
+            "dragon": [
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ],
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59",
+                "NA_60"
+              ]
+            ],
+            "herald": [
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ],
+              [
+                "NA_57",
+                "NA_58",
+                "NA_59",
+                "NA_60",
+                "NA_56"
+              ]
+            ],
+            "baron": [
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_55"
+              ],
+              []
+            ],
+            "elder": [
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ],
+              [
+                "NA_56",
+                "NA_57",
+                "NA_59",
+                "NA_60"
+              ]
+            ]
+          },
+          "before": {
+            "objectives": 0,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 17,
+              "rewardClaimed": true,
+              "lastSequence": 76,
+              "roamBank": 0
+            }
+          },
+          "key": "elder",
+          "part": [
+            "NA_56",
+            "NA_57",
+            "NA_59",
+            "NA_60"
+          ],
+          "accepted": true,
+          "after": {
+            "objectives": 1,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 17,
+              "rewardClaimed": true,
+              "lastSequence": 77,
+              "roamBank": 0
+            }
+          },
+          "receipt": {
+            "id": "elder:32",
+            "key": "elder",
+            "side": 1,
+            "minute": 32,
+            "second": 22,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_59",
+              "NA_60"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "seed": "objective-steal-source-46",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 26,
+        "second": 59
+      },
+      "duration": 26.983333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-47",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 36,
+        "second": 11
+      },
+      "duration": 36.18333333333333,
+      "steals": [
+        {
+          "actor": "NA_57",
+          "side": 1,
+          "minute": 20,
+          "calls": {
+            "dragon": [
+              [],
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59",
+                "NA_60"
+              ]
+            ],
+            "herald": [
+              [],
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59",
+                "NA_60"
+              ]
+            ],
+            "baron": [
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ],
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59"
+              ]
+            ]
+          },
+          "before": {
+            "objectives": 4,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 15,
+              "rewardClaimed": true,
+              "lastSequence": 48,
+              "roamBank": 0
+            }
+          },
+          "key": "baron",
+          "part": [
+            "NA_56",
+            "NA_57",
+            "NA_58",
+            "NA_59"
+          ],
+          "accepted": true,
+          "after": {
+            "objectives": 5,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 15,
+              "rewardClaimed": true,
+              "lastSequence": 49,
+              "roamBank": 0
+            }
+          },
+          "receipt": {
+            "id": "baron:20",
+            "key": "baron",
+            "side": 1,
+            "minute": 20,
+            "second": 52,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_59"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "seed": "objective-steal-source-47",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 34,
+        "second": 21
+      },
+      "duration": 34.35,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-48",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 27,
+        "second": 37
+      },
+      "duration": 27.616666666666667,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-48",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 28,
+        "second": 54
+      },
+      "duration": 28.9,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-49",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 34,
+        "second": 32
+      },
+      "duration": 34.53333333333333,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-49",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 32,
+        "second": 17
+      },
+      "duration": 32.28333333333333,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-50",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 32,
+        "second": 47
+      },
+      "duration": 32.78333333333333,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-50",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 35,
+        "second": 14
+      },
+      "duration": 35.233333333333334,
+      "steals": [
+        {
+          "actor": "NA_57",
+          "side": 0,
+          "minute": 32,
+          "calls": {
+            "dragon": [
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59",
+                "NA_60"
+              ],
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ]
+            ],
+            "herald": [
+              [],
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_55"
+              ]
+            ],
+            "baron": [
+              [],
+              [
+                "NA_52",
+                "NA_53",
+                "NA_55"
+              ]
+            ],
+            "elder": [
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59",
+                "NA_60"
+              ],
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ]
+            ]
+          },
+          "before": {
+            "objectives": 0,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 15,
+              "rewardClaimed": true,
+              "lastSequence": 66,
+              "roamBank": 0
+            }
+          },
+          "key": "elder",
+          "part": [
+            "NA_56",
+            "NA_57",
+            "NA_58",
+            "NA_59",
+            "NA_60"
+          ],
+          "accepted": true,
+          "after": {
+            "objectives": 1,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 15,
+              "rewardClaimed": true,
+              "lastSequence": 67,
+              "roamBank": 0
+            }
+          },
+          "receipt": {
+            "id": "elder:32",
+            "key": "elder",
+            "side": 0,
+            "minute": 32,
+            "second": 49,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_59",
+              "NA_60"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "seed": "objective-steal-source-51",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 33,
+        "second": 48
+      },
+      "duration": 33.8,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-51",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 30,
+        "second": 55
+      },
+      "duration": 30.916666666666668,
+      "steals": [
+        {
+          "actor": "NA_52",
+          "side": 1,
+          "minute": 20,
+          "calls": {
+            "dragon": [
+              [],
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ]
+            ],
+            "herald": [
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59",
+                "NA_60"
+              ],
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54"
+              ]
+            ],
+            "baron": [
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59",
+                "NA_60"
+              ],
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ]
+            ]
+          },
+          "before": {
+            "objectives": 3,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 15,
+              "rewardClaimed": true,
+              "lastSequence": 48,
+              "roamBank": 0
+            }
+          },
+          "key": "baron",
+          "part": [
+            "NA_51",
+            "NA_52",
+            "NA_53",
+            "NA_54",
+            "NA_55"
+          ],
+          "accepted": true,
+          "after": {
+            "objectives": 4,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 15,
+              "rewardClaimed": true,
+              "lastSequence": 49,
+              "roamBank": 0
+            }
+          },
+          "receipt": {
+            "id": "baron:20",
+            "key": "baron",
+            "side": 1,
+            "minute": 20,
+            "second": 56,
+            "participants": [
+              "NA_51",
+              "NA_52",
+              "NA_53",
+              "NA_54",
+              "NA_55"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "seed": "objective-steal-source-52",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 28,
+        "second": 20
+      },
+      "duration": 28.333333333333332,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-52",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 40,
+        "second": 28
+      },
+      "duration": 40.46666666666667,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-53",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 22,
+        "second": 42
+      },
+      "duration": 22.7,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-53",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 36,
+        "second": 23
+      },
+      "duration": 36.38333333333333,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-54",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 43,
+        "second": 7
+      },
+      "duration": 43.11666666666667,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-54",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 31,
+        "second": 59
+      },
+      "duration": 31.983333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-55",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 37,
+        "second": 14
+      },
+      "duration": 37.233333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-55",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 28,
+        "second": 59
+      },
+      "duration": 28.983333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-56",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 30,
+        "second": 59
+      },
+      "duration": 30.983333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-56",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 33,
+        "second": 43
+      },
+      "duration": 33.71666666666667,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-57",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 27,
+        "second": 45
+      },
+      "duration": 27.75,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-57",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 26,
+        "second": 59
+      },
+      "duration": 26.983333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-58",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 29,
+        "second": 41
+      },
+      "duration": 29.683333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-58",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 28,
+        "second": 59
+      },
+      "duration": 28.983333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-59",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 39,
+        "second": 11
+      },
+      "duration": 39.18333333333333,
+      "steals": [
+        {
+          "actor": "NA_52",
+          "side": 0,
+          "minute": 20,
+          "calls": {
+            "dragon": [
+              [],
+              [
+                "NA_57",
+                "NA_59",
+                "NA_60",
+                "NA_56"
+              ]
+            ],
+            "herald": [
+              [],
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59",
+                "NA_60"
+              ]
+            ],
+            "baron": [
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ],
+              [
+                "NA_56",
+                "NA_58",
+                "NA_59",
+                "NA_60"
+              ]
+            ]
+          },
+          "before": {
+            "objectives": 1,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 15,
+              "rewardClaimed": true,
+              "lastSequence": 44,
+              "roamBank": 0
+            }
+          },
+          "key": "baron",
+          "part": [
+            "NA_51",
+            "NA_52",
+            "NA_53",
+            "NA_54",
+            "NA_55"
+          ],
+          "accepted": true,
+          "after": {
+            "objectives": 2,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 15,
+              "rewardClaimed": true,
+              "lastSequence": 45,
+              "roamBank": 0
+            }
+          },
+          "receipt": {
+            "id": "baron:20",
+            "key": "baron",
+            "side": 0,
+            "minute": 20,
+            "second": 59,
+            "participants": [
+              "NA_51",
+              "NA_52",
+              "NA_53",
+              "NA_54",
+              "NA_55"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "seed": "objective-steal-source-59",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 32,
+        "second": 56
+      },
+      "duration": 32.93333333333333,
+      "steals": [
+        {
+          "actor": "NA_52",
+          "side": 1,
+          "minute": 20,
+          "calls": {
+            "dragon": [
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59",
+                "NA_60"
+              ],
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ]
+            ],
+            "herald": [
+              [],
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_55"
+              ]
+            ]
+          },
+          "before": {
+            "objectives": 1,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 15,
+              "rewardClaimed": true,
+              "lastSequence": 40,
+              "roamBank": 0
+            }
+          },
+          "key": "dragon",
+          "part": [
+            "NA_51",
+            "NA_52",
+            "NA_53",
+            "NA_54",
+            "NA_55"
+          ],
+          "accepted": true,
+          "after": {
+            "objectives": 2,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 15,
+              "rewardClaimed": true,
+              "lastSequence": 41,
+              "roamBank": 0
+            }
+          },
+          "receipt": {
+            "id": "dragon:20:3",
+            "key": "dragon",
+            "side": 1,
+            "minute": 20,
+            "second": 44,
+            "participants": [
+              "NA_51",
+              "NA_52",
+              "NA_53",
+              "NA_54",
+              "NA_55"
+            ]
+          }
+        },
+        {
+          "actor": "NA_52",
+          "side": 1,
+          "minute": 25,
+          "calls": {
+            "dragon": [
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59",
+                "NA_60"
+              ],
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ]
+            ],
+            "herald": [
+              [],
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_55"
+              ]
+            ],
+            "baron": [
+              [
+                "NA_56",
+                "NA_57",
+                "NA_59",
+                "NA_60"
+              ],
+              []
+            ]
+          },
+          "before": {
+            "objectives": 2,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 15,
+              "rewardClaimed": true,
+              "lastSequence": 54,
+              "roamBank": 0
+            }
+          },
+          "key": "dragon",
+          "part": [
+            "NA_51",
+            "NA_52",
+            "NA_53",
+            "NA_54",
+            "NA_55"
+          ],
+          "accepted": true,
+          "after": {
+            "objectives": 3,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 15,
+              "rewardClaimed": true,
+              "lastSequence": 55,
+              "roamBank": 0
+            }
+          },
+          "receipt": {
+            "id": "dragon:25:4",
+            "key": "dragon",
+            "side": 1,
+            "minute": 25,
+            "second": 36,
+            "participants": [
+              "NA_51",
+              "NA_52",
+              "NA_53",
+              "NA_54",
+              "NA_55"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "seed": "objective-steal-source-60",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 42,
+        "second": 18
+      },
+      "duration": 42.3,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-60",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 38,
+        "second": 46
+      },
+      "duration": 38.766666666666666,
+      "steals": [
+        {
+          "actor": "NA_57",
+          "side": 0,
+          "minute": 26,
+          "calls": {
+            "dragon": [
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59",
+                "NA_60"
+              ],
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ]
+            ],
+            "herald": [
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59",
+                "NA_60"
+              ],
+              []
+            ],
+            "baron": [
+              [],
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54"
+              ]
+            ],
+            "elder": [
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59",
+                "NA_60"
+              ],
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ]
+            ]
+          },
+          "before": {
+            "objectives": 1,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 15,
+              "rewardClaimed": true,
+              "lastSequence": 53,
+              "roamBank": 0
+            }
+          },
+          "key": "elder",
+          "part": [
+            "NA_56",
+            "NA_57",
+            "NA_58",
+            "NA_59",
+            "NA_60"
+          ],
+          "accepted": true,
+          "after": {
+            "objectives": 2,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 15,
+              "rewardClaimed": true,
+              "lastSequence": 54,
+              "roamBank": 0
+            }
+          },
+          "receipt": {
+            "id": "elder:26",
+            "key": "elder",
+            "side": 0,
+            "minute": 26,
+            "second": 42,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_59",
+              "NA_60"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "seed": "objective-steal-source-61",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 32,
+        "second": 52
+      },
+      "duration": 32.86666666666667,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-61",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 31,
+        "second": 25
+      },
+      "duration": 31.416666666666668,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-62",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 35,
+        "second": 40
+      },
+      "duration": 35.666666666666664,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-62",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 22,
+        "second": 59
+      },
+      "duration": 22.983333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-63",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 32,
+        "second": 59
+      },
+      "duration": 32.983333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-63",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 25,
+        "second": 59
+      },
+      "duration": 25.983333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-64",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 32,
+        "second": 59
+      },
+      "duration": 32.983333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-64",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 22,
+        "second": 42
+      },
+      "duration": 22.7,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-65",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 36,
+        "second": 59
+      },
+      "duration": 36.983333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-65",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 37,
+        "second": 24
+      },
+      "duration": 37.4,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-66",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 41,
+        "second": 55
+      },
+      "duration": 41.916666666666664,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-66",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 40,
+        "second": 29
+      },
+      "duration": 40.483333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-67",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 32,
+        "second": 40
+      },
+      "duration": 32.666666666666664,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-67",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 34,
+        "second": 35
+      },
+      "duration": 34.583333333333336,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-68",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 27,
+        "second": 48
+      },
+      "duration": 27.8,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-68",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 29,
+        "second": 59
+      },
+      "duration": 29.983333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-69",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 43,
+        "second": 54
+      },
+      "duration": 43.9,
+      "steals": [
+        {
+          "actor": "NA_57",
+          "side": 1,
+          "minute": 21,
+          "calls": {
+            "dragon": [
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ],
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59",
+                "NA_60"
+              ]
+            ],
+            "herald": [
+              [],
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59",
+                "NA_60"
+              ]
+            ],
+            "baron": [
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ],
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59",
+                "NA_60"
+              ]
+            ]
+          },
+          "before": {
+            "objectives": 2,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 15,
+              "rewardClaimed": true,
+              "lastSequence": 40,
+              "roamBank": 0
+            }
+          },
+          "key": "dragon",
+          "part": [
+            "NA_56",
+            "NA_57",
+            "NA_58",
+            "NA_59",
+            "NA_60"
+          ],
+          "accepted": true,
+          "after": {
+            "objectives": 3,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 15,
+              "rewardClaimed": true,
+              "lastSequence": 41,
+              "roamBank": 0
+            }
+          },
+          "receipt": {
+            "id": "dragon:20:3",
+            "key": "dragon",
+            "side": 1,
+            "minute": 21,
+            "second": 25,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_59",
+              "NA_60"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "seed": "objective-steal-source-69",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 34,
+        "second": 54
+      },
+      "duration": 34.9,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-70",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 33,
+        "second": 15
+      },
+      "duration": 33.25,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-70",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 27,
+        "second": 59
+      },
+      "duration": 27.983333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-71",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 34,
+        "second": 40
+      },
+      "duration": 34.666666666666664,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-71",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 30,
+        "second": 24
+      },
+      "duration": 30.4,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-72",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 38,
+        "second": 32
+      },
+      "duration": 38.53333333333333,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-72",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 26,
+        "second": 59
+      },
+      "duration": 26.983333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-73",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 38,
+        "second": 43
+      },
+      "duration": 38.71666666666667,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-73",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 27,
+        "second": 57
+      },
+      "duration": 27.95,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-74",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 26,
+        "second": 59
+      },
+      "duration": 26.983333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-74",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 31,
+        "second": 44
+      },
+      "duration": 31.733333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-75",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 37,
+        "second": 30
+      },
+      "duration": 37.5,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-75",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 41,
+        "second": 24
+      },
+      "duration": 41.4,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-76",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 28,
+        "second": 54
+      },
+      "duration": 28.9,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-76",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 25,
+        "second": 59
+      },
+      "duration": 25.983333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-77",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 36,
+        "second": 46
+      },
+      "duration": 36.766666666666666,
+      "steals": [
+        {
+          "actor": "NA_57",
+          "side": 1,
+          "minute": 20,
+          "calls": {
+            "dragon": [
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ],
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59",
+                "NA_60"
+              ]
+            ],
+            "herald": [
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ],
+              []
+            ]
+          },
+          "before": {
+            "objectives": 0,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 17,
+              "rewardClaimed": true,
+              "lastSequence": 53,
+              "roamBank": 0
+            }
+          },
+          "key": "dragon",
+          "part": [
+            "NA_56",
+            "NA_57",
+            "NA_58",
+            "NA_59",
+            "NA_60"
+          ],
+          "accepted": true,
+          "after": {
+            "objectives": 1,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 17,
+              "rewardClaimed": true,
+              "lastSequence": 54,
+              "roamBank": 0
+            }
+          },
+          "receipt": {
+            "id": "dragon:20:3",
+            "key": "dragon",
+            "side": 1,
+            "minute": 20,
+            "second": 48,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_59",
+              "NA_60"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "seed": "objective-steal-source-77",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 32,
+        "second": 59
+      },
+      "duration": 32.983333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-78",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 39,
+        "second": 19
+      },
+      "duration": 39.31666666666667,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-78",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 40,
+        "second": 59
+      },
+      "duration": 40.983333333333334,
+      "steals": [
+        {
+          "actor": "NA_57",
+          "side": 0,
+          "minute": 31,
+          "calls": {
+            "dragon": [
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59",
+                "NA_60"
+              ],
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ]
+            ],
+            "herald": [
+              [
+                "NA_56",
+                "NA_57",
+                "NA_59",
+                "NA_60"
+              ],
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54"
+              ]
+            ],
+            "baron": [
+              [],
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ]
+            ]
+          },
+          "before": {
+            "objectives": 2,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 15,
+              "rewardClaimed": true,
+              "lastSequence": 64,
+              "roamBank": 0
+            }
+          },
+          "key": "dragon",
+          "part": [
+            "NA_56",
+            "NA_57",
+            "NA_58",
+            "NA_59",
+            "NA_60"
+          ],
+          "accepted": true,
+          "after": {
+            "objectives": 3,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 15,
+              "rewardClaimed": true,
+              "lastSequence": 65,
+              "roamBank": 0
+            }
+          },
+          "receipt": {
+            "id": "dragon:31:5",
+            "key": "dragon",
+            "side": 0,
+            "minute": 31,
+            "second": 32,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_59",
+              "NA_60"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "seed": "objective-steal-source-79",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 27,
+        "second": 57
+      },
+      "duration": 27.95,
+      "steals": [
+        {
+          "actor": "NA_57",
+          "side": 1,
+          "minute": 20,
+          "calls": {
+            "dragon": [
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ],
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59",
+                "NA_60"
+              ]
+            ],
+            "herald": [
+              [],
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59",
+                "NA_60"
+              ]
+            ]
+          },
+          "before": {
+            "objectives": 4,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 14,
+              "rewardClaimed": true,
+              "lastSequence": 42,
+              "roamBank": 0
+            }
+          },
+          "key": "dragon",
+          "part": [
+            "NA_56",
+            "NA_57",
+            "NA_58",
+            "NA_59",
+            "NA_60"
+          ],
+          "accepted": true,
+          "after": {
+            "objectives": 5,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 14,
+              "rewardClaimed": true,
+              "lastSequence": 43,
+              "roamBank": 0
+            }
+          },
+          "receipt": {
+            "id": "dragon:20:3",
+            "key": "dragon",
+            "side": 1,
+            "minute": 20,
+            "second": 41,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_59",
+              "NA_60"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "seed": "objective-steal-source-79",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 39,
+        "second": 33
+      },
+      "duration": 39.55,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-80",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 25,
+        "second": 59
+      },
+      "duration": 25.983333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-80",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 30,
+        "second": 41
+      },
+      "duration": 30.683333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-81",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 23,
+        "second": 39
+      },
+      "duration": 23.65,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-81",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 32,
+        "second": 59
+      },
+      "duration": 32.983333333333334,
+      "steals": [
+        {
+          "actor": "NA_52",
+          "side": 1,
+          "minute": 15,
+          "calls": {
+            "dragon": [
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59",
+                "NA_60"
+              ],
+              []
+            ],
+            "herald": [
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59",
+                "NA_60"
+              ],
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ]
+            ]
+          },
+          "before": {
+            "objectives": 0,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 15,
+              "rewardClaimed": true,
+              "lastSequence": 30,
+              "roamBank": 0
+            }
+          },
+          "key": "herald",
+          "part": [
+            "NA_51",
+            "NA_52",
+            "NA_53",
+            "NA_54",
+            "NA_55"
+          ],
+          "accepted": true,
+          "after": {
+            "objectives": 1,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 15,
+              "rewardClaimed": true,
+              "lastSequence": 31,
+              "roamBank": 0
+            }
+          },
+          "receipt": {
+            "id": "herald:14",
+            "key": "herald",
+            "side": 1,
+            "minute": 15,
+            "second": 42,
+            "participants": [
+              "NA_51",
+              "NA_52",
+              "NA_53",
+              "NA_54",
+              "NA_55"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "seed": "objective-steal-source-82",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 24,
+        "second": 55
+      },
+      "duration": 24.916666666666668,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-82",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 33,
+        "second": 33
+      },
+      "duration": 33.55,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-83",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 32,
+        "second": 33
+      },
+      "duration": 32.55,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-83",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 30,
+        "second": 52
+      },
+      "duration": 30.866666666666667,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-84",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 32,
+        "second": 47
+      },
+      "duration": 32.78333333333333,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-84",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 36,
+        "second": 59
+      },
+      "duration": 36.983333333333334,
+      "steals": [
+        {
+          "actor": "NA_57",
+          "side": 0,
+          "minute": 20,
+          "calls": {
+            "dragon": [
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59",
+                "NA_60"
+              ],
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ]
+            ],
+            "herald": [
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59",
+                "NA_60"
+              ],
+              []
+            ]
+          },
+          "before": {
+            "objectives": 1,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 16,
+              "rewardClaimed": true,
+              "lastSequence": 58,
+              "roamBank": 0
+            }
+          },
+          "key": "dragon",
+          "part": [
+            "NA_56",
+            "NA_57",
+            "NA_58",
+            "NA_59",
+            "NA_60"
+          ],
+          "accepted": true,
+          "after": {
+            "objectives": 2,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 16,
+              "rewardClaimed": true,
+              "lastSequence": 59,
+              "roamBank": 0
+            }
+          },
+          "receipt": {
+            "id": "dragon:20:3",
+            "key": "dragon",
+            "side": 0,
+            "minute": 20,
+            "second": 52,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_59",
+              "NA_60"
+            ]
+          }
+        },
+        {
+          "actor": "NA_57",
+          "side": 0,
+          "minute": 36,
+          "calls": {
+            "dragon": [
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59",
+                "NA_60"
+              ],
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ]
+            ],
+            "herald": [
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59",
+                "NA_60"
+              ],
+              []
+            ],
+            "baron": [
+              [],
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ]
+            ],
+            "elder": [
+              [
+                "NA_56",
+                "NA_57",
+                "NA_58",
+                "NA_59",
+                "NA_60"
+              ],
+              [
+                "NA_51",
+                "NA_52",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ]
+            ]
+          },
+          "before": {
+            "objectives": 3,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 16,
+              "rewardClaimed": true,
+              "lastSequence": 106,
+              "roamBank": 0
+            }
+          },
+          "key": "elder",
+          "part": [
+            "NA_56",
+            "NA_57",
+            "NA_58",
+            "NA_59",
+            "NA_60"
+          ],
+          "accepted": true,
+          "after": {
+            "objectives": 4,
+            "quest": {
+              "role": "JGL",
+              "patchId": "26.19",
+              "rules": {
+                "threshold": 35,
+                "monsterGold": 10,
+                "monsterXp": 10,
+                "smiteDamage": 1400,
+                "jungleMobility": 0.04
+              },
+              "progress": 35,
+              "completed": true,
+              "completedAt": 16,
+              "rewardClaimed": true,
+              "lastSequence": 107,
+              "roamBank": 0
+            }
+          },
+          "receipt": {
+            "id": "elder:36",
+            "key": "elder",
+            "side": 0,
+            "minute": 36,
+            "second": 52,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_59",
+              "NA_60"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "seed": "objective-steal-source-85",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 28,
+        "second": 44
+      },
+      "duration": 28.733333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-85",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 27,
+        "second": 47
+      },
+      "duration": 27.783333333333335,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-86",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 32,
+        "second": 50
+      },
+      "duration": 32.833333333333336,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-86",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 26,
+        "second": 59
+      },
+      "duration": 26.983333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-87",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 38,
+        "second": 32
+      },
+      "duration": 38.53333333333333,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-87",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 28,
+        "second": 50
+      },
+      "duration": 28.833333333333332,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-88",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 39,
+        "second": 10
+      },
+      "duration": 39.166666666666664,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-88",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 35,
+        "second": 19
+      },
+      "duration": 35.31666666666667,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-89",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 28,
+        "second": 59
+      },
+      "duration": 28.983333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-89",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 36,
+        "second": 45
+      },
+      "duration": 36.75,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-90",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 32,
+        "second": 48
+      },
+      "duration": 32.8,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-90",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 36,
+        "second": 57
+      },
+      "duration": 36.95,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-91",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 38,
+        "second": 53
+      },
+      "duration": 38.88333333333333,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-91",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 25,
+        "second": 59
+      },
+      "duration": 25.983333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-92",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 26,
+        "second": 59
+      },
+      "duration": 26.983333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-92",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 42,
+        "second": 50
+      },
+      "duration": 42.833333333333336,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-93",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 35,
+        "second": 42
+      },
+      "duration": 35.7,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-93",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 24,
+        "second": 56
+      },
+      "duration": 24.933333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-94",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 27,
+        "second": 48
+      },
+      "duration": 27.8,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-94",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 28,
+        "second": 46
+      },
+      "duration": 28.766666666666666,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-95",
+      "sides": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 32,
+        "second": 59
+      },
+      "duration": 32.983333333333334,
+      "steals": []
+    },
+    {
+      "seed": "objective-steal-source-95",
+      "sides": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 23,
+        "second": 43
+      },
+      "duration": 23.716666666666665,
+      "steals": []
+    }
+  ],
+  "hashes": {
+    "engine.js": "ff603f8f7279bd2b8f51f45ad870dab0664ad2fbec42656ccb6f996d9937ec68",
+    "objective-awards.js": "4c0cbc23fc007336362528421d6497562f0418fa4567839533d27d3de897320e",
+    "role-quest-match.js": "29ce026186ea801419cb8a369548cef21a5c969f08b9f17b804726934892532b",
+    "takedown-rewards.js": "59a545ebfae98986c7216cc980e351661f5a61dc5c1c313079b122a749733c74"
+  },
+  "baselineCommit": "dfabb6642f107d5e37789adff117143cf61a4286",
+  "date": "2026-10-04"
+}

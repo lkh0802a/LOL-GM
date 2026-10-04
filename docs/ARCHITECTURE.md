@@ -243,3 +243,7 @@ fields; no second contract, roster, finance or preview ledger is introduced.
 ### 8.3.3 실제 아이템 수치 패치
 
 `system-data.js:itemRawStatFields/applyItemRawStatNote`는 pinned source provenance와 raw AD/HP/armor/MR old/new·단위를 검증하고 stats/effects/source split을 함께 작성한다. `patch.js:applyNote`가 성공한 노트의 patch/system revision을 갱신한다. `patch-balance.js`는 기존 stat size profile/관측 meta 정책을 재사용하며 private planning copy로 같은 패치 내 노트 순서를 구성하고 stat 타입을 기존 cooldown에 포함한다. owned gear/combat·choice/draft의 기존 consumers/caches, 역사 replay/save는 동일 note 경로를 사용한다. `ui-patch.js:noteText`가 당시 이름/수치/기준 source와 fictional 조정을 표현한다. 검증 위치는 `scripts/item-stat-patch-acceptance.mjs`와 `scripts/item-stat-patch-scenarios.mjs`, 근거/한계/정확한 다음은 DEVELOPMENT8.3.3이다. AP/AS/crit/조건 효과·exact spell execution은 별도 미완료 범위다.
+
+## 8.6.2 실제 스틸 실행자 source
+
+`engine.js:objectiveTick`가 실제 lj 스틸 성공 때 actor를 `objective-awards.js`에 전달한다. 공통 writer는 소유/alive JGL을 기존 participant와 중복 없이 합치고 quest를 작성하며 optional receipt.stealer를 기록한다. `match-history.js`는 실제 source를 복사하고 `recordedObjectivesValid`는 archived JGL/participant 포함을 검증한다. `ui-match-history.js:renderRecordedObjectives`는 당시 이름을 optional details에 표시한다. 구형/일반 receipt에 actor를 추정하지 않는다. focused source/official/save/UI/거절 검증은 `objective-steal-acceptance.mjs`, bounded 자연 재현은 `objective-steal-probe.mjs`이며 확률/보상/위치 규칙은 변경하지 않는다.

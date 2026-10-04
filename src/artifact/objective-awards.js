@@ -8,11 +8,12 @@ function matchObjectiveToken(st,key){
   if(key==='baron'&&st.t>=o.baronAt)return key+':'+o.baronAt;
   return null;
 }
-function awardMatchObjective(st,key,w,part,conversion=false){
+function awardMatchObjective(st,key,w,part,conversion=false,stealer=null){
   if(matchEnded(st)||![0,1].includes(w)||!Array.isArray(part)||!part.length||part.some(p=>!st.sides[w].ps.includes(p)))return false;
+  if(stealer!==null&&(conversion||!st.sides[w].ps.includes(stealer)||stealer.role!=='JGL'||!alive(st,stealer)))return false;
   const token=matchObjectiveToken(st,key);
   if(!token||(st.objectiveEvents||[]).some(e=>e.id===token))return false;
-  const involved=[...new Set(part)],o=st.obj,s=st.sides[w],rules=st.patch.rules;
+  const involved=[...new Set(stealer?[...part,stealer]:part)],o=st.obj,s=st.sides[w],rules=st.patch.rules;
   o.wait[key]=0;
   involved.forEach(p=>{p.objectives++;matchQuestEvent(st,p,{epics:1,jungleStacks:p.role==='JGL'?1:0})});
   let second;
@@ -35,11 +36,11 @@ function awardMatchObjective(st,key,w,part,conversion=false){
     aliveOf(st,w).forEach(p=>addGold(p,300));
     second=log(st,`${s.team.short} ${conversion?'한타 승리 후 ':''}바론 처치`,{side:w,major:true,kind:'obj'});
   }
-  (st.objectiveEvents||(st.objectiveEvents=[])).push({id:token,key,side:w,minute:st.t,second,participants:involved.map(p=>p.p.id)});
+  (st.objectiveEvents||(st.objectiveEvents=[])).push({id:token,key,side:w,minute:st.t,second,participants:involved.map(p=>p.p.id),...(stealer?{stealer:stealer.p.id}:{})});
   return true;
 }
 function recordedObjectivesValid(p){
   if(p.objectives===undefined)return true;
   const o=p.objectives;
-  return o?.version===1&&Array.isArray(o.events)&&o.events.length<=720&&new Set(o.events.map(e=>e?.id)).size===o.events.length&&o.events.every(e=>e&&typeof e.id==='string'&&['dragon','elder','herald','baron'].includes(e.key)&&[0,1].includes(e.side)&&Number.isInteger(e.minute)&&e.minute>=1&&e.minute+e.second/60<=p.duration&&Number.isInteger(e.second)&&e.second>=0&&e.second<60&&(!p.ending||e.minute<p.ending.minute||e.minute===p.ending.minute&&e.second<=p.ending.second)&&Array.isArray(e.participants)&&e.participants.length>0&&e.participants.length<=5&&new Set(e.participants).size===e.participants.length&&e.participants.every(id=>p.sides?.[e.side]?.players?.some(x=>x[0]===id)));
+  return o?.version===1&&Array.isArray(o.events)&&o.events.length<=720&&new Set(o.events.map(e=>e?.id)).size===o.events.length&&o.events.every(e=>e&&typeof e.id==='string'&&['dragon','elder','herald','baron'].includes(e.key)&&[0,1].includes(e.side)&&Number.isInteger(e.minute)&&e.minute>=1&&e.minute+e.second/60<=p.duration&&Number.isInteger(e.second)&&e.second>=0&&e.second<60&&(!p.ending||e.minute<p.ending.minute||e.minute===p.ending.minute&&e.second<=p.ending.second)&&Array.isArray(e.participants)&&e.participants.length>0&&e.participants.length<=5&&new Set(e.participants).size===e.participants.length&&e.participants.every(id=>p.sides?.[e.side]?.players?.some(x=>x[0]===id))&&(e.stealer===undefined||typeof e.stealer==='string'&&e.participants.includes(e.stealer)&&p.sides[e.side].players.some(x=>x[0]===e.stealer&&x[2]==='JGL')));
 }

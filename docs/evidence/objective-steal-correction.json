@@ -1,0 +1,6178 @@
+{
+  "baselineCommit": "dfabb6642f107d5e37789adff117143cf61a4286",
+  "date": "2026-10-04",
+  "fictionalNotProfessionalCalibration": true,
+  "original": {
+    "setup": "NA4 franchise, default tactics, genPlayer match-history|team.id+role age22/base65",
+    "provenance": "Seeded fictional match execution with read-only wrappers, no injected outcomes/professional frequency target",
+    "runs": [
+      {
+        "seed": "objective-steal-source-35",
+        "sides": [
+          "VXG",
+          "CR"
+        ],
+        "winner": 1,
+        "ending": {
+          "version": 1,
+          "kind": "nexus",
+          "winner": 1,
+          "minute": 31,
+          "second": 48
+        },
+        "duration": 31.8,
+        "objectives": [
+          {
+            "id": "dragon:5:0",
+            "key": "dragon",
+            "side": 1,
+            "minute": 5,
+            "second": 11,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_59",
+              "NA_60"
+            ]
+          },
+          {
+            "id": "dragon:10:1",
+            "key": "dragon",
+            "side": 0,
+            "minute": 10,
+            "second": 24,
+            "participants": [
+              "NA_51",
+              "NA_52",
+              "NA_53",
+              "NA_54",
+              "NA_55"
+            ]
+          },
+          {
+            "id": "herald:14",
+            "key": "herald",
+            "side": 1,
+            "minute": 14,
+            "second": 30,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_59",
+              "NA_60"
+            ]
+          },
+          {
+            "id": "dragon:15:2",
+            "key": "dragon",
+            "side": 1,
+            "minute": 15,
+            "second": 31,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_59",
+              "NA_60"
+            ]
+          },
+          {
+            "id": "dragon:20:3",
+            "key": "dragon",
+            "side": 1,
+            "minute": 20,
+            "second": 13,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_59",
+              "NA_60"
+            ]
+          },
+          {
+            "id": "baron:20",
+            "key": "baron",
+            "side": 1,
+            "minute": 20,
+            "second": 28,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_59",
+              "NA_60"
+            ]
+          },
+          {
+            "id": "dragon:25:4",
+            "key": "dragon",
+            "side": 1,
+            "minute": 25,
+            "second": 33,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_59",
+              "NA_60"
+            ]
+          },
+          {
+            "id": "baron:26",
+            "key": "baron",
+            "side": 1,
+            "minute": 26,
+            "second": 13,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_59",
+              "NA_60"
+            ]
+          },
+          {
+            "id": "elder:31",
+            "key": "elder",
+            "side": 0,
+            "minute": 31,
+            "second": 45,
+            "participants": [
+              "NA_51",
+              "NA_52",
+              "NA_53",
+              "NA_54",
+              "NA_55"
+            ]
+          }
+        ],
+        "players": [
+          [
+            {
+              "id": "NA_51",
+              "k": 6,
+              "d": 1,
+              "a": 6,
+              "quest": {
+                "role": "TOP",
+                "patchId": "26.19",
+                "rules": {
+                  "csPoints": 2,
+                  "takedownPoints": 15,
+                  "epicPoints": 30,
+                  "towerPoints": 50,
+                  "platePoints": 40,
+                  "lanePerSecond": 1.5,
+                  "awayPerSecond": 0.3333333333333333,
+                  "roamBankCap": 60,
+                  "threshold": 1200,
+                  "xpReward": 600,
+                  "xpBonus": 0.11,
+                  "takedownXp": 80,
+                  "levelCap": 20,
+                  "teleportCooldown": 6.5
+                },
+                "progress": 1200,
+                "completed": true,
+                "completedAt": 12,
+                "rewardClaimed": true,
+                "lastSequence": 77,
+                "roamBank": 60
+              },
+              "objectives": 2,
+              "gold": 12780.108603015104,
+              "held": 280.10860301510183,
+              "items": [
+                "1086",
+                "3008",
+                "663193",
+                "667101",
+                "3087",
+                "3156"
+              ],
+              "damage": 24982
+            },
+            {
+              "id": "NA_52",
+              "k": 4,
+              "d": 3,
+              "a": 11,
+              "quest": {
+                "role": "JGL",
+                "patchId": "26.19",
+                "rules": {
+                  "threshold": 35,
+                  "monsterGold": 10,
+                  "monsterXp": 10,
+                  "smiteDamage": 1400,
+                  "jungleMobility": 0.04
+                },
+                "progress": 35,
+                "completed": true,
+                "completedAt": 15,
+                "rewardClaimed": true,
+                "lastSequence": 83,
+                "roamBank": 0
+              },
+              "objectives": 2,
+              "gold": 11599.720993481114,
+              "held": 749.7209934811164,
+              "items": [
+                "1105",
+                "3006",
+                "663193",
+                "667101",
+                "3087",
+                "3155"
+              ],
+              "damage": 22022
+            },
+            {
+              "id": "NA_53",
+              "k": 3,
+              "d": 6,
+              "a": 7,
+              "quest": {
+                "role": "MID",
+                "patchId": "26.19",
+                "rules": {
+                  "csPoints": 2,
+                  "takedownPoints": 25,
+                  "epicPoints": 30,
+                  "towerPoints": 50,
+                  "platePoints": 40,
+                  "lanePerSecond": 1.5,
+                  "awayPerSecond": 0.3333333333333333,
+                  "roamBankCap": 60,
+                  "threshold": 1350,
+                  "damageRanged": 0.015,
+                  "damageMelee": 0.03,
+                  "bonusPower": 0.08
+                },
+                "progress": 1350,
+                "completed": true,
+                "completedAt": 14,
+                "rewardClaimed": true,
+                "lastSequence": 68,
+                "roamBank": 60
+              },
+              "objectives": 2,
+              "gold": 11296.670097847638,
+              "held": 596.670097847641,
+              "items": [
+                "1086",
+                "3168",
+                "663193",
+                "667101",
+                "3087",
+                "3155"
+              ],
+              "damage": 17352
+            },
+            {
+              "id": "NA_54",
+              "k": 4,
+              "d": 11,
+              "a": 5,
+              "quest": {
+                "role": "ADC",
+                "patchId": "26.19",
+                "rules": {
+                  "csPoints": 3,
+                  "takedownPoints": 15,
+                  "epicPoints": 30,
+                  "towerPoints": 50,
+                  "platePoints": 40,
+                  "lanePerSecond": 1.5,
+                  "awayPerSecond": 0.3333333333333333,
+                  "roamBankCap": 60,
+                  "threshold": 1350,
+                  "goldReward": 300,
+                  "csGold": 2,
+                  "takedownGold": 40
+                },
+                "progress": 1350,
+                "completed": true,
+                "completedAt": 13,
+                "rewardClaimed": true,
+                "lastSequence": 57,
+                "roamBank": 60
+              },
+              "objectives": 2,
+              "gold": 11221.224802479088,
+              "held": 1571.224802479085,
+              "items": [
+                "1086",
+                "3046",
+                "667101",
+                "3087"
+              ],
+              "damage": 13297
+            },
+            {
+              "id": "NA_55",
+              "k": 1,
+              "d": 1,
+              "a": 10,
+              "quest": {
+                "role": "SUP",
+                "patchId": "26.19",
+                "rules": {
+                  "threshold": 1000,
+                  "controlWardCost": 40,
+                  "controlWardCapacity": 2
+                },
+                "progress": 1000,
+                "completed": true,
+                "completedAt": 18,
+                "rewardClaimed": true,
+                "lastSequence": 76,
+                "roamBank": 0
+              },
+              "objectives": 2,
+              "gold": 8703.247799313966,
+              "held": 13.247799313966198,
+              "items": [
+                "3870",
+                "3008",
+                "663193",
+                "3156",
+                "3211"
+              ],
+              "damage": 10418
+            }
+          ],
+          [
+            {
+              "id": "NA_56",
+              "k": 5,
+              "d": 4,
+              "a": 6,
+              "quest": {
+                "role": "TOP",
+                "patchId": "26.19",
+                "rules": {
+                  "csPoints": 2,
+                  "takedownPoints": 15,
+                  "epicPoints": 30,
+                  "towerPoints": 50,
+                  "platePoints": 40,
+                  "lanePerSecond": 1.5,
+                  "awayPerSecond": 0.3333333333333333,
+                  "roamBankCap": 60,
+                  "threshold": 1200,
+                  "xpReward": 600,
+                  "xpBonus": 0.11,
+                  "takedownXp": 80,
+                  "levelCap": 20,
+                  "teleportCooldown": 6.5
+                },
+                "progress": 1200,
+                "completed": true,
+                "completedAt": 13,
+                "rewardClaimed": true,
+                "lastSequence": 80,
+                "roamBank": 60
+              },
+              "objectives": 7,
+              "gold": 12757.148698575467,
+              "held": 257.14869857546705,
+              "items": [
+                "1086",
+                "3008",
+                "663193",
+                "667101",
+                "3087",
+                "3156"
+              ],
+              "damage": 22656
+            },
+            {
+              "id": "NA_57",
+              "k": 3,
+              "d": 1,
+              "a": 13,
+              "quest": {
+                "role": "JGL",
+                "patchId": "26.19",
+                "rules": {
+                  "threshold": 35,
+                  "monsterGold": 10,
+                  "monsterXp": 10,
+                  "smiteDamage": 1400,
+                  "jungleMobility": 0.04
+                },
+                "progress": 35,
+                "completed": true,
+                "completedAt": 15,
+                "rewardClaimed": true,
+                "lastSequence": 89,
+                "roamBank": 0
+              },
+              "objectives": 7,
+              "gold": 12508.682362923324,
+              "held": 1758.6823629233281,
+              "items": [
+                "1103",
+                "3008",
+                "663193",
+                "667101",
+                "3087",
+                "3155"
+              ],
+              "damage": 17697
+            },
+            {
+              "id": "NA_58",
+              "k": 3,
+              "d": 7,
+              "a": 3,
+              "quest": {
+                "role": "MID",
+                "patchId": "26.19",
+                "rules": {
+                  "csPoints": 2,
+                  "takedownPoints": 25,
+                  "epicPoints": 30,
+                  "towerPoints": 50,
+                  "platePoints": 40,
+                  "lanePerSecond": 1.5,
+                  "awayPerSecond": 0.3333333333333333,
+                  "roamBankCap": 60,
+                  "threshold": 1350,
+                  "damageRanged": 0.015,
+                  "damageMelee": 0.03,
+                  "bonusPower": 0.08
+                },
+                "progress": 1350,
+                "completed": true,
+                "completedAt": 13,
+                "rewardClaimed": true,
+                "lastSequence": 57,
+                "roamBank": 60
+              },
+              "objectives": 7,
+              "gold": 11717.190659223204,
+              "held": 717.1906592232014,
+              "items": [
+                "1086",
+                "3006",
+                "3087",
+                "3100",
+                "663172",
+                "3145"
+              ],
+              "damage": 10963
+            },
+            {
+              "id": "NA_59",
+              "k": 4,
+              "d": 5,
+              "a": 10,
+              "quest": {
+                "role": "ADC",
+                "patchId": "26.19",
+                "rules": {
+                  "csPoints": 3,
+                  "takedownPoints": 15,
+                  "epicPoints": 30,
+                  "towerPoints": 50,
+                  "platePoints": 40,
+                  "lanePerSecond": 1.5,
+                  "awayPerSecond": 0.3333333333333333,
+                  "roamBankCap": 60,
+                  "threshold": 1350,
+                  "goldReward": 300,
+                  "csGold": 2,
+                  "takedownGold": 40
+                },
+                "progress": 1350,
+                "completed": true,
+                "completedAt": 12,
+                "rewardClaimed": true,
+                "lastSequence": 76,
+                "roamBank": 60
+              },
+              "objectives": 7,
+              "gold": 14513.443552601824,
+              "held": 1238.4435526018274,
+              "items": [
+                "1086",
+                "663193",
+                "667101",
+                "3087",
+                "3156",
+                "6690"
+              ],
+              "damage": 25220
+            },
+            {
+              "id": "NA_60",
+              "k": 7,
+              "d": 1,
+              "a": 12,
+              "quest": {
+                "role": "SUP",
+                "patchId": "26.19",
+                "rules": {
+                  "threshold": 1000,
+                  "controlWardCost": 40,
+                  "controlWardCapacity": 2
+                },
+                "progress": 1000,
+                "completed": true,
+                "completedAt": 18,
+                "rewardClaimed": true,
+                "lastSequence": 97,
+                "roamBank": 0
+              },
+              "objectives": 7,
+              "gold": 11841.65290109035,
+              "held": 761.652901090353,
+              "items": [
+                "3870",
+                "3008",
+                "663193",
+                "3156",
+                "3065",
+                "6660"
+              ],
+              "damage": 12942
+            }
+          ]
+        ],
+        "log": [
+          {
+            "t": 4,
+            "sec": 7,
+            "text": "VXG Tiskx(Xin Zhao) 바텀 갱킹 — Valvy 점멸로 생존",
+            "side": 0,
+            "major": false,
+            "kind": "gank"
+          },
+          {
+            "t": 4,
+            "sec": 11,
+            "text": "CR Jodan(Vi) 바텀 갱킹",
+            "side": 1,
+            "major": false,
+            "kind": "gank"
+          },
+          {
+            "t": 4,
+            "sec": 13,
+            "text": "CR Jodan(Vi) → VXG Gorth(Tristana) 처치 (퍼스트 블러드) · 바텀 갱킹",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 4,
+            "sec": 19,
+            "text": "CR Caezo(Leona) → VXG Sylor(Poppy) 처치 · 더블 킬 갱킹",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 5,
+            "sec": 11,
+            "text": "CR 바다 드래곤 처치 (1스택)",
+            "side": 1,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 7,
+            "sec": 17,
+            "text": "VXG Tiskx(Xin Zhao) 바텀 갱킹 → Jodan 카운터 정글",
+            "side": 0,
+            "major": true,
+            "kind": "gank"
+          },
+          {
+            "t": 7,
+            "sec": 24,
+            "text": "CR Caezo(Leona) → VXG Gorth(Tristana) 처치 · 바텀 카운터 정글",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 7,
+            "sec": 26,
+            "text": "바텀 카운터 정글: CR 승리 (1킬 / 0데스) · 패배 측 후퇴",
+            "side": 1,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 7,
+            "sec": 33,
+            "text": "CR Jodan(Vi) 바텀 갱킹 — Sylor 점멸로 생존",
+            "side": 1,
+            "major": false,
+            "kind": "gank"
+          },
+          {
+            "t": 8,
+            "sec": 9,
+            "text": "VXG 바텀 1차 포탑 파괴 (첫 포탑)",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 10,
+            "sec": 10,
+            "text": "VXG Tiskx(Xin Zhao) 탑 갱킹",
+            "side": 0,
+            "major": false,
+            "kind": "gank"
+          },
+          {
+            "t": 10,
+            "sec": 12,
+            "text": "VXG Tiskx(Xin Zhao) → CR Zerro(Aatrox) 처치 · 탑 갱킹",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 10,
+            "sec": 15,
+            "text": "CR Jodan(Vi) 바텀 갱킹 실패",
+            "side": 1,
+            "major": false,
+            "kind": "gank"
+          },
+          {
+            "t": 10,
+            "sec": 17,
+            "text": "CR 바람 드래곤 포기 → 반대편 교환",
+            "side": 1,
+            "major": false,
+            "kind": ""
+          },
+          {
+            "t": 10,
+            "sec": 20,
+            "text": "CR 탑 1차 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 10,
+            "sec": 24,
+            "text": "VXG 바람 드래곤 처치 (1스택)",
+            "side": 0,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 12,
+            "sec": 17,
+            "text": "VXG Nyro(Yasuo) 탑 퀘스트 완료",
+            "side": 0,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 12,
+            "sec": 23,
+            "text": "CR Valvy(Nilah) 원딜 퀘스트 완료",
+            "side": 1,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 13,
+            "sec": 13,
+            "text": "VXG Gorth(Tristana) 원딜 퀘스트 완료",
+            "side": 0,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 13,
+            "sec": 15,
+            "text": "CR Zerro(Aatrox) 탑 퀘스트 완료",
+            "side": 1,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 13,
+            "sec": 19,
+            "text": "VXG Tiskx(Xin Zhao) 바텀 갱킹",
+            "side": 0,
+            "major": false,
+            "kind": "gank"
+          },
+          {
+            "t": 13,
+            "sec": 24,
+            "text": "VXG Tiskx(Xin Zhao) → CR Valvy(Nilah) 처치 · 바텀 갱킹",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 13,
+            "sec": 30,
+            "text": "CR Jolyx(Taliyah) 미드 퀘스트 완료",
+            "side": 1,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 13,
+            "sec": 33,
+            "text": "CR 미드 1차 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 14,
+            "sec": 7,
+            "text": "VXG Ulra(Diana) 미드 퀘스트 완료",
+            "side": 0,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 14,
+            "sec": 10,
+            "text": "CR Jodan(Vi) 바텀 갱킹",
+            "side": 1,
+            "major": false,
+            "kind": "gank"
+          },
+          {
+            "t": 14,
+            "sec": 12,
+            "text": "CR Jodan(Vi) → VXG Gorth(Tristana) 처치 · 바텀 갱킹",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 14,
+            "sec": 19,
+            "text": "VXG 협곡의 전령 포기 → 반대편 교환",
+            "side": 0,
+            "major": false,
+            "kind": ""
+          },
+          {
+            "t": 14,
+            "sec": 26,
+            "text": "VXG 바텀 2차 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 14,
+            "sec": 30,
+            "text": "CR 협곡의 전령 획득",
+            "side": 1,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 14,
+            "sec": 35,
+            "text": "CR 전령 사용 (미드)",
+            "side": 1,
+            "major": false,
+            "kind": ""
+          },
+          {
+            "t": 14,
+            "sec": 39,
+            "text": "CR 미드 2차 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 15,
+            "sec": 8,
+            "text": "VXG Tiskx(Xin Zhao) 정글 퀘스트 완료",
+            "side": 0,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 15,
+            "sec": 14,
+            "text": "CR Jodan(Vi) 정글 퀘스트 완료",
+            "side": 1,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 15,
+            "sec": 18,
+            "text": "VXG 화염 드래곤 포기 → 반대편 교환",
+            "side": 0,
+            "major": false,
+            "kind": ""
+          },
+          {
+            "t": 15,
+            "sec": 25,
+            "text": "VXG 탑 1차 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 15,
+            "sec": 31,
+            "text": "CR 화염 드래곤 처치 (2스택)",
+            "side": 1,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 15,
+            "sec": 38,
+            "text": "CR Zerro(Aatrox) → VXG Ulra(Diana) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 15,
+            "sec": 40,
+            "text": "CR Jolyx(Taliyah) → VXG Gorth(Tristana) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 15,
+            "sec": 47,
+            "text": "VXG Gorth(Tristana) → CR Jolyx(Taliyah) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 15,
+            "sec": 53,
+            "text": "VXG Nyro(Yasuo) → CR Valvy(Nilah) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 15,
+            "sec": 58,
+            "text": "수성 한타: VXG 승리 (2킬 / 2데스)",
+            "side": 0,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 15,
+            "sec": 59,
+            "text": "VXG 탑 2차 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 17,
+            "sec": 12,
+            "text": "CR Caezo(Leona) → VXG Ulra(Diana) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 17,
+            "sec": 16,
+            "text": "CR Zerro(Aatrox) → VXG Gorth(Tristana) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 17,
+            "sec": 19,
+            "text": "VXG Nyro(Yasuo) → CR Zerro(Aatrox) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 17,
+            "sec": 24,
+            "text": "VXG Tiskx(Xin Zhao) → CR Jolyx(Taliyah) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 17,
+            "sec": 28,
+            "text": "수성 한타: VXG 승리 (2킬 / 2데스)",
+            "side": 0,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 17,
+            "sec": 33,
+            "text": "VXG 미드 1차 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 17,
+            "sec": 39,
+            "text": "CR 탑 2차 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 18,
+            "sec": 12,
+            "text": "VXG Sylor(Poppy) 서폿 퀘스트 완료",
+            "side": 0,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 18,
+            "sec": 14,
+            "text": "CR Caezo(Leona) 서폿 퀘스트 완료",
+            "side": 1,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 18,
+            "sec": 21,
+            "text": "CR Zerro(Aatrox) → VXG Gorth(Tristana) 처치 · 탑 끊기",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 18,
+            "sec": 28,
+            "text": "VXG Gorth(Tristana) → CR Zerro(Aatrox) 처치 · 탑 끊기",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 18,
+            "sec": 35,
+            "text": "VXG Ulra(Diana) → CR Caezo(Leona) 처치 · 탑 끊기",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 18,
+            "sec": 40,
+            "text": "VXG 탑 억제기 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 19,
+            "sec": 6,
+            "text": "CR 미드 억제기 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 20,
+            "sec": 6,
+            "text": "VXG 대지 드래곤 포기 → 반대편 교환",
+            "side": 0,
+            "major": false,
+            "kind": ""
+          },
+          {
+            "t": 20,
+            "sec": 13,
+            "text": "CR 대지 드래곤 처치 (3스택)",
+            "side": 1,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 20,
+            "sec": 20,
+            "text": "VXG 바론 포기 → 반대편 교환",
+            "side": 0,
+            "major": false,
+            "kind": ""
+          },
+          {
+            "t": 20,
+            "sec": 25,
+            "text": "VXG 바텀 억제기 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 20,
+            "sec": 28,
+            "text": "CR 바론 처치",
+            "side": 1,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 21,
+            "sec": 5,
+            "text": "CR Caezo(Leona) → VXG Tiskx(Xin Zhao) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 21,
+            "sec": 10,
+            "text": "CR Caezo(Leona) → VXG Gorth(Tristana) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 21,
+            "sec": 15,
+            "text": "VXG Nyro(Yasuo) → CR Jolyx(Taliyah) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 21,
+            "sec": 17,
+            "text": "VXG Nyro(Yasuo) → CR Valvy(Nilah) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 21,
+            "sec": 21,
+            "text": "수성 한타: CR 승리 (2킬 / 2데스) · 패배 측 후퇴",
+            "side": 1,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 21,
+            "sec": 23,
+            "text": "CR 바텀 1차 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 23,
+            "sec": 15,
+            "text": "CR Zerro(Aatrox) → VXG Tiskx(Xin Zhao) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 23,
+            "sec": 19,
+            "text": "CR Jolyx(Taliyah) → VXG Ulra(Diana) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 23,
+            "sec": 24,
+            "text": "CR Valvy(Nilah) → VXG Gorth(Tristana) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 23,
+            "sec": 29,
+            "text": "VXG Nyro(Yasuo) → CR Jodan(Vi) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 23,
+            "sec": 33,
+            "text": "VXG Ulra(Diana) → CR Jolyx(Taliyah) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 23,
+            "sec": 39,
+            "text": "VXG Gorth(Tristana) → CR Valvy(Nilah) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 23,
+            "sec": 46,
+            "text": "수성 한타: CR 승리 (3킬 / 3데스)",
+            "side": 1,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 25,
+            "sec": 12,
+            "text": "CR Caezo(Leona) → VXG Ulra(Diana) 처치 · 바다 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 25,
+            "sec": 17,
+            "text": "CR Jodan(Vi) → VXG Gorth(Tristana) 처치 · 바다 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 25,
+            "sec": 23,
+            "text": "VXG Gorth(Tristana) → CR Jolyx(Taliyah) 처치 · 바다 드래곤 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 25,
+            "sec": 27,
+            "text": "바다 드래곤 한타: CR 승리 (2킬 / 1데스) · 패배 측 후퇴",
+            "side": 1,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 25,
+            "sec": 33,
+            "text": "CR 바다 드래곤 처치 (4스택)",
+            "side": 1,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 25,
+            "sec": 39,
+            "text": "CR 드래곤 영혼 획득",
+            "side": 1,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 26,
+            "sec": 11,
+            "text": "VXG 바론 포기 → 반대편 교환",
+            "side": 0,
+            "major": false,
+            "kind": ""
+          },
+          {
+            "t": 26,
+            "sec": 13,
+            "text": "CR 바론 처치",
+            "side": 1,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 26,
+            "sec": 20,
+            "text": "CR 바텀 2차 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 27,
+            "sec": 9,
+            "text": "CR Valvy(Nilah) → VXG Nyro(Yasuo) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 27,
+            "sec": 11,
+            "text": "CR Caezo(Leona) → VXG Ulra(Diana) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 27,
+            "sec": 16,
+            "text": "CR Valvy(Nilah) → VXG Gorth(Tristana) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 27,
+            "sec": 19,
+            "text": "VXG Ulra(Diana) → CR Jolyx(Taliyah) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 27,
+            "sec": 26,
+            "text": "수성 한타: CR 승리 (3킬 / 1데스) · 패배 측 후퇴",
+            "side": 1,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 27,
+            "sec": 31,
+            "text": "CR 미드 억제기 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 27,
+            "sec": 37,
+            "text": "CR 쌍둥이 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 27,
+            "sec": 40,
+            "text": "CR 쌍둥이 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 27,
+            "sec": 45,
+            "text": "CR 바텀 억제기 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 28,
+            "sec": 11,
+            "text": "CR 탑 억제기 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 31,
+            "sec": 12,
+            "text": "CR Zerro(Aatrox) → VXG Tiskx(Xin Zhao) 처치 · 장로 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 31,
+            "sec": 17,
+            "text": "CR Jolyx(Taliyah) → VXG Ulra(Diana) 처치 · 장로 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 31,
+            "sec": 22,
+            "text": "CR Valvy(Nilah) → VXG Gorth(Tristana) 처치 · 장로 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 31,
+            "sec": 26,
+            "text": "VXG Tiskx(Xin Zhao) → CR Zerro(Aatrox) 처치 · 장로 드래곤 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 31,
+            "sec": 30,
+            "text": "VXG Nyro(Yasuo) → CR Jolyx(Taliyah) 처치 · 장로 드래곤 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 31,
+            "sec": 36,
+            "text": "VXG Sylor(Poppy) → CR Valvy(Nilah) 처치 · 장로 드래곤 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 31,
+            "sec": 40,
+            "text": "장로 드래곤 한타: VXG 승리 (3킬 / 3데스)",
+            "side": 0,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 31,
+            "sec": 45,
+            "text": "VXG 장로 드래곤 처치",
+            "side": 0,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 31,
+            "sec": 48,
+            "text": "CR 넥서스 파괴 — 승리",
+            "side": 1,
+            "major": true,
+            "kind": "nexus"
+          }
+        ],
+        "steals": []
+      },
+      {
+        "seed": "objective-steal-source-35",
+        "sides": [
+          "CR",
+          "VXG"
+        ],
+        "winner": 0,
+        "ending": {
+          "version": 1,
+          "kind": "nexus",
+          "winner": 0,
+          "minute": 33,
+          "second": 35
+        },
+        "duration": 33.583333333333336,
+        "objectives": [
+          {
+            "id": "dragon:5:0",
+            "key": "dragon",
+            "side": 1,
+            "minute": 5,
+            "second": 49,
+            "participants": [
+              "NA_51",
+              "NA_53",
+              "NA_54",
+              "NA_55"
+            ]
+          },
+          {
+            "id": "dragon:10:1",
+            "key": "dragon",
+            "side": 0,
+            "minute": 10,
+            "second": 30,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_59",
+              "NA_60"
+            ]
+          },
+          {
+            "id": "herald:14",
+            "key": "herald",
+            "side": 0,
+            "minute": 14,
+            "second": 32,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_60"
+            ]
+          },
+          {
+            "id": "dragon:15:2",
+            "key": "dragon",
+            "side": 0,
+            "minute": 15,
+            "second": 38,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_59",
+              "NA_60"
+            ]
+          },
+          {
+            "id": "baron:20",
+            "key": "baron",
+            "side": 1,
+            "minute": 20,
+            "second": 38,
+            "participants": [
+              "NA_51",
+              "NA_52",
+              "NA_53",
+              "NA_54",
+              "NA_55"
+            ]
+          },
+          {
+            "id": "dragon:20:3",
+            "key": "dragon",
+            "side": 1,
+            "minute": 21,
+            "second": 36,
+            "participants": [
+              "NA_51",
+              "NA_52",
+              "NA_53",
+              "NA_54",
+              "NA_55"
+            ]
+          },
+          {
+            "id": "dragon:26:4",
+            "key": "dragon",
+            "side": 0,
+            "minute": 26,
+            "second": 41,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_59",
+              "NA_60"
+            ]
+          },
+          {
+            "id": "baron:26",
+            "key": "baron",
+            "side": 1,
+            "minute": 26,
+            "second": 58,
+            "participants": [
+              "NA_51",
+              "NA_52",
+              "NA_53"
+            ]
+          },
+          {
+            "id": "dragon:31:5",
+            "key": "dragon",
+            "side": 1,
+            "minute": 31,
+            "second": 37,
+            "participants": [
+              "NA_51",
+              "NA_52",
+              "NA_53",
+              "NA_54",
+              "NA_55"
+            ]
+          },
+          {
+            "id": "baron:32",
+            "key": "baron",
+            "side": 0,
+            "minute": 32,
+            "second": 26,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_60"
+            ]
+          }
+        ],
+        "players": [
+          [
+            {
+              "id": "NA_56",
+              "k": 9,
+              "d": 5,
+              "a": 12,
+              "quest": {
+                "role": "TOP",
+                "patchId": "26.19",
+                "rules": {
+                  "csPoints": 2,
+                  "takedownPoints": 15,
+                  "epicPoints": 30,
+                  "towerPoints": 50,
+                  "platePoints": 40,
+                  "lanePerSecond": 1.5,
+                  "awayPerSecond": 0.3333333333333333,
+                  "roamBankCap": 60,
+                  "threshold": 1200,
+                  "xpReward": 600,
+                  "xpBonus": 0.11,
+                  "takedownXp": 80,
+                  "levelCap": 20,
+                  "teleportCooldown": 6.5
+                },
+                "progress": 1200,
+                "completed": true,
+                "completedAt": 12,
+                "rewardClaimed": true,
+                "lastSequence": 111,
+                "roamBank": 0
+              },
+              "objectives": 5,
+              "gold": 14714.591559404696,
+              "held": 2214.591559404697,
+              "items": [
+                "1086",
+                "3008",
+                "663193",
+                "667101",
+                "3087",
+                "3156"
+              ],
+              "damage": 36691
+            },
+            {
+              "id": "NA_57",
+              "k": 6,
+              "d": 1,
+              "a": 11,
+              "quest": {
+                "role": "JGL",
+                "patchId": "26.19",
+                "rules": {
+                  "threshold": 35,
+                  "monsterGold": 10,
+                  "monsterXp": 10,
+                  "smiteDamage": 1400,
+                  "jungleMobility": 0.04
+                },
+                "progress": 35,
+                "completed": true,
+                "completedAt": 14,
+                "rewardClaimed": true,
+                "lastSequence": 104,
+                "roamBank": 0
+              },
+              "objectives": 5,
+              "gold": 13684.763302797264,
+              "held": 1134.7633027972613,
+              "items": [
+                "1103",
+                "3008",
+                "663193",
+                "667101",
+                "3087",
+                "3156"
+              ],
+              "damage": 23238
+            },
+            {
+              "id": "NA_58",
+              "k": 5,
+              "d": 11,
+              "a": 5,
+              "quest": {
+                "role": "MID",
+                "patchId": "26.19",
+                "rules": {
+                  "csPoints": 2,
+                  "takedownPoints": 25,
+                  "epicPoints": 30,
+                  "towerPoints": 50,
+                  "platePoints": 40,
+                  "lanePerSecond": 1.5,
+                  "awayPerSecond": 0.3333333333333333,
+                  "roamBankCap": 60,
+                  "threshold": 1350,
+                  "damageRanged": 0.015,
+                  "damageMelee": 0.03,
+                  "bonusPower": 0.08
+                },
+                "progress": 1350,
+                "completed": true,
+                "completedAt": 14,
+                "rewardClaimed": true,
+                "lastSequence": 67,
+                "roamBank": 0
+              },
+              "objectives": 4,
+              "gold": 11196.100348024444,
+              "held": 196.1003480244467,
+              "items": [
+                "1086",
+                "3006",
+                "667101",
+                "3087",
+                "6672",
+                "3134"
+              ],
+              "damage": 23849
+            },
+            {
+              "id": "NA_59",
+              "k": 5,
+              "d": 8,
+              "a": 9,
+              "quest": {
+                "role": "ADC",
+                "patchId": "26.19",
+                "rules": {
+                  "csPoints": 3,
+                  "takedownPoints": 15,
+                  "epicPoints": 30,
+                  "towerPoints": 50,
+                  "platePoints": 40,
+                  "lanePerSecond": 1.5,
+                  "awayPerSecond": 0.3333333333333333,
+                  "roamBankCap": 60,
+                  "threshold": 1350,
+                  "goldReward": 300,
+                  "csGold": 2,
+                  "takedownGold": 40
+                },
+                "progress": 1350,
+                "completed": true,
+                "completedAt": 13,
+                "rewardClaimed": true,
+                "lastSequence": 85,
+                "roamBank": 60
+              },
+              "objectives": 3,
+              "gold": 13550.518752655325,
+              "held": 275.51875265532567,
+              "items": [
+                "1086",
+                "663193",
+                "667101",
+                "3087",
+                "3156",
+                "6690"
+              ],
+              "damage": 29548
+            },
+            {
+              "id": "NA_60",
+              "k": 5,
+              "d": 8,
+              "a": 10,
+              "quest": {
+                "role": "SUP",
+                "patchId": "26.19",
+                "rules": {
+                  "threshold": 1000,
+                  "controlWardCost": 40,
+                  "controlWardCapacity": 2
+                },
+                "progress": 1000,
+                "completed": true,
+                "completedAt": 18,
+                "rewardClaimed": true,
+                "lastSequence": 88,
+                "roamBank": 0
+              },
+              "objectives": 5,
+              "gold": 10348.133522215781,
+              "held": 893.1335222157821,
+              "items": [
+                "3870",
+                "3006",
+                "667101",
+                "3087",
+                "6690",
+                "3051"
+              ],
+              "damage": 20107
+            }
+          ],
+          [
+            {
+              "id": "NA_51",
+              "k": 7,
+              "d": 4,
+              "a": 14,
+              "quest": {
+                "role": "TOP",
+                "patchId": "26.19",
+                "rules": {
+                  "csPoints": 2,
+                  "takedownPoints": 15,
+                  "epicPoints": 30,
+                  "towerPoints": 50,
+                  "platePoints": 40,
+                  "lanePerSecond": 1.5,
+                  "awayPerSecond": 0.3333333333333333,
+                  "roamBankCap": 60,
+                  "threshold": 1200,
+                  "xpReward": 600,
+                  "xpBonus": 0.11,
+                  "takedownXp": 80,
+                  "levelCap": 20,
+                  "teleportCooldown": 6.5
+                },
+                "progress": 1200,
+                "completed": true,
+                "completedAt": 13,
+                "rewardClaimed": true,
+                "lastSequence": 105,
+                "roamBank": 0
+              },
+              "objectives": 5,
+              "gold": 13883.172678540246,
+              "held": 1383.172678540248,
+              "items": [
+                "1086",
+                "3008",
+                "663193",
+                "667101",
+                "3087",
+                "3156"
+              ],
+              "damage": 25659
+            },
+            {
+              "id": "NA_52",
+              "k": 7,
+              "d": 4,
+              "a": 18,
+              "quest": {
+                "role": "JGL",
+                "patchId": "26.19",
+                "rules": {
+                  "threshold": 35,
+                  "monsterGold": 10,
+                  "monsterXp": 10,
+                  "smiteDamage": 1400,
+                  "jungleMobility": 0.04
+                },
+                "progress": 35,
+                "completed": true,
+                "completedAt": 15,
+                "rewardClaimed": true,
+                "lastSequence": 111,
+                "roamBank": 0
+              },
+              "objectives": 4,
+              "gold": 13474.871248771413,
+              "held": 824.8712487714123,
+              "items": [
+                "1105",
+                "3006",
+                "663193",
+                "667101",
+                "3087",
+                "3156"
+              ],
+              "damage": 27524
+            },
+            {
+              "id": "NA_53",
+              "k": 7,
+              "d": 3,
+              "a": 9,
+              "quest": {
+                "role": "MID",
+                "patchId": "26.19",
+                "rules": {
+                  "csPoints": 2,
+                  "takedownPoints": 25,
+                  "epicPoints": 30,
+                  "towerPoints": 50,
+                  "platePoints": 40,
+                  "lanePerSecond": 1.5,
+                  "awayPerSecond": 0.3333333333333333,
+                  "roamBankCap": 60,
+                  "threshold": 1350,
+                  "damageRanged": 0.015,
+                  "damageMelee": 0.03,
+                  "bonusPower": 0.08
+                },
+                "progress": 1350,
+                "completed": true,
+                "completedAt": 13,
+                "rewardClaimed": true,
+                "lastSequence": 94,
+                "roamBank": 0
+              },
+              "objectives": 5,
+              "gold": 14293.03236240667,
+              "held": 1793.0323624066696,
+              "items": [
+                "1086",
+                "3168",
+                "663193",
+                "667101",
+                "3087",
+                "3156"
+              ],
+              "damage": 21056
+            },
+            {
+              "id": "NA_54",
+              "k": 6,
+              "d": 9,
+              "a": 17,
+              "quest": {
+                "role": "ADC",
+                "patchId": "26.19",
+                "rules": {
+                  "csPoints": 3,
+                  "takedownPoints": 15,
+                  "epicPoints": 30,
+                  "towerPoints": 50,
+                  "platePoints": 40,
+                  "lanePerSecond": 1.5,
+                  "awayPerSecond": 0.3333333333333333,
+                  "roamBankCap": 60,
+                  "threshold": 1350,
+                  "goldReward": 300,
+                  "csGold": 2,
+                  "takedownGold": 40
+                },
+                "progress": 1350,
+                "completed": true,
+                "completedAt": 12,
+                "rewardClaimed": true,
+                "lastSequence": 95,
+                "roamBank": 60
+              },
+              "objectives": 4,
+              "gold": 14279.87691827163,
+              "held": 1354.8769182716323,
+              "items": [
+                "1086",
+                "3046",
+                "667101",
+                "3087",
+                "663172",
+                "6690"
+              ],
+              "damage": 30649
+            },
+            {
+              "id": "NA_55",
+              "k": 6,
+              "d": 10,
+              "a": 12,
+              "quest": {
+                "role": "SUP",
+                "patchId": "26.19",
+                "rules": {
+                  "threshold": 1000,
+                  "controlWardCost": 40,
+                  "controlWardCapacity": 2
+                },
+                "progress": 1000,
+                "completed": true,
+                "completedAt": 18,
+                "rewardClaimed": true,
+                "lastSequence": 88,
+                "roamBank": 0
+              },
+              "objectives": 4,
+              "gold": 10239.611443459356,
+              "held": 2199.6114434593574,
+              "items": [
+                "3870",
+                "3006",
+                "3087",
+                "3100"
+              ],
+              "damage": 24250
+            }
+          ]
+        ],
+        "log": [
+          {
+            "t": 4,
+            "sec": 7,
+            "text": "CR Jodan(Jarvan IV) 바텀 갱킹 — Gorth 점멸로 생존",
+            "side": 0,
+            "major": false,
+            "kind": "gank"
+          },
+          {
+            "t": 4,
+            "sec": 11,
+            "text": "VXG Tiskx(Xin Zhao) 바텀 갱킹",
+            "side": 1,
+            "major": false,
+            "kind": "gank"
+          },
+          {
+            "t": 4,
+            "sec": 13,
+            "text": "VXG Tiskx(Xin Zhao) → CR Valvy(Nilah) 처치 (퍼스트 블러드) · 바텀 갱킹",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 4,
+            "sec": 19,
+            "text": "VXG Sylor(Zilean) → CR Caezo(Pyke) 처치 · 더블 킬 갱킹",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 5,
+            "sec": 11,
+            "text": "CR 콜 불일치 — 1명 합류 실패",
+            "side": 0,
+            "major": false,
+            "kind": ""
+          },
+          {
+            "t": 5,
+            "sec": 17,
+            "text": "VXG 콜 불일치 — 1명 합류 실패",
+            "side": 1,
+            "major": false,
+            "kind": ""
+          },
+          {
+            "t": 5,
+            "sec": 24,
+            "text": "VXG Ulra(Diana) → CR Jolyx(Katarina) 처치 · 바다 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 5,
+            "sec": 29,
+            "text": "CR Zerro(Aatrox) → VXG Nyro(Yasuo) 처치 · 바다 드래곤 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 5,
+            "sec": 36,
+            "text": "CR Zerro(Aatrox) → VXG Sylor(Zilean) 처치 · 바다 드래곤 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 5,
+            "sec": 38,
+            "text": "바다 드래곤 한타: CR 승리 (2킬 / 1데스)",
+            "side": 0,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 5,
+            "sec": 45,
+            "text": "VXG Tiskx(Xin Zhao) 바다 드래곤 스틸!",
+            "side": 1,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 5,
+            "sec": 49,
+            "text": "VXG 바다 드래곤 처치 (1스택)",
+            "side": 1,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 6,
+            "sec": 11,
+            "text": "VXG Gorth(Tristana) → CR Valvy(Nilah) 처치 · 바텀 라인전",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 7,
+            "sec": 10,
+            "text": "CR Jodan(Jarvan IV) 바텀 갱킹 실패",
+            "side": 0,
+            "major": false,
+            "kind": "gank"
+          },
+          {
+            "t": 7,
+            "sec": 12,
+            "text": "VXG Tiskx(Xin Zhao) 바텀 갱킹",
+            "side": 1,
+            "major": false,
+            "kind": "gank"
+          },
+          {
+            "t": 7,
+            "sec": 15,
+            "text": "VXG Tiskx(Xin Zhao) → CR Caezo(Pyke) 처치 · 바텀 갱킹",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 9,
+            "sec": 7,
+            "text": "VXG Ulra(Diana) 귀환",
+            "side": 1,
+            "major": false,
+            "kind": "recall"
+          },
+          {
+            "t": 10,
+            "sec": 17,
+            "text": "CR Jodan(Jarvan IV) 탑 갱킹 — Nyro 점멸로 생존",
+            "side": 0,
+            "major": false,
+            "kind": "gank"
+          },
+          {
+            "t": 10,
+            "sec": 24,
+            "text": "VXG Tiskx(Xin Zhao) 미드 갱킹 — Jolyx 점멸로 생존",
+            "side": 1,
+            "major": false,
+            "kind": "gank"
+          },
+          {
+            "t": 10,
+            "sec": 30,
+            "text": "CR 바람 드래곤 처치 (1스택)",
+            "side": 0,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 12,
+            "sec": 11,
+            "text": "CR Zerro(Aatrox) 탑 퀘스트 완료",
+            "side": 0,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 12,
+            "sec": 15,
+            "text": "VXG Gorth(Tristana) 원딜 퀘스트 완료",
+            "side": 1,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 13,
+            "sec": 13,
+            "text": "CR Valvy(Nilah) 원딜 퀘스트 완료",
+            "side": 0,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 13,
+            "sec": 16,
+            "text": "VXG Nyro(Yasuo) 탑 퀘스트 완료",
+            "side": 1,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 13,
+            "sec": 18,
+            "text": "VXG Tiskx(Xin Zhao) 미드 갱킹",
+            "side": 1,
+            "major": false,
+            "kind": "gank"
+          },
+          {
+            "t": 13,
+            "sec": 24,
+            "text": "VXG Ulra(Diana) 미드 퀘스트 완료",
+            "side": 1,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 13,
+            "sec": 27,
+            "text": "VXG Tiskx(Xin Zhao) → CR Jolyx(Katarina) 처치 · 미드 갱킹",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 14,
+            "sec": 8,
+            "text": "CR Jolyx(Katarina) 미드 퀘스트 완료",
+            "side": 0,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 14,
+            "sec": 15,
+            "text": "CR Jodan(Jarvan IV) 탑 갱킹 실패",
+            "side": 0,
+            "major": false,
+            "kind": "gank"
+          },
+          {
+            "t": 14,
+            "sec": 19,
+            "text": "VXG 협곡의 전령 포기 → 반대편 교환",
+            "side": 1,
+            "major": false,
+            "kind": ""
+          },
+          {
+            "t": 14,
+            "sec": 24,
+            "text": "VXG 바텀 1차 포탑 파괴 (첫 포탑)",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 14,
+            "sec": 28,
+            "text": "CR Jodan(Jarvan IV) 정글 퀘스트 완료",
+            "side": 0,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 14,
+            "sec": 32,
+            "text": "CR 협곡의 전령 획득",
+            "side": 0,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 14,
+            "sec": 34,
+            "text": "VXG Nyro(Yasuo) → CR Jolyx(Katarina) 처치 · 중앙 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 14,
+            "sec": 40,
+            "text": "VXG Nyro(Yasuo) → CR Caezo(Pyke) 처치 · 중앙 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 14,
+            "sec": 44,
+            "text": "CR Zerro(Aatrox) → VXG Nyro(Yasuo) 처치 · 중앙 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 14,
+            "sec": 51,
+            "text": "CR Zerro(Aatrox) → VXG Gorth(Tristana) 처치 · 중앙 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 14,
+            "sec": 57,
+            "text": "CR Jolyx(Katarina) → VXG Sylor(Zilean) 처치 · 중앙 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 14,
+            "sec": 59,
+            "text": "중앙 한타: CR 승리 (3킬 / 2데스)",
+            "side": 0,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 14,
+            "sec": 59,
+            "text": "CR 탑 1차 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 14,
+            "sec": 59,
+            "text": "CR 전령 사용 (탑)",
+            "side": 0,
+            "major": false,
+            "kind": ""
+          },
+          {
+            "t": 14,
+            "sec": 59,
+            "text": "CR 탑 2차 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 15,
+            "sec": 10,
+            "text": "VXG Tiskx(Xin Zhao) 정글 퀘스트 완료",
+            "side": 1,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 15,
+            "sec": 17,
+            "text": "VXG Nyro(Yasuo) → CR Jolyx(Katarina) 처치 · 화염 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 15,
+            "sec": 22,
+            "text": "VXG Ulra(Diana) → CR Caezo(Pyke) 처치 · 화염 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 15,
+            "sec": 26,
+            "text": "CR Jodan(Jarvan IV) → VXG Tiskx(Xin Zhao) 처치 · 화염 드래곤 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 15,
+            "sec": 30,
+            "text": "CR Jolyx(Katarina) → VXG Sylor(Zilean) 처치 · 화염 드래곤 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 15,
+            "sec": 33,
+            "text": "화염 드래곤 한타: CR 승리 (2킬 / 2데스)",
+            "side": 0,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 15,
+            "sec": 38,
+            "text": "CR 화염 드래곤 처치 (2스택)",
+            "side": 0,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 15,
+            "sec": 42,
+            "text": "VXG Gorth(Tristana) → CR Zerro(Aatrox) 처치 · 바텀 끊기",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 15,
+            "sec": 47,
+            "text": "CR Jodan(Jarvan IV) → VXG Gorth(Tristana) 처치 · 바텀 끊기",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 15,
+            "sec": 53,
+            "text": "CR 미드 1차 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 18,
+            "sec": 8,
+            "text": "CR Caezo(Pyke) 서폿 퀘스트 완료",
+            "side": 0,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 18,
+            "sec": 15,
+            "text": "VXG Sylor(Zilean) 서폿 퀘스트 완료",
+            "side": 1,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 19,
+            "sec": 16,
+            "text": "VXG Gorth(Tristana) → CR Valvy(Nilah) 처치 · 탑 끊기",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 19,
+            "sec": 18,
+            "text": "CR Zerro(Aatrox) → VXG Gorth(Tristana) 처치 · 탑 끊기",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 19,
+            "sec": 24,
+            "text": "CR 미드 2차 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 19,
+            "sec": 27,
+            "text": "CR 바텀 1차 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 20,
+            "sec": 11,
+            "text": "VXG Sylor(Zilean) → CR Zerro(Aatrox) 처치 · 바론 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 20,
+            "sec": 18,
+            "text": "VXG Sylor(Zilean) → CR Jolyx(Katarina) 처치 · 바론 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 20,
+            "sec": 23,
+            "text": "VXG Ulra(Diana) → CR Valvy(Nilah) 처치 · 바론 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 20,
+            "sec": 26,
+            "text": "CR Caezo(Pyke) → VXG Tiskx(Xin Zhao) 처치 · 바론 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 20,
+            "sec": 28,
+            "text": "CR Valvy(Nilah) → VXG Sylor(Zilean) 처치 · 바론 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 20,
+            "sec": 33,
+            "text": "바론 한타: VXG 승리 (3킬 / 2데스)",
+            "side": 1,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 20,
+            "sec": 38,
+            "text": "VXG 바론 처치",
+            "side": 1,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 21,
+            "sec": 10,
+            "text": "VXG Gorth(Tristana) → CR Zerro(Aatrox) 처치 · 대지 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 21,
+            "sec": 14,
+            "text": "VXG Nyro(Yasuo) → CR Jolyx(Katarina) 처치 · 대지 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 21,
+            "sec": 16,
+            "text": "VXG Sylor(Zilean) → CR Valvy(Nilah) 처치 · 대지 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 21,
+            "sec": 20,
+            "text": "VXG Sylor(Zilean) → CR Caezo(Pyke) 처치 · 대지 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 21,
+            "sec": 26,
+            "text": "CR Caezo(Pyke) → VXG Ulra(Diana) 처치 · 대지 드래곤 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 21,
+            "sec": 32,
+            "text": "대지 드래곤 한타: VXG 승리 (4킬 / 1데스)",
+            "side": 1,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 21,
+            "sec": 36,
+            "text": "VXG 대지 드래곤 처치 (2스택)",
+            "side": 1,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 21,
+            "sec": 41,
+            "text": "VXG 탑 1차 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 21,
+            "sec": 46,
+            "text": "VXG 미드 1차 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 21,
+            "sec": 50,
+            "text": "VXG 바텀 2차 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 22,
+            "sec": 17,
+            "text": "VXG Tiskx(Xin Zhao) → CR Jolyx(Katarina) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 22,
+            "sec": 21,
+            "text": "VXG Tiskx(Xin Zhao) → CR Valvy(Nilah) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 22,
+            "sec": 25,
+            "text": "VXG Gorth(Tristana) → CR Caezo(Pyke) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 22,
+            "sec": 31,
+            "text": "CR Valvy(Nilah) → VXG Gorth(Tristana) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 22,
+            "sec": 36,
+            "text": "CR Jolyx(Katarina) → VXG Sylor(Zilean) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 22,
+            "sec": 42,
+            "text": "수성 한타: VXG 승리 (3킬 / 2데스)",
+            "side": 1,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 22,
+            "sec": 46,
+            "text": "VXG 바텀 억제기 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 23,
+            "sec": 15,
+            "text": "VXG Nyro(Yasuo) → CR Jolyx(Katarina) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 23,
+            "sec": 21,
+            "text": "CR Valvy(Nilah) → VXG Tiskx(Xin Zhao) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 23,
+            "sec": 23,
+            "text": "CR Jodan(Jarvan IV) → VXG Ulra(Diana) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 23,
+            "sec": 25,
+            "text": "CR Caezo(Pyke) → VXG Gorth(Tristana) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 23,
+            "sec": 32,
+            "text": "수성 한타: CR 승리 (3킬 / 1데스) · 패배 측 후퇴",
+            "side": 0,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 23,
+            "sec": 36,
+            "text": "CR 탑 억제기 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 23,
+            "sec": 40,
+            "text": "CR 바텀 2차 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 25,
+            "sec": 11,
+            "text": "CR 미드 억제기 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 26,
+            "sec": 17,
+            "text": "CR 콜 불일치 — 1명 합류 실패",
+            "side": 0,
+            "major": false,
+            "kind": ""
+          },
+          {
+            "t": 26,
+            "sec": 23,
+            "text": "VXG Ulra(Diana) → CR Valvy(Nilah) 처치 · 바다 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 26,
+            "sec": 26,
+            "text": "VXG Ulra(Diana) → CR Caezo(Pyke) 처치 · 바다 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 26,
+            "sec": 31,
+            "text": "CR Caezo(Pyke) → VXG Gorth(Tristana) 처치 · 바다 드래곤 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 26,
+            "sec": 36,
+            "text": "CR Caezo(Pyke) → VXG Sylor(Zilean) 처치 · 바다 드래곤 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 26,
+            "sec": 39,
+            "text": "바다 드래곤 한타: CR 승리 (2킬 / 2데스)",
+            "side": 0,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 26,
+            "sec": 41,
+            "text": "CR 바다 드래곤 처치 (3스택)",
+            "side": 0,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 26,
+            "sec": 47,
+            "text": "CR 바론 포기 → 반대편 교환",
+            "side": 0,
+            "major": false,
+            "kind": ""
+          },
+          {
+            "t": 26,
+            "sec": 52,
+            "text": "CR 바텀 억제기 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 26,
+            "sec": 58,
+            "text": "VXG 바론 처치",
+            "side": 1,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 26,
+            "sec": 59,
+            "text": "VXG Tiskx(Xin Zhao) → CR Zerro(Aatrox) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 26,
+            "sec": 59,
+            "text": "VXG Nyro(Yasuo) → CR Jodan(Jarvan IV) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 26,
+            "sec": 59,
+            "text": "CR Jodan(Jarvan IV) → VXG Nyro(Yasuo) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 26,
+            "sec": 59,
+            "text": "수성 한타: VXG 승리 (2킬 / 1데스) · 패배 측 후퇴",
+            "side": 1,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 26,
+            "sec": 59,
+            "text": "VXG 바텀 억제기 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 26,
+            "sec": 59,
+            "text": "VXG 탑 2차 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 26,
+            "sec": 59,
+            "text": "VXG 미드 2차 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 28,
+            "sec": 13,
+            "text": "VXG 미드 억제기 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 29,
+            "sec": 7,
+            "text": "VXG Gorth(Tristana) → CR Jolyx(Katarina) 처치 · 바텀 끊기",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 29,
+            "sec": 10,
+            "text": "CR Jolyx(Katarina) → VXG Gorth(Tristana) 처치 · 바텀 끊기",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 29,
+            "sec": 13,
+            "text": "CR Valvy(Nilah) → VXG Sylor(Zilean) 처치 · 바텀 끊기",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 31,
+            "sec": 12,
+            "text": "VXG Nyro(Yasuo) → CR Jolyx(Katarina) 처치 · 바람 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 31,
+            "sec": 15,
+            "text": "VXG Ulra(Diana) → CR Valvy(Nilah) 처치 · 바람 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 31,
+            "sec": 22,
+            "text": "VXG Tiskx(Xin Zhao) → CR Caezo(Pyke) 처치 · 바람 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 31,
+            "sec": 24,
+            "text": "CR Jolyx(Katarina) → VXG Gorth(Tristana) 처치 · 바람 드래곤 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 31,
+            "sec": 28,
+            "text": "CR Valvy(Nilah) → VXG Sylor(Zilean) 처치 · 바람 드래곤 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 31,
+            "sec": 30,
+            "text": "바람 드래곤 한타: VXG 승리 (3킬 / 2데스)",
+            "side": 1,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 31,
+            "sec": 37,
+            "text": "VXG 바람 드래곤 처치 (3스택)",
+            "side": 1,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 32,
+            "sec": 11,
+            "text": "VXG Ulra(Diana) → CR Jolyx(Katarina) 처치 · 바론 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 32,
+            "sec": 13,
+            "text": "CR Zerro(Aatrox) → VXG Nyro(Yasuo) 처치 · 바론 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 32,
+            "sec": 19,
+            "text": "CR Jodan(Jarvan IV) → VXG Tiskx(Xin Zhao) 처치 · 바론 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 32,
+            "sec": 21,
+            "text": "CR Zerro(Aatrox) → VXG Ulra(Diana) 처치 · 바론 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 32,
+            "sec": 23,
+            "text": "바론 한타: CR 승리 (3킬 / 1데스)",
+            "side": 0,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 32,
+            "sec": 26,
+            "text": "CR 바론 처치",
+            "side": 0,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 32,
+            "sec": 30,
+            "text": "CR Zerro(Aatrox) → VXG Sylor(Zilean) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 32,
+            "sec": 37,
+            "text": "CR 미드 억제기 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 32,
+            "sec": 42,
+            "text": "CR 쌍둥이 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 32,
+            "sec": 49,
+            "text": "CR 쌍둥이 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 33,
+            "sec": 12,
+            "text": "VXG Sylor(Zilean) → CR Zerro(Aatrox) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 33,
+            "sec": 16,
+            "text": "CR Jodan(Jarvan IV) → VXG Gorth(Tristana) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 33,
+            "sec": 22,
+            "text": "CR Zerro(Aatrox) → VXG Sylor(Zilean) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 33,
+            "sec": 27,
+            "text": "수성 한타: CR 승리 (2킬 / 1데스)",
+            "side": 0,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 33,
+            "sec": 32,
+            "text": "CR 바텀 억제기 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 33,
+            "sec": 35,
+            "text": "CR 넥서스 파괴 — 승리",
+            "side": 0,
+            "major": true,
+            "kind": "nexus"
+          }
+        ],
+        "steals": [
+          {
+            "actor": "NA_52",
+            "side": 1,
+            "minute": 5,
+            "calls": {
+              "dragon": [
+                [
+                  "NA_56",
+                  "NA_57",
+                  "NA_58",
+                  "NA_59"
+                ],
+                [
+                  "NA_51",
+                  "NA_53",
+                  "NA_54",
+                  "NA_55"
+                ]
+              ]
+            },
+            "before": {
+              "objectives": 0,
+              "quest": {
+                "role": "JGL",
+                "patchId": "26.19",
+                "rules": {
+                  "threshold": 35,
+                  "monsterGold": 10,
+                  "monsterXp": 10,
+                  "smiteDamage": 1400,
+                  "jungleMobility": 0.04
+                },
+                "progress": 10.839829670258979,
+                "completed": false,
+                "completedAt": null,
+                "rewardClaimed": false,
+                "lastSequence": 6,
+                "roamBank": 0
+              }
+            },
+            "key": "dragon",
+            "part": [
+              "NA_51",
+              "NA_53",
+              "NA_54",
+              "NA_55"
+            ],
+            "accepted": true,
+            "after": {
+              "objectives": 0,
+              "quest": {
+                "role": "JGL",
+                "patchId": "26.19",
+                "rules": {
+                  "threshold": 35,
+                  "monsterGold": 10,
+                  "monsterXp": 10,
+                  "smiteDamage": 1400,
+                  "jungleMobility": 0.04
+                },
+                "progress": 10.839829670258979,
+                "completed": false,
+                "completedAt": null,
+                "rewardClaimed": false,
+                "lastSequence": 6,
+                "roamBank": 0
+              }
+            },
+            "receipt": {
+              "id": "dragon:5:0",
+              "key": "dragon",
+              "side": 1,
+              "minute": 5,
+              "second": 49,
+              "participants": [
+                "NA_51",
+                "NA_53",
+                "NA_54",
+                "NA_55"
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "hashes": {
+      "engine.js": "ff603f8f7279bd2b8f51f45ad870dab0664ad2fbec42656ccb6f996d9937ec68",
+      "objective-awards.js": "4c0cbc23fc007336362528421d6497562f0418fa4567839533d27d3de897320e",
+      "role-quest-match.js": "29ce026186ea801419cb8a369548cef21a5c969f08b9f17b804726934892532b",
+      "takedown-rewards.js": "59a545ebfae98986c7216cc980e351661f5a61dc5c1c313079b122a749733c74"
+    }
+  },
+  "corrected": {
+    "setup": "NA4 franchise, default tactics, genPlayer match-history|team.id+role age22/base65",
+    "provenance": "Seeded fictional match execution with read-only wrappers, no injected outcomes/professional frequency target",
+    "runs": [
+      {
+        "seed": "objective-steal-source-35",
+        "sides": [
+          "VXG",
+          "CR"
+        ],
+        "winner": 1,
+        "ending": {
+          "version": 1,
+          "kind": "nexus",
+          "winner": 1,
+          "minute": 31,
+          "second": 48
+        },
+        "duration": 31.8,
+        "objectives": [
+          {
+            "id": "dragon:5:0",
+            "key": "dragon",
+            "side": 1,
+            "minute": 5,
+            "second": 11,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_59",
+              "NA_60"
+            ]
+          },
+          {
+            "id": "dragon:10:1",
+            "key": "dragon",
+            "side": 0,
+            "minute": 10,
+            "second": 24,
+            "participants": [
+              "NA_51",
+              "NA_52",
+              "NA_53",
+              "NA_54",
+              "NA_55"
+            ]
+          },
+          {
+            "id": "herald:14",
+            "key": "herald",
+            "side": 1,
+            "minute": 14,
+            "second": 30,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_59",
+              "NA_60"
+            ]
+          },
+          {
+            "id": "dragon:15:2",
+            "key": "dragon",
+            "side": 1,
+            "minute": 15,
+            "second": 31,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_59",
+              "NA_60"
+            ]
+          },
+          {
+            "id": "dragon:20:3",
+            "key": "dragon",
+            "side": 1,
+            "minute": 20,
+            "second": 13,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_59",
+              "NA_60"
+            ]
+          },
+          {
+            "id": "baron:20",
+            "key": "baron",
+            "side": 1,
+            "minute": 20,
+            "second": 28,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_59",
+              "NA_60"
+            ]
+          },
+          {
+            "id": "dragon:25:4",
+            "key": "dragon",
+            "side": 1,
+            "minute": 25,
+            "second": 33,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_59",
+              "NA_60"
+            ]
+          },
+          {
+            "id": "baron:26",
+            "key": "baron",
+            "side": 1,
+            "minute": 26,
+            "second": 13,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_59",
+              "NA_60"
+            ]
+          },
+          {
+            "id": "elder:31",
+            "key": "elder",
+            "side": 0,
+            "minute": 31,
+            "second": 45,
+            "participants": [
+              "NA_51",
+              "NA_52",
+              "NA_53",
+              "NA_54",
+              "NA_55"
+            ]
+          }
+        ],
+        "players": [
+          [
+            {
+              "id": "NA_51",
+              "k": 6,
+              "d": 1,
+              "a": 6,
+              "quest": {
+                "role": "TOP",
+                "patchId": "26.19",
+                "rules": {
+                  "csPoints": 2,
+                  "takedownPoints": 15,
+                  "epicPoints": 30,
+                  "towerPoints": 50,
+                  "platePoints": 40,
+                  "lanePerSecond": 1.5,
+                  "awayPerSecond": 0.3333333333333333,
+                  "roamBankCap": 60,
+                  "threshold": 1200,
+                  "xpReward": 600,
+                  "xpBonus": 0.11,
+                  "takedownXp": 80,
+                  "levelCap": 20,
+                  "teleportCooldown": 6.5
+                },
+                "progress": 1200,
+                "completed": true,
+                "completedAt": 12,
+                "rewardClaimed": true,
+                "lastSequence": 77,
+                "roamBank": 60
+              },
+              "objectives": 2,
+              "gold": 12780.108603015104,
+              "held": 280.10860301510183,
+              "items": [
+                "1086",
+                "3008",
+                "663193",
+                "667101",
+                "3087",
+                "3156"
+              ],
+              "damage": 24982
+            },
+            {
+              "id": "NA_52",
+              "k": 4,
+              "d": 3,
+              "a": 11,
+              "quest": {
+                "role": "JGL",
+                "patchId": "26.19",
+                "rules": {
+                  "threshold": 35,
+                  "monsterGold": 10,
+                  "monsterXp": 10,
+                  "smiteDamage": 1400,
+                  "jungleMobility": 0.04
+                },
+                "progress": 35,
+                "completed": true,
+                "completedAt": 15,
+                "rewardClaimed": true,
+                "lastSequence": 83,
+                "roamBank": 0
+              },
+              "objectives": 2,
+              "gold": 11599.720993481114,
+              "held": 749.7209934811164,
+              "items": [
+                "1105",
+                "3006",
+                "663193",
+                "667101",
+                "3087",
+                "3155"
+              ],
+              "damage": 22022
+            },
+            {
+              "id": "NA_53",
+              "k": 3,
+              "d": 6,
+              "a": 7,
+              "quest": {
+                "role": "MID",
+                "patchId": "26.19",
+                "rules": {
+                  "csPoints": 2,
+                  "takedownPoints": 25,
+                  "epicPoints": 30,
+                  "towerPoints": 50,
+                  "platePoints": 40,
+                  "lanePerSecond": 1.5,
+                  "awayPerSecond": 0.3333333333333333,
+                  "roamBankCap": 60,
+                  "threshold": 1350,
+                  "damageRanged": 0.015,
+                  "damageMelee": 0.03,
+                  "bonusPower": 0.08
+                },
+                "progress": 1350,
+                "completed": true,
+                "completedAt": 14,
+                "rewardClaimed": true,
+                "lastSequence": 68,
+                "roamBank": 60
+              },
+              "objectives": 2,
+              "gold": 11296.670097847638,
+              "held": 596.670097847641,
+              "items": [
+                "1086",
+                "3168",
+                "663193",
+                "667101",
+                "3087",
+                "3155"
+              ],
+              "damage": 17352
+            },
+            {
+              "id": "NA_54",
+              "k": 4,
+              "d": 11,
+              "a": 5,
+              "quest": {
+                "role": "ADC",
+                "patchId": "26.19",
+                "rules": {
+                  "csPoints": 3,
+                  "takedownPoints": 15,
+                  "epicPoints": 30,
+                  "towerPoints": 50,
+                  "platePoints": 40,
+                  "lanePerSecond": 1.5,
+                  "awayPerSecond": 0.3333333333333333,
+                  "roamBankCap": 60,
+                  "threshold": 1350,
+                  "goldReward": 300,
+                  "csGold": 2,
+                  "takedownGold": 40
+                },
+                "progress": 1350,
+                "completed": true,
+                "completedAt": 13,
+                "rewardClaimed": true,
+                "lastSequence": 57,
+                "roamBank": 60
+              },
+              "objectives": 2,
+              "gold": 11221.224802479088,
+              "held": 1571.224802479085,
+              "items": [
+                "1086",
+                "3046",
+                "667101",
+                "3087"
+              ],
+              "damage": 13297
+            },
+            {
+              "id": "NA_55",
+              "k": 1,
+              "d": 1,
+              "a": 10,
+              "quest": {
+                "role": "SUP",
+                "patchId": "26.19",
+                "rules": {
+                  "threshold": 1000,
+                  "controlWardCost": 40,
+                  "controlWardCapacity": 2
+                },
+                "progress": 1000,
+                "completed": true,
+                "completedAt": 18,
+                "rewardClaimed": true,
+                "lastSequence": 76,
+                "roamBank": 0
+              },
+              "objectives": 2,
+              "gold": 8703.247799313966,
+              "held": 13.247799313966198,
+              "items": [
+                "3870",
+                "3008",
+                "663193",
+                "3156",
+                "3211"
+              ],
+              "damage": 10418
+            }
+          ],
+          [
+            {
+              "id": "NA_56",
+              "k": 5,
+              "d": 4,
+              "a": 6,
+              "quest": {
+                "role": "TOP",
+                "patchId": "26.19",
+                "rules": {
+                  "csPoints": 2,
+                  "takedownPoints": 15,
+                  "epicPoints": 30,
+                  "towerPoints": 50,
+                  "platePoints": 40,
+                  "lanePerSecond": 1.5,
+                  "awayPerSecond": 0.3333333333333333,
+                  "roamBankCap": 60,
+                  "threshold": 1200,
+                  "xpReward": 600,
+                  "xpBonus": 0.11,
+                  "takedownXp": 80,
+                  "levelCap": 20,
+                  "teleportCooldown": 6.5
+                },
+                "progress": 1200,
+                "completed": true,
+                "completedAt": 13,
+                "rewardClaimed": true,
+                "lastSequence": 80,
+                "roamBank": 60
+              },
+              "objectives": 7,
+              "gold": 12757.148698575467,
+              "held": 257.14869857546705,
+              "items": [
+                "1086",
+                "3008",
+                "663193",
+                "667101",
+                "3087",
+                "3156"
+              ],
+              "damage": 22656
+            },
+            {
+              "id": "NA_57",
+              "k": 3,
+              "d": 1,
+              "a": 13,
+              "quest": {
+                "role": "JGL",
+                "patchId": "26.19",
+                "rules": {
+                  "threshold": 35,
+                  "monsterGold": 10,
+                  "monsterXp": 10,
+                  "smiteDamage": 1400,
+                  "jungleMobility": 0.04
+                },
+                "progress": 35,
+                "completed": true,
+                "completedAt": 15,
+                "rewardClaimed": true,
+                "lastSequence": 89,
+                "roamBank": 0
+              },
+              "objectives": 7,
+              "gold": 12508.682362923324,
+              "held": 1758.6823629233281,
+              "items": [
+                "1103",
+                "3008",
+                "663193",
+                "667101",
+                "3087",
+                "3155"
+              ],
+              "damage": 17697
+            },
+            {
+              "id": "NA_58",
+              "k": 3,
+              "d": 7,
+              "a": 3,
+              "quest": {
+                "role": "MID",
+                "patchId": "26.19",
+                "rules": {
+                  "csPoints": 2,
+                  "takedownPoints": 25,
+                  "epicPoints": 30,
+                  "towerPoints": 50,
+                  "platePoints": 40,
+                  "lanePerSecond": 1.5,
+                  "awayPerSecond": 0.3333333333333333,
+                  "roamBankCap": 60,
+                  "threshold": 1350,
+                  "damageRanged": 0.015,
+                  "damageMelee": 0.03,
+                  "bonusPower": 0.08
+                },
+                "progress": 1350,
+                "completed": true,
+                "completedAt": 13,
+                "rewardClaimed": true,
+                "lastSequence": 57,
+                "roamBank": 60
+              },
+              "objectives": 7,
+              "gold": 11717.190659223204,
+              "held": 717.1906592232014,
+              "items": [
+                "1086",
+                "3006",
+                "3087",
+                "3100",
+                "663172",
+                "3145"
+              ],
+              "damage": 10963
+            },
+            {
+              "id": "NA_59",
+              "k": 4,
+              "d": 5,
+              "a": 10,
+              "quest": {
+                "role": "ADC",
+                "patchId": "26.19",
+                "rules": {
+                  "csPoints": 3,
+                  "takedownPoints": 15,
+                  "epicPoints": 30,
+                  "towerPoints": 50,
+                  "platePoints": 40,
+                  "lanePerSecond": 1.5,
+                  "awayPerSecond": 0.3333333333333333,
+                  "roamBankCap": 60,
+                  "threshold": 1350,
+                  "goldReward": 300,
+                  "csGold": 2,
+                  "takedownGold": 40
+                },
+                "progress": 1350,
+                "completed": true,
+                "completedAt": 12,
+                "rewardClaimed": true,
+                "lastSequence": 76,
+                "roamBank": 60
+              },
+              "objectives": 7,
+              "gold": 14513.443552601824,
+              "held": 1238.4435526018274,
+              "items": [
+                "1086",
+                "663193",
+                "667101",
+                "3087",
+                "3156",
+                "6690"
+              ],
+              "damage": 25220
+            },
+            {
+              "id": "NA_60",
+              "k": 7,
+              "d": 1,
+              "a": 12,
+              "quest": {
+                "role": "SUP",
+                "patchId": "26.19",
+                "rules": {
+                  "threshold": 1000,
+                  "controlWardCost": 40,
+                  "controlWardCapacity": 2
+                },
+                "progress": 1000,
+                "completed": true,
+                "completedAt": 18,
+                "rewardClaimed": true,
+                "lastSequence": 97,
+                "roamBank": 0
+              },
+              "objectives": 7,
+              "gold": 11841.65290109035,
+              "held": 761.652901090353,
+              "items": [
+                "3870",
+                "3008",
+                "663193",
+                "3156",
+                "3065",
+                "6660"
+              ],
+              "damage": 12942
+            }
+          ]
+        ],
+        "log": [
+          {
+            "t": 4,
+            "sec": 7,
+            "text": "VXG Tiskx(Xin Zhao) 바텀 갱킹 — Valvy 점멸로 생존",
+            "side": 0,
+            "major": false,
+            "kind": "gank"
+          },
+          {
+            "t": 4,
+            "sec": 11,
+            "text": "CR Jodan(Vi) 바텀 갱킹",
+            "side": 1,
+            "major": false,
+            "kind": "gank"
+          },
+          {
+            "t": 4,
+            "sec": 13,
+            "text": "CR Jodan(Vi) → VXG Gorth(Tristana) 처치 (퍼스트 블러드) · 바텀 갱킹",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 4,
+            "sec": 19,
+            "text": "CR Caezo(Leona) → VXG Sylor(Poppy) 처치 · 더블 킬 갱킹",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 5,
+            "sec": 11,
+            "text": "CR 바다 드래곤 처치 (1스택)",
+            "side": 1,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 7,
+            "sec": 17,
+            "text": "VXG Tiskx(Xin Zhao) 바텀 갱킹 → Jodan 카운터 정글",
+            "side": 0,
+            "major": true,
+            "kind": "gank"
+          },
+          {
+            "t": 7,
+            "sec": 24,
+            "text": "CR Caezo(Leona) → VXG Gorth(Tristana) 처치 · 바텀 카운터 정글",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 7,
+            "sec": 26,
+            "text": "바텀 카운터 정글: CR 승리 (1킬 / 0데스) · 패배 측 후퇴",
+            "side": 1,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 7,
+            "sec": 33,
+            "text": "CR Jodan(Vi) 바텀 갱킹 — Sylor 점멸로 생존",
+            "side": 1,
+            "major": false,
+            "kind": "gank"
+          },
+          {
+            "t": 8,
+            "sec": 9,
+            "text": "VXG 바텀 1차 포탑 파괴 (첫 포탑)",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 10,
+            "sec": 10,
+            "text": "VXG Tiskx(Xin Zhao) 탑 갱킹",
+            "side": 0,
+            "major": false,
+            "kind": "gank"
+          },
+          {
+            "t": 10,
+            "sec": 12,
+            "text": "VXG Tiskx(Xin Zhao) → CR Zerro(Aatrox) 처치 · 탑 갱킹",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 10,
+            "sec": 15,
+            "text": "CR Jodan(Vi) 바텀 갱킹 실패",
+            "side": 1,
+            "major": false,
+            "kind": "gank"
+          },
+          {
+            "t": 10,
+            "sec": 17,
+            "text": "CR 바람 드래곤 포기 → 반대편 교환",
+            "side": 1,
+            "major": false,
+            "kind": ""
+          },
+          {
+            "t": 10,
+            "sec": 20,
+            "text": "CR 탑 1차 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 10,
+            "sec": 24,
+            "text": "VXG 바람 드래곤 처치 (1스택)",
+            "side": 0,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 12,
+            "sec": 17,
+            "text": "VXG Nyro(Yasuo) 탑 퀘스트 완료",
+            "side": 0,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 12,
+            "sec": 23,
+            "text": "CR Valvy(Nilah) 원딜 퀘스트 완료",
+            "side": 1,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 13,
+            "sec": 13,
+            "text": "VXG Gorth(Tristana) 원딜 퀘스트 완료",
+            "side": 0,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 13,
+            "sec": 15,
+            "text": "CR Zerro(Aatrox) 탑 퀘스트 완료",
+            "side": 1,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 13,
+            "sec": 19,
+            "text": "VXG Tiskx(Xin Zhao) 바텀 갱킹",
+            "side": 0,
+            "major": false,
+            "kind": "gank"
+          },
+          {
+            "t": 13,
+            "sec": 24,
+            "text": "VXG Tiskx(Xin Zhao) → CR Valvy(Nilah) 처치 · 바텀 갱킹",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 13,
+            "sec": 30,
+            "text": "CR Jolyx(Taliyah) 미드 퀘스트 완료",
+            "side": 1,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 13,
+            "sec": 33,
+            "text": "CR 미드 1차 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 14,
+            "sec": 7,
+            "text": "VXG Ulra(Diana) 미드 퀘스트 완료",
+            "side": 0,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 14,
+            "sec": 10,
+            "text": "CR Jodan(Vi) 바텀 갱킹",
+            "side": 1,
+            "major": false,
+            "kind": "gank"
+          },
+          {
+            "t": 14,
+            "sec": 12,
+            "text": "CR Jodan(Vi) → VXG Gorth(Tristana) 처치 · 바텀 갱킹",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 14,
+            "sec": 19,
+            "text": "VXG 협곡의 전령 포기 → 반대편 교환",
+            "side": 0,
+            "major": false,
+            "kind": ""
+          },
+          {
+            "t": 14,
+            "sec": 26,
+            "text": "VXG 바텀 2차 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 14,
+            "sec": 30,
+            "text": "CR 협곡의 전령 획득",
+            "side": 1,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 14,
+            "sec": 35,
+            "text": "CR 전령 사용 (미드)",
+            "side": 1,
+            "major": false,
+            "kind": ""
+          },
+          {
+            "t": 14,
+            "sec": 39,
+            "text": "CR 미드 2차 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 15,
+            "sec": 8,
+            "text": "VXG Tiskx(Xin Zhao) 정글 퀘스트 완료",
+            "side": 0,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 15,
+            "sec": 14,
+            "text": "CR Jodan(Vi) 정글 퀘스트 완료",
+            "side": 1,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 15,
+            "sec": 18,
+            "text": "VXG 화염 드래곤 포기 → 반대편 교환",
+            "side": 0,
+            "major": false,
+            "kind": ""
+          },
+          {
+            "t": 15,
+            "sec": 25,
+            "text": "VXG 탑 1차 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 15,
+            "sec": 31,
+            "text": "CR 화염 드래곤 처치 (2스택)",
+            "side": 1,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 15,
+            "sec": 38,
+            "text": "CR Zerro(Aatrox) → VXG Ulra(Diana) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 15,
+            "sec": 40,
+            "text": "CR Jolyx(Taliyah) → VXG Gorth(Tristana) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 15,
+            "sec": 47,
+            "text": "VXG Gorth(Tristana) → CR Jolyx(Taliyah) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 15,
+            "sec": 53,
+            "text": "VXG Nyro(Yasuo) → CR Valvy(Nilah) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 15,
+            "sec": 58,
+            "text": "수성 한타: VXG 승리 (2킬 / 2데스)",
+            "side": 0,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 15,
+            "sec": 59,
+            "text": "VXG 탑 2차 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 17,
+            "sec": 12,
+            "text": "CR Caezo(Leona) → VXG Ulra(Diana) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 17,
+            "sec": 16,
+            "text": "CR Zerro(Aatrox) → VXG Gorth(Tristana) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 17,
+            "sec": 19,
+            "text": "VXG Nyro(Yasuo) → CR Zerro(Aatrox) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 17,
+            "sec": 24,
+            "text": "VXG Tiskx(Xin Zhao) → CR Jolyx(Taliyah) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 17,
+            "sec": 28,
+            "text": "수성 한타: VXG 승리 (2킬 / 2데스)",
+            "side": 0,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 17,
+            "sec": 33,
+            "text": "VXG 미드 1차 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 17,
+            "sec": 39,
+            "text": "CR 탑 2차 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 18,
+            "sec": 12,
+            "text": "VXG Sylor(Poppy) 서폿 퀘스트 완료",
+            "side": 0,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 18,
+            "sec": 14,
+            "text": "CR Caezo(Leona) 서폿 퀘스트 완료",
+            "side": 1,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 18,
+            "sec": 21,
+            "text": "CR Zerro(Aatrox) → VXG Gorth(Tristana) 처치 · 탑 끊기",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 18,
+            "sec": 28,
+            "text": "VXG Gorth(Tristana) → CR Zerro(Aatrox) 처치 · 탑 끊기",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 18,
+            "sec": 35,
+            "text": "VXG Ulra(Diana) → CR Caezo(Leona) 처치 · 탑 끊기",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 18,
+            "sec": 40,
+            "text": "VXG 탑 억제기 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 19,
+            "sec": 6,
+            "text": "CR 미드 억제기 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 20,
+            "sec": 6,
+            "text": "VXG 대지 드래곤 포기 → 반대편 교환",
+            "side": 0,
+            "major": false,
+            "kind": ""
+          },
+          {
+            "t": 20,
+            "sec": 13,
+            "text": "CR 대지 드래곤 처치 (3스택)",
+            "side": 1,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 20,
+            "sec": 20,
+            "text": "VXG 바론 포기 → 반대편 교환",
+            "side": 0,
+            "major": false,
+            "kind": ""
+          },
+          {
+            "t": 20,
+            "sec": 25,
+            "text": "VXG 바텀 억제기 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 20,
+            "sec": 28,
+            "text": "CR 바론 처치",
+            "side": 1,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 21,
+            "sec": 5,
+            "text": "CR Caezo(Leona) → VXG Tiskx(Xin Zhao) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 21,
+            "sec": 10,
+            "text": "CR Caezo(Leona) → VXG Gorth(Tristana) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 21,
+            "sec": 15,
+            "text": "VXG Nyro(Yasuo) → CR Jolyx(Taliyah) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 21,
+            "sec": 17,
+            "text": "VXG Nyro(Yasuo) → CR Valvy(Nilah) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 21,
+            "sec": 21,
+            "text": "수성 한타: CR 승리 (2킬 / 2데스) · 패배 측 후퇴",
+            "side": 1,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 21,
+            "sec": 23,
+            "text": "CR 바텀 1차 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 23,
+            "sec": 15,
+            "text": "CR Zerro(Aatrox) → VXG Tiskx(Xin Zhao) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 23,
+            "sec": 19,
+            "text": "CR Jolyx(Taliyah) → VXG Ulra(Diana) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 23,
+            "sec": 24,
+            "text": "CR Valvy(Nilah) → VXG Gorth(Tristana) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 23,
+            "sec": 29,
+            "text": "VXG Nyro(Yasuo) → CR Jodan(Vi) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 23,
+            "sec": 33,
+            "text": "VXG Ulra(Diana) → CR Jolyx(Taliyah) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 23,
+            "sec": 39,
+            "text": "VXG Gorth(Tristana) → CR Valvy(Nilah) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 23,
+            "sec": 46,
+            "text": "수성 한타: CR 승리 (3킬 / 3데스)",
+            "side": 1,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 25,
+            "sec": 12,
+            "text": "CR Caezo(Leona) → VXG Ulra(Diana) 처치 · 바다 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 25,
+            "sec": 17,
+            "text": "CR Jodan(Vi) → VXG Gorth(Tristana) 처치 · 바다 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 25,
+            "sec": 23,
+            "text": "VXG Gorth(Tristana) → CR Jolyx(Taliyah) 처치 · 바다 드래곤 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 25,
+            "sec": 27,
+            "text": "바다 드래곤 한타: CR 승리 (2킬 / 1데스) · 패배 측 후퇴",
+            "side": 1,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 25,
+            "sec": 33,
+            "text": "CR 바다 드래곤 처치 (4스택)",
+            "side": 1,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 25,
+            "sec": 39,
+            "text": "CR 드래곤 영혼 획득",
+            "side": 1,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 26,
+            "sec": 11,
+            "text": "VXG 바론 포기 → 반대편 교환",
+            "side": 0,
+            "major": false,
+            "kind": ""
+          },
+          {
+            "t": 26,
+            "sec": 13,
+            "text": "CR 바론 처치",
+            "side": 1,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 26,
+            "sec": 20,
+            "text": "CR 바텀 2차 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 27,
+            "sec": 9,
+            "text": "CR Valvy(Nilah) → VXG Nyro(Yasuo) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 27,
+            "sec": 11,
+            "text": "CR Caezo(Leona) → VXG Ulra(Diana) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 27,
+            "sec": 16,
+            "text": "CR Valvy(Nilah) → VXG Gorth(Tristana) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 27,
+            "sec": 19,
+            "text": "VXG Ulra(Diana) → CR Jolyx(Taliyah) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 27,
+            "sec": 26,
+            "text": "수성 한타: CR 승리 (3킬 / 1데스) · 패배 측 후퇴",
+            "side": 1,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 27,
+            "sec": 31,
+            "text": "CR 미드 억제기 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 27,
+            "sec": 37,
+            "text": "CR 쌍둥이 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 27,
+            "sec": 40,
+            "text": "CR 쌍둥이 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 27,
+            "sec": 45,
+            "text": "CR 바텀 억제기 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 28,
+            "sec": 11,
+            "text": "CR 탑 억제기 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 31,
+            "sec": 12,
+            "text": "CR Zerro(Aatrox) → VXG Tiskx(Xin Zhao) 처치 · 장로 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 31,
+            "sec": 17,
+            "text": "CR Jolyx(Taliyah) → VXG Ulra(Diana) 처치 · 장로 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 31,
+            "sec": 22,
+            "text": "CR Valvy(Nilah) → VXG Gorth(Tristana) 처치 · 장로 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 31,
+            "sec": 26,
+            "text": "VXG Tiskx(Xin Zhao) → CR Zerro(Aatrox) 처치 · 장로 드래곤 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 31,
+            "sec": 30,
+            "text": "VXG Nyro(Yasuo) → CR Jolyx(Taliyah) 처치 · 장로 드래곤 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 31,
+            "sec": 36,
+            "text": "VXG Sylor(Poppy) → CR Valvy(Nilah) 처치 · 장로 드래곤 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 31,
+            "sec": 40,
+            "text": "장로 드래곤 한타: VXG 승리 (3킬 / 3데스)",
+            "side": 0,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 31,
+            "sec": 45,
+            "text": "VXG 장로 드래곤 처치",
+            "side": 0,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 31,
+            "sec": 48,
+            "text": "CR 넥서스 파괴 — 승리",
+            "side": 1,
+            "major": true,
+            "kind": "nexus"
+          }
+        ],
+        "steals": []
+      },
+      {
+        "seed": "objective-steal-source-35",
+        "sides": [
+          "CR",
+          "VXG"
+        ],
+        "winner": 0,
+        "ending": {
+          "version": 1,
+          "kind": "nexus",
+          "winner": 0,
+          "minute": 33,
+          "second": 35
+        },
+        "duration": 33.583333333333336,
+        "objectives": [
+          {
+            "id": "dragon:5:0",
+            "key": "dragon",
+            "side": 1,
+            "minute": 5,
+            "second": 49,
+            "participants": [
+              "NA_51",
+              "NA_53",
+              "NA_54",
+              "NA_55",
+              "NA_52"
+            ],
+            "stealer": "NA_52"
+          },
+          {
+            "id": "dragon:10:1",
+            "key": "dragon",
+            "side": 0,
+            "minute": 10,
+            "second": 30,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_59",
+              "NA_60"
+            ]
+          },
+          {
+            "id": "herald:14",
+            "key": "herald",
+            "side": 0,
+            "minute": 14,
+            "second": 32,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_60"
+            ]
+          },
+          {
+            "id": "dragon:15:2",
+            "key": "dragon",
+            "side": 0,
+            "minute": 15,
+            "second": 38,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_59",
+              "NA_60"
+            ]
+          },
+          {
+            "id": "baron:20",
+            "key": "baron",
+            "side": 1,
+            "minute": 20,
+            "second": 38,
+            "participants": [
+              "NA_51",
+              "NA_52",
+              "NA_53",
+              "NA_54",
+              "NA_55"
+            ]
+          },
+          {
+            "id": "dragon:20:3",
+            "key": "dragon",
+            "side": 1,
+            "minute": 21,
+            "second": 36,
+            "participants": [
+              "NA_51",
+              "NA_52",
+              "NA_53",
+              "NA_54",
+              "NA_55"
+            ]
+          },
+          {
+            "id": "dragon:26:4",
+            "key": "dragon",
+            "side": 0,
+            "minute": 26,
+            "second": 41,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_59",
+              "NA_60"
+            ]
+          },
+          {
+            "id": "baron:26",
+            "key": "baron",
+            "side": 1,
+            "minute": 26,
+            "second": 58,
+            "participants": [
+              "NA_51",
+              "NA_52",
+              "NA_53"
+            ]
+          },
+          {
+            "id": "dragon:31:5",
+            "key": "dragon",
+            "side": 1,
+            "minute": 31,
+            "second": 37,
+            "participants": [
+              "NA_51",
+              "NA_52",
+              "NA_53",
+              "NA_54",
+              "NA_55"
+            ]
+          },
+          {
+            "id": "baron:32",
+            "key": "baron",
+            "side": 0,
+            "minute": 32,
+            "second": 26,
+            "participants": [
+              "NA_56",
+              "NA_57",
+              "NA_58",
+              "NA_60"
+            ]
+          }
+        ],
+        "players": [
+          [
+            {
+              "id": "NA_56",
+              "k": 9,
+              "d": 5,
+              "a": 12,
+              "quest": {
+                "role": "TOP",
+                "patchId": "26.19",
+                "rules": {
+                  "csPoints": 2,
+                  "takedownPoints": 15,
+                  "epicPoints": 30,
+                  "towerPoints": 50,
+                  "platePoints": 40,
+                  "lanePerSecond": 1.5,
+                  "awayPerSecond": 0.3333333333333333,
+                  "roamBankCap": 60,
+                  "threshold": 1200,
+                  "xpReward": 600,
+                  "xpBonus": 0.11,
+                  "takedownXp": 80,
+                  "levelCap": 20,
+                  "teleportCooldown": 6.5
+                },
+                "progress": 1200,
+                "completed": true,
+                "completedAt": 12,
+                "rewardClaimed": true,
+                "lastSequence": 111,
+                "roamBank": 0
+              },
+              "objectives": 5,
+              "gold": 14714.591559404696,
+              "held": 2214.591559404697,
+              "items": [
+                "1086",
+                "3008",
+                "663193",
+                "667101",
+                "3087",
+                "3156"
+              ],
+              "damage": 36691
+            },
+            {
+              "id": "NA_57",
+              "k": 6,
+              "d": 1,
+              "a": 11,
+              "quest": {
+                "role": "JGL",
+                "patchId": "26.19",
+                "rules": {
+                  "threshold": 35,
+                  "monsterGold": 10,
+                  "monsterXp": 10,
+                  "smiteDamage": 1400,
+                  "jungleMobility": 0.04
+                },
+                "progress": 35,
+                "completed": true,
+                "completedAt": 14,
+                "rewardClaimed": true,
+                "lastSequence": 104,
+                "roamBank": 0
+              },
+              "objectives": 5,
+              "gold": 13684.763302797264,
+              "held": 1134.7633027972613,
+              "items": [
+                "1103",
+                "3008",
+                "663193",
+                "667101",
+                "3087",
+                "3156"
+              ],
+              "damage": 23238
+            },
+            {
+              "id": "NA_58",
+              "k": 5,
+              "d": 11,
+              "a": 5,
+              "quest": {
+                "role": "MID",
+                "patchId": "26.19",
+                "rules": {
+                  "csPoints": 2,
+                  "takedownPoints": 25,
+                  "epicPoints": 30,
+                  "towerPoints": 50,
+                  "platePoints": 40,
+                  "lanePerSecond": 1.5,
+                  "awayPerSecond": 0.3333333333333333,
+                  "roamBankCap": 60,
+                  "threshold": 1350,
+                  "damageRanged": 0.015,
+                  "damageMelee": 0.03,
+                  "bonusPower": 0.08
+                },
+                "progress": 1350,
+                "completed": true,
+                "completedAt": 14,
+                "rewardClaimed": true,
+                "lastSequence": 67,
+                "roamBank": 0
+              },
+              "objectives": 4,
+              "gold": 11196.100348024444,
+              "held": 196.1003480244467,
+              "items": [
+                "1086",
+                "3006",
+                "667101",
+                "3087",
+                "6672",
+                "3134"
+              ],
+              "damage": 23849
+            },
+            {
+              "id": "NA_59",
+              "k": 5,
+              "d": 8,
+              "a": 9,
+              "quest": {
+                "role": "ADC",
+                "patchId": "26.19",
+                "rules": {
+                  "csPoints": 3,
+                  "takedownPoints": 15,
+                  "epicPoints": 30,
+                  "towerPoints": 50,
+                  "platePoints": 40,
+                  "lanePerSecond": 1.5,
+                  "awayPerSecond": 0.3333333333333333,
+                  "roamBankCap": 60,
+                  "threshold": 1350,
+                  "goldReward": 300,
+                  "csGold": 2,
+                  "takedownGold": 40
+                },
+                "progress": 1350,
+                "completed": true,
+                "completedAt": 13,
+                "rewardClaimed": true,
+                "lastSequence": 85,
+                "roamBank": 60
+              },
+              "objectives": 3,
+              "gold": 13550.518752655325,
+              "held": 275.51875265532567,
+              "items": [
+                "1086",
+                "663193",
+                "667101",
+                "3087",
+                "3156",
+                "6690"
+              ],
+              "damage": 29548
+            },
+            {
+              "id": "NA_60",
+              "k": 5,
+              "d": 8,
+              "a": 10,
+              "quest": {
+                "role": "SUP",
+                "patchId": "26.19",
+                "rules": {
+                  "threshold": 1000,
+                  "controlWardCost": 40,
+                  "controlWardCapacity": 2
+                },
+                "progress": 1000,
+                "completed": true,
+                "completedAt": 18,
+                "rewardClaimed": true,
+                "lastSequence": 88,
+                "roamBank": 0
+              },
+              "objectives": 5,
+              "gold": 10348.133522215781,
+              "held": 893.1335222157821,
+              "items": [
+                "3870",
+                "3006",
+                "667101",
+                "3087",
+                "6690",
+                "3051"
+              ],
+              "damage": 20107
+            }
+          ],
+          [
+            {
+              "id": "NA_51",
+              "k": 7,
+              "d": 4,
+              "a": 14,
+              "quest": {
+                "role": "TOP",
+                "patchId": "26.19",
+                "rules": {
+                  "csPoints": 2,
+                  "takedownPoints": 15,
+                  "epicPoints": 30,
+                  "towerPoints": 50,
+                  "platePoints": 40,
+                  "lanePerSecond": 1.5,
+                  "awayPerSecond": 0.3333333333333333,
+                  "roamBankCap": 60,
+                  "threshold": 1200,
+                  "xpReward": 600,
+                  "xpBonus": 0.11,
+                  "takedownXp": 80,
+                  "levelCap": 20,
+                  "teleportCooldown": 6.5
+                },
+                "progress": 1200,
+                "completed": true,
+                "completedAt": 13,
+                "rewardClaimed": true,
+                "lastSequence": 105,
+                "roamBank": 0
+              },
+              "objectives": 5,
+              "gold": 13883.172678540246,
+              "held": 1383.172678540248,
+              "items": [
+                "1086",
+                "3008",
+                "663193",
+                "667101",
+                "3087",
+                "3156"
+              ],
+              "damage": 25659
+            },
+            {
+              "id": "NA_52",
+              "k": 7,
+              "d": 4,
+              "a": 18,
+              "quest": {
+                "role": "JGL",
+                "patchId": "26.19",
+                "rules": {
+                  "threshold": 35,
+                  "monsterGold": 10,
+                  "monsterXp": 10,
+                  "smiteDamage": 1400,
+                  "jungleMobility": 0.04
+                },
+                "progress": 35,
+                "completed": true,
+                "completedAt": 15,
+                "rewardClaimed": true,
+                "lastSequence": 112,
+                "roamBank": 0
+              },
+              "objectives": 5,
+              "gold": 13474.871248771413,
+              "held": 824.8712487714123,
+              "items": [
+                "1105",
+                "3006",
+                "663193",
+                "667101",
+                "3087",
+                "3156"
+              ],
+              "damage": 27524
+            },
+            {
+              "id": "NA_53",
+              "k": 7,
+              "d": 3,
+              "a": 9,
+              "quest": {
+                "role": "MID",
+                "patchId": "26.19",
+                "rules": {
+                  "csPoints": 2,
+                  "takedownPoints": 25,
+                  "epicPoints": 30,
+                  "towerPoints": 50,
+                  "platePoints": 40,
+                  "lanePerSecond": 1.5,
+                  "awayPerSecond": 0.3333333333333333,
+                  "roamBankCap": 60,
+                  "threshold": 1350,
+                  "damageRanged": 0.015,
+                  "damageMelee": 0.03,
+                  "bonusPower": 0.08
+                },
+                "progress": 1350,
+                "completed": true,
+                "completedAt": 13,
+                "rewardClaimed": true,
+                "lastSequence": 94,
+                "roamBank": 0
+              },
+              "objectives": 5,
+              "gold": 14293.03236240667,
+              "held": 1793.0323624066696,
+              "items": [
+                "1086",
+                "3168",
+                "663193",
+                "667101",
+                "3087",
+                "3156"
+              ],
+              "damage": 21056
+            },
+            {
+              "id": "NA_54",
+              "k": 6,
+              "d": 9,
+              "a": 17,
+              "quest": {
+                "role": "ADC",
+                "patchId": "26.19",
+                "rules": {
+                  "csPoints": 3,
+                  "takedownPoints": 15,
+                  "epicPoints": 30,
+                  "towerPoints": 50,
+                  "platePoints": 40,
+                  "lanePerSecond": 1.5,
+                  "awayPerSecond": 0.3333333333333333,
+                  "roamBankCap": 60,
+                  "threshold": 1350,
+                  "goldReward": 300,
+                  "csGold": 2,
+                  "takedownGold": 40
+                },
+                "progress": 1350,
+                "completed": true,
+                "completedAt": 12,
+                "rewardClaimed": true,
+                "lastSequence": 95,
+                "roamBank": 60
+              },
+              "objectives": 4,
+              "gold": 14279.87691827163,
+              "held": 1354.8769182716323,
+              "items": [
+                "1086",
+                "3046",
+                "667101",
+                "3087",
+                "663172",
+                "6690"
+              ],
+              "damage": 30649
+            },
+            {
+              "id": "NA_55",
+              "k": 6,
+              "d": 10,
+              "a": 12,
+              "quest": {
+                "role": "SUP",
+                "patchId": "26.19",
+                "rules": {
+                  "threshold": 1000,
+                  "controlWardCost": 40,
+                  "controlWardCapacity": 2
+                },
+                "progress": 1000,
+                "completed": true,
+                "completedAt": 18,
+                "rewardClaimed": true,
+                "lastSequence": 88,
+                "roamBank": 0
+              },
+              "objectives": 4,
+              "gold": 10239.611443459356,
+              "held": 2199.6114434593574,
+              "items": [
+                "3870",
+                "3006",
+                "3087",
+                "3100"
+              ],
+              "damage": 24250
+            }
+          ]
+        ],
+        "log": [
+          {
+            "t": 4,
+            "sec": 7,
+            "text": "CR Jodan(Jarvan IV) 바텀 갱킹 — Gorth 점멸로 생존",
+            "side": 0,
+            "major": false,
+            "kind": "gank"
+          },
+          {
+            "t": 4,
+            "sec": 11,
+            "text": "VXG Tiskx(Xin Zhao) 바텀 갱킹",
+            "side": 1,
+            "major": false,
+            "kind": "gank"
+          },
+          {
+            "t": 4,
+            "sec": 13,
+            "text": "VXG Tiskx(Xin Zhao) → CR Valvy(Nilah) 처치 (퍼스트 블러드) · 바텀 갱킹",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 4,
+            "sec": 19,
+            "text": "VXG Sylor(Zilean) → CR Caezo(Pyke) 처치 · 더블 킬 갱킹",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 5,
+            "sec": 11,
+            "text": "CR 콜 불일치 — 1명 합류 실패",
+            "side": 0,
+            "major": false,
+            "kind": ""
+          },
+          {
+            "t": 5,
+            "sec": 17,
+            "text": "VXG 콜 불일치 — 1명 합류 실패",
+            "side": 1,
+            "major": false,
+            "kind": ""
+          },
+          {
+            "t": 5,
+            "sec": 24,
+            "text": "VXG Ulra(Diana) → CR Jolyx(Katarina) 처치 · 바다 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 5,
+            "sec": 29,
+            "text": "CR Zerro(Aatrox) → VXG Nyro(Yasuo) 처치 · 바다 드래곤 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 5,
+            "sec": 36,
+            "text": "CR Zerro(Aatrox) → VXG Sylor(Zilean) 처치 · 바다 드래곤 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 5,
+            "sec": 38,
+            "text": "바다 드래곤 한타: CR 승리 (2킬 / 1데스)",
+            "side": 0,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 5,
+            "sec": 45,
+            "text": "VXG Tiskx(Xin Zhao) 바다 드래곤 스틸!",
+            "side": 1,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 5,
+            "sec": 49,
+            "text": "VXG 바다 드래곤 처치 (1스택)",
+            "side": 1,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 6,
+            "sec": 11,
+            "text": "VXG Gorth(Tristana) → CR Valvy(Nilah) 처치 · 바텀 라인전",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 7,
+            "sec": 10,
+            "text": "CR Jodan(Jarvan IV) 바텀 갱킹 실패",
+            "side": 0,
+            "major": false,
+            "kind": "gank"
+          },
+          {
+            "t": 7,
+            "sec": 12,
+            "text": "VXG Tiskx(Xin Zhao) 바텀 갱킹",
+            "side": 1,
+            "major": false,
+            "kind": "gank"
+          },
+          {
+            "t": 7,
+            "sec": 15,
+            "text": "VXG Tiskx(Xin Zhao) → CR Caezo(Pyke) 처치 · 바텀 갱킹",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 9,
+            "sec": 7,
+            "text": "VXG Ulra(Diana) 귀환",
+            "side": 1,
+            "major": false,
+            "kind": "recall"
+          },
+          {
+            "t": 10,
+            "sec": 17,
+            "text": "CR Jodan(Jarvan IV) 탑 갱킹 — Nyro 점멸로 생존",
+            "side": 0,
+            "major": false,
+            "kind": "gank"
+          },
+          {
+            "t": 10,
+            "sec": 24,
+            "text": "VXG Tiskx(Xin Zhao) 미드 갱킹 — Jolyx 점멸로 생존",
+            "side": 1,
+            "major": false,
+            "kind": "gank"
+          },
+          {
+            "t": 10,
+            "sec": 30,
+            "text": "CR 바람 드래곤 처치 (1스택)",
+            "side": 0,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 12,
+            "sec": 11,
+            "text": "CR Zerro(Aatrox) 탑 퀘스트 완료",
+            "side": 0,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 12,
+            "sec": 15,
+            "text": "VXG Gorth(Tristana) 원딜 퀘스트 완료",
+            "side": 1,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 13,
+            "sec": 13,
+            "text": "CR Valvy(Nilah) 원딜 퀘스트 완료",
+            "side": 0,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 13,
+            "sec": 16,
+            "text": "VXG Nyro(Yasuo) 탑 퀘스트 완료",
+            "side": 1,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 13,
+            "sec": 18,
+            "text": "VXG Tiskx(Xin Zhao) 미드 갱킹",
+            "side": 1,
+            "major": false,
+            "kind": "gank"
+          },
+          {
+            "t": 13,
+            "sec": 24,
+            "text": "VXG Ulra(Diana) 미드 퀘스트 완료",
+            "side": 1,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 13,
+            "sec": 27,
+            "text": "VXG Tiskx(Xin Zhao) → CR Jolyx(Katarina) 처치 · 미드 갱킹",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 14,
+            "sec": 8,
+            "text": "CR Jolyx(Katarina) 미드 퀘스트 완료",
+            "side": 0,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 14,
+            "sec": 15,
+            "text": "CR Jodan(Jarvan IV) 탑 갱킹 실패",
+            "side": 0,
+            "major": false,
+            "kind": "gank"
+          },
+          {
+            "t": 14,
+            "sec": 19,
+            "text": "VXG 협곡의 전령 포기 → 반대편 교환",
+            "side": 1,
+            "major": false,
+            "kind": ""
+          },
+          {
+            "t": 14,
+            "sec": 24,
+            "text": "VXG 바텀 1차 포탑 파괴 (첫 포탑)",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 14,
+            "sec": 28,
+            "text": "CR Jodan(Jarvan IV) 정글 퀘스트 완료",
+            "side": 0,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 14,
+            "sec": 32,
+            "text": "CR 협곡의 전령 획득",
+            "side": 0,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 14,
+            "sec": 34,
+            "text": "VXG Nyro(Yasuo) → CR Jolyx(Katarina) 처치 · 중앙 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 14,
+            "sec": 40,
+            "text": "VXG Nyro(Yasuo) → CR Caezo(Pyke) 처치 · 중앙 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 14,
+            "sec": 44,
+            "text": "CR Zerro(Aatrox) → VXG Nyro(Yasuo) 처치 · 중앙 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 14,
+            "sec": 51,
+            "text": "CR Zerro(Aatrox) → VXG Gorth(Tristana) 처치 · 중앙 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 14,
+            "sec": 57,
+            "text": "CR Jolyx(Katarina) → VXG Sylor(Zilean) 처치 · 중앙 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 14,
+            "sec": 59,
+            "text": "중앙 한타: CR 승리 (3킬 / 2데스)",
+            "side": 0,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 14,
+            "sec": 59,
+            "text": "CR 탑 1차 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 14,
+            "sec": 59,
+            "text": "CR 전령 사용 (탑)",
+            "side": 0,
+            "major": false,
+            "kind": ""
+          },
+          {
+            "t": 14,
+            "sec": 59,
+            "text": "CR 탑 2차 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 15,
+            "sec": 10,
+            "text": "VXG Tiskx(Xin Zhao) 정글 퀘스트 완료",
+            "side": 1,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 15,
+            "sec": 17,
+            "text": "VXG Nyro(Yasuo) → CR Jolyx(Katarina) 처치 · 화염 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 15,
+            "sec": 22,
+            "text": "VXG Ulra(Diana) → CR Caezo(Pyke) 처치 · 화염 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 15,
+            "sec": 26,
+            "text": "CR Jodan(Jarvan IV) → VXG Tiskx(Xin Zhao) 처치 · 화염 드래곤 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 15,
+            "sec": 30,
+            "text": "CR Jolyx(Katarina) → VXG Sylor(Zilean) 처치 · 화염 드래곤 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 15,
+            "sec": 33,
+            "text": "화염 드래곤 한타: CR 승리 (2킬 / 2데스)",
+            "side": 0,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 15,
+            "sec": 38,
+            "text": "CR 화염 드래곤 처치 (2스택)",
+            "side": 0,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 15,
+            "sec": 42,
+            "text": "VXG Gorth(Tristana) → CR Zerro(Aatrox) 처치 · 바텀 끊기",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 15,
+            "sec": 47,
+            "text": "CR Jodan(Jarvan IV) → VXG Gorth(Tristana) 처치 · 바텀 끊기",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 15,
+            "sec": 53,
+            "text": "CR 미드 1차 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 18,
+            "sec": 8,
+            "text": "CR Caezo(Pyke) 서폿 퀘스트 완료",
+            "side": 0,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 18,
+            "sec": 15,
+            "text": "VXG Sylor(Zilean) 서폿 퀘스트 완료",
+            "side": 1,
+            "major": true,
+            "kind": "quest"
+          },
+          {
+            "t": 19,
+            "sec": 16,
+            "text": "VXG Gorth(Tristana) → CR Valvy(Nilah) 처치 · 탑 끊기",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 19,
+            "sec": 18,
+            "text": "CR Zerro(Aatrox) → VXG Gorth(Tristana) 처치 · 탑 끊기",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 19,
+            "sec": 24,
+            "text": "CR 미드 2차 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 19,
+            "sec": 27,
+            "text": "CR 바텀 1차 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 20,
+            "sec": 11,
+            "text": "VXG Sylor(Zilean) → CR Zerro(Aatrox) 처치 · 바론 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 20,
+            "sec": 18,
+            "text": "VXG Sylor(Zilean) → CR Jolyx(Katarina) 처치 · 바론 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 20,
+            "sec": 23,
+            "text": "VXG Ulra(Diana) → CR Valvy(Nilah) 처치 · 바론 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 20,
+            "sec": 26,
+            "text": "CR Caezo(Pyke) → VXG Tiskx(Xin Zhao) 처치 · 바론 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 20,
+            "sec": 28,
+            "text": "CR Valvy(Nilah) → VXG Sylor(Zilean) 처치 · 바론 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 20,
+            "sec": 33,
+            "text": "바론 한타: VXG 승리 (3킬 / 2데스)",
+            "side": 1,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 20,
+            "sec": 38,
+            "text": "VXG 바론 처치",
+            "side": 1,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 21,
+            "sec": 10,
+            "text": "VXG Gorth(Tristana) → CR Zerro(Aatrox) 처치 · 대지 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 21,
+            "sec": 14,
+            "text": "VXG Nyro(Yasuo) → CR Jolyx(Katarina) 처치 · 대지 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 21,
+            "sec": 16,
+            "text": "VXG Sylor(Zilean) → CR Valvy(Nilah) 처치 · 대지 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 21,
+            "sec": 20,
+            "text": "VXG Sylor(Zilean) → CR Caezo(Pyke) 처치 · 대지 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 21,
+            "sec": 26,
+            "text": "CR Caezo(Pyke) → VXG Ulra(Diana) 처치 · 대지 드래곤 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 21,
+            "sec": 32,
+            "text": "대지 드래곤 한타: VXG 승리 (4킬 / 1데스)",
+            "side": 1,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 21,
+            "sec": 36,
+            "text": "VXG 대지 드래곤 처치 (2스택)",
+            "side": 1,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 21,
+            "sec": 41,
+            "text": "VXG 탑 1차 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 21,
+            "sec": 46,
+            "text": "VXG 미드 1차 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 21,
+            "sec": 50,
+            "text": "VXG 바텀 2차 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 22,
+            "sec": 17,
+            "text": "VXG Tiskx(Xin Zhao) → CR Jolyx(Katarina) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 22,
+            "sec": 21,
+            "text": "VXG Tiskx(Xin Zhao) → CR Valvy(Nilah) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 22,
+            "sec": 25,
+            "text": "VXG Gorth(Tristana) → CR Caezo(Pyke) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 22,
+            "sec": 31,
+            "text": "CR Valvy(Nilah) → VXG Gorth(Tristana) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 22,
+            "sec": 36,
+            "text": "CR Jolyx(Katarina) → VXG Sylor(Zilean) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 22,
+            "sec": 42,
+            "text": "수성 한타: VXG 승리 (3킬 / 2데스)",
+            "side": 1,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 22,
+            "sec": 46,
+            "text": "VXG 바텀 억제기 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 23,
+            "sec": 15,
+            "text": "VXG Nyro(Yasuo) → CR Jolyx(Katarina) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 23,
+            "sec": 21,
+            "text": "CR Valvy(Nilah) → VXG Tiskx(Xin Zhao) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 23,
+            "sec": 23,
+            "text": "CR Jodan(Jarvan IV) → VXG Ulra(Diana) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 23,
+            "sec": 25,
+            "text": "CR Caezo(Pyke) → VXG Gorth(Tristana) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 23,
+            "sec": 32,
+            "text": "수성 한타: CR 승리 (3킬 / 1데스) · 패배 측 후퇴",
+            "side": 0,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 23,
+            "sec": 36,
+            "text": "CR 탑 억제기 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 23,
+            "sec": 40,
+            "text": "CR 바텀 2차 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 25,
+            "sec": 11,
+            "text": "CR 미드 억제기 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 26,
+            "sec": 17,
+            "text": "CR 콜 불일치 — 1명 합류 실패",
+            "side": 0,
+            "major": false,
+            "kind": ""
+          },
+          {
+            "t": 26,
+            "sec": 23,
+            "text": "VXG Ulra(Diana) → CR Valvy(Nilah) 처치 · 바다 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 26,
+            "sec": 26,
+            "text": "VXG Ulra(Diana) → CR Caezo(Pyke) 처치 · 바다 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 26,
+            "sec": 31,
+            "text": "CR Caezo(Pyke) → VXG Gorth(Tristana) 처치 · 바다 드래곤 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 26,
+            "sec": 36,
+            "text": "CR Caezo(Pyke) → VXG Sylor(Zilean) 처치 · 바다 드래곤 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 26,
+            "sec": 39,
+            "text": "바다 드래곤 한타: CR 승리 (2킬 / 2데스)",
+            "side": 0,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 26,
+            "sec": 41,
+            "text": "CR 바다 드래곤 처치 (3스택)",
+            "side": 0,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 26,
+            "sec": 47,
+            "text": "CR 바론 포기 → 반대편 교환",
+            "side": 0,
+            "major": false,
+            "kind": ""
+          },
+          {
+            "t": 26,
+            "sec": 52,
+            "text": "CR 바텀 억제기 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 26,
+            "sec": 58,
+            "text": "VXG 바론 처치",
+            "side": 1,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 26,
+            "sec": 59,
+            "text": "VXG Tiskx(Xin Zhao) → CR Zerro(Aatrox) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 26,
+            "sec": 59,
+            "text": "VXG Nyro(Yasuo) → CR Jodan(Jarvan IV) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 26,
+            "sec": 59,
+            "text": "CR Jodan(Jarvan IV) → VXG Nyro(Yasuo) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 26,
+            "sec": 59,
+            "text": "수성 한타: VXG 승리 (2킬 / 1데스) · 패배 측 후퇴",
+            "side": 1,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 26,
+            "sec": 59,
+            "text": "VXG 바텀 억제기 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 26,
+            "sec": 59,
+            "text": "VXG 탑 2차 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 26,
+            "sec": 59,
+            "text": "VXG 미드 2차 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 28,
+            "sec": 13,
+            "text": "VXG 미드 억제기 포탑 파괴",
+            "side": 1,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 29,
+            "sec": 7,
+            "text": "VXG Gorth(Tristana) → CR Jolyx(Katarina) 처치 · 바텀 끊기",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 29,
+            "sec": 10,
+            "text": "CR Jolyx(Katarina) → VXG Gorth(Tristana) 처치 · 바텀 끊기",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 29,
+            "sec": 13,
+            "text": "CR Valvy(Nilah) → VXG Sylor(Zilean) 처치 · 바텀 끊기",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 31,
+            "sec": 12,
+            "text": "VXG Nyro(Yasuo) → CR Jolyx(Katarina) 처치 · 바람 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 31,
+            "sec": 15,
+            "text": "VXG Ulra(Diana) → CR Valvy(Nilah) 처치 · 바람 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 31,
+            "sec": 22,
+            "text": "VXG Tiskx(Xin Zhao) → CR Caezo(Pyke) 처치 · 바람 드래곤 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 31,
+            "sec": 24,
+            "text": "CR Jolyx(Katarina) → VXG Gorth(Tristana) 처치 · 바람 드래곤 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 31,
+            "sec": 28,
+            "text": "CR Valvy(Nilah) → VXG Sylor(Zilean) 처치 · 바람 드래곤 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 31,
+            "sec": 30,
+            "text": "바람 드래곤 한타: VXG 승리 (3킬 / 2데스)",
+            "side": 1,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 31,
+            "sec": 37,
+            "text": "VXG 바람 드래곤 처치 (3스택)",
+            "side": 1,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 32,
+            "sec": 11,
+            "text": "VXG Ulra(Diana) → CR Jolyx(Katarina) 처치 · 바론 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 32,
+            "sec": 13,
+            "text": "CR Zerro(Aatrox) → VXG Nyro(Yasuo) 처치 · 바론 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 32,
+            "sec": 19,
+            "text": "CR Jodan(Jarvan IV) → VXG Tiskx(Xin Zhao) 처치 · 바론 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 32,
+            "sec": 21,
+            "text": "CR Zerro(Aatrox) → VXG Ulra(Diana) 처치 · 바론 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 32,
+            "sec": 23,
+            "text": "바론 한타: CR 승리 (3킬 / 1데스)",
+            "side": 0,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 32,
+            "sec": 26,
+            "text": "CR 바론 처치",
+            "side": 0,
+            "major": true,
+            "kind": "obj"
+          },
+          {
+            "t": 32,
+            "sec": 30,
+            "text": "CR Zerro(Aatrox) → VXG Sylor(Zilean) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 32,
+            "sec": 37,
+            "text": "CR 미드 억제기 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 32,
+            "sec": 42,
+            "text": "CR 쌍둥이 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 32,
+            "sec": 49,
+            "text": "CR 쌍둥이 포탑 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 33,
+            "sec": 12,
+            "text": "VXG Sylor(Zilean) → CR Zerro(Aatrox) 처치 · 수성 한타",
+            "side": 1,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 33,
+            "sec": 16,
+            "text": "CR Jodan(Jarvan IV) → VXG Gorth(Tristana) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 33,
+            "sec": 22,
+            "text": "CR Zerro(Aatrox) → VXG Sylor(Zilean) 처치 · 수성 한타",
+            "side": 0,
+            "major": true,
+            "kind": "kill"
+          },
+          {
+            "t": 33,
+            "sec": 27,
+            "text": "수성 한타: CR 승리 (2킬 / 1데스)",
+            "side": 0,
+            "major": true,
+            "kind": "fight"
+          },
+          {
+            "t": 33,
+            "sec": 32,
+            "text": "CR 바텀 억제기 파괴",
+            "side": 0,
+            "major": true,
+            "kind": "tower"
+          },
+          {
+            "t": 33,
+            "sec": 35,
+            "text": "CR 넥서스 파괴 — 승리",
+            "side": 0,
+            "major": true,
+            "kind": "nexus"
+          }
+        ],
+        "steals": [
+          {
+            "actor": "NA_52",
+            "side": 1,
+            "minute": 5,
+            "calls": {
+              "dragon": [
+                [
+                  "NA_56",
+                  "NA_57",
+                  "NA_58",
+                  "NA_59"
+                ],
+                [
+                  "NA_51",
+                  "NA_53",
+                  "NA_54",
+                  "NA_55"
+                ]
+              ]
+            },
+            "before": {
+              "objectives": 0,
+              "quest": {
+                "role": "JGL",
+                "patchId": "26.19",
+                "rules": {
+                  "threshold": 35,
+                  "monsterGold": 10,
+                  "monsterXp": 10,
+                  "smiteDamage": 1400,
+                  "jungleMobility": 0.04
+                },
+                "progress": 10.839829670258979,
+                "completed": false,
+                "completedAt": null,
+                "rewardClaimed": false,
+                "lastSequence": 6,
+                "roamBank": 0
+              }
+            },
+            "key": "dragon",
+            "part": [
+              "NA_51",
+              "NA_53",
+              "NA_54",
+              "NA_55"
+            ],
+            "accepted": true,
+            "after": {
+              "objectives": 1,
+              "quest": {
+                "role": "JGL",
+                "patchId": "26.19",
+                "rules": {
+                  "threshold": 35,
+                  "monsterGold": 10,
+                  "monsterXp": 10,
+                  "smiteDamage": 1400,
+                  "jungleMobility": 0.04
+                },
+                "progress": 11.839829670258979,
+                "completed": false,
+                "completedAt": null,
+                "rewardClaimed": false,
+                "lastSequence": 7,
+                "roamBank": 0
+              }
+            },
+            "receipt": {
+              "id": "dragon:5:0",
+              "key": "dragon",
+              "side": 1,
+              "minute": 5,
+              "second": 49,
+              "participants": [
+                "NA_51",
+                "NA_53",
+                "NA_54",
+                "NA_55",
+                "NA_52"
+              ],
+              "stealer": "NA_52"
+            }
+          }
+        ]
+      }
+    ],
+    "hashes": {
+      "engine.js": "ea1e2ca1c34c2bf57a9b0511c7c4c3b0739d223b4eff1fe42b30ebea514deb35",
+      "objective-awards.js": "16c4fbd2dce37d45ac11c6efa6b9ac623b9039b11bb52ff4acbf3aab9b972bd4",
+      "role-quest-match.js": "29ce026186ea801419cb8a369548cef21a5c969f08b9f17b804726934892532b",
+      "takedown-rewards.js": "59a545ebfae98986c7216cc980e351661f5a61dc5c1c313079b122a749733c74"
+    }
+  },
+  "limits": "192 default-tactic seeded matches produced 31 steals, one omitted actor; bounded discovery, not rate target or exhaustive absence proof. Original/corrected selected two match outcomes share winner/end time; only NA_52 final objective count differs, quest timing intentionally changes. No global parity claim."
+}
