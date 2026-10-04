@@ -928,3 +928,7 @@ The approved region-first explorer uses the current source `player.region` as **
 ## Initial observed comparison implementation boundary (12.5.2, 2026-10-05 UTC10-04)
 
 The approved temporary two-to-three candidate comparison reuses current authorized observed ranges/ten metrics and existing role attributes. Shared patch/event/date filters describe public sample rows, never historical reconstructed ability. Public rows lack game IDs and are labelled source rows. Missing axes stay missing; radar is a visual encoding of the same observed metrics, not normalization, potential truth or a win ranking. Current-FA/owned-context checks apply before getters and before all existing actions. Removing later direct bindings enforces the already approved stale-world guard without creating a new authority policy. Full match-metric radar/UI/language remain approved and unfinished.
+
+### 2026-10-05 — 12.5.3 초기 조건부 영입 미리보기
+
+기존 초기 계약 명령을 private copy에서 적용한 전후 숫자만 표시한다. 선수 수락/공식 출전 자격을 보장하거나 다른 진행중 제안을 확정 의무로 합산하지 않는다. 전문 역할 인원은 참고이며 새 등록 의무가 아니다. 초기 예산·계약금·로컬/SFR는 기존 가상 규칙의 실제 소비자를 사용하고 새 금액/재정/언어 정책은 추가하지 않는다. 실제 계약은 기존 수동 협상 명령의 최신 검사와 rollback을 유지한다.

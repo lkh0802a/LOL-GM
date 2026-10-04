@@ -1,0 +1,164 @@
+{
+  "task": "12.5.3",
+  "date": "2026-10-05 Asia/Seoul",
+  "basis": "existing fictional initial contract/finance/roster transaction; no professional calibration",
+  "sourceHashes": {
+    "src/artifact/ui-initial-offer-preview.js": "20e8e54bc12e306d7e08b0a95c154aea2a213862b21a5a325babfb1d5469e72e",
+    "src/artifact/ui-initial-candidates.js": "79d07d1cea198613b0c9ea2cd459fa3b418f91c6cf5dce04e58124a0997ff2a0",
+    "src/artifact/ui-market-initial.js": "eadd1bc1b7269374b579390ccee1bbdf915ce8af159900898a18cbd494c1043d",
+    "src/artifact/ui-negotiations.js": "fb98f76fb849804e8a70463b42d38c3bb59c88eb6f1bdecf3caaf0cc5723cf94",
+    "scripts/initial-offer-preview-acceptance.mjs": "4cdbf43b8c439dcfdce9872a91c1192f669dbab43bfea2818811c69a202f1110",
+    "index.html": "bb7555d34035b5867347d6d872791d7b657fd896692ea746cf213ee17ff2b134"
+  },
+  "focused": {
+    "pure": true,
+    "source": "existing initial rules/transaction/finance",
+    "before": {
+      "count": 0,
+      "imports": 0,
+      "pay": 0,
+      "budget": 51.81,
+      "cash": 38.4,
+      "roles": {
+        "TOP": 0,
+        "JGL": 0,
+        "MID": 0,
+        "ADC": 0,
+        "SUP": 0
+      },
+      "organization": 0,
+      "errors": [
+        "Hangyeol Tigers: 최소 5명 필요",
+        "Hangyeol Tigers Challengers: 최소 5명 필요",
+        "통합 로스터 최소 11명 필요"
+      ],
+      "tax": 0
+    },
+    "after": {
+      "count": 1,
+      "imports": 0,
+      "pay": 5.8,
+      "budget": 51.81,
+      "cash": 38.4,
+      "roles": {
+        "TOP": 1,
+        "JGL": 0,
+        "MID": 0,
+        "ADC": 0,
+        "SUP": 0
+      },
+      "organization": 1,
+      "errors": [
+        "Hangyeol Tigers: 최소 5명 필요",
+        "Hangyeol Tigers Challengers: 최소 5명 필요",
+        "통합 로스터 최소 11명 필요"
+      ],
+      "tax": 0
+    },
+    "terms": {
+      "salary": 5.8,
+      "years": 1,
+      "signingBonus": 0,
+      "bonuses": {
+        "performance": 0,
+        "title": 0,
+        "international": 0
+      },
+      "buyout": null,
+      "option": null,
+      "releaseGuaranteeRate": 0.5,
+      "promisedRole": "starter"
+    },
+    "actualAgreement": true,
+    "agreementAfter": {
+      "count": 1,
+      "imports": 0,
+      "pay": 51.8,
+      "budget": 51.81,
+      "cash": 37.6,
+      "roles": {
+        "TOP": 1,
+        "JGL": 0,
+        "MID": 0,
+        "ADC": 0,
+        "SUP": 0
+      },
+      "organization": 1,
+      "errors": [
+        "Hangyeol Tigers: 최소 5명 필요",
+        "Hangyeol Tigers Challengers: 최소 5명 필요",
+        "통합 로스터 최소 11명 필요"
+      ],
+      "tax": 0
+    },
+    "bonusCash": true,
+    "foreignFiredSigned": true,
+    "parentReserve": true,
+    "changedBudget": true,
+    "duplicateCancel": true,
+    "save": true
+  },
+  "rawFocused": "INITIAL_OFFER_ACCEPTANCE {\"pure\":true,\"source\":\"existing initial rules/transaction/finance\",\"before\":{\"count\":0,\"imports\":0,\"pay\":0,\"budget\":51.81,\"cash\":38.4,\"roles\":{\"TOP\":0,\"JGL\":0,\"MID\":0,\"ADC\":0,\"SUP\":0},\"organization\":0,\"errors\":[\"Hangyeol Tigers: 최소 5명 필요\",\"Hangyeol Tigers Challengers: 최소 5명 필요\",\"통합 로스터 최소 11명 필요\"],\"tax\":0},\"after\":{\"count\":1,\"imports\":0,\"pay\":5.8,\"budget\":51.81,\"cash\":38.4,\"roles\":{\"TOP\":1,\"JGL\":0,\"MID\":0,\"ADC\":0,\"SUP\":0},\"organization\":1,\"errors\":[\"Hangyeol Tigers: 최소 5명 필요\",\"Hangyeol Tigers Challengers: 최소 5명 필요\",\"통합 로스터 최소 11명 필요\"],\"tax\":0},\"terms\":{\"salary\":5.8,\"years\":1,\"signingBonus\":0,\"bonuses\":{\"performance\":0,\"title\":0,\"international\":0},\"buyout\":null,\"option\":null,\"releaseGuaranteeRate\":0.5,\"promisedRole\":\"starter\"},\"actualAgreement\":true,\"agreementAfter\":{\"count\":1,\"imports\":0,\"pay\":51.8,\"budget\":51.81,\"cash\":37.6,\"roles\":{\"TOP\":1,\"JGL\":0,\"MID\":0,\"ADC\":0,\"SUP\":0},\"organization\":1,\"errors\":[\"Hangyeol Tigers: 최소 5명 필요\",\"Hangyeol Tigers Challengers: 최소 5명 필요\",\"통합 로스터 최소 11명 필요\"],\"tax\":0},\"bonusCash\":true,\"foreignFiredSigned\":true,\"parentReserve\":true,\"changedBudget\":true,\"duplicateCancel\":true,\"save\":true}\n",
+  "limits": [
+    "conditional agreement, not predicted acceptance or official eligibility",
+    "professional role counts are not compulsory roster roles",
+    "other pending offers not committed liabilities",
+    "existing salary-budget/SFR/rounding rules retained",
+    "no new save schema/live-world writer/engine outcome recalculation",
+    "whole UI/AnalysisRoom/language/engine inventory remain pending"
+  ],
+  "browser": {
+    "browser": "Chromium",
+    "widths": [
+      1280,
+      320
+    ],
+    "keyboard": true,
+    "pure": true,
+    "draftPreserved": true,
+    "counterDistinct": true,
+    "actualAgreement": {
+      "pay": 51.8,
+      "cash": 38.3,
+      "count": 1
+    },
+    "projection": {
+      "count": 1,
+      "imports": 0,
+      "pay": 51.8,
+      "budget": 51.81,
+      "cash": 38.3,
+      "roles": {
+        "TOP": 1,
+        "JGL": 0,
+        "MID": 0,
+        "ADC": 0,
+        "SUP": 0
+      },
+      "organization": 1,
+      "errors": [
+        "Hangyeol Tigers: 최소 5명 필요",
+        "Hangyeol Tigers Challengers: 최소 5명 필요",
+        "통합 로스터 최소 11명 필요"
+      ],
+      "tax": 0
+    },
+    "saveReset": true,
+    "actualStaleHandlerInert": true,
+    "allDraftFieldsPreserved": true,
+    "fired": true,
+    "errors": []
+  },
+  "checks": {
+    "staticTests": 14,
+    "builtModules": 142,
+    "uiAcceptances": 78,
+    "independentVMs": 77,
+    "calendarAcceptances": 20,
+    "regression": true,
+    "smokeMs": 29432.9,
+    "smokeLimitMs": 35000,
+    "smokeSetup": "brief calendar overlap, not isolated speed evidence",
+    "careerOfficialGames": 186
+  }
+}

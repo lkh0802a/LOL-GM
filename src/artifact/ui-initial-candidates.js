@@ -2,7 +2,7 @@
 // No recruitment, contracts or scouting mutation is owned here.
 const INITIAL_CANDIDATE_PAGE_SIZE=25;
 const INITIAL_CANDIDATE_SORTS={ability:'추정 기량',name:'선수 이름',role:'포지션',region:'출신 지역',age:'나이',potential:'잠재 추정',reputation:'명성',salary:'요구 연봉'};
-function initialCandidateUiState(){return {comparison:initialComparisonState(),role:'ALL',scope:'region',target:null,q:'',minimum:0,sort:'ability',direction:'desc',page:0,selected:[],detail:null,returnY:0}}
+function initialCandidateUiState(){return {impact:null,comparison:initialComparisonState(),role:'ALL',scope:'region',target:null,q:'',minimum:0,sort:'ability',direction:'desc',page:0,selected:[],detail:null,returnY:0}}
 function initialCandidateView(db){const view=Object.create(db);view.scout=JSON.parse(JSON.stringify(db.scout||{}));view.world={...db.world,recruitment:JSON.parse(JSON.stringify(db.world?.recruitment||{})),negotiations:JSON.parse(JSON.stringify(db.world?.negotiations||{}))};view._marketDemandCache={...(db._marketDemandCache||{})};return view}
 let INITIAL_CANDIDATE_CONTEXT=null;
 function initialCandidateContext(db){

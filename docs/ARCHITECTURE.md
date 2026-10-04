@@ -271,3 +271,7 @@ fields; no second contract, roster, finance or preview ledger is introduced.
 ### Initial same-context observed comparison (12.5.2)
 
 `ui-initial-comparison.js` owns ephemeral max-three IDs, pure FA-authorized snapshots, shared public-sample conditions, archived-source details and guarded existing actions/return. `ui-observed-radar.js` renders only the same ten compatible observed 1–99 metrics; missing axes never become zero and the numeric table remains primary. Existing role-source/getters and initial command ownership are reused, with no permanent save schema. Public meta rows lack game IDs: source rows are not authenticated independent-game denominators. `ui-market-initial.js` must not overwrite guarded bindings with later direct handlers. Existing public champion labels use `championLabel`, not an undefined alias. General/match-metric radar and language/finance remain separate approved work.
+
+### Conditional initial offer impact (12.5.3)
+
+`ui-initial-offer-preview.js` owns FA/owned-target permission checks, private-copy existing transaction projection, numeric before/after presentation and ephemeral return context. Existing career/finance/roster/contract writers own rules and actual agreement. `ui-negotiations.js:initialNegotiationDraft` preserves raw form fields through preview rerenders; round/attempt changes invalidate restoration. No live-world mutation, new saved schema, alternate agreement writer or acceptance prediction. Existing initial shared action guards remain the command boundary.
