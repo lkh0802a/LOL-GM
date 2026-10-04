@@ -1,0 +1,41 @@
+{
+  "scope": "8.4.5",
+  "staleDefect": "not reproduced in supported writer audit",
+  "requests": 5770,
+  "calculationsBefore": 1315,
+  "calculationsAfter": 1120,
+  "removedCashOnly": 195,
+  "boundedFourMatchParity": true,
+  "limits": [
+    "Wall times include warmup and observer; no overall speed promise",
+    "Profiles/player attrs/playerMod and st.mods fixed during one isolated match; unsupported midmatch edits not accepted evidence",
+    "HP/deadline availability consumed outside cached maximum stats",
+    "No professional calibration or final device QA"
+  ],
+  "failures": [
+    {
+      "path": "/tmp/combat-cache-focused-first.log",
+      "reason": "Fixture expected original old->new stat note to reject after actual rollback restored old; it is legitimately valid. Use mismatching old=n.new; unchanged mutation/parity assertion passes."
+    },
+    {
+      "path": "/tmp/combat-cache-static-first.log",
+      "reason": "Default sandbox ci-run.test subprocess failed. Same unchanged static checks passed with explicit permission review."
+    },
+    {
+      "path": "/tmp/combat-cache-browser-first.log",
+      "reason": "Default Chromium launch/socket sandbox failure. Same rebuilt HTML browser flow passed with explicit permission review."
+    },
+    {
+      "path": "/tmp/combat-cache-regression-first-overlap.log",
+      "reason": "Local Node22 smoke timed out at unchanged35000ms after regression started before calendar runner exited; preserve original, retry identical full chain isolated."
+    }
+  ],
+  "local": {
+    "focused": "PASS2side boundaries/11540actual cached-fresh checks/4logged-quiet pairs/pending-full-lite",
+    "ui": "PASS75acceptances/74freshVM/101engine",
+    "calendar": "PASS20",
+    "staticBuild": "PASS138modules",
+    "browser": "PASSChromium1280/320 real scheduled FirstSelection/manual20turn/Bo3threegames/source/Analysis/filter/keyboard/pending-history save/fired/no overflow/pageerror; identical rebuilt HTML injection, not productionHTTP/finaldeviceQA",
+    "regression": "PASS same Node22 full chain isolated; smoke29027.5ms unchanged35000ms; two-season186officialmatches"
+  }
+}
