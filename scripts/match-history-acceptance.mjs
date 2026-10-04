@@ -29,6 +29,7 @@ await runEngineFixture(String.raw`(()=>{
  check(officialMatchReviews(db,a.id,{patch:rec.patch}).length===1&&officialMatchReviews(db,b.id).length===0,'observer source ownership');
  ANALYSIS_SET={review:JSON.stringify(['history',0,0,0])};check(analysisMatchPanel(db,a,{}).includes('당시 확정된 경기 기록'),'analysis consumer');
  const rolePanel=analysisMatchPanel(db,a,{position:'MID'});check(rolePanel.includes(db.players[a.depthChart.MID].name)&&!rolePanel.includes('<td>'+db.players[a.depthChart.TOP].name+' · '),'recorded role table filtering');
+ const privateGame={...g,blue:b.id,red:reserveTeamsOf(db,b)[0].id};Object.defineProperty(privateGame,'publicRecord',{get(){throw Error('foreign practice read')}});check(recordedPublicMatch(db,{...rec,practiceModel:'engine'},privateGame).reason==='no-authority','foreign practice source authority');
  const frozen=packDB(db);officialMatchReviews(db,a.id);renderPublicMatchReview(db,rec,g);check(packDB(db)===frozen,'reads mutate history');
  db.world.fired=true;check(officialMatchReviews(db,a.id).length===0,'fired owner');
  console.log('MATCH_HISTORY_ACCEPTANCE PASS actual public stats/events, bounded real nexus, unchanged seeded capture/no-capture lines, no hidden fields/re-evaluation, public getter traps, original/lite/legacy save, analysis ownership and pure reads; snapshotChars='+JSON.stringify(g.publicRecord).length);
