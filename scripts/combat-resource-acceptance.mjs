@@ -10,8 +10,8 @@ await runEngineFixture(String.raw`(()=>{
  // Real quest consumer sees only applied report damage. No completion/reward is
  // inferred from overkill; repeated packets on the same dead target are inert.
  const ps=newPS(db.players[a.depthChart.MID],0,'MID',championByName(db,'Ahri').id,db.patch),victim=newPS(db.players[b.depthChart.MID],1,'MID',championByName(db,'Ahri').id,db.patch);
- const st={t:12,ending:null,quiet:true,patch:db.patch,rng:makeStreams('packet'),sides:[{team:a},{team:b}],log:[],expl:[]};
- const f={ps},t={ps:victim,hp:100,max:100,hitters:new Set(),last:null},questBefore=ps.quest.progress;
+ const st={t:12,ending:null,quiet:true,patch:db.patch,rng:makeStreams('packet'),sides:[{team:a,ps:[ps]},{team:b,ps:[victim]}],log:[],expl:[]};
+ const f={ps,side:0,hp:100,alive:true},t={ps:victim,side:1,alive:true,hp:100,max:100,hitters:new Set(),last:null},questBefore=ps.quest.progress;
  const paid=applyFightDamage(st,f,t,1000,true);check(paid===90&&t.hp===0&&ps.dmg===victim.dmgTaken&&ps.teamfightDmg===90&&t.last===f,'effective budget/stat accounting');
  const frozen=JSON.stringify([ps,victim,t.hp,st.rng]),hitters=t.hitters.size;
  check(applyFightDamage(st,f,t,1000,true)===0&&JSON.stringify([ps,victim,t.hp,st.rng])===frozen&&t.hitters.size===hitters,'duplicate/dead target mutated');
@@ -20,7 +20,7 @@ await runEngineFixture(String.raw`(()=>{
  check(applyFightDamage(st,f,live,20,true)===0&&JSON.stringify([ps,victim,live.hp,st.rng])===terminal,'post-end damage mutated');st.ending=null;
  const missed=JSON.stringify([ps,victim,live.hp,st.rng]);for(const d of [0,-1,NaN])check(applyFightDamage(st,f,live,d,false)===0&&JSON.stringify([ps,victim,live.hp,st.rng])===missed,'nonpositive packet consumed');
  // A second target retains its own budget; overkill is never moved for free.
- const other={ps:victim,hp:50,hitters:new Set(),last:null};check(other.hp===50&&applyFightDamage(st,f,other,20,false)===18&&other.hp===30,'separate target budget');
+ const other={ps:victim,side:1,alive:true,hp:50,hitters:new Set(),last:null};check(other.hp===50&&applyFightDamage(st,f,other,20,false)===18&&other.hp===30,'separate target budget');
  const saved=packDB(db),digest=r=>JSON.stringify({winner:r.winner,ending:r.ending,duration:r.duration,gold:r.goldHist,ps:r.sides.map(s=>s.ps.map(p=>({k:p.k,d:p.d,a:p.a,dmg:p.dmg,taken:p.dmgTaken,hp:p.hp,quest:p.quest,ledger:matchGoldLedger(p),items:matchQuestItems(p)})))});
  let pairs=0;for(const seed of ['record-official','combat-resource-1'])for(const ids of [[a.id,b.id],[b.id,a.id]]){const r=simulateMatch(db,...ids,seed,null,false),q=simulateMatch(db,...ids,seed,null,true);check(digest(r)===digest(q)&&r.ending.kind==='nexus','actual logged/quiet/side outcome');check(r.sides.flatMap(s=>s.ps).reduce((v,p)=>v+p.dmg,0)===r.sides.flatMap(s=>s.ps).reduce((v,p)=>v+p.dmgTaken,0),'actual damage totals disagree');pairs++;}
  check(packDB(db)===saved,'simulation modified world/history');

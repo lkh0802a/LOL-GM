@@ -7,7 +7,7 @@ function renderRecordedTakedowns(p){
 
 // Archived reward interpretation; no present-state adjudication or mutation.
 function renderRecordedAdjudicationBasis(p){
-  return `<p class="hint">${p.damageBasis==='effective-aggregate-v1'?'피해량은 남은 체력 예산 안에서 집계한 값이며, 실제 스킬별 피해 판정은 아닙니다.':'이전 기록의 피해 집계 방식은 저장되지 않았습니다. 현재 계산으로 바꾸지 않습니다.'}</p>${p.structureSelectionBasis==='progress-seeded-ties-v1'?'<p class="hint">구조물 대상은 공격이 허용된 라인의 진행도를 우선하고, 동률은 당시 시드로 선택했습니다. 정확한 이동·거리 판정은 아닙니다.</p>':''}`;
+  return `${p.combatRoundBasis==='prepared-round-budget-v1'?'<p class="hint">교전은 라운드별로 피해를 준비해 순서대로 처리합니다. 같은 라운드에서 체력이 소진돼도 이미 준비된 피해는 남고, 다음 라운드의 새 공격에는 참여하지 않습니다. 정확한 스킬 시전·물리적 동시 판정은 아닙니다.</p>':''}<p class="hint">${p.damageBasis==='effective-aggregate-v1'?'피해량은 남은 체력 예산 안에서 집계한 값이며, 실제 스킬별 피해 판정은 아닙니다.':'이전 기록의 피해 집계 방식은 저장되지 않았습니다. 현재 계산으로 바꾸지 않습니다.'}</p>${p.structureSelectionBasis==='progress-seeded-ties-v1'?'<p class="hint">구조물 대상은 공격이 허용된 라인의 진행도를 우선하고, 동률은 당시 시드로 선택했습니다. 정확한 이동·거리 판정은 아닙니다.</p>':''}`;
 }
 
 // Actual archived macro participants, never current ability/private evidence.

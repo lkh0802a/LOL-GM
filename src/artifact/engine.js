@@ -108,8 +108,8 @@ function fight(st,zone,sideArrs,ctx={}){
         if(R.exec.chance(0.15+0.5*dk)){disengaged=lose;break;}}
     }
     const dmgs=[];
-    for(const f of F){ if(!f.alive)continue;
-      const en=F.filter(e=>e.side!==f.side&&e.alive); if(!en.length)continue;
+    for(const f of F){ if(!f.alive||f.hp<=0)continue;
+      const en=F.filter(e=>e.side!==f.side&&e.alive&&e.hp>0); if(!en.length)continue;
       let tgt;
       if(R.dec.chance(0.35+0.55*at(f.ps,'target_selection'))){
         tgt=en.reduce((b,e)=>{const s=(e.off/e.hp)*(1.3-0.6*at(e.ps,'positioning'));return !b||s>b.s?{e,s}:b},null).e;
@@ -122,7 +122,7 @@ function fight(st,zone,sideArrs,ctx={}){
       dmgs.push([f,tgt,d]);
     }
     for(let i=dmgs.length-1;i>0;i--){const j=Math.floor(R.mech.next()*(i+1));[dmgs[i],dmgs[j]]=[dmgs[j],dmgs[i]]}
-    for(const [f,t,d] of dmgs)applyFightDamage(st,f,t,d,isTeamfight);
+    applyPreparedFightRound(st,F,dmgs,isTeamfight);
     for(const t of F) if(t.alive&&t.hp<=0){t.alive=false;}
     if(rd==='clean')break;
   }
@@ -477,5 +477,5 @@ function simulateMatch(db,blueId,redId,seed,ctx,quiet){
   if(st.winner<0)throw new Error('Match unresolved: neither nexus was destroyed within '+MATCH_SIMULATION_MAX_MINUTES+' simulated minutes; no official result produced (seed '+seed+')');
   const endSec=st.ending.second;
   st.log.sort((a,b)=>a.t-b.t||a.sec-b.sec);
-  return {seed,winner:st.winner,ending:{...st.ending},damageBasis:'effective-aggregate-v1',structureSelectionBasis:'progress-seeded-ties-v1',macroPickEvents:st.macroPickEvents||[],objectiveEvents:st.objectiveEvents||[],takedownEvents:st.takedownEvents||[],duration:t+endSec/60,durationStr:fmtTime(t,endSec),draft:d,sides:st.sides,log:st.log,expl:st.expl,goldHist:st.goldHist,firsts:st.firsts};
+  return {seed,winner:st.winner,ending:{...st.ending},combatRoundBasis:'prepared-round-budget-v1',damageBasis:'effective-aggregate-v1',structureSelectionBasis:'progress-seeded-ties-v1',macroPickEvents:st.macroPickEvents||[],objectiveEvents:st.objectiveEvents||[],takedownEvents:st.takedownEvents||[],duration:t+endSec/60,durationStr:fmtTime(t,endSec),draft:d,sides:st.sides,log:st.log,expl:st.expl,goldHist:st.goldHist,firsts:st.firsts};
 }

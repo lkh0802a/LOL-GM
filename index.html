@@ -392,17 +392,28 @@ function destroyMatchNexus(st,side){
 }
 
 /* ==== FILE: combat-resources.js ==== */
-// Consume the target's remaining aggregate EHP budget. The existing .9 report
-// conversion stays a proxy, not physical HP or per-spell damage. Queued attack
-// ordering and RNG are unchanged; a dead target cannot receive another packet.
-function applyFightDamage(st,f,t,damage,isTeamfight){
-  if(matchEnded(st)||t.hp<=0||!(damage>0))return 0;
+// Ordered aggregate rounds, not exact casts/geometry. A packet prepared while
+// alive may resolve after its actor's budget reaches zero in that same round.
+function fightPacketOwned(st,f,t){
+  return f&&t&&f!==t&&[0,1].includes(f.side)&&t.side===1-f.side&&f.ps?.side===f.side&&t.ps?.side===t.side&&st.sides?.[f.side]?.ps?.includes(f.ps)&&st.sides?.[t.side]?.ps?.includes(t.ps);
+}
+function applyFightDamage(st,f,t,damage,isTeamfight,prepared=null){
+  if(matchEnded(st)||!fightPacketOwned(st,f,t)||!f.alive||!t.alive||!alive(st,f.ps)||!alive(st,t.ps)||!Number.isFinite(f.hp)||!Number.isFinite(t.hp)||f.hp<0||t.hp<=0||!Number.isFinite(damage)||damage<=0||(!(f.hp>0)&&!prepared?.has(f)))return 0;
   const applied=Math.min(damage,t.hp),dealt=Math.round(applied*.9);
   t.hp-=applied;t.hitters.add(f);
   f.ps.dmg+=dealt;matchQuestEvent(st,f.ps,{damage:dealt});t.ps.dmgTaken+=dealt;
   if(isTeamfight)f.ps.teamfightDmg+=dealt;
   if(t.hp<=0)t.last=f;
   return dealt;
+}
+function applyPreparedFightRound(st,actors,packets,isTeamfight){
+  if(matchEnded(st)||!Array.isArray(actors)||!Array.isArray(packets))return false;
+  const prepared=new Set(actors.filter(f=>f.alive&&Number.isFinite(f.hp)&&f.hp>0&&alive(st,f.ps)));
+  // Whole packet input preflight, before damage/quest/hitters mutate. Callback
+  // exceptions are not covered by this guard and no new rollback policy is made.
+  if(packets.some(p=>!Array.isArray(p)||p.length!==3||!prepared.has(p[0])||!prepared.has(p[1])||!fightPacketOwned(st,p[0],p[1])||!Number.isFinite(p[2])||p[2]<=0))return false;
+  for(const [f,t,d] of packets)applyFightDamage(st,f,t,d,isTeamfight,prepared);
+  return true;
 }
 
 /* ==== FILE: objective-awards.js ==== */
@@ -641,8 +652,8 @@ function fight(st,zone,sideArrs,ctx={}){
         if(R.exec.chance(0.15+0.5*dk)){disengaged=lose;break;}}
     }
     const dmgs=[];
-    for(const f of F){ if(!f.alive)continue;
-      const en=F.filter(e=>e.side!==f.side&&e.alive); if(!en.length)continue;
+    for(const f of F){ if(!f.alive||f.hp<=0)continue;
+      const en=F.filter(e=>e.side!==f.side&&e.alive&&e.hp>0); if(!en.length)continue;
       let tgt;
       if(R.dec.chance(0.35+0.55*at(f.ps,'target_selection'))){
         tgt=en.reduce((b,e)=>{const s=(e.off/e.hp)*(1.3-0.6*at(e.ps,'positioning'));return !b||s>b.s?{e,s}:b},null).e;
@@ -655,7 +666,7 @@ function fight(st,zone,sideArrs,ctx={}){
       dmgs.push([f,tgt,d]);
     }
     for(let i=dmgs.length-1;i>0;i--){const j=Math.floor(R.mech.next()*(i+1));[dmgs[i],dmgs[j]]=[dmgs[j],dmgs[i]]}
-    for(const [f,t,d] of dmgs)applyFightDamage(st,f,t,d,isTeamfight);
+    applyPreparedFightRound(st,F,dmgs,isTeamfight);
     for(const t of F) if(t.alive&&t.hp<=0){t.alive=false;}
     if(rd==='clean')break;
   }
@@ -1010,7 +1021,7 @@ function simulateMatch(db,blueId,redId,seed,ctx,quiet){
   if(st.winner<0)throw new Error('Match unresolved: neither nexus was destroyed within '+MATCH_SIMULATION_MAX_MINUTES+' simulated minutes; no official result produced (seed '+seed+')');
   const endSec=st.ending.second;
   st.log.sort((a,b)=>a.t-b.t||a.sec-b.sec);
-  return {seed,winner:st.winner,ending:{...st.ending},damageBasis:'effective-aggregate-v1',structureSelectionBasis:'progress-seeded-ties-v1',macroPickEvents:st.macroPickEvents||[],objectiveEvents:st.objectiveEvents||[],takedownEvents:st.takedownEvents||[],duration:t+endSec/60,durationStr:fmtTime(t,endSec),draft:d,sides:st.sides,log:st.log,expl:st.expl,goldHist:st.goldHist,firsts:st.firsts};
+  return {seed,winner:st.winner,ending:{...st.ending},combatRoundBasis:'prepared-round-budget-v1',damageBasis:'effective-aggregate-v1',structureSelectionBasis:'progress-seeded-ties-v1',macroPickEvents:st.macroPickEvents||[],objectiveEvents:st.objectiveEvents||[],takedownEvents:st.takedownEvents||[],duration:t+endSec/60,durationStr:fmtTime(t,endSec),draft:d,sides:st.sides,log:st.log,expl:st.expl,goldHist:st.goldHist,firsts:st.firsts};
 }
 
 /* ==== FILE: draft.js ==== */
@@ -11895,7 +11906,7 @@ function recordedDraftReview(db,rec,game,team=managedTeamId(db)){
 function publicMatchRecord(r,patch){
   const events=(r.log||[]).filter(e=>['kill','fight','obj','tower','nexus'].includes(e.kind)),limit=24,
     selected=events.length>limit?[...events.slice(0,12),...events.slice(-12)]:events;
-  return {version:1,...publicMacroPicks(r),...(r.structureSelectionBasis==='progress-seeded-ties-v1'?{structureSelectionBasis:r.structureSelectionBasis}:{}),...(Array.isArray(r.takedownEvents)?{takedowns:{version:1,count:r.takedownEvents.length,events:(r.takedownEvents.length>24?[...r.takedownEvents.slice(0,12),...r.takedownEvents.slice(-12)]:r.takedownEvents).map(e=>({...e,payouts:e.payouts.map(x=>({...x}))}))}}:{}),...(Array.isArray(r.objectiveEvents)?{objectives:{version:1,events:r.objectiveEvents.map(e=>({...e,participants:e.participants.slice()}))}}:{}),...(r.damageBasis==='effective-aggregate-v1'?{damageBasis:r.damageBasis}:{}),...(r.ending?{ending:{...r.ending,winner:r.sides[r.ending.winner].team.id}}:{}),resources:{version:1,players:Object.fromEntries(r.sides.flatMap(s=>s.ps.map(p=>[p.p.id,matchGoldLedger(p)])))},date:r.date,patch,winner:r.sides[r.winner].team.id,duration:r.duration,
+  return {version:1,...(r.combatRoundBasis==='prepared-round-budget-v1'?{combatRoundBasis:r.combatRoundBasis}:{}),...publicMacroPicks(r),...(r.structureSelectionBasis==='progress-seeded-ties-v1'?{structureSelectionBasis:r.structureSelectionBasis}:{}),...(Array.isArray(r.takedownEvents)?{takedowns:{version:1,count:r.takedownEvents.length,events:(r.takedownEvents.length>24?[...r.takedownEvents.slice(0,12),...r.takedownEvents.slice(-12)]:r.takedownEvents).map(e=>({...e,payouts:e.payouts.map(x=>({...x}))}))}}:{}),...(Array.isArray(r.objectiveEvents)?{objectives:{version:1,events:r.objectiveEvents.map(e=>({...e,participants:e.participants.slice()}))}}:{}),...(r.damageBasis==='effective-aggregate-v1'?{damageBasis:r.damageBasis}:{}),...(r.ending?{ending:{...r.ending,winner:r.sides[r.ending.winner].team.id}}:{}),resources:{version:1,players:Object.fromEntries(r.sides.flatMap(s=>s.ps.map(p=>[p.p.id,matchGoldLedger(p)])))},date:r.date,patch,winner:r.sides[r.winner].team.id,duration:r.duration,
     sides:r.sides.map(s=>({team:s.team.id,name:s.team.name,players:s.ps.map(p=>[p.p.id,p.p.name,p.role,p.champ.id,p.k,p.d,p.a,Math.round(p.cs),Math.round(p.goldEarned),Math.round(p.dmg),p.lvl,matchQuestItems(p).slice()])})),
     championNames:Object.fromEntries(r.sides.flatMap(s=>s.ps.map(p=>[p.champ.id,championDisplayName(p.champ)]))),
     itemNames:Object.fromEntries(r.sides.flatMap(s=>s.ps.flatMap(p=>matchQuestItems(p).map(id=>[id,p.patchRef?.itemDefs?.[id]?.name||id])))),
@@ -11912,6 +11923,7 @@ function recordedPublicMatch(db,rec,game){
   const p=game?.publicRecord;
   if(!p)return {reason:'not-recorded',record:null};
   if(p.structureSelectionBasis!==undefined&&p.structureSelectionBasis!=='progress-seeded-ties-v1')return {reason:'unverified-source',record:null};
+  if(p.combatRoundBasis!==undefined&&p.combatRoundBasis!=='prepared-round-budget-v1')return {reason:'unverified-source',record:null};
   if(p.damageBasis!==undefined&&p.damageBasis!=='effective-aggregate-v1')return {reason:'unverified-source',record:null};
   if(!recordedMacroPicksValid(p)||!recordedGoldLedgerValid(p)||!recordedObjectivesValid(p)||!recordedTakedownsValid(p))return {reason:'unverified-source',record:null};
   if(!recordedEndingValid(p)||p.version!==1||!['championNames','itemNames'].every(k=>p[k]&&typeof p[k]==='object'&&!Array.isArray(p[k])&&Object.values(p[k]).every(x=>typeof x==='string'))||p.date!==game.date||p.patch!==game.patch||p.patch!==rec.patch||!observedMetaDate(db,p)||p.winner!==game.winner||!Number.isFinite(p.duration)||p.duration<=0||!Array.isArray(p.sides)||p.sides.length!==2||p.sides.some((s,i)=>!s||typeof s!=='object'||s.team!==[game.blue,game.red][i]||typeof s.name!=='string'||!Array.isArray(s.players)||s.players.length!==5||new Set(s.players.map(x=>x?.[2])).size!==5||s.players.some(x=>!Array.isArray(x)||x.length!==12||typeof x[0]!=='string'||typeof x[1]!=='string'||!ROLES.includes(x[2])||typeof x[3]!=='string'||!x.slice(4,11).every(Number.isFinite)||!Array.isArray(x[11])||x[11].length>7||!x[11].every(id=>typeof id==='string')))||!Array.isArray(p.events)||p.events.length>24||!Number.isInteger(p.eventCount)||p.eventCount<p.events.length||p.events.some(e=>!Array.isArray(e)||e.length!==5||!Number.isFinite(e[0])||!Number.isFinite(e[1])||![-1,0,1].includes(e[3])||typeof e[4]!=='string'||!['kill','fight','obj','tower','nexus'].includes(e[2])||e[0]<0||e[0]>Math.ceil(p.duration)||e[1]<0||e[1]>=60))return {reason:'unverified-source',record:null};
@@ -13878,7 +13890,7 @@ function renderRecordedTakedowns(p){
 
 // Archived reward interpretation; no present-state adjudication or mutation.
 function renderRecordedAdjudicationBasis(p){
-  return `<p class="hint">${p.damageBasis==='effective-aggregate-v1'?'피해량은 남은 체력 예산 안에서 집계한 값이며, 실제 스킬별 피해 판정은 아닙니다.':'이전 기록의 피해 집계 방식은 저장되지 않았습니다. 현재 계산으로 바꾸지 않습니다.'}</p>${p.structureSelectionBasis==='progress-seeded-ties-v1'?'<p class="hint">구조물 대상은 공격이 허용된 라인의 진행도를 우선하고, 동률은 당시 시드로 선택했습니다. 정확한 이동·거리 판정은 아닙니다.</p>':''}`;
+  return `${p.combatRoundBasis==='prepared-round-budget-v1'?'<p class="hint">교전은 라운드별로 피해를 준비해 순서대로 처리합니다. 같은 라운드에서 체력이 소진돼도 이미 준비된 피해는 남고, 다음 라운드의 새 공격에는 참여하지 않습니다. 정확한 스킬 시전·물리적 동시 판정은 아닙니다.</p>':''}<p class="hint">${p.damageBasis==='effective-aggregate-v1'?'피해량은 남은 체력 예산 안에서 집계한 값이며, 실제 스킬별 피해 판정은 아닙니다.':'이전 기록의 피해 집계 방식은 저장되지 않았습니다. 현재 계산으로 바꾸지 않습니다.'}</p>${p.structureSelectionBasis==='progress-seeded-ties-v1'?'<p class="hint">구조물 대상은 공격이 허용된 라인의 진행도를 우선하고, 동률은 당시 시드로 선택했습니다. 정확한 이동·거리 판정은 아닙니다.</p>':''}`;
 }
 
 // Actual archived macro participants, never current ability/private evidence.
