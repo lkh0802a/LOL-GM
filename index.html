@@ -405,6 +405,53 @@ function applyFightDamage(st,f,t,damage,isTeamfight){
   return dealt;
 }
 
+/* ==== FILE: objective-awards.js ==== */
+// One acquisition writer for existing aggregate objective rules. Participation
+// is supplied by the decision/fight path; this is not physical proximity.
+function matchObjectiveToken(st,key){
+  const o=st.obj;
+  if(key==='dragon'&&!o.soul&&o.dragonAt&&st.t>=o.dragonAt)return key+':'+o.dragonAt+':'+o.dragonIdx;
+  if(key==='elder'&&o.soul&&o.elderAt&&st.t>=o.elderAt)return key+':'+o.elderAt;
+  if(key==='herald'&&!o.heraldDone&&st.t>=st.patch.rules.heraldSpawn&&st.t<20)return key+':'+st.patch.rules.heraldSpawn;
+  if(key==='baron'&&st.t>=o.baronAt)return key+':'+o.baronAt;
+  return null;
+}
+function awardMatchObjective(st,key,w,part,conversion=false){
+  if(matchEnded(st)||![0,1].includes(w)||!Array.isArray(part)||!part.length||part.some(p=>!st.sides[w].ps.includes(p)))return false;
+  const token=matchObjectiveToken(st,key);
+  if(!token||(st.objectiveEvents||[]).some(e=>e.id===token))return false;
+  const involved=[...new Set(part)],o=st.obj,s=st.sides[w],rules=st.patch.rules;
+  o.wait[key]=0;
+  involved.forEach(p=>{p.objectives++;matchQuestEvent(st,p,{epics:1,jungleStacks:p.role==='JGL'?1:0})});
+  let second;
+  if(key==='dragon'){
+    const type=o.dragonTypes[o.dragonIdx%o.dragonTypes.length];s.dragons.push(type);o.dragonIdx++;
+    if(st.firsts.dragon===undefined)st.firsts.dragon=w;
+    aliveOf(st,w).forEach(p=>addGold(p,40));
+    second=log(st,`${s.team.short} ${type} 드래곤 처치 (${s.dragons.length}스택)`,{side:w,major:true,kind:'obj'});
+    if(s.dragons.length>=4){s.soul=true;o.soul=true;o.elderAt=st.t+6;log(st,`${s.team.short} 드래곤 영혼 획득`,{side:w,major:true,kind:'obj'})}
+    else o.dragonAt=st.t+rules.dragonRespawn;
+  }else if(key==='elder'){
+    s.elderUntil=st.t+rules.elderBuff;o.elderAt=st.t+6;
+    second=log(st,`${s.team.short} 장로 드래곤 처치`,{side:w,major:true,kind:'obj'});
+  }else if(key==='herald'){
+    o.heraldDone=true;s.herald++;s.heraldCharge=true;
+    second=log(st,`${s.team.short} 협곡의 전령 획득`,{side:w,major:true,kind:'obj'});
+  }else{
+    s.baronUntil=st.t+rules.baronBuff;s.barons++;o.baronAt=st.t+rules.baronRespawn;
+    if(st.firsts.baron===undefined)st.firsts.baron=w;
+    aliveOf(st,w).forEach(p=>addGold(p,300));
+    second=log(st,`${s.team.short} ${conversion?'한타 승리 후 ':''}바론 처치`,{side:w,major:true,kind:'obj'});
+  }
+  (st.objectiveEvents||(st.objectiveEvents=[])).push({id:token,key,side:w,minute:st.t,second,participants:involved.map(p=>p.p.id)});
+  return true;
+}
+function recordedObjectivesValid(p){
+  if(p.objectives===undefined)return true;
+  const o=p.objectives;
+  return o?.version===1&&Array.isArray(o.events)&&o.events.length<=720&&new Set(o.events.map(e=>e?.id)).size===o.events.length&&o.events.every(e=>e&&typeof e.id==='string'&&['dragon','elder','herald','baron'].includes(e.key)&&[0,1].includes(e.side)&&Number.isInteger(e.minute)&&e.minute>=1&&e.minute+e.second/60<=p.duration&&Number.isInteger(e.second)&&e.second>=0&&e.second<60&&(!p.ending||e.minute<p.ending.minute||e.minute===p.ending.minute&&e.second<=p.ending.second)&&Array.isArray(e.participants)&&e.participants.length>0&&e.participants.length<=5&&new Set(e.participants).size===e.participants.length&&e.participants.every(id=>p.sides?.[e.side]?.players?.some(x=>x[0]===id)));
+}
+
 /* ==== FILE: engine.js ==== */
 // ===== LOL GM: isolated one-game match simulation =====
 
@@ -558,7 +605,7 @@ function fight(st,zone,sideArrs,ctx={}){
   if(deaths[0]===deaths[1]&&disengaged<0) winner = pw0[0]>=pw0[1]?0:1;
   st.vision[zone]=clamp((st.vision[zone]||0)+(winner===0?0.3:-0.3),-1,1);
   if(isTeamfight)for(const f of F){f.ps.teamfights++;if(f.side===winner)f.ps.teamfightWins++}
-  const res={winner,deaths,sur,init,engOk,disengaged,skillEngage,n:[sideArrs[0].length,sideArrs[1].length]};
+  const res={winner,deaths,sur,init,engOk,disengaged,skillEngage,participants:sideArrs.map(a=>a.map(p=>p.p.id)),n:[sideArrs[0].length,sideArrs[1].length]};
   expl(st,`교전 (${ctx.label||zone}) ${sideArrs[0].length}v${sideArrs[1].length}`,[
     ['선공권 Blue',initScore[0]],['선공권 Red',initScore[1]],['진입 성공확률',engP],['교전 전 전력 Blue',pw0[0]/1000],['교전 전 전력 Red',pw0[1]/1000]],
     {prob:engP,result:`${engOk?'진입 성공':'진입 실패'} · ${['Blue','Red'][winner]} 승리 ${deaths[1]}–${deaths[0]}${disengaged>=0?' (후퇴)':''}`});
@@ -733,7 +780,7 @@ function teamCall(st,side,obj,stakeBonus){
 function objectiveTick(st){
   if(matchEnded(st))return;
   const o=st.obj, R=st.rng, rules=st.patch.rules;
-  const run=(key,label,z,stake,reward)=>{
+  const run=(key,label,z,stake)=>{
     o.wait[key]=(o.wait[key]||0)+1;
     const c=[0,1].map(i=>teamCall(st,i,key,stake(i)+(o.wait[key]-1)*0.25));
     expl(st,`${label} 콜`,c.flatMap((x,i)=>x.votes.map(([p,u])=>[`${['Blue','Red'][i]} ${ROLE_KO[p.role]}`,u])),{result:`Blue ${c[0].go?'싸움':'포기'} / Red ${c[1].go?'싸움':'포기'}`});
@@ -755,30 +802,18 @@ function objectiveTick(st){
         takeStructure(st,giver,{lane:key==='baron'||key==='herald'?'bot':'top'});
       }
     }
-    if(taker>=0){o.wait[key]=0;const involved=c[taker]&&c[taker].part&&c[taker].part.length?c[taker].part:aliveOf(st,taker);involved.forEach(p=>{p.objectives++;matchQuestEvent(st,p,{epics:1,jungleStacks:p.role==='JGL'?1:0})});reward(taker);}
+    if(taker>=0&&!matchEnded(st)){const involved=c[taker]&&c[taker].part&&c[taker].part.length?c[taker].part:aliveOf(st,taker);awardMatchObjective(st,key,taker,involved);}
   };
   if(!o.soul&&o.dragonAt&&st.t>=o.dragonAt){
     const type=o.dragonTypes[o.dragonIdx%o.dragonTypes.length];
-    run('dragon',`${type} 드래곤`,'dragon',i=>{const m=st.sides[i].dragons.length,e=st.sides[1-i].dragons.length;return (m===3?0.4:0)+(e===3?0.6:0)},w=>{
-      st.sides[w].dragons.push(type); o.dragonIdx++; if(st.firsts.dragon===undefined)st.firsts.dragon=w;
-      aliveOf(st,w).forEach(p=>addGold(p,40));
-      log(st,`${st.sides[w].team.short} ${type} 드래곤 처치 (${st.sides[w].dragons.length}스택)`,{side:w,major:true,kind:'obj'});
-      if(st.sides[w].dragons.length>=4){st.sides[w].soul=true;o.soul=true;o.elderAt=st.t+6;log(st,`${st.sides[w].team.short} 드래곤 영혼 획득`,{side:w,major:true,kind:'obj'})}
-      else o.dragonAt=st.t+rules.dragonRespawn;
-    });
+    run('dragon',`${type} 드래곤`,'dragon',i=>{const m=st.sides[i].dragons.length,e=st.sides[1-i].dragons.length;return (m===3?0.4:0)+(e===3?0.6:0)});
   }
-  if(o.soul&&o.elderAt&&st.t>=o.elderAt){
-    run('elder','장로 드래곤','dragon',()=>0.8,w=>{st.sides[w].elderUntil=st.t+rules.elderBuff;o.elderAt=st.t+6;log(st,`${st.sides[w].team.short} 장로 드래곤 처치`,{side:w,major:true,kind:'obj'})});
-  }
-  if(!o.heraldDone&&st.t>=rules.heraldSpawn&&st.t<20){
-    run('herald','협곡의 전령','top',()=>-0.1,w=>{o.heraldDone=true;st.sides[w].herald++;st.sides[w].heraldCharge=true;log(st,`${st.sides[w].team.short} 협곡의 전령 획득`,{side:w,major:true,kind:'obj'})});
-  }
-  if(st.t>=o.baronAt){
-    run('baron','바론','baron',()=>0.1,w=>{st.sides[w].baronUntil=st.t+rules.baronBuff;st.sides[w].barons++;o.baronAt=st.t+rules.baronRespawn;
-      if(st.firsts.baron===undefined)st.firsts.baron=w;
-      aliveOf(st,w).forEach(p=>addGold(p,300));
-      log(st,`${st.sides[w].team.short} 바론 처치`,{side:w,major:true,kind:'obj'})});
-  }
+  if(matchEnded(st))return;
+  if(o.soul&&o.elderAt&&st.t>=o.elderAt)run('elder','장로 드래곤','dragon',()=>0.8);
+  if(matchEnded(st))return;
+  if(!o.heraldDone&&st.t>=rules.heraldSpawn&&st.t<20)run('herald','협곡의 전령','top',()=>-0.1);
+  if(matchEnded(st))return;
+  if(st.t>=o.baronAt)run('baron','바론','baron',()=>0.1);
 }
 
 function convert(st,w,r){
@@ -787,10 +822,8 @@ function convert(st,w,r){
   if(aliveOf(st,w).length<2||diff<1)return;
   let n=Math.max(1,diff-1);
   if(st.t>=st.obj.baronAt&&diff>=2&&st.rng.dec.chance(0.6)){
-    st.sides[w].baronUntil=st.t+st.patch.rules.baronBuff; st.sides[w].barons++; st.obj.baronAt=st.t+st.patch.rules.baronRespawn;
-    if(st.firsts.baron===undefined)st.firsts.baron=w;
-    aliveOf(st,w).forEach(p=>addGold(p,300));
-    log(st,`${st.sides[w].team.short} 한타 승리 후 바론 처치`,{side:w,major:true,kind:'obj'}); n--;
+    const involved=(r?.participants?.[w]||[]).map(id=>st.sides[w].ps.find(p=>p.p.id===id));
+    if(involved.every(Boolean)&&awardMatchObjective(st,'baron',w,involved.filter(p=>alive(st,p)),true))n--;
   }
   const buffed=st.sides[w].baronUntil>st.t||st.sides[w].elderUntil>st.t;
   const allowNexus=diff>=3||aliveOf(st,1-w).length<=1||(diff>=2&&(buffed||st.t>=30))||(buffed&&st.t>=30);
@@ -900,7 +933,7 @@ function simulateMatch(db,blueId,redId,seed,ctx,quiet){
   if(st.winner<0)throw new Error('Match unresolved: neither nexus was destroyed within '+MATCH_SIMULATION_MAX_MINUTES+' simulated minutes; no official result produced (seed '+seed+')');
   const endSec=st.ending.second;
   st.log.sort((a,b)=>a.t-b.t||a.sec-b.sec);
-  return {seed,winner:st.winner,ending:{...st.ending},damageBasis:'effective-aggregate-v1',duration:t+endSec/60,durationStr:fmtTime(t,endSec),draft:d,sides:st.sides,log:st.log,expl:st.expl,goldHist:st.goldHist,firsts:st.firsts};
+  return {seed,winner:st.winner,ending:{...st.ending},damageBasis:'effective-aggregate-v1',objectiveEvents:st.objectiveEvents||[],duration:t+endSec/60,durationStr:fmtTime(t,endSec),draft:d,sides:st.sides,log:st.log,expl:st.expl,goldHist:st.goldHist,firsts:st.firsts};
 }
 
 /* ==== FILE: draft.js ==== */
@@ -11755,7 +11788,7 @@ function recordedDraftReview(db,rec,game,team=managedTeamId(db)){
 function publicMatchRecord(r,patch){
   const events=(r.log||[]).filter(e=>['kill','fight','obj','tower','nexus'].includes(e.kind)),limit=24,
     selected=events.length>limit?[...events.slice(0,12),...events.slice(-12)]:events;
-  return {version:1,...(r.damageBasis==='effective-aggregate-v1'?{damageBasis:r.damageBasis}:{}),...(r.ending?{ending:{...r.ending,winner:r.sides[r.ending.winner].team.id}}:{}),resources:{version:1,players:Object.fromEntries(r.sides.flatMap(s=>s.ps.map(p=>[p.p.id,matchGoldLedger(p)])))},date:r.date,patch,winner:r.sides[r.winner].team.id,duration:r.duration,
+  return {version:1,...(Array.isArray(r.objectiveEvents)?{objectives:{version:1,events:r.objectiveEvents.map(e=>({...e,participants:e.participants.slice()}))}}:{}),...(r.damageBasis==='effective-aggregate-v1'?{damageBasis:r.damageBasis}:{}),...(r.ending?{ending:{...r.ending,winner:r.sides[r.ending.winner].team.id}}:{}),resources:{version:1,players:Object.fromEntries(r.sides.flatMap(s=>s.ps.map(p=>[p.p.id,matchGoldLedger(p)])))},date:r.date,patch,winner:r.sides[r.winner].team.id,duration:r.duration,
     sides:r.sides.map(s=>({team:s.team.id,name:s.team.name,players:s.ps.map(p=>[p.p.id,p.p.name,p.role,p.champ.id,p.k,p.d,p.a,Math.round(p.cs),Math.round(p.goldEarned),Math.round(p.dmg),p.lvl,matchQuestItems(p).slice()])})),
     championNames:Object.fromEntries(r.sides.flatMap(s=>s.ps.map(p=>[p.champ.id,championDisplayName(p.champ)]))),
     itemNames:Object.fromEntries(r.sides.flatMap(s=>s.ps.flatMap(p=>matchQuestItems(p).map(id=>[id,p.patchRef?.itemDefs?.[id]?.name||id])))),
@@ -11772,7 +11805,7 @@ function recordedPublicMatch(db,rec,game){
   const p=game?.publicRecord;
   if(!p)return {reason:'not-recorded',record:null};
   if(p.damageBasis!==undefined&&p.damageBasis!=='effective-aggregate-v1')return {reason:'unverified-source',record:null};
-  if(!recordedGoldLedgerValid(p))return {reason:'unverified-source',record:null};
+  if(!recordedGoldLedgerValid(p)||!recordedObjectivesValid(p))return {reason:'unverified-source',record:null};
   if(!recordedEndingValid(p)||p.version!==1||!['championNames','itemNames'].every(k=>p[k]&&typeof p[k]==='object'&&!Array.isArray(p[k])&&Object.values(p[k]).every(x=>typeof x==='string'))||p.date!==game.date||p.patch!==game.patch||p.patch!==rec.patch||!observedMetaDate(db,p)||p.winner!==game.winner||!Number.isFinite(p.duration)||p.duration<=0||!Array.isArray(p.sides)||p.sides.length!==2||p.sides.some((s,i)=>!s||typeof s!=='object'||s.team!==[game.blue,game.red][i]||typeof s.name!=='string'||!Array.isArray(s.players)||s.players.length!==5||new Set(s.players.map(x=>x?.[2])).size!==5||s.players.some(x=>!Array.isArray(x)||x.length!==12||typeof x[0]!=='string'||typeof x[1]!=='string'||!ROLES.includes(x[2])||typeof x[3]!=='string'||!x.slice(4,11).every(Number.isFinite)||!Array.isArray(x[11])||x[11].length>7||!x[11].every(id=>typeof id==='string')))||!Array.isArray(p.events)||p.events.length>24||!Number.isInteger(p.eventCount)||p.eventCount<p.events.length||p.events.some(e=>!Array.isArray(e)||e.length!==5||!Number.isFinite(e[0])||!Number.isFinite(e[1])||![-1,0,1].includes(e[3])||typeof e[4]!=='string'||!['kill','fight','obj','tower','nexus'].includes(e[2])||e[0]<0||e[0]>Math.ceil(p.duration)||e[1]<0||e[1]>=60))return {reason:'unverified-source',record:null};
   return {reason:null,record:p};
 }
@@ -13682,7 +13715,7 @@ function bindRecordedDraftReview(root,rec){
 function renderPublicMatchReview(db,rec,game,filter={}){
   const read=recordedPublicMatch(db,rec,game),p=read.record;
   if(!p)return `<section><h3>저장된 경기 기록</h3><p class="hint">${read.reason==='no-authority'?'이 연습 경기 기록의 조회 권한이 없습니다.':read.reason==='not-recorded'?'이 경기의 당시 상세 기록이 없습니다. 세트 요약과 기록된 밴픽 근거만 확인할 수 있습니다.':'경기 기록의 출처를 확인할 수 없습니다.'} 현재 선수 상태로 과거 기록을 다시 만들지 않습니다.</p></section>`;
-  return `<section><h3>${rec.practiceModel?'연습 당시 관측된 경기 기록':'당시 확정된 경기 기록'}</h3><p class="hint">${esc(p.date)} · 패치 ${esc(p.patch)} · ${p.duration.toFixed(1)}분${p.ending?` · 넥서스 파괴 ${fmtTime(p.ending.minute,p.ending.second)}`:''}. ${rec.practiceModel?'참가 구단의 비공개 연습 관측입니다.':'공개 경기 결과입니다.'} 숨은 능력·숙련 추정이나 승패 원인 판정이 아닙니다.</p><p class="hint">${p.damageBasis==='effective-aggregate-v1'?'피해량은 남은 체력 예산 안에서 집계한 값이며, 실제 스킬별 피해 판정은 아닙니다.':'이전 기록의 피해 집계 방식은 저장되지 않았습니다. 현재 계산으로 바꾸지 않습니다.'}</p>${p.sides.map(s=>`<h4>${esc(s.name)}</h4><div class="scroll"><table><thead><tr><th>선수·역할</th><th>챔피언</th><th>K/D/A</th><th>CS</th><th>획득 골드</th><th>피해량</th><th>레벨</th></tr></thead><tbody>${s.players.filter(x=>!filter.position||x[2]===filter.position).map(x=>`<tr><td>${esc(x[1])} · ${ROLE_KO[x[2]]}</td><td>${esc(p.championNames[x[3]]||x[3])}</td><td>${x[4]}/${x[5]}/${x[6]}</td><td>${x[7]}</td><td>${x[8]}</td><td>${x[9]}</td><td>${x[10]}</td></tr>`).join('')}</tbody></table></div>`).join('')}${renderRecordedGoldUse(p,filter)}${filter.events===false?'':`<h4>실제 주요 사건</h4><p class="hint">${p.events.length?'당시 로그의 공개 처치·교전·오브젝트·구조물 사건 '+p.events.length+'건 / '+p.eventCount+'건'+(p.eventCount>p.events.length?' · 중간 사건은 저장 크기를 제한하기 위해 생략했습니다.':''): '당시 주요 사건 로그를 수집하지 않았습니다. 결과로 사건을 추정하지 않습니다.'}</p><ol>${p.events.map(e=>`<li><time>${fmtTime(e[0],e[1])}</time> ${esc(e[4])}</li>`).join('')}</ol>`}</section>`;
+  return `<section><h3>${rec.practiceModel?'연습 당시 관측된 경기 기록':'당시 확정된 경기 기록'}</h3><p class="hint">${esc(p.date)} · 패치 ${esc(p.patch)} · ${p.duration.toFixed(1)}분${p.ending?` · 넥서스 파괴 ${fmtTime(p.ending.minute,p.ending.second)}`:''}. ${rec.practiceModel?'참가 구단의 비공개 연습 관측입니다.':'공개 경기 결과입니다.'} 숨은 능력·숙련 추정이나 승패 원인 판정이 아닙니다.</p><p class="hint">${p.damageBasis==='effective-aggregate-v1'?'피해량은 남은 체력 예산 안에서 집계한 값이며, 실제 스킬별 피해 판정은 아닙니다.':'이전 기록의 피해 집계 방식은 저장되지 않았습니다. 현재 계산으로 바꾸지 않습니다.'}</p>${p.sides.map(s=>`<h4>${esc(s.name)}</h4><div class="scroll"><table><thead><tr><th>선수·역할</th><th>챔피언</th><th>K/D/A</th><th>CS</th><th>획득 골드</th><th>피해량</th><th>레벨</th></tr></thead><tbody>${s.players.filter(x=>!filter.position||x[2]===filter.position).map(x=>`<tr><td>${esc(x[1])} · ${ROLE_KO[x[2]]}</td><td>${esc(p.championNames[x[3]]||x[3])}</td><td>${x[4]}/${x[5]}/${x[6]}</td><td>${x[7]}</td><td>${x[8]}</td><td>${x[9]}</td><td>${x[10]}</td></tr>`).join('')}</tbody></table></div>`).join('')}${renderRecordedGoldUse(p,filter)}${renderRecordedObjectives(p)}${filter.events===false?'':`<h4>실제 주요 사건</h4><p class="hint">${p.events.length?'당시 로그의 공개 처치·교전·오브젝트·구조물 사건 '+p.events.length+'건 / '+p.eventCount+'건'+(p.eventCount>p.events.length?' · 중간 사건은 저장 크기를 제한하기 위해 생략했습니다.':''): '당시 주요 사건 로그를 수집하지 않았습니다. 결과로 사건을 추정하지 않습니다.'}</p><ol>${p.events.map(e=>`<li><time>${fmtTime(e[0],e[1])}</time> ${esc(e[4])}</li>`).join('')}</ol>`}</section>`;
 }
 function renderRecordedGoldUse(p,filter){
   if(!p.resources)return '<p class="hint">이 경기의 당시 골드 사용 내역은 저장되지 않았습니다.</p>';
@@ -13690,6 +13723,11 @@ function renderRecordedGoldUse(p,filter){
     const values=s.players.filter(x=>!filter.position||x[2]===filter.position).map(x=>p.resources.players[x[0]]),sum=k=>Math.round(values.reduce((v,x)=>v+x[k],0));
     return `<p><strong>${esc(s.name)}</strong> · 장비 구매 ${sum('items')} · 시야 구매 ${sum('wards')} · 미사용 ${sum('held')} 골드</p>`;
   }).join('')}</details>`;
+}
+function renderRecordedObjectives(p){
+  if(!p.objectives)return '<p class="hint">당시 오브젝트 참여 기록이 저장되지 않았습니다.</p>';
+  const names={dragon:'드래곤',elder:'장로 드래곤',herald:'협곡의 전령',baron:'바론'},players=Object.fromEntries(p.sides.flatMap(s=>s.players.map(x=>[x[0],x[1]])));
+  return `<details><summary>오브젝트 획득·참여 기록 (${p.objectives.events.length}건)</summary><p class="hint">당시 판정에 참여한 선수 기록입니다. 정확한 위치나 마지막 타격의 기록은 아닙니다.</p>${p.objectives.events.length?`<ol>${p.objectives.events.map(e=>`<li><time>${fmtTime(e.minute,e.second)}</time> ${esc(p.sides[e.side].name)} · ${names[e.key]} · ${e.participants.map(id=>esc(players[id])).join(', ')}</li>`).join('')}</ol>`:'<p class="empty">이 경기에서 판정된 오브젝트 획득이 없습니다.</p>'}</details>`;
 }
 function analysisMatchPanel(db,team,filter){
   const rows=officialMatchReviews(db,team.id,filter),shown=rows.slice(0,30),key=x=>JSON.stringify([x.key,x.di,x.mi,x.gi]),selected=shown.find(x=>key(x)===ANALYSIS_SET.review)||null;
@@ -13702,7 +13740,7 @@ function analysisMatchPanel(db,team,filter){
     let content;
     if(tab==='draft')content=renderRecordedDraftReview(db,selected.rec,selected.game)||'<p class="empty">조회할 수 있는 당시 밴픽 검토가 없습니다. 현재 상태로 재구성하지 않습니다.</p>';
     else if(!p)content=renderPublicMatchReview(db,selected.rec,selected.game,filter);
-    else if(tab==='events')content=`<section class="review-events"><h4>주요 사건</h4><p class="hint">${p.events.length?p.events.length+'건 / 당시 공개 사건 '+p.eventCount+'건'+(p.eventCount>p.events.length?' · 처음과 마지막 사건을 보존한 발췌입니다.':''):'당시 사건 로그를 수집하지 않았습니다. 결과로 사건을 추정하지 않습니다.'}</p><ol>${p.events.map(e=>`<li><time>${fmtTime(e[0],e[1])}</time><span>${esc(e[4])}</span></li>`).join('')}</ol></section>`;
+    else if(tab==='events')content=`<section class="review-events">${renderRecordedObjectives(p)}<h4>주요 사건</h4><p class="hint">${p.events.length?p.events.length+'건 / 당시 공개 사건 '+p.eventCount+'건'+(p.eventCount>p.events.length?' · 처음과 마지막 사건을 보존한 발췌입니다.':''):'당시 사건 로그를 수집하지 않았습니다. 결과로 사건을 추정하지 않습니다.'}</p><ol>${p.events.map(e=>`<li><time>${fmtTime(e[0],e[1])}</time><span>${esc(e[4])}</span></li>`).join('')}</ol></section>`;
     else content=renderPublicMatchReview(db,selected.rec,selected.game,{...filter,events:false});
     detail=`<header class="review-heading"><p>${esc(db.competitions[selected.comp]?.name||selected.comp)} · ${selected.game.n}세트</p><h3>${esc(label(selected))}</h3><p class="review-result">${esc(winner)} 승리 <span>${esc(selected.date)} · 패치 ${esc(selected.patch)}</span></p><p class="hint">${esc(source)}. 기록과 당시 평가를 구분하며, 승패 원인을 단정하지 않습니다.</p></header><div class="review-tabs" role="tablist" aria-label="경기 복기 자료">${[['records','선수 기록'],['events','주요 사건'],['draft','밴픽 검토']].map(([id,name])=>`<button id="review-tab-${id}" data-review-tab="${id}" role="tab" aria-selected="${tab===id}" aria-controls="review-content" tabindex="${tab===id?0:-1}">${name}</button>`).join('')}</div><div id="review-content" role="tabpanel" aria-labelledby="review-tab-${tab}" tabindex="0">${content}</div>`;
   }

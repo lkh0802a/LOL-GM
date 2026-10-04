@@ -150,7 +150,7 @@ function fight(st,zone,sideArrs,ctx={}){
   if(deaths[0]===deaths[1]&&disengaged<0) winner = pw0[0]>=pw0[1]?0:1;
   st.vision[zone]=clamp((st.vision[zone]||0)+(winner===0?0.3:-0.3),-1,1);
   if(isTeamfight)for(const f of F){f.ps.teamfights++;if(f.side===winner)f.ps.teamfightWins++}
-  const res={winner,deaths,sur,init,engOk,disengaged,skillEngage,n:[sideArrs[0].length,sideArrs[1].length]};
+  const res={winner,deaths,sur,init,engOk,disengaged,skillEngage,participants:sideArrs.map(a=>a.map(p=>p.p.id)),n:[sideArrs[0].length,sideArrs[1].length]};
   expl(st,`교전 (${ctx.label||zone}) ${sideArrs[0].length}v${sideArrs[1].length}`,[
     ['선공권 Blue',initScore[0]],['선공권 Red',initScore[1]],['진입 성공확률',engP],['교전 전 전력 Blue',pw0[0]/1000],['교전 전 전력 Red',pw0[1]/1000]],
     {prob:engP,result:`${engOk?'진입 성공':'진입 실패'} · ${['Blue','Red'][winner]} 승리 ${deaths[1]}–${deaths[0]}${disengaged>=0?' (후퇴)':''}`});
@@ -325,7 +325,7 @@ function teamCall(st,side,obj,stakeBonus){
 function objectiveTick(st){
   if(matchEnded(st))return;
   const o=st.obj, R=st.rng, rules=st.patch.rules;
-  const run=(key,label,z,stake,reward)=>{
+  const run=(key,label,z,stake)=>{
     o.wait[key]=(o.wait[key]||0)+1;
     const c=[0,1].map(i=>teamCall(st,i,key,stake(i)+(o.wait[key]-1)*0.25));
     expl(st,`${label} 콜`,c.flatMap((x,i)=>x.votes.map(([p,u])=>[`${['Blue','Red'][i]} ${ROLE_KO[p.role]}`,u])),{result:`Blue ${c[0].go?'싸움':'포기'} / Red ${c[1].go?'싸움':'포기'}`});
@@ -347,30 +347,18 @@ function objectiveTick(st){
         takeStructure(st,giver,{lane:key==='baron'||key==='herald'?'bot':'top'});
       }
     }
-    if(taker>=0){o.wait[key]=0;const involved=c[taker]&&c[taker].part&&c[taker].part.length?c[taker].part:aliveOf(st,taker);involved.forEach(p=>{p.objectives++;matchQuestEvent(st,p,{epics:1,jungleStacks:p.role==='JGL'?1:0})});reward(taker);}
+    if(taker>=0&&!matchEnded(st)){const involved=c[taker]&&c[taker].part&&c[taker].part.length?c[taker].part:aliveOf(st,taker);awardMatchObjective(st,key,taker,involved);}
   };
   if(!o.soul&&o.dragonAt&&st.t>=o.dragonAt){
     const type=o.dragonTypes[o.dragonIdx%o.dragonTypes.length];
-    run('dragon',`${type} 드래곤`,'dragon',i=>{const m=st.sides[i].dragons.length,e=st.sides[1-i].dragons.length;return (m===3?0.4:0)+(e===3?0.6:0)},w=>{
-      st.sides[w].dragons.push(type); o.dragonIdx++; if(st.firsts.dragon===undefined)st.firsts.dragon=w;
-      aliveOf(st,w).forEach(p=>addGold(p,40));
-      log(st,`${st.sides[w].team.short} ${type} 드래곤 처치 (${st.sides[w].dragons.length}스택)`,{side:w,major:true,kind:'obj'});
-      if(st.sides[w].dragons.length>=4){st.sides[w].soul=true;o.soul=true;o.elderAt=st.t+6;log(st,`${st.sides[w].team.short} 드래곤 영혼 획득`,{side:w,major:true,kind:'obj'})}
-      else o.dragonAt=st.t+rules.dragonRespawn;
-    });
+    run('dragon',`${type} 드래곤`,'dragon',i=>{const m=st.sides[i].dragons.length,e=st.sides[1-i].dragons.length;return (m===3?0.4:0)+(e===3?0.6:0)});
   }
-  if(o.soul&&o.elderAt&&st.t>=o.elderAt){
-    run('elder','장로 드래곤','dragon',()=>0.8,w=>{st.sides[w].elderUntil=st.t+rules.elderBuff;o.elderAt=st.t+6;log(st,`${st.sides[w].team.short} 장로 드래곤 처치`,{side:w,major:true,kind:'obj'})});
-  }
-  if(!o.heraldDone&&st.t>=rules.heraldSpawn&&st.t<20){
-    run('herald','협곡의 전령','top',()=>-0.1,w=>{o.heraldDone=true;st.sides[w].herald++;st.sides[w].heraldCharge=true;log(st,`${st.sides[w].team.short} 협곡의 전령 획득`,{side:w,major:true,kind:'obj'})});
-  }
-  if(st.t>=o.baronAt){
-    run('baron','바론','baron',()=>0.1,w=>{st.sides[w].baronUntil=st.t+rules.baronBuff;st.sides[w].barons++;o.baronAt=st.t+rules.baronRespawn;
-      if(st.firsts.baron===undefined)st.firsts.baron=w;
-      aliveOf(st,w).forEach(p=>addGold(p,300));
-      log(st,`${st.sides[w].team.short} 바론 처치`,{side:w,major:true,kind:'obj'})});
-  }
+  if(matchEnded(st))return;
+  if(o.soul&&o.elderAt&&st.t>=o.elderAt)run('elder','장로 드래곤','dragon',()=>0.8);
+  if(matchEnded(st))return;
+  if(!o.heraldDone&&st.t>=rules.heraldSpawn&&st.t<20)run('herald','협곡의 전령','top',()=>-0.1);
+  if(matchEnded(st))return;
+  if(st.t>=o.baronAt)run('baron','바론','baron',()=>0.1);
 }
 
 function convert(st,w,r){
@@ -379,10 +367,8 @@ function convert(st,w,r){
   if(aliveOf(st,w).length<2||diff<1)return;
   let n=Math.max(1,diff-1);
   if(st.t>=st.obj.baronAt&&diff>=2&&st.rng.dec.chance(0.6)){
-    st.sides[w].baronUntil=st.t+st.patch.rules.baronBuff; st.sides[w].barons++; st.obj.baronAt=st.t+st.patch.rules.baronRespawn;
-    if(st.firsts.baron===undefined)st.firsts.baron=w;
-    aliveOf(st,w).forEach(p=>addGold(p,300));
-    log(st,`${st.sides[w].team.short} 한타 승리 후 바론 처치`,{side:w,major:true,kind:'obj'}); n--;
+    const involved=(r?.participants?.[w]||[]).map(id=>st.sides[w].ps.find(p=>p.p.id===id));
+    if(involved.every(Boolean)&&awardMatchObjective(st,'baron',w,involved.filter(p=>alive(st,p)),true))n--;
   }
   const buffed=st.sides[w].baronUntil>st.t||st.sides[w].elderUntil>st.t;
   const allowNexus=diff>=3||aliveOf(st,1-w).length<=1||(diff>=2&&(buffed||st.t>=30))||(buffed&&st.t>=30);
@@ -492,5 +478,5 @@ function simulateMatch(db,blueId,redId,seed,ctx,quiet){
   if(st.winner<0)throw new Error('Match unresolved: neither nexus was destroyed within '+MATCH_SIMULATION_MAX_MINUTES+' simulated minutes; no official result produced (seed '+seed+')');
   const endSec=st.ending.second;
   st.log.sort((a,b)=>a.t-b.t||a.sec-b.sec);
-  return {seed,winner:st.winner,ending:{...st.ending},damageBasis:'effective-aggregate-v1',duration:t+endSec/60,durationStr:fmtTime(t,endSec),draft:d,sides:st.sides,log:st.log,expl:st.expl,goldHist:st.goldHist,firsts:st.firsts};
+  return {seed,winner:st.winner,ending:{...st.ending},damageBasis:'effective-aggregate-v1',objectiveEvents:st.objectiveEvents||[],duration:t+endSec/60,durationStr:fmtTime(t,endSec),draft:d,sides:st.sides,log:st.log,expl:st.expl,goldHist:st.goldHist,firsts:st.firsts};
 }
