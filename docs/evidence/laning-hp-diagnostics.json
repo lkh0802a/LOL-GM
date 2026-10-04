@@ -48,5 +48,10 @@
   ],
   "preservation": "All #164–184 sources/failures/history including #180 first successful screenshot overwrite limitation protected. Current /tmp/laning-hp-* copies/logs/initial screenshots unique; no old bytes overwritten.",
   "deferred": "100season/device/mobile/TalkBack final QA, external organized professional calibration, shop/waves reviewed metadata/full approved scope",
-  "next": "8.4.5 actual combat cache inputs versus supported mutation/invalidation consumers; reproduce before correction, not yet verified defect"
+  "next": "8.4.5 actual combat cache inputs versus supported mutation/invalidation consumers; reproduce before correction, not yet verified defect",
+  "supersededDocumentationHead": {
+    "head": "08ae1164f53dbfa38cee073180e5bca31906f3f3",
+    "run": 37219490595,
+    "reason": "Full-inventory reread found dated #171 current-status wording; label the original snapshot without changing approval/source/history. Actual code and acceptance unchanged. Not final CI success."
+  }
 }
