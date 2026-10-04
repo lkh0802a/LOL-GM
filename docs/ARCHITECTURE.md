@@ -202,3 +202,5 @@ one usage evaluator. Representatives shape negotiating demands and patience, not
 client utility. UI-player-commitments owns compact status and confirm/cancel
 controls; player detail/roster delegate to it. Agents/promises are optional save
 fields; no second contract, roster, finance or preview ledger is introduced.
+
+상단 내비게이션과 표시 상태는 `ui-state.js:updateAppNavigation`, 공통 토큰·레이아웃은 `shell.html`이 소유한다. 주요 이동은 모바일을 고려해 상단에 유지한다. 시작 전에는 새 게임/불러오기, 커리어 시작 후에는 기존 목적별 route를 표시한다. 분석실 경기 복기는 `ui-match-history.js`의 목록/선택 요약/실제 기록·사건·밴픽 탭으로 구성하며 transient review/reviewTab 상태와 source authority를 분리한다. 전체 도메인 UI 교체는 12.3–12.5의 다음 실제 연결 검증 단위로 남는다.

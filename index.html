@@ -36,6 +36,39 @@ button,select,input,textarea{font:inherit;color:inherit}
 #analysis-tiers details{width:300px;white-space:normal;overflow-wrap:anywhere}
 #analysis-tiers summary{min-height:44px;cursor:pointer}
 .analysis-controls label{flex:1 1 160px}
+/* Match review: one selected record, explicit evidence tabs, compact master/detail. */
+.match-workspace{border:1px solid var(--line);background:var(--surf)}
+.review-title{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.review-title h3,.review-title p{margin:0}
+.review-layout{display:grid;grid-template-columns:260px minmax(0,1fr);min-height:420px}
+.review-list{border-right:1px solid var(--line);min-width:0;background:var(--bg)}
+.review-picker{padding:12px;border-bottom:1px solid var(--line)}
+.review-picker label{display:block;font-size:12px;color:var(--mut)}
+.review-picker select{display:block;width:100%;max-width:100%;margin-top:5px;min-width:0}
+.review-list-buttons{max-height:620px;overflow:auto}
+.review-list-buttons button{display:block;text-align:left;width:100%;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;padding:12px 14px;color:var(--ink)}
+.review-list-buttons button[aria-pressed=true]{background:var(--surf);box-shadow:inset 3px 0 var(--brass)}
+.review-list-buttons span,.review-list-buttons small{display:block;font-size:12px;color:var(--mut)}
+.review-list-buttons strong{display:block;margin:3px 0;font-size:14px;font-weight:600}
+.review-detail{min-width:0;padding:0 16px 16px}
+.review-heading{display:block;padding:16px 0;max-width:none;text-align:left}
+.review-heading h3{font-family:inherit;font-size:22px;margin:5px 0;letter-spacing:0}
+.review-heading p{margin:3px 0;font-size:13px}
+.review-result{font-weight:600}.review-result span{font-weight:400;color:var(--mut);margin-left:12px}
+.review-tabs{display:flex;gap:20px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.review-tabs button{border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;color:var(--mut);padding:10px 0;font-size:13px}
+.review-tabs button[aria-selected=true]{border-bottom-color:var(--brass);color:var(--ink);font-weight:600}
+.review-detail h3,.review-detail h4,.review-title h3{font-family:inherit;letter-spacing:0}
+.review-detail table{font-size:12px;font-variant-numeric:tabular-nums}
+.review-detail td:nth-child(n+3):not(:last-child),.review-detail th:nth-child(n+3):not(:last-child){text-align:right}
+.review-detail td,.review-detail th{padding:8px 10px}
+.review-items{max-width:180px;white-space:normal}.review-items summary{white-space:nowrap}
+.review-events ol{list-style:none;padding:0;margin:0}
+.review-events li{display:grid;grid-template-columns:54px minmax(0,1fr);gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}
+.review-events time{font-variant-numeric:tabular-nums;color:var(--mut)}
+.review-empty{padding:48px 20px;color:var(--mut);max-width:440px}.review-empty h4{color:var(--ink)}
+@media(max-width:720px){.review-layout{grid-template-columns:minmax(0,1fr)}.review-list{border-right:0}.review-list-buttons{display:none}.review-title{display:block}.review-title p{margin-top:4px}.review-detail{padding:0 10px 12px}.review-heading h3{font-size:19px}.review-result span{display:block;margin-left:0}.review-tabs{gap:18px}}
+
 .analysis-room #opponentpreparation>label{display:flex;flex-direction:column;gap:4px;max-width:360px;margin-bottom:12px;color:var(--mut);font-size:12px}
 .analysis-room #pprepteam{background:var(--surf);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:16px;color:var(--ink);width:100%;min-width:0}
 .controls label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--mut);min-width:0}
@@ -291,11 +324,27 @@ td.fmt{font-size:12px;color:var(--mut);white-space:normal;min-width:200px}
  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
  #ll li{animation:none}
 }
+
+/* Compact top navigation: management destinations above, selected details inside screens. */
+:root{--app-bar-height:58px}
+body>header.app-bar{max-width:none;margin:0;padding:10px 20px;height:var(--app-bar-height);background:var(--surf);border-bottom:1px solid var(--line);align-items:center;flex-wrap:nowrap;gap:20px}
+.app-brand{font-size:17px;letter-spacing:.5px;flex-shrink:0}
+.app-context{min-width:0;flex:1}.app-context b,.app-context span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.app-context b{font-size:14px}.app-context span{font-size:12px;color:var(--mut)}
+#app-save{background:none;border:1px solid var(--line);border-radius:3px;padding:6px 9px;white-space:nowrap;font-size:12px}
+.app-theme{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--mut)}.app-theme select{padding:4px;border:1px solid var(--line);background:var(--surf)}
+body>nav#app-nav{position:sticky;top:0;width:100%;border-bottom:1px solid var(--line);background:var(--surf);z-index:7}
+#app-nav>div{display:flex;max-width:none;padding:0 20px;margin:0;gap:18px;overflow-x:auto}
+#app-nav button{display:block;padding:11px 2px;flex-shrink:0;border:0;border-bottom:2px solid transparent;font-size:13px;color:var(--mut)}
+#app-nav button[aria-current=page]{border-bottom-color:var(--brass);color:var(--ink);font-weight:600}
+body>main{max-width:1440px;margin:0 auto;padding:22px 24px 60px}
+h2{font-family:inherit;font-weight:600;letter-spacing:0}.controls{border-radius:4px}.seg{border-radius:3px}
+body[data-career=false] #app-nav button:not([data-v=season]):not([data-v=data]){display:none}
+@media(max-width:720px){body>header.app-bar{padding:8px 12px;gap:12px}.app-brand{font-size:14px}.app-theme{font-size:0}.app-theme select{font-size:12px;width:70px}#app-nav>div{padding:0 12px;gap:18px}body>main{padding:16px 12px 60px}.app-context b{font-size:13px}.app-context span{font-size:11px}}
 </style>
 </head>
-<body>
-<header><a class="skip-link" href="#main">게임 콘텐츠로 건너뛰기</a><h1>LOL <span>GM</span></h1><p>살아 움직이는 e스포츠 세계</p></header>
-<nav aria-label="주요 화면"><div><button type="button" data-v="season">시즌</button><button type="button" data-v="match">스크림</button><button type="button" data-v="squad">선수단</button><button type="button" data-v="analysis">분석실</button><button type="button" data-v="patch">패치·메타</button><button type="button" data-v="data">저장</button></div></nav>
+<body data-career="false">
+<header class="app-bar"><a class="skip-link" href="#main">게임 콘텐츠로 건너뛰기</a><strong class="app-brand">LOL <span>GM</span></strong><div class="app-context"><b id="app-screen">새 게임</b><span id="app-club"></span></div><button type="button" data-v="data" id="app-save">불러오기</button><label class="app-theme">화면<select id="app-theme" aria-label="화면 색상"><option value="auto">자동</option><option value="dark">어둡게</option><option value="light">밝게</option></select></label></header>
+<nav aria-label="주요 화면" id="app-nav"><div><button type="button" data-v="season">일정·대회</button><button type="button" data-v="squad">선수단</button><button type="button" data-v="match">경기·스크림</button><button type="button" data-v="analysis">분석실</button><button type="button" data-v="patch">패치·메타</button></div></nav>
 <main id="main" tabindex="-1" aria-label="게임 콘텐츠"></main>
 <div id="overlay" hidden role="dialog" aria-modal="true" aria-label="시리즈 상세" tabindex="-1"></div>
 <script>
@@ -13507,16 +13556,34 @@ function bindRecordedDraftReview(root,rec){
 function renderPublicMatchReview(db,rec,game,filter={}){
   const read=recordedPublicMatch(db,rec,game),p=read.record;
   if(!p)return `<section><h3>저장된 경기 기록</h3><p class="hint">${read.reason==='no-authority'?'이 연습 경기 기록의 조회 권한이 없습니다.':read.reason==='not-recorded'?'이 경기의 당시 상세 기록이 없습니다. 세트 요약과 기록된 밴픽 근거만 확인할 수 있습니다.':'경기 기록의 출처를 확인할 수 없습니다.'} 현재 선수 상태로 과거 기록을 다시 만들지 않습니다.</p></section>`;
-  return `<section><h3>${rec.practiceModel?'연습 당시 관측된 경기 기록':'당시 확정된 경기 기록'}</h3><p class="hint">${esc(p.date)} · 패치 ${esc(p.patch)} · ${p.duration.toFixed(1)}분. ${rec.practiceModel?'참가 구단의 비공개 연습 관측입니다.':'공개 경기 결과입니다.'} 숨은 능력·숙련 추정이나 승패 원인 판정이 아닙니다.</p>${p.sides.map(s=>`<h4>${esc(s.name)}</h4><div class="scroll"><table><thead><tr><th>선수·역할</th><th>챔피언</th><th>K/D/A</th><th>CS</th><th>획득 골드</th><th>피해량</th><th>레벨</th><th>아이템·역할 보상 포함</th></tr></thead><tbody>${s.players.filter(x=>!filter.position||x[2]===filter.position).map(x=>`<tr><td>${esc(x[1])} · ${ROLE_KO[x[2]]}</td><td>${esc(p.championNames[x[3]]||x[3])}</td><td>${x[4]}/${x[5]}/${x[6]}</td><td>${x[7]}</td><td>${x[8]}</td><td>${x[9]}</td><td>${x[10]}</td><td>${x[11].map(id=>esc(p.itemNames[id]||id)).join(', ')||'없음'}</td></tr>`).join('')}</tbody></table></div>`).join('')}<h4>실제 주요 사건</h4><p class="hint">${p.events.length?'당시 로그의 공개 처치·교전·오브젝트·구조물 사건 '+p.events.length+'건 / '+p.eventCount+'건'+(p.eventCount>p.events.length?' · 중간 사건은 저장 크기를 제한하기 위해 생략했습니다.':''): '당시 주요 사건 로그를 수집하지 않았습니다. 결과로 사건을 추정하지 않습니다.'}</p><ol>${p.events.map(e=>`<li><time>${fmtTime(e[0],e[1])}</time> ${esc(e[4])}</li>`).join('')}</ol></section>`;
+  return `<section><h3>${rec.practiceModel?'연습 당시 관측된 경기 기록':'당시 확정된 경기 기록'}</h3><p class="hint">${esc(p.date)} · 패치 ${esc(p.patch)} · ${p.duration.toFixed(1)}분. ${rec.practiceModel?'참가 구단의 비공개 연습 관측입니다.':'공개 경기 결과입니다.'} 숨은 능력·숙련 추정이나 승패 원인 판정이 아닙니다.</p>${p.sides.map(s=>`<h4>${esc(s.name)}</h4><div class="scroll"><table><thead><tr><th>선수·역할</th><th>챔피언</th><th>K/D/A</th><th>CS</th><th>획득 골드</th><th>피해량</th><th>레벨</th><th>아이템·역할 보상 포함</th></tr></thead><tbody>${s.players.filter(x=>!filter.position||x[2]===filter.position).map(x=>`<tr><td>${esc(x[1])} · ${ROLE_KO[x[2]]}</td><td>${esc(p.championNames[x[3]]||x[3])}</td><td>${x[4]}/${x[5]}/${x[6]}</td><td>${x[7]}</td><td>${x[8]}</td><td>${x[9]}</td><td>${x[10]}</td><td><details class="review-items"><summary>${x[11].length}개</summary>${x[11].map(id=>esc(p.itemNames[id]||id)).join(', ')||'없음'}</details></td></tr>`).join('')}</tbody></table></div>`).join('')}${filter.events===false?'':`<h4>실제 주요 사건</h4><p class="hint">${p.events.length?'당시 로그의 공개 처치·교전·오브젝트·구조물 사건 '+p.events.length+'건 / '+p.eventCount+'건'+(p.eventCount>p.events.length?' · 중간 사건은 저장 크기를 제한하기 위해 생략했습니다.':''): '당시 주요 사건 로그를 수집하지 않았습니다. 결과로 사건을 추정하지 않습니다.'}</p><ol>${p.events.map(e=>`<li><time>${fmtTime(e[0],e[1])}</time> ${esc(e[4])}</li>`).join('')}</ol>`}</section>`;
 }
 function analysisMatchPanel(db,team,filter){
-  const rows=officialMatchReviews(db,team.id,filter),shown=rows.slice(0,30),selected=shown.find(x=>JSON.stringify([x.key,x.di,x.mi,x.gi])===ANALYSIS_SET.review)||null;
-  return `<section><h3>공식 경기 복기</h3><p class="hint">조건에 맞는 ${rows.length}세트 중 최근 ${shown.length}세트. 저장된 공개 결과와 자기 구단의 당시 밴픽 평가를 구분합니다.</p>${shown.length?`<div class="controls analysis-controls"><label>경기<select id="analysis-review"><option value="">경기를 선택하세요</option>${shown.map(x=>{const id=JSON.stringify([x.key,x.di,x.mi,x.gi]);return `<option value="${esc(id)}"${selected===x?' selected':''}>${esc(x.date)} · ${esc(db.competitions[x.comp]?.name||x.comp)} · ${esc(db.teams[x.game.blue]?.short||x.game.blue)} / ${esc(db.teams[x.game.red]?.short||x.game.red)} · ${x.game.n}세트</option>`}).join('')}</select></label></div>`:'<p class="empty">조건에 맞는 완료된 공식 경기 기록이 없습니다.</p>'}${selected?renderPublicMatchReview(db,selected.rec,selected.game,filter)+renderRecordedDraftReview(db,selected.rec,selected.game):''}</section>`;
+  const rows=officialMatchReviews(db,team.id,filter),shown=rows.slice(0,30),key=x=>JSON.stringify([x.key,x.di,x.mi,x.gi]),selected=shown.find(x=>key(x)===ANALYSIS_SET.review)||null;
+  const tab=['records','events','draft'].includes(ANALYSIS_SET.reviewTab)?ANALYSIS_SET.reviewTab:'records',read=selected&&recordedPublicMatch(db,selected.rec,selected.game),p=read?.record;
+  const label=x=>`${db.teams[x.game.blue]?.short||x.game.blue} / ${db.teams[x.game.red]?.short||x.game.red}`;
+  const empty='<div class="review-empty"><h4>복기할 경기를 선택하세요</h4><p>왼쪽 경기 목록에서 세트를 선택하면 당시 선수 기록, 주요 사건, 우리 구단의 밴픽 검토를 확인할 수 있습니다.</p></div>';
+  let detail=empty;
+  if(selected){
+    const source=p?`${p.duration.toFixed(1)}분 · 당시 저장된 공개 기록`:'당시 상세 기록 없음',winner=db.teams[selected.game.winner]?.short||selected.game.winner;
+    let content;
+    if(tab==='draft')content=renderRecordedDraftReview(db,selected.rec,selected.game)||'<p class="empty">조회할 수 있는 당시 밴픽 검토가 없습니다. 현재 상태로 재구성하지 않습니다.</p>';
+    else if(!p)content=renderPublicMatchReview(db,selected.rec,selected.game,filter);
+    else if(tab==='events')content=`<section class="review-events"><h4>주요 사건</h4><p class="hint">${p.events.length?p.events.length+'건 / 당시 공개 사건 '+p.eventCount+'건'+(p.eventCount>p.events.length?' · 처음과 마지막 사건을 보존한 발췌입니다.':''):'당시 사건 로그를 수집하지 않았습니다. 결과로 사건을 추정하지 않습니다.'}</p><ol>${p.events.map(e=>`<li><time>${fmtTime(e[0],e[1])}</time><span>${esc(e[4])}</span></li>`).join('')}</ol></section>`;
+    else content=renderPublicMatchReview(db,selected.rec,selected.game,{...filter,events:false});
+    detail=`<header class="review-heading"><p>${esc(db.competitions[selected.comp]?.name||selected.comp)} · ${selected.game.n}세트</p><h3>${esc(label(selected))}</h3><p class="review-result">${esc(winner)} 승리 <span>${esc(selected.date)} · 패치 ${esc(selected.patch)}</span></p><p class="hint">${esc(source)}. 기록과 당시 평가를 구분하며, 승패 원인을 단정하지 않습니다.</p></header><div class="review-tabs" role="tablist" aria-label="경기 복기 자료">${[['records','선수 기록'],['events','주요 사건'],['draft','밴픽 검토']].map(([id,name])=>`<button id="review-tab-${id}" data-review-tab="${id}" role="tab" aria-selected="${tab===id}" aria-controls="review-content" tabindex="${tab===id?0:-1}">${name}</button>`).join('')}</div><div id="review-content" role="tabpanel" aria-labelledby="review-tab-${tab}" tabindex="0">${content}</div>`;
+  }
+  return `<section class="match-workspace"><div class="review-title"><h3>공식 경기 복기</h3><p class="hint">조건에 맞는 ${rows.length}세트 · 최근 ${shown.length}세트 표시</p></div><div class="review-layout"><aside class="review-list" aria-label="복기할 경기"><div class="review-picker"><label>경기 선택<select id="analysis-review"><option value="">경기를 선택하세요</option>${shown.map(x=>`<option value="${esc(key(x))}"${selected===x?' selected':''}>${esc(x.date)} · ${esc(label(x))} · ${x.game.n}세트</option>`).join('')}</select></label></div>${shown.length?`<div class="review-list-buttons">${shown.map(x=>`<button data-review-game="${esc(key(x))}" aria-pressed="${selected===x}"><span>${esc(x.date)} · ${x.game.n}세트</span><strong>${esc(label(x))}</strong><small>${esc(db.competitions[x.comp]?.name||x.comp)}</small></button>`).join('')}</div>`:'<p class="empty">조건에 맞는 완료된 공식 경기가 없습니다.</p>'}</aside><div class="review-detail">${detail}</div></div></section>`;
 }
 function bindAnalysisMatch(){
-  const node=$('#analysis-review');if(node)node.onchange=e=>{const team=analysisSelectedTeam(DB),rows=team?officialMatchReviews(DB,team.id,analysisFilter(DB,team)):[];
-    if(e.target.value&&!rows.slice(0,30).some(x=>JSON.stringify([x.key,x.di,x.mi,x.gi])===e.target.value))return;
-    ANALYSIS_SET.review=e.target.value;analysisRefresh();};
+  const choose=value=>{const team=analysisSelectedTeam(DB),rows=team?officialMatchReviews(DB,team.id,analysisFilter(DB,team)):[];
+    if(value&&!rows.slice(0,30).some(x=>JSON.stringify([x.key,x.di,x.mi,x.gi])===value))return;
+    ANALYSIS_SET.review=value;analysisRefresh();};
+  const node=$('#analysis-review');if(node)node.onchange=e=>choose(e.target.value);
+  document.querySelectorAll('[data-review-game]').forEach(b=>b.onclick=()=>choose(b.dataset.reviewGame));
+  const tabs=[...document.querySelectorAll('[data-review-tab]')];
+  const activate=b=>{ANALYSIS_SET.reviewTab=b.dataset.reviewTab;analysisRefresh();document.getElementById(b.id)?.focus()};
+  tabs.forEach((b,i)=>{b.onclick=()=>activate(b);b.onkeydown=e=>{let n;if(e.key==='ArrowRight')n=(i+1)%tabs.length;if(e.key==='ArrowLeft')n=(i+tabs.length-1)%tabs.length;if(e.key==='Home')n=0;if(e.key==='End')n=tabs.length-1;if(n!==undefined){e.preventDefault();activate(tabs[n])}}});
   const team=analysisSelectedTeam(DB),selected=team&&officialMatchReviews(DB,team.id,analysisFilter(DB,team)).find(x=>JSON.stringify([x.key,x.di,x.mi,x.gi])===ANALYSIS_SET.review);
   if(selected)bindRecordedDraftReview(document,selected.rec);
 }
@@ -13856,7 +13923,7 @@ let MK={role:'ALL',scope:'region',tab:'fa'};
 let MC={blue:'HTG',red:'SBZ',n:300,res:null,running:false};
 let PSET={role:'ALL',q:'',region:'GLOBAL',patch:'ALL',comp:'ALL',period:'ALL',year:'',season:'ALL',split:'ALL',league:'ALL',scope:'ALL',position:'ALL',team:'ALL',player:'ALL',opponent:'ALL',color:'ALL',playerSearch:'',prepTeam:'AUTO',champ:null};
 let DRAFT_UI=null;
-let ANALYSIS_SET={mode:'own',team:'AUTO',period:'90',patch:'CURRENT',position:'ALL',prepTeam:'AUTO',review:'',tierView:'public',tierQ:'',comp:'ALL'};
+let ANALYSIS_SET={mode:'own',team:'AUTO',period:'90',patch:'CURRENT',position:'ALL',prepTeam:'AUTO',review:'',reviewTab:'records',tierView:'public',tierQ:'',comp:'ALL'};
 
 // Keep the supported screen map and its binding ownership in one place.
 const UI_ROUTES=Object.freeze({
@@ -13913,11 +13980,22 @@ window.addEventListener?.('resize',()=>{
   uiEnhanceScrollRegions(document.querySelector('#main'));
   if(UI_OVERLAY)uiEnhanceScrollRegions(document.querySelector('#overlay'));
 });
+function updateAppNavigation(){
+  const started=!!DB.world,names={season:started?'일정·대회':'새 게임',squad:'선수단',match:'경기·스크림',analysis:'분석실',patch:'패치·메타',data:started?'저장·불러오기':'불러오기'};
+  document.body?.setAttribute('data-career',String(started));
+  document.querySelectorAll('nav button').forEach(b=>{if(names[b.dataset.v])b.textContent=names[b.dataset.v]});
+  const save=document.querySelector('#app-save');if(save){save.textContent=names.data;save.setAttribute?.('aria-current',VIEW==='data'?'page':'false');save.onclick=()=>navigateTo('data')};
+  const screen=document.querySelector('#app-screen'),club=document.querySelector('#app-club');
+  if(screen)screen.textContent=names[VIEW];
+  if(club){const t=started&&DB.teams&&typeof managedTeamId==='function'&&DB.teams[managedTeamId(DB)];club.textContent=t?`${t.name} · ${DB.worldDate||DB.year}`:'커리어 시작 전'}
+  const theme=document.querySelector('#app-theme');if(theme){let value='auto';try{value=localStorage.getItem('lol-gm-theme')||'auto'}catch(e){}theme.value=['auto','dark','light'].includes(value)?value:'auto';document.documentElement?.setAttribute('data-theme',theme.value);theme.onchange=()=>{document.documentElement.setAttribute('data-theme',theme.value);try{localStorage.setItem('lol-gm-theme',theme.value)}catch(e){}}}
+}
 function nav(){
   const route=UI_ROUTES[VIEW];
   if(!route)throw new Error('Unknown screen: '+VIEW);
   const main=document.querySelector('#main');
   if(!main)throw new Error('Main screen container missing');
+  updateAppNavigation();
   cancelUiTasks();
   UI_RENDER_ID++;
   if(LIVE!==null)clearInterval(LIVE);
@@ -13952,7 +14030,7 @@ function resetUiForWorld(){
   LAST=null;LASTSER=null;OPEN_P=null;SQUAD_EDIT=null;MSG='';
   MC.res=null;MC.running=false;SSET.view=null;
   PSET.team='ALL';PSET.player='ALL';PSET.opponent='ALL';PSET.color='ALL';PSET.playerSearch='';PSET.prepTeam='AUTO';
-  ANALYSIS_SET={mode:'own',team:'AUTO',period:'90',patch:'CURRENT',position:'ALL',prepTeam:'AUTO',review:'',tierView:'public',tierQ:'',comp:'ALL'};
+  ANALYSIS_SET={mode:'own',team:'AUTO',period:'90',patch:'CURRENT',position:'ALL',prepTeam:'AUTO',review:'',reviewTab:'records',tierView:'public',tierQ:'',comp:'ALL'};
 }
 
 /* ==== FILE: app.js ==== */
