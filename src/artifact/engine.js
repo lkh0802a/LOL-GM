@@ -58,8 +58,8 @@ function fightSkillPhase(own,enemy,round,engaged){
 }
 
 function fmtTime(m,sec){return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`}
-function log(st,text,opt={}){if(st.quiet)return;if(opt.sec===undefined)st.cur=Math.min(59,st.cur+st.rng.log.int(2,7));st.log.push({t:st.t,sec:opt.sec??st.cur,text,side:opt.side??-1,major:!!opt.major,kind:opt.kind||''})}
-function expl(st,title,factors,extra={}){if(st.quiet)return;st.expl.push({t:st.t,title,factors,...extra})}
+function log(st,text,opt={}){if(matchEnded(st))return null;const sec=matchEventSecond(st,opt);if(!st.quiet)st.log.push({t:st.t,sec,text,side:opt.side??-1,major:!!opt.major,kind:opt.kind||''});return sec}
+function expl(st,title,factors,extra={}){if(st.quiet||matchEnded(st))return;st.expl.push({t:st.t,title,factors,...extra})}
 function pname(st,ps){return `${st.sides[ps.side].team.short} ${ps.p.name}(${ps.champ.name})`}
 
 function addGold(ps,g){ps.gold+=g;ps.goldEarned+=g;
@@ -68,6 +68,7 @@ function addGold(ps,g){ps.gold+=g;ps.goldEarned+=g;
 function addXp(ps,x,source='ordinary'){ps.xp+=x*(source==='ordinary'&&ps.quest?.completed?1+(ps.quest.rules.xpBonus||0):1);let l=1;for(let i=1;i<XP_TABLE.length;i++)if(ps.xp>=XP_TABLE[i])l=i+1;ps.lvl=Math.min(ps.quest?.completed?ps.quest.rules.levelCap||18:18,l)}
 
 function killPlayer(st,killer,victim,assists,reason){
+  if(matchEnded(st))return;
   const R=st.patch.rules;
   victim.d++; victim.hp=1;
   const sec=victim.lvl*2.5+6+Math.max(0,st.t-15)*0.9;
@@ -83,6 +84,7 @@ function killPlayer(st,killer,victim,assists,reason){
 
 // ----- 교전: Setup → Engage → Burst → Extended → Cleanup -----
 function fight(st,zone,sideArrs,ctx={}){
+  if(matchEnded(st))return null;
   const R=st.rng;
   if(!sideArrs[0].length||!sideArrs[1].length) return null;
   for(const ps of sideArrs.flat()){const lane=LANES.find(l=>LANE_ROLES[l].includes(ps.role));if(lane&&zone!==lane)ps.questAwayUntil=st.t+1}
@@ -156,13 +158,14 @@ function fight(st,zone,sideArrs,ctx={}){
 // ----- 구조물 -----
 function laneProgress(s,l){return s.towers[l].filter(x=>!x).length}
 function takeStructure(st,side,opt={}){
+  if(matchEnded(st))return;
   const en=st.sides[1-side];
   // 억제기 재생성 처리
   for(const l of LANES) if(!en.towers[l][3]&&en.inhibAt[l]&&st.t>=en.inhibAt[l]){en.towers[l][3]=true;en.inhibAt[l]=0;log(st,`${en.team.short} ${LANE_KO[l]} 억제기 재생성`,{side:1-side})}
   const inhibDown=LANES.some(l=>!en.towers[l][3]);
   if(opt.allowNexus&&inhibDown){
     if(en.nexusT>0){en.nexusT--; st.sides[side].towersTaken++; log(st,`${st.sides[side].team.short} 쌍둥이 포탑 파괴`,{side,major:true,kind:'tower'}); return 'nexusT'}
-    en.nexus=false; log(st,`${st.sides[side].team.short} 넥서스 파괴 — 승리`,{side,major:true,kind:'nexus'}); return 'nexus';
+    return destroyMatchNexus(st,side);
   }
   let lanes=opt.lane?[opt.lane]:LANES.slice();
   lanes=lanes.filter(l=>en.towers[l].some(x=>x));
@@ -184,6 +187,7 @@ function takeStructure(st,side,opt={}){
 
 // ----- 틱: 수입/시야/라인전/정글/오브젝트/운영 -----
 function incomeTick(st){
+  if(matchEnded(st))return;
   const R=st.patch.rules, lane=st.t<14;
   for(const s of st.sides) for(const ps of s.ps){
     if(!alive(st,ps)){continue}
@@ -203,6 +207,7 @@ function incomeTick(st){
 }
 const ZONES=['top','mid','bot','dragon','baron'];
 function visionTick(st){
+  if(matchEnded(st))return;
   const inv=[0,1].map(i=>{const s=st.sides[i],a=aliveOf(st,i),tac=.7+.6*s.team.tactics.vision_investment/100;
     let questVision=0;for(const p of a){const ward=roleQuestWard(st,p);questVision+=ward;p.vision+=ward+(at(p,'vision_understanding')*(p.role==='SUP'||p.role==='JGL'?1.5:.8))*tac*.65}
     return avg(a.map(p=>at(p,'vision_understanding')*(p.role==='SUP'||p.role==='JGL'?1.5:.8)))*(a.length/5)*tac+questVision*.1});
@@ -213,6 +218,7 @@ function pushFor(st,side,l){return side===0?st.lanePush[l]:-st.lanePush[l]}
 function lanePS(st,side,l){return st.sides[side].ps.filter(p=>LANE_ROLES[l].includes(p.role))}
 
 function laningTick(st){
+  if(matchEnded(st))return;
   const R=st.rng;
   for(const l of LANES){
     const A=lanePS(st,0,l).filter(p=>alive(st,p)), B=lanePS(st,1,l).filter(p=>alive(st,p));
@@ -248,6 +254,7 @@ function laningTick(st){
 }
 
 function jungleTick(st){
+  if(matchEnded(st))return;
   const R=st.rng;
   for(const side of [0,1]){
     const j=st.sides[side].ps.find(p=>p.role==='JGL'); if(!alive(st,j)||st.t<(st.jgNext[side]))continue;
@@ -312,6 +319,7 @@ function teamCall(st,side,obj,stakeBonus){
 }
 
 function objectiveTick(st){
+  if(matchEnded(st))return;
   const o=st.obj, R=st.rng, rules=st.patch.rules;
   const run=(key,label,z,stake,reward)=>{
     o.wait[key]=(o.wait[key]||0)+1;
@@ -362,6 +370,7 @@ function objectiveTick(st){
 }
 
 function convert(st,w,r){
+  if(matchEnded(st))return;
   const diff=aliveOf(st,w).length-aliveOf(st,1-w).length;
   if(aliveOf(st,w).length<2||diff<1)return;
   let n=Math.max(1,diff-1);
@@ -378,6 +387,7 @@ function convert(st,w,r){
 }
 
 function macroTick(st){
+  if(matchEnded(st))return;
   const R=st.rng;
   const gold=[0,1].map(i=>st.sides[i].ps.reduce((s,p)=>s+p.goldEarned,0));
   const force=[0,1].map(i=>{const s=st.sides[i], t=s.team.tactics;
@@ -421,6 +431,7 @@ function macroTick(st){
 }
 
 function towerTick(st){
+  if(matchEnded(st))return;
   const R=st.rng;
   if(st.t<8)return;
   for(const side of [0,1]){
@@ -439,11 +450,11 @@ function towerTick(st){
       }
       if(s.heraldCharge){p+=0.35;}
       p*=[1,0.65,0.4][idx];
-      if(R.exec.chance(clamp(p,0,0.8))){ if(s.heraldCharge){s.heraldCharge=false;log(st,`${s.team.short} 전령 사용 (${LANE_KO[l]})`,{side})} takeStructure(st,side,{lane:l}); }
+      if(R.exec.chance(clamp(p,0,0.8))){ if(s.heraldCharge){s.heraldCharge=false;log(st,`${s.team.short} 전령 사용 (${LANE_KO[l]})`,{side})} takeStructure(st,side,{lane:l}); if(matchEnded(st))return; }
     }
     // 억제기가 밀린 팀은 슈퍼 미니언 압박을 받는다
     const inhibDown=LANES.filter(l=>!en.towers[l][3]).length;
-    if(inhibDown&&st.t>=20&&R.exec.chance(0.08*inhibDown+(aliveOf(st,1-side).length<=2?0.35:0))) takeStructure(st,side,{allowInhib:true,allowNexus:aliveOf(st,1-side).length<=3});
+    if(inhibDown&&st.t>=20&&R.exec.chance(0.08*inhibDown+(aliveOf(st,1-side).length<=2?0.35:0))) {takeStructure(st,side,{allowInhib:true,allowNexus:aliveOf(st,1-side).length<=3});if(matchEnded(st))return;}
     if(st.t>=22&&s.baronUntil>st.t&&R.exec.chance(0.3)) takeStructure(st,side,{allowInhib:true});
   }
 }
@@ -454,29 +465,28 @@ function simulateMatch(db,blueId,redId,seed,ctx,quiet){
   const d=runDraft(db,[blueId,redId],rng.draft,ctx);
   const mkSide=(tid,i)=>{const team=db.teams[tid],check=validateStartingLineup(db,team);if(!check.ok)throw new Error('Official lineup invalid: '+tid+' '+check.errors.join(', '));const ps=ROLES.map(r=>newPS(starterFor(db,team,r),i,r,d.picks[i][r],patch));
     return {team,ps,tacticContext:matchTacticSnapshot(db,team),color:i===0?'BLUE':'RED',towers:{top:[1,1,1,1],mid:[1,1,1,1],bot:[1,1,1,1]},inhibAt:{top:0,mid:0,bot:0},nexusT:2,nexus:true,dragons:[],soul:false,baronUntil:0,elderUntil:0,herald:0,heraldCharge:false,barons:0,kills:0,towersTaken:0}};
-  const st={t:0,cur:0,quiet:!!quiet,seed,rng,patch,sides:[mkSide(blueId,0),mkSide(redId,1)],lanePush:{top:0,mid:0,bot:0},vision:{top:0,mid:0,bot:0,dragon:0,baron:0},
+  const st={t:0,eventSecond:0,ending:null,quiet:!!quiet,seed,rng,patch,sides:[mkSide(blueId,0),mkSide(redId,1)],lanePush:{top:0,mid:0,bot:0},vision:{top:0,mid:0,bot:0,dragon:0,baron:0},
     obj:{dragonAt:patch.rules.dragonSpawn,dragonIdx:0,dragonTypes:rng.dec.chance(0.5)?['화염','대지','바다','바람']:['바다','바람','화염','대지'],soul:false,elderAt:0,heraldDone:false,baronAt:patch.rules.baronSpawn,wait:{}},
     jgNext:[2.6+rng.dec.range(0,1),2.6+rng.dec.range(0,1)],mods:[(ctx&&ctx.mods&&ctx.mods[blueId])||0,(ctx&&ctx.mods&&ctx.mods[redId])||0],log:[],expl:[...d.expl],firsts:{},goldHist:[],winner:-1};
   // 경기 당일 컨디션: 기복(consistency)이 낮은 팀일수록 편차가 크다
   st.mods=st.mods.map((m,i)=>m+(i===((ctx&&ctx.firstPick)||0)?BAL.first:0)+(lineupSynergy(db,st.sides[i].team,st.sides[i].ps.map(p=>p.p.id))-50)/1000+rng.mech.normal(0,0.07*(1.25-avg(st.sides[i].ps.map(p=>at(p,'consistency'))))));
   let t;
   for(t=1;t<=MATCH_SIMULATION_MAX_MINUTES;t++){
-    st.t=t; st.cur=rng.log.int(0,12);
+    st.t=t; st.eventSecond=rng.log.int(0,12);
     incomeTick(st); visionTick(st);
     if(t>=2&&t<14) laningTick(st);
     if(t>=2&&t<16) jungleTick(st);
     objectiveTick(st);
     if(t>=14) macroTick(st);
-    towerTick(st);
+    if(!matchEnded(st))towerTick(st);
     // 억제기 재생성
-    for(const s of st.sides) for(const l of LANES) if(!s.towers[l][3]&&s.inhibAt[l]&&t>=s.inhibAt[l]){s.towers[l][3]=true;s.inhibAt[l]=0}
+    if(!matchEnded(st))for(const s of st.sides) for(const l of LANES) if(!s.towers[l][3]&&s.inhibAt[l]&&t>=s.inhibAt[l]){s.towers[l][3]=true;s.inhibAt[l]=0}
     const g=st.sides.map(s=>s.ps.reduce((a,p)=>a+p.goldEarned,0)); st.goldHist.push(g[0]-g[1]);
-    const dead=st.sides.findIndex(s=>!s.nexus); if(dead>=0){st.winner=1-dead;break}
+    if(matchEnded(st))break;
 
   }
   if(st.winner<0)throw new Error('Match unresolved: neither nexus was destroyed within '+MATCH_SIMULATION_MAX_MINUTES+' simulated minutes; no official result produced (seed '+seed+')');
-  const endSec=Math.min(59,(st.cur||0)+1);
+  const endSec=st.ending.second;
   st.log.sort((a,b)=>a.t-b.t||a.sec-b.sec);
-  const last=st.log[st.log.length-1]; if(last&&last.kind==='nexus')last.sec=endSec;
-  return {seed,winner:st.winner,duration:t+endSec/60,durationStr:fmtTime(t,endSec),draft:d,sides:st.sides,log:st.log,expl:st.expl,goldHist:st.goldHist,firsts:st.firsts};
+  return {seed,winner:st.winner,ending:{...st.ending},duration:t+endSec/60,durationStr:fmtTime(t,endSec),draft:d,sides:st.sides,log:st.log,expl:st.expl,goldHist:st.goldHist,firsts:st.firsts};
 }

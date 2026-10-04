@@ -35,3 +35,5 @@ Do not treat historical next-work instructions as the active plan.
 ## Unified stage hierarchy
 
 Use [numeric stages 1–13 and dotted work units](DEVELOPMENT.md#unified-numeric-roadmap) for current tasks. Phase records now live in archive/phase-records; current guidance remains here.
+
+[8.1.1 넥서스 종료 결함의 원본·교정 비교](evidence/match-end-original-series.json)는 가상 엔진 재현 자료이며 프로 경기 보정 데이터가 아닙니다. 현재 상태·한계·후속은 DEVELOPMENT의 8.1.1을 따릅니다.

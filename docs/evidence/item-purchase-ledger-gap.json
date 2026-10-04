@@ -1,0 +1,204 @@
+{
+  "status": "verified defect; NOT corrected by nexus slice",
+  "kind": "fictional engine source probe, not professional calibration",
+  "seed": "record-official/g1",
+  "source": "newPS/addGold -> systems.js:advanceItemPurchases/applyItemCraftAction -> roleQuestWard/combatStats",
+  "definitions": "rawBank is current ps.gold, not a verified correct available-gold ledger; expected costs use actual applied pinned action.cost fields",
+  "records": [
+    {
+      "team": "CR",
+      "role": "TOP",
+      "earned": 10885.31046310919,
+      "rawBank": 10485.31046310919,
+      "starterSpend": 400,
+      "appliedRecipeCost": 9750,
+      "wardSpend": 0,
+      "expectedBankFromAppliedCosts": 735.3104631091901,
+      "items": [
+        "3008",
+        "663193",
+        "667101",
+        "3087",
+        "1036",
+        "1033"
+      ],
+      "actionIndex": 13,
+      "ledgerConsistent": false
+    },
+    {
+      "team": "CR",
+      "role": "JGL",
+      "earned": 12022.436185257091,
+      "rawBank": 11572.436185257091,
+      "starterSpend": 450,
+      "appliedRecipeCost": 10900,
+      "wardSpend": 0,
+      "expectedBankFromAppliedCosts": 672.436185257091,
+      "items": [
+        "3008",
+        "663193",
+        "667101",
+        "3087",
+        "3155",
+        "2022"
+      ],
+      "actionIndex": 17,
+      "ledgerConsistent": false
+    },
+    {
+      "team": "CR",
+      "role": "MID",
+      "earned": 8659.664622832775,
+      "rawBank": 8259.664622832775,
+      "starterSpend": 400,
+      "appliedRecipeCost": 7625,
+      "wardSpend": 0,
+      "expectedBankFromAppliedCosts": 634.6646228327754,
+      "items": [
+        "1086",
+        "3168",
+        "667101",
+        "3087",
+        "6690",
+        "1036"
+      ],
+      "actionIndex": 13,
+      "ledgerConsistent": false
+    },
+    {
+      "team": "CR",
+      "role": "ADC",
+      "earned": 12163.07887751414,
+      "rawBank": 11763.07887751414,
+      "starterSpend": 400,
+      "appliedRecipeCost": 11250,
+      "wardSpend": 0,
+      "expectedBankFromAppliedCosts": 513.0788775141391,
+      "items": [
+        "663193",
+        "667101",
+        "3087",
+        "3155",
+        "2022",
+        "1036"
+      ],
+      "actionIndex": 18,
+      "ledgerConsistent": false
+    },
+    {
+      "team": "CR",
+      "role": "SUP",
+      "earned": 8957.615124493721,
+      "rawBank": 8197.615124493721,
+      "starterSpend": 400,
+      "appliedRecipeCost": 7400,
+      "wardSpend": 360,
+      "expectedBankFromAppliedCosts": 797.6151244937209,
+      "items": [
+        "3870",
+        "3008",
+        "663193",
+        "3156",
+        "1028",
+        "1033"
+      ],
+      "actionIndex": 14,
+      "ledgerConsistent": false
+    },
+    {
+      "team": "VXG",
+      "role": "TOP",
+      "earned": 9363.244229273201,
+      "rawBank": 8963.244229273198,
+      "starterSpend": 400,
+      "appliedRecipeCost": 8375,
+      "wardSpend": 0,
+      "expectedBankFromAppliedCosts": 588.2442292732012,
+      "items": [
+        "3008",
+        "663193",
+        "667101",
+        "3144",
+        "3113",
+        "1037"
+      ],
+      "actionIndex": 10,
+      "ledgerConsistent": false
+    },
+    {
+      "team": "VXG",
+      "role": "JGL",
+      "earned": 8791.051474142174,
+      "rawBank": 8341.051474142172,
+      "starterSpend": 450,
+      "appliedRecipeCost": 7625,
+      "wardSpend": 0,
+      "expectedBankFromAppliedCosts": 716.0514741421739,
+      "items": [
+        "1102",
+        "3008",
+        "667101",
+        "3087",
+        "6690",
+        "1036"
+      ],
+      "actionIndex": 13,
+      "ledgerConsistent": false
+    },
+    {
+      "team": "VXG",
+      "role": "MID",
+      "earned": 10049.568258316727,
+      "rawBank": 9649.568258316729,
+      "starterSpend": 400,
+      "appliedRecipeCost": 9000,
+      "wardSpend": 0,
+      "expectedBankFromAppliedCosts": 649.5682583167272,
+      "items": [
+        "3168",
+        "663193",
+        "667101",
+        "3087"
+      ],
+      "actionIndex": 11,
+      "ledgerConsistent": false
+    },
+    {
+      "team": "VXG",
+      "role": "ADC",
+      "earned": 9368.66430715149,
+      "rawBank": 8968.66430715149,
+      "starterSpend": 400,
+      "appliedRecipeCost": 7750,
+      "wardSpend": 0,
+      "expectedBankFromAppliedCosts": 1218.66430715149,
+      "items": [
+        "1086",
+        "3046",
+        "667101",
+        "3144",
+        "3113"
+      ],
+      "actionIndex": 16,
+      "ledgerConsistent": false
+    },
+    {
+      "team": "VXG",
+      "role": "SUP",
+      "earned": 6451.04183324504,
+      "rawBank": 5691.041833245041,
+      "starterSpend": 400,
+      "appliedRecipeCost": 5000,
+      "wardSpend": 360,
+      "expectedBankFromAppliedCosts": 691.0418332450399,
+      "items": [
+        "3870",
+        "3006",
+        "3087",
+        "3057"
+      ],
+      "actionIndex": 13,
+      "ledgerConsistent": false
+    }
+  ]
+}
