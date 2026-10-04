@@ -34,7 +34,9 @@ files or another worker's unpushed changes exist in Cloud.
 
 한 명의 구현 담당자가 기존 시간당 45–55분 단위로 진행한다. 현재 열린 PR의 실패를 보존·해결하고 중복 작업을 피한다. PR #164의 초기 head `575d6203d605672173777411c32f19a6807755bc`에서 발생한 35초 core 실패는 보존한다. 최종 head `45e55e3d1eb75785cf80b5feafe9c39130c031fa`의 필수 CI `37147718717` 전체 성공(의료 4시드·2집계 포함)을 확인한 뒤 main `606b3d63eca2e6923ef4b004ae26b575dac2c4f2`로 병합했다. 분석실 첫 흐름 PR #165는 main `b9e3a65c510dde5b0e8a94ebbd5b83b3cb1b158a`의 CI `37149338522`와 Pages `37149770866`까지 성공했다. 공개/내부 티어 PR #166은 최종 head `a69ed20662acd96230f6427b9dadcdf3d7ff2c78`의 필수 CI `37151397972` 전체 성공 후 main `9d4d13cb91a788d555ced365929e9293ca612801`로 병합했다. 같은 main의 CI `37151887620`·standalone-sync 및 Pages `37152219937` 성공과 저장소 HTML 일치를 확인했다. 같은 후보 비교 PR #167은 최종 head `69390728286792597b6db00f246302030314f4c6`의 필수 CI `37154848493` 전체 성공(의료 4시드·2집계 포함) 후 main `023db1ebb731a50551bb829e94577c3424a7c6bd`로 순차 병합했다. 이 main의 CI `37155290244`·standalone-sync와 Pages `37155554005` 성공, 검증 head와 main HTML 일치를 확인했다. 이전 `c55efce`의 CI `37154672981`은 제한 설명 수정으로 대체/취소된 기록이며 최종 게이트 통과로 간주하지 않는다. 실제 밴픽 비교 PR #168은 최종 head `caaf6bea008620d9efa4b7d7ec33dcfbaabb37a6`의 필수 CI `37158156615` 전체 성공(의료 4시드·2집계 포함) 뒤 main `d43c9e161c52bc178555db71c50077b4eb4afb98`로 순차 병합됐다. 같은 main의 CI `37158616072`·standalone-sync와 Pages `37159016683`의 검증 artifact·조립·배포 성공, 테스트 head와 main HTML 일치를 확인했다. 수동 밴픽 당시 근거 PR #169는 최종 head `169cdd32f849b5a2e3f20b22141e1086b3ec623f`의 필수 CI `37161438479` 전체 성공(의료 4시드·2집계 포함) 후 main `041817b77164508cc756c663f73068d489f79f6b`로 순차 병합됐다. 같은 main의 전체 CI `37161783420`·standalone-sync와 Pages `37162158263`의 검증 artifact·온라인/오프라인 조립·배포 성공, 테스트 코드/docs/HTML 일치를 확인했다. Cloud 정책이 github.io 접속을 403으로 차단해 실제 공개 HTTP 응답은 여기서 재확인하지 못했다. 분석 흐름의 배포 워크플로 성공은 전체 분석실/재설계 완료를 뜻하지 않는다. 재설계 구현은 별도 검토 가능한 작업 단위/PR로 진행하고 정확한 현재 head의 필수 CI 성공 후 순차 병합·HTML/웹 배포한다. 전체 구조/구단 개요 12.3–12.5도 남아 있고 분석 12.9.5가 병합·게시됐으며 현재 경기 단위는 8.1.1이고, 전면 교체가 끝났다는 선언보다 실제 화면별 연결 증거를 기록한다.
 
-현재 검증된 출시 기준(2026-10-04): PR #171 최종 `d173a7f67f9da33dc7d6506be5ee3f9b629f99ac` 전체 CI `37168431212` 후 main `b1cf7abb94bd00583baf78d34872d19de96a9605` 병합. 같은 main 전체 CI/standalone `37168684378`, 검증 artifact/Pages `37168959385` 성공. 현재 구현 단위는 8.2.1이며 아직 새 출시 게이트를 통과하지 않았다. 직접 github.io HTTP는 정책 차단 상태다. 이전 출시 증거는 위 기록과 각 단위에 보존한다.
+이전 검증된 출시 기준(2026-10-04): PR #171 최종 `d173a7f67f9da33dc7d6506be5ee3f9b629f99ac` 전체 CI `37168431212` 후 main `b1cf7abb94bd00583baf78d34872d19de96a9605` 병합. 같은 main 전체 CI/standalone `37168684378`, 검증 artifact/Pages `37168959385` 성공. 당시 구현 단위는 8.2.1이었다. 최신 출시 기준과 이어가기는 아래 기록을 따른다. 직접 github.io HTTP는 정책 차단 상태다. 이전 출시 증거는 위 기록과 각 단위에 보존한다.
+
+현재 검증된 출시 기준 갱신(2026-10-04): PR #172 최종 `d309a635140e514b3a15c845a6a42dd2f7c0962e`의 전체 CI `37175037544` 성공 후 main `a529566d838f50f1b6215ffa07bba9c9b9f61b30`로 병합했다. 같은 main의 전체 CI/standalone `37175385189`와 Pages `37175728063` 성공을 확인했다. 문서 PR #173 최종 `9e2b0850d7ddb93ddd930576dbbc78cafc71338a`은 전체 CI `37176582788` 후 main `6ab1f55461ffbd8441226e55ec9600f8eceb970d`로 병합됐다. 같은 main의 전체 CI `37178547630`·standalone-sync와 Pages `37178753632`의 검증된 checkout/이전 head 차단/artifact 다운로드/온라인·오프라인 조립/실제 게시 성공을 확인했다. 문서 배포는 새 게임 기능 구현 단위가 아니다. 직접 공개 HTTP 응답은 Cloud 정책 차단으로 별도 확인되지 않았다. 현재 엔진 단위는 **8.2.2 구매 장소·귀환 상태 연결**이며 아래 소스 조사 경계와 미구현 사항을 따른다. 최초 영입 화면의 별도 미커밋 작업은 보존하고 출시로 간주하지 않는다.
 
 ## Unified numeric roadmap
 
@@ -1071,3 +1073,203 @@ Node 22 CPU 프로파일에서 `activeTeams`가 가장 큰 누적 소비였다. 
 | 5·12.7 | 과거 구단 해체/개명 | event-time labels/stableidentity/historynavigation 유지 |
 
 예약 지시문은 사용자 요청대로2만자 이하로 압축하되 전체 승인 범위/단일 가이드/필수 검증·publication/한worker·hourly/최종QA보류를 유지한다. 중복 release prose는 요약하지만 source/failure 기록은 삭제하지 않는다. 문서화는 사용자 직접 요청이며 새로운 hourly 구현 완료로 집계하지 않는다.
+
+
+### 2026-10-04 의사결정·반복 작업 옵션 전체 승인 보강
+
+사용자의 “ㅇㅇ 추가하고 더 많이 진짜 개 많이 줘봐”는 직전 제시된 아래 전체 목록의 추가 승인을 뜻한다. 기존 numeric stage에 합쳐 추적하고 별도 기능 개수로 중복 집계하지 않는다. 상태는 **승인·등록 / 구현 및 소스별 수용 검증 미완료**다. 이번 기록은 진행 중 initial recruitment explorer 구현과 별개이며 구현 완료 증거가 아니다.
+
+| 단계 | 승인된 기능·보강 전체 | 실제 결정/편의와 제한 |
+| --- | --- | --- |
+| 3·4·12.5 | 영입 필수/선호 조건 분리; 관측 중심/하한 기준 필터; 후보 제외 이유; 복수 후보 협상 대기열; 실제 조건 변화 관심 알림; 영입 전후 선수단 비교 | 관측 불확실성/등록/예산을 구분; 자동 계약·숨은 능력 공개 없음 |
+| 4·12.5 | 재제안 변경점 표시; 계약 만료 업무 묶음; 실제 결원 때만 대체 계획 | 확정은 선수별, 정상 주전 강제 교체/반복 계획 과제 없음 |
+| 7·8·12.9 | 준비안 저장/현재 조건 재검사; 적용 전 차이; 전술 실행 제약 설명; 다음 세트 선택 비교; 복기→실제 설정 연결; 변경 당시 근거 보관 | 계산·공식 원본 근거만, 새 계수/과거 이유 재구성/결과 보장 없음 |
+| 5·6·12.5 | 훈련 예외 검토; 다중 대상 적용 가능 여부; 실제 스태프 업무량 배분 | 회복/시간/업무 제약 및 감독 권한 보존 |
+| 2·5 | 구단 업무 언어 변경 영향 비교; 구단 언어 지원 지출/적응 내역 | 구단 차원 결정·실제 재정 원장, 비용/학습률 근거 확보 전 임의 효과 없음 |
+| 5·12.5 | 현금 부족 시점/확정 지급 보기; 중요 업무 진행 묶음 | 확정 의무/예측·미확정 제안 구별 |
+| 12.6·12.8 | 사건 단위 알림; 변경된 제한만 재알림; 중요한 결정 전까지 날짜 진행 | 필수 업무와 선택 뉴스 분리, 마감/미처리 결정을 자동 통과하지 않음 |
+| 3·11·12.5·12.9 | 화면별 열/정렬/필터 기억; 비교 묶음/과거 원본 보존; 보고서 갱신 필요; 개인 표시 기본값; 행동 취소 범위; 미확정 업무 이어하기 | 슬롯/권한/날짜 원본 구분, 계약/전술 자동 확정 없음 |
+| 5·12.4 | 위임 전 권고 시험 검토; 위임 예외 검토 | 시험은 실제 mutation 없음; 범위/승인/회수 및 이미 확정된 결과 보존 |
+| 5·12.7 | 새 감독 인수인계 요약 | 실제 확정 의무/미처리 업무와 새 감독의 합법 관측만 |
+
+추가 아이디어는 계속 발굴하되 기존 승인 보강/별도 정책 후보/검증 전 가설을 구별한다. 후보 등록은 구현 또는 정책 승인 완료가 아니다. 각각 trigger, 실제 source/writer/consumer, 관측/권한, 선택 변화·시간 절감, 비용/상충, UI, 반례/수용, 저장/취소/AI 영향을 확인한 뒤 coherent slice로 진행한다. 현재 작업은 최초 영입의 관측 기준 검색·정렬·전체 결과 페이지·상세 연결이며 언어 엔진/레이더/전체 UI/모든 옵션 구현 완료를 주장하지 않는다.
+
+### 2026-10-04 추가 114개 전체 승인 — 기존 단계 보강 inventory
+
+사용자의 “다 넣고 또 더 없어? 아니면 보강점이라던가”로 직전 전체 114개를 승인·등록한다. 아래 번호는 대화 목록 추적용이며 새로운 개발 단계/독립 기능 개수/구현 완료 수가 아니다. 기존 항목과 중복은 합치되 원래 조건과 예시를 보존한다. 구현·배포는 미완료이며 source/action/UI/save acceptance로 확인한다.
+
+| 대화 목록 | 기존 단계 | 승인 내용 전체 |
+| --- | --- | --- |
+| 1–15 | 3·4·12.5 | 현재 주전 대비 검색; 부족 특성 보완 검색; 즉시 전력/장기 육성 분리; 실제 출전 경로 비교; 영입 포기 이유 메모; 제외 후보 재검토; 비교 조건 고정; 정보 부족 부분 추가 조사; 조사 중복 안내; 후보 없음의 대안; 조건별 분포; 목록에서 비교 추가; 후보 검토 시점; 후보 변동 요약; 검색 조건 복사 |
+| 16–25 | 4·5·12.5 | 계약 조건 교환 관계; 미확정 제안/확정 지출 분리; 동시 영입 충돌; 대체 영입/기존 선수 처리 순서; 협상 종료 이유; 마지막 제안 불러오기; 임대 복귀 자리 확인; 임대 관측/출전 기록 분리; 계약 종료 후 의무; 일괄 검토/개별 확정 |
+| 26–35 | 2·3·6·12.5 | 현재/기대 역할 비교; 역할 전환 기록; 챔피언 폭/실전 사용 가능성; 성장 정체 근거; 육성 중간 점검; 출전 맥락 경쟁 비교; 2군 승격 준비; 회복 후 기존 계획 복귀; 장기 미출전 검토; 개인 성장/팀 적응 분리 |
+| 36–43 | 2·5·6 | 업무 언어별 인원; 언어 변경 영향 대상; 영입 언어 적응 상태; 지원/경기 실행 문제 분리; 지원 지출 중복 확인; 임대/이적 적응 연속성; 반복 정책 변경 부담 조사; 적응 상태 변화 요약 |
+| 44–53 | 5·6·12.4 | 일정 변경 훈련 충돌; 계획 복사 재검사; 훈련 계획/실제 참여; 스태프 공석 실제 영향; 담당자 변경 인계; 권고 근거/한계; 위임 중지 업무 회수; 위임 규칙 충돌; 결과 기반 위임 범위 조정; 단순 반복 업무 선택 위임 |
+| 54–63 | 7·8·12.9 | 준비 정보 기준 시점; 밴 기회비용; 플렉스 가능/확정 역할; 픽으로 제한되는 우리 선택; 선수 교체 준비 영향; 세트 사이 유지할 부분; 시리즈 선택 이력; 상대 분석 새 정보; 준비 완료/충분 구분; 드래프트 판단/실행 결과 |
+| 64–74 | 8·12.9 | 전환점 전후 실제 상태; 우세 상실/열세 극복; 킬 이후 실제 전환; 단일 경기/반복 경향; 유사 상황 비교; 분석 제외 이유; 분석 조건 변경 전후; 레이더 축/원본 수치; 비교 불가 축; 메모/실제 기록; 결론 근거 이동 |
+| 75–82 | 10·12.5 | 일정 변경 영향; 현재/다음 시즌 규정; 등록 불가 해결 경로; 공식 문의 답변 이력; 1군/2군 일정 충돌; 대회별 준비 업무; 연기 원래 일정; 규정 개정 실제 영향 |
+| 83–89 | 5·12.5 | 확정/조건부/예상 금액; 지출 실제 원인; 계획별 재정 비교; 반복 지출 변경점; 시설 작업 기간 영향; 구단 목표/결정 충돌; 예산/계약 여유 |
+| 90–98 | 3·5·12.6·12.7·12.8 | 이전/현재 감독 결정; 이적 선수 이후 공개 기록; 원래 보고서/이후 관측; 뉴스 후속 실제 사건; 정정 이력; 회고 관심 분야; 대표 선수 역사 근거; 옛 동료/코치 실제 재회; 은퇴 후 실제 경력 |
+| 99–114 | 11·12.3·12.5 | 최근 본 목록; 뒤로가기 문맥; 관련 화면 비교; 미완료 입력 보존; 위험한 이탈만 확인; 빈 화면 다음 행동; 키보드 상세 이동; 표 밀도; 열 고정; 단위 일관성; 저장 진행 위치; 불러오기 전 호환성; 정상 저장 복구; 선택적 진단 내보내기; 업데이트 기존 저장 영향; 실제 행동 바로가기 |
+
+공통 경계: 현재 관측만 합법적으로 사용; 보고서 원본/과거 사건 보존; source 없는 축/효과/원인/가격/규정 생성 금지; 일괄 검토가 자동 계약/등록/전술 확정을 뜻하지 않음; 위임은 직접 운영 기본과 범위/회수 보존; 기존 계약 조항·출전 약속 등 지원되지 않는 정책은 명시적 설계와 근거 필요; 구단 업무 언어/지원 지출은 이미 승인된 구단 차원 결정; 모든 초기 영입 UI/엔진 미완료 범위를 유지한다.
+
+### 2026-10-04 추가 70개 연결·안정성 보강 전체 승인
+
+사용자의 “다 추가하고 또 더 없어?”로 직전 70개 전체를 승인·등록한다. 기존 단계 및 위 114개와 겹치는 보강은 하나로 합치며 기능 개수/완료율을 늘리지 않는다. 현재 상태는 승인·등록, 구현·재현·검증은 각 실제 소스별 확인 전 미완료다. 대화 번호는 추적용이다.
+
+| 대화 목록 | 단계 | 전체 승인 보강 |
+| --- | --- | --- |
+| 1–10 | 3·4·12.5 | 추천 제외 이유; 후보별 관측 확신도; 순위 변경 이유; 조건 단계별 완화; 공통 관측 항목 비교; 비교 제외 메모 보존; 보고서/감독 선호 분리; 다른 역할 검토 이유; 실제 개선 자리; 미영입 선택 비교 |
+| 11–20 | 4·5·12.5 | 동시 제안 수락 부담; 협상 중 변경 재검사; 계약/육성 기간 충돌; 지급일 기준 비교; 보류 지출 재검토 조건; 확정 의무 예산; 이탈/대체 영입 묶음; 갱신 차이; 구단 자동 지출 근거; 예상 수입 수정 영향 |
+| 21–30 | 2·5·6 | 임시/장기 계획; 복귀 감독 검토; 관측 문제/훈련 연결; 훈련 기회비용; 휴식 원인; 교체 적응 영향; 언어 정책/학습 이력; 언어 문제 관측 근거; 언어/팀워크/전술 중복 불이익; 지원/효과 확인 분리 |
+| 31–48 | 7·8·9 | 판단/실행 가능성; 행동 조건 재검사; 소비 자원 보존; 귀환 취소 구매/회복; 실제 구매 전투력; 부활/현장 복귀; 실제 참여 인원; 교전 후 행동 비용; 오브젝트 포기 자원; 실제 버프 소비; 웨이브/구조물 조건; 유효 피해; 유효 회복/보호막; 효과 대상/중첩; 종료 후 효과 중단; 계산/설명 일치; 경기 고정 패치; 합법 AI 정보 |
+| 49–58 | 5·12.4·12.6 | 위임 미실행 이유; 권고/실행 비교; 권한 변경 대기 작업; 감독/스태프 중복; 알림 행동 이동; 재알림 조건; 해결 업무 정리; 하루 진행 차단 묶음; 선택 뉴스 진행 비차단; 실제 업무 선행 조건 |
+| 59–70 | 11·12.3·12.5·12.9 | 일괄 작업 부분 성공; 실패 대상만 재시도; ID 선택 유지; 필터 밖 선택 안내; 오래 열린 화면 변경; 저장 실패 진행 보존; 저장 보존 범위; 이직 비공개 권한; 과거/현재 이름; 보관/삭제 구분; 선택 상세 접기; 단축키 일관성 |
+
+실제 source/action/UI/save 연결과 권한·rollback·부분 성공·중복 재시도 반례를 검증한다. 제안된 위험은 재현 결함과 구분한다. 계약 조항/소비 비용/학습률/물리 동시 판정 등 지원되지 않은 정책·계수는 이 승인만으로 임의 생성하지 않는다. 엔진 최우선과 현재 initial recruitment explorer의 미완료 상태 및 8.2.2 own-base purchase continuation을 유지한다. 이번 문서 기록은 hourly 구현 slice 완료 또는 배포 증거가 아니다.
+
+
+### 2026-10-04 기능 간 연결 보강과 추가 게임성 전체 승인
+
+사용자의 “다 추가해”로 직전 제시한 연결 보강 34개와 별도 설계가 필요한 게임성 4개를 모두 승인된 과제로 등록한다. 기존 numeric stage의 원래 승인·완료 조건과 합치며 별도 기능 수나 완료율을 부풀리지 않는다. 상태는 **승인·등록 / 소스 감사·설계·구현·수용 검증 미완료**다. 후보/제안 전용 상태로 계속 보류하지 않고, 실제 구현 중 정의와 근거를 확보해 진행한다. 현재 코드에서 이미 지원하는 동작은 재사용하고 중복 구현하지 않는다.
+
+| 기존 단계 | 승인된 전체 보강 | 선택 변화·제약·수용 방향 |
+| --- | --- | --- |
+| 3·4·5·12.5 | 결정 보류 이유; 배타적인 대안 계획; 결정 전 확인 가능한/없는 정보; 판단 재검토 조건; 폐기 계획 이유; 변경과 무관한 항목 유지; 확정 전 관련 부분 수정 후 검토 이어가기 | 미확정 계획/확정 의무 구분. 대안 A/B를 동시 확정 계획으로 계산하지 않음. 보류 조건은 실제 변화로 재검사하며 자동 계약/지출 없음. 계획 변경·취소·중복 확정·저장 후 문맥 수용 확인 |
+| 3·12.9 | 동일 원본 보고서 표시; 보고서 의견 차이; 추천 기준 변경 순위 비교; 부족한 추가 관측 안내; 결론 유보 상태; 공개 원본 수정 영향; 추천 사용 기준 공개 | 같은 경기의 두 보고서를 독립 표본 두 개로 세지 않음. 관측 범위/기간/역할과 보고서 원본 보존. 자료 부족을 낮은 능력으로 표시하지 않음. 숨은 능력/외부 비공개 원본/확실한 미래 예측 사용 금지. 정정 이후 현재 분석과 원래 보고서 구분 |
+| 2·5·6·12.5 | 선수 계획 변경 이력; 2군 이동 목적/실제 활동; 복수 육성 목표 충돌; 적응 지원 미완료 이유; 선수·스태프 구성 변화에 따른 구단 언어 재검토; 일상 언어와 경기 용어 적응 구분 검토 | 실제 시간·참여·언어 관측·지원 원장 사용. 구단 언어/재정 결정의 기존 승인 유지. 변경 횟수만으로 임의 벌점 금지. 경기 용어를 별도 효과로 만들기 전 source/input/unit/learning writer/consumer/cost와 팀워크 중복을 정의 |
+| 7·8·12.9 | 준비 예상/실제 상황; 전술 미실행/실행 실패; 성공 행동 반복 가능 조건; 유지 결정 당시 정보; 복기/실제 설정 변경 연결; 판정 근거 부족 표시 | 실제 event-time 정보와 실행 조건/소비 근거만. 예상 불일치가 자동 실패는 아님. 성공 보장/복기 읽기 보너스 없음. 오래된 미저장 원인을 현재 상태로 재구성하지 않음. 기존 엔진·명령·로그 연결/seed parity와 의도된 변화 구분 |
+| 11·12.3·12.5·12.9 | 작업 중 변경 시 입력/대상 분리 보존; 긴 작업 진행/취소 범위; 개별 작업 오류/세계 상태 분리; 오프라인 외부 연결 실패; 설정 적용 범위; 화면 문맥만 초기화; export 기준 시점 고정; 갱신 목록 선택 위치 안내 | 취소 가능하지 않은 작업에 가짜 취소 버튼 없음. 실패한 보고서가 무관한 진행을 차단하지 않음. network 차단과 게임 실행 불가 구별. 저장 슬롯/구단 권한/비공개 자료 경계 유지. 문맥 초기화는 세계/계약/역사 삭제가 아님. export 중 시점 혼합 방지 |
+
+아래 네 가지도 **승인된 설계·구현 과제**이며 단순 제안 목록으로 남겨두지 않는다. 다만 구체적인 규칙·효과·가격·계수는 이 승인만으로 임의 생성하지 않는다. 기존 결정/엔진/관측/고용/목표와 겹치는 부분을 먼저 확인하고, 정의가 필요한 부분은 근거·상충·반례를 문서화하며 중요한 새 세부 정책은 명확히 제시한다.
+
+| 기존 단계 | 승인된 게임성 보강 | 필수 설계·수용 경계 |
+| --- | --- | --- |
+| 2·4·12.7 | 선수 선호 역할·커리어 방향과 협상 연결 | 기존 career goals/역할/협상 재사용. 선호와 실제 계약 약속 구분. 지원되는 약속/위반 판정·관측·고용 연속성을 정의하고 성공 강제·숨은 미래 의사 노출 금지 |
+| 5·6 | 스태프 전문 분야와 업무 배치 연결 | 실제 스태프 능력/고용/담당 writer·업무 consumer 검사. 직책 이름만으로 임의 보너스 생성 금지. 업무 시간/비용/대체 담당/AI parity/해고·인계·save 수용 |
+| 5·12.7 | 선택적 구단 장기 운영 방향 | 기존 구단 목표/육성·성과·재정 선택 재사용. 새 mandatory story/임의 벌점/자동 의사결정 없음. 목표 상충·변경·평가 기간과 실제 관측 결과 연결 |
+| 7·8 | 상대의 반복 공개 대응에 따른 준비 변화 | 기존 실제 series adaptation/공개 match history 재사용. observer-first 공개 근거와 당시 patch/role/sample 보존. 상대 private tactics/hidden true ability/future actions 금지. 실제 준비 소비·수동 감독 기본·AI/player parity 검증 |
+
+문서 추가 자체는 기능 구현·hourly slice·CI·merge·publication 완료 증거가 아니다. 진행 중 최초 영입 explorer 및 엔진 최우선 8.2.2 own-base purchase continuation, 전체 승인 backlog, 한 implementation worker, exact-head sequential CI/merge/main standalone/publication, final QA 보류를 유지한다.
+
+### 2026-10-04 경기 운영·장기 연속성 추가 36개 전체 승인
+
+사용자의 “다 추가하고 더 없어?”로 직전 전체 목록을 승인·등록한다. 기존 단계/승인 inventory에 합치며 독립 feature count나 구현 완료로 집계하지 않는다. 상태: 승인·등록, 소스 감사/설계/구현/수용 미완료. 아래 번호는 대화 추적용이다.
+
+| 목록 | 기존 단계 | 전체 승인 항목 |
+| --- | --- | --- |
+| 1–12 | 7·8 | 귀환 기회를 만드는 플레이; 팀 동시 귀환/잔류; 구매 대기 비용; 라인전 이후 웨이브 수령자 변경; 사망 중 자원 손실/복귀 회수 구분; 목표 포기/손실 제한; 공격 중단 조건; 시야 정보 유효 기간; 목표 확보 후 이탈; 수비 성공 실제 기록; 분할 압박/본대 부담; 목표 사전 준비/막판 도착 구분 |
+| 13–20 | 3·4·5·7·12.9 | 기존 전술 허용 범위; 전술 예외 사전 검토; 공개 선택 이력; 정보 부족 감수/조사 선택; 외부 영입/내부 육성 비교; 임시/장기 해결; 구단 정책 예외 요청; 장기 계획 종료 조건 |
+| 21–28 | 5·10·11·12.7·12.9 | 시즌 경계 업무 연속성; 새 시즌 변경 항목만 재확인; 실행 불가 계획 이유; 역사 요약/원본 연결; 저장된 기준 시점 비교; 이직 자료 소유권; 설정간 자원 충돌; 은퇴/해체 역사 연결 |
+| 29–36 | 11·12.3·12.5 | 최근 변경 설정; 동명 검색 결과 종류; 비교 대상 교체 조건 유지; 갱신 중 읽던 위치; 일괄 실행 전 대상/실제 비용; 실행 결과 다음 업무; 선택 알림 숨김/필수 업무 구분; 현재 차단 조건 도움말 |
+
+수용 경계: 기존 이동/귀환/웨이브/시야/목표/자원 상태를 실제 소비 경로에 연결하고 물리적 geometry/정확한 spell simulation을 주장하지 않는다. 상대 위치는 observer-lastseen/source 기반이며 미래/비공개 상태를 쓰지 않는다. 강제 역전율/새 handicap/미검토 timing·price·effect coefficient 없음. 전술 범위는 실제 지원되는 설정만; 정보 수집 선택은 실제 시간/비용 모델이 있어야 한다. 구단 정책 예외 요청은 기존 구단 권한의 설계·구현 과제로 승인되었으며 league-office 등록/자격/mandatory tier2/방송 고정 제약 우회가 아니다. 자료 반출/이직은 public/personal/club-private 소유권을 정의하고 현재 actor 권한을 먼저 검사한다. 저장된 기준 시점이 없는 과거 값을 재구성하지 않는다. 취소는 실제 reversible action만, history/raw sources/diagnostics 보존. 현재 최초 영입 explorer 구현 및 다음 엔진 8.2.2 own-base purchase 연결 상태 유지. 문서 수정은 CI/merge/publication 또는 hourly slice 완료 증거가 아니다.
+
+### 2026-10-04 경기 경계·준비·평가 추가 36개 전체 승인
+
+사용자의 “다 추가하고 … 전수조사해서”로 직전 36개 전체를 승인·등록한다. 기존 승인 과제에 합치며 source 없는 효과/정책/coefficients를 임의 생성하지 않는다. 모두 등록 단계이고 실제 구현 및 수용 상태는 개별 확인한다.
+
+| 대화 범위 | 단계 | 전체 승인 |
+| --- | --- | --- |
+| 1–12 | 8 | 최대 체력 변화의 현재 체력; 임시 효과 종료 복원; 공격 속도/실제 공격 시간; 보호막 피해 종류; 제어 중 가능한 행동; 자원 부족 대체 행동; 사망 효과 유지/소멸; 재적용 효과 갱신; 구조물 효과 대상; 몬스터 피해 제한; 처치 보상 원인; 이벤트/최종 합계 |
+| 13–18 | 7·9·10 | 대회 챔피언 사용 가능; 패치 준비안 영향; 시리즈 규칙 고정; 참가 확정 전후 준비; 상대 대회 맥락; 규칙 변경 저장 설정 |
+| 19–24 | 2·3·5·12.9 | 관측 성향/감독 지시; 평가 환경 변화; 교체 후보 준비; 스태프 권고 이후 결과; 평가 수정 근거; 특정 선수 의존 |
+| 25–30 | 5·6·7 | 연습 상대 선택; 연습 검증 목적; 준비 자료 업무 우선순위; 내부 보고서 공유 범위; 공개 발표/내부 확정; 시즌 목표 중간 검토 |
+| 31–36 | 11·12 | 판단 근거 강조; 동일 사실 표현; 읽지 않음/수정 구분; 자료 요청 결과 한계; 닫은 화면 업무 추적; 무관 갱신 입력 보존 |
+
+<a id="whole-domain-audit-2026-10-04"></a>
+
+### 2026-10-04 전 영역 조사 — 소스 inventory·보강·한계
+
+**조사 성격:** 사용자 직접 요청의 bounded source investigation이다. 모든 알려진 도메인을 coverage matrix로 대조했지만 모든 함수의 모든 실행 경로/시간조합/긴 커리어/기기를 전수 실행한 것은 아니다. “한 개도 누락 없음” 또는 전 게임 버그 없음/전체 구현 완료를 주장하지 않는다. 등록된 114/70/34+4/36/36 및 기존 38-engine/13-narrative 승인과 중복을 합친다.
+
+**현재 기준:** Git main `a529566d838f50f1b6215ffa07bba9c9b9f61b30` 확인. 열린 PR #173 docs `9e2b0850d7ddb93ddd930576dbbc78cafc71338a`와 오래된 #27/#28 확인; 중복 merge/branch edits 하지 않음. 로컬 `feat/initial-recruitment-explorer`에는 UI 변경과 승인 문서가 아직 미커밋이다. 이것을 main/게시된 게임 상태로 제시하지 않는다.
+
+**coverage:** manifest engine97/UI37=134 modules + shell=135 files; structural inventory 14,118lines/1,275named functions, 변경 중 workingtree 기준. 모든 파일의 기능 목록/marker/hash 대조와 주요 도메인 소스 selected deep read를 구분한다. 활성 문서의 상대 파일 링크93개 대상 존재 확인(anchors와 runtime nav 전체 검증 아님). 생성된 embedded sources는 provenance/consumer 중심, 모든 raw champion spell/mechanics 개별 검증 아님. 독립 source fixture3건만 실행; full CI/browser/100season/device/TalkBack 미실행.
+
+**중복 정정:** 실제 scrimPartnerAssessment/scrimPlanCheck가 상대 선택·수락·예약을 지원하고 staffRoleAbility는 specialty allocation을 실제 소비한다. playerCareerGoal/effectiveRolePromiseStatus도 존재한다. 이들을 새 시스템 부재로 제안하지 않고 UI/근거/연속성/판정 보강으로 합친다. 172 ledger와 171 ending 수정은 보호하며 location gating나 complete mechanics 완료로 확대하지 않는다.
+
+| 단계 | 영역 | 실제 원본/entry | 전체 보강·완료 inventory | 현재 확인/한계 | 우선 | 집중 수용 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1·12.3 | 시작·세계 생성 | [world.js:buildWorld](../src/artifact/world.js); [ui-setup.js:seasonSetup](../src/artifact/ui-setup.js); [career.js:beginInitialRosterPhase](../src/artifact/career.js) | 새로시작/불러오기/설정만 시작에 표시; 실제 팀 선택은 다음 흐름; 6지역 필수 2부·합법 FA·예산·zero/default subs·legacy identity 유지 | 긴 startup 설명/운영 메뉴 남음; 국제 설명 undefined 재현 | P1 | 실제 시작→팀 선택→초기 영입→save; 생성 규칙 회귀와 초기화 취소 |
+| 5·12.7 | 감독 커리어·인계 | [world.js:setManagedTeam](../src/artifact/world.js); [ui-season.js:bindSeason](../src/artifact/ui-season.js); [app.js:viewSeason](../src/artifact/app.js) | 직업/취임/계약/해임/인계/타구단 continuidad; 이전 의무/내 결정 구분; former private 권한 | 팀 선택·해임 후 재선택은 있음, 완전 career/job lifecycle 근거 미완료 | P1 | 이직 전후 선수·계약·역사/비공개 접근·pending 업무/save |
+| 2·10 | 선수 정체성·로컬·국가 | [roster.js:playerOriginRegion](../src/artifact/roster.js); [roster.js:playerActiveLocalRegion](../src/artifact/roster.js); [local-service.js:processLocalServiceDaily](../src/artifact/local-service.js) | 국적/출신/활동지역/로컬/업무 언어 별개; country home/development/location office admission | 기존 local-service 있음; origin을 현재 활동/언어로 추정 금지 | P1 | 이적/임대/2군 외국 거점·국적/로컬 보존 및 등록 |
+| 2·3·12.5 | 선수 능력·성장·역할 | [player.js:playerCoreMetrics](../src/artifact/player.js); [development.js:growPlayer](../src/artifact/development.js); [role-conversion.js:advanceRoleConversionPlayer](../src/artifact/role-conversion.js) | 관측 능력/잠재/성장·환경/성향 구분; role 전환 시간·비용; 낮음 vs 모름; observed radar/numeric/source/context | 내부 core metrics true branch 존재, observed-only extension audit 필수 | P1 | own/foreign/FA/fired 관측·실제 훈련/출전/성장·save |
+| 3·12.9 | 스카우팅·보고서 | [scouting.js:observePlayer](../src/artifact/scouting.js); [scouting-ai-ops.js:performAiScoutingOperation](../src/artifact/scouting-ai-ops.js); [scouting-champions.js:recordChampionScoutObservation](../src/artifact/scouting-champions.js) | 지역 조사/담당/비용/기회;원본/갱신/확신/동일 원본 중복/의견 차이/제외 sample/source/bias | 기존 private observations/AI regional operations 있음; 과거 recruitment 원본 장기 archive 미완료 | P1 | 실제 조사→관측→평가→비교·owner별 save/이직; no hidden ability |
+| 3·4·12.5 | 초기 영입·일반 시장 | 미커밋 별도 작업 `ui-initial-candidates.js:initialCandidatePage`; [ui-market-initial.js:bindInitialRosterMarket](../src/artifact/ui-market-initial.js); [transfer.js:recruitmentBoard](../src/artifact/transfer.js) | origin regional/overseas/all; 조건 mandatory/preferred; center/lower bound; full count/page/sort/column/selection; actual detail/evaluation/negotiation/return | 현재 explorer 작업 중, 아직 acceptance/PR/release 없음 | P1 | FA 실제 detail/관측/최소 필터/80cap 제거/10선택·stale·save/authority |
+| 4 | 계약·약속·협상 | [contract-negotiation.js:finalizeNegotiation](../src/artifact/contract-negotiation.js); [player-representation.js:effectiveRolePromiseStatus](../src/artifact/player-representation.js); [contract-window.js:recordContractAgreement](../src/artifact/contract-window.js) | 대표/동의/기간/옵션/역할 약속/갱신/해지; 재제안 diff·동시 대안/실패/재개/일괄 검토 개별 확정 | 기존 negotiation/role promises 있음; 새 동일 시스템 중복 금지 | P1 | 소속/예산/권한 바뀐 열린 제안; 확정1회·거절/취소 rollback |
+| 4·11 | 이적료·지급·해체 | [transfer-payments.js:processTransferPayments](../src/artifact/transfer-payments.js); [club-closure.js:applyClubClosure](../src/artifact/club-closure.js); [finance-estate.js:processClubEstateRecoveries](../src/artifact/finance-estate.js) | actual commitments/invoices/부분 지급/보장/잔여 claims; 미확정 제안/예상/확정 분리; arbitrary asset fee 금지 | 기존 결제/estate recoveries partial; 전체 liquidation/creditor policy 근거 미완료 | P1 | 송금 동일 원장·stale/rollback·양측 지급일·future obligation save |
+| 4·5 | 임대·복귀·전환 | [player-loans.js:applyLoanStart](../src/artifact/player-loans.js); [player-loans.js:processLoanDaily](../src/artifact/player-loans.js); [loan-purchase.js:validateLoanPurchase](../src/artifact/loan-purchase.js) | 원소속/차입/급여/등록/교육/만료/회수/전환; 복귀 자리/언어 연속성/보고서 owner | 기존 shared lifecycle 있음; force lineup overwrite는 가설 유지 | P1 | return day/등록/계약 겹침·parent/reserve 권한·수동 lineup |
+| 5·10 | 선수단·출전·등록 | [roster.js:applyRosterPlan](../src/artifact/roster.js); [registration.js:writeOfficialRegistration](../src/artifact/registration.js); [registration-match.js:officialMatchView](../src/artifact/registration-match.js) | 고정 주전·경쟁/후보·실제 결원 때만대체; current vs projected salary/eligibility; official roster/entry/긴급 대체 | 기존 실제 command 있음; 항상 계획작성/강제 rotation 불필요 | P1 | 선발→조건→actual match/기용→save; invalid/duplicate/undo |
+| 2·6 | 의료·피로·회복 | [medical.js:medicalDailyTick](../src/artifact/medical.js); [player-relations.js:playerMod](../src/artifact/player-relations.js); [development.js:dailyRecovery](../src/artifact/development.js) | 피로/부상/상태/잔여/휴식/재활·경기감각 별 원인; 과훈련/일정·복귀/의료 대체 | 기존 daily 의료/4seed test 있음; language/teamwork 중복 효과 검토 | P1 | daily once·official/scrim/rest/exposure→actual performance·tradeoffs |
+| 2·5·6 | 업무 언어·적응·지원 지출 | [player-relations.js:lineupCohesion](../src/artifact/player-relations.js); [practice-resources.js:runDailyPractice](../src/artifact/practice-resources.js); [ui-setup.js:managerTeamPicker](../src/artifact/ui-setup.js) | club decides working language/support spend; 실제 proficiency/learning/cost/uncertainty; regional first list는 언어 대체 아님 | 복원 승인 미구현; ui-setup no-language-barrier 문구 아직 남음 | P1 | 영입/profile/training→학습/회계→actual execution; legacy/AI·no nationality-only |
+| 2·5 | 관계·리더십·만족·목표 | [player-relations.js:applySatisfaction](../src/artifact/player-relations.js); [player.js:playerCareerGoal](../src/artifact/player.js); [player-representation.js:applyOralRolePromise](../src/artifact/player-representation.js) | actual playing/관계/기대/커리어/지원된 약속; 역할/이탈/복귀; 근거없는 leadership aura 금지 | 기존 goal/usage/relationship 있음; hidden public露출 범위 검사 | P2 | 실제 약속/기용 변화→원인/이적·재협상; 원본 event/history |
+| 5·6 | 스태프·전문성·고용 | [staff.js:staffRoleAbility](../src/artifact/staff.js); [staff-contracts.js:applyStaffAction](../src/artifact/staff-contracts.js); [staff-registration.js:competitionStaffMatchRoster](../src/artifact/staff-registration.js) | 전문 영역/secondary allocation·observed hiring/부서 공석/업무 인계/대표 고용/현장 service/은퇴 | 전문성 기존 실제 consumer 있음; 새 직책 보너스 중복 금지 | P2 | 실제 채용→배치→업무/등록→지출/save; vacancy·expired/fired |
+| 5·11 | 시설·구단·소유권 | [development.js:upgradeFacility](../src/artifact/development.js); [development.js:advanceFacilityConstruction](../src/artifact/development.js); [club-ownership.js:transferClubOwnership](../src/artifact/club-ownership.js) | construction day/cash/upkeep/actual effect; 소유권 바뀌어도 club id/license/contracts/history 보존 | 기존 timed시설·takeover continuity 있음; 예외/장기 goal 설계 보강 | P2 | 공사 전후 training/recovery/scouting; 인수·해체·예산 continuity |
+| 6 | 훈련·육성·연습 자원 | [practice-resources.js:runDailyPractice](../src/artifact/practice-resources.js); [development.js:setTrainingAllocation](../src/artifact/development.js); [role-conversion.js:roleConversionGrowthMultiplier](../src/artifact/role-conversion.js) | 목표/실참여/복수 목표 기회비용/공식일·휴식·개인전환/shared budget; exception 검토/copy | 기존 daily shared budget·manual owned coaching 있음 | P1 | 동일 day중복/reentry/비참여·실제 개인 효과/source |
+| 6 | 스크림·파트너·목적 | [scrim-partner.js:scrimPartnerAssessment](../src/artifact/scrim-partner.js); [scrim-plans.js:scrimPlanCheck](../src/artifact/scrim-plans.js); [scrim.js:recordScrimPractice](../src/artifact/scrim.js) | 상호 목적/수락/예약/현지 시간/회복/공식대진·중복/취소;검증목적 vs승리·private evidence | 실제 상대 선택/수락/예약 이미 있음; 기능 없는 것으로 재제안하지 않음 | P2 | request→bilateral booking→execution→resources/report/save; no public calibration |
+| 7 | 밴픽·First Selection | [draft.js:draftApplyChoice](../src/artifact/draft.js); [first-selection.js:firstSelectionEvidence](../src/artifact/first-selection.js); [draft-preparation.js:draftPreparationReport](../src/artifact/draft-preparation.js) | public/private tiers·own mastery·legal/flex/role/scarcity/ban opportunity/Fearless·actual confirmation source | 12.9.3/4 실제 live/context/snapshot 있음; 전체 mechanics calibration는 별도 | P1 | 20turn/forced actual official/취소/duplicate/foreign traps·no RNG changes |
+| 7·8 | 전술·시리즈·준비 | [meta-tactics.js:matchTacticSnapshot](../src/artifact/meta-tactics.js); [series.js:playSeriesSessionGame](../src/artifact/series.js); [season.js:resolvePendingOfficialMatch](../src/artifact/season.js) | intent/feasible execution/failure·public adaptation·변경/유지 원본·조건차이·pending/patch pinned | 기존 tactic·series 소비 있음; 새 complete execution/사건 설명 추가 필요 | P1 | actual selection→series writer→review/save·same patch/context; no future info |
+| 8.1 | 종료·시계·동시 사건 | [match-adjudication.js:destroyMatchNexus](../src/artifact/match-adjudication.js); [engine.js:simulateMatch](../src/artifact/engine.js) | first nexus·postend frozen·quiet/logged clock; ordered simultaneous/reward/end-state 분리 | 8.1.1 수정/출시 보호; 물리 동시 nexus 정책 미구현 | P0 | 양side/quiet/full same stats·unresolved guard; no gold winner |
+| 8.2·8.3·8.4 | 골드·구매·아이템·룬 | [item-purchases.js:commitItemCraftBatch](../src/artifact/item-purchases.js); [engine.js:addGold](../src/artifact/engine.js); [engine.js:combatStats0](../src/artifact/engine.js); [systems.js:systemEffects](../src/artifact/systems.js) | earned/spent/held ledger; own base recall/Ornn; recipes/slots/unique/exclusive/repeated/components/quest/sale supported; actual power/conditional/team utility | 172 ledger 수정 출시; 실제 own-base gating와 generic earned-gold power 소비는 남음 | P0 | 27 killPlayer purchase baseline→recall/location writer; sources·paired timing/AI/save |
+| 8.5 | 웨이브·캠프·XP | [engine.js:incomeTick](../src/artifact/engine.js); [engine.js:jungleTick](../src/artifact/engine.js); [system-data.js:buildSystemBaseline](../src/artifact/system-data.js) | finite supply/spawn/arrival/shared nearby XP not CS;camp hp/resists/clear/respawn/reward/availability; allocation/death/roam | cs*58+role constants/current farm cadence proxy; complete waves/camps 미구현 | P1 | reviewed patch metadata→resource/level/purchase/macro; MID27min no display fudge |
+| 8.4 | 교전·피해·접근·효과 | [engine.js:fight](../src/artifact/engine.js); [engine.js:combatStats0](../src/artifact/engine.js); [engine.js:fightSkillPhase](../src/artifact/engine.js) | damage/defense/reduction/penetration·reach/target/time/availability/resource/CC/heal/shield/effective/overkill/status expiry/retarget | aggregate bounded existing; lowHP clamp/source 후보 포함 많은 mechanics 미검증 | P1 | source-based paired cases·both sides/status order/end·conditional item consumers |
+| 8.6 | 시야·이동·목표·구조물 | [engine.js:visionTick](../src/artifact/engine.js); [engine.js:teamCall](../src/artifact/engine.js); [engine.js:convert](../src/artifact/engine.js); [engine.js:takeStructure](../src/artifact/engine.js) | lastseen/observer AI·recall/respawn/travel·postfight resources·persistent waves/towers/dive/objective cost/trade/buff/abandon | 현재 alive/global proxy·hardcoded rewards·convert baron alternate writer; reviewed causal expansion 필요 | P1 | ahead loss/behind win source scenarios no predetermined rate·actual rewards once |
+| 9 | 패치·메타·진단 | [patch.js:applyNote](../src/artifact/patch.js); [patch-balance.js:patchChampionEvidence](../src/artifact/patch-balance.js); [patch-content.js:generateNewItem](../src/artifact/patch-content.js) | champ base/skill/item price/recipe/effect/rune/objective/wave/camp→draft/combat/macro; adaptation/sample concentration/holdout/rollback/oscillation | 기존 diagnosis/patch consumers 있음; event-time team strength vs current lookup 가설 조사 | P1 | pinned baseline+old note replay; actual causal pair/output/save; no invented coefficient |
+| 8.7·9 | 외부 프로 자료·정적 출처 | [champion-source.js](../src/artifact/champion-source.js); [system-source.js](../src/artifact/system-source.js); [docs/CHAMPION_DATA.md](../docs/CHAMPION_DATA.md); [docs/SYSTEM_DATA.md](../docs/SYSTEM_DATA.md) | pro-only event/date/patch/tier/side/role/gameID/duplicates/missing/units/license/raw/chronological holdout; static mechanics 별도 | validated professional calibration 미수집; network/source blockers 정확히 기록 | P1 | source validation 먼저; fictional result와 actual external data 혼합 금지 |
+| 10.1·10.2 | 지역·국가·2부·승강 | [world.js:addRegion](../src/artifact/world.js); [offseason.js:promotionRelegation](../src/artifact/offseason.js); [region-continuity.js:recordRegionSuccession](../src/artifact/region-continuity.js) | Lalias6pairs/NA-SA/CA-Caribbean; country tier2/home/development/office admission; no parent-owned reserve promotion | 6major tier2/name 구현; country/membership/office continuation 미완료 | P1 | next-season actual schedules/standings/membership·legacy ID/nationality/contracts |
+| 10.4 | 국내·국제 사무국·규정 | [office.js:officeDecisions](../src/artifact/office.js); [office-consultation.js:officeFormatConsultation](../src/artifact/office-consultation.js); [office-international.js:globalOffice](../src/artifact/office-international.js) | jurisdiction/metrics/consult/cooldown/version/announced/effective/atomic changes/consumer/post reform sample evaluation | 기존 lifecycle 일부 있음; full country/broadcast/registration scope completion 아님 | P1 | announced vs effective·idempotent replay/rollback·no retroactive results/contracts |
+| 10 | 달력·중계·대회 | [timezone-calendar.js:pushVenueRound](../src/artifact/timezone-calendar.js); [broadcast-calendar.js:broadcastSlotTime](../src/artifact/broadcast-calendar.js); [season.js:playWorldDay](../src/artifact/season.js) | UTC/venue/KST/daily tick/pending/deadline·global international/sameleague nonoverlap; actual reserved end/overrun shift | staggered starts ≠ full reservedwindows/overrun; actual connected continuation 필요 | P1 | same day/UTC rollover/overrun→next refs/training/registration/save |
+| 10·12.9 | 결과·통계·분석실 | [match-history.js:officialMatchReviews](../src/artifact/match-history.js); [ui-match-history.js:analysisMatchPanel](../src/artifact/ui-match-history.js); [analysis-tiers.js:internalChampionTiers](../src/artifact/analysis-tiers.js) | stored public outcome/own original reasons·24excerpt limit·radar/context comparisons/snapshots/watchlists/notes/conditions/exports/source | 165–172 vertical slices 있음; fullroom tools UI incomplete; no fake old logs | P1 | own/reserve/opponent/fired·dated samecontext/full-lite/pending·source nav |
+| 3.1·12.6·12.7·12.8 | 뉴스·이야기 13영역 | [season.js:news](../src/artifact/season.js); [player.js:recordPlayerEvent](../src/artifact/player.js); [player.js:rookieGlobalCohort](../src/artifact/player.js); [staff.js:staffRetirementReview](../src/artifact/staff.js) | amateur origin/milestone/development/cohort/reunion/rivalry/clubrepresentative/report-later/decision/retiredstaff/fan/news/recap | existing history/cohort/public news; 120/250 source truncation 재현·full narrative connection 미완료 | P1 | real event→lawful article/profile/relatedflow/save; no amateur match/forced story/bonus |
+| 11 | 회계·스폰서·전략 | [finance.js:financeForecast](../src/artifact/finance.js); [finance.js:closeFinances](../src/artifact/finance.js); [features.js:sponsorOffers](../src/artifact/features.js) | cash/liabilities/commitments/prepaid/tax/staff/facility/sponsor·future obligations/board language support·AI planning | 기존 finance statements 있음; bounded history replacement archive 조사 | P1 | actual writer conservation/obligation expiry/partial failure·no invented price |
+| 12.3·12.4·12.5 | UI·공통 조작·접근성 | [ui-state.js:UI_ROUTES](../src/artifact/ui-state.js); [ui-overlay.js:openUiOverlay](../src/artifact/ui-overlay.js); [shell.html](../src/artifact/shell.html); [ui-market-initial.js:bindInitialRosterMarket](../src/artifact/ui-market-initial.js) | top FM-inspired hierarchy/separate domains/save utility/3startup; filter/sort/context/tabledensity/keyboard/focus/error/loading/empty/units/Korean/no fake control | 6routes only; full domain replacements/radar remain; current explorer unpublished | P1 | each action→command→result→save; rollback/dup and focused desktop320 not finaldevice |
+| 11·12 | 저장·복구·소유권·정보 | [save.js:packDB](../src/artifact/save.js); [save-migration.js:migrateSaveState](../src/artifact/save-migration.js); [app.js:persistWorldSnapshot](../src/artifact/app.js); [ui-data.js:bindData](../src/artifact/ui-data.js) | slot/compat/migration/recovery/export/legalownership/pending/full-lite/eventtime/current distinctions; local plaintext backup vs public debug info | existing queued IDB/local fallback/source retention; new report ownership/tools need continuity | P1 | read purity/atomic switch/invalid source/history preserved·no irreversible partialoverwrite |
+| 5·12.4 | 위임·업무 흐름·편의 | [state-transaction.js:commitWorldAction](../src/artifact/state-transaction.js); [state-rollback.js:captureWorldActionJournal](../src/artifact/state-rollback.js); [ui-state.js:beginUiTask](../src/artifact/ui-state.js) | manual default·permission scope/trial/exceptions/revoke·batch partial/retry·task state/plans/dependency deadlines/no duplicate notification | shared command guarded; integrated delegation/workflow replacements incomplete | P2 | beforecondition→actual lawful mutation→feedback/save; no automatic major contracts |
+| 12·13 | 성능·배포·검증 | [scripts/perf.mjs](../scripts/perf.mjs); [scripts/check.mjs](../scripts/check.mjs); [.github/workflows/ci.yml](../.github/workflows/ci.yml); [.github/workflows/pages.yml](../.github/workflows/pages.yml) | measured bottleneck representative baseline/outputparity/seed/version/history/AI·exacthead CI/sequential merge/validated main offline/playable URL | 172 validated release; 173open+uncommitted explorer; no new full CI/Pages; finalQA deferred | P1 | no instrumentation/budget/record deletion; source tests ≠ everydomain completion |
+
+**공통 finding schema/작업 크기:** 각 행은 trigger=current recorded gap 또는 해당 scope의 실제 action/조건 변경, source=linked entry, writer/consumer/UI/save=acceptance path, 기대 이익=정확한 결정·반복 감소·정보/역사 보존이다. 비용/상충은 추가 observation/processing/storage/표현 밀도이며 강제 감독 입력·능력 보너스로 해결하지 않는다. 각 domain 전체는 여러45–55분 vertical slices; 개별 변경은 source/권한/조건→writer→consumer→UI→save/rollback까지 natural boundary로 나눈다. 경기 mechanics/source 확보→실제 writer→설명/화면 순, 과거 없는 원본 재구성 금지. AI/player 동일 명령·manual 기본을 보존한다.
+
+**좁은 실제 source 재현:** [전체 inventory/원본 재현](evidence/whole-domain-audit-2026-10-04.json).
+
+1. `player.js:recordPlayerEvent` 121개 입력 후120개만 남고 auditIndex0이 사라짐. Player career 원본/medical risk/title/goal consumer와 연결되므로 recent view와 영구 source를 분리하는 보호된 archive continuation 필요(P1). 무조건 cap을 없애거나 history budget을 올리는 수정 금지; source archive/읽기 window/save 비용을 측정하고 원래 기록을 보존. 이미 잘린 과거는 복원했다고 주장하지 않음.
+2. `season.js:news` 251개 입력 후250개 유지, 초기 사건 제거. 현재 row fields year/text뿐이다. 모든 underlying domain history가 사라졌다는 증거는 아니며 각각 archive 존재 확인 필요. actual event identity/date/category/navigation/read/filter 원본과 bounded recent feed를 분리(12.6/P1). No fabricated archived articles.
+3. `ui-season.js:worldTable`에 실제 defaultWorldConfig internationals7개를 사용하면 entry/format 설명에 undefined가 출력됨. UI_RUNTIME_EXCEPTION이 아니라 문자열 누락 결함이다. 최초 synthetic format fixture를 exception으로 예상한 probe 실패 로그를 보존했고 actual default fixture로 corrected diagnosis를 확보. startup3buttons replacement/competition domain에서 supported fields만 소비하고 missing metadata는 정직한 빈 상태로 처리(P1).
+4. `ui-setup.js:managerTeamPicker`의 no-language-barrier notice는 latest superseding rule과 충돌하는 verified stale wording. 초기 recruitment notice만 없앤 현재 미검증 explorer가 전체 language restoration을 완료한 것은 아님. 실제 language workflow slice에서 code/rules/UI 함께 교체.
+5. `docs/SYSTEM_DATA.md`의 append-only purchase legality 설명은172 actual atomic ledger writer와 불일치하는 dated documentation. 기존 raw rule/미확보 exclusive group과 source gaps는 보존하고 현재 구현 경계만 evidence-backed 갱신한다. README/ARCHITECTURE/retro audit의 날짜 있는 phase references는 historical evidence와 현재 지시를 구분해 follow-up.
+
+**미재현 hypothesis/source candidates:** lowHP5–19→fight20clamp; objectiveTick/convert baron participation/quest 경로 차이; hardcoded reward patch propagation; assist rounding/global-local alive eligibility; RNG sort comparator portability; combat cache dependency completeness; patch diagnosis current team strength versus event-time strength; bounded role/rookie/scout/office/finance/scrim state replacement의 영구 archive 부재 여부; pending series patch lock 모든 날짜 변경 경로; loan force/manual lineup. source expression만으로 전 gameplay 결함 재현을 주장하지 않는다. 개별 반례를 확보한 뒤 correction. purchase shallow preview·ledger cache는172수정 보호, 별도 남은 alias 경로가 없으면 중복 defect count에서 제거한다.
+
+**누락 방지 재검토:** 모든 엔진38개(장부/구매시간/gold double power/legality; CS vs nearbyXP/finite waves/share/allocation/camps; recall/respawn/travel/partial loss; damage/defense/reduction/penetration/reach/burst-sustained/skill-summoner availability/resources/CC/heal-shield/effective damage/conditional effects/team utility; postfight/waves/structures/dive/objective trade/buff/vision/AI/tactics/series/fatigue-mastery-teamwork; ordering/reward-cache/calculation reasons/patch/calibration/seed-version-history)는 위8.x/7/9 rows 및 원래38 inventory로 통합 유지한다. 이야기13개는 amateur origins, milestones, academy paths, cohorts, reunions, actual rivalries, clubrepresentatives, originalreport-later observation, management decisions, qualifiedretiredstaff, groundedfans, eventnews, seasonrecaps를 모두 유지한다. UI 전면12.3–12.5/Analysis12.9/managercareer/office10.4/country10.2 승인도 완료 처리하지 않는다.
+
+**조사 후 precise continuation:** 진행 중 initial recruitment explorer의 actual query/detail/permission/selection/save acceptance를 완료해야 한다. 다음 engine priority는8.2.2 actual own-base purchase/recall/respawn/Ornn reviewed exception, 이후8.3 earned-gold generic power 및8.5.1 source-backed nearby/sharedXP/waves/camps. Career event 원본 archive와12.6 event-backed news/undefined/startup 설명 교체는 관련 vertical slice에 연결한다. 이번 조사만으로 임시 UI를 출시/173 merge/예약 변경/전체 기능 완료라고 주장하지 않는다. 생산 HTTP/외부 프로 데이터는 기존 blocked/미확보 한계 유지. 구현 phase 후 playtest fixes 전 final QA 금지.
+
+
+### 8.2.2 구매 장소·귀환·부활 경로의 재현 가능한 조사 경계 — 2026-10-04
+
+**상태:** 한 구현 담당자의 45–55분으로 추정한 제한된 엔진 조사 단위다. `scripts/shop-availability-probe.mjs`로 실제 함수·고정 입력·네 시드의 기록/무기록 총 여덟 실행을 재현한다. 게임의 구매 장소 수정, 귀환 시간 모델 또는 오른 예외 구현 완료가 아니다. 빠진 시간을 임의로 정해 구매 기능을 막거나 가짜 기지 상태를 만들지 않는다. 이전 8.2.1 장부 구현·원본 기록은 유지한다.
+
+**발생 조건과 실제 경로:** `engine.js:addGold → advanceItemPurchases → commitItemCraftBatch`는 실제 골드를 차감하며 장비를 조합하지만 기지 위치를 입력받거나 확인하지 않는다. 처치·수입·구조물 보상이 같은 경로를 소비한다. `role-quest-match.js:roleQuestWard`는 별도 골드 차감·와드 구매 경로이며 역시 상점 상태를 확인하지 않는다. 일반 구매는 아군 기지라는 최신 승인에 맞게 두 경로를 함께 연결해야 한다. 감독의 아이템 구매 조작은 추가하지 않는다.
+
+| 시드 · 기록/무기록 각각 | 조합 배치 | 처치 처리 중 배치 | 와드 구매 | 귀환 이벤트 | 사망 기록 | 명시적 상점 상태 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| record-official | 106 | 27 | 6 | 1 | 33 | 0 |
+| shop-availability-A | 155 | 25 | 27 | 3 | 57 | 0 |
+| shop-availability-B | 162 | 34 | 29 | 0 | 53 | 0 |
+| shop-availability-C | 127 | 24 | 13 | 1 | 38 | 0 |
+
+**관측의 한계:** 배치 수는 개별 재료 수 또는 완성 아이템 수가 아니다. `recall=false`는 물리적 전장 위치 증거가 아니며, 현재 위치 상태가 없다는 것이 문제다. 사망 중 구매는 각 시드 4/6/7/5배치로 관측됐지만, 사망 중 구매 자체가 불법이라는 판정은 아니다. `deadUntil`은 부활 가능 시간 경계이지 실제 기지·복귀 경로가 아니다. 오른/자르반의 장화·체력 물약 실제 writer 직접 호출도 모두 같은 위치 없는 방식으로 허용되므로, 오른의 전장 예외가 구현돼 있다는 근거가 될 수 없다. 직접 호출은 합성 참가자 조사이며 공식 경기 기록이 아니다.
+
+**상태 작성·소비 경계:** 현재 `laningTick`은 초반 저체력 참가자를 즉시 `hp=1, recall=true`로 바꾸고 다음 `incomeTick`에서 CS 감소 후 표식을 지운다. `roleQuestIncome`은 기존 12초 대리값을 소비한다. 후반 귀환·귀환 취소·기지 도착·체류·복귀 상태는 이 표식으로 검증되지 않는다. `killPlayer`는 HP/사망 시각/손실 대리값을 쓰며 `alive`는 사망 시각만 검사한다. 기지 체류를 새로 구현할 때 수입·경험치·퀘스트·교전·시야·목표 합류까지 같은 가용성을 소비해야 한다. 기존 사망/귀환 손실을 중복 차감하지 않는다. 이 표식들을 정확한 이동·채널 시뮬레이션으로 설명하지 않는다.
+
+**자료 확보 제한:** 고정 Riot Data Dragon 16.19.1의 오른 간이 대장간 설명은 어디서든 **소모품을 제외한** 제작을 지원한다. 자료 commit은 `1cf34d485c572a9894c223efd3d66c1e5ad7f22f`이다. 그러나 현재 저장된 자료는 일반 귀환의 채널·취소·복귀 시간 또는 오른 제작 가용성의 전체 조건을 제공하지 않는다. 고정 버전 summoner.json 요청도 HTTP 403/curl 22로 차단됐다. 이 응답은 자료 부재를 증명하는 것이 아니라 현재 수집 제한이다. `summoner.json` 확보만으로 이동 규칙 전체가 충족된다고도 가정하지 않는다. 정책을 우회하거나 8초/1분 같은 값을 출처 없이 추가하지 않았다.
+
+**산출물과 집중 수용:** 이전 [기본 구매 원본](evidence/shop-availability-source-probe.json)을 덮어쓰지 않고 [전이·실제 writer·로그 동등성 원본](evidence/shop-availability-transition-probe.json)을 별도 보존한다. 다섯 실제 작성/자료 모듈의 SHA256, 가격의 골드 단위, 분/이벤트 순서 초, 제작 전후 잔액·재료·장비, 사망 전후/부활 경계, 귀환 기록과 원래 함수 실행 대비 정확한 결과 동등성을 남긴다. 승자·종료·경기 길이·플레이어 KDA/CS/XP/레벨/골드/아이템/퀘스트/시야/피해량·구조물·골드 이력·밴픽·기록/설명은 관측 wrapper 전후 동일하다. 기록/무기록의 실제 결과도 동일하고 원래 세계의 저장값은 불변이다. CLI 시드는 1–8개로 제한한다. 이 도구는 현재 결함을 반드시 남겨야 통과하는 테스트가 아니며 미래 교정 후에도 관측과 동등성 경계를 사용한다. [수집·초기 fixture 실패 진단](evidence/shop-availability-diagnostics.json)과 `/tmp/shop-availability-*` 로그는 보존한다. 초기 영어 champion 이름/템플릿 escape fixture 실패는 시뮬레이션 실패로 분류하지 않는다. 로컬 기존 정적 테스트의 자식 프로세스가 sandbox에서 EPERM인데 빈 출력/종료 0을 반환하는 환경 문제도 Node 22/24에서 독립 재현하고 원 진단을 보존했다. 권한 자동 검토 후 동일한 기존 정적 검사 전체가 성공했으며 테스트·계측·예산을 바꾸지 않았다. 외부 프로 경기 보정은 수행하지 않았다.
+
+**로컬 검사:** 정적 검사·133모듈 빌드와 기존 실제 장부 수용(1,380 action/4 logged·quiet paired matches/공식 결과·복기·저장)이 성공했다. UI 통합 runner 결과는 원 로그에 보존한다. 제품 JS/HTML은 현재 main과 동일하며 이 조사의 출시 여부는 새 PR의 정확한 head 전체 CI·병합·같은 main CI/standalone/Pages 후에만 기록한다. 이번 코드에는 사용자 화면 변화가 없어 같은 화면의 브라우저 장기 검사를 반복하지 않았다.
+
+**정확한 다음 구현:** 고정 패치의 귀환 완료·중단, 부활 후 기지와 복귀, 이동 가용성·오른 제작 조건의 검토 가능한 원자료를 확보하고 단위/출처를 기존 자료 체계에 등록한다. 실제 상태 작성자 → 공유 구매 장소 판정 → 장비 조합/와드의 골드 writer → 실제 효과 시점과 가용성 소비 → 공식 결과/저장·복기까지 연결한다. 반례는 일반 전장 구매 거절, 귀환 중 피격 취소, 기지에서 정확한 잔액·6칸 조합, 사망·부활 경계, 오른의 합법 비소모품/소모품 구분, 같은 시각 중복/실패 원자성, 종료 후 불변, 기록/무기록·AI/선수 동등성, 공식 pending/full/lite 저장이다. 자료 제한이 계속되면 안전한 독립 엔진 단위 8.3의 earned 골드·실제 장비 이중 전투력 소비를 조사·교정하고, 구매 장소 연결은 미완료로 유지한다. 8.5.1 출처 기반 웨이브/경험치 및 전체 승인 범위도 유지한다. 장기·실기기·TalkBack 최종 QA는 아직 시작하지 않는다.
+
+
+**8.3의 다음 경계에 대한 추가 실제 재현(8.2.2 조사 중):** [고정 장비·레벨/미사용 골드 소비 원본](evidence/unspent-gold-power-source-probe.json). 같은 합성 자르반 참가자/레벨1/빈 장비/분12에서 `addGold`로 미사용 골드만 500→6,500으로 늘리자 실제 `combatStats`의 offense는 39.036→141.506, EHP는845.056→3,297.647로 증가했다. 장비 효과는 모두0이며 실제 350골드 롱소드 writer 구매 후 offense146.256/EHP3,338.210으로 다시 늘었다. 원인은 `combatStats0`의 `goldEarned-500` 전환과 `systemEffects`의 동시 소비다. 이 수치는 실제 초당 피해량/체력이나 전문 경기 보정 목표가 아닌 엔진 내부 대리지표다. **기존 승인8.3 가설을 실제 소비 재현으로 승격했고 아직 수정하지 않았다.** 구매를 기지로 제한해도 이 미사용 골드 전투력 경로가 남으면 귀환·구매의 비용이 왜곡될 수 있다. 검토된 raw item stats/패치 효과/챔피언 damage 소비 경계 및 오래된 generic 계수 의존을 먼저 대조하고, 새 arbitrary 수치 없이 실제 보유 장비·레벨·효과만 소비하도록 substantial 자연 경계에서 교정한다. 기존 결과 변화는 의도적 판정 교정으로 기록하며 역사를 다시 계산하지 않는다.

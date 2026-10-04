@@ -47,9 +47,13 @@ Historical patch reconstruction starts from the pinned baseline and reapplies re
 Do not claim all real item restrictions are implemented. `selectItemBuild` avoids
 multiple boots, and purchase execution caps inventory at six using atomic recipe
 combination. These guarantees do not establish all unique-item/group restrictions.
-`applyItemCraftAction` currently appends the purchased ID; `systemEffects` sums
-effects per inventory entry. Runtime normalization does not carry reviewed
-exclusive-group rules, and automatic selection alone is not a shared legality gate.
+The dated append-only writer finding was corrected in task 8.2.1 (PR #172):
+`commitItemCraftBatch` now validates actual recipe/cost/ingredients, final duplicates,
+boots/champion conditions, cash and atomic six-slot combination, debits gold and
+invalidates inventory effects. `systemEffects` still sums inventory effects;
+reviewed exclusive-group metadata and complete conditional effect adjudication
+remain missing. Selection alone is not proof of all restrictions. Original dated
+findings and correction evidence remain in DEVELOPMENT.
 
 Next bounded acceptance must check duplicate final items, mutually exclusive
 groups, legal repeated components/consumables, missing ingredients, six-slot
@@ -79,3 +83,8 @@ not a complete camp/wave model. Review spawn/respawn, rewards, health/resistance
 clear/arrival cost, availability, vision, waves and conversion separately.
 Documented rules must reach actual income, levels, purchases, pressure and macro
 decisions; do not label aggregate camp/CS proxies as exact monster simulation.
+
+
+## 실제 구매 위치 — 8.2.2 조사 상태
+
+구매 장부 교정은 실제 상점 위치 판정 완료가 아니다. `addGold`와 별도 퀘스트 와드 writer에는 기지/귀환/복귀 상태 확인이 없으며, 실제 재현 결과와 수집 제한은 DEVELOPMENT의 8.2.2에 기록했다. 고정 오른 설명은 전장 비소모품 제작을 허용하지만 일반 선수와 오른이 같은 위치 없는 writer를 사용하는 현재 상태는 합법 예외 구현 증거가 아니다. 고정 귀환/이동/제작 조건의 원자료를 검토하기 전 시간을 발명하지 않는다. 사망 중 구매를 일괄 금지하는 새 정책도 추가하지 않는다.
