@@ -1,0 +1,74 @@
+{
+  "kind": "synthetic-actual-consumer-probe-not-professional-data",
+  "champion": "Jarvan IV",
+  "before": {
+    "ledger": {
+      "earned": 500,
+      "items": 0,
+      "wards": 0,
+      "held": 500
+    },
+    "items": [],
+    "level": 1,
+    "off": 39.036149389442926,
+    "ehp": 845.0560747976098,
+    "itemEffects": {
+      "offense": 0,
+      "defense": 0,
+      "sustain": 0,
+      "utility": 0,
+      "haste": 0,
+      "mobility": 0,
+      "early": 0,
+      "scaling": 0
+    }
+  },
+  "unspent": {
+    "ledger": {
+      "earned": 6500,
+      "items": 0,
+      "wards": 0,
+      "held": 6500
+    },
+    "items": [],
+    "level": 1,
+    "off": 141.50604153673055,
+    "ehp": 3297.6471449365113,
+    "itemEffects": {
+      "offense": 0,
+      "defense": 0,
+      "sustain": 0,
+      "utility": 0,
+      "haste": 0,
+      "mobility": 0,
+      "early": 0,
+      "scaling": 0
+    }
+  },
+  "equipped": {
+    "ledger": {
+      "earned": 6500,
+      "items": 350,
+      "wards": 0,
+      "held": 6150
+    },
+    "items": [
+      "1036"
+    ],
+    "level": 1,
+    "off": 146.25575233084925,
+    "ehp": 3338.21013533735,
+    "itemEffects": {
+      "offense": 0.01,
+      "defense": 0,
+      "sustain": 0,
+      "utility": 0,
+      "haste": 0,
+      "mobility": 0,
+      "early": 0.025,
+      "scaling": 0
+    }
+  },
+  "source": "engine.js combatStats0 g=goldEarned-500 plus systemEffects; addGold; item-purchases.js actual writer",
+  "limit": "Controlled source scenario, not calibrated champion power or an official match outcome"
+}
