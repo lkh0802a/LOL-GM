@@ -83,7 +83,7 @@ assert.equal(stats.engineCompiles,1,
 assert(stats.cachedArtifacts>=ENGINE_MODULES.length,
   'shared domain runner did not cache the complete engine source');
 assert.equal(stats.contexts,63,
-  'fifty-nine engine fixtures, including independent analysis-room/tiers/comparison, staff and public opponent draft coverage, must each receive a fresh VM context');
+  'all 63 engine fixtures, including independent inventory-defense and analysis/report coverage, must each receive a fresh VM context');
 
 console.log('UI_FINANCE_CONTRACTS_RUNNER '+JSON.stringify({
   acceptances:rows.length,
