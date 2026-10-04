@@ -977,3 +977,97 @@ Node 22 CPU 프로파일에서 `activeTeams`가 가장 큰 누적 소비였다. 
 게임 진행 위험은 기존 승인 목록에 병합한다: 장비 재료 삭제/조합 및 quest 변환은 8.2.1 재현·수정; 낮은 HP 바닥/중립목표 두 writer/patch reward/분배·반올림은 위 추가 감사의 코드 가설; offseason 만료·임대·등록 순서와 연기 일정의 피로/준비/pending 참조는 4·10·11 연결 검증; 저장 실패/반복 action의 보상 중복·원자성은 11; 이적/해임 후 report 권한과 현재 patch의 과거 재구성은 3·9·12 관측/역사 경계다. 미재현 위험은 결함 확정으로 표시하지 않으며 각 실제 trigger/기존 writer/거절·save 반례를 해당 도메인 단위에서 검증한다.
 
 최신 연결 승인(2026-10-04): 한국어 단일 지원에서 기능이 없는 ‘공용어 사용’ 설정은 시작 화면 정리 단위에서 제거한다. 구매 장소는 일반적으로 아군 기지 상점이며 오른은 실제 patch-pinned passive 구매 예외를 검증해야 한다. 8.2.1은 bank/recipe만 교정했고 상점 밖 자동 구매 제한을 완료하지 않았다. 다음 8.2.2는 현재 recall/respawn/travel/기지 상태 writer→구매 가능 consumer→actual effect timing→official/save 반례를 우선하고, source로 검토된 오른 조건 외 전장 구매를 허용하지 않는다. 이동·귀환 모델에 없는 상태는 임의 계수로 꾸미지 않는다. 실제 아이템/generic earned 전투력 중복 감사와 8.5.1 wave XP는 이어지는 엔진 우선순위로 유지한다. 표의 항목별 위/아래 정렬 요청은 12.5·12.9의 정렬/컨텍스트 유지 조건에 등록하되 열 정렬/화면 배치 의미는 확인 중이다.
+
+
+<a id="recruitment-language-refinements"></a>
+
+## 2·3·4·12 영입·의사소통·FM 참고와 세부 편의성 — 2026-10-04 전체 문서화
+
+이 절은 사용자 직접 문서화 요청으로 추가했다. 기존 단계/승인 조건의 구체화이며 별도 24개 기능으로 집계하지 않는다. 등록은 구현/출시가 아니다. 8.2.1 actual ledger PR #172 최종 head `d309a635140e514b3a15c845a6a42dd2f7c0962e`의 전체 CI `37175037544`(medical 4 seed/2 aggregate/verify 포함) 성공 후 main `a529566d838f50f1b6215ffa07bba9c9b9f61b30`로 순차 병합했다. 같은 main 전체 CI `37175385189`·standalone-sync와 Pages `37175728063` 게시가 성공했다. Pages의 fully validated checkout/superseded guard/성공 artifact 다운로드/launcher·offline 조립/게시 steps를 확인했다. 직접 github.io HTTP는 Cloud 정책 차단으로 별도 검증되지 않았다. 이전 171 evidence와 현재 코드/HTML parity를 보존한다.
+
+### 확정 방향과 실제 현재 상태
+
+1. **언어 규칙 변경 승인(2·5·6·8·12.5):** ‘가상 공용어로 해외 선수 의사소통 페널티 없음’ 규칙을 사용자의 ‘의사소통 패널티 되살리자’가 대체한다. `ui-market-initial.js`의 고정 ‘공용어 사용’ 안내는 시작 화면이 아니라 게임 시작 뒤 첫 영입 화면이다. 기존 규칙/표시는 원래 결정의 증거로 유지하며 실제 교체 후 최신 UI에서는 제거한다. 언어 숙련/팀 실제 업무 언어/적응 시간은 **승인·미구현**이다. 기존 `teamAdaptation`, playerMod/lineupCohesion, practice-resources의 적응 writer를 조사해 일반 팀워크와 중복 페널티를 막는다. 국적 하나로 숙련을 정하거나 외국 선수를 일괄 불이익 처리하지 않는다. 각 입력 단위/생성·학습 writer/실제 수행 consumer/훈련 기회비용/관측 권한/legacy 기본값과 효과 크기는 검토 후 확정한다. 실제 이적→영입 정보→훈련/적응→경기 수행→save/AI 대칭을 수용해야 구현 완료다. 기존 결과/계약을 소급 변경하지 않는다.
+2. **초기 영입 정보(3·4·12.5):** FM의 아이디어는 자산/문구/브랜딩 복제가 아닌 목록→관측 능력/보고서→조건→협상→목록 복귀 흐름이다. 현재 first market는 기량/잠재 범위가 있지만 이름이 inert text이고 상세 연결이 없다. ui-player/scouting의 existing observed reports/metrics를 재사용해 계약 전 강점/약점/포지션/합법적으로 관측된 champion/신뢰도를 보여준다. 내부 observedPlayerCoreMetrics가 true core를 반환하는 분기가 있으므로 명칭만 믿지 않는다. hidden 정확한 attrs/potential/타팀 practice를 공개하지 않는다. 실제 후보 상세→보고서→기존 evaluation/negotiation→취소/확정→선택/스크롤 복귀→save가 수용 경계다. **승인·미구현**.
+3. **지역 후보 기본값(3·4·12.5):** 기본 지역 내, 해외, 전체 구분을 유지한다. 활동 지역·출신/국적·리그 local 자격·업무 언어 숙련은 서로 다른 개념이다. 현재 initial scope all/local은 eligibility를 사용하므로 그대로 ‘지역 내 활동’이라고 바꾸지 않는다. 생성/현 소속/FA 기록의 실제 region 의미를 검토하고 탭 기준을 정의한다. 해외 출신의 기존 언어 숙련과 국내 출신의 비로컬 자격 반례를 포함한다. default/탭 이동/전체 보기/정렬/권한/관측 범위·return/save를 검증한다. 해외 영입 금지·강제 확인·새 agency fee는 없다. **사용자 방향·구현 대기**, 세부 활동 기준은 source 조사 대상.
+4. **처음 화면(12.3–12.5):** 새로 시작하기/불러오기/설정만 제공하고 긴 세계/리그 설명을 제거한다. 팀/커리어 선택은 새로 시작하기 다음으로 연결한다. 실제 screenshot undefined 국제대회 문구를 보존하고 관련 현재 화면 writer를 교정한다. 실제 new/load/settings·취소·기존 save·키보드·좁은 화면 연결이 완료 조건이다. 주요 career nav는 상단, save utility는 별도, 화면은 절제된 typography/table hierarchy를 유지한다. **승인·미구현**.
+5. **정렬/레이더(12.5·12.9):** ‘항목별 위/아래 정렬’은 열 오름/내림 또는 화면 배치 의미 확인 질문을 보냈으며 아직 답이 없다. 우선 표 열 정렬을 작업 가정으로 삼고 현재 기준·방향·동률 안정성·미관측값·filter/선택/scroll과 keyboard를 검증한다. 레이더는 관측 능력과 실제 경기 지표를 분리하고 같은 context 비교/숫자 표/source/missing axes를 유지한다. **승인·미구현**, 가짜 normalization·KDA 단일 우열·다른 역할의 확정 순위는 없다.
+6. **구매 장소(8.2.2):** 일반 선수는 실제 아군 기지 상점에서 구매하고 오른은 검토된 passive 예외다. pinned Riot Data Dragon16.19.1/sourceCommit1cf34d485c572a9894c223efd3d66c1e5ad7f22f의 간이 대장간 설명은 ‘어디에서든 골드를 써서 소모품을 제외한 아이템 제작’이다. current recall은 hp 회복/다음 income 감소 flag이며 기지 체류·귀환 완료·복귀 상태가 없다. 실제 main seed record-official의 read-only kill/commit wrappers에서 **처치 처리 안 구매27회**를 재현했다. 3분 JarvanIV/Nilah boots 700조합은 recall=false다. 원본 `/tmp/item-ledger-shop-baseline.log`와 probe를 보존하고 결과/RNG를 변경하지 않았다. **재현·미수정**, 다음 coherent45–55분 엔진 단위에서 상태/writer/consumer/source를 연결한다. 임의 귀환 시간/전장 위치·계수나 모든 오른 구매 허용으로 해결하지 않는다.
+
+### 최근 제시한 세부 아이디어 전체 — 기존 담당 단계에 병합
+
+공통 수용: 아래 trigger→기존 writer/관측/권한을 먼저 확인한다. 실제 source가 없으면 ‘없음/불확실’이며 숫자를 만들지 않는다. 효과 없는 fake control은 추가하지 않는다. 상태 보존은 world/save slot/권한 변경 시 해제·재검증하고 취소/중복/rollback/save/AI 영향까지 기록한다. P1은 실제 의사결정·오류 방지, P2는 그 위 탐색 편의성이다. 작은 UI는 개별 PR로 쪼개지 않고 해당 화면의45–55분 flow에 함께 구현한다. source/engine 의존이 큰 것은 별도 수직 단위다. 아래 상태는 **첫12개 사용자 전체 추가 승인**, 뒤12개는 **기존 승인 범위의 등록·검증 후보**이며 재현되지 않은 결함을 확정하지 않는다.
+
+| 담당/우선 | trigger·현재 문제 또는 후보 | 개선과 선수-facing 예 | 비용/의존·수용 |
+| --- | --- | --- | --- |
+| 3·12.5/P1 | 낮은 기량과 적은 정보 혼동 | 정보 부족 표시: 낮은 점수와 미관측 구분 | knowledge/report 범위; 공개→관찰 변화·missing counterexample |
+| 2·3·12.5/P1 | 포지션 다른 종합 점수 비교 | 역할 핵심 능력 강조, SUP/ADC 동일 우열 금지 | 기존 role weight/observed source; hidden getter guard |
+| 4·12.5/P1 | 보고서를 닫고 선수를 재검색 | 보고서→현재 합법 협상 직접 이동 | 기존 shared command/preconditions; stale/fired 거절·취소·복귀 |
+| 3·12.9/P2 | 후보 비교 반복 이동 | 임시2–3명 비교함, 능력 범위/연봉/역할/언어 나란히 | 관측/동일context; 수/축 누락·departed/save-slot reset |
+| 4·5·12.5/P1 | 영입 이후 제한을 뒤늦게 발견 | 실제 선수단/비로컬/연봉 전후 미리보기 | 기존 preview/rule authority; 실패 불변·real commit 일치 |
+| 2·6·12.5/P1 | ‘적응 중’ 이유/변화 없음 | 실제 언어 학습/적응 변화 기록 | 새 언어 writer 승인·미구현; 과거값 보존·no invented improvement |
+| 7·10·12.5/P1 | 준비 제한이 여러 화면 분산 | 실제 등록/부상/역할 blockers 한곳 표시 | 현재 rule writers; allow/reject 동일·최신성 |
+| 8·12.9/P1 | 복기 사실과 추정 혼동 | 저장된 사실과 평가 라벨 구분 | existing public record/private reason; legacy missing·불변 |
+| 12.5/P2 | 현재 표 순서 불명 | ‘요구 연봉 낮은 순’ 등 활성 정렬 제목 | sort/context; 동률·키보드·미관측·필터 |
+| 3·11·12.9/P1 | 이적/은퇴 후 비교 stale | 대상 이탈 상태/당시 report 날짜 표시 | existing history/observer-first; 현재 권한·save load |
+| 11·12.6/P2 | 같은 제한 반복 알림 | 실제 제한이 바뀌었을 때 갱신 | event identity/state change; 중요 deadline 누락 금지 |
+| 12.5/P2 | 상세/협상 후 위치 분실 | 선택 선수/필터/scroll 복귀 | transient routing; cancel·slot/world reset·focus |
+| 3·12.5/P1 | 같은 이름 후보 오선택 가설 | 포지션/나이/소속 식별 정보 | actual ID stable; 동명이인 fixture·source label |
+| 3·12.5/P2 | 빈 검색의 원인 모름 | 어떤 filter로 후보가 제외됐는지 안내 | real filtered counts; hidden/private counts 노출 금지 |
+| 3·12.9/P1 | 겹치는 추정 범위의 확정 우열 | 65–75/68–78이면 판단 유보 | observed intervals; arbitrary confidence/tier bonus 없음 |
+| 4·12.5/P1 | 새 협상에서 달라진 조건 찾기 | 연봉/기간/역할 변경만 표시 | 실제 prior/current offer; stale/cancel/save 원본 |
+| 4·5·12.5/P1 | cash와 쓸 수 있는 돈 혼동 | 지급 의무와 현금 별도 표시 | existing finance/payments; 예약/확정 중복 차감 금지·units |
+| 4·7·12.5/P1 | 조건부 계획이 확정처럼 보임 | ‘영입 성공 시’ 계획 라벨 | 실제 pending/committed source; no premature roster mutation |
+| 4·10·11/P1 | 같은 선수 임대/방출/등록 충돌 가설 | 최신 계약/소속 재검증·정확한 막힘 이유 | shared command version/ownership; stale/duplicate atomic |
+| 2·4·12.5/P1 | 약속과 실제 기용 비교 반복 | 약속 역할↔실제 usage 나란히 | original promises/actual official appearances; 부상/시점 context |
+| 7·9·12.5/P2 | 전체 patch를 읽어야 내 영향 파악 | 실제 주력/현재 lineup 관련 변경 먼저 | reviewed pinned before/after; 미래/hidden enemy prep 금지 |
+| 3·9·12.9/P1 | 평가 변화 원인 혼동 | 선수·표본·patch·filter 변화 구분 | original snapshot/source/date; no causal certainty 재구성 |
+| 3·12.9/P1 | radar 면적/다른 단위 오해 | 축 단위/역할/표본/누락 설명 | authorized radar/numeric table; no fake axes·accessible missing |
+| 4·11·12.5/P1 | 권한 상실 전 열린 dialog stale | 해임/이적/구단 변경 후 적용 차단 | observer-first + command authority; saved/reopened dialog counterexamples |
+
+정확한 이어가기: 현재172 main/standalone/Pages follow-through 확인 후8.2.2 기지 구매 상태·오른 예외가 엔진 최우선. UI는 startup→실제 팀 선택→지역 후보/관측 능력 상세·비교→기존 협상→복귀의 coherent 단위로 교체한다. 언어는 그 화면의 가짜 상태로 먼저 표시하지 않고 실제 적응 writer/수행 consumer 단위와 함께 연결한다. source metadata 부족·공개 전문 경기 미수집은 정직하게 기록한다. long/device/TalkBack final QA는 여전히 보류다.
+
+
+### 추가 긴 목록 전체와 구단 차원의 업무 언어·지원 지출 승인
+
+최신 사용자는 추가 아이디어 전부를 기존 단계에 추가하고, 업무 언어와 그 지원 지출을 **팀 차원에서 판단**하도록 승인했다. 이는 감독이 매번 언어/금액을 입력하게 만드는 정책 제안을 대체한다. 구단의 실제 선수·스태프 언어 상태, existing owner/finance authority와 cash/확정 의무를 사용해 판단하고 actual ledger/shared command/AI-player parity로 지출한다. 결정 이유·실제 지급·적응 상태는 lawful UI/news에서 확인 가능해야 한다. 실제 cost/learning rate/source/model이 없는 지원 항목에 가격/보너스를 발명하지 않는다. 업무 언어 선택·staff 지원 경로·학습 기회비용/훈련 자원은 승인된 구단 정책의 세부 구현 조사다. 기존 manual manager authority 전체를 임의로 자동화하는 승인이 아니며 언어 운영의 구단 차원 판단으로 한정한다. **승인·미구현**. 과거 common-language 결정과 과거 결과는 original evidence로 보존하되 현행 지시로 취급하지 않는다.
+
+다음은 대화에서 추가로 제시한 긴 목록 전체다. 사용자 전체 추가 승인이며 기존 단계의 concrete acceptance로 통합한다. source 조사 전 확정 결함/구현 완료로 표시하지 않는다. 각 행의 기존 domain writer/source와 실제 trigger를 검사해 input/unit/authority/tradeoff/UI/save/rollback/AI를 구체화한다. 같은 도메인 항목은 coherent45–55분 slice로 묶고 source/state 기반이 필요한 것은 선행 단위를 의존한다. 신규 effect/정책 숫자를 임의로 도입하지 않는다.
+
+| 담당/우선·의존 | 전체 구체화 항목 | benefit·tradeoff·수용 경계 |
+| --- | --- | --- |
+| 8.2·8.6/P0–P1·actual travel/shop | 획득/완성시점 분리; 귀환 목적(회복/구매/회피/목표준비); 압박 때문에 못 하는 귀환; 귀환 후 목표 도착; 사망 중 구매와 부활/복귀; 큰 미사용 bank; 실제 component 효과 | 전장 골드=즉시 전투력 오류 방지. 정확한 위치/시간 model이 없으면 그 한계를 드러내고 arbitrary timing으로 채우지 않는다. actual shop purchase/arrival paired case·same-source save |
+| 8.2–8.4/P1·effects/resources | 일회/지속효과 중복; 처치 전후 자원; 목표 획득 후 체력/생존/웨이브; 추격·철수 조건; 부활 뒤 만료된 기회; 총골드 vs 역할 집중; engage-followup 접근; retarget 비용/overkill; CC 만료와 행동 | 인과 정확도/실행 가능한 행동. side/target/time/availability/real stored trace 반례, coefficient redesign은 별도 검토 |
+| 7·8.7·12.9/P1·observed map/series | 발견 vs 행동가능; unknown enemy/lastseen 오래됨; 공개 이전 세트에 대한 대응; 결과 설명 반례 | AI hidden access trap, 무근거 causal 문구 제거, original sources와 계산 일치; 미래/타팀private금지 |
+| 2·5·6/P1·language writer | 일상 언어 vs 경기 콜; 개인 숙련 vs 다섯명 공통 소통; 구단 업무 언어 변경 영향; 기존 staff 지원; 훈련 콜 활용/시간비용; 같은 언어 이적 때 지식 보존; 임대 복귀의 익숙함; 후보 선수의 practice 적응 | 새로운 세부 축 필요성은 actual model 조사. nationality만으로 penalty/이적 때 언어 reset 금지, actual learning/change/history/opportunity cost/finance/AI/save 반례 |
+| 2·3·6/P1·observed growth/medical | 역할 전환 준비도 vs 원래 기량; 건강 복귀 vs sharpness; 좋은 성적 vs 성장; 관측된 소통 문제의 불확실성 | role/context·medical writer·actual practice source를 구분. 낮은 승률을 language cause로 단정하지 않음 |
+| 3·4·12.5/P1·initial/report/commands | 첫 시즌 추정 출처; 적합 이유와 위험 함께; 정보 최신성; 관찰로 새로 안 부분; 다른 구단 실제 계약 발생; 주전/후보 영입 역할 맥락; 후보 실패 뒤 계획 복구 | 없는 초기 detailed stats/경쟁 offer를 발명하지 않음. 관측범위·original date·actual candidate transition·filter/return/source 검증 |
+| 4·5·10/P1·finance/registration | 협상 중 예산/등록/비로컬 변화; 복수 offer vs 확정 지급 의무; 옵션 행사 시점/주체; 임대 종료 전망; 관찰 확장 비용 | preflight와 commit 동일 authority/실제 최신 조건, 의무/지출 중복 금지, no inventedfee·unlimitedobservation |
+| 5·6·10/P1·daily practice/staff | calendar 실제 훈련 부담; 같은 날 중복훈련; 의료/소속 변경 불참; staff 빈 영역 실제 상태; 스태프 업무 인계; 위임 실행 vs 감독 확정; 소유2군 lawful observations; 주전 교체 실제 이유 | daily/time budget·event identity·report owner·permission/parity, no unsupported staffpenalty/무료동시훈련, actual before-after/save/rollback |
+| 10·11/P1·calendar/office/series | 연기 전후 비교; prep/scrim/rest/registration 충돌; 연기 전후 준비 중복; 현행 vs future office rules; 실제 승격 자격; result확정→다음round 생성순서; tournament fixedpatch; 국가2부/통합1부 탐색; 개정 후 actual 영향 | actual schedule/broadcast pending 참조·effectivedate·membership state·idempotence·history. nofuture rules applyingtoday/no double reward |
+| 3·9·12.6·12.9/P1·observation/history | smallsample 평가확신; 다른role/patch/event/opponent 비교; original영입판단보존; 당시 player/club 이름; 개인 vs 팀 결과; 실제 뉴스 정정출처; 같은 사건기사 통합; 관심뉴스/필수deadline 분리; actual seasondecisions/results recap; qualified retirement-staff history | original/observed/public/private 소유 구분, arbitrary stability coef 없음, hidden enemy/no fabricated corrections, real event→navigation/read/filter/save |
+| 11·12.5/P1–P2·common UI/save | 일관 선수식별; 미관측 정렬값; filter 밖 batch selection; 현장 disabled reason; 실행중 duplicatebutton; cancel vs finalconfirmation; slot metadata; last good save 보호; load 후 stale work; 실제 cancelable 범위; noncolor status; keyboard profile-table-return; context help; new engine vs past records; recoverable error feedback | fakecontrols 금지·meaningfulchoice 보존, 기존 저장보호/rollback·world-slot/권한 reset·units/keyboard/좁은화면. whole deviceQA 아닌 focused flow |
+
+### 추가 동시 사건·변경 조건 반례 전체 — 등록·승인, 재현 상태 별도
+
+| 단계 | 구체 trigger | 검증해야 할 불변식 |
+| --- | --- | --- |
+| 4·10 | 영입/등록 deadline/경기 같은 날 | 계약만으로 등록전 공식출전 불가; office/effective ordering |
+| 8.2·8.6 | 귀환 도중 잔액 충분 또는 귀환 취소 | 일반선수 완료전 구매/취소된귀환 회복 불가; actual 상태·Ornn예외 |
+| 8.5·8.6 | 부활과 목표 spawn 근접 | alive가 즉시현장참여를 의미하지 않음; actual travel/arrival |
+| 8.4 | 처리중 target사망/이탈 | stale target재검증, overkill 이전·비용 없는 retarget 금지 |
+| 8.1·8.4 | buffexpiry와 attack 같은 시점 | 일관 ordered source/consumer/설명·no fabricated physical simultaneity |
+| 8.2·8.3·8.5 | kill/quest/reward 한 사건 | 각 정당 reward1회, effect/cache 중복 없음·identity |
+| 8.2·9 | 레시피 바뀐 tournament | 경기 고정 patch의 cost/from, current/global 혼합 없음 |
+| 2·5·6 | 구단 업무 언어 변경 | 학습 원본/기존언어 보존·새 적응 구분; 반복 변경 exploit 조사 |
+| 2·4·5 | 임대 원/차입 구단 언어 차이 | 구단별 정책/지출/관측권한 구분·복귀 연속성 |
+| 5 | language지원 확정 후 insolvency | 이미 확정 의무와 새가용예산 구분; nofree지원/몰래의무취소 |
+| 3·4·5 | 같은 후보 1군/2군 검토 | evaluation owner/contractactor 분리·foreign report완료가 현재승인 아님 |
+| 4·11·12.5 | 열린 상세 중 소속변경 | current authority/condition 재검증·stale command 거절 |
+| 3·12.5 | 정렬중 보고서갱신 | 선택 ID 보존·newsort 표시·batch 오선택 없음 |
+| 3·12.9 | empty/old report혼합 | no-information vs old-information·0ability 동일취급 금지 |
+| 8·11 | pendingofficial 저장직전 오류 | 마지막정상저장/확정게임/미확정선택 구분·재시도 no doublegame |
+| 10·11 | 연기후 reload | oldwindow/newdate/pendingrefs 동일 실제match 연결 |
+| 5·12.7 | 과거 구단 해체/개명 | event-time labels/stableidentity/historynavigation 유지 |
+
+예약 지시문은 사용자 요청대로2만자 이하로 압축하되 전체 승인 범위/단일 가이드/필수 검증·publication/한worker·hourly/최종QA보류를 유지한다. 중복 release prose는 요약하지만 source/failure 기록은 삭제하지 않는다. 문서화는 사용자 직접 요청이며 새로운 hourly 구현 완료로 집계하지 않는다.
