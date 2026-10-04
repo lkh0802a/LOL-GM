@@ -71,4 +71,4 @@ await runEngineFixture(String.raw`(()=>{
  globalThis.esc=s=>String(s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
  check(!renderPublicMatchReview(reloaded,saved,saved.games[0],{}).includes('<th>아이템'),'removed item column returned');
  console.log('INVENTORY_DEFENSE_ACCEPTANCE PASS '+JSON.stringify({rows,pairedMatches:4,officialSave:true,legacy:true,cashConversionRemoved:true,exactOffensiveMechanicsPending:true}));
-})()`,{timeout:60000,setupSources:[await artifactSource('ui-match-history.js')]});
+})()`,{timeout:60000,setupSources:[await artifactSource('ui-match-history.js'),await artifactSource('ui-takedown-history.js')]});

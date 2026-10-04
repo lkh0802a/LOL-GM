@@ -59,4 +59,4 @@ await runEngineFixture(String.raw`(()=>{
  const practice={...rec,practiceModel:true},fired=unpackDB(packDB(db));fired.world.fired=true;
  check(recordedPublicMatch(fired,practice,g).reason==='no-authority','practice ledger permission leak');
  console.log('ITEM_LEDGER_ACCEPTANCE PASS actual cost/cash/conservation, strict recipe/affordability/repeat/final/champion, six-slot atomic/failed preview/idempotence, MID/ADC free equipment, ward/cache,4 paired matches/'+paidActions+' actual actions, official UI/source/lite/legacy/privacy');
-})()`,{timeout:60000,setupSources:[await artifactSource('ui-match-history.js')]});
+})()`,{timeout:60000,setupSources:[await artifactSource('ui-match-history.js'),await artifactSource('ui-takedown-history.js')]});

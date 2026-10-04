@@ -233,3 +233,8 @@ fields; no second contract, roster, finance or preview ledger is introduced.
 ## 8.6.1 오브젝트 작성자와 당시 source
 
 `objective-awards.js`는 actual availability/identity·participant validation과 기존 reward/quest/respawn/buff를 소유한다. engine의 call 및 fight participant IDs/survivor conversion이 명시적으로 공급한다. actual result.objectiveEvents→match-history optional source/validation→ui-match-history의 공식/Analysis 펼침→기존 full/lite save가 연결된다. gold eligibility는 기존 모델을 유지하며 실제 위치를 추정하지 않는다. `objective-award-acceptance.mjs`가 paired actual writers, 실제 경기·source/UI/legacy/save를 검증한다. 나머지 reviewed reward/transition와 rollback 범위는 DEVELOPMENT8.6.1에 유지한다.
+
+
+## 8.4.2 실제 처치 보상과 당시 설명
+
+`takedown-rewards.js`는 기존 `killPlayer` actual writer와 preflight actor ownership/availability·unique assist·기존 gold/XP/quest를 소유한다. `engine.js`의 fight/라인/갱킹은 실제 actors를 공급하고 결과 receipt를 반환한다. `match-history.js`의 optional bounded takedowns v1 검증/복사→`ui-takedown-history.js` 순수 표현을 official/Analysis에서 호출→기존 full/lite save로 이어진다. 새 UI module의 의존 fixture를 명시적으로 로드하며 budget을 올리지 않는다. takedown-reward-acceptance와 existing domain/regression/browser에서 actual writer/normal parity/source/권한/save를 확인한다. 반올림·거리·simultaneous policy와 exception rollback의 미완료 범위는 DEVELOPMENT8.4.2를 따른다.

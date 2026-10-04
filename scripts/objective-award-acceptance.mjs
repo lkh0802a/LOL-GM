@@ -30,4 +30,4 @@ await runEngineFixture(String.raw`(()=>{
  const legacy=JSON.parse(JSON.stringify(g));delete legacy.publicRecord.objectives;const original=JSON.stringify(legacy);check(recordedPublicMatch(resumed,rec,legacy).record&&renderPublicMatchReview(resumed,rec,legacy,{}).includes('참여 기록이 저장되지')&&JSON.stringify(legacy)===original,'legacy reconstruction');
  const bad=JSON.parse(JSON.stringify(g));bad.publicRecord.objectives.events=[{id:'baron:1',key:'baron',side:0,minute:1,second:0,participants:['foreign-hidden']}];check(!recordedPublicMatch(resumed,rec,bad).record,'foreign evidence accepted');
  console.log('OBJECTIVE_AWARD_ACCEPTANCE PASS '+JSON.stringify({pairs,converted,oneStackQuest:true,spawnReplay:true,terminal:true,officialFullLite:true,legacyPure:true,physicalParticipation:false}));
-})()`,{timeout:60000,setupSources:[init.replace('function simulateMatch(','function initialObjectiveState('),await artifactSource('ui-match-history.js')]});
+})()`,{timeout:60000,setupSources:[init.replace('function simulateMatch(','function initialObjectiveState('),await artifactSource('ui-match-history.js'),await artifactSource('ui-takedown-history.js')]});

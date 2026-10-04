@@ -71,20 +71,6 @@ function addGold(ps,g){ps.gold+=g;ps.goldEarned+=g;
 }
 function addXp(ps,x,source='ordinary'){ps.xp+=x*(source==='ordinary'&&ps.quest?.completed?1+(ps.quest.rules.xpBonus||0):1);let l=1;for(let i=1;i<XP_TABLE.length;i++)if(ps.xp>=XP_TABLE[i])l=i+1;ps.lvl=Math.min(ps.quest?.completed?ps.quest.rules.levelCap||18:18,l)}
 
-function killPlayer(st,killer,victim,assists,reason){
-  if(matchEnded(st))return;
-  const R=st.patch.rules;
-  victim.d++; victim.hp=1;
-  const sec=victim.lvl*2.5+6+Math.max(0,st.t-15)*0.9;
-  victim.deadUntil=st.t+sec/60; victim.penalty=Math.min(1,(sec+25)/60);
-  if(killer){killer.k++; addGold(killer,R.killGold); addXp(killer,140+victim.lvl*20,'champion'); st.sides[killer.side].kills++;roleQuestTakedown(st,killer);}
-  const as=assists.filter(a=>a!==killer&&a.side!==victim.side);
-  as.forEach(a=>{a.a++; addGold(a,Math.round(R.assistGold/as.length)); addXp(a,70,'champion');roleQuestTakedown(st,a)});
-  const lane=LANES.find(l=>LANE_ROLES[l].includes(victim.role))||'mid';
-  st.lanePush[lane]+= victim.side===0?-0.35:0.35; st.lanePush[lane]=clamp(st.lanePush[lane],-1,1);
-  const fb=st.firsts.blood===undefined; if(fb) st.firsts.blood=killer?killer.side:1-victim.side;
-  log(st,`${killer?pname(st,killer):'처형'} → ${pname(st,victim)} 처치${fb?' (퍼스트 블러드)':''}${reason?' · '+reason:''}`,{side:killer?killer.side:1-victim.side,major:true,kind:'kill'});
-}
 
 // ----- 교전: Setup → Engage → Burst → Extended → Cleanup -----
 function fight(st,zone,sideArrs,ctx={}){
@@ -478,5 +464,5 @@ function simulateMatch(db,blueId,redId,seed,ctx,quiet){
   if(st.winner<0)throw new Error('Match unresolved: neither nexus was destroyed within '+MATCH_SIMULATION_MAX_MINUTES+' simulated minutes; no official result produced (seed '+seed+')');
   const endSec=st.ending.second;
   st.log.sort((a,b)=>a.t-b.t||a.sec-b.sec);
-  return {seed,winner:st.winner,ending:{...st.ending},damageBasis:'effective-aggregate-v1',objectiveEvents:st.objectiveEvents||[],duration:t+endSec/60,durationStr:fmtTime(t,endSec),draft:d,sides:st.sides,log:st.log,expl:st.expl,goldHist:st.goldHist,firsts:st.firsts};
+  return {seed,winner:st.winner,ending:{...st.ending},damageBasis:'effective-aggregate-v1',objectiveEvents:st.objectiveEvents||[],takedownEvents:st.takedownEvents||[],duration:t+endSec/60,durationStr:fmtTime(t,endSec),draft:d,sides:st.sides,log:st.log,expl:st.expl,goldHist:st.goldHist,firsts:st.firsts};
 }

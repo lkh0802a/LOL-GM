@@ -8,7 +8,7 @@ const seedArg=process.argv.find(x=>x.startsWith('--seeds='));
 const seeds=seedArg?seedArg.slice(8).split(','):['record-official','shop-availability-A','shop-availability-B','shop-availability-C'];
 assert(seeds.length>0&&seeds.length<=8&&seeds.every(x=>x.length>0&&x.length<=100),'Use 1–8 bounded seeds');
 const output=process.argv.find(x=>x.startsWith('--output='))?.slice(9);
-const sourceFiles=['engine.js','item-purchases.js','role-quest-match.js','champion-source.js','system-source.js'];
+const sourceFiles=['engine.js','takedown-rewards.js','item-purchases.js','role-quest-match.js','champion-source.js','system-source.js'];
 const sourceHashes=Object.fromEntries(await Promise.all(sourceFiles.map(async file=>[file,createHash('sha256').update(await readFile(new URL('../src/artifact/'+file,import.meta.url))).digest('hex')])));
 const data=await runEngineFixture(`(()=>{
  const seeds=${JSON.stringify(seeds)};
