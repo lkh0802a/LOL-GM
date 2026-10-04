@@ -228,3 +228,8 @@ fields; no second contract, roster, finance or preview ledger is introduced.
 ## 8.4.1 교전 자원·실제 기록 연결
 
 `combat-resources.js:applyFightDamage`는 target remaining aggregate EHP를 소비하는 작은 shared writer다. module list에서 engine 앞에 로드하며 기존 quest/terminal 함수를 소비한다. `engine.js:fight`는 실제 starting/survivor HP fraction, 기존 queued order/RNG를 유지하고 effective packet 결과를 공통 writer에 전달한다. `simulateMatch.damageBasis`→`match-history.js:publicMatchRecord` optional source→`ui-match-history.js` 공식/분석 설명→기존 full/lite save로 이어진다. legacy는 source를 추정하지 않는다. `combat-resource-acceptance.mjs`가 writer/fight/official/source/UI/legacy/저장 경계를 확인한다. engine size budget을 바꾸지 않았다. 나머지 효과/피해/동시 처리 및 old record의 진짜 source 인증은 별도 미완료다.
+
+
+## 8.6.1 오브젝트 작성자와 당시 source
+
+`objective-awards.js`는 actual availability/identity·participant validation과 기존 reward/quest/respawn/buff를 소유한다. engine의 call 및 fight participant IDs/survivor conversion이 명시적으로 공급한다. actual result.objectiveEvents→match-history optional source/validation→ui-match-history의 공식/Analysis 펼침→기존 full/lite save가 연결된다. gold eligibility는 기존 모델을 유지하며 실제 위치를 추정하지 않는다. `objective-award-acceptance.mjs`가 paired actual writers, 실제 경기·source/UI/legacy/save를 검증한다. 나머지 reviewed reward/transition와 rollback 범위는 DEVELOPMENT8.6.1에 유지한다.

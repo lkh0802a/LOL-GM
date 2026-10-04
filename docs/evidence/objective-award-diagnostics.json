@@ -1,0 +1,49 @@
+{
+  "failures": {
+    "/tmp/objective-award-focused.log": "acceptance-fixture.js:2\n const check=(x,m)=>{if(!x)throw Error('OBJECTIVE_AWARD '+m)};\n                           ^\n\nError: OBJECTIVE_AWARD call/conversion participant and quest parity\n    at check (acceptance-fixture.js:2:34)\n    at acceptance-fixture.js:10:2\n    at acceptance-fixture.js:29:3\n    at Script.runInContext (node:vm:149:12)\n    at runEngineFixture (file:///workspace/LOL-GM-engine/scripts/test-harness.mjs:70:15)\n    at async file:///workspace/LOL-GM-engine/scripts/objective-award-acceptance.mjs:3:1\n\nNode.js v22.23.3\n"
+  },
+  "correction": "First paired fixture included post-Baron structure conversion gold/quests. Isolate that unrelated phase with a test-only takeStructure stub for the paired writer assertion; real full conversion stays tested in four actual logged/quiet pairs and browser. No production fallback or assertion removal.",
+  "retainedRaw": [
+    "/tmp/objective-award-original-engine.js",
+    "/tmp/objective-award-baseline.json",
+    "/tmp/objective-award-baseline-32.json",
+    "/tmp/objective-award-baseline-tactics.json",
+    "/tmp/objective-award-corrected.json",
+    "/tmp/objective-award-corrected-participants.json"
+  ],
+  "earlierChecks": "Initial UI67/66VM/regression/browser preceded final fight participant IDs. Final focused/corrected source verified; repeat relevant final checks and exact-head CI before release.",
+  "finalLocal": {
+    "ui": {
+      "acceptances": 67,
+      "freshContexts": 66,
+      "engineModules": 99
+    },
+    "staticBuildModules": 135,
+    "regression": "PASS",
+    "smokeMs": 26811.3,
+    "smokeLimitMs": 35000,
+    "careerMatches": 186,
+    "browser": {
+      "browser": "Chromium",
+      "actualCompleteOfficialBo3": {
+        "games": 3,
+        "rows": [
+          5,
+          5,
+          5
+        ]
+      },
+      "pendingAndHistorySave": true,
+      "storedStatsEvents": true,
+      "analysisFilterSourceNavigation": true,
+      "narrow": {
+        "width": 320,
+        "document": 320
+      },
+      "firedPrivateOmission": true,
+      "pageErrors": []
+    },
+    "newDetailsKeyboardEnter": true,
+    "oldFilesRetained": true
+  }
+}

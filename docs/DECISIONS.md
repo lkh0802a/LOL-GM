@@ -910,3 +910,8 @@ UI 재설계의 추가 확정 기준은 수정 용이성이다. 공통 표현/�
 ## 2026-10-04 교전 남은 자원·유효 기록의 교정 경계 (8.4.1)
 
 실제 회복·부활 없이 HP ratio를 다음 교전에서20%/생존 저장에서5%로 올리던 재현 경로를 실제 fraction 보존으로 교정한다. damage는 남은 aggregate EHP 안에서 소비하고 기존 .9 보고/rounding을 유지해 통계·quest에 동일 전달한다. 새 전투/스킬 계수, 공짜 retarget 또는 물리적 동시 규칙은 만들지 않는다. 새 공식 source에만 집계 방식 marker를 저장하고 옛 기록은 방식 미확인/원본 유지다. reviewed wave XP/귀환 metadata 부족은 임의 수치로 대체하지 않으며 나머지 승인 inventory를 축소하지 않는다. 상세 source/진단/수용/한계는 DEVELOPMENT8.4.1이다.
+
+
+## 2026-10-04 오브젝트 경로 연결의 교정 경계 (8.6.1)
+
+한타 후 실제 바론에서 관여/quest 사건이 빠진 재현 경로를 기존 공통 규칙으로 교정한다. actual fight participant IDs 중 생존한 실제 참가자가 관여를 받으며 alive 전원과 구분한다. 기존 alive 금전 지급/확률·보상 상수·buff/respawn 규칙은 새 정책으로 바꾸지 않는다. 단위·proximity·global/local source 부족을 완료로 숨기지 않고 당시 source와 old history를 보존한다. 실제 종료 이후 claim 거절은 보강하지만 현재 정상 경로에서 terminal 지급 결함을 재현했다고 주장하지 않는다.
