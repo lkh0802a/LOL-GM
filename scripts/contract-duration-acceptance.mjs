@@ -68,6 +68,6 @@ const fixture=String.raw`(()=>{
 await runEngineFixture(fixture,{timeout:30000,filename:'contract-duration-acceptance.fixture.js'});
 
 const ui=await artifactSource('ui-negotiations.js');
-if(!ui.includes('contractDurationPolicy(DB,p,team)')||ui.includes('[1,2,3,4].map'))
+if(!ui.includes('contractDurationPolicy(db,p,team)')||!ui.includes('renderNegotiations(teamIds=null,db=DB)')||ui.includes('[1,2,3,4].map'))
   throw new Error('D04_DURATION negotiation UI does not consume engine duration choices');
 console.log('D04_CONTRACT_DURATION_UI_ACCEPTANCE '+JSON.stringify({enginePolicy:true,legacyFourYearChoice:false}));

@@ -15,7 +15,7 @@ await runEngineFixture(String.raw`(()=>{
  const html=viewSquad();check(html.includes('공개 로스터')&&html.includes('공개 경기 준비 정보')&&html.includes('다음 공식전')&&html.includes('공식 등록'),'public navigation/registration context lost');
  for(const token of ['data-tac=','data-tr=','data-lineup-player=','data-srole=','data-medical-plan=','scrimrequest','공식전·스크림 일정','<h3>훈련 배분','<th>컨디션</th>','<th>만족도</th>'])check(!html.includes(token),'foreign UI leaked '+token);
  check(html.includes('data-p-open=')&&html.includes('aria-expanded=')&&html.includes('scoutT'),'public roster/scouting/keyboard actions lost');
- check(html.indexOf(expected[0].name)<html.indexOf(expected[1].name),'foreign order is not observation-based');
+ check(html.indexOf('data-p="'+expected[0].id+'"')<html.indexOf('data-p="'+expected[1].id+'"'),'foreign order is not observation-based');
  for(const [object,key,desc] of descs){if(desc)Object.defineProperty(object,key,desc);else delete object[key]}
  check(JSON.stringify(db)===before,'foreign renderer mutates world');
  OPEN_P=mids[0].id;const expandedBefore=JSON.stringify(db),expanded=viewSquad();check(expanded.includes('pdet')&&DB===db&&JSON.stringify(db)===expandedBefore,'expanded foreign profile mutated live DB/report/cache');OPEN_P=null;

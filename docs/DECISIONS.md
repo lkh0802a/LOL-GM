@@ -920,3 +920,7 @@ UI 재설계의 추가 확정 기준은 수정 용이성이다. 공통 표현/�
 ## 2026-10-04 처치 관여 중복·당시 지급 경계 (8.4.2)
 
 같은 실제 지원자를 두 번 지급하거나 이미 사망 처리된 target의 동일 처치를 재호출해 경제/quest를 변경하는 actual writer 반례를 소유/가용성·유일 지원자로 방지한다. 실제 정상 hitter/call source와 죽은 관여자의 기존 지급 eligibility, base/quest·사망 시간/로그 RNG는 유지한다. assistGold150을 네 명에게 각38 지급하는152 현상은 실제 재현됐으나 reviewed server rounding metadata가 없어 새 정수/소수 배분 정책을 임의 도입하지 않는다. 설정과 실제 지급을 당시 source/UI에 구분하며 과거 missing history는 재구성하지 않는다. 거리·bounty·동시/캐시/XP·shop 범위 완료 주장이 아니다.
+
+## Initial recruitment observed workflow boundary (2026-10-05, UTC10-04)
+
+The approved region-first explorer uses the current source `player.region` as **origin region**, explicitly separate from nationality, activity region, local eligibility and language. It connects legitimate observed reports to existing interest, paid observation, evaluation and negotiation without new automatic authority. Viewing/filtering must not create persisted reports; unavailable observed values remain unavailable. Ephemeral filters/selection reset across world/save-slot ownership boundaries; persisted actual reports/contracts retain existing save semantics. Removing the superseded no-language-penalty notice does not implement the separately approved club language/support-spending engine. Comparison/radar and full UI remain approved continuations.
