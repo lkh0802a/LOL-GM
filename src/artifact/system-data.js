@@ -48,9 +48,17 @@ function itemClassesFromSource(raw,e){
   const max=Math.max(...Object.values(score));if(max<=0)return ['fighter','tank','mage','assassin','marksman','enchanter'];
   return Object.keys(score).filter(k=>score[k]>=Math.max(1,max*.5));
 }
+// Keep the original normalized stat contribution separate from effect-patch
+// deltas. Combat consumes these three stats directly; draft scoring still uses
+// the complete existing effects. Older saves derive this split without mutation.
+function itemDefenseStatEffect(raw){
+  const stats={...(raw.stats||{}),FlatHPPoolMod:0,FlatArmorMod:0,FlatSpellBlockMod:0};
+  return itemEffectsFromSource(raw).defense-itemEffectsFromSource({...raw,stats}).defense;
+}
 function buildItemSystems(snapshot=SYSTEM_SOURCE_SNAPSHOT){
   const defs={},pool={fighter:[],tank:[],mage:[],assassin:[],marksman:[],enchanter:[]};
   for(const [id,raw] of Object.entries(snapshot.items||{})){const tier=itemTier(raw),effects=itemEffectsFromSource(raw),classes=itemClassesFromSource(raw,effects),d={id,name:raw.nameKo,nameKo:raw.nameKo,descriptionKo:raw.descriptionKo,plaintextKo:raw.plaintextKo,cost:raw.gold?.total||0,recipeCost:raw.gold?.base??raw.gold?.total??0,sell:raw.gold?.sell||0,tags:(raw.tags||[]).slice(),stats:{...(raw.stats||{})},from:(raw.from||[]).slice(),into:(raw.into||[]).slice(),tier,classes,effects,active:true,shopActive:!raw.hideFromAll&&!raw.requiredChampion&&raw.inStore!==false,requiredChampion:raw.requiredChampion||null,source:{provider:snapshot.provider,version:snapshot.version,mapId:snapshot.mapId}};
+    d.defenseStatEffect=itemDefenseStatEffect(raw);
     defs[id]=d;if(d.shopActive&&['final','boots'].includes(tier))for(const cls of classes)pool[cls].push(id)}
   for(const cls of Object.keys(pool))pool[cls].sort((a,b)=>(defs[a].cost-defs[b].cost)||defs[a].name.localeCompare(defs[b].name));
   return {defs,pool};

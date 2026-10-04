@@ -213,3 +213,8 @@ fields; no second contract, roster, finance or preview ledger is introduced.
 ## 구매 장소 조사 도구와 구현 경계
 
 `scripts/shop-availability-probe.mjs`는 테스트 harness의 실제 엔진을 독립 VM에서 실행한다. `npm run investigate:shop -- --output=/tmp/shop-probe.json`으로 기본 네 시드/기록·무기록을 관측하고 `--seeds=seed1,seed2`로 1–8개 시드를 지정한다. 도구는 제품 모듈/저장 형식에 포함되지 않는다. 원래 함수와 같은 입력의 승패·개인 기록·골드/장비/퀘스트·종료·기록/설명 동등성 및 세계 저장 불변을 검사한다. 합성 직접 writer 호출은 물리적 위치 또는 공식 경기 증거로 사용하지 않는다. 귀환·사망은 `engine.js`, 장비 골드 writer는 `item-purchases.js`, 와드 골드 writer는 `role-quest-match.js`가 소유한다. 아직 실제 기지/복귀 가용성이 구매에 연결되지 않았으며, 출처 없는 시간을 추가하지 않는다. 현재 증거·원자료 요청 제한·구체적인 연결 수용은 DEVELOPMENT의 8.2.2에 유지한다.
+
+
+## 8.3.1 장비 기반 방어 소비
+
+`system-data.js:itemDefenseStatEffect`는 기존 source 정규화에서 HP/armor/MR의 방어 proxy 기여만 분리한다. 새 `itemDefs.defenseStatEffect`는 source 기준으로 저장되고 legacy 누락은 순수 읽기로 유도한다. `systems.js:inventoryDefenseStats`는 실제 inventory/퀘스트 장비의 raw stats를 합산한다. `engine.js`는 base+level+gear를 사용하며 동일 raw proxy를 중복 적용하지 않고 기존 effect delta/비수치 proxy와 aggregate식을 유지한다. patch revision은 실제 combat cache 갱신에 포함한다. 장비/장부 writer, 공식 source/history UI와 저장 소유권은 바뀌지 않는다. `inventory-defense-acceptance.mjs`와 기존 ledger/ending/patch/domain runner가 소비 경계를 확인한다. 공격 earned-gold 경로와 전체 raw stat/effect mechanics는 아직 미완료이며 다음8.3.2는 DEVELOPMENT를 따른다. 과거 공식 source는 재계산하지 않는다.

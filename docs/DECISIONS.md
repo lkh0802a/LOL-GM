@@ -895,3 +895,8 @@ UI 재설계의 추가 확정 기준은 수정 용이성이다. 공통 표현/�
 영입 기본은 지역 내 후보, 해외/전체 별도 구분이며 actual activity-region 정의와 eligibility 구분을 검토한다. FM에서 가져올 것은 목록→관측 능력/보고서→협상 흐름과 명료한 정보 위계다. 자산/문구 복제가 아니며 처음 화면은 새로 시작하기/불러오기/설정만 제공한다. 초기 기량 범위는 이미 있지만 상세 연결이 없으므로 real profile/observed report/sorting/return/save를 연결한다. 모든 추가 세부 아이디어/담당 단계/상태/수용은 [현재 가이드의 통합 절](DEVELOPMENT.md#recruitment-language-refinements)을 따른다. 문서 등록은 구현 완료가 아니다.
 
 2026-10-04 추가 승인: 긴 추가 목록도 모두 기존 단계에 병합한다. 업무 언어/언어 지원 지출은 구단 차원에서 선수·스태프 상태/재정·existing authority로 판단하고 실제 ledger/공통 command·AI parity를 사용한다. 감독의 반복 언어비용 입력은 요구하지 않는다. 결정이유/actual spend/적응은 볼 수 있어야 한다. 미확인 지원 가격/학습 rate/능력 보너스를 발명하지 않으며 기존 manual authority 전체의 자동화로 확대하지 않는다. 구현·검증은 아직 남아 있다.
+
+
+## 2026-10-04 실제 장비 방어 소비의 구현 경계 (8.3.1)
+
+미사용 골드를 HP/armor/MR로 환산하는 재현 결함은 제거하고 패치 고정 raw inventory stats와 챔피언 레벨 성장으로 연결한다. 동일 source의 기존 방어 proxy는 중복 적용하지 않으며 기존 효과 패치 delta와 비수치 proxy는 보존한다. 이는 승인된 인과 판정 교정이며 새로운 balance policy/계수·전문 목표가 아니다. 큰8.3는 방어/공격 자연 경계로 나눈다. offense earned-gold와 실제 AP/스킬 피해, 조건부 효과, 구매 장소/귀환·오른 metadata는 미완료다. 기존 기록을 새 수식으로 소급 변경하지 않는다. 상세 근거/진단/반례/다음 작업은 DEVELOPMENT8.3.1이다.

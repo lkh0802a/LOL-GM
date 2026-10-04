@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-04",
+  "boundary": "8.3.1 defense correction; original failures preserved, not hidden or bypassed",
+  "diagnostics": [
+    {
+      "file": "/tmp/inventory-defense-focused.log",
+      "log": "acceptance-fixture.js:2\n const check=(v,m)=>{if(!v)throw Error('INVENTORY_DEFENSE '+m)},near=(a,b)=>Math.abs(a-b)<1e-8;\n                           ^\n\nError: INVENTORY_DEFENSE missing champion JarvanIV\n    at check (acceptance-fixture.js:2:34)\n    at make (acceptance-fixture.js:8:85)\n    at acceptance-fixture.js:11:12\n    at acceptance-fixture.js:70:3\n    at Script.runInContext (node:vm:149:12)\n    at runEngineFixture (file:///workspace/LOL-GM-engine/scripts/test-harness.mjs:70:15)\n    at async file:///workspace/LOL-GM-engine/scripts/inventory-defense-acceptance.mjs:2:1\n\nNode.js v24.19.0\n"
+    },
+    {
+      "file": "/tmp/inventory-defense-focused-2.log",
+      "log": "acceptance-fixture.js:2\n const check=(v,m)=>{if(!v)throw Error('INVENTORY_DEFENSE '+m)},near=(a,b)=>Math.abs(a-b)<1e-8;\n                           ^\n\nError: INVENTORY_DEFENSE missing champion JarvanIV\n    at check (acceptance-fixture.js:2:34)\n    at make (acceptance-fixture.js:8:83)\n    at acceptance-fixture.js:11:12\n    at acceptance-fixture.js:70:3\n    at Script.runInContext (node:vm:149:12)\n    at runEngineFixture (file:///workspace/LOL-GM-engine/scripts/test-harness.mjs:70:15)\n    at async file:///workspace/LOL-GM-engine/scripts/inventory-defense-acceptance.mjs:2:1\n\nNode.js v24.19.0\n"
+    },
+    {
+      "file": "/tmp/inventory-defense-focused-3.log",
+      "log": "acceptance-fixture.js:2\n const check=(v,m)=>{if(!v)throw Error('INVENTORY_DEFENSE '+m)},near=(a,b)=>Math.abs(a-b)<1e-8;\n                           ^\n\nError: INVENTORY_DEFENSE source purchase rejected 1031\n    at check (acceptance-fixture.js:2:34)\n    at acceptance-fixture.js:18:4\n    at acceptance-fixture.js:70:3\n    at Script.runInContext (node:vm:149:12)\n    at runEngineFixture (file:///workspace/LOL-GM-engine/scripts/test-harness.mjs:70:15)\n    at async file:///workspace/LOL-GM-engine/scripts/inventory-defense-acceptance.mjs:2:1\n\nNode.js v24.19.0\n"
+    },
+    {
+      "file": "/tmp/inventory-defense-ending.log",
+      "log": "acceptance-fixture.js:2\n const check=(x,m)=>{if(!x)throw Error('MATCH_ADJUDICATION '+m)};\n                           ^\n\nError: MATCH_ADJUDICATION resource lead alone won or missing natural behind win\n    at check (acceptance-fixture.js:2:34)\n    at acceptance-fixture.js:22:3\n    at acceptance-fixture.js:48:3\n    at Script.runInContext (node:vm:149:12)\n    at runEngineFixture (file:///workspace/LOL-GM-engine/scripts/test-harness.mjs:70:15)\n    at async file:///workspace/LOL-GM-engine/scripts/match-adjudication-acceptance.mjs:2:1\n\nNode.js v24.19.0\n"
+    },
+    {
+      "file": "/tmp/inventory-defense-regression.log",
+      "classification": "Node24 parallel local smoke35s timeout; regression itself passed. Same budgets unchanged; Node22 separate validation follows.",
+      "log": "\n> lol-gm@0.1.0 check:regression-smoke-career\n> node scripts/validate-system-snapshot.mjs && node scripts/regression.mjs && node scripts/smoke.mjs && node scripts/career-acceptance.mjs\n\nValidated pinned system snapshot: 254 items, 62 runes, 5 rune styles.\n11.5 Step 1 regression baseline: OK (01-world-bootstrap, 02-player-lineup, 03-roster-role-state, 04-rookie-supply, 05-contracts, 06-owned-reserve-roster, 06b-roster-transaction, 06c-player-sign-transaction, 06d-player-transfer-transaction, 06e-ai-transfer-and-move-limit, 06f-release-and-option-transaction, 06g-save-format-and-cache-isolation, 06g2-large-history-loadout-sharing, 06h-legacy-v15-save-restoration, 06i-invalid-and-forward-saves, 06j-transaction-transfer-rollback, 06k-transaction-roster-rollback, 06l-transaction-release-option-rollback, 06m-transaction-actor-parity-and-membership-guard, 07-staff-migration-caps, 08-local-regulation, 09-patch-baseline, 10-system-patch, 11-draft-series-save, 11a-meta-index-incremental-and-bounded, 11b-historic-patch-cache-limit, 11c-system-usage-index-parity, 11d-shared-registration-rule-and-pure-preview, 11e-roster-detach-is-single-owner, 11f-dead-api-pruned-without-market-breakage, 11g-required-domain-hooks-have-real-effects, 11h-initial-market-must-use-real-budget-and-team-policy, 11i-unreachable-wrappers-removed-and-supported-routes-retained, 11j-initial-manager-negotiation-path-after-legacy-removal, 11k-scheduled-series-session-after-unused-opener-removal, 11l-reserve-preflight-and-transaction-after-legacy-removal, 11m-new-procedural-regional-league-and-save-restore)\nnode:vm:149\n    return ReflectApply(super.runInContext, this, args);\n           ^\n\nError: Script execution timed out after 35000ms\n    at Script.runInContext (node:vm:149:12)\n    at Script.runInNewContext (node:vm:154:17)\n    at Object.runInNewContext (node:vm:310:38)\n    at file:///workspace/LOL-GM-engine/scripts/smoke.mjs:665:4 {\n  code: 'ERR_SCRIPT_EXECUTION_TIMEOUT'\n}\n\nNode.js v24.19.0\n"
+    }
+  ],
+  "unchangedNode22Smoke": {
+    "file": "/tmp/inventory-defense-smoke-node22.log",
+    "log": "SMOKE_PHASE_TIMINGS {\"mode\":\"full\",\"phases\":[{\"name\":\"bootstrap-policy-rookie\",\"ms\":2161.8},{\"name\":\"patch-system-cache\",\"ms\":1244.5},{\"name\":\"player-role-training\",\"ms\":12.7},{\"name\":\"draft-match-save\",\"ms\":580.9},{\"name\":\"initial-roster\",\"ms\":8811.5},{\"name\":\"staff-roster\",\"ms\":869.4},{\"name\":\"tier2-promotion\",\"ms\":572.9},{\"name\":\"series-offseason-market\",\"ms\":12777.5}],\"totalMs\":27031.2}\nWorld smoke test: OK — blank rosters, global FA, roster rules, engine-owned regional policy, workforce-backed rookie intake/scouting reports, no emergency roster generation, offseason market closure, player identity/role ratings/state/value/development/champion learning/full match metrics/fixed depth charts/roster roles/satisfaction, season bootstrap and Bo1 simulation\n"
+  }
+}
