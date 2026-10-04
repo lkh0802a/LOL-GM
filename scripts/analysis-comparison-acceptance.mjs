@@ -1,5 +1,5 @@
 import {runEngineFixture,artifactSources} from './test-harness.mjs';
-const ui=await artifactSources(['ui-patch.js','ui-opponent-report.js','ui-opponent-draft.js','ui-analysis.js','ui-analysis-tiers.js','ui-analysis-comparison.js']);
+const ui=await artifactSources(['ui-patch.js','ui-opponent-report.js','ui-opponent-draft.js','ui-analysis.js','ui-match-history.js','ui-analysis-tiers.js','ui-analysis-comparison.js']);
 await runEngineFixture(String.raw`(()=>{
   const check=(ok,msg)=>{if(!ok)throw Error('ANALYSIS_COMPARISON '+msg)};
   const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:4,div2:true,system:'franchise'})];cfg.internationals=[];

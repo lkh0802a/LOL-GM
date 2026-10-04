@@ -160,6 +160,8 @@ const maintainabilityBudgets = {
   'draft-analysis.js': 18000,
   'draft-preparation.js': 5000,
   'draft-history.js': 9000,
+  'match-history.js': 7500,
+  'ui-match-history.js': 8000,
   'ui-draft-history.js': 6500,
   'ui-draft-preparation.js': 6000,
   'ui-draft-analysis.js': 9000,

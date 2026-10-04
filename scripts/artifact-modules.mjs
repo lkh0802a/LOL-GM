@@ -91,6 +91,7 @@ export const ENGINE_MODULES = [
   'draft-analysis.js',
   'draft-preparation.js',
   'draft-history.js',
+  'match-history.js',
   'analysis-tiers.js',
   'career.js',
 ];
@@ -126,6 +127,7 @@ export const UI_MODULES = [
   'ui-draft-analysis.js',
   'ui-draft-preparation.js',
   'ui-draft-history.js',
+  'ui-match-history.js',
   'ui-season.js',
   'ui-office-consultation.js',
   'ui-overlay.js',

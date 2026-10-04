@@ -2825,6 +2825,7 @@ function playSeriesSessionGame(db,sess,forcedDraft=null,quiet=true){
   const mvp=gameMVP(r);
   sess.games.push({n:sess.g,blue:cur.blue,red:cur.red,seed:cur.gseed,mods:cur.snap.mods,winner:wId,bans:r.draft.bans,sideBy:cur.chooser,sideWhy:cur.sc.why,selectionEvidence:recordedSelectionEvidence(cur.sc.evidence),firstPick:cur.fpTeam,kills:[r.sides[0].kills,r.sides[1].kills],dur:r.durationStr,duration:r.duration,picks:pk,mvp});
   const recordedGame=sess.games[sess.games.length-1];recordedGame.date=r.date;recordedGame.patch=matchDb.patch.id;
+  recordedGame.publicRecord=publicMatchRecord(r,matchDb.patch.id);
   if(r.draft.sequence)recordedGame.draftSequence=copyDraftSequence(r.draft.sequence);
   const manualEvidence=(Array.isArray(forcedDraft?.manualEvidence)?forcedDraft.manualEvidence:[]).filter(e=>!db.world?.fired&&managerControlsSquad(db,db.teams[e?.team]));
   const evidence=recordedManualDraftEvidence({manualEvidence},recordedGame);
@@ -5192,7 +5193,7 @@ function unpackMetaHistory(rows){
 const ALL_ATTRS=Object.values(ATTR_GROUPS).flat();
 function seriesResultForSave(r,lite){
   const q={...r};delete q.seed;delete q.firstChoice;
-  if(lite&&!q.lite){q.games=(q.games||[]).map(g=>({n:g.n,blue:g.blue,red:g.red,winner:g.winner,kills:g.kills,dur:g.dur,mvp:g.mvp,...(g.draftEvidence?{date:g.date,patch:g.patch,draftEvidence:g.draftEvidence,draftSequence:g.draftSequence,picks:g.picks,bans:g.bans}:{})}));delete q.tac;q.lite=true}
+  if(lite&&!q.lite){q.games=(q.games||[]).map(g=>({n:g.n,blue:g.blue,red:g.red,winner:g.winner,kills:g.kills,dur:g.dur,mvp:g.mvp,...(g.publicRecord?{date:g.date,patch:g.patch,publicRecord:g.publicRecord}:{}),...(g.draftEvidence?{date:g.date,patch:g.patch,draftEvidence:g.draftEvidence,draftSequence:g.draftSequence,picks:g.picks,bans:g.bans}:{})}));delete q.tac;q.lite=true}
   return q;
 }
 function worldForSave(db){
@@ -11588,6 +11589,39 @@ function recordedDraftReview(db,rec,game,team=managedTeamId(db)){
     finalRole:ROLES[game.picks?.[side]?.indexOf(e.champ)]||null})),team};
 }
 
+/* ==== FILE: match-history.js ==== */
+// Public event-time observations only. Never persist profiles/ratings/tactics.
+function publicMatchRecord(r,patch){
+  const events=(r.log||[]).filter(e=>['kill','fight','obj','tower','nexus'].includes(e.kind)),limit=24,
+    selected=events.length>limit?[...events.slice(0,12),...events.slice(-12)]:events;
+  return {version:1,date:r.date,patch,winner:r.sides[r.winner].team.id,duration:r.duration,
+    sides:r.sides.map(s=>({team:s.team.id,name:s.team.name,players:s.ps.map(p=>[p.p.id,p.p.name,p.role,p.champ.id,p.k,p.d,p.a,Math.round(p.cs),Math.round(p.goldEarned),Math.round(p.dmg),p.lvl,matchQuestItems(p).slice()])})),
+    championNames:Object.fromEntries(r.sides.flatMap(s=>s.ps.map(p=>[p.champ.id,championDisplayName(p.champ)]))),
+    itemNames:Object.fromEntries(r.sides.flatMap(s=>s.ps.flatMap(p=>matchQuestItems(p).map(id=>[id,p.patchRef?.itemDefs?.[id]?.name||id])))),
+    eventCount:events.length,events:selected.map(e=>[e.t,e.sec,e.kind,e.side,e.text])};
+}
+function recordedPublicMatch(db,rec,game){
+  const p=game?.publicRecord;
+  if(!p)return {reason:'not-recorded',record:null};
+  if(p.version!==1||!['championNames','itemNames'].every(k=>p[k]&&typeof p[k]==='object'&&!Array.isArray(p[k])&&Object.values(p[k]).every(x=>typeof x==='string'))||p.date!==game.date||p.patch!==game.patch||p.patch!==rec.patch||!observedMetaDate(db,p)||p.winner!==game.winner||!Number.isFinite(p.duration)||p.duration<=0||!Array.isArray(p.sides)||p.sides.length!==2||p.sides.some((s,i)=>!s||typeof s!=='object'||s.team!==[game.blue,game.red][i]||typeof s.name!=='string'||!Array.isArray(s.players)||s.players.length!==5||new Set(s.players.map(x=>x?.[2])).size!==5||s.players.some(x=>!Array.isArray(x)||x.length!==12||typeof x[0]!=='string'||typeof x[1]!=='string'||!ROLES.includes(x[2])||typeof x[3]!=='string'||!x.slice(4,11).every(Number.isFinite)||!Array.isArray(x[11])||x[11].length>7||!x[11].every(id=>typeof id==='string')))||!Array.isArray(p.events)||p.events.length>24||!Number.isInteger(p.eventCount)||p.eventCount<p.events.length||p.events.some(e=>!Array.isArray(e)||e.length!==5||!Number.isFinite(e[0])||!Number.isFinite(e[1])||![-1,0,1].includes(e[3])||typeof e[4]!=='string'||!['kill','fight','obj','tower','nexus'].includes(e[2])||e[0]<0||e[0]>Math.ceil(p.duration)||e[1]<0||e[1]>=60))return {reason:'unverified-source',record:null};
+  return {reason:null,record:p};
+}
+function officialMatchReviews(db,team,filter={}){
+  const club=db.teams[team];if(db.world?.fired||!club||!managerControlsSquad(db,club))return [];
+  const out=[];
+  for(const [key,s] of Object.entries(db.world?.seasons||{}))for(const [di,day] of (s.days||[]).entries())for(const [mi,m] of (day.matches||[]).entries()){
+    const rec=m.res;if(!rec||![rec.a,rec.b].includes(team)||filter.comp&&filter.comp!==s.comp)continue;
+    for(const [gi,g] of (rec.games||[]).entries()){
+      const date=g.date||day.date,patch=g.patch||rec.patch;
+      if(!observedMetaDate(db,{date})||filter.from&&date<filter.from||filter.to&&date>filter.to||filter.patch&&patch!==filter.patch)continue;
+      const publicRead=recordedPublicMatch(db,rec,g);
+      if(filter.position&&(!publicRead.record||!publicRead.record.sides.find(x=>x.team===team)?.players.some(x=>x[2]===filter.position)))continue;
+      out.push({key,di,mi,gi,date,patch,comp:s.comp,rec,game:g});
+    }
+  }
+  return out.sort((a,b)=>b.date.localeCompare(a.date)||a.key.localeCompare(b.key)||a.di-b.di||a.mi-b.mi||a.gi-b.gi);
+}
+
 /* ==== FILE: analysis-tiers.js ==== */
 // Descriptive tiers reuse established labels and actual draft evaluation.
 // No new draft coefficient, game state, observation or random draw is created.
@@ -12076,16 +12110,16 @@ function viewAnalysis(){
   if(!team)return header+'<section><h3>분석할 관리 구단이 없습니다</h3><p>커리어를 시작하거나 새 구단에 취임하면 해당 구단의 분석을 이용할 수 있습니다.</p><button class="ghost" type="button" data-analysis-open="season">시즌 화면으로</button></section>';
   const filter=analysisFilter(DB,team),patches=analysisPatchChoices(DB,team),comps=[...new Set(publicTierSourceGroups(DB).map(g=>g.comp).filter(Boolean))].sort(),
     option=(value,label,selected)=>`<option value="${esc(value)}"${selected?' selected':''}>${esc(label)}</option>`,
-    mode=['opponent','tiers'].includes(ANALYSIS_SET.mode)?ANALYSIS_SET.mode:'own';
+    mode=['opponent','tiers','matches'].includes(ANALYSIS_SET.mode)?ANALYSIS_SET.mode:'own';
   const controls=`<section aria-label="분석 조건"><div class="seg tabs">
-    <button type="button" data-analysis-mode="own" aria-pressed="${mode==='own'}">우리 팀</button>
+    <button type="button" data-analysis-mode="matches" aria-pressed="${mode==='matches'}">경기 복기</button><button type="button" data-analysis-mode="own" aria-pressed="${mode==='own'}">우리 팀</button>
     <button type="button" data-analysis-mode="opponent" aria-pressed="${mode==='opponent'}">상대 준비</button><button type="button" data-analysis-mode="tiers" aria-pressed="${mode==='tiers'}">밴픽·메타</button></div>
     <div class="controls analysis-controls"><label>관찰 구단<select id="analysis-team">${teams.map(t=>option(t.id,t.name,t.id===team.id)).join('')}</select></label>
     <label>기간<select id="analysis-period">${[['30','최근 30일'],['90','최근 90일'],['ALL','전체 기록']].map(([v,l])=>option(v,l,ANALYSIS_SET.period===v)).join('')}</select></label>
     <label>대회<select id="analysis-comp">${option('ALL','전체 대회',!ANALYSIS_SET.comp||ANALYSIS_SET.comp==='ALL')}${comps.map(c=>option(c,DB.competitions[c]?.name||c,ANALYSIS_SET.comp===c)).join('')}${ANALYSIS_SET.comp&&ANALYSIS_SET.comp!=='ALL'&&!comps.includes(ANALYSIS_SET.comp)?option(ANALYSIS_SET.comp,ANALYSIS_SET.comp+' · 기록 없음',true):''}</select></label><label>패치<select id="analysis-patch">${option('CURRENT','현재 패치 · '+DB.patch.id,ANALYSIS_SET.patch==='CURRENT')}${option('ALL','전체 패치',ANALYSIS_SET.patch==='ALL')}${patches.map(p=>option(p,p,ANALYSIS_SET.patch===p)).join('')}${!['CURRENT','ALL',...patches].includes(ANALYSIS_SET.patch)?option(ANALYSIS_SET.patch,ANALYSIS_SET.patch+' · 기록 없음',true):''}</select></label>
     <label>${mode==='tiers'?'후보 역할':'기록 역할'}<select id="analysis-position">${option('ALL','전체',ANALYSIS_SET.position==='ALL')}${ROLES.map(r=>option(r,ROLE_KO[r],ANALYSIS_SET.position===r)).join('')}</select></label></div>
     <p class="hint">${esc(team.name)} · ${filter.from?esc(filter.from)+' ~ '+esc(filter.to):'전체 기간'} · ${filter.patch?esc(filter.patch):'여러 패치 포함'}. ${mode==='tiers'?'후보 역할은 현재 챔피언 설정을 사용합니다. 기간·패치 조건은 공개 표본 조회에 적용하며 내부 준비도는 현재 상태만 평가합니다.':'역할 조건은 기록된 출전에 적용합니다.'} 공개 원자료는 분석가가 없어도 확인할 수 있습니다.</p></section>`;
-  const reports=mode==='tiers'?analysisTiersPanel(DB,team,filter):mode==='opponent'?patchOpponentReport(DB,ANALYSIS_SET,filter):
+  const reports=mode==='matches'?analysisMatchPanel(DB,team,filter):mode==='tiers'?analysisTiersPanel(DB,team,filter):mode==='opponent'?patchOpponentReport(DB,ANALYSIS_SET,filter):
     patchPracticeComparisonCard(DB,filter)+patchOwnTacticCard(DB,filter)+patchAnalystCard(DB,filter);
   const links='<section aria-label="관련 운영 화면"><h3>관련 화면</h3><div class="controls analysis-controls"><button class="ghost" type="button" data-analysis-open="squad">선수단·훈련·전술</button><button class="ghost" type="button" data-analysis-open="season">일정·경기 기록</button><button class="ghost" type="button" data-analysis-open="patch">패치·메타 자료</button></div><p class="hint">분석은 기록의 비교입니다. 승률만으로 원인을 단정하거나 설정을 자동 적용하지 않습니다.</p></section>';
   return '<div class="analysis-room">'+header+controls+reports+links+'</div>';
@@ -12093,13 +12127,13 @@ function viewAnalysis(){
 function analysisRefresh(){
   const active=document.activeElement,id=active?.id,mode=active?.dataset?.analysisMode,tier=active?.dataset?.analysisTier;
   navKeepScroll();
-  const replacement=id?$('#'+id):['own','opponent','tiers'].includes(mode)?document.querySelector('[data-analysis-mode="'+mode+'"]'):['public','internal','compare'].includes(tier)?document.querySelector('[data-analysis-tier="'+tier+'"]'):null;
+  const replacement=id?$('#'+id):['own','opponent','tiers','matches'].includes(mode)?document.querySelector('[data-analysis-mode="'+mode+'"]'):['public','internal','compare'].includes(tier)?document.querySelector('[data-analysis-tier="'+tier+'"]'):null;
   replacement?.focus?.({preventScroll:true});
 }
 function bindAnalysis(){
-  bindAnalysisTiers();
+  bindAnalysisTiers();bindAnalysisMatch();
   document.querySelectorAll('[data-analysis-mode]').forEach(button=>button.onclick=()=>{
-    if(!['own','opponent','tiers'].includes(button.dataset.analysisMode))return;
+    if(!['own','opponent','tiers','matches'].includes(button.dataset.analysisMode))return;
     ANALYSIS_SET.mode=button.dataset.analysisMode;analysisRefresh();
   });
   for(const [id,key] of [['analysis-team','team'],['analysis-period','period'],['analysis-patch','patch'],['analysis-position','position'],['analysis-comp','comp'],['pprepteam','prepTeam']]){
@@ -12663,13 +12697,14 @@ function renderResult(r){
   <section><h3>선수 기록</h3>${r.sides.map((s,i)=>playerTable(s,i)).join('')}</section>
   <section><button class="primary" id="watch">중계 보기</button><div id="live"></div></section>
   <section><div class="loghead"><h3>경기 로그</h3><div class="seg"><button data-logmode="major" aria-pressed="${LOGMODE==='major'}">주요</button><button data-logmode="all" aria-pressed="${LOGMODE==='all'}">전체</button></div></div><div id="logbox">${renderLog(r)}</div></section>
-  <section><details class="expl"><summary>개발자 로그 (판단 근거 ${r.expl.length}건)</summary>${renderExpl(r)}</details></section>`;
+  <section><p class="hint">경기 판정은 집계 모델입니다. 공개 경기 사건과 자기 팀의 관측 근거를 구분하며, 내부 계산값을 상대의 관측된 능력으로 표시하지 않습니다.</p></section>`;
 }
+function safeDraftTeam(r,i){return r.sides[i].team.id}
 function renderDraft(r){
   const d=r.draft;
   return `<section><h3>밴픽</h3><div class="draft">${[0,1].map(i=>`<div class="dside ${i?'red':'blue'}">
     <div class="bans">${d.bans[i].map(c=>`<span class="ban">${esc(championLabel(DB,c))}</span>`).join('')}</div>
-    ${ROLES.map(role=>{const ps=r.sides[i].ps.find(p=>p.role===role);return `<div class="pick"><span class="role">${ROLE_KO[role]}</span><b>${esc(championDisplayName(ps.champ))}</b><span class="pn">${esc(ps.p.name)} · 숙련 ${ps.prof.mastery}</span></div>`}).join('')}
+    ${ROLES.map(role=>{const ps=r.sides[i].ps.find(p=>p.role===role);return `<div class="pick"><span class="role">${ROLE_KO[role]}</span><b>${esc(championDisplayName(ps.champ))}</b><span class="pn">${esc(ps.p.name)} ${!DB.world?.fired&&managerControlsSquad(DB,safeDraftTeam(r,i))?` · 현재 재생 숙련 ${ps.prof.mastery}`:''}</span></div>`}).join('')}
   </div>`).join('')}</div></section>`;
 }
 function goldChart(r){
@@ -12715,18 +12750,16 @@ function renderSeries(rec,big){
     <span class="gside"><i class="dot blue"></i>${esc(tshort(g.blue))} <b>${g.kills[0]}</b> : <b>${g.kills[1]}</b> ${esc(tshort(g.red))}<i class="dot red"></i></span>
     <span class="gw">${esc(tshort(g.winner))} 승 · ${g.dur}</span>
     ${g.picks?`<span class="gp">블루 ${g.picks[0].map(c=>esc(championLabel(DB,c))).join(', ')}<br>레드 ${g.picks[1].map(c=>esc(championLabel(DB,c))).join(', ')}</span>`:''}
-    <span class="gm">${g.sideBy?`${esc(tshort(g.sideBy))} 선택권: ${esc(g.sideWhy||'')} · 선픽 ${esc(tshort(g.firstPick||g.blue))} · `:''}POG ${esc(pnm(g.mvp))}${g.mods&&(Math.abs(g.mods[g.blue]||0)+Math.abs(g.mods[g.red]||0))>0?` · 멘탈 보정 ${esc(tshort(g.blue))} ${fmtMod(g.mods[g.blue])} / ${esc(tshort(g.red))} ${fmtMod(g.mods[g.red])}`:''}</span>
-  </button>${renderRecordedDraftReview(DB,rec,g)}</li>`).join('')}</ol><p class="hint">세트를 누르면 전체 경기 기록이 열립니다.</p></section>
+    <span class="gm">${g.sideBy?`${esc(tshort(g.sideBy))} 선택권: ${!DB.world?.fired&&managerControlsSquad(DB,g.sideBy)?esc(g.sideWhy||''):''} · 선픽 ${esc(tshort(g.firstPick||g.blue))} · `:''}POG ${esc(pnm(g.mvp))}</span>
+  </button>${renderRecordedDraftReview(DB,rec,g)}</li>`).join('')}</ol><p class="hint">세트를 누르면 저장된 당시 경기 기록이 열립니다.</p></section>
   <div class="gamedetail"></div>`;
 }
 function fmtMod(v){v=v||0;return (v>=0?'+':'')+(v*100).toFixed(1)+'%'}
 function bindSeries(root,rec){
   bindRecordedDraftReview(root,rec);
   root.querySelectorAll('.game').forEach(b=>b.onclick=()=>{
-    if(rec.lite){root.querySelector('.gamedetail').innerHTML='<p class="hint">저장 공간을 아끼려고 다른 지역 리그 경기는 세트 요약만 보관합니다. 전체 기록은 내 지역 리그와 국제대회에서 볼 수 있습니다.</p>';return}
     root.querySelectorAll('.game').forEach(x=>x.classList.toggle('sel',x===b));
-    LAST=replayGame(DB,rec,rec.games[+b.dataset.g]);
-    const d=root.querySelector('.gamedetail'); d.innerHTML=renderResult(LAST); bindResult(); d.scrollIntoView({behavior:'smooth',block:'start'});
+    const d=root.querySelector('.gamedetail');d.innerHTML=renderPublicMatchReview(DB,rec,rec.games[+b.dataset.g]);uiEnhanceScrollRegions(d);d.scrollIntoView({behavior:'smooth',block:'start'});
   });
 }
 
@@ -13467,6 +13500,25 @@ function bindRecordedDraftReview(root,rec){
   });
 }
 
+/* ==== FILE: ui-match-history.js ==== */
+// Stored results are separate from current-state simulations and private models.
+function renderPublicMatchReview(db,rec,game){
+  const read=recordedPublicMatch(db,rec,game),p=read.record;
+  if(!p)return `<section><h3>저장된 경기 기록</h3><p class="hint">${read.reason==='not-recorded'?'이 경기의 당시 상세 기록이 없습니다. 세트 요약과 기록된 밴픽 근거만 확인할 수 있습니다.':'경기 기록의 출처를 확인할 수 없습니다.'} 현재 선수 상태로 과거 기록을 다시 만들지 않습니다.</p></section>`;
+  return `<section><h3>당시 확정된 경기 기록</h3><p class="hint">${esc(p.date)} · 패치 ${esc(p.patch)} · ${p.duration.toFixed(1)}분. 공개 경기 결과이며 숨은 능력·숙련 추정이나 승패 원인 판정이 아닙니다.</p>${p.sides.map(s=>`<h4>${esc(s.name)}</h4><div class="scroll"><table><thead><tr><th>선수·역할</th><th>챔피언</th><th>K/D/A</th><th>CS</th><th>획득 골드</th><th>피해량</th><th>레벨</th><th>아이템·역할 보상 포함</th></tr></thead><tbody>${s.players.map(x=>`<tr><td>${esc(x[1])} · ${ROLE_KO[x[2]]}</td><td>${esc(p.championNames[x[3]]||x[3])}</td><td>${x[4]}/${x[5]}/${x[6]}</td><td>${x[7]}</td><td>${x[8]}</td><td>${x[9]}</td><td>${x[10]}</td><td>${x[11].map(id=>esc(p.itemNames[id]||id)).join(', ')||'없음'}</td></tr>`).join('')}</tbody></table></div>`).join('')}<h4>실제 주요 사건</h4><p class="hint">${p.events.length?'당시 로그의 공개 처치·교전·오브젝트·구조물 사건 '+p.events.length+'건 / '+p.eventCount+'건'+(p.eventCount>p.events.length?' · 중간 사건은 저장 크기를 제한하기 위해 생략했습니다.':''): '당시 주요 사건 로그를 수집하지 않았습니다. 결과로 사건을 추정하지 않습니다.'}</p><ol>${p.events.map(e=>`<li><time>${fmtTime(e[0],e[1])}</time> ${esc(e[4])}</li>`).join('')}</ol></section>`;
+}
+function analysisMatchPanel(db,team,filter){
+  const rows=officialMatchReviews(db,team.id,filter),shown=rows.slice(0,30),selected=shown.find(x=>JSON.stringify([x.key,x.di,x.mi,x.gi])===ANALYSIS_SET.review)||null;
+  return `<section><h3>공식 경기 복기</h3><p class="hint">조건에 맞는 ${rows.length}세트 중 최근 ${shown.length}세트. 저장된 공개 결과와 자기 구단의 당시 밴픽 평가를 구분합니다.</p>${shown.length?`<div class="controls analysis-controls"><label>경기<select id="analysis-review"><option value="">경기를 선택하세요</option>${shown.map(x=>{const id=JSON.stringify([x.key,x.di,x.mi,x.gi]);return `<option value="${esc(id)}"${selected===x?' selected':''}>${esc(x.date)} · ${esc(db.competitions[x.comp]?.name||x.comp)} · ${esc(db.teams[x.game.blue]?.short||x.game.blue)} / ${esc(db.teams[x.game.red]?.short||x.game.red)} · ${x.game.n}세트</option>`}).join('')}</select></label></div>`:'<p class="empty">조건에 맞는 완료된 공식 경기 기록이 없습니다.</p>'}${selected?renderPublicMatchReview(db,selected.rec,selected.game)+renderRecordedDraftReview(db,selected.rec,selected.game):''}</section>`;
+}
+function bindAnalysisMatch(){
+  const node=$('#analysis-review');if(node)node.onchange=e=>{const team=analysisSelectedTeam(DB),rows=team?officialMatchReviews(DB,team.id,analysisFilter(DB,team)):[];
+    if(e.target.value&&!rows.slice(0,30).some(x=>JSON.stringify([x.key,x.di,x.mi,x.gi])===e.target.value))return;
+    ANALYSIS_SET.review=e.target.value;analysisRefresh();};
+  const team=analysisSelectedTeam(DB),selected=team&&officialMatchReviews(DB,team.id,analysisFilter(DB,team)).find(x=>JSON.stringify([x.key,x.di,x.mi,x.gi])===ANALYSIS_SET.review);
+  if(selected)bindRecordedDraftReview(document,selected.rec);
+}
+
 /* ==== FILE: ui-season.js ==== */
 // ===== LOL GM: 시즌 / 세계 / 진행 UI =====
 // 시즌 현황, 세계/사무국 표시, 새 게임 설정과 시즌 진행 바인딩.
@@ -13802,7 +13854,7 @@ let MK={role:'ALL',scope:'region',tab:'fa'};
 let MC={blue:'HTG',red:'SBZ',n:300,res:null,running:false};
 let PSET={role:'ALL',q:'',region:'GLOBAL',patch:'ALL',comp:'ALL',period:'ALL',year:'',season:'ALL',split:'ALL',league:'ALL',scope:'ALL',position:'ALL',team:'ALL',player:'ALL',opponent:'ALL',color:'ALL',playerSearch:'',prepTeam:'AUTO',champ:null};
 let DRAFT_UI=null;
-let ANALYSIS_SET={mode:'own',team:'AUTO',period:'90',patch:'CURRENT',position:'ALL',prepTeam:'AUTO',tierView:'public',tierQ:'',comp:'ALL'};
+let ANALYSIS_SET={mode:'own',team:'AUTO',period:'90',patch:'CURRENT',position:'ALL',prepTeam:'AUTO',review:'',tierView:'public',tierQ:'',comp:'ALL'};
 
 // Keep the supported screen map and its binding ownership in one place.
 const UI_ROUTES=Object.freeze({
@@ -13898,7 +13950,7 @@ function resetUiForWorld(){
   LAST=null;LASTSER=null;OPEN_P=null;SQUAD_EDIT=null;MSG='';
   MC.res=null;MC.running=false;SSET.view=null;
   PSET.team='ALL';PSET.player='ALL';PSET.opponent='ALL';PSET.color='ALL';PSET.playerSearch='';PSET.prepTeam='AUTO';
-  ANALYSIS_SET={mode:'own',team:'AUTO',period:'90',patch:'CURRENT',position:'ALL',prepTeam:'AUTO',tierView:'public',tierQ:'',comp:'ALL'};
+  ANALYSIS_SET={mode:'own',team:'AUTO',period:'90',patch:'CURRENT',position:'ALL',prepTeam:'AUTO',review:'',tierView:'public',tierQ:'',comp:'ALL'};
 }
 
 /* ==== FILE: app.js ==== */

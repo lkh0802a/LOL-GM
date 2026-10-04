@@ -73,7 +73,7 @@ assert.equal(value('PSET.color'),'ALL','new world retained old side selection');
 assert.equal(value('PSET.prepTeam'),'AUTO','new world retained selected preparation rival');
 for(const expression of ['LAST','LASTSER','OPEN_P','SQUAD_EDIT','MC.res','SSET.view'])assert.equal(value(expression),null,expression+' must be reset on world replacement');
 assert.equal(value('MSG'),'');
-assert.deepEqual(JSON.parse(value('JSON.stringify(ANALYSIS_SET)')),{mode:'own',team:'AUTO',period:'90',patch:'CURRENT',position:'ALL',prepTeam:'AUTO',tierView:'public',tierQ:'',comp:'ALL'},'world replacement resets every analysis filter');
+assert.deepEqual(JSON.parse(value('JSON.stringify(ANALYSIS_SET)')),{mode:'own',team:'AUTO',period:'90',patch:'CURRENT',position:'ALL',prepTeam:'AUTO',review:'',tierView:'public',tierQ:'',comp:'ALL'},'world replacement resets every analysis filter');
 assert.equal(value('ANALYSIS_SET.team'),'AUTO');
 assert.equal(value('ANALYSIS_SET.prepTeam'),'AUTO');
 assert.equal(value('VIEW'),'match','world replacement does not silently navigate');

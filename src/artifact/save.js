@@ -64,7 +64,7 @@ function unpackMetaHistory(rows){
 const ALL_ATTRS=Object.values(ATTR_GROUPS).flat();
 function seriesResultForSave(r,lite){
   const q={...r};delete q.seed;delete q.firstChoice;
-  if(lite&&!q.lite){q.games=(q.games||[]).map(g=>({n:g.n,blue:g.blue,red:g.red,winner:g.winner,kills:g.kills,dur:g.dur,mvp:g.mvp,...(g.draftEvidence?{date:g.date,patch:g.patch,draftEvidence:g.draftEvidence,draftSequence:g.draftSequence,picks:g.picks,bans:g.bans}:{})}));delete q.tac;q.lite=true}
+  if(lite&&!q.lite){q.games=(q.games||[]).map(g=>({n:g.n,blue:g.blue,red:g.red,winner:g.winner,kills:g.kills,dur:g.dur,mvp:g.mvp,...(g.publicRecord?{date:g.date,patch:g.patch,publicRecord:g.publicRecord}:{}),...(g.draftEvidence?{date:g.date,patch:g.patch,draftEvidence:g.draftEvidence,draftSequence:g.draftSequence,picks:g.picks,bans:g.bans}:{})}));delete q.tac;q.lite=true}
   return q;
 }
 function worldForSave(db){
