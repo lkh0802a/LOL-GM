@@ -408,10 +408,11 @@ function macroTick(st){
     const ok=R.exec.chance(p);
     expl(st,`${s.team.short} 끊기 시도 → ${tgt.p.name}`,[['시야',visFor(st,side,lane)],['대상 맵 인지',at(tgt,'map_awareness')],['대상 스플릿 성향',td(tgt,'split_preference')]],{prob:p,result:ok?'SUCCESS':'FAIL'});
     if(ok){
-      const hunters=al.slice().sort(()=>R.dec.next()-0.5).slice(0,Math.min(3,al.length));
+      const hunters=selectMacroHunters(st,side,al);
       const help=en.filter(x=>x!==tgt&&R.dec.chance(0.3*at(x,'rotation')));
       const sides=side===0?[hunters,[tgt,...help]]:[[tgt,...help],hunters];
       const r=fight(st,lane,sides,{label:`${LANE_KO[lane]} 끊기`});
+      recordMacroPick(st,side,lane,tgt,sides,r);
       if(r&&r.winner===side) convert(st,side,r);
       break;
     }
@@ -476,5 +477,5 @@ function simulateMatch(db,blueId,redId,seed,ctx,quiet){
   if(st.winner<0)throw new Error('Match unresolved: neither nexus was destroyed within '+MATCH_SIMULATION_MAX_MINUTES+' simulated minutes; no official result produced (seed '+seed+')');
   const endSec=st.ending.second;
   st.log.sort((a,b)=>a.t-b.t||a.sec-b.sec);
-  return {seed,winner:st.winner,ending:{...st.ending},damageBasis:'effective-aggregate-v1',structureSelectionBasis:'progress-seeded-ties-v1',objectiveEvents:st.objectiveEvents||[],takedownEvents:st.takedownEvents||[],duration:t+endSec/60,durationStr:fmtTime(t,endSec),draft:d,sides:st.sides,log:st.log,expl:st.expl,goldHist:st.goldHist,firsts:st.firsts};
+  return {seed,winner:st.winner,ending:{...st.ending},damageBasis:'effective-aggregate-v1',structureSelectionBasis:'progress-seeded-ties-v1',macroPickEvents:st.macroPickEvents||[],objectiveEvents:st.objectiveEvents||[],takedownEvents:st.takedownEvents||[],duration:t+endSec/60,durationStr:fmtTime(t,endSec),draft:d,sides:st.sides,log:st.log,expl:st.expl,goldHist:st.goldHist,firsts:st.firsts};
 }

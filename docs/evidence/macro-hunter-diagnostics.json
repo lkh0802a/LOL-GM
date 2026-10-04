@@ -1,0 +1,51 @@
+{
+  "date": "2026-10-04",
+  "failures": [
+    {
+      "file": "/tmp/macro-hunter-focused-initial.log",
+      "reason": "Node24 full state rebuild/serialization per120permutation exceeded unchanged60s"
+    },
+    {
+      "file": "/tmp/macro-hunter-focused-reused.log",
+      "reason": "Node22 repeated full roster JSON exceeded unchanged60s; group pre/post equality retained once per group"
+    },
+    {
+      "file": "/tmp/macro-hunter-ui-wrong-command.log",
+      "reason": "incorrect script name check:ui; corrected actual package script"
+    },
+    {
+      "file": "/tmp/macro-hunter-ui-initial.log",
+      "reason": "prior behind win fixture0/20 no longer behind after intentional RNG correction"
+    },
+    {
+      "file": "/tmp/macro-hunter-original-objective-failure.log",
+      "reason": "prior conversion17 no natural conversion"
+    },
+    {
+      "file": "/tmp/macro-hunter-ui-final.log",
+      "reason": "prior official steal1 no natural steal; same actual pending32sessions give8"
+    },
+    {
+      "file": "/tmp/macro-hunter-static-default.log",
+      "reason": "sandbox child process; same reviewed static passed138modules"
+    },
+    {
+      "file": "/tmp/macro-hunter-browser-default.log",
+      "reason": "sandbox socket; same reviewed actual Bo3 passed; unique capture paths"
+    }
+  ],
+  "local": {
+    "focused": "PASS12x120bothside/4actualpairs/8picks/officialpendingfull-lite/legacy",
+    "static": "PASS138modules",
+    "build": "PASS",
+    "regression": "PASSNode22",
+    "smokeMs": 30957.1,
+    "smokeLimitMs": 35000,
+    "career": "PASS2seasons186officialmatches",
+    "calendar": "PASS20acceptances20VM101engine",
+    "ui": "PASS72acceptances71freshVM101engine",
+    "browser": "PASSactualChromium1280/320officialBo3threegames/newdetailsEnter/save/source/filter/fired/overflow/pageerrors; identicalbuiltHTML injection, not productionHTTP/finaldeviceQA"
+  },
+  "release": "PENDING exacthead fullCI/main/standalone/Pages",
+  "protected": "ALL previous164–182sources/failures/history plus this bounded raw evidence; no budgets/assertions/instrumentation removal"
+}
