@@ -18,8 +18,8 @@ await runEngineFixture(String.raw`(()=>{
  }
  // Reviewed behind-resource conversions after actual inventory offense correction.
  // Prior 13/21, 19/22 and 8/15 traces/failures remain tied to their original heads.
- // New structure-selection bounded32-seed evidence is preserved in structure-selection-resource-scenarios.json; original fixtures/failures remain.
- for(const seed of ['nexus-resource-scenario-0','nexus-resource-scenario-20']){
+ // New macro-hunter bounded32-seed evidence (14/27), with prior0/20 failure retained; structure-selection bounded32-seed evidence is preserved in structure-selection-resource-scenarios.json; original fixtures/failures remain.
+ for(const seed of ['nexus-resource-scenario-14','nexus-resource-scenario-27']){
   const r=simulateMatch(db,a.id,b.id,seed,null,false),gold=r.sides.map(s=>s.ps.reduce((v,p)=>v+p.goldEarned,0)),w=r.winner;
   check(gold[w]<gold[1-w]&&!r.sides[1-w].nexus&&r.sides[w].nexus,'resource lead alone won or missing natural behind win');
   check(r.sides[w].ps.some(p=>p.deadUntil<=r.ending.minute)&&r.sides[1-w].nexusT===0&&LANES.some(l=>!r.sides[1-w].towers[l][3]),'no surviving conversion or open base');
