@@ -55,10 +55,17 @@ function itemDefenseStatEffect(raw){
   const stats={...(raw.stats||{}),FlatHPPoolMod:0,FlatArmorMod:0,FlatSpellBlockMod:0};
   return itemEffectsFromSource(raw).defense-itemEffectsFromSource({...raw,stats}).defense;
 }
+function itemAttackStatEffects(raw){
+  const withoutAD={...raw,stats:{...(raw.stats||{}),FlatPhysicalDamageMod:0}};
+  const withoutAP={...withoutAD,stats:{...withoutAD.stats,FlatMagicDamageMod:0}};
+  const remaining=itemEffectsFromSource(withoutAD).offense;
+  return {ad:itemEffectsFromSource(raw).offense-remaining,ap:remaining-itemEffectsFromSource(withoutAP).offense};
+}
 function buildItemSystems(snapshot=SYSTEM_SOURCE_SNAPSHOT){
   const defs={},pool={fighter:[],tank:[],mage:[],assassin:[],marksman:[],enchanter:[]};
   for(const [id,raw] of Object.entries(snapshot.items||{})){const tier=itemTier(raw),effects=itemEffectsFromSource(raw),classes=itemClassesFromSource(raw,effects),d={id,name:raw.nameKo,nameKo:raw.nameKo,descriptionKo:raw.descriptionKo,plaintextKo:raw.plaintextKo,cost:raw.gold?.total||0,recipeCost:raw.gold?.base??raw.gold?.total??0,sell:raw.gold?.sell||0,tags:(raw.tags||[]).slice(),stats:{...(raw.stats||{})},from:(raw.from||[]).slice(),into:(raw.into||[]).slice(),tier,classes,effects,active:true,shopActive:!raw.hideFromAll&&!raw.requiredChampion&&raw.inStore!==false,requiredChampion:raw.requiredChampion||null,source:{provider:snapshot.provider,version:snapshot.version,mapId:snapshot.mapId}};
     d.defenseStatEffect=itemDefenseStatEffect(raw);
+    d.attackStatEffects=itemAttackStatEffects(raw);
     defs[id]=d;if(d.shopActive&&['final','boots'].includes(tier))for(const cls of classes)pool[cls].push(id)}
   for(const cls of Object.keys(pool))pool[cls].sort((a,b)=>(defs[a].cost-defs[b].cost)||defs[a].name.localeCompare(defs[b].name));
   return {defs,pool};

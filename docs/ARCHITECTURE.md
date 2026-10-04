@@ -217,4 +217,9 @@ fields; no second contract, roster, finance or preview ledger is introduced.
 
 ## 8.3.1 장비 기반 방어 소비
 
-`system-data.js:itemDefenseStatEffect`는 기존 source 정규화에서 HP/armor/MR의 방어 proxy 기여만 분리한다. 새 `itemDefs.defenseStatEffect`는 source 기준으로 저장되고 legacy 누락은 순수 읽기로 유도한다. `systems.js:inventoryDefenseStats`는 실제 inventory/퀘스트 장비의 raw stats를 합산한다. `engine.js`는 base+level+gear를 사용하며 동일 raw proxy를 중복 적용하지 않고 기존 effect delta/비수치 proxy와 aggregate식을 유지한다. patch revision은 실제 combat cache 갱신에 포함한다. 장비/장부 writer, 공식 source/history UI와 저장 소유권은 바뀌지 않는다. `inventory-defense-acceptance.mjs`와 기존 ledger/ending/patch/domain runner가 소비 경계를 확인한다. 공격 earned-gold 경로와 전체 raw stat/effect mechanics는 아직 미완료이며 다음8.3.2는 DEVELOPMENT를 따른다. 과거 공식 source는 재계산하지 않는다.
+`system-data.js:itemDefenseStatEffect`는 기존 source 정규화에서 HP/armor/MR의 방어 proxy 기여만 분리한다. 새 `itemDefs.defenseStatEffect`는 source 기준으로 저장되고 legacy 누락은 순수 읽기로 유도한다. `systems.js:inventoryDefenseStats`는 실제 inventory/퀘스트 장비의 raw stats를 합산한다. `engine.js`는 base+level+gear를 사용하며 동일 raw proxy를 중복 적용하지 않고 기존 effect delta/비수치 proxy와 aggregate식을 유지한다. patch revision은 실제 combat cache 갱신에 포함한다. 장비/장부 writer, 공식 source/history UI와 저장 소유권은 바뀌지 않는다. `inventory-defense-acceptance.mjs`와 기존 ledger/ending/patch/domain runner가 소비 경계를 확인한다. 이 절 작성 당시 공격 earned-gold는 미완료였고 아래8.3.2에서 현금 경로를 제거한다. 전체 raw stat/effect mechanics는 아직 미완료다. 과거 공식 source는 재계산하지 않는다.
+
+
+## 8.3.2 공격 장비 소비
+
+`system-data.js:itemAttackStatEffects`는 기존 정규화의 AD/AP source 기여를 분리해 저장한다. `systems.js:inventoryAttackStats`는 실제 inventory/quest equipment의 raw AD/AP를 읽으며 legacy split을 순수 유도한다. `engine.js:combatStats0`는 base+level+owned AD를 소비하고 raw AD의 기존 proxy 중복 및 cash conversion을 제거한다. 기존 AP/AS/crit는 집계 proxy로 남으며 MID bonusPower는 장비 AD/남은 AP 기여에 적용한다. 구매/패치/퀘스트 cache, 원자적 장부와 source/UI/history 소유자는 유지한다. 집중 acceptance는 inventory-offense, 기존 실제 scheduled draft-history 및 domain runner에 있다. 전체 피해/주문/가용성·shop 구현으로 확대 주장하지 않는다.

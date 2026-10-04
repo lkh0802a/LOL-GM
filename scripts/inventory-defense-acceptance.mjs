@@ -12,8 +12,8 @@ await runEngineFixture(String.raw`(()=>{
   const ps=make(name);ps.lvl=lvl;
   const first=combatStats(st,ps);addGold(ps,6000);const held=combatStats(st,ps);
   check(first.ehp===held.ehp&&JSON.stringify(first.defenseStats)===JSON.stringify(held.defenseStats),'unspent gold gave defense '+name);
-  // The offense conversion is explicitly a separate unfinished boundary.
-  check(first.off!==held.off,'remaining offense fixture stopped detecting legacy conversion');
+  // 8.3.2 removes the remaining offense cash conversion as well.
+  check(first.off===held.off,'unspent gold gave offense');
   for(const id of ['1028','1031','1033']){
    const before=combatStats(st,ps),d=defs[id],actions=itemCraftActions(db.patch,[id]);
    for(const action of actions)check(applyItemCraftAction(ps,action),'source purchase rejected '+id);
@@ -70,5 +70,5 @@ await runEngineFixture(String.raw`(()=>{
  check(JSON.stringify(saved.games[0].publicRecord)===JSON.stringify(g.publicRecord),'history rewritten through save');
  globalThis.esc=s=>String(s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
  check(!renderPublicMatchReview(reloaded,saved,saved.games[0],{}).includes('<th>아이템'),'removed item column returned');
- console.log('INVENTORY_DEFENSE_ACCEPTANCE PASS '+JSON.stringify({rows,pairedMatches:4,officialSave:true,legacy:true,offenseStillPending:true}));
+ console.log('INVENTORY_DEFENSE_ACCEPTANCE PASS '+JSON.stringify({rows,pairedMatches:4,officialSave:true,legacy:true,cashConversionRemoved:true,exactOffensiveMechanicsPending:true}));
 })()`,{timeout:60000,setupSources:[await artifactSource('ui-match-history.js')]});

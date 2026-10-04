@@ -900,3 +900,8 @@ UI 재설계의 추가 확정 기준은 수정 용이성이다. 공통 표현/�
 ## 2026-10-04 실제 장비 방어 소비의 구현 경계 (8.3.1)
 
 미사용 골드를 HP/armor/MR로 환산하는 재현 결함은 제거하고 패치 고정 raw inventory stats와 챔피언 레벨 성장으로 연결한다. 동일 source의 기존 방어 proxy는 중복 적용하지 않으며 기존 효과 패치 delta와 비수치 proxy는 보존한다. 이는 승인된 인과 판정 교정이며 새로운 balance policy/계수·전문 목표가 아니다. 큰8.3는 방어/공격 자연 경계로 나눈다. offense earned-gold와 실제 AP/스킬 피해, 조건부 효과, 구매 장소/귀환·오른 metadata는 미완료다. 기존 기록을 새 수식으로 소급 변경하지 않는다. 상세 근거/진단/반례/다음 작업은 DEVELOPMENT8.3.1이다.
+
+
+## 2026-10-04 실제 공격 장비 소비의 구현 경계 (8.3.2)
+
+현금/earned 골드의 class별 공격 전환을 제거하고 실제 소유 raw AD와 챔피언 기본값/레벨 성장을 사용한다. 동일 AD source proxy는 한 번 제외하고 AP/AS/crit/기타 기존 집계 proxy와 effect patch delta는 유지한다. 기존 MID bonusPower는 장비 AD/남은 AP source 기여로 연결한다. 가격·지출을 스탯으로 바꾸거나 새로운 AP→AD/스킬 계수·치명타 배율은 만들지 않는다. AP/AS/crit의 정확한 mechanics 및 shop/가용성은 별도 미완료다. 결과 변화와 원래 역전 fixture 실패를 보존하며 기존 역사에 소급하지 않는다. DEVELOPMENT8.3.2의 source/반례/remaining을 따른다.
