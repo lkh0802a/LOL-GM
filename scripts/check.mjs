@@ -100,6 +100,7 @@ const maintainabilityBudgets = {
   'system-data.js': 14000,
   'data.js': 20000,
   'systems.js': 11000,
+  'item-purchases.js': 4500,
   'draft.js': 21000,
   'content-naming.js': 16000,
   'meta.js': 14000,

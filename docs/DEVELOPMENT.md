@@ -34,6 +34,8 @@ files or another worker's unpushed changes exist in Cloud.
 
 한 명의 구현 담당자가 기존 시간당 45–55분 단위로 진행한다. 현재 열린 PR의 실패를 보존·해결하고 중복 작업을 피한다. PR #164의 초기 head `575d6203d605672173777411c32f19a6807755bc`에서 발생한 35초 core 실패는 보존한다. 최종 head `45e55e3d1eb75785cf80b5feafe9c39130c031fa`의 필수 CI `37147718717` 전체 성공(의료 4시드·2집계 포함)을 확인한 뒤 main `606b3d63eca2e6923ef4b004ae26b575dac2c4f2`로 병합했다. 분석실 첫 흐름 PR #165는 main `b9e3a65c510dde5b0e8a94ebbd5b83b3cb1b158a`의 CI `37149338522`와 Pages `37149770866`까지 성공했다. 공개/내부 티어 PR #166은 최종 head `a69ed20662acd96230f6427b9dadcdf3d7ff2c78`의 필수 CI `37151397972` 전체 성공 후 main `9d4d13cb91a788d555ced365929e9293ca612801`로 병합했다. 같은 main의 CI `37151887620`·standalone-sync 및 Pages `37152219937` 성공과 저장소 HTML 일치를 확인했다. 같은 후보 비교 PR #167은 최종 head `69390728286792597b6db00f246302030314f4c6`의 필수 CI `37154848493` 전체 성공(의료 4시드·2집계 포함) 후 main `023db1ebb731a50551bb829e94577c3424a7c6bd`로 순차 병합했다. 이 main의 CI `37155290244`·standalone-sync와 Pages `37155554005` 성공, 검증 head와 main HTML 일치를 확인했다. 이전 `c55efce`의 CI `37154672981`은 제한 설명 수정으로 대체/취소된 기록이며 최종 게이트 통과로 간주하지 않는다. 실제 밴픽 비교 PR #168은 최종 head `caaf6bea008620d9efa4b7d7ec33dcfbaabb37a6`의 필수 CI `37158156615` 전체 성공(의료 4시드·2집계 포함) 뒤 main `d43c9e161c52bc178555db71c50077b4eb4afb98`로 순차 병합됐다. 같은 main의 CI `37158616072`·standalone-sync와 Pages `37159016683`의 검증 artifact·조립·배포 성공, 테스트 head와 main HTML 일치를 확인했다. 수동 밴픽 당시 근거 PR #169는 최종 head `169cdd32f849b5a2e3f20b22141e1086b3ec623f`의 필수 CI `37161438479` 전체 성공(의료 4시드·2집계 포함) 후 main `041817b77164508cc756c663f73068d489f79f6b`로 순차 병합됐다. 같은 main의 전체 CI `37161783420`·standalone-sync와 Pages `37162158263`의 검증 artifact·온라인/오프라인 조립·배포 성공, 테스트 코드/docs/HTML 일치를 확인했다. Cloud 정책이 github.io 접속을 403으로 차단해 실제 공개 HTTP 응답은 여기서 재확인하지 못했다. 분석 흐름의 배포 워크플로 성공은 전체 분석실/재설계 완료를 뜻하지 않는다. 재설계 구현은 별도 검토 가능한 작업 단위/PR로 진행하고 정확한 현재 head의 필수 CI 성공 후 순차 병합·HTML/웹 배포한다. 전체 구조/구단 개요 12.3–12.5도 남아 있고 분석 12.9.5가 병합·게시됐으며 현재 경기 단위는 8.1.1이고, 전면 교체가 끝났다는 선언보다 실제 화면별 연결 증거를 기록한다.
 
+현재 검증된 출시 기준(2026-10-04): PR #171 최종 `d173a7f67f9da33dc7d6506be5ee3f9b629f99ac` 전체 CI `37168431212` 후 main `b1cf7abb94bd00583baf78d34872d19de96a9605` 병합. 같은 main 전체 CI/standalone `37168684378`, 검증 artifact/Pages `37168959385` 성공. 현재 구현 단위는 8.2.1이며 아직 새 출시 게이트를 통과하지 않았다. 직접 github.io HTTP는 정책 차단 상태다. 이전 출시 증거는 위 기록과 각 단위에 보존한다.
+
 ## Unified numeric roadmap
 
 This is the development task hierarchy, not a change to internal game architecture.
@@ -880,3 +882,98 @@ Node 22 CPU 프로파일에서 `activeTeams`가 가장 큰 누적 소비였다. 
 - 종료 후 지급의 전후 비교에서 **구매 비용이 raw 보유 골드에서 차감되지 않는 실제 결함**을 확인했다. `newPS`는 시작 아이템만 차감하고 `addGold`는 보유/누적 골드를 함께 증가시킨다. `advanceItemPurchases`는 `goldEarned−questWardSpent >= threshold`로 구매하며 `applyItemCraftAction`은 재료·아이템만 변경하고 `ps.gold`를 차감하지 않는다. 그런데 `roleQuestWard`는 raw ps.gold를 실제 구매 가능 금액으로 소비한다. 이는 표시 전용 숫자 문제가 아니다. [실제 applied recipe cost와 raw bank](evidence/item-purchase-ledger-gap.json), `/tmp/item-ledger-defect.log/json`을 보존했다. 소스 가격을 합산한 장부 대조이며 자산 가격이나 수수료를 발명하지 않았다.
 - **다음 우선 45–55분 구현은 이 8.2·8.3 구매 장부 경계다.** 실제 starter/cumulative recipe/component/quest/ward 비용, 500 시작 골드와 `500+spent` threshold의 불필요한 추가 문턱, affordability와 six-slot atomic combine/재료 소모/거절/반복 호출을 조사한다. 획득·소비·보유 금액을 기존 actual costs로 일치시키고 실제 automatic purchase writer·ward consumer·inventory/effects·official result/save와 paired 시나리오를 연결한다. 포괄적인 item exclusivity/판매/환불/팀 counter 효과가 이미 완성됐다고 주장하지 않는다. 누락된 금지 그룹 metadata는 먼저 확보한다. 효과·결과가 바뀌는 정정과 동작 보존 변경을 구분하고 AI/player parity·budget/seed/rollback을 검증한다. 새 manager 아이템 조작을 추가하지 않는다.
 - 앞의 **8.5.1 XP/웨이브 source-backed 단위도 승인·유지**하며 구매 장부 교정 다음 순서다. 막타/경험치 수급 결합과 27분 MID 레벨 질문을 덮거나 임의 레벨로 맞추지 않는다. 이번 넥서스 단위가 구매 장부·full camp/wave/기하·미검증 item effect를 끝낸 것으로 부풀리지 않는다.
+## 8·9 엔진 고도화 전체 판정·검증 목록 — 2026-10-04 사용자 문서화 승인
+
+사용자가 직전 보고의 **38개 항목 전부 문서화**하도록 지시했다. 아래 번호는 이 검토 목록의 순번이며 새로운 개발 단계/기능 수가 아니다. 기존 7.1·8.1–8.6·9.1·3·12.9에 통합한다. 기존 승인·구현 증거·원본 규칙은 유지하며 등록을 구현/검증/게시 완료로 계산하지 않는다. 같은 항목을 다른 이름의 신규 기능으로 반복 제안하지 않는다.
+
+현재 기준: PR #171 최종 head `d173a7f67f9da33dc7d6506be5ee3f9b629f99ac`의 필수 CI `37168431212` 전체 성공 후 main `b1cf7abb94bd00583baf78d34872d19de96a9605`로 병합됐다. 같은 main의 전체 CI/standalone-sync `37168684378`, Pages `37168959385`의 검증 artifact/온라인·오프라인 조립/게시가 성공했다. 이전 실패 head와 원본은 8.1.1대로 보존한다. Cloud 직접 github.io HTTP는 차단되어 응답 검증 성공을 주장하지 않는다. 본 문서화는 별도 사용자 요청이며 시간당 게임 구현 단위 완료로 집계하지 않는다.
+
+**공통 등록·완료 계약**
+- 모든 행은 기존 승인 범위다. 재현된 결함, 코드로 확인한 aggregate 한계, 조사 가설, 구현/검증/게시를 구분한다. 표의 '승인·검토'는 시스템이 전혀 없다는 뜻이 아니라 기존 부분 구현을 감사하고 남은 실제 연결/반례를 완결한다는 뜻이다.
+- source는 해당 경기의 pinned patch/검토된 공식 메커니즘·기존 확정 가상 규칙·실제 상태와 사건이다. 경험적 보정은 provenance/license/날짜/patch/event/tier/side/role/game ID/중복/누락/단위를 검증한 organized competition 자료만 사용한다. 솔로랭크/혼합 미검증 자료·가상 경기 표본을 프로 목표로 사용하지 않는다.
+- 입력 단위는 골드/비용, XP/레벨, 게임 초/분, 실제 HP·피해·보호막/회복, 개수/거리 또는 명시한 aggregate 접근 상태로 정의한다. 추상 효과 계수를 실제 AD/HP/거리로 위장하지 않고 source 없는 가격·계수·CC 시간을 만들지 않는다. 완전한 주문 시전/2D geometry/물리적 동시 틱 구현은 주장하지 않는다.
+- writer는 실제 engine/shared command이고 consumer는 구매/인벤토리/전투/운영/공식 결과다. 화면은 확인된 원본·소유 관측·범위/누락과 실제 실패 이유를 보여준다. 숨은 true ability/상대 private 상태는 엔진 내부 결과 계산과 관리자의 관측을 구분하며 보고서·AI 판단 입력을 감사한다.
+- 각 구현은 실제 행동→가능 조건→상태 변경→결과/근거 UI→pending/full/lite 저장·재접속을 연결한다. 중복/실패/취소·rollback, 종료 경계, seeded 재현, AI/player 같은 규칙, 원본 history/diagnostics 보존을 검사한다. public/private event-time source를 오늘의 상태로 재구성하지 않는다.
+- 기대 이익은 표의 실제 오판정 감소다. 비용은 상태·source·검증·저장 증가, 기존 새 경기 결과 변화, 데이터 확보 부담이다. 의도적 현실성 수정과 동작 보존 최적화를 구분하며 measured bottleneck 없는 rewrite를 하지 않는다.
+- 우선도: P0 재현된 실제 결함, P1 기반 자원/효과 정확도, P2 기반 소비자 위 확장/설명. 크기는 초기 추정으로 중=보통 2–3개 45–55분 수직 단위, 대=3개 이상/규칙 확보 의존이며 실제 조사 후 자연스러운 경계를 확정한다. 구매 장부 첫 단위는 기존 8.2·8.3의 45–55분 범위이며 전체 구매/효과 완성을 한 번에 주장하지 않는다.
+
+| 순번·기존 단계 | 필요한 판정 / 현재 상태·source writer→consumer | 예시·집중 완료 조건 | 우선도·크기·의존 |
+| --- | --- | --- | --- |
+| 1 · 8.2·8.3 | 획득·소비·보유 골드 장부. **재현·8.2.1 구현, 출시 게이트 대기**: newPS/addGold→advanceItemPurchases/applyItemCraftAction→ward/전투. 기존 actual craft가 ps.gold를 차감하지 않았음; 현재 검증은 8.2.1 참조 | 기존 evidence의 실제 10명 cost/bank 대조; 벌고 쓴 금액과 잔액 일치, 부족/중복/조합 거절·원자성·save 검증 | P0·중; 실제 recipe/cost |
+| 2 · 8.2·8.6 | 구매 가능 시점과 실제 구매 시점. **승인·검토**: addGold의 자동 구매→귀환/가용 상태 | 전장 획득 골드가 즉시 장비 효과가 되는지 재현; 검토된 구매 장소/귀환 조건 소비, manager 조작 추가 없음 | P1·중; 1·9 |
+| 3 · 8.3 | 골드와 실제 장비 전투력의 중복. **코드 한계**: combatStats0의 goldEarned×ITEM_CONV와 systemEffects 동시 소비 | 같은 획득 골드/다른 실제 장비·미소비 골드의 차이; 장비별 구매·효과 인과, source 없는 계수로 대체 금지 | P1·대; 1·4·11 |
+| 4 · 8.2 | 구매 writer 합법성. **승인·부분 구현 감사**: systems의 plan/craft/advance, role-quests equipment→inventory/effects | 재료·가격·고유/배타 그룹·6칸 결합·boots/champion·역할 보상; 허용 repeated component와 불허 final 중복 구분 | P1·대; pinned 누락 metadata 확보 |
+| 5 · 8.5.1 | 막타 골드와 주변 XP 분리. **코드 한계**: incomeTick CS×58→addXp/level | 막타 실패 vs XP 수급 범위 밖을 분리; 27분 MID 임의 목표 레벨 금지 | P1·대; minion XP/share source |
+| 6 · 8.5 | 웨이브 실제 공급량. **승인·검토**: lanePush/incomeTick→CS/gold/XP | 생성·도착·사망·잔여 미니언보다 많은 수입 불가; 종류별 공급/수요 장부, 이전 history 보존 | P1·대; 5·patch spawn/reward |
+| 7 · 8.5·8.3 | XP 공유·역할 자원 배분. **승인·검토**: income/quest→levels/purchases | support 동행/정글 cover/roam/사이드 독식의 개인·팀 자원 차이, 국소 공유 대상·시간 조건 | P1·대; 5·6·9·source |
+| 8 · 8.5 | 캠프별 가용성·처치 비용. **승인·검토**: jungleTick/jgNext/income→동선/XP/구매 | camp 생성·respawn·HP/resist·clear time·reward·이미 먹힘/카정, farm 대신 gank의 실제 손실 | P1·대; camp metadata·9 |
+| 9 · 8.6 | 귀환·부활·이동 시간. **코드 한계**: laningTick 귀환 즉시 hp=1/recall→income/합류 | recall 시작/중단/완료·구매·복귀 중 공백; 회복 직후 원위치 전투나 용 합류가 가능한지 반례 | P1·대; 1·2·10 |
+| 10 · 8.3·8.6 | 부분 시간 자원·참여 손실. **승인·검토**: deadUntil/penalty/분 tick→income/fight | 같은 사망 시간의 분 경계 전후 수입/XP/합류 차이; 절대 시각 vs 표시 시각 구분 | P1·중; 5·9·33 |
+| 11 · 8.3·9.1 | 피해 유형별 방어. **코드 한계**: combatStats0 arm/mr 혼합 EHP→fight | 물리/마법/고정 피해별 상대 방어 빌드 대응; 피해 subtype·원천·실제 stats 검토 | P1·대; 3·4·source |
+| 12 · 8.4 | 팀 방어 감소와 개인 관통. **승인·검토**: reviewed effects→실제 피해 consumer | 적용자·stack/order·coverage/uptime·수혜 공격자; 같은 방어 감소 두 번 중복 효과 반례 | P1·대; 11·mechanics source |
+| 13 · 8.6 | 접근 가능한 공격 대상. **승인·검토**: fight target selection→damage | 후방 딜러 선택 전에 range/access/frontline/peel/disengage 조건; aggregate 접근 한계 명시 | P1·대; 14·17·28 |
+| 14 · 8.3·8.6 | 순간·지속 피해의 시간 차이. **기존 burst/ext/clean 보강**: fightSkillPhase/fight→damage | 짧은·긴 실제 교전의 공격 가능/생존 시간과 누적 피해 차이; 고정 승률 설정 금지 | P1·대; 13·15·16 |
+| 15 · 8·9.1 | 핵심 스킬/소환사 주문 가용성. **점멸 등 기존 상태 감사**: flashAt/roleQuestSmite/skillProfile→행동 | 재사용 전 사용 불가, 직전 교전 소모가 다음 운영에 영향; 검토된 cooldown·지원 효과만 연결 | P1·대; source·시간 상태 |
+| 16 · 8.3 | 실제 마나/기력 등 자원. **코드 한계**: combatStats0 resource 계수→off | 부족/소모/회복이 가능한 행동·지속 시간을 바꿈; 서로 다른 자원 규칙/소스, 없는 자원 발명 금지 | P1·대; 14·15·source |
+| 17 · 8·9.1 | CC 종류·겹침. **aggregate cc 기존 보강**: skill profile→fight 접근/시간 | stun/root/slow/displacement별 공격·이동·해제와 overlap; 모르는 CC 시간 임의 설정 금지 | P1·대; 13·15·source |
+| 18 · 8.4 | 유효 회복/보호막/치감. **승인·검토**: system/skill effects→실제 HP/수혜 대상 | full HP overheal·unused expired shield·사망 대상·중복 치감; 유효량과 원래 생성량 분리 | P1·대; 11·17·source |
+| 19 · 8.3·12.9 | 실제 피해와 overkill. **검토 필요**: fight의 d와 round(d×.9)→HP/dmg/dmgTaken/quest | 남은 HP보다 큰 한 번 피해, blocked/shielded/overkill 구분; 실제 감소와 통계/퀘스트 일관성 | P1·중; 11·18 |
+| 20 · 8.2–8.4·9.1 | 조건부 item/rune 효과. **systemEffects 소비자 감사** | 조건/target/cooldown/횟수/적용 불가 이유; passive 수치만 합산한 상태를 전체 메커니즘 완성으로 간주하지 않음 | P1·대; 4·15–18·source |
+| 21 · 8.4 | 팀 utility 배분. **승인·검토**: selectItemBuild→actual applicable effects | 치감/방깎 안정 적용자·damage type·coverage·대체 장비 비용; 모든 선수 동일 counter 중복 구매 비교 | P2·대; 4·12·18·20 |
+| 22 · 8.6 | 교전 뒤 잔여 전력. **승인·검토**: fight survivors/hp→convert/objective | 살아 있지만 HP/자원/cooldown 부족해 baron 포기, 역습/귀환/웨이브 손실; 승리와 다음 행동 가능성 분리 | P1·대; 9·14–18 |
+| 23 · 8.5·8.6 | 웨이브 상태 지속. **lanePush proxy 보강** | 쌓인 wave/도착/clear time/freeze/억제기 pressure가 다음 선택에 남음; 상태를 장식 값으로 추가하지 않음 | P1·대; 6·9 |
+| 24 · 8.6 | 구조물 공격 조건. **takeStructure/towerTick 보강** | wave/살아 있는 공격자/방어 병력/보호 규칙/시간·퇴로 확인; 우세 score만으로 즉시 철거하지 않음 | P1·대; 22·23·source |
+| 25 · 8.6 | 다이브 비용. **승인·검토**: laning/fight/tower→피해/죽음/전환 | turret aggro/target switch·적 증원/퇴로·생존; 킬 이득보다 손실이 큰 사례, 알려진 규칙 근거 | P2·대; 9·13·24 |
+| 26 · 8.5·8.6 | 오브젝트 처치/교환 비용. **objectiveTick/convert 보강** | clear time/받는 피해/smite/접근/반대편 손실; 먼저 확보한 objective가 언제나 이득이 아닌 paired 사례 | P1·대; 8·15·22–24 |
+| 27 · 8·9.1 | 버프의 실제 소비. **combatStats/tower의 기존 buff 감사** | 소유·만료·갱신, patch별 baron wave/공성·elder 지원 효과; 고정 전투 배수만으로 전체 효과 완료 주장 금지 | P1·대; 20·23·24·source |
+| 28 · 8.6·3 | 시야 위치/수명/마지막 관측. **visionTick scalar 보강** | 현재 보임 vs last seen·기간 경과 uncertainty, 제거/만료/정보 공유; 정확 2D sight geometry 주장 금지 | P1·대; 9·23·source |
+| 29 · 8.6·7.1·3 | 관측 가능한 AI 판단 입력. **조사 가설**: jungle/teamCall/macro/draft→선택 | 실제 상대 HP/위치/cooldown을 비관측 상태에서 읽는지 감사; 엔진 참 상태와 합법적 판단 정보 분리 | P1·대; 28·기존 observation |
+| 30 · 7.1·8·6 | 전술 실행 가능성. **기존 tactics/콜 보강** | aggressive 지시 vs 조합/wave/자원/도착/실행력, 불가능 조건·대기·실패 사유; forced success 금지 | P2·대; 9·13·22·28 |
+| 31 · 7.1 | 근거 있는 series 적응. **series/draft evidence 소비 감사** | 실제 이전 세트 공개 pick/운영·자기 소유 관측만 다음 세트 사용; enemy private/future state 금지 | P2·중; 29·기존 series source |
+| 32 · 2·6·8 | 피로/숙련/팀워크 영향 분리. **기존 playerMod/mf/sk/mods 감사** | 판단·실행·협업 중 실제 적용 위치/겹침; 단일 반복 보너스·임의 handicap 금지, 동일 조건 비교 | P2·대; source·30 |
+| 33 · 8.1 | 동시 사건/처리 순서. **넥서스 경계 구현, 나머지 검토**: fight queued damage/순서→kill/reward | 양쪽 교환·이미 예정된 공격·caster 사망·objective 경합, 배열/side 순서 반례; 새 동시 규칙은 명시적 검토 | P1·대; actual timing/source |
+| 34 · 8·9 | 효과/보상/cache 일관성. **조사 가설**: quest/equipment/buff/combatStats cache→결과 | 같은 event 재처리·만료·장비 변환 뒤 cache stale, actual writer 변경과 실제 effect; logger 제거 금지 | P1·중; 4·15·20·27 |
+| 35 · 8·12.9 | 설명과 계산 일치. **기존 event-time source 보강**: actual events/expl→review | 실제로 사용한 원인·관측/추론/평가 구분, unsupported 인과 단정/과거 재구성 금지; source 링크·권한·save | P2·중; 각 실제 consumer |
+| 36 · 9.1·7.1·8 | patch 실제 파급. **기존 revision/consumers 감사** | price/stats/recipes/effects/skills/spawn/rewards 변경→구매/draft/combat/macro, paired before/after·rollback | P1·대; 1–34·reviewed source |
+| 37 · 3·7·8·9 | organized competition 보정. **외부 자료 미수집·미검증** | source/license/game IDs/중복/결측/단위 검증 후 role CS/XP/resource/purchase/objective·시간 분포 및 chronological holdout | P2·대; 수집/검증·기계적 정확도 |
+| 38 · 8·9·12 | 재현성과 engine version 경계. **기존 seeded/save 보강** | 같은 input/patch/seed·side 교환·표시/정렬/noise 영향·save 연속; 새 engine 결과 변화와 보존된 역사 분리 | P1·중; 모든 writer/consumer |
+
+### 8·9 추가 source 발견 — 기존 승인 조건 보강, 완료 아님
+
+이번 코드 읽기에서 아래 후보를 추가했다. **코드 표현 확인과 실제 경기 결함 재현은 구분**하며, 새 가격/효과/정책을 확정하지 않는다. 모두 위/기존 승인 항목의 구체적인 반례로 통합하며 신규 기능 수를 늘리지 않는다. 관측/UI/save/rollback/AI 계약은 위 공통 기준을 그대로 적용한다. 우선순위는 P1이며 구매 장부 첫 단위 이후 해당 consumer의 수직 작업에서 조사한다.
+
+| 추가 발견·상태·기존 담당 | source/trigger·입력/단위·writer→consumer | 이익·반례·의존/비용·정확한 다음 조사 |
+| --- | --- | --- |
+| 저체력의 교전 진입 최소치 — **코드 불일치 후보**, 8.3·8.6/목록 18·22 | fight가 F.hp=EHP×clamp(ps.hp,.2,1)로 시작하지만 교전 후 hp는 .05까지 저장한다. HP ratio 5–19% 생존자의 다음 교전 진입 | 자동 회복 없이 5% 상태가 20% 시작으로 상승하는지 실제 연속 교전 재현. 부활/시간 회복과 다른 현상으로 구분; aggregate 최소치의 근거 검토, 무조건 삭제/계수 교체 금지. 중·HP 회복/시간 상태 의존 |
+| 오브젝트 획득 두 writer의 기록 차이 — **코드 연결 공백 후보**, 8.5·8.6/26·34 | objectiveTick.run은 involved.objectives/epics/jungleStacks와 reward를 처리; convert의 직접 baron 경로는 barons/buff/gold/log만 처리 | 동일 실제 획득이 경로 때문에 참여 기록/quest 진척 누락·중복되는지 실제 paired fixture. 실제 참여자는 관측/가용·시간 조건으로 정하고 무조건 alive 전원 배분 금지. 중·공유 actual award writer 검토 |
+| patch 밖의 보상 상수 — **코드 확인·규칙 감사 필요**, 8.3·9.1/1·36 | takeStructure gold 250/300/350, dragon 40, baron 300, 일부 elder spawn/buff 상수 등과 patch.rules 소비 경계를 대조 | reviewed 패치 보상이 실제 모든 지급 경로에 닿는지 확인; source 없는 값을 규칙으로 옮기는 것만으로 정확성 완료 아님. 중·source/license/version·2경로 의존 |
+| assist 배분/반올림 보존 — **미재현 가설**, 8.3/1·19·34 | killPlayer가 assistGold/as.length를 각각 Math.round; killer/victim/assist 대상 목록→실제 gold/XP/quest | 지원 규칙에 따른 총 지급량·대상 유일성·killer 제외·유효 관여 확인. 반올림 오차를 무조건 버그로 단정하지 않고 정책/단위 확보, 1/2/3/4명 반례. 중·실제 assist source |
+| global/local 보상 수령 자격 — **규칙 확인 후보**, 8.3·8.6/7·24·26 | tower/dragon/baron이 aliveOf에 보상을 지급하는 경로. 사망한 아군 vs 실제 근처 공격자/참여자 | patch의 팀 전역/국소 지급·사망 상태 규칙을 대조, 지급 자격과 참여 기록 분리. 죽은 선수 항상 지급/미지급으로 새 규칙 발명 금지. 중·metadata·실제 source |
+| sort comparator 안 난수 — **코드 확인·재현성 가설**, 8.6/33·38 | takeStructure lanes.sort comparator가 st.rng.dec.next 소비; 정렬 호출 순서→다음 실제 의사결정 stream | 지원 runtime/같은 input 재현과 total-order/동률·정렬 소비를 최소 fixture로 확인. source 없는 정책 변경 없이 사전 seeded keys 등 검토; 출력 변화면 의도적 변경으로 기록. 중·seed/side parity |
+| 전투 능력치 cache 갱신 조건 — **미재현 가설**, 8.3/3·20·27·34 | combatStats key는 t/goldEarned/lvl/questRevision/buff/soul; 실제 items/runes/patch 상태 변경 writer가 모든 경로에서 key를 바꾸는지 감사 | 같은 시각 장비 변환/조건 효과/patch snapshot에서 cached vs fresh combatStats0 결과 비교. stale 재현 전에 cache rewrite 금지; measured 성능·behavior parity. 중·실제 mutation 경로 |
+| 구매 preview의 공유 상태 — **코드 alias·미재현 가설**, 8.2/1·4·34 | advanceItemPurchases preview={...ps,items:ps.items.slice()}, applyItemCraftAction→syncRoleQuestEquipment; items 외 quest/관련 객체 공유 여부 | 슬롯 부족/중간 조합 거절 preview가 원본 quest/equipment/state를 바꾸는지 before-after 비교. 실패·중복 시 bank/inventory/quest/RNG 불변; 필요한 clone/순수 검증 경계만 적용. 중·actual quest writer/ledger |
+
+**정확한 다음 구현 순서:** 8.2·8.3 실제 구매 장부 첫 45–55분 단위 → 실제 inventory/골드 전투력 중복 감사 → source-backed 8.5.1 XP·웨이브 → camp/귀환·이동·실제 참여 시간 → 피해/방어/효과 → 정보 기반 운영. 의존이 겹치는 반례는 해당 수직 단위에 함께 검증한다. 전체 approved scope/숫자 roadmap, 엔진 최우선, 한 worker, 정확한 head CI/순차 merge/validated HTML·Pages, 원본/실패/이력 보호와 최종 장기/실기기 QA 보류를 유지한다.
+
+
+### 8.2.1 실제 구매 장부·원자적 조합·기록 연결 — 2026-10-04
+
+범위/추정: 기존 8.2·8.3의 한 worker 45–55분 수직 단위. `fix/item-purchase-ledger`는 main `b1cf7abb`에서 시작했으며 구현/로컬 수용 완료, PR·정확한 head 전체 CI·병합·게시 게이트는 아직 대기한다. 등록된 38항목 전체 완료가 아니다.
+
+- 재현/원본: [실제 10명 기존 장부 결함](evidence/item-purchase-ledger-gap.json)을 보존한다. starter만 차감하고 이후 recipe writer가 장비를 지급하면서 실제 bank를 차감하지 않았다. 추가 500 누적 threshold는 시작 골드가 이미 earned에 포함된 상태에서 실제 구매를 늦췄다. 현재 writer는 패치의 actual recipeCost/from/active 정보를 검증하고 실제 잔액을 차감한다. 선수/AI 모두 같은 engine-owned 경로를 사용하며 새 감독 조작은 없다.
+- 새 `item-purchases.js`는 순수 inventory 검증→전체 조합 비용/재료 multiplicity/6칸 검사→단일 commit을 소유한다. 부족·잘못된 가격·누락 재료·불법 final 중복·champion boots·반복 실행은 지출/장비/quest를 바꾸지 않는다. 반복 component는 허용한다. 기존 starter disposal은 실제 시작 아이템에만 한정하고 환불을 만들지 않는다. source에서 값싼 recipe component도 starter로 분류되어 있어 기존 blanket disposal은 실제 재료를 버렸고, 기존 writer는 누락 재료를 무시했다. 실제 6,866개 champion/role build 검증으로 이 연결을 확인했다.
+- 미완성 boots recipe를 MID/ADC 퀘스트 무료 변환이 먼저 소비하지 않도록 최종 조합까지 보류한다. 완료 뒤 기존 무료 upgrade/별도 boots 보상을 유지한다. support ward는 실제 bank를 사용하고 소비 금액/동일 시점 중복 제한을 유지한다. preview는 quest를 호출하지 않는다. 이전 shallow alias의 구체적 quest 손상은 미재현 상태이며 새 순수 preview 검증을 원본 결함 재현으로 부풀리지 않는다.
+- 실제 inventory 변경 revision을 기존 combat cache에 연결했다. earned gold가 같은 상태에서 장비를 구매한 반례에서 cache와 fresh 계산의 실제 효과가 일치한다. combat 계수/AI 정책을 바꾸지 않았다.
+- `match-history.js`는 실제 official 결과에 optional resources v1(earned/items/wards/held)을 저장하고 10명/비음수/장부 등식/기존 earned row를 검증한다. `ui-match-history.js`는 선택적 ‘종료 당시 골드 사용’만 보여준다. 아이템 목록 열은 복원하지 않는다. 기존 기록에 없으면 저장되지 않았다는 상태를 표시하고 현재 상태로 재구성하지 않는다. full/lite save의 기존 publicRecord 경계를 재사용한다. practice는 기존 참가자/현재 권한 경계를 따르며 공개 official 분석으로 편입하지 않는다.
+- focused 수용: 실제 1,380개 구매 action, 4개 logged/quiet seed/side paired match, 정확한 비용·잔액 보존·재료/가격/잔액 거절·6칸 atomic combine·MID/ADC/SUP·같은 earned cache·official writer/UI·위조 source 거절·legacy/lite save·fired practice 경계 통과. UI 통합 63 acceptance/62 독립 VM, 133-module static/build, system 16경기/6,866 inventory, ending 6 pairs와 regression 통과. Chromium 1280/320px에서 실제 First Selection/수동 밴픽/공식 Bo3 3경기·pending/history save·장부 펼치기/키보드·분석 필터/source·fired/overflow 검증 통과. 정책상 동일 rebuilt HTML 주입이며 실제 production HTTP 검증/최종 기기 QA는 아니다.
+- 결과 해석/원본 보호: 구매 시점/잔액/장비 가용성이 교정되므로 승패·income이 달라질 수 있는 의도적 판정 수정이다. 이전 seed13/21 behind-win 증거는 원본 commit 그대로 보존하며 현재 자연 발생 seed19/22에서 뒤진 골드→실제 교전/접근→넥서스 반례를 확인했다. 검사 script가 기존 임시 scenario JSON을 덮어쓴 실수는 새 결과를 별도 파일로 분리하고 정확한 b1cf7abb 입력/함수로 복원한 뒤 원본 전체 bounded log 일치를 확인했다. 원본 committed evidence는 변경하지 않았다.
+- 진단: `/tmp/item-ledger-system-first.log`의 실제 recipe stall, focused-first의 fixture esc 누락, ending-first의 의도적 timing 변경에 따른 구 seed 반례 실패, original-scenario restoration의 sandbox/중복 선언 실패와 최종 원본 일치, 이전 사용량 auto-review 실패를 보존한다. 최신 성공은 각각 corrected 로그이고 원 실패가 성공이었다고 주장하지 않는다. `/tmp/item-ledger-browser.log`, integration/build/regression/system/focused/ending 로그와 원자료를 유지한다.
+- 한계/후속: 아직 실제 상점 위치/귀환·이동과 구매 시점이 연결되지 않고, 기존 earned-gold generic 전투력 계수도 남는다. sale/refund, 모든 exclusive group, conditional item/rune 효과와 team utility coordination의 전체 합법성/현실성을 완료했다고 주장하지 않는다. 다음 엔진 단위는 실제 inventory와 generic earned power의 이중 소비를 source/consumer로 재현하고 검토된 효과 경계로 교정하는 것, 이후 8.5.1 source-backed wave/XP다. 현재 퀘스트/slot 전환의 기존 aggregate 한계를 유지한다.
+
+### 12.3–12.5 시작 화면 최신 사용자 방향 및 진행 중 위험 연결
+
+최신 승인: 처음 화면은 ‘새로 시작하기 / 불러오기 / 설정’만 제공하고 긴 리그·국제대회·생성 세계 설명을 제거한다. 팀/커리어 선택은 새로 시작하기 이후 실제 흐름으로 옮긴다. 스크린샷의 국제대회 undefined 문구는 실제 UI 결함 증거다. 이 변경은 아직 구현되지 않았으며 구매 장부 후 별도 coherent UI 단위에서 실제 new/load/settings·취소·키보드·반응형·기존 저장/route 연결을 검증한다. 진행 중 주요 메뉴는 상단을 유지하고 저장 utility·아이템 열 제거·관측 radar 승인은 그대로 유지한다.
+
+게임 진행 위험은 기존 승인 목록에 병합한다: 장비 재료 삭제/조합 및 quest 변환은 8.2.1 재현·수정; 낮은 HP 바닥/중립목표 두 writer/patch reward/분배·반올림은 위 추가 감사의 코드 가설; offseason 만료·임대·등록 순서와 연기 일정의 피로/준비/pending 참조는 4·10·11 연결 검증; 저장 실패/반복 action의 보상 중복·원자성은 11; 이적/해임 후 report 권한과 현재 patch의 과거 재구성은 3·9·12 관측/역사 경계다. 미재현 위험은 결함 확정으로 표시하지 않으며 각 실제 trigger/기존 writer/거절·save 반례를 해당 도메인 단위에서 검증한다.
+
+최신 연결 승인(2026-10-04): 한국어 단일 지원에서 기능이 없는 ‘공용어 사용’ 설정은 시작 화면 정리 단위에서 제거한다. 구매 장소는 일반적으로 아군 기지 상점이며 오른은 실제 patch-pinned passive 구매 예외를 검증해야 한다. 8.2.1은 bank/recipe만 교정했고 상점 밖 자동 구매 제한을 완료하지 않았다. 다음 8.2.2는 현재 recall/respawn/travel/기지 상태 writer→구매 가능 consumer→actual effect timing→official/save 반례를 우선하고, source로 검토된 오른 조건 외 전장 구매를 허용하지 않는다. 이동·귀환 모델에 없는 상태는 임의 계수로 꾸미지 않는다. 실제 아이템/generic earned 전투력 중복 감사와 8.5.1 wave XP는 이어지는 엔진 우선순위로 유지한다. 표의 항목별 위/아래 정렬 요청은 12.5·12.9의 정렬/컨텍스트 유지 조건에 등록하되 열 정렬/화면 배치 의미는 확인 중이다.

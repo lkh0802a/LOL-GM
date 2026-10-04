@@ -5,6 +5,7 @@ function roleQuestBootUpgrade(patch,id){return Object.values(patch.itemDefs||{})
 function syncRoleQuestEquipment(ps){
   if(!ps.quest?.completed)return;
   const i=ps.items.findIndex(id=>ps.patchRef.itemDefs[id]?.tags?.includes('Boots'));if(i<0)return;
+  if((ps.itemActions||[]).slice(ps.itemActionIndex||0).some(a=>a.consume?.includes(ps.items[i])))return;
   if(ps.role==='ADC'){ps.questBoots=ps.items.splice(i,1)[0];ps.questRevision=(ps.questRevision||0)+1}
   else if(ps.role==='MID'){const upgrade=roleQuestBootUpgrade(ps.patchRef,ps.items[i]);if(upgrade){ps.items[i]=upgrade;ps.questRevision=(ps.questRevision||0)+1}}
 }
@@ -59,8 +60,7 @@ function roleQuestTakedown(st,ps){
 function roleQuestWard(st,ps){
   if(ps.role!=='SUP'||!ps.quest?.completed)return 0;
   const price=ps.quest.rules.controlWardCost,capacity=ps.quest.rules.controlWardCapacity;
-  const spent=(ps.itemActions?.[ps.itemActionIndex-1]?.threshold||500+(ps.patchRef.itemDefs?.[ps.starterItem]?.cost||0))-500;
-  if(!capacity||ps.goldEarned-spent-(ps.questWardSpent||0)<price||st.t<(ps.questWardAt||0))return 0;
+  if(!capacity||!Number.isFinite(price)||price<0||ps.gold<price||st.t<(ps.questWardAt||0))return 0;
   ps.gold-=price;ps.questWardSpent=(ps.questWardSpent||0)+price;ps.questWardAt=st.t+Math.max(1,3-capacity);ps.questWards=(ps.questWards||0)+1;
   return .25+st.sides[ps.side].team.tactics.vision_investment/200;
 }

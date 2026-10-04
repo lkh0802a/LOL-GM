@@ -38,8 +38,8 @@ function selectItemBuild(patch,c,p,role){
   const bestBoot=quest?ranked.find(x=>x.tier==='boots'):null;const out=bestBoot?[bestBoot.id]:[];let boots=!!bestBoot;if(quest&&role==='SUP'&&patch.itemDefs['3865'])out.push('3865');for(const x of ranked){if(x.tier==='boots'&&boots)continue;out.push(x.id);if(x.tier==='boots')boots=true;if(out.length>=6)break}return out;
 }
 function selectStarterItem(patch,c,p,role){
-  if(role==='SUP'&&patch.roleQuests?.roles?.SUP&&patch.itemDefs?.['3865']?.active!==false&&patch.itemDefs?.['3865'])return '3865';
-  const rows=systemChoiceBase(patch,c,role).starters.map(d=>({id:d.id,s:d.fit+d.roleFit+((hashStr((p&&p.id||'')+'|start|'+d.id)%1000)/1000-.5)*.008-d.cost/40000})).sort((a,b)=>b.s-a.s);
+  if(role==='SUP'&&patch.roleQuests?.roles?.SUP&&patch.itemDefs?.['3865']?.active!==false&&Number.isFinite(patch.itemDefs?.['3865']?.cost)&&patch.itemDefs['3865'].cost>=0&&patch.itemDefs['3865'].cost<=500)return '3865';
+  const rows=systemChoiceBase(patch,c,role).starters.filter(d=>Number.isFinite(patch.itemDefs[d.id].cost)&&patch.itemDefs[d.id].cost>=0&&patch.itemDefs[d.id].cost<=500).map(d=>({id:d.id,s:d.fit+d.roleFit+((hashStr((p&&p.id||'')+'|start|'+d.id)%1000)/1000-.5)*.008-d.cost/40000})).sort((a,b)=>b.s-a.s);
   return rows[0]?.id||null;
 }
 function itemCraftActions(patch,finalBuild){
@@ -50,7 +50,7 @@ function itemCraftActions(patch,finalBuild){
 }
 function itemPurchasePlan(patch,finalBuild,starterId){
   const actions=itemCraftActions(patch,patch.roleQuests?finalBuild.filter(id=>id!=='3865'):finalBuild);let spent=starterId&&patch.itemDefs?.[starterId]?patch.itemDefs[starterId].cost||0:0;
-  for(const a of actions){spent+=a.cost;a.threshold=500+spent}
+  for(const a of actions){spent+=a.cost;a.threshold=spent}
   return actions;
 }
 function runeChoiceScore(patch,c,p,role,id){
@@ -68,22 +68,4 @@ function selectRunePage(patch,c,p,role){
   // Reuse slots 1–3 without repeating scoring/hash/sort work for the secondary.
   const secondary=ranked.slice(1).map(x=>{const picks=x.picks.slice(1).filter(Boolean).sort((u,v)=>v.s-u.s).slice(0,2);return {style:x.style,picks,score:picks.length===2?picks.reduce((z,y)=>z+y.s,0):-Infinity}}).filter(x=>Number.isFinite(x.score)).sort((x,y)=>y.score-x.score)[0];
   return [...primary.picks.map(x=>x.id),...(secondary?secondary.picks.map(x=>x.id):[])];
-}
-function applyItemCraftAction(ps,a){
-  for(const id of a.consume||[]){const i=ps.items.indexOf(id);if(i>=0)ps.items.splice(i,1)}
-  ps.items.push(a.id);syncRoleQuestEquipment(ps);
-  if(ps.items.length>6){const i=ps.items.findIndex(id=>['starter','consumable'].includes(ps.patchRef?.itemDefs?.[id]?.tier)&&!(id==='3865'&&ps.quest?.role==='SUP'));if(i>=0)ps.items.splice(i,1)}
-}
-function advanceItemPurchases(ps){
-  const actions=ps.itemActions||[];
-  while(ps.itemActionIndex<actions.length&&ps.goldEarned-(ps.questWardSpent||0)>=actions[ps.itemActionIndex].threshold){
-    const start=ps.itemActionIndex,preview={...ps,items:ps.items.slice()};let end=start;
-    // With a full inventory, wait until enough gold can combine the remaining
-    // components atomically. Intermediate ingredients never occupy extra slots.
-    for(;end<actions.length&&ps.goldEarned-(ps.questWardSpent||0)>=actions[end].threshold;end++){
-      applyItemCraftAction(preview,actions[end]);if(preview.items.length<=6)break;
-    }
-    if(end>=actions.length||ps.goldEarned-(ps.questWardSpent||0)<actions[end].threshold)break;
-    for(;ps.itemActionIndex<=end;ps.itemActionIndex++)applyItemCraftAction(ps,actions[ps.itemActionIndex]);
-  }
 }
