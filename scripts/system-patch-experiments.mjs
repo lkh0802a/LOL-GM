@@ -33,8 +33,8 @@ export async function runSystemPatchExperiments({seeds=8}={}){
         JSON.stringify(ps.items.slice().sort())===JSON.stringify(ps.itemPlan.slice().sort()),
         'full affordable build stalled or lost ingredients '+champion.id);
     }
-    const limited={items:['one','two','three','four','five','a'],gold:0,goldEarned:0,itemActionIndex:0,
-      itemActions:[{id:'b',consume:[],threshold:1000},{id:'six',consume:['a','b'],threshold:1500}]};
+    const limited={items:['one','two','three','four','five','a'],gold:0,goldEarned:0,itemActionIndex:0,patchRef:{itemDefs:{b:{cost:1000,recipeCost:1000,from:[]},six:{cost:1500,recipeCost:500,from:['a','b']}}},
+      itemActions:[{id:'b',cost:1000,consume:[],threshold:1000},{id:'six',cost:500,consume:['a','b'],threshold:1500}]};
     addGold(limited,1000);check(limited.itemActionIndex===0&&limited.items.length===6,'seventh ingredient bought before combine affordable');
     addGold(limited,499);check(limited.itemActionIndex===0,'combined purchase advanced before threshold');
     addGold(limited,1);check(limited.itemActionIndex===2&&limited.items.length===6&&limited.items.includes('six')&&

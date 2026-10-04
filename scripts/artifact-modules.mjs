@@ -5,6 +5,7 @@ export const ENGINE_MODULES = [
   'match-adjudication.js', 'engine.js',
   'draft.js',
   'systems.js',
+  'item-purchases.js',
   'role-quests.js',
   'role-quest-match.js',
   'data.js',

@@ -12,14 +12,15 @@ const td=(ps,t)=>ps.p.tend[t]/100;
 
 function newPS(p,side,role,champ,patch){
   const pr=p.pool[champ]||{mastery:25,confidence:40,experience:10},c=patch.champions[champ],itemPlan=selectItemBuild(patch,c,p,role),starterItem=selectStarterItem(patch,c,p,role),itemActions=itemPurchasePlan(patch,itemPlan,starterItem),runes=selectRunePage(patch,c,p,role);
-  return {p,side,role,champ:c,prof:pr,quest:createRoleQuest(patch,role),questRevision:0,lvl:1,xp:0,gold:starterItem?Math.max(0,500-(patch.itemDefs?.[starterItem]?.cost||0)):500,goldEarned:500,cs:0,k:0,d:0,a:0,dmg:0,dmgTaken:0,vision:0,objectives:0,laneAdv:0,laneSamples:0,teamfightDmg:0,teamfights:0,teamfightWins:0,deadUntil:0,hp:1,flashAt:0,penalty:0,items:starterItem?[starterItem]:[],starterItem,itemPlan,itemActions,itemActionIndex:0,runes,patchRef:patch,recall:false};
+  const itemSpent=starterItem?patch.itemDefs[starterItem].cost:0;
+  return {p,side,role,champ:c,prof:pr,quest:createRoleQuest(patch,role),questRevision:0,itemRevision:0,itemSpent,lvl:1,xp:0,gold:500-itemSpent,goldEarned:500,cs:0,k:0,d:0,a:0,dmg:0,dmgTaken:0,vision:0,objectives:0,laneAdv:0,laneSamples:0,teamfightDmg:0,teamfights:0,teamfightWins:0,deadUntil:0,hp:1,flashAt:0,penalty:0,items:starterItem?[starterItem]:[],starterItem,itemPlan,itemActions,itemActionIndex:0,runes,patchRef:patch,recall:false};
 }
 function alive(st,ps){return ps.deadUntil<=st.t}
 function aliveOf(st,side){return st.sides[side].ps.filter(x=>alive(st,x))}
 
 function combatStats(st,ps){
   const sd=st.sides[ps.side], key=st.t*1e6+ps.goldEarned*10+ps.lvl+(ps.questRevision||0)*.00001+(sd.baronUntil>st.t?0.1:0)+(sd.elderUntil>st.t?0.2:0)+(sd.soul?0.4:0);
-  if(ps._ck===key)return ps._cs; ps._ck=key; return ps._cs=combatStats0(st,ps);
+  if(ps._ck===key&&ps._itemRevision===ps.itemRevision)return ps._cs;ps._itemRevision=ps.itemRevision;ps._ck=key;return ps._cs=combatStats0(st,ps);
 }
 function combatStats0(st,ps){
   const c=ps.champ,b=c.base,L=ps.lvl,g=Math.max(0,ps.goldEarned-500),cv=ITEM_CONV[c.cls],k=c.kit,sp=championSkillProfile(c);

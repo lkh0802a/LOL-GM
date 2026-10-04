@@ -406,14 +406,15 @@ const td=(ps,t)=>ps.p.tend[t]/100;
 
 function newPS(p,side,role,champ,patch){
   const pr=p.pool[champ]||{mastery:25,confidence:40,experience:10},c=patch.champions[champ],itemPlan=selectItemBuild(patch,c,p,role),starterItem=selectStarterItem(patch,c,p,role),itemActions=itemPurchasePlan(patch,itemPlan,starterItem),runes=selectRunePage(patch,c,p,role);
-  return {p,side,role,champ:c,prof:pr,quest:createRoleQuest(patch,role),questRevision:0,lvl:1,xp:0,gold:starterItem?Math.max(0,500-(patch.itemDefs?.[starterItem]?.cost||0)):500,goldEarned:500,cs:0,k:0,d:0,a:0,dmg:0,dmgTaken:0,vision:0,objectives:0,laneAdv:0,laneSamples:0,teamfightDmg:0,teamfights:0,teamfightWins:0,deadUntil:0,hp:1,flashAt:0,penalty:0,items:starterItem?[starterItem]:[],starterItem,itemPlan,itemActions,itemActionIndex:0,runes,patchRef:patch,recall:false};
+  const itemSpent=starterItem?patch.itemDefs[starterItem].cost:0;
+  return {p,side,role,champ:c,prof:pr,quest:createRoleQuest(patch,role),questRevision:0,itemRevision:0,itemSpent,lvl:1,xp:0,gold:500-itemSpent,goldEarned:500,cs:0,k:0,d:0,a:0,dmg:0,dmgTaken:0,vision:0,objectives:0,laneAdv:0,laneSamples:0,teamfightDmg:0,teamfights:0,teamfightWins:0,deadUntil:0,hp:1,flashAt:0,penalty:0,items:starterItem?[starterItem]:[],starterItem,itemPlan,itemActions,itemActionIndex:0,runes,patchRef:patch,recall:false};
 }
 function alive(st,ps){return ps.deadUntil<=st.t}
 function aliveOf(st,side){return st.sides[side].ps.filter(x=>alive(st,x))}
 
 function combatStats(st,ps){
   const sd=st.sides[ps.side], key=st.t*1e6+ps.goldEarned*10+ps.lvl+(ps.questRevision||0)*.00001+(sd.baronUntil>st.t?0.1:0)+(sd.elderUntil>st.t?0.2:0)+(sd.soul?0.4:0);
-  if(ps._ck===key)return ps._cs; ps._ck=key; return ps._cs=combatStats0(st,ps);
+  if(ps._ck===key&&ps._itemRevision===ps.itemRevision)return ps._cs;ps._itemRevision=ps.itemRevision;ps._ck=key;return ps._cs=combatStats0(st,ps);
 }
 function combatStats0(st,ps){
   const c=ps.champ,b=c.base,L=ps.lvl,g=Math.max(0,ps.goldEarned-500),cv=ITEM_CONV[c.cls],k=c.kit,sp=championSkillProfile(c);
@@ -1155,8 +1156,8 @@ function selectItemBuild(patch,c,p,role){
   const bestBoot=quest?ranked.find(x=>x.tier==='boots'):null;const out=bestBoot?[bestBoot.id]:[];let boots=!!bestBoot;if(quest&&role==='SUP'&&patch.itemDefs['3865'])out.push('3865');for(const x of ranked){if(x.tier==='boots'&&boots)continue;out.push(x.id);if(x.tier==='boots')boots=true;if(out.length>=6)break}return out;
 }
 function selectStarterItem(patch,c,p,role){
-  if(role==='SUP'&&patch.roleQuests?.roles?.SUP&&patch.itemDefs?.['3865']?.active!==false&&patch.itemDefs?.['3865'])return '3865';
-  const rows=systemChoiceBase(patch,c,role).starters.map(d=>({id:d.id,s:d.fit+d.roleFit+((hashStr((p&&p.id||'')+'|start|'+d.id)%1000)/1000-.5)*.008-d.cost/40000})).sort((a,b)=>b.s-a.s);
+  if(role==='SUP'&&patch.roleQuests?.roles?.SUP&&patch.itemDefs?.['3865']?.active!==false&&Number.isFinite(patch.itemDefs?.['3865']?.cost)&&patch.itemDefs['3865'].cost>=0&&patch.itemDefs['3865'].cost<=500)return '3865';
+  const rows=systemChoiceBase(patch,c,role).starters.filter(d=>Number.isFinite(patch.itemDefs[d.id].cost)&&patch.itemDefs[d.id].cost>=0&&patch.itemDefs[d.id].cost<=500).map(d=>({id:d.id,s:d.fit+d.roleFit+((hashStr((p&&p.id||'')+'|start|'+d.id)%1000)/1000-.5)*.008-d.cost/40000})).sort((a,b)=>b.s-a.s);
   return rows[0]?.id||null;
 }
 function itemCraftActions(patch,finalBuild){
@@ -1167,7 +1168,7 @@ function itemCraftActions(patch,finalBuild){
 }
 function itemPurchasePlan(patch,finalBuild,starterId){
   const actions=itemCraftActions(patch,patch.roleQuests?finalBuild.filter(id=>id!=='3865'):finalBuild);let spent=starterId&&patch.itemDefs?.[starterId]?patch.itemDefs[starterId].cost||0:0;
-  for(const a of actions){spent+=a.cost;a.threshold=500+spent}
+  for(const a of actions){spent+=a.cost;a.threshold=spent}
   return actions;
 }
 function runeChoiceScore(patch,c,p,role,id){
@@ -1186,24 +1187,52 @@ function selectRunePage(patch,c,p,role){
   const secondary=ranked.slice(1).map(x=>{const picks=x.picks.slice(1).filter(Boolean).sort((u,v)=>v.s-u.s).slice(0,2);return {style:x.style,picks,score:picks.length===2?picks.reduce((z,y)=>z+y.s,0):-Infinity}}).filter(x=>Number.isFinite(x.score)).sort((x,y)=>y.score-x.score)[0];
   return [...primary.picks.map(x=>x.id),...(secondary?secondary.picks.map(x=>x.id):[])];
 }
-function applyItemCraftAction(ps,a){
-  for(const id of a.consume||[]){const i=ps.items.indexOf(id);if(i>=0)ps.items.splice(i,1)}
-  ps.items.push(a.id);syncRoleQuestEquipment(ps);
-  if(ps.items.length>6){const i=ps.items.findIndex(id=>['starter','consumable'].includes(ps.patchRef?.itemDefs?.[id]?.tier)&&!(id==='3865'&&ps.quest?.role==='SUP'));if(i>=0)ps.items.splice(i,1)}
+
+/* ==== FILE: item-purchases.js ==== */
+// Actual recipe costs and bank balances; planning never mutates quest state.
+function itemCraftInventory(ps,items,a){
+  const defs=ps.patchRef?.itemDefs,d=defs?.[a?.id],from=d?.from||[],cost=d?.recipeCost??d?.cost;
+  if(!d||d.active===false||d.shopActive===false||!Number.isFinite(cost)||cost<0||a.cost!==cost||!Array.isArray(a.consume)||JSON.stringify(a.consume)!==JSON.stringify(from)||d.requiredChampion&&d.requiredChampion!==ps.champ?.name)return null;
+  if(d.tier==='final'&&items.includes(a.id)||d.tags?.includes('Boots')&&(ps.champ?.name==='Cassiopeia'||ps.questBoots))return null;
+  const next=items.slice();for(const id of from){const i=next.indexOf(id);if(i<0)return null;next.splice(i,1)}
+  next.push(a.id);
+  if(d.tags?.includes('Boots')&&next.filter(id=>defs[id]?.tags?.includes('Boots')).length>1)return null;
+  return next;
 }
+function itemCraftSlotResult(ps,items,last){
+  if(items.length<=6)return {items,disposed:false};
+  // Only the actual starting item may be discarded, once, without a refund.
+  // Cheap recipe components can also be classified as "starter" in the source.
+  if(!ps.starterDisposed&&(ps.itemPlan?.includes(last.id)||ps.patchRef.itemDefs[last.id]?.tier==='final')&&!(ps.starterItem==='3865'&&ps.quest?.role==='SUP')){
+    const i=items.indexOf(ps.starterItem);if(i>=0){const next=items.slice();next.splice(i,1);if(next.length<=6)return {items:next,disposed:true}}
+  }
+  return null;
+}
+function commitItemCraftBatch(ps,actions,nextIndex){
+  let items=ps.items.slice(),cost=0;
+  for(const a of actions){items=itemCraftInventory(ps,items,a);if(!items)return false;cost+=a.cost}
+  const slots=itemCraftSlotResult(ps,items,actions.at(-1));
+  if(!slots||!Number.isFinite(ps.gold)||ps.gold<cost)return false;
+  ps.gold-=cost;ps.itemSpent=(ps.itemSpent||0)+cost;ps.items=slots.items;
+  if(slots.disposed)ps.starterDisposed=true;
+  if(nextIndex!==undefined)ps.itemActionIndex=nextIndex;
+  ps.itemRevision=(ps.itemRevision||0)+1;syncRoleQuestEquipment(ps);return true;
+}
+function applyItemCraftAction(ps,a){return commitItemCraftBatch(ps,[a])}
 function advanceItemPurchases(ps){
   const actions=ps.itemActions||[];
-  while(ps.itemActionIndex<actions.length&&ps.goldEarned-(ps.questWardSpent||0)>=actions[ps.itemActionIndex].threshold){
-    const start=ps.itemActionIndex,preview={...ps,items:ps.items.slice()};let end=start;
-    // With a full inventory, wait until enough gold can combine the remaining
-    // components atomically. Intermediate ingredients never occupy extra slots.
-    for(;end<actions.length&&ps.goldEarned-(ps.questWardSpent||0)>=actions[end].threshold;end++){
-      applyItemCraftAction(preview,actions[end]);if(preview.items.length<=6)break;
+  while(ps.itemActionIndex<actions.length){
+    const start=ps.itemActionIndex;let items=ps.items.slice(),cost=0,end=start;
+    // Wait for an affordable whole combine when components exceed six slots.
+    for(;end<actions.length;end++){
+      const a=actions[end];cost+=a.cost;if(!Number.isFinite(cost)||cost>ps.gold)return;
+      items=itemCraftInventory(ps,items,a);if(!items)return;
+      if(itemCraftSlotResult(ps,items,a))break;
     }
-    if(end>=actions.length||ps.goldEarned-(ps.questWardSpent||0)<actions[end].threshold)break;
-    for(;ps.itemActionIndex<=end;ps.itemActionIndex++)applyItemCraftAction(ps,actions[ps.itemActionIndex]);
+    if(end===actions.length||!commitItemCraftBatch(ps,actions.slice(start,end+1),end+1))return;
   }
 }
+function matchGoldLedger(ps){return {earned:ps.goldEarned,items:ps.itemSpent||0,wards:ps.questWardSpent||0,held:ps.gold}}
 
 /* ==== FILE: role-quests.js ==== */
 // Patch-owned role rules and match-local quest transitions. Engine adapters
@@ -1281,6 +1310,7 @@ function roleQuestBootUpgrade(patch,id){return Object.values(patch.itemDefs||{})
 function syncRoleQuestEquipment(ps){
   if(!ps.quest?.completed)return;
   const i=ps.items.findIndex(id=>ps.patchRef.itemDefs[id]?.tags?.includes('Boots'));if(i<0)return;
+  if((ps.itemActions||[]).slice(ps.itemActionIndex||0).some(a=>a.consume?.includes(ps.items[i])))return;
   if(ps.role==='ADC'){ps.questBoots=ps.items.splice(i,1)[0];ps.questRevision=(ps.questRevision||0)+1}
   else if(ps.role==='MID'){const upgrade=roleQuestBootUpgrade(ps.patchRef,ps.items[i]);if(upgrade){ps.items[i]=upgrade;ps.questRevision=(ps.questRevision||0)+1}}
 }
@@ -1335,8 +1365,7 @@ function roleQuestTakedown(st,ps){
 function roleQuestWard(st,ps){
   if(ps.role!=='SUP'||!ps.quest?.completed)return 0;
   const price=ps.quest.rules.controlWardCost,capacity=ps.quest.rules.controlWardCapacity;
-  const spent=(ps.itemActions?.[ps.itemActionIndex-1]?.threshold||500+(ps.patchRef.itemDefs?.[ps.starterItem]?.cost||0))-500;
-  if(!capacity||ps.goldEarned-spent-(ps.questWardSpent||0)<price||st.t<(ps.questWardAt||0))return 0;
+  if(!capacity||!Number.isFinite(price)||price<0||ps.gold<price||st.t<(ps.questWardAt||0))return 0;
   ps.gold-=price;ps.questWardSpent=(ps.questWardSpent||0)+price;ps.questWardAt=st.t+Math.max(1,3-capacity);ps.questWards=(ps.questWards||0)+1;
   return .25+st.sides[ps.side].team.tactics.vision_investment/200;
 }
@@ -11669,7 +11698,7 @@ function recordedDraftReview(db,rec,game,team=managedTeamId(db)){
 function publicMatchRecord(r,patch){
   const events=(r.log||[]).filter(e=>['kill','fight','obj','tower','nexus'].includes(e.kind)),limit=24,
     selected=events.length>limit?[...events.slice(0,12),...events.slice(-12)]:events;
-  return {version:1,...(r.ending?{ending:{...r.ending,winner:r.sides[r.ending.winner].team.id}}:{}),date:r.date,patch,winner:r.sides[r.winner].team.id,duration:r.duration,
+  return {version:1,...(r.ending?{ending:{...r.ending,winner:r.sides[r.ending.winner].team.id}}:{}),resources:{version:1,players:Object.fromEntries(r.sides.flatMap(s=>s.ps.map(p=>[p.p.id,matchGoldLedger(p)])))},date:r.date,patch,winner:r.sides[r.winner].team.id,duration:r.duration,
     sides:r.sides.map(s=>({team:s.team.id,name:s.team.name,players:s.ps.map(p=>[p.p.id,p.p.name,p.role,p.champ.id,p.k,p.d,p.a,Math.round(p.cs),Math.round(p.goldEarned),Math.round(p.dmg),p.lvl,matchQuestItems(p).slice()])})),
     championNames:Object.fromEntries(r.sides.flatMap(s=>s.ps.map(p=>[p.champ.id,championDisplayName(p.champ)]))),
     itemNames:Object.fromEntries(r.sides.flatMap(s=>s.ps.flatMap(p=>matchQuestItems(p).map(id=>[id,p.patchRef?.itemDefs?.[id]?.name||id])))),
@@ -11685,8 +11714,16 @@ function recordedPublicMatch(db,rec,game){
   if(rec.practiceModel&&(db.world?.fired||![game?.blue,game?.red].some(id=>managerControlsSquad(db,id))))return {reason:'no-authority',record:null};
   const p=game?.publicRecord;
   if(!p)return {reason:'not-recorded',record:null};
+  if(!recordedGoldLedgerValid(p))return {reason:'unverified-source',record:null};
   if(!recordedEndingValid(p)||p.version!==1||!['championNames','itemNames'].every(k=>p[k]&&typeof p[k]==='object'&&!Array.isArray(p[k])&&Object.values(p[k]).every(x=>typeof x==='string'))||p.date!==game.date||p.patch!==game.patch||p.patch!==rec.patch||!observedMetaDate(db,p)||p.winner!==game.winner||!Number.isFinite(p.duration)||p.duration<=0||!Array.isArray(p.sides)||p.sides.length!==2||p.sides.some((s,i)=>!s||typeof s!=='object'||s.team!==[game.blue,game.red][i]||typeof s.name!=='string'||!Array.isArray(s.players)||s.players.length!==5||new Set(s.players.map(x=>x?.[2])).size!==5||s.players.some(x=>!Array.isArray(x)||x.length!==12||typeof x[0]!=='string'||typeof x[1]!=='string'||!ROLES.includes(x[2])||typeof x[3]!=='string'||!x.slice(4,11).every(Number.isFinite)||!Array.isArray(x[11])||x[11].length>7||!x[11].every(id=>typeof id==='string')))||!Array.isArray(p.events)||p.events.length>24||!Number.isInteger(p.eventCount)||p.eventCount<p.events.length||p.events.some(e=>!Array.isArray(e)||e.length!==5||!Number.isFinite(e[0])||!Number.isFinite(e[1])||![-1,0,1].includes(e[3])||typeof e[4]!=='string'||!['kill','fight','obj','tower','nexus'].includes(e[2])||e[0]<0||e[0]>Math.ceil(p.duration)||e[1]<0||e[1]>=60))return {reason:'unverified-source',record:null};
   return {reason:null,record:p};
+}
+function recordedGoldLedgerValid(p){
+  if(p.resources===undefined)return true; // Never invent missing historical costs.
+  const r=p.resources,rows=p.sides?.flatMap(s=>s.players||[]),ids=rows?.map(x=>x[0]);
+  return r?.version===1&&r.players&&typeof r.players==='object'&&!Array.isArray(r.players)&&ids?.length===10&&new Set(ids).size===10&&Object.keys(r.players).length===10&&rows.every(x=>{
+    const v=r.players[x[0]];return v&&['earned','items','wards','held'].every(k=>Number.isFinite(v[k])&&v[k]>=0)&&Math.abs(v.earned-v.items-v.wards-v.held)<1e-6&&Math.round(v.earned)===x[8];
+  });
 }
 function officialMatchReviews(db,team,filter={}){
   const club=db.teams[team];if(db.world?.fired||!club||!managerControlsSquad(db,club))return [];
@@ -13587,7 +13624,14 @@ function bindRecordedDraftReview(root,rec){
 function renderPublicMatchReview(db,rec,game,filter={}){
   const read=recordedPublicMatch(db,rec,game),p=read.record;
   if(!p)return `<section><h3>저장된 경기 기록</h3><p class="hint">${read.reason==='no-authority'?'이 연습 경기 기록의 조회 권한이 없습니다.':read.reason==='not-recorded'?'이 경기의 당시 상세 기록이 없습니다. 세트 요약과 기록된 밴픽 근거만 확인할 수 있습니다.':'경기 기록의 출처를 확인할 수 없습니다.'} 현재 선수 상태로 과거 기록을 다시 만들지 않습니다.</p></section>`;
-  return `<section><h3>${rec.practiceModel?'연습 당시 관측된 경기 기록':'당시 확정된 경기 기록'}</h3><p class="hint">${esc(p.date)} · 패치 ${esc(p.patch)} · ${p.duration.toFixed(1)}분${p.ending?` · 넥서스 파괴 ${fmtTime(p.ending.minute,p.ending.second)}`:''}. ${rec.practiceModel?'참가 구단의 비공개 연습 관측입니다.':'공개 경기 결과입니다.'} 숨은 능력·숙련 추정이나 승패 원인 판정이 아닙니다.</p>${p.sides.map(s=>`<h4>${esc(s.name)}</h4><div class="scroll"><table><thead><tr><th>선수·역할</th><th>챔피언</th><th>K/D/A</th><th>CS</th><th>획득 골드</th><th>피해량</th><th>레벨</th></tr></thead><tbody>${s.players.filter(x=>!filter.position||x[2]===filter.position).map(x=>`<tr><td>${esc(x[1])} · ${ROLE_KO[x[2]]}</td><td>${esc(p.championNames[x[3]]||x[3])}</td><td>${x[4]}/${x[5]}/${x[6]}</td><td>${x[7]}</td><td>${x[8]}</td><td>${x[9]}</td><td>${x[10]}</td></tr>`).join('')}</tbody></table></div>`).join('')}${filter.events===false?'':`<h4>실제 주요 사건</h4><p class="hint">${p.events.length?'당시 로그의 공개 처치·교전·오브젝트·구조물 사건 '+p.events.length+'건 / '+p.eventCount+'건'+(p.eventCount>p.events.length?' · 중간 사건은 저장 크기를 제한하기 위해 생략했습니다.':''): '당시 주요 사건 로그를 수집하지 않았습니다. 결과로 사건을 추정하지 않습니다.'}</p><ol>${p.events.map(e=>`<li><time>${fmtTime(e[0],e[1])}</time> ${esc(e[4])}</li>`).join('')}</ol>`}</section>`;
+  return `<section><h3>${rec.practiceModel?'연습 당시 관측된 경기 기록':'당시 확정된 경기 기록'}</h3><p class="hint">${esc(p.date)} · 패치 ${esc(p.patch)} · ${p.duration.toFixed(1)}분${p.ending?` · 넥서스 파괴 ${fmtTime(p.ending.minute,p.ending.second)}`:''}. ${rec.practiceModel?'참가 구단의 비공개 연습 관측입니다.':'공개 경기 결과입니다.'} 숨은 능력·숙련 추정이나 승패 원인 판정이 아닙니다.</p>${p.sides.map(s=>`<h4>${esc(s.name)}</h4><div class="scroll"><table><thead><tr><th>선수·역할</th><th>챔피언</th><th>K/D/A</th><th>CS</th><th>획득 골드</th><th>피해량</th><th>레벨</th></tr></thead><tbody>${s.players.filter(x=>!filter.position||x[2]===filter.position).map(x=>`<tr><td>${esc(x[1])} · ${ROLE_KO[x[2]]}</td><td>${esc(p.championNames[x[3]]||x[3])}</td><td>${x[4]}/${x[5]}/${x[6]}</td><td>${x[7]}</td><td>${x[8]}</td><td>${x[9]}</td><td>${x[10]}</td></tr>`).join('')}</tbody></table></div>`).join('')}${renderRecordedGoldUse(p,filter)}${filter.events===false?'':`<h4>실제 주요 사건</h4><p class="hint">${p.events.length?'당시 로그의 공개 처치·교전·오브젝트·구조물 사건 '+p.events.length+'건 / '+p.eventCount+'건'+(p.eventCount>p.events.length?' · 중간 사건은 저장 크기를 제한하기 위해 생략했습니다.':''): '당시 주요 사건 로그를 수집하지 않았습니다. 결과로 사건을 추정하지 않습니다.'}</p><ol>${p.events.map(e=>`<li><time>${fmtTime(e[0],e[1])}</time> ${esc(e[4])}</li>`).join('')}</ol>`}</section>`;
+}
+function renderRecordedGoldUse(p,filter){
+  if(!p.resources)return '<p class="hint">이 경기의 당시 골드 사용 내역은 저장되지 않았습니다.</p>';
+  return `<details><summary>종료 당시 골드 사용</summary><p class="hint">구매에 사용한 골드와 남은 골드입니다. 판매·환불은 계산하지 않으며, 각 합계는 반올림했습니다.</p>${p.sides.map(s=>{
+    const values=s.players.filter(x=>!filter.position||x[2]===filter.position).map(x=>p.resources.players[x[0]]),sum=k=>Math.round(values.reduce((v,x)=>v+x[k],0));
+    return `<p><strong>${esc(s.name)}</strong> · 장비 구매 ${sum('items')} · 시야 구매 ${sum('wards')} · 미사용 ${sum('held')} 골드</p>`;
+  }).join('')}</details>`;
 }
 function analysisMatchPanel(db,team,filter){
   const rows=officialMatchReviews(db,team.id,filter),shown=rows.slice(0,30),key=x=>JSON.stringify([x.key,x.di,x.mi,x.gi]),selected=shown.find(x=>key(x)===ANALYSIS_SET.review)||null;
