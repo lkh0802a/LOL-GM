@@ -44,5 +44,15 @@
   "capturePaths": "Unique /tmp/fight-round-browser-initial-*; no overwritten prior screenshot paths",
   "historicalCaptureLimitation": "#180 final rerun overwrote first successful screenshot bytes; first logs/code and distinct final captures remain. Never relabel final captures as original.",
   "unfinished": "Full callback-exception rollback/geometry/cast timing/simultaneity/item AP AS crit/conditional effects/shop/waves/full approved domains remain pending",
-  "next": "8.4.4 real laning trade HP-floor source reproduction and resource preservation, without invented death or timing policy"
+  "next": "8.4.4 real laning trade HP-floor source reproduction and resource preservation, without invented death or timing policy",
+  "finalSourceHashParity": true,
+  "retainedIntermediateTrace": {
+    "path": "fight-round-correction.json",
+    "reason": "Trace generated before final optional side.ps/negative HP guard hardening; retain its real intermediate hash. Final same outcomes/current source hashes are fight-round-final.json"
+  },
+  "supersededCI": {
+    "head": "c3dec2e09b9b3809d55445069dcd5111171a7daa",
+    "run": 37216028963,
+    "status": "in progress at hardening evidence refresh; not final CI success"
+  }
 }
