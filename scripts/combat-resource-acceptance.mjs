@@ -37,4 +37,4 @@ await runEngineFixture(String.raw`(()=>{
  const malformed=JSON.parse(JSON.stringify(g));malformed.publicRecord.damageBasis='exact-spells';check(!recordedPublicMatch(resumed,rec,malformed).record,'forged unsupported model accepted');
  check(!renderPublicMatchReview(resumed,rec,g,{}).includes('<th>아이템'),'item review column returned');
  console.log('COMBAT_RESOURCE_ACCEPTANCE PASS '+JSON.stringify({pairs,appliedPacket:paid,officialBasis:p.damageBasis,pendingFullLite:true,legacyPure:true,exactGeometry:false}));
-})()`,{timeout:60000,setupSources:[await artifactSource('ui-match-history.js'),'globalThis.__combatHealth={starts:[],ends:[]};'+observed]});
+})()`,{timeout:60000,setupSources:[await artifactSource('ui-match-history.js'),await artifactSource('ui-takedown-history.js'),'globalThis.__combatHealth={starts:[],ends:[]};'+observed]});

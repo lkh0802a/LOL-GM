@@ -452,6 +452,50 @@ function recordedObjectivesValid(p){
   return o?.version===1&&Array.isArray(o.events)&&o.events.length<=720&&new Set(o.events.map(e=>e?.id)).size===o.events.length&&o.events.every(e=>e&&typeof e.id==='string'&&['dragon','elder','herald','baron'].includes(e.key)&&[0,1].includes(e.side)&&Number.isInteger(e.minute)&&e.minute>=1&&e.minute+e.second/60<=p.duration&&Number.isInteger(e.second)&&e.second>=0&&e.second<60&&(!p.ending||e.minute<p.ending.minute||e.minute===p.ending.minute&&e.second<=p.ending.second)&&Array.isArray(e.participants)&&e.participants.length>0&&e.participants.length<=5&&new Set(e.participants).size===e.participants.length&&e.participants.every(id=>p.sides?.[e.side]?.players?.some(x=>x[0]===id)));
 }
 
+/* ==== FILE: takedown-rewards.js ==== */
+// Existing aggregate payouts, not exact server rounding or physical assist range.
+function matchTakedownActors(st,killer,victim,assists){
+  if(matchEnded(st)||!victim||![0,1].includes(victim.side)||!st.sides[victim.side].ps.includes(victim)||!alive(st,victim)||!Array.isArray(assists))return null;
+  const enemy=st.sides[1-victim.side].ps;
+  if(killer&&!enemy.includes(killer)||assists.some(p=>!p||![0,1].includes(p.side)||!st.sides[p.side].ps.includes(p)))return null;
+  const rules=st.patch.rules;
+  if(![rules.killGold,rules.assistGold].every(x=>Number.isFinite(x)&&x>=0))return null;
+  return [...new Set(assists)].filter(p=>p!==killer&&p.side!==victim.side);
+}
+function killPlayer(st,killer,victim,assists,reason){
+  const eligible=matchTakedownActors(st,killer,victim,assists);
+  if(!eligible)return false;
+  victim.d++; victim.hp=1;
+  const sec=victim.lvl*2.5+6+Math.max(0,st.t-15)*0.9;
+  victim.deadUntil=st.t+sec/60; victim.penalty=Math.min(1,(sec+25)/60);
+  const payouts=[],r=st.patch.rules,credit=(p,kind,gold,xp)=>{
+    if(kind==='kill'){p.k++;st.sides[p.side].kills++}else p.a++;
+    addGold(p,gold);addXp(p,xp,'champion');
+    const beforeGold=p.goldEarned,beforeXp=p.xp;roleQuestTakedown(st,p);
+    payouts.push({player:p.p.id,kind,gold,xp,questGold:p.goldEarned-beforeGold,questXp:p.xp-beforeXp});
+  };
+  if(killer)credit(killer,'kill',r.killGold,140+victim.lvl*20);
+  for(const p of eligible)credit(p,'assist',Math.round(r.assistGold/eligible.length),70);
+  const receipt={id:victim.p.id+':'+victim.d,side:1-victim.side,victim:victim.p.id,killer:killer?.p.id||null,assistPool:r.assistGold,assistPaid:payouts.filter(x=>x.kind==='assist').reduce((n,x)=>n+x.gold,0),payouts};
+  const lane=LANES.find(l=>LANE_ROLES[l].includes(victim.role))||'mid';
+  st.lanePush[lane]+= victim.side===0?-0.35:0.35; st.lanePush[lane]=clamp(st.lanePush[lane],-1,1);
+  const fb=st.firsts.blood===undefined; if(fb) st.firsts.blood=killer?killer.side:1-victim.side;
+  const second=log(st,`${killer?pname(st,killer):'처형'} → ${pname(st,victim)} 처치${fb?' (퍼스트 블러드)':''}${reason?' · '+reason:''}`,{side:killer?killer.side:1-victim.side,major:true,kind:'kill'});
+  (st.takedownEvents||(st.takedownEvents=[])).push({...receipt,minute:st.t,second});
+  return true;
+}
+
+
+function recordedTakedownsValid(p){
+  if(p.takedowns===undefined)return true;
+  const t=p.takedowns;
+  return t?.version===1&&Number.isInteger(t.count)&&t.count>=0&&t.count===p.sides?.flatMap(s=>s.players||[]).reduce((n,x)=>n+x[5],0)&&Array.isArray(t.events)&&t.events.length===Math.min(24,t.count)&&new Set(t.events.map(e=>e?.id)).size===t.events.length&&t.events.every(e=>{
+    if(!e||typeof e.id!=='string'||![0,1].includes(e.side)||!Number.isInteger(e.minute)||e.minute<1||!Number.isInteger(e.second)||e.second<0||e.second>=60||e.minute+e.second/60>p.duration||!Number.isFinite(e.assistPool)||e.assistPool<0||!Number.isFinite(e.assistPaid)||e.assistPaid<0||!p.sides?.[1-e.side]?.players?.some(x=>x[0]===e.victim)||!Array.isArray(e.payouts)||e.payouts.length>5||e.payouts.some(x=>!x||typeof x!=='object')||new Set(e.payouts.map(x=>x?.player)).size!==e.payouts.length)return false;
+    const kills=e.payouts.filter(x=>x.kind==='kill'),assists=e.payouts.filter(x=>x.kind==='assist');
+    return (e.killer===null?kills.length===0:kills.length===1&&kills[0].player===e.killer)&&assists.length<=(e.killer===null?5:4)&&e.assistPaid===assists.reduce((n,x)=>n+x.gold,0)&&e.payouts.every(x=>p.sides[e.side]?.players?.some(v=>v[0]===x.player)&&['kill','assist'].includes(x.kind)&&['gold','xp','questGold','questXp'].every(k=>Number.isFinite(x[k])&&x[k]>=0)&&(x.kind!=='assist'||x.gold===Math.round(e.assistPool/assists.length)));
+  });
+}
+
 /* ==== FILE: engine.js ==== */
 // ===== LOL GM: isolated one-game match simulation =====
 
@@ -526,20 +570,6 @@ function addGold(ps,g){ps.gold+=g;ps.goldEarned+=g;
 }
 function addXp(ps,x,source='ordinary'){ps.xp+=x*(source==='ordinary'&&ps.quest?.completed?1+(ps.quest.rules.xpBonus||0):1);let l=1;for(let i=1;i<XP_TABLE.length;i++)if(ps.xp>=XP_TABLE[i])l=i+1;ps.lvl=Math.min(ps.quest?.completed?ps.quest.rules.levelCap||18:18,l)}
 
-function killPlayer(st,killer,victim,assists,reason){
-  if(matchEnded(st))return;
-  const R=st.patch.rules;
-  victim.d++; victim.hp=1;
-  const sec=victim.lvl*2.5+6+Math.max(0,st.t-15)*0.9;
-  victim.deadUntil=st.t+sec/60; victim.penalty=Math.min(1,(sec+25)/60);
-  if(killer){killer.k++; addGold(killer,R.killGold); addXp(killer,140+victim.lvl*20,'champion'); st.sides[killer.side].kills++;roleQuestTakedown(st,killer);}
-  const as=assists.filter(a=>a!==killer&&a.side!==victim.side);
-  as.forEach(a=>{a.a++; addGold(a,Math.round(R.assistGold/as.length)); addXp(a,70,'champion');roleQuestTakedown(st,a)});
-  const lane=LANES.find(l=>LANE_ROLES[l].includes(victim.role))||'mid';
-  st.lanePush[lane]+= victim.side===0?-0.35:0.35; st.lanePush[lane]=clamp(st.lanePush[lane],-1,1);
-  const fb=st.firsts.blood===undefined; if(fb) st.firsts.blood=killer?killer.side:1-victim.side;
-  log(st,`${killer?pname(st,killer):'처형'} → ${pname(st,victim)} 처치${fb?' (퍼스트 블러드)':''}${reason?' · '+reason:''}`,{side:killer?killer.side:1-victim.side,major:true,kind:'kill'});
-}
 
 // ----- 교전: Setup → Engage → Burst → Extended → Cleanup -----
 function fight(st,zone,sideArrs,ctx={}){
@@ -933,7 +963,7 @@ function simulateMatch(db,blueId,redId,seed,ctx,quiet){
   if(st.winner<0)throw new Error('Match unresolved: neither nexus was destroyed within '+MATCH_SIMULATION_MAX_MINUTES+' simulated minutes; no official result produced (seed '+seed+')');
   const endSec=st.ending.second;
   st.log.sort((a,b)=>a.t-b.t||a.sec-b.sec);
-  return {seed,winner:st.winner,ending:{...st.ending},damageBasis:'effective-aggregate-v1',objectiveEvents:st.objectiveEvents||[],duration:t+endSec/60,durationStr:fmtTime(t,endSec),draft:d,sides:st.sides,log:st.log,expl:st.expl,goldHist:st.goldHist,firsts:st.firsts};
+  return {seed,winner:st.winner,ending:{...st.ending},damageBasis:'effective-aggregate-v1',objectiveEvents:st.objectiveEvents||[],takedownEvents:st.takedownEvents||[],duration:t+endSec/60,durationStr:fmtTime(t,endSec),draft:d,sides:st.sides,log:st.log,expl:st.expl,goldHist:st.goldHist,firsts:st.firsts};
 }
 
 /* ==== FILE: draft.js ==== */
@@ -11788,7 +11818,7 @@ function recordedDraftReview(db,rec,game,team=managedTeamId(db)){
 function publicMatchRecord(r,patch){
   const events=(r.log||[]).filter(e=>['kill','fight','obj','tower','nexus'].includes(e.kind)),limit=24,
     selected=events.length>limit?[...events.slice(0,12),...events.slice(-12)]:events;
-  return {version:1,...(Array.isArray(r.objectiveEvents)?{objectives:{version:1,events:r.objectiveEvents.map(e=>({...e,participants:e.participants.slice()}))}}:{}),...(r.damageBasis==='effective-aggregate-v1'?{damageBasis:r.damageBasis}:{}),...(r.ending?{ending:{...r.ending,winner:r.sides[r.ending.winner].team.id}}:{}),resources:{version:1,players:Object.fromEntries(r.sides.flatMap(s=>s.ps.map(p=>[p.p.id,matchGoldLedger(p)])))},date:r.date,patch,winner:r.sides[r.winner].team.id,duration:r.duration,
+  return {version:1,...(Array.isArray(r.takedownEvents)?{takedowns:{version:1,count:r.takedownEvents.length,events:(r.takedownEvents.length>24?[...r.takedownEvents.slice(0,12),...r.takedownEvents.slice(-12)]:r.takedownEvents).map(e=>({...e,payouts:e.payouts.map(x=>({...x}))}))}}:{}),...(Array.isArray(r.objectiveEvents)?{objectives:{version:1,events:r.objectiveEvents.map(e=>({...e,participants:e.participants.slice()}))}}:{}),...(r.damageBasis==='effective-aggregate-v1'?{damageBasis:r.damageBasis}:{}),...(r.ending?{ending:{...r.ending,winner:r.sides[r.ending.winner].team.id}}:{}),resources:{version:1,players:Object.fromEntries(r.sides.flatMap(s=>s.ps.map(p=>[p.p.id,matchGoldLedger(p)])))},date:r.date,patch,winner:r.sides[r.winner].team.id,duration:r.duration,
     sides:r.sides.map(s=>({team:s.team.id,name:s.team.name,players:s.ps.map(p=>[p.p.id,p.p.name,p.role,p.champ.id,p.k,p.d,p.a,Math.round(p.cs),Math.round(p.goldEarned),Math.round(p.dmg),p.lvl,matchQuestItems(p).slice()])})),
     championNames:Object.fromEntries(r.sides.flatMap(s=>s.ps.map(p=>[p.champ.id,championDisplayName(p.champ)]))),
     itemNames:Object.fromEntries(r.sides.flatMap(s=>s.ps.flatMap(p=>matchQuestItems(p).map(id=>[id,p.patchRef?.itemDefs?.[id]?.name||id])))),
@@ -11805,7 +11835,7 @@ function recordedPublicMatch(db,rec,game){
   const p=game?.publicRecord;
   if(!p)return {reason:'not-recorded',record:null};
   if(p.damageBasis!==undefined&&p.damageBasis!=='effective-aggregate-v1')return {reason:'unverified-source',record:null};
-  if(!recordedGoldLedgerValid(p)||!recordedObjectivesValid(p))return {reason:'unverified-source',record:null};
+  if(!recordedGoldLedgerValid(p)||!recordedObjectivesValid(p)||!recordedTakedownsValid(p))return {reason:'unverified-source',record:null};
   if(!recordedEndingValid(p)||p.version!==1||!['championNames','itemNames'].every(k=>p[k]&&typeof p[k]==='object'&&!Array.isArray(p[k])&&Object.values(p[k]).every(x=>typeof x==='string'))||p.date!==game.date||p.patch!==game.patch||p.patch!==rec.patch||!observedMetaDate(db,p)||p.winner!==game.winner||!Number.isFinite(p.duration)||p.duration<=0||!Array.isArray(p.sides)||p.sides.length!==2||p.sides.some((s,i)=>!s||typeof s!=='object'||s.team!==[game.blue,game.red][i]||typeof s.name!=='string'||!Array.isArray(s.players)||s.players.length!==5||new Set(s.players.map(x=>x?.[2])).size!==5||s.players.some(x=>!Array.isArray(x)||x.length!==12||typeof x[0]!=='string'||typeof x[1]!=='string'||!ROLES.includes(x[2])||typeof x[3]!=='string'||!x.slice(4,11).every(Number.isFinite)||!Array.isArray(x[11])||x[11].length>7||!x[11].every(id=>typeof id==='string')))||!Array.isArray(p.events)||p.events.length>24||!Number.isInteger(p.eventCount)||p.eventCount<p.events.length||p.events.some(e=>!Array.isArray(e)||e.length!==5||!Number.isFinite(e[0])||!Number.isFinite(e[1])||![-1,0,1].includes(e[3])||typeof e[4]!=='string'||!['kill','fight','obj','tower','nexus'].includes(e[2])||e[0]<0||e[0]>Math.ceil(p.duration)||e[1]<0||e[1]>=60))return {reason:'unverified-source',record:null};
   return {reason:null,record:p};
 }
@@ -13715,7 +13745,7 @@ function bindRecordedDraftReview(root,rec){
 function renderPublicMatchReview(db,rec,game,filter={}){
   const read=recordedPublicMatch(db,rec,game),p=read.record;
   if(!p)return `<section><h3>저장된 경기 기록</h3><p class="hint">${read.reason==='no-authority'?'이 연습 경기 기록의 조회 권한이 없습니다.':read.reason==='not-recorded'?'이 경기의 당시 상세 기록이 없습니다. 세트 요약과 기록된 밴픽 근거만 확인할 수 있습니다.':'경기 기록의 출처를 확인할 수 없습니다.'} 현재 선수 상태로 과거 기록을 다시 만들지 않습니다.</p></section>`;
-  return `<section><h3>${rec.practiceModel?'연습 당시 관측된 경기 기록':'당시 확정된 경기 기록'}</h3><p class="hint">${esc(p.date)} · 패치 ${esc(p.patch)} · ${p.duration.toFixed(1)}분${p.ending?` · 넥서스 파괴 ${fmtTime(p.ending.minute,p.ending.second)}`:''}. ${rec.practiceModel?'참가 구단의 비공개 연습 관측입니다.':'공개 경기 결과입니다.'} 숨은 능력·숙련 추정이나 승패 원인 판정이 아닙니다.</p><p class="hint">${p.damageBasis==='effective-aggregate-v1'?'피해량은 남은 체력 예산 안에서 집계한 값이며, 실제 스킬별 피해 판정은 아닙니다.':'이전 기록의 피해 집계 방식은 저장되지 않았습니다. 현재 계산으로 바꾸지 않습니다.'}</p>${p.sides.map(s=>`<h4>${esc(s.name)}</h4><div class="scroll"><table><thead><tr><th>선수·역할</th><th>챔피언</th><th>K/D/A</th><th>CS</th><th>획득 골드</th><th>피해량</th><th>레벨</th></tr></thead><tbody>${s.players.filter(x=>!filter.position||x[2]===filter.position).map(x=>`<tr><td>${esc(x[1])} · ${ROLE_KO[x[2]]}</td><td>${esc(p.championNames[x[3]]||x[3])}</td><td>${x[4]}/${x[5]}/${x[6]}</td><td>${x[7]}</td><td>${x[8]}</td><td>${x[9]}</td><td>${x[10]}</td></tr>`).join('')}</tbody></table></div>`).join('')}${renderRecordedGoldUse(p,filter)}${renderRecordedObjectives(p)}${filter.events===false?'':`<h4>실제 주요 사건</h4><p class="hint">${p.events.length?'당시 로그의 공개 처치·교전·오브젝트·구조물 사건 '+p.events.length+'건 / '+p.eventCount+'건'+(p.eventCount>p.events.length?' · 중간 사건은 저장 크기를 제한하기 위해 생략했습니다.':''): '당시 주요 사건 로그를 수집하지 않았습니다. 결과로 사건을 추정하지 않습니다.'}</p><ol>${p.events.map(e=>`<li><time>${fmtTime(e[0],e[1])}</time> ${esc(e[4])}</li>`).join('')}</ol>`}</section>`;
+  return `<section><h3>${rec.practiceModel?'연습 당시 관측된 경기 기록':'당시 확정된 경기 기록'}</h3><p class="hint">${esc(p.date)} · 패치 ${esc(p.patch)} · ${p.duration.toFixed(1)}분${p.ending?` · 넥서스 파괴 ${fmtTime(p.ending.minute,p.ending.second)}`:''}. ${rec.practiceModel?'참가 구단의 비공개 연습 관측입니다.':'공개 경기 결과입니다.'} 숨은 능력·숙련 추정이나 승패 원인 판정이 아닙니다.</p><p class="hint">${p.damageBasis==='effective-aggregate-v1'?'피해량은 남은 체력 예산 안에서 집계한 값이며, 실제 스킬별 피해 판정은 아닙니다.':'이전 기록의 피해 집계 방식은 저장되지 않았습니다. 현재 계산으로 바꾸지 않습니다.'}</p>${p.sides.map(s=>`<h4>${esc(s.name)}</h4><div class="scroll"><table><thead><tr><th>선수·역할</th><th>챔피언</th><th>K/D/A</th><th>CS</th><th>획득 골드</th><th>피해량</th><th>레벨</th></tr></thead><tbody>${s.players.filter(x=>!filter.position||x[2]===filter.position).map(x=>`<tr><td>${esc(x[1])} · ${ROLE_KO[x[2]]}</td><td>${esc(p.championNames[x[3]]||x[3])}</td><td>${x[4]}/${x[5]}/${x[6]}</td><td>${x[7]}</td><td>${x[8]}</td><td>${x[9]}</td><td>${x[10]}</td></tr>`).join('')}</tbody></table></div>`).join('')}${renderRecordedGoldUse(p,filter)}${renderRecordedObjectives(p)}${renderRecordedTakedowns(p)}${filter.events===false?'':`<h4>실제 주요 사건</h4><p class="hint">${p.events.length?'당시 로그의 공개 처치·교전·오브젝트·구조물 사건 '+p.events.length+'건 / '+p.eventCount+'건'+(p.eventCount>p.events.length?' · 중간 사건은 저장 크기를 제한하기 위해 생략했습니다.':''): '당시 주요 사건 로그를 수집하지 않았습니다. 결과로 사건을 추정하지 않습니다.'}</p><ol>${p.events.map(e=>`<li><time>${fmtTime(e[0],e[1])}</time> ${esc(e[4])}</li>`).join('')}</ol>`}</section>`;
 }
 function renderRecordedGoldUse(p,filter){
   if(!p.resources)return '<p class="hint">이 경기의 당시 골드 사용 내역은 저장되지 않았습니다.</p>';
@@ -13740,7 +13770,7 @@ function analysisMatchPanel(db,team,filter){
     let content;
     if(tab==='draft')content=renderRecordedDraftReview(db,selected.rec,selected.game)||'<p class="empty">조회할 수 있는 당시 밴픽 검토가 없습니다. 현재 상태로 재구성하지 않습니다.</p>';
     else if(!p)content=renderPublicMatchReview(db,selected.rec,selected.game,filter);
-    else if(tab==='events')content=`<section class="review-events">${renderRecordedObjectives(p)}<h4>주요 사건</h4><p class="hint">${p.events.length?p.events.length+'건 / 당시 공개 사건 '+p.eventCount+'건'+(p.eventCount>p.events.length?' · 처음과 마지막 사건을 보존한 발췌입니다.':''):'당시 사건 로그를 수집하지 않았습니다. 결과로 사건을 추정하지 않습니다.'}</p><ol>${p.events.map(e=>`<li><time>${fmtTime(e[0],e[1])}</time><span>${esc(e[4])}</span></li>`).join('')}</ol></section>`;
+    else if(tab==='events')content=`<section class="review-events">${renderRecordedObjectives(p)}${renderRecordedTakedowns(p)}<h4>주요 사건</h4><p class="hint">${p.events.length?p.events.length+'건 / 당시 공개 사건 '+p.eventCount+'건'+(p.eventCount>p.events.length?' · 처음과 마지막 사건을 보존한 발췌입니다.':''):'당시 사건 로그를 수집하지 않았습니다. 결과로 사건을 추정하지 않습니다.'}</p><ol>${p.events.map(e=>`<li><time>${fmtTime(e[0],e[1])}</time><span>${esc(e[4])}</span></li>`).join('')}</ol></section>`;
     else content=renderPublicMatchReview(db,selected.rec,selected.game,{...filter,events:false});
     detail=`<header class="review-heading"><p>${esc(db.competitions[selected.comp]?.name||selected.comp)} · ${selected.game.n}세트</p><h3>${esc(label(selected))}</h3><p class="review-result">${esc(winner)} 승리 <span>${esc(selected.date)} · 패치 ${esc(selected.patch)}</span></p><p class="hint">${esc(source)}. 기록과 당시 평가를 구분하며, 승패 원인을 단정하지 않습니다.</p></header><div class="review-tabs" role="tablist" aria-label="경기 복기 자료">${[['records','선수 기록'],['events','주요 사건'],['draft','밴픽 검토']].map(([id,name])=>`<button id="review-tab-${id}" data-review-tab="${id}" role="tab" aria-selected="${tab===id}" aria-controls="review-content" tabindex="${tab===id?0:-1}">${name}</button>`).join('')}</div><div id="review-content" role="tabpanel" aria-labelledby="review-tab-${tab}" tabindex="0">${content}</div>`;
   }
@@ -13757,6 +13787,14 @@ function bindAnalysisMatch(){
   tabs.forEach((b,i)=>{b.onclick=()=>activate(b);b.onkeydown=e=>{let n;if(e.key==='ArrowRight')n=(i+1)%tabs.length;if(e.key==='ArrowLeft')n=(i+tabs.length-1)%tabs.length;if(e.key==='Home')n=0;if(e.key==='End')n=tabs.length-1;if(n!==undefined){e.preventDefault();activate(tabs[n])}}});
   const team=analysisSelectedTeam(DB),selected=team&&officialMatchReviews(DB,team.id,analysisFilter(DB,team)).find(x=>JSON.stringify([x.key,x.di,x.mi,x.gi])===ANALYSIS_SET.review);
   if(selected)bindRecordedDraftReview(document,selected.rec);
+}
+
+/* ==== FILE: ui-takedown-history.js ==== */
+// Presentation of archived public payouts only. No current-state reward calculations.
+function renderRecordedTakedowns(p){
+  if(!p.takedowns)return '<p class="hint">당시 처치 보상 내역이 저장되지 않았습니다.</p>';
+  const t=p.takedowns,names=Object.fromEntries(p.sides.flatMap(s=>s.players.map(x=>[x[0],x[1]])));
+  return `<details><summary>처치·지원 보상 (${t.events.length}건 / ${t.count}건)</summary><p class="hint">당시 실제 지급 내역입니다. 지원 설정값과 선수별 반올림 후 지급 합계는 다를 수 있습니다. 퀘스트 추가 보상은 별도로 표시합니다. 정확한 기여 거리나 실서버 보상 규칙을 뜻하지 않습니다.${t.count>24?' 중간 사건은 저장 크기를 제한하기 위해 생략했습니다.':''}</p>${t.events.length?`<ol>${t.events.map(e=>`<li><time>${fmtTime(e.minute,e.second)}</time> ${esc(names[e.victim])} 처치 · 지원 설정 ${e.assistPool} / 지급 ${e.assistPaid} 골드<ul>${e.payouts.map(x=>`<li>${esc(names[x.player])} · ${x.kind==='kill'?'처치':'지원'} ${x.gold} 골드 · ${x.xp} 경험치${x.questGold||x.questXp?` · 퀘스트 추가 ${x.questGold} 골드 / ${x.questXp} 경험치`:''}</li>`).join('')}</ul></li>`).join('')}</ol>`:'<p class="empty">이 경기에서 판정된 처치 보상이 없습니다.</p>'}</details>`;
 }
 
 /* ==== FILE: ui-season.js ==== */

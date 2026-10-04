@@ -915,3 +915,8 @@ UI 재설계의 추가 확정 기준은 수정 용이성이다. 공통 표현/�
 ## 2026-10-04 오브젝트 경로 연결의 교정 경계 (8.6.1)
 
 한타 후 실제 바론에서 관여/quest 사건이 빠진 재현 경로를 기존 공통 규칙으로 교정한다. actual fight participant IDs 중 생존한 실제 참가자가 관여를 받으며 alive 전원과 구분한다. 기존 alive 금전 지급/확률·보상 상수·buff/respawn 규칙은 새 정책으로 바꾸지 않는다. 단위·proximity·global/local source 부족을 완료로 숨기지 않고 당시 source와 old history를 보존한다. 실제 종료 이후 claim 거절은 보강하지만 현재 정상 경로에서 terminal 지급 결함을 재현했다고 주장하지 않는다.
+
+
+## 2026-10-04 처치 관여 중복·당시 지급 경계 (8.4.2)
+
+같은 실제 지원자를 두 번 지급하거나 이미 사망 처리된 target의 동일 처치를 재호출해 경제/quest를 변경하는 actual writer 반례를 소유/가용성·유일 지원자로 방지한다. 실제 정상 hitter/call source와 죽은 관여자의 기존 지급 eligibility, base/quest·사망 시간/로그 RNG는 유지한다. assistGold150을 네 명에게 각38 지급하는152 현상은 실제 재현됐으나 reviewed server rounding metadata가 없어 새 정수/소수 배분 정책을 임의 도입하지 않는다. 설정과 실제 지급을 당시 source/UI에 구분하며 과거 missing history는 재구성하지 않는다. 거리·bounty·동시/캐시/XP·shop 범위 완료 주장이 아니다.

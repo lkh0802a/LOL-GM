@@ -64,4 +64,4 @@ await runEngineFixture(String.raw`(()=>{
  globalThis.esc=s=>String(s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
  check(!renderPublicMatchReview(resumed,rec,g,{}).includes('<th>아이템'),'item review column restored');
  console.log('INVENTORY_OFFENSE_ACCEPTANCE PASS '+JSON.stringify({cashCases,empty:empty.off,sword:sword.off,rawAD:sword.attackStats.ad,proxyRows,pairedMatches:4,pendingFullLite:true,exactSpellMechanics:false}));
-})()`,{timeout:60000,setupSources:[await artifactSource('ui-match-history.js')]});
+})()`,{timeout:60000,setupSources:[await artifactSource('ui-match-history.js'),await artifactSource('ui-takedown-history.js')]});
