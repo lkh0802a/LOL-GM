@@ -46,13 +46,14 @@ function renderResult(r){
   <section><h3>선수 기록</h3>${r.sides.map((s,i)=>playerTable(s,i)).join('')}</section>
   <section><button class="primary" id="watch">중계 보기</button><div id="live"></div></section>
   <section><div class="loghead"><h3>경기 로그</h3><div class="seg"><button data-logmode="major" aria-pressed="${LOGMODE==='major'}">주요</button><button data-logmode="all" aria-pressed="${LOGMODE==='all'}">전체</button></div></div><div id="logbox">${renderLog(r)}</div></section>
-  <section><details class="expl"><summary>개발자 로그 (판단 근거 ${r.expl.length}건)</summary>${renderExpl(r)}</details></section>`;
+  <section><p class="hint">경기 판정은 집계 모델입니다. 공개 경기 사건과 자기 팀의 관측 근거를 구분하며, 내부 계산값을 상대의 관측된 능력으로 표시하지 않습니다.</p></section>`;
 }
+function safeDraftTeam(r,i){return r.sides[i].team.id}
 function renderDraft(r){
   const d=r.draft;
   return `<section><h3>밴픽</h3><div class="draft">${[0,1].map(i=>`<div class="dside ${i?'red':'blue'}">
     <div class="bans">${d.bans[i].map(c=>`<span class="ban">${esc(championLabel(DB,c))}</span>`).join('')}</div>
-    ${ROLES.map(role=>{const ps=r.sides[i].ps.find(p=>p.role===role);return `<div class="pick"><span class="role">${ROLE_KO[role]}</span><b>${esc(championDisplayName(ps.champ))}</b><span class="pn">${esc(ps.p.name)} · 숙련 ${ps.prof.mastery}</span></div>`}).join('')}
+    ${ROLES.map(role=>{const ps=r.sides[i].ps.find(p=>p.role===role);return `<div class="pick"><span class="role">${ROLE_KO[role]}</span><b>${esc(championDisplayName(ps.champ))}</b><span class="pn">${esc(ps.p.name)} ${!DB.world?.fired&&managerControlsSquad(DB,safeDraftTeam(r,i))?` · 현재 재생 숙련 ${ps.prof.mastery}`:''}</span></div>`}).join('')}
   </div>`).join('')}</div></section>`;
 }
 function goldChart(r){
@@ -98,17 +99,15 @@ function renderSeries(rec,big){
     <span class="gside"><i class="dot blue"></i>${esc(tshort(g.blue))} <b>${g.kills[0]}</b> : <b>${g.kills[1]}</b> ${esc(tshort(g.red))}<i class="dot red"></i></span>
     <span class="gw">${esc(tshort(g.winner))} 승 · ${g.dur}</span>
     ${g.picks?`<span class="gp">블루 ${g.picks[0].map(c=>esc(championLabel(DB,c))).join(', ')}<br>레드 ${g.picks[1].map(c=>esc(championLabel(DB,c))).join(', ')}</span>`:''}
-    <span class="gm">${g.sideBy?`${esc(tshort(g.sideBy))} 선택권: ${esc(g.sideWhy||'')} · 선픽 ${esc(tshort(g.firstPick||g.blue))} · `:''}POG ${esc(pnm(g.mvp))}${g.mods&&(Math.abs(g.mods[g.blue]||0)+Math.abs(g.mods[g.red]||0))>0?` · 멘탈 보정 ${esc(tshort(g.blue))} ${fmtMod(g.mods[g.blue])} / ${esc(tshort(g.red))} ${fmtMod(g.mods[g.red])}`:''}</span>
-  </button>${renderRecordedDraftReview(DB,rec,g)}</li>`).join('')}</ol><p class="hint">세트를 누르면 전체 경기 기록이 열립니다.</p></section>
+    <span class="gm">${g.sideBy?`${esc(tshort(g.sideBy))} 선택권: ${!DB.world?.fired&&managerControlsSquad(DB,g.sideBy)?esc(g.sideWhy||''):''} · 선픽 ${esc(tshort(g.firstPick||g.blue))} · `:''}POG ${esc(pnm(g.mvp))}</span>
+  </button>${renderRecordedDraftReview(DB,rec,g)}</li>`).join('')}</ol><p class="hint">세트를 누르면 저장된 당시 경기 기록이 열립니다.</p></section>
   <div class="gamedetail"></div>`;
 }
 function fmtMod(v){v=v||0;return (v>=0?'+':'')+(v*100).toFixed(1)+'%'}
 function bindSeries(root,rec){
   bindRecordedDraftReview(root,rec);
   root.querySelectorAll('.game').forEach(b=>b.onclick=()=>{
-    if(rec.lite){root.querySelector('.gamedetail').innerHTML='<p class="hint">저장 공간을 아끼려고 다른 지역 리그 경기는 세트 요약만 보관합니다. 전체 기록은 내 지역 리그와 국제대회에서 볼 수 있습니다.</p>';return}
     root.querySelectorAll('.game').forEach(x=>x.classList.toggle('sel',x===b));
-    LAST=replayGame(DB,rec,rec.games[+b.dataset.g]);
-    const d=root.querySelector('.gamedetail'); d.innerHTML=renderResult(LAST); bindResult(); d.scrollIntoView({behavior:'smooth',block:'start'});
+    const d=root.querySelector('.gamedetail');d.innerHTML=renderPublicMatchReview(DB,rec,rec.games[+b.dataset.g]);uiEnhanceScrollRegions(d);d.scrollIntoView({behavior:'smooth',block:'start'});
   });
 }

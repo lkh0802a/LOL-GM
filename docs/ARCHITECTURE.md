@@ -40,6 +40,8 @@ The match, draft, item/rune, series and competition engines stay separate. `engi
 
 `draft-history.js` owns event-time manual pick snapshots, public-sequence/source validation and observer-first private history reads. `draft.js` captures only actual manual confirmations, `series.js` persists authorized snapshots with original public draft order through scheduled commits, and `save.js` retains these source fields through existing lite compaction. `ui-draft-history.js` owns optional archived evidence presentation and revalidated current player/champion navigation, connected by `ui-match.js:renderSeries/bindSeries`. This does not recompute historical utility or certify replayed current-state explanations. Focused acceptance: `draft-history-acceptance.mjs` (scheduled full Bo3, exact seeded outcome/lines/public-meta parity, authority, legacy/pending/lite saves and source buttons).
 
+`match-history.js` captures explicitly public actual game observations and validates archived sources; `series.js` is its writer and `save.js` retains them through lite saves. `ui-match-history.js` owns stored official result rendering and the Analysis Room match selector. Historical series clicks read these records rather than re-running current player state. `ui-match.js` gates owned current mastery/selection reasons and keeps internal explanatory instrumentation out of public result rendering. Focused acceptance: `match-history-acceptance.mjs`; 24-event excerpts, missing quiet/legacy evidence and original model limits remain explicit.
+
 `ui-market-initial.js` owns first-season roster markets; `ui-negotiations.js` owns negotiation forms; `ui-market-staff.js` owns staffing and sponsorship panels and bindings. `ui-match.js` owns scrim/match/series-result rendering, `ui-setup.js` owns world/team selection, `ui-manager.js` owns finance/Monte-Carlo surfaces, and `ui-data.js` owns save-slot/import-export surfaces. `app.js` is not a view bucket.
 
 New large UI surfaces should be added as `ui-<domain>.js` modules instead of extending `app.js`. Squad editing lives in `ui-roster.js`; player detail/scouting lives in `ui-player.js`; draft UI lives in `ui-draft.js`. Small files are kept separate only when they own a coherent domain boundary, not merely to increase module count.
@@ -200,3 +202,5 @@ one usage evaluator. Representatives shape negotiating demands and patience, not
 client utility. UI-player-commitments owns compact status and confirm/cancel
 controls; player detail/roster delegate to it. Agents/promises are optional save
 fields; no second contract, roster, finance or preview ledger is introduced.
+
+상단 내비게이션과 표시 상태는 `ui-state.js:updateAppNavigation`, 공통 토큰·레이아웃은 `shell.html`이 소유한다. 주요 이동은 모바일을 고려해 상단에 유지한다. 시작 전에는 새 게임/불러오기, 커리어 시작 후에는 기존 목적별 route를 표시한다. 분석실 경기 복기는 `ui-match-history.js`의 목록/선택 요약/실제 기록·사건·밴픽 탭으로 구성하며 transient review/reviewTab 상태와 source authority를 분리한다. 전체 도메인 UI 교체는 12.3–12.5의 다음 실제 연결 검증 단위로 남는다.

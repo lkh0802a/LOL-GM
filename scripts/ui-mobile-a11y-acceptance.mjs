@@ -11,7 +11,7 @@ const [shell,uiState,roster,draft,overlay,season,data,app]=await Promise.all(
 
 for(const marker of [
   '<html lang="ko">','width=device-width, initial-scale=1, viewport-fit=cover',
-  'class="skip-link" href="#main"','<nav aria-label="주요 화면">',
+  'class="skip-link" href="#main"','<nav aria-label="주요 화면" id="app-nav">',
   '<main id="main" tabindex="-1" aria-label="게임 콘텐츠">',
   'role="dialog" aria-modal="true"',':focus-visible{outline:3px',
   'min-height:44px','grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))',

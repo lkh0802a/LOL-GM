@@ -119,6 +119,7 @@ function playSeriesSessionGame(db,sess,forcedDraft=null,quiet=true){
   const mvp=gameMVP(r);
   sess.games.push({n:sess.g,blue:cur.blue,red:cur.red,seed:cur.gseed,mods:cur.snap.mods,winner:wId,bans:r.draft.bans,sideBy:cur.chooser,sideWhy:cur.sc.why,selectionEvidence:recordedSelectionEvidence(cur.sc.evidence),firstPick:cur.fpTeam,kills:[r.sides[0].kills,r.sides[1].kills],dur:r.durationStr,duration:r.duration,picks:pk,mvp});
   const recordedGame=sess.games[sess.games.length-1];recordedGame.date=r.date;recordedGame.patch=matchDb.patch.id;
+  if(!sess.opt.replay||sess.opt.practice)recordedGame.publicRecord=publicMatchRecord(r,matchDb.patch.id);
   if(r.draft.sequence)recordedGame.draftSequence=copyDraftSequence(r.draft.sequence);
   const manualEvidence=(Array.isArray(forcedDraft?.manualEvidence)?forcedDraft.manualEvidence:[]).filter(e=>!db.world?.fired&&managerControlsSquad(db,db.teams[e?.team]));
   const evidence=recordedManualDraftEvidence({manualEvidence},recordedGame);
