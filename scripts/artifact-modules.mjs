@@ -2,7 +2,7 @@ export const ENGINE_MODULES = [
   'champion-source.js',
   'system-source.js',
   'random.js',
-  'engine.js',
+  'match-adjudication.js', 'engine.js',
   'draft.js',
   'systems.js',
   'role-quests.js',

@@ -1,0 +1,512 @@
+{
+  "provenance": {
+    "kind": "fictional seeded engine acceptance; not professional calibration",
+    "boundedSearchGames": 32,
+    "selection": "observed natural lower-gold nexus wins on both sides; no winner override or comeback target",
+    "setup": "scripts/match-adjudication-acceptance.mjs",
+    "patchSource": "existing buildPatch; unchanged combat/economic coefficients"
+  },
+  "scenarios": [
+    {
+      "seed": "nexus-resource-scenario-13",
+      "winner": 1,
+      "duration": 29.7,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 29,
+        "second": 42
+      },
+      "gold": [
+        56686,
+        54848
+      ],
+      "winnerBehind": true,
+      "priorGoldLead": 2482.815244929385,
+      "events": [
+        [
+          28,
+          21,
+          "kill",
+          0,
+          "VXG Nyro(Yasuo) → CR Valvy(Nilah) 처치 · 수성 한타"
+        ],
+        [
+          28,
+          24,
+          "fight",
+          1,
+          "수성 한타: CR 승리 (3킬 / 3데스)"
+        ],
+        [
+          29,
+          13,
+          "kill",
+          1,
+          "CR Jodan(Vi) → VXG Nyro(Yasuo) 처치 · 수성 한타"
+        ],
+        [
+          29,
+          16,
+          "kill",
+          1,
+          "CR Valvy(Nilah) → VXG Gorth(Tristana) 처치 · 수성 한타"
+        ],
+        [
+          29,
+          18,
+          "kill",
+          1,
+          "CR Valvy(Nilah) → VXG Sylor(Zilean) 처치 · 수성 한타"
+        ],
+        [
+          29,
+          24,
+          "kill",
+          0,
+          "VXG Sylor(Zilean) → CR Zerro(Aatrox) 처치 · 수성 한타"
+        ],
+        [
+          29,
+          30,
+          "kill",
+          0,
+          "VXG Sylor(Zilean) → CR Jolyx(Yone) 처치 · 수성 한타"
+        ],
+        [
+          29,
+          34,
+          "fight",
+          1,
+          "수성 한타: CR 승리 (3킬 / 2데스)"
+        ],
+        [
+          29,
+          37,
+          "tower",
+          1,
+          "CR 미드 억제기 포탑 파괴"
+        ],
+        [
+          29,
+          42,
+          "nexus",
+          1,
+          "CR 넥서스 파괴 — 승리"
+        ]
+      ],
+      "players": [
+        [
+          {
+            "role": "TOP",
+            "k": 5,
+            "d": 2,
+            "gold": 12667,
+            "items": [
+              "3008",
+              "663193",
+              "667101",
+              "3087",
+              "3155",
+              "3133"
+            ],
+            "deadUntil": 30.018333333333334
+          },
+          {
+            "role": "JGL",
+            "k": 6,
+            "d": 2,
+            "gold": 11939,
+            "items": [
+              "3006",
+              "663193",
+              "667101",
+              "3087",
+              "3155",
+              "1036"
+            ],
+            "deadUntil": 25.833333333333332
+          },
+          {
+            "role": "MID",
+            "k": 3,
+            "d": 3,
+            "gold": 12108,
+            "items": [
+              "3168",
+              "663193",
+              "667101",
+              "3087",
+              "3155",
+              "2022"
+            ],
+            "deadUntil": 28.92
+          },
+          {
+            "role": "ADC",
+            "k": 3,
+            "d": 9,
+            "gold": 11065,
+            "items": [
+              "1086",
+              "3046",
+              "667101",
+              "3087"
+            ],
+            "deadUntil": 29.893333333333334
+          },
+          {
+            "role": "SUP",
+            "k": 4,
+            "d": 7,
+            "gold": 8908,
+            "items": [
+              "3870",
+              "3006",
+              "3087",
+              "3100"
+            ],
+            "deadUntil": 29.851666666666667
+          }
+        ],
+        [
+          {
+            "role": "TOP",
+            "k": 6,
+            "d": 3,
+            "gold": 12369,
+            "items": [
+              "3008",
+              "663193",
+              "667101",
+              "3087",
+              "3155",
+              "3133"
+            ],
+            "deadUntil": 30.018333333333334
+          },
+          {
+            "role": "JGL",
+            "k": 8,
+            "d": 2,
+            "gold": 12199,
+            "items": [
+              "3008",
+              "663193",
+              "667101",
+              "3087",
+              "3155",
+              "2022"
+            ],
+            "deadUntil": 28.961666666666666
+          },
+          {
+            "role": "MID",
+            "k": 2,
+            "d": 9,
+            "gold": 9118,
+            "items": [
+              "3168",
+              "667101",
+              "3087",
+              "6690",
+              "1036",
+              "1042"
+            ],
+            "deadUntil": 29.851666666666667
+          },
+          {
+            "role": "ADC",
+            "k": 6,
+            "d": 6,
+            "gold": 12559,
+            "items": [
+              "663193",
+              "667101",
+              "3087",
+              "3155",
+              "3133"
+            ],
+            "deadUntil": 28.92
+          },
+          {
+            "role": "SUP",
+            "k": 1,
+            "d": 1,
+            "gold": 8603,
+            "items": [
+              "3870",
+              "3008",
+              "663193",
+              "3156",
+              "1028"
+            ],
+            "deadUntil": 15.433333333333334
+          }
+        ]
+      ],
+      "buffs": [
+        {
+          "baronUntil": 29,
+          "elderUntil": 0
+        },
+        {
+          "baronUntil": 23,
+          "elderUntil": 0
+        }
+      ]
+    },
+    {
+      "seed": "nexus-resource-scenario-21",
+      "winner": 0,
+      "duration": 35.36666666666667,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 35,
+        "second": 22
+      },
+      "gold": [
+        66319,
+        68676
+      ],
+      "winnerBehind": true,
+      "priorGoldLead": -3007.803053143434,
+      "events": [
+        [
+          34,
+          16,
+          "kill",
+          0,
+          "VXG Nyro(Yasuo) → CR Zerro(Aatrox) 처치 · 수성 한타"
+        ],
+        [
+          34,
+          21,
+          "kill",
+          0,
+          "VXG Sylor(Zilean) → CR Jolyx(Taliyah) 처치 · 수성 한타"
+        ],
+        [
+          34,
+          23,
+          "kill",
+          0,
+          "VXG Ulra(Diana) → CR Valvy(Nilah) 처치 · 수성 한타"
+        ],
+        [
+          34,
+          29,
+          "fight",
+          0,
+          "수성 한타: VXG 승리 (3킬 / 3데스)"
+        ],
+        [
+          34,
+          35,
+          "tower",
+          0,
+          "VXG 미드 2차 포탑 파괴"
+        ],
+        [
+          34,
+          41,
+          "tower",
+          0,
+          "VXG 쌍둥이 포탑 파괴"
+        ],
+        [
+          35,
+          10,
+          "kill",
+          0,
+          "VXG Ulra(Diana) → CR Jodan(Jarvan IV) 처치 · 바다 드래곤 한타"
+        ],
+        [
+          35,
+          16,
+          "obj",
+          0,
+          "VXG 바다 드래곤 처치 (4스택)"
+        ],
+        [
+          35,
+          18,
+          "obj",
+          0,
+          "VXG 드래곤 영혼 획득"
+        ],
+        [
+          35,
+          22,
+          "nexus",
+          0,
+          "VXG 넥서스 파괴 — 승리"
+        ]
+      ],
+      "players": [
+        [
+          {
+            "role": "TOP",
+            "k": 6,
+            "d": 1,
+            "gold": 15245,
+            "items": [
+              "3008",
+              "663193",
+              "667101",
+              "3087",
+              "3156",
+              "1038"
+            ],
+            "deadUntil": 25.875
+          },
+          {
+            "role": "JGL",
+            "k": 10,
+            "d": 10,
+            "gold": 12810,
+            "items": [
+              "3008",
+              "667101",
+              "3087",
+              "6672",
+              "3134",
+              "6690"
+            ],
+            "deadUntil": 35.05166666666667
+          },
+          {
+            "role": "MID",
+            "k": 4,
+            "d": 2,
+            "gold": 15476,
+            "items": [
+              "3168",
+              "663193",
+              "667101",
+              "3087",
+              "3156",
+              "3067"
+            ],
+            "deadUntil": 23.803333333333335
+          },
+          {
+            "role": "ADC",
+            "k": 4,
+            "d": 13,
+            "gold": 12115,
+            "items": [
+              "1086",
+              "3046",
+              "667101",
+              "3087"
+            ],
+            "deadUntil": 35.01
+          },
+          {
+            "role": "SUP",
+            "k": 7,
+            "d": 10,
+            "gold": 10672,
+            "items": [
+              "3870",
+              "3006",
+              "3087",
+              "3100"
+            ],
+            "deadUntil": 35.01
+          }
+        ],
+        [
+          {
+            "role": "TOP",
+            "k": 10,
+            "d": 7,
+            "gold": 14478,
+            "items": [
+              "3008",
+              "663193",
+              "667101",
+              "3087",
+              "3156",
+              "1038"
+            ],
+            "deadUntil": 35.135
+          },
+          {
+            "role": "JGL",
+            "k": 11,
+            "d": 4,
+            "gold": 15368,
+            "items": [
+              "3008",
+              "663193",
+              "667101",
+              "3087",
+              "3156",
+              "3067"
+            ],
+            "deadUntil": 36.15
+          },
+          {
+            "role": "MID",
+            "k": 5,
+            "d": 12,
+            "gold": 11600,
+            "items": [
+              "3006",
+              "3087",
+              "3100",
+              "663172",
+              "3145"
+            ],
+            "deadUntil": 35.01
+          },
+          {
+            "role": "ADC",
+            "k": 9,
+            "d": 7,
+            "gold": 16450,
+            "items": [
+              "663193",
+              "667101",
+              "3087",
+              "3156",
+              "6672",
+              "1028"
+            ],
+            "deadUntil": 35.135
+          },
+          {
+            "role": "SUP",
+            "k": 1,
+            "d": 1,
+            "gold": 10781,
+            "items": [
+              "3870",
+              "3008",
+              "663193",
+              "3156",
+              "3211",
+              "3067"
+            ],
+            "deadUntil": 26.765
+          }
+        ]
+      ],
+      "buffs": [
+        {
+          "baronUntil": 35,
+          "elderUntil": 0
+        },
+        {
+          "baronUntil": 23,
+          "elderUntil": 0
+        }
+      ]
+    }
+  ]
+}

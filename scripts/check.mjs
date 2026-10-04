@@ -94,6 +94,7 @@ const maintainabilityBudgets = {
   'ui-state.js': 6500,
   'ui-overlay.js': 6500,
   'random.js': 5000,
+  'match-adjudication.js': 2000,
   'engine.js': 34000,
   'champion-data.js': 14000,
   'system-data.js': 14000,

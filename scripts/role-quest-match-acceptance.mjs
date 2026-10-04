@@ -20,7 +20,7 @@ await runEngineFixture(String.raw`(()=>{
    if(ps.role==='MID'&&ps.quest.completed)check(!ps.items.some(id=>roleQuestBootUpgrade(ps.patchRef,id)),'mid boot not upgraded');
    if(ps.role==='SUP'&&ps.quest.completed)check(ps.questSupportItem&&ps.questWards>0,'support reward/ward not used');
  }
- const ps=newPS(Object.values(db.players).find(p=>!p.retired),0,'TOP',forced.picks[0].TOP,db.patch),st={t:20,quiet:true,sides:[{ps:[ps],team:a}]};
+ const ps=newPS(Object.values(db.players).find(p=>!p.retired),0,'TOP',forced.picks[0].TOP,db.patch),st={t:20,quiet:true,rng:{log:new RNG('quest-clock','log')},sides:[{ps:[ps],team:a}]};
  matchQuestEvent(st,ps,{cs:10000});addXp(ps,1e6);check(ps.lvl===20,'top level20 reward');
  const xp=ps.xp;roleQuestTakedown(st,ps);check(ps.xp-xp===80,'top takedown xp');
  const joined=roleQuestObjectiveJoin(st,0,[]);check(joined.includes(ps)&&ps.questTeleports===1&&!roleQuestObjectiveJoin(st,0,[]).length,'teleport cooldown');
