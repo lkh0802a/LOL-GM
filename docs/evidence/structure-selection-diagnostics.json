@@ -37,5 +37,12 @@
     "externalProfessionalCalibration": false,
     "finalDeviceQA": "deferred"
   },
-  "scope": "Intentional causal/RNG outcome change, not behavior-preserving optimization; geometry/HP/lane travel/hunter comparator and queued attacker availability remain unfinished"
+  "scope": "Intentional causal/RNG outcome change, not behavior-preserving optimization; geometry/HP/lane travel/hunter comparator and queued attacker availability remain unfinished",
+  "prFirstHeadStaticFailure": {
+    "head": "b743185d0b35214a72b1e95d8a63335cc7569cdb",
+    "run": 37208548063,
+    "job": 111454814400,
+    "reason": "ui-match-history.js exceeded unchanged 8000-character budget",
+    "localCorrection": "Earlier local static-reviewed log also failed; previous pass summary was inaccurate. Extracted archived adjudication explanation into existing ui-takedown-history.js presentation module; no budget changes."
+  }
 }
