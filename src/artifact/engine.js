@@ -315,7 +315,7 @@ function objectiveTick(st){
     o.wait[key]=(o.wait[key]||0)+1;
     const c=[0,1].map(i=>teamCall(st,i,key,stake(i)+(o.wait[key]-1)*0.25));
     expl(st,`${label} 콜`,c.flatMap((x,i)=>x.votes.map(([p,u])=>[`${['Blue','Red'][i]} ${ROLE_KO[p.role]}`,u])),{result:`Blue ${c[0].go?'싸움':'포기'} / Red ${c[1].go?'싸움':'포기'}`});
-    let taker=-1;
+    let taker=-1,stealer=null;
     if(c[0].go&&c[1].go&&c[0].part.length&&c[1].part.length){
       for(const i of [0,1]){const n=aliveOf(st,i).length-c[i].part.length; if(n>0&&c[i].part.length<aliveOf(st,i).length) log(st,`${st.sides[i].team.short} 콜 불일치 — ${n}명 합류 실패`,{side:i})}
       const r=fight(st,z,[c[0].part,c[1].part],{label:`${label} 한타`});
@@ -323,7 +323,7 @@ function objectiveTick(st){
       if(wa.length){
         taker=w;
         const lj=st.sides[1-w].ps.find(p=>p.role==='JGL');
-        if(alive(st,lj)&&R.exec.chance(clamp(0.04+0.12*at(lj,'smite_execution')*(r.deaths[1-w]<=1?1:0.3)+(roleQuestSmite(lj)-roleQuestSmite(st.sides[w].ps.find(p=>p.role==='JGL')))/1400*.04,.01,.25))){taker=1-w;log(st,`${pname(st,lj)} ${label} 스틸!`,{side:1-w,major:true,kind:'obj'})}
+        if(alive(st,lj)&&R.exec.chance(clamp(0.04+0.12*at(lj,'smite_execution')*(r.deaths[1-w]<=1?1:0.3)+(roleQuestSmite(lj)-roleQuestSmite(st.sides[w].ps.find(p=>p.role==='JGL')))/1400*.04,.01,.25))){taker=1-w;stealer=lj;log(st,`${pname(st,lj)} ${label} 스틸!`,{side:1-w,major:true,kind:'obj'})}
       }
     } else if(c[0].go!==c[1].go){
       taker=c[0].go?0:1;
@@ -333,7 +333,7 @@ function objectiveTick(st){
         takeStructure(st,giver,{lane:key==='baron'||key==='herald'?'bot':'top'});
       }
     }
-    if(taker>=0&&!matchEnded(st)){const involved=c[taker]&&c[taker].part&&c[taker].part.length?c[taker].part:aliveOf(st,taker);awardMatchObjective(st,key,taker,involved);}
+    if(taker>=0&&!matchEnded(st)){const involved=c[taker]&&c[taker].part&&c[taker].part.length?c[taker].part:aliveOf(st,taker);awardMatchObjective(st,key,taker,involved,false,stealer);}
   };
   if(!o.soul&&o.dragonAt&&st.t>=o.dragonAt){
     const type=o.dragonTypes[o.dragonIdx%o.dragonTypes.length];

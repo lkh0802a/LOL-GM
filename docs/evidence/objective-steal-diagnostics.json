@@ -1,0 +1,124 @@
+{
+  "date": "2026-10-04",
+  "failures": [
+    {
+      "file": "/tmp/objective-steal-focused-initial.log",
+      "trigger": "synthetic duplicate fixture reset dragonAt but not dragonIdx",
+      "reason": "dragon spawn identity includes index; next index is a legitimate distinct spawn",
+      "correction": "restore original spawn index only in duplicate fixture; production identity unchanged"
+    },
+    {
+      "file": "/tmp/objective-steal-static-initial.log",
+      "trigger": "default sandbox child process",
+      "correction": "unchanged static command passed after permission auto-review"
+    },
+    {
+      "file": "/tmp/objective-steal-browser-initial.log",
+      "trigger": "Chromium socket sandbox denial",
+      "correction": "identical rebuilt HTML focused browser passed after permission auto-review"
+    },
+    {
+      "file": "/tmp/objective-steal-focused-final.log and /tmp/objective-steal-ui-final.log",
+      "trigger": "official seed was selected on pre-load world; the actual test resumes a packed pending session",
+      "correction": "bounded original and reloaded official searches retained; actual reloaded seed steal-official-1 naturally has a stealer; no forced outcomes or weakened assertion"
+    },
+    {
+      "file": "/tmp/objective-steal-browser-final.log",
+      "trigger": "fresh official series whole-rec JSON compared before/after existing compact save",
+      "actualDifference": [
+        "seed",
+        "firstChoice"
+      ],
+      "correction": "retain actual whole-rec diagnostic; verify exact publicRecord actor and original source separately; existing compaction unchanged",
+      "diagnostic": "/tmp/objective-steal-browser-save-diagnostic.json"
+    }
+  ],
+  "prior180CaptureLimitation": "Final #180 browser rerun reused original successful PNG filenames and overwrote original successful screenshot bytes. Initial logs/first-head code remain; final-* captures are final only. This run uses distinct initial/final paths; no failed/raw/history deletion.",
+  "prior180SupersededCI": {
+    "head": "9253496d8f6a049dd5cc46d0a00c24739ce8ed16",
+    "run": 37202080210,
+    "conclusion": "cancelled/superseded, not final success",
+    "medicalLog": "/tmp/item-stat-patch-first-medical-cancelled.log"
+  },
+  "externalProfessionalCalibration": false,
+  "productionHTTP": "separately unverified under restricted Cloud policy",
+  "finalDeviceQA": "deferred",
+  "officialSearchOriginal": [
+    {
+      "i": 0,
+      "events": []
+    },
+    {
+      "i": 1,
+      "events": []
+    },
+    {
+      "i": 2,
+      "events": []
+    },
+    {
+      "i": 3,
+      "events": []
+    },
+    {
+      "i": 4,
+      "events": [
+        {
+          "id": "dragon:10:1",
+          "key": "dragon",
+          "side": 0,
+          "minute": 10,
+          "second": 36,
+          "participants": [
+            "NA_51",
+            "NA_52",
+            "NA_53",
+            "NA_54",
+            "NA_55"
+          ],
+          "stealer": "NA_52"
+        }
+      ]
+    }
+  ],
+  "officialSearchReloaded": [
+    {
+      "i": 0,
+      "events": []
+    },
+    {
+      "i": 1,
+      "events": [
+        {
+          "id": "baron:26",
+          "key": "baron",
+          "side": 0,
+          "minute": 26,
+          "second": 41,
+          "participants": [
+            "NA_56",
+            "NA_57",
+            "NA_59",
+            "NA_60"
+          ],
+          "stealer": "NA_57"
+        }
+      ]
+    }
+  ],
+  "finalAcceptance": {
+    "focused": "/tmp/objective-steal-focused-official-reloaded.log",
+    "ui": "70 acceptances / 69 independent VM",
+    "modules": 137,
+    "engineModules": 100,
+    "calendar": "20 acceptances",
+    "regression": "passed Node22",
+    "smokeMs": 30844.8,
+    "smokeLimitMs": 35000,
+    "careerOfficialMatches": 186,
+    "browser": "Chromium actual officialBo3 3games plus actual steal official record; pending/public history full/lite, Enter/320-1280/filters/source/fired; no overflow/page errors",
+    "browserLog": "/tmp/objective-steal-browser-final2.log",
+    "captures": "distinct initial/final/final2 paths, no overwrites",
+    "productionHTTP": "not independently verified"
+  }
+}

@@ -416,11 +416,12 @@ function matchObjectiveToken(st,key){
   if(key==='baron'&&st.t>=o.baronAt)return key+':'+o.baronAt;
   return null;
 }
-function awardMatchObjective(st,key,w,part,conversion=false){
+function awardMatchObjective(st,key,w,part,conversion=false,stealer=null){
   if(matchEnded(st)||![0,1].includes(w)||!Array.isArray(part)||!part.length||part.some(p=>!st.sides[w].ps.includes(p)))return false;
+  if(stealer!==null&&(conversion||!st.sides[w].ps.includes(stealer)||stealer.role!=='JGL'||!alive(st,stealer)))return false;
   const token=matchObjectiveToken(st,key);
   if(!token||(st.objectiveEvents||[]).some(e=>e.id===token))return false;
-  const involved=[...new Set(part)],o=st.obj,s=st.sides[w],rules=st.patch.rules;
+  const involved=[...new Set(stealer?[...part,stealer]:part)],o=st.obj,s=st.sides[w],rules=st.patch.rules;
   o.wait[key]=0;
   involved.forEach(p=>{p.objectives++;matchQuestEvent(st,p,{epics:1,jungleStacks:p.role==='JGL'?1:0})});
   let second;
@@ -443,13 +444,13 @@ function awardMatchObjective(st,key,w,part,conversion=false){
     aliveOf(st,w).forEach(p=>addGold(p,300));
     second=log(st,`${s.team.short} ${conversion?'한타 승리 후 ':''}바론 처치`,{side:w,major:true,kind:'obj'});
   }
-  (st.objectiveEvents||(st.objectiveEvents=[])).push({id:token,key,side:w,minute:st.t,second,participants:involved.map(p=>p.p.id)});
+  (st.objectiveEvents||(st.objectiveEvents=[])).push({id:token,key,side:w,minute:st.t,second,participants:involved.map(p=>p.p.id),...(stealer?{stealer:stealer.p.id}:{})});
   return true;
 }
 function recordedObjectivesValid(p){
   if(p.objectives===undefined)return true;
   const o=p.objectives;
-  return o?.version===1&&Array.isArray(o.events)&&o.events.length<=720&&new Set(o.events.map(e=>e?.id)).size===o.events.length&&o.events.every(e=>e&&typeof e.id==='string'&&['dragon','elder','herald','baron'].includes(e.key)&&[0,1].includes(e.side)&&Number.isInteger(e.minute)&&e.minute>=1&&e.minute+e.second/60<=p.duration&&Number.isInteger(e.second)&&e.second>=0&&e.second<60&&(!p.ending||e.minute<p.ending.minute||e.minute===p.ending.minute&&e.second<=p.ending.second)&&Array.isArray(e.participants)&&e.participants.length>0&&e.participants.length<=5&&new Set(e.participants).size===e.participants.length&&e.participants.every(id=>p.sides?.[e.side]?.players?.some(x=>x[0]===id)));
+  return o?.version===1&&Array.isArray(o.events)&&o.events.length<=720&&new Set(o.events.map(e=>e?.id)).size===o.events.length&&o.events.every(e=>e&&typeof e.id==='string'&&['dragon','elder','herald','baron'].includes(e.key)&&[0,1].includes(e.side)&&Number.isInteger(e.minute)&&e.minute>=1&&e.minute+e.second/60<=p.duration&&Number.isInteger(e.second)&&e.second>=0&&e.second<60&&(!p.ending||e.minute<p.ending.minute||e.minute===p.ending.minute&&e.second<=p.ending.second)&&Array.isArray(e.participants)&&e.participants.length>0&&e.participants.length<=5&&new Set(e.participants).size===e.participants.length&&e.participants.every(id=>p.sides?.[e.side]?.players?.some(x=>x[0]===id))&&(e.stealer===undefined||typeof e.stealer==='string'&&e.participants.includes(e.stealer)&&p.sides[e.side].players.some(x=>x[0]===e.stealer&&x[2]==='JGL')));
 }
 
 /* ==== FILE: takedown-rewards.js ==== */
@@ -814,7 +815,7 @@ function objectiveTick(st){
     o.wait[key]=(o.wait[key]||0)+1;
     const c=[0,1].map(i=>teamCall(st,i,key,stake(i)+(o.wait[key]-1)*0.25));
     expl(st,`${label} 콜`,c.flatMap((x,i)=>x.votes.map(([p,u])=>[`${['Blue','Red'][i]} ${ROLE_KO[p.role]}`,u])),{result:`Blue ${c[0].go?'싸움':'포기'} / Red ${c[1].go?'싸움':'포기'}`});
-    let taker=-1;
+    let taker=-1,stealer=null;
     if(c[0].go&&c[1].go&&c[0].part.length&&c[1].part.length){
       for(const i of [0,1]){const n=aliveOf(st,i).length-c[i].part.length; if(n>0&&c[i].part.length<aliveOf(st,i).length) log(st,`${st.sides[i].team.short} 콜 불일치 — ${n}명 합류 실패`,{side:i})}
       const r=fight(st,z,[c[0].part,c[1].part],{label:`${label} 한타`});
@@ -822,7 +823,7 @@ function objectiveTick(st){
       if(wa.length){
         taker=w;
         const lj=st.sides[1-w].ps.find(p=>p.role==='JGL');
-        if(alive(st,lj)&&R.exec.chance(clamp(0.04+0.12*at(lj,'smite_execution')*(r.deaths[1-w]<=1?1:0.3)+(roleQuestSmite(lj)-roleQuestSmite(st.sides[w].ps.find(p=>p.role==='JGL')))/1400*.04,.01,.25))){taker=1-w;log(st,`${pname(st,lj)} ${label} 스틸!`,{side:1-w,major:true,kind:'obj'})}
+        if(alive(st,lj)&&R.exec.chance(clamp(0.04+0.12*at(lj,'smite_execution')*(r.deaths[1-w]<=1?1:0.3)+(roleQuestSmite(lj)-roleQuestSmite(st.sides[w].ps.find(p=>p.role==='JGL')))/1400*.04,.01,.25))){taker=1-w;stealer=lj;log(st,`${pname(st,lj)} ${label} 스틸!`,{side:1-w,major:true,kind:'obj'})}
       }
     } else if(c[0].go!==c[1].go){
       taker=c[0].go?0:1;
@@ -832,7 +833,7 @@ function objectiveTick(st){
         takeStructure(st,giver,{lane:key==='baron'||key==='herald'?'bot':'top'});
       }
     }
-    if(taker>=0&&!matchEnded(st)){const involved=c[taker]&&c[taker].part&&c[taker].part.length?c[taker].part:aliveOf(st,taker);awardMatchObjective(st,key,taker,involved);}
+    if(taker>=0&&!matchEnded(st)){const involved=c[taker]&&c[taker].part&&c[taker].part.length?c[taker].part:aliveOf(st,taker);awardMatchObjective(st,key,taker,involved,false,stealer);}
   };
   if(!o.soul&&o.dragonAt&&st.t>=o.dragonAt){
     const type=o.dragonTypes[o.dragonIdx%o.dragonTypes.length];
@@ -13788,7 +13789,7 @@ function renderRecordedGoldUse(p,filter){
 function renderRecordedObjectives(p){
   if(!p.objectives)return '<p class="hint">당시 오브젝트 참여 기록이 저장되지 않았습니다.</p>';
   const names={dragon:'드래곤',elder:'장로 드래곤',herald:'협곡의 전령',baron:'바론'},players=Object.fromEntries(p.sides.flatMap(s=>s.players.map(x=>[x[0],x[1]])));
-  return `<details><summary>오브젝트 획득·참여 기록 (${p.objectives.events.length}건)</summary><p class="hint">당시 판정에 참여한 선수 기록입니다. 정확한 위치나 마지막 타격의 기록은 아닙니다.</p>${p.objectives.events.length?`<ol>${p.objectives.events.map(e=>`<li><time>${fmtTime(e.minute,e.second)}</time> ${esc(p.sides[e.side].name)} · ${names[e.key]} · ${e.participants.map(id=>esc(players[id])).join(', ')}</li>`).join('')}</ol>`:'<p class="empty">이 경기에서 판정된 오브젝트 획득이 없습니다.</p>'}</details>`;
+  return `<details><summary>오브젝트 획득·참여 기록 (${p.objectives.events.length}건)</summary><p class="hint">당시 판정에 참여한 선수 기록입니다. 스틸 실행자는 당시 엔진 판정이며, 정확한 위치나 개별 스킬의 마지막 타격 기록은 아닙니다.</p>${p.objectives.events.length?`<ol>${p.objectives.events.map(e=>`<li><time>${fmtTime(e.minute,e.second)}</time> ${esc(p.sides[e.side].name)} · ${names[e.key]} · ${e.participants.map(id=>esc(players[id])).join(', ')}${e.stealer?' · 스틸 실행: '+esc(players[e.stealer]):''}</li>`).join('')}</ol>`:'<p class="empty">이 경기에서 판정된 오브젝트 획득이 없습니다.</p>'}</details>`;
 }
 function analysisMatchPanel(db,team,filter){
   const rows=officialMatchReviews(db,team.id,filter),shown=rows.slice(0,30),key=x=>JSON.stringify([x.key,x.di,x.mi,x.gi]),selected=shown.find(x=>key(x)===ANALYSIS_SET.review)||null;

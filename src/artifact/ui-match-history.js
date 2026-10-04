@@ -14,7 +14,7 @@ function renderRecordedGoldUse(p,filter){
 function renderRecordedObjectives(p){
   if(!p.objectives)return '<p class="hint">당시 오브젝트 참여 기록이 저장되지 않았습니다.</p>';
   const names={dragon:'드래곤',elder:'장로 드래곤',herald:'협곡의 전령',baron:'바론'},players=Object.fromEntries(p.sides.flatMap(s=>s.players.map(x=>[x[0],x[1]])));
-  return `<details><summary>오브젝트 획득·참여 기록 (${p.objectives.events.length}건)</summary><p class="hint">당시 판정에 참여한 선수 기록입니다. 정확한 위치나 마지막 타격의 기록은 아닙니다.</p>${p.objectives.events.length?`<ol>${p.objectives.events.map(e=>`<li><time>${fmtTime(e.minute,e.second)}</time> ${esc(p.sides[e.side].name)} · ${names[e.key]} · ${e.participants.map(id=>esc(players[id])).join(', ')}</li>`).join('')}</ol>`:'<p class="empty">이 경기에서 판정된 오브젝트 획득이 없습니다.</p>'}</details>`;
+  return `<details><summary>오브젝트 획득·참여 기록 (${p.objectives.events.length}건)</summary><p class="hint">당시 판정에 참여한 선수 기록입니다. 스틸 실행자는 당시 엔진 판정이며, 정확한 위치나 개별 스킬의 마지막 타격 기록은 아닙니다.</p>${p.objectives.events.length?`<ol>${p.objectives.events.map(e=>`<li><time>${fmtTime(e.minute,e.second)}</time> ${esc(p.sides[e.side].name)} · ${names[e.key]} · ${e.participants.map(id=>esc(players[id])).join(', ')}${e.stealer?' · 스틸 실행: '+esc(players[e.stealer]):''}</li>`).join('')}</ol>`:'<p class="empty">이 경기에서 판정된 오브젝트 획득이 없습니다.</p>'}</details>`;
 }
 function analysisMatchPanel(db,team,filter){
   const rows=officialMatchReviews(db,team.id,filter),shown=rows.slice(0,30),key=x=>JSON.stringify([x.key,x.di,x.mi,x.gi]),selected=shown.find(x=>key(x)===ANALYSIS_SET.review)||null;
