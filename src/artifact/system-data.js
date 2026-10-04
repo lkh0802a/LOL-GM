@@ -61,6 +61,27 @@ function itemAttackStatEffects(raw){
   const remaining=itemEffectsFromSource(withoutAD).offense;
   return {ad:itemEffectsFromSource(raw).offense-remaining,ap:remaining-itemEffectsFromSource(withoutAP).offense};
 }
+// Supported raw units only. AP/AS/crit still require their own reviewed consumers.
+const ITEM_RAW_STAT_LABELS={FlatPhysicalDamageMod:'공격력',FlatHPPoolMod:'체력',FlatArmorMod:'방어력',FlatSpellBlockMod:'마법 저항력'};
+function itemRawStatFields(d,family){
+  const raw=SYSTEM_SOURCE_SNAPSHOT.items[d?.id];
+  if(!raw||d.active===false||d.source?.provider!==SYSTEM_SOURCE_SNAPSHOT.provider||d.source?.version!==SYSTEM_SOURCE_SNAPSHOT.version||d.source?.mapId!==SYSTEM_SOURCE_SNAPSHOT.mapId)return [];
+  return Object.keys(ITEM_RAW_STAT_LABELS).filter(k=>(!family||(family==='offense')===(k==='FlatPhysicalDamageMod'))&&Number(raw.stats?.[k])>0&&Number.isFinite(d.stats?.[k])&&d.stats[k]>=0);
+}
+function applyItemRawStatNote(P,n){
+  const d=P.itemDefs?.[n.id];
+  if(!d||!itemRawStatFields(d).includes(n.field)||!Number.isFinite(n.old)||!Number.isFinite(n.new)||n.new<0||n.old===n.new||d.stats[n.field]!==n.old||n.source?.provider!==d.source.provider||n.source?.version!==d.source.version||n.source?.mapId!==d.source.mapId)return false;
+  const raw={...d,gold:{total:d.cost}},next={...raw,stats:{...d.stats,[n.field]:n.new}},before=itemEffectsFromSource(raw),after=itemEffectsFromSource(next),effects={...d.effects};
+  // Preserve independent effect deltas while refreshing rounded source splits.
+  for(const k of ['offense','defense']){
+    if(!Number.isFinite(effects[k]))return false;
+    effects[k]=Math.round((effects[k]+after[k]-before[k])*1e12)/1e12;
+    if(!Number.isFinite(effects[k]))return false;
+  }
+  const defenseStatEffect=itemDefenseStatEffect(next),attackStatEffects=itemAttackStatEffects(next);
+  d.stats=next.stats;d.effects=effects;d.defenseStatEffect=defenseStatEffect;d.attackStatEffects=attackStatEffects;
+  return true;
+}
 function buildItemSystems(snapshot=SYSTEM_SOURCE_SNAPSHOT){
   const defs={},pool={fighter:[],tank:[],mage:[],assassin:[],marksman:[],enchanter:[]};
   for(const [id,raw] of Object.entries(snapshot.items||{})){const tier=itemTier(raw),effects=itemEffectsFromSource(raw),classes=itemClassesFromSource(raw,effects),d={id,name:raw.nameKo,nameKo:raw.nameKo,descriptionKo:raw.descriptionKo,plaintextKo:raw.plaintextKo,cost:raw.gold?.total||0,recipeCost:raw.gold?.base??raw.gold?.total??0,sell:raw.gold?.sell||0,tags:(raw.tags||[]).slice(),stats:{...(raw.stats||{})},from:(raw.from||[]).slice(),into:(raw.into||[]).slice(),tier,classes,effects,active:true,shopActive:!raw.hideFromAll&&!raw.requiredChampion&&raw.inStore!==false,requiredChampion:raw.requiredChampion||null,source:{provider:snapshot.provider,version:snapshot.version,mapId:snapshot.mapId}};

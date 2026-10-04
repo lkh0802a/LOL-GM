@@ -165,16 +165,24 @@ function systemUsageEvidence(db,kind,id,rows){
     buff:Math.max(0,.16-usage)*.55+Math.max(0,.47-wr)*1.1*confidence};
 }
 function lastSystemChange(db,kind,id){
-  const h=patchHistory(db);for(let i=h.length-1;i>=0;i--)for(let j=(h[i].notes||[]).length-1;j>=0;j--){const n=h[i].notes[j];if(n.type===kind&&n.id===id&&n.dir)return {patch:h[i],note:n}}return null;
+  const h=patchHistory(db);for(let i=h.length-1;i>=0;i--)for(let j=(h[i].notes||[]).length-1;j>=0;j--){const n=h[i].notes[j];if((n.type===kind||(kind==='item'&&n.type==='item_stat'))&&n.id===id&&n.dir)return {patch:h[i],note:n}}return null;
 }
 function systemBalanceNote(db,kind,ev,dir,size,rng){
   const defs=kind==='item'?db.patch.itemDefs:db.patch.runeDefs,d=defs[ev.id],p=PATCH_SIZE_PROFILE[size]||PATCH_SIZE_PROFILE.small,keys=Object.keys(d.effects||{}).filter(k=>Number.isFinite(d.effects[k]));
   if(kind==='item'&&rng.chance(.35)){const old=d.cost,step={micro:50,small:100,medium:150,large:200}[size]||100,nv=clamp(old+(dir<0?step:-step),Math.min(500,old),Math.max(4500,old));if(nv!==old)return {type:'item',id:ev.id,field:'cost',old,new:nv,dir,size,why:'아이템 사용률 '+Math.round(ev.usage*100)+'% · 승률 '+Math.round(ev.wr*100)+'%'}}
-  const field=keys.length?rng.pick(keys):(kind==='item'?'offense':'utility'),old=Number(d.effects[field]||0),step=rng.range(p.mod[0],p.mod[1])*.6,nv=Math.round(clamp(old+(dir>0?step:-step),0,.14)*1000)/1000;if(nv===old)return null;
+  const field=keys.length?rng.pick(keys):(kind==='item'?'offense':'utility');
+  if(kind==='item'&&['offense','defense'].includes(field)){
+    const fields=itemRawStatFields(d,field).filter(k=>d.stats[k]>0);
+    if(fields.length){const key=rng.pick(fields),old=d.stats[key],step=rng.range(p.stat[0],p.stat[1]),nv=Math.round(old*(1+(dir>0?step:-step))*100)/100;
+      if(nv!==old)return {type:'item_stat',id:ev.id,name:d.name,field:key,old,new:nv,source:{...d.source},dir,size,why:'아이템 사용률 '+Math.round(ev.usage*100)+'% · 승률 '+Math.round(ev.wr*100)+'%'};
+    }
+  }
+  const old=Number(d.effects[field]||0),step=rng.range(p.mod[0],p.mod[1])*.6,nv=Math.round(clamp(old+(dir>0?step:-step),0,.14)*1000)/1000;if(nv===old)return null;
   return {type:kind,id:ev.id,field,old,new:nv,dir,size,why:(kind==='item'?'아이템':'룬')+' 사용률 '+Math.round(ev.usage*100)+'% · 승률 '+Math.round(ev.wr*100)+'%'};
 }
 function chooseSystemBalanceChanges(db,diag,major,rng){
+  const planning={...db,patch:{...db.patch,itemDefs:JSON.parse(JSON.stringify(db.patch.itemDefs||{})),runeDefs:JSON.parse(JSON.stringify(db.patch.runeDefs||{}))}};
   const rows=diag.rows,out=[];for(const kind of ['item','rune']){const defs=kind==='item'?db.patch.itemDefs||{}:db.patch.runeDefs||{},evs=Object.keys(defs).map(id=>systemUsageEvidence(db,kind,id,rows)).filter(x=>x.eligible>=12),nerfs=evs.filter(x=>x.nerf>=.055).sort((a,b)=>b.nerf-a.nerf),buffs=evs.filter(x=>x.buff>=.055).sort((a,b)=>b.buff-a.buff),limit=major?2:1;
-      for(const [dir,list] of [[-1,nerfs],[1,buffs]]){let n=0;for(const ev of list){if(n>=limit)break;const last=lastSystemChange(db,kind,ev.id);if(last&&last.note.dir===dir&&patchHistory(db).slice(-2).includes(last.patch))continue;const sig=dir<0?ev.nerf:ev.buff,size=patchSizeForSignal(sig*4,major),note=systemBalanceNote(db,kind,ev,dir,size,rng);if(note){out.push(note);n++}}}
+      for(const [dir,list] of [[-1,nerfs],[1,buffs]]){let n=0;for(const ev of list){if(n>=limit)break;const last=lastSystemChange(db,kind,ev.id);if(last&&last.note.dir===dir&&patchHistory(db).slice(-2).includes(last.patch))continue;const sig=dir<0?ev.nerf:ev.buff,size=patchSizeForSignal(sig*4,major),note=systemBalanceNote(planning,kind,ev,dir,size,rng);if(note){applyNote(planning.patch,note);out.push(note);n++}}}
     }return out;
 }

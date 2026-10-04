@@ -1,0 +1,299 @@
+{
+  "scope": "8.3.3 AD/HP/armor/MR only; intentional patch behavior extension",
+  "rows": [
+    {
+      "id": "3072",
+      "field": "FlatPhysicalDamageMod",
+      "source": {
+        "provider": "Riot Data Dragon",
+        "version": "16.19.1",
+        "mapId": 11
+      },
+      "old": 80,
+      "new": 81.6,
+      "before": {
+        "off": 89.33932205112465,
+        "ehp": 876.4257228382157
+      },
+      "after": {
+        "off": 90.33198118502601,
+        "ehp": 876.4257228382157
+      },
+      "fitBefore": 0.20165,
+      "damageClassLevels": [
+        [
+          "AD",
+          1
+        ],
+        [
+          "AD",
+          11
+        ],
+        [
+          "AP",
+          1
+        ],
+        [
+          "AP",
+          11
+        ]
+      ]
+    },
+    {
+      "id": "1028",
+      "field": "FlatHPPoolMod",
+      "source": {
+        "provider": "Riot Data Dragon",
+        "version": "16.19.1",
+        "mapId": 11
+      },
+      "old": 150,
+      "new": 153,
+      "before": {
+        "off": 40.00116973245871,
+        "ehp": 1075.4972610792
+      },
+      "after": {
+        "off": 40.00116973245871,
+        "ehp": 1079.5814278934247
+      },
+      "fitBefore": 0.0615,
+      "damageClassLevels": [
+        [
+          "AD",
+          1
+        ],
+        [
+          "AD",
+          11
+        ],
+        [
+          "AP",
+          1
+        ],
+        [
+          "AP",
+          11
+        ]
+      ]
+    },
+    {
+      "id": "1029",
+      "field": "FlatArmorMod",
+      "source": {
+        "provider": "Riot Data Dragon",
+        "version": "16.19.1",
+        "mapId": 11
+      },
+      "old": 15,
+      "new": 15.3,
+      "before": {
+        "off": 40.00116973245871,
+        "ehp": 924.8517638332029
+      },
+      "after": {
+        "off": 40.00116973245871,
+        "ehp": 925.9230207025076
+      },
+      "fitBefore": 0.0615,
+      "damageClassLevels": [
+        [
+          "AD",
+          1
+        ],
+        [
+          "AD",
+          11
+        ],
+        [
+          "AP",
+          1
+        ],
+        [
+          "AP",
+          11
+        ]
+      ]
+    },
+    {
+      "id": "1033",
+      "field": "FlatSpellBlockMod",
+      "source": {
+        "provider": "Riot Data Dragon",
+        "version": "16.19.1",
+        "mapId": 11
+      },
+      "old": 20,
+      "new": 20.4,
+      "before": {
+        "off": 40.00116973245871,
+        "ehp": 929.7211132391337
+      },
+      "after": {
+        "off": 40.00116973245871,
+        "ehp": 930.8897570965572
+      },
+      "fitBefore": 0.06825,
+      "damageClassLevels": [
+        [
+          "AD",
+          1
+        ],
+        [
+          "AD",
+          11
+        ],
+        [
+          "AP",
+          1
+        ],
+        [
+          "AP",
+          11
+        ]
+      ]
+    }
+  ],
+  "selectorStatNotes": 4,
+  "selected": [
+    {
+      "type": "item_stat",
+      "id": "3072",
+      "name": "피바라기",
+      "field": "FlatPhysicalDamageMod",
+      "old": 80,
+      "new": 81.53,
+      "source": {
+        "provider": "Riot Data Dragon",
+        "version": "16.19.1",
+        "mapId": 11
+      },
+      "dir": 1,
+      "size": "small",
+      "why": "아이템 사용률 30% · 승률 52%"
+    },
+    {
+      "type": "item_stat",
+      "id": "3072",
+      "name": "피바라기",
+      "field": "FlatPhysicalDamageMod",
+      "old": 80,
+      "new": 81.75,
+      "source": {
+        "provider": "Riot Data Dragon",
+        "version": "16.19.1",
+        "mapId": 11
+      },
+      "dir": 1,
+      "size": "small",
+      "why": "아이템 사용률 30% · 승률 52%"
+    },
+    {
+      "type": "item_stat",
+      "id": "3072",
+      "name": "피바라기",
+      "field": "FlatPhysicalDamageMod",
+      "old": 80,
+      "new": 81.67,
+      "source": {
+        "provider": "Riot Data Dragon",
+        "version": "16.19.1",
+        "mapId": 11
+      },
+      "dir": 1,
+      "size": "small",
+      "why": "아이템 사용률 30% · 승률 52%"
+    },
+    {
+      "type": "item_stat",
+      "id": "3072",
+      "name": "피바라기",
+      "field": "FlatPhysicalDamageMod",
+      "old": 80,
+      "new": 78.32,
+      "source": {
+        "provider": "Riot Data Dragon",
+        "version": "16.19.1",
+        "mapId": 11
+      },
+      "dir": -1,
+      "size": "small",
+      "why": "아이템 사용률 30% · 승률 52%"
+    }
+  ],
+  "outcomes": [
+    {
+      "seed": "record-official",
+      "teams": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 1,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 1,
+        "minute": 31,
+        "second": 53
+      },
+      "gold": -7477.152868407138
+    },
+    {
+      "seed": "record-official",
+      "teams": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 31,
+        "second": 41
+      },
+      "gold": 3327.4704182280984
+    },
+    {
+      "seed": "item-stat-match-1",
+      "teams": [
+        "VXG",
+        "CR"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 28,
+        "second": 45
+      },
+      "gold": 5002.7386095859765
+    },
+    {
+      "seed": "item-stat-match-1",
+      "teams": [
+        "CR",
+        "VXG"
+      ],
+      "winner": 0,
+      "ending": {
+        "version": 1,
+        "kind": "nexus",
+        "winner": 0,
+        "minute": 30,
+        "second": 57
+      },
+      "gold": -6107.59773115944
+    }
+  ],
+  "pendingFullLite": true,
+  "oldHistoryUnchanged": true,
+  "sourceImmutable": true,
+  "limits": [
+    "AP/AS/crit remain aggregate proxies",
+    "no exact spell geometry",
+    "shop and waves metadata still missing",
+    "no professional calibration"
+  ]
+}

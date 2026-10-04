@@ -1812,6 +1812,27 @@ function itemAttackStatEffects(raw){
   const remaining=itemEffectsFromSource(withoutAD).offense;
   return {ad:itemEffectsFromSource(raw).offense-remaining,ap:remaining-itemEffectsFromSource(withoutAP).offense};
 }
+// Supported raw units only. AP/AS/crit still require their own reviewed consumers.
+const ITEM_RAW_STAT_LABELS={FlatPhysicalDamageMod:'공격력',FlatHPPoolMod:'체력',FlatArmorMod:'방어력',FlatSpellBlockMod:'마법 저항력'};
+function itemRawStatFields(d,family){
+  const raw=SYSTEM_SOURCE_SNAPSHOT.items[d?.id];
+  if(!raw||d.active===false||d.source?.provider!==SYSTEM_SOURCE_SNAPSHOT.provider||d.source?.version!==SYSTEM_SOURCE_SNAPSHOT.version||d.source?.mapId!==SYSTEM_SOURCE_SNAPSHOT.mapId)return [];
+  return Object.keys(ITEM_RAW_STAT_LABELS).filter(k=>(!family||(family==='offense')===(k==='FlatPhysicalDamageMod'))&&Number(raw.stats?.[k])>0&&Number.isFinite(d.stats?.[k])&&d.stats[k]>=0);
+}
+function applyItemRawStatNote(P,n){
+  const d=P.itemDefs?.[n.id];
+  if(!d||!itemRawStatFields(d).includes(n.field)||!Number.isFinite(n.old)||!Number.isFinite(n.new)||n.new<0||n.old===n.new||d.stats[n.field]!==n.old||n.source?.provider!==d.source.provider||n.source?.version!==d.source.version||n.source?.mapId!==d.source.mapId)return false;
+  const raw={...d,gold:{total:d.cost}},next={...raw,stats:{...d.stats,[n.field]:n.new}},before=itemEffectsFromSource(raw),after=itemEffectsFromSource(next),effects={...d.effects};
+  // Preserve independent effect deltas while refreshing rounded source splits.
+  for(const k of ['offense','defense']){
+    if(!Number.isFinite(effects[k]))return false;
+    effects[k]=Math.round((effects[k]+after[k]-before[k])*1e12)/1e12;
+    if(!Number.isFinite(effects[k]))return false;
+  }
+  const defenseStatEffect=itemDefenseStatEffect(next),attackStatEffects=itemAttackStatEffects(next);
+  d.stats=next.stats;d.effects=effects;d.defenseStatEffect=defenseStatEffect;d.attackStatEffects=attackStatEffects;
+  return true;
+}
 function buildItemSystems(snapshot=SYSTEM_SOURCE_SNAPSHOT){
   const defs={},pool={fighter:[],tank:[],mage:[],assassin:[],marksman:[],enchanter:[]};
   for(const [id,raw] of Object.entries(snapshot.items||{})){const tier=itemTier(raw),effects=itemEffectsFromSource(raw),classes=itemClassesFromSource(raw,effects),d={id,name:raw.nameKo,nameKo:raw.nameKo,descriptionKo:raw.descriptionKo,plaintextKo:raw.plaintextKo,cost:raw.gold?.total||0,recipeCost:raw.gold?.base??raw.gold?.total??0,sell:raw.gold?.sell||0,tags:(raw.tags||[]).slice(),stats:{...(raw.stats||{})},from:(raw.from||[]).slice(),into:(raw.into||[]).slice(),tier,classes,effects,active:true,shopActive:!raw.hideFromAll&&!raw.requiredChampion&&raw.inStore!==false,requiredChampion:raw.requiredChampion||null,source:{provider:snapshot.provider,version:snapshot.version,mapId:snapshot.mapId}};
@@ -2552,6 +2573,7 @@ function initPatches(db){
   db.patches.sourceControlBaseline=1;
 }
 function applyNote(P,n){
+  if(n.type==='item_stat'){if(!applyItemRawStatNote(P,n))return false;P._revision=(P._revision||0)+1;P._systemRevision=(P._systemRevision||0)+1;return true}
   if(n.type==='role_quest')applyRoleQuestNote(P,n);
   const c=P.champions[n.c];
   P._revision=(P._revision||0)+1;if(/^item/.test(n.type)||/^rune/.test(n.type))P._systemRevision=(P._systemRevision||0)+1;
@@ -2791,17 +2813,25 @@ function systemUsageEvidence(db,kind,id,rows){
     buff:Math.max(0,.16-usage)*.55+Math.max(0,.47-wr)*1.1*confidence};
 }
 function lastSystemChange(db,kind,id){
-  const h=patchHistory(db);for(let i=h.length-1;i>=0;i--)for(let j=(h[i].notes||[]).length-1;j>=0;j--){const n=h[i].notes[j];if(n.type===kind&&n.id===id&&n.dir)return {patch:h[i],note:n}}return null;
+  const h=patchHistory(db);for(let i=h.length-1;i>=0;i--)for(let j=(h[i].notes||[]).length-1;j>=0;j--){const n=h[i].notes[j];if((n.type===kind||(kind==='item'&&n.type==='item_stat'))&&n.id===id&&n.dir)return {patch:h[i],note:n}}return null;
 }
 function systemBalanceNote(db,kind,ev,dir,size,rng){
   const defs=kind==='item'?db.patch.itemDefs:db.patch.runeDefs,d=defs[ev.id],p=PATCH_SIZE_PROFILE[size]||PATCH_SIZE_PROFILE.small,keys=Object.keys(d.effects||{}).filter(k=>Number.isFinite(d.effects[k]));
   if(kind==='item'&&rng.chance(.35)){const old=d.cost,step={micro:50,small:100,medium:150,large:200}[size]||100,nv=clamp(old+(dir<0?step:-step),Math.min(500,old),Math.max(4500,old));if(nv!==old)return {type:'item',id:ev.id,field:'cost',old,new:nv,dir,size,why:'아이템 사용률 '+Math.round(ev.usage*100)+'% · 승률 '+Math.round(ev.wr*100)+'%'}}
-  const field=keys.length?rng.pick(keys):(kind==='item'?'offense':'utility'),old=Number(d.effects[field]||0),step=rng.range(p.mod[0],p.mod[1])*.6,nv=Math.round(clamp(old+(dir>0?step:-step),0,.14)*1000)/1000;if(nv===old)return null;
+  const field=keys.length?rng.pick(keys):(kind==='item'?'offense':'utility');
+  if(kind==='item'&&['offense','defense'].includes(field)){
+    const fields=itemRawStatFields(d,field).filter(k=>d.stats[k]>0);
+    if(fields.length){const key=rng.pick(fields),old=d.stats[key],step=rng.range(p.stat[0],p.stat[1]),nv=Math.round(old*(1+(dir>0?step:-step))*100)/100;
+      if(nv!==old)return {type:'item_stat',id:ev.id,name:d.name,field:key,old,new:nv,source:{...d.source},dir,size,why:'아이템 사용률 '+Math.round(ev.usage*100)+'% · 승률 '+Math.round(ev.wr*100)+'%'};
+    }
+  }
+  const old=Number(d.effects[field]||0),step=rng.range(p.mod[0],p.mod[1])*.6,nv=Math.round(clamp(old+(dir>0?step:-step),0,.14)*1000)/1000;if(nv===old)return null;
   return {type:kind,id:ev.id,field,old,new:nv,dir,size,why:(kind==='item'?'아이템':'룬')+' 사용률 '+Math.round(ev.usage*100)+'% · 승률 '+Math.round(ev.wr*100)+'%'};
 }
 function chooseSystemBalanceChanges(db,diag,major,rng){
+  const planning={...db,patch:{...db.patch,itemDefs:JSON.parse(JSON.stringify(db.patch.itemDefs||{})),runeDefs:JSON.parse(JSON.stringify(db.patch.runeDefs||{}))}};
   const rows=diag.rows,out=[];for(const kind of ['item','rune']){const defs=kind==='item'?db.patch.itemDefs||{}:db.patch.runeDefs||{},evs=Object.keys(defs).map(id=>systemUsageEvidence(db,kind,id,rows)).filter(x=>x.eligible>=12),nerfs=evs.filter(x=>x.nerf>=.055).sort((a,b)=>b.nerf-a.nerf),buffs=evs.filter(x=>x.buff>=.055).sort((a,b)=>b.buff-a.buff),limit=major?2:1;
-      for(const [dir,list] of [[-1,nerfs],[1,buffs]]){let n=0;for(const ev of list){if(n>=limit)break;const last=lastSystemChange(db,kind,ev.id);if(last&&last.note.dir===dir&&patchHistory(db).slice(-2).includes(last.patch))continue;const sig=dir<0?ev.nerf:ev.buff,size=patchSizeForSignal(sig*4,major),note=systemBalanceNote(db,kind,ev,dir,size,rng);if(note){out.push(note);n++}}}
+      for(const [dir,list] of [[-1,nerfs],[1,buffs]]){let n=0;for(const ev of list){if(n>=limit)break;const last=lastSystemChange(db,kind,ev.id);if(last&&last.note.dir===dir&&patchHistory(db).slice(-2).includes(last.patch))continue;const sig=dir<0?ev.nerf:ev.buff,size=patchSizeForSignal(sig*4,major),note=systemBalanceNote(planning,kind,ev,dir,size,rng);if(note){applyNote(planning.patch,note);out.push(note);n++}}}
     }return out;
 }
 
@@ -12219,6 +12249,7 @@ function noteText(n){
   if(n.type==='kit')return `<b>${esc(championLabel(DB,n.c))}</b> ${esc(KIT_KO[n.key]||n.key)} ${patchValueText(n.old,n.key)} → ${patchValueText(n.new,n.key)}${why}`;
   if(n.type==='skill')return `<b>${esc(championLabel(DB,n.c))} ${esc(n.slot)}</b> ${esc(patchFieldLabel(n.field))} ${patchValueText(n.old,n.field)} → ${patchValueText(n.new,n.field)}${why}`;
   if(n.type==='base')return `<b>${esc(championLabel(DB,n.c))}</b> ${{ad:'공격력',hp:'체력',arm:'방어력',mr:'마법 저항력',adg:'성장 공격력',hpg:'성장 체력',armg:'성장 방어력',mrg:'성장 마법 저항력',ms:'이동 속도',range:'기본 공격 사거리',resource:'자원',resourceRegen:'자원 회복'}[n.key]||esc(n.key)} ${patchValueText(n.old,n.key)} → ${patchValueText(n.new,n.key)}${why}`;
+  if(n.type==='item_stat')return `<b>아이템 · ${esc(n.name||DB.patch.itemDefs?.[n.id]?.name||n.id)}</b> ${esc(ITEM_RAW_STAT_LABELS[n.field]||n.field)} ${esc(patchValueText(n.old,n.field))} → ${esc(patchValueText(n.new,n.field))} <small>실제 보유 장비 스탯 · 기준 자료 ${esc(n.source?.version||'미상')} · 게임 내 조정</small>${why}`;
   if(n.type==='item'){const d=DB.patch.itemDefs?.[n.id];return `<b>아이템 · ${esc(d?.name||n.id)}</b> ${esc(patchFieldLabel(n.field))} ${patchValueText(n.old,n.field)} → ${patchValueText(n.new,n.field)}${why}`}
   if(n.type==='item_new')return `<b>신규 아이템 · ${esc(n.def.name)}</b> ${n.def.cost}골드 <small>${esc(n.why||'')}</small>`;
   if(n.type==='item_remove'){const d=DB.patch.itemDefs?.[n.id];return `<b>아이템 삭제 · ${esc(d?.name||n.id)}</b> <small>${esc(n.why||'')}</small>`}

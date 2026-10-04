@@ -1,0 +1,22 @@
+{
+  "baseCommit": "a063fc4e9fb342eb7c87bdc8bc33dc6c6cab6f3b",
+  "id": "1036",
+  "source": {
+    "provider": "Riot Data Dragon",
+    "version": "16.19.1",
+    "mapId": 11
+  },
+  "original": {
+    "raw": 10,
+    "offense": 0.01
+  },
+  "effectChange": {
+    "raw": 10,
+    "offense": 0.02
+  },
+  "unsupportedRawNote": {
+    "raw": 10,
+    "offense": 0.02
+  },
+  "classification": "authorized-roadmap-gap; existing effect changes remain legitimate aggregate proxies"
+}

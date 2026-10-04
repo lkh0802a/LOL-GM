@@ -88,3 +88,6 @@ decisions; do not label aggregate camp/CS proxies as exact monster simulation.
 ## 실제 구매 위치 — 8.2.2 조사 상태
 
 구매 장부 교정은 실제 상점 위치 판정 완료가 아니다. `addGold`와 별도 퀘스트 와드 writer에는 기지/귀환/복귀 상태 확인이 없으며, 실제 재현 결과와 수집 제한은 DEVELOPMENT의 8.2.2에 기록했다. 고정 오른 설명은 전장 비소모품 제작을 허용하지만 일반 선수와 오른이 같은 위치 없는 writer를 사용하는 현재 상태는 합법 예외 구현 증거가 아니다. 고정 귀환/이동/제작 조건의 원자료를 검토하기 전 시간을 발명하지 않는다. 사망 중 구매를 일괄 금지하는 새 정책도 추가하지 않는다.
+
+
+8.3.3의 `item_stat` 노트는 runtime `itemDefs.stats`의 기존 AD/HP/armor/MR만 변경한다. `itemDefs.source`는 pinned provider/version/map provenance이고 원본 snapshot은 수정하지 않는다. 이는 가상 게임의 밸런스 변경이며 새로운 실제 Riot patch 수집이 아니다. 정규화 효과의 raw 기여/독립 효과 delta를 구분하고 기존 source split을 같은 writer에서 갱신한다. 실제 수용/역사·저장/미완료 AP·공속·치명타 범위는 [개발 가이드8.3.3](DEVELOPMENT.md#833-실제-보유-장비-스탯-패치-작성자소비-연결--2026-10-04)에 기록한다.
