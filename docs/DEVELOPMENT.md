@@ -22,6 +22,12 @@ files or another worker's unpushed changes exist in Cloud.
 
 ## 현재 검증된 출시와 이번 구현 경계 — 2026-10-04
 
+PR #184 최종 head `78af14fbb3622d5a9a5b095290cd322f04a2477e` 전체CI `37216333851`(의료4시드·두집계/core/verify, 7개 exitCode0) 성공 후 main `5906f0fc492975904c33c6bead9e3171ecf93aba`에 순차 병합됐다. 같은 main 전체CI/standalone `37216894941`(unchanged)와 Pages `37217351540`/job `111480458463`의 validated checkout/head guard/artifact `11308598002` digest·download/동일 online·offline 조립/실제 게시 성공을 재확인했다. native attachment는 cell981 응답 중단으로 성공 미확인, direct productionHTTP는 정책상 별도 미검증이다. 첫 c3dec2e/CI37216028963은 초기 trace hash 최신화로 대체·취소됐으며 final 성공이 아니다. 원본·중간·최종 source/취소 의료 로그와 #164–#184 역사, #180 캡처 보존 한계를 보호한다.
+
+이번 실제 구현은 **8.4.4 라인전 HP 비용의 자원 보존과 당시 설명**(예상45–55분)이다. 기존 nonlethal trade/올인/귀환 규칙을 보존하고 피해 비용의 암묵적 회복만 막는다. 새로운 current-head CI/병합/Pages gates는 실제 성공 전 기록하지 않는다. 전체 승인 inventory와 source-blocked shop·XP/장기 QA 보류를 유지한다.
+
+### 이전 #183·8.4.3 출시 헤더 원문 (보존)
+
 PR #183 최종 head `54bd08216adf70ab9cad43136f64c0351b7d7f8e` 전체CI `37212450588`(의료4시드·두집계·core·verify) 성공 후 main `6e7f3b5e4fb8eafa14e9cb537a9af08a31d235c6`에 순차 병합됐다. 같은 main 전체CI/standalone `37212986820`와 Pages `37213498615`/job `111469241076`는 validated checkout/head guard/artifact `11307222654` digest·download/동일 online·offline 조립/실제 게시 성공으로 확인됐다. native attachment는 응답 중단으로 성공 미확인, direct productionHTTP는 정책상 별도 미검증이다. #164–#183 원본·실패·역사와 #180 캡처 덮어쓰기 한계를 보호한다.
 
 이번 실제 구현은 **8.4.3 준비된 라운드 피해와 잘못된 입력의 자원·기록 경계**(예상45–55분)다. 기존 같은 라운드의 준비된 공격을 사망 후 일괄 취소하는 정책을 도입하지 않는다. 새 PR/current-main/게시 gates는 확인 전 성공으로 쓰지 않는다. 전체 승인 inventory와 source-blocked shop·XP/장기 QA 보류를 유지한다.
@@ -931,6 +937,8 @@ Node 22 CPU 프로파일에서 `activeTeams`가 가장 큰 누적 소비였다. 
 
 사용자가 직전 보고의 **38개 항목 전부 문서화**하도록 지시했다. 아래 번호는 이 검토 목록의 순번이며 새로운 개발 단계/기능 수가 아니다. 기존 7.1·8.1–8.6·9.1·3·12.9에 통합한다. 기존 승인·구현 증거·원본 규칙은 유지하며 등록을 구현/검증/게시 완료로 계산하지 않는다. 같은 항목을 다른 이름의 신규 기능으로 반복 제안하지 않는다.
 
+**이 inventory의 상태 문구는 최초 작성 당시 snapshot으로 보존한다.** 아래 #171 출시 문단과38행의 '현재/대기/한계'는 당시 기록이다. 전체38개 승인은 계속 유효하며 최신 실제 구현·검증·출시 상태는 문서 상단과 각 담당8.x 후속 절의 source evidence를 우선한다. 예컨대8.2.1 장부와8.3.1–8.3.3 raw stats/패치,8.4.1–8.4.4 자원 경계를 이후 구현했지만 전체 item/XP/효과/38개 완료로 확장하지 않는다. 원래 문구를 새로운 성공으로 덮어쓰지 않는다.
+
 현재 기준: PR #171 최종 head `d173a7f67f9da33dc7d6506be5ee3f9b629f99ac`의 필수 CI `37168431212` 전체 성공 후 main `b1cf7abb94bd00583baf78d34872d19de96a9605`로 병합됐다. 같은 main의 전체 CI/standalone-sync `37168684378`, Pages `37168959385`의 검증 artifact/온라인·오프라인 조립/게시가 성공했다. 이전 실패 head와 원본은 8.1.1대로 보존한다. Cloud 직접 github.io HTTP는 차단되어 응답 검증 성공을 주장하지 않는다. 본 문서화는 별도 사용자 요청이며 시간당 게임 구현 단위 완료로 집계하지 않는다.
 
 **공통 등록·완료 계약**
@@ -1498,3 +1506,20 @@ Node 22 CPU 프로파일에서 `activeTeams`가 가장 큰 누적 소비였다. 
 8.4.3 최종 로컬 수용: UI73수용/72독립VM·101engine, calendar20, static/build138module, 격리Node22 regression/smoke27489.8ms(기존35초)/두시즌186공식경기, 실제Chromium1280/320 공식Bo3세경기/당시round설명·source·Enter·Analysis filter·pending/history save·권한·넘침/pageerror없음. exacthead CI/main/Pages는 별도 gates다.
 
 8.4.3 source 검증에서 초기 교정 trace의 combat-resources hash가 마지막 optional ownership/음수HP guard 전 상태임을 발견했다. 초기 fight-round-correction.json과 hash를 그대로 보존하고 현재 최종source hash·동일4경기를 fight-round-final.json으로 별도 기록했다. 첫 head c3dec2e/CI37216028963은 이 evidence 최신화 전 실행이며 final 성공이라고 집계하지 않는다. 코드·검사/budget 변경 없이 최종head에서 다시 모든 CI를 확인한다.
+
+
+### 8.4.4 라인전 HP 비용·자원 보존·당시 설명 — 2026-10-04
+
+**상태·trigger·source:** coherent45–55분 구현 단위. `laningTick`의 패자/승자/올인 실패 HP 비용이 기존 .05/.1 비치명적 하한으로 저체력 상태를 올릴 수 있다. [원본](evidence/laning-hp-baseline.json)은 실제4경기 normal raises0과 같은 실제 phase 함수의8개 controlled lowHP setup에서28 implicit raises를 보존한다. 통제 state는 합성 입력이며 자연 경기28건 또는 pro target이라고 주장하지 않는다. 현재 정상 tick 순서의 income 회복이 이4경기를 보호한 사실도 기록한다. 앞선 상태가 다음 상태에 영향을 준다는 SPEC19/기존8.4 자원 보존에 맞춰 비용을 회복 writer와 구분한다.
+
+**writer·단위·선택:** 기존 `combat-resources.js:applyLaningHpCost`는 actual side.ps ownership/생존/terminal·0–1 HP fraction·유한 nonnegative cost/0–1 floor를 확인하고 `min(before,max(existingFloor,before-cost))`를 쓴다. below-floor HP를 올리거나 new trade death를 만들지 않는다. 기존 패자 cost `min(.5,.1+abs(diff)*1.4)`/floor.05, 승자.07/floor.1, 올인 실패.2/floor.05를 그대로 전달한다. 실제 낮아진 HP가 low target 선택·올인 성공 probability·귀환 조건과 다음 fight 자원을 소비한다. 올인 처치/kill gold·quest·item, 귀환HP1/income/death deadline 정책은 바꾸지 않는다. trade 비용을 EHP로 변환해 damage/quest에 발명한 통계를 넣지 않는다. 이 aggregate nonlethal trade floor 자체의 현실성/정확한 spell/geometry/heal/shield는 별도 미완료다.
+
+**UI·save·예:** 새 실제 결과의 optional `laningHpBasis:bounded-nonlethal-cost-v1`만 공식/public→공식 복기/Analysis의 한국어 “피해 비용으로 체력이 회복되지는 않습니다”→pending/full-lite/history에 연결한다. 예: HP2%인 선수에게 비용을 적용해5%로 올리지 않고2%를 유지하며 실제 귀환이 발생하면 별도HP1 writer가 회복한다. marker 없는 과거는 설명을 추정하거나 다시 돌리지 않으며 unsupported marker reject. local source checks는 cryptographic save authentication이 아니다. engine-owned item/top nav/item-column removal/full approved UI scope를 보존한다.
+
+**재현·교정·tradeoff:** [교정](evidence/laning-hp-corrected.json)의 controlled raises0, 원본과 normal4경기 전체 phase traces/HP/KDA/gold/items/XP/damage/quest/log/nexus/time 동일. controlled8setup 중6trace 결과가 바뀌며 intentional invalid cost-healing correction이다. bounded normal parity이지 전체 최적화·professional calibration·comeback 발생률 목표가 아니다. below-floor 상태의 nonlethal 비용은 새 처치 정책 없이0까지 제한될 수 있어 기존 보호 하한 의미를 유지한다. 앞으로 reviewed 별도 lethal trade/spell 모델이 생기면 이 한계를 다시 검토하며 이번에 settled policy를 바꾸지 않는다.
+
+**수용·소유:** `laning-hp-acceptance.mjs`가128양side HP/floor/cost 경계·normal cost·기존 nonlethal floor·below-floor/zero·반복 가능한 정상 비용·foreign/side/dead/HPNaN/negative/above1/costInfinity/floorinvalid/terminal 무변경과 실제귀환 consumer,4logged/quiet pairs·world purity·actual official pending/full-lite/source/Korean/legacy/malformed를 확인한다. `laning-hp-probe.mjs`는 실제 phase 표현에 순수 observer를 넣고 module hashes/원본·교정 full bounded traces/합성lowHP를 보존한다. seed/outcome 강제나 실제생존비율 목표를 만들지 않는다. focused/local/정확headCI/병합/Pages를 [진단](evidence/laning-hp-diagnostics.json)에 구분한다. 원본 /tmp/laning-hp-* source/log/고유 초기·최종캡처와 모든 이전 실패를 보호한다. 장기100season/device/mobile/TalkBack QA·외부 프로 보정은 보류다.
+
+**정확한 다음:** coherent45–55분 **8.4.5 combat cache 입력·실제 mutation/consumer 연결 감사와 확인된 교정**이다. 기존 eight-audit combat cache 후보에 병합한다. 현재 key의 t/goldEarned/lvl/questRevision/itemRevision/patch revision/side buff와 실제 `combatStats0` 입력 mastery/confidence/playerMod/mods/owned raw stats/effects를 대조하고 지원 writer에서 같은 시각·버전의 cached/uncached 결과를 bounded source/seed/양측/rollback/patch/event ordering로 재현한다. stale 결과는 아직 확정 결함이 아니다. 실제 정상 invalidation을 보존하며 확인된 누락만 구현하고 speculative rewrite/계수/미관측 private 입력을 추가하지 않는다. 개선 성능을 주장하려면 bounded baseline/before-after/parity를 측정한다. source-supported 결함이 없으면 actionable evidence/정확 continuation을 기록하고 이미 승인된 initial-recruitment observed flow 등 독립된 실제 구현을 이어간다. genuine metadata 없는 shop8.2.2/XP8.5.1 조사·완료된 HP/round/objective/macro 단위를 반복하지 않는다. 전체 승인38/eightaudit/13narrative/UIAnalysisradar/languagefinancecareer/officecountrytier2broadcast inventory를 유지한다.
+
+8.4.4 최종 로컬 수용: UI74수용/73독립VM·101engine, calendar20, static/build138module, 격리Node22 regression/smoke26060.1ms(기존35초)/두시즌186공식경기, actualChromium1280/320 공식Bo3세경기/새비용설명·source·Enter·Analysis filter·pending/history save·권한·넘침/pageerror없음. identical rebuiltHTML injection이며 직접productionHTTP/장기deviceQA 아니다. 정확headCI/병합/동일main/Pages gates는 별도다.

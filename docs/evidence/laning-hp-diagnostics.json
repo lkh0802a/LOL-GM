@@ -1,0 +1,57 @@
+{
+  "task": "8.4.4",
+  "baseMain": "5906f0fc492975904c33c6bead9e3171ecf93aba",
+  "status": "implemented and locally accepted; PR/main/publication pending",
+  "normalMatches": 4,
+  "normalImplicitRaises": 0,
+  "normalFullTraceParity": true,
+  "controlledPhaseSetups": 8,
+  "controlledImplicitRaises": {
+    "before": 28,
+    "after": 0
+  },
+  "controlledChangedTraces": 6,
+  "scope": "Synthetic lowHP supported phase states, NOT naturally observed28raises or professional calibration. Preserve existing nonlethal floor/cost/kill/recall coefficients; cost may not heal. Aggregate fractions are not exact spell damage.",
+  "sourceHashes": {
+    "engine.js": "5db752b274ed2a759e810305d8fbea8d98c5d6abd66d866ee66f13e1658e0721",
+    "combat-resources.js": "c7c13b9cd5486b437b79e60c11d4a85655fad3e0c694e7991e911310fc9400cd",
+    "match-history.js": "66f7f169ebefdfc09d535ee956fca7113fb0ce134b07ba1d0f89a443635b3c20"
+  },
+  "uiHash": "0e9a0f441d00af5a86e56bc33142c079c5d0dae9f8f204feb5a3db26f28c3745",
+  "local": {
+    "focused128AndFourPairs": true,
+    "uiAcceptances": 74,
+    "independentVMs": 73,
+    "engineModules": 101,
+    "calendarAcceptances": 20,
+    "staticModules": 138,
+    "Node22SmokeMs": 26060.1,
+    "unchangedSmokeLimitMs": 35000,
+    "twoSeasonOfficialGames": 186,
+    "browser": "Chromium1280/320 actual scheduled FirstSelection/manual20turn draft/officialBo3 threegames/new Korean cost explanation/source/Enter/Analysis filter/save/fired/no document overflow or pageerror. Identical rebuiltHTML injection, not productionHTTP or finaldeviceQA."
+  },
+  "preservedDiagnostics": [
+    {
+      "file": "/tmp/laning-hp-static-initial.log",
+      "reason": "default childprocess sandbox; same checks accepted permission review /tmp/laning-hp-static-reviewed.log"
+    },
+    {
+      "file": "/tmp/laning-hp-browser-initial.log",
+      "reason": "default Chromium socket sandbox; same local HTML focused script receives permission review"
+    },
+    {
+      "note": "Early read of not-yet-started regression/focused log reported file absent; dependent chain later completed, not a test failure. No output replaced."
+    },
+    {
+      "note": "Initial string insertion did not match multiline render helper; source inspected and real insertion connected before official UI/focused acceptance, no fake control."
+    }
+  ],
+  "preservation": "All #164–184 sources/failures/history including #180 first successful screenshot overwrite limitation protected. Current /tmp/laning-hp-* copies/logs/initial screenshots unique; no old bytes overwritten.",
+  "deferred": "100season/device/mobile/TalkBack final QA, external organized professional calibration, shop/waves reviewed metadata/full approved scope",
+  "next": "8.4.5 actual combat cache inputs versus supported mutation/invalidation consumers; reproduce before correction, not yet verified defect",
+  "supersededDocumentationHead": {
+    "head": "08ae1164f53dbfa38cee073180e5bca31906f3f3",
+    "run": 37219490595,
+    "reason": "Full-inventory reread found dated #171 current-status wording; label the original snapshot without changing approval/source/history. Actual code and acceptance unchanged. Not final CI success."
+  }
+}
