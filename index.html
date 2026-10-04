@@ -416,6 +416,13 @@ function applyPreparedFightRound(st,actors,packets,isTeamfight){
   return true;
 }
 
+// Preserve existing nonlethal lane floors, but a cost cannot heal its actor.
+// HP is a 0..1 aggregate fraction; no damage-stat/EHP conversion is inferred.
+function applyLaningHpCost(st,p,cost,floor){
+  if(matchEnded(st)||!p||![0,1].includes(p.side)||!st.sides?.[p.side]?.ps?.includes(p)||!alive(st,p)||!Number.isFinite(p.hp)||p.hp<0||p.hp>1||!Number.isFinite(cost)||cost<0||!Number.isFinite(floor)||floor<0||floor>1)return 0;
+  const before=p.hp;p.hp=Math.min(before,Math.max(floor,before-cost));return before-p.hp;
+}
+
 /* ==== FILE: objective-awards.js ==== */
 // One acquisition writer for existing aggregate objective rules. Participation
 // is supplied by the decision/fight path; this is not physical proximity.
@@ -778,8 +785,8 @@ function laningTick(st){
       const cons=avg([...A,...B].map(p=>at(p,'consistency')));
       const diff=sc(A)-sc(B)+R.mech.normal(0,0.14*(1.3-cons));
       const W=diff>=0?A:B, L=diff>=0?B:A;
-      L.forEach(p=>p.hp=Math.max(0.05,p.hp-Math.min(0.5,0.1+Math.abs(diff)*1.4)));
-      W.forEach(p=>p.hp=Math.max(0.1,p.hp-0.07));
+      L.forEach(p=>applyLaningHpCost(st,p,Math.min(0.5,0.1+Math.abs(diff)*1.4),0.05));
+      W.forEach(p=>applyLaningHpCost(st,p,0.07,0.1));
       const low=L.reduce((b,p)=>p.hp<b.hp?p:b), win=W.reduce((b,p)=>at(p,'all_in')>at(b,'all_in')?p:b);
       if(low.hp<0.45&&R.dec.chance(td(win,'aggression')*0.45+td(win,'risk_taking')*0.25)){
         let esc=avg([at(low,'dodging'),at(low,'gank_avoidance')]);
@@ -789,7 +796,7 @@ function laningTick(st){
         const ok=R.exec.chance(p);
         expl(st,`${LANE_KO[l]} 올인: ${pname(st,win)} → ${low.p.name}`,[['상대 체력',low.hp],['올인 능력',at(win,'all_in')],['회피',esc],['레벨 차',win.lvl-low.lvl],['점멸 사용',flash?1:0]],{prob:p,result:ok?'SUCCESS':'FAIL'});
         if(ok) killPlayer(st,win,low,W,`${LANE_KO[l]} 라인전`);
-        else {win.hp=Math.max(0.05,win.hp-0.2); log(st,`${pname(st,win)} 올인 실패`,{side:win.side})}
+        else {applyLaningHpCost(st,win,0.2,0.05); log(st,`${pname(st,win)} 올인 실패`,{side:win.side})}
       }
     }
     for(const p of [...A,...B]) if(alive(st,p)&&p.hp<0.32){
@@ -1021,7 +1028,7 @@ function simulateMatch(db,blueId,redId,seed,ctx,quiet){
   if(st.winner<0)throw new Error('Match unresolved: neither nexus was destroyed within '+MATCH_SIMULATION_MAX_MINUTES+' simulated minutes; no official result produced (seed '+seed+')');
   const endSec=st.ending.second;
   st.log.sort((a,b)=>a.t-b.t||a.sec-b.sec);
-  return {seed,winner:st.winner,ending:{...st.ending},combatRoundBasis:'prepared-round-budget-v1',damageBasis:'effective-aggregate-v1',structureSelectionBasis:'progress-seeded-ties-v1',macroPickEvents:st.macroPickEvents||[],objectiveEvents:st.objectiveEvents||[],takedownEvents:st.takedownEvents||[],duration:t+endSec/60,durationStr:fmtTime(t,endSec),draft:d,sides:st.sides,log:st.log,expl:st.expl,goldHist:st.goldHist,firsts:st.firsts};
+  return {seed,winner:st.winner,ending:{...st.ending},laningHpBasis:'bounded-nonlethal-cost-v1',combatRoundBasis:'prepared-round-budget-v1',damageBasis:'effective-aggregate-v1',structureSelectionBasis:'progress-seeded-ties-v1',macroPickEvents:st.macroPickEvents||[],objectiveEvents:st.objectiveEvents||[],takedownEvents:st.takedownEvents||[],duration:t+endSec/60,durationStr:fmtTime(t,endSec),draft:d,sides:st.sides,log:st.log,expl:st.expl,goldHist:st.goldHist,firsts:st.firsts};
 }
 
 /* ==== FILE: draft.js ==== */
@@ -11906,7 +11913,7 @@ function recordedDraftReview(db,rec,game,team=managedTeamId(db)){
 function publicMatchRecord(r,patch){
   const events=(r.log||[]).filter(e=>['kill','fight','obj','tower','nexus'].includes(e.kind)),limit=24,
     selected=events.length>limit?[...events.slice(0,12),...events.slice(-12)]:events;
-  return {version:1,...(r.combatRoundBasis==='prepared-round-budget-v1'?{combatRoundBasis:r.combatRoundBasis}:{}),...publicMacroPicks(r),...(r.structureSelectionBasis==='progress-seeded-ties-v1'?{structureSelectionBasis:r.structureSelectionBasis}:{}),...(Array.isArray(r.takedownEvents)?{takedowns:{version:1,count:r.takedownEvents.length,events:(r.takedownEvents.length>24?[...r.takedownEvents.slice(0,12),...r.takedownEvents.slice(-12)]:r.takedownEvents).map(e=>({...e,payouts:e.payouts.map(x=>({...x}))}))}}:{}),...(Array.isArray(r.objectiveEvents)?{objectives:{version:1,events:r.objectiveEvents.map(e=>({...e,participants:e.participants.slice()}))}}:{}),...(r.damageBasis==='effective-aggregate-v1'?{damageBasis:r.damageBasis}:{}),...(r.ending?{ending:{...r.ending,winner:r.sides[r.ending.winner].team.id}}:{}),resources:{version:1,players:Object.fromEntries(r.sides.flatMap(s=>s.ps.map(p=>[p.p.id,matchGoldLedger(p)])))},date:r.date,patch,winner:r.sides[r.winner].team.id,duration:r.duration,
+  return {version:1,...(r.laningHpBasis==='bounded-nonlethal-cost-v1'?{laningHpBasis:r.laningHpBasis}:{}),...(r.combatRoundBasis==='prepared-round-budget-v1'?{combatRoundBasis:r.combatRoundBasis}:{}),...publicMacroPicks(r),...(r.structureSelectionBasis==='progress-seeded-ties-v1'?{structureSelectionBasis:r.structureSelectionBasis}:{}),...(Array.isArray(r.takedownEvents)?{takedowns:{version:1,count:r.takedownEvents.length,events:(r.takedownEvents.length>24?[...r.takedownEvents.slice(0,12),...r.takedownEvents.slice(-12)]:r.takedownEvents).map(e=>({...e,payouts:e.payouts.map(x=>({...x}))}))}}:{}),...(Array.isArray(r.objectiveEvents)?{objectives:{version:1,events:r.objectiveEvents.map(e=>({...e,participants:e.participants.slice()}))}}:{}),...(r.damageBasis==='effective-aggregate-v1'?{damageBasis:r.damageBasis}:{}),...(r.ending?{ending:{...r.ending,winner:r.sides[r.ending.winner].team.id}}:{}),resources:{version:1,players:Object.fromEntries(r.sides.flatMap(s=>s.ps.map(p=>[p.p.id,matchGoldLedger(p)])))},date:r.date,patch,winner:r.sides[r.winner].team.id,duration:r.duration,
     sides:r.sides.map(s=>({team:s.team.id,name:s.team.name,players:s.ps.map(p=>[p.p.id,p.p.name,p.role,p.champ.id,p.k,p.d,p.a,Math.round(p.cs),Math.round(p.goldEarned),Math.round(p.dmg),p.lvl,matchQuestItems(p).slice()])})),
     championNames:Object.fromEntries(r.sides.flatMap(s=>s.ps.map(p=>[p.champ.id,championDisplayName(p.champ)]))),
     itemNames:Object.fromEntries(r.sides.flatMap(s=>s.ps.flatMap(p=>matchQuestItems(p).map(id=>[id,p.patchRef?.itemDefs?.[id]?.name||id])))),
@@ -11923,6 +11930,7 @@ function recordedPublicMatch(db,rec,game){
   const p=game?.publicRecord;
   if(!p)return {reason:'not-recorded',record:null};
   if(p.structureSelectionBasis!==undefined&&p.structureSelectionBasis!=='progress-seeded-ties-v1')return {reason:'unverified-source',record:null};
+  if(p.laningHpBasis!==undefined&&p.laningHpBasis!=='bounded-nonlethal-cost-v1')return {reason:'unverified-source',record:null};
   if(p.combatRoundBasis!==undefined&&p.combatRoundBasis!=='prepared-round-budget-v1')return {reason:'unverified-source',record:null};
   if(p.damageBasis!==undefined&&p.damageBasis!=='effective-aggregate-v1')return {reason:'unverified-source',record:null};
   if(!recordedMacroPicksValid(p)||!recordedGoldLedgerValid(p)||!recordedObjectivesValid(p)||!recordedTakedownsValid(p))return {reason:'unverified-source',record:null};
@@ -13890,7 +13898,7 @@ function renderRecordedTakedowns(p){
 
 // Archived reward interpretation; no present-state adjudication or mutation.
 function renderRecordedAdjudicationBasis(p){
-  return `${p.combatRoundBasis==='prepared-round-budget-v1'?'<p class="hint">교전은 라운드별로 피해를 준비해 순서대로 처리합니다. 같은 라운드에서 체력이 소진돼도 이미 준비된 피해는 남고, 다음 라운드의 새 공격에는 참여하지 않습니다. 정확한 스킬 시전·물리적 동시 판정은 아닙니다.</p>':''}<p class="hint">${p.damageBasis==='effective-aggregate-v1'?'피해량은 남은 체력 예산 안에서 집계한 값이며, 실제 스킬별 피해 판정은 아닙니다.':'이전 기록의 피해 집계 방식은 저장되지 않았습니다. 현재 계산으로 바꾸지 않습니다.'}</p>${p.structureSelectionBasis==='progress-seeded-ties-v1'?'<p class="hint">구조물 대상은 공격이 허용된 라인의 진행도를 우선하고, 동률은 당시 시드로 선택했습니다. 정확한 이동·거리 판정은 아닙니다.</p>':''}`;
+  return `${p.laningHpBasis==='bounded-nonlethal-cost-v1'?'<p class="hint">라인전 교환은 기존 비치명적 체력 하한을 유지하지만, 피해 비용으로 체력이 회복되지는 않습니다. 올인 처치·귀환 회복은 별도 판정이며, 교환 비용은 정확한 개별 스킬 피해량이 아닙니다.</p>':''}${p.combatRoundBasis==='prepared-round-budget-v1'?'<p class="hint">교전은 라운드별로 피해를 준비해 순서대로 처리합니다. 같은 라운드에서 체력이 소진돼도 이미 준비된 피해는 남고, 다음 라운드의 새 공격에는 참여하지 않습니다. 정확한 스킬 시전·물리적 동시 판정은 아닙니다.</p>':''}<p class="hint">${p.damageBasis==='effective-aggregate-v1'?'피해량은 남은 체력 예산 안에서 집계한 값이며, 실제 스킬별 피해 판정은 아닙니다.':'이전 기록의 피해 집계 방식은 저장되지 않았습니다. 현재 계산으로 바꾸지 않습니다.'}</p>${p.structureSelectionBasis==='progress-seeded-ties-v1'?'<p class="hint">구조물 대상은 공격이 허용된 라인의 진행도를 우선하고, 동률은 당시 시드로 선택했습니다. 정확한 이동·거리 판정은 아닙니다.</p>':''}`;
 }
 
 // Actual archived macro participants, never current ability/private evidence.

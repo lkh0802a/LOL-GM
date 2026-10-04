@@ -234,8 +234,8 @@ function laningTick(st){
       const cons=avg([...A,...B].map(p=>at(p,'consistency')));
       const diff=sc(A)-sc(B)+R.mech.normal(0,0.14*(1.3-cons));
       const W=diff>=0?A:B, L=diff>=0?B:A;
-      L.forEach(p=>p.hp=Math.max(0.05,p.hp-Math.min(0.5,0.1+Math.abs(diff)*1.4)));
-      W.forEach(p=>p.hp=Math.max(0.1,p.hp-0.07));
+      L.forEach(p=>applyLaningHpCost(st,p,Math.min(0.5,0.1+Math.abs(diff)*1.4),0.05));
+      W.forEach(p=>applyLaningHpCost(st,p,0.07,0.1));
       const low=L.reduce((b,p)=>p.hp<b.hp?p:b), win=W.reduce((b,p)=>at(p,'all_in')>at(b,'all_in')?p:b);
       if(low.hp<0.45&&R.dec.chance(td(win,'aggression')*0.45+td(win,'risk_taking')*0.25)){
         let esc=avg([at(low,'dodging'),at(low,'gank_avoidance')]);
@@ -245,7 +245,7 @@ function laningTick(st){
         const ok=R.exec.chance(p);
         expl(st,`${LANE_KO[l]} 올인: ${pname(st,win)} → ${low.p.name}`,[['상대 체력',low.hp],['올인 능력',at(win,'all_in')],['회피',esc],['레벨 차',win.lvl-low.lvl],['점멸 사용',flash?1:0]],{prob:p,result:ok?'SUCCESS':'FAIL'});
         if(ok) killPlayer(st,win,low,W,`${LANE_KO[l]} 라인전`);
-        else {win.hp=Math.max(0.05,win.hp-0.2); log(st,`${pname(st,win)} 올인 실패`,{side:win.side})}
+        else {applyLaningHpCost(st,win,0.2,0.05); log(st,`${pname(st,win)} 올인 실패`,{side:win.side})}
       }
     }
     for(const p of [...A,...B]) if(alive(st,p)&&p.hp<0.32){
@@ -477,5 +477,5 @@ function simulateMatch(db,blueId,redId,seed,ctx,quiet){
   if(st.winner<0)throw new Error('Match unresolved: neither nexus was destroyed within '+MATCH_SIMULATION_MAX_MINUTES+' simulated minutes; no official result produced (seed '+seed+')');
   const endSec=st.ending.second;
   st.log.sort((a,b)=>a.t-b.t||a.sec-b.sec);
-  return {seed,winner:st.winner,ending:{...st.ending},combatRoundBasis:'prepared-round-budget-v1',damageBasis:'effective-aggregate-v1',structureSelectionBasis:'progress-seeded-ties-v1',macroPickEvents:st.macroPickEvents||[],objectiveEvents:st.objectiveEvents||[],takedownEvents:st.takedownEvents||[],duration:t+endSec/60,durationStr:fmtTime(t,endSec),draft:d,sides:st.sides,log:st.log,expl:st.expl,goldHist:st.goldHist,firsts:st.firsts};
+  return {seed,winner:st.winner,ending:{...st.ending},laningHpBasis:'bounded-nonlethal-cost-v1',combatRoundBasis:'prepared-round-budget-v1',damageBasis:'effective-aggregate-v1',structureSelectionBasis:'progress-seeded-ties-v1',macroPickEvents:st.macroPickEvents||[],objectiveEvents:st.objectiveEvents||[],takedownEvents:st.takedownEvents||[],duration:t+endSec/60,durationStr:fmtTime(t,endSec),draft:d,sides:st.sides,log:st.log,expl:st.expl,goldHist:st.goldHist,firsts:st.firsts};
 }

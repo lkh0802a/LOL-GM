@@ -21,3 +21,10 @@ function applyPreparedFightRound(st,actors,packets,isTeamfight){
   for(const [f,t,d] of packets)applyFightDamage(st,f,t,d,isTeamfight,prepared);
   return true;
 }
+
+// Preserve existing nonlethal lane floors, but a cost cannot heal its actor.
+// HP is a 0..1 aggregate fraction; no damage-stat/EHP conversion is inferred.
+function applyLaningHpCost(st,p,cost,floor){
+  if(matchEnded(st)||!p||![0,1].includes(p.side)||!st.sides?.[p.side]?.ps?.includes(p)||!alive(st,p)||!Number.isFinite(p.hp)||p.hp<0||p.hp>1||!Number.isFinite(cost)||cost<0||!Number.isFinite(floor)||floor<0||floor>1)return 0;
+  const before=p.hp;p.hp=Math.min(before,Math.max(floor,before-cost));return before-p.hp;
+}
