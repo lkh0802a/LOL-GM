@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "task": "12.5.2",
+  "base": "8593979f1eb2da770eeb7e22b1b3d6a161d4f727",
+  "sourceHashes": {
+    "src/artifact/ui-initial-comparison.js": "b11d7ce5286090f6bab1d916e222aefa115573ecbfdaee7b50fc283b35f17788",
+    "src/artifact/ui-observed-radar.js": "00989d1c9200039667380a1ac760d203296a95c4b98ab57c8be35edd98f164ac",
+    "src/artifact/ui-initial-candidates.js": "e51a8cd8e70c8465433a171af3c52acb1c3e7822d363c438adcc4abbc8e10e59",
+    "src/artifact/ui-market-initial.js": "c032c77575db5ddce284843ca6c9a07215b37bbeab3a6a2fd8dc5669677072a5",
+    "src/artifact/scouting.js": "6f3868bb816888970554a0c874e89006e553e1d8ffd6f1f4568521d3c7e87a12",
+    "src/artifact/meta.js": "8ffd6ff85694453af40d49e61ba6770f054f40d4fbe35d3552aa11e408707c41",
+    "scripts/initial-comparison-acceptance.mjs": "ff4d88c99ddb94c58af7954f12ad2cf69960fe9a15c9a6fc1bafbd48e0e050da"
+  },
+  "scope": "initial FA observed comparison/actions; not full UI or professional calibration",
+  "focusedRaw": "INITIAL_COMPARISON_ACCEPTANCE {\"candidates\":3,\"observed\":true,\"pure\":true,\"actualPublicGame\":true,\"sourceExclusions\":3,\"actualPublicSource\":[{\"date\":\"2027-01-01\",\"patch\":\"26.19\",\"comp\":\"comparison-cup\",\"stage\":\"GROUP\",\"role\":\"TOP\",\"champ\":\"champ_yasuo\",\"color\":\"BLUE\",\"win\":true}],\"fullLiteHistory\":true,\"radarMissing\":true,\"staleButtonInert\":true,\"commands\":true,\"save\":true,\"context\":true}\n",
+  "originalStaleActionRaw": "INITIAL_STALE_BINDING_BASELINE {\"changedNewWorld\":true,\"cashBefore\":38.4,\"cashAfter\":38.3,\"observations\":1,\"pid\":\"HTG_JGL\",\"originalOverride\":\"data-init-scout direct scoutPlayers binding after guarded binding\"}\n",
+  "browserRaw": "{\"browser\": \"Chromium\", \"widths\": [1280, 320], \"actualPublicGames\": 2, \"readPure\": true, \"comparison3\": true, \"radarAndNumeric\": true, \"keyboardSource\": true, \"sourceFilters\": true, \"negotiationCancel\": true, \"returnFocus\": true, \"saveReset\": true, \"staleScoutInert\": true, \"errors\": []}\n",
+  "fullLiteSource": "actual fictional simulateSeries rec/publicRecord preserved through seriesResultForSave full/lite",
+  "units": {
+    "observedMetrics": "existing1–99, visual0–99",
+    "publicSample": "source rows, gameIDs unavailable",
+    "salary": "existing money unit/asking, not agreed offer"
+  },
+  "ownership": "current owned initial FA target/world/slot; pure read; command-owned mutations; ephemeral comparison context",
+  "limits": [
+    "no source gameIDs or independent-game duplicate guarantee",
+    "no hidden ability/private practice or fabricated missing axes",
+    "no historical ability reconstruction",
+    "no language implementation",
+    "no direct production HTTP",
+    "no final device/mobile/TalkBack/100-season QA"
+  ],
+  "next": "12.5.3 actual squad/eligibility/payroll before-after preview"
+}
