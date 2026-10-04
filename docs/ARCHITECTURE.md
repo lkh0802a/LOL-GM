@@ -223,3 +223,8 @@ fields; no second contract, roster, finance or preview ledger is introduced.
 ## 8.3.2 공격 장비 소비
 
 `system-data.js:itemAttackStatEffects`는 기존 정규화의 AD/AP source 기여를 분리해 저장한다. `systems.js:inventoryAttackStats`는 실제 inventory/quest equipment의 raw AD/AP를 읽으며 legacy split을 순수 유도한다. `engine.js:combatStats0`는 base+level+owned AD를 소비하고 raw AD의 기존 proxy 중복 및 cash conversion을 제거한다. 기존 AP/AS/crit는 집계 proxy로 남으며 MID bonusPower는 장비 AD/남은 AP 기여에 적용한다. 구매/패치/퀘스트 cache, 원자적 장부와 source/UI/history 소유자는 유지한다. 집중 acceptance는 inventory-offense, 기존 실제 scheduled draft-history 및 domain runner에 있다. 전체 피해/주문/가용성·shop 구현으로 확대 주장하지 않는다.
+
+
+## 8.4.1 교전 자원·실제 기록 연결
+
+`combat-resources.js:applyFightDamage`는 target remaining aggregate EHP를 소비하는 작은 shared writer다. module list에서 engine 앞에 로드하며 기존 quest/terminal 함수를 소비한다. `engine.js:fight`는 실제 starting/survivor HP fraction, 기존 queued order/RNG를 유지하고 effective packet 결과를 공통 writer에 전달한다. `simulateMatch.damageBasis`→`match-history.js:publicMatchRecord` optional source→`ui-match-history.js` 공식/분석 설명→기존 full/lite save로 이어진다. legacy는 source를 추정하지 않는다. `combat-resource-acceptance.mjs`가 writer/fight/official/source/UI/legacy/저장 경계를 확인한다. engine size budget을 바꾸지 않았다. 나머지 효과/피해/동시 처리 및 old record의 진짜 source 인증은 별도 미완료다.

@@ -1,0 +1,322 @@
+{
+  "date": "2026-10-04",
+  "baselineCommit": "69b65d26c5d59bcaa242c52c9d07a47dad4c7bd4",
+  "failures": {
+    "/tmp/combat-resource-static.log": "\n> lol-gm@0.1.0 check:static\n> node --test scripts/ci-run.test.mjs scripts/sync-standalone.test.mjs scripts/mutation-ownership.test.mjs && node scripts/check.mjs\n\nTAP version 13\n# Subtest: preserves success, multiline output and structured evidence\nok 1 - preserves success, multiline output and structured evidence\n  ---\n  duration_ms: 107.962624\n  type: 'test'\n  ...\n# Subtest: propagates failure and preserves the first error in the log\nok 2 - propagates failure and preserves the first error in the log\n  ---\n  duration_ms: 78.928273\n  type: 'test'\n  ...\n# Subtest: failed spawn cannot report green\nok 3 - failed spawn cannot report green\n  ---\n  duration_ms: 53.140522\n  type: 'test'\n  ...\n# Subtest: records a live child before completion and preserves forced termination\nok 4 - records a live child before completion and preserves forced termination\n  ---\n  duration_ms: 79.313028\n  type: 'test'\n  ...\n# Subtest: rejects a new UI writer and an extra write in an existing owner\nok 5 - rejects a new UI writer and an extra write in an existing owner\n  ---\n  duration_ms: 1.97486\n  type: 'test'\n  ...\n# Subtest: caller migration must shrink its old inventory and declare its new owner\nok 6 - caller migration must shrink its old inventory and declare its new owner\n  ---\n  duration_ms: 0.529687\n  type: 'test'\n  ...\n# Subtest: reads/comparisons/function definitions are not writer calls\nok 7 - reads/comparisons/function definitions are not writer calls\n  ---\n  duration_ms: 1.597415\n  type: 'test'\n  ...\n# Subtest: tracks compound writes and literal bracket properties\nok 8 - tracks compound writes and literal bracket properties\n  ---\n  duration_ms: 0.17715\n  type: 'test'\n  ...\n# Subtest: release liabilities may only be written by the finance owner\nok 9 - release liabilities may only be written by the finance owner\n  ---\n  duration_ms: 0.405205\n  type: 'test'\n  ...\n# Subtest: real remote receives the built bytes once and rejects stale artifacts\nok 10 - real remote receives the built bytes once and rejects stale artifacts\n  ---\n  duration_ms: 151.050541\n  type: 'test'\n  ...\n# Subtest: publishes the existing artifact with a normal push\nok 11 - publishes the existing artifact with a normal push\n  ---\n  duration_ms: 0.448188\n  type: 'test'\n  ...\n# Subtest: unchanged and stale runs do not commit\nok 12 - unchanged and stale runs do not commit\n  ---\n  duration_ms: 0.194475\n  type: 'test'\n  ...\n# Subtest: a push race skips stale publication but transport failures fail\nok 13 - a push race skips stale publication but transport failures fail\n  ---\n  duration_ms: 0.352457\n  type: 'test'\n  ...\n# Subtest: rejects another checkout or unrelated staged changes\nok 14 - rejects another checkout or unrelated staged changes\n  ---\n  duration_ms: 0.277298\n  type: 'test'\n  ...\n1..14\n# tests 14\n# suites 0\n# pass 14\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 657.743651\nMaintainability budget exceeded: engine.js > 34000 characters; split the domain UI instead of growing the monolith\n",
+    "/tmp/combat-resource-static-split.log": "\n> lol-gm@0.1.0 check:static\n> node --test scripts/ci-run.test.mjs scripts/sync-standalone.test.mjs scripts/mutation-ownership.test.mjs && node scripts/check.mjs\n\nTAP version 13\n# Subtest: preserves success, multiline output and structured evidence\nok 1 - preserves success, multiline output and structured evidence\n  ---\n  duration_ms: 223.550532\n  type: 'test'\n  ...\n# Subtest: propagates failure and preserves the first error in the log\nok 2 - propagates failure and preserves the first error in the log\n  ---\n  duration_ms: 269.842598\n  type: 'test'\n  ...\n# Subtest: failed spawn cannot report green\nok 3 - failed spawn cannot report green\n  ---\n  duration_ms: 131.87407\n  type: 'test'\n  ...\n# Subtest: records a live child before completion and preserves forced termination\nok 4 - records a live child before completion and preserves forced termination\n  ---\n  duration_ms: 100.876833\n  type: 'test'\n  ...\n# Subtest: rejects a new UI writer and an extra write in an existing owner\nok 5 - rejects a new UI writer and an extra write in an existing owner\n  ---\n  duration_ms: 1.530357\n  type: 'test'\n  ...\n# Subtest: caller migration must shrink its old inventory and declare its new owner\nok 6 - caller migration must shrink its old inventory and declare its new owner\n  ---\n  duration_ms: 0.412315\n  type: 'test'\n  ...\n# Subtest: reads/comparisons/function definitions are not writer calls\nok 7 - reads/comparisons/function definitions are not writer calls\n  ---\n  duration_ms: 5.343845\n  type: 'test'\n  ...\n# Subtest: tracks compound writes and literal bracket properties\nok 8 - tracks compound writes and literal bracket properties\n  ---\n  duration_ms: 0.385936\n  type: 'test'\n  ...\n# Subtest: release liabilities may only be written by the finance owner\nok 9 - release liabilities may only be written by the finance owner\n  ---\n  duration_ms: 0.328232\n  type: 'test'\n  ...\n# Subtest: real remote receives the built bytes once and rejects stale artifacts\nok 10 - real remote receives the built bytes once and rejects stale artifacts\n  ---\n  duration_ms: 287.059226\n  type: 'test'\n  ...\n# Subtest: publishes the existing artifact with a normal push\nok 11 - publishes the existing artifact with a normal push\n  ---\n  duration_ms: 0.556896\n  type: 'test'\n  ...\n# Subtest: unchanged and stale runs do not commit\nok 12 - unchanged and stale runs do not commit\n  ---\n  duration_ms: 0.316314\n  type: 'test'\n  ...\n# Subtest: a push race skips stale publication but transport failures fail\nok 13 - a push race skips stale publication but transport failures fail\n  ---\n  duration_ms: 0.605458\n  type: 'test'\n  ...\n# Subtest: rejects another checkout or unrelated staged changes\nok 14 - rejects another checkout or unrelated staged changes\n  ---\n  duration_ms: 0.332698\n  type: 'test'\n  ...\n1..14\n# tests 14\n# suites 0\n# pass 14\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 1395.625193\nChecked 133 JavaScript modules and Artifact shell: OK\n",
+    "/tmp/combat-resource-ui-final.log": "npm error Missing script: \"check:ui\"\nnpm error\nnpm error Did you mean this?\nnpm error   npm run check # run the \"check\" package script\nnpm error\nnpm error To see a list of scripts, run:\nnpm error   npm run\nnpm error Log files were not written due to an error writing to the directory: /home/agent/.npm/_logs\nnpm error You can rerun the command with `--loglevel=verbose` to see the logs in your terminal\n"
+  },
+  "limits": [
+    "Existing EHP/damage .9 conversion and rounding remain aggregate proxies",
+    "Income healing/recall/death timing not redesigned",
+    "Queued attack/target order unchanged, simultaneous policy pending",
+    "No final device/TalkBack/100-season QA or external pro collection"
+  ],
+  "moduleSplit": "Existing34000-character engine budget retained; helper extracted to combat-resources.js and explicitly registered. The initial line-pattern missed combined engine registration; corrected before focused/browser final acceptance.",
+  "browser": {
+    "browser": "Chromium",
+    "actualCompleteOfficialBo3": {
+      "games": 3,
+      "rows": [
+        5,
+        5,
+        5
+      ]
+    },
+    "pendingAndHistorySave": true,
+    "storedStatsEvents": true,
+    "analysisFilterSourceNavigation": true,
+    "narrow": {
+      "width": 320,
+      "document": 320
+    },
+    "firedPrivateOmission": true,
+    "pageErrors": []
+  },
+  "localFinal": {
+    "node": "22",
+    "regression": "PASS",
+    "smokeMs": 27537.7,
+    "smokeLimitMs": 35000,
+    "careerSeasons": 2,
+    "careerOfficialMatches": 186,
+    "staticModules": 134,
+    "moduleLoad": "combat-resources.js before engine.js",
+    "productionHttp": "policy-blocked; browser used identical rebuilt HTML",
+    "ui": {
+      "acceptances": 66,
+      "engineModules": 98,
+      "engineCompiles": 1,
+      "freshContexts": 65,
+      "artifactReads": 130,
+      "cachedArtifacts": 130,
+      "totalMs": 71302.8,
+      "rows": [
+        {
+          "file": "bootstrap-seed-acceptance.mjs",
+          "ms": 1575.5
+        },
+        {
+          "file": "ui-state-acceptance.mjs",
+          "ms": 4.7
+        },
+        {
+          "file": "analysis-room-acceptance.mjs",
+          "ms": 822.7
+        },
+        {
+          "file": "analysis-tiers-acceptance.mjs",
+          "ms": 1187.8
+        },
+        {
+          "file": "analysis-comparison-acceptance.mjs",
+          "ms": 1214
+        },
+        {
+          "file": "draft-preparation-acceptance.mjs",
+          "ms": 738.8
+        },
+        {
+          "file": "draft-history-acceptance.mjs",
+          "ms": 1322.2
+        },
+        {
+          "file": "match-history-acceptance.mjs",
+          "ms": 1152.9
+        },
+        {
+          "file": "match-adjudication-acceptance.mjs",
+          "ms": 1784.8
+        },
+        {
+          "file": "item-purchase-ledger-acceptance.mjs",
+          "ms": 982
+        },
+        {
+          "file": "inventory-defense-acceptance.mjs",
+          "ms": 966.2
+        },
+        {
+          "file": "inventory-offense-acceptance.mjs",
+          "ms": 1895.1
+        },
+        {
+          "file": "combat-resource-acceptance.mjs",
+          "ms": 1255.1
+        },
+        {
+          "file": "ui-overlay-acceptance.mjs",
+          "ms": 6.3
+        },
+        {
+          "file": "ui-async-acceptance.mjs",
+          "ms": 4.6
+        },
+        {
+          "file": "ui-mobile-a11y-acceptance.mjs",
+          "ms": 3.9
+        },
+        {
+          "file": "career-public-information-acceptance.mjs",
+          "ms": 2797.8
+        },
+        {
+          "file": "finance-acceptance.mjs",
+          "ms": 1077.3
+        },
+        {
+          "file": "finance-depth-acceptance.mjs",
+          "ms": 1133.3
+        },
+        {
+          "file": "contract-duration-acceptance.mjs",
+          "ms": 929.6
+        },
+        {
+          "file": "contract-negotiation-state-acceptance.mjs",
+          "ms": 1127.1
+        },
+        {
+          "file": "contract-buyout-acceptance.mjs",
+          "ms": 96.7
+        },
+        {
+          "file": "contract-window-acceptance.mjs",
+          "ms": 1178.2
+        },
+        {
+          "file": "market-reserve-acceptance.mjs",
+          "ms": 9852.6
+        },
+        {
+          "file": "owned-reserve-coach-acceptance.mjs",
+          "ms": 2325.5
+        },
+        {
+          "file": "contract-release-acceptance.mjs",
+          "ms": 1028.5
+        },
+        {
+          "file": "contract-release-liability-acceptance.mjs",
+          "ms": 1780.5
+        },
+        {
+          "file": "contract-guarantee-acceptance.mjs",
+          "ms": 1345
+        },
+        {
+          "file": "contract-mutual-termination-acceptance.mjs",
+          "ms": 2483.8
+        },
+        {
+          "file": "transfer-consent-acceptance.mjs",
+          "ms": 229
+        },
+        {
+          "file": "contract-role-promise-acceptance.mjs",
+          "ms": 83.3
+        },
+        {
+          "file": "player-representation-acceptance.mjs",
+          "ms": 171.9
+        },
+        {
+          "file": "agent-negotiation-parity-acceptance.mjs",
+          "ms": 218.2
+        },
+        {
+          "file": "player-loan-acceptance.mjs",
+          "ms": 293.6
+        },
+        {
+          "file": "transfer-stage-acceptance.mjs",
+          "ms": 307.2
+        },
+        {
+          "file": "local-service-acceptance.mjs",
+          "ms": 112.6
+        },
+        {
+          "file": "registration-acceptance.mjs",
+          "ms": 596.4
+        },
+        {
+          "file": "first-selection-acceptance.mjs",
+          "ms": 2938.8
+        },
+        {
+          "file": "opponent-intent-acceptance.mjs",
+          "ms": 684.7
+        },
+        {
+          "file": "draft-observer-information-acceptance.mjs",
+          "ms": 590.9
+        },
+        {
+          "file": "champion-scout-observation-acceptance.mjs",
+          "ms": 884.9
+        },
+        {
+          "file": "squad-observer-information-acceptance.mjs",
+          "ms": 1219.2
+        },
+        {
+          "file": "squad-staging-acceptance.mjs",
+          "ms": 202.7
+        },
+        {
+          "file": "ban-attribution-acceptance.mjs",
+          "ms": 566.9
+        },
+        {
+          "file": "participant-meta-acceptance.mjs",
+          "ms": 642.8
+        },
+        {
+          "file": "side-meta-acceptance.mjs",
+          "ms": 701.9
+        },
+        {
+          "file": "composition-meta-acceptance.mjs",
+          "ms": 543.3
+        },
+        {
+          "file": "draft-order-meta-acceptance.mjs",
+          "ms": 519.3
+        },
+        {
+          "file": "tactic-meta-acceptance.mjs",
+          "ms": 489.7
+        },
+        {
+          "file": "practice-meta-acceptance.mjs",
+          "ms": 905.2
+        },
+        {
+          "file": "analyst-report-acceptance.mjs",
+          "ms": 810.3
+        },
+        {
+          "file": "opponent-report-acceptance.mjs",
+          "ms": 966
+        },
+        {
+          "file": "opponent-draft-acceptance.mjs",
+          "ms": 947
+        },
+        {
+          "file": "player-champion-information-acceptance.mjs",
+          "ms": 456
+        },
+        {
+          "file": "observer-player-profile-acceptance.mjs",
+          "ms": 477.1
+        },
+        {
+          "file": "training-allocation-acceptance.mjs",
+          "ms": 97.6
+        },
+        {
+          "file": "cohesion-practice-acceptance.mjs",
+          "ms": 1453.8
+        },
+        {
+          "file": "relationship-decisions-acceptance.mjs",
+          "ms": 266.2
+        },
+        {
+          "file": "club-ownership-acceptance.mjs",
+          "ms": 144
+        },
+        {
+          "file": "staff-contracts-acceptance.mjs",
+          "ms": 612.2
+        },
+        {
+          "file": "staff-registration-acceptance.mjs",
+          "ms": 1168.6
+        },
+        {
+          "file": "club-license-acceptance.mjs",
+          "ms": 387.5
+        },
+        {
+          "file": "region-continuity-acceptance.mjs",
+          "ms": 893.8
+        },
+        {
+          "file": "club-closure-acceptance.mjs",
+          "ms": 4505.7
+        },
+        {
+          "file": "club-estate-acceptance.mjs",
+          "ms": 230.1
+        },
+        {
+          "file": "rune-selection-acceptance.mjs",
+          "ms": 2911.9
+        }
+      ]
+    }
+  }
+}

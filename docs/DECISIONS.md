@@ -905,3 +905,8 @@ UI 재설계의 추가 확정 기준은 수정 용이성이다. 공통 표현/�
 ## 2026-10-04 실제 공격 장비 소비의 구현 경계 (8.3.2)
 
 현금/earned 골드의 class별 공격 전환을 제거하고 실제 소유 raw AD와 챔피언 기본값/레벨 성장을 사용한다. 동일 AD source proxy는 한 번 제외하고 AP/AS/crit/기타 기존 집계 proxy와 effect patch delta는 유지한다. 기존 MID bonusPower는 장비 AD/남은 AP source 기여로 연결한다. 가격·지출을 스탯으로 바꾸거나 새로운 AP→AD/스킬 계수·치명타 배율은 만들지 않는다. AP/AS/crit의 정확한 mechanics 및 shop/가용성은 별도 미완료다. 결과 변화와 원래 역전 fixture 실패를 보존하며 기존 역사에 소급하지 않는다. DEVELOPMENT8.3.2의 source/반례/remaining을 따른다.
+
+
+## 2026-10-04 교전 남은 자원·유효 기록의 교정 경계 (8.4.1)
+
+실제 회복·부활 없이 HP ratio를 다음 교전에서20%/생존 저장에서5%로 올리던 재현 경로를 실제 fraction 보존으로 교정한다. damage는 남은 aggregate EHP 안에서 소비하고 기존 .9 보고/rounding을 유지해 통계·quest에 동일 전달한다. 새 전투/스킬 계수, 공짜 retarget 또는 물리적 동시 규칙은 만들지 않는다. 새 공식 source에만 집계 방식 marker를 저장하고 옛 기록은 방식 미확인/원본 유지다. reviewed wave XP/귀환 metadata 부족은 임의 수치로 대체하지 않으며 나머지 승인 inventory를 축소하지 않는다. 상세 source/진단/수용/한계는 DEVELOPMENT8.4.1이다.

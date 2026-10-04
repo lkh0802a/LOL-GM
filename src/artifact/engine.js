@@ -105,7 +105,7 @@ function fight(st,zone,sideArrs,ctx={}){
   const mult=[1,1]; mult[init]*=engOk?1.2:0.9; if(!engOk) mult[def]*=1.05;
   if(ctx.defender!==undefined) mult[ctx.defender]*=1.15;
   const F=[];
-  for(const i of [0,1]) for(const ps of sideArrs[i]){const cs=combatStats(st,ps);F.push({ps,side:i,max:cs.ehp,hp:cs.ehp*clamp(ps.hp,0.2,1),off:cs.off,alive:true,hitters:new Set(),last:null})}
+  for(const i of [0,1]) for(const ps of sideArrs[i]){const cs=combatStats(st,ps);F.push({ps,side:i,max:cs.ehp,hp:cs.ehp*clamp(ps.hp,0,1),off:cs.off,alive:true,hitters:new Set(),last:null})}
   const K=(avg(F.map(f=>f.max))/avg(F.map(f=>f.off)))/4.6;
   const peel=[0,1].map(i=>avg(sideArrs[i].map(p=>p.champ.kit.peel/10*at(p,'peeling'))));
   const pw0=[0,1].map(i=>F.filter(f=>f.side===i).reduce((s,f)=>s+Math.sqrt(f.off*f.hp),0)*mult[i]);
@@ -136,14 +136,14 @@ function fight(st,zone,sideArrs,ctx={}){
       dmgs.push([f,tgt,d]);
     }
     for(let i=dmgs.length-1;i>0;i--){const j=Math.floor(R.mech.next()*(i+1));[dmgs[i],dmgs[j]]=[dmgs[j],dmgs[i]]}
-    for(const [f,t,d] of dmgs){if(t.hp<=0)continue;const dealt=Math.round(d*.9);t.hp-=d;t.hitters.add(f);f.ps.dmg+=dealt;matchQuestEvent(st,f.ps,{damage:dealt});t.ps.dmgTaken+=dealt;if(isTeamfight)f.ps.teamfightDmg+=dealt;if(t.hp<=0)t.last=f;}
+    for(const [f,t,d] of dmgs)applyFightDamage(st,f,t,d,isTeamfight);
     for(const t of F) if(t.alive&&t.hp<=0){t.alive=false;}
     if(rd==='clean')break;
   }
   const deaths=[0,0];
   for(const f of F){
     if(!f.alive){deaths[f.side]++; killPlayer(st,f.last?f.last.ps:null,f.ps,[...f.hitters].map(h=>h.ps),ctx.label||'')}
-    else f.ps.hp=clamp(f.hp/f.max,0.05,1);
+    else f.ps.hp=clamp(f.hp/f.max,0,1);
   }
   const sur=[0,1].map(i=>F.filter(f=>f.side===i&&f.alive).length);
   let winner = deaths[0]===deaths[1] ? (sur[0]>=sur[1]? (disengaged===0?1:0):1) : (deaths[0]<deaths[1]?0:1);
@@ -492,5 +492,5 @@ function simulateMatch(db,blueId,redId,seed,ctx,quiet){
   if(st.winner<0)throw new Error('Match unresolved: neither nexus was destroyed within '+MATCH_SIMULATION_MAX_MINUTES+' simulated minutes; no official result produced (seed '+seed+')');
   const endSec=st.ending.second;
   st.log.sort((a,b)=>a.t-b.t||a.sec-b.sec);
-  return {seed,winner:st.winner,ending:{...st.ending},duration:t+endSec/60,durationStr:fmtTime(t,endSec),draft:d,sides:st.sides,log:st.log,expl:st.expl,goldHist:st.goldHist,firsts:st.firsts};
+  return {seed,winner:st.winner,ending:{...st.ending},damageBasis:'effective-aggregate-v1',duration:t+endSec/60,durationStr:fmtTime(t,endSec),draft:d,sides:st.sides,log:st.log,expl:st.expl,goldHist:st.goldHist,firsts:st.firsts};
 }
