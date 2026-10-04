@@ -1,8 +1,6 @@
 // ===== LOL GM: isolated one-game match simulation =====
 
 const XP_TABLE=[0,280,660,1140,1720,2400,3180,4060,5040,6120,7300,8580,9960,11440,13020,14700,16480,18360,20340,22420];
-const ITEM_CONV={fighter:{hp:.18,arm:.012,ad:.028},tank:{hp:.32,arm:.028,ad:.011},mage:{hp:.05,arm:.004,ad:.05},assassin:{hp:.06,arm:.005,ad:.047},marksman:{hp:.035,arm:.003,ad:.047},enchanter:{hp:.09,arm:.01,ad:.018}};
-const ITEM_COST=[3000,6000,9000,12000,15000,18000];
 // Computation guard, not a tournament time limit or a victory rule.
 const MATCH_SIMULATION_MAX_MINUTES=180;
 
@@ -25,15 +23,15 @@ function combatStats(st,ps){
   ps._combatPatch=st.patch;ps._combatRevision=revision;ps._itemRevision=ps.itemRevision;ps._ck=key;return ps._cs=combatStats0(st,ps);
 }
 function combatStats0(st,ps){
-  // Defense now uses owned raw equipment stats. The earned-gold offense proxy
-  // remains an explicit separate correction boundary (DEVELOPMENT 8.3.2).
-  const c=ps.champ,b=c.base,L=ps.lvl,g=Math.max(0,ps.goldEarned-500),cv=ITEM_CONV[c.cls],k=c.kit,sp=championSkillProfile(c);
-  const ie=systemEffects(st.patch.itemDefs,matchQuestItems(ps)),re=systemEffects(st.patch.runeDefs,ps.runes),phaseEarly=st.t<15?1:0,phaseLate=st.t>=28?1:0;
-  const gear=inventoryDefenseStats(st.patch.itemDefs,matchQuestItems(ps));
+  // Owned AD and defense stats, with explicitly retained AP/AS/crit aggregate
+  // proxies. Cash is not a combat stat; no spell ratios are reconstructed here.
+  const c=ps.champ,b=c.base,L=ps.lvl,k=c.kit,sp=championSkillProfile(c),equipment=matchQuestItems(ps);
+  const ie=systemEffects(st.patch.itemDefs,equipment),re=systemEffects(st.patch.runeDefs,ps.runes),phaseEarly=st.t<15?1:0,phaseLate=st.t>=28?1:0;
+  const gear=inventoryDefenseStats(st.patch.itemDefs,equipment),attack=inventoryAttackStats(st.patch.itemDefs,equipment),questBonus=ps.quest?.completed?ps.quest.rules.bonusPower||0:0;
   const ph=st.t<14?k.early:st.t<26?k.mid:k.late,pm=.8+.04*ph,phaseSystem=1+(ie.early+re.early)*phaseEarly+(ie.scaling+re.scaling)*phaseLate;
-  const hp=b.hp+b.hpg*(L-1)+gear.hp,arm=b.arm+b.armg*(L-1)+gear.armor,mr=(b.mr||30)+(b.mrg||1.3)*(L-1)+gear.mr,ad=b.ad+b.adg*(L-1)+g*cv.ad*(1+(ps.quest?.completed?ps.quest.rules.bonusPower||0:0));
+  const hp=b.hp+b.hpg*(L-1)+gear.hp,arm=b.arm+b.armg*(L-1)+gear.armor,mr=(b.mr||30)+(b.mrg||1.3)*(L-1)+gear.mr,ad=b.ad+b.adg*(L-1)+attack.ad*(1+questBonus);
   const asp=(b.as||.65)*(1+(b.asg||0)*(L-1)/100),resource=(b.resource?clamp((b.resource+(b.resourceg||0)*(L-1))/800+(b.resourceRegen||0)/30,.65,1.18):1)*sp.economy;
-  const sysOff=1+ie.offense+re.offense+(ie.haste+re.haste)*.35+(ie.mobility+re.mobility)*.16,sysDef=1+ie.defense-gear.statEffect+re.defense+(ie.sustain+re.sustain)*.55+(ie.utility+re.utility)*.25+(ie.mobility+re.mobility)*.08;
+  const sysOff=1+ie.offense-attack.adEffect+attack.apEffect*questBonus+re.offense+(ie.haste+re.haste)*.35+(ie.mobility+re.mobility)*.16,sysDef=1+ie.defense-gear.statEffect+re.defense+(ie.sustain+re.sustain)*.55+(ie.utility+re.utility)*.25+(ie.mobility+re.mobility)*.08;
   let off=ad*(.52+.042*(k.burst+k.dps))*pm*(b.range>400?1.1:1)*(.88+asp*.18)*(.94+sp.power*.07+sp.uptime*.04+sp.reach*.025+sp.mobility*.012)*resource*sysOff*phaseSystem;
   const defense=arm*.55+mr*.45;let ehp=hp*(1+defense/100)*(.83+.028*k.sustain)*(.98+sp.utility*.04+sp.cc*.025)*Math.sqrt(pm)*sysDef*Math.sqrt(phaseSystem);
   const s=st.sides[ps.side];
@@ -41,7 +39,7 @@ function combatStats0(st,ps){
   const mf=.82+.26*ps.prof.mastery/100+.04*(ps.prof.confidence-50)/50;
   const sk=.84+.32*avg(['positioning','target_selection','teamfight_awareness','combo_execution','reaction','burst_execution','extended_fight'].map(a=>at(ps,a)));
   const fm=1+playerMod(ps.p),md=1+(st.mods?st.mods[ps.side]:0);
-  return {off:off*buff*mf*sk*md*fm,ehp:ehp*buff*Math.sqrt(mf),mf,sk,itemEffects:ie,runeEffects:re,skillProfile:sp,defenseStats:{hp,armor:arm,mr,gear}};
+  return {off:off*buff*mf*sk*md*fm,ehp:ehp*buff*Math.sqrt(mf),mf,sk,itemEffects:ie,runeEffects:re,skillProfile:sp,defenseStats:{hp,armor:arm,mr,gear},attackStats:{ad,gear:attack,questBonus}};
 }
 function power(st,ps){const c=combatStats(st,ps);return Math.sqrt(c.off*c.ehp)}
 function teamPower(st,side){return aliveOf(st,side).reduce((s,x)=>s+power(st,x)*x.hp**0.5,0)}

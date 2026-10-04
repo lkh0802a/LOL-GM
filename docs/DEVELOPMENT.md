@@ -22,9 +22,9 @@ files or another worker's unpushed changes exist in Cloud.
 
 ## 현재 검증된 출시와 이번 구현 경계 — 2026-10-04
 
-PR #174 최종 head `54fccb1bbe71f976e20633a503d78ae410a6d387`은 전체 CI `37182526543`(의료 네 시드·두 집계·verify 포함) 성공 후 main `ff8b275ab608256476131de66a6039853cf71ebe`로 병합됐다. 같은 main의 전체 CI/standalone `37182947669` 및 검증 artifact를 사용한 Pages `37183286127`의 실제 게시 성공을 확인했다. 초기 head의 취소된 CI는 최종 통과가 아니다. native PR attachment는 호출했지만 응답이 중단돼 성공 여부 미확인이다. 직접 github.io HTTP는 Cloud 정책상 별도 검증되지 않았다. #173도 main CI/standalone `37178547630` 및 Pages `37178753632` 성공이 확인됐다. 아래 전 영역 조사표의 `173 open` 등은 그 조사 당시의 상태이며 현재 출시 상태는 이 절을 따른다. 원 조사·실패·근거는 보존한다.
+PR #175 최종 head `4f98a5f9723e7c50bee760cf7fba8a0df9252aa4`는 전체 CI `37185218029`(의료 네 시드·두 집계·verify 포함) 성공 후 main `9611ea4c043b3b57ccc1cdff240425e499754d48`로 병합됐다. 같은 main 전체 CI/standalone `37185707163`과 검증 artifact Pages `37186063963`의 checkout/head guard/download/launcher·offline assembly/실제 게시 성공을 확인했다. native attachment는 호출했으나 응답 중단으로 성공 미확인이며 직접 github.io HTTP도 정책상 별도 미검증이다. #174의 CI/main/Pages `37182526543`/`37182947669`/`37183286127`, #173의 main/Pages `37178547630`/`37178753632` 출시 근거와 원래 실패는 보존한다. 아래 날짜별 조사·구현 절은 그 당시 상태이며 현재 경계는 이 절과 마지막 8.3.2를 따른다.
 
-이번 실제 구현은 **8.3.1 장비 기반 방어 수치**이며 8.3 전체 완료가 아니다. 미사용 골드의 공격력 전환, AP/스킬 계수, 구매 장소·귀환 연결 및 전체 승인 inventory는 남는다. 새 구현의 PR/CI/병합/게시 성공은 확인 전까지 주장하지 않는다.
+이번 실제 구현은 **8.3.2 장비 AD와 미사용 골드 공격 전환 제거**다. 8.3.1 방어와 함께 골드 자체가 전투 지표를 올리는 경로를 제거하지만, AP·공격 속도·치명타/주문별 정확한 소비, 구매 장소·귀환 및 전체 승인 inventory는 미완료다. 새 PR/정확한 head CI·병합·같은 main CI/게시 성공은 확인 전까지 주장하지 않는다.
 
 ## UI 전면 재설계 — 승인된 현재 범위
 
@@ -1294,3 +1294,22 @@ Node 22 CPU 프로파일에서 `activeTeams`가 가장 큰 누적 소비였다. 
 **의도적 변화·진단:** 이 수정은 동등 최적화가 아니라 잘못된 방어 입력 교정이다. 네 대표 경기의 승패/시간 변화와 전 이벤트를 삭제하지 않고 보존한다. 기존 골드 열세 승리 19/22 fixture는 해당 구버전의 결과이며 이번 변화 후 assertion 실패를 `/tmp/inventory-defense-ending.log`에 보존했다. [같은 설정의 제한된 32시드 관측](evidence/inventory-defense-resource-scenarios.json)은 현재 seed8/15의 실제 열세 승리·살아 있는 공격자·열린 기지·교전/오브젝트→넥서스를 확인한다. 원래 assertions를 유지하며 승률·컴백 목표를 정하거나 승자를 조작하지 않는다. 초기 champion identity와 재료 전체 조합을 빠뜨린 새 fixture 오류도 focused 로그1–3에 보존했다. 이전 근거는 그대로 둔다.
 
 **상충·한계·정확한 다음 단위:** 장비 구매 전후의 방어 차이가 실제 재고에 연결되는 이익이 있다. 승패/교전 시간은 의도적으로 달라지고 전체 밸런스 검증은 남는다. AP/스킬 damage의 검토된 계수가 충분하지 않아 **미사용 earned 골드의 offense 전환은 아직 존재**하며 attack/AS/AP/치명타·penetration·효과 가용성은 다음 **8.3.2 공격 장비와 실제 피해 소비** 단위에서 원본 writer/consumer를 대조해 자연 경계로 교정한다. 가격을 공격력으로 바꾸거나 임의 AP→AD 계수를 만들지 않는다. 장비 stats 패치 writer 전체, 조건부 보호막/회복, 팀 armor reduction/개인 penetration, 퀘스트 bonus, 구매 장소/귀환 metadata 및 8.5.1 XP/waves도 미완료다. 이미 저장된 공식 결과는 재계산하지 않는다. draft 중 pending save의 새 엔진 재실행은 아직 완전한 과거 엔진 버전 고정이 아니며 그 한계를 숨기지 않는다. 장기/실기기/TalkBack 최종 QA와 외부 전문 보정은 수행하지 않았다. 전체 언어/UI/분석실/서사/사무국 및 승인된 범위는 그대로 유지한다.
+
+
+### 8.3.2 실제 보유 공격 장비와 미사용 골드 소비 교정 — 2026-10-04
+
+**발생·근거·규모:** P0 엔진 45–55분 세로 단위. 8.3.1 이후에도 `combatStats0`가 `goldEarned-500`에 class별 AD 전환을 적용했다. 레벨1/빈 장비 자르반·분12에서 미사용 골드 500→6,500만으로 내부 offense 39.187→142.053이었다. [원본/교정 입력·전체 사건·source hashes](evidence/inventory-offense-correction.json)는 baseline `9611ea4c043b3b57ccc1cdff240425e499754d48`의 실제 함수와 동일 fixture/seed를 보존한다. 교정 후 39.187→39.187, 실제 350골드 롱소드 구매 후 46.432다. 내부 집계 지표이며 실제 DPS/프로 경기 목표가 아니다.
+
+**writer → consumer·단위:** `item-purchases.js`의 실제 잔액/레시피/퀘스트 writer를 유지한다. `systems.js:inventoryAttackStats`가 `matchQuestItems`의 실제 소유 장비 `FlatPhysicalDamageMod`(AD)와 AP 원자료/기존 source 기여를 읽는다. `engine.js`는 기본 AD+레벨 성장+보유 장비 AD를 소비하고 earned/price/spent gold를 공격력으로 바꾸지 않는다. `system-data.js:itemAttackStatEffects`가 기존 rounding/clamp 정규화의 AD 기여를 분리해 동일 AD proxy 중복을 한 번 제거한다. draft의 전체 정규화 effects와 AP/AS/crit·penetration 텍스트 proxy는 유지한다. 실제 장비·퀘스트·패치 revision 캐시를 그대로 쓰며 새로운 감독 구매 조작은 없다. 양 팀/AI가 같은 소비 경로다.
+
+**기존 규칙·호환성:** 기존 MID 퀘스트 `bonusPower`를 장비 bonus AD 및 남은 AP source proxy에 연결한다. 새 비율/스킬 계수/치명타 배율/챔피언 예외는 만들지 않았다. `attackStatEffects`는 원래 source 기준 기여이며 effects 패치 delta를 지우지 않는다. 장비 가격만 바뀌면 보유 AD는 불변이고 실제 affordability는 바뀐다. legacy 누락 split은 기존 합법 source로 읽기 시 유도하며 저장/역사를 변경하지 않는다. 원자적 실패/중복 조합/재료 소모와 8.3.1 방어는 유지한다. 사용되지 않게 된 class별 `ITEM_CONV`/`ITEM_COST`는 source callers 확인 후 제거하며 원본 함수/committed 근거는 보호한다.
+
+**집중 수용:** `inventory-offense-acceptance.mjs`는 현재 모든 챔피언·레벨1/11·MID 퀘스트 전후 688조건의 미사용 골드 공격/방어 불변, 실제 롱소드·반복 재료·완성품 재료 소모, affordability/중복 거절 원자성, 같은 시각 cache, effect/price patch 및 rollback, 모든 source item legacy split, AP/AS/crit의 기존 proxy 연결을 검증한다. 네 실제 기록/무기록 paired match의 승자/종료/시간·KDA·XP·장비·장부·골드 이력 동등성과 세계 read purity, 공식 series session pending save 및 public source full/lite 역사, 복기 아이템 열 제거를 검증한다. 실제 scheduled First Selection → 20턴 수동 draft → `resolvePendingOfficialMatch` → 결과 commit/queue → pending/full save 및 완료 중복 거절은 기존 `draft-history-acceptance.mjs`를 새 엔진으로 실행한다. 세션 저장만으로 전체 공식 transaction rollback 완료를 주장하지 않는다.
+
+**의도적 변화·실패 보호:** 동일 네 경기의 승패/시간/전체 trace를 원본과 나란히 보존한다. 성능 동등 최적화나 밸런스 재설계가 아니라 잘못된 현금 입력 교정이다. 기존 8/15 열세 승리 fixture와 기존 여섯 경기의 양쪽 winner coverage가 이번 결과에서 실패한 원 로그를 [진단](evidence/inventory-offense-diagnostics.json)에 보존했다. [동일 설정의 첫32시드 관측](evidence/inventory-offense-resource-scenarios.json)은 실제 seed5/18 열세 골드 승리의 살아 있는 공격자·열린 기지·교전/오브젝트→넥서스 trace를 보존한다. paired fixture의 seed0은 실제 반대 winner를 제공한다. 기존 assertions/32시드 한도는 유지하고 승자/컴백 비율/계수는 조작하지 않았다. 원래 #171/#175 결과/실패는 그대로 보호한다.
+
+**이익·상충·남은 범위·정확한 다음:** 구매하지 않은 현금만으로 공격력이 오르지 않아 자원→실제 장비→교전 연결이 일관된다. 승패와 시간은 의도적으로 변하며 전체 밸런스/전문 보정은 아직 없다. AP는 정확한 스킬 계수, AS는 실제 공격 횟수/챔피언 예외, crit는 정확한 치명타 판정으로 구현되지 않았고 기존 aggregate proxy다. raw stats 전체 패치 writer·피해 유형/관통/conditional effects/구매 위치도 미완료다. 기존 history는 재계산하지 않으며 pending draft는 과거 엔진 버전을 완전히 고정하지 않는다. 다음 45–55분 단위 **8.5.1 유한 웨이브·last hit와 nearby/shared XP**는 현재 income/level writer와 pinned metadata 보유 여부를 조사하고 원자료가 있는 범위의 공급·경험치·참가 가용성→레벨/아이템/교전 연결을 구현한다. source 부족은 정확히 기록하며 level 표시/임의 XP 계수로 보상하지 않는다. 8.2.2는 genuine transition 자료가 확보될 때 이어가고 같은 차단 조사만 반복하지 않는다. 전체 승인 38/8/13 및 UI/언어/사무국·서사 범위는 유지하며 장기/실기기/TalkBack final QA는 보류한다.
+
+**현재 로컬 검사·한계:** 정적/133모듈 build, focused 원본 대조·ledger/ending/scheduled 및 UI65수용/64독립VM·calendar20수용이 성공했다. 실제 Chromium1280/320px에서 수동 공식Bo3 세 게임·pending/history save·당시 source/탭/키보드/filter/navigation/fired omission을 검증했고 document overflow/page error는 없었다. URL 정책 때문에 동일 rebuilt HTML을 주입한 검사이며 생산 HTTP/final device QA가 아니다. 초기 Chromium sandbox socket 권한 실패 후 자동 권한 검토로 동일 검사에 성공했다. 여러 검사와 동시에 실행한 Node22 regression30초 timeout은 보존하고 동일 제한의 단독 실행으로 재검증하며 한도를 올리지 않는다. 이 결과와 PR/main release gates는 별도다.
+
+**로컬 최종 결과:** 같은 제한의 단독 Node22 regression·smoke27,050ms/35초·두 시즌186공식 경기/modern8·legacy2 save resume가 성공했다. 앞선30초 timeout은 진단 원본에 보존한다. UI65/64·calendar20·133module build/static 및 실제 scheduled/브라우저 수용은 통과했고 전체 required PR/main CI·standalone/Pages는 별도 확인한다.

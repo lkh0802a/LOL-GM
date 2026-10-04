@@ -45,3 +45,5 @@ Use [numeric stages 1–13 and dotted work units](DEVELOPMENT.md#unified-numeric
 [2026-10-04 전 영역 조사·소스 근거·구현 한계](DEVELOPMENT.md#whole-domain-audit-2026-10-04)는 모든 알려진 도메인의 coverage와 재현/미검증 상태를 구분합니다. 전체 함수 실행·전체 기능 완료 선언이 아닙니다.
 
 [8.2.2 실제 구매 장소·귀환 경로 조사와 자료 제한](DEVELOPMENT.md#822-구매-장소귀환부활-경로의-재현-가능한-조사-경계--2026-10-04)은 재현 도구와 원본 증거를 연결합니다. 구매 위치 구현 완료가 아닙니다.
+
+[8.3.2 실제 공격 장비 소비·현금 전투력 제거](DEVELOPMENT.md#832-실제-보유-공격-장비와-미사용-골드-소비-교정--2026-10-04)는 원본/교정 사건·실패·AP/AS/crit proxy 한계와 다음 경험치 단위를 연결합니다.

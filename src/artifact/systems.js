@@ -32,6 +32,18 @@ function inventoryDefenseStats(defs,ids){
   }
   return out;
 }
+function inventoryAttackStats(defs,ids){
+  const out={ad:0,ap:0,adEffect:0,apEffect:0};
+  for(const id of ids||[]){
+    const d=defs?.[id];if(!d||d.active===false)continue;
+    out.ad+=Number(d.stats?.FlatPhysicalDamageMod)||0;
+    out.ap+=Number(d.stats?.FlatMagicDamageMod)||0;
+    const split=d.attackStatEffects||
+      (d.source?.provider===SYSTEM_SOURCE_SNAPSHOT.provider?itemAttackStatEffects({...d,gold:{total:d.cost||0}}):{ad:0,ap:0});
+    out.adEffect+=Number(split.ad)||0;out.apEffect+=Number(split.ap)||0;
+  }
+  return out;
+}
 function systemChoiceScore(c,e,role){
   const k=c.kit||{},front=['fighter','tank'].includes(c.cls),support=role==='SUP'||c.cls==='enchanter';
   return (e.offense||0)*(.8+(k.burst+k.dps)/16)+(e.defense||0)*(front?1.35:.75)+(e.sustain||0)*(.7+(k.sustain||5)/8)+(e.utility||0)*(support?1.5:.7)+(e.haste||0)*(.8+(k.cc+k.poke)/18)+(e.mobility||0)*(.75+(k.mobility||5)/8)+(e.early||0)*(.65+(k.early||5)/8)+(e.scaling||0)*(.65+(k.late||5)/8);
