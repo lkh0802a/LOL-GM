@@ -1,0 +1,4084 @@
+{
+  "kind": "bounded-source-audit-not-professional-calibration",
+  "dateKST": "2026-10-04",
+  "gitHead": "9e2b0850d7ddb93ddd930576dbbc78cafc71338a",
+  "gitMainVerified": "a529566d838f50f1b6215ffa07bba9c9b9f61b30",
+  "workingTreeUncommitted": true,
+  "coverage": {
+    "manifestEngine": 97,
+    "manifestUI": 37,
+    "structuralFilesIncludingShell": 135,
+    "notAllRuntimePathsExecuted": true
+  },
+  "probe": {
+    "playerHistory": {
+      "inputEvents": 121,
+      "retained": 120,
+      "firstRetained": 1,
+      "originalFirstRetained": false
+    },
+    "newsFeed": {
+      "inputEvents": 251,
+      "retained": 250,
+      "originalFirstRetained": false,
+      "recordFields": [
+        "year",
+        "text"
+      ]
+    },
+    "worldTable": {
+      "html": "<div class=\"scroll\"><table><thead><tr><th>지역</th><th>리그</th><th>구분</th><th>팀</th><th>수준 (최고 100)</th><th>흥행</th><th>균형</th><th>사무국</th><th>진출권</th><th>방식</th></tr></thead><tbody>\n  \n  </tbody></table></div><p class=\"hint\">국제대회: First Stand (스플릿 1 이후, undefined, undefined) · Mid-Season Invitational (스플릿 2 이후, undefined, undefined) · Eastern Cup (스플릿 2 이후, undefined, undefined) · Western Cup (스플릿 2 이후, undefined, undefined) · World Championship (스플릿 3 이후, undefined, undefined) · Worlds Masters (스플릿 3 이후, undefined, undefined) · Worlds Open (스플릿 3 이후, undefined, undefined)</p>",
+      "threw": false
+    }
+  },
+  "originalProbeFailure": "acceptance-fixture.js:10\n if(out.playerHistory.retained!==120||out.playerHistory.originalFirstRetained||out.newsFeed.retained!==250||out.newsFeed.originalFirstRetained||!out.worldTable.threw)throw Error('Audit source behavior changed: '+JSON.stringify(out));\n                                                                                                                                                                      ^\n\nError: Audit source behavior changed: {\"playerHistory\":{\"inputEvents\":121,\"retained\":120,\"firstRetained\":1,\"originalFirstRetained\":false},\"newsFeed\":{\"inputEvents\":251,\"retained\":250,\"originalFirstRetained\":false,\"recordFields\":[\"year\",\"text\"]},\"worldTable\":{\"html\":\"<div class=\\\"scroll\\\"><table><thead><tr><th>지역</th><th>리그</th><th>구분</th><th>팀</th><th>수준 (최고 100)</th><th>흥행</th><th>균형</th><th>사무국</th><th>진출권</th><th>방식</th></tr></thead><tbody>\\n  \\n  </tbody></table></div><p class=\\\"hint\\\">국제대회: Audit Cup (스플릿 2 이후, 지역별 진출권, undefined)</p>\",\"threw\":false}}\n    at acceptance-fixture.js:10:173\n    at acceptance-fixture.js:12:3\n    at Script.runInContext (node:vm:149:12)\n    at runEngineFixture (file:///workspace/LOL-GM-analysis/scripts/test-harness.mjs:70:15)\n    at async file:///tmp/lol-gm-whole-domain-probe.mjs:3:14\n\nNode.js v22.23.3\n",
+  "docLocalLinks": {
+    "checked": 93,
+    "missing": []
+  },
+  "modules": [
+    {
+      "file": "src/artifact/ui-overlay.js",
+      "lines": 94,
+      "bytes": 4072,
+      "functions": [
+        "uiOverlayRoot",
+        "uiOverlayFocusables",
+        "uiOverlayFocusKey",
+        "uiOverlayRestoreTarget",
+        "uiOverlayFocus",
+        "uiOverlayBackground",
+        "openUiOverlay",
+        "refreshUiOverlay",
+        "closeUiOverlay",
+        "uiOverlayKeydown"
+      ],
+      "markers": [
+        {
+          "line": 17,
+          "text": "const data=keys.filter(k=>el.dataset?.[k]!==undefined).map(k=>[k,el.dataset[k]]);"
+        }
+      ],
+      "sha256": "bf3b63fe1fb47b72bba7f78e8d6fec68270d713b13db4063443dee503e054186"
+    },
+    {
+      "file": "src/artifact/club-license.js",
+      "lines": 25,
+      "bytes": 1280,
+      "functions": [
+        "clubLicenseState",
+        "ensureClubLicense",
+        "syncClubLicense",
+        "syncCompetitionLicenses"
+      ],
+      "markers": [],
+      "sha256": "70252f7573fb4307db93a0921a98f758f2f4b9118c495c9d34acde81fbbd8317"
+    },
+    {
+      "file": "src/artifact/career.js",
+      "lines": 254,
+      "bytes": 22919,
+      "functions": [
+        "seedInitialRegionalSupply",
+        "prepareFirstSeasonFreeAgency",
+        "initialGoalLabel",
+        "promotionStatus",
+        "setupTeamsForManager",
+        "initialPayrollFloorKey",
+        "cheapestInitialRows",
+        "minimumViableInitialPayroll",
+        "seedInitialPayrollBudgets",
+        "initialSalaryBudget",
+        "initialSalaryCeiling",
+        "initialSquadLimits",
+        "initialRosterTarget",
+        "initialSquadErrors",
+        "initialOrganizationErrors",
+        "initialOfferCheck",
+        "initialSignCheck",
+        "initialStartNegotiation",
+        "initialReleasePlayer",
+        "initialCandidateScore",
+        "initialMarketSnapshot",
+        "initialCheapestCost",
+        "initialFutureFeasible",
+        "initialCandidateShortlist",
+        "initialPickCandidate",
+        "aiInitialContractTerms",
+        "initialOfferForTeam",
+        "resolveInitialOfferRound",
+        "runInitialMarketTo",
+        "initialLegalMinimumTarget",
+        "runInitialMinimumMarket",
+        "runInitialDepthMarket",
+        "autoBuildInitialSquad",
+        "autoBuildInitialWorld",
+        "beginInitialRosterPhase",
+        "seedFirstSeasonFreeAgentDepth",
+        "finalizeInitialRosters"
+      ],
+      "markers": [
+        {
+          "line": 20,
+          "text": "const role=ROLES.slice().sort((a,b)=>counts[a]-counts[b]||ROLES.indexOf(a)-ROLES.indexOf(b))[0];"
+        },
+        {
+          "line": 37,
+          "text": "const ts=activeTeams(db,R.id,div).slice().sort((a,b)=>(b.reputation||0)-(a.reputation||0)),n=ts.length;"
+        },
+        {
+          "line": 59,
+          "text": "return {local:rows.filter(x=>!x.nonLocal).sort((a,b)=>a.s-b.s),foreign:rows.filter(x=>x.nonLocal).sort((a,b)=>a.s-b.s)};"
+        },
+        {
+          "line": 136,
+          "text": "for(const region of regions){const rows=free.map(p=>({p,id:p.id,s:price(p,region),nonLocal:!isLocalPlayer(p,region)}));byRegion[region]={local:rows.filter(x=>!x.nonLocal).sort((a,b"
+        },
+        {
+          "line": 153,
+          "text": "const publicTop=market.free.map(p=>{const salary=market.price(p,team.region),coverage=covered.has(p.role)?0:3,youth=(team.philosophy==='youth'&&p.age<=21)?3:0,star=team.philosophy="
+        },
+        {
+          "line": 160,
+          "text": "rows.sort((a,b)=>(a.salary<=softMax)!==(b.salary<=softMax)?(a.salary<=softMax?-1:1):b.score-a.score||a.salary-b.salary);"
+        },
+        {
+          "line": 178,
+          "text": "let signed=0;for(const os of Object.values(byPlayer)){const best=os.sort((a,b)=>b.value-a.value||b.terms.salary-a.terms.salary)[0],p=best.player,t=best.team;if(p.team)continue;cons"
+        }
+      ],
+      "sha256": "4d7031ea62165d1c2ed27842e11fcb104b8d8b9e9fbc8be80184df5210838b37"
+    },
+    {
+      "file": "src/artifact/content-naming.js",
+      "lines": 138,
+      "bytes": 12206,
+      "functions": [
+        "contentNameNorm",
+        "contentNameDistance",
+        "contentNameTooSimilar",
+        "contentExistingNames",
+        "contentRecentPrefixKeys",
+        "contentUniqueName",
+        "championNamingTheme",
+        "championNameCandidate",
+        "generateChampionContentName",
+        "dominantContentEffect",
+        "itemNameCandidate",
+        "generateItemContentName",
+        "runeStyleKey",
+        "runeNameCandidate",
+        "generateRuneContentName"
+      ],
+      "markers": [
+        {
+          "line": 98,
+          "text": "function dominantContentEffect(effects,fallback='utility'){return Object.entries(effects||{}).sort((a,b)=>Number(b[1]||0)-Number(a[1]||0))[0]?.[0]||fallback}"
+        }
+      ],
+      "sha256": "cfaccd15c05386a6061e455472dad7dcc01ee65a9753a2d764f2c888711dc20e"
+    },
+    {
+      "file": "src/artifact/ui-season.js",
+      "lines": 199,
+      "bytes": 22575,
+      "functions": [
+        "spark",
+        "officeCard",
+        "globalCard",
+        "fmtRegion",
+        "regionalLevelIndex",
+        "worldTable",
+        "seasonTab",
+        "histTable",
+        "findMatch",
+        "openSeries",
+        "closeOv",
+        "bindSeasonTab",
+        "bindSetup",
+        "bindSeason"
+      ],
+      "markers": [
+        {
+          "line": 12,
+          "text": "function globalCard(){const g=DB.global||{decisions:[],power:{}};const P=Object.values(DB.regions).map(R=>[R,g.power[R.id]]).filter(x=>x[1]!==undefined).sort((a,b)=>b[1]-a[1]);"
+        },
+        {
+          "line": 76,
+          "text": "const top=rows.filter(r=>r.g>=minG).sort((a,b)=>b.kda-a.kda).slice(0,12);"
+        },
+        {
+          "line": 78,
+          "text": "const ctop=Object.entries(champs).sort((a,b)=>b[1][0]-a[1][0]).slice(0,12);"
+        },
+        {
+          "line": 97,
+          "text": "const keys=Object.keys(groups).sort((a,b)=>(groups[b][0].intl-groups[a][0].intl));"
+        },
+        {
+          "line": 101,
+          "text": "</tbody></table></div>`}).join('')+`<p class=\"hint\">통산 우승: ${Object.entries(titles).sort((a,b)=>b[1].w-a[1].w||b[1].n-a[1].n).slice(0,12).map(([t,v])=>`${esc(tshort(t))} ${v.n}회${v"
+        }
+      ],
+      "sha256": "16b3c734679fe06298947b57e8016603b3f2ea53a129ff7f03f25230ca99757d"
+    },
+    {
+      "file": "src/artifact/save-migration.js",
+      "lines": 136,
+      "bytes": 6671,
+      "functions": [
+        "saveObject",
+        "validateSaveEnvelope",
+        "unpackPlayerSaveFields",
+        "normalizeRestoredSave",
+        "migrateSaveState"
+      ],
+      "markers": [
+        {
+          "line": 23,
+          "text": "if(db.world!==null&&db.world!==undefined&&!saveObject(db.world))"
+        },
+        {
+          "line": 25,
+          "text": "if(db.metaHistory!==undefined&&!Array.isArray(db.metaHistory))"
+        },
+        {
+          "line": 67,
+          "text": "if(pr[key]!==undefined&&(!Number.isFinite(pr[key])||pr[key]<0||pr[key]>max))throw Error('Invalid saved champion coaching: '+key);"
+        }
+      ],
+      "sha256": "68ec50df15e1836c8277e0bfd674a8b7346e101f105134aa9ee030fb14d6e0af"
+    },
+    {
+      "file": "src/artifact/ui-state.js",
+      "lines": 122,
+      "bytes": 6467,
+      "functions": [
+        "cancelUiTask",
+        "cancelUiTasks",
+        "beginUiTask",
+        "isUiTaskCurrent",
+        "finishUiTask",
+        "uiEnhanceScrollRegions",
+        "updateAppNavigation",
+        "nav",
+        "navigateTo",
+        "navKeepScroll",
+        "resetUiForWorld"
+      ],
+      "markers": [
+        {
+          "line": 78,
+          "text": "const theme=document.querySelector('#app-theme');if(theme){let value='auto';try{value=localStorage.getItem('lol-gm-theme')||'auto'}catch(e){}theme.value=['auto','dark','light'].inc"
+        }
+      ],
+      "sha256": "151ee89ecdca0afc58b0947b965306e8e852ce2793546ec29e247fcf4533a65d"
+    },
+    {
+      "file": "src/artifact/ui-transfer-terms.js",
+      "lines": 67,
+      "bytes": 6032,
+      "functions": [
+        "transferFeeOfferFields",
+        "transferFeePlanFromDom",
+        "transferFeePlanText",
+        "loanPurchaseOfferFields",
+        "loanPurchaseFromDom",
+        "loanPurchaseControls",
+        "bindLoanPurchaseControls",
+        "transferPaymentsPanel"
+      ],
+      "markers": [],
+      "sha256": "b2fa407d2ccc1ee16a6858e839f3987a3dfb7c49d5c7fead6611724b826dee37"
+    },
+    {
+      "file": "src/artifact/contract-agreement.js",
+      "lines": 106,
+      "bytes": 4962,
+      "functions": [
+        "withContractStartSeason",
+        "voidContractAgreement",
+        "applyDueRenewalAgreements",
+        "expireContractPlayer",
+        "autoResolveExpiryOption",
+        "applyDueEarlyContactAgreements",
+        "finalizeExclusiveContractExpiry",
+        "settleOffseasonContractRollover"
+      ],
+      "markers": [],
+      "sha256": "a9410870a8ba1c16f9d7645879986f89c6f30f819b466a443fd12c88d8b21d14"
+    },
+    {
+      "file": "src/artifact/competition.js",
+      "lines": 235,
+      "bytes": 17520,
+      "functions": [
+        "addDays",
+        "roundRobin",
+        "newSeason",
+        "pushDay",
+        "addStageDays",
+        "seedSort",
+        "hiLo",
+        "elimName",
+        "addElimRound",
+        "deRound",
+        "deAfter",
+        "swissRound",
+        "standings",
+        "groupStandings",
+        "recordLines",
+        "scheduledSeriesOptions",
+        "simulateScheduledSeries",
+        "commitScheduledSeries",
+        "finalizeCompetitionDay",
+        "scheduledSeriesSession",
+        "playDay",
+        "finishStage",
+        "elimReach",
+        "leagueStages",
+        "intlStages"
+      ],
+      "markers": [
+        {
+          "line": 23,
+          "text": "let order=st0.type==='round_robin'&&!st0.groups?comp.teams.slice().sort(()=>rng.next()-0.5):comp.teams.slice();"
+        },
+        {
+          "line": 61,
+          "text": "function seedSort(sd,arr){return arr.slice().sort((a,b)=>sd.seeds.indexOf(a)-sd.seeds.indexOf(b))}"
+        },
+        {
+          "line": 96,
+          "text": "const keys=Object.keys(bucket).sort((a,b)=>{const [aw,al]=a.split('-').map(Number),[bw,bl]=b.split('-').map(Number);return (bw-bl)-(aw-al)});"
+        },
+        {
+          "line": 173,
+          "text": "const adv=standings(db,s,next.from||cfg.id).map(x=>x.tid).slice(0,next.take||undefined);"
+        },
+        {
+          "line": 185,
+          "text": "const mvp=Object.entries(s.pstats).filter(([,p])=>p.g>=6).sort((x,y)=>y[1].mvp-x[1].mvp||((y[1].k+y[1].a)/(y[1].d||1))-((x[1].k+x[1].a)/(x[1].d||1)))[0];"
+        },
+        {
+          "line": 230,
+          "text": "return [{...de(undefined,size)}];"
+        },
+        {
+          "line": 232,
+          "text": "if(fmt==='ko'||n<6){let P=4;while(P*2<=n)P*=2;return [{...ko(undefined,P)}]}"
+        }
+      ],
+      "sha256": "44d0856b841357315c29c022df0a910817edb2d22e940b37bbca3df9d2774783"
+    },
+    {
+      "file": "src/artifact/ui-market.js",
+      "lines": 147,
+      "bytes": 18870,
+      "functions": [
+        "renderAcademyRosterControl",
+        "recruitStageLabel",
+        "recruitButtons",
+        "renderRecruitmentBoard",
+        "renderMutualTermination",
+        "bindMutualTerminationControls",
+        "renderContractWindow",
+        "bindContractWindow",
+        "renderMarket",
+        "bindMarket"
+      ],
+      "markers": [
+        {
+          "line": 21,
+          "text": "return rows.sort((a,b)=>(rank[a.priority]??9)-(rank[b.priority]??9)).map(e=>{const p=DB.players[e.pid],ev=e.evaluation,where=p.team?esc(tshort(p.team)):'FA';return `<div class=\"mro"
+        },
+        {
+          "line": 58,
+          "text": ".sort((a,b)=>obsOvr(DB,b)-obsOvr(DB,a)).slice(0,25):[];"
+        },
+        {
+          "line": 111,
+          "text": "const fas=Object.values(DB.players).filter(p=>!p.retired&&!p.team&&(MK.role==='ALL'||p.role===MK.role)&&(MK.scope==='all'||isLocalPlayer(p,t.region))).sort((a,b)=>obsOvr(DB,b)-obsO"
+        },
+        {
+          "line": 112,
+          "text": "const tgts=activeTeams(DB,MK.scope==='all'?null:t.region,1).filter(o=>o.id!==t.id).flatMap(o=>o.roster.map(id=>DB.players[id])).filter(p=>p&&p.contract&&(MK.role==='ALL'||p.role==="
+        }
+      ],
+      "sha256": "bff63fcae220b825ad033a2354f64c5c325a84d56dbe5e28f91c576e02a9737c"
+    },
+    {
+      "file": "src/artifact/contract-transfer-market.js",
+      "lines": 71,
+      "bytes": 4778,
+      "functions": [
+        "buyoutTransferError",
+        "aiTransferPersonalTerms",
+        "aiTransferSalaryRoom",
+        "aiMarketPermanentTransfers"
+      ],
+      "markers": [
+        {
+          "line": 46,
+          "text": "for(const t of activeTeams(db,null,1).filter(t=>t.id!==mine&&transferMarketOpen(db,t)&&t.finance.cash>20*psTeam(db,t)&&financeRunway(db,t).months>=9&&financeForecast(db,t).closingC"
+        },
+        {
+          "line": 55,
+          "text": ".filter(x=>x.personal).sort((a,b)=>aiMarketValue(db,b.p,t)-aiMarketValue(db,a.p,t))[0];"
+        }
+      ],
+      "sha256": "5adf767bfce1e07c635db473cc84729b2932c750f092078d0dcf2e38bb81aa77"
+    },
+    {
+      "file": "src/artifact/ui-analysis-tiers.js",
+      "lines": 36,
+      "bytes": 6847,
+      "functions": [
+        "analysisTiersPanel",
+        "bindAnalysisTiers"
+      ],
+      "markers": [],
+      "sha256": "37b602091737165aaa3eb84a25ed44a6fcdb415573e2b6b6e21216bdf3682770"
+    },
+    {
+      "file": "src/artifact/office-international.js",
+      "lines": 200,
+      "bytes": 17217,
+      "functions": [
+        "newLeagueIdentity",
+        "futureLeagueCandidates",
+        "worldDecisions",
+        "globalOffice"
+      ],
+      "markers": [
+        {
+          "line": 55,
+          "text": "})).sort((a,b)=>b.score-a.score);"
+        },
+        {
+          "line": 63,
+          "text": "return {id,P,par,fictional:false,score:P.strength/10+(pm?(pm.hype-45)/15:0)+(par?activeTeams(db,par.id,1).length/10:0)}}).sort((a,b)=>b.score-a.score);"
+        },
+        {
+          "line": 84,
+          "text": "const mv=activeTeams(db,c.par.id,1).filter(t=>!t.franchised).sort((a,b)=>(a.fans||0)-(b.fans||0)).slice(0,activeTeams(db,c.par.id,1).length>=8?2:0);"
+        },
+        {
+          "line": 88,
+          "text": "const extra=activeTeams(db,id,1).length-cfg.teams; for(let k=0;k<extra;k++){const w=activeTeams(db,id,1).filter(t=>!mv.includes(t)).sort((a,b)=>(a.fans||0)-(b.fans||0))[0];if(w)fol"
+        },
+        {
+          "line": 97,
+          "text": "const rest=activeTeams(db,P.id,1).sort((a,b)=>(b.fans||0)-(a.fans||0)), got={};"
+        },
+        {
+          "line": 98,
+          "text": "for(const t of rest){const dst=kids.map(k=>db.regions[k]).sort((a,b)=>activeTeams(db,a.id,1).length-activeTeams(db,b.id,1).length)[0];"
+        },
+        {
+          "line": 101,
+          "text": "const heirs=kids.map(k=>db.regions[k]).sort((a,b)=>b.strength-a.strength);"
+        },
+        {
+          "line": 124,
+          "text": "const ts=activeTeams(db,g.id,1).sort((a,b)=>(b.fans||0)-(a.fans||0)), keep=ts.slice(0,2);"
+        },
+        {
+          "line": 131,
+          "text": "const low=Object.values(db.regions).filter(R=>(R.metrics||[]).length>=2&&R.metrics.slice(-2).every(m=>m.hype<30)).sort((a,b)=>a.strength-b.strength);"
+        },
+        {
+          "line": 142,
+          "text": "const weakI=I.filter(i=>i.id!=='WORLDS'&&(i.prestige||1)<=1).sort((a,b)=>(a.prestige||1)-(b.prestige||1));"
+        },
+        {
+          "line": 163,
+          "text": "for(const R of Object.values(db.regions))if(ratings[R.id]!==undefined)db.global.power[R.id]=ratings[R.id];else delete db.global.power[R.id];"
+        },
+        {
+          "line": 166,
+          "text": "if(db.global.wcCap===undefined)db.global.wcCap=Math.max(20,Object.values(db.regions).reduce((a,R)=>a+R.slots,0));"
+        },
+        {
+          "line": 174,
+          "text": "const rk=Object.values(db.regions).filter(R=>ratings[R.id]!==undefined).sort((a,b)=>compareInternationalRegions(db,ratings,a,b,w.year));"
+        }
+      ],
+      "sha256": "a02379c12f82679d696692181f43cc0c5c722e0512e9123592c54f75c57e4e9d"
+    },
+    {
+      "file": "src/artifact/meta-side.js",
+      "lines": 18,
+      "bytes": 1268,
+      "functions": [
+        "metaSideColor",
+        "metaSideCoverage"
+      ],
+      "markers": [],
+      "sha256": "0b95bcc3e0cb1d26625074ab6589778ccea25e0615eb3a83aee2964f95fd0fea"
+    },
+    {
+      "file": "src/artifact/scouting-champions.js",
+      "lines": 47,
+      "bytes": 3401,
+      "functions": [
+        "championScoutReport",
+        "championScoutObserver",
+        "recordChampionScoutObservation",
+        "championScoutObservation"
+      ],
+      "markers": [],
+      "sha256": "79ca9afa9204c2b2f0428008a47ae46786fda8730058e4c293bd0bb742a85d88"
+    },
+    {
+      "file": "src/artifact/region-continuity.js",
+      "lines": 51,
+      "bytes": 3317,
+      "functions": [
+        "moveClubForRegionReorganization",
+        "recordRegionSuccession"
+      ],
+      "markers": [],
+      "sha256": "d5c1452d3671f93aad7904f02fcb1df71361ac5f40bb08fe8b0d2ffd01840d08"
+    },
+    {
+      "file": "src/artifact/ui-scouting-regions.js",
+      "lines": 9,
+      "bytes": 923,
+      "functions": [
+        "staffRegionalKnowledgeSummary",
+        "scoutRegionalSummary"
+      ],
+      "markers": [
+        {
+          "line": 3,
+          "text": "const rows=Object.entries(s.scoutRegions||{}).sort((a,b)=>b[1].knowledge-a[1].knowledge).slice(0,3);"
+        }
+      ],
+      "sha256": "9fc488cbe8e3249c3c082ad5f66425dcd0d1fe113d65ba7530a8c7f2f8a971ef"
+    },
+    {
+      "file": "src/artifact/league-aggregation.js",
+      "lines": 64,
+      "bytes": 3491,
+      "functions": [
+        "rrTable",
+        "championshipStandings",
+        "recentSplitChampion",
+        "regionPlacements"
+      ],
+      "markers": [
+        {
+          "line": 13,
+          "text": ".sort((a,b)=>a.split-b.split):[];"
+        },
+        {
+          "line": 29,
+          "text": "return Object.values(tb).sort((x,y)=>(y.w-x.w)||((y.gw-y.gl)-(x.gw-x.gl))||((y.h2h[x.tid]||0)-(x.h2h[y.tid]||0))||(hashStr(s.seed+x.tid)-hashStr(s.seed+y.tid)));"
+        },
+        {
+          "line": 37,
+          "text": "s.region===R.id&&(s.div||1)===div&&s.split).sort((a,b)=>a.split-b.split);"
+        },
+        {
+          "line": 44,
+          "text": "teams.slice().sort((a,b)=>teamStrength(db,b)-teamStrength(db,a));"
+        },
+        {
+          "line": 46,
+          "text": "return Object.values(totals).sort((a,b)=>b.points-a.points||"
+        },
+        {
+          "line": 62,
+          "text": "const rest=act.filter(t=>!base.includes(t)).sort((a,b)=>teamStrength(db,b)-teamStrength(db,a));"
+        }
+      ],
+      "sha256": "8a1f46972c06f92154f24fa366bbfcd026fe85be13350aa16393ba3dd1890a63"
+    },
+    {
+      "file": "src/artifact/ui-office-consultation.js",
+      "lines": 23,
+      "bytes": 1904,
+      "functions": [
+        "officeOpinionPanel",
+        "bindOfficeOpinionControls"
+      ],
+      "markers": [],
+      "sha256": "12c194e79f06befbf08029198d798656c90447b22185fb6107083065a20dda54"
+    },
+    {
+      "file": "src/artifact/data.js",
+      "lines": 172,
+      "bytes": 17853,
+      "functions": [
+        "buildPatch"
+      ],
+      "markers": [],
+      "sha256": "0eb2d3ac7321e3a728028c3a0799405f24f50b0a904b5e879f95c5f6d71662ff"
+    },
+    {
+      "file": "src/artifact/registration.js",
+      "lines": 150,
+      "bytes": 10390,
+      "functions": [
+        "officialRegistrationEnabled",
+        "officialPlayerCanRepresent",
+        "officialRosterCap",
+        "initialOfficialRoster",
+        "initializeOfficialRegistrations",
+        "internationalRegistrationSeasons",
+        "internationalRosterLocked",
+        "officialRegistrationOpen",
+        "internalSquadMoveError",
+        "officialRegistrationErrors",
+        "officialRegistrationSnapshot",
+        "writeOfficialRegistration",
+        "aiReviewOfficialRegistrations",
+        "validateStoredRegistrations"
+      ],
+      "markers": [],
+      "sha256": "902e5fe018a0818ab48ea5a2802c3eaa9ebfdae968736f018b6a846e69393794"
+    },
+    {
+      "file": "src/artifact/ui-manager.js",
+      "lines": 66,
+      "bytes": 8682,
+      "functions": [
+        "releaseObligationsPanel",
+        "financePanel",
+        "financeTable"
+      ],
+      "markers": [
+        {
+          "line": 62,
+          "text": "const ts=activeTeams(DB,rid).sort((a,b)=>b.finance.cash-a.finance.cash);"
+        }
+      ],
+      "sha256": "0588d818d1886fb7eba2cdcef6d43a588fa9efe8bc5a906e31749516ec938be5"
+    },
+    {
+      "file": "src/artifact/meta-composition.js",
+      "lines": 23,
+      "bytes": 1854,
+      "functions": [
+        "championCompositionInsights"
+      ],
+      "markers": [
+        {
+          "line": 21,
+          "text": "out.pairs=[...counts.values()].sort((a,b)=>b.g-a.g||a.champ.localeCompare(b.champ)).slice(0,8).map(x=>({...x,wr:x.w/x.g,presence:x.g/out.sample}));"
+        }
+      ],
+      "sha256": "13bef6227a2ea4a5f83066ff8d4e9a5936063d8fa4e026dfdccaf76980715632"
+    },
+    {
+      "file": "src/artifact/ui-scrim-plans.js",
+      "lines": 17,
+      "bytes": 2360,
+      "functions": [
+        "scrimPlansPanel",
+        "bindScrimPlans"
+      ],
+      "markers": [],
+      "sha256": "e9e4a90fc49129844479b64a356c72269218bb34e3f4670717c4efd2a3ceeadf"
+    },
+    {
+      "file": "src/artifact/calendar.js",
+      "lines": 60,
+      "bytes": 2738,
+      "functions": [
+        "setWorldCalendarDate",
+        "nextCalendarDate",
+        "applyCalendarPatchEvents",
+        "applyWorldDailyEffects"
+      ],
+      "markers": [],
+      "sha256": "8736fbf8bdcad1fec98f869de9756c333e740f1d191e2322426e911599f21183"
+    },
+    {
+      "file": "src/artifact/ui-draft-preparation.js",
+      "lines": 32,
+      "bytes": 3706,
+      "functions": [
+        "draftUiPreparationContent",
+        "draftUiPreparationSelect",
+        "draftUiPreparationBind"
+      ],
+      "markers": [],
+      "sha256": "25e8e0030ca1880b9c16b47520da77e8dafbfdc861bd0fc94000f87e35e04894"
+    },
+    {
+      "file": "src/artifact/champs2.js",
+      "lines": 47,
+      "bytes": 5304,
+      "functions": [
+        "archChampion"
+      ],
+      "markers": [],
+      "sha256": "067ab9927d8b0672231c3226e00167f8e7cf582a41c20a70f18f185d512ad827"
+    },
+    {
+      "file": "src/artifact/ui-opponent-draft.js",
+      "lines": 8,
+      "bytes": 3982,
+      "functions": [
+        "patchOpponentDraftReport"
+      ],
+      "markers": [],
+      "sha256": "08d4261c324b117bcbcd7545ddbf5c5fe4b387707012e2aa9c0fc179ae31f4bf"
+    },
+    {
+      "file": "src/artifact/ui-player-champions.js",
+      "lines": 10,
+      "bytes": 3474,
+      "functions": [
+        "scoutReportSummary",
+        "playerChampionPanel"
+      ],
+      "markers": [
+        {
+          "line": 7,
+          "text": "if(playerChampionInternalAccess(DB,p))return `<h4>챔피언 폭 · 내부 준비 정보</h4><div class=\"scroll\"><table class=\"pool\"><thead><tr><th>챔피언</th><th>숙련도</th><th>공식 경험</th><th>스크림</th><th>훈련</"
+        }
+      ],
+      "sha256": "019b93dff3cb091de8c57075e29054e647c7375c5357109f58a975a88389ff44"
+    },
+    {
+      "file": "src/artifact/ui-opponent-report.js",
+      "lines": 11,
+      "bytes": 5593,
+      "functions": [
+        "patchOpponentReport",
+        "bindOpponentPreparation"
+      ],
+      "markers": [
+        {
+          "line": 4,
+          "text": "const name=id=>db.teams[id]?.name||id,person=id=>db.players[id]?.name||id,unknown=x=>x||'미상',labels=['기본 확인','패치 구분','빈도 패턴'],choices=Object.values(db.teams).filter(t=>t.id!==obser"
+        }
+      ],
+      "sha256": "93fba8dd3b238b545bf799c00e0fc52663801d48f036982829fddc1f16e95773"
+    },
+    {
+      "file": "src/artifact/ui-draft.js",
+      "lines": 189,
+      "bytes": 20151,
+      "functions": [
+        "openInteractiveDraft",
+        "openDraftPractice",
+        "officialSelectionText",
+        "officialLastGameRow",
+        "officialLastGameCard",
+        "openPendingOfficialSelection",
+        "openPendingOfficialDraft",
+        "draftUiClose",
+        "draftUiAdvanceAi",
+        "draftUiChampionState",
+        "draftUiMatch",
+        "draftUiPickSlot",
+        "draftUiBanSlot",
+        "draftUiSidePanel",
+        "draftUiFearlessStrip",
+        "draftUiSeriesMeta",
+        "draftUiSigned",
+        "draftUiEvidenceSources",
+        "draftUiPoolTop",
+        "draftUiStaffAdvice",
+        "draftUiOpponentIntent",
+        "draftUiGrid",
+        "draftUiRender",
+        "draftUiBind",
+        "draftUiBindGrid",
+        "draftUiLock"
+      ],
+      "markers": [
+        {
+          "line": 130,
+          "text": "const s=DRAFT_UI.state,rows=Object.values(s.db.patch.champions).filter(draftUiMatch).sort((a,b)=>championDisplayName(a).localeCompare(championDisplayName(b),'ko'));"
+        }
+      ],
+      "sha256": "378461f0a5b7dc97dbf50a2ae8315b4c338f83b4be02ae7c0ebb26d16e9ed2a1"
+    },
+    {
+      "file": "src/artifact/engine.js",
+      "lines": 493,
+      "bytes": 34262,
+      "functions": [
+        "newPS",
+        "alive",
+        "aliveOf",
+        "combatStats",
+        "combatStats0",
+        "power",
+        "teamPower",
+        "fightSkillProfile",
+        "fightSkillEngage",
+        "fightSkillPhase",
+        "fmtTime",
+        "log",
+        "expl",
+        "pname",
+        "addGold",
+        "addXp",
+        "killPlayer",
+        "fight",
+        "laneProgress",
+        "takeStructure",
+        "incomeTick",
+        "visionTick",
+        "visFor",
+        "pushFor",
+        "lanePS",
+        "laningTick",
+        "jungleTick",
+        "teamCall",
+        "objectiveTick",
+        "convert",
+        "macroTick",
+        "towerTick",
+        "simulateMatch"
+      ],
+      "markers": [
+        {
+          "line": 82,
+          "text": "const fb=st.firsts.blood===undefined; if(fb) st.firsts.blood=killer?killer.side:1-victim.side;"
+        },
+        {
+          "line": 103,
+          "text": "if(ctx.defender!==undefined) mult[ctx.defender]*=1.15;"
+        },
+        {
+          "line": 174,
+          "text": "lanes.sort((a,b)=>laneProgress(en,b)-laneProgress(en,a)+(st.rng.dec.next()-0.5)*1.5);"
+        },
+        {
+          "line": 181,
+          "text": "const ft=st.firsts.tower===undefined; if(ft)st.firsts.tower=side;"
+        },
+        {
+          "line": 352,
+          "text": "st.sides[w].dragons.push(type); o.dragonIdx++; if(st.firsts.dragon===undefined)st.firsts.dragon=w;"
+        },
+        {
+          "line": 367,
+          "text": "if(st.firsts.baron===undefined)st.firsts.baron=w;"
+        },
+        {
+          "line": 380,
+          "text": "if(st.firsts.baron===undefined)st.firsts.baron=w;"
+        },
+        {
+          "line": 409,
+          "text": "const r=fight(st,'mid',att===0?[aliveOf(st,0),aliveOf(st,1)]:[aliveOf(st,0),aliveOf(st,1)],{label:deep?'수성 한타':'중앙 한타',defender:deep?def:undefined});"
+        },
+        {
+          "line": 424,
+          "text": "const hunters=al.slice().sort(()=>R.dec.next()-0.5).slice(0,Math.min(3,al.length));"
+        },
+        {
+          "line": 491,
+          "text": "st.log.sort((a,b)=>a.t-b.t||a.sec-b.sec);"
+        }
+      ],
+      "sha256": "14840853f5b73e8e9f16458a0484b38f2dd7892b190214edcd62919b54def4b4"
+    },
+    {
+      "file": "src/artifact/app.js",
+      "lines": 222,
+      "bytes": 18244,
+      "functions": [
+        "idb",
+        "idbGet",
+        "idbSet",
+        "loadDB",
+        "persistWorldSnapshot",
+        "saveDB",
+        "switchSaveSlot",
+        "freshInternalSeed",
+        "grpAvg",
+        "ovrTag",
+        "mySeasonKey",
+        "curS",
+        "sName",
+        "nextMine",
+        "phaseText",
+        "viewSeason",
+        "chapters",
+        "controlsFor",
+        "renderReport"
+      ],
+      "markers": [
+        {
+          "line": 6,
+          "text": "let SLOT=(()=>{try{return localStorage.getItem(STORAGE_NS+'-slot')||'1'}catch(e){return '1'}})();"
+        },
+        {
+          "line": 12,
+          "text": "// 저장: IndexedDB(용량 큼) 우선, 안 되면 localStorage"
+        },
+        {
+          "line": 14,
+          "text": "if(DIRECT_FILE_PREVIEW||typeof indexedDB==='undefined')return rej(new Error('IndexedDB unavailable in direct-file preview'));"
+        },
+        {
+          "line": 41,
+          "text": "try{stored=localStorage.getItem(key)}catch(e){}"
+        },
+        {
+          "line": 42,
+          "text": "if(stored!==null&&stored!==undefined){"
+        },
+        {
+          "line": 48,
+          "text": "if(stored!==null&&stored!==undefined){"
+        },
+        {
+          "line": 67,
+          "text": "try{localStorage.removeItem(key)}catch(e){}"
+        },
+        {
+          "line": 69,
+          "text": "try{localStorage.setItem(key,str)}catch(e2){return false}"
+        },
+        {
+          "line": 71,
+          "text": "try{localStorage.setItem(STORAGE_NS+'-meta-'+slot,meta)}catch(e){}"
+        },
+        {
+          "line": 104,
+          "text": "try{localStorage.setItem(STORAGE_NS+'-slot',SLOT)}catch(e){}"
+        },
+        {
+          "line": 125,
+          "text": "const a=new Uint32Array(2);try{crypto.getRandomValues(a);return `${prefix}-${a[0].toString(36)}${a[1].toString(36)}`}catch(e){return `${prefix}-${Date.now().toString(36)}-${Math.ra"
+        },
+        {
+          "line": 135,
+          "text": "function mySeasonKey(){const w=DB.world,rid=DB.teams[managedTeamId(DB)].region;const ks=Object.values(w.seasons).filter(s=>s.region===rid).sort((a,b)=>(b.split||0)-(a.split||0));re"
+        },
+        {
+          "line": 176,
+          "text": "const ss=Object.values(w.seasons).filter(s=>stepOf(DB,s)===i).sort((a,b)=>(b.region===myR)-(a.region===myR)||(a.div||1)-(b.div||1)||(DB.competitions[a.comp].tier==='low')-(DB.compe"
+        },
+        {
+          "line": 198,
+          "text": "const sig=r.signings.slice().sort((a,b)=>(b.team===mineT)-(a.team===mineT));"
+        },
+        {
+          "line": 211,
+          "text": "<div><h4>FA 영입 (${r.signings.length})</h4>${sig.filter(x=>!x.fill).sort((a,b)=>(b.team===mineT)-(a.team===mineT)||b.salary-a.salary).slice(0,10).map(x=>`<div class=\"arow ${x.team=="
+        },
+        {
+          "line": 212,
+          "text": "<div><h4>재계약 (${(r.resign||[]).length}) · 계약 만료 (${(r.expired||[]).length})</h4>${(r.resign||[]).filter(x=>x.team===mineT).concat((r.resign||[]).filter(x=>x.team!==mineT).sort((a,b"
+        }
+      ],
+      "sha256": "973921378f26d3a1bd7d40e665b1da8883b04dcbe2e7cd0cede1c542bec3426e"
+    },
+    {
+      "file": "src/artifact/ui-match-history.js",
+      "lines": 42,
+      "bytes": 8159,
+      "functions": [
+        "renderPublicMatchReview",
+        "renderRecordedGoldUse",
+        "analysisMatchPanel",
+        "bindAnalysisMatch"
+      ],
+      "markers": [
+        {
+          "line": 39,
+          "text": "tabs.forEach((b,i)=>{b.onclick=()=>activate(b);b.onkeydown=e=>{let n;if(e.key==='ArrowRight')n=(i+1)%tabs.length;if(e.key==='ArrowLeft')n=(i+tabs.length-1)%tabs.length;if(e.key==='"
+        }
+      ],
+      "sha256": "69bd08bebde07b291e77a46c3083433a9a06c73b17e0f646ab94aec9c29d92f9"
+    },
+    {
+      "file": "src/artifact/meta-opponent.js",
+      "lines": 61,
+      "bytes": 6090,
+      "functions": [
+        "opponentReportContext",
+        "observedMetaDate",
+        "opponentPreparation"
+      ],
+      "markers": [
+        {
+          "line": 48,
+          "text": "out.players=[...players.values()].filter(p=>!scoped.player||p.id===scoped.player).sort((a,b)=>Number(b.current)-Number(a.current)||b.appearances-a.appearances||a.id.localeCompare(b"
+        },
+        {
+          "line": 49,
+          "text": "out.groups=[...groups.values()].sort((a,b)=>b.g-a.g||b.to.localeCompare(a.to)||JSON.stringify(a).localeCompare(JSON.stringify(b)));"
+        },
+        {
+          "line": 58,
+          "text": "for(const f of [...frequencies.values()].sort((a,b)=>b.g-a.g||a.player.localeCompare(b.player)||a.champ.localeCompare(b.champ)).slice(0,3))out.patterns.push({...f,patches:f.patches"
+        }
+      ],
+      "sha256": "0c2b5201e4cdc2aa4f9590e2c0e0a3abc4025a6821c325b7a728277e12bb7c9f"
+    },
+    {
+      "file": "src/artifact/finance-estate.js",
+      "lines": 49,
+      "bytes": 3202,
+      "functions": [
+        "financeClosureReservedAllocation",
+        "settleClubEstateRecovery",
+        "clubEstateRecoveryPlan",
+        "processClubEstateRecoveries"
+      ],
+      "markers": [],
+      "sha256": "8acfde7f0f0f9166a1c3570c4f845ef26ac92bc632589a080fdf89ec6bf1a661"
+    },
+    {
+      "file": "src/artifact/meta-practice.js",
+      "lines": 62,
+      "bytes": 4572,
+      "functions": [
+        "validPracticePicks",
+        "preparePracticeEvidence",
+        "practiceRowMatches",
+        "practicePickMatches",
+        "ownPracticeComparison",
+        "ownPracticeFacets"
+      ],
+      "markers": [
+        {
+          "line": 9,
+          "text": "const team=db.teams[tid];if(!managerControlsSquad(db,team)||(team.practiceEvidence!==undefined&&!Array.isArray(team.practiceEvidence)))continue;"
+        },
+        {
+          "line": 61,
+          "text": "return {teams,players:[...players].sort()};"
+        }
+      ],
+      "sha256": "6a415363a730a6f0f2854632103fbe0f338cda149136d90fd8409852ba1bc739"
+    },
+    {
+      "file": "src/artifact/state-player-actions.js",
+      "lines": 291,
+      "bytes": 18437,
+      "functions": [
+        "playerActionAuthority",
+        "playerActionTeam",
+        "playerActionFinance",
+        "playerActionSnapshot",
+        "playerActionTerms",
+        "validatePlayerSignAction",
+        "validatePlayerTransferAction",
+        "validatePlayerReleaseAction",
+        "validatePlayerOptionAction",
+        "playerActionCanonical",
+        "playerActionChanges",
+        "applyPlayerSignAction",
+        "applyPlayerTransferAction",
+        "applyPlayerReleaseAction",
+        "applyPlayerOptionAction"
+      ],
+      "markers": [
+        {
+          "line": 22,
+          "text": "const ids=Array.from(new Set([action.teamId||null,action.fromId||null,source])).filter(Boolean).sort();"
+        },
+        {
+          "line": 35,
+          "text": "return t?{id,active:t.active!==false,roster:(t.roster||[]).slice().sort(),"
+        }
+      ],
+      "sha256": "4c492d3c29507013d34994b941baefef1e99103713e37da2d551b5ff0b7ce9e3"
+    },
+    {
+      "file": "src/artifact/scouting-ai-ops.js",
+      "lines": 135,
+      "bytes": 6759,
+      "functions": [
+        "aiScoutingTargetRegion",
+        "aiScoutingUnitCost",
+        "aiScoutingVisitGain",
+        "aiScoutingPublicFit",
+        "aiScoutingEligibleTarget",
+        "aiScoutingLeagueKeys",
+        "aiScoutingCoveragePlan",
+        "aiRunScoutingOperation",
+        "performAiScoutingOperation",
+        "aiRunActiveScouting"
+      ],
+      "markers": [
+        {
+          "line": 38,
+          "text": ".map(c=>c.id).sort();"
+        },
+        {
+          "line": 55,
+          "text": ".sort((a,b)=>b-a).slice(0,3);"
+        },
+        {
+          "line": 60,
+          "text": ".sort((a,b)=>regionScore(b)-regionScore(a)||a.localeCompare(b))]"
+        },
+        {
+          "line": 89,
+          "text": ".sort((a,b)=>b.score-a.score||a.p.id.localeCompare(b.p.id)),"
+        }
+      ],
+      "sha256": "f3c4f36441bde098f07db481f594fad7ce4805482f4549593687a8cea79626f9"
+    },
+    {
+      "file": "src/artifact/local-service.js",
+      "lines": 134,
+      "bytes": 9334,
+      "functions": [
+        "localServicePolicy",
+        "localServiceRegistration",
+        "checkLocalServiceQualification",
+        "processLocalServiceDaily",
+        "localChoiceSeason",
+        "projectedPlayerLocal",
+        "projectedPlayerIsLocal",
+        "localChoiceOptions",
+        "validateStoredLocalService",
+        "activateLocalChoices",
+        "aiChooseLocalEligibility"
+      ],
+      "markers": [
+        {
+          "line": 68,
+          "text": "!Number.isInteger(row.until)||(row.signed!==undefined&&!Number.isInteger(row.signed)))))"
+        }
+      ],
+      "sha256": "794173227f82c8e1e43de27c638f0c71fff18caabb03756fe63d6686f09c673b"
+    },
+    {
+      "file": "src/artifact/ui-analysis.js",
+      "lines": 67,
+      "bytes": 7105,
+      "functions": [
+        "analysisControlledTeams",
+        "analysisSelectedTeam",
+        "analysisFilter",
+        "analysisPatchChoices",
+        "viewAnalysis",
+        "analysisRefresh",
+        "bindAnalysis"
+      ],
+      "markers": [
+        {
+          "line": 13,
+          "text": "return {team:team?.id,comp:ANALYSIS_SET.comp&&ANALYSIS_SET.comp!=='ALL'?ANALYSIS_SET.comp:undefined,patch:ANALYSIS_SET.patch==='CURRENT'?db.patch.id:"
+        },
+        {
+          "line": 14,
+          "text": "ANALYSIS_SET.patch==='ALL'?undefined:ANALYSIS_SET.patch,"
+        },
+        {
+          "line": 15,
+          "text": "position:ROLES.includes(ANALYSIS_SET.position)?ANALYSIS_SET.position:undefined,"
+        },
+        {
+          "line": 16,
+          "text": "from:validDate&&period?addDays(today,-period):undefined,"
+        },
+        {
+          "line": 17,
+          "text": "to:validDate&&period?today:undefined};"
+        },
+        {
+          "line": 23,
+          "text": "return [...patches].sort();"
+        },
+        {
+          "line": 29,
+          "text": "const filter=analysisFilter(DB,team),patches=analysisPatchChoices(DB,team),comps=[...new Set(publicTierSourceGroups(DB).map(g=>g.comp).filter(Boolean))].sort(),"
+        }
+      ],
+      "sha256": "95e122c994fa6fcc145a54bf0331b13de68e739d924068c29196d11a0217263f"
+    },
+    {
+      "file": "src/artifact/series.js",
+      "lines": 153,
+      "bytes": 14355,
+      "functions": [
+        "teamComposure",
+        "gameMVP",
+        "playerGameRating",
+        "chooseSide",
+        "resolveFirstSelection",
+        "seriesSelectionPrompt",
+        "seriesApplyManagedSelection",
+        "seriesDraftSnapshot",
+        "seriesGameSetup",
+        "createSeriesSession",
+        "seriesSessionRng",
+        "seriesSessionDone",
+        "seriesSessionPrepareGame",
+        "seriesResultLines",
+        "playSeriesSessionGame",
+        "seriesSessionResult",
+        "simulateSeries",
+        "replayGame"
+      ],
+      "markers": [],
+      "sha256": "67a33366c2b244a2ca7f315ee2f70420e6efd7243873403a59392d095a81d3ec"
+    },
+    {
+      "file": "src/artifact/ui-roster.js",
+      "lines": 105,
+      "bytes": 17371,
+      "functions": [
+        "squadUiCanManage",
+        "squadObservationDb",
+        "squadObservedDetail",
+        "squadEditState",
+        "rosterPlanPanel",
+        "discardSquadEdit",
+        "applySquadEdit",
+        "viewSquad",
+        "bindSquad"
+      ],
+      "markers": [
+        {
+          "line": 9,
+          "text": "for(const id of t.roster||[]){const r=DB.scout?.[id];if(r!==undefined)view.scout[id]=r&&typeof r==='object'?{...r}:r}"
+        },
+        {
+          "line": 47,
+          "text": "ps=roster.map(id=>DB.players[id]).filter(Boolean).sort((a,b)=>ROLES.indexOf(a.role)-ROLES.indexOf(b.role)||obsOvr(observationDb,b)-obsOvr(observationDb,a)||a.id.localeCompare(b.id)"
+        }
+      ],
+      "sha256": "0116ae9db2a9c6941f92cf83e1a4bf60d8f13fd7bee501adb596a152bedd0360"
+    },
+    {
+      "file": "src/artifact/season.js",
+      "lines": 250,
+      "bytes": 17353,
+      "functions": [
+        "finalSeason",
+        "divName",
+        "leagueComp",
+        "startWorldSeason",
+        "seasonLastDate",
+        "compactSeason",
+        "advanceStep",
+        "placements",
+        "regionPower",
+        "teamStrength",
+        "startInternational",
+        "internationalPolicy",
+        "recordInternationalResults",
+        "internationalRegionRatings",
+        "latestWorldsRank",
+        "compareInternationalRegions",
+        "activeSeasons",
+        "nextDate",
+        "nextTeamMatch",
+        "daysUntil",
+        "trainingRecommendation",
+        "pendingOfficialRefs",
+        "pendingOfficialSession",
+        "pendingOfficialSelectionSetup",
+        "applyPendingOfficialSelection",
+        "pendingOfficialDraftSetup",
+        "resolvePendingOfficialMatch",
+        "playWorldDay",
+        "news",
+        "stepOf"
+      ],
+      "markers": [
+        {
+          "line": 31,
+          "text": "const intlSteps=tm=>{const tops=I.filter(i=>i.timing===tm&&i.tier!=='low').sort((a,b)=>(a.prestige||1)-(b.prestige||1)),lows=I.filter(i=>i.timing===tm&&i.tier==='low');"
+        },
+        {
+          "line": 95,
+          "text": "function regionPower(db,R){const h=(db.global&&db.global.power||{})[R.id];return h!==undefined?h:R.strength}"
+        },
+        {
+          "line": 99,
+          "text": "const regs=Object.values(db.regions).filter(R=>!it.zone||(INTL_ZONES[it.zone]||[]).includes(R.id)).sort((a,b)=>regionPower(db,b)-regionPower(db,a));"
+        },
+        {
+          "line": 147,
+          "text": ".sort((a,b)=>elimReach(db,s,b)-elimReach(db,s,a)||(base.indexOf(a)-base.indexOf(b)));"
+        },
+        {
+          "line": 167,
+          "text": "if(!rows.length)return Infinity;const newestYear=Math.max(...rows.map(e=>e.year)),e=rows.filter(x=>x.year===newestYear).sort((a,b)=>a.eventId.localeCompare(b.eventId)).at(-1);"
+        },
+        {
+          "line": 247,
+          "text": "if(s.step!==undefined)return s.step;"
+        }
+      ],
+      "sha256": "34961c37ed9fe55c0afb3dd0f84d2f45d94f46f05a231ea367a83afc596ed621"
+    },
+    {
+      "file": "src/artifact/ui-squad-preparation.js",
+      "lines": 23,
+      "bytes": 4368,
+      "functions": [
+        "squadPublicPreparation",
+        "squadPreparationTactics",
+        "squadPreparationTraining"
+      ],
+      "markers": [],
+      "sha256": "d6c4f160d105431ecbeaae6101133323c073384a232724ded52a6405449b0baf"
+    },
+    {
+      "file": "src/artifact/champion-data.js",
+      "lines": 82,
+      "bytes": 9264,
+      "functions": [
+        "championId",
+        "championByName",
+        "championLabel",
+        "championDisplayName",
+        "generatedChampionVisual",
+        "cleanChampionSourceText",
+        "sourceSkillControl",
+        "normalizeSourceSkill",
+        "mergeChampionSource",
+        "applyChampionSource",
+        "enrichChampion"
+      ],
+      "markers": [
+        {
+          "line": 63,
+          "text": "if(b.mr===undefined)b.mr=c.cls==='marksman'?30:c.cls==='mage'||c.cls==='enchanter'?30:32;"
+        },
+        {
+          "line": 64,
+          "text": "if(b.mrg===undefined)b.mrg=c.cls==='marksman'?1.3:2.05;"
+        },
+        {
+          "line": 65,
+          "text": "if(b.asg===undefined)b.asg=Math.round((1.5+(h%31)/10)*100)/100;"
+        },
+        {
+          "line": 66,
+          "text": "if(b.resource===undefined)b.resource=manaFree?0:Math.round((c.cls==='mage'||c.cls==='enchanter'?430:330)+(h%121));"
+        },
+        {
+          "line": 67,
+          "text": "if(b.resourceg===undefined)b.resourceg=b.resource?Math.round((25+(h%31))*10)/10:0;"
+        },
+        {
+          "line": 68,
+          "text": "if(b.resourceRegen===undefined)b.resourceRegen=b.resource?Math.round((6+(h%45)/10)*10)/10:0;"
+        }
+      ],
+      "sha256": "aa2fd33316757c4ac8c86d5bcad27d7b8f5b8739dbd3e3e4eb0f696ae84e105b"
+    },
+    {
+      "file": "src/artifact/ui-market-staff.js",
+      "lines": 44,
+      "bytes": 8989,
+      "functions": [
+        "sponsorBlock",
+        "coachBlock",
+        "bindClubOfficeControls",
+        "staffEmploymentCard"
+      ],
+      "markers": [
+        {
+          "line": 8,
+          "text": "const dept=(d)=>members.filter(s=>staffDepartment(s.role)===d),cards=members.slice().sort((a,b)=>staffDepartment(a.role).localeCompare(staffDepartment(b.role))).map(x=>staffEmploym"
+        },
+        {
+          "line": 13,
+          "text": "const candidates=staffMarketCandidates(DB,t).filter(s=>!MK.staffRole||MK.staffRole==='ALL'||s.role===MK.staffRole).sort((a,b)=>staffObservation(DB,t,b).estimate-staffObservation(DB"
+        },
+        {
+          "line": 15,
+          "text": "return `<div class=\"fin\"><div><span>헤드코치</span><b>플레이어</b><small>최종 스포츠 결정</small></div><div><span>부서 정원</span><b>${limits}</b><small>범용 수석코치 없음</small></div><div><span>스태프 효과</spa"
+        },
+        {
+          "line": 24,
+          "text": "const preview=previewWorldAction(DB,{type:found.team?.id===t.id?'staff.renew':'staff.sign',actor:'manager',teamId:t.id,sid,replaceSid:document.querySelector(`[data-staff-replace=\"$"
+        }
+      ],
+      "sha256": "025a8a3a0075f1db6fadec70c76f86c91377b86d31e540a98b74d882eb31a72c"
+    },
+    {
+      "file": "src/artifact/ui-analysis-comparison.js",
+      "lines": 22,
+      "bytes": 6161,
+      "functions": [
+        "analysisTierComparisonPanel",
+        "bindAnalysisTierSources"
+      ],
+      "markers": [],
+      "sha256": "2ae91009c5bffbbf2945a6f2f257230c422c42b026691cfabe2099b48a210f54"
+    },
+    {
+      "file": "src/artifact/scrim-partner.js",
+      "lines": 129,
+      "bytes": 6052,
+      "functions": [
+        "scrimOfficialRivalWindow",
+        "scrimRivalCalendar",
+        "scrimRecentResults",
+        "scrimClubIntent",
+        "scrimPartnerInterest",
+        "scrimPartnerAssessment"
+      ],
+      "markers": [
+        {
+          "line": 31,
+          "text": "const key=[m.a,m.b].sort().join('|'),old=rivals.get(key);"
+        },
+        {
+          "line": 32,
+          "text": "if(old===undefined||Math.abs(days)<Math.abs(old))rivals.set(key,days);"
+        },
+        {
+          "line": 48,
+          "text": "recent.sort((a,b)=>b.date.localeCompare(a.date));"
+        },
+        {
+          "line": 113,
+          "text": "const key=[t.id,other.id].sort().join('|'),rivalDays=rivals?"
+        }
+      ],
+      "sha256": "46b7a202e93b76ba4a19eda48530322b55a3c0acc871db2ab9b44e0b1eea1e8e"
+    },
+    {
+      "file": "src/artifact/ui-draft-analysis.js",
+      "lines": 19,
+      "bytes": 4551,
+      "functions": [
+        "draftUiAnalysisContent",
+        "draftUiAnalysisPanel",
+        "draftUiCompositionHistory"
+      ],
+      "markers": [],
+      "sha256": "9cf8f40961821013f8bea322d6c10b5dca126052881db3a5025017a6ad802835"
+    },
+    {
+      "file": "src/artifact/player-representation.js",
+      "lines": 127,
+      "bytes": 7613,
+      "functions": [
+        "playerAgent",
+        "ensurePlayerAgent",
+        "negotiationRepresentativeProfile",
+        "playerRepresentativeText",
+        "oralRolePromiseStatus",
+        "effectiveRolePromiseStatus",
+        "closeOralRolePromise",
+        "rolePromiseActionSnapshot",
+        "validateRolePromiseOwner",
+        "applyOralRolePromise",
+        "oralRoleRevisionConsent",
+        "aiSportingRolePromise"
+      ],
+      "markers": [],
+      "sha256": "94875b49ae3be90745083b8a1e4e0cb3b5a75149fce3768747b21db8407ad529"
+    },
+    {
+      "file": "src/artifact/practice-resources.js",
+      "lines": 108,
+      "bytes": 6804,
+      "functions": [
+        "practiceDay",
+        "consumeScrimPractice",
+        "trainingTimeMultiplier",
+        "runDailyPractice",
+        "scrimDailyCapacity",
+        "scrimReadiness"
+      ],
+      "markers": [
+        {
+          "line": 56,
+          "text": "const pool=Object.entries(p.pool||{}).sort((a,b)=>b[1].mastery-a[1].mastery).slice(0,3);"
+        }
+      ],
+      "sha256": "43e284428f47238b3360e91b7c1d4ae686a9e96e92f698e0ae01f67f1a4ef5d0"
+    },
+    {
+      "file": "src/artifact/transfer-payments.js",
+      "lines": 151,
+      "bytes": 9770,
+      "functions": [
+        "normalizeTransferFeePlan",
+        "transferDealRows",
+        "transferCounter",
+        "recordTransferAppearances",
+        "writeTransferDeal",
+        "settleTransferSigningFee",
+        "transferInvoiceReview",
+        "validateTransferPayment",
+        "processTransferPayments",
+        "transferPaymentExposure",
+        "financeCommittedTransferCash",
+        "validateStoredTransferState"
+      ],
+      "markers": [],
+      "sha256": "816f57f1634ed3dd0bbc633e75de17db67ec6159dfc6e3f32492e3ad061b21d6"
+    },
+    {
+      "file": "src/artifact/system-source.js",
+      "lines": 2,
+      "bytes": 177327,
+      "functions": [],
+      "markers": [],
+      "sha256": "0067a197dd54541fec3bc15a96fddec52ed19ea85eb43a6d2eb3cb5d7759d836"
+    },
+    {
+      "file": "src/artifact/draft-preparation.js",
+      "lines": 31,
+      "bytes": 2068,
+      "functions": [
+        "draftPreparationReport"
+      ],
+      "markers": [
+        {
+          "line": 25,
+          "text": "}).sort((a,b)=>b.score-a.score||ROLES.indexOf(a.role)-ROLES.indexOf(b.role));"
+        },
+        {
+          "line": 28,
+          "text": "rows.sort((a,b)=>b.best.score-a.best.score||a.champ.localeCompare(b.champ));"
+        }
+      ],
+      "sha256": "6e031fab26717ab1f7c2edd5f65e82f4c60d91b94d729fefadbcdeb7de5a50cc"
+    },
+    {
+      "file": "src/artifact/staff-registration.js",
+      "lines": 107,
+      "bytes": 7839,
+      "functions": [
+        "competitionStaffPolicy",
+        "staffRegistrationSeason",
+        "competitionStaffEntry",
+        "staffRegistrationOpen",
+        "staffRegistrationErrors",
+        "staffRegistrationSnapshot",
+        "initializeCompetitionStaffRegistrations",
+        "competitionStaffObservedContributions",
+        "competitionStaffCoverageScore",
+        "aiCompetitionStaffPlan",
+        "aiReviewCompetitionStaffRegistrations",
+        "competitionStaffMatchRoster",
+        "validateStoredStaffRegistrations"
+      ],
+      "markers": [
+        {
+          "line": 59,
+          "text": "return COMPETITION_STAFF_COVERAGE_WEIGHTS.reduce((n,w,i)=>n+w*staffWeightedValues(contributions.map(xs=>xs[i]).sort((a,b)=>b-a)),0);"
+        },
+        {
+          "line": 64,
+          "text": ".map(x=>({id:x.id,values:competitionStaffObservedContributions(db,t,x)})).sort((a,b)=>a.id.localeCompare(b.id)),chosen=[],values=[];"
+        }
+      ],
+      "sha256": "dfc7ef5f5a707dc098212c8f4e4cc527c01580a5ff73521e135889fe14a40104"
+    },
+    {
+      "file": "src/artifact/contract-market-behavior.js",
+      "lines": 85,
+      "bytes": 5373,
+      "functions": [
+        "unsignedSeasonCareerRisk",
+        "offerAcceptanceThreshold",
+        "contractOfferReasonable",
+        "contractTransferConsent",
+        "contractMutualTerminationTerms"
+      ],
+      "markers": [],
+      "sha256": "f3d0b3899bb2d036835b5abb30cad05bbba89ee9cf0ec087e765088d359c8925"
+    },
+    {
+      "file": "src/artifact/ui-initial-candidates.js",
+      "lines": 38,
+      "bytes": 8254,
+      "functions": [
+        "initialCandidateUiState",
+        "initialCandidateView",
+        "initialCandidatePage",
+        "initialCandidateControls",
+        "initialCandidateDetail",
+        "bindInitialCandidateExplorer"
+      ],
+      "markers": [
+        {
+          "line": 14,
+          "text": "valued.sort((a,b)=>{const cmp=typeof a.value==='string'?a.value.localeCompare(b.value,'ko'):a.value-b.value;return direction*cmp||a.p.id.localeCompare(b.p.id)});"
+        },
+        {
+          "line": 18,
+          "text": "function initialCandidateControls(page){return `<div class=\"controls\"><label>선수 검색<input id=\"init-query\" type=\"search\" value=\"${esc(INITMK.q)}\" placeholder=\"이름 검색\"></label><label>기"
+        }
+      ],
+      "sha256": "bb5dd88fcd68b2ae203b5a98485f1f2c1da4ef989464f071438f8cd2eb339634"
+    },
+    {
+      "file": "src/artifact/scouting-ai.js",
+      "lines": 145,
+      "bytes": 8132,
+      "functions": [
+        "aiScoutingOwner",
+        "ensureAiScoutingState",
+        "aiBaseScoutKnowledge",
+        "ensureAiScoutReport",
+        "aiScoutUncertainty",
+        "aiPublicMarketObservation",
+        "initialAiMarketDossierSignal",
+        "seedInitialAiScoutReport",
+        "observeAiPlayer",
+        "aiScoutReport",
+        "ageAiScoutReports",
+        "scoutAiFromDay"
+      ],
+      "markers": [],
+      "sha256": "c654412ff8c1270a9d8fd5147de72634891fd19d6e5814ee7b367e6717519403"
+    },
+    {
+      "file": "src/artifact/meta-analyst.js",
+      "lines": 45,
+      "bytes": 4462,
+      "functions": [
+        "analystReportSupport",
+        "ownAnalystInterpretation"
+      ],
+      "markers": [
+        {
+          "line": 28,
+          "text": "const patchRows=[...patches.values()].sort((a,b)=>b.g-a.g||a.patch.localeCompare(b.patch)),patchIds=new Set([...patches.keys(),...practicePatches]);"
+        }
+      ],
+      "sha256": "7f642d520efd77c9d6fb0284185b05f5c279840269269771e3b11c7813f8af28"
+    },
+    {
+      "file": "src/artifact/meta-draft-order.js",
+      "lines": 37,
+      "bytes": 3127,
+      "functions": [
+        "validDraftSequence",
+        "copyDraftSequence",
+        "recordedDraftSequence",
+        "draftOrderInsights"
+      ],
+      "markers": [
+        {
+          "line": 11,
+          "text": "const equal=(a,b)=>Array.isArray(b)&&JSON.stringify(a.slice().sort())===JSON.stringify(b.slice().sort());"
+        },
+        {
+          "line": 35,
+          "text": "out.preceding=[...partners.values()].sort((a,b)=>b.g-a.g||a.champ.localeCompare(b.champ)).slice(0,8);"
+        }
+      ],
+      "sha256": "f041f41b7ec21f25b1b6292add20e94aa64c2d602ebcef83f654ef67b4655b99"
+    },
+    {
+      "file": "src/artifact/ui-draft-history.js",
+      "lines": 21,
+      "bytes": 3116,
+      "functions": [
+        "renderRecordedDraftReview",
+        "bindRecordedDraftReview"
+      ],
+      "markers": [],
+      "sha256": "7f6980d59d6ab50b8dc50abe5fa8bfb6477bab2e979ac53905dbfdafd5082875"
+    },
+    {
+      "file": "src/artifact/contract-window.js",
+      "lines": 212,
+      "bytes": 11642,
+      "functions": [
+        "contractWindowYear",
+        "contractWindowAnchorDate",
+        "contractWindowDates",
+        "contractExpiresThisSeason",
+        "contractHasPendingOption",
+        "contractAgreementStore",
+        "contractAgreementFor",
+        "contractClosingPayrollSnapshot",
+        "initOffseasonContractWindow",
+        "grantEarlyContact",
+        "earlyContactAllowed",
+        "contractWindowContactError",
+        "recordContractAgreement",
+        "aiRunExclusiveRenewals",
+        "exerciseExclusiveTeamOption",
+        "closeExclusiveContractWindow",
+        "advanceOffseasonContractDay",
+        "advanceOffseasonContractWindow"
+      ],
+      "markers": [
+        {
+          "line": 15,
+          "text": "if(worlds.length)return worlds.map(endDate).sort().at(-1);"
+        },
+        {
+          "line": 19,
+          "text": "if(internationals.length)return internationals.map(endDate).sort().at(-1);"
+        }
+      ],
+      "sha256": "493055514c6becc347fc76033c2555b53f6b3364c26232ca4fdd562841fda377"
+    },
+    {
+      "file": "src/artifact/staff-contracts.js",
+      "lines": 154,
+      "bytes": 15554,
+      "functions": [
+        "staffTermYearsValid",
+        "staffTermUntil",
+        "initializeStaffContract",
+        "locateStaff",
+        "staffMarketCandidates",
+        "staffAskingSalary",
+        "staffExitFee",
+        "staffClosureClaims",
+        "releaseClosingStaff",
+        "staffObservation",
+        "staffConsent",
+        "validateStaffAction",
+        "staffActionSnapshot",
+        "recordStaffEvent",
+        "applyStaffAction",
+        "staffStateErrors",
+        "captureStaffActionJournal"
+      ],
+      "markers": [
+        {
+          "line": 129,
+          "text": "if(s.analysisFocus!==undefined&&!Object.hasOwn(ANALYSIS_CONTEXTS,s.analysisFocus))errors.push('잘못된 분석가 전문성: '+s.id);"
+        },
+        {
+          "line": 130,
+          "text": "if(s.specialties!==undefined&&(!s.specialties||typeof s.specialties!=='object'||Array.isArray(s.specialties)||Object.entries(s.specialties).some(([r,v])=>Object.hasOwn(STAFF_ROLES,"
+        },
+        {
+          "line": 131,
+          "text": "if(s.scoutRegions!==undefined&&(!s.scoutRegions||typeof s.scoutRegions!=='object'||Array.isArray(s.scoutRegions)||Object.values(s.scoutRegions).some(r=>!r||!Number.isFinite(r.knowl"
+        },
+        {
+          "line": 132,
+          "text": "if(s.career!==undefined&&(!Array.isArray(s.career)||s.career.some(r=>!r||!Number.isInteger(r.year)||typeof r.seasonId!=='string'||typeof r.teamId!=='string'||!STAFF_ROLES[r.role]||"
+        },
+        {
+          "line": 135,
+          "text": "if(r!==undefined&&(!r||!Number.isInteger(r.year)||!Number.isFinite(r.age)||!Number.isInteger(r.careerYears)||r.careerYears<0||!Number.isInteger(r.series)||r.series<0||!Number.isInt"
+        },
+        {
+          "line": 137,
+          "text": "if(s.ageReviewYear!==undefined&&!Number.isInteger(s.ageReviewYear))errors.push('잘못된 스태프 검토 연도: '+s.id);"
+        }
+      ],
+      "sha256": "291450863b03399e8d98e769224464e52620a2f91f89bbe1b4c28e84b46d8297"
+    },
+    {
+      "file": "src/artifact/ui-player-commitments.js",
+      "lines": 27,
+      "bytes": 3279,
+      "functions": [
+        "playerCommitmentsPanel",
+        "bindRolePromiseControls"
+      ],
+      "markers": [],
+      "sha256": "d2e511b53208d6a1e98f8a6b7045569d5f9f8e10b64da29e2714e13e9c8dc167"
+    },
+    {
+      "file": "src/artifact/ui-setup.js",
+      "lines": 66,
+      "bytes": 7862,
+      "functions": [
+        "normalizeManagerTeamSelection",
+        "managerTeamPicker",
+        "bindManagerTeamPicker",
+        "sel",
+        "regionCard",
+        "intlCard",
+        "seasonSetup"
+      ],
+      "markers": [
+        {
+          "line": 35,
+          "text": "<p class=\"hint\">가상 프로씬 공용어가 정착된 세계이므로 국적에 따른 언어 장벽은 없습니다. 국적/출신지역은 신인 생성·스카우팅 정체성에 사용되고, 공식 등록의 비로컬 판정은 별도 활성 로컬 자격을 사용합니다.</p>"
+        }
+      ],
+      "sha256": "7711310bd7ec60c5d43800e1279f2e20adc49d142d5fce3f0d081b459e98e53b"
+    },
+    {
+      "file": "src/artifact/match-history.js",
+      "lines": 46,
+      "bytes": 5174,
+      "functions": [
+        "publicMatchRecord",
+        "recordedEndingValid",
+        "recordedPublicMatch",
+        "recordedGoldLedgerValid",
+        "officialMatchReviews"
+      ],
+      "markers": [
+        {
+          "line": 12,
+          "text": "if(p.ending===undefined)return true; // Legacy observations remain original evidence."
+        },
+        {
+          "line": 26,
+          "text": "if(p.resources===undefined)return true; // Never invent missing historical costs."
+        },
+        {
+          "line": 45,
+          "text": "return out.sort((a,b)=>b.date.localeCompare(a.date)||a.key.localeCompare(b.key)||a.di-b.di||a.mi-b.mi||a.gi-b.gi);"
+        }
+      ],
+      "sha256": "a290da7abb786c8f42f91bbc71968442f1fe6094ea0369fdb6ed7540dbb52ac4"
+    },
+    {
+      "file": "src/artifact/medical.js",
+      "lines": 367,
+      "bytes": 20447,
+      "functions": [
+        "medicalPlanFor",
+        "medicalScrimRest",
+        "medicalOut",
+        "medicalAvailable",
+        "medicalPerformancePenalty",
+        "medicalContractRisk",
+        "medicalSummary",
+        "medicalCare",
+        "medicalExposure",
+        "medicalEmergencyCallup",
+        "medicalReplacementClause",
+        "medicalReplacementSafeToEnd",
+        "medicalReplacementCharge",
+        "medicalReplacementDailyTick",
+        "medicalEmergencyFASigning",
+        "startMedicalEvent",
+        "medicalScar",
+        "medicalHeal",
+        "medicalIncidentOdds",
+        "medicalDailyTick",
+        "medicalOffseasonRecovery"
+      ],
+      "markers": [
+        {
+          "line": 102,
+          "text": ".sort((a,b)=>lineupRoleScore(b,injured.role)-lineupRoleScore(a,injured.role));"
+        },
+        {
+          "line": 199,
+          "text": ".sort((a,b)=>{"
+        }
+      ],
+      "sha256": "9c5d23dfb9cd7f0ebdef4dbc6af223e2a61beaf23f1cbc97be4f9ffa4647d11d"
+    },
+    {
+      "file": "src/artifact/player-loan-market.js",
+      "lines": 76,
+      "bytes": 4513,
+      "functions": [
+        "aiReviewLoanMarket",
+        "aiLoanPurchaseProposal",
+        "aiReviewLoanDecisions"
+      ],
+      "markers": [
+        {
+          "line": 17,
+          "text": "const role=ROLES.slice().sort((a,b)=>{"
+        },
+        {
+          "line": 28,
+          "text": ".sort((a,b)=>b.value-a.value||a.p.id.localeCompare(b.p.id)).slice(0,8);"
+        }
+      ],
+      "sha256": "8713eb541e084696ceb516c2743f46185bacd6d135572fcc07cde011172c591d"
+    },
+    {
+      "file": "src/artifact/role-quest-match.js",
+      "lines": 81,
+      "bytes": 5391,
+      "functions": [
+        "matchQuestItems",
+        "roleQuestBootUpgrade",
+        "syncRoleQuestEquipment",
+        "matchQuestEvent",
+        "extendBotQuestBuild",
+        "roleQuestIncome",
+        "roleQuestTakedown",
+        "roleQuestWard",
+        "roleQuestObjectiveJoin",
+        "roleQuestSmite",
+        "upgradeSupportQuestItem"
+      ],
+      "markers": [
+        {
+          "line": 28,
+          "text": "const choice=systemChoiceBase(ps.patchRef,ps.champ,ps.role).items.filter(x=>!ps.itemPlan.includes(x.id)&&!ps.patchRef.itemDefs[x.id]?.tags?.includes('Boots')&&!ps.patchRef.itemDefs"
+        },
+        {
+          "line": 77,
+          "text": "const reward=Object.values(ps.patchRef.itemDefs||{}).filter(d=>d.active!==false&&d.from?.includes('3867')).sort((a,b)=>systemChoiceScore(ps.champ,b.effects||{},ps.role)-systemChoic"
+        }
+      ],
+      "sha256": "29ce026186ea801419cb8a369548cef21a5c969f08b9f17b804726934892532b"
+    },
+    {
+      "file": "src/artifact/ui-data.js",
+      "lines": 23,
+      "bytes": 2911,
+      "functions": [
+        "slotMeta",
+        "viewData",
+        "bindData"
+      ],
+      "markers": [
+        {
+          "line": 2,
+          "text": "function slotMeta(n){try{return JSON.parse(localStorage.getItem(STORAGE_NS+'-meta-'+n)||'null')}catch(e){return null}}"
+        }
+      ],
+      "sha256": "421404f6e353705ad32c496ece407f9570f010a866f27d7c47b71189a61f99c8"
+    },
+    {
+      "file": "src/artifact/transfer-market-rules.js",
+      "lines": 14,
+      "bytes": 846,
+      "functions": [
+        "transferMarketOpen",
+        "permanentTransferWindowError"
+      ],
+      "markers": [],
+      "sha256": "11939f62331144bafee591cd74383d896b9a0e268c2e5e9bdb83dc2f234e72ab"
+    },
+    {
+      "file": "src/artifact/world.js",
+      "lines": 278,
+      "bytes": 24168,
+      "functions": [
+        "worldSimulationSeed",
+        "genTactics",
+        "splitName",
+        "regionCfg",
+        "defaultWorldConfig",
+        "orgName",
+        "withActiveTeamReadIndex",
+        "activeTeams",
+        "isManagerSelectableTeam",
+        "managerSelectableTeams",
+        "genTeam",
+        "makeAcademy",
+        "reserveRequirement",
+        "promotionEligible",
+        "createDiv2",
+        "abolishDiv2",
+        "reconcileTier2Structure",
+        "markFranchised",
+        "deriveRegionPayScale",
+        "inferRegionPolicy",
+        "addRegion",
+        "buildWorld",
+        "managedTeamId",
+        "managedTeam",
+        "managedRecruitmentTeamId",
+        "managerControlsSquad",
+        "setManagedTeam",
+        "startCareer",
+        "validateConfig"
+      ],
+      "markers": [
+        {
+          "line": 175,
+          "text": "function markFranchised(db,R){const ts=activeTeams(db,R.id,1).sort((a,b)=>(b.fans||0)-(a.fans||0));ts.forEach((t,i)=>t.franchised=i<Math.ceil(ts.length/2))}"
+        },
+        {
+          "line": 184,
+          "text": "const pays=teams.map(t=>topFivePayroll(db,t)).filter(x=>x>0).sort((a,b)=>a-b),med=pays.length?pays[Math.floor(pays.length/2)]:Math.max(1,8*psOf(db,R.id)),disp=pays.length>1?pays[pa"
+        }
+      ],
+      "sha256": "41076b06ece7065b7ecc2518ed444ededfdf798b92b31da46964c89d78fea99a"
+    },
+    {
+      "file": "src/artifact/lineup.js",
+      "lines": 86,
+      "bytes": 6365,
+      "functions": [
+        "lineupRoleScore",
+        "validLineupPlayer",
+        "validateStartingLineup",
+        "bestStartingLineup",
+        "initializeDepthChart",
+        "starterFor",
+        "setDepthStarter",
+        "lineupAssignmentScore",
+        "aiReviewDepthChart"
+      ],
+      "markers": [],
+      "sha256": "a6371c9870a2e8440d49c36e1ee089cdd6b39d96c52e5cd9de72cc574025a20b"
+    },
+    {
+      "file": "src/artifact/systems.js",
+      "lines": 71,
+      "bytes": 6932,
+      "functions": [
+        "championSystemMetaProfile",
+        "systemEffects",
+        "systemChoiceScore",
+        "systemChoiceBase",
+        "selectItemBuild",
+        "selectStarterItem",
+        "itemCraftActions",
+        "itemPurchasePlan",
+        "runeChoiceScore",
+        "selectRunePage"
+      ],
+      "markers": [
+        {
+          "line": 37,
+          "text": "const ranked=options.map(x=>{const noise=((hashStr((p&&p.id||'')+'|'+c.id+'|'+role+'|'+x.id)%1000)/1000-.5)*.012;return {id:x.id,tier:x.tier,s:x.fit+noise-x.cost/140000+(x.tier==='"
+        },
+        {
+          "line": 42,
+          "text": "const rows=systemChoiceBase(patch,c,role).starters.filter(d=>Number.isFinite(patch.itemDefs[d.id].cost)&&patch.itemDefs[d.id].cost>=0&&patch.itemDefs[d.id].cost<=500).map(d=>({id:d"
+        },
+        {
+          "line": 64,
+          "text": "const bestIn=(style,slot)=>((style.slots&&style.slots[slot])||[]).filter(id=>patch.runeDefs?.[id]?.active!==false).map(id=>({id,s:runeChoiceScore(patch,c,p,role,id),slot})).sort((x"
+        },
+        {
+          "line": 65,
+          "text": "const ranked=styles.map(style=>{const picks=[0,1,2,3].map(slot=>bestIn(style,slot));return {style,picks,score:picks.every(Boolean)?picks.reduce((z,x)=>z+x.s,0):-Infinity}}).filter("
+        },
+        {
+          "line": 69,
+          "text": "const secondary=ranked.slice(1).map(x=>{const picks=x.picks.slice(1).filter(Boolean).sort((u,v)=>v.s-u.s).slice(0,2);return {style:x.style,picks,score:picks.length===2?picks.reduce"
+        }
+      ],
+      "sha256": "ba861a9635bd677398fc84fdd8067a4d1ba0d16372f1341168c7684255cabc10"
+    },
+    {
+      "file": "src/artifact/squad-preparation.js",
+      "lines": 89,
+      "bytes": 6353,
+      "functions": [
+        "squadPreparationSnapshot",
+        "validateSquadPreparation",
+        "captureSquadPreparationJournal"
+      ],
+      "markers": [
+        {
+          "line": 43,
+          "text": "x.training.focus!==undefined&&!Object.hasOwn(PRACTICE_FOCUS,x.training.focus))"
+        },
+        {
+          "line": 78,
+          "text": "present:Object.hasOwn(team,key),ref:team[key],value:team[key]===undefined?null:actionJournalClone(team[key])}))}));"
+        }
+      ],
+      "sha256": "24e7cfbdfd92d768eb80a799c3ce6f0a83258a00f059796bf7a8e28832c357ab"
+    },
+    {
+      "file": "src/artifact/ui-player-loans.js",
+      "lines": 54,
+      "bytes": 4924,
+      "functions": [
+        "playerLoanPanel",
+        "bindLoanControls",
+        "squadLoanPanel"
+      ],
+      "markers": [],
+      "sha256": "850fe4e9aec7c09605d5670f8b163d5d100c141830dafc2f6ba37aa6e448e0a0"
+    },
+    {
+      "file": "src/artifact/patch-content.js",
+      "lines": 51,
+      "bytes": 7530,
+      "functions": [
+        "generatedItemDef",
+        "generatedRuneDef",
+        "canRemoveItem",
+        "canRemoveRune",
+        "maybeSystemLifecycle",
+        "maybeChampionRework",
+        "maybeRuleChange",
+        "releaseTarget",
+        "maybeNewChampion"
+      ],
+      "markers": [
+        {
+          "line": 11,
+          "text": "const keys=['offense','defense','sustain','utility','haste','mobility','early','scaling'].sort(()=>rng.next()-.5),effects={};for(const k of keys.slice(0,kind==='keystone'?2:1))effe"
+        },
+        {
+          "line": 28,
+          "text": "if(diag.sampleGames>=20&&st.itemRemove<1&&rng.chance(.16)){const ev=Object.keys(db.patch.itemDefs||{}).map(id=>systemUsageEvidence(db,'item',id,diag.rows)).filter(x=>x.eligible>=15"
+        },
+        {
+          "line": 29,
+          "text": "if(diag.sampleGames>=20&&st.runeRemove<1&&rng.chance(.07)){const ev=Object.keys(db.patch.runeDefs||{}).map(id=>systemUsageEvidence(db,'rune',id,diag.rows)).filter(x=>x.eligible>=15"
+        },
+        {
+          "line": 34,
+          "text": "const scope=doBig?'major':'mid',cand=diag.champions.filter(x=>x.c&&!x.c.releaseDate).sort((a,b)=>a.pres-b.pres||a.wr-b.wr)[0]||rng.pick(diag.champions.filter(x=>x.c&&!x.c.releaseDa"
+        },
+        {
+          "line": 37,
+          "text": "for(const key of kitKeys.sort(()=>rng.next()-.5).slice(0,kN)){const old=c.kit[key],dir=rng.chance(.68)?1:-1,step=scope==='major'?rng.pick([1,1,2]):1,nv=clamp(old+dir*step,1,10);if("
+        },
+        {
+          "line": 42,
+          "text": "if(!rng.chance(major?.32:.025))return null;const opts=[['dragonRespawn',[5,6]],['baronBuff',[2.5,3,3.5]],['csGold',[21,22,23,24]],['killGold',[275,300,325]],['heraldSpawn',[14,15,1"
+        }
+      ],
+      "sha256": "057c2abe7ca7cf195971fea24330055017851ca794aaf2d5eae4935fa4471ed9"
+    },
+    {
+      "file": "src/artifact/ui-negotiations.js",
+      "lines": 19,
+      "bytes": 6697,
+      "functions": [
+        "contractTermsText",
+        "renderNegotiations",
+        "negotiationTermsFromDom",
+        "bindNegotiationControls"
+      ],
+      "markers": [],
+      "sha256": "cfff792b34e0d0ce9fee5ed587fe553d0a387aa44a4949da8d63d62318568513"
+    },
+    {
+      "file": "src/artifact/office-consultation.js",
+      "lines": 52,
+      "bytes": 3712,
+      "functions": [
+        "clubFormatPreferences",
+        "officeFormatConsultation"
+      ],
+      "markers": [
+        {
+          "line": 25,
+          "text": "return {teamId:t.id,preferred,vote,source:stated!==undefined?'submitted':manual?'abstain':'club',reason};"
+        }
+      ],
+      "sha256": "69791d5028a04c60b32dbeda5dfce6a270e5e728c9f0dd2e8d9fae563659f29c"
+    },
+    {
+      "file": "src/artifact/ui-patch.js",
+      "lines": 104,
+      "bytes": 31565,
+      "functions": [
+        "skillRangeText",
+        "patchValueText",
+        "patchFieldLabel",
+        "noteText",
+        "patchParticipantControls",
+        "patchBanAttributionCard",
+        "patchSideCoverageCard",
+        "patchCompositionCard",
+        "patchDraftOrderCard",
+        "patchAnalystCard",
+        "patchPracticeComparisonCard",
+        "patchOwnTacticCard",
+        "viewPatch",
+        "bindPatchParticipants",
+        "bindPatch"
+      ],
+      "markers": [
+        {
+          "line": 44,
+          "text": "const top=Object.entries(a.champions).filter(([,x])=>x.own>0).sort((x,y)=>y[1].own-x[1].own||x[0].localeCompare(y[0])).slice(0,5).map(([id,x])=>esc(name(id))+' '+x.own+'회').join(' "
+        },
+        {
+          "line": 80,
+          "text": "const rid=PSET.region==='GLOBAL'?null:PSET.region,{comps,patches,seasons,splits,leagues}=metaHistoryFacets(DB),today=DB.worldDate,from=PSET.period==='30'?addDays(today,-30):PSET.pe"
+        },
+        {
+          "line": 84,
+          "text": "if(!observed)rows.sort((a,b)=>(ranks.get(a.c.id)??2)-(ranks.get(b.c.id)??2));"
+        },
+        {
+          "line": 90,
+          "text": "const topSystem=(kind,defs)=>defs.map(d=>({d,e:systemUsageEvidence(DB,kind,d.id,sysRows)})).filter(x=>x.e.eligible>0).sort((a,b)=>b.e.usage-a.e.usage).slice(0,5).map(x=>esc(x.d.nam"
+        }
+      ],
+      "sha256": "344d6fbdbc3604627a0f07928e65cb1625932152b16a2f99ec969fc85729fde9"
+    },
+    {
+      "file": "src/artifact/first-selection.js",
+      "lines": 67,
+      "bytes": 4560,
+      "functions": [
+        "selectionLineup",
+        "selectionPatchValues",
+        "firstSelectionEvidence",
+        "draftPrefs",
+        "selectionDecisionReason",
+        "selectionDecisionSummary",
+        "recordedSelectionEvidence"
+      ],
+      "markers": [
+        {
+          "line": 26,
+          "text": "}).sort((a,b)=>b.fit-a.fit||a.id.localeCompare(b.id));"
+        },
+        {
+          "line": 29,
+          "text": "const opponentBest=rows.slice().sort((a,b)=>b.opponent-a.opponent||b.meta-a.meta)[0];"
+        }
+      ],
+      "sha256": "0c788ea7cfab33266e7610f312888c13d881df63dd3966570451c71604239331"
+    },
+    {
+      "file": "src/artifact/ui-registration.js",
+      "lines": 53,
+      "bytes": 6403,
+      "functions": [
+        "officialRegistrationPanel",
+        "bindOfficialRegistrationControls",
+        "competitionStaffRegistrationPanel"
+      ],
+      "markers": [],
+      "sha256": "b50f2c193c1de3fb3eb68928ee6605d97e9d2a5ece4f315e5f24543cb92f24fd"
+    },
+    {
+      "file": "src/artifact/roster.js",
+      "lines": 274,
+      "bytes": 18920,
+      "functions": [
+        "ensurePlayerEligibility",
+        "playerOriginRegion",
+        "playerActiveLocalRegion",
+        "legacyLocalForClub",
+        "isLocalPlayer",
+        "nonLocalLimitForTeam",
+        "teamNonLocalCount",
+        "localRegistrationError",
+        "contractedMoveSeason",
+        "contractedMoveCount",
+        "contractedMoveError",
+        "recordContractedMove",
+        "rosterRule",
+        "rosterRuleProfile",
+        "engineRosterRuleProfile",
+        "rosterRulesForTeam",
+        "parentTeamOf",
+        "reserveTeamsOf",
+        "organizationTeams",
+        "organizationRoster",
+        "rosterPlanState",
+        "validateRosterPlan",
+        "applyRosterPlan",
+        "rosterMoveCheck",
+        "aiManageOwnedReserve",
+        "marketReserveCallupDecision",
+        "validateMarketReserveCallup",
+        "applyMarketReserveCallup",
+        "aiMarketReserveCallups",
+        "playerRef",
+        "teamRef",
+        "detachPlayerFromRosters",
+        "removePlayerFromTeam",
+        "assignPlayerToTeam",
+        "rosterIntegrityErrors"
+      ],
+      "markers": [
+        {
+          "line": 167,
+          "text": "const first=(parent.roster||[]).map(id=>db.players[id]).filter(Boolean).sort((a,b)=>fit(a)-fit(b));"
+        },
+        {
+          "line": 168,
+          "text": "const second=(reserve.roster||[]).map(id=>db.players[id]).filter(Boolean).sort((a,b)=>fit(b)-fit(a));"
+        },
+        {
+          "line": 185,
+          "text": ".filter(p=>p.role===role).sort((x,y)=>playerOvr(y)-playerOvr(x))[0];"
+        }
+      ],
+      "sha256": "efdedc445c4c865e67468518945de49f8a763f20adba047fc48757b6d567fb57"
+    },
+    {
+      "file": "src/artifact/features.js",
+      "lines": 131,
+      "bytes": 8275,
+      "functions": [
+        "clubCanBeRelegated",
+        "realisticClubGoal",
+        "setGoals",
+        "evalGoals",
+        "sponsorMarketStrength",
+        "sponsorGoalFor",
+        "sponsorGoalLabel",
+        "sponsorGoalReached",
+        "sponsorAchievementBonus",
+        "sponsorOffers",
+        "sponsorExpectedValue",
+        "aiSelectSponsor",
+        "seasonAwards",
+        "hallOfFame"
+      ],
+      "markers": [
+        {
+          "line": 13,
+          "text": "const ts=activeTeams(db,R.id,1).sort((a,b)=>teamStrength(db,b.id)-teamStrength(db,a.id)), n=ts.length;"
+        },
+        {
+          "line": 103,
+          "text": "}).sort((a,b)=>b.score-a.score)[0].sp;"
+        },
+        {
+          "line": 117,
+          "text": "rows.sort((x,y)=>y.sc-x.sc); give('MVP',rows[0].pid,R.leagueName);"
+        },
+        {
+          "line": 122,
+          "text": "const best=db.teams[s.champion].roster.map(id=>[id,s.pstats[id]]).filter(x=>x[1]).sort((a,b)=>b[1].mvp-a[1].mvp||((b[1].k+b[1].a)/Math.max(1,b[1].d))-((a[1].k+a[1].a)/Math.max(1,a["
+        }
+      ],
+      "sha256": "d814dcc47f25a765bfcebe09e745264baa5944026f3e47ba3dde7724ed9996fd"
+    },
+    {
+      "file": "src/artifact/state-rollback.js",
+      "lines": 148,
+      "bytes": 7484,
+      "functions": [
+        "actionJournalClone",
+        "actionJournalRestoreObject",
+        "actionJournalTeamSnapshot",
+        "actionJournalRestoreTeam",
+        "actionJournalTargets",
+        "captureWorldActionJournal",
+        "worldActionScopeErrors"
+      ],
+      "markers": [
+        {
+          "line": 125,
+          "text": "}else if(newsRef===undefined)delete db.news;"
+        }
+      ],
+      "sha256": "1591117e72458abd1ee6ad36b229f95fd70161fd60d5cf0f2cee6280b50831b4"
+    },
+    {
+      "file": "src/artifact/meta.js",
+      "lines": 166,
+      "bytes": 13393,
+      "functions": [
+        "patchCache",
+        "clearPatchCache",
+        "rememberHistoricPatch",
+        "historicPatchCacheHit",
+        "metaIndexAdd",
+        "metaIndexAddRow",
+        "metaHistoryIndex",
+        "metaHistoryFacets",
+        "metaCacheRemember",
+        "currentPatchMetaSamples",
+        "metaFilterKey",
+        "metaSideMatches",
+        "metaRowsFiltered",
+        "recordMeta",
+        "metaTableFiltered",
+        "metaBanAttribution",
+        "championMetaInsights",
+        "metaTable"
+      ],
+      "markers": [
+        {
+          "line": 33,
+          "text": "if(value!==undefined&&value!==null&&value!=='')index.facetSets[key].add(value);"
+        },
+        {
+          "line": 61,
+          "text": "const sorted=key=>[...c.facetSets[key]].sort();"
+        },
+        {
+          "line": 65,
+          "text": "leagues:sorted('league'),teams:[...c.byTeam.keys()].sort(),players:[...c.byPlayer.keys()].sort()"
+        },
+        {
+          "line": 140,
+          "text": "const G=Math.max(1,rows.length);return Object.values(db.patch.champions).map(c=>{const s=st[c.id]||{p:0,w:0,b:0};return {c,p:s.p,b:s.b,w:s.w,pres:(s.p+s.b)/G,wr:s.p?s.w/s.p:null,sa"
+        },
+        {
+          "line": 149,
+          "text": "const sides=row.sides||[],flat=row.bans||[],known=sides.length===2&&sides.every(s=>typeof s.region==='string'&&(row.regions||[]).includes(s.region)&&Array.isArray(s.bans)&&s.bans.e"
+        },
+        {
+          "line": 161,
+          "text": "const top=o=>Object.entries(o).sort((a,b)=>b[1].g-a[1].g||b[1].w-a[1].w).slice(0,5);return {players:top(players),teams:top(teams),matchups:top(matchups),recent:recent.sort((a,b)=>a"
+        },
+        {
+          "line": 165,
+          "text": "return Object.values(db.patch.champions).map(c=>{const s=st[c.id]||{p:0,w:0,b:0};return {c,p:s.p,b:s.b,w:s.w,pres:(s.p+s.b)/G,wr:s.p?s.w/s.p:null,sample:G,eligible:championProEligi"
+        }
+      ],
+      "sha256": "8ffd6ff85694453af40d49e61ba6770f054f40d4fbe35d3552aa11e408707c41"
+    },
+    {
+      "file": "src/artifact/contracts.js",
+      "lines": 328,
+      "bytes": 23029,
+      "functions": [
+        "invalidContractNumericTerms",
+        "defaultPromisedRole",
+        "contractDurationPolicy",
+        "contractDurationFit",
+        "contractGuaranteePolicy",
+        "regionalContractGuaranteeRate",
+        "bindingAgreementTerms",
+        "contractGuaranteeRate",
+        "contractGuaranteeTermsValid",
+        "normalizeBuyoutClause",
+        "normalizeContractTerms",
+        "contractExpectedValue",
+        "teamInternationalAppeal",
+        "offerUtility",
+        "contractBonusCost",
+        "signContract",
+        "contractReleaseCost",
+        "contractReleaseSettlement",
+        "medicalContractYears",
+        "contractYearsForPlayer",
+        "eligibleFillFAs",
+        "aiMarketObservation",
+        "aiMarketValue",
+        "pFillScore",
+        "optionDecision",
+        "shouldAutoExerciseOption",
+        "exerciseContractOption",
+        "commitMarketPlayerAction",
+        "signMarketContract",
+        "aiMarketOfferCandidates",
+        "contractMarket",
+        "reconcileMinimumRosterAfterExpiry"
+      ],
+      "markers": [
+        {
+          "line": 141,
+          "text": ".sort((a,b)=>(pFillScore(db,b,t)-pFillScore(db,a,t))));"
+        },
+        {
+          "line": 185,
+          "text": ".sort((a,b)=>b.v-a.v||a.p.id.localeCompare(b.p.id)));"
+        },
+        {
+          "line": 229,
+          "text": "for(const t of activeTeams(db).filter(t=>t.id!==mine&&!t.parent).sort(()=>rng.next()-0.5)){"
+        },
+        {
+          "line": 243,
+          "text": "const best=os.map(o=>({o,v:u(o)})).sort((a,b)=>b.v-a.v)"
+        },
+        {
+          "line": 271,
+          "text": "if(t.roster.length>size+1){const bench=t.roster.map(id=>db.players[id]).filter(x=>x!==p&&!x.contract?.medicalReplacement&&starterFor(db,t,x.role)!==x).sort((a,b)=>playerValue(db,a,"
+        },
+        {
+          "line": 289,
+          "text": "while(t.roster.length>size){const b=t.roster.map(id=>db.players[id]).filter(x=>!x.contract?.medicalReplacement&&starterFor(db,t,x.role)!==x).sort((a,b)=>playerValue(db,a,t)-playerV"
+        }
+      ],
+      "sha256": "6bd9c40df01bdbf65f8a944bea5cda5a739afa63b0227f8c200c3c2ebce3e403"
+    },
+    {
+      "file": "src/artifact/finance.js",
+      "lines": 320,
+      "bytes": 18469,
+      "functions": [
+        "psOf",
+        "psTeam",
+        "initFinance",
+        "financePrepaid",
+        "recordFinancePrepaid",
+        "payFinancePrepaid",
+        "receiveFinancePrepaidTransfer",
+        "payMedicalReplacementWage",
+        "recordContractReleaseObligation",
+        "financeReleaseObligations",
+        "financeClosureAllocation",
+        "applyClubClosureFunding",
+        "settleClubClosureFinance",
+        "payroll",
+        "ownedContractPayroll",
+        "topFivePayroll",
+        "loanAnnualRegulatedPayroll",
+        "regulatedPayroll",
+        "spendingTaxForPayroll",
+        "sumFinanceRows",
+        "financeSeasonWins",
+        "financeExposure",
+        "financeCommercialIncome",
+        "financeSeasonPayroll",
+        "financeOperatingExpense",
+        "financePrepaidSettlement",
+        "staffCost",
+        "opsCost",
+        "ownerSupport",
+        "estRevenue",
+        "financeRunway",
+        "salaryBudget",
+        "financeForecast",
+        "closeFinances",
+        "mSponsor"
+      ],
+      "markers": [
+        {
+          "line": 121,
+          "text": "return salaries.sort((a,b)=>b-a).slice(0,5).reduce((sum,n)=>sum+n,0);"
+        },
+        {
+          "line": 132,
+          "text": "return (db.regions[t.region]?.spendingRule==='sfr_top5'?values.sort((a,b)=>b-a).slice(0,5):values)"
+        }
+      ],
+      "sha256": "bdc04f13a16e99631548346c811a080dbef5c8a89db787ff003de5b32d03a07e"
+    },
+    {
+      "file": "src/artifact/draft-history.js",
+      "lines": 46,
+      "bytes": 4235,
+      "functions": [
+        "manualDraftEvidence",
+        "recordedManualDraftEvidence",
+        "recordedDraftReview"
+      ],
+      "markers": [],
+      "sha256": "3d8c8d0b38472fb7fca681d04d32647d1bc3ba16aa2090425db6a619cb44c5b3"
+    },
+    {
+      "file": "src/artifact/item-purchases.js",
+      "lines": 44,
+      "bytes": 2808,
+      "functions": [
+        "itemCraftInventory",
+        "itemCraftSlotResult",
+        "commitItemCraftBatch",
+        "applyItemCraftAction",
+        "advanceItemPurchases",
+        "matchGoldLedger"
+      ],
+      "markers": [
+        {
+          "line": 27,
+          "text": "if(nextIndex!==undefined)ps.itemActionIndex=nextIndex;"
+        }
+      ],
+      "sha256": "6fb206bdf0dfb208fea5dd6011b22ec8827ca138bac8bb08d367fe17805520cb"
+    },
+    {
+      "file": "src/artifact/ui-local-service.js",
+      "lines": 22,
+      "bytes": 2327,
+      "functions": [
+        "localServicePanel",
+        "bindLocalServiceControls"
+      ],
+      "markers": [],
+      "sha256": "2ebc5d22995ddb00f37baff87ca466912bcf81c872db83935e71b14eadce255b"
+    },
+    {
+      "file": "src/artifact/contract-market-pricing.js",
+      "lines": 49,
+      "bytes": 3777,
+      "functions": [
+        "recentMarketPerformance",
+        "withMarketDemandReadIndex",
+        "marketDemandSnapshot",
+        "invalidateMarketDemand",
+        "roleMarketDemand",
+        "marketSalary",
+        "playerMarketValue",
+        "asking"
+      ],
+      "markers": [],
+      "sha256": "3bed2894690c6686e3387aa5643b0aabb60d65d446bdd8112d8919a9f7bb39ca"
+    },
+    {
+      "file": "src/artifact/system-data.js",
+      "lines": 76,
+      "bytes": 6528,
+      "functions": [
+        "systemSourceText",
+        "itemTier",
+        "itemEffectsFromSource",
+        "itemClassesFromSource",
+        "buildItemSystems",
+        "runeEffectsFromSource",
+        "buildRuneSystems"
+      ],
+      "markers": [
+        {
+          "line": 55,
+          "text": "for(const cls of Object.keys(pool))pool[cls].sort((a,b)=>(defs[a].cost-defs[b].cost)||defs[a].name.localeCompare(defs[b].name));"
+        }
+      ],
+      "sha256": "479608cba33ff4b43ddd7c7ae72845475d61df945bd5b8a4ad6291cec9a5738d"
+    },
+    {
+      "file": "src/artifact/staff.js",
+      "lines": 160,
+      "bytes": 15593,
+      "functions": [
+        "staffSecondaryRoles",
+        "staffSpecialtyAllocation",
+        "staffRoleAbility",
+        "staffAnalysisMultiplier",
+        "staffAnalysisAbility",
+        "staffAnalysisFor",
+        "staffAnalysisHiringWeights",
+        "staffObservedPrimary",
+        "staffWeightedValues",
+        "staffAggregate",
+        "staffByRole",
+        "positionCoachRole",
+        "roleCoachRating",
+        "positionPracticeBonus",
+        "staffProfile",
+        "staffDevelopmentFor",
+        "trainingGrowthMul",
+        "staffSalary",
+        "staffDepartment",
+        "ensureStaffRoster",
+        "migrateLegacyStaffState",
+        "teamStaffMembers",
+        "staffDeptCount",
+        "staffCanHire",
+        "genStaffMember",
+        "ensureTeamStaff",
+        "genStaffPool",
+        "hireStaff",
+        "releaseStaff",
+        "staffRoleWeight",
+        "aiManageStaff",
+        "ageStaff",
+        "staffRetirementReview",
+        "staffRetirementExplanation",
+        "officialStaffServiceSnapshot",
+        "recordStaffMatchService",
+        "mHireStaff",
+        "mReleaseStaff"
+      ],
+      "markers": [
+        {
+          "line": 9,
+          "text": "function staffAnalysisMultiplier(s,context){return s.analysisFocus===undefined?1:s.analysisFocus===context?1.2:.75}"
+        },
+        {
+          "line": 11,
+          "text": "function staffAnalysisFor(t,context){const xs=staffByRole(t,'analyst').map(s=>staffAnalysisAbility(s,context)).sort((a,b)=>b-a);return clamp(42+staffWeightedValues(xs)*.52,35,96)}"
+        },
+        {
+          "line": 15,
+          "text": "function staffAggregate(ms,role){return staffWeightedValues((ms||[]).filter(Boolean).map(s=>role?staffRoleAbility(s,role):s.rating||50).sort((a,b)=>b-a))}"
+        },
+        {
+          "line": 69,
+          "text": "for(const s of db.staffPool)if(counts[s.role]!==undefined)counts[s.role]++;"
+        },
+        {
+          "line": 90,
+          "text": "for(const s of cands){if(!STAFF_ROLES[s.role])continue;const same=teamStaffMembers(t).filter(x=>x.role===s.role).sort((a,b)=>staffObservedPrimary(db,t,a)-staffObservedPrimary(db,t,"
+        },
+        {
+          "line": 132,
+          "text": "for(const [from,to] of spans.sort((a,b)=>a[0]-b[0])){careerYears+=Math.max(0,to-Math.max(from,covered));covered=Math.max(covered,to)}"
+        }
+      ],
+      "sha256": "16484fd92f9a00db824a48196bb7a8a3c65f7f14a8767decfee12bd93f2c067a"
+    },
+    {
+      "file": "src/artifact/offseason.js",
+      "lines": 156,
+      "bytes": 11945,
+      "functions": [
+        "ensureEven",
+        "runOffseason",
+        "closeMarket",
+        "promotionRelegation"
+      ],
+      "markers": [
+        {
+          "line": 48,
+          "text": "rep.growth.sort((a,b)=>b.d-a.d);"
+        },
+        {
+          "line": 102,
+          "text": ".sort((a,b)=>b.benefit-a.benefit||a.key.localeCompare(b.key));"
+        }
+      ],
+      "sha256": "a2f37612c9db7f096f29d686ba1ce063330ada78301400fd1773e0bc95951949"
+    },
+    {
+      "file": "src/artifact/role-quests.js",
+      "lines": 66,
+      "bytes": 5587,
+      "functions": [
+        "maybeRoleQuestChange",
+        "defaultRoleQuestRules",
+        "validateRoleQuestNote",
+        "applyRoleQuestNote",
+        "createRoleQuest",
+        "advanceRoleQuest"
+      ],
+      "markers": [],
+      "sha256": "6f501d340094774120a4cc74dc4f0964581909716fc537d7a58b14252dcb66f1"
+    },
+    {
+      "file": "src/artifact/match-adjudication.js",
+      "lines": 15,
+      "bytes": 656,
+      "functions": [
+        "matchEnded",
+        "matchEventSecond",
+        "destroyMatchNexus"
+      ],
+      "markers": [
+        {
+          "line": 4,
+          "text": "if(opt.sec!==undefined)return opt.sec;"
+        }
+      ],
+      "sha256": "63fb882340a949d5ca67bf07f2d7a90f8caab8d06af48da512d2911712ab3b4f"
+    },
+    {
+      "file": "src/artifact/draft.js",
+      "lines": 227,
+      "bytes": 19942,
+      "functions": [
+        "revisionBucket",
+        "draftPatchRevisionKey",
+        "draftNoiseBucket",
+        "buildDraftPoolSnapshot",
+        "draftPoolSnapshot",
+        "championSkillProfile",
+        "champStrength",
+        "champStrengthUncached",
+        "draftTeamMetaAssessment",
+        "createDraftSession",
+        "draftTurn",
+        "draftMastery",
+        "draftAssignmentsFor",
+        "draftCanPick",
+        "draftRolePossibilities",
+        "draftFeasibleRoles",
+        "draftPickValue",
+        "draftCandidateAnalysis",
+        "draftStaffAdvice",
+        "draftShortlist",
+        "draftValidateChoice",
+        "draftLegalChampions",
+        "draftAiChoice",
+        "draftApplyChoice",
+        "draftSkipTurn",
+        "draftAssignmentValue",
+        "draftFinalAssignment",
+        "draftResult",
+        "runDraft"
+      ],
+      "markers": [
+        {
+          "line": 71,
+          "text": "champs.forEach(c=>{if(NZ[c.id]===undefined)NZ[c.id]=((hashStr(tid+db.patch.id+c.id)%2000)/1000-1)*0.35*(1.1-an);const noise=NZ[c.id];"
+        },
+        {
+          "line": 95,
+          "text": "const ordered=ids.slice().sort((a,b)=>{"
+        },
+        {
+          "line": 139,
+          "text": "const team=state.db.teams[state.teamIds[side]],strategic=staffByRole(team,'strategicCoach').sort((a,b)=>staffRoleAbility(b,'strategicCoach')-staffRoleAbility(a,'strategicCoach'))[0"
+        },
+        {
+          "line": 146,
+          "text": "const best=vals.sort((a,b)=>b.total-a.total)[0];score=best.total;factors.mastery=Math.round(best.mastery*200);factors.comp=Math.round(best.comp*100);factors.counter=Math.round(best"
+        },
+        {
+          "line": 152,
+          "text": "}).filter(Boolean).sort((a,b)=>b.score-a.score||a.champ.localeCompare(b.champ)).slice(0,3);"
+        },
+        {
+          "line": 156,
+          "text": "const k=observerSide+'|'+side+role;if(!state.shortlists[k]){const p=state.roster[side][role];state.shortlists[k]=state.byRole[role].map(c=>({c,q:state.vhat[observerSide][c.id]*0.35"
+        },
+        {
+          "line": 162,
+          "text": "if(choice.side!==undefined&&choice.side!==turn.side)return {ok:false,reason:'wrong_side'};"
+        },
+        {
+          "line": 213,
+          "text": "return rows.map(a=>({a,v:draftAssignmentValue(state,side,a)})).sort((x,y)=>y.v-x.v||ROLES.map(r=>x.a[r]).join('|').localeCompare(ROLES.map(r=>y.a[r]).join('|')))[0].a;"
+        }
+      ],
+      "sha256": "b5edc5d6158f30f8fa7cb68803b60f84bf34e7c6d6fc80fa126dae985176e8ba"
+    },
+    {
+      "file": "src/artifact/club-ownership.js",
+      "lines": 28,
+      "bytes": 1559,
+      "functions": [
+        "ensureClubOwnership",
+        "transferClubOwnership"
+      ],
+      "markers": [],
+      "sha256": "739abb8e99f1c08900ec7e1568e31cdabdb42ac04a404fe5cf88fe28c5c05c66"
+    },
+    {
+      "file": "src/artifact/scouting.js",
+      "lines": 134,
+      "bytes": 13472,
+      "functions": [
+        "sameScoutZone",
+        "scoutingPowerForTeam",
+        "scoutingPower",
+        "scoutRegionalKnowledge",
+        "scoutRegionalCapacity",
+        "scoutRegionalMembers",
+        "scoutingRegionalPower",
+        "recordScoutRegionalObservation",
+        "regionalScoutingAssignments",
+        "scoutingOperationAtomically",
+        "aiScoutingBatchCharge",
+        "aiScoutingAffordableTargets",
+        "baseScoutKnowledge",
+        "ensureScoutReport",
+        "knowledge",
+        "scoutSample",
+        "scoutingRisk",
+        "obsAttr",
+        "obsOvr",
+        "observePlayer",
+        "ageScoutReports",
+        "scoutFromDay",
+        "scoutAbilityRange",
+        "scoutPotentialRange",
+        "scoutGrowthTrend",
+        "playerChampionInternalAccess",
+        "observedPlayerAttributes",
+        "observedPlayerCoreMetrics",
+        "observedPlayerMarketValue",
+        "publicPlayerChampions",
+        "scoutReport",
+        "scoutPlayers"
+      ],
+      "markers": [
+        {
+          "line": 14,
+          "text": ".sort((a,b)=>(scoutRegionalKnowledge(b,region)-scoutRegionalKnowledge(a,region))||staffRoleAbility(b,'scout')-staffRoleAbility(a,'scout')||a.id.localeCompare(b.id));"
+        },
+        {
+          "line": 33,
+          "text": "const members=scoutRegionalMembers(db,t,region).filter(s=>(assigned.get(s.id)||0)<scoutRegionalCapacity(s)).sort((a,b)=>{"
+        },
+        {
+          "line": 123,
+          "text": "return {champions:[...groups.values()].sort((a,b)=>b.g-a.g||b.to.localeCompare(a.to)||a.id.localeCompare(b.id)),unknown};"
+        },
+        {
+          "line": 126,
+          "text": "const r=ensureScoutReport(db,p),sample=scoutSample(db,p),ability=scoutAbilityRange(db,p),potential=scoutPotentialRange(db,p),growth=scoutGrowthTrend(p),internal=playerChampionInter"
+        }
+      ],
+      "sha256": "1e7c61947917891095cf78977314f7ea323a9a212fd8342a0d3d5a343362296c"
+    },
+    {
+      "file": "src/artifact/scrim.js",
+      "lines": 164,
+      "bytes": 8598,
+      "functions": [
+        "scrimAnalysisBonus",
+        "scrimValue",
+        "backgroundScrimChampion",
+        "simulateBackgroundScrim",
+        "aiRunScrims",
+        "recordScrimPractice"
+      ],
+      "markers": [
+        {
+          "line": 20,
+          "text": ".sort((a,b)=>(b.profile.mastery||25)-(a.profile.mastery||25));"
+        },
+        {
+          "line": 96,
+          "text": "const order=eligible.slice().sort((a,b)=>String(a.id).localeCompare(String(b.id)));"
+        }
+      ],
+      "sha256": "0523a4580a4f0a68a12a6f096007d1d2c034cbc6b670d66ae6a1e6b6d7543e89"
+    },
+    {
+      "file": "src/artifact/analysis-tiers.js",
+      "lines": 70,
+      "bytes": 5786,
+      "functions": [
+        "championTierLabels",
+        "publicChampionTiers",
+        "internalChampionTiers",
+        "championTierComparison",
+        "publicTierSourceGroups"
+      ],
+      "markers": [
+        {
+          "line": 4,
+          "text": "const ranked=rows.filter(x=>x.eligible).map(x=>({id:x.c.id,power:champStrength(x.c,db.patch)})).sort((a,b)=>b.power-a.power),"
+        },
+        {
+          "line": 14,
+          "text": "const candidates=metaRowsFiltered(db,{...scoped,from:undefined,to:undefined}),dated=candidates.filter(row=>observedMetaDate(db,row)),"
+        },
+        {
+          "line": 21,
+          "text": "if(!labels.observed)rows.sort((a,b)=>(labels.ranks.get(a.champ)??2)-(labels.ranks.get(b.champ)??2));"
+        },
+        {
+          "line": 45,
+          "text": "}).sort((a,b)=>b.score-a.score||ROLES.indexOf(a.role)-ROLES.indexOf(b.role));"
+        },
+        {
+          "line": 49,
+          "text": "rows.sort((a,b)=>b.best.score-a.best.score||a.champ.localeCompare(b.champ));"
+        },
+        {
+          "line": 59,
+          "text": "if(!internalReport.reason)rows.sort((a,b)=>(a.internal?.rank??Infinity)-(b.internal?.rank??Infinity)||a.champ.localeCompare(b.champ));"
+        },
+        {
+          "line": 63,
+          "text": "const report=publicChampionTiers(db,filter),groups=new Map(),unverified=new Set(metaRowsFiltered(db,{...report.filter,from:undefined,to:undefined}).filter(row=>!observedMetaDate(db"
+        },
+        {
+          "line": 69,
+          "text": "return [...groups.values()].sort((a,b)=>b.games-a.games||String(a.comp).localeCompare(String(b.comp))||String(a.patch).localeCompare(String(b.patch)));"
+        }
+      ],
+      "sha256": "98fd00a64e70477f6fded6bbc664850d8bc358a162ef0e73c564fdef1baa2b3a"
+    },
+    {
+      "file": "src/artifact/timezone-calendar.js",
+      "lines": 163,
+      "bytes": 7967,
+      "functions": [
+        "venueZone",
+        "competitionVenue",
+        "venueClockParts",
+        "venueToUtc",
+        "fixtureTimeInfo",
+        "teamPracticeVenue",
+        "scrimScheduleContext",
+        "scrimUtcRange",
+        "scrimTimeOverlap",
+        "appendUtcFixtureDay",
+        "pushVenueRound",
+        "venueRoundGap",
+        "scrimOverlapGames"
+      ],
+      "markers": [
+        {
+          "line": 29,
+          "text": ".map(id=>db.teams[id]?.region).filter(id=>db.regions[id]))].sort();"
+        },
+        {
+          "line": 69,
+          "text": "const comp=db.competitions[s.comp],dates=(s.days||[]).map(d=>d.date).sort();"
+        },
+        {
+          "line": 72,
+          "text": "}).sort((a,b)=>String(a.id).localeCompare(String(b.id)));"
+        },
+        {
+          "line": 81,
+          "text": "for(const s of Object.values(db.world?.seasons||{}).sort((a,b)=>String(a.id).localeCompare(String(b.id)))){"
+        },
+        {
+          "line": 83,
+          "text": "const dates=(s.days||[]).map(d=>d.date).sort();"
+        },
+        {
+          "line": 141,
+          "text": "day.matches.sort((a,b)=>a.utcAt.localeCompare(b.utcAt));"
+        },
+        {
+          "line": 145,
+          "text": "s.days.sort((a,b)=>a.date.localeCompare(b.date));"
+        }
+      ],
+      "sha256": "4f9796a001fcd127e488f2d9424ee44bf9ee46ff694e1f0dd2f552b254ade645"
+    },
+    {
+      "file": "src/artifact/ui-player.js",
+      "lines": 35,
+      "bytes": 17360,
+      "functions": [
+        "potText",
+        "playerCompetitionIds",
+        "undervaluedProspect",
+        "scoutingSearchBlock",
+        "playerDetail"
+      ],
+      "markers": [
+        {
+          "line": 12,
+          "text": "ps=ps.sort((a,b)=>{const ap=scoutPotentialRange(DB,a)[1]+obsOvr(DB,a)*.5-a.age*.12,bp=scoutPotentialRange(DB,b)[1]+obsOvr(DB,b)*.5-b.age*.12;return bp-ap}).slice(0,40);"
+        },
+        {
+          "line": 32,
+          "text": "${p.career.length?`<h4 style=\"margin-top:14px\">커리어</h4><div class=\"scroll\"><table class=\"pool\"><thead><tr><th>시즌</th><th>대회</th><th>팀</th><th>구분</th><th>종합</th><th>경기</th><th>평점</t"
+        }
+      ],
+      "sha256": "d700d5aff83e2d7b6ccee3111ecb9f70344f9eeb1ce4e3076992acbb0895806a"
+    },
+    {
+      "file": "src/artifact/development.js",
+      "lines": 159,
+      "bytes": 10676,
+      "functions": [
+        "youthMul",
+        "growthCap",
+        "defaultTraining",
+        "normalizeTraining",
+        "setTrainingAllocation",
+        "trainingIntensity",
+        "aiManageTraining",
+        "ensureFacilities",
+        "facilityMul",
+        "facilityScoutingBonus",
+        "facilityInvestmentScore",
+        "facilityAnalysisBonus",
+        "facilityRecoveryBonus",
+        "facilityCost",
+        "facilityUpkeep",
+        "facilityBuildDays",
+        "facilityReadyDate",
+        "upgradeFacility",
+        "advanceFacilityConstruction",
+        "ageCurve",
+        "growPlayer",
+        "playerValue",
+        "dailyRecovery"
+      ],
+      "markers": [
+        {
+          "line": 134,
+          "text": "if(team&&p.pool&&!team.practiceUsage?.days){const practice=Math.max(2,Math.round((tr.combat+tr.mental)/12*(.7+coach*.5)));Object.entries(p.pool).sort((a,b)=>b[1].mastery-a[1].maste"
+        }
+      ],
+      "sha256": "791297239cb94c28990a7373176aad3a122d10d69e64189f39125d6a2c7b1417"
+    },
+    {
+      "file": "src/artifact/local-policy.js",
+      "lines": 57,
+      "bytes": 3944,
+      "functions": [
+        "localPolicyTerms",
+        "localPolicyAgreement",
+        "reviewLocalServiceAgreements",
+        "validateStoredLocalPolicies"
+      ],
+      "markers": [],
+      "sha256": "655017910f1a52faca6e5cd18b3a6519cf1cff382c1e2ae96573c51255cfa507"
+    },
+    {
+      "file": "src/artifact/registration-match.js",
+      "lines": 74,
+      "bytes": 5025,
+      "functions": [
+        "officialSeasonRoster",
+        "officialMatchView",
+        "seriesOfficialView",
+        "officialMedicalReplacementAllowed",
+        "registerMedicalOfficialReplacement",
+        "scheduledRegistrationForfeit",
+        "snapshotInternationalEntries"
+      ],
+      "markers": [],
+      "sha256": "16c6d092a0e8008bb71f629e812f7e68f9b19a0d2d598dee8f6df049b909c20e"
+    },
+    {
+      "file": "src/artifact/save.js",
+      "lines": 104,
+      "bytes": 7177,
+      "functions": [
+        "packMetaHistoryRow",
+        "packMetaHistory",
+        "stringifyMetaHistory",
+        "unpackMetaHistory",
+        "seriesResultForSave",
+        "worldForSave",
+        "packDB",
+        "unpackDB"
+      ],
+      "markers": [
+        {
+          "line": 31,
+          "text": "const intern=x=>{if(typeof x!=='string')return x;const old=strings.get(x);if(old!==undefined)return old;strings.set(x,x);return x};"
+        },
+        {
+          "line": 87,
+          "text": "if(p.pool)q.pool=Object.fromEntries(Object.entries(p.pool).map(([c,v])=>[c,[v.mastery,v.experience,v.matchup_knowledge,v.confidence,v.scrimExperience||0,v.trainingExperience||0,v.s"
+        }
+      ],
+      "sha256": "92a476222e94e8658b108bbca94bce76b00462dc4d3a1688d1833a45c2c951a0"
+    },
+    {
+      "file": "src/artifact/broadcast-calendar.js",
+      "lines": 94,
+      "bytes": 4182,
+      "functions": [
+        "nextBroadcastTuesday",
+        "broadcastSlotTime",
+        "allocateBroadcastWeek",
+        "scheduleBroadcastRoundRobin",
+        "officialBookedTeams"
+      ],
+      "markers": [
+        {
+          "line": 34,
+          "text": "matches.sort((a,b)=>"
+        }
+      ],
+      "sha256": "61eec6c44669131a7068c2770799b7a71112a73c25760a00d88643bf450c45ab"
+    },
+    {
+      "file": "src/artifact/patch.js",
+      "lines": 84,
+      "bytes": 7572,
+      "functions": [
+        "initPatches",
+        "applyNote",
+        "getPatch",
+        "championProEligible",
+        "championAvailableForContext",
+        "patchId",
+        "newPatch",
+        "patchTick",
+        "seasonPatch"
+      ],
+      "markers": [
+        {
+          "line": 36,
+          "text": "if(db.patches.roleQuestBaseline!==undefined)P.roleQuests=JSON.parse(JSON.stringify(db.patches.roleQuestBaseline));"
+        }
+      ],
+      "sha256": "5c1c8cfc188bb75dd57ef965cd2a8f39ef2363062933bb3642dcdf9437ee7c9a"
+    },
+    {
+      "file": "src/artifact/ui-match.js",
+      "lines": 113,
+      "bytes": 12059,
+      "functions": [
+        "viewMatch",
+        "bindMatch",
+        "bindResult",
+        "renderResult",
+        "safeDraftTeam",
+        "renderDraft",
+        "goldChart",
+        "playerTable",
+        "renderLog",
+        "renderExpl",
+        "renderSeries",
+        "fmtMod",
+        "bindSeries"
+      ],
+      "markers": [
+        {
+          "line": 85,
+          "text": "<div class=\"xr\">${e.utility!==undefined?`효용 ${e.utility.toFixed(2)}`:''}${e.perceived!==undefined?` · 인식 효용 ${e.perceived.toFixed(2)}`:''}${e.prob!==undefined?` · 성공확률 ${(e.prob*10"
+        }
+      ],
+      "sha256": "f37dd780454ef3c835a5f21660c406e0dfa55e198bf9fc08cdfad511fb8e3030"
+    },
+    {
+      "file": "src/artifact/random.js",
+      "lines": 16,
+      "bytes": 1233,
+      "functions": [
+        "clamp",
+        "avg",
+        "hashStr",
+        "makeStreams"
+      ],
+      "markers": [],
+      "sha256": "86e30259e4926ea9428afa33d7cff6c51c20a9faa89e847f94aee450bd5b323c"
+    },
+    {
+      "file": "src/artifact/contract-contact-ai.js",
+      "lines": 100,
+      "bytes": 5074,
+      "functions": [
+        "aiWantsRenewal",
+        "aiGrantEarlyContact",
+        "aiRunEarlyContactOffers",
+        "aiRenewalDecision"
+      ],
+      "markers": [
+        {
+          "line": 62,
+          "text": "}).filter(Boolean).sort((a,b)=>b.utility-a.utility||"
+        }
+      ],
+      "sha256": "211bac31fea0761f10ee0b1b904285ff650220e92abae8a079bdad89c1461f54"
+    },
+    {
+      "file": "src/artifact/scrim-plans.js",
+      "lines": 74,
+      "bytes": 6057,
+      "functions": [
+        "scrimPlans",
+        "scrimPlanCheck",
+        "scrimPlanSnapshot",
+        "captureScrimPlanJournal",
+        "runScheduledScrims"
+      ],
+      "markers": [
+        {
+          "line": 15,
+          "text": "const pair=[t.id,o.id].sort().join('|'),id=pair+'|'+a.date+'|'+a.slot;"
+        },
+        {
+          "line": 65,
+          "text": "for(const p of scrimPlans(db).filter(p=>p.status==='accepted'&&p.date<=db.worldDate).sort((a,b)=>a.date.localeCompare(b.date)||a.slot.localeCompare(b.slot)||a.id.localeCompare(b.id"
+        }
+      ],
+      "sha256": "5346f414bcdc3180a34972c3e9881a19d419edcd80b653710455a6ecd0a470eb"
+    },
+    {
+      "file": "src/artifact/transfer.js",
+      "lines": 80,
+      "bytes": 8842,
+      "functions": [
+        "recruitmentStore",
+        "recruitmentTarget",
+        "setRecruitmentPriority",
+        "removeRecruitmentTarget",
+        "syncRecruitmentObservation",
+        "recruitmentEvaluation",
+        "recruitmentReady",
+        "recruitmentBoard",
+        "mInterest",
+        "mEvaluateTarget",
+        "mDropInterest",
+        "sellerTransferAsk",
+        "mTransferBid",
+        "acceptSellerCounter",
+        "closeOpenNegotiationsForDeadline",
+        "transferFee",
+        "doTransfer",
+        "myT",
+        "mExerciseTeamOption",
+        "mRelease",
+        "mTransfer"
+      ],
+      "markers": [
+        {
+          "line": 27,
+          "text": "function recruitmentBoard(db){const rank={A:0,B:1,C:2};return Object.values(recruitmentStore(db)).sort((a,b)=>(rank[a.priority]??9)-(rank[b.priority]??9)||String(a.addedDate||'').l"
+        }
+      ],
+      "sha256": "1b423b602349f05b55072abae65be66536fe42e55e207c6ef3b4846aeeba6c08"
+    },
+    {
+      "file": "src/artifact/office.js",
+      "lines": 147,
+      "bytes": 14126,
+      "functions": [
+        "baseFans",
+        "hypeLabel",
+        "updateHype",
+        "rng01",
+        "officeDecisions",
+        "officeMidSeason",
+        "foldTeam"
+      ],
+      "markers": [
+        {
+          "line": 24,
+          "text": "const latest=ss.slice().sort((a,b)=>b.split-a.split)[0];"
+        },
+        {
+          "line": 61,
+          "text": "const weak=activeTeams(db,R.id,1).map(t=>({t,s:teamStrength(db,t.id)})).sort((a,b)=>a.s-b.s);"
+        },
+        {
+          "line": 76,
+          "text": "const broke=activeTeams(db,R.id,1).sort((a,b)=>a.finance.cash-b.finance.cash);"
+        },
+        {
+          "line": 84,
+          "text": "const pays=activeTeams(db,R.id,1).map(t=>topFivePayroll(db,t)).sort((a,b)=>a-b),med=pays[Math.floor(pays.length/2)]||1,disp=(pays[pays.length-1]||1)/Math.max(.1,pays[0]||.1);"
+        },
+        {
+          "line": 120,
+          "text": "if(up!==undefined) add('playoffs',(0.55-B)*3+(H<45?0.2:0),()=>{const o=R.playoffTake;R.playoffTake=up;return `플레이오프 ${o}팀 → ${up}팀 확대`},`순위 경쟁 약화 (균형 ${B})`);"
+        },
+        {
+          "line": 124,
+          "text": "const fmt=Object.entries(fmtU).filter(([k])=>k!==(R.format||'rr_po')).sort((a,b)=>b[1]-a[1])[0];"
+        },
+        {
+          "line": 128,
+          "text": "props.sort((a,b)=>b.u-a.u);"
+        }
+      ],
+      "sha256": "080c5f43a4d3b7fe5bb758cd1c63ab10de74eb2d2e5b8d0edd488accea5dd494"
+    },
+    {
+      "file": "src/artifact/shell.html",
+      "lines": 353,
+      "bytes": 43345,
+      "functions": [],
+      "markers": [],
+      "sha256": "3a842f750dd7814164f76b53b78e21b6ae2b7eb5b93a7b8cf911681ae5e4583a"
+    },
+    {
+      "file": "src/artifact/champion-source.js",
+      "lines": 2,
+      "bytes": 410873,
+      "functions": [],
+      "markers": [],
+      "sha256": "29efbdabad4d152e351f0bfdfb025feb5283862ea3ae9caa4fcd2b1d0678bf1c"
+    },
+    {
+      "file": "src/artifact/patch-balance.js",
+      "lines": 180,
+      "bytes": 15944,
+      "functions": [
+        "patchHistory",
+        "patchEvidenceRows",
+        "patchTeamPower",
+        "patchEvidenceContext",
+        "patchChampionEvidence",
+        "patchSizeForSignal",
+        "diagnosePatchMeta",
+        "recentDirectionCount",
+        "lastChampionChange",
+        "blendPatchValue",
+        "partialChampionRollback",
+        "shiftedArray",
+        "championBalanceNote",
+        "chooseChampionBalanceChanges",
+        "patchSystemUsageIndex",
+        "systemUsageEvidence",
+        "lastSystemChange",
+        "systemBalanceNote",
+        "chooseSystemBalanceChanges"
+      ],
+      "markers": [
+        {
+          "line": 17,
+          "text": "const rows=(c.byPatch.get(id)||EMPTY_META_HISTORY).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));"
+        },
+        {
+          "line": 26,
+          "text": "const tids=[...new Set(rows.flatMap(r=>(r.sides||[]).map(s=>s.team).filter(Boolean)))],powers=tids.map(t=>patchTeamPower(db,t)).sort((a,b)=>a-b);"
+        },
+        {
+          "line": 97,
+          "text": "const take=(dir,n)=>diag.champions.filter(x=>x.dir===dir).sort((a,b)=>b.signal-a.signal).slice(0,n*3);"
+        },
+        {
+          "line": 177,
+          "text": "const rows=diag.rows,out=[];for(const kind of ['item','rune']){const defs=kind==='item'?db.patch.itemDefs||{}:db.patch.runeDefs||{},evs=Object.keys(defs).map(id=>systemUsageEvidenc"
+        }
+      ],
+      "sha256": "0827958ce1a171e432e3bd483b6afb4f8771e729e9df19e4c07be7f3ca140ad7"
+    },
+    {
+      "file": "src/artifact/draft-analysis.js",
+      "lines": 100,
+      "bytes": 11135,
+      "functions": [
+        "draftMasteryObservation",
+        "draftMetaEvidence",
+        "draftManagedChampionPoolEvidence",
+        "draftOwnChampionPoolEvidence",
+        "draftCompositionEvidence",
+        "draftCandidateEvidence",
+        "draftOpponentIntent"
+      ],
+      "markers": [
+        {
+          "line": 46,
+          "text": "const p=state.roster[side][role];if(!p)return null;const rows=Object.entries(p.pool||{}).map(([id,v])=>({champ:id,mastery:Math.round(v.mastery||25)})).sort((a,b)=>b.mastery-a.maste"
+        }
+      ],
+      "sha256": "f68f88b632819d268183f2714b672e7845d51d2b13905eda51bdcd8af249fb9b"
+    },
+    {
+      "file": "src/artifact/club-closure.js",
+      "lines": 141,
+      "bytes": 8321,
+      "functions": [
+        "clubClosureTeams",
+        "clubClosureFinanceTeams",
+        "clubClosureFundingPlan",
+        "validateClubClosure",
+        "clubClosureAllocation",
+        "clubClosureSnapshot",
+        "applyClubClosure"
+      ],
+      "markers": [],
+      "sha256": "5bf3cb8853aa5170e285ab3e21a973b55e8bd14e3a6248aa4249742254758b11"
+    },
+    {
+      "file": "src/artifact/meta-opponent-draft.js",
+      "lines": 41,
+      "bytes": 5175,
+      "functions": [
+        "opponentDraftPreparation"
+      ],
+      "markers": [
+        {
+          "line": 16,
+          "text": "const ids=[...new Set(picks.filter(p=>typeof p?.champ==='string'&&p.champ).map(p=>p.champ))].sort(),players=picks.map(p=>typeof p?.player==='string'&&p.player?p.player:null),color="
+        },
+        {
+          "line": 30,
+          "text": "const sides=row.sides||[],flat=sides.flatMap(s=>Array.isArray(s.bans)?s.bans:[]),knownBans=sides.length===2&&sides.every(s=>Array.isArray(s.bans)&&s.bans.length===5&&s.bans.every(i"
+        },
+        {
+          "line": 33,
+          "text": "const sort=(a,b)=>b.g-a.g||b.to.localeCompare(a.to)||JSON.stringify(a).localeCompare(JSON.stringify(b));for(const key of Object.keys(bags))out[key]=[...bags[key].values()].sort(sor"
+        },
+        {
+          "line": 34,
+          "text": "out.patches=[...patches.values()].sort((a,b)=>b.g-a.g||String(a.patch).localeCompare(String(b.patch)));"
+        }
+      ],
+      "sha256": "5fd55c5c9adee4b5269edff550eea450dae4784b60db8664665ca6ce8409c6ef"
+    },
+    {
+      "file": "src/artifact/loan-purchase.js",
+      "lines": 86,
+      "bytes": 6339,
+      "functions": [
+        "validateLoanPurchaseTerms",
+        "recordLoanConversionWages",
+        "validateLoanPurchase",
+        "loanPurchaseDescription",
+        "recordLoanWageAdjustment"
+      ],
+      "markers": [],
+      "sha256": "23c486aae9fec0bd5bac47273b6b2bd2c594c94117d198209b04149605860c79"
+    },
+    {
+      "file": "src/artifact/player.js",
+      "lines": 226,
+      "bytes": 20986,
+      "functions": [
+        "playerGroupScore",
+        "playerRoleRating",
+        "playerOvr",
+        "ensurePlayerDevelopment",
+        "careerStage",
+        "expectedPlayShare",
+        "playerCareerGoal",
+        "recommendedRosterRole",
+        "setRosterRole",
+        "initializeTeamRosterRoles",
+        "rebalanceAiRosterRoles",
+        "playerCoreMetrics",
+        "playerSquadLabel",
+        "recordPlayerEvent",
+        "ensureChampionProfile",
+        "practiceChampion",
+        "championLearningMultiplier",
+        "adaptPlayerPoolsToPatch",
+        "withPlayerGenerationIndex",
+        "uniqNick",
+        "uniqId",
+        "genPlayer",
+        "rookieRoleWeights",
+        "weightedRole",
+        "rookieIntakeProfile",
+        "rookieClassLabel",
+        "rookieGlobalCohort",
+        "rookieCohortState",
+        "rookieTier",
+        "generateRookieClass",
+        "talentSupplyErrors"
+      ],
+      "markers": [
+        {
+          "line": 42,
+          "text": "const same=(team.roster||[]).map(id=>db.players[id]).filter(x=>x&&x.role===p.role).sort((a,b)=>playerOvr(b)-playerOvr(a)),best=same[0]?playerOvr(same[0]):o;"
+        },
+        {
+          "line": 130,
+          "text": "const mySig=sigIds.length?sigIds:champs.slice().sort(()=>rng.next()-0.5).slice(0,2);"
+        },
+        {
+          "line": 132,
+          "text": "const n=clamp(Math.round(9+(age-17)*0.7+rng.normal(0,2)),7,18), picks=[...mySig,...champs.filter(c=>!mySig.includes(c)).sort(()=>rng.next()-0.5).slice(0,n)];"
+        },
+        {
+          "line": 142,
+          "text": "const ovr=playerOvr(p);p.pot=Math.round(clamp(o.pot!==undefined?o.pot:ovr+Math.max(0,24-age)*rng.range(0.8,2.4)+rng.normal(2,3),ovr,99));"
+        }
+      ],
+      "sha256": "e5b0470e4e4518b80261875b8d6f875c9b821cad6efd8f35e04b40e75336171b"
+    },
+    {
+      "file": "src/artifact/role-conversion.js",
+      "lines": 94,
+      "bytes": 9399,
+      "functions": [
+        "ensureRoleConversionState",
+        "roleConversionLabel",
+        "roleHistoryBonus",
+        "roleChampionReadiness",
+        "roleConversionFit",
+        "roleConversionAcceptance",
+        "proposeRoleConversion",
+        "cancelRoleConversion",
+        "roleConversionEffectiveness",
+        "roleConversionPracticeChampion",
+        "completeRoleConversion",
+        "advanceRoleConversionPlayer",
+        "recordRoleConversionUsage",
+        "roleConversionGrowthMultiplier",
+        "aiReviewRoleConversions"
+      ],
+      "markers": [
+        {
+          "line": 19,
+          "text": "const ids=Object.values(db.patch?.champions||{}).filter(c=>(c.roles||[]).includes(role)).map(c=>c.id),vals=ids.map(id=>p.pool?.[id]?.mastery||0).filter(Boolean).sort((a,b)=>b-a).sl"
+        },
+        {
+          "line": 65,
+          "text": "pool.sort((a,b)=>(p.pool?.[b.id]?.mastery||0)-(p.pool?.[a.id]?.mastery||0)||String(a.id).localeCompare(String(b.id)));"
+        }
+      ],
+      "sha256": "18708388bd2202835d8226c28be041fb255031282f03b20e2436c932cbfb951d"
+    },
+    {
+      "file": "src/artifact/meta-tactics.js",
+      "lines": 36,
+      "bytes": 2934,
+      "functions": [
+        "validMatchTactics",
+        "matchTacticSnapshot",
+        "archivedMatchTactics",
+        "ownTacticInsights"
+      ],
+      "markers": [
+        {
+          "line": 34,
+          "text": "out.axes=axes.map((axis,i)=>({key:MATCH_TACTIC_FIELDS[i],distinct:axis.size,settings:[...axis.values()].sort((a,b)=>b.g-a.g||a.value-b.value).slice(0,6).map(x=>({...x,wr:x.w/x.g}))"
+        }
+      ],
+      "sha256": "36ae3cf21f93d4b5578b54a9ca0b65509d718038f6a59b0c7275cd88b640c5b6"
+    },
+    {
+      "file": "src/artifact/ui-market-initial.js",
+      "lines": 45,
+      "bytes": 9969,
+      "functions": [
+        "renderInitialRosterMarket",
+        "bindInitialRosterMarket"
+      ],
+      "markers": [],
+      "sha256": "8a6f5e528b9a3febbe09bd7f6da65db5c38571faacfa2b375f9100b3c7b6409e"
+    },
+    {
+      "file": "src/artifact/player-relations.js",
+      "lines": 192,
+      "bytes": 16356,
+      "functions": [
+        "pState",
+        "playerMod",
+        "teamSynergy",
+        "lineupCohesion",
+        "lineupSynergy",
+        "recoverTeamCohesion",
+        "playerRelationKey",
+        "playerRelationship",
+        "adjustPlayerRelationship",
+        "teamRelationshipScore",
+        "rememberTeamRelationships",
+        "knownRecruitRelationship",
+        "playerTeamRelationship",
+        "startContractRolePromise",
+        "contractRolePromiseStatus",
+        "rolePromiseUsageStatus",
+        "ensureSatisfaction",
+        "renewalDisposition",
+        "usageFor",
+        "actualPlayShare",
+        "satisfactionLabel",
+        "satisfactionIssues",
+        "applySatisfaction",
+        "updatePlayerUsage",
+        "onSquadMoveSatisfaction",
+        "offseasonPlayerSatisfaction",
+        "afterSeries"
+      ],
+      "markers": [
+        {
+          "line": 4,
+          "text": "function pState(p){if(p.form===undefined)p.form=0;if(p.fatigue===undefined)p.fatigue=10;if(p.morale===undefined)p.morale=65;if(p.condition===undefined)p.condition=96;if(p.sharpness"
+        },
+        {
+          "line": 42,
+          "text": "if(entries.length>512)t.relationshipReports=Object.fromEntries(entries.sort((a,b)=>String(b[1].date).localeCompare(String(a[1].date))||a[0].localeCompare(b[0])).slice(0,512));"
+        },
+        {
+          "line": 85,
+          "text": "pState(p);if(p.satisfaction===undefined)p.satisfaction=70;if(!Array.isArray(p.satisfactionReasons))p.satisfactionReasons=[];"
+        },
+        {
+          "line": 86,
+          "text": "if(p.managerRelationship===undefined)p.managerRelationship=60;if(p.managerTrust===undefined)p.managerTrust=60;"
+        },
+        {
+          "line": 87,
+          "text": "if(p.concernStreak===undefined)p.concernStreak=0;if(p.wantsOut===undefined)p.wantsOut=false;if(p.wantsOutReason===undefined)p.wantsOutReason=null;"
+        },
+        {
+          "line": 124,
+          "text": "return out.sort((a,b)=>b.severity-a.severity);"
+        }
+      ],
+      "sha256": "8400885087a034a244d03cd365803c01f01dc37c55b3686667e0bc367257e6bb"
+    },
+    {
+      "file": "src/artifact/scouting-ai-reassessment.js",
+      "lines": 23,
+      "bytes": 1252,
+      "functions": [
+        "aiScoutingResearchPriority",
+        "aiMarketOfferRankSnapshot"
+      ],
+      "markers": [],
+      "sha256": "ba39dfd9133a1527bad3fef873d02916af7ff3909d8d3e970270da6c13c1226d"
+    },
+    {
+      "file": "src/artifact/contract-negotiation.js",
+      "lines": 238,
+      "bytes": 18754,
+      "functions": [
+        "negotiationStore",
+        "negotiationId",
+        "negotiationRoundLimit",
+        "negotiationPreferredYears",
+        "negotiationSituationSnapshot",
+        "negotiationSituationChanges",
+        "latestNegotiationAttempt",
+        "negotiationReopenCheck",
+        "negotiationAttemptSummary",
+        "closePlayerNegotiationFailure",
+        "negotiationCompetition",
+        "negotiationDemand",
+        "startNegotiation",
+        "negotiationBudgetError",
+        "negotiationCounter",
+        "aiRepresentativeCounterTerms",
+        "finalizeNegotiation",
+        "submitNegotiationOffer",
+        "acceptNegotiationCounter",
+        "cancelNegotiation"
+      ],
+      "markers": [
+        {
+          "line": 14,
+          "text": "?satisfactionIssues(db,p,{year:db.year,offseason:true}).map(x=>x.code).sort()"
+        },
+        {
+          "line": 40,
+          "text": ".sort((a,b)=>String(b.closedDate||b.createdDate||'').localeCompare("
+        },
+        {
+          "line": 84,
+          "text": "}).filter(Boolean).sort((a,b)=>b.utility-a.utility).slice(0,2);"
+        }
+      ],
+      "sha256": "16bfbbfa64277122bf1eeb5fc3c9085c21d6a0d61f7e8bc512cd2f8c0a834c89"
+    },
+    {
+      "file": "src/artifact/state-transaction.js",
+      "lines": 121,
+      "bytes": 6137,
+      "functions": [
+        "worldActionError",
+        "rosterActionSnapshot",
+        "validateWorldAction",
+        "previewWorldAction",
+        "applyWorldAction",
+        "commitWorldAction"
+      ],
+      "markers": [
+        {
+          "line": 15,
+          "text": "id:t.id,roster:(t.roster||[]).slice().sort()"
+        },
+        {
+          "line": 83,
+          "text": "if(checked.total!==undefined)result.total=checked.total;"
+        }
+      ],
+      "sha256": "6ad636cb64b328cb046e5d8dfe760eeb26c7655c34b0ff776e2102835fab03f1"
+    },
+    {
+      "file": "src/artifact/ui-champion.js",
+      "lines": 43,
+      "bytes": 5639,
+      "functions": [
+        "championPortraitUrl",
+        "championPortraitVisual",
+        "championPortraitSvg",
+        "championPortraitDataUri",
+        "championPortraitMarkup"
+      ],
+      "markers": [],
+      "sha256": "a5809261b12178e7abf53aa72e939139b1e8b8e2713c9815e8547270d17942f2"
+    },
+    {
+      "file": "src/artifact/player-loans.js",
+      "lines": 176,
+      "bytes": 11664,
+      "functions": [
+        "loanIndex",
+        "loanOutgoingPlayers",
+        "loanRosterCapacityError",
+        "loanMarketOpen",
+        "loanEndDate",
+        "loanPlayerConsent",
+        "loanSnapshot",
+        "validateLoanStart",
+        "loanWageAmount",
+        "accrueLoanWages",
+        "loanMovePlayer",
+        "applyLoanStart",
+        "validateLoanExisting",
+        "applyLoanReturn",
+        "processLoanDaily"
+      ],
+      "markers": [],
+      "sha256": "0c128ea349f7e34d8f42006478e8f29ac693497ee5428f07abe1f8f4838d83fd"
+    }
+  ],
+  "domainMatrix": [
+    {
+      "stage": "1·12.3",
+      "domain": "시작·세계 생성",
+      "source": "world.js:buildWorld;ui-setup.js:seasonSetup;career.js:beginInitialRosterPhase",
+      "scope": "새로시작/불러오기/설정만 시작에 표시; 실제 팀 선택은 다음 흐름; 6지역 필수 2부·합법 FA·예산·zero/default subs·legacy identity 유지",
+      "status": "긴 startup 설명/운영 메뉴 남음; 국제 설명 undefined 재현",
+      "priority": "P1",
+      "acceptance": "실제 시작→팀 선택→초기 영입→save; 생성 규칙 회귀와 초기화 취소"
+    },
+    {
+      "stage": "5·12.7",
+      "domain": "감독 커리어·인계",
+      "source": "world.js:setManagedTeam;ui-season.js:bindSeason;app.js:viewSeason",
+      "scope": "직업/취임/계약/해임/인계/타구단 continuidad; 이전 의무/내 결정 구분; former private 권한",
+      "status": "팀 선택·해임 후 재선택은 있음, 완전 career/job lifecycle 근거 미완료",
+      "priority": "P1",
+      "acceptance": "이직 전후 선수·계약·역사/비공개 접근·pending 업무/save"
+    },
+    {
+      "stage": "2·10",
+      "domain": "선수 정체성·로컬·국가",
+      "source": "roster.js:playerOriginRegion;roster.js:playerActiveLocalRegion;local-service.js:processLocalServiceDaily",
+      "scope": "국적/출신/활동지역/로컬/업무 언어 별개; country home/development/location office admission",
+      "status": "기존 local-service 있음; origin을 현재 활동/언어로 추정 금지",
+      "priority": "P1",
+      "acceptance": "이적/임대/2군 외국 거점·국적/로컬 보존 및 등록"
+    },
+    {
+      "stage": "2·3·12.5",
+      "domain": "선수 능력·성장·역할",
+      "source": "player.js:playerCoreMetrics;development.js:growPlayer;role-conversion.js:advanceRoleConversionPlayer",
+      "scope": "관측 능력/잠재/성장·환경/성향 구분; role 전환 시간·비용; 낮음 vs 모름; observed radar/numeric/source/context",
+      "status": "내부 core metrics true branch 존재, observed-only extension audit 필수",
+      "priority": "P1",
+      "acceptance": "own/foreign/FA/fired 관측·실제 훈련/출전/성장·save"
+    },
+    {
+      "stage": "3·12.9",
+      "domain": "스카우팅·보고서",
+      "source": "scouting.js:observePlayer;scouting-ai-ops.js:performAiScoutingOperation;scouting-champions.js:recordChampionScoutObservation",
+      "scope": "지역 조사/담당/비용/기회;원본/갱신/확신/동일 원본 중복/의견 차이/제외 sample/source/bias",
+      "status": "기존 private observations/AI regional operations 있음; 과거 recruitment 원본 장기 archive 미완료",
+      "priority": "P1",
+      "acceptance": "실제 조사→관측→평가→비교·owner별 save/이직; no hidden ability"
+    },
+    {
+      "stage": "3·4·12.5",
+      "domain": "초기 영입·일반 시장",
+      "source": "ui-initial-candidates.js:initialCandidatePage;ui-market-initial.js:bindInitialRosterMarket;transfer.js:recruitmentBoard",
+      "scope": "origin regional/overseas/all; 조건 mandatory/preferred; center/lower bound; full count/page/sort/column/selection; actual detail/evaluation/negotiation/return",
+      "status": "현재 explorer 작업 중, 아직 acceptance/PR/release 없음",
+      "priority": "P1",
+      "acceptance": "FA 실제 detail/관측/최소 필터/80cap 제거/10선택·stale·save/authority"
+    },
+    {
+      "stage": "4",
+      "domain": "계약·약속·협상",
+      "source": "contract-negotiation.js:finalizeNegotiation;player-representation.js:effectiveRolePromiseStatus;contract-window.js:recordContractAgreement",
+      "scope": "대표/동의/기간/옵션/역할 약속/갱신/해지; 재제안 diff·동시 대안/실패/재개/일괄 검토 개별 확정",
+      "status": "기존 negotiation/role promises 있음; 새 동일 시스템 중복 금지",
+      "priority": "P1",
+      "acceptance": "소속/예산/권한 바뀐 열린 제안; 확정1회·거절/취소 rollback"
+    },
+    {
+      "stage": "4·11",
+      "domain": "이적료·지급·해체",
+      "source": "transfer-payments.js:processTransferPayments;club-closure.js:applyClubClosure;finance-estate.js:processClubEstateRecoveries",
+      "scope": "actual commitments/invoices/부분 지급/보장/잔여 claims; 미확정 제안/예상/확정 분리; arbitrary asset fee 금지",
+      "status": "기존 결제/estate recoveries partial; 전체 liquidation/creditor policy 근거 미완료",
+      "priority": "P1",
+      "acceptance": "송금 동일 원장·stale/rollback·양측 지급일·future obligation save"
+    },
+    {
+      "stage": "4·5",
+      "domain": "임대·복귀·전환",
+      "source": "player-loans.js:applyLoanStart;player-loans.js:processLoanDaily;loan-purchase.js:validateLoanPurchase",
+      "scope": "원소속/차입/급여/등록/교육/만료/회수/전환; 복귀 자리/언어 연속성/보고서 owner",
+      "status": "기존 shared lifecycle 있음; force lineup overwrite는 가설 유지",
+      "priority": "P1",
+      "acceptance": "return day/등록/계약 겹침·parent/reserve 권한·수동 lineup"
+    },
+    {
+      "stage": "5·10",
+      "domain": "선수단·출전·등록",
+      "source": "roster.js:applyRosterPlan;registration.js:writeOfficialRegistration;registration-match.js:officialMatchView",
+      "scope": "고정 주전·경쟁/후보·실제 결원 때만대체; current vs projected salary/eligibility; official roster/entry/긴급 대체",
+      "status": "기존 실제 command 있음; 항상 계획작성/강제 rotation 불필요",
+      "priority": "P1",
+      "acceptance": "선발→조건→actual match/기용→save; invalid/duplicate/undo"
+    },
+    {
+      "stage": "2·6",
+      "domain": "의료·피로·회복",
+      "source": "medical.js:medicalDailyTick;player-relations.js:playerMod;development.js:dailyRecovery",
+      "scope": "피로/부상/상태/잔여/휴식/재활·경기감각 별 원인; 과훈련/일정·복귀/의료 대체",
+      "status": "기존 daily 의료/4seed test 있음; language/teamwork 중복 효과 검토",
+      "priority": "P1",
+      "acceptance": "daily once·official/scrim/rest/exposure→actual performance·tradeoffs"
+    },
+    {
+      "stage": "2·5·6",
+      "domain": "업무 언어·적응·지원 지출",
+      "source": "player-relations.js:lineupCohesion;practice-resources.js:runDailyPractice;ui-setup.js:managerTeamPicker",
+      "scope": "club decides working language/support spend; 실제 proficiency/learning/cost/uncertainty; regional first list는 언어 대체 아님",
+      "status": "복원 승인 미구현; ui-setup no-language-barrier 문구 아직 남음",
+      "priority": "P1",
+      "acceptance": "영입/profile/training→학습/회계→actual execution; legacy/AI·no nationality-only"
+    },
+    {
+      "stage": "2·5",
+      "domain": "관계·리더십·만족·목표",
+      "source": "player-relations.js:applySatisfaction;player.js:playerCareerGoal;player-representation.js:applyOralRolePromise",
+      "scope": "actual playing/관계/기대/커리어/지원된 약속; 역할/이탈/복귀; 근거없는 leadership aura 금지",
+      "status": "기존 goal/usage/relationship 있음; hidden public露출 범위 검사",
+      "priority": "P2",
+      "acceptance": "실제 약속/기용 변화→원인/이적·재협상; 원본 event/history"
+    },
+    {
+      "stage": "5·6",
+      "domain": "스태프·전문성·고용",
+      "source": "staff.js:staffRoleAbility;staff-contracts.js:applyStaffAction;staff-registration.js:competitionStaffMatchRoster",
+      "scope": "전문 영역/secondary allocation·observed hiring/부서 공석/업무 인계/대표 고용/현장 service/은퇴",
+      "status": "전문성 기존 실제 consumer 있음; 새 직책 보너스 중복 금지",
+      "priority": "P2",
+      "acceptance": "실제 채용→배치→업무/등록→지출/save; vacancy·expired/fired"
+    },
+    {
+      "stage": "5·11",
+      "domain": "시설·구단·소유권",
+      "source": "development.js:upgradeFacility;development.js:advanceFacilityConstruction;club-ownership.js:transferClubOwnership",
+      "scope": "construction day/cash/upkeep/actual effect; 소유권 바뀌어도 club id/license/contracts/history 보존",
+      "status": "기존 timed시설·takeover continuity 있음; 예외/장기 goal 설계 보강",
+      "priority": "P2",
+      "acceptance": "공사 전후 training/recovery/scouting; 인수·해체·예산 continuity"
+    },
+    {
+      "stage": "6",
+      "domain": "훈련·육성·연습 자원",
+      "source": "practice-resources.js:runDailyPractice;development.js:setTrainingAllocation;role-conversion.js:roleConversionGrowthMultiplier",
+      "scope": "목표/실참여/복수 목표 기회비용/공식일·휴식·개인전환/shared budget; exception 검토/copy",
+      "status": "기존 daily shared budget·manual owned coaching 있음",
+      "priority": "P1",
+      "acceptance": "동일 day중복/reentry/비참여·실제 개인 효과/source"
+    },
+    {
+      "stage": "6",
+      "domain": "스크림·파트너·목적",
+      "source": "scrim-partner.js:scrimPartnerAssessment;scrim-plans.js:scrimPlanCheck;scrim.js:recordScrimPractice",
+      "scope": "상호 목적/수락/예약/현지 시간/회복/공식대진·중복/취소;검증목적 vs승리·private evidence",
+      "status": "실제 상대 선택/수락/예약 이미 있음; 기능 없는 것으로 재제안하지 않음",
+      "priority": "P2",
+      "acceptance": "request→bilateral booking→execution→resources/report/save; no public calibration"
+    },
+    {
+      "stage": "7",
+      "domain": "밴픽·First Selection",
+      "source": "draft.js:draftApplyChoice;first-selection.js:firstSelectionEvidence;draft-preparation.js:draftPreparationReport",
+      "scope": "public/private tiers·own mastery·legal/flex/role/scarcity/ban opportunity/Fearless·actual confirmation source",
+      "status": "12.9.3/4 실제 live/context/snapshot 있음; 전체 mechanics calibration는 별도",
+      "priority": "P1",
+      "acceptance": "20turn/forced actual official/취소/duplicate/foreign traps·no RNG changes"
+    },
+    {
+      "stage": "7·8",
+      "domain": "전술·시리즈·준비",
+      "source": "meta-tactics.js:matchTacticSnapshot;series.js:playSeriesSessionGame;season.js:resolvePendingOfficialMatch",
+      "scope": "intent/feasible execution/failure·public adaptation·변경/유지 원본·조건차이·pending/patch pinned",
+      "status": "기존 tactic·series 소비 있음; 새 complete execution/사건 설명 추가 필요",
+      "priority": "P1",
+      "acceptance": "actual selection→series writer→review/save·same patch/context; no future info"
+    },
+    {
+      "stage": "8.1",
+      "domain": "종료·시계·동시 사건",
+      "source": "match-adjudication.js:destroyMatchNexus;engine.js:simulateMatch",
+      "scope": "first nexus·postend frozen·quiet/logged clock; ordered simultaneous/reward/end-state 분리",
+      "status": "8.1.1 수정/출시 보호; 물리 동시 nexus 정책 미구현",
+      "priority": "P0",
+      "acceptance": "양side/quiet/full same stats·unresolved guard; no gold winner"
+    },
+    {
+      "stage": "8.2·8.3·8.4",
+      "domain": "골드·구매·아이템·룬",
+      "source": "item-purchases.js:commitItemCraftBatch;engine.js:addGold;engine.js:combatStats0;systems.js:systemEffects",
+      "scope": "earned/spent/held ledger; own base recall/Ornn; recipes/slots/unique/exclusive/repeated/components/quest/sale supported; actual power/conditional/team utility",
+      "status": "172 ledger 수정 출시; 실제 own-base gating와 generic earned-gold power 소비는 남음",
+      "priority": "P0",
+      "acceptance": "27 killPlayer purchase baseline→recall/location writer; sources·paired timing/AI/save"
+    },
+    {
+      "stage": "8.5",
+      "domain": "웨이브·캠프·XP",
+      "source": "engine.js:incomeTick;engine.js:jungleTick;system-data.js:buildSystemBaseline",
+      "scope": "finite supply/spawn/arrival/shared nearby XP not CS;camp hp/resists/clear/respawn/reward/availability; allocation/death/roam",
+      "status": "cs*58+role constants/current farm cadence proxy; complete waves/camps 미구현",
+      "priority": "P1",
+      "acceptance": "reviewed patch metadata→resource/level/purchase/macro; MID27min no display fudge"
+    },
+    {
+      "stage": "8.4",
+      "domain": "교전·피해·접근·효과",
+      "source": "engine.js:fight;engine.js:combatStats0;engine.js:fightSkillPhase",
+      "scope": "damage/defense/reduction/penetration·reach/target/time/availability/resource/CC/heal/shield/effective/overkill/status expiry/retarget",
+      "status": "aggregate bounded existing; lowHP clamp/source 후보 포함 많은 mechanics 미검증",
+      "priority": "P1",
+      "acceptance": "source-based paired cases·both sides/status order/end·conditional item consumers"
+    },
+    {
+      "stage": "8.6",
+      "domain": "시야·이동·목표·구조물",
+      "source": "engine.js:visionTick;engine.js:teamCall;engine.js:convert;engine.js:takeStructure",
+      "scope": "lastseen/observer AI·recall/respawn/travel·postfight resources·persistent waves/towers/dive/objective cost/trade/buff/abandon",
+      "status": "현재 alive/global proxy·hardcoded rewards·convert baron alternate writer; reviewed causal expansion 필요",
+      "priority": "P1",
+      "acceptance": "ahead loss/behind win source scenarios no predetermined rate·actual rewards once"
+    },
+    {
+      "stage": "9",
+      "domain": "패치·메타·진단",
+      "source": "patch.js:applyNote;patch-balance.js:patchChampionEvidence;patch-content.js:generateNewItem",
+      "scope": "champ base/skill/item price/recipe/effect/rune/objective/wave/camp→draft/combat/macro; adaptation/sample concentration/holdout/rollback/oscillation",
+      "status": "기존 diagnosis/patch consumers 있음; event-time team strength vs current lookup 가설 조사",
+      "priority": "P1",
+      "acceptance": "pinned baseline+old note replay; actual causal pair/output/save; no invented coefficient"
+    },
+    {
+      "stage": "8.7·9",
+      "domain": "외부 프로 자료·정적 출처",
+      "source": "champion-source.js;system-source.js;docs/CHAMPION_DATA.md;docs/SYSTEM_DATA.md",
+      "scope": "pro-only event/date/patch/tier/side/role/gameID/duplicates/missing/units/license/raw/chronological holdout; static mechanics 별도",
+      "status": "validated professional calibration 미수집; network/source blockers 정확히 기록",
+      "priority": "P1",
+      "acceptance": "source validation 먼저; fictional result와 actual external data 혼합 금지"
+    },
+    {
+      "stage": "10.1·10.2",
+      "domain": "지역·국가·2부·승강",
+      "source": "world.js:addRegion;offseason.js:promotionRelegation;region-continuity.js:recordRegionSuccession",
+      "scope": "Lalias6pairs/NA-SA/CA-Caribbean; country tier2/home/development/office admission; no parent-owned reserve promotion",
+      "status": "6major tier2/name 구현; country/membership/office continuation 미완료",
+      "priority": "P1",
+      "acceptance": "next-season actual schedules/standings/membership·legacy ID/nationality/contracts"
+    },
+    {
+      "stage": "10.4",
+      "domain": "국내·국제 사무국·규정",
+      "source": "office.js:officeDecisions;office-consultation.js:officeFormatConsultation;office-international.js:globalOffice",
+      "scope": "jurisdiction/metrics/consult/cooldown/version/announced/effective/atomic changes/consumer/post reform sample evaluation",
+      "status": "기존 lifecycle 일부 있음; full country/broadcast/registration scope completion 아님",
+      "priority": "P1",
+      "acceptance": "announced vs effective·idempotent replay/rollback·no retroactive results/contracts"
+    },
+    {
+      "stage": "10",
+      "domain": "달력·중계·대회",
+      "source": "timezone-calendar.js:pushVenueRound;broadcast-calendar.js:broadcastSlotTime;season.js:playWorldDay",
+      "scope": "UTC/venue/KST/daily tick/pending/deadline·global international/sameleague nonoverlap; actual reserved end/overrun shift",
+      "status": "staggered starts ≠ full reservedwindows/overrun; actual connected continuation 필요",
+      "priority": "P1",
+      "acceptance": "same day/UTC rollover/overrun→next refs/training/registration/save"
+    },
+    {
+      "stage": "10·12.9",
+      "domain": "결과·통계·분석실",
+      "source": "match-history.js:officialMatchReviews;ui-match-history.js:analysisMatchPanel;analysis-tiers.js:internalChampionTiers",
+      "scope": "stored public outcome/own original reasons·24excerpt limit·radar/context comparisons/snapshots/watchlists/notes/conditions/exports/source",
+      "status": "165–172 vertical slices 있음; fullroom tools UI incomplete; no fake old logs",
+      "priority": "P1",
+      "acceptance": "own/reserve/opponent/fired·dated samecontext/full-lite/pending·source nav"
+    },
+    {
+      "stage": "3.1·12.6·12.7·12.8",
+      "domain": "뉴스·이야기 13영역",
+      "source": "season.js:news;player.js:recordPlayerEvent;player.js:rookieGlobalCohort;staff.js:staffRetirementReview",
+      "scope": "amateur origin/milestone/development/cohort/reunion/rivalry/clubrepresentative/report-later/decision/retiredstaff/fan/news/recap",
+      "status": "existing history/cohort/public news; 120/250 source truncation 재현·full narrative connection 미완료",
+      "priority": "P1",
+      "acceptance": "real event→lawful article/profile/relatedflow/save; no amateur match/forced story/bonus"
+    },
+    {
+      "stage": "11",
+      "domain": "회계·스폰서·전략",
+      "source": "finance.js:financeForecast;finance.js:closeFinances;features.js:sponsorOffers",
+      "scope": "cash/liabilities/commitments/prepaid/tax/staff/facility/sponsor·future obligations/board language support·AI planning",
+      "status": "기존 finance statements 있음; bounded history replacement archive 조사",
+      "priority": "P1",
+      "acceptance": "actual writer conservation/obligation expiry/partial failure·no invented price"
+    },
+    {
+      "stage": "12.3·12.4·12.5",
+      "domain": "UI·공통 조작·접근성",
+      "source": "ui-state.js:UI_ROUTES;ui-overlay.js:openUiOverlay;shell.html;ui-market-initial.js:bindInitialRosterMarket",
+      "scope": "top FM-inspired hierarchy/separate domains/save utility/3startup; filter/sort/context/tabledensity/keyboard/focus/error/loading/empty/units/Korean/no fake control",
+      "status": "6routes only; full domain replacements/radar remain; current explorer unpublished",
+      "priority": "P1",
+      "acceptance": "each action→command→result→save; rollback/dup and focused desktop320 not finaldevice"
+    },
+    {
+      "stage": "11·12",
+      "domain": "저장·복구·소유권·정보",
+      "source": "save.js:packDB;save-migration.js:migrateSaveState;app.js:persistWorldSnapshot;ui-data.js:bindData",
+      "scope": "slot/compat/migration/recovery/export/legalownership/pending/full-lite/eventtime/current distinctions; local plaintext backup vs public debug info",
+      "status": "existing queued IDB/local fallback/source retention; new report ownership/tools need continuity",
+      "priority": "P1",
+      "acceptance": "read purity/atomic switch/invalid source/history preserved·no irreversible partialoverwrite"
+    },
+    {
+      "stage": "5·12.4",
+      "domain": "위임·업무 흐름·편의",
+      "source": "state-transaction.js:commitWorldAction;state-rollback.js:captureWorldActionJournal;ui-state.js:beginUiTask",
+      "scope": "manual default·permission scope/trial/exceptions/revoke·batch partial/retry·task state/plans/dependency deadlines/no duplicate notification",
+      "status": "shared command guarded; integrated delegation/workflow replacements incomplete",
+      "priority": "P2",
+      "acceptance": "beforecondition→actual lawful mutation→feedback/save; no automatic major contracts"
+    },
+    {
+      "stage": "12·13",
+      "domain": "성능·배포·검증",
+      "source": "scripts/perf.mjs;scripts/check.mjs;.github/workflows/ci.yml;.github/workflows/pages.yml",
+      "scope": "measured bottleneck representative baseline/outputparity/seed/version/history/AI·exacthead CI/sequential merge/validated main offline/playable URL",
+      "status": "172 validated release; 173open+uncommitted explorer; no new full CI/Pages; finalQA deferred",
+      "priority": "P1",
+      "acceptance": "no instrumentation/budget/record deletion; source tests ≠ everydomain completion"
+    }
+  ],
+  "limits": [
+    "Selected source deep reads; structural inventory of all modules is not full semantic/runtime audit",
+    "No full CI/browser/final device/TalkBack/100season run for this investigation",
+    "No validated external organized competition calibration collected",
+    "No mechanics/policies/coefficient changes",
+    "Original production history and source snapshots untouched"
+  ]
+}

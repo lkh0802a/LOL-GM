@@ -21,7 +21,8 @@
     "check:medical": "node scripts/medical-acceptance.mjs && node scripts/medical-balance-acceptance.mjs && node scripts/medical-calendar-acceptance.mjs && node scripts/medical-regional-acceptance.mjs",
     "check:regression-smoke-career": "node scripts/validate-system-snapshot.mjs && node scripts/regression.mjs && node scripts/smoke.mjs && node scripts/career-acceptance.mjs",
     "check:medical-core": "node scripts/medical-acceptance.mjs && node scripts/medical-balance-acceptance.mjs",
-    "qa:system-patches": "node scripts/system-patch-experiments.mjs"
+    "qa:system-patches": "node scripts/system-patch-experiments.mjs",
+    "investigate:shop": "node scripts/shop-availability-probe.mjs"
   },
   "engines": {
     "node": ">=20"
