@@ -1,0 +1,37 @@
+{
+  "date": "2026-10-04",
+  "baselineCommit": "69b65d26c5d59bcaa242c52c9d07a47dad4c7bd4",
+  "systemSourceKeys": [
+    "schema",
+    "version",
+    "sourceCommit",
+    "provider",
+    "mapId",
+    "items",
+    "runeStyles",
+    "runes"
+  ],
+  "championSourceKeys": [
+    "schema",
+    "version",
+    "provider",
+    "sourceCommit",
+    "champions"
+  ],
+  "sourceVersion": "16.19.1",
+  "sourceCommit": "1cf34d485c572a9894c223efd3d66c1e5ad7f22f",
+  "available": [
+    "item/rune/champion static source"
+  ],
+  "missingReviewedMetadata": [
+    "finite wave spawn/arrival supply",
+    "minion experience/reward",
+    "nearby/shared XP eligibility and split",
+    "camp clear/respawn resource rules"
+  ],
+  "currentWriter": "engine.js:incomeTick CS*58 plus role/time constants; addXp XP_TABLE; aggregate availability/death/recall proxies",
+  "network": "fresh Cloud environment restricted/enforced; allowed_hosts empty, package_managers only; no permitted external rule collection in this runtime",
+  "priorRequestDiagnostic": "shop-availability-diagnostics.json retains previous fixed-version HTTP403/curl22; not rerun or bypassed",
+  "status": "8.5.1 not implemented; independently verified 8.4 resource defects corrected in this slice",
+  "notProfessionalCalibration": true
+}
