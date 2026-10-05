@@ -1,6 +1,6 @@
 import {runEngineFixture,artifactSource} from './test-harness.mjs';
 import assert from 'node:assert/strict';
-const [ui,managerUi,app,regionUi]=await Promise.all(['ui-market-staff.js','ui-manager.js','app.js','ui-scouting-regions.js'].map(artifactSource));
+const [ui,managerUi,app,regionUi,financeUi]=await Promise.all(['ui-market-staff.js','ui-manager.js','app.js','ui-scouting-regions.js','ui-club-finance.js'].map(artifactSource));
 await runEngineFixture(String.raw`(()=>{
  const check=(x,m)=>{if(!x)throw Error('STAFF_CONTRACTS '+m)};
  const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:10,div2:true,system:'franchise'})];cfg.internationals=[];
@@ -174,7 +174,7 @@ await runEngineFixture(String.raw`(()=>{
  let confirmation='';confirm=text=>{confirmation=text;return true};button.onclick();check(locateStaff(db,free.id).team===buyer&&free.contract.years===6&&message==='스태프 계약 완료','UI did not execute negotiated years');
  check(confirmation.includes('6년')&&confirmation.includes('총 약정 연봉')&&confirmation.includes('선납 아님')&&confirmation.includes('50%'),'UI confirmation omitted duration/liability distinction');
  console.log('STAFF_CONTRACTS_ACCEPTANCE PASS (FA, renewal, interviews, specialties, consent, cash conservation, authority, rollback, expiry, retirement, saves)');
-})();`,{setupSources:[app.match(/^const esc=.*$/m)[0],managerUi,regionUi,ui]});
+})();`,{setupSources:[app.match(/^const esc=.*$/m)[0],managerUi,regionUi,financeUi,ui]});
 assert(!/能力|능력 \$\{[xs]\.rating\}/.test(ui));
 assert(ui.includes('staffObservation(DB,t,s)')&&ui.includes('data-interview-staff')&&ui.includes('data-staff-years')&&ui.includes('data-staff-salary')&&ui.includes('previewWorldAction(DB')&&ui.includes('applyWorldAction(DB,preview)'));
 console.log('STAFF_CONTRACTS_UI PASS (estimated ability, interviews, offer terms, guarded confirmation)');

@@ -58,10 +58,10 @@ function bindLoanPurchaseControls(){
     if(result.ok)saveDB();navKeepScroll();
   });
 }
-function transferPaymentsPanel(t){
+function transferPaymentsPanel(t,db=DB){
   const deals=transferDealRows(t),exposure=transferPaymentExposure(t);if(!deals.length)return '';
   return `<details class="cfgcard"><summary>분할 / 성과 이적료 · 미지급 보장 ${money(exposure.guaranteed)}</summary>
     <p class="hint">미달성 추가금 최대 ${money(exposure.contingent)} · 지급한 이적료는 결산에서 중복 차감하지 않습니다. 현금 부족 시 미지급액을 보존합니다.</p>
-    ${deals.map(d=>`<div class="cfgcard"><b>${esc(DB.players[d.pid]?.name||d.pid)}</b> · ${d.fromId===t.id?'받을 금액':'지급할 금액'}
+    ${deals.map(d=>`<div class="cfgcard"><b>${esc(db.players[d.pid]?.name||d.pid)}</b> · ${d.fromId===t.id?'받을 금액':'지급할 금액'}
       ${d.rows.map(r=>`<p>${esc(r.date||r.through)} · ${money(r.amount)} · 지급 ${money(r.paid)} · ${({pending:'예정 / 조건 미달성',earned:'지급 의무 발생',paid:'지급 완료',expired:'조건 만료'})[r.status]}</p>`).join('')}</div>`).join('')}</details>`;
 }

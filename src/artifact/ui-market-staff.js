@@ -15,7 +15,7 @@ function coachBlock(t){
   return `<div class="fin"><div><span>헤드코치</span><b>플레이어</b><small>최종 스포츠 결정</small></div><div><span>부서 정원</span><b>${limits}</b><small>범용 수석코치 없음</small></div><div><span>스태프 효과</span><b>전략 ${Math.round(profile.draft)} · 분석 ${Math.round(profile.analysis)}</b><small>육성 ${Math.round(profile.development)} · 스카우팅 ${Math.round(profile.scouting)}</small></div></div><h4>시설 운영 현황</h4><p class="hint">${Object.entries(labels).map(([k,v])=>v+' '+(facilities[k]||1)+'단계').join(' · ')} · 연간 유지비 ${money(facilityUpkeep(DB,t))}</p><p class="hint">훈련: 시즌 능력치 성장 · 데이터 분석: 조합/상대 준비 · 회복: 일일 피로 회복 · 유소년: 젊은 선수 성장/영입 매력 · 스카우팅: 관찰 보고서 정확도</p><p class="hint">다음 시설 투자 판단: ${FACILITY_TYPES.filter(k=>facilities[k]<5).map(k=>labels[k]+' '+facilityInvestmentScore(DB,t,k).toFixed(2)).sort().join(' · ')} (투자 적합도, 현재 선수단·구단 철학·비용 반영)</p><p class="hint">${building?'시설 증설 중: '+esc(building):'진행 중인 시설 증설 없음'} · 구단 경영진이 투자 판단</p><h4>현재 스태프</h4>${cards||'<p class="hint">고용된 전문 스태프가 없습니다.</p>'}<h4>스태프 시장</h4>${market}`;
 }
 function bindClubOfficeControls(act){
-  document.querySelectorAll('[data-spon]').forEach(b=>b.onclick=()=>act(mSponsor(DB,b.dataset.spon)));
+  bindSponsorControls(act);
   document.querySelectorAll('[data-staff-role]').forEach(s=>s.onchange=()=>{MK.staffRole=s.value;MK.staffPage=0;navKeepScroll()});
   document.querySelectorAll('[data-staff-page]').forEach(b=>b.onclick=()=>{MK.staffPage=Number(b.dataset.staffPage);navKeepScroll()});
   document.querySelectorAll('[data-interview-staff]').forEach(b=>b.onclick=()=>{const out=commitWorldAction(DB,{type:'staff.interview',actor:'manager',teamId:managedTeamId(DB),sid:b.dataset.interviewStaff});act(out.ok?'면접 완료 · 추정 범위가 좁아졌습니다':out.errors.join(' · '))});

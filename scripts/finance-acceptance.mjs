@@ -65,7 +65,7 @@ await runEngineFixture(fixture,{timeout:35000,filename:'finance-acceptance.fixtu
 const [ui,season,office,day,year]=await artifactSources([
   'ui-manager.js','ui-season.js','ui-market-staff.js','calendar.js','offseason.js'
 ]);
-assert(ui.includes('financeForecast(DB,t)')&&ui.includes('예상 수입')&&ui.includes('예상 결산 현금'),
+assert(ui.includes('function financePanel(t,db=DB)')&&ui.includes('financeForecast(db,t)')&&ui.includes('예상 수입')&&ui.includes('예상 결산 현금'),
   'financial outlook must be accessible in the user interface');
 assert(season.includes('financePanel(DB.teams[me])'),'forecast is not visible in the season history view');
 assert(office.includes('facilityProjects')&&office.includes('완료 예정'),'club office must show active construction');
