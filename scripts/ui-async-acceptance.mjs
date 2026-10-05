@@ -6,8 +6,8 @@ import { resolve } from 'node:path';
 
 const dir=resolve(import.meta.dirname,'..','src','artifact');
 const get=async p=>readFile(resolve(dir,p),'utf8');
-const [app,state,season,manager,data,briefing]=await Promise.all(
-  ['app.js','ui-state.js','ui-season.js','ui-manager.js','ui-data.js','ui-club-briefing.js'].map(get));
+const [app,state,season,manager,data,briefing,eligibility]=await Promise.all(
+  ['app.js','ui-state.js','ui-season.js','ui-manager.js','ui-data.js','ui-club-briefing.js','ui-club-eligibility.js'].map(get));
 const later=()=>new Promise(resolve=>setImmediate(resolve));
 
 {
@@ -115,6 +115,7 @@ const later=()=>new Promise(resolve=>setImmediate(resolve));
     closeUiOverlay:()=>{},console:{error:(...args)=>unexpected.push(args)}
   });
   context.$=selector=>node(selector.slice(1));
+  vm.runInContext(eligibility,context,{filename:'ui-club-eligibility.js'});
   vm.runInContext(briefing,context,{filename:'ui-club-briefing.js'});
   vm.runInContext(season.slice(season.lastIndexOf('function bindSeason(){')),context,{filename:'bindSeason()'});
   vm.runInContext(state,context,{filename:'ui-state.js'});
