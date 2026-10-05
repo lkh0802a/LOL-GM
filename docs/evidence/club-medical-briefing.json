@@ -1,0 +1,2278 @@
+{
+  "task": "12.3.6",
+  "base": "39847edfddca94114026e070e312a9a84eb593ad",
+  "scope": "소유 의료 가용·수동 계획→기존 실제 일일·훈련·스크림·공식 소비→복귀·저장",
+  "source": {
+    "src/artifact/ui-club-medical.js": {
+      "sha256": "4f9720ad155921947d020cfbcb5a57beb7b90fd708595f787127840165500df9",
+      "source": "// Owned medical presentation and the existing per-player manual plan writer.\nfunction clubMedicalStamp(db,t){\n  return JSON.stringify({date:db.worldDate,year:db.year,phase:db.world?.phase,manage:db.world?.manage,\n    pending:db.world?.pendingOfficial,active:t.active,roster:t.roster,training:t.training,\n    players:(t.roster||[]).map(id=>db.players[id])});\n}\nfunction medicalUiAllowed(db,t){return !!db.world&&!db.world.fired&&db.world.manage==='manual'&&\n  !['pick','initial_roster'].includes(db.world.phase)&&t?.active!==false&&managerControlsSquad(db,t)&&!db.world.pendingOfficial?.queue?.length}\nfunction medicalUiGuard(t,allowed=()=>true){\n  const db=DB,w=db.world,slot=SLOT,render=UI_RENDER_ID,view=VIEW,manager=managedTeamId(db),managerRef=db.manager,dialog=UI_OVERLAY,stamp=clubMedicalStamp(db,t);\n  return ()=>DB===db&&DB.world===w&&SLOT===slot&&!SLOT_SWITCHING&&UI_RENDER_ID===render&&VIEW===view&&\n    UI_OVERLAY===dialog&&managedTeamId(db)===manager&&db.manager===managerRef&&DB.teams[t.id]===t&&medicalUiAllowed(db,t)&&clubMedicalStamp(db,t)===stamp&&allowed();\n}\nfunction writeMedicalUiPlan(p,mode){\n  if(!Object.hasOwn(MEDICAL_PLAN_LABELS,mode))return false;\n  // The existing roster writer: no medical tick, selection or history rewrite.\n  p.medicalPlan=mode;return true;\n}\nfunction bindMedicalPlanControls(root=document,allowed=()=>true,after=()=>{saveDB();navKeepScroll()}){\n  root.querySelectorAll('[data-medical-plan]').forEach(el=>{\n    const p=DB.players[el.dataset.medicalPlan],t=p&&DB.teams[p.team];\n    const current=t&&medicalUiAllowed(DB,t)?medicalUiGuard(t,allowed):()=>false;\n    el.onchange=()=>{if(!current()||DB.players[p.id]!==p||p.retired||!t.roster.includes(p.id)||!Object.hasOwn(MEDICAL_PLAN_LABELS,el.value)||(p.medicalPlan||'auto')===el.value)return;\n      writeMedicalUiPlan(p,el.value);after();};\n  });\n}\nfunction clubMedicalHistory(p){\n  const labels={medical_start:'의료 관리 시작',medical_return:'치료 후 복귀',medical_scar:'중증 부상 후유증',medical_callup:'의료 대체 조직 이동',medical_emergency_fa:'의료 대체 계약',medical_replacement_end:'의료 대체 계약 종료'},events=(p.careerEvents||[]).filter(e=>Object.hasOwn(labels,e.type));\n  return `<details><summary>저장된 의료 이력 ${events.length}건</summary><p class=\"hint\">최근 저장 순서 최대 8건입니다. 당시 기록이며 현재 진단·복귀 예정·수동 대체 영입 권한을 뜻하지 않습니다.</p>${events.length?`<ul>${events.slice(-8).reverse().map(e=>`<li>${esc(e.date||((e.year?'연도 '+e.year+' · ':'')+'날짜 기록 없음'))} · ${labels[e.type]}${e.type==='medical_start'?' · '+esc(MEDICAL_LABELS[e.site]||MEDICAL_LABELS[e.kind]||'건강 문제')+(Number.isFinite(e.days)?' · 당시 예상 '+e.days+'일':' · 당시 기간 기록 없음')+' · '+(e.out===true?'당시 결장':e.out===false?'당시 제한 출전':'당시 가용 기록 없음'):''}</li>`).join('')}</ul>`:'<p>저장된 의료 이력이 없습니다.</p>'}</details>`;\n}\nfunction clubMedicalModel(db=DB,tid=managedTeamId(db)){\n  const ctx=clubBriefContext(db);if(!ctx||!ctx.teams.includes(tid)||!managerControlsSquad(db,db.teams[tid]))return null;\n  const read=JSON.parse(JSON.stringify(db)),t=read.teams[tid];\n  return {t,date:read.worldDate,canAct:medicalUiAllowed(db,db.teams[tid]),rows:(t.roster||[]).map(id=>read.players[id]).filter(p=>p&&!p.retired&&p.team===tid).map(p=>({id:p.id,name:p.name,role:ROLE_KO[p.role]||'역할 기록 없음',summary:medicalSummary(p),out:medicalOut(p),selected:p.medicalPlan||'auto',effective:medicalPlanFor(read,p),rest:medicalScrimRest(read,p),condition:p.condition,fatigue:p.fatigue,day:p.medicalPlanDate||null,dayPlan:p.medicalDayPlan||null,history:clubMedicalHistory(p)}))};\n}\nfunction renderClubMedicalBriefing(){\n  const ctx=clubBriefContext();if(!ctx)return '';\n  return `<h4>의료 가용 · 회복 계획</h4><p class=\"hint\">고용·공식 등록·저장 선발과 현재 의료 가용은 별개입니다. 예상 관리 일수는 복귀 보장이 아닙니다.</p><div class=\"controls\">${ctx.teams.map(tid=>{const m=clubMedicalModel(DB,tid);return m?`<button data-brief-medical=\"${esc(tid)}\">${esc(m.t.name)} · 의료·회복 ${m.rows.filter(p=>p.out).length}명 출전 불가</button>`:''}).join('')}</div>`;\n}\nfunction openClubMedical(tid){\n  const m=clubMedicalModel(DB,tid);if(!m||UI_OVERLAY)return false;\n  const t=DB.teams[tid],root=document.querySelector('#overlay');let dialog=null,current=null;\n  const close=()=>{if(UI_OVERLAY===dialog)closeUiOverlay()};\n  openUiOverlay({kind:'club-medical',label:'내 구단 의료·회복 계획',dismissible:true,onDismiss:close,focusSelector:'#brief-medical-close',html:`<div class=\"ovin\"><div class=\"ovhead\"><b>${esc(m.t.name)} · 의료·회복</b><button id=\"brief-medical-close\" class=\"ghost\">브리핑으로 돌아가기</button></div><p class=\"hint\">기준일 ${esc(m.date||'날짜 미정')}. 휴식·재활은 일일 훈련·스크림에서 제외되지만 그 자체가 공식 출전 금지는 아닙니다. 공식 출전에는 의료 상태 외 등록·명단 조건도 적용됩니다. 자동 계획은 기존 일일 판단을 따릅니다. 변경은 적용 버튼을 눌러야 저장됩니다.</p>${!m.canAct?'<p class=\"hint\">현재는 수동 계획을 변경할 수 없습니다.</p>':''}<div class=\"cfgs\">${m.rows.map(p=>`<div class=\"cfgcard compact\"><h4>${esc(p.name)} · ${esc(p.role)}</h4><p>${esc(p.summary)} · 현재 의료상 ${p.out?'출전 불가':'출전 불가 아님'}</p><p>컨디션 ${Number.isFinite(p.condition)?Math.round(p.condition):'기록 없음'} · 피로 ${Number.isFinite(p.fatigue)?Math.round(p.fatigue):'기록 없음'}</p><p>저장 계획 ${esc(MEDICAL_PLAN_LABELS[p.selected]||'기록 미상')}</p><p>현재 적용 계획 ${esc(MEDICAL_PLAN_LABELS[p.effective]||'기록 미상')} · 훈련·스크림 ${p.out||p.rest?'의료 조건으로 제외':'의료 조건 충족, 다른 조건 별도'}</p><p class=\"hint\">마지막 일일 계획 ${esc(p.day||'기록 없음')} · ${esc(MEDICAL_PLAN_LABELS[p.dayPlan]||'기록 없음')}. 미래 상태를 예측하지 않습니다.</p>${p.history}${m.canAct?`<label>회복 계획 <select data-medical-draft=\"${esc(p.id)}\" aria-label=\"${esc(p.name)} 회복 계획\">${Object.entries(MEDICAL_PLAN_LABELS).map(([mode,label])=>`<option value=\"${mode}\"${mode===p.selected?' selected':''}>${esc(label)}</option>`).join('')}</select></label><button data-medical-apply=\"${esc(p.id)}\">계획 적용</button>`:`<p>저장 계획 ${esc(MEDICAL_PLAN_LABELS[p.selected]||'기록 미상')}</p>`}</div>`).join('')}</div></div>`});\n  dialog=UI_OVERLAY;current=medicalUiGuard(t,()=>UI_OVERLAY===dialog);root.querySelector('#brief-medical-close').onclick=close;\n  root.querySelectorAll('[data-medical-apply]').forEach(b=>b.onclick=()=>{\n    if(!current())return;const p=DB.players[b.dataset.medicalApply],el=root.querySelector(`[data-medical-draft=\"${b.dataset.medicalApply}\"]`),mode=el?.value;\n    if(!p||p.retired||p.team!==tid||!t.roster.includes(p.id)||!Object.hasOwn(MEDICAL_PLAN_LABELS,mode)||(p.medicalPlan||'auto')===mode)return;\n    if(!confirm(`${p.name} · ${MEDICAL_PLAN_LABELS[mode]} 계획을 적용할까요?`)||!current())return;\n    writeMedicalUiPlan(p,mode);clubBriefState().message=p.name+' · '+MEDICAL_PLAN_LABELS[mode]+' 계획 적용';\n    closeUiOverlay({restoreFocus:false});saveDB();navKeepScroll();\n    [...document.querySelectorAll('[data-brief-medical]')].find(x=>x.dataset.briefMedical===tid)?.focus?.({preventScroll:true});\n  });return true;\n}\nfunction bindClubMedicalBriefing(){\n  const ctx=clubBriefContext();if(!ctx)return;const db=DB,w=ctx.w,slot=SLOT,render=UI_RENDER_ID,date=db.worldDate,phase=w.phase;\n  document.querySelectorAll('[data-brief-medical]').forEach(b=>b.onclick=()=>{if(clubBriefCurrent(db,w,slot,render,ctx.t.id)&&db.worldDate===date&&w.phase===phase&&!UI_OVERLAY)openClubMedical(b.dataset.briefMedical)});\n}\n"
+    },
+    "src/artifact/ui-roster.js": {
+      "sha256": "71734a2355b0f03e64ccf218e0114aa97d642cb88facc80b7d6c59b79140c3d4",
+      "source": "// ===== LOL GM: Roster / player management UI =====\n// Squad editing, free match-role assignment, player detail and scouting surfaces.\nconst TACTIC_AXES={aggression:['교전 회피','교전 주도'],risk_tolerance:['안정 지향','위험 감수'],objective_priority:['킬·교전 지향','오브젝트 지향'],vision_investment:['성장 투자','시야 투자'],scaling_preference:['초반 지향','후반 지향']};\n\nfunction squadUiCanManage(t){return !!DB.world&&!DB.world.fired&&managerControlsSquad(DB,t)}\n// Isolate legacy scouting initialization from read-only roster rendering.\nfunction squadObservationDb(t){\n  const view=Object.create(DB);view.scout={};view._marketDemandCache={...(DB._marketDemandCache||{})};\n  for(const id of t.roster||[]){const r=DB.scout?.[id];if(r!==undefined)view.scout[id]=r&&typeof r==='object'?{...r}:r}\n  return view;\n}\nfunction squadObservedDetail(p,view){\n  // Legacy profile widgets use the synchronous UI DB global. Isolate their\n  // optional report/cache initialization and restore the live identity even on failure.\n  const live=DB;try{DB=view;return playerDetail(p)}finally{DB=live}\n}\nfunction squadEditState(t){\n  if(!squadUiCanManage(t))return null;\n  const root=parentTeamOf(DB,t)||t;\n  if(!SQUAD_EDIT||SQUAD_EDIT.parentId!==root.id||SQUAD_EDIT.world!==DB){\n    SQUAD_EDIT={parentId:root.id,teamId:null,world:DB,squads:{},\n      expected:squadPreparationSnapshot(DB,{parentId:root.id}),\n      roles:Object.fromEntries((managedTeam(DB)?.parent?t.roster:organizationRoster(DB,root)).map(id=>[id,DB.players[id]?.rosterRole||recommendedRosterRole(DB,DB.players[id],DB.teams[DB.players[id].team])])),\n      rosterPlan:rosterPlanState(DB,root)};\n  }\n  const e=SQUAD_EDIT;\n  if(e.teamId) e.squads[e.teamId]={starters:e.starters,tactics:e.tactics,training:e.training,dirty:e.dirty};\n  const next=e.squads[t.id]||{starters:{...(t.depthChart||{})},tactics:{...t.tactics},training:normalizeTraining(t.training),dirty:false};\n  Object.assign(e,next,{teamId:t.id});return e;\n}\nfunction rosterPlanPanel(t){const root=parentTeamOf(DB,t),res=reserveTeamsOf(DB,root);if(!root||!res.length)return '';if(managedTeam(DB)?.parent)return '<section><h3>모구단 선수 배치</h3><p class=\"hint\">1·2군 이동과 선수 영입·계약은 모구단이 결정합니다. 현재 배정된 선수의 경기·훈련을 관리하세요.</p></section>';const e=squadEditState(t),v=validateRosterPlan(DB,root,e.rosterPlan),teams=organizationTeams(DB,root),counts=teams.map(x=>'<div><span>'+(x.parent?'2군':'1군')+'</span><b>'+(v.counts?.[x.id]??0)+'명</b><small>'+esc(x.name)+'</small></div>').join(''),rows=organizationRoster(DB,root).map(pid=>{const p=DB.players[pid],cur=DB.teams[p.team],dst=e.rosterPlan.assignments[pid]||p.team,opts=teams.map(x=>'<option value=\"'+x.id+'\"'+(dst===x.id?' selected':'')+'>'+(x.parent?'2군':'1군')+' · '+esc(x.short)+'</option>').join('');return '<tr><td><b>'+esc(p.name)+'</b></td><td>'+ROLE_KO[p.role]+'</td><td>'+(cur.parent?'2군':'1군')+'</td><td><select data-squad-dst=\"'+p.id+'\">'+opts+'</select></td></tr>'}).join('');return '<section><h3>1군 · 2군 배치</h3><p class=\"hint\">바꾸고 싶은 선수만 선택하고 변경사항 적용을 누르면 최종 상태 전체를 한 번에 검증합니다.</p><div class=\"fin\">'+counts+'</div>'+(v.ok?'':'<p class=\"lo\">'+v.errors.map(esc).join(' · ')+'</p>')+'<div class=\"scroll\"><table><thead><tr><th>선수</th><th>포지션</th><th>현재</th><th>변경 후</th></tr></thead><tbody>'+rows+'</tbody></table></div></section>'}\nfunction discardSquadEdit(){SQUAD_EDIT=null;MSG='관리 구단의 모든 임시 변경을 취소했습니다';nav()}\nfunction applySquadEdit(){\n  const t=DB.teams[SQUAD_EDIT?.teamId];if(!t||!squadUiCanManage(t))return;\n  const e=squadEditState(t),preview=previewWorldAction(DB,{type:'squad.preparation',actor:'manager',parentId:e.parentId,\n    expected:e.expected,assignments:e.rosterPlan.assignments,roles:e.roles,\n    squads:Object.fromEntries(Object.entries(e.squads).filter(([id,x])=>{const base=e.expected.teams.find(t=>t.id===id);return x.dirty||JSON.stringify([x.starters,x.tactics,x.training])!==JSON.stringify([base?.starters,base?.tactics,normalizeTraining(base?.training)])}).map(([id,x])=>[id,{starters:x.starters,tactics:x.tactics,training:x.training}]))});\n  if(!preview.ok){MSG=preview.errors.join(' · ');navKeepScroll();return}\n  const applied=applyWorldAction(DB,preview);\n  if(!applied.ok){MSG=applied.errors.join(' · ');navKeepScroll();return}\n  SQUAD_EDIT=null;MSG='관리 구단의 변경사항을 함께 적용했습니다';saveDB();nav();\n}\nfunction viewSquad(){\n  SQUAD=SQUAD&&DB.teams[SQUAD]&&DB.teams[SQUAD].active!==false?SQUAD:(DB.world?managedTeamId(DB):activeTeams(DB)[0].id);\n  const t=DB.teams[SQUAD],mineOrg=squadUiCanManage(t),edit=mineOrg?squadEditState(t):null,observationDb=squadObservationDb(t),\n    roster=edit?Object.entries(edit.rosterPlan.assignments).filter(([,dst])=>dst===t.id).map(([pid])=>pid):t.roster,\n    ps=roster.map(id=>DB.players[id]).filter(Boolean).sort((a,b)=>ROLES.indexOf(a.role)-ROLES.indexOf(b.role)||obsOvr(observationDb,b)-obsOvr(observationDb,a)||a.id.localeCompare(b.id)),\n    kAvg=Math.round(avg(ps.map(p=>knowledge(observationDb,p))));\n  return `<section class=\"controls\"><label>팀<select id=\"sq\">${teamOpts(SQUAD)}</select></label></section>\n  <section class=\"teamhead\"><h2>${esc(t.name)}</h2><p>${t.formerNames&&t.formerNames.length?'전신 '+t.formerNames.map(esc).join(', ')+' · ':''}${esc(DB.regions[t.region].leagueName)} · 감독 ${mineOrg?'플레이어':'구단 AI'} · 운영 철학 ${PHIL_KO[t.philosophy]||'균형'} · 팬덤 ${t.fans??'—'}${mineOrg?' · 팀 호흡 '+Math.round(teamSynergy(t)):''}${t.goal?` · 구단주 목표: ${GOAL_KO[t.goal]}`:''}</p><p class=\"hint\">전문 스태프가 밴픽·분석·육성·회복을 지원하며, 관리 구단의 최종 스포츠 결정은 플레이어가 내립니다.</p></section>\n  ${officialRegistrationPanel(t)}\n  ${mineOrg?squadPreparationTactics(t,edit):squadPublicPreparation(t)}\n  ${financePanel(t)}\n  ${squadLoanPanel(t)}\n  ${mineOrg?scrimPlansPanel(t):''}\n  ${mineOrg&&DB.world?.phase==='season'?`<section><h3>공식전·스크림 일정</h3><p class=\"hint\">오늘 ${esc(DB.worldDate)} · ${officialBookedTeams(DB).has(t.id)?'공식 경기 예정/진행 · 스크림 불가':scrimReadiness(DB,t).ok?'스크림 가능 ('+scrimReadiness(DB,t).availableSlots.map(x=>x==='afternoon'?'오후':'저녁').join('·')+') · 잔여 '+scrimReadiness(DB,t).remaining+'세트':esc(scrimReadiness(DB,t).reason)} · 양팀 모두 같은 연습 시간이 비어야 하며, 7일 내 공식전 상대는 피하고 전력 격차·연패·자신감 회복 목적을 반영해 상호 수락해야 편성됩니다.</p><p class=\"hint\">다음 공식전: ${esc(nextTeamMatch(DB,t.id)?.date||'미정')} / 최근 스크림: ${(t.scrimLog||[]).slice(-4).reverse().map(x=>esc(x.date)+' '+(x.slot==='afternoon'?'오후':x.slot==='evening'?'저녁':'연습')+' '+esc(DB.teams[x.opponent]?.short||x.opponent)+' '+x.games+'세트'+(x.purpose?' · '+esc(x.purpose):'')).join(' · ')||'없음'}</p></section>`:''}\n  ${mineOrg?rosterPlanPanel(t):''}\n  ${mineOrg?squadPreparationTraining(t,edit):''}\n  <section><h3>${mineOrg?'변경 후 로스터':'공개 로스터'}</h3><div class=\"scroll\"><table class=\"roster\"><thead><tr><th>포지션</th><th>선수</th>${mineOrg?'<th>경기 슬롯</th><th>역할</th><th>회복 계획</th><th>만족도</th>':''}<th>나이</th><th>${mineOrg?'종합':'종합 추정'}</th><th>${mineOrg?'성장 여지':'잠재 추정'}</th><th>명성</th><th>${mineOrg?'시장가치':'시장가치 추정'}</th>${mineOrg?'<th>폼</th><th>컨디션</th><th>경기 감각</th><th>피로</th><th>사기</th>':''}<th>연봉</th><th>계약</th>${Object.keys(ATTR_GROUPS).map(g=>`<th>${GROUP_KO[g]}</th>`).join('')}</tr></thead><tbody>\n    ${ps.map(p=>{const st=mineOrg?pState({...p}):null,shown=mineOrg?ensureSatisfaction({...p}):null,potential=scoutPotentialRange(observationDb,p);const shownRole=mineOrg?(edit.roles[p.id]||p.rosterRole||recommendedRosterRole(DB,p,t)):null,lineupMap=mineOrg?edit.starters:{},assignedRole=ROLES.find(r=>lineupMap[r]===p.id)||'',roleCtl=mineOrg?`<select data-srole=\"${p.id}\" aria-label=\"${esc(p.name)} 로스터 역할\">${SQUAD_ROLES.map(r=>`<option value=\"${r}\"${shownRole===r?' selected':''}>${SQUAD_ROLE_KO[r]}</option>`).join('')}</select>`:'비공개',starterCtl=mineOrg?`<select data-lineup-player=\"${p.id}\" aria-label=\"${esc(p.name)} 경기 포지션\"><option value=\"\">후보</option>${ROLES.map(r=>`<option value=\"${r}\"${assignedRole===r?' selected':''}>${ROLE_KO[r]} · 적합 ${playerRoleRating(p,r)}</option>`).join('')}</select>`:'미공개';const healthCtl=mineOrg?`<select data-medical-plan=\"${esc(p.id)}\" aria-label=\"${esc(p.name)} 회복 계획\"${medicalUiAllowed(DB,t)?'':' disabled'}>${Object.entries(MEDICAL_PLAN_LABELS).map(([mode,label])=>`<option value=\"${mode}\"${(p.medicalPlan||'auto')===mode?' selected':''}>${mode==='auto'?'자동 · '+MEDICAL_PLAN_LABELS[medicalPlanFor(DB,p)]:label}</option>`).join('')}</select>`:'비공개';return `<tr data-p=\"${p.id}\" class=\"${OPEN_P===p.id?'open':''}\"><td><span class=\"role\">${ROLE_KO[p.role]}</span></td><td><button type=\"button\" class=\"roster-open\" data-p-open=\"${esc(p.id)}\" aria-expanded=\"${OPEN_P===p.id}\" aria-controls=\"pdetail\">${esc(p.name)}</button>${medicalSummary(p)==='정상'?'':' <small class=\"lo\">'+esc(medicalSummary(p))+'</small>'}${mineOrg&&!assignedRole?' <small class=\"hint\">후보</small>':''}</td>${mineOrg?`<td>${starterCtl}</td><td>${roleCtl}</td><td>${healthCtl}</td>`:''}${mineOrg?`<td class=\"num ${shown.satisfaction<35?'lo':shown.satisfaction>=70?'hi':''}\">${Math.round(shown.satisfaction)}<small class=\"hint\"> ${satisfactionLabel(shown.satisfaction)}</small>${shown.wantsOut?' <span class=\"lo\">이적요청</span>':''}</td>`:''}<td class=\"num\">${p.age}</td><td>${ovrTag(obsOvr(observationDb,p))}${knowledge(observationDb,p)<100?'<small class=\"hint\">?</small>':''}</td><td>${potential[0]===potential[1]?potential[0]:potential.join('~')}</td><td class=\"num\">${p.reputation??'—'}</td><td class=\"num\">${money(observedPlayerMarketValue(observationDb,p))}</td>${mineOrg?`<td class=\"num\">${st.form>=3?'<span class=\"hi\">▲</span>':st.form<=-3?'<span class=\"lo\">▼</span>':'–'}</td><td class=\"num\">${Math.round(st.condition)}</td><td class=\"num\">${Math.round(st.sharpness)}</td><td class=\"num\">${Math.round(st.fatigue)}</td><td class=\"num ${st.morale<35?'lo':''}\">${Math.round(st.morale)}${p.wantsOut?' 이적요청':''}</td>`:''}<td class=\"num\">${p.contract?money(p.contract.salary)+(p.contract.medicalReplacement?' (연 환산)':''):'—'}</td><td class=\"num\">${p.contract?.medicalReplacement?'대체 · '+p.contract.medicalReplacement.guaranteedThrough+' 보장 / '+p.contract.medicalReplacement.expiresOn+' 조건 종료':p.contract?'~'+p.contract.until:'—'}</td>${Object.keys(ATTR_GROUPS).map(g=>`<td>${ovrTag(Math.round(avg(ATTR_GROUPS[g].map(a=>obsAttr(observationDb,p,a)))))}</td>`).join('')}</tr>`}).join('')}\n  </tbody></table></div><p class=\"hint\">주포지션은 선수의 전문 역할 표시이며 출전 자격 제한이 아닙니다. 등록 선수 5명을 TOP/JGL/MID/ADC/SUP 경기 슬롯에 자유롭게 배치할 수 있습니다. 선수를 누르면 세부 능력치, 챔피언 폭, 커리어가 열립니다.${mineOrg?'':` 스카우팅 정보 ${kAvg}% — 정보가 적을수록 실제와 다르게 보입니다.`}</p>${DB.world&&!DB.world.fired&&!mineOrg?`<div class=\"controls\"><button class=\"ghost\" id=\"scoutT\">이 팀 집중 스카우팅 (${money(0.5*psOf(DB,DB.teams[managedTeamId(DB)].region))})</button><span id=\"scmsg\" class=\"hint\"></span></div>`:''}</section>\n  <div id=\"pdetail\">${OPEN_P&&DB.players[OPEN_P]&&(edit?edit.rosterPlan.assignments[OPEN_P]===SQUAD:DB.players[OPEN_P].team===SQUAD)?(mineOrg?playerDetail(DB.players[OPEN_P]):squadObservedDetail(DB.players[OPEN_P],observationDb)):''}</div>${mineOrg?scoutingSearchBlock():''}`;\n}\nfunction bindSquad(){\n  bindScrimPlans();\n  const focus=$('#practicefocus');if(focus)focus.onchange=e=>{if(!squadUiCanManage(DB.teams[SQUAD]))return;const d=squadEditState(DB.teams[SQUAD]);d.training.focus=e.target.value;d.dirty=true};\n  const ti=$('#trint');if(ti)ti.onchange=e=>{if(!squadUiCanManage(DB.teams[SQUAD]))return;const d=squadEditState(DB.teams[SQUAD]);d.training.intensity=e.target.value;d.dirty=true};\n  $('#sq').onchange=e=>{SQUAD=e.target.value;OPEN_P=null;nav()};\n  bindMedicalPlanControls();\n  if($('#sqapply'))$('#sqapply').onclick=applySquadEdit;if($('#sqdiscard'))$('#sqdiscard').onclick=discardSquadEdit;\n  document.querySelectorAll('[data-squad-dst]').forEach(el=>el.onchange=e=>{e.stopPropagation();if(!squadUiCanManage(DB.teams[SQUAD]))return;const d=squadEditState(DB.teams[SQUAD]);d.rosterPlan.assignments[el.dataset.squadDst]=el.value;d.dirty=true;navKeepScroll()});\n  if($('#scoutT'))$('#scoutT').onclick=()=>{if(DB.world?.fired)return;const m=scoutPlayers(DB,DB.teams[SQUAD].roster,35,0.5*psOf(DB,DB.teams[managedTeamId(DB)].region));saveDB();nav();$('#scmsg')&&($('#scmsg').textContent=m)};\n  document.querySelectorAll('[data-lineup-player]').forEach(el=>{el.onclick=e=>e.stopPropagation();el.onchange=e=>{e.stopPropagation();if(!squadUiCanManage(DB.teams[SQUAD]))return;const pid=el.dataset.lineupPlayer,d=squadEditState(DB.teams[SQUAD]);if(!DB.players[pid]||d.rosterPlan.assignments[pid]!==SQUAD)return;const next=el.value;for(const r of ROLES)if(d.starters[r]===pid)delete d.starters[r];if(next)d.starters[next]=pid;d.dirty=true;navKeepScroll()}});\n  document.querySelectorAll('[data-srole]').forEach(el=>{el.onclick=e=>e.stopPropagation();el.onchange=e=>{e.stopPropagation();if(!squadUiCanManage(DB.teams[SQUAD]))return;const p=DB.players[el.dataset.srole],d=squadEditState(DB.teams[SQUAD]);if(p&&d.rosterPlan.assignments[p.id]===SQUAD){d.roles[p.id]=el.value;d.dirty=true}}});\n  bindRolePromiseControls();\n  bindLoanControls();\n  bindLoanPurchaseControls();\n  bindLocalServiceControls();\n  bindOfficialRegistrationControls();\n  document.querySelectorAll('[data-role-convert]').forEach(b=>b.onclick=e=>{e.stopPropagation();if(DB.world?.fired)return;const r=proposeRoleConversion(DB,b.dataset.roleConvert,b.dataset.targetRole,'manager');MSG=r.reason;saveDB();navKeepScroll()});\n  document.querySelectorAll('[data-role-convert-cancel]').forEach(b=>b.onclick=e=>{e.stopPropagation();if(DB.world?.fired)return;const r=cancelRoleConversion(DB,b.dataset.roleConvert,'manager');MSG=r.reason;saveDB();navKeepScroll()});\n  document.querySelectorAll('[data-tac]').forEach(el=>el.oninput=el.onchange=e=>{if(!squadUiCanManage(DB.teams[SQUAD]))return;const k=el.dataset.tac;const d=squadEditState(DB.teams[SQUAD]);d.tactics[k]=+el.value;d.dirty=true;if(el.previousElementSibling)el.previousElementSibling.querySelector('output').textContent=el.value});\n  document.querySelectorAll('[data-tr]').forEach(el=>el.oninput=()=>{const t=DB.teams[SQUAD];if(!squadUiCanManage(t))return;const d=squadEditState(t),k=el.dataset.tr;\n    d.training=setTrainingAllocation(d.training,k,el.value);const v=d.training[k],others=Object.keys(ATTR_GROUPS).filter(g=>g!==k).reduce((s,g)=>s+d.training[g],0);\n    el.value=v;d.training[k]=v;d.dirty=true;el.previousElementSibling.querySelector('output').textContent=v;$('#trleft').textContent=`남은 포인트 ${TRAIN_POINTS-others-v} / ${TRAIN_POINTS}`});\n  const scRefresh=()=>{SCOUTSET.region=$('#screg')?.value||SCOUTSET.region;SCOUTSET.role=$('#scrole')?.value||SCOUTSET.role;SCOUTSET.contract=$('#sccontract')?.value||SCOUTSET.contract;SCOUTSET.competition=$('#sccomp')?.value||SCOUTSET.competition;SCOUTSET.undervalued=!!$('#scunder')?.checked;SCOUTSET.q=$('#scq')?.value||'';nav()};\n  for(const id of ['#screg','#scrole','#sccontract','#sccomp','#scunder','#scq'])if($(id))$(id).onchange=scRefresh;\n  document.querySelectorAll('[data-scout]').forEach(b=>b.onclick=e=>{e.stopPropagation();if(DB.world?.fired)return;MSG=scoutPlayers(DB,[b.dataset.scout],20,.1*psOf(DB,managedTeam(DB).region));saveDB();navKeepScroll()});\n  if($('#scall'))$('#scall').onchange=e=>document.querySelectorAll('[data-scout-select]').forEach(x=>x.checked=e.target.checked);\n  if($('#scbatch'))$('#scbatch').onclick=()=>{if(DB.world?.fired)return;const ids=[...document.querySelectorAll('[data-scout-select]:checked')].slice(0,10).map(x=>x.dataset.scoutSelect);if(!ids.length){MSG='관찰할 선수를 선택하세요';navKeepScroll();return}MSG=scoutPlayers(DB,ids,20,.1*psOf(DB,managedTeam(DB).region)*ids.length);saveDB();navKeepScroll()};\n  document.querySelectorAll('[data-p-open]').forEach(button=>button.onclick=()=>{\n    const playerId=button.dataset.pOpen;\n    OPEN_P=OPEN_P===playerId?null:playerId;\n    nav();\n    const restored=[...document.querySelectorAll('[data-p-open]')].find(el=>el.dataset.pOpen===playerId);\n    restored?.focus();\n    const detail=$('#pdetail');\n    if(OPEN_P&&detail)detail.scrollIntoView({behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});\n  });\n}\n// ---------- 몬테카를로 ----------\n"
+    },
+    "src/artifact/ui-club-briefing.js": {
+      "sha256": "5e1994021df401a2b1726c7f034169deb614fb5c78942a71733e721302f1e5d7",
+      "source": "// Pure owned-club briefing; existing season/contract writers keep authority.\nlet CLUB_BRIEF={db:null,slot:null,team:null,message:'',draft:null};\nfunction clubBriefContext(db=DB){\n  const w=db?.world,t=w&&managedTeam(db);\n  if(!t||w.fired||['pick','initial_roster'].includes(w.phase))return null;\n  return {db,w,t,teams:setupTeamsForManager(db).map(x=>x.id)};\n}\nfunction clubBriefState(){\n  if(CLUB_BRIEF.db!==DB||CLUB_BRIEF.slot!==SLOT||CLUB_BRIEF.team!==managedTeamId(DB))CLUB_BRIEF={db:DB,slot:SLOT,team:managedTeamId(DB),message:'',draft:null};\n  return CLUB_BRIEF;\n}\nfunction clubBriefNegotiations(db,ctx=clubBriefContext(db)){\n  if(!ctx||ctx.t.parent)return [];\n  return Object.values(db.world.negotiations||{}).filter(n=>n&&typeof n.id==='string'&&/^[A-Za-z0-9_:/.\\-]+$/.test(n.id)&&['club','player'].includes(n.stage)&&(n.stage==='club'?n.teamId===ctx.t.id&&!!db.teams[n.sellerId]:!!(n.counter||n.demand))&&n.status==='open'&&ctx.teams.includes(n.teamId)&&db.players[n.pid]&&!db.players[n.pid].retired&&db.teams[n.teamId]&&\n    (['renewal','fa','early_fa','transfer'].includes(n.kind))&&(n.kind==='renewal'?db.players[n.pid].team===n.teamId:['transfer','early_fa'].includes(n.kind)?db.players[n.pid].team===n.sellerId:!db.players[n.pid].team))\n    .sort((a,b)=>String(a.createdDate||'').localeCompare(String(b.createdDate||''))||String(a.id).localeCompare(String(b.id)));\n}\nfunction clubBriefFixture(db,ctx=clubBriefContext(db)){\n  if(!ctx||ctx.w.phase!=='season')return null;\n  const rows=[];\n  for(const s of Object.values(ctx.w.seasons||{}))if(!s.done&&db.competitions[s.comp])\n    for(const d of s.days.slice(s.cur))for(const m of d.matches)\n      if(!m.res&&(m.a===ctx.t.id||m.b===ctx.t.id)&&db.teams[m.a]&&db.teams[m.b])rows.push({s,d,m});\n  rows.sort((a,b)=>String(a.d.date).localeCompare(String(b.d.date))||String(a.m.time||'').localeCompare(String(b.m.time||''))||String(a.m.id).localeCompare(String(b.m.id)));\n  return rows[0]||null;\n}\nfunction renderClubBriefing(){\n  const ctx=clubBriefContext();if(!ctx){CLUB_ENTRY_DRAFT=null;return '';}\n  const state=clubBriefState(),nx=clubBriefFixture(DB,ctx),ns=clubBriefNegotiations(DB,ctx),cw=ctx.w.contractWindow;\n  return `<section id=\"club-briefing\"><h3 tabindex=\"-1\">구단 운영 브리핑</h3><p class=\"hint\">${esc(ctx.t.name)} · 기준일 ${esc(DB.worldDate||'날짜 미정')} · ${ctx.w.manage==='manual'?'직접 운영':'현재 AI 위임 설정'} · 확정된 일정과 진행 중인 내 구단 협상만 표시합니다.</p><p role=\"status\">${esc(state.message)}</p>\n    ${nx?`<div class=\"cfgcard\"><h4>다음 공식 경기</h4><p>${esc(DB.competitions[nx.s.comp].name)} · ${esc(nx.d.label||'')} · Bo${nx.m.bo}</p><p>${esc(nx.d.date)} UTC · ${esc(fixtureTimeInfo(nx.m))} · ${esc(DB.teams[nx.m.a].name)} vs ${esc(DB.teams[nx.m.b].name)}</p><div class=\"controls\"><button data-brief-schedule=\"${esc(nx.s.key)}\">해당 일정 확인</button><button data-brief-progress=\"smine\">내 경기까지 진행</button></div></div>`:'<p class=\"hint\">현재 생성된 일정에 남은 내 공식 경기가 없습니다. 아직 생성되지 않은 대진은 예측하지 않습니다.</p>'}\n    ${renderClubEligibility()}${renderClubFinanceBriefing()}${renderClubStaffBriefing()}${renderClubMedicalBriefing()}\n    ${SSET.tab==='sched'?'<button class=\"ghost\" data-brief-return>브리핑으로 돌아오기</button>':''}\n    ${ctx.w.phase==='season'?'<div class=\"controls\"><button data-brief-progress=\"sday\">하루 진행</button></div>':''}\n    ${cw&&ctx.w.phase==='offseason'?`<p class=\"hint\">현재 계약 창구 · ${cw.stage==='exclusive'?'원소속 독점 협상':'FA 시장'}${cw.exclusiveThrough?' · 독점 종료 '+esc(cw.exclusiveThrough):''}${cw.outsideContactDate?' · 타 구단 접촉 '+esc(cw.outsideContactDate):''}. 개별 협상 만료일로 해석하지 않습니다.</p>`:''}\n    ${ctx.w.manage!=='manual'?'<p class=\"hint\">AI 위임 중에는 이 브리핑에서 수동 제안을 보내지 않습니다. 기존 운영 설정에서 직접 운영으로 바꾸세요.</p>':''}<h4>열린 협상 ${ns.length}건</h4>${ns.length?`<div class=\"cfgs\">${ns.map(n=>`<div class=\"cfgcard compact\"><b>${esc(DB.players[n.pid].name)} · ${esc(DB.teams[n.teamId].name)}</b><p class=\"hint\">${n.stage==='club'?'구단 이적료':'선수 개인조건'} · 시작 ${esc(n.createdDate||'날짜 미상')} · ${n.stage==='club'?n.clubRounds||0:n.round}/${n.stage==='club'?3:n.maxRounds}라운드</p><button data-brief-neg=\"${esc(n.id)}\"${ctx.w.manage!=='manual'?' disabled':''}>조건 확인·수동 협상</button></div>`).join('')}</div>`:'<p class=\"hint\">현재 처리 가능한 열린 협상이 없습니다. 개인별 마감은 저장된 근거가 없으면 만들지 않습니다.</p>'}</section>`;\n}\nfunction clubBriefCurrent(db,w,slot,render,team){return DB===db&&db.world===w&&SLOT===slot&&UI_RENDER_ID===render&&VIEW==='season'&&managedTeamId(db)===team&&!SLOT_SWITCHING&&!!clubBriefContext(db)}\nfunction openClubBriefNegotiation(nid){\n  const ctx=clubBriefContext(),n=clubBriefNegotiations(DB,ctx).find(x=>x.id===nid);\n  if(!n||ctx.w.manage!=='manual'||UI_OVERLAY||ctx.w.pendingOfficial?.queue?.length)return false;\n  const db=DB,w=ctx.w,slot=SLOT,render=UI_RENDER_ID,stamp=JSON.stringify(n),date=db.worldDate,phase=w.phase;\n  const current=()=>clubBriefCurrent(db,w,slot,render,ctx.t.id)&&db.worldDate===date&&w.phase===phase&&w.manage==='manual'&&UI_OVERLAY===dialog&&JSON.stringify(db.world.negotiations?.[nid])===stamp&&clubBriefNegotiations(db).some(x=>x.id===nid);\n  const read=JSON.parse(JSON.stringify(db));read.world.negotiations={[nid]:read.world.negotiations[nid]};\n  const state=clubBriefState(),root=document.querySelector('#overlay');let dialog=null;\n  const close=()=>{if(UI_OVERLAY!==dialog)return;if(current())state.draft={nid,stamp,date,values:clubBriefDraft(nid,root)};closeUiOverlay()};\n  openUiOverlay({kind:'club-negotiation',label:'내 구단 수동 협상',dismissible:true,onDismiss:close,focusSelector:'#brief-neg-close',html:`<div class=\"ovin\"><div class=\"ovhead\"><b>내 구단 수동 협상</b><button id=\"brief-neg-close\" class=\"ghost\">브리핑으로 돌아가기</button></div><p class=\"hint\">작성은 제안 보내기 전까지 적용되지 않습니다. 수락·등록을 보장하지 않습니다.</p>${renderNegotiations([n.teamId],read)}</div>`});\n  dialog=UI_OVERLAY;\n  if(state.draft?.nid===nid&&state.draft.stamp===stamp&&state.draft.date===date)clubBriefDraft(nid,root,state.draft.values);\n  $('#brief-neg-close').onclick=close;\n  bindNegotiationControls(msg=>{state.message=String(msg||'처리 결과 없음');state.draft=null;closeUiOverlay({restoreFocus:false});saveDB();navKeepScroll();([...document.querySelectorAll('[data-brief-neg]')].find(b=>b.dataset.briefNeg===nid)||document.querySelector('#club-briefing h3'))?.focus?.({preventScroll:true})},current,root);\n  return true;\n}\nfunction bindClubBriefing(){\n  const ctx=clubBriefContext();if(!ctx)return;\n  bindClubEligibility();bindClubFinanceBriefing();bindClubStaffBriefing();bindClubMedicalBriefing();\n  const db=DB,w=ctx.w,slot=SLOT,render=UI_RENDER_ID,date=db.worldDate,phase=w.phase,nx=clubBriefFixture(db),current=()=>clubBriefCurrent(db,w,slot,render,ctx.t.id)&&db.worldDate===date&&w.phase===phase&&!UI_OVERLAY;\n  document.querySelectorAll('[data-brief-neg]').forEach(b=>b.onclick=()=>{if(current())openClubBriefNegotiation(b.dataset.briefNeg)});\n  document.querySelectorAll('[data-brief-schedule]').forEach(b=>b.onclick=()=>{if(!current()||clubBriefFixture(db)?.m.id!==nx?.m.id)return;SSET.view=b.dataset.briefSchedule;SSET.tab='sched';navKeepScroll();document.querySelector('#stab')?.setAttribute?.('tabindex','-1');document.querySelector('#stab')?.focus?.()});\n  document.querySelectorAll('[data-brief-return]').forEach(b=>b.onclick=()=>{if(current())document.querySelector('#club-briefing h3')?.focus?.()});\n  document.querySelectorAll('[data-brief-progress]').forEach(b=>b.onclick=()=>{if(!current()||w.phase!=='season'||w.pendingOfficial?.queue?.length)return;const target=document.querySelector('#'+b.dataset.briefProgress);if(target&&!target.disabled)target.click()});\n}\n\nfunction clubBriefDraft(nid,root,values=null){\n  const neg=initialNegotiationDraft(nid,values?.neg||null,root),fees={};\n  for(const key of ['fee','upfront','kind','threshold','bonus']){const el=root.querySelector(`[data-${key==='fee'?'neg-fee':'fee-'+key}=\"${nid}\"]`);if(el){if(values?.fees&&key in values.fees)el.value=values.fees[key];fees[key]=el.value}}\n  return {neg,fees};\n}\n"
+    },
+    "scripts/club-medical-acceptance.mjs": {
+      "sha256": "d7299a0433ca0826ca43346de0fbb38469e56539baba35ecc8657fbd21b10707",
+      "source": "import {artifactSources,runEngineFixture} from './test-harness.mjs';\nconst sources=await artifactSources(['ui-club-briefing.js','ui-club-medical.js','app.js']);const app=sources.pop(),esc=app.match(/^const esc=.*$/m)[0];\nawait runEngineFixture(String.raw`(()=>{\n const check=(v,m)=>{if(!v)throw Error('CLUB_MEDICAL '+m)};\n const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:3,div2:true})];cfg.internationals=[];DB=buildWorld(cfg);const [t,other]=activeTeams(DB,'NA',1),reserve=reserveTeamsOf(DB,t)[0];setManagedTeam(DB,t.id);DB.world={phase:'season',year:DB.year,seed:'medical-ui',manage:'manual',registrationVersion:1,seasons:{},offers:[],marketLog:[],steps:[],step:0};setWorldCalendarDate(DB,DB.year+'-01-10');\n for(const team of activeTeams(DB)){for(const role of ROLES){const p=genPlayer(DB,new RNG('medical-ui|'+team.id+role),{region:'NA',role,age:22,base:65});signContract(DB,p,team,1,2,{})}initializeDepthChart(DB,team,true);}initializeOfficialRegistrations(DB);\n const pid=t.roster[0],beforeHistory=JSON.stringify(DB.players[pid].careerEvents||[]);let before=JSON.stringify(DB);check(clubMedicalModel()&&renderClubMedicalBriefing().includes('回')===false&&JSON.stringify(DB)===before,'pure read');check(clubMedicalModel(DB,reserve.id)&&!clubMedicalModel(DB,other.id),'owned reserve foreign');\n check(openClubMedical(t.id)&&JSON.stringify(DB)===before,'pure open');let input=root.querySelector('[data-medical-draft=\"'+pid+'\"]'),button=root.querySelector('[data-medical-apply=\"'+pid+'\"]');input.value='rest';confirm=()=>false;button.onclick();check(JSON.stringify(DB)===before&&saves===0,'confirm cancel');root.querySelector('#brief-medical-close').onclick();check(!UI_OVERLAY&&JSON.stringify(DB)===before,'close cancel');\n openClubMedical(t.id);input=root.querySelector('[data-medical-draft=\"'+pid+'\"]');input.value='invalid';button=root.querySelector('[data-medical-apply=\"'+pid+'\"]');button.onclick();check(JSON.stringify(DB)===before&&saves===0,'invalid');input.value='rest';confirm=()=>true;const callback=button.onclick,expected=JSON.parse(before);expected.players[pid].medicalPlan='rest';callback();check(JSON.stringify(DB)===JSON.stringify(expected)&&saves===1,'same original plan writer whole world');before=JSON.stringify(DB);callback();check(JSON.stringify(DB)===before&&saves===1,'duplicate');check(JSON.stringify(DB.players[pid].careerEvents||[])===beforeHistory,'history unchanged');\n const daily=JSON.parse(before),normal=JSON.parse(before);normal.players[pid].medicalPlan='normal';daily.players[pid].medicalLoad=normal.players[pid].medicalLoad=12;medicalDailyTick(daily,daily.worldDate);medicalDailyTick(normal,normal.worldDate);check(daily.players[pid].medicalRestDays===1&&daily.players[pid].medicalLoad<normal.players[pid].medicalLoad,'actual daily rest consumer');\n const practice=JSON.parse(before),full=JSON.parse(before);full.players[pid].medicalPlan='normal';runDailyPractice(practice);runDailyPractice(full);check(!practice.players[pid].practiceDay&&full.players[pid].practiceDay.individual>0,'actual training exclusion');const scrimNormal=JSON.parse(before);scrimNormal.players[pid].medicalPlan='normal';check(scrimDailyCapacity(DB,DB.teams[t.id])===0&&scrimDailyCapacity(scrimNormal,scrimNormal.teams[t.id])>0,'actual five-person scrim exclusion');check(Object.values(bestStartingLineup(DB,DB.teams[t.id],{},true)).length<5&&!Object.values(bestStartingLineup(DB,DB.teams[t.id],{},true)).includes(pid)&&Object.values(bestStartingLineup(scrimNormal,scrimNormal.teams[t.id],{},true)).length===5,'actual scrim lineup excludes rest');check(validLineupPlayer(DB,DB.teams[t.id],DB.players[pid]),'rest still official medical eligible');\n for(const mode of ['auto','normal','light','rest','rehab']){const read=JSON.parse(before);read.players[pid].medicalPlan=mode;check(!medicalOut(read.players[pid]),mode+' plan alone not official out');check(medicalPlanFor(read,read.players[pid])===(mode==='auto'?'normal':mode==='rehab'?'rest':mode),'actual effective mode');}\n for(const compact of [false,true]){const restored=unpackDB(packDB(DB,compact));check(restored.players[pid].medicalPlan==='rest'&&JSON.stringify(restored.players[pid].careerEvents||[])===beforeHistory,'full lite save plan/history');}\n for(const kind of ['load','slot','manager','fired','ai','initial','date','medical','sameDialog','render','pending','sameManager','switching','retired']){\n  UI_OVERLAY=null;UI_RENDER_ID++;setManagedTeam(DB,t.id);DB.world.manage='manual';DB.world.fired=false;DB.world.phase='season';delete DB.world.pendingOfficial;SLOT='1';openClubMedical(t.id);const cb=root.querySelector('[data-medical-apply=\"'+pid+'\"]').onclick;root.querySelector('[data-medical-draft=\"'+pid+'\"]').value='normal';\n  if(kind==='sameManager')DB.manager={...DB.manager};if(kind==='switching')SLOT_SWITCHING=true;if(kind==='retired')DB.players[pid].retired=true;if(kind==='load')DB=unpackDB(packDB(DB));if(kind==='slot')SLOT='2';if(kind==='manager')setManagedTeam(DB,other.id);if(kind==='fired')DB.world.fired=true;if(kind==='ai')DB.world.manage='ai';if(kind==='initial')DB.world.phase='initial_roster';if(kind==='date')DB.worldDate=addDays(DB.worldDate,1);if(kind==='medical')DB.players[pid].fatigue++;if(kind==='sameDialog')UI_OVERLAY={kind:'club-medical'};if(kind==='render')UI_RENDER_ID++;if(kind==='pending')DB.world.pendingOfficial={queue:[{}]};before=JSON.stringify(DB);cb();check(JSON.stringify(DB)===before&&saves===1,kind+' stale');SLOT_SWITCHING=false;DB.players[pid].retired=false;\n }\n UI_OVERLAY=null;UI_RENDER_ID++;SLOT='1';setManagedTeam(DB,t.id);DB.world.manage='manual';DB.world.fired=false;DB.world.phase='season';delete DB.world.pendingOfficial;\n openClubMedical(t.id);root.querySelector('[data-medical-draft=\"'+pid+'\"]').value='normal';confirm=()=>{DB.worldDate=addDays(DB.worldDate,1);return true};root.querySelector('[data-medical-apply=\"'+pid+'\"]').onclick();check(DB.players[pid].medicalPlan==='rest'&&saves===1,'confirm date recheck');confirm=()=>true;UI_OVERLAY=null;UI_RENDER_ID++;\n // Actual old roster control now shares current guard.\n const el={dataset:{medicalPlan:pid},value:'normal'},fakeRoot={querySelectorAll:()=>[el]};bindMedicalPlanControls(fakeRoot);const stale=el.onchange;DB=unpackDB(packDB(DB));before=JSON.stringify(DB);stale();check(JSON.stringify(DB)===before&&saves===1,'roster retained old DOM inert');bindMedicalPlanControls(fakeRoot);el.onchange();check(DB.players[pid].medicalPlan==='normal'&&saves===2,'current roster writer');\n // Actual official consumer: rest alone eligible, medical out excluded; archive nexus/save.\n const team=DB.teams[t.id],opp=DB.teams[other.id],extra=genPlayer(DB,new RNG('medical-sub'),{region:'NA',role:'TOP',age:22,base:65});signContract(DB,extra,team,1,2,{});const registration=commitWorldAction(DB,{type:'roster.register',actor:'manager',teamId:team.id,registrations:Object.fromEntries(organizationTeams(DB,team).map(x=>[x.id,x.roster.slice()]))});check(registration.ok,'actual registration writer adds employed substitute');DB.players[pid].medical={kind:'injury',site:'wrist',severity:'moderate',daysLeft:5,out:true,started:DB.worldDate,penalty:.04};DB.players[pid].medicalPlan='rehab';\n const historic=JSON.parse(JSON.stringify(DB));const activeHistory=JSON.stringify(historic.players[pid]);check(startMedicalEvent(historic,historic.players[pid],'injury','moderate',5)===null&&JSON.stringify(historic.players[pid])===activeHistory,'existing active medical source not overwritten');startMedicalEvent(historic,historic.players[extra.id],'injury','minor',5,historic.worldDate,new RNG('medical-history-source'));before=JSON.stringify(historic);check(clubMedicalModel(historic,t.id).rows.find(p=>p.id===extra.id).history.includes('당시 예상 5일')&&JSON.stringify(historic)===before,'pure actual stored medical history');const healing=JSON.parse(JSON.stringify(DB)),healed=healing.players[pid],remaining=healed.medical.daysLeft;medicalDailyTick(healing,healing.worldDate);check(healed.medical.daysLeft<remaining&&healed.medicalDayPlan==='rehab','actual rehabilitation daily healing');const cid='medical-real-domestic';DB.competitions[cid]={id:cid,name:'의료 공식 소비 검증',region:'NA',teams:[t.id,other.id],rules:{fearless:true},stages:[{id:'regular',name:'정규',type:'round_robin',legs:1,bestOf:1}]};const season=newSeason(DB,cid,DB.year,'medical-actual',addDays(DB.worldDate,1));season.key=cid;season.region='NA';season.div=1;DB.world.seasons[cid]=season;const view=officialMatchView(DB,season,t.id,other.id);check(!validLineupPlayer(view,view.teams[t.id],view.players[pid]),'actual medical out excluded');const day=season.days[0],match=day.matches[0];setWorldCalendarDate(DB,day.date);const series=simulateScheduledSeries(DB,season,day,match,DB.competitions[cid].stages[0]);commitScheduledSeries(DB,season,match,series);check(series.rec.games.every(g=>g.publicRecord.ending.kind==='nexus'&&g.publicRecord.sides.every(s=>s.players.length===5)&&!g.publicRecord.sides.flatMap(s=>s.players).some(p=>p[0]===pid)),'actual official nexus/out consumer');\n for(const compact of [false,true]){const restored=unpackDB(packDB(DB,compact));check(restored.players[pid].medicalPlan==='rehab'&&restored.players[pid].medical.out&&restored.world.seasons[cid].days[0].matches[0].res.games.every(g=>g.publicRecord.ending.kind==='nexus'),'actual official full lite');}\n console.log('CLUB_MEDICAL_ACCEPTANCE '+JSON.stringify({pure:true,manualWriter:true,daily:{rest:daily.players[pid].medicalLoad,normal:normal.players[pid].medicalLoad},training:true,scrim:true,stale:true,save:true,official:series.rec}));\n})()`,{timeout:30000,setupSources:[esc,...sources,String.raw`\nvar DB,MSG='',VIEW='season',SLOT='1',SLOT_SWITCHING=false,UI_RENDER_ID=1,UI_OVERLAY=null,confirm=()=>true;const SSET={tab:'table'};let saves=0;\nconst camel=s=>s.replace(/-([a-z])/g,(_,c)=>c.toUpperCase());\nconst root={html:'',nodes:[],querySelectorAll(sel){return sel.split(',').flatMap(s=>{s=s.trim();if(s.startsWith('#'))return this.nodes.filter(n=>n.id===s.slice(1));const a=s.match(/^\\[([^=\\]]+)(?:=\"([^\"]*)\")?\\]/);if(!a)return [];return this.nodes.filter(n=>Object.hasOwn(n.attrs,a[1])&&(a[2]===undefined||n.attrs[a[1]]===a[2])&&(!s.endsWith(':checked')||n.checked));});},querySelector(s){return this.querySelectorAll(s)[0]||null;}};\nconst document={querySelector:s=>s==='#overlay'?root:{focus(){}},querySelectorAll:()=>[]};function saveDB(){saves++}function navKeepScroll(){UI_RENDER_ID++}function closeUiOverlay(){UI_OVERLAY=null}function openUiOverlay(o){root.html=o.html;UI_OVERLAY={kind:o.kind};root.nodes=[...o.html.matchAll(/<(button|input|select)\\b([^>]*)>/g)].map(x=>{const attrs=Object.fromEntries([...x[2].matchAll(/([\\w-]+)=\"([^\"]*)\"/g)].map(a=>[a[1],a[2]]));return {attrs,dataset:Object.fromEntries(Object.entries(attrs).filter(([k])=>k.startsWith('data-')).map(([k,v])=>[camel(k.slice(5)),v])),id:attrs.id,type:attrs.type||'',value:attrs.value||'',checked:x[2].includes(' checked'),focus(){}};});}\n`]});\n"
+    }
+  },
+  "engineBytesUnchanged": {
+    "champion-source.js": "29efbdabad4d152e351f0bfdfb025feb5283862ea3ae9caa4fcd2b1d0678bf1c",
+    "system-source.js": "0067a197dd54541fec3bc15a96fddec52ed19ea85eb43a6d2eb3cb5d7759d836",
+    "random.js": "86e30259e4926ea9428afa33d7cff6c51c20a9faa89e847f94aee450bd5b323c",
+    "match-adjudication.js": "63fb882340a949d5ca67bf07f2d7a90f8caab8d06af48da512d2911712ab3b4f",
+    "combat-resources.js": "c7c13b9cd5486b437b79e60c11d4a85655fad3e0c694e7991e911310fc9400cd",
+    "objective-awards.js": "e391263586777ea48ee6f8806e6458639304fd21914cea45de11f720355cd2ff",
+    "takedown-rewards.js": "59a545ebfae98986c7216cc980e351661f5a61dc5c1c313079b122a749733c74",
+    "macro-picks.js": "614b6e64901661b8841edbddd065d0e41999cdf4d56a73606fd64dc952b197e5",
+    "engine.js": "5afc093091fbf7e921aaead89ee0729b66c65628376e93445f51b25a011b6d49",
+    "draft.js": "b5edc5d6158f30f8fa7cb68803b60f84bf34e7c6d6fc80fa126dae985176e8ba",
+    "systems.js": "0da7844547f70eabdb0494451368a295f518ca0ce2ae4d0d77bebad5c3a8b996",
+    "item-purchases.js": "6fb206bdf0dfb208fea5dd6011b22ec8827ca138bac8bb08d367fe17805520cb",
+    "role-quests.js": "6f501d340094774120a4cc74dc4f0964581909716fc537d7a58b14252dcb66f1",
+    "role-quest-match.js": "29ce026186ea801419cb8a369548cef21a5c969f08b9f17b804726934892532b",
+    "data.js": "0eb2d3ac7321e3a728028c3a0799405f24f50b0a904b5e879f95c5f6d71662ff",
+    "champion-data.js": "aa2fd33316757c4ac8c86d5bcad27d7b8f5b8739dbd3e3e4eb0f696ae84e105b",
+    "system-data.js": "16ad1c37594d8aedb047a4707003a20bc66518f0448a7fae861805c925dd5146",
+    "champs2.js": "067ab9927d8b0672231c3226e00167f8e7cf582a41c20a70f18f185d512ad827",
+    "content-naming.js": "cfaccd15c05386a6061e455472dad7dcc01ee65a9753a2d764f2c888711dc20e",
+    "meta.js": "8ffd6ff85694453af40d49e61ba6770f054f40d4fbe35d3552aa11e408707c41",
+    "meta-side.js": "0b95bcc3e0cb1d26625074ab6589778ccea25e0615eb3a83aee2964f95fd0fea",
+    "meta-composition.js": "13bef6227a2ea4a5f83066ff8d4e9a5936063d8fa4e026dfdccaf76980715632",
+    "meta-draft-order.js": "f041f41b7ec21f25b1b6292add20e94aa64c2d602ebcef83f654ef67b4655b99",
+    "meta-tactics.js": "36ae3cf21f93d4b5578b54a9ca0b65509d718038f6a59b0c7275cd88b640c5b6",
+    "meta-practice.js": "6a415363a730a6f0f2854632103fbe0f338cda149136d90fd8409852ba1bc739",
+    "meta-analyst.js": "7f642d520efd77c9d6fb0284185b05f5c279840269269771e3b11c7813f8af28",
+    "meta-opponent.js": "0c2b5201e4cdc2aa4f9590e2c0e0a3abc4025a6821c325b7a728277e12bb7c9f",
+    "meta-opponent-draft.js": "5fd55c5c9adee4b5269edff550eea450dae4784b60db8664665ca6ce8409c6ef",
+    "patch.js": "0bab4d0582fa6da7b3bb582599ded9527cce9192dc9bedbb6e9006154094e235",
+    "patch-balance.js": "145097323c9fa2f6230c5135997c57920495fdcfa6ca2880739d757cbdbedbea",
+    "patch-content.js": "057c2abe7ca7cf195971fea24330055017851ca794aaf2d5eae4935fa4471ed9",
+    "first-selection.js": "0c788ea7cfab33266e7610f312888c13d881df63dd3966570451c71604239331",
+    "series.js": "67a33366c2b244a2ca7f315ee2f70420e6efd7243873403a59392d095a81d3ec",
+    "timezone-calendar.js": "4f9796a001fcd127e488f2d9424ee44bf9ee46ff694e1f0dd2f552b254ade645",
+    "broadcast-calendar.js": "61eec6c44669131a7068c2770799b7a71112a73c25760a00d88643bf450c45ab",
+    "competition.js": "44d0856b841357315c29c022df0a910817edb2d22e940b37bbca3df9d2774783",
+    "league-aggregation.js": "8a1f46972c06f92154f24fa366bbfcd026fe85be13350aa16393ba3dd1890a63",
+    "player.js": "e5b0470e4e4518b80261875b8d6f875c9b821cad6efd8f35e04b40e75336171b",
+    "development.js": "791297239cb94c28990a7373176aad3a122d10d69e64189f39125d6a2c7b1417",
+    "player-relations.js": "8400885087a034a244d03cd365803c01f01dc37c55b3686667e0bc367257e6bb",
+    "medical.js": "9c5d23dfb9cd7f0ebdef4dbc6af223e2a61beaf23f1cbc97be4f9ffa4647d11d",
+    "world.js": "41076b06ece7065b7ecc2518ed444ededfdf798b92b31da46964c89d78fea99a",
+    "calendar.js": "8736fbf8bdcad1fec98f869de9756c333e740f1d191e2322426e911599f21183",
+    "season.js": "34961c37ed9fe55c0afb3dd0f84d2f45d94f46f05a231ea367a83afc596ed621",
+    "offseason.js": "a2f37612c9db7f096f29d686ba1ce063330ada78301400fd1773e0bc95951949",
+    "save.js": "92a476222e94e8658b108bbca94bce76b00462dc4d3a1688d1833a45c2c951a0",
+    "save-migration.js": "68ec50df15e1836c8277e0bfd674a8b7346e101f105134aa9ee030fb14d6e0af",
+    "roster.js": "efdedc445c4c865e67468518945de49f8a763f20adba047fc48757b6d567fb57",
+    "lineup.js": "a6371c9870a2e8440d49c36e1ee089cdd6b39d96c52e5cd9de72cc574025a20b",
+    "state-transaction.js": "6ad636cb64b328cb046e5d8dfe760eeb26c7655c34b0ff776e2102835fab03f1",
+    "state-rollback.js": "1591117e72458abd1ee6ad36b229f95fd70161fd60d5cf0f2cee6280b50831b4",
+    "squad-preparation.js": "24e7cfbdfd92d768eb80a799c3ce6f0a83258a00f059796bf7a8e28832c357ab",
+    "office.js": "080c5f43a4d3b7fe5bb758cd1c63ab10de74eb2d2e5b8d0edd488accea5dd494",
+    "office-consultation.js": "69791d5028a04c60b32dbeda5dfce6a270e5e728c9f0dd2e8d9fae563659f29c",
+    "local-policy.js": "655017910f1a52faca6e5cd18b3a6519cf1cff382c1e2ae96573c51255cfa507",
+    "office-international.js": "a02379c12f82679d696692181f43cc0c5c722e0512e9123592c54f75c57e4e9d",
+    "club-ownership.js": "739abb8e99f1c08900ec7e1568e31cdabdb42ac04a404fe5cf88fe28c5c05c66",
+    "club-license.js": "70252f7573fb4307db93a0921a98f758f2f4b9118c495c9d34acde81fbbd8317",
+    "region-continuity.js": "d5c1452d3671f93aad7904f02fcb1df71361ac5f40bb08fe8b0d2ffd01840d08",
+    "finance.js": "bdc04f13a16e99631548346c811a080dbef5c8a89db787ff003de5b32d03a07e",
+    "contract-market-pricing.js": "3bed2894690c6686e3387aa5643b0aabb60d65d446bdd8112d8919a9f7bb39ca",
+    "contracts.js": "6bd9c40df01bdbf65f8a944bea5cda5a739afa63b0227f8c200c3c2ebce3e403",
+    "contract-market-behavior.js": "f3d0b3899bb2d036835b5abb30cad05bbba89ee9cf0ec087e765088d359c8925",
+    "contract-transfer-market.js": "5adf767bfce1e07c635db473cc84729b2932c750f092078d0dcf2e38bb81aa77",
+    "scouting.js": "6f3868bb816888970554a0c874e89006e553e1d8ffd6f1f4568521d3c7e87a12",
+    "scouting-ai.js": "c654412ff8c1270a9d8fd5147de72634891fd19d6e5814ee7b367e6717519403",
+    "scouting-champions.js": "79ca9afa9204c2b2f0428008a47ae46786fda8730058e4c293bd0bb742a85d88",
+    "scouting-ai-ops.js": "f3c4f36441bde098f07db481f594fad7ce4805482f4549593687a8cea79626f9",
+    "scouting-ai-reassessment.js": "ba39dfd9133a1527bad3fef873d02916af7ff3909d8d3e970270da6c13c1226d",
+    "contract-negotiation.js": "16bfbbfa64277122bf1eeb5fc3c9085c21d6a0d61f7e8bc512cd2f8c0a834c89",
+    "transfer.js": "1b423b602349f05b55072abae65be66536fe42e55e207c6ef3b4846aeeba6c08",
+    "contract-window.js": "493055514c6becc347fc76033c2555b53f6b3364c26232ca4fdd562841fda377",
+    "contract-contact-ai.js": "211bac31fea0761f10ee0b1b904285ff650220e92abae8a079bdad89c1461f54",
+    "contract-agreement.js": "a9410870a8ba1c16f9d7645879986f89c6f30f819b466a443fd12c88d8b21d14",
+    "state-player-actions.js": "4c492d3c29507013d34994b941baefef1e99103713e37da2d551b5ff0b7ce9e3",
+    "player-representation.js": "94875b49ae3be90745083b8a1e4e0cb3b5a75149fce3768747b21db8407ad529",
+    "player-loans.js": "0c128ea349f7e34d8f42006478e8f29ac693497ee5428f07abe1f8f4838d83fd",
+    "transfer-payments.js": "816f57f1634ed3dd0bbc633e75de17db67ec6159dfc6e3f32492e3ad061b21d6",
+    "finance-estate.js": "8acfde7f0f0f9166a1c3570c4f845ef26ac92bc632589a080fdf89ec6bf1a661",
+    "transfer-market-rules.js": "11939f62331144bafee591cd74383d896b9a0e268c2e5e9bdb83dc2f234e72ab",
+    "loan-purchase.js": "23c486aae9fec0bd5bac47273b6b2bd2c594c94117d198209b04149605860c79",
+    "local-service.js": "794173227f82c8e1e43de27c638f0c71fff18caabb03756fe63d6686f09c673b",
+    "registration.js": "902e5fe018a0818ab48ea5a2802c3eaa9ebfdae968736f018b6a846e69393794",
+    "registration-match.js": "16c6d092a0e8008bb71f629e812f7e68f9b19a0d2d598dee8f6df049b909c20e",
+    "player-loan-market.js": "8713eb541e084696ceb516c2743f46185bacd6d135572fcc07cde011172c591d",
+    "club-closure.js": "5bf3cb8853aa5170e285ab3e21a973b55e8bd14e3a6248aa4249742254758b11",
+    "staff.js": "16484fd92f9a00db824a48196bb7a8a3c65f7f14a8767decfee12bd93f2c067a",
+    "staff-contracts.js": "291450863b03399e8d98e769224464e52620a2f91f89bbe1b4c28e84b46d8297",
+    "staff-registration.js": "dfc7ef5f5a707dc098212c8f4e4cc527c01580a5ff73521e135889fe14a40104",
+    "scrim-partner.js": "46b7a202e93b76ba4a19eda48530322b55a3c0acc871db2ab9b44e0b1eea1e8e",
+    "scrim.js": "0523a4580a4f0a68a12a6f096007d1d2c034cbc6b670d66ae6a1e6b6d7543e89",
+    "scrim-plans.js": "5346f414bcdc3180a34972c3e9881a19d419edcd80b653710455a6ecd0a470eb",
+    "practice-resources.js": "43e284428f47238b3360e91b7c1d4ae686a9e96e92f698e0ae01f67f1a4ef5d0",
+    "features.js": "d814dcc47f25a765bfcebe09e745264baa5944026f3e47ba3dde7724ed9996fd",
+    "role-conversion.js": "18708388bd2202835d8226c28be041fb255031282f03b20e2436c932cbfb951d",
+    "draft-analysis.js": "f68f88b632819d268183f2714b672e7845d51d2b13905eda51bdcd8af249fb9b",
+    "draft-preparation.js": "6e031fab26717ab1f7c2edd5f65e82f4c60d91b94d729fefadbcdeb7de5a50cc",
+    "draft-history.js": "3d8c8d0b38472fb7fca681d04d32647d1bc3ba16aa2090425db6a619cb44c5b3",
+    "match-history.js": "66f7f169ebefdfc09d535ee956fca7113fb0ce134b07ba1d0f89a443635b3c20",
+    "analysis-tiers.js": "98fd00a64e70477f6fded6bbc664850d8bc358a162ef0e73c564fdef1baa2b3a",
+    "career.js": "4d7031ea62165d1c2ed27842e11fcb104b8d8b9e9fbc8be80184df5210838b37"
+  },
+  "acceptance": {
+    "pure": true,
+    "manualWriter": true,
+    "daily": {
+      "rest": 8.76,
+      "normal": 10.4
+    },
+    "training": true,
+    "scrim": true,
+    "stale": true,
+    "save": true,
+    "official": {
+      "a": "CR",
+      "b": "VXG",
+      "bestOf": 1,
+      "seed": "medical-actual/2027/season_2027_medical-real-domestic_match_0",
+      "patch": "26.19",
+      "fearless": true,
+      "firstChoice": "home",
+      "score": [
+        0,
+        1
+      ],
+      "winner": "VXG",
+      "games": [
+        {
+          "n": 1,
+          "blue": "CR",
+          "red": "VXG",
+          "seed": "medical-actual/2027/season_2027_medical-real-domestic_match_0/g1",
+          "mods": {
+            "CR": 0,
+            "VXG": 0
+          },
+          "winner": "VXG",
+          "bans": [
+            [
+              "champ_malphite",
+              "champ_amumu",
+              "champ_morgana",
+              "champ_leona",
+              "champ_pantheon"
+            ],
+            [
+              "champ_qiyana",
+              "champ_irelia",
+              "champ_maokai",
+              "champ_yasuo",
+              "champ_lee_sin"
+            ]
+          ],
+          "sideBy": "CR",
+          "sideWhy": "픽 순서 선택 → 후픽 (상대가 레드 선택) · 남은 챔피언 폭을 활용한 후픽 대응",
+          "selectionEvidence": {
+            "version": 1,
+            "self": {
+              "first": 0.038,
+              "last": 0.062,
+              "scarcity": 0.326,
+              "contested": 0,
+              "counter": 0.018,
+              "breadth": 0.2
+            },
+            "opponent": {
+              "first": 0.054,
+              "last": 0.068,
+              "scarcity": 0.349,
+              "contested": 0,
+              "counter": 0.007,
+              "breadth": 0.7
+            }
+          },
+          "firstPick": "VXG",
+          "kills": [
+            20,
+            38
+          ],
+          "dur": "34:38",
+          "duration": 34.63333333333333,
+          "picks": [
+            [
+              "champ_yone",
+              "champ_olaf",
+              "champ_katarina",
+              "champ_tristana",
+              "champ_blitzcrank"
+            ],
+            [
+              "champ_warwick",
+              "champ_udyr",
+              "champ_syndra",
+              "champ_swain",
+              "champ_alistar"
+            ]
+          ],
+          "mvp": "NA_68",
+          "date": "2027-01-14",
+          "patch": "26.19",
+          "publicRecord": {
+            "version": 1,
+            "laningHpBasis": "bounded-nonlethal-cost-v1",
+            "combatRoundBasis": "prepared-round-budget-v1",
+            "macroPicks": {
+              "version": 1,
+              "basis": "canonical-seeded-keys-v1",
+              "count": 4,
+              "events": [
+                {
+                  "id": "pick:1",
+                  "side": 0,
+                  "lane": "bot",
+                  "minute": 19,
+                  "second": 28,
+                  "target": "NA_41",
+                  "hunters": [
+                    "NA_43",
+                    "NA_45",
+                    "NA_46"
+                  ],
+                  "defenders": [
+                    "NA_41",
+                    "NA_42"
+                  ],
+                  "winner": 1
+                },
+                {
+                  "id": "pick:2",
+                  "side": 1,
+                  "lane": "bot",
+                  "minute": 20,
+                  "second": 59,
+                  "target": "NA_44",
+                  "hunters": [
+                    "NA_39",
+                    "NA_68",
+                    "NA_42"
+                  ],
+                  "defenders": [
+                    "NA_44"
+                  ],
+                  "winner": 1
+                },
+                {
+                  "id": "pick:3",
+                  "side": 1,
+                  "lane": "bot",
+                  "minute": 29,
+                  "second": 14,
+                  "target": "NA_44",
+                  "hunters": [
+                    "NA_40",
+                    "NA_39",
+                    "NA_42"
+                  ],
+                  "defenders": [
+                    "NA_44"
+                  ],
+                  "winner": 1
+                },
+                {
+                  "id": "pick:4",
+                  "side": 1,
+                  "lane": "bot",
+                  "minute": 31,
+                  "second": 23,
+                  "target": "NA_44",
+                  "hunters": [
+                    "NA_41",
+                    "NA_68",
+                    "NA_39"
+                  ],
+                  "defenders": [
+                    "NA_44",
+                    "NA_45",
+                    "NA_47"
+                  ],
+                  "winner": 1
+                }
+              ]
+            },
+            "structureSelectionBasis": "progress-seeded-ties-v1",
+            "takedowns": {
+              "version": 1,
+              "count": 58,
+              "events": [
+                {
+                  "id": "NA_44:1",
+                  "side": 1,
+                  "victim": "NA_44",
+                  "killer": "NA_39",
+                  "assistPool": 150,
+                  "assistPaid": 150,
+                  "payouts": [
+                    {
+                      "player": "NA_39",
+                      "kind": "kill",
+                      "gold": 300,
+                      "xp": 260,
+                      "questGold": 0,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_41",
+                      "kind": "assist",
+                      "gold": 75,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_42",
+                      "kind": "assist",
+                      "gold": 75,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    }
+                  ],
+                  "minute": 6,
+                  "second": 21
+                },
+                {
+                  "id": "NA_47:1",
+                  "side": 1,
+                  "victim": "NA_47",
+                  "killer": "NA_41",
+                  "assistPool": 150,
+                  "assistPaid": 150,
+                  "payouts": [
+                    {
+                      "player": "NA_41",
+                      "kind": "kill",
+                      "gold": 300,
+                      "xp": 220,
+                      "questGold": 0,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_39",
+                      "kind": "assist",
+                      "gold": 75,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_42",
+                      "kind": "assist",
+                      "gold": 75,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    }
+                  ],
+                  "minute": 6,
+                  "second": 24
+                },
+                {
+                  "id": "NA_41:1",
+                  "side": 0,
+                  "victim": "NA_41",
+                  "killer": "NA_43",
+                  "assistPool": 150,
+                  "assistPaid": 150,
+                  "payouts": [
+                    {
+                      "player": "NA_43",
+                      "kind": "kill",
+                      "gold": 300,
+                      "xp": 280,
+                      "questGold": 0,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_44",
+                      "kind": "assist",
+                      "gold": 75,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_47",
+                      "kind": "assist",
+                      "gold": 75,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    }
+                  ],
+                  "minute": 7,
+                  "second": 18
+                },
+                {
+                  "id": "NA_42:1",
+                  "side": 0,
+                  "victim": "NA_42",
+                  "killer": "NA_44",
+                  "assistPool": 150,
+                  "assistPaid": 150,
+                  "payouts": [
+                    {
+                      "player": "NA_44",
+                      "kind": "kill",
+                      "gold": 300,
+                      "xp": 240,
+                      "questGold": 0,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_43",
+                      "kind": "assist",
+                      "gold": 75,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_47",
+                      "kind": "assist",
+                      "gold": 75,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    }
+                  ],
+                  "minute": 7,
+                  "second": 25
+                },
+                {
+                  "id": "NA_43:1",
+                  "side": 1,
+                  "victim": "NA_43",
+                  "killer": "NA_41",
+                  "assistPool": 150,
+                  "assistPaid": 150,
+                  "payouts": [
+                    {
+                      "player": "NA_41",
+                      "kind": "kill",
+                      "gold": 300,
+                      "xp": 280,
+                      "questGold": 0,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_39",
+                      "kind": "assist",
+                      "gold": 75,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_42",
+                      "kind": "assist",
+                      "gold": 75,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    }
+                  ],
+                  "minute": 10,
+                  "second": 15
+                },
+                {
+                  "id": "NA_44:2",
+                  "side": 1,
+                  "victim": "NA_44",
+                  "killer": "NA_39",
+                  "assistPool": 150,
+                  "assistPaid": 150,
+                  "payouts": [
+                    {
+                      "player": "NA_39",
+                      "kind": "kill",
+                      "gold": 300,
+                      "xp": 300,
+                      "questGold": 0,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_41",
+                      "kind": "assist",
+                      "gold": 75,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_42",
+                      "kind": "assist",
+                      "gold": 75,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    }
+                  ],
+                  "minute": 10,
+                  "second": 18
+                },
+                {
+                  "id": "NA_47:2",
+                  "side": 1,
+                  "victim": "NA_47",
+                  "killer": "NA_41",
+                  "assistPool": 150,
+                  "assistPaid": 150,
+                  "payouts": [
+                    {
+                      "player": "NA_41",
+                      "kind": "kill",
+                      "gold": 300,
+                      "xp": 260,
+                      "questGold": 0,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_39",
+                      "kind": "assist",
+                      "gold": 75,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_42",
+                      "kind": "assist",
+                      "gold": 75,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    }
+                  ],
+                  "minute": 10,
+                  "second": 24
+                },
+                {
+                  "id": "NA_47:3",
+                  "side": 1,
+                  "victim": "NA_47",
+                  "killer": "NA_39",
+                  "assistPool": 150,
+                  "assistPaid": 150,
+                  "payouts": [
+                    {
+                      "player": "NA_39",
+                      "kind": "kill",
+                      "gold": 300,
+                      "xp": 280,
+                      "questGold": 0,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_41",
+                      "kind": "assist",
+                      "gold": 75,
+                      "xp": 70,
+                      "questGold": 40,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_42",
+                      "kind": "assist",
+                      "gold": 75,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    }
+                  ],
+                  "minute": 12,
+                  "second": 17
+                },
+                {
+                  "id": "NA_43:2",
+                  "side": 1,
+                  "victim": "NA_43",
+                  "killer": "NA_41",
+                  "assistPool": 150,
+                  "assistPaid": 150,
+                  "payouts": [
+                    {
+                      "player": "NA_41",
+                      "kind": "kill",
+                      "gold": 300,
+                      "xp": 300,
+                      "questGold": 40,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_42",
+                      "kind": "assist",
+                      "gold": 75,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_39",
+                      "kind": "assist",
+                      "gold": 75,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    }
+                  ],
+                  "minute": 12,
+                  "second": 24
+                },
+                {
+                  "id": "NA_41:2",
+                  "side": 0,
+                  "victim": "NA_41",
+                  "killer": "NA_44",
+                  "assistPool": 150,
+                  "assistPaid": 150,
+                  "payouts": [
+                    {
+                      "player": "NA_44",
+                      "kind": "kill",
+                      "gold": 300,
+                      "xp": 340,
+                      "questGold": 0,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_43",
+                      "kind": "assist",
+                      "gold": 75,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_47",
+                      "kind": "assist",
+                      "gold": 75,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    }
+                  ],
+                  "minute": 12,
+                  "second": 27
+                },
+                {
+                  "id": "NA_46:1",
+                  "side": 1,
+                  "victim": "NA_46",
+                  "killer": "NA_40",
+                  "assistPool": 150,
+                  "assistPaid": 150,
+                  "payouts": [
+                    {
+                      "player": "NA_40",
+                      "kind": "kill",
+                      "gold": 300,
+                      "xp": 320,
+                      "questGold": 0,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_41",
+                      "kind": "assist",
+                      "gold": 150,
+                      "xp": 70,
+                      "questGold": 40,
+                      "questXp": 0
+                    }
+                  ],
+                  "minute": 14,
+                  "second": 35
+                },
+                {
+                  "id": "NA_44:3",
+                  "side": 1,
+                  "victim": "NA_44",
+                  "killer": "NA_41",
+                  "assistPool": 150,
+                  "assistPaid": 150,
+                  "payouts": [
+                    {
+                      "player": "NA_41",
+                      "kind": "kill",
+                      "gold": 300,
+                      "xp": 340,
+                      "questGold": 40,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_68",
+                      "kind": "assist",
+                      "gold": 50,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 80
+                    },
+                    {
+                      "player": "NA_39",
+                      "kind": "assist",
+                      "gold": 50,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_42",
+                      "kind": "assist",
+                      "gold": 50,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    }
+                  ],
+                  "minute": 14,
+                  "second": 39
+                },
+                {
+                  "id": "NA_43:4",
+                  "side": 1,
+                  "victim": "NA_43",
+                  "killer": "NA_68",
+                  "assistPool": 150,
+                  "assistPaid": 150,
+                  "payouts": [
+                    {
+                      "player": "NA_68",
+                      "kind": "kill",
+                      "gold": 300,
+                      "xp": 440,
+                      "questGold": 0,
+                      "questXp": 80
+                    },
+                    {
+                      "player": "NA_40",
+                      "kind": "assist",
+                      "gold": 150,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    }
+                  ],
+                  "minute": 32,
+                  "second": 8
+                },
+                {
+                  "id": "NA_46:9",
+                  "side": 1,
+                  "victim": "NA_46",
+                  "killer": "NA_40",
+                  "assistPool": 150,
+                  "assistPaid": 150,
+                  "payouts": [
+                    {
+                      "player": "NA_40",
+                      "kind": "kill",
+                      "gold": 300,
+                      "xp": 420,
+                      "questGold": 0,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_39",
+                      "kind": "assist",
+                      "gold": 150,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    }
+                  ],
+                  "minute": 32,
+                  "second": 12
+                },
+                {
+                  "id": "NA_44:11",
+                  "side": 1,
+                  "victim": "NA_44",
+                  "killer": "NA_68",
+                  "assistPool": 150,
+                  "assistPaid": 150,
+                  "payouts": [
+                    {
+                      "player": "NA_68",
+                      "kind": "kill",
+                      "gold": 300,
+                      "xp": 440,
+                      "questGold": 0,
+                      "questXp": 80
+                    },
+                    {
+                      "player": "NA_40",
+                      "kind": "assist",
+                      "gold": 75,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_42",
+                      "kind": "assist",
+                      "gold": 75,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    }
+                  ],
+                  "minute": 32,
+                  "second": 17
+                },
+                {
+                  "id": "NA_39:1",
+                  "side": 0,
+                  "victim": "NA_39",
+                  "killer": "NA_46",
+                  "assistPool": 150,
+                  "assistPaid": 0,
+                  "payouts": [
+                    {
+                      "player": "NA_46",
+                      "kind": "kill",
+                      "gold": 300,
+                      "xp": 500,
+                      "questGold": 0,
+                      "questXp": 0
+                    }
+                  ],
+                  "minute": 32,
+                  "second": 20
+                },
+                {
+                  "id": "NA_40:7",
+                  "side": 0,
+                  "victim": "NA_40",
+                  "killer": "NA_47",
+                  "assistPool": 150,
+                  "assistPaid": 150,
+                  "payouts": [
+                    {
+                      "player": "NA_47",
+                      "kind": "kill",
+                      "gold": 300,
+                      "xp": 460,
+                      "questGold": 0,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_43",
+                      "kind": "assist",
+                      "gold": 75,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_44",
+                      "kind": "assist",
+                      "gold": 75,
+                      "xp": 70,
+                      "questGold": 40,
+                      "questXp": 0
+                    }
+                  ],
+                  "minute": 32,
+                  "second": 23
+                },
+                {
+                  "id": "NA_47:5",
+                  "side": 1,
+                  "victim": "NA_47",
+                  "killer": "NA_68",
+                  "assistPool": 150,
+                  "assistPaid": 150,
+                  "payouts": [
+                    {
+                      "player": "NA_68",
+                      "kind": "kill",
+                      "gold": 300,
+                      "xp": 420,
+                      "questGold": 0,
+                      "questXp": 80
+                    },
+                    {
+                      "player": "NA_42",
+                      "kind": "assist",
+                      "gold": 150,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    }
+                  ],
+                  "minute": 32,
+                  "second": 59
+                },
+                {
+                  "id": "NA_45:6",
+                  "side": 1,
+                  "victim": "NA_45",
+                  "killer": "NA_41",
+                  "assistPool": 150,
+                  "assistPaid": 150,
+                  "payouts": [
+                    {
+                      "player": "NA_41",
+                      "kind": "kill",
+                      "gold": 300,
+                      "xp": 480,
+                      "questGold": 40,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_39",
+                      "kind": "assist",
+                      "gold": 75,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_68",
+                      "kind": "assist",
+                      "gold": 75,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 80
+                    }
+                  ],
+                  "minute": 34,
+                  "second": 11
+                },
+                {
+                  "id": "NA_46:10",
+                  "side": 1,
+                  "victim": "NA_46",
+                  "killer": "NA_41",
+                  "assistPool": 150,
+                  "assistPaid": 150,
+                  "payouts": [
+                    {
+                      "player": "NA_41",
+                      "kind": "kill",
+                      "gold": 300,
+                      "xp": 440,
+                      "questGold": 40,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_68",
+                      "kind": "assist",
+                      "gold": 150,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 80
+                    }
+                  ],
+                  "minute": 34,
+                  "second": 13
+                },
+                {
+                  "id": "NA_44:12",
+                  "side": 1,
+                  "victim": "NA_44",
+                  "killer": "NA_41",
+                  "assistPool": 150,
+                  "assistPaid": 150,
+                  "payouts": [
+                    {
+                      "player": "NA_41",
+                      "kind": "kill",
+                      "gold": 300,
+                      "xp": 460,
+                      "questGold": 40,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_42",
+                      "kind": "assist",
+                      "gold": 150,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    }
+                  ],
+                  "minute": 34,
+                  "second": 18
+                },
+                {
+                  "id": "NA_47:6",
+                  "side": 1,
+                  "victim": "NA_47",
+                  "killer": "NA_42",
+                  "assistPool": 150,
+                  "assistPaid": 150,
+                  "payouts": [
+                    {
+                      "player": "NA_42",
+                      "kind": "kill",
+                      "gold": 300,
+                      "xp": 420,
+                      "questGold": 0,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_68",
+                      "kind": "assist",
+                      "gold": 50,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 80
+                    },
+                    {
+                      "player": "NA_39",
+                      "kind": "assist",
+                      "gold": 50,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_41",
+                      "kind": "assist",
+                      "gold": 50,
+                      "xp": 70,
+                      "questGold": 40,
+                      "questXp": 0
+                    }
+                  ],
+                  "minute": 34,
+                  "second": 21
+                },
+                {
+                  "id": "NA_40:8",
+                  "side": 0,
+                  "victim": "NA_40",
+                  "killer": "NA_45",
+                  "assistPool": 150,
+                  "assistPaid": 150,
+                  "payouts": [
+                    {
+                      "player": "NA_45",
+                      "kind": "kill",
+                      "gold": 300,
+                      "xp": 460,
+                      "questGold": 0,
+                      "questXp": 80
+                    },
+                    {
+                      "player": "NA_43",
+                      "kind": "assist",
+                      "gold": 50,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_47",
+                      "kind": "assist",
+                      "gold": 50,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_46",
+                      "kind": "assist",
+                      "gold": 50,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    }
+                  ],
+                  "minute": 34,
+                  "second": 24
+                },
+                {
+                  "id": "NA_41:10",
+                  "side": 0,
+                  "victim": "NA_41",
+                  "killer": "NA_43",
+                  "assistPool": 150,
+                  "assistPaid": 150,
+                  "payouts": [
+                    {
+                      "player": "NA_43",
+                      "kind": "kill",
+                      "gold": 300,
+                      "xp": 500,
+                      "questGold": 0,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_45",
+                      "kind": "assist",
+                      "gold": 50,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 80
+                    },
+                    {
+                      "player": "NA_44",
+                      "kind": "assist",
+                      "gold": 50,
+                      "xp": 70,
+                      "questGold": 40,
+                      "questXp": 0
+                    },
+                    {
+                      "player": "NA_47",
+                      "kind": "assist",
+                      "gold": 50,
+                      "xp": 70,
+                      "questGold": 0,
+                      "questXp": 0
+                    }
+                  ],
+                  "minute": 34,
+                  "second": 27
+                }
+              ]
+            },
+            "objectives": {
+              "version": 1,
+              "events": [
+                {
+                  "id": "dragon:5:0",
+                  "key": "dragon",
+                  "side": 1,
+                  "minute": 5,
+                  "second": 16,
+                  "participants": [
+                    "NA_68",
+                    "NA_39",
+                    "NA_40",
+                    "NA_41",
+                    "NA_42"
+                  ]
+                },
+                {
+                  "id": "dragon:10:1",
+                  "key": "dragon",
+                  "side": 1,
+                  "minute": 10,
+                  "second": 34,
+                  "participants": [
+                    "NA_68",
+                    "NA_39",
+                    "NA_40",
+                    "NA_41",
+                    "NA_42"
+                  ]
+                },
+                {
+                  "id": "herald:14",
+                  "key": "herald",
+                  "side": 1,
+                  "minute": 14,
+                  "second": 33,
+                  "participants": [
+                    "NA_68",
+                    "NA_39",
+                    "NA_40",
+                    "NA_41",
+                    "NA_42"
+                  ]
+                },
+                {
+                  "id": "dragon:15:2",
+                  "key": "dragon",
+                  "side": 1,
+                  "minute": 15,
+                  "second": 8,
+                  "participants": [
+                    "NA_68",
+                    "NA_39",
+                    "NA_40",
+                    "NA_41",
+                    "NA_42"
+                  ]
+                },
+                {
+                  "id": "dragon:20:3",
+                  "key": "dragon",
+                  "side": 1,
+                  "minute": 20,
+                  "second": 33,
+                  "participants": [
+                    "NA_68",
+                    "NA_39",
+                    "NA_40",
+                    "NA_41",
+                    "NA_42"
+                  ]
+                },
+                {
+                  "id": "baron:20",
+                  "key": "baron",
+                  "side": 1,
+                  "minute": 20,
+                  "second": 55,
+                  "participants": [
+                    "NA_68",
+                    "NA_39",
+                    "NA_42"
+                  ]
+                },
+                {
+                  "id": "elder:26",
+                  "key": "elder",
+                  "side": 1,
+                  "minute": 26,
+                  "second": 21,
+                  "participants": [
+                    "NA_68",
+                    "NA_39",
+                    "NA_40",
+                    "NA_41",
+                    "NA_42"
+                  ]
+                },
+                {
+                  "id": "baron:26",
+                  "key": "baron",
+                  "side": 1,
+                  "minute": 26,
+                  "second": 37,
+                  "participants": [
+                    "NA_68",
+                    "NA_39",
+                    "NA_40",
+                    "NA_41",
+                    "NA_42"
+                  ]
+                },
+                {
+                  "id": "elder:32",
+                  "key": "elder",
+                  "side": 1,
+                  "minute": 32,
+                  "second": 35,
+                  "participants": [
+                    "NA_68",
+                    "NA_39",
+                    "NA_40",
+                    "NA_42"
+                  ]
+                },
+                {
+                  "id": "baron:32",
+                  "key": "baron",
+                  "side": 1,
+                  "minute": 32,
+                  "second": 55,
+                  "participants": [
+                    "NA_68",
+                    "NA_42"
+                  ]
+                }
+              ]
+            },
+            "damageBasis": "effective-aggregate-v1",
+            "ending": {
+              "version": 1,
+              "kind": "nexus",
+              "winner": "VXG",
+              "minute": 34,
+              "second": 38
+            },
+            "resources": {
+              "version": 1,
+              "players": {
+                "NA_45": {
+                  "earned": 11957.621968531086,
+                  "items": 11200,
+                  "wards": 0,
+                  "held": 757.6219685310859
+                },
+                "NA_43": {
+                  "earned": 11118.71087218563,
+                  "items": 10150,
+                  "wards": 0,
+                  "held": 968.7108721856273
+                },
+                "NA_46": {
+                  "earned": 10502.051722501024,
+                  "items": 10350,
+                  "wards": 0,
+                  "held": 152.05172250102135
+                },
+                "NA_44": {
+                  "earned": 13081.398814288588,
+                  "items": 12925,
+                  "wards": 0,
+                  "held": 156.39881428858968
+                },
+                "NA_47": {
+                  "earned": 9215.02460148589,
+                  "items": 8200,
+                  "wards": 680,
+                  "held": 335.0246014858908
+                },
+                "NA_68": {
+                  "earned": 15948.054663972087,
+                  "items": 14900,
+                  "wards": 0,
+                  "held": 1048.0546639720856
+                },
+                "NA_39": {
+                  "earned": 15082.55462584767,
+                  "items": 12550,
+                  "wards": 0,
+                  "held": 2532.5546258476693
+                },
+                "NA_40": {
+                  "earned": 13045.199319236452,
+                  "items": 12800,
+                  "wards": 0,
+                  "held": 245.1993192364539
+                },
+                "NA_41": {
+                  "earned": 16749.058702986138,
+                  "items": 15200,
+                  "wards": 0,
+                  "held": 1549.058702986138
+                },
+                "NA_42": {
+                  "earned": 12411.76783234477,
+                  "items": 10600,
+                  "wards": 680,
+                  "held": 1131.7678323447722
+                }
+              }
+            },
+            "date": "2027-01-14",
+            "patch": "26.19",
+            "winner": "VXG",
+            "duration": 34.63333333333333,
+            "sides": [
+              {
+                "team": "CR",
+                "name": "Crimson",
+                "players": [
+                  [
+                    "NA_45",
+                    "Paxth",
+                    "TOP",
+                    "champ_yone",
+                    5,
+                    6,
+                    9,
+                    220,
+                    11958,
+                    26836,
+                    18,
+                    [
+                      "1086",
+                      "3008",
+                      "667101",
+                      "3087",
+                      "6672",
+                      "3155"
+                    ]
+                  ],
+                  [
+                    "NA_43",
+                    "Hexek",
+                    "JGL",
+                    "champ_olaf",
+                    2,
+                    4,
+                    13,
+                    180,
+                    11119,
+                    18310,
+                    16,
+                    [
+                      "1103",
+                      "3008",
+                      "663193",
+                      "667101",
+                      "3156",
+                      "3144"
+                    ]
+                  ],
+                  [
+                    "NA_46",
+                    "Pyro",
+                    "MID",
+                    "champ_katarina",
+                    4,
+                    10,
+                    4,
+                    186,
+                    10502,
+                    18598,
+                    15,
+                    [
+                      "1086",
+                      "3006",
+                      "667101",
+                      "3087",
+                      "6672",
+                      "1036"
+                    ]
+                  ],
+                  [
+                    "NA_44",
+                    "Vexta",
+                    "ADC",
+                    "champ_tristana",
+                    8,
+                    12,
+                    6,
+                    192,
+                    13081,
+                    29914,
+                    16,
+                    [
+                      "1086",
+                      "3046",
+                      "667101",
+                      "3087",
+                      "663172",
+                      "6690",
+                      "3006"
+                    ]
+                  ],
+                  [
+                    "NA_47",
+                    "Elta",
+                    "SUP",
+                    "champ_blitzcrank",
+                    1,
+                    6,
+                    14,
+                    29,
+                    9215,
+                    19299,
+                    14,
+                    [
+                      "3870",
+                      "3008",
+                      "663193",
+                      "3156",
+                      "3067",
+                      "1052"
+                    ]
+                  ]
+                ]
+              },
+              {
+                "team": "VXG",
+                "name": "Vertex Gaming",
+                "players": [
+                  [
+                    "NA_68",
+                    "Hexzo",
+                    "TOP",
+                    "champ_warwick",
+                    5,
+                    0,
+                    15,
+                    273,
+                    15948,
+                    28682,
+                    20,
+                    [
+                      "3008",
+                      "663193",
+                      "667101",
+                      "3087",
+                      "663172",
+                      "4629"
+                    ]
+                  ],
+                  [
+                    "NA_39",
+                    "Valul",
+                    "JGL",
+                    "champ_udyr",
+                    10,
+                    1,
+                    12,
+                    187,
+                    15083,
+                    33665,
+                    18,
+                    [
+                      "1103",
+                      "3008",
+                      "663193",
+                      "667101",
+                      "3087",
+                      "3156"
+                    ]
+                  ],
+                  [
+                    "NA_40",
+                    "Tien",
+                    "MID",
+                    "champ_syndra",
+                    6,
+                    8,
+                    8,
+                    213,
+                    13045,
+                    20548,
+                    16,
+                    [
+                      "1086",
+                      "3006",
+                      "3087",
+                      "3100",
+                      "663146",
+                      "3115"
+                    ]
+                  ],
+                  [
+                    "NA_41",
+                    "Kaie",
+                    "ADC",
+                    "champ_swain",
+                    13,
+                    10,
+                    10,
+                    213,
+                    16749,
+                    43238,
+                    18,
+                    [
+                      "1086",
+                      "3087",
+                      "3100",
+                      "663172",
+                      "663146",
+                      "4646",
+                      "3006"
+                    ]
+                  ],
+                  [
+                    "NA_42",
+                    "Ishe",
+                    "SUP",
+                    "champ_alistar",
+                    4,
+                    1,
+                    20,
+                    32,
+                    12412,
+                    13283,
+                    15,
+                    [
+                      "3870",
+                      "3008",
+                      "663193",
+                      "3156",
+                      "3065",
+                      "6660"
+                    ]
+                  ]
+                ]
+              }
+            ],
+            "championNames": {
+              "champ_yone": "요네",
+              "champ_olaf": "올라프",
+              "champ_katarina": "카타리나",
+              "champ_tristana": "트리스타나",
+              "champ_blitzcrank": "블리츠크랭크",
+              "champ_warwick": "워윅",
+              "champ_udyr": "우디르",
+              "champ_syndra": "신드라",
+              "champ_swain": "스웨인",
+              "champ_alistar": "알리스타"
+            },
+            "itemNames": {
+              "1036": "롱소드",
+              "1052": "증폭의 고서",
+              "1086": "도란의 활",
+              "1103": "새끼 이끼쿵쿵이",
+              "3006": "광전사의 군화",
+              "3008": "탐욕의 군화",
+              "3046": "유령 무희",
+              "3065": "정령의 형상",
+              "3067": "점화석",
+              "3087": "스태틱의 단검",
+              "3100": "리치베인",
+              "3115": "내셔의 이빨",
+              "3144": "정찰병의 새총",
+              "3155": "주문포식자",
+              "3156": "맬모셔스의 아귀",
+              "3870": "꿈 생성기",
+              "4629": "우주의 추진력",
+              "4646": "폭풍 쇄도",
+              "6660": "바미의 불씨",
+              "6672": "크라켄 학살자",
+              "6690": "꽁지깃",
+              "663146": "마법공학 총검",
+              "663172": "서풍",
+              "663193": "가고일 돌갑옷",
+              "667101": "도박꾼의 칼날"
+            },
+            "eventCount": 0,
+            "events": []
+          },
+          "draftSequence": {
+            "version": 1,
+            "firstPick": 1,
+            "events": [
+              [
+                0,
+                "B",
+                1,
+                "champ_qiyana"
+              ],
+              [
+                1,
+                "B",
+                0,
+                "champ_malphite"
+              ],
+              [
+                2,
+                "B",
+                1,
+                "champ_irelia"
+              ],
+              [
+                3,
+                "B",
+                0,
+                "champ_amumu"
+              ],
+              [
+                4,
+                "B",
+                1,
+                "champ_maokai"
+              ],
+              [
+                5,
+                "B",
+                0,
+                "champ_morgana"
+              ],
+              [
+                6,
+                "P",
+                1,
+                "champ_warwick"
+              ],
+              [
+                7,
+                "P",
+                0,
+                "champ_blitzcrank"
+              ],
+              [
+                8,
+                "P",
+                0,
+                "champ_tristana"
+              ],
+              [
+                9,
+                "P",
+                1,
+                "champ_swain"
+              ],
+              [
+                10,
+                "P",
+                1,
+                "champ_udyr"
+              ],
+              [
+                11,
+                "P",
+                0,
+                "champ_katarina"
+              ],
+              [
+                12,
+                "B",
+                0,
+                "champ_leona"
+              ],
+              [
+                13,
+                "B",
+                1,
+                "champ_yasuo"
+              ],
+              [
+                14,
+                "B",
+                0,
+                "champ_pantheon"
+              ],
+              [
+                15,
+                "B",
+                1,
+                "champ_lee_sin"
+              ],
+              [
+                16,
+                "P",
+                0,
+                "champ_yone"
+              ],
+              [
+                17,
+                "P",
+                1,
+                "champ_alistar"
+              ],
+              [
+                18,
+                "P",
+                1,
+                "champ_syndra"
+              ],
+              [
+                19,
+                "P",
+                0,
+                "champ_olaf"
+              ]
+            ]
+          }
+        }
+      ],
+      "tac": {
+        "CR": {
+          "aggression": 48,
+          "risk_tolerance": 75,
+          "objective_priority": 60,
+          "vision_investment": 56,
+          "scaling_preference": 44
+        },
+        "VXG": {
+          "aggression": 55,
+          "risk_tolerance": 51,
+          "objective_priority": 63,
+          "vision_investment": 65,
+          "scaling_preference": 57
+        }
+      },
+      "staffService": {
+        "CR": [
+          {
+            "id": "S1289000282",
+            "role": "strategicCoach"
+          },
+          {
+            "id": "S1349269476",
+            "role": "developmentCoach"
+          },
+          {
+            "id": "S2899648372",
+            "role": "performanceCoach"
+          },
+          {
+            "id": "S2148187381",
+            "role": "analyst"
+          },
+          {
+            "id": "S2353177229",
+            "role": "scout"
+          },
+          {
+            "id": "S886085526",
+            "role": "scout"
+          }
+        ],
+        "VXG": [
+          {
+            "id": "S3610885180",
+            "role": "strategicCoach"
+          },
+          {
+            "id": "S3080613151",
+            "role": "developmentCoach"
+          },
+          {
+            "id": "S1975099604",
+            "role": "performanceCoach"
+          },
+          {
+            "id": "S4277108636",
+            "role": "analyst"
+          },
+          {
+            "id": "S2023985245",
+            "role": "scout"
+          },
+          {
+            "id": "S1889278641",
+            "role": "scout"
+          }
+        ]
+      }
+    }
+  },
+  "browserSource": "from playwright.sync_api import sync_playwright\nfrom pathlib import Path\nimport json\nSETUP=\"()=>{const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:3,div2:true,system:'franchise'})];cfg.internationals=[];DB=buildWorld(cfg);const [t,o]=activeTeams(DB,'NA',1);setManagedTeam(DB,t.id);DB.world={phase:'season',year:DB.year,seed:'staff-browser',manage:'manual',registrationVersion:1,seasons:{},steps:[],step:0,offers:[],marketLog:[],pendingOfficial:null};setWorldCalendarDate(DB,DB.year+'-01-10');for(const team of activeTeams(DB)){for(const r of ROLES){const p=genPlayer(DB,new RNG('staff-browser|'+team.id+r),{region:'NA',role:r,age:22,base:65});signContract(DB,p,team,1,2,{})}initializeDepthChart(DB,team,true);team.finance.cash=1000}initializeOfficialRegistrations(DB);const cid='staff-browser-cup';DB.competitions[cid]={id:cid,name:'현장 스태프 검증 대회',region:'NA',teams:[t.id,o.id],rules:{fearless:true,staffRegistration:{max:1,lockAt:DB.year+'-01-12'}},stages:[{id:'regular',name:'정규',type:'round_robin',legs:1,bestOf:1}]};const s=newSeason(DB,cid,DB.year,'staff-browser-official',DB.year+'-01-13');s.key=cid;s.region='NA';s.div=1;DB.world.seasons[cid]=s;window.staffSeason=cid;window.staffCandidate=DB.staffPool.find(s=>s.role==='analyst').id;resetUiForWorld();VIEW='season';nav();}\"\nwith sync_playwright() as pw:\n browser=pw.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])\n for width in [1280,320]:\n  page=browser.new_page(viewport={'width':width,'height':900});errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('dialog',lambda d:d.accept())\n  page.evaluate(\"()=>{const map=new Map();Object.defineProperty(window,'localStorage',{value:{getItem:k=>map.has(k)?map.get(k):null,setItem:(k,v)=>map.set(k,String(v)),removeItem:k=>map.delete(k)}})}\")\n  page.set_content(Path('/workspace/LOL-GM-engine/index.html').read_text(),wait_until='load');page.wait_for_function('typeof DB!==\"undefined\"&&DB!==null');page.evaluate(SETUP)\n  pid=page.evaluate('managedTeam(DB).roster[0]');before=page.evaluate('JSON.stringify(DB)');page.locator('[data-brief-medical]').first.focus();page.keyboard.press('Enter');assert page.evaluate('JSON.stringify(DB)')==before\n  assert '공식 출전 금지는 아닙니다' in page.locator('#overlay').inner_text()\n  select=page.locator('#overlay [data-medical-draft=\"'+pid+'\"]');select.select_option('rest');page.locator('#brief-medical-close').click();assert page.evaluate('JSON.stringify(DB)')==before\n  assert '의료·회복' in page.evaluate('document.activeElement.textContent')\n  page.locator('[data-brief-medical]').first.click();select=page.locator('#overlay [data-medical-draft=\"'+pid+'\"]');select.select_option('rest')\n  page.evaluate('(pid)=>{const el=document.createElement(\"select\");el.dataset.medicalDraft=pid;el.innerHTML=\"<option value=normal>일반 훈련</option>\";document.body.prepend(el)}',pid)\n  page.evaluate('(pid)=>{window.medicalOldApply=document.querySelector(`#overlay [data-medical-apply=\"${pid}\"]`).onclick}',pid)\n  expected=page.evaluate('(pid)=>{const copy=JSON.parse(JSON.stringify(DB));copy.players[pid].medicalPlan=\"rest\";return JSON.stringify(copy)}',pid)\n  page.locator('#overlay [data-medical-apply=\"'+pid+'\"]').click();assert page.evaluate('JSON.stringify(DB)')==expected\n  page.evaluate('medicalOldApply()');assert page.evaluate('JSON.stringify(DB)')==expected\n  page.evaluate('(pid)=>{window.medicalPid=pid;window.medicalSource=JSON.stringify(DB.players[pid]);DB=unpackDB(packDB(DB));resetUiForWorld();nav()}',pid);assert page.evaluate('JSON.stringify(DB.players[medicalPid])')==page.evaluate('medicalSource')\n  page.locator('[data-brief-medical]').first.click();page.locator('#overlay [data-medical-draft=\"'+pid+'\"]').select_option('normal');page.evaluate('(pid)=>{window.medicalOldApply=document.querySelector(`#overlay [data-medical-apply=\"${pid}\"]`).onclick;window.medicalOldClose=document.querySelector(\"#brief-medical-close\").onclick;window.realMedicalDialog=UI_OVERLAY;UI_OVERLAY={kind:\"club-medical\"}}',pid);before=page.evaluate('JSON.stringify(DB)');page.evaluate('medicalOldApply();medicalOldClose()');assert page.evaluate('JSON.stringify(DB)')==before;assert page.evaluate('UI_OVERLAY!==realMedicalDialog');page.evaluate('UI_OVERLAY=realMedicalDialog;medicalOldClose()')\n  page.evaluate('VIEW=\"squad\";SQUAD=managedTeamId(DB);nav()');el=page.locator('[data-medical-plan=\"'+pid+'\"]');assert el.count()==1\n  page.evaluate('(pid)=>{window.medicalRosterOld=document.querySelector(`[data-medical-plan=\"${pid}\"]`).onchange;DB=unpackDB(packDB(DB));resetUiForWorld();VIEW=\"squad\";SQUAD=managedTeamId(DB);nav()}',pid);before=page.evaluate('JSON.stringify(DB)');page.evaluate('medicalRosterOld()');assert page.evaluate('JSON.stringify(DB)')==before\n  page.locator('[data-medical-plan=\"'+pid+'\"]').select_option('light');assert page.evaluate('DB.players[medicalPid].medicalPlan')=='light'\n  page.evaluate('VIEW=\"season\";nav()');page.locator('[data-brief-medical]').nth(1).click();assert page.locator('#overlay [data-medical-apply]').count()==5;page.locator('#brief-medical-close').click()\n  page.evaluate('DB.world.manage=\"ai\";nav()');page.locator('[data-brief-medical]').first.click();assert page.locator('#overlay [data-medical-apply]').count()==0;page.locator('#brief-medical-close').click();page.evaluate('DB.world.manage=\"manual\";DB.world.fired=true;nav()');assert page.locator('[data-brief-medical]').count()==0\n  page.evaluate('DB.world.fired=false;nav()');page.locator('[data-brief-medical]').first.click();page.screenshot(path='/tmp/club-medical-browser-final3-'+str(width)+'.png',full_page=True)\n  assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'),'document overflow';assert not errors,errors\n  print(json.dumps({'width':width,'pure':True,'scoped':True,'actualPlan':True,'save':True,'stale':True,'reserve':True,'authority':True,'keyboard':True,'errors':errors}));page.close()\n browser.close()\n",
+  "officialBrowserSource": "from playwright.sync_api import sync_playwright\nfrom pathlib import Path\nimport json\nwith sync_playwright() as p:\n browser=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])\n page=browser.new_page(viewport={'width':1280,'height':900});errors=[]\n page.on('pageerror',lambda e:errors.append(str(e)))\n page.evaluate(\"\"\"()=>{const map=new Map();Object.defineProperty(window,'localStorage',{value:{getItem:k=>map.has(k)?map.get(k):null,setItem:(k,v)=>map.set(k,String(v)),removeItem:k=>map.delete(k)}})}\"\"\")\n page.set_content(Path('/workspace/LOL-GM-engine/index.html').read_text(),wait_until='load')\n page.wait_for_function('typeof DB!==\"undefined\" && DB!==null')\n assert page.locator('#main button').count()==3\n page.evaluate(\"\"\"()=>{const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:4,div2:true,system:'franchise'})];cfg.internationals=[];DB=buildWorld(cfg);const [a,b]=activeTeams(DB,'NA',1);setManagedTeam(DB,a.id);for(const t of [a,b])for(const r of ROLES){const player=genPlayer(DB,new RNG('browser-history|'+t.id+r),{region:t.region,role:r,age:22,base:65});signContract(DB,player,t,1,3);t.depthChart[r]=player.id;}const cid='history-cup';DB.competitions[cid]={id:cid,name:'기록 검증 대회',region:'NA',teams:[a.id,b.id],rules:{fearless:true},stages:[{id:'group',name:'풀리그',type:'round_robin',legs:2,bestOf:3}]};const s=newSeason(DB,cid,DB.year,'browser-history',DB.worldDate),day=s.days[0],m=day.matches[0];s.key=cid;DB.world={year:DB.year,seed:'browser-history',manage:'manual',phase:'season',seasons:{[s.key]:s},steps:[],step:-1,pendingOfficial:null,offers:[],marketLog:[]};window.briefKey=s.key;DB.worldDate=addDays(day.date,-1);DB.world.registrationVersion=1;const extra=genPlayer(DB,new RNG('registered-extra'),{region:'NA',role:'TOP',age:22,base:65});signContract(DB,extra,a,1,3);window.entryStarter=extra.id;initializeOfficialRegistrations(DB);resetUiForWorld();VIEW='season';nav();}\"\"\")\n page.evaluate(\"()=>{const t=managedTeam(DB),p=DB.players[t.roster.find(id=>DB.players[id].role==='TOP'&&id!==window.entryStarter)];window.medicalOriginal=p.id;startMedicalEvent(DB,p,'injury','moderate',10,DB.worldDate,new RNG('medical-browser-event'));window.medicalHistory=JSON.stringify(p.careerEvents);nav();}\")\n page.locator('[data-brief-medical]').first.focus();page.keyboard.press('Enter');pid=page.evaluate('medicalOriginal');assert '저장된 의료 이력 1건' in page.locator('#overlay').inner_text();page.locator('#overlay [data-medical-draft=\"'+pid+'\"]').select_option('rehab');page.on('dialog',lambda d:d.accept());page.locator('#overlay [data-medical-apply=\"'+pid+'\"]').click();assert page.evaluate('DB.players[medicalOriginal].medicalPlan')=='rehab';assert page.evaluate('JSON.stringify(DB.players[medicalOriginal].careerEvents)')==page.evaluate('medicalHistory')\n page.locator('[data-brief-entry]').first.click();page.locator('#overlay summary').filter(has_text='공식전 선발 5명').click();page.locator('#overlay [data-official-role=TOP]').select_option(page.evaluate('window.entryStarter'));page.locator('#overlay [data-official-lineup]').click();assert page.evaluate('managedTeam(DB).registration.depthChart.TOP===window.entryStarter')\n page.locator('[data-brief-schedule]').click();assert page.evaluate('SSET.tab')=='sched';page.locator('[data-brief-return]').click();assert page.evaluate(\"document.activeElement.textContent\")==\"구단 운영 브리핑\"\n page.locator('[data-brief-progress=smine]').click();page.wait_for_selector('[data-choice-kind]');assert page.evaluate('!!DB.world.pendingOfficial')\n for n in range(3):\n  if not page.evaluate('!!DB.world.pendingOfficial'):break\n  assert not page.evaluate(\"navigateTo('analysis')\")\n  page.locator('[data-choice-kind]').first.click()\n  for step in range(20):\n   if page.locator('#du-finish').count():break\n   page.locator('[data-du-champ]:not([disabled])').first.click();page.locator('#du-lock').click()\n  assert page.locator('#du-finish').count()\n  page.locator('#du-finish').click()\n  if page.evaluate('!!DB.world.pendingOfficial'):\n   saved=page.evaluate(\"\"\"()=>{const before=DB.world.pendingOfficial.queue[0].session.games;DB=unpackDB(packDB(DB));return JSON.stringify(before)===JSON.stringify(DB.world.pendingOfficial.queue[0].session.games)}\"\"\")\n   assert saved\n   page.evaluate('openPendingOfficialDraft(DB)')\n assert not page.evaluate('!!DB.world.pendingOfficial')\n assert page.evaluate(\"DB.players[medicalOriginal].medicalDayPlan==='rehab'&&DB.players[medicalOriginal].medicalRestDays>0&&medicalOut(DB.players[medicalOriginal])\")\n assert page.evaluate(\"DB.world.seasons[briefKey].days[0].matches[0].res.games.every(g=>g.publicRecord.sides.every(s=>s.players.every(x=>x[0]!==medicalOriginal)))\")\n result=page.evaluate(\"\"\"()=>{const rec=DB.world.seasons[window.briefKey].days[0].matches[0].res;LASTSER=rec;LAST=null;navigateTo('match');return {games:rec.games.length,rows:rec.games.map(g=>recordedDraftReview(DB,rec,g).rows.length)}}\"\"\")\n assert all(n==5 for n in result['rows']),result\n assert page.evaluate('DB.world.seasons[window.briefKey].days[0].matches[0].res.games.every(g=>g.publicRecord.sides.some(s=>s.players.some(x=>x[0]===window.entryStarter)))'), 'actual manual official starter reaches series result'\n endings=page.evaluate(\"\"\"()=>DB.world.seasons[window.briefKey].days[0].matches[0].res.games.map(g=>{const p=g.publicRecord,e=p.ending,last=p.events.at(-1);return {winner:e.winner,duration:p.duration,minute:e.minute,second:e.second,nexusCount:p.events.filter(x=>x[2]==='nexus').length,last:last?.[2],sameTime:last?.[0]===e.minute&&last?.[1]===e.second,sourceValid:!!recordedPublicMatch(DB,DB.world.seasons[window.briefKey].days[0].matches[0].res,g).record}})\"\"\")\n assert all(e['sourceValid'] and e['nexusCount']==1 and e['last']=='nexus' and e['sameTime'] and e['duration']==e['minute']+e['second']/60 for e in endings),endings\n print(json.dumps({'actualOfficialEndings':endings}))\n page.locator('.game').first.click()\n assert '당시 확정된 경기 기록' in page.locator('.gamedetail').inner_text()\n assert '넥서스 파괴' in page.locator('.gamedetail').inner_text()\n assert '실제 주요 사건' in page.locator('.gamedetail').inner_text()\n assert '남은 체력 예산' in page.locator('.gamedetail').inner_text()\n immutable=page.evaluate('packDB(DB)')\n page.evaluate(\"navigateTo('analysis')\")\n page.locator('[data-analysis-mode=\"matches\"]').click()\n page.locator('#analysis-period').select_option('ALL')\n choice=page.locator('#analysis-review option').nth(1).get_attribute('value')\n page.locator('#analysis-review').select_option(choice)\n page.locator('[data-review-tab=\"records\"]').click()\n assert '당시 확정된 경기 기록' in page.locator('main').inner_text()\n page.locator('#analysis-position').focus()\n page.locator('#analysis-position').select_option('MID')\n assert page.locator('.analysis-room table tbody tr').count()==2\n assert page.evaluate('document.activeElement.id')=='analysis-position'\n page.locator('#analysis-review').focus()\n page.keyboard.press('Tab')\n assert page.locator('#app-nav').bounding_box()['x']==0\n assert page.locator('#app-nav').bounding_box()['width']==1280\n page.screenshot(path='/tmp/club-medical-official-1280-final2.png')\n page.set_viewport_size({'width':320,'height':800})\n narrow=page.evaluate('({width:innerWidth,document:document.documentElement.scrollWidth})')\n print(page.evaluate('[...document.querySelectorAll(\\\"main *\\\")].filter(e=>e.getBoundingClientRect().right>innerWidth).slice(0,8).map(e=>({tag:e.tagName,cls:e.className,id:e.id,width:e.getBoundingClientRect().width}))'))\n assert narrow['document']<=narrow['width'],narrow\n assert page.locator('.scroll[tabindex=\"0\"]').count()>0\n assert page.locator('#app-nav').bounding_box()['width']==320\n page.locator('#app-nav [data-v=analysis]').click()\n page.screenshot(path='/tmp/club-medical-official-320-final2.png')\n assert page.evaluate('packDB(DB)')==immutable,'review mutated world'\n page.locator('[data-review-tab=\"events\"]').click()\n assert page.locator('.review-events li').count()>0\n page.locator('[data-review-tab=\"events\"]').focus()\n page.keyboard.press('ArrowRight')\n assert page.locator('[data-review-tab=\"draft\"]').get_attribute('aria-selected')=='true'\n page.locator('.draft-history summary').first.click()\n page.locator('[data-draft-history-kind=\"champ\"]').first.click()\n assert page.evaluate('VIEW')=='patch'\n page.evaluate(\"navigateTo('analysis')\")\n assert page.locator('#analysis-review').input_value()==choice\n page.locator('#analysis-patch').select_option('absent') if page.locator('#analysis-patch option[value=\"absent\"]').count() else None\n page.evaluate(\"DB=unpackDB(packDB(DB));resetUiForWorld();navigateTo('analysis')\")\n assert page.evaluate('ANALYSIS_SET.review')==''\n page.locator('[data-analysis-mode=\"matches\"]').click()\n page.locator('#analysis-period').select_option('ALL')\n page.locator('#analysis-review').select_option(choice)\n page.locator('[data-review-tab=\"records\"]').click()\n assert '당시 확정된 경기 기록' in page.locator('main').inner_text()\n page.evaluate(\"DB.world.fired=true;navigateTo('analysis')\")\n assert page.locator('#analysis-review').count()==0\n restored=True\n assert not errors,errors\n print(json.dumps({'browser':'Chromium','actualCompleteOfficialBo3':result,'pendingAndHistorySave':restored,'storedStatsEvents':True,'analysisFilterSourceNavigation':True,'narrow':narrow,'firedPrivateOmission':True,'pageErrors':errors}))\n browser.close()\n",
+  "limitations": [
+    "가상 경기 검사이며 프로 보정 자료가 아니다",
+    "동일 rebuild HTML 주입·controlled localStorage이며 production HTTP·최종 기기 QA가 아니다",
+    "기존 비동기 저장 절차를 유지하며 분산탭·저장 실패 전체 callback rollback을 보장하지 않는다"
+  ],
+  "localChecks": {
+    "ui": {
+      "acceptances": 84,
+      "engineModules": 101,
+      "engineCompiles": 1,
+      "freshContexts": 83,
+      "artifactReads": 146,
+      "cachedArtifacts": 146,
+      "totalMs": 113965.4,
+      "rows": [
+        {
+          "file": "bootstrap-seed-acceptance.mjs",
+          "ms": 1658
+        },
+        {
+          "file": "ui-state-acceptance.mjs",
+          "ms": 5.1
+        },
+        {
+          "file": "analysis-room-acceptance.mjs",
+          "ms": 781.1
+        },
+        {
+          "file": "analysis-tiers-acceptance.mjs",
+          "ms": 1161.1
+        },
+        {
+          "file": "analysis-comparison-acceptance.mjs",
+          "ms": 1261.5
+        },
+        {
+          "file": "draft-preparation-acceptance.mjs",
+          "ms": 729
+        },
+        {
+          "file": "draft-history-acceptance.mjs",
+          "ms": 1274.5
+        },
+        {
+          "file": "match-history-acceptance.mjs",
+          "ms": 1112.8
+        },
+        {
+          "file": "match-adjudication-acceptance.mjs",
+          "ms": 2000
+        },
+        {
+          "file": "item-purchase-ledger-acceptance.mjs",
+          "ms": 970
+        },
+        {
+          "file": "inventory-defense-acceptance.mjs",
+          "ms": 971.2
+        },
+        {
+          "file": "inventory-offense-acceptance.mjs",
+          "ms": 1706.2
+        },
+        {
+          "file": "combat-resource-acceptance.mjs",
+          "ms": 1317.1
+        },
+        {
+          "file": "objective-award-acceptance.mjs",
+          "ms": 2124
+        },
+        {
+          "file": "objective-steal-acceptance.mjs",
+          "ms": 3087.1
+        },
+        {
+          "file": "structure-selection-acceptance.mjs",
+          "ms": 5001.5
+        },
+        {
+          "file": "macro-hunter-acceptance.mjs",
+          "ms": 3894.7
+        },
+        {
+          "file": "fight-round-acceptance.mjs",
+          "ms": 2846.9
+        },
+        {
+          "file": "laning-hp-acceptance.mjs",
+          "ms": 7149.8
+        },
+        {
+          "file": "combat-cache-acceptance.mjs",
+          "ms": 1838.9
+        },
+        {
+          "file": "initial-recruitment-acceptance.mjs",
+          "ms": 1803.1
+        },
+        {
+          "file": "initial-comparison-acceptance.mjs",
+          "ms": 621.2
+        },
+        {
+          "file": "initial-offer-preview-acceptance.mjs",
+          "ms": 448.4
+        },
+        {
+          "file": "startup-flow-acceptance.mjs",
+          "ms": 1189.2
+        },
+        {
+          "file": "club-briefing-acceptance.mjs",
+          "ms": 395.6
+        },
+        {
+          "file": "club-eligibility-acceptance.mjs",
+          "ms": 1007.3
+        },
+        {
+          "file": "club-finance-acceptance.mjs",
+          "ms": 1210.3
+        },
+        {
+          "file": "club-staff-acceptance.mjs",
+          "ms": 1163.1
+        },
+        {
+          "file": "club-medical-acceptance.mjs",
+          "ms": 1180.4
+        },
+        {
+          "file": "takedown-reward-acceptance.mjs",
+          "ms": 2794.4
+        },
+        {
+          "file": "item-stat-patch-acceptance.mjs",
+          "ms": 1563.9
+        },
+        {
+          "file": "ui-overlay-acceptance.mjs",
+          "ms": 5.5
+        },
+        {
+          "file": "ui-async-acceptance.mjs",
+          "ms": 7.2
+        },
+        {
+          "file": "ui-mobile-a11y-acceptance.mjs",
+          "ms": 4.1
+        },
+        {
+          "file": "career-public-information-acceptance.mjs",
+          "ms": 2880.1
+        },
+        {
+          "file": "finance-acceptance.mjs",
+          "ms": 1129.3
+        },
+        {
+          "file": "finance-depth-acceptance.mjs",
+          "ms": 1184.1
+        },
+        {
+          "file": "contract-duration-acceptance.mjs",
+          "ms": 1000.4
+        },
+        {
+          "file": "contract-negotiation-state-acceptance.mjs",
+          "ms": 1172.7
+        },
+        {
+          "file": "contract-buyout-acceptance.mjs",
+          "ms": 99.3
+        },
+        {
+          "file": "contract-window-acceptance.mjs",
+          "ms": 1300.1
+        },
+        {
+          "file": "market-reserve-acceptance.mjs",
+          "ms": 10179.6
+        },
+        {
+          "file": "owned-reserve-coach-acceptance.mjs",
+          "ms": 2319.4
+        },
+        {
+          "file": "contract-release-acceptance.mjs",
+          "ms": 1069.7
+        },
+        {
+          "file": "contract-release-liability-acceptance.mjs",
+          "ms": 1734.2
+        },
+        {
+          "file": "contract-guarantee-acceptance.mjs",
+          "ms": 1356.6
+        },
+        {
+          "file": "contract-mutual-termination-acceptance.mjs",
+          "ms": 2593.4
+        },
+        {
+          "file": "transfer-consent-acceptance.mjs",
+          "ms": 218.1
+        },
+        {
+          "file": "contract-role-promise-acceptance.mjs",
+          "ms": 83.2
+        },
+        {
+          "file": "player-representation-acceptance.mjs",
+          "ms": 146.9
+        },
+        {
+          "file": "agent-negotiation-parity-acceptance.mjs",
+          "ms": 227.6
+        },
+        {
+          "file": "player-loan-acceptance.mjs",
+          "ms": 296.5
+        },
+        {
+          "file": "transfer-stage-acceptance.mjs",
+          "ms": 283.1
+        },
+        {
+          "file": "local-service-acceptance.mjs",
+          "ms": 160.8
+        },
+        {
+          "file": "registration-acceptance.mjs",
+          "ms": 586.7
+        },
+        {
+          "file": "first-selection-acceptance.mjs",
+          "ms": 2964.3
+        },
+        {
+          "file": "opponent-intent-acceptance.mjs",
+          "ms": 674.9
+        },
+        {
+          "file": "draft-observer-information-acceptance.mjs",
+          "ms": 598
+        },
+        {
+          "file": "champion-scout-observation-acceptance.mjs",
+          "ms": 874.6
+        },
+        {
+          "file": "squad-observer-information-acceptance.mjs",
+          "ms": 1336.6
+        },
+        {
+          "file": "squad-staging-acceptance.mjs",
+          "ms": 202.9
+        },
+        {
+          "file": "ban-attribution-acceptance.mjs",
+          "ms": 474
+        },
+        {
+          "file": "participant-meta-acceptance.mjs",
+          "ms": 558.7
+        },
+        {
+          "file": "side-meta-acceptance.mjs",
+          "ms": 719.7
+        },
+        {
+          "file": "composition-meta-acceptance.mjs",
+          "ms": 612.4
+        },
+        {
+          "file": "draft-order-meta-acceptance.mjs",
+          "ms": 575.6
+        },
+        {
+          "file": "tactic-meta-acceptance.mjs",
+          "ms": 528.8
+        },
+        {
+          "file": "practice-meta-acceptance.mjs",
+          "ms": 1014.3
+        },
+        {
+          "file": "analyst-report-acceptance.mjs",
+          "ms": 772.1
+        },
+        {
+          "file": "opponent-report-acceptance.mjs",
+          "ms": 999.1
+        },
+        {
+          "file": "opponent-draft-acceptance.mjs",
+          "ms": 934.8
+        },
+        {
+          "file": "player-champion-information-acceptance.mjs",
+          "ms": 459.4
+        },
+        {
+          "file": "observer-player-profile-acceptance.mjs",
+          "ms": 561.1
+        },
+        {
+          "file": "training-allocation-acceptance.mjs",
+          "ms": 102.4
+        },
+        {
+          "file": "cohesion-practice-acceptance.mjs",
+          "ms": 1749.2
+        },
+        {
+          "file": "relationship-decisions-acceptance.mjs",
+          "ms": 279.4
+        },
+        {
+          "file": "club-ownership-acceptance.mjs",
+          "ms": 182.5
+        },
+        {
+          "file": "staff-contracts-acceptance.mjs",
+          "ms": 772.2
+        },
+        {
+          "file": "staff-registration-acceptance.mjs",
+          "ms": 1329.6
+        },
+        {
+          "file": "club-license-acceptance.mjs",
+          "ms": 460.1
+        },
+        {
+          "file": "region-continuity-acceptance.mjs",
+          "ms": 1122.9
+        },
+        {
+          "file": "club-closure-acceptance.mjs",
+          "ms": 5386.3
+        },
+        {
+          "file": "club-estate-acceptance.mjs",
+          "ms": 246.4
+        },
+        {
+          "file": "rune-selection-acceptance.mjs",
+          "ms": 3167.1
+        }
+      ]
+    },
+    "calendar": {
+      "acceptances": 20,
+      "engineModules": 101,
+      "engineCompiles": 1,
+      "freshContexts": 20,
+      "artifactReads": 112,
+      "cachedArtifacts": 112,
+      "totalMs": 83286.4,
+      "rows": [
+        {
+          "file": "calendar-depth-acceptance.mjs",
+          "ms": 2748.8
+        },
+        {
+          "file": "league-identity-acceptance.mjs",
+          "ms": 18450.1
+        },
+        {
+          "file": "manual-owned-coaching-acceptance.mjs",
+          "ms": 31940.9
+        },
+        {
+          "file": "office-consultation-acceptance.mjs",
+          "ms": 200
+        },
+        {
+          "file": "international-coefficients-acceptance.mjs",
+          "ms": 1212.7
+        },
+        {
+          "file": "local-policy-acceptance.mjs",
+          "ms": 245.7
+        },
+        {
+          "file": "timezone-calendar-acceptance.mjs",
+          "ms": 915.7
+        },
+        {
+          "file": "scrim-partner-acceptance.mjs",
+          "ms": 825.1
+        },
+        {
+          "file": "scrim-plans-acceptance.mjs",
+          "ms": 925
+        },
+        {
+          "file": "fight-skill-acceptance.mjs",
+          "ms": 2475.4
+        },
+        {
+          "file": "match-ending-acceptance.mjs",
+          "ms": 1704
+        },
+        {
+          "file": "source-control-acceptance.mjs",
+          "ms": 1615.4
+        },
+        {
+          "file": "system-patch-acceptance.mjs",
+          "ms": 15960
+        },
+        {
+          "file": "role-quest-rules-acceptance.mjs",
+          "ms": 1006.2
+        },
+        {
+          "file": "role-quest-match-acceptance.mjs",
+          "ms": 917.9
+        },
+        {
+          "file": "save-history-acceptance.mjs",
+          "ms": 1186.3
+        },
+        {
+          "file": "split-standings-acceptance.mjs",
+          "ms": 341.9
+        },
+        {
+          "file": "scouting-depth-acceptance.mjs",
+          "ms": 199.1
+        },
+        {
+          "file": "scouting-operations-acceptance.mjs",
+          "ms": 239.9
+        },
+        {
+          "file": "scouting-reassessment-acceptance.mjs",
+          "ms": 176.3
+        }
+      ]
+    },
+    "regression": "Validated pinned system snapshot: 254 items, 62 runes, 5 rune styles.\n11.5 Step 1 regression baseline: OK (01-world-bootstrap, 02-player-lineup, 03-roster-role-state, 04-rookie-supply, 05-contracts, 06-owned-reserve-roster, 06b-roster-transaction, 06c-player-sign-transaction, 06d-player-transfer-transaction, 06e-ai-transfer-and-move-limit, 06f-release-and-option-transaction, 06g-save-format-and-cache-isolation, 06g2-large-history-loadout-sharing, 06h-legacy-v15-save-restoration, 06i-invalid-and-forward-saves, 06j-transaction-transfer-rollback, 06k-transaction-roster-rollback, 06l-transaction-release-option-rollback, 06m-transaction-actor-parity-and-membership-guard, 07-staff-migration-caps, 08-local-regulation, 09-patch-baseline, 10-system-patch, 11-draft-series-save, 11a-meta-index-incremental-and-bounded, 11b-historic-patch-cache-limit, 11c-system-usage-index-parity, 11d-shared-registration-rule-and-pure-preview, 11e-roster-detach-is-single-owner, 11f-dead-api-pruned-without-market-breakage, 11g-required-domain-hooks-have-real-effects, 11h-initial-market-must-use-real-budget-and-team-policy, 11i-unreachable-wrappers-removed-and-supported-routes-retained, 11j-initial-manager-negotiation-path-after-legacy-removal, 11k-scheduled-series-session-after-unused-opener-removal, 11l-reserve-preflight-and-transaction-after-legacy-removal, 11m-new-procedural-regional-league-and-save-restore)\nSMOKE_PHASE_TIMINGS {\"mode\":\"full\",\"phases\":[{\"name\":\"bootstrap-policy-rookie\",\"ms\":2155.1},{\"name\":\"patch-system-cache\",\"ms\":1365.9},{\"name\":\"player-role-training\",\"ms\":11.5},{\"name\":\"draft-match-save\",\"ms\":568.3},{\"name\":\"initial-roster\",\"ms\":8973},{\"name\":\"staff-roster\",\"ms\":1122.5},{\"name\":\"tier2-promotion\",\"ms\":592.3},{\"name\":\"series-offseason-market\",\"ms\":12497.5}],\"totalMs\":27286.1}\nWorld smoke test: OK — blank rosters, global FA, roster rules, engine-owned regional policy, workforce-backed rookie intake/scouting reports, no emergency roster generation, offseason market closure, player identity/role ratings/state/value/development/champion learning/full match metrics/fixed depth charts/roster roles/satisfaction, season bootstrap and Bo1 simulation\nCAREER_ACCEPTANCE {\"seasons\":[{\"season\":2027,\"matches\":93,\"rookies\":19,\"players\":84,\"saves\":4},{\"season\":2028,\"matches\":93,\"rookies\":16,\"players\":95,\"saves\":9}],\"officialMatches\":186,\"modernSaveResumes\":8,\"legacySaveResumes\":2,\"worldVersion\":15,\"saveFormat\":2}\n",
+    "static": "TAP version 13\n# Subtest: preserves success, multiline output and structured evidence\nok 1 - preserves success, multiline output and structured evidence\n  ---\n  duration_ms: 243.018166\n  type: 'test'\n  ...\n# Subtest: propagates failure and preserves the first error in the log\nok 2 - propagates failure and preserves the first error in the log\n  ---\n  duration_ms: 152.054535\n  type: 'test'\n  ...\n# Subtest: failed spawn cannot report green\nok 3 - failed spawn cannot report green\n  ---\n  duration_ms: 155.102902\n  type: 'test'\n  ...\n# Subtest: records a live child before completion and preserves forced termination\nok 4 - records a live child before completion and preserves forced termination\n  ---\n  duration_ms: 127.136035\n  type: 'test'\n  ...\n# Subtest: rejects a new UI writer and an extra write in an existing owner\nok 5 - rejects a new UI writer and an extra write in an existing owner\n  ---\n  duration_ms: 1.494825\n  type: 'test'\n  ...\n# Subtest: caller migration must shrink its old inventory and declare its new owner\nok 6 - caller migration must shrink its old inventory and declare its new owner\n  ---\n  duration_ms: 0.518882\n  type: 'test'\n  ...\n# Subtest: reads/comparisons/function definitions are not writer calls\nok 7 - reads/comparisons/function definitions are not writer calls\n  ---\n  duration_ms: 1.751101\n  type: 'test'\n  ...\n# Subtest: tracks compound writes and literal bracket properties\nok 8 - tracks compound writes and literal bracket properties\n  ---\n  duration_ms: 0.23827\n  type: 'test'\n  ...\n# Subtest: release liabilities may only be written by the finance owner\nok 9 - release liabilities may only be written by the finance owner\n  ---\n  duration_ms: 0.264018\n  type: 'test'\n  ...\n# Subtest: real remote receives the built bytes once and rejects stale artifacts\nok 10 - real remote receives the built bytes once and rejects stale artifacts\n  ---\n  duration_ms: 214.028252\n  type: 'test'\n  ...\n# Subtest: publishes the existing artifact with a normal push\nok 11 - publishes the existing artifact with a normal push\n  ---\n  duration_ms: 0.36056\n  type: 'test'\n  ...\n# Subtest: unchanged and stale runs do not commit\nok 12 - unchanged and stale runs do not commit\n  ---\n  duration_ms: 0.200704\n  type: 'test'\n  ...\n# Subtest: a push race skips stale publication but transport failures fail\nok 13 - a push race skips stale publication but transport failures fail\n  ---\n  duration_ms: 0.357415\n  type: 'test'\n  ...\n# Subtest: rejects another checkout or unrelated staged changes\nok 14 - rejects another checkout or unrelated staged changes\n  ---\n  duration_ms: 0.193183\n  type: 'test'\n  ...\n1..14\n# tests 14\n# suites 0\n# pass 14\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 1195.526189\n"
+  }
+}

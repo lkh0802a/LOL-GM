@@ -8,7 +8,8 @@ let source='';
 for(const file of ENGINE_MODULES)source+=await readFile(resolve(dir,file),'utf8')+'\n';
 const ui=await readFile(resolve(dir,'ui-roster.js'),'utf8');
 const marketUi=await readFile(resolve(dir,'ui-market.js'),'utf8');
-if(!ui.includes('data-medical-plan')||!ui.includes('p.medicalPlan=e.target.value'))
+const medicalUi=await readFile(resolve(dir,'ui-club-medical.js'),'utf8');
+if(!ui.includes('data-medical-plan')||!ui.includes('bindMedicalPlanControls()')||!medicalUi.includes('p.medicalPlan=mode')||!medicalUi.includes('el.onchange='))
   throw new Error('D02_MEDICAL player rest controls missing from manager roster');
 if(!marketUi.includes('의료 가용성 위험')||!marketUi.includes('medicalContractRisk(DB,p)'))
   throw new Error('D02_MEDICAL recruitment evaluation is missing live contract availability risk');

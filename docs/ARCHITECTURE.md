@@ -293,3 +293,5 @@ ui-club-eligibility는 full JSON 읽기 복사본에서 다음 실제 fixture의
 ### 현재 구단 직원 presentation (12.3.5)
 
 ui-club-staff는 private cloned read/ephemeral filter·draft와 실제 현장 source를 소유한다. ui-staff-controls는 market/overlay scoped root와 현재 world-slot-manager-dialog guards를 공유하고 기존 staff commands·rollback만 사용한다. 고용 full profile과 official filtered staff profile은 기존 consumers로 분리한다. 등록은 ui-registration의 기존 writer를 사용하며 새 saved schema·engine/economy coefficients는 없다.
+
+ui-club-medical은 owned/ownedreserve full JSON read로 현재 의료 가용·저장 계획·실제 plan consumer·일일 기록·의료 이력을 분리한다. ui-roster의 기존 단일 medicalPlan writer를 current-context scoped binding과 공유하고 의료/AI/등록/자동 대체/save 규칙은 바꾸지 않는다. confirmed popup 입력과 실제 dialog/DB/world/slot/manager 객체·render/날짜·source snapshot을 재검사한다. 기존 비동기 saveDB/SAVEFAIL을 유지하며 전체 I/O rollback을 보장하지 않는다.

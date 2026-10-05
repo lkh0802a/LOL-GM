@@ -1,5 +1,5 @@
 import {artifactSources,runEngineFixture} from './test-harness.mjs';
-const sources=await artifactSources(['ui-observed-radar.js','ui-initial-comparison.js','ui-initial-offer-preview.js','ui-initial-candidates.js','ui-market-initial.js','ui-negotiations.js','ui-roster.js','app.js']);const esc=sources.pop().match(/^const esc=.*$/m)[0];
+const sources=await artifactSources(['ui-observed-radar.js','ui-initial-comparison.js','ui-initial-offer-preview.js','ui-initial-candidates.js','ui-market-initial.js','ui-negotiations.js','ui-club-medical.js','ui-roster.js','app.js']);const esc=sources.pop().match(/^const esc=.*$/m)[0];
 await runEngineFixture(String.raw`(()=>{
  const check=(x,m)=>{if(!x)throw Error('INITIAL_OFFER '+m)};
  const cfg=defaultWorldConfig();cfg.regions=[regionCfg('KR',{teams:4,div2:true}),regionCfg('NA',{teams:4,div2:true})];cfg.internationals=[];

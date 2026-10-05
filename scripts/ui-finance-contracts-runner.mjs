@@ -31,6 +31,7 @@ const acceptances=[
   'club-eligibility-acceptance.mjs',
   'club-finance-acceptance.mjs',
   'club-staff-acceptance.mjs',
+  'club-medical-acceptance.mjs',
   'takedown-reward-acceptance.mjs',
   'item-stat-patch-acceptance.mjs',
   'ui-overlay-acceptance.mjs',
@@ -101,8 +102,8 @@ assert.equal(stats.engineCompiles,1,
   'shared domain runner must compile the engine exactly once');
 assert(stats.cachedArtifacts>=ENGINE_MODULES.length,
   'shared domain runner did not cache the complete engine source');
-assert.equal(stats.contexts,82,
-  'all 82 engine fixtures, including independent inventory-defense and analysis/report coverage, must each receive a fresh VM context');
+assert.equal(stats.contexts,83,
+  'all 83 engine fixtures, including independent inventory-defense and analysis/report coverage, must each receive a fresh VM context');
 
 console.log('UI_FINANCE_CONTRACTS_RUNNER '+JSON.stringify({
   acceptances:rows.length,
