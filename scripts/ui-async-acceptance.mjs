@@ -6,8 +6,8 @@ import { resolve } from 'node:path';
 
 const dir=resolve(import.meta.dirname,'..','src','artifact');
 const get=async p=>readFile(resolve(dir,p),'utf8');
-const [app,state,season,manager,data,briefing,eligibility,clubFinance,clubStaff,staffControls,registration,clubMedical]=await Promise.all(
-  ['app.js','ui-state.js','ui-season.js','ui-manager.js','ui-data.js','ui-club-briefing.js','ui-club-eligibility.js','ui-club-finance.js','ui-club-staff.js','ui-staff-controls.js','ui-registration.js','ui-club-medical.js'].map(get));
+const [app,state,season,manager,data,briefing,eligibility,clubFinance,clubStaff,staffControls,registration,clubMedical,clubContracts]=await Promise.all(
+  ['app.js','ui-state.js','ui-season.js','ui-manager.js','ui-data.js','ui-club-briefing.js','ui-club-eligibility.js','ui-club-finance.js','ui-club-staff.js','ui-staff-controls.js','ui-registration.js','ui-club-medical.js','ui-club-contracts.js'].map(get));
 const later=()=>new Promise(resolve=>setImmediate(resolve));
 
 {
@@ -116,7 +116,7 @@ const later=()=>new Promise(resolve=>setImmediate(resolve));
   });
   context.$=selector=>node(selector.slice(1));
   vm.runInContext(clubFinance,context,{filename:'ui-club-finance.js'});
-  vm.runInContext(clubMedical,context);vm.runInContext(clubStaff,context);vm.runInContext(staffControls,context);vm.runInContext(registration,context);
+  vm.runInContext(clubMedical,context);vm.runInContext(clubContracts,context);vm.runInContext(clubStaff,context);vm.runInContext(staffControls,context);vm.runInContext(registration,context);
   vm.runInContext(eligibility,context,{filename:'ui-club-eligibility.js'});
   vm.runInContext(briefing,context,{filename:'ui-club-briefing.js'});
   vm.runInContext(season.slice(season.lastIndexOf('function bindSeason(){')),context,{filename:'bindSeason()'});

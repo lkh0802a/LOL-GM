@@ -90,9 +90,8 @@ function renderContractWindow(){
 function bindContractWindow(){
   const act=m=>{MSG=m;saveDB();nav();const e=document.querySelector('.contractwindow');e&&e.scrollIntoView({block:'start'})};
   bindMutualTerminationControls(act);
-  document.querySelectorAll('[data-start-renew]').forEach(b=>b.onclick=()=>act(startNegotiation(DB,b.dataset.startRenew,'renewal').msg));
+  bindContractEntryControls(act);
   document.querySelectorAll('[data-allow-contact]').forEach(b=>b.onclick=()=>act(grantEarlyContact(DB,b.dataset.allowContact,'manager').msg));
-  document.querySelectorAll('[data-exercise-window-option]').forEach(b=>b.onclick=()=>act(exerciseExclusiveTeamOption(DB,b.dataset.exerciseWindowOption).msg));
   document.querySelectorAll('[data-start-early]').forEach(b=>b.onclick=()=>act(startNegotiation(DB,b.dataset.startEarly,'early_fa',{teamId:managedTeamId(DB)}).msg));
   document.querySelectorAll('[data-start-fa]').forEach(b=>b.onclick=()=>act(startNegotiation(DB,b.dataset.startFa,'fa').msg));
   document.querySelectorAll('[data-interest]').forEach(b=>b.onclick=()=>act(mInterest(DB,b.dataset.interest,'B')));
@@ -130,9 +129,8 @@ function bindMarket(){
   if(managedTeam(DB)?.parent)return;
   const act=m=>{MSG=m;saveDB();nav();const e=document.querySelector('.market');e&&e.scrollIntoView({block:'start'})};
   bindMutualTerminationControls(act);
+  bindContractEntryControls(act);
   bindClubOfficeControls(act);
-  document.querySelectorAll('[data-exercise-option]').forEach(b=>b.onclick=()=>act(mExerciseTeamOption(DB,b.dataset.exerciseOption)));
-  document.querySelectorAll('[data-start-renew]').forEach(b=>b.onclick=()=>act(startNegotiation(DB,b.dataset.startRenew,'renewal').msg));
   document.querySelectorAll('[data-release]').forEach(b=>b.onclick=()=>{const p=DB.players[b.dataset.release],cost=contractReleaseCost(DB,p);if(confirm(`${p.name} 선수를 방출할까요?\n해지금 ${money(cost)}${p.contract?` · 계약 ${p.contract.until}년까지`:''}\n방출 후 즉시 FA가 됩니다.`))act(mRelease(DB,b.dataset.release))});
   document.querySelectorAll('[data-interest]').forEach(b=>b.onclick=()=>act(mInterest(DB,b.dataset.interest,'B')));
   document.querySelectorAll('[data-priority]').forEach(el=>el.onchange=()=>act(mInterest(DB,el.dataset.priority,el.value)));
