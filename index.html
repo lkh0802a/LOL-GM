@@ -12599,16 +12599,84 @@ function renderNegotiations(teamIds=null,db=DB){
     const c=n.counter||n.demand,b=c.bonuses||{};
     return `<div class="cfgcard"><div class="cfghead"><b>${esc(p.name)} · ${n.kind==='renewal'?'재계약':n.kind==='early_fa'?'조기 계약':n.kind==='initial'?(esc(db.teams[n.teamId]?.name||'')+' 창단 계약'):'개인조건'} 협상</b><span class="hint">${n.round}/${n.maxRounds}라운드 · 경쟁 관심 ${rivals}곳</span></div><p class="hint">협상 담당 · ${esc(n.representative?.name||playerRepresentativeText(p))}</p><p><b>${n.counter?'선수 측 역제안':'선수 측 초기 요구'}</b> · ${esc(contractTermsText(c))}</p>${n.feePlan?`<p class="hint">${esc(transferFeePlanText(n.feePlan))}</p>`:''}<div class="controls"><label>연봉 <input type="number" step="0.1" min="0.1" value="${c.salary}" data-neg-sal="${n.id}">억</label><label>기간 <select data-neg-years="${n.id}">${duration.choices.map(y=>`<option value="${y}"${c.years===y?' selected':''}>${y}년</option>`).join('')}</select></label><label>계약금 <input type="number" step="0.1" min="0" value="${c.signingBonus||0}" data-neg-sign="${n.id}">억</label><label>성과 보너스 <input type="number" step="0.1" min="0" value="${b.performance||0}" data-neg-perf="${n.id}">억</label><label>우승 보너스 <input type="number" step="0.1" min="0" value="${b.title||0}" data-neg-title="${n.id}">억</label><label>국제전 보너스 <input type="number" step="0.1" min="0" value="${b.international||0}" data-neg-intl="${n.id}">억</label><label>바이아웃 유형 <select data-neg-buyout-type="${n.id}"><option value="negotiation"${normalizeBuyoutClause(c.buyout)?.type!=='release'?' selected':''}>협상 개시권</option><option value="release"${normalizeBuyoutClause(c.buyout)?.type==='release'?' selected':''}>구단 거부 불가</option></select></label><label>바이아웃 금액 <input type="number" step="0.5" min="0" value="${normalizeBuyoutClause(c.buyout)?.amount||0}" data-neg-buyout="${n.id}">억</label><label>옵션 <select data-neg-option="${n.id}"><option value="none"${!c.option?' selected':''}>없음</option><option value="team"${c.option?.type==='team'?' selected':''}>팀 옵션</option><option value="player"${c.option?.type==='player'?' selected':''}>선수 옵션</option></select></label><label>약속 역할 <select data-neg-role="${n.id}">${SQUAD_ROLES.map(x=>`<option value="${x}"${c.promisedRole===x?' selected':''}>${SQUAD_ROLE_KO[x]}</option>`).join('')}</select></label></div><div class="controls">${n.kind==='initial'&&typeof INITMK!=='undefined'&&n.teamId===INITMK.target?`<button class="ghost" data-init-impact-form="${n.id}">작성 중 제안 미리보기</button><button class="ghost" data-init-impact-counter="${n.id}">선수 요구·역제안 미리보기</button>`:''}<button class="primary" data-neg-submit="${n.id}">제안 보내기</button>${n.counter?`<button class="ghost" data-neg-accept="${n.id}">역제안 그대로 수락</button>`:''}<button class="ghost" data-neg-cancel="${n.id}">협상 종료</button></div><p class="hint">방출 보상은 지역 사무국 공통 규정을 따릅니다.</p></div>`}).join('');
 }
-function negotiationTermsFromDom(nid){return {salary:+document.querySelector(`[data-neg-sal="${nid}"]`).value,years:+document.querySelector(`[data-neg-years="${nid}"]`).value,signingBonus:+document.querySelector(`[data-neg-sign="${nid}"]`).value,bonuses:{performance:+document.querySelector(`[data-neg-perf="${nid}"]`).value,title:+document.querySelector(`[data-neg-title="${nid}"]`).value,international:+document.querySelector(`[data-neg-intl="${nid}"]`).value},buyout:(+document.querySelector(`[data-neg-buyout="${nid}"]`).value||0)>0?{amount:+document.querySelector(`[data-neg-buyout="${nid}"]`).value,type:document.querySelector(`[data-neg-buyout-type="${nid}"]`).value}:null,option:document.querySelector(`[data-neg-option="${nid}"]`).value==='none'?null:{type:document.querySelector(`[data-neg-option="${nid}"]`).value},promisedRole:document.querySelector(`[data-neg-role="${nid}"]`).value}}
-function bindNegotiationControls(act,allowed=()=>true){
-  document.querySelectorAll('[data-neg-bid]').forEach(b=>b.onclick=()=>{if(!allowed())return;const n=negotiationStore(DB)[b.dataset.negBid];act(mTransferBid(DB,n.pid,+document.querySelector(`[data-neg-fee="${n.id}"]`).value,transferFeePlanFromDom(n.id,+document.querySelector(`[data-neg-fee="${n.id}"]`).value)))});
-  document.querySelectorAll('[data-accept-seller]').forEach(b=>b.onclick=()=>{if(allowed())act(acceptSellerCounter(DB,b.dataset.acceptSeller))});
-  document.querySelectorAll('[data-neg-submit]').forEach(b=>b.onclick=()=>{if(allowed())act(submitNegotiationOffer(DB,b.dataset.negSubmit,negotiationTermsFromDom(b.dataset.negSubmit)).msg)});
-  document.querySelectorAll('[data-neg-accept]').forEach(b=>b.onclick=()=>{if(allowed())act(acceptNegotiationCounter(DB,b.dataset.negAccept).msg)});
-  document.querySelectorAll('[data-neg-cancel]').forEach(b=>b.onclick=()=>{if(allowed())act(cancelNegotiation(DB,b.dataset.negCancel))});
+function negotiationTermsFromDom(nid,root=document){return {salary:+root.querySelector(`[data-neg-sal="${nid}"]`).value,years:+root.querySelector(`[data-neg-years="${nid}"]`).value,signingBonus:+root.querySelector(`[data-neg-sign="${nid}"]`).value,bonuses:{performance:+root.querySelector(`[data-neg-perf="${nid}"]`).value,title:+root.querySelector(`[data-neg-title="${nid}"]`).value,international:+root.querySelector(`[data-neg-intl="${nid}"]`).value},buyout:(+root.querySelector(`[data-neg-buyout="${nid}"]`).value||0)>0?{amount:+root.querySelector(`[data-neg-buyout="${nid}"]`).value,type:root.querySelector(`[data-neg-buyout-type="${nid}"]`).value}:null,option:root.querySelector(`[data-neg-option="${nid}"]`).value==='none'?null:{type:root.querySelector(`[data-neg-option="${nid}"]`).value},promisedRole:root.querySelector(`[data-neg-role="${nid}"]`).value}}
+function bindNegotiationControls(act,allowed=()=>true,root=document){
+  root.querySelectorAll('[data-neg-bid]').forEach(b=>b.onclick=()=>{if(!allowed())return;const n=negotiationStore(DB)[b.dataset.negBid];act(mTransferBid(DB,n.pid,+root.querySelector(`[data-neg-fee="${n.id}"]`).value,transferFeePlanFromDom(n.id,+root.querySelector(`[data-neg-fee="${n.id}"]`).value,DB.worldDate,root)))});
+  root.querySelectorAll('[data-accept-seller]').forEach(b=>b.onclick=()=>{if(allowed())act(acceptSellerCounter(DB,b.dataset.acceptSeller))});
+  root.querySelectorAll('[data-neg-submit]').forEach(b=>b.onclick=()=>{if(allowed())act(submitNegotiationOffer(DB,b.dataset.negSubmit,negotiationTermsFromDom(b.dataset.negSubmit,root)).msg)});
+  root.querySelectorAll('[data-neg-accept]').forEach(b=>b.onclick=()=>{if(allowed())act(acceptNegotiationCounter(DB,b.dataset.negAccept).msg)});
+  root.querySelectorAll('[data-neg-cancel]').forEach(b=>b.onclick=()=>{if(allowed())act(cancelNegotiation(DB,b.dataset.negCancel))});
 }
 
-function initialNegotiationDraft(nid,values=null){const fields=["sal","years","sign","perf","title","intl","buyout","buyout-type","option","role"],out={};for(const k of fields){const el=document.querySelector(`[data-neg-${k}="${nid}"]`);if(el){if(values&&k in values)el.value=values[k];out[k]=el.value}}return out}
+function initialNegotiationDraft(nid,values=null,root=document){const fields=["sal","years","sign","perf","title","intl","buyout","buyout-type","option","role"],out={};for(const k of fields){const el=root.querySelector(`[data-neg-${k}="${nid}"]`);if(el){if(values&&k in values)el.value=values[k];out[k]=el.value}}return out}
+
+/* ==== FILE: ui-club-briefing.js ==== */
+// Pure owned-club briefing; existing season/contract writers keep authority.
+let CLUB_BRIEF={db:null,slot:null,team:null,message:'',draft:null};
+function clubBriefContext(db=DB){
+  const w=db?.world,t=w&&managedTeam(db);
+  if(!t||w.fired||['pick','initial_roster'].includes(w.phase))return null;
+  return {db,w,t,teams:setupTeamsForManager(db).map(x=>x.id)};
+}
+function clubBriefState(){
+  if(CLUB_BRIEF.db!==DB||CLUB_BRIEF.slot!==SLOT||CLUB_BRIEF.team!==managedTeamId(DB))CLUB_BRIEF={db:DB,slot:SLOT,team:managedTeamId(DB),message:'',draft:null};
+  return CLUB_BRIEF;
+}
+function clubBriefNegotiations(db,ctx=clubBriefContext(db)){
+  if(!ctx||ctx.t.parent)return [];
+  return Object.values(db.world.negotiations||{}).filter(n=>n&&typeof n.id==='string'&&/^[A-Za-z0-9_:/.\-]+$/.test(n.id)&&['club','player'].includes(n.stage)&&(n.stage==='club'?n.teamId===ctx.t.id&&!!db.teams[n.sellerId]:!!(n.counter||n.demand))&&n.status==='open'&&ctx.teams.includes(n.teamId)&&db.players[n.pid]&&!db.players[n.pid].retired&&db.teams[n.teamId]&&
+    (['renewal','fa','early_fa','transfer'].includes(n.kind))&&(n.kind==='renewal'?db.players[n.pid].team===n.teamId:['transfer','early_fa'].includes(n.kind)?db.players[n.pid].team===n.sellerId:!db.players[n.pid].team))
+    .sort((a,b)=>String(a.createdDate||'').localeCompare(String(b.createdDate||''))||String(a.id).localeCompare(String(b.id)));
+}
+function clubBriefFixture(db,ctx=clubBriefContext(db)){
+  if(!ctx||ctx.w.phase!=='season')return null;
+  const rows=[];
+  for(const s of Object.values(ctx.w.seasons||{}))if(!s.done&&db.competitions[s.comp])
+    for(const d of s.days.slice(s.cur))for(const m of d.matches)
+      if(!m.res&&(m.a===ctx.t.id||m.b===ctx.t.id)&&db.teams[m.a]&&db.teams[m.b])rows.push({s,d,m});
+  rows.sort((a,b)=>String(a.d.date).localeCompare(String(b.d.date))||String(a.m.time||'').localeCompare(String(b.m.time||''))||String(a.m.id).localeCompare(String(b.m.id)));
+  return rows[0]||null;
+}
+function renderClubBriefing(){
+  const ctx=clubBriefContext();if(!ctx)return '';
+  const state=clubBriefState(),nx=clubBriefFixture(DB,ctx),ns=clubBriefNegotiations(DB,ctx),cw=ctx.w.contractWindow;
+  return `<section id="club-briefing"><h3 tabindex="-1">구단 운영 브리핑</h3><p class="hint">${esc(ctx.t.name)} · 기준일 ${esc(DB.worldDate||'날짜 미정')} · ${ctx.w.manage==='manual'?'직접 운영':'현재 AI 위임 설정'} · 확정된 일정과 진행 중인 내 구단 협상만 표시합니다.</p><p role="status">${esc(state.message)}</p>
+    ${nx?`<div class="cfgcard"><h4>다음 공식 경기</h4><p>${esc(DB.competitions[nx.s.comp].name)} · ${esc(nx.d.label||'')} · Bo${nx.m.bo}</p><p>${esc(nx.d.date)} UTC · ${esc(fixtureTimeInfo(nx.m))} · ${esc(DB.teams[nx.m.a].name)} vs ${esc(DB.teams[nx.m.b].name)}</p><div class="controls"><button data-brief-schedule="${esc(nx.s.key)}">해당 일정 확인</button><button data-brief-progress="smine">내 경기까지 진행</button></div></div>`:'<p class="hint">현재 생성된 일정에 남은 내 공식 경기가 없습니다. 아직 생성되지 않은 대진은 예측하지 않습니다.</p>'}
+    ${SSET.tab==='sched'?'<button class="ghost" data-brief-return>브리핑으로 돌아오기</button>':''}
+    ${ctx.w.phase==='season'?'<div class="controls"><button data-brief-progress="sday">하루 진행</button></div>':''}
+    ${cw&&ctx.w.phase==='offseason'?`<p class="hint">현재 계약 창구 · ${cw.stage==='exclusive'?'원소속 독점 협상':'FA 시장'}${cw.exclusiveThrough?' · 독점 종료 '+esc(cw.exclusiveThrough):''}${cw.outsideContactDate?' · 타 구단 접촉 '+esc(cw.outsideContactDate):''}. 개별 협상 만료일로 해석하지 않습니다.</p>`:''}
+    ${ctx.w.manage!=='manual'?'<p class="hint">AI 위임 중에는 이 브리핑에서 수동 제안을 보내지 않습니다. 기존 운영 설정에서 직접 운영으로 바꾸세요.</p>':''}<h4>열린 협상 ${ns.length}건</h4>${ns.length?`<div class="cfgs">${ns.map(n=>`<div class="cfgcard compact"><b>${esc(DB.players[n.pid].name)} · ${esc(DB.teams[n.teamId].name)}</b><p class="hint">${n.stage==='club'?'구단 이적료':'선수 개인조건'} · 시작 ${esc(n.createdDate||'날짜 미상')} · ${n.stage==='club'?n.clubRounds||0:n.round}/${n.stage==='club'?3:n.maxRounds}라운드</p><button data-brief-neg="${esc(n.id)}"${ctx.w.manage!=='manual'?' disabled':''}>조건 확인·수동 협상</button></div>`).join('')}</div>`:'<p class="hint">현재 처리 가능한 열린 협상이 없습니다. 개인별 마감은 저장된 근거가 없으면 만들지 않습니다.</p>'}</section>`;
+}
+function clubBriefCurrent(db,w,slot,render,team){return DB===db&&db.world===w&&SLOT===slot&&UI_RENDER_ID===render&&VIEW==='season'&&managedTeamId(db)===team&&!SLOT_SWITCHING&&!!clubBriefContext(db)}
+function openClubBriefNegotiation(nid){
+  const ctx=clubBriefContext(),n=clubBriefNegotiations(DB,ctx).find(x=>x.id===nid);
+  if(!n||ctx.w.manage!=='manual'||UI_OVERLAY||ctx.w.pendingOfficial?.queue?.length)return false;
+  const db=DB,w=ctx.w,slot=SLOT,render=UI_RENDER_ID,stamp=JSON.stringify(n),date=db.worldDate,phase=w.phase;
+  const current=()=>clubBriefCurrent(db,w,slot,render,ctx.t.id)&&db.worldDate===date&&w.phase===phase&&w.manage==='manual'&&UI_OVERLAY===dialog&&JSON.stringify(db.world.negotiations?.[nid])===stamp&&clubBriefNegotiations(db).some(x=>x.id===nid);
+  const read=JSON.parse(JSON.stringify(db));read.world.negotiations={[nid]:read.world.negotiations[nid]};
+  const state=clubBriefState(),root=document.querySelector('#overlay');let dialog=null;
+  const close=()=>{if(UI_OVERLAY!==dialog)return;if(current())state.draft={nid,stamp,date,values:clubBriefDraft(nid,root)};closeUiOverlay()};
+  openUiOverlay({kind:'club-negotiation',label:'내 구단 수동 협상',dismissible:true,onDismiss:close,focusSelector:'#brief-neg-close',html:`<div class="ovin"><div class="ovhead"><b>내 구단 수동 협상</b><button id="brief-neg-close" class="ghost">브리핑으로 돌아가기</button></div><p class="hint">작성은 제안 보내기 전까지 적용되지 않습니다. 수락·등록을 보장하지 않습니다.</p>${renderNegotiations([n.teamId],read)}</div>`});
+  dialog=UI_OVERLAY;
+  if(state.draft?.nid===nid&&state.draft.stamp===stamp&&state.draft.date===date)clubBriefDraft(nid,root,state.draft.values);
+  $('#brief-neg-close').onclick=close;
+  bindNegotiationControls(msg=>{state.message=String(msg||'처리 결과 없음');state.draft=null;closeUiOverlay({restoreFocus:false});saveDB();navKeepScroll();([...document.querySelectorAll('[data-brief-neg]')].find(b=>b.dataset.briefNeg===nid)||document.querySelector('#club-briefing h3'))?.focus?.({preventScroll:true})},current,root);
+  return true;
+}
+function bindClubBriefing(){
+  const ctx=clubBriefContext();if(!ctx)return;
+  const db=DB,w=ctx.w,slot=SLOT,render=UI_RENDER_ID,date=db.worldDate,phase=w.phase,nx=clubBriefFixture(db),current=()=>clubBriefCurrent(db,w,slot,render,ctx.t.id)&&db.worldDate===date&&w.phase===phase&&!UI_OVERLAY;
+  document.querySelectorAll('[data-brief-neg]').forEach(b=>b.onclick=()=>{if(current())openClubBriefNegotiation(b.dataset.briefNeg)});
+  document.querySelectorAll('[data-brief-schedule]').forEach(b=>b.onclick=()=>{if(!current()||clubBriefFixture(db)?.m.id!==nx?.m.id)return;SSET.view=b.dataset.briefSchedule;SSET.tab='sched';navKeepScroll();document.querySelector('#stab')?.setAttribute?.('tabindex','-1');document.querySelector('#stab')?.focus?.()});
+  document.querySelectorAll('[data-brief-return]').forEach(b=>b.onclick=()=>{if(current())document.querySelector('#club-briefing h3')?.focus?.()});
+  document.querySelectorAll('[data-brief-progress]').forEach(b=>b.onclick=()=>{if(!current()||w.phase!=='season'||w.pendingOfficial?.queue?.length)return;const target=document.querySelector('#'+b.dataset.briefProgress);if(target&&!target.disabled)target.click()});
+}
+
+function clubBriefDraft(nid,root,values=null){
+  const neg=initialNegotiationDraft(nid,values?.neg||null,root),fees={};
+  for(const key of ['fee','upfront','kind','threshold','bonus']){const el=root.querySelector(`[data-${key==='fee'?'neg-fee':'fee-'+key}="${nid}"]`);if(el){if(values?.fees&&key in values.fees)el.value=values.fees[key];fees[key]=el.value}}
+  return {neg,fees};
+}
 
 /* ==== FILE: ui-transfer-terms.js ==== */
 // Advanced economic terms are collapsed on small screens. Preview always shows
@@ -12621,8 +12689,8 @@ function transferFeeOfferFields(id){
     <label>조건 달성 추가금 (억)<input data-fee-bonus="${id}" type="number" min="0" step="0.1" value="0" inputmode="decimal"></label></div>
     <p class="hint">잔금은 이적 30일 후, 매입 조항은 임대 예정 종료 30일 후 지급합니다. 추가금 조건의 유효기간은 이적/임대 예정 종료 후 1년입니다. 조건부 추가금은 보장 이적료와 별도입니다.</p></details>`;
 }
-function transferFeePlanFromDom(id,fee,anchor=DB.worldDate){
-  const read=key=>document.querySelector(`[data-fee-${key}="${id}"]`),
+function transferFeePlanFromDom(id,fee,anchor=DB.worldDate,root=document){
+  const read=key=>root.querySelector(`[data-fee-${key}="${id}"]`),
     fraction=Number(read('upfront')?.value??100)/100,
     upfront=Math.round(fee*fraction*10)/10,bonus=Number(read('bonus')?.value||0),
     installment=Math.round((fee-upfront)*10)/10;
@@ -14206,6 +14274,7 @@ function bindSeason(){
   if(!w)return bindSetup();
   if(w.phase==='pick'){$('#pickgo').onclick=()=>{setManagedTeam(DB,$('#pickteam').value);w.fired=false;const t=DB.teams[managedTeamId(DB)];t.owner.patience=2;w.phase='preseason';SSET.view=null;saveDB();nav()};return}
   if(w.phase==='initial_roster'){bindInitialRosterMarket();return}
+  bindClubBriefing();
   document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{SSET.view=b.dataset.view;nav()});
   document.querySelectorAll('[data-chap]').forEach(b=>b.onclick=()=>{const i=+b.dataset.chap;SSET.chap=(SSET.chap??w.step)===i?-1:i;const s=Object.values(w.seasons).find(x=>stepOf(DB,x)===i&&(x.region===DB.teams[managedTeamId(DB)].region||DB.competitions[x.comp].international));if(s)SSET.view=s.key;nav()});
   document.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>{SSET.tab=b.dataset.st;$('#stab').innerHTML=seasonTab();document.querySelectorAll('[data-st]').forEach(x=>x.setAttribute('aria-pressed',x===b));bindSeasonTab()});
@@ -14778,6 +14847,7 @@ function viewSeason(){
   return `<section class="seasonhead">
     <div><h2>${w.year} 시즌</h2><p>${esc(T.name)} · ${esc(DB.regions[T.region].leagueName)}${lgS?' '+esc(lgS.label):''} ${mine&&(mine.w+mine.l)?`${rank}위 (${mine.w}승 ${mine.l}패)`:''} · ${esc(phaseText(w))}</p></div>${right}
   </section>
+  ${renderClubBriefing()}
   ${SAVEFAIL?'<p class="warn">브라우저 저장 공간이 부족해 진행 상황을 저장하지 못했습니다. 데이터 탭에서 JSON을 복사해 두세요.</p>':''}
   <section class="controls">${controlsFor(w)}<span id="sprog" class="hint" role="status"></span></section>
   ${w.phase==='market'&&w.manage==='manual'?renderMarket():''}

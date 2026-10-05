@@ -8,8 +8,8 @@ function transferFeeOfferFields(id){
     <label>조건 달성 추가금 (억)<input data-fee-bonus="${id}" type="number" min="0" step="0.1" value="0" inputmode="decimal"></label></div>
     <p class="hint">잔금은 이적 30일 후, 매입 조항은 임대 예정 종료 30일 후 지급합니다. 추가금 조건의 유효기간은 이적/임대 예정 종료 후 1년입니다. 조건부 추가금은 보장 이적료와 별도입니다.</p></details>`;
 }
-function transferFeePlanFromDom(id,fee,anchor=DB.worldDate){
-  const read=key=>document.querySelector(`[data-fee-${key}="${id}"]`),
+function transferFeePlanFromDom(id,fee,anchor=DB.worldDate,root=document){
+  const read=key=>root.querySelector(`[data-fee-${key}="${id}"]`),
     fraction=Number(read('upfront')?.value??100)/100,
     upfront=Math.round(fee*fraction*10)/10,bonus=Number(read('bonus')?.value||0),
     installment=Math.round((fee-upfront)*10)/10;

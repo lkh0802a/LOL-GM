@@ -6,8 +6,8 @@ import { resolve } from 'node:path';
 
 const dir=resolve(import.meta.dirname,'..','src','artifact');
 const get=async p=>readFile(resolve(dir,p),'utf8');
-const [app,state,season,manager,data]=await Promise.all(
-  ['app.js','ui-state.js','ui-season.js','ui-manager.js','ui-data.js'].map(get));
+const [app,state,season,manager,data,briefing]=await Promise.all(
+  ['app.js','ui-state.js','ui-season.js','ui-manager.js','ui-data.js','ui-club-briefing.js'].map(get));
 const later=()=>new Promise(resolve=>setImmediate(resolve));
 
 {
@@ -101,7 +101,7 @@ const later=()=>new Promise(resolve=>setImmediate(resolve));
     setTimeout:f=>{callbacks.push(f);return callbacks.length},
     saveDB:()=>{saves++},
     nextDate:()=> '2030-02-01',
-    managedTeamId:()=> 'T',
+    managedTeamId:()=> 'T',managedTeam:()=>db.teams.T,setupTeamsForManager:()=>[db.teams.T],
     bindSeasonTab:()=>{},
     bindOfficeOpinionControls:()=>{},
     playWorldDay:world=>{world.world.count++;days++;return {played:[],pending:false}},
@@ -115,6 +115,7 @@ const later=()=>new Promise(resolve=>setImmediate(resolve));
     closeUiOverlay:()=>{},console:{error:(...args)=>unexpected.push(args)}
   });
   context.$=selector=>node(selector.slice(1));
+  vm.runInContext(briefing,context,{filename:'ui-club-briefing.js'});
   vm.runInContext(season.slice(season.lastIndexOf('function bindSeason(){')),context,{filename:'bindSeason()'});
   vm.runInContext(state,context,{filename:'ui-state.js'});
   const run=js=>vm.runInContext(js,context);
