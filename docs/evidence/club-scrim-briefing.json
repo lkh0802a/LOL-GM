@@ -2,7 +2,7 @@
   "task": "12.3.9",
   "baseMain": "6db6354f2039299e0a5330ba7bec84ec9af362ae",
   "sourceHashes": {
-    "src/artifact/ui-club-scrim.js": "245228d0f6511da8f59588ae9b58ed71bd0c46f67e0026b376171ecd2dc99e5c",
+    "src/artifact/ui-club-scrim.js": "1fc7a2783100ffbc84b6c3e86d2ef33308c2c19bb35d29bd09073fc7f3a0cd10",
     "src/artifact/ui-scrim-plans.js": "d08d408d1dff3b1e8e5560b228e97209c8371dcc4b9637417237480f307e68b6",
     "src/artifact/ui-club-briefing.js": "abccb42319cb324edb997c16fe44adac4c5ddbfdcdbccf8c9631498ec26f4570",
     "scripts/club-scrim-acceptance.mjs": "d61f0188469b8eb6e95642d900ad36c21aa904948186b5c19b0f6d3ea177b112",
@@ -11,7 +11,7 @@
     "scripts/ui-async-acceptance.mjs": "6ea44d5ffe0e97dc001ccd31d2dcad0522ad77620e11e032dfc6ebae4626ed94",
     "scripts/ui-finance-contracts-runner.mjs": "06ff03caad9f0bfd557192ebae08ba858acf1d2c3132819cc8ff2b5e2ba12fe4",
     "package.json": "71579a662dfd9e6816104eeb91e7128732aec0eb2b1e0763b9175810d1c29adc",
-    "index.html": "2ec48916dcdbd0551e8becfb8174b505d3f899e6e8da7de19a71e97119f4da9f"
+    "index.html": "10e17315a7249be72c8a4a6b75a1bd8251594e4393135724f7fe48ae876a59c6"
   },
   "originalWholeSnapshotHashCheck": true,
   "ui": {
@@ -890,7 +890,7 @@
     "record": {
       "read": {
         "version": 15,
-        "saveId": "save-muvf02py",
+        "saveId": "save-muvfmvq9",
         "manager": {
           "id": "manager-human",
           "teamId": "VXG",
@@ -102638,9 +102638,9 @@
   },
   "rawSnapshots": {
     "before": {
-      "sha256": "6bdb982c074a63cbd57114d02f083d25c957101ea6316341e17eb3efcc85fee0",
+      "sha256": "47798774fe428e1fc842cc29e74d2822c7c208aa765f492ce3110b621ffc982d",
       "parts": [
-        "1ca9f5ea7d12dac6afe6e4c58be2bfd82e4ad2fb92f99d195c768b8e27046562",
+        "608ce67f9f306c04e6e0241c6b44493b296fd7da6302e61a788431a153b063fe",
         "e499d2f4ad5799913f211c4d992d900c3279c3175295e8b15391894a916e14d3",
         "09d30a30f5717ba1d9c0ced63f4bf472a34e7e911a5fd275f1a66459598cfc89",
         "5468802e74a78559f0755e4c058d5c2b6b82e65b5d71460c034b4a44b2d43417",
@@ -108562,9 +108562,9 @@
       "bytes": 1465807
     },
     "expected": {
-      "sha256": "0ad116c7325ce0650966c71521fcc4fff517a136f07da572460116b5c12e9cd1",
+      "sha256": "2414348326af3304c6e0222c924c10b3cd1d5ca203c73ccc7787eb763cbd3972",
       "parts": [
-        "1ca9f5ea7d12dac6afe6e4c58be2bfd82e4ad2fb92f99d195c768b8e27046562",
+        "608ce67f9f306c04e6e0241c6b44493b296fd7da6302e61a788431a153b063fe",
         "e499d2f4ad5799913f211c4d992d900c3279c3175295e8b15391894a916e14d3",
         "09d30a30f5717ba1d9c0ced63f4bf472a34e7e911a5fd275f1a66459598cfc89",
         "5468802e74a78559f0755e4c058d5c2b6b82e65b5d71460c034b4a44b2d43417",
@@ -114486,9 +114486,9 @@
       "bytes": 1466065
     },
     "after": {
-      "sha256": "0ad116c7325ce0650966c71521fcc4fff517a136f07da572460116b5c12e9cd1",
+      "sha256": "2414348326af3304c6e0222c924c10b3cd1d5ca203c73ccc7787eb763cbd3972",
       "parts": [
-        "1ca9f5ea7d12dac6afe6e4c58be2bfd82e4ad2fb92f99d195c768b8e27046562",
+        "608ce67f9f306c04e6e0241c6b44493b296fd7da6302e61a788431a153b063fe",
         "e499d2f4ad5799913f211c4d992d900c3279c3175295e8b15391894a916e14d3",
         "09d30a30f5717ba1d9c0ced63f4bf472a34e7e911a5fd275f1a66459598cfc89",
         "5468802e74a78559f0755e4c058d5c2b6b82e65b5d71460c034b4a44b2d43417",
@@ -120410,9 +120410,9 @@
       "bytes": 1466065
     },
     "completed": {
-      "sha256": "e21b76bd91a9e93d018c157982c49f064efcc9fee1f1c3e81bdfe21ff0952e5f",
+      "sha256": "4b6a98db61616db9e0d611e162ae07982ded9e7466572236a0237163df15f056",
       "parts": [
-        "1ca9f5ea7d12dac6afe6e4c58be2bfd82e4ad2fb92f99d195c768b8e27046562",
+        "608ce67f9f306c04e6e0241c6b44493b296fd7da6302e61a788431a153b063fe",
         "8b7e55cdcf30bb923dc7af2bd961a065183f90624c251ce1c20b3adeb8ed668b",
         "09d30a30f5717ba1d9c0ced63f4bf472a34e7e911a5fd275f1a66459598cfc89",
         "5468802e74a78559f0755e4c058d5c2b6b82e65b5d71460c034b4a44b2d43417",
@@ -126493,9 +126493,9 @@
       "bytes": 1495592
     },
     "canonical": {
-      "sha256": "de77c86d45a4dacc03f2e35eb46cefb16708fd629dd791f6720c4299a2675e03",
+      "sha256": "70be90b59024a3d686f3545888df4a74c0e6fc396e334cbabd7eacfba255ee6c",
       "parts": [
-        "1ca9f5ea7d12dac6afe6e4c58be2bfd82e4ad2fb92f99d195c768b8e27046562",
+        "608ce67f9f306c04e6e0241c6b44493b296fd7da6302e61a788431a153b063fe",
         "6e6ed22cbb47c5931c1df114d35d818ee69307680bfb4603479b028daeba6a6e",
         "09d30a30f5717ba1d9c0ced63f4bf472a34e7e911a5fd275f1a66459598cfc89",
         "5468802e74a78559f0755e4c058d5c2b6b82e65b5d71460c034b4a44b2d43417",
@@ -131417,8 +131417,9 @@
     "manualDayScrimTotal": 50,
     "manualDayDrills": 50,
     "routineAdditionalScrimPoints": 30,
-    "finalScrimLog": "/tmp/club-scrim-browser-final7.log",
+    "finalScrimLog": "/tmp/club-scrim-browser-final8.log",
     "finalOfficialLog": "/tmp/club-scrim-official-browser-final2.log"
   },
+  "copyOnlyContinuation": "shared UI final2 preceded final plain-language UI copy; focused final9/browser final8 and exact final-head CI validate current source",
   "next": "12.3.10 owned current shortlist/report→existing manual observation→actual cost/report/detail-return-save"
 }
