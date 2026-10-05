@@ -299,3 +299,5 @@ ui-club-medical은 owned/ownedreserve full JSON read로 현재 의료 가용·�
 ### 소유 선수 계약 presentation (12.3.7)
 
 ui-club-contracts는 private full JSON의 현재 계약·기존 재계약/옵션 가능 조건·역할 사용량·지연 합의를 읽고 guarded 계약 진입을 시장/독점 창구/브리핑과 공유한다. 기존 startNegotiation/option journal/contract agreement activation/player-relations usage/finance payroll이 단일 writer·consumer다. ui-club-briefing의 기존 scoped negotiation controls와 return focus를 재사용한다. 실제 dialog/DB/world/slot/manager 객체·source snapshot은 stale callback을 막고 읽기에 lazy negotiationStore를 쓰지 않는다. 저장 schema·AI·가격·의료/등록/계약 규칙은 바꾸지 않는다.
+
+- 12.3.8 `ui-club-practice.js` owns private cloned current training/resource presentation and scoped ephemeral drafts; `ui-squad-controls.js` binds existing roster/tactics/lineup/role draft inputs with the shared current context guard. Existing squad-preparation command/journal, practice-resources/development/calendar and save writers retain rules/state ownership. UI budgets10500/3000 are new owned budgets; engine101 files and all prior budgets stay unchanged. See DEVELOPMENT12.3.8 for actual acceptance, counterexamples and limitations.

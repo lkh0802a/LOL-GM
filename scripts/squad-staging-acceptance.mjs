@@ -11,12 +11,12 @@ await runEngineFixture(String.raw`(()=>{
    role={dataset:{srole:backup.id},value:'core'},destination={dataset:{squadDst:backup.id},value:reserve.id},
    lineup={dataset:{lineupPlayer:backup.id},value:'MID'},
    selectors={'[data-tac]':[tactic],'[data-srole]':[role],'[data-squad-dst]':[destination],'[data-lineup-player]':[lineup]};
- $=q=>elements[q.slice(1)]||null;document={querySelectorAll:q=>selectors[q]||[]};window={};
+ $=q=>elements[q.slice(1)]||null;document={querySelector:$,querySelectorAll:q=>selectors[q]||[]};window={};
  const event={stopPropagation(){}};bindSquad();const parentChart={...parent.depthChart},reserveChart={...reserve.depthChart};
- squadEditState(parent);tactic.oninput(event);elements.trint.onchange({target:{value:'light'}});role.onchange(event);
+ squadEditState(parent);tactic.oninput(event);elements.trint.value='light';elements.trint.onchange({target:elements.trint});role.onchange(event);
  elements.sq.onchange({target:{value:reserve.id}});const er=squadEditState(reserve);
  check(er.tactics.aggression===reserve.tactics.aggression&&er.starters.MID===reserveChart.MID,'parent values leaked into reserve');
- tactic.value=79;tactic.oninput(event);elements.trint.onchange({target:{value:'high'}});
+ tactic.value=79;tactic.oninput(event);elements.trint.value='high';elements.trint.onchange({target:elements.trint});
  elements.sq.onchange({target:{value:other.id}});check(squadEditState(other)===null,'foreign team creates editor');
  elements.sq.onchange({target:{value:parent.id}});const ep=squadEditState(parent);
  check(ep.tactics.aggression===13&&ep.training.intensity==='light'&&ep.starters.MID===parentChart.MID&&ep.roles[backup.id]==='core','parent pending edits lost after navigation');
@@ -43,7 +43,7 @@ await runEngineFixture(String.raw`(()=>{
  elements.sqapply.onclick();check(backup.team===reserve.id&&reserve.roster.includes(backup.id)&&parent.tactics.aggression===23,'roster and coaching did not commit together');
  // Baseline stale roster/date/preparation rejects rather than applying old intent.
  const stale=squadEditState(parent);stale.tactics.aggression=34;parent.tactics.aggression=35;
- const changed=JSON.stringify(db);elements.sqapply.onclick();check(JSON.stringify(db)===changed&&SQUAD_EDIT&&MSG.includes('변경되었습니다'),'stale coaching overwrote current state');
+ const changed=JSON.stringify(db);bindSquad();elements.sqapply.onclick();check(JSON.stringify(db)===changed&&SQUAD_EDIT&&MSG.includes('변경되었습니다'),'stale coaching overwrote current state');
  elements.sqdiscard.onclick();check(SQUAD_EDIT===null&&parent.tactics.aggression===35&&MSG.includes('취소'),'discard changed live state');
  const fresh=squadEditState(parent);fresh.starters.MID=backup.id;fresh.dirty=true;const membership=JSON.stringify(db);elements.sqapply.onclick();check(JSON.stringify(db)===membership&&MSG.includes('슬롯'),'stale player membership accepted');elements.sqdiscard.onclick();
  const valid={type:'squad.preparation',actor:'manager',parentId:parent.id,assignments:rosterPlanState(db,parent).assignments,roles:{[backup.id]:backup.rosterRole},squads:{[parent.id]:{starters:{...parent.depthChart},tactics:{...parent.tactics},training:normalizeTraining(parent.training)}}};
@@ -59,9 +59,9 @@ await runEngineFixture(String.raw`(()=>{
  // Reserve-only authority and fired state are checked by the domain itself.
  db.manager.teamId=reserve.id;SQUAD=reserve.id;const coach=squadEditState(reserve);coach.training.intensity='light';coach.dirty=true;
  const command={type:'squad.preparation',actor:'manager',parentId:parent.id,assignments:coach.rosterPlan.assignments,roles:coach.roles,squads:{[parent.id]:{starters:parent.depthChart,tactics:parent.tactics,training:normalizeTraining(parent.training)}}};
- check(!commitWorldAction(db,command).ok,'reserve coach crafted parent control');elements.sqapply.onclick();check(reserve.training.intensity==='light','reserve coaching rejected');
+ check(!commitWorldAction(db,command).ok,'reserve coach crafted parent control');bindSquad();elements.sqapply.onclick();check(reserve.training.intensity==='light','reserve coaching rejected');
  db.world.fired=true;check(!commitWorldAction(db,{...command,squads:{}}).ok,'fired manager domain bypass');db.world.fired=false;
  const clone=unpackDB(packDB(db));SQUAD_EDIT=squadEditState(reserve);DB=clone;const reset=squadEditState(clone.teams[reserve.id]);check(reset.world===clone&&reset!==coach&&Object.keys(reset.squads).length===0,'replaced DB reused transient edits');
  check(clone.teams[parent.id].tactics.aggression===35&&clone.teams[reserve.id].training.intensity==='light','save/load preparation changed');
  console.log('SQUAD_STAGING_ACCEPTANCE PASS actual team/slider/role/destination/apply/discard events, independent pending edits/public navigation, validation+late writer rollback with identities/history, roster+coaching atomicity, stale baseline/membership, reserve/fired authority, world replacement/save');
-})();`,{timeout:60000,setupSources:["let DB,SQUAD,SQUAD_EDIT,OPEN_P,MSG,$,document,window;const originalStarter=setDepthStarter;function nav(){}function navKeepScroll(){}function saveDB(){}function bindScrimPlans(){}function bindRolePromiseControls(){}function bindLoanControls(){}function bindLoanPurchaseControls(){}function bindLocalServiceControls(){}function bindOfficialRegistrationControls(){}",...(await artifactSources(['ui-club-medical.js','ui-roster.js']))]});
+})();`,{timeout:60000,setupSources:["var SLOT='1',SLOT_SWITCHING=false,UI_RENDER_ID=1,UI_OVERLAY=null,VIEW='squad';let DB,SQUAD,SQUAD_EDIT,OPEN_P,MSG,$,document,window;const originalStarter=setDepthStarter;function nav(){UI_RENDER_ID++;bindSquad()}function navKeepScroll(){UI_RENDER_ID++;bindSquad()}function saveDB(){}function bindScrimPlans(){}function bindRolePromiseControls(){}function bindLoanControls(){}function bindLoanPurchaseControls(){}function bindLocalServiceControls(){}function bindOfficialRegistrationControls(){}",...(await artifactSources(['ui-club-medical.js','ui-club-practice.js','ui-squad-controls.js','ui-roster.js']))]});

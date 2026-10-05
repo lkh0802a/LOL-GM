@@ -85,3 +85,5 @@ Use [numeric stages 1–13 and dotted work units](DEVELOPMENT.md#unified-numeric
 - 12.3.6 현재 소유 의료 가용·수동 휴식/재활·저장 이력과 실제 일일·훈련·스크림·공식 소비: [수용](evidence/club-medical-briefing.json), [원본 진단](evidence/club-medical-briefing-diagnostics.json). 전체 의료/UI/언어 완료가 아니다.
 
 - 12.3.7 소유 선수 계약·옵션·역할 약속과 기존 수동 재계약·실제 공식 사용량: [수용](evidence/club-contract-briefing.json), [원본 진단](evidence/club-contract-briefing-diagnostics.json). 전체 계약/UI/언어 완료가 아니다.
+
+- 12.3.8 현재 훈련·공유 연습 자원과 실제 수동 준비/일일·성장·공식 소비: [수용](evidence/club-practice-briefing.json), [원본 진단](evidence/club-practice-briefing-diagnostics.json), [실행](../scripts/club-practice-acceptance.mjs). 스크림 예약 UI 확대·전체 훈련/언어/UI 완료가 아니다.
