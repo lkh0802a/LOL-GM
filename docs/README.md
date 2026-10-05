@@ -71,3 +71,5 @@ Use [numeric stages 1–13 and dotted work units](DEVELOPMENT.md#unified-numeric
 [12.5.2 초기 영입 같은 문맥 관측 비교·원자료·행동](DEVELOPMENT.md#1252-초기-영입의-같은-문맥-관측-비교원자료행동--2026-10-05-utc-10-04)은 임시3인 숫자 비교/관측 radar, 실제 source·권한/복귀 수용과 남은 전면 UI를 구분합니다.
 
 [12.5.3 실제 초기 영입 전후·수동 계약 근거](evidence/initial-offer-impact.json)는 private projection과 실제 합의/현재 권한/저장 경계를 검증합니다. 전체 UI·언어·AnalysisRoom 완료는 DEVELOPMENT의 별도 수용 조건을 따릅니다.
+
+[12.3.1 처음 화면·커리어 선택·저장 보존/복원](evidence/startup-career-flow.json)은 실제 세 작업·기존 writer와 오류 경계를 연결합니다. 전체 UI/언어/AnalysisRoom 완료가 아닙니다.

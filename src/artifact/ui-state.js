@@ -12,7 +12,6 @@ let PSET={role:'ALL',q:'',region:'GLOBAL',patch:'ALL',comp:'ALL',period:'ALL',ye
 let DRAFT_UI=null;
 let ANALYSIS_SET={mode:'own',team:'AUTO',period:'90',patch:'CURRENT',position:'ALL',prepTeam:'AUTO',review:'',reviewTab:'records',tierView:'public',tierQ:'',comp:'ALL'};
 
-// Keep the supported screen map and its binding ownership in one place.
 const UI_ROUTES=Object.freeze({
   season:{render:viewSeason,bind:bindSeason},
   match:{render:viewMatch,bind:bindMatch},
@@ -45,7 +44,6 @@ function finishUiTask(task){
   UI_TASKS.delete(task.kind);task.active=false;return true;
 }
 let UI_RENDER_ID=0;
-// Only genuinely overflowing horizontal data regions become keyboard tab stops.
 function uiEnhanceScrollRegions(root){
   if(!root||typeof root.querySelectorAll!=='function')return;
   root.querySelectorAll('.scroll').forEach(region=>{
@@ -68,21 +66,22 @@ window.addEventListener?.('resize',()=>{
   if(UI_OVERLAY)uiEnhanceScrollRegions(document.querySelector('#overlay'));
 });
 function updateAppNavigation(){
-  const started=!!DB.world,names={season:started?'일정·대회':'새 게임',squad:'선수단',match:'경기·스크림',analysis:'분석실',patch:'패치·메타',data:started?'저장·불러오기':'불러오기'};
+  const started=!!DB?.world,names={season:started?'일정·대회':'새 게임',squad:'선수단',match:'경기·스크림',analysis:'분석실',patch:'패치·메타',data:started?'저장·불러오기':'불러오기'};
   document.body?.setAttribute('data-career',String(started));
   document.querySelectorAll('nav button').forEach(b=>{if(names[b.dataset.v])b.textContent=names[b.dataset.v]});
   const save=document.querySelector('#app-save');if(save){save.textContent=names.data;save.setAttribute?.('aria-current',VIEW==='data'?'page':'false');save.onclick=()=>navigateTo('data')};
   const screen=document.querySelector('#app-screen'),club=document.querySelector('#app-club');
-  if(screen)screen.textContent=names[VIEW];
+  if(screen)screen.textContent=typeof START_UI!=='undefined'&&START_UI.active?'시작':names[VIEW];
   if(club){const t=started&&DB.teams&&typeof managedTeamId==='function'&&DB.teams[managedTeamId(DB)];club.textContent=t?`${t.name} · ${DB.worldDate||DB.year}`:'커리어 시작 전'}
   const theme=document.querySelector('#app-theme');if(theme){let value='auto';try{value=localStorage.getItem('lol-gm-theme')||'auto'}catch(e){}theme.value=['auto','dark','light'].includes(value)?value:'auto';document.documentElement?.setAttribute('data-theme',theme.value);theme.onchange=()=>{document.documentElement.setAttribute('data-theme',theme.value);try{localStorage.setItem('lol-gm-theme',theme.value)}catch(e){}}}
 }
 function nav(){
-  const route=UI_ROUTES[VIEW];
+  const route=typeof START_UI!=='undefined'&&START_UI.active?{render:viewStartup,bind:bindStartup}:UI_ROUTES[VIEW];
   if(!route)throw new Error('Unknown screen: '+VIEW);
   const main=document.querySelector('#main');
   if(!main)throw new Error('Main screen container missing');
   updateAppNavigation();
+  document.body?.setAttribute('data-startup',String(typeof START_UI!=='undefined'&&START_UI.active));
   cancelUiTasks();
   UI_RENDER_ID++;
   if(LIVE!==null)clearInterval(LIVE);
@@ -112,6 +111,7 @@ function navKeepScroll(){
 }
 function resetUiForWorld(){
   cancelUiTasks();
+  if(typeof START_UI!=='undefined')START_UI={active:!DB.world,page:'home',error:''};
   if(UI_OVERLAY)closeUiOverlay({force:true,restoreFocus:false});
   DRAFT_UI=null;
   LAST=null;LASTSER=null;OPEN_P=null;SQUAD_EDIT=null;MSG='';
