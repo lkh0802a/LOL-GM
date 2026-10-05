@@ -279,3 +279,7 @@ fields; no second contract, roster, finance or preview ledger is introduced.
 ### Startup and career/save boundary (12.3.1)
 
 `ui-startup.js` owns ephemeral home/career/load/settings and boot-error recovery, with actual `ui-state.nav` dispatch. Existing setup/career and app per-slot queues/storage own rules and persistence. New career runs on a private copy and commits identity after successful save; occupied/unknown slots are not silently replaced. Boot recovery with DB=null writes no outgoing corrupted slot. `ui-data.js` guards actual callbacks by DB/slot/render and rebinds after import. `app.loadDB` distinguishes unreadable backend from genuine empty data. No new saved UI schema or game economy. Focused acceptance is `startup-flow-acceptance.mjs`; raw source failures/actual browser/storage limits are retained in DEVELOPMENT12.3.1.
+
+### 12.3.2 구단 브리핑·동시 입력 소유
+
+`ui-club-briefing.js`가 ephemeral owned-club read/context와 overlay 이동·복귀를 소유한다. `app.viewSeason`/`ui-season.bindSeason`이 소비하며 날짜·official·contract writer는 기존 engine/shared command다. 복사본 단일 negotiation render와 선택적 root를 가진 공통 UI controls가 배경 시장과 팝업 입력을 분리한다. root 기본값 document는 기존 호출을 유지한다. live world에 view용 negotiationStore를 만들거나 새 저장 schema/계수를 추가하지 않는다. 순수 조회/현재 권한·stale·실제 원문/수동 행동·저장 수용은 club-briefing-acceptance.mjs와 DEVELOPMENT12.3.2를 따른다.

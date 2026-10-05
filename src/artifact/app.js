@@ -160,6 +160,7 @@ function viewSeason(){
   return `<section class="seasonhead">
     <div><h2>${w.year} 시즌</h2><p>${esc(T.name)} · ${esc(DB.regions[T.region].leagueName)}${lgS?' '+esc(lgS.label):''} ${mine&&(mine.w+mine.l)?`${rank}위 (${mine.w}승 ${mine.l}패)`:''} · ${esc(phaseText(w))}</p></div>${right}
   </section>
+  ${renderClubBriefing()}
   ${SAVEFAIL?'<p class="warn">브라우저 저장 공간이 부족해 진행 상황을 저장하지 못했습니다. 데이터 탭에서 JSON을 복사해 두세요.</p>':''}
   <section class="controls">${controlsFor(w)}<span id="sprog" class="hint" role="status"></span></section>
   ${w.phase==='market'&&w.manage==='manual'?renderMarket():''}
