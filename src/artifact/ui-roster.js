@@ -63,15 +63,10 @@ function viewSquad(){
 }
 function bindSquad(){
   bindScrimPlans();
-  const focus=$('#practicefocus');if(focus)focus.onchange=e=>{if(!squadUiCanManage(DB.teams[SQUAD]))return;const d=squadEditState(DB.teams[SQUAD]);d.training.focus=e.target.value;d.dirty=true};
-  const ti=$('#trint');if(ti)ti.onchange=e=>{if(!squadUiCanManage(DB.teams[SQUAD]))return;const d=squadEditState(DB.teams[SQUAD]);d.training.intensity=e.target.value;d.dirty=true};
+  bindSquadPracticeControls();bindSquadDraftControls();
   $('#sq').onchange=e=>{SQUAD=e.target.value;OPEN_P=null;nav()};
   bindMedicalPlanControls();
-  if($('#sqapply'))$('#sqapply').onclick=applySquadEdit;if($('#sqdiscard'))$('#sqdiscard').onclick=discardSquadEdit;
-  document.querySelectorAll('[data-squad-dst]').forEach(el=>el.onchange=e=>{e.stopPropagation();if(!squadUiCanManage(DB.teams[SQUAD]))return;const d=squadEditState(DB.teams[SQUAD]);d.rosterPlan.assignments[el.dataset.squadDst]=el.value;d.dirty=true;navKeepScroll()});
   if($('#scoutT'))$('#scoutT').onclick=()=>{if(DB.world?.fired)return;const m=scoutPlayers(DB,DB.teams[SQUAD].roster,35,0.5*psOf(DB,DB.teams[managedTeamId(DB)].region));saveDB();nav();$('#scmsg')&&($('#scmsg').textContent=m)};
-  document.querySelectorAll('[data-lineup-player]').forEach(el=>{el.onclick=e=>e.stopPropagation();el.onchange=e=>{e.stopPropagation();if(!squadUiCanManage(DB.teams[SQUAD]))return;const pid=el.dataset.lineupPlayer,d=squadEditState(DB.teams[SQUAD]);if(!DB.players[pid]||d.rosterPlan.assignments[pid]!==SQUAD)return;const next=el.value;for(const r of ROLES)if(d.starters[r]===pid)delete d.starters[r];if(next)d.starters[next]=pid;d.dirty=true;navKeepScroll()}});
-  document.querySelectorAll('[data-srole]').forEach(el=>{el.onclick=e=>e.stopPropagation();el.onchange=e=>{e.stopPropagation();if(!squadUiCanManage(DB.teams[SQUAD]))return;const p=DB.players[el.dataset.srole],d=squadEditState(DB.teams[SQUAD]);if(p&&d.rosterPlan.assignments[p.id]===SQUAD){d.roles[p.id]=el.value;d.dirty=true}}});
   bindRolePromiseControls();
   bindLoanControls();
   bindLoanPurchaseControls();
@@ -79,10 +74,6 @@ function bindSquad(){
   bindOfficialRegistrationControls();
   document.querySelectorAll('[data-role-convert]').forEach(b=>b.onclick=e=>{e.stopPropagation();if(DB.world?.fired)return;const r=proposeRoleConversion(DB,b.dataset.roleConvert,b.dataset.targetRole,'manager');MSG=r.reason;saveDB();navKeepScroll()});
   document.querySelectorAll('[data-role-convert-cancel]').forEach(b=>b.onclick=e=>{e.stopPropagation();if(DB.world?.fired)return;const r=cancelRoleConversion(DB,b.dataset.roleConvert,'manager');MSG=r.reason;saveDB();navKeepScroll()});
-  document.querySelectorAll('[data-tac]').forEach(el=>el.oninput=el.onchange=e=>{if(!squadUiCanManage(DB.teams[SQUAD]))return;const k=el.dataset.tac;const d=squadEditState(DB.teams[SQUAD]);d.tactics[k]=+el.value;d.dirty=true;if(el.previousElementSibling)el.previousElementSibling.querySelector('output').textContent=el.value});
-  document.querySelectorAll('[data-tr]').forEach(el=>el.oninput=()=>{const t=DB.teams[SQUAD];if(!squadUiCanManage(t))return;const d=squadEditState(t),k=el.dataset.tr;
-    d.training=setTrainingAllocation(d.training,k,el.value);const v=d.training[k],others=Object.keys(ATTR_GROUPS).filter(g=>g!==k).reduce((s,g)=>s+d.training[g],0);
-    el.value=v;d.training[k]=v;d.dirty=true;el.previousElementSibling.querySelector('output').textContent=v;$('#trleft').textContent=`남은 포인트 ${TRAIN_POINTS-others-v} / ${TRAIN_POINTS}`});
   const scRefresh=()=>{SCOUTSET.region=$('#screg')?.value||SCOUTSET.region;SCOUTSET.role=$('#scrole')?.value||SCOUTSET.role;SCOUTSET.contract=$('#sccontract')?.value||SCOUTSET.contract;SCOUTSET.competition=$('#sccomp')?.value||SCOUTSET.competition;SCOUTSET.undervalued=!!$('#scunder')?.checked;SCOUTSET.q=$('#scq')?.value||'';nav()};
   for(const id of ['#screg','#scrole','#sccontract','#sccomp','#scunder','#scq'])if($(id))$(id).onchange=scRefresh;
   document.querySelectorAll('[data-scout]').forEach(b=>b.onclick=e=>{e.stopPropagation();if(DB.world?.fired)return;MSG=scoutPlayers(DB,[b.dataset.scout],20,.1*psOf(DB,managedTeam(DB).region));saveDB();navKeepScroll()});
