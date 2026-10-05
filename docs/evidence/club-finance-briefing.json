@@ -1,0 +1,2319 @@
+{
+  "task": "12.3.4",
+  "date": "2026-10-05",
+  "sourceHashes": {
+    "src/artifact/ui-club-finance.js": "9d4ff037d50b29b0dfda79bf858b17c2740924c0e42609eca7fa662ac6796f9c",
+    "src/artifact/ui-club-briefing.js": "01529ba48c3921f8b9c55e74c588b704df749e6a894d4843c652359d2f4aed98",
+    "src/artifact/ui-manager.js": "bf9b7527f7506c7f7be482982661ada4163ae79902d41d81dddb6189712b2a9c",
+    "src/artifact/ui-market-staff.js": "73cbf620a4d61d8d8c23e6017f3fee8f67206658a066be6fb21c033ea6c47b4d",
+    "src/artifact/ui-transfer-terms.js": "27f305d8e907c0e7e70aa9b06d48bbb3510369f3193e4803aef54534ee4e9f51",
+    "scripts/club-finance-acceptance.mjs": "ac361ef0008a772b435d5d7f3708e2e07e021c0ddcf4eea4014a7a8d2d53b253",
+    "scripts/finance-acceptance.mjs": "5ac5cee3a113cf0c186e2f1a49a9bfa73eaed427a366546ed32f7ec012b695fd",
+    "scripts/staff-contracts-acceptance.mjs": "77ea1c6258ee4b9960d088ba45de6d6839dc8b44104a988699beccf0577cd3a1",
+    "scripts/ui-async-acceptance.mjs": "fefb86dc7b2fc2be70b81505094fbe0725452a1f893a9c0590f2099550f90a49",
+    "scripts/ui-finance-contracts-runner.mjs": "7d8cb6e1f8f630429f50da41f6f0c893a940a12ead1c9b1b65aa23af6ce0aba1",
+    "scripts/artifact-modules.mjs": "0ed658eebdbc8a9d530fed0c279de70b36cb506ad97f07b24c31e28ab9c64d63",
+    "scripts/check.mjs": "9addade76fbcfbd7bc4db6517dd02729d4c8ddebe7b10a37f0c6a884d7172876",
+    "package.json": "b16fd847ed1fc3d95bc92482ef758c108b0f9e7b183e7cb31ea9cf3a985193cc"
+  },
+  "engineModulesIdenticalToBase": {
+    "base": "fc85cb68a018f64f9570bdf38982e742299cbb78",
+    "count": 101
+  },
+  "baseline": {
+    "mutated": true,
+    "sponsor": {
+      "id": "fixed",
+      "name": "Mir Foods",
+      "type": "안정형",
+      "base": 15.7,
+      "perWin": 0,
+      "years": 1,
+      "milestone": null,
+      "milestoneBonus": 0,
+      "until": 2027
+    },
+    "writes": 1
+  },
+  "focused": {
+    "pure": true,
+    "actualAgreement": true,
+    "actualCommercialConsumer": true,
+    "annualSettlement": true,
+    "currentAndStale": true,
+    "ownedReserve": true,
+    "saveContinuity": true,
+    "saves": 1,
+    "evidence": {
+      "contracted": {
+        "id": "fixed",
+        "name": "Mir Foods",
+        "type": "안정형",
+        "base": 15.7,
+        "perWin": 0,
+        "years": 1,
+        "milestone": null,
+        "milestoneBonus": 0,
+        "until": 2027
+      },
+      "cash": 43.6,
+      "forecast": {
+        "rev": {
+          "league": 7.2501358695652165,
+          "sponsor": 15.7,
+          "merch": 2.0732800000000005,
+          "prize": 0,
+          "sponsorMilestone": 0,
+          "owner": 2.9568,
+          "transfer": 0
+        },
+        "exp": {
+          "salary": 0,
+          "medicalReplacementWage": 0,
+          "bonuses": 0,
+          "staff": 6.54,
+          "ops": 6.16,
+          "facility": 3.2,
+          "travel": 0,
+          "interest": 0,
+          "buyout": 2,
+          "tax": 0,
+          "facilityInvestment": 0,
+          "signingBonus": 0,
+          "transfer": 0,
+          "staffSeverance": 0,
+          "scouting": 1
+        },
+        "revenue": 27.980215869565217,
+        "expense": 18.9,
+        "net": 9.080215869565219,
+        "closingCash": 53.680215869565224,
+        "runway": {
+          "months": 32.9,
+          "severity": "stable",
+          "monthly": 1.325
+        },
+        "unknown": [
+          "미확정 상금",
+          "스폰서 목표 달성 수당",
+          "미지급 선수 성과급",
+          "미확정 선수 거래",
+          "향후 공식 경기 승수",
+          "사치세 재분배"
+        ]
+      },
+      "prepaid": {
+        "income": 0,
+        "expense": 1
+      },
+      "releases": {
+        "amount": 2,
+        "items": [],
+        "unattributedAmount": 2
+      },
+      "official": {
+        "id": "season_2027_finance-actual-domestic_match_0",
+        "teams": [
+          {
+            "team": "VXG",
+            "wins": 1,
+            "sponsor": 10.899999999999999,
+            "terms": {
+              "id": "perf",
+              "name": "Nuri Telecom",
+              "type": "성과형",
+              "base": 10.7,
+              "perWin": 0.2,
+              "years": 1,
+              "milestone": "survive",
+              "milestoneBonus": 4.4,
+              "until": 2027
+            }
+          },
+          {
+            "team": "CR",
+            "wins": 0,
+            "sponsor": 9.7,
+            "terms": {
+              "id": "perf",
+              "name": "Yunseul Beauty",
+              "type": "성과형",
+              "base": 9.7,
+              "perWin": 0.2,
+              "years": 1,
+              "milestone": "survive",
+              "milestoneBonus": 4,
+              "until": 2027
+            }
+          }
+        ],
+        "result": {
+          "a": "VXG",
+          "b": "CR",
+          "bestOf": 1,
+          "seed": "club-finance-actual/2027/season_2027_finance-actual-domestic_match_0",
+          "patch": "26.19",
+          "fearless": true,
+          "firstChoice": "home",
+          "score": [
+            1,
+            0
+          ],
+          "winner": "VXG",
+          "games": [
+            {
+              "n": 1,
+              "blue": "CR",
+              "red": "VXG",
+              "seed": "club-finance-actual/2027/season_2027_finance-actual-domestic_match_0/g1",
+              "mods": {
+                "VXG": 0,
+                "CR": 0
+              },
+              "winner": "VXG",
+              "bans": [
+                [
+                  "champ_hecarim",
+                  "champ_amumu",
+                  "champ_morgana",
+                  "champ_pyke",
+                  "champ_katarina"
+                ],
+                [
+                  "champ_malphite",
+                  "champ_irelia",
+                  "champ_qiyana",
+                  "champ_trundle",
+                  "champ_yasuo"
+                ]
+              ],
+              "sideBy": "VXG",
+              "sideWhy": "픽 순서 선택 → 선픽 (상대가 블루 선택) · 대체하기 어려운 주력 픽 선점",
+              "selectionEvidence": {
+                "version": 1,
+                "self": {
+                  "first": 0.044,
+                  "last": 0.028,
+                  "scarcity": 0.476,
+                  "contested": 0,
+                  "counter": 0.004,
+                  "breadth": 0.167
+                },
+                "opponent": {
+                  "first": 0.061,
+                  "last": 0.047,
+                  "scarcity": 0.313,
+                  "contested": 0,
+                  "counter": 0.024,
+                  "breadth": 0.367
+                }
+              },
+              "firstPick": "VXG",
+              "kills": [
+                23,
+                34
+              ],
+              "dur": "35:58",
+              "duration": 35.96666666666667,
+              "picks": [
+                [
+                  "champ_akshan",
+                  "champ_maokai",
+                  "champ_swain",
+                  "champ_xayah",
+                  "champ_alistar"
+                ],
+                [
+                  "champ_gragas",
+                  "champ_volibear",
+                  "champ_annie",
+                  "champ_senna",
+                  "champ_ashe"
+                ]
+              ],
+              "mvp": "NA_40",
+              "date": "2027-11-21",
+              "patch": "26.19",
+              "publicRecord": {
+                "version": 1,
+                "laningHpBasis": "bounded-nonlethal-cost-v1",
+                "combatRoundBasis": "prepared-round-budget-v1",
+                "macroPicks": {
+                  "version": 1,
+                  "basis": "canonical-seeded-keys-v1",
+                  "count": 3,
+                  "events": [
+                    {
+                      "id": "pick:1",
+                      "side": 0,
+                      "lane": "bot",
+                      "minute": 24,
+                      "second": 5,
+                      "target": "NA_39",
+                      "hunters": [
+                        "NA_45",
+                        "NA_44",
+                        "NA_48"
+                      ],
+                      "defenders": [
+                        "NA_39"
+                      ],
+                      "winner": 0
+                    },
+                    {
+                      "id": "pick:2",
+                      "side": 0,
+                      "lane": "top",
+                      "minute": 32,
+                      "second": 52,
+                      "target": "NA_40",
+                      "hunters": [
+                        "NA_46",
+                        "NA_45",
+                        "NA_44"
+                      ],
+                      "defenders": [
+                        "NA_40"
+                      ],
+                      "winner": 1
+                    },
+                    {
+                      "id": "pick:3",
+                      "side": 0,
+                      "lane": "bot",
+                      "minute": 33,
+                      "second": 8,
+                      "target": "NA_39",
+                      "hunters": [
+                        "NA_47",
+                        "NA_48"
+                      ],
+                      "defenders": [
+                        "NA_39"
+                      ],
+                      "winner": 0
+                    }
+                  ]
+                },
+                "structureSelectionBasis": "progress-seeded-ties-v1",
+                "takedowns": {
+                  "version": 1,
+                  "count": 57,
+                  "events": [
+                    {
+                      "id": "NA_45:1",
+                      "side": 1,
+                      "victim": "NA_45",
+                      "killer": "NA_41",
+                      "assistPool": 150,
+                      "assistPaid": 150,
+                      "payouts": [
+                        {
+                          "player": "NA_41",
+                          "kind": "kill",
+                          "gold": 300,
+                          "xp": 220,
+                          "questGold": 0,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_40",
+                          "kind": "assist",
+                          "gold": 150,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 0
+                        }
+                      ],
+                      "minute": 4,
+                      "second": 25
+                    },
+                    {
+                      "id": "NA_46:1",
+                      "side": 1,
+                      "victim": "NA_46",
+                      "killer": "NA_41",
+                      "assistPool": 150,
+                      "assistPaid": 150,
+                      "payouts": [
+                        {
+                          "player": "NA_41",
+                          "kind": "kill",
+                          "gold": 300,
+                          "xp": 300,
+                          "questGold": 0,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_40",
+                          "kind": "assist",
+                          "gold": 50,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_39",
+                          "kind": "assist",
+                          "gold": 50,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_43",
+                          "kind": "assist",
+                          "gold": 50,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 0
+                        }
+                      ],
+                      "minute": 10,
+                      "second": 22
+                    },
+                    {
+                      "id": "NA_47:1",
+                      "side": 1,
+                      "victim": "NA_47",
+                      "killer": "NA_41",
+                      "assistPool": 150,
+                      "assistPaid": 150,
+                      "payouts": [
+                        {
+                          "player": "NA_41",
+                          "kind": "kill",
+                          "gold": 300,
+                          "xp": 300,
+                          "questGold": 0,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_43",
+                          "kind": "assist",
+                          "gold": 75,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_40",
+                          "kind": "assist",
+                          "gold": 75,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 0
+                        }
+                      ],
+                      "minute": 10,
+                      "second": 28
+                    },
+                    {
+                      "id": "NA_41:1",
+                      "side": 0,
+                      "victim": "NA_41",
+                      "killer": "NA_47",
+                      "assistPool": 150,
+                      "assistPaid": 150,
+                      "payouts": [
+                        {
+                          "player": "NA_47",
+                          "kind": "kill",
+                          "gold": 300,
+                          "xp": 300,
+                          "questGold": 0,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_46",
+                          "kind": "assist",
+                          "gold": 50,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_44",
+                          "kind": "assist",
+                          "gold": 50,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_48",
+                          "kind": "assist",
+                          "gold": 50,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 0
+                        }
+                      ],
+                      "minute": 10,
+                      "second": 34
+                    },
+                    {
+                      "id": "NA_39:1",
+                      "side": 0,
+                      "victim": "NA_39",
+                      "killer": "NA_48",
+                      "assistPool": 150,
+                      "assistPaid": 150,
+                      "payouts": [
+                        {
+                          "player": "NA_48",
+                          "kind": "kill",
+                          "gold": 300,
+                          "xp": 300,
+                          "questGold": 0,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_47",
+                          "kind": "assist",
+                          "gold": 50,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_46",
+                          "kind": "assist",
+                          "gold": 50,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_44",
+                          "kind": "assist",
+                          "gold": 50,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 0
+                        }
+                      ],
+                      "minute": 10,
+                      "second": 36
+                    },
+                    {
+                      "id": "NA_47:2",
+                      "side": 1,
+                      "victim": "NA_47",
+                      "killer": "NA_41",
+                      "assistPool": 150,
+                      "assistPaid": 150,
+                      "payouts": [
+                        {
+                          "player": "NA_41",
+                          "kind": "kill",
+                          "gold": 300,
+                          "xp": 340,
+                          "questGold": 0,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_39",
+                          "kind": "assist",
+                          "gold": 75,
+                          "xp": 70,
+                          "questGold": 40,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_42",
+                          "kind": "assist",
+                          "gold": 75,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 0
+                        }
+                      ],
+                      "minute": 14,
+                      "second": 10
+                    },
+                    {
+                      "id": "NA_48:1",
+                      "side": 1,
+                      "victim": "NA_48",
+                      "killer": "NA_39",
+                      "assistPool": 150,
+                      "assistPaid": 150,
+                      "payouts": [
+                        {
+                          "player": "NA_39",
+                          "kind": "kill",
+                          "gold": 300,
+                          "xp": 300,
+                          "questGold": 40,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_41",
+                          "kind": "assist",
+                          "gold": 75,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_42",
+                          "kind": "assist",
+                          "gold": 75,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 0
+                        }
+                      ],
+                      "minute": 14,
+                      "second": 15
+                    },
+                    {
+                      "id": "NA_46:2",
+                      "side": 1,
+                      "victim": "NA_46",
+                      "killer": "NA_40",
+                      "assistPool": 150,
+                      "assistPaid": 150,
+                      "payouts": [
+                        {
+                          "player": "NA_40",
+                          "kind": "kill",
+                          "gold": 300,
+                          "xp": 340,
+                          "questGold": 0,
+                          "questXp": 80
+                        },
+                        {
+                          "player": "NA_39",
+                          "kind": "assist",
+                          "gold": 50,
+                          "xp": 70,
+                          "questGold": 40,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_42",
+                          "kind": "assist",
+                          "gold": 50,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_43",
+                          "kind": "assist",
+                          "gold": 50,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 0
+                        }
+                      ],
+                      "minute": 15,
+                      "second": 29
+                    },
+                    {
+                      "id": "NA_47:3",
+                      "side": 1,
+                      "victim": "NA_47",
+                      "killer": "NA_41",
+                      "assistPool": 150,
+                      "assistPaid": 150,
+                      "payouts": [
+                        {
+                          "player": "NA_41",
+                          "kind": "kill",
+                          "gold": 300,
+                          "xp": 340,
+                          "questGold": 0,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_42",
+                          "kind": "assist",
+                          "gold": 50,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_39",
+                          "kind": "assist",
+                          "gold": 50,
+                          "xp": 70,
+                          "questGold": 40,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_40",
+                          "kind": "assist",
+                          "gold": 50,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 80
+                        }
+                      ],
+                      "minute": 15,
+                      "second": 33
+                    },
+                    {
+                      "id": "NA_43:1",
+                      "side": 0,
+                      "victim": "NA_43",
+                      "killer": "NA_46",
+                      "assistPool": 150,
+                      "assistPaid": 150,
+                      "payouts": [
+                        {
+                          "player": "NA_46",
+                          "kind": "kill",
+                          "gold": 300,
+                          "xp": 340,
+                          "questGold": 0,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_47",
+                          "kind": "assist",
+                          "gold": 150,
+                          "xp": 70,
+                          "questGold": 40,
+                          "questXp": 0
+                        }
+                      ],
+                      "minute": 15,
+                      "second": 39
+                    },
+                    {
+                      "id": "NA_39:2",
+                      "side": 0,
+                      "victim": "NA_39",
+                      "killer": "NA_45",
+                      "assistPool": 150,
+                      "assistPaid": 150,
+                      "payouts": [
+                        {
+                          "player": "NA_45",
+                          "kind": "kill",
+                          "gold": 300,
+                          "xp": 360,
+                          "questGold": 0,
+                          "questXp": 80
+                        },
+                        {
+                          "player": "NA_47",
+                          "kind": "assist",
+                          "gold": 50,
+                          "xp": 70,
+                          "questGold": 40,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_48",
+                          "kind": "assist",
+                          "gold": 50,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_44",
+                          "kind": "assist",
+                          "gold": 50,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 0
+                        }
+                      ],
+                      "minute": 15,
+                      "second": 44
+                    },
+                    {
+                      "id": "NA_45:2",
+                      "side": 1,
+                      "victim": "NA_45",
+                      "killer": "NA_43",
+                      "assistPool": 150,
+                      "assistPaid": 0,
+                      "payouts": [
+                        {
+                          "player": "NA_43",
+                          "kind": "kill",
+                          "gold": 300,
+                          "xp": 380,
+                          "questGold": 0,
+                          "questXp": 0
+                        }
+                      ],
+                      "minute": 17,
+                      "second": 19
+                    },
+                    {
+                      "id": "NA_46:10",
+                      "side": 1,
+                      "victim": "NA_46",
+                      "killer": "NA_40",
+                      "assistPool": 150,
+                      "assistPaid": 0,
+                      "payouts": [
+                        {
+                          "player": "NA_40",
+                          "kind": "kill",
+                          "gold": 300,
+                          "xp": 460,
+                          "questGold": 0,
+                          "questXp": 80
+                        }
+                      ],
+                      "minute": 32,
+                      "second": 36
+                    },
+                    {
+                      "id": "NA_45:5",
+                      "side": 1,
+                      "victim": "NA_45",
+                      "killer": "NA_40",
+                      "assistPool": 150,
+                      "assistPaid": 0,
+                      "payouts": [
+                        {
+                          "player": "NA_40",
+                          "kind": "kill",
+                          "gold": 300,
+                          "xp": 480,
+                          "questGold": 0,
+                          "questXp": 80
+                        }
+                      ],
+                      "minute": 32,
+                      "second": 43
+                    },
+                    {
+                      "id": "NA_44:2",
+                      "side": 1,
+                      "victim": "NA_44",
+                      "killer": "NA_40",
+                      "assistPool": 150,
+                      "assistPaid": 0,
+                      "payouts": [
+                        {
+                          "player": "NA_40",
+                          "kind": "kill",
+                          "gold": 300,
+                          "xp": 460,
+                          "questGold": 0,
+                          "questXp": 80
+                        }
+                      ],
+                      "minute": 32,
+                      "second": 45
+                    },
+                    {
+                      "id": "NA_40:1",
+                      "side": 0,
+                      "victim": "NA_40",
+                      "killer": "NA_44",
+                      "assistPool": 150,
+                      "assistPaid": 150,
+                      "payouts": [
+                        {
+                          "player": "NA_44",
+                          "kind": "kill",
+                          "gold": 300,
+                          "xp": 520,
+                          "questGold": 0,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_46",
+                          "kind": "assist",
+                          "gold": 75,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_45",
+                          "kind": "assist",
+                          "gold": 75,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 80
+                        }
+                      ],
+                      "minute": 32,
+                      "second": 52
+                    },
+                    {
+                      "id": "NA_39:10",
+                      "side": 0,
+                      "victim": "NA_39",
+                      "killer": "NA_47",
+                      "assistPool": 150,
+                      "assistPaid": 150,
+                      "payouts": [
+                        {
+                          "player": "NA_47",
+                          "kind": "kill",
+                          "gold": 300,
+                          "xp": 460,
+                          "questGold": 40,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_48",
+                          "kind": "assist",
+                          "gold": 150,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 0
+                        }
+                      ],
+                      "minute": 33,
+                      "second": 8
+                    },
+                    {
+                      "id": "NA_45:6",
+                      "side": 1,
+                      "victim": "NA_45",
+                      "killer": "NA_40",
+                      "assistPool": 150,
+                      "assistPaid": 150,
+                      "payouts": [
+                        {
+                          "player": "NA_40",
+                          "kind": "kill",
+                          "gold": 300,
+                          "xp": 480,
+                          "questGold": 0,
+                          "questXp": 80
+                        },
+                        {
+                          "player": "NA_41",
+                          "kind": "assist",
+                          "gold": 75,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_42",
+                          "kind": "assist",
+                          "gold": 75,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 0
+                        }
+                      ],
+                      "minute": 34,
+                      "second": 2
+                    },
+                    {
+                      "id": "NA_46:11",
+                      "side": 1,
+                      "victim": "NA_46",
+                      "killer": "NA_41",
+                      "assistPool": 150,
+                      "assistPaid": 150,
+                      "payouts": [
+                        {
+                          "player": "NA_41",
+                          "kind": "kill",
+                          "gold": 300,
+                          "xp": 460,
+                          "questGold": 0,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_40",
+                          "kind": "assist",
+                          "gold": 75,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 80
+                        },
+                        {
+                          "player": "NA_42",
+                          "kind": "assist",
+                          "gold": 75,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 0
+                        }
+                      ],
+                      "minute": 34,
+                      "second": 9
+                    },
+                    {
+                      "id": "NA_47:11",
+                      "side": 1,
+                      "victim": "NA_47",
+                      "killer": "NA_41",
+                      "assistPool": 150,
+                      "assistPaid": 0,
+                      "payouts": [
+                        {
+                          "player": "NA_41",
+                          "kind": "kill",
+                          "gold": 300,
+                          "xp": 460,
+                          "questGold": 0,
+                          "questXp": 0
+                        }
+                      ],
+                      "minute": 34,
+                      "second": 16
+                    },
+                    {
+                      "id": "NA_41:2",
+                      "side": 0,
+                      "victim": "NA_41",
+                      "killer": "NA_46",
+                      "assistPool": 150,
+                      "assistPaid": 150,
+                      "payouts": [
+                        {
+                          "player": "NA_46",
+                          "kind": "kill",
+                          "gold": 300,
+                          "xp": 500,
+                          "questGold": 0,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_45",
+                          "kind": "assist",
+                          "gold": 50,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 80
+                        },
+                        {
+                          "player": "NA_48",
+                          "kind": "assist",
+                          "gold": 50,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_44",
+                          "kind": "assist",
+                          "gold": 50,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 0
+                        }
+                      ],
+                      "minute": 34,
+                      "second": 19
+                    },
+                    {
+                      "id": "NA_43:9",
+                      "side": 0,
+                      "victim": "NA_43",
+                      "killer": "NA_47",
+                      "assistPool": 150,
+                      "assistPaid": 150,
+                      "payouts": [
+                        {
+                          "player": "NA_47",
+                          "kind": "kill",
+                          "gold": 300,
+                          "xp": 440,
+                          "questGold": 40,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_44",
+                          "kind": "assist",
+                          "gold": 150,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 0
+                        }
+                      ],
+                      "minute": 34,
+                      "second": 22
+                    },
+                    {
+                      "id": "NA_44:3",
+                      "side": 1,
+                      "victim": "NA_44",
+                      "killer": "NA_42",
+                      "assistPool": 150,
+                      "assistPaid": 150,
+                      "payouts": [
+                        {
+                          "player": "NA_42",
+                          "kind": "kill",
+                          "gold": 300,
+                          "xp": 460,
+                          "questGold": 0,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_40",
+                          "kind": "assist",
+                          "gold": 75,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 80
+                        },
+                        {
+                          "player": "NA_39",
+                          "kind": "assist",
+                          "gold": 75,
+                          "xp": 70,
+                          "questGold": 40,
+                          "questXp": 0
+                        }
+                      ],
+                      "minute": 35,
+                      "second": 33
+                    },
+                    {
+                      "id": "NA_48:3",
+                      "side": 1,
+                      "victim": "NA_48",
+                      "killer": "NA_39",
+                      "assistPool": 150,
+                      "assistPaid": 150,
+                      "payouts": [
+                        {
+                          "player": "NA_39",
+                          "kind": "kill",
+                          "gold": 300,
+                          "xp": 440,
+                          "questGold": 40,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_42",
+                          "kind": "assist",
+                          "gold": 75,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 0
+                        },
+                        {
+                          "player": "NA_40",
+                          "kind": "assist",
+                          "gold": 75,
+                          "xp": 70,
+                          "questGold": 0,
+                          "questXp": 80
+                        }
+                      ],
+                      "minute": 35,
+                      "second": 38
+                    }
+                  ]
+                },
+                "objectives": {
+                  "version": 1,
+                  "events": [
+                    {
+                      "id": "dragon:5:0",
+                      "key": "dragon",
+                      "side": 1,
+                      "minute": 5,
+                      "second": 5,
+                      "participants": [
+                        "NA_40",
+                        "NA_41",
+                        "NA_43",
+                        "NA_39",
+                        "NA_42"
+                      ]
+                    },
+                    {
+                      "id": "dragon:10:1",
+                      "key": "dragon",
+                      "side": 0,
+                      "minute": 10,
+                      "second": 48,
+                      "participants": [
+                        "NA_44",
+                        "NA_46",
+                        "NA_47",
+                        "NA_48"
+                      ]
+                    },
+                    {
+                      "id": "herald:14",
+                      "key": "herald",
+                      "side": 1,
+                      "minute": 14,
+                      "second": 24,
+                      "participants": [
+                        "NA_40",
+                        "NA_41",
+                        "NA_43",
+                        "NA_39",
+                        "NA_42"
+                      ]
+                    },
+                    {
+                      "id": "dragon:15:2",
+                      "key": "dragon",
+                      "side": 1,
+                      "minute": 15,
+                      "second": 24,
+                      "participants": [
+                        "NA_40",
+                        "NA_41",
+                        "NA_43",
+                        "NA_39",
+                        "NA_42"
+                      ]
+                    },
+                    {
+                      "id": "dragon:20:3",
+                      "key": "dragon",
+                      "side": 1,
+                      "minute": 20,
+                      "second": 13,
+                      "participants": [
+                        "NA_40",
+                        "NA_41",
+                        "NA_43",
+                        "NA_39",
+                        "NA_42"
+                      ]
+                    },
+                    {
+                      "id": "baron:20",
+                      "key": "baron",
+                      "side": 1,
+                      "minute": 20,
+                      "second": 23,
+                      "participants": [
+                        "NA_40",
+                        "NA_41",
+                        "NA_43",
+                        "NA_39",
+                        "NA_42"
+                      ]
+                    },
+                    {
+                      "id": "dragon:25:4",
+                      "key": "dragon",
+                      "side": 0,
+                      "minute": 25,
+                      "second": 39,
+                      "participants": [
+                        "NA_45",
+                        "NA_44",
+                        "NA_46",
+                        "NA_47",
+                        "NA_48"
+                      ],
+                      "stealer": "NA_44"
+                    },
+                    {
+                      "id": "baron:26",
+                      "key": "baron",
+                      "side": 1,
+                      "minute": 26,
+                      "second": 10,
+                      "participants": [
+                        "NA_40",
+                        "NA_41",
+                        "NA_43",
+                        "NA_39",
+                        "NA_42"
+                      ]
+                    },
+                    {
+                      "id": "dragon:30:5",
+                      "key": "dragon",
+                      "side": 0,
+                      "minute": 30,
+                      "second": 24,
+                      "participants": [
+                        "NA_45",
+                        "NA_44",
+                        "NA_46",
+                        "NA_47",
+                        "NA_48"
+                      ],
+                      "stealer": "NA_44"
+                    },
+                    {
+                      "id": "baron:32",
+                      "key": "baron",
+                      "side": 1,
+                      "minute": 32,
+                      "second": 31,
+                      "participants": [
+                        "NA_40",
+                        "NA_41",
+                        "NA_43",
+                        "NA_42"
+                      ]
+                    },
+                    {
+                      "id": "dragon:35:6",
+                      "key": "dragon",
+                      "side": 1,
+                      "minute": 35,
+                      "second": 21,
+                      "participants": [
+                        "NA_40",
+                        "NA_39",
+                        "NA_42"
+                      ]
+                    }
+                  ]
+                },
+                "damageBasis": "effective-aggregate-v1",
+                "ending": {
+                  "version": 1,
+                  "kind": "nexus",
+                  "winner": "VXG",
+                  "minute": 35,
+                  "second": 58
+                },
+                "resources": {
+                  "version": 1,
+                  "players": {
+                    "NA_45": {
+                      "earned": 12203.715993163003,
+                      "items": 12150,
+                      "wards": 0,
+                      "held": 53.71599316300262
+                    },
+                    "NA_44": {
+                      "earned": 11977.377597979585,
+                      "items": 11000,
+                      "wards": 0,
+                      "held": 977.377597979579
+                    },
+                    "NA_46": {
+                      "earned": 12372.38352530091,
+                      "items": 10200,
+                      "wards": 0,
+                      "held": 2172.383525300909
+                    },
+                    "NA_47": {
+                      "earned": 13545.383104684217,
+                      "items": 13425,
+                      "wards": 0,
+                      "held": 120.38310468421594
+                    },
+                    "NA_48": {
+                      "earned": 10530.283374493496,
+                      "items": 9700,
+                      "wards": 600,
+                      "held": 230.28337449349726
+                    },
+                    "NA_40": {
+                      "earned": 16463.811966742556,
+                      "items": 15700,
+                      "wards": 0,
+                      "held": 763.8119667425568
+                    },
+                    "NA_41": {
+                      "earned": 16960.52354320085,
+                      "items": 16750,
+                      "wards": 0,
+                      "held": 210.52354320084896
+                    },
+                    "NA_43": {
+                      "earned": 11919.647234103706,
+                      "items": 11000,
+                      "wards": 0,
+                      "held": 919.6472341037077
+                    },
+                    "NA_39": {
+                      "earned": 14021.894290325454,
+                      "items": 13850,
+                      "wards": 0,
+                      "held": 171.89429032545172
+                    },
+                    "NA_42": {
+                      "earned": 12459.663842743033,
+                      "items": 10850,
+                      "wards": 640,
+                      "held": 969.6638427430327
+                    }
+                  }
+                },
+                "date": "2027-11-21",
+                "patch": "26.19",
+                "winner": "VXG",
+                "duration": 35.96666666666667,
+                "sides": [
+                  {
+                    "team": "CR",
+                    "name": "Crimson",
+                    "players": [
+                      [
+                        "NA_45",
+                        "Nimly",
+                        "TOP",
+                        "champ_akshan",
+                        2,
+                        6,
+                        11,
+                        233,
+                        12204,
+                        21526,
+                        18,
+                        [
+                          "1086",
+                          "3006",
+                          "3046",
+                          "667101",
+                          "3087",
+                          "663172"
+                        ]
+                      ],
+                      [
+                        "NA_44",
+                        "Fenxz",
+                        "JGL",
+                        "champ_maokai",
+                        2,
+                        3,
+                        14,
+                        193,
+                        11977,
+                        19425,
+                        16,
+                        [
+                          "1103",
+                          "3008",
+                          "663193",
+                          "3156",
+                          "3065",
+                          "3211"
+                        ]
+                      ],
+                      [
+                        "NA_46",
+                        "Sata",
+                        "MID",
+                        "champ_swain",
+                        7,
+                        11,
+                        6,
+                        195,
+                        12372,
+                        26569,
+                        16,
+                        [
+                          "1086",
+                          "3006",
+                          "3087",
+                          "3100",
+                          "4646"
+                        ]
+                      ],
+                      [
+                        "NA_47",
+                        "Vexal",
+                        "ADC",
+                        "champ_xayah",
+                        7,
+                        11,
+                        8,
+                        199,
+                        13545,
+                        27581,
+                        16,
+                        [
+                          "1086",
+                          "3046",
+                          "667101",
+                          "3087",
+                          "3032",
+                          "6690",
+                          "3006"
+                        ]
+                      ],
+                      [
+                        "NA_48",
+                        "Paxdan",
+                        "SUP",
+                        "champ_alistar",
+                        5,
+                        3,
+                        10,
+                        31,
+                        10530,
+                        14894,
+                        15,
+                        [
+                          "3870",
+                          "3008",
+                          "663193",
+                          "3156",
+                          "3065"
+                        ]
+                      ]
+                    ]
+                  },
+                  {
+                    "team": "VXG",
+                    "name": "Vertex Gaming",
+                    "players": [
+                      [
+                        "NA_40",
+                        "Zuen",
+                        "TOP",
+                        "champ_gragas",
+                        8,
+                        1,
+                        13,
+                        261,
+                        16464,
+                        40332,
+                        20,
+                        [
+                          "3008",
+                          "663193",
+                          "3156",
+                          "4629",
+                          "3071",
+                          "3065"
+                        ]
+                      ],
+                      [
+                        "NA_41",
+                        "Sylo",
+                        "JGL",
+                        "champ_volibear",
+                        14,
+                        2,
+                        10,
+                        202,
+                        16961,
+                        40162,
+                        18,
+                        [
+                          "3008",
+                          "663193",
+                          "3156",
+                          "3087",
+                          "3072",
+                          "6333"
+                        ]
+                      ],
+                      [
+                        "NA_43",
+                        "Akial9",
+                        "MID",
+                        "champ_annie",
+                        2,
+                        9,
+                        10,
+                        200,
+                        11920,
+                        12238,
+                        15,
+                        [
+                          "1086",
+                          "3006",
+                          "3087",
+                          "3100",
+                          "663172",
+                          "3145"
+                        ]
+                      ],
+                      [
+                        "NA_39",
+                        "Mirko",
+                        "ADC",
+                        "champ_senna",
+                        4,
+                        10,
+                        11,
+                        211,
+                        14022,
+                        29246,
+                        16,
+                        [
+                          "1086",
+                          "3046",
+                          "667101",
+                          "3087",
+                          "6672",
+                          "3155",
+                          "3008"
+                        ]
+                      ],
+                      [
+                        "NA_42",
+                        "Lux",
+                        "SUP",
+                        "champ_ashe",
+                        6,
+                        1,
+                        13,
+                        34,
+                        12460,
+                        21191,
+                        16,
+                        [
+                          "3870",
+                          "3008",
+                          "3046",
+                          "667101",
+                          "3087",
+                          "3155"
+                        ]
+                      ]
+                    ]
+                  }
+                ],
+                "championNames": {
+                  "champ_akshan": "아크샨",
+                  "champ_maokai": "마오카이",
+                  "champ_swain": "스웨인",
+                  "champ_xayah": "자야",
+                  "champ_alistar": "알리스타",
+                  "champ_gragas": "그라가스",
+                  "champ_volibear": "볼리베어",
+                  "champ_annie": "애니",
+                  "champ_senna": "세나",
+                  "champ_ashe": "애쉬"
+                },
+                "itemNames": {
+                  "1086": "도란의 활",
+                  "1103": "새끼 이끼쿵쿵이",
+                  "3006": "광전사의 군화",
+                  "3008": "탐욕의 군화",
+                  "3032": "윤 탈 야생화살",
+                  "3046": "유령 무희",
+                  "3065": "정령의 형상",
+                  "3071": "칠흑의 양날 도끼",
+                  "3072": "피바라기",
+                  "3087": "스태틱의 단검",
+                  "3100": "리치베인",
+                  "3145": "마법공학 교류 발전기",
+                  "3155": "주문포식자",
+                  "3156": "맬모셔스의 아귀",
+                  "3211": "망령의 두건",
+                  "3870": "꿈 생성기",
+                  "4629": "우주의 추진력",
+                  "4646": "폭풍 쇄도",
+                  "6333": "죽음의 무도",
+                  "6672": "크라켄 학살자",
+                  "6690": "꽁지깃",
+                  "663172": "서풍",
+                  "663193": "가고일 돌갑옷",
+                  "667101": "도박꾼의 칼날"
+                },
+                "eventCount": 0,
+                "events": []
+              },
+              "draftSequence": {
+                "version": 1,
+                "firstPick": 1,
+                "events": [
+                  [
+                    0,
+                    "B",
+                    1,
+                    "champ_malphite"
+                  ],
+                  [
+                    1,
+                    "B",
+                    0,
+                    "champ_hecarim"
+                  ],
+                  [
+                    2,
+                    "B",
+                    1,
+                    "champ_irelia"
+                  ],
+                  [
+                    3,
+                    "B",
+                    0,
+                    "champ_amumu"
+                  ],
+                  [
+                    4,
+                    "B",
+                    1,
+                    "champ_qiyana"
+                  ],
+                  [
+                    5,
+                    "B",
+                    0,
+                    "champ_morgana"
+                  ],
+                  [
+                    6,
+                    "P",
+                    1,
+                    "champ_gragas"
+                  ],
+                  [
+                    7,
+                    "P",
+                    0,
+                    "champ_maokai"
+                  ],
+                  [
+                    8,
+                    "P",
+                    0,
+                    "champ_swain"
+                  ],
+                  [
+                    9,
+                    "P",
+                    1,
+                    "champ_annie"
+                  ],
+                  [
+                    10,
+                    "P",
+                    1,
+                    "champ_senna"
+                  ],
+                  [
+                    11,
+                    "P",
+                    0,
+                    "champ_akshan"
+                  ],
+                  [
+                    12,
+                    "B",
+                    0,
+                    "champ_pyke"
+                  ],
+                  [
+                    13,
+                    "B",
+                    1,
+                    "champ_trundle"
+                  ],
+                  [
+                    14,
+                    "B",
+                    0,
+                    "champ_katarina"
+                  ],
+                  [
+                    15,
+                    "B",
+                    1,
+                    "champ_yasuo"
+                  ],
+                  [
+                    16,
+                    "P",
+                    0,
+                    "champ_xayah"
+                  ],
+                  [
+                    17,
+                    "P",
+                    1,
+                    "champ_ashe"
+                  ],
+                  [
+                    18,
+                    "P",
+                    1,
+                    "champ_volibear"
+                  ],
+                  [
+                    19,
+                    "P",
+                    0,
+                    "champ_alistar"
+                  ]
+                ]
+              }
+            }
+          ],
+          "tac": {
+            "VXG": {
+              "aggression": 55,
+              "risk_tolerance": 51,
+              "objective_priority": 63,
+              "vision_investment": 65,
+              "scaling_preference": 57
+            },
+            "CR": {
+              "aggression": 48,
+              "risk_tolerance": 75,
+              "objective_priority": 60,
+              "vision_investment": 56,
+              "scaling_preference": 44
+            }
+          },
+          "staffService": {
+            "VXG": [
+              {
+                "id": "S3610885180",
+                "role": "strategicCoach"
+              },
+              {
+                "id": "S3080613151",
+                "role": "developmentCoach"
+              },
+              {
+                "id": "S1975099604",
+                "role": "performanceCoach"
+              },
+              {
+                "id": "S4277108636",
+                "role": "analyst"
+              },
+              {
+                "id": "S2023985245",
+                "role": "scout"
+              },
+              {
+                "id": "S1889278641",
+                "role": "scout"
+              }
+            ],
+            "CR": [
+              {
+                "id": "S1289000282",
+                "role": "strategicCoach"
+              },
+              {
+                "id": "S1349269476",
+                "role": "developmentCoach"
+              },
+              {
+                "id": "S2899648372",
+                "role": "performanceCoach"
+              },
+              {
+                "id": "S2148187381",
+                "role": "analyst"
+              },
+              {
+                "id": "S2353177229",
+                "role": "scout"
+              },
+              {
+                "id": "S886085526",
+                "role": "scout"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "history": {
+      "year": 2027,
+      "rev": {
+        "league": 7.3,
+        "sponsor": 10.9,
+        "merch": 2.1,
+        "prize": 0,
+        "sponsorMilestone": 0,
+        "owner": 3,
+        "transfer": 0
+      },
+      "exp": {
+        "salary": 5,
+        "medicalReplacementWage": 0,
+        "bonuses": 0,
+        "staff": 6.5,
+        "ops": 6.2,
+        "facility": 3.2,
+        "travel": 0,
+        "interest": 0,
+        "buyout": 2,
+        "tax": 0,
+        "facilityInvestment": 0,
+        "signingBonus": 0,
+        "transfer": 0,
+        "staffSeverance": 0,
+        "scouting": 1
+      },
+      "net": -0.7,
+      "cash": 44.9,
+      "releaseSettlement": {
+        "amount": 2,
+        "items": [],
+        "unattributedAmount": 2
+      }
+    }
+  },
+  "ui": {
+    "acceptances": 82,
+    "engineModules": 101,
+    "engineCompiles": 1,
+    "freshContexts": 81,
+    "artifactReads": 143,
+    "cachedArtifacts": 143,
+    "totalMs": 106314.7,
+    "rows": [
+      {
+        "file": "bootstrap-seed-acceptance.mjs",
+        "ms": 1716.6
+      },
+      {
+        "file": "ui-state-acceptance.mjs",
+        "ms": 12.5
+      },
+      {
+        "file": "analysis-room-acceptance.mjs",
+        "ms": 749.6
+      },
+      {
+        "file": "analysis-tiers-acceptance.mjs",
+        "ms": 1079.4
+      },
+      {
+        "file": "analysis-comparison-acceptance.mjs",
+        "ms": 1219.7
+      },
+      {
+        "file": "draft-preparation-acceptance.mjs",
+        "ms": 723.1
+      },
+      {
+        "file": "draft-history-acceptance.mjs",
+        "ms": 1227
+      },
+      {
+        "file": "match-history-acceptance.mjs",
+        "ms": 1056.2
+      },
+      {
+        "file": "match-adjudication-acceptance.mjs",
+        "ms": 1679.2
+      },
+      {
+        "file": "item-purchase-ledger-acceptance.mjs",
+        "ms": 961.6
+      },
+      {
+        "file": "inventory-defense-acceptance.mjs",
+        "ms": 904.9
+      },
+      {
+        "file": "inventory-offense-acceptance.mjs",
+        "ms": 1609.3
+      },
+      {
+        "file": "combat-resource-acceptance.mjs",
+        "ms": 1176
+      },
+      {
+        "file": "objective-award-acceptance.mjs",
+        "ms": 1837.6
+      },
+      {
+        "file": "objective-steal-acceptance.mjs",
+        "ms": 3042.9
+      },
+      {
+        "file": "structure-selection-acceptance.mjs",
+        "ms": 4903
+      },
+      {
+        "file": "macro-hunter-acceptance.mjs",
+        "ms": 4011.6
+      },
+      {
+        "file": "fight-round-acceptance.mjs",
+        "ms": 2826.1
+      },
+      {
+        "file": "laning-hp-acceptance.mjs",
+        "ms": 6735.9
+      },
+      {
+        "file": "combat-cache-acceptance.mjs",
+        "ms": 1699.8
+      },
+      {
+        "file": "initial-recruitment-acceptance.mjs",
+        "ms": 1786.5
+      },
+      {
+        "file": "initial-comparison-acceptance.mjs",
+        "ms": 600.7
+      },
+      {
+        "file": "initial-offer-preview-acceptance.mjs",
+        "ms": 433.6
+      },
+      {
+        "file": "startup-flow-acceptance.mjs",
+        "ms": 1184.3
+      },
+      {
+        "file": "club-briefing-acceptance.mjs",
+        "ms": 326
+      },
+      {
+        "file": "club-eligibility-acceptance.mjs",
+        "ms": 968
+      },
+      {
+        "file": "club-finance-acceptance.mjs",
+        "ms": 1124.2
+      },
+      {
+        "file": "takedown-reward-acceptance.mjs",
+        "ms": 2696.7
+      },
+      {
+        "file": "item-stat-patch-acceptance.mjs",
+        "ms": 1387.5
+      },
+      {
+        "file": "ui-overlay-acceptance.mjs",
+        "ms": 5.6
+      },
+      {
+        "file": "ui-async-acceptance.mjs",
+        "ms": 5.9
+      },
+      {
+        "file": "ui-mobile-a11y-acceptance.mjs",
+        "ms": 3.8
+      },
+      {
+        "file": "career-public-information-acceptance.mjs",
+        "ms": 2942.4
+      },
+      {
+        "file": "finance-acceptance.mjs",
+        "ms": 1125.7
+      },
+      {
+        "file": "finance-depth-acceptance.mjs",
+        "ms": 1141.4
+      },
+      {
+        "file": "contract-duration-acceptance.mjs",
+        "ms": 928.6
+      },
+      {
+        "file": "contract-negotiation-state-acceptance.mjs",
+        "ms": 1134.2
+      },
+      {
+        "file": "contract-buyout-acceptance.mjs",
+        "ms": 117.5
+      },
+      {
+        "file": "contract-window-acceptance.mjs",
+        "ms": 1271.3
+      },
+      {
+        "file": "market-reserve-acceptance.mjs",
+        "ms": 9345.7
+      },
+      {
+        "file": "owned-reserve-coach-acceptance.mjs",
+        "ms": 2272.9
+      },
+      {
+        "file": "contract-release-acceptance.mjs",
+        "ms": 1028.7
+      },
+      {
+        "file": "contract-release-liability-acceptance.mjs",
+        "ms": 1837.4
+      },
+      {
+        "file": "contract-guarantee-acceptance.mjs",
+        "ms": 1188.4
+      },
+      {
+        "file": "contract-mutual-termination-acceptance.mjs",
+        "ms": 2761.1
+      },
+      {
+        "file": "transfer-consent-acceptance.mjs",
+        "ms": 234.4
+      },
+      {
+        "file": "contract-role-promise-acceptance.mjs",
+        "ms": 83.2
+      },
+      {
+        "file": "player-representation-acceptance.mjs",
+        "ms": 197.8
+      },
+      {
+        "file": "agent-negotiation-parity-acceptance.mjs",
+        "ms": 227
+      },
+      {
+        "file": "player-loan-acceptance.mjs",
+        "ms": 287.5
+      },
+      {
+        "file": "transfer-stage-acceptance.mjs",
+        "ms": 286.5
+      },
+      {
+        "file": "local-service-acceptance.mjs",
+        "ms": 124.6
+      },
+      {
+        "file": "registration-acceptance.mjs",
+        "ms": 565.8
+      },
+      {
+        "file": "first-selection-acceptance.mjs",
+        "ms": 2973.6
+      },
+      {
+        "file": "opponent-intent-acceptance.mjs",
+        "ms": 623.1
+      },
+      {
+        "file": "draft-observer-information-acceptance.mjs",
+        "ms": 576.6
+      },
+      {
+        "file": "champion-scout-observation-acceptance.mjs",
+        "ms": 864.9
+      },
+      {
+        "file": "squad-observer-information-acceptance.mjs",
+        "ms": 1382.8
+      },
+      {
+        "file": "squad-staging-acceptance.mjs",
+        "ms": 238.5
+      },
+      {
+        "file": "ban-attribution-acceptance.mjs",
+        "ms": 502
+      },
+      {
+        "file": "participant-meta-acceptance.mjs",
+        "ms": 518.7
+      },
+      {
+        "file": "side-meta-acceptance.mjs",
+        "ms": 665.7
+      },
+      {
+        "file": "composition-meta-acceptance.mjs",
+        "ms": 475.9
+      },
+      {
+        "file": "draft-order-meta-acceptance.mjs",
+        "ms": 505.8
+      },
+      {
+        "file": "tactic-meta-acceptance.mjs",
+        "ms": 500.5
+      },
+      {
+        "file": "practice-meta-acceptance.mjs",
+        "ms": 909.6
+      },
+      {
+        "file": "analyst-report-acceptance.mjs",
+        "ms": 761.3
+      },
+      {
+        "file": "opponent-report-acceptance.mjs",
+        "ms": 945
+      },
+      {
+        "file": "opponent-draft-acceptance.mjs",
+        "ms": 965
+      },
+      {
+        "file": "player-champion-information-acceptance.mjs",
+        "ms": 452.6
+      },
+      {
+        "file": "observer-player-profile-acceptance.mjs",
+        "ms": 456.4
+      },
+      {
+        "file": "training-allocation-acceptance.mjs",
+        "ms": 93.1
+      },
+      {
+        "file": "cohesion-practice-acceptance.mjs",
+        "ms": 1583.9
+      },
+      {
+        "file": "relationship-decisions-acceptance.mjs",
+        "ms": 314.4
+      },
+      {
+        "file": "club-ownership-acceptance.mjs",
+        "ms": 159.8
+      },
+      {
+        "file": "staff-contracts-acceptance.mjs",
+        "ms": 683.5
+      },
+      {
+        "file": "staff-registration-acceptance.mjs",
+        "ms": 1158.7
+      },
+      {
+        "file": "club-license-acceptance.mjs",
+        "ms": 419.6
+      },
+      {
+        "file": "region-continuity-acceptance.mjs",
+        "ms": 974.7
+      },
+      {
+        "file": "club-closure-acceptance.mjs",
+        "ms": 4755.5
+      },
+      {
+        "file": "club-estate-acceptance.mjs",
+        "ms": 216.8
+      },
+      {
+        "file": "rune-selection-acceptance.mjs",
+        "ms": 2839.8
+      }
+    ]
+  },
+  "calendar": {
+    "acceptances": 20,
+    "engineModules": 101,
+    "engineCompiles": 1,
+    "freshContexts": 20,
+    "artifactReads": 112,
+    "cachedArtifacts": 112,
+    "totalMs": 68440.1,
+    "rows": [
+      {
+        "file": "calendar-depth-acceptance.mjs",
+        "ms": 2309.1
+      },
+      {
+        "file": "league-identity-acceptance.mjs",
+        "ms": 17843.1
+      },
+      {
+        "file": "manual-owned-coaching-acceptance.mjs",
+        "ms": 22753.3
+      },
+      {
+        "file": "office-consultation-acceptance.mjs",
+        "ms": 167.5
+      },
+      {
+        "file": "international-coefficients-acceptance.mjs",
+        "ms": 969.5
+      },
+      {
+        "file": "local-policy-acceptance.mjs",
+        "ms": 191.4
+      },
+      {
+        "file": "timezone-calendar-acceptance.mjs",
+        "ms": 625.4
+      },
+      {
+        "file": "scrim-partner-acceptance.mjs",
+        "ms": 491.4
+      },
+      {
+        "file": "scrim-plans-acceptance.mjs",
+        "ms": 702.7
+      },
+      {
+        "file": "fight-skill-acceptance.mjs",
+        "ms": 1608.8
+      },
+      {
+        "file": "match-ending-acceptance.mjs",
+        "ms": 1122.8
+      },
+      {
+        "file": "source-control-acceptance.mjs",
+        "ms": 1184.2
+      },
+      {
+        "file": "system-patch-acceptance.mjs",
+        "ms": 14435.4
+      },
+      {
+        "file": "role-quest-rules-acceptance.mjs",
+        "ms": 1017.7
+      },
+      {
+        "file": "role-quest-match-acceptance.mjs",
+        "ms": 904.1
+      },
+      {
+        "file": "save-history-acceptance.mjs",
+        "ms": 1113.6
+      },
+      {
+        "file": "split-standings-acceptance.mjs",
+        "ms": 348.2
+      },
+      {
+        "file": "scouting-depth-acceptance.mjs",
+        "ms": 200.3
+      },
+      {
+        "file": "scouting-operations-acceptance.mjs",
+        "ms": 277.2
+      },
+      {
+        "file": "scouting-reassessment-acceptance.mjs",
+        "ms": 174.4
+      }
+    ]
+  },
+  "browser": [
+    {
+      "width": 1280,
+      "pure": true,
+      "Enter": true,
+      "existingWriterWholeWorld": true,
+      "consumerCash": true,
+      "ownedReserve": true,
+      "save": true,
+      "sameKindLoadFiredDuplicate": true,
+      "focus": true,
+      "overflow": false,
+      "pageErrors": []
+    },
+    {
+      "width": 320,
+      "pure": true,
+      "Enter": true,
+      "existingWriterWholeWorld": true,
+      "consumerCash": true,
+      "ownedReserve": true,
+      "save": true,
+      "sameKindLoadFiredDuplicate": true,
+      "focus": true,
+      "overflow": false,
+      "pageErrors": []
+    }
+  ],
+  "regressionRaw": "\n> lol-gm@0.1.0 check:regression-smoke-career\n> node scripts/validate-system-snapshot.mjs && node scripts/regression.mjs && node scripts/smoke.mjs && node scripts/career-acceptance.mjs\n\nValidated pinned system snapshot: 254 items, 62 runes, 5 rune styles.\n11.5 Step 1 regression baseline: OK (01-world-bootstrap, 02-player-lineup, 03-roster-role-state, 04-rookie-supply, 05-contracts, 06-owned-reserve-roster, 06b-roster-transaction, 06c-player-sign-transaction, 06d-player-transfer-transaction, 06e-ai-transfer-and-move-limit, 06f-release-and-option-transaction, 06g-save-format-and-cache-isolation, 06g2-large-history-loadout-sharing, 06h-legacy-v15-save-restoration, 06i-invalid-and-forward-saves, 06j-transaction-transfer-rollback, 06k-transaction-roster-rollback, 06l-transaction-release-option-rollback, 06m-transaction-actor-parity-and-membership-guard, 07-staff-migration-caps, 08-local-regulation, 09-patch-baseline, 10-system-patch, 11-draft-series-save, 11a-meta-index-incremental-and-bounded, 11b-historic-patch-cache-limit, 11c-system-usage-index-parity, 11d-shared-registration-rule-and-pure-preview, 11e-roster-detach-is-single-owner, 11f-dead-api-pruned-without-market-breakage, 11g-required-domain-hooks-have-real-effects, 11h-initial-market-must-use-real-budget-and-team-policy, 11i-unreachable-wrappers-removed-and-supported-routes-retained, 11j-initial-manager-negotiation-path-after-legacy-removal, 11k-scheduled-series-session-after-unused-opener-removal, 11l-reserve-preflight-and-transaction-after-legacy-removal, 11m-new-procedural-regional-league-and-save-restore)\nSMOKE_PHASE_TIMINGS {\"mode\":\"full\",\"phases\":[{\"name\":\"bootstrap-policy-rookie\",\"ms\":2709.2},{\"name\":\"patch-system-cache\",\"ms\":1650},{\"name\":\"player-role-training\",\"ms\":19.2},{\"name\":\"draft-match-save\",\"ms\":690.7},{\"name\":\"initial-roster\",\"ms\":10901.6},{\"name\":\"staff-roster\",\"ms\":1381.4},{\"name\":\"tier2-promotion\",\"ms\":642.8},{\"name\":\"series-offseason-market\",\"ms\":14835.6}],\"totalMs\":32830.5}\nWorld smoke test: OK — blank rosters, global FA, roster rules, engine-owned regional policy, workforce-backed rookie intake/scouting reports, no emergency roster generation, offseason market closure, player identity/role ratings/state/value/development/champion learning/full match metrics/fixed depth charts/roster roles/satisfaction, season bootstrap and Bo1 simulation\nCAREER_ACCEPTANCE {\"seasons\":[{\"season\":2027,\"matches\":93,\"rookies\":19,\"players\":84,\"saves\":4},{\"season\":2028,\"matches\":93,\"rookies\":16,\"players\":95,\"saves\":9}],\"officialMatches\":186,\"modernSaveResumes\":8,\"legacySaveResumes\":2,\"worldVersion\":15,\"saveFormat\":2}\n",
+  "static": "\n> lol-gm@0.1.0 check:static\n> node --test scripts/ci-run.test.mjs scripts/sync-standalone.test.mjs scripts/mutation-ownership.test.mjs && node scripts/check.mjs\n\n✔ preserves success, multiline output and structured evidence (152.375239ms)\n✔ propagates failure and preserves the first error in the log (166.220772ms)\n✔ failed spawn cannot report green (102.700462ms)\n✔ records a live child before completion and preserves forced termination (104.344137ms)\n✔ rejects a new UI writer and an extra write in an existing owner (2.285957ms)\n✔ caller migration must shrink its old inventory and declare its new owner (0.594132ms)\n✔ reads/comparisons/function definitions are not writer calls (0.884119ms)\n✔ tracks compound writes and literal bracket properties (0.213283ms)\n✔ release liabilities may only be written by the finance owner (0.355982ms)\n✔ real remote receives the built bytes once and rejects stale artifacts (223.989173ms)\n✔ publishes the existing artifact with a normal push (0.384444ms)\n✔ unchanged and stale runs do not commit (0.328012ms)\n✔ a push race skips stale publication but transport failures fail (0.40148ms)\n✔ rejects another checkout or unrelated staged changes (0.177571ms)\nℹ tests 14\nℹ suites 0\nℹ pass 14\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 1104.841222\nChecked 146 JavaScript modules and Artifact shell: OK\n",
+  "build": "\n> lol-gm@0.1.0 build\n> node scripts/build.mjs\n\nBuilt 146 modules -> index.html and dist/index.html\n",
+  "limits": [
+    "실제 가상 소스의 소비 검증이며 프로 보정·가격 자료 아님",
+    "브라우저 동일 rebuiltHTML 주입/controlled localStorage; production HTTP·최종deviceQA 아님",
+    "발행 연도·구단/개별 만료 메타데이터를 새로 만들지 않음",
+    "단일 mSponsor writer와 기존 결산 유지; full exception/callback rollback·분산 탭 보장 없음",
+    "regression은 UI와 잠시 중첩; isolated speed evidence/optimization 아님",
+    "전체 UI·독립 재정 route·언어·AnalysisRoom·전체 승인 완료 아님"
+  ]
+}

@@ -77,3 +77,5 @@ Use [numeric stages 1–13 and dotted work units](DEVELOPMENT.md#unified-numeric
 [12.3.2 현재 구단의 실제 일정·수동 협상 브리핑](evidence/club-operational-briefing.json)은 실제 소유·조회·명령·결과·저장 경계를 연결합니다. 전체 등록·재정·UI 완료를 뜻하지 않습니다.
 
 - 12.3.3 소유 구단의 공식 등록·의료 가용·수동 선발과 실제 공식 소비: [수용 증거](evidence/club-registration-briefing.json), [원본 진단](evidence/club-registration-briefing-diagnostics.json), [실행 검사](../scripts/club-eligibility-acceptance.mjs). 전체 등록/의료/재정/UI 완료가 아니다.
+
+- 12.3.4 현재 현금·의무·조건부 예상과 실제 수동 후원/결산: [수용](evidence/club-finance-briefing.json), [원본 진단](evidence/club-finance-briefing-diagnostics.json). 전체 UI·재정·언어 완료가 아니다.

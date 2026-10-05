@@ -12642,7 +12642,7 @@ function renderClubBriefing(){
   const state=clubBriefState(),nx=clubBriefFixture(DB,ctx),ns=clubBriefNegotiations(DB,ctx),cw=ctx.w.contractWindow;
   return `<section id="club-briefing"><h3 tabindex="-1">구단 운영 브리핑</h3><p class="hint">${esc(ctx.t.name)} · 기준일 ${esc(DB.worldDate||'날짜 미정')} · ${ctx.w.manage==='manual'?'직접 운영':'현재 AI 위임 설정'} · 확정된 일정과 진행 중인 내 구단 협상만 표시합니다.</p><p role="status">${esc(state.message)}</p>
     ${nx?`<div class="cfgcard"><h4>다음 공식 경기</h4><p>${esc(DB.competitions[nx.s.comp].name)} · ${esc(nx.d.label||'')} · Bo${nx.m.bo}</p><p>${esc(nx.d.date)} UTC · ${esc(fixtureTimeInfo(nx.m))} · ${esc(DB.teams[nx.m.a].name)} vs ${esc(DB.teams[nx.m.b].name)}</p><div class="controls"><button data-brief-schedule="${esc(nx.s.key)}">해당 일정 확인</button><button data-brief-progress="smine">내 경기까지 진행</button></div></div>`:'<p class="hint">현재 생성된 일정에 남은 내 공식 경기가 없습니다. 아직 생성되지 않은 대진은 예측하지 않습니다.</p>'}
-    ${renderClubEligibility()}
+    ${renderClubEligibility()}${renderClubFinanceBriefing()}
     ${SSET.tab==='sched'?'<button class="ghost" data-brief-return>브리핑으로 돌아오기</button>':''}
     ${ctx.w.phase==='season'?'<div class="controls"><button data-brief-progress="sday">하루 진행</button></div>':''}
     ${cw&&ctx.w.phase==='offseason'?`<p class="hint">현재 계약 창구 · ${cw.stage==='exclusive'?'원소속 독점 협상':'FA 시장'}${cw.exclusiveThrough?' · 독점 종료 '+esc(cw.exclusiveThrough):''}${cw.outsideContactDate?' · 타 구단 접촉 '+esc(cw.outsideContactDate):''}. 개별 협상 만료일로 해석하지 않습니다.</p>`:''}
@@ -12666,7 +12666,7 @@ function openClubBriefNegotiation(nid){
 }
 function bindClubBriefing(){
   const ctx=clubBriefContext();if(!ctx)return;
-  bindClubEligibility();
+  bindClubEligibility();bindClubFinanceBriefing();
   const db=DB,w=ctx.w,slot=SLOT,render=UI_RENDER_ID,date=db.worldDate,phase=w.phase,nx=clubBriefFixture(db),current=()=>clubBriefCurrent(db,w,slot,render,ctx.t.id)&&db.worldDate===date&&w.phase===phase&&!UI_OVERLAY;
   document.querySelectorAll('[data-brief-neg]').forEach(b=>b.onclick=()=>{if(current())openClubBriefNegotiation(b.dataset.briefNeg)});
   document.querySelectorAll('[data-brief-schedule]').forEach(b=>b.onclick=()=>{if(!current()||clubBriefFixture(db)?.m.id!==nx?.m.id)return;SSET.view=b.dataset.briefSchedule;SSET.tab='sched';navKeepScroll();document.querySelector('#stab')?.setAttribute?.('tabindex','-1');document.querySelector('#stab')?.focus?.()});
@@ -12738,6 +12738,61 @@ function bindClubEligibility(){
   document.querySelectorAll('[data-brief-entry]').forEach(b=>b.onclick=()=>{if(clubBriefCurrent(db,w,slot,render,ctx.t.id)&&db.worldDate===date&&!UI_OVERLAY)openClubEntry(b.dataset.briefEntry)});
 }
 
+/* ==== FILE: ui-club-finance.js ==== */
+// Owned finance views use private copies; finance.js remains the sole sponsor writer.
+function clubFinanceModel(db=DB,tid=managedTeamId(db)){
+  const ctx=clubBriefContext(db),t=db?.teams?.[tid];
+  if(!ctx||t?.active===false||!t?.finance||!managerControlsSquad(db,t))return null;
+  const read=JSON.parse(JSON.stringify(db)),team=read.teams[tid],forecast=financeForecast(read,team),prepaid=financePrepaidSettlement(team),releases=financeReleaseObligations(team),transfer=transferPaymentExposure(team);
+  return {read,team,forecast,prepaid,releases,transfer,committed:financeCommittedTransferCash(read,team),payroll:payroll(read,team),offers:tid===ctx.t.id&&!team.parent?(read.world.sponsorOffers||[]):[]};
+}
+function clubFinanceStamp(db){const t=managedTeam(db);return JSON.stringify([db.year,db.worldDate,db.world.phase,db.world.manage,db.world.sponsorOffers,t?.sponsor,t?.finance,t?.parent]);}
+function sponsorUiCurrent(db,w,slot,render,tid,date,stamp){return DB===db&&db.world===w&&SLOT===slot&&UI_RENDER_ID===render&&managedTeamId(db)===tid&&!SLOT_SWITCHING&&!w.fired&&w.manage==='manual'&&!['pick','initial_roster'].includes(w.phase)&&managedTeam(db)?.active!==false&&!managedTeam(db)?.parent&&db.worldDate===date&&clubFinanceStamp(db)===stamp;}
+function bindSponsorControls(act,allowed=()=>true,root=document){
+  const buttons=[...root.querySelectorAll('[data-spon]')];if(!buttons.length)return;
+  const db=DB,w=db.world,slot=SLOT,render=UI_RENDER_ID,tid=managedTeamId(db),date=db.worldDate,stamp=clubFinanceStamp(db),view=VIEW,overlay=UI_OVERLAY;
+  buttons.forEach(b=>b.onclick=()=>{
+    if(VIEW!==view||UI_OVERLAY!==overlay||!allowed()||!sponsorUiCurrent(db,w,slot,render,tid,date,stamp))return;
+    const t=managedTeam(db),o=w.sponsorOffers?.find(x=>x.id===b.dataset.spon);
+    if(t.sponsor?.until>=db.year){act('기존 스폰서 계약 기간이 남아 있습니다');return;}
+    if(!o){act('제안이 만료되었습니다');return;}
+    const before=t.sponsor;const msg=mSponsor(db,o.id);
+    act(msg,t.sponsor!==before);
+  });
+}
+function clubSponsorProjection(m,id){
+  if(m.team.parent||m.team.id!==managedTeamId(m.read)||m.team.sponsor?.until>=m.read.year||!m.offers.some(o=>o.id===id))return null;
+  const read=JSON.parse(JSON.stringify(m.read)),team=read.teams[m.team.id],before=team.sponsor;mSponsor(read,id);
+  return team.sponsor!==before?{cash:team.finance.cash,forecast:financeForecast(read,team)}:null;
+}
+function clubSponsorTerms(m){
+  const t=m.team,cur=t.sponsor?.until>=m.read.year?t.sponsor:null;
+  const terms=o=>`기본 연간 ${money(o.base)}${o.perWin?' · 국내 1승당 '+money(o.perWin):''}${o.milestone?' · '+esc(sponsorGoalLabel(o.milestone))+' 달성 시 '+money(o.milestoneBonus):''}`;
+  return `<h4>실제 후원 계약·현재 제안</h4>${cur?`<p>${esc(cur.name)} · ${esc(cur.type)} · ${terms(cur)} · ${cur.until}년까지</p>`:m.offers.length?m.offers.map(o=>{const projection=clubSponsorProjection(m,o.id);return `<div class="cfgcard"><b>${esc(o.name)} · ${esc(o.type)}</b><p>${terms(o)} · ${o.years}년</p><p class="hint">기존 모형의 예상 연간 ${money(sponsorExpectedValue(m.read,t,o))} · 성과를 보장하거나 현재 현금으로 지급한 값이 아닙니다.</p>${projection?`<p>선택 가정 · 현재 현금 ${money(projection.cash)} (변경 없음) · 예상 연간 수입 ${money(m.forecast.revenue)} → ${money(projection.forecast.revenue)} · 예상 결산 현금 ${money(m.forecast.closingCash)} → ${money(projection.forecast.closingCash)}</p>`:'<p>선택 가정의 근거를 확인할 수 없습니다.</p>'}<button data-spon="${esc(o.id)}"${m.read.world.manage!=='manual'?' disabled':''}>이 조건으로 계약</button></div>`;}).join(''):'<p class="hint">현재 저장된 후원 제안이 없습니다. 새 제안을 임의로 생성하지 않습니다.</p>'}<p class="hint">계약 체결은 현재 현금을 늘리지 않습니다. 기본액·이미 기록된 국내 승수는 기존 연간 결산 소비자에 반영되고 목표 달성 수당은 결산 시 실제 조건을 검사합니다. 제안에 개별 만료일·발행 구단 기록이 없으므로 이를 발명하지 않습니다.</p>`;
+}
+function clubFinanceSummary(m){
+  const rows=[['현재 현금',m.team.finance.cash],['기록된 미지급 방출 보상',m.releases.amount],['확정 이적·의무 구매 예약액',m.committed],['미달성 이적 추가금 최대',m.transfer.contingent],['이미 현금에 반영된 지출',m.prepaid.expense],['이미 현금에 반영된 이적 수입',m.prepaid.income],['현재 연봉 연간 합계',m.payroll],['조건부 예상 결산 현금',m.forecast.closingCash]];
+  return `<div class="fin">${rows.map(([k,v])=>`<div><span>${k}</span><b>${Number.isFinite(v)?money(v):'기록 확인 필요'}</b></div>`).join('')}</div><p class="hint">모든 금액은 가상 게임의 억 단위입니다. 현재 현금·확정 채무·조건부 예상은 합산 잔액으로 혼동하지 않습니다. 연봉은 연간 기준이며 즉시 일시 지급 채무가 아닙니다. 예상 결산은 현재 현금 + 예상 수입 − 예상 지출 − 이미 반영된 이적 수입 + 이미 반영된 지출입니다. 선지급 금액은 결산에서 중복 차감하지 않습니다. 예상 결산은 미확정 상금·향후 승리·성과급·거래·재분배를 보장하지 않습니다.</p>`;
+}
+function renderClubFinanceBriefing(){
+  const m=clubFinanceModel();if(!m)return '';
+  return `<div id="club-finance" class="cfgcard"><h4 tabindex="-1">현금 · 의무 · 후원</h4>${clubFinanceSummary(m)}<div class="controls"><button data-brief-finance="${esc(m.team.id)}">재정 근거·후원 확인</button>${clubBriefContext().teams.filter(id=>id!==m.team.id).map(id=>`<button data-brief-finance="${esc(id)}">${esc(DB.teams[id].name)} 재정 확인</button>`).join('')}</div></div>`;
+}
+function openClubFinance(tid){
+  const ctx=clubBriefContext(),m=clubFinanceModel(DB,tid);if(!m||UI_OVERLAY)return false;
+  const db=DB,w=db.world,slot=SLOT,render=UI_RENDER_ID,date=db.worldDate,stamp=clubFinanceStamp(db),root=document.querySelector('#overlay');let dialog=null;
+  const current=()=>clubBriefCurrent(db,w,slot,render,ctx.t.id)&&UI_OVERLAY===dialog&&db.worldDate===date&&clubFinanceStamp(db)===stamp&&managerControlsSquad(db,db.teams[tid]);
+  const close=()=>{if(UI_OVERLAY===dialog)closeUiOverlay();};
+  openUiOverlay({kind:'club-finance',label:'구단 재정 근거·후원',dismissible:true,onDismiss:close,focusSelector:'#brief-finance-close',html:`<div class="ovin"><div class="ovhead"><b>${esc(m.team.name)} 재정 근거·후원</b><button id="brief-finance-close" class="ghost">브리핑으로 돌아가기</button></div>${clubFinanceSummary(m)}${financePanel(m.team,m.read)}${transferPaymentsPanel(m.team,m.read)}${tid===ctx.t.id&&!m.team.parent?clubSponsorTerms(m):'<p class="hint">소유 2군 재정은 확인할 수 있지만 이 화면에서 모구단 후원 계약을 대신 체결하지 않습니다.</p>'}</div>`});dialog=UI_OVERLAY;
+  root.querySelector('#brief-finance-close').onclick=close;
+  bindSponsorControls((msg,changed)=>{clubBriefState().message=String(msg);MSG=String(msg);if(changed)saveDB();closeUiOverlay({restoreFocus:false});navKeepScroll();document.querySelector('#club-finance h4')?.focus?.({preventScroll:true});},current,root);
+  return true;
+}
+function bindClubFinanceBriefing(){
+  const ctx=clubBriefContext();if(!ctx)return;const db=DB,w=ctx.w,slot=SLOT,render=UI_RENDER_ID,date=db.worldDate;
+  document.querySelectorAll('[data-brief-finance]').forEach(b=>b.onclick=()=>{if(clubBriefCurrent(db,w,slot,render,ctx.t.id)&&db.worldDate===date&&!UI_OVERLAY)openClubFinance(b.dataset.briefFinance);});
+}
+
 /* ==== FILE: ui-transfer-terms.js ==== */
 // Advanced economic terms are collapsed on small screens. Preview always shows
 // guaranteed cost separately from contingent bonuses before confirmation.
@@ -12799,11 +12854,11 @@ function bindLoanPurchaseControls(){
     if(result.ok)saveDB();navKeepScroll();
   });
 }
-function transferPaymentsPanel(t){
+function transferPaymentsPanel(t,db=DB){
   const deals=transferDealRows(t),exposure=transferPaymentExposure(t);if(!deals.length)return '';
   return `<details class="cfgcard"><summary>분할 / 성과 이적료 · 미지급 보장 ${money(exposure.guaranteed)}</summary>
     <p class="hint">미달성 추가금 최대 ${money(exposure.contingent)} · 지급한 이적료는 결산에서 중복 차감하지 않습니다. 현금 부족 시 미지급액을 보존합니다.</p>
-    ${deals.map(d=>`<div class="cfgcard"><b>${esc(DB.players[d.pid]?.name||d.pid)}</b> · ${d.fromId===t.id?'받을 금액':'지급할 금액'}
+    ${deals.map(d=>`<div class="cfgcard"><b>${esc(db.players[d.pid]?.name||d.pid)}</b> · ${d.fromId===t.id?'받을 금액':'지급할 금액'}
       ${d.rows.map(r=>`<p>${esc(r.date||r.through)} · ${money(r.amount)} · 지급 ${money(r.paid)} · ${({pending:'예정 / 조건 미달성',earned:'지급 의무 발생',paid:'지급 완료',expired:'조건 만료'})[r.status]}</p>`).join('')}</div>`).join('')}</details>`;
 }
 
@@ -12988,7 +13043,7 @@ function coachBlock(t){
   return `<div class="fin"><div><span>헤드코치</span><b>플레이어</b><small>최종 스포츠 결정</small></div><div><span>부서 정원</span><b>${limits}</b><small>범용 수석코치 없음</small></div><div><span>스태프 효과</span><b>전략 ${Math.round(profile.draft)} · 분석 ${Math.round(profile.analysis)}</b><small>육성 ${Math.round(profile.development)} · 스카우팅 ${Math.round(profile.scouting)}</small></div></div><h4>시설 운영 현황</h4><p class="hint">${Object.entries(labels).map(([k,v])=>v+' '+(facilities[k]||1)+'단계').join(' · ')} · 연간 유지비 ${money(facilityUpkeep(DB,t))}</p><p class="hint">훈련: 시즌 능력치 성장 · 데이터 분석: 조합/상대 준비 · 회복: 일일 피로 회복 · 유소년: 젊은 선수 성장/영입 매력 · 스카우팅: 관찰 보고서 정확도</p><p class="hint">다음 시설 투자 판단: ${FACILITY_TYPES.filter(k=>facilities[k]<5).map(k=>labels[k]+' '+facilityInvestmentScore(DB,t,k).toFixed(2)).sort().join(' · ')} (투자 적합도, 현재 선수단·구단 철학·비용 반영)</p><p class="hint">${building?'시설 증설 중: '+esc(building):'진행 중인 시설 증설 없음'} · 구단 경영진이 투자 판단</p><h4>현재 스태프</h4>${cards||'<p class="hint">고용된 전문 스태프가 없습니다.</p>'}<h4>스태프 시장</h4>${market}`;
 }
 function bindClubOfficeControls(act){
-  document.querySelectorAll('[data-spon]').forEach(b=>b.onclick=()=>act(mSponsor(DB,b.dataset.spon)));
+  bindSponsorControls(act);
   document.querySelectorAll('[data-staff-role]').forEach(s=>s.onchange=()=>{MK.staffRole=s.value;MK.staffPage=0;navKeepScroll()});
   document.querySelectorAll('[data-staff-page]').forEach(b=>b.onclick=()=>{MK.staffPage=Number(b.dataset.staffPage);navKeepScroll()});
   document.querySelectorAll('[data-interview-staff]').forEach(b=>b.onclick=()=>{const out=commitWorldAction(DB,{type:'staff.interview',actor:'manager',teamId:managedTeamId(DB),sid:b.dataset.interviewStaff});act(out.ok?'면접 완료 · 추정 범위가 좁아졌습니다':out.errors.join(' · '))});
@@ -13405,7 +13460,7 @@ function releaseObligationsPanel(releases,title){
     ${releases.unattributedAmount>0?`<p class="hint">기존 기록의 상세 미기록 채무 ${money(releases.unattributedAmount)}</p>`:''}
   </details>`;
 }
-function financePanel(t){
+function financePanel(t,db=DB){
   const f=t.finance; if(!f)return '';
   if(t.active===false&&f.closureSettlement){
     const closure=f.closureSettlement,recovery=f.estateRecovery;
@@ -13417,7 +13472,7 @@ function financePanel(t){
       ${(closure.funding?.transfers||[]).map(row=>`<p>${row.kind==='cash_recovery'?
         row.toId===t.id?'2군 잔여 자금 회수':'모구단에 잔여 자금 반환':
         row.toId===t.id?'모구단 정산 지원':'소유 2군 정산 지원'} ${money(row.amount)}</p>`).join('')}
-      ${transferDealRows(t).length?transferPaymentsPanel(t):''}
+      ${transferDealRows(t).length?transferPaymentsPanel(t,db):''}
       ${recovery?.distributions?`<details class="cfgcard"><summary>해체 후 추가 지급 · ${money(recovery.paidAmount)}</summary>
         ${recovery.history.map(row=>`<p>${esc(row.date)} · ${money(row.paidAmount)} 지급</p>`).join('')}</details>`:''}
   ${releaseObligationsPanel(financeReleaseObligations(t),'해체 구단 미지급 보상')}
@@ -13427,12 +13482,12 @@ function financePanel(t){
       ${closure.unattributedAmount?`<p class="hint">상세 미기록 청구 ${money(closure.unattributedAmount)} · 지급 ${money(closure.unattributedPaid)} · 미지급 ${money(closure.unattributedUnpaid)}</p>`:''}
       </details></section>`;
   }
-  const R=DB.regions[t.region], last=f.history.slice(-1)[0], pay=payroll(DB,t), outlook=financeForecast(DB,t);
+  const R=db.regions[t.region], last=f.history.slice(-1)[0], pay=payroll(db,t), outlook=financeForecast(db,t);
   const RK={league:'중계권 분배',sponsor:'스폰서',merch:'굿즈',prize:'상금',owner:'구단주 지원',tax:'사치세 분배',transfer:'이적료 수입',sponsorMilestone:'스폰서 목표 달성',academyFunding:'모구단 지원금'}, EK={salary:'연봉',loanWages:'임대 급여 분담',loanConversion:'계약 소유권 급여 정산',staff:'코칭 스태프',ops:'운영비',facility:'훈련 시설',floor:'플로어 부담금',buyout:'선수 방출 비용',tax:'사치세',facilityInvestment:'시설 증설비',signingBonus:'계약금',transfer:'이적료 지출',staffSeverance:'스태프 해지금',travel:'해외 대회 출장비',interest:'재정 부족 부담금',scouting:'스카우팅 비용',academySupport:'2군 운영 지원'};
   return `<section><h3>재정</h3><div class="fin">
     <div><span>보유 자금</span><b class="${f.cash<0?'neg':''}">${money(f.cash)}</b></div>
-    <div><span>연봉 총액</span><b>${money(pay)}</b><small>${R.spendingRule==='sfr_top5'?`SFR 상위 5인 ${money(regulatedPayroll(DB,t))} · 기준 ${money(R.salaryCap)}${R.salaryCap?' · '+Math.round(regulatedPayroll(DB,t)/R.salaryCap*100)+'% 사용':''}${regulatedPayroll(DB,t)>R.salaryCap?' 초과':''}`:'구단 자체 예산'}</small></div>
-    <div><span>영입 예산</span><b>${money(Math.max(0,salaryBudget(DB,t)-pay))}</b></div>
+    <div><span>연봉 총액</span><b>${money(pay)}</b><small>${R.spendingRule==='sfr_top5'?`SFR 상위 5인 ${money(regulatedPayroll(db,t))} · 기준 ${money(R.salaryCap)}${R.salaryCap?' · '+Math.round(regulatedPayroll(db,t)/R.salaryCap*100)+'% 사용':''}${regulatedPayroll(db,t)>R.salaryCap?' 초과':''}`:'구단 자체 예산'}</small></div>
+    <div><span>영입 예산</span><b>${money(Math.max(0,salaryBudget(db,t)-pay))}</b></div>
     <div><span>구단주 재력</span><b>${t.owner?t.owner.wealth:'—'}</b></div>
     <div><span>운영 여유</span><b>${outlook.runway.months}개월</b><small>${({stable:'안정',watch:'유의',strained:'긴축',critical:'위기'})[outlook.runway.severity]}</small></div>
     <div><span>예상 수입</span><b>${money(outlook.revenue)}</b></div>
@@ -13446,10 +13501,10 @@ function financePanel(t){
   ${releaseObligationsPanel(last?.releaseSettlement,'지난 결산 선수 방출 보상')}
   ${f.closureSupportHistory?.length?`<details class="cfgcard release-settlements"><summary>2군 종료 정산 지원 내역</summary>
     <p class="hint">이미 현금에 반영된 내부 지원금입니다. 다음 결산에서 다시 차감하지 않습니다.</p>
-    ${f.closureSupportHistory.map(row=>`<p>${esc(row.date||String(row.year))} · ${esc(DB.teams[row.toId]?.name||row.toId)} · ${money(row.amount)}</p>`).join('')}</details>`:''}
+    ${f.closureSupportHistory.map(row=>`<p>${esc(row.date||String(row.year))} · ${esc(db.teams[row.toId]?.name||row.toId)} · ${money(row.amount)}</p>`).join('')}</details>`:''}
   ${f.closureCashRecoveryHistory?.length?`<details class="cfgcard release-settlements"><summary>2군 종료 잔여 자금 회수</summary>
     <p class="hint">2군의 선수 보상 채무를 보호한 뒤 반환받은 현금입니다. 다음 결산 수입으로 중복 반영하지 않습니다.</p>
-    ${f.closureCashRecoveryHistory.map(row=>`<p>${esc(row.date||String(row.year))} · ${esc(DB.teams[row.fromId]?.name||row.fromId)} · ${money(row.amount)}</p>`).join('')}</details>`:''}
+    ${f.closureCashRecoveryHistory.map(row=>`<p>${esc(row.date||String(row.year))} · ${esc(db.teams[row.fromId]?.name||row.fromId)} · ${money(row.amount)}</p>`).join('')}</details>`:''}
   ${last?.capital?`<p class="hint">${last.year}년 구단 매각/외부 자본 투입: ${money(last.capital.newOwner||0)} (영업손익과 구분)</p>`:''}
   ${last?`<div class="rgrid"><div><h4>${last.year} 수입 ${money(Object.values(last.rev).reduce((a,b)=>a+b,0))}</h4>${Object.entries(last.rev).filter(([,v])=>v).map(([k,v])=>`<div class="arow"><span>${RK[k]||k}</span><span class="num">${money(v)}</span></div>`).join('')}</div>
   <div><h4>${last.year} 지출 ${money(Object.values(last.exp).reduce((a,b)=>a+b,0))}</h4>${Object.entries(last.exp).filter(([,v])=>v).map(([k,v])=>`<div class="arow"><span>${EK[k]||k}</span><span class="num">${money(v)}</span></div>`).join('')}<div class="arow"><span><b>순이익</b></span><span class="num ${last.net<0?'lo':'hi'}"><b>${money(last.net)}</b></span></div></div></div>`:'<p class="hint">첫 시즌이 끝나면 결산이 나옵니다.</p>'}</section>`;
