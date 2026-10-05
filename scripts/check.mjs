@@ -99,6 +99,7 @@ const maintainabilityBudgets = {
   'ui-club-medical.js': 7500,
   'ui-club-contracts.js': 8000,
   'ui-club-practice.js': 10500,
+  'ui-club-scrim.js': 9000,
   'ui-squad-controls.js': 3000,
   'ui-staff-controls.js': 4000,
   'ui-state.js': 6500,
