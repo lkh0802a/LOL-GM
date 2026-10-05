@@ -38,13 +38,13 @@ async function loadDB(key=STORE){
   // A local fallback is newer than a failed IndexedDB update for this key.
   // A successful IndexedDB write removes the local fallback.
   let stored=null;
-  try{stored=localStorage.getItem(key)}catch(e){}
+  try{stored=localStorage.getItem(key)}catch(e){invalid.push('로컬 저장소 읽기 실패: '+e.message)}
   if(stored!==null&&stored!==undefined){
     try{return unpackDB(stored)}
     catch(e){invalid.push('로컬 저장소: '+e.message)}
   }
   stored=null;
-  try{stored=await idbGet(key)}catch(e){}
+  try{stored=await idbGet(key)}catch(e){if(!(typeof DIRECT_FILE_PREVIEW!=='undefined'&&DIRECT_FILE_PREVIEW)&&typeof indexedDB!=='undefined')invalid.push('IndexedDB 읽기 실패: '+e.message)}
   if(stored!==null&&stored!==undefined){
     try{return unpackDB(stored)}
     catch(e){invalid.push('IndexedDB: '+e.message)}
@@ -217,6 +217,7 @@ document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>navigateTo(b.da
 $('#main').innerHTML='<p class="empty">세계를 불러오는 중…</p>';
 loadDB().then(d=>{DB=d;nav()}).catch(e=>{
   console.error('LOL GM initialization failed',e);
+  if(typeof startupBootFailure==='function'){startupBootFailure(e);return}
   $('#main').innerHTML=`<section><h2>게임을 시작하지 못했습니다</h2><p class="warn">${esc(e&&e.message?e.message:'초기화 오류')}</p><p class="hint">저장 데이터 오류가 발생한 경우 원본은 보존됩니다. 브라우저 저장소를 지우지 말고 JSON 백업을 확인해 주세요. 파일 미리보기 접근 오류라면 최신 HTML을 다시 열어 보세요.</p><button class="primary" id="retryboot">다시 시도</button></section>`;
   const b=$('#retryboot');if(b)b.onclick=()=>location.reload();
 });

@@ -32,7 +32,7 @@ function managerTeamPicker(disabled=false){
     <div><span>승강</span><b>${esc(promotionStatus(DB,team))}</b></div>
   </div>`:''}
   <p class="hint">첫 시즌은 모든 구단이 백지 로스터로 시작합니다. 독립 구단은 직접 선수단을 구성하고, 소유 2군은 모구단이 구성한 선수단으로 시작합니다.</p>
-  <p class="hint">가상 프로씬 공용어가 정착된 세계이므로 국적에 따른 언어 장벽은 없습니다. 국적/출신지역은 신인 생성·스카우팅 정체성에 사용되고, 공식 등록의 비로컬 판정은 별도 활성 로컬 자격을 사용합니다.</p>
+  <p class="hint">국적·출신 지역·활동 지역과 공식 등록의 로컬 자격은 서로 다릅니다. 구단 언어와 지원 제도는 별도 개발 중이며 이 화면에서 언어 적응을 보장하지 않습니다.</p>
   <p class="hint">소유 2군도 감독할 수 있습니다. 선수 영입·계약·방출·1·2군 이동은 모구단이 담당하고, 2군 감독은 경기·전술·훈련·육성을 맡습니다.</p></div>`;
 }
 function bindManagerTeamPicker(){
@@ -56,7 +56,7 @@ function intlCard(it,i){
 }
 function seasonSetup(){
   const cfg=DB.worldConfig, dirty=false;
-  return `<section class="teamhead"><h2>새 게임</h2><p>LOL GM은 고정된 글로벌 프로 생태계에서 시작합니다. 리그와 국제대회는 새 게임에서 임의로 추가·삭제하지 않으며, 이후 구조 변화는 게임 내 사무국과 세계 변화 시스템이 처리합니다.</p></section>
+  return `<section class="teamhead"><h2>새 커리어 선택</h2>${typeof START_UI!=='undefined'&&START_UI.active?startupBack():''}${typeof START_UI!=='undefined'&&START_UI.error?`<p class="warn" role="status">${esc(START_UI.error)}</p>`:''}<p>LOL GM은 고정된 글로벌 프로 생태계에서 시작합니다. 리그와 국제대회는 새 게임에서 임의로 추가·삭제하지 않으며, 이후 구조 변화는 게임 내 사무국과 세계 변화 시스템이 처리합니다.</p></section>
   <section><h3>리그 구조</h3><p class="hint">새 기본 세계는 북미 LCS · 남미 LSA를 포함한 주요 6개 지역에 1·2부가 있습니다. 기존 세계의 구단 구조는 유지됩니다. 새 구성을 시작하려면 빈 저장 슬롯을 사용하세요. LSA와 새 하부 리그 약칭은 가상 리그 표기이며 실제 대회 운영 규칙을 뜻하지 않습니다.</p><p class="hint">스플릿 기간 수와 성적 집계 방식은 각 지역 리그 사무국이 독립적으로 결정합니다. 감독이 직접 선택하지 않습니다. 사무국은 시즌 종료 후 흥행·경쟁 균형·운영 부담에 따라 다음 시즌 구조를 변경할 수 있으며, 결정은 세계 뉴스와 사무국 기록에 남습니다.</p><div class="cfgs">${cfg.regions.map(regionCard).join('')}</div></section>
   <section><h3>국제대회</h3><div class="cfgs">${cfg.internationals.map(intlCard).join('')}</div><p class="hint">퍼스트 스탠드 · MSI · 월드 챔피언십과 권역별 마스터즈/챌린저급 국제대회가 세계 일정에 포함됩니다.</p></section>
   <section><h3>생성된 세계</h3>${worldTable()}</section>

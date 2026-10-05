@@ -203,7 +203,7 @@ client utility. UI-player-commitments owns compact status and confirm/cancel
 controls; player detail/roster delegate to it. Agents/promises are optional save
 fields; no second contract, roster, finance or preview ledger is introduced.
 
-상단 내비게이션과 표시 상태는 `ui-state.js:updateAppNavigation`, 공통 토큰·레이아웃은 `shell.html`이 소유한다. 주요 이동은 모바일을 고려해 상단에 유지한다. 시작 전에는 새 게임/불러오기, 커리어 시작 후에는 기존 목적별 route를 표시한다. 분석실 경기 복기는 `ui-match-history.js`의 목록/선택 요약/실제 기록·사건·밴픽 탭으로 구성하며 transient review/reviewTab 상태와 source authority를 분리한다. 전체 도메인 UI 교체는 12.3–12.5의 다음 실제 연결 검증 단위로 남는다.
+상단 내비게이션과 표시 상태는 `ui-state.js:updateAppNavigation`, 공통 토큰·레이아웃은 `shell.html`이 소유한다. 주요 이동은 모바일을 고려해 상단에 유지한다. 시작 전에는 새 게임/불러오기, 커리어 시작 후에는 기존 목적별 route를 표시한다. (12.3.1 이전의 표시 설명을 보존한 문장이다. 최신 세 작업 startup/설정·복구 ownership은 아래12.3.1을 따른다.) 분석실 경기 복기는 `ui-match-history.js`의 목록/선택 요약/실제 기록·사건·밴픽 탭으로 구성하며 transient review/reviewTab 상태와 source authority를 분리한다. 전체 도메인 UI 교체는 12.3–12.5의 다음 실제 연결 검증 단위로 남는다.
 
 `match-adjudication.js` owns the first nexus terminal state and aggregate event clock, independent of optional trace storage. `engine.js` applies termination guards to actual phases/actions and final duration; `seriesResultLines` and public official observations consume that exact duration. `match-history.js` preserves/validates optional versioned ending provenance; old observations remain unchanged. `ui-match-history.js` shows only stored ending source. Acceptance: match-adjudication/match-ending plus real official pending/save/review and quiet/logged parity. This is an ordered aggregate model, not exact simultaneous geometry; Purchase ledger follows in DEVELOPMENT 8.2.1; source-backed XP/wave adjudication remains 8.5.1.
 
@@ -275,3 +275,7 @@ fields; no second contract, roster, finance or preview ledger is introduced.
 ### Conditional initial offer impact (12.5.3)
 
 `ui-initial-offer-preview.js` owns FA/owned-target permission checks, private-copy existing transaction projection, numeric before/after presentation and ephemeral return context. Existing career/finance/roster/contract writers own rules and actual agreement. `ui-negotiations.js:initialNegotiationDraft` preserves raw form fields through preview rerenders; round/attempt changes invalidate restoration. No live-world mutation, new saved schema, alternate agreement writer or acceptance prediction. Existing initial shared action guards remain the command boundary.
+
+### Startup and career/save boundary (12.3.1)
+
+`ui-startup.js` owns ephemeral home/career/load/settings and boot-error recovery, with actual `ui-state.nav` dispatch. Existing setup/career and app per-slot queues/storage own rules and persistence. New career runs on a private copy and commits identity after successful save; occupied/unknown slots are not silently replaced. Boot recovery with DB=null writes no outgoing corrupted slot. `ui-data.js` guards actual callbacks by DB/slot/render and rebinds after import. `app.loadDB` distinguishes unreadable backend from genuine empty data. No new saved UI schema or game economy. Focused acceptance is `startup-flow-acceptance.mjs`; raw source failures/actual browser/storage limits are retained in DEVELOPMENT12.3.1.
