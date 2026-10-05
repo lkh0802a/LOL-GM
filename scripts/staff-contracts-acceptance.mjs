@@ -1,6 +1,6 @@
 import {runEngineFixture,artifactSource} from './test-harness.mjs';
 import assert from 'node:assert/strict';
-const [ui,managerUi,app,regionUi,financeUi]=await Promise.all(['ui-market-staff.js','ui-manager.js','app.js','ui-scouting-regions.js','ui-club-finance.js'].map(artifactSource));
+const [ui,managerUi,app,regionUi,financeUi,clubStaffUi,staffControls]=await Promise.all(['ui-market-staff.js','ui-manager.js','app.js','ui-scouting-regions.js','ui-club-finance.js','ui-club-staff.js','ui-staff-controls.js'].map(artifactSource));
 await runEngineFixture(String.raw`(()=>{
  const check=(x,m)=>{if(!x)throw Error('STAFF_CONTRACTS '+m)};
  const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:10,div2:true,system:'franchise'})];cfg.internationals=[];
@@ -167,14 +167,14 @@ await runEngineFixture(String.raw`(()=>{
  check(!staffStateErrors(closed).length&&!staffStateErrors(unpackDB(packDB(closed))).length,'closed employment survived restoration');
  DB=closed;const closureHtml=financePanel(club);check(closureHtml.includes('선수·스태프별 지급 내역')&&closureHtml.includes('&lt;img')&&!closureHtml.includes(employee.name),'closure UI omitted/failed to escape staff creditor');
  const noRepeat=JSON.stringify(closed);commitWorldAction(closed,closeIntent);check(JSON.stringify(closed)===noRepeat,'closure paid staff twice');
- DB=db;const card=staffEmploymentCard(buyer,free,false);check(card.includes('추정')&&card.includes('data-staff-years')&&!card.includes('능력 '+free.rating),'staff card leaked exact hidden ability');
+ DB=db;DB.world=DB.world||{};DB.world.year=DB.year;DB.world.phase='season';DB.world.manage='manual';DB.world.fired=false;SLOT='1';SLOT_SWITCHING=false;UI_RENDER_ID=1;VIEW='market';UI_OVERLAY=null;const card=staffEmploymentCard(buyer,free,false);check(card.includes('추정')&&card.includes('data-staff-years')&&!card.includes('능력 '+free.rating),'staff card leaked exact hidden ability');
  const button={dataset:{hireStaff:free.id}},fields={'data-staff-years':{value:'6'},'data-staff-salary':{value:String(staffAskingSalary(db,buyer,free))}};
  document={querySelectorAll:selector=>selector==='[data-hire-staff]'?[button]:[],querySelector:selector=>Object.entries(fields).find(([key])=>selector.includes(key))?.[1]};
  let message='';confirm=()=>false;bindClubOfficeControls(text=>{message=text});const beforeCancel=JSON.stringify(db);button.onclick();check(JSON.stringify(db)===beforeCancel,'cancelled UI staff offer mutated state');
  let confirmation='';confirm=text=>{confirmation=text;return true};button.onclick();check(locateStaff(db,free.id).team===buyer&&free.contract.years===6&&message==='스태프 계약 완료','UI did not execute negotiated years');
  check(confirmation.includes('6년')&&confirmation.includes('총 약정 연봉')&&confirmation.includes('선납 아님')&&confirmation.includes('50%'),'UI confirmation omitted duration/liability distinction');
  console.log('STAFF_CONTRACTS_ACCEPTANCE PASS (FA, renewal, interviews, specialties, consent, cash conservation, authority, rollback, expiry, retirement, saves)');
-})();`,{setupSources:[app.match(/^const esc=.*$/m)[0],managerUi,regionUi,financeUi,ui]});
+})();`,{setupSources:["var SLOT='1',SLOT_SWITCHING=false,UI_RENDER_ID=1,VIEW='market',UI_OVERLAY=null;",app.match(/^const esc=.*$/m)[0],managerUi,regionUi,financeUi,clubStaffUi,staffControls,ui]});
 assert(!/能力|능력 \$\{[xs]\.rating\}/.test(ui));
-assert(ui.includes('staffObservation(DB,t,s)')&&ui.includes('data-interview-staff')&&ui.includes('data-staff-years')&&ui.includes('data-staff-salary')&&ui.includes('previewWorldAction(DB')&&ui.includes('applyWorldAction(DB,preview)'));
+assert(ui.includes('staffObservation(db,t,s)')&&ui.includes('db=DB')&&ui.includes('data-interview-staff')&&ui.includes('data-staff-years')&&ui.includes('data-staff-salary')&&staffControls.includes('previewWorldAction(read,c)')&&staffControls.includes('commitWorldAction(db,c)')&&staffControls.includes('!current()'));
 console.log('STAFF_CONTRACTS_UI PASS (estimated ability, interviews, offer terms, guarded confirmation)');

@@ -1,7 +1,7 @@
 // Recorded regional evidence, never exact hidden staff ability.
-function staffRegionalKnowledgeSummary(s){
+function staffRegionalKnowledgeSummary(s,db=DB){
   const rows=Object.entries(s.scoutRegions||{}).sort((a,b)=>b[1].knowledge-a[1].knowledge).slice(0,3);
-  return rows.length?'<p class="hint">지역 관찰 경험 · '+rows.map(([id,r])=>esc(DB.regions[id]?.name||id)+' '+Math.round(r.knowledge)+'% / '+r.observations+'회').join(' · ')+'</p>':'';
+  return rows.length?'<p class="hint">지역 관찰 경험 · '+rows.map(([id,r])=>esc(db.regions[id]?.name||id)+' '+Math.round(r.knowledge)+'% / '+r.observations+'회').join(' · ')+'</p>':'';
 }
 function scoutRegionalSummary(db,p){
   const view=scoutingRegionalPower(db,managedTeam(db),p),s=view.members[0],row=s?.scoutRegions?.[view.region];

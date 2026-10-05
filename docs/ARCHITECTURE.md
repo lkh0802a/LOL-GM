@@ -289,3 +289,7 @@ fields; no second contract, roster, finance or preview ledger is introduced.
 ui-club-eligibility는 full JSON 읽기 복사본에서 다음 실제 fixture의 공식/국제 명단, 현재 의료 가용, 저장 선발과 existing officialMatchView 보정을 구분한다. ui-club-briefing에 읽기·행동 진입을 제공하고 ui-registration의 선택적 db/allowed/root/after를 통해 기존 roster.register·roster.official-lineup writer를 재사용한다. 기존 default caller·AI/규칙/save schema를 바꾸지 않는다. UI context·actual dialog identity·등록 source snapshot과 확인 후 guard로 오래된 입력을 거절하며 world reset은 ephemeral draft만 지운다. 실제 의료 대체·정확한 미래 출전/전체 등록 adjudication은 이 presentation의 완료 범위가 아니다.
 
 `ui-club-finance.js` owns pure owned finance snapshots, provisional existing-writer sponsor projections and context guarded finance/sponsor overlay actions. `finance.js` remains the single sponsor/cash/settlement writer; `ui-manager.js:financePanel` and `ui-transfer-terms.js:transferPaymentsPanel` accept an optional read DB while default callers retain DB. Sponsorship bindings in the market use the same current world/slot/view/offer guard; staff bindings retain their separate writer. No new engine or save schema.
+
+### 현재 구단 직원 presentation (12.3.5)
+
+ui-club-staff는 private cloned read/ephemeral filter·draft와 실제 현장 source를 소유한다. ui-staff-controls는 market/overlay scoped root와 현재 world-slot-manager-dialog guards를 공유하고 기존 staff commands·rollback만 사용한다. 고용 full profile과 official filtered staff profile은 기존 consumers로 분리한다. 등록은 ui-registration의 기존 writer를 사용하며 새 saved schema·engine/economy coefficients는 없다.

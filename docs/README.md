@@ -79,3 +79,5 @@ Use [numeric stages 1–13 and dotted work units](DEVELOPMENT.md#unified-numeric
 - 12.3.3 소유 구단의 공식 등록·의료 가용·수동 선발과 실제 공식 소비: [수용 증거](evidence/club-registration-briefing.json), [원본 진단](evidence/club-registration-briefing-diagnostics.json), [실행 검사](../scripts/club-eligibility-acceptance.mjs). 전체 등록/의료/재정/UI 완료가 아니다.
 
 - 12.3.4 현재 현금·의무·조건부 예상과 실제 수동 후원/결산: [수용](evidence/club-finance-briefing.json), [원본 진단](evidence/club-finance-briefing-diagnostics.json). 전체 UI·재정·언어 완료가 아니다.
+
+- 12.3.5 관측 직원·수동 고용과 공식 현장 지원: [수용](evidence/club-staff-briefing.json), [원본 진단](evidence/club-staff-briefing-diagnostics.json). 전체 직원/UI/언어 완료가 아니다.
