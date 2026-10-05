@@ -20,6 +20,14 @@ publication are required follow-through, not the implementation slice itself.
 Check branch/PR/current main and ownership before editing; do not assume local
 files or another worker's unpushed changes exist in Cloud.
 
+## 현재 검증된 출시와 이번 구현 경계 — 2026-10-05 (12.3.5)
+
+직전 검증 출시 #193: exact PR head `2011aeea09e394bbac5be7512ec405da7041b54e` / ALL PR CI `37272435523` → main `8042519806fb15a57af90b8e0a21bbb31e4b131f` / ALL CI·standalone `37272979584`(unchanged) / Pages `37273625892`·publication job `111645747439`. 의료 core/regional0·1/calendar0·1/두집계7 labelled success/exitCode0와 verify, validated checkout/superseded-head guard/artifact `11329805217` digest `sha256:3bf1c89c916251d7897397d5aca3ad65955f5f6f63bb111425015719a840ac6e` 실제 다운로드 일치·동일 launcher-online-offline·actual Reported success는 #193 원기록에 보존한다. 실제 remote/main/branches/open27·28/conflicts/current-main README·DEVELOPMENT/규칙을 다시 확인했다. Native193 attachment cell53 hung bounded 종료로 성공 미확인; 직접 productionHTTP는 workflow와 별개 Cloud 정책 아래 미검증이다.
+
+이번 실제 **12.3.5 관측 직원·수동 고용/재계약/해지·공식 현장 등록→실제 지원 소비·결과·복귀·저장**은 편집 전45–55분 예상 범위였다. 가격/고용/현장/등록/AI/효과/101engine/save schema를 바꾸지 않는다. 새 exact-head PR CI/main/게시 gates는 확인 전 성공으로 쓰지 않는다. COMPLETE38/eight-audit/13서사/all-domain과 모든 원본 기록은 유지한다.
+
+### 보존된 #192→#193 당시 header 원문
+
 ## 현재 검증된 출시와 이번 구현 경계 — 2026-10-05 (12.3.4)
 
 직전 검증 출시 #192: exact PR head `310815f226dc9f89ddb0ef009f4aa1934c0846f4` / ALL CI `37262523203` → main `fc85cb68a018f64f9570bdf38982e742299cbb78` / ALL CI·standalone `37263352295`(unchanged) / Pages `37263884559`·publication job `111616515299`. 의료7 labelled success/exitCode0·verify, validated checkout/superseded-head guard/artifact `11325895880` digest `sha256:3d29a914396027dde6fbb6361462486e62114efbc4366959b644e0e79117d235` actual ZIP download SHA256 일치·동일 launcher-online-offline 조립·actual deployment는 PR192 최종 body/raw 증거에 보존한다. 실제 remote/main/branches/open27·28/파일 충돌·현재 main 가이드를 다시 확인했다. Native192 attachment hung cell32 bounded 종료로 성공 미확인, 직접 productionHTTP는 workflow와 별개 Cloud정책 아래 미검증이다.
@@ -1722,3 +1730,20 @@ Local UI81수용/80freshVM·101engine, calendar20, static14/build145, isolated N
 [실행 수용](../scripts/club-finance-acceptance.mjs), [실제 소스·소비 증거](evidence/club-finance-briefing.json), [원본 source·실패·진단](evidence/club-finance-briefing-diagnostics.json) 및 실제 존재하는 ALL `/tmp/club-finance-*` 원본을 보존한다. 초기 잘못된 함수명/연산순서/year·season fields/publicRecord shape/minimal VM dependency/literal DB assertion/incomplete invoice save refusal/default childprocess/socket sandbox 실패 원문과 교정 근거를 유지한다. 실제 complete invoice writer로 fixture를 공급하고 validator/assertions/budgets/instrumentation/fallback은 약화하지 않았다. 원본 first와 final2/final3 캡처는 경로를 재사용하지 않는다. 역사#180 최초 성공 screenshot bytes overwrite 한계는 계속 기록한다. 전체 UI·독립 목적지·사무국·언어·AnalysisRoom·레이더·모든 승인 범위 완료가 아니다.
 
 **정확한 다음45–55분 구현: 12.3.5 현재 소유 구단의 실제 스태프 고용·공식 현장 등록·공석 구분→기존 관측/면접·수동 계약/등록→실제 준비·현장 소비·결과·복귀·저장.** Fresh inspect staffProfile/teamStaffMembers/competitionStaffRegistration/staffOnsite/직무·실제 effect consumer, ui-market-staff staffEmploymentCard/bindClubOfficeControls, shared staff command·authority·예산·기간·보상부터. 직무별 실제 현행 고용/현장/관측을 분리하고 없는 vacancy 과제·업무량/가격·벌점·언어상태/새효과를 만들지 않는다. 조회의 lazy report/facility getter는 private copy, actual interview/hire/renew/release/registration은 기존 writer와 최신 권한/금액/기간으로 연결한다. parent/reserve·foreign/fired/manual/stale/root/confirm cancellation·rejection/rollback/full-lite·현장 effect source/반례를 수용한다. 큰 boundary가55분을 넘으면 actual observed staff→manual contract→실제 consumer 경계를 완결하고 continuation을 기록한다. 새 source-backed engine defect 우선, completed engine audits/unchanged blocked shop8.2.2·XP8.5.1 획득 반복 금지. COMPLETE38/eightaudit/13서사/all-domain, full UI/목적별topnav/언어·clubfinance/career/office-countrytier2-broadcast, final100season/device/mobile/TalkBack 조건은 별도로 남는다.
+
+
+### 12.3.5 관측 직원·고용·공식 현장과 실제 소비 — 2026-10-05
+
+`ui-club-staff.js`는 current owned/ownedreserve private full JSON read와 임시 직무/페이지/raw inputs/문맥을 소유한다. 고용 상한은 실제 coach9/analyst4/scout6 규칙이며 남은 자리를 의무 공석으로 만들지 않는다. 자기 고용 지원/훈련·회복 전체 고용과 공식 draft/analysis/scouting 현장 명단을 분리한다. 실제 공개된 competitionStaffPolicy의 max/lockAt만 표시하며 없는 대회·마감·업무·언어 상태를 만들지 않는다. 관측 시장 카드의 범위/현재 면접 날짜/기존 요구 연봉·기간/경력은 기존 getter를 private clone에서 읽는다. 상대 실제 능력이나 비공개 연습은 읽지 않는다.
+
+`ui-staff-controls.js`는 기존 시장과 팝업의 scoped root를 공유하며 실제 staff.interview/sign/renew/release previewWorldAction→confirm→current guard 재검사→commitWorldAction을 사용한다. current DB/world/slot/manager/render/VIEW/actual dialog/date/year/staff/finance/phase/manual/fired/active를 검사한다. 거절한 raw 조건도 같은 문맥의 재개에 유지한다. 계약은 현재 관리 구단만 가능하며 parent의 소유 reserve 조회·기존 공식 등록 권한이 계약 대행을 만들지 않는다. 기존 명령의 현재 돈/교체 동의/기간/보상/거절/rollback이 최종 권한이다. 계약 총액은 일시 선납으로 표시하지 않는다. 기존 registration panel/writer는 현장 수동 선택·현재 창구를 소비하고 departed staff history는 남긴다. 저장 형식·새 효과 계수/가격/자동 선발은 없다.
+
+원본 실제 market interview DOM callback after pack/unpack는 새 DB report와 1 save를 작성했다. controlled source counterexample와 원본 source/log는 [진단](evidence/club-staff-briefing-diagnostics.json)에 보존한다. 새 shared guard의 동일 stale callback은 inert다. 자연 사용자 빈도/전체 callback rollback/분산 탭 보장은 주장하지 않는다. 실제 브라우저 filter 후 close focus 오류도 재현해 원래 브리핑 버튼으로 복원했다.
+
+[focused 수용](../scripts/club-staff-acceptance.mjs)과 [증거](evidence/club-staff-briefing.json)는 pure read/면접/7년 고용/현재 만료 재계약/해지·취소/음수 연봉 거절/duplicate/stale/confirm date change/parentreserve·foreign·fired·AI·initial/실제 whole-world 기존 writer equality/full-lite history/late rollback을 연결한다. 실제 published max1 현장 선택은 officialMatchView의 strategy 1명/미등록 분석 제외와 actual domestic Bo1 nexus CR37:32/staffService/career series1에 이어졌다. 강제 결과·프로 보정이 아니다.
+
+로컬 UI83수용/82freshVM/101engine, calendar20, static14/build148, Node22 regression/smoke28294ms(기존35s)·두시즌186공식 경기 통과. Chromium1280/320 actual Enter/관측·raw7년/배경3년 vs 팝업7년·whole writer/현장 등록/official consumer/save/stale/fired/same-kind/scroll·focus/no overflow-pageerror 통과. 동일 rebuiltHTML injection·controlled localStorage이며 productionHTTP/최종 기기 QA가 아니다. 재계약·해지/닫힌 창구·퇴사 기록/거절 raw 복귀를 확장한 최종 focused도 통과했다. 새 exact-head CI는 별도로 확인한다. module 수는 전체 완료 근거가 아니다.
+
+원본 실패/fixture의 실제 source shape/VM globals/페이지·만료 조건/selector·coach tab/default sandbox/current focus와 수정은 진단 raw에 보존한다. 기존 budgets/assertions/instrumentation/fallback/GC/billing을 약화하지 않았다. 별도 dirty analysis explorer/base9e2b085는 unchanged, 열린27/28은 충돌 검토만 하고 merge하지 않았다.
+
+다음 **12.3.6 현재 소유 의료 가용·수동 휴식/재활 계획→기존 실제 일일·훈련/스크림·공식 소비→결과·복귀·저장**. fresh inspect medicalPlanFor/medicalScrimRest/medicalOut/medicalDailyTick/medicalRosterStatus와 ui-roster 실제 writer/ownedreserve/manual 권한부터. 현재 가용·추정 복귀·고용/등록/선발을 분리, 없는 마감/치료비/새효과/미래복귀 보장을 만들지 않는다. system-only medicalEmergencyFASigning은 새 수동 권한으로 바꾸지 않는다. source-backed engine defect는 최우선이며 완료 audit/변함없는 shop8.2.2·XP8.5.1 source gap 획득을 반복하지 않는다. 전체 UI/직원·의료/AnalysisRoom/언어/13서사/38/eight-audit/all-domain 승인 미완료와 최종100season/device/mobile/TalkBack 유예는 유지한다.
