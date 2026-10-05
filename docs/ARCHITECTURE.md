@@ -283,3 +283,7 @@ fields; no second contract, roster, finance or preview ledger is introduced.
 ### 12.3.2 구단 브리핑·동시 입력 소유
 
 `ui-club-briefing.js`가 ephemeral owned-club read/context와 overlay 이동·복귀를 소유한다. `app.viewSeason`/`ui-season.bindSeason`이 소비하며 날짜·official·contract writer는 기존 engine/shared command다. 복사본 단일 negotiation render와 선택적 root를 가진 공통 UI controls가 배경 시장과 팝업 입력을 분리한다. root 기본값 document는 기존 호출을 유지한다. live world에 view용 negotiationStore를 만들거나 새 저장 schema/계수를 추가하지 않는다. 순수 조회/현재 권한·stale·실제 원문/수동 행동·저장 수용은 club-briefing-acceptance.mjs와 DEVELOPMENT12.3.2를 따른다.
+
+### 12.3.3 소유 구단 등록·가용 조회와 기존 수동 명령
+
+ui-club-eligibility는 full JSON 읽기 복사본에서 다음 실제 fixture의 공식/국제 명단, 현재 의료 가용, 저장 선발과 existing officialMatchView 보정을 구분한다. ui-club-briefing에 읽기·행동 진입을 제공하고 ui-registration의 선택적 db/allowed/root/after를 통해 기존 roster.register·roster.official-lineup writer를 재사용한다. 기존 default caller·AI/규칙/save schema를 바꾸지 않는다. UI context·actual dialog identity·등록 source snapshot과 확인 후 guard로 오래된 입력을 거절하며 world reset은 ephemeral draft만 지운다. 실제 의료 대체·정확한 미래 출전/전체 등록 adjudication은 이 presentation의 완료 범위가 아니다.

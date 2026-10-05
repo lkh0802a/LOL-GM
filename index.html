@@ -12638,10 +12638,11 @@ function clubBriefFixture(db,ctx=clubBriefContext(db)){
   return rows[0]||null;
 }
 function renderClubBriefing(){
-  const ctx=clubBriefContext();if(!ctx)return '';
+  const ctx=clubBriefContext();if(!ctx){CLUB_ENTRY_DRAFT=null;return '';}
   const state=clubBriefState(),nx=clubBriefFixture(DB,ctx),ns=clubBriefNegotiations(DB,ctx),cw=ctx.w.contractWindow;
   return `<section id="club-briefing"><h3 tabindex="-1">구단 운영 브리핑</h3><p class="hint">${esc(ctx.t.name)} · 기준일 ${esc(DB.worldDate||'날짜 미정')} · ${ctx.w.manage==='manual'?'직접 운영':'현재 AI 위임 설정'} · 확정된 일정과 진행 중인 내 구단 협상만 표시합니다.</p><p role="status">${esc(state.message)}</p>
     ${nx?`<div class="cfgcard"><h4>다음 공식 경기</h4><p>${esc(DB.competitions[nx.s.comp].name)} · ${esc(nx.d.label||'')} · Bo${nx.m.bo}</p><p>${esc(nx.d.date)} UTC · ${esc(fixtureTimeInfo(nx.m))} · ${esc(DB.teams[nx.m.a].name)} vs ${esc(DB.teams[nx.m.b].name)}</p><div class="controls"><button data-brief-schedule="${esc(nx.s.key)}">해당 일정 확인</button><button data-brief-progress="smine">내 경기까지 진행</button></div></div>`:'<p class="hint">현재 생성된 일정에 남은 내 공식 경기가 없습니다. 아직 생성되지 않은 대진은 예측하지 않습니다.</p>'}
+    ${renderClubEligibility()}
     ${SSET.tab==='sched'?'<button class="ghost" data-brief-return>브리핑으로 돌아오기</button>':''}
     ${ctx.w.phase==='season'?'<div class="controls"><button data-brief-progress="sday">하루 진행</button></div>':''}
     ${cw&&ctx.w.phase==='offseason'?`<p class="hint">현재 계약 창구 · ${cw.stage==='exclusive'?'원소속 독점 협상':'FA 시장'}${cw.exclusiveThrough?' · 독점 종료 '+esc(cw.exclusiveThrough):''}${cw.outsideContactDate?' · 타 구단 접촉 '+esc(cw.outsideContactDate):''}. 개별 협상 만료일로 해석하지 않습니다.</p>`:''}
@@ -12665,6 +12666,7 @@ function openClubBriefNegotiation(nid){
 }
 function bindClubBriefing(){
   const ctx=clubBriefContext();if(!ctx)return;
+  bindClubEligibility();
   const db=DB,w=ctx.w,slot=SLOT,render=UI_RENDER_ID,date=db.worldDate,phase=w.phase,nx=clubBriefFixture(db),current=()=>clubBriefCurrent(db,w,slot,render,ctx.t.id)&&db.worldDate===date&&w.phase===phase&&!UI_OVERLAY;
   document.querySelectorAll('[data-brief-neg]').forEach(b=>b.onclick=()=>{if(current())openClubBriefNegotiation(b.dataset.briefNeg)});
   document.querySelectorAll('[data-brief-schedule]').forEach(b=>b.onclick=()=>{if(!current()||clubBriefFixture(db)?.m.id!==nx?.m.id)return;SSET.view=b.dataset.briefSchedule;SSET.tab='sched';navKeepScroll();document.querySelector('#stab')?.setAttribute?.('tabindex','-1');document.querySelector('#stab')?.focus?.()});
@@ -12676,6 +12678,64 @@ function clubBriefDraft(nid,root,values=null){
   const neg=initialNegotiationDraft(nid,values?.neg||null,root),fees={};
   for(const key of ['fee','upfront','kind','threshold','bonus']){const el=root.querySelector(`[data-${key==='fee'?'neg-fee':'fee-'+key}="${nid}"]`);if(el){if(values?.fees&&key in values.fees)el.value=values.fees[key];fees[key]=el.value}}
   return {neg,fees};
+}
+
+/* ==== FILE: ui-club-eligibility.js ==== */
+// Current owned entry/availability reads use private copies; commands own all changes.
+let CLUB_ENTRY_DRAFT=null;
+function clubEntryModel(db=DB,tid=managedTeamId(db)){
+  const ctx=clubBriefContext(db),t=db?.teams?.[tid];
+  if(!ctx||!t||!managerControlsSquad(db,t))return null;
+  const read=JSON.parse(JSON.stringify(db)),team=read.teams[tid],nx=clubBriefFixture(read,{...clubBriefContext(read),t:team}),s=nx?.s||null,
+    enabled=officialRegistrationEnabled(read),ids=officialSeasonRoster(read,team,s).slice(),
+    view=officialMatchView(read,s,tid,tid),effective=view.teams[tid],stored=team.registration?.depthChart||{},
+    pool=Array.from(new Set([...team.roster,...(team.registration?.players||[]),...ids]));
+  const rows=pool.map(id=>{
+    const p=read.players[id],listed=ids.includes(id),rights=!!p&&(!enabled?!p.retired&&team.roster.includes(id):officialPlayerCanRepresent(read,p,team)),out=!!p&&medicalOut(p);
+    return {id,name:p?.name||'선수 기록 없음',training:read.teams[p?.team]?.short||'무소속',registered:!!team.registration?.players?.includes(id),listed,
+      health:p?medicalSummary(p):'기록 없음',available:listed&&rights&&!out,
+      reason:!p?'선수 기록 없음':!listed?'해당 공식 명단에 없음':!rights?'현재 대표 자격 없음':out?'의료상 출전 불가':'현재 출전 가능'};
+  });
+  const registration=enabled?previewWorldAction(read,{type:'roster.register',actor:'manager',teamId:tid,players:team.registration?.players||[]}):null,
+    lineup=enabled?previewWorldAction(read,{type:'roster.official-lineup',actor:'manager',teamId:tid,lineup:stored}):null;
+  return {read,team,nx,enabled,international:!!s&&!!read.competitions[s.comp]?.international,rows,stored,effective:effective.depthChart,
+    available:rows.filter(x=>x.available).length,registration,lineup,checked:validateStartingLineup(view,effective)};
+}
+function clubEntryConditions(m){return `<details><summary>선수별 출전 조건과 선발 근거</summary>${m.rows.map(x=>`<p><b>${esc(x.name)}</b> · 훈련 ${esc(x.training)} · 구단 공식 ${!m.enabled?'기록 없음':x.registered?'등록':'미등록'} · 대상 명단 ${x.listed?'포함':'미포함'} · ${esc(x.health)} · ${esc(x.reason)}</p>`).join('')||'<p>선수 명단 없음</p>'}
+    <p class="hint">${ROLES.map(r=>esc(ROLE_KO[r])+': 저장 '+esc(m.read.players[m.stored[r]]?.name||'미지정')+' / 현재 경기뷰 '+esc(m.read.players[m.effective[r]]?.name||'가용 선수 없음')).join(' · ')}. 경기뷰는 기존 엔진의 가용 검사와 보정 결과이며 수동 저장 선발로 가장하지 않습니다.</p></details>`}
+function renderClubEligibility(){
+  const m=clubEntryModel();if(!m)return '';
+  if(CLUB_ENTRY_DRAFT&&(CLUB_ENTRY_DRAFT.key[0]!==DB||CLUB_ENTRY_DRAFT.key[1]!==SLOT||CLUB_ENTRY_DRAFT.key[6]!==managedTeamId(DB)))CLUB_ENTRY_DRAFT=null;
+  const error=p=>p? p.ok?'기존 명령의 현재 검증 통과':p.errors.join(' · '):'구형 저장: 별도 공식 등록 규칙 미사용';
+  return `<div id="club-entry" class="cfgcard"><h4 tabindex="-1">공식 등록 · 가용 확인</h4><p class="hint">${esc(m.nx?'일정 '+m.nx.m.id+' · '+m.nx.d.date:'남은 공식 일정 없음 · 현재 명단 기준')} · ${!m.enabled?'구형 저장의 계약·훈련 명단':m.international?'해당 국제대회 제출 엔트리':'현재 공식 등록 명단'} · 현재 가용 ${m.available}명</p>
+    <p class="hint">계약·훈련 소속, 등록, 선발, 의료 가용은 별개입니다. 미래 출전이나 수락을 보장하지 않습니다. 등록 검사: ${esc(error(m.registration))} · 저장된 선발 검사: ${esc(error(m.lineup))}</p>
+    ${clubEntryConditions(m)}
+    ${m.enabled?`<button data-brief-entry="${esc(m.team.id)}"${DB.world.manage!=='manual'?' disabled':''}>공식 명단·선발 수동 확인</button>${clubBriefContext().teams.filter(id=>id!==m.team.id).map(id=>`<button data-brief-entry="${esc(id)}"${DB.world.manage!=='manual'?' disabled':''}>${esc(DB.teams[id].name)} 등록·가용 확인</button>`).join('')}`:''}</div>`;
+}
+function clubEntryStamp(db,tid){
+  const t=db.teams[tid],teams=organizationTeams(db,parentTeamOf(db,t)),players=Array.from(new Set(teams.flatMap(x=>[...x.roster,...(x.registration?.players||[])])));
+  return JSON.stringify(officialRegistrationSnapshot(db,{teamId:tid,players}))+JSON.stringify([db.world.registrationVersion,db.world.manage,clubBriefFixture(db)?.m.id]);
+}
+function clubEntryDraft(root,values=null){
+  const fields=[...root.querySelectorAll('[data-official-destination]'),...root.querySelectorAll('[data-official-role]'),...root.querySelectorAll('[data-competition-staff]')],out={};
+  for(const el of fields){const d=el.dataset,key=d.officialDestination?'player:'+d.officialDestination:d.officialRole?'role:'+d.officialRole:'staff:'+d.competitionStaff+':'+el.value;if(values&&key in values){if(d.competitionStaff)el.checked=values[key];else el.value=values[key]}out[key]=d.competitionStaff?el.checked:el.value}return out;
+}
+function openClubEntry(tid){
+  const ctx=clubBriefContext(),m=clubEntryModel(DB,tid);if(!m?.enabled||ctx.w.manage!=='manual'||UI_OVERLAY)return false;
+  const db=DB,w=db.world,slot=SLOT,render=UI_RENDER_ID,stamp=clubEntryStamp(db,tid),date=db.worldDate,phase=w.phase,root=document.querySelector('#overlay');let dialog=null;
+  const current=()=>clubBriefCurrent(db,w,slot,render,ctx.t.id)&&!w.fired&&w.manage==='manual'&&db.worldDate===date&&w.phase===phase&&UI_OVERLAY===dialog&&managerControlsSquad(db,db.teams[tid])&&clubEntryStamp(db,tid)===stamp;
+  const draftKey=[db,slot,tid,date,phase,stamp,ctx.t.id];
+  const close=()=>{if(UI_OVERLAY!==dialog)return;if(current())CLUB_ENTRY_DRAFT={key:draftKey,values:clubEntryDraft(root)};closeUiOverlay()};
+  openUiOverlay({kind:'club-entry',label:'공식 명단·선발 수동 확인',dismissible:true,onDismiss:close,focusSelector:'#brief-entry-close',html:`<div class="ovin"><div class="ovhead"><b>${esc(m.team.name)} 공식 명단·선발</b><button id="brief-entry-close" class="ghost">브리핑으로 돌아가기</button></div><p class="hint">작성은 제출 전까지 적용되지 않습니다. 등록 기간과 현재 자격은 기존 명령이 다시 검사합니다.</p>${clubEntryConditions(m)}${officialRegistrationPanel(m.team,m.read)}</div>`});dialog=UI_OVERLAY;
+  if(CLUB_ENTRY_DRAFT?.key.every((v,i)=>v===draftKey[i]))clubEntryDraft(root,CLUB_ENTRY_DRAFT.values);else CLUB_ENTRY_DRAFT=null;
+  $('#brief-entry-close').onclick=close;
+  bindOfficialRegistrationControls(current,root,()=>{CLUB_ENTRY_DRAFT=null;clubBriefState().message=MSG;closeUiOverlay({restoreFocus:false});navKeepScroll();document.querySelector('#club-entry h4')?.focus?.({preventScroll:true})});
+  return true;
+}
+function bindClubEligibility(){
+  const ctx=clubBriefContext();if(!ctx)return;
+  const db=DB,w=ctx.w,slot=SLOT,render=UI_RENDER_ID,date=db.worldDate;
+  document.querySelectorAll('[data-brief-entry]').forEach(b=>b.onclick=()=>{if(clubBriefCurrent(db,w,slot,render,ctx.t.id)&&db.worldDate===date&&!UI_OVERLAY)openClubEntry(b.dataset.briefEntry)});
 }
 
 /* ==== FILE: ui-transfer-terms.js ==== */
@@ -13749,57 +13809,62 @@ function bindScrimPlans(){
 }
 
 /* ==== FILE: ui-registration.js ==== */
-function officialRegistrationPanel(t){
-  if(!officialRegistrationEnabled(DB))return '';
-  const mine=!DB.world?.fired&&managerControlsSquad(DB,t),open=officialRegistrationOpen(DB,t),
-    root=parentTeamOf(DB,t),teams=managedTeam(DB)?.parent?[t]:organizationTeams(DB,root),
+function officialRegistrationPanel(t,db=DB){
+  if(!officialRegistrationEnabled(db))return '';
+  const mine=!db.world?.fired&&managerControlsSquad(db,t),open=officialRegistrationOpen(db,t),
+    root=parentTeamOf(db,t),teams=managedTeam(db)?.parent?[t]:organizationTeams(db,root),
     players=mine?Array.from(new Set(teams.flatMap(x=>[...x.roster,...(x.registration?.players||[])]))):t.registration?.players||[],
-    current=t.registration?.players||[],depth=mine?officialMatchView(DB,null,t.id,t.id).teams[t.id].depthChart:{};
-  return `<section><h3>공식 등록 · ${current.length}/${officialRosterCap(DB,t)}명</h3>
+    current=t.registration?.players||[],depth=mine?officialMatchView(db,null,t.id,t.id).teams[t.id].depthChart:{};
+  return `<section><h3>공식 등록 · ${current.length}/${officialRosterCap(db,t)}명</h3>
     <p class="hint">${open?'등록 기간 열림':'등록 기간 닫힘'} · 계약·훈련 소속과 공식 출전 명단은 별개입니다. 미등록 선수도 훈련·스크림에 참여합니다.</p>
     <details class="cfgcard"><summary>공식 명단 확인 / 변경</summary>
-      ${players.map(id=>{const p=DB.players[id];if(!p)return '';const registered=teams.find(x=>x.registration?.players.includes(id));
-        return `<label class="cfgcard"><b>${esc(p.name)}</b> · 훈련 ${esc(DB.teams[p.team]?.short||'무소속')}
+      ${players.map(id=>{const p=db.players[id];if(!p)return '';const registered=teams.find(x=>x.registration?.players.includes(id));
+        return `<label class="cfgcard"><b>${esc(p.name)}</b> · 훈련 ${esc(db.teams[p.team]?.short||'무소속')}
           ${mine&&open?`<select data-official-destination="${id}"><option value="">미등록</option>${teams.map(x=>`<option value="${x.id}"${registered?.id===x.id?' selected':''}>${esc(x.short)} 공식 명단</option>`).join('')}</select>`:
           `<span>${registered?esc(registered.short)+' 등록':'미등록'}</span>`}</label>`}).join('')}
       ${mine&&open?`<button class="primary" data-official-submit="${t.id}">공식 명단 변경 확인</button>`:''}</details>
-    ${competitionStaffRegistrationPanel(t)}
+    ${competitionStaffRegistrationPanel(t,db)}
     ${mine?`<details class="cfgcard"><summary>공식전 선발 5명</summary><p class="hint">등록된 선수 안의 선발 변경은 등록 기간 밖에도 가능합니다. 훈련 그룹 선발과 별도로 적용됩니다.</p>
-      ${ROLES.map(role=>`<label>${ROLE_KO[role]}<select data-official-role="${role}">${current.filter(id=>officialPlayerCanRepresent(DB,DB.players[id],t)).map(id=>`<option value="${id}"${depth[role]===id?' selected':''}>${esc(DB.players[id].name)} · 적합 ${playerRoleRating(DB.players[id],role)}</option>`).join('')}</select></label>`).join('')}
+      ${ROLES.map(role=>`<label>${ROLE_KO[role]}<select data-official-role="${role}">${current.filter(id=>officialPlayerCanRepresent(db,db.players[id],t)).map(id=>`<option value="${id}"${depth[role]===id?' selected':''}>${esc(db.players[id].name)} · 적합 ${playerRoleRating(db.players[id],role)}</option>`).join('')}</select></label>`).join('')}
       <button class="ghost" data-official-lineup="${t.id}">공식 선발 적용</button></details>`:''}</section>`;
 }
-function bindOfficialRegistrationControls(){
-  document.querySelectorAll('[data-official-submit]').forEach(b=>b.onclick=()=>{
+function bindOfficialRegistrationControls(allowed=()=>true,root=document,after=()=>navKeepScroll()){
+  root.querySelectorAll('[data-official-submit]').forEach(b=>b.onclick=()=>{
+    if(!allowed())return;
     const t=DB.teams[b.dataset.officialSubmit],teams=managedTeam(DB)?.parent?[t]:organizationTeams(DB,t),
       registrations=Object.fromEntries(teams.map(x=>[x.id,[]]));
-    document.querySelectorAll('[data-official-destination]').forEach(el=>{
+    root.querySelectorAll('[data-official-destination]').forEach(el=>{
       if(Object.hasOwn(registrations,el.value))registrations[el.value].push(el.dataset.officialDestination);
     });
     const preview=previewWorldAction(DB,{type:'roster.register',actor:'manager',teamId:t.id,registrations});
-    if(!preview.ok){MSG=preview.errors.join(' · ');navKeepScroll();return}
+    if(!preview.ok){MSG=preview.errors.join(' · ');after();return}
     if(!confirm('공식 명단을 제출할까요?\n'+teams.map(x=>x.short+' '+registrations[x.id].length+'명').join(' · ')+
       '\n계약·훈련 배치는 유지됩니다. 제출 즉시 출전 자격이 변경됩니다.'))return;
+    if(!allowed())return;
     const result=applyWorldAction(DB,preview);MSG=result.ok?'공식 명단 제출 완료':result.errors.join(' · ');
-    if(result.ok)saveDB();navKeepScroll();
+    if(result.ok)saveDB();after();
   });
-  document.querySelectorAll('[data-official-lineup]').forEach(b=>b.onclick=()=>{
-    const lineup=Object.fromEntries(Array.from(document.querySelectorAll('[data-official-role]')).map(el=>[el.dataset.officialRole,el.value]));
+  root.querySelectorAll('[data-official-lineup]').forEach(b=>b.onclick=()=>{
+    if(!allowed())return;
+    const lineup=Object.fromEntries(Array.from(root.querySelectorAll('[data-official-role]')).map(el=>[el.dataset.officialRole,el.value]));
     const result=commitWorldAction(DB,{type:'roster.official-lineup',actor:'manager',teamId:b.dataset.officialLineup,lineup});
-    MSG=result.ok?'공식 선발 변경 완료':result.errors.join(' · ');if(result.ok)saveDB();navKeepScroll();
+    MSG=result.ok?'공식 선발 변경 완료':result.errors.join(' · ');if(result.ok)saveDB();after();
   });
-  document.querySelectorAll('[data-competition-staff-submit]').forEach(b=>b.onclick=()=>{
-    const ids=Array.from(document.querySelectorAll(`[data-competition-staff="${b.dataset.competitionStaffSubmit}"]:checked`)).map(x=>x.value),preview=previewWorldAction(DB,{type:'competition.staff-register',actor:'manager',seasonId:b.dataset.competitionStaffSubmit,teamId:b.dataset.teamId,staffIds:ids});
-    if(!preview.ok){MSG=preview.errors.join(' · ');navKeepScroll();return}
+  root.querySelectorAll('[data-competition-staff-submit]').forEach(b=>b.onclick=()=>{
+    if(!allowed())return;
+    const ids=Array.from(root.querySelectorAll(`[data-competition-staff="${b.dataset.competitionStaffSubmit}"]:checked`)).map(x=>x.value),preview=previewWorldAction(DB,{type:'competition.staff-register',actor:'manager',seasonId:b.dataset.competitionStaffSubmit,teamId:b.dataset.teamId,staffIds:ids});
+    if(!preview.ok){MSG=preview.errors.join(' · ');after();return}
     if(!confirm('대회 현장 스태프 '+ids.length+'명을 등록할까요?\n마감 뒤에는 변경할 수 없습니다.'))return;
-    const result=applyWorldAction(DB,preview);MSG=result.ok?'대회 현장 스태프 등록 완료':result.errors.join(' · ');if(result.ok)saveDB();navKeepScroll();
+    if(!allowed())return;
+    const result=applyWorldAction(DB,preview);MSG=result.ok?'대회 현장 스태프 등록 완료':result.errors.join(' · ');if(result.ok)saveDB();after();
   });
 }
-function competitionStaffRegistrationPanel(t){
-  const seasons=Object.values(DB.world?.seasons||{}).filter(s=>DB.competitions[s.comp]?.teams.includes(t.id)&&competitionStaffPolicy(DB,s));if(!seasons.length)return '';
+function competitionStaffRegistrationPanel(t,db=DB){
+  const seasons=Object.values(db.world?.seasons||{}).filter(s=>db.competitions[s.comp]?.teams.includes(t.id)&&competitionStaffPolicy(db,s));if(!seasons.length)return '';
   return seasons.map(s=>{
-    const p=competitionStaffPolicy(DB,s),open=!DB.world?.fired&&managerControlsSquad(DB,t)&&staffRegistrationOpen(DB,s),selected=new Set(competitionStaffEntry(DB,s,t.id)),members=teamStaffMembers(t),
+    const p=competitionStaffPolicy(db,s),open=!db.world?.fired&&managerControlsSquad(db,t)&&staffRegistrationOpen(db,s),selected=new Set(competitionStaffEntry(db,s,t.id)),members=teamStaffMembers(t),
       departed=(s.staffEntryRecords?.[t.id]?.staff||[]).filter(x=>!members.some(m=>m.id===x.id));
-    return `<details class="cfgcard"><summary>${esc(DB.competitions[s.comp].name)} 현장 스태프 · ${selected.size}/${p.max}명</summary><p class="hint">${s.done?'대회 종료':open?'마감 전 변경 가능':'등록 마감됨'} · 마감 ${esc(p.lockAt)} · 공식전 코칭·분석은 현재 고용 중인 등록 직원이 담당합니다. AI는 관측 평가·공개 전문성의 보완 효과로 선택하며 필수 직무 할당은 없습니다. 구단 훈련·회복은 전체 고용 인원이 담당합니다.</p>${members.map(x=>`<label><input type="checkbox" data-competition-staff="${esc(s.id)}" value="${esc(x.id)}"${selected.has(x.id)?' checked':''}${!open?' disabled':''}> ${esc(x.name)} · ${esc(STAFF_ROLES[x.role])}${x.role==='analyst'||staffSecondaryRoles(x).includes('analyst')?' · '+(ANALYSIS_CONTEXTS[x.analysisFocus]||'범용'):''}</label>`).join('')}${departed.map(x=>`<p class="hint">${esc(x.name)} · ${esc(STAFF_ROLES[x.role]||x.role)} · 제출 후 퇴사</p>`).join('')}${open?`<button class="primary" data-competition-staff-submit="${esc(s.id)}" data-team-id="${esc(t.id)}">현장 명단 제출</button>`:''}</details>`;
+    return `<details class="cfgcard"><summary>${esc(db.competitions[s.comp].name)} 현장 스태프 · ${selected.size}/${p.max}명</summary><p class="hint">${s.done?'대회 종료':open?'마감 전 변경 가능':'등록 마감됨'} · 마감 ${esc(p.lockAt)} · 공식전 코칭·분석은 현재 고용 중인 등록 직원이 담당합니다. AI는 관측 평가·공개 전문성의 보완 효과로 선택하며 필수 직무 할당은 없습니다. 구단 훈련·회복은 전체 고용 인원이 담당합니다.</p>${members.map(x=>`<label><input type="checkbox" data-competition-staff="${esc(s.id)}" value="${esc(x.id)}"${selected.has(x.id)?' checked':''}${!open?' disabled':''}> ${esc(x.name)} · ${esc(STAFF_ROLES[x.role])}${x.role==='analyst'||staffSecondaryRoles(x).includes('analyst')?' · '+(ANALYSIS_CONTEXTS[x.analysisFocus]||'범용'):''}</label>`).join('')}${departed.map(x=>`<p class="hint">${esc(x.name)} · ${esc(STAFF_ROLES[x.role]||x.role)} · 제출 후 퇴사</p>`).join('')}${open?`<button class="primary" data-competition-staff-submit="${esc(s.id)}" data-team-id="${esc(t.id)}">현장 명단 제출</button>`:''}</details>`;
   }).join('');
 }
 
@@ -14678,7 +14743,7 @@ function resetUiForWorld(){
   if(typeof START_UI!=='undefined')START_UI={active:!DB.world,page:'home',error:''};
   if(UI_OVERLAY)closeUiOverlay({force:true,restoreFocus:false});
   DRAFT_UI=null;
-  LAST=null;LASTSER=null;OPEN_P=null;SQUAD_EDIT=null;MSG='';
+  LAST=LASTSER=OPEN_P=SQUAD_EDIT=null;MSG='';CLUB_ENTRY_DRAFT=null;
   MC.res=null;MC.running=false;SSET.view=null;
   PSET.team='ALL';PSET.player='ALL';PSET.opponent='ALL';PSET.color='ALL';PSET.playerSearch='';PSET.prepTeam='AUTO';
   ANALYSIS_SET={mode:'own',team:'AUTO',period:'90',patch:'CURRENT',position:'ALL',prepTeam:'AUTO',review:'',reviewTab:'records',tierView:'public',tierQ:'',comp:'ALL'};

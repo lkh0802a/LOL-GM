@@ -93,6 +93,7 @@ const maintainabilityBudgets = {
   'app.js': 22000,
   'ui-startup.js': 7000,
   'ui-club-briefing.js': 8500,
+  'ui-club-eligibility.js': 7500,
   'ui-state.js': 6500,
   'ui-overlay.js': 6500,
   'random.js': 5000,

@@ -1,0 +1,491 @@
+{
+  "task": "12.3.3",
+  "baseMain": "5d15131e50101a5ac364845af8b3a97dc4ff4e87",
+  "sourceHashes": {
+    "src/artifact/ui-club-eligibility.js": "03a90c62d1006b243aa4b27aaa77c683273c7aeb18eb793a37dbcac4009d9801",
+    "src/artifact/ui-registration.js": "837c54c27531e1f8e8d509b2de6e11fec8c9498d0f894bc85ee6e7b5d0335142",
+    "src/artifact/ui-club-briefing.js": "7edad4edb0fb1b935eb9d442849e26d7d9d1617a365ec04757a13997bdf55642",
+    "src/artifact/ui-state.js": "7663dc05501806385f0ac4d4d8ff342c2d53624ad9956c1da49142bf28cdecc2",
+    "scripts/club-eligibility-acceptance.mjs": "e558c4d1f7c1394ae52f9439b4e7d18f660a7b52105fc2ef42a69528a7a724a6",
+    "scripts/club-briefing-acceptance.mjs": "f38bc1bd94d62c838981f05b82df04d877ef179619a9ee85de42ed67e6b20274",
+    "scripts/ui-async-acceptance.mjs": "d0eb8e8ebb60b61615b6580955e259427e5b141900a2252fd18649d761986dc2",
+    "scripts/ui-finance-contracts-runner.mjs": "30dee390372598981b2f158eb12cfbaecc4c5dfac69ae5d39c8353413b785cb6",
+    "scripts/artifact-modules.mjs": "161eda0a8265a4123a56b55617b63eef7fe27e37024b68cd1b02b240f2afd561",
+    "scripts/check.mjs": "f8702ea0beb3a594445a1f77e47b44f783aacb2150c94d050e6afd909c8320ad",
+    "package.json": "24d9683acf8aa655fe74f8c81ec84bc8b96c7134aa7afa15ae32a7502941f006",
+    "index.html": "d08996ea007d03a9d31eeab0d2389d320d88d177b4b7f43023afd1bd48d325e6"
+  },
+  "actualFocused": {
+    "pure": true,
+    "employmentDistinct": true,
+    "medical": true,
+    "ownedReserve": true,
+    "scopedActualLineup": true,
+    "actualRegistration": true,
+    "staleLoadSlotMedicalFired": true,
+    "closedWindow": true,
+    "pending": true,
+    "international": true,
+    "officialLines": 10,
+    "fullCompact": true,
+    "saves": 2,
+    "evidence": {
+      "initial": {
+        "date": "2027-01-10",
+        "fixture": "season_2027_entry-cup_match_0",
+        "registered": [
+          "NA_41",
+          "NA_38",
+          "NA_40",
+          "NA_42",
+          "NA_39",
+          "NA_68"
+        ],
+        "stored": {},
+        "effective": {
+          "TOP": "NA_41",
+          "JGL": "NA_38",
+          "MID": "NA_40",
+          "ADC": "NA_42",
+          "SUP": "NA_39"
+        },
+        "rows": [
+          {
+            "id": "NA_38",
+            "name": "Zerroz",
+            "training": "VXG",
+            "registered": true,
+            "listed": true,
+            "health": "정상",
+            "available": true,
+            "reason": "현재 출전 가능"
+          },
+          {
+            "id": "NA_39",
+            "name": "Gorash",
+            "training": "VXG",
+            "registered": true,
+            "listed": true,
+            "health": "정상",
+            "available": true,
+            "reason": "현재 출전 가능"
+          },
+          {
+            "id": "NA_40",
+            "name": "Rivdan",
+            "training": "VXG",
+            "registered": true,
+            "listed": true,
+            "health": "정상",
+            "available": true,
+            "reason": "현재 출전 가능"
+          },
+          {
+            "id": "NA_41",
+            "name": "Rivalz",
+            "training": "VXG",
+            "registered": true,
+            "listed": true,
+            "health": "정상",
+            "available": true,
+            "reason": "현재 출전 가능"
+          },
+          {
+            "id": "NA_42",
+            "name": "Crous",
+            "training": "VXG",
+            "registered": true,
+            "listed": true,
+            "health": "정상",
+            "available": true,
+            "reason": "현재 출전 가능"
+          },
+          {
+            "id": "NA_68",
+            "name": "Nimce",
+            "training": "VXG",
+            "registered": true,
+            "listed": true,
+            "health": "정상",
+            "available": true,
+            "reason": "현재 출전 가능"
+          }
+        ]
+      },
+      "trainingMove": {
+        "id": "NA_41",
+        "name": "Rivalz",
+        "training": "VXGC",
+        "registered": true,
+        "listed": true,
+        "health": "정상",
+        "available": true,
+        "reason": "현재 출전 가능"
+      },
+      "medical": {
+        "id": "NA_41",
+        "name": "Rivalz",
+        "training": "VXGC",
+        "registered": true,
+        "listed": true,
+        "health": "손목 · 3일 예상 · 출전 불가",
+        "available": false,
+        "reason": "의료상 출전 불가"
+      },
+      "manualLineup": {
+        "before": {},
+        "desired": {
+          "TOP": "NA_68",
+          "JGL": "NA_38",
+          "MID": "NA_40",
+          "ADC": "NA_42",
+          "SUP": "NA_39"
+        },
+        "after": {
+          "TOP": "NA_68",
+          "JGL": "NA_38",
+          "MID": "NA_40",
+          "ADC": "NA_42",
+          "SUP": "NA_39"
+        },
+        "expected": true
+      },
+      "registration": {
+        "submitted": {
+          "VXG": [
+            "NA_38",
+            "NA_39",
+            "NA_40",
+            "NA_42",
+            "NA_68",
+            "NA_41"
+          ],
+          "VXGC": [
+            "NA_53",
+            "NA_54",
+            "NA_55",
+            "NA_56",
+            "NA_57"
+          ]
+        },
+        "result": {
+          "VXG": [
+            "NA_38",
+            "NA_39",
+            "NA_40",
+            "NA_42",
+            "NA_68",
+            "NA_41"
+          ],
+          "VXGC": [
+            "NA_53",
+            "NA_54",
+            "NA_55",
+            "NA_56",
+            "NA_57"
+          ]
+        },
+        "expected": true
+      }
+    },
+    "officialPlayers": [
+      {
+        "pid": "NA_68",
+        "tid": "VXG",
+        "role": "TOP"
+      },
+      {
+        "pid": "NA_38",
+        "tid": "VXG",
+        "role": "JGL"
+      },
+      {
+        "pid": "NA_40",
+        "tid": "VXG",
+        "role": "MID"
+      },
+      {
+        "pid": "NA_42",
+        "tid": "VXG",
+        "role": "ADC"
+      },
+      {
+        "pid": "NA_39",
+        "tid": "VXG",
+        "role": "SUP"
+      },
+      {
+        "pid": "NA_43",
+        "tid": "CR",
+        "role": "TOP"
+      },
+      {
+        "pid": "NA_44",
+        "tid": "CR",
+        "role": "JGL"
+      },
+      {
+        "pid": "NA_46",
+        "tid": "CR",
+        "role": "MID"
+      },
+      {
+        "pid": "NA_45",
+        "tid": "CR",
+        "role": "ADC"
+      },
+      {
+        "pid": "NA_47",
+        "tid": "CR",
+        "role": "SUP"
+      }
+    ]
+  },
+  "UI": {
+    "acceptances": 81,
+    "freshContexts": 80,
+    "engineModules": 101,
+    "totalMs": 115647.8
+  },
+  "calendar": {
+    "acceptances": 20,
+    "freshContexts": 20,
+    "engineModules": 101,
+    "totalMs": 68793.3
+  },
+  "smoke": {
+    "mode": "full",
+    "phases": [
+      {
+        "name": "bootstrap-policy-rookie",
+        "ms": 2113.8
+      },
+      {
+        "name": "patch-system-cache",
+        "ms": 1316.5
+      },
+      {
+        "name": "player-role-training",
+        "ms": 13
+      },
+      {
+        "name": "draft-match-save",
+        "ms": 592.5
+      },
+      {
+        "name": "initial-roster",
+        "ms": 8999.8
+      },
+      {
+        "name": "staff-roster",
+        "ms": 1049
+      },
+      {
+        "name": "tier2-promotion",
+        "ms": 596.7
+      },
+      {
+        "name": "series-offseason-market",
+        "ms": 13080.9
+      }
+    ],
+    "totalMs": 27762.2
+  },
+  "browser": [
+    {
+      "width": 1280,
+      "pure": true,
+      "Enter": true,
+      "scopedWriter": true,
+      "actualRegistration": true,
+      "ownedReserve": true,
+      "draftFocusReturn": true,
+      "save": true,
+      "staleSameKindLoadFiredDuplicate": true,
+      "overflow": false,
+      "pageErrors": []
+    },
+    {
+      "width": 320,
+      "pure": true,
+      "Enter": true,
+      "scopedWriter": true,
+      "actualRegistration": true,
+      "ownedReserve": true,
+      "draftFocusReturn": true,
+      "save": true,
+      "staleSameKindLoadFiredDuplicate": true,
+      "overflow": false,
+      "pageErrors": []
+    }
+  ],
+  "officialBrowser": [
+    {
+      "actualOfficialEndings": [
+        {
+          "winner": "VXG",
+          "duration": 48.93333333333333,
+          "minute": 48,
+          "second": 56,
+          "nexusCount": 1,
+          "last": "nexus",
+          "sameTime": true,
+          "sourceValid": true
+        },
+        {
+          "winner": "CR",
+          "duration": 20.983333333333334,
+          "minute": 20,
+          "second": 59,
+          "nexusCount": 1,
+          "last": "nexus",
+          "sameTime": true,
+          "sourceValid": true
+        },
+        {
+          "winner": "CR",
+          "duration": 35.083333333333336,
+          "minute": 35,
+          "second": 5,
+          "nexusCount": 1,
+          "last": "nexus",
+          "sameTime": true,
+          "sourceValid": true
+        }
+      ]
+    },
+    {
+      "browser": "Chromium",
+      "actualCompleteOfficialBo3": {
+        "games": 3,
+        "rows": [
+          5,
+          5,
+          5
+        ]
+      },
+      "pendingAndHistorySave": true,
+      "storedStatsEvents": true,
+      "analysisFilterSourceNavigation": true,
+      "narrow": {
+        "width": 320,
+        "document": 320
+      },
+      "firedPrivateOmission": true,
+      "pageErrors": []
+    }
+  ],
+  "claims": {
+    "newRules": false,
+    "optimization": false,
+    "globalMatchParity": false,
+    "professionalCalibration": false,
+    "productionHTTP": false,
+    "finalDeviceQA": false,
+    "fullUIOrRegistrationCompleted": false
+  },
+  "runtimeInterruption": "02:17 UTC 이후 실행 환경 starting / tools.exec_command unavailable, 03:57:46 재개. 실제 파일·로그·remote가 유지됨을 재검증. 환경 대기를 구현 시간으로 계산하지 않음.",
+  "engineSourcePurity": {
+    "src/artifact/champion-source.js": "29efbdabad4d152e351f0bfdfb025feb5283862ea3ae9caa4fcd2b1d0678bf1c",
+    "src/artifact/system-source.js": "0067a197dd54541fec3bc15a96fddec52ed19ea85eb43a6d2eb3cb5d7759d836",
+    "src/artifact/random.js": "86e30259e4926ea9428afa33d7cff6c51c20a9faa89e847f94aee450bd5b323c",
+    "src/artifact/match-adjudication.js": "63fb882340a949d5ca67bf07f2d7a90f8caab8d06af48da512d2911712ab3b4f",
+    "src/artifact/combat-resources.js": "c7c13b9cd5486b437b79e60c11d4a85655fad3e0c694e7991e911310fc9400cd",
+    "src/artifact/objective-awards.js": "e391263586777ea48ee6f8806e6458639304fd21914cea45de11f720355cd2ff",
+    "src/artifact/takedown-rewards.js": "59a545ebfae98986c7216cc980e351661f5a61dc5c1c313079b122a749733c74",
+    "src/artifact/macro-picks.js": "614b6e64901661b8841edbddd065d0e41999cdf4d56a73606fd64dc952b197e5",
+    "src/artifact/engine.js": "5afc093091fbf7e921aaead89ee0729b66c65628376e93445f51b25a011b6d49",
+    "src/artifact/draft.js": "b5edc5d6158f30f8fa7cb68803b60f84bf34e7c6d6fc80fa126dae985176e8ba",
+    "src/artifact/systems.js": "0da7844547f70eabdb0494451368a295f518ca0ce2ae4d0d77bebad5c3a8b996",
+    "src/artifact/item-purchases.js": "6fb206bdf0dfb208fea5dd6011b22ec8827ca138bac8bb08d367fe17805520cb",
+    "src/artifact/role-quests.js": "6f501d340094774120a4cc74dc4f0964581909716fc537d7a58b14252dcb66f1",
+    "src/artifact/role-quest-match.js": "29ce026186ea801419cb8a369548cef21a5c969f08b9f17b804726934892532b",
+    "src/artifact/data.js": "0eb2d3ac7321e3a728028c3a0799405f24f50b0a904b5e879f95c5f6d71662ff",
+    "src/artifact/champion-data.js": "aa2fd33316757c4ac8c86d5bcad27d7b8f5b8739dbd3e3e4eb0f696ae84e105b",
+    "src/artifact/system-data.js": "16ad1c37594d8aedb047a4707003a20bc66518f0448a7fae861805c925dd5146",
+    "src/artifact/champs2.js": "067ab9927d8b0672231c3226e00167f8e7cf582a41c20a70f18f185d512ad827",
+    "src/artifact/content-naming.js": "cfaccd15c05386a6061e455472dad7dcc01ee65a9753a2d764f2c888711dc20e",
+    "src/artifact/meta.js": "8ffd6ff85694453af40d49e61ba6770f054f40d4fbe35d3552aa11e408707c41",
+    "src/artifact/meta-side.js": "0b95bcc3e0cb1d26625074ab6589778ccea25e0615eb3a83aee2964f95fd0fea",
+    "src/artifact/meta-composition.js": "13bef6227a2ea4a5f83066ff8d4e9a5936063d8fa4e026dfdccaf76980715632",
+    "src/artifact/meta-draft-order.js": "f041f41b7ec21f25b1b6292add20e94aa64c2d602ebcef83f654ef67b4655b99",
+    "src/artifact/meta-tactics.js": "36ae3cf21f93d4b5578b54a9ca0b65509d718038f6a59b0c7275cd88b640c5b6",
+    "src/artifact/meta-practice.js": "6a415363a730a6f0f2854632103fbe0f338cda149136d90fd8409852ba1bc739",
+    "src/artifact/meta-analyst.js": "7f642d520efd77c9d6fb0284185b05f5c279840269269771e3b11c7813f8af28",
+    "src/artifact/meta-opponent.js": "0c2b5201e4cdc2aa4f9590e2c0e0a3abc4025a6821c325b7a728277e12bb7c9f",
+    "src/artifact/meta-opponent-draft.js": "5fd55c5c9adee4b5269edff550eea450dae4784b60db8664665ca6ce8409c6ef",
+    "src/artifact/patch.js": "0bab4d0582fa6da7b3bb582599ded9527cce9192dc9bedbb6e9006154094e235",
+    "src/artifact/patch-balance.js": "145097323c9fa2f6230c5135997c57920495fdcfa6ca2880739d757cbdbedbea",
+    "src/artifact/patch-content.js": "057c2abe7ca7cf195971fea24330055017851ca794aaf2d5eae4935fa4471ed9",
+    "src/artifact/first-selection.js": "0c788ea7cfab33266e7610f312888c13d881df63dd3966570451c71604239331",
+    "src/artifact/series.js": "67a33366c2b244a2ca7f315ee2f70420e6efd7243873403a59392d095a81d3ec",
+    "src/artifact/timezone-calendar.js": "4f9796a001fcd127e488f2d9424ee44bf9ee46ff694e1f0dd2f552b254ade645",
+    "src/artifact/broadcast-calendar.js": "61eec6c44669131a7068c2770799b7a71112a73c25760a00d88643bf450c45ab",
+    "src/artifact/competition.js": "44d0856b841357315c29c022df0a910817edb2d22e940b37bbca3df9d2774783",
+    "src/artifact/league-aggregation.js": "8a1f46972c06f92154f24fa366bbfcd026fe85be13350aa16393ba3dd1890a63",
+    "src/artifact/player.js": "e5b0470e4e4518b80261875b8d6f875c9b821cad6efd8f35e04b40e75336171b",
+    "src/artifact/development.js": "791297239cb94c28990a7373176aad3a122d10d69e64189f39125d6a2c7b1417",
+    "src/artifact/player-relations.js": "8400885087a034a244d03cd365803c01f01dc37c55b3686667e0bc367257e6bb",
+    "src/artifact/medical.js": "9c5d23dfb9cd7f0ebdef4dbc6af223e2a61beaf23f1cbc97be4f9ffa4647d11d",
+    "src/artifact/world.js": "41076b06ece7065b7ecc2518ed444ededfdf798b92b31da46964c89d78fea99a",
+    "src/artifact/calendar.js": "8736fbf8bdcad1fec98f869de9756c333e740f1d191e2322426e911599f21183",
+    "src/artifact/season.js": "34961c37ed9fe55c0afb3dd0f84d2f45d94f46f05a231ea367a83afc596ed621",
+    "src/artifact/offseason.js": "a2f37612c9db7f096f29d686ba1ce063330ada78301400fd1773e0bc95951949",
+    "src/artifact/save.js": "92a476222e94e8658b108bbca94bce76b00462dc4d3a1688d1833a45c2c951a0",
+    "src/artifact/save-migration.js": "68ec50df15e1836c8277e0bfd674a8b7346e101f105134aa9ee030fb14d6e0af",
+    "src/artifact/roster.js": "efdedc445c4c865e67468518945de49f8a763f20adba047fc48757b6d567fb57",
+    "src/artifact/lineup.js": "a6371c9870a2e8440d49c36e1ee089cdd6b39d96c52e5cd9de72cc574025a20b",
+    "src/artifact/state-transaction.js": "6ad636cb64b328cb046e5d8dfe760eeb26c7655c34b0ff776e2102835fab03f1",
+    "src/artifact/state-rollback.js": "1591117e72458abd1ee6ad36b229f95fd70161fd60d5cf0f2cee6280b50831b4",
+    "src/artifact/squad-preparation.js": "24e7cfbdfd92d768eb80a799c3ce6f0a83258a00f059796bf7a8e28832c357ab",
+    "src/artifact/office.js": "080c5f43a4d3b7fe5bb758cd1c63ab10de74eb2d2e5b8d0edd488accea5dd494",
+    "src/artifact/office-consultation.js": "69791d5028a04c60b32dbeda5dfce6a270e5e728c9f0dd2e8d9fae563659f29c",
+    "src/artifact/local-policy.js": "655017910f1a52faca6e5cd18b3a6519cf1cff382c1e2ae96573c51255cfa507",
+    "src/artifact/office-international.js": "a02379c12f82679d696692181f43cc0c5c722e0512e9123592c54f75c57e4e9d",
+    "src/artifact/club-ownership.js": "739abb8e99f1c08900ec7e1568e31cdabdb42ac04a404fe5cf88fe28c5c05c66",
+    "src/artifact/club-license.js": "70252f7573fb4307db93a0921a98f758f2f4b9118c495c9d34acde81fbbd8317",
+    "src/artifact/region-continuity.js": "d5c1452d3671f93aad7904f02fcb1df71361ac5f40bb08fe8b0d2ffd01840d08",
+    "src/artifact/finance.js": "bdc04f13a16e99631548346c811a080dbef5c8a89db787ff003de5b32d03a07e",
+    "src/artifact/contract-market-pricing.js": "3bed2894690c6686e3387aa5643b0aabb60d65d446bdd8112d8919a9f7bb39ca",
+    "src/artifact/contracts.js": "6bd9c40df01bdbf65f8a944bea5cda5a739afa63b0227f8c200c3c2ebce3e403",
+    "src/artifact/contract-market-behavior.js": "f3d0b3899bb2d036835b5abb30cad05bbba89ee9cf0ec087e765088d359c8925",
+    "src/artifact/contract-transfer-market.js": "5adf767bfce1e07c635db473cc84729b2932c750f092078d0dcf2e38bb81aa77",
+    "src/artifact/scouting.js": "6f3868bb816888970554a0c874e89006e553e1d8ffd6f1f4568521d3c7e87a12",
+    "src/artifact/scouting-ai.js": "c654412ff8c1270a9d8fd5147de72634891fd19d6e5814ee7b367e6717519403",
+    "src/artifact/scouting-champions.js": "79ca9afa9204c2b2f0428008a47ae46786fda8730058e4c293bd0bb742a85d88",
+    "src/artifact/scouting-ai-ops.js": "f3c4f36441bde098f07db481f594fad7ce4805482f4549593687a8cea79626f9",
+    "src/artifact/scouting-ai-reassessment.js": "ba39dfd9133a1527bad3fef873d02916af7ff3909d8d3e970270da6c13c1226d",
+    "src/artifact/contract-negotiation.js": "16bfbbfa64277122bf1eeb5fc3c9085c21d6a0d61f7e8bc512cd2f8c0a834c89",
+    "src/artifact/transfer.js": "1b423b602349f05b55072abae65be66536fe42e55e207c6ef3b4846aeeba6c08",
+    "src/artifact/contract-window.js": "493055514c6becc347fc76033c2555b53f6b3364c26232ca4fdd562841fda377",
+    "src/artifact/contract-contact-ai.js": "211bac31fea0761f10ee0b1b904285ff650220e92abae8a079bdad89c1461f54",
+    "src/artifact/contract-agreement.js": "a9410870a8ba1c16f9d7645879986f89c6f30f819b466a443fd12c88d8b21d14",
+    "src/artifact/state-player-actions.js": "4c492d3c29507013d34994b941baefef1e99103713e37da2d551b5ff0b7ce9e3",
+    "src/artifact/player-representation.js": "94875b49ae3be90745083b8a1e4e0cb3b5a75149fce3768747b21db8407ad529",
+    "src/artifact/player-loans.js": "0c128ea349f7e34d8f42006478e8f29ac693497ee5428f07abe1f8f4838d83fd",
+    "src/artifact/transfer-payments.js": "816f57f1634ed3dd0bbc633e75de17db67ec6159dfc6e3f32492e3ad061b21d6",
+    "src/artifact/finance-estate.js": "8acfde7f0f0f9166a1c3570c4f845ef26ac92bc632589a080fdf89ec6bf1a661",
+    "src/artifact/transfer-market-rules.js": "11939f62331144bafee591cd74383d896b9a0e268c2e5e9bdb83dc2f234e72ab",
+    "src/artifact/loan-purchase.js": "23c486aae9fec0bd5bac47273b6b2bd2c594c94117d198209b04149605860c79",
+    "src/artifact/local-service.js": "794173227f82c8e1e43de27c638f0c71fff18caabb03756fe63d6686f09c673b",
+    "src/artifact/registration.js": "902e5fe018a0818ab48ea5a2802c3eaa9ebfdae968736f018b6a846e69393794",
+    "src/artifact/registration-match.js": "16c6d092a0e8008bb71f629e812f7e68f9b19a0d2d598dee8f6df049b909c20e",
+    "src/artifact/player-loan-market.js": "8713eb541e084696ceb516c2743f46185bacd6d135572fcc07cde011172c591d",
+    "src/artifact/club-closure.js": "5bf3cb8853aa5170e285ab3e21a973b55e8bd14e3a6248aa4249742254758b11",
+    "src/artifact/staff.js": "16484fd92f9a00db824a48196bb7a8a3c65f7f14a8767decfee12bd93f2c067a",
+    "src/artifact/staff-contracts.js": "291450863b03399e8d98e769224464e52620a2f91f89bbe1b4c28e84b46d8297",
+    "src/artifact/staff-registration.js": "dfc7ef5f5a707dc098212c8f4e4cc527c01580a5ff73521e135889fe14a40104",
+    "src/artifact/scrim-partner.js": "46b7a202e93b76ba4a19eda48530322b55a3c0acc871db2ab9b44e0b1eea1e8e",
+    "src/artifact/scrim.js": "0523a4580a4f0a68a12a6f096007d1d2c034cbc6b670d66ae6a1e6b6d7543e89",
+    "src/artifact/scrim-plans.js": "5346f414bcdc3180a34972c3e9881a19d419edcd80b653710455a6ecd0a470eb",
+    "src/artifact/practice-resources.js": "43e284428f47238b3360e91b7c1d4ae686a9e96e92f698e0ae01f67f1a4ef5d0",
+    "src/artifact/features.js": "d814dcc47f25a765bfcebe09e745264baa5944026f3e47ba3dde7724ed9996fd",
+    "src/artifact/role-conversion.js": "18708388bd2202835d8226c28be041fb255031282f03b20e2436c932cbfb951d",
+    "src/artifact/draft-analysis.js": "f68f88b632819d268183f2714b672e7845d51d2b13905eda51bdcd8af249fb9b",
+    "src/artifact/draft-preparation.js": "6e031fab26717ab1f7c2edd5f65e82f4c60d91b94d729fefadbcdeb7de5a50cc",
+    "src/artifact/draft-history.js": "3d8c8d0b38472fb7fca681d04d32647d1bc3ba16aa2090425db6a619cb44c5b3",
+    "src/artifact/match-history.js": "66f7f169ebefdfc09d535ee956fca7113fb0ce134b07ba1d0f89a443635b3c20",
+    "src/artifact/analysis-tiers.js": "98fd00a64e70477f6fded6bbc664850d8bc358a162ef0e73c564fdef1baa2b3a",
+    "src/artifact/career.js": "4d7031ea62165d1c2ed27842e11fcb104b8d8b9e9fbc8be80184df5210838b37"
+  }
+}

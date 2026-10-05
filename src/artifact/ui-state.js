@@ -114,7 +114,7 @@ function resetUiForWorld(){
   if(typeof START_UI!=='undefined')START_UI={active:!DB.world,page:'home',error:''};
   if(UI_OVERLAY)closeUiOverlay({force:true,restoreFocus:false});
   DRAFT_UI=null;
-  LAST=null;LASTSER=null;OPEN_P=null;SQUAD_EDIT=null;MSG='';
+  LAST=LASTSER=OPEN_P=SQUAD_EDIT=null;MSG='';CLUB_ENTRY_DRAFT=null;
   MC.res=null;MC.running=false;SSET.view=null;
   PSET.team='ALL';PSET.player='ALL';PSET.opponent='ALL';PSET.color='ALL';PSET.playerSearch='';PSET.prepTeam='AUTO';
   ANALYSIS_SET={mode:'own',team:'AUTO',period:'90',patch:'CURRENT',position:'ALL',prepTeam:'AUTO',review:'',reviewTab:'records',tierView:'public',tierQ:'',comp:'ALL'};
