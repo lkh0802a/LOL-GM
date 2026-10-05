@@ -301,3 +301,7 @@ ui-club-medical은 owned/ownedreserve full JSON read로 현재 의료 가용·�
 ui-club-contracts는 private full JSON의 현재 계약·기존 재계약/옵션 가능 조건·역할 사용량·지연 합의를 읽고 guarded 계약 진입을 시장/독점 창구/브리핑과 공유한다. 기존 startNegotiation/option journal/contract agreement activation/player-relations usage/finance payroll이 단일 writer·consumer다. ui-club-briefing의 기존 scoped negotiation controls와 return focus를 재사용한다. 실제 dialog/DB/world/slot/manager 객체·source snapshot은 stale callback을 막고 읽기에 lazy negotiationStore를 쓰지 않는다. 저장 schema·AI·가격·의료/등록/계약 규칙은 바꾸지 않는다.
 
 - 12.3.8 `ui-club-practice.js` owns private cloned current training/resource presentation and scoped ephemeral drafts; `ui-squad-controls.js` binds existing roster/tactics/lineup/role draft inputs with the shared current context guard. Existing squad-preparation command/journal, practice-resources/development/calendar and save writers retain rules/state ownership. UI budgets10500/3000 are new owned budgets; engine101 files and all prior budgets stay unchanged. See DEVELOPMENT12.3.8 for actual acceptance, counterexamples and limitations.
+
+### 12.3.9 스크림 예약 UI 소유 경계
+
+`ui-club-scrim.js`는 current owned clone 조회·저장된 own 참가 원자료·임시 팝업 초안/문맥 방어만 소유한다. `ui-scrim-plans.js`의 optional db/root는 기존 선수단 호출을 유지하고 동일 private preview/current recheck/commit binding을 공유한다. `scrim-plans`·`scrim-partner`·`practice-resources`·일일 calendar와 기록/저장 writer는 기존 규칙/가격/동의 seed/의료·공식 가용을 소유한다. UI가 미래 선발이나 상대 private practice를 생성하지 않는다.

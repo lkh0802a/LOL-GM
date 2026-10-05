@@ -113,6 +113,7 @@ export const UI_MODULES = [
   'ui-club-medical.js',
   'ui-club-contracts.js',
   'ui-club-practice.js',
+  'ui-club-scrim.js',
   'ui-squad-controls.js',
   'ui-staff-controls.js',
   'ui-transfer-terms.js',
