@@ -1,5 +1,5 @@
 import {artifactSources,runEngineFixture} from './test-harness.mjs';
-const sources=await artifactSources(['ui-club-briefing.js','ui-club-scrim.js','ui-scrim-plans.js','app.js']);const app=sources.pop(),esc=app.match(/^const esc=.*$/m)[0];
+const sources=await artifactSources(['ui-club-briefing.js','ui-club-scrim.js','ui-club-recruitment.js','ui-scrim-plans.js','app.js']);const app=sources.pop(),esc=app.match(/^const esc=.*$/m)[0];
 await runEngineFixture(String.raw`(()=>{
 
 const check=(v,m)=>{if(!v)throw Error('CLUB_SCRIM '+m)};

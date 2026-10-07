@@ -305,3 +305,8 @@ ui-club-contracts는 private full JSON의 현재 계약·기존 재계약/옵션
 ### 12.3.9 스크림 예약 UI 소유 경계
 
 `ui-club-scrim.js`는 current owned clone 조회·저장된 own 참가 원자료·임시 팝업 초안/문맥 방어만 소유한다. `ui-scrim-plans.js`의 optional db/root는 기존 선수단 호출을 유지하고 동일 private preview/current recheck/commit binding을 공유한다. `scrim-plans`·`scrim-partner`·`practice-resources`·일일 calendar와 기록/저장 writer는 기존 규칙/가격/동의 seed/의료·공식 가용을 소유한다. UI가 미래 선발이나 상대 private practice를 생성하지 않는다.
+
+
+### 현재 관심 후보 브리핑의 읽기·수동 쓰기 소유권 (12.3.10)
+
+`ui-club-recruitment.js`는 닫힌 화면에서 관심 수만 읽고, 열린 목록·상세를 private JSON clone에서 생성한다. `ui-market.js`와 공유하는 현재 문맥 guard는 기존 recruitment/scouting domain writer를 확인 뒤 호출한다. UI는 보고서·평가·공개 출전 source를 소비하며 가격/AI/engine/save schema를 소유하지 않는다. 공개 출전 검사는 기존 `ui-initial-comparison.js`의 순수 source helper를 재사용하고 초기 FA 권한은 재사용하지 않는다. 현재 수용·한계·후속의 단일 active guide는 DEVELOPMENT12.3.10이며, 손실 없는 원로그 archive는 `scripts/verify-club-recruitment-evidence.mjs`로 tmp 없이 검증한다.
