@@ -1859,7 +1859,7 @@ Chromium1280/320에서 실제 Enter/공통 roster·popup scoped input/확인·�
 
 **관측과 한계:** 첨부 1000004152.jpg에서 첫 화면의 ‘새 시작’만 넓고 불러오기·설정은 오른쪽에 서로 다른 폭으로 배치되며 넓은 빈 공간이 보인다. 1000004154.jpg에서는 ‘새 커리어 선택’ 뒤 긴 세계/리그 운영 설명이 선택 카드보다 먼저 나온다. 테마 전환 후 글자가 잘 보이지 않는 문제는 사용자 보고이며 두 정지 이미지로 전환 전후나 원인·대비 수치까지 입증하지 않는다. 첨부 원본 SHA256은 각각 cdca283f84c4913467c24718776bb36c71712669c1d27aedd1cbc5ea0fe57ad3 / 42b801b9c77ea5a05fa91a6d5e5f3dc621c3bbba87be2e2396e626c26f6d89d0이다. 원본은 이 채팅 첨부이며 저장소에 이미지 bytes를 보존했다고 주장하지 않는다.
 
-**실제 소스:** 검토 기준 main64d50d77e0c674e9d679970dc2c6d8023194eff3. ui-startup.js의 viewStartup / applyStartupTheme와 ui-state.js의 #app-theme는 기존 data-theme 및 lol-gm-theme 저장을 사용한다. ui-season.js의 seasonSetup과 shell.html의 테마 토큰·startup-actions 스타일을 실제 수정 대상으로 검토한다. 소스 위치를 찾는 첫 검색에서 존재하지 않는 ui-start.js/ui-settings.js/styles* 및 ui-world.js 경로 오류가 있었고 rg --files와 실제 ui-startup.js/ui-state.js/shell.html로 확인했다. 이는 게임 결함이나 성공 검사로 집계하지 않는다.
+**실제 소스:** 검토 기준 main64d50d77e0c674e9d679970dc2c6d8023194eff3. ui-startup.js의 viewStartup / applyStartupTheme와 ui-state.js의 #app-theme는 기존 data-theme 및 lol-gm-theme 저장을 사용한다. ui-setup.js의 seasonSetup과 shell.html의 테마 토큰·startup-actions 스타일을 실제 수정 대상으로 검토한다. 소스 위치를 찾는 첫 검색에서 존재하지 않는 ui-start.js/ui-settings.js/styles* 및 ui-world.js 경로 오류가 있었고 rg --files와 실제 ui-startup.js/ui-state.js/shell.html로 확인했다. 첫 문서 초안은 seasonSetup의 소유 모듈을 ui-season.js로 잘못 적었으며 전체 src/artifact 검색으로 실제 ui-setup.js:57을 확인해 정정했다. 이는 게임 결함이나 성공 검사로 집계하지 않는다.
 
 **요청된 수정과 수용 조건:**
 - 테마 가독성을 첫 UI 수정 우선순위로 둔다. 자동/밝게/어둡게 및 시스템 테마 조합에서 본문·보조 설명·버튼·선택 항목·입력·팝업·표·경고·레이더 범례를 실제 렌더링으로 확인한다. 공통 색상 토큰과 고정 색상을 감사하고 정상 글자 대비4.5:1, 큰 글자3:1, 필요한 컨트롤 경계·포커스3:1을 측정한다. 색만으로 선택·상태를 구분하지 않는다. 테마 변경·화면 이동·재접속·기존 저장 불러오기 뒤 동일하게 읽히는지 확인한다. 측정 전 통과라고 쓰지 않는다.
