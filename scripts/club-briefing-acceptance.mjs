@@ -1,5 +1,5 @@
 import {artifactSources,runEngineFixture} from './test-harness.mjs';
-const sources=await artifactSources(['ui-negotiations.js','ui-club-briefing.js','ui-club-eligibility.js','ui-club-finance.js','ui-club-staff.js','ui-club-medical.js','ui-club-contracts.js','ui-club-practice.js','ui-club-scrim.js','ui-scrim-plans.js','ui-staff-controls.js','ui-registration.js','ui-transfer-terms.js','app.js']);
+const sources=await artifactSources(['ui-negotiations.js','ui-club-briefing.js','ui-club-eligibility.js','ui-club-finance.js','ui-club-staff.js','ui-club-medical.js','ui-club-contracts.js','ui-club-practice.js','ui-club-scrim.js','ui-club-recruitment.js','ui-scrim-plans.js','ui-staff-controls.js','ui-registration.js','ui-transfer-terms.js','app.js']);
 const app=sources.pop(),esc=app.match(/^const esc=.*$/m)[0];
 await runEngineFixture(String.raw`(()=>{
  const check=(x,m)=>{if(!x)throw Error('CLUB_BRIEF '+m)};
