@@ -1970,3 +1970,14 @@ Chromium1280/320에서 실제 Enter/공통 roster·popup scoped input/확인·�
 - **긴급 상황과 정상 흐름(2·4·10·11·12):** 가용 선수 부족·공식 경기 진행 불능·규정 변경·지급 실패 등 실제 사건에서 다음 합법 경로와 제한을 명확히 한다. system-only emergency writer를 새 수동 권한으로 바꾸지 않는다. 막힌 상태는 원인/필요 metadata/정확 continuation을 남긴다.
 
 **소스 검토와 완료 경계:** ui-state.js의 route/scroll/render generation, ui-overlay.js의 transient dialog/focus 소유, state-transaction.js의 preview/actor/current snapshot, app.js의 SAVEFAIL/SLOT_SWITCHING 및 실제 저장·불러오기 경계가 관련 진입점이다. 명칭/등록은 수용 증거가 아니며 신규 UX를 이 기존 실제 명령·소유 경계로 검증한다. 원문 PR200에 추가만 했고 게임 코드/HTML 변경이나 새 시간당 구현은 아니다. #199의 exact-head CI/의료7/verify·출시 대기와12.3.11, engine 최우선·COMPLETE inventory·최종 QA 유예·예약 비활성화를 모두 유지한다.
+
+
+## 12.5.4.3 예약 지침 갱신과 개발 재개 — 2026-10-07
+
+최신 사용자 요청 “그거까지 추가하도 예약좀 다듬고 다시 진행해”에 따라 12.5.4–12.5.4.2의 테마/시작 흐름·전체 도메인·게임성9항목·UX12항목·추가 게임성4항목을 예약의 실제 수용 기준에 연결하고 기존 시간당 예약을 다시 활성화한다. 앞선 예약 비활성화 문장은 당시 결정의 역사 기록으로 유지하며 이번 명시적 재개 요청이 현재 운영 지침이다. 새 기능 숫자/완료 분모를 만들거나 기존 COMPLETE 승인 범위를 줄이지 않는다.
+
+원래 예약 지침 전체와 러너 복구·재실행 응답은 [automation-resume-2026-10-07.json](evidence/automation-resume-2026-10-07.json)에 원문으로 보존했다. 승인 접두부와 #194 역사 원문은 새 예약에서도 그대로 유지하고 활성 체크포인트만 이번 실제 상태로 갱신한다. 단일 작업자·한국어·Asia/Seoul·기존 시간당 일정·의미 있는 변화만 통지하는 조건을 유지한다. 이 문서/예약 갱신은 구현 slice가 아니다.
+
+main은 64d50d77e0c674e9d679970dc2c6d8023194eff3, #199 head는 c628a5ecd47003ca90758b9f203995dc9647d146로 재확인했다. #200 CI37693385496 static-fast113039477708 및 최신 CI37695170581 static-fast113045129728은 실제 러너/단계가 실행되어 success였다. 이는 러너 복구의 근거이며 #199의 게임 테스트 통과 증거는 아니다. 이 근거로 기존 CI37366842536의 취소된 static-fast111975453965 재실행 API를 한 번 호출했고 success 응답을 받았다. 뒤따르는 의료7·집계·verify와 모든 필수 검사의 실제 결과는 다시 확인해야 한다. 재실행 요청 성공은 검사 성공·병합·배포가 아니다. 기존 attempt1/2 실패·의료 미실행 원본을 보존한다.
+
+정확 순서: #199 current-head 필수 검사 → 순차 병합 → exact resulting-main ALL CI/standalone/실제 artifact/Pages 게이트 → #200의 원문 추가와 #199 DEVELOPMENT 추가를 모두 보존하여 충돌 해소·검증. 이후 신규 source-backed 경기 엔진 결함/실제 저장·권한·진행 불능을 우선한다. 독립적인 기존 구현은 12.3.11 현재 관심후보2–3명 관측 비교 경계로 이어가며, 실제 테마 가독성·시작 흐름 결함은 12.5.4 수용 조건으로 처리한다. 자료 공백 반복 획득·CI 대기·문서 정리를 새 구현으로 세지 않는다. 전체 승인 범위는 미완료이며 최종100시즌/기기/TalkBack QA 유예를 유지한다.
