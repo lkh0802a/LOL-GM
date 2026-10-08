@@ -1,0 +1,181 @@
+{
+  "base": "222176b0691ede2d1d050dc406479eb83afe1197",
+  "status": "로컬 수용 완료 · PR/CI/병합/배포 대기",
+  "tasks": [
+    "12.5.4.5",
+    "12.5.4.6"
+  ],
+  "originalGuideSha256": "a0059a2ca0632a344083dc2a6c9cc143a5115db84521209b4bbf2b4e9e4828b3",
+  "originalGuideBytes": 520965,
+  "sources": [
+    {
+      "path": "scripts/artifact-modules.mjs",
+      "sha256": "4364a246dd349241aa4ebf6d96867badefd043665bc008198d64aecb39f7349d",
+      "bytes": 3709
+    },
+    {
+      "path": "scripts/check.mjs",
+      "sha256": "e378ab16ffebc54be8eeb2eb06b80bcf467a6c555b57989e74419d12d01f0e1e",
+      "bytes": 35177
+    },
+    {
+      "path": "scripts/club-briefing-acceptance.mjs",
+      "sha256": "199957cc50df09726fd9ad8f083039d2c120ba5813dd3ba1465ad9ee9dad011c",
+      "bytes": 11641
+    },
+    {
+      "path": "scripts/initial-comparison-acceptance.mjs",
+      "sha256": "e0fa8fbfcfab447a7e827181eb16f429f5754971256a06767476aeb4fe6a6537",
+      "bytes": 7846
+    },
+    {
+      "path": "scripts/initial-offer-preview-acceptance.mjs",
+      "sha256": "6c452a57a97a2978fec1396017b30fcdddbebb7b93a2ec8afe1ec51902e9acc2",
+      "bytes": 7006
+    },
+    {
+      "path": "scripts/initial-recruitment-acceptance.mjs",
+      "sha256": "5d5d266854d9e2500adb5e1133efe1fd0eaf43b9bea29a13fed34b3db24ae82e",
+      "bytes": 9907
+    },
+    {
+      "path": "scripts/owned-reserve-coach-acceptance.mjs",
+      "sha256": "0d129ad133e978fd0b307d3da8bd86a1b7493fa277d53e4bc25e4344022e2d4c",
+      "bytes": 6150
+    },
+    {
+      "path": "scripts/shortlist-comparison-acceptance.mjs",
+      "sha256": "945c83c801204190f710f4117f117b47fcb8621ee3902f8828078388f3426f3b",
+      "bytes": 13653
+    },
+    {
+      "path": "scripts/ui-async-acceptance.mjs",
+      "sha256": "f26eea8f631d9f9e18cd2bb59437c2f074124a2d4a80e19abed93a2d420b4ebe",
+      "bytes": 10016
+    },
+    {
+      "path": "scripts/verify-shortlist-comparison-evidence.mjs",
+      "sha256": "b021637188324d60b741b49a7f82181e53361b0622c860461497f062585a6fe1",
+      "bytes": 6249
+    },
+    {
+      "path": "src/artifact/shell.html",
+      "sha256": "71ed4ed7d6afa629bd414c9af3907a1a1f561bbb9ab66c7188a11d7160065e5c",
+      "bytes": 45033
+    },
+    {
+      "path": "src/artifact/ui-club-briefing.js",
+      "sha256": "89f21e880245c0167254b93e72d213e7625595e8d7c46a58f22320f5952023d8",
+      "bytes": 8980
+    },
+    {
+      "path": "src/artifact/ui-initial-candidates.js",
+      "sha256": "b78be53359e94f93519d5f20925c7c495d2d72aa873bbe4ec7e9a9c4a0a0f0dd",
+      "bytes": 8948
+    },
+    {
+      "path": "src/artifact/ui-market-initial.js",
+      "sha256": "8627ed09cd5b667f3d630525a2cc1dea345017ec33438047fc4a367219fa02b4",
+      "bytes": 13414
+    },
+    {
+      "path": "src/artifact/ui-club-actions.js",
+      "sha256": "e2eee1b067313ee525cb14d797a204c6d64c64afae973fb8ce5997187161e9f9",
+      "bytes": 5205
+    },
+    {
+      "path": "src/artifact/ui-initial-table.js",
+      "sha256": "904e4ea1daa0f025fadc8497ffc904216f6f19e5552896fff407345955f3f410",
+      "bytes": 6389
+    },
+    {
+      "path": "scripts/club-actions-browser.py",
+      "sha256": "dda3509667196b659ad4bd60ac867447fd0f34e368389bd4942b91da7a2aa4cd",
+      "bytes": 6477
+    },
+    {
+      "path": "scripts/initial-candidate-table-browser.py",
+      "sha256": "99e3e9690c22282b72034cd245941bca1b3afcbb38b5857210a73ff1848763e8",
+      "bytes": 5489
+    }
+  ],
+  "archive": {
+    "parts": [
+      {
+        "path": "docs/evidence/club-current-actions-2026-10-08.json.gz.part0",
+        "sha256": "7c3479dd111c4e155a8b3ec112f3c12473a6f53329df10270f406d59c8f2a063",
+        "bytes": 2000000
+      },
+      {
+        "path": "docs/evidence/club-current-actions-2026-10-08.json.gz.part1",
+        "sha256": "adbfddf5810a00185baf3dfcc076c64694fec871cbad9cb852027ec066edafee",
+        "bytes": 2000000
+      },
+      {
+        "path": "docs/evidence/club-current-actions-2026-10-08.json.gz.part2",
+        "sha256": "c94ed0635d569d87a53fa0ff94a5bc6059eb25cc4cc11ba0bf32bc2e1602c1fc",
+        "bytes": 2000000
+      },
+      {
+        "path": "docs/evidence/club-current-actions-2026-10-08.json.gz.part3",
+        "sha256": "c0514e41acf09b6aabd5b50cf441373f7950e16b31854109874b010c2e1d811d",
+        "bytes": 2000000
+      },
+      {
+        "path": "docs/evidence/club-current-actions-2026-10-08.json.gz.part4",
+        "sha256": "ac41cc00ccb598a5ced849d70a2a87dcaeec0052ddefc3968f3d08f47fa5e447",
+        "bytes": 2000000
+      },
+      {
+        "path": "docs/evidence/club-current-actions-2026-10-08.json.gz.part5",
+        "sha256": "f3a46944ade73811c63739e34408109e392ed98fb6f145e85b5cfe8ebd906782",
+        "bytes": 573702
+      }
+    ],
+    "sha256": "1785814c5610be7ec8f678f13a4e96ad579ec3e05957f328d7f0a81a958f79f1",
+    "decodedSha256": "bc67cf06aeab54037cc268ae18cdb155470026cebb5c7060a002ebe4171e02a3",
+    "decodedBytes": 61548376
+  },
+  "accepted": {
+    "UI": 89,
+    "freshVM": 88,
+    "engineUnchanged": 101,
+    "calendar": 20,
+    "browserOperationsContexts": 8,
+    "browserTableContexts": 4
+  },
+  "failuresPreserved": [
+    "/tmp/club-actions-evidence-generation-final.log",
+    "/tmp/club-actions-static-final.log",
+    "/tmp/club-actions-build-final.log",
+    "/tmp/club-actions-evidence-verify-final.log",
+    "/tmp/club-actions-evidence-verify-first.log",
+    "/tmp/club-actions-smoke-final.log",
+    "/tmp/club-actions-regression-final.log",
+    "/tmp/club-actions-static-tests-final.log",
+    "/tmp/club-actions-calendar-final.log",
+    "/tmp/club-actions-static-table-final.log",
+    "/tmp/club-actions-initial-table-final.log",
+    "/tmp/club-actions-browser-final.log",
+    "/tmp/club-actions-table-browser-second.log",
+    "/tmp/club-actions-ui-table-2.log",
+    "/tmp/club-actions-build-table-3.log",
+    "/tmp/club-actions-table-browser-first.log",
+    "/tmp/club-actions-build-table-2.log",
+    "/tmp/club-actions-async-table.log",
+    "/tmp/club-actions-initial-table-first.log",
+    "/tmp/club-actions-static-table.log",
+    "/tmp/club-actions-build-table.log",
+    "/tmp/club-actions-browser-concise.log",
+    "/tmp/club-actions-build-3.log",
+    "/tmp/club-actions-browser-first.log",
+    "/tmp/club-actions-static-first.log",
+    "/tmp/club-actions-ui-first.log",
+    "/tmp/club-actions-build-2.log",
+    "/tmp/club-actions-focused-3.log",
+    "/tmp/club-actions-build-1.log",
+    "/tmp/club-actions-focused-2.log",
+    "/tmp/club-actions-first-focused.log"
+  ],
+  "remaining": "exact current PR head ALL/medical7 exit0/verify→순차merge→exactmain ALL/sync/artifact/Pages; 다음12.5.4.7과 전체 승인 미완료"
+}
