@@ -9,13 +9,15 @@
     "기존 원자적 writer·full/lite",
     "실제 가상2군 Bo1 넥서스·공식 경기일 drills0·history",
     "Chromium1280/320·keyboard·nooverflow·no pageerrors",
-    "UI90/89VM·calendar20·static14·Node22 regression/smoke 기존35s"
+    "UI90/89VM·calendar20·static14·Node22 regression/smoke 기존35s",
+    "실제 owned full/foreign EU completed Bo1 lite 압축 여부와 원본 JSON/압축 저장의 넥서스 history 별도 검사"
   ],
   "failures": [
     "fixture TAC_KO 미정의",
     "opponent 계약 후 공식 등록 fixture 미초기화",
     "기본 static ci-run exit1 상세 원인 미확정·동일 escalated 통과",
-    "없는 소스 경로·truncated read stdout"
+    "없는 소스 경로·truncated read stdout",
+    "저장 수용 재감사: packDB 미사용 두 번째 인자로 동일 저장을 반복한 공백 발견; 원본 JSON과 실제 외부 EU Bo1 compact/lite로 교정, 이전 소스·로그·commit 보존"
   ],
   "limits": [
     "모든 중간 source snapshot 미보관",
@@ -27,7 +29,7 @@
   "sources": {
     "src/artifact/ui-squad-preparation.js": "33fb7b3c15b003fa38b9d4b194f4695489191092141f626e6f5facf47defdf09",
     "src/artifact/ui-club-practice.js": "d9186479fa6be7eb1013be89de8abddedbca2985cb3cf94206696ce1fe27abcb",
-    "scripts/squad-staging-acceptance.mjs": "f6f55236f32eea6f0bfcfedcbe8e066d0e6f866558a63c46a38e1ff3613aaad2",
+    "scripts/squad-staging-acceptance.mjs": "608362c48e647dafa55f94078e15ce466a16e914fd79f527253768894f2c8f36",
     "scripts/verify-squad-draft-recovery-evidence.mjs": "528226b7115a7174af2e88ff45f3e0f15d578bc6acf05ba78118274fede7a81a",
     "index.html": "3a1253b82048d5dcfab80e8279d34060ab16df1997ca23b353b79b58698fcad8"
   },
@@ -157,10 +159,10 @@
       "docs/evidence/squad-draft-recovery-2026-10-08.raw.19.gz.part",
       "docs/evidence/squad-draft-recovery-2026-10-08.raw.20.gz.part"
     ],
-    "bytes": 10157794,
-    "sha256": "10ae61dbe715c0322a6777e3cefb7b4cc862f1e60ac9513a167acad331790b95",
-    "decodedBytes": 58012385,
-    "decodedSha256": "ebf0e13334a6b6ad5f75e0a7d572e020c7df0801b0a408d882ec855e20cd67b7",
-    "rows": 32
+    "bytes": 10169257,
+    "sha256": "238174e76594c8bdd55f21d02d7d4f4c5d6ca06f057600e4d6fd43eb49bb8c53",
+    "decodedBytes": 58064511,
+    "decodedSha256": "061875d24650eb8a5cfab15f04f3b47d1d61c8b25f566244deeaecaa560ec290",
+    "rows": 37
   }
 }

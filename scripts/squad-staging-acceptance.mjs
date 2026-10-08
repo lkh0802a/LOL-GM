@@ -2,9 +2,9 @@ import './verify-squad-draft-recovery-evidence.mjs';
 import {runEngineFixture,artifactSources,artifactSource} from './test-harness.mjs';
 await runEngineFixture(String.raw`(()=>{
  const check=(ok,msg)=>{if(!ok)throw Error('SQUAD_STAGING '+msg)};
- const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:6,div2:true,system:'franchise'})];cfg.internationals=[];cfg.subs=0;cfg.changes='none';
+ const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:6,div2:true,system:'franchise'}),regionCfg('EU',{teams:2,div2:false,system:'franchise'})];cfg.internationals=[];cfg.subs=0;cfg.changes='none';
  const db=buildWorld(cfg),[parent,other]=activeTeams(db,'NA',1),reserve=reserveTeamsOf(db,parent)[0];
- for(const t of [parent,reserve])for(const role of ROLES){const p=genPlayer(db,new RNG(t.id+role),{region:t.region,role,age:22,base:65});signContract(db,p,t,1,3);t.depthChart[role]=p.id}
+ for(const t of [parent,reserve,...activeTeams(db,'EU',1)])for(const role of ROLES){const p=genPlayer(db,new RNG(t.id+role),{region:t.region,role,age:22,base:65});signContract(db,p,t,1,3);t.depthChart[role]=p.id}
  const backup=genPlayer(db,new RNG('staged-backup'),{region:parent.region,role:'MID',age:22,base:60});signContract(db,backup,parent,1,3);
  startWorldSeason(db,parent.id,'squad-staging');DB=db;SQUAD=parent.id;SQUAD_EDIT=null;
  const elements={sq:{},practicefocus:{},trint:{},trleft:{textContent:''},sqapply:{},sqdiscard:{}},
@@ -82,7 +82,7 @@ await runEngineFixture(String.raw`(()=>{
  const freshEdit=squadEditState(owned);check(freshEdit.expected.roster.date===clone.worldDate&&freshEdit.tactics.aggression===owned.tactics.aggression&&freshEdit.training.intensity===owned.training.intensity,'fresh editor copied stale proposals');
  resetCallback();check(SQUAD_EDIT===freshEdit,'retained reset callback discarded new editor');
  freshEdit.training.intensity='light';freshEdit.dirty=true;bindSquad();elements.sqapply.onclick();check(owned.training.intensity==='light'&&SQUAD_EDIT===null,'manual re-edit existing writer failed');
- for(const lite of [false,true]){const restored=unpackDB(packDB(clone,lite));check(restored.teams[reserve.id].training.intensity==='light'&&restored.teams[parent.id].tactics.aggression===35,'review/re-edit save continuity');}
+ for(const lite of [false,true]){const restored=unpackDB(lite?packDB(clone):JSON.stringify(clone));check(restored.teams[reserve.id].training.intensity==='light'&&restored.teams[parent.id].tactics.aggression===35,'review/re-edit save continuity');}
  const cid='recovery-official',opponent=activeTeams(clone,'NA',2).find(t=>t.id!==owned.id);
  check(!!opponent,'tier-two opponent missing');
  for(const role of ROLES){const p=genPlayer(clone,new RNG('recovery-opponent|'+role),{region:'NA',role,age:22,base:65});signContract(clone,p,opponent,1,3);opponent.depthChart[role]=p.id;}
@@ -94,7 +94,14 @@ await runEngineFixture(String.raw`(()=>{
  check(owned.training.intensity==='light'&&owned.practiceDay.drills===0,'current manual training/official daily consumer');
  const result=simulateScheduledSeries(clone,season,day,match,clone.competitions[cid].stages[0]);commitScheduledSeries(clone,season,match,result);finalizeCompetitionDay(clone,season,day,0,clone.competitions[cid].stages[0]);
  check(result.rec.games.every(g=>g.publicRecord.ending.kind==='nexus'),'recovery official ending');
- for(const lite of [false,true]){const restored=unpackDB(packDB(clone,lite));check(restored.world.seasons[cid].days[0].matches[0].res.games.every(g=>g.publicRecord.ending.kind==='nexus')&&restored.teams[owned.id].training.intensity==='light','recovery official save history');}
+ const foreignId='recovery-foreign',foreignTeams=activeTeams(clone,'EU',1).slice(0,2);
+ clone.competitions[foreignId]={id:foreignId,name:'외부 공식 소비',region:'EU',teams:foreignTeams.map(t=>t.id),rules:{fearless:true},stages:[{id:'regular',name:'정규',type:'round_robin',legs:1,bestOf:1}]};
+ const fs=newSeason(clone,foreignId,clone.year,'recovery-foreign',addDays(clone.worldDate,1));fs.key=foreignId;fs.region='EU';fs.div=1;clone.world.seasons[foreignId]=fs;
+ const fd=fs.days[0],fm=fd.matches[0];setWorldCalendarDate(clone,fd.date);const fr=simulateScheduledSeries(clone,fs,fd,fm,clone.competitions[foreignId].stages[0]);commitScheduledSeries(clone,fs,fm,fr);finalizeCompetitionDay(clone,fs,fd,0,clone.competitions[foreignId].stages[0]);
+ const rawFull=JSON.stringify(clone),packed=packDB(clone),encoded=JSON.parse(packed);
+ check(encoded.world.seasons[foreignId].compact&&encoded.world.seasons[foreignId].days[0].matches[0].res.lite&&!encoded.world.seasons[cid].days[0].matches[0].res.lite,'actual foreign lite/owned full packing');
+ for(const restored of [unpackDB(rawFull),unpackDB(packed)])check(restored.world.seasons[foreignId].days[0].matches[0].res.games.every(g=>g.publicRecord.ending.kind==='nexus'),'actual foreign lite nexus history');
+ for(const lite of [false,true]){const restored=unpackDB(lite?packDB(clone):JSON.stringify(clone));check(restored.world.seasons[cid].days[0].matches[0].res.games.every(g=>g.publicRecord.ending.kind==='nexus')&&restored.teams[owned.id].training.intensity==='light','recovery official save history');}
  console.log('SQUAD_DRAFT_REVIEW PASS clone purity, original expected, current-only reserve authority, source table, cancellation, changed-date confirmation, reset duplicate guard, explicit current re-edit, full/lite');
  console.log('SQUAD_STAGING_ACCEPTANCE PASS actual team/slider/role/destination/apply/discard events, independent pending edits/public navigation, validation+late writer rollback with identities/history, roster+coaching atomicity, stale baseline/membership, reserve/fired authority, world replacement/save');
 })();`,{timeout:60000,setupSources:["var SLOT='1',SLOT_SWITCHING=false,UI_RENDER_ID=1,UI_OVERLAY=null,VIEW='squad';let DB,SQUAD,SQUAD_EDIT,OPEN_P,MSG,$,document,window,confirm=()=>true;const originalStarter=setDepthStarter;function nav(){UI_RENDER_ID++;bindSquad()}function navKeepScroll(){UI_RENDER_ID++;bindSquad()}function saveDB(){}function bindScrimPlans(){}function bindRolePromiseControls(){}function bindLoanControls(){}function bindLoanPurchaseControls(){}function bindLocalServiceControls(){}function bindOfficialRegistrationControls(){}",...(await artifactSource('app.js')).split('\n').filter(x=>x.startsWith('const TAC_KO=')||x.startsWith('const esc=')).map(x=>x),...(await artifactSources(['ui-club-medical.js','ui-club-practice.js','ui-squad-controls.js','ui-roster.js','ui-squad-preparation.js']))]});
