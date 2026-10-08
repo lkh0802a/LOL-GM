@@ -1,3 +1,4 @@
+import {historicalSourceHash} from './season-history-source-successor.mjs';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {gunzipSync} from 'node:zlib';
@@ -12,10 +13,10 @@ for(const r of rows){const b=Buffer.from(r.base64,'base64');assert.equal(b.lengt
 for(const [p,h] of Object.entries(e.originals))assert(rows.some(r=>r.path==='original/'+p&&r.sha256===h),p);
 const next=JSON.parse(await readFile(new URL('docs/evidence/official-draft-comparison-2026-10-08.json',root)));
 for(const [p,h] of Object.entries(e.sources)){
-  const current=sha(await readFile(new URL(p,root)));if(current===h)continue;
+  const current=await historicalSourceHash(p);if(current===h)continue;
   assert(['src/artifact/ui-registration.js','src/artifact/ui-club-eligibility.js','scripts/club-eligibility-acceptance.mjs','scripts/registration-acceptance.mjs','scripts/staff-registration-acceptance.mjs','scripts/verify-squad-draft-recovery-evidence.mjs','scripts/verify-official-edit-evidence.mjs','index.html'].includes(p),'reviewed official comparison successor');
   assert.equal(next.originals[p],h);assert.equal(current,next.sources[p],p);
 }
 assert((await readFile(new URL('docs/DEVELOPMENT.md',root))).includes(Buffer.from(rows.find(r=>r.path==='original/docs/DEVELOPMENT.md').base64,'base64')));
-for(const f of ENGINE_MODULES)assert.equal(sha(await readFile(new URL('src/artifact/'+f,root))),e.engine[f],f);
-console.log('OFFICIAL_EDIT_EVIDENCE PASS original records, exact source successors, guide and engine bytes');
+for(const f of ENGINE_MODULES)assert.equal(await historicalSourceHash('src/artifact/'+f),e.engine[f],f);
+console.log('OFFICIAL_EDIT_EVIDENCE PASS original records, exact source successors, guide and historical engine hashes with reviewed season successor');

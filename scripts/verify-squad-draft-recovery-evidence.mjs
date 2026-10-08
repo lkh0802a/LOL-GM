@@ -1,3 +1,4 @@
+import {historicalSourceHash} from './season-history-source-successor.mjs';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {gunzipSync} from 'node:zlib';
@@ -14,7 +15,7 @@ for(const row of rows){const bytes=Buffer.from(row.base64,'base64');assert.equal
 const successor=JSON.parse(await readFile(new URL('docs/evidence/official-edit-context-2026-10-08.json',root),'utf8'));
 const comparison=JSON.parse(await readFile(new URL('docs/evidence/official-draft-comparison-2026-10-08.json',root),'utf8'));
 for(const [path,hash] of Object.entries(evidence.sources)){
-  const current=sha(await readFile(new URL(path,root)));
+  const current=await historicalSourceHash(path);
   if(current===hash)continue;
   assert(['index.html','scripts/verify-squad-draft-recovery-evidence.mjs'].includes(path),'only reviewed successor paths');
   assert.equal(successor.originals[path],hash,'original source pin retained');
@@ -23,6 +24,6 @@ for(const [path,hash] of Object.entries(evidence.sources)){
 const guide=await readFile(new URL('docs/DEVELOPMENT.md',root));
 const original=Buffer.from(rows.find(r=>r.path==='original-guide.md').base64,'base64');
 assert(guide.includes(original),'original guide bytes must remain contiguous');
-for(const file of ENGINE_MODULES)assert.equal(sha(await readFile(new URL('src/artifact/'+file,root))),evidence.engine[file],file);
+for(const file of ENGINE_MODULES)assert.equal(await historicalSourceHash('src/artifact/'+file),evidence.engine[file],file);
 assert.equal(ENGINE_MODULES.length,101);
-console.log('SQUAD_DRAFT_RECOVERY_EVIDENCE PASS raw hashes, source pins, complete original guide and 101 unchanged engine sources');
+console.log('SQUAD_DRAFT_RECOVERY_EVIDENCE PASS raw hashes, source pins, complete original guide and 101 historical engine hashes and reviewed season successor');

@@ -5091,10 +5091,13 @@ function startWorldSeason(db,myTeam,seed){
   advanceStep(db);
 }
 function seasonLastDate(s){return s.days[s.days.length-1].date}
-// 저장 공간 절약: 내 지역이 아닌 리그 경기는 세트 요약만 남긴다
+// 해외 리그 요약에도 저장 계약의 공개 경기 기록과 당시 수동 밴픽 근거를 보존한다.
 function compactSeason(db,s){
-  if(s.compact)return; const my=db.teams[managedTeamId(db)].region; if(s.region===my||db.competitions[s.comp].international)return;
-  for(const d of s.days)for(const m of d.matches)if(m.res){const r=m.res;r.games=r.games.map(g=>({n:g.n,blue:g.blue,red:g.red,winner:g.winner,kills:g.kills,dur:g.dur,mvp:g.mvp}));delete r.tac;r.lite=true}
+  if(s.compact)return; const managed=db.teams&&db.teams[managedTeamId(db)],my=managed&&managed.region;
+  if(!my||!s.region||s.region===my||db.competitions?.[s.comp]?.international)return;
+  const prepared=[];
+  for(const d of s.days)for(const m of d.matches)if(m.res)prepared.push([m.res,seriesResultForSave(m.res,true).games]);
+  for(const [r,games] of prepared){r.games=games;delete r.tac;r.lite=true}
   s.compact=true;
 }
 function advanceStep(db){
