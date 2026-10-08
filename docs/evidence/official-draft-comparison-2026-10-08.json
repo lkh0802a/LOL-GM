@@ -1,4 +1,11 @@
 {
+  "priorArchive": {
+    "path": "docs/evidence/official-draft-comparison-first-2026-10-08.raw.json.gz",
+    "sha256": "09377c05ee6801c46f026353ae20624fec9c8d897744ca50205da5fed2f5aa45",
+    "decodedSha256": "15a365e0932415c805446dc89958b04e23b40ef759b9cb7e0de2fdaefb323ee0",
+    "rawFiles": 119,
+    "commit": "d729ad8eb5eeacce397311cfb7cadcc6bd27fa94"
+  },
   "task": "12.5.4.8.2.2",
   "base": "c103beadf24e2af2a220d6951a737c8d8a5fa94d",
   "state": "로컬 구현·집중 수용·관련 검사 완료; exact PR/main 출시 게이트 별도 확인",
@@ -12,12 +19,13 @@
     "scripts/registration-acceptance.mjs": "f0ff589ff55c174f31c643d94e5f8398cbab31cbe1eafe0b7ef6a369cc598d16",
     "scripts/squad-observer-information-acceptance.mjs": "21ba29214ba487d687cc02f7397b6583d7d842450a886a0f9b73626022aa9680",
     "scripts/staff-registration-acceptance.mjs": "808ceef0fe60c52d10de0d1952a0b647aa8d9702ec5f29a81b8777f43259a86b",
+    "scripts/verify-official-draft-evidence.mjs": "2fc16d91666e10b9815436c7e5245b1734b6ee4046a04bc666474fba3f58ea2a",
     "scripts/verify-official-edit-evidence.mjs": "f597142db77a0ec8de59f14385279652b47bc7fa0b182322c2d96915847d3ac9",
+    "scripts/verify-shortlist-comparison-evidence.mjs": "5b9f4862d972c389f649034596c6a2399a93e482fc124387a8590d94b4abf9fb",
     "scripts/verify-squad-draft-recovery-evidence.mjs": "60c93b9a23a8aa702f3c2127952bd3e0c2c4106255246803082240a982ed6348",
     "src/artifact/ui-club-eligibility.js": "a809346cad9e2123dfd2ae08171aa2f8062d0f984b00f813956be8e87c94da94",
-    "src/artifact/ui-registration.js": "f7eb3f9123ffbb50118dd6d2e4e1db76f1815b20f1e36a58a2845889177c5f4c",
     "src/artifact/ui-official-edit.js": "56e1c28602107354616e8efbeec89505fb3e35cafc2846b4cc57a991fd5937e4",
-    "scripts/verify-official-draft-evidence.mjs": "24e4e5a0a4cccf99404b1d344ccf09192879aa5ea8f50dca3520a4d64aab09e6"
+    "src/artifact/ui-registration.js": "f7eb3f9123ffbb50118dd6d2e4e1db76f1815b20f1e36a58a2845889177c5f4c"
   },
   "originals": {
     "docs/ARCHITECTURE.md": "488ee85719669bff4195acc83fcb2b0b43b9d35868bb43ff0d5c49eea0720cdf",
@@ -33,6 +41,7 @@
     "scripts/squad-observer-information-acceptance.mjs": "6921c0d896803397fa5430f39e5843f2998da30ad9df55657c36fb39a3c121cc",
     "scripts/staff-registration-acceptance.mjs": "f24ea5a29d372f3240646930393976b3fef5788d71dd47d257c69464eac601db",
     "scripts/verify-official-edit-evidence.mjs": "15b0aebb755a2ba5e1a0a42a5283328c97be21b69235008602cc5a9a1ab6c633",
+    "scripts/verify-shortlist-comparison-evidence.mjs": "4a492a39c549a4dea1710dabe2e69c9486d80231f520dd50eac2317f35c84dd0",
     "scripts/verify-squad-draft-recovery-evidence.mjs": "b579ad52d4ef16a8487bc24c09407d09e8cab6fb9a1708516b0cabb4893d3827",
     "src/artifact/ui-club-eligibility.js": "7055325909ca25df32ce8fef6b7d3e5cc6392d1abe6410348e82cacde68d9128",
     "src/artifact/ui-registration.js": "f6c0b2611725bfdaae76bc6b08eb22a05294021ac14c70ef4ba9ab65fe93c768"
@@ -142,9 +151,9 @@
   },
   "archive": {
     "path": "docs/evidence/official-draft-comparison-2026-10-08.raw.json.gz",
-    "sha256": "09377c05ee6801c46f026353ae20624fec9c8d897744ca50205da5fed2f5aa45",
-    "decodedSha256": "15a365e0932415c805446dc89958b04e23b40ef759b9cb7e0de2fdaefb323ee0",
-    "rawFiles": 119
+    "sha256": "4c8c77d48759fe31dfd2ebf1217325c49b36b47b7464bbf5b825ddbd284bb5ea",
+    "decodedSha256": "4f2cbcf291891f3884fab29b813ad50ccb126092ec6133c3de4d04babe115408",
+    "rawFiles": 142
   },
   "limitations": [
     "controlled local fixtures are not professional calibration",
