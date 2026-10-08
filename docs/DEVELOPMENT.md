@@ -1,3 +1,5 @@
+> 2026-10-08 이번 실행 시작 재확인: 실제 remote main `038858df78c08b3a27e85ec0035fb0360a4a91e3`(#205), 동일 main ALL37760033859/Pages37760884926 completed/success와 PR205 merged를 원격 재조회했다. 앞선 원문은 역사 기록으로 모두 그대로 보존한다. 이번 별도 feat/squad-draft-recovery의12.5.4.8.1은 실제 구현·집중 로컬 수용이며, 정확한 PR head ALL/의료7/verify → resulting-main/sync/artifact/Pages 전에는 출시 완료가 아니다. 운영 HTTP·이전 native 첨부 미확인 한계와 전체 승인 inventory/남은 작업은 유지한다.
+
 > 2026-10-08 이번 실행의 실제 시작 재확인: remote main `249a087c11e63c20c937f7a8a191aee8f1e9df6a`(#204), 같은 head ALL37750103387와 Pages37750942908의 completed/success를 다시 읽었다. PR204 본문·보존 댓글6056128766의 압축 원문88544bytes/decoded794651bytes 및20행 SHA를 원격 재조회·결합 검증했다. 아래 원래 전체 가이드와 이전 실패/승인/출시 기록은 그대로 보존한다. 새12.5.4.7.1은 구현·로컬 수용이며 별도 PR의 정확한 head 전체 CI·순차 병합·main/sync/artifact/Pages를 거쳐야 출시다. 전체 승인 범위 완료가 아니다.
 
 ## 현재 출시와 이번 구현 경계 — 2026-10-08 (12.5.4.5–12.5.4.6)
@@ -2100,3 +2102,17 @@ main은 64d50d77e0c674e9d679970dc2c6d8023194eff3, #199 head는 c628a5ecd47003ca9
 ### 12.5.4.8 정확한 다음 구현 경계
 
 새 실제 source-backed 경기 엔진·저장·권한/진행 결함을 최우선으로 재현한다. 없으면 **선수단 임시 배치·선발·전술·훈련이 날짜/공식 등록/로스터/manager 문맥 변경 뒤 실제 거절되는 경우의 확인·수정·취소/복귀 → 기존 원자적 수동 명령 → 공식 소비·full/lite 역사**를45–55분 수직 단위로 이어간다. 자동으로 old expectation을 재기준화하거나 감독 대신 결정하지 않는다. 이번20명 후보 paging/최대10명 batch·상세 복귀 수용은 scout center의 visit/배정·공식 표본 필터/관측 비교 전체 완료가 아니다. 모든 COMPLETE38/eight-audit/13서사/all-domain/AnalysisRoom/언어/전면 UI·UX12/게임성9+4 승인과 남은 작업, blockedshop/XP 자료 반복 금지, 타인27/28·dirtyanalysis 원본, 최종100시즌/기기/TalkBack 유예를 그대로 유지한다.
+
+
+### 12.5.4.8.1 오래된 선수단 초안의 실제 값 비교·수동 취소 후 재편집 — 2026-10-08
+
+- 편집 전45–55분 예상으로 범위를 고지했다. 현재 main·208 branches(100/100/8)·open27/28 파일·rulesets·current-main README/DEVELOPMENT·specification/decisions/architecture와 관련 source를 다시 확인했다. 타인 PR 및 dirtyanalysis는 변경하지 않았다. 새 source-backed 엔진 결함 재현이나 unchanged shop/XP metadata 획득 반복을 이 구현의 대체물로 세지 않는다.
+- 기존 `squad.preparation`의 old expected 거절을 그대로 유지한다. `ui-squad-preparation.js`가 private JSON 복사에서 실제 `squadPreparationSnapshot`/`previewWorldAction`을 소비해 편집 시작/현재 적용/미적용 초안을 표로 비교한다. 소유 선발·0–100 전술·점 단위 훈련 배분·강도/연습 중점·배치·역할만 현재 권한에 따라 보여준다. 로스터/공식 등록/의료 가용/고용을 하나의 상태로 합치지 않는다. 공식 등록 변경 자체가 기존 preparation snapshot에 포함된다는 주장은 하지 않는다.
+- 기존 UI guard를 취소 확인 전후 검사하고 기존 `discardSquadEdit`로 관리 구단 모든 초안을 취소한다. 현재 상태에서 다시 편집하며 old expected 자동 갱신/초안 자동 복사/감독 대신 결정은 없다. 취소는 DB·save를 쓰지 않고 직접 재편집 적용만 기존 원자적 수동 writer/save를 사용한다. 새 계약 대행권한·가격·시간·계수·save schema/engine 변경은 없다.
+- 집중 수용: 원문 squad-staging assertions 유지, clone purity/old expected 보존/리저브의 모구단 private 준비 조회 거절/실제 거절 문구와 표/취소/확인 중 날짜 변경/retained reset 버튼/현재 상태 재편집/기존 writer/full-lite 통과. 실제 가상 2군 Bo1의 공식 경기일 drills0·넥서스 종료와 외부 EU Bo1 완료 후 실제 owned full/foreign lite 압축 및 원본 JSON/압축 저장의 넥서스 history를 수용했다. 프로 보정이나 강제 결과가 아니다. Chromium1280/320 실제 rebuiltHTML·controlled storage에서 표/키보드/취소/재편집/기존 적용·save/full-lite/no pageerror·페이지 가로 넘침 없음 통과. production HTTP/최종 기기 QA와 구분한다.
+- 실패 원문 보존: 첫 fixture의 TAC_KO 미정의 → 실제 app.js 상수만 읽어 동일 fixture 제공; 공식 소비 시험의 빈 opponent 공식 등록 → 생성/계약 뒤 시험 opponent의 초기 등록을 실제 initializer로 제공; 원래 static test의 ci-run.test exit1(상세 원인 로그 미포함·원인 확정하지 않음) → 동일 Node22 검사·예산 escalated 재검증. 없는 소스 경로/읽기 출력 truncation 한계도 기록하며 빠진 원문을 재생성 보존했다고 주장하지 않는다. 저장 수용 재감사에서 packDB의 미사용 두 번째 인자로 동일 저장을 반복한 공백을 발견해 원본 JSON/실제 foreign lite로 교정했고 기존 코드·로그와 한계를 보존한다. 성능 최적화나 전체 outcome parity는 주장하지 않는다.
+- 증거/로그/원본 guide·automation·base/final source는 `docs/evidence/squad-draft-recovery-2026-10-08.json` 및 대응 압축 archive에 보존한다. 기존 예산/GC/billing/instrumentation/101engine source/역사·승인 inventory를 유지한다. CI·병합·게시 후속은 구현 시간으로 세지 않는다.
+
+### 12.5.4.8.2 정확한 계속 경계
+
+새 source-backed 엔진/저장/권한/진행 불능을 최우선으로 재현한다. 없으면 공식 등록·선발 준비의 실제 미적용 입력과 현행 등록 명령 snapshot/lock/의료 거절 → 현재 등록·수동 수정·취소/복귀 → 기존 명령·공식 경기/full-lite/history를45–55분 단위로 연결한다. old expected 자동 재기준화 금지. 이번 준비 초안 표는 공식 등록 편집 전체/전면UI·AnalysisRoom·언어·13서사/all-domain/COMPLETE38/eight-audit/UX12·게임성9+4/scoutcenter visit·assignment·공식표본필터/관측비교 완료가 아니다. 최종100시즌/기기/TalkBack QA 유예와 모든 기존 승인·남은 작업을 그대로 유지한다.

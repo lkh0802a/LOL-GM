@@ -19,6 +19,8 @@ function bindSquadPracticeControls(root=document){
   const apply=root.querySelector('#sqapply'),discard=root.querySelector('#sqdiscard');
   if(apply)apply.onclick=()=>{if(current())applySquadEdit()};
   if(discard)discard.onclick=()=>{if(current())discardSquadEdit()};
+  const reset=root.querySelector('#sqreviewreset');
+  if(reset)reset.onclick=()=>{if(!current())return;if(confirm('관리 구단의 모든 미적용 초안을 취소하고 현재 상태에서 다시 편집할까요?')&&current())discardSquadEdit()};
 }
 function clubPracticeModel(db=DB,tid=managedTeamId(db)){
   const ctx=clubBriefContext(db);if(!ctx||!ctx.teams.includes(tid)||!managerControlsSquad(db,db.teams[tid]))return null;
