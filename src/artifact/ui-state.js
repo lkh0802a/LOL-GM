@@ -97,10 +97,12 @@ function navigateTo(view,options={}){
     if(UI_OVERLAY.onDismiss)UI_OVERLAY.onDismiss();
     else closeUiOverlay();
   }
+  if(VIEW==='squad'&&(document.querySelector('#scq')||document.querySelector('#scback')))captureScoutReturn();
   VIEW=view;
   nav();
   if(!options.keepScroll)window.scrollTo(0,0);
   document.querySelector('#main')?.focus?.({preventScroll:true});
+  if(view==='squad'&&(document.querySelector('#scq')||document.querySelector('#scback')))restoreScoutReturn();
   return true;
 }
 function navKeepScroll(){
@@ -110,7 +112,7 @@ function navKeepScroll(){
   requestAnimationFrame(()=>{if(generation===UI_RENDER_ID&&VIEW===view)window.scrollTo(0,y)});
 }
 function resetUiForWorld(){
-  cancelUiTasks();
+  cancelUiTasks();clearScoutReturn();
   if(typeof START_UI!=='undefined')START_UI={active:!DB.world,page:'home',error:''};
   if(UI_OVERLAY)closeUiOverlay({force:true,restoreFocus:false});
   DRAFT_UI=null;

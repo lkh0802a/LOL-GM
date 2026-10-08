@@ -16,6 +16,7 @@ const guide=await readFile(new URL('docs/DEVELOPMENT.md',root));assert(guide.inc
 // Keep the original evidence and compare these two current files to exact reviewed edits.
 const themeEvidence=JSON.parse(await readFile(new URL('docs/evidence/startup-theme-readability-2026-10-08.json',root)));
 const actionsEvidence=JSON.parse(await readFile(new URL('docs/evidence/club-current-actions-2026-10-08.json',root)));
+const returnEvidence=JSON.parse(await readFile(new URL('docs/evidence/scout-return-context-2026-10-08.json',root)));
 for(const [path,row] of Object.entries(archive.sources)){
   assert.equal(sha(row.text),row.sha256,path);assert.equal(Buffer.byteLength(row.text),row.bytes,path);
   let expected=path==='scripts/verify-shortlist-comparison-evidence.mjs'?summary.verifierSource.sha256:row.sha256;
@@ -24,8 +25,9 @@ for(const [path,row] of Object.entries(archive.sources)){
   if(path==='scripts/shortlist-comparison-acceptance.mjs')expected=sha(row.text.replace("'ui-initial-candidates.js'","'ui-initial-table.js','ui-initial-candidates.js'"));
   if(path==='src/artifact/ui-club-briefing.js')expected=sha(row.text.replace('    ${nx?', '    ${renderClubActions()}${nx?').replace('  bindClubEligibility();','  bindClubActions();bindClubEligibility();'));
   if(path==='scripts/verify-shortlist-comparison-evidence.mjs'){
-    const successor=actionsEvidence.sources.find(x=>x.path===path);assert(successor,'reviewed current verifier source');expected=successor.sha256;
+    const successor=returnEvidence.sources.find(x=>x.path===path);assert(successor,'reviewed current verifier source');expected=successor.sha256;
   }
+  if(path==='scripts/ui-finance-contracts-runner.mjs')expected=sha(row.text.replace("  'ui-state-acceptance.mjs',","  'ui-state-acceptance.mjs',\n  'scout-return-acceptance.mjs',").replace('stats.contexts,88','stats.contexts,89').replace('all 88 engine fixtures','all 89 engine fixtures'));
   assert.equal(sha(await readFile(new URL(path,root))),expected,path);
 }
 
@@ -40,10 +42,21 @@ const actionGzip=Buffer.concat(actionChunks);assert.equal(sha(actionGzip),action
 const actionBytes=gunzipSync(actionGzip);assert.equal(sha(actionBytes),actionsEvidence.archive.decodedSha256);
 const actionArchive=JSON.parse(actionBytes);assert(guide.includes(Buffer.from(actionArchive.originalGuide.text)),'entire current main guide retained');
 for(const [path,row] of Object.entries(actionArchive.raw)){const b=Buffer.from(row.data,row.encoding);assert.equal(sha(b),row.sha256,path);assert.equal(b.length,row.bytes,path)}
-for(const row of actionsEvidence.sources)assert.equal(sha(await readFile(new URL(row.path,root))),row.sha256,row.path);
+for(const row of actionsEvidence.sources)assert.equal(sha(await readFile(new URL(row.path,root))),row.path==='scripts/verify-shortlist-comparison-evidence.mjs'?returnEvidence.sources.find(x=>x.path===row.path).sha256:row.sha256,row.path);
 for(const [path,row] of Object.entries(actionArchive.engine))assert.equal(sha(await readFile(new URL(path,root))),row.sha256,path);
 const actualOfficial=actionArchive.accepted.operations.filter(x=>x.official);
 assert.equal(actualOfficial.length,2);for(const x of actualOfficial){assert(x.official.games.every(g=>g.ending.kind==='nexus'));assert(x.official.snapshots.every(s=>s.plan==='rest'&&s.medical.out&&s.ending.every(e=>e.kind==='nexus')))}
 assert.equal(actionArchive.accepted.table.length,4);assert(actionArchive.accepted.table.every(x=>x.readOnly&&x.order.orders.length===3));
 console.log('현재 운영·후보 비교표 원본 검증 '+JSON.stringify({engineFiles:Object.keys(actionArchive.engine).length,rawFiles:Object.keys(actionArchive.raw).length,fullMainGuide:true,actualNexusFullLite:true,multipleColumns:true}));
 console.log('관심 후보 비교 원본 검증 '+JSON.stringify({rawFiles:Object.keys(archive.rawFileIndex).length,rawUnique:Object.keys(raw).length,originalGuide:true,currentSources:true,temporaryFilesRequired:false}));
+
+// 12.5.4.7 retains every earlier archive/assertion and pins the added current UI.
+const returnGzip=Buffer.concat(await Promise.all(returnEvidence.archive.parts.map(async row=>{const b=await readFile(new URL(row.path,root));assert.equal(sha(b),row.sha256);assert.equal(b.length,row.bytes);return b})));
+assert.equal(sha(returnGzip),returnEvidence.archive.sha256);
+const returnBytes=gunzipSync(returnGzip);assert.equal(sha(returnBytes),returnEvidence.archive.decodedSha256);
+const returnArchive=JSON.parse(returnBytes);assert(guide.includes(Buffer.from(returnArchive.originalGuide.text)),'whole main guide retained');
+for(const [path,row] of Object.entries(returnArchive.raw)){const b=Buffer.from(row.data,row.encoding);assert.equal(sha(b),row.sha256,path);assert.equal(b.length,row.bytes,path)}
+for(const row of returnEvidence.sources)assert.equal(sha(await readFile(new URL(row.path,root))),row.sha256,row.path);
+for(const row of returnArchive.engine)assert.equal(sha(await readFile(new URL(row.path,root))),row.sha256,row.path);
+assert.equal(returnArchive.browser.length,2);assert(returnArchive.browser.every(x=>x.writerWholeEquality&&x.batch10Equality&&x.squadDraftReturnWriterDailyConsumer&&x.official.games.every(g=>g.kind==='nexus')&&x.official.copies.every(s=>s.report.sample.g>0&&s.endings.every(e=>e.kind==='nexus'))));
+console.log('관찰 복귀 원본 검증 '+JSON.stringify({rawFiles:Object.keys(returnArchive.raw).length,engineFiles:returnArchive.engine.length,fullGuide:true,actualWriterAndNexusSave:true}));
