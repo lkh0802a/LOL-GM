@@ -1,3 +1,4 @@
+import {seasonUiSourceHash} from './unemployed-season-source-successor.mjs';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {gunzipSync} from 'node:zlib';
@@ -15,14 +16,14 @@ async function successor(){
   for(const p of reviewed){
     assert(rows.some(r=>r.path==='original/'+p&&r.sha256===e.originals[p]),p+' original retained');
     assert(rows.some(r=>r.path==='current/'+p&&r.sha256===e.sources[p]),p+' reviewed source retained');
-    assert.equal(sha(await readFile(new URL(p,root))),e.sources[p],p+' reviewed current source');
+    assert.equal(await seasonUiSourceHash(p),e.sources[p],p+' reviewed current source');
   }
   evidence=e;return e;
 }
 // Historical assertions still check their exact original hashes. Only the
 // explicitly archived retention correction may supply its verified base bytes.
 export async function historicalSourceHash(path){
-  const actual=sha(await readFile(new URL(path,root)));
+  const actual=await seasonUiSourceHash(path);
   if(!reviewed.has(path))return actual;
   const e=await successor();return e.originals[path];
 }

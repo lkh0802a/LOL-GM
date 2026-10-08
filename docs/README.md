@@ -106,3 +106,5 @@ Use [numeric stages 1–13 and dotted work units](DEVELOPMENT.md#unified-numeric
 - 12.5.4.8.2.2: 공식 등록·선발·현장 스태프 편집에서 시작 입력/현재 적용/미적용 입력을 표로 비교하고, 거절된 입력을 유지하여 직접 수정하거나 명시 취소 후 현재 상태로 재편집한다. 실제 명령·공식 소비·저장 수용 범위와 원본 실패는 DEVELOPMENT와 official-draft-comparison 증거를 참조한다. 전체 UI/Analysis/언어/엔진 승인 범위의 완료 선언은 아니다.
 
 2026-10-08 공식 시즌 기록 보존·무소속 진행 교정의 현재 구현/수용 경계는 DEVELOPMENT12.5.4.8.3을 따른다. 과거 원문·승인·미완료는 보존하며, 새 정확한 PR/main CI·게시 검증 전 출시 완료로 세지 않는다.
+
+12.5.4.8.4 무소속 공개 시즌 화면·기존 수동 선택/취소·실제 오프시즌 진행의 수용/원본 실패와 정확한 다음 경계는 DEVELOPMENT 및 [증거](evidence/unemployed-season-context-2026-10-08.json)를 따른다. 전체 승인 범위 완료가 아니며 PR209 private 원문 공개 전송 승인은 미해결이다.

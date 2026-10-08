@@ -132,7 +132,7 @@ const TAC_KO={aggression:'공격성',risk_tolerance:'위험 감수',objective_pr
 // ---------- 데이터 ----------
 // ---------- 시리즈 ----------
 // ---------- 시즌 (월드) ----------
-function mySeasonKey(){const w=DB.world,rid=DB.teams[managedTeamId(DB)].region;const ks=Object.values(w.seasons).filter(s=>s.region===rid).sort((a,b)=>(b.split||0)-(a.split||0));return ks.length?ks[0].key:null}
+function mySeasonKey(){const w=DB.world,rid=seasonManagedRegion();if(!rid)return null;const ks=Object.values(w.seasons).filter(s=>s.region===rid).sort((a,b)=>(b.split||0)-(a.split||0));return ks.length?ks[0].key:null}
 function curS(){const w=DB.world;if(!SSET.view||!w.seasons[SSET.view])SSET.view=mySeasonKey()||Object.keys(w.seasons)[0];return w.seasons[SSET.view]}
 function sName(s){return DB.competitions[s.comp].name+(s.label?' '+s.label:'')}
 function nextMine(){
@@ -149,22 +149,22 @@ function phaseText(w){
 function viewSeason(){
   const w=DB.world;
   if(!w) return seasonSetup();
-  if(w.phase==='pick') return `<section class="teamhead"><h2>팀 선택</h2><p>${w.fired?'해임되었습니다. ':''}새로 맡을 팀을 고르세요. 세계와 기록은 그대로 이어집니다.</p></section><section class="controls"><label>팀<select id="pickteam">${teamOpts(managedTeamId(DB))}</select></label><button class="primary" id="pickgo">이 팀으로 계속</button></section>`;
+  if(w.phase==='pick') return renderSeasonTeamChoice();
   if(w.phase==='initial_roster') return renderInitialRosterMarket();
-  const me=managedTeamId(DB), T=DB.teams[me], k=mySeasonKey(), lgS=k&&w.seasons[k];
+  const me=managedTeamId(DB), T=seasonManagedTeam(), k=mySeasonKey(), lgS=k&&w.seasons[k];
   const reg=lgS?standings(DB,lgS,'regular'):[], mine=reg.find(x=>x.tid===me), rank=reg.indexOf(mine)+1;
   const nx=nextMine(), nd=nextDate(DB);
   let right='';
   if(w.phase==='season') right=`<div class="nextm"><span>현재 ${esc(DB.worldDate||'날짜 미정')} · 다음 경기 ${nd?esc(nd):'일정 없음'}</span><b>${nx?`다음 경기 ${esc(nx.d.date)} — vs ${esc(tname(nx.m.a===me?nx.m.b:nx.m.a))} (${esc(sName(nx.s))} · Bo${nx.m.bo})`:'이번 단계에 남은 경기가 없습니다'}</b></div>`;
   else{const last=DB.history.filter(h=>h.year===w.year&&h.intl).slice(-1)[0];right=`<div class="champ"><span>${w.year} ${last?esc(last.compName):''} 우승</span><b>${last?esc(tname(last.champion)):'—'}</b></div>`}
   return `<section class="seasonhead">
-    <div><h2>${w.year} 시즌</h2><p>${esc(T.name)} · ${esc(DB.regions[T.region].leagueName)}${lgS?' '+esc(lgS.label):''} ${mine&&(mine.w+mine.l)?`${rank}위 (${mine.w}승 ${mine.l}패)`:''} · ${esc(phaseText(w))}</p></div>${right}
+    <div><h2>${w.year} 시즌</h2><p>${T?esc(T.name):managedTeamId(DB)?'관리 구단 확인 필요':'무소속 감독'} · ${seasonManagedRegion()?esc(DB.regions[T.region].leagueName):'지역 정보 없음'}${lgS?' '+esc(lgS.label):''} ${mine&&(mine.w+mine.l)?`${rank}위 (${mine.w}승 ${mine.l}패)`:''} · ${esc(phaseText(w))}</p></div>${right}
   </section>
-  ${renderClubBriefing()}
+  ${T?renderClubBriefing():''}
   ${SAVEFAIL?'<p class="warn">브라우저 저장 공간이 부족해 진행 상황을 저장하지 못했습니다. 데이터 탭에서 JSON을 복사해 두세요.</p>':''}
   <section class="controls">${controlsFor(w)}<span id="sprog" class="hint" role="status"></span></section>
-  ${w.phase==='market'&&w.manage==='manual'?renderMarket():''}
-  ${w.phase==='offseason'&&w.manage==='manual'&&w.contractWindow?renderContractWindow():''}
+  ${T&&w.phase==='market'&&w.manage==='manual'?renderMarket():''}
+  ${T&&w.phase==='offseason'&&w.manage==='manual'&&w.contractWindow?renderContractWindow():''}
   ${(w.phase==='preseason'||w.phase==='market')&&w.report?renderReport(w.report):''}
   ${chapters(w)}
   <div class="seg tabs">${[['table','순위'],['sched','일정·결과'],['bracket','토너먼트'],['stats','기록'],['hist','세계·역대']].map(([k,l])=>`<button data-st="${k}" aria-pressed="${SSET.tab===k}">${l}</button>`).join('')}</div>
@@ -172,7 +172,7 @@ function viewSeason(){
 }
 // 시즌을 챕터(단계)별로 묶어 보여준다: 1장 스프링 → 2장 퍼스트 스탠드 → 3장 MSI 기간 → …
 function chapters(w){
-  const cur=curS(), myR=DB.teams[managedTeamId(DB)].region, open=SSET.chap??w.step;
+  const cur=curS(), myR=seasonManagedRegion(), open=SSET.chap??w.step;
   return `<div class="chapters">${w.steps.map((st,i)=>{
     const ss=Object.values(w.seasons).filter(s=>stepOf(DB,s)===i).sort((a,b)=>(b.region===myR)-(a.region===myR)||(a.div||1)-(b.div||1)||(DB.competitions[a.comp].tier==='low')-(DB.competitions[b.comp].tier==='low'));
     const state=i<w.step||w.phase!=='season'?'done':i===w.step?'now':'next';
@@ -189,8 +189,8 @@ function controlsFor(w){
     if(cw.stage==='exclusive')return `<button class="primary" id="scontractday">하루 진행</button><button class="ghost" id="scontractopen">독점 기간 끝까지</button><span class="hint">현재 ${DB.worldDate} · ${cw.startDate}~${cw.exclusiveThrough} 원소속 구단만 재계약 가능 · ${cw.outsideContactDate}부터 타 구단 접촉</span>`;
     return `<button class="primary" id="soff">오프시즌 진행</button><span class="hint">${cw.contractExpiryDate}에 기존 계약이 끝났고 ${cw.outsideContactDate}부터 FA 시장이 열렸습니다. 영입을 마친 뒤 다음 시즌 시장 단계로 진행합니다.</span>`;
   }
-  if(w.phase==='market') return `<button class="primary" id="smkt">이적 시장 마감</button><label class="inl">내 팀 운영 <select id="smanage">${[['manual','직접'],['ai','AI 위임']].map(([k,l])=>`<option value="${k}"${w.manage===k?' selected':''}>${l}</option>`).join('')}</select></label><span class="hint">${w.manage==='manual'?'재계약·방출·FA 제안·이적 제안을 마친 뒤 마감하세요.':'AI가 내 팀 계약을 처리합니다.'}</span>`;
-  if(w.phase==='preseason') return w.fired?`<button class="primary" id="sreset">새 팀 고르기</button>`:`<button class="primary" id="snew">${DB.year} 시즌 시작</button><button class="ghost" id="sreset">맡을 팀 바꾸기</button>`;
+  if(w.phase==='market') return `<button class="primary" id="smkt">이적 시장 마감</button>${seasonManagedTeam()?`<label class="inl">내 팀 운영 <select id="smanage">${[['manual','직접'],['ai','AI 위임']].map(([k,l])=>`<option value="${k}"${w.manage===k?' selected':''}>${l}</option>`).join('')}</select></label>`:''}<span class="hint">${w.manage==='manual'?'재계약·방출·FA 제안·이적 제안을 마친 뒤 마감하세요.':'AI가 내 팀 계약을 처리합니다.'}</span>`;
+  if(w.phase==='preseason') return w.fired?`<button class="primary" id="sreset">새 팀 고르기</button>`:`<button class="primary" id="snew"${managedTeamId(DB)&&!seasonManagedTeam()?' disabled':''}>${DB.year} 시즌 시작</button><button class="ghost" id="sreset">맡을 팀 바꾸기</button>`;
   return `<button class="primary" id="sday">하루 진행</button><button class="ghost" id="sfixture">다음 경기일</button><button class="ghost" id="smine"${nextMine()?'':' disabled'}>내 경기까지</button><button class="ghost" id="sstep">이번 단계 끝까지</button><button class="ghost" id="send">시즌 끝까지</button>`;
 }
 function renderReport(r){
@@ -198,7 +198,7 @@ function renderReport(r){
   const mineT=managedTeamId(DB);
   const sig=r.signings.slice().sort((a,b)=>(b.team===mineT)-(a.team===mineT));
   return `<section class="report"><h3>${r.year} 오프시즌 리포트</h3>
-   ${r.myGoal?`<p class="${r.myGoal.ok?'hi':'lo'}"><b>구단주 목표 "${GOAL_KO[r.myGoal.goal]}" ${r.myGoal.ok?'달성':'미달'}</b>${!r.myGoal.ok?` — 구단주 인내심 ${DB.teams[managedTeamId(DB)].owner.patience??0}`:''}</p>`:''}
+   ${r.myGoal?`<p class="${r.myGoal.ok?'hi':'lo'}"><b>구단주 목표 "${GOAL_KO[r.myGoal.goal]}" ${r.myGoal.ok?'달성':'미달'}</b>${!r.myGoal.ok?` — 구단주 인내심 ${managedTeam(DB)?.owner?.patience??'—'}`:''}</p>`:''}
    ${DB.world.fired?'<p class="warn">해임되었습니다. 다른 팀을 골라 커리어를 이어가세요.</p>':''}
    ${(r.awards||[]).length?`<div class="rx"><h4>시상</h4>${r.awards.map(a=>`<p><b>${esc(a.comp)} ${esc(a.type)}</b> ${esc(nm(a.pid))} <small>${esc(tshort(DB.players[a.pid]&&DB.players[a.pid].team))}</small></p>`).join('')}</div>`:''}
    ${(r.hof||[]).length?`<div class="rx"><h4>명예의 전당 헌액</h4><p>${r.hof.map(id=>esc(nm(id))).join(', ')}</p></div>`:''}
