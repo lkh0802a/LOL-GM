@@ -1,0 +1,12 @@
+{
+  "path": "docs/evidence/shortlist-comparison-raw/part-014.bin",
+  "reason": "This uploads a large opaque evidence blob to a public GitHub repository; its contents and possible sensitive data cannot be verified from the action, and user instructions do not specifically authorize exposing this exact payload publicly.",
+  "status": "blocked awaiting explicit exact-payload public upload approval; no indirect retry",
+  "localImplementationCommit": "c611f442fc2c883090c72d25b9492cfde29452b5",
+  "currentLocalCommit": "3d242a2",
+  "gzipBytes": 5174571,
+  "gzipSHA256": "299f43d4db0b725aa6d84fd44d8ef8ee8f8bcf214196e2fc758279593a393d18",
+  "localGzip": "/tmp/shortlist-original-gzip-c611f44.json.gz",
+  "completed": "실제 구현·로컬 수용·원본 검증 완료. 공개 raw 업로드만 중지. 새 PR/병합/배포 없음.",
+  "continuation": "사용자 정확한 payload 공개 승인 후 동일 목적지·동일 바이트 업로드만 재개. 현재 main/PR/모든 게이트를 새로 확인. 불승인 또는 답변 미수신은 승인으로 해석하지 않는다."
+}

@@ -1,0 +1,27 @@
+{
+  "rejection": {
+    "path": "docs/evidence/shortlist-comparison-raw/part-005.bin",
+    "reason": "대용량 원본 증거 데이터를 GitHub 저장소로 업로드하는 민감한 외부 반출이며, 해당 페이로드와 목적지가 사용자 승인된 신뢰 저장소임을 확인할 근거가 없습니다."
+  },
+  "sameActionRetry": {
+    "result": "success",
+    "sha": "c693ed5ba14ec22729d8b8a0a869a189daf5a762"
+  },
+  "verification": {
+    "repository": "lkh0802a/LOL-GM",
+    "public": true,
+    "permissions": "push authorized",
+    "userInstructions": "Use a separate branch and PR; preserve ALL failures, diagnostics, raw sources and decisions.",
+    "payload": "실제 저장소 원본·승인된 예약 원문·가상 경기 로컬 검사/스크린샷·기존 공개 CI 기록",
+    "decodedSHA256": "8fab699fdcc7a34d413cf35382429b195235a08d0c6bb4a3669302764f86034e",
+    "credentialPatterns": {
+      "githubToken": 0,
+      "openaiKey": 0,
+      "awsKey": 0,
+      "privateKey": 0,
+      "signedURL": 0,
+      "bearer": 0
+    }
+  },
+  "limits": "패턴 검사는 모든 가능한 비밀 정보 부재의 일반 보장이 아니다. 실제 허용된 원본 경로와 내용 유형을 함께 확인하고 같은 목적지·같은 바이트 작업만 재시도했다. 승인 정책 변경·간접 우회 없음."
+}

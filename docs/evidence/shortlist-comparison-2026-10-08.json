@@ -1,0 +1,536 @@
+{
+  "task": "12.3.11",
+  "base": "d92a2f734369736670d36450ecd5fdd3448626ff",
+  "sourceBackedScope": "현재 관심 후보2–3명 관측 추정/공식 공개 표본 비교 → 기존 상세/수동 writer → 복귀/실제 full-lite 저장",
+  "accepted": {
+    "sameContext": true,
+    "contracted": true,
+    "ownedReserve": true,
+    "scoped": true,
+    "sourceExclusions": true,
+    "staleCases": 13,
+    "fullLite": true,
+    "actualNexus": true,
+    "raw": {
+      "tuple": [
+        {
+          "id": "NA_63",
+          "ability": [
+            60,
+            70
+          ],
+          "knowledge": 73,
+          "date": "2027-01-10",
+          "sample": {
+            "g": 1,
+            "k": 7,
+            "d": 0,
+            "a": 9,
+            "min": 22.816666666666666,
+            "dmg": 12882,
+            "rating": 10,
+            "kda": 16,
+            "dpm": 564.5872899926954,
+            "csDiff": 3,
+            "goldDiff": 3260,
+            "competitions": [
+              "shortlist-official-NA"
+            ]
+          },
+          "sources": {
+            "rows": [
+              {
+                "date": "2027-01-12",
+                "patch": "26.19",
+                "comp": "shortlist-official-NA",
+                "stage": "regular",
+                "role": "JGL",
+                "champ": "champ_gragas",
+                "color": "RED",
+                "win": true
+              }
+            ],
+            "excluded": 1
+          },
+          "metrics": {
+            "laning": 68,
+            "skirmish": 62,
+            "teamfight": 64,
+            "positioning": 60,
+            "damage": 62,
+            "survival": 63,
+            "vision": 70,
+            "objective": 67,
+            "roaming": 77,
+            "macro": 75,
+            "sidelane": 66,
+            "decision": 61,
+            "stability": 70,
+            "concentration": 69,
+            "adaptability": 66,
+            "volatility": 32,
+            "championLearning": 73,
+            "metaAdaptation": 64
+          }
+        },
+        {
+          "id": "NA_64",
+          "ability": [
+            55,
+            73
+          ],
+          "knowledge": 35,
+          "date": null,
+          "sample": {
+            "g": 0,
+            "k": 0,
+            "d": 0,
+            "a": 0,
+            "min": 0,
+            "dmg": 0,
+            "rating": null,
+            "kda": 0,
+            "dpm": 0,
+            "csDiff": 0,
+            "goldDiff": 0,
+            "competitions": []
+          },
+          "sources": {
+            "rows": [],
+            "excluded": 0
+          },
+          "metrics": {
+            "laning": 68,
+            "skirmish": 61,
+            "teamfight": 67,
+            "positioning": 71,
+            "damage": 59,
+            "survival": 61,
+            "vision": 65,
+            "objective": 68,
+            "roaming": 59,
+            "macro": 62,
+            "sidelane": 58,
+            "decision": 53,
+            "stability": 59,
+            "concentration": 67,
+            "adaptability": 53,
+            "volatility": 42,
+            "championLearning": 61,
+            "metaAdaptation": 65
+          }
+        },
+        {
+          "id": "EU_90",
+          "ability": [
+            53,
+            73
+          ],
+          "knowledge": 30,
+          "date": null,
+          "sample": {
+            "g": 1,
+            "k": 2,
+            "d": 9,
+            "a": 5,
+            "min": 28.933333333333334,
+            "dmg": 10889,
+            "rating": 5.68,
+            "kda": 0.7777777777777778,
+            "dpm": 376.3479262672811,
+            "csDiff": -59,
+            "goldDiff": -2450,
+            "competitions": [
+              "shortlist-official-EU"
+            ]
+          },
+          "sources": {
+            "rows": [
+              {
+                "date": "2027-01-13",
+                "patch": "26.19",
+                "comp": "shortlist-official-EU",
+                "stage": "regular",
+                "role": "ADC",
+                "champ": "champ_swain",
+                "color": "RED",
+                "win": false
+              }
+            ],
+            "excluded": 0
+          },
+          "metrics": {
+            "laning": 61,
+            "skirmish": 64,
+            "teamfight": 64,
+            "positioning": 56,
+            "damage": 65,
+            "survival": 65,
+            "vision": 60,
+            "objective": 60,
+            "roaming": 57,
+            "macro": 54,
+            "sidelane": 65,
+            "decision": 64,
+            "stability": 65,
+            "concentration": 74,
+            "adaptability": 53,
+            "volatility": 24,
+            "championLearning": 62,
+            "metaAdaptation": 61
+          }
+        }
+      ],
+      "endings": [
+        [
+          {
+            "version": 1,
+            "kind": "nexus",
+            "winner": "CR",
+            "minute": 22,
+            "second": 49
+          }
+        ],
+        [
+          {
+            "version": 1,
+            "kind": "nexus",
+            "winner": "NLN",
+            "minute": 28,
+            "second": 56
+          }
+        ]
+      ]
+    }
+  },
+  "localChecks": {
+    "ui": {
+      "acceptances": 89,
+      "freshVM": 88,
+      "note": "불가용 필터 option 보강 전 broad run; 최종 source focused/browser 통과, exact-head CI 전체 대기"
+    },
+    "calendar": 20,
+    "staticTests": 14,
+    "buildModules": 155,
+    "regression": true,
+    "smokeMs": 26566.6,
+    "smokeBudgetMs": 35000,
+    "engineUnchanged": 101,
+    "browserWidths": [
+      1280,
+      320
+    ],
+    "productionHTTP": false,
+    "finalDeviceTalkBack": false
+  },
+  "archive": {
+    "path": "docs/evidence/shortlist-comparison-raw.json.gz",
+    "compressedSha256": "299f43d4db0b725aa6d84fd44d8ef8ee8f8bcf214196e2fc758279593a393d18",
+    "decodedSha256": "8fab699fdcc7a34d413cf35382429b195235a08d0c6bb4a3669302764f86034e",
+    "decodedBytes": 40339182,
+    "rawFiles": 46,
+    "uniqueRawBytes": 38,
+    "parts": [
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-000.bin",
+        "bytes": 131072,
+        "sha256": "c757d719313c6185f3c52c1b40a3e010908c94877c18f5a311eb22d31be64d27"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-001.bin",
+        "bytes": 131072,
+        "sha256": "e91d74ad0a6599afd437d7bd3352dccc40826178da3a1d4f9a433e5f4cff00dd"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-002.bin",
+        "bytes": 131072,
+        "sha256": "a890cc22cd0464dfae3cbaaa57fae593c2da0cea3cdf5c5796a854630b178509"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-003.bin",
+        "bytes": 131072,
+        "sha256": "7fa4f9035cdf533ee58416e86e9db970ff67d18c3a9914e4c9ae347640a51cd1"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-004.bin",
+        "bytes": 131072,
+        "sha256": "163ed6be9be450372d1ff4aa97dbbc44854b4bb38f2038a45df137f599255356"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-005.bin",
+        "bytes": 131072,
+        "sha256": "434eb313a56fc0f5d9cda3ea50d5c91eaa3534770486ff333c231d98de7ff739"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-006.bin",
+        "bytes": 131072,
+        "sha256": "f588492406e38397069e011e21272448e1a21cc6ec8d19854a8a091b66945b36"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-007.bin",
+        "bytes": 131072,
+        "sha256": "75e3f8ae2d60ad4293173ec45edd635749b23b66c758b08664ed8fe3e3fd064d"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-008.bin",
+        "bytes": 131072,
+        "sha256": "a13e894746462dcb803f6bff8f6f2aa62778fa19491b85a8194cae5ac28e7b4f"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-009.bin",
+        "bytes": 131072,
+        "sha256": "ab6d1abfa20de4f41b0ec7319ef87a97ee74fa6ece6d8d58deef2544edf82fa6"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-010.bin",
+        "bytes": 131072,
+        "sha256": "bf8f61219ef07c190951fe8befbca94b0e3637125b549203f8933f0efdf2300d"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-011.bin",
+        "bytes": 131072,
+        "sha256": "a584f9031efba7ce2b81a8fd8c7ce249d51934e6e405a77244f039165f9512c4"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-012.bin",
+        "bytes": 131072,
+        "sha256": "90b64f94688660b53fad8e57d145897cbb188837b6ecff8a87f626a12666c20f"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-013.bin",
+        "bytes": 131072,
+        "sha256": "43015214fd1fb36bcc3fbae1b6d9e3b2ef54de08ec3fdd9fc05b19430ce8b975"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-014.bin",
+        "bytes": 131072,
+        "sha256": "00287cd39a45126125ea27955be1cc94020f45e46cef47b7497f1279208fa7bc"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-015.bin",
+        "bytes": 131072,
+        "sha256": "6e402c57d94364883477d6303adf3b0333304dbf7371dd62888f064b45a67cf1"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-016.bin",
+        "bytes": 131072,
+        "sha256": "59ad13d394663e52cfd5441db3a89bcb53f32afba7ca606ae9bf8dbc59c2261a"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-017.bin",
+        "bytes": 131072,
+        "sha256": "76e2b71376faf399c84c30c81937d6d1edfd2dc0dae7a48affc67c29bcc2ec85"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-018.bin",
+        "bytes": 131072,
+        "sha256": "56869024ab363a7aad9c7d47995b197016720d04288ab3aa9278f7da9ceeb1a8"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-019.bin",
+        "bytes": 131072,
+        "sha256": "6d475671845f4e09744dea0f0a94af178b455f6e1a96f93b0f734d02c0148066"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-020.bin",
+        "bytes": 131072,
+        "sha256": "01a3118d7fe30ad8dc37027510b5d81e660a4540a480121a251a04bba3c14e40"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-021.bin",
+        "bytes": 131072,
+        "sha256": "bf373e2eefef46af3e0dfd848dc6fe771b922b8f3deb90ff02252a849de95959"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-022.bin",
+        "bytes": 131072,
+        "sha256": "d5ab32402b83157502a7295b02d0128016db3779df270b9d63814c30f3180f59"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-023.bin",
+        "bytes": 131072,
+        "sha256": "c3d92098d31a3002e001682279886b2197c0c1f71fb21885a0788504fb8a8013"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-024.bin",
+        "bytes": 131072,
+        "sha256": "621952a3b7dc4fce3f4029b9fdcdb4c0a0b2b6614dbb09f0cb656ec5c0091469"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-025.bin",
+        "bytes": 131072,
+        "sha256": "7cdb0004995f34e306197e2ed588498d704bd203eb2c7d106e7e3975cb2b590b"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-026.bin",
+        "bytes": 131072,
+        "sha256": "6cfcebbb813df539c4ff9a0d27245d1c61412c184b9175ae7019718bfa052b26"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-027.bin",
+        "bytes": 131072,
+        "sha256": "07d3c45a8e62596b6dbb935aadc3f79ea8b50546ae5b4fa07b9dc6425d0bbbda"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-028.bin",
+        "bytes": 131072,
+        "sha256": "4f832b85d2c94deac850a9e9a0db360ef96e45d90761033cfec0d50510332361"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-029.bin",
+        "bytes": 131072,
+        "sha256": "9587c366e0038910b662852fa26226d0e280fb13e019bbc47d2cbc553a515208"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-030.bin",
+        "bytes": 131072,
+        "sha256": "ffd4656d6c290bb047eeb34b1bcc01016f4e393c452d38f4f1fab4fd53e62bd7"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-031.bin",
+        "bytes": 131072,
+        "sha256": "ec5d9a18a00cfca4d290a1ec0582f2ab666897ded1d8a68bf122a1baf05cdd1b"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-032.bin",
+        "bytes": 131072,
+        "sha256": "3dbd0f67cdd09c4d5685e1644274e89e35d18caecd159b2d27d8a519520ba60c"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-033.bin",
+        "bytes": 131072,
+        "sha256": "a840c86648f58252894f135ded059ccaef04a07348c1f64e0f50b27b8160b5df"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-034.bin",
+        "bytes": 131072,
+        "sha256": "4290b972ed866fb1f776514f5f7c563d67152f102d3c294ca905c73c583e8bd0"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-035.bin",
+        "bytes": 131072,
+        "sha256": "605633cd90e07348a0ed1e7a0126563cce9797a53db5f2637b40eea090725894"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-036.bin",
+        "bytes": 131072,
+        "sha256": "3ce7f9d418d5e4e3fd366d68b3285c9978836f735448a83aafb3307b462747a0"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-037.bin",
+        "bytes": 131072,
+        "sha256": "62fd7c140a77bf28d4fefe0e0f1bf1c4086394cf1eadf78fa32a37551e3b6e33"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-038.bin",
+        "bytes": 131072,
+        "sha256": "c0afa7071075db5dbd48574002e8e3ebe22f50e36a7fbd6d5e0ae6b1d8927c17"
+      },
+      {
+        "path": "docs/evidence/shortlist-comparison-raw/part-039.bin",
+        "bytes": 62763,
+        "sha256": "530802b66b3b9f7f5899a56d8f3d9389f75611728b5fe087c82a8f2621a13305"
+      }
+    ],
+    "originalCompressedRepresentationPreserved": true,
+    "reassembly": "parts 순서대로 bytes를 이어 원본 gzip를 복원합니다. 기존 compressedSha256/decodedSha256과 같습니다."
+  },
+  "originalGuideSha256": "86f84644558494ebac51623f7bd487f0f524a92b1f8059ba3a7de8ee5f4d9029",
+  "finalSources": {
+    "src/artifact/ui-club-recruitment.js": {
+      "sha256": "017d98c0bde0ed57a83f086525d2babdd0251ad808609cec859e88c36180c829",
+      "bytes": 11905
+    },
+    "src/artifact/ui-shortlist-comparison.js": {
+      "sha256": "18a9c3cbe79b591b38af659e4f826fa510ff0ba47447545d74128cc4a47ea4f9",
+      "bytes": 7703
+    },
+    "src/artifact/ui-initial-comparison.js": {
+      "sha256": "b11d7ce5286090f6bab1d916e222aefa115573ecbfdaee7b50fc283b35f17788",
+      "bytes": 8836
+    },
+    "src/artifact/ui-observed-radar.js": {
+      "sha256": "00989d1c9200039667380a1ac760d203296a95c4b98ab57c8be35edd98f164ac",
+      "bytes": 2033
+    },
+    "src/artifact/scouting.js": {
+      "sha256": "6f3868bb816888970554a0c874e89006e553e1d8ffd6f1f4568521d3c7e87a12",
+      "bytes": 13097
+    },
+    "src/artifact/transfer.js": {
+      "sha256": "1b423b602349f05b55072abae65be66536fe42e55e207c6ef3b4846aeeba6c08",
+      "bytes": 8842
+    },
+    "src/artifact/ui-club-briefing.js": {
+      "sha256": "233a626279f46d31a1489ea09aafb173ee79f1aca7494051ec1090a3a91874b7",
+      "bytes": 8940
+    },
+    "scripts/shortlist-comparison-acceptance.mjs": {
+      "sha256": "d747c63b494534cf77ab17cfe2008a8ab5296468f9da2e7f3a14c766d09e2b1f",
+      "bytes": 13631
+    },
+    "scripts/artifact-modules.mjs": {
+      "sha256": "95feedf322f2e338c75da28999eae0eb60f3d670bc2a7ab958a603d9c61a4577",
+      "bytes": 3643
+    },
+    "scripts/check.mjs": {
+      "sha256": "f69078998924e0a6c3b4a4334b546d9312d1d3c8157a81fca0dcd3a2be2bd5fd",
+      "bytes": 35093
+    },
+    "scripts/verify-shortlist-comparison-evidence.mjs": {
+      "sha256": "f64d707e29bd9f8593d74dac81b7114f93a43df70beb08ff0ff2bd06ae6ae511",
+      "bytes": 2647
+    },
+    "scripts/club-recruitment-acceptance.mjs": {
+      "sha256": "06268c9780f08020bdc6b0a57adf2b21e68771dacb31c16d8eaef8612f221300",
+      "bytes": 18577
+    },
+    "scripts/ui-finance-contracts-runner.mjs": {
+      "sha256": "a253a34496662e2fa85e64951040878a20b3acee55f00358c79a3e66a0b09c0e",
+      "bytes": 4476
+    },
+    "package.json": {
+      "sha256": "bd065bebd07120082c607a150e3d7ae3826c25d2d540a920c5fe4996df3cfeb1",
+      "bytes": 6175
+    }
+  },
+  "limits": [
+    "가상 공식 경기는 소비·이력 수용이며 프로 보정 자료가 아니다",
+    "실제 공개 행의 게임 ID 미보관; 독립 게임 중복 제거 불가",
+    "현재 관측 능력과 저장된 과거 평가/공개 기록은 별개",
+    "가격/효과/AI·경제·medical·save schema 및 기존 예산/GC/billing 불변",
+    "세계·slot·관리자·source·render·실제 dialog stamp guard이며 분산 탭/전역 rollback 보장 아님",
+    "초기FA 권한 복사 없음; owned reserve 조회는 영입 대행 아님",
+    "미완료 전체UI/Analysis/언어/13서사/COMPLETE38/eight-audit 승인 유지",
+    "원본196~200 출시/gates는 archive의 실제 기존 raw에 보존; 이 새 PR 출시 전"
+  ],
+  "failuresAndCorrections": [
+    "git fetch exit128: Failed to connect to proxy port 8080 after 0 ms: Could not connect to server; no proxy/network bypass",
+    "apply_patch rejected delete+add same path: multiple operations target docs/DEVELOPMENT.md; no edit applied; exact current-main guide subsequently written in bounded chunks",
+    "Main signed commit reconstruction first SHA4cfcd8aa00abcec753cb8c1fc02c67ea0527d888 was unequal; preserved signature ending newline corrected SHA=d92a2f734369736670d36450ecd5fdd3448626ff; tree independently equals0f07ea0969f6f34f48f5c44afb1064fc668f361e",
+    "rg missing ui-acceptance.mjs/ui-runner.mjs exit2; actual ui-finance-contracts-runner located",
+    "Node24 fixture errors missing initialCandidateAllowed/recruitStageLabel/metaHistory; actual sources and optional initial meta array supplied; same acceptance retained; final Node22 used",
+    "Original selection assumed all candidates started; actual official source NA_64 g0 while NA_63 played JGL and EU_90 ADC; preserve actual nonappearance rather than force selections or winners",
+    "Default CI subprocess evidence[] and Chromium setsockopt EPERM failed; same checks passed with approved local execution; no automatic approval rejection",
+    "First successful browser captures used same output paths on a later run; first bytes not independently retained. Archive contains only actual surviving captures, not recreated missing originals. Later official captures use separate paths.",
+    "No source-backed new engine defect established in this slice. COMPLETE38/eight-audit source metadata gaps and all-domain/narrative inventory remain open."
+  ],
+  "captures": [
+    {
+      "path": "docs/evidence/shortlist-comparison-1280.png",
+      "sha256": "e25d1a1cf3ca931bb80b392c9d3d110684c42c623435e171b8048993be16ee5e",
+      "sourcePath": "/tmp/shortlist-browser-official-1280.png"
+    },
+    {
+      "path": "docs/evidence/shortlist-comparison-320.png",
+      "sha256": "86274b29880884ee7fd4d8d1293336a2c28fcd753d6d1012466215edd9ee3085",
+      "sourcePath": "/tmp/shortlist-browser-official-320.png"
+    }
+  ],
+  "verifierSource": {
+    "path": "scripts/verify-shortlist-comparison-evidence.mjs",
+    "sha256": "c9b0385aaa26e58682fb11270337308f0fcf3524e79da46971dc36809c7bdd57",
+    "text": "import assert from 'node:assert/strict';\nimport {readFile} from 'node:fs/promises';\nimport {createHash} from 'node:crypto';\nimport {gunzipSync} from 'node:zlib';\nconst root=new URL('../',import.meta.url),sha=b=>createHash('sha256').update(b).digest('hex');\nconst summary=JSON.parse(await readFile(new URL('docs/evidence/shortlist-comparison-2026-10-08.json',root)));\nconst pieces=summary.archive.parts?await Promise.all(summary.archive.parts.map(async row=>{const b=await readFile(new URL(row.path,root));assert.equal(sha(b),row.sha256,row.path);assert.equal(b.length,row.bytes,row.path);return b;})):null;\nconst compressed=pieces?Buffer.concat(pieces):await readFile(new URL(summary.archive.path,root));assert.equal(sha(compressed),summary.archive.compressedSha256);\nconst bytes=gunzipSync(compressed);assert.equal(sha(bytes),summary.archive.decodedSha256);assert.equal(bytes.length,summary.archive.decodedBytes);\nconst archive=JSON.parse(bytes),raw=archive.rawBytesBySha256;\nfor(const [hash,row] of Object.entries(raw)){const b=Buffer.from(row.text,row.encoding==='base64'?'base64':'utf8');assert.equal(sha(b),hash);}\nfor(const [path,row] of Object.entries(archive.rawFileIndex)){assert(raw[row.sha256],path);const r=raw[row.sha256];assert.equal(Buffer.from(r.text,r.encoding==='base64'?'base64':'utf8').length,row.bytes,path);}\nassert.equal(sha(archive.originalGuide.text),summary.originalGuideSha256);assert.equal(Buffer.byteLength(archive.originalGuide.text),archive.originalGuide.bytes);\nconst guide=await readFile(new URL('docs/DEVELOPMENT.md',root));assert(guide.includes(Buffer.from(archive.originalGuide.text)),'current-main original guide bytes must remain contiguous in order');\nfor(const [path,row] of Object.entries(archive.sources)){assert.equal(sha(row.text),row.sha256,path);assert.equal(Buffer.byteLength(row.text),row.bytes,path);assert.equal(sha(await readFile(new URL(path,root))),path==='scripts/verify-shortlist-comparison-evidence.mjs'?summary.verifierSource.sha256:row.sha256,path);}\nfor(const [path,row] of Object.entries(archive.originalSources))if(!row.absentAtBase)assert.equal(sha(row.text),row.sha256,path);\nconst api=JSON.parse(raw[archive.rawFileIndex['/tmp/shortlist-preparation-api.json'].sha256].text);assert.equal(JSON.parse(api.main).object.sha,summary.base);\nconst automation=JSON.parse(raw[archive.rawFileIndex['/tmp/shortlist-automation-original.json'].sha256].text)[0];assert.equal(automation.prompt.length,19719);assert(automation.is_enabled);assert.equal(automation.default_timezone,'Asia/Seoul');\nassert.deepEqual(summary.accepted,archive.accepted);assert(archive.accepted.raw.endings.flat().every(x=>x.kind==='nexus'));\nfor(const capture of summary.captures)assert.equal(sha(await readFile(new URL(capture.path,root))),capture.sha256);\nconsole.log('관심 후보 비교 원본 검증 '+JSON.stringify({rawFiles:Object.keys(archive.rawFileIndex).length,rawUnique:Object.keys(raw).length,originalGuide:true,currentSources:true,temporaryFilesRequired:false}));\n",
+    "note": "원본 decoder 소스는 raw archive에 유지; 같은 원본 gzip 전체 SHA를 파트 조립 후 검사하는 decoder로 확장"
+  }
+}

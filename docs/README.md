@@ -91,3 +91,5 @@ Use [numeric stages 1–13 and dotted work units](DEVELOPMENT.md#unified-numeric
 - 12.3.9 내 구단 날짜별 스크림 예약·기존 수동 요청/취소와 실제 자원·참가 원자료: [수용](evidence/club-scrim-briefing.json), [원본 진단](evidence/club-scrim-briefing-diagnostics.json), [실행](../scripts/club-scrim-acceptance.mjs). 전체 스크림/훈련/UI/AnalysisRoom/언어 완료가 아니다.
 
 [12.3.10 현재 관심 후보·보고서와 수동 관찰·평가](DEVELOPMENT.md#12310-현재-관심-후보보고서와-수동-관찰내부-평가-연결--2026-10-06)는 실제 source·비용·공개 원자료·저장과 비교 확대의 남은 경계를 기록합니다.
+
+[12.3.11 현재 관심 후보 관측 비교·공개 근거·복귀/저장](evidence/shortlist-comparison-2026-10-08.json)은 시즌 소속 후보의 실제 보고서/권한/표본·수동 행동 경계를 연결한다. 테마·전면 UI·AnalysisRoom·언어/전체 승인 완료는 아니다.
