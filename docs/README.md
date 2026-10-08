@@ -99,3 +99,5 @@ Use [numeric stages 1–13 and dotted work units](DEVELOPMENT.md#unified-numeric
 - 12.5.4.5–12.5.4.6 현재 운영 조건·후보 비교표의 실제 수동 행동/관측/저장 수용과 실패 보존: [증거](evidence/club-current-actions-2026-10-08.json). 원래 안내·전체 승인 범위는 DEVELOPMENT를 따른다.
 
 - 12.5.4.7.1 선수단 후보의20명 페이지·복수 선택·미완료 입력/상세 복귀와 실제 관찰·전향/저장: [수용/원본 진단](evidence/scout-return-context-2026-10-08.json). 정확한 다음12.5.4.8과 전체 승인 미완료는 DEVELOPMENT를 따른다.
+
+- 12.5.4.8.2.1 공식 편집의 시작 문맥·오래된 입력 거절·수동 취소 후 현재 재편집: [원본 반례와 수용](evidence/official-edit-context-2026-10-08.json). 전체 공식 편집 비교표와 입력 복귀는 미완료이며 정확한 출시 상태는 DEVELOPMENT 및 PR 검증 기록을 따른다.

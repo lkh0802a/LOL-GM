@@ -40,12 +40,19 @@ function clubEntryDraft(root,values=null){
 function openClubEntry(tid){
   const ctx=clubBriefContext(),m=clubEntryModel(DB,tid);if(!m?.enabled||ctx.w.manage!=='manual'||UI_OVERLAY)return false;
   const db=DB,w=db.world,slot=SLOT,render=UI_RENDER_ID,stamp=clubEntryStamp(db,tid),date=db.worldDate,phase=w.phase,root=document.querySelector('#overlay');let dialog=null;
-  const current=()=>clubBriefCurrent(db,w,slot,render,ctx.t.id)&&!w.fired&&w.manage==='manual'&&db.worldDate===date&&w.phase===phase&&UI_OVERLAY===dialog&&managerControlsSquad(db,db.teams[tid])&&clubEntryStamp(db,tid)===stamp;
+  const context=()=>clubBriefCurrent(db,w,slot,render,ctx.t.id)&&!w.fired&&w.manage==='manual'&&db.worldDate===date&&w.phase===phase&&UI_OVERLAY===dialog&&managerControlsSquad(db,db.teams[tid]);
+  const current=()=>context()&&clubEntryStamp(db,tid)===stamp;
   const draftKey=[db,slot,tid,date,phase,stamp,ctx.t.id];
   const close=()=>{if(UI_OVERLAY!==dialog)return;if(current())CLUB_ENTRY_DRAFT={key:draftKey,values:clubEntryDraft(root)};closeUiOverlay()};
-  openUiOverlay({kind:'club-entry',label:'공식 명단·선발 수동 확인',dismissible:true,onDismiss:close,focusSelector:'#brief-entry-close',html:`<div class="ovin"><div class="ovhead"><b>${esc(m.team.name)} 공식 명단·선발</b><button id="brief-entry-close" class="ghost">브리핑으로 돌아가기</button></div><p class="hint">작성은 제출 전까지 적용되지 않습니다. 등록 기간과 현재 자격은 기존 명령이 다시 검사합니다.</p>${clubEntryConditions(m)}${officialRegistrationPanel(m.team,m.read)}</div>`});dialog=UI_OVERLAY;
+  openUiOverlay({kind:'club-entry',label:'공식 명단·선발 수동 확인',dismissible:true,onDismiss:close,focusSelector:'#brief-entry-close',html:`<div class="ovin"><div class="ovhead"><b>${esc(m.team.name)} 공식 명단·선발</b><button id="brief-entry-close" class="ghost">브리핑으로 돌아가기</button></div><p class="hint">작성은 제출 전까지 적용되지 않습니다. 등록 기간과 현재 자격은 기존 명령이 다시 검사합니다.</p>${clubEntryConditions(m)}<button id="brief-entry-reset" class="ghost">초안 취소 · 현재 명단 다시 열기</button>${officialRegistrationPanel(m.team,m.read)}</div>`});dialog=UI_OVERLAY;
   if(CLUB_ENTRY_DRAFT?.key.every((v,i)=>v===draftKey[i]))clubEntryDraft(root,CLUB_ENTRY_DRAFT.values);else CLUB_ENTRY_DRAFT=null;
   $('#brief-entry-close').onclick=close;
+  $('#brief-entry-reset').onclick=()=>{
+    if(DB!==db||DB.world!==w||SLOT!==slot||UI_RENDER_ID!==render||UI_OVERLAY!==dialog||managedTeamId(db)!==ctx.t.id||SLOT_SWITCHING||w.fired||w.manage!=='manual')return;
+    if(!confirm('미적용 명단·선발·현장 스태프 입력을 모두 취소하고 현재 상태를 다시 열까요?'))return;
+    if(DB!==db||DB.world!==w||SLOT!==slot||UI_RENDER_ID!==render||UI_OVERLAY!==dialog||managedTeamId(db)!==ctx.t.id||SLOT_SWITCHING||w.fired||w.manage!=='manual')return;
+    CLUB_ENTRY_DRAFT=null;closeUiOverlay({restoreFocus:false});openClubEntry(tid);
+  };
   bindOfficialRegistrationControls(current,root,()=>{CLUB_ENTRY_DRAFT=null;clubBriefState().message=MSG;closeUiOverlay({restoreFocus:false});navKeepScroll();document.querySelector('#club-entry h4')?.focus?.({preventScroll:true})});
   return true;
 }

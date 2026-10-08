@@ -2116,3 +2116,18 @@ main은 64d50d77e0c674e9d679970dc2c6d8023194eff3, #199 head는 c628a5ecd47003ca9
 ### 12.5.4.8.2 정확한 계속 경계
 
 새 source-backed 엔진/저장/권한/진행 불능을 최우선으로 재현한다. 없으면 공식 등록·선발 준비의 실제 미적용 입력과 현행 등록 명령 snapshot/lock/의료 거절 → 현재 등록·수동 수정·취소/복귀 → 기존 명령·공식 경기/full-lite/history를45–55분 단위로 연결한다. old expected 자동 재기준화 금지. 이번 준비 초안 표는 공식 등록 편집 전체/전면UI·AnalysisRoom·언어·13서사/all-domain/COMPLETE38/eight-audit/UX12·게임성9+4/scoutcenter visit·assignment·공식표본필터/관측비교 완료가 아니다. 최종100시즌/기기/TalkBack QA 유예와 모든 기존 승인·남은 작업을 그대로 유지한다.
+
+
+### 12.5.4.8.2.1 공식 편집의 시작 문맥과 수동 취소 후 현재 재편집 — 2026-10-08
+
+실제 시작 main은1975b75950cf67ddb31d771f0e952e8c66b3d680(#206)이다. 이전 헤더/NEXT는 원래 역사 기록이며 모두 그대로 보존한다. 별도 feat/official-entry-edit-context에서 선수단 화면의 공식 명단·선발·현장 스태프 버튼을 조사했다. 원래 retained inline 선발 callback은 실제 pack/unpack 뒤 새 DB를 변경하고 save를1회 호출하는 controlled 반례가 재현됐다. 팝업의 기존 current guard와 일반 선수단 바인딩은 서로 다른 보호 경계였다. 자연 빈도나 전체 callback 보장을 주장하지 않는다.
+
+현재 ui-registration은 바인딩 시 DB/world·slot·view/render/overlay·현재 감독과 실제 날짜/phase/manage/fired/pending·등록 버전/규칙·공식 엔트리/로스터·계약/임대/의료 문맥을 보존하고 제출 전 및 기존 확인 후 대조한다. old expected를 자동 재기준화하지 않는다. 실제 기존 preview/apply/commitWorldAction 및 rollback이 작성자이며 AI/가격/계수/고용/등록 규칙과 엔진은 바꾸지 않는다. 같은 문맥의 수동 제출·의료/중복 선발·등록 마감/진행 세트의 기존 거절은 유지한다. inline stale는 현재 화면의 status로 거절을 표시한다. 기존 팝업은 미적용 명단·선발·현장 직원 입력을 사용자가 확인해 모두 취소한 후 현재 명단을 다시 열 수 있다. 취소 자체는 DB/save를 쓰지 않으며 소유/slot/load/감독/다른 dialog/확인 중 문맥 변경은 재검사한다. 리저브 등록/조회는 모구단 계약 대행권한이 아니다.
+
+집중 수용은 원래 club-eligibility 검사를 유지해 stale inline/cancel/current re-edit·실제 기존 writer 전체 DB 일치와 실제 공식 Bo1/nexus의 commit/history 및 raw JSON/compact save를 추가한다. 과거 packDB의 두 번째 인자가 미사용인 수용 공백은 실제 JSON.stringify와 packDB의 서로 다른 저장 경로로 교정한다. 브라우저/전체 검사·정확한 PR/main CI/의료7·verify·sync/artifact/Pages는 실제 결과를 확인해야 하며 구현만으로 출시로 쓰지 않는다. 원래6500/7500자 제한과 모든 기존 예산/GC/billing/instrumentation은 유지한다. 원본 문구·소스/실패·교정은 official-edit-context 증거에 보존한다.
+
+이번 bounded 경계 뒤 **12.5.4.8.2.2 공식 명단의 편집 시작/현재/미적용 전체 비교표와 거절 뒤 수정 입력 복귀**를 이어간다. 현재 입력을 현재 등록으로 자동 제출하거나 상태가 바뀐 초안을 자동 복사하지 않는다. 이번 guard/수동 전체 취소는 전체 공식 편집·전면 UI/Analysis Room/언어/38/eight-audit/13서사/all-domain·UX12/게임성9+4/scoutcenter 나머지 작업 완료가 아니다. 장기100시즌/기기/TalkBack 유예와 타인27/28·dirtyanalysis 원본, 자료 공백의 반복 획득 금지는 그대로 유지한다. 환경 재시작/검사·CI/병합/게시 대기는 구현 slice로 세지 않는다.
+
+집중 로컬 결과: 원본 loaded inline 반례 save0→1, 최종 동일 callback no-save; 10개 inline 문맥의 명단·선발 거절과 기존 popup 반례/rollback·수동 재편집/공식 Bo1 publicRecord nexus 및 raw·compact history 수용. 최종 Chromium1280·320 키보드/취소/재편집/실제 writer 전체DB 동일·저장·nooverflow/pageerror 통과. UI90/89freshVM·calendar20·정적14·158module 및 Node22 regression 통과. 첫 UI fixture SLOT 미공급은 실제 앱 global을 공급해 원래 assertion을 유지했고, 첫 nexus 검사는 games의 publicRecord.ending 경로로 교정했다. 첫 브라우저 sandbox socket EPERM·실제 운영 route 문맥 교정·모든 원본 실패는 압축 증거에 보존한다. smoke와 정확한 출시 게이트는 후속 실제 결과를 따른다.
+
+- 최종 로컬 단독 Node22 full smoke: 28930.2ms, 기존 35000ms 예산 내 exit0. 원래 실패·교정·원본과 최종 소스는 증거에 보존한다. 실제 PR/main CI·병합·게시 검증은 아직 대기이며 이번 런타임 중단 실행의 45–55분 완료를 주장하지 않는다.

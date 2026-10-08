@@ -64,7 +64,7 @@ await runEngineFixture(String.raw`(()=>{
  const stale=previewWorldAction(db,staffCommand);s.staffRegistrationPolicy.max=1;check(applyWorldAction(db,stale).reason==='stale_preview','changed published policy accepted old preview');s.staffRegistrationPolicy.max=2;
  for(const bad of [undefined,null,{},'bad',[coach.id,coach.id],[7]])check(!previewWorldAction(db,{...staffCommand,staffIds:bad}).ok,'malformed submission accepted or threw');
  // UI cancellation and authority are exercised on the same production command.
- globalThis.DB=db;globalThis.esc=x=>String(x).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('"','&quot;');globalThis.MSG='';let saves=0;globalThis.saveDB=()=>saves++;globalThis.navKeepScroll=()=>{};
+ globalThis.SLOT='1';globalThis.SLOT_SWITCHING=false;globalThis.UI_RENDER_ID=1;globalThis.UI_OVERLAY=null;globalThis.VIEW='squad';globalThis.DB=db;globalThis.esc=x=>String(x).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('"','&quot;');globalThis.MSG='';let saves=0;globalThis.saveDB=()=>saves++;globalThis.navKeepScroll=()=>{};
  const button={dataset:{competitionStaffSubmit:s.id,teamId:mine.id}};
  globalThis.document={querySelectorAll:q=>q==='[data-competition-staff-submit]'?[button]:q.includes(':checked')?[{value:coach.id}]:[]};
  globalThis.confirm=()=>false;bindOfficialRegistrationControls();const cancelled=packDB(db);button.onclick();check(packDB(db)===cancelled&&!saves,'cancelled UI mutated entries');
