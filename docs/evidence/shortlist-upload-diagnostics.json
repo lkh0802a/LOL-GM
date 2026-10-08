@@ -1,0 +1,27 @@
+{
+  "source": "실제 runtime 재개 후 API 응답",
+  "archiveProbe": {
+    "content": [
+      {
+        "type": "text",
+        "text": "GitHub API error 422: {\"message\":\"tree.sha 693334e459aa869931383693ce03aa38909024db is not a valid blob\",\"documentation_url\":\"https://docs.github.com/rest/git/trees#create-a-tree\",\"status\":\"422\"}"
+      }
+    ],
+    "structuredContent": {
+      "error": "GitHub API error 422: {\"message\":\"tree.sha 693334e459aa869931383693ce03aa38909024db is not a valid blob\",\"documentation_url\":\"https://docs.github.com/rest/git/trees#create-a-tree\",\"status\":\"422\"}",
+      "error_code": "INVALID_ARGUMENT",
+      "error_data": {
+        "message": "tree.sha 693334e459aa869931383693ce03aa38909024db is not a valid blob",
+        "documentation_url": "https://docs.github.com/rest/git/trees#create-a-tree",
+        "status": "422"
+      }
+    },
+    "isError": true
+  },
+  "notes": [
+    "Original c611f442fc2c883090c72d25b9492cfde29452b5 remains local; no remote PR yet.",
+    "Previous large exec aborted after555.9s, outcome unconfirmed; initial stdout capped1MiB. Blob existence probe422 proves original gzip blob unavailable.",
+    "40 ordered parts reconstruct exact original gzip299f43d4db0b725aa6d84fd44d8ef8ee8f8bcf214196e2fc758279593a393d18. No raw bytes deleted.",
+    "git fetch normal proxy route failed exit128 again. No policy/GC/billing/test/budget changes."
+  ]
+}
