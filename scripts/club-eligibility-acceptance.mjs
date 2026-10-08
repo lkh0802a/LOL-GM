@@ -1,3 +1,4 @@
+import './verify-official-edit-evidence.mjs';
 import {artifactSources,runEngineFixture} from './test-harness.mjs';
 const sources=await artifactSources(['ui-registration.js','ui-club-briefing.js','ui-club-eligibility.js','app.js']);
 const app=sources.pop(),esc=app.match(/^const esc=.*$/m)[0];
@@ -19,6 +20,22 @@ await runEngineFixture(String.raw`(()=>{
  before=JSON.stringify(DB);check(openClubEntry(t.id)&&JSON.stringify(DB)===before,'actual popup pure');const root=document.querySelector('#overlay'),firstSubmit=root.querySelector('[data-official-submit]'),lineButton=root.querySelector('[data-official-lineup]');
  const field=root.querySelector('[data-official-role="TOP"]');field.value=spare.id;root.querySelector('#brief-entry-close').onclick();check(!UI_OVERLAY&&JSON.stringify(DB)===before,'draft cancel pure');check(openClubEntry(t.id)&&root.querySelector('[data-official-role="TOP"]').value===spare.id,'raw draft restoration');
  let callback=root.querySelector('[data-official-lineup]').onclick;const dialog=UI_OVERLAY;UI_OVERLAY={kind:'club-entry'};before=JSON.stringify(DB);callback();check(JSON.stringify(DB)===before,'same kind other dialog inert');UI_OVERLAY=dialog;
+
+ // Inline controls must retain the render context, independently of popup allowed().
+ const inlineCase=(change)=>{const savedDB=DB,savedDate=DB.worldDate,savedSlot=SLOT,savedView=VIEW,savedRid=UI_RENDER_ID,savedMode=DB.world.manage;
+  bindOfficialRegistrationControls(()=>true,root,()=>{});const retained=root.querySelector('[data-official-lineup]').onclick,register=root.querySelector('[data-official-submit]').onclick;
+  const undo=change();const prior=JSON.stringify(DB),count=saves;retained();register();console.log('INLINE_EDIT_CHECK',JSON.stringify({unchanged:JSON.stringify(DB)===prior,savesBefore:count,savesAfter:saves}));check(JSON.stringify(DB)===prior&&saves===count,'inline stale callback cannot write/save');
+  undo?.();DB=savedDB;DB.worldDate=savedDate;SLOT=savedSlot;VIEW=savedView;UI_RENDER_ID=savedRid;DB.world.manage=savedMode;};
+ inlineCase(()=>{DB=unpackDB(packDB(DB))});inlineCase(()=>{DB.worldDate=addDays(DB.worldDate,1)});
+ inlineCase(()=>{SLOT='other'});inlineCase(()=>{VIEW='market'});inlineCase(()=>{UI_RENDER_ID++});inlineCase(()=>{DB.world.manage='ai'});
+ inlineCase(()=>{const old=UI_OVERLAY;UI_OVERLAY={kind:'other'};return ()=>{UI_OVERLAY=old}});
+ inlineCase(()=>{DB.players[spare.id].medical={daysLeft:1,out:true};return ()=>{delete DB.players[spare.id].medical}});
+ inlineCase(()=>{const old=t.registration.depthChart;t.registration.depthChart={TOP:spare.id};return ()=>{t.registration.depthChart=old}});
+ inlineCase(()=>{const old=DB.world.pendingOfficial;DB.world.pendingOfficial={queue:[{session:{current:{}}}]};return ()=>{DB.world.pendingOfficial=old}});
+ // Explicit discard permits current re-edit; cancel keeps input and never writes.
+ confirmHook=()=>false;const count=saves;root.nodes.find(x=>x.attrs.id==='brief-entry-reset').onclick?.();
+ check(saves===count&&root.querySelector('[data-official-role="TOP"]').value===spare.id,'reset cancel preserves raw input');confirmHook=()=>true;
+
  // Actual scoped fields override unrelated background controls, through the existing command.
  const desired=Object.fromEntries(ROLES.map(r=>[r,root.querySelector('[data-official-role="'+r+'"]').value]));desired.TOP=spare.id;for(const r of ROLES)root.querySelector('[data-official-role="'+r+'"]').value=desired[r];
  background=[{dataset:{officialRole:'TOP'},value:unregistered.id}];const projected=JSON.parse(JSON.stringify(DB)),expected=commitWorldAction(projected,{type:'roster.official-lineup',actor:'manager',teamId:t.id,lineup:desired});const beforeLineup={...DB.teams[t.id].registration.depthChart};callback();evidence.manualLineup={before:beforeLineup,desired,after:{...DB.teams[t.id].registration.depthChart},expected:expected.ok};check(expected.ok&&JSON.stringify(DB)===JSON.stringify(projected)&&saves===1,'scoped actual lineup command/result/save');before=JSON.stringify(DB);callback();check(JSON.stringify(DB)===before&&saves===1,'duplicate retained callback inert');
@@ -35,17 +52,27 @@ await runEngineFixture(String.raw`(()=>{
  openClubEntry(t.id);confirmHook=()=>false;before=JSON.stringify(DB);root.querySelector('[data-official-submit]').onclick();check(JSON.stringify(DB)===before&&!!UI_OVERLAY&&saves===2,'actual confirmation cancellation');confirmHook=()=>true;root.querySelector('#brief-entry-close').onclick();
  openClubEntry(t.id);const originalDate=DB.worldDate;confirmHook=()=>{DB.worldDate=addDays(DB.worldDate,1);return true};const dateExpected=JSON.parse(JSON.stringify(DB));dateExpected.worldDate=addDays(dateExpected.worldDate,1);root.querySelector('[data-official-submit]').onclick();check(JSON.stringify(DB)===JSON.stringify(dateExpected)&&saves===2,'confirm-time changed context cannot apply');confirmHook=()=>true;DB.worldDate=originalDate;UI_OVERLAY=null;UI_RENDER_ID++;
  openClubEntry(t.id);const actualWriter=writeOfficialRegistration;writeOfficialRegistration=(...args)=>{actualWriter(...args);throw Error('controlled late entry writer')};before=JSON.stringify(DB);root.querySelector('[data-official-submit]').onclick();check(JSON.stringify(DB)===before&&saves===2,'existing command late rollback through actual UI');writeOfficialRegistration=actualWriter;
+
+ openClubEntry(t.id);const resetOld=root.querySelector('[data-official-lineup]').onclick;
+ root.querySelector('[data-official-role="TOP"]').value=root.querySelector('[data-official-role="MID"]').value;
+ DB.worldDate=addDays(DB.worldDate,1);before=JSON.stringify(DB);const resetSaveCount=saves;
+ root.nodes.find(x=>x.attrs.id==='brief-entry-reset').onclick();
+ check(JSON.stringify(DB)===before&&saves===resetSaveCount&&root.querySelector('[data-official-role="TOP"]').value===spare.id,'explicit cancel opens current applied lineup without save or auto commit');
+ resetOld();check(JSON.stringify(DB)===before&&saves===resetSaveCount,'discarded callback remains inert after current re-edit');
+ root.querySelector('#brief-entry-close').onclick();
  setWorldCalendarDate(DB,DB.year+'-02-02');m=clubEntryModel();check(!m.registration.ok,'closed registration source');openClubEntry(t.id);check(!root.querySelector('[data-official-submit]')&&root.querySelector('[data-official-lineup]'),'lineup separate from registration window');root.querySelector('#brief-entry-close').onclick();
  DB.world.pendingOfficial={queue:[{session:{current:{}}}]};m=clubEntryModel();check(!m.lineup.ok&&m.lineup.errors.some(x=>x.includes('現在')||x.includes('현재')),'actual pending series writer reason');DB.world.pendingOfficial=null;
  const intlId='ENTRY_INT';DB.competitions[intlId]={...DB.competitions[cid],id:intlId,international:true};const intl=newSeason(DB,intlId,DB.year,'entry-int',DB.worldDate);intl.key=intlId;DB.world.seasons[intlId]=intl;const absent=DB.teams[t.id].registration.players[0];intl.entries[t.id]=intl.entries[t.id].filter(id=>id!==absent);DB.world.seasons[cid].done=true;m=clubEntryModel();check(m.international&&!m.rows.find(x=>x.id===absent).listed,'actual international frozen entries separate');delete DB.world.seasons[intlId];DB.world.seasons[cid].done=false;
  const liveSeason=DB.world.seasons[cid],d=liveSeason.days[0],match=d.matches[0],res=simulateScheduledSeries(DB,liveSeason,d,match,DB.competitions[cid].stages[0]);check(res.lines.length===10&&!res.lines.some(x=>x.pid===unregistered.id)&&res.lines.some(x=>x.pid===spare.id),'actual official consumer uses manual starter and excludes unsigned entry');
- const saved=unpackDB(packDB(DB)),compact=unpackDB(packDB(DB,true));check(JSON.stringify(saved.teams[t.id].registration)===JSON.stringify(DB.teams[t.id].registration)&&JSON.stringify(compact.teams[t.id].registration)===JSON.stringify(DB.teams[t.id].registration),'full compact registration continuity');
+ commitScheduledSeries(DB,liveSeason,match,res);check(res.rec.games.every(g=>g.publicRecord.ending.kind==='nexus')&&match.res===res.rec,'actual published nexus history');
+ const saved=unpackDB(JSON.stringify(DB)),compact=unpackDB(packDB(DB));check(JSON.stringify(saved.teams[t.id].registration)===JSON.stringify(DB.teams[t.id].registration)&&JSON.stringify(compact.teams[t.id].registration)===JSON.stringify(DB.teams[t.id].registration),'full compact registration continuity');
+ check([saved,compact].every(copy=>copy.world.seasons[cid].days.flatMap(day=>day.matches).find(x=>x.id===match.id).res.games.every(g=>g.publicRecord.ending.kind==='nexus')),'published official history survives raw and compact save');
  DB.world.manage='ai';UI_OVERLAY=null;check(!openClubEntry(t.id),'manual setting respected');DB.world.manage='manual';DB.world.phase='initial_roster';check(!clubEntryModel(),'initial recruitment owner');DB.world.phase='season';delete DB.world.registrationVersion;before=JSON.stringify(DB);check(!clubEntryModel().enabled&&JSON.stringify(DB)===before,'legacy honest pure');
  console.log('CLUB_ELIGIBILITY_ACCEPTANCE '+JSON.stringify({pure:true,employmentDistinct:true,medical:true,ownedReserve:true,scopedActualLineup:true,actualRegistration:true,staleLoadSlotMedicalFired:true,closedWindow:true,pending:true,international:true,officialLines:res.lines.length,fullCompact:true,saves,evidence,officialPlayers:res.lines.map(x=>({pid:x.pid,tid:x.tid,role:x.role}))}));
 })()`,{timeout:30000,setupSources:[esc,...sources,String.raw`
 var DB,MSG='',SLOT='1',SLOT_SWITCHING=false,VIEW='season',UI_RENDER_ID=1,UI_OVERLAY=null;const SSET={tab:'table'};let saves=0,background=[],confirmHook=()=>true;
 const root={nodes:[],querySelectorAll(s){const attr=s.slice(1,-1).split('=')[0];return this.nodes.filter(n=>Object.hasOwn(n.attrs,attr))},querySelector(s){if(s==='#brief-entry-close')return this.close;if(s.includes('=')){const [a,v]=s.slice(1,-1).split('=');return this.nodes.find(n=>n.attrs[a]===v.replaceAll('"',''))||null}return this.querySelectorAll(s)[0]||null},close:{focus(){}}};
-const document={querySelector:s=>s==='#overlay'?root:s==='#brief-entry-close'?root.close:{focus(){}},querySelectorAll:s=>s==='[data-official-role]'?background:[]};const $=s=>document.querySelector(s);
+const document={querySelector:s=>s==='#overlay'?root:s==='#brief-entry-close'?root.close:s==='#brief-entry-reset'?root.nodes.find(n=>n.attrs.id==='brief-entry-reset'):{focus(){}},querySelectorAll:s=>s==='[data-official-role]'?background:[]};const $=s=>document.querySelector(s);
 function fixtureTimeInfo(m){return m.time||'시간 미정'}function saveDB(){saves++}function navKeepScroll(){UI_RENDER_ID++}function confirm(){return confirmHook()}function closeUiOverlay(){UI_OVERLAY=null}
 function openUiOverlay(o){UI_OVERLAY={kind:o.kind};root.nodes=[];for(const match of o.html.matchAll(/<(select|button|input)\b([^>]*)(?:>([\s\S]*?)<\/\1>|>)/g)){const attrs=Object.fromEntries([...match[2].matchAll(/([\w-]+)="([^"]*)"/g)].map(x=>[x[1],x[2]])),dataset=Object.fromEntries(Object.entries(attrs).filter(([k])=>k.startsWith('data-')).map(([k,v])=>[k.slice(5).replace(/-([a-z])/g,(_,c)=>c.toUpperCase()),v]));let value=attrs.value||'';if(match[1]==='select'){const options=[...match[3].matchAll(/<option value="([^"]*)"([^>]*)>/g)];value=(options.find(x=>x[2].includes('selected'))||options[0])?.[1]||''}root.nodes.push({attrs,dataset,value,checked:match[2].includes(' checked'),focus(){}})}}
 `]});

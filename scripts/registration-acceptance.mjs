@@ -85,7 +85,7 @@ await runEngineFixture(String.raw`(()=>{
   registerMedicalOfficialReplacement=emergencyWriter;
   check(medicalEmergencyFASigning(em,coverTeam,coverFor,10)?.id===cover.id&&coverTeam.registration.players.includes(cover.id),'production emergency signing did not register cover');
   intl.done=true;setWorldCalendarDate(db,year+'-01-25');
-  globalThis.DB=db;globalThis.esc=String;globalThis.MSG='';let saves=0;globalThis.saveDB=()=>saves++;globalThis.navKeepScroll=()=>{};
+  globalThis.SLOT='1';globalThis.SLOT_SWITCHING=false;globalThis.UI_RENDER_ID=1;globalThis.UI_OVERLAY=null;globalThis.VIEW='squad';globalThis.DB=db;globalThis.esc=String;globalThis.MSG='';let saves=0;globalThis.saveDB=()=>saves++;globalThis.navKeepScroll=()=>{};
   const button={dataset:{officialSubmit:parent.id}},selectors=[parent,reserve].flatMap(t=>t.registration.players.map(id=>({value:t.id,dataset:{officialDestination:id}})));
   globalThis.document={querySelectorAll:q=>q==='[data-official-submit]'?[button]:q==='[data-official-destination]'?selectors:[]};
   globalThis.confirm=()=>false;bindOfficialRegistrationControls();const cancelled=JSON.stringify(db);button.onclick();check(JSON.stringify(db)===cancelled&&!saves,'cancelled UI registry committed');
