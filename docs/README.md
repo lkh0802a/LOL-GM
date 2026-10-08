@@ -101,3 +101,6 @@ Use [numeric stages 1–13 and dotted work units](DEVELOPMENT.md#unified-numeric
 - 12.5.4.7.1 선수단 후보의20명 페이지·복수 선택·미완료 입력/상세 복귀와 실제 관찰·전향/저장: [수용/원본 진단](evidence/scout-return-context-2026-10-08.json). 정확한 다음12.5.4.8과 전체 승인 미완료는 DEVELOPMENT를 따른다.
 
 - 12.5.4.8.2.1 공식 편집의 시작 문맥·오래된 입력 거절·수동 취소 후 현재 재편집: [원본 반례와 수용](evidence/official-edit-context-2026-10-08.json). 전체 공식 편집 비교표와 입력 복귀는 미완료이며 정확한 출시 상태는 DEVELOPMENT 및 PR 검증 기록을 따른다.
+
+
+- 12.5.4.8.2.2: 공식 등록·선발·현장 스태프 편집에서 시작 입력/현재 적용/미적용 입력을 표로 비교하고, 거절된 입력을 유지하여 직접 수정하거나 명시 취소 후 현재 상태로 재편집한다. 실제 명령·공식 소비·저장 수용 범위와 원본 실패는 DEVELOPMENT와 official-draft-comparison 증거를 참조한다. 전체 UI/Analysis/언어/엔진 승인 범위의 완료 선언은 아니다.

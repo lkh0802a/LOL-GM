@@ -31,7 +31,7 @@ function renderClubEligibility(){
 }
 function clubEntryStamp(db,tid){
   const t=db.teams[tid],teams=organizationTeams(db,parentTeamOf(db,t)),players=Array.from(new Set(teams.flatMap(x=>[...x.roster,...(x.registration?.players||[])])));
-  return JSON.stringify(officialRegistrationSnapshot(db,{teamId:tid,players}))+JSON.stringify([db.world.registrationVersion,db.world.manage,clubBriefFixture(db)?.m.id]);
+  return JSON.stringify(officialRegistrationSnapshot(db,{teamId:tid,players}))+JSON.stringify([db.world.registrationVersion,db.world.manage,clubBriefFixture(db)?.m.id])+officialStaffEditStamp(db,tid);
 }
 function clubEntryDraft(root,values=null){
   const fields=[...root.querySelectorAll('[data-official-destination]'),...root.querySelectorAll('[data-official-role]'),...root.querySelectorAll('[data-competition-staff]')],out={};
@@ -39,13 +39,14 @@ function clubEntryDraft(root,values=null){
 }
 function openClubEntry(tid){
   const ctx=clubBriefContext(),m=clubEntryModel(DB,tid);if(!m?.enabled||ctx.w.manage!=='manual'||UI_OVERLAY)return false;
-  const db=DB,w=db.world,slot=SLOT,render=UI_RENDER_ID,stamp=clubEntryStamp(db,tid),date=db.worldDate,phase=w.phase,root=document.querySelector('#overlay');let dialog=null;
+  const db=DB,w=db.world,slot=SLOT,render=UI_RENDER_ID,stamp=clubEntryStamp(db,tid),date=db.worldDate,phase=w.phase,root=document.querySelector('#overlay');let dialog=null,comparisonStart;
   const context=()=>clubBriefCurrent(db,w,slot,render,ctx.t.id)&&!w.fired&&w.manage==='manual'&&db.worldDate===date&&w.phase===phase&&UI_OVERLAY===dialog&&managerControlsSquad(db,db.teams[tid]);
   const current=()=>context()&&clubEntryStamp(db,tid)===stamp;
   const draftKey=[db,slot,tid,date,phase,stamp,ctx.t.id];
-  const close=()=>{if(UI_OVERLAY!==dialog)return;if(current())CLUB_ENTRY_DRAFT={key:draftKey,values:clubEntryDraft(root)};closeUiOverlay()};
-  openUiOverlay({kind:'club-entry',label:'공식 명단·선발 수동 확인',dismissible:true,onDismiss:close,focusSelector:'#brief-entry-close',html:`<div class="ovin"><div class="ovhead"><b>${esc(m.team.name)} 공식 명단·선발</b><button id="brief-entry-close" class="ghost">브리핑으로 돌아가기</button></div><p class="hint">작성은 제출 전까지 적용되지 않습니다. 등록 기간과 현재 자격은 기존 명령이 다시 검사합니다.</p>${clubEntryConditions(m)}<button id="brief-entry-reset" class="ghost">초안 취소 · 현재 명단 다시 열기</button>${officialRegistrationPanel(m.team,m.read)}</div>`});dialog=UI_OVERLAY;
-  if(CLUB_ENTRY_DRAFT?.key.every((v,i)=>v===draftKey[i]))clubEntryDraft(root,CLUB_ENTRY_DRAFT.values);else CLUB_ENTRY_DRAFT=null;
+  const close=()=>{if(UI_OVERLAY!==dialog)return;if(current())CLUB_ENTRY_DRAFT={key:draftKey,values:clubEntryDraft(root),start:comparisonStart};closeUiOverlay()};
+  openUiOverlay({kind:'club-entry',label:'공식 명단·선발 수동 확인',dismissible:true,onDismiss:close,focusSelector:'#brief-entry-close',html:`<div class="ovin"><div class="ovhead"><b>${esc(m.team.name)} 공식 명단·선발</b><button id="brief-entry-close" class="ghost">브리핑으로 돌아가기</button></div><p class="hint">작성은 제출 전까지 적용되지 않습니다. 등록 기간과 현재 자격은 기존 명령이 다시 검사합니다.</p>${clubEntryConditions(m)}<button id="brief-entry-reset" class="ghost">초안 취소 · 현재 명단 다시 열기</button><div data-official-comparison></div>${officialRegistrationPanel(m.team,m.read)}</div>`});dialog=UI_OVERLAY;
+  const cached=CLUB_ENTRY_DRAFT?.key.every((v,i)=>v===draftKey[i])?CLUB_ENTRY_DRAFT:null;
+  comparisonStart=clubOfficialEditStart(db,tid,root,cached);if(!cached)CLUB_ENTRY_DRAFT=null;
   $('#brief-entry-close').onclick=close;
   $('#brief-entry-reset').onclick=()=>{
     if(DB!==db||DB.world!==w||SLOT!==slot||UI_RENDER_ID!==render||UI_OVERLAY!==dialog||managedTeamId(db)!==ctx.t.id||SLOT_SWITCHING||w.fired||w.manage!=='manual')return;
@@ -53,7 +54,9 @@ function openClubEntry(tid){
     if(DB!==db||DB.world!==w||SLOT!==slot||UI_RENDER_ID!==render||UI_OVERLAY!==dialog||managedTeamId(db)!==ctx.t.id||SLOT_SWITCHING||w.fired||w.manage!=='manual')return;
     CLUB_ENTRY_DRAFT=null;closeUiOverlay({restoreFocus:false});openClubEntry(tid);
   };
-  bindOfficialRegistrationControls(current,root,()=>{CLUB_ENTRY_DRAFT=null;clubBriefState().message=MSG;closeUiOverlay({restoreFocus:false});navKeepScroll();document.querySelector('#club-entry h4')?.focus?.({preventScroll:true})});
+  const readable=()=>DB===db&&DB.world===w&&SLOT===slot&&UI_RENDER_ID===render&&UI_OVERLAY===dialog&&!SLOT_SWITCHING&&!w.fired&&w.manage==='manual'&&managedTeamId(db)===ctx.t.id&&VIEW==='season';
+  const review=bindClubOfficialComparison(root,tid,readable,comparisonStart);
+  bindOfficialRegistrationControls(current,root,()=>{CLUB_ENTRY_DRAFT=null;clubBriefState().message=MSG;closeUiOverlay({restoreFocus:false});navKeepScroll();document.querySelector('#club-entry h4')?.focus?.({preventScroll:true})},()=>clubOfficialEditRejected(root,readable,review));
   return true;
 }
 function bindClubEligibility(){
