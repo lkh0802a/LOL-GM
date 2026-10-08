@@ -22,7 +22,7 @@ function managerTeamPicker(disabled=false){
     <label>리그<span class="static-field">${st.region?esc(st.div===2?divName(st.region):st.region.short):'—'}</span></label>
     <label>리그 선택<select id="steam-division"${disabled?' disabled':''}>${st.divs.map(d=>`<option value="${d}"${d===st.div?' selected':''}>${esc(d===1?st.region.short:divName(st.region))}</option>`).join('')}</select></label>
     <label>팀<select id="steam"${disabled?' disabled':''}>${st.teams.map(t=>`<option value="${t.id}"${t.id===st.team?' selected':''}>${esc(t.name)}</option>`).join('')}</select></label>
-  </div>${team?`<div class="fin">
+  </div><p class="hint">${team?.parent?'소유 2군: 경기·전술·훈련·육성을 맡습니다. 선수 계약과 이동은 모구단 권한입니다.':'첫 시즌은 선수단 구성부터 시작합니다.'}</p><details class="career-club-details"><summary>선택한 구단 정보와 감독 권한</summary>${team?`<div class="fin">
     <div><span>재정</span><b>${money(team.finance.cash)}</b><small>초기 연봉 예산 ${money(budget)} · 현재 ${money(pay)}</small></div>
     <div><span>선수단</span><b>${(team.roster||[]).length}명</b><small>첫 시즌은 전 구단 0명에서 시작</small></div>
     <div><span>시설</span><b>${Math.round(avg(Object.values(ensureFacilities(team)))*10)/10} / 5</b><small>4종 인프라 평균</small></div>
@@ -33,7 +33,7 @@ function managerTeamPicker(disabled=false){
   </div>`:''}
   <p class="hint">첫 시즌은 모든 구단이 백지 로스터로 시작합니다. 독립 구단은 직접 선수단을 구성하고, 소유 2군은 모구단이 구성한 선수단으로 시작합니다.</p>
   <p class="hint">국적·출신 지역·활동 지역과 공식 등록의 로컬 자격은 서로 다릅니다. 구단 언어와 지원 제도는 별도 개발 중이며 이 화면에서 언어 적응을 보장하지 않습니다.</p>
-  <p class="hint">소유 2군도 감독할 수 있습니다. 선수 영입·계약·방출·1·2군 이동은 모구단이 담당하고, 2군 감독은 경기·전술·훈련·육성을 맡습니다.</p></div>`;
+  <p class="hint">소유 2군도 감독할 수 있습니다. 선수 영입·계약·방출·1·2군 이동은 모구단이 담당하고, 2군 감독은 경기·전술·훈련·육성을 맡습니다.</p></details></div>`;
 }
 function bindManagerTeamPicker(){
   const r=$('#steam-region'),d=$('#steam-division'),t=$('#steam');
@@ -56,11 +56,13 @@ function intlCard(it,i){
 }
 function seasonSetup(){
   const cfg=DB.worldConfig, dirty=false;
-  return `<section class="teamhead"><h2>새 커리어 선택</h2>${typeof START_UI!=='undefined'&&START_UI.active?startupBack():''}${typeof START_UI!=='undefined'&&START_UI.error?`<p class="warn" role="status">${esc(START_UI.error)}</p>`:''}<p>LOL GM은 고정된 글로벌 프로 생태계에서 시작합니다. 리그와 국제대회는 새 게임에서 임의로 추가·삭제하지 않으며, 이후 구조 변화는 게임 내 사무국과 세계 변화 시스템이 처리합니다.</p></section>
+  return `<section class="teamhead"><h2>감독 커리어 시작</h2>${typeof START_UI!=='undefined'&&START_UI.active?startupBack():''}${typeof START_UI!=='undefined'&&START_UI.error?`<p class="warn" role="status">${esc(START_UI.error)}</p>`:''}<p>맡을 구단을 선택하고 감독 커리어를 시작하세요.</p></section>
+  <section class="career-choice"><h3>구단 선택</h3>${managerTeamPicker(dirty)}<div class="controls"><button class="primary" id="sstart"${dirty?' disabled':''}>${DB.teams[SSET.team]?.parent?'소유 2군 감독 시작':'이 팀으로 로스터 구성 시작'}</button></div></section>
+  <details class="career-world-details"><summary>세계와 대회 안내 자세히 보기</summary>
+  <p>LOL GM은 고정된 글로벌 프로 생태계에서 시작합니다. 리그와 국제대회는 새 게임에서 임의로 추가·삭제하지 않으며, 이후 구조 변화는 게임 내 사무국과 세계 변화 시스템이 처리합니다.</p>
   <section><h3>리그 구조</h3><p class="hint">새 기본 세계는 북미 LCS · 남미 LSA를 포함한 주요 6개 지역에 1·2부가 있습니다. 기존 세계의 구단 구조는 유지됩니다. 새 구성을 시작하려면 빈 저장 슬롯을 사용하세요. LSA와 새 하부 리그 약칭은 가상 리그 표기이며 실제 대회 운영 규칙을 뜻하지 않습니다.</p><p class="hint">스플릿 기간 수와 성적 집계 방식은 각 지역 리그 사무국이 독립적으로 결정합니다. 감독이 직접 선택하지 않습니다. 사무국은 시즌 종료 후 흥행·경쟁 균형·운영 부담에 따라 다음 시즌 구조를 변경할 수 있으며, 결정은 세계 뉴스와 사무국 기록에 남습니다.</p><div class="cfgs">${cfg.regions.map(regionCard).join('')}</div></section>
   <section><h3>국제대회</h3><div class="cfgs">${cfg.internationals.map(intlCard).join('')}</div><p class="hint">퍼스트 스탠드 · MSI · 월드 챔피언십과 권역별 마스터즈/챌린저급 국제대회가 세계 일정에 포함됩니다.</p></section>
-  <section><h3>생성된 세계</h3>${worldTable()}</section>
-  <section><h3>팀 선택</h3>${managerTeamPicker(dirty)}<div class="controls"><button class="primary" id="sstart"${dirty?' disabled':''}>${DB.teams[SSET.team]?.parent?'소유 2군 감독 시작':'이 팀으로 로스터 구성 시작'}</button></div></section>
+  <section><h3>생성된 세계</h3>${worldTable()}</section></details>
   ${DB.history.length?`<section><h3>역대 기록</h3>${histTable()}</section>`:''}`;
 }
 // 시즌/세계/진행 UI는 ui-season.js에 분리되어 있다.

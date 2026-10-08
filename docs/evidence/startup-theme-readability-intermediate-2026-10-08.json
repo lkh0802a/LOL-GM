@@ -1,0 +1,133 @@
+{
+  "task": "12.5.4.4",
+  "base": "f09082a0f4626c2f086615b58aa1d4d61113d384",
+  "status": "구현·로컬수용 완료; 새 PR exact-head CI/병합/게시 아직 미검증",
+  "archive": {
+    "path": "docs/evidence/startup-theme-readability-raw-2026-10-08.json.gz",
+    "bytes": 9878755,
+    "sha256": "faf509f5d64203ba1017bc849f120535db822c1c904e4f3b15041a3932c55357",
+    "decodedBytes": 102794185,
+    "decodedSHA256": "03e9582049f061789c82b143d4de1615529533457ee5e30806ab9a2050fe71a4"
+  },
+  "sources": [
+    {
+      "path": "src/artifact/shell.html",
+      "bytes": 44431,
+      "sha256": "1a904d97109a6ac21210addfc18e7ef539e162e46b7384ab0e1e6a306b45a1ca"
+    },
+    {
+      "path": "src/artifact/ui-startup.js",
+      "bytes": 7505,
+      "sha256": "ee9224223ad4e511824e2b4112bbc863f2b302c650da81379ac7402f54fe1709"
+    },
+    {
+      "path": "src/artifact/ui-setup.js",
+      "bytes": 8523,
+      "sha256": "6ccc430c6f4ea52fe9259fcaea1719633363b14363d4744a419bc52bbe518ff5"
+    },
+    {
+      "path": "scripts/startup-flow-acceptance.mjs",
+      "bytes": 7329,
+      "sha256": "6fa59aa70a00cb5acc8bc8d08bd3b30fe1c553161c8c64f9a6cfb4d172d31967"
+    },
+    {
+      "path": "scripts/startup-theme-browser.py",
+      "bytes": 13601,
+      "sha256": "f3cbde92332d07c921e0d8b57c3e1e4ffe69a2e68a3e27e64022a9b9b918a849"
+    },
+    {
+      "path": "scripts/verify-startup-theme-evidence.mjs",
+      "bytes": 1546,
+      "sha256": "6e58e514d34ece3f3fae556668605a032b6b58a09dd320d5eb9ed994dfe94dcb"
+    },
+    {
+      "path": "index.html",
+      "bytes": 1944719,
+      "sha256": "306996c255496917285405fab049291c8e79ed6dde1f328ff0622d1c726797be"
+    }
+  ],
+  "engineModules": 101,
+  "officialDraftContrastCases": 99,
+  "browser": {
+    "cases": 162,
+    "minText": 4.9551609429662635,
+    "minControl": 3.498259534199826,
+    "widths": [
+      1280,
+      320
+    ]
+  },
+  "baseline": {
+    "darkSelect": {
+      "text": "rgb(230,235,240)",
+      "background": "rgb(239,239,239)",
+      "colorScheme": "normal"
+    },
+    "buttonWidths": [
+      270,
+      81.203125,
+      53.609375
+    ],
+    "career320PickerY": 3378.3125
+  },
+  "after": {
+    "career320PickerY": 476.96875,
+    "career1280PickerY": 309.78125,
+    "allTextMinimum": 4.9551609429662635,
+    "allActiveControlMinimum": 3.498259534199826,
+    "routes": [
+      "season",
+      "squad",
+      "match",
+      "patch",
+      "analysis",
+      "data"
+    ],
+    "clubDialogs": [
+      "entry",
+      "finance",
+      "staff",
+      "medical",
+      "contract",
+      "practice",
+      "scrim",
+      "recruit"
+    ]
+  },
+  "checks": {
+    "uiAcceptances": 89,
+    "freshVM": 88,
+    "calendar": 20,
+    "staticTests": 14,
+    "modules": 155,
+    "regression": "PASS",
+    "smokeTotalMs": 33214,
+    "smokeBudgetMs": 35000,
+    "smokeIsolated": false,
+    "officialBo3": "3 actual nexus endings 41:57/21:30/28:40; history/save/Analysis/320px PASS"
+  },
+  "limits": [
+    "controlled local storage and rebuilt HTML injection",
+    "External requests blocked: no loaded Google font or production HTTP proof",
+    "Disabled/inert and native option popup not contrast audited",
+    "Not final physical-device/TalkBack QA or empirical pro calibration",
+    "Early reused screenshot path first-success bytes unavailable; final unique-directory captures retained",
+    "No AI/economy/engine/save-schema coefficient changes",
+    "Previous main Pages37727219820 updating_pages cancelled after existing5min timeout; publication unconfirmed"
+  ],
+  "guidePreservation": {
+    "base": "f09082a0f4626c2f086615b58aa1d4d61113d384",
+    "originalBytes": 511025,
+    "originalSHA256": "318cc32fee0c6b88b48273376d834ba2981eb00a722361760388d1c3599ba0a9",
+    "wholeOriginalExactPreserved": true,
+    "offset": 1898,
+    "newBytes": 518679
+  },
+  "measurementCorrection": {
+    "initialIncorrectReports": 213,
+    "actualLightContrastReportsAfterUnitsCorrection": 43,
+    "colorSrgbChannels": "0–1 multiplied by255; rgba0–255 unchanged",
+    "originalFailuresPreserved": true
+  },
+  "next": "12.5.4.5 actual current work/rejection source→existing manual action/return/save; new source-backed engine/save/authority defects first; complete approved inventory retained"
+}

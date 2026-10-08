@@ -310,3 +310,7 @@ ui-club-contracts는 private full JSON의 현재 계약·기존 재계약/옵션
 ### 현재 관심 후보 브리핑의 읽기·수동 쓰기 소유권 (12.3.10)
 
 `ui-club-recruitment.js`는 닫힌 화면에서 관심 수만 읽고, 열린 목록·상세를 private JSON clone에서 생성한다. `ui-market.js`와 공유하는 현재 문맥 guard는 기존 recruitment/scouting domain writer를 확인 뒤 호출한다. UI는 보고서·평가·공개 출전 source를 소비하며 가격/AI/engine/save schema를 소유하지 않는다. 공개 출전 검사는 기존 `ui-initial-comparison.js`의 순수 source helper를 재사용하고 초기 FA 권한은 재사용하지 않는다. 현재 수용·한계·후속의 단일 active guide는 DEVELOPMENT12.3.10이며, 손실 없는 원로그 archive는 `scripts/verify-club-recruitment-evidence.mjs`로 tmp 없이 검증한다.
+
+12.5.4.4 표현 경계: `shell.html`의 ink/surf/control-line과 native color-scheme이 실제 기존 밝게/어둡게/자동 테마 소비를 소유한다. 장식용 line과 활성 입력 경계는 분리한다. `ui-startup.js`는 기존 설정 저장/current guard를 유지하고, `ui-setup.js`는 같은 수동 구단 선택 writer 앞에 필수 선택을 배치하며 원래 설명을 native details 안에 보존한다. 테마/접힘은 엔진·계약·save schema 상태가 아니다. Python Playwright 수용은 rebuilt 로컬 HTML/차단된 외부 요청에서 실행하며 productionHTTP/실기기 완전 검증을 뜻하지 않는다.
+
+기존 `applyStartupTheme`와 운영 설정 실패 피드백의 소유자는 `ui-theme.js`이다. `ui-state.js:updateAppNavigation`이 nav render 증가 전인 순서를 유지하므로 다음 render 토큰을 전달한다. 역할은 저장된 global preference이며 계약/감독 권한 명령이 아니다. DB/slot/render/select 교체 후 retained handler는 inert이다. 새 테마 파일1500자·기존 startup7000/state6500자 한도는 유지한다.

@@ -11,17 +11,13 @@ function startupMove(page){
 function startupCurrent(db,slot,render){return DB===db&&SLOT===slot&&UI_RENDER_ID===render&&!SLOT_SWITCHING}
 function startupBack(){return '<button class="ghost" id="startup-back">처음 화면으로</button>'}
 function viewStartup(){
-  if(START_UI.page==='home')return `<section class="teamhead"><h2>LOL GM</h2></section>${START_BOOT_ERROR?`<p class="warn" role="status">${esc(START_BOOT_ERROR)} · 다른 슬롯을 선택할 수 있습니다. 원본은 유지됩니다.</p>`:''}<section class="controls startup-actions"><button class="primary" id="startup-new">새 시작</button><button class="ghost" id="startup-load">불러오기</button><button class="ghost" id="startup-settings">설정</button></section>`;
-  if(START_UI.page==='settings')return `<section><h2>설정</h2><label>화면 색상<select id="startup-theme"><option value="auto">자동</option><option value="dark">어둡게</option><option value="light">밝게</option></select></label><p id="startup-theme-status" role="status"></p>${startupBack()}</section>`;
+  if(START_UI.page==='home')return `<section class="teamhead"><h2>LOL GM</h2></section>${START_BOOT_ERROR?`<p class="warn" role="status">${esc(START_BOOT_ERROR)} · 다른 슬롯을 선택할 수 있습니다. 원본은 유지됩니다.</p>`:''}<section class="controls startup-actions"><button class="primary" id="startup-new">새 게임</button><button class="ghost" id="startup-load">불러오기</button><button class="ghost" id="startup-settings">설정</button></section>`;
+  if(START_UI.page==='settings')return `<section class="startup-settings"><h2>설정</h2><label>화면 색상<select id="startup-theme"><option value="auto">자동</option><option value="dark">어둡게</option><option value="light">밝게</option></select></label><p id="startup-theme-status" role="status"></p>${startupBack()}</section>`;
   if(START_UI.page==='new-slot'||(!DB&&START_UI.page==='load'))return `<section><h2>${START_UI.page==='load'?'저장 슬롯 복원':'새 커리어 저장 위치'}</h2><p>${START_UI.page==='load'?'복원할 슬롯을 선택하세요.':'빈 슬롯을 선택하세요. 모두 사용 중이면 불러오기에서 기존 커리어를 이어갈 수 있습니다.'} 기존 커리어와 손상된 저장 원본은 덮어쓰지 않습니다.</p>${startupBack()}<p class="warn" role="status">${esc(START_UI.error)}</p></section><section class="cfgs">${SAVE_SLOTS.filter(n=>n!==SLOT).map(n=>{const m=slotMeta(n);return `<div class="cfgcard compact"><h3>슬롯 ${n}</h3><p>${m?.team?esc(m.team)+' · '+esc(m.year):'저장 여부는 선택 시 확인합니다'}</p><button data-startup-slot="${n}">이 슬롯 확인</button></div>`}).join('')}</section>`;
   if(START_UI.page==='load')return `<section class="controls">${startupBack()}${DB.world?'<button class="primary" id="startup-resume">현재 커리어 계속</button>':''}</section>`+viewData();
   return seasonSetup();
 }
-function applyStartupTheme(value){
-  if(!['auto','dark','light'].includes(value))return false;
-  document.documentElement.setAttribute('data-theme',value);
-  try{localStorage.setItem('lol-gm-theme',value);return true}catch(e){return false}
-}
+
 // Fail closed on unavailable storage: missing metadata never establishes emptiness.
 async function startupSlotWorld(slot){
   if(!SAVE_SLOTS.includes(slot))throw Error('올바르지 않은 슬롯입니다.');
@@ -40,7 +36,7 @@ async function startupChooseSlot(slot,current){
     if(!result.ok)throw Error(result.error);
     if(DB.world||(DB.history||[]).length)throw Error('슬롯 상태가 바뀌었습니다. 기존 저장은 유지됩니다.');
     startupMove('career');return true;
-  }catch(e){if(current()){START_UI.error='새 시작을 진행하지 못했습니다 — '+e.message;nav()}return false}
+  }catch(e){if(current()){START_UI.error='새 게임을 시작하지 못했습니다 — '+e.message;nav()}return false}
 }
 async function startupCommitCareer(db,slot,team){
   if(DB!==db||SLOT!==slot||SLOT_SWITCHING||db.world||(db.history||[]).length||!isManagerSelectableTeam(db,team))return false;

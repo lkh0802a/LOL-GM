@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict';
 import {artifactSources,runEngineFixture} from './test-harness.mjs';
 import {readFile} from 'node:fs/promises';
-const [startup,app,data,setup]=await artifactSources(['ui-startup.js','app.js','ui-data.js','ui-setup.js']);
+const [startup,app,data,setup,themeSource]=await artifactSources(['ui-startup.js','app.js','ui-data.js','ui-setup.js','ui-theme.js']);
 const storage=app.slice(app.indexOf('async function loadDB('),app.indexOf('const $=s=>'));
 const esc=app.match(/^const esc=.*$/m)[0];
 await runEngineFixture(String.raw`(async()=>{
  const check=(x,m)=>{if(!x)throw Error('STARTUP '+m)};
  const cfg=defaultWorldConfig();cfg.regions=[regionCfg('KR',{teams:4,div2:true})];cfg.internationals=[];
  DB=buildWorld(cfg);const original=JSON.stringify(DB),db=DB;
- let home=viewStartup();check((home.match(/<button/g)||[]).length===3&&['새 시작','불러오기','설정'].every(x=>home.includes(x))&&!home.includes('steam'),'three actions only');
+ let home=viewStartup();check((home.match(/<button/g)||[]).length===3&&['새 게임','불러오기','설정'].every(x=>home.includes(x))&&!home.includes('steam'),'three actions only');
  bindStartup();const oldNew=$('#startup-new').onclick;oldNew();check(START_UI.page==='career'&&JSON.stringify(DB)===original,'new start then career no mutation');
  bindStartup();$('#startup-back').onclick();check(START_UI.page==='home'&&JSON.stringify(DB)===original,'cancel keeps world');
  bindStartup();$('#startup-settings').onclick();bindStartup();$('#startup-theme').value='dark';$('#startup-theme').onchange();check(localStorage.getItem('lol-gm-theme')==='dark'&&theme==='dark','actual settings');
@@ -40,6 +40,11 @@ await runEngineFixture(String.raw`(async()=>{
  check(await startupChooseSlot('1',()=>true)&&DB.world.phase==='initial_roster'&&!START_UI.active&&!START_BOOT_ERROR,'actual other slot boot recovery');
  DB=null;START_BOOT_ERROR='bad original';START_UI={active:true,page:'new-slot',error:''};local.delete('base-8');mem.delete('base-8');check(await startupChooseSlot('8',()=>true)&&!DB.world&&START_UI.page==='career','boot new uses genuine empty slot');
  
+ const preferenceWorld=JSON.stringify(DB),activeTheme=$('#app-theme'),themeStatus=$('#app-theme-status');
+ bindAppThemePreference(activeTheme,UI_RENDER_ID);activeTheme.value='dark';activeTheme.onchange();check(localStorage.getItem('lol-gm-theme')==='dark'&&theme==='dark'&&themeStatus.hidden,'active theme actual preference writer');
+ failWrites=true;activeTheme.value='light';activeTheme.onchange();check(theme==='light'&&localStorage.getItem('lol-gm-theme')==='dark'&&!themeStatus.hidden&&themeStatus.textContent.includes('설정 저장은 실패'),'active theme I/O failure visible');failWrites=false;
+ const staleActiveTheme=activeTheme.onchange;UI_RENDER_ID++;activeTheme.value='auto';staleActiveTheme();check(localStorage.getItem('lol-gm-theme')==='dark','active theme stale render inert');
+ bindAppThemePreference(activeTheme,UI_RENDER_ID);activeTheme.value='auto';activeTheme.onchange();check(localStorage.getItem('lol-gm-theme')==='auto'&&themeStatus.hidden&&JSON.stringify(DB)===preferenceWorld,'active theme successful recovery game pure');
  console.log('STARTUP_FLOW_ACCEPTANCE '+JSON.stringify({threeActions:true,careerAfterNew:true,cancelPure:true,theme:true,invalidPreserved:true,failedWritesRollback:true,actualManualCareer:true,duplicateStale:true,fullSlotsProtected:true,emptySlot:true,previousCareerSaved:true,staleUtility:true,save:true}));
 })()`,{timeout:30000,setupSources:[String.raw`
 const indexedDB={};let failReads=false;
@@ -52,7 +57,7 @@ async function idbGet(k){if(failReads)throw Error('controlled read failure');ret
 const document={querySelector:s=>{if(!nodes.has(s))nodes.set(s,{value:'',innerHTML:'',focus(){}});return nodes.get(s)},querySelectorAll:()=>[],documentElement:{setAttribute:(k,v)=>{theme=v}}};const $=s=>document.querySelector(s);
 const window={scrollTo(){}};const navigator={};function clearTimeout(){}function setTimeout(){return 1}function cancelUiTasks(){}function freshInternalSeed(){return 'startup-actual'}
 function nav(){UI_RENDER_ID++}function navigateTo(v){VIEW=v;nav();return true}function resetUiForWorld(){START_UI={active:!DB.world,page:'home',error:''}}function bindSetup(){}function seasonSetup(){return 'career choices'}const SSET={};
-`,esc,storage,data,startup]});
+`,esc,storage,data,themeSource,startup]});
 // Retain the old utility counterexample using original source, without archived save mutation.
 const old=await readFile(new URL('../src/artifact/ui-data.js',import.meta.url),'utf8');
 assert(old.includes('if(!current())return'),'all utility action callbacks must check identity');
