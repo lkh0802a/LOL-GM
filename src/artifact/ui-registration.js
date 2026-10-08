@@ -17,13 +17,8 @@ function officialRegistrationPanel(t,db=DB){
       ${ROLES.map(role=>`<label>${ROLE_KO[role]}<select data-official-role="${role}">${current.filter(id=>officialPlayerCanRepresent(db,db.players[id],t)).map(id=>`<option value="${id}"${depth[role]===id?' selected':''}>${esc(db.players[id].name)} · 적합 ${playerRoleRating(db.players[id],role)}</option>`).join('')}</select></label>`).join('')}
       <button class="ghost" data-official-lineup="${t.id}">공식 선발 적용</button></details>`:''}</section>`;
 }
-function bindOfficialRegistrationControls(ok=()=>true,root=document,after=()=>navKeepScroll()){
-const db=DB,w=db.world,slot=SLOT,rid=UI_RENDER_ID,oid=managedTeamId(db),view=VIEW,overlay=UI_OVERLAY;
-const stamp=()=>JSON.stringify([w.year,w.manage,w.fired,w.registrationVersion,w.pendingOfficial,
-Object.values(db.teams).map(t=>[t.id,t.roster]),officialRegistrationSnapshot(db,{teamId:oid,players:Object.keys(db.players)})]);
-const start=stamp(),guard=()=>ok()&&DB===db&&DB.world===w&&SLOT===slot&&VIEW===view&&
-UI_RENDER_ID===rid&&UI_OVERLAY===overlay&&!SLOT_SWITCHING&&!w.fired&&w.manage==='manual'&&managedTeamId(db)===oid&&stamp()===start;
-const valid=()=>{if(guard())return true;if(DB===db&&ok()){MSG='상태 변경: 초안을 취소하고 다시 확인하세요';const n=root.querySelector('[data-official-status]');if(n)n.textContent=MSG}return false};
+function bindOfficialRegistrationControls(ok=()=>true,root=document,after=()=>navKeepScroll(),onReject=null){
+const valid=officialEditGuard(ok,root,onReject),reject=()=>{(onReject||after)('rejected')};
 root.querySelectorAll('[data-official-submit]').forEach(b=>b.onclick=()=>{
   if(!valid())return;
   const t=DB.teams[b.dataset.officialSubmit],teams=managedTeam(DB)?.parent?[t]:organizationTeams(DB,t),
@@ -32,26 +27,26 @@ root.querySelectorAll('[data-official-submit]').forEach(b=>b.onclick=()=>{
     if(Object.hasOwn(registrations,el.value))registrations[el.value].push(el.dataset.officialDestination);
   });
   const preview=previewWorldAction(DB,{type:'roster.register',actor:'manager',teamId:t.id,registrations});
-  if(!preview.ok){MSG=preview.errors.join(' · ');after();return}
+  if(!preview.ok){MSG=preview.errors.join(' · ');reject();return}
   if(!confirm('공식 명단을 제출할까요?\n'+teams.map(x=>x.short+' '+registrations[x.id].length+'명').join(' · ')+
     '\n계약·훈련 유지. 제출 즉시 출전 자격 변경.'))return;
   if(!valid())return;
   const result=applyWorldAction(DB,preview);MSG=result.ok?'공식 명단 제출 완료':result.errors.join(' · ');
-  if(result.ok)saveDB();after();
+  if(result.ok){saveDB();after()}else reject();
 });
 root.querySelectorAll('[data-official-lineup]').forEach(b=>b.onclick=()=>{
   if(!valid())return;
   const lineup=Object.fromEntries(Array.from(root.querySelectorAll('[data-official-role]')).map(el=>[el.dataset.officialRole,el.value]));
   const result=commitWorldAction(DB,{type:'roster.official-lineup',actor:'manager',teamId:b.dataset.officialLineup,lineup});
-  MSG=result.ok?'공식 선발 적용 완료':result.errors.join(' · ');if(result.ok)saveDB();after();
+  MSG=result.ok?'공식 선발 적용 완료':result.errors.join(' · ');if(result.ok){saveDB();after()}else reject();
 });
 root.querySelectorAll('[data-competition-staff-submit]').forEach(b=>b.onclick=()=>{
   if(!valid())return;
   const ids=Array.from(root.querySelectorAll(`[data-competition-staff="${b.dataset.competitionStaffSubmit}"]:checked`)).map(x=>x.value),preview=previewWorldAction(DB,{type:'competition.staff-register',actor:'manager',seasonId:b.dataset.competitionStaffSubmit,teamId:b.dataset.teamId,staffIds:ids});
-  if(!preview.ok){MSG=preview.errors.join(' · ');after();return}
+  if(!preview.ok){MSG=preview.errors.join(' · ');reject();return}
   if(!confirm('대회 현장 스태프 '+ids.length+'명을 등록할까요?\n마감 후 변경 불가.'))return;
   if(!valid())return;
-  const result=applyWorldAction(DB,preview);MSG=result.ok?'현장 스태프 등록 완료':result.errors.join(' · ');if(result.ok)saveDB();after();
+  const result=applyWorldAction(DB,preview);MSG=result.ok?'현장 스태프 등록 완료':result.errors.join(' · ');if(result.ok){saveDB();after()}else reject();
 });
 }
 function competitionStaffRegistrationPanel(t,db=DB){

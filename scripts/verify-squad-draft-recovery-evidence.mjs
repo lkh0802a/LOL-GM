@@ -12,12 +12,13 @@ const decoded=gunzipSync(compressed);assert.equal(sha(decoded),evidence.archive.
 const rows=JSON.parse(decoded);
 for(const row of rows){const bytes=Buffer.from(row.base64,'base64');assert.equal(bytes.length,row.bytes);assert.equal(sha(bytes),row.sha256);}
 const successor=JSON.parse(await readFile(new URL('docs/evidence/official-edit-context-2026-10-08.json',root),'utf8'));
+const comparison=JSON.parse(await readFile(new URL('docs/evidence/official-draft-comparison-2026-10-08.json',root),'utf8'));
 for(const [path,hash] of Object.entries(evidence.sources)){
   const current=sha(await readFile(new URL(path,root)));
   if(current===hash)continue;
   assert(['index.html','scripts/verify-squad-draft-recovery-evidence.mjs'].includes(path),'only reviewed successor paths');
   assert.equal(successor.originals[path],hash,'original source pin retained');
-  assert.equal(current,successor.sources[path],path);
+  if(current!==successor.sources[path]){assert.equal(comparison.originals[path],successor.sources[path]);assert.equal(current,comparison.sources[path],path)}
 }
 const guide=await readFile(new URL('docs/DEVELOPMENT.md',root));
 const original=Buffer.from(rows.find(r=>r.path==='original-guide.md').base64,'base64');

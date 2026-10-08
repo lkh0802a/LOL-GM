@@ -7,6 +7,15 @@ await runEngineFixture(String.raw`(()=>{
  const ids=mine.staffRoster.slice(0,2).map(x=>x.id),before=JSON.stringify(db),preview=previewWorldAction(db,{type:'competition.staff-register',actor:'manager',seasonId:s.id,teamId:mine.id,staffIds:ids});
  check(preview.ok&&JSON.stringify(db)===before,'preview rejected or changed state: '+(preview.errors||[]).join(' · '));check(applyWorldAction(db,preview).ok&&competitionStaffEntry(db,s,mine.id).join(',')===ids.join(','),'manager entry failed');
  check(!previewWorldAction(db,{type:'competition.staff-register',actor:'manager',seasonId:s.id,teamId:mine.id,staffIds:mine.staffRoster.slice(0,3).map(x=>x.id)}).ok,'published cap bypassed');
+ const tableStart=clubOfficialEditState(db,mine.id),draft={...tableStart.values},staffKeys=mine.staffRoster.slice(0,3).map(x=>'staff:'+s.id+':'+x.id);
+ for(const key of staffKeys)draft[key]=true;
+ const tableBefore=JSON.stringify(db),table=clubOfficialEditReview(db,mine.id,tableStart,draft);
+ check(JSON.stringify(db)===tableBefore&&table.errors.some(x=>x.startsWith('현장 스태프:'))&&staffKeys.every(key=>table.rows.some(row=>row.key===key&&row.draft==='등록')),'actual published staff cap appears in pure unapplied comparison');
+ const appliedKey=staffKeys[0],baseline=JSON.stringify(tableStart.values),staffClear=commitWorldAction(db,{type:'competition.staff-register',actor:'manager',seasonId:s.id,teamId:mine.id,staffIds:[]});
+ const clearState=JSON.stringify(db),afterClear=clubOfficialEditReview(db,mine.id,tableStart,draft),clearRow=afterClear.rows.find(row=>row.key===appliedKey);
+ check(staffClear.ok&&clearRow.start==='등록'&&clearRow.current==='미등록'&&clearRow.draft==='등록'&&JSON.stringify(tableStart.values)===baseline&&JSON.stringify(db)===clearState,'actual staff writer visible without rebasing start or changing employed records');
+ check(commitWorldAction(db,{type:'competition.staff-register',actor:'manager',seasonId:s.id,teamId:mine.id,staffIds:ids}).ok,'restore submitted staff through existing command');
+
  check(!previewWorldAction(db,{type:'competition.staff-register',actor:'manager',seasonId:s.id,teamId:mine.id,staffIds:[ai.staffRoster[0].id]}).ok,'other club employee registered');
  const original=JSON.stringify(db),handler=WORLD_ACTION_HANDLERS['competition.staff-register'],writer=handler.apply;handler.apply=(state,c)=>{writer(state,c);throw Error('late failure')};const fault=applyWorldAction(db,previewWorldAction(db,{type:'competition.staff-register',actor:'manager',seasonId:s.id,teamId:mine.id,staffIds:[]}));handler.apply=writer;check(!fault.ok&&JSON.stringify(db)===original,'late failure did not restore entries');
  const saved=unpackDB(packDB(db)),savedSeason=staffRegistrationSeason(saved,s.id);check(competitionStaffEntry(saved,savedSeason,mine.id).join(',')===ids.join(','),'save lost staff entries');
@@ -71,6 +80,18 @@ await runEngineFixture(String.raw`(()=>{
  globalThis.confirm=()=>true;button.onclick();check(saves===1&&competitionStaffEntry(db,s,mine.id).length===1,'confirmed UI did not submit/save');
  check(!competitionStaffRegistrationPanel(ai).includes('data-competition-staff-submit'),'other team UI offered manager submission');
  check(commitWorldAction(db,{...staffCommand,staffIds:[coach.id,analyst.id]}).ok,'restore two on-site staff failed');
+ // Extend this existing fresh VM with retained-control context cases; preserve its fixture count.
+ const editButton={dataset:{competitionStaffSubmit:s.id,teamId:mine.id}},editRoot={querySelectorAll:k=>k==='[data-competition-staff-submit]'?[editButton]:k.includes(':checked')?[{value:coach.id}]:[],querySelector:()=>null};
+ const editCase=change=>{bindOfficialRegistrationControls(()=>true,editRoot,()=>{});const retained=editButton.onclick,undo=change(),before=JSON.stringify(db),count=saves;retained();check(JSON.stringify(db)===before&&saves===count,'changed staff context cannot overwrite/save');undo?.()};
+ editCase(()=>{const prior=JSON.parse(JSON.stringify(s.staffEntries));check(commitWorldAction(db,{...staffCommand,staffIds:[analyst.id]}).ok,'real intervening staff entry command');return ()=>{s.staffEntries=prior}});
+ editCase(()=>{const prior=s.staffRegistrationPolicy.max;s.staffRegistrationPolicy.max=1;return ()=>{s.staffRegistrationPolicy.max=prior}});
+ editCase(()=>{const prior=coach.contract.until;coach.contract.until=db.year-1;return ()=>{coach.contract.until=prior}});
+ editCase(()=>{s.done=true;return ()=>{s.done=false}});
+ bindOfficialRegistrationControls(()=>true,editRoot,()=>{});const editProjected=JSON.parse(JSON.stringify(db)),editExpected=commitWorldAction(editProjected,{...staffCommand,staffIds:[coach.id]}),editCount=saves;editButton.onclick();
+ check(editExpected.ok&&JSON.stringify(db)===JSON.stringify(editProjected)&&saves===editCount+1,'current staff UI equals existing atomic command');const editBefore=JSON.stringify(db);editButton.onclick();check(JSON.stringify(db)===editBefore&&saves===editCount+1,'duplicate retained staff callback inert');
+ check(commitWorldAction(db,{...staffCommand,staffIds:[coach.id,analyst.id]}).ok,'restore original on-site entry after context checks');
+ console.log('STAFF_EDIT_CONTEXT PASS real intervening entry/policy/employment/done guard and current writer parity');
+
  db.worldDate=s.days[0].date;
  const lockedAi=JSON.stringify(s.staffEntries[ai.id]);ai.staffRoster[0].publicEstimate=100;aiReviewCompetitionStaffRegistrations(db);check(JSON.stringify(s.staffEntries[ai.id])===lockedAi,'AI changed locked on-site entry');
  check(!previewWorldAction(db,{type:'competition.staff-register',actor:'manager',seasonId:s.id,teamId:mine.id,staffIds:[]}).ok,'opening fixture did not lock entry');console.log('STAFF_REGISTRATION_ACCEPTANCE '+JSON.stringify({manager:ids.length}));
@@ -95,7 +116,7 @@ await runEngineFixture(String.raw`(()=>{
  db.worldDate=db.year+'-02-01';check(!previewWorldAction(db,{...staffCommand,seasonId:intl.id,staffIds:[]}).ok,'published early deadline ignored');
  check(unpackDB(packDB(db)),'international entries failed restore');
  console.log('STAFF_REGISTRATION_GAMEPLAY: PASS (official draft, practice, AI command, authority, policy snapshot, UI, departed-staff history and saves)');
-})();`,{timeout:30000,filename:'staff-registration-acceptance.fixture.js',setupSources:[await artifactSource('ui-registration.js')]});
+})();`,{timeout:30000,filename:'staff-registration-acceptance.fixture.js',setupSources:[await artifactSource('ui-official-edit.js'),await artifactSource('ui-registration.js')]});
 
 await runEngineFixture(String.raw`(()=>{
  const check=(x,m)=>{if(!x)throw Error('STAFF_COVERAGE '+m)};

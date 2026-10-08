@@ -91,4 +91,4 @@ await runEngineFixture(String.raw`(()=>{
   globalThis.confirm=()=>false;bindOfficialRegistrationControls();const cancelled=JSON.stringify(db);button.onclick();check(JSON.stringify(db)===cancelled&&!saves,'cancelled UI registry committed');
   globalThis.confirm=()=>true;button.onclick();check(saves===1&&officialRegistrationPanel(parent).includes('미등록'),'UI registry confirmation failed');
   console.log('REGISTRATION_ACCEPTANCE '+JSON.stringify({pureRollback:true,atomicSquadSwap:true,employmentSeparate:true,localService:true,windowsWait:true,internationalLock:true,productionMatch:true,saveValidation:true,emergencyPolicy:true,forfeitNoGames:true,uiConfirmCancel:true}));
-})();`,{filename:'registration.fixture.js',setupSources:await artifactSources(['ui-registration.js'])});
+})();`,{filename:'registration.fixture.js',setupSources:await artifactSources(['ui-official-edit.js','ui-registration.js'])});
