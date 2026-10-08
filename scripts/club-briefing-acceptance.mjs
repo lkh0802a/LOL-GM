@@ -1,5 +1,5 @@
 import {artifactSources,runEngineFixture} from './test-harness.mjs';
-const sources=await artifactSources(['ui-negotiations.js','ui-club-briefing.js','ui-club-eligibility.js','ui-club-finance.js','ui-club-staff.js','ui-club-medical.js','ui-club-contracts.js','ui-club-practice.js','ui-club-scrim.js','ui-club-recruitment.js','ui-scrim-plans.js','ui-staff-controls.js','ui-registration.js','ui-transfer-terms.js','app.js']);
+const sources=await artifactSources(['ui-club-actions.js','ui-negotiations.js','ui-club-briefing.js','ui-club-eligibility.js','ui-club-finance.js','ui-club-staff.js','ui-club-medical.js','ui-club-contracts.js','ui-club-practice.js','ui-club-scrim.js','ui-club-recruitment.js','ui-scrim-plans.js','ui-staff-controls.js','ui-registration.js','ui-transfer-terms.js','app.js']);
 const app=sources.pop(),esc=app.match(/^const esc=.*$/m)[0];
 await runEngineFixture(String.raw`(()=>{
  const check=(x,m)=>{if(!x)throw Error('CLUB_BRIEF '+m)};
@@ -40,7 +40,26 @@ await runEngineFixture(String.raw`(()=>{
  DB.world.phase='initial_roster';check(renderClubBriefing()==='','initial explorer stays owner');DB.world.phase='pick';check(renderClubBriefing()==='','career picker stays owner');
  DB.world.phase='season';DB.world.manage='manual';DB.world.pendingOfficial={queue:[{}]};check(!openClubBriefNegotiation(actual.id),'pending official protected');
  DB.world.pendingOfficial=null;const message=CLUB_BRIEF.message;setManagedTeam(DB,other.id);clubBriefState();check(!CLUB_BRIEF.message&&!CLUB_BRIEF.draft,'manager identity clears ephemeral state');setManagedTeam(DB,t.id);SLOT='2';clubBriefState();check(CLUB_BRIEF.slot==='2'&&!CLUB_BRIEF.message,'slot identity reset');
- console.log('CLUB_BRIEFING_ACCEPTANCE '+JSON.stringify({pure:true,owned:true,fixture:true,completedExcluded:true,actualRenewal:true,draftReturn:true,staleLoadDateFired:true,cancelDuplicate:true,commandParity:true,result:expected,save:true,AI:true,initial:true,pending:true}));
+ const pristine=JSON.stringify(DB),actions=clubActionsModel();check(actions&&actions.rows.some(r=>r.kind==='schedule')&&JSON.stringify(DB)===pristine,'current actions pure generated schedule');
+ DB.world.registrationVersion=1;initializeOfficialRegistrations(DB);const ownedTeam=managedTeam(DB),injured=DB.players[ownedTeam.roster[0]];
+ const storedTop=ownedTeam.registration.depthChart.TOP;delete ownedTeam.registration.depthChart.TOP;
+ injured.medical={daysLeft:3,out:true,site:'wrist'};const report=clubActionsModel(),medicalRow=report.rows.find(r=>r.kind==='medical'&&r.id===ownedTeam.id);
+ check(medicalRow.reasons.some(x=>x.includes(injured.name)),'actual owned medical consumer');
+ check(report.rows.find(r=>r.kind==='entry'&&r.id===ownedTeam.id).reasons.length>0,'actual registration or stored lineup rejection reason');
+ const savedMedical=injured.medical;delete injured.medical;check(!clubActionsModel().rows.find(r=>r.kind==='medical'&&r.id===ownedTeam.id).reasons.length,'resolved medical warning removed without history rewrite');injured.medical=savedMedical;
+ DB.world.pendingOfficial={queue:[{}]};check(clubActionsModel().rows.every(r=>r.disabled)&&renderClubActions().includes('수동 선택'),'pending cause and existing actions locked');DB.world.pendingOfficial=null;
+ DB.world.manage='ai';check(clubActionsModel().rows.filter(r=>['entry','neg'].includes(r.kind)).every(r=>r.disabled),'AI manual choices disabled');DB.world.manage='manual';
+ const realAll=document.querySelectorAll;let clicks=0;
+ const action={dataset:{clubAction:'medical',clubTarget:ownedTeam.id}},destination={dataset:{briefMedical:ownedTeam.id},click(){clicks++}};
+ document.querySelectorAll=s=>s==='[data-club-action]'?[action]:s==='[data-brief-medical]'?[destination]:realAll(s);
+ bindClubActions();const retained=action.onclick;old=JSON.stringify(DB);retained();check(clicks===1&&JSON.stringify(DB)===old,'scoped existing action routing does not write');
+ DB.worldDate=addDays(DB.worldDate,1);retained();check(clicks===1,'changed date action inert');bindClubActions();
+ const changedMedical=action.onclick;injured.medical.daysLeft++;changedMedical();check(clicks===1,'changed medical action inert');
+ bindClubActions();const loadedAction=action.onclick;DB=unpackDB(packDB(DB));old=JSON.stringify(DB);loadedAction();check(clicks===1&&JSON.stringify(DB)===old,'actual load stale action inert');
+ document.querySelectorAll=realAll;const restored=clubActionsModel();check(restored.rows.some(r=>r.kind==='medical'&&r.reasons.length),'full/lite restored current medical source');
+ DB.world.fired=true;check(!clubActionsModel()&&renderClubActions()==='','fired action list omitted');DB.world.fired=false;
+ DB.world.phase='initial_roster';check(!clubActionsModel(),'initial authority unchanged');DB.world.phase='season';
+ console.log('CLUB_BRIEFING_ACCEPTANCE '+JSON.stringify({pure:true,owned:true,fixture:true,completedExcluded:true,actualRenewal:true,draftReturn:true,staleLoadDateFired:true,cancelDuplicate:true,commandParity:true,result:expected,save:true,AI:true,initial:true,pending:true,currentActions:true}));
 })()`,{timeout:30000,setupSources:[esc,...sources,String.raw`
 var DB,UI_OVERLAY=null,SLOT='1',SLOT_SWITCHING=false,VIEW='season',UI_RENDER_ID=1,MSG='';const SSET={tab:'table'},nodes=new Map();let saves=0;
 const document={querySelector:s=>{if(!nodes.has(s))nodes.set(s,{value:'',dataset:{},focus(){},setAttribute(){},click(){this.onclick?.()}});return nodes.get(s)},querySelectorAll:s=>{if(s==='[data-neg-bid]'||s==='[data-accept-seller]'||s==='[data-brief-neg]')return [];if(/^\[data-neg-(submit|accept|cancel)\]$/.test(s)){const key=s.slice(1,-1),ds=key.replace(/-([a-z])/g,(_,c)=>c.toUpperCase());return [...nodes].filter(([k])=>k.startsWith('['+key+'=')).map(([,v])=>v)}return []}};const $=s=>document.querySelector(s);

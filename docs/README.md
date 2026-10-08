@@ -95,3 +95,5 @@ Use [numeric stages 1–13 and dotted work units](DEVELOPMENT.md#unified-numeric
 [12.3.11 현재 관심 후보 관측 비교·공개 근거·복귀/저장](evidence/shortlist-comparison-2026-10-08.json)은 시즌 소속 후보의 실제 보고서/권한/표본·수동 행동 경계를 연결한다. 테마·전면 UI·AnalysisRoom·언어/전체 승인 완료는 아니다.
 
 2026-10-08 구현 경계: [12.5.4.4 테마 가독성·새 게임·선택 우선 흐름](DEVELOPMENT.md#12544-테마-가독성새-게임필수-선택-먼저--2026-10-08), [실제 수용/한계](evidence/startup-theme-readability-2026-10-08.json). main f090의 Pages 취소는 게시 성공으로 세지 않는다. 전체 승인 범위는 미완료다.
+
+- 12.5.4.5–12.5.4.6 현재 운영 조건·후보 비교표의 실제 수동 행동/관측/저장 수용과 실패 보존: [증거](evidence/club-current-actions-2026-10-08.json). 원래 안내·전체 승인 범위는 DEVELOPMENT를 따른다.

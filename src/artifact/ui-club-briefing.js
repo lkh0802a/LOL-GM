@@ -28,7 +28,7 @@ function renderClubBriefing(){
   const ctx=clubBriefContext();if(!ctx){CLUB_ENTRY_DRAFT=null;return '';}
   const state=clubBriefState(),nx=clubBriefFixture(DB,ctx),ns=clubBriefNegotiations(DB,ctx),cw=ctx.w.contractWindow;
   return `<section id="club-briefing"><h3 tabindex="-1">구단 운영 브리핑</h3><p class="hint">${esc(ctx.t.name)} · 기준일 ${esc(DB.worldDate||'날짜 미정')} · ${ctx.w.manage==='manual'?'직접 운영':'현재 AI 위임 설정'} · 확정된 일정과 진행 중인 내 구단 협상만 표시합니다.</p><p role="status">${esc(state.message)}</p>
-    ${nx?`<div class="cfgcard"><h4>다음 공식 경기</h4><p>${esc(DB.competitions[nx.s.comp].name)} · ${esc(nx.d.label||'')} · Bo${nx.m.bo}</p><p>${esc(nx.d.date)} UTC · ${esc(fixtureTimeInfo(nx.m))} · ${esc(DB.teams[nx.m.a].name)} vs ${esc(DB.teams[nx.m.b].name)}</p><div class="controls"><button data-brief-schedule="${esc(nx.s.key)}">해당 일정 확인</button><button data-brief-progress="smine">내 경기까지 진행</button></div></div>`:'<p class="hint">현재 생성된 일정에 남은 내 공식 경기가 없습니다. 아직 생성되지 않은 대진은 예측하지 않습니다.</p>'}
+    ${renderClubActions()}${nx?`<div class="cfgcard"><h4>다음 공식 경기</h4><p>${esc(DB.competitions[nx.s.comp].name)} · ${esc(nx.d.label||'')} · Bo${nx.m.bo}</p><p>${esc(nx.d.date)} UTC · ${esc(fixtureTimeInfo(nx.m))} · ${esc(DB.teams[nx.m.a].name)} vs ${esc(DB.teams[nx.m.b].name)}</p><div class="controls"><button data-brief-schedule="${esc(nx.s.key)}">해당 일정 확인</button><button data-brief-progress="smine">내 경기까지 진행</button></div></div>`:'<p class="hint">현재 생성된 일정에 남은 내 공식 경기가 없습니다. 아직 생성되지 않은 대진은 예측하지 않습니다.</p>'}
     ${renderClubEligibility()}${renderClubFinanceBriefing()}${renderClubStaffBriefing()}${renderClubMedicalBriefing()}${renderClubContractBriefing()}${renderClubPracticeBriefing()}${renderClubScrimBriefing()}${renderClubRecruitBriefing()}
     ${SSET.tab==='sched'?'<button class="ghost" data-brief-return>브리핑으로 돌아오기</button>':''}
     ${ctx.w.phase==='season'?'<div class="controls"><button data-brief-progress="sday">하루 진행</button></div>':''}
@@ -53,7 +53,7 @@ function openClubBriefNegotiation(nid,returnContractTeam=null){
 }
 function bindClubBriefing(){
   const ctx=clubBriefContext();if(!ctx)return;
-  bindClubEligibility();bindClubFinanceBriefing();bindClubStaffBriefing();bindClubMedicalBriefing();bindClubContractBriefing();bindClubPracticeBriefing();bindClubScrimBriefing();bindClubRecruitBriefing();
+  bindClubActions();bindClubEligibility();bindClubFinanceBriefing();bindClubStaffBriefing();bindClubMedicalBriefing();bindClubContractBriefing();bindClubPracticeBriefing();bindClubScrimBriefing();bindClubRecruitBriefing();
   const db=DB,w=ctx.w,slot=SLOT,render=UI_RENDER_ID,date=db.worldDate,phase=w.phase,nx=clubBriefFixture(db),current=()=>clubBriefCurrent(db,w,slot,render,ctx.t.id)&&db.worldDate===date&&w.phase===phase&&!UI_OVERLAY;
   document.querySelectorAll('[data-brief-neg]').forEach(b=>b.onclick=()=>{if(current())openClubBriefNegotiation(b.dataset.briefNeg)});
   document.querySelectorAll('[data-brief-schedule]').forEach(b=>b.onclick=()=>{if(!current()||clubBriefFixture(db)?.m.id!==nx?.m.id)return;SSET.view=b.dataset.briefSchedule;SSET.tab='sched';navKeepScroll();document.querySelector('#stab')?.setAttribute?.('tabindex','-1');document.querySelector('#stab')?.focus?.()});

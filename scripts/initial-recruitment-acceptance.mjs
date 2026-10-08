@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {artifactSources,runEngineFixture} from './test-harness.mjs';
-const sources=await artifactSources(['ui-observed-radar.js','ui-initial-comparison.js','ui-initial-offer-preview.js','ui-initial-candidates.js','ui-market-initial.js','ui-negotiations.js','ui-club-medical.js','ui-roster.js','app.js']);
+const sources=await artifactSources(['ui-observed-radar.js','ui-initial-comparison.js','ui-initial-offer-preview.js','ui-initial-table.js','ui-initial-candidates.js','ui-market-initial.js','ui-negotiations.js','ui-club-medical.js','ui-roster.js','app.js']);
 const esc=sources.pop().match(/^const esc=.*$/m)?.[0];assert(esc);
 await runEngineFixture(String.raw`(()=>{
  const check=(ok,msg)=>{if(!ok)throw Error('INITIAL_RECRUITMENT '+msg)};
@@ -35,6 +35,14 @@ await runEngineFixture(String.raw`(()=>{
  cancelNegotiation(db,nid);check(negotiationStore(db)[nid].status!=='open'&&!candidate.team,'cancel signed player');
  const k=knowledge(initialCandidateView(db),candidate);initialCandidateCommand(db,INITMK,candidate.id,'scout');check(knowledge(db,candidate)>=k&&db.scout[candidate.id].observations>0,'actual observation');
  const agreement=submitNegotiationOffer(copy,nid,{...negotiationStore(copy)[nid].demand,salary:Math.floor((initialSalaryBudget(copy,copy.teams[t.id])-payroll(copy,copy.teams[t.id]))*10)/10});check(agreement.ok&&copy.players[candidate.id].team===t.id,'supported agreement '+JSON.stringify(agreement));const replay=JSON.stringify(copy);check(!submitNegotiationOffer(copy,nid,negotiationStore(copy)[nid].demand).ok&&JSON.stringify(copy)===replay,'agreement duplicate');check(unpackDB(packDB(copy)).players[candidate.id].team===t.id,'agreement save');
+ const tableBefore=JSON.stringify(db),stateBefore=JSON.parse(JSON.stringify(INITMK));
+ INITMK.q='';INITMK.minimum=0;INITMK.scope='all';INITMK.sort='role';INITMK.direction='asc';INITMK.secondary=[{key:'salary',direction:'asc'},{key:'age',direction:'asc'}];INITMK.columns=['age','salary','region'];
+ const multi=initialCandidatePage(db,INITMK,t);check(initialCandidateOrders(INITMK).length===3,'three sort priorities');
+ for(let i=1;i<multi.rows.length;i++){const a=multi.rows[i-1],b=multi.rows[i];let cmp=0;for(const order of initialCandidateOrders(INITMK)){cmp=initialCandidateSortValue(multi.view,a,order.key,t)-initialCandidateSortValue(multi.view,b,order.key,t);if(cmp)break}check(cmp<=0,'ordered role/salary/age values')}
+ const table=renderInitialRosterMarket();check(table.includes('FA 후보 비교표')&&table.includes('data-init-column')&&table.includes('aria-sort="ascending"')&&table.includes('여러 개 선택'),'multiple columns table semantics');check(initialCandidateColumns().join(',')==='age,salary,region','selected visible columns');
+ check(initialCandidateDirection('salary','asc')==='저렴한 순'&&initialCandidateDirection('age','asc')==='어린 순'&&initialCandidateDirection('name','asc')==='가나다순','criterion-specific direction');
+ check(initialCandidateOrders({sort:'role',secondary:[{key:'role',direction:'desc'},{key:'fake'}]}).length===1,'duplicate and invalid priority');
+ INITMK.columns=[];check(initialCandidateColumns().length===0&&renderInitialRosterMarket().includes('후보 비교'),'all optional columns hidden');check(JSON.stringify(db)===tableBefore,'column/sort pure world');INITMK=stateBefore;
  const oldPhase=db.world.phase;db.world.phase='season';const inert=JSON.stringify(db);check(initialCandidateCommand(db,INITMK,candidate.id,'interest').includes('권한')&&JSON.stringify(db)===inert,'stale phase');db.world.phase=oldPhase;
  db.world.fired=true;const fired=JSON.stringify(db);check(!initialCandidatePage(db,INITMK,t).allowed&&initialCandidateCommand(db,INITMK,candidate.id,'scout').includes('권한')&&JSON.stringify(db)===fired,'fired authority');db.world.fired=false;
  candidate.team=t.id;const signed=JSON.stringify(db);check(initialCandidateDetail(initialCandidatePage(db,INITMK,t)).includes('더 이상 FA')&&initialCandidateCommand(db,INITMK,candidate.id,'evaluate').includes('권한')&&JSON.stringify(db)===signed,'signed candidate truth');candidate.team=null;

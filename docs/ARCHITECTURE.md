@@ -314,3 +314,7 @@ ui-club-contracts는 private full JSON의 현재 계약·기존 재계약/옵션
 12.5.4.4 표현 경계: `shell.html`의 ink/surf/control-line과 native color-scheme이 실제 기존 밝게/어둡게/자동 테마 소비를 소유한다. 장식용 line과 활성 입력 경계는 분리한다. `ui-startup.js`는 기존 설정 저장/current guard를 유지하고, `ui-setup.js`는 같은 수동 구단 선택 writer 앞에 필수 선택을 배치하며 원래 설명을 native details 안에 보존한다. 테마/접힘은 엔진·계약·save schema 상태가 아니다. Python Playwright 수용은 rebuilt 로컬 HTML/차단된 외부 요청에서 실행하며 productionHTTP/실기기 완전 검증을 뜻하지 않는다.
 
 기존 `applyStartupTheme`와 운영 설정 실패 피드백의 소유자는 `ui-theme.js`이다. `ui-state.js:updateAppNavigation`이 nav render 증가 전인 순서를 유지하므로 다음 render 토큰을 전달한다. 역할은 저장된 global preference이며 계약/감독 권한 명령이 아니다. DB/slot/render/select 교체 후 retained handler는 inert이다. 새 테마 파일1500자·기존 startup7000/state6500자 한도는 유지한다.
+
+## 현재 운영 조건·초기 후보 비교표 (12.5.4.5–12.5.4.6)
+
+ui-club-actions는 private cloned 현재 owned 상태를 읽고 scoped 실제 브리핑 버튼으로 기존 writer에 진입한다. manager/DB/world/slot/render/source stamp 검사를 거치며 명령·기한·저장 schema를 소유하지 않는다. ui-initial-table은 transient INITMK의 복수 열과 최대3 정렬 기준/방향만 소유한다. ui-initial-candidates는 기존 관측 obsOvr·잠재 범위 중간값·asking·공개 identity를 비교하고 ui-market-initial은 실제 후보/기존 절차를 표로 렌더한다. shell의 sticky 이름 열과 가로 scroll은 모바일에서 이름/숫자를 함께 확인하기 위한 표시다. 세계/load 변경 시 transient 상태가 초기화되고 계약/의료/등록 소비·역사는 기존 단일 writer/save 경로를 유지한다.

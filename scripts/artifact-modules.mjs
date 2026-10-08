@@ -98,6 +98,8 @@ export const ENGINE_MODULES = [
 ];
 
 export const UI_MODULES = [
+  'ui-club-actions.js',
+  'ui-initial-table.js',
   'ui-theme.js',
   'ui-patch.js',
   'ui-opponent-report.js',
