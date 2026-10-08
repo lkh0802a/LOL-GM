@@ -318,3 +318,5 @@ ui-club-contracts는 private full JSON의 현재 계약·기존 재계약/옵션
 ## 현재 운영 조건·초기 후보 비교표 (12.5.4.5–12.5.4.6)
 
 ui-club-actions는 private cloned 현재 owned 상태를 읽고 scoped 실제 브리핑 버튼으로 기존 writer에 진입한다. manager/DB/world/slot/render/source stamp 검사를 거치며 명령·기한·저장 schema를 소유하지 않는다. ui-initial-table은 transient INITMK의 복수 열과 최대3 정렬 기준/방향만 소유한다. ui-initial-candidates는 기존 관측 obsOvr·잠재 범위 중간값·asking·공개 identity를 비교하고 ui-market-initial은 실제 후보/기존 절차를 표로 렌더한다. shell의 sticky 이름 열과 가로 scroll은 모바일에서 이름/숫자를 함께 확인하기 위한 표시다. 세계/load 변경 시 transient 상태가 초기화되고 계약/의료/등록 소비·역사는 기존 단일 writer/save 경로를 유지한다.
+
+`ui-roster`는 DB/world/slot/manager에 귀속된 임시 후보 복귀 문맥을 소유하며, `ui-player`는 private read copy에서20명 페이지와 관측 상세를 표시한다. `ui-state`는 화면 이동의 스크롤/focus를 보존·복원하고 세계 교체 때 이전 문맥 참조를 지운다. 관찰은 기존 `scoutPlayers`/원자적 domain rollback, 전향은 기존 writer/현재 소유 준비 guard를 사용한다. 선택·미완료 검색어는 schema15/format2 저장에 들어가지 않는다. 집중 수용은 `scout-return-acceptance.mjs`, `scout-return-browser.py`이며 독립 fixture를 기존 전체 UI runner에 등록했다.

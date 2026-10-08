@@ -1,0 +1,753 @@
+{
+  "task": "12.5.4.7.1",
+  "status": "구현 및 로컬 수용·정확 head CI/병합/게시 대기",
+  "base": "249a087c11e63c20c937f7a8a191aee8f1e9df6a",
+  "archive": {
+    "parts": [
+      {
+        "path": "docs/evidence/scout-return-context-2026-10-08.json.gz.part0",
+        "bytes": 2000000,
+        "sha256": "cdd4bd4b1819534fa565597487d43e23305b118816f177ec2182d52ce3a17ea3"
+      },
+      {
+        "path": "docs/evidence/scout-return-context-2026-10-08.json.gz.part1",
+        "bytes": 2000000,
+        "sha256": "f799a56856c03aa3bf0febeb68ef3877c172bf10eba7f8166f08b5b665ce4535"
+      },
+      {
+        "path": "docs/evidence/scout-return-context-2026-10-08.json.gz.part2",
+        "bytes": 2000000,
+        "sha256": "9a04d991548162031ed5f1890b54f4912d413ec0181104adc9cf8e1069c8878a"
+      },
+      {
+        "path": "docs/evidence/scout-return-context-2026-10-08.json.gz.part3",
+        "bytes": 2000000,
+        "sha256": "57347f97ddc5c25bd30b14fe3be5cb9bd4480849c391a872bef62417db19a4d9"
+      },
+      {
+        "path": "docs/evidence/scout-return-context-2026-10-08.json.gz.part4",
+        "bytes": 2000000,
+        "sha256": "7772836be30f2aff12f438b8ab31e08b819549dcaaf589e636cf2459c4fca700"
+      },
+      {
+        "path": "docs/evidence/scout-return-context-2026-10-08.json.gz.part5",
+        "bytes": 2000000,
+        "sha256": "a4e3447fb786c4cafcce72919087edf54ef11c3555768fd3ea295ce5cc08dd58"
+      },
+      {
+        "path": "docs/evidence/scout-return-context-2026-10-08.json.gz.part6",
+        "bytes": 2000000,
+        "sha256": "f7448790940ec1692125b7fc2a666ff9e8a359a194539136c6d3ace7b0fd7143"
+      },
+      {
+        "path": "docs/evidence/scout-return-context-2026-10-08.json.gz.part7",
+        "bytes": 2000000,
+        "sha256": "21b74a897ca3749eac71baf0ec01fe283b3ac31fcce5a6cb4d7d17af3abad93f"
+      },
+      {
+        "path": "docs/evidence/scout-return-context-2026-10-08.json.gz.part8",
+        "bytes": 2000000,
+        "sha256": "ad9e7afc35bf56feb9d3cc96917777f869fb235e4e99bd362aebd11ca2acdf2b"
+      },
+      {
+        "path": "docs/evidence/scout-return-context-2026-10-08.json.gz.part9",
+        "bytes": 2000000,
+        "sha256": "f287dcfdc64c745dca3d8e0b22067f67076903722645342f2a323a4935bd5406"
+      },
+      {
+        "path": "docs/evidence/scout-return-context-2026-10-08.json.gz.part10",
+        "bytes": 2000000,
+        "sha256": "ac4a17ff4192850fd9cecbd1897d490fec0c025f84bff6aa37c618e185e99aab"
+      },
+      {
+        "path": "docs/evidence/scout-return-context-2026-10-08.json.gz.part11",
+        "bytes": 815171,
+        "sha256": "33b2577438ad2172595b0d21b5463dd306eef048a0458d9d803ba7d9f1b7007c"
+      }
+    ],
+    "sha256": "5834724c1e50a92a7283565d557a2c2ea0dbc57a7213c6f4dc5fda5d9ad1acae",
+    "bytes": 22815171,
+    "decodedSha256": "71ad8c7719e3c73ca6ad9f059a5fdba060ec243445083e5e5d7d7f7ec0a30b0d",
+    "decodedBytes": 96440267
+  },
+  "sources": [
+    {
+      "path": "src/artifact/ui-roster.js",
+      "bytes": 19332,
+      "sha256": "607e5f2324f00819fda90a866afc0f975d5ff7cee2f0fad2c03724b6164cd6d7"
+    },
+    {
+      "path": "src/artifact/ui-player.js",
+      "bytes": 18423,
+      "sha256": "50e433f58e78a4f54451469e25774b73747ebcb8d999ffa1d3b79567b2f07710"
+    },
+    {
+      "path": "src/artifact/ui-state.js",
+      "bytes": 6537,
+      "sha256": "451ed86d4bb2356cb98968923f45ad07f07c54ce7280f7c876c60f4a3c22a884"
+    },
+    {
+      "path": "scripts/scout-return-acceptance.mjs",
+      "bytes": 8351,
+      "sha256": "9112f7cc4c809458fa7f00bea0704abed03a2e62b0ce2fce5a74c9c6589e7ff1"
+    },
+    {
+      "path": "scripts/scout-return-browser.py",
+      "bytes": 12411,
+      "sha256": "a40c1481fa315d628130cecc3a7ac0871079ff595184eabd8991c840a787234e"
+    },
+    {
+      "path": "scripts/ui-finance-contracts-runner.mjs",
+      "bytes": 4509,
+      "sha256": "5e552902c7a02c9c642f6bb83aaafcbfd9dc30ebafc63480ac48caea2f1ecb54"
+    },
+    {
+      "path": "scripts/ui-state-acceptance.mjs",
+      "bytes": 5884,
+      "sha256": "833baf8f067956db8a55469cffb1543722397bb9b7a40c4e94806daa64190c66"
+    },
+    {
+      "path": "scripts/verify-shortlist-comparison-evidence.mjs",
+      "bytes": 8300,
+      "sha256": "4a492a39c549a4dea1710dabe2e69c9486d80231f520dd50eac2317f35c84dd0"
+    },
+    {
+      "path": "docs/evidence/scout-return-original-ui-roster-2026-10-08.txt",
+      "bytes": 14824,
+      "sha256": "2fcff378a8ffa18fc82b781e617975b7723a84f36e7b90aa6fc2627e55cec0fa"
+    },
+    {
+      "path": "docs/evidence/scout-return-original-ui-player-2026-10-08.txt",
+      "bytes": 17360,
+      "sha256": "d700d5aff83e2d7b6ccee3111ecb9f70344f9eeb1ce4e3076992acbb0895806a"
+    }
+  ],
+  "rawFiles": 98,
+  "engineFiles": 101,
+  "browser": [
+    {
+      "width": 1280,
+      "pureRead": true,
+      "pages": true,
+      "detailReturn": true,
+      "unfinishedQuery": true,
+      "writerWholeEquality": true,
+      "batch10Equality": true,
+      "team35Equality": true,
+      "squadDraftReturnWriterDailyConsumer": true,
+      "staleLoadDateConfirmDuplicate": true,
+      "authority": [
+        "pending",
+        "ai",
+        "fired",
+        "reserve"
+      ],
+      "ids": [
+        "NA_0",
+        "NA_6",
+        "NA_12"
+      ],
+      "pid": "NA_110",
+      "official": {
+        "pid": "NA_44",
+        "cid": "scout-return-cup",
+        "games": [
+          {
+            "version": 1,
+            "kind": "nexus",
+            "winner": "MFD",
+            "minute": 39,
+            "second": 14
+          }
+        ],
+        "copies": [
+          {
+            "lite": false,
+            "report": {
+              "knowledge": 45,
+              "ability": [
+                60,
+                76
+              ],
+              "potential": [
+                69,
+                89
+              ],
+              "sample": {
+                "g": 1,
+                "k": 2,
+                "d": 6,
+                "a": 6,
+                "min": 39.233333333333334,
+                "dmg": 24382,
+                "rating": 6.13,
+                "kda": 1.3333333333333333,
+                "dpm": 621.4613423959219,
+                "csDiff": -4,
+                "goldDiff": -812,
+                "competitions": [
+                  "scout-return-cup"
+                ]
+              },
+              "growth": {
+                "delta": null,
+                "label": "표본 부족"
+              },
+              "champions": [
+                {
+                  "id": "champ_kennen",
+                  "g": 1,
+                  "w": 0,
+                  "results": 1,
+                  "from": "2027-01-13",
+                  "to": "2027-01-13",
+                  "observation": {
+                    "value": 85,
+                    "known": true,
+                    "range": [
+                      76,
+                      94
+                    ],
+                    "confidence": 45,
+                    "date": "2027-01-13",
+                    "staleYears": 0,
+                    "sources": [
+                      "스카우팅 조사 · 2027-01-13",
+                      "챔피언별 저장 추정 · 실제 숙련 확정값 아님"
+                    ]
+                  }
+                }
+              ],
+              "championSource": "public",
+              "championUnknown": 0,
+              "lastSeenDate": "2027-01-13",
+              "staleYears": 0,
+              "observations": 1,
+              "gamesSeen": 0
+            },
+            "finance": 999,
+            "preparation": {
+              "training": {
+                "mechanical": 20,
+                "laning": 20,
+                "combat": 20,
+                "macro": 20,
+                "mental": 20,
+                "intensity": "light"
+              },
+              "tactics": {
+                "aggression": 56,
+                "risk_tolerance": 51,
+                "objective_priority": 63,
+                "vision_investment": 65,
+                "scaling_preference": 57
+              },
+              "usage": {
+                "year": 2027,
+                "days": 1,
+                "individual": 50,
+                "champions": 20,
+                "tactics": 15,
+                "teamwork": 15,
+                "scrim": 0
+              }
+            },
+            "endings": [
+              {
+                "version": 1,
+                "kind": "nexus",
+                "winner": "MFD",
+                "minute": 39,
+                "second": 14
+              }
+            ],
+            "scout": {
+              "knowledge": 45.14896507882867,
+              "lastSeenYear": 2027,
+              "lastSeenDate": "2027-01-13",
+              "observations": 1,
+              "gamesSeen": 0,
+              "competitions": {
+                "manual": 1
+              },
+              "snapshots": [
+                {
+                  "year": 2027,
+                  "date": "2027-01-13",
+                  "estimate": 68,
+                  "games": 1
+                }
+              ],
+              "championObservations": {
+                "champ_kennen": {
+                  "observer": "VXG",
+                  "player": "NA_44",
+                  "champ": "champ_kennen",
+                  "date": "2027-01-13",
+                  "source": "investigation",
+                  "competition": "manual",
+                  "evidenceFrom": "2027-01-13",
+                  "evidenceTo": "2027-01-13",
+                  "appearances": 1,
+                  "estimate": 85,
+                  "uncertainty": 8.1,
+                  "knowledge": 45
+                }
+              }
+            }
+          },
+          {
+            "lite": true,
+            "report": {
+              "knowledge": 45,
+              "ability": [
+                60,
+                76
+              ],
+              "potential": [
+                69,
+                89
+              ],
+              "sample": {
+                "g": 1,
+                "k": 2,
+                "d": 6,
+                "a": 6,
+                "min": 39.233333333333334,
+                "dmg": 24382,
+                "rating": 6.13,
+                "kda": 1.3333333333333333,
+                "dpm": 621.4613423959219,
+                "csDiff": -4,
+                "goldDiff": -812,
+                "competitions": [
+                  "scout-return-cup"
+                ]
+              },
+              "growth": {
+                "delta": null,
+                "label": "표본 부족"
+              },
+              "champions": [
+                {
+                  "id": "champ_kennen",
+                  "g": 1,
+                  "w": 0,
+                  "results": 1,
+                  "from": "2027-01-13",
+                  "to": "2027-01-13",
+                  "observation": {
+                    "value": 85,
+                    "known": true,
+                    "range": [
+                      76,
+                      94
+                    ],
+                    "confidence": 45,
+                    "date": "2027-01-13",
+                    "staleYears": 0,
+                    "sources": [
+                      "스카우팅 조사 · 2027-01-13",
+                      "챔피언별 저장 추정 · 실제 숙련 확정값 아님"
+                    ]
+                  }
+                }
+              ],
+              "championSource": "public",
+              "championUnknown": 0,
+              "lastSeenDate": "2027-01-13",
+              "staleYears": 0,
+              "observations": 1,
+              "gamesSeen": 0
+            },
+            "finance": 999,
+            "preparation": {
+              "training": {
+                "mechanical": 20,
+                "laning": 20,
+                "combat": 20,
+                "macro": 20,
+                "mental": 20,
+                "intensity": "light"
+              },
+              "tactics": {
+                "aggression": 56,
+                "risk_tolerance": 51,
+                "objective_priority": 63,
+                "vision_investment": 65,
+                "scaling_preference": 57
+              },
+              "usage": {
+                "year": 2027,
+                "days": 1,
+                "individual": 50,
+                "champions": 20,
+                "tactics": 15,
+                "teamwork": 15,
+                "scrim": 0
+              }
+            },
+            "endings": [
+              {
+                "version": 1,
+                "kind": "nexus",
+                "winner": "MFD",
+                "minute": 39,
+                "second": 14
+              }
+            ],
+            "scout": {
+              "knowledge": 45.14896507882867,
+              "lastSeenYear": 2027,
+              "lastSeenDate": "2027-01-13",
+              "observations": 1,
+              "gamesSeen": 0,
+              "competitions": {
+                "manual": 1
+              },
+              "snapshots": [
+                {
+                  "year": 2027,
+                  "date": "2027-01-13",
+                  "estimate": 68,
+                  "games": 1
+                }
+              ],
+              "championObservations": {
+                "champ_kennen": {
+                  "observer": "VXG",
+                  "player": "NA_44",
+                  "champ": "champ_kennen",
+                  "date": "2027-01-13",
+                  "source": "investigation",
+                  "competition": "manual",
+                  "evidenceFrom": "2027-01-13",
+                  "evidenceTo": "2027-01-13",
+                  "appearances": 1,
+                  "estimate": 85,
+                  "uncertainty": 8.1,
+                  "knowledge": 45
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "width": 320,
+      "pureRead": true,
+      "pages": true,
+      "detailReturn": true,
+      "unfinishedQuery": true,
+      "writerWholeEquality": true,
+      "batch10Equality": true,
+      "team35Equality": true,
+      "squadDraftReturnWriterDailyConsumer": true,
+      "staleLoadDateConfirmDuplicate": true,
+      "authority": [
+        "pending",
+        "ai",
+        "fired",
+        "reserve"
+      ],
+      "ids": [
+        "NA_0",
+        "NA_6",
+        "NA_12"
+      ],
+      "pid": "NA_110",
+      "official": {
+        "pid": "NA_44",
+        "cid": "scout-return-cup",
+        "games": [
+          {
+            "version": 1,
+            "kind": "nexus",
+            "winner": "MFD",
+            "minute": 39,
+            "second": 14
+          }
+        ],
+        "copies": [
+          {
+            "lite": false,
+            "report": {
+              "knowledge": 45,
+              "ability": [
+                60,
+                76
+              ],
+              "potential": [
+                69,
+                89
+              ],
+              "sample": {
+                "g": 1,
+                "k": 2,
+                "d": 6,
+                "a": 6,
+                "min": 39.233333333333334,
+                "dmg": 24382,
+                "rating": 6.13,
+                "kda": 1.3333333333333333,
+                "dpm": 621.4613423959219,
+                "csDiff": -4,
+                "goldDiff": -812,
+                "competitions": [
+                  "scout-return-cup"
+                ]
+              },
+              "growth": {
+                "delta": null,
+                "label": "표본 부족"
+              },
+              "champions": [
+                {
+                  "id": "champ_kennen",
+                  "g": 1,
+                  "w": 0,
+                  "results": 1,
+                  "from": "2027-01-13",
+                  "to": "2027-01-13",
+                  "observation": {
+                    "value": 85,
+                    "known": true,
+                    "range": [
+                      76,
+                      94
+                    ],
+                    "confidence": 45,
+                    "date": "2027-01-13",
+                    "staleYears": 0,
+                    "sources": [
+                      "스카우팅 조사 · 2027-01-13",
+                      "챔피언별 저장 추정 · 실제 숙련 확정값 아님"
+                    ]
+                  }
+                }
+              ],
+              "championSource": "public",
+              "championUnknown": 0,
+              "lastSeenDate": "2027-01-13",
+              "staleYears": 0,
+              "observations": 1,
+              "gamesSeen": 0
+            },
+            "finance": 999,
+            "preparation": {
+              "training": {
+                "mechanical": 20,
+                "laning": 20,
+                "combat": 20,
+                "macro": 20,
+                "mental": 20,
+                "intensity": "light"
+              },
+              "tactics": {
+                "aggression": 56,
+                "risk_tolerance": 51,
+                "objective_priority": 63,
+                "vision_investment": 65,
+                "scaling_preference": 57
+              },
+              "usage": {
+                "year": 2027,
+                "days": 1,
+                "individual": 50,
+                "champions": 20,
+                "tactics": 15,
+                "teamwork": 15,
+                "scrim": 0
+              }
+            },
+            "endings": [
+              {
+                "version": 1,
+                "kind": "nexus",
+                "winner": "MFD",
+                "minute": 39,
+                "second": 14
+              }
+            ],
+            "scout": {
+              "knowledge": 45.14896507882867,
+              "lastSeenYear": 2027,
+              "lastSeenDate": "2027-01-13",
+              "observations": 1,
+              "gamesSeen": 0,
+              "competitions": {
+                "manual": 1
+              },
+              "snapshots": [
+                {
+                  "year": 2027,
+                  "date": "2027-01-13",
+                  "estimate": 68,
+                  "games": 1
+                }
+              ],
+              "championObservations": {
+                "champ_kennen": {
+                  "observer": "VXG",
+                  "player": "NA_44",
+                  "champ": "champ_kennen",
+                  "date": "2027-01-13",
+                  "source": "investigation",
+                  "competition": "manual",
+                  "evidenceFrom": "2027-01-13",
+                  "evidenceTo": "2027-01-13",
+                  "appearances": 1,
+                  "estimate": 85,
+                  "uncertainty": 8.1,
+                  "knowledge": 45
+                }
+              }
+            }
+          },
+          {
+            "lite": true,
+            "report": {
+              "knowledge": 45,
+              "ability": [
+                60,
+                76
+              ],
+              "potential": [
+                69,
+                89
+              ],
+              "sample": {
+                "g": 1,
+                "k": 2,
+                "d": 6,
+                "a": 6,
+                "min": 39.233333333333334,
+                "dmg": 24382,
+                "rating": 6.13,
+                "kda": 1.3333333333333333,
+                "dpm": 621.4613423959219,
+                "csDiff": -4,
+                "goldDiff": -812,
+                "competitions": [
+                  "scout-return-cup"
+                ]
+              },
+              "growth": {
+                "delta": null,
+                "label": "표본 부족"
+              },
+              "champions": [
+                {
+                  "id": "champ_kennen",
+                  "g": 1,
+                  "w": 0,
+                  "results": 1,
+                  "from": "2027-01-13",
+                  "to": "2027-01-13",
+                  "observation": {
+                    "value": 85,
+                    "known": true,
+                    "range": [
+                      76,
+                      94
+                    ],
+                    "confidence": 45,
+                    "date": "2027-01-13",
+                    "staleYears": 0,
+                    "sources": [
+                      "스카우팅 조사 · 2027-01-13",
+                      "챔피언별 저장 추정 · 실제 숙련 확정값 아님"
+                    ]
+                  }
+                }
+              ],
+              "championSource": "public",
+              "championUnknown": 0,
+              "lastSeenDate": "2027-01-13",
+              "staleYears": 0,
+              "observations": 1,
+              "gamesSeen": 0
+            },
+            "finance": 999,
+            "preparation": {
+              "training": {
+                "mechanical": 20,
+                "laning": 20,
+                "combat": 20,
+                "macro": 20,
+                "mental": 20,
+                "intensity": "light"
+              },
+              "tactics": {
+                "aggression": 56,
+                "risk_tolerance": 51,
+                "objective_priority": 63,
+                "vision_investment": 65,
+                "scaling_preference": 57
+              },
+              "usage": {
+                "year": 2027,
+                "days": 1,
+                "individual": 50,
+                "champions": 20,
+                "tactics": 15,
+                "teamwork": 15,
+                "scrim": 0
+              }
+            },
+            "endings": [
+              {
+                "version": 1,
+                "kind": "nexus",
+                "winner": "MFD",
+                "minute": 39,
+                "second": 14
+              }
+            ],
+            "scout": {
+              "knowledge": 45.14896507882867,
+              "lastSeenYear": 2027,
+              "lastSeenDate": "2027-01-13",
+              "observations": 1,
+              "gamesSeen": 0,
+              "competitions": {
+                "manual": 1
+              },
+              "snapshots": [
+                {
+                  "year": 2027,
+                  "date": "2027-01-13",
+                  "estimate": 68,
+                  "games": 1
+                }
+              ],
+              "championObservations": {
+                "champ_kennen": {
+                  "observer": "VXG",
+                  "player": "NA_44",
+                  "champ": "champ_kennen",
+                  "date": "2027-01-13",
+                  "source": "investigation",
+                  "competition": "manual",
+                  "evidenceFrom": "2027-01-13",
+                  "evidenceTo": "2027-01-13",
+                  "appearances": 1,
+                  "estimate": 85,
+                  "uncertainty": 8.1,
+                  "knowledge": 45
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "originalGuideSha256": "10d4ff30afb0bcade4d8fbb4bdf20a06efc41091d6da6f5435b74ddc5d83638a",
+  "originalAutomationChars": 25928,
+  "preservationLimitDetails": [
+    "시작 검사 일부 도구 출력은 출력 한도에서 잘렸다. 저장된 preparation-api 응답 자체와 확인한 실패 경로/종류를 보존하며 잘린 전체 stdout을 복구했다고 주장하지 않는다.",
+    "각 중간 source 파일은 개별 snapshot으로 모두 보존하지 않았다. 최초 base tar와 최종 source, 실제 존재하는 실행 로그·고유 캡처를 보존한다."
+  ]
+}

@@ -97,3 +97,5 @@ Use [numeric stages 1–13 and dotted work units](DEVELOPMENT.md#unified-numeric
 2026-10-08 구현 경계: [12.5.4.4 테마 가독성·새 게임·선택 우선 흐름](DEVELOPMENT.md#12544-테마-가독성새-게임필수-선택-먼저--2026-10-08), [실제 수용/한계](evidence/startup-theme-readability-2026-10-08.json). main f090의 Pages 취소는 게시 성공으로 세지 않는다. 전체 승인 범위는 미완료다.
 
 - 12.5.4.5–12.5.4.6 현재 운영 조건·후보 비교표의 실제 수동 행동/관측/저장 수용과 실패 보존: [증거](evidence/club-current-actions-2026-10-08.json). 원래 안내·전체 승인 범위는 DEVELOPMENT를 따른다.
+
+- 12.5.4.7.1 선수단 후보의20명 페이지·복수 선택·미완료 입력/상세 복귀와 실제 관찰·전향/저장: [수용/원본 진단](evidence/scout-return-context-2026-10-08.json). 정확한 다음12.5.4.8과 전체 승인 미완료는 DEVELOPMENT를 따른다.

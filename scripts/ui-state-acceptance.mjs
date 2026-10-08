@@ -15,7 +15,7 @@ const main={innerHTML:''};
 const window={scrollY:70,scrollTo(x,y){this.scrollY=y;calls.push('scroll:'+x+':'+y)}};
 const document={querySelector(s){return s==='#main'?main:null},querySelectorAll(s){return s==='nav button'?tabs:[]}};
 const context=vm.createContext({
-  document,window,
+  document,window,clearScoutReturn:()=>{},
   DB:{test:true},SLOT:'1',SLOT_SWITCHING:false,UI_OVERLAY:null,
   clearUiOverlay:()=>{},closeUiOverlay:()=>{},
   clearInterval:n=>calls.push('interval:'+n),
