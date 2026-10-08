@@ -98,6 +98,7 @@ export const ENGINE_MODULES = [
 ];
 
 export const UI_MODULES = [
+  'ui-theme.js',
   'ui-patch.js',
   'ui-opponent-report.js',
   'ui-opponent-draft.js',

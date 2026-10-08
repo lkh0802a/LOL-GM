@@ -93,3 +93,5 @@ Use [numeric stages 1–13 and dotted work units](DEVELOPMENT.md#unified-numeric
 [12.3.10 현재 관심 후보·보고서와 수동 관찰·평가](DEVELOPMENT.md#12310-현재-관심-후보보고서와-수동-관찰내부-평가-연결--2026-10-06)는 실제 source·비용·공개 원자료·저장과 비교 확대의 남은 경계를 기록합니다.
 
 [12.3.11 현재 관심 후보 관측 비교·공개 근거·복귀/저장](evidence/shortlist-comparison-2026-10-08.json)은 시즌 소속 후보의 실제 보고서/권한/표본·수동 행동 경계를 연결한다. 테마·전면 UI·AnalysisRoom·언어/전체 승인 완료는 아니다.
+
+2026-10-08 구현 경계: [12.5.4.4 테마 가독성·새 게임·선택 우선 흐름](DEVELOPMENT.md#12544-테마-가독성새-게임필수-선택-먼저--2026-10-08), [실제 수용/한계](evidence/startup-theme-readability-2026-10-08.json). main f090의 Pages 취소는 게시 성공으로 세지 않는다. 전체 승인 범위는 미완료다.

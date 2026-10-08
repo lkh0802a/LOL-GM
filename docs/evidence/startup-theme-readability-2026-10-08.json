@@ -1,0 +1,168 @@
+{
+  "intermediateArchive": {
+    "path": "docs/evidence/startup-theme-readability-intermediate-2026-10-08.json.gz",
+    "sha256": "faf509f5d64203ba1017bc849f120535db822c1c904e4f3b15041a3932c55357"
+  },
+  "task": "12.5.4.4",
+  "base": "f09082a0f4626c2f086615b58aa1d4d61113d384",
+  "status": "구현·로컬수용 완료; 새 PR exact-head CI/병합/게시 아직 미검증",
+  "archive": {
+    "path": "docs/evidence/startup-theme-readability-raw-2026-10-08.json.gz",
+    "bytes": 21898838,
+    "sha256": "6b78e053b7ad3a805f08682e8d8251570b9e947a463718d936672c40b982dfb0",
+    "decodedBytes": 191400164,
+    "decodedSHA256": "cd79219bbed0e6e6e5836f14c4e3ffcdb63c31d27534ebc26d48a558d60748f4"
+  },
+  "sources": [
+    {
+      "path": "src/artifact/shell.html",
+      "bytes": 44633,
+      "sha256": "0143a434897a967906590413dc5a3b595eec8fce640347e8615178af64bffce8"
+    },
+    {
+      "path": "src/artifact/ui-theme.js",
+      "bytes": 1003,
+      "sha256": "99ae559ff5a159468fccf903cb526bdfe3218bb0b4d597efa9030d376aa326c2"
+    },
+    {
+      "path": "src/artifact/ui-state.js",
+      "bytes": 6296,
+      "sha256": "abfa7fbeeb2db6c7eebb3fd8501f8e9ea4e5651d01fb10edb6586a2e47380e2c"
+    },
+    {
+      "path": "src/artifact/ui-startup.js",
+      "bytes": 7264,
+      "sha256": "b6acb95c3085613aad1ea6c9af7fd5133e018508078ee2cf582c018514e8dcd0"
+    },
+    {
+      "path": "src/artifact/ui-setup.js",
+      "bytes": 8523,
+      "sha256": "6ccc430c6f4ea52fe9259fcaea1719633363b14363d4744a419bc52bbe518ff5"
+    },
+    {
+      "path": "scripts/startup-flow-acceptance.mjs",
+      "bytes": 8419,
+      "sha256": "a5c2edc669baddb2d631953804f76737ad9013e9887a3968a1c4754b55544b20"
+    },
+    {
+      "path": "scripts/ui-async-acceptance.mjs",
+      "bytes": 9907,
+      "sha256": "53dfba710e46f38b4a268672c4c38a3d064a2b4c8ff60a76d53a148d85690d3c"
+    },
+    {
+      "path": "scripts/startup-theme-browser.py",
+      "bytes": 14713,
+      "sha256": "6f83a5e7f26e6f51ebeff9971bd72b7f8dbdc5ba84251a651f8b4303024149d2"
+    },
+    {
+      "path": "scripts/verify-startup-theme-evidence.mjs",
+      "bytes": 1698,
+      "sha256": "223b48edc6c7e7bbb70f891529a4877d4b0d94cdf2ae89a641216a3c6419dffd"
+    },
+    {
+      "path": "scripts/verify-shortlist-comparison-evidence.mjs",
+      "bytes": 3839,
+      "sha256": "37552e56fad8b16ce25e341ad06d5e5396dcbdd0e3d16198e66aa036c6610f05"
+    },
+    {
+      "path": "scripts/artifact-modules.mjs",
+      "bytes": 3660,
+      "sha256": "b45a2db5368e3eb44b01485730e32542faaa258980108c54bc38b3d7e3558d1c"
+    },
+    {
+      "path": "scripts/check.mjs",
+      "bytes": 35116,
+      "sha256": "a108e8ed60ff516db94a80aa9da4cd4f49f9cec50bd1b50c7b36a876c1cbec46"
+    },
+    {
+      "path": "index.html",
+      "bytes": 1945401,
+      "sha256": "2be3f299376e430b9eec42f192f39700876d176ad31884e7568f5c6bd4332d00"
+    }
+  ],
+  "engineModules": 101,
+  "officialDraftContrastCases": 99,
+  "browser": {
+    "cases": 164,
+    "minText": 4.9551609429662635,
+    "minControl": 3.498259534199826,
+    "widths": [
+      1280,
+      320
+    ]
+  },
+  "baseline": {
+    "darkSelect": {
+      "text": "rgb(230,235,240)",
+      "background": "rgb(239,239,239)",
+      "colorScheme": "normal"
+    },
+    "buttonWidths": [
+      270,
+      81.203125,
+      53.609375
+    ],
+    "career320PickerY": 3378.3125
+  },
+  "after": {
+    "career320PickerY": 476.96875,
+    "career1280PickerY": 309.78125,
+    "allTextMinimum": 4.9551609429662635,
+    "allActiveControlMinimum": 3.498259534199826,
+    "routes": [
+      "season",
+      "squad",
+      "match",
+      "patch",
+      "analysis",
+      "data"
+    ],
+    "clubDialogs": [
+      "entry",
+      "finance",
+      "staff",
+      "medical",
+      "contract",
+      "practice",
+      "scrim",
+      "recruit"
+    ]
+  },
+  "checks": {
+    "uiAcceptances": 89,
+    "freshVM": 88,
+    "calendar": 20,
+    "staticTests": 14,
+    "modules": 156,
+    "regression": "PASS",
+    "smokeTotalMs": 33214,
+    "smokeBudgetMs": 35000,
+    "smokeIsolated": false,
+    "officialBo3": "3 actual nexus endings 41:57/21:30/28:40; history/save/Analysis/320px PASS"
+  },
+  "limits": [
+    "controlled local storage and rebuilt HTML injection",
+    "External requests blocked: no loaded Google font or production HTTP proof",
+    "Disabled/inert and native option popup not contrast audited",
+    "Not final physical-device/TalkBack QA or empirical pro calibration",
+    "Early reused screenshot path first-success bytes unavailable; final unique-directory captures retained",
+    "First local generated archive8,629,412 bytes overwritten before independent copy; cannot claim its original compressed bytes retained. Current9,878,755-byte intermediate gzip copied unchanged before final rebuild.",
+    "No AI/economy/engine/save-schema coefficient changes",
+    "Previous main Pages37727219820 updating_pages cancelled after existing5min timeout; publication unconfirmed"
+  ],
+  "guidePreservation": {
+    "base": "f09082a0f4626c2f086615b58aa1d4d61113d384",
+    "originalBytes": 511025,
+    "originalSHA256": "318cc32fee0c6b88b48273376d834ba2981eb00a722361760388d1c3599ba0a9",
+    "wholeOriginalExactPreserved": true,
+    "offset": 1898,
+    "newBytes": 520965
+  },
+  "measurementCorrection": {
+    "initialIncorrectReports": 213,
+    "actualLightContrastReportsAfterUnitsCorrection": 43,
+    "colorSrgbChannels": "0–1 multiplied by255; rgba0–255 unchanged",
+    "originalFailuresPreserved": true
+  },
+  "next": "12.5.4.5 actual current work/rejection source→existing manual action/return/save; new source-backed engine/save/authority defects first; complete approved inventory retained"
+}

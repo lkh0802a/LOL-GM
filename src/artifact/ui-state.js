@@ -73,7 +73,7 @@ function updateAppNavigation(){
   const screen=document.querySelector('#app-screen'),club=document.querySelector('#app-club');
   if(screen)screen.textContent=typeof START_UI!=='undefined'&&START_UI.active?'시작':names[VIEW];
   if(club){const t=started&&DB.teams&&typeof managedTeamId==='function'&&DB.teams[managedTeamId(DB)];club.textContent=t?`${t.name} · ${DB.worldDate||DB.year}`:'커리어 시작 전'}
-  const theme=document.querySelector('#app-theme');if(theme){let value='auto';try{value=localStorage.getItem('lol-gm-theme')||'auto'}catch(e){}theme.value=['auto','dark','light'].includes(value)?value:'auto';document.documentElement?.setAttribute('data-theme',theme.value);theme.onchange=()=>{document.documentElement.setAttribute('data-theme',theme.value);try{localStorage.setItem('lol-gm-theme',theme.value)}catch(e){}}}
+  const theme=document.querySelector('#app-theme');if(theme)bindAppThemePreference(theme,UI_RENDER_ID+1);
 }
 function nav(){
   const route=typeof START_UI!=='undefined'&&START_UI.active?{render:viewStartup,bind:bindStartup}:UI_ROUTES[VIEW];
