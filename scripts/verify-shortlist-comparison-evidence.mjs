@@ -1,3 +1,4 @@
+import {historicalSourceHash} from './season-history-source-successor.mjs';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
@@ -19,8 +20,8 @@ const actionsEvidence=JSON.parse(await readFile(new URL('docs/evidence/club-curr
 const returnEvidence=JSON.parse(await readFile(new URL('docs/evidence/scout-return-context-2026-10-08.json',root)));
 const officialEvidence=JSON.parse(await readFile(new URL('docs/evidence/official-draft-comparison-2026-10-08.json',root)));
 async function assertReviewedSource(path,expected){
- const actual=sha(await readFile(new URL(path,root)));if(actual===expected)return;
- assert(['scripts/artifact-modules.mjs','scripts/check.mjs','scripts/club-briefing-acceptance.mjs','scripts/verify-shortlist-comparison-evidence.mjs'].includes(path),'only reviewed official-edit successors');
+ const actual=await historicalSourceHash(path);if(actual===expected)return;
+ assert(['scripts/artifact-modules.mjs','scripts/check.mjs','scripts/club-briefing-acceptance.mjs','scripts/verify-shortlist-comparison-evidence.mjs'].includes(path),'only reviewed official-edit successors: '+path);
  assert.equal(officialEvidence.originals[path],expected,'original source hash preserved');assert.equal(actual,officialEvidence.sources[path],path);
 }
 
@@ -50,7 +51,7 @@ const actionBytes=gunzipSync(actionGzip);assert.equal(sha(actionBytes),actionsEv
 const actionArchive=JSON.parse(actionBytes);assert(guide.includes(Buffer.from(actionArchive.originalGuide.text)),'entire current main guide retained');
 for(const [path,row] of Object.entries(actionArchive.raw)){const b=Buffer.from(row.data,row.encoding);assert.equal(sha(b),row.sha256,path);assert.equal(b.length,row.bytes,path)}
 for(const row of actionsEvidence.sources)await assertReviewedSource(row.path,row.path==='scripts/verify-shortlist-comparison-evidence.mjs'?returnEvidence.sources.find(x=>x.path===row.path).sha256:row.sha256);
-for(const [path,row] of Object.entries(actionArchive.engine))assert.equal(sha(await readFile(new URL(path,root))),row.sha256,path);
+for(const [path,row] of Object.entries(actionArchive.engine))assert.equal(await historicalSourceHash(path),row.sha256,path);
 const actualOfficial=actionArchive.accepted.operations.filter(x=>x.official);
 assert.equal(actualOfficial.length,2);for(const x of actualOfficial){assert(x.official.games.every(g=>g.ending.kind==='nexus'));assert(x.official.snapshots.every(s=>s.plan==='rest'&&s.medical.out&&s.ending.every(e=>e.kind==='nexus')))}
 assert.equal(actionArchive.accepted.table.length,4);assert(actionArchive.accepted.table.every(x=>x.readOnly&&x.order.orders.length===3));
@@ -64,6 +65,6 @@ const returnBytes=gunzipSync(returnGzip);assert.equal(sha(returnBytes),returnEvi
 const returnArchive=JSON.parse(returnBytes);assert(guide.includes(Buffer.from(returnArchive.originalGuide.text)),'whole main guide retained');
 for(const [path,row] of Object.entries(returnArchive.raw)){const b=Buffer.from(row.data,row.encoding);assert.equal(sha(b),row.sha256,path);assert.equal(b.length,row.bytes,path)}
 for(const row of returnEvidence.sources)await assertReviewedSource(row.path,row.sha256);
-for(const row of returnArchive.engine)assert.equal(sha(await readFile(new URL(row.path,root))),row.sha256,row.path);
+for(const row of returnArchive.engine)assert.equal(await historicalSourceHash(row.path),row.sha256,row.path);
 assert.equal(returnArchive.browser.length,2);assert(returnArchive.browser.every(x=>x.writerWholeEquality&&x.batch10Equality&&x.squadDraftReturnWriterDailyConsumer&&x.official.games.every(g=>g.kind==='nexus')&&x.official.copies.every(s=>s.report.sample.g>0&&s.endings.every(e=>e.kind==='nexus'))));
 console.log('관찰 복귀 원본 검증 '+JSON.stringify({rawFiles:Object.keys(returnArchive.raw).length,engineFiles:returnArchive.engine.length,fullGuide:true,actualWriterAndNexusSave:true}));
