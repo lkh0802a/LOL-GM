@@ -1,0 +1,20 @@
+import {readFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+import {gunzipSync} from 'node:zlib';
+import assert from 'node:assert/strict';
+import {ENGINE_MODULES} from './artifact-modules.mjs';
+const root=new URL('../',import.meta.url);
+const sha=b=>createHash('sha256').update(b).digest('hex');
+const evidence=JSON.parse(await readFile(new URL('docs/evidence/squad-draft-recovery-2026-10-08.json',root),'utf8'));
+const compressed=Buffer.concat(await Promise.all(evidence.archive.parts.map(p=>readFile(new URL(p,root)))));
+assert.equal(sha(compressed),evidence.archive.sha256);
+const decoded=gunzipSync(compressed);assert.equal(sha(decoded),evidence.archive.decodedSha256);
+const rows=JSON.parse(decoded);
+for(const row of rows){const bytes=Buffer.from(row.base64,'base64');assert.equal(bytes.length,row.bytes);assert.equal(sha(bytes),row.sha256);}
+for(const [path,hash] of Object.entries(evidence.sources))assert.equal(sha(await readFile(new URL(path,root))),hash,path);
+const guide=await readFile(new URL('docs/DEVELOPMENT.md',root));
+const original=Buffer.from(rows.find(r=>r.path==='original-guide.md').base64,'base64');
+assert(guide.includes(original),'original guide bytes must remain contiguous');
+for(const file of ENGINE_MODULES)assert.equal(sha(await readFile(new URL('src/artifact/'+file,root))),evidence.engine[file],file);
+assert.equal(ENGINE_MODULES.length,101);
+console.log('SQUAD_DRAFT_RECOVERY_EVIDENCE PASS raw hashes, source pins, complete original guide and 101 unchanged engine sources');
