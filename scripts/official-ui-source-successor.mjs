@@ -1,3 +1,4 @@
+import {handoffSourceHash} from './pending-handoff-source-successor.mjs';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {gunzipSync} from 'node:zlib';
@@ -13,12 +14,12 @@ export async function verifyOfficialUiSources(){
  const raw=gunzipSync(zipped);assert.equal(sha(raw),e.archive.decodedSha256);assert.equal(e.archive.format,'jsonl-v1');
  const rows=[];let start=0;while(start<raw.length){const end=raw.indexOf(10,start);assert(end>=start,'complete evidence row');const r=JSON.parse(raw.subarray(start,end));const b=Buffer.from(r.base64,'base64');assert.equal(b.length,r.bytes);assert.equal(sha(b),r.sha256);rows.push({path:r.path,sha256:r.sha256,...(r.path.startsWith('original/')?{base64:r.base64}:{})});start=end+1}assert.equal(rows.length,e.archive.rows);
  for(const p of reviewed){assert(rows.some(r=>r.path==='original/'+p&&r.sha256===e.originals[p]),p+' exact validated main source');assert(rows.some(r=>r.path==='current/'+p&&r.sha256===e.sources[p]),p+' reviewed successor source')}
- for(const [p,h] of Object.entries(e.sources))assert.equal(sha(await readFile(new URL(p,root))),h,p+' exact current source');
+ for(const [p,h] of Object.entries(e.sources))assert.equal(await handoffSourceHash(p),h,p+' exact reviewed predecessor/current source');
  for(const d of e.dependencies)assert.equal(sha(await readFile(new URL(d.path,root))),d.sha256,d.path+' previous evidence retained');
  assert((await readFile(new URL('docs/DEVELOPMENT.md',root))).includes(Buffer.from(rows.find(r=>r.path==='original/docs/DEVELOPMENT.md').base64,'base64')));
  evidence=e;return e;
 }
 export async function officialUiSourceHash(path){
- const actual=sha(await readFile(new URL(path,root)));if(!reviewed.has(path))return actual;
+ const actual=await handoffSourceHash(path);if(!reviewed.has(path))return actual;
  const e=await verifyOfficialUiSources();return e.originals[path];
 }

@@ -112,3 +112,6 @@ Use [numeric stages 1–13 and dotted work units](DEVELOPMENT.md#unified-numeric
 - [날짜 진행 권한·수동 중단 증거](evidence/season-progress-authority-2026-10-09.json):12.5.4.8.5 실제 held continuation·완료 일일/공식 기록·저장/키보드 복귀의 집중 수용. 전체 게임 구현 완료가 아니다.
 
 - [12.5.4.8.6 공식 경기 준비 권한·중단/취소·수동 재개](evidence/official-ui-authority-2026-10-09.json): 실제 frame/선택/밴픽/공식 nexus·저장 수용과 원본 실패를 연결한다. exact PR/main 출시 게이트와 전체 승인 미완료는 DEVELOPMENT를 따른다.
+
+
+2026-10-09 대기 공식 경기 인계: 수동 참가 감독은 준비를 유지하고, 무소속·해임·AI 운영·다른 구단으로 이동한 pending은 기존 AI 공식 writer로 한 세트씩 진행한다. 날짜·일일 효과/완료 기록·저장을 보존하며 missing metadata와 실패는 근거 표시/rollback으로 처리한다. 수용 및 원본·실패 증거는 DEVELOPMENT12.5.4.8.7과 docs/evidence/pending-official-handoff-2026-10-09.json을 참조한다. 전체 UI/엔진 승인 범위 완료와 운영 HTTP 독립 검증은 별개다.

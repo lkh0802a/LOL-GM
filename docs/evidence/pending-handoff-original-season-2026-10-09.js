@@ -186,30 +186,9 @@ function trainingRecommendation(db,t){
   const scrim=days>=1&&fat<54&&cond>70;return {intensity,scrim,next,days,fat,cond};
 }
 function pendingOfficialRefs(db,q){
-  const s=db.world?.seasons?.[q?.seasonKey],day=s?.days?.[s.cur],m=day?.matches?.find(x=>x.id===q.matchId);
-  if(!s||!m||m.res)return null;const comp=db.competitions?.[s.comp],cfgIdx=Array.isArray(comp?.stages)?comp.stages.findIndex(x=>x?.id===day.stage):-1,cfg=comp?.stages?.[cfgIdx];if(!cfg)return null;
+  const s=db.world.seasons[q.seasonKey],day=s&&s.days[s.cur],m=day&&day.matches.find(x=>x.id===q.matchId);
+  if(!s||!m||m.res)return null;const comp=db.competitions[s.comp],cfgIdx=comp.stages.findIndex(x=>x.id===day.stage),cfg=comp.stages[cfgIdx];
   return {s,day,m,comp,cfg,cfgIdx};
-}
-// A pending series belongs to its official fixture, not the former manager.
-// Missing fixture/date metadata blocks processing instead of inventing it.
-function pendingOfficialControl(db){
-  const w=db.world,p=w?.pendingOfficial,q=p?.queue?.[0],refs=q&&pendingOfficialRefs(db,q);
-  if(!q)return {manual:false,error:null,refs:null};
-  if(!refs)return {manual:false,error:'대기 중인 공식 경기 정보를 확인할 수 없습니다.',refs:null};
-  if(!['manual','ai'].includes(w.manage))return {manual:false,error:'현재 운영 방식 정보를 확인할 수 없습니다.',refs};
-  if(w.phase!=='season'||w.year!==db.year||p.date!==db.worldDate||q.date!==p.date||refs.day.date!==p.date)return {manual:false,error:'대기 경기의 날짜와 현재 시즌이 다릅니다.',refs};
-  if([refs.m.a,refs.m.b].some(id=>!db.teams?.[id]||!db.regions?.[db.teams[id].region]))return {manual:false,error:'대기 경기 구단의 지역 정보를 확인할 수 없습니다.',refs};
-  if([refs.m.a,refs.m.b].some(id=>db.teams[id].active===false))return {manual:false,error:'대기 경기에 비활성 구단이 포함되어 있습니다.',refs};
-  if(q.session&&(q.session.a!==refs.m.a||q.session.b!==refs.m.b||q.session.bestOf!==refs.m.bo||q.session.seed!==`${refs.s.seed}/${refs.s.year}/${refs.m.id}`||q.session.opt?.compId!==refs.s.comp||q.session.opt?.metaContext?.season!==refs.s.id))return {manual:false,error:'대기 세션과 공식 경기 정보가 다릅니다.',refs};
-  const t=managedTeam(db),manual=w.manage==='manual'&&!w.fired&&t&&t.active!==false&&(t.id===refs.m.a||t.id===refs.m.b);
-  return {manual:!!manual,error:null,refs};
-}
-// Preserve object identity as well as values if this one-set handoff fails.
-// Previously completed sets are outside the operation and remain recorded.
-function pendingOfficialUndo(db){
-  const seen=new Set(),rows=[];
-  const visit=o=>{if(!o||typeof o!=='object'||seen.has(o))return;seen.add(o);const entries=Object.entries(o);rows.push({o,entries,length:Array.isArray(o)?o.length:null});for(const [,v] of entries)visit(v)};
-  visit(db);return ()=>{for(const {o,entries,length} of rows){const keys=new Set(entries.map(([k])=>k));for(const k of Object.keys(o))if(!keys.has(k))delete o[k];for(const [k,v] of entries)o[k]=v;if(length!==null)o.length=length}};
 }
 function pendingOfficialSession(db){
   const p=db.world&&db.world.pendingOfficial,q=p&&p.queue&&p.queue[0];if(!q)return null;
@@ -248,17 +227,11 @@ function playWorldDay(db){
   const w=db.world;if(w.phase!=='season')return null;
   // An unfinished managed Bo3/Bo5 must be resumed before advancing another
   // day; do not apply recovery, patches, or construction a second time.
-  if(w.pendingOfficial?.queue?.length){
-    const control=pendingOfficialControl(db),date=w.pendingOfficial.date;
-    if(control.error)throw new Error(control.error);
-    if(control.manual)return {date,played:[],pending:w.pendingOfficial,advanced:false};
-    const undo=pendingOfficialUndo(db);
-    try{resolvePendingOfficialMatch(db,null);return {date,played:[{s:control.refs.s,day:control.refs.day}],pending:w.pendingOfficial,advanced:false}}catch(e){undo();throw e}
-  }
+  if(w.pendingOfficial?.queue?.length)return {date:w.pendingOfficial.date,played:[],pending:w.pendingOfficial,advanced:false};
   const d=nextCalendarDate(db);
   if(!d){advanceStep(db);return {date:null,played:[],pending:null,advanced:false}}
   const advanced=applyWorldDailyEffects(db,d);
-  const fixture=nextDate(db),played=[],queue=[],me=w.manage==='manual'&&!w.fired?managedTeamId(db):null;
+  const fixture=nextDate(db),played=[],queue=[],me=managedTeamId(db);
   if(d===fixture){
     for(const [seasonKey,s] of Object.entries(w.seasons))if(!s.done&&s.days[s.cur].date===d){
       const result=playDay(db,s,{deferTeam:me});

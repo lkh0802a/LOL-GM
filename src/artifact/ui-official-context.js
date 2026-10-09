@@ -15,6 +15,7 @@ function officialUiAuthority(c){
 function officialUiCurrent(c){return officialUiAuthority(c)&&c.view===VIEW&&c.render===UI_RENDER_ID}
 function officialUiReason(c){
   const t=c.club,w=c.world;
+  const control=pendingOfficialControl(DB);if(control.error)return control.error;
   if(!t||t.active===false)return '현재 맡은 활성 구단이 없습니다.';
   if(!w||w.phase!=='season')return '현재 시즌의 공식 경기 준비 상태가 아닙니다.';
   if(w.fired)return '해임 상태에서는 수동 경기 준비를 진행할 수 없습니다.';
