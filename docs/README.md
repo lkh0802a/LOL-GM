@@ -117,3 +117,5 @@ Use [numeric stages 1–13 and dotted work units](DEVELOPMENT.md#unified-numeric
 2026-10-09 대기 공식 경기 인계: 수동 참가 감독은 준비를 유지하고, 무소속·해임·AI 운영·다른 구단으로 이동한 pending은 기존 AI 공식 writer로 한 세트씩 진행한다. 날짜·일일 효과/완료 기록·저장을 보존하며 missing metadata와 실패는 근거 표시/rollback으로 처리한다. 수용 및 원본·실패 증거는 DEVELOPMENT12.5.4.8.7과 docs/evidence/pending-official-handoff-2026-10-09.json을 참조한다. 전체 UI/엔진 승인 범위 완료와 운영 HTTP 독립 검증은 별개다.
 
 - 운영 홈 첫 UI 재설계 경계·수동 행동/복귀·검증/미완료: [DEVELOPMENT 12.4.1](DEVELOPMENT.md).
+
+- 회귀 검증 반복 비용·원래 검사/새 VM 보존·실패와 출시 경계: DEVELOPMENT11.5.1을 따른다.
