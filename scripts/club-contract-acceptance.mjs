@@ -1,5 +1,5 @@
 import {artifactSources,runEngineFixture} from './test-harness.mjs';
-const sources=await artifactSources(['ui-negotiations.js','ui-transfer-terms.js','ui-club-briefing.js','ui-club-contracts.js','app.js']);const app=sources.pop(),esc=app.match(/^const esc=.*$/m)[0];
+const sources=await artifactSources(['ui-negotiations.js','ui-transfer-terms.js','ui-club-briefing.js','ui-club-home.js','ui-club-contracts.js','app.js']);const app=sources.pop(),esc=app.match(/^const esc=.*$/m)[0];
 await runEngineFixture(String.raw`(()=>{
  const check=(v,m)=>{if(!v)throw Error('CLUB_CONTRACT '+m)};
  const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:3,div2:true}),regionCfg('EU',{teams:2,div2:false})];cfg.internationals=[];DB=buildWorld(cfg);const [t,other]=activeTeams(DB,'NA',1),reserve=reserveTeamsOf(DB,t)[0];setManagedTeam(DB,t.id);DB.world={phase:'season',year:DB.year,seed:'contracts-ui',manage:'manual',registrationVersion:1,seasons:{},offers:[],marketLog:[],steps:[],step:0};setWorldCalendarDate(DB,DB.year+'-01-10');

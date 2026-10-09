@@ -58,6 +58,6 @@ function bindClubActions(){
     const attr={entry:'briefEntry',medical:'briefMedical',contract:'briefContract',neg:'briefNeg',schedule:'briefSchedule'}[row.kind];
     const name=attr.replace(/[A-Z]/g,x=>'-'+x.toLowerCase());
     const target=[...document.querySelectorAll('[data-'+name+']')].find(x=>x.dataset[attr]===row.id);
-    if(target&&!target.disabled)target.click();
+    if(target&&!target.disabled){clubHomeRevealTarget(target);target.click()}
   });
 }

@@ -6,8 +6,8 @@ import { resolve } from 'node:path';
 
 const dir=resolve(import.meta.dirname,'..','src','artifact');
 const get=async p=>readFile(resolve(dir,p),'utf8');
-const [app,state,season,manager,data,briefing,eligibility,clubFinance,clubStaff,staffControls,registration,clubMedical,clubContracts,clubPractice,clubScrim,clubRecruitment,themeSource,actionsSource,officialContextSource]=await Promise.all(
-  ['app.js','ui-state.js','ui-season.js','ui-manager.js','ui-data.js','ui-club-briefing.js','ui-club-eligibility.js','ui-club-finance.js','ui-club-staff.js','ui-staff-controls.js','ui-registration.js','ui-club-medical.js','ui-club-contracts.js','ui-club-practice.js','ui-club-scrim.js','ui-club-recruitment.js','ui-theme.js','ui-club-actions.js','ui-official-context.js'].map(get));
+const [app,state,season,manager,data,briefing,homeSource,eligibility,clubFinance,clubStaff,staffControls,registration,clubMedical,clubContracts,clubPractice,clubScrim,clubRecruitment,themeSource,actionsSource,officialContextSource]=await Promise.all(
+  ['app.js','ui-state.js','ui-season.js','ui-manager.js','ui-data.js','ui-club-briefing.js','ui-club-home.js','ui-club-eligibility.js','ui-club-finance.js','ui-club-staff.js','ui-staff-controls.js','ui-registration.js','ui-club-medical.js','ui-club-contracts.js','ui-club-practice.js','ui-club-scrim.js','ui-club-recruitment.js','ui-theme.js','ui-club-actions.js','ui-official-context.js'].map(get));
 const pendingEngineSource=await get('season.js');
 const later=()=>new Promise(resolve=>setImmediate(resolve));
 
@@ -121,6 +121,7 @@ const later=()=>new Promise(resolve=>setImmediate(resolve));
   vm.runInContext(clubMedical,context);vm.runInContext(clubContracts,context);vm.runInContext(clubPractice,context);vm.runInContext(clubScrim,context);vm.runInContext(clubRecruitment,context);vm.runInContext(clubStaff,context);vm.runInContext(staffControls,context);vm.runInContext(registration,context);
   vm.runInContext(eligibility,context,{filename:'ui-club-eligibility.js'});
   vm.runInContext(briefing,context,{filename:'ui-club-briefing.js'});
+  vm.runInContext(homeSource,context,{filename:'ui-club-home.js'});
   vm.runInContext(actionsSource,context,{filename:'ui-club-actions.js'});
   vm.runInContext(pendingEngineSource.slice(pendingEngineSource.indexOf('function pendingOfficialRefs('),pendingEngineSource.indexOf('function pendingOfficialUndo(')),context,{filename:'pending-official-control.js'});
   vm.runInContext(officialContextSource,context,{filename:'ui-official-context.js'});

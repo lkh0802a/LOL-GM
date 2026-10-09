@@ -1,0 +1,1028 @@
+{
+  "task": "12.4.1",
+  "base": "015954b8d03a13342e9dc216155000e1df41950d",
+  "scope": "운영 홈 우선 행동·접힌 구단 상세·선수단 진입/복귀·실제 의료 writer·저장·stale 취소",
+  "originals": {
+    "src/artifact/app.js": "0bf4bbd3536352690446b28e5705bf8f95bf5710979fea0db622666c29b71c31",
+    "src/artifact/ui-club-briefing.js": "89f21e880245c0167254b93e72d213e7625595e8d7c46a58f22320f5952023d8",
+    "src/artifact/ui-club-actions.js": "e2eee1b067313ee525cb14d797a204c6d64c64afae973fb8ce5997187161e9f9",
+    "src/artifact/ui-roster.js": "607e5f2324f00819fda90a866afc0f975d5ff7cee2f0fad2c03724b6164cd6d7",
+    "src/artifact/shell.html": "71ed4ed7d6afa629bd414c9af3907a1a1f561bbb9ab66c7188a11d7160065e5c",
+    "scripts/artifact-modules.mjs": "a186515562423fabc12f5f869e79810b7bdbfddf0a3b7ec2821a0a68af5bcf0d",
+    "scripts/check.mjs": "947918896b669353ed0ef4e0f05eefd98bce4939eb0e98f6eb4f7045ec608084",
+    "scripts/pending-handoff-source-successor.mjs": "23fb68565811ba731a8484f0d1e2ae1c570c7fef0b82ae99b7fcb62dd8b1a541",
+    "package.json": "fc39ce43124ab7d526f6fee0d0bfde8d3c2a3ae325f17ea0926c6d3f419b8f87",
+    "index.html": "42842f07c75598f5fc6a5af0c608780e8a5e681fdaed2f4b8ffc783607c18ca5",
+    "scripts/club-briefing-acceptance.mjs": "be2e64357058b3a014d0169b4933266d50d839e1d8a99396069e4755127cfa43",
+    "scripts/club-contract-acceptance.mjs": "219fb9a3bbf7d2a5fb1906dc7c7f387ba51a417c49f032e35422b2532b4e705f",
+    "scripts/club-eligibility-acceptance.mjs": "903486602f65e1f19f33682071f55307898d62cc67951c2773f7a57985343bb5",
+    "scripts/club-finance-acceptance.mjs": "ac361ef0008a772b435d5d7f3708e2e07e021c0ddcf4eea4014a7a8d2d53b253",
+    "scripts/club-medical-acceptance.mjs": "d7299a0433ca0826ca43346de0fbb38469e56539baba35ecc8657fbd21b10707",
+    "scripts/club-practice-acceptance.mjs": "903df7c0b752ea7b65068b62d46393c04fd4b06b09ac264dc025e8c391fd6463",
+    "scripts/club-recruitment-acceptance.mjs": "06268c9780f08020bdc6b0a57adf2b21e68771dacb31c16d8eaef8612f221300",
+    "scripts/club-scrim-acceptance.mjs": "738c06ee299e349cf621538e2ed32c3374f00f5e1b75499f2a7222d3f254552d",
+    "scripts/club-staff-acceptance.mjs": "683ca504e110dfcca871d321ce924c02557bc41ce65baaa986bc2ff6f8b9cd4c",
+    "scripts/shortlist-comparison-acceptance.mjs": "945c83c801204190f710f4117f117b47fcb8621ee3902f8828078388f3426f3b",
+    "scripts/ui-async-acceptance.mjs": "fa634396903e0211e92e6c956128f77f9f005e23f4938309a3a4f8eb2db6f8c8",
+    "scripts/initial-recruitment-acceptance.mjs": "5d5d266854d9e2500adb5e1133efe1fd0eaf43b9bea29a13fed34b3db24ae82e",
+    "scripts/initial-offer-preview-acceptance.mjs": "6c452a57a97a2978fec1396017b30fcdddbebb7b93a2ec8afe1ec51902e9acc2",
+    "scripts/scrim-plans-acceptance.mjs": "db764d655df3ee774ef721a349abb44c3182917951386c01664afb2eaad48b31",
+    "scripts/owned-reserve-coach-acceptance.mjs": "0d129ad133e978fd0b307d3da8bd86a1b7493fa277d53e4bc25e4344022e2d4c",
+    "scripts/scout-return-acceptance.mjs": "9112f7cc4c809458fa7f00bea0704abed03a2e62b0ce2fce5a74c9c6589e7ff1",
+    "scripts/squad-observer-information-acceptance.mjs": "21ba29214ba487d687cc02f7397b6583d7d842450a886a0f9b73626022aa9680",
+    "scripts/initial-comparison-acceptance.mjs": "e0fa8fbfcfab447a7e827181eb16f429f5754971256a06767476aeb4fe6a6537",
+    "scripts/squad-staging-acceptance.mjs": "608362c48e647dafa55f94078e15ce466a16e914fd79f527253768894f2c8f36",
+    "docs/DEVELOPMENT.md": "9f961cc4cd4fd28d37c57c9b7634b2391997bc3cf27e8f8e738322abfc0ad788",
+    "docs/README.md": "71ba88316f18b17a008cfd939753377e8906cd7e10a9492d410deed3cb1d99ee",
+    "docs/LOL_GM_SPEC.md": "8cfa9f0530c5b5e1fa25c7a78690edc2d11e952b1b347e7e594c6252a898e0c2",
+    "docs/DECISIONS.md": "8132238c4e29c31cc6329a9091e03b313eecdd7ad26f6d33245abceeff4e1945",
+    "docs/ARCHITECTURE.md": "805a8a4ce919225158f33637ea8a9966dbbe10a4a67ba72da54910980084ae0d"
+  },
+  "sources": {
+    "src/artifact/app.js": "2763749795be474800d7877f628ac4e36adfc9eb9f0fd11ee6cc718fe7517a00",
+    "src/artifact/ui-club-briefing.js": "7ec61474c5d5d9ba5cb6c80e4cce8901e4494734e2f4e05965ff01c81a18f515",
+    "src/artifact/ui-club-actions.js": "f1ae678ca9edd1f5e0dc5df0a6c620efcca175b0d104a674e3b9c3081a9af47e",
+    "src/artifact/ui-roster.js": "b444b38b0491c9002ed5098100c369ef35d10d318a76f8e82412f27f1f3b304b",
+    "src/artifact/shell.html": "acbc998edd169508fb9d85e31b59c43898687f72708adf191c2ff50ab4f20a67",
+    "scripts/artifact-modules.mjs": "d16106f4eee918208615cc8d6c1dd9929ec71bc0d3748bbc81e240208c84a48d",
+    "scripts/check.mjs": "db5040d1158fcf1122af0b5ab1857f604d828e1b1047966502ad6c90e919cb82",
+    "scripts/pending-handoff-source-successor.mjs": "9da18039990723acbfc9c1ec134cf05fa8d21d3051788d130c07600d82ee4baa",
+    "package.json": "7b7aa133957f9ddca7c915ca7f1496fec8317845fbe40cf0358cf8ce62bdf418",
+    "index.html": "ab0c871aca7ef641fd77889b1b455cf5a3343f892f40c46cce3fbadef328bba8",
+    "scripts/club-briefing-acceptance.mjs": "b4d3a05ae3e6464a514ec607f8de1dda71822e5e6ecb0b568b40f2cae6bd24e0",
+    "scripts/club-contract-acceptance.mjs": "9d9a637dbea0c82bd36890aab7a9f64cb3deae8f1c3a77353e5d95e02ce4e264",
+    "scripts/club-eligibility-acceptance.mjs": "94cef9851ffa7d2e543e700c30ec010df88d059f4cadd71fc486b6ca29cac25c",
+    "scripts/club-finance-acceptance.mjs": "dee027e916b4d110fc9eaddee4853bd7e203273cf4a603afa986f2a61fb0735a",
+    "scripts/club-medical-acceptance.mjs": "554b8701427fc9c016e104e53a648469197e34c8fa4a315b4837705cd87476d8",
+    "scripts/club-practice-acceptance.mjs": "9895ceccdca0b73b0d9baf0b6aebb6fc1dd8be6f024f5ad92f65a4fbb2c17645",
+    "scripts/club-recruitment-acceptance.mjs": "4ee73d11cc3cad9af85a71ec9d67a4919a45c2726e865196461a33f0e1a2d758",
+    "scripts/club-scrim-acceptance.mjs": "11cd50934fdbfd054603630fbcd471f5dee38624af05b814ca7b77254d059ee8",
+    "scripts/club-staff-acceptance.mjs": "4feace6df1827c6b45b5b40a82d041663857e2293f8b4a47e5a7d34fb469b315",
+    "scripts/shortlist-comparison-acceptance.mjs": "04c6a5a3b95833776c29c305f13fe9bfa27d53583ac48cc26fa6382aff5c9963",
+    "scripts/ui-async-acceptance.mjs": "b0f8f776b379ee65434371dafd1f10ec562ef135027a2b22028963046a80416d",
+    "scripts/initial-recruitment-acceptance.mjs": "58c293aa00168153e68baac1b1beb2c499cda6df8d73d076a813898d041ac22f",
+    "scripts/initial-offer-preview-acceptance.mjs": "4a2b5daaaa538638a97716894d736ea0b935f391dadc6efceec2f5d91d02bdfe",
+    "scripts/scrim-plans-acceptance.mjs": "5686f7d661a10f35a74c712a5d0171ea0d8ab40d7f4a64b7b3317c18f53d6201",
+    "scripts/owned-reserve-coach-acceptance.mjs": "7651441ae411f94ebd3725f420a9f48ee963ed809700f21111165f4ab967837c",
+    "scripts/scout-return-acceptance.mjs": "3446d4777f496985dd82773a03d1b41f311a09fc0135d89efa87552e87aab67e",
+    "scripts/squad-observer-information-acceptance.mjs": "5e73edf4c21f9471ec94b7e326a5cc3c5e277054573b428de4d9e00604b3ef8c",
+    "scripts/initial-comparison-acceptance.mjs": "313daa289a9b576406940aaba0036f826592405c3a150e15c42dbcecf408f3f2",
+    "scripts/squad-staging-acceptance.mjs": "13c85dbb67dabda1cc829ba8c464c1a25d717d1d266403aab2065e487bea89a0",
+    "src/artifact/ui-club-home.js": "63a5f0c99cc9d4939d901658ca158e948d10d8ed6e8fd11e65b46dd6f9830916",
+    "scripts/club-home-acceptance.mjs": "c66b38c6736afe7fdd153e7458d1ce7d2a1cef2902a6a48a19644cfaa1bde109",
+    "scripts/club-home-source-successor.mjs": "59921121fe5cad03923077ff2fba942de0d9404a71ac3d04d402bff81f5f4d11",
+    "scripts/verify-club-home-evidence.mjs": "4df1592dfdde7d41b3d306c52e14c4f7c8ba6755046fe3eeba6cd23f4a88eefd"
+  },
+  "engine": {
+    "champion-source.js": "29efbdabad4d152e351f0bfdfb025feb5283862ea3ae9caa4fcd2b1d0678bf1c",
+    "system-source.js": "0067a197dd54541fec3bc15a96fddec52ed19ea85eb43a6d2eb3cb5d7759d836",
+    "random.js": "86e30259e4926ea9428afa33d7cff6c51c20a9faa89e847f94aee450bd5b323c",
+    "match-adjudication.js": "63fb882340a949d5ca67bf07f2d7a90f8caab8d06af48da512d2911712ab3b4f",
+    "combat-resources.js": "c7c13b9cd5486b437b79e60c11d4a85655fad3e0c694e7991e911310fc9400cd",
+    "objective-awards.js": "e391263586777ea48ee6f8806e6458639304fd21914cea45de11f720355cd2ff",
+    "takedown-rewards.js": "59a545ebfae98986c7216cc980e351661f5a61dc5c1c313079b122a749733c74",
+    "macro-picks.js": "614b6e64901661b8841edbddd065d0e41999cdf4d56a73606fd64dc952b197e5",
+    "engine.js": "5afc093091fbf7e921aaead89ee0729b66c65628376e93445f51b25a011b6d49",
+    "draft.js": "b5edc5d6158f30f8fa7cb68803b60f84bf34e7c6d6fc80fa126dae985176e8ba",
+    "systems.js": "0da7844547f70eabdb0494451368a295f518ca0ce2ae4d0d77bebad5c3a8b996",
+    "item-purchases.js": "6fb206bdf0dfb208fea5dd6011b22ec8827ca138bac8bb08d367fe17805520cb",
+    "role-quests.js": "6f501d340094774120a4cc74dc4f0964581909716fc537d7a58b14252dcb66f1",
+    "role-quest-match.js": "29ce026186ea801419cb8a369548cef21a5c969f08b9f17b804726934892532b",
+    "data.js": "0eb2d3ac7321e3a728028c3a0799405f24f50b0a904b5e879f95c5f6d71662ff",
+    "champion-data.js": "aa2fd33316757c4ac8c86d5bcad27d7b8f5b8739dbd3e3e4eb0f696ae84e105b",
+    "system-data.js": "16ad1c37594d8aedb047a4707003a20bc66518f0448a7fae861805c925dd5146",
+    "champs2.js": "067ab9927d8b0672231c3226e00167f8e7cf582a41c20a70f18f185d512ad827",
+    "content-naming.js": "cfaccd15c05386a6061e455472dad7dcc01ee65a9753a2d764f2c888711dc20e",
+    "meta.js": "8ffd6ff85694453af40d49e61ba6770f054f40d4fbe35d3552aa11e408707c41",
+    "meta-side.js": "0b95bcc3e0cb1d26625074ab6589778ccea25e0615eb3a83aee2964f95fd0fea",
+    "meta-composition.js": "13bef6227a2ea4a5f83066ff8d4e9a5936063d8fa4e026dfdccaf76980715632",
+    "meta-draft-order.js": "f041f41b7ec21f25b1b6292add20e94aa64c2d602ebcef83f654ef67b4655b99",
+    "meta-tactics.js": "36ae3cf21f93d4b5578b54a9ca0b65509d718038f6a59b0c7275cd88b640c5b6",
+    "meta-practice.js": "6a415363a730a6f0f2854632103fbe0f338cda149136d90fd8409852ba1bc739",
+    "meta-analyst.js": "7f642d520efd77c9d6fb0284185b05f5c279840269269771e3b11c7813f8af28",
+    "meta-opponent.js": "0c2b5201e4cdc2aa4f9590e2c0e0a3abc4025a6821c325b7a728277e12bb7c9f",
+    "meta-opponent-draft.js": "5fd55c5c9adee4b5269edff550eea450dae4784b60db8664665ca6ce8409c6ef",
+    "patch.js": "0bab4d0582fa6da7b3bb582599ded9527cce9192dc9bedbb6e9006154094e235",
+    "patch-balance.js": "145097323c9fa2f6230c5135997c57920495fdcfa6ca2880739d757cbdbedbea",
+    "patch-content.js": "057c2abe7ca7cf195971fea24330055017851ca794aaf2d5eae4935fa4471ed9",
+    "first-selection.js": "0c788ea7cfab33266e7610f312888c13d881df63dd3966570451c71604239331",
+    "series.js": "67a33366c2b244a2ca7f315ee2f70420e6efd7243873403a59392d095a81d3ec",
+    "timezone-calendar.js": "4f9796a001fcd127e488f2d9424ee44bf9ee46ff694e1f0dd2f552b254ade645",
+    "broadcast-calendar.js": "61eec6c44669131a7068c2770799b7a71112a73c25760a00d88643bf450c45ab",
+    "competition.js": "44d0856b841357315c29c022df0a910817edb2d22e940b37bbca3df9d2774783",
+    "league-aggregation.js": "8a1f46972c06f92154f24fa366bbfcd026fe85be13350aa16393ba3dd1890a63",
+    "player.js": "e5b0470e4e4518b80261875b8d6f875c9b821cad6efd8f35e04b40e75336171b",
+    "development.js": "791297239cb94c28990a7373176aad3a122d10d69e64189f39125d6a2c7b1417",
+    "player-relations.js": "8400885087a034a244d03cd365803c01f01dc37c55b3686667e0bc367257e6bb",
+    "medical.js": "9c5d23dfb9cd7f0ebdef4dbc6af223e2a61beaf23f1cbc97be4f9ffa4647d11d",
+    "world.js": "41076b06ece7065b7ecc2518ed444ededfdf798b92b31da46964c89d78fea99a",
+    "calendar.js": "8736fbf8bdcad1fec98f869de9756c333e740f1d191e2322426e911599f21183",
+    "season.js": "fe129b44023f97257e6f07dae8b4efe97b6a4e1b3b588d4548713e83a247dfed",
+    "offseason.js": "ba7d5187746097a7ddf7869eadae0caea233e072f9b392bcd315c4f466cf458a",
+    "save.js": "92a476222e94e8658b108bbca94bce76b00462dc4d3a1688d1833a45c2c951a0",
+    "save-migration.js": "68ec50df15e1836c8277e0bfd674a8b7346e101f105134aa9ee030fb14d6e0af",
+    "roster.js": "efdedc445c4c865e67468518945de49f8a763f20adba047fc48757b6d567fb57",
+    "lineup.js": "a6371c9870a2e8440d49c36e1ee089cdd6b39d96c52e5cd9de72cc574025a20b",
+    "state-transaction.js": "6ad636cb64b328cb046e5d8dfe760eeb26c7655c34b0ff776e2102835fab03f1",
+    "state-rollback.js": "1591117e72458abd1ee6ad36b229f95fd70161fd60d5cf0f2cee6280b50831b4",
+    "squad-preparation.js": "24e7cfbdfd92d768eb80a799c3ce6f0a83258a00f059796bf7a8e28832c357ab",
+    "office.js": "080c5f43a4d3b7fe5bb758cd1c63ab10de74eb2d2e5b8d0edd488accea5dd494",
+    "office-consultation.js": "69791d5028a04c60b32dbeda5dfce6a270e5e728c9f0dd2e8d9fae563659f29c",
+    "local-policy.js": "655017910f1a52faca6e5cd18b3a6519cf1cff382c1e2ae96573c51255cfa507",
+    "office-international.js": "a02379c12f82679d696692181f43cc0c5c722e0512e9123592c54f75c57e4e9d",
+    "club-ownership.js": "739abb8e99f1c08900ec7e1568e31cdabdb42ac04a404fe5cf88fe28c5c05c66",
+    "club-license.js": "70252f7573fb4307db93a0921a98f758f2f4b9118c495c9d34acde81fbbd8317",
+    "region-continuity.js": "d5c1452d3671f93aad7904f02fcb1df71361ac5f40bb08fe8b0d2ffd01840d08",
+    "finance.js": "bdc04f13a16e99631548346c811a080dbef5c8a89db787ff003de5b32d03a07e",
+    "contract-market-pricing.js": "3bed2894690c6686e3387aa5643b0aabb60d65d446bdd8112d8919a9f7bb39ca",
+    "contracts.js": "6bd9c40df01bdbf65f8a944bea5cda5a739afa63b0227f8c200c3c2ebce3e403",
+    "contract-market-behavior.js": "f3d0b3899bb2d036835b5abb30cad05bbba89ee9cf0ec087e765088d359c8925",
+    "contract-transfer-market.js": "5adf767bfce1e07c635db473cc84729b2932c750f092078d0dcf2e38bb81aa77",
+    "scouting.js": "6f3868bb816888970554a0c874e89006e553e1d8ffd6f1f4568521d3c7e87a12",
+    "scouting-ai.js": "c654412ff8c1270a9d8fd5147de72634891fd19d6e5814ee7b367e6717519403",
+    "scouting-champions.js": "79ca9afa9204c2b2f0428008a47ae46786fda8730058e4c293bd0bb742a85d88",
+    "scouting-ai-ops.js": "f3c4f36441bde098f07db481f594fad7ce4805482f4549593687a8cea79626f9",
+    "scouting-ai-reassessment.js": "ba39dfd9133a1527bad3fef873d02916af7ff3909d8d3e970270da6c13c1226d",
+    "contract-negotiation.js": "16bfbbfa64277122bf1eeb5fc3c9085c21d6a0d61f7e8bc512cd2f8c0a834c89",
+    "transfer.js": "1b423b602349f05b55072abae65be66536fe42e55e207c6ef3b4846aeeba6c08",
+    "contract-window.js": "493055514c6becc347fc76033c2555b53f6b3364c26232ca4fdd562841fda377",
+    "contract-contact-ai.js": "211bac31fea0761f10ee0b1b904285ff650220e92abae8a079bdad89c1461f54",
+    "contract-agreement.js": "a9410870a8ba1c16f9d7645879986f89c6f30f819b466a443fd12c88d8b21d14",
+    "state-player-actions.js": "4c492d3c29507013d34994b941baefef1e99103713e37da2d551b5ff0b7ce9e3",
+    "player-representation.js": "94875b49ae3be90745083b8a1e4e0cb3b5a75149fce3768747b21db8407ad529",
+    "player-loans.js": "0c128ea349f7e34d8f42006478e8f29ac693497ee5428f07abe1f8f4838d83fd",
+    "transfer-payments.js": "816f57f1634ed3dd0bbc633e75de17db67ec6159dfc6e3f32492e3ad061b21d6",
+    "finance-estate.js": "8acfde7f0f0f9166a1c3570c4f845ef26ac92bc632589a080fdf89ec6bf1a661",
+    "transfer-market-rules.js": "11939f62331144bafee591cd74383d896b9a0e268c2e5e9bdb83dc2f234e72ab",
+    "loan-purchase.js": "23c486aae9fec0bd5bac47273b6b2bd2c594c94117d198209b04149605860c79",
+    "local-service.js": "794173227f82c8e1e43de27c638f0c71fff18caabb03756fe63d6686f09c673b",
+    "registration.js": "902e5fe018a0818ab48ea5a2802c3eaa9ebfdae968736f018b6a846e69393794",
+    "registration-match.js": "16c6d092a0e8008bb71f629e812f7e68f9b19a0d2d598dee8f6df049b909c20e",
+    "player-loan-market.js": "8713eb541e084696ceb516c2743f46185bacd6d135572fcc07cde011172c591d",
+    "club-closure.js": "5bf3cb8853aa5170e285ab3e21a973b55e8bd14e3a6248aa4249742254758b11",
+    "staff.js": "16484fd92f9a00db824a48196bb7a8a3c65f7f14a8767decfee12bd93f2c067a",
+    "staff-contracts.js": "291450863b03399e8d98e769224464e52620a2f91f89bbe1b4c28e84b46d8297",
+    "staff-registration.js": "dfc7ef5f5a707dc098212c8f4e4cc527c01580a5ff73521e135889fe14a40104",
+    "scrim-partner.js": "46b7a202e93b76ba4a19eda48530322b55a3c0acc871db2ab9b44e0b1eea1e8e",
+    "scrim.js": "0523a4580a4f0a68a12a6f096007d1d2c034cbc6b670d66ae6a1e6b6d7543e89",
+    "scrim-plans.js": "5346f414bcdc3180a34972c3e9881a19d419edcd80b653710455a6ecd0a470eb",
+    "practice-resources.js": "43e284428f47238b3360e91b7c1d4ae686a9e96e92f698e0ae01f67f1a4ef5d0",
+    "features.js": "d814dcc47f25a765bfcebe09e745264baa5944026f3e47ba3dde7724ed9996fd",
+    "role-conversion.js": "18708388bd2202835d8226c28be041fb255031282f03b20e2436c932cbfb951d",
+    "draft-analysis.js": "f68f88b632819d268183f2714b672e7845d51d2b13905eda51bdcd8af249fb9b",
+    "draft-preparation.js": "6e031fab26717ab1f7c2edd5f65e82f4c60d91b94d729fefadbcdeb7de5a50cc",
+    "draft-history.js": "3d8c8d0b38472fb7fca681d04d32647d1bc3ba16aa2090425db6a619cb44c5b3",
+    "match-history.js": "66f7f169ebefdfc09d535ee956fca7113fb0ce134b07ba1d0f89a443635b3c20",
+    "analysis-tiers.js": "98fd00a64e70477f6fded6bbc664850d8bc358a162ef0e73c564fdef1baa2b3a",
+    "career.js": "4d7031ea62165d1c2ed27842e11fcb104b8d8b9e9fbc8be80184df5210838b37"
+  },
+  "dependencies": [
+    {
+      "path": "docs/evidence/pending-official-handoff-2026-10-09.json",
+      "sha256": "0fa147f22611f3de3b40167d95f4d23ca291d590f3306f7aa73d98a75f2a1d9e"
+    },
+    {
+      "path": "docs/evidence/pending-official-handoff-2026-10-09.raw.part1.gz",
+      "sha256": "f531ebdd579b537ed3ad669b90b4509a5575ffe4adf777c81a4ebd6b8fdcda51"
+    },
+    {
+      "path": "docs/evidence/pending-official-handoff-2026-10-09.raw.part2.gz",
+      "sha256": "a15f17c6551cbb2b6e677ad369cef26b5a00f86dfb2b1e7d57c074b457b6316f"
+    },
+    {
+      "path": "docs/evidence/pending-official-handoff-2026-10-09.raw.part3.gz",
+      "sha256": "431314258d0719a1a11aeab74a320840180f94e5ab829bfcdf5c0dcc63bd5d50"
+    },
+    {
+      "path": "docs/evidence/pending-official-handoff-2026-10-09.raw.part4.gz",
+      "sha256": "06f6847b4991afbe8fde81acb09079118a2f3414af3bac296de3defd3334a1ca"
+    },
+    {
+      "path": "docs/evidence/pending-official-handoff-2026-10-09.raw.part5.gz",
+      "sha256": "2e96ad1253cc9751e42504cf8187a6480307eca6edaaa1c35145b91a5c6b15ca"
+    },
+    {
+      "path": "docs/evidence/pending-official-handoff-2026-10-09.raw.part6.gz",
+      "sha256": "16a6a0c78ba36e12648db3c3e9363e232393de35d920001508ae26a156cc2555"
+    },
+    {
+      "path": "docs/evidence/pending-official-handoff-2026-10-09.raw.part7.gz",
+      "sha256": "04d1034b990d18c39e665e1cf7953baa50f2763918dedfe02ae4925b0bc926a3"
+    },
+    {
+      "path": "docs/evidence/pending-official-handoff-2026-10-09.raw.part8.gz",
+      "sha256": "daa5fe4b8195099b2760c8778b11da870bfc29b0df5ba66d0cc0f31bb23c1cf0"
+    },
+    {
+      "path": "docs/evidence/pending-official-handoff-2026-10-09.raw.part9.gz",
+      "sha256": "a33f127fe2e2bb66274dcbb200223dc6fdad2945e79577de4e64379ad9a1151a"
+    },
+    {
+      "path": "docs/evidence/pending-official-handoff-2026-10-09.raw.part10.gz",
+      "sha256": "1dc3fffefd88a6ae9c23943acc09768073c8954aad6e15c27809e1c221a61a31"
+    }
+  ],
+  "archive": {
+    "format": "jsonl-chunks-v1",
+    "parts": [
+      {
+        "path": "docs/evidence/operating-home-2026-10-09.raw.part1.gz",
+        "bytes": 16777216,
+        "sha256": "2f7b2de6d7b6ebdada65b684abb6d4179c6b57e8e58283fa16304c2862839193"
+      },
+      {
+        "path": "docs/evidence/operating-home-2026-10-09.raw.part2.gz",
+        "bytes": 16777216,
+        "sha256": "208d913311cefcdf40f97e3d85dfc44ec4a50c843cf355ddc422e5cb33c9ea3a"
+      },
+      {
+        "path": "docs/evidence/operating-home-2026-10-09.raw.part3.gz",
+        "bytes": 7652374,
+        "sha256": "f5892fe57abb5df2a3b2e85171069158c432873624e03ef2ee2f4935662a9c1e"
+      }
+    ],
+    "sha256": "94dfdf2b971f2fa7b38b3ed4538ca3cae0908474d13e2262c9c85086fe44a289",
+    "decodedSha256": "4986a20d5190a1b654f8900c8854084bcb7cdfaae36c2e198d761f885b043e02",
+    "rows": 146,
+    "files": [
+      {
+        "path": "original/src/artifact/app.js",
+        "bytes": 18593,
+        "sha256": "0bf4bbd3536352690446b28e5705bf8f95bf5710979fea0db622666c29b71c31",
+        "chunks": 1
+      },
+      {
+        "path": "original/src/artifact/ui-club-briefing.js",
+        "bytes": 8980,
+        "sha256": "89f21e880245c0167254b93e72d213e7625595e8d7c46a58f22320f5952023d8",
+        "chunks": 1
+      },
+      {
+        "path": "original/src/artifact/ui-club-actions.js",
+        "bytes": 5205,
+        "sha256": "e2eee1b067313ee525cb14d797a204c6d64c64afae973fb8ce5997187161e9f9",
+        "chunks": 1
+      },
+      {
+        "path": "original/src/artifact/ui-roster.js",
+        "bytes": 19332,
+        "sha256": "607e5f2324f00819fda90a866afc0f975d5ff7cee2f0fad2c03724b6164cd6d7",
+        "chunks": 1
+      },
+      {
+        "path": "original/src/artifact/shell.html",
+        "bytes": 45033,
+        "sha256": "71ed4ed7d6afa629bd414c9af3907a1a1f561bbb9ab66c7188a11d7160065e5c",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/artifact-modules.mjs",
+        "bytes": 3762,
+        "sha256": "a186515562423fabc12f5f869e79810b7bdbfddf0a3b7ec2821a0a68af5bcf0d",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/check.mjs",
+        "bytes": 35242,
+        "sha256": "947918896b669353ed0ef4e0f05eefd98bce4939eb0e98f6eb4f7045ec608084",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/pending-handoff-source-successor.mjs",
+        "bytes": 3301,
+        "sha256": "23fb68565811ba731a8484f0d1e2ae1c570c7fef0b82ae99b7fcb62dd8b1a541",
+        "chunks": 1
+      },
+      {
+        "path": "original/package.json",
+        "bytes": 7861,
+        "sha256": "fc39ce43124ab7d526f6fee0d0bfde8d3c2a3ae325f17ea0926c6d3f419b8f87",
+        "chunks": 1
+      },
+      {
+        "path": "original/index.html",
+        "bytes": 1989027,
+        "sha256": "42842f07c75598f5fc6a5af0c608780e8a5e681fdaed2f4b8ffc783607c18ca5",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/club-briefing-acceptance.mjs",
+        "bytes": 11663,
+        "sha256": "be2e64357058b3a014d0169b4933266d50d839e1d8a99396069e4755127cfa43",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/club-contract-acceptance.mjs",
+        "bytes": 17227,
+        "sha256": "219fb9a3bbf7d2a5fb1906dc7c7f387ba51a417c49f032e35422b2532b4e705f",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/club-eligibility-acceptance.mjs",
+        "bytes": 21494,
+        "sha256": "903486602f65e1f19f33682071f55307898d62cc67951c2773f7a57985343bb5",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/club-finance-acceptance.mjs",
+        "bytes": 10477,
+        "sha256": "ac361ef0008a772b435d5d7f3708e2e07e021c0ddcf4eea4014a7a8d2d53b253",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/club-medical-acceptance.mjs",
+        "bytes": 10971,
+        "sha256": "d7299a0433ca0826ca43346de0fbb38469e56539baba35ecc8657fbd21b10707",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/club-practice-acceptance.mjs",
+        "bytes": 14434,
+        "sha256": "903df7c0b752ea7b65068b62d46393c04fd4b06b09ac264dc025e8c391fd6463",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/club-recruitment-acceptance.mjs",
+        "bytes": 18577,
+        "sha256": "06268c9780f08020bdc6b0a57adf2b21e68771dacb31c16d8eaef8612f221300",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/club-scrim-acceptance.mjs",
+        "bytes": 16146,
+        "sha256": "738c06ee299e349cf621538e2ed32c3374f00f5e1b75499f2a7222d3f254552d",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/club-staff-acceptance.mjs",
+        "bytes": 12843,
+        "sha256": "683ca504e110dfcca871d321ce924c02557bc41ce65baaa986bc2ff6f8b9cd4c",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/shortlist-comparison-acceptance.mjs",
+        "bytes": 13653,
+        "sha256": "945c83c801204190f710f4117f117b47fcb8621ee3902f8828078388f3426f3b",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/ui-async-acceptance.mjs",
+        "bytes": 10636,
+        "sha256": "fa634396903e0211e92e6c956128f77f9f005e23f4938309a3a4f8eb2db6f8c8",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/initial-recruitment-acceptance.mjs",
+        "bytes": 9907,
+        "sha256": "5d5d266854d9e2500adb5e1133efe1fd0eaf43b9bea29a13fed34b3db24ae82e",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/initial-offer-preview-acceptance.mjs",
+        "bytes": 7006,
+        "sha256": "6c452a57a97a2978fec1396017b30fcdddbebb7b93a2ec8afe1ec51902e9acc2",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/scrim-plans-acceptance.mjs",
+        "bytes": 6669,
+        "sha256": "db764d655df3ee774ef721a349abb44c3182917951386c01664afb2eaad48b31",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/owned-reserve-coach-acceptance.mjs",
+        "bytes": 6150,
+        "sha256": "0d129ad133e978fd0b307d3da8bd86a1b7493fa277d53e4bc25e4344022e2d4c",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/scout-return-acceptance.mjs",
+        "bytes": 8351,
+        "sha256": "9112f7cc4c809458fa7f00bea0704abed03a2e62b0ce2fce5a74c9c6589e7ff1",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/squad-observer-information-acceptance.mjs",
+        "bytes": 9838,
+        "sha256": "21ba29214ba487d687cc02f7397b6583d7d842450a886a0f9b73626022aa9680",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/initial-comparison-acceptance.mjs",
+        "bytes": 7846,
+        "sha256": "e0fa8fbfcfab447a7e827181eb16f429f5754971256a06767476aeb4fe6a6537",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/squad-staging-acceptance.mjs",
+        "bytes": 15392,
+        "sha256": "608362c48e647dafa55f94078e15ce466a16e914fd79f527253768894f2c8f36",
+        "chunks": 1
+      },
+      {
+        "path": "original/docs/DEVELOPMENT.md",
+        "bytes": 614706,
+        "sha256": "9f961cc4cd4fd28d37c57c9b7634b2391997bc3cf27e8f8e738322abfc0ad788",
+        "chunks": 1
+      },
+      {
+        "path": "original/docs/README.md",
+        "bytes": 13278,
+        "sha256": "71ba88316f18b17a008cfd939753377e8906cd7e10a9492d410deed3cb1d99ee",
+        "chunks": 1
+      },
+      {
+        "path": "original/docs/LOL_GM_SPEC.md",
+        "bytes": 48590,
+        "sha256": "8cfa9f0530c5b5e1fa25c7a78690edc2d11e952b1b347e7e594c6252a898e0c2",
+        "chunks": 1
+      },
+      {
+        "path": "original/docs/DECISIONS.md",
+        "bytes": 89198,
+        "sha256": "8132238c4e29c31cc6329a9091e03b313eecdd7ad26f6d33245abceeff4e1945",
+        "chunks": 1
+      },
+      {
+        "path": "original/docs/ARCHITECTURE.md",
+        "bytes": 49606,
+        "sha256": "805a8a4ce919225158f33637ea8a9966dbbe10a4a67ba72da54910980084ae0d",
+        "chunks": 1
+      },
+      {
+        "path": "current/src/artifact/app.js",
+        "bytes": 18652,
+        "sha256": "2763749795be474800d7877f628ac4e36adfc9eb9f0fd11ee6cc718fe7517a00",
+        "chunks": 1
+      },
+      {
+        "path": "current/src/artifact/ui-club-briefing.js",
+        "bytes": 9152,
+        "sha256": "7ec61474c5d5d9ba5cb6c80e4cce8901e4494734e2f4e05965ff01c81a18f515",
+        "chunks": 1
+      },
+      {
+        "path": "current/src/artifact/ui-club-actions.js",
+        "bytes": 5235,
+        "sha256": "f1ae678ca9edd1f5e0dc5df0a6c620efcca175b0d104a674e3b9c3081a9af47e",
+        "chunks": 1
+      },
+      {
+        "path": "current/src/artifact/ui-roster.js",
+        "bytes": 19297,
+        "sha256": "b444b38b0491c9002ed5098100c369ef35d10d318a76f8e82412f27f1f3b304b",
+        "chunks": 1
+      },
+      {
+        "path": "current/src/artifact/shell.html",
+        "bytes": 45562,
+        "sha256": "acbc998edd169508fb9d85e31b59c43898687f72708adf191c2ff50ab4f20a67",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/artifact-modules.mjs",
+        "bytes": 3783,
+        "sha256": "d16106f4eee918208615cc8d6c1dd9929ec71bc0d3748bbc81e240208c84a48d",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/check.mjs",
+        "bytes": 35269,
+        "sha256": "db5040d1158fcf1122af0b5ab1857f604d828e1b1047966502ad6c90e919cb82",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/pending-handoff-source-successor.mjs",
+        "bytes": 3352,
+        "sha256": "9da18039990723acbfc9c1ec134cf05fa8d21d3051788d130c07600d82ee4baa",
+        "chunks": 1
+      },
+      {
+        "path": "current/package.json",
+        "bytes": 8122,
+        "sha256": "7b7aa133957f9ddca7c915ca7f1496fec8317845fbe40cf0358cf8ce62bdf418",
+        "chunks": 1
+      },
+      {
+        "path": "current/index.html",
+        "bytes": 1992247,
+        "sha256": "ab0c871aca7ef641fd77889b1b455cf5a3343f892f40c46cce3fbadef328bba8",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/club-briefing-acceptance.mjs",
+        "bytes": 11681,
+        "sha256": "b4d3a05ae3e6464a514ec607f8de1dda71822e5e6ecb0b568b40f2cae6bd24e0",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/club-contract-acceptance.mjs",
+        "bytes": 17245,
+        "sha256": "9d9a637dbea0c82bd36890aab7a9f64cb3deae8f1c3a77353e5d95e02ce4e264",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/club-eligibility-acceptance.mjs",
+        "bytes": 21512,
+        "sha256": "94cef9851ffa7d2e543e700c30ec010df88d059f4cadd71fc486b6ca29cac25c",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/club-finance-acceptance.mjs",
+        "bytes": 10495,
+        "sha256": "dee027e916b4d110fc9eaddee4853bd7e203273cf4a603afa986f2a61fb0735a",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/club-medical-acceptance.mjs",
+        "bytes": 10989,
+        "sha256": "554b8701427fc9c016e104e53a648469197e34c8fa4a315b4837705cd87476d8",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/club-practice-acceptance.mjs",
+        "bytes": 14452,
+        "sha256": "9895ceccdca0b73b0d9baf0b6aebb6fc1dd8be6f024f5ad92f65a4fbb2c17645",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/club-recruitment-acceptance.mjs",
+        "bytes": 18595,
+        "sha256": "4ee73d11cc3cad9af85a71ec9d67a4919a45c2726e865196461a33f0e1a2d758",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/club-scrim-acceptance.mjs",
+        "bytes": 16164,
+        "sha256": "11cd50934fdbfd054603630fbcd471f5dee38624af05b814ca7b77254d059ee8",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/club-staff-acceptance.mjs",
+        "bytes": 12861,
+        "sha256": "4feace6df1827c6b45b5b40a82d041663857e2293f8b4a47e5a7d34fb469b315",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/shortlist-comparison-acceptance.mjs",
+        "bytes": 13671,
+        "sha256": "04c6a5a3b95833776c29c305f13fe9bfa27d53583ac48cc26fa6382aff5c9963",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/ui-async-acceptance.mjs",
+        "bytes": 10733,
+        "sha256": "b0f8f776b379ee65434371dafd1f10ec562ef135027a2b22028963046a80416d",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/initial-recruitment-acceptance.mjs",
+        "bytes": 9947,
+        "sha256": "58c293aa00168153e68baac1b1beb2c499cda6df8d73d076a813898d041ac22f",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/initial-offer-preview-acceptance.mjs",
+        "bytes": 7046,
+        "sha256": "4a2b5daaaa538638a97716894d736ea0b935f391dadc6efceec2f5d91d02bdfe",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/scrim-plans-acceptance.mjs",
+        "bytes": 6709,
+        "sha256": "5686f7d661a10f35a74c712a5d0171ea0d8ab40d7f4a64b7b3317c18f53d6201",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/owned-reserve-coach-acceptance.mjs",
+        "bytes": 6190,
+        "sha256": "7651441ae411f94ebd3725f420a9f48ee963ed809700f21111165f4ab967837c",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/scout-return-acceptance.mjs",
+        "bytes": 8391,
+        "sha256": "3446d4777f496985dd82773a03d1b41f311a09fc0135d89efa87552e87aab67e",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/squad-observer-information-acceptance.mjs",
+        "bytes": 9878,
+        "sha256": "5e73edf4c21f9471ec94b7e326a5cc3c5e277054573b428de4d9e00604b3ef8c",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/initial-comparison-acceptance.mjs",
+        "bytes": 7886,
+        "sha256": "313daa289a9b576406940aaba0036f826592405c3a150e15c42dbcecf408f3f2",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/squad-staging-acceptance.mjs",
+        "bytes": 15432,
+        "sha256": "13c85dbb67dabda1cc829ba8c464c1a25d717d1d266403aab2065e487bea89a0",
+        "chunks": 1
+      },
+      {
+        "path": "current/src/artifact/ui-club-home.js",
+        "bytes": 2426,
+        "sha256": "63a5f0c99cc9d4939d901658ca158e948d10d8ed6e8fd11e65b46dd6f9830916",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/club-home-acceptance.mjs",
+        "bytes": 3641,
+        "sha256": "c66b38c6736afe7fdd153e7458d1ce7d2a1cef2902a6a48a19644cfaa1bde109",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/club-home-source-successor.mjs",
+        "bytes": 3971,
+        "sha256": "59921121fe5cad03923077ff2fba942de0d9404a71ac3d04d402bff81f5f4d11",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/verify-club-home-evidence.mjs",
+        "bytes": 437,
+        "sha256": "4df1592dfdde7d41b3d306c52e14c4f7c8ba6755046fe3eeba6cd23f4a88eefd",
+        "chunks": 1
+      },
+      {
+        "path": "run/baseline-browser-results.json",
+        "bytes": 1312,
+        "sha256": "6c00ab332c8b611e5f8762b49795a55f28ae17764040305b9ba03e6510bd2bec",
+        "chunks": 1
+      },
+      {
+        "path": "run/baseline-browser.log",
+        "bytes": 859,
+        "sha256": "868a2e5eb7a781c30868de5f736c59e9821eb1a3ea58eb9777b59127d4a90d55",
+        "chunks": 1
+      },
+      {
+        "path": "run/baseline-browser.py",
+        "bytes": 2091,
+        "sha256": "cd92fc063650dff49b6203102564372e28b76368ff1699f5b85fe8235c06b53b",
+        "chunks": 1
+      },
+      {
+        "path": "run/briefing-first.log",
+        "bytes": 344,
+        "sha256": "6315978724a494b9f637b45938ecc2a22df0e566d595ccc9eb80d40ad00f132a",
+        "chunks": 1
+      },
+      {
+        "path": "run/browser-fifth.log",
+        "bytes": 991,
+        "sha256": "919cb78fd35b727b905edcd849ad5501998e72b76c6ad47e659cfa7fc1a4f796",
+        "chunks": 1
+      },
+      {
+        "path": "run/browser-first.log",
+        "bytes": 2348,
+        "sha256": "0a620b52802c8fc2003b20ce61ba7f50bc87bae015edbb94cf840aab2edab7e8",
+        "chunks": 1
+      },
+      {
+        "path": "run/browser-fourth.log",
+        "bytes": 994,
+        "sha256": "4d256a9f3f9aad1b3db772c4c824273eb62cc8d53a7ae812b3d0bb861e99e601",
+        "chunks": 1
+      },
+      {
+        "path": "run/browser-original-fifth.py",
+        "bytes": 5636,
+        "sha256": "2d17c4cba94262d2c7f0b0bb713c6f894fb0874bfbe367d4808f9a414f6c4b51",
+        "chunks": 1
+      },
+      {
+        "path": "run/browser-original-first.py",
+        "bytes": 5565,
+        "sha256": "df6cbf402f646f754b324e944574a7afe7c6a7797d5a03c80f0559f0188a3d0f",
+        "chunks": 1
+      },
+      {
+        "path": "run/browser-original-fourth.py",
+        "bytes": 5615,
+        "sha256": "018db1a1b0a33d6aae0ee49d6e769f7399b0eeab0ffe4f309a3d04ffc2c6644f",
+        "chunks": 1
+      },
+      {
+        "path": "run/browser-original-second.py",
+        "bytes": 5569,
+        "sha256": "1e6693ade0068b8bc4d7fc384ba81cd30c5f5fe233bd9f57c977c597e1719bbd",
+        "chunks": 1
+      },
+      {
+        "path": "run/browser-results.json",
+        "bytes": 1530,
+        "sha256": "3f474a7d3ce8f59dbf923dccf7805e0f3419d9e3998ba504efaad00513d82b74",
+        "chunks": 1
+      },
+      {
+        "path": "run/browser-second.log",
+        "bytes": 443,
+        "sha256": "e9ea25e8420825421db8fb77160eb9b12501eefe9dc6fbaad14fdce96e4df037",
+        "chunks": 1
+      },
+      {
+        "path": "run/browser-sixth.log",
+        "bytes": 1045,
+        "sha256": "8d55c76b6971535680aabb48d595e64fef265c58c0f03906152000af61897084",
+        "chunks": 1
+      },
+      {
+        "path": "run/browser-third.log",
+        "bytes": 543,
+        "sha256": "debb0f6f40af938c2fd9d66e82fc30b124d31476031563b3b11c237bd7084bdc",
+        "chunks": 1
+      },
+      {
+        "path": "run/browser.py",
+        "bytes": 5969,
+        "sha256": "ebee5274ef97c763c27b96c8d21e4076a92723b9200b5cbc28ec2b57a143cb6d",
+        "chunks": 1
+      },
+      {
+        "path": "run/build-evidence-original-first.py",
+        "bytes": 3559,
+        "sha256": "3c29163588d82be44888ee9156c9c3790793f75d52dc6d764a8b1bd7a0c7c667",
+        "chunks": 1
+      },
+      {
+        "path": "run/build-evidence.py",
+        "bytes": 3569,
+        "sha256": "effab93e2f96b611c77bb0ef1bca412d3e737fa3a66bc7ceca2e6a736e40f5fb",
+        "chunks": 1
+      },
+      {
+        "path": "run/build-final.log",
+        "bytes": 52,
+        "sha256": "b461ff4d621ea30d604433f4cc3d1b2ceca4d3fda50fadb2dff1af40e647a1d0",
+        "chunks": 1
+      },
+      {
+        "path": "run/build-first.log",
+        "bytes": 52,
+        "sha256": "b461ff4d621ea30d604433f4cc3d1b2ceca4d3fda50fadb2dff1af40e647a1d0",
+        "chunks": 1
+      },
+      {
+        "path": "run/build-fourth.log",
+        "bytes": 52,
+        "sha256": "b461ff4d621ea30d604433f4cc3d1b2ceca4d3fda50fadb2dff1af40e647a1d0",
+        "chunks": 1
+      },
+      {
+        "path": "run/build-second.log",
+        "bytes": 52,
+        "sha256": "b461ff4d621ea30d604433f4cc3d1b2ceca4d3fda50fadb2dff1af40e647a1d0",
+        "chunks": 1
+      },
+      {
+        "path": "run/build-third.log",
+        "bytes": 52,
+        "sha256": "b461ff4d621ea30d604433f4cc3d1b2ceca4d3fda50fadb2dff1af40e647a1d0",
+        "chunks": 1
+      },
+      {
+        "path": "run/calendar-first.log",
+        "bytes": 10913,
+        "sha256": "09d794f835934791d55a8431c9c12dd409d48fb3e28642cf666011315c463040",
+        "chunks": 1
+      },
+      {
+        "path": "run/career-acceptance-first.log",
+        "bytes": 261,
+        "sha256": "93fa1fc7c31d103116ecf7c5897ce1bb93001d2dfdde793503b841aee198584e",
+        "chunks": 1
+      },
+      {
+        "path": "run/club-home-acceptance-first.mjs",
+        "bytes": 3596,
+        "sha256": "a1b866c7558eba2c51b0b3ba906c08cbe26de6c189823e047414bb376311251e",
+        "chunks": 1
+      },
+      {
+        "path": "run/completed-checks.json",
+        "bytes": 516,
+        "sha256": "69904a1fe5dc7b14fd0b96e8c7c4242461d5e87c422c35664b37105d6843d074",
+        "chunks": 1
+      },
+      {
+        "path": "run/focused-final.log",
+        "bytes": 234,
+        "sha256": "79baec07678be6a300dc25a474c96304c4b0d302f7e49b6adfe97cd0a79e6ab8",
+        "chunks": 1
+      },
+      {
+        "path": "run/focused-first.log",
+        "bytes": 234,
+        "sha256": "79baec07678be6a300dc25a474c96304c4b0d302f7e49b6adfe97cd0a79e6ab8",
+        "chunks": 1
+      },
+      {
+        "path": "run/home-after-1280.png",
+        "bytes": 165607,
+        "sha256": "878039f7c52eab2eb51316f88106bd4bdf00de516acaf6ca0ac3d2706ed240ff",
+        "chunks": 1
+      },
+      {
+        "path": "run/home-after-320.png",
+        "bytes": 154510,
+        "sha256": "c21accfb3456a2ed8efb8f2d35f82aed8646657a4a22d30476e84f3fed6e873c",
+        "chunks": 1
+      },
+      {
+        "path": "run/home-before-1280.png",
+        "bytes": 318698,
+        "sha256": "4ce6ed3ef1fc166f9cc642630d2a07212da064b76e70e0194e1bf27690ef85c9",
+        "chunks": 1
+      },
+      {
+        "path": "run/home-before-320.png",
+        "bytes": 315867,
+        "sha256": "f698d15b4ddb27027bca64bf70b16144b3974faec8cc75aa420a5a9364ba8bd1",
+        "chunks": 1
+      },
+      {
+        "path": "run/home-fixture.json",
+        "bytes": 1574890,
+        "sha256": "c1e0313bb17c8d907c1000e184973c76e3b2d9d564e8d0fd6225723d213959aa",
+        "chunks": 1
+      },
+      {
+        "path": "run/medical-first.log",
+        "bytes": 16652,
+        "sha256": "42bc1cf9e6e5b1bf28aa95e23b5cbf15e00c4740331d1dac4af325511a0c6d53",
+        "chunks": 1
+      },
+      {
+        "path": "run/old-assertions-preserved.json",
+        "bytes": 1956,
+        "sha256": "900c00651c9ac03def6ad14448022e8193e0b4d2e7b65716125dbb693055bcae",
+        "chunks": 1
+      },
+      {
+        "path": "run/original-pending-fixture.json",
+        "bytes": 1645803,
+        "sha256": "c348d932d400ff53c0e784a8ad732501efd68ab23ba4c6d7dc2f64d91b81dbad",
+        "chunks": 1
+      },
+      {
+        "path": "run/regression-first.log",
+        "bytes": 72029471,
+        "sha256": "d4f12aa4b1748c8079e16b7f79117547d7153fa562516c416b9513ec3600a8c1",
+        "chunks": 9
+      },
+      {
+        "path": "run/regression-second-result.json",
+        "bytes": 65,
+        "sha256": "ef48d755f4806160086f0a898d4f4314813e9ffd6268391bf5c1edda2222367d",
+        "chunks": 1
+      },
+      {
+        "path": "run/regression-second.log",
+        "bytes": 72071198,
+        "sha256": "4ea59f832669362ee166778c96cd0562b8f30f561f904cee913bb16761ab8a16",
+        "chunks": 9
+      },
+      {
+        "path": "run/reviewed-paths.json",
+        "bytes": 1076,
+        "sha256": "6bd28ced777499482640cdccbdaeef98e8ea8d80178c97f8c35eb539ba1ab327",
+        "chunks": 1
+      },
+      {
+        "path": "run/smoke-career-result.json",
+        "bytes": 142,
+        "sha256": "c41b6550608a925d62017714d389d9f31750c63bc26785567cc70de37fb173cb",
+        "chunks": 1
+      },
+      {
+        "path": "run/smoke-first.log",
+        "bytes": 767,
+        "sha256": "456130085ea91d9699f242faa6ae57492b65d2c9638d7dc8c56269b506eb4a89",
+        "chunks": 1
+      },
+      {
+        "path": "run/source-final.log",
+        "bytes": 54,
+        "sha256": "ccc00ecdd8f6051177b7db1487f4981168bb753593b3c1c01362428fed928f68",
+        "chunks": 1
+      },
+      {
+        "path": "run/source-first.log",
+        "bytes": 118,
+        "sha256": "500fd045260777a607956f73aa72ba38fcea7337507526177e547020a4c3235c",
+        "chunks": 1
+      },
+      {
+        "path": "run/source-fourth.log",
+        "bytes": 54,
+        "sha256": "ccc00ecdd8f6051177b7db1487f4981168bb753593b3c1c01362428fed928f68",
+        "chunks": 1
+      },
+      {
+        "path": "run/source-second.log",
+        "bytes": 118,
+        "sha256": "500fd045260777a607956f73aa72ba38fcea7337507526177e547020a4c3235c",
+        "chunks": 1
+      },
+      {
+        "path": "run/source-third.log",
+        "bytes": 54,
+        "sha256": "ccc00ecdd8f6051177b7db1487f4981168bb753593b3c1c01362428fed928f68",
+        "chunks": 1
+      },
+      {
+        "path": "run/startup-source-hashes.json",
+        "bytes": 2388,
+        "sha256": "c1d480fac230f83716d8108797d13c66231726b37a7d7d28c694213398a84c9e",
+        "chunks": 1
+      },
+      {
+        "path": "run/static-first.log",
+        "bytes": 697,
+        "sha256": "12b12d10d9df73d901d4efbdbbccf7157dbba7d55b03b1baa6d9ae00a3ec2ec4",
+        "chunks": 1
+      },
+      {
+        "path": "run/static-second.log",
+        "bytes": 2732,
+        "sha256": "741494a2556bdfca631730af8d71bd5026ff2164294f3c76ef212c700d0f875e",
+        "chunks": 1
+      },
+      {
+        "path": "run/tab-probe-first.log",
+        "bytes": 2277,
+        "sha256": "6cdb59505749394145724564951782e3c05bada561e60228caa7051e6c5a7145",
+        "chunks": 1
+      },
+      {
+        "path": "run/tab-probe.py",
+        "bytes": 2477,
+        "sha256": "b3f737efdec10ad2d9ee9902241f849c08afa58f05882e7735a64a1588e40b3f",
+        "chunks": 1
+      },
+      {
+        "path": "run/ui-first.log",
+        "bytes": 703,
+        "sha256": "7948f7ca596d27bcf47998e0cc74d2a304698d34ecb3c083884f61cf176deaa8",
+        "chunks": 1
+      },
+      {
+        "path": "run/ui-second.log",
+        "bytes": 19499447,
+        "sha256": "664d8dcce7da68d79e73e198a0cf7114385b5b08ffc7ece033b690f3ec5dd6d7",
+        "chunks": 3
+      },
+      {
+        "path": "run/unemployed-squad-probe.json",
+        "bytes": 3578803,
+        "sha256": "f0c82afbcf10b619b41f18ccae18231908d6f1fe349003c4a6828a7e86933553",
+        "chunks": 1
+      },
+      {
+        "path": "run/unemployed-squad-probe.log",
+        "bytes": 511,
+        "sha256": "2925a568ad33fa20d698b8d1ace748f968a6cd7c9e9ce2d6837fdf37fba9a393",
+        "chunks": 1
+      },
+      {
+        "path": "run/unemployed-squad-probe.py",
+        "bytes": 1367,
+        "sha256": "942b83b143ec5f94a3762eea5a2f8682f662eddd04e7e22131eca4c6e68586dd",
+        "chunks": 1
+      },
+      {
+        "path": "run/verify-first.log",
+        "bytes": 684,
+        "sha256": "3fb4b63f643b559f28c106ad246fffc6392bf87cdaf286f8c996f876e1637137",
+        "chunks": 1
+      },
+      {
+        "path": "run/verify-fourth.log",
+        "bytes": 127,
+        "sha256": "a11814f70f995f09d70c886e3186547d634b344a24047c9fd693395d824fa344",
+        "chunks": 1
+      },
+      {
+        "path": "run/verify-second.log",
+        "bytes": 127,
+        "sha256": "a11814f70f995f09d70c886e3186547d634b344a24047c9fd693395d824fa344",
+        "chunks": 1
+      }
+    ]
+  },
+  "limitations": [
+    "운영 HTTP 독립 미검증",
+    "전체 UI/엔진 승인 범위 완료 아님",
+    "큰 stdout 일부 잘림; 실제 원본 로그 파일 보존",
+    "모든 중간 소스 개별 보관 주장 없음",
+    "첫 browser summary selector가 중첩 summary도 선택하여 실패; 최상위 scope로 교정",
+    "최초 roster18000예산 초과를 예산 변경 없이 기존 표시를 별도 UI component에 연결하여 교정",
+    "stale 반례 이후 switching/overlay를 reset하지 않은 fixture 실패와 교정 유지",
+    "PR209 거절된 private payload·자동화 지시문 공개 전송 없음"
+  ]
+}

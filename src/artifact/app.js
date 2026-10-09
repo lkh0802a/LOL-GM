@@ -160,14 +160,14 @@ function viewSeason(){
   return `<section class="seasonhead">
     <div><h2>${w.year} 시즌</h2><p>${T?esc(T.name):managedTeamId(DB)?'관리 구단 확인 필요':'무소속 감독'} · ${seasonManagedRegion()?esc(DB.regions[T.region].leagueName):'지역 정보 없음'}${lgS?' '+esc(lgS.label):''} ${mine&&(mine.w+mine.l)?`${rank}위 (${mine.w}승 ${mine.l}패)`:''} · ${esc(phaseText(w))}</p></div>${right}
   </section>
-  ${T?renderClubBriefing():''}
   ${SAVEFAIL?'<p class="warn">브라우저 저장 공간이 부족해 진행 상황을 저장하지 못했습니다. 데이터 탭에서 JSON을 복사해 두세요.</p>':''}
   <section class="controls">${controlsFor(w)}<span id="sprog" class="hint" role="status">${esc(seasonProgressNotice())}</span></section>
+  ${T?renderClubBriefing():''}
   ${T&&w.phase==='market'&&w.manage==='manual'?renderMarket():''}
   ${T&&w.phase==='offseason'&&w.manage==='manual'&&w.contractWindow?renderContractWindow():''}
   ${(w.phase==='preseason'||w.phase==='market')&&w.report?renderReport(w.report):''}
   ${chapters(w)}
-  <div class="seg tabs">${[['table','순위'],['sched','일정·결과'],['bracket','토너먼트'],['stats','기록'],['hist','세계·역대']].map(([k,l])=>`<button data-st="${k}" aria-pressed="${SSET.tab===k}">${l}</button>`).join('')}</div>
+  <div class="seg tabs season-tabs" role="group" aria-label="대회 정보 선택">${[['table','순위'],['sched','일정·결과'],['bracket','토너먼트'],['stats','기록'],['hist','세계·역대']].map(([k,l])=>`<button data-st="${k}" aria-pressed="${SSET.tab===k}">${l}</button>`).join('')}</div>
   <div id="stab">${seasonTab()}</div>`;
 }
 // 시즌을 챕터(단계)별로 묶어 보여준다: 1장 스프링 → 2장 퍼스트 스탠드 → 3장 MSI 기간 → …

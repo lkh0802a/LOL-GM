@@ -1,7 +1,7 @@
 import './verify-official-draft-evidence.mjs';
 import './verify-official-edit-evidence.mjs';
 import {artifactSources,runEngineFixture} from './test-harness.mjs';
-const sources=await artifactSources(['ui-official-edit.js','ui-registration.js','ui-club-briefing.js','ui-club-eligibility.js','app.js']);
+const sources=await artifactSources(['ui-official-edit.js','ui-registration.js','ui-club-briefing.js','ui-club-home.js','ui-club-eligibility.js','app.js']);
 const app=sources.pop(),esc=app.match(/^const esc=.*$/m)[0];
 await runEngineFixture(String.raw`(()=>{
  const evidence={};

@@ -46,7 +46,7 @@ function viewSquad(){
     roster=edit?Object.entries(edit.rosterPlan.assignments).filter(([,dst])=>dst===t.id).map(([pid])=>pid):t.roster,
     ps=roster.map(id=>DB.players[id]).filter(Boolean).sort((a,b)=>ROLES.indexOf(a.role)-ROLES.indexOf(b.role)||obsOvr(observationDb,b)-obsOvr(observationDb,a)||a.id.localeCompare(b.id)),
     kAvg=Math.round(avg(ps.map(p=>knowledge(observationDb,p))));
-  return `<section class="controls"><label>팀<select id="sq">${teamOpts(SQUAD)}</select></label></section>
+  return `${renderClubHomeSquadControls(teamOpts(SQUAD))}
   ${MSG?`<section role="status"><p>${esc(MSG)}</p></section>`:''}<section class="teamhead"><h2>${esc(t.name)}</h2><p>${t.formerNames&&t.formerNames.length?'전신 '+t.formerNames.map(esc).join(', ')+' · ':''}${esc(DB.regions[t.region].leagueName)} · 감독 ${mineOrg?'플레이어':'구단 AI'} · 운영 철학 ${PHIL_KO[t.philosophy]||'균형'} · 팬덤 ${t.fans??'—'}${mineOrg?' · 팀 호흡 '+Math.round(teamSynergy(t)):''}${t.goal?` · 구단주 목표: ${GOAL_KO[t.goal]}`:''}</p><p class="hint">전문 스태프가 밴픽·분석·육성·회복을 지원하며, 관리 구단의 최종 스포츠 결정은 플레이어가 내립니다.</p></section>
   ${officialRegistrationPanel(t)}
   ${mineOrg?squadPreparationTactics(t,edit):squadPublicPreparation(t)}
@@ -62,7 +62,7 @@ function viewSquad(){
   <div id="pdetail">${OPEN_P&&DB.players[OPEN_P]&&(edit?edit.rosterPlan.assignments[OPEN_P]===SQUAD:DB.players[OPEN_P].team===SQUAD)?(mineOrg?playerDetail(DB.players[OPEN_P]):squadObservedDetail(DB.players[OPEN_P],observationDb)):''}</div>${mineOrg?scoutingSearchBlock():''}`;
 }
 function bindSquad(){
-  bindScrimPlans();
+  bindClubHome();bindScrimPlans();
   bindSquadPracticeControls();bindSquadDraftControls();
   $('#sq').onchange=e=>{SQUAD=e.target.value;OPEN_P=null;nav()};
   bindMedicalPlanControls();

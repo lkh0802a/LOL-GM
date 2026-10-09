@@ -55,5 +55,5 @@ const source=String.raw`(()=>{
   console.log('SCRIM_PLANS_ACCEPTANCE PASS');
 })()`;
 await runEngineFixture(source,{filename:'scrim-plans-acceptance.vm.js',timeout:120000});
-const [ui,roster,calendar]=await artifactSources(['ui-scrim-plans.js','ui-roster.js','calendar.js']);
+const [ui,roster,calendar]=await artifactSources(['ui-scrim-plans.js','ui-roster.js','ui-club-briefing.js','ui-club-home.js','calendar.js']);
 if(!ui.includes('previewWorldAction')||!ui.includes('saveDB()')||!roster.includes('bindScrimPlans()')||calendar.indexOf('runScheduledScrims(db)')>calendar.indexOf('aiRunScrims(db,'))throw Error('scrim request UI/calendar integration missing');
