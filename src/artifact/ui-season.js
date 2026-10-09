@@ -83,8 +83,8 @@ function seasonTab(){
       ${ctop.map(([c,[n,w]])=>`<tr><td><b>${esc(c)}</b></td><td class="num">${n}</td><td class="num">${(w/n*100).toFixed(0)}%</td></tr>`).join('')}
     </tbody></table></div></section>`;
   }
-  return `${financePanel(DB.teams[me])}<section><h3>세계 현황</h3>${worldTable()}${DB.worldHype?`<p class="hint">세계 흥행 합계 ${DB.worldHype}. 지역 평균 흥행이 높을수록 새 지역 합류와 국제대회 신설 가능성이 올라갑니다.</p>`:''}</section>
-  <section><h3>구단 재정 · ${esc(DB.regions[DB.teams[me].region].leagueName)}</h3>${financeTable(DB.teams[me].region)}</section>
+  return `${seasonManagedTeam()?financePanel(DB.teams[me]):''}<section><h3>세계 현황</h3>${worldTable()}${DB.worldHype?`<p class="hint">세계 흥행 합계 ${DB.worldHype}. 지역 평균 흥행이 높을수록 새 지역 합류와 국제대회 신설 가능성이 올라갑니다.</p>`:''}</section>
+  ${seasonManagedRegion()?`<section><h3>구단 재정 · ${esc(DB.regions[seasonManagedRegion()].leagueName)}</h3>${financeTable(seasonManagedRegion())}</section>`:''}
   <section><h3>국제 e스포츠 사무국</h3>${globalCard()}</section>
   <section><h3>리그 사무국</h3><div class="cfgs">${Object.values(DB.regions).map(officeCard).join('')}</div></section>
   ${DB.news.length?`<section><h3>뉴스</h3><ol class="news">${DB.news.slice(0,20).map(n=>`<li><time>${n.year}</time><span>${esc(n.text)}</span></li>`).join('')}</ol></section>`:''}
@@ -100,7 +100,7 @@ function histTable(){
   ${H.map(h=>`<tr><td class="num">${h.year}</td><td><b>${esc(tname(h.champion))}</b></td><td>${esc(tname(h.runnerUp))}</td><td class="num">${h.final?h.final.join(':'):'—'}</td><td>${h.mvp?esc(pnm(h.mvp)):'—'}</td></tr>`).join('')}
   </tbody></table></div>`}).join('')+`<p class="hint">통산 우승: ${Object.entries(titles).sort((a,b)=>b[1].w-a[1].w||b[1].n-a[1].n).slice(0,12).map(([t,v])=>`${esc(tshort(t))} ${v.n}회${v.w?` (국제 ${v.w})`:''}`).join(', ')}</p>`;
 }
-function findMatch(id){const s=curS();for(const d of s.days)for(const m of d.matches)if(m.id===id)return m}
+function findMatch(id){const s=curS();if(!s)return null;for(const d of s.days)for(const m of d.matches)if(m.id===id)return m}
 function openSeries(m){
   const title=`${tname(m.a)} vs ${tname(m.b)}`;
   const markup=`<div class="ovin"><div class="ovhead"><b>${esc(title)}</b><button class="ghost" id="ovclose">닫기</button></div><div id="ovbody">${renderSeries(m.res)}</div></div>`;
@@ -108,7 +108,7 @@ function openSeries(m){
   $('#ovclose').onclick=closeOv;bindSeries($('#ovbody'),m.res);
 }
 function closeOv(){closeUiOverlay()}
-function bindSeasonTab(){document.querySelectorAll('#stab [data-m]').forEach(b=>b.onclick=()=>{const m=findMatch(b.dataset.m);if(m&&m.res)openSeries(m)})}
+function bindSeasonTab(){const current=seasonUiGuard();document.querySelectorAll('#stab [data-m]').forEach(b=>b.onclick=()=>{if(!current())return;const m=findMatch(b.dataset.m);if(m&&m.res)openSeries(m)})}
 function bindSetup(){
   const cfg=DB.worldConfig, dirty=()=>{DB.configDirty=true;saveDB();nav()};
   document.querySelectorAll('[data-cfg]').forEach(el=>el.onchange=()=>{
@@ -128,34 +128,35 @@ function bindSetup(){
 function bindSeason(){
   const w=DB.world;
   if(!w)return bindSetup();
-  if(w.phase==='pick'){$('#pickgo').onclick=()=>{setManagedTeam(DB,$('#pickteam').value);w.fired=false;const t=DB.teams[managedTeamId(DB)];t.owner.patience=2;w.phase='preseason';SSET.view=null;saveDB();nav()};return}
+  if(w.phase==='pick'){bindSeasonTeamChoice();return}
   if(w.phase==='initial_roster'){bindInitialRosterMarket();return}
-  bindClubBriefing();
-  document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{SSET.view=b.dataset.view;nav()});
-  document.querySelectorAll('[data-chap]').forEach(b=>b.onclick=()=>{const i=+b.dataset.chap;SSET.chap=(SSET.chap??w.step)===i?-1:i;const s=Object.values(w.seasons).find(x=>stepOf(DB,x)===i&&(x.region===DB.teams[managedTeamId(DB)].region||DB.competitions[x.comp].international));if(s)SSET.view=s.key;nav()});
-  document.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>{SSET.tab=b.dataset.st;$('#stab').innerHTML=seasonTab();document.querySelectorAll('[data-st]').forEach(x=>x.setAttribute('aria-pressed',x===b));bindSeasonTab()});
+  const current=seasonUiGuard();
+  if(seasonManagedTeam())bindClubBriefing();
+  document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{if(!current())return;SSET.view=b.dataset.view;nav()});
+  document.querySelectorAll('[data-chap]').forEach(b=>b.onclick=()=>{if(!current())return;const i=+b.dataset.chap;SSET.chap=(SSET.chap??w.step)===i?-1:i;const s=Object.values(w.seasons).find(x=>stepOf(DB,x)===i&&(x.region===seasonManagedRegion()||DB.competitions[x.comp].international));if(s)SSET.view=s.key;nav()});
+  document.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>{if(!current())return;SSET.tab=b.dataset.st;$('#stab').innerHTML=seasonTab();document.querySelectorAll('[data-st]').forEach(x=>x.setAttribute('aria-pressed',x===b));bindSeasonTab()});
   bindSeasonTab();
   bindOfficeOpinionControls();
   if(w.phase==='offseason'){
     if(!w.contractWindow){
-      $('#soff').onclick=()=>{initOffseasonContractWindow(DB);saveDB();nav();window.scrollTo(0,0)};
+      $('#soff').onclick=()=>{if(!current())return;initOffseasonContractWindow(DB);saveDB();nav();window.scrollTo(0,0)};
     }else if(w.contractWindow.stage==='exclusive'){
-      $('#scontractday').onclick=()=>{advanceOffseasonContractDay(DB);saveDB();nav()};
-      $('#scontractopen').onclick=()=>{advanceOffseasonContractWindow(DB);saveDB();nav();window.scrollTo(0,0)};
+      $('#scontractday').onclick=()=>{if(!current())return;advanceOffseasonContractDay(DB);saveDB();nav()};
+      $('#scontractopen').onclick=()=>{if(!current())return;advanceOffseasonContractWindow(DB);saveDB();nav();window.scrollTo(0,0)};
     }else{
-      $('#soff').onclick=()=>{runOffseason(DB);saveDB();nav();window.scrollTo(0,0)};
+      $('#soff').onclick=()=>{if(!current())return;runOffseason(DB);saveDB();nav();window.scrollTo(0,0)};
     }
-    if(w.manage==='manual'&&w.contractWindow)bindContractWindow();
+    if(seasonManagedTeam()&&w.manage==='manual'&&w.contractWindow)bindContractWindow();
     return;
   }
   if(w.phase==='market'){
-    $('#smkt').onclick=()=>{closeMarket(DB);MSG='';saveDB();nav();window.scrollTo(0,0)};
-    $('#smanage').onchange=e=>{w.manage=e.target.value;saveDB();nav()};
-    if(w.manage==='manual')bindMarket();return;
+    $('#smkt').onclick=()=>{if(!current())return;closeMarket(DB);MSG='';saveDB();nav();window.scrollTo(0,0)};
+    if($('#smanage'))$('#smanage').onchange=e=>{if(!current())return;w.manage=e.target.value;saveDB();nav()};
+    if(seasonManagedTeam()&&w.manage==='manual')bindMarket();return;
   }
   if(w.phase==='preseason'){
-    if($('#snew'))$('#snew').onclick=()=>{SSET.view=null;const current=managedTeamId(DB);if(DB.teams[current].active===false)setManagedTeam(DB,activeTeams(DB,DB.teams[current].region)[0].id);startWorldSeason(DB,managedTeamId(DB),freshInternalSeed('world'));saveDB();nav()};
-    $('#sreset').onclick=()=>{SSET.team=managedTeamId(DB);w.picking=true;w.phase='pick';saveDB();nav()};
+    if($('#snew'))$('#snew').onclick=()=>{if(!current()||managedTeamId(DB)&&!seasonManagedTeam())return;SSET.view=null;startWorldSeason(DB,managedTeamId(DB),freshInternalSeed('world'));saveDB();nav()};
+    $('#sreset').onclick=()=>{if(!current())return;SEASON_CHOICE_RETURN={db:DB,w,manager:DB.manager,slot:SLOT,team:managedTeamId(DB),phase:w.phase,date:DB.worldDate,year:DB.year,manage:w.manage,fired:w.fired,pickingPresent:Object.hasOwn(w,'picking'),picking:w.picking};SSET.team=managedTeamId(DB);w.picking=true;w.phase='pick';saveDB();nav();$('#pickteam')?.focus()};
     return;
   }
   if(w.pendingOfficial&&w.pendingOfficial.queue?.length){
@@ -169,6 +170,7 @@ function bindSeason(){
     return;
   }
   const run=(stop)=>{
+    if(!current())return;
     document.querySelectorAll('.controls button').forEach(b=>b.disabled=true);
     const db=DB;let n=0;
     const task=beginUiTask('season-days',()=>{if(n)saveDB()});
@@ -197,4 +199,33 @@ function bindSeason(){
   $('#smine').onclick=()=>run(r=>r.played.some(x=>x.day.matches.some(m=>m.a===me||m.b===me)));
   $('#sstep').onclick=()=>run(()=>DB.world.step!==st0);
   $('#send').onclick=()=>run(()=>false);
+}
+
+// 시즌 조회와 수동 커리어 선택은 실제 관리 구단·화면 문맥을 공유한다.
+let SEASON_CHOICE_RETURN=null;
+function seasonManagedTeam(db=DB){const t=managedTeam(db);return t&&isManagerSelectableTeam(db,t)&&db.regions[t.region]?t:null}
+function seasonManagedRegion(db=DB){return seasonManagedTeam(db)?.region||null}
+function seasonUiGuard(){
+  const db=DB,w=db.world,manager=db.manager,team=managedTeamId(db),slot=SLOT,render=UI_RENDER_ID,view=VIEW,overlay=UI_OVERLAY;
+  const stamp=()=>JSON.stringify([db.worldDate,db.year,w.phase,w.step,w.manage,w.fired,w.picking,w.pendingOfficial,db.teams[team],db.regions[db.teams[team]?.region],managerSelectableTeams(db).map(t=>[t.id,t.active,t.parent,t.region,!!db.regions[t.region]])]);
+  const initial=stamp();
+  return ()=>DB===db&&db.world===w&&db.manager===manager&&managedTeamId(db)===team&&SLOT===slot&&UI_RENDER_ID===render&&VIEW===view&&UI_OVERLAY===overlay&&!SLOT_SWITCHING&&stamp()===initial;
+}
+function seasonChoiceReturnCurrent(){const r=SEASON_CHOICE_RETURN;return r&&r.db===DB&&r.w===DB.world&&r.manager===DB.manager&&r.slot===SLOT&&r.team===managedTeamId(DB)&&r.phase==='preseason'&&DB.world.phase==='pick'&&r.date===DB.worldDate&&r.year===DB.year&&r.manage===DB.world.manage&&r.fired===DB.world.fired?r:null}
+function renderSeasonTeamChoice(){
+  const choices=managerSelectableTeams(DB).filter(t=>DB.regions[t.region]);
+  return `<section class="teamhead"><h2>팀 선택</h2><p>${DB.world.fired?'해임되었습니다. ':''}새로 맡을 팀을 고르세요. 세계와 기록은 그대로 이어집니다.</p></section><section class="controls"><label>팀<select id="pickteam">${teamOpts(managedTeamId(DB))}</select></label><button class="primary" id="pickgo"${choices.length?'':' disabled'}>이 팀으로 계속</button>${seasonChoiceReturnCurrent()?'<button class="ghost" id="pickcancel">선택 취소</button>':''}<span id="pickmsg" role="status"></span></section>`;
+}
+function bindSeasonTeamChoice(){
+  const current=seasonUiGuard();
+  $('#pickgo').onclick=()=>{
+    if(!current())return;
+    const id=$('#pickteam').value,t=DB.teams[id];
+    if(!isManagerSelectableTeam(DB,t)||!DB.regions[t.region]||!t.owner){$('#pickmsg').textContent='현재 관리할 수 없는 팀입니다.';return}
+    setManagedTeam(DB,id);DB.world.fired=false;t.owner.patience=2;DB.world.phase='preseason';SSET.view=null;SEASON_CHOICE_RETURN=null;saveDB();nav();$('#snew')?.focus();
+  };
+  if($('#pickcancel'))$('#pickcancel').onclick=()=>{
+    if(!current())return;const r=seasonChoiceReturnCurrent();if(!r)return;
+    DB.world.phase=r.phase;if(r.pickingPresent)DB.world.picking=r.picking;else delete DB.world.picking;SEASON_CHOICE_RETURN=null;saveDB();nav();$('#sreset')?.focus();
+  };
 }

@@ -112,8 +112,7 @@ function runOffseason(db){
   // 선수 만족도: 한 시즌 누적 출전/역할/계약/성적/국제전/커리어 목표를 결산한다.
   for(const t of activeTeams(db)){t._pre=t.roster.slice();for(const id of t.roster){const p=db.players[id];if(!p||!p.contract)continue;pState(p);p.form=0;p.fatigue=5;}}
   offseasonPlayerSatisfaction(db,w,rep,ev);
-  const managed=managedTeam(db);
-  w.sponsorOffers=managed&&managed.active!==false&&db.regions[managed.region]?sponsorOffers(db,managed):[];
+  w.sponsorOffers=sponsorOffers(db,db.teams[managedTeamId(db)]);
   w.report=rep; w.phase='market'; w.offers=[]; w.negotiations={}; w.marketLog=[];
   return rep;
 }

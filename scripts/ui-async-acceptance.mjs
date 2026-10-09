@@ -92,7 +92,7 @@ const later=()=>new Promise(resolve=>setImmediate(resolve));
     querySelector:s=>s==='#main'?node('main'):s.startsWith('#')?node(s.slice(1)):null,
     querySelectorAll:s=>s==='nav button'?tabs:[],
   };
-  const db={world:{phase:'season',step:0,pendingOfficial:null,count:0},teams:{T:{short:'T',name:'Team'},U:{short:'U',name:'Other'}}};
+  const db={world:{phase:'season',step:0,pendingOfficial:null,count:0},manager:{teamId:'T'},regions:{R:{id:'R'}},teams:{T:{id:'T',region:'R',short:'T',name:'Team'},U:{id:'U',region:'R',short:'U',name:'Other'}}};
   const context=vm.createContext({
     DB:db,SLOT:'1',SLOT_SWITCHING:false,UI_OVERLAY:null,
     document,window:{scrollY:0,scrollTo(){}},
@@ -102,6 +102,7 @@ const later=()=>new Promise(resolve=>setImmediate(resolve));
     saveDB:()=>{saves++},
     nextDate:()=> '2030-02-01',
     managedTeamId:()=> 'T',managedTeam:()=>db.teams.T,setupTeamsForManager:()=>[db.teams.T],
+    isManagerSelectableTeam:(_db,t)=>!!t&&t.active!==false,managerSelectableTeams:_db=>Object.values(_db.teams).filter(t=>t.active!==false),
     bindSeasonTab:()=>{},
     bindOfficeOpinionControls:()=>{},
     playWorldDay:world=>{world.world.count++;days++;return {played:[],pending:false}},
