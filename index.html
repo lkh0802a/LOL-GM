@@ -15189,7 +15189,7 @@ function bindSeason(){
       }catch(e){
         if(!finishUiTask(task))return;saveCompleted();
         console.error('LOL GM date progression failed',e);
-        notice('날짜 진행 중 오류: '+e.message);if(!UI_OVERLAY)nav();
+        notice('날짜 진행 중 오류가 발생했습니다. 현재 상태와 완료 기록을 확인한 뒤 다시 시도하세요.');if(!UI_OVERLAY)nav();
       }
     };
     step();
