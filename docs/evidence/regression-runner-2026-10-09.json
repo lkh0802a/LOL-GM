@@ -1,0 +1,480 @@
+{
+  "task": "11.5.1",
+  "base": "2548780e3564dc85f7ac8a4feea90eb58b6f52eb",
+  "status": "구현·로컬 수용; 정확한 PR/main CI와 게시 후속 필요",
+  "modules": [
+    "verify-club-home-evidence.mjs",
+    "club-home-acceptance.mjs",
+    "verify-pending-handoff-evidence.mjs",
+    "pending-handoff-acceptance.mjs",
+    "verify-official-ui-evidence.mjs",
+    "official-ui-authority-acceptance.mjs",
+    "verify-season-progress-evidence.mjs",
+    "season-progress-acceptance.mjs",
+    "verify-unemployed-season-evidence.mjs",
+    "unemployed-season-acceptance.mjs",
+    "unemployed-season-ui-acceptance.mjs",
+    "verify-season-history-evidence.mjs",
+    "season-history-compaction-acceptance.mjs",
+    "regression.mjs"
+  ],
+  "originals": {
+    "package.json": "7b7aa133957f9ddca7c915ca7f1496fec8317845fbe40cf0358cf8ce62bdf418",
+    "index.html": "ab0c871aca7ef641fd77889b1b455cf5a3343f892f40c46cce3fbadef328bba8",
+    "docs/DEVELOPMENT.md": "fd3bfb041e19aa6ac05119967b0ae5b42631df8c3e8c40997b8250951d23f937",
+    "docs/README.md": "016d3b7d1631d66e76e44c8715e50f3d6997fdf42b3fd389090244b3b0568073",
+    "scripts/verify-unemployed-season-evidence.mjs": "354e707349a926a3339095ed60d70a879c803cb840304e40fae0d17704905ef0",
+    "scripts/regression.mjs": "abe0992485fcbaa79da856af24266d163dc297f4a25eda67bac5415dfcb79aa4",
+    "scripts/verify-club-home-evidence.mjs": "4df1592dfdde7d41b3d306c52e14c4f7c8ba6755046fe3eeba6cd23f4a88eefd",
+    "scripts/verify-official-ui-evidence.mjs": "9b578c984e3c9a044e0273218ad6db9869a6a6bcaeeefdac8a98defeb5403807",
+    "scripts/verify-season-history-evidence.mjs": "c130d80d81eb6ebb40aad4c78e0f357cb1acd3062a5f097b221fa3fd98702398",
+    "scripts/club-home-acceptance.mjs": "c66b38c6736afe7fdd153e7458d1ce7d2a1cef2902a6a48a19644cfaa1bde109",
+    "scripts/verify-pending-handoff-evidence.mjs": "c29eca528a1563021562ef2c869f48e309bd440ea13d60cc17851404b64bd743",
+    "scripts/test-harness.mjs": "3a691761e936b5083ecbe5dda95e98b318aceb2490e61d630facdb3a9ec03170",
+    "scripts/verify-season-progress-evidence.mjs": "b01c5ee7c54ce94c99652257226b60d17923be09aec8f693530f962ed616e80c",
+    "scripts/pending-handoff-acceptance.mjs": "40695f01ce29346388b17d656ca9f191e83ca832fed0772a3852be9f10008acc",
+    "scripts/unemployed-season-ui-acceptance.mjs": "66b6356239f98a9f30803e8fc8777285cd42c140f9e08370831403a47e134fa0",
+    "scripts/ci-run.mjs": "838f63097029a627e228c17c3d67e406f9e35e5ebe3d87d3e9d64a9ba631e6e2",
+    "scripts/season-progress-acceptance.mjs": "eee8fced31bc23817aec60125dc9d2be9d09953b419df8bdf19df7a77d0231e6",
+    "scripts/season-history-compaction-acceptance.mjs": "a7be82359dfd001163f63ecd64182c7be108cb14cdfaaac1008bce3e0be8a158",
+    "scripts/unemployed-season-acceptance.mjs": "8d644baebdae6118f6a2edcb350f72aa5069feaed5b31dda77a2cd18d1d07b2e",
+    "scripts/official-ui-authority-acceptance.mjs": "573dcd604b438d92989896957cdab8d85269509fdf08eafe2820f53631cc42c8",
+    "scripts/artifact-modules.mjs": "d16106f4eee918208615cc8d6c1dd9929ec71bc0d3748bbc81e240208c84a48d",
+    ".github/workflows/ci.yml": "ee5bdaa5faeaf638b94de6d588bb76552d6bb2b77d85628da5b038bd638858c0"
+  },
+  "unchanged": {
+    "scripts/verify-club-home-evidence.mjs": "4df1592dfdde7d41b3d306c52e14c4f7c8ba6755046fe3eeba6cd23f4a88eefd",
+    "scripts/club-home-acceptance.mjs": "c66b38c6736afe7fdd153e7458d1ce7d2a1cef2902a6a48a19644cfaa1bde109",
+    "scripts/verify-pending-handoff-evidence.mjs": "c29eca528a1563021562ef2c869f48e309bd440ea13d60cc17851404b64bd743",
+    "scripts/pending-handoff-acceptance.mjs": "40695f01ce29346388b17d656ca9f191e83ca832fed0772a3852be9f10008acc",
+    "scripts/verify-official-ui-evidence.mjs": "9b578c984e3c9a044e0273218ad6db9869a6a6bcaeeefdac8a98defeb5403807",
+    "scripts/official-ui-authority-acceptance.mjs": "573dcd604b438d92989896957cdab8d85269509fdf08eafe2820f53631cc42c8",
+    "scripts/verify-season-progress-evidence.mjs": "b01c5ee7c54ce94c99652257226b60d17923be09aec8f693530f962ed616e80c",
+    "scripts/season-progress-acceptance.mjs": "eee8fced31bc23817aec60125dc9d2be9d09953b419df8bdf19df7a77d0231e6",
+    "scripts/verify-unemployed-season-evidence.mjs": "354e707349a926a3339095ed60d70a879c803cb840304e40fae0d17704905ef0",
+    "scripts/unemployed-season-acceptance.mjs": "8d644baebdae6118f6a2edcb350f72aa5069feaed5b31dda77a2cd18d1d07b2e",
+    "scripts/unemployed-season-ui-acceptance.mjs": "66b6356239f98a9f30803e8fc8777285cd42c140f9e08370831403a47e134fa0",
+    "scripts/verify-season-history-evidence.mjs": "c130d80d81eb6ebb40aad4c78e0f357cb1acd3062a5f097b221fa3fd98702398",
+    "scripts/season-history-compaction-acceptance.mjs": "a7be82359dfd001163f63ecd64182c7be108cb14cdfaaac1008bce3e0be8a158",
+    "scripts/regression.mjs": "abe0992485fcbaa79da856af24266d163dc297f4a25eda67bac5415dfcb79aa4",
+    "scripts/test-harness.mjs": "3a691761e936b5083ecbe5dda95e98b318aceb2490e61d630facdb3a9ec03170",
+    "scripts/ci-run.mjs": "838f63097029a627e228c17c3d67e406f9e35e5ebe3d87d3e9d64a9ba631e6e2",
+    "scripts/artifact-modules.mjs": "d16106f4eee918208615cc8d6c1dd9929ec71bc0d3748bbc81e240208c84a48d",
+    "package.json": "7b7aa133957f9ddca7c915ca7f1496fec8317845fbe40cf0358cf8ce62bdf418",
+    "index.html": "ab0c871aca7ef641fd77889b1b455cf5a3343f892f40c46cce3fbadef328bba8"
+  },
+  "engine": {
+    "champion-source.js": "29efbdabad4d152e351f0bfdfb025feb5283862ea3ae9caa4fcd2b1d0678bf1c",
+    "system-source.js": "0067a197dd54541fec3bc15a96fddec52ed19ea85eb43a6d2eb3cb5d7759d836",
+    "random.js": "86e30259e4926ea9428afa33d7cff6c51c20a9faa89e847f94aee450bd5b323c",
+    "match-adjudication.js": "63fb882340a949d5ca67bf07f2d7a90f8caab8d06af48da512d2911712ab3b4f",
+    "combat-resources.js": "c7c13b9cd5486b437b79e60c11d4a85655fad3e0c694e7991e911310fc9400cd",
+    "objective-awards.js": "e391263586777ea48ee6f8806e6458639304fd21914cea45de11f720355cd2ff",
+    "takedown-rewards.js": "59a545ebfae98986c7216cc980e351661f5a61dc5c1c313079b122a749733c74",
+    "macro-picks.js": "614b6e64901661b8841edbddd065d0e41999cdf4d56a73606fd64dc952b197e5",
+    "engine.js": "5afc093091fbf7e921aaead89ee0729b66c65628376e93445f51b25a011b6d49",
+    "draft.js": "b5edc5d6158f30f8fa7cb68803b60f84bf34e7c6d6fc80fa126dae985176e8ba",
+    "systems.js": "0da7844547f70eabdb0494451368a295f518ca0ce2ae4d0d77bebad5c3a8b996",
+    "item-purchases.js": "6fb206bdf0dfb208fea5dd6011b22ec8827ca138bac8bb08d367fe17805520cb",
+    "role-quests.js": "6f501d340094774120a4cc74dc4f0964581909716fc537d7a58b14252dcb66f1",
+    "role-quest-match.js": "29ce026186ea801419cb8a369548cef21a5c969f08b9f17b804726934892532b",
+    "data.js": "0eb2d3ac7321e3a728028c3a0799405f24f50b0a904b5e879f95c5f6d71662ff",
+    "champion-data.js": "aa2fd33316757c4ac8c86d5bcad27d7b8f5b8739dbd3e3e4eb0f696ae84e105b",
+    "system-data.js": "16ad1c37594d8aedb047a4707003a20bc66518f0448a7fae861805c925dd5146",
+    "champs2.js": "067ab9927d8b0672231c3226e00167f8e7cf582a41c20a70f18f185d512ad827",
+    "content-naming.js": "cfaccd15c05386a6061e455472dad7dcc01ee65a9753a2d764f2c888711dc20e",
+    "meta.js": "8ffd6ff85694453af40d49e61ba6770f054f40d4fbe35d3552aa11e408707c41",
+    "meta-side.js": "0b95bcc3e0cb1d26625074ab6589778ccea25e0615eb3a83aee2964f95fd0fea",
+    "meta-composition.js": "13bef6227a2ea4a5f83066ff8d4e9a5936063d8fa4e026dfdccaf76980715632",
+    "meta-draft-order.js": "f041f41b7ec21f25b1b6292add20e94aa64c2d602ebcef83f654ef67b4655b99",
+    "meta-tactics.js": "36ae3cf21f93d4b5578b54a9ca0b65509d718038f6a59b0c7275cd88b640c5b6",
+    "meta-practice.js": "6a415363a730a6f0f2854632103fbe0f338cda149136d90fd8409852ba1bc739",
+    "meta-analyst.js": "7f642d520efd77c9d6fb0284185b05f5c279840269269771e3b11c7813f8af28",
+    "meta-opponent.js": "0c2b5201e4cdc2aa4f9590e2c0e0a3abc4025a6821c325b7a728277e12bb7c9f",
+    "meta-opponent-draft.js": "5fd55c5c9adee4b5269edff550eea450dae4784b60db8664665ca6ce8409c6ef",
+    "patch.js": "0bab4d0582fa6da7b3bb582599ded9527cce9192dc9bedbb6e9006154094e235",
+    "patch-balance.js": "145097323c9fa2f6230c5135997c57920495fdcfa6ca2880739d757cbdbedbea",
+    "patch-content.js": "057c2abe7ca7cf195971fea24330055017851ca794aaf2d5eae4935fa4471ed9",
+    "first-selection.js": "0c788ea7cfab33266e7610f312888c13d881df63dd3966570451c71604239331",
+    "series.js": "67a33366c2b244a2ca7f315ee2f70420e6efd7243873403a59392d095a81d3ec",
+    "timezone-calendar.js": "4f9796a001fcd127e488f2d9424ee44bf9ee46ff694e1f0dd2f552b254ade645",
+    "broadcast-calendar.js": "61eec6c44669131a7068c2770799b7a71112a73c25760a00d88643bf450c45ab",
+    "competition.js": "44d0856b841357315c29c022df0a910817edb2d22e940b37bbca3df9d2774783",
+    "league-aggregation.js": "8a1f46972c06f92154f24fa366bbfcd026fe85be13350aa16393ba3dd1890a63",
+    "player.js": "e5b0470e4e4518b80261875b8d6f875c9b821cad6efd8f35e04b40e75336171b",
+    "development.js": "791297239cb94c28990a7373176aad3a122d10d69e64189f39125d6a2c7b1417",
+    "player-relations.js": "8400885087a034a244d03cd365803c01f01dc37c55b3686667e0bc367257e6bb",
+    "medical.js": "9c5d23dfb9cd7f0ebdef4dbc6af223e2a61beaf23f1cbc97be4f9ffa4647d11d",
+    "world.js": "41076b06ece7065b7ecc2518ed444ededfdf798b92b31da46964c89d78fea99a",
+    "calendar.js": "8736fbf8bdcad1fec98f869de9756c333e740f1d191e2322426e911599f21183",
+    "season.js": "fe129b44023f97257e6f07dae8b4efe97b6a4e1b3b588d4548713e83a247dfed",
+    "offseason.js": "ba7d5187746097a7ddf7869eadae0caea233e072f9b392bcd315c4f466cf458a",
+    "save.js": "92a476222e94e8658b108bbca94bce76b00462dc4d3a1688d1833a45c2c951a0",
+    "save-migration.js": "68ec50df15e1836c8277e0bfd674a8b7346e101f105134aa9ee030fb14d6e0af",
+    "roster.js": "efdedc445c4c865e67468518945de49f8a763f20adba047fc48757b6d567fb57",
+    "lineup.js": "a6371c9870a2e8440d49c36e1ee089cdd6b39d96c52e5cd9de72cc574025a20b",
+    "state-transaction.js": "6ad636cb64b328cb046e5d8dfe760eeb26c7655c34b0ff776e2102835fab03f1",
+    "state-rollback.js": "1591117e72458abd1ee6ad36b229f95fd70161fd60d5cf0f2cee6280b50831b4",
+    "squad-preparation.js": "24e7cfbdfd92d768eb80a799c3ce6f0a83258a00f059796bf7a8e28832c357ab",
+    "office.js": "080c5f43a4d3b7fe5bb758cd1c63ab10de74eb2d2e5b8d0edd488accea5dd494",
+    "office-consultation.js": "69791d5028a04c60b32dbeda5dfce6a270e5e728c9f0dd2e8d9fae563659f29c",
+    "local-policy.js": "655017910f1a52faca6e5cd18b3a6519cf1cff382c1e2ae96573c51255cfa507",
+    "office-international.js": "a02379c12f82679d696692181f43cc0c5c722e0512e9123592c54f75c57e4e9d",
+    "club-ownership.js": "739abb8e99f1c08900ec7e1568e31cdabdb42ac04a404fe5cf88fe28c5c05c66",
+    "club-license.js": "70252f7573fb4307db93a0921a98f758f2f4b9118c495c9d34acde81fbbd8317",
+    "region-continuity.js": "d5c1452d3671f93aad7904f02fcb1df71361ac5f40bb08fe8b0d2ffd01840d08",
+    "finance.js": "bdc04f13a16e99631548346c811a080dbef5c8a89db787ff003de5b32d03a07e",
+    "contract-market-pricing.js": "3bed2894690c6686e3387aa5643b0aabb60d65d446bdd8112d8919a9f7bb39ca",
+    "contracts.js": "6bd9c40df01bdbf65f8a944bea5cda5a739afa63b0227f8c200c3c2ebce3e403",
+    "contract-market-behavior.js": "f3d0b3899bb2d036835b5abb30cad05bbba89ee9cf0ec087e765088d359c8925",
+    "contract-transfer-market.js": "5adf767bfce1e07c635db473cc84729b2932c750f092078d0dcf2e38bb81aa77",
+    "scouting.js": "6f3868bb816888970554a0c874e89006e553e1d8ffd6f1f4568521d3c7e87a12",
+    "scouting-ai.js": "c654412ff8c1270a9d8fd5147de72634891fd19d6e5814ee7b367e6717519403",
+    "scouting-champions.js": "79ca9afa9204c2b2f0428008a47ae46786fda8730058e4c293bd0bb742a85d88",
+    "scouting-ai-ops.js": "f3c4f36441bde098f07db481f594fad7ce4805482f4549593687a8cea79626f9",
+    "scouting-ai-reassessment.js": "ba39dfd9133a1527bad3fef873d02916af7ff3909d8d3e970270da6c13c1226d",
+    "contract-negotiation.js": "16bfbbfa64277122bf1eeb5fc3c9085c21d6a0d61f7e8bc512cd2f8c0a834c89",
+    "transfer.js": "1b423b602349f05b55072abae65be66536fe42e55e207c6ef3b4846aeeba6c08",
+    "contract-window.js": "493055514c6becc347fc76033c2555b53f6b3364c26232ca4fdd562841fda377",
+    "contract-contact-ai.js": "211bac31fea0761f10ee0b1b904285ff650220e92abae8a079bdad89c1461f54",
+    "contract-agreement.js": "a9410870a8ba1c16f9d7645879986f89c6f30f819b466a443fd12c88d8b21d14",
+    "state-player-actions.js": "4c492d3c29507013d34994b941baefef1e99103713e37da2d551b5ff0b7ce9e3",
+    "player-representation.js": "94875b49ae3be90745083b8a1e4e0cb3b5a75149fce3768747b21db8407ad529",
+    "player-loans.js": "0c128ea349f7e34d8f42006478e8f29ac693497ee5428f07abe1f8f4838d83fd",
+    "transfer-payments.js": "816f57f1634ed3dd0bbc633e75de17db67ec6159dfc6e3f32492e3ad061b21d6",
+    "finance-estate.js": "8acfde7f0f0f9166a1c3570c4f845ef26ac92bc632589a080fdf89ec6bf1a661",
+    "transfer-market-rules.js": "11939f62331144bafee591cd74383d896b9a0e268c2e5e9bdb83dc2f234e72ab",
+    "loan-purchase.js": "23c486aae9fec0bd5bac47273b6b2bd2c594c94117d198209b04149605860c79",
+    "local-service.js": "794173227f82c8e1e43de27c638f0c71fff18caabb03756fe63d6686f09c673b",
+    "registration.js": "902e5fe018a0818ab48ea5a2802c3eaa9ebfdae968736f018b6a846e69393794",
+    "registration-match.js": "16c6d092a0e8008bb71f629e812f7e68f9b19a0d2d598dee8f6df049b909c20e",
+    "player-loan-market.js": "8713eb541e084696ceb516c2743f46185bacd6d135572fcc07cde011172c591d",
+    "club-closure.js": "5bf3cb8853aa5170e285ab3e21a973b55e8bd14e3a6248aa4249742254758b11",
+    "staff.js": "16484fd92f9a00db824a48196bb7a8a3c65f7f14a8767decfee12bd93f2c067a",
+    "staff-contracts.js": "291450863b03399e8d98e769224464e52620a2f91f89bbe1b4c28e84b46d8297",
+    "staff-registration.js": "dfc7ef5f5a707dc098212c8f4e4cc527c01580a5ff73521e135889fe14a40104",
+    "scrim-partner.js": "46b7a202e93b76ba4a19eda48530322b55a3c0acc871db2ab9b44e0b1eea1e8e",
+    "scrim.js": "0523a4580a4f0a68a12a6f096007d1d2c034cbc6b670d66ae6a1e6b6d7543e89",
+    "scrim-plans.js": "5346f414bcdc3180a34972c3e9881a19d419edcd80b653710455a6ecd0a470eb",
+    "practice-resources.js": "43e284428f47238b3360e91b7c1d4ae686a9e96e92f698e0ae01f67f1a4ef5d0",
+    "features.js": "d814dcc47f25a765bfcebe09e745264baa5944026f3e47ba3dde7724ed9996fd",
+    "role-conversion.js": "18708388bd2202835d8226c28be041fb255031282f03b20e2436c932cbfb951d",
+    "draft-analysis.js": "f68f88b632819d268183f2714b672e7845d51d2b13905eda51bdcd8af249fb9b",
+    "draft-preparation.js": "6e031fab26717ab1f7c2edd5f65e82f4c60d91b94d729fefadbcdeb7de5a50cc",
+    "draft-history.js": "3d8c8d0b38472fb7fca681d04d32647d1bc3ba16aa2090425db6a619cb44c5b3",
+    "match-history.js": "66f7f169ebefdfc09d535ee956fca7113fb0ce134b07ba1d0f89a443635b3c20",
+    "analysis-tiers.js": "98fd00a64e70477f6fded6bbc664850d8bc358a162ef0e73c564fdef1baa2b3a",
+    "career.js": "4d7031ea62165d1c2ed27842e11fcb104b8d8b9e9fbc8be80184df5210838b37"
+  },
+  "sources": {
+    "scripts/regression-runner.mjs": "394425e67f8e884fbbd8a66388c87358a76eccdc32321d3d774b3d251669d191",
+    "scripts/regression-runner.test.mjs": "355e78308946cf31e11fa19b98c0682d16a638ffa4932cfd08ae2f8c6caaa377",
+    "scripts/verify-regression-runner-evidence.mjs": "e67cb4349eea090f23e5693585b92062b6794e461db87d9367433103a4cc1bda",
+    ".github/workflows/ci.yml": "91ce631ebf2553507d3b1a0924a23ab677a123debfefcbfb390eb606190a11ad"
+  },
+  "workflow": {
+    "addedStep": "      - name: Regression runner isolation and failure handling\n        run: node --test scripts/regression-runner.test.mjs && node scripts/verify-regression-runner-evidence.mjs\n\n",
+    "originalCommand": "node scripts/ci-run.mjs regression -- npm run regression",
+    "currentCommand": "node scripts/ci-run.mjs regression -- node scripts/regression-runner.mjs"
+  },
+  "measurements": {
+    "baseline": {
+      "exit": 0,
+      "seconds": 371.5903986969497,
+      "revision": "2548780e3564dc85f7ac8a4feea90eb58b6f52eb",
+      "node": "22.23.3",
+      "overlap": false
+    },
+    "after": {
+      "exit": 0,
+      "seconds": 144.6785648720106,
+      "node": "22.23.3",
+      "overlap": false
+    },
+    "parity": {
+      "recordBytesExact": true,
+      "recordLinesBefore": 73,
+      "recordLinesAfter": 73,
+      "recordSha256": "32c7ec40320f81af244e3ffc7efa2a10362d0fcbe1677932ee2dba55431219c6",
+      "diagnosticsRetainedVerbatim": true,
+      "parityExclusions": [
+        "npm 명령 banner",
+        "새 runner 시간/요약",
+        "원본과 추가 stack frame 작업경로; 원문 로그에는 모두 보존"
+      ]
+    },
+    "reductionPercent": 61.06504221332072,
+    "priorAcceptedSeconds": 349.81850361824036,
+    "overlapExcludedSeconds": [
+      400.6647885480197,
+      193.79014834098052
+    ]
+  },
+  "parityLogs": [
+    "logs/baseline-full-regression-serial.log",
+    "logs/after-full-regression-serial.log"
+  ],
+  "archive": {
+    "format": "jsonl-chunks-v1",
+    "bytes": 34392251,
+    "sha256": "4130b57ff6af9eb5cd61b7e6ea86f721d0db43b8947f6d32bdfbe4e691fcb4fc",
+    "decodedSha256": "7053e11cd41d57a9e1fcbfaf9de6469e8883652eff8768d7a079a26ff2e5486a",
+    "rows": 72,
+    "files": [
+      {
+        "path": "original/.github/workflows/ci.yml",
+        "bytes": 15320,
+        "sha256": "ee5bdaa5faeaf638b94de6d588bb76552d6bb2b77d85628da5b038bd638858c0",
+        "chunks": 1
+      },
+      {
+        "path": "original/docs/DEVELOPMENT.md",
+        "bytes": 623606,
+        "sha256": "fd3bfb041e19aa6ac05119967b0ae5b42631df8c3e8c40997b8250951d23f937",
+        "chunks": 1
+      },
+      {
+        "path": "original/docs/README.md",
+        "bytes": 13395,
+        "sha256": "016d3b7d1631d66e76e44c8715e50f3d6997fdf42b3fd389090244b3b0568073",
+        "chunks": 1
+      },
+      {
+        "path": "original/index.html",
+        "bytes": 1992247,
+        "sha256": "ab0c871aca7ef641fd77889b1b455cf5a3343f892f40c46cce3fbadef328bba8",
+        "chunks": 1
+      },
+      {
+        "path": "original/package.json",
+        "bytes": 8122,
+        "sha256": "7b7aa133957f9ddca7c915ca7f1496fec8317845fbe40cf0358cf8ce62bdf418",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/artifact-modules.mjs",
+        "bytes": 3783,
+        "sha256": "d16106f4eee918208615cc8d6c1dd9929ec71bc0d3748bbc81e240208c84a48d",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/ci-run.mjs",
+        "bytes": 5382,
+        "sha256": "838f63097029a627e228c17c3d67e406f9e35e5ebe3d87d3e9d64a9ba631e6e2",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/club-home-acceptance.mjs",
+        "bytes": 3641,
+        "sha256": "c66b38c6736afe7fdd153e7458d1ce7d2a1cef2902a6a48a19644cfaa1bde109",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/official-ui-authority-acceptance.mjs",
+        "bytes": 12967,
+        "sha256": "573dcd604b438d92989896957cdab8d85269509fdf08eafe2820f53631cc42c8",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/pending-handoff-acceptance.mjs",
+        "bytes": 10831,
+        "sha256": "40695f01ce29346388b17d656ca9f191e83ca832fed0772a3852be9f10008acc",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/regression.mjs",
+        "bytes": 65758,
+        "sha256": "abe0992485fcbaa79da856af24266d163dc297f4a25eda67bac5415dfcb79aa4",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/season-history-compaction-acceptance.mjs",
+        "bytes": 10839,
+        "sha256": "a7be82359dfd001163f63ecd64182c7be108cb14cdfaaac1008bce3e0be8a158",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/season-progress-acceptance.mjs",
+        "bytes": 9867,
+        "sha256": "eee8fced31bc23817aec60125dc9d2be9d09953b419df8bdf19df7a77d0231e6",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/test-harness.mjs",
+        "bytes": 2402,
+        "sha256": "3a691761e936b5083ecbe5dda95e98b318aceb2490e61d630facdb3a9ec03170",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/unemployed-season-acceptance.mjs",
+        "bytes": 4147,
+        "sha256": "8d644baebdae6118f6a2edcb350f72aa5069feaed5b31dda77a2cd18d1d07b2e",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/unemployed-season-ui-acceptance.mjs",
+        "bytes": 7533,
+        "sha256": "66b6356239f98a9f30803e8fc8777285cd42c140f9e08370831403a47e134fa0",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/verify-club-home-evidence.mjs",
+        "bytes": 437,
+        "sha256": "4df1592dfdde7d41b3d306c52e14c4f7c8ba6755046fe3eeba6cd23f4a88eefd",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/verify-official-ui-evidence.mjs",
+        "bytes": 801,
+        "sha256": "9b578c984e3c9a044e0273218ad6db9869a6a6bcaeeefdac8a98defeb5403807",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/verify-pending-handoff-evidence.mjs",
+        "bytes": 605,
+        "sha256": "c29eca528a1563021562ef2c869f48e309bd440ea13d60cc17851404b64bd743",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/verify-season-history-evidence.mjs",
+        "bytes": 1817,
+        "sha256": "c130d80d81eb6ebb40aad4c78e0f357cb1acd3062a5f097b221fa3fd98702398",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/verify-season-progress-evidence.mjs",
+        "bytes": 827,
+        "sha256": "b01c5ee7c54ce94c99652257226b60d17923be09aec8f693530f962ed616e80c",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/verify-unemployed-season-evidence.mjs",
+        "bytes": 1818,
+        "sha256": "354e707349a926a3339095ed60d70a879c803cb840304e40fae0d17704905ef0",
+        "chunks": 1
+      },
+      {
+        "path": "logs/baseline-full-regression-serial.log",
+        "bytes": 72071198,
+        "sha256": "4ea59f832669362ee166778c96cd0562b8f30f561f904cee913bb16761ab8a16",
+        "chunks": 18
+      },
+      {
+        "path": "logs/baseline-full-regression-serial.json",
+        "bytes": 134,
+        "sha256": "5051fa911f1b02f21587036bd9b2f9415ee2289962b928e4510fb360d792f47b",
+        "chunks": 1
+      },
+      {
+        "path": "logs/after-full-regression-serial.log",
+        "bytes": 72072439,
+        "sha256": "8a9991b2a20b25eff38c424e8d19487ab0a28d4e36a70059456e0106221d569c",
+        "chunks": 18
+      },
+      {
+        "path": "logs/after-full-regression-serial.json",
+        "bytes": 78,
+        "sha256": "c82849cdd311e539ec105efc6b0118277fc65388f38026762962ad30a2a0cee0",
+        "chunks": 1
+      },
+      {
+        "path": "logs/runner-focused-tests-final.log",
+        "bytes": 1383,
+        "sha256": "0272d12a4c40470c346a8a275ac0e6993414c5f4606245b08da0b9f3a6f4b4c0",
+        "chunks": 1
+      },
+      {
+        "path": "logs/parity-serial.json",
+        "bytes": 377,
+        "sha256": "dc93c25aedd3a3cf5c6c2bee461f419938aab3f300ac798907bb34af2c3b3b5e",
+        "chunks": 1
+      },
+      {
+        "path": "logs/measurement-limits.json",
+        "bytes": 853,
+        "sha256": "3202d26e12a0724ad92d525c247af607185765f9379372e71dc5a0306d448606",
+        "chunks": 1
+      },
+      {
+        "path": "logs/parity-first.json",
+        "bytes": 3095,
+        "sha256": "1579de6621104d8ad3fcf25bc6510fbd9c26a4839baca3bec1e0818c414ff74f",
+        "chunks": 1
+      },
+      {
+        "path": "logs/release-blocker-public-facts.json",
+        "bytes": 617,
+        "sha256": "29c9d963018a963cae67f9472fd0e91447d8fa5c94e7fcc2225c9ad2beba0296",
+        "chunks": 1
+      },
+      {
+        "path": "profile/baseline-profile-source-verification.json",
+        "bytes": 213,
+        "sha256": "133d4c1e76a3f74c149af5f39a460bedeb80c489a087f97713f5fba93c8defbd",
+        "chunks": 1
+      },
+      {
+        "path": "profile/shared-profile-readonly.json",
+        "bytes": 41,
+        "sha256": "226e4b094bf13c566f3f9ef929643c66de1bfc8c69b285540e7b7e3868d30369",
+        "chunks": 1
+      },
+      {
+        "path": "profile/shared-profile-readonly.log",
+        "bytes": 458,
+        "sha256": "0f3ae6eb70c647e978e804a41f1e9038a7d3daa9c3e5e108ee36528f7ccbcdb4",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/regression-runner.mjs",
+        "bytes": 3370,
+        "sha256": "394425e67f8e884fbbd8a66388c87358a76eccdc32321d3d774b3d251669d191",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/regression-runner.test.mjs",
+        "bytes": 3384,
+        "sha256": "355e78308946cf31e11fa19b98c0682d16a638ffa4932cfd08ae2f8c6caaa377",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/verify-regression-runner-evidence.mjs",
+        "bytes": 4689,
+        "sha256": "e67cb4349eea090f23e5693585b92062b6794e461db87d9367433103a4cc1bda",
+        "chunks": 1
+      },
+      {
+        "path": "current/.github/workflows/ci.yml",
+        "bytes": 15514,
+        "sha256": "91ce631ebf2553507d3b1a0924a23ab677a123debfefcbfb390eb606190a11ad",
+        "chunks": 1
+      }
+    ],
+    "parts": [
+      {
+        "path": "docs/evidence/regression-runner-2026-10-09.raw.part-01.json.gz",
+        "bytes": 12582912,
+        "sha256": "f8e5e4bb333699ee0fe58e77e8c9a6b258ff41b81fdac491946eee1c718596f9"
+      },
+      {
+        "path": "docs/evidence/regression-runner-2026-10-09.raw.part-02.json.gz",
+        "bytes": 12582912,
+        "sha256": "2a3af4f41e1fb209fdba3ac0658dbd806ef654466eaee34b0fffb8208aba0917"
+      },
+      {
+        "path": "docs/evidence/regression-runner-2026-10-09.raw.part-03.json.gz",
+        "bytes": 9226427,
+        "sha256": "987f2fc90f7b7bcfe20594dd31fd9906d38b7a470a77610ee23a9c2c8f07f82c"
+      }
+    ]
+  },
+  "limits": [
+    "최종 CI/main/Pages 확인 전 출시 완료 아님",
+    "취소 원인 timeout 확정 아님",
+    "전체 scope 미완료·운영 HTTP/native214 성공 미확인",
+    "PR209 private payload와 자동화 원문 제외",
+    "일부 채팅 stdout 잘림·모든 중간 source 개별 보관 미확인",
+    "겹친 실행 시간은 속도 비교 제외; 해당 원문은 private 경로 유지",
+    "실제 가상 fixture 결과 비교이며 프로 보정·실기기 성능 보장 아님"
+  ]
+}
