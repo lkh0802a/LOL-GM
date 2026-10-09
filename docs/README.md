@@ -119,3 +119,5 @@ Use [numeric stages 1–13 and dotted work units](DEVELOPMENT.md#unified-numeric
 - 운영 홈 첫 UI 재설계 경계·수동 행동/복귀·검증/미완료: [DEVELOPMENT 12.4.1](DEVELOPMENT.md).
 
 - 회귀 검증 반복 비용·원래 검사/새 VM 보존·실패와 출시 경계: DEVELOPMENT11.5.1을 따른다.
+
+선수단 공개 조회·명단 우선 첫 경계의 검토 자료: [12.4.2.1 증거](evidence/squad-overview-2026-10-09.json). 로컬 수용과 exact-head CI/게시 완료를 구분하며, 필터·페이지·표시열과 전체 재설계는 미완료입니다.

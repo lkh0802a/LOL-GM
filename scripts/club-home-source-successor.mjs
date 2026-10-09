@@ -1,3 +1,4 @@
+import {squadOverviewSourceHash} from './squad-overview-source-successor.mjs';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {createGunzip} from 'node:zlib';
@@ -23,13 +24,13 @@ export async function verifyClubHomeSources(){
  assert.equal(pending.length,0);assert.equal(count,e.archive.rows);assert.equal(rawHash.digest('hex'),e.archive.decodedSha256);
  for(const f of e.archive.files){const actual=files.get(f.path);assert(actual,f.path+' complete raw retained');assert.equal(actual.next,f.chunks);assert.equal(actual.bytes,f.bytes);assert.equal(actual.hash.digest('hex'),f.sha256)}assert.equal(files.size,e.archive.files.length);
  for(const p of reviewed){assert(rows.some(r=>r.path==='original/'+p&&r.sha256===e.originals[p]),p+' exact main original');assert(e.sources[p],p+' explicit successor')}
- for(const [p,h] of Object.entries(e.sources))assert.equal(sha(await readFile(new URL(p,root))),h,p+' reviewed current bytes');
+ for(const [p,h] of Object.entries(e.sources))assert.equal(await squadOverviewSourceHash(p),h,p+' reviewed current bytes');
  for(const d of e.dependencies)assert.equal(sha(await readFile(new URL(d.path,root))),d.sha256,d.path+' prior evidence unchanged');
  assert((await readFile(new URL('docs/DEVELOPMENT.md',root))).includes(Buffer.from(rows.find(r=>r.path==='original/docs/DEVELOPMENT.md').base64,'base64')));
  for(const [f,h] of Object.entries(e.engine))assert.equal(sha(await readFile(new URL('src/artifact/'+f,root))),h,f+' current engine bytes');
  evidence=e;return e;
 }
 export async function clubHomeSourceHash(path){
- const actual=sha(await readFile(new URL(path,root)));if(!reviewed.has(path))return actual;
+ const actual=await squadOverviewSourceHash(path);if(!reviewed.has(path))return actual;
  const e=await verifyClubHomeSources();return e.originals[path];
 }
