@@ -1,3 +1,4 @@
+import {officialUiSourceHash} from './official-ui-source-successor.mjs';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {gunzipSync} from 'node:zlib';
@@ -16,11 +17,11 @@ export async function verifyProgressSources(){
   assert(rows.some(r=>r.path==='original/'+p&&r.sha256===e.originals[p]),p+' exact validated main original retained');
   assert(rows.some(r=>r.path==='current/'+p&&r.sha256===e.sources[p]),p+' reviewed source retained');
  }
- for(const [p,h] of Object.entries(e.sources))assert.equal(sha(await readFile(new URL(p,root))),h,p+' exact reviewed progress source');
+ for(const [p,h] of Object.entries(e.sources))assert.equal(await officialUiSourceHash(p),h,p+' exact reviewed progress source');
  assert((await readFile(new URL('docs/DEVELOPMENT.md',root))).includes(Buffer.from(rows.find(r=>r.path==='original/docs/DEVELOPMENT.md').base64,'base64')));
  evidence=e;return e;
 }
 export async function progressSourceHash(path){
- const actual=sha(await readFile(new URL(path,root)));if(!reviewed.has(path))return actual;
+ const actual=await officialUiSourceHash(path);if(!reviewed.has(path))return actual;
  const e=await verifyProgressSources();return e.originals[path];
 }

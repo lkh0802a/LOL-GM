@@ -1,3 +1,4 @@
+import {officialUiSourceHash} from './official-ui-source-successor.mjs';
 import {progressSourceHash} from './season-progress-source-successor.mjs';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
@@ -20,6 +21,6 @@ async function successor(){
  evidence=e;return e;
 }
 export async function seasonUiSourceHash(path){
- const actual=sha(await readFile(new URL(path,root)));if(!reviewed.has(path))return actual;
+ const actual=await officialUiSourceHash(path);if(!reviewed.has(path))return actual;
  const e=await successor();return e.originals[path];
 }

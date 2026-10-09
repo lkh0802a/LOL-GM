@@ -110,3 +110,5 @@ Use [numeric stages 1–13 and dotted work units](DEVELOPMENT.md#unified-numeric
 12.5.4.8.4 무소속 공개 시즌 화면·기존 수동 선택/취소·실제 오프시즌 진행의 수용/원본 실패와 정확한 다음 경계는 DEVELOPMENT 및 [증거](evidence/unemployed-season-context-2026-10-08.json)를 따른다. 전체 승인 범위 완료가 아니며 PR209 private 원문 공개 전송 승인은 미해결이다.
 
 - [날짜 진행 권한·수동 중단 증거](evidence/season-progress-authority-2026-10-09.json):12.5.4.8.5 실제 held continuation·완료 일일/공식 기록·저장/키보드 복귀의 집중 수용. 전체 게임 구현 완료가 아니다.
+
+- [12.5.4.8.6 공식 경기 준비 권한·중단/취소·수동 재개](evidence/official-ui-authority-2026-10-09.json): 실제 frame/선택/밴픽/공식 nexus·저장 수용과 원본 실패를 연결한다. exact PR/main 출시 게이트와 전체 승인 미완료는 DEVELOPMENT를 따른다.
