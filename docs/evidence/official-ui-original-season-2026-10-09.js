@@ -160,7 +160,14 @@ function bindSeason(){
     return;
   }
   if(w.pendingOfficial&&w.pendingOfficial.queue?.length){
-    const renderId=UI_RENDER_ID;officialUiBindPending(()=>UI_RENDER_ID!==renderId); return;
+    document.querySelectorAll('.controls button').forEach(b=>b.disabled=true);
+    const db=DB,renderId=UI_RENDER_ID;
+    requestAnimationFrame(()=>{
+      if(db!==DB||VIEW!=='season'||UI_RENDER_ID!==renderId||UI_OVERLAY||
+        !db.world?.pendingOfficial?.queue?.length)return;
+      openPendingOfficialDraft(db);
+    });
+    return;
   }
   const run=(stop)=>{
     if(!current())return;

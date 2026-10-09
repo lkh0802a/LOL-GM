@@ -19,7 +19,7 @@ function draftUiPreparationContent(){
     <small>후보를 누르면 기존 상세 분석을 엽니다. 픽 확정을 눌러야 선택이 반영됩니다. 상대 비공개 숙련·전술은 사용하지 않습니다.</small></details>`;
 }
 function draftUiPreparationSelect(champ){
-  if(!DRAFT_UI)return false;
+  if(!DRAFT_UI||(DRAFT_UI.officialContext&&!draftUiActionCurrent(DRAFT_UI,UI_OVERLAY)))return false;
   const s=DRAFT_UI.state,report=draftPreparationReport(s,DRAFT_UI.playerSide,{role:DRAFT_UI.filter==='ALL'?null:DRAFT_UI.filter});
   if(report.reason||!report.rows.some(x=>x.champ===champ)||!draftValidateChoice(s,{champ,side:DRAFT_UI.playerSide}).ok)return false;
   DRAFT_UI.selected=champ;DRAFT_UI.infoTab='analysis';draftUiRender();
@@ -27,6 +27,7 @@ function draftUiPreparationSelect(champ){
   return true;
 }
 function draftUiPreparationBind(){
-  const details=$('#du-preparation-details');if(details)details.ontoggle=()=>{if(DRAFT_UI)DRAFT_UI.preparationOpen=details.open};
-  document.querySelectorAll('[data-du-preparation]').forEach(b=>b.onclick=()=>draftUiPreparationSelect(b.dataset.duPreparation));
+  const active=DRAFT_UI,overlay=UI_OVERLAY;
+  const details=$('#du-preparation-details');if(details)details.ontoggle=()=>{if(draftUiActionCurrent(active,overlay,details))DRAFT_UI.preparationOpen=details.open};
+  document.querySelectorAll('[data-du-preparation]').forEach(b=>b.onclick=()=>{if(draftUiActionCurrent(active,overlay,b))draftUiPreparationSelect(b.dataset.duPreparation)});
 }

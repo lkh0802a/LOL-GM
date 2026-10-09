@@ -144,6 +144,7 @@ export const UI_MODULES = [
   'ui-squad-preparation.js',
   'ui-scrim-plans.js',
   'ui-registration.js',
+  'ui-official-context.js',
   'ui-draft.js',
   'ui-draft-analysis.js',
   'ui-draft-preparation.js',
