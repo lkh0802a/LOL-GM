@@ -171,6 +171,8 @@ textarea{width:100%;height:60vh;font:12px/1.45 ui-monospace,Menlo,Consolas,monos
 .champ{text-align:right;display:flex;flex-direction:column}.champ span{font-size:12px;color:var(--mut)}.champ b{font:400 26px "Black Han Sans",sans-serif;color:var(--brass)}.champ small{color:var(--mut)}
 .controls button:disabled{opacity:.5;cursor:default}
 .tabs{margin:0 0 14px;width:max-content;max-width:100%;overflow-x:auto}
+.season-tabs{width:100%;flex-wrap:nowrap}.season-tabs button{flex:0 0 auto;white-space:nowrap;min-height:44px}
+.club-home-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:12px;align-items:start}.club-home-actions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}.club-home-details{border:1px solid var(--line);border-radius:10px;padding:12px;margin:12px 0}.club-home-details>summary{cursor:pointer;font-weight:700;min-height:32px}.club-home-details[open]>summary{margin-bottom:12px}
 .stand tr.mine,table tr.mine{background:var(--blue-t)}
 .stand tr.cut td{border-bottom:2px solid var(--brass)}
 .form{display:flex;gap:3px}.form i{font-style:normal;font-size:11px;width:20px;text-align:center;border-radius:3px;padding:1px 0;background:var(--line);color:var(--mut)}.form i.W{background:var(--hi);color:var(--surf)}
@@ -12387,7 +12389,7 @@ function bindClubActions(){
     const attr={entry:'briefEntry',medical:'briefMedical',contract:'briefContract',neg:'briefNeg',schedule:'briefSchedule'}[row.kind];
     const name=attr.replace(/[A-Z]/g,x=>'-'+x.toLowerCase());
     const target=[...document.querySelectorAll('[data-'+name+']')].find(x=>x.dataset[attr]===row.id);
-    if(target&&!target.disabled)target.click();
+    if(target&&!target.disabled){clubHomeRevealTarget(target);target.click()}
   });
 }
 
@@ -12780,8 +12782,8 @@ function renderClubBriefing(){
   const ctx=clubBriefContext();if(!ctx){CLUB_ENTRY_DRAFT=null;return '';}
   const state=clubBriefState(),nx=clubBriefFixture(DB,ctx),ns=clubBriefNegotiations(DB,ctx),cw=ctx.w.contractWindow;
   return `<section id="club-briefing"><h3 tabindex="-1">구단 운영 브리핑</h3><p class="hint">${esc(ctx.t.name)} · 기준일 ${esc(DB.worldDate||'날짜 미정')} · ${ctx.w.manage==='manual'?'직접 운영':'현재 AI 위임 설정'} · 확정된 일정과 진행 중인 내 구단 협상만 표시합니다.</p><p role="status">${esc(state.message)}</p>
-    ${renderClubActions()}${nx?`<div class="cfgcard"><h4>다음 공식 경기</h4><p>${esc(DB.competitions[nx.s.comp].name)} · ${esc(nx.d.label||'')} · Bo${nx.m.bo}</p><p>${esc(nx.d.date)} UTC · ${esc(fixtureTimeInfo(nx.m))} · ${esc(DB.teams[nx.m.a].name)} vs ${esc(DB.teams[nx.m.b].name)}</p><div class="controls"><button data-brief-schedule="${esc(nx.s.key)}">해당 일정 확인</button><button data-brief-progress="smine">내 경기까지 진행</button></div></div>`:'<p class="hint">현재 생성된 일정에 남은 내 공식 경기가 없습니다. 아직 생성되지 않은 대진은 예측하지 않습니다.</p>'}
-    ${renderClubEligibility()}${renderClubFinanceBriefing()}${renderClubStaffBriefing()}${renderClubMedicalBriefing()}${renderClubContractBriefing()}${renderClubPracticeBriefing()}${renderClubScrimBriefing()}${renderClubRecruitBriefing()}
+    <div class="club-home-actions"><button data-club-home-squad>내 선수단 열기</button></div><div class="club-home-grid">${renderClubActions()}${nx?`<div class="cfgcard"><h4>다음 공식 경기</h4><p>${esc(DB.competitions[nx.s.comp].name)} · ${esc(nx.d.label||'')} · Bo${nx.m.bo}</p><p>${esc(nx.d.date)} UTC · ${esc(fixtureTimeInfo(nx.m))} · ${esc(DB.teams[nx.m.a].name)} vs ${esc(DB.teams[nx.m.b].name)}</p><div class="controls"><button data-brief-schedule="${esc(nx.s.key)}">해당 일정 확인</button><button data-brief-progress="smine">내 경기까지 진행</button></div></div>`:'<p class="hint">현재 생성된 일정에 남은 내 공식 경기가 없습니다. 아직 생성되지 않은 대진은 예측하지 않습니다.</p>'}</div>
+    ${renderClubHomeDetails(`${renderClubEligibility()}${renderClubFinanceBriefing()}${renderClubStaffBriefing()}${renderClubMedicalBriefing()}${renderClubContractBriefing()}${renderClubPracticeBriefing()}${renderClubScrimBriefing()}${renderClubRecruitBriefing()}`)}
     ${SSET.tab==='sched'?'<button class="ghost" data-brief-return>브리핑으로 돌아오기</button>':''}
     ${ctx.w.phase==='season'?'<div class="controls"><button data-brief-progress="sday">하루 진행</button></div>':''}
     ${cw&&ctx.w.phase==='offseason'?`<p class="hint">현재 계약 창구 · ${cw.stage==='exclusive'?'원소속 독점 협상':'FA 시장'}${cw.exclusiveThrough?' · 독점 종료 '+esc(cw.exclusiveThrough):''}${cw.outsideContactDate?' · 타 구단 접촉 '+esc(cw.outsideContactDate):''}. 개별 협상 만료일로 해석하지 않습니다.</p>`:''}
@@ -12805,7 +12807,7 @@ function openClubBriefNegotiation(nid,returnContractTeam=null){
 }
 function bindClubBriefing(){
   const ctx=clubBriefContext();if(!ctx)return;
-  bindClubActions();bindClubEligibility();bindClubFinanceBriefing();bindClubStaffBriefing();bindClubMedicalBriefing();bindClubContractBriefing();bindClubPracticeBriefing();bindClubScrimBriefing();bindClubRecruitBriefing();
+  bindClubHome();bindClubActions();bindClubEligibility();bindClubFinanceBriefing();bindClubStaffBriefing();bindClubMedicalBriefing();bindClubContractBriefing();bindClubPracticeBriefing();bindClubScrimBriefing();bindClubRecruitBriefing();
   const db=DB,w=ctx.w,slot=SLOT,render=UI_RENDER_ID,date=db.worldDate,phase=w.phase,nx=clubBriefFixture(db),current=()=>clubBriefCurrent(db,w,slot,render,ctx.t.id)&&db.worldDate===date&&w.phase===phase&&!UI_OVERLAY;
   document.querySelectorAll('[data-brief-neg]').forEach(b=>b.onclick=()=>{if(current())openClubBriefNegotiation(b.dataset.briefNeg)});
   document.querySelectorAll('[data-brief-schedule]').forEach(b=>b.onclick=()=>{if(!current()||clubBriefFixture(db)?.m.id!==nx?.m.id)return;SSET.view=b.dataset.briefSchedule;SSET.tab='sched';navKeepScroll();document.querySelector('#stab')?.setAttribute?.('tabindex','-1');document.querySelector('#stab')?.focus?.()});
@@ -12817,6 +12819,35 @@ function clubBriefDraft(nid,root,values=null){
   const neg=initialNegotiationDraft(nid,values?.neg||null,root),fees={};
   for(const key of ['fee','upfront','kind','threshold','bonus']){const el=root.querySelector(`[data-${key==='fee'?'neg-fee':'fee-'+key}="${nid}"]`);if(el){if(values?.fees&&key in values.fees)el.value=values.fees[key];fees[key]=el.value}}
   return {neg,fees};
+}
+
+/* ==== FILE: ui-club-home.js ==== */
+// Transient presentation context; all domain actions keep their existing writers.
+let CLUB_HOME_UI=null;
+function clubHomeUiState(){
+  const c=clubBriefContext();if(!c)return null;
+  if(!CLUB_HOME_UI||CLUB_HOME_UI.db!==DB||CLUB_HOME_UI.w!==DB.world||CLUB_HOME_UI.slot!==SLOT||CLUB_HOME_UI.manager!==DB.manager||CLUB_HOME_UI.team!==c.t||CLUB_HOME_UI.date!==DB.worldDate)
+    CLUB_HOME_UI={db:DB,w:DB.world,slot:SLOT,manager:DB.manager,team:c.t,date:DB.worldDate,open:false};
+  return CLUB_HOME_UI;
+}
+function renderClubHomeDetails(html){
+  const state=clubHomeUiState();
+  return `<details class="club-home-details" data-club-home-detail${state?.open?' open':''}><summary>구단 상세 · 등록·재정·직원·의료·계약·훈련·영입</summary>${html}</details>`;
+}
+function renderClubHomeSquadControls(options){return `<section class="controls">${renderClubHomeReturn()}<label>팀<select id="sq">${options}</select></label></section>`}
+function renderClubHomeReturn(){return clubBriefContext()?'<button class="ghost" data-club-home-return>운영 홈으로</button>':''}
+function clubHomeRevealTarget(target){
+  const detail=target?.closest?.('[data-club-home-detail]');if(!detail)return;
+  detail.open=true;const state=clubHomeUiState();if(state)state.open=true;
+}
+function bindClubHome(){
+  document.querySelectorAll('.season-tabs [data-st]').forEach(b=>b.onfocus=()=>b.scrollIntoView?.({block:'nearest',inline:'nearest'}));
+  const c=clubBriefContext();if(!c)return;
+  const db=DB,w=db.world,manager=db.manager,slot=SLOT,view=VIEW,render=UI_RENDER_ID,date=db.worldDate,team=c.t,state=clubHomeUiState(),phase=w.phase,mode=w.manage,year=db.year,pending=JSON.stringify(w.pendingOfficial);
+  const current=()=>DB===db&&DB.world===w&&DB.manager===manager&&SLOT===slot&&!SLOT_SWITCHING&&VIEW===view&&UI_RENDER_ID===render&&db.worldDate===date&&db.year===year&&w.phase===phase&&w.manage===mode&&JSON.stringify(w.pendingOfficial)===pending&&managedTeam(db)===team&&team.active!==false&&!w.fired&&!UI_OVERLAY;
+  document.querySelectorAll('[data-club-home-detail]').forEach(d=>d.ontoggle=()=>{if(current()&&CLUB_HOME_UI===state)state.open=d.open});
+  const squad=document.querySelector('[data-club-home-squad]');if(squad)squad.onclick=()=>{if(!current())return;SQUAD=team.id;navigateTo('squad')};
+  const back=document.querySelector('[data-club-home-return]');if(back)back.onclick=()=>{if(current())navigateTo('season')};
 }
 
 /* ==== FILE: ui-official-edit.js ==== */
@@ -14340,7 +14371,7 @@ function viewSquad(){
     roster=edit?Object.entries(edit.rosterPlan.assignments).filter(([,dst])=>dst===t.id).map(([pid])=>pid):t.roster,
     ps=roster.map(id=>DB.players[id]).filter(Boolean).sort((a,b)=>ROLES.indexOf(a.role)-ROLES.indexOf(b.role)||obsOvr(observationDb,b)-obsOvr(observationDb,a)||a.id.localeCompare(b.id)),
     kAvg=Math.round(avg(ps.map(p=>knowledge(observationDb,p))));
-  return `<section class="controls"><label>팀<select id="sq">${teamOpts(SQUAD)}</select></label></section>
+  return `${renderClubHomeSquadControls(teamOpts(SQUAD))}
   ${MSG?`<section role="status"><p>${esc(MSG)}</p></section>`:''}<section class="teamhead"><h2>${esc(t.name)}</h2><p>${t.formerNames&&t.formerNames.length?'전신 '+t.formerNames.map(esc).join(', ')+' · ':''}${esc(DB.regions[t.region].leagueName)} · 감독 ${mineOrg?'플레이어':'구단 AI'} · 운영 철학 ${PHIL_KO[t.philosophy]||'균형'} · 팬덤 ${t.fans??'—'}${mineOrg?' · 팀 호흡 '+Math.round(teamSynergy(t)):''}${t.goal?` · 구단주 목표: ${GOAL_KO[t.goal]}`:''}</p><p class="hint">전문 스태프가 밴픽·분석·육성·회복을 지원하며, 관리 구단의 최종 스포츠 결정은 플레이어가 내립니다.</p></section>
   ${officialRegistrationPanel(t)}
   ${mineOrg?squadPreparationTactics(t,edit):squadPublicPreparation(t)}
@@ -14356,7 +14387,7 @@ function viewSquad(){
   <div id="pdetail">${OPEN_P&&DB.players[OPEN_P]&&(edit?edit.rosterPlan.assignments[OPEN_P]===SQUAD:DB.players[OPEN_P].team===SQUAD)?(mineOrg?playerDetail(DB.players[OPEN_P]):squadObservedDetail(DB.players[OPEN_P],observationDb)):''}</div>${mineOrg?scoutingSearchBlock():''}`;
 }
 function bindSquad(){
-  bindScrimPlans();
+  bindClubHome();bindScrimPlans();
   bindSquadPracticeControls();bindSquadDraftControls();
   $('#sq').onchange=e=>{SQUAD=e.target.value;OPEN_P=null;nav()};
   bindMedicalPlanControls();
@@ -15735,14 +15766,14 @@ function viewSeason(){
   return `<section class="seasonhead">
     <div><h2>${w.year} 시즌</h2><p>${T?esc(T.name):managedTeamId(DB)?'관리 구단 확인 필요':'무소속 감독'} · ${seasonManagedRegion()?esc(DB.regions[T.region].leagueName):'지역 정보 없음'}${lgS?' '+esc(lgS.label):''} ${mine&&(mine.w+mine.l)?`${rank}위 (${mine.w}승 ${mine.l}패)`:''} · ${esc(phaseText(w))}</p></div>${right}
   </section>
-  ${T?renderClubBriefing():''}
   ${SAVEFAIL?'<p class="warn">브라우저 저장 공간이 부족해 진행 상황을 저장하지 못했습니다. 데이터 탭에서 JSON을 복사해 두세요.</p>':''}
   <section class="controls">${controlsFor(w)}<span id="sprog" class="hint" role="status">${esc(seasonProgressNotice())}</span></section>
+  ${T?renderClubBriefing():''}
   ${T&&w.phase==='market'&&w.manage==='manual'?renderMarket():''}
   ${T&&w.phase==='offseason'&&w.manage==='manual'&&w.contractWindow?renderContractWindow():''}
   ${(w.phase==='preseason'||w.phase==='market')&&w.report?renderReport(w.report):''}
   ${chapters(w)}
-  <div class="seg tabs">${[['table','순위'],['sched','일정·결과'],['bracket','토너먼트'],['stats','기록'],['hist','세계·역대']].map(([k,l])=>`<button data-st="${k}" aria-pressed="${SSET.tab===k}">${l}</button>`).join('')}</div>
+  <div class="seg tabs season-tabs" role="group" aria-label="대회 정보 선택">${[['table','순위'],['sched','일정·결과'],['bracket','토너먼트'],['stats','기록'],['hist','세계·역대']].map(([k,l])=>`<button data-st="${k}" aria-pressed="${SSET.tab===k}">${l}</button>`).join('')}</div>
   <div id="stab">${seasonTab()}</div>`;
 }
 // 시즌을 챕터(단계)별로 묶어 보여준다: 1장 스프링 → 2장 퍼스트 스탠드 → 3장 MSI 기간 → …

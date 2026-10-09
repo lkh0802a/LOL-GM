@@ -110,6 +110,7 @@ export const UI_MODULES = [
   'ui-initial-offer-preview.js',
   'ui-negotiations.js',
   'ui-club-briefing.js',
+  'ui-club-home.js',
   'ui-official-edit.js',
   'ui-club-eligibility.js',
   'ui-club-finance.js',

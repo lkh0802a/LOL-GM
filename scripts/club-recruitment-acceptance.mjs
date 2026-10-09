@@ -1,5 +1,5 @@
 import {artifactSources,runEngineFixture} from './test-harness.mjs';
-const sources=await artifactSources(['ui-club-briefing.js','ui-club-recruitment.js','ui-shortlist-comparison.js','ui-observed-radar.js','ui-initial-comparison.js','ui-market.js','app.js']);const app=sources.pop(),esc=app.match(/^const esc=.*$/m)[0];
+const sources=await artifactSources(['ui-club-briefing.js','ui-club-home.js','ui-club-recruitment.js','ui-shortlist-comparison.js','ui-observed-radar.js','ui-initial-comparison.js','ui-market.js','app.js']);const app=sources.pop(),esc=app.match(/^const esc=.*$/m)[0];
 await runEngineFixture(String.raw`(()=>{
 const check=(v,m)=>{if(!v)throw Error('CLUB_RECRUIT '+m)};
 const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:3,div2:true}),regionCfg('EU',{teams:2,div2:false})];cfg.internationals=[];DB=buildWorld(cfg);let [t,other]=activeTeams(DB,'NA',1);const reserve=reserveTeamsOf(DB,t)[0];setManagedTeam(DB,t.id);DB.world={phase:'season',year:DB.year,seed:'recruit-ui',manage:'manual',registrationVersion:1,seasons:{},offers:[],marketLog:[],steps:[],step:0};setWorldCalendarDate(DB,DB.year+'-01-10');
