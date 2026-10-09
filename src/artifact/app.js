@@ -155,14 +155,14 @@ function viewSeason(){
   const reg=lgS?standings(DB,lgS,'regular'):[], mine=reg.find(x=>x.tid===me), rank=reg.indexOf(mine)+1;
   const nx=nextMine(), nd=nextDate(DB);
   let right='';
-  if(w.phase==='season') right=`<div class="nextm"><span>현재 ${esc(DB.worldDate||'날짜 미정')} · 다음 경기 ${nd?esc(nd):'일정 없음'}</span><b>${nx?`다음 경기 ${esc(nx.d.date)} — vs ${esc(tname(nx.m.a===me?nx.m.b:nx.m.a))} (${esc(sName(nx.s))} · Bo${nx.m.bo})`:'이번 단계에 남은 경기가 없습니다'}</b></div>`;
+  if(w.phase==='season') right=`<div class="nextm"><span>현재 ${esc(DB.worldDate||'날짜 미정')} · 다음 경기 ${nd?esc(nd):'일정 없음'}</span><b>${T&&nx?`다음 경기 ${esc(nx.d.date)} — vs ${esc(tname(nx.m.a===me?nx.m.b:nx.m.a))} (${esc(sName(nx.s))} · Bo${nx.m.bo})`:T?'내 구단의 예정 경기가 없습니다':nd?`다음 공개 경기 ${esc(nd)}`:'공개 예정 경기가 없습니다'}</b></div>`;
   else{const last=DB.history.filter(h=>h.year===w.year&&h.intl).slice(-1)[0];right=`<div class="champ"><span>${w.year} ${last?esc(last.compName):''} 우승</span><b>${last?esc(tname(last.champion)):'—'}</b></div>`}
   return `<section class="seasonhead">
     <div><h2>${w.year} 시즌</h2><p>${T?esc(T.name):managedTeamId(DB)?'관리 구단 확인 필요':'무소속 감독'} · ${seasonManagedRegion()?esc(DB.regions[T.region].leagueName):'지역 정보 없음'}${lgS?' '+esc(lgS.label):''} ${mine&&(mine.w+mine.l)?`${rank}위 (${mine.w}승 ${mine.l}패)`:''} · ${esc(phaseText(w))}</p></div>${right}
   </section>
   ${T?renderClubBriefing():''}
   ${SAVEFAIL?'<p class="warn">브라우저 저장 공간이 부족해 진행 상황을 저장하지 못했습니다. 데이터 탭에서 JSON을 복사해 두세요.</p>':''}
-  <section class="controls">${controlsFor(w)}<span id="sprog" class="hint" role="status"></span></section>
+  <section class="controls">${controlsFor(w)}<span id="sprog" class="hint" role="status">${esc(seasonProgressNotice())}</span></section>
   ${T&&w.phase==='market'&&w.manage==='manual'?renderMarket():''}
   ${T&&w.phase==='offseason'&&w.manage==='manual'&&w.contractWindow?renderContractWindow():''}
   ${(w.phase==='preseason'||w.phase==='market')&&w.report?renderReport(w.report):''}
@@ -191,7 +191,7 @@ function controlsFor(w){
   }
   if(w.phase==='market') return `<button class="primary" id="smkt">이적 시장 마감</button>${seasonManagedTeam()?`<label class="inl">내 팀 운영 <select id="smanage">${[['manual','직접'],['ai','AI 위임']].map(([k,l])=>`<option value="${k}"${w.manage===k?' selected':''}>${l}</option>`).join('')}</select></label>`:''}<span class="hint">${w.manage==='manual'?'재계약·방출·FA 제안·이적 제안을 마친 뒤 마감하세요.':'AI가 내 팀 계약을 처리합니다.'}</span>`;
   if(w.phase==='preseason') return w.fired?`<button class="primary" id="sreset">새 팀 고르기</button>`:`<button class="primary" id="snew"${managedTeamId(DB)&&!seasonManagedTeam()?' disabled':''}>${DB.year} 시즌 시작</button><button class="ghost" id="sreset">맡을 팀 바꾸기</button>`;
-  return `<button class="primary" id="sday">하루 진행</button><button class="ghost" id="sfixture">다음 경기일</button><button class="ghost" id="smine"${nextMine()?'':' disabled'}>내 경기까지</button><button class="ghost" id="sstep">이번 단계 끝까지</button><button class="ghost" id="send">시즌 끝까지</button>`;
+  return `<button class="primary" id="sday">하루 진행</button><button class="ghost" id="sfixture">다음 경기일</button><button class="ghost" id="smine"${nextMine()?'':' disabled'}>내 경기까지</button><button class="ghost" id="sstep">이번 단계 끝까지</button><button class="ghost" id="send">시즌 끝까지</button><button class="ghost" id="spause" disabled>진행 중단</button>`;
 }
 function renderReport(r){
   const nm=id=>DB.players[id]?DB.players[id].name:'?';
