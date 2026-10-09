@@ -159,8 +159,13 @@ function bindSeason(){
     $('#sreset').onclick=()=>{if(!current())return;SEASON_CHOICE_RETURN={db:DB,w,manager:DB.manager,slot:SLOT,team:managedTeamId(DB),phase:w.phase,date:DB.worldDate,year:DB.year,manage:w.manage,fired:w.fired,pickingPresent:Object.hasOwn(w,'picking'),picking:w.picking};SSET.team=managedTeamId(DB);w.picking=true;w.phase='pick';saveDB();nav();$('#pickteam')?.focus()};
     return;
   }
-  if(w.pendingOfficial&&w.pendingOfficial.queue?.length){
+  const pendingControl=w.pendingOfficial?.queue?.length?pendingOfficialControl(DB):null;
+  if(pendingControl&&(pendingControl.manual||pendingControl.error)){
     const renderId=UI_RENDER_ID;officialUiBindPending(()=>UI_RENDER_ID!==renderId); return;
+  }
+  if(pendingControl){
+    $('#sday').textContent='대기 세트 진행';
+    document.querySelector('.controls')?.insertAdjacentHTML('beforeend','<span role="status">현재 감독의 수동 준비 대상이 아닌 대기 세트입니다. 진행하면 기존 구단 AI가 처리하며 완료된 세트와 기록은 유지됩니다.</span>');
   }
   const run=(stop)=>{
     if(!current())return;
@@ -186,7 +191,7 @@ function bindSeason(){
           if(!result||db.world.phase!=='season'||result.pending||stop(result))return fin();
         }
         const progress=$('#sprog');
-        if(progress)progress.textContent=`${n}일 진행 · 현재 ${db.worldDate} · 다음 경기 ${nextDate(db)||'일정 없음'}`;
+        if(progress)progress.textContent=`${n}회 처리 · 현재 ${db.worldDate} · 다음 경기 ${nextDate(db)||'일정 없음'}`;
         setTimeout(step,0);
       }catch(e){
         if(!finishUiTask(task))return;saveCompleted();

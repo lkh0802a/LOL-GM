@@ -1,0 +1,781 @@
+{
+  "task": "12.5.4.8.7",
+  "base": "144146dcd44a5e9dbbcd1dc49a235c2b257663ed",
+  "scope": "대기 공식 경기 수동 권한 유지·기존 AI 세트 인계·완료 기록·실패 rollback·실제 UI/저장",
+  "originals": {
+    "src/artifact/season.js": "60484bcfc86fadf8d00b36132a6c0a3fdce96a0443d8b28cb5e39f7c31cf96e7",
+    "src/artifact/ui-season.js": "115aa3f9005d8d11d7dedd65c01623faa27bcc70a89acf26d42ca2c288b0223b",
+    "src/artifact/ui-official-context.js": "17fccab8e9a2b7edd6084988818492dd4e6b86772108bbc2602bda1164e75ee3",
+    "scripts/official-ui-source-successor.mjs": "fe5b09badf25b46eff3f172d62ac9ce9d9d5973528bd4b3dc79bd95866d71442",
+    "scripts/verify-official-ui-evidence.mjs": "70f28daa3a0b48a8cbe00f12c68894010d4984cdd27c5b8c2b78ea7a2bbba318",
+    "scripts/verify-season-progress-evidence.mjs": "72a02de1430d7f3801c872412a3fb2bf0d8d5f96a80b5369d43929f86f5ce3c2",
+    "scripts/verify-unemployed-season-evidence.mjs": "3a343fb6ece3b708307386fa95745a093c62c7ebf2d5edeef1a2e1835c3f970b",
+    "scripts/ui-async-acceptance.mjs": "e92b720ad2565e46b61b384e609f394a336d6660e2b25ea48e402fd5a26d2b6a",
+    "package.json": "10f472c1455e25dc8d03cdebeb6bc0aa85f1efefe67d38da5e8c96857c3105bf",
+    "index.html": "24c235e14bc5cce949a09e387df01202d65075a34c911935a8bdaa1484bf7281",
+    "docs/DEVELOPMENT.md": "3276cbaade1620ddeec0fa23e39d61677277ecfa211a69d5f55d64b77af07095",
+    "docs/README.md": "e44f72a4993e6c50d81dc71c87a4c30838bb5ad59915a38f796e66734c8cfcce",
+    "docs/LOL_GM_SPEC.md": "8cfa9f0530c5b5e1fa25c7a78690edc2d11e952b1b347e7e594c6252a898e0c2",
+    "docs/DECISIONS.md": "8132238c4e29c31cc6329a9091e03b313eecdd7ad26f6d33245abceeff4e1945",
+    "docs/ARCHITECTURE.md": "805a8a4ce919225158f33637ea8a9966dbbe10a4a67ba72da54910980084ae0d"
+  },
+  "sources": {
+    "src/artifact/season.js": "fe129b44023f97257e6f07dae8b4efe97b6a4e1b3b588d4548713e83a247dfed",
+    "src/artifact/ui-season.js": "29ca15e25bdbedb7b34de098a45605b278aef7fc23182d4168dcafef1d41ecf5",
+    "src/artifact/ui-official-context.js": "4dca9e12f0e148eca8f7410ce433acd527b7575b566a065250c2f70cf9cfcc15",
+    "scripts/official-ui-source-successor.mjs": "fd3f6fad08c89fb70361a957a6b7bb8771c0a861149b0c166810b11f2d26d1d5",
+    "scripts/verify-official-ui-evidence.mjs": "9b578c984e3c9a044e0273218ad6db9869a6a6bcaeeefdac8a98defeb5403807",
+    "scripts/verify-season-progress-evidence.mjs": "b01c5ee7c54ce94c99652257226b60d17923be09aec8f693530f962ed616e80c",
+    "scripts/verify-unemployed-season-evidence.mjs": "354e707349a926a3339095ed60d70a879c803cb840304e40fae0d17704905ef0",
+    "scripts/ui-async-acceptance.mjs": "fa634396903e0211e92e6c956128f77f9f005e23f4938309a3a4f8eb2db6f8c8",
+    "package.json": "fc39ce43124ab7d526f6fee0d0bfde8d3c2a3ae325f17ea0926c6d3f419b8f87",
+    "index.html": "41f788970c1629e6cf471ed836521852fe49207313ca47332f5635377e054f0c",
+    "scripts/pending-handoff-acceptance.mjs": "6d63dbd23e58de584c3c2fc559e912b74b1eba1243d0af6f108871016aaaa111",
+    "scripts/pending-handoff-source-successor.mjs": "23fb68565811ba731a8484f0d1e2ae1c570c7fef0b82ae99b7fcb62dd8b1a541",
+    "scripts/verify-pending-handoff-evidence.mjs": "c29eca528a1563021562ef2c869f48e309bd440ea13d60cc17851404b64bd743",
+    "docs/evidence/pending-handoff-original-season-2026-10-09.js": "60484bcfc86fadf8d00b36132a6c0a3fdce96a0443d8b28cb5e39f7c31cf96e7"
+  },
+  "engine": {
+    "champion-source.js": "29efbdabad4d152e351f0bfdfb025feb5283862ea3ae9caa4fcd2b1d0678bf1c",
+    "system-source.js": "0067a197dd54541fec3bc15a96fddec52ed19ea85eb43a6d2eb3cb5d7759d836",
+    "random.js": "86e30259e4926ea9428afa33d7cff6c51c20a9faa89e847f94aee450bd5b323c",
+    "match-adjudication.js": "63fb882340a949d5ca67bf07f2d7a90f8caab8d06af48da512d2911712ab3b4f",
+    "combat-resources.js": "c7c13b9cd5486b437b79e60c11d4a85655fad3e0c694e7991e911310fc9400cd",
+    "objective-awards.js": "e391263586777ea48ee6f8806e6458639304fd21914cea45de11f720355cd2ff",
+    "takedown-rewards.js": "59a545ebfae98986c7216cc980e351661f5a61dc5c1c313079b122a749733c74",
+    "macro-picks.js": "614b6e64901661b8841edbddd065d0e41999cdf4d56a73606fd64dc952b197e5",
+    "engine.js": "5afc093091fbf7e921aaead89ee0729b66c65628376e93445f51b25a011b6d49",
+    "draft.js": "b5edc5d6158f30f8fa7cb68803b60f84bf34e7c6d6fc80fa126dae985176e8ba",
+    "systems.js": "0da7844547f70eabdb0494451368a295f518ca0ce2ae4d0d77bebad5c3a8b996",
+    "item-purchases.js": "6fb206bdf0dfb208fea5dd6011b22ec8827ca138bac8bb08d367fe17805520cb",
+    "role-quests.js": "6f501d340094774120a4cc74dc4f0964581909716fc537d7a58b14252dcb66f1",
+    "role-quest-match.js": "29ce026186ea801419cb8a369548cef21a5c969f08b9f17b804726934892532b",
+    "data.js": "0eb2d3ac7321e3a728028c3a0799405f24f50b0a904b5e879f95c5f6d71662ff",
+    "champion-data.js": "aa2fd33316757c4ac8c86d5bcad27d7b8f5b8739dbd3e3e4eb0f696ae84e105b",
+    "system-data.js": "16ad1c37594d8aedb047a4707003a20bc66518f0448a7fae861805c925dd5146",
+    "champs2.js": "067ab9927d8b0672231c3226e00167f8e7cf582a41c20a70f18f185d512ad827",
+    "content-naming.js": "cfaccd15c05386a6061e455472dad7dcc01ee65a9753a2d764f2c888711dc20e",
+    "meta.js": "8ffd6ff85694453af40d49e61ba6770f054f40d4fbe35d3552aa11e408707c41",
+    "meta-side.js": "0b95bcc3e0cb1d26625074ab6589778ccea25e0615eb3a83aee2964f95fd0fea",
+    "meta-composition.js": "13bef6227a2ea4a5f83066ff8d4e9a5936063d8fa4e026dfdccaf76980715632",
+    "meta-draft-order.js": "f041f41b7ec21f25b1b6292add20e94aa64c2d602ebcef83f654ef67b4655b99",
+    "meta-tactics.js": "36ae3cf21f93d4b5578b54a9ca0b65509d718038f6a59b0c7275cd88b640c5b6",
+    "meta-practice.js": "6a415363a730a6f0f2854632103fbe0f338cda149136d90fd8409852ba1bc739",
+    "meta-analyst.js": "7f642d520efd77c9d6fb0284185b05f5c279840269269771e3b11c7813f8af28",
+    "meta-opponent.js": "0c2b5201e4cdc2aa4f9590e2c0e0a3abc4025a6821c325b7a728277e12bb7c9f",
+    "meta-opponent-draft.js": "5fd55c5c9adee4b5269edff550eea450dae4784b60db8664665ca6ce8409c6ef",
+    "patch.js": "0bab4d0582fa6da7b3bb582599ded9527cce9192dc9bedbb6e9006154094e235",
+    "patch-balance.js": "145097323c9fa2f6230c5135997c57920495fdcfa6ca2880739d757cbdbedbea",
+    "patch-content.js": "057c2abe7ca7cf195971fea24330055017851ca794aaf2d5eae4935fa4471ed9",
+    "first-selection.js": "0c788ea7cfab33266e7610f312888c13d881df63dd3966570451c71604239331",
+    "series.js": "67a33366c2b244a2ca7f315ee2f70420e6efd7243873403a59392d095a81d3ec",
+    "timezone-calendar.js": "4f9796a001fcd127e488f2d9424ee44bf9ee46ff694e1f0dd2f552b254ade645",
+    "broadcast-calendar.js": "61eec6c44669131a7068c2770799b7a71112a73c25760a00d88643bf450c45ab",
+    "competition.js": "44d0856b841357315c29c022df0a910817edb2d22e940b37bbca3df9d2774783",
+    "league-aggregation.js": "8a1f46972c06f92154f24fa366bbfcd026fe85be13350aa16393ba3dd1890a63",
+    "player.js": "e5b0470e4e4518b80261875b8d6f875c9b821cad6efd8f35e04b40e75336171b",
+    "development.js": "791297239cb94c28990a7373176aad3a122d10d69e64189f39125d6a2c7b1417",
+    "player-relations.js": "8400885087a034a244d03cd365803c01f01dc37c55b3686667e0bc367257e6bb",
+    "medical.js": "9c5d23dfb9cd7f0ebdef4dbc6af223e2a61beaf23f1cbc97be4f9ffa4647d11d",
+    "world.js": "41076b06ece7065b7ecc2518ed444ededfdf798b92b31da46964c89d78fea99a",
+    "calendar.js": "8736fbf8bdcad1fec98f869de9756c333e740f1d191e2322426e911599f21183",
+    "season.js": "60484bcfc86fadf8d00b36132a6c0a3fdce96a0443d8b28cb5e39f7c31cf96e7",
+    "offseason.js": "ba7d5187746097a7ddf7869eadae0caea233e072f9b392bcd315c4f466cf458a",
+    "save.js": "92a476222e94e8658b108bbca94bce76b00462dc4d3a1688d1833a45c2c951a0",
+    "save-migration.js": "68ec50df15e1836c8277e0bfd674a8b7346e101f105134aa9ee030fb14d6e0af",
+    "roster.js": "efdedc445c4c865e67468518945de49f8a763f20adba047fc48757b6d567fb57",
+    "lineup.js": "a6371c9870a2e8440d49c36e1ee089cdd6b39d96c52e5cd9de72cc574025a20b",
+    "state-transaction.js": "6ad636cb64b328cb046e5d8dfe760eeb26c7655c34b0ff776e2102835fab03f1",
+    "state-rollback.js": "1591117e72458abd1ee6ad36b229f95fd70161fd60d5cf0f2cee6280b50831b4",
+    "squad-preparation.js": "24e7cfbdfd92d768eb80a799c3ce6f0a83258a00f059796bf7a8e28832c357ab",
+    "office.js": "080c5f43a4d3b7fe5bb758cd1c63ab10de74eb2d2e5b8d0edd488accea5dd494",
+    "office-consultation.js": "69791d5028a04c60b32dbeda5dfce6a270e5e728c9f0dd2e8d9fae563659f29c",
+    "local-policy.js": "655017910f1a52faca6e5cd18b3a6519cf1cff382c1e2ae96573c51255cfa507",
+    "office-international.js": "a02379c12f82679d696692181f43cc0c5c722e0512e9123592c54f75c57e4e9d",
+    "club-ownership.js": "739abb8e99f1c08900ec7e1568e31cdabdb42ac04a404fe5cf88fe28c5c05c66",
+    "club-license.js": "70252f7573fb4307db93a0921a98f758f2f4b9118c495c9d34acde81fbbd8317",
+    "region-continuity.js": "d5c1452d3671f93aad7904f02fcb1df71361ac5f40bb08fe8b0d2ffd01840d08",
+    "finance.js": "bdc04f13a16e99631548346c811a080dbef5c8a89db787ff003de5b32d03a07e",
+    "contract-market-pricing.js": "3bed2894690c6686e3387aa5643b0aabb60d65d446bdd8112d8919a9f7bb39ca",
+    "contracts.js": "6bd9c40df01bdbf65f8a944bea5cda5a739afa63b0227f8c200c3c2ebce3e403",
+    "contract-market-behavior.js": "f3d0b3899bb2d036835b5abb30cad05bbba89ee9cf0ec087e765088d359c8925",
+    "contract-transfer-market.js": "5adf767bfce1e07c635db473cc84729b2932c750f092078d0dcf2e38bb81aa77",
+    "scouting.js": "6f3868bb816888970554a0c874e89006e553e1d8ffd6f1f4568521d3c7e87a12",
+    "scouting-ai.js": "c654412ff8c1270a9d8fd5147de72634891fd19d6e5814ee7b367e6717519403",
+    "scouting-champions.js": "79ca9afa9204c2b2f0428008a47ae46786fda8730058e4c293bd0bb742a85d88",
+    "scouting-ai-ops.js": "f3c4f36441bde098f07db481f594fad7ce4805482f4549593687a8cea79626f9",
+    "scouting-ai-reassessment.js": "ba39dfd9133a1527bad3fef873d02916af7ff3909d8d3e970270da6c13c1226d",
+    "contract-negotiation.js": "16bfbbfa64277122bf1eeb5fc3c9085c21d6a0d61f7e8bc512cd2f8c0a834c89",
+    "transfer.js": "1b423b602349f05b55072abae65be66536fe42e55e207c6ef3b4846aeeba6c08",
+    "contract-window.js": "493055514c6becc347fc76033c2555b53f6b3364c26232ca4fdd562841fda377",
+    "contract-contact-ai.js": "211bac31fea0761f10ee0b1b904285ff650220e92abae8a079bdad89c1461f54",
+    "contract-agreement.js": "a9410870a8ba1c16f9d7645879986f89c6f30f819b466a443fd12c88d8b21d14",
+    "state-player-actions.js": "4c492d3c29507013d34994b941baefef1e99103713e37da2d551b5ff0b7ce9e3",
+    "player-representation.js": "94875b49ae3be90745083b8a1e4e0cb3b5a75149fce3768747b21db8407ad529",
+    "player-loans.js": "0c128ea349f7e34d8f42006478e8f29ac693497ee5428f07abe1f8f4838d83fd",
+    "transfer-payments.js": "816f57f1634ed3dd0bbc633e75de17db67ec6159dfc6e3f32492e3ad061b21d6",
+    "finance-estate.js": "8acfde7f0f0f9166a1c3570c4f845ef26ac92bc632589a080fdf89ec6bf1a661",
+    "transfer-market-rules.js": "11939f62331144bafee591cd74383d896b9a0e268c2e5e9bdb83dc2f234e72ab",
+    "loan-purchase.js": "23c486aae9fec0bd5bac47273b6b2bd2c594c94117d198209b04149605860c79",
+    "local-service.js": "794173227f82c8e1e43de27c638f0c71fff18caabb03756fe63d6686f09c673b",
+    "registration.js": "902e5fe018a0818ab48ea5a2802c3eaa9ebfdae968736f018b6a846e69393794",
+    "registration-match.js": "16c6d092a0e8008bb71f629e812f7e68f9b19a0d2d598dee8f6df049b909c20e",
+    "player-loan-market.js": "8713eb541e084696ceb516c2743f46185bacd6d135572fcc07cde011172c591d",
+    "club-closure.js": "5bf3cb8853aa5170e285ab3e21a973b55e8bd14e3a6248aa4249742254758b11",
+    "staff.js": "16484fd92f9a00db824a48196bb7a8a3c65f7f14a8767decfee12bd93f2c067a",
+    "staff-contracts.js": "291450863b03399e8d98e769224464e52620a2f91f89bbe1b4c28e84b46d8297",
+    "staff-registration.js": "dfc7ef5f5a707dc098212c8f4e4cc527c01580a5ff73521e135889fe14a40104",
+    "scrim-partner.js": "46b7a202e93b76ba4a19eda48530322b55a3c0acc871db2ab9b44e0b1eea1e8e",
+    "scrim.js": "0523a4580a4f0a68a12a6f096007d1d2c034cbc6b670d66ae6a1e6b6d7543e89",
+    "scrim-plans.js": "5346f414bcdc3180a34972c3e9881a19d419edcd80b653710455a6ecd0a470eb",
+    "practice-resources.js": "43e284428f47238b3360e91b7c1d4ae686a9e96e92f698e0ae01f67f1a4ef5d0",
+    "features.js": "d814dcc47f25a765bfcebe09e745264baa5944026f3e47ba3dde7724ed9996fd",
+    "role-conversion.js": "18708388bd2202835d8226c28be041fb255031282f03b20e2436c932cbfb951d",
+    "draft-analysis.js": "f68f88b632819d268183f2714b672e7845d51d2b13905eda51bdcd8af249fb9b",
+    "draft-preparation.js": "6e031fab26717ab1f7c2edd5f65e82f4c60d91b94d729fefadbcdeb7de5a50cc",
+    "draft-history.js": "3d8c8d0b38472fb7fca681d04d32647d1bc3ba16aa2090425db6a619cb44c5b3",
+    "match-history.js": "66f7f169ebefdfc09d535ee956fca7113fb0ce134b07ba1d0f89a443635b3c20",
+    "analysis-tiers.js": "98fd00a64e70477f6fded6bbc664850d8bc358a162ef0e73c564fdef1baa2b3a",
+    "career.js": "4d7031ea62165d1c2ed27842e11fcb104b8d8b9e9fbc8be80184df5210838b37"
+  },
+  "dependencies": [
+    {
+      "path": "docs/evidence/official-ui-authority-2026-10-09.json",
+      "sha256": "dfb73612c92368595cabe1c1c9137beadeaca94993efa8fb773251c5450f2a87"
+    },
+    {
+      "path": "docs/evidence/official-ui-authority-2026-10-09.raw.part1.gz",
+      "sha256": "c6a2189af00bbe71507a48d75dec3d0ff2c09c346cc9723f03cd28c39eeefc9a"
+    },
+    {
+      "path": "docs/evidence/official-ui-authority-2026-10-09.raw.part2.gz",
+      "sha256": "397c849973c43c305a4f6e6a516ac748068765f1e8fa4fd7f7564b57327ae450"
+    },
+    {
+      "path": "docs/evidence/official-ui-authority-2026-10-09.raw.part3.gz",
+      "sha256": "287f0397ca130864caa6dfc53ec7cf4679528257bf021b0656211be2477a1565"
+    },
+    {
+      "path": "docs/evidence/official-ui-authority-2026-10-09.raw.part4.gz",
+      "sha256": "dbfc106ab03e04d508f76dd8908124a51a3552ee9105efdf3bccc750d94d4881"
+    },
+    {
+      "path": "docs/evidence/official-ui-authority-2026-10-09.raw.part5.gz",
+      "sha256": "361810efe8b342721e741ae7a12f761fa9d46acdcb43d4c8fde3cafd74ac60b5"
+    },
+    {
+      "path": "docs/evidence/official-ui-authority-2026-10-09.raw.part6.gz",
+      "sha256": "57e3a15ee0135033f5780c1a4426e2d68b1b0e24127666a8c93a67149d28e698"
+    },
+    {
+      "path": "docs/evidence/official-ui-authority-2026-10-09.raw.part7.gz",
+      "sha256": "85ad72d0a87cda358b81912e8eb0c9cef911f41c95fa3017ea155398b53a7f7d"
+    }
+  ],
+  "archive": {
+    "format": "jsonl-chunks-v1",
+    "parts": [
+      {
+        "path": "docs/evidence/pending-official-handoff-2026-10-09.raw.part1.gz",
+        "bytes": 16777216,
+        "sha256": "d4e4e46365ca578b1a65efe6fa1d663586fd8de20ceaee11bc853e884379dfcd"
+      },
+      {
+        "path": "docs/evidence/pending-official-handoff-2026-10-09.raw.part2.gz",
+        "bytes": 16777216,
+        "sha256": "dc5d0032bd67d0bd5340124590ecc5e4d8323d6761770440d72502bd1daad1d1"
+      },
+      {
+        "path": "docs/evidence/pending-official-handoff-2026-10-09.raw.part3.gz",
+        "bytes": 16777216,
+        "sha256": "4427474d9b38c6dbe3f26222b8c0e2085f674b75aa570d55a3ee713e77a3bc48"
+      },
+      {
+        "path": "docs/evidence/pending-official-handoff-2026-10-09.raw.part4.gz",
+        "bytes": 16777216,
+        "sha256": "127912b169378cf95318e391b91c295c298f8c86041756c46a015a4df0caf5e1"
+      },
+      {
+        "path": "docs/evidence/pending-official-handoff-2026-10-09.raw.part5.gz",
+        "bytes": 16777216,
+        "sha256": "ac9431c04e22185211860da49c1be2778814cc107ec819be2d28f4d27127f176"
+      },
+      {
+        "path": "docs/evidence/pending-official-handoff-2026-10-09.raw.part6.gz",
+        "bytes": 16777216,
+        "sha256": "d0c7a037a7cc4e88981d78cf1ee30b801937274817bb71f42a7f07381d6fea41"
+      },
+      {
+        "path": "docs/evidence/pending-official-handoff-2026-10-09.raw.part7.gz",
+        "bytes": 16777216,
+        "sha256": "b76a70242ce890bf72619e43f8d6427998aedaa2eb7d7521537be3b911b8b7d7"
+      },
+      {
+        "path": "docs/evidence/pending-official-handoff-2026-10-09.raw.part8.gz",
+        "bytes": 16284958,
+        "sha256": "dce3cee1fce8db51440ecb4db5aba3e87f73e12be07835ea3c8286a8414eaeab"
+      }
+    ],
+    "sha256": "3df4ec3bfb04259e2a37007e19fc84439b7645f5b0051241cefa5edb8fb23e68",
+    "decodedSha256": "6d491137ae7a6953143e854154d21f8ae09c75c33562d87af5bc37db18bd738d",
+    "rows": 153,
+    "files": [
+      {
+        "path": "original/src/artifact/season.js",
+        "bytes": 17446,
+        "sha256": "60484bcfc86fadf8d00b36132a6c0a3fdce96a0443d8b28cb5e39f7c31cf96e7",
+        "chunks": 1
+      },
+      {
+        "path": "original/src/artifact/ui-season.js",
+        "bytes": 26979,
+        "sha256": "115aa3f9005d8d11d7dedd65c01623faa27bcc70a89acf26d42ca2c288b0223b",
+        "chunks": 1
+      },
+      {
+        "path": "original/src/artifact/ui-official-context.js",
+        "bytes": 5171,
+        "sha256": "17fccab8e9a2b7edd6084988818492dd4e6b86772108bbc2602bda1164e75ee3",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/official-ui-source-successor.mjs",
+        "bytes": 2481,
+        "sha256": "fe5b09badf25b46eff3f172d62ac9ce9d9d5973528bd4b3dc79bd95866d71442",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/verify-official-ui-evidence.mjs",
+        "bytes": 701,
+        "sha256": "70f28daa3a0b48a8cbe00f12c68894010d4984cdd27c5b8c2b78ea7a2bbba318",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/verify-season-progress-evidence.mjs",
+        "bytes": 732,
+        "sha256": "72a02de1430d7f3801c872412a3fb2bf0d8d5f96a80b5369d43929f86f5ce3c2",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/verify-unemployed-season-evidence.mjs",
+        "bytes": 1754,
+        "sha256": "3a343fb6ece3b708307386fa95745a093c62c7ebf2d5edeef1a2e1835c3f970b",
+        "chunks": 1
+      },
+      {
+        "path": "original/scripts/ui-async-acceptance.mjs",
+        "bytes": 10368,
+        "sha256": "e92b720ad2565e46b61b384e609f394a336d6660e2b25ea48e402fd5a26d2b6a",
+        "chunks": 1
+      },
+      {
+        "path": "original/package.json",
+        "bytes": 7564,
+        "sha256": "10f472c1455e25dc8d03cdebeb6bc0aa85f1efefe67d38da5e8c96857c3105bf",
+        "chunks": 1
+      },
+      {
+        "path": "original/index.html",
+        "bytes": 1985675,
+        "sha256": "24c235e14bc5cce949a09e387df01202d65075a34c911935a8bdaa1484bf7281",
+        "chunks": 1
+      },
+      {
+        "path": "original/docs/DEVELOPMENT.md",
+        "bytes": 602404,
+        "sha256": "3276cbaade1620ddeec0fa23e39d61677277ecfa211a69d5f55d64b77af07095",
+        "chunks": 1
+      },
+      {
+        "path": "original/docs/README.md",
+        "bytes": 12715,
+        "sha256": "e44f72a4993e6c50d81dc71c87a4c30838bb5ad59915a38f796e66734c8cfcce",
+        "chunks": 1
+      },
+      {
+        "path": "original/docs/LOL_GM_SPEC.md",
+        "bytes": 48590,
+        "sha256": "8cfa9f0530c5b5e1fa25c7a78690edc2d11e952b1b347e7e594c6252a898e0c2",
+        "chunks": 1
+      },
+      {
+        "path": "original/docs/DECISIONS.md",
+        "bytes": 89198,
+        "sha256": "8132238c4e29c31cc6329a9091e03b313eecdd7ad26f6d33245abceeff4e1945",
+        "chunks": 1
+      },
+      {
+        "path": "original/docs/ARCHITECTURE.md",
+        "bytes": 49606,
+        "sha256": "805a8a4ce919225158f33637ea8a9966dbbe10a4a67ba72da54910980084ae0d",
+        "chunks": 1
+      },
+      {
+        "path": "current/src/artifact/season.js",
+        "bytes": 20188,
+        "sha256": "fe129b44023f97257e6f07dae8b4efe97b6a4e1b3b588d4548713e83a247dfed",
+        "chunks": 1
+      },
+      {
+        "path": "current/src/artifact/ui-season.js",
+        "bytes": 27424,
+        "sha256": "29ca15e25bdbedb7b34de098a45605b278aef7fc23182d4168dcafef1d41ecf5",
+        "chunks": 1
+      },
+      {
+        "path": "current/src/artifact/ui-official-context.js",
+        "bytes": 5253,
+        "sha256": "4dca9e12f0e148eca8f7410ce433acd527b7575b566a065250c2f70cf9cfcc15",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/official-ui-source-successor.mjs",
+        "bytes": 2556,
+        "sha256": "fd3f6fad08c89fb70361a957a6b7bb8771c0a861149b0c166810b11f2d26d1d5",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/verify-official-ui-evidence.mjs",
+        "bytes": 801,
+        "sha256": "9b578c984e3c9a044e0273218ad6db9869a6a6bcaeeefdac8a98defeb5403807",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/verify-season-progress-evidence.mjs",
+        "bytes": 827,
+        "sha256": "b01c5ee7c54ce94c99652257226b60d17923be09aec8f693530f962ed616e80c",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/verify-unemployed-season-evidence.mjs",
+        "bytes": 1818,
+        "sha256": "354e707349a926a3339095ed60d70a879c803cb840304e40fae0d17704905ef0",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/ui-async-acceptance.mjs",
+        "bytes": 10636,
+        "sha256": "fa634396903e0211e92e6c956128f77f9f005e23f4938309a3a4f8eb2db6f8c8",
+        "chunks": 1
+      },
+      {
+        "path": "current/package.json",
+        "bytes": 7861,
+        "sha256": "fc39ce43124ab7d526f6fee0d0bfde8d3c2a3ae325f17ea0926c6d3f419b8f87",
+        "chunks": 1
+      },
+      {
+        "path": "current/index.html",
+        "bytes": 1988944,
+        "sha256": "41f788970c1629e6cf471ed836521852fe49207313ca47332f5635377e054f0c",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/pending-handoff-acceptance.mjs",
+        "bytes": 10349,
+        "sha256": "6d63dbd23e58de584c3c2fc559e912b74b1eba1243d0af6f108871016aaaa111",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/pending-handoff-source-successor.mjs",
+        "bytes": 3301,
+        "sha256": "23fb68565811ba731a8484f0d1e2ae1c570c7fef0b82ae99b7fcb62dd8b1a541",
+        "chunks": 1
+      },
+      {
+        "path": "current/scripts/verify-pending-handoff-evidence.mjs",
+        "bytes": 605,
+        "sha256": "c29eca528a1563021562ef2c869f48e309bd440ea13d60cc17851404b64bd743",
+        "chunks": 1
+      },
+      {
+        "path": "current/docs/evidence/pending-handoff-original-season-2026-10-09.js",
+        "bytes": 17446,
+        "sha256": "60484bcfc86fadf8d00b36132a6c0a3fdce96a0443d8b28cb5e39f7c31cf96e7",
+        "chunks": 1
+      },
+      {
+        "path": "run/browser-1280.png",
+        "bytes": 78710,
+        "sha256": "3ac82157192bd5157894275170ae31c7f4c54b4b0433a29a8e71d14d78eca954",
+        "chunks": 1
+      },
+      {
+        "path": "run/browser-320.png",
+        "bytes": 71368,
+        "sha256": "59bd48bef9813da5916d05d4e6141d9c2f604185f07bedeb9d7e3e6dd77ac08f",
+        "chunks": 1
+      },
+      {
+        "path": "run/browser-final-1280.png",
+        "bytes": 78710,
+        "sha256": "3ac82157192bd5157894275170ae31c7f4c54b4b0433a29a8e71d14d78eca954",
+        "chunks": 1
+      },
+      {
+        "path": "run/browser-final-320.png",
+        "bytes": 71368,
+        "sha256": "59bd48bef9813da5916d05d4e6141d9c2f604185f07bedeb9d7e3e6dd77ac08f",
+        "chunks": 1
+      },
+      {
+        "path": "run/browser-final.log",
+        "bytes": 434,
+        "sha256": "a258d9f632e79c83a4fe526891e6b6b8c165e5f44239c67f4c9cf16219b8c748",
+        "chunks": 1
+      },
+      {
+        "path": "run/browser-first.log",
+        "bytes": 5708,
+        "sha256": "0e70c84aaf90e91007c93cb36761f68efee320809053ce1b3352741035c8d1d0",
+        "chunks": 1
+      },
+      {
+        "path": "run/browser-fourth.log",
+        "bytes": 434,
+        "sha256": "a258d9f632e79c83a4fe526891e6b6b8c165e5f44239c67f4c9cf16219b8c748",
+        "chunks": 1
+      },
+      {
+        "path": "run/browser-results.json",
+        "bytes": 535,
+        "sha256": "82cc784ae401c6e8720b9f35c6f878af9240d09ad0c4f21dd3fb4b489824eacc",
+        "chunks": 1
+      },
+      {
+        "path": "run/browser-second-source.py",
+        "bytes": 3943,
+        "sha256": "41b2c5f6a6965c3c447e26f392473d489ed15879d165c8660daf963566a6bd77",
+        "chunks": 1
+      },
+      {
+        "path": "run/browser-second.log",
+        "bytes": 478,
+        "sha256": "803035cf8d25a46396e38172997b36e3cae568f460c30dd65c0c6d169bfe9a0d",
+        "chunks": 1
+      },
+      {
+        "path": "run/browser-third-source.py",
+        "bytes": 4032,
+        "sha256": "8088cdc63244915b8dcb5e04046fb3e0fd92c64cffa5d1ed71c27ad4a8a2b0c0",
+        "chunks": 1
+      },
+      {
+        "path": "run/browser-third.log",
+        "bytes": 2095,
+        "sha256": "7d3897e7bcbf3b1c8f2e90d770611168889a095a0f4cb13a682b7d6c44f0a211",
+        "chunks": 1
+      },
+      {
+        "path": "run/browser.py",
+        "bytes": 4017,
+        "sha256": "81f86aa68c9e131c35cfd1e12b8f407c0689229f0e111d7593ce763d4fdb02a8",
+        "chunks": 1
+      },
+      {
+        "path": "run/build-evidence.py",
+        "bytes": 3947,
+        "sha256": "68b212033dc2850ddd51c96cd88c238681954e741bad09a2daa5e16f22e4cecf",
+        "chunks": 1
+      },
+      {
+        "path": "run/build-final-second.log",
+        "bytes": 52,
+        "sha256": "a94ee0ce27427f8ac55c105eedda5964adc7c54aec958dbd948db96c334485ea",
+        "chunks": 1
+      },
+      {
+        "path": "run/build-final.log",
+        "bytes": 52,
+        "sha256": "a94ee0ce27427f8ac55c105eedda5964adc7c54aec958dbd948db96c334485ea",
+        "chunks": 1
+      },
+      {
+        "path": "run/build-first.log",
+        "bytes": 52,
+        "sha256": "a94ee0ce27427f8ac55c105eedda5964adc7c54aec958dbd948db96c334485ea",
+        "chunks": 1
+      },
+      {
+        "path": "run/calendar-first.log",
+        "bytes": 10997,
+        "sha256": "ac7bacf724142b2409d3094ae1a1b723b0a29a3c07c1d8fa69dab9d76b803c34",
+        "chunks": 1
+      },
+      {
+        "path": "run/career-final.log",
+        "bytes": 261,
+        "sha256": "93fa1fc7c31d103116ecf7c5897ce1bb93001d2dfdde793503b841aee198584e",
+        "chunks": 1
+      },
+      {
+        "path": "run/check-count-diagnostics.json",
+        "bytes": 153,
+        "sha256": "fe813fb8706f30bf552b9b2d05423f63a3599bf0e60281b96ccb4e1cb6610e4a",
+        "chunks": 1
+      },
+      {
+        "path": "run/check-first.log",
+        "bytes": 54,
+        "sha256": "6089d7a1497e3ffd2902f2285f845e447954626bd6e841e3862fa829671d8079",
+        "chunks": 1
+      },
+      {
+        "path": "run/check-second.log",
+        "bytes": 54,
+        "sha256": "6089d7a1497e3ffd2902f2285f845e447954626bd6e841e3862fa829671d8079",
+        "chunks": 1
+      },
+      {
+        "path": "run/evidence-first.log",
+        "bytes": 185,
+        "sha256": "2cb3097f13b78d57e12f501eacd719c67139e71007a65b5ff40bbd69b11f4e83",
+        "chunks": 1
+      },
+      {
+        "path": "run/focused-eighth.log",
+        "bytes": 24374730,
+        "sha256": "fd4024655775790f776cd4622d9adbdaa75373cdc3067e21f55d58217d58f513",
+        "chunks": 3
+      },
+      {
+        "path": "run/focused-fifth.log",
+        "bytes": 24374730,
+        "sha256": "fd4024655775790f776cd4622d9adbdaa75373cdc3067e21f55d58217d58f513",
+        "chunks": 3
+      },
+      {
+        "path": "run/focused-first.log",
+        "bytes": 101434777,
+        "sha256": "8bdf8acfb7b18edfdba9e31553937622a408d3d697c8aa012a5628399a1499ba",
+        "chunks": 13
+      },
+      {
+        "path": "run/focused-fourth-source.mjs",
+        "bytes": 9110,
+        "sha256": "540c589558eef39b40899045de73c3a6065661af184238250eb90cbba5949fba",
+        "chunks": 1
+      },
+      {
+        "path": "run/focused-fourth.log",
+        "bytes": 24374730,
+        "sha256": "fd4024655775790f776cd4622d9adbdaa75373cdc3067e21f55d58217d58f513",
+        "chunks": 3
+      },
+      {
+        "path": "run/focused-second.log",
+        "bytes": 101434264,
+        "sha256": "26548e4a167ccd177bb7ffa5874d491884ad931d2e243f3c361698197da8bbdc",
+        "chunks": 13
+      },
+      {
+        "path": "run/focused-seventh.log",
+        "bytes": 24374730,
+        "sha256": "fd4024655775790f776cd4622d9adbdaa75373cdc3067e21f55d58217d58f513",
+        "chunks": 3
+      },
+      {
+        "path": "run/focused-sixth-source.mjs",
+        "bytes": 10048,
+        "sha256": "57e0cb9500f0f2108f7661be3e11194e31087b52762cbcb3e1641240db1f4fee",
+        "chunks": 1
+      },
+      {
+        "path": "run/focused-sixth.log",
+        "bytes": 24375101,
+        "sha256": "fd736b14c49f5b7cb79b22addd8be9eda6b9ab9d4d4517f609558a64c7cdfec8",
+        "chunks": 3
+      },
+      {
+        "path": "run/focused-third-source.mjs",
+        "bytes": 9100,
+        "sha256": "cc81c30d4c6a7570528cd4d237e34f843b139e1f7103a8165571a4ff31cd8098",
+        "chunks": 1
+      },
+      {
+        "path": "run/focused-third.log",
+        "bytes": 12158205,
+        "sha256": "21740d432616b05581b711f802742ffc13fcbe00a3dcc84d729fcd2d8d26b420",
+        "chunks": 2
+      },
+      {
+        "path": "run/history-consumers-first-source.mjs",
+        "bytes": 2836,
+        "sha256": "1c1bbdd77fcf294ed8ce4503242a4b6ebe44e4fb2400a9e1df9f1e560eee51d4",
+        "chunks": 1
+      },
+      {
+        "path": "run/history-consumers-first.log",
+        "bytes": 551,
+        "sha256": "1f931925496691113af1123793091833e9b67a1327aae789558313756ea6d366",
+        "chunks": 1
+      },
+      {
+        "path": "run/history-consumers-second.log",
+        "bytes": 1745472,
+        "sha256": "9f2f2fee5804796e6cefdb07f8e628e6d5c60ce91ca984cd1cdcb30ef91344fe",
+        "chunks": 1
+      },
+      {
+        "path": "run/history-consumers.mjs",
+        "bytes": 2976,
+        "sha256": "1819276d48772877528ff5f791805249f0f40b6a731bc96c28deb6da4e0e48fb",
+        "chunks": 1
+      },
+      {
+        "path": "run/local-results.json",
+        "bytes": 1037,
+        "sha256": "9d9261f8a10c85403f994f9899f80451efb812c0eba7bb232a67f1019306446e",
+        "chunks": 1
+      },
+      {
+        "path": "run/manual-first-set-fixture.json",
+        "bytes": 1530003,
+        "sha256": "8ece3ef26de98c9d42f82aafca85328541bc9988a71dcb3514eb1cf4990e2347",
+        "chunks": 1
+      },
+      {
+        "path": "run/medical-core-final.log",
+        "bytes": 972,
+        "sha256": "7785bfc4a14670754fbd6630c209ecfcec4f1746b28bcb89dc7b505c48277cf0",
+        "chunks": 1
+      },
+      {
+        "path": "run/original-DEVELOPMENT.md",
+        "bytes": 602404,
+        "sha256": "3276cbaade1620ddeec0fa23e39d61677277ecfa211a69d5f55d64b77af07095",
+        "chunks": 1
+      },
+      {
+        "path": "run/original-README.md",
+        "bytes": 12715,
+        "sha256": "e44f72a4993e6c50d81dc71c87a4c30838bb5ad59915a38f796e66734c8cfcce",
+        "chunks": 1
+      },
+      {
+        "path": "run/original-checks.json",
+        "bytes": 53,
+        "sha256": "8bc119aecd5cb3b544b647000bab56e5b1bb2e4e535779edd286d19256b713c6",
+        "chunks": 1
+      },
+      {
+        "path": "run/original-season.js",
+        "bytes": 17446,
+        "sha256": "60484bcfc86fadf8d00b36132a6c0a3fdce96a0443d8b28cb5e39f7c31cf96e7",
+        "chunks": 1
+      },
+      {
+        "path": "run/original-ui-official-context.js",
+        "bytes": 5171,
+        "sha256": "17fccab8e9a2b7edd6084988818492dd4e6b86772108bbc2602bda1164e75ee3",
+        "chunks": 1
+      },
+      {
+        "path": "run/original-ui-season.js",
+        "bytes": 26979,
+        "sha256": "115aa3f9005d8d11d7dedd65c01623faa27bcc70a89acf26d42ca2c288b0223b",
+        "chunks": 1
+      },
+      {
+        "path": "run/pr-body.md",
+        "bytes": 1765,
+        "sha256": "110d577332a83243e7265cfa627734523919cfbf3eaf28a7ae8daebd8d00ad60",
+        "chunks": 1
+      },
+      {
+        "path": "run/regression-final.log",
+        "bytes": 72070175,
+        "sha256": "1428b22e7586ba92d9e18ffaffb6c33f123e2bc0cdce1832a2f556eb305afd77",
+        "chunks": 9
+      },
+      {
+        "path": "run/regression-first.log",
+        "bytes": 58807318,
+        "sha256": "8c5d685081c3f0c358e07efd2d98160aab45600e38b3aad831a1f0461a31d7fc",
+        "chunks": 8
+      },
+      {
+        "path": "run/regression-second.log",
+        "bytes": 72027815,
+        "sha256": "7b78fa0725567f5bb5e04e83a61ab457154078a3a550e876160141cf4bb0987e",
+        "chunks": 9
+      },
+      {
+        "path": "run/smoke-final.log",
+        "bytes": 767,
+        "sha256": "6cf6e307ce1648bb213e094d0b1861f819db70455a279bbb1bd5554af9dc436a",
+        "chunks": 1
+      },
+      {
+        "path": "run/source-final-second.log",
+        "bytes": 54,
+        "sha256": "6089d7a1497e3ffd2902f2285f845e447954626bd6e841e3862fa829671d8079",
+        "chunks": 1
+      },
+      {
+        "path": "run/source-final.log",
+        "bytes": 54,
+        "sha256": "6089d7a1497e3ffd2902f2285f845e447954626bd6e841e3862fa829671d8079",
+        "chunks": 1
+      },
+      {
+        "path": "run/source-size-review.json",
+        "bytes": 319,
+        "sha256": "6ec1cba88d480fc93a07bbfbeb996b583365e3042852a19b33cf301f6a9e5d86",
+        "chunks": 1
+      },
+      {
+        "path": "run/static-first.log",
+        "bytes": 861,
+        "sha256": "b48fcc8e882b8fd56d92bc0613cb0c9bc55374237c75b48509d8996ae1fd1ece",
+        "chunks": 1
+      },
+      {
+        "path": "run/static-second.log",
+        "bytes": 2940,
+        "sha256": "48cf7ff207c72d1a8790e0cd87cd61f1a71204d3070974f5ba62d9a632b09e22",
+        "chunks": 1
+      },
+      {
+        "path": "run/ui-async-final.log",
+        "bytes": 131,
+        "sha256": "d20e156832ea51054a6a47d71acf20e1ae3058ee3f3dcff7f8e6f7628fb95d5a",
+        "chunks": 1
+      },
+      {
+        "path": "run/ui-async-first.log",
+        "bytes": 131,
+        "sha256": "d20e156832ea51054a6a47d71acf20e1ae3058ee3f3dcff7f8e6f7628fb95d5a",
+        "chunks": 1
+      },
+      {
+        "path": "run/ui-broad-final.log",
+        "bytes": 19500221,
+        "sha256": "92378a304f08daa156f3f95fe56bd6888d34e9730f4d62505006b0fc384b9da9",
+        "chunks": 3
+      },
+      {
+        "path": "run/ui-broad-first.log",
+        "bytes": 19500213,
+        "sha256": "b5840eccf75dac4fd77ff0b2095106ddb8bfbeb3a696290ad4c06644fad991c6",
+        "chunks": 3
+      },
+      {
+        "path": "run/ui-next-observation.json",
+        "bytes": 455,
+        "sha256": "cbcd90df2c48bb3d2041ab8c0b053255d514a46e21367ecf83a11e76dd5a97b3",
+        "chunks": 1
+      }
+    ]
+  },
+  "limitations": [
+    "운영 HTTP 독립 미검증",
+    "전체 UI/엔진 승인 범위 완료 아님",
+    "큰 stdout 일부 잘림; 실제 원본 로그 파일 보존",
+    "모든 중간 소스 개별 보관 주장 없음",
+    "첫 신규 날짜 parity fixture가 manager 변경의 별도 소비를 섞어 실패; 기존 day writer의 deferTeam 경계만 통제하여 교정",
+    "최초 비활성 구단 실제 lineup 불가 실패를 임의 경기 처리 대신 metadata 거절로 교정",
+    "selection prompt first/remaining 구분 fixture 실패와 교정 유지",
+    "PR209 거절된 private payload·자동화 지시문 공개 전송 없음"
+  ]
+}

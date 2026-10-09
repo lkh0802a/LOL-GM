@@ -1,3 +1,4 @@
+import {handoffSourceHash} from './pending-handoff-source-successor.mjs';
 import {progressSourceHash} from './season-progress-source-successor.mjs';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
@@ -13,6 +14,6 @@ for(const [p,h] of Object.entries(e.sources))assert.equal(await progressSourceHa
 for(const [p,h] of Object.entries(e.originals))assert(rows.some(r=>r.path==='original/'+p&&r.sha256===h),p);
 assert((await readFile(new URL('docs/DEVELOPMENT.md',root))).includes(Buffer.from(rows.find(r=>r.path==='original/docs/DEVELOPMENT.md').base64,'base64')));
 assert.equal(ENGINE_MODULES.length,101);let changes=0;
-for(const f of ENGINE_MODULES){const p='src/artifact/'+f,current=sha(await readFile(new URL(p,root)));if(current!==e.engine[f]){assert.equal(f,'offseason.js');assert.equal(current,e.sources[p]);assert.equal(await seasonUiSourceHash(p),e.engine[f]);changes++}}
+for(const f of ENGINE_MODULES){const p='src/artifact/'+f,current=await handoffSourceHash(p);if(current!==e.engine[f]){assert.equal(f,'offseason.js');assert.equal(current,e.sources[p]);assert.equal(await seasonUiSourceHash(p),e.engine[f]);changes++}}
 assert.equal(changes,1);
 console.log('무소속 시즌 증거 검증 통과: 전체 승인 가이드·원본/실패 유지, 엔진100 동일·오프시즌 무소속 제안 교정1');

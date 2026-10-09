@@ -8,6 +8,7 @@ const dir=resolve(import.meta.dirname,'..','src','artifact');
 const get=async p=>readFile(resolve(dir,p),'utf8');
 const [app,state,season,manager,data,briefing,eligibility,clubFinance,clubStaff,staffControls,registration,clubMedical,clubContracts,clubPractice,clubScrim,clubRecruitment,themeSource,actionsSource,officialContextSource]=await Promise.all(
   ['app.js','ui-state.js','ui-season.js','ui-manager.js','ui-data.js','ui-club-briefing.js','ui-club-eligibility.js','ui-club-finance.js','ui-club-staff.js','ui-staff-controls.js','ui-registration.js','ui-club-medical.js','ui-club-contracts.js','ui-club-practice.js','ui-club-scrim.js','ui-club-recruitment.js','ui-theme.js','ui-club-actions.js','ui-official-context.js'].map(get));
+const pendingEngineSource=await get('season.js');
 const later=()=>new Promise(resolve=>setImmediate(resolve));
 
 {
@@ -121,6 +122,7 @@ const later=()=>new Promise(resolve=>setImmediate(resolve));
   vm.runInContext(eligibility,context,{filename:'ui-club-eligibility.js'});
   vm.runInContext(briefing,context,{filename:'ui-club-briefing.js'});
   vm.runInContext(actionsSource,context,{filename:'ui-club-actions.js'});
+  vm.runInContext(pendingEngineSource.slice(pendingEngineSource.indexOf('function pendingOfficialRefs('),pendingEngineSource.indexOf('function pendingOfficialUndo(')),context,{filename:'pending-official-control.js'});
   vm.runInContext(officialContextSource,context,{filename:'ui-official-context.js'});
   vm.runInContext(season.slice(season.lastIndexOf('function bindSeason(){')),context,{filename:'bindSeason()'});
   vm.runInContext(themeSource,context,{filename:'ui-theme.js'});
