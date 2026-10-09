@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import vm from 'node:vm';
+const source=await readFile(new URL('../src/artifact/ui-squad-table.js',import.meta.url),'utf8');
+function fixture(){const db={world:{manage:'manual',fired:false},manager:{teamId:'a'},worldDate:'2028-01-08',year:2028},elements={};const c=vm.createContext({DB:db,SQUAD:'a',SLOT:'1',VIEW:'squad',UI_RENDER_ID:1,SLOT_SWITCHING:false,UI_OVERLAY:null,ROLES:['TOP','JGL','MID','ADC','SUP'],ROLE_KO:{TOP:'탑',JGL:'정글',MID:'미드',ADC:'원딜',SUP:'서포터'},GROUP_KO:{mechanics:'기계적 능력'},esc:String,document:{querySelector:()=>null},window:{scrollY:12,scrollTo(){}},nav:()=>c.UI_RENDER_ID++});vm.runInContext(source,c);return c}
+const rows=Array.from({length:47},(_,i)=>({id:'p'+i,name:'선수 '+i,role:['TOP','JGL','MID','ADC','SUP'][i%5]}));
+const c=fixture();c.rows=rows;const before=JSON.stringify(c.DB);assert.equal(vm.runInContext('squadTableRows(rows).length',c),20);vm.runInContext('squadTableState().page=2',c);assert.equal(vm.runInContext('squadTableRows(rows).length',c),7);vm.runInContext("squadTableState().roles=['TOP','MID']",c);assert.equal(vm.runInContext('squadTableRows(rows).length',c),19);assert.equal(vm.runInContext('squadTableState().page',c),0);vm.runInContext("squadTableState().q='선수 1';squadTableState().draftQ='미완료';squadTableState().columns=['평가','계약']",c);assert.equal(vm.runInContext('squadTableRows(rows).length',c),4);assert(vm.runInContext("renderSquadTableControls().includes('미완료')",c));assert.equal(JSON.stringify(c.DB),before);
+vm.runInContext("SQUAD='b';squadTableState().q='다른 구단';SQUAD='a'",c);assert.equal(vm.runInContext('squadTableState().draftQ',c),'미완료');assert.equal(vm.runInContext('squadTableState().columns.length',c),2);
+const changes=[c=>c.DB=JSON.parse(JSON.stringify(c.DB)),c=>c.DB.world={...c.DB.world},c=>c.DB.manager={...c.DB.manager},c=>c.DB.manager.teamId='b',c=>c.SLOT='2',c=>c.VIEW='season',c=>c.UI_RENDER_ID++,c=>c.SQUAD='b',c=>c.DB.worldDate='2028-01-09',c=>c.DB.year++,c=>c.DB.world.manage='ai',c=>c.DB.world.fired=true,c=>c.SLOT_SWITCHING=true,c=>c.UI_OVERLAY={}];
+for(const change of changes){const c=fixture();const guard=vm.runInContext('squadTableGuard()',c);assert.equal(guard(),true);change(c);assert.equal(guard(),false)}
+for(const label of ['포지션','선수','나이'])assert.equal(vm.runInContext(`squadTableColumnGroup(${JSON.stringify(label)})`,c),null);
+vm.runInContext('DB.manager={...DB.manager}',c);assert.equal(vm.runInContext('squadTableState().draftQ',c),'');
+const roster=await readFile(new URL('../src/artifact/ui-roster.js',import.meta.url),'utf8');
+const detail=roster.slice(roster.indexOf('function squadObservedDetail('),roster.indexOf('function squadEditState('));
+const foreign={id:'f',team:'b'};Object.defineProperty(foreign,'privatePractice',{get(){throw Error('비공개 조회')}});
+const own={id:'o',team:'a',roleProposalCount:0};const ctx=vm.createContext({DB:{players:{f:foreign,o:own}},playerChampionInternalAccess:(db,p)=>p.team==='a',squadTableBack:()=>'',playerDetail:p=>{if(p.team==='a')p.roleProposalCount++;return p.id}});vm.runInContext(detail,ctx);ctx.foreign=foreign;ctx.own=own;assert.equal(vm.runInContext('squadObservedDetail(foreign,Object.create(DB))',ctx),'f');assert.equal(vm.runInContext('squadObservedDetail(own,Object.create(DB))',ctx),'o');assert.equal(own.roleProposalCount,0);assert.equal(ctx.DB.players.o,own);
+console.log('선수단 표 수용: 47명/20행·복수 포지션/검색 교집합·페이지 보정·미완료 검색/복수 열/구단별 문맥·14 stale 문맥·DB 무변경');

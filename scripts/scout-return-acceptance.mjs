@@ -1,6 +1,6 @@
 import {readFile} from 'node:fs/promises';
 import {artifactSources,runEngineFixture} from './test-harness.mjs';
-const sources=await artifactSources(['ui-squad-controls.js','ui-roster.js','ui-club-briefing.js','ui-club-home.js','ui-player.js','ui-club-recruitment.js','ui-club-practice.js','app.js']);const esc=sources.pop().match(/^const esc=.*$/m)[0];
+const sources=await artifactSources(['ui-squad-controls.js','ui-squad-table.js','ui-roster.js','ui-club-briefing.js','ui-club-home.js','ui-player.js','ui-club-recruitment.js','ui-club-practice.js','app.js']);const esc=sources.pop().match(/^const esc=.*$/m)[0];
 const original=await readFile(new URL('../docs/evidence/scout-return-original-ui-roster-2026-10-08.txt',import.meta.url),'utf8');const originalBind=original.slice(original.indexOf('function bindSquad(){'),original.indexOf('// ---------- 몬테카를로 ----------')).replace('function bindSquad(){','function bindOriginalSquad(){');
 const originalPlayer=await readFile(new URL('../docs/evidence/scout-return-original-ui-player-2026-10-08.txt',import.meta.url),'utf8');const originalValueFilter=originalPlayer.match(/^function undervaluedProspect.*$/m)[0].replace('function undervaluedProspect(','function originalUndervaluedProspect(');
 await runEngineFixture(String.raw`(()=>{

@@ -101,10 +101,11 @@ assert(contrast(darkBg,darkFg)>=4.5,'dark primary text/background contrast below
   const document={querySelectorAll:s=>s==='[data-p-open]'?controls:[]};
   const detail={scrollIntoView:options=>{scrollBehavior=options.behavior}};
   const context=vm.createContext({
-    document,$:s=>s==='#pdetail'?detail:null,OPEN_P:null,
+    document,$:s=>s==='#pdetail'?detail:null,OPEN_P:null,DB:{world:{manage:'manual',fired:false},manager:{teamId:'a'},worldDate:'2028-01-08',year:2028},SQUAD:'a',SLOT:'1',VIEW:'squad',UI_RENDER_ID:1,SLOT_SWITCHING:false,UI_OVERLAY:null,
     nav:()=>{controls=[create()]},
     window:{matchMedia:()=>({matches:true})}
   });
+  vm.runInContext(await get('ui-squad-table.js')+'\nconst detailCurrent=squadTableGuard();',context);
   vm.runInContext(match[0],context);
   controls[0].onclick();
   assert.equal(vm.runInContext('OPEN_P',context),'p1');

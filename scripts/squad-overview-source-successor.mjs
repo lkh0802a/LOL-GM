@@ -1,3 +1,4 @@
+import {squadTableSourceHash,squadTableSourceText} from './squad-table-source-successor.mjs';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
@@ -14,9 +15,9 @@ async function verify(){
  for(const row of rows){const b=Buffer.from(row.base64,'base64');assert.equal(b.length,row.bytes);assert.equal(sha(b),row.sha256)}
  for(const [path,h] of Object.entries(originals))assert(rows.some(x=>x.path==='original/'+path&&x.sha256===h),path+' 이전 원문 보존');
  assert.deepEqual(Object.keys(e.sources).sort(),[...Object.keys(originals),'scripts/squad-overview-acceptance.mjs','scripts/squad-overview-source-successor.mjs'].sort(),'승계 source 목록 누락/확대 거절');
- for(const [path,h] of Object.entries(e.sources))assert.equal(sha(await readFile(new URL(path,root))),h,path+' 검토한 현재 바이트');
+ for(const [path,h] of Object.entries(e.sources))assert.equal(await squadTableSourceHash(path),h,path+' 검토한 현재 바이트');
  const originalText=path=>Buffer.from(rows.find(x=>x.path==='original/'+path).base64,'base64').toString();
- const dependency='scripts/scout-return-acceptance.mjs';assert.equal(await readFile(new URL(dependency,root),'utf8'),originalText(dependency).replace("['ui-roster.js'","['ui-squad-controls.js','ui-roster.js'"),'기존 scout-return 모든 assertion 원문·의존성만 추가');
+ const dependency='scripts/scout-return-acceptance.mjs';assert.equal(await squadTableSourceText(dependency),originalText(dependency).replace("['ui-roster.js'","['ui-squad-controls.js','ui-roster.js'"),'기존 scout-return 모든 assertion 원문·의존성만 추가');
  for(const path of ['scripts/club-home-source-successor.mjs','scripts/verify-regression-runner-evidence.mjs']){
   const prefix="import {squadOverviewSourceHash} from './squad-overview-source-successor.mjs';\n";
   const transformed=originalText(path).replaceAll("sha(await readFile(new URL(p,root)))","await squadOverviewSourceHash(p)").replaceAll("sha(await readFile(new URL(path,root)))","await squadOverviewSourceHash(path)");
@@ -27,7 +28,7 @@ async function verify(){
  await import('./squad-overview-acceptance.mjs');verified=e;return e;
 }
 export async function squadOverviewSourceHash(path){
- const actual=sha(await readFile(new URL(path,root)));if(!Object.hasOwn(originals,path))return actual;
+ const actual=await squadTableSourceHash(path);if(!Object.hasOwn(originals,path))return actual;
  await verify();return originals[path];
 }
 export {verify as verifySquadOverviewSources};
