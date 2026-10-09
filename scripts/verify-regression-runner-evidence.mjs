@@ -1,3 +1,4 @@
+import {squadOverviewSourceHash} from './squad-overview-source-successor.mjs';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
@@ -13,11 +14,11 @@ assert.equal(sha(packageBytes),e.originals['package.json']);regressionPlan(JSON.
 const workflow=await readFile(new URL('.github/workflows/ci.yml',root),'utf8');
 const originalWorkflow=workflow.replace(e.workflow.addedStep,'').replace(e.workflow.currentCommand,e.workflow.originalCommand);
 assert.notEqual(originalWorkflow,workflow);assert.equal(sha(Buffer.from(originalWorkflow)),e.originals['.github/workflows/ci.yml'],'기존 모든 job·제한·의료/집계/verify·게시 조건 유지');
-for(const [path,hash] of Object.entries(e.unchanged))assert.equal(sha(await readFile(new URL(path,root))),hash,path+' 기존 검사 원문 유지');
+for(const [path,hash] of Object.entries(e.unchanged))assert.equal(await squadOverviewSourceHash(path),hash,path+' 기존 검사 원문 유지');
 assert.equal(ENGINE_MODULES.length,101);
 for(const [file,hash] of Object.entries(e.engine))assert.equal(sha(await readFile(new URL('src/artifact/'+file,root))),hash,file+' 기존 엔진 유지');
 assert.equal(Object.keys(e.engine).length,101);
-for(const [path,hash] of Object.entries(e.sources))assert.equal(sha(await readFile(new URL(path,root))),hash,path+' 현재 검증 source');
+for(const [path,hash] of Object.entries(e.sources))assert.equal(await squadOverviewSourceHash(path),hash,path+' 현재 검증 source');
 const parts=[];
 for(const p of e.archive.parts){const bytes=await readFile(new URL(p.path,root));assert.equal(bytes.length,p.bytes);assert.equal(sha(bytes),p.sha256);parts.push(bytes);}
 assert.equal(sha(Buffer.concat(parts)),e.archive.sha256);
