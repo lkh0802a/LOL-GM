@@ -1,3 +1,4 @@
+import {progressSourceHash} from './season-progress-source-successor.mjs';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {gunzipSync} from 'node:zlib';
@@ -8,7 +9,7 @@ const root=new URL('../',import.meta.url),sha=b=>createHash('sha256').update(b).
 const e=JSON.parse(await readFile(new URL('docs/evidence/unemployed-season-context-2026-10-08.json',root)));
 const zip=await readFile(new URL(e.archive.path,root));assert.equal(sha(zip),e.archive.sha256);const raw=gunzipSync(zip);assert.equal(sha(raw),e.archive.decodedSha256);const rows=JSON.parse(raw);
 for(const row of rows){const b=Buffer.from(row.base64,'base64');assert.equal(b.length,row.bytes);assert.equal(sha(b),row.sha256)}
-for(const [p,h] of Object.entries(e.sources))assert.equal(sha(await readFile(new URL(p,root))),h,p);
+for(const [p,h] of Object.entries(e.sources))assert.equal(await progressSourceHash(p),h,p);
 for(const [p,h] of Object.entries(e.originals))assert(rows.some(r=>r.path==='original/'+p&&r.sha256===h),p);
 assert((await readFile(new URL('docs/DEVELOPMENT.md',root))).includes(Buffer.from(rows.find(r=>r.path==='original/docs/DEVELOPMENT.md').base64,'base64')));
 assert.equal(ENGINE_MODULES.length,101);let changes=0;

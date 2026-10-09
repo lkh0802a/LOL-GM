@@ -172,23 +172,33 @@ function bindSeason(){
   const run=(stop)=>{
     if(!current())return;
     document.querySelectorAll('.controls button').forEach(b=>b.disabled=true);
-    const db=DB;let n=0;
-    const task=beginUiTask('season-days',()=>{if(n)saveDB()});
+    SEASON_PROGRESS_NOTICE=null;
+    const db=DB,manager=db.manager,team=managedTeamId(db),club=db.teams[team],region=club?.region,active=club?.active,manage=w.manage,fired=w.fired,slot=SLOT;let n=0;
+    const cursor=()=>JSON.stringify([db.worldDate,db.year,w.phase,w.step,w.lastDailyTick,w.pendingOfficial]);let consumed=cursor();
+    const saveCompleted=()=>{if(n&&DB===db&&db.world===w&&SLOT===slot&&!SLOT_SWITCHING)saveDB()};
+    const task=beginUiTask('season-days',saveCompleted);
+    const authority=()=>db.world===w&&db.manager===manager&&managedTeamId(db)===team&&db.teams[team]===club&&club?.region===region&&club?.active===active&&w.manage===manage&&w.fired===fired&&!SLOT_SWITCHING&&!UI_OVERLAY;
+    const notice=text=>{MSG=text;SEASON_PROGRESS_NOTICE={db,w,slot,text};const output=$('#sprog');if(output)output.textContent=text};
+    const halt=()=>{if(!isUiTaskCurrent(task))return;cancelUiTask(task.kind);notice(`${db.worldDate}에서 진행을 중단했습니다. 현재 상황을 확인한 뒤 다시 진행할 수 있습니다.`);if(!UI_OVERLAY){nav();$('#send')?.focus?.()}};
+    const pause=$('#spause');if(pause){pause.disabled=false;pause.onclick=halt}
     const fin=()=>{if(!finishUiTask(task))return;saveDB();nav()};
     const step=()=>{
       if(!isUiTaskCurrent(task))return;
+      if(!authority()||cursor()!==consumed)return halt();
       try{
         for(let i=0;i<2;i++){
           const result=playWorldDay(db);n++;
+          if(!authority())return halt();
+          consumed=cursor();
           if(!result||db.world.phase!=='season'||result.pending||stop(result))return fin();
         }
         const progress=$('#sprog');
         if(progress)progress.textContent=`${n}일 진행 · 현재 ${db.worldDate} · 다음 경기 ${nextDate(db)||'일정 없음'}`;
         setTimeout(step,0);
       }catch(e){
-        finishUiTask(task);if(n)saveDB();
+        if(!finishUiTask(task))return;saveCompleted();
         console.error('LOL GM date progression failed',e);
-        MSG='날짜 진행 중 오류: '+e.message;nav();
+        notice('날짜 진행 중 오류: '+e.message);if(!UI_OVERLAY)nav();
       }
     };
     step();
@@ -203,6 +213,8 @@ function bindSeason(){
 
 // 시즌 조회와 수동 커리어 선택은 실제 관리 구단·화면 문맥을 공유한다.
 let SEASON_CHOICE_RETURN=null;
+let SEASON_PROGRESS_NOTICE=null;
+function seasonProgressNotice(){const n=SEASON_PROGRESS_NOTICE;return n&&n.db===DB&&n.w===DB.world&&n.slot===SLOT?n.text:''}
 function seasonManagedTeam(db=DB){const t=managedTeam(db);return t&&isManagerSelectableTeam(db,t)&&db.regions[t.region]?t:null}
 function seasonManagedRegion(db=DB){return seasonManagedTeam(db)?.region||null}
 function seasonUiGuard(){

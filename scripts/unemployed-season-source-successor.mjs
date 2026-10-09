@@ -1,3 +1,4 @@
+import {progressSourceHash} from './season-progress-source-successor.mjs';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {gunzipSync} from 'node:zlib';
@@ -14,7 +15,7 @@ async function successor(){
  for(const p of reviewed){
   assert(rows.some(r=>r.path==='original/'+p&&r.sha256===e.originals[p]),p+' exact 209 source retained');
   assert(rows.some(r=>r.path==='current/'+p&&r.sha256===e.sources[p]),p+' reviewed correction retained');
-  assert.equal(sha(await readFile(new URL(p,root))),e.sources[p],p+' exact current correction');
+  assert.equal(await progressSourceHash(p),e.sources[p],p+' exact current correction');
  }
  evidence=e;return e;
 }
