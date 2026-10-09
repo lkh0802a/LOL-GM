@@ -1,0 +1,445 @@
+{
+  "task": "12.4.2.2.1",
+  "base": "68964aa42be2c2e96532f45bb4770ec5dc714bd6",
+  "originals": {
+    "index.html": "230bd972b1069c835710aef55d8f92151834150c0aaf46a7cc7cdc3035f6182c",
+    "scripts/artifact-modules.mjs": "d16106f4eee918208615cc8d6c1dd9929ec71bc0d3748bbc81e240208c84a48d",
+    "scripts/check.mjs": "db5040d1158fcf1122af0b5ab1857f604d828e1b1047966502ad6c90e919cb82",
+    "scripts/scout-return-acceptance.mjs": "65485d18effdca39ff30df67d60d1334b1819220f86a6fc5a5c9db52d6d27919",
+    "scripts/squad-observer-information-acceptance.mjs": "5e73edf4c21f9471ec94b7e326a5cc3c5e277054573b428de4d9e00604b3ef8c",
+    "scripts/squad-overview-source-successor.mjs": "edd83f12a8e2fcd1e17a88bcf43bc1778c1e9c73a31baa4095875252d38feae3",
+    "scripts/squad-staging-acceptance.mjs": "13c85dbb67dabda1cc829ba8c464c1a25d717d1d266403aab2065e487bea89a0",
+    "scripts/ui-mobile-a11y-acceptance.mjs": "252e8919e867ad4d08ca12eb844f2a114a092110c91bcb8633763391263dbae2",
+    "src/artifact/ui-roster.js": "300a31390247f9dd884501005f8f6d84d62d68629aebc29b8ed86bd78f57f107"
+  },
+  "sources": {
+    "index.html": "4ced5c0e0cda3273e31fe6bdd4438ade0da9cbe4ce8f386f985b19d9f13120e7",
+    "scripts/artifact-modules.mjs": "a8156df7a326f56f0d119f7229ba47dae375d988f28dd2d12755014f87eb52b6",
+    "scripts/check.mjs": "b434c815056311897aab379553a2ecae33f1cb9689e4be9911d82fcca8bfa2ae",
+    "scripts/scout-return-acceptance.mjs": "89e8e95def8fb250f10c5056c2bb950d66df3200c239ee490a6a39e364a88de9",
+    "scripts/squad-observer-information-acceptance.mjs": "b8f1438ebf603eb3281ef5c341c937da26e49509f54db217efa28835e9aa9c4c",
+    "scripts/squad-overview-source-successor.mjs": "61acf7f90472a46953c8f6e69b033174ca72472c4c4d69a249b468ca0bdc7d6b",
+    "scripts/squad-staging-acceptance.mjs": "91f0825475cf562ca4c53bec4f0caa53b5a726ea0e67e3d76168f6bcab78694e",
+    "scripts/ui-mobile-a11y-acceptance.mjs": "d98bb0a27cdc5960660b7d2032de60e692cf4088eb6adf34c6bdd54bd8bed5de",
+    "src/artifact/ui-roster.js": "ea35573cf26e77541d482dc61958dd6b53377debc97f56656502d38856851f9e",
+    "src/artifact/ui-squad-table.js": "bcf89ee1b5999172ac92bf3bc8a98265e4612ff669334e6e176560aeecfef5fe",
+    "scripts/squad-table-acceptance.mjs": "87dd22f4c2129dd8ddef2340b9a5bf45eb0b8d8a94a95e19b591bf9356ccb26a",
+    "scripts/squad-table-source-successor.mjs": "fda682d03b7250e2f08ac0c78d1f9a13711965094b905f71731e6c07e1938f5f"
+  },
+  "engine": {
+    "champion-source.js": "29efbdabad4d152e351f0bfdfb025feb5283862ea3ae9caa4fcd2b1d0678bf1c",
+    "system-source.js": "0067a197dd54541fec3bc15a96fddec52ed19ea85eb43a6d2eb3cb5d7759d836",
+    "random.js": "86e30259e4926ea9428afa33d7cff6c51c20a9faa89e847f94aee450bd5b323c",
+    "match-adjudication.js": "63fb882340a949d5ca67bf07f2d7a90f8caab8d06af48da512d2911712ab3b4f",
+    "combat-resources.js": "c7c13b9cd5486b437b79e60c11d4a85655fad3e0c694e7991e911310fc9400cd",
+    "objective-awards.js": "e391263586777ea48ee6f8806e6458639304fd21914cea45de11f720355cd2ff",
+    "takedown-rewards.js": "59a545ebfae98986c7216cc980e351661f5a61dc5c1c313079b122a749733c74",
+    "macro-picks.js": "614b6e64901661b8841edbddd065d0e41999cdf4d56a73606fd64dc952b197e5",
+    "engine.js": "5afc093091fbf7e921aaead89ee0729b66c65628376e93445f51b25a011b6d49",
+    "draft.js": "b5edc5d6158f30f8fa7cb68803b60f84bf34e7c6d6fc80fa126dae985176e8ba",
+    "systems.js": "0da7844547f70eabdb0494451368a295f518ca0ce2ae4d0d77bebad5c3a8b996",
+    "item-purchases.js": "6fb206bdf0dfb208fea5dd6011b22ec8827ca138bac8bb08d367fe17805520cb",
+    "role-quests.js": "6f501d340094774120a4cc74dc4f0964581909716fc537d7a58b14252dcb66f1",
+    "role-quest-match.js": "29ce026186ea801419cb8a369548cef21a5c969f08b9f17b804726934892532b",
+    "data.js": "0eb2d3ac7321e3a728028c3a0799405f24f50b0a904b5e879f95c5f6d71662ff",
+    "champion-data.js": "aa2fd33316757c4ac8c86d5bcad27d7b8f5b8739dbd3e3e4eb0f696ae84e105b",
+    "system-data.js": "16ad1c37594d8aedb047a4707003a20bc66518f0448a7fae861805c925dd5146",
+    "champs2.js": "067ab9927d8b0672231c3226e00167f8e7cf582a41c20a70f18f185d512ad827",
+    "content-naming.js": "cfaccd15c05386a6061e455472dad7dcc01ee65a9753a2d764f2c888711dc20e",
+    "meta.js": "8ffd6ff85694453af40d49e61ba6770f054f40d4fbe35d3552aa11e408707c41",
+    "meta-side.js": "0b95bcc3e0cb1d26625074ab6589778ccea25e0615eb3a83aee2964f95fd0fea",
+    "meta-composition.js": "13bef6227a2ea4a5f83066ff8d4e9a5936063d8fa4e026dfdccaf76980715632",
+    "meta-draft-order.js": "f041f41b7ec21f25b1b6292add20e94aa64c2d602ebcef83f654ef67b4655b99",
+    "meta-tactics.js": "36ae3cf21f93d4b5578b54a9ca0b65509d718038f6a59b0c7275cd88b640c5b6",
+    "meta-practice.js": "6a415363a730a6f0f2854632103fbe0f338cda149136d90fd8409852ba1bc739",
+    "meta-analyst.js": "7f642d520efd77c9d6fb0284185b05f5c279840269269771e3b11c7813f8af28",
+    "meta-opponent.js": "0c2b5201e4cdc2aa4f9590e2c0e0a3abc4025a6821c325b7a728277e12bb7c9f",
+    "meta-opponent-draft.js": "5fd55c5c9adee4b5269edff550eea450dae4784b60db8664665ca6ce8409c6ef",
+    "patch.js": "0bab4d0582fa6da7b3bb582599ded9527cce9192dc9bedbb6e9006154094e235",
+    "patch-balance.js": "145097323c9fa2f6230c5135997c57920495fdcfa6ca2880739d757cbdbedbea",
+    "patch-content.js": "057c2abe7ca7cf195971fea24330055017851ca794aaf2d5eae4935fa4471ed9",
+    "first-selection.js": "0c788ea7cfab33266e7610f312888c13d881df63dd3966570451c71604239331",
+    "series.js": "67a33366c2b244a2ca7f315ee2f70420e6efd7243873403a59392d095a81d3ec",
+    "timezone-calendar.js": "4f9796a001fcd127e488f2d9424ee44bf9ee46ff694e1f0dd2f552b254ade645",
+    "broadcast-calendar.js": "61eec6c44669131a7068c2770799b7a71112a73c25760a00d88643bf450c45ab",
+    "competition.js": "44d0856b841357315c29c022df0a910817edb2d22e940b37bbca3df9d2774783",
+    "league-aggregation.js": "8a1f46972c06f92154f24fa366bbfcd026fe85be13350aa16393ba3dd1890a63",
+    "player.js": "e5b0470e4e4518b80261875b8d6f875c9b821cad6efd8f35e04b40e75336171b",
+    "development.js": "791297239cb94c28990a7373176aad3a122d10d69e64189f39125d6a2c7b1417",
+    "player-relations.js": "8400885087a034a244d03cd365803c01f01dc37c55b3686667e0bc367257e6bb",
+    "medical.js": "9c5d23dfb9cd7f0ebdef4dbc6af223e2a61beaf23f1cbc97be4f9ffa4647d11d",
+    "world.js": "41076b06ece7065b7ecc2518ed444ededfdf798b92b31da46964c89d78fea99a",
+    "calendar.js": "8736fbf8bdcad1fec98f869de9756c333e740f1d191e2322426e911599f21183",
+    "season.js": "fe129b44023f97257e6f07dae8b4efe97b6a4e1b3b588d4548713e83a247dfed",
+    "offseason.js": "ba7d5187746097a7ddf7869eadae0caea233e072f9b392bcd315c4f466cf458a",
+    "save.js": "92a476222e94e8658b108bbca94bce76b00462dc4d3a1688d1833a45c2c951a0",
+    "save-migration.js": "68ec50df15e1836c8277e0bfd674a8b7346e101f105134aa9ee030fb14d6e0af",
+    "roster.js": "efdedc445c4c865e67468518945de49f8a763f20adba047fc48757b6d567fb57",
+    "lineup.js": "a6371c9870a2e8440d49c36e1ee089cdd6b39d96c52e5cd9de72cc574025a20b",
+    "state-transaction.js": "6ad636cb64b328cb046e5d8dfe760eeb26c7655c34b0ff776e2102835fab03f1",
+    "state-rollback.js": "1591117e72458abd1ee6ad36b229f95fd70161fd60d5cf0f2cee6280b50831b4",
+    "squad-preparation.js": "24e7cfbdfd92d768eb80a799c3ce6f0a83258a00f059796bf7a8e28832c357ab",
+    "office.js": "080c5f43a4d3b7fe5bb758cd1c63ab10de74eb2d2e5b8d0edd488accea5dd494",
+    "office-consultation.js": "69791d5028a04c60b32dbeda5dfce6a270e5e728c9f0dd2e8d9fae563659f29c",
+    "local-policy.js": "655017910f1a52faca6e5cd18b3a6519cf1cff382c1e2ae96573c51255cfa507",
+    "office-international.js": "a02379c12f82679d696692181f43cc0c5c722e0512e9123592c54f75c57e4e9d",
+    "club-ownership.js": "739abb8e99f1c08900ec7e1568e31cdabdb42ac04a404fe5cf88fe28c5c05c66",
+    "club-license.js": "70252f7573fb4307db93a0921a98f758f2f4b9118c495c9d34acde81fbbd8317",
+    "region-continuity.js": "d5c1452d3671f93aad7904f02fcb1df71361ac5f40bb08fe8b0d2ffd01840d08",
+    "finance.js": "bdc04f13a16e99631548346c811a080dbef5c8a89db787ff003de5b32d03a07e",
+    "contract-market-pricing.js": "3bed2894690c6686e3387aa5643b0aabb60d65d446bdd8112d8919a9f7bb39ca",
+    "contracts.js": "6bd9c40df01bdbf65f8a944bea5cda5a739afa63b0227f8c200c3c2ebce3e403",
+    "contract-market-behavior.js": "f3d0b3899bb2d036835b5abb30cad05bbba89ee9cf0ec087e765088d359c8925",
+    "contract-transfer-market.js": "5adf767bfce1e07c635db473cc84729b2932c750f092078d0dcf2e38bb81aa77",
+    "scouting.js": "6f3868bb816888970554a0c874e89006e553e1d8ffd6f1f4568521d3c7e87a12",
+    "scouting-ai.js": "c654412ff8c1270a9d8fd5147de72634891fd19d6e5814ee7b367e6717519403",
+    "scouting-champions.js": "79ca9afa9204c2b2f0428008a47ae46786fda8730058e4c293bd0bb742a85d88",
+    "scouting-ai-ops.js": "f3c4f36441bde098f07db481f594fad7ce4805482f4549593687a8cea79626f9",
+    "scouting-ai-reassessment.js": "ba39dfd9133a1527bad3fef873d02916af7ff3909d8d3e970270da6c13c1226d",
+    "contract-negotiation.js": "16bfbbfa64277122bf1eeb5fc3c9085c21d6a0d61f7e8bc512cd2f8c0a834c89",
+    "transfer.js": "1b423b602349f05b55072abae65be66536fe42e55e207c6ef3b4846aeeba6c08",
+    "contract-window.js": "493055514c6becc347fc76033c2555b53f6b3364c26232ca4fdd562841fda377",
+    "contract-contact-ai.js": "211bac31fea0761f10ee0b1b904285ff650220e92abae8a079bdad89c1461f54",
+    "contract-agreement.js": "a9410870a8ba1c16f9d7645879986f89c6f30f819b466a443fd12c88d8b21d14",
+    "state-player-actions.js": "4c492d3c29507013d34994b941baefef1e99103713e37da2d551b5ff0b7ce9e3",
+    "player-representation.js": "94875b49ae3be90745083b8a1e4e0cb3b5a75149fce3768747b21db8407ad529",
+    "player-loans.js": "0c128ea349f7e34d8f42006478e8f29ac693497ee5428f07abe1f8f4838d83fd",
+    "transfer-payments.js": "816f57f1634ed3dd0bbc633e75de17db67ec6159dfc6e3f32492e3ad061b21d6",
+    "finance-estate.js": "8acfde7f0f0f9166a1c3570c4f845ef26ac92bc632589a080fdf89ec6bf1a661",
+    "transfer-market-rules.js": "11939f62331144bafee591cd74383d896b9a0e268c2e5e9bdb83dc2f234e72ab",
+    "loan-purchase.js": "23c486aae9fec0bd5bac47273b6b2bd2c594c94117d198209b04149605860c79",
+    "local-service.js": "794173227f82c8e1e43de27c638f0c71fff18caabb03756fe63d6686f09c673b",
+    "registration.js": "902e5fe018a0818ab48ea5a2802c3eaa9ebfdae968736f018b6a846e69393794",
+    "registration-match.js": "16c6d092a0e8008bb71f629e812f7e68f9b19a0d2d598dee8f6df049b909c20e",
+    "player-loan-market.js": "8713eb541e084696ceb516c2743f46185bacd6d135572fcc07cde011172c591d",
+    "club-closure.js": "5bf3cb8853aa5170e285ab3e21a973b55e8bd14e3a6248aa4249742254758b11",
+    "staff.js": "16484fd92f9a00db824a48196bb7a8a3c65f7f14a8767decfee12bd93f2c067a",
+    "staff-contracts.js": "291450863b03399e8d98e769224464e52620a2f91f89bbe1b4c28e84b46d8297",
+    "staff-registration.js": "dfc7ef5f5a707dc098212c8f4e4cc527c01580a5ff73521e135889fe14a40104",
+    "scrim-partner.js": "46b7a202e93b76ba4a19eda48530322b55a3c0acc871db2ab9b44e0b1eea1e8e",
+    "scrim.js": "0523a4580a4f0a68a12a6f096007d1d2c034cbc6b670d66ae6a1e6b6d7543e89",
+    "scrim-plans.js": "5346f414bcdc3180a34972c3e9881a19d419edcd80b653710455a6ecd0a470eb",
+    "practice-resources.js": "43e284428f47238b3360e91b7c1d4ae686a9e96e92f698e0ae01f67f1a4ef5d0",
+    "features.js": "d814dcc47f25a765bfcebe09e745264baa5944026f3e47ba3dde7724ed9996fd",
+    "role-conversion.js": "18708388bd2202835d8226c28be041fb255031282f03b20e2436c932cbfb951d",
+    "draft-analysis.js": "f68f88b632819d268183f2714b672e7845d51d2b13905eda51bdcd8af249fb9b",
+    "draft-preparation.js": "6e031fab26717ab1f7c2edd5f65e82f4c60d91b94d729fefadbcdeb7de5a50cc",
+    "draft-history.js": "3d8c8d0b38472fb7fca681d04d32647d1bc3ba16aa2090425db6a619cb44c5b3",
+    "match-history.js": "66f7f169ebefdfc09d535ee956fca7113fb0ce134b07ba1d0f89a443635b3c20",
+    "analysis-tiers.js": "98fd00a64e70477f6fded6bbc664850d8bc358a162ef0e73c564fdef1baa2b3a",
+    "career.js": "4d7031ea62165d1c2ed27842e11fcb104b8d8b9e9fbc8be80184df5210838b37"
+  },
+  "archive": {
+    "path": "docs/evidence/squad-table-2026-10-09.raw.json.gz",
+    "bytes": 2078354,
+    "sha256": "17c4b074f897419011f7cbb13e0ef4b8111418f0aea0cf853c92ff7b413eee50",
+    "decodedSha256": "ba2576845872acda971f8cf0856d5f635852fc00f6ee1faeacb643be33d64bdf"
+  },
+  "limits": [
+    "공개 archive: git base689와 바이트 대조한 공개 original/current source 및 직접 검토한 새 synthetic 수용 결과6개 요약",
+    "모든 상세 실패/원본 JSON/로그와 거절 payload는 비공개 경로·원래 local commit/bundle에 보존; 공개 업로드 없음",
+    "등록·의료 상태 해석 및 전체 UI 수용은 다음 경계"
+  ],
+  "privateRawManifest": [
+    {
+      "name": "browser-errors.json",
+      "bytes": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "name": "browser-final-return.log",
+      "bytes": 676,
+      "sha256": "37166daa66a43b015ec5ee2f5c03834bdbf20c6112b6a573af7a4da001859f7f"
+    },
+    {
+      "name": "browser-final.log",
+      "bytes": 676,
+      "sha256": "37166daa66a43b015ec5ee2f5c03834bdbf20c6112b6a573af7a4da001859f7f"
+    },
+    {
+      "name": "browser-first-source.py",
+      "bytes": 7532,
+      "sha256": "8d6995e13ec88a5e065e4088ac414d943335b0b311082ddd402e717edd3aff26"
+    },
+    {
+      "name": "browser-first.log",
+      "bytes": 5655,
+      "sha256": "1a05ec31dc71aadaa061167d7e7f29281f6da17639a27fcf9550b9056129bff2"
+    },
+    {
+      "name": "browser-pure.log",
+      "bytes": 446,
+      "sha256": "90e67d697b4bdc6060a4f76cb956cb773f2e5a9aec766a6189aba1228909b3fa"
+    },
+    {
+      "name": "browser-results.json",
+      "bytes": 801,
+      "sha256": "cf6704eb3619ceef0a0a5b418faa7fefb1b3394216523ca7f5d250dbfd33b880"
+    },
+    {
+      "name": "browser-reviewed.log",
+      "bytes": 302,
+      "sha256": "9f6d04546ed41a75d44c85df140f3c2780ea76f84fe6422a22f5938a8dd6f904"
+    },
+    {
+      "name": "browser-trace.log",
+      "bytes": 640,
+      "sha256": "2d33b968961aa134dfccd612ac2d6b262caf6bc99da4beed373f5c327dc5fafb"
+    },
+    {
+      "name": "browser.py",
+      "bytes": 8261,
+      "sha256": "5f4121f102f2a0ddff390b1f207fdc8cfe6342a6ccd6c9e50046a268a3de59b0"
+    },
+    {
+      "name": "calendar-corrected.log",
+      "bytes": 226,
+      "sha256": "c67b80aa1a746df8294a56ee2dd9fb4609d42953987a0a2af90c1f378e489314"
+    },
+    {
+      "name": "calendar-final-return.log",
+      "bytes": 700,
+      "sha256": "039e95eeb9f4cc45a0c09f4983192333505a39c132329404e442947aa4a17574"
+    },
+    {
+      "name": "check-final-remaining.py",
+      "bytes": 781,
+      "sha256": "6263377413e50a1e742481e3e76019ded1b622cb1ba95d03b726b761bf440cdd"
+    },
+    {
+      "name": "check-final.py",
+      "bytes": 1060,
+      "sha256": "c5d9dc66a455dd809f9e4f98722bad2d4c8463149a20e1cc5a29bdfbe9e12080"
+    },
+    {
+      "name": "checks-final.json",
+      "bytes": 216,
+      "sha256": "0ea0cf165fb059f4c5bfa422bbe9062fe3352e75c1f05d171a5b48ce3c6fd588"
+    },
+    {
+      "name": "detail-counterexample-base216.json",
+      "bytes": 3479906,
+      "sha256": "7bfe27b8be0a6d120847899a608ff55e96ee1f443a2462e64d4ca8ae68081c34"
+    },
+    {
+      "name": "detail-counterexample-current.json",
+      "bytes": 3479517,
+      "sha256": "c7fc0deabc7f8283b477ffba6703e6927c39183792b32275961fbd1f7414bb7c"
+    },
+    {
+      "name": "detail-counterexample-final-current-base216.json",
+      "bytes": 3479906,
+      "sha256": "7bfe27b8be0a6d120847899a608ff55e96ee1f443a2462e64d4ca8ae68081c34"
+    },
+    {
+      "name": "detail-counterexample-final-current-current.json",
+      "bytes": 3479517,
+      "sha256": "c7fc0deabc7f8283b477ffba6703e6927c39183792b32275961fbd1f7414bb7c"
+    },
+    {
+      "name": "detail-counterexample-final-current.log",
+      "bytes": 77,
+      "sha256": "49bc30774f2cd74801dca71ac7c96e6ca605fca2081f3c3eb458f30aacd87226"
+    },
+    {
+      "name": "detail-counterexample-final-current.py",
+      "bytes": 1823,
+      "sha256": "5d47b0cdbd30cfbdf567a563d0a8acd7628f3b0fdfe89b42112a1a45600ac9d1"
+    },
+    {
+      "name": "detail-counterexample-final.log",
+      "bytes": 77,
+      "sha256": "49bc30774f2cd74801dca71ac7c96e6ca605fca2081f3c3eb458f30aacd87226"
+    },
+    {
+      "name": "detail-counterexample.log",
+      "bytes": 77,
+      "sha256": "49bc30774f2cd74801dca71ac7c96e6ca605fca2081f3c3eb458f30aacd87226"
+    },
+    {
+      "name": "detail-counterexample.py",
+      "bytes": 1809,
+      "sha256": "116373e371c87be1d451c0985c2faa0bb83e6fe3b0001e5758e8e7666c24b3b4"
+    },
+    {
+      "name": "detail-final-pure-1280.json",
+      "bytes": 4150181,
+      "sha256": "072d79c833a86ea48d3c369ed1ef9ee64d8b5bd97aab44cd2a5f7befae9eceea"
+    },
+    {
+      "name": "detail-final-pure-320.json",
+      "bytes": 4150181,
+      "sha256": "072d79c833a86ea48d3c369ed1ef9ee64d8b5bd97aab44cd2a5f7befae9eceea"
+    },
+    {
+      "name": "detail-final-return-pure-1280.json",
+      "bytes": 4150181,
+      "sha256": "072d79c833a86ea48d3c369ed1ef9ee64d8b5bd97aab44cd2a5f7befae9eceea"
+    },
+    {
+      "name": "detail-final-return-pure-320.json",
+      "bytes": 4150181,
+      "sha256": "072d79c833a86ea48d3c369ed1ef9ee64d8b5bd97aab44cd2a5f7befae9eceea"
+    },
+    {
+      "name": "detail-first-trace-copy-after-overwrite.json",
+      "bytes": 4150181,
+      "sha256": "072d79c833a86ea48d3c369ed1ef9ee64d8b5bd97aab44cd2a5f7befae9eceea"
+    },
+    {
+      "name": "detail-manual-writer-raw.json",
+      "bytes": 5196437,
+      "sha256": "ee569df59cc5f5345f22c6cd6afe3cb8ad74f72cdfa1d0a09f3177480fcb2fe5"
+    },
+    {
+      "name": "detail-mutation-raw.json",
+      "bytes": 4150181,
+      "sha256": "072d79c833a86ea48d3c369ed1ef9ee64d8b5bd97aab44cd2a5f7befae9eceea"
+    },
+    {
+      "name": "filtered-manual-writer-raw.json",
+      "bytes": 5196870,
+      "sha256": "555429283a49250b0eda70a79379ceb3ea7d00b7ad2ea1cfcf7253f10388c9b7"
+    },
+    {
+      "name": "filtered-writer-corrected.log",
+      "bytes": 1460,
+      "sha256": "0e29f7bf73c38f16893254eab4f00271efbfece605a43374fb88c73682b72fa4"
+    },
+    {
+      "name": "filtered-writer-final.log",
+      "bytes": 109,
+      "sha256": "62d4d46bfc98936a282c3309ffbc678537d2eeff0f9674d3430af00d2cb26a01"
+    },
+    {
+      "name": "filtered-writer-first-recursive-fixture.py",
+      "bytes": 3809,
+      "sha256": "3335e8b12972e7fe0603f21cc8945bf3d56daaaececc253df9ace8ac87ab9688"
+    },
+    {
+      "name": "filtered-writer-second-rerender-fixture.py",
+      "bytes": 3823,
+      "sha256": "624c83fbb26a6d9b9afb7128fe1fb856fa902cddd0fdc405ad738e5da6e73d29"
+    },
+    {
+      "name": "filtered-writer.log",
+      "bytes": 2562,
+      "sha256": "58965473b0ba9cdbcb23cc83e0b1c11664fbce63789b43538a858efbbb173cf2"
+    },
+    {
+      "name": "filtered-writer.py",
+      "bytes": 3844,
+      "sha256": "5951f0170b262039ec6f58cdc87f675bd7541aeebc4b8ef0a9a15928b0190576"
+    },
+    {
+      "name": "final-return-fix-cancel.json",
+      "bytes": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "name": "final-source-verification.log",
+      "bytes": 374,
+      "sha256": "cd7912728f46ef5849d5c3eded2d89ccf25efa9ccf8e9edfb7f7435c4df36202"
+    },
+    {
+      "name": "regression-all.log",
+      "bytes": 24377323,
+      "sha256": "617a84f9e64eca41fe86a303bef03c5ed3df27f4b948be95f222776fa6f6d128"
+    },
+    {
+      "name": "regression-final-return.log",
+      "bytes": 72072738,
+      "sha256": "27ef336f1fea293f148d5c032d612462ce2be69621c31044d78bd45e6caa9976"
+    },
+    {
+      "name": "retained-controls.log",
+      "bytes": 117,
+      "sha256": "4020a2469e8a09571bb873a245dafa3707aaba40857262044e772cd0b4982a10"
+    },
+    {
+      "name": "retained-controls.py",
+      "bytes": 3227,
+      "sha256": "89882b8f1eda5e465eabc29d7972a4d76b2bc7910f2c64db857dfc55e713718c"
+    },
+    {
+      "name": "smoke-final-return.log",
+      "bytes": 769,
+      "sha256": "6bfb6b7ee6085fb05822d08ff0be5691127d427ccef8818871b4cf40af80188b"
+    },
+    {
+      "name": "source-check.log",
+      "bytes": 54,
+      "sha256": "02c2f6a7515d0d661522a6c9b18bea297c28537596721714d299492fce4b6249"
+    },
+    {
+      "name": "source-final-return.log",
+      "bytes": 54,
+      "sha256": "02c2f6a7515d0d661522a6c9b18bea297c28537596721714d299492fce4b6249"
+    },
+    {
+      "name": "source-final.log",
+      "bytes": 54,
+      "sha256": "02c2f6a7515d0d661522a6c9b18bea297c28537596721714d299492fce4b6249"
+    },
+    {
+      "name": "squad-1280.png",
+      "bytes": 296104,
+      "sha256": "46cbfd24430588a60debc88a3f6c0d07ff33b845ba95dfa22a1d1b70c146595c"
+    },
+    {
+      "name": "squad-320.png",
+      "bytes": 160295,
+      "sha256": "53416ce3211f0737336ef13ce8db0f9bab6618ca5d31f474dcf40ae137bc7f15"
+    },
+    {
+      "name": "squad-final-return-1280.png",
+      "bytes": 295773,
+      "sha256": "944c73e9088a1cf4b936e21a8bbdd600ff8ce403d734d27cd54bf37db16b05dc"
+    },
+    {
+      "name": "squad-final-return-320.png",
+      "bytes": 158458,
+      "sha256": "9c6cbf5c43e7fa8297e777d056c1c601429141575d955f05acbf28008a5af24f"
+    },
+    {
+      "name": "staging-first.log",
+      "bytes": 1530,
+      "sha256": "406b1bca83219d25da1576f90bc51157e8852eaedd0759cda4630bddc2dbabb5"
+    },
+    {
+      "name": "staging-second.log",
+      "bytes": 10921,
+      "sha256": "98699f478aa428cca2896b74f76030edd232e71fb446c523553d7f1335900dca"
+    },
+    {
+      "name": "staging-third.log",
+      "bytes": 931,
+      "sha256": "6a21ac1f2ed5276eacfef368e4ea14953de1ada2aad6c90ca66d6494fea3d681"
+    },
+    {
+      "name": "static-final-return.log",
+      "bytes": 2726,
+      "sha256": "abff6934660641f74ab89afcf5b98d7dd75d154e5a36eeaeafb4fbaa3f8832e4"
+    },
+    {
+      "name": "static-final.log",
+      "bytes": 2725,
+      "sha256": "356c7c58026777b7eaf91be25973e3901a144f6c2b84aa81deae543a780eb0f4"
+    },
+    {
+      "name": "ui-all.log",
+      "bytes": 19481650,
+      "sha256": "afaa8745e0cd82a612445a243daf190398f622bec48c8fa0c70bd801e2ab4cc6"
+    },
+    {
+      "name": "ui-final-return.log",
+      "bytes": 19499716,
+      "sha256": "b1857477af6898c277fb8b3cfd894f2cfbdf0ec3c629d627579b20c23c36f013"
+    },
+    {
+      "name": "ui-final.log",
+      "bytes": 9968,
+      "sha256": "916ebe3f277b24f3d6f95f0151ae17fdfbd8f86a7099fbca9d7eaadb5dffeaa4"
+    }
+  ]
+}
