@@ -123,3 +123,5 @@ Use [numeric stages 1–13 and dotted work units](DEVELOPMENT.md#unified-numeric
 선수단 공개 조회·명단 우선 첫 경계의 검토 자료: [12.4.2.1 증거](evidence/squad-overview-2026-10-09.json). 로컬 수용과 exact-head CI/게시 완료를 구분하며, 필터·페이지·표시열과 전체 재설계는 미완료입니다.
 
 [12.4.2.2.1 선수단 표의 복수 포지션·이름 검색/표시 열/20행 페이지·상세 읽기 분리](DEVELOPMENT.md#124221-선수단-표의-복수-필터표시-열20행-페이지와-상세-읽기-분리--2026-10-09)는 실제 기존 관측/수동 명단을 사용한다. 공식 등록·의료 상태의 상세 구분/필터와 전체 UI는 후속 수용이 남았다. 새 PR·main CI/게시 결과는 확인 전 성공으로 표시하지 않는다.
+
+[12.4.2.2.2 선수단 등록·공식 저장/경기뷰 선발·훈련 초안·의료 근거](DEVELOPMENT.md)는 현재 상태/불확실성과 기존 수동 writer를 구분한다. 신규 source-backed 수용과 exact-head CI·main 게시/전체 승인 미완료는 별도로 확인한다.

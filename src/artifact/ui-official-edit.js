@@ -1,9 +1,9 @@
-// Transient official-edit reads; domain commands remain the only writers.
 function officialEditGuard(ok,root,onReject){
-  const db=DB,w=db.world,slot=SLOT,rid=UI_RENDER_ID,oid=managedTeamId(db),view=VIEW,overlay=UI_OVERLAY;
+  const sq=()=>typeof SQUAD==='undefined'?null:SQUAD;
+  const db=DB,w=db.world,slot=SLOT,rid=UI_RENDER_ID,oid=managedTeamId(db),view=VIEW,overlay=UI_OVERLAY,mgr=db.manager,squad=sq(),date=db.worldDate,year=db.year,ph=w.phase,team=db.teams[oid];
   const stamp=()=>JSON.stringify([w.year,w.manage,w.fired,w.registrationVersion,w.pendingOfficial,
     Object.values(db.teams).map(t=>[t.id,t.roster]),officialRegistrationSnapshot(db,{teamId:oid,players:Object.keys(db.players)}),officialStaffEditStamp(db,oid)]);
-  const start=stamp(),identity=()=>DB===db&&DB.world===w&&SLOT===slot&&VIEW===view&&UI_RENDER_ID===rid&&UI_OVERLAY===overlay&&!SLOT_SWITCHING&&!w.fired&&w.manage==='manual'&&managedTeamId(db)===oid;
+  const start=stamp(),identity=()=>DB===db&&DB.world===w&&db.manager===mgr&&db.teams[oid]===team&&sq()===squad&&db.worldDate===date&&db.year===year&&w.phase===ph&&SLOT===slot&&VIEW===view&&UI_RENDER_ID===rid&&UI_OVERLAY===overlay&&!SLOT_SWITCHING&&!w.fired&&w.manage==='manual'&&managedTeamId(db)===oid;
   return ()=>{if(ok()&&identity()&&stamp()===start)return true;
     if(identity()){MSG='상태 변경: 초안을 취소하고 다시 확인하세요';const n=root.querySelector('[data-official-status]');if(n)n.textContent=MSG;onReject?.('stale')}
     return false;
