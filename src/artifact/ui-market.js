@@ -89,12 +89,13 @@ function renderContractWindow(){
   </section>`;
 }
 function bindContractWindow(allowed=()=>true){
+  const current=stoveGuard(allowed);allowed=()=>current()&&recruitUiAllowed(DB);
   const act=m=>{MSG=m;saveDB();nav();const e=document.querySelector('.contractwindow');e&&e.scrollIntoView({block:'start'})};
   bindMutualTerminationControls(act,allowed);
   bindContractEntryControls(act,allowed);
-  document.querySelectorAll('[data-allow-contact]').forEach(b=>b.onclick=()=>act(grantEarlyContact(DB,b.dataset.allowContact,'manager').msg));
-  document.querySelectorAll('[data-start-early]').forEach(b=>b.onclick=()=>act(startNegotiation(DB,b.dataset.startEarly,'early_fa',{teamId:managedTeamId(DB)}).msg));
-  document.querySelectorAll('[data-start-fa]').forEach(b=>b.onclick=()=>act(startNegotiation(DB,b.dataset.startFa,'fa').msg));
+  document.querySelectorAll('[data-allow-contact]').forEach(b=>b.onclick=()=>{if(allowed())act(grantEarlyContact(DB,b.dataset.allowContact,'manager').msg)});
+  document.querySelectorAll('[data-start-early]').forEach(b=>b.onclick=()=>{if(allowed())act(startNegotiation(DB,b.dataset.startEarly,'early_fa',{teamId:managedTeamId(DB)}).msg)});
+  document.querySelectorAll('[data-start-fa]').forEach(b=>b.onclick=()=>{if(allowed())act(startNegotiation(DB,b.dataset.startFa,'fa').msg)});
   bindRecruitmentControls((msg,changed)=>{if(changed)act(msg);else{MSG=msg;navKeepScroll();}},allowed);
   bindNegotiationControls(act,allowed);
 }

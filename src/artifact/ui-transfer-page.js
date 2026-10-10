@@ -17,11 +17,11 @@ function renderTransferPage(){
  if(!transferTabAllowed())return '<section><h2>이적시장</h2><p>현재 영입 화면을 열 수 없습니다. 일정·대회에서 현재 진행 상태를 확인하세요.</p></section>';
  if(DB.world.phase==='initial_roster')return renderInitialRosterMarket();
  if(DB.world.manage!=='manual')return '<section><h2>이적시장</h2><p>현재 구단 운영이 위임되어 있습니다. 일정·대회에서 운영 방식을 직접 선택하세요.</p></section>';
- const actual=DB;try{DB=JSON.parse(JSON.stringify(actual));return DB.world.phase==='market'?renderMarket():DB.world.contractWindow?renderContractWindow():'<section><h2>이적시장</h2><p>일정·대회에서 계약 협상 기간을 시작하세요.</p></section>'}finally{DB=actual}
+ const actual=DB;try{DB=JSON.parse(JSON.stringify(actual));return DB.world.phase==='market'?renderMarket():DB.world.contractWindow?renderStove()+renderContractWindow():'<section><h2>이적시장</h2><p>일정·대회에서 계약 협상 기간을 시작하세요.</p></section>'}finally{DB=actual}
 }
 function bindTransferPage(){
  if(!transferTabAllowed())return;if(DB.world.phase==='initial_roster'){bindInitialRosterMarket();return}
  if(DB.world.manage!=='manual')return;
- const current=seasonUiGuard();if(DB.world.phase==='market')bindMarket(current);else if(DB.world.contractWindow)bindContractWindow(current);
+ const current=seasonUiGuard();if(DB.world.phase==='market')bindMarket(current);else if(DB.world.contractWindow){bindStove(current);bindContractWindow(current);}
  const root=document.querySelector('#main');root?.querySelectorAll('button,input,select').forEach(el=>{for(const key of ['onclick','oninput','onchange','onkeydown']){const f=el[key];if(typeof f==='function')el[key]=function(e){if(current())return f.call(this,e)}}});
 }
