@@ -137,6 +137,7 @@ export const UI_MODULES = [
   'ui-setup.js',
   'ui-match.js',
   'ui-manager.js',
+  'ui-save-library.js',
   'ui-data.js',
   'ui-player.js',
   'ui-player-champions.js',
