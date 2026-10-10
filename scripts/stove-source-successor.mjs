@@ -1,3 +1,4 @@
+import {stoveFaSourceHash,stoveFaSourceText} from './stove-fa-source-successor.mjs';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
@@ -14,7 +15,7 @@ async function verify(){
  for(const r of rows){const b=Buffer.from(r.base64,'base64');assert.equal(b.length,r.bytes);assert.equal(sha(b),r.sha256)}
  const original=p=>Buffer.from(rows.find(r=>r.path==='original/'+p).base64,'base64').toString();
  for(const [p,h] of Object.entries(e.originals))assert.equal(sha(Buffer.from(original(p))),h,p+' 기존 원문');
- for(const [p,h] of Object.entries(e.sources))assert.equal(sha(await readFile(new URL(p,root))),h,p+' 검토한 현재 소스');
+ for(const [p,h] of Object.entries(e.sources))assert.equal(await stoveFaSourceHash(p),h,p+' 검토한 현재 소스');
  const p='scripts/save-library-source-successor.mjs',prefix="import {stoveSourceHash,stoveSourceText} from './stove-source-successor.mjs';\n";
  const transformed=original(p).split('\n').map(line=>{
   if(line.startsWith(' for(const [p,h] of Object.entries(e.sources))'))return line.replace('sha(await readFile(new URL(p,root)))','await stoveSourceHash(p)');
@@ -24,14 +25,14 @@ async function verify(){
   if(line.startsWith('export async function saveLibrarySourceText'))return line.replace("readFile(new URL(p,root),'utf8')",'stoveSourceText(p)');
   return line;
  }).join('\n');
- assert.equal(await readFile(new URL(p,root),'utf8'),prefix+transformed,'기존 해시·원문·검사·압축 자료 검증의 정확한 승계');
- const overview='scripts/squad-overview-source-successor.mjs';assert.equal(await readFile(new URL(overview,root),'utf8'),original(overview).replace("assert.equal(await readFile(new URL(path,root),'utf8'),prefix+transformed","assert.equal(await squadTableSourceText(path),prefix+transformed"),'선수단 검증의 원래 조건을 보존한 실제 소스 읽기 승계');
- const validator='scripts/verify-regression-runner-evidence.mjs';assert.equal(await readFile(new URL(validator,root),'utf8'),"import {stoveSourceText} from './stove-source-successor.mjs';\n"+original(validator).replace("const workflow=await readFile(new URL('.github/workflows/ci.yml',root),'utf8');","const workflow=await stoveSourceText('.github/workflows/ci.yml');"),'기존 회귀 원본·압축 증거·측정·전체 게이트 검증 조건을 그대로 유지한 작업 정의 읽기 승계');
- const workflow='.github/workflows/ci.yml';assert.equal(await readFile(new URL(workflow,root),'utf8'),original(workflow).replace('node --test scripts/regression-runner.test.mjs && node scripts/verify-regression-runner-evidence.mjs','node --test scripts/regression-runner.test.mjs scripts/ui-evidence-runner.test.mjs && node scripts/verify-regression-runner-evidence.mjs').replace('node scripts/ci-run.mjs ui-finance-contracts -- npm run check:ui-finance-contracts','node scripts/ci-run.mjs ui-finance-contracts -- node scripts/ui-evidence-runner.mjs'),'기존 작업·필수 게이트·시간 한도·의료·관측 기록을 그대로 유지한 실행 승계');
- const f='scripts/contract-window-acceptance.mjs';assert.equal(await readFile(new URL(f,root),'utf8'),original(f).replace("const [app,market]=await artifactSources(['app.js','ui-market.js']);","const [appSource,market,stove]=await artifactSources(['app.js','ui-market.js','ui-stove.js']);\nconst app=appSource+'\\n'+stove;"),'기존 검사 조건 원문 그대로, 실제 화면 모듈 의존성만 추가');
- for(const [p,h] of Object.entries(e.engine))assert.equal(sha(await readFile(new URL('src/artifact/'+p,root))),h);assert.equal(Object.keys(e.engine).length,101);
+ assert.equal(await stoveFaSourceText(p),prefix+transformed,'기존 해시·원문·검사·압축 자료 검증의 정확한 승계');
+ const overview='scripts/squad-overview-source-successor.mjs';assert.equal(await stoveFaSourceText(overview),original(overview).replace("assert.equal(await readFile(new URL(path,root),'utf8'),prefix+transformed","assert.equal(await squadTableSourceText(path),prefix+transformed"),'선수단 검증의 원래 조건을 보존한 실제 소스 읽기 승계');
+ const validator='scripts/verify-regression-runner-evidence.mjs';assert.equal(await stoveFaSourceText(validator),"import {stoveSourceText} from './stove-source-successor.mjs';\n"+original(validator).replace("const workflow=await readFile(new URL('.github/workflows/ci.yml',root),'utf8');","const workflow=await stoveSourceText('.github/workflows/ci.yml');"),'기존 회귀 원본·압축 증거·측정·전체 게이트 검증 조건을 그대로 유지한 작업 정의 읽기 승계');
+ const workflow='.github/workflows/ci.yml';assert.equal(await stoveFaSourceText(workflow),original(workflow).replace('node --test scripts/regression-runner.test.mjs && node scripts/verify-regression-runner-evidence.mjs','node --test scripts/regression-runner.test.mjs scripts/ui-evidence-runner.test.mjs && node scripts/verify-regression-runner-evidence.mjs').replace('node scripts/ci-run.mjs ui-finance-contracts -- npm run check:ui-finance-contracts','node scripts/ci-run.mjs ui-finance-contracts -- node scripts/ui-evidence-runner.mjs'),'기존 작업·필수 게이트·시간 한도·의료·관측 기록을 그대로 유지한 실행 승계');
+ const f='scripts/contract-window-acceptance.mjs';assert.equal(await stoveFaSourceText(f),original(f).replace("const [app,market]=await artifactSources(['app.js','ui-market.js']);","const [appSource,market,stove]=await artifactSources(['app.js','ui-market.js','ui-stove.js']);\nconst app=appSource+'\\n'+stove;"),'기존 검사 조건 원문 그대로, 실제 화면 모듈 의존성만 추가');
+ for(const [p,h] of Object.entries(e.engine))assert.equal(await stoveFaSourceHash('src/artifact/'+p),h);assert.equal(Object.keys(e.engine).length,101);
  for(const p of ['docs/README.md','docs/DEVELOPMENT.md'])assert((await readFile(new URL(p,root))).includes(Buffer.from(rows.find(r=>r.path==='original/'+p).base64,'base64')),'전체 승인 원문 연속 보존');
- await import('./stove-daily-acceptance.mjs');verified={e,rows};return verified;
+ await import('./stove-daily-acceptance.mjs');await import('./stove-fa-daily-acceptance.mjs');verified={e,rows};return verified;
 }
-export async function stoveSourceHash(p){const {e}=await verify();return e.originals[p]||sha(await readFile(new URL(p,root)))}
-export async function stoveSourceText(p){const {e,rows}=await verify();return e.originals[p]?Buffer.from(rows.find(r=>r.path==='original/'+p).base64,'base64').toString():readFile(new URL(p,root),'utf8')}
+export async function stoveSourceHash(p){const {e}=await verify();return e.originals[p]||await stoveFaSourceHash(p)}
+export async function stoveSourceText(p){const {e,rows}=await verify();return e.originals[p]?Buffer.from(rows.find(r=>r.path==='original/'+p).base64,'base64').toString():stoveFaSourceText(p)}

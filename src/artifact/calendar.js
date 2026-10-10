@@ -58,3 +58,22 @@ function applyWorldDailyEffects(db,date){
   w.lastDailyTick=date;
   return true;
 }
+
+// 독점 기간 뒤 연간 결산 전의 실제 날짜 소비. 기존 결산 기준일과 소비만 사용한다.
+function freeAgencyDateValid(date){try{return typeof date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(date)&&addDays(date,0)===date}catch{return false}}
+function freeAgencyDayState(db){
+ const w=db.world,cw=w?.contractWindow,date=db.worldDate;
+ const valid=w?.phase==='offseason'&&cw?.stage==='fa'&&cw.completed===true&&Number.isInteger(w.year)&&db.year===w.year&&cw.startSeason===w.year+1&&cw.seasonYear===w.year&&freeAgencyDateValid(cw.contractExpiryDate)&&freeAgencyDateValid(cw.outsideContactDate)&&addDays(cw.contractExpiryDate,1)===cw.outsideContactDate&&freeAgencyDateValid(date)&&freeAgencyDateValid(cw.outsideContactDate)&&date>=cw.outsideContactDate;
+ const through=valid?`${cw.startSeason}-01-06`:null,next=valid?addDays(date,1):null;
+ return {ready:!!(valid&&next<=through),date,next,through,reason:!valid?'자유계약 날짜 정보를 확인할 수 없습니다':next>through?'연간 결산 기준일에 도달했습니다':'',stage:valid?'fa':null};
+}
+function advanceOffseasonFreeAgencyDay(db,actor='manager'){
+ const state=freeAgencyDayState(db),w=db.world,t=managedTeam(db);
+ if(!state.ready)return {ok:false,msg:state.reason};
+ if(!['manager','system'].includes(actor)||actor==='manager'&&(!t||t.active===false||t.parent||w.manage!=='manual'||w.fired||w.pendingOfficial?.queue?.length))return {ok:false,msg:'현재 구단에서 날짜를 직접 진행할 권한이 없습니다'};
+ // 처리 실패가 현재 세계를 부분 변경하지 않도록 완성된 결과만 반영한다.
+ const prepared=JSON.parse(JSON.stringify(db));
+ setWorldCalendarDate(prepared,state.next);processTransferPayments(prepared);processLocalServiceDaily(prepared);aiChooseLocalEligibility(prepared);
+ for(const key of Object.keys(db))delete db[key];Object.assign(db,prepared);
+ return {ok:true,stage:'fa',date:db.worldDate,msg:'자유계약 기간 · '+db.worldDate};
+}

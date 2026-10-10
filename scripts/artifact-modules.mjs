@@ -132,6 +132,7 @@ export const UI_MODULES = [
   'ui-transfer-page.js',
   'ui-market-initial.js',
   'ui-market-staff.js',
+  'ui-stove-fa.js',
   'ui-stove.js',
   'ui-market.js',
   'ui-champion.js',
