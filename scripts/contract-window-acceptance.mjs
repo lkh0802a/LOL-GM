@@ -182,7 +182,8 @@ const fixture=String.raw`(()=>{
 })();`;
 await runEngineFixture(fixture,{timeout:30000,filename:'contract-window-acceptance.fixture.js'});
 
-const [app,market]=await artifactSources(['app.js','ui-market.js']);
+const [appSource,market,stove]=await artifactSources(['app.js','ui-market.js','ui-stove.js']);
+const app=appSource+'\n'+stove;
 if(!app.includes('scontractday')||!app.includes('scontractopen')||
   !market.includes('data-allow-contact')||!market.includes('data-start-early')||
   !market.includes('bindContractWindow'))

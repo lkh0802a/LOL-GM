@@ -141,8 +141,7 @@ function bindSeason(){
     if(!w.contractWindow){
       $('#soff').onclick=()=>{if(!current())return;initOffseasonContractWindow(DB);saveDB();nav();window.scrollTo(0,0)};
     }else if(w.contractWindow.stage==='exclusive'){
-      $('#scontractday').onclick=()=>{if(!current())return;advanceOffseasonContractDay(DB);saveDB();nav()};
-      $('#scontractopen').onclick=()=>{if(!current())return;advanceOffseasonContractWindow(DB);saveDB();nav();window.scrollTo(0,0)};
+      bindStove(current);
     }else{
       $('#soff').onclick=()=>{if(!current())return;runOffseason(DB);saveDB();nav();window.scrollTo(0,0)};
     }

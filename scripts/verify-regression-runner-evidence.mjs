@@ -1,3 +1,4 @@
+import {stoveSourceText} from './stove-source-successor.mjs';
 import {squadOverviewSourceHash} from './squad-overview-source-successor.mjs';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -11,7 +12,7 @@ const e=JSON.parse(await readFile(new URL('docs/evidence/regression-runner-2026-
 assert.deepEqual(e.modules,REGRESSION_MODULES);
 const packageBytes=await readFile(new URL('package.json',root));
 assert.equal(sha(packageBytes),e.originals['package.json']);regressionPlan(JSON.parse(packageBytes).scripts.regression);
-const workflow=await readFile(new URL('.github/workflows/ci.yml',root),'utf8');
+const workflow=await stoveSourceText('.github/workflows/ci.yml');
 const originalWorkflow=workflow.replace(e.workflow.addedStep,'').replace(e.workflow.currentCommand,e.workflow.originalCommand);
 assert.notEqual(originalWorkflow,workflow);assert.equal(sha(Buffer.from(originalWorkflow)),e.originals['.github/workflows/ci.yml'],'기존 모든 job·제한·의료/집계/verify·게시 조건 유지');
 for(const [path,hash] of Object.entries(e.unchanged))assert.equal(await squadOverviewSourceHash(path),hash,path+' 기존 검사 원문 유지');

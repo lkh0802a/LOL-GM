@@ -93,7 +93,7 @@ jobs:
         run: node --test scripts/ci-scope.test.mjs
 
       - name: Regression runner isolation and failure handling
-        run: node --test scripts/regression-runner.test.mjs && node scripts/verify-regression-runner-evidence.mjs
+        run: node --test scripts/regression-runner.test.mjs scripts/ui-evidence-runner.test.mjs && node scripts/verify-regression-runner-evidence.mjs
 
       - name: Upload validation report
         if: always()
@@ -120,7 +120,7 @@ jobs:
           node-version: 22
 
       - name: UI finance and contract acceptances
-        run: node scripts/ci-run.mjs ui-finance-contracts -- npm run check:ui-finance-contracts
+        run: node scripts/ci-run.mjs ui-finance-contracts -- node scripts/ui-evidence-runner.mjs
 
       - name: Upload validation report
         if: always()

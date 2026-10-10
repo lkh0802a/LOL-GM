@@ -207,6 +207,7 @@ const maintainabilityBudgets = {
   'ui-match.js': 22000,
   'ui-manager.js': 16000,
   'ui-save-library.js': 6500,
+  'ui-stove.js': 6500,
   'ui-data.js': 12000,
   'ui-champion.js': 18000,
   'ui-player.js': 18000,
