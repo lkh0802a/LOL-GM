@@ -33,16 +33,16 @@ function renderMutualTermination(t){
         <p class="hint">선수 요구 ${money(terms.minimumAmount)} 이상</p>`:'<p class="hint">선수 동의 없음 · 상호 해지 불가</p>'}
     </div>`).join('')}</details>`;
 }
-function bindMutualTerminationControls(act){
+function bindMutualTerminationControls(act,allowed=()=>true){
   document.querySelectorAll('[data-mutual-submit]').forEach(button=>button.onclick=()=>{
-    const p=DB.players[button.dataset.mutualSubmit],amount=+
+    if(!allowed())return;const p=DB.players[button.dataset.mutualSubmit],amount=+
       document.querySelector(`[data-mutual-amount="${p.id}"]`).value,
       preview=previewWorldAction(DB,{type:'player.release',actor:'manager',
         pid:p.id,teamId:p.team,mode:'mutual',amount});
     if(!preview.ok){act(preview.errors.join(' · '));return}
     if(!confirm(p.name+' 선수와 상호 해지할까요?\n합의금 '+money(amount)+
       '\n기존 계약·옵션은 종료되며 선수는 즉시 FA가 됩니다.'))return;
-    const result=applyWorldAction(DB,preview);
+    if(!allowed())return;const result=applyWorldAction(DB,preview);
     act(result.ok?p.name+' 상호 해지 합의 · '+money(result.cost):result.errors.join(' · '));
   });
 }
@@ -88,15 +88,15 @@ function renderContractWindow(){
       `<h4>FA 시장</h4>${faRows||'<p class="hint">현재 협상 가능한 FA가 없습니다.</p>'}`}
   </section>`;
 }
-function bindContractWindow(){
+function bindContractWindow(allowed=()=>true){
   const act=m=>{MSG=m;saveDB();nav();const e=document.querySelector('.contractwindow');e&&e.scrollIntoView({block:'start'})};
-  bindMutualTerminationControls(act);
-  bindContractEntryControls(act);
+  bindMutualTerminationControls(act,allowed);
+  bindContractEntryControls(act,allowed);
   document.querySelectorAll('[data-allow-contact]').forEach(b=>b.onclick=()=>act(grantEarlyContact(DB,b.dataset.allowContact,'manager').msg));
   document.querySelectorAll('[data-start-early]').forEach(b=>b.onclick=()=>act(startNegotiation(DB,b.dataset.startEarly,'early_fa',{teamId:managedTeamId(DB)}).msg));
   document.querySelectorAll('[data-start-fa]').forEach(b=>b.onclick=()=>act(startNegotiation(DB,b.dataset.startFa,'fa').msg));
-  bindRecruitmentControls((msg,changed)=>{if(changed)act(msg);else{MSG=msg;navKeepScroll();}});
-  bindNegotiationControls(act);
+  bindRecruitmentControls((msg,changed)=>{if(changed)act(msg);else{MSG=msg;navKeepScroll();}},allowed);
+  bindNegotiationControls(act,allowed);
 }
 
 function renderMarket(){
@@ -122,17 +122,17 @@ function renderMarket(){
   :tgts.map(p=>{const e=recruitmentTarget(DB,p.id),fee=transferFee(DB,p),n=negotiationStore(DB)[negotiationId(DB,p.id,'transfer')];return `<div class="mrow"><span><span class="role">${ROLE_KO[p.role]}</span> <b>${esc(p.name)}</b> ${esc(tshort(p.team))} · ${p.age}세 · 종합 ${obsOvr(DB,p)}${knowledge(DB,p)<100?'?':''} · 연봉 ${money(p.contract.salary)} ~${p.contract.until} · 시장 이적가 추정 ${money(fee)} · <small>${recruitStageLabel(e)}</small></span><span>${recruitButtons(p,e)}${e?.stage==='evaluated'&&!(n&&n.status==='open')?`<input type="number" step="0.5" min="0" value="${fee}" data-fee="${p.id}" aria-label="이적료">억<button class="primary sm2" data-bid="${p.id}">구단 협상</button>`:''}</span></div>`}).join('')}
   <p class="hint">영입은 관심 등록 → 관찰/스카우팅 → 내부 평가 → 공식 제안 순서입니다. 재계약도 자동 확정되지 않으며 선수 측과 조건을 협상해야 합니다.</p></section>`;
 }
-function bindMarket(){
+function bindMarket(allowed=()=>true){
   if(managedTeam(DB)?.parent)return;
   const act=m=>{MSG=m;saveDB();nav();const e=document.querySelector('.market');e&&e.scrollIntoView({block:'start'})};
-  bindMutualTerminationControls(act);
-  bindContractEntryControls(act);
+  bindMutualTerminationControls(act,allowed);
+  bindContractEntryControls(act,allowed);
   bindClubOfficeControls(act);
-  document.querySelectorAll('[data-release]').forEach(b=>b.onclick=()=>{const p=DB.players[b.dataset.release],cost=contractReleaseCost(DB,p);if(confirm(`${p.name} 선수를 방출할까요?\n해지금 ${money(cost)}${p.contract?` · 계약 ${p.contract.until}년까지`:''}\n방출 후 즉시 FA가 됩니다.`))act(mRelease(DB,b.dataset.release))});
-  bindRecruitmentControls((msg,changed)=>{if(changed)act(msg);else{MSG=msg;navKeepScroll();}});
+  document.querySelectorAll('[data-release]').forEach(b=>b.onclick=()=>{const p=DB.players[b.dataset.release],cost=contractReleaseCost(DB,p);if(confirm(`${p.name} 선수를 방출할까요?\n해지금 ${money(cost)}${p.contract?` · 계약 ${p.contract.until}년까지`:''}\n방출 후 즉시 FA가 됩니다.`)&&allowed())act(mRelease(DB,b.dataset.release))});
+  bindRecruitmentControls((msg,changed)=>{if(changed)act(msg);else{MSG=msg;navKeepScroll();}},allowed);
   document.querySelectorAll('[data-start-fa]').forEach(b=>b.onclick=()=>act(startNegotiation(DB,b.dataset.startFa,'fa').msg));
   document.querySelectorAll('[data-bid]').forEach(b=>b.onclick=()=>{const id=b.dataset.bid;act(mTransfer(DB,id,+document.querySelector(`[data-fee="${id}"]`).value))});
-  bindNegotiationControls(act);
+  bindNegotiationControls(act,allowed);
   document.querySelectorAll('[data-mk]').forEach(b=>b.onclick=()=>{MK.tab=b.dataset.mk;nav()});
   $('#mkrole').onchange=e=>{MK.role=e.target.value;nav()};$('#mkscope').onchange=e=>{MK.scope=e.target.value;nav()};
 }

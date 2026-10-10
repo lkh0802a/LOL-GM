@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import {artifactSources,runEngineFixture} from './test-harness.mjs';
-const sources=await artifactSources(['ui-market.js','ui-observed-radar.js','ui-initial-comparison.js','ui-initial-offer-preview.js','ui-initial-table.js','ui-initial-candidates.js','ui-market-initial.js','ui-club-medical.js','ui-roster.js','ui-club-briefing.js','ui-club-home.js','ui-setup.js','ui-negotiations.js','app.js']);
+const sources=await artifactSources(['ui-market.js','ui-observed-radar.js','ui-initial-comparison.js','ui-initial-offer-preview.js','ui-initial-filters.js','ui-initial-table.js','ui-initial-candidates.js','ui-market-initial.js','ui-club-medical.js','ui-roster.js','ui-club-briefing.js','ui-club-home.js','ui-setup.js','ui-negotiations.js','app.js']);
 const esc=sources.pop().match(/^const esc=.*$/m)?.[0];assert(esc);
+const seasonSource=(await artifactSources(['ui-season.js']))[0],authoritySource=seasonSource.slice(seasonSource.indexOf('function seasonUiGuard(){'),seasonSource.indexOf('function seasonChoiceReturnCurrent('));
 await runEngineFixture(String.raw`(()=>{
   const check=(ok,msg)=>{if(!ok)throw Error('OWNED_RESERVE_COACH '+msg)};
   const cfg=defaultWorldConfig();cfg.regions=[regionCfg('KR',{teams:8,div2:true,
@@ -37,7 +38,7 @@ await runEngineFixture(String.raw`(()=>{
   check(!proposeRoleConversion(db,parentPlayer.id,ROLES.find(r=>r!==parentPlayer.role)).ok,
     'coach can train parent players');
   MSG='';nav=()=>{};saveDB=()=>{};navKeepScroll=()=>{};
-  document={querySelectorAll:()=>[]};window={scrollTo:()=>{}};
+  document={querySelectorAll:()=>[],getElementById:()=>null};window={scrollTo:()=>{}};
   const finishButton={};$=selector=>selector==='#init-final'?finishButton:null;
   bindInitialRosterMarket();check(typeof finishButton.onclick==='function','provided-roster start button unbound');
   finishButton.onclick();
@@ -84,4 +85,4 @@ await runEngineFixture(String.raw`(()=>{
   console.log('OWNED_RESERVE_COACH_ACCEPTANCE '+JSON.stringify({selection:true,
     providedRoster:true,economicAuthority:true,coachingUi:true,parentIsolation:true,
     recovery:true,officialPause:true,aiContracts:true,saveRestore:true}));
-})();`,{filename:'owned-reserve-coach.fixture.js',setupSources:[...sources,esc]});
+})();`,{filename:'owned-reserve-coach.fixture.js',setupSources:[...sources,esc,authoritySource,'var SLOT="1",VIEW="transfer",UI_RENDER_ID=1,SLOT_SWITCHING=false,UI_OVERLAY=null;']});

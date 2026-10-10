@@ -45,11 +45,11 @@ await runEngineFixture(String.raw`(()=>{
  const stageSaved=unpackDB(saves[0]);for(const s of Object.values(DB.world.seasons))for(const d of s.days)for(const m of d.matches)if(m.res){const saved=stageSaved.world.seasons[s.key].days.flatMap(d=>d.matches).find(x=>x.id===m.id).res;check(JSON.stringify(saved)===JSON.stringify(s.done?seriesResultForSave(m.res,false):m.res),'actual stage compact/source save continuity')}
  console.log('PROGRESS_STAGE_RAW '+JSON.stringify({stepBefore:initialStep,stepAfter:DB.world.step,date:DB.worldDate,actual:DB,expected:expectedStage,packed:JSON.parse(saves[0])}));
  console.log('협력 날짜 진행 수용 통과: 실제 외부 문맥16개·구단3경계·수동 중단/중복/재개·기존 writer 전체DB/시드/공식 nexus/압축history');
-})()`,{timeout:120000,setupSources:[String.raw`
+})()`,{timeout:120000,setupSources:[(await artifactSources(['ui-transfer-page.js']))[0],String.raw`
 let DB,VIEW='season',SLOT='1',SLOT_SWITCHING=false,UI_RENDER_ID=1,UI_OVERLAY=null,MSG='';
 const SSET={view:null,tab:'sched'},callbacks=[],nodes=new Map(),saves=[];
 for(const id of ['#sday','#sfixture','#smine','#sstep','#send','#sprog','#spause'])nodes.set(id,{value:'',textContent:'',disabled:false});
-const $=s=>nodes.get(s)||null,document={querySelectorAll:()=>[]};
+const $=s=>nodes.get(s)||null,document={querySelector:s=>$(s),querySelectorAll:()=>[]};
 function nav(){UI_RENDER_ID++}function saveDB(){saves.push(packDB(DB))}function bindClubBriefing(){}function bindOfficeOpinionControls(){}function bindSeasonTab(){}
 function setTimeout(fn){callbacks.push(fn)}function requestAnimationFrame(fn){}function esc(x){return String(x)}function teamOpts(){return ''}
 `,state.slice(state.indexOf('const UI_TASKS='),state.indexOf('let UI_RENDER_ID=')),baselineUi.slice(baselineUi.indexOf('function bindSeason(){'),baselineUi.indexOf('// 시즌 조회')).replace('function bindSeason(){','function originalBindSeason(){'),ui.slice(ui.indexOf('function bindSeason(){')),'const FIXTURE='+JSON.stringify(fixture)+';']});

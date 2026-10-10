@@ -99,6 +99,8 @@ export const ENGINE_MODULES = [
 
 export const UI_MODULES = [
   'ui-club-actions.js',
+  'ui-initial-comparison.js',
+  'ui-initial-filters.js',
   'ui-initial-table.js',
   'ui-theme.js',
   'ui-patch.js',
@@ -125,8 +127,9 @@ export const UI_MODULES = [
   'ui-staff-controls.js',
   'ui-transfer-terms.js',
   'ui-observed-radar.js',
-  'ui-initial-comparison.js',
   'ui-initial-candidates.js',
+  'ui-initial-squad.js',
+  'ui-transfer-page.js',
   'ui-market-initial.js',
   'ui-market-staff.js',
   'ui-market.js',

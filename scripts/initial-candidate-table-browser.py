@@ -11,7 +11,7 @@ with sync_playwright() as pw:
   page=b.new_page(viewport={'width':width,'height':900});errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.route('https://**/*',lambda route:route.abort())
   page.evaluate("()=>{const map=new Map();Object.defineProperty(window,'localStorage',{value:{getItem:k=>map.get(k)||null,setItem:(k,v)=>map.set(k,String(v)),removeItem:k=>map.delete(k)}})}")
   page.set_content(html,wait_until='load');page.wait_for_selector('#startup-new')
-  page.evaluate("()=>{const cfg=defaultWorldConfig();cfg.regions=[regionCfg('KR',{teams:3,div2:true}),regionCfg('NA',{teams:3,div2:true})];cfg.internationals=[];DB=buildWorld(cfg);const t=activeTeams(DB,'KR',1)[0];startCareer(DB,t.id,'candidate-table-browser');resetUiForWorld();VIEW='season';nav()}")
+  page.evaluate("()=>{const cfg=defaultWorldConfig();cfg.regions=[regionCfg('KR',{teams:3,div2:true}),regionCfg('NA',{teams:3,div2:true})];cfg.internationals=[];DB=buildWorld(cfg);const t=activeTeams(DB,'KR',1)[0];startCareer(DB,t.id,'candidate-table-browser');resetUiForWorld();VIEW='transfer';nav()}")
   before=page.evaluate('JSON.stringify(DB)');assert page.locator('.candidate-table table').count()==1
   assert page.locator('.candidate-table th[aria-sort]').inner_text().startswith('종합 기량 추정')
   assert not page.locator('#init-table-options').evaluate('e=>e.open')
@@ -19,13 +19,15 @@ with sync_playwright() as pw:
   page.locator('#init-column-region').check();page.locator('#init-column-reputation').check()
   assert page.locator('#init-column-region').is_checked() and page.locator('#init-column-reputation').is_checked()
   assert page.locator('.candidate-table th').filter(has_text='출신 지역').count()==1
-  page.locator('#init-sort').select_option('role');page.locator('#init-direction').select_option('asc')
-  page.locator('#init-secondary-0').select_option('salary');page.locator('#init-secondary-direction-0').select_option('asc')
-  page.locator('#init-secondary-1').select_option('age');page.locator('#init-secondary-direction-1').select_option('asc')
-  assert page.locator('#init-secondary-direction-1').evaluate('e=>e===document.activeElement')
-  ordered=page.evaluate("()=>{const p=initialCandidatePage(DB,INITMK,DB.teams[INITMK.target]);return {orders:initialCandidateOrders(INITMK),rows:p.rows.map(x=>({id:x.p.id,role:ROLES.indexOf(x.p.role),salary:asking(p.view,x.p,DB.teams[INITMK.target].region),age:x.p.age}))}}")
+  page.locator('#init-sort-column-salary').click()
+  page.locator('#init-multi-sort').check()
+  page.locator('#init-sort-column-age').click()
+  page.locator('#init-sort-column-name').click()
+  assert page.locator('#init-sort-column-name').evaluate('e=>e===document.activeElement')
+  ordered=page.evaluate("()=>{const p=initialCandidatePage(DB,INITMK,DB.teams[INITMK.target]);return {orders:initialCandidateOrders(INITMK),rows:p.rows.map(x=>({id:x.p.id,name:x.p.name,salary:asking(p.view,x.p,DB.teams[INITMK.target].region),age:x.p.age}))}}")
   assert len(ordered['orders'])==3
-  assert ordered['rows']==sorted(ordered['rows'],key=lambda x:(x['role'],x['salary'],x['age'],x['id']))
+  assert page.evaluate("()=>{const p=initialCandidatePage(DB,INITMK,DB.teams[INITMK.target]);return p.rows.every((x,i,a)=>!i||(()=>{const a0=a[i-1],as=asking(p.view,a0.p,DB.teams[INITMK.target].region),bs=asking(p.view,x.p,DB.teams[INITMK.target].region);return as<bs||as===bs&&(a0.p.age<x.p.age||a0.p.age===x.p.age&&a0.p.name.localeCompare(x.p.name,'ko')<=0)})())}")
+  page.locator('#init-multi-sort').uncheck()
   page.locator('#init-table-options > summary').click()
   page.locator('#init-sort-column-age').focus();page.keyboard.press('Enter')
   assert page.locator('th[aria-sort]').get_attribute('aria-sort')=='ascending'

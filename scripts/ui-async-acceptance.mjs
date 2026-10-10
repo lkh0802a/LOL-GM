@@ -127,6 +127,7 @@ const later=()=>new Promise(resolve=>setImmediate(resolve));
   vm.runInContext(officialContextSource,context,{filename:'ui-official-context.js'});
   vm.runInContext(season.slice(season.lastIndexOf('function bindSeason(){')),context,{filename:'bindSeason()'});
   vm.runInContext(themeSource,context,{filename:'ui-theme.js'});
+  vm.runInContext(await get('ui-initial-squad.js')+'\n'+await get('ui-transfer-page.js'),context);
   vm.runInContext(state,context,{filename:'ui-state.js'});
   const run=js=>vm.runInContext(js,context);
   const flush=()=>{const work=callbacks.splice(0);work.forEach(fn=>fn())};

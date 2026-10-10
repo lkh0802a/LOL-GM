@@ -33,7 +33,7 @@ await runEngineFixture(String.raw`(()=>{
  reset();openPendingOfficialDraft(DB);document.querySelectorAll('[data-choice-kind]')[0].onclick();const stale=DRAFT_UI;$('#official-pause').onclick();DB.manager={...DB.manager};bindSeason();$('#official-open').onclick();check(DRAFT_UI!==stale,'manual current review never rebase old draft');check(UI_OVERLAY.kind==='draft','same actual pending current manual review');
  reset();openPendingOfficialDraft(DB);document.querySelectorAll('[data-choice-kind]')[0].onclick();const cancelled=DRAFT_UI;$('#official-pause').onclick();bindSeason();const discard=$('#official-discard').onclick,cancelBefore=JSON.stringify(DB);discard();check(JSON.stringify(DB)===cancelBefore&&OFFICIAL_UI_PAUSED.draft===null,'explicit cancellation only discards uncommitted transient input');bindSeason();$('#official-open').onclick();check(DRAFT_UI!==cancelled&&JSON.stringify(DB)===cancelBefore,'manual fresh preparation without replay/rewind');discard();check(DRAFT_UI!==cancelled&&JSON.stringify(DB)===cancelBefore,'duplicate cancellation inert');
  console.log('공식 UI 권한 수용 통과: 원본 반례·22 frame/선택/밴픽 문맥·수동 중단/재개·동일 공식 writer/nexus/raw compact 역사');
-})()`,{timeout:120000,setupSources:[String.raw`
+})()`,{timeout:120000,setupSources:[(await artifactSources(['ui-transfer-page.js']))[0],String.raw`
 let DB,VIEW='season',SLOT='1',SLOT_SWITCHING=false,UI_RENDER_ID=1,UI_OVERLAY=null,MSG='',DRAFT_UI=null,LAST=null,LASTSER=null;
 const SSET={view:null,tab:'sched'},frames=[],saves=[],nodes=new Map(),lists=new Map();
 function dom(html){for(const n of nodes.values())n.isConnected=false;nodes.clear();lists.clear();

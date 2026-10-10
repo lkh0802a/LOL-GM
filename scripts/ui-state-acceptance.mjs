@@ -26,6 +26,7 @@ const context=vm.createContext({
     ['bind'+({season:'Season',match:'Match',squad:'Squad',patch:'Patch',analysis:'Analysis',mc:'MC',data:'Data'}[v]),()=>calls.push('bind:'+v)]
   ]))
 });
+vm.runInContext(await readFile(resolve(root,'ui-initial-squad.js'),'utf8')+'\n'+await readFile(resolve(root,'ui-transfer-page.js'),'utf8'),context);
 vm.runInContext(source,context,{filename:'ui-state.js'});
 const run=s=>vm.runInContext(s,context);
 const value=s=>vm.runInContext(s,context);

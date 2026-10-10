@@ -1,0 +1,8 @@
+import vm from 'node:vm';
+import {artifactSources,compiledEngine} from './test-harness.mjs';
+const sources=await artifactSources(['ui-initial-comparison.js','ui-initial-filters.js','ui-initial-table.js','ui-initial-candidates.js']);
+const ctx=vm.createContext({console,Date,Math,JSON,Set,Map,WeakMap,Object,Array,String,Number,Boolean,RegExp,Error,Intl,performance,crypto});(await compiledEngine()).runInContext(ctx,{timeout:30000});for(const s of sources)new vm.Script(s).runInContext(ctx);
+new vm.Script(String.raw`(()=>{
+const output=[];for(const size of ['small','default'])for(const seed of ['initial-sort-a','initial-sort-b','initial-sort-c']){const cfg=defaultWorldConfig();if(size==='small'){cfg.regions=[regionCfg('KR',{teams:3,div2:true}),regionCfg('NA',{teams:3,div2:true})];cfg.internationals=[]}const db=buildWorld(cfg),t=activeTeams(db,'KR',1)[0];startCareer(db,t.id,seed);
+for(const key of ['ability','salary','potential']){const state={...initialCandidateUiState(),target:t.id,scope:'all',sort:key,direction:'asc'},before=JSON.stringify(db),f=initialCandidateSortValue;let calls=0;initialCandidateSortValue=(...args)=>{calls++;return f(...args)};const times=[];let p;for(let i=0;i<5;i++){const start=performance.now();p=initialCandidatePage(db,state,t);times.push(performance.now()-start)}initialCandidateSortValue=f;if(JSON.stringify(db)!==before)throw Error('sort read changed DB');output.push({size,seed,key,candidates:p.total,callsPerRead:calls/5,ms:times,medianMs:times.slice().sort((a,b)=>a-b)[2],ids:p.rows.map(x=>x.p.id),values:p.rows.map(x=>x.value)})}}
+console.log('INITIAL_SORT_MEASURE '+JSON.stringify(output));})()`).runInContext(ctx,{timeout:120000});
