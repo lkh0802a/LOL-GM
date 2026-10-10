@@ -43,6 +43,10 @@ reset();const payment=processTransferPayments;processTransferPayments=()=>{throw
 reset();const actualSave=saveDB;saveDB=()=>{throw Error('synthetic save failure')};bindStove(seasonUiGuard());node('[data-stove-day]').onclick();saveDB=actualSave;check(DB.worldDate===addDays(JSON.parse(base).worldDate,1)&&MSG.includes('저장하지 못'),'completed date retained on save error');
 const raw=JSON.stringify(DB),loaded=unpackDB(packDB(DB));check(loaded.worldDate===DB.worldDate&&JSON.stringify(loaded.world.contractWindow)===JSON.stringify(DB.world.contractWindow)&&JSON.stringify(DB)===raw,'actual full save continuity');
 reset();DB.world.contractWindow.exclusiveThrough='unknown';check(!stoveModel().ready&&renderStove().includes(' disabled'),'missing date not invented');
+for(const field of ['startDate','exclusiveThrough','contractExpiryDate','outsideContactDate']){
+ reset();DB.world.contractWindow[field]='2027-13-20';DB=unpackDB(JSON.stringify(DB));const before=JSON.stringify(DB);check(!stoveModel().ready&&renderStove().includes('계약 날짜 정보를 확인할 수 없어'),'invalid saved date displayed without exception');bindStove(seasonUiGuard());node('[data-stove-day]').onclick();check(JSON.stringify(DB)===before&&saves===0,'invalid calendar metadata does not consume or overwrite save');
+}
+reset();DB.worldDate='2027-00-00';DB=unpackDB(JSON.stringify(DB));const invalidBefore=JSON.stringify(DB);check(!stoveModel().ready&&renderStove().includes(' disabled')&&JSON.stringify(DB)===invalidBefore,'invalid saved world clock does not invent date');
 console.log('STOVE_DAILY_ACCEPTANCE '+JSON.stringify({stale:cases,originalCounterexample:true,dailyWriter:true,expiryWriter:true,endWriter:true,cancel:true,duplicate:true,rollback:true,save:true,readPure:true}));
 })()`).runInContext(context,{timeout:30000});
 assert.equal(new vm.Script('saves').runInContext(context),0);

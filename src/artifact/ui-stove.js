@@ -1,7 +1,7 @@
 // 기존 계약 달력의 실제 날짜 진행과 수동 확인 화면.
 function stoveModel(){
  const db=DB,w=db.world,cw=w?.contractWindow,team=managedTeamId(db);if(!w||w.phase!=='offseason'||!cw)return null;
- const copy=JSON.parse(JSON.stringify(db)),valid=d=>typeof d==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&addDays(d,0)===d;
+ const copy=JSON.parse(JSON.stringify(db)),valid=d=>{try{return typeof d==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&addDays(d,0)===d}catch{return false}};
  const ready=cw.stage==='exclusive'&&[db.worldDate,cw.startDate,cw.exclusiveThrough,cw.contractExpiryDate,cw.outsideContactDate].every(valid)&&cw.startDate<=db.worldDate&&db.worldDate<=cw.exclusiveThrough&&cw.exclusiveThrough===cw.contractExpiryDate&&addDays(cw.exclusiveThrough,1)===cw.outsideContactDate;
  const rows=Object.values(copy.world.negotiations||{}).filter(n=>n.teamId===team&&n.status==='open').map(n=>({name:copy.players[n.pid]?.name||'선수 정보 없음',round:n.round,maxRounds:n.maxRounds,created:n.createdDate}));
  return {date:db.worldDate,cw:copy.world.contractWindow,rows,ready,next:ready?addDays(db.worldDate,1):null};

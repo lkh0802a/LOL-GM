@@ -11,10 +11,13 @@
     "src/artifact/app.js": "9063d2f41b4dcd6c7dff781a0353aa380b22987149e736c96ff647a43455504a",
     "src/artifact/ui-season.js": "0bf06d57307655c3991f0ec6ec2f409a6b11e1be59af865329e81f7bb6928eb5",
     "src/artifact/ui-market.js": "75d4f86f1b512b52eb94b427ef6183e5b5f264618a1e1281fab9d44a2da0e5cd",
-    "src/artifact/ui-transfer-page.js": "5c5667356248f67ab3844f6d2d8747b93550723c644bf1d286e0221c5774242d"
+    "src/artifact/ui-transfer-page.js": "5c5667356248f67ab3844f6d2d8747b93550723c644bf1d286e0221c5774242d",
+    ".github/workflows/ci.yml": "91ce631ebf2553507d3b1a0924a23ab677a123debfefcbfb390eb606190a11ad",
+    "scripts/verify-regression-runner-evidence.mjs": "8a120723ba920aa7d5d7bb51dd55dc1ca418bc8860a92f43599742d1c06c9dc8",
+    "scripts/squad-overview-source-successor.mjs": "61acf7f90472a46953c8f6e69b033174ca72472c4c4d69a249b468ca0bdc7d6b"
   },
   "sources": {
-    "index.html": "468b1d58e326cb547acd841a6610e2abb5b02d7529bfbc6afea44082465fc255",
+    "index.html": "e31c96f29db30ee454ea13a575df52a47a5e66924bef6f37d6641e764f3abf85",
     "scripts/artifact-modules.mjs": "f515326e73aceae936ad36721e34503ec087fd8d3e6918b8b49b9ee4c40b5fb6",
     "scripts/check.mjs": "c2be057e815173b4c4f5091ce65f8a595181e25d0d053d5199f902cd66fd72bd",
     "scripts/contract-window-acceptance.mjs": "c3840432de322c5864e97bf40fc8ab519257d699847a072dc0abd558cd648ab0",
@@ -23,9 +26,14 @@
     "src/artifact/ui-season.js": "be9ea5521737c9584ac23605c958f2836bab401b42ba50899485d9f190c34dd5",
     "src/artifact/ui-market.js": "8a53eb0641b48c29ef04e3d6775e2dd649c7f88a5e638f56c6a4fc072e4f131a",
     "src/artifact/ui-transfer-page.js": "238f0b6786d1d1fc90bc607303cadca5222af6ba120247fdf08b2cc1fcddad6d",
-    "src/artifact/ui-stove.js": "d17c7b5608b126eae3f4f67b9a309b29921edcf8aa33e97bdac9978354004d3a",
-    "scripts/stove-daily-acceptance.mjs": "2dbaa0694feb070a12fbb4b2d5875e6b6435ffc5b11589973fcb6ec9b6a36b08",
-    "scripts/stove-source-successor.mjs": "a348c9462ce8dbcb50c2baa12fbd04924f21e91eab24762163965860ddf05090"
+    ".github/workflows/ci.yml": "d0fd8cd0a6ed4353110cb999007c98a6cacaeb55525d504607daa45bad2fb684",
+    "scripts/verify-regression-runner-evidence.mjs": "acda1571acfb8ef98bd39b39c488e77916f1d3ddea61eff11fb4edf892ddf4a3",
+    "scripts/squad-overview-source-successor.mjs": "252e4f1e1b1113410e871f005d219181993f44150f59a4d6c6404cc3692ecd7e",
+    "src/artifact/ui-stove.js": "509353dd0026f2d5fe6e40ce29f27fbd16a76ae7d4c6361b3ab9f3203a8fc01f",
+    "scripts/stove-daily-acceptance.mjs": "cbb83bbe413afcbb3728b640aff257fa24642ebc6309a188368b14e275a08363",
+    "scripts/stove-source-successor.mjs": "a06f5b50b82a6042f41ef59f1ef0ed3540ff89bf01a2b81b4e477a8775bd22da",
+    "scripts/ui-evidence-runner.mjs": "eb5ce32fc96f0fdd5e7e283d27c842e918129f7e9c22cc00c3ac6936535fd3df",
+    "scripts/ui-evidence-runner.test.mjs": "97d40570e5d81b5f4289ff66ebcefc1cc0b8e9269fe98ae8a2c351b6ef693083"
   },
   "engine": {
     "champion-source.js": "29efbdabad4d152e351f0bfdfb025feb5283862ea3ae9caa4fcd2b1d0678bf1c",
@@ -132,10 +140,10 @@
   },
   "archive": {
     "path": "docs/evidence/stove-daily-2026-10-10.raw.json.gz",
-    "bytes": 2141604,
-    "sha256": "9cca3ab40ea72774fc797326993796d3955ec7d3eed65cc3167d28697bd87a56",
-    "decodedSha256": "d025bd44c76ef8fddc70f5df1d0fba9e4524f65838be2fcf6555ee674c6d1bbe",
-    "rows": 23
+    "bytes": 2164299,
+    "sha256": "bb31a0503953beeb18b9d31748a5ed7fd46e56ad071f755d94aa6d7780dd51ca",
+    "decodedSha256": "da836b78ac07ad72885072224d469b139386d6add937e2d52b20e322f13066f2",
+    "rows": 31
   },
   "publicPayload": "명시 목록의 기존 공개 소스/문서와 현재 검토 소스/검사 코드만. 원시 로그/전체 저장/사진/자동화/거절 자료 없음",
   "state": "구현·집중 수용 완료, 필수 검사·변경 요청·병합·게시 대기",

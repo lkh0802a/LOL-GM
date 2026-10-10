@@ -21,7 +21,7 @@ async function verify(){
  for(const path of ['scripts/club-home-source-successor.mjs','scripts/verify-regression-runner-evidence.mjs']){
   const prefix="import {squadOverviewSourceHash} from './squad-overview-source-successor.mjs';\n";
   const transformed=originalText(path).replaceAll("sha(await readFile(new URL(p,root)))","await squadOverviewSourceHash(p)").replaceAll("sha(await readFile(new URL(path,root)))","await squadOverviewSourceHash(path)");
-  assert.equal(await readFile(new URL(path,root),'utf8'),prefix+transformed,path+' 기존 assertion 원문·정확한 승계 hash 호출만 변경');
+  assert.equal(await squadTableSourceText(path),prefix+transformed,path+' 기존 assertion 원문·정확한 승계 hash 호출만 변경');
  }
  for(const [path,h] of Object.entries(e.engine))assert.equal(sha(await readFile(new URL('src/artifact/'+path,root))),h,path+' 엔진 원문 유지');assert.equal(Object.keys(e.engine).length,101);
  for(const file of ['docs/README.md','docs/DEVELOPMENT.md']){const row=rows.find(x=>x.path==='original/'+file);assert(row);assert((await readFile(new URL(file,root))).includes(Buffer.from(row.base64,'base64')),file+' 전체 원문 연속 보존')}
