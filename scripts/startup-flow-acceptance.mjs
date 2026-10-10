@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import {artifactSources,runEngineFixture} from './test-harness.mjs';
 import {readFile} from 'node:fs/promises';
-const [startup,app,data,setup,themeSource,saveLibrary]=await artifactSources(['ui-startup.js','app.js','ui-data.js','ui-setup.js','ui-theme.js','ui-save-library.js']);
+const [startupSource,startupStorage,app,data,setup,themeSource,saveLibrary]=await artifactSources(['ui-startup.js','ui-startup-storage.js','app.js','ui-data.js','ui-setup.js','ui-theme.js','ui-save-library.js']);
+const startup=startupSource+'\n'+startupStorage;
 const storage=app.slice(app.indexOf('async function loadDB('),app.indexOf('const $=s=>'));
 const esc=app.match(/^const esc=.*$/m)[0];
 await runEngineFixture(String.raw`(async()=>{
@@ -35,7 +36,7 @@ await runEngineFixture(String.raw`(async()=>{
  DB=empty;START_UI={active:true,page:'new-slot',error:''};local.set('base-5',packDB(careerDB));const stale=()=>false;check(!await startupChooseSlot('5',stale)&&START_UI.error==='','stale async slot observer inert');
  check(local.get('base-3')!==null,'old slot untouched');
  DB=null;startupBootFailure(Error('controlled invalid boot'));check((viewStartup().match(/<button/g)||[]).length===3,'invalid boot keeps three actions');
- bindStartup();$('#startup-load').onclick();check(viewStartup().includes('저장 슬롯 복원'),'boot load reachable');
+ bindStartup();$('#startup-load').onclick();check(viewStartup().includes('저장된 게임'),'boot load reachable');
  failReads=true;local.delete('base-7');const bootSlot=SLOT;check(!await startupChooseSlot('7',()=>true)&&DB===null&&SLOT===bootSlot,'boot I/O failure identity preserved');failReads=false;
  check(await startupChooseSlot('1',()=>true)&&DB.world.phase==='initial_roster'&&!START_UI.active&&!START_BOOT_ERROR,'actual other slot boot recovery');
  DB=null;START_BOOT_ERROR='bad original';START_UI={active:true,page:'new-slot',error:''};local.delete('base-8');mem.delete('base-8');check(await startupChooseSlot('8',()=>true)&&!DB.world&&START_UI.page==='career','boot new uses genuine empty slot');

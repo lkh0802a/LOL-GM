@@ -92,6 +92,7 @@ for (const file of modules) {
 const maintainabilityBudgets = {
   'app.js': 22000,
   'ui-startup.js': 7000,
+  'ui-startup-storage.js': 5500,
   'ui-theme.js': 1500,
   'ui-club-actions.js': 6500,
   'ui-initial-squad.js': 6500,
