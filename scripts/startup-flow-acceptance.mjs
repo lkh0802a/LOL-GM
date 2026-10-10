@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {artifactSources,runEngineFixture} from './test-harness.mjs';
 import {readFile} from 'node:fs/promises';
-const [startup,app,data,setup,themeSource]=await artifactSources(['ui-startup.js','app.js','ui-data.js','ui-setup.js','ui-theme.js']);
+const [startup,app,data,setup,themeSource,saveLibrary]=await artifactSources(['ui-startup.js','app.js','ui-data.js','ui-setup.js','ui-theme.js','ui-save-library.js']);
 const storage=app.slice(app.indexOf('async function loadDB('),app.indexOf('const $=s=>'));
 const esc=app.match(/^const esc=.*$/m)[0];
 await runEngineFixture(String.raw`(async()=>{
@@ -54,10 +54,10 @@ const SAVE_SLOTS=Array.from({length:10},(_,i)=>String(i+1));
 const local=new Map(),mem=new Map(),nodes=new Map();
 const localStorage={getItem:k=>local.has(k)?local.get(k):null,setItem:(k,v)=>{if(failWrites)throw Error('controlled write failure');local.set(k,v)},removeItem:k=>local.delete(k)};
 async function idbGet(k){if(failReads)throw Error('controlled read failure');return mem.get(k)}async function idbSet(k,v){if(failWrites)throw Error('controlled write failure');mem.set(k,v)}
-const document={querySelector:s=>{if(!nodes.has(s))nodes.set(s,{value:'',innerHTML:'',focus(){}});return nodes.get(s)},querySelectorAll:()=>[],documentElement:{setAttribute:(k,v)=>{theme=v}}};const $=s=>document.querySelector(s);
+const document={querySelector:s=>{if(!nodes.has(s))nodes.set(s,{value:'',innerHTML:'',querySelectorAll:()=>[],focus(){}});return nodes.get(s)},querySelectorAll:()=>[],documentElement:{setAttribute:(k,v)=>{theme=v}}};const $=s=>document.querySelector(s);
 const window={scrollTo(){}};const navigator={};function clearTimeout(){}function setTimeout(){return 1}function cancelUiTasks(){}function freshInternalSeed(){return 'startup-actual'}
 function nav(){UI_RENDER_ID++}function navigateTo(v){VIEW=v;nav();return true}function resetUiForWorld(){START_UI={active:!DB.world,page:'home',error:''}}function bindSetup(){}function seasonSetup(){return 'career choices'}const SSET={};
-`,esc,storage,data,themeSource,startup]});
+`,esc,storage,saveLibrary,data,themeSource,startup]});
 // Retain the old utility counterexample using original source, without archived save mutation.
 const old=await readFile(new URL('../src/artifact/ui-data.js',import.meta.url),'utf8');
 assert(old.includes('if(!current())return'),'all utility action callbacks must check identity');
