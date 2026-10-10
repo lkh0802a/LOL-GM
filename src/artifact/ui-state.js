@@ -1,5 +1,5 @@
 // ===== LOL GM: transient UI state and screen routing =====
-// View-local state is deliberately excluded from the persistent world DB.
+// UI state stays outside the saved DB.
 // These globals retain their established names for the standalone classic-script build.
 let LAST=null, LASTSER=null, VIEW='season', SQUAD=null, OPEN_P=null, LOGMODE='major', MSG='';
 let SCOUTSET={region:'ALL',role:'ALL',contract:'all',competition:'ALL',undervalued:false,q:''}, SQUAD_EDIT=null;
@@ -15,7 +15,7 @@ let ANALYSIS_SET={mode:'own',team:'AUTO',period:'90',patch:'CURRENT',position:'A
 const UI_ROUTES=Object.freeze({
   season:{render:viewSeason,bind:bindSeason},
   match:{render:viewMatch,bind:bindMatch},
-  squad:{render:viewSquad,bind:bindSquad},
+  squad:{render:()=>initialSquadRoute(viewSquad),bind:()=>initialSquadRoute(bindSquad,true)},
   patch:{render:viewPatch,bind:bindPatch},
   analysis:{render:viewAnalysis,bind:bindAnalysis},
   data:{render:viewData,bind:bindData}
@@ -71,12 +71,12 @@ function updateAppNavigation(){
   document.querySelectorAll('nav button').forEach(b=>{if(names[b.dataset.v])b.textContent=names[b.dataset.v]});
   const save=document.querySelector('#app-save');if(save){save.textContent=names.data;save.setAttribute?.('aria-current',VIEW==='data'?'page':'false');save.onclick=()=>navigateTo('data')};
   const screen=document.querySelector('#app-screen'),club=document.querySelector('#app-club');
-  if(screen)screen.textContent=typeof START_UI!=='undefined'&&START_UI.active?'시작':names[VIEW];
+  if(screen)screen.textContent=typeof START_UI!=='undefined'&&START_UI.active?'시작':VIEW==='transfer'?'이적시장':names[VIEW];
   if(club){const t=started&&DB.teams&&typeof managedTeamId==='function'&&DB.teams[managedTeamId(DB)];club.textContent=t?`${t.name} · ${DB.worldDate||DB.year}`:started?`무소속 · ${DB.worldDate||DB.year}`:'커리어 시작 전'}
   const theme=document.querySelector('#app-theme');if(theme)bindAppThemePreference(theme,UI_RENDER_ID+1);
 }
 function nav(){
-  const route=typeof START_UI!=='undefined'&&START_UI.active?{render:viewStartup,bind:bindStartup}:UI_ROUTES[VIEW];
+  const route=initialScreenRoute();
   if(!route)throw new Error('Unknown screen: '+VIEW);
   const main=document.querySelector('#main');
   if(!main)throw new Error('Main screen container missing');
@@ -91,7 +91,7 @@ function nav(){
   route.bind();
 }
 function navigateTo(view,options={}){
-  if(!Object.prototype.hasOwnProperty.call(UI_ROUTES,view)||!DB||SLOT_SWITCHING)return false;
+  if(!(Object.hasOwn(UI_ROUTES,view)||view==='transfer'&&transferTabAllowed())||!DB||SLOT_SWITCHING)return false;
   if(UI_OVERLAY){
     if(!UI_OVERLAY.dismissible)return false;
     if(UI_OVERLAY.onDismiss)UI_OVERLAY.onDismiss();

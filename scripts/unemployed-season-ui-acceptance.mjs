@@ -4,7 +4,7 @@ import {runEngineFixture,artifactSources} from './test-harness.mjs';
 const root=new URL('../',import.meta.url),e=JSON.parse(await readFile(new URL('docs/evidence/unemployed-season-context-2026-10-08.json',root)));
 const rows=JSON.parse(gunzipSync(await readFile(new URL(e.archive.path,root))));
 const original=Buffer.from(rows.find(r=>r.path==='original/src/artifact/ui-season.js').base64,'base64').toString();
-const current=(await artifactSources(['ui-season.js']))[0];
+const current=(await artifactSources(['ui-season.js']))[0],transfer=(await artifactSources(['ui-transfer-page.js']))[0];
 const fixture=JSON.parse(await readFile(new URL('docs/evidence/unemployed-season-fixture-2026-10-08.json',root)));
 const popupSource=current.slice(current.indexOf('function findMatch('),current.indexOf('function openSeries('))+current.match(/^function bindSeasonTab.*$/m)[0];
 await runEngineFixture(String.raw`(()=>{
@@ -43,7 +43,7 @@ function curS(){return DB.world?.seasons[SSET.view]}
 let DB,VIEW='season',SLOT='1',SLOT_SWITCHING=false,UI_RENDER_ID=1,UI_OVERLAY=null,saves=0,MSG='';
 const SSET={view:null,tab:'sched'},nodes=new Map();
 for(const id of ['#pickteam','#pickgo','#pickcancel','#pickmsg','#snew','#sreset','#stab'])nodes.set(id,{value:'',textContent:'',focus(){},innerHTML:''});
-const $=s=>nodes.get(s)||null,document={querySelectorAll:()=>[]};
+const $=s=>nodes.get(s)||null,document={querySelector:s=>$(s),querySelectorAll:()=>[]};
 function nav(){UI_RENDER_ID++}function saveDB(){saves++;return packDB(DB)}function bindClubBriefing(){}function bindOfficeOpinionControls(){}
 function bindSeasonTab(){}function esc(x){return String(x)}function teamOpts(){return ''}
-`,original.slice(original.indexOf('function bindSeason(){')).replace('function bindSeason(){','function originalBindSeason(){'),current.slice(current.indexOf('function bindSeason(){')),popupSource,'const FIXTURE='+JSON.stringify(fixture)+';']});
+`,transfer,original.slice(original.indexOf('function bindSeason(){')).replace('function bindSeason(){','function originalBindSeason(){'),current.slice(current.indexOf('function bindSeason(){')),popupSource,'const FIXTURE='+JSON.stringify(fixture)+';']});

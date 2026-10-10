@@ -68,6 +68,7 @@ assert(contrast(darkBg,darkFg)>=4.5,'dark primary text/background contrast below
       return [['view'+title,()=>'<section>'+v+'</section>'],['bind'+title,()=>{}]];
     }))
   });
+  vm.runInContext(await get('ui-initial-squad.js')+'\n'+await get('ui-transfer-page.js'),context);
   vm.runInContext(uiState,context,{filename:'ui-state.js'});
   const run=s=>vm.runInContext(s,context);
   assert.equal(run("navigateTo('squad')"),true);

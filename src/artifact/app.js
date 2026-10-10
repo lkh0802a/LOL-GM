@@ -150,7 +150,7 @@ function viewSeason(){
   const w=DB.world;
   if(!w) return seasonSetup();
   if(w.phase==='pick') return renderSeasonTeamChoice();
-  if(w.phase==='initial_roster') return renderInitialRosterMarket();
+  if(w.phase==='initial_roster') return renderInitialSetupHome();
   const me=managedTeamId(DB), T=seasonManagedTeam(), k=mySeasonKey(), lgS=k&&w.seasons[k];
   const reg=lgS?standings(DB,lgS,'regular'):[], mine=reg.find(x=>x.tid===me), rank=reg.indexOf(mine)+1;
   const nx=nextMine(), nd=nextDate(DB);
@@ -163,8 +163,7 @@ function viewSeason(){
   ${SAVEFAIL?'<p class="warn">브라우저 저장 공간이 부족해 진행 상황을 저장하지 못했습니다. 데이터 탭에서 JSON을 복사해 두세요.</p>':''}
   <section class="controls">${controlsFor(w)}<span id="sprog" class="hint" role="status">${esc(seasonProgressNotice())}</span></section>
   ${T?renderClubBriefing():''}
-  ${T&&w.phase==='market'&&w.manage==='manual'?renderMarket():''}
-  ${T&&w.phase==='offseason'&&w.manage==='manual'&&w.contractWindow?renderContractWindow():''}
+  ${renderTransferEntry()}
   ${(w.phase==='preseason'||w.phase==='market')&&w.report?renderReport(w.report):''}
   ${chapters(w)}
   <div class="seg tabs season-tabs" role="group" aria-label="대회 정보 선택">${[['table','순위'],['sched','일정·결과'],['bracket','토너먼트'],['stats','기록'],['hist','세계·역대']].map(([k,l])=>`<button data-st="${k}" aria-pressed="${SSET.tab===k}">${l}</button>`).join('')}</div>

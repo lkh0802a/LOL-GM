@@ -129,8 +129,8 @@ function bindSeason(){
   const w=DB.world;
   if(!w)return bindSetup();
   if(w.phase==='pick'){bindSeasonTeamChoice();return}
-  if(w.phase==='initial_roster'){bindInitialRosterMarket();return}
-  const current=seasonUiGuard();
+  if(w.phase==='initial_roster'){bindInitialSetupHome();return}
+  const current=seasonUiGuard();bindTransferEntry(current);
   if(seasonManagedTeam())bindClubBriefing();
   document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{if(!current())return;SSET.view=b.dataset.view;nav()});
   document.querySelectorAll('[data-chap]').forEach(b=>b.onclick=()=>{if(!current())return;const i=+b.dataset.chap;SSET.chap=(SSET.chap??w.step)===i?-1:i;const s=Object.values(w.seasons).find(x=>stepOf(DB,x)===i&&(x.region===seasonManagedRegion()||DB.competitions[x.comp].international));if(s)SSET.view=s.key;nav()});
@@ -146,13 +146,12 @@ function bindSeason(){
     }else{
       $('#soff').onclick=()=>{if(!current())return;runOffseason(DB);saveDB();nav();window.scrollTo(0,0)};
     }
-    if(seasonManagedTeam()&&w.manage==='manual'&&w.contractWindow)bindContractWindow();
     return;
   }
   if(w.phase==='market'){
     $('#smkt').onclick=()=>{if(!current())return;closeMarket(DB);MSG='';saveDB();nav();window.scrollTo(0,0)};
     if($('#smanage'))$('#smanage').onchange=e=>{if(!current())return;w.manage=e.target.value;saveDB();nav()};
-    if(seasonManagedTeam()&&w.manage==='manual')bindMarket();return;
+    return;
   }
   if(w.phase==='preseason'){
     if($('#snew'))$('#snew').onclick=()=>{if(!current()||managedTeamId(DB)&&!seasonManagedTeam())return;SSET.view=null;startWorldSeason(DB,managedTeamId(DB),freshInternalSeed('world'));saveDB();nav()};

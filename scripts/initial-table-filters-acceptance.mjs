@@ -1,0 +1,25 @@
+import assert from 'node:assert/strict';
+import vm from 'node:vm';
+import {artifactSources,compiledEngine} from './test-harness.mjs';
+const modules=['ui-initial-comparison.js','ui-initial-filters.js','ui-initial-table.js','ui-initial-candidates.js','ui-initial-squad.js','ui-transfer-page.js','ui-market-initial.js','ui-observed-radar.js','ui-initial-offer-preview.js','ui-negotiations.js','app.js'];
+const sources=await artifactSources(modules),ctx=vm.createContext({console,Date,Math,JSON,Set,Map,WeakMap,Object,Array,String,Number,Boolean,RegExp,Error,Intl,performance,crypto});
+(await compiledEngine()).runInContext(ctx,{timeout:30000});
+const app=sources.pop();new vm.Script(app.match(/^const esc=.*$/m)[0]+'\nvar DB,MSG="",SLOT=1,VIEW="squad",UI_RENDER_ID=1,SLOT_SWITCHING=false,UI_OVERLAY=null,document,saveDB,navKeepScroll;').runInContext(ctx);for(const s of sources)new vm.Script(s).runInContext(ctx);
+const result=new vm.Script(String.raw`(()=>{
+const check=(ok,m)=>{if(!ok)throw Error('초기 표 수용 '+m)},cfg=defaultWorldConfig();cfg.regions=[regionCfg('KR',{teams:3,div2:true}),regionCfg('NA',{teams:3,div2:true})];cfg.internationals=[];
+DB=buildWorld(cfg);const t=activeTeams(DB,'KR',1)[0];startCareer(DB,t.id,'initial-simple-ui');initialCandidateContext(DB);INITMK.target=t.id;
+const original=JSON.stringify(DB),all=initialCandidatePage(DB,INITMK,t),source=all.rows[0],metrics=observedPlayerCoreMetrics(all.view,source.p);
+INITMK.roles=['JGL','SUP'];const roles=initialCandidatePage(DB,INITMK,t);check(roles.total>0&&roles.rows.every(x=>['JGL','SUP'].includes(x.p.role)),'포지션 OR');INITMK.roles=[];
+INITMK.q=source.p.name;INITMK.metricFilters={laning:{min:metrics.laning,max:metrics.laning},vision:{min:metrics.vision,max:metrics.vision}};check(initialCandidatePage(DB,INITMK,t).rows.some(x=>x.p.id===source.p.id),'동일 관측 값 두 조건 AND');
+INITMK.metricFilters.vision.min=metrics.vision+1;check(!initialCandidatePage(DB,INITMK,t).rows.some(x=>x.p.id===source.p.id),'같은 후보 거절');
+for(const bad of [{laning:{min:90,max:20}},{laning:{min:100}},{laning:{min:'bad'}},{fake:{min:1}}])check(!initialMetricConditions({metricFilters:bad}).valid&&initialCandidatePage(DB,{...INITMK,metricFilters:bad},t).total===0,'잘못된 조건 fail closed');
+check(!initialCandidateMetricMatch(all.view,{p:source.p,metrics:{}},{valid:true,rows:[{key:'vision',min:1,max:null}]}),'정보 없는 조건 제외');INITMK.metricFilters={};INITMK.q='';
+check(!initialCandidateSortHeader('role').includes('<button'),'포지션 정렬 제거');check(!initialCandidateSortHeader('ability').match(/>[^<]*[123]순위/),'정렬 숫자 비노출');
+INITMK.columns=Object.keys(INITIAL_COMPARE_METRICS);check(initialCandidateColumns().length===10&&Object.keys(INITIAL_COMPARE_METRICS).every(k=>initialCandidateSortValue(all.view,source,k,t)===metrics[k]),'10지표 표·상세 소비 동일');
+check(initialSquadOverviewAllowed()&&transferTabAllowed()&&renderInitialSquadOverview().includes('선수단 구성'),'현재 선수단 조직');check(JSON.stringify(DB)===original,'조회 wholeDB 불변');
+const before=JSON.stringify(DB);DB.world.phase='season';check(!transferTabAllowed(),'일반 시즌 탭 숨김');DB.world.phase='offseason';check(transferTabAllowed(),'비시즌 문맥');DB.world.fired=true;check(!transferTabAllowed(),'해임 권한');DB=JSON.parse(before);
+const p=source.p,keep=JSON.stringify(DB);DB.world.phase='season';check(initialCandidateCommand(DB,INITMK,p.id,'interest').includes('권한'),'초기 권한 시즌 복사 없음');DB=JSON.parse(keep);check(unpackDB(packDB(DB)).world.phase==='initial_roster','실제 저장 경계');
+const candidate=Object.values(DB.players).find(p=>!p.team&&p.region===t.region&&initialSignCheck(DB,p,t).ok),signed=commitWorldAction(DB,{type:'player.sign',actor:'manager',kind:'initial',pid:candidate.id,teamId:t.id,salary:asking(DB,candidate,t.region),years:1,terms:{}});check(signed.ok,'실제 영입 명령');const signedDb=JSON.stringify(DB);
+for(const mode of ['actual','load','manager','date','slot','fired','roster','manage']){DB=JSON.parse(signedDb);let saves=0;saveDB=()=>saves++;navKeepScroll=()=>{};const button={dataset:{initRelease:candidate.id}},back={};document={getElementById:()=>back,querySelectorAll:()=>[button]};bindInitialSquadOverview();const callback=button.onclick,expected=JSON.parse(JSON.stringify(DB));if(mode==='actual')initialReleasePlayer(expected,candidate.id);else if(mode==='load')DB=JSON.parse(JSON.stringify(DB));else if(mode==='manager')DB.manager={...DB.manager};else if(mode==='date')DB.worldDate=addDays(DB.worldDate,1);else if(mode==='slot')SLOT++;else if(mode==='fired')DB.world.fired=true;else if(mode==='roster')DB.teams[t.id].roster.pop();else if(mode==='manage')DB.world.manage='ai';const before=JSON.stringify(DB);callback();check(JSON.stringify(DB)===(mode==='actual'?JSON.stringify(expected):before)&&saves===(mode==='actual'?1:0),'실제 선수단 명령/저장과 오래된 '+mode+' 거절');}
+return {roleOr:true,metricAnd:true,invalidExcluded:true,missingExcluded:true,tenObservedMetrics:true,readOnly:true,contextualTab:true,save:true,manualReleaseParity:true,changedAuthorityInert:true};
+})()`).runInContext(ctx,{timeout:30000});assert(Object.values(result).every(Boolean));console.log('초기 표 독립 VM 수용 '+JSON.stringify(result));
