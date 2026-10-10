@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
-const source=await readFile(new URL('../src/artifact/ui-squad-table.js',import.meta.url),'utf8');
+const source=(await readFile(new URL('../src/artifact/ui-squad-status.js',import.meta.url),'utf8'))+'\n'+(await readFile(new URL('../src/artifact/ui-squad-table.js',import.meta.url),'utf8'));
 function fixture(){const db={world:{manage:'manual',fired:false},manager:{teamId:'a'},worldDate:'2028-01-08',year:2028},elements={};const c=vm.createContext({DB:db,SQUAD:'a',SLOT:'1',VIEW:'squad',UI_RENDER_ID:1,SLOT_SWITCHING:false,UI_OVERLAY:null,ROLES:['TOP','JGL','MID','ADC','SUP'],ROLE_KO:{TOP:'탑',JGL:'정글',MID:'미드',ADC:'원딜',SUP:'서포터'},GROUP_KO:{mechanics:'기계적 능력'},esc:String,document:{querySelector:()=>null},window:{scrollY:12,scrollTo(){}},nav:()=>c.UI_RENDER_ID++});vm.runInContext(source,c);return c}
 const rows=Array.from({length:47},(_,i)=>({id:'p'+i,name:'선수 '+i,role:['TOP','JGL','MID','ADC','SUP'][i%5]}));
 const c=fixture();c.rows=rows;const before=JSON.stringify(c.DB);assert.equal(vm.runInContext('squadTableRows(rows).length',c),20);vm.runInContext('squadTableState().page=2',c);assert.equal(vm.runInContext('squadTableRows(rows).length',c),7);vm.runInContext("squadTableState().roles=['TOP','MID']",c);assert.equal(vm.runInContext('squadTableRows(rows).length',c),19);assert.equal(vm.runInContext('squadTableState().page',c),0);vm.runInContext("squadTableState().q='선수 1';squadTableState().draftQ='미완료';squadTableState().columns=['평가','계약']",c);assert.equal(vm.runInContext('squadTableRows(rows).length',c),4);assert(vm.runInContext("renderSquadTableControls().includes('미완료')",c));assert.equal(JSON.stringify(c.DB),before);

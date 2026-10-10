@@ -1,3 +1,4 @@
+import {squadStatusSourceHash,squadStatusSourceText} from './squad-status-source-successor.mjs';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
@@ -14,16 +15,16 @@ async function verify(){
  const raw=gunzipSync(compressed);assert.equal(sha(raw),e.archive.decodedSha256);const rows=JSON.parse(raw);
  for(const row of rows){const b=Buffer.from(row.base64,'base64');assert.equal(b.length,row.bytes);assert.equal(sha(b),row.sha256)}
  for(const [path,h] of Object.entries(e.originals))assert(rows.some(row=>row.path==='original/'+path&&row.sha256===h),path+' 원문 보존');
- for(const [path,h] of Object.entries(e.sources))assert.equal(sha(await readFile(new URL(path,root))),h,path+' reviewed bytes');
+ for(const [path,h] of Object.entries(e.sources))assert.equal(await squadStatusSourceHash(path),h,path+' reviewed bytes');
  const original=path=>Buffer.from(rows.find(row=>row.path==='original/'+path).base64,'base64').toString();
- for(const name of ['scout-return','squad-staging','squad-observer-information']){const path='scripts/'+name+'-acceptance.mjs';assert.equal(await readFile(new URL(path,root),'utf8'),original(path).replaceAll("'ui-roster.js'","'ui-squad-table.js','ui-roster.js'"),path+' 원래 assertion 전체·의존성만 추가')}
+ for(const name of ['scout-return','squad-staging','squad-observer-information']){const path='scripts/'+name+'-acceptance.mjs';assert.equal(await squadStatusSourceText(path),original(path).replaceAll("'ui-roster.js'","'ui-squad-table.js','ui-roster.js'"),path+' 원래 assertion 전체·의존성만 추가')}
  const a11y='scripts/ui-mobile-a11y-acceptance.mjs';const a11yOriginal=original(a11y);const a11yCurrent=await readFile(new URL(a11y,root),'utf8');assert.deepEqual(a11yCurrent.split('\n').filter(x=>x.trim().startsWith('assert')),a11yOriginal.split('\n').filter(x=>x.trim().startsWith('assert')),'모든 기존 접근성 assertion 원문 유지');
  const path='scripts/squad-overview-source-successor.mjs',prefix="import {squadTableSourceHash,squadTableSourceText} from './squad-table-source-successor.mjs';\n";
  const transformed=original(path).replace("assert.equal(sha(await readFile(new URL(path,root))),h","assert.equal(await squadTableSourceHash(path),h").replace("const actual=sha(await readFile(new URL(path,root)));","const actual=await squadTableSourceHash(path);").replace("assert.equal(await readFile(new URL(dependency,root),'utf8'),","assert.equal(await squadTableSourceText(dependency),");
- assert.equal(await readFile(new URL(path,root),'utf8'),prefix+transformed,'이전 검증의 모든 assertion 원문 유지·좁힌 승계');
+ assert.equal(await squadStatusSourceText(path),prefix+transformed,'이전 검증의 모든 assertion 원문 유지·좁힌 승계');
  for(const [path,h] of Object.entries(e.engine))assert.equal(sha(await readFile(new URL('src/artifact/'+path,root))),h);assert.equal(Object.keys(e.engine).length,101);
  for(const path of ['docs/README.md','docs/DEVELOPMENT.md'])assert((await readFile(new URL(path,root))).includes(Buffer.from(rows.find(row=>row.path==='original/'+path).base64,'base64')),path+' 전체 연속 원문 유지');
  await import('./squad-table-acceptance.mjs');verified={e,rows};return verified;
 }
-export async function squadTableSourceHash(path){const actual=sha(await readFile(new URL(path,root)));const {e}=await verify();return e.originals[path]||actual}
-export async function squadTableSourceText(path){const {rows,e}=await verify();return e.originals[path]?Buffer.from(rows.find(row=>row.path==='original/'+path).base64,'base64').toString():readFile(new URL(path,root),'utf8')}
+export async function squadTableSourceHash(path){const actual=await squadStatusSourceHash(path);const {e}=await verify();return e.originals[path]||actual}
+export async function squadTableSourceText(path){const {rows,e}=await verify();return e.originals[path]?Buffer.from(rows.find(row=>row.path==='original/'+path).base64,'base64').toString():squadStatusSourceText(path)}

@@ -1,0 +1,19 @@
+// Read-only status sources. A declaration, a resolved view and a draft differ.
+const SQUAD_STATUS_LABELS={registered:'공식 등록',unregistered:'공식 미등록',out:'의료 출전 불가',notOut:'의료 출전 불가 아님',declared:'저장된 공식 선발',changed:'선발 초안 변경'};
+function squadStatusModel(t,e,db=DB){
+  if(!db.world||db.world.fired||!managerControlsSquad(db,t))return null;
+  const read=JSON.parse(JSON.stringify(db)),team=read.teams[t.id],s=internationalRegistrationSeasons(read,team).find(x=>read.worldDate>=x.days[0]?.date)||null,
+    ids=officialSeasonRoster(read,team,s),enabled=officialRegistrationEnabled(read),view=officialMatchView(read,s,t.id,t.id),stored=team.registration?.depthChart||{},effective=view.teams[t.id].depthChart||{};
+  const rows={};for(const p of Object.values(read.players)){
+    if(!team.roster.includes(p.id)&&!ids.includes(p.id)&&e?.rosterPlan?.assignments[p.id]!==t.id)continue;
+    const declared=ROLES.filter(r=>stored[r]===p.id),resolved=ROLES.filter(r=>effective[r]===p.id),current=ROLES.filter(r=>team.depthChart?.[r]===p.id),draft=ROLES.filter(r=>e?.starters?.[r]===p.id),out=medicalOut(p),m=p.medical;
+    rows[p.id]={registered:enabled?ids.includes(p.id):null,domestic:team.registration?.players?.includes(p.id)||false,declared,resolved,current,draft,out,medical:medicalSummary(p),days:m?.daysLeft>0?Math.ceil(m.daysLeft):null,training:read.teams[p.team]?.short||'무소속',staged:read.teams[e?.rosterPlan?.assignments[p.id]]?.short||read.teams[p.team]?.short||'무소속',changed:JSON.stringify(current)!==JSON.stringify(draft)};
+  }
+  return {date:read.worldDate,enabled,international:!!s,name:s?read.competitions[s.comp]?.name:'구단 공식 명단',registrationDate:team.registration?.date||null,rows};
+}
+function squadStatusMatches(row,filters=[]){return !filters.length||!!row&&filters.some(k=>k==='registered'?row.registered:k==='unregistered'?row.registered===false:k==='out'?row.out:k==='notOut'?!row.out:k==='declared'?row.declared.length>0:k==='changed'?row.changed:false)}
+function squadStatusControls(m){if(!m)return '';const filters=squadTableState().statuses||[];return `<fieldset><legend>상태 · 복수 선택 중 하나 충족</legend>${Object.entries(SQUAD_STATUS_LABELS).filter(([k])=>m.enabled||!['registered','unregistered','declared'].includes(k)).map(([k,v])=>`<label><input type="checkbox" data-sqt-status="${k}"${filters.includes(k)?' checked':''}>${v}</label>`).join(' ')}</fieldset>`}
+function squadStatusSources(m){if(!m)return '';return `<details><summary>등록·선발·의료 근거 · ${esc(m.date||'날짜 없음')}</summary><p>대상 명단: ${esc(m.name||'대회 이름 없음')} · ${m.enabled?m.international?'대회 제출 엔트리':'구단 공식 등록':'구형 저장의 훈련 명단'} · 구단 등록 기록일 ${esc(m.registrationDate||'기록 없음')}. 표의 날짜는 조회 기준일이며 선발 제출일을 뜻하지 않습니다.</p><p>저장 선발은 공식 입력, 경기뷰는 기존 가용 검사·보정 결과입니다. 훈련 선발과 미적용 초안은 별개입니다. 의료 예상 잔여 일수는 확정 복귀일이 아니며, 의료 불가 아님은 등록·대표 자격·최종 출전 보장이 아닙니다.</p></details>`}
+function squadStatusHead(m){return m?'<th>공식 등록</th><th>공식 선발 · 저장 / 경기뷰</th><th>훈련 · 현재 / 초안</th><th>의료 가용</th>':''}
+function squadStatusCells(m,p){if(!m)return '';const x=m.rows[p.id];if(!x)return '<td colspan="4">기록 없음</td>';const roles=rs=>rs.map(r=>ROLE_KO[r]).join('·')||'미지정';return `<td>${m.enabled?(x.registered?'등록':'미등록'):'별도 등록 미사용'}${m.international?'<small> 구단 '+(x.domestic?'등록':'미등록')+'</small>':''}</td><td>${esc(roles(x.declared))} / ${esc(roles(x.resolved))}</td><td>${esc(x.training)} → ${esc(x.staged)}<small>${esc(roles(x.current))} / ${esc(roles(x.draft))}${x.changed?' · 미적용 변경':''}</small></td><td>${x.out?'출전 불가':'의료 불가 아님'}<small>${esc(x.medical)}</small></td>`}
+function bindSquadStatusFilters(root,refresh,current){root.querySelectorAll('[data-sqt-status]').forEach(el=>el.onchange=()=>{const k=el.dataset.sqtStatus;if(!current()||!Object.hasOwn(SQUAD_STATUS_LABELS,k))return;const s=squadTableState(),a=s.statuses||[];s.statuses=el.checked?[...new Set([...a,k])]:a.filter(x=>x!==k);s.page=0;refresh(`[data-sqt-status="${k}"]`)})}

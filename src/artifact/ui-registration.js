@@ -3,7 +3,8 @@ function officialRegistrationPanel(t,db=DB){
   const mine=!db.world?.fired&&managerControlsSquad(db,t),open=officialRegistrationOpen(db,t),
     root=parentTeamOf(db,t),teams=managedTeam(db)?.parent?[t]:organizationTeams(db,root),
     players=mine?Array.from(new Set(teams.flatMap(x=>[...x.roster,...(x.registration?.players||[])]))):t.registration?.players||[],
-    current=t.registration?.players||[],depth=mine?officialMatchView(db,null,t.id,t.id).teams[t.id].depthChart:{};
+    current=t.registration?.players||[],season=internationalRegistrationSeasons(db,t).find(s=>db.worldDate>=s.days[0]?.date)||null,
+    lineupPlayers=officialSeasonRoster(db,t,season),depth=mine?officialMatchView(db,season,t.id,t.id).teams[t.id].depthChart:{};
   return `<section><p role="status" data-official-status></p><h3>공식 등록 · ${current.length}/${officialRosterCap(db,t)}명</h3>
     <p class="hint">${open?'등록 기간 열림':'등록 닫힘'} · 훈련 소속과 공식 명단은 별개.</p>
     <details class="cfgcard"><summary>공식 명단 확인 / 변경</summary>
@@ -13,8 +14,8 @@ function officialRegistrationPanel(t,db=DB){
           `<span>${registered?esc(registered.short)+' 등록':'미등록'}</span>`}</label>`}).join('')}
       ${mine&&open?`<button class="primary" data-official-submit="${t.id}">공식 명단 제출</button>`:''}</details>
     ${competitionStaffRegistrationPanel(t,db)}
-    ${mine?`<details class="cfgcard"><summary>공식전 선발 5명</summary><p class="hint">등록 기간 밖에도 선발 변경 가능. 훈련 선발과 별도 적용.</p>
-      ${ROLES.map(role=>`<label>${ROLE_KO[role]}<select data-official-role="${role}">${current.filter(id=>officialPlayerCanRepresent(db,db.players[id],t)).map(id=>`<option value="${id}"${depth[role]===id?' selected':''}>${esc(db.players[id].name)} · 적합 ${playerRoleRating(db.players[id],role)}</option>`).join('')}</select></label>`).join('')}
+    ${mine?`<details class="cfgcard"><summary>공식전 선발 5명</summary><p class="hint">등록 기간 밖에도 선발 변경 가능. 훈련 선발과 별도 적용. ${season?esc(db.competitions[season.comp]?.name||'국제대회')+' 제출 엔트리 기준':'구단 공식 명단 기준'}</p>
+      ${ROLES.map(role=>`<label>${ROLE_KO[role]}<select data-official-role="${role}">${lineupPlayers.filter(id=>officialPlayerCanRepresent(db,db.players[id],t)).map(id=>`<option value="${id}"${depth[role]===id?' selected':''}>${esc(db.players[id].name)} · 적합 ${playerRoleRating(db.players[id],role)}</option>`).join('')}</select></label>`).join('')}
       <button class="ghost" data-official-lineup="${t.id}">공식 선발 적용</button></details>`:''}</section>`;
 }
 function bindOfficialRegistrationControls(ok=()=>true,root=document,after=()=>navKeepScroll(),onReject=null){
