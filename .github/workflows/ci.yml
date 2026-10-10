@@ -95,6 +95,9 @@ jobs:
       - name: Regression runner isolation and failure handling
         run: node --test scripts/regression-runner.test.mjs scripts/ui-evidence-runner.test.mjs && node scripts/verify-regression-runner-evidence.mjs
 
+      - name: 시작 저장 복원과 빈 저장 선택
+        run: node scripts/ci-run.mjs startup-save -- node scripts/startup-save-acceptance.mjs
+
       - name: Upload validation report
         if: always()
         uses: actions/upload-artifact@v4

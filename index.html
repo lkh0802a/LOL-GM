@@ -14294,8 +14294,25 @@ function savedGameSummary(db){
 }
 function savedGameLabel(s){return `${esc(s.name)}${s.year?` · ${esc(s.year)} 시즌`:''}`}
 function saveLibraryCurrent(){
- const db=DB,world=DB?.world,manager=DB?.manager,slot=SLOT,view=VIEW,render=UI_RENDER_ID,date=DB?.worldDate,year=DB?.year,team=managedTeamId(DB),policy=JSON.stringify([DB?.world?.manage,DB?.world?.fired,DB?.world?.phase]),page=typeof START_UI==='undefined'?null:START_UI.page,active=typeof START_UI==='undefined'?null:START_UI.active;
- return ()=>DB===db&&DB?.world===world&&DB?.manager===manager&&SLOT===slot&&VIEW===view&&UI_RENDER_ID===render&&DB?.worldDate===date&&DB?.year===year&&managedTeamId(DB)===team&&JSON.stringify([DB?.world?.manage,DB?.world?.fired,DB?.world?.phase])===policy&&!SLOT_SWITCHING&&(typeof UI_OVERLAY==='undefined'||!UI_OVERLAY)&&(typeof START_UI==='undefined'||START_UI.page===page&&START_UI.active===active);
+ const db=DB,world=DB?.world,manager=DB?.manager,slot=SLOT,view=VIEW,render=UI_RENDER_ID,date=DB?.worldDate,year=DB?.year,team=DB?managedTeamId(DB):null,policy=JSON.stringify([DB?.world?.manage,DB?.world?.fired,DB?.world?.phase]),page=typeof START_UI==='undefined'?null:START_UI.page,active=typeof START_UI==='undefined'?null:START_UI.active;
+ return ()=>DB===db&&DB?.world===world&&DB?.manager===manager&&SLOT===slot&&VIEW===view&&UI_RENDER_ID===render&&DB?.worldDate===date&&DB?.year===year&&(DB?managedTeamId(DB):null)===team&&JSON.stringify([DB?.world?.manage,DB?.world?.fired,DB?.world?.phase])===policy&&!SLOT_SWITCHING&&(typeof UI_OVERLAY==='undefined'||!UI_OVERLAY)&&(typeof START_UI==='undefined'||START_UI.page===page&&START_UI.active===active);
+}
+function renderStartupSavedGames(){
+ const fresh=START_UI.page==='new-slot';
+ return `<section><h2>${fresh?'새 게임 저장 준비':'저장된 게임'}</h2><p>${fresh?'기존 게임은 유지하고 빈 저장 위치에 시작합니다.':'구단과 시즌을 확인한 뒤 직접 불러오세요.'}</p>${startupBack()}<p class="warn" role="status">${esc(START_UI.error)}</p><button class="linklike" type="button" id="startup-saves-refresh">목록 다시 확인</button><div id="startup-saves-list" aria-live="polite"><p>저장된 게임을 확인하고 있습니다.</p></div></section>`;
+}
+function bindStartupSavedGames(){
+ const current=saveLibraryCurrent(),run=++SAVE_LIBRARY_RUN,page=START_UI.page,box=$('#startup-saves-list');
+ const valid=()=>current()&&SAVE_LIBRARY_RUN===run;
+ $('#startup-saves-refresh').onclick=()=>{if(valid())bindStartupSavedGames()};
+ void(async()=>{
+  const rows=[];for(const slot of SAVE_SLOTS){if(!valid())return;if(!DB||slot!==SLOT)rows.push(await readSavedGame(slot))}
+  if(!valid())return;
+  const empty=rows.find(r=>r.state==='empty');
+  box.innerHTML=page==='load'?savedGamesRows(rows):`${empty?`<button class="primary" type="button" data-startup-slot="${empty.slot}">빈 저장에 새 게임 시작</button>`:'<p>사용할 수 있는 빈 저장 위치가 없습니다. 기존 게임을 불러오거나 파일로 보관한 뒤 원본 관리에서 확인하세요.</p>'}<p class="hint">손상되거나 읽지 못한 저장은 사용하지 않습니다.</p><button class="linklike" type="button" data-startup-existing>기존 게임 불러오기</button>`;
+  box.querySelectorAll('[data-slot], [data-startup-slot]').forEach(b=>{let used=false;b.onclick=async()=>{if(used||!valid())return;used=true;await startupChooseSlot(b.dataset.slot||b.dataset.startupSlot,valid)}});
+  box.querySelector('[data-startup-existing]')?.addEventListener('click',()=>{if(valid())startupMove('load')});
+ })().catch(error=>{console.error(error);if(valid())box.innerHTML='<p class="warn">저장 목록을 확인하지 못했습니다. 원본은 유지됩니다.</p>'});
 }
 async function readSavedGame(slot){
  if(!SAVE_SLOTS.includes(slot))throw Error('올바르지 않은 저장 위치입니다.');
@@ -15672,28 +15689,9 @@ function uiOverlayKeydown(event){
 }
 document.addEventListener('keydown',uiOverlayKeydown);
 
-/* ==== FILE: ui-startup.js ==== */
-// Startup owns presentation only; existing storage and career writers own commits.
-let START_UI={active:true,page:'home',error:''};
-let START_BOOT_ERROR='';
-function startupBootFailure(error){START_BOOT_ERROR=error.message||'저장 복원 오류';START_UI={active:true,page:'home',error:''};VIEW='season';nav()}
-
-function startupMove(page){
-  if(SLOT_SWITCHING||(!DB&&!START_BOOT_ERROR))return false;
-  START_UI={active:true,page,error:''};VIEW='season';nav();window.scrollTo(0,0);
-  document.querySelector('#main')?.focus?.({preventScroll:true});return true;
-}
-function startupCurrent(db,slot,render){return DB===db&&SLOT===slot&&UI_RENDER_ID===render&&!SLOT_SWITCHING}
-function startupBack(){return '<button class="ghost" id="startup-back">처음 화면으로</button>'}
-function viewStartup(){
-  if(START_UI.page==='home')return `<section class="teamhead"><h2>LOL GM</h2></section>${START_BOOT_ERROR?`<p class="warn" role="status">${esc(START_BOOT_ERROR)} · 다른 슬롯을 선택할 수 있습니다. 원본은 유지됩니다.</p>`:''}<section class="controls startup-actions"><button class="primary" id="startup-new">새 게임</button><button class="ghost" id="startup-load">불러오기</button><button class="ghost" id="startup-settings">설정</button></section>`;
-  if(START_UI.page==='settings')return `<section class="startup-settings"><h2>설정</h2><label>화면 색상<select id="startup-theme"><option value="auto">자동</option><option value="dark">어둡게</option><option value="light">밝게</option></select></label><p id="startup-theme-status" role="status"></p>${startupBack()}</section>`;
-  if(START_UI.page==='new-slot'||(!DB&&START_UI.page==='load'))return `<section><h2>${START_UI.page==='load'?'저장 슬롯 복원':'새 커리어 저장 위치'}</h2><p>${START_UI.page==='load'?'복원할 슬롯을 선택하세요.':'빈 슬롯을 선택하세요. 모두 사용 중이면 불러오기에서 기존 커리어를 이어갈 수 있습니다.'} 기존 커리어와 손상된 저장 원본은 덮어쓰지 않습니다.</p>${startupBack()}<p class="warn" role="status">${esc(START_UI.error)}</p></section><section class="cfgs">${SAVE_SLOTS.filter(n=>n!==SLOT).map(n=>{const m=slotMeta(n);return `<div class="cfgcard compact"><h3>슬롯 ${n}</h3><p>${m?.team?esc(m.team)+' · '+esc(m.year):'저장 여부는 선택 시 확인합니다'}</p><button data-startup-slot="${n}">이 슬롯 확인</button></div>`}).join('')}</section>`;
-  if(START_UI.page==='load')return `<section class="controls">${startupBack()}${DB.world?'<button class="primary" id="startup-resume">현재 커리어 계속</button>':''}</section>`+viewData();
-  return seasonSetup();
-}
-
-// Fail closed on unavailable storage: missing metadata never establishes emptiness.
+/* ==== FILE: ui-startup-storage.js ==== */
+// 시작 화면 저장 전달. 실제 저장/커리어 작성자와 현재 원본 검사만 사용한다.
+// 저장 읽기 실패는 빈 저장이 아니다. 요약 정보만으로 원본 유무를 판단하지 않는다.
 async function startupSlotWorld(slot){
   if(!SAVE_SLOTS.includes(slot))throw Error('올바르지 않은 슬롯입니다.');
   const key=STORE_BASE+slot,local=localStorage.getItem(key);
@@ -15703,42 +15701,78 @@ async function startupSlotWorld(slot){
 }
 async function startupChooseSlot(slot,current){
   try{
-    const stored=await startupSlotWorld(slot);
+    const stored=START_UI.page==='load'?await readSavedGame(slot):await startupSlotWorld(slot);
     if(!current())return false;
-    if(START_UI.page!=='load'&&stored&&(stored.world||(stored.history||[]).length))throw Error('이미 커리어나 기록이 있는 슬롯입니다. 불러오기에서 이어가세요.');
+    if(START_UI.page!=='load'&&stored)throw Error('이미 커리어나 기록이 있는 슬롯입니다. 불러오기에서 이어가세요.');
+    if(START_UI.page==='load'&&stored.state!=='saved')throw Error('저장된 게임이 없습니다. 목록을 다시 확인하세요.');
     if(!DB)return await startupRecoverSlot(slot,current);
-    const result=await switchSaveSlot(slot);
+    const page=START_UI.page,render=UI_RENDER_ID,source=DB;
+    const same=()=>START_UI.page===page&&UI_RENDER_ID===render&&DB===source;
+    const result=await switchSaveSlot(slot,async loaded=>{
+      if(!same()||loaded.world||(loaded.history||[]).length)return false;
+      const stored=await startupSlotWorld(slot);return !stored&&same();
+    });
     if(!result.ok)throw Error(result.error);
     if(DB.world||(DB.history||[]).length)throw Error('슬롯 상태가 바뀌었습니다. 기존 저장은 유지됩니다.');
-    startupMove('career');return true;
-  }catch(e){if(current()){START_UI.error='새 게임을 시작하지 못했습니다 — '+e.message;nav()}return false}
+    START_EMPTY_SAVE={db:DB,slot,snapshot:packDB(DB)};startupMove('career');return true;
+  }catch(e){if(current()){console.error(e);START_UI.error='저장 상태를 확인하지 못했습니다. 기존 원본을 유지합니다. 목록을 다시 확인하세요.';nav()}return false}
 }
 async function startupCommitCareer(db,slot,team){
   if(DB!==db||SLOT!==slot||SLOT_SWITCHING||db.world||(db.history||[]).length||!isManagerSelectableTeam(db,team))return false;
   SLOT_SWITCHING=true;
   const main=$('#main');if(main)main.inert=true;
   try{
+    if(START_EMPTY_SAVE?.db===db&&START_EMPTY_SAVE.slot===slot){const stored=await startupSlotWorld(slot);if(stored&&packDB(stored)!==START_EMPTY_SAVE.snapshot)throw Error('빈 저장 위치의 상태가 바뀌었습니다. 기존 원본을 유지합니다.');}
+    if(DB!==db||SLOT!==slot||db.world||(db.history||[]).length||!isManagerSelectableTeam(db,team))return false;
     const staged=JSON.parse(JSON.stringify(db));
     startCareer(staged,team,freshInternalSeed('world'));
     clearTimeout(saveTimer);saveTimer=null;
     if(!await persistWorldSnapshot(staged,slot,STORE))throw Error('저장에 실패했습니다. 현재 세계는 그대로 유지됩니다.');
-    DB=staged;SAVEFAIL=false;resetUiForWorld();START_UI={active:false,page:'home',error:''};VIEW='season';
+    DB=staged;START_EMPTY_SAVE=null;SAVEFAIL=false;resetUiForWorld();START_UI={active:false,page:'home',error:''};VIEW='season';
     return true;
-  }catch(e){START_UI.error='커리어를 시작하지 못했습니다 — '+e.message;return false}
+  }catch(e){console.error(e);START_UI.error='커리어를 시작하지 못했습니다. 저장 상태와 현재 선택을 다시 확인하세요. 기존 원본은 유지합니다.';return false}
   finally{SLOT_SWITCHING=false;if(main)main.inert=false;nav();document.querySelector('#main')?.focus?.({preventScroll:true})}
 }
 async function startupRecoverSlot(slot,current){
   if(!current()||DB)return false;
-  const page=START_UI.page;SLOT_SWITCHING=true;
+  const page=START_UI.page,render=UI_RENDER_ID,previousSlot=SLOT,view=VIEW,boot=START_BOOT_ERROR;SLOT_SWITCHING=true;
   try{
     const loaded=await loadDB(STORE_BASE+slot);
+    if(DB||SLOT!==previousSlot||UI_RENDER_ID!==render||VIEW!==view||START_UI.page!==page||START_BOOT_ERROR!==boot)return false;
+    if(page==='load'&&(await readSavedGame(slot)).state!=='saved')throw Error('저장 상태가 바뀌었습니다. 목록을 다시 확인하세요.');
+    if(page==='new-slot'&&await startupSlotWorld(slot))throw Error('저장 상태가 바뀌었습니다. 원본은 유지됩니다.');
+    if(DB||SLOT!==previousSlot||UI_RENDER_ID!==render||VIEW!==view||START_UI.page!==page||START_BOOT_ERROR!==boot)return false;
     DB=loaded;SLOT=slot;STORE=STORE_BASE+slot;START_BOOT_ERROR='';
+    if(page==='new-slot')START_EMPTY_SAVE={db:loaded,slot,snapshot:packDB(loaded)};
     try{localStorage.setItem(STORAGE_NS+'-slot',slot)}catch(e){}
     resetUiForWorld();START_UI={active:!loaded.world,page:page==='new-slot'?'career':'home',error:''};
     return true;
-  }catch(e){START_UI.error='슬롯을 복원하지 못했습니다 — '+e.message;return false}
+  }catch(e){console.error(e);if(!DB&&SLOT===previousSlot&&UI_RENDER_ID===render&&VIEW===view&&START_UI.page===page)START_UI.error='저장된 게임을 불러오지 못했습니다. 원본은 유지합니다.';return false}
   finally{SLOT_SWITCHING=false;nav();document.querySelector('#main')?.focus?.({preventScroll:true})}
 }
+
+/* ==== FILE: ui-startup.js ==== */
+// Startup owns presentation only; existing storage and career writers own commits.
+let START_UI={active:true,page:'home',error:''};
+let START_BOOT_ERROR='';
+let START_EMPTY_SAVE=null;
+function startupBootFailure(error){console.error(error);START_BOOT_ERROR='저장된 게임을 복원하지 못했습니다';START_UI={active:true,page:'home',error:''};VIEW='season';nav()}
+
+function startupMove(page){
+  if(SLOT_SWITCHING||(!DB&&!START_BOOT_ERROR))return false;
+  START_UI={active:true,page,error:''};VIEW='season';nav();window.scrollTo(0,0);
+  document.querySelector('#main')?.focus?.({preventScroll:true});return true;
+}
+function startupCurrent(db,slot,render){return DB===db&&SLOT===slot&&UI_RENDER_ID===render&&!SLOT_SWITCHING}
+function startupBack(){return '<button class="ghost" id="startup-back">처음 화면으로</button>'}
+function viewStartup(){
+  if(START_UI.page==='home')return `<section class="teamhead"><h2>LOL GM</h2></section>${START_BOOT_ERROR?`<p class="warn" role="status">${esc(START_BOOT_ERROR)} · 저장된 게임 목록에서 복원을 확인하세요. 원본은 유지됩니다.</p>`:''}<section class="controls startup-actions"><button class="primary" id="startup-new">새 게임</button><button class="ghost" id="startup-load">불러오기</button><button class="ghost" id="startup-settings">설정</button></section>`;
+  if(START_UI.page==='settings')return `<section class="startup-settings"><h2>설정</h2><label>화면 색상<select id="startup-theme"><option value="auto">자동</option><option value="dark">어둡게</option><option value="light">밝게</option></select></label><p id="startup-theme-status" role="status"></p>${startupBack()}</section>`;
+  if(START_UI.page==='new-slot'||(!DB&&START_UI.page==='load'))return renderStartupSavedGames();
+  if(START_UI.page==='load')return `<section class="controls">${startupBack()}${DB.world?'<button class="primary" id="startup-resume">현재 커리어 계속</button>':''}</section>`+viewData();
+  return seasonSetup();
+}
+
 function bindStartup(){
   const db=DB,slot=SLOT,render=UI_RENDER_ID,current=()=>startupCurrent(db,slot,render);
   const bind=(id,action)=>{const b=$('#'+id);if(b)b.onclick=()=>{if(current())return action()}};
@@ -15747,7 +15781,7 @@ function bindStartup(){
   bind('startup-load',()=>startupMove('load'));
   bind('startup-settings',()=>startupMove('settings'));
   bind('startup-resume',()=>{START_UI.active=false;VIEW='season';nav();document.querySelector('#main')?.focus?.({preventScroll:true})});
-  if(START_UI.page==='new-slot'||(!db&&START_UI.page==='load'))document.querySelectorAll('[data-startup-slot]').forEach(b=>b.onclick=()=>{if(current())return startupChooseSlot(b.dataset.startupSlot,current)});
+  if(START_UI.page==='new-slot'||(!db&&START_UI.page==='load'))bindStartupSavedGames();
   if(START_UI.page==='load'&&db){
     bindData();
     document.querySelectorAll('[data-slot]').forEach(b=>{const action=b.onclick;b.onclick=async()=>{if(!current())return;await action();if(DB!==db){START_UI.active=!!(!DB.world);nav()}}});
@@ -15977,9 +16011,10 @@ function saveDB(){
     catch(e){if(DB===db&&SLOT===slot)SAVEFAIL=true;console.error('LOL GM save failed',e)}
   },150);
 }
-async function switchSaveSlot(nextSlot){
+async function switchSaveSlot(nextSlot,acceptLoaded=null){
   if(SLOT_SWITCHING||nextSlot===SLOT||!SAVE_SLOTS.includes(nextSlot))
     return {ok:false,error:'이미 슬롯을 전환 중이거나 올바르지 않은 슬롯입니다.'};
+  const sourceDB=DB,sourceSlot=SLOT,sourceStore=STORE;
   SLOT_SWITCHING=true;
   cancelUiTasks();
   const main=document.querySelector('#main'),navigation=document.querySelector('nav');
@@ -15992,6 +16027,8 @@ async function switchSaveSlot(nextSlot){
     if(!saved)throw new Error('현재 슬롯 저장에 실패했습니다. 슬롯 전환을 중단했습니다.');
     const key=STORE_BASE+nextSlot;
     const loaded=await loadDB(key);
+    const accepted=!acceptLoaded||await acceptLoaded(loaded);
+    if(!accepted||DB!==sourceDB||SLOT!==sourceSlot||STORE!==sourceStore)throw Error('불러오는 동안 저장 문맥이 바뀌었습니다.');
     // Commit the slot identity and world only after both I/O operations finish.
     SLOT=nextSlot;STORE=key;DB=loaded;
     try{localStorage.setItem(STORAGE_NS+'-slot',SLOT)}catch(e){}

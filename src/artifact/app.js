@@ -84,9 +84,10 @@ function saveDB(){
     catch(e){if(DB===db&&SLOT===slot)SAVEFAIL=true;console.error('LOL GM save failed',e)}
   },150);
 }
-async function switchSaveSlot(nextSlot){
+async function switchSaveSlot(nextSlot,acceptLoaded=null){
   if(SLOT_SWITCHING||nextSlot===SLOT||!SAVE_SLOTS.includes(nextSlot))
     return {ok:false,error:'이미 슬롯을 전환 중이거나 올바르지 않은 슬롯입니다.'};
+  const sourceDB=DB,sourceSlot=SLOT,sourceStore=STORE;
   SLOT_SWITCHING=true;
   cancelUiTasks();
   const main=document.querySelector('#main'),navigation=document.querySelector('nav');
@@ -99,6 +100,8 @@ async function switchSaveSlot(nextSlot){
     if(!saved)throw new Error('현재 슬롯 저장에 실패했습니다. 슬롯 전환을 중단했습니다.');
     const key=STORE_BASE+nextSlot;
     const loaded=await loadDB(key);
+    const accepted=!acceptLoaded||await acceptLoaded(loaded);
+    if(!accepted||DB!==sourceDB||SLOT!==sourceSlot||STORE!==sourceStore)throw Error('불러오는 동안 저장 문맥이 바뀌었습니다.');
     // Commit the slot identity and world only after both I/O operations finish.
     SLOT=nextSlot;STORE=key;DB=loaded;
     try{localStorage.setItem(STORAGE_NS+'-slot',SLOT)}catch(e){}

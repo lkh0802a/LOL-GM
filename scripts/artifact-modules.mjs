@@ -163,6 +163,7 @@ export const UI_MODULES = [
   'ui-season.js',
   'ui-office-consultation.js',
   'ui-overlay.js',
+  'ui-startup-storage.js',
   'ui-startup.js',
   'ui-state.js',
   'app.js',

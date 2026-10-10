@@ -6,8 +6,25 @@ function savedGameSummary(db){
 }
 function savedGameLabel(s){return `${esc(s.name)}${s.year?` · ${esc(s.year)} 시즌`:''}`}
 function saveLibraryCurrent(){
- const db=DB,world=DB?.world,manager=DB?.manager,slot=SLOT,view=VIEW,render=UI_RENDER_ID,date=DB?.worldDate,year=DB?.year,team=managedTeamId(DB),policy=JSON.stringify([DB?.world?.manage,DB?.world?.fired,DB?.world?.phase]),page=typeof START_UI==='undefined'?null:START_UI.page,active=typeof START_UI==='undefined'?null:START_UI.active;
- return ()=>DB===db&&DB?.world===world&&DB?.manager===manager&&SLOT===slot&&VIEW===view&&UI_RENDER_ID===render&&DB?.worldDate===date&&DB?.year===year&&managedTeamId(DB)===team&&JSON.stringify([DB?.world?.manage,DB?.world?.fired,DB?.world?.phase])===policy&&!SLOT_SWITCHING&&(typeof UI_OVERLAY==='undefined'||!UI_OVERLAY)&&(typeof START_UI==='undefined'||START_UI.page===page&&START_UI.active===active);
+ const db=DB,world=DB?.world,manager=DB?.manager,slot=SLOT,view=VIEW,render=UI_RENDER_ID,date=DB?.worldDate,year=DB?.year,team=DB?managedTeamId(DB):null,policy=JSON.stringify([DB?.world?.manage,DB?.world?.fired,DB?.world?.phase]),page=typeof START_UI==='undefined'?null:START_UI.page,active=typeof START_UI==='undefined'?null:START_UI.active;
+ return ()=>DB===db&&DB?.world===world&&DB?.manager===manager&&SLOT===slot&&VIEW===view&&UI_RENDER_ID===render&&DB?.worldDate===date&&DB?.year===year&&(DB?managedTeamId(DB):null)===team&&JSON.stringify([DB?.world?.manage,DB?.world?.fired,DB?.world?.phase])===policy&&!SLOT_SWITCHING&&(typeof UI_OVERLAY==='undefined'||!UI_OVERLAY)&&(typeof START_UI==='undefined'||START_UI.page===page&&START_UI.active===active);
+}
+function renderStartupSavedGames(){
+ const fresh=START_UI.page==='new-slot';
+ return `<section><h2>${fresh?'새 게임 저장 준비':'저장된 게임'}</h2><p>${fresh?'기존 게임은 유지하고 빈 저장 위치에 시작합니다.':'구단과 시즌을 확인한 뒤 직접 불러오세요.'}</p>${startupBack()}<p class="warn" role="status">${esc(START_UI.error)}</p><button class="linklike" type="button" id="startup-saves-refresh">목록 다시 확인</button><div id="startup-saves-list" aria-live="polite"><p>저장된 게임을 확인하고 있습니다.</p></div></section>`;
+}
+function bindStartupSavedGames(){
+ const current=saveLibraryCurrent(),run=++SAVE_LIBRARY_RUN,page=START_UI.page,box=$('#startup-saves-list');
+ const valid=()=>current()&&SAVE_LIBRARY_RUN===run;
+ $('#startup-saves-refresh').onclick=()=>{if(valid())bindStartupSavedGames()};
+ void(async()=>{
+  const rows=[];for(const slot of SAVE_SLOTS){if(!valid())return;if(!DB||slot!==SLOT)rows.push(await readSavedGame(slot))}
+  if(!valid())return;
+  const empty=rows.find(r=>r.state==='empty');
+  box.innerHTML=page==='load'?savedGamesRows(rows):`${empty?`<button class="primary" type="button" data-startup-slot="${empty.slot}">빈 저장에 새 게임 시작</button>`:'<p>사용할 수 있는 빈 저장 위치가 없습니다. 기존 게임을 불러오거나 파일로 보관한 뒤 원본 관리에서 확인하세요.</p>'}<p class="hint">손상되거나 읽지 못한 저장은 사용하지 않습니다.</p><button class="linklike" type="button" data-startup-existing>기존 게임 불러오기</button>`;
+  box.querySelectorAll('[data-slot], [data-startup-slot]').forEach(b=>{let used=false;b.onclick=async()=>{if(used||!valid())return;used=true;await startupChooseSlot(b.dataset.slot||b.dataset.startupSlot,valid)}});
+  box.querySelector('[data-startup-existing]')?.addEventListener('click',()=>{if(valid())startupMove('load')});
+ })().catch(error=>{console.error(error);if(valid())box.innerHTML='<p class="warn">저장 목록을 확인하지 못했습니다. 원본은 유지됩니다.</p>'});
 }
 async function readSavedGame(slot){
  if(!SAVE_SLOTS.includes(slot))throw Error('올바르지 않은 저장 위치입니다.');

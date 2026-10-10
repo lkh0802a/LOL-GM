@@ -1,3 +1,4 @@
+import {startupSaveSourceHash,startupSaveSourceText} from './startup-save-source-successor.mjs';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
@@ -12,7 +13,7 @@ async function verify(){
  for(const r of rows){const b=Buffer.from(r.base64,'base64');assert.equal(b.length,r.bytes);assert.equal(sha(b),r.sha256)}
  const original=p=>Buffer.from(rows.find(r=>r.path==='original/'+p).base64,'base64').toString();
  for(const [p,h] of Object.entries(pins))assert.equal(sha(Buffer.from(original(p))),h);
- for(const [p,h] of Object.entries(e.sources))assert.equal(sha(await readFile(new URL(p,root))),h);
+ for(const [p,h] of Object.entries(e.sources))assert.equal(await startupSaveSourceHash(p),h);
  const p='scripts/stove-source-successor.mjs';let changed="import {stoveFaSourceHash,stoveFaSourceText} from './stove-fa-source-successor.mjs';\n"+original(p);
  changed=changed.replace('for(const [p,h] of Object.entries(e.sources))assert.equal(sha(await readFile(new URL(p,root))),h','for(const [p,h] of Object.entries(e.sources))assert.equal(await stoveFaSourceHash(p),h');
  for(const name of ['p','overview','validator','workflow','f'])changed=changed.replace("assert.equal(await readFile(new URL("+name+",root),'utf8'),","assert.equal(await stoveFaSourceText("+name+"),");
@@ -26,5 +27,5 @@ async function verify(){
  for(const p of ['docs/README.md','docs/DEVELOPMENT.md'])assert((await readFile(new URL(p,root),'utf8')).includes(original(p)),'전체 승인 원문 연속 보존');
  verified={e,rows};return verified;
 }
-export async function stoveFaSourceHash(p){const {e}=await verify();return e.originals[p]||sha(await readFile(new URL(p,root)))}
-export async function stoveFaSourceText(p){const {e,rows}=await verify();return e.originals[p]?Buffer.from(rows.find(r=>r.path==='original/'+p).base64,'base64').toString():readFile(new URL(p,root),'utf8')}
+export async function stoveFaSourceHash(p){const {e}=await verify();return e.originals[p]||await startupSaveSourceHash(p)}
+export async function stoveFaSourceText(p){const {e,rows}=await verify();return e.originals[p]?Buffer.from(rows.find(r=>r.path==='original/'+p).base64,'base64').toString():startupSaveSourceText(p)}
