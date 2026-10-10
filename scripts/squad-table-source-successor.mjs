@@ -1,3 +1,4 @@
+import {stoveFaSourceHash} from './stove-fa-source-successor.mjs';
 import {squadStatusSourceHash,squadStatusSourceText} from './squad-status-source-successor.mjs';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -22,7 +23,7 @@ async function verify(){
  const path='scripts/squad-overview-source-successor.mjs',prefix="import {squadTableSourceHash,squadTableSourceText} from './squad-table-source-successor.mjs';\n";
  const transformed=original(path).replace("assert.equal(sha(await readFile(new URL(path,root))),h","assert.equal(await squadTableSourceHash(path),h").replace("const actual=sha(await readFile(new URL(path,root)));","const actual=await squadTableSourceHash(path);").replace("assert.equal(await readFile(new URL(dependency,root),'utf8'),","assert.equal(await squadTableSourceText(dependency),");
  assert.equal(await squadStatusSourceText(path),prefix+transformed,'이전 검증의 모든 assertion 원문 유지·좁힌 승계');
- for(const [path,h] of Object.entries(e.engine))assert.equal(sha(await readFile(new URL('src/artifact/'+path,root))),h);assert.equal(Object.keys(e.engine).length,101);
+ for(const [path,h] of Object.entries(e.engine))assert.equal(await stoveFaSourceHash('src/artifact/'+path),h);assert.equal(Object.keys(e.engine).length,101);
  for(const path of ['docs/README.md','docs/DEVELOPMENT.md'])assert((await readFile(new URL(path,root))).includes(Buffer.from(rows.find(row=>row.path==='original/'+path).base64,'base64')),path+' 전체 연속 원문 유지');
  await import('./squad-table-acceptance.mjs');verified={e,rows};return verified;
 }

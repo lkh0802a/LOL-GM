@@ -186,7 +186,7 @@ function controlsFor(w){
     const cw=w.contractWindow;
     if(!cw)return `<button class="primary" id="soff">계약 협상 기간 열기</button><span class="hint">시즌 종료 후 원소속 구단 14일 독점 재계약 기간을 시작합니다.</span>`;
     if(cw.stage==='exclusive')return renderStove();
-    return `<button class="primary" id="soff">오프시즌 진행</button><span class="hint">${cw.contractExpiryDate}에 기존 계약이 끝났고 ${cw.outsideContactDate}부터 FA 시장이 열렸습니다. 영입을 마친 뒤 다음 시즌 시장 단계로 진행합니다.</span>`;
+    return renderStove()+`<button class="primary" id="soff">오프시즌 진행</button><span class="hint">${cw.contractExpiryDate}에 기존 계약이 끝났고 ${cw.outsideContactDate}부터 FA 시장이 열렸습니다. 영입을 마친 뒤 다음 시즌 시장 단계로 진행합니다.</span>`;
   }
   if(w.phase==='market') return `<button class="primary" id="smkt">이적 시장 마감</button>${seasonManagedTeam()?`<label class="inl">내 팀 운영 <select id="smanage">${[['manual','직접'],['ai','AI 위임']].map(([k,l])=>`<option value="${k}"${w.manage===k?' selected':''}>${l}</option>`).join('')}</select></label>`:''}<span class="hint">${w.manage==='manual'?'재계약·방출·FA 제안·이적 제안을 마친 뒤 마감하세요.':'AI가 내 팀 계약을 처리합니다.'}</span>`;
   if(w.phase==='preseason') return w.fired?`<button class="primary" id="sreset">새 팀 고르기</button>`:`<button class="primary" id="snew"${managedTeamId(DB)&&!seasonManagedTeam()?' disabled':''}>${DB.year} 시즌 시작</button><button class="ghost" id="sreset">맡을 팀 바꾸기</button>`;

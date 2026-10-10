@@ -1,3 +1,4 @@
+import {stoveFaSourceHash} from './stove-fa-source-successor.mjs';
 import {clubHomeSourceHash} from './club-home-source-successor.mjs';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
@@ -27,7 +28,7 @@ export async function verifyPendingHandoffSources(){
  for(const [p,h] of Object.entries(e.sources))assert.equal(await clubHomeSourceHash(p),h,p+' reviewed current bytes');
  for(const d of e.dependencies)assert.equal(sha(await readFile(new URL(d.path,root))),d.sha256,d.path+' prior evidence unchanged');
  assert((await readFile(new URL('docs/DEVELOPMENT.md',root))).includes(Buffer.from(rows.find(r=>r.path==='original/docs/DEVELOPMENT.md').base64,'base64')));
- for(const [f,h] of Object.entries(e.engine))assert.equal(sha(await readFile(new URL('src/artifact/'+f,root))),f==='season.js'?e.sources['src/artifact/season.js']:h,f+' current engine bytes');
+ for(const [f,h] of Object.entries(e.engine))assert.equal(await stoveFaSourceHash('src/artifact/'+f),f==='season.js'?e.sources['src/artifact/season.js']:h,f+' current engine bytes');
  evidence=e;return e;
 }
 export async function handoffSourceHash(path){

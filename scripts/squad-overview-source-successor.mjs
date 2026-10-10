@@ -1,3 +1,4 @@
+import {stoveFaSourceHash} from './stove-fa-source-successor.mjs';
 import {squadTableSourceHash,squadTableSourceText} from './squad-table-source-successor.mjs';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -23,7 +24,7 @@ async function verify(){
   const transformed=originalText(path).replaceAll("sha(await readFile(new URL(p,root)))","await squadOverviewSourceHash(p)").replaceAll("sha(await readFile(new URL(path,root)))","await squadOverviewSourceHash(path)");
   assert.equal(await squadTableSourceText(path),prefix+transformed,path+' 기존 assertion 원문·정확한 승계 hash 호출만 변경');
  }
- for(const [path,h] of Object.entries(e.engine))assert.equal(sha(await readFile(new URL('src/artifact/'+path,root))),h,path+' 엔진 원문 유지');assert.equal(Object.keys(e.engine).length,101);
+ for(const [path,h] of Object.entries(e.engine))assert.equal(await stoveFaSourceHash('src/artifact/'+path),h,path+' 엔진 원문 유지');assert.equal(Object.keys(e.engine).length,101);
  for(const file of ['docs/README.md','docs/DEVELOPMENT.md']){const row=rows.find(x=>x.path==='original/'+file);assert(row);assert((await readFile(new URL(file,root))).includes(Buffer.from(row.base64,'base64')),file+' 전체 원문 연속 보존')}
  await import('./squad-overview-acceptance.mjs');verified=e;return e;
 }

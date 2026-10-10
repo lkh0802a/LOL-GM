@@ -143,6 +143,7 @@ function bindSeason(){
     }else if(w.contractWindow.stage==='exclusive'){
       bindStove(current);
     }else{
+      bindStove(current);
       $('#soff').onclick=()=>{if(!current())return;runOffseason(DB);saveDB();nav();window.scrollTo(0,0)};
     }
     return;
