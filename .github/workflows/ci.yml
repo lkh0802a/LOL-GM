@@ -98,6 +98,9 @@ jobs:
       - name: 시작 저장 복원과 빈 저장 선택
         run: node scripts/ci-run.mjs startup-save -- node scripts/startup-save-acceptance.mjs
 
+      - name: 첫 영입 계약 조건 검토
+        run: node scripts/ci-run.mjs initial-negotiation-review -- node scripts/initial-negotiation-review-acceptance.mjs
+
       - name: Upload validation report
         if: always()
         uses: actions/upload-artifact@v4
