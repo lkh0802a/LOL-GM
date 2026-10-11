@@ -1,0 +1,34 @@
+import {artifactSources,runEngineFixture} from './test-harness.mjs';
+const [ui,app]=await artifactSources(['ui-negotiations.js','app.js']);
+const esc=app.match(/^const esc=.*$/m)[0];
+await runEngineFixture(String.raw`(()=>{
+ const check=(x,m)=>{if(!x)throw Error('NEGOTIATION_SUMMARY '+m)};
+ const cfg=defaultWorldConfig();cfg.regions=[regionCfg('KR',{teams:3,div2:true})];cfg.internationals=[];
+ DB=buildWorld(cfg);const t=activeTeams(DB,'KR',1)[0];startCareer(DB,t.id,'initial-review');
+ const p=Object.values(DB.players).find(p=>!p.team&&!p.retired&&p.region===t.region&&initialSignCheck(DB,p,t).ok);
+ mInterest(DB,p.id);mEvaluateTarget(DB,p.id,t.id);initialStartNegotiation(DB,p.id,t.id);
+ const n=negotiationStore(DB)[negotiationId(DB,p.id,'initial',t.id)],base=JSON.stringify(DB);
+ let html=renderNegotiations();check(html.includes('<b>선수 측 초기 요구</b>')&&!html.includes('<b>선수 측 역제안</b>'),'round zero demand labelled correctly');
+ check(html.includes('요구 조건 검토')&&html.includes('아직 제출한 제안이 없습니다.'),'truthful initial action and empty history');
+ check(html.includes('<details><summary>제안 조건 작성·수정</summary>')&&!html.includes('<details open'),'native collapsed terms');
+ check(html.includes('협상 시작 '+DB.worldDate)&&JSON.stringify(DB)===base,'read-only actual created date');
+ for(const field of ['sal','years','sign','perf','title','intl','buyout','buyout-type','option','role'])check(html.includes('data-neg-'+field+'="'+n.id+'"'),'retained input '+field);
+ const realCommit=commitWorldAction;commitWorldAction=()=>({ok:false,errors:['통제된 계약 작성 실패']});
+ const rejected=submitNegotiationOffer(DB,n.id,{...n.demand,salary:Math.floor((initialSalaryBudget(DB,t)-payroll(DB,t))*10)/10});commitWorldAction=realCommit;
+ check(!rejected.ok&&n.status==='open'&&n.history.some(h=>h.result==='commit_rejected'),'actual failed commit fixture');
+ check(renderNegotiations().includes('<b>선수 측 초기 요구</b>')&&!renderNegotiations().includes('<b>선수 측 역제안</b>'),'failed commit cannot invent a counter');DB=JSON.parse(base);
+ let found;
+ for(const fraction of [.6,.7,.8,.9,1]){const copy=JSON.parse(base),neg=copy.world.negotiations[n.id];submitNegotiationOffer(copy,n.id,{...neg.demand,salary:neg.demand.salary*fraction});if(neg.status==='open'&&neg.history.some(h=>h.result==='counter')){found=copy;break}}
+ check(found,'existing writer counter fixture');DB=found;const counter=DB.world.negotiations[n.id],before=JSON.stringify(DB);html=renderNegotiations();
+ check(html.includes('<b>선수 측 역제안</b>')&&html.includes('역제안 조건 검토'),'actual counter after submitted round');
+ check(html.includes('1차 · 구단 제안')&&html.includes('1차 · 역제안'),'actual both sides history');
+ check(!html.includes(String(counter.history[0].utility))&&JSON.stringify(DB)===before,'private utility hidden and read-only counter');
+ const restored=unpackDB(packDB(DB));check(JSON.stringify(restored.world.negotiations[n.id].history)===JSON.stringify(counter.history),'actual history save continuity');
+ DB=restored;check(renderNegotiations().includes('1차 · 역제안'),'restored history consumer');
+ const values={sal:'2.3',years:'2',sign:'0.4',perf:'0.2',title:'0.3',intl:'0.1',buyout:'8.5','buyout-type':'release',option:'player',role:'starter'},root={querySelector:s=>({value:values[s.match(/data-neg-([^=]+)/)[1]]})};
+ const terms=negotiationTermsFromDom(n.id,root);check(JSON.stringify(terms)===JSON.stringify({salary:2.3,years:2,signingBonus:.4,bonuses:{performance:.2,title:.3,international:.1},buyout:{amount:8.5,type:'release'},option:{type:'player'},promisedRole:'starter'}),'all original units and values');
+ values.buyout='0';values.option='none';check(negotiationTermsFromDom(n.id,root).buyout===null&&negotiationTermsFromDom(n.id,root).option===null,'optional clauses unchanged');
+ const malicious={history:[{round:'<script>',side:'club',terms:{salary:1,years:1,promisedRole:'<img>',bonuses:{}}},{round:2,side:'player',result:'private-unknown',utility:123456.789}],createdDate:'<img>'};
+ const safe=negotiationHistoryText(malicious);check(!safe.includes('<script>')&&!safe.includes('<img>')&&!safe.includes('private-unknown')&&!safe.includes('123456.789')&&safe.includes('선수 응답'),'escaped unknown history and private fields');
+ console.log('NEGOTIATION_SUMMARY_ACCEPTANCE initial/counter labels, actual history, collapsed native details, original units, private boundaries and saved history');
+})()`,{timeout:30000,setupSources:[ui,esc,'let DB;']});
