@@ -101,6 +101,9 @@ jobs:
       - name: 첫 영입 계약 조건 검토
         run: node scripts/ci-run.mjs initial-negotiation-review -- node scripts/initial-negotiation-review-acceptance.mjs
 
+      - name: 협상 요약과 실제 제안 기록
+        run: node scripts/ci-run.mjs negotiation-summary -- node scripts/negotiation-summary-acceptance.mjs
+
       - name: Upload validation report
         if: always()
         uses: actions/upload-artifact@v4
