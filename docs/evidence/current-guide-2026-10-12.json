@@ -13,8 +13,8 @@
     "scripts/negotiation-summary-source-successor.mjs": "35cc3254a195976367b6fd3f5228ca740b415867c8c673a48586b66090d11dc1"
   },
   "sources": {
-    "docs/README.md": "a39a61b639050571d4e3c99fbb8f7c24f56937254d52d31c40ec5d4845566422",
-    "docs/DEVELOPMENT.md": "2d719bad92d53c6ad22ec71e1fbaab73901bfa938f75434c1c8f2bf65f8a5aa7",
+    "docs/README.md": "e2ff124b70036e68e15afa62548a6cef806c09ff1420a640118d847263a02ede",
+    "docs/DEVELOPMENT.md": "3c5aa83c7c730e6a4640fb5845d05d0491f5746b290a93d6ec9fb971aee73fd7",
     "scripts/negotiation-summary-source-successor.mjs": "f34bba49c9ded9c9666e46ac4641af0cce085692fb46fd6e94e118ddb1d389f4"
   }
 }
