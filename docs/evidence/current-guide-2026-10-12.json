@@ -1,0 +1,20 @@
+{
+  "base": "7622a625de58c9baf46becd0a400607152ba14d7",
+  "archive": {
+    "path": "docs/evidence/current-guide-2026-10-12.source.json.gz",
+    "bytes": 366372,
+    "sha256": "1ae2bf9050812a2a1ab9876ed97b4d8c58981e473f0841ce6a4e68cb47a3f82d",
+    "decodedSha256": "bb45c76dee45c321bc6c14924e870471eea66fe06c6e85b67e19b435a370c219",
+    "rows": 3
+  },
+  "originals": {
+    "docs/README.md": "353883413d00e9fcfa5b8b06fe861cf761bf0f44c4b0af5dd5a8e51cf9df06ec",
+    "docs/DEVELOPMENT.md": "6727b520ce5cc6372b0d960072e10ebf503ef563a53806b071b13185a418c54f",
+    "scripts/negotiation-summary-source-successor.mjs": "35cc3254a195976367b6fd3f5228ca740b415867c8c673a48586b66090d11dc1"
+  },
+  "sources": {
+    "docs/README.md": "a06211a828adeb9aa58149d3a4be898606c0fbd9b5bbda8e8197603d0ce0311c",
+    "docs/DEVELOPMENT.md": "380850a13d1747ba918ee46e3a47108beddff1ca36dbd0555059f98c6ce861bd",
+    "scripts/negotiation-summary-source-successor.mjs": "f34bba49c9ded9c9666e46ac4641af0cce085692fb46fd6e94e118ddb1d389f4"
+  }
+}

@@ -1,3 +1,4 @@
+import {currentGuideSourceHash} from './current-guide-source-successor.mjs';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
@@ -13,7 +14,7 @@ async function verify(){
  for(const r of rows){const b=Buffer.from(r.base64,'base64');assert.equal(b.length,r.bytes);assert.equal(sha(b),r.sha256)}
  const original=p=>Buffer.from(rows.find(r=>r.path==='original/'+p).base64,'base64').toString();
  for(const [p,h] of Object.entries(e.originals))assert.equal(sha(Buffer.from(original(p))),h);
- for(const [p,h] of Object.entries(e.sources))assert.equal(sha(await readFile(new URL(p,root))),h,p);
+ for(const [p,h] of Object.entries(e.sources))assert.equal(await currentGuideSourceHash(p),h,p);
  const p='scripts/initial-negotiation-review-source-successor.mjs';
  let expected="import {negotiationSummarySourceHash,negotiationSummarySourceText} from './negotiation-summary-source-successor.mjs';\n"+original(p);
  expected=expected.replace('for(const [p,h] of Object.entries(e.sources))assert.equal(sha(await readFile(new URL(p,root))),h,p);','for(const [p,h] of Object.entries(e.sources))assert.equal(await negotiationSummarySourceHash(p),h,p);').replace("assert.equal(await readFile(new URL('.github/workflows/ci.yml',root),'utf8'),workflow","assert.equal(await negotiationSummarySourceText('.github/workflows/ci.yml'),workflow");
