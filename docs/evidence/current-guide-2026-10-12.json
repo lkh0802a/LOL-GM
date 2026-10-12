@@ -14,7 +14,7 @@
   },
   "sources": {
     "docs/README.md": "a06211a828adeb9aa58149d3a4be898606c0fbd9b5bbda8e8197603d0ce0311c",
-    "docs/DEVELOPMENT.md": "380850a13d1747ba918ee46e3a47108beddff1ca36dbd0555059f98c6ce861bd",
+    "docs/DEVELOPMENT.md": "5d59befd32783b1fb32f7183edbf38429a8684f648b4156a93d9ebb69cfa5632",
     "scripts/negotiation-summary-source-successor.mjs": "f34bba49c9ded9c9666e46ac4641af0cce085692fb46fd6e94e118ddb1d389f4"
   }
 }
