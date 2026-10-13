@@ -2,10 +2,10 @@
   "base": "8fa903c5bbaf27b66911efa4b9b5fcc34704a5d2",
   "archive": {
     "path": "docs/evidence/negotiation-final-2026-10-13.source.json.gz",
-    "bytes": 1246265,
-    "sha256": "a3c4baaf5cd74d90b785103e84c4d7b58b1d3a3aafa2b6c94d2b90cb84d5315f",
-    "decodedSha256": "d9c9198c1d9c2da64fd303944172761cf6d212fc5cdb2b2407cde9ddeefb5a38",
-    "rows": 18
+    "bytes": 1246997,
+    "sha256": "041d67efb38fb3878e3e3171dfc6f36cf421777f885b4784e34d5bdaa778f38a",
+    "decodedSha256": "23e6a6ecacf9e164396e60d37f3739c53b8e750c4752a518d847379bd022ce27",
+    "rows": 20
   },
   "originals": {
     "docs/README.md": "18cb444ea2db6cb284250bc9ada71c2c785399e28deb9b71c56568a982dddeb8",
@@ -25,11 +25,13 @@
     "scripts/verify-season-progress-evidence.mjs": "b01c5ee7c54ce94c99652257226b60d17923be09aec8f693530f962ed616e80c",
     "scripts/verify-squad-draft-recovery-evidence.mjs": "8839d344952b3b7316550920610455f6a0f894a5a7bb17dca6959c06a6591324",
     "scripts/verify-unemployed-season-evidence.mjs": "354e707349a926a3339095ed60d70a879c803cb840304e40fae0d17704905ef0",
-    "scripts/stove-fa-source-successor.mjs": "dcfadbb399afacfa7ec8efc208cca529a8e901a566ef2b5ece015e492fae9f4a"
+    "scripts/stove-fa-source-successor.mjs": "dcfadbb399afacfa7ec8efc208cca529a8e901a566ef2b5ece015e492fae9f4a",
+    "scripts/verify-official-draft-evidence.mjs": "2aa5ec78a93950ae0b5c5e4832c1737661a6721df4ee412c1be766c4cf8ddd96",
+    "scripts/verify-official-edit-evidence.mjs": "e040f16df1693b2cc411f0796e6bb329c53d7b04eb847dadc8ab96a55c29d29d"
   },
   "sources": {
     "docs/README.md": "37b852bb1868e38f129961d990a4ad333af0397f60efe8e50296bad174c6ca34",
-    "docs/DEVELOPMENT.md": "f08b436d8fdcebbf7ac65c3a0f8811e825e61066dd1c70e297cd2cb7cb70451b",
+    "docs/DEVELOPMENT.md": "5e2c1792b236b24e7be44a929f00d4a44457be9165f432a1371946aa6281ca89",
     "index.html": "cb8e47dbb2980c4bf5013b490274a04dc7a052d57ce885daae858df31965ead4",
     "scripts/artifact-modules.mjs": "f3936d38570c9533bf02d066b1e9e51666e4ca6944637e820f202bd88b467193",
     "scripts/current-guide-source-successor.mjs": "1e32b80db1d2f57db4f4082778ba4beebf46366fd71e42602e9fe897f87de1d0",
@@ -46,9 +48,11 @@
     "scripts/verify-squad-draft-recovery-evidence.mjs": "c877ea086c6338672abbbe10b208465b0f5cd8ffc724db9555725b87cf1045aa",
     "scripts/verify-unemployed-season-evidence.mjs": "21b8d8464dbd908f6e98475c8c41af9a7e571a263f25840c7b45a07a7c386cab",
     "scripts/stove-fa-source-successor.mjs": "04e7c1fa7c9fbee0b0c9b63c168fdb9108a19bdc31ece2cc8fc171fbe2c5782b",
+    "scripts/verify-official-draft-evidence.mjs": "728f8c50d742c27a19f4e566f757bef97e144f17fd7d5344a3d8dc58d539b751",
+    "scripts/verify-official-edit-evidence.mjs": "c458de3c31f3ff6487eb96ec3cc49bed0eb0df510d4f92d8653cd450a7e0fda1",
     "src/artifact/negotiation-final.js": "a72109f224e4838c9ab0a675ca3789d0503a6f50b0742c676acc6ae8b6eae7ef",
     "src/artifact/ui-negotiation-final.js": "fb60579473ea143b11618bc8f8b10f3d44c49181e5bd97c48448f3e504347c65",
     "scripts/negotiation-final-acceptance.mjs": "6b3e98cc742f40b300e2ef76c8753210514d07aa067085faad3c3486e4f63994",
-    "scripts/negotiation-final-source-successor.mjs": "a2db34b1d53c0bd6ba0734fc83bef386525edda45c412674298a5ef784349e8c"
+    "scripts/negotiation-final-source-successor.mjs": "17b02c2a2dae706147769d653b530694138e2f0c399259499012a122f18770cb"
   }
 }

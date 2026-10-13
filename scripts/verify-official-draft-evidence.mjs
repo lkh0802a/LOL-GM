@@ -1,9 +1,12 @@
+import {negotiationFinalSourceHash} from './negotiation-final-source-successor.mjs';
 import {historicalSourceHash} from './season-history-source-successor.mjs';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {gunzipSync} from 'node:zlib';
 import assert from 'node:assert/strict';
-import {ENGINE_MODULES} from './artifact-modules.mjs';
+import {ENGINE_MODULES as CURRENT_ENGINE_MODULES} from './artifact-modules.mjs';
+const ENGINE_MODULES=CURRENT_ENGINE_MODULES.filter(p=>p!=='negotiation-final.js');
+assert.equal(CURRENT_ENGINE_MODULES.length,102);assert.deepEqual(CURRENT_ENGINE_MODULES.filter(p=>p==='negotiation-final.js'),['negotiation-final.js']);await negotiationFinalSourceHash('src/artifact/negotiation-final.js');
 const root=new URL('../',import.meta.url),sha=b=>createHash('sha256').update(b).digest('hex');
 const e=JSON.parse(await readFile(new URL('docs/evidence/official-draft-comparison-2026-10-08.json',root)));
 if(e.priorArchive){const prior=await readFile(new URL(e.priorArchive.path,root));assert.equal(sha(prior),e.priorArchive.sha256);assert.equal(sha(gunzipSync(prior)),e.priorArchive.decodedSha256)}
