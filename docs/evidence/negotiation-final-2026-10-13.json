@@ -1,0 +1,30 @@
+{
+  "base": "8fa903c5bbaf27b66911efa4b9b5fcc34704a5d2",
+  "archive": {
+    "path": "docs/evidence/negotiation-final-2026-10-13.source.json.gz",
+    "bytes": 1234901,
+    "sha256": "7fa902807bbe0cf02764d4906e60980023649237c089393e430d06a6185de6a8",
+    "decodedSha256": "17d62a4bd174b4dc4db6b9bdbb5c9e0b4c5b9f05376bc2291a0d07d4654873d1",
+    "rows": 6
+  },
+  "originals": {
+    "docs/README.md": "18cb444ea2db6cb284250bc9ada71c2c785399e28deb9b71c56568a982dddeb8",
+    "docs/DEVELOPMENT.md": "1e27919ac4c7b080265fdf3f1082d66720e65aa0b962a46c7b08aeb11052b73a",
+    "index.html": "5e56df0dbdebbe10a369b86eedaaa98edee85207b30e976581347811a97974d4",
+    "scripts/artifact-modules.mjs": "b07e331c2ac4036bd89714f866f481cd529b7fdb2ac29c1ebb30805bed27514d",
+    "scripts/current-guide-source-successor.mjs": "d174d849668d209b4b1c548a98e1184fedfe25793885facca18655d30d6bea34",
+    "scripts/negotiation-summary-acceptance.mjs": "93fadbcdb304dbe03370bd593184b13a72a9bd1f97e5bf46a5c5f3f1a121bfca"
+  },
+  "sources": {
+    "docs/README.md": "37b852bb1868e38f129961d990a4ad333af0397f60efe8e50296bad174c6ca34",
+    "docs/DEVELOPMENT.md": "9f774de198fc7544fe1298612bfd8cb996371823440a62ea2fa85a2b67292ce8",
+    "index.html": "cb8e47dbb2980c4bf5013b490274a04dc7a052d57ce885daae858df31965ead4",
+    "scripts/artifact-modules.mjs": "f3936d38570c9533bf02d066b1e9e51666e4ca6944637e820f202bd88b467193",
+    "scripts/current-guide-source-successor.mjs": "84330f60154aa74b9c81225a49c5ffd04c68df9121c8f180a43e790cafcca32c",
+    "scripts/negotiation-summary-acceptance.mjs": "b1a19070d9390682c27e0d5eb2558debfca37b91799afdb2c715258b7ab04e2f",
+    "src/artifact/negotiation-final.js": "a72109f224e4838c9ab0a675ca3789d0503a6f50b0742c676acc6ae8b6eae7ef",
+    "src/artifact/ui-negotiation-final.js": "fb60579473ea143b11618bc8f8b10f3d44c49181e5bd97c48448f3e504347c65",
+    "scripts/negotiation-final-acceptance.mjs": "6b3e98cc742f40b300e2ef76c8753210514d07aa067085faad3c3486e4f63994",
+    "scripts/negotiation-final-source-successor.mjs": "6070f12537f77115d0e5937b152833b9b611fb344db22192d260f11bcac5e04e"
+  }
+}
