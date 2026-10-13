@@ -8,7 +8,7 @@ if(clubBriefNegotiationsBeforeClock)clubBriefNegotiations=function(db,ctx){
 };
 // 실제 합의와 최종 계약의 수동 결정/취소/오래된 입력 거절.
 negotiationHistoryText=function(n){
-  const labels={counter:'역제안',accept:'수락·계약 처리',commit_rejected:'계약 처리 거절',rival:'경쟁 구단 선택',agreed:'선수 조건 수락 · 최종 계약 전',finalized:'감독 최종 계약 확정',submitted:'제안 접수 · 응답 대기',response_unavailable:'현재 조건으로 응답 처리 불가',cancelled:'제안 취소'};
+  const labels={contact:'선수 연락 도착',counter:'역제안',accept:'수락·계약 처리',commit_rejected:'계약 처리 거절',rival:'경쟁 구단 선택',agreed:'선수 조건 수락 · 최종 계약 전',finalized:'감독 최종 계약 확정',submitted:'제안 접수 · 응답 대기',response_unavailable:'현재 조건으로 응답 처리 불가',cancelled:'제안 취소'};
   return `<details><summary>주고받은 제안 ${n.history?.length||0}건</summary><p>협상 시작 ${esc(n.createdDate||'날짜 정보 없음')}</p>${(n.history||[]).map(h=>`<p>${esc(h.round)}차 · ${h.stage==='club'?(h.side==='seller'?(h.result==='accept'?'구단 이적료 수락':'구단 이적료 역제안'):'구단 이적료 제안'):(labels[h.result]||(h.side==='club'?'구단 제안':'선수 응답'))}${h.stage==='club'&&Number.isFinite(h.fee)?' · '+esc(money(h.fee)):h.terms?' · '+esc(contractTermsText(h.terms)):''}</p>`).join('')||'<p>아직 제출한 제안이 없습니다.</p>'}</details>`;
 };
 const negotiationRenderBeforeFinal=renderNegotiations;
@@ -47,4 +47,26 @@ bindNegotiationControls=function(act,allowed=()=>true,root=document){
   const db=DB,w=db.world,slot=SLOT,render=UI_RENDER_ID,view=VIEW,manager=db.manager,dialog=UI_OVERLAY,basis=JSON.stringify([db.worldDate,w.negotiationClock,w.officialGameTimeThrough,officialClockState(db),w.negotiations]);let used=false;
   root.querySelectorAll('[data-neg-continue]').forEach(b=>b.onclick=()=>{if(used||!allowed()||DB!==db||db.world!==w||db.manager!==manager||SLOT!==slot||UI_RENDER_ID!==render||VIEW!==view||SLOT_SWITCHING||UI_OVERLAY!==dialog||dialog&&dialog.kind!=='club-negotiation'||JSON.stringify([db.worldDate,w.negotiationClock,w.officialGameTimeThrough,officialClockState(db),w.negotiations])!==basis)return;used=true;act(advanceToNegotiationResponse(db).msg);});
   for(const [selector,field,mode] of [['[data-neg-submit]','negSubmit','offer'],['[data-neg-accept]','negAccept','counter'],['[data-neg-final]','negFinal','final']])root.querySelectorAll(selector).forEach(b=>b.onclick=()=>reviewManualNegotiation(b.dataset[field],mode,b,act,allowed,root));
+};
+
+// 완료 게임 뒤의 연락과 다음 수동 준비는 감독의 서로 다른 결정이다.
+const officialUiBindBeforeManualContact=typeof officialUiBindPending==='function'?officialUiBindPending:null;
+if(officialUiBindBeforeManualContact)officialUiBindPending=function(staleFrame=()=>false){
+  const q=DB.world?.pendingOfficial?.queue?.[0];if(!q?.contact)return officialUiBindBeforeManualContact(staleFrame);
+  const c=officialUiContext(DB),contact=q.contact,n=DB.world.negotiations?.[contact.id];
+  document.querySelectorAll('.controls button').forEach(b=>b.disabled=true);
+  document.querySelector('.controls')?.insertAdjacentHTML('beforeend','<p role="status">완료한 게임 뒤 선수 연락이 도착했습니다. 연락을 검토하고 다음 경기 준비를 직접 다시 여세요.</p><button class="primary" id="manual-contact-review">선수 연락 검토</button><button class="ghost" id="manual-contact-resume">현재 경기 준비 다시 열기</button>');
+  const valid=()=>officialUiCurrent(c)&&manualContactPending(DB)&&q.contact===contact&&!UI_OVERLAY&&!staleFrame();
+  const review=$('#manual-contact-review'),resume=$('#manual-contact-resume');if(!review||!resume)return;
+  review.disabled=resume.disabled=!valid();
+  resume.onclick=()=>{if(!valid())return;try{const result=resumeManualAfterContact(DB);if(!result.ok&&!result.response)return;saveDB();nav();}catch(error){MSG=error.message;nav();}};
+  review.onclick=()=>{
+    if(!valid()||!n)return;const db=DB,w=db.world,root=$('#overlay'),read=Object.create(db),state=clubBriefState(),stamp=JSON.stringify(n),date=db.worldDate;read.world={...w,negotiations:{[n.id]:n}};let dialog;
+    const current=()=>officialUiCurrent(c)&&DB===db&&db.world===w&&q.contact===contact&&UI_OVERLAY===dialog&&manualContactPending(db);
+    const close=()=>{if(UI_OVERLAY!==dialog)return;if(current())state.draft={nid:n.id,stamp,date,values:clubBriefDraft(n.id,root)};closeUiOverlay();};
+    openUiOverlay({kind:'club-negotiation',label:'완료 게임 뒤 선수 연락',dismissible:true,onDismiss:close,focusSelector:'#manual-contact-close',html:'<div class="ovin"><div class="ovhead"><b>선수 연락 검토</b><button class="ghost" id="manual-contact-close">경기 진행으로 돌아가기</button></div><p>연락 시각 '+esc(negotiationTimeText(contact.at))+'</p>'+renderNegotiations([n.teamId],read)+(n.status==='open'?'':'<section><h4>'+esc(db.players[n.pid]?.name||'선수 정보 없음')+' · 협상 결과</h4>'+negotiationHistoryText(n)+'</section>')+'</div>'});dialog=UI_OVERLAY;
+    if(state.draft?.nid===n.id&&state.draft.stamp===stamp&&state.draft.date===date)clubBriefDraft(n.id,root,state.draft.values);
+    $('#manual-contact-close').onclick=close;
+    bindNegotiationControls(msg=>{if(UI_OVERLAY!==dialog)return;state.draft=null;closeUiOverlay({restoreFocus:false});MSG=msg;saveDB();nav();$('#manual-contact-review')?.focus?.();},current,root);
+  };
 };
