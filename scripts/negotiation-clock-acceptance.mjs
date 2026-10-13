@@ -176,3 +176,71 @@ const endedContact=await runEngineFixture(String.raw`(()=>{
 })()`);
 assert.equal(JSON.parse(endedContact).late,false);
 console.log('OFFICIAL_ENDED_CONTACT_ACCEPTANCE '+endedContact);
+
+// 실제 생성 편성의 객체 순서만 바꾼 반례. 경기 시각·가격·시드는 변경하지 않는다.
+const globalEvents=await runEngineFixture(String.raw`(()=>{
+ const check=(v,m)=>{if(!v)throw Error('OFFICIAL_GLOBAL_EVENTS '+m)};
+ const cfg=defaultWorldConfig();cfg.regions=['KR','CN'].map(id=>regionCfg(id,{teams:10,div2:false}));cfg.internationals=[];
+ const base=buildWorld(cfg),team=activeTeams(base,'KR',1).sort((a,b)=>salaryBudget(base,b)-salaryBudget(base,a))[0];startCareer(base,team.id,'clock-contact-order');autoBuildInitialSquad(base,team,new RNG('clock-roster','fixture'),5);finalizeInitialRosters(base);
+ let count=0;while(true){const date=nextCalendarDate(base),own=Object.values(base.world.seasons).flatMap(s=>s.days.flatMap(d=>d.matches)).find(m=>!m.res&&(m.a===team.id||m.b===team.id)&&m.utcAt?.slice(0,10)===date);if(own&&date===nextDate(base)){applyWorldDailyEffects(base,date);break;}check(++count<=30,'bounded generated fixture');playWorldDay(base);}
+ const canonical=v=>JSON.stringify(v,(_,x)=>x&&typeof x==='object'&&!Array.isArray(x)?Object.fromEntries(Object.keys(x).sort().map(k=>[k,x[k]])):x);
+ const run=(reverse,save)=>{
+  let db=JSON.parse(JSON.stringify(base));if(reverse)db.world.seasons=Object.fromEntries(Object.entries(db.world.seasons).reverse());if(save)db=unpackDB(packDB(db));
+  const trace=[],starts=[],meta=recordMeta,prepare=prepareOfficialClockGame,world=db.world,club=managedTeam(db);
+  recordMeta=function(current,r){if(current===db){const m=Object.values(db.world.seasons).flatMap(s=>s.days.flatMap(d=>d.matches)).find(m=>m.clockGame?.observation===r);if(m)trace.push({id:m.id,end:m.clockGame.endAt,game:m.clockGame.session.games.length});}return meta(current,r);};
+  prepareOfficialClockGame=function(current,s,m){if(current===db&&!m.clockGame)starts.push({id:m.id,at:m.gameTime?.gameTimeThrough||m.utcAt,completed:trace.length});return prepare(current,s,m);};
+  try{const result=playWorldDay(db);check(result.pending&&db.world===world&&managedTeam(db)===club,'manual preparation and active identities');}finally{recordMeta=meta;prepareOfficialClockGame=prepare;}
+  check(trace.length>=4&&trace.every((x,i)=>!i||x.end>=trace[i-1].end),'world actual end order');
+  check(starts.some(x=>x.at>trace[0].end&&x.at<trace[1].end&&x.completed===1),'overlapping start reads first completed game only');
+  return {db,trace,starts};
+ };
+ const normal=run(false,true),reversed=run(true,true);
+ check(canonical(normal.db)===canonical(reversed.db)&&canonical(normal.trace)===canonical(reversed.trace)&&canonical(normal.starts)===canonical(reversed.starts),'restored property order independent full state and seed');
+ const live=run(false,false);check(canonical(unpackDB(packDB(live.db)))===canonical(normal.db),'live and restored world equivalent');
+ const frozen=unpackDB(packDB(base));
+ const n=Object.values(frozen.players).find(p=>p.team===team.id&&!p.retired);const start=startNegotiation(frozen,n.id,'renewal');check(start.ok,'real renewal');start.neg.maxRounds=3;start.neg.competitors=[];
+ const terms={...start.neg.demand,salary:start.neg.demand.salary*2},plan=negotiationResponsePlan(frozen,start.neg,terms);check(plan.ok&&plan.hours>=2&&plan.hours<=8,'approved response interval');
+ const first=normal.trace[0].end,at=new Date(Date.parse(first)-plan.hours*3600000).toISOString();check(at.slice(0,10)===frozen.worldDate&&at>=negotiationClockAt(frozen),'derived valid saved clock');frozen.world.negotiationClock={at};check(stageNegotiationOffer(frozen,start.neg.id,terms).waiting,'real queued offer');
+ const contact=playWorldDay(frozen);check(contact.response&&negotiationClockAt(frozen)===first,'contact at first actual end');
+ const failed=unpackDB(packDB(frozen)),failedWorld=failed.world,failedClub=managedTeam(failed),oldUndo=pendingOfficialUndo,oldMeta=recordMeta;let checkpoint,refused=false;
+ pendingOfficialUndo=function(current){if(current===failed)checkpoint=JSON.stringify(current);return oldUndo(current);};recordMeta=function(current,r){const value=oldMeta(current,r);if(current===failed)throw Error('controlled global end consumer failure');return value;};
+ try{playWorldDay(failed);}catch{refused=true;}finally{pendingOfficialUndo=oldUndo;recordMeta=oldMeta;}
+ check(refused&&JSON.stringify(failed)===checkpoint&&failed.world===failedWorld&&managedTeam(failed)===failedClub,'global failed event restores full state and identities');
+ const preserved=Object.values(failed.world.seasons).flatMap(s=>s.days.flatMap(d=>d.matches)).find(m=>m.clockSession);check(preserved?.clockSession.games.length===1&&preserved.clockGame&&!preserved.res,'prior game and pending receipt preserved after failure');
+ const damaged=unpackDB(packDB(failed)),dm=Object.values(damaged.world.seasons).flatMap(s=>s.days.flatMap(d=>d.matches)).find(m=>m.clockGame);dm.clockGame.observation.sides[0].ps=null;const damagedBefore=JSON.stringify(damaged);let damagedRejected=false;try{playWorldDay(damaged);}catch{damagedRejected=true;}check(damagedRejected&&JSON.stringify(damaged)===damagedBefore,'damaged saved receipt rejected before any world event');
+ const badConsumption=unpackDB(packDB(failed)),cm=Object.values(badConsumption.world.seasons).flatMap(s=>s.days.flatMap(d=>d.matches)).find(m=>m.clockSession);cm.gameTime.gameTimeThrough=addDays(badConsumption.worldDate,1)+'T12:00:00.000Z';const consumptionBefore=JSON.stringify(badConsumption);let consumptionRejected=false;try{playWorldDay(badConsumption);}catch{consumptionRejected=true;}check(consumptionRejected&&JSON.stringify(badConsumption)===consumptionBefore,'invalid partial consumed time rejected before chronology');
+ const noNexus=unpackDB(packDB(failed)),nm=Object.values(noNexus.world.seasons).flatMap(s=>s.days.flatMap(d=>d.matches)).find(m=>m.clockGame);nm.clockGame.session.games.at(-1).publicRecord.ending.kind='gold';const noNexusBefore=JSON.stringify(noNexus);let noNexusRejected=false;try{playWorldDay(noNexus);}catch{noNexusRejected=true;}check(noNexusRejected&&JSON.stringify(noNexus)===noNexusBefore,'gold-based ending cannot write official effects');
+ const handoff=unpackDB(packDB(failed)),hm=Object.values(handoff.world.seasons).flatMap(s=>s.days.flatMap(d=>d.matches)).find(m=>m.clockGame);setManagedTeam(handoff,hm.a);const handoffBefore=JSON.stringify(handoff);let handoffRejected=false;try{playWorldDay(handoff);}catch{handoffRejected=true;}check(handoffRejected&&JSON.stringify(handoff)===handoffBefore,'old automatic game cannot consume new manager authority');
+ const partial=unpackDB(packDB(frozen));partial.world.seasons=Object.fromEntries(Object.entries(partial.world.seasons).reverse());
+ const tick=frozen.world.lastDailyTick;playWorldDay(frozen);playWorldDay(partial);check(canonical(unpackDB(packDB(frozen)))===canonical(unpackDB(packDB(partial)))&&frozen.world.lastDailyTick===tick,'partial game contact restore and single daily consumer');
+ return JSON.stringify({worldEndOrder:true,overlappingStartUsesPastOnly:true,propertyOrderFullStateEqual:true,liveSavedEqual:true,partialContactSaveEqual:true,failedGlobalConsumerRollback:true,priorGameAndReceiptPreserved:true,damagedSaveInert:true,nexusEndRequired:true,partialConsumedTimeInert:true,authorityHandoffInert:true,manualPreparation:true,dailyOnce:true,trace:normal.trace,starts:normal.starts});
+})()`);
+assert.equal(JSON.parse(globalEvents).propertyOrderFullStateEqual,true);
+console.log('OFFICIAL_GLOBAL_EVENTS_ACCEPTANCE '+globalEvents);
+
+const globalAutomatic=await runEngineFixture(String.raw`(()=>{
+ const check=(v,m)=>{if(!v)throw Error('OFFICIAL_GLOBAL_AUTOMATIC '+m)};
+ const cfg=defaultWorldConfig();cfg.regions=['KR','CN'].map(id=>regionCfg(id,{teams:4,div2:false}));cfg.internationals=[];
+ const base=buildWorld(cfg),team=activeTeams(base,'KR',1)[0];startCareer(base,team.id,'global-auto');autoBuildInitialSquad(base,team,new RNG('clock-roster','fixture'),5);finalizeInitialRosters(base);base.world.manage='ai';
+ while(nextCalendarDate(base)!==nextDate(base))playWorldDay(base);applyWorldDailyEffects(base,nextDate(base));
+ const canonical=v=>JSON.stringify(v,(_,x)=>x&&typeof x==='object'&&!Array.isArray(x)?Object.fromEntries(Object.keys(x).sort().map(k=>[k,x[k]])):x);
+ const left=unpackDB(packDB(base)),right=unpackDB(packDB(base));right.world.seasons=Object.fromEntries(Object.entries(right.world.seasons).reverse());
+ const date=base.worldDate,tick=base.world.lastDailyTick;playWorldDay(left);playWorldDay(right);
+ check(canonical(left)===canonical(right),'automatic complete state independent of season order');check(left.world.lastDailyTick===tick&&left.worldDate===date,'single existing daily consumer');
+ const finishFailure=unpackDB(packDB(base)),finishWorld=finishFailure.world,oldFinishUndo=pendingOfficialUndo,oldScout=scoutFromDay;let finishCheckpoint,finishRejected=false;
+ pendingOfficialUndo=function(current){if(current===finishFailure)finishCheckpoint=JSON.stringify(current);return oldFinishUndo(current);};scoutFromDay=function(current,...args){const result=oldScout(current,...args);if(current===finishFailure)throw Error('controlled global day consumer failure');return result;};
+ try{playWorldDay(finishFailure);}catch{finishRejected=true;}finally{pendingOfficialUndo=oldFinishUndo;scoutFromDay=oldScout;}
+ check(finishRejected&&JSON.stringify(finishFailure)===finishCheckpoint&&finishFailure.world===finishWorld,'completed games survive failed day consumer without partial stage advance');
+ playWorldDay(finishFailure);check(canonical(finishFailure)===canonical(left),'failed day consumer explicit retry preserves full result');
+ const invalid=unpackDB(packDB(base)),fixture=Object.values(invalid.world.seasons).flatMap(s=>s.days[s.cur].matches).find(m=>!m.res);fixture.utcAt='invalid';const before=JSON.stringify(invalid),world=invalid.world;let refused=false;try{playWorldDay(invalid);}catch{refused=true;}check(refused&&JSON.stringify(invalid)===before&&invalid.world===world,'invalid future input rejected before daily or match writes');
+ // 겹치지 않는 기존 한 대회 편성은 원래 작성자의 전체 결과와 비교한다.
+ const oneCfg=defaultWorldConfig();oneCfg.regions=[regionCfg('KR',{teams:2,div2:false})];oneCfg.internationals=[];
+ const one=buildWorld(oneCfg),oneTeam=activeTeams(one,'KR',1)[0];startCareer(one,oneTeam.id,'global-non-overlap');autoBuildInitialSquad(one,oneTeam,new RNG('clock-roster','fixture'),5);finalizeInitialRosters(one);one.world.manage='ai';
+ while(nextCalendarDate(one)!==nextDate(one))playWorldDay(one);applyWorldDailyEffects(one,nextDate(one));
+ const current=JSON.parse(JSON.stringify(one)),old=JSON.parse(JSON.stringify(one));playWorldDay(current);negotiationWorldDayBeforeClock(old);
+ const withoutClock=db=>{delete db.world.negotiationClock;delete db.world.officialGameTimeThrough;return db;};
+ check(canonical(withoutClock(current))===canonical(withoutClock(old)),'non-overlap original writer complete state and seed equal');
+ return JSON.stringify({automaticOrderIndependent:true,allCurrentResultsEqual:true,dailyOnce:true,invalidInputBeforeWrites:true,failedDayConsumerRollback:true,completedGamesPreserved:true,explicitRetryEqual:true,nonOverlapOriginalStateEqual:true});
+})()`);
+assert.equal(JSON.parse(globalAutomatic).automaticOrderIndependent,true);
+console.log('OFFICIAL_GLOBAL_AUTOMATIC_ACCEPTANCE '+globalAutomatic);
