@@ -238,8 +238,7 @@ const globalAutomatic=await runEngineFixture(String.raw`(()=>{
  const one=buildWorld(oneCfg),oneTeam=activeTeams(one,'KR',1)[0];startCareer(one,oneTeam.id,'global-non-overlap');autoBuildInitialSquad(one,oneTeam,new RNG('clock-roster','fixture'),5);finalizeInitialRosters(one);one.world.manage='ai';
  while(nextCalendarDate(one)!==nextDate(one))playWorldDay(one);applyWorldDailyEffects(one,nextDate(one));
  const current=JSON.parse(JSON.stringify(one)),old=JSON.parse(JSON.stringify(one));playWorldDay(current);negotiationWorldDayBeforeClock(old);
- const withoutClock=db=>{delete db.world.negotiationClock;delete db.world.officialGameTimeThrough;return db;};
- check(canonical(withoutClock(current))===canonical(withoutClock(old)),'non-overlap original writer complete state and seed equal');
+ check(canonical(current)===canonical(old),'non-overlap original writer complete state and seed equal');
  return JSON.stringify({automaticOrderIndependent:true,allCurrentResultsEqual:true,dailyOnce:true,invalidInputBeforeWrites:true,failedDayConsumerRollback:true,completedGamesPreserved:true,explicitRetryEqual:true,nonOverlapOriginalStateEqual:true});
 })()`);
 assert.equal(JSON.parse(globalAutomatic).automaticOrderIndependent,true);

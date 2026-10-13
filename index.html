@@ -12549,7 +12549,8 @@ function playOfficialWorldEvents(db,date){
     const undo=pendingOfficialUndo(db);
     try{
       // 이전 저장의 이미 소비된 하한은 되감지 않는다.
-      const current=negotiationClockAt(db),at=event.at<current?current:event.at;w.negotiationClock={at};
+      const current=negotiationClockAt(db),at=event.at<current?current:event.at;
+      if(me)w.negotiationClock={at};
       if(event.kind==='contact'){
         const response=resolveDueNegotiationResponse(db);finish();
         return {date,played,pending:{kind:'negotiation',id:contact.id},advanced,...response};
