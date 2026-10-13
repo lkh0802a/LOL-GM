@@ -126,16 +126,51 @@ const orderedContact=await runEngineFixture(String.raw`(()=>{
   if(plan.ok&&plan.hours>=3&&plan.hours<=6){next={n,terms,plan};break;}cancelNegotiation(db,n.id);
  }
  if(!next)throw Error('actual affordable renewal interval missing');if(!stageNegotiationOffer(db,next.n.id,next.terms).waiting)throw Error('actual renewal queue missing');
- const prepared=playWorldDay(db);
- const late=Object.values(db.world.seasons).flatMap(s=>s.days.flatMap(d=>d.matches)).find(m=>!m.res&&m.utcAt?.slice(0,10)===db.worldDate&&m.utcAt>=next.plan.dueAt);if(!late)throw Error('later real fixture missing');
  const queued=unpackDB(packDB(db)),date=db.worldDate,tick=db.world.lastDailyTick;
+ const prepared=playWorldDay(db),savedPrepared=playWorldDay(queued);
+ const late=Object.values(db.world.seasons).flatMap(s=>s.days.flatMap(d=>d.matches)).find(m=>!m.res&&m.utcAt?.slice(0,10)===db.worldDate&&m.utcAt>=next.plan.dueAt);if(!late)throw Error('later real fixture missing');
  while(db.world.pendingOfficial?.queue?.length)resolvePendingOfficialMatch(db,null);
  while(queued.world.pendingOfficial?.queue?.length)resolvePendingOfficialMatch(queued,null);
- let result,savedResult;for(let i=0;i<4;i++){result=playWorldDay(db);if(result?.response)break;if(result?.pending)throw Error('unexpected manual fixture before response');}
- for(let i=0;i<4;i++){savedResult=playWorldDay(queued);if(savedResult?.response)break;if(savedResult?.pending)throw Error('unexpected restored fixture');}
+ let result=prepared,savedResult=savedPrepared;for(let i=0;!result?.response&&i<4;i++){result=playWorldDay(db);if(result?.response)break;if(result?.pending)throw Error('unexpected manual fixture before response');}
+ for(let i=0;!savedResult?.response&&i<4;i++){savedResult=playWorldDay(queued);if(savedResult?.response)break;if(savedResult?.pending)throw Error('unexpected restored fixture');}
  if(!result?.response||!savedResult?.response||late.res||db.worldDate!==date||db.world.lastDailyTick!==tick)throw Error('late fixture or daily effects consumed before actual contact');
  if(negotiationClockAt(db)!==negotiationClockAt(queued)||JSON.stringify(db.world.negotiations[next.n.id])!==JSON.stringify(queued.world.negotiations[next.n.id]))throw Error('actual saved contact differs');
  return JSON.stringify({firstHours:offer.plan.hours,secondHours:next.plan.hours,firstResultPending:!!prepared.pending,due:next.plan.dueAt,received:negotiationClockAt(db),lateStart:late.utcAt,lateResolved:!!late.res,response:true,restoredClock:negotiationClockAt(queued),date,tick,stage:db.world.negotiations[next.n.id].stage});
 })()`);
 assert.equal(JSON.parse(orderedContact).response,true);
 console.log('OFFICIAL_RESULT_CONTACT_ACCEPTANCE '+orderedContact);
+
+const endedContact=await runEngineFixture(String.raw`(()=>{
+ const cfg=defaultWorldConfig();cfg.regions=['KR','CN'].map(id=>regionCfg(id,{teams:10,div2:false}));cfg.internationals=[];
+ const db=buildWorld(cfg),team=activeTeams(db,'KR',1).sort((a,b)=>salaryBudget(db,b)-salaryBudget(db,a))[0];startCareer(db,team.id,'clock-contact-order');autoBuildInitialSquad(db,team,new RNG('clock-roster','fixture'),5);finalizeInitialRosters(db);
+ let count=0;while(true){const date=nextCalendarDate(db),own=Object.values(db.world.seasons).flatMap(s=>s.days.flatMap(d=>d.matches)).find(m=>!m.res&&(m.a===team.id||m.b===team.id)&&m.utcAt?.slice(0,10)===date);if(own&&date===nextDate(db)){applyWorldDailyEffects(db,date);break;}if(++count>30)throw Error('bounded existing fixture');playWorldDay(db);}
+ let offer;for(const p of Object.values(db.players).filter(p=>p.team===team.id&&!p.retired)){const start=startNegotiation(db,p.id,'renewal');if(!start.ok)continue;const n=start.neg;n.maxRounds=3;n.competitors=[];const terms={...n.demand,salary:n.demand.salary*2},plan=negotiationResponsePlan(db,n,terms);if(plan.ok&&plan.hours>=2&&plan.hours<=8){offer={n,terms,plan};break;}cancelNegotiation(db,n.id);}if(!offer)throw Error('actual accepted renewal missing');
+ const live=JSON.stringify(db),preview=JSON.parse(live),s=Object.values(preview.world.seasons).find(s=>s.days[s.cur].matches.some(m=>m.a!==team.id&&m.b!==team.id)),day=s.days[s.cur],m=day.matches.find(m=>m.a!==team.id&&m.b!==team.id),cfgStage=preview.competitions[s.comp].stages.find(x=>x.id===day.stage),series=simulateScheduledSeries(preview,s,day,m,cfgStage);
+ if(JSON.stringify(db)!==live||series.rec.games.length<2)throw Error('read-only actual series fixture');
+ const firstEnd=new Date(Date.parse(m.utcAt)+Math.round(series.rec.games[0].duration*60000)).toISOString(),seriesEnd=officialGameTimeRecord(m,series.rec.games).gameTimeThrough,loadedAt=new Date(Date.parse(firstEnd)-offer.plan.hours*3600000).toISOString();
+ if(loadedAt.slice(0,10)!==db.worldDate||loadedAt<negotiationClockAt(db))throw Error('derived valid saved time would rewind');
+ // 격리된 유효 저장 시각을 기존 첫 게임 종료와 승인 간격으로 계산한다. 진행/가격 정책이 아니다.
+ db.world.negotiationClock={at:loadedAt};const restored=unpackDB(packDB(db)),submission=stageNegotiationOffer(restored,offer.n.id,offer.terms);if(submission.dueAt!==firstEnd)throw Error('actual due time differs');
+ const mid=unpackDB(packDB(db));mid.world.negotiationClock={at:new Date(Date.parse(loadedAt)-1000).toISOString()};
+ const midOffer=stageNegotiationOffer(mid,offer.n.id,offer.terms),midBefore=JSON.stringify([mid.players,mid.teams,mid.metaHistory]);
+ const midContact=playWorldDay(mid),midSeason=Object.values(mid.world.seasons).find(x=>x.days[x.cur]?.matches.some(y=>y.id===m.id)),midMatch=midSeason.days[midSeason.cur].matches.find(y=>y.id===m.id);
+ if(!midContact.response||negotiationClockAt(mid)!==midOffer.dueAt||midMatch.res||midMatch.clockSession||!midMatch.clockGame||JSON.stringify([mid.players,mid.teams,mid.metaHistory])!==midBefore)throw Error('unfinished game has early effects before contact');
+ const midSaved=unpackDB(packDB(mid)),midSavedSeason=Object.values(midSaved.world.seasons).find(x=>x.id===midSeason.id),midSavedMatch=midSavedSeason.days[midSavedSeason.cur].matches.find(x=>x.id===m.id);
+ const invalid=JSON.parse(JSON.stringify(mid)),invalidSeason=Object.values(invalid.world.seasons).find(x=>x.id===midSeason.id),invalidMatch=invalidSeason.days[invalidSeason.cur].matches.find(x=>x.id===m.id);invalidMatch.clockGame.endAt='invalid';const invalidBefore=JSON.stringify(invalid);let invalidRejected=false;try{playOfficialGamesThrough(invalid,invalidSeason,invalidMatch,firstEnd);}catch{invalidRejected=true;}if(!invalidRejected||JSON.stringify(invalid)!==invalidBefore)throw Error('invalid saved event mutates current world');
+ const final=finalizeStagedNegotiation(mid,offer.n.id);if(!final.ok)throw Error('actual manual decision at contact missing');const manualContract=JSON.stringify(mid.players[offer.n.pid].contract);
+ playOfficialGamesThrough(mid,midSeason,midMatch,firstEnd);playOfficialGamesThrough(midSaved,midSavedSeason,midSavedMatch,firstEnd);
+ if(midMatch.clockSession.games.length!==1||JSON.stringify(midMatch.clockSession)!==JSON.stringify(midSavedMatch.clockSession)||JSON.stringify(mid.players[offer.n.pid].contract)!==manualContract)throw Error('frozen game restore overwrites later manual decision');
+ const contact=playWorldDay(restored),actual=negotiationClockAt(restored),written=Object.values(restored.world.seasons).flatMap(s=>s.days.flatMap(d=>d.matches)).find(x=>x.id===m.id);
+ if(written?.res||written.clockSession?.games.length!==1||written.clockSession.games[0].duration!==series.rec.games[0].duration||written.gameTime.gameTimeThrough!==firstEnd||!contact.response||actual!==firstEnd)throw Error('single game and actual contact boundary differs');
+ const resumed=unpackDB(packDB(restored)),savedGame=JSON.stringify(written.clockSession),savedMeta=JSON.stringify(restored.metaHistory),tick=restored.world.lastDailyTick;
+ if(!savedGame||resumed.world.negotiations[offer.n.id].stage!=='agreement')throw Error('actual partial and agreement save missing');
+ const rs=Object.values(restored.world.seasons).find(x=>x.days[x.cur]?.matches.some(y=>y.id===m.id)),ss=Object.values(resumed.world.seasons).find(x=>x.days[x.cur]?.matches.some(y=>y.id===m.id)),sm=ss.days[ss.cur].matches.find(y=>y.id===m.id);
+ const denied=JSON.parse(JSON.stringify(restored)),ds=denied.world.seasons[rs.id]||Object.values(denied.world.seasons).find(x=>x.id===rs.id),dm=ds.days[ds.cur].matches.find(x=>x.id===m.id);setManagedTeam(denied,m.a);const deniedBefore=JSON.stringify(denied);let rejected=false;try{playOfficialGamesThrough(denied,ds,dm,seriesEnd);}catch{rejected=true;}if(!rejected||JSON.stringify(denied)!==deniedBefore)throw Error('new manual authority applies old automatic input');
+ playOfficialGamesThrough(restored,rs,written,seriesEnd);playOfficialGamesThrough(resumed,ss,sm,seriesEnd);
+ if(!written.res||JSON.stringify(written.res)!==JSON.stringify(series.rec)||JSON.stringify(sm.res)!==JSON.stringify(written.res)||written.clockGame||written.clockSession)throw Error('original series and saved resume differ');
+ if(restored.world.lastDailyTick!==tick||stringifyMetaHistory(restored.metaHistory)!==stringifyMetaHistory(resumed.metaHistory)||JSON.stringify(restored.players)!==JSON.stringify(resumed.players))throw Error('restore consumer differs');
+ const duplicate=JSON.stringify(restored);playOfficialGamesThrough(restored,rs,written,seriesEnd);if(JSON.stringify(restored)!==duplicate)throw Error('duplicate result consumer');
+ return JSON.stringify({unfinishedGameNoEffects:true,frozenGameSave:true,manualDecisionPreserved:true,invalidEventRejected:true,saveAndResume:true,currentAuthority:true,originalSeriesEqual:true,duplicateInert:true,actualDurationVerified:true,basis:'isolated valid save derived from actual first-game duration and approved response interval',hours:offer.plan.hours,loadedAt,due:submission.dueAt,seriesEnd,received:actual,response:!!contact.response,publishedGames:JSON.parse(savedGame).games.length,late:actual>submission.dueAt});
+})()`);
+assert.equal(JSON.parse(endedContact).late,false);
+console.log('OFFICIAL_ENDED_CONTACT_ACCEPTANCE '+endedContact);

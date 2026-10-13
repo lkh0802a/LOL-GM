@@ -12446,20 +12446,66 @@ resolvePendingOfficialMatch=function(db,forcedDraft){
   return result;
 };
 const officialPlayDayBeforeClock=playDay;
+// 진행 중인 다른 경기의 다음 게임은 실제 종료 때만 관측/결과에 반영한다.
+// 미래 세계 전체를 덮어쓰지 않고, 해당 게임의 기존 세션과 관측 입력만 보존한다.
+function officialClockState(db){
+  return Object.values(db.world?.seasons||{}).flatMap(s=>(s.days||[]).flatMap(d=>d.matches)).filter(m=>m.clockGame||m.clockSession).map(m=>[m.id,m.clockSession?.games.length||0,m.clockGame?.endAt||null]);
+}
+function officialGameObservation(r){
+  return JSON.parse(JSON.stringify({winner:r.winner,date:r.date,patch:r.patch,comp:r.comp,metaContext:r.metaContext,
+    draft:{bans:r.draft.bans,sequence:r.draft.sequence},sides:r.sides.map(s=>({
+      team:{id:s.team.id,region:s.team.region,staffRoster:teamStaffMembers(s.team)},color:s.color,tacticContext:s.tacticContext,
+      ps:s.ps.map(p=>({champ:{id:p.champ.id},p:{id:p.p.id},role:p.role,items:p.items,questBoots:p.questBoots,runes:p.runes}))}))}));
+}
+function officialQueuedGameError(db,s,m,event){
+  const session=event?.session;
+  if(!session||session.a!==m.a||session.b!==m.b||session.bestOf!==m.bo||session.seed!==`${s.seed}/${s.year}/${m.id}`||session.opt?.compId!==s.comp||session.opt?.metaContext?.season!==s.id)throw Error('진행 중인 다른 경기와 공식 편성이 다릅니다');
+  const record=officialGameTimeRecord(m,session.games);
+  if(!record||event.endAt!==record.gameTimeThrough||session.games.length!==(m.clockSession?.games.length||0)+1||event.observation?.date!==s.days[s.cur].date)throw Error('진행 중인 다른 게임의 종료 기록을 확인할 수 없습니다');
+  const game=session.games.at(-1),observation=event.observation;
+  if(![0,1].includes(observation.winner)||observation.sides?.length!==2||observation.sides[0].team?.id!==game.blue||observation.sides[1].team?.id!==game.red||[game.blue,game.red][observation.winner]!==game.winner||observation.comp!==s.comp||observation.metaContext?.season!==s.id)throw Error('진행 중인 게임과 관측 입력이 다릅니다');
+  if([m.a,m.b].some(id=>!db.teams[id]||db.teams[id].active===false)||db.world.phase!=='season'||db.world.year!==s.year)throw Error('진행 중인 다른 경기의 현재 참가 권한을 확인할 수 없습니다');
+  return record;
+}
+function playOfficialGamesThrough(db,s,m,boundary){
+  if(typeof boundary!=='string'||!Number.isFinite(Date.parse(boundary))||new Date(boundary).toISOString()!==boundary)throw Error('공식 경기 진행 경계 시각을 확인할 수 없습니다');
+  const me=db.world.manage==='manual'&&!db.world.fired?managedTeamId(db):null;
+  if(me&&(m.a===me||m.b===me))throw Error('현재 감독의 경기에는 다른 구단의 자동 입력을 적용할 수 없습니다');
+  while(!m.res){
+    if(!m.clockGame){
+      if(m.clockSession&&(m.clockSession.a!==m.a||m.clockSession.b!==m.b||m.clockSession.bestOf!==m.bo||m.clockSession.seed!==`${s.seed}/${s.year}/${m.id}`||m.clockSession.opt?.compId!==s.comp||m.clockSession.opt?.metaContext?.season!==s.id||m.clockSession.g!==m.clockSession.games?.length+1))throw Error('저장된 진행 세션과 현재 공식 편성이 다릅니다');
+      const copy=JSON.parse(JSON.stringify(db)),session=JSON.parse(JSON.stringify(m.clockSession||scheduledSeriesSession(copy,s,m).session));
+      const played=playSeriesSessionGame(copy,session,null,true),record=officialGameTimeRecord(m,session.games);
+      m.clockGame={endAt:record.gameTimeThrough,session,observation:officialGameObservation(played.game)};
+    }
+    const event=m.clockGame,record=officialQueuedGameError(db,s,m,event);
+    if(event.endAt>boundary)return false;
+    // 기존 관측 작성자는 현재 세계에 한 번만 적용한다. 계약/재정/선수 상태는 덮어쓰지 않는다.
+    recordMeta(db,event.observation);m.clockSession=event.session;delete m.clockGame;
+    recordOfficialGameTime(db,m,record);
+    if(seriesSessionDone(m.clockSession)){
+      commitScheduledSeries(db,s,m,seriesSessionResult(db,m.clockSession));delete m.clockSession;return true;
+    }
+    if(event.endAt>=boundary)return false;
+  }
+  return true;
+}
 playDay=function(db,s,opt={}){
-  if(!s||s.done||!opt.deferTeam)return officialPlayDayBeforeClock(db,s,opt);
+  if(!s||s.done||(!opt.deferTeam&&!s.days[s.cur].matches.some(m=>m.clockGame||m.clockSession)))return officialPlayDayBeforeClock(db,s,opt);
   const day=s.days[s.cur],w=db.world;
   const pending=Object.values(w.seasons||{}).filter(next=>!next.done&&next.days[next.cur]?.date===day.date)
     .flatMap(next=>next.days[next.cur].matches).filter(m=>!m.res&&(m.a===opt.deferTeam||m.b===opt.deferTeam));
   const contact=w.phase==='season'&&opt.deferTeam===managedTeamId(db)?waitingNegotiationResponses(db,true)[0]:null;
   if(contact){const error=negotiationResponseError(contact);if(error)throw Error(error);}
-  if((!pending.length&&!contact)||pending.some(m=>m.utcAt==null)||day.matches.some(m=>!m.res&&m.utcAt==null))return officialPlayDayBeforeClock(db,s,opt);
+  const running=day.matches.some(m=>m.clockGame||m.clockSession);
+  if((!pending.length&&!contact&&!running)||pending.some(m=>m.utcAt==null)||day.matches.some(m=>!m.res&&m.utcAt==null))return officialPlayDayBeforeClock(db,s,opt);
   // 날짜만 남은 이전 저장은 원래 작성자가 처리한다. 현재 시각의 오류는 작성 전 거절한다.
   for(const m of [...pending,...day.matches.filter(m=>!m.res)])officialGameTimeRecord(m,[]);
-  const boundary=[...pending.map(m=>m.utcAt),...(contact?[contact.response.dueAt]:[])].sort()[0],comp=db.competitions[s.comp],cfgIdx=comp.stages.findIndex(x=>x.id===day.stage),cfg=comp.stages[cfgIdx],queue=[];
+  const boundary=[...pending.map(m=>m.utcAt),...(contact?[contact.response.dueAt]:[])].sort()[0]||'9999-12-31T23:59:59.999Z',comp=db.competitions[s.comp],cfgIdx=comp.stages.findIndex(x=>x.id===day.stage),cfg=comp.stages[cfgIdx],queue=[];
   for(const m of day.matches){
     if(m.res)continue;
     if(m.a===opt.deferTeam||m.b===opt.deferTeam){
+      if(m.clockGame||m.clockSession)throw Error('진행 중인 다른 구단의 경기입니다. 현재 감독 경기로 자동 전환하지 않습니다');
       if(contact&&m.utcAt>=contact.response.dueAt)continue;
       const forfeit=scheduledRegistrationForfeit(db,s,m);
       if(forfeit)commitScheduledSeries(db,s,m,forfeit);else queue.push({matchId:m.id});
@@ -12467,8 +12513,9 @@ playDay=function(db,s,opt={}){
     }
     // 늦게 시작할 경기는 결과·사용/의료 효과·관측을 아직 작성하지 않는다.
     if(m.utcAt>=boundary)continue;
-    const forfeit=scheduledRegistrationForfeit(db,s,m);
-    commitScheduledSeries(db,s,m,forfeit||simulateScheduledSeries(db,s,day,m,cfg));
+    const forfeit=m.clockGame||m.clockSession?null:scheduledRegistrationForfeit(db,s,m);
+    if(forfeit)commitScheduledSeries(db,s,m,forfeit);
+    else playOfficialGamesThrough(db,s,m,boundary);
   }
   return {day,pending:queue,finalized:finalizeCompetitionDay(db,s,day,cfgIdx,cfg)};
 };
@@ -12604,7 +12651,15 @@ playWorldDay=function(db){
   const fixtureStarts=Object.values(w.seasons).filter(s=>!s.done).flatMap(s=>s.days[s.cur]?.date===date?s.days[s.cur].matches.filter(m=>!m.res).map(m=>m.utcAt):[]).filter(Boolean).sort();
   // 실재 편성의 첫 경기보다 이른 연락만 먼저 소비한다. 경기 준비는 기존 작성자가 담당한다.
   const boundary=fixtureStarts[0]||dayEnd;
-  if(due>at&&(due>boundary||due>=dayEnd))return negotiationWorldDayBeforeClock(db);
+  if(due>at&&(due>boundary||due>=dayEnd)){
+    const result=negotiationWorldDayBeforeClock(db);
+    // 시작한 다른 경기를 게임 종료 경계에서 보존한 뒤 연락 시각에 멈춘다.
+    if(due<dayEnd&&!db.world.pendingOfficial?.queue?.length&&db.world.phase==='season'){
+      db.world.negotiationClock={at:due};const response=resolveDueNegotiationResponse(db);
+      if(response)return {...result,...response,pending:{kind:'negotiation',id:n.id},advanced:result?.advanced||false};
+    }
+    return result;
+  }
   const copy=JSON.parse(JSON.stringify(db)),target=due<=at?at:due;
   if(target.slice(0,10)>db.worldDate)applyWorldDailyEffects(copy,target.slice(0,10));
   copy.world.negotiationClock={at:target};const r=resolveDueNegotiationResponse(copy);
@@ -13150,6 +13205,13 @@ function reviewInitialNegotiation(id,counter,opener,act,allowed,root){
 
 /* ==== FILE: ui-negotiation-final.js ==== */
 function negotiationTimeText(at){if(typeof at!=='string'||!Number.isFinite(Date.parse(at)))return '시각 확인 필요';const value=venueClockParts(at,'Asia/Seoul');return value.date+' '+value.time+' · 한국 시간';}
+// 기존 구단 브리핑의 같은 당사자 검사를 대기/합의에도 적용한다.
+const clubBriefNegotiationsBeforeClock=typeof clubBriefNegotiations==='function'?clubBriefNegotiations:null;
+if(clubBriefNegotiationsBeforeClock)clubBriefNegotiations=function(db,ctx){
+  const negotiations=db.world?.negotiations||{},read=Object.create(db),originals=new Map();
+  read.world={...db.world,negotiations:Object.fromEntries(Object.entries(negotiations).map(([id,n])=>{const projected=n&&['waiting','agreement'].includes(n.stage)?{...n,stage:'player'}:n;originals.set(projected,n);return [id,projected]}))};
+  return clubBriefNegotiationsBeforeClock(read,ctx).map(n=>originals.get(n));
+};
 // 실제 합의와 최종 계약의 수동 결정/취소/오래된 입력 거절.
 negotiationHistoryText=function(n){
   const labels={counter:'역제안',accept:'수락·계약 처리',commit_rejected:'계약 처리 거절',rival:'경쟁 구단 선택',agreed:'선수 조건 수락 · 최종 계약 전',finalized:'감독 최종 계약 확정',submitted:'제안 접수 · 응답 대기',response_unavailable:'현재 조건으로 응답 처리 불가',cancelled:'제안 취소'};
@@ -13160,7 +13222,9 @@ renderNegotiations=function(teamIds=null,db=DB){
   const allowed=new Set(teamIds||[managedTeamId(db)]),all=Object.values(db.world?.negotiations||{}),agreements=all.filter(n=>allowed.has(n.teamId)&&n.status==='open'&&n.stage==='agreement'),waiting=all.filter(n=>allowed.has(n.teamId)&&n.status==='open'&&n.stage==='waiting');
   const view=Object.create(db);view.world={...db.world,negotiations:Object.fromEntries(all.filter(n=>!['agreement','waiting'].includes(n.stage)).map(n=>[n.id,n]))};
   const normal=negotiationRenderBeforeFinal(teamIds,view);
-  return ((agreements.length||waiting.length)&&normal.includes('진행 중인 공식 협상이 없습니다.')?'':normal)+(waiting.length?`<div class="controls"><button type="button" class="primary" data-neg-continue>다음 선수 연락까지 진행</button></div><p>현재 게임 시각 ${esc(negotiationTimeText(negotiationClockAt(db)))}</p>`:'')+waiting.map(n=>`<section class="cfgcard"><h4>${esc(db.players[n.pid]?.name||'선수 정보 없음')} · 응답 대기</h4><p>응답 예정 ${esc(negotiationTimeText(n.response.dueAt))}</p><p>${esc(contractTermsText(n.response.terms))}</p><p>수정하려면 현재 제안을 취소한 뒤 다시 제출하세요. 선수와 예산은 예약되지 않습니다.</p><button type="button" class="ghost" data-neg-cancel="${n.id}">제안 취소</button>${negotiationHistoryText(n)}</section>`).join('')+agreements.map(n=>`<section class="cfgcard"><h4>${esc(db.players[n.pid]?.name||'선수 정보 없음')} · 조건 합의</h4><p>${esc(contractTermsText(n.agreedTerms))}</p><p class="hint">아직 계약·소속·지급은 변경되지 않았습니다. 최종 확정 때 현재 예산·자리·자격을 다시 확인합니다.</p><button type="button" class="primary" data-neg-final="${n.id}">최종 계약 검토</button><button type="button" class="ghost" data-neg-cancel="${n.id}">협상 종료</button><section data-neg-review="${n.id}" hidden tabindex="-1" aria-label="최종 계약 검토"></section>${negotiationHistoryText(n)}</section>`).join('');
+  const running=Object.values(db.world?.seasons||{}).flatMap(s=>(s.days||[]).flatMap(d=>d.matches)).filter(m=>!m.res&&(m.clockGame||m.clockSession));
+  const progress=running.length?`<p role="status">다른 공식 경기 ${running.length}개가 진행 중입니다. 완료한 게임만 기록했으며, 다음 진행에서 남은 경기를 이어갑니다.</p>`:'';
+  return progress+((agreements.length||waiting.length)&&normal.includes('진행 중인 공식 협상이 없습니다.')?'':normal)+(waiting.length?`<div class="controls"><button type="button" class="primary" data-neg-continue>다음 선수 연락까지 진행</button></div><p>현재 게임 시각 ${esc(negotiationTimeText(negotiationClockAt(db)))}</p>`:'')+waiting.map(n=>`<section class="cfgcard"><h4>${esc(db.players[n.pid]?.name||'선수 정보 없음')} · 응답 대기</h4><p>응답 예정 ${esc(negotiationTimeText(n.response.dueAt))}</p><p>${esc(contractTermsText(n.response.terms))}</p><p>수정하려면 현재 제안을 취소한 뒤 다시 제출하세요. 선수와 예산은 예약되지 않습니다.</p><button type="button" class="ghost" data-neg-cancel="${n.id}">제안 취소</button>${negotiationHistoryText(n)}</section>`).join('')+agreements.map(n=>`<section class="cfgcard"><h4>${esc(db.players[n.pid]?.name||'선수 정보 없음')} · 조건 합의</h4><p>${esc(contractTermsText(n.agreedTerms))}</p><p class="hint">아직 계약·소속·지급은 변경되지 않았습니다. 최종 확정 때 현재 예산·자리·자격을 다시 확인합니다.</p><button type="button" class="primary" data-neg-final="${n.id}">최종 계약 검토</button><button type="button" class="ghost" data-neg-cancel="${n.id}">협상 종료</button><section data-neg-review="${n.id}" hidden tabindex="-1" aria-label="최종 계약 검토"></section>${negotiationHistoryText(n)}</section>`).join('');
 };
 function reviewManualNegotiation(id,mode,opener,act,allowed,root){
   const db=DB,w=db.world,n=w?.negotiations?.[id],panel=root.querySelector(`[data-neg-review="${id}"]`);
@@ -13170,7 +13234,7 @@ function reviewManualNegotiation(id,mode,opener,act,allowed,root){
   const plan=final?null:negotiationResponsePlan(db,n,terms);
   const responseText=plan?.ok?(plan.immediate?'기존 조건에 따라 즉시 응답할 수 있습니다.':'응답 예정 '+negotiationTimeText(plan.dueAt)):(plan?.msg||'');
   const slot=SLOT,render=UI_RENDER_ID,view=VIEW,dialog=UI_OVERLAY,manager=db.manager;
-  const stamp=()=>JSON.stringify([db.year,db.worldDate,w.negotiationClock,w.officialGameTimeThrough,w.phase,w.manage,w.fired,w.pendingOfficial,w.contractWindow,w.contractAgreements,w.negotiations,db.players[n.pid],db.teams[n.teamId],db.teams[n.sellerId],db.regions[db.teams[n.teamId]?.region]]),basis=stamp(),token={};
+  const stamp=()=>JSON.stringify([db.year,db.worldDate,w.negotiationClock,w.officialGameTimeThrough,officialClockState(db),w.phase,w.manage,w.fired,w.pendingOfficial,w.contractWindow,w.contractAgreements,w.negotiations,db.players[n.pid],db.teams[n.teamId],db.teams[n.sellerId],db.regions[db.teams[n.teamId]?.region]]),basis=stamp(),token={};
   panel.reviewToken=token;panel.hidden=false;
   panel.innerHTML=`<h4>${esc(db.players[n.pid].name)} · ${final?'최종 계약':'제안 조건'} 검토</h4><p>${esc(contractTermsText(terms))}</p><p class="hint">${final?'직접 확정하면 현재 조건을 재검사한 뒤 계약을 작성합니다.':'선수의 조건 수락과 최종 계약은 별개입니다. 선수별 응답 예정 시각을 기록하고 실제 시간이 진행되면 답변을 처리합니다. 기존 조건에 따른 즉시 수락도 가능합니다.'}</p>${!final?`<p>${esc(responseText)}</p>`:''}<button type="button" data-review-commit>${final?'최종 계약 확정':'이 조건으로 제출'}</button><button type="button" class="ghost" data-review-cancel>${final?'합의로 돌아가기':'조건 수정으로 돌아가기'}</button><p role="status" data-review-status></p>`;
   const hide=()=>{if(panel.reviewToken!==token)return;panel.reviewToken=null;panel.hidden=true;opener.focus({preventScroll:true})};
@@ -13186,8 +13250,8 @@ function reviewManualNegotiation(id,mode,opener,act,allowed,root){
 const negotiationBindBeforeFinal=bindNegotiationControls;
 bindNegotiationControls=function(act,allowed=()=>true,root=document){
   negotiationBindBeforeFinal(act,allowed,root);
-  const db=DB,w=db.world,slot=SLOT,render=UI_RENDER_ID,view=VIEW,manager=db.manager,basis=JSON.stringify([db.worldDate,w.negotiationClock,w.officialGameTimeThrough,w.negotiations]);let used=false;
-  root.querySelectorAll('[data-neg-continue]').forEach(b=>b.onclick=()=>{if(used||!allowed()||DB!==db||db.world!==w||db.manager!==manager||SLOT!==slot||UI_RENDER_ID!==render||VIEW!==view||SLOT_SWITCHING||UI_OVERLAY||JSON.stringify([db.worldDate,w.negotiationClock,w.officialGameTimeThrough,w.negotiations])!==basis)return;used=true;act(advanceToNegotiationResponse(db).msg);});
+  const db=DB,w=db.world,slot=SLOT,render=UI_RENDER_ID,view=VIEW,manager=db.manager,dialog=UI_OVERLAY,basis=JSON.stringify([db.worldDate,w.negotiationClock,w.officialGameTimeThrough,officialClockState(db),w.negotiations]);let used=false;
+  root.querySelectorAll('[data-neg-continue]').forEach(b=>b.onclick=()=>{if(used||!allowed()||DB!==db||db.world!==w||db.manager!==manager||SLOT!==slot||UI_RENDER_ID!==render||VIEW!==view||SLOT_SWITCHING||UI_OVERLAY!==dialog||dialog&&dialog.kind!=='club-negotiation'||JSON.stringify([db.worldDate,w.negotiationClock,w.officialGameTimeThrough,officialClockState(db),w.negotiations])!==basis)return;used=true;act(advanceToNegotiationResponse(db).msg);});
   for(const [selector,field,mode] of [['[data-neg-submit]','negSubmit','offer'],['[data-neg-accept]','negAccept','counter'],['[data-neg-final]','negFinal','final']])root.querySelectorAll(selector).forEach(b=>b.onclick=()=>reviewManualNegotiation(b.dataset[field],mode,b,act,allowed,root));
 };
 
