@@ -19,7 +19,7 @@ function reviewManualNegotiation(id,mode,opener,act,allowed,root){
   const plan=final?null:negotiationResponsePlan(db,n,terms);
   const responseText=plan?.ok?(plan.immediate?'기존 조건에 따라 즉시 응답할 수 있습니다.':'응답 예정 '+negotiationTimeText(plan.dueAt)):(plan?.msg||'');
   const slot=SLOT,render=UI_RENDER_ID,view=VIEW,dialog=UI_OVERLAY,manager=db.manager;
-  const stamp=()=>JSON.stringify([db.year,db.worldDate,w.negotiationClock,w.phase,w.manage,w.fired,w.pendingOfficial,w.contractWindow,w.contractAgreements,w.negotiations,db.players[n.pid],db.teams[n.teamId],db.teams[n.sellerId],db.regions[db.teams[n.teamId]?.region]]),basis=stamp(),token={};
+  const stamp=()=>JSON.stringify([db.year,db.worldDate,w.negotiationClock,w.officialGameTimeThrough,w.phase,w.manage,w.fired,w.pendingOfficial,w.contractWindow,w.contractAgreements,w.negotiations,db.players[n.pid],db.teams[n.teamId],db.teams[n.sellerId],db.regions[db.teams[n.teamId]?.region]]),basis=stamp(),token={};
   panel.reviewToken=token;panel.hidden=false;
   panel.innerHTML=`<h4>${esc(db.players[n.pid].name)} · ${final?'최종 계약':'제안 조건'} 검토</h4><p>${esc(contractTermsText(terms))}</p><p class="hint">${final?'직접 확정하면 현재 조건을 재검사한 뒤 계약을 작성합니다.':'선수의 조건 수락과 최종 계약은 별개입니다. 선수별 응답 예정 시각을 기록하고 실제 시간이 진행되면 답변을 처리합니다. 기존 조건에 따른 즉시 수락도 가능합니다.'}</p>${!final?`<p>${esc(responseText)}</p>`:''}<button type="button" data-review-commit>${final?'최종 계약 확정':'이 조건으로 제출'}</button><button type="button" class="ghost" data-review-cancel>${final?'합의로 돌아가기':'조건 수정으로 돌아가기'}</button><p role="status" data-review-status></p>`;
   const hide=()=>{if(panel.reviewToken!==token)return;panel.reviewToken=null;panel.hidden=true;opener.focus({preventScroll:true})};
@@ -35,7 +35,7 @@ function reviewManualNegotiation(id,mode,opener,act,allowed,root){
 const negotiationBindBeforeFinal=bindNegotiationControls;
 bindNegotiationControls=function(act,allowed=()=>true,root=document){
   negotiationBindBeforeFinal(act,allowed,root);
-  const db=DB,w=db.world,slot=SLOT,render=UI_RENDER_ID,view=VIEW,manager=db.manager,basis=JSON.stringify([db.worldDate,w.negotiationClock,w.negotiations]);let used=false;
-  root.querySelectorAll('[data-neg-continue]').forEach(b=>b.onclick=()=>{if(used||!allowed()||DB!==db||db.world!==w||db.manager!==manager||SLOT!==slot||UI_RENDER_ID!==render||VIEW!==view||SLOT_SWITCHING||UI_OVERLAY||JSON.stringify([db.worldDate,w.negotiationClock,w.negotiations])!==basis)return;used=true;act(advanceToNegotiationResponse(db).msg);});
+  const db=DB,w=db.world,slot=SLOT,render=UI_RENDER_ID,view=VIEW,manager=db.manager,basis=JSON.stringify([db.worldDate,w.negotiationClock,w.officialGameTimeThrough,w.negotiations]);let used=false;
+  root.querySelectorAll('[data-neg-continue]').forEach(b=>b.onclick=()=>{if(used||!allowed()||DB!==db||db.world!==w||db.manager!==manager||SLOT!==slot||UI_RENDER_ID!==render||VIEW!==view||SLOT_SWITCHING||UI_OVERLAY||JSON.stringify([db.worldDate,w.negotiationClock,w.officialGameTimeThrough,w.negotiations])!==basis)return;used=true;act(advanceToNegotiationResponse(db).msg);});
   for(const [selector,field,mode] of [['[data-neg-submit]','negSubmit','offer'],['[data-neg-accept]','negAccept','counter'],['[data-neg-final]','negFinal','final']])root.querySelectorAll(selector).forEach(b=>b.onclick=()=>reviewManualNegotiation(b.dataset[field],mode,b,act,allowed,root));
 };

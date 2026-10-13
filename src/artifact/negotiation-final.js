@@ -49,10 +49,52 @@ function negotiationClockAt(db){
   if(stored){
     if(typeof stored.at!=='string'||!Number.isFinite(Date.parse(stored.at))||new Date(stored.at).toISOString()!==stored.at)throw Error('협상 시각을 확인할 수 없습니다');
     if(stored.at.slice(0,10)>date)throw Error('협상 시각이 현재 날짜보다 늦습니다');
-    if(stored.at.slice(0,10)===date)return stored.at;
+    if(stored.at.slice(0,10)===date)return officialGameClockFloor(db,stored.at);
   }
-  return date+'T00:00:00.000Z';
+  return officialGameClockFloor(db,date+'T00:00:00.000Z');
 }
+// 넥서스 종료까지 실제 엔진이 소비한 분 단위 시간만 기록한다.
+// 세트 사이 준비/휴식과 중계 종료 시간은 자료가 없어 만들어 넣지 않는다.
+function officialGameTimeRecord(m,games){
+  if(!Array.isArray(games)||games.some(g=>g.duration!=null&&(!Number.isFinite(g.duration)||g.duration<0)))throw Error('공식 경기의 실제 소요 시간을 확인할 수 없습니다');
+  if(m.utcAt!=null&&(typeof m.utcAt!=='string'||!Number.isFinite(Date.parse(m.utcAt))||new Date(m.utcAt).toISOString()!==m.utcAt))throw Error('공식 경기 시작 시각을 확인할 수 없습니다');
+  // 이전 저장의 누락된 시각/수치에는 새 시간을 추정하지 않는다.
+  if(m.utcAt==null||Array.isArray(games)&&(!games.length||games.some(g=>g.duration==null)))return null;
+  const minutes=games.reduce((sum,g)=>sum+g.duration,0),end=Date.parse(m.utcAt)+Math.round(minutes*60000);
+  if(!Number.isFinite(end))throw Error('공식 경기 종료 시각을 확인할 수 없습니다');
+  return {scheduledAt:m.utcAt,gameTimeThrough:new Date(end).toISOString(),minutes,games:games.length};
+}
+function officialGameClockFloor(db,at){
+  const floor=db.world?.officialGameTimeThrough;
+  if(!floor)return at;
+  if(typeof floor!=='string'||!Number.isFinite(Date.parse(floor))||new Date(floor).toISOString()!==floor)throw Error('저장된 공식 경기 소비 시각을 확인할 수 없습니다');
+  return floor>at?floor:at;
+}
+function recordOfficialGameTime(db,m,record){
+  if(!record)return;
+  m.gameTime=record;
+  // 기존 일괄 작성자가 미리 계산한 다른 경기 때문에 수동 준비를 건너뛰지 않는다.
+  const w=db.world,me=w.manage==='manual'&&!w.fired?managedTeamId(db):null;
+  if(me&&m.a!==me&&m.b!==me&&Object.values(w.seasons||{}).some(s=>(s.days||[]).some(d=>d.matches.some(next=>!next.res&&(next.a===me||next.b===me)&&next.utcAt&&next.utcAt<record.gameTimeThrough))))return;
+  db.world.officialGameTimeThrough=officialGameClockFloor(db,record.gameTimeThrough);
+}
+const officialCommitBeforeClock=commitScheduledSeries;
+commitScheduledSeries=function(db,s,m,series){
+  // 중복 결과와 잘못된 입력은 기존 결과/재정/사용 기록 작성 전에 거절한다.
+  if(m.res)return officialCommitBeforeClock(db,s,m,series);
+  officialGameClockFloor(db,m.utcAt);
+  const record=officialGameTimeRecord(m,series.rec.games||[]);
+  const result=officialCommitBeforeClock(db,s,m,series);
+  recordOfficialGameTime(db,m,record);return result;
+};
+const officialResolveBeforeClock=resolvePendingOfficialMatch;
+resolvePendingOfficialMatch=function(db,forcedDraft){
+  const q=db.world?.pendingOfficial?.queue?.[0],refs=q&&pendingOfficialRefs(db,q);
+  if(refs){officialGameClockFloor(db,refs.m.utcAt);officialGameTimeRecord(refs.m,q.session?.games||[]);}
+  const result=officialResolveBeforeClock(db,forcedDraft);
+  if(refs&&!result.done)recordOfficialGameTime(db,refs.m,officialGameTimeRecord(refs.m,q.session.games));
+  return result;
+};
 function negotiationResponsePlan(db,n,terms){
   const preview=JSON.parse(JSON.stringify(db)),result=resolveNegotiationOffer(preview,n.id,terms),next=preview.world.negotiations[n.id];
   const changed=JSON.stringify(next)!==JSON.stringify(n);
@@ -185,7 +227,7 @@ playWorldDay=function(db){
   const fixtureStarts=Object.values(w.seasons).filter(s=>!s.done).flatMap(s=>s.days[s.cur]?.date===date?s.days[s.cur].matches.filter(m=>!m.res).map(m=>m.utcAt):[]).filter(Boolean).sort();
   // 실재 편성의 첫 경기보다 이른 연락만 먼저 소비한다. 경기 준비는 기존 작성자가 담당한다.
   const boundary=fixtureStarts[0]||dayEnd;
-  if(due>=boundary||due>=dayEnd)return negotiationWorldDayBeforeClock(db);
+  if(due>at&&(due>=boundary||due>=dayEnd))return negotiationWorldDayBeforeClock(db);
   const copy=JSON.parse(JSON.stringify(db)),target=due<=at?at:due;
   if(target.slice(0,10)>db.worldDate)applyWorldDailyEffects(copy,target.slice(0,10));
   copy.world.negotiationClock={at:target};const r=resolveDueNegotiationResponse(copy);

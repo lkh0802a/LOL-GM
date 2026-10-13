@@ -42,3 +42,50 @@ const result=await runEngineFixture(String.raw`(()=>{
 })()`);
 assert.equal(JSON.parse(result).contactStop,true);
 console.log('NEGOTIATION_CLOCK_ACCEPTANCE '+result);
+
+const officialResult=await runEngineFixture(String.raw`(()=>{
+ const check=(v,m)=>{if(!v)throw Error('OFFICIAL_GAME_CLOCK '+m)};
+ const cfg=defaultWorldConfig();cfg.regions=[regionCfg('KR',{teams:3,div2:false,regularBo:1,playoffBo:1})];cfg.internationals=[];
+ const db=buildWorld(cfg),team=activeTeams(db,'KR',1)[0];startCareer(db,team.id,'clock-official-reproduction');
+ autoBuildInitialSquad(db,team,new RNG('clock-roster','fixture'),5);finalizeInitialRosters(db);
+ let count=0;while(!db.world.pendingOfficial?.queue?.length){check(++count<=30,'bounded actual fixture');playWorldDay(db);}
+ const before=JSON.parse(JSON.stringify(db)),q=db.world.pendingOfficial.queue[0],refs=pendingOfficialRefs(db,q);
+ for(const fault of ['start','floor']){const bad=JSON.parse(JSON.stringify(db)),r=pendingOfficialRefs(bad,bad.world.pendingOfficial.queue[0]);if(fault==='start')r.m.utcAt='invalid';else bad.world.officialGameTimeThrough='invalid';const old=JSON.stringify(bad);let rejected=false;try{resolvePendingOfficialMatch(bad,null);}catch{rejected=true}check(rejected&&JSON.stringify(bad)===old,'invalid pending '+fault+' rejected before game and session writes');}
+ const oldDate=db.worldDate,oldTick=db.world.lastDailyTick,world=db.world;
+ const first=resolvePendingOfficialMatch(db,null);
+ check(db.world===world&&db.worldDate===oldDate&&db.world.lastDailyTick===oldTick,'game consumes no duplicate daily effects or world replacement');
+ const expected=new Date(Date.parse(refs.m.utcAt)+Math.round((q.session.games||[]).reduce((n,g)=>n+g.duration,0)*60000)).toISOString();
+ check(negotiationClockAt(db)>=expected&&refs.m.gameTime.gameTimeThrough===expected,'actual game time consumed');
+ const restored=unpackDB(packDB(db));check(negotiationClockAt(restored)===negotiationClockAt(db),'actual pending save retains consumed time');
+ while(db.world.pendingOfficial?.queue?.length)resolvePendingOfficialMatch(db,null);
+ while(restored.world.pendingOfficial?.queue?.length)resolvePendingOfficialMatch(restored,null);
+ check(negotiationClockAt(db)===negotiationClockAt(restored),'restored remaining games same time');
+ check(JSON.stringify(refs.m.res)===JSON.stringify(Object.values(restored.world.seasons).flatMap(s=>s.days.flatMap(d=>d.matches)).find(m=>m.id===refs.m.id).res),'restored actual results identical');
+ // 기존 작성자와 비교할 때 새 시간 기록만 제외하고 전체 상태를 비교한다.
+ const wrappedCommit=commitScheduledSeries,wrappedResolve=resolvePendingOfficialMatch;
+ commitScheduledSeries=officialCommitBeforeClock;resolvePendingOfficialMatch=officialResolveBeforeClock;
+ while(before.world.pendingOfficial?.queue?.length)resolvePendingOfficialMatch(before,null);
+ commitScheduledSeries=wrappedCommit;resolvePendingOfficialMatch=wrappedResolve;
+ const withoutTime=x=>{x=JSON.parse(JSON.stringify(x));delete x.world.officialGameTimeThrough;for(const s of Object.values(x.world.seasons))for(const d of s.days)for(const m of d.matches)delete m.gameTime;return x};
+ check(JSON.stringify(withoutTime(db))===JSON.stringify(withoutTime(before)),'same seed complete state unchanged except consumed time');
+ const state=JSON.stringify(db);check(negotiationClockAt(db)>=refs.m.gameTime.gameTimeThrough&&JSON.stringify(db)===state,'read does not rewrite saved history');
+ const crossing={utcAt:db.worldDate+'T23:50:00.000Z'},timing=officialGameTimeRecord(crossing,[{duration:30}]);
+ check(timing.gameTimeThrough===addDays(db.worldDate,1)+'T00:20:00.000Z','UTC date crossing uses actual minutes');
+ recordOfficialGameTime(db,crossing,timing);check(negotiationClockAt(db)===timing.gameTimeThrough,'date crossing never reads earlier midnight');
+ check(negotiationClockAt(unpackDB(packDB(db)))===timing.gameTimeThrough,'crossing survives real save');
+ for(const fault of [{utcAt:'invalid'}, {utcAt:'2027-01-19T08:00:00.000Z'}]){
+  const old=JSON.stringify(db);let rejected=false;try{commitScheduledSeries(db,refs.s,fault,{rec:{games:[{duration:NaN}]},lines:[]});}catch{rejected=true}
+  check(rejected&&JSON.stringify(db)===old,'invalid source rejected before actual writers');
+ }
+ check(officialGameTimeRecord({},[{duration:30}])===null&&officialGameTimeRecord({utcAt:'2027-01-19T08:00:00.000Z'},[{dur:'30:00'}])===null&&officialGameTimeRecord({utcAt:'2027-01-19T08:00:00.000Z'},[])===null,'legacy missing units and forfeits do not invent game time');
+ const legacy={worldDate:'2027-01-19',world:{}};check(negotiationClockAt(legacy)==='2027-01-19T00:00:00.000Z'&&JSON.stringify(legacy)==='{"worldDate":"2027-01-19","world":{}}','legacy read unchanged');
+ const orderCfg=defaultWorldConfig();orderCfg.regions=[regionCfg('KR',{teams:10,div2:false,regularBo:1,playoffBo:1})];orderCfg.internationals=[];
+ const order=buildWorld(orderCfg),orderTeam=activeTeams(order,'KR',1)[0];startCareer(order,orderTeam.id,'clock-official-reproduction');autoBuildInitialSquad(order,orderTeam,new RNG('clock-roster','fixture'),5);finalizeInitialRosters(order);
+ count=0;while(!order.world.pendingOfficial?.queue?.length){check(++count<=30,'bounded manual order');playWorldDay(order);}
+ const pendingRefs=pendingOfficialRefs(order,order.world.pendingOfficial.queue[0]);
+ const ahead=Object.values(order.world.seasons).flatMap(s=>s.days.flatMap(d=>d.matches)).find(m=>m.res&&m.utcAt>pendingRefs.m.utcAt&&m.utcAt.slice(0,10)===order.worldDate);
+ check(ahead&&ahead.gameTime&&negotiationClockAt(order)<=pendingRefs.m.utcAt,'later precomputed game cannot consume time before manual preparation');
+ return JSON.stringify({laterGameDoesNotSkipManual:true,actualStart:refs.m.utcAt,gameTimeThrough:expected,completedClock:restored.world.officialGameTimeThrough,firstDone:first.done,save:true,seedParity:true,invalidSource:true,dateCrossing:true,dailyUnchanged:true});
+})()`);
+assert.equal(JSON.parse(officialResult).seedParity,true);
+console.log('OFFICIAL_GAME_CLOCK_ACCEPTANCE '+officialResult);
