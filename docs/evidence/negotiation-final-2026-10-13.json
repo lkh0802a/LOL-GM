@@ -2,10 +2,10 @@
   "base": "8fa903c5bbaf27b66911efa4b9b5fcc34704a5d2",
   "archive": {
     "path": "docs/evidence/negotiation-final-2026-10-13.source.json.gz",
-    "bytes": 1243694,
-    "sha256": "497ce8b8bbd40f42a3f25d9515e1cb794b02982540c8f8b4488f04dd16a4c4c2",
-    "decodedSha256": "378eff684cd94fc83ac5a44a8c295ed11d458dd08d74989727ad2524ec0ed371",
-    "rows": 17
+    "bytes": 1246265,
+    "sha256": "a3c4baaf5cd74d90b785103e84c4d7b58b1d3a3aafa2b6c94d2b90cb84d5315f",
+    "decodedSha256": "d9c9198c1d9c2da64fd303944172761cf6d212fc5cdb2b2407cde9ddeefb5a38",
+    "rows": 18
   },
   "originals": {
     "docs/README.md": "18cb444ea2db6cb284250bc9ada71c2c785399e28deb9b71c56568a982dddeb8",
@@ -24,18 +24,19 @@
     "scripts/verify-season-history-evidence.mjs": "c130d80d81eb6ebb40aad4c78e0f357cb1acd3062a5f097b221fa3fd98702398",
     "scripts/verify-season-progress-evidence.mjs": "b01c5ee7c54ce94c99652257226b60d17923be09aec8f693530f962ed616e80c",
     "scripts/verify-squad-draft-recovery-evidence.mjs": "8839d344952b3b7316550920610455f6a0f894a5a7bb17dca6959c06a6591324",
-    "scripts/verify-unemployed-season-evidence.mjs": "354e707349a926a3339095ed60d70a879c803cb840304e40fae0d17704905ef0"
+    "scripts/verify-unemployed-season-evidence.mjs": "354e707349a926a3339095ed60d70a879c803cb840304e40fae0d17704905ef0",
+    "scripts/stove-fa-source-successor.mjs": "dcfadbb399afacfa7ec8efc208cca529a8e901a566ef2b5ece015e492fae9f4a"
   },
   "sources": {
     "docs/README.md": "37b852bb1868e38f129961d990a4ad333af0397f60efe8e50296bad174c6ca34",
-    "docs/DEVELOPMENT.md": "84ce7d8cc04168ab84ee3c68b3f2b35ce4ae6e470ae39b9329e7032ac0e4da01",
+    "docs/DEVELOPMENT.md": "f08b436d8fdcebbf7ac65c3a0f8811e825e61066dd1c70e297cd2cb7cb70451b",
     "index.html": "cb8e47dbb2980c4bf5013b490274a04dc7a052d57ce885daae858df31965ead4",
     "scripts/artifact-modules.mjs": "f3936d38570c9533bf02d066b1e9e51666e4ca6944637e820f202bd88b467193",
     "scripts/current-guide-source-successor.mjs": "1e32b80db1d2f57db4f4082778ba4beebf46366fd71e42602e9fe897f87de1d0",
     "scripts/negotiation-summary-acceptance.mjs": "b1a19070d9390682c27e0d5eb2558debfca37b91799afdb2c715258b7ab04e2f",
     "scripts/negotiation-summary-source-successor.mjs": "119cb61f625006477ccc765cbe484f1c252b1e56fbb208c8c5b219080bf6bcf5",
     "scripts/initial-negotiation-review-source-successor.mjs": "d39279ee2d60ee2bcf2e9a1b50aa4eaf4eeffb76438a8cbed91e1d0e74b4c4ec",
-    "scripts/startup-save-source-successor.mjs": "bcf5ff849bc673508c7826e883ce1bff43eabea74135ee4e10a9a52435b4fddc",
+    "scripts/startup-save-source-successor.mjs": "bd16c74e2979bee148eff1711c3287e9d2f684ceae21a65d329ba1069f4a2c4d",
     "scripts/verify-club-home-evidence.mjs": "042f6826ab5c62cfdd097fac8fbcbf81410d1b4cc56965730f5187ab83c599b0",
     "scripts/verify-official-ui-evidence.mjs": "8dd2fae649a2acae8aeb7b28260ca620c954edb88c324e86fdae5cf2a658fd5c",
     "scripts/verify-pending-handoff-evidence.mjs": "8fa0d1d49dc9cfa76b7a8647c405869bfe46a3cea34811b781a07ea082c4f61f",
@@ -44,9 +45,10 @@
     "scripts/verify-season-progress-evidence.mjs": "a071b4b8aaa3c39d57bcc6221d2e785d634a8aba5fd443e518f0b6e282b84bb6",
     "scripts/verify-squad-draft-recovery-evidence.mjs": "c877ea086c6338672abbbe10b208465b0f5cd8ffc724db9555725b87cf1045aa",
     "scripts/verify-unemployed-season-evidence.mjs": "21b8d8464dbd908f6e98475c8c41af9a7e571a263f25840c7b45a07a7c386cab",
+    "scripts/stove-fa-source-successor.mjs": "04e7c1fa7c9fbee0b0c9b63c168fdb9108a19bdc31ece2cc8fc171fbe2c5782b",
     "src/artifact/negotiation-final.js": "a72109f224e4838c9ab0a675ca3789d0503a6f50b0742c676acc6ae8b6eae7ef",
     "src/artifact/ui-negotiation-final.js": "fb60579473ea143b11618bc8f8b10f3d44c49181e5bd97c48448f3e504347c65",
     "scripts/negotiation-final-acceptance.mjs": "6b3e98cc742f40b300e2ef76c8753210514d07aa067085faad3c3486e4f63994",
-    "scripts/negotiation-final-source-successor.mjs": "1878fae0c2b785b77556c4b40dedbc9381448e67a0769ab9f53a296a5a773cc1"
+    "scripts/negotiation-final-source-successor.mjs": "a2db34b1d53c0bd6ba0734fc83bef386525edda45c412674298a5ef784349e8c"
   }
 }
