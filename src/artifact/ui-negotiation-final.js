@@ -52,10 +52,10 @@ bindNegotiationControls=function(act,allowed=()=>true,root=document){
 // 완료 게임 뒤의 연락과 다음 수동 준비는 감독의 서로 다른 결정이다.
 const officialUiBindBeforeManualContact=typeof officialUiBindPending==='function'?officialUiBindPending:null;
 if(officialUiBindBeforeManualContact)officialUiBindPending=function(staleFrame=()=>false){
-  const q=DB.world?.pendingOfficial?.queue?.[0];if(!q?.contact)return officialUiBindBeforeManualContact(staleFrame);
-  const c=officialUiContext(DB),contact=q.contact,n=DB.world.negotiations?.[contact.id];
+  const q=DB.world?.pendingOfficial?.queue?.[0];if(!q||!Object.hasOwn(q,'contact'))return officialUiBindBeforeManualContact(staleFrame);
+  const c=officialUiContext(DB),contact=q.contact,n=DB.world.negotiations?.[contact?.id];
   document.querySelectorAll('.controls button').forEach(b=>b.disabled=true);
-  document.querySelector('.controls')?.insertAdjacentHTML('beforeend','<p role="status">완료한 게임 뒤 선수 연락이 도착했습니다. 연락을 검토하고 다음 경기 준비를 직접 다시 여세요.</p><button class="primary" id="manual-contact-review">선수 연락 검토</button><button class="ghost" id="manual-contact-resume">현재 경기 준비 다시 열기</button>');
+  document.querySelector('.controls')?.insertAdjacentHTML('beforeend','<p role="status">'+(manualContactPending(DB)?'완료한 게임 뒤 선수 연락이 도착했습니다. 연락을 검토하고 다음 경기 준비를 직접 다시 여세요.':'현재 대기 연락의 저장 정보를 확인할 수 없습니다. 현재 저장과 경기 상태를 확인하세요.')+'</p><button class="primary" id="manual-contact-review">선수 연락 검토</button><button class="ghost" id="manual-contact-resume">현재 경기 준비 다시 열기</button>');
   const valid=()=>officialUiCurrent(c)&&manualContactPending(DB)&&q.contact===contact&&!UI_OVERLAY&&!staleFrame();
   const review=$('#manual-contact-review'),resume=$('#manual-contact-resume');if(!review||!resume)return;
   review.disabled=resume.disabled=!valid();

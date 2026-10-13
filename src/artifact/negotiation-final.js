@@ -456,10 +456,14 @@ startNegotiation=function(db,pid,kind='fa',extra={}){
 const officialManualResolveBeforeEvents=resolvePendingOfficialMatch;
 resolvePendingOfficialMatch=function(db,forcedDraft){
   const control=pendingOfficialControl(db),p=db.world?.pendingOfficial,q=p?.queue?.[0],refs=control.refs;
+  // 날짜 필드 없는 기존 직접 작성 호출은 기존 작성자를 유지한다.
+  // 화면·날짜 진행의 pendingOfficialControl 거절은 그대로이며 날짜를 저장에 보충하지 않는다.
+  const w=db.world,me=managedTeam(db),legacy=q&&q.date==null&&!Object.hasOwn(q,'contact')&&refs&&['manual','ai'].includes(w.manage)&&w.phase==='season'&&w.year===db.year&&p.date===db.worldDate&&refs.day.date===p.date&&[refs.m.a,refs.m.b].every(id=>db.teams[id]?.active!==false&&db.regions[db.teams[id]?.region])&&(!q.session||q.session.a===refs.m.a&&q.session.b===refs.m.b&&q.session.bestOf===refs.m.bo&&q.session.seed===`${refs.s.seed}/${refs.s.year}/${refs.m.id}`&&q.session.opt?.compId===refs.s.comp&&q.session.opt?.metaContext?.season===refs.s.id);
+  if(legacy){if(forcedDraft!=null&&(w.manage!=='manual'||w.fired||!me||me.active===false||![refs.m.a,refs.m.b].includes(me.id)))throw Error('현재 감독의 수동 게임 입력이 아닙니다');return officialManualResolveBeforeEvents(db,forcedDraft);}
   if(control.error)throw Error(control.error);
   if(!control.manual&&forcedDraft!=null)throw Error('현재 감독의 수동 게임 입력이 아닙니다');
   if(!control.manual||!refs?.m.utcAt)return officialManualResolveBeforeEvents(db,forcedDraft);
-  if(q.contact)throw Error('선수 연락을 검토한 뒤 현재 경기 준비를 직접 다시 여세요');
+  if(Object.hasOwn(q,'contact'))throw Error('선수 연락을 검토한 뒤 현재 경기 준비를 직접 다시 여세요');
   for(const n of waitingNegotiationResponses(db).filter(n=>n.teamId===managedTeamId(db))){const error=negotiationResponseError(n);if(error)throw Error(error);}
   const undo=pendingOfficialUndo(db);
   try{
