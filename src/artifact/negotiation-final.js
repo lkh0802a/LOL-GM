@@ -95,6 +95,33 @@ resolvePendingOfficialMatch=function(db,forcedDraft){
   if(refs&&!result.done)recordOfficialGameTime(db,refs.m,officialGameTimeRecord(refs.m,q.session.games));
   return result;
 };
+const officialPlayDayBeforeClock=playDay;
+playDay=function(db,s,opt={}){
+  if(!s||s.done||!opt.deferTeam)return officialPlayDayBeforeClock(db,s,opt);
+  const day=s.days[s.cur],w=db.world;
+  const pending=Object.values(w.seasons||{}).filter(next=>!next.done&&next.days[next.cur]?.date===day.date)
+    .flatMap(next=>next.days[next.cur].matches).filter(m=>!m.res&&(m.a===opt.deferTeam||m.b===opt.deferTeam));
+  const contact=w.phase==='season'&&opt.deferTeam===managedTeamId(db)?waitingNegotiationResponses(db,true)[0]:null;
+  if(contact){const error=negotiationResponseError(contact);if(error)throw Error(error);}
+  if((!pending.length&&!contact)||pending.some(m=>m.utcAt==null)||day.matches.some(m=>!m.res&&m.utcAt==null))return officialPlayDayBeforeClock(db,s,opt);
+  // 날짜만 남은 이전 저장은 원래 작성자가 처리한다. 현재 시각의 오류는 작성 전 거절한다.
+  for(const m of [...pending,...day.matches.filter(m=>!m.res)])officialGameTimeRecord(m,[]);
+  const boundary=[...pending.map(m=>m.utcAt),...(contact?[contact.response.dueAt]:[])].sort()[0],comp=db.competitions[s.comp],cfgIdx=comp.stages.findIndex(x=>x.id===day.stage),cfg=comp.stages[cfgIdx],queue=[];
+  for(const m of day.matches){
+    if(m.res)continue;
+    if(m.a===opt.deferTeam||m.b===opt.deferTeam){
+      if(contact&&m.utcAt>=contact.response.dueAt)continue;
+      const forfeit=scheduledRegistrationForfeit(db,s,m);
+      if(forfeit)commitScheduledSeries(db,s,m,forfeit);else queue.push({matchId:m.id});
+      continue;
+    }
+    // 늦게 시작할 경기는 결과·사용/의료 효과·관측을 아직 작성하지 않는다.
+    if(m.utcAt>=boundary)continue;
+    const forfeit=scheduledRegistrationForfeit(db,s,m);
+    commitScheduledSeries(db,s,m,forfeit||simulateScheduledSeries(db,s,day,m,cfg));
+  }
+  return {day,pending:queue,finalized:finalizeCompetitionDay(db,s,day,cfgIdx,cfg)};
+};
 function negotiationResponsePlan(db,n,terms){
   const preview=JSON.parse(JSON.stringify(db)),result=resolveNegotiationOffer(preview,n.id,terms),next=preview.world.negotiations[n.id];
   const changed=JSON.stringify(next)!==JSON.stringify(n);
@@ -227,7 +254,7 @@ playWorldDay=function(db){
   const fixtureStarts=Object.values(w.seasons).filter(s=>!s.done).flatMap(s=>s.days[s.cur]?.date===date?s.days[s.cur].matches.filter(m=>!m.res).map(m=>m.utcAt):[]).filter(Boolean).sort();
   // 실재 편성의 첫 경기보다 이른 연락만 먼저 소비한다. 경기 준비는 기존 작성자가 담당한다.
   const boundary=fixtureStarts[0]||dayEnd;
-  if(due>at&&(due>=boundary||due>=dayEnd))return negotiationWorldDayBeforeClock(db);
+  if(due>at&&(due>boundary||due>=dayEnd))return negotiationWorldDayBeforeClock(db);
   const copy=JSON.parse(JSON.stringify(db)),target=due<=at?at:due;
   if(target.slice(0,10)>db.worldDate)applyWorldDailyEffects(copy,target.slice(0,10));
   copy.world.negotiationClock={at:target};const r=resolveDueNegotiationResponse(copy);
