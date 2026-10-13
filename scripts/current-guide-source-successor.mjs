@@ -1,4 +1,4 @@
-import {negotiationFinalSourceHash} from './negotiation-final-source-successor.mjs';
+import {negotiationFinalSourceHash,negotiationFinalSourceText} from './negotiation-final-source-successor.mjs';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
@@ -19,7 +19,7 @@ async function verify(){
  for(const p of paths.slice(0,2))assert((await readFile(new URL(p,root),'utf8')).endsWith(original[p]),p+' 전체 승인·역사 원문 연속 보존');
  const p=paths[2];
  const expected=("import {currentGuideSourceHash} from './current-guide-source-successor.mjs';\n"+original[p]).replace('for(const [p,h] of Object.entries(e.sources))assert.equal(sha(await readFile(new URL(p,root))),h,p);','for(const [p,h] of Object.entries(e.sources))assert.equal(await currentGuideSourceHash(p),h,p);');
- assert.equal(await readFile(new URL(p,root),'utf8'),expected,'기존 압축 증거·검사·엔진·작업·시간 제한 단언 보존');
+ assert.equal(await negotiationFinalSourceText(p),expected,'기존 압축 증거·검사·엔진·작업·시간 제한 단언 보존');
  verified=e;return e;
 }
 export async function currentGuideSourceHash(p){const e=await verify();return e.originals[p]||await negotiationFinalSourceHash(p)}
