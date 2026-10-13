@@ -203,7 +203,7 @@ cancelNegotiation=function(db,nid){
 };
 const negotiationStartBeforeClock=startNegotiation;
 startNegotiation=function(db,pid,kind='fa',extra={}){
-  const teamId=extra.teamId||managedTeamId(db),previous=latestNegotiationAttempt(db,pid,kind,teamId),history=previous?.history?.some(h=>h.result==='submitted')?JSON.parse(JSON.stringify(previous.history)):null;
+  const teamId=extra.teamId||managedTeamId(db),previous=db.world?.negotiations?latestNegotiationAttempt(db,pid,kind,teamId):null,history=previous?.history?.some(h=>h.result==='submitted')?JSON.parse(JSON.stringify(previous.history)):null;
   const result=negotiationStartBeforeClock(db,pid,kind,extra);
   if(result.ok&&history&&result.neg!==previous&&result.neg.previousAttempts?.length)result.neg.previousAttempts.at(-1).history=history;
   return result;

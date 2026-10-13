@@ -9,6 +9,7 @@ const result=await runEngineFixture(String.raw`(()=>{
  const id=negotiationId(base,p.id,'initial',team.id),n=base.world.negotiations[id];n.maxRounds=3;n.competitors=[];
  const terms={...n.demand,salary:Math.floor((initialSalaryBudget(base,team)-payroll(base,team))*10)/10};
  const before=JSON.stringify(base),plan=negotiationResponsePlan(base,n,terms);
+  const invalidStart=JSON.parse(before);delete invalidStart.world.negotiations;const invalidStartState=JSON.stringify(invalidStart);check(!startNegotiation(invalidStart,'missing','fa').ok&&JSON.stringify(invalidStart)===invalidStartState,'invalid start does not create negotiation storage');
  check(plan.ok&&!plan.immediate&&plan.hours>=2&&plan.hours<=8,'approved normal hours');check(JSON.stringify(base)===before,'planning read only');
  const db=JSON.parse(before),submitted=stageNegotiationOffer(db,id,terms);check(submitted.ok&&submitted.waiting,'actual queued submission');
  check(!db.players[p.id].team&&db.world.negotiations[id].round===0,'no early signing or judgement');
