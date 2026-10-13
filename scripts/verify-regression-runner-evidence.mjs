@@ -1,3 +1,4 @@
+import {negotiationFinalSourceHash} from './negotiation-final-source-successor.mjs';
 import {stoveFaSourceHash} from './stove-fa-source-successor.mjs';
 import {stoveSourceText} from './stove-source-successor.mjs';
 import {squadOverviewSourceHash} from './squad-overview-source-successor.mjs';
@@ -7,7 +8,9 @@ import {createHash} from 'node:crypto';
 import {createGunzip} from 'node:zlib';
 import {Readable} from 'node:stream';
 import {REGRESSION_MODULES,regressionPlan} from './regression-runner.mjs';
-import {ENGINE_MODULES} from './artifact-modules.mjs';
+import {ENGINE_MODULES as CURRENT_ENGINE_MODULES} from './artifact-modules.mjs';
+const ENGINE_MODULES=CURRENT_ENGINE_MODULES.filter(p=>p!=='negotiation-final.js');
+assert.equal(CURRENT_ENGINE_MODULES.length,102);assert.deepEqual(CURRENT_ENGINE_MODULES.filter(p=>p==='negotiation-final.js'),['negotiation-final.js']);await negotiationFinalSourceHash('src/artifact/negotiation-final.js');
 const root=new URL('../',import.meta.url),sha=b=>createHash('sha256').update(b).digest('hex');
 const e=JSON.parse(await readFile(new URL('docs/evidence/regression-runner-2026-10-09.json',root)));
 assert.deepEqual(e.modules,REGRESSION_MODULES);
