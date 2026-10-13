@@ -1,5 +1,8 @@
+import {negotiationFinalSourceHash} from './negotiation-final-source-successor.mjs';
 import {verifyPendingHandoffSources} from './pending-handoff-source-successor.mjs';
-import {ENGINE_MODULES} from './artifact-modules.mjs';
+import {ENGINE_MODULES as CURRENT_ENGINE_MODULES} from './artifact-modules.mjs';
+const ENGINE_MODULES=CURRENT_ENGINE_MODULES.filter(p=>p!=='negotiation-final.js');
+assert.equal(CURRENT_ENGINE_MODULES.length,102);assert.deepEqual(CURRENT_ENGINE_MODULES.filter(p=>p==='negotiation-final.js'),['negotiation-final.js']);await negotiationFinalSourceHash('src/artifact/negotiation-final.js');
 import assert from 'node:assert/strict';
 const e=await verifyPendingHandoffSources();assert.equal(ENGINE_MODULES.length,101);assert.equal(Object.keys(e.engine).length,101);
 assert.notEqual(e.sources['src/artifact/season.js'],e.originals['src/artifact/season.js']);

@@ -1,3 +1,4 @@
+await import('./negotiation-final-acceptance.mjs');
 import {artifactSources,runEngineFixture} from './test-harness.mjs';
 const [ui,app]=await artifactSources(['ui-negotiations.js','app.js']);
 const esc=app.match(/^const esc=.*$/m)[0];

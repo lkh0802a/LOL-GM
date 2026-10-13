@@ -95,6 +95,7 @@ export const ENGINE_MODULES = [
   'match-history.js',
   'analysis-tiers.js',
   'career.js',
+  'negotiation-final.js',
 ];
 
 export const UI_MODULES = [
@@ -111,6 +112,7 @@ export const UI_MODULES = [
   'ui-analysis-comparison.js',
   'ui-initial-offer-preview.js',
   'ui-negotiations.js',
+  'ui-negotiation-final.js',
   'ui-club-briefing.js',
   'ui-club-home.js',
   'ui-official-edit.js',

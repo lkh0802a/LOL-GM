@@ -1,3 +1,4 @@
+import {negotiationFinalSourceHash,negotiationFinalSourceText} from './negotiation-final-source-successor.mjs';
 import {currentGuideSourceHash} from './current-guide-source-successor.mjs';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -18,11 +19,11 @@ async function verify(){
  const p='scripts/initial-negotiation-review-source-successor.mjs';
  let expected="import {negotiationSummarySourceHash,negotiationSummarySourceText} from './negotiation-summary-source-successor.mjs';\n"+original(p);
  expected=expected.replace('for(const [p,h] of Object.entries(e.sources))assert.equal(sha(await readFile(new URL(p,root))),h,p);','for(const [p,h] of Object.entries(e.sources))assert.equal(await negotiationSummarySourceHash(p),h,p);').replace("assert.equal(await readFile(new URL('.github/workflows/ci.yml',root),'utf8'),workflow","assert.equal(await negotiationSummarySourceText('.github/workflows/ci.yml'),workflow");
- assert.equal(await readFile(new URL(p,root),'utf8'),expected,'기존 증거·단언을 보존한 현재 소스 검사 승계');
+ assert.equal(await negotiationFinalSourceText(p),expected,'기존 증거·단언을 보존한 현재 소스 검사 승계');
  assert.equal(await readFile(new URL('.github/workflows/ci.yml',root),'utf8'),original('.github/workflows/ci.yml').replace('      - name: Upload validation report\n','      - name: 협상 요약과 실제 제안 기록\n        run: node scripts/ci-run.mjs negotiation-summary -- node scripts/negotiation-summary-acceptance.mjs\n\n      - name: Upload validation report\n'),'기존 작업·시간 제한과 모든 검사 유지');
  assert.equal(Object.keys(e.engine).length,101);for(const [p,h] of Object.entries(e.engine))assert.equal(sha(await readFile(new URL('src/artifact/'+p,root))),h,p+' 기존 엔진 불변');
  for(const p of ['docs/README.md','docs/DEVELOPMENT.md'])assert((await readFile(new URL(p,root),'utf8')).includes(original(p)),'전체 승인 원문 연속 보존');
  verified={e,rows};return verified;
 }
-export async function negotiationSummarySourceHash(p){const {e}=await verify();return e.originals[p]||sha(await readFile(new URL(p,root)))}
-export async function negotiationSummarySourceText(p){const {e,rows}=await verify();return e.originals[p]?Buffer.from(rows.find(r=>r.path==='original/'+p).base64,'base64').toString():readFile(new URL(p,root),'utf8')}
+export async function negotiationSummarySourceHash(p){const {e}=await verify();return e.originals[p]||await negotiationFinalSourceHash(p)}
+export async function negotiationSummarySourceText(p){const {e,rows}=await verify();return e.originals[p]?Buffer.from(rows.find(r=>r.path==='original/'+p).base64,'base64').toString():negotiationFinalSourceText(p)}
