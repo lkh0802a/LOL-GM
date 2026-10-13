@@ -1,4 +1,4 @@
-function negotiationTimeText(at){const value=venueClockParts(at,'Asia/Seoul');return value.date+' '+value.time+' · 한국 시간';}
+function negotiationTimeText(at){if(typeof at!=='string'||!Number.isFinite(Date.parse(at)))return '시각 확인 필요';const value=venueClockParts(at,'Asia/Seoul');return value.date+' '+value.time+' · 한국 시간';}
 // 실제 합의와 최종 계약의 수동 결정/취소/오래된 입력 거절.
 negotiationHistoryText=function(n){
   const labels={counter:'역제안',accept:'수락·계약 처리',commit_rejected:'계약 처리 거절',rival:'경쟁 구단 선택',agreed:'선수 조건 수락 · 최종 계약 전',finalized:'감독 최종 계약 확정',submitted:'제안 접수 · 응답 대기',response_unavailable:'현재 조건으로 응답 처리 불가',cancelled:'제안 취소'};

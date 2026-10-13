@@ -12427,8 +12427,9 @@ function stageNegotiationOffer(db,nid,terms){
   const shown=venueClockParts(plan.dueAt,'Asia/Seoul');
   return {ok:true,waiting:true,dueAt:plan.dueAt,msg:'제안을 접수했습니다 · 선수 응답 예정 '+shown.date+' '+shown.time+' (한국 시간) · 최종 계약은 직접 확정하세요'};
 }
-function waitingNegotiationResponses(db){
+function waitingNegotiationResponses(db,ownedOnly=false){
   return Object.values(db.world?.negotiations||{}).filter(n=>n.status==='open'&&n.stage==='waiting'&&n.response)
+    .filter(n=>!ownedOnly||!manualNegotiationError(db,n))
     .sort((a,b)=>String(a.response.dueAt).localeCompare(String(b.response.dueAt))||String(a.id).localeCompare(String(b.id)));
 }
 function negotiationContactDeadline(db,n){
@@ -12444,12 +12445,18 @@ function negotiationContactDeadline(db,n){
   if(!starts.length)throw Error('기존 개막 편성에서 협상 마감을 확인할 수 없습니다');
   return starts.sort()[0];
 }
+function negotiationResponseError(n){
+  const r=n.response;
+  if(!r||typeof r.dueAt!=='string'||!Number.isFinite(Date.parse(r.dueAt))||new Date(r.dueAt).toISOString()!==r.dueAt)return '응답 예정 시각을 확인할 수 없습니다';
+  if(!Number.isInteger(r.round)||r.round!==n.round+1)return '제출 당시 협상 회차가 바뀌었습니다. 제안을 취소하고 현재 조건을 다시 확인하세요';
+  return null;
+}
 function resolveDueNegotiationResponse(db){
-  const now=negotiationClockAt(db),n=waitingNegotiationResponses(db).find(n=>n.response.dueAt<=now);
+  const now=negotiationClockAt(db),n=waitingNegotiationResponses(db,true).find(n=>n.response.dueAt<=now);
   if(!n)return null;
   const response=n.response,error=manualNegotiationError(db,n);
   if(error)return {ok:false,blocked:true,msg:error};
-  if(!Number.isInteger(response.round)||response.round!==n.round+1)return {ok:false,blocked:true,msg:'제출 당시 협상 회차가 바뀌었습니다. 제안을 취소하고 현재 조건을 다시 확인하세요'};
+  const responseError=negotiationResponseError(n);if(responseError)return {ok:false,blocked:true,msg:responseError};
   // 제출 시점의 판정을 적용하지 않고 실제 응답 시점의 상태를 재검사한다.
   n.stage='player';delete n.response;
   const before=n.history.length,result=resolveNegotiationOffer(db,n.id,response.terms),current=db.world.negotiations[n.id];
@@ -12468,7 +12475,8 @@ function advanceNegotiationTime(db){
   const w=db.world,t=managedTeam(db);
   if(!w||!t||t.active===false||t.parent||w.manage!=='manual'||w.fired||w.pendingOfficial)return {ok:false,msg:'현재 감독 권한으로 시간을 진행할 수 없습니다'};
   if(!['initial_roster','market','offseason'].includes(w.phase))return {ok:false,msg:'현재 화면에서 협상 시간을 직접 진행할 수 없습니다'};
-  const pending=waitingNegotiationResponses(db);if(!pending.length)return {ok:false,msg:'응답을 기다리는 제안이 없습니다'};
+  const pending=waitingNegotiationResponses(db,true);if(!pending.length)return {ok:false,msg:'응답을 기다리는 현재 구단의 제안이 없습니다'};
+  const responseError=negotiationResponseError(pending[0]);if(responseError)return {ok:false,msg:responseError};
   const now=negotiationClockAt(db),nextMidnight=addDays(db.worldDate,1)+'T00:00:00.000Z',due=pending[0].response.dueAt;
   if(!Number.isFinite(Date.parse(due)))return {ok:false,msg:'응답 예정 시각을 확인할 수 없습니다'};
   const copy=JSON.parse(JSON.stringify(db)),target=due<=now?now:due<nextMidnight?due:nextMidnight;
@@ -12494,7 +12502,7 @@ function advanceToNegotiationResponse(db){
     commitNegotiationTime(db,copy);
     return {ok:true,msg:result?.msg||'기존 공식 일정에서 진행을 중단했습니다. 현재 준비와 연락을 확인하세요',response:!!result?.response};
   }
-  do{result=advanceNegotiationTime(copy);if(!result?.ok&&!result?.response)return result;}while(!result.response&&waitingNegotiationResponses(copy).length);
+  do{result=advanceNegotiationTime(copy);if(!result?.ok&&!result?.response)return result;}while(!result.response&&waitingNegotiationResponses(copy,true).length);
   commitNegotiationTime(db,copy);
   return result;
 }
@@ -12502,7 +12510,7 @@ const negotiationExclusiveDayBeforeClock=advanceOffseasonContractDay;
 const negotiationExclusiveWindowBeforeClock=advanceOffseasonContractWindow;
 const negotiationFreeAgencyDayBeforeClock=advanceOffseasonFreeAgencyDay;
 function negotiationResponseBeforeDate(db,date){
-  const n=waitingNegotiationResponses(db)[0];
+  const n=waitingNegotiationResponses(db,true)[0];
   return !!(n&&n.response.dueAt<=date+'T00:00:00.000Z');
 }
 advanceOffseasonContractDay=function(db){
@@ -12521,6 +12529,7 @@ const negotiationWorldDayBeforeClock=playWorldDay;
 playWorldDay=function(db){
   const w=db.world,n=waitingNegotiationResponses(db).find(n=>!manualNegotiationError(db,n));
   if(!n||w.phase!=='season'||w.pendingOfficial?.queue?.length)return negotiationWorldDayBeforeClock(db);
+  const responseError=negotiationResponseError(n);if(responseError)return {date:db.worldDate,played:[],pending:{kind:'negotiation',id:n.id},advanced:false,msg:responseError};
   const date=nextCalendarDate(db);if(!date)return negotiationWorldDayBeforeClock(db);
   const due=n.response.dueAt,at=negotiationClockAt(db),dayEnd=addDays(date,1)+'T00:00:00.000Z';
   const fixtureStarts=Object.values(w.seasons).filter(s=>!s.done).flatMap(s=>s.days[s.cur]?.date===date?s.days[s.cur].matches.filter(m=>!m.res).map(m=>m.utcAt):[]).filter(Boolean).sort();
@@ -13071,7 +13080,7 @@ function reviewInitialNegotiation(id,counter,opener,act,allowed,root){
 }
 
 /* ==== FILE: ui-negotiation-final.js ==== */
-function negotiationTimeText(at){const value=venueClockParts(at,'Asia/Seoul');return value.date+' '+value.time+' · 한국 시간';}
+function negotiationTimeText(at){if(typeof at!=='string'||!Number.isFinite(Date.parse(at)))return '시각 확인 필요';const value=venueClockParts(at,'Asia/Seoul');return value.date+' '+value.time+' · 한국 시간';}
 // 실제 합의와 최종 계약의 수동 결정/취소/오래된 입력 거절.
 negotiationHistoryText=function(n){
   const labels={counter:'역제안',accept:'수락·계약 처리',commit_rejected:'계약 처리 거절',rival:'경쟁 구단 선택',agreed:'선수 조건 수락 · 최종 계약 전',finalized:'감독 최종 계약 확정',submitted:'제안 접수 · 응답 대기',response_unavailable:'현재 조건으로 응답 처리 불가',cancelled:'제안 취소'};
