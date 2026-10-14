@@ -54,9 +54,10 @@ const officialUiBindBeforeManualContact=typeof officialUiBindPending==='function
 if(officialUiBindBeforeManualContact)officialUiBindPending=function(staleFrame=()=>false){
   const q=DB.world?.pendingOfficial?.queue?.[0];if(!q||!Object.hasOwn(q,'contact')&&!Object.hasOwn(q,'inflight'))return officialUiBindBeforeManualContact(staleFrame);
   if(!Object.hasOwn(q,'contact')){
-    const context=officialUiContext(DB),receipt=q.inflight;document.querySelectorAll('.controls button').forEach(b=>b.disabled=true);
-    document.querySelector('.controls')?.insertAdjacentHTML('beforeend','<p role="status">제출한 입력으로 게임이 진행 중입니다. 종료한 게임만 기록합니다.</p><button class="primary" id="manual-game-continue">진행 중 게임 계속</button>');
-    const button=$('#manual-game-continue');if(button){button.disabled=!validManualInflightGame(DB);button.onclick=()=>{if(!officialUiCurrent(context)||q.inflight!==receipt||!validManualInflightGame(DB)||UI_OVERLAY||staleFrame())return;try{const result=resolvePendingOfficialMatch(DB,null);LAST=result.game||null;LASTSER=result.done?result.rec:null;saveDB();nav();}catch(error){MSG=error.message;nav();}};}return;
+    const context=officialUiContext(DB),receipt=q.inflight,ready=validManualInflightGame(DB);document.querySelectorAll('.controls button').forEach(b=>b.disabled=true);
+    const note=ready?'제출한 입력으로 게임이 진행 중입니다. 종료한 게임만 기록합니다.':pendingOfficialControl(DB).error||'진행 중 게임의 저장 정보나 현재 감독 권한을 확인할 수 없습니다. 현재 저장을 확인하세요.';
+    document.querySelector('.controls')?.insertAdjacentHTML('beforeend','<p role="status">'+esc(note)+'</p><button class="primary" id="manual-game-continue">진행 중 게임 계속</button>');
+    const button=$('#manual-game-continue');if(button){button.disabled=!ready;button.onclick=()=>{if(!officialUiCurrent(context)||q.inflight!==receipt||!validManualInflightGame(DB)||UI_OVERLAY||staleFrame())return;try{const result=resolvePendingOfficialMatch(DB,null);LAST=result.game||null;LASTSER=result.done?result.rec:null;saveDB();nav();}catch(error){MSG=error.message;nav();}};}return;
   }
   const c=officialUiContext(DB),contact=q.contact,n=DB.world.negotiations?.[contact?.id];
   document.querySelectorAll('.controls button').forEach(b=>b.disabled=true);
@@ -64,7 +65,7 @@ if(officialUiBindBeforeManualContact)officialUiBindPending=function(staleFrame=(
   const valid=()=>officialUiCurrent(c)&&manualContactPending(DB)&&q.contact===contact&&!UI_OVERLAY&&!staleFrame();
   const review=$('#manual-contact-review'),resume=$('#manual-contact-resume');if(!review||!resume)return;
   review.disabled=resume.disabled=!valid();
-  resume.onclick=()=>{if(!valid())return;try{const result=resumeManualAfterContact(DB);if(!result.ok&&!result.response&&!result.game)return;LAST=result.game||null;LASTSER=result.done?result.rec:null;saveDB();nav();}catch(error){MSG=error.message;nav();}};
+  resume.onclick=()=>{if(!valid())return;try{const result=resumeManualAfterContact(DB);if(!result.ok&&!result.response&&!result.game){MSG=result.msg;nav();return;}LAST=result.game||null;LASTSER=result.done?result.rec:null;saveDB();nav();}catch(error){MSG=error.message;nav();}};
   review.onclick=()=>{
     if(!valid()||!n)return;const db=DB,w=db.world,root=$('#overlay'),read=Object.create(db),state=clubBriefState(),stamp=JSON.stringify(n),date=db.worldDate;read.world={...w,negotiations:{[n.id]:n}};let dialog;
     const current=()=>officialUiCurrent(c)&&DB===db&&db.world===w&&q.contact===contact&&UI_OVERLAY===dialog&&manualContactPending(db);
