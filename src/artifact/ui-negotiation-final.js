@@ -52,7 +52,7 @@ bindNegotiationControls=function(act,allowed=()=>true,root=document){
 // 완료 게임 뒤의 연락과 다음 수동 준비는 감독의 서로 다른 결정이다.
 const officialUiBindBeforeManualContact=typeof officialUiBindPending==='function'?officialUiBindPending:null;
 if(officialUiBindBeforeManualContact)officialUiBindPending=function(staleFrame=()=>false){
-  const q=DB.world?.pendingOfficial?.queue?.[0];if(!q||!Object.hasOwn(q,'contact')&&!Object.hasOwn(q,'inflight'))return officialUiBindBeforeManualContact(staleFrame);
+  const q=DB.world?.pendingOfficial?.queue?.[0];if(q&&officialPendingAcrossMidnight(DB))document.querySelector('.controls')?.insertAdjacentHTML('beforeend','<p role="status">자정을 넘겨 진행 중인 경기입니다 · 원래 편성 '+esc(q.date)+' · 현재 '+esc(DB.worldDate)+' · 오늘의 일일 처리 완료</p>');if(!q||!Object.hasOwn(q,'contact')&&!Object.hasOwn(q,'inflight'))return officialUiBindBeforeManualContact(staleFrame);
   if(!Object.hasOwn(q,'contact')){
     const context=officialUiContext(DB),receipt=q.inflight,ready=validManualInflightGame(DB);document.querySelectorAll('.controls button').forEach(b=>b.disabled=true);
     const note=ready?'제출한 입력으로 게임이 진행 중입니다. 종료한 게임만 기록합니다.':pendingOfficialControl(DB).error||'진행 중 게임의 저장 정보나 현재 감독 권한을 확인할 수 없습니다. 현재 저장을 확인하세요.';
@@ -75,4 +75,12 @@ if(officialUiBindBeforeManualContact)officialUiBindPending=function(staleFrame=(
     $('#manual-contact-close').onclick=close;
     bindNegotiationControls(msg=>{if(UI_OVERLAY!==dialog)return;state.draft=null;closeUiOverlay({restoreFocus:false});MSG=msg;saveDB();nav();$('#manual-contact-review')?.focus?.();},current,root);
   };
+};
+
+const officialUiAuthorityBeforeMidnight=typeof officialUiAuthority==='function'?officialUiAuthority:null;
+if(officialUiAuthorityBeforeMidnight)officialUiAuthority=function(c){
+  if(!officialPendingAcrossMidnight(DB))return officialUiAuthorityBeforeMidnight(c);
+  if(!c||c.db!==DB||c.world!==DB.world||c.manager!==DB.manager||c.slot!==SLOT||SLOT_SWITCHING||c.team!==managedTeamId(DB)||c.club!==DB.teams?.[c.team])return false;
+  const w=c.world,t=c.club,q=w.pendingOfficial?.queue?.[0];
+  return !!(t&&t.active!==false&&DB.regions?.[t.region]&&managerControlsSquad(DB,t)&&pendingOfficialControl(DB).manual&&c.pending===w.pendingOfficial&&c.q===q&&c.session===q?.session&&c.stamp===c.read());
 };
