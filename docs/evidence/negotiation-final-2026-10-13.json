@@ -30,9 +30,9 @@
     "scripts/verify-official-edit-evidence.mjs": "e040f16df1693b2cc411f0796e6bb329c53d7b04eb847dadc8ab96a55c29d29d"
   },
   "sources": {
-    "docs/README.md": "37b852bb1868e38f129961d990a4ad333af0397f60efe8e50296bad174c6ca34",
-    "docs/DEVELOPMENT.md": "5e2c1792b236b24e7be44a929f00d4a44457be9165f432a1371946aa6281ca89",
-    "index.html": "cb8e47dbb2980c4bf5013b490274a04dc7a052d57ce885daae858df31965ead4",
+    "docs/README.md": "14867a5110488785caaa9fdd9d4b354f4739ec08b18a825076f92fceaefe4c78",
+    "docs/DEVELOPMENT.md": "2bf81f50dac27ae8c2b43ff4d80c6c265fd709edd058fcbea3a1f288803b1123",
+    "index.html": "60960401d6ed60bcd94acb190fff82e8d434caca8153218cc7d132dbbd6a81ee",
     "scripts/artifact-modules.mjs": "f3936d38570c9533bf02d066b1e9e51666e4ca6944637e820f202bd88b467193",
     "scripts/current-guide-source-successor.mjs": "1e32b80db1d2f57db4f4082778ba4beebf46366fd71e42602e9fe897f87de1d0",
     "scripts/negotiation-summary-acceptance.mjs": "b1a19070d9390682c27e0d5eb2558debfca37b91799afdb2c715258b7ab04e2f",
@@ -50,9 +50,10 @@
     "scripts/stove-fa-source-successor.mjs": "04e7c1fa7c9fbee0b0c9b63c168fdb9108a19bdc31ece2cc8fc171fbe2c5782b",
     "scripts/verify-official-draft-evidence.mjs": "728f8c50d742c27a19f4e566f757bef97e144f17fd7d5344a3d8dc58d539b751",
     "scripts/verify-official-edit-evidence.mjs": "c458de3c31f3ff6487eb96ec3cc49bed0eb0df510d4f92d8653cd450a7e0fda1",
-    "src/artifact/negotiation-final.js": "a72109f224e4838c9ab0a675ca3789d0503a6f50b0742c676acc6ae8b6eae7ef",
-    "src/artifact/ui-negotiation-final.js": "fb60579473ea143b11618bc8f8b10f3d44c49181e5bd97c48448f3e504347c65",
-    "scripts/negotiation-final-acceptance.mjs": "6b3e98cc742f40b300e2ef76c8753210514d07aa067085faad3c3486e4f63994",
-    "scripts/negotiation-final-source-successor.mjs": "17b02c2a2dae706147769d653b530694138e2f0c399259499012a122f18770cb"
+    "src/artifact/negotiation-final.js": "551ffd6006f327f142e667d5726cd5cb3b5b52c88f4668d818bc1066c2128795",
+    "src/artifact/ui-negotiation-final.js": "59de3c2bb75d99332f240b9da7ed4b22e406c432bac810f21713154bf1670351",
+    "scripts/negotiation-final-acceptance.mjs": "ed010698e8495312e8fffb8b86b6cb99f93d217f620074ff0df0d53235f815d1",
+    "scripts/negotiation-final-source-successor.mjs": "7f44fe56aa754ade16021c7ff2c56e645836890577c2bd40a96cecdc5332cdb9",
+    "scripts/negotiation-clock-acceptance.mjs": "00ec411e96b50bb80673d4260475a993807aa47753e50d7b918de98f55ef4b8c"
   }
 }
