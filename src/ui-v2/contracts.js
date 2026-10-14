@@ -1,0 +1,35 @@
+const V2_TERM_FIELDS=[['salary','연봉 · 억 원/년'],['years','계약 기간 · 년'],['signingBonus','계약금 · 억 원']];
+function v2Negotiations(){const ids=new Set(setupTeamsForManager(V2.db).map(t=>t.id));return Object.values(V2.db.world?.negotiations||{}).filter(n=>ids.has(n.teamId));}
+function v2Draft(n){const stamp=JSON.stringify([V2.db.worldDate,n]);if(V2.drafts[n.id]?.stamp!==stamp)V2.drafts[n.id]={stamp,terms:JSON.parse(JSON.stringify(n.counter||n.demand))};return V2.drafts[n.id].terms;}
+function v2CaptureDrafts(){if(!V2.db)return;document.querySelectorAll('[data-neg-form]').forEach(form=>{const n=V2.db.world?.negotiations?.[form.dataset.negForm];if(!n)return;const terms=v2Draft(n);for(const [key] of V2_TERM_FIELDS){const input=form.querySelector('[data-term="'+key+'"]');if(input)terms[key]=Number(input.value)}});}
+function v2Terms(terms){if(!terms)return '';return `<div class="statline"><span>연봉 · 연간</span><strong>${v2Money(terms.salary)}</strong></div><div class="statline"><span>기간</span><strong>${v2Esc(terms.years)}년</strong></div><div class="statline"><span>계약금</span><strong>${v2Money(terms.signingBonus||0)}</strong></div><div class="statline"><span>방출 보장 비율</span><strong>${Math.round(contractGuaranteeRate(terms)*100)}%</strong></div>${Object.entries(terms.bonuses||{}).filter(([,v])=>v).map(([k,v])=>`<div class="statline"><span>${({performance:'성과 보너스',title:'우승 보너스',international:'국제전 보너스'})[k]||v2Esc(k)}</span><strong>${v2Money(v)}</strong></div>`).join('')}<p class="hint">${v2Esc(SQUAD_ROLE_KO[terms.promisedRole]||'역할 약속 없음')}${terms.option?' · '+v2Esc(terms.option.type==='player'?'선수 옵션':'구단 옵션'):''}${terms.buyout?' · 바이아웃 '+v2Money(terms.buyout.amount):''}</p>`;}
+function v2NegotiationList(){
+ const rows=v2Negotiations();if(!rows.length)return '<section class="panel empty">진행 중인 협상이 없습니다.<p><button class="btn btn-primary" data-tab="선수 검색">선수 찾아보기</button></p></section>';
+ return rows.map(n=>{
+  const p=V2.db.players[n.pid],open=n.status==='open',agreed=n.stage==='agreement',terms=open&&!agreed?v2Draft(n):n.agreedTerms||n.acceptedTerms||n.demand;
+  const review=V2.review?.nid===n.id?`<div class="term-review" tabindex="-1" id="contract-review"><h3>${V2.review.mode==='final'?'최종 계약 검토':'제안 조건 검토'}</h3><p class="small">대상 선수단 · ${v2Esc(V2.db.teams[n.teamId]?.name||'정보 없음')}</p>${v2Terms(V2.review.terms)}<p class="hint">${V2.review.mode==='final'?'직접 확정하면 현재 예산·자리·자격을 다시 확인하고 계약을 체결합니다.':'제안을 제출해도 선수단·예산·자리를 예약하지 않습니다.'}</p><div class="tag-flex"><button class="btn btn-primary" id="confirm-contract">${V2.review.mode==='final'?'최종 계약 확정':'이 조건으로 제출'}</button><button class="btn btn-outline" id="cancel-review">${V2.review.mode==='final'?'합의로 돌아가기':'조건 수정으로'}</button></div></div>`:'';
+  return `${v2Assistant(n)}<section class="panel"><div class="panel-heading"><strong>${v2Esc(p?.name||'선수 정보 없음')}</strong><span class="state-tag ${agreed?'ok':''}">${!open?({accepted:'계약 완료',cancelled:'협상 종료',withdrawn:'철회',rejected:'거절'})[n.status]||v2Esc(n.status):agreed?'조건 합의':n.counter?'역제안 검토':'조건 작성'}</span></div>${open&&!agreed?`<form data-neg-form="${v2Esc(n.id)}" onsubmit="return false">${V2_TERM_FIELDS.map(([key,label])=>`<label class="field">${label}<input class="input" type="number" data-term="${key}" min="${key==='years'?1:0}" step="${key==='years'?1:.1}" value="${v2Esc(terms[key]||0)}" required></label>`).join('')}<details><summary>보너스·보장·옵션 조건</summary>${v2Terms(terms)}</details><button class="btn btn-primary" type="button" data-offer-review="${v2Esc(n.id)}">제안 검토</button></form>`:v2Terms(terms)}${agreed&&open?`<p class="hint">아직 계약과 소속은 바뀌지 않았습니다. 최종 계약은 감독이 직접 결정합니다.</p><button class="btn btn-primary" data-final-review="${v2Esc(n.id)}">최종 계약 검토</button>`:''}${review}${open?`<p><button class="btn btn-outline btn-small" data-end-neg="${v2Esc(n.id)}">협상 종료</button></p>`:''}<details><summary>주고받은 제안 · ${n.history?.length||0}건</summary>${(n.history||[]).map(h=>`<p class="small">${v2Esc(h.date||n.createdDate||'날짜 정보 없음')} · ${v2Esc(v2NegotiationLabel(h))}${h.terms?' · 연봉 '+v2Money(h.terms.salary)+' / 년':''}</p>`).join('')}</details></section>`;
+ }).join('');
+}
+function v2NegotiationLabel(h){return ({agreed:'선수 조건 수락 · 최종 계약 전',finalized:'감독 최종 계약 확정',accept:'조건 수락',counter:'역제안',commit_rejected:'계약 처리 거절',rival:'경쟁 구단 선택'})[h.result]||(h.side==='club'?'구단 제안':'선수 응답');}
+function v2NegotiationStamp(n){const db=V2.db;return JSON.stringify([db.manager,db.worldDate,db.world.phase,db.world.manage,db.world.fired,db.world.pendingOfficial,db.world.contractWindow,db.world.negotiations,db.players[n.pid],db.teams[n.teamId],db.regions[db.teams[n.teamId]?.region]]);}
+function v2Review(nid,mode){
+ v2CaptureDrafts();const n=V2.db.world?.negotiations?.[nid],error=manualNegotiationError(V2.db,n);if(error)return v2Tell(error);
+ if(n.status!=='open'||n.stage!==(mode==='final'?'agreement':'player'))return v2Tell('현재 협상 상태가 바뀌었습니다');
+ const form=document.querySelector(`[data-neg-form="${CSS.escape(nid)}"]`);if(mode!=='final'&&form&&!form.reportValidity())return;
+ V2.review={nid,mode,stamp:v2NegotiationStamp(n),terms:JSON.parse(JSON.stringify(mode==='final'?n.agreedTerms:v2Draft(n)))};v2Render();document.getElementById('contract-review')?.focus();
+}
+function v2BindContracts(){
+ v2Bind('[data-offer-review]',el=>v2Review(el.dataset.offerReview,'offer'));
+ v2Bind('[data-final-review]',el=>v2Review(el.dataset.finalReview,'final'));
+ v2Bind('#cancel-review',()=>{v2CaptureDrafts();V2.review=null;v2Render()});
+ v2Bind('#confirm-contract',()=>{
+  const review=V2.review,n=V2.db.world?.negotiations?.[review?.nid];if(!review||!n)return;
+  v2CaptureDrafts();if(review.stamp!==v2NegotiationStamp(n)||review.mode!=='final'&&JSON.stringify(review.terms)!==JSON.stringify(v2Draft(n)))return v2Tell('조건이나 게임 상태가 바뀌었습니다. 현재 조건을 다시 검토하세요.');
+  V2.review=null;v2Mutate(()=>review.mode==='final'?finalizeStagedNegotiation(V2.db,n.id):stageNegotiationOffer(V2.db,n.id,review.terms));
+ });
+ v2Bind('[data-end-neg]',el=>{const n=V2.db.world?.negotiations?.[el.dataset.endNeg],error=manualNegotiationError(V2.db,n);if(error)return v2Tell(error);v2Mutate(()=>cancelNegotiation(V2.db,n.id))});
+ const current=v2Guard();document.querySelectorAll('[data-neg-form] input').forEach(el=>el.oninput=()=>{if(current())v2CaptureDrafts()});
+}
+function v2Mail(){return v2Negotiations().flatMap(n=>(n.history||[]).map((h,i)=>({id:n.id+':'+i,nid:n.id,pid:n.pid,date:h.date||n.createdDate||'',title:(V2.db.players[n.pid]?.name||'선수')+' · '+v2NegotiationLabel(h),terms:h.terms}))).reverse();}
+function v2Inbox(){const rows=v2Mail().filter(m=>V2.tab!=='읽지 않음'||!V2.read[m.id]);return `<section class="stack">${rows.map(m=>`<button class="mail-item" data-mail="${v2Esc(m.id)}"><span>${v2Icon('mail')}</span><span class="grow"><span class="title">${V2.read[m.id]?'':'● '}${v2Esc(m.title)}</span><span class="player-meta" style="display:block">${v2Esc(m.date)}</span></span><span>›</span></button>`).join('')||'<div class="panel empty">확인할 계약 연락이 없습니다.</div>'}</section>`;}
