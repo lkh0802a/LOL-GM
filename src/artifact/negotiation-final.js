@@ -208,7 +208,7 @@ function playOfficialWorldEvents(db,date,manualEnd=null){
   if(!days.length||matches.some(({m})=>m.utcAt==null))return null;
   negotiationClockAt(db);
   for(const {s,m} of matches){officialGameTimeRecord(m,[]);officialClockSessionCheck(s,m);if(m.clockGame)officialQueuedGameError(db,s,m,m.clockGame);if(me&&(m.a===me||m.b===me)&&(m.clockGame||m.clockSession))throw Error('진행 중인 다른 구단의 경기입니다. 현재 감독 경기로 자동 전환하지 않습니다');}
-  const n=waitingNegotiationResponses(db,true)[0];
+  const n=(manualEnd?waitingNegotiationResponses(db).filter(n=>n.teamId===me):waitingNegotiationResponses(db,true))[0];
   if(n){const error=negotiationResponseError(n);if(error)throw Error(error);if(n.response.dueAt<date+'T00:00:00.000Z')return null;}
   const advanced=applyWorldDailyEffects(db,date),played=days.map(({s,day})=>({s,day}));
   const finish=()=>{
@@ -229,7 +229,7 @@ function playOfficialWorldEvents(db,date,manualEnd=null){
         at:m.clockGame?.endAt||officialGameTimeRecord(m,m.clockSession?.games||[])?.gameTimeThrough||m.utcAt};
     });
     if(manualEnd)events.push({kind:'manualEnd',priority:0,at:manualEnd.at,key:manualEnd.key,m:manualEnd.match});
-    const contact=waitingNegotiationResponses(db,true)[0];
+    const contact=(manualEnd?waitingNegotiationResponses(db).filter(n=>n.teamId===me):waitingNegotiationResponses(db,true))[0];
     if(contact&&contact.response.dueAt<addDays(date,1)+'T00:00:00.000Z')events.push({kind:'contact',priority:1,at:contact.response.dueAt,key:contact.id});
     events.sort((a,b)=>a.at.localeCompare(b.at)||a.priority-b.priority||a.key.localeCompare(b.key)||String(a.m?.id||'').localeCompare(String(b.m?.id||'')));
     const event=events[0];if(!event){finish();if(!activeSeasons(db).length)advanceStep(db);return {date,played,pending:w.pendingOfficial,advanced};}
@@ -240,7 +240,7 @@ function playOfficialWorldEvents(db,date,manualEnd=null){
       const current=negotiationClockAt(db),at=event.at<current?current:event.at;
       if(me&&event.kind!=='manualEnd')w.negotiationClock={at};
       if(event.kind==='contact'){
-        const response=resolveDueNegotiationResponse(db);finish();
+        const response=manualEnd?receiveManualEndedContact(db):resolveDueNegotiationResponse(db);finish();
         return {date,played,pending:{kind:'negotiation',id:contact.id},advanced,...response};
       }
       if(event.kind==='manualEnd')return manualEnd.consume();
@@ -462,16 +462,24 @@ resolvePendingOfficialMatch=function(db,forcedDraft){
   if(legacy){if(forcedDraft!=null&&(w.manage!=='manual'||w.fired||!me||me.active===false||![refs.m.a,refs.m.b].includes(me.id)))throw Error('현재 감독의 수동 게임 입력이 아닙니다');return officialManualResolveBeforeEvents(db,forcedDraft);}
   if(control.error)throw Error(control.error);
   if(!control.manual&&forcedDraft!=null)throw Error('현재 감독의 수동 게임 입력이 아닙니다');
-  if(!control.manual||!refs?.m.utcAt)return officialManualResolveBeforeEvents(db,forcedDraft);
-  if(Object.hasOwn(q,'contact'))throw Error('선수 연락을 검토한 뒤 현재 경기 준비를 직접 다시 여세요');
+  if((!control.manual&&!Object.hasOwn(q,'inflight'))||!refs?.m.utcAt)return officialManualResolveBeforeEvents(db,forcedDraft);
+  if(control.manual&&Object.hasOwn(q,'contact'))throw Error('선수 연락을 검토한 뒤 현재 경기 준비를 직접 다시 여세요');
   for(const n of waitingNegotiationResponses(db).filter(n=>n.teamId===managedTeamId(db))){const error=negotiationResponseError(n);if(error)throw Error(error);}
   const undo=pendingOfficialUndo(db);
   try{
-    const preview=officialClockPreview(db),baseSession=JSON.parse(JSON.stringify(q.session||scheduledSeriesSession(preview,officialClockReadonly(refs.s),officialClockReadonly(refs.m)).session));
-    const played=playSeriesSessionGame(preview,baseSession,forcedDraft,false),record=officialGameTimeRecord(refs.m,baseSession.games),at=record?.gameTimeThrough;
+    let played,baseSession,at;
+    if(Object.hasOwn(q,'inflight')){
+      if(forcedDraft!=null)throw Error('이미 시작한 게임에 새 밴픽 입력을 적용할 수 없습니다');
+      const event=manualInflightGame(db,!control.manual);played=event.played;baseSession=event.session;at=event.endAt;
+    }else{
+      const preview=officialClockPreview(db),initial=JSON.parse(JSON.stringify(q.session||scheduledSeriesSession(preview,officialClockReadonly(refs.s),officialClockReadonly(refs.m)).session));
+      baseSession=JSON.parse(JSON.stringify(initial));played=playSeriesSessionGame(preview,baseSession,forcedDraft,false);at=officialGameTimeRecord(refs.m,baseSession.games)?.gameTimeThrough;
+      if(at&&at.slice(0,10)===db.worldDate){if(!q.session)q.session=initial;q.inflight={endAt:at,session:baseSession,observation:officialGameObservation(played.game),played,manager:db.manager.id,team:managedTeamId(db),basis:JSON.stringify(q.session)};}
+    }
     if(!at||at.slice(0,10)!==db.worldDate)return officialManualResolveBeforeEvents(db,forcedDraft);
     officialQueuedGameError(db,refs.s,{...refs.m,clockSession:q.session},{endAt:at,session:baseSession,observation:officialGameObservation(played.game)});
     const consume=()=>{
+      manualInflightGame(db,!control.manual);delete q.inflight;if(!control.manual)delete q.contact;
       const writer=playSeriesSessionGame;let consumed=false;
       playSeriesSessionGame=function(current,currentSession,draft,quiet){
         if(current!==db)return writer(current,currentSession,draft,quiet);
@@ -479,7 +487,7 @@ resolvePendingOfficialMatch=function(db,forcedDraft){
         consumed=true;recordMeta(current,played.game);for(const key of Object.keys(currentSession))delete currentSession[key];Object.assign(currentSession,JSON.parse(JSON.stringify(baseSession)));return played;
       };
       let result;try{result=officialManualResolveBeforeEvents(db,forcedDraft);}finally{playSeriesSessionGame=writer;}
-      const contact=receiveManualEndedContact(db);return contact?{...result,...contact}:result;
+      const contact=control.manual?receiveManualEndedContact(db):null;return contact?{...result,...contact}:result;
     };
     return playOfficialWorldEvents(db,db.worldDate,{match:refs.m,at,key:q.seasonKey,consume});
   }catch(error){undo();throw error;}
@@ -487,11 +495,12 @@ resolvePendingOfficialMatch=function(db,forcedDraft){
 
 function manualContactPending(db){
   const control=pendingOfficialControl(db),q=db.world?.pendingOfficial?.queue?.[0],contact=q?.contact,n=contact&&db.world.negotiations?.[contact.id];
-  return !!(control.manual&&n&&n.teamId===managedTeamId(db)&&typeof contact.at==='string'&&Number.isFinite(Date.parse(contact.at))&&new Date(contact.at).toISOString()===contact.at&&contact.at===negotiationClockAt(db)&&Array.isArray(q.session?.games)&&q.session.games.length&&Array.isArray(n.history)&&n.history.some(row=>row?.side==='player'&&row.at===contact.at));
+  return !!(control.manual&&n&&n.teamId===managedTeamId(db)&&typeof contact.at==='string'&&Number.isFinite(Date.parse(contact.at))&&new Date(contact.at).toISOString()===contact.at&&contact.at===negotiationClockAt(db)&&Array.isArray(q.session?.games)&&(Object.hasOwn(q,'inflight')?validManualInflightGame(db):q.session.games.length)&&Array.isArray(n.history)&&n.history.some(row=>row?.side==='player'&&row.at===contact.at));
 }
 function resumeManualAfterContact(db){
-  if(!manualContactPending(db))return {ok:false,msg:'현재 감독의 완료 게임 뒤 선수 연락을 확인할 수 없습니다'};
-  const undo=pendingOfficialUndo(db);try{delete db.world.pendingOfficial.queue[0].contact;const contact=receiveManualEndedContact(db);return contact||{ok:true,msg:'현재 경기 준비를 다시 검토하세요'};}catch(error){undo();throw error;}
+  if(!manualContactPending(db))return {ok:false,msg:'현재 감독의 도착한 선수 연락을 확인할 수 없습니다'};
+  const current=db.world.negotiations[db.world.pendingOfficial.queue[0].contact.id];if(current.status==='open'&&current.stage==='waiting')return {ok:false,msg:'도착한 응답을 처리할 수 없습니다. 협상 상태를 확인하거나 직접 종료하세요'};
+  const undo=pendingOfficialUndo(db);try{delete db.world.pendingOfficial.queue[0].contact;const contact=receiveManualEndedContact(db);return contact||(Object.hasOwn(db.world.pendingOfficial.queue[0],'inflight')?resolvePendingOfficialMatch(db,null):{ok:true,msg:'현재 경기 준비를 다시 검토하세요'});}catch(error){undo();throw error;}
 }
 
 function receiveManualEndedContact(db){
@@ -499,5 +508,23 @@ function receiveManualEndedContact(db){
   const response=waitingNegotiationResponses(db).filter(n=>n.teamId===managedTeamId(db)&&n.response.dueAt<=negotiationClockAt(db))[0];if(!response)return null;
   const error=negotiationResponseError(response);if(error)throw Error(error);
   next.contact={id:response.id,at:negotiationClockAt(db)};response.history.push({round:response.response.round,side:'player',result:'contact',date:db.worldDate,at:next.contact.at});
-  const contact=resolveDueNegotiationResponse(db);if(!contact)delete next.contact;return contact;
+  const contact=resolveDueNegotiationResponse(db);if(!contact)delete next.contact;return contact&&!contact.response?{...contact,response:true,negotiationId:response.id}:contact;
 }
+
+// 시작 입력은 진행 저장에 고정하며 실제 종료 전에는 관측·결과를 소비하지 않는다.
+function manualInflightGame(db,automatic=false){
+  const control=pendingOfficialControl(db),q=db.world?.pendingOfficial?.queue?.[0],event=q?.inflight,refs=control.refs;
+  if(control.error||!event||!refs||![refs.m.a,refs.m.b].includes(event.team)||(!automatic&&(!control.manual||event.manager!==db.manager?.id||event.team!==managedTeamId(db)))||event.basis!==JSON.stringify(q.session))throw Error('진행 중인 수동 게임의 시작 입력이나 현재 권한을 확인할 수 없습니다');
+  officialQueuedGameError(db,refs.s,{...refs.m,clockSession:q.session},event);
+  const played=event.played,last=event.session.games.at(-1);
+  if(!played?.game||JSON.stringify(officialGameObservation(played.game))!==JSON.stringify(event.observation)||played.winner!==last.winner||played.loser!==[last.blue,last.red].find(id=>id!==last.winner)||played.done!==seriesSessionDone(event.session)||JSON.stringify(played.score)!==JSON.stringify([event.session.wins[event.session.a],event.session.wins[event.session.b]])||played.game.duration!==last.duration||negotiationClockAt(db)>event.endAt)throw Error('진행 중인 수동 게임의 실제 종료 입력을 확인할 수 없습니다');
+  return event;
+}
+function validManualInflightGame(db){try{return !!manualInflightGame(db);}catch{return false;}}
+
+const pendingOfficialSessionBeforeInflight=pendingOfficialSession;
+pendingOfficialSession=function(db){
+  const q=db.world?.pendingOfficial?.queue?.[0];
+  if(q&&(Object.hasOwn(q,'inflight')||Object.hasOwn(q,'contact')))throw Error('시작한 게임이나 도착한 연락을 먼저 확인하세요. 새 준비 입력을 적용할 수 없습니다');
+  return pendingOfficialSessionBeforeInflight(db);
+};

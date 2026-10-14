@@ -52,14 +52,19 @@ bindNegotiationControls=function(act,allowed=()=>true,root=document){
 // 완료 게임 뒤의 연락과 다음 수동 준비는 감독의 서로 다른 결정이다.
 const officialUiBindBeforeManualContact=typeof officialUiBindPending==='function'?officialUiBindPending:null;
 if(officialUiBindBeforeManualContact)officialUiBindPending=function(staleFrame=()=>false){
-  const q=DB.world?.pendingOfficial?.queue?.[0];if(!q||!Object.hasOwn(q,'contact'))return officialUiBindBeforeManualContact(staleFrame);
+  const q=DB.world?.pendingOfficial?.queue?.[0];if(!q||!Object.hasOwn(q,'contact')&&!Object.hasOwn(q,'inflight'))return officialUiBindBeforeManualContact(staleFrame);
+  if(!Object.hasOwn(q,'contact')){
+    const context=officialUiContext(DB),receipt=q.inflight;document.querySelectorAll('.controls button').forEach(b=>b.disabled=true);
+    document.querySelector('.controls')?.insertAdjacentHTML('beforeend','<p role="status">제출한 입력으로 게임이 진행 중입니다. 종료한 게임만 기록합니다.</p><button class="primary" id="manual-game-continue">진행 중 게임 계속</button>');
+    const button=$('#manual-game-continue');if(button){button.disabled=!validManualInflightGame(DB);button.onclick=()=>{if(!officialUiCurrent(context)||q.inflight!==receipt||!validManualInflightGame(DB)||UI_OVERLAY||staleFrame())return;try{const result=resolvePendingOfficialMatch(DB,null);LAST=result.game||null;LASTSER=result.done?result.rec:null;saveDB();nav();}catch(error){MSG=error.message;nav();}};}return;
+  }
   const c=officialUiContext(DB),contact=q.contact,n=DB.world.negotiations?.[contact?.id];
   document.querySelectorAll('.controls button').forEach(b=>b.disabled=true);
-  document.querySelector('.controls')?.insertAdjacentHTML('beforeend','<p role="status">'+(manualContactPending(DB)?'완료한 게임 뒤 선수 연락이 도착했습니다. 연락을 검토하고 다음 경기 준비를 직접 다시 여세요.':'현재 대기 연락의 저장 정보를 확인할 수 없습니다. 현재 저장과 경기 상태를 확인하세요.')+'</p><button class="primary" id="manual-contact-review">선수 연락 검토</button><button class="ghost" id="manual-contact-resume">현재 경기 준비 다시 열기</button>');
+  document.querySelector('.controls')?.insertAdjacentHTML('beforeend','<p role="status">'+(manualContactPending(DB)?(q.inflight?'진행 중인 게임보다 먼저 선수 연락이 도착했습니다. 연락을 검토한 뒤 게임을 직접 계속하세요.':'완료한 게임 뒤 선수 연락이 도착했습니다. 연락을 검토하고 다음 경기 준비를 직접 다시 여세요.'):'현재 대기 연락의 저장 정보를 확인할 수 없습니다. 현재 저장과 경기 상태를 확인하세요.')+'</p><button class="primary" id="manual-contact-review">선수 연락 검토</button><button class="ghost" id="manual-contact-resume">'+(q.inflight?'진행 중 게임 계속':'현재 경기 준비 다시 열기')+'</button>');
   const valid=()=>officialUiCurrent(c)&&manualContactPending(DB)&&q.contact===contact&&!UI_OVERLAY&&!staleFrame();
   const review=$('#manual-contact-review'),resume=$('#manual-contact-resume');if(!review||!resume)return;
   review.disabled=resume.disabled=!valid();
-  resume.onclick=()=>{if(!valid())return;try{const result=resumeManualAfterContact(DB);if(!result.ok&&!result.response)return;saveDB();nav();}catch(error){MSG=error.message;nav();}};
+  resume.onclick=()=>{if(!valid())return;try{const result=resumeManualAfterContact(DB);if(!result.ok&&!result.response&&!result.game)return;LAST=result.game||null;LASTSER=result.done?result.rec:null;saveDB();nav();}catch(error){MSG=error.message;nav();}};
   review.onclick=()=>{
     if(!valid()||!n)return;const db=DB,w=db.world,root=$('#overlay'),read=Object.create(db),state=clubBriefState(),stamp=JSON.stringify(n),date=db.worldDate;read.world={...w,negotiations:{[n.id]:n}};let dialog;
     const current=()=>officialUiCurrent(c)&&DB===db&&db.world===w&&q.contact===contact&&UI_OVERLAY===dialog&&manualContactPending(db);
