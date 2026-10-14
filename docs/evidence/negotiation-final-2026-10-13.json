@@ -30,9 +30,9 @@
     "scripts/verify-official-edit-evidence.mjs": "e040f16df1693b2cc411f0796e6bb329c53d7b04eb847dadc8ab96a55c29d29d"
   },
   "sources": {
-    "docs/README.md": "4582954c0af7b716cacafc536e663f6f6e10748c425d2d0e53060045e135e67b",
-    "docs/DEVELOPMENT.md": "e88ee8316fd8c2b64e2deacdf8b3b2d01668724f10c73e98f447902fe08f7bb6",
-    "index.html": "76f9ab7eda4f1d2eb7f7b4896b78fbe20282cf2b63c06a36b9f2f7dda60502d4",
+    "docs/README.md": "14867a5110488785caaa9fdd9d4b354f4739ec08b18a825076f92fceaefe4c78",
+    "docs/DEVELOPMENT.md": "4af6a20d99cd5fd36c0fe7c5916420682816dd892e92b755ba3fe264f49afdaf",
+    "index.html": "9225d86664dcf7a7ce516a9a21eee437beaa2b571138bfa159a48c0aad5fb60f",
     "scripts/artifact-modules.mjs": "f3936d38570c9533bf02d066b1e9e51666e4ca6944637e820f202bd88b467193",
     "scripts/current-guide-source-successor.mjs": "1e32b80db1d2f57db4f4082778ba4beebf46366fd71e42602e9fe897f87de1d0",
     "scripts/negotiation-summary-acceptance.mjs": "b1a19070d9390682c27e0d5eb2558debfca37b91799afdb2c715258b7ab04e2f",
@@ -50,10 +50,10 @@
     "scripts/stove-fa-source-successor.mjs": "04e7c1fa7c9fbee0b0c9b63c168fdb9108a19bdc31ece2cc8fc171fbe2c5782b",
     "scripts/verify-official-draft-evidence.mjs": "728f8c50d742c27a19f4e566f757bef97e144f17fd7d5344a3d8dc58d539b751",
     "scripts/verify-official-edit-evidence.mjs": "c458de3c31f3ff6487eb96ec3cc49bed0eb0df510d4f92d8653cd450a7e0fda1",
-    "src/artifact/negotiation-final.js": "71b103eaea00e054758392de3f644fa983961c3e34d63abbb99f8fcb57ceda86",
-    "src/artifact/ui-negotiation-final.js": "220668cb3171e4266f0ec84f61dbc790a0df09164fddec7344d9b04e0cc2329c",
+    "src/artifact/negotiation-final.js": "71bdf8f43f72066d571c60b22fae1b45fb79b08ab894319a2c87882ad04e8d5e",
+    "src/artifact/ui-negotiation-final.js": "59de3c2bb75d99332f240b9da7ed4b22e406c432bac810f21713154bf1670351",
     "scripts/negotiation-final-acceptance.mjs": "ed010698e8495312e8fffb8b86b6cb99f93d217f620074ff0df0d53235f815d1",
     "scripts/negotiation-final-source-successor.mjs": "7f44fe56aa754ade16021c7ff2c56e645836890577c2bd40a96cecdc5332cdb9",
-    "scripts/negotiation-clock-acceptance.mjs": "9d04f4c802a74b345c747da52d01e69391524d53473248b44c1a9e24e9ea2f76"
+    "scripts/negotiation-clock-acceptance.mjs": "f01a766d3c929a07b712f3fc4479d8fe04d11a6fb434d93d5c6a2fb4f2df612a"
   }
 }

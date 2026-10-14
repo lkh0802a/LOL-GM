@@ -1,4 +1,11 @@
 function negotiationTimeText(at){if(typeof at!=='string'||!Number.isFinite(Date.parse(at)))return '시각 확인 필요';const value=venueClockParts(at,'Asia/Seoul');return value.date+' '+value.time+' · 한국 시간';}
+const fixtureTimeInfoBeforeResource=fixtureTimeInfo;
+fixtureTimeInfo=function(match){
+  const planned=fixtureTimeInfoBeforeResource(match);if(!match?.actualStart)return planned;
+  try{const at=officialActualStart(match),local=venueClockParts(at,match.timeZone),korea=venueClockParts(at,'Asia/Seoul'),seconds=at.slice(17,19);return planned+' · 앞 공식 경기 종료로 순연 · 실제 시작 '+local.date+' '+local.time+':'+seconds+' '+match.timeZone+' · 한국 '+korea.date+' '+korea.time+':'+seconds;}catch{return planned+' · 실제 시작 기록 확인 필요';}
+};
+const officialUiContextBeforeResource=typeof officialUiContext==='function'?officialUiContext:null;
+if(officialUiContextBeforeResource)officialUiContext=function(db){const c=officialUiContextBeforeResource(db),read=c.read;c.read=()=>{const refs=c.q&&pendingOfficialRefs(db,c.q);return JSON.stringify([read(),refs?.m.actualStart,refs?.m.gameTime]);};c.stamp=c.read();return c;};
 // 기존 구단 브리핑의 같은 당사자 검사를 대기/합의에도 적용한다.
 const clubBriefNegotiationsBeforeClock=typeof clubBriefNegotiations==='function'?clubBriefNegotiations:null;
 if(clubBriefNegotiationsBeforeClock)clubBriefNegotiations=function(db,ctx){
@@ -52,6 +59,7 @@ bindNegotiationControls=function(act,allowed=()=>true,root=document){
 // 완료 게임 뒤의 연락과 다음 수동 준비는 감독의 서로 다른 결정이다.
 const officialUiBindBeforeManualContact=typeof officialUiBindPending==='function'?officialUiBindPending:null;
 if(officialUiBindBeforeManualContact)officialUiBindPending=function(staleFrame=()=>false){
+  const refs=DB.world?.pendingOfficial?.queue?.[0]&&pendingOfficialRefs(DB,DB.world.pendingOfficial.queue[0]);if(refs?.m.actualStart)document.querySelector('.controls')?.insertAdjacentHTML('beforeend','<p role="status">'+esc(fixtureTimeInfo(refs.m))+'</p>');
   const q=DB.world?.pendingOfficial?.queue?.[0];if(q&&officialPendingAcrossMidnight(DB))document.querySelector('.controls')?.insertAdjacentHTML('beforeend','<p role="status">자정을 넘겨 진행 중인 경기입니다 · 원래 편성 '+esc(q.date)+' · 현재 '+esc(DB.worldDate)+' · 오늘의 일일 처리 완료</p>');if(!q||!Object.hasOwn(q,'contact')&&!Object.hasOwn(q,'inflight'))return officialUiBindBeforeManualContact(staleFrame);
   if(!Object.hasOwn(q,'contact')){
     const context=officialUiContext(DB),receipt=q.inflight,ready=validManualInflightGame(DB);document.querySelectorAll('.controls button').forEach(b=>b.disabled=true);
@@ -79,6 +87,7 @@ if(officialUiBindBeforeManualContact)officialUiBindPending=function(staleFrame=(
 
 const officialUiAuthorityBeforeMidnight=typeof officialUiAuthority==='function'?officialUiAuthority:null;
 if(officialUiAuthorityBeforeMidnight)officialUiAuthority=function(c){
+  if(pendingOfficialControl(DB).error)return false;
   if(!officialPendingAcrossMidnight(DB))return officialUiAuthorityBeforeMidnight(c);
   if(!c||c.db!==DB||c.world!==DB.world||c.manager!==DB.manager||c.slot!==SLOT||SLOT_SWITCHING||c.team!==managedTeamId(DB)||c.club!==DB.teams?.[c.team])return false;
   const w=c.world,t=c.club,q=w.pendingOfficial?.queue?.[0];

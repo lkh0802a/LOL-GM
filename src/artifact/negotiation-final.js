@@ -61,9 +61,55 @@ function officialGameTimeRecord(m,games){
   if(m.utcAt!=null&&(typeof m.utcAt!=='string'||!Number.isFinite(Date.parse(m.utcAt))||new Date(m.utcAt).toISOString()!==m.utcAt))throw Error('공식 경기 시작 시각을 확인할 수 없습니다');
   // 이전 저장의 누락된 시각/수치에는 새 시간을 추정하지 않는다.
   if(m.utcAt==null||Array.isArray(games)&&(!games.length||games.some(g=>g.duration==null)))return null;
-  const minutes=games.reduce((sum,g)=>sum+g.duration,0),end=Date.parse(m.utcAt)+Math.round(minutes*60000);
+  const start=officialActualStart(m),minutes=games.reduce((sum,g)=>sum+g.duration,0),end=Date.parse(start)+Math.round(minutes*60000);
   if(!Number.isFinite(end))throw Error('공식 경기 종료 시각을 확인할 수 없습니다');
-  return {scheduledAt:m.utcAt,gameTimeThrough:new Date(end).toISOString(),minutes,games:games.length};
+  return {scheduledAt:m.utcAt,...(m.actualStart?{startedAt:start}:{}),gameTimeThrough:new Date(end).toISOString(),minutes,games:games.length};
+}
+// 원래 편성은 바꾸지 않는다. 실제로 끝난 앞 시리즈의 점유 근거만 순연에 쓴다.
+function officialActualStart(m){
+  const start=m.actualStart;
+  if(!start)return m.utcAt;
+  if(typeof start.at!=='string'||!Number.isFinite(Date.parse(start.at))||new Date(start.at).toISOString()!==start.at||start.at<=m.utcAt||!Array.isArray(start.after)||!start.after.length||start.after.some(x=>typeof x?.seasonKey!=='string'||typeof x?.matchId!=='string'||typeof x?.through!=='string')||start.at!==start.after.map(x=>x.through).sort().at(-1))throw Error('실제 경기 시작과 앞 경기의 종료 근거를 확인할 수 없습니다');
+  return start.at;
+}
+function officialGameTimeSame(first,second){return !!first&&!!second&&['scheduledAt','startedAt','gameTimeThrough','minutes','games'].every(key=>first[key]===second[key]);}
+function officialResourceKeys(db,s,m){
+  const comp=db.competitions[s.comp];if(!comp)throw Error('공식 경기의 대회 자원을 확인할 수 없습니다');
+  const keys=[comp.international?'broadcast:international':'broadcast:'+s.comp,'team:'+m.a,'team:'+m.b];
+  // 개최 지역/시간대는 경기장 식별자가 아니다. 명시된 장소가 있을 때만 공유한다.
+  const venue=m.venueId||s.venueId||comp.venueId;
+  if(venue!=null){if(typeof venue!=='string'||!venue)throw Error('공식 경기의 장소를 확인할 수 없습니다');keys.push('venue:'+venue);}
+  return keys;
+}
+function officialResourceEntries(db){
+  return Object.entries(db.world.seasons||{}).flatMap(([key,s])=>(s.days||[]).flatMap(day=>day.matches.map(m=>({key,s,day,m}))));
+}
+function officialResourceStart(db,s,m,entries=officialResourceEntries(db)){
+  const keys=officialResourceKeys(db,s,m),key=s.key||Object.entries(db.world.seasons).find(([,v])=>v===s)?.[0],order=(a,b)=>a.m.utcAt.localeCompare(b.m.utcAt)||a.key.localeCompare(b.key)||a.m.id.localeCompare(b.m.id),self={key,m},after=[];
+  for(const ref of entries){
+    if(ref.m===m||!ref.m.utcAt||order(ref,self)>=0||!officialResourceKeys(db,ref.s,ref.m).some(k=>keys.includes(k)))continue;
+    if(!ref.m.res)return {blocked:true};
+    const record=ref.m.gameTime;
+    if(!record||record.gameTimeThrough<=m.utcAt)continue;
+    const actual=officialGameTimeRecord(ref.m,ref.m.res.games||[]);
+    if(!officialGameTimeSame(actual,record))throw Error('앞 경기의 실제 종료 기록을 확인할 수 없습니다');
+    after.push({seasonKey:ref.key,matchId:ref.m.id,through:record.gameTimeThrough});
+  }
+  after.sort((a,b)=>a.seasonKey.localeCompare(b.seasonKey)||a.matchId.localeCompare(b.matchId));
+  return {at:after.length?after.map(x=>x.through).sort().at(-1):m.utcAt,after};
+}
+function officialResourceStartCheck(db,s,m){
+  officialActualStart(m);if(!m.actualStart)return;
+  const refs=officialResourceEntries(db),keys=officialResourceKeys(db,s,m);
+  const seen=new Set();for(const cause of m.actualStart.after){const id=cause.seasonKey+'|'+cause.matchId,ref=refs.find(x=>x.key===cause.seasonKey&&x.m.id===cause.matchId);if(seen.has(id)||!ref?.m.res||ref.m===m||ref.m.gameTime?.gameTimeThrough!==cause.through||!officialGameTimeSame(officialGameTimeRecord(ref.m,ref.m.res.games||[]),ref.m.gameTime)||!officialResourceKeys(db,ref.s,ref.m).some(k=>keys.includes(k))||cause.through<=m.utcAt||ref.m.utcAt>m.utcAt)throw Error('저장된 경기 순연의 자원 근거가 다릅니다');seen.add(id);}
+}
+function recordOfficialResourceStart(m,plan){
+  if(plan.blocked)throw Error('앞 공식 경기의 종료를 기다리고 있습니다');
+  if(plan.at>m.utcAt)m.actualStart={at:plan.at,after:plan.after};
+}
+function officialResourcePendingCheck(db,refs,q){
+  officialResourceStartCheck(db,refs.s,refs.m);
+  if(!q.inflight&&!q.session?.games?.length){const plan=officialResourceStart(db,refs.s,refs.m);if(plan.blocked||plan.at!==officialActualStart(refs.m))throw Error('앞 공식 경기의 종료와 현재 경기 시작을 다시 확인하세요');}
 }
 function officialGameClockFloor(db,at){
   const floor=db.world?.officialGameTimeThrough;
@@ -109,10 +155,11 @@ function officialGameObservation(r){
       ps:s.ps.map(p=>({champ:{id:p.champ.id},p:{id:p.p.id},role:p.role,items:p.items,questBoots:p.questBoots,runes:p.runes}))}))}));
 }
 function officialQueuedGameError(db,s,m,event){
+  officialResourceStartCheck(db,s,m);
   const session=event?.session;
   if(!session||session.a!==m.a||session.b!==m.b||session.bestOf!==m.bo||session.seed!==`${s.seed}/${s.year}/${m.id}`||session.opt?.compId!==s.comp||session.opt?.metaContext?.season!==s.id)throw Error('진행 중인 다른 경기와 공식 편성이 다릅니다');
   const record=officialGameTimeRecord(m,session.games);
-  if(!record||event.endAt!==record.gameTimeThrough||session.games.length!==(m.clockSession?.games.length||0)+1||event.observation?.date!==(officialGameTimeRecord(m,m.clockSession?.games||[])?.gameTimeThrough||m.utcAt).slice(0,10))throw Error('진행 중인 다른 게임의 종료 기록을 확인할 수 없습니다');
+  if(!record||event.endAt!==record.gameTimeThrough||session.games.length!==(m.clockSession?.games.length||0)+1||event.observation?.date!==(officialGameTimeRecord(m,m.clockSession?.games||[])?.gameTimeThrough||officialActualStart(m)).slice(0,10))throw Error('진행 중인 다른 게임의 종료 기록을 확인할 수 없습니다');
   const game=session.games.at(-1),observation=event.observation;
   if(game.publicRecord?.ending?.kind!=='nexus'||game.publicRecord.ending.winner!==game.winner||game.publicRecord.winner!==game.winner||game.publicRecord.duration!==game.duration||game.publicRecord.ending.minute+game.publicRecord.ending.second/60!==game.duration)throw Error('실제 넥서스 종료 기록을 확인할 수 없습니다');
   if(![0,1].includes(observation.winner)||observation.sides?.length!==2||observation.sides[0].team?.id!==game.blue||observation.sides[1].team?.id!==game.red||[game.blue,game.red][observation.winner]!==game.winner||observation.comp!==s.comp||observation.metaContext?.season!==s.id)throw Error('진행 중인 게임과 관측 입력이 다릅니다');
@@ -196,8 +243,8 @@ function playOfficialGamesThrough(db,s,m,boundary){
 }
 function officialClockStartUndo(db,m){
   // 시작 준비는 격리된 자료만 변경한다. 실제 세계 작성은 이 두 필드뿐이다.
-  const world=db.world,clock=Object.getOwnPropertyDescriptor(world,'negotiationClock'),game=Object.getOwnPropertyDescriptor(m,'clockGame');
-  return ()=>{if(clock)Object.defineProperty(world,'negotiationClock',clock);else delete world.negotiationClock;if(game)Object.defineProperty(m,'clockGame',game);else delete m.clockGame;};
+  const world=db.world,clock=Object.getOwnPropertyDescriptor(world,'negotiationClock'),game=Object.getOwnPropertyDescriptor(m,'clockGame'),start=Object.getOwnPropertyDescriptor(m,'actualStart');
+  return ()=>{if(clock)Object.defineProperty(world,'negotiationClock',clock);else delete world.negotiationClock;if(game)Object.defineProperty(m,'clockGame',game);else delete m.clockGame;if(start)Object.defineProperty(m,'actualStart',start);else delete m.actualStart;};
 }
 // 대회 객체 나열 순서 대신 실제 시작·게임 종료·판단 연락을 함께 비교한다.
 function playOfficialWorldEvents(db,date,manualEnd=null){
@@ -224,18 +271,20 @@ function playOfficialWorldEvents(db,date,manualEnd=null){
     }catch(error){undo();throw error;}
   };
   while(true){
-    const events=remaining().map(ref=>{
+    const entries=officialResourceEntries(db),events=remaining().flatMap(ref=>{
       const {m}=ref,owned=me&&(m.a===me||m.b===me);
       if(owned&&(m.clockGame||m.clockSession))throw Error('진행 중인 다른 구단의 경기입니다. 현재 감독 경기로 자동 전환하지 않습니다');
-      return {...ref,kind:m.clockGame?'end':owned?'manual':'start',priority:m.clockGame?0:owned?2:3,
-        at:m.clockGame?.endAt||officialGameTimeRecord(m,m.clockSession?.games||[])?.gameTimeThrough||m.utcAt};
+      officialResourceStartCheck(db,ref.s,m);
+      const started=m.clockGame||m.clockSession,plan=started?null:officialResourceStart(db,ref.s,m,entries);if(plan?.blocked)return [];
+      return [{...ref,plan,kind:m.clockGame?'end':owned?'manual':'start',priority:m.clockGame?0:owned?2:3,
+        at:m.clockGame?.endAt||officialGameTimeRecord(m,m.clockSession?.games||[])?.gameTimeThrough||plan?.at||officialActualStart(m)}];
     });
     if(manualEnd)events.push({kind:'manualEnd',priority:0,at:manualEnd.at,key:manualEnd.key,m:manualEnd.match});
     const contact=(manualEnd?waitingNegotiationResponses(db).filter(n=>n.teamId===me):waitingNegotiationResponses(db,true))[0];
     const midnight=addDays(db.worldDate,1)+'T00:00:00.000Z',through=events.map(e=>e.at).sort().at(-1)||midnight;
     if(contact&&(contact.response.dueAt<midnight||contact.response.dueAt<=through))events.push({kind:'contact',priority:1,at:contact.response.dueAt,key:contact.id});
     events.sort((a,b)=>a.at.localeCompare(b.at)||a.priority-b.priority||a.key.localeCompare(b.key)||String(a.m?.id||'').localeCompare(String(b.m?.id||'')));
-    let event=events[0];if(event&&event.at>=midnight)event={kind:'midnight',at:midnight};if(!event){finish();if(!activeSeasons(db).length)advanceStep(db);return {date,played,pending:w.pendingOfficial,advanced};}
+    let event=events[0];if(event&&event.at>=midnight)event={kind:'midnight',at:midnight};if(!event){if(remaining().length)throw Error('앞 공식 경기의 점유가 해소되지 않았습니다. 현재 경기와 저장을 확인하세요');finish();if(!activeSeasons(db).length)advanceStep(db);return {date,played,pending:w.pendingOfficial,advanced};}
     const forfeit=['start','manual'].includes(event.kind)&&!event.m.clockSession?scheduledRegistrationForfeit(officialClockReadonly(db),officialClockReadonly(event.s),officialClockReadonly(event.m)):null;
     const undo=event.kind==='start'&&!forfeit?officialClockStartUndo(db,event.m):pendingOfficialUndo(db);
     try{
@@ -252,6 +301,7 @@ function playOfficialWorldEvents(db,date,manualEnd=null){
       if(event.kind==='manualEnd')return manualEnd.consume();
       if(event.kind==='end'){consumeOfficialClockGame(db,event.s,event.m);continue;}
       if(forfeit){commitScheduledSeries(db,event.s,event.m,forfeit);continue;}
+      if(event.plan)recordOfficialResourceStart(event.m,event.plan);
       if(event.kind==='manual'){
         if(manualEnd)throw Error('다른 수동 경기의 준비가 현재 게임 종료보다 먼저 겹칩니다. 현재 일정을 확인하세요');
         w.pendingOfficial={date,queue:[{seasonKey:event.key,matchId:event.m.id,date}]};finish();
@@ -467,6 +517,7 @@ resolvePendingOfficialMatch=function(db,forcedDraft){
   const w=db.world,me=managedTeam(db),legacy=q&&q.date==null&&!Object.hasOwn(q,'contact')&&!Object.hasOwn(q,'inflight')&&refs&&['manual','ai'].includes(w.manage)&&w.phase==='season'&&w.year===db.year&&p.date===db.worldDate&&refs.day.date===p.date&&[refs.m.a,refs.m.b].every(id=>db.teams[id]?.active!==false&&db.regions[db.teams[id]?.region])&&(!q.session||q.session.a===refs.m.a&&q.session.b===refs.m.b&&q.session.bestOf===refs.m.bo&&q.session.seed===`${refs.s.seed}/${refs.s.year}/${refs.m.id}`&&q.session.opt?.compId===refs.s.comp&&q.session.opt?.metaContext?.season===refs.s.id);
   if(legacy){if(forcedDraft!=null&&(w.manage!=='manual'||w.fired||!me||me.active===false||![refs.m.a,refs.m.b].includes(me.id)))throw Error('현재 감독의 수동 게임 입력이 아닙니다');return officialManualResolveBeforeEvents(db,forcedDraft);}
   if(control.error)throw Error(control.error);
+  if(refs)officialResourcePendingCheck(db,refs,q);
   if(!control.manual&&forcedDraft!=null)throw Error('현재 감독의 수동 게임 입력이 아닙니다');
   if((!control.manual&&!Object.hasOwn(q,'inflight'))||!refs?.m.utcAt)return officialManualResolveBeforeEvents(db,forcedDraft);
   if(control.manual&&Object.hasOwn(q,'contact'))throw Error('선수 연락을 검토한 뒤 현재 경기 준비를 직접 다시 여세요');
@@ -568,11 +619,13 @@ function officialInflightUnpack(graph){
 // 원래 편성과 실제 소비 날짜를 구분하며 자정을 넘긴 진행 근거가 있을 때만 허용한다.
 function officialPendingAcrossMidnight(db){
   const w=db.world,p=w?.pendingOfficial,q=p?.queue?.[0],refs=q&&pendingOfficialRefs(db,q);
-  if(!refs||!freeAgencyDateValid(db.worldDate)||w.officialCalendarThrough!==db.worldDate||w.lastDailyTick!==db.worldDate||p.date!==q.date||q.date!==refs.day.date||q.date>=db.worldDate||!q.session)return false;
+  if(!refs||!freeAgencyDateValid(db.worldDate)||w.officialCalendarThrough!==db.worldDate||w.lastDailyTick!==db.worldDate||p.date!==q.date||q.date!==refs.day.date||q.date>=db.worldDate)return false;
+  if(refs.m.actualStart&&(!q.session||!q.session.games?.length)&&!q.inflight){try{officialResourceStartCheck(db,refs.s,refs.m);return officialActualStart(refs.m)===negotiationClockAt(db)&&officialActualStart(refs.m).slice(0,10)===db.worldDate;}catch{return false;}}
+  if(!q.session)return false;
   try{const record=officialGameTimeRecord(refs.m,q.session.games);if(q.inflight)officialQueuedGameError(db,refs.s,{...refs.m,clockSession:q.session},q.inflight);else if(!record||!refs.m.gameTime||['scheduledAt','gameTimeThrough','minutes','games'].some(key=>refs.m.gameTime[key]!==record[key]))return false;const at=negotiationClockAt(db),start=record?.gameTimeThrough||refs.m.utcAt,end=q.inflight?.endAt||start;return at.slice(0,10)===db.worldDate&&start<=at&&end>=at&&(!q.inflight||q.inflight.basis===JSON.stringify(q.session));}catch{return false;}
 }
 const pendingOfficialControlBeforeMidnight=pendingOfficialControl;
-pendingOfficialControl=function(db){return officialPendingAcrossMidnight(db)?pendingOfficialControlBeforeMidnight({...db,worldDate:db.world.pendingOfficial.date}):pendingOfficialControlBeforeMidnight(db);};
+pendingOfficialControl=function(db){const result=officialPendingAcrossMidnight(db)?pendingOfficialControlBeforeMidnight({...db,worldDate:db.world.pendingOfficial.date}):pendingOfficialControlBeforeMidnight(db);if(!result.error&&result.refs){try{officialResourcePendingCheck(db,result.refs,db.world.pendingOfficial.queue[0]);}catch(error){return {...result,manual:false,error:error.message};}}return result;};
 const nextCalendarDateBeforeMidnight=nextCalendarDate;
 nextCalendarDate=function(db){
   const fixture=nextDate(db),w=db.world;
@@ -586,6 +639,6 @@ nextCalendarDate=function(db){
 const officialBookedTeamsBeforeMidnight=officialBookedTeams;
 officialBookedTeams=function(db,date=db.worldDate){
   const teams=officialBookedTeamsBeforeMidnight(db,date),add=(m,session,event)=>{if(!event)return;const start=officialGameTimeRecord(m,session?.games||[])?.gameTimeThrough||m.utcAt;if(start&&start.slice(0,10)<=date&&typeof event.endAt==='string'&&event.endAt.slice(0,10)>=date){teams.add(m.a);teams.add(m.b);}};
-  for(const s of Object.values(db.world?.seasons||{}))for(const day of s.days||[])for(const m of day.matches){add(m,m.clockSession,m.clockGame);if(m.gameTime&&typeof m.utcAt==='string'&&typeof m.gameTime.gameTimeThrough==='string'&&m.utcAt.slice(0,10)<=date&&m.gameTime.gameTimeThrough.slice(0,10)>=date){teams.add(m.a);teams.add(m.b);}}
+  for(const s of Object.values(db.world?.seasons||{}))for(const day of s.days||[])for(const m of day.matches){add(m,m.clockSession,m.clockGame);if(m.actualStart&&officialActualStart(m).slice(0,10)===date||m.gameTime&&typeof m.utcAt==='string'&&typeof m.gameTime.gameTimeThrough==='string'&&m.utcAt.slice(0,10)<=date&&m.gameTime.gameTimeThrough.slice(0,10)>=date){teams.add(m.a);teams.add(m.b);}}
   const q=db.world?.pendingOfficial?.queue?.[0],refs=q&&pendingOfficialRefs(db,q);if(refs)add(refs.m,q.session,q.inflight);return teams;
 };
