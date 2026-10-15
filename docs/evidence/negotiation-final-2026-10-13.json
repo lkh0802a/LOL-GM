@@ -30,8 +30,8 @@
     "scripts/verify-official-edit-evidence.mjs": "e040f16df1693b2cc411f0796e6bb329c53d7b04eb847dadc8ab96a55c29d29d"
   },
   "sources": {
-    "docs/README.md": "bace989ba638d9fb8f7f00a855a1d158e5d798a4089ffedff69a8bbb1fa71b3c",
-    "docs/DEVELOPMENT.md": "47d980140d39b253edd15554a49fead1e7aec09fe78fcd79326b49cd5c09dc2d",
+    "docs/README.md": "e2ca9c81aeb5fe7dfd146576d92e0f12cb2d0ade8ef71829fd16d5ceef1d8a6e",
+    "docs/DEVELOPMENT.md": "9ce3d46999b8670dad42bcb25f276c4522e549ccbb32cfeb0f0d6ee3f9dab606",
     "index.html": "cb8e47dbb2980c4bf5013b490274a04dc7a052d57ce885daae858df31965ead4",
     "scripts/artifact-modules.mjs": "f3936d38570c9533bf02d066b1e9e51666e4ca6944637e820f202bd88b467193",
     "scripts/current-guide-source-successor.mjs": "1e32b80db1d2f57db4f4082778ba4beebf46366fd71e42602e9fe897f87de1d0",
