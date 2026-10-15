@@ -2,5 +2,5 @@
 import {buildUiV2} from './build-ui-v2.mjs';
 import {testHarnessStats} from './test-harness.mjs';
 await buildUiV2();
-for(const script of ['ui-v2-acceptance','ui-v2-management-acceptance','ui-v2-context-acceptance'])await import('./'+script+'.mjs');
-console.log('UI_V2_CHECK_RUNNER',JSON.stringify({tests:3,...testHarnessStats()}));
+for(const script of ['ui-v2-acceptance','ui-v2-management-acceptance','ui-v2-context-acceptance','ui-v2-official-acceptance','ui-v2-dialog-acceptance'])await import('./'+script+'.mjs');
+console.log('UI_V2_CHECK_RUNNER',JSON.stringify({tests:5,...testHarnessStats()}));

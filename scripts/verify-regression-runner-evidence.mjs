@@ -14,7 +14,7 @@ assert.equal(CURRENT_ENGINE_MODULES.length,102);assert.deepEqual(CURRENT_ENGINE_
 const root=new URL('../',import.meta.url),sha=b=>createHash('sha256').update(b).digest('hex');
 const e=JSON.parse(await readFile(new URL('docs/evidence/regression-runner-2026-10-09.json',root)));
 assert.deepEqual(e.modules,REGRESSION_MODULES);
-const packageBytes=await readFile(new URL('package.json',root));
+const packageBytes=Buffer.from((await readFile(new URL('package.json',root),'utf8')).replace('    \"dev:ui-v2\": \"node scripts/dev-ui-v2.mjs\",\n','').replace('    \"check:ui-v2\": \"node scripts/check-ui-v2.mjs\",\n',''));
 assert.equal(sha(packageBytes),e.originals['package.json']);regressionPlan(JSON.parse(packageBytes).scripts.regression);
 const workflow=await stoveSourceText('.github/workflows/ci.yml');
 const originalWorkflow=workflow.replace(e.workflow.addedStep,'').replace(e.workflow.currentCommand,e.workflow.originalCommand);

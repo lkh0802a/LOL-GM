@@ -30,8 +30,8 @@
     "scripts/verify-official-edit-evidence.mjs": "e040f16df1693b2cc411f0796e6bb329c53d7b04eb847dadc8ab96a55c29d29d"
   },
   "sources": {
-    "docs/README.md": "79a71af0b5ba90fdb3d6ef00ce226853bc657d47a1c731b8facba4e49b92a8dd",
-    "docs/DEVELOPMENT.md": "1f2cedea8fcd34e6eb80ffd063588991969294f9c6daa4fb58679a85e8e9175b",
+    "docs/README.md": "bace989ba638d9fb8f7f00a855a1d158e5d798a4089ffedff69a8bbb1fa71b3c",
+    "docs/DEVELOPMENT.md": "47d980140d39b253edd15554a49fead1e7aec09fe78fcd79326b49cd5c09dc2d",
     "index.html": "cb8e47dbb2980c4bf5013b490274a04dc7a052d57ce885daae858df31965ead4",
     "scripts/artifact-modules.mjs": "f3936d38570c9533bf02d066b1e9e51666e4ca6944637e820f202bd88b467193",
     "scripts/current-guide-source-successor.mjs": "1e32b80db1d2f57db4f4082778ba4beebf46366fd71e42602e9fe897f87de1d0",
@@ -42,7 +42,7 @@
     "scripts/verify-club-home-evidence.mjs": "042f6826ab5c62cfdd097fac8fbcbf81410d1b4cc56965730f5187ab83c599b0",
     "scripts/verify-official-ui-evidence.mjs": "8dd2fae649a2acae8aeb7b28260ca620c954edb88c324e86fdae5cf2a658fd5c",
     "scripts/verify-pending-handoff-evidence.mjs": "8fa0d1d49dc9cfa76b7a8647c405869bfe46a3cea34811b781a07ea082c4f61f",
-    "scripts/verify-regression-runner-evidence.mjs": "01ad4f55c1b68a1b42e190cff3820229ba124e2208abe5310267e7ceae533e02",
+    "scripts/verify-regression-runner-evidence.mjs": "f0da74fccfe21e31506235601942337cb0978cbaa2db6172a19565391f0087b8",
     "scripts/verify-season-history-evidence.mjs": "6497c6a41f1f99ff870dbfb9031ccddfb08831b823460ef0e1f653a867ef76ac",
     "scripts/verify-season-progress-evidence.mjs": "a071b4b8aaa3c39d57bcc6221d2e785d634a8aba5fd443e518f0b6e282b84bb6",
     "scripts/verify-squad-draft-recovery-evidence.mjs": "c877ea086c6338672abbbe10b208465b0f5cd8ffc724db9555725b87cf1045aa",
@@ -53,6 +53,6 @@
     "src/artifact/negotiation-final.js": "a72109f224e4838c9ab0a675ca3789d0503a6f50b0742c676acc6ae8b6eae7ef",
     "src/artifact/ui-negotiation-final.js": "fb60579473ea143b11618bc8f8b10f3d44c49181e5bd97c48448f3e504347c65",
     "scripts/negotiation-final-acceptance.mjs": "6b3e98cc742f40b300e2ef76c8753210514d07aa067085faad3c3486e4f63994",
-    "scripts/negotiation-final-source-successor.mjs": "17b02c2a2dae706147769d653b530694138e2f0c399259499012a122f18770cb"
+    "scripts/negotiation-final-source-successor.mjs": "057ce3bdbfe168f6bf417b92c5e6c6c21e44750e42711426333a987fa226ef7a"
   }
 }

@@ -1,0 +1,21 @@
+// Riot 기본 일러스트는 표시 자원이며 경기 수치/패치 판정 자료가 아니다.
+function v2ChampionArtUrl(c,kind='icon'){
+ if(!c?.riotAlias||!/^[A-Za-z][A-Za-z0-9]+$/.test(c.riotAlias))return null;
+ const alias=encodeURIComponent(c.riotAlias),base='https://ddragon.leagueoflegends.com/cdn/';
+ return kind==='splash'?base+'img/champion/splash/'+alias+'_0.jpg':kind==='loading'?base+'img/champion/loading/'+alias+'_0.jpg':base+encodeURIComponent(CHAMPION_SOURCE_PATCH)+'/img/champion/'+alias+'.png';
+}
+// 기존 생성 외형 자료를 읽는 새 화면 전용 초상. 게임 난수·선수/챔피언 자료를 쓰지 않는다.
+function v2GeneratedChampionArt(c){
+ const v=c.visual||generatedChampionVisual(c),n=Math.abs(Number(v.seed)||0),revision=Math.max(0,Number(v.revision)||0),h=(n+revision*47)%360;
+ const hue=({arcane:265,celestial:210,infernal:12,verdant:145,storm:195,shadow:285,void:275,frost:185,solar:42,hex:170}[v.theme]??h)+revision*23;
+ const glow=`hsl(${hue} 76% 65%)`,metal=`hsl(${hue} 28% 32%)`,skin=`hsl(${24+n%25} 36% ${45+n%20}%)`,wide=v.silhouette==='heavy'?26:0,lean=v.pose==='profile'?18:v.pose==='threeQuarter'?8:0;
+ const ornaments={hood:'<path d="M58 143Q38 31 100 30Q164 34 145 143L126 126V77Q101 54 74 79V127Z"/>',crown:'<path d="M68 68L59 34L85 49L100 20L116 49L143 34L133 68Z"/>',horns:'<path d="M74 67Q38 55 44 22Q52 48 83 48ZM125 67Q163 55 157 22Q148 48 118 48Z"/>',mask:'<path d="M73 105L100 118L128 105L119 136H82Z"/>',halo:'<ellipse cx="100" cy="34" rx="45" ry="12" fill="none" stroke-width="6"/>',crest:'<path d="M88 65L100 16L114 65Z"/>',braids:'<path d="M68 77L55 160L70 174L82 83ZM128 77L143 160L129 174L117 83Z"/>',visor:'<path d="M67 81H133L126 103H74Z"/>'};
+ const weapons={shield:'<path d="M14 166L62 151L75 195L48 248L15 217Z"/>',blade:'<path d="M150 243L145 213L176 105L184 85L189 110L163 220Z"/>',spear:'<path d="M161 278L171 75L162 76L178 35L187 78L178 78L170 278Z"/>',staff:'<path d="M165 280L172 101H181L174 280Z"/><circle cx="179" cy="77" r="23" fill="none" stroke-width="8"/>',orb:'<circle cx="161" cy="178" r="25"/><circle cx="161" cy="178" r="34" fill="none" stroke-width="2"/>',blades:'<path d="M24 253L12 135L30 152L40 242ZM153 242L172 134L183 153L170 252Z"/>',bow:'<path d="M169 101Q222 182 163 258L175 180Z"/><path d="M169 101L163 258" fill="none" stroke-width="2"/>',rifle:'<path d="M22 225L151 164L158 176L56 235L48 252L31 245Z"/>'};
+ const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 300"><defs><radialGradient id="a"><stop stop-color="${metal}"/><stop offset="1" stop-color="#090f1c"/></radialGradient><linearGradient id="b" x2="1" y2="1"><stop stop-color="${glow}"/><stop offset="1" stop-color="${metal}"/></linearGradient></defs><path fill="url(#a)" d="M0 0H200V300H0Z"/><g fill="none" stroke="${glow}" opacity=".35"><circle cx="100" cy="113" r="81"/><circle cx="100" cy="113" r="69"/><path d="M0 ${155+n%40}L200 ${15+n%80}M0 265L200 130"/></g><path fill="url(#b)" d="M${55-wide} 180Q100 128 ${145+wide} 180L180 300H20Z"/><path fill="${metal}" d="M56 188L100 235L144 188L126 300H74Z"/><path fill="${skin}" d="M77 76Q${100+lean} 52 126 77L123 119L101 144L77 119Z"/><g fill="${glow}" stroke="${glow}">${ornaments[v.ornament]||ornaments.crest}</g><path stroke="${glow}" stroke-width="4" d="M81 94H93M108 94H120"/><g fill="url(#b)" stroke="${glow}" stroke-width="1.5">${weapons[v.weapon]||weapons.blade}</g></svg>`;
+ return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+}
+function v2ChampionArt(c,kind='icon',eager=false){
+ const generated=!!c&&!c.riotAlias,url=generated?v2GeneratedChampionArt(c):v2ChampionArtUrl(c,kind),unavailable=!url||V2.artUnavailable?.has(url),name=c?championLabel(V2.db,c.id):'';
+ return `<span class="champ-art ${unavailable?'art-unavailable':''}" data-art-frame><span class="art-fallback" aria-hidden="true">${c?v2Esc(name)+' · 그림을 불러오지 못했습니다':''}</span>${!unavailable?`<img data-champion-art data-art-origin="${generated?'generated':'riot'}" src="${v2Esc(url)}" alt="${v2Esc(name)}${generated?' · 생성 초상':''}" loading="${eager?'eager':'lazy'}" decoding="async" referrerpolicy="no-referrer">`:''}</span>`;
+}
+function v2BindChampionArt(){document.querySelectorAll('[data-champion-art]').forEach(img=>{const fail=()=>{V2.artUnavailable??=new Set();V2.artUnavailable.add(img.src);img.hidden=true;img.closest('[data-art-frame]')?.classList.add('art-unavailable');};img.onerror=fail;if(img.complete&&!img.naturalWidth)fail();});}

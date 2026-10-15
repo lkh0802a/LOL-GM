@@ -11,11 +11,11 @@ function v2Candidates(){
  const db=V2.db,t=v2Target(),view=v2ReadView(),query=V2.q.trim().toLocaleLowerCase('ko'),targets=db.world?.recruitment?.targets||{};
  const rows=Object.values(db.players).filter(p=>!p.retired&&!p.team&&(V2.role==='ALL'||p.role===V2.role)&&(!query||p.name.toLocaleLowerCase('ko').includes(query))&&(V2.tab!=='관심 선수'||targets[p.id]));
  rows.sort((a,b)=>a.name.localeCompare(b.name,'ko')||a.id.localeCompare(b.id));
- const pages=Math.max(1,Math.ceil(rows.length/20));V2.page=Math.max(0,Math.min(V2.page,pages-1));return {view,rows:rows.slice(V2.page*20,(V2.page+1)*20),total:rows.length,pages};
+ const pages=Math.max(1,Math.ceil(rows.length/V2_LIST_PAGE_SIZE));V2.page=Math.max(0,Math.min(V2.page,pages-1));return {view,rows:rows.slice(V2.page*V2_LIST_PAGE_SIZE,(V2.page+1)*V2_LIST_PAGE_SIZE),total:rows.length,pages};
 }
 function v2PlayerCard(p,view){
- const watched=!!view.world.recruitment?.targets?.[p.id],range=scoutAbilityRange(view,p),t=v2Target(),salary=t?asking(view,p,t.region):NaN;
- return `<article class="panel"><div class="player-top"><div class="player-info"><div class="player-avatar">${v2Esc(ROLE_KO[p.role])}</div><div><div class="player-name">${v2Esc(p.name)}</div><div class="player-meta">무소속 · ${v2Esc(view.regions[p.region]?.name||p.region)} · ${p.age}세</div></div></div><button class="icon-button favorite ${watched?'on':''}" data-watch="${v2Esc(p.id)}" aria-pressed="${watched}" aria-label="${v2Esc(p.name)} 관심 ${watched?'해제':'등록'}">${v2Icon('star')}</button></div><div class="player-bottom"><div><div class="label">종합 기량 추정</div><div class="money">${range.every(Number.isFinite)?range.join('–'):'정보 부족'}</div></div><div><div class="label">예상 연봉 · 연간</div><div class="money">${v2Money(salary)}</div></div><button class="btn btn-outline btn-small" data-player="${v2Esc(p.id)}">선수 검토 →</button></div></article>`;
+ const watched=!!view.world.recruitment?.targets?.[p.id],range=scoutAbilityRange(view,p);
+ return `<article class="player-list-row"><button class="player-list-open" data-player="${v2Esc(p.id)}"><span class="player-avatar">${v2Esc(ROLE_KO[p.role])}</span><span class="grow"><strong>${v2Esc(p.name)}</strong><span class="player-meta">${p.age}세 · 무소속 · 기량 ${range.every(Number.isFinite)?range.join('–'):'정보 부족'}</span></span><span aria-hidden="true">›</span></button><button class="icon-button favorite ${watched?'on':''}" data-watch="${v2Esc(p.id)}" aria-pressed="${watched}" aria-label="${v2Esc(p.name)} 관심 ${watched?'해제':'등록'}">${v2Icon('star')}</button></article>`;
 }
 function v2Market(){
  const db=V2.db,t=v2Target();if(!t)return '<section class="panel empty">관리 구단이 없습니다.</section>';
@@ -42,5 +42,5 @@ function v2BindMarket(){
  v2Bind('[data-watch]',el=>v2RecruitAction(()=>{const id=el.dataset.watch;return V2.db.world?.recruitment?.targets?.[id]?mDropInterest(V2.db,id):mInterest(V2.db,id,'B')}));
  v2Bind('#scout-player',()=>v2RecruitAction(()=>scoutPlayers(V2.db,[V2.pid],40,.1*psOf(V2.db,v2Team().region))));
  v2Bind('#evaluate-player',()=>v2RecruitAction(()=>mEvaluateTarget(V2.db,V2.pid,v2Target().id)));
- v2Bind('#negotiate-player',()=>{if(v2ManualError())return v2Tell(v2ManualError());if(v2Team()?.parent)return v2Tell('산하 선수단의 영입 계약은 모구단이 담당합니다');const db=V2.db,id=negotiationId(db,V2.pid,'initial',v2Target().id),n=db.world?.negotiations?.[id];if(!n||n.status!=='open')v2Mutate(()=>initialStartNegotiation(db,V2.pid,v2Target().id));v2Navigate('market','진행 중인 협상');});
+ v2Bind('#negotiate-player',()=>{if(v2ManualError())return v2Tell(v2ManualError());if(v2Team()?.parent)return v2Tell('산하 선수단의 영입 계약은 모구단이 담당합니다');const db=V2.db,id=negotiationId(db,V2.pid,'initial',v2Target().id),n=db.world?.negotiations?.[id];if(!n||n.status!=='open')v2Mutate(()=>initialStartNegotiation(db,V2.pid,v2Target().id));v2OpenNegotiation(id);});
 }
