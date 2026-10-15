@@ -1,4 +1,12 @@
-function v2Target(){const teams=setupTeamsForManager(V2.db);return teams.find(t=>t.id===V2.target)||teams[0]||null;}
+function v2Target(){if(!V2.db)return null;const teams=setupTeamsForManager(V2.db);return teams.find(t=>t.id===V2.target)||teams[0]||null;}
+function v2OrganizationContext(){
+ const db=V2.db;if(db.world.phase!=='initial_roster')return '';const teams=setupTeamsForManager(db),current=v2Target();if(teams.length<2)return '';
+ return `<section class="panel"><div class="panel-heading"><strong>구성할 선수단</strong></div><p class="hint">구성할 선수단을 선택하고 선수를 검토하세요. 계약은 조건 합의 후 직접 확정합니다.</p><div class="stack">${teams.map(t=>{const lim=initialSquadLimits(db,t);return `<button class="btn ${current?.id===t.id?'btn-primary':'btn-outline'}" data-squad-context="${v2Esc(t.id)}" aria-pressed="${current?.id===t.id}">${v2Esc(t.name)} · ${t.roster.length}명 / 최소 ${lim.min}명</button>`}).join('')}</div></section>`;
+}
+function v2ChooseSquad(id){
+ const error=v2ManualError();if(error)return v2Tell(error);if(V2.db.world.phase!=='initial_roster'||!setupTeamsForManager(V2.db).some(t=>t.id===id))return v2Tell('현재 구성할 수 있는 선수단이 아닙니다');
+ v2CaptureDrafts();V2.target=id;V2.review=null;V2.managementReview=null;V2.pid=null;V2.page=0;V2.returnScroll=0;v2Save();v2Tell('구성할 선수단 · '+v2Target().name);v2Render();
+}
 function v2Candidates(){
  const db=V2.db,t=v2Target(),view=v2ReadView(),query=V2.q.trim().toLocaleLowerCase('ko'),targets=db.world?.recruitment?.targets||{};
  const rows=Object.values(db.players).filter(p=>!p.retired&&!p.team&&(V2.role==='ALL'||p.role===V2.role)&&(!query||p.name.toLocaleLowerCase('ko').includes(query))&&(V2.tab!=='관심 선수'||targets[p.id]));
@@ -28,8 +36,9 @@ function v2BindMarket(){
  if(search)search.oninput=()=>{if(!current())return;V2.q=search.value;V2.page=0;const start=search.selectionStart;v2Render();const next=document.getElementById('player-search');next?.focus({preventScroll:true});if(start!==null)next?.setSelectionRange(start,start)};
  v2Bind('[data-role]',el=>{V2.role=el.dataset.role;V2.page=0;v2Render()});
  v2Bind('[data-page]',el=>{V2.page+=Number(el.dataset.page);v2Render();window.scrollTo(0,0)});
- v2Bind('[data-player]',el=>v2Navigate('market',V2.tab,el.dataset.player));
- v2Bind('#player-back',()=>v2Navigate('market',V2.tab));
+ v2Bind('[data-player]',el=>v2Navigate(V2.section,V2.tab,el.dataset.player));
+ v2Bind('#player-back',()=>v2Navigate(V2.section,V2.tab));
+ v2Bind('[data-squad-context]',el=>v2ChooseSquad(el.dataset.squadContext));
  v2Bind('[data-watch]',el=>v2RecruitAction(()=>{const id=el.dataset.watch;return V2.db.world?.recruitment?.targets?.[id]?mDropInterest(V2.db,id):mInterest(V2.db,id,'B')}));
  v2Bind('#scout-player',()=>v2RecruitAction(()=>scoutPlayers(V2.db,[V2.pid],40,.1*psOf(V2.db,v2Team().region))));
  v2Bind('#evaluate-player',()=>v2RecruitAction(()=>mEvaluateTarget(V2.db,V2.pid,v2Target().id)));

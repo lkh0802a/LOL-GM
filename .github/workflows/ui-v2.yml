@@ -18,10 +18,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: 기존 UI 없이 새 화면 조립
-        run: node scripts/build-ui-v2.mjs
-      - name: 금액·현재 권한·비서 조회·소스 구성 검증
-        run: node scripts/ci-run.mjs ui-v2 -- node scripts/ui-v2-acceptance.mjs
+      - name: 새 화면 조립·금액·권한·직원·선수단 문맥 검증
+        run: node scripts/ci-run.mjs ui-v2 -- node scripts/check-ui-v2.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: lol-gm-ui-v2

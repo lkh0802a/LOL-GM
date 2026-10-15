@@ -10,10 +10,10 @@ const v2Money=value=>{
 };
 const v2Team=()=>V2.db&&managedTeam(V2.db);
 function v2ReadView(){const db=V2.db;if(!db)return null;const view=Object.create(db);view.scout=JSON.parse(JSON.stringify(db.scout||{}));view.world={...db.world,recruitment:JSON.parse(JSON.stringify(db.world?.recruitment||{}))};return view;}
-function v2Guard(){const db=V2.db,w=db?.world,manager=db?.manager,owner=db&&managedTeamId(db),date=db?.worldDate,phase=w?.phase,revision=V2.revision;return ()=>V2.db===db&&db?.world===w&&db?.manager===manager&&(!db||managedTeamId(db)===owner)&&db?.worldDate===date&&w?.phase===phase&&V2.revision===revision&&!V2.busy;}
+function v2Guard(){const db=V2.db,w=db?.world,manager=db?.manager,owner=db&&managedTeamId(db),target=V2.target,date=db?.worldDate,phase=w?.phase,revision=V2.revision;return ()=>V2.db===db&&db?.world===w&&db?.manager===manager&&(!db||managedTeamId(db)===owner)&&V2.target===target&&db?.worldDate===date&&w?.phase===phase&&V2.revision===revision&&!V2.busy;}
 function v2ManualError(){const db=V2.db,t=v2Team();return !db?.world||!t||db.world.fired||db.world.manage!=='manual'?'현재 감독의 수동 권한이 없습니다':db.world.pendingOfficial?'진행 중인 공식 경기의 준비를 먼저 확인하세요':null;}
 function v2Save(){
- try{localStorage.setItem(V2_STORE,JSON.stringify({game:packDB(V2.db),read:V2.read}));V2.saved=true;document.getElementById('save-status').textContent='현재 게임 저장 완료';return true}
+ try{localStorage.setItem(V2_STORE,JSON.stringify({game:packDB(V2.db),read:V2.read,view:{target:v2Target()?.id||null}}));V2.saved=true;document.getElementById('save-status').textContent='현재 게임 저장 완료';return true}
  catch(error){V2.saved=false;document.getElementById('save-status').textContent='저장하지 못했습니다 · 설정에서 파일로 저장하세요';return false}
 }
 function v2Tell(message){V2.message=String(message||'');document.getElementById('status').textContent=V2.message;}
@@ -21,8 +21,12 @@ function v2Mutate(action){const error=v2ManualError();if(error)return v2Tell(err
 function v2Bind(selector,fn,root=document){const current=v2Guard();root.querySelectorAll(selector).forEach(el=>el.onclick=e=>{if(!current()||!el.isConnected||el.disabled)return;e.preventDefault();fn(el,e)});}
 function v2Navigate(section,tab=null,pid=null){
  const menu=V2_MENUS.find(x=>x.id===section);if(!menu)return;
- v2CaptureDrafts();V2.section=section;V2.tab=menu.tabs.includes(tab)?tab:menu.tabs[0];V2.pid=pid;V2.review=null;V2.page=0;
+ v2CaptureDrafts();v2RememberSearch();V2.section=section;V2.tab=menu.tabs.includes(tab)?tab:menu.tabs[0];V2.pid=pid;V2.review=null;V2.managementReview=null;v2RestoreSearch();
  const path='#'+[section,encodeURIComponent(V2.tab),pid?encodeURIComponent(pid):''].filter(Boolean).join('/');
- if(location.hash!==path)history.pushState(null,'',path);v2Render();document.getElementById('app-title').focus({preventScroll:true});window.scrollTo(0,0);
+ if(location.hash!==path)history.pushState(null,'',path);v2Render();v2FocusLocation();
 }
-function v2Route(){const [section,tab,pid]=location.hash.slice(1).split('/');let t,p;try{t=decodeURIComponent(tab||'');p=pid?decodeURIComponent(pid):null}catch{return}if(V2_MENUS.some(x=>x.id===section)){const m=V2_MENUS.find(x=>x.id===section);V2.section=section;V2.tab=m.tabs.includes(t)?t:m.tabs[0];V2.pid=p;V2.review=null;v2Render()}}
+function v2Route(){const [section,tab,pid]=location.hash.slice(1).split('/');let t,p;try{t=decodeURIComponent(tab||'');p=pid?decodeURIComponent(pid):null}catch{return}if(V2_MENUS.some(x=>x.id===section)){const m=V2_MENUS.find(x=>x.id===section);v2RememberSearch();V2.section=section;V2.tab=m.tabs.includes(t)?t:m.tabs[0];V2.pid=p;V2.review=null;V2.managementReview=null;v2RestoreSearch();v2Render();v2FocusLocation()}}
+function v2SearchKey(){return ['market','scout'].includes(V2.section)&&['선수 검색','관심 선수','선수 탐색'].includes(V2.tab)?V2.section+'|'+V2.tab:null;}
+function v2RememberSearch(){const key=v2SearchKey();if(!key||V2.pid)return;V2.searchViews??={};V2.searchViews[key]={db:V2.db,manager:V2.db?.manager,owner:V2.db&&managedTeamId(V2.db),target:v2Target()?.id,q:V2.q,role:V2.role,page:V2.page,scroll:window.scrollY||0};}
+function v2RestoreSearch(){const key=v2SearchKey(),s=key&&V2.searchViews?.[key];if(s&&s.db===V2.db&&s.manager===V2.db?.manager&&s.owner===managedTeamId(V2.db)&&s.target===v2Target()?.id){V2.q=s.q;V2.role=s.role;V2.page=s.page;V2.returnScroll=V2.pid?0:s.scroll;}else {V2.page=0;V2.returnScroll=0;}}
+function v2FocusLocation(){document.getElementById('app-title').focus({preventScroll:true});window.scrollTo(0,V2.returnScroll||0);}

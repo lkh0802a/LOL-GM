@@ -3,7 +3,7 @@ import {readFile} from 'node:fs/promises';
 import {runEngineFixture} from './test-harness.mjs';
 import {ENGINE_MODULES,UI_MODULES} from './artifact-modules.mjs';
 const root=new URL('../',import.meta.url),get=p=>readFile(new URL(p,root),'utf8');
-const modules=['state.js','market.js','contracts.js','views.js','app.js'];
+const modules=['state.js','market.js','contracts.js','views.js','management.js','app.js'];
 const sources=await Promise.all(modules.map(p=>get('src/ui-v2/'+p)));
 const build=await get('scripts/build-ui-v2.mjs');assert(build.includes('ENGINE_MODULES'));assert(!build.includes('UI_MODULES'));
 
