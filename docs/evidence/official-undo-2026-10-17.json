@@ -1,0 +1,11 @@
+{
+  "predecessorPublicCommit": "352e8455e3deb1fe79f6b9394b9e23a02eb9ac7f",
+  "predecessorSha256": "aefff4d2e3c8c46b93e7725817e93614f261a6afd53850959535b7bece7884b1",
+  "archive": {
+    "path": "docs/evidence/official-undo-2026-10-17.original.js.gz",
+    "sha256": "0abbe4b381a3be604b1d49e25f0c4e439db13964d4f7ca3bbb2ed97fd6913bde",
+    "bytes": 7670
+  },
+  "currentSha256": "231711f819d218879c83fc1dfbd866267e1b6ae1abec282b8e3fc0b06cfd975d",
+  "meaning": "Full graph remains in scope; flat snapshot storage only. Historical source retention is not current test success."
+}

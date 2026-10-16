@@ -1,3 +1,5 @@
+await import('./official-compact-time-acceptance.mjs');
+await import('./negotiation-clock-acceptance.mjs');
 import assert from 'node:assert/strict';
 import {artifactSources,runEngineFixture} from './test-harness.mjs';
 const result=await runEngineFixture(String.raw`(()=>{
@@ -7,6 +9,7 @@ const result=await runEngineFixture(String.raw`(()=>{
  const player=Object.values(db.players).find(p=>!p.team&&!p.retired&&p.region===team.region&&initialSignCheck(db,p,team).ok);
  check(player,'eligible actual candidate');mInterest(db,player.id,'B');mEvaluateTarget(db,player.id,team.id);initialStartNegotiation(db,player.id,team.id);
  const id=negotiationId(db,player.id,'initial',team.id),n=db.world.negotiations[id];
+ n.maxRounds=2;
  const terms={...n.demand,salary:Math.floor((initialSalaryBudget(db,team)-payroll(db,team))*10)/10};
  const base=JSON.stringify(db),legacy=JSON.parse(base),old=submitNegotiationOffer(legacy,id,terms);check(old.ok&&legacy.world.negotiations[id].status==='accepted','existing accepted writer');
  const result=stageNegotiationOffer(db,id,terms);check(result.ok&&result.agreed,'actual acceptance staged');
@@ -43,12 +46,18 @@ await runEngineFixture(String.raw`(()=>{
   let n;
   if(kind==='transfer'){mTransferBid(db,p.id,sellerTransferAsk(db,p,seller));n=db.world.negotiations[negotiationId(db,p.id,kind)];check(n?.stage==='player','actual seller agreement')}
   else {const started=startNegotiation(db,p.id,kind);check(started.ok,kind+' start '+started.msg);n=started.neg}
+  n.maxRounds=2;
   const original=JSON.stringify(db);let accepted;
   for(const factor of [1,1.2,1.5,2]){
    const clone=JSON.parse(original),neg=clone.world.negotiations[n.id],terms={...neg.demand,salary:neg.demand.salary*factor},r=submitNegotiationOffer(clone,n.id,terms);
    if(r.ok&&clone.world.negotiations[n.id].status==='accepted'){accepted={clone,terms};break}
   }
   check(accepted,kind+' existing accepted conditions');
+  const timed=JSON.parse(original);timed.world.negotiations[n.id].maxRounds=3;timed.world.negotiations[n.id].competitors=[];
+  const delayed=stageNegotiationOffer(timed,n.id,accepted.terms);check(delayed.ok&&delayed.waiting,kind+' actual timed submission');
+  const timedSave=unpackDB(packDB(timed));check(timedSave.world.negotiations[n.id].response.dueAt===delayed.dueAt,kind+' timed save');
+  const contact=advanceToNegotiationResponse(timedSave);check(contact.response&&timedSave.world.negotiations[n.id].stage==='agreement',kind+' timed contact stop');
+  check(finalizeStagedNegotiation(timedSave,n.id).ok,kind+' timed manual final');
   const result=stageNegotiationOffer(db,n.id,accepted.terms);check(result.ok&&result.agreed,kind+' staged response');
   const compare=x=>{const c=JSON.parse(JSON.stringify(x));delete c.world.negotiations;return JSON.stringify(c)};
   check(compare(db)===compare(JSON.parse(original)),kind+' no ownership/payment/reservation before final');
@@ -66,7 +75,7 @@ await runEngineFixture(String.raw`(()=>{
  DB=buildWorld(cfg);const team=activeTeams(DB,'KR',1)[0];startCareer(DB,team.id,'manual-final-ui');
  const p=Object.values(DB.players).find(p=>!p.team&&!p.retired&&p.region===team.region&&initialSignCheck(DB,p,team).ok);
  mInterest(DB,p.id,'B');mEvaluateTarget(DB,p.id,team.id);initialStartNegotiation(DB,p.id,team.id);
- const id=negotiationId(DB,p.id,'initial',team.id),n=DB.world.negotiations[id];n.counter={...n.demand,salary:Math.floor((initialSalaryBudget(DB,team)-payroll(DB,team))*10)/10};
+ const id=negotiationId(DB,p.id,'initial',team.id),n=DB.world.negotiations[id];n.maxRounds=2;n.counter={...n.demand,salary:Math.floor((initialSalaryBudget(DB,team)-payroll(DB,team))*10)/10};
  const values=n.counter;fields={sal:{value:values.salary},years:{value:values.years},sign:{value:values.signingBonus||0},perf:{value:values.bonuses?.performance||0},title:{value:values.bonuses?.title||0},intl:{value:values.bonuses?.international||0},buyout:{value:0},'buyout-type':{value:'negotiation'},option:{value:'none'},role:{value:values.promisedRole||'competition'}};
  buttons={submit:node({negSubmit:id}),accept:node({negAccept:id}),final:node({negFinal:id}),cancel:node({negCancel:id})};
  const act=()=>saves++;bindNegotiationControls(act,()=>permission,root);
@@ -74,7 +83,7 @@ await runEngineFixture(String.raw`(()=>{
  buttons.accept.onclick();panel.commit.onclick();check(saves===1&&!DB.players[p.id].team&&DB.world.negotiations[id].stage==='agreement','actual UI agreement without signing');
  const projected=Object.create(DB);projected.world={...DB.world};const agreed=JSON.stringify(DB),html=renderNegotiations(null,projected);check(html.includes('최종 계약 검토')&&html.includes('선수 조건 수락 · 최종 계약 전')&&!html.includes('data-neg-submit'),'actual agreement card');check(JSON.stringify(DB)===agreed,'agreement read-only');
  buttons.final.onclick();const cancelledFinal=panel.commit.onclick;panel.cancel.onclick();cancelledFinal();check(JSON.stringify(DB)===agreed&&saves===1&&buttons.final.focused,'final review cancel restores focus');
- const changes={db:()=>DB=JSON.parse(JSON.stringify(DB)),world:()=>DB.world={...DB.world},year:()=>DB.year++,phase:()=>DB.world.phase='season',manage:()=>DB.world.manage='ai',fired:()=>DB.world.fired=true,player:()=>DB.players[p.id].retired=true,negotiation:()=>DB.world.negotiations[id].round++,slot:()=>SLOT='2',view:()=>VIEW='squad',render:()=>UI_RENDER_ID++,date:()=>DB.worldDate=addDays(DB.worldDate,1),permission:()=>permission=false,manager:()=>DB.manager='other',budget:()=>DB.teams[team.id].finance.cash++,dialog:()=>UI_OVERLAY={},switching:()=>SLOT_SWITCHING=true};
+ const changes={db:()=>DB=JSON.parse(JSON.stringify(DB)),world:()=>DB.world={...DB.world},year:()=>DB.year++,phase:()=>DB.world.phase='season',manage:()=>DB.world.manage='ai',fired:()=>DB.world.fired=true,player:()=>DB.players[p.id].retired=true,negotiation:()=>DB.world.negotiations[id].round++,slot:()=>SLOT='2',view:()=>VIEW='squad',render:()=>UI_RENDER_ID++,date:()=>DB.worldDate=addDays(DB.worldDate,1),permission:()=>permission=false,manager:()=>DB.manager='other',budget:()=>DB.teams[team.id].finance.cash++,dialog:()=>UI_OVERLAY={},switching:()=>SLOT_SWITCHING=true,clock:()=>DB.world.negotiationClock={at:DB.worldDate+'T01:00:00.000Z'},officialClock:()=>DB.world.officialGameTimeThrough=DB.worldDate+'T02:00:00.000Z',otherGame:()=>DB.world.seasons={guard:{days:[{matches:[{id:'guard',clockGame:{endAt:DB.worldDate+'T02:00:00.000Z'}}]}]}}};
  for(const [kind,change] of Object.entries(changes)){DB=JSON.parse(agreed);SLOT='1';VIEW='season';UI_RENDER_ID=0;UI_OVERLAY=null;SLOT_SWITCHING=false;permission=true;buttons.final.onclick();change();const b=JSON.stringify(DB);panel.commit.onclick();check(JSON.stringify(DB)===b&&saves===1,kind+' stale review inert')}
  DB=JSON.parse(agreed);SLOT='1';VIEW='season';UI_RENDER_ID=0;UI_OVERLAY=null;SLOT_SWITCHING=false;permission=true;buttons.final.onclick();const final=panel.commit.onclick;final();final();check(saves===2&&DB.players[p.id].team===team.id,'actual manual final once');
  console.log('NEGOTIATION_FINAL_UI_ACCEPTANCE '+JSON.stringify({actualAgreement:true,actualFinal:true,cancel:true,focus:true,stale:Object.keys(changes).length,duplicate:true}));

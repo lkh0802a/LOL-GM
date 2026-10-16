@@ -1,3 +1,4 @@
+import {patchPolicySourceHash,patchPolicySourceText} from './patch-policy-source-successor.mjs';
 import {negotiationFinalSourceHash,negotiationFinalSourceText} from './negotiation-final-source-successor.mjs';
 import {startupSaveSourceHash,startupSaveSourceText} from './startup-save-source-successor.mjs';
 import assert from 'node:assert/strict';
@@ -24,7 +25,7 @@ async function verify(){
  for(const p of ["scripts/save-library-source-successor.mjs", "scripts/initial-table-source-successor.mjs", "scripts/squad-status-source-successor.mjs", "scripts/squad-table-source-successor.mjs", "scripts/squad-overview-source-successor.mjs", "scripts/club-home-source-successor.mjs", "scripts/pending-handoff-source-successor.mjs", "scripts/verify-regression-runner-evidence.mjs"]){const source=original(p),actual="import {stoveFaSourceHash} from './stove-fa-source-successor.mjs';\n"+source.replace(/sha\(await readFile\(new URL\('src\/artifact\/'\+(p|path|f|file),root\)\)\)/g,(_,key)=>"await stoveFaSourceHash('src/artifact/'+"+key+")");assert.equal(await negotiationFinalSourceText(p),actual,'기존 엔진 해시·조건 유지와 현재 소스 검증 연결 '+p)}
  const f='scripts/stove-daily-acceptance.mjs';assert.equal(await readFile(new URL(f,root),'utf8'),original(f).replace("const [stove,season,market,recruit]=await artifactSources(['ui-stove.js','ui-season.js','ui-market.js','ui-club-recruitment.js']);","const [stoveSource,fa,season,market,recruit]=await artifactSources(['ui-stove.js','ui-stove-fa.js','ui-season.js','ui-market.js','ui-club-recruitment.js']);\nconst stove=fa+'\\n'+stoveSource;"),'기존 독점 기간 검사 원문 유지·실제 화면 의존성만 추가');
  assert((await readFile(new URL('src/artifact/offseason.js',root),'utf8')).includes('const medicalRolloverDate=`${db.year}-01-06`;'),'기존 연간 결산 기준일의 실제 작성자');
- for(const [p,h] of Object.entries(e.engine)){const actual=sha(await readFile(new URL('src/artifact/'+p,root)));if(p==='calendar.js'){assert.equal(pins['src/artifact/calendar.js'],h);assert((await readFile(new URL('src/artifact/calendar.js',root),'utf8')).startsWith(original('src/artifact/calendar.js')))}else assert.equal(actual,h)}assert.equal(Object.keys(e.engine).length,101);
+ for(const [p,h] of Object.entries(e.engine)){const actual=await patchPolicySourceHash('src/artifact/'+p);if(p==='calendar.js'){assert.equal(pins['src/artifact/calendar.js'],h);assert((await patchPolicySourceText('src/artifact/calendar.js')).startsWith(original('src/artifact/calendar.js')))}else assert.equal(actual,h)}assert.equal(Object.keys(e.engine).length,101);
  for(const p of ['docs/README.md','docs/DEVELOPMENT.md'])assert((await readFile(new URL(p,root),'utf8')).includes(original(p)),'전체 승인 원문 연속 보존');
  verified={e,rows};return verified;
 }

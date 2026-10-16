@@ -110,7 +110,7 @@ function seriesResultLines(r,wId,mvp){
 function playSeriesSessionGame(db,sess,forcedDraft=null,quiet=true){
   const cur=seriesSessionPrepareGame(db,sess);if(!cur)throw new Error('Series already complete');
   const snap=seriesDraftSnapshot(sess.ctx);snap.firstPick=cur.fpTeam===cur.blue?0:1;if(forcedDraft)snap.forced=forcedDraft;
-  const matchDb=seriesOfficialView(db,sess),r=simulateMatch(matchDb,cur.blue,cur.red,cur.gseed,snap,quiet);r.comp=sess.opt.compId||null;r.date=db.worldDate;r.metaContext=sess.opt.metaContext||null;
+  const matchDb=seriesOfficialView(db,sess),r=simulateMatch(matchDb,cur.blue,cur.red,cur.gseed,snap,quiet);r.patch=matchDb.patch.id;r.comp=sess.opt.compId||null;r.date=db.worldDate;r.metaContext=sess.opt.metaContext||null;
   if(!sess.opt.replay&&!sess.opt.practice)recordMeta(db,r);
   const wId=r.winner===0?cur.blue:cur.red,lId=wId===cur.blue?cur.red:cur.blue;sess.wins[wId]++;
   const pk=[0,1].map(i=>ROLES.map(x=>r.draft.picks[i][x]));
@@ -129,13 +129,13 @@ function playSeriesSessionGame(db,sess,forcedDraft=null,quiet=true){
 }
 function seriesSessionResult(db,sess){
   if(!seriesSessionDone(sess))return null;const tac={[sess.a]:{...db.teams[sess.a].tactics},[sess.b]:{...db.teams[sess.b].tactics}};
-  return {rec:{a:sess.a,b:sess.b,bestOf:sess.bestOf,seed:sess.seed,patch:db.patch.id,fearless:!!sess.opt.fearless,firstChoice:sess.opt.firstChoice,score:[sess.wins[sess.a],sess.wins[sess.b]],winner:sess.wins[sess.a]>sess.wins[sess.b]?sess.a:sess.b,games:sess.games,tac,...(sess.opt.practice?{practiceModel:'engine'}:{}),...(sess.staffService?{staffService:sess.staffService}:{})},lines:sess.lines};
+  return {rec:{a:sess.a,b:sess.b,bestOf:sess.bestOf,seed:sess.seed,patch:seriesOfficialView(db,sess).patch.id,fearless:!!sess.opt.fearless,firstChoice:sess.opt.firstChoice,score:[sess.wins[sess.a],sess.wins[sess.b]],winner:sess.wins[sess.a]>sess.wins[sess.b]?sess.a:sess.b,games:sess.games,tac,...(sess.opt.practice?{practiceModel:'engine'}:{}),...(sess.staffService?{staffService:sess.staffService}:{})},lines:sess.lines};
 }
 function simulateSeries(db,aId,bId,bestOf,seed,opt={}){
   const sess=createSeriesSession(db,aId,bId,bestOf,seed,opt);
   while(!seriesSessionDone(sess)){
     const cur=seriesSessionPrepareGame(db,sess),forced=opt.forced&&opt.forced[sess.g-1]||null;
-    if(opt.capture===sess.g){const snap=seriesDraftSnapshot(sess.ctx);snap.firstPick=cur.fpTeam===cur.blue?0:1;if(forced)snap.forced=forced;const r=simulateMatch(seriesOfficialView(db,sess),cur.blue,cur.red,cur.gseed,snap,false);r.comp=opt.compId||null;r.date=db.worldDate;r.metaContext=opt.metaContext||null;return {captured:r}}
+    if(opt.capture===sess.g){const snap=seriesDraftSnapshot(sess.ctx);snap.firstPick=cur.fpTeam===cur.blue?0:1;if(forced)snap.forced=forced;const view=seriesOfficialView(db,sess),r=simulateMatch(view,cur.blue,cur.red,cur.gseed,snap,false);r.patch=view.patch.id;r.comp=opt.compId||null;r.date=db.worldDate;r.metaContext=opt.metaContext||null;return {captured:r}}
     playSeriesSessionGame(db,sess,forced,true);
   }
   return seriesSessionResult(db,sess);

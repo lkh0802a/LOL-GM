@@ -41,10 +41,11 @@ function patchChampionEvidence(db,cid,rows,ctx){
   const games=Math.max(1,rows.length),pres=(p+b)/games,wr=p?(w+2)/(p+4):.5,recentGames=Math.max(1,rows.length-cut),oldGames=Math.max(1,cut),recentPres=(recentP+recentB)/recentGames,oldPres=(oldP+oldB)/oldGames,trend=recentPres-oldPres;
   const maxShare=o=>{const v=Object.values(o);return p&&v.length?Math.max(...v)/p:0},playerConc=maxShare(players),teamConc=maxShare(teams),comboConc=maxShare(partners),flex=Object.keys(pos).length,regionSpread=Object.keys(regions).length/ctx.regionCount,intlShare=p?intl/p:0,topShare=p?top/p:0;
   const confidence=clamp((p+b)/(p+b+12)*Math.min(1,rows.length/24),0,1);
-  const nerfSignal=pres*1.02+Math.max(0,wr-.51)*2.4*confidence+Math.max(0,trend)*.8+Math.max(0,flex-1)*.055+intlShare*.07+regionSpread*.05-Math.max(0,playerConc-.45)*.2-Math.max(0,teamConc-.5)*.12-Math.max(0,comboConc-.65)*.08;
-  const buffSignal=Math.max(0,.065-pres)*3.3*Math.min(1,rows.length/18)+Math.max(0,.47-wr)*1.7*confidence+Math.max(0,-trend)*.38+(p===0&&rows.length>=16?.12:0);
-  let dir=0,signal=0;if(rows.length>=8&&nerfSignal>=.48&&nerfSignal-buffSignal>=.16){dir=-1;signal=nerfSignal}else if(rows.length>=12&&buffSignal>=.2&&buffSignal-nerfSignal*.38>=.07){dir=1;signal=buffSignal}
-  const diagnosis=dir<0?(flex>=2&&pres>.25?'플렉스와 프로 우선순위 과다':wr>=.545&&confidence>.25?'실전 성능 과다':topShare>.65?'상위권 중심 우선순위 과다':'밴픽 압력 과다'):(dir>0?(pres<.025?'저사용으로 전략적 가치 부족':'낮은 실전 성능과 선택률'):'관찰');
+  const nerfSignal=pres*1.02+(patchWinInterval(w,p).lower>.53?Math.max(0,wr-.53)*2.4*confidence:0)+Math.max(0,trend)*.8+Math.max(0,flex-1)*.055+intlShare*.07+regionSpread*.05-Math.max(0,playerConc-.45)*.2-Math.max(0,teamConc-.5)*.12-Math.max(0,comboConc-.65)*.08;
+  // Low use is an observation, never a buff entitlement. Bans are not performance samples.
+  const performance=patchWinInterval(w,p),buffSignal=Math.max(0,.47-wr)*1.7*confidence;
+  let dir=0,signal=0;if(rows.length>=8&&nerfSignal>=.48&&nerfSignal-buffSignal>=.16){dir=-1;signal=nerfSignal}else if(rows.length>=12&&performance.upper<.47&&buffSignal>=.2&&buffSignal-nerfSignal*.38>=.07){dir=1;signal=buffSignal}
+  const diagnosis=dir<0?(flex>=2&&pres>.25?'플렉스와 프로 우선순위 과다':wr>=.545&&confidence>.25?'실전 성능 과다':topShare>.65?'상위권 중심 우선순위 과다':'밴픽 압력 과다'):(dir>0?'표본 불확실성을 고려한 낮은 실전 성능':'관찰');
   const why='표본 '+rows.length+'경기 · 밴픽 '+Math.round(pres*100)+'% · 승률 '+Math.round(wr*100)+'% · 최근 추세 '+(trend>=0?'+':'')+Math.round(trend*100)+'%p'+(flex>1?' · '+flex+'포지션 플렉스':'')+(intlShare>.2?' · 국제전 비중 '+Math.round(intlShare*100)+'%':'')+(playerConc>.5?' · 특정 선수 의존 '+Math.round(playerConc*100)+'%':'')+(teamConc>.55?' · 특정 팀 의존 '+Math.round(teamConc*100)+'%':'');
   return {c:db.patch.champions[cid],cid,games:rows.length,p,b,w,pres,wr,trend,confidence,flex,regionSpread,intlShare,topShare,playerConc,teamConc,comboConc,nerfSignal,buffSignal,dir,signal,diagnosis,why};
 }
@@ -54,7 +55,57 @@ function patchSizeForSignal(signal,major){
 }
 function diagnosePatchMeta(db,major=false){
   const rows=patchEvidenceRows(db),ctx=patchEvidenceContext(db,rows),champions=Object.keys(db.patch.champions).map(id=>patchChampionEvidence(db,id,rows,ctx));
-  return {sampleGames:rows.length,rows,ctx,champions,major:!!major};
+  const reviews=patchReworkReviews(db,champions);
+  return {sampleGames:rows.length,rows,ctx,champions,reviews,major:!!major};
+}
+// Wilson 95% intervals describe observed win uncertainty, not the probability
+// of a champion being strong. No manager identity or private practice is read.
+function patchWinInterval(wins,games){
+  if(!games)return {lower:0,upper:1};
+  const z=1.959963984540054,p=wins/games,z2=z*z,den=1+z2/games,
+    centre=(p+z2/(2*games))/den,half=z*Math.sqrt(p*(1-p)/games+z2/(4*games*games))/den;
+  return {lower:Math.max(0,centre-half),upper:Math.min(1,centre+half)};
+}
+function patchReworkReviews(db,champions){
+  // Reuse the existing two-patch lookback plus the current patch, 24-game
+  // observation horizon and 2.5% low-presence label. These are game policy,
+  // not empirically calibrated professional balance thresholds.
+  const history=patchHistory(db),ids=[...new Set([...history.map(p=>p.id),db.patch.id])].slice(-3),index=metaHistoryIndex(db);
+  return champions.map(d=>{
+    const c=d.c,windows=ids.map(id=>{
+      const rows=(index.byPatch.get(id)||EMPTY_META_HISTORY).filter(r=>
+        typeof r.date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(r.date)&&r.date<=db.worldDate&&(!c.releaseDate||r.date>=c.releaseDate)&&championProEligible(db,c,r.date));
+      let p=0,w=0,b=0;const roles={},matchups={},teams=new Map(),players=new Map();
+      for(const row of rows){if((row.bans||[]).includes(d.cid))b++;
+        for(const side of row.sides||[]){const picks=(side.picks||[]).map(x=>typeof x==='string'?{champ:x}:x),me=picks.find(x=>x.champ===d.cid);if(!me)continue;
+          p++;if(side.win)w++;if(side.team)teams.set(side.team,(teams.get(side.team)||0)+1);if(me.player)players.set(me.player,(players.get(me.player)||0)+1);
+          if(me.role){const r=roles[me.role]||(roles[me.role]={p:0,w:0});r.p++;if(side.win)r.w++;
+            const opp=(row.sides||[]).find(x=>x!==side),other=(opp?.picks||[]).map(x=>typeof x==='string'?{champ:x}:x).find(x=>x.role===me.role);
+            if(other){const m=matchups[me.role+':'+other.champ]||(matchups[me.role+':'+other.champ]={p:0,w:0});m.p++;if(side.win)m.w++}
+          }
+        }
+      }
+      return {id,games:rows.length,p,w,b,pres:rows.length?(p+b)/rows.length:0,
+        interval:patchWinInterval(w,p),roles,matchups,teams:teams.size,players:players.size,teamConc:p?Math.max(0,...teams.values())/p:0,playerConc:p?Math.max(0,...players.values())/p:0,
+        firstDate:rows.reduce((a,r)=>a<r.date?a:r.date,rows[0]?.date||null)};
+    });
+    const result={cid:d.cid,status:'observe',scope:null,reason:'충분한 관측 기회가 쌓이지 않음',windows};
+    if(!championProEligible(db,c)){result.reason='현재 대회 사용 제한';return result}
+    if(windows.length<3||windows.some(x=>x.games<24))return result;
+    if(windows.some(x=>x.pres>=.025)){result.status='retain';result.reason='최근 선택·밴 또는 활용 증가가 있어 유지';return result}
+    if(windows.some(x=>Object.values(x.roles).concat(Object.values(x.matchups)).some(r=>patchWinInterval(r.w,r.p).lower>=.47))){
+      result.status='retain';result.reason='실제 포지션·상대 조합에서 성과가 확인된 틈새 픽';return result;
+    }
+    if(windows.some(x=>!x.p||x.interval.upper>=.47||x.teams<2||x.players<2||x.teamConc>.5||x.playerConc>.45||Object.values(x.roles).reduce((n,r)=>n+r.p,0)!==x.p||
+      Object.values(x.roles).some(r=>patchWinInterval(r.w,r.p).upper>=.47))){result.reason='저사용만으로 설계 문제를 단정하지 않음 · 출전·역할·분산 근거 부족';return result}
+    const first=windows[0].firstDate,lastChange=[...history].reverse().find(p=>(p.notes||[]).some(n=>n.c===d.cid&&['skill','base','kit','rework'].includes(n.type)));
+    if(!lastChange||!lastChange.date||lastChange.date>=first){result.reason='이전 조정 이후의 독립 관측·효과 부족 근거가 더 필요';return result}
+    const prior=(lastChange.notes||[]).filter(n=>n.c===d.cid),mid=prior.some(n=>n.type==='rework'&&n.scope==='mid');
+    if(!mid&&!prior.some(n=>n.dir===1&&n.category!=='rework')){result.reason='수치 보강을 거치지 않은 저사용은 구조 변경 근거로 쓰지 않음';return result}
+    result.status='candidate';result.scope=mid?'major':'mid';
+    result.reason=mid?'소규모 업데이트 뒤에도 세 관측 구간의 역할 부진이 지속 · 대규모 검토 후보':'이전 보강 뒤에도 세 관측 구간의 역할 부진이 지속 · 소규모 검토 후보';
+    return result;
+  });
 }
 function recentDirectionCount(db,cid,dir,lookback=2){
   return patchHistory(db).slice(-lookback).reduce((z,p)=>z+(p.notes||[]).some(n=>n.c===cid&&n.dir===dir&&['skill','base','kit'].includes(n.type))?1:0,0);
