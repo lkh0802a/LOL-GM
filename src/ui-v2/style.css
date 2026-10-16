@@ -28,3 +28,15 @@ body{background:var(--bg);transition:background .15s,color .15s}svg.ico{width:20
 .work-dialog-heading{display:flex;justify-content:flex-end}.work-dialog-heading .icon-button{min-width:44px;min-height:44px}.work-dialog:not([data-task="official"]){width:min(620px,calc(100vw - 24px))}.work-dialog:not([data-task="official"]) .term-review{margin:0}.work-dialog .panel{min-width:0}
 
 .player-list-row{display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--line);padding:9px 0;min-width:0}.player-list-open{display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-align:left;color:var(--fg);background:transparent;border:0;padding:5px 0;min-height:52px}.player-list-open .grow{min-width:0}.player-list-open strong{display:block;font-size:14px;overflow-wrap:anywhere}.player-list-open .player-meta{display:block;margin-top:4px;font-size:11px}.player-list-row .player-avatar{width:36px;height:36px;font-size:10px;flex-shrink:0}.player-list-row .icon-button{min-width:44px;min-height:44px}.work-dialog-heading{justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}.work-dialog-heading h2{font-size:16px;margin:0}
+
+/* 웹 안전 영역을 현재 화면 여백에 더한다. 앱의 실제 inset 전달은 실기기에서 별도 검증한다. */
+:root{--safe-top:env(safe-area-inset-top,0px);--safe-right:env(safe-area-inset-right,0px);--safe-bottom:env(safe-area-inset-bottom,0px);--safe-left:env(safe-area-inset-left,0px)}
+.shell{--shell-top:22px;--shell-side:25px;--shell-bottom:45px;padding:calc(var(--shell-top) + var(--safe-top)) calc(var(--shell-side) + var(--safe-right)) calc(var(--shell-bottom) + var(--safe-bottom)) calc(var(--shell-side) + var(--safe-left))}
+.work-dialog{--dialog-gap:20px;inset:var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);width:min(1180px,calc(100vw - 2 * var(--dialog-gap) - var(--safe-left) - var(--safe-right)));max-height:calc(100dvh - 2 * var(--dialog-gap) - var(--safe-top) - var(--safe-bottom))}
+.work-dialog:not([data-task="official"]){width:min(620px,calc(100vw - 2 * var(--dialog-gap) - var(--safe-left) - var(--safe-right)))}
+.work-dialog-heading{position:sticky;top:0;z-index:3;background:var(--bg);border-bottom:1px solid var(--line);padding:4px 0}
+@media(max-width:620px){.shell{--shell-top:17px;--shell-side:13px;--shell-bottom:30px}}
+@media(max-width:650px){.work-dialog{--dialog-gap:6px}}
+@media(pointer:coarse){.btn,.icon-button,.chip,.sub-item,input.input,select.input{min-height:44px}.icon-button{min-width:44px}}
+
+@media(max-width:620px){.header{flex-wrap:wrap}.actions{margin-left:auto}}

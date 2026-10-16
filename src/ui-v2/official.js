@@ -1,7 +1,7 @@
 // 공식 선택·밴픽 화면. 경기 결과·선택권·시드·등록 작성자는 기존 엔진만 사용한다.
 function v2OfficialError(){
  const db=V2.db;if(!db?.world?.pendingOfficial?.queue?.length)return '준비할 공식 경기가 없습니다';
- const control=pendingOfficialControl(db);return control.error||(!control.manual||!managerControlsSquad(db,v2Team())?'현재 감독이 직접 준비할 수 있는 경기가 아닙니다':null);
+ const control=pendingOfficialControl(db);return control.error||(manualContactPending(db)?'도착한 선수 연락을 먼저 검토하세요':null)||(!control.manual||!managerControlsSquad(db,v2Team())?'현재 감독이 직접 준비할 수 있는 경기가 아닙니다':null);
 }
 function v2OfficialContext(){
  const db=V2.db,w=db.world,p=w.pendingOfficial,q=p.queue[0],team=v2Team(),refs=pendingOfficialRefs(db,q);
@@ -12,6 +12,7 @@ function v2OfficialCurrent(o=V2.official){const c=o?.context;return !!c&&V2.db==
 function v2OfficialAi(state,side){let turns=0;while(draftTurn(state)&&draftTurn(state).side!==side){if(++turns>20)throw Error('밴픽 진행 순서를 확인할 수 없습니다');const choice=draftAiChoice(state);if(choice)draftApplyChoice(state,choice);else draftSkipTurn(state);}}
 function v2OfficialShow(){V2.section='schedule';V2.tab='경기 일정';V2.pid=null;v2Render();}
 function v2OfficialPrepare(){
+ if(validManualInflightGame(V2.db))return {mode:'running',open:true,context:v2OfficialContext()};
  const selection=pendingOfficialSelectionSetup(V2.db);let o;
  if(selection)o={mode:'selection',setup:selection};
  else {const setup=pendingOfficialDraftSetup(V2.db);if(!setup)throw Error('현재 경기의 준비 입력을 확인할 수 없습니다');const side=[setup.blue,setup.red].indexOf(managedTeamId(V2.db));if(side<0)throw Error('현재 구단의 공식 경기 준비가 아닙니다');const state=createDraftSession(seriesOfficialView(V2.db,setup.session),[setup.blue,setup.red],new RNG(setup.gseed,'draft'),setup.draftCtx);v2OfficialAi(state,side);o={mode:'draft',setup,state,side,query:'',role:'ALL',selected:null};}
@@ -35,17 +36,24 @@ function v2OfficialConfirm(){
 }
 function v2OfficialFinish(){
  const o=V2.official;if(!v2OfficialCurrent(o)||o.mode!=='draft'||draftTurn(o.state))return v2Tell('현재 경기의 밴픽을 먼저 확정하세요');
- const previousResult=V2.officialResult,undo=pendingOfficialUndo(V2.db);try{
-  const draft=draftResult(o.state),out=resolvePendingOfficialMatch(V2.db,draft);if(!out.game)throw Error('실제 경기 결과를 확인할 수 없습니다');
-  const record=publicMatchRecord(out.game,V2.db.patch.id);V2.officialResult={game:record,score:out.score,done:out.done};V2.official=null;v2Save();v2Tell('실제 경기 결과를 기록했습니다. 다음 준비와 진행은 직접 선택하세요');v2Render();
- }catch(error){undo();V2.official=o;V2.officialResult=previousResult;v2Tell('공식 경기 처리 실패 · '+error.message+' · 완료 기록과 준비 입력은 유지했습니다');}
+ v2ResolveOfficialGame(draftResult(o.state));
+}
+function v2ResolveOfficialGame(draft){
+ const o=V2.official;if(!v2OfficialCurrent(o))return v2Tell('현재 경기 준비를 다시 확인하세요');
+ const previousResult=V2.officialResult,undo=pendingOfficialUndo(V2.db);try{const out=resolvePendingOfficialMatch(V2.db,draft);if(!out.game&&!out.response)throw Error('현재 경기 진행 결과를 확인할 수 없습니다');v2AcceptOfficialOutput(out);}catch(error){undo();V2.official=o;V2.officialResult=previousResult;v2Tell('공식 경기 처리 실패 · '+error.message+' · 완료 기록과 준비 입력은 유지했습니다');}
+}
+function v2AcceptOfficialOutput(out){
+ if(out.game)V2.officialResult={game:publicMatchRecord(out.game,V2.db.patch.id),score:out.score,done:out.done};
+ V2.official=null;v2Save();const contact=v2CurrentContact();v2Tell(contact||out.response?'선수 연락에서 진행을 멈췄습니다. 현재 계약을 직접 검토하세요.':'실제 경기 결과를 기록했습니다. 다음 준비와 진행은 직접 선택하세요');
+ if(contact)v2OpenNegotiation(contact.id);else if(!v2ShowContractResponse(out))v2Render();
 }
 function v2OfficialNotice(){
- if(!V2.db.world.pendingOfficial)return '';const error=v2OfficialError();
+ if(!V2.db.world.pendingOfficial)return '';const contact=v2CurrentContact();if(contact)return '<section class="panel"><h3>선수 연락 도착 · 경기 진행 중단</h3><p>연락을 직접 검토한 뒤 현재 경기 재개를 선택하세요. 이미 시작한 게임의 밴픽을 바꾸지 않습니다.</p><button class="btn btn-primary" id="official-contact">도착한 계약 연락 확인</button></section>';const error=v2OfficialError();
  return `<section class="panel"><div class="panel-heading"><strong>공식 경기 준비 대기</strong></div><p class="hint">${v2Esc(error||'진영·픽 순서와 밴픽을 직접 확정한 뒤 경기를 진행하세요. 다른 날짜로 넘어가지 않습니다.')}</p><div class="tag-flex"><button class="btn btn-primary" id="official-open"${error?' disabled':''}>${V2.official?'중단한 준비 재개':'현재 경기 준비'}</button>${V2.official?'<button class="btn btn-outline" id="official-discard">미완료 준비 입력 취소</button>':''}</div><p class="hint">중단 중인 챔피언 입력은 파일 저장에 포함되지 않습니다. 저장된 세트 선택권과 완료 경기는 유지합니다.</p></section>`;
 }
 function v2OfficialView(){
  const o=V2.official;if(!v2OfficialCurrent(o))return `<section class="panel"><h2>경기 준비 상태가 바뀌었습니다</h2><p>이전 준비 입력을 현재 경기에 자동 적용하지 않습니다.</p><button class="btn btn-outline" id="official-discard">미완료 준비 입력 취소</button></section>`;
+ if(o.mode==='running')return '<section class="panel"><h2>진행 중인 공식 게임</h2><p>시작할 때 확정한 입력을 유지합니다. 아직 끝나지 않은 경기의 결과는 표시하지 않습니다.</p><button class="btn btn-primary" id="official-resume">현재 게임 이어서 진행</button></section>';
  const x=o.setup,header=`<section class="panel"><div class="panel-heading"><strong>${v2Esc(x.comp.name)} · ${x.game}세트</strong><button class="btn btn-outline btn-small" id="official-pause">창 닫기</button></div><p>${v2Esc(V2.db.teams[x.m.a].name)} ${x.score.join(' : ')} ${v2Esc(V2.db.teams[x.m.b].name)}</p></section>`;
  if(o.mode==='selection'){
   const p=x.prompt,options=p.mode==='first'?[['side','blue','블루 진영'],['side','red','레드 진영'],['order','first','선픽'],['order','last','후픽']]:p.remaining==='side'?[['side','blue','블루 진영'],['side','red','레드 진영']]:[['order','first','선픽'],['order','last','후픽']];
@@ -71,6 +79,8 @@ function v2DraftCentre(o){
 
 function v2OfficialResultView(){const r=V2.officialResult;if(!r)return '';const g=r.game;return `<section class="panel"><h2>방금 끝난 공식 경기</h2><p>${v2Esc(V2.db.teams[g.winner]?.name||g.winner)} 승 · ${v2Esc(g.ending?.kind==='nexus'?'넥서스 파괴':g.ending?.kind||'종료 사유 확인')}</p><p>${r.score.join(' : ')} · ${r.done?'시리즈 종료':'다음 세트 준비 대기'}</p></section>`;}
 function v2BindOfficial(){
+ v2Bind('#official-contact',()=>{const c=v2CurrentContact();if(c)v2OpenNegotiation(c.id)});
+ v2Bind('#official-resume',()=>{if(V2.official?.mode==='running')v2ResolveOfficialGame(null)});
  v2BindChampionArt();
  v2Bind('#official-open',()=>v2OfficialOpen());v2Bind('#official-pause',()=>{if(V2.official)V2.official.open=false;v2Render();document.getElementById('official-open')?.focus({preventScroll:true});});v2Bind('#official-discard',()=>{V2.official=null;v2Tell('미완료 준비 입력만 취소했습니다. 저장된 경기와 선택권은 유지합니다');v2Render();});
  v2Bind('[data-official-kind]',el=>v2OfficialSelect(el.dataset.officialKind,el.dataset.officialValue));

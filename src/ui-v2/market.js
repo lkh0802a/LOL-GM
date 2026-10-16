@@ -1,4 +1,4 @@
-function v2Target(){if(!V2.db)return null;const teams=setupTeamsForManager(V2.db);return teams.find(t=>t.id===V2.target)||teams[0]||null;}
+function v2Target(){if(!V2.db)return null;if(V2.db.world.phase!=='initial_roster')return managedTeam(V2.db);const teams=setupTeamsForManager(V2.db);return teams.find(t=>t.id===V2.target)||teams[0]||null;}
 function v2OrganizationContext(){
  const db=V2.db;if(db.world.phase!=='initial_roster')return '';const teams=setupTeamsForManager(db),current=v2Target();if(teams.length<2)return '';
  return `<section class="panel"><div class="panel-heading"><strong>구성할 선수단</strong></div><p class="hint">구성할 선수단을 선택하고 선수를 검토하세요. 계약은 조건 합의 후 직접 확정합니다.</p><div class="stack">${teams.map(t=>{const lim=initialSquadLimits(db,t);return `<button class="btn ${current?.id===t.id?'btn-primary':'btn-outline'}" data-squad-context="${v2Esc(t.id)}" aria-pressed="${current?.id===t.id}">${v2Esc(t.name)} · ${t.roster.length}명 / 최소 ${lim.min}명</button>`}).join('')}</div></section>`;
@@ -27,8 +27,8 @@ function v2Market(){
 }
 function v2PlayerDetail(){
  const db=V2.db,p=db.players[V2.pid],t=v2Target();if(!p||p.retired)return '<section class="panel empty">현재 선수 정보를 확인할 수 없습니다.</section>';
- const view=v2ReadView(),range=scoutAbilityRange(view,p),potential=scoutPotentialRange(view,p),entry=view.world?.recruitment?.targets?.[p.id],checked=entry?.evaluation?.teamId===t?.id,eligible=t&&!p.team?initialSignCheck(db,p,t):{ok:false,reason:'현재 자유계약 대상이 아닙니다'},n=Object.values(db.world?.negotiations||{}).find(n=>n.pid===p.id&&n.teamId===t?.id&&n.status==='open');
- return `<section class="panel"><button class="btn btn-outline btn-small" id="player-back">← 목록으로</button><div class="content-head"><div><div class="eyebrow">선수 상세</div><h2>${v2Esc(p.name)}</h2><p class="small subtle">${v2Esc(ROLE_KO[p.role])} · ${p.age}세 · ${v2Esc(db.teams[p.team]?.name||'무소속')}</p></div><button class="icon-button favorite ${entry?'on':''}" data-watch="${p.id}" aria-pressed="${!!entry}" aria-label="관심 ${entry?'해제':'등록'}">${v2Icon('star')}</button></div><div class="detail-grid"><div class="stat"><span class="label">기량 추정</span><strong>${range.every(Number.isFinite)?range.join('–'):'정보 부족'}</strong></div><div class="stat"><span class="label">잠재력 추정</span><strong>${potential.every(Number.isFinite)?potential.join('–'):'정보 부족'}</strong></div></div><hr class="divider"><p class="hint">관측한 정보로 표시합니다. 추정 범위는 실제 능력 확정값이 아닙니다. 현재 정보량 ${knowledge(view,p)}%.</p><div class="stack"><button class="btn btn-outline" id="scout-player">관찰 보고서 요청 · ${v2Money(.1*psOf(db,v2Team().region))}</button><button class="btn btn-outline" id="evaluate-player"${!entry||knowledge(view,p)<35?' disabled':''}>대상 선수단 내부 평가${checked?' · 완료':''}</button><button class="btn btn-primary" id="negotiate-player"${!checked||!eligible.ok||db.world.phase!=='initial_roster'?' disabled':''}>${n?'진행 중인 협상 확인':'계약 조건 제안'}</button></div>${!eligible.ok?`<p class="hint">${v2Esc(eligible.reason)}</p>`:''}<p class="hint">관심 등록 → 관찰 정보 확인 → 내부 평가 → 조건 제안 순서로 진행합니다.</p></section>`;
+ const view=v2ReadView(),range=scoutAbilityRange(view,p),potential=scoutPotentialRange(view,p),entry=view.world?.recruitment?.targets?.[p.id],checked=entry?.evaluation?.teamId===t?.id,eligible=t&&!p.team?v2PlayerEntryCheck(p,t):{ok:false,reason:'현재 자유계약 대상이 아닙니다'},n=Object.values(db.world?.negotiations||{}).find(n=>n.pid===p.id&&n.teamId===t?.id&&n.status==='open');
+ return `<section class="panel"><button class="btn btn-outline btn-small" id="player-back">← 목록으로</button><div class="content-head"><div><div class="eyebrow">선수 상세</div><h2>${v2Esc(p.name)}</h2><p class="small subtle">${v2Esc(ROLE_KO[p.role])} · ${p.age}세 · ${v2Esc(db.teams[p.team]?.name||'무소속')}</p></div><button class="icon-button favorite ${entry?'on':''}" data-watch="${p.id}" aria-pressed="${!!entry}" aria-label="관심 ${entry?'해제':'등록'}">${v2Icon('star')}</button></div><div class="detail-grid"><div class="stat"><span class="label">기량 추정</span><strong>${range.every(Number.isFinite)?range.join('–'):'정보 부족'}</strong></div><div class="stat"><span class="label">잠재력 추정</span><strong>${potential.every(Number.isFinite)?potential.join('–'):'정보 부족'}</strong></div></div><hr class="divider"><p class="hint">관측한 정보로 표시합니다. 추정 범위는 실제 능력 확정값이 아닙니다. 현재 정보량 ${knowledge(view,p)}%.</p><div class="stack"><button class="btn btn-outline" id="scout-player">관찰 보고서 요청 · ${v2Money(.1*psOf(db,v2Team().region))}</button><button class="btn btn-outline" id="evaluate-player"${!entry||knowledge(view,p)<35?' disabled':''}>대상 선수단 내부 평가${checked?' · 완료':''}</button><button class="btn btn-primary" id="negotiate-player"${!checked||!eligible.ok?' disabled':''}>${n?'진행 중인 협상 확인':'계약 조건 제안'}</button></div>${!eligible.ok?`<p class="hint">${v2Esc(eligible.reason)}</p>`:''}<p class="hint">관심 등록 → 관찰 정보 확인 → 내부 평가 → 조건 제안 순서로 진행합니다.</p></section>`;
 }
 function v2RecruitAction(action){if(v2Team()?.parent)return v2Tell('산하 선수단의 영입 계약은 모구단이 담당합니다');return v2Mutate(action);}
 function v2BindMarket(){
@@ -42,5 +42,17 @@ function v2BindMarket(){
  v2Bind('[data-watch]',el=>v2RecruitAction(()=>{const id=el.dataset.watch;return V2.db.world?.recruitment?.targets?.[id]?mDropInterest(V2.db,id):mInterest(V2.db,id,'B')}));
  v2Bind('#scout-player',()=>v2RecruitAction(()=>scoutPlayers(V2.db,[V2.pid],40,.1*psOf(V2.db,v2Team().region))));
  v2Bind('#evaluate-player',()=>v2RecruitAction(()=>mEvaluateTarget(V2.db,V2.pid,v2Target().id)));
- v2Bind('#negotiate-player',()=>{if(v2ManualError())return v2Tell(v2ManualError());if(v2Team()?.parent)return v2Tell('산하 선수단의 영입 계약은 모구단이 담당합니다');const db=V2.db,id=negotiationId(db,V2.pid,'initial',v2Target().id),n=db.world?.negotiations?.[id];if(!n||n.status!=='open')v2Mutate(()=>initialStartNegotiation(db,V2.pid,v2Target().id));v2OpenNegotiation(id);});
+ v2Bind('#negotiate-player',()=>v2StartPlayerNegotiation());
+}
+
+function v2PlayerEntryCheck(p,t=v2Target()){
+ if(V2.db.world.phase==='initial_roster')return initialSignCheck(V2.db,p,t);
+ const error=v2ManualError()||(!t||t.active===false||t.parent?'현재 선수 계약은 활성 모구단에서 직접 검토하세요':!p||p.retired||p.team?'현재 자유계약 대상이 아닙니다':null);
+ return {ok:!error,reason:error};
+}
+function v2StartPlayerNegotiation(){
+ const db=V2.db,p=db.players[V2.pid],t=v2Target(),allowed=v2PlayerEntryCheck(p,t);if(!allowed.ok)return v2Tell(allowed.reason);
+ if(v2Team()?.parent)return v2Tell('산하 선수단의 영입 계약은 모구단이 담당합니다');
+ const kind=db.world.phase==='initial_roster'?'initial':'fa',id=negotiationId(db,p.id,kind,kind==='initial'?t.id:null),undo=pendingOfficialUndo(db);
+ try{const out=kind==='initial'?initialStartNegotiation(db,p.id,t.id):startNegotiation(db,p.id,'fa');if(!out.ok){undo();return v2Tell(out.msg);}v2Save();v2OpenNegotiation(out.neg?.id||id);}catch(error){undo();v2Tell(error.message);}
 }
