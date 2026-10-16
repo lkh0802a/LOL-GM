@@ -54,11 +54,13 @@ function v2WaitingProgress(){const rows=waitingNegotiationResponses(V2.db,true);
 function v2ContractAction(action,nid=null){
  const error=nid?manualNegotiationError(V2.db,v2OwnedNegotiation(nid)):v2ManualError();if(error)return v2Tell(error);
  if(V2.managementReview||V2.roleReview||V2.advice||V2.official?.open)return v2Tell('현재 작업 창을 먼저 닫으세요');
- const undo=pendingOfficialUndo(V2.db);try{const out=action();if(!out?.ok&&!out?.response){undo();v2Tell(out?.msg||'현재 계약 상태를 다시 확인하세요');return out;}v2Tell(out.msg||'연락과 현재 상태를 확인하세요');v2Save();if(!v2ShowContractResponse(out))v2Render();return out;}catch(error){undo();v2Tell(error.message);return {ok:false,msg:error.message};}
+ const undo=pendingOfficialUndo(V2.db);let out;try{out=action();if(!out?.ok&&!out?.response){undo();v2Tell(out?.msg||'현재 계약 상태를 다시 확인하세요');return out;}}catch(error){undo();v2Tell(error.message);return {ok:false,msg:error.message};}
+ v2AfterCommittedAction(()=>{v2Tell(out.msg||'연락과 현재 상태를 확인하세요');v2Save();if(!v2ShowContractResponse(out))v2Render();});return out;
 }
 function v2ResumeAfterContact(){
  if(!v2CurrentContact())return v2Tell('현재 경기의 연락을 다시 확인하세요');
- const undo=pendingOfficialUndo(V2.db);try{const out=resumeManualAfterContact(V2.db);if(!out.ok&&!out.response&&!out.game){undo();return v2Tell(out.msg);}v2AcceptOfficialOutput(out);if(!v2CurrentContact()&&V2.db.world.pendingOfficial)v2OfficialOpen();}catch(error){undo();v2Tell(error.message);}
+ const undo=pendingOfficialUndo(V2.db);let out;try{out=resumeManualAfterContact(V2.db);if(!out.ok&&!out.response&&!out.game){undo();return v2Tell(out.msg);}}catch(error){undo();return v2Tell(error.message);}
+ v2AfterCommittedAction(()=>{v2AcceptOfficialOutput(out);if(!v2CurrentContact()&&V2.db.world.pendingOfficial)v2OfficialOpen();});
 }
 
 function v2ShowContractResponse(out){
@@ -67,3 +69,6 @@ function v2ShowContractResponse(out){
 }
 
 function v2CancelNegotiation(nid){const n=v2OwnedNegotiation(nid);if(!n||n.status!=='open')return {ok:false,msg:'진행 중인 협상이 아닙니다'};const msg=cancelNegotiation(V2.db,nid);return {ok:n.status==='cancelled',msg};}
+
+// 게임 작성이 성공한 뒤의 표시 실패는 저장한 결정을 되돌리지 않는다.
+function v2AfterCommittedAction(show){try{show();}catch(error){v2Tell('게임 처리는 유지했습니다. 화면을 다시 여세요 · '+error.message);}}

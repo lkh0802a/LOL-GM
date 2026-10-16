@@ -40,7 +40,8 @@ function v2OfficialFinish(){
 }
 function v2ResolveOfficialGame(draft){
  const o=V2.official;if(!v2OfficialCurrent(o))return v2Tell('현재 경기 준비를 다시 확인하세요');
- const previousResult=V2.officialResult,undo=pendingOfficialUndo(V2.db);try{const out=resolvePendingOfficialMatch(V2.db,draft);if(!out.game&&!out.response)throw Error('현재 경기 진행 결과를 확인할 수 없습니다');v2AcceptOfficialOutput(out);}catch(error){undo();V2.official=o;V2.officialResult=previousResult;v2Tell('공식 경기 처리 실패 · '+error.message+' · 완료 기록과 준비 입력은 유지했습니다');}
+ const previousResult=V2.officialResult,undo=pendingOfficialUndo(V2.db);let out;try{out=resolvePendingOfficialMatch(V2.db,draft);if(!out.game&&!out.response)throw Error('현재 경기 진행 결과를 확인할 수 없습니다');}catch(error){undo();V2.official=o;V2.officialResult=previousResult;return v2Tell('공식 경기 처리 실패 · '+error.message+' · 완료 기록과 준비 입력은 유지했습니다');}
+ v2AfterCommittedAction(()=>v2AcceptOfficialOutput(out));
 }
 function v2AcceptOfficialOutput(out){
  if(out.game)V2.officialResult={game:publicMatchRecord(out.game,V2.db.patch.id),score:out.score,done:out.done};
