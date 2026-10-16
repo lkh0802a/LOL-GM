@@ -1,3 +1,4 @@
+await import('./official-undo-acceptance.mjs');
 import assert from 'node:assert/strict';
 import {runEngineFixture} from './test-harness.mjs';
 const result=await runEngineFixture(String.raw`(()=>{

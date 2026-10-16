@@ -30,9 +30,9 @@
     "scripts/verify-official-edit-evidence.mjs": "e040f16df1693b2cc411f0796e6bb329c53d7b04eb847dadc8ab96a55c29d29d"
   },
   "sources": {
-    "docs/README.md": "dcde797976c36c42aa0a7e42aa7a9ecd9ea1afd667ea856f84f48baca96b9f45",
-    "docs/DEVELOPMENT.md": "3410a6cec94c810311cb03c05937050a20bb4c75beab41cc958e8524419e6526",
-    "index.html": "f759b29d70bb371163bb77d4e3c779253c2475388e3481ad0f4c981c44ac3c82",
+    "docs/README.md": "79a20776fb6100cb9ef805ef9934c3b8001c0f2886825e1a6c76dc0bb9168dd7",
+    "docs/DEVELOPMENT.md": "027663d4595bce5463d5bdba4e8f99288392d4a4d7f82959bde3ae40b662e522",
+    "index.html": "be177854c4e10226d5107b6837314539f2b408db59b6f6a0928857eda4f5d04f",
     "scripts/artifact-modules.mjs": "f3936d38570c9533bf02d066b1e9e51666e4ca6944637e820f202bd88b467193",
     "scripts/current-guide-source-successor.mjs": "1e32b80db1d2f57db4f4082778ba4beebf46366fd71e42602e9fe897f87de1d0",
     "scripts/negotiation-summary-acceptance.mjs": "b1a19070d9390682c27e0d5eb2558debfca37b91799afdb2c715258b7ab04e2f",

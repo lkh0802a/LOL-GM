@@ -35,7 +35,7 @@
     "scripts/initial-negotiation-review-source-successor.mjs": "0d7a04d427020605a62890ee76e0b97173459e080282041496837f70f8ad52bb",
     "scripts/startup-save-source-successor.mjs": "6d189a87af95fad4b6ebb5b73fa61d38ed0c07ee93024a2356fe84455e05caea",
     "scripts/stove-fa-source-successor.mjs": "e41f65cbe153f6805a85a25af758c573f1869048885553be386f1df0d7664680",
-    "src/artifact/season.js": "aefff4d2e3c8c46b93e7725817e93614f261a6afd53850959535b7bece7884b1",
+    "src/artifact/season.js": "231711f819d218879c83fc1dfbd866267e1b6ae1abec282b8e3fc0b06cfd975d",
     "src/artifact/negotiation-final.js": "3215be1393f5bacc9d458051ae158499e6d99412b339bd5de7a5befb988b9e9c",
     "src/artifact/calendar.js": "f44a6edceb11aec7b029095072d3b5f85a13148c84d57c4d1586022409acf825",
     "src/artifact/competition.js": "3aac21d9ac684de4913b191f15d6bcc1f375bfe0ed5773c4bc914102100f1ba9",
@@ -48,7 +48,7 @@
     "scripts/patch-rework-acceptance.mjs": "408d5dff7e4a39cec01508b3cb01ed90ba6a7b8722f079da5c8479718390071e",
     "scripts/patch-lifecycle-acceptance.mjs": "f4a9bfe5bc1e99caa6eb7d7cb09880a1fbdf34bc1274815072574e09d41027fc",
     "scripts/patch-world-sample.mjs": "1b29dcd9f35112fafa8b47881c77982f8eeac04148cc985fcdc8dd26b217c751",
-    "scripts/patch-calendar-carry-acceptance.mjs": "ffc81068ce4d63ef53797f9429591122686a8db9cfe46a36a37af676890bf207"
+    "scripts/patch-calendar-carry-acceptance.mjs": "f2a3371d47c4a51173700f8a0dd1351db88acc30cd8e5f80745b4818011625cd"
   },
   "meaning": "원래 단언·원문을 보존한 명시적 소스 승계. 과거 검사는 현재 엔진의 성공으로 승계하지 않는다. 현재 검사 정상 종료는 별도 기록한다.",
   "clockDecidingSet": {
