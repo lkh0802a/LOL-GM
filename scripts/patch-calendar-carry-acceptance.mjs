@@ -1,3 +1,5 @@
+await import('./system-choice-hash-acceptance.mjs');
+await import('./draft-staff-profile-acceptance.mjs');
 await import('./official-undo-acceptance.mjs');
 import assert from 'node:assert/strict';
 import {runEngineFixture} from './test-harness.mjs';

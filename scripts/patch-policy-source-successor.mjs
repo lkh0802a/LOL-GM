@@ -1,3 +1,4 @@
+import {draftPerformanceSource} from './draft-performance-source-successor.mjs';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
@@ -33,5 +34,5 @@ async function verify(){
 }
 // Return predecessor hashes only for explicitly archived, current-byte-verified
 // changes. This proves old evidence retention, never current engine identity.
-export async function patchPolicySourceHash(p){const {e}=await verify();return e.originals[p]||sha(await readFile(new URL(p,root)))}
-export async function patchPolicySourceText(p){const {originals}=await verify();return originals[p]??readFile(new URL(p,root),'utf8')}
+export async function patchPolicySourceHash(p){const {e}=await verify();const retained=await draftPerformanceSource(p);return e.originals[p]||sha(retained??await readFile(new URL(p,root)))}
+export async function patchPolicySourceText(p){const {originals}=await verify();return originals[p]??await draftPerformanceSource(p)??readFile(new URL(p,root),'utf8')}
