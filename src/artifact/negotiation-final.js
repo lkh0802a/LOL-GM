@@ -54,6 +54,14 @@ function negotiationClockAt(db){
   }
   return officialGameClockFloor(db,date+'T00:00:00.000Z');
 }
+// 완료된 타 지역 경기의 압축 저장에도 실제 숫자 소요 시간을 유지한다.
+// 표시용 dur 문자열에서 시간을 복원하거나 누락 근거를 추정하지 않는다.
+const seriesResultForSaveBeforeActualTime=seriesResultForSave;
+seriesResultForSave=function(result,lite){
+  const saved=seriesResultForSaveBeforeActualTime(result,lite);
+  if(lite&&!result.lite)saved.games=saved.games.map((game,index)=>({...game,...(result.games[index].duration!=null?{duration:result.games[index].duration}:{})}));
+  return saved;
+};
 // 넥서스 종료까지 실제 엔진이 소비한 분 단위 시간만 기록한다.
 // 세트 사이 준비/휴식과 중계 종료 시간은 자료가 없어 만들어 넣지 않는다.
 function officialGameTimeRecord(m,games){

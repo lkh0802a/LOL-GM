@@ -30,9 +30,9 @@
     "scripts/verify-official-edit-evidence.mjs": "e040f16df1693b2cc411f0796e6bb329c53d7b04eb847dadc8ab96a55c29d29d"
   },
   "sources": {
-    "docs/README.md": "8c0190558f0a89ba88c972744ed3634538e73b8820fd1c15809edce441bff5dd",
-    "docs/DEVELOPMENT.md": "6c27dbe144eef1e425b00f58928cf5aeb2547e2846bd217bf04c1f4e1da64dc7",
-    "index.html": "30a7a8e5a0787bf3f2f0468a36f3703788689b6bf252a7dd522cf49a0d29cec8",
+    "docs/README.md": "a84679a4aa5e1c7a5ba6b891d90d3dd903c4550e485066ca4aeb0a8a2c23ab48",
+    "docs/DEVELOPMENT.md": "3e3a9683c93799fee904cd43638d41e3dc1579b9f93d6a0e0a3e48328b762c04",
+    "index.html": "cfbe8409c061fe4dbe5bd609fc20c26b51195e893d15ddd5c2b06ce15db8cebf",
     "scripts/artifact-modules.mjs": "f3936d38570c9533bf02d066b1e9e51666e4ca6944637e820f202bd88b467193",
     "scripts/current-guide-source-successor.mjs": "1e32b80db1d2f57db4f4082778ba4beebf46366fd71e42602e9fe897f87de1d0",
     "scripts/negotiation-summary-acceptance.mjs": "b1a19070d9390682c27e0d5eb2558debfca37b91799afdb2c715258b7ab04e2f",
@@ -50,9 +50,9 @@
     "scripts/stove-fa-source-successor.mjs": "04e7c1fa7c9fbee0b0c9b63c168fdb9108a19bdc31ece2cc8fc171fbe2c5782b",
     "scripts/verify-official-draft-evidence.mjs": "728f8c50d742c27a19f4e566f757bef97e144f17fd7d5344a3d8dc58d539b751",
     "scripts/verify-official-edit-evidence.mjs": "c458de3c31f3ff6487eb96ec3cc49bed0eb0df510d4f92d8653cd450a7e0fda1",
-    "src/artifact/negotiation-final.js": "ca68695012c8ed0ea4f1d91f9778ca836606bc6fce9ede791efdef40c2365171",
+    "src/artifact/negotiation-final.js": "b13cccb26265c213ccdac6ee0ebb9cf045bc525b1f862bfc0c83ddc127b5bd69",
     "src/artifact/ui-negotiation-final.js": "d29e22807a257adb10836f4fd25836b57e5b39baebb42bbfa9a0ab71b4d3e9d7",
-    "scripts/negotiation-final-acceptance.mjs": "ed010698e8495312e8fffb8b86b6cb99f93d217f620074ff0df0d53235f815d1",
+    "scripts/negotiation-final-acceptance.mjs": "508322cad31f1091c8b228c238dd4f3b7c90f668c63311a4674234e10d11ff63",
     "scripts/negotiation-final-source-successor.mjs": "057ce3bdbfe168f6bf417b92c5e6c6c21e44750e42711426333a987fa226ef7a"
   }
 }

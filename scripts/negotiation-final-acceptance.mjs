@@ -1,3 +1,4 @@
+await import('./official-compact-time-acceptance.mjs');
 await import('./negotiation-clock-acceptance.mjs');
 import assert from 'node:assert/strict';
 import {artifactSources,runEngineFixture} from './test-harness.mjs';
