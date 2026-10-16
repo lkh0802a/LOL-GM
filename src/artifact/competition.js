@@ -120,9 +120,23 @@ function recordLines(s,lines){
     const c=p.champs[l.champ]||(p.champs[l.champ]=[0,0]);c[0]++;if(l.win)c[1]++;
   }
 }
+function lockInternationalPatch(db,s,date=db.worldDate){
+  if(!db.competitions[s?.comp]?.international||s.patchLock||!s.days.length||date<s.days[0].date)return;
+  if(date!==s.days[0].date)throw new Error('국제대회 개막 패치 기록이 없습니다: '+s.id);
+  s.patchLock={id:db.patch.id,date};
+  s.championPool=Object.values(db.patch.champions).filter(c=>championProEligible(db,c,date)).map(c=>c.id);
+}
+function internationalMatchPatch(db,s){
+  if(!db.competitions[s?.comp]?.international)return db.patch;
+  if(!s.patchLock){if(db.worldDate>=s.days[0]?.date)throw new Error('국제대회 개막 패치가 고정되지 않았습니다: '+s.id);return db.patch}
+  const patch=getPatch(db,s.patchLock.id);
+  if(patch.id!==s.patchLock.id)throw new Error('국제대회 고정 패치를 복원할 수 없습니다: '+s.patchLock.id);
+  return patch;
+}
 function scheduledSeriesOptions(db,s,day,cfg){
+  lockInternationalPatch(db,s);
   const comp=db.competitions[s.comp],neutralIntlBracket=!!comp.international&&['single_elim','double_elim'].includes(cfg.type),firstChoice=neutralIntlBracket?'coin':(cfg.firstChoice||(cfg.type==='round_robin'&&!comp.international?'home':(['round_robin','swiss','single_elim'].includes(cfg.type)?'coin':'seed')));
-  return {fearless:comp.rules&&comp.rules.fearless,firstChoice,compId:s.comp,championPool:comp.championPool,metaContext:{season:s.id,year:s.year,split:s.split||null,stage:day.stage,league:comp.region||s.comp,international:!!comp.international}};
+  return {fearless:comp.rules&&comp.rules.fearless,firstChoice,compId:s.comp,championPool:s.championPool||comp.championPool,metaContext:{season:s.id,year:s.year,split:s.split||null,stage:day.stage,league:comp.region||s.comp,international:!!comp.international}};
 }
 function simulateScheduledSeries(db,s,day,m,cfg,extra={}){
   return simulateSeries(db,m.a,m.b,m.bo,`${s.seed}/${s.year}/${m.id}`,{...scheduledSeriesOptions(db,s,day,cfg),...extra});

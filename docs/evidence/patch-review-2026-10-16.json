@@ -1,0 +1,58 @@
+{
+  "base": "f121a05b848bd12944eed708a4b7d60c8f5c432a",
+  "archive": {
+    "path": "docs/evidence/patch-review-2026-10-16.originals.json.gz",
+    "bytes": 179966,
+    "sha256": "01284c45d0956e9d740f07e80496c2e32c1b694fedc85a721ef7bac05de71411",
+    "decodedSha256": "6bd463d544dbba6276e1cb9949719f15378581360bb5b3a5a98a17ae93270c0b",
+    "rows": 17
+  },
+  "originals": {
+    "src/artifact/patch-balance.js": "145097323c9fa2f6230c5135997c57920495fdcfa6ca2880739d757cbdbedbea",
+    "src/artifact/patch-content.js": "057c2abe7ca7cf195971fea24330055017851ca794aaf2d5eae4935fa4471ed9",
+    "src/artifact/patch.js": "0bab4d0582fa6da7b3bb582599ded9527cce9192dc9bedbb6e9006154094e235",
+    "scripts/smoke.mjs": "cf4577c446fa64fa97b1c51f4e33efbcdb85341a34d79880c537148cd1c520fc",
+    "scripts/negotiation-summary-source-successor.mjs": "119cb61f625006477ccc765cbe484f1c252b1e56fbb208c8c5b219080bf6bcf5",
+    "scripts/initial-negotiation-review-source-successor.mjs": "d39279ee2d60ee2bcf2e9a1b50aa4eaf4eeffb76438a8cbed91e1d0e74b4c4ec",
+    "scripts/startup-save-source-successor.mjs": "bd16c74e2979bee148eff1711c3287e9d2f684ceae21a65d329ba1069f4a2c4d",
+    "scripts/stove-fa-source-successor.mjs": "04e7c1fa7c9fbee0b0c9b63c168fdb9108a19bdc31ece2cc8fc171fbe2c5782b",
+    "src/artifact/season.js": "fe129b44023f97257e6f07dae8b4efe97b6a4e1b3b588d4548713e83a247dfed",
+    "src/artifact/negotiation-final.js": "b13cccb26265c213ccdac6ee0ebb9cf045bc525b1f862bfc0c83ddc127b5bd69",
+    "src/artifact/calendar.js": "d3f4765cd70304e999b9761747442d7c2b007a161000aba868d31fc2a0a8e115",
+    "src/artifact/competition.js": "44d0856b841357315c29c022df0a910817edb2d22e940b37bbca3df9d2774783",
+    "src/artifact/registration-match.js": "16c6d092a0e8008bb71f629e812f7e68f9b19a0d2d598dee8f6df049b909c20e",
+    "src/artifact/series.js": "67a33366c2b244a2ca7f315ee2f70420e6efd7243873403a59392d095a81d3ec",
+    "src/ui-v2/official.js": "d3d3f3d055417b731d1c82cbb9b8dbcb9a8b78564dc639f26685ff5d49116662",
+    "scripts/calendar-depth-acceptance.mjs": "6af83a68eb3807e2deae8c6bfebeeeaf846aa113e8907deeda4f57a10e0f6182",
+    "scripts/negotiation-clock-acceptance.mjs": "a1bde88877afa8a77a8ae90c4764d46296b4aa0aaa8bd8c0247d089779719ecf"
+  },
+  "sources": {
+    "src/artifact/patch-balance.js": "04e32428726961baeb197010a4c8469fa0dff58257a0fba4231b7aa0354849d5",
+    "src/artifact/patch-content.js": "f2627e83a2a7c8557be77f2e9bea5ca97c81e22b340440d90b346b7a15126f6c",
+    "src/artifact/patch.js": "a1600586593d3bf20e55cb09425c494081e12e5738c0ff54e557d745dfd7abd2",
+    "scripts/smoke.mjs": "c712b5092069d6915283cfc08bd3c2d66234495d80d348084e2024f0e0be28ac",
+    "scripts/negotiation-summary-source-successor.mjs": "425041347f157582af0b685a52ed660380082c0463eca0956f872cde6e1068cd",
+    "scripts/initial-negotiation-review-source-successor.mjs": "0d7a04d427020605a62890ee76e0b97173459e080282041496837f70f8ad52bb",
+    "scripts/startup-save-source-successor.mjs": "6d189a87af95fad4b6ebb5b73fa61d38ed0c07ee93024a2356fe84455e05caea",
+    "scripts/stove-fa-source-successor.mjs": "e41f65cbe153f6805a85a25af758c573f1869048885553be386f1df0d7664680",
+    "src/artifact/season.js": "aefff4d2e3c8c46b93e7725817e93614f261a6afd53850959535b7bece7884b1",
+    "src/artifact/negotiation-final.js": "3215be1393f5bacc9d458051ae158499e6d99412b339bd5de7a5befb988b9e9c",
+    "src/artifact/calendar.js": "f44a6edceb11aec7b029095072d3b5f85a13148c84d57c4d1586022409acf825",
+    "src/artifact/competition.js": "3aac21d9ac684de4913b191f15d6bcc1f375bfe0ed5773c4bc914102100f1ba9",
+    "src/artifact/registration-match.js": "e7e2abc1cac71ed9ac93e66adf90dc7bb9e8434613a4f5677fdf4f419f65ed53",
+    "src/artifact/series.js": "48871d70a8451edaffbea1032f41601ae31857776c6c0defe3511721bf7630ed",
+    "src/ui-v2/official.js": "232e6c82dcb733a076d39e22941f44bc19a1e7d8f387dcf818dd378ed45956a9",
+    "scripts/calendar-depth-acceptance.mjs": "18400fcba9c4a8bd09ab37d69e63098ff7f58a875f16c288e8c5896c423b744d",
+    "scripts/negotiation-clock-acceptance.mjs": "d6809a6f26905f41c379adb0419aefffc6aafbb3df761e9d374330b501e7d9b0",
+    "scripts/patch-policy-source-successor.mjs": "d95dfd2ab16332b3f45ef237f518dd8ec5ad29992b2aa1224bd21ef3769c5036",
+    "scripts/patch-rework-acceptance.mjs": "408d5dff7e4a39cec01508b3cb01ed90ba6a7b8722f079da5c8479718390071e",
+    "scripts/patch-lifecycle-acceptance.mjs": "f4a9bfe5bc1e99caa6eb7d7cb09880a1fbdf34bc1274815072574e09d41027fc",
+    "scripts/patch-world-sample.mjs": "1b29dcd9f35112fafa8b47881c77982f8eeac04148cc985fcdc8dd26b217c751",
+    "scripts/patch-calendar-carry-acceptance.mjs": "ffc81068ce4d63ef53797f9429591122686a8db9cfe46a36a37af676890bf207"
+  },
+  "meaning": "원래 단언·원문을 보존한 명시적 소스 승계. 과거 검사는 현재 엔진의 성공으로 승계하지 않는다. 현재 검사 정상 종료는 별도 기록한다.",
+  "clockDecidingSet": {
+    "anchor": "const recorded=Object.values(laterLoaded.world.seasons)",
+    "before": "\n // A changed real patch can produce a deciding set. Consume its original seeded\n // game on both paths; keep the original full-series and daily-once assertions.\n while(!seriesSessionDone(secondSession)){if(secondSession.games.length>=secondSession.bestOf)throw Error('native deciding-set bound');const expectedThird=officialClockPreview(laterLoaded);playSeriesSessionGame(expectedThird,secondSession,null,false);resolvePendingOfficialMatch(laterLoaded,null);}\n "
+  }
+}

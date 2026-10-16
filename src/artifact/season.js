@@ -208,8 +208,8 @@ function pendingOfficialControl(db){
 // Previously completed sets are outside the operation and remain recorded.
 function pendingOfficialUndo(db){
   const seen=new Set(),rows=[];
-  const visit=o=>{if(!o||typeof o!=='object'||seen.has(o))return;seen.add(o);const entries=Object.entries(o);rows.push({o,entries,length:Array.isArray(o)?o.length:null});for(const [,v] of entries)visit(v)};
-  visit(db);return ()=>{for(const {o,entries,length} of rows){const keys=new Set(entries.map(([k])=>k));for(const k of Object.keys(o))if(!keys.has(k))delete o[k];for(const [k,v] of entries)o[k]=v;if(length!==null)o.length=length}};
+  const visit=o=>{if(!o||typeof o!=='object'||seen.has(o))return;seen.add(o);const keys=Object.keys(o),values=keys.map(k=>o[k]);rows.push({o,keys,values,length:Array.isArray(o)?o.length:null});for(const v of values)visit(v)};
+  visit(db);return ()=>{for(const {o,keys,values,length} of rows){const kept=new Set(keys);for(const k of Object.keys(o))if(!kept.has(k))delete o[k];for(let i=0;i<keys.length;i++)o[keys[i]]=values[i];if(length!==null)o.length=length}};
 }
 function pendingOfficialSession(db){
   const p=db.world&&db.world.pendingOfficial,q=p&&p.queue&&p.queue[0];if(!q)return null;

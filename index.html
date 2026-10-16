@@ -2695,7 +2695,7 @@ function newPatch(db,date,major,rng){
   notes.forEach(n=>applyNote(P,n));
   adaptPlayerPoolsToPatch(db,notes,!!major);
   P.id=id;
-  const rec={id,date,major:!!major,notes,analysis:{sampleGames:diag.sampleGames,championChanges:notes.filter(n=>n.c&&['skill','base','kit'].includes(n.type)).map(n=>n.c),reworks:notes.filter(n=>n.type==='rework').map(n=>({c:n.c,scope:n.scope})),itemChanges:notes.filter(n=>n.type.indexOf('item')===0).map(n=>n.id),runeChanges:notes.filter(n=>n.type.indexOf('rune')===0).map(n=>n.id)}};
+  const rec={id,date,major:!!major,notes,analysis:{sampleGames:diag.sampleGames,reworkReview:{policy:'opportunity-and-role-v1',allChampionsRequired:false,candidates:diag.reviews.filter(x=>x.status==='candidate'),observations:diag.reviews.reduce((counts,x)=>{const key=x.status+' · '+x.reason;counts[key]=(counts[key]||0)+1;return counts},{})},championChanges:notes.filter(n=>n.c&&['skill','base','kit'].includes(n.type)).map(n=>n.c),reworks:notes.filter(n=>n.type==='rework').map(n=>({c:n.c,scope:n.scope})),itemChanges:notes.filter(n=>n.type.indexOf('item')===0).map(n=>n.id),runeChanges:notes.filter(n=>n.type.indexOf('rune')===0).map(n=>n.id)}};
   db.patches.list.push(rec);db.patches.history=db.patches.history||[];db.patches.history.push(rec);
   clearPatchCache(db);
   for(const k in db.metaStats){const x=db.metaStats[k];x.p=Math.floor(x.p/3);x.w=Math.floor(x.w/3);x.b=Math.floor(x.b/3)}
@@ -2706,7 +2706,8 @@ function newPatch(db,date,major,rng){
 }
 function patchTick(db,date,rng){
   const pt=db.patches;if(!pt.nextDate)pt.nextDate=addDays(date,14);
-  while(date>=pt.nextDate){const p=newPatch(db,pt.nextDate,false,rng);news(db,'패치 '+p.id+' 적용 — 챔피언 '+new Set(p.notes.filter(n=>n.c).map(n=>n.c)).size+'명 · 아이템 '+p.notes.filter(n=>n.type.indexOf('item')===0).length+'건 · 룬 '+p.notes.filter(n=>n.type.indexOf('rune')===0).length+'건');const gap=rng.chance(.08)?21:(pt.cadence||14);pt.nextDate=addDays(pt.nextDate,gap)}
+  if(date<pt.nextDate||patchEvidenceRows(db).length<24)return;
+  const p=newPatch(db,date,false,rng);news(db,'패치 '+p.id+' 적용 — 챔피언 '+new Set(p.notes.filter(n=>n.c).map(n=>n.c)).size+'명 · 아이템 '+p.notes.filter(n=>n.type.indexOf('item')===0).length+'건 · 룬 '+p.notes.filter(n=>n.type.indexOf('rune')===0).length+'건');const gap=rng.chance(.08)?21:(pt.cadence||14);pt.nextDate=addDays(date,gap);
 }
 // 새 시즌: 지난 시즌 패치를 기준점으로 접고(재생은 이번 시즌 경기만 필요) 개막 대형 패치 적용
 function seasonPatch(db,date,rng){
@@ -2714,7 +2715,7 @@ function seasonPatch(db,date,rng){
   pt.prev=pt.list.map(p=>({id:p.id,date:p.date,major:p.major,notes:p.notes}));
   pt.list=[];
   clearPatchCache(db);
-  const p=newPatch(db,date,true,rng);pt.nextDate=addDays(date,pt.cadence||14);
+  const p=newPatch(db,date,true,rng);pt.nextDate=addDays(date,Math.max(21,pt.cadence||14));
   const nc=p.notes.find(n=>n.type==='new');
   news(db,`시즌 개막 패치 ${p.id} — 챔피언 ${p.notes.filter(n=>n.c).length}명 조정${nc?`, 신규 챔피언 ${nc.def.nameKo||nc.def.name} 출시`:''}`);
 }
@@ -2763,10 +2764,11 @@ function patchChampionEvidence(db,cid,rows,ctx){
   const games=Math.max(1,rows.length),pres=(p+b)/games,wr=p?(w+2)/(p+4):.5,recentGames=Math.max(1,rows.length-cut),oldGames=Math.max(1,cut),recentPres=(recentP+recentB)/recentGames,oldPres=(oldP+oldB)/oldGames,trend=recentPres-oldPres;
   const maxShare=o=>{const v=Object.values(o);return p&&v.length?Math.max(...v)/p:0},playerConc=maxShare(players),teamConc=maxShare(teams),comboConc=maxShare(partners),flex=Object.keys(pos).length,regionSpread=Object.keys(regions).length/ctx.regionCount,intlShare=p?intl/p:0,topShare=p?top/p:0;
   const confidence=clamp((p+b)/(p+b+12)*Math.min(1,rows.length/24),0,1);
-  const nerfSignal=pres*1.02+Math.max(0,wr-.51)*2.4*confidence+Math.max(0,trend)*.8+Math.max(0,flex-1)*.055+intlShare*.07+regionSpread*.05-Math.max(0,playerConc-.45)*.2-Math.max(0,teamConc-.5)*.12-Math.max(0,comboConc-.65)*.08;
-  const buffSignal=Math.max(0,.065-pres)*3.3*Math.min(1,rows.length/18)+Math.max(0,.47-wr)*1.7*confidence+Math.max(0,-trend)*.38+(p===0&&rows.length>=16?.12:0);
-  let dir=0,signal=0;if(rows.length>=8&&nerfSignal>=.48&&nerfSignal-buffSignal>=.16){dir=-1;signal=nerfSignal}else if(rows.length>=12&&buffSignal>=.2&&buffSignal-nerfSignal*.38>=.07){dir=1;signal=buffSignal}
-  const diagnosis=dir<0?(flex>=2&&pres>.25?'플렉스와 프로 우선순위 과다':wr>=.545&&confidence>.25?'실전 성능 과다':topShare>.65?'상위권 중심 우선순위 과다':'밴픽 압력 과다'):(dir>0?(pres<.025?'저사용으로 전략적 가치 부족':'낮은 실전 성능과 선택률'):'관찰');
+  const nerfSignal=pres*1.02+(patchWinInterval(w,p).lower>.53?Math.max(0,wr-.53)*2.4*confidence:0)+Math.max(0,trend)*.8+Math.max(0,flex-1)*.055+intlShare*.07+regionSpread*.05-Math.max(0,playerConc-.45)*.2-Math.max(0,teamConc-.5)*.12-Math.max(0,comboConc-.65)*.08;
+  // Low use is an observation, never a buff entitlement. Bans are not performance samples.
+  const performance=patchWinInterval(w,p),buffSignal=Math.max(0,.47-wr)*1.7*confidence;
+  let dir=0,signal=0;if(rows.length>=8&&nerfSignal>=.48&&nerfSignal-buffSignal>=.16){dir=-1;signal=nerfSignal}else if(rows.length>=12&&performance.upper<.47&&buffSignal>=.2&&buffSignal-nerfSignal*.38>=.07){dir=1;signal=buffSignal}
+  const diagnosis=dir<0?(flex>=2&&pres>.25?'플렉스와 프로 우선순위 과다':wr>=.545&&confidence>.25?'실전 성능 과다':topShare>.65?'상위권 중심 우선순위 과다':'밴픽 압력 과다'):(dir>0?'표본 불확실성을 고려한 낮은 실전 성능':'관찰');
   const why='표본 '+rows.length+'경기 · 밴픽 '+Math.round(pres*100)+'% · 승률 '+Math.round(wr*100)+'% · 최근 추세 '+(trend>=0?'+':'')+Math.round(trend*100)+'%p'+(flex>1?' · '+flex+'포지션 플렉스':'')+(intlShare>.2?' · 국제전 비중 '+Math.round(intlShare*100)+'%':'')+(playerConc>.5?' · 특정 선수 의존 '+Math.round(playerConc*100)+'%':'')+(teamConc>.55?' · 특정 팀 의존 '+Math.round(teamConc*100)+'%':'');
   return {c:db.patch.champions[cid],cid,games:rows.length,p,b,w,pres,wr,trend,confidence,flex,regionSpread,intlShare,topShare,playerConc,teamConc,comboConc,nerfSignal,buffSignal,dir,signal,diagnosis,why};
 }
@@ -2776,7 +2778,57 @@ function patchSizeForSignal(signal,major){
 }
 function diagnosePatchMeta(db,major=false){
   const rows=patchEvidenceRows(db),ctx=patchEvidenceContext(db,rows),champions=Object.keys(db.patch.champions).map(id=>patchChampionEvidence(db,id,rows,ctx));
-  return {sampleGames:rows.length,rows,ctx,champions,major:!!major};
+  const reviews=patchReworkReviews(db,champions);
+  return {sampleGames:rows.length,rows,ctx,champions,reviews,major:!!major};
+}
+// Wilson 95% intervals describe observed win uncertainty, not the probability
+// of a champion being strong. No manager identity or private practice is read.
+function patchWinInterval(wins,games){
+  if(!games)return {lower:0,upper:1};
+  const z=1.959963984540054,p=wins/games,z2=z*z,den=1+z2/games,
+    centre=(p+z2/(2*games))/den,half=z*Math.sqrt(p*(1-p)/games+z2/(4*games*games))/den;
+  return {lower:Math.max(0,centre-half),upper:Math.min(1,centre+half)};
+}
+function patchReworkReviews(db,champions){
+  // Reuse the existing two-patch lookback plus the current patch, 24-game
+  // observation horizon and 2.5% low-presence label. These are game policy,
+  // not empirically calibrated professional balance thresholds.
+  const history=patchHistory(db),ids=[...new Set([...history.map(p=>p.id),db.patch.id])].slice(-3),index=metaHistoryIndex(db);
+  return champions.map(d=>{
+    const c=d.c,windows=ids.map(id=>{
+      const rows=(index.byPatch.get(id)||EMPTY_META_HISTORY).filter(r=>
+        typeof r.date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(r.date)&&r.date<=db.worldDate&&(!c.releaseDate||r.date>=c.releaseDate)&&championProEligible(db,c,r.date));
+      let p=0,w=0,b=0;const roles={},matchups={},teams=new Map(),players=new Map();
+      for(const row of rows){if((row.bans||[]).includes(d.cid))b++;
+        for(const side of row.sides||[]){const picks=(side.picks||[]).map(x=>typeof x==='string'?{champ:x}:x),me=picks.find(x=>x.champ===d.cid);if(!me)continue;
+          p++;if(side.win)w++;if(side.team)teams.set(side.team,(teams.get(side.team)||0)+1);if(me.player)players.set(me.player,(players.get(me.player)||0)+1);
+          if(me.role){const r=roles[me.role]||(roles[me.role]={p:0,w:0});r.p++;if(side.win)r.w++;
+            const opp=(row.sides||[]).find(x=>x!==side),other=(opp?.picks||[]).map(x=>typeof x==='string'?{champ:x}:x).find(x=>x.role===me.role);
+            if(other){const m=matchups[me.role+':'+other.champ]||(matchups[me.role+':'+other.champ]={p:0,w:0});m.p++;if(side.win)m.w++}
+          }
+        }
+      }
+      return {id,games:rows.length,p,w,b,pres:rows.length?(p+b)/rows.length:0,
+        interval:patchWinInterval(w,p),roles,matchups,teams:teams.size,players:players.size,teamConc:p?Math.max(0,...teams.values())/p:0,playerConc:p?Math.max(0,...players.values())/p:0,
+        firstDate:rows.reduce((a,r)=>a<r.date?a:r.date,rows[0]?.date||null)};
+    });
+    const result={cid:d.cid,status:'observe',scope:null,reason:'충분한 관측 기회가 쌓이지 않음',windows};
+    if(!championProEligible(db,c)){result.reason='현재 대회 사용 제한';return result}
+    if(windows.length<3||windows.some(x=>x.games<24))return result;
+    if(windows.some(x=>x.pres>=.025)){result.status='retain';result.reason='최근 선택·밴 또는 활용 증가가 있어 유지';return result}
+    if(windows.some(x=>Object.values(x.roles).concat(Object.values(x.matchups)).some(r=>patchWinInterval(r.w,r.p).lower>=.47))){
+      result.status='retain';result.reason='실제 포지션·상대 조합에서 성과가 확인된 틈새 픽';return result;
+    }
+    if(windows.some(x=>!x.p||x.interval.upper>=.47||x.teams<2||x.players<2||x.teamConc>.5||x.playerConc>.45||Object.values(x.roles).reduce((n,r)=>n+r.p,0)!==x.p||
+      Object.values(x.roles).some(r=>patchWinInterval(r.w,r.p).upper>=.47))){result.reason='저사용만으로 설계 문제를 단정하지 않음 · 출전·역할·분산 근거 부족';return result}
+    const first=windows[0].firstDate,lastChange=[...history].reverse().find(p=>(p.notes||[]).some(n=>n.c===d.cid&&['skill','base','kit','rework'].includes(n.type)));
+    if(!lastChange||!lastChange.date||lastChange.date>=first){result.reason='이전 조정 이후의 독립 관측·효과 부족 근거가 더 필요';return result}
+    const prior=(lastChange.notes||[]).filter(n=>n.c===d.cid),mid=prior.some(n=>n.type==='rework'&&n.scope==='mid');
+    if(!mid&&!prior.some(n=>n.dir===1&&n.category!=='rework')){result.reason='수치 보강을 거치지 않은 저사용은 구조 변경 근거로 쓰지 않음';return result}
+    result.status='candidate';result.scope=mid?'major':'mid';
+    result.reason=mid?'소규모 업데이트 뒤에도 세 관측 구간의 역할 부진이 지속 · 대규모 검토 후보':'이전 보강 뒤에도 세 관측 구간의 역할 부진이 지속 · 소규모 검토 후보';
+    return result;
+  });
 }
 function recentDirectionCount(db,cid,dir,lookback=2){
   return patchHistory(db).slice(-lookback).reduce((z,p)=>z+(p.notes||[]).some(n=>n.c===cid&&n.dir===dir&&['skill','base','kit'].includes(n.type))?1:0,0);
@@ -2942,13 +2994,18 @@ function maybeSystemLifecycle(db,date,major,rng,diag){
   return out;
 }
 function maybeChampionRework(db,date,major,rng,diag){
-  if(!major)return [];const year=+date.slice(0,4),out=[],mid=db.patches.reworksByYear[year]||0,big=db.patches.majorReworksByYear[year]||0,doBig=big<1&&rng.chance(.018),doMid=!doBig&&mid<2&&rng.chance(.16);if(!doBig&&!doMid)return out;
-  const scope=doBig?'major':'mid',cand=diag.champions.filter(x=>x.c&&!x.c.releaseDate).sort((a,b)=>a.pres-b.pres||a.wr-b.wr)[0]||rng.pick(diag.champions.filter(x=>x.c&&!x.c.releaseDate));if(!cand)return out;
-  out.push({type:'rework',c:cand.cid,scope,stableId:cand.cid,why:(scope==='major'?'대규모 챔피언 업데이트':'미드스코프 업데이트')+' · 낮은 선택률과 역할 정체성 재정비'});
+  if(!major)return [];const year=+date.slice(0,4),out=[],mid=db.patches.reworksByYear[year]||0,big=db.patches.majorReworksByYear[year]||0,reviews=diag.reviews||patchReworkReviews(db,diag.champions),candidates=reviews.filter(x=>x.status==='candidate'),doBig=big<1&&candidates.some(x=>x.scope==='major')&&rng.chance(.018),doMid=!doBig&&mid<2&&candidates.some(x=>x.scope==='mid')&&rng.chance(.16);if(!doBig&&!doMid)return out;
+  // Annual limits/chances remain upper bounds. No low-use quota, fallback
+  // champion, or guarantee that every champion will enter professional play.
+  const scope=doBig&&candidates.some(x=>x.scope==='major')?'major':doMid?'mid':null;
+  if(!scope)return out;
+  const review=candidates.filter(x=>scope==='major'?x.scope==='major':x.scope==='mid').sort((a,b)=>a.cid.localeCompare(b.cid))[0];
+  const cand=review&&diag.champions.find(x=>x.cid===review.cid);if(!cand)return out;
+  out.push({type:'rework',c:cand.cid,scope,stableId:cand.cid,why:(scope==='major'?'대규모 챔피언 업데이트':'미드스코프 업데이트')+' · '+review.reason});
   const c=cand.c,kitKeys=['burst','dps','cc','engage','disengage','peel','poke','waveclear','mobility','sustain','early','mid','late'],kN=scope==='major'?4:2;
   for(const key of kitKeys.sort(()=>rng.next()-.5).slice(0,kN)){const old=c.kit[key],dir=rng.chance(.68)?1:-1,step=scope==='major'?rng.pick([1,1,2]):1,nv=clamp(old+dir*step,1,10);if(nv!==old)out.push({type:'kit',c:c.id,key,old,new:nv,d:nv-old,dir:Math.sign(nv-old),size:scope==='major'?'large':'medium',category:'rework',why:out[0].why})}
   for(let i=0;i<(scope==='major'?4:2);i++){const d={...cand,diagnosis:out[0].why},n=championBalanceNote(db,d,i%3===2?-1:1,scope==='major'?'large':'medium',rng,'rework');if(n)out.push(n)}
-  if(doBig)db.patches.majorReworksByYear[year]=big+1;else db.patches.reworksByYear[year]=mid+1;return out;
+  if(scope==='major')db.patches.majorReworksByYear[year]=big+1;else db.patches.reworksByYear[year]=mid+1;return out;
 }
 function maybeRuleChange(db,major,rng){
   if(!rng.chance(major?.32:.025))return null;const opts=[['dragonRespawn',[5,6]],['baronBuff',[2.5,3,3.5]],['csGold',[21,22,23,24]],['killGold',[275,300,325]],['heraldSpawn',[14,15,16]],['baronSpawn',[20,22,25]]],pick=rng.pick(opts),key=pick[0],vals=pick[1],cur=db.patch.rules[key],v=rng.pick(vals.filter(x=>x!==cur));return v===undefined?null:{type:'rule',key,v,old:cur,why:'게임 템포와 오브젝트 가치 조정'};
@@ -3144,7 +3201,7 @@ function seriesResultLines(r,wId,mvp){
 function playSeriesSessionGame(db,sess,forcedDraft=null,quiet=true){
   const cur=seriesSessionPrepareGame(db,sess);if(!cur)throw new Error('Series already complete');
   const snap=seriesDraftSnapshot(sess.ctx);snap.firstPick=cur.fpTeam===cur.blue?0:1;if(forcedDraft)snap.forced=forcedDraft;
-  const matchDb=seriesOfficialView(db,sess),r=simulateMatch(matchDb,cur.blue,cur.red,cur.gseed,snap,quiet);r.comp=sess.opt.compId||null;r.date=db.worldDate;r.metaContext=sess.opt.metaContext||null;
+  const matchDb=seriesOfficialView(db,sess),r=simulateMatch(matchDb,cur.blue,cur.red,cur.gseed,snap,quiet);r.patch=matchDb.patch.id;r.comp=sess.opt.compId||null;r.date=db.worldDate;r.metaContext=sess.opt.metaContext||null;
   if(!sess.opt.replay&&!sess.opt.practice)recordMeta(db,r);
   const wId=r.winner===0?cur.blue:cur.red,lId=wId===cur.blue?cur.red:cur.blue;sess.wins[wId]++;
   const pk=[0,1].map(i=>ROLES.map(x=>r.draft.picks[i][x]));
@@ -3163,13 +3220,13 @@ function playSeriesSessionGame(db,sess,forcedDraft=null,quiet=true){
 }
 function seriesSessionResult(db,sess){
   if(!seriesSessionDone(sess))return null;const tac={[sess.a]:{...db.teams[sess.a].tactics},[sess.b]:{...db.teams[sess.b].tactics}};
-  return {rec:{a:sess.a,b:sess.b,bestOf:sess.bestOf,seed:sess.seed,patch:db.patch.id,fearless:!!sess.opt.fearless,firstChoice:sess.opt.firstChoice,score:[sess.wins[sess.a],sess.wins[sess.b]],winner:sess.wins[sess.a]>sess.wins[sess.b]?sess.a:sess.b,games:sess.games,tac,...(sess.opt.practice?{practiceModel:'engine'}:{}),...(sess.staffService?{staffService:sess.staffService}:{})},lines:sess.lines};
+  return {rec:{a:sess.a,b:sess.b,bestOf:sess.bestOf,seed:sess.seed,patch:seriesOfficialView(db,sess).patch.id,fearless:!!sess.opt.fearless,firstChoice:sess.opt.firstChoice,score:[sess.wins[sess.a],sess.wins[sess.b]],winner:sess.wins[sess.a]>sess.wins[sess.b]?sess.a:sess.b,games:sess.games,tac,...(sess.opt.practice?{practiceModel:'engine'}:{}),...(sess.staffService?{staffService:sess.staffService}:{})},lines:sess.lines};
 }
 function simulateSeries(db,aId,bId,bestOf,seed,opt={}){
   const sess=createSeriesSession(db,aId,bId,bestOf,seed,opt);
   while(!seriesSessionDone(sess)){
     const cur=seriesSessionPrepareGame(db,sess),forced=opt.forced&&opt.forced[sess.g-1]||null;
-    if(opt.capture===sess.g){const snap=seriesDraftSnapshot(sess.ctx);snap.firstPick=cur.fpTeam===cur.blue?0:1;if(forced)snap.forced=forced;const r=simulateMatch(seriesOfficialView(db,sess),cur.blue,cur.red,cur.gseed,snap,false);r.comp=opt.compId||null;r.date=db.worldDate;r.metaContext=opt.metaContext||null;return {captured:r}}
+    if(opt.capture===sess.g){const snap=seriesDraftSnapshot(sess.ctx);snap.firstPick=cur.fpTeam===cur.blue?0:1;if(forced)snap.forced=forced;const view=seriesOfficialView(db,sess),r=simulateMatch(view,cur.blue,cur.red,cur.gseed,snap,false);r.patch=view.patch.id;r.comp=opt.compId||null;r.date=db.worldDate;r.metaContext=opt.metaContext||null;return {captured:r}}
     playSeriesSessionGame(db,sess,forced,true);
   }
   return seriesSessionResult(db,sess);
@@ -3570,9 +3627,23 @@ function recordLines(s,lines){
     const c=p.champs[l.champ]||(p.champs[l.champ]=[0,0]);c[0]++;if(l.win)c[1]++;
   }
 }
+function lockInternationalPatch(db,s,date=db.worldDate){
+  if(!db.competitions[s?.comp]?.international||s.patchLock||!s.days.length||date<s.days[0].date)return;
+  if(date!==s.days[0].date)throw new Error('국제대회 개막 패치 기록이 없습니다: '+s.id);
+  s.patchLock={id:db.patch.id,date};
+  s.championPool=Object.values(db.patch.champions).filter(c=>championProEligible(db,c,date)).map(c=>c.id);
+}
+function internationalMatchPatch(db,s){
+  if(!db.competitions[s?.comp]?.international)return db.patch;
+  if(!s.patchLock){if(db.worldDate>=s.days[0]?.date)throw new Error('국제대회 개막 패치가 고정되지 않았습니다: '+s.id);return db.patch}
+  const patch=getPatch(db,s.patchLock.id);
+  if(patch.id!==s.patchLock.id)throw new Error('국제대회 고정 패치를 복원할 수 없습니다: '+s.patchLock.id);
+  return patch;
+}
 function scheduledSeriesOptions(db,s,day,cfg){
+  lockInternationalPatch(db,s);
   const comp=db.competitions[s.comp],neutralIntlBracket=!!comp.international&&['single_elim','double_elim'].includes(cfg.type),firstChoice=neutralIntlBracket?'coin':(cfg.firstChoice||(cfg.type==='round_robin'&&!comp.international?'home':(['round_robin','swiss','single_elim'].includes(cfg.type)?'coin':'seed')));
-  return {fearless:comp.rules&&comp.rules.fearless,firstChoice,compId:s.comp,championPool:comp.championPool,metaContext:{season:s.id,year:s.year,split:s.split||null,stage:day.stage,league:comp.region||s.comp,international:!!comp.international}};
+  return {fearless:comp.rules&&comp.rules.fearless,firstChoice,compId:s.comp,championPool:s.championPool||comp.championPool,metaContext:{season:s.id,year:s.year,split:s.split||null,stage:day.stage,league:comp.region||s.comp,international:!!comp.international}};
 }
 function simulateScheduledSeries(db,s,day,m,cfg,extra={}){
   return simulateSeries(db,m.a,m.b,m.bo,`${s.seed}/${s.year}/${m.id}`,{...scheduledSeriesOptions(db,s,day,cfg),...extra});
@@ -5008,7 +5079,7 @@ function applyCalendarPatchEvents(db,date){
     if(e.date>date){remaining.push(e);continue}
     const rng=new RNG(w.seed+w.year+'|'+e.step,'mid');
     const p=newPatch(db,e.date,true,rng);
-    db.patches.nextDate=addDays(e.date,db.patches.cadence||14);
+    db.patches.nextDate=addDays(e.date,Math.max(21,db.patches.cadence||14));
     const nc=p.notes.find(n=>n.type==='new');
     news(db,`${SPLIT_NAME[e.split]} 개막 패치 ${p.id}${nc?` — 신규 챔피언 ${nc.def.nameKo||nc.def.name} 출시`:''}`);
     officeMidSeason(db,rng,WORLD_CHANGE_FREQUENCY);
@@ -5029,6 +5100,7 @@ function applyWorldDailyEffects(db,date){
   // preceding break. Then every actual day runs exactly once.
   applyCalendarPatchEvents(db,date);
   patchTick(db,date,new RNG(w.seed+date,'patch'));
+  for(const s of Object.values(w.seasons||{}))lockInternationalPatch(db,s,date);
   advanceFacilityConstruction(db,date);
   for(const t of activeTeams(db))aiManageTraining(db,t);
   dailyRecovery(db);
@@ -5274,8 +5346,8 @@ function pendingOfficialControl(db){
 // Previously completed sets are outside the operation and remain recorded.
 function pendingOfficialUndo(db){
   const seen=new Set(),rows=[];
-  const visit=o=>{if(!o||typeof o!=='object'||seen.has(o))return;seen.add(o);const entries=Object.entries(o);rows.push({o,entries,length:Array.isArray(o)?o.length:null});for(const [,v] of entries)visit(v)};
-  visit(db);return ()=>{for(const {o,entries,length} of rows){const keys=new Set(entries.map(([k])=>k));for(const k of Object.keys(o))if(!keys.has(k))delete o[k];for(const [k,v] of entries)o[k]=v;if(length!==null)o.length=length}};
+  const visit=o=>{if(!o||typeof o!=='object'||seen.has(o))return;seen.add(o);const keys=Object.keys(o),values=keys.map(k=>o[k]);rows.push({o,keys,values,length:Array.isArray(o)?o.length:null});for(const v of values)visit(v)};
+  visit(db);return ()=>{for(const {o,keys,values,length} of rows){const kept=new Set(keys);for(const k of Object.keys(o))if(!kept.has(k))delete o[k];for(let i=0;i<keys.length;i++)o[keys[i]]=values[i];if(length!==null)o.length=length}};
 }
 function pendingOfficialSession(db){
   const p=db.world&&db.world.pendingOfficial,q=p&&p.queue&&p.queue[0];if(!q)return null;
@@ -10373,20 +10445,23 @@ WORLD_ACTION_HANDLERS['roster.official-lineup']={
   changes(db,c){return [{kind:'official_lineup',teamId:c.teamId,lineup:c.lineup}]},
   apply(db,c){db.teams[c.teamId].registration.depthChart={...c.lineup};return {lineup:c.lineup}}
 };
-function officialMatchView(db,s,a,b){
-  if(!officialRegistrationEnabled(db))return db;
+function officialMatchView(db,s,a,b,requirePatch=false){
+  // Roster/registration inspection may precede opening metadata. Only actual
+  // series execution requires the opening patch; inspection never creates it.
+  const patch=requirePatch||s?.patchLock?internationalMatchPatch(db,s):db.patch;
+  if(!officialRegistrationEnabled(db))return patch===db.patch?db:{...db,patch};
   const teams={...db.teams};
   for(const id of [a,b]){
     const t=db.teams[id],players=officialSeasonRoster(db,t,s).filter(pid=>officialPlayerCanRepresent(db,db.players[pid],t));
     teams[id]={...t,roster:players,staffRoster:competitionStaffMatchRoster(db,s,t),officialRosterView:true,depthChart:{...t.depthChart,
       ...Object.fromEntries(Object.entries(t.registration?.depthChart||{}).filter(([,pid])=>players.includes(pid)))}};
   }
-  const view={...db,teams};for(const id of [a,b])initializeDepthChart(view,teams[id],false);
+  const view={...db,teams,patch};for(const id of [a,b])initializeDepthChart(view,teams[id],false);
   return view;
 }
 function seriesOfficialView(db,sess){
   const s=Object.values(db.world?.seasons||{}).find(x=>x.id===sess.opt.metaContext?.season);
-  return s&&!sess.opt.practice&&!sess.opt.replay?officialMatchView(db,s,sess.a,sess.b):db;
+  return s&&!sess.opt.practice&&!sess.opt.replay?officialMatchView(db,s,sess.a,sess.b,true):db;
 }
 function officialMedicalReplacementAllowed(db,t,injured,p){
   if(!officialRegistrationEnabled(db))return true;
@@ -12519,6 +12594,7 @@ function officialQueuedGameError(db,s,m,event){
   const record=officialGameTimeRecord(m,session.games);
   if(!record||event.endAt!==record.gameTimeThrough||session.games.length!==(m.clockSession?.games.length||0)+1||event.observation?.date!==(officialGameTimeRecord(m,m.clockSession?.games||[])?.gameTimeThrough||officialActualStart(m)).slice(0,10))throw Error('진행 중인 다른 게임의 종료 기록을 확인할 수 없습니다');
   const game=session.games.at(-1),observation=event.observation;
+  if(s.patchLock&&[game.patch,game.publicRecord?.patch,observation.patch].some(id=>id!==internationalMatchPatch(db,s).id))throw Error('국제대회 개막 패치와 저장된 게임의 패치가 다릅니다');
   if(game.publicRecord?.ending?.kind!=='nexus'||game.publicRecord.ending.winner!==game.winner||game.publicRecord.winner!==game.winner||game.publicRecord.duration!==game.duration||game.publicRecord.ending.minute+game.publicRecord.ending.second/60!==game.duration)throw Error('실제 넥서스 종료 기록을 확인할 수 없습니다');
   if(![0,1].includes(observation.winner)||observation.sides?.length!==2||observation.sides[0].team?.id!==game.blue||observation.sides[1].team?.id!==game.red||[game.blue,game.red][observation.winner]!==game.winner||observation.comp!==s.comp||observation.metaContext?.season!==s.id)throw Error('진행 중인 게임과 관측 입력이 다릅니다');
   if(!Array.isArray(observation.draft?.bans)||observation.draft.bans.length!==2||observation.draft.bans.some(xs=>!Array.isArray(xs)||xs.some(id=>typeof id!=='string'))||observation.sides.some(side=>!Array.isArray(side.ps)||side.ps.length!==ROLES.length||side.ps.some(p=>typeof p?.champ?.id!=='string'||typeof p?.p?.id!=='string'||!Array.isArray(p.items)||!Array.isArray(p.runes))))throw Error('저장된 게임의 관측 입력을 확인할 수 없습니다');
@@ -12557,8 +12633,16 @@ function officialClockFixed(value){
   const copy=JSON.parse(raw),freeze=o=>{if(o&&typeof o==='object'){for(const v of Object.values(o))freeze(v);Object.freeze(o);}};
   freeze(copy);OFFICIAL_CLOCK_FIXED.set(value,{raw,copy});return copy;
 }
-function officialClockPreview(db){
-  const mutable=JSON.parse(JSON.stringify({players:db.players,teams:db.teams,metaStats:db.metaStats,regionMetaStats:db.regionMetaStats,regionMetaGames:db.regionMetaGames}));
+function officialClockPreview(db,teamIds=null){
+  // A prepared foreign game may write only its participating squads. Other
+  // players/teams remain guarded read-only inputs; the full path stays for
+  // general callers. No rollback graph or historical validation is omitted.
+  const participants=teamIds&&new Set(teamIds),pids=participants&&new Set(teamIds.flatMap(id=>db.teams[id]?.roster||[]));
+  const mutable=JSON.parse(JSON.stringify({players:participants?Object.fromEntries([...pids].filter(id=>db.players[id]).map(id=>[id,db.players[id]])):db.players,teams:participants?Object.fromEntries(teamIds.filter(id=>db.teams[id]).map(id=>[id,db.teams[id]])):db.teams,metaStats:db.metaStats,regionMetaStats:db.regionMetaStats,regionMetaGames:db.regionMetaGames}));
+  if(participants){
+    mutable.players=Object.fromEntries(Object.entries(db.players).map(([id,p])=>[id,mutable.players[id]||officialClockReadonly(p)]));
+    mutable.teams=Object.fromEntries(Object.entries(db.teams).map(([id,t])=>[id,mutable.teams[id]||officialClockReadonly(t)]));
+  }
   const copy=Object.fromEntries(Object.entries(db).map(([key,value])=>[key,Object.hasOwn(mutable,key)?mutable[key]:officialClockReadonly(value)]));
   copy.patch=officialClockFixed(db.patch);copy.metaHistory=(db.metaHistory||[]).map(officialClockFixed);return copy;
 }
@@ -12567,7 +12651,7 @@ function prepareOfficialClockGame(db,s,m){
   if(me&&(m.a===me||m.b===me))throw Error('현재 감독의 경기에는 다른 구단의 자동 입력을 적용할 수 없습니다');
   if(m.clockGame){officialQueuedGameError(db,s,m,m.clockGame);return;}
   officialClockSessionCheck(s,m);
-  const copy=officialClockPreview(db),session=JSON.parse(JSON.stringify(m.clockSession||scheduledSeriesSession(copy,officialClockReadonly(s),officialClockReadonly(m)).session));
+  const copy=officialClockPreview(db,[m.a,m.b]),session=JSON.parse(JSON.stringify(m.clockSession||scheduledSeriesSession(copy,officialClockReadonly(s),officialClockReadonly(m)).session));
   const played=playSeriesSessionGame(copy,session,null,true),record=officialGameTimeRecord(m,session.games);
   m.clockGame={endAt:record.gameTimeThrough,session,observation:officialGameObservation(played.game)};
   officialQueuedGameError(db,s,m,m.clockGame);
@@ -12587,17 +12671,16 @@ function playOfficialGamesThrough(db,s,m,boundary){
   if(typeof boundary!=='string'||!Number.isFinite(Date.parse(boundary))||new Date(boundary).toISOString()!==boundary)throw Error('공식 경기 진행 경계 시각을 확인할 수 없습니다');
   const me=db.world.manage==='manual'&&!db.world.fired?managedTeamId(db):null;
   if(me&&(m.a===me||m.b===me))throw Error('현재 감독의 경기에는 다른 구단의 자동 입력을 적용할 수 없습니다');
-  while(!m.res){
-    const undo=pendingOfficialUndo(db);
-    try{
+  // This boundary call is atomic on failure, including earlier sets consumed
+  // inside it. Sets committed before entry keep their original identities.
+  const undo=pendingOfficialUndo(db);
+  try{while(!m.res){
       prepareOfficialClockGame(db,s,m);
       if(m.clockGame.endAt>boundary)return false;
       const end=m.clockGame.endAt;consumeOfficialClockGame(db,s,m);
       if(m.res)return true;
       if(end>=boundary)return false;
-    }catch(error){undo();throw error;}
-  }
-  return true;
+  }return true;}catch(error){undo();throw error;}
 }
 function officialClockStartUndo(db,m){
   // 시작 준비는 격리된 자료만 변경한다. 실제 세계 작성은 이 두 필드뿐이다.
@@ -12609,6 +12692,7 @@ function playOfficialWorldEvents(db,date,manualEnd=null){
   const w=db.world,me=w.manage==='manual'&&!w.fired?managedTeamId(db):null;
   let days=Object.entries(w.seasons||{}).filter(([,s])=>!s.done&&s.days[s.cur]?.date===date)
     .map(([key,s])=>({key,s,day:s.days[s.cur]})).sort((a,b)=>a.key.localeCompare(b.key));
+  const requested=days.flatMap(({day})=>day.matches);
   const currentDays=()=>Object.entries(w.seasons||{}).filter(([,s])=>!s.done&&s.days[s.cur]?.date<=db.worldDate).map(([key,s])=>({key,s,day:s.days[s.cur]})).sort((a,b)=>a.key.localeCompare(b.key));
   const remaining=()=>days.flatMap(d=>d.day.matches.filter(m=>!m.res&&m!==manualEnd?.match).map(m=>({...d,m})));
   const matches=remaining();
@@ -12618,17 +12702,20 @@ function playOfficialWorldEvents(db,date,manualEnd=null){
   const n=(manualEnd?waitingNegotiationResponses(db).filter(n=>n.teamId===me):waitingNegotiationResponses(db,true))[0];
   if(n){const error=negotiationResponseError(n);if(error)throw Error(error);if(n.response.dueAt<date+'T00:00:00.000Z')return null;}
   const advanced=date>=db.worldDate?applyWorldDailyEffects(db,date):false,played=days.map(({s,day})=>({s,day}));
-  const finish=()=>{
+  const finish=(carryOnly=false)=>{
+    const complete=days.filter(({s,day})=>day.matches.every(m=>m.res)&&(!carryOnly||s.days[s.cur+1]?.date<=db.worldDate));if(!complete.length)return;
     const undo=pendingOfficialUndo(db);
     try{
-      for(const {s,day} of days){
-        if(day.matches.some(m=>!m.res))continue;
+      for(const {s,day} of complete){
         const comp=db.competitions[s.comp],idx=comp.stages.findIndex(x=>x.id===day.stage);
         if(finalizeCompetitionDay(db,s,day,idx,comp.stages[idx]))scoutFromDay(db,s,day);
       }
     }catch(error){undo();throw error;}
   };
   while(true){
+    // Finish the requested fixture day and its started games. A midnight
+    // carry must not eagerly consume every later fixture day in the season.
+    if(requested.every(m=>m.res)){finish();if(!activeSeasons(db).length)advanceStep(db);return {date,played,pending:w.pendingOfficial,advanced};}
     const entries=officialResourceEntries(db),events=remaining().flatMap(ref=>{
       const {m}=ref,owned=me&&(m.a===me||m.b===me);
       if(owned&&(m.clockGame||m.clockSession))throw Error('진행 중인 다른 구단의 경기입니다. 현재 감독 경기로 자동 전환하지 않습니다');
@@ -12645,6 +12732,7 @@ function playOfficialWorldEvents(db,date,manualEnd=null){
     let event=events[0];if(event&&event.at>=midnight)event={kind:'midnight',at:midnight};if(!event){if(remaining().length)throw Error('앞 공식 경기의 점유가 해소되지 않았습니다. 현재 경기와 저장을 확인하세요');finish();if(!activeSeasons(db).length)advanceStep(db);return {date,played,pending:w.pendingOfficial,advanced};}
     const forfeit=['start','manual'].includes(event.kind)&&!event.m.clockSession?scheduledRegistrationForfeit(officialClockReadonly(db),officialClockReadonly(event.s),officialClockReadonly(event.m)):null;
     const undo=event.kind==='start'&&!forfeit?officialClockStartUndo(db,event.m):pendingOfficialUndo(db);
+    let gameConsumed=false;
     try{
       // 이전 저장의 이미 소비된 하한은 되감지 않는다.
       const current=negotiationClockAt(db),at=event.at<current?current:event.at;
@@ -12657,7 +12745,7 @@ function playOfficialWorldEvents(db,date,manualEnd=null){
         return {date,played,pending:{kind:'negotiation',id:contact.id},advanced,...response};
       }
       if(event.kind==='manualEnd')return manualEnd.consume();
-      if(event.kind==='end'){consumeOfficialClockGame(db,event.s,event.m);continue;}
+      if(event.kind==='end'){consumeOfficialClockGame(db,event.s,event.m);gameConsumed=true;finish(true);days=currentDays();for(const {s,day} of days)if(!played.some(x=>x.day===day))played.push({s,day});continue;}
       if(forfeit){commitScheduledSeries(db,event.s,event.m,forfeit);continue;}
       if(event.plan)recordOfficialResourceStart(event.m,event.plan);
       if(event.kind==='manual'){
@@ -12666,7 +12754,7 @@ function playOfficialWorldEvents(db,date,manualEnd=null){
         return {date,played,pending:w.pendingOfficial,advanced};
       }
       prepareOfficialClockGame(db,event.s,event.m);
-    }catch(error){undo();throw error;}
+    }catch(error){if(!gameConsumed)undo();throw error;}
   }
 }
 playDay=function(db,s,opt={}){

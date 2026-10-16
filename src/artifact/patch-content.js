@@ -30,13 +30,18 @@ function maybeSystemLifecycle(db,date,major,rng,diag){
   return out;
 }
 function maybeChampionRework(db,date,major,rng,diag){
-  if(!major)return [];const year=+date.slice(0,4),out=[],mid=db.patches.reworksByYear[year]||0,big=db.patches.majorReworksByYear[year]||0,doBig=big<1&&rng.chance(.018),doMid=!doBig&&mid<2&&rng.chance(.16);if(!doBig&&!doMid)return out;
-  const scope=doBig?'major':'mid',cand=diag.champions.filter(x=>x.c&&!x.c.releaseDate).sort((a,b)=>a.pres-b.pres||a.wr-b.wr)[0]||rng.pick(diag.champions.filter(x=>x.c&&!x.c.releaseDate));if(!cand)return out;
-  out.push({type:'rework',c:cand.cid,scope,stableId:cand.cid,why:(scope==='major'?'대규모 챔피언 업데이트':'미드스코프 업데이트')+' · 낮은 선택률과 역할 정체성 재정비'});
+  if(!major)return [];const year=+date.slice(0,4),out=[],mid=db.patches.reworksByYear[year]||0,big=db.patches.majorReworksByYear[year]||0,reviews=diag.reviews||patchReworkReviews(db,diag.champions),candidates=reviews.filter(x=>x.status==='candidate'),doBig=big<1&&candidates.some(x=>x.scope==='major')&&rng.chance(.018),doMid=!doBig&&mid<2&&candidates.some(x=>x.scope==='mid')&&rng.chance(.16);if(!doBig&&!doMid)return out;
+  // Annual limits/chances remain upper bounds. No low-use quota, fallback
+  // champion, or guarantee that every champion will enter professional play.
+  const scope=doBig&&candidates.some(x=>x.scope==='major')?'major':doMid?'mid':null;
+  if(!scope)return out;
+  const review=candidates.filter(x=>scope==='major'?x.scope==='major':x.scope==='mid').sort((a,b)=>a.cid.localeCompare(b.cid))[0];
+  const cand=review&&diag.champions.find(x=>x.cid===review.cid);if(!cand)return out;
+  out.push({type:'rework',c:cand.cid,scope,stableId:cand.cid,why:(scope==='major'?'대규모 챔피언 업데이트':'미드스코프 업데이트')+' · '+review.reason});
   const c=cand.c,kitKeys=['burst','dps','cc','engage','disengage','peel','poke','waveclear','mobility','sustain','early','mid','late'],kN=scope==='major'?4:2;
   for(const key of kitKeys.sort(()=>rng.next()-.5).slice(0,kN)){const old=c.kit[key],dir=rng.chance(.68)?1:-1,step=scope==='major'?rng.pick([1,1,2]):1,nv=clamp(old+dir*step,1,10);if(nv!==old)out.push({type:'kit',c:c.id,key,old,new:nv,d:nv-old,dir:Math.sign(nv-old),size:scope==='major'?'large':'medium',category:'rework',why:out[0].why})}
   for(let i=0;i<(scope==='major'?4:2);i++){const d={...cand,diagnosis:out[0].why},n=championBalanceNote(db,d,i%3===2?-1:1,scope==='major'?'large':'medium',rng,'rework');if(n)out.push(n)}
-  if(doBig)db.patches.majorReworksByYear[year]=big+1;else db.patches.reworksByYear[year]=mid+1;return out;
+  if(scope==='major')db.patches.majorReworksByYear[year]=big+1;else db.patches.reworksByYear[year]=mid+1;return out;
 }
 function maybeRuleChange(db,major,rng){
   if(!rng.chance(major?.32:.025))return null;const opts=[['dragonRespawn',[5,6]],['baronBuff',[2.5,3,3.5]],['csGold',[21,22,23,24]],['killGold',[275,300,325]],['heraldSpawn',[14,15,16]],['baronSpawn',[20,22,25]]],pick=rng.pick(opts),key=pick[0],vals=pick[1],cur=db.patch.rules[key],v=rng.pick(vals.filter(x=>x!==cur));return v===undefined?null:{type:'rule',key,v,old:cur,why:'게임 템포와 오브젝트 가치 조정'};

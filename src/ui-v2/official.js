@@ -5,7 +5,7 @@ function v2OfficialError(){
 }
 function v2OfficialContext(){
  const db=V2.db,w=db.world,p=w.pendingOfficial,q=p.queue[0],team=v2Team(),refs=pendingOfficialRefs(db,q);
- const read=()=>JSON.stringify([db.worldDate,db.year,w.year,w.phase,w.manage,w.fired,managedTeamId(db),p,team,db.regions[team.region],refs?.s.cur,refs?.day.date,refs?.m,db.patch.id,db.patch._revision,db.patch._systemRevision,refs?[refs.m.a,refs.m.b].map(id=>[db.teams[id],db.teams[id]?.roster.map(pid=>db.players[pid])]):[]]);
+ const read=()=>JSON.stringify([db.worldDate,db.year,w.year,w.phase,w.manage,w.fired,managedTeamId(db),p,team,db.regions[team.region],refs?.s.cur,refs?.s.patchLock,refs?.s.championPool,refs?.day.date,refs?.m,db.patch.id,db.patch._revision,db.patch._systemRevision,refs?[refs.m.a,refs.m.b].map(id=>[db.teams[id],db.teams[id]?.roster.map(pid=>db.players[pid])]):[]]);
  return {db,w,p,q,session:q.session,manager:db.manager,team,patch:db.patch,read,stamp:read()};
 }
 function v2OfficialCurrent(o=V2.official){const c=o?.context;return !!c&&V2.db===c.db&&V2.db.world===c.w&&V2.db.manager===c.manager&&v2Team()===c.team&&V2.db.patch===c.patch&&c.w.pendingOfficial===c.p&&c.p.queue?.[0]===c.q&&c.q.session===c.session&&!v2OfficialError()&&c.read()===c.stamp;}
@@ -44,7 +44,7 @@ function v2ResolveOfficialGame(draft){
  v2AfterCommittedAction(()=>v2AcceptOfficialOutput(out));
 }
 function v2AcceptOfficialOutput(out){
- if(out.game)V2.officialResult={game:publicMatchRecord(out.game,V2.db.patch.id),score:out.score,done:out.done};
+ if(out.game)V2.officialResult={game:publicMatchRecord(out.game,out.game.patch||V2.db.patch.id),score:out.score,done:out.done};
  V2.official=null;v2Save();const contact=v2CurrentContact();v2Tell(contact||out.response?'선수 연락에서 진행을 멈췄습니다. 현재 계약을 직접 검토하세요.':'실제 경기 결과를 기록했습니다. 다음 준비와 진행은 직접 선택하세요');
  if(contact)v2OpenNegotiation(contact.id);else if(!v2ShowContractResponse(out))v2Render();
 }
@@ -54,8 +54,8 @@ function v2OfficialNotice(){
 }
 function v2OfficialView(){
  const o=V2.official;if(!v2OfficialCurrent(o))return `<section class="panel"><h2>경기 준비 상태가 바뀌었습니다</h2><p>이전 준비 입력을 현재 경기에 자동 적용하지 않습니다.</p><button class="btn btn-outline" id="official-discard">미완료 준비 입력 취소</button></section>`;
- if(o.mode==='running')return '<section class="panel"><h2>진행 중인 공식 게임</h2><p>시작할 때 확정한 입력을 유지합니다. 아직 끝나지 않은 경기의 결과는 표시하지 않습니다.</p><button class="btn btn-primary" id="official-resume">현재 게임 이어서 진행</button></section>';
- const x=o.setup,header=`<section class="panel"><div class="panel-heading"><strong>${v2Esc(x.comp.name)} · ${x.game}세트</strong><button class="btn btn-outline btn-small" id="official-pause">창 닫기</button></div><p>${v2Esc(V2.db.teams[x.m.a].name)} ${x.score.join(' : ')} ${v2Esc(V2.db.teams[x.m.b].name)}</p></section>`;
+ if(o.mode==='running')return '<section class="panel"><h2>진행 중인 공식 게임</h2><p>경기 패치 '+v2Esc(seriesOfficialView(V2.db,o.context.session).patch.id)+'</p><p>시작할 때 확정한 입력을 유지합니다. 아직 끝나지 않은 경기의 결과는 표시하지 않습니다.</p><button class="btn btn-primary" id="official-resume">현재 게임 이어서 진행</button></section>';
+ const x=o.setup,header=`<section class="panel"><div class="panel-heading"><strong>${v2Esc(x.comp.name)} · ${x.game}세트</strong><small>경기 패치 ${v2Esc(seriesOfficialView(V2.db,x.session).patch.id)}${x.comp.international?' · 대회 개막 패치 고정':''}</small><button class="btn btn-outline btn-small" id="official-pause">창 닫기</button></div><p>${v2Esc(V2.db.teams[x.m.a].name)} ${x.score.join(' : ')} ${v2Esc(V2.db.teams[x.m.b].name)}</p></section>`;
  if(o.mode==='selection'){
   const p=x.prompt,options=p.mode==='first'?[['side','blue','블루 진영'],['side','red','레드 진영'],['order','first','선픽'],['order','last','후픽']]:p.remaining==='side'?[['side','blue','블루 진영'],['side','red','레드 진영']]:[['order','first','선픽'],['order','last','후픽']];
   return header+`<section class="panel"><h2>세트 선택권</h2><p class="section-lead">${p.mode==='first'?'진영 또는 픽 순서를 먼저 선택하세요. 상대가 나머지를 결정합니다.':'상대가 먼저 결정한 뒤 남은 항목을 선택합니다.'}</p><div class="detail-grid">${options.map(([kind,value,name])=>`<button class="btn btn-primary" data-official-kind="${kind}" data-official-value="${value}">${name}</button>`).join('')}</div></section>`;

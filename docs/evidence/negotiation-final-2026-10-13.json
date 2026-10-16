@@ -30,15 +30,15 @@
     "scripts/verify-official-edit-evidence.mjs": "e040f16df1693b2cc411f0796e6bb329c53d7b04eb847dadc8ab96a55c29d29d"
   },
   "sources": {
-    "docs/README.md": "a84679a4aa5e1c7a5ba6b891d90d3dd903c4550e485066ca4aeb0a8a2c23ab48",
-    "docs/DEVELOPMENT.md": "3e3a9683c93799fee904cd43638d41e3dc1579b9f93d6a0e0a3e48328b762c04",
-    "index.html": "cfbe8409c061fe4dbe5bd609fc20c26b51195e893d15ddd5c2b06ce15db8cebf",
+    "docs/README.md": "5c46be9897fa986d346e5dda11f3497fb0fe0f656560459b58a7e87172e68bb8",
+    "docs/DEVELOPMENT.md": "0bb16c6a078f6e3c1fb6f0ceefd5e1c78849175ab1836d8975bf9cdc285d1194",
+    "index.html": "f759b29d70bb371163bb77d4e3c779253c2475388e3481ad0f4c981c44ac3c82",
     "scripts/artifact-modules.mjs": "f3936d38570c9533bf02d066b1e9e51666e4ca6944637e820f202bd88b467193",
     "scripts/current-guide-source-successor.mjs": "1e32b80db1d2f57db4f4082778ba4beebf46366fd71e42602e9fe897f87de1d0",
     "scripts/negotiation-summary-acceptance.mjs": "b1a19070d9390682c27e0d5eb2558debfca37b91799afdb2c715258b7ab04e2f",
-    "scripts/negotiation-summary-source-successor.mjs": "119cb61f625006477ccc765cbe484f1c252b1e56fbb208c8c5b219080bf6bcf5",
-    "scripts/initial-negotiation-review-source-successor.mjs": "d39279ee2d60ee2bcf2e9a1b50aa4eaf4eeffb76438a8cbed91e1d0e74b4c4ec",
-    "scripts/startup-save-source-successor.mjs": "bd16c74e2979bee148eff1711c3287e9d2f684ceae21a65d329ba1069f4a2c4d",
+    "scripts/negotiation-summary-source-successor.mjs": "425041347f157582af0b685a52ed660380082c0463eca0956f872cde6e1068cd",
+    "scripts/initial-negotiation-review-source-successor.mjs": "0d7a04d427020605a62890ee76e0b97173459e080282041496837f70f8ad52bb",
+    "scripts/startup-save-source-successor.mjs": "6d189a87af95fad4b6ebb5b73fa61d38ed0c07ee93024a2356fe84455e05caea",
     "scripts/verify-club-home-evidence.mjs": "042f6826ab5c62cfdd097fac8fbcbf81410d1b4cc56965730f5187ab83c599b0",
     "scripts/verify-official-ui-evidence.mjs": "8dd2fae649a2acae8aeb7b28260ca620c954edb88c324e86fdae5cf2a658fd5c",
     "scripts/verify-pending-handoff-evidence.mjs": "8fa0d1d49dc9cfa76b7a8647c405869bfe46a3cea34811b781a07ea082c4f61f",
@@ -47,12 +47,12 @@
     "scripts/verify-season-progress-evidence.mjs": "a071b4b8aaa3c39d57bcc6221d2e785d634a8aba5fd443e518f0b6e282b84bb6",
     "scripts/verify-squad-draft-recovery-evidence.mjs": "c877ea086c6338672abbbe10b208465b0f5cd8ffc724db9555725b87cf1045aa",
     "scripts/verify-unemployed-season-evidence.mjs": "21b8d8464dbd908f6e98475c8c41af9a7e571a263f25840c7b45a07a7c386cab",
-    "scripts/stove-fa-source-successor.mjs": "04e7c1fa7c9fbee0b0c9b63c168fdb9108a19bdc31ece2cc8fc171fbe2c5782b",
+    "scripts/stove-fa-source-successor.mjs": "e41f65cbe153f6805a85a25af758c573f1869048885553be386f1df0d7664680",
     "scripts/verify-official-draft-evidence.mjs": "728f8c50d742c27a19f4e566f757bef97e144f17fd7d5344a3d8dc58d539b751",
     "scripts/verify-official-edit-evidence.mjs": "c458de3c31f3ff6487eb96ec3cc49bed0eb0df510d4f92d8653cd450a7e0fda1",
-    "src/artifact/negotiation-final.js": "b13cccb26265c213ccdac6ee0ebb9cf045bc525b1f862bfc0c83ddc127b5bd69",
+    "src/artifact/negotiation-final.js": "3215be1393f5bacc9d458051ae158499e6d99412b339bd5de7a5befb988b9e9c",
     "src/artifact/ui-negotiation-final.js": "d29e22807a257adb10836f4fd25836b57e5b39baebb42bbfa9a0ab71b4d3e9d7",
     "scripts/negotiation-final-acceptance.mjs": "508322cad31f1091c8b228c238dd4f3b7c90f668c63311a4674234e10d11ff63",
-    "scripts/negotiation-final-source-successor.mjs": "057ce3bdbfe168f6bf417b92c5e6c6c21e44750e42711426333a987fa226ef7a"
+    "scripts/negotiation-final-source-successor.mjs": "210f753d1986ad7590e30083d1e749806e82fa716070247f0233d2d191e12460"
   }
 }
