@@ -309,7 +309,7 @@ function medicalDailyTick(db,date){
       p.medicalDayPlan=plan;p.medicalPlanDate=date;
       const care=medicalCare(db,p);
       p.medicalLoad=Math.round(clamp(load*(rest?.73:plan==='light'?.82:.86)+(rest?0:plan==='light'?.02:.08),0,38)*100)/100;
-      p.medicalOverloadDays=load>=9&&!rest&&p.fatigue>=38?
+      p.medicalOverloadDays=load>=9&&!rest?
         Math.min(120,(p.medicalOverloadDays||0)+1):Math.max(0,(p.medicalOverloadDays||0)-(rest?4:2));
       if(rest)p.medicalRestDays=Math.min(366,(p.medicalRestDays||0)+1);
       if(p.medical?.daysLeft>0||p.medicalResidual?.daysLeft>0)medicalHeal(db,p,1,date);
