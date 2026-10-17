@@ -58,19 +58,23 @@
   "successors": {
     "scripts/negotiation-summary-source-successor.mjs": {
       "historical": "119cb61f625006477ccc765cbe484f1c252b1e56fbb208c8c5b219080bf6bcf5",
-      "current": "0ae66caa0357fb11c58ded8a2d35734e61b6ab1e3594a7e7c81872a9dc4d0963"
+      "current": "1d3f48fd9af3bb5c6d1fe8577b8e90dea727bf4a548ea23d1761e41ecce8aba5"
     },
     "scripts/initial-negotiation-review-source-successor.mjs": {
       "historical": "d39279ee2d60ee2bcf2e9a1b50aa4eaf4eeffb76438a8cbed91e1d0e74b4c4ec",
-      "current": "bb64d0fbc1d3c0c440dbe8945fea5a43881a91ec1297604f5a9b0da70c4ec6a4"
+      "current": "1433fb8791dc8688628dab5fcdc225712d91afacffb0ee0a08a294feb35cf45d"
     },
     "scripts/startup-save-source-successor.mjs": {
       "historical": "bd16c74e2979bee148eff1711c3287e9d2f684ceae21a65d329ba1069f4a2c4d",
-      "current": "5f7eec423dc0e4246ba26aae7cb785ea1619d6a4a85357b0b3cff3aff2775ebc"
+      "current": "88e9a903a723a3a17b192dbf013939a3596c0d1750a9caf387e82522a6e9acd5"
     },
     "scripts/stove-fa-source-successor.mjs": {
       "historical": "04e7c1fa7c9fbee0b0c9b63c168fdb9108a19bdc31ece2cc8fc171fbe2c5782b",
-      "current": "f7fae948bd4cdf2294ce6a3a102973c371f6ebce75db8a928137f106edc795fc"
+      "current": "fb229d5274d33ad005ae0c7245002707ef4cdb1349124ce0fe63fbca1b03a8ac"
     }
+  },
+  "historicalEvidence": {
+    "docs/evidence/negotiation-summary-2026-10-11.json": "6de1028a653b743d0007c265cd8703f34c0928bf62fddd7b956afc9486ff0090",
+    "docs/evidence/stove-fa-daily-2026-10-10.json": "2b9c2d4909a8119204c83621b0e1cc68c0494c15f1eea7df33dff117a6b83508"
   }
 }

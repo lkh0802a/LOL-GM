@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 const root=new URL('../',import.meta.url),sha=b=>createHash('sha256').update(b).digest('hex');
-let approved;
+let approved,historicalEnginePins;
 async function pins(){
  if(approved)return approved;
  const m=JSON.parse(await readFile(new URL('docs/evidence/training-retirement-2026-10-17.json',root)));
@@ -20,10 +20,28 @@ async function pins(){
    assert.equal(pin.historical,initial,path+' original evidence pin');
    assert.equal(sha(await readFile(new URL(path,root))),pin.current,path+' reviewed current source');
  }
+ const oldHashes={};
+ for(const [path,proof] of Object.entries(m.historicalEvidence)){
+   const bytes=await readFile(new URL(path,root));
+   assert.equal(sha(bytes),proof,'historical evidence manifest integrity '+path);
+   const prior=JSON.parse(bytes);
+   for(const [name,value] of Object.entries(prior.engine||{})){
+     const key='src/artifact/'+name;
+     if(!Object.hasOwn(rows,key))continue;
+     (oldHashes[key]??=new Set([rows[key].historical])).add(value);
+   }
+ }
+ historicalEnginePins=oldHashes;
  approved=rows;return rows;
 }
-export async function reviewedRetirementSourceHash(path){
+export async function reviewedRetirementSourceHash(path,expected=null){
  const rows=await pins();
- if(Object.hasOwn(rows,path))return rows[path].historical;
+ if(Object.hasOwn(rows,path)){
+   if(expected!==null){
+     assert((historicalEnginePins[path]||new Set([rows[path].historical])).has(expected),path+' expected historical hash must exist in verified proof');
+     return expected;
+   }
+   return rows[path].historical;
+ }
  return sha(await readFile(new URL(path,root)));
 }
