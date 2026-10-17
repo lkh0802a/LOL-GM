@@ -125,18 +125,17 @@ const fixture=String.raw`(()=>{
     'processed date marker not retained');
   // Recovery is followed by actual private scrim practice. A club can
   // finish a productive day with higher NET fatigue, despite recuperating.
-  const recovery=4+(staffProfile(t).recovery-50)/45+facilityRecoveryBonus(t),
-    train=trainingIntensity(t);
-  assert(p.fatigue<=startFatigue-recovery+train.fatigue+6*1.2+.01&&
-    p.condition>=75+2.5+train.condition-6*.45-.01,
+  const recovery=4+(staffProfile(t).recovery-50)/45+facilityRecoveryBonus(t);
+  assert(p.fatigue<=startFatigue-recovery+.8+6*1.2+.01&&
+    p.condition>=75+2.5-6*.45-.01,
     'daily recovery was missing from the scrim-inclusive workload');
-  assert(p.roleConversion.trainingDays===1,'no daily role-practice tick');
+  assert((p.roleConversion.trainingDays||0)===0,'retired daily drill advanced role conversion without real activity');
   assert(t.facilities.training===level,'facility benefit activated too early');
   assert(db.patch.id===initialPatch&&db.patches.list.length===oldPatchCount,
     'patch applied before its effective date');
   const previousFatigue=p.fatigue;
   assert(!applyWorldDailyEffects(db,day1.date)&&p.fatigue===previousFatigue&&
-    p.roleConversion.trainingDays===1,'daily effects can be applied twice');
+    (p.roleConversion.trainingDays||0)===0,'daily effects can be applied twice');
   const checkpoint=unpackDB(packDB(db));
   assert(checkpoint.version===15&&checkpoint.saveFormat===2&&
     checkpoint.world.lastDailyTick===day1.date&&
