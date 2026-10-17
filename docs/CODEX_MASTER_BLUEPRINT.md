@@ -6,7 +6,7 @@
 
 이 문서는 분산된 1~13단계·10개 엔진 C안·최근 전체 게임 소스 감사·UI 전면 재설계를 **단일 제품 모델과 구현 검증 계약**으로 묶는다. 기존 `LOL_GM_SPEC.md`, `DEVELOPMENT.md`, `DECISIONS.md`, 경기 38+추가 감사 8항목, 기존 사용자 세부 승인, 실제 source/test 기록은 삭제하거나 덮지 않는다.
 
-**Codex 읽기/실행:** [AGENTS.md](../AGENTS.md) → [현재 P0/P1/P2 및 첫 PR 작업](CODEX_EXECUTION.md) → **이 마스터 명세** → [33개 분야 인덱스](CODEX_DOMAIN_INDEX.md) → 해당 [구단·선수 A](CODEX_DOMAIN_A_CLUB.md) / [경기·세계 B](CODEX_DOMAIN_B_MATCH_WORLD.md) / [UI·검증 C](CODEX_DOMAIN_C_UI_QA.md) → 대상 GitHub 이슈 본문·코멘트 → 해당 최신 코드/테스트·기존 PR.
+**코덱스 단독·문맥 절약 적용:** 기본 작업은 [AGENTS.md](../AGENTS.md) → 선택한 GitHub 이슈/관련 댓글 → 최신 코드·인접 테스트만 읽는다. 이 문서는 **필요한 INV/D 항목만 검색하는 참고 기준**이다. 다른 엔진과 충돌하거나 원래 승인 정책이 불명확할 때만 [실행 지침](CODEX_EXECUTION.md)의 해당 절, [33개 분야 인덱스](CODEX_DOMAIN_INDEX.md), 관련 [A](CODEX_DOMAIN_A_CLUB.md) / [B](CODEX_DOMAIN_B_MATCH_WORLD.md) / [C](CODEX_DOMAIN_C_UI_QA.md)의 필요한 범위를 추가로 확인한다. 상세 개발 범위/필수 검증은 그대로 두고 **장문 문서 전체를 매 작업에 선독하지 않는다**.
 
 **우선순위는 이 마스터 문서의 순서가 아니라 [#242 실행표](https://github.com/lkh0802a/LOL-GM/issues/242)에 따른다.** 현재 첫 P0 실제 코드 수정은 [#243 Bo1 스크림 기록/표시 단일원본](https://github.com/lkh0802a/LOL-GM/issues/243), 다음은 [#244 저장/복원 위험 검증](https://github.com/lkh0802a/LOL-GM/issues/244). [#241 통합 검증](https://github.com/lkh0802a/LOL-GM/issues/241)은 *모든 PR에서 계속 적용하는 수용 게이트*. 새로운 C안 대형 기능을 먼저 재작성하지 말 것.
 
