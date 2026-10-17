@@ -1,0 +1,40 @@
+{
+  "base": "494a3a9f09f627e64db7e59bde0acece7f2b2df0",
+  "archive": {
+    "path": "docs/evidence/scrim-single-result-originals-2026-10-18.json.gz",
+    "bytes": 1703291,
+    "sha256": "175f177e26ff3f92eea8024a5e71364e5eb328e46b03cd2106ec10d49e41ba15",
+    "decodedSha256": "e80cfb5e2a3946c299298d273e8ed83f286e5d29a4bd94ad720c750df24f2c8d",
+    "rows": 13
+  },
+  "originals": {
+    "src/artifact/series.js": "67a33366c2b244a2ca7f315ee2f70420e6efd7243873403a59392d095a81d3ec",
+    "src/artifact/ui-match.js": "f37dd780454ef3c835a5f21660c406e0dfa55e198bf9fc08cdfad511fb8e3030",
+    "scripts/negotiation-final-source-successor.mjs": "17b02c2a2dae706147769d653b530694138e2f0c399259499012a122f18770cb",
+    "scripts/negotiation-summary-source-successor.mjs": "119cb61f625006477ccc765cbe484f1c252b1e56fbb208c8c5b219080bf6bcf5",
+    "scripts/initial-negotiation-review-source-successor.mjs": "d39279ee2d60ee2bcf2e9a1b50aa4eaf4eeffb76438a8cbed91e1d0e74b4c4ec",
+    "scripts/startup-save-source-successor.mjs": "bd16c74e2979bee148eff1711c3287e9d2f684ceae21a65d329ba1069f4a2c4d",
+    "scripts/stove-fa-source-successor.mjs": "04e7c1fa7c9fbee0b0c9b63c168fdb9108a19bdc31ece2cc8fc171fbe2c5782b",
+    "scripts/smoke.mjs": "cf4577c446fa64fa97b1c51f4e33efbcdb85341a34d79880c537148cd1c520fc",
+    "index.html": "cb8e47dbb2980c4bf5013b490274a04dc7a052d57ce885daae858df31965ead4",
+    "docs/README.md": "37b852bb1868e38f129961d990a4ad333af0397f60efe8e50296bad174c6ca34",
+    "docs/DEVELOPMENT.md": "5e2c1792b236b24e7be44a929f00d4a44457be9165f432a1371946aa6281ca89",
+    "main/docs/README.md": "9537e831da64a72b80ce160e8ed2ed5935aa29e7dfdf470bf2d398ef16488a09",
+    "main/docs/DEVELOPMENT.md": "9bba9ea939d257643c09563713964cb690cf1bf980537be0dd9ce064fa467ff4"
+  },
+  "sources": {
+    "src/artifact/series.js": "878735099288a734a75764706204815347a43ef2d6999307972cdf631bd9912a",
+    "src/artifact/ui-match.js": "4de8383f2a4111605eba3ed18f6299425ea534315796a6e68e83c44baac833e5",
+    "scripts/negotiation-final-source-successor.mjs": "9966418abdd1aa2d591c3d529f1c20b0276919882bd244e35b1f8ccb323311e5",
+    "scripts/negotiation-summary-source-successor.mjs": "8696d4d34c3eb64b2e93192b0b01711a5a74e12bb59576b0deb81eb86eae11c7",
+    "scripts/initial-negotiation-review-source-successor.mjs": "280c66591e5d3bbda89b15fe26178a644998b815b0d203842f5aa706f128cdd7",
+    "scripts/startup-save-source-successor.mjs": "ba0dd3d24794dd9ecd8a10855a897f398cb8841dca05c740fd1637855486dc48",
+    "scripts/stove-fa-source-successor.mjs": "05992f1bb82abb624a9ca77faa1c17f462a7cd58817f093d13a956c56a3f280e",
+    "scripts/smoke.mjs": "ae85f4ebdc0ea50f5ba4cab43b398929589b3e4ba691d4a443454fdc9988e587",
+    "index.html": "333d1bcfc66836c7df230df693240527854d3fe29ffb16c1c5cf971c969cec55",
+    "docs/README.md": "9537e831da64a72b80ce160e8ed2ed5935aa29e7dfdf470bf2d398ef16488a09",
+    "docs/DEVELOPMENT.md": "b197d6b59ddac31976066a9213ba4983859b9e034587a160f4b67d13f954e041",
+    "scripts/scrim-single-result-acceptance.mjs": "5ba7d2f3e7b9ca6778d36f3369ebdc18c9d91ca3e23230b56e3fb40ecd430ea5",
+    "scripts/scrim-single-result-source-successor.mjs": "68da58e52667af19f1bf93a9169f8e763b74126923b1d28b5b24b840c3a24e4d"
+  }
+}

@@ -1,3 +1,4 @@
+await import('./scrim-single-result-acceptance.mjs');
 import { createHash } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
