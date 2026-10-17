@@ -16,7 +16,8 @@ async function verify(){
   const current=await readFile(new URL('src/artifact/world.js',root));
   assert.equal(sha(current),pin.current,'reviewed world source digest');
   assert(!/\bimportLimit\s*:/.test(current.toString())&&!/\bR\.importLimit\s*=/.test(current.toString()),'retired duplicate import limit must remain absent');
-  assert(current.includes('FIRST_TEAM_NON_LOCAL_LIMIT'),'active registration limit retained');
+  const rosterRules=await readFile(new URL('src/artifact/roster.js',root));
+  assert(rosterRules.includes('const FIRST_TEAM_NON_LOCAL_LIMIT=2')&&rosterRules.includes('function nonLocalLimitForTeam('),'active first-team registration limit retained');
   approved=pin;return pin;
 }
 export async function reviewedLegacyWorldHash(path,expected){
