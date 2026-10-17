@@ -1,3 +1,9 @@
+## All-domain implementation playbooks
+
+**Detailed domain contracts (read the matching sections before editing any area):** [33-domain index](docs/CODEX_DOMAIN_INDEX.md), [A — game start/players/scouting/transfers/clubs/training](docs/CODEX_DOMAIN_A_CLUB.md), [B — champions/draft/matches/patches/leagues/world/AI/history](docs/CODEX_DOMAIN_B_MATCH_WORLD.md), [C — mobile UI/save/performance/security/CI/Android](docs/CODEX_DOMAIN_C_UI_QA.md).
+
+The index maps every area to source owners, actual action/consumer boundaries, malicious/edge-case tests and GitHub issue ownership. **Do not treat the 33 sections as 33 new independent issues; reuse the already-open issues.** All relevant cross-domain acceptance remains mandatory. The official first implementation issue is still #243, then #244, with #241 continuous.
+
 # Codex repository instructions — LOL-GM
 
 These are repository-level instructions for implementation agents (Codex and similar). Follow these before changing the game. **The actionable queue and exact first task are in [docs/CODEX_EXECUTION.md](docs/CODEX_EXECUTION.md).** This file does not claim any issue is implemented.
