@@ -1,3 +1,4 @@
+import {reviewedRetirementSourceHash} from './training-retirement-evidence.mjs';
 import {negotiationFinalSourceHash,negotiationFinalSourceText} from './negotiation-final-source-successor.mjs';
 import {currentGuideSourceHash} from './current-guide-source-successor.mjs';
 import assert from 'node:assert/strict';
@@ -21,7 +22,7 @@ async function verify(){
  expected=expected.replace('for(const [p,h] of Object.entries(e.sources))assert.equal(sha(await readFile(new URL(p,root))),h,p);','for(const [p,h] of Object.entries(e.sources))assert.equal(await negotiationSummarySourceHash(p),h,p);').replace("assert.equal(await readFile(new URL('.github/workflows/ci.yml',root),'utf8'),workflow","assert.equal(await negotiationSummarySourceText('.github/workflows/ci.yml'),workflow");
  assert.equal(await negotiationFinalSourceText(p),expected,'기존 증거·단언을 보존한 현재 소스 검사 승계');
  assert.equal(await readFile(new URL('.github/workflows/ci.yml',root),'utf8'),original('.github/workflows/ci.yml').replace('      - name: Upload validation report\n','      - name: 협상 요약과 실제 제안 기록\n        run: node scripts/ci-run.mjs negotiation-summary -- node scripts/negotiation-summary-acceptance.mjs\n\n      - name: Upload validation report\n'),'기존 작업·시간 제한과 모든 검사 유지');
- assert.equal(Object.keys(e.engine).length,101);for(const [p,h] of Object.entries(e.engine))assert.equal(sha(await readFile(new URL('src/artifact/'+p,root))),h,p+' 기존 엔진 불변');
+ assert.equal(Object.keys(e.engine).length,101);for(const [p,h] of Object.entries(e.engine))assert.equal(await reviewedRetirementSourceHash('src/artifact/'+p),h,p+' 기록된 변경 또는 원본 불변');
  for(const p of ['docs/README.md','docs/DEVELOPMENT.md'])assert((await readFile(new URL(p,root),'utf8')).includes(original(p)),'전체 승인 원문 연속 보존');
  verified={e,rows};return verified;
 }

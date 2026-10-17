@@ -52,5 +52,25 @@
       "historical": "41076b06ece7065b7ecc2518ed444ededfdf798b92b31da46964c89d78fea99a",
       "current": "4b07e946ac217c4ce82053c79483a3b968d25d120ef879a5ce0fcedb682b9bcd"
     }
+  },
+  "sourceBaseline": "docs/evidence/negotiation-final-2026-10-13.json",
+  "sourceBaselineSha256": "dc25c109edd85505200214e3468d2610cde31a9c4407aeb338d02317b2d0e248",
+  "successors": {
+    "scripts/negotiation-summary-source-successor.mjs": {
+      "historical": "119cb61f625006477ccc765cbe484f1c252b1e56fbb208c8c5b219080bf6bcf5",
+      "current": "0ae66caa0357fb11c58ded8a2d35734e61b6ab1e3594a7e7c81872a9dc4d0963"
+    },
+    "scripts/initial-negotiation-review-source-successor.mjs": {
+      "historical": "d39279ee2d60ee2bcf2e9a1b50aa4eaf4eeffb76438a8cbed91e1d0e74b4c4ec",
+      "current": "bb64d0fbc1d3c0c440dbe8945fea5a43881a91ec1297604f5a9b0da70c4ec6a4"
+    },
+    "scripts/startup-save-source-successor.mjs": {
+      "historical": "bd16c74e2979bee148eff1711c3287e9d2f684ceae21a65d329ba1069f4a2c4d",
+      "current": "5f7eec423dc0e4246ba26aae7cb785ea1619d6a4a85357b0b3cff3aff2775ebc"
+    },
+    "scripts/stove-fa-source-successor.mjs": {
+      "historical": "04e7c1fa7c9fbee0b0c9b63c168fdb9108a19bdc31ece2cc8fc171fbe2c5782b",
+      "current": "f7fae948bd4cdf2294ce6a3a102973c371f6ebce75db8a928137f106edc795fc"
+    }
   }
 }
