@@ -4,6 +4,12 @@
 
 ## 코덱스의 읽기 순서
 
+## 통합 마스터 명세 — 전체 사용자 여정과 엔진 간 불변식
+
+33개 도메인 상세 계약을 개별로 수정하기 전에 **[CODEX_MASTER_BLUEPRINT.md](CODEX_MASTER_BLUEPRINT.md)**를 읽어 사용자 커리어 전체 루프, 16개 구현 흐름, **INV-01~INV-22** 불변식, 실제 source writer/consumer/역사·UI·저장 상태, 복합 수용 테스트와 P0/P1/P2 순서를 확인한다. 본 문서는 상세 분야 색인이며, 마스터는 **분야 사이의 합법 정보·세계 시각/경기·재정·스토리지 통합 계약**이다.
+
+
+
 1. 저장소 루트 [AGENTS.md](../AGENTS.md): 전체 개발 규칙/최상위 P0→P1→P2.
 2. [CODEX_EXECUTION.md](CODEX_EXECUTION.md): **첫 코드 수정 #243**, 다음 저장 검증 #244, 전체 OPEN 작업 순서와 변경·검증·보고 절차.
 3. [#242](https://github.com/lkh0802a/LOL-GM/issues/242): 최우선 전체 게임 수정/결함 인덱스 + 지금 열려 있는 작업.
