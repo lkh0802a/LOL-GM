@@ -70,13 +70,14 @@
     },
     "scripts/stove-fa-source-successor.mjs": {
       "historical": "04e7c1fa7c9fbee0b0c9b63c168fdb9108a19bdc31ece2cc8fc171fbe2c5782b",
-      "current": "ef307b553c0e43fca41a4b064c87fe36ba9b1ed7daf08a612f2e0838fab085f5"
+      "current": "315ebf69eef8998c526585da40612eb1c201b7dab06bb2dbd0ef8a51ceb49727"
     }
   },
   "historicalEvidence": {
     "docs/evidence/negotiation-summary-2026-10-11.json": "6de1028a653b743d0007c265cd8703f34c0928bf62fddd7b956afc9486ff0090",
     "docs/evidence/stove-fa-daily-2026-10-10.json": "2b9c2d4909a8119204c83621b0e1cc68c0494c15f1eea7df33dff117a6b83508",
-    "docs/evidence/squad-status-2026-10-09.json": "5fee5291a6fb1eb582c82a59c82e70638c296ef75f01a431c189528da5b1c77a"
+    "docs/evidence/squad-status-2026-10-09.json": "5fee5291a6fb1eb582c82a59c82e70638c296ef75f01a431c189528da5b1c77a",
+    "docs/evidence/squad-overview-2026-10-09.json": "03fb1c1081741c269afb4188d0a73ace5e1626f951fda34885658bc933459c51"
   },
   "uiBaseline": "docs/evidence/squad-status-2026-10-09.json",
   "uiBaselineSha256": "5fee5291a6fb1eb582c82a59c82e70638c296ef75f01a431c189528da5b1c77a",
