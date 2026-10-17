@@ -3,7 +3,7 @@
   "sha256": {
     "docs/README.md": "9537e831da64a72b80ce160e8ed2ed5935aa29e7dfdf470bf2d398ef16488a09",
     "docs/DEVELOPMENT.md": "9bba9ea939d257643c09563713964cb690cf1bf980537be0dd9ce064fa467ff4",
-    "scripts/negotiation-final-source-successor.mjs": "000000000000000000000000000000004a7ef117e903afa8bf676e8405466b91"
+    "scripts/negotiation-final-source-successor.mjs": "e555a0270dc0453b14f04dbe64dcce2ebabcdd1cc1a5105d5b1906d71dd1bb45"
   },
   "purpose": "Immutable Oct 13 archive retained. Reviewed Oct 17 source successor pins, complete per-file training-retirement digests, and generated HTML parity are verified independently."
 }
