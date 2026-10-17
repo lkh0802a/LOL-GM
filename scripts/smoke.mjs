@@ -46,8 +46,11 @@ source += `\n(()=>{
   if(players.length<10||players.some(p=>p.team||p.contract)) throw new Error('Initial player pool is not fully FA');
   for(const R of Object.values(db.regions)){
     if(R.policyMode!=='engine'||!R.policyBasis||R.policyBasis.source!=='engine')throw new Error('Region policy is not engine-owned: '+R.id);
-    if(R.payScale==null||R.importLimit==null||R.importRecruitMinGap==null||!R.rosterRuleProfile||!R.marketProfile||!R.office||R.spendingRule==null)throw new Error('Policy engine left unresolved output: '+R.id);
-    if(R.importLimit!==FIRST_TEAM_NON_LOCAL_LIMIT||R.importLimit!==2)throw new Error('First-team non-local cap drifted: '+R.id+' '+R.importLimit);
+    if(R.payScale==null||R.importRecruitMinGap==null||!R.rosterRuleProfile||!R.marketProfile||!R.office||R.spendingRule==null)throw new Error('Policy engine left unresolved output: '+R.id);
+    const topTeams=activeTeams(db,R.id,1);
+    if(Object.hasOwn(R,'importLimit')||FIRST_TEAM_NON_LOCAL_LIMIT!==2||
+      topTeams.some(t=>nonLocalLimitForTeam(db,t)!==FIRST_TEAM_NON_LOCAL_LIMIT))
+      throw new Error('First-team non-local cap drifted or deprecated field returned: '+R.id);
     if(R.reserveImportLimit==null)throw new Error('Reserve non-local policy missing: '+R.id);
   }
   const eligibilityProbe={id:'ELIGIBILITY_PROBE',region:'ORIGIN',nationality:'ORIGIN',contractedMoves:[]};
