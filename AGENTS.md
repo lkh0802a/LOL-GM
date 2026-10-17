@@ -1,47 +1,34 @@
-# Codex repository instructions — LOL-GM
+# LOL-GM — Codex 단독 개발 / 경량 작업 지침
 
-## All-domain implementation playbooks
+**운영 원칙:** 게임 소스 구현·수정·테스트·PR은 **Codex 하나로 진행**한다. 모델 교체·다른 AI/Work/외부 작업자 분담을 전제로 계획하지 않는다. GitHub 문서와 이슈는 작업 지시 및 인수인계 수단이며, 저장소에 적었다고 Codex 실행·한도 초기화·PR 생성이 자동으로 시작되는 것은 아니다.
 
-**Detailed domain contracts (read the matching sections before editing any area):** [33-domain index](docs/CODEX_DOMAIN_INDEX.md), [A — game start/players/scouting/transfers/clubs/training](docs/CODEX_DOMAIN_A_CLUB.md), [B — champions/draft/matches/patches/leagues/world/AI/history](docs/CODEX_DOMAIN_B_MATCH_WORLD.md), [C — mobile UI/save/performance/security/CI/Android](docs/CODEX_DOMAIN_C_UI_QA.md).
+## 1. 착수 (문맥 최소화)
 
-The index maps every area to source owners, actual action/consumer boundaries, malicious/edge-case tests and GitHub issue ownership. **Do not treat the 33 sections as 33 new independent issues; reuse the already-open issues.** All relevant cross-domain acceptance remains mandatory. The official first implementation issue is still #243, then #244, with #241 continuous.
+1. [#242 우선순위 실행표](https://github.com/lkh0802a/LOL-GM/issues/242)에서 **맨 앞의 실제 미완료 구현 이슈 하나**를 고른다. 현 첫 작업 **#243 → #244**, 다음 P1→P2. **#242는 추적, #241은 모든 PR의 상시 통합 검증 게이트**.
+2. **이 파일 + 선택한 이슈의 본문/최근 관련 댓글 + 현재 코드·인접 테스트**만 먼저 읽는다. `git status`/브랜치·현재 main/기존 관련 PR을 확인해 이미 해결됐거나 중복 작업 중인 항목은 건드리지 않는다.
+3. 작은 재현→원인 확인→최소 수정→집중·인접 테스트→빌드·필수 최종 CI→이슈에 증거 기록. 완료가 입증된 범위만 Close하고 다음 미완료 이슈로 이동한다.
+4. 같은 이슈에서 작업을 재개할 때는 이전 PR/최신 작업 댓글과 바뀐 코드부터 읽는다. **기존 전체 요구사항을 처음부터 다시 조사·요약하지 않는다**.
 
-These are repository-level instructions for implementation agents (Codex and similar). Follow these before changing the game. **The actionable queue and exact first task are in [docs/CODEX_EXECUTION.md](docs/CODEX_EXECUTION.md).** This file does not claim any issue is implemented.
+## 2. 상세 문서는 필요할 때 해당 부분만
 
-## Mandatory integrated specification
+- [작업 순서/첫 P0 상세](docs/CODEX_EXECUTION.md): #243은 §3, #244는 §4. **관련 절만 선택적으로 읽기**.
+- [분야별 목록](docs/CODEX_DOMAIN_INDEX.md): 작업 영역 A(구단·선수·시장·훈련) / B(경기·패치·AI·대회·역사) / C(UI·저장·성능·QA) 중 **해당 1~2절만**.
+- [통합 마스터](docs/CODEX_MASTER_BLUEPRINT.md): 여러 엔진/불변식 충돌 또는 설계·권한 판단 시 **관련 INV/D 항목만**.
+- [전체 개발 계획](docs/DEVELOPMENT.md), [사용자 결정](docs/DECISIONS.md), [원본 사양](docs/LOL_GM_SPEC.md): 정책 충돌·불명확한 수치/규칙에 한해 **검색해 해당 범위만**. 46만 자 개발 계획 전체를 매번 읽지 않는다.
+- 문서 링크가 열리지 않아도 현재 이슈와 코드만으로 안전하게 재현·검증할 수 있다면 해당 소형 수정을 진행한다. 미확인 요구를 임의 단정하지 않는다.
 
-Read [the end-to-end master blueprint](docs/CODEX_MASTER_BLUEPRINT.md) before changing any game system. It integrates the player journey, **22 cross-engine invariants**, 10 approved C-tier directions, 16 vertical feature groups, UI/source/data ownership, risk classification, test matrix, release gates and the per-PR evidence contract. Follow [CODEX_EXECUTION.md](docs/CODEX_EXECUTION.md) for the **actual issue order**, then use the [33-domain index](docs/CODEX_DOMAIN_INDEX.md) for exact affected code. These are complementary references, **not new issues or permission to delay P0 #243**.
+## 3. 코드·안전 불변식 (모든 작업)
 
+- 소스 `src/artifact/`, 조립 순서 `scripts/artifact-modules.mjs`. `index.html`·`dist/index.html`은 생성물: 직접 수정 금지.
+- 기존 정상 기능과 월드/세이브·안정 ID·계약/등록/의료/재정·훈련 자원·AI 동등성·합법 정보만 사용. **화면/스크림/공식 경기 결과는 동일한 실제 실행 원본**. 중복 writer·별도 세계 시계·가짜 UI/통계·무작위 강제 보정 금지.
+- 합의≠감독 최종 서명. Fearless·First Selection 및 **그 게임 날짜 모든 공식경기 종료 후 핫픽스** 유지. 상대의 숨은 선수 능력/의료/스크림 정보 유출 금지. 별도 직원/감독 인수인계 기능 신설 금지.
+- 저장·복원/마감·중복 클릭/실패·롤백/AI 권한/당시 공식 경기 이력·결정론을 변경 범위에 맞게 검증. 검증된 LoL 원자료 없는 수치/규정 창작 금지.
 
+## 4. 테스트/작업 기록 최소화 — 검증 축소 금지
 
-## First action on every new task
+- **수정 중:** 관련 `scripts/*-acceptance.mjs` 집중 실행 + 영향받은 인접 회귀. `npm run build` 확인.
+- **완료/PR:** 기존 필수 `npm run check`와 정확 최종 head CI·의료 시드/aggregate 등 원래 게이트 준수. 테스트 삭제·예상값 약화·실패 숨기기 금지. 도구 출력은 실패 원인과 요약 중심으로 확인하되 **원본 증거는 보존**.
+- 이슈 댓글/PR에 짧게 기록: **원인(file:line) / 변경 파일·SHA / 실행한 검사 PASS·FAIL·미실행 / 저장·시드·UI 영향 / 남은 범위 / 다음 이슈**. 전체 문서 복사·거대 분석 보고서 반복 금지.
+- 코드 수정·테스트·PR·병합·Pages 게시·Android 릴리스는 **각각 별도의 사실**. 문서나 이슈를 작성한 것만으로 완료 주장 금지.
 
-1. Read this file, `docs/CODEX_EXECUTION.md`, the top/latest decision sections of `docs/DEVELOPMENT.md`, and the **entire body and relevant comments** of the selected GitHub issue.
-2. Inspect the **current working branch, current main, existing PRs/commits and source tests**. Never rely on a dated issue/comment to assert that something is still broken or complete. Avoid simultaneous workers modifying the same functional slice.
-3. Pick the **first OPEN unfinished implementation issue in the rank order below** unless the latest explicit user instruction overrides it. If it is already fixed, prove that from executable tests and commits, document that evidence, close only its completed scope, then select the next unfinished issue.
-4. Reproduce/test **before** editing; make the smallest implementation patch that closes a real writer → consumer → UI/history/save gap. Treat source-observed risks differently from reproduced failures.
-5. Do not skip relevant tests, weaken expectations, hide existing failures, silently alter game rules or say it is deployed without build/CI/deploy evidence.
-
-## Mandatory current priority order (user decision: 2026-10-17)
-
-Tracking issues **[#242](https://github.com/lkh0802a/LOL-GM/issues/242)** and **[#241](https://github.com/lkh0802a/LOL-GM/issues/241)** are *not* a license to stop at a planning/report; #241 is the continuous integration/acceptance gate.
-
-- **P0 implementation:** **[#243](https://github.com/lkh0802a/LOL-GM/issues/243) Bo1 scrim double simulation / displayed-vs-recorded result** → **[#244](https://github.com/lkh0802a/LOL-GM/issues/244) mobile save/background/crash safety**.
-- **P1:** [#245 AI loan date](https://github.com/lkh0802a/LOL-GM/issues/245) → [#246 random comparator determinism](https://github.com/lkh0802a/LOL-GM/issues/246) → [#248 scouting/medical information boundary](https://github.com/lkh0802a/LOL-GM/issues/248) → [#249 historical replay/records](https://github.com/lkh0802a/LOL-GM/issues/249) → [#247 mobile deep-copy costs](https://github.com/lkh0802a/LOL-GM/issues/247) → [#234 world clock](https://github.com/lkh0802a/LOL-GM/issues/234) → [#224 time-based transfer negotiation](https://github.com/lkh0802a/LOL-GM/issues/224) → [#225 mobile transfer UI](https://github.com/lkh0802a/LOL-GM/issues/225).
-- **P2:** [#250 nickname uniqueness](https://github.com/lkh0802a/LOL-GM/issues/250) → [#233 exact match engine](https://github.com/lkh0802a/LOL-GM/issues/233) → [#232 patch 2.0](https://github.com/lkh0802a/LOL-GM/issues/232) → [#235 strategy AI](https://github.com/lkh0802a/LOL-GM/issues/235) → [#236 player career](https://github.com/lkh0802a/LOL-GM/issues/236) → [#237 club management](https://github.com/lkh0802a/LOL-GM/issues/237) → [#238 scouting 2.0](https://github.com/lkh0802a/LOL-GM/issues/238) → [#239 long-world/history](https://github.com/lkh0802a/LOL-GM/issues/239) → [#240 performance architecture](https://github.com/lkh0802a/LOL-GM/issues/240).
-
-If independent narrowly scoped fixes can be done in parallel without branch/file conflicts, that is allowed; **do not delay P0** for new P2 feature work. Do not create duplicate issues for work already owned by these links. Latest explicit user decisions override older planning text.
-
-## Source, simulation and game rules
-
-- Canonical implementation: `src/artifact/`. Ordered module list: `scripts/artifact-modules.mjs`. Root `index.html` / `dist/index.html` are **generated** by `npm run build`; never hand-edit generated files.
-- The game is **mobile-first, offline-first**, world schema **v15** and compact save format **2**. Preserve saves and migrations, slot independence, idempotency, state transactions/rollback, stable IDs, and existing domain ownership. No arbitrary global rewrite.
-- Keep user manager decisions explicit, AI and user teams under the same legal/budget/time constraints, opponent private data private, actual competition/calibration sources, original patch and tournament rules, Fearless Draft, and **hotfix only after all official matches of the in-game date finish**.
-- Protect existing medically and financially verified rules and training/scrim shared-resource constraints. **Do not add a standalone manager/staff handover feature** (explicit user exclusion).
-- Already-implemented features must not be described as missing merely because a deeper engine is planned; distinguish **existing / partially integrated / reproduced bug / unverified risk / enhancement**.
-
-## Definition of done and handoff
-
-For each implementation PR: `issue + reproduction + minimal code change + focused regression + adjacent integration tests + save/load/seed/authority checks + build + exact commit/test evidence + remaining gaps`. Run `npm run check` or full mandatory CI as appropriate; preserve the exact final-head CI/deployment policy in `docs/DEVELOPMENT.md`. Do not reduce tests to pass. Report what was **not** run and why. Long 100-season QA, real-device/TalkBack and Android APK are later acceptance gates, **not** already completed.
-
-When an issue is proven complete, leave evidence and close it only then. Keep partially implemented issues open with clear outstanding steps. Update [#242](https://github.com/lkh0802a/LOL-GM/issues/242) and cross-reference the domain issue / PR. Do not conflate an issue, a commit, a PR, CI success, a merged main branch, and a deployed Pages build.
+**목표:** Codex 사용량은 *반복 문서 읽기/재조사/쓸데없는 로그와 중복 작업*을 줄여 절약한다. 모델은 고정하며, 개발 범위·정확성·필수 검증은 축소하지 않는다.
