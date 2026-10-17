@@ -1,3 +1,11 @@
+## 2026-10-17 C안 엔진 고도화 — 신규 추적 이슈 등록
+
+사용자는 **경기·이적시장 시간·대회 일정·전술 AI·선수 커리어·구단 경영·스카우팅·장기 세계/저장·모바일 고성능·전 엔진 실사용 검증**의 10개 방향에서 모두 C안을 확정했다. 등록한 신규 이슈는 **[#233 경기](https://github.com/lkh0802a/LOL-GM/issues/233) · [#234 시간·일정](https://github.com/lkh0802a/LOL-GM/issues/234) · [#235 전략 AI](https://github.com/lkh0802a/LOL-GM/issues/235) · [#236 선수](https://github.com/lkh0802a/LOL-GM/issues/236) · [#237 경영](https://github.com/lkh0802a/LOL-GM/issues/237) · [#238 스카우팅](https://github.com/lkh0802a/LOL-GM/issues/238) · [#239 역사·저장](https://github.com/lkh0802a/LOL-GM/issues/239) · [#240 성능](https://github.com/lkh0802a/LOL-GM/issues/240) · [#241 전체 검증](https://github.com/lkh0802a/LOL-GM/issues/241)**이다.
+
+기존 **[#224 시간형 협상](https://github.com/lkh0802a/LOL-GM/issues/224) · [#225 모바일 시장](https://github.com/lkh0802a/LOL-GM/issues/225) · [#232 패치 2.0](https://github.com/lkh0802a/LOL-GM/issues/232)**은 보강 코멘트로 연결했고 원래 세부 규칙은 유지한다. [개발 지침 C안 통합 등록표](DEVELOPMENT.md)와 [최신 확정 결정](DECISIONS.md)을 우선 읽는다. 기존 단계1–13/경기38+감사8·전체 승인 범위를 보존하며, **등록은 구현·검증·게시 완료가 아니다.**
+
+---
+
 ## 최신 구현 경계 — 2026-10-13
 
 [개발 지침12.5.4.12.3](DEVELOPMENT.md)의 실제 수락→합의 저장→별도 수동 최종 계약 연결을 구현·검증 중입니다. 기존 선수 판정과 가격/계약 작성자는 유지하며 응답 시각/시간 진행은 후속입니다. 최신 기준main8fa903c5(PR228 문서 출시)와 게임 동작PR227을 구분하고 아래 전체 원문을 보존합니다. 필수 검사/의료7·병합·결과main/게시 전 출시로 표시하지 않습니다.
