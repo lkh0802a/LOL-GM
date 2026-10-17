@@ -27,8 +27,8 @@ async function pins(){
    rows[path]=pin;
  }
  assert.deepEqual(Object.keys(m.successors),["scripts/negotiation-summary-source-successor.mjs","scripts/initial-negotiation-review-source-successor.mjs","scripts/startup-save-source-successor.mjs","scripts/stove-fa-source-successor.mjs"]);
- for(const [path,pin] of Object.entries(rows)){
-   const initial=m.uiSuccessors?.[path]?uiBaseline.sources[path]:m.successors[path]?second.sources[path]:path.startsWith('src/artifact/')?previous.engine[path.slice('src/artifact/'.length)]||previous.sources[path]:previous.sources[path];
+ // The retired squad fixture caused a necessary change in an older,\n // byte-for-byte successor assertion. Verify the Oct 10 reviewed digest\n // and the replacement source before allowing that one exception.\n const intermediaryPath='docs/evidence/stove-fa-daily-2026-10-10.json';\n const intermediaryBytes=await readFile(new URL(intermediaryPath,root));\n assert.equal(sha(intermediaryBytes),m.historicalEvidence[intermediaryPath],'immutable intermediate evidence');\n const intermediary=JSON.parse(intermediaryBytes);\n assert.deepEqual(Object.keys(m.intermediaries),['scripts/squad-status-source-successor.mjs']);\n for(const [path,pin] of Object.entries(m.intermediaries)){\n   assert.equal(pin.historical,intermediary.sources[path],path+' archived reviewed intermediate');\n   assert.equal(sha(await readFile(new URL(path,root))),pin.current,path+' approved retirement verifier');\n   rows[path]=pin;\n }\n for(const [path,pin] of Object.entries(rows)){
+   const initial=m.uiSuccessors?.[path]?uiBaseline.sources[path]:m.intermediaries?.[path]?intermediary.sources[path]:m.successors[path]?second.sources[path]:path.startsWith('src/artifact/')?previous.engine[path.slice('src/artifact/'.length)]||previous.sources[path]:previous.sources[path];
    assert.equal(pin.historical,initial,path+' original evidence pin');
    assert.equal(sha(await readFile(new URL(path,root))),pin.current,path+' reviewed current source');
  }
