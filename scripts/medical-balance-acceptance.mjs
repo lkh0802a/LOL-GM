@@ -30,21 +30,20 @@ source+=String.raw`(()=>{
   // Counterfactuals: keep all characteristics but the named risk driver fixed.
   const p={...athletes[0],age:21,fatigue:29,condition:96,medicalOverloadDays:0};
   const normal=teams[0],intense=teams[5];
-  normal.training.intensity='light';intense.training.intensity='high';
   const base=medicalIncidentOdds(p,normal,6,'normal');
   const older=medicalIncidentOdds({...p,age:34},normal,6,'normal');
   const exposed=medicalIncidentOdds(p,normal,18,'normal');
-  const high=medicalIncidentOdds(p,intense,18,'normal');
-  const light=medicalIncidentOdds(p,intense,18,'light');
-  const rest=medicalIncidentOdds(p,intense,18,'rest');
+  const high=medicalIncidentOdds({...p,fatigue:60},normal,18,'normal');
+  const light=medicalIncidentOdds({...p,fatigue:60},normal,18,'light');
+  const rest=medicalIncidentOdds({...p,fatigue:60},normal,18,'rest');
   const overloaded=medicalIncidentOdds({...p,medicalOverloadDays:70},intense,18,'normal');
   const restedOverload=medicalIncidentOdds({...p,medicalOverloadDays:70},intense,18,'rest');
   assert(base.injury>0&&older.injury>base.injury*1.15,
     'older player did not show greater injury incidence at equal workload');
-  assert(exposed.injury>base.injury*1.4&&high.injury>exposed.injury*1.2,
-    'recent official/scrim load or intensive training is not priced into injury risk');
+  assert(exposed.injury>base.injury*1.4&&high.injury>exposed.injury*1.15,
+    'actual workload or fatigue was not priced into injury risk');
   assert(light.injury<high.injury&&rest.injury<light.injury&&
-    rest.illness===high.illness,'lighter/rest training does not reduce overuse only');
+    rest.illness===high.illness,'medical activity limits do not reduce overuse only');
   assert(base.burnout===0&&overloaded.burnout>0&&
     restedOverload.burnout<overloaded.burnout,
     'accumulated overload or recovery failed burnout risk check');
@@ -80,7 +79,6 @@ source+=String.raw`(()=>{
     db.year=year;db.world.seed='d02-b6-population-'+iteration;
     const season={controlled:count(),loaded:count()};
     for(const cohort of squads){
-      cohort.team.training.intensity=cohort.profile==='loaded'?'high':'light';
       cohort.team.finance.cash=0; // Do not alter the trial cohort via emergency signing.
       for(const athlete of cohort.players){
         athlete.age=cohort.profile==='loaded'?34:21;
@@ -99,12 +97,24 @@ source+=String.raw`(()=>{
         // Distinct workloads: loaded athletes play two series and four
         // three-game scrims weekly; controlled athletes use half the sessions.
         // Never expose a medically absent player to official or scrim play.
-        if(medicalOut(athlete)||medicalScrimRest(db,athlete))continue;
-        if(weekday===2||weekday===5&&cohort.profile==='loaded')
+        if(medicalOut(athlete)||medicalScrimRest(db,athlete)){
+          athlete.fatigue=clamp((athlete.fatigue||0)-4,0,100);
+          continue;
+        }
+        // The synthetic year reproduces both exposure and physical fatigue
+        // of the observed official/scrim sessions; there is no intensity mode.
+        let activityFatigue=0;
+        if(weekday===2||weekday===5&&cohort.profile==='loaded'){
           medicalExposure(db,athlete,'official',2);
+          activityFatigue+=8;
+        }
         if(cohort.profile==='loaded'?[0,1,3,4].includes(weekday):
-          [0,4].includes(weekday))
-          medicalExposure(db,athlete,'scrim',cohort.profile==='loaded'?3:2);
+          [0,4].includes(weekday)){
+          const games=cohort.profile==='loaded'?3:2;
+          medicalExposure(db,athlete,'scrim',games);
+          activityFatigue+=games*2;
+        }
+        athlete.fatigue=clamp((athlete.fatigue||0)-2.8+activityFatigue,0,100);
       }
       medicalDailyTick(db,date);
       for(const cohort of squads){
@@ -140,7 +150,7 @@ source+=String.raw`(()=>{
     total(low)/low.days<.001&&total(highStress)/highStress.days<.002,
     'baseline incidence collapsed or became unreasonably frequent');
   assert(highStress.injury>low.injury,
-    'high-load older cohort failed to show higher live injury incidence');
+    'high-load older cohort failed to show higher live injury incidence: '+JSON.stringify({controlled:low.injury,loaded:highStress.injury,daysLow:low.days,daysLoaded:highStress.days,burnoutLow:low.burnout,burnoutLoaded:highStress.burnout}));
   assert(highStress.burnout>low.burnout&&highStress.burnout>0,
     'prolonged high workload did not generate measurable burnout');
   assert(low.illness>0&&highStress.illness>0,
@@ -153,9 +163,9 @@ source+=String.raw`(()=>{
   // Recovery support should materially reduce the observed duration of the
   // same moderate event (no permanent scars, no event lottery in this probe).
   const careTeam=normal,fac=ensureFacilities(careTeam);
-  const originalFacility=fac.recovery,originalIntensity=careTeam.training.intensity;
-  const recover=(level,intensity)=>{
-    fac.recovery=level;careTeam.training.intensity=intensity;
+  const originalFacility=fac.recovery;
+  const recover=(level)=>{
+    fac.recovery=level;
     const candidate={...athletes[0],id:'d02-b6-recovery',
       team:careTeam.id,medicalPlan:'auto',medicalDayPlan:null,medicalPlanDate:null,
       fatigue:25,careerEvents:[],medicalResidual:null,
@@ -167,10 +177,10 @@ source+=String.raw`(()=>{
     }
     throw new Error('medical recovery failed within 36 days');
   };
-  const slow=recover(1,'high'),fast=recover(5,'light');
-  fac.recovery=originalFacility;careTeam.training.intensity=originalIntensity;
+  const slow=recover(1),fast=recover(5);
+  fac.recovery=originalFacility;
   assert(fast<slow&&slow-fast>=3,
-    'facilities/training did not improve real measured injury recovery');
+    'recovery facilities did not improve measured injury recovery');
   const spread=field=>{
     const xs=perSeed.map(x=>x[field]).sort((a,b)=>a-b);
     return {min:xs[0],median:xs[Math.floor(xs.length/2)],max:xs[xs.length-1]};

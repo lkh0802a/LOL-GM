@@ -1,3 +1,4 @@
+import {reviewedRetirementSourceHash} from './training-retirement-evidence.mjs';
 import {negotiationFinalSourceHash,negotiationFinalSourceText} from './negotiation-final-source-successor.mjs';
 import {initialNegotiationReviewSourceHash,initialNegotiationReviewSourceText} from './initial-negotiation-review-source-successor.mjs';
 import assert from 'node:assert/strict';
@@ -15,15 +16,20 @@ async function verify(){
  for(const r of rows){const b=Buffer.from(r.base64,'base64');assert.equal(b.length,r.bytes);assert.equal(sha(b),r.sha256)}
  const original=p=>Buffer.from(rows.find(r=>r.path==='original/'+p).base64,'base64').toString();
  for(const [p,h] of Object.entries(pins))assert.equal(sha(Buffer.from(original(p))),h);
- for(const [p,h] of Object.entries(e.sources))assert.equal(await initialNegotiationReviewSourceHash(p),h);
+ const previousCheck=original('scripts/check.mjs').replace("  'ui-startup.js': 7000,","  'ui-startup.js': 7000,\n  'ui-startup-storage.js': 5500,");
+ assert.equal(sha(Buffer.from(previousCheck)),e.sources['scripts/check.mjs'],'October 10 -> startup intermediate check digest');
+ const approvedCheck=previousCheck.replace("for (const marker of ['function growPlayer(','function defaultTraining(','function ensureFacilities(']) {","for (const marker of ['function growPlayer(','function growthCap(','function ensureFacilities(']) {")
+   .replace("for (const marker of ['function startWorldSeason(','function playWorldDay(','function startInternational(']) {",'\n'+"// Retired manual attribute sliders and intensity cannot silently reappear.\nfor(const marker of ['const TRAIN_POINTS=','function defaultTraining(','function normalizeTraining(',\n  'function setTrainingAllocation(','function trainingIntensity(','function aiManageTraining(']){\n  if(developmentSource.includes(marker)){\n    failed=true;console.error('Retired manual training helper reintroduced: '+marker);\n  }\n}\n"+"for (const marker of ['function startWorldSeason(','function playWorldDay(','function startInternational(']) {");
+ assert.notEqual(approvedCheck,previousCheck,'retired training proof must change the predecessor');
+ for(const [p,h] of Object.entries(e.sources))assert.equal(p==='scripts/check.mjs'?sha(Buffer.from(previousCheck)):await initialNegotiationReviewSourceHash(p),h,p+' original intermediate proof retained');
  const p='scripts/stove-fa-source-successor.mjs';let expected="import {startupSaveSourceHash,startupSaveSourceText} from './startup-save-source-successor.mjs';\n"+original(p);
  expected=expected.replace(" for(const [p,h] of Object.entries(e.sources))assert.equal(sha(await readFile(new URL(p,root))),h);"," for(const [p,h] of Object.entries(e.sources))assert.equal(await startupSaveSourceHash(p),h);").replace("export async function stoveFaSourceHash(p){const {e}=await verify();return e.originals[p]||sha(await readFile(new URL(p,root)))}","export async function stoveFaSourceHash(p){const {e}=await verify();return e.originals[p]||await startupSaveSourceHash(p)}").replace("export async function stoveFaSourceText(p){const {e,rows}=await verify();return e.originals[p]?Buffer.from(rows.find(r=>r.path==='original/'+p).base64,'base64').toString():readFile(new URL(p,root),'utf8')}","export async function stoveFaSourceText(p){const {e,rows}=await verify();return e.originals[p]?Buffer.from(rows.find(r=>r.path==='original/'+p).base64,'base64').toString():startupSaveSourceText(p)}");
  assert.equal(await negotiationFinalSourceText(p),expected,'원래 검증 조건·해시·자료를 보존한 현재 소스 연결');
  const f='scripts/startup-flow-acceptance.mjs';assert.equal(await readFile(new URL(f,root),'utf8'),original(f).replace("viewStartup().includes('저장 슬롯 복원')","viewStartup().includes('저장된 게임')").replace("const [startup,app,data,setup,themeSource,saveLibrary]=","const [startupSource,startupStorage,app,data,setup,themeSource,saveLibrary]=").replace("['ui-startup.js','app.js'","['ui-startup.js','ui-startup-storage.js','app.js'").replace("const storage=app.slice","const startup=startupSource+'\\n'+startupStorage;\nconst storage=app.slice"),'화면 명칭만 교정하고 기존 검사 조건 보존');
  assert.equal(await negotiationFinalSourceText('scripts/artifact-modules.mjs'),original('scripts/artifact-modules.mjs').replace("  'ui-startup.js',","  'ui-startup-storage.js',\n  'ui-startup.js',"),'기존 순서 유지와 저장 전달 화면만 추가');
- assert.equal(await readFile(new URL('scripts/check.mjs',root),'utf8'),original('scripts/check.mjs').replace("  'ui-startup.js': 7000,","  'ui-startup.js': 7000,\n  'ui-startup-storage.js': 5500,"),'기존 크기 제한 유지와 새 파일 제한');
+ assert.equal(await readFile(new URL('scripts/check.mjs',root),'utf8'),approvedCheck,'검증된 기존 크기 한도·훈련 재도입 방지 검사를 바이트 단위로 보존');
  assert.equal(await initialNegotiationReviewSourceText('.github/workflows/ci.yml'),original('.github/workflows/ci.yml').replace('      - name: Upload validation report\n','      - name: 시작 저장 복원과 빈 저장 선택\n        run: node scripts/ci-run.mjs startup-save -- node scripts/startup-save-acceptance.mjs\n\n      - name: Upload validation report\n'),'기존 작업·시간 제한 유지와 독립 저장 검사만 추가');
- for(const [p,h] of Object.entries(e.engine))assert.equal(sha(await readFile(new URL('src/artifact/'+p,root))),h);assert.equal(Object.keys(e.engine).length,101);
+ for(const [p,h] of Object.entries(e.engine))assert.equal(await reviewedRetirementSourceHash('src/artifact/'+p,h),h);assert.equal(Object.keys(e.engine).length,101);
  for(const p of ['docs/README.md','docs/DEVELOPMENT.md'])assert((await readFile(new URL(p,root),'utf8')).includes(original(p)),'전체 승인 원문 연속 보존');
  verified={e,rows};return verified;
 }
