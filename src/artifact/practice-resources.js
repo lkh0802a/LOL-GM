@@ -1,5 +1,4 @@
-// Daily time is shared by scrims and drills. Attribute allocations subdivide
-// individual drills, rather than providing another independent time budget.
+// Daily time budget is reserved for actual scrims; retired drills do not consume it.
 const PRACTICE_POINTS=100,SCRIM_PRACTICE_COST=10;
 function practiceDay(db,t){
   if(t.practiceDay?.date===db.worldDate)return t.practiceDay;
@@ -18,7 +17,7 @@ function consumeScrimPractice(db,t,games){
 function runDailyPractice(db){
   for(const t of activeTeams(db)){
     const day=practiceDay(db,t);
-    if(!day.completed)t.practiceDay={...day,drills:0,remaining:0,completed:true};
+    if(!day.completed)t.practiceDay={...day,drills:0,remaining:day.remaining,completed:true};
   }
 }
 
