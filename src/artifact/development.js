@@ -1,38 +1,10 @@
 // ===== LOL GM: Player development / training domain =====
-// Owns training intensity, facilities, age curves, seasonal growth and development valuation.
+// Owns facilities, age curves, match-based seasonal growth and development valuation.
 // Long-term role conversion remains isolated in role-conversion.js.
-
-const TRAIN_POINTS=100;
 
 // 나이가 어릴수록 더 많이, 더 빠르게 오른다
 function youthMul(age){return age<=18?1.4:age<=20?1.25:age<=22?1.1:age<=24?1:0.85}
 function growthCap(age){return age<=18?4.2:age<=20?3.5:age<=22?2.8:age<=24?2.1:age<=26?1.5:1.0}
-function defaultTraining(){return {mechanical:20,laning:20,combat:20,macro:20,mental:20,intensity:'normal'}}
-function normalizeTraining(plan){
-  const result=defaultTraining(),keys=Object.keys(ATTR_GROUPS);
-  for(const k of keys){const v=plan?.[k];result[k]=v!==null&&v!==''&&Number.isFinite(Number(v))?Math.round(clamp(Number(v),0,TRAIN_POINTS)):20}
-  const total=keys.reduce((s,k)=>s+result[k],0);
-  if(total>TRAIN_POINTS)for(const k of keys)result[k]=Math.floor(result[k]*TRAIN_POINTS/total);
-  if(['light','normal','high'].includes(plan?.intensity))result.intensity=plan.intensity;
-  if(Object.hasOwn(PRACTICE_FOCUS,plan?.focus))result.focus=plan.focus;
-  return result;
-}
-function setTrainingAllocation(plan,key,value){
-  const result=normalizeTraining(plan);
-  if(!Object.hasOwn(ATTR_GROUPS,key))return result;
-  const others=Object.keys(ATTR_GROUPS).filter(k=>k!==key).reduce((s,k)=>s+result[k],0);
-  if(Number.isFinite(Number(value)))result[key]=Math.round(clamp(Number(value),0,TRAIN_POINTS-others));
-  return result;
-}
-function trainingIntensity(t){const x=t?.training?.intensity||'normal';return x==='light'?{growth:.9,fatigue:.45,condition:.25}:x==='high'?{growth:1.08,fatigue:1.35,condition:-.35}:{growth:1,fatigue:.8,condition:0}}
-function aiManageTraining(db,t){
-  if(!t||managerControlsSquad(db,t))return;
-  t.training=normalizeTraining(t.training);t.training.intensity=trainingRecommendation(db,t).intensity;
-  const cohesion=lineupCohesion(db,t),adaptation=avg(t.roster.map(id=>db.players[id]?.tacticalAdaptation??60));
-  t.training.focus=cohesion.relationship<40||cohesion.adaptation<65?'teamwork':adaptation<65?'tactics':t.philosophy==='youth'?'individual':'balanced';
-  t.practiceDecision={date:db.worldDate,focus:t.training.focus,
-    reason:t.training.focus==='teamwork'?'관계·새 조합 적응':t.training.focus==='tactics'?'전술 적응':t.training.focus==='individual'?'육성 우선':'균형 유지'};
-}
 const FACILITY_TYPES=['training','analysis','recovery','youth','scouting'];
 const FACILITY_LABELS={training:'훈련',analysis:'데이터 분석',recovery:'회복',youth:'유소년 육성',scouting:'스카우팅'};
 function ensureFacilities(t){
@@ -58,7 +30,7 @@ function facilityInvestmentScore(db,t,key){
   const p=t.philosophy||'balanced';
   const fit={training:1+.25*(p==='win-now')+.15*roster.length/8,
     analysis:.85+(p==='win-now'?.4:0)+(p==='superstar'?.15:0),
-    recovery:.7+old*.65+(t.training?.intensity==='high'?.2:0),
+    recovery:.7+old*.65,
     youth:.7+kids*.95+(p==='youth'?.45:0),
     scouting:.75+(p==='youth'?.35:0)+(p==='cost'?.2:0)}[key]||0;
   const cost=facilityCost(db,t,key);
@@ -117,21 +89,19 @@ function growPlayer(db,p,rng,games,champGames){
     practiceFactor=Math.max(.82,1-Math.min(280,p.medicalRestDays||0)*.00065);
   const room=clamp((p.pot-before)/10,-0.5,1.5), prof=p.personality.professionalism/100,ageShift=dev.peakAge-25;
   const coach=team?staffDevelopmentFor(team,p.role)/100:0.45, play=clamp(games/30,0,1);
-  const tr=normalizeTraining(team?.training), intensity=trainingIntensity(team),conversionMul=roleConversionGrowthMultiplier(p),tsum=['mechanical','laning','combat','macro','mental'].reduce((a,k)=>a+tr[k],0)||1;
+  const conversionMul=roleConversionGrowthMultiplier(p);
   for(const g in ATTR_GROUPS){
-    // 훈련 포인트는 총 100점 한도: 배분하지 않은 포인트는 버려진다 (나눠 쓰는 만큼만 효과)
-    const base=ageCurve(p.age-ageShift,g), train=team?(Math.min(TRAIN_POINTS,tr[g])/TRAIN_POINTS*5-1)*0.9:-0.3;
+    // Base growth depends on age, actual official appearances, staff and facilities.
+    const base=ageCurve(p.age-ageShift,g);
     pState(p);
-    let d=base>0?base*dev.growthRate*(0.45+room*0.6)*(0.7+0.6*prof)*(0.8+0.4*coach)*(0.65+0.55*play)*trainingGrowthMul(team)*facilityMul(team,p.age)*intensity.growth*(0.9+0.2*p.morale/100):base*dev.declineRate*(1.3-0.6*prof);
-    d+=train*(base>0?1:0.5);
-    if(d>0)d*=youthMul(p.age)*conversionMul*practiceFactor*trainingTimeMultiplier(team,db.year,p);
+    let d=base>0?base*dev.growthRate*(0.45+room*0.6)*(0.7+0.6*prof)*(0.8+0.4*coach)*(0.65+0.55*play)*trainingGrowthMul(team)*facilityMul(team,p.age)*(0.9+0.2*p.morale/100):base*dev.declineRate*(1.3-0.6*prof);
+    if(d>0)d*=youthMul(p.age)*conversionMul*practiceFactor;
     d=Math.min(d,growthCap(p.age)); // 한 시즌 영역별 성장 상한 (어릴수록 높음)
     const ceil=Math.min(99,p.pot+6); // 잠재력 + 6을 넘는 능력치는 더 오르지 않음
     for(const a of ATTR_GROUPS[g]){const v=p.attrs[a]+d+rng.normal(0,1.3);p.attrs[a]=Math.round(clamp(d>0&&p.attrs[a]>=ceil?Math.min(v,p.attrs[a]):d>0?Math.min(v,Math.max(ceil,p.attrs[a])):v,20,99))}
   }
   // 챔피언 폭: 공식전 + 스크림 + 훈련 + 난이도 + 학습 능력을 함께 반영
   for(const c in champGames)ensureChampionProfile(db,p,c);
-  if(team&&p.pool&&!team.practiceUsage?.days){const practice=Math.max(2,Math.round((tr.combat+tr.mental)/12*(.7+coach*.5)));Object.entries(p.pool).sort((a,b)=>b[1].mastery-a[1].mastery).slice(0,6).forEach(([c])=>practiceChampion(db,p,c,'training',practice,false))}
   for(const c of Object.keys(p.pool||{})){const n=champGames[c]||0,pr=ensureChampionProfile(db,p,c),learn=championLearningMultiplier(db,p,c),practiceGain=(pr.scrimSeason||0)*.16+(pr.trainingSeason||0)*.09+(pr.coachingMastery||0),officialGain=Math.min(7,n*.42),gain=Math.min(8,(officialGain+practiceGain)*learn*(p.age<22?1.12:1));
     if(n||practiceGain){pr.mastery=Math.round(clamp(pr.mastery+gain,20,99));pr.experience=Math.round(clamp(pr.experience+n*1.5,0,999));pr.confidence=Math.round(clamp(pr.confidence+rng.normal(n?2:1,3),10,99))}
     else {pr.mastery=Math.round(clamp(pr.mastery-rng.range(0,1.8)*(1-(p.attrs.meta_adaptation||50)/180),20,99));if(pr.mastery<36&&Object.keys(p.pool).length>12)delete p.pool[c]}
@@ -149,10 +119,10 @@ function playerValue(db,p,team){
 function dailyRecovery(db){
   for(const t of Object.values(db.teams)){ if(t.active===false)continue;
     const prof=staffProfile(t),rec=4+(prof.recovery-50)/45+facilityRecoveryBonus(t);
-    const ti=trainingIntensity(t);for(const id of t.roster){const p=db.players[id];if(!p)continue;pState(p);
+    for(const id of t.roster){const p=db.players[id];if(!p)continue;pState(p);
       const plan=medicalPlanFor(db,p),off=plan==='rest'||plan==='rehab';
-      p.fatigue=clamp(p.fatigue-rec+(off?0:plan==='light'?ti.fatigue*.4:ti.fatigue)-(plan==='rest'?3:plan==='rehab'?1.7:plan==='light'?.9:0),0,100);
-      p.condition=clamp(p.condition+2.5+(off?.8:plan==='light'?.1:ti.condition),0,100);
+      p.fatigue=clamp(p.fatigue-rec+(off?0:plan==='light'?.32:.8)-(plan==='rest'?3:plan==='rehab'?1.7:plan==='light'?.9:0),0,100);
+      p.condition=clamp(p.condition+2.5+(off?.8:plan==='light'?.1:0),0,100);
       if(off)p.sharpness=clamp(p.sharpness-.28,0,100);
       p.form*=.98}
   }

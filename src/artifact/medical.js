@@ -77,9 +77,9 @@ function medicalSummary(p){
 function medicalCare(db,p){
   const t=p.team&&db.teams[p.team];
   if(!t)return 0.75;
-  const recovery=staffProfile(t).recovery,fac=facilityRecoveryBonus(t),tr=trainingIntensity(t);
+  const recovery=staffProfile(t).recovery,fac=facilityRecoveryBonus(t);
   const plan=medicalPlanFor(db,p);
-  return clamp(.88+(recovery-50)/225+fac*.05+(tr.growth<1?.07:tr.growth>1?-.13:0)-Math.max(0,(p.fatigue||0)-45)/330+
+  return clamp(.88+(recovery-50)/225+fac*.05-Math.max(0,(p.fatigue||0)-45)/330+
     (plan==='rehab'?.12:plan==='rest'?.065:plan==='light'?.025:0),.65,1.42);
 }
 function medicalExposure(db,p,kind='scrim',games=1){
@@ -278,14 +278,14 @@ function medicalHeal(db,p,elapsed,date){
 // balance audit. These are per eligible player-day, NOT annual injury rates.
 // Rest lowers overuse risk without changing ordinary infectious illness.
 function medicalIncidentOdds(p,t,load,plan){
-  const rest=plan==='rest'||plan==='rehab',high=t.training?.intensity==='high'&&!rest&&plan!=='light';
+  const rest=plan==='rest'||plan==='rehab';
   // The same paid recovery staff and facilities that accelerate rehabilitation
   // also reduce preventable overuse incidents. Bounded to avoid a medical
   // arms race or eliminating the baseline risk from high-activity schedules.
   const prevention=clamp(1-(staffProfile(t).recovery-50)*.0017-
     (ensureFacilities(t).recovery-1)*.022,.79,1.08);
   const injury=clamp(.000065*(1+load/22)*(1+Math.max(0,p.age-28)*.035)*
-    (high?1.25:1)*(1+Math.max(0,p.fatigue-45)/95)*
+    (1+Math.max(0,p.fatigue-45)/95)*
     (rest?.57:plan==='light'?.83:1)*prevention,0,.00042);
   const illness=.00020*(1+((p.condition??96)<70?.32:0));
   const burnout=(p.medicalOverloadDays||0)>=14?
@@ -307,9 +307,9 @@ function medicalDailyTick(db,date){
       const load=p.medicalLoad||0;
       const plan=medicalPlanFor(db,p),rest=medicalScrimRest(db,p);
       p.medicalDayPlan=plan;p.medicalPlanDate=date;
-      const high=t.training?.intensity==='high'&&!rest&&plan!=='light',care=medicalCare(db,p);
-      p.medicalLoad=Math.round(clamp(load*(rest?.73:plan==='light'?.82:.86)+(rest?0:high?.35:plan==='light'?.02:.08),0,38)*100)/100;
-      p.medicalOverloadDays=load>=9&&!rest&&(high||p.fatigue>=38)?
+      const care=medicalCare(db,p);
+      p.medicalLoad=Math.round(clamp(load*(rest?.73:plan==='light'?.82:.86)+(rest?0:plan==='light'?.02:.08),0,38)*100)/100;
+      p.medicalOverloadDays=load>=9&&!rest&&p.fatigue>=38?
         Math.min(120,(p.medicalOverloadDays||0)+1):Math.max(0,(p.medicalOverloadDays||0)-(rest?4:2));
       if(rest)p.medicalRestDays=Math.min(366,(p.medicalRestDays||0)+1);
       if(p.medical?.daysLeft>0||p.medicalResidual?.daysLeft>0)medicalHeal(db,p,1,date);
