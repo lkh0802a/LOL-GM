@@ -290,7 +290,7 @@ function medicalIncidentOdds(p,t,load,plan){
   const exposure=Math.pow(1+Math.max(0,load)/11,1.2);
   const injury=clamp(.00006*exposure*(1+Math.max(0,p.age-28)*.22)*
     (1+Math.max(0,p.fatigue-45)/90)*
-    (rest?.57:plan==='light'?.83:1)*prevention,0,.00042);
+    (rest?.57:plan==='light'?.83:1)*prevention,0,.0008);
   const illness=.00020*(1+((p.condition??96)<70?.32:0));
   const strain=Math.max(0,load-7)/5+
     Math.max(0,(p.medicalOverloadDays||0)-7)/15+
