@@ -9,6 +9,7 @@ function practiceDay(db,t){
 }
 function consumeScrimPractice(db,t,games){
   const day=practiceDay(db,t),cost=games*SCRIM_PRACTICE_COST;
+  if(day.completed)throw Error('오늘의 스크림 시간이 종료되었습니다');
   if(!Number.isInteger(games)||games<1||cost>day.remaining)throw Error('오늘 남은 연습 시간이 부족합니다');
   t.practiceDay={...day,scrim:day.scrim+cost,remaining:day.remaining-cost};
 }
@@ -37,7 +38,8 @@ function scrimDailyCapacity(db,t,booked=null){
   const scheduleCap=days===1?2:days===2?4:6;
   const fatigueCap=fatigue>=49?2:fatigue>=38?4:6;
   const conditionCap=condition<=77?2:condition<=85?4:6;
-  const day=practiceDay(db,t),spent=(t.scrimLog||[]).filter(x=>x.date===db.worldDate).reduce((n,x)=>n+(x.games||0),0);
+  const day=practiceDay(db,t);if(day.completed)return 0;
+  const spent=(t.scrimLog||[]).filter(x=>x.date===db.worldDate).reduce((n,x)=>n+(x.games||0),0);
   return Math.min(scheduleCap,fatigueCap,conditionCap,spent+Math.floor(day.remaining/SCRIM_PRACTICE_COST));
 }
 function scrimReadiness(db,t,booked=null){

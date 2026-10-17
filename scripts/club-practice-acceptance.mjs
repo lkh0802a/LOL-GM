@@ -63,9 +63,12 @@ await runEngineFixture(String.raw`(()=>{
     'real scrim expenditure not represented faithfully');
   runDailyPractice(DB);
   check(t.practiceDay.completed&&t.practiceDay.scrim===20&&
-    t.practiceDay.drills===0&&t.practiceDay.remaining===0&&
+    t.practiceDay.drills===0&&t.practiceDay.remaining===80&&
     !p.practiceDay&&!t.practiceUsage,
     'daily closure generated obsolete individual drills');
+  let lateScrimBlocked=false;try{consumeScrimPractice(DB,t,1)}catch{lateScrimBlocked=true}
+  check(lateScrimBlocked&&scrimDailyCapacity(DB,t)===0,
+    'closed day allowed late scrim activity despite unused capacity');
   const once=JSON.stringify(DB);
   runDailyPractice(DB);
   check(JSON.stringify(DB)===once,'daily closure not idempotent');

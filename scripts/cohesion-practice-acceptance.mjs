@@ -32,7 +32,7 @@ await runEngineFixture(String.raw`(()=>{
   const base=JSON.parse(JSON.stringify(db));
   runDailyPractice(db);
   check(t.practiceDay.drills===0&&t.practiceDay.scrim===30&&
-    t.practiceDay.remaining===0,'unused capacity was minted as drills');
+    t.practiceDay.remaining===70,'unused capacity was lost or minted as drills');
   const once=JSON.stringify(db);runDailyPractice(db);
   check(JSON.stringify(db)===once,'daily closure replayed');
   let blocked=false;try{consumeScrimPractice(db,t,1)}catch{blocked=true}
