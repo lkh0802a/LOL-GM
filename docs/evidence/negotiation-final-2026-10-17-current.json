@@ -4,7 +4,10 @@
     "docs/README.md": "9537e831da64a72b80ce160e8ed2ed5935aa29e7dfdf470bf2d398ef16488a09",
     "docs/DEVELOPMENT.md": "9bba9ea939d257643c09563713964cb690cf1bf980537be0dd9ce064fa467ff4",
     "scripts/negotiation-summary-source-successor.mjs": "0aa842affa85c2e3454ab20394012364d09f74b367468e8cf5e129957c3dc589",
-    "scripts/negotiation-final-source-successor.mjs": "5ddd8544dbf78bce9520e023a2258935367338b4be16b6f047768ddc66be2fbe"
+    "scripts/initial-negotiation-review-source-successor.mjs": "cb3f105a9ab1edee33dbefc3b240057e428c9e8f869f2a78b7573cdafd26a5d1",
+    "scripts/startup-save-source-successor.mjs": "730237056fd9a8782f98a87de68c3757f3519a01819f67688d05704908e423db",
+    "scripts/stove-fa-source-successor.mjs": "41b1d6b26480e474117e8823c69ccf677d0918923e7d9559e4a5b5fdeceec52e",
+    "scripts/negotiation-final-source-successor.mjs": "a69cc9ea638bf3d44bdff9b4e722df44b9f881bb91ef0f5d924831a8faa1393b"
   },
   "purpose": "Record the exact currently reviewed successor verifier content while retaining immutable 2026-10-13 raw archive and independent October 17 pins. Source modifications require a new reviewed digest."
 }
