@@ -40,7 +40,7 @@ await runEngineFixture(String.raw`(()=>{
   check(openClubPractice(t.id)&&JSON.stringify(DB)===before,
     'opening practice overlay changed simulation');
   check(root.html.includes('스크림')&&root.html.includes('회복')&&
-    !root.html.includes('훈련 강도')&&!root.html.includes('훈련 배분')&&
+    !root.html.includes('id="trint"')&&!root.html.includes('id="trleft"')&&
     !root.html.includes('data-practice-allocation')&&
     !root.querySelector('#brief-practice-apply')&&
     !root.querySelector('#brief-practice-intensity'),
