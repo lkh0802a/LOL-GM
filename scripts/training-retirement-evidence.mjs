@@ -14,6 +14,18 @@ async function pins(){
  assert.equal(sha(sourceBuffer),m.sourceBaselineSha256,'original negotiation archive manifest');
  const second=JSON.parse(sourceBuffer);
  const rows={...m.changes,...m.successors};
+ // An approved UI-only deletion has its own October 9 original archive.
+ // Verify both the immutable evidence manifest and the live replacement bytes.
+ assert.equal(m.uiBaseline,'docs/evidence/squad-status-2026-10-09.json');
+ const uiBytes=await readFile(new URL(m.uiBaseline,root));
+ assert.equal(sha(uiBytes),m.uiBaselineSha256,'original roster evidence manifest');
+ const uiBaseline=JSON.parse(uiBytes);
+ assert.deepEqual(Object.keys(m.uiSuccessors),['src/artifact/ui-roster.js']);
+ for(const [path,pin] of Object.entries(m.uiSuccessors)){
+   assert.equal(pin.historical,uiBaseline.sources[path],path+' archived October 9 source pin');
+   assert.equal(sha(await readFile(new URL(path,root))),pin.current,path+' approved current UI bytes');
+   rows[path]=pin;
+ }
  assert.deepEqual(Object.keys(m.successors),["scripts/negotiation-summary-source-successor.mjs","scripts/initial-negotiation-review-source-successor.mjs","scripts/startup-save-source-successor.mjs","scripts/stove-fa-source-successor.mjs"]);
  for(const [path,pin] of Object.entries(rows)){
    const initial=m.successors[path]?second.sources[path]:path.startsWith('src/artifact/')?previous.engine[path.slice('src/artifact/'.length)]||previous.sources[path]:previous.sources[path];
