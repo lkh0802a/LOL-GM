@@ -12,7 +12,7 @@
 
 > **적용:** 2026-10-17 사용자 최종 지시. 이 문서는 **코덱스에게 실제 코드를 수정·검증할 순서와 완료 기준**을 명확하게 전달하기 위한 작업 지침이다. GitHub 문서 업데이트 자체는 기능 수정/회귀 통과/배포가 아니다.
 >
-> **필독:** [루트 AGENTS.md](../AGENTS.md) · [#242 전체 작업 인덱스](https://github.com/lkh0802a/LOL-GM/issues/242) · [개발 계획](DEVELOPMENT.md) · [사용자 승인](DECISIONS.md) · [게임 사양](LOL_GM_SPEC.md)
+> **필수 기본:** [AGENTS.md](../AGENTS.md)와 현재 선택한 GitHub 이슈. [#242 우선순위](https://github.com/lkh0802a/LOL-GM/issues/242) 및 [개발 계획](DEVELOPMENT.md) · [사용자 결정](DECISIONS.md) · [원본 사양](LOL_GM_SPEC.md)은 해당 규칙·근거가 필요할 때 관련 부분만 검색한다.
 
 ## 0.1. 전체 게임 통합 마스터 명세 (다른 엔진과 충돌할 때만 해당 절 조회)
 
