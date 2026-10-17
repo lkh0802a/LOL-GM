@@ -1,3 +1,19 @@
+## 2026-10-17 최종 이슈 실행 순서 — P0 → P1 → P2
+
+사용자 요청에 따라 **현재 열린 21개 GitHub 이슈 전부**에 `priority:P0`/`priority:P1`/`priority:P2` GitHub 라벨 및 제목 `[P0-01]`처럼 보이는 착수 순번을 적용했다. **[공식 우선순위·완료 체크표 #242](https://github.com/lkh0802a/LOL-GM/issues/242)**의 앞부분을 실행 큐 원본으로 사용. 기존 이슈 #2 완료/close 이력과 단계1–13·모든 C안 승인 범위를 유지한다.
+
+| 등급 | 업무 순서 (앞이 우선) | 의미 |
+| --- | --- | --- |
+| **P0** | [#242 감사 총괄](https://github.com/lkh0802a/LOL-GM/issues/242) → **[#243 Bo1 스크림 단일 결과](https://github.com/lkh0802a/LOL-GM/issues/243)** → **[#244 모바일 저장/백그라운드 복원](https://github.com/lkh0802a/LOL-GM/issues/244)**; [#241 통합 수용](https://github.com/lkh0802a/LOL-GM/issues/241)은 **상시** | #242는 분류/추적, #243가 첫 실제 수정. #244 저장 위험 재현·원본 보전. #241은 P0-게이트이지 #243 작업을 막는 전제 작업/완료된 기능 아님 |
+| **P1** | [#245 AI 임대 날짜](https://github.com/lkh0802a/LOL-GM/issues/245) → [#246 결정론 난수 정렬](https://github.com/lkh0802a/LOL-GM/issues/246) → [#248 정보·의료 비공개](https://github.com/lkh0802a/LOL-GM/issues/248) → [#249 과거 경기/역사](https://github.com/lkh0802a/LOL-GM/issues/249) → [#247 모바일 UI 세계 복사](https://github.com/lkh0802a/LOL-GM/issues/247) → [#234 공통 세계 시계](https://github.com/lkh0802a/LOL-GM/issues/234) → [#224 시간형 협상](https://github.com/lkh0802a/LOL-GM/issues/224) → [#225 모바일 시장](https://github.com/lkh0802a/LOL-GM/issues/225) | 코드로 확인한 작고 정확한 결함→정보·역사·성능→공통 시간 의존성→기존 이적시장 업무 순서 |
+| **P2** | [#250 닉네임](https://github.com/lkh0802a/LOL-GM/issues/250) → [#233 초정밀 경기](https://github.com/lkh0802a/LOL-GM/issues/233) → [#232 패치 2.0](https://github.com/lkh0802a/LOL-GM/issues/232) → [#235 전술 AI](https://github.com/lkh0802a/LOL-GM/issues/235) → [#236 선수](https://github.com/lkh0802a/LOL-GM/issues/236) → [#237 경영](https://github.com/lkh0802a/LOL-GM/issues/237) → [#238 스카우팅](https://github.com/lkh0802a/LOL-GM/issues/238) → [#239 장기 세계](https://github.com/lkh0802a/LOL-GM/issues/239) → [#240 고성능](https://github.com/lkh0802a/LOL-GM/issues/240) | 기존 C안 **전부 유지**, 전체 기능 확장은 P0/P1 정확성/저장/권한 정리 후 단계별. 장기 역사/성능의 기본 불변식은 앞 단계에서도 즉시 지킨다 |
+
+- **이 순서가 아래 역사적 우선순위 문구보다 착수 순서에서 우선한다.** 같은 도메인의 진행 PR 확인 및 독립·충돌 없는 작업 병렬 처리는 가능. 기존 작업의 미완/완료 정의, 시드/공정한 AI·의료/패치/인수인계 제외·100시즌/Android 최종 게이트는 그대로.
+- GitHub 기본 열린 이슈 목록은 라벨별 자동순위 정렬이 되지 않으므로 `priority:P0`/`priority:P1`/`priority:P2` 라벨로 각각 필터링하고 **실제 착수 순서는 #242의 번호**를 따른다. 번호가 큰 #245가 번호가 작은 #224보다 먼저인 것은 의도적인 순위.
+- 이슈 제목/라벨/문서 변경만 수행했으며 **실제 코드 변경·CI 통과·배포 완료로 판정하지 않는다**.
+
+---
+
 ## 2026-10-17 후속 최우선 지시 — 전 게임 전수조사 안정화/실사용 연결 P0
 
 **사용자 결정:** 게임 전체 **엔진 102개+UI 70개**를 빠짐없이 살펴, 작은 오류/불편·중복 계산·정확하지 않은 세계 시간·정보/재정/세이브·모바일 개선을 포함한 전수조사 결과를 등록하고 **초정밀 C안 신규 기능 확장보다 먼저 처리**한다. [#242 최우선 전수조사 인덱스](https://github.com/lkh0802a/LOL-GM/issues/242)가 단일 추적표이며 세부 결함은 아래 이슈로 분리. 본 승인에는 기존 개발 1–13, 경기38+추가 감사8, 2026-10-17 10개 C안, 모든 구체 수치/원본 테스트의 삭제·취소·재해석을 포함하지 않는다.
