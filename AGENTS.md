@@ -8,13 +8,13 @@ The index maps every area to source owners, actual action/consumer boundaries, m
 
 These are repository-level instructions for implementation agents (Codex and similar). Follow these before changing the game. **The actionable queue and exact first task are in [docs/CODEX_EXECUTION.md](docs/CODEX_EXECUTION.md).** This file does not claim any issue is implemented.
 
-## First action on every new task
-
 ## Mandatory integrated specification
 
 Read [the end-to-end master blueprint](docs/CODEX_MASTER_BLUEPRINT.md) before changing any game system. It integrates the player journey, **22 cross-engine invariants**, 10 approved C-tier directions, 16 vertical feature groups, UI/source/data ownership, risk classification, test matrix, release gates and the per-PR evidence contract. Follow [CODEX_EXECUTION.md](docs/CODEX_EXECUTION.md) for the **actual issue order**, then use the [33-domain index](docs/CODEX_DOMAIN_INDEX.md) for exact affected code. These are complementary references, **not new issues or permission to delay P0 #243**.
 
 
+
+## First action on every new task
 
 1. Read this file, `docs/CODEX_EXECUTION.md`, the top/latest decision sections of `docs/DEVELOPMENT.md`, and the **entire body and relevant comments** of the selected GitHub issue.
 2. Inspect the **current working branch, current main, existing PRs/commits and source tests**. Never rely on a dated issue/comment to assert that something is still broken or complete. Avoid simultaneous workers modifying the same functional slice.
