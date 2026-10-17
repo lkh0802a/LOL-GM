@@ -726,7 +726,6 @@ const brandTargets = [
   ...modules.map(file => resolve(artifact, file)),
   resolve(artifact, 'shell.html'),
   resolve(root, 'README.md'),
-  resolve(root, 'MIGRATION_REPORT.md'),
   ...docFiles,
 ];
 for (const path of brandTargets) {

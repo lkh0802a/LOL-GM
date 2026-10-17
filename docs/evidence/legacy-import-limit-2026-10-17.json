@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "baseline": "docs/evidence/squad-draft-recovery-2026-10-08.json",
+  "baselineSha256": "083986a7a5a33231a590914fe9c280574faf6a4696ac06a02cee4b8ad5291386",
+  "changes": {
+    "src/artifact/world.js": {
+      "historical": "41076b06ece7065b7ecc2518ed444ededfdf798b92b31da46964c89d78fea99a",
+      "current": "91c2a0979826fc1bb55885be780e0055475665be5b11a9e5c04aa9f858f31dae"
+    }
+  },
+  "decision": "2026-10-17 reviewed deletion of unused region importLimit copies; original Oct 8 evidence immutable, current world exact SHA-256 verified by CI 39026169315."
+}

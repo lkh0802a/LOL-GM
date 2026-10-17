@@ -1,0 +1,13 @@
+{
+  "base": "8fa903c5bbaf27b66911efa4b9b5fcc34704a5d2",
+  "sha256": {
+    "docs/README.md": "9537e831da64a72b80ce160e8ed2ed5935aa29e7dfdf470bf2d398ef16488a09",
+    "docs/DEVELOPMENT.md": "9bba9ea939d257643c09563713964cb690cf1bf980537be0dd9ce064fa467ff4",
+    "scripts/negotiation-summary-source-successor.mjs": "0aa842affa85c2e3454ab20394012364d09f74b367468e8cf5e129957c3dc589",
+    "scripts/initial-negotiation-review-source-successor.mjs": "cb3f105a9ab1edee33dbefc3b240057e428c9e8f869f2a78b7573cdafd26a5d1",
+    "scripts/startup-save-source-successor.mjs": "dfcf6652d855626673f45ad131f35eebe1ff1c1fbfca2adacc34d61dfd185a2d",
+    "scripts/stove-fa-source-successor.mjs": "3156c8a9de4a8099c962596695606679810b6446bbcae9ff0ba6b2bd0ec1c348",
+    "scripts/negotiation-final-source-successor.mjs": "67a01af6eea2a3cd3bc2aa0ddce0a005fc832c9e560298ab6069b49532eb81aa"
+  },
+  "purpose": "Record the exact currently reviewed successor verifier content while retaining immutable 2026-10-13 raw archive and independent October 17 pins. Source modifications require a new reviewed digest."
+}
