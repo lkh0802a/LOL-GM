@@ -296,7 +296,7 @@ function medicalIncidentOdds(p,t,load,plan){
     Math.max(0,(p.medicalOverloadDays||0)-7)/15+
     Math.max(0,(p.fatigue||0)-38)/26;
   const burnout=strain>0?
-    clamp(.000075*strain*(rest?.25:plan==='light'?.75:1)*prevention,0,.00036):0;
+    clamp(.000075*strain*(rest?.25:plan==='light'?.75:1)*prevention,0,.00065):0;
   return {injury,illness,burnout};
 }
 function medicalDailyTick(db,date){
