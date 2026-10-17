@@ -131,8 +131,10 @@ jobs:
         with:
           node-version: 22
 
+      # Execute all 89 behavioral acceptances. Historical source snapshots
+      # are archived and can be audited independently from current docs.
       - name: UI finance and contract acceptances
-        run: node scripts/ci-run.mjs ui-finance-contracts -- node scripts/ui-evidence-runner.mjs
+        run: node scripts/ci-run.mjs ui-finance-contracts -- node scripts/ui-finance-contracts-runner.mjs
 
       - name: Upload validation report
         if: always()
@@ -219,7 +221,7 @@ jobs:
           node-version: 22
 
       - name: System snapshot and regression
-        run: node scripts/ci-run.mjs system-snapshot -- npm run validate:systems && node scripts/ci-run.mjs regression -- node scripts/regression-runner.mjs
+        run: node scripts/ci-run.mjs system-snapshot -- npm run validate:systems && node scripts/ci-run.mjs regression -- node scripts/current-regression-runner.mjs
 
       - name: Upload validation report
         if: always()
