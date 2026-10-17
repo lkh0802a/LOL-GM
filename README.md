@@ -1,5 +1,7 @@
 # LOL GM
 
+**Codex automation cadence:** [5-hour-window scheduling and rescheduling instructions](docs/CODEX_AUTOMATION_5H.md): one Codex-only automation, preferred 5h10m interval when supported, approximately 90m soft work cap, quota/weekly-window guards, no duplicate runs. Updating GitHub instructions does not edit the actual Codex schedule.
+
 Mobile-first esports management simulation, playable as offline standalone HTML.
 Desktop/mobile HTML comes first; Android packaging follows later.
 
