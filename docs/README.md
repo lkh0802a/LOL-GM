@@ -1,3 +1,11 @@
+## 2026-10-17 최우선 — 게임 전체 전수조사 후속 개선
+
+게임 엔진 **102개 + UI 모듈 70개** 소스 감사를 기반으로 사용자가 **[#242 P0 최우선 전체 후속 개선](https://github.com/lkh0802a/LOL-GM/issues/242)**을 승인. 새 C안 깊이 개발 전에 실제 결함·저장/정보·권한·장기 역사/모바일 성능을 먼저 검증·교정한다. 세부 작업: [#243 Bo1 기록/화면](https://github.com/lkh0802a/LOL-GM/issues/243), [#244 저장·백그라운드](https://github.com/lkh0802a/LOL-GM/issues/244), [#245 AI 임대 날짜](https://github.com/lkh0802a/LOL-GM/issues/245), [#246 RNG 안정성](https://github.com/lkh0802a/LOL-GM/issues/246), [#248 정보 경계](https://github.com/lkh0802a/LOL-GM/issues/248), [#249 역사·리플레이](https://github.com/lkh0802a/LOL-GM/issues/249), [#247 UI 세계 복사](https://github.com/lkh0802a/LOL-GM/issues/247), [#250 닉네임](https://github.com/lkh0802a/LOL-GM/issues/250).
+
+[최신 우선순위/검증 계약](DEVELOPMENT.md) · [사용자 확정 결정](DECISIONS.md). 기존 C안 이슈 #224·#225·#232·#233–#241과 단계1–13 전체 계획은 **유지**한다. 이슈/문서 등록 자체는 수정·CI 통과·게시 완료가 아니다.
+
+---
+
 ## 2026-10-17 C안 엔진 고도화 — 신규 추적 이슈 등록
 
 사용자는 **경기·이적시장 시간·대회 일정·전술 AI·선수 커리어·구단 경영·스카우팅·장기 세계/저장·모바일 고성능·전 엔진 실사용 검증**의 10개 방향에서 모두 C안을 확정했다. 등록한 신규 이슈는 **[#233 경기](https://github.com/lkh0802a/LOL-GM/issues/233) · [#234 시간·일정](https://github.com/lkh0802a/LOL-GM/issues/234) · [#235 전략 AI](https://github.com/lkh0802a/LOL-GM/issues/235) · [#236 선수](https://github.com/lkh0802a/LOL-GM/issues/236) · [#237 경영](https://github.com/lkh0802a/LOL-GM/issues/237) · [#238 스카우팅](https://github.com/lkh0802a/LOL-GM/issues/238) · [#239 역사·저장](https://github.com/lkh0802a/LOL-GM/issues/239) · [#240 성능](https://github.com/lkh0802a/LOL-GM/issues/240) · [#241 전체 검증](https://github.com/lkh0802a/LOL-GM/issues/241)**이다.
