@@ -28,7 +28,7 @@ async function pins(){
  }
  assert.deepEqual(Object.keys(m.successors),["scripts/negotiation-summary-source-successor.mjs","scripts/initial-negotiation-review-source-successor.mjs","scripts/startup-save-source-successor.mjs","scripts/stove-fa-source-successor.mjs"]);
  for(const [path,pin] of Object.entries(rows)){
-   const initial=m.successors[path]?second.sources[path]:path.startsWith('src/artifact/')?previous.engine[path.slice('src/artifact/'.length)]||previous.sources[path]:previous.sources[path];
+   const initial=m.uiSuccessors?.[path]?uiBaseline.sources[path]:m.successors[path]?second.sources[path]:path.startsWith('src/artifact/')?previous.engine[path.slice('src/artifact/'.length)]||previous.sources[path]:previous.sources[path];
    assert.equal(pin.historical,initial,path+' original evidence pin');
    assert.equal(sha(await readFile(new URL(path,root))),pin.current,path+' reviewed current source');
  }
