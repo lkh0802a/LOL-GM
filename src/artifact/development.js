@@ -89,13 +89,12 @@ function growPlayer(db,p,rng,games,champGames){
     practiceFactor=Math.max(.82,1-Math.min(280,p.medicalRestDays||0)*.00065);
   const room=clamp((p.pot-before)/10,-0.5,1.5), prof=p.personality.professionalism/100,ageShift=dev.peakAge-25;
   const coach=team?staffDevelopmentFor(team,p.role)/100:0.45, play=clamp(games/30,0,1);
-  const conversionMul=roleConversionGrowthMultiplier(p);
   for(const g in ATTR_GROUPS){
     // Base growth depends on age, actual official appearances, staff and facilities.
     const base=ageCurve(p.age-ageShift,g);
     pState(p);
     let d=base>0?base*dev.growthRate*(0.45+room*0.6)*(0.7+0.6*prof)*(0.8+0.4*coach)*(0.65+0.55*play)*trainingGrowthMul(team)*facilityMul(team,p.age)*(0.9+0.2*p.morale/100):base*dev.declineRate*(1.3-0.6*prof);
-    if(d>0)d*=youthMul(p.age)*conversionMul*practiceFactor;
+    if(d>0)d*=youthMul(p.age)*practiceFactor;
     d=Math.min(d,growthCap(p.age)); // 한 시즌 영역별 성장 상한 (어릴수록 높음)
     const ceil=Math.min(99,p.pot+6); // 잠재력 + 6을 넘는 능력치는 더 오르지 않음
     for(const a of ATTR_GROUPS[g]){const v=p.attrs[a]+d+rng.normal(0,1.3);p.attrs[a]=Math.round(clamp(d>0&&p.attrs[a]>=ceil?Math.min(v,p.attrs[a]):d>0?Math.min(v,Math.max(ceil,p.attrs[a])):v,20,99))}
