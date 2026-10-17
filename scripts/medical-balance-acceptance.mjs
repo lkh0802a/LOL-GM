@@ -97,12 +97,24 @@ source+=String.raw`(()=>{
         // Distinct workloads: loaded athletes play two series and four
         // three-game scrims weekly; controlled athletes use half the sessions.
         // Never expose a medically absent player to official or scrim play.
-        if(medicalOut(athlete)||medicalScrimRest(db,athlete))continue;
-        if(weekday===2||weekday===5&&cohort.profile==='loaded')
+        if(medicalOut(athlete)||medicalScrimRest(db,athlete)){
+          athlete.fatigue=clamp((athlete.fatigue||0)-4,0,100);
+          continue;
+        }
+        // The synthetic year reproduces both exposure and physical fatigue
+        // of the observed official/scrim sessions; there is no intensity mode.
+        let activityFatigue=0;
+        if(weekday===2||weekday===5&&cohort.profile==='loaded'){
           medicalExposure(db,athlete,'official',2);
+          activityFatigue+=8;
+        }
         if(cohort.profile==='loaded'?[0,1,3,4].includes(weekday):
-          [0,4].includes(weekday))
-          medicalExposure(db,athlete,'scrim',cohort.profile==='loaded'?3:2);
+          [0,4].includes(weekday)){
+          const games=cohort.profile==='loaded'?3:2;
+          medicalExposure(db,athlete,'scrim',games);
+          activityFatigue+=games*2;
+        }
+        athlete.fatigue=clamp((athlete.fatigue||0)-2.8+activityFatigue,0,100);
       }
       medicalDailyTick(db,date);
       for(const cohort of squads){
