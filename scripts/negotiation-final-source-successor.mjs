@@ -22,8 +22,14 @@ async function verify(){
    'docs/README.md','docs/DEVELOPMENT.md','scripts/negotiation-final-source-successor.mjs']);
  for(const [p,h] of Object.entries(e.sources)){
    if(p==='index.html'){
-     assert.equal(sha(await readFile(new URL(p,root))),
-       sha(await readFile(new URL('dist/index.html',root))),p+' generated output mismatch');
+     const current=sha(await readFile(new URL(p,root)));
+     // CI's fast verification runs before the build; the focused workflow
+     // builds first. In either state keep the appropriate integrity check.
+     let built=null;
+     try{built=await readFile(new URL('dist/index.html',root))}
+     catch(err){if(err.code!=='ENOENT')throw err}
+     if(built)assert.equal(current,sha(built),p+' generated output mismatch');
+     else assert.equal(current,h,p+' committed standalone baseline drift');
      continue;
    }
    assert.equal(sha(await readFile(new URL(p,root))),followup.sha256[p]||h,p);
