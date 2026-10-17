@@ -284,12 +284,18 @@ function medicalIncidentOdds(p,t,load,plan){
   // arms race or eliminating the baseline risk from high-activity schedules.
   const prevention=clamp(1-(staffProfile(t).recovery-50)*.0017-
     (ensureFacilities(t).recovery-1)*.022,.79,1.08);
-  const injury=clamp(.000065*(1+load/22)*(1+Math.max(0,p.age-28)*.035)*
-    (1+Math.max(0,p.fatigue-45)/95)*
+  // Actual recent official/scrim exposure, aging and accumulated fatigue
+  // replace the retired artificial 'high training intensity' injury flag.
+  // Benefits of rest and medical staff remain bounded.
+  const exposure=Math.pow(1+Math.max(0,load)/11,1.2);
+  const injury=clamp(.00006*exposure*(1+Math.max(0,p.age-28)*.075)*
+    (1+Math.max(0,p.fatigue-45)/90)*
     (rest?.57:plan==='light'?.83:1)*prevention,0,.00042);
   const illness=.00020*(1+((p.condition??96)<70?.32:0));
-  const burnout=(p.medicalOverloadDays||0)>=14?
-    clamp(.00008*((p.medicalOverloadDays||0)-12)/18*(rest?.45:1)*prevention,0,.00032):0;
+  const strain=Math.max(0,load-7)/8+
+    Math.max(0,(p.medicalOverloadDays||0)-12)/18;
+  const burnout=strain>0?
+    clamp(.00008*strain*(rest?.35:1)*prevention,0,.00032):0;
   return {injury,illness,burnout};
 }
 function medicalDailyTick(db,date){
