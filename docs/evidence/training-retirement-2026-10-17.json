@@ -66,7 +66,7 @@
     },
     "scripts/startup-save-source-successor.mjs": {
       "historical": "bd16c74e2979bee148eff1711c3287e9d2f684ceae21a65d329ba1069f4a2c4d",
-      "current": "88e9a903a723a3a17b192dbf013939a3596c0d1750a9caf387e82522a6e9acd5"
+      "current": "55d5deef9644c1252bdc8e4b3cff56fd729b9a6c318f0b9d66a9a66f9d88f1f9"
     },
     "scripts/stove-fa-source-successor.mjs": {
       "historical": "04e7c1fa7c9fbee0b0c9b63c168fdb9108a19bdc31ece2cc8fc171fbe2c5782b",
