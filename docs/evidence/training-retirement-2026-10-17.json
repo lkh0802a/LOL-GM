@@ -1,0 +1,56 @@
+{
+  "schema": 1,
+  "baseline": "docs/evidence/squad-draft-recovery-2026-10-08.json",
+  "baselineSha256": "083986a7a5a33231a590914fe9c280574faf6a4696ac06a02cee4b8ad5291386",
+  "decision": "2026-10-17 user-approved removal of manual attribute allocations/intensity; preserve Oct 8 original evidence and audit each explicitly modified source by its exact content SHA-256.",
+  "changes": {
+    "scripts/squad-staging-acceptance.mjs": {
+      "historical": "608362c48e647dafa55f94078e15ce466a16e914fd79f527253768894f2c8f36",
+      "current": "841044694be120d39dc187c3c05e820523e1f8c634586c07627f900e1cfd5c0d"
+    },
+    "src/artifact/calendar.js": {
+      "historical": "8736fbf8bdcad1fec98f869de9756c333e740f1d191e2322426e911599f21183",
+      "current": "d5f99d5a36113853964f8a3cfc417d40759052b1624d638865f45a4497e648b0"
+    },
+    "src/artifact/development.js": {
+      "historical": "791297239cb94c28990a7373176aad3a122d10d69e64189f39125d6a2c7b1417",
+      "current": "9c57a8e941f20d3ae6eea03157c1086a16091eebf239d8105395cedac465ecb3"
+    },
+    "src/artifact/medical.js": {
+      "historical": "9c5d23dfb9cd7f0ebdef4dbc6af223e2a61beaf23f1cbc97be4f9ffa4647d11d",
+      "current": "534b09edc19a4b5e9a2bd5c4470bd63f123ae841ef6ff291ad77349ddb833118"
+    },
+    "src/artifact/offseason.js": {
+      "historical": "a2f37612c9db7f096f29d686ba1ce063330ada78301400fd1773e0bc95951949",
+      "current": "aa4411ef970f9752236f544c2a555c991d9c9ffb148f1241e072f09a1cf4432b"
+    },
+    "src/artifact/practice-resources.js": {
+      "historical": "43e284428f47238b3360e91b7c1d4ae686a9e96e92f698e0ae01f67f1a4ef5d0",
+      "current": "c769fd09aa633f05cb3d39287a95d5f3489038c0f54b77786cb25cf34bbef319"
+    },
+    "src/artifact/role-conversion.js": {
+      "historical": "18708388bd2202835d8226c28be041fb255031282f03b20e2436c932cbfb951d",
+      "current": "153a76cfcc4ad65c5eaf520575c1dcd957b1d381887b4e982bfdcc117adc72c0"
+    },
+    "src/artifact/save-migration.js": {
+      "historical": "68ec50df15e1836c8277e0bfd674a8b7346e101f105134aa9ee030fb14d6e0af",
+      "current": "f1a2ad72339520394afaedacd96899bc1eb4991ab0996b3c5f078e77e1287e1e"
+    },
+    "src/artifact/squad-preparation.js": {
+      "historical": "24e7cfbdfd92d768eb80a799c3ce6f0a83258a00f059796bf7a8e28832c357ab",
+      "current": "32e3386ad0d0f88f7437880dd972dc452ec1bb49ebf5239829ca8515c9d1b3d9"
+    },
+    "src/artifact/ui-club-practice.js": {
+      "historical": "d9186479fa6be7eb1013be89de8abddedbca2985cb3cf94206696ce1fe27abcb",
+      "current": "60207a540b37969291773d2ca8aad2634ff2b5866e6065bcc8b5b7355fb376b2"
+    },
+    "src/artifact/ui-squad-preparation.js": {
+      "historical": "33fb7b3c15b003fa38b9d4b194f4695489191092141f626e6f5facf47defdf09",
+      "current": "78ab98f81f03f5ff224146cf6934eb690a7a5d19997dc7712fcdbc897385aabb"
+    },
+    "src/artifact/world.js": {
+      "historical": "41076b06ece7065b7ecc2518ed444ededfdf798b92b31da46964c89d78fea99a",
+      "current": "4b07e946ac217c4ce82053c79483a3b968d25d120ef879a5ce0fcedb682b9bcd"
+    }
+  }
+}
