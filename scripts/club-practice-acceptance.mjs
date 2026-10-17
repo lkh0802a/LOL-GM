@@ -35,7 +35,7 @@ await runEngineFixture(String.raw`(()=>{
   check(!!clubPracticeModel(DB,reserve.id)&&!clubPracticeModel(DB,other.id),
     'foreign or reserve model access error');
   const briefing=renderClubPracticeBriefing();
-  check(briefing.includes('스크림')&&!briefing.includes('훈련 포인트'),
+  check(briefing.includes('스크림')&&briefing.includes('설정은 사용하지 않습니다'),
     'briefing still advertises obsolete manual training');
   check(openClubPractice(t.id)&&JSON.stringify(DB)===before,
     'opening practice overlay changed simulation');
