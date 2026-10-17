@@ -79,7 +79,7 @@ function medicalCare(db,p){
   if(!t)return 0.75;
   const recovery=staffProfile(t).recovery,fac=facilityRecoveryBonus(t);
   const plan=medicalPlanFor(db,p);
-  return clamp(.88+(recovery-50)/225+fac*.05-Math.max(0,(p.fatigue||0)-45)/330+
+  return clamp(.88+(recovery-50)/225+fac*.075-Math.max(0,(p.fatigue||0)-45)/330+
     (plan==='rehab'?.12:plan==='rest'?.065:plan==='light'?.025:0),.65,1.42);
 }
 function medicalExposure(db,p,kind='scrim',games=1){
