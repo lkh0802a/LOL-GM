@@ -1,3 +1,15 @@
+## 코덱스 전 분야 상세 계약 — 33개 세부 영역
+
+[**전체 분야 인덱스**](CODEX_DOMAIN_INDEX.md)에서 A1–A10, B1–B11, C1–C12의 개발 소유 코드/상세 기준/테스트·담당 이슈를 찾아갈 수 있다.
+
+- [A. 새 게임·선수·의료·스카우팅·계약/임대·2군/스태프·재정·훈련/스크림](CODEX_DOMAIN_A_CLUB.md)
+- [B. 챔피언/아이템·밴픽/전술·경기/패치·대회/일정·AI·역사/뉴스](CODEX_DOMAIN_B_MATCH_WORLD.md)
+- [C. 모바일 홈/선수/시장·공식 경기 UI·접근성/저장·메모리/권한/CI·Android](CODEX_DOMAIN_C_UI_QA.md)
+
+코덱스 기본 실행 계약은 [루트 AGENTS.md](../AGENTS.md), [우선순위 실행 지침](CODEX_EXECUTION.md), [#242 최우선 P0 작업표](https://github.com/lkh0802a/LOL-GM/issues/242). 세부 문서의 모든 계약은 **이미 승인된 1–13단계/10개 C안의 심화 구현·검증 기준**이며 33개 신규 이슈나 즉시 전체 구현을 뜻하지 않는다. 게임 코드/테스트/배포는 별도로 작업해야 한다.
+
+---
+
 ## Codex implementation entrypoint
 
 Codex/구현 에이전트는 저장소 루트 [AGENTS.md](../AGENTS.md) → [단계별 작업 실행 지침 CODEX_EXECUTION.md](CODEX_EXECUTION.md) → [#242 우선순위 인덱스](https://github.com/lkh0802a/LOL-GM/issues/242) → 대상 이슈의 본문/댓글을 순서대로 확인한다. 실제 첫 수정은 **[#243 Bo1 스크림 단일 계산](https://github.com/lkh0802a/LOL-GM/issues/243)**, 다음은 **[#244 저장/복원 안정성](https://github.com/lkh0802a/LOL-GM/issues/244)**. #241은 모든 작업의 통합 수용 게이트다. 코드/테스트/PR·CI 증거 없이 이슈·문서 등록만으로 완료 처리하지 않는다.
