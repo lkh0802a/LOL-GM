@@ -27,8 +27,10 @@ export async function verifyScrimSources(){
     .replaceAll("await readFile(new URL(paths[5],root),'utf8')",'await scrimSourceText(paths[5])')
     .replaceAll("await readFile(new URL(paths[3],root),'utf8')",'await scrimSourceText(paths[3])')).join('\n');
   assert.equal(await readFile(new URL(p,root),'utf8'),expected,'exact historical evidence routing only');
+  const guide='scripts/current-guide-source-successor.mjs';
+  assert.equal(await readFile(new URL(guide,root),'utf8'),"import {scrimSourceText} from './scrim-single-result-source-successor.mjs';\n"+originals[guide].replace("(await readFile(new URL(p,root),'utf8')).endsWith(original[p])","(await scrimSourceText(p)).endsWith(original[p])"),'original guide suffix assertion retained on complete historical bytes');
   assert.equal(await readFile(new URL('scripts/smoke.mjs',root),'utf8'),"await import('./scrim-single-result-acceptance.mjs');\n"+originals['scripts/smoke.mjs'],'all smoke assertions retained with new acceptance');
-  for(const p of ['docs/README.md','docs/DEVELOPMENT.md'])assert((await readFile(new URL(p,root),'utf8')).includes(originals['main/'+p]),p+' latest main and complete prior guide retained');
+  for(const p of ['docs/README.md','docs/DEVELOPMENT.md']){assert(originals['main/'+p].includes(originals[p]),p+' complete release guide retained in latest main');assert((await readFile(new URL(p,root),'utf8')).includes(originals['main/'+p]),p+' latest main and complete prior guide retained');}
   verified={e,originals};return verified;
 }
 export async function scrimSourceHash(p){const {e}=await verifyScrimSources();return e.originals[p]||sha(await readFile(new URL(p,root)))}

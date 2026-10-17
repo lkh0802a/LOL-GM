@@ -1,3 +1,4 @@
+import {scrimSourceText} from './scrim-single-result-source-successor.mjs';
 import {negotiationFinalSourceHash,negotiationFinalSourceText} from './negotiation-final-source-successor.mjs';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -16,7 +17,7 @@ async function verify(){
  assert.deepEqual(rows.map(r=>r.path),paths.map(p=>'original/'+p));
  const original={};for(const r of rows){const p=r.path.slice(9),b=Buffer.from(r.base64,'base64');assert.equal(b.length,r.bytes);assert.equal(sha(b),r.sha256);assert.equal(sha(b),e.originals[p]);original[p]=b.toString()}
  for(const p of paths){const b=await readFile(new URL(p,root));assert.equal(await negotiationFinalSourceHash(p),e.sources[p],p)}
- for(const p of paths.slice(0,2))assert((await readFile(new URL(p,root),'utf8')).endsWith(original[p]),p+' 전체 승인·역사 원문 연속 보존');
+ for(const p of paths.slice(0,2))assert((await scrimSourceText(p)).endsWith(original[p]),p+' 전체 승인·역사 원문 연속 보존');
  const p=paths[2];
  const expected=("import {currentGuideSourceHash} from './current-guide-source-successor.mjs';\n"+original[p]).replace('for(const [p,h] of Object.entries(e.sources))assert.equal(sha(await readFile(new URL(p,root))),h,p);','for(const [p,h] of Object.entries(e.sources))assert.equal(await currentGuideSourceHash(p),h,p);');
  assert.equal(await negotiationFinalSourceText(p),expected,'기존 압축 증거·검사·엔진·작업·시간 제한 단언 보존');
