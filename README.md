@@ -5,6 +5,10 @@ Desktop/mobile HTML comes first; Android packaging follows later.
 
 ## Instructions for Codex and implementation agents
 
+**Overall game master specification:** [CODEX_MASTER_BLUEPRINT.md](docs/CODEX_MASTER_BLUEPRINT.md) consolidates the full game loop, cross-engine ownership, 22 invariants, all 10 C-tier directions, 16 implementation groups, user-facing acceptance paths, failure scenarios, and release validation. Pair it with [the execution queue](docs/CODEX_EXECUTION.md) and [33 domain-specific contracts](docs/CODEX_DOMAIN_INDEX.md). **First code fix remains #243; #244 follows.**
+
+
+
 **All-domain implementation reference:** The [33-section Codex domain index](docs/CODEX_DOMAIN_INDEX.md) links [A — club/player/market/training](docs/CODEX_DOMAIN_A_CLUB.md), [B — match/draft/patch/world/AI/history](docs/CODEX_DOMAIN_B_MATCH_WORLD.md), and [C — mobile UI/save/performance/QA/Android](docs/CODEX_DOMAIN_C_UI_QA.md). Read the relevant sections and cross-domain acceptance before coding. No roadmap or issue document is proof of implementation.
 
 
