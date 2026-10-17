@@ -33,6 +33,7 @@ export async function stoveFaSourceHash(p){
  const {e}=await verify();
  if(e.originals[p])return e.originals[p];
  const engine=p.startsWith('src/artifact/')?p.slice('src/artifact/'.length):null;
+ if(p==='scripts/squad-staging-acceptance.mjs')return reviewedRetirementSourceHash(p,'671ddd646ce9bbee61b60be8f71e04d27a593f5a0efc96e7f6c90489b82d70f2');
  if(p==='src/artifact/ui-roster.js')return reviewedRetirementSourceHash(p,'200ddec8f30a134789f33501e3be8ccd89578505772aab2a2fcfc9cd08a45ec6');
  if(engine&&Object.hasOwn(e.engine,engine))return reviewedRetirementSourceHash(p,e.engine[engine]);
  return startupSaveSourceHash(p);
