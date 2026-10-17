@@ -29,5 +29,11 @@ async function verify(){
  for(const p of ['docs/README.md','docs/DEVELOPMENT.md'])assert((await readFile(new URL(p,root),'utf8')).includes(original(p)),'전체 승인 원문 연속 보존');
  verified={e,rows};return verified;
 }
-export async function stoveFaSourceHash(p){const {e}=await verify();return e.originals[p]||await startupSaveSourceHash(p)}
+export async function stoveFaSourceHash(p){
+ const {e}=await verify();
+ if(e.originals[p])return e.originals[p];
+ const engine=p.startsWith('src/artifact/')?p.slice('src/artifact/'.length):null;
+ if(engine&&Object.hasOwn(e.engine,engine))return reviewedRetirementSourceHash(p,e.engine[engine]);
+ return startupSaveSourceHash(p);
+}
 export async function stoveFaSourceText(p){const {e,rows}=await verify();return e.originals[p]?Buffer.from(rows.find(r=>r.path==='original/'+p).base64,'base64').toString():startupSaveSourceText(p)}
