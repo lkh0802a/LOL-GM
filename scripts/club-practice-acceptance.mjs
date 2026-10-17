@@ -1,6 +1,6 @@
 import {artifactSources,runEngineFixture} from './test-harness.mjs';
 const sources=await artifactSources(['ui-roster.js','ui-club-briefing.js','ui-club-home.js','ui-club-practice.js','ui-club-scrim.js','ui-club-recruitment.js','ui-scrim-plans.js','ui-squad-controls.js','app.js']);const app=sources.pop(),esc=app.match(/^const esc=.*$/m)[0];
-await runEngineFixture(String.raw\`(()=>{
+await runEngineFixture(String.raw`(()=>{
   const check=(ok,msg)=>{if(!ok)throw Error('CLUB_PRACTICE '+msg)};
   const cfg=defaultWorldConfig();cfg.regions=[
     regionCfg('NA',{teams:3,div2:true}),
