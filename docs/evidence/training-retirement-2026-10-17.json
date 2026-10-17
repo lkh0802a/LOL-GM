@@ -89,7 +89,7 @@
   "intermediaries": {
     "scripts/squad-status-source-successor.mjs": {
       "historical": "fafb4d6e9c1b4d56c6b96f88a290bc34ab8cb5b461eaf39fb26534c315d54f65",
-      "current": "83b0540978e6a8f302e061ace35edbaebd970328483884e8ecee90e257dcb43c"
+      "current": "d524a61cc6c0d5dbc14b338604a98cdc2f55ae87840ee48c1518ee60999da351"
     }
   }
 }
