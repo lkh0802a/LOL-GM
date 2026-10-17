@@ -70,12 +70,13 @@
     },
     "scripts/stove-fa-source-successor.mjs": {
       "historical": "04e7c1fa7c9fbee0b0c9b63c168fdb9108a19bdc31ece2cc8fc171fbe2c5782b",
-      "current": "f31ce2cd9532d725ddc03bd8ff1e1cf50edd911818de0aef153f1df07f45766e"
+      "current": "b62b3c55e9d4d552203ad17e5f12c6064017dde72273c9a34bcd45dcb5b942c0"
     }
   },
   "historicalEvidence": {
     "docs/evidence/negotiation-summary-2026-10-11.json": "6de1028a653b743d0007c265cd8703f34c0928bf62fddd7b956afc9486ff0090",
-    "docs/evidence/stove-fa-daily-2026-10-10.json": "2b9c2d4909a8119204c83621b0e1cc68c0494c15f1eea7df33dff117a6b83508"
+    "docs/evidence/stove-fa-daily-2026-10-10.json": "2b9c2d4909a8119204c83621b0e1cc68c0494c15f1eea7df33dff117a6b83508",
+    "docs/evidence/squad-status-2026-10-09.json": "5fee5291a6fb1eb582c82a59c82e70638c296ef75f01a431c189528da5b1c77a"
   },
   "uiBaseline": "docs/evidence/squad-status-2026-10-09.json",
   "uiBaselineSha256": "5fee5291a6fb1eb582c82a59c82e70638c296ef75f01a431c189528da5b1c77a",
