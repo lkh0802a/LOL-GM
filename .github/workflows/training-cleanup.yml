@@ -1,0 +1,37 @@
+name: Training cleanup verification
+on:
+  push:
+    branches:
+      - cleanup/remove-legacy-training-20261017
+  pull_request:
+    paths:
+      - 'src/artifact/**'
+      - 'scripts/**'
+      - 'docs/**'
+      - '.github/workflows/training-cleanup.yml'
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts
+      - name: Build bundle
+        run: npm run build
+      - name: Validate source structure
+        run: node scripts/check.mjs
+      - name: Run direct compatibility tests
+        shell: bash
+        run: |
+          set +e
+          failed=0
+          for test in training-allocation squad-staging club-practice cohesion-practice medical-balance medical club-medical club-scrim scrim-plans scrim-partner practice-meta calendar-depth career; do
+            printf '\n=========== %s ===========\n' "$test"
+            node "scripts/${test}-acceptance.mjs" >"/tmp/${test}.log" 2>&1
+            status=$?
+            tail -n 35 "/tmp/${test}.log"
+            if [ "$status" -ne 0 ]; then echo "FAIL $test ($status)"; failed=1; else echo "PASS $test"; fi
+          done
+          exit "$failed"
