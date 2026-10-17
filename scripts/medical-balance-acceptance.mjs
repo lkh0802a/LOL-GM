@@ -150,7 +150,7 @@ source+=String.raw`(()=>{
     total(low)/low.days<.001&&total(highStress)/highStress.days<.002,
     'baseline incidence collapsed or became unreasonably frequent');
   assert(highStress.injury>low.injury,
-    'high-load older cohort failed to show higher live injury incidence');
+    'high-load older cohort failed to show higher live injury incidence: '+JSON.stringify({controlled:low.injury,loaded:highStress.injury,daysLow:low.days,daysLoaded:highStress.days,burnoutLow:low.burnout,burnoutLoaded:highStress.burnout}));
   assert(highStress.burnout>low.burnout&&highStress.burnout>0,
     'prolonged high workload did not generate measurable burnout');
   assert(low.illness>0&&highStress.illness>0,

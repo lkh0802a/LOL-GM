@@ -65,7 +65,7 @@ await runEngineFixture(String.raw`(()=>{
   practiceChampion(wrong,wp,learnChamp,'scrim',2);
   check(cp.pool[learnChamp].coachingMastery>np.pool[learnChamp].coachingMastery&&
     cp.pool[learnChamp].coachingMastery>wp.pool[learnChamp].coachingMastery,
-    'position-specific coaching did not help actual scrim play');
+    'position-specific coaching did not help actual scrim play: '+JSON.stringify({coach:cp.pool[learnChamp].coachingMastery,plain:np.pool[learnChamp].coachingMastery,wrong:wp.pool[learnChamp].coachingMastery,role:p.role,roleCoach:positionPracticeBonus(coached,cp),plainCoach:positionPracticeBonus(plain,np),wrongCoach:positionPracticeBonus(wrong,wp),team:cp.team}));
   const earned=cp.pool[learnChamp].coachingMastery;
   check(commitWorldAction(coached,{type:'staff.release',actor:'manager',
     teamId:t.id,sid:specialist.id}).ok,'staff release failed');
