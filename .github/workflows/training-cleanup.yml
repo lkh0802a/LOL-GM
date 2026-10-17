@@ -17,7 +17,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm ci --ignore-scripts
+      # Dependency-free repository; no lockfile/npm ci needed.
       - name: Build bundle
         run: npm run build
       - name: Validate source structure
