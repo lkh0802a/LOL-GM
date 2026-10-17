@@ -30,6 +30,13 @@ async function pins(){
      if(!Object.hasOwn(rows,key))continue;
      (oldHashes[key]??=new Set([rows[key].historical])).add(value);
    }
+   // A historic source may have a different intermediate byte digest from
+   // its earlier engine snapshot. Require that exact digest to occur in an
+   // immutable, hash-verified historical manifest before accepting it.
+   for(const [key,value] of Object.entries(prior.sources||{})){
+     if(!Object.hasOwn(rows,key))continue;
+     (oldHashes[key]??=new Set([rows[key].historical])).add(value);
+   }
  }
  historicalEnginePins=oldHashes;
  approved=rows;return rows;
