@@ -140,13 +140,13 @@ const fixture=String.raw`(()=>{
   assert(checkpoint.version===15&&checkpoint.saveFormat===2&&
     checkpoint.world.lastDailyTick===day1.date&&
     checkpoint.teams[user.id].facilityProjects.length===1&&
-    checkpoint.players[p.id].roleConversion.trainingDays===1,
+    (checkpoint.players[p.id].roleConversion.trainingDays||0)===0,
     'daily status, construction and role progress not saved');
   for(let i=2;i<=7;i++){
     const oldDate=db.worldDate,r=playWorldDay(db);
     assert(r.advanced&&r.date===addDays(oldDate,1)&&r.played.length===0,
       'skipped an intervening calendar date '+i);
-    assert(p.roleConversion.trainingDays===i,'role conversion trained an incorrect number of days');
+    assert((p.roleConversion.trainingDays||0)===0,'calendar minted role progress without an actual position appearance');
     assert(t.facilities.training===(i<3?level:level+1),
       'facility construction completed on wrong date '+i);
     if(i<5)assert(db.patches.list.length===oldPatchCount,'early ordinary patch');
