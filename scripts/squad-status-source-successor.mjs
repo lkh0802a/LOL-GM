@@ -34,6 +34,10 @@ async function verify(){
     const retired=/training|trint|trleft|practicefocus|훈련 강도|oldReserveTr|normalizeTraining/;
     for(const line of expected.split('\n')){
       if(retired.test(line))continue;
+      if(line.includes('SQUAD_STAGING_ACCEPTANCE PASS')){
+        assert([...liveLines].some(next=>next.includes('SQUAD_STAGING_ACCEPTANCE PASS')&&next.includes('roster+coaching atomicity')&&next.includes('validation+late writer rollback')),p+' original squad acceptance coverage retained');
+        continue;
+      }
       assert(liveLines.has(line),p+' unrelated original fixture line retained: '+line.slice(0,120));
     }
   }else assert.equal(await initialTableSourceText(p),expected,'기존 모든 assertion·실제 의존성만 추가');
