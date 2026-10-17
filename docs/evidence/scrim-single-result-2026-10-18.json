@@ -34,7 +34,7 @@
     "scripts/smoke.mjs": "ae85f4ebdc0ea50f5ba4cab43b398929589b3e4ba691d4a443454fdc9988e587",
     "index.html": "333d1bcfc66836c7df230df693240527854d3fe29ffb16c1c5cf971c969cec55",
     "docs/README.md": "9537e831da64a72b80ce160e8ed2ed5935aa29e7dfdf470bf2d398ef16488a09",
-    "docs/DEVELOPMENT.md": "3a9e15989fea373279fc4673a4b641c901681c994f202607e0a2d46a33f759c3",
+    "docs/DEVELOPMENT.md": "2305ab472d9135ecf9a291855125cedde752d42c145f5758afb29f8636102252",
     "scripts/scrim-single-result-acceptance.mjs": "5ba7d2f3e7b9ca6778d36f3369ebdc18c9d91ca3e23230b56e3fb40ecd430ea5",
     "scripts/scrim-single-result-source-successor.mjs": "9679d374f078815f0a1e0658da0b0436f28dffdc25598ef8cecde1412eac8e01",
     "scripts/current-guide-source-successor.mjs": "456d3b18ff49d0f0d7bfa3eda71acecd95c9d6fc0e1800b584b74cfb8dcb28c1"
