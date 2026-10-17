@@ -292,7 +292,7 @@ function medicalIncidentOdds(p,t,load,plan){
     (1+Math.max(0,p.fatigue-45)/90)*
     (rest?.57:plan==='light'?.83:1)*prevention,0,.00042);
   const illness=.00020*(1+((p.condition??96)<70?.32:0));
-  const strain=Math.max(0,load-5)/5+
+  const strain=Math.max(0,load-7)/5+
     Math.max(0,(p.medicalOverloadDays||0)-7)/15+
     Math.max(0,(p.fatigue||0)-38)/26;
   const burnout=strain>0?
