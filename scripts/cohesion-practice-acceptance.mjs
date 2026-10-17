@@ -25,64 +25,68 @@ await runEngineFixture(String.raw`(()=>{
   check(satisfactionIssues(db,p).some(x=>x.code==='teammates'),'conflict absent from satisfaction');
   const beforeRenew=renewalDisposition(p);for(let n=0;n<40;n++)applySatisfaction(db,p);
   check(renewalDisposition(p)<beforeRenew,'conflict did not affect renewal motivation');
-  t.training={...defaultTraining(),focus:'teamwork'};db.manager.teamId=other.id;
-  aiManageTraining(db,t);check(t.training.focus==='teamwork'&&t.practiceDecision.reason,'AI did not respond to observed conflict');
-  consumeScrimPractice(db,t,3);check(practiceDay(db,t).remaining===70,'scrim time not spent');
-  const base=JSON.parse(JSON.stringify(db));runDailyPractice(db);
-  check(t.practiceDay.drills===70&&t.practiceDay.scrim===30&&t.practiceDay.remaining===0,'same time used by scrims and drills');
-  const once=JSON.stringify(db);runDailyPractice(db);check(JSON.stringify(db)===once,'daily practice repeated');
-  let blocked=false;try{consumeScrimPractice(db,t,1)}catch{blocked=true}check(blocked,'scrim after spent drills was accepted');
-  const a=unpackDB(packDB(base)),b=unpackDB(packDB(base));
-  a.teams[t.id].training.focus='individual';b.teams[t.id].training.focus='champions';
-  runDailyPractice(a);runDailyPractice(b);
-  const ap=a.players[p.id],bp=b.players[p.id],
-    championWork=q=>Object.values(q.pool).reduce((n,c)=>n+(c.trainingSeason||0),0);
-  // A pool's insertion-first champion need not be selected for today's work.
-  // Compare actual aggregate work, not an unrelated champion's untouched row.
-  check(a.teams[t.id].practiceUsage.individual>b.teams[t.id].practiceUsage.individual&&championWork(bp)>championWork(ap),'focus has no opportunity cost');
-  check(trainingTimeMultiplier(a.teams[t.id],db.year)>trainingTimeMultiplier(b.teams[t.id],db.year),'individual time not linked to real growth');
-  // Current role, actual practice time and employment boundary; no inflated raw work.
-  const learningWorld=()=>{const w=unpackDB(packDB(base)),club=w.teams[t.id];club.staffRoster=[];delete club.practiceDay;club.scrimLog=[];club.training.focus='champions';w.manager.teamId=t.id;w.players[p.id].medicalPlan='normal';return w};
-  const coached=learningWorld(),plain=learningWorld(),wrong=learningWorld(),aiLearning=learningWorld();
-  const specialist={id:'LEARNING_COACH',role:positionCoachRole(p.role),rating:99,age:35,specialties:{},department:'coach',publicEstimate:80};
-  for(const w of [coached,aiLearning]){w.teams[t.id].staffRoster=[JSON.parse(JSON.stringify(specialist))];initializeStaffContract(w,w.teams[t.id],w.teams[t.id].staffRoster[0])}
-  wrong.teams[t.id].staffRoster=[{...specialist,role:positionCoachRole(ROLES.find(r=>r!==p.role))}];
-  aiLearning.manager.teamId=other.id;
-  for(const w of [coached,plain,wrong,aiLearning])runDailyPractice(w);
-  const cp=coached.players[p.id],np=plain.players[p.id],wp=wrong.players[p.id],ipr=aiLearning.players[p.id],learnChamp=Object.keys(cp.pool).sort((x,y)=>cp.pool[y].mastery-cp.pool[x].mastery)[0];
-  check(cp.pool[learnChamp].trainingSeason===np.pool[learnChamp].trainingSeason&&JSON.stringify(cp.practiceDay)===JSON.stringify(np.practiceDay),'coach minted practice resources');
-  check(cp.pool[learnChamp].coachingMastery>0&&!wp.pool[learnChamp].coachingMastery&&positionPracticeBonus(coached,cp)===.3,'wrong role or bounded learning effect');
-  check(JSON.stringify(cp.pool)===JSON.stringify(ipr.pool),'AI/human practice differs');
-  const earned=cp.pool[learnChamp].coachingMastery;
-  check(commitWorldAction(coached,{type:'staff.release',actor:'manager',teamId:t.id,sid:specialist.id}).ok,'real coach release failed');
-  practiceChampion(coached,cp,learnChamp,'training',1);
-  check(cp.pool[learnChamp].coachingMastery===earned&&positionPracticeBonus(coached,cp)===0,'departure erased earned learning or applied future coaching');
-  const stored=unpackDB(packDB(coached));check(stored.players[p.id].pool[learnChamp].coachingMastery===earned,'save lost earned learning');
-  const freeCoach=coached.staffPool.find(s=>s.id===specialist.id);
-  check(commitWorldAction(coached,{type:'staff.sign',actor:'manager',teamId:t.id,sid:freeCoach.id,years:2,salary:staffAskingSalary(coached,coached.teams[t.id],freeCoach)}).ok,'real coach rehire failed');
-  check(cp.pool[learnChamp].coachingMastery===earned,'rehire backfilled earlier practice');
-  const scrimWork=cp.pool[learnChamp].scrimSeason,trainingWork=cp.pool[learnChamp].trainingSeason;
-  practiceChampion(coached,cp,learnChamp,'scrim',2);
-  check(Math.abs(cp.pool[learnChamp].coachingMastery-earned-.096)<1e-9&&cp.pool[learnChamp].scrimSeason===scrimWork+2&&cp.pool[learnChamp].trainingSeason===trainingWork,'scrim learning inflated or used wrong work coefficient');
-  const historic=learningWorld(),hp=historic.players[p.id];delete hp.pool[learnChamp].coachingMastery;delete hp.pool[learnChamp].coachingResearch;
-  const legacy=JSON.parse(packDB(historic));legacy.players[p.id].pool[learnChamp]=legacy.players[p.id].pool[learnChamp].slice(0,8);
-  check(!unpackDB(JSON.stringify(legacy)).players[p.id].pool[learnChamp].coachingMastery,'legacy save fabricated coach practice');
-  legacy.players[p.id].pool[learnChamp][8]=9;let invalidCoach=false;try{unpackDB(JSON.stringify(legacy))}catch{invalidCoach=true}check(invalidCoach,'invalid coaching save accepted');
-  // Observe a substantial real practice block, then settle once under the same RNG.
-  for(const w of [coached,plain]){const q=w.players[p.id],pr=q.pool[learnChamp];Object.assign(pr,{mastery:40,matchup_knowledge:40,scrimSeason:0,trainingSeason:0,coachingMastery:0,coachingResearch:0});w.teams[t.id].practiceUsage={year:w.year,days:1};}
+  // Only real games spend scrim capacity. Unused capacity never becomes
+  // fabricated daily training, coaching mastery or role-conversion progress.
+  consumeScrimPractice(db,t,3);
+  check(practiceDay(db,t).remaining===70,'scrim time was not charged');
+  const base=JSON.parse(JSON.stringify(db));
+  runDailyPractice(db);
+  check(t.practiceDay.drills===0&&t.practiceDay.scrim===30&&
+    t.practiceDay.remaining===0,'unused capacity was minted as drills');
+  const once=JSON.stringify(db);runDailyPractice(db);
+  check(JSON.stringify(db)===once,'daily closure replayed');
+  let blocked=false;try{consumeScrimPractice(db,t,1)}catch{blocked=true}
+  check(blocked,'scrim accepted after daily cutoff');
+  const restored=unpackDB(packDB(db));
+  check(JSON.stringify(restored.teams[t.id].practiceDay)===JSON.stringify(t.practiceDay),
+    'real scrim resource ledger lost on load');
+  const snapshot=JSON.stringify(restored);
+  runDailyPractice(restored);
+  check(JSON.stringify(restored)===snapshot,'reload generated artificial practice');
+  const learningWorld=()=>{
+    const w=unpackDB(packDB(base)),club=w.teams[t.id];
+    club.staffRoster=[];delete club.practiceDay;club.scrimLog=[];
+    w.manager.teamId=t.id;w.players[p.id].medicalPlan='normal';return w;
+  };
+  const coached=learningWorld(),plain=learningWorld(),wrong=learningWorld();
+  const specialist={id:'LEARNING_COACH',role:positionCoachRole(p.role),rating:99,age:35,
+    specialties:{},department:'coach',publicEstimate:80};
   coached.teams[t.id].staffRoster=[JSON.parse(JSON.stringify(specialist))];
-  practiceChampion(coached,cp,learnChamp,'training',40);practiceChampion(plain,np,learnChamp,'training',40);
-  coached.teams[t.id].staffRoster=[];
-  growPlayer(coached,cp,new RNG('learning-settlement'),0,{});growPlayer(plain,np,new RNG('learning-settlement'),0,{});
-  check(cp.pool[learnChamp].mastery>np.pool[learnChamp].mastery&&cp.pool[learnChamp].matchup_knowledge>np.pool[learnChamp].matchup_knowledge,'earned coaching did not affect actual mastery/research');
-  check(cp.pool[learnChamp].mastery<=48&&cp.pool[learnChamp].coachingMastery===0&&cp.pool[learnChamp].coachingResearch===0,'settlement cap or reset violated');
-  const excess=learningWorld(),ep=excess.players[p.id];excess.teams[t.id].staffRoster=[specialist];practiceChampion(excess,ep,learnChamp,'training',10000);
-  check(ep.pool[learnChamp].coachingMastery===8&&ep.pool[learnChamp].coachingResearch===5,'earned assistance unbounded');
-  const rested=learningWorld();rested.teams[t.id].staffRoster=[specialist];rested.players[p.id].medicalPlan='rest';runDailyPractice(rested);
-  check(!rested.players[p.id].pool[learnChamp].coachingMastery,'rest minted coached practice');
-  let invalidAmount=false;try{practiceChampion(rested,rested.players[p.id],learnChamp,'training',Infinity)}catch{invalidAmount=true}check(invalidAmount,'infinite practice accepted');
-  const restored=unpackDB(packDB(db));check(JSON.stringify(restored.teams[t.id].practiceDay)===JSON.stringify(t.practiceDay),'spent resources lost on reload');
-  const snapshot=JSON.stringify(restored);runDailyPractice(restored);check(JSON.stringify(restored)===snapshot,'reload minted extra practice');
+  initializeStaffContract(coached,coached.teams[t.id],coached.teams[t.id].staffRoster[0]);
+  wrong.teams[t.id].staffRoster=[{...specialist,
+    role:positionCoachRole(ROLES.find(r=>r!==p.role))}];
+  const cp=coached.players[p.id],np=plain.players[p.id],wp=wrong.players[p.id];
+  const learnChamp=Object.keys(cp.pool).sort((x,y)=>cp.pool[y].mastery-cp.pool[x].mastery)[0];
+  for(const w of [coached,plain,wrong])runDailyPractice(w);
+  check(!cp.pool[learnChamp].coachingMastery&&
+    !np.pool[learnChamp].coachingMastery,'unused day generated coached champion training');
+  practiceChampion(coached,cp,learnChamp,'scrim',2);
+  practiceChampion(plain,np,learnChamp,'scrim',2);
+  practiceChampion(wrong,wp,learnChamp,'scrim',2);
+  check(cp.pool[learnChamp].coachingMastery>np.pool[learnChamp].coachingMastery&&
+    cp.pool[learnChamp].coachingMastery>wp.pool[learnChamp].coachingMastery,
+    'position-specific coaching did not help actual scrim play');
+  const earned=cp.pool[learnChamp].coachingMastery;
+  check(commitWorldAction(coached,{type:'staff.release',actor:'manager',
+    teamId:t.id,sid:specialist.id}).ok,'staff release failed');
+  check(cp.pool[learnChamp].coachingMastery===earned,'release erased earned learning');
+  const stored=unpackDB(packDB(coached));
+  check(stored.players[p.id].pool[learnChamp].coachingMastery===earned,
+    'save lost actual scrim coaching');
+  const freeCoach=coached.staffPool.find(x=>x.id===specialist.id);
+  check(commitWorldAction(coached,{type:'staff.sign',actor:'manager',teamId:t.id,
+    sid:freeCoach.id,years:2,
+    salary:staffAskingSalary(coached,coached.teams[t.id],freeCoach)}).ok,
+    'coach rehire failed');
+  check(cp.pool[learnChamp].coachingMastery===earned,'rehire backfilled earlier scrims');
+  const rested=learningWorld();rested.players[p.id].medicalPlan='rest';
+  runDailyPractice(rested);
+  check(!rested.players[p.id].pool[learnChamp].coachingMastery,
+    'rest day minted coached practice');
+  let invalidAmount=false;
+  try{practiceChampion(rested,rested.players[p.id],learnChamp,'scrim',Infinity)}
+  catch{invalidAmount=true}
+  check(invalidAmount,'infinite scrim practice accepted');
   check(!scrimPartnerAssessment(db,t,other).allowed,'remote club bypassed travel');
   const eventId='COHESION_TEST';db.competitions[eventId]={id:eventId,international:true,teams:[t.id,other.id],venueRegion:'KR',timeZone:'Asia/Seoul'};
   db.world.seasons[eventId]={id:eventId,comp:eventId,days:[{date:addDays(db.worldDate,4),matches:[]},{date:addDays(db.worldDate,10),matches:[]}]};
@@ -101,27 +105,36 @@ await runEngineFixture(String.raw`(()=>{
   check(cachedCalls*5<clockCalls,'clock conversion work was not meaningfully reduced');venueToUtc=clock;
   db.worldDate=addDays(db.worldDate,12);check(!scrimPartnerAssessment(db,t,other).allowed,'foreign practice visit never ended');
   check(!scrimPartnerAssessment(db,t,other,null,null,null,schedule).allowed,'expired batch context ignored a venue change');
+  // Role changes progress from appearances in the target role, not a
+  // synthetic daily drill. Medical rest cannot generate an appearance.
   const fresh=unpackDB(packDB(base)),light=unpackDB(packDB(base));
   for(const world of [fresh,light]){
-    world.manager.teamId=t.id;delete world.teams[t.id].practiceDay;
-    world.teams[t.id].scrimLog=[];world.teams[t.id].training.focus='balanced';
+    world.manager.teamId=t.id;
+    delete world.teams[t.id].practiceDay;
+    world.teams[t.id].scrimLog=[];
     world.players[p.id].medicalPlan='normal';
-    world.players[p.id].roleConversion={fromRole:p.role,targetRole:ROLES.find(r=>r!==p.role),progress:0,trainingDays:0};
+    world.players[p.id].roleConversion={fromRole:p.role,
+      targetRole:ROLES.find(r=>r!==p.role),progress:0,trainingDays:0,
+      officialGames:0,scrimGames:0};
   }
   consumeScrimPractice(light,light.teams[t.id],6);
   runDailyPractice(fresh);runDailyPractice(light);
   const fp=fresh.players[p.id],lp=light.players[p.id];
-  check(fp.practiceDay.individual+fp.practiceDay.conversion===50&&fp.practiceDay.conversion===12.5,'conversion received unbudgeted time');
-  check(lp.practiceDay.conversion===5&&lp.roleConversion.progress<fp.roleConversion.progress*.41,'heavy scrims did not reduce conversion work');
-  check(trainingTimeMultiplier(fresh.teams[t.id],fresh.year,fp)<trainingTimeMultiplier(fresh.teams[t.id],fresh.year),'conversion did not displace personal growth');
-  check(roleConversionGrowthMultiplier(fp)===1,'daily conversion time charged twice');
-  const convertSave=unpackDB(packDB(fresh)),progress=convertSave.players[p.id].roleConversion.progress;
-  runDailyPractice(convertSave);check(convertSave.players[p.id].roleConversion.progress===progress,'reload repeated conversion practice');
-  fresh.worldDate=addDays(fresh.worldDate,1);fp.medicalPlan='rest';const days=fp.roleConversion.trainingDays;
-  runDailyPractice(fresh);check(fp.roleConversion.trainingDays===days,'resting player trained conversion');
-  fresh.worldDate=addDays(fresh.worldDate,1);fp.medicalPlan='normal';
-  Object.values(fresh.world.seasons)[0].days.push({date:fresh.worldDate,matches:[{a:t.id,b:opponent.id,bo:1}]});
-  Object.values(fresh.world.seasons)[0].days.sort((a,b)=>a.date.localeCompare(b.date));
-  runDailyPractice(fresh);check(fp.roleConversion.trainingDays===days&&fp.practiceDay.conversion===0,'official day minted conversion time');
-  console.log('COHESION_PRACTICE_ACCEPTANCE: PASS (bounded conflict/recovery, renewal, observed AI response, shared time, focus tradeoff, reload, tournament travel)');
+  check(fp.roleConversion.trainingDays===0&&lp.roleConversion.trainingDays===0&&
+    fp.roleConversion.progress===0&&lp.roleConversion.progress===0,
+    'daily scrim capacity fabricated role adaptation');
+  recordRoleConversionUsage(fresh,[{pid:fp.id,role:fp.roleConversion.targetRole}],'scrim');
+  check(fp.roleConversion.scrimGames===1&&fp.roleConversion.progress>0,
+    'actual role appearance failed to progress conversion');
+  check(lp.roleConversion.progress===0,
+    'unplayed match increased role conversion');
+  const convertSave=unpackDB(packDB(fresh));
+  check(convertSave.players[p.id].roleConversion.progress===fp.roleConversion.progress,
+    'role conversion progress did not survive save');
+  const originalProgress=fp.roleConversion.progress;
+  fresh.worldDate=addDays(fresh.worldDate,1);fp.medicalPlan='rest';
+  runDailyPractice(fresh);
+  check(fp.roleConversion.progress===originalProgress,
+    'rest day generated artificial role conversion');
+  console.log('COHESION_PRACTICE_ACCEPTANCE: PASS (relations, real scrim resources, coaching, role appearances, save, travel)');
 })();`);
