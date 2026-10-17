@@ -15,7 +15,7 @@ async function verify(){
  for(const r of rows){const b=Buffer.from(r.base64,'base64');assert.equal(b.length,r.bytes);assert.equal(sha(b),r.sha256)}
  const original=p=>Buffer.from(rows.find(r=>r.path==='original/'+p).base64,'base64').toString();
  for(const [p,h] of Object.entries(pins))assert.equal(sha(Buffer.from(original(p))),h);
- for(const [p,h] of Object.entries(e.sources))assert.equal(p==='src/artifact/calendar.js'?await reviewedRetirementSourceHash(p,h):await startupSaveSourceHash(p),h,p+' original reviewed intermediary digest');
+ for(const [p,h] of Object.entries(e.sources))assert.equal((p==='src/artifact/calendar.js'||p==='scripts/squad-status-source-successor.mjs')?await reviewedRetirementSourceHash(p,h):await startupSaveSourceHash(p),h,p+' original reviewed intermediary digest');
  const p='scripts/stove-source-successor.mjs';let changed="import {stoveFaSourceHash,stoveFaSourceText} from './stove-fa-source-successor.mjs';\n"+original(p);
  changed=changed.replace('for(const [p,h] of Object.entries(e.sources))assert.equal(sha(await readFile(new URL(p,root))),h','for(const [p,h] of Object.entries(e.sources))assert.equal(await stoveFaSourceHash(p),h');
  for(const name of ['p','overview','validator','workflow','f'])changed=changed.replace("assert.equal(await readFile(new URL("+name+",root),'utf8'),","assert.equal(await stoveFaSourceText("+name+"),");
