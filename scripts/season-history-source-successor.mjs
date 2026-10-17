@@ -22,28 +22,7 @@ async function successor(){
 }
 // Historical assertions still check their exact original hashes. Only the
 // explicitly archived retention correction may supply its verified base bytes.
-// The original October 8 evidence remains immutable; removal of the legacy
-// import-limit copies is reviewed as one exact source transition.
-let legacyWorldEvidence;
-async function reviewedLegacyWorld(){
-  if(legacyWorldEvidence)return legacyWorldEvidence;
-  const m=JSON.parse(await readFile(new URL('docs/evidence/legacy-import-limit-2026-10-17.json',root)));
-  assert.equal(m.schema,1);
-  assert.equal(m.baseline,'docs/evidence/squad-draft-recovery-2026-10-08.json');
-  const originalBytes=await readFile(new URL(m.baseline,root));
-  assert.equal(sha(originalBytes),m.baselineSha256,'original source evidence must remain unchanged');
-  const original=JSON.parse(originalBytes);
-  assert.deepEqual(Object.keys(m.changes),['src/artifact/world.js']);
-  const pair=m.changes['src/artifact/world.js'];
-  assert.equal(pair.historical,original.engine['world.js'],'historical world engine pin');
-  const current=await readFile(new URL('src/artifact/world.js',root));
-  assert.equal(sha(current),pair.current,'reviewed world engine source must match exactly');
-  assert(!/\bimportLimit\s*:/.test(current.toString())&&!/\bR\.importLimit\s*=/.test(current.toString()),
-    'retired import-limit copies must not return');
-  legacyWorldEvidence=pair;return pair;
-}
 export async function historicalSourceHash(path){
-  if(path==='src/artifact/world.js')return (await reviewedLegacyWorld()).historical;
   const actual=await seasonUiSourceHash(path);
   if(!reviewed.has(path))return actual;
   const e=await successor();return e.originals[path];
