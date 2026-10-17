@@ -70,11 +70,19 @@
     },
     "scripts/stove-fa-source-successor.mjs": {
       "historical": "04e7c1fa7c9fbee0b0c9b63c168fdb9108a19bdc31ece2cc8fc171fbe2c5782b",
-      "current": "320b96a9337c81516c839505e7b347ab7f655b99d510bd3b95355e1cd0f0e8e3"
+      "current": "f31ce2cd9532d725ddc03bd8ff1e1cf50edd911818de0aef153f1df07f45766e"
     }
   },
   "historicalEvidence": {
     "docs/evidence/negotiation-summary-2026-10-11.json": "6de1028a653b743d0007c265cd8703f34c0928bf62fddd7b956afc9486ff0090",
     "docs/evidence/stove-fa-daily-2026-10-10.json": "2b9c2d4909a8119204c83621b0e1cc68c0494c15f1eea7df33dff117a6b83508"
+  },
+  "uiBaseline": "docs/evidence/squad-status-2026-10-09.json",
+  "uiBaselineSha256": "5fee5291a6fb1eb582c82a59c82e70638c296ef75f01a431c189528da5b1c77a",
+  "uiSuccessors": {
+    "src/artifact/ui-roster.js": {
+      "historical": "200ddec8f30a134789f33501e3be8ccd89578505772aab2a2fcfc9cd08a45ec6",
+      "current": "525ab1382dfd3f23184c42104b2042c4ceb5b830191c44f51f5ea2823aa380e1"
+    }
   }
 }
