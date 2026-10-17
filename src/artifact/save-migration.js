@@ -103,13 +103,18 @@ function normalizeRestoredSave(db){
   }
   for(const t of Object.values(db.teams)){
     ensureFacilities(t);
-    t.training=normalizeTraining(t.training);
+    // Retired manual training fields do not belong to the activity-based model.
+    delete t.training;
+    delete t.practiceUsage;
+    delete t.practiceDecision;
     ensureClubOwnership(t);
     ensureClubLicense(db,t);
     delete t._pre;
   }
   for(const p of Object.values(db.players)){
     unpackPlayerSaveFields(p);
+    delete p.practiceUsage;
+    delete p.practiceDay;
     ensurePlayerEligibility(p);
   }
   if(saveObject(db.patches)){
