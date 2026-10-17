@@ -1,3 +1,11 @@
+## 2026-10-17 열린 이슈 21건 우선순위별 실행 큐
+
+**GitHub P0/P1/P2 라벨과 제목 순번 전부 적용.** 이슈 단순 번호순이 아니라 [#242 최우선 전체 작업표](https://github.com/lkh0802a/LOL-GM/issues/242)의 순번을 개발 착수 기준으로 사용한다. **P0:** #242 총괄 → #243 Bo1 중복 계산(첫 수정) → #244 저장/복원, #241 상시 통합 검증. **P1:** #245 → #246 → #248 → #249 → #247 → #234 → #224 → #225. **P2:** #250 → #233 → #232 → #235 → #236 → #237 → #238 → #239 → #240. 기존 상세 범위·완료 이력·C안 엔진 목표 유지.
+
+우선순위별 GitHub 필터: [P0 최우선](https://github.com/lkh0802a/LOL-GM/issues?q=is%3Aissue+is%3Aopen+label%3A%22priority%3AP0%22) · [P1 핵심 수정](https://github.com/lkh0802a/LOL-GM/issues?q=is%3Aissue+is%3Aopen+label%3A%22priority%3AP1%22) · [P2 후속 개발](https://github.com/lkh0802a/LOL-GM/issues?q=is%3Aissue+is%3Aopen+label%3A%22priority%3AP2%22). GitHub 기본 목록은 우선순위순 자동 정렬을 보장하지 않으므로 [DEVELOPMENT.md](DEVELOPMENT.md)의 순위표와 제목 접두사 참조. 이는 **이슈 정리**이며 게임 코드 수정·출시 완료가 아니다.
+
+---
+
 ## 2026-10-17 최우선 — 게임 전체 전수조사 후속 개선
 
 게임 엔진 **102개 + UI 모듈 70개** 소스 감사를 기반으로 사용자가 **[#242 P0 최우선 전체 후속 개선](https://github.com/lkh0802a/LOL-GM/issues/242)**을 승인. 새 C안 깊이 개발 전에 실제 결함·저장/정보·권한·장기 역사/모바일 성능을 먼저 검증·교정한다. 세부 작업: [#243 Bo1 기록/화면](https://github.com/lkh0802a/LOL-GM/issues/243), [#244 저장·백그라운드](https://github.com/lkh0802a/LOL-GM/issues/244), [#245 AI 임대 날짜](https://github.com/lkh0802a/LOL-GM/issues/245), [#246 RNG 안정성](https://github.com/lkh0802a/LOL-GM/issues/246), [#248 정보 경계](https://github.com/lkh0802a/LOL-GM/issues/248), [#249 역사·리플레이](https://github.com/lkh0802a/LOL-GM/issues/249), [#247 UI 세계 복사](https://github.com/lkh0802a/LOL-GM/issues/247), [#250 닉네임](https://github.com/lkh0802a/LOL-GM/issues/250).
