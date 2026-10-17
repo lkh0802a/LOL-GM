@@ -5,6 +5,9 @@ Desktop/mobile HTML comes first; Android packaging follows later.
 
 ## Instructions for Codex and implementation agents
 
+**All-domain implementation reference:** The [33-section Codex domain index](docs/CODEX_DOMAIN_INDEX.md) links [A — club/player/market/training](docs/CODEX_DOMAIN_A_CLUB.md), [B — match/draft/patch/world/AI/history](docs/CODEX_DOMAIN_B_MATCH_WORLD.md), and [C — mobile UI/save/performance/QA/Android](docs/CODEX_DOMAIN_C_UI_QA.md). Read the relevant sections and cross-domain acceptance before coding. No roadmap or issue document is proof of implementation.
+
+
 **Before starting any code task**, read [AGENTS.md](AGENTS.md) and the [Codex execution runbook](docs/CODEX_EXECUTION.md). The current **P0 → P1 → P2 queue** is tracked in [#242](https://github.com/lkh0802a/LOL-GM/issues/242): the first implementation fix is **[#243 scrim Bo1 single-source result](https://github.com/lkh0802a/LOL-GM/issues/243)**; the next is **[#244 save/background safety](https://github.com/lkh0802a/LOL-GM/issues/244)**. [#241](https://github.com/lkh0802a/LOL-GM/issues/241) is the continuous acceptance/integration gate, not a standalone prerequisite project.
 
 Treat issue text as a target, **not proof that code is missing or tested**. Check the latest code, existing PRs and tests, implement the smallest fix, retain established simulation/save rules, report verified test and commit evidence, and only close truly completed issues. The older P2 C-tier engine plan remains in scope. GitHub docs/issue prioritization does not start Codex or mean an issue is fixed.
