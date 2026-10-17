@@ -3,6 +3,12 @@
 Mobile-first esports management simulation, playable as offline standalone HTML.
 Desktop/mobile HTML comes first; Android packaging follows later.
 
+## Instructions for Codex and implementation agents
+
+**Before starting any code task**, read [AGENTS.md](AGENTS.md) and the [Codex execution runbook](docs/CODEX_EXECUTION.md). The current **P0 → P1 → P2 queue** is tracked in [#242](https://github.com/lkh0802a/LOL-GM/issues/242): the first implementation fix is **[#243 scrim Bo1 single-source result](https://github.com/lkh0802a/LOL-GM/issues/243)**; the next is **[#244 save/background safety](https://github.com/lkh0802a/LOL-GM/issues/244)**. [#241](https://github.com/lkh0802a/LOL-GM/issues/241) is the continuous acceptance/integration gate, not a standalone prerequisite project.
+
+Treat issue text as a target, **not proof that code is missing or tested**. Check the latest code, existing PRs and tests, implement the smallest fix, retain established simulation/save rules, report verified test and commit evidence, and only close truly completed issues. The older P2 C-tier engine plan remains in scope. GitHub docs/issue prioritization does not start Codex or mean an issue is fixed.
+
 ## Current work
 
 Continue the complete game scope in the unified numeric development plan, then verified
@@ -44,7 +50,7 @@ is an aggregate simulation; it does not claim exact spell casts or geometry.
 ## Saves and delivery
 
 Active world schema v15, compact save format 2, storage namespace `lol-gm-v15`,
-three save slots. Supported older v15 encodings normalize on load; arbitrary old
+ten save slots (defined by `SAVE_SLOTS` in `src/artifact/app.js`). Supported older v15 encodings normalize on load; arbitrary old
 schemas and unknown forward formats are not guaranteed compatible. Save files,
 source history and failures are preserved. No runtime external API is required
 for offline play.
