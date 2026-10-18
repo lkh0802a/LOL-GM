@@ -332,6 +332,7 @@ td.fmt{font-size:12px;color:var(--mut);white-space:normal;min-width:200px}
 body>header.app-bar{max-width:none;margin:0;padding:10px 20px;height:var(--app-bar-height);background:var(--surf);border-bottom:1px solid var(--line);align-items:center;flex-wrap:nowrap;gap:20px}
 .app-brand{font-size:17px;letter-spacing:.5px;flex-shrink:0}
 .app-context{min-width:0;flex:1}.app-context b,.app-context span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.app-context b{font-size:14px}.app-context span{font-size:12px;color:var(--mut)}
+#save-state-notice{margin:6px auto;max-width:1180px;padding:0 12px}#save-state-notice:empty{display:none}
 #app-save{background:none;border:1px solid var(--control-line);border-radius:3px;padding:6px 9px;white-space:nowrap;font-size:12px}
 #app-theme-status{margin:0;padding:10px 12px;background:var(--surf);color:var(--ink);overflow-wrap:anywhere}
 .app-theme{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--mut)}.app-theme select{padding:4px;border:1px solid var(--control-line);background:var(--surf)}
@@ -351,6 +352,7 @@ body[data-startup=true] #app-theme-status,body[data-startup=true] #app-nav,body[
 <header class="app-bar"><a class="skip-link" href="#main">게임 콘텐츠로 건너뛰기</a><strong class="app-brand">LOL <span>GM</span></strong><div class="app-context"><b id="app-screen">새 게임</b><span id="app-club"></span></div><button type="button" data-v="data" id="app-save">불러오기</button><label class="app-theme">화면<select id="app-theme" aria-label="화면 색상"><option value="auto">자동</option><option value="dark">어둡게</option><option value="light">밝게</option></select></label></header>
 <p id="app-theme-status" role="status" hidden></p>
 <nav aria-label="주요 화면" id="app-nav"><div><button type="button" data-v="season">일정·대회</button><button type="button" data-v="squad">선수단</button><button type="button" data-v="match">경기·스크림</button><button type="button" data-v="analysis">분석실</button><button type="button" data-v="patch">패치·메타</button></div></nav>
+<p id="save-state-notice" data-save-status class="hint" role="status" aria-live="polite"></p>
 <main id="main" tabindex="-1" aria-label="게임 콘텐츠"></main>
 <div id="overlay" hidden role="dialog" aria-modal="true" aria-label="시리즈 상세" tabindex="-1"></div>
 <script>
@@ -14400,9 +14402,9 @@ function savedGameSummary(db){
  return {name:team?.name||(db.world?'무소속 감독':'커리어 선택 전'),year:db.world?.year??db.year,date:db.worldDate||'',started:!!db.world};
 }
 function savedGameLabel(s){return `${esc(s.name)}${s.year?` · ${esc(s.year)} 시즌`:''}`}
-function saveLibraryCurrent(){
+function saveLibraryCurrent(allowSwitch=false){
  const db=DB,world=DB?.world,manager=DB?.manager,slot=SLOT,view=VIEW,render=UI_RENDER_ID,date=DB?.worldDate,year=DB?.year,team=DB?managedTeamId(DB):null,policy=JSON.stringify([DB?.world?.manage,DB?.world?.fired,DB?.world?.phase]),page=typeof START_UI==='undefined'?null:START_UI.page,active=typeof START_UI==='undefined'?null:START_UI.active;
- return ()=>DB===db&&DB?.world===world&&DB?.manager===manager&&SLOT===slot&&VIEW===view&&UI_RENDER_ID===render&&DB?.worldDate===date&&DB?.year===year&&(DB?managedTeamId(DB):null)===team&&JSON.stringify([DB?.world?.manage,DB?.world?.fired,DB?.world?.phase])===policy&&!SLOT_SWITCHING&&(typeof UI_OVERLAY==='undefined'||!UI_OVERLAY)&&(typeof START_UI==='undefined'||START_UI.page===page&&START_UI.active===active);
+ return ()=>DB===db&&DB?.world===world&&DB?.manager===manager&&SLOT===slot&&VIEW===view&&UI_RENDER_ID===render&&DB?.worldDate===date&&DB?.year===year&&(DB?managedTeamId(DB):null)===team&&JSON.stringify([DB?.world?.manage,DB?.world?.fired,DB?.world?.phase])===policy&&(!SLOT_SWITCHING||allowSwitch)&&(typeof UI_OVERLAY==='undefined'||!UI_OVERLAY)&&(typeof START_UI==='undefined'||START_UI.page===page&&START_UI.active===active);
 }
 function renderStartupSavedGames(){
  const fresh=START_UI.page==='new-slot';
@@ -14418,6 +14420,7 @@ function bindStartupSavedGames(){
   const empty=rows.find(r=>r.state==='empty');
   box.innerHTML=page==='load'?savedGamesRows(rows):`${empty?`<button class="primary" type="button" data-startup-slot="${empty.slot}">빈 저장에 새 게임 시작</button>`:'<p>사용할 수 있는 빈 저장 위치가 없습니다. 기존 게임을 불러오거나 파일로 보관한 뒤 원본 관리에서 확인하세요.</p>'}<p class="hint">손상되거나 읽지 못한 저장은 사용하지 않습니다.</p><button class="linklike" type="button" data-startup-existing>기존 게임 불러오기</button>`;
   box.querySelectorAll('[data-slot], [data-startup-slot]').forEach(b=>{let used=false;b.onclick=async()=>{if(used||!valid())return;used=true;await startupChooseSlot(b.dataset.slot||b.dataset.startupSlot,valid)}});
+  box.querySelectorAll('[data-recover]').forEach(b=>b.onclick=()=>{if(valid())void openSaveRecovery(b.dataset.recover)});
   box.querySelector('[data-startup-existing]')?.addEventListener('click',()=>{if(valid())startupMove('load')});
  })().catch(error=>{console.error(error);if(valid())box.innerHTML='<p class="warn">저장 목록을 확인하지 못했습니다. 원본은 유지됩니다.</p>'});
 }
@@ -14434,12 +14437,12 @@ async function readSavedGame(slot){
 }
 function renderSavedGames(){
  const s=savedGameSummary(DB);
- return `<section class="teamhead"><h2>저장된 게임</h2><p>진행 상황은 자동 저장됩니다. 다른 게임을 불러와도 현재 게임을 먼저 저장합니다.</p></section><section class="cfgcard cur"><h3>현재 게임</h3><p><b>${savedGameLabel(s)}</b></p>${s.date?`<p>게임 날짜 ${esc(s.date)}</p>`:''}<p class="${SAVEFAIL?'warn':'hint'}" role="status">${SAVEFAIL?'현재 게임을 저장하지 못했습니다. 원본을 내보내 보관하세요.':'자동 저장 사용'}</p></section><section><p id="save-load-status" class="warn" role="status"></p><div class="cfghead"><h3>다른 게임 불러오기</h3><button id="save-games-refresh" class="linklike" type="button">목록 다시 확인</button></div><div id="save-games-list" aria-live="polite"><p>저장된 게임을 확인하고 있습니다.</p></div></section>`;
+ return `<section class="teamhead"><h2>저장된 게임</h2><p>진행 상황은 자동 저장됩니다. 다른 게임을 불러와도 현재 게임을 먼저 저장합니다.</p></section><section class="cfgcard cur"><h3>현재 게임</h3><p><b>${savedGameLabel(s)}</b></p>${s.date?`<p>게임 날짜 ${esc(s.date)}</p>`:''}<p data-save-status class="${SAVEFAIL?'warn':'hint'}">${typeof saveStatusText==='function'?saveStatusText():SAVEFAIL?'현재 게임을 저장하지 못했습니다. 원본을 내보내 보관하세요.':'자동 저장 사용'}</p><button id="save-now" type="button">지금 저장·재시도</button><button id="save-recovery" type="button">저장 원본 복구</button></section><section><p id="save-load-status" class="warn" role="status"></p><div class="cfghead"><h3>다른 게임 불러오기</h3><button id="save-games-refresh" class="linklike" type="button">목록 다시 확인</button></div><div id="save-games-list" aria-live="polite"><p>저장된 게임을 확인하고 있습니다.</p></div></section>`;
 }
 function savedGamesRows(rows){
  const present=rows.filter(r=>r.state!=='empty');
  if(!present.length)return '<p class="hint">다른 저장된 게임이 없습니다.</p>';
- return present.map((r,i)=>r.state==='saved'?`<article class="cfgcard compact"><div class="cfghead"><h3>${savedGameLabel(r.summary)}</h3><button class="ghost" type="button" data-slot="${r.slot}">불러오기</button></div>${r.summary.date?`<p>게임 날짜 ${esc(r.summary.date)}</p>`:''}${!r.summary.started?'<p class="hint">커리어 선택 전</p>':''}</article>`:`<article class="cfgcard compact"><h3>확인하지 못한 저장 ${i+1}</h3><p class="warn">${r.state==='damaged'?'저장 데이터를 복원할 수 없습니다.':'저장소를 읽을 수 없습니다.'} 원본은 유지됩니다. 목록을 다시 확인하거나 원본 관리에서 보관한 파일을 가져오세요.</p></article>`).join('');
+ return present.map((r,i)=>r.state==='saved'?`<article class="cfgcard compact"><div class="cfghead"><h3>${savedGameLabel(r.summary)}</h3><button class="ghost" type="button" data-slot="${r.slot}">불러오기</button></div>${r.summary.date?`<p>게임 날짜 ${esc(r.summary.date)}</p>`:''}${!r.summary.started?'<p class="hint">커리어 선택 전</p>':''}</article>`:`<article class="cfgcard compact"><h3>확인하지 못한 저장 ${i+1}</h3><p class="warn">${r.state==='damaged'?'저장 데이터를 복원할 수 없습니다.':'저장소를 읽을 수 없습니다.'} 원본은 유지됩니다. 목록을 다시 확인하거나 원본 관리에서 보관한 파일을 가져오세요.</p>${!DB?`<button data-recover="${r.slot}">보관 원본 복구</button>`:''}</article>`).join('');
 }
 function bindSavedGames(current,onLoad){
  const run=++SAVE_LIBRARY_RUN,box=$('#save-games-list'),refresh=$('#save-games-refresh');
@@ -14455,8 +14458,129 @@ function bindSavedGames(current,onLoad){
  })().catch(e=>{console.error('LOL GM save discovery failed',e);if(valid())box.innerHTML='<p class="warn">저장 목록을 확인하지 못했습니다. 원본은 유지됩니다. 목록을 다시 확인하세요.</p>'});
 }
 
+/* ==== FILE: ui-save-recovery-store.js ==== */
+// Reads persisted recovery candidates without changing the active world.
+async function saveRecoveryRaw(row){return row.backend==='local'?localStorage.getItem(row.key):idbGet(row.key)}
+async function readSaveRecovery(key){
+  const sources=[{backend:'local',key,label:'저장 원본'},{backend:'local',key:key+'-checkpoint',label:'이전 보관 원본'},{backend:'local',key:key+'-restore',label:'보호 보관 원본',protected:true}];
+  if(!DIRECT_FILE_PREVIEW&&typeof indexedDB!=='undefined')sources.push({backend:'idb',key,label:'저장 원본'},{backend:'idb',key:key+'-checkpoint',label:'이전 보관 원본'},{backend:'idb',key:key+'-damaged',label:'읽지 못한 보관 원본'},{backend:'idb',key:key+'-restore',label:'보호 보관 원본',protected:true});
+  const values=await Promise.all(sources.map(async row=>{try{return {...row,raw:await saveRecoveryRaw(row)}}catch(e){return {...row,error:true}}}));
+  const rows=[],seen=new Map();let errors=0;
+  for(const row of values){
+    if(row.error){errors++;continue}if(row.raw===null||row.raw===undefined)continue;if(seen.has(row.raw)){if(row.protected)seen.get(row.raw).protected=true;continue}
+    let entry;try{const db=unpackDB(row.raw);entry={...row,valid:true,summary:savedGameSummary(db)}}catch(e){entry={...row,valid:false,summary:null}}seen.set(row.raw,entry);rows.push(entry);
+  }
+  return {rows,errors};
+}
+function exportSaveRecovery(row){
+  const raw=typeof row.raw==='string'?row.raw:JSON.stringify(row.raw),url=URL.createObjectURL(new Blob([raw],{type:'application/json'})),link=document.createElement('a');
+  try{link.href=url;link.download='LOL-GM-복구-'+Date.now()+'.json';link.click()}finally{URL.revokeObjectURL(url)}
+}
+
+/* ==== FILE: ui-save-protection.js ==== */
+// Preserve the selected recovery source before any rotating checkpoint writes.
+function saveProtectionKey(key){if(!key.startsWith(STORE_BASE)||!SAVE_SLOTS.includes(key.slice(STORE_BASE.length)))throw Error('올바르지 않은 저장 위치입니다.');return key+'-restore'}
+async function saveProtectionIDB(key,raw,remove=false){
+  const db=await idb();return new Promise((resolve,reject)=>{
+    let done=false,tx,changed=false;
+    const finish=(ok,value)=>{if(done)return;done=true;clearTimeout(timer);try{db.close()}catch(e){}ok?resolve(value):reject(value)};
+    const fail=error=>{try{tx?.abort()}catch(e){}finish(false,error)};
+    const timer=setTimeout(()=>fail(Error('복구 보관소 응답을 확인하지 못했습니다.')),800);
+    try{
+      tx=db.transaction('kv','readwrite');const store=tx.objectStore('kv'),read=store.get(key);
+      read.onerror=()=>fail(read.error||Error('복구 원본을 읽지 못했습니다.'));
+      read.onsuccess=()=>{try{
+        if(remove){if(read.result===raw){store.delete(key);changed=true}}
+        else if(read.result!==null&&read.result!==undefined&&read.result!==raw){const error=Error('다른 보호 보관 원본이 있습니다. 해당 원본을 먼저 확인하거나 파일로 보관한 뒤 보호를 해제하세요.');error.recoveryConflict=true;fail(error)}
+        else{store.put(raw,key);changed=true}
+      }catch(e){fail(e)}};
+      tx.oncomplete=()=>finish(true,changed);tx.onabort=()=>finish(false,tx.error||Error('복구 원본 보관이 중단됐습니다.'));tx.onerror=()=>finish(false,tx.error||Error('복구 원본을 보관하지 못했습니다.'));
+    }catch(e){fail(e)}
+  });
+}
+async function protectSaveRecovery(key,raw){
+  const target=saveProtectionKey(key);let readable=true,local=null;
+  try{local=localStorage.getItem(target)}catch(e){readable=false}
+  if(readable&&local!==null&&local!==raw)throw Error('다른 보호 보관 원본이 있습니다. 먼저 파일로 보관한 뒤 보호를 해제하세요.');
+  try{await saveProtectionIDB(target,raw);return {key,raw}}
+  catch(e){if(e.recoveryConflict)throw e;if(!readable)throw e;const current=localStorage.getItem(target);if(current!==null&&current!==raw)throw Error('보호 보관 원본이 바뀌었습니다. 다시 확인하세요.');localStorage.setItem(target,raw);return {key,raw}}
+}
+async function releaseSaveProtection(key,raw){
+  const target=saveProtectionKey(key);let removed=0,errors=0;
+  try{if(localStorage.getItem(target)===raw){localStorage.removeItem(target);removed++}}catch(e){errors++}
+  if(!DIRECT_FILE_PREVIEW&&typeof indexedDB!=='undefined')try{if(await saveProtectionIDB(target,raw,true))removed++}catch(e){errors++}
+  return {removed,errors};
+}
+
+function showSaveProtectionRelease({row,key,root,show,frame,message,back,refresh,setBusy}){
+    show('<h3>보호 보관본 해제</h3><p>이 보호용 추가 사본만 지웁니다. 현재 게임과 일반 보관 원본은 유지됩니다. 먼저 이 원본을 파일로 보관하고 확인하세요.</p><button id="save-protection-export" type="button">이 원본 파일로 보관</button><label><input id="save-protection-confirm" type="checkbox">내보낸 원본 파일을 확인했습니다.</label><button id="save-protection-release" type="button">보호용 추가 사본 해제</button><button id="save-protection-back" type="button">목록으로 돌아가기</button>');
+    const current=frame();
+    root.querySelector('#save-protection-export').onclick=()=>{if(current())try{exportSaveRecovery(row);message('내려받은 파일을 확인하세요.')}catch(e){message('파일을 내보내지 못했습니다.')}};
+    root.querySelector('#save-protection-back').onclick=()=>{if(current())back()};
+    root.querySelector('#save-protection-release').onclick=async()=>{if(!current()||!root.querySelector('#save-protection-confirm').checked)return;setBusy(true);try{const result=await releaseSaveProtection(key,row.raw);if(result.errors)message('해제 상태를 확인하지 못했습니다. 다시 확인하세요.');else{setBusy(false);if(current())await refresh()}}finally{setBusy(false)}};
+}
+
+/* ==== FILE: ui-save-recovery.js ==== */
+// One focused recovery window; a candidate is never applied by selecting it.
+async function openSaveRecovery(recoverySlot=SLOT){
+  if(SLOT_SWITCHING||UI_OVERLAY||!SAVE_SLOTS.includes(recoverySlot)||DB&&recoverySlot!==SLOT)return false;
+  const db=DB,world=DB?.world,manager=DB?.manager,slot=recoverySlot,key=STORE_BASE+slot,sourceSlot=SLOT,sourceKey=STORE,date=DB?.worldDate,year=DB?.year,team=DB?managedTeamId(DB):null,view=VIEW,render=UI_RENDER_ID,startup=typeof START_UI!=='undefined'&&START_UI.active;
+  let generation=SAVE_STATUS,dialog=null,busy=false,model=null,screen=0,reads=0;
+  const base=()=>DB===db&&DB?.world===world&&DB?.manager===manager&&SLOT===sourceSlot&&STORE===sourceKey&&DB?.worldDate===date&&DB?.year===year&&(DB?managedTeamId(DB):null)===team&&VIEW===view&&UI_RENDER_ID===render&&UI_OVERLAY===dialog;
+  const valid=()=>base()&&SAVE_STATUS===generation;
+  const current=()=>valid()&&!SLOT_SWITCHING&&!busy;
+  const frame=()=>{const n=screen;return ()=>current()&&screen===n};
+  const root=uiOverlayRoot();
+  const message=text=>{if(UI_OVERLAY===dialog){const el=root.querySelector('#save-recovery-message');if(el)el.textContent=text}};
+  const close=()=>{if(!busy&&UI_OVERLAY===dialog)closeUiOverlay()};
+  const shell=body=>`<div class="ovin"><div class="ovhead"><b>저장 원본 복구</b><button id="save-recovery-close" type="button">닫기</button></div><p id="save-recovery-message" role="status"></p>${body}</div>`;
+  const show=(body,focus='#save-recovery-close')=>{if(UI_OVERLAY!==dialog)return;screen++;refreshUiOverlay(shell(body),{focusSelector:focus});root.querySelector('#save-recovery-close').onclick=close};
+  openUiOverlay({kind:'save-recovery',label:'저장 원본 확인·수동 복구',html:shell('<p>저장된 원본을 확인하고 있습니다.</p>'),dismissible:true,onDismiss:close,focusSelector:'#save-recovery-close'});dialog=UI_OVERLAY;root.querySelector('#save-recovery-close').onclick=close;
+  const renderList=()=>{
+    show(`<p>${db?`현재 게임 ${savedGameLabel(savedGameSummary(db))} · ${esc(date||'날짜 미상')}`:'활성 게임을 불러오지 못했습니다. 보관 원본을 검토하세요.'}</p><p>날짜와 구단을 확인하고 직접 선택하세요. 선택만으로 게임을 바꾸지 않습니다. 미저장 변경은 원본 관리에서 파일로 보관할 수 있습니다.</p>${model.errors?'<p class="warn">일부 원본을 읽지 못했습니다. 확인된 원본만 표시합니다.</p>':''}${model.rows.map((row,i)=>`<section class="cfgcard compact"><h3>${esc(row.label)} ${i+1}</h3>${row.valid?`<p>${savedGameLabel(row.summary)} · ${esc(row.summary.date||'날짜 미상')}</p><button type="button" data-recovery-select="${i}">이 원본 검토</button>`:'<p class="warn">읽을 수 없는 원본입니다. 자동으로 삭제하거나 적용하지 않습니다.</p>'}<button type="button" data-recovery-export="${i}">이 원본 파일로 보관</button>${row.protected?`<button type="button" data-recovery-release="${i}">보호 보관본 해제 검토</button>`:''}</section>`).join('')||'<p>확인된 보관 원본이 없습니다.</p>'}<button id="save-recovery-refresh" type="button">다시 확인</button>`);
+    const here=frame(),snapshot=model,version=screen;
+    root.querySelectorAll('[data-recovery-select]').forEach(b=>b.onclick=()=>{const row=snapshot.rows[+b.dataset.recoverySelect];if(here()&&row?.valid)preview(row)});
+    root.querySelectorAll('[data-recovery-export]').forEach(b=>b.onclick=()=>{if(!here())return;const row=snapshot.rows[+b.dataset.recoveryExport];if(!row)return;try{exportSaveRecovery(row);message('파일 내보내기를 요청했습니다. 내려받은 파일을 확인하세요.')}catch(e){message('원본 파일을 내보내지 못했습니다. 저장 원본은 유지됩니다.')}});
+    root.querySelectorAll('[data-recovery-release]').forEach(b=>b.onclick=()=>{const row=snapshot.rows[+b.dataset.recoveryRelease];if(here()&&row?.protected)releasePreview(row)});
+    root.querySelector('#save-recovery-refresh').onclick=()=>{if(base()&&!busy&&!SLOT_SWITCHING&&screen===version){generation=SAVE_STATUS;void load()}};
+  };
+  const apply=async row=>{
+    if(!current()||busy)return;busy=true;dialog.dismissible=false;SLOT_SWITCHING=true;
+    root.querySelectorAll('button').forEach(b=>b.disabled=true);message('선택한 원본을 보관하고 저장을 확인하고 있습니다.');
+    let protection=null;
+    try{
+      const raw=await saveRecoveryRaw(row);if(!valid()||raw!==row.raw)throw Error('원본 또는 화면 문맥이 바뀌었습니다. 다시 확인하세요.');
+      const staged=unpackDB(raw);protection=await protectSaveRecovery(key,raw);if(!valid())throw Error('게임 문맥이 바뀌었습니다.');cancelUiTasks();clearTimeout(saveTimer);saveTimer=null;SAVE_PENDING=null;
+      const outgoing=db?persistWorldSnapshot(db,slot,key):Promise.resolve(true);generation=SAVE_STATUS;
+      if(!await outgoing)throw Error('현재 게임 저장을 확인하지 못해 복원을 중단했습니다. 원본을 파일로 보관하세요.');
+      if(!valid())throw Error('게임 문맥이 바뀌어 복원을 중단했습니다.');
+      if(!await persistWorldSnapshot(staged,slot,key))throw Error('복원 저장을 확인하지 못해 활성 게임을 교체하지 않았습니다.');
+      if(!valid())throw Error('게임 문맥이 바뀌어 활성 게임을 교체하지 않았습니다.');
+      await releaseSaveProtection(key,raw);protection=null;if(!valid())throw Error('게임 문맥이 바뀌었습니다.');
+      DB=staged;SLOT=slot;STORE=key;try{localStorage.setItem(STORAGE_NS+'-slot',slot)}catch(e){}if(typeof START_BOOT_ERROR!=='undefined')START_BOOT_ERROR='';SLOT_SWITCHING=false;SAVEFAIL=false;const status=beginSaveStatus(DB,slot,key,'saved');status.date=DB.worldDate||String(DB.year||'');
+      resetUiForWorld();if(startup)START_UI={active:true,page:'load',error:''};nav();publishSaveStatus();
+    }catch(e){message((e.message||'복구하지 못했습니다.')+(protection?' 선택한 원본은 보호 보관본에 남아 있습니다.':''))}
+    finally{SLOT_SWITCHING=false;busy=false;if(UI_OVERLAY===dialog){dialog.dismissible=true;root.querySelectorAll('button').forEach(b=>b.disabled=false)}}
+  };
+  const releasePreview=row=>showSaveProtectionRelease({row,key,root,show,frame,message,back:renderList,refresh:load,setBusy:value=>{busy=value;if(UI_OVERLAY===dialog)dialog.dismissible=!value}});
+  const preview=row=>{
+    show(`<h3>복원할 게임</h3><p>${savedGameLabel(row.summary)} · ${esc(row.summary.date||'날짜 미상')}</p><p>${db?'현재 게임을 저장한 뒤 이 원본으로 바꿉니다.':'선택한 원본의 저장을 확인한 뒤 게임을 복원합니다.'} 저장에 실패하면 활성 게임을 교체하지 않습니다. 저장된 경기·계약·재정·역사를 다시 계산하지 않습니다.</p><button id="save-recovery-apply" class="primary" type="button">이 원본 적용</button><button id="save-recovery-back" type="button">목록으로 돌아가기</button>`,'#save-recovery-apply');
+    const here=frame();root.querySelector('#save-recovery-apply').onclick=()=>{if(here())return apply(row)};root.querySelector('#save-recovery-back').onclick=()=>{if(here())renderList()};
+  };
+  const load=async()=>{const request=++reads;try{const result=await readSaveRecovery(key);if(!current()||request!==reads)return;model=result;renderList()}catch(e){message('저장 원본을 확인하지 못했습니다. 현재 게임과 원본은 유지됩니다.')}};
+  await load();return true;
+}
+
 /* ==== FILE: ui-data.js ==== */
 // ===== LOL GM: Save-slot / import-export UI =====
+function saveStatusText(){
+  const phase=typeof currentSaveStatus==='function'?currentSaveStatus():SAVEFAIL?'failed':'idle';
+  return phase==='saved'?'마지막 저장 확인'+(SAVE_STATUS.date?' · '+SAVE_STATUS.date:''):phase==='saving'?'저장 중입니다. 완료를 확인한 뒤 종료하세요.':phase==='pending'?(SAVEFAIL?'저장 재시도 대기 중 · 원본을 내보내 보관하세요.':'변경 사항 저장 대기 중'):phase==='failed'?'현재 게임 저장을 확인하지 못했습니다. 원본을 내보내 보관하세요.':'자동 저장 사용';
+}
+function updateSaveStatus(){
+  const text=DB?saveStatusText():'';
+  for(const node of document.querySelectorAll?.('[data-save-status]')||[]){node.textContent=text;node.classList?.toggle('warn',SAVEFAIL);node.classList?.toggle('hint',!SAVEFAIL)}
+}
 function slotMeta(n){try{return JSON.parse(localStorage.getItem(STORAGE_NS+'-meta-'+n)||'null')}catch(e){return null}}
 function viewData(){
   return renderSavedGames()+`<details class="cfgcard"><summary>저장 원본 관리</summary>
@@ -14480,14 +14604,35 @@ function bindData(){
   };
   document.querySelectorAll('[data-slot]').forEach(b=>b.onclick=()=>loadSavedGame(b));
   bindSavedGames(current,loadSavedGame);
+  const recover=$('#save-recovery');if(recover)recover.onclick=()=>{if(current())void openSaveRecovery()};
+  const save=$('#save-now');let saving=false;
+  if(save)save.onclick=async()=>{if(saving||!current())return;saving=true;save.disabled=true;try{await saveNow()}catch(e){console.error('LOL GM manual save failed',e)}finally{saving=false;if(current())save.disabled=false}};
   $('#ddownload').onclick=()=>{if(!current())return;try{const raw=packDB(DB),url=URL.createObjectURL(new Blob([raw],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download=`LOL-GM-저장-${DB.worldDate||DB.year||'게임'}.json`;link.click();URL.revokeObjectURL(url);msg('게임 파일 내보내기를 요청했습니다. 내려받은 파일을 보관하세요.')}catch(e){console.error('LOL GM save export failed',e);msg('파일을 내보내지 못했습니다. 원본 직접 보기에서 복사해 보관하세요.')} };
   let fileRead=0;
   $('#dchoose').onclick=()=>{if(current())$('#dfile').click()};
   $('#dfile').onclick=()=>{if(current())$('#dfile').value=''};
   $('#dfile').onchange=async()=>{if(!current())return;const input=$('#dfile'),file=input.files?.[0],run=++fileRead;if(!file)return;try{const raw=await file.text();if(!current()||run!==fileRead||input.files?.[0]!==file)return;$('#djson').value=raw;msg('파일을 읽었습니다. 가져온 원본 적용을 누르면 현재 게임에 적용합니다.');$('#dapply').focus?.({preventScroll:true})}catch(e){console.error('LOL GM save file read failed',e);if(current()&&run===fileRead)msg('게임 파일을 읽지 못했습니다. 현재 게임과 원본은 유지됩니다.')} };
   $('#dshow').onclick=()=>{if(!current())return;$('#djson').value=packDB(DB);msg('저장 원본입니다. 그대로 복사해 보관하세요.')};
-  $('#dapply').onclick=()=>{if(!current())return;try{const d=unpackDB($('#djson').value);if(!d.teams||!d.players||!d.patch||!d.regions)throw new Error('teams, players, patch, regions 항목이 필요합니다');
-    if(d.version!==SAVE_VERSION)throw new Error(`이 세이브는 현재 버전(${SAVE_VERSION})과 호환되지 않습니다`);const startup=typeof START_UI!=='undefined'&&START_UI.active;DB=d;resetUiForWorld();if(startup)START_UI={active:true,page:'load',error:''};saveDB();nav();const output=$('#dmsg');if(output)output.textContent='적용했습니다.';$('#dapply')?.focus?.({preventScroll:true})}catch(e){console.error('LOL GM save import failed',e);msg('저장 원본을 적용하지 못했습니다. 현재 게임은 유지됩니다. 원본 내용과 게임 버전을 확인하세요.');}};
+  $('#dapply').onclick=async()=>{
+    if(!current())return;
+    const raw=$('#djson').value,db=DB,slot=SLOT,key=STORE,unchanged=saveLibraryCurrent(true),button=$('#dapply');let generation=SAVE_STATUS,protectedCopy=false;
+    const valid=()=>unchanged()&&STORE===key&&SAVE_STATUS===generation&&$('#djson').value===raw;
+    try{
+      const d=unpackDB(raw);if(!d.teams||!d.players||!d.patch||!d.regions||d.version!==SAVE_VERSION)throw Error('게임 저장 구조 또는 버전이 다릅니다.');
+      const startup=typeof START_UI!=='undefined'&&START_UI.active;
+      SLOT_SWITCHING=true;button.disabled=true;
+      await protectSaveRecovery(key,raw);protectedCopy=true;if(!valid())throw Error('가져오기 문맥이 바뀌었습니다.');
+      cancelUiTasks();clearTimeout(saveTimer);saveTimer=null;SAVE_PENDING=null;
+      const outgoing=persistWorldSnapshot(db,slot,key);generation=SAVE_STATUS;
+      if(!await outgoing)throw Error('현재 게임 저장을 확인하지 못했습니다.');
+      if(!valid())throw Error('현재 게임 문맥이 바뀌었습니다.');
+      if(!await persistWorldSnapshot(d,slot,key))throw Error('가져온 원본 저장을 확인하지 못했습니다.');
+      if(!valid())throw Error('현재 게임 문맥이 바뀌었습니다.');
+      await releaseSaveProtection(key,raw);if(!valid())throw Error('현재 게임 문맥이 바뀌었습니다.');
+      DB=d;SLOT_SWITCHING=false;SAVEFAIL=false;const status=beginSaveStatus(DB,slot,key,'saved');status.date=DB.worldDate||String(DB.year||'');resetUiForWorld();if(startup)START_UI={active:true,page:'load',error:''};nav();publishSaveStatus();const output=$('#dmsg');if(output)output.textContent='저장 확인 후 적용했습니다.';$('#dapply')?.focus?.({preventScroll:true});
+    }catch(e){console.error('LOL GM save import failed',e);if(unchanged()&&STORE===key){const output=$('#dmsg');if(output)output.textContent='원본을 적용하지 않았습니다. '+e.message+(protectedCopy?' 가져온 원본은 저장 원본 복구의 보호 보관본에서 확인하세요.':' 현재 게임과 원본은 유지됩니다.');}}
+    finally{SLOT_SWITCHING=false;if(unchanged())button.disabled=false}
+  };
   $('#dcopy').onclick=()=>{if(!current())return;const v=$('#djson').value||packDB(DB);navigator.clipboard&&navigator.clipboard.writeText(v).then(()=>msg('복사했습니다.'),()=>msg('복사 권한이 없습니다. 저장 원본 보기에서 직접 선택해 복사하세요.'))};
   $('#dreset').onclick=()=>{if(!current())return;if(!confirm('현재 게임의 커리어와 기록이 모두 지워집니다. 계속할까요?')||!current())return;DB=buildWorld();resetUiForWorld();saveDB();navigateTo('season')};
 }
@@ -16052,7 +16197,7 @@ function idb(){return new Promise((res,rej)=>{
   try{
     const r=indexedDB.open(STORAGE_NS,1);
     r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('kv'))r.result.createObjectStore('kv')};
-    r.onsuccess=()=>finish(true,r.result);
+    r.onsuccess=()=>{if(done){try{r.result.close()}catch(e){}return}finish(true,r.result)};
     r.onerror=()=>finish(false,r.error||new Error('IndexedDB open failed'));
     r.onblocked=()=>finish(false,new Error('IndexedDB blocked'));
   }catch(e){finish(false,e)}
@@ -16062,10 +16207,22 @@ async function idbGet(k){const d=await idb();return new Promise((res,rej)=>{
   const timer=setTimeout(()=>finish(false,new Error('IndexedDB read timeout')),800);
   try{const q=d.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>finish(true,q.result);q.onerror=()=>finish(false,q.error||new Error('IndexedDB read failed'))}catch(e){finish(false,e)}
 })}
-async function idbSet(k,v){const d=await idb();return new Promise((res,rej)=>{
+async function idbSet(k,v,preferred=null){const d=await idb();return new Promise((res,rej)=>{
   let done=false;const finish=(ok,v)=>{if(done)return;done=true;clearTimeout(timer);try{d.close()}catch(e){}ok?res(v):rej(v)};
   const timer=setTimeout(()=>finish(false,new Error('IndexedDB write timeout')),800);
-  try{const tx=d.transaction('kv','readwrite');tx.objectStore('kv').put(v,k);tx.oncomplete=()=>finish(true);tx.onerror=()=>finish(false,tx.error||new Error('IndexedDB write failed'));tx.onabort=()=>finish(false,tx.error||new Error('IndexedDB write aborted'))}catch(e){finish(false,e)}
+  try{const tx=d.transaction('kv','readwrite'),store=tx.objectStore('kv'),read=store.get(k);
+    const fail=e=>{try{tx.abort()}catch(e2){}finish(false,e)};
+    read.onerror=()=>fail(read.error||new Error('IndexedDB checkpoint read failed'));
+    read.onsuccess=()=>{try{
+      const old=read.result,prior=normalSnapshot(k,preferred)?preferred:normalSnapshot(k,old)?old:null;
+      const write=()=>{try{if(prior!==null&&prior!==v)store.put(prior,k+'-checkpoint');store.put(v,k)}catch(e){fail(e)}};
+      if(old!==undefined&&old!==null&&old!==v&&!normalSnapshot(k,old)){
+        const kept=store.get(k+'-damaged');kept.onerror=()=>fail(kept.error||new Error('IndexedDB original read failed'));
+        kept.onsuccess=()=>{try{if(kept.result!==undefined&&kept.result!==null&&kept.result!==old)throw Error('An unreadable original is already preserved');store.put(old,k+'-damaged');write()}catch(e){fail(e)}};
+      }else write();
+    }catch(e){fail(e)}};
+    tx.oncomplete=()=>finish(true);tx.onerror=()=>finish(false,tx.error||new Error('IndexedDB write failed'));tx.onabort=()=>finish(false,tx.error||new Error('IndexedDB write aborted'));
+  }catch(e){finish(false,e)}
 })}
 async function loadDB(key=STORE){
   const invalid=[];
@@ -16074,50 +16231,78 @@ async function loadDB(key=STORE){
   let stored=null;
   try{stored=localStorage.getItem(key)}catch(e){invalid.push('로컬 저장소 읽기 실패: '+e.message)}
   if(stored!==null&&stored!==undefined){
-    try{return unpackDB(stored)}
+    try{const decoded=unpackDB(stored);SAVE_LAST_ACK={key,raw:stored};return decoded}
     catch(e){invalid.push('로컬 저장소: '+e.message)}
   }
   stored=null;
   try{stored=await idbGet(key)}catch(e){if(!(typeof DIRECT_FILE_PREVIEW!=='undefined'&&DIRECT_FILE_PREVIEW)&&typeof indexedDB!=='undefined')invalid.push('IndexedDB 읽기 실패: '+e.message)}
   if(stored!==null&&stored!==undefined){
-    try{return unpackDB(stored)}
+    try{const decoded=unpackDB(stored);SAVE_LAST_ACK={key,raw:stored};return decoded}
     catch(e){invalid.push('IndexedDB: '+e.message)}
   }
   if(invalid.length)
     throw new Error('저장 데이터를 복원할 수 없습니다. 원본은 삭제하거나 덮어쓰지 않았습니다. '+invalid.join(' / '));
   return buildWorld();
 }
-let saveTimer=null;
+let saveTimer=null,SAVE_PENDING=null,SAVE_STATUS=null,SAVE_LAST_ACK=null;
 // Per-slot write queues keep late IndexedDB completions from overwriting a
 // newer snapshot. All bytes and metadata are frozen before joining the queue.
 const SAVE_QUEUES=new Map();
-function persistWorldSnapshot(db,slot,key){
-  const str=packDB(db),teamId=managedTeamId(db);
+function normalSnapshot(key,raw){if(typeof raw!=='string')return false;if(SAVE_LAST_ACK?.key===key&&SAVE_LAST_ACK.raw===raw)return true;try{unpackDB(raw);return true}catch(e){return false}}
+function currentSaveStatus(){return SAVE_STATUS&&SAVE_STATUS.db===DB&&SAVE_STATUS.slot===SLOT&&SAVE_STATUS.key===STORE?SAVE_STATUS.phase:'idle'}
+function publishSaveStatus(){if(typeof updateSaveStatus==='function')updateSaveStatus()}
+function beginSaveStatus(db,slot,key,phase){const status={db,slot,key,phase};if(DB===db&&SLOT===slot&&STORE===key){SAVE_STATUS=status;publishSaveStatus()}return status}
+function finishSaveStatus(status,ok){if(SAVE_STATUS!==status||DB!==status.db||SLOT!==status.slot||STORE!==status.key)return;SAVEFAIL=!ok;status.phase=ok?'saved':'failed';publishSaveStatus()}
+function persistWorldSnapshot(db,slot,key,status=null){
+  status=status||beginSaveStatus(db,slot,key,'saving');
+  let str;try{str=packDB(db)}catch(e){finishSaveStatus(status,false);throw e}
+  status.date=db.worldDate||String(db.world?.year||db.year||'');status.phase='saving';if(SAVE_STATUS===status)publishSaveStatus();const teamId=managedTeamId(db);
   const meta=JSON.stringify({team:teamId&&db.teams[teamId]?db.teams[teamId].name:'',year:db.world?db.world.year:''});
   const prior=SAVE_QUEUES.get(key)||Promise.resolve(true);
   const next=prior.then(async()=>{
+    let fallback=null,readable=true;try{fallback=localStorage.getItem(key)}catch(e){readable=false}
     try{
-      await idbSet(key,str);
-      try{localStorage.removeItem(key)}catch(e){}
+      await idbSet(key,str,SAVE_LAST_ACK?.key===key?SAVE_LAST_ACK.raw:fallback);
+      if(!readable)return false;
+      const current=localStorage.getItem(key);
+      if(current!==fallback&&current!==str)return false;
+      // An unreadable original cannot override a valid IDB snapshot; retain it.
+      if(current===null||normalSnapshot(key,current)){
+        try{localStorage.removeItem(key)}catch(e){try{if(current!==null&&current!==str)localStorage.setItem(key,str)}catch(e2){return false}}
+      }
     }catch(e){
-      try{localStorage.setItem(key,str)}catch(e2){return false}
+      try{
+        if(!readable||fallback!==null&&!normalSnapshot(key,fallback)||localStorage.getItem(key)!==fallback)return false;
+        if(fallback!==null&&fallback!==str)localStorage.setItem(key+'-checkpoint',fallback);
+        localStorage.setItem(key,str);
+      }catch(e2){return false}
     }
     try{localStorage.setItem(STORAGE_NS+'-meta-'+slot,meta)}catch(e){}
     return true;
   });
   SAVE_QUEUES.set(key,next);
-  next.then(ok=>{if(DB===db&&SLOT===slot)SAVEFAIL=!ok});
+  next.then(ok=>{if(ok)SAVE_LAST_ACK={key,raw:str};finishSaveStatus(status,ok)});
   return next;
 }
 function saveDB(){
   const db=DB,slot=SLOT,key=STORE;
   clearTimeout(saveTimer);
-  saveTimer=setTimeout(()=>{
-    saveTimer=null;
-    try{void persistWorldSnapshot(db,slot,key)}
-    catch(e){if(DB===db&&SLOT===slot)SAVEFAIL=true;console.error('LOL GM save failed',e)}
-  },150);
+  const status=beginSaveStatus(db,slot,key,'pending');
+  SAVE_PENDING={db,slot,key,run:()=>{
+    saveTimer=null;SAVE_PENDING=null;
+    try{return persistWorldSnapshot(db,slot,key,status)}
+    catch(e){finishSaveStatus(status,false);console.error('LOL GM save failed',e);return Promise.resolve(false)}
+  }};
+  saveTimer=setTimeout(SAVE_PENDING.run,150);
 }
+function flushPendingSave(){const pending=SAVE_PENDING;if(!pending)return null;clearTimeout(saveTimer);saveTimer=null;return pending.run()}
+async function saveNow(){
+  if(!DB||SLOT_SWITCHING)return false;
+  const pending=SAVE_PENDING,db=DB,slot=SLOT,key=STORE;
+  if(pending){const result=await flushPendingSave();if(pending.db===db&&pending.slot===slot&&pending.key===key)return result;if(DB!==db||SLOT!==slot||STORE!==key)return false}
+  return persistWorldSnapshot(db,slot,key);
+}
+function saveBeforeBackground(){if(SAVE_PENDING)void saveNow().catch(e=>console.error('LOL GM background save failed',e))}
 async function switchSaveSlot(nextSlot,acceptLoaded=null){
   if(SLOT_SWITCHING||nextSlot===SLOT||!SAVE_SLOTS.includes(nextSlot))
     return {ok:false,error:'이미 슬롯을 전환 중이거나 올바르지 않은 슬롯입니다.'};
@@ -16129,7 +16314,7 @@ async function switchSaveSlot(nextSlot,acceptLoaded=null){
   if(navigation)navigation.inert=true;
   let switched=false,error='';
   try{
-    clearTimeout(saveTimer);saveTimer=null;
+    clearTimeout(saveTimer);saveTimer=null;SAVE_PENDING=null;
     const saved=await persistWorldSnapshot(DB,SLOT,STORE);
     if(!saved)throw new Error('현재 슬롯 저장에 실패했습니다. 슬롯 전환을 중단했습니다.');
     const key=STORE_BASE+nextSlot;
@@ -16197,7 +16382,6 @@ function viewSeason(){
   return `<section class="seasonhead">
     <div><h2>${w.year} 시즌</h2><p>${T?esc(T.name):managedTeamId(DB)?'관리 구단 확인 필요':'무소속 감독'} · ${seasonManagedRegion()?esc(DB.regions[T.region].leagueName):'지역 정보 없음'}${lgS?' '+esc(lgS.label):''} ${mine&&(mine.w+mine.l)?`${rank}위 (${mine.w}승 ${mine.l}패)`:''} · ${esc(phaseText(w))}</p></div>${right}
   </section>
-  ${SAVEFAIL?'<p class="warn">브라우저 저장 공간이 부족해 진행 상황을 저장하지 못했습니다. 데이터 탭에서 JSON을 복사해 두세요.</p>':''}
   <section class="controls">${controlsFor(w)}<span id="sprog" class="hint" role="status">${esc(seasonProgressNotice())}</span></section>
   ${T?renderClubBriefing():''}
   ${renderTransferEntry()}
@@ -16250,9 +16434,11 @@ function renderReport(r){
    </div></section>`;
 }
 
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveBeforeBackground()});
+window.addEventListener('pagehide',saveBeforeBackground);
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>navigateTo(b.dataset.v));
 $('#main').innerHTML='<p class="empty">세계를 불러오는 중…</p>';
-loadDB().then(d=>{DB=d;nav()}).catch(e=>{
+loadDB().then(d=>{DB=d;nav();publishSaveStatus()}).catch(e=>{
   console.error('LOL GM initialization failed',e);
   if(typeof startupBootFailure==='function'){startupBootFailure(e);return}
   $('#main').innerHTML=`<section><h2>게임을 시작하지 못했습니다</h2><p class="warn">${esc(e&&e.message?e.message:'초기화 오류')}</p><p class="hint">저장 데이터 오류가 발생한 경우 원본은 보존됩니다. 브라우저 저장소를 지우지 말고 JSON 백업을 확인해 주세요. 파일 미리보기 접근 오류라면 최신 HTML을 다시 열어 보세요.</p><button class="primary" id="retryboot">다시 시도</button></section>`;
