@@ -5,9 +5,9 @@ function savedGameSummary(db){
  return {name:team?.name||(db.world?'무소속 감독':'커리어 선택 전'),year:db.world?.year??db.year,date:db.worldDate||'',started:!!db.world};
 }
 function savedGameLabel(s){return `${esc(s.name)}${s.year?` · ${esc(s.year)} 시즌`:''}`}
-function saveLibraryCurrent(){
+function saveLibraryCurrent(allowSwitch=false){
  const db=DB,world=DB?.world,manager=DB?.manager,slot=SLOT,view=VIEW,render=UI_RENDER_ID,date=DB?.worldDate,year=DB?.year,team=DB?managedTeamId(DB):null,policy=JSON.stringify([DB?.world?.manage,DB?.world?.fired,DB?.world?.phase]),page=typeof START_UI==='undefined'?null:START_UI.page,active=typeof START_UI==='undefined'?null:START_UI.active;
- return ()=>DB===db&&DB?.world===world&&DB?.manager===manager&&SLOT===slot&&VIEW===view&&UI_RENDER_ID===render&&DB?.worldDate===date&&DB?.year===year&&(DB?managedTeamId(DB):null)===team&&JSON.stringify([DB?.world?.manage,DB?.world?.fired,DB?.world?.phase])===policy&&!SLOT_SWITCHING&&(typeof UI_OVERLAY==='undefined'||!UI_OVERLAY)&&(typeof START_UI==='undefined'||START_UI.page===page&&START_UI.active===active);
+ return ()=>DB===db&&DB?.world===world&&DB?.manager===manager&&SLOT===slot&&VIEW===view&&UI_RENDER_ID===render&&DB?.worldDate===date&&DB?.year===year&&(DB?managedTeamId(DB):null)===team&&JSON.stringify([DB?.world?.manage,DB?.world?.fired,DB?.world?.phase])===policy&&(!SLOT_SWITCHING||allowSwitch)&&(typeof UI_OVERLAY==='undefined'||!UI_OVERLAY)&&(typeof START_UI==='undefined'||START_UI.page===page&&START_UI.active===active);
 }
 function renderStartupSavedGames(){
  const fresh=START_UI.page==='new-slot';
@@ -39,7 +39,7 @@ async function readSavedGame(slot){
 }
 function renderSavedGames(){
  const s=savedGameSummary(DB);
- return `<section class="teamhead"><h2>저장된 게임</h2><p>진행 상황은 자동 저장됩니다. 다른 게임을 불러와도 현재 게임을 먼저 저장합니다.</p></section><section class="cfgcard cur"><h3>현재 게임</h3><p><b>${savedGameLabel(s)}</b></p>${s.date?`<p>게임 날짜 ${esc(s.date)}</p>`:''}<p data-save-status class="${SAVEFAIL?'warn':'hint'}">${typeof saveStatusText==='function'?saveStatusText():SAVEFAIL?'현재 게임을 저장하지 못했습니다. 원본을 내보내 보관하세요.':'자동 저장 사용'}</p><button id="save-now" type="button">지금 저장·재시도</button></section><section><p id="save-load-status" class="warn" role="status"></p><div class="cfghead"><h3>다른 게임 불러오기</h3><button id="save-games-refresh" class="linklike" type="button">목록 다시 확인</button></div><div id="save-games-list" aria-live="polite"><p>저장된 게임을 확인하고 있습니다.</p></div></section>`;
+ return `<section class="teamhead"><h2>저장된 게임</h2><p>진행 상황은 자동 저장됩니다. 다른 게임을 불러와도 현재 게임을 먼저 저장합니다.</p></section><section class="cfgcard cur"><h3>현재 게임</h3><p><b>${savedGameLabel(s)}</b></p>${s.date?`<p>게임 날짜 ${esc(s.date)}</p>`:''}<p data-save-status class="${SAVEFAIL?'warn':'hint'}">${typeof saveStatusText==='function'?saveStatusText():SAVEFAIL?'현재 게임을 저장하지 못했습니다. 원본을 내보내 보관하세요.':'자동 저장 사용'}</p><button id="save-now" type="button">지금 저장·재시도</button><button id="save-recovery" type="button">저장 원본 복구</button></section><section><p id="save-load-status" class="warn" role="status"></p><div class="cfghead"><h3>다른 게임 불러오기</h3><button id="save-games-refresh" class="linklike" type="button">목록 다시 확인</button></div><div id="save-games-list" aria-live="polite"><p>저장된 게임을 확인하고 있습니다.</p></div></section>`;
 }
 function savedGamesRows(rows){
  const present=rows.filter(r=>r.state!=='empty');

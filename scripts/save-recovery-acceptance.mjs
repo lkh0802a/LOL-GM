@@ -6,7 +6,7 @@ await runEngineFixture(String.raw`(async()=>{
  const settle=async()=>{for(let i=0;i<40;i++)await Promise.resolve()};
  const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:2,div2:false})];cfg.internationals=[];
  const base=buildWorld(cfg);base.worldDate='2027-03-01';const original=packDB(base);
- const reset=()=>{DB=unpackDB(original);SLOT='1';STORE=STORE_BASE+SLOT;SAVEFAIL=false;SLOT_SWITCHING=false;SAVE_PENDING=null;SAVE_STATUS=null;saveTimer=null;SAVE_QUEUES.clear();local.clear();disk.clear();timers.clear();held.length=0;flags={};calls=0;local.set(STORE,original);disk.set(STORE,original)};
+ const reset=()=>{DB=unpackDB(original);SLOT='1';STORE=STORE_BASE+SLOT;SAVEFAIL=false;SLOT_SWITCHING=false;SAVE_PENDING=null;SAVE_STATUS=null;SAVE_LAST_ACK=null;saveTimer=null;SAVE_QUEUES.clear();local.clear();disk.clear();timers.clear();held.length=0;flags={};calls=0;local.set(STORE,original);disk.set(STORE,original)};
  const rows=[];
  for(const kind of ['normal','cleanup','cleanup-and-write','no-fallback','already-current','idb-fallback','both-backends','unreadable-fallback']){
   reset();DB.worldDate='2027-03-02';const expected=packDB(DB);
@@ -25,6 +25,10 @@ await runEngineFixture(String.raw`(async()=>{
   if(denied){flags={};check(await persistWorldSnapshot(DB,SLOT,STORE),'explicit retry '+kind);check(!SAVEFAIL&&currentSaveStatus()==='saved','retry is acknowledged after commit');check((await loadDB(STORE)).worldDate==='2027-03-02','retry restores new world')}
   rows.push({kind,acknowledged:ok});
  }
+ reset();flags.idb=true;DB.worldDate='2027-03-02';await persistWorldSnapshot(DB,SLOT,STORE);const secondRaw=packDB(DB);check(local.get(STORE+'-checkpoint')===original,'fallback preserves previous complete snapshot');DB.worldDate='2027-03-03';await persistWorldSnapshot(DB,SLOT,STORE);check(local.get(STORE+'-checkpoint')===secondRaw,'fallback rotates to the last confirmed snapshot');
+ reset();flags.idb=true;flags.checkpointWrite=true;DB.worldDate='2027-03-02';check(!await persistWorldSnapshot(DB,SLOT,STORE)&&local.get(STORE)===original&&disk.get(STORE)===original,'checkpoint quota failure cannot replace the primary original');
+ reset();local.set(STORE,'{truncated');DB.worldDate='2027-03-02';check(await persistWorldSnapshot(DB,SLOT,STORE)&&local.get(STORE)==='{truncated'&&(await loadDB(STORE)).worldDate==='2027-03-02','unreadable fallback retained while valid IDB stays loadable');
+ reset();flags.hold=true;DB.worldDate='2027-03-02';const concurrent=persistWorldSnapshot(DB,SLOT,STORE);await settle();const foreign=unpackDB(original);foreign.worldDate='2027-03-05';const foreignRaw=packDB(foreign);local.set(STORE,foreignRaw);held.shift().finish();check(!await concurrent&&local.get(STORE)===foreignRaw,'concurrent preferred snapshot is never deleted by old completion');
  reset();flags.hold=true;DB.worldDate='2027-03-02';const first=persistWorldSnapshot(DB,SLOT,STORE);await settle();
  DB.worldDate='2027-03-03';saveDB();check(currentSaveStatus()==='pending','new changes wait for debounce');
  held.shift().finish();await first;await settle();check(currentSaveStatus()==='pending','old completion cannot announce new changes saved');
@@ -43,10 +47,10 @@ await runEngineFixture(String.raw`(async()=>{
  const opening=idb().then(()=>false,()=>true);fireTimers();check(await opening,'original open deadline rejects');request.onsuccess();check(closed===1,'late open connection is closed without changing timeout');
  reset();flags.idb=true;flags.write=true;DB.worldDate='2027-03-02';const source=DB,oldSlot=SLOT;const switchResult=await switchSaveSlot('2');check(!switchResult.ok&&DB===source&&SLOT===oldSlot&&currentSaveStatus()==='failed','failed outgoing save blocks slot switch');
  console.log('SAVE_RECOVERY_ACCEPTANCE '+JSON.stringify({rows,generationGuard:true,slotIsolation:true,backgroundBestEffort:true,manualRetry:true,focusPreserved:true,serializationFailure:true,switchGuard:true}));
-})()`,{filename:'save-recovery.vm.js',timeout:120000,setupSources:[String.raw`
+})()`,{filename:'save-recovery.vm.js',setupSources:[String.raw`
 const local=new Map(),disk=new Map(),timers=new Map(),held=[],nodes=new Map();let flags={},calls=0,timerId=0,navs=0;
 const location={protocol:'https:',origin:'https://fixture.invalid'},indexedDB={};
-const localStorage={getItem:k=>{if(flags.read&&k===STORE)throw Error('injected read denial');return local.has(k)?local.get(k):null},setItem:(k,v)=>{if(flags.write&&k===STORE)throw Error('injected write denial');local.set(k,String(v))},removeItem:k=>{if(flags.remove)throw Error('injected cleanup denial');local.delete(k)}};
+const localStorage={getItem:k=>{if(flags.read&&k===STORE)throw Error('injected read denial');return local.has(k)?local.get(k):null},setItem:(k,v)=>{if(flags.checkpointWrite&&k===STORE+'-checkpoint')throw Error('injected checkpoint quota');if(flags.write&&k===STORE)throw Error('injected write denial');local.set(k,String(v))},removeItem:k=>{if(flags.remove)throw Error('injected cleanup denial');local.delete(k)}};
 const statusNodes=[{textContent:'',classList:{toggle(){}}},{textContent:'',classList:{toggle(){}}}];
 const node=k=>{if(!nodes.has(k))nodes.set(k,{textContent:'',innerHTML:'',value:'',disabled:false,focus(){document.activeElement=this},querySelectorAll(){return []}});return nodes.get(k)};
 const document={activeElement:null,querySelector:s=>node(s),querySelectorAll:s=>s==='[data-save-status]'?statusNodes:[]};const $=s=>node(s);

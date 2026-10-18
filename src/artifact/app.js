@@ -28,10 +28,22 @@ async function idbGet(k){const d=await idb();return new Promise((res,rej)=>{
   const timer=setTimeout(()=>finish(false,new Error('IndexedDB read timeout')),800);
   try{const q=d.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>finish(true,q.result);q.onerror=()=>finish(false,q.error||new Error('IndexedDB read failed'))}catch(e){finish(false,e)}
 })}
-async function idbSet(k,v){const d=await idb();return new Promise((res,rej)=>{
+async function idbSet(k,v,preferred=null){const d=await idb();return new Promise((res,rej)=>{
   let done=false;const finish=(ok,v)=>{if(done)return;done=true;clearTimeout(timer);try{d.close()}catch(e){}ok?res(v):rej(v)};
   const timer=setTimeout(()=>finish(false,new Error('IndexedDB write timeout')),800);
-  try{const tx=d.transaction('kv','readwrite');tx.objectStore('kv').put(v,k);tx.oncomplete=()=>finish(true);tx.onerror=()=>finish(false,tx.error||new Error('IndexedDB write failed'));tx.onabort=()=>finish(false,tx.error||new Error('IndexedDB write aborted'))}catch(e){finish(false,e)}
+  try{const tx=d.transaction('kv','readwrite'),store=tx.objectStore('kv'),read=store.get(k);
+    const fail=e=>{try{tx.abort()}catch(e2){}finish(false,e)};
+    read.onerror=()=>fail(read.error||new Error('IndexedDB checkpoint read failed'));
+    read.onsuccess=()=>{try{
+      const old=read.result,prior=normalSnapshot(k,preferred)?preferred:normalSnapshot(k,old)?old:null;
+      const write=()=>{try{if(prior!==null&&prior!==v)store.put(prior,k+'-checkpoint');store.put(v,k)}catch(e){fail(e)}};
+      if(old!==undefined&&old!==null&&old!==v&&!normalSnapshot(k,old)){
+        const kept=store.get(k+'-damaged');kept.onerror=()=>fail(kept.error||new Error('IndexedDB original read failed'));
+        kept.onsuccess=()=>{try{if(kept.result!==undefined&&kept.result!==null&&kept.result!==old)throw Error('An unreadable original is already preserved');store.put(old,k+'-damaged');write()}catch(e){fail(e)}};
+      }else write();
+    }catch(e){fail(e)}};
+    tx.oncomplete=()=>finish(true);tx.onerror=()=>finish(false,tx.error||new Error('IndexedDB write failed'));tx.onabort=()=>finish(false,tx.error||new Error('IndexedDB write aborted'));
+  }catch(e){finish(false,e)}
 })}
 async function loadDB(key=STORE){
   const invalid=[];
@@ -40,23 +52,24 @@ async function loadDB(key=STORE){
   let stored=null;
   try{stored=localStorage.getItem(key)}catch(e){invalid.push('로컬 저장소 읽기 실패: '+e.message)}
   if(stored!==null&&stored!==undefined){
-    try{return unpackDB(stored)}
+    try{const decoded=unpackDB(stored);SAVE_LAST_ACK={key,raw:stored};return decoded}
     catch(e){invalid.push('로컬 저장소: '+e.message)}
   }
   stored=null;
   try{stored=await idbGet(key)}catch(e){if(!(typeof DIRECT_FILE_PREVIEW!=='undefined'&&DIRECT_FILE_PREVIEW)&&typeof indexedDB!=='undefined')invalid.push('IndexedDB 읽기 실패: '+e.message)}
   if(stored!==null&&stored!==undefined){
-    try{return unpackDB(stored)}
+    try{const decoded=unpackDB(stored);SAVE_LAST_ACK={key,raw:stored};return decoded}
     catch(e){invalid.push('IndexedDB: '+e.message)}
   }
   if(invalid.length)
     throw new Error('저장 데이터를 복원할 수 없습니다. 원본은 삭제하거나 덮어쓰지 않았습니다. '+invalid.join(' / '));
   return buildWorld();
 }
-let saveTimer=null,SAVE_PENDING=null,SAVE_STATUS=null;
+let saveTimer=null,SAVE_PENDING=null,SAVE_STATUS=null,SAVE_LAST_ACK=null;
 // Per-slot write queues keep late IndexedDB completions from overwriting a
 // newer snapshot. All bytes and metadata are frozen before joining the queue.
 const SAVE_QUEUES=new Map();
+function normalSnapshot(key,raw){if(typeof raw!=='string')return false;if(SAVE_LAST_ACK?.key===key&&SAVE_LAST_ACK.raw===raw)return true;try{unpackDB(raw);return true}catch(e){return false}}
 function currentSaveStatus(){return SAVE_STATUS&&SAVE_STATUS.db===DB&&SAVE_STATUS.slot===SLOT&&SAVE_STATUS.key===STORE?SAVE_STATUS.phase:'idle'}
 function publishSaveStatus(){if(typeof updateSaveStatus==='function')updateSaveStatus()}
 function beginSaveStatus(db,slot,key,phase){const status={db,slot,key,phase};if(DB===db&&SLOT===slot&&STORE===key){SAVE_STATUS=status;publishSaveStatus()}return status}
@@ -68,19 +81,28 @@ function persistWorldSnapshot(db,slot,key,status=null){
   const meta=JSON.stringify({team:teamId&&db.teams[teamId]?db.teams[teamId].name:'',year:db.world?db.world.year:''});
   const prior=SAVE_QUEUES.get(key)||Promise.resolve(true);
   const next=prior.then(async()=>{
+    let fallback=null,readable=true;try{fallback=localStorage.getItem(key)}catch(e){readable=false}
     try{
-      await idbSet(key,str);
-      try{localStorage.removeItem(key)}catch(e){
-        try{const fallback=localStorage.getItem(key);if(fallback!==null&&fallback!==str)localStorage.setItem(key,str)}catch(e2){return false}
+      await idbSet(key,str,SAVE_LAST_ACK?.key===key?SAVE_LAST_ACK.raw:fallback);
+      if(!readable)return false;
+      const current=localStorage.getItem(key);
+      if(current!==fallback&&current!==str)return false;
+      // An unreadable original cannot override a valid IDB snapshot; retain it.
+      if(current===null||normalSnapshot(key,current)){
+        try{localStorage.removeItem(key)}catch(e){try{if(current!==null&&current!==str)localStorage.setItem(key,str)}catch(e2){return false}}
       }
     }catch(e){
-      try{localStorage.setItem(key,str)}catch(e2){return false}
+      try{
+        if(!readable||fallback!==null&&!normalSnapshot(key,fallback)||localStorage.getItem(key)!==fallback)return false;
+        if(fallback!==null&&fallback!==str)localStorage.setItem(key+'-checkpoint',fallback);
+        localStorage.setItem(key,str);
+      }catch(e2){return false}
     }
     try{localStorage.setItem(STORAGE_NS+'-meta-'+slot,meta)}catch(e){}
     return true;
   });
   SAVE_QUEUES.set(key,next);
-  next.then(ok=>finishSaveStatus(status,ok));
+  next.then(ok=>{if(ok)SAVE_LAST_ACK={key,raw:str};finishSaveStatus(status,ok)});
   return next;
 }
 function saveDB(){
