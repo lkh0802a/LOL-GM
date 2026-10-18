@@ -35,20 +35,21 @@
 5. 해당 집중 테스트와 인접 도메인 통합 검사, 정적/빌드, 정확 최종 head 필수 CI를 차례로 검증한다. 기존 실패 단언·가정·테스트 강도를 약화하거나 임의 스탯/확률로 실패를 덮지 않는다.
 6. 이슈에 **원인/변경 파일/사용한 명령/통과·실패·미실행/PR·커밋/미완 사항**을 남긴다. 완료 기준을 충족한 작업만 Close. 다음 우선순위 작업으로 이동한다. 외부 동의가 필요한 규칙 변경/새 사양은 임의 처리하지 말고 구체적으로 알린다.
 
-## 2. 최초 생성한 이슈 실행 대기열 (현재 OPEN 여부는 실시간 확인)
+## 2. 최초 이슈 실행 대기열과 2026-10-18 상태 스냅샷 (이후 실시간 확인)
 
-*아래 표는 작성 당시의 작업 목록·우선순위 기록이지 최신 open 목록이 아니다. 실제 이슈 완료·PR 검증·체크포인트를 먼저 조회한다. 순위는 최초 착수/게이트 처리 순서이며 P2 목표를 취소하지 않는다.*
+*완료·진행 표시는 2026-10-18 조회 시점이다. **[#242 본문 최상단](https://github.com/lkh0802a/LOL-GM/issues/242)** 및 현재 이슈·PR 정확 HEAD/CI·체크포인트를 매 실행 우선 조회한다. [#257](https://github.com/lkh0802a/LOL-GM/issues/257)/Draft PR #263·#264 문서 검토와 Draft PR #253·#254 레거시 훈련 정리는 **별도 병합·검증 트랙**이며, 구형 CI 결과/코드 작성만으로 완료 처리하지 않는다. 기존 P2 목표는 유지한다.*
 
 | 단계 | 작업 순서 | 구현·검증 목표 |
 | --- | --- | --- |
 | **P0 총괄** | **[#242](https://github.com/lkh0802a/LOL-GM/issues/242)** | 수정 전체 인덱스, 실적과 미완·원본 실패 기록 추적. **개발할 새로운 게임 기능 아님** |
-| **P0-01** | **[#243](https://github.com/lkh0802a/LOL-GM/issues/243)** | **첫 작업: Bo1 스크림 표시·훈련 기록의 이중 시뮬레이션 제거** |
-| **P0-02** | **[#244](https://github.com/lkh0802a/LOL-GM/issues/244)** | 모바일 저장 지연/백그라운드/강제 종료/복원 위험 재현 및 보정 |
+| **P0-01 · 완료** | **[#243](https://github.com/lkh0802a/LOL-GM/issues/243)** | Bo1 실제 단일 결과 [PR #259](https://github.com/lkh0802a/LOL-GM/pull/259) 병합, 기본 작업 재개 불필요 |
+| **P0-02 · 완료** | **[#244](https://github.com/lkh0802a/LOL-GM/issues/244)** | 저장·복구 [PR #260](https://github.com/lkh0802a/LOL-GM/pull/260) 병합, 기본 작업 재개 불필요 |
 | **P0 상시** | **[#241](https://github.com/lkh0802a/LOL-GM/issues/241)** | 모든 작업의 실사용 연결·원자성·정보권한·이력/세이브/모바일 수용. **먼저 독립 구현하는 게 아님** |
-| P1-01 | [#245](https://github.com/lkh0802a/LOL-GM/issues/245) | AI 임대 검토의 월 일자 숫자 `%7` 주기를 세계 경과 날짜로 교정 |
-| P1-02 | [#246](https://github.com/lkh0802a/LOL-GM/issues/246) | `sort(()=>rng.next()-0.5)` 제거 및 시드·엔진 결정론 검증 |
+| P1-01 · 완료 | [#245](https://github.com/lkh0802a/LOL-GM/issues/245) | AI 임대 실제 7일 [PR #261](https://github.com/lkh0802a/LOL-GM/pull/261) 병합 |
+| P1-02 · 활성 (2026-10-18) | [#246](https://github.com/lkh0802a/LOL-GM/issues/246) | [Draft PR #262](https://github.com/lkh0802a/LOL-GM/pull/262) 최종 HEAD CI 성공·미병합; 리뷰/병합 여부 우선 확인 |
 | P1-03 | [#248](https://github.com/lkh0802a/LOL-GM/issues/248) | 상대 실제 OVR/잠재력·비공개 의료 정보 노출 경계 검증 |
 | P1-04 | [#249](https://github.com/lkh0802a/LOL-GM/issues/249) | 과거 경기·선수 소속·당시 패치/로스터/영구 역사, 리플레이 정확성 |
+| **P1-04B** | [#252](https://github.com/lkh0802a/LOL-GM/issues/252) | 월즈 정식 ID·상금·과거 세이브·사무국 보호, 최신 N02B 계약 경계 검증. #249 뒤·#247 앞 |
 | P1-05 | [#247](https://github.com/lkh0802a/LOL-GM/issues/247) | 스카우팅/구단 재정 UI의 반복 세계 전체 `JSON` 복사·비교를 측정 후 최적화 |
 | P1-06 | [#234](https://github.com/lkh0802a/LOL-GM/issues/234) | 공통 세계 시계, 일정 충돌·중계 지연·공식 사건 순서 |
 | P1-07 | [#224](https://github.com/lkh0802a/LOL-GM/issues/224) | 실제 시간형 영입·이적 협상, AI 경쟁/즉시 예외·합의와 최종 서명 구분 |
