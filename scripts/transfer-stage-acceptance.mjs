@@ -54,19 +54,22 @@ await runEngineFixture(String.raw`(()=>{
     'season-end purchase charged future salary in closing year');
   // Production weekly AI exercises an affordable agreed option, while manual
   // manager decisions stay protected. Recall solves a real five-player shortage.
+  const early=unpackDB(raw);check(commitWorldAction(early,loan).ok,'early review preparation failed');
+  setManagedTeam(early,other.id);early.teams[buyer.id].finance.cash=1000;early.teams[buyer.id].depthChart[ROLES[0]]=pid;setWorldCalendarDate(early,year+'-01-14');
+  const earlyBefore=JSON.stringify(early);aiReviewLoanDecisions(early);check(JSON.stringify(early)===earlyBefore,'four days after loan start is not a weekly AI review');
   const automated=unpackDB(raw);check(commitWorldAction(automated,loan).ok,'AI preparation failed');
-  automated.teams[buyer.id].finance.cash=1000;automated.teams[buyer.id].depthChart[ROLES[0]]=pid;setWorldCalendarDate(automated,year+'-01-14');
+  automated.teams[buyer.id].finance.cash=1000;automated.teams[buyer.id].depthChart[ROLES[0]]=pid;setWorldCalendarDate(automated,year+'-01-17');
   aiReviewLoanDecisions(automated);check(automated.players[pid].loan,'AI purchased for manual manager');
   setManagedTeam(automated,other.id);aiReviewLoanDecisions(automated);
   check(!automated.players[pid].loan,'production AI did not exercise useful affordable option');
   const recalled=unpackDB(raw);check(commitWorldAction(recalled,{...loan,purchase:null,recall:true}).ok,'recall preparation failed');
-  setManagedTeam(recalled,other.id);setWorldCalendarDate(recalled,year+'-01-14');
+  setManagedTeam(recalled,other.id);setWorldCalendarDate(recalled,year+'-01-17');
   const injured=recalled.players[recalled.teams[owner.id].depthChart[ROLES[0]]];injured.medical={daysLeft:30,out:true};
   aiReviewLoanDecisions(recalled);check(!recalled.players[pid].loan&&recalled.players[pid].team===owner.id,'AI shortage recall failed');
   const strategic=unpackDB(raw),sp=strategic.players[pid],so=strategic.teams[owner.id],
     replacement=strategic.players[so.depthChart[sp.role]];
   check(commitWorldAction(strategic,{...loan,purchase:null,recall:true}).ok,'strategic recall preparation failed');
-  setManagedTeam(strategic,other.id);setWorldCalendarDate(strategic,year+'-01-14');
+  setManagedTeam(strategic,other.id);setWorldCalendarDate(strategic,year+'-01-17');
   so.scoutingState={homeRegion:so.region,reports:{[pid]:{knowledge:98,ability:96,potential:96},
     [replacement.id]:{knowledge:98,ability:55,potential:55}},competitions:{}};
   aiReviewLoanDecisions(strategic);
@@ -74,20 +77,20 @@ await runEngineFixture(String.raw`(()=>{
   const noNeed=unpackDB(raw),np=noNeed.players[pid],no=noNeed.teams[owner.id],
     incumbent=noNeed.players[no.depthChart[np.role]];
   check(commitWorldAction(noNeed,{...loan,purchase:null,recall:true}).ok,'no-need recall preparation failed');
-  setManagedTeam(noNeed,other.id);setWorldCalendarDate(noNeed,year+'-01-14');
+  setManagedTeam(noNeed,other.id);setWorldCalendarDate(noNeed,year+'-01-17');
   no.scoutingState={homeRegion:no.region,reports:{[pid]:{knowledge:98,ability:48,potential:48},
     [incumbent.id]:{knowledge:98,ability:70,potential:70}},competitions:{}};
   aiReviewLoanDecisions(noNeed);
   check(np.loan&&np.team===buyer.id,'AI recalled a loan without a sporting need');
   const clauseProtected=unpackDB(raw),cp=clauseProtected.players[pid],co=clauseProtected.teams[owner.id];
   check(commitWorldAction(clauseProtected,{...loan,purchase:null,recall:false}).ok,'no-recall fixture preparation failed');
-  setManagedTeam(clauseProtected,other.id);setWorldCalendarDate(clauseProtected,year+'-01-14');
+  setManagedTeam(clauseProtected,other.id);setWorldCalendarDate(clauseProtected,year+'-01-17');
   co.scoutingState={homeRegion:co.region,reports:{[pid]:{knowledge:98,ability:99,potential:99}},competitions:{}};
   aiReviewLoanDecisions(clauseProtected);
   check(cp.loan&&cp.team===buyer.id,'AI ignored the negotiated no-recall clause');
   const humanOwner=unpackDB(raw),hp=humanOwner.players[pid],ho=humanOwner.teams[owner.id];
   check(commitWorldAction(humanOwner,{...loan,purchase:null,recall:true}).ok,'human-owner fixture preparation failed');
-  setManagedTeam(humanOwner,owner.id);setWorldCalendarDate(humanOwner,year+'-01-14');
+  setManagedTeam(humanOwner,owner.id);setWorldCalendarDate(humanOwner,year+'-01-17');
   ho.scoutingState={homeRegion:ho.region,reports:{[pid]:{knowledge:98,ability:99,potential:99}},competitions:{}};
   aiReviewLoanDecisions(humanOwner);
   check(hp.loan&&hp.team===buyer.id,'AI overrode the managed lender despite its recall clause');

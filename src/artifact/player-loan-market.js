@@ -45,12 +45,25 @@ function aiLoanPurchaseProposal(db,p,to){
   const terms=personal.kind==='retained'?personal.consent.terms:personal.terms;
   return {purchase:{type:'option',fee,salary:terms.salary,years:terms.years,terms}};
 }
+// Weekly reviews follow each actual loan, rather than restarting every month.
+function loanDecisionReviewDue(db,loan,kind='purchase'){
+  const key=kind==='purchase'?'aiPurchaseReviewDate':kind==='recall'?'aiRecallReviewDate':null;
+  if(!key)return false;
+  const date=db.worldDate,start=loan?.startDate,previous=loan?.[key]??start,dates=[date,start,previous];
+  if(dates.some(d=>typeof d!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(d)))return false;
+  try{if(dates.some(d=>addDays(d,0)!==d))return false}catch{return false}
+  const days=(Date.parse(date+'T00:00:00Z')-Date.parse(previous+'T00:00:00Z'))/86400000;
+  return previous>=start&&Number.isInteger(days)&&days>=7;
+}
+function claimLoanDecisionReview(db,loan,kind){
+  if(!loanDecisionReviewDue(db,loan,kind))return false;
+  loan[kind==='purchase'?'aiPurchaseReviewDate':'aiRecallReviewDate']=db.worldDate;return true;
+}
 function aiReviewLoanDecisions(db){
-  if(Number((db.worldDate||'').slice(-2))%7!==0)return;
   for(const pid of loanIndex(db).players.slice()){
     const p=db.players[pid],l=p.loan,owner=db.teams[l.ownerId],borrower=db.teams[l.borrowerId];
     if(!owner||!borrower||owner.active===false||borrower.active===false)continue;
-    if(l.purchase?.type==='option'&&!playerActionAuthority(db,'ai',borrower)){
+    if(l.purchase?.type==='option'&&!playerActionAuthority(db,'ai',borrower)&&claimLoanDecisionReview(db,l,'purchase')){
       const starter=borrower.depthChart?.[p.role]===p.id,quote=l.purchase,
         room=salaryBudget(db,borrower)-payroll(db,borrower)+p.contract.salary*l.salaryShare;
       if(starter&&quote.terms.salary<=room&&quote.fee+quote.terms.signingBonus<=
@@ -59,7 +72,7 @@ function aiReviewLoanDecisions(db){
           fromId:owner.id,teamId:borrower.id});if(result.ok)continue;
       }
     }
-    if(l.recall&&l.purchase?.type!=='obligation'&&!playerActionAuthority(db,'ai',owner)){
+    if(l.recall&&l.purchase?.type!=='obligation'&&!playerActionAuthority(db,'ai',owner)&&claimLoanDecisionReview(db,l,'recall')){
       const role=p.role,current=owner.depthChart?.[role]&&db.players[owner.depthChart[role]],
         ownsCurrent=current&&current.team===owner.id&&!current.loan&&
           owner.roster.includes(current.id)&&!current.retired,
