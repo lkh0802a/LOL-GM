@@ -332,6 +332,7 @@ td.fmt{font-size:12px;color:var(--mut);white-space:normal;min-width:200px}
 body>header.app-bar{max-width:none;margin:0;padding:10px 20px;height:var(--app-bar-height);background:var(--surf);border-bottom:1px solid var(--line);align-items:center;flex-wrap:nowrap;gap:20px}
 .app-brand{font-size:17px;letter-spacing:.5px;flex-shrink:0}
 .app-context{min-width:0;flex:1}.app-context b,.app-context span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.app-context b{font-size:14px}.app-context span{font-size:12px;color:var(--mut)}
+#save-state-notice{margin:6px auto;max-width:1180px;padding:0 12px}#save-state-notice:empty{display:none}
 #app-save{background:none;border:1px solid var(--control-line);border-radius:3px;padding:6px 9px;white-space:nowrap;font-size:12px}
 #app-theme-status{margin:0;padding:10px 12px;background:var(--surf);color:var(--ink);overflow-wrap:anywhere}
 .app-theme{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--mut)}.app-theme select{padding:4px;border:1px solid var(--control-line);background:var(--surf)}
@@ -351,6 +352,7 @@ body[data-startup=true] #app-theme-status,body[data-startup=true] #app-nav,body[
 <header class="app-bar"><a class="skip-link" href="#main">게임 콘텐츠로 건너뛰기</a><strong class="app-brand">LOL <span>GM</span></strong><div class="app-context"><b id="app-screen">새 게임</b><span id="app-club"></span></div><button type="button" data-v="data" id="app-save">불러오기</button><label class="app-theme">화면<select id="app-theme" aria-label="화면 색상"><option value="auto">자동</option><option value="dark">어둡게</option><option value="light">밝게</option></select></label></header>
 <p id="app-theme-status" role="status" hidden></p>
 <nav aria-label="주요 화면" id="app-nav"><div><button type="button" data-v="season">일정·대회</button><button type="button" data-v="squad">선수단</button><button type="button" data-v="match">경기·스크림</button><button type="button" data-v="analysis">분석실</button><button type="button" data-v="patch">패치·메타</button></div></nav>
+<p id="save-state-notice" data-save-status class="hint" role="status" aria-live="polite"></p>
 <main id="main" tabindex="-1" aria-label="게임 콘텐츠"></main>
 <div id="overlay" hidden role="dialog" aria-modal="true" aria-label="시리즈 상세" tabindex="-1"></div>
 <script>
@@ -14434,7 +14436,7 @@ async function readSavedGame(slot){
 }
 function renderSavedGames(){
  const s=savedGameSummary(DB);
- return `<section class="teamhead"><h2>저장된 게임</h2><p>진행 상황은 자동 저장됩니다. 다른 게임을 불러와도 현재 게임을 먼저 저장합니다.</p></section><section class="cfgcard cur"><h3>현재 게임</h3><p><b>${savedGameLabel(s)}</b></p>${s.date?`<p>게임 날짜 ${esc(s.date)}</p>`:''}<p class="${SAVEFAIL?'warn':'hint'}" role="status">${SAVEFAIL?'현재 게임을 저장하지 못했습니다. 원본을 내보내 보관하세요.':'자동 저장 사용'}</p></section><section><p id="save-load-status" class="warn" role="status"></p><div class="cfghead"><h3>다른 게임 불러오기</h3><button id="save-games-refresh" class="linklike" type="button">목록 다시 확인</button></div><div id="save-games-list" aria-live="polite"><p>저장된 게임을 확인하고 있습니다.</p></div></section>`;
+ return `<section class="teamhead"><h2>저장된 게임</h2><p>진행 상황은 자동 저장됩니다. 다른 게임을 불러와도 현재 게임을 먼저 저장합니다.</p></section><section class="cfgcard cur"><h3>현재 게임</h3><p><b>${savedGameLabel(s)}</b></p>${s.date?`<p>게임 날짜 ${esc(s.date)}</p>`:''}<p data-save-status class="${SAVEFAIL?'warn':'hint'}">${typeof saveStatusText==='function'?saveStatusText():SAVEFAIL?'현재 게임을 저장하지 못했습니다. 원본을 내보내 보관하세요.':'자동 저장 사용'}</p><button id="save-now" type="button">지금 저장·재시도</button></section><section><p id="save-load-status" class="warn" role="status"></p><div class="cfghead"><h3>다른 게임 불러오기</h3><button id="save-games-refresh" class="linklike" type="button">목록 다시 확인</button></div><div id="save-games-list" aria-live="polite"><p>저장된 게임을 확인하고 있습니다.</p></div></section>`;
 }
 function savedGamesRows(rows){
  const present=rows.filter(r=>r.state!=='empty');
@@ -14457,6 +14459,14 @@ function bindSavedGames(current,onLoad){
 
 /* ==== FILE: ui-data.js ==== */
 // ===== LOL GM: Save-slot / import-export UI =====
+function saveStatusText(){
+  const phase=typeof currentSaveStatus==='function'?currentSaveStatus():SAVEFAIL?'failed':'idle';
+  return phase==='saved'?'마지막 저장 확인'+(SAVE_STATUS.date?' · '+SAVE_STATUS.date:''):phase==='saving'?'저장 중입니다. 완료를 확인한 뒤 종료하세요.':phase==='pending'?(SAVEFAIL?'저장 재시도 대기 중 · 원본을 내보내 보관하세요.':'변경 사항 저장 대기 중'):phase==='failed'?'현재 게임을 저장하지 못했습니다. 원본을 내보내 보관하세요.':'자동 저장 사용';
+}
+function updateSaveStatus(){
+  const text=DB?saveStatusText():'';
+  for(const node of document.querySelectorAll?.('[data-save-status]')||[]){node.textContent=text;node.classList?.toggle('warn',SAVEFAIL);node.classList?.toggle('hint',!SAVEFAIL)}
+}
 function slotMeta(n){try{return JSON.parse(localStorage.getItem(STORAGE_NS+'-meta-'+n)||'null')}catch(e){return null}}
 function viewData(){
   return renderSavedGames()+`<details class="cfgcard"><summary>저장 원본 관리</summary>
@@ -14480,6 +14490,8 @@ function bindData(){
   };
   document.querySelectorAll('[data-slot]').forEach(b=>b.onclick=()=>loadSavedGame(b));
   bindSavedGames(current,loadSavedGame);
+  const save=$('#save-now');let saving=false;
+  if(save)save.onclick=async()=>{if(saving||!current())return;saving=true;save.disabled=true;try{await saveNow()}catch(e){console.error('LOL GM manual save failed',e)}finally{saving=false;if(current())save.disabled=false}};
   $('#ddownload').onclick=()=>{if(!current())return;try{const raw=packDB(DB),url=URL.createObjectURL(new Blob([raw],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download=`LOL-GM-저장-${DB.worldDate||DB.year||'게임'}.json`;link.click();URL.revokeObjectURL(url);msg('게임 파일 내보내기를 요청했습니다. 내려받은 파일을 보관하세요.')}catch(e){console.error('LOL GM save export failed',e);msg('파일을 내보내지 못했습니다. 원본 직접 보기에서 복사해 보관하세요.')} };
   let fileRead=0;
   $('#dchoose').onclick=()=>{if(current())$('#dfile').click()};
@@ -16052,7 +16064,7 @@ function idb(){return new Promise((res,rej)=>{
   try{
     const r=indexedDB.open(STORAGE_NS,1);
     r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('kv'))r.result.createObjectStore('kv')};
-    r.onsuccess=()=>finish(true,r.result);
+    r.onsuccess=()=>{if(done){try{r.result.close()}catch(e){}return}finish(true,r.result)};
     r.onerror=()=>finish(false,r.error||new Error('IndexedDB open failed'));
     r.onblocked=()=>finish(false,new Error('IndexedDB blocked'));
   }catch(e){finish(false,e)}
@@ -16087,18 +16099,26 @@ async function loadDB(key=STORE){
     throw new Error('저장 데이터를 복원할 수 없습니다. 원본은 삭제하거나 덮어쓰지 않았습니다. '+invalid.join(' / '));
   return buildWorld();
 }
-let saveTimer=null;
+let saveTimer=null,SAVE_PENDING=null,SAVE_STATUS=null;
 // Per-slot write queues keep late IndexedDB completions from overwriting a
 // newer snapshot. All bytes and metadata are frozen before joining the queue.
 const SAVE_QUEUES=new Map();
-function persistWorldSnapshot(db,slot,key){
-  const str=packDB(db),teamId=managedTeamId(db);
+function currentSaveStatus(){return SAVE_STATUS&&SAVE_STATUS.db===DB&&SAVE_STATUS.slot===SLOT&&SAVE_STATUS.key===STORE?SAVE_STATUS.phase:'idle'}
+function publishSaveStatus(){if(typeof updateSaveStatus==='function')updateSaveStatus()}
+function beginSaveStatus(db,slot,key,phase){const status={db,slot,key,phase};if(DB===db&&SLOT===slot&&STORE===key){SAVE_STATUS=status;publishSaveStatus()}return status}
+function finishSaveStatus(status,ok){if(SAVE_STATUS!==status||DB!==status.db||SLOT!==status.slot||STORE!==status.key)return;SAVEFAIL=!ok;status.phase=ok?'saved':'failed';publishSaveStatus()}
+function persistWorldSnapshot(db,slot,key,status=null){
+  status=status||beginSaveStatus(db,slot,key,'saving');
+  let str;try{str=packDB(db)}catch(e){finishSaveStatus(status,false);throw e}
+  status.date=db.worldDate||String(db.world?.year||db.year||'');status.phase='saving';if(SAVE_STATUS===status)publishSaveStatus();const teamId=managedTeamId(db);
   const meta=JSON.stringify({team:teamId&&db.teams[teamId]?db.teams[teamId].name:'',year:db.world?db.world.year:''});
   const prior=SAVE_QUEUES.get(key)||Promise.resolve(true);
   const next=prior.then(async()=>{
     try{
       await idbSet(key,str);
-      try{localStorage.removeItem(key)}catch(e){}
+      try{localStorage.removeItem(key)}catch(e){
+        try{const fallback=localStorage.getItem(key);if(fallback!==null&&fallback!==str)localStorage.setItem(key,str)}catch(e2){return false}
+      }
     }catch(e){
       try{localStorage.setItem(key,str)}catch(e2){return false}
     }
@@ -16106,18 +16126,28 @@ function persistWorldSnapshot(db,slot,key){
     return true;
   });
   SAVE_QUEUES.set(key,next);
-  next.then(ok=>{if(DB===db&&SLOT===slot)SAVEFAIL=!ok});
+  next.then(ok=>finishSaveStatus(status,ok));
   return next;
 }
 function saveDB(){
   const db=DB,slot=SLOT,key=STORE;
   clearTimeout(saveTimer);
-  saveTimer=setTimeout(()=>{
-    saveTimer=null;
-    try{void persistWorldSnapshot(db,slot,key)}
-    catch(e){if(DB===db&&SLOT===slot)SAVEFAIL=true;console.error('LOL GM save failed',e)}
-  },150);
+  const status=beginSaveStatus(db,slot,key,'pending');
+  SAVE_PENDING={db,slot,key,run:()=>{
+    saveTimer=null;SAVE_PENDING=null;
+    try{return persistWorldSnapshot(db,slot,key,status)}
+    catch(e){finishSaveStatus(status,false);console.error('LOL GM save failed',e);return Promise.resolve(false)}
+  }};
+  saveTimer=setTimeout(SAVE_PENDING.run,150);
 }
+function flushPendingSave(){const pending=SAVE_PENDING;if(!pending)return null;clearTimeout(saveTimer);saveTimer=null;return pending.run()}
+async function saveNow(){
+  if(!DB||SLOT_SWITCHING)return false;
+  const pending=SAVE_PENDING,db=DB,slot=SLOT,key=STORE;
+  if(pending){const result=await flushPendingSave();if(pending.db===db&&pending.slot===slot&&pending.key===key)return result;if(DB!==db||SLOT!==slot||STORE!==key)return false}
+  return persistWorldSnapshot(db,slot,key);
+}
+function saveBeforeBackground(){if(SAVE_PENDING)void saveNow().catch(e=>console.error('LOL GM background save failed',e))}
 async function switchSaveSlot(nextSlot,acceptLoaded=null){
   if(SLOT_SWITCHING||nextSlot===SLOT||!SAVE_SLOTS.includes(nextSlot))
     return {ok:false,error:'이미 슬롯을 전환 중이거나 올바르지 않은 슬롯입니다.'};
@@ -16129,7 +16159,7 @@ async function switchSaveSlot(nextSlot,acceptLoaded=null){
   if(navigation)navigation.inert=true;
   let switched=false,error='';
   try{
-    clearTimeout(saveTimer);saveTimer=null;
+    clearTimeout(saveTimer);saveTimer=null;SAVE_PENDING=null;
     const saved=await persistWorldSnapshot(DB,SLOT,STORE);
     if(!saved)throw new Error('현재 슬롯 저장에 실패했습니다. 슬롯 전환을 중단했습니다.');
     const key=STORE_BASE+nextSlot;
@@ -16197,7 +16227,6 @@ function viewSeason(){
   return `<section class="seasonhead">
     <div><h2>${w.year} 시즌</h2><p>${T?esc(T.name):managedTeamId(DB)?'관리 구단 확인 필요':'무소속 감독'} · ${seasonManagedRegion()?esc(DB.regions[T.region].leagueName):'지역 정보 없음'}${lgS?' '+esc(lgS.label):''} ${mine&&(mine.w+mine.l)?`${rank}위 (${mine.w}승 ${mine.l}패)`:''} · ${esc(phaseText(w))}</p></div>${right}
   </section>
-  ${SAVEFAIL?'<p class="warn">브라우저 저장 공간이 부족해 진행 상황을 저장하지 못했습니다. 데이터 탭에서 JSON을 복사해 두세요.</p>':''}
   <section class="controls">${controlsFor(w)}<span id="sprog" class="hint" role="status">${esc(seasonProgressNotice())}</span></section>
   ${T?renderClubBriefing():''}
   ${renderTransferEntry()}
@@ -16250,9 +16279,11 @@ function renderReport(r){
    </div></section>`;
 }
 
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveBeforeBackground()});
+window.addEventListener('pagehide',saveBeforeBackground);
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>navigateTo(b.dataset.v));
 $('#main').innerHTML='<p class="empty">세계를 불러오는 중…</p>';
-loadDB().then(d=>{DB=d;nav()}).catch(e=>{
+loadDB().then(d=>{DB=d;nav();publishSaveStatus()}).catch(e=>{
   console.error('LOL GM initialization failed',e);
   if(typeof startupBootFailure==='function'){startupBootFailure(e);return}
   $('#main').innerHTML=`<section><h2>게임을 시작하지 못했습니다</h2><p class="warn">${esc(e&&e.message?e.message:'초기화 오류')}</p><p class="hint">저장 데이터 오류가 발생한 경우 원본은 보존됩니다. 브라우저 저장소를 지우지 말고 JSON 백업을 확인해 주세요. 파일 미리보기 접근 오류라면 최신 HTML을 다시 열어 보세요.</p><button class="primary" id="retryboot">다시 시도</button></section>`;

@@ -1,4 +1,12 @@
 // ===== LOL GM: Save-slot / import-export UI =====
+function saveStatusText(){
+  const phase=typeof currentSaveStatus==='function'?currentSaveStatus():SAVEFAIL?'failed':'idle';
+  return phase==='saved'?'마지막 저장 확인'+(SAVE_STATUS.date?' · '+SAVE_STATUS.date:''):phase==='saving'?'저장 중입니다. 완료를 확인한 뒤 종료하세요.':phase==='pending'?(SAVEFAIL?'저장 재시도 대기 중 · 원본을 내보내 보관하세요.':'변경 사항 저장 대기 중'):phase==='failed'?'현재 게임을 저장하지 못했습니다. 원본을 내보내 보관하세요.':'자동 저장 사용';
+}
+function updateSaveStatus(){
+  const text=DB?saveStatusText():'';
+  for(const node of document.querySelectorAll?.('[data-save-status]')||[]){node.textContent=text;node.classList?.toggle('warn',SAVEFAIL);node.classList?.toggle('hint',!SAVEFAIL)}
+}
 function slotMeta(n){try{return JSON.parse(localStorage.getItem(STORAGE_NS+'-meta-'+n)||'null')}catch(e){return null}}
 function viewData(){
   return renderSavedGames()+`<details class="cfgcard"><summary>저장 원본 관리</summary>
@@ -22,6 +30,8 @@ function bindData(){
   };
   document.querySelectorAll('[data-slot]').forEach(b=>b.onclick=()=>loadSavedGame(b));
   bindSavedGames(current,loadSavedGame);
+  const save=$('#save-now');let saving=false;
+  if(save)save.onclick=async()=>{if(saving||!current())return;saving=true;save.disabled=true;try{await saveNow()}catch(e){console.error('LOL GM manual save failed',e)}finally{saving=false;if(current())save.disabled=false}};
   $('#ddownload').onclick=()=>{if(!current())return;try{const raw=packDB(DB),url=URL.createObjectURL(new Blob([raw],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download=`LOL-GM-저장-${DB.worldDate||DB.year||'게임'}.json`;link.click();URL.revokeObjectURL(url);msg('게임 파일 내보내기를 요청했습니다. 내려받은 파일을 보관하세요.')}catch(e){console.error('LOL GM save export failed',e);msg('파일을 내보내지 못했습니다. 원본 직접 보기에서 복사해 보관하세요.')} };
   let fileRead=0;
   $('#dchoose').onclick=()=>{if(current())$('#dfile').click()};

@@ -18,7 +18,7 @@ function idb(){return new Promise((res,rej)=>{
   try{
     const r=indexedDB.open(STORAGE_NS,1);
     r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('kv'))r.result.createObjectStore('kv')};
-    r.onsuccess=()=>finish(true,r.result);
+    r.onsuccess=()=>{if(done){try{r.result.close()}catch(e){}return}finish(true,r.result)};
     r.onerror=()=>finish(false,r.error||new Error('IndexedDB open failed'));
     r.onblocked=()=>finish(false,new Error('IndexedDB blocked'));
   }catch(e){finish(false,e)}
@@ -53,18 +53,26 @@ async function loadDB(key=STORE){
     throw new Error('저장 데이터를 복원할 수 없습니다. 원본은 삭제하거나 덮어쓰지 않았습니다. '+invalid.join(' / '));
   return buildWorld();
 }
-let saveTimer=null;
+let saveTimer=null,SAVE_PENDING=null,SAVE_STATUS=null;
 // Per-slot write queues keep late IndexedDB completions from overwriting a
 // newer snapshot. All bytes and metadata are frozen before joining the queue.
 const SAVE_QUEUES=new Map();
-function persistWorldSnapshot(db,slot,key){
-  const str=packDB(db),teamId=managedTeamId(db);
+function currentSaveStatus(){return SAVE_STATUS&&SAVE_STATUS.db===DB&&SAVE_STATUS.slot===SLOT&&SAVE_STATUS.key===STORE?SAVE_STATUS.phase:'idle'}
+function publishSaveStatus(){if(typeof updateSaveStatus==='function')updateSaveStatus()}
+function beginSaveStatus(db,slot,key,phase){const status={db,slot,key,phase};if(DB===db&&SLOT===slot&&STORE===key){SAVE_STATUS=status;publishSaveStatus()}return status}
+function finishSaveStatus(status,ok){if(SAVE_STATUS!==status||DB!==status.db||SLOT!==status.slot||STORE!==status.key)return;SAVEFAIL=!ok;status.phase=ok?'saved':'failed';publishSaveStatus()}
+function persistWorldSnapshot(db,slot,key,status=null){
+  status=status||beginSaveStatus(db,slot,key,'saving');
+  let str;try{str=packDB(db)}catch(e){finishSaveStatus(status,false);throw e}
+  status.date=db.worldDate||String(db.world?.year||db.year||'');status.phase='saving';if(SAVE_STATUS===status)publishSaveStatus();const teamId=managedTeamId(db);
   const meta=JSON.stringify({team:teamId&&db.teams[teamId]?db.teams[teamId].name:'',year:db.world?db.world.year:''});
   const prior=SAVE_QUEUES.get(key)||Promise.resolve(true);
   const next=prior.then(async()=>{
     try{
       await idbSet(key,str);
-      try{localStorage.removeItem(key)}catch(e){}
+      try{localStorage.removeItem(key)}catch(e){
+        try{const fallback=localStorage.getItem(key);if(fallback!==null&&fallback!==str)localStorage.setItem(key,str)}catch(e2){return false}
+      }
     }catch(e){
       try{localStorage.setItem(key,str)}catch(e2){return false}
     }
@@ -72,18 +80,28 @@ function persistWorldSnapshot(db,slot,key){
     return true;
   });
   SAVE_QUEUES.set(key,next);
-  next.then(ok=>{if(DB===db&&SLOT===slot)SAVEFAIL=!ok});
+  next.then(ok=>finishSaveStatus(status,ok));
   return next;
 }
 function saveDB(){
   const db=DB,slot=SLOT,key=STORE;
   clearTimeout(saveTimer);
-  saveTimer=setTimeout(()=>{
-    saveTimer=null;
-    try{void persistWorldSnapshot(db,slot,key)}
-    catch(e){if(DB===db&&SLOT===slot)SAVEFAIL=true;console.error('LOL GM save failed',e)}
-  },150);
+  const status=beginSaveStatus(db,slot,key,'pending');
+  SAVE_PENDING={db,slot,key,run:()=>{
+    saveTimer=null;SAVE_PENDING=null;
+    try{return persistWorldSnapshot(db,slot,key,status)}
+    catch(e){finishSaveStatus(status,false);console.error('LOL GM save failed',e);return Promise.resolve(false)}
+  }};
+  saveTimer=setTimeout(SAVE_PENDING.run,150);
 }
+function flushPendingSave(){const pending=SAVE_PENDING;if(!pending)return null;clearTimeout(saveTimer);saveTimer=null;return pending.run()}
+async function saveNow(){
+  if(!DB||SLOT_SWITCHING)return false;
+  const pending=SAVE_PENDING,db=DB,slot=SLOT,key=STORE;
+  if(pending){const result=await flushPendingSave();if(pending.db===db&&pending.slot===slot&&pending.key===key)return result;if(DB!==db||SLOT!==slot||STORE!==key)return false}
+  return persistWorldSnapshot(db,slot,key);
+}
+function saveBeforeBackground(){if(SAVE_PENDING)void saveNow().catch(e=>console.error('LOL GM background save failed',e))}
 async function switchSaveSlot(nextSlot,acceptLoaded=null){
   if(SLOT_SWITCHING||nextSlot===SLOT||!SAVE_SLOTS.includes(nextSlot))
     return {ok:false,error:'이미 슬롯을 전환 중이거나 올바르지 않은 슬롯입니다.'};
@@ -95,7 +113,7 @@ async function switchSaveSlot(nextSlot,acceptLoaded=null){
   if(navigation)navigation.inert=true;
   let switched=false,error='';
   try{
-    clearTimeout(saveTimer);saveTimer=null;
+    clearTimeout(saveTimer);saveTimer=null;SAVE_PENDING=null;
     const saved=await persistWorldSnapshot(DB,SLOT,STORE);
     if(!saved)throw new Error('현재 슬롯 저장에 실패했습니다. 슬롯 전환을 중단했습니다.');
     const key=STORE_BASE+nextSlot;
@@ -163,7 +181,6 @@ function viewSeason(){
   return `<section class="seasonhead">
     <div><h2>${w.year} 시즌</h2><p>${T?esc(T.name):managedTeamId(DB)?'관리 구단 확인 필요':'무소속 감독'} · ${seasonManagedRegion()?esc(DB.regions[T.region].leagueName):'지역 정보 없음'}${lgS?' '+esc(lgS.label):''} ${mine&&(mine.w+mine.l)?`${rank}위 (${mine.w}승 ${mine.l}패)`:''} · ${esc(phaseText(w))}</p></div>${right}
   </section>
-  ${SAVEFAIL?'<p class="warn">브라우저 저장 공간이 부족해 진행 상황을 저장하지 못했습니다. 데이터 탭에서 JSON을 복사해 두세요.</p>':''}
   <section class="controls">${controlsFor(w)}<span id="sprog" class="hint" role="status">${esc(seasonProgressNotice())}</span></section>
   ${T?renderClubBriefing():''}
   ${renderTransferEntry()}
@@ -216,9 +233,11 @@ function renderReport(r){
    </div></section>`;
 }
 
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveBeforeBackground()});
+window.addEventListener('pagehide',saveBeforeBackground);
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>navigateTo(b.dataset.v));
 $('#main').innerHTML='<p class="empty">세계를 불러오는 중…</p>';
-loadDB().then(d=>{DB=d;nav()}).catch(e=>{
+loadDB().then(d=>{DB=d;nav();publishSaveStatus()}).catch(e=>{
   console.error('LOL GM initialization failed',e);
   if(typeof startupBootFailure==='function'){startupBootFailure(e);return}
   $('#main').innerHTML=`<section><h2>게임을 시작하지 못했습니다</h2><p class="warn">${esc(e&&e.message?e.message:'초기화 오류')}</p><p class="hint">저장 데이터 오류가 발생한 경우 원본은 보존됩니다. 브라우저 저장소를 지우지 말고 JSON 백업을 확인해 주세요. 파일 미리보기 접근 오류라면 최신 HTML을 다시 열어 보세요.</p><button class="primary" id="retryboot">다시 시도</button></section>`;
