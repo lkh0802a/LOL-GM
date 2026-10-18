@@ -226,7 +226,7 @@ function contractMarket(db,rng,rep,ev){
     const fas=Object.values(db.players).filter(p=>!p.retired&&!p.team);
     const offers={};
     if(round===0&&mine)for(const o of w.offers||[]){const p=db.players[o.pid];if(p&&!p.team)(offers[p.id]=offers[p.id]||[]).push({t:db.teams[mine],sal:o.salary,years:o.years,starter:starterFor(db,db.teams[mine],p.role)?playerOvr(p)>playerOvr(starterFor(db,db.teams[mine],p.role)):true,mine:true})}
-    for(const t of rng.shuffle(activeTeams(db).filter(t=>t.id!==mine&&!t.parent))){
+    for(const t of shuffleWithRng(activeTeams(db).filter(t=>t.id!==mine&&!t.parent),rng)){
       const R=db.regions[t.region];
       for(const role of ROLES){
         const cur=starterFor(db,t,role), cv=cur?playerValue(db,cur,t):-99;

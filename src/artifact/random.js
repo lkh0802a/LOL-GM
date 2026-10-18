@@ -11,9 +11,9 @@ class RNG{
   normal(m=0,s=1){if(this.sp!==null){const z=this.sp;this.sp=null;return m+s*z}const u=1-this.next(),v=this.next(),r=Math.sqrt(-2*Math.log(u));this.sp=r*Math.sin(2*Math.PI*v);return m+s*r*Math.cos(2*Math.PI*v)}
   pick(arr){return arr[Math.floor(this.next()*arr.length)]}
   int(a,b){return a+Math.floor(this.next()*(b-a+1))}
-  // Fisher–Yates consumes exactly n-1 draws from this existing stream. Never
-  // hand a stateful random comparator to Array.sort or mutate the candidate list.
-  shuffle(arr){const out=arr.slice();for(let i=out.length-1;i>0;i--){const j=this.int(0,i),value=out[i];out[i]=out[j];out[j]=value}return out}
 }
+// Copy Fisher–Yates uses the existing next() protocol, including RNG test doubles.
+// Exactly n-1 draws; candidate order/references and other streams stay untouched.
+function shuffleWithRng(arr,rng){const out=arr.slice();for(let i=out.length-1;i>0;i--){const j=Math.floor(rng.next()*(i+1)),value=out[i];out[i]=out[j];out[j]=value}return out}
 // 원인별로 분리된 랜덤 스트림
 function makeStreams(seed){return {mech:new RNG(seed,'mechanical'),dec:new RNG(seed,'decision'),info:new RNG(seed,'information'),exec:new RNG(seed,'execution'),draft:new RNG(seed,'draft'),log:new RNG(seed,'log')}}
