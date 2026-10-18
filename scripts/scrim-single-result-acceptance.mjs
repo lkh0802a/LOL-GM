@@ -1,3 +1,5 @@
+import {assertCurrentCheckPlan} from './current-check-plan.mjs';
+await assertCurrentCheckPlan();
 import {runEngineFixture,artifactSource} from './test-harness.mjs';
 
 const ui=await artifactSource('ui-match.js');
