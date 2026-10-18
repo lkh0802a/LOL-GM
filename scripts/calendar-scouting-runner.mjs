@@ -12,6 +12,7 @@ const acceptances=[
   'timezone-calendar-acceptance.mjs',
   'scrim-partner-acceptance.mjs',
   'scrim-plans-acceptance.mjs',
+  'scrim-single-result-acceptance.mjs',
   'fight-skill-acceptance.mjs',
   'match-ending-acceptance.mjs',
   'source-control-acceptance.mjs',

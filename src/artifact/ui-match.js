@@ -6,21 +6,22 @@ function viewMatch(){
   if(!DB.teams[SEL.red]||DB.teams[SEL.red].active===false||SEL.red===own)SEL.red=(act.find(t=>t.id!==own)||act[0]).id;
   const oppOpts=Object.values(DB.regions).flatMap(r=>(r.div2?[1,2]:[1]).map(d=>`<optgroup label="${esc(d===2?divName(r):r.leagueName)}">${activeTeams(DB,r.id,d).filter(t=>t.id!==own).map(t=>`<option value="${t.id}"${t.id===SEL.red?' selected':''}>${esc(t.name)} · 연습가치 ${Math.round(scrimValue(DB,own,t.id)*100)}%</option>`).join('')}</optgroup>`)).join('');
   const ready=scrimReadiness(DB,DB.teams[own]),rec=trainingRecommendation(DB,DB.teams[own]);
-  return `<section class="teamhead"><h2>스크림</h2><p>내 팀과 실제 구단을 골라 비공식 연습 경기를 진행합니다. 결과는 공식 전적·리그 순위에 반영되지 않습니다.</p><p class="hint">현재 평균 피로 ${Math.round(ready.avgFatigue||0)} · 컨디션 ${Math.round(ready.avgCondition||0)} · 오늘 ${ready.games||0}게임 · ${ready.reason}</p><p class="hint">${rec.next?`다음 공식전까지 ${rec.days}일 · ${esc(DB.teams[rec.next.opponent]?.name||'상대 미정')}`:'예정된 공식전 없음'} · 스크림 추천 ${rec.scrim?'진행':'휴식'}</p></section>
+  return `<section class="teamhead"><h2>스크림</h2><p>내 팀과 실제 구단을 골라 비공식 연습 경기를 진행합니다. 결과는 공식 전적·리그 순위에 반영되지 않습니다. 스크림은 선택한 세트 수를 전부 진행하며 양 팀의 잔여 연습 시간이 필요합니다.</p><p class="hint">현재 평균 피로 ${Math.round(ready.avgFatigue||0)} · 컨디션 ${Math.round(ready.avgCondition||0)} · 오늘 ${ready.games||0}게임 · ${ready.reason}</p><p class="hint">${rec.next?`다음 공식전까지 ${rec.days}일 · ${esc(DB.teams[rec.next.opponent]?.name||'상대 미정')}`:'예정된 공식전 없음'} · 스크림 추천 ${rec.scrim?'진행':'휴식'}</p></section>
   <section class="controls">
     <label>내 팀 <b>${esc(DB.teams[own].name)}</b></label>
     <label>상대팀<select id="red">${oppOpts}</select></label>
-    <label>형식<select id="bo">${[1,3,5].map(n=>`<option value="${n}"${SEL.bo===n?' selected':''}>${n===1?'단판':'Bo'+n}</option>`).join('')}</select></label>
+    <label>형식<select id="bo">${[1,3,5].map(n=>`<option value="${n}"${SEL.bo===n?' selected':''}>${n===1?'단판':n+'세트 전부'}</option>`).join('')}</select></label>
     <button class="ghost" id="draftpractice"${ready.ok?'':' disabled'}>밴픽 연습</button>
     <button class="primary" id="play"${ready.ok?'':' disabled'}>스크림 시작</button>
   </section>
   <div id="result">${LASTSER?renderSeries(LASTSER,true):LAST?renderResult(LAST):`<p class="empty">상대 팀과 형식을 고르고 스크림을 시작하세요. 같은 조건에서도 결과는 달라질 수 있습니다.</p>`}</div>`;
 }
 function bindMatch(){
+  const db=DB,slot=SLOT,manager=DB.manager;
   $('#red').onchange=e=>SEL.red=e.target.value;
   $('#bo').onchange=e=>SEL.bo=+e.target.value;
   $('#draftpractice').onclick=()=>openDraftPractice(DB,SEL.blue,SEL.red);
-  $('#play').onclick=()=>{const readiness=scrimReadiness(DB,DB.teams[SEL.blue]);if(!readiness.ok){MSG=readiness.reason;nav();return}const seed=freshInternalSeed('scrim'),series=simulateSeries(DB,SEL.blue,SEL.red,SEL.bo,seed,{fearless:true,firstChoice:'coin',replay:true,practice:true});recordScrimPractice(DB,series.rec,series.lines);saveDB();if(SEL.bo===1){LASTSER=null;LAST=simulateMatch(DB,SEL.blue,SEL.red,seed);$('#result').innerHTML=renderResult(LAST);bindResult()}
+  $('#play').onclick=()=>{if(DB!==db||SLOT!==slot||SLOT_SWITCHING||DB.manager!==manager||DB.world?.manage==='ai'||DB.world?.fired||!managerControlsSquad(DB,DB.teams[SEL.blue])||![1,3,5].includes(SEL.bo))return;const readiness=[SEL.blue,SEL.red].map(id=>scrimReadiness(DB,DB.teams[id])),blocked=readiness.find(r=>!r.ok||r.remaining<SEL.bo);if(blocked){MSG=blocked.ok?'선택한 스크림의 모든 세트를 진행할 연습 시간이 부족합니다. 단판 또는 더 짧은 형식을 선택하세요.':blocked.reason;nav();return}const seed=freshInternalSeed('scrim'),series=simulateSeries(DB,SEL.blue,SEL.red,SEL.bo,seed,{fearless:true,firstChoice:'coin',replay:true,practice:true,detailGame:SEL.bo===1?1:null});recordScrimPractice(DB,series.rec,series.lines);saveDB();if(SEL.bo===1){LASTSER=null;LAST=series.detail;$('#result').innerHTML=renderResult(LAST);bindResult()}
     else{LAST=null;LASTSER=series.rec;$('#result').innerHTML=renderSeries(LASTSER,true);bindSeries($('#result'),LASTSER)}};
   if(LASTSER)bindSeries($('#result'),LASTSER);else if(LAST)bindResult();
 }
