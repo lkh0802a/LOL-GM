@@ -1,4 +1,5 @@
-import './verify-squad-draft-recovery-evidence.mjs';
+// Historical squad recovery evidence is audited separately; this acceptance
+// tests the current staged squad editor against the live engine.
 import {runEngineFixture,artifactSources,artifactSource} from './test-harness.mjs';
 await runEngineFixture(String.raw`(()=>{
  const check=(ok,msg)=>{if(!ok)throw Error('SQUAD_STAGING '+msg)};
