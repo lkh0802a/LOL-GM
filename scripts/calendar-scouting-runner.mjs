@@ -11,6 +11,7 @@ const acceptances=[
   'local-policy-acceptance.mjs',
   'timezone-calendar-acceptance.mjs',
   'loan-calendar-acceptance.mjs',
+  'seeded-shuffle-acceptance.mjs',
   'scrim-partner-acceptance.mjs',
   'scrim-plans-acceptance.mjs',
   'scrim-single-result-acceptance.mjs',
