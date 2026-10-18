@@ -23,6 +23,7 @@ function bindStartupSavedGames(){
   const empty=rows.find(r=>r.state==='empty');
   box.innerHTML=page==='load'?savedGamesRows(rows):`${empty?`<button class="primary" type="button" data-startup-slot="${empty.slot}">빈 저장에 새 게임 시작</button>`:'<p>사용할 수 있는 빈 저장 위치가 없습니다. 기존 게임을 불러오거나 파일로 보관한 뒤 원본 관리에서 확인하세요.</p>'}<p class="hint">손상되거나 읽지 못한 저장은 사용하지 않습니다.</p><button class="linklike" type="button" data-startup-existing>기존 게임 불러오기</button>`;
   box.querySelectorAll('[data-slot], [data-startup-slot]').forEach(b=>{let used=false;b.onclick=async()=>{if(used||!valid())return;used=true;await startupChooseSlot(b.dataset.slot||b.dataset.startupSlot,valid)}});
+  box.querySelectorAll('[data-recover]').forEach(b=>b.onclick=()=>{if(valid())void openSaveRecovery(b.dataset.recover)});
   box.querySelector('[data-startup-existing]')?.addEventListener('click',()=>{if(valid())startupMove('load')});
  })().catch(error=>{console.error(error);if(valid())box.innerHTML='<p class="warn">저장 목록을 확인하지 못했습니다. 원본은 유지됩니다.</p>'});
 }
@@ -44,7 +45,7 @@ function renderSavedGames(){
 function savedGamesRows(rows){
  const present=rows.filter(r=>r.state!=='empty');
  if(!present.length)return '<p class="hint">다른 저장된 게임이 없습니다.</p>';
- return present.map((r,i)=>r.state==='saved'?`<article class="cfgcard compact"><div class="cfghead"><h3>${savedGameLabel(r.summary)}</h3><button class="ghost" type="button" data-slot="${r.slot}">불러오기</button></div>${r.summary.date?`<p>게임 날짜 ${esc(r.summary.date)}</p>`:''}${!r.summary.started?'<p class="hint">커리어 선택 전</p>':''}</article>`:`<article class="cfgcard compact"><h3>확인하지 못한 저장 ${i+1}</h3><p class="warn">${r.state==='damaged'?'저장 데이터를 복원할 수 없습니다.':'저장소를 읽을 수 없습니다.'} 원본은 유지됩니다. 목록을 다시 확인하거나 원본 관리에서 보관한 파일을 가져오세요.</p></article>`).join('');
+ return present.map((r,i)=>r.state==='saved'?`<article class="cfgcard compact"><div class="cfghead"><h3>${savedGameLabel(r.summary)}</h3><button class="ghost" type="button" data-slot="${r.slot}">불러오기</button></div>${r.summary.date?`<p>게임 날짜 ${esc(r.summary.date)}</p>`:''}${!r.summary.started?'<p class="hint">커리어 선택 전</p>':''}</article>`:`<article class="cfgcard compact"><h3>확인하지 못한 저장 ${i+1}</h3><p class="warn">${r.state==='damaged'?'저장 데이터를 복원할 수 없습니다.':'저장소를 읽을 수 없습니다.'} 원본은 유지됩니다. 목록을 다시 확인하거나 원본 관리에서 보관한 파일을 가져오세요.</p>${!DB?`<button data-recover="${r.slot}">보관 원본 복구</button>`:''}</article>`).join('');
 }
 function bindSavedGames(current,onLoad){
  const run=++SAVE_LIBRARY_RUN,box=$('#save-games-list'),refresh=$('#save-games-refresh');
