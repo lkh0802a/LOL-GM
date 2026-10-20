@@ -23,7 +23,11 @@ await runEngineFixture(String.raw`(()=>{
  const rawBefore=JSON.stringify(db);model=initialComparisonModel(db,INITMK);check(model.rows[0].sources.rows.length===1&&model.rows[0].sources.excluded===3,'future/missing/ambiguous exclude');
  const rendered=initialComparisonPanel(db,INITMK);check(!rendered.includes('future-secret')&&!rendered.includes('future-patch')&&rendered.includes('data-init-compare-source')&&rendered.includes('패치')&&rendered.includes('게임 ID 미보관'),'source controls/context');check(JSON.stringify(db)===rawBefore,'source read rewrote raw');
  INITMK.comparison.comp='absent';check(initialComparisonModel(db,INITMK).rows.every(r=>!r.sources.rows.length),'shared filter');INITMK.comparison.comp='ALL';
- const attr=a.attrs.reaction;delete a.attrs.reaction;model=initialComparisonModel(db,INITMK);check(!Number.isFinite(model.rows[0].metrics.skirmish)&&initialComparisonRadar(model.rows).includes('축 누락으로 차트 제외'),'missing radar axis never zero-filled');a.attrs.reaction=attr;
+ // A missing private attribute must not alter an already presented public view.
+ const attr=a.attrs.reaction,shownBefore=JSON.stringify(initialComparisonModel(db,INITMK).rows[0].metrics);delete a.attrs.reaction;check(JSON.stringify(initialComparisonModel(db,INITMK).rows[0].metrics)===shownBefore,'private missing axis leaked');a.attrs.reaction=attr;
+ // Exercise the original missing-axis assertion at its actual observation source.
+ const priorScout=db.scout[a.id]?JSON.parse(JSON.stringify(db.scout[a.id])):null;observePlayer(db,a,24);delete db.scout[a.id].observedAttributes.reaction;
+ model=initialComparisonModel(db,INITMK);check(!Number.isFinite(model.rows[0].metrics.skirmish)&&initialComparisonRadar(model.rows).includes('축 누락으로 차트 제외'),'missing radar axis never zero-filled');if(priorScout)db.scout[a.id]=priorScout;else delete db.scout[a.id];
  b.retired=true;check(initialComparisonModel(db,INITMK).rows.find(r=>r.id===b.id).status==='은퇴한 선수','retired status');b.retired=false;b.team=x.id;check(initialComparisonModel(db,INITMK).rows.find(r=>r.id===b.id).status==='이미 소속된 선수','departed status');b.team=null;
  const foreign=JSON.stringify(db);check(!initialComparisonModel(db,{...INITMK,target:x.id}).allowed&&JSON.stringify(db)===foreign,'foreign authority');db.world.fired=true;check(!initialComparisonModel(db,INITMK).allowed,'fired');db.world.fired=false;
  // Actual old DOM scout handler is inert after loading a replacement world.

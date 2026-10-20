@@ -84,6 +84,7 @@ const acceptances=[
   'opponent-draft-acceptance.mjs',
   'player-champion-information-acceptance.mjs',
   'observer-player-profile-acceptance.mjs',
+  'observer-information-acceptance.mjs',
   'training-allocation-acceptance.mjs',
   'cohesion-practice-acceptance.mjs',
   'relationship-decisions-acceptance.mjs',
