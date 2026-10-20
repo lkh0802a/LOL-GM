@@ -87,7 +87,7 @@ const result=await runEngineFixture(String.raw`(()=>{
   while(!seriesSessionDone(live))playSeriesSessionGame(sourceDb,live);
   while(!seriesSessionDone(resumed))playSeriesSessionGame(resumeDb,resumed);
   same(seriesSessionResult(sourceDb,live),seriesSessionResult(resumeDb,resumed),'saved session preserves remaining actual sets');
-  const completed=seriesSessionResult(resumeDb,resumed).rec,last=completed.games[4];check(replayGame(resumeDb,completed,last)?.seed===last.seed,'practice replay reaches the fifth actual set');
+  const completed=seriesSessionResult(resumeDb,resumed).rec,last=completed.games[4];check(replayGame(resumeDb,completed,last)?.seed===last.seed,'stored practice review reaches the fifth original set');
   const official={...resumed,opt:{...resumed.opt,practice:false},wins:{[a.id]:3,[b.id]:0},games:resumed.games.slice(0,3)};
   check(seriesSessionDone(official),'official five-game maximum still stops at three wins');
   check(seriesSessionPrepareGame(resumeDb,official)===null,'no extra official game');

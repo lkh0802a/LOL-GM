@@ -94,6 +94,7 @@ export const ENGINE_MODULES = [
   'draft-preparation.js',
   'draft-history.js',
   'match-history.js',
+  'history-identity.js',
   'analysis-tiers.js',
   'career.js',
   'negotiation-final.js',

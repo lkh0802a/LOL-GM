@@ -89,19 +89,20 @@ function renderExpl(r){
 const tname=id=>DB.teams[id]?DB.teams[id].name:id, tshort=id=>DB.teams[id]?DB.teams[id].short:id;
 const pnm=id=>DB.players[id]?DB.players[id].name:id;
 function renderSeries(rec,big){
-  const aw=rec.winner===rec.a;
+  if(rec.practiceModel&&(DB.world?.fired||!rec.games?.length||rec.games.some(g=>![g.blue,g.red].some(id=>managerControlsSquad(DB,id)))))return '<section><p>비공개 스크림 조회 권한이 없습니다.</p></section>';
+  const aw=rec.winner===rec.a,identity=recordedSeriesIdentity(DB,rec);
   return `<section class="board ser">
-    <div class="side blue ${aw?'won':''}"><div class="tname">${esc(tname(rec.a))}</div><div class="res">${aw?'승리':'패배'}</div></div>
+    <div class="side blue ${aw?'won':''}"><div class="tname">${esc(recordedTeamLabel(identity,rec.a))}</div><div class="res">${aw?'승리':'패배'}</div></div>
     <div class="score"><span>${rec.score[0]}</span><i>:</i><span>${rec.score[1]}</span><div class="dur">Bo${rec.bestOf}${rec.fearless?' · 하드 피어리스':''}${rec.patch?' · 패치 '+esc(rec.patch):''}</div></div>
-    <div class="side red ${!aw?'won':''}"><div class="tname">${esc(tname(rec.b))}</div><div class="res">${!aw?'승리':'패배'}</div></div>
+    <div class="side red ${!aw?'won':''}"><div class="tname">${esc(recordedTeamLabel(identity,rec.b))}</div><div class="res">${!aw?'승리':'패배'}</div></div>
   </section>
-  <section><h3>세트별 결과</h3><ol class="games">${rec.games.map((g,i)=>`<li><button class="game" data-g="${i}">
+  <section><h3>세트별 결과</h3><ol class="games">${rec.games.map((g,i)=>{const identity=recordedSeriesIdentity(DB,rec,g);return `<li><button class="game" data-g="${i}">
     <span class="gn">${g.n}세트</span>
-    <span class="gside"><i class="dot blue"></i>${esc(tshort(g.blue))} <b>${g.kills[0]}</b> : <b>${g.kills[1]}</b> ${esc(tshort(g.red))}<i class="dot red"></i></span>
-    <span class="gw">${esc(tshort(g.winner))} 승 · ${g.dur}</span>
-    ${g.picks?`<span class="gp">블루 ${g.picks[0].map(c=>esc(championLabel(DB,c))).join(', ')}<br>레드 ${g.picks[1].map(c=>esc(championLabel(DB,c))).join(', ')}</span>`:''}
-    <span class="gm">${g.sideBy?`${esc(tshort(g.sideBy))} 선택권: ${!DB.world?.fired&&managerControlsSquad(DB,g.sideBy)?esc(g.sideWhy||''):''} · 선픽 ${esc(tshort(g.firstPick||g.blue))} · `:''}POG ${esc(pnm(g.mvp))}</span>
-  </button>${renderRecordedDraftReview(DB,rec,g)}</li>`).join('')}</ol><p class="hint">세트를 누르면 저장된 당시 경기 기록이 열립니다.</p></section>
+    <span class="gside"><i class="dot blue"></i>${esc(recordedTeamLabel(identity,g.blue,true))} <b>${g.kills[0]}</b> : <b>${g.kills[1]}</b> ${esc(recordedTeamLabel(identity,g.red,true))}<i class="dot red"></i></span>
+    <span class="gw">${esc(recordedTeamLabel(identity,g.winner,true))} 승 · ${g.dur}</span>
+    ${g.picks?`<span class="gp">블루 ${g.picks[0].map(c=>esc(identity.champions[c]||c)).join(', ')}<br>레드 ${g.picks[1].map(c=>esc(identity.champions[c]||c)).join(', ')}</span>`:''}
+    <span class="gm">${g.sideBy?`${esc(recordedTeamLabel(identity,g.sideBy,true))} 선택권: ${!DB.world?.fired&&managerControlsSquad(DB,g.sideBy)?esc(g.sideWhy||''):''} · 선픽 ${esc(recordedTeamLabel(identity,g.firstPick||g.blue,true))} · `:''}POG ${esc(recordedPlayerLabel(identity,g.mvp))}</span>
+  </button>${renderRecordedDraftReview(DB,rec,g)}</li>`}).join('')}</ol><p class="hint">세트를 누르면 저장된 당시 경기 기록이 열립니다. 당시 명칭이 없으면 식별자를 표시하며 현재 상태로 재계산하지 않습니다.</p></section>
   <div class="gamedetail"></div>`;
 }
 function fmtMod(v){v=v||0;return (v>=0?'+':'')+(v*100).toFixed(1)+'%'}

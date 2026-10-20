@@ -3158,7 +3158,7 @@ function playSeriesSessionGame(db,sess,forcedDraft=null,quiet=true){
   const mvp=gameMVP(r);
   sess.games.push({n:sess.g,blue:cur.blue,red:cur.red,seed:cur.gseed,mods:cur.snap.mods,winner:wId,bans:r.draft.bans,sideBy:cur.chooser,sideWhy:cur.sc.why,selectionEvidence:recordedSelectionEvidence(cur.sc.evidence),firstPick:cur.fpTeam,kills:[r.sides[0].kills,r.sides[1].kills],dur:r.durationStr,duration:r.duration,picks:pk,mvp});
   const recordedGame=sess.games[sess.games.length-1];recordedGame.date=r.date;recordedGame.patch=matchDb.patch.id;
-  if(!sess.opt.replay||sess.opt.practice)recordedGame.publicRecord=publicMatchRecord(r,matchDb.patch.id);
+  if(!sess.opt.replay||sess.opt.practice){recordedGame.publicRecord=publicMatchRecord(r,matchDb.patch.id,db);Object.defineProperty(r,'recordedPublicRecord',{value:recordedGame.publicRecord})}
   if(r.draft.sequence)recordedGame.draftSequence=copyDraftSequence(r.draft.sequence);
   const manualEvidence=(Array.isArray(forcedDraft?.manualEvidence)?forcedDraft.manualEvidence:[]).filter(e=>!db.world?.fired&&managerControlsSquad(db,db.teams[e?.team]));
   const evidence=recordedManualDraftEvidence({manualEvidence},recordedGame);
@@ -3184,13 +3184,11 @@ function simulateSeries(db,aId,bId,bestOf,seed,opt={}){
   const result=seriesSessionResult(db,sess);
   return detail?{...result,detail}:result;
 }
-// 저장된 세트를 당시 전술로 다시 재생
+// No complete historical engine snapshot is persisted. Return the original
+// observation instead of generating another match from current private state.
 function replayGame(db,rec,g){
-  const keep={};for(const t in rec.tac){keep[t]=db.teams[t].tactics;db.teams[t].tactics=rec.tac[t]}
-  const cur=db.patch; if(rec.patch&&rec.patch!==cur.id)db.patch=getPatch(db,rec.patch);
-  const forced=rec.games.map(x=>({picks:[0,1].map(i=>Object.fromEntries(ROLES.map((r,j)=>[r,x.picks[i][j]]))),bans:x.bans||[[],[]]}));
-  try{return simulateSeries(db,rec.a,rec.b,rec.bestOf,rec.seed,{fearless:rec.fearless,firstChoice:rec.firstChoice,capture:g.n,forced,selections:rec.games,replay:true,practice:rec.practiceModel==='engine'}).captured}
-  finally{for(const t in keep)db.teams[t].tactics=keep[t];db.patch=cur}
+  const saved=recordedPublicMatch(db,rec,g);
+  return {...saved,exact:false,basis:'recorded-only',...(saved.record?{seed:g.seed??null}:{})};
 }
 
 // ===== LOL GM: Competition / Stage 엔진 =====
@@ -3477,7 +3475,7 @@ function newSeason(db,compId,year,seed,start,instanceKey=compId){
   const comp=db.competitions[compId], st0=comp.stages[0], id=`season_${year}_${instanceKey}`;
   const venue=competitionVenue(db,comp);
   comp.timeZone=venue.timeZone;comp.venueRegion=venue.region;
-  const s={id,comp:compId,year,seed,days:[],cur:0,stage:0,stageData:{},pstats:{},done:false,champion:null,runnerUp:null,standingsMode:comp.region?(db.regions[comp.region]?.standingsMode||'independent'):null,venueTimeZone:venue.timeZone,venueRegion:venue.region};
+  const s={id,comp:compId,year,seed,formatSnapshot:historicalCompetitionSnapshot(db,comp),days:[],cur:0,stage:0,stageData:{},pstats:{},done:false,champion:null,runnerUp:null,standingsMode:comp.region?(db.regions[comp.region]?.standingsMode||'independent'):null,venueTimeZone:venue.timeZone,venueRegion:venue.region};
   comp.championPool=Object.values(db.patch.champions).filter(c=>championProEligible(db,c,start||db.worldDate)).map(c=>c.id);comp.championPoolLockedAt=start||db.worldDate;
   const rng=new RNG(seed,'schedule');
   let order=st0.type==='round_robin'&&!st0.groups?shuffleWithRng(comp.teams,rng):comp.teams.slice();
@@ -3643,7 +3641,7 @@ function finishStage(db,s,idx,date){
   } else { const st=standings(db,s,cfg.id); s.champion=st[0].tid; s.runnerUp=st[1].tid; }
   const first=comp.stages[0].type==='round_robin'?standings(db,s,comp.stages[0].id)[0].tid:null;
   const mvp=Object.entries(s.pstats).filter(([,p])=>p.g>=6).sort((x,y)=>y[1].mvp-x[1].mvp||((y[1].k+y[1].a)/(y[1].d||1))-((x[1].k+x[1].a)/(x[1].d||1)))[0];
-  db.history.push({year:s.year,comp:s.comp,compName:comp.name+(s.label?' '+s.label:''),region:comp.region||null,div:comp.div||1,intl:!!comp.international,champion:s.champion,runnerUp:s.runnerUp,regularFirst:first,mvp:mvp?mvp[0]:null,final:s.finalScore||null});
+  db.history.push({year:s.year,comp:s.comp,compName:comp.name+(s.label?' '+s.label:''),region:comp.region||null,div:comp.div||1,intl:!!comp.international,champion:s.champion,championName:db.teams[s.champion]?.name,runnerUp:s.runnerUp,runnerUpName:db.teams[s.runnerUp]?.name,regularFirst:first,mvp:mvp?mvp[0]:null,mvpName:mvp?db.players[mvp[0]]?.name:null,final:s.finalScore||null});
 }
 // 토너먼트 도달 점수: 우승 4, 준우승 3, 4강 2, 녹아웃 진출 1
 function elimReach(db,s,tid){
@@ -5583,8 +5581,8 @@ function unpackMetaHistory(rows){
 }
 const ALL_ATTRS=Object.values(ATTR_GROUPS).flat();
 function seriesResultForSave(r,lite){
-  const q={...r};delete q.seed;delete q.firstChoice;
-  if(lite&&!q.lite){q.games=(q.games||[]).map(g=>({n:g.n,blue:g.blue,red:g.red,winner:g.winner,kills:g.kills,dur:g.dur,mvp:g.mvp,...(g.publicRecord?{date:g.date,patch:g.patch,publicRecord:g.publicRecord}:{}),...(g.draftEvidence?{date:g.date,patch:g.patch,draftEvidence:g.draftEvidence,draftSequence:g.draftSequence,picks:g.picks,bans:g.bans}:{})}));delete q.tac;q.lite=true}
+  const q={...r};
+  if(lite&&!q.lite){q.games=(q.games||[]).map(g=>({n:g.n,blue:g.blue,red:g.red,...(g.seed!==undefined?{seed:g.seed}:{}),winner:g.winner,kills:g.kills,dur:g.dur,mvp:g.mvp,...(g.publicRecord?{date:g.date,patch:g.patch,publicRecord:g.publicRecord}:{}),...(g.draftEvidence?{date:g.date,patch:g.patch,draftEvidence:g.draftEvidence,draftSequence:g.draftSequence,picks:g.picks,bans:g.bans}:{})}));delete q.tac;q.lite=true}
   return q;
 }
 function worldForSave(db){
@@ -11735,7 +11733,7 @@ function aiSelectSponsor(db,t){
 // ---- 시상 · 명예의 전당 ----
 function seasonAwards(db,w,rep){
   db.awards=db.awards||[];
-  const give=(type,pid,comp)=>{if(!pid)return;db.awards.push({year:w.year,type,pid,comp});const p=db.players[pid];if(p){p.titles.push(`${w.year} ${comp} ${type}`);p.reputation=Math.round(clamp((p.reputation||playerOvr(p))+(type==='MVP'||type==='대회 MVP'?3:1),20,99));recordPlayerEvent(p,'award',w.year,{award:type,competition:comp})}rep.awards.push({type,pid,comp})};
+  const give=(type,pid,comp)=>{if(!pid)return;const p=db.players[pid];db.awards.push({year:w.year,type,pid,comp,playerName:p?.name});if(p){p.titles.push(`${w.year} ${comp} ${type}`);p.reputation=Math.round(clamp((p.reputation||playerOvr(p))+(type==='MVP'||type==='대회 MVP'?3:1),20,99));recordPlayerEvent(p,'award',w.year,{award:type,competition:comp})}rep.awards.push({type,pid,comp})};
   for(const R of Object.values(db.regions)){
     const ss=Object.values(w.seasons).filter(s=>s.region===R.id&&(s.div||1)===1&&s.split&&s.done); if(!ss.length)continue;
     const agg={};for(const s of ss)for(const [pid,st] of Object.entries(s.pstats)){const a=agg[pid]||(agg[pid]={g:0,w:0,k:0,d:0,a:0,mvp:0});for(const k of ['g','w','k','d','a','mvp'])a[k]+=st[k]}
@@ -12038,11 +12036,13 @@ function recordedDraftReview(db,rec,game,team=managedTeamId(db)){
 
 /* ==== FILE: match-history.js ==== */
 // Public event-time observations only. Never persist profiles/ratings/tactics.
-function publicMatchRecord(r,patch){
+function publicMatchRecord(r,patch,db=null){
+  if(r.recordedPublicRecord?.patch===patch)return JSON.parse(JSON.stringify(r.recordedPublicRecord));
   const events=(r.log||[]).filter(e=>['kill','fight','obj','tower','nexus'].includes(e.kind)),limit=24,
     selected=events.length>limit?[...events.slice(0,12),...events.slice(-12)]:events;
   return {version:1,...(r.laningHpBasis==='bounded-nonlethal-cost-v1'?{laningHpBasis:r.laningHpBasis}:{}),...(r.combatRoundBasis==='prepared-round-budget-v1'?{combatRoundBasis:r.combatRoundBasis}:{}),...publicMacroPicks(r),...(r.structureSelectionBasis==='progress-seeded-ties-v1'?{structureSelectionBasis:r.structureSelectionBasis}:{}),...(Array.isArray(r.takedownEvents)?{takedowns:{version:1,count:r.takedownEvents.length,events:(r.takedownEvents.length>24?[...r.takedownEvents.slice(0,12),...r.takedownEvents.slice(-12)]:r.takedownEvents).map(e=>({...e,payouts:e.payouts.map(x=>({...x}))}))}}:{}),...(Array.isArray(r.objectiveEvents)?{objectives:{version:1,events:r.objectiveEvents.map(e=>({...e,participants:e.participants.slice()}))}}:{}),...(r.damageBasis==='effective-aggregate-v1'?{damageBasis:r.damageBasis}:{}),...(r.ending?{ending:{...r.ending,winner:r.sides[r.ending.winner].team.id}}:{}),resources:{version:1,players:Object.fromEntries(r.sides.flatMap(s=>s.ps.map(p=>[p.p.id,matchGoldLedger(p)])))},date:r.date,patch,winner:r.sides[r.winner].team.id,duration:r.duration,
-    sides:r.sides.map(s=>({team:s.team.id,name:s.team.name,players:s.ps.map(p=>[p.p.id,p.p.name,p.role,p.champ.id,p.k,p.d,p.a,Math.round(p.cs),Math.round(p.goldEarned),Math.round(p.dmg),p.lvl,matchQuestItems(p).slice()])})),
+    ...(db&&r.comp?{competition:{id:r.comp,name:db.competitions[r.comp]?.name||r.comp}}:{}),
+    sides:r.sides.map(s=>({team:s.team.id,name:s.team.name,...(typeof s.team.short==='string'?{short:s.team.short}:{}),...(typeof s.team.region==='string'?{region:s.team.region,...(db?.regions[s.team.region]?.name?{regionName:db.regions[s.team.region].name}:{})}:{}),players:s.ps.map(p=>[p.p.id,p.p.name,p.role,p.champ.id,p.k,p.d,p.a,Math.round(p.cs),Math.round(p.goldEarned),Math.round(p.dmg),p.lvl,matchQuestItems(p).slice()])})),
     championNames:Object.fromEntries(r.sides.flatMap(s=>s.ps.map(p=>[p.champ.id,championDisplayName(p.champ)]))),
     itemNames:Object.fromEntries(r.sides.flatMap(s=>s.ps.flatMap(p=>matchQuestItems(p).map(id=>[id,p.patchRef?.itemDefs?.[id]?.name||id])))),
     eventCount:events.length,events:selected.map(e=>[e.t,e.sec,e.kind,e.side,e.text])};
@@ -12057,6 +12057,8 @@ function recordedPublicMatch(db,rec,game){
   if(rec.practiceModel&&(db.world?.fired||![game?.blue,game?.red].some(id=>managerControlsSquad(db,id))))return {reason:'no-authority',record:null};
   const p=game?.publicRecord;
   if(!p)return {reason:'not-recorded',record:null};
+  if(p.competition!==undefined&&(!p.competition||typeof p.competition.id!=='string'||typeof p.competition.name!=='string'))return {reason:'unverified-source',record:null};
+  if(Array.isArray(p.sides)&&p.sides.some(s=>['short','region','regionName'].some(k=>s?.[k]!==undefined&&typeof s[k]!=='string')))return {reason:'unverified-source',record:null};
   if(p.structureSelectionBasis!==undefined&&p.structureSelectionBasis!=='progress-seeded-ties-v1')return {reason:'unverified-source',record:null};
   if(p.laningHpBasis!==undefined&&p.laningHpBasis!=='bounded-nonlethal-cost-v1')return {reason:'unverified-source',record:null};
   if(p.combatRoundBasis!==undefined&&p.combatRoundBasis!=='prepared-round-budget-v1')return {reason:'unverified-source',record:null};
@@ -12086,6 +12088,66 @@ function officialMatchReviews(db,team,filter={}){
     }
   }
   return out.sort((a,b)=>b.date.localeCompare(a.date)||a.key.localeCompare(b.key)||a.di-b.di||a.mi-b.mi||a.gi-b.gi);
+}
+
+/* ==== FILE: history-identity.js ==== */
+// Event-time public identity only; never infer historical names from live maps.
+function mergeRecordedIdentity(target,source){
+  for(const [id,row] of Object.entries(source.teams))if(!target.teams[id])target.teams[id]={...row};
+  for(const [id,row] of Object.entries(source.players)){
+    const old=target.players[id];if(!old){target.players[id]={name:row.name,roles:row.roles.slice(),teams:row.teams.map(t=>({...t}))};continue}
+    for(const role of row.roles)if(!old.roles.includes(role))old.roles.push(role);
+    for(const team of row.teams)if(!old.teams.some(t=>t.id===team.id&&t.name===team.name))old.teams.push({...team});
+  }
+  Object.assign(target.champions,source.champions);
+  if(!target.competition&&source.competition)target.competition={...source.competition};
+  return target;
+}
+function emptyRecordedIdentity(){return {teams:Object.create(null),players:Object.create(null),champions:Object.create(null),competition:null}}
+function recordedSeriesIdentity(db,rec,game=null){
+  const out=emptyRecordedIdentity();
+  for(const g of game?[game]:rec?.games||[]){
+    const p=recordedPublicMatch(db,rec,g).record;if(!p)continue;
+    const one=emptyRecordedIdentity();one.competition=p.competition||null;one.champions=p.championNames;
+    for(const side of p.sides){
+      one.teams[side.team]={name:side.name,short:side.short||side.name,region:side.region||null,regionName:side.regionName||null};
+      for(const row of side.players)one.players[row[0]]={name:row[1],roles:[row[2]],teams:[{id:side.team,name:side.name}]};
+    }
+    mergeRecordedIdentity(out,one);
+  }
+  return out;
+}
+function recordedSeasonIdentity(db,s){
+  const out=emptyRecordedIdentity();
+  for(const day of s.days||[])for(const match of day.matches||[])if(match.res)mergeRecordedIdentity(out,recordedSeriesIdentity(db,match.res));
+  return out;
+}
+function recordedTeamLabel(identity,id,short=false){return (short?identity.teams[id]?.short:identity.teams[id]?.name)||id||'—'}
+function recordedPlayerLabel(identity,id){return identity.players[id]?.name||id||'—'}
+function recordedSeriesLabel(db,rec,game=null){const view=recordedSeriesIdentity(db,rec,game);return [game?.blue||rec.a,game?.red||rec.b].map(id=>recordedTeamLabel(view,id,true)).join(' / ')}
+function recordedCompetitionLabel(db,rec,id){const c=recordedSeriesIdentity(db,rec).competition;return c?.id===id?c.name:id}
+function historicalCompetitionSnapshot(db,c){
+  const region=db.regions?.[c.region];
+  return {id:c.id,name:c.name,short:c.short,tier:c.tier,region:c.region||null,div:c.div||1,international:!!c.international,teams:c.teams.slice(),stages:JSON.parse(JSON.stringify(c.stages)),teamInfo:c.teams.map(id=>{const t=db.teams[id];if(!t)return {id,active:false};return {id,name:t.name,short:t.short,region:t.region,regionName:db.regions?.[t.region]?.name,division:t.division||1,parent:t.parent||null,active:t.active!==false,franchised:!!t.franchised}}),...(region?{regionInfo:{id:region.id,short:region.short,splits:region.splits,name:region.name,leagueName:region.leagueName,splitNames:{...region.splitNames},standingsMode:region.standingsMode,system:region.system,relegate:region.relegate,div2:region.div2}}:{})};
+}
+
+// Read-only view for completed standings. No present-day team membership or
+// changed competition stages may reclassify already recorded results.
+function historicalSeasonView(db,s){
+  const snap=s.formatSnapshot;
+  if(!snap||snap.id!==s.comp||!Array.isArray(snap.stages)||!Array.isArray(snap.teamInfo)||snap.teamInfo.some(t=>!t||typeof t.id!=='string'))return null;
+  const view=Object.create(db);
+  view.world={...db.world,year:s.year,seasons:Object.fromEntries(Object.entries(db.world?.seasons||{}).filter(([,x])=>x.year===s.year))};
+  view.competitions={...db.competitions,[s.comp]:snap};
+  view.teams=Object.fromEntries(Object.keys(db.teams).map(id=>[id,{id,active:false}]));
+  for(const t of snap.teamInfo)view.teams[t.id]={...t};
+  view.regions={...db.regions,...(snap.regionInfo?{[snap.regionInfo.id]:snap.regionInfo}:{})};
+  return view;
+}
+
+function seasonDisplayCompetition(db,s){
+  if(s.done||s.year<db.year)return s.formatSnapshot||{id:s.comp,name:s.comp,short:s.comp};
+  return db.competitions[s.comp]||{id:s.comp,name:s.comp,short:s.comp};
 }
 
 /* ==== FILE: analysis-tiers.js ==== */
@@ -14364,19 +14426,20 @@ function renderExpl(r){
 const tname=id=>DB.teams[id]?DB.teams[id].name:id, tshort=id=>DB.teams[id]?DB.teams[id].short:id;
 const pnm=id=>DB.players[id]?DB.players[id].name:id;
 function renderSeries(rec,big){
-  const aw=rec.winner===rec.a;
+  if(rec.practiceModel&&(DB.world?.fired||!rec.games?.length||rec.games.some(g=>![g.blue,g.red].some(id=>managerControlsSquad(DB,id)))))return '<section><p>비공개 스크림 조회 권한이 없습니다.</p></section>';
+  const aw=rec.winner===rec.a,identity=recordedSeriesIdentity(DB,rec);
   return `<section class="board ser">
-    <div class="side blue ${aw?'won':''}"><div class="tname">${esc(tname(rec.a))}</div><div class="res">${aw?'승리':'패배'}</div></div>
+    <div class="side blue ${aw?'won':''}"><div class="tname">${esc(recordedTeamLabel(identity,rec.a))}</div><div class="res">${aw?'승리':'패배'}</div></div>
     <div class="score"><span>${rec.score[0]}</span><i>:</i><span>${rec.score[1]}</span><div class="dur">Bo${rec.bestOf}${rec.fearless?' · 하드 피어리스':''}${rec.patch?' · 패치 '+esc(rec.patch):''}</div></div>
-    <div class="side red ${!aw?'won':''}"><div class="tname">${esc(tname(rec.b))}</div><div class="res">${!aw?'승리':'패배'}</div></div>
+    <div class="side red ${!aw?'won':''}"><div class="tname">${esc(recordedTeamLabel(identity,rec.b))}</div><div class="res">${!aw?'승리':'패배'}</div></div>
   </section>
-  <section><h3>세트별 결과</h3><ol class="games">${rec.games.map((g,i)=>`<li><button class="game" data-g="${i}">
+  <section><h3>세트별 결과</h3><ol class="games">${rec.games.map((g,i)=>{const identity=recordedSeriesIdentity(DB,rec,g);return `<li><button class="game" data-g="${i}">
     <span class="gn">${g.n}세트</span>
-    <span class="gside"><i class="dot blue"></i>${esc(tshort(g.blue))} <b>${g.kills[0]}</b> : <b>${g.kills[1]}</b> ${esc(tshort(g.red))}<i class="dot red"></i></span>
-    <span class="gw">${esc(tshort(g.winner))} 승 · ${g.dur}</span>
-    ${g.picks?`<span class="gp">블루 ${g.picks[0].map(c=>esc(championLabel(DB,c))).join(', ')}<br>레드 ${g.picks[1].map(c=>esc(championLabel(DB,c))).join(', ')}</span>`:''}
-    <span class="gm">${g.sideBy?`${esc(tshort(g.sideBy))} 선택권: ${!DB.world?.fired&&managerControlsSquad(DB,g.sideBy)?esc(g.sideWhy||''):''} · 선픽 ${esc(tshort(g.firstPick||g.blue))} · `:''}POG ${esc(pnm(g.mvp))}</span>
-  </button>${renderRecordedDraftReview(DB,rec,g)}</li>`).join('')}</ol><p class="hint">세트를 누르면 저장된 당시 경기 기록이 열립니다.</p></section>
+    <span class="gside"><i class="dot blue"></i>${esc(recordedTeamLabel(identity,g.blue,true))} <b>${g.kills[0]}</b> : <b>${g.kills[1]}</b> ${esc(recordedTeamLabel(identity,g.red,true))}<i class="dot red"></i></span>
+    <span class="gw">${esc(recordedTeamLabel(identity,g.winner,true))} 승 · ${g.dur}</span>
+    ${g.picks?`<span class="gp">블루 ${g.picks[0].map(c=>esc(identity.champions[c]||c)).join(', ')}<br>레드 ${g.picks[1].map(c=>esc(identity.champions[c]||c)).join(', ')}</span>`:''}
+    <span class="gm">${g.sideBy?`${esc(recordedTeamLabel(identity,g.sideBy,true))} 선택권: ${!DB.world?.fired&&managerControlsSquad(DB,g.sideBy)?esc(g.sideWhy||''):''} · 선픽 ${esc(recordedTeamLabel(identity,g.firstPick||g.blue,true))} · `:''}POG ${esc(recordedPlayerLabel(identity,g.mvp))}</span>
+  </button>${renderRecordedDraftReview(DB,rec,g)}</li>`}).join('')}</ol><p class="hint">세트를 누르면 저장된 당시 경기 기록이 열립니다. 당시 명칭이 없으면 식별자를 표시하며 현재 상태로 재계산하지 않습니다.</p></section>
   <div class="gamedetail"></div>`;
 }
 function fmtMod(v){v=v||0;return (v>=0?'+':'')+(v*100).toFixed(1)+'%'}
@@ -15594,19 +15657,19 @@ function renderRecordedObjectives(p){
 function analysisMatchPanel(db,team,filter){
   const rows=officialMatchReviews(db,team.id,filter),shown=rows.slice(0,30),key=x=>JSON.stringify([x.key,x.di,x.mi,x.gi]),selected=shown.find(x=>key(x)===ANALYSIS_SET.review)||null;
   const tab=['records','events','draft'].includes(ANALYSIS_SET.reviewTab)?ANALYSIS_SET.reviewTab:'records',read=selected&&recordedPublicMatch(db,selected.rec,selected.game),p=read?.record;
-  const label=x=>`${db.teams[x.game.blue]?.short||x.game.blue} / ${db.teams[x.game.red]?.short||x.game.red}`;
+  const label=x=>recordedSeriesLabel(db,x.rec,x.game);
   const empty='<div class="review-empty"><h4>복기할 경기를 선택하세요</h4><p>왼쪽 경기 목록에서 세트를 선택하면 당시 선수 기록, 주요 사건, 우리 구단의 밴픽 검토를 확인할 수 있습니다.</p></div>';
   let detail=empty;
   if(selected){
-    const source=p?`${p.duration.toFixed(1)}분 · 당시 저장된 공개 기록${p.ending?' · 넥서스 파괴 '+fmtTime(p.ending.minute,p.ending.second):''}`:'당시 상세 기록 없음',winner=db.teams[selected.game.winner]?.short||selected.game.winner;
+    const source=p?`${p.duration.toFixed(1)}분 · 당시 저장된 공개 기록${p.ending?' · 넥서스 파괴 '+fmtTime(p.ending.minute,p.ending.second):''}`:'당시 상세 기록 없음',winner=recordedTeamLabel(recordedSeriesIdentity(db,selected.rec,selected.game),selected.game.winner,true);
     let content;
     if(tab==='draft')content=renderRecordedDraftReview(db,selected.rec,selected.game)||'<p class="empty">조회할 수 있는 당시 밴픽 검토가 없습니다. 현재 상태로 재구성하지 않습니다.</p>';
     else if(!p)content=renderPublicMatchReview(db,selected.rec,selected.game,filter);
     else if(tab==='events')content=`<section class="review-events">${renderRecordedObjectives(p)}${renderRecordedTakedowns(p)}${renderRecordedMacroPicks(p)}<h4>주요 사건</h4><p class="hint">${p.events.length?p.events.length+'건 / 당시 공개 사건 '+p.eventCount+'건'+(p.eventCount>p.events.length?' · 처음과 마지막 사건을 보존한 발췌입니다.':''):'당시 사건 로그를 수집하지 않았습니다. 결과로 사건을 추정하지 않습니다.'}</p><ol>${p.events.map(e=>`<li><time>${fmtTime(e[0],e[1])}</time><span>${esc(e[4])}</span></li>`).join('')}</ol></section>`;
     else content=renderPublicMatchReview(db,selected.rec,selected.game,{...filter,events:false});
-    detail=`<header class="review-heading"><p>${esc(db.competitions[selected.comp]?.name||selected.comp)} · ${selected.game.n}세트</p><h3>${esc(label(selected))}</h3><p class="review-result">${esc(winner)} 승리 <span>${esc(selected.date)} · 패치 ${esc(selected.patch)}</span></p><p class="hint">${esc(source)}. 기록과 당시 평가를 구분하며, 승패 원인을 단정하지 않습니다.</p></header><div class="review-tabs" role="tablist" aria-label="경기 복기 자료">${[['records','선수 기록'],['events','주요 사건'],['draft','밴픽 검토']].map(([id,name])=>`<button id="review-tab-${id}" data-review-tab="${id}" role="tab" aria-selected="${tab===id}" aria-controls="review-content" tabindex="${tab===id?0:-1}">${name}</button>`).join('')}</div><div id="review-content" role="tabpanel" aria-labelledby="review-tab-${tab}" tabindex="0">${content}</div>`;
+    detail=`<header class="review-heading"><p>${esc(recordedCompetitionLabel(db,selected.rec,selected.comp))} · ${selected.game.n}세트</p><h3>${esc(label(selected))}</h3><p class="review-result">${esc(winner)} 승리 <span>${esc(selected.date)} · 패치 ${esc(selected.patch)}</span></p><p class="hint">${esc(source)}. 기록과 당시 평가를 구분하며, 승패 원인을 단정하지 않습니다.</p></header><div class="review-tabs" role="tablist" aria-label="경기 복기 자료">${[['records','선수 기록'],['events','주요 사건'],['draft','밴픽 검토']].map(([id,name])=>`<button id="review-tab-${id}" data-review-tab="${id}" role="tab" aria-selected="${tab===id}" aria-controls="review-content" tabindex="${tab===id?0:-1}">${name}</button>`).join('')}</div><div id="review-content" role="tabpanel" aria-labelledby="review-tab-${tab}" tabindex="0">${content}</div>`;
   }
-  return `<section class="match-workspace"><div class="review-title"><h3>공식 경기 복기</h3><p class="hint">조건에 맞는 ${rows.length}세트 · 최근 ${shown.length}세트 표시</p></div><div class="review-layout"><aside class="review-list" aria-label="복기할 경기"><div class="review-picker"><label>경기 선택<select id="analysis-review"><option value="">경기를 선택하세요</option>${shown.map(x=>`<option value="${esc(key(x))}"${selected===x?' selected':''}>${esc(x.date)} · ${esc(label(x))} · ${x.game.n}세트</option>`).join('')}</select></label></div>${shown.length?`<div class="review-list-buttons">${shown.map(x=>`<button data-review-game="${esc(key(x))}" aria-pressed="${selected===x}"><span>${esc(x.date)} · ${x.game.n}세트</span><strong>${esc(label(x))}</strong><small>${esc(db.competitions[x.comp]?.name||x.comp)}</small></button>`).join('')}</div>`:'<p class="empty">조건에 맞는 완료된 공식 경기가 없습니다.</p>'}</aside><div class="review-detail">${detail}</div></div></section>`;
+  return `<section class="match-workspace"><div class="review-title"><h3>공식 경기 복기</h3><p class="hint">조건에 맞는 ${rows.length}세트 · 최근 ${shown.length}세트 표시</p></div><div class="review-layout"><aside class="review-list" aria-label="복기할 경기"><div class="review-picker"><label>경기 선택<select id="analysis-review"><option value="">경기를 선택하세요</option>${shown.map(x=>`<option value="${esc(key(x))}"${selected===x?' selected':''}>${esc(x.date)} · ${esc(label(x))} · ${x.game.n}세트</option>`).join('')}</select></label></div>${shown.length?`<div class="review-list-buttons">${shown.map(x=>`<button data-review-game="${esc(key(x))}" aria-pressed="${selected===x}"><span>${esc(x.date)} · ${x.game.n}세트</span><strong>${esc(label(x))}</strong><small>${esc(recordedCompetitionLabel(db,x.rec,x.comp))}</small></button>`).join('')}</div>`:'<p class="empty">조건에 맞는 완료된 공식 경기가 없습니다.</p>'}</aside><div class="review-detail">${detail}</div></div></section>`;
 }
 function bindAnalysisMatch(){
   const choose=value=>{const team=analysisSelectedTeam(DB),rows=team?officialMatchReviews(DB,team.id,analysisFilter(DB,team)):[];
@@ -15672,30 +15735,38 @@ function worldTable(){
   ${Object.values(DB.regions).map(r=>{const ts=activeTeams(DB,r.id,1),m=(r.metrics||[]).slice(-1)[0];return `<tr><td><b>${esc(r.name)}</b></td><td>${esc(r.leagueName)}</td><td>${r.tier==='major'?'메이저':'신흥'}${r.parent&&DB.regions[r.parent]?`<small class="hint"> (${esc(DB.regions[r.parent].leagueName)} 권역)</small>`:''}</td><td class="num">${ts.length}</td><td class="num">${levels[r.id]}</td><td class="num">${m?m.hype+' <small class="hint">'+hypeLabel(m.hype)+'</small>':'—'}</td><td class="num">${m?m.balance.toFixed(2):'—'}</td><td>${esc((OFFICE_STYLES[r.office]||{}).label||'')}</td><td class="num">${r.slots}</td><td class="fmt">${fmtRegion(r)}</td></tr>`}).join('')}
   </tbody></table></div><p class="hint">국제대회: ${DB.worldConfig.internationals.map(i=>`${esc(i.name)} (${ISEL_KO.timing[i.timing]}, ${ISEL_KO.entry[i.entry]}, ${ISEL_KO.format[i.format]})`).join(' · ')||'없음'}</p>`;
 }
+function renderHistoricalSeasonFallback(s){
+  const matches=(s.days||[]).flatMap(d=>(d.matches||[]).filter(m=>m.res).map(m=>({d,m})));
+  return `<section><h3>보관된 대회 결과 · ${s.year}</h3><p class="hint">당시 대회 규정이 보관되지 않아 현재 규정으로 순위를 다시 계산하지 않습니다. 확정 경기와 원래 기록만 확인할 수 있습니다.</p><ol>${matches.map(({d,m})=>`<li><button data-m="${m.id}">${esc(d.date)} · ${esc(recordedSeriesLabel(DB,m.res))} · ${m.res.score.join(':')}</button></li>`).join('')}</ol></section>`;
+}
 function seasonTab(){
   const s=curS(); if(!s)return '<p class="empty">진행 중인 대회가 없습니다.</p>';
-  const comp=DB.competitions[s.comp], me=managedTeamId(DB);
+  const past=SSET.tab!=='hist'&&(s.done||s.year<DB.year),read=past?historicalSeasonView(DB,s):DB;
+  if(!read)return renderHistoricalSeasonFallback(s);
+  const identity=past?recordedSeasonIdentity(DB,s):null;
+  const tname=id=>past?recordedTeamLabel(identity,id):DB.teams[id]?.name||id,tshort=id=>past?recordedTeamLabel(identity,id,true):DB.teams[id]?.short||id;
+  const comp=read.competitions[s.comp], me=managedTeamId(DB);
   if(SSET.tab==='table'){
-    const region=comp.region&&DB.regions[comp.region],mode=s.standingsMode||region?.standingsMode||'independent';
-    const doneSplits=region?Object.values(DB.world.seasons).filter(x=>
-      x.done&&x.year===DB.world.year&&x.region===region.id&&
+    const region=comp.region&&read.regions[comp.region],mode=s.standingsMode||region?.standingsMode||'independent';
+    const doneSplits=region?Object.values(read.world.seasons).filter(x=>
+      x.done&&x.year===read.world.year&&x.region===region.id&&
       (x.div||1)===(comp.div||1)&&x.split).length:0;
     const pointRows=region&&mode==='points'&&doneSplits?
-      championshipStandings(DB,region,comp.div||1):[];
+      championshipStandings(read,region,comp.div||1):[];
     const annualPoints=region&&mode==='points'?
       `<section><h3>${esc(region.leagueName)} · 연간 챔피언십 포인트</h3>
       <p class="hint">완료된 ${doneSplits}개 스플릿만 합산 · 우승 100 / 준우승 70 / 4강 45 / 플레이오프 진출 20점. 동점은 최근 완료 스플릿 순위로 정합니다. 현재 스플릿 승패/플레이오프는 별도 진행합니다.</p>
       ${pointRows.length?`<div class="scroll"><table class="stand"><thead><tr><th>순위</th><th>팀</th><th>총점</th><th>스플릿별</th></tr></thead><tbody>
-      ${pointRows.map((r,i)=>`<tr class="${r.tid===me?'mine':''}"><td class="num">${i+1}</td><td><b>${esc(tname(r.tid))}</b></td><td class="num">${r.points}</td><td>${Object.entries(r.bySplit).map(([sp,pt])=>`${esc(splitName(DB.regions[comp.region]||{},sp))} ${pt}점`).join(' · ')}</td></tr>`).join('')}
+      ${pointRows.map((r,i)=>`<tr class="${r.tid===me?'mine':''}"><td class="num">${i+1}</td><td><b>${esc(tname(r.tid))}</b></td><td class="num">${r.points}</td><td>${Object.entries(r.bySplit).map(([sp,pt])=>`${esc(splitName(read.regions[comp.region]||{},sp))} ${pt}점`).join(' · ')}</td></tr>`).join('')}
       </tbody></table></div>`:'<p class="empty">첫 스플릿 종료 후 누적 포인트가 표시됩니다.</p>'}</section>`:'';
-    const sw=comp.stages.filter(x=>x.type==='swiss'&&s.stageData[x.id]).map(cfg=>{const sd=s.stageData[cfg.id];const rows=standings(DB,s,cfg.id);
+    const sw=comp.stages.filter(x=>x.type==='swiss'&&s.stageData[x.id]).map(cfg=>{const sd=s.stageData[cfg.id];const rows=standings(read,s,cfg.id);
       return `<section><h3>${esc(sName(s))} · ${esc(cfg.name)} <small class="hint">${sd.W}승 진출 · ${sd.L}패 탈락</small></h3><div class="scroll"><table class="stand"><thead><tr><th>팀</th><th>전적</th><th>상태</th></tr></thead><tbody>
       ${rows.map(r=>`<tr class="${r.tid===me?'mine':''}"><td><b>${esc(tname(r.tid))}</b></td><td class="num">${r.w}-${r.l}</td><td>${sd.advanced.includes(r.tid)?'진출':sd.out.includes(r.tid)?'탈락':'진행 중'}</td></tr>`).join('')}</tbody></table></div></section>`}).join('');
-    const grp=comp.stages.filter(x=>x.type==='round_robin'&&x.groups>1&&s.stageData[x.id]).map(cfg=>groupStandings(DB,s,cfg.id).map((rows,gi)=>`<section><h3>${esc(sName(s))} · ${esc(cfg.name)} ${String.fromCharCode(65+gi)}조</h3><div class="scroll"><table class="stand"><thead><tr><th>순위</th><th>팀</th><th>승</th><th>패</th><th>득실</th></tr></thead><tbody>${rows.map((r,i)=>`<tr class="${r.tid===me?'mine':''}"><td class="num">${i+1}</td><td><b>${esc(tname(r.tid))}</b></td><td class="num">${r.w}</td><td class="num">${r.l}</td><td class="num">${r.gw-r.gl}</td></tr>`).join('')}</tbody></table></div></section>`).join('')).join('');
+    const grp=comp.stages.filter(x=>x.type==='round_robin'&&x.groups>1&&s.stageData[x.id]).map(cfg=>groupStandings(read,s,cfg.id).map((rows,gi)=>`<section><h3>${esc(sName(s))} · ${esc(cfg.name)} ${String.fromCharCode(65+gi)}조</h3><div class="scroll"><table class="stand"><thead><tr><th>순위</th><th>팀</th><th>승</th><th>패</th><th>득실</th></tr></thead><tbody>${rows.map((r,i)=>`<tr class="${r.tid===me?'mine':''}"><td class="num">${i+1}</td><td><b>${esc(tname(r.tid))}</b></td><td class="num">${r.w}</td><td class="num">${r.l}</td><td class="num">${r.gw-r.gl}</td></tr>`).join('')}</tbody></table></div></section>`).join('')).join('');
     if(sw||grp)return annualPoints+sw+grp;
-    return annualPoints+comp.stages.filter(x=>x.type==='round_robin').map(cfg=>{if(!s.stageData[cfg.id])return '';const rows=standings(DB,s,cfg.id), take=(comp.stages.find(x=>x.from===cfg.id)||{}).take;
+    return annualPoints+comp.stages.filter(x=>x.type==='round_robin').map(cfg=>{if(!s.stageData[cfg.id])return '';const rows=standings(read,s,cfg.id), take=(comp.stages.find(x=>x.from===cfg.id)||{}).take;
       return `<section><h3>${esc(sName(s))} · ${esc(cfg.name)}${mode==='cumulative'&&s.split?' · 연간 누적 전적':''}</h3><div class="scroll"><table class="stand"><thead><tr><th>순위</th><th>팀</th>${comp.international?'<th>지역</th>':''}<th>승</th><th>패</th><th>세트</th><th>득실</th><th>최근 5</th></tr></thead><tbody>
-      ${rows.map((r,i)=>`<tr class="${r.tid===me?'mine':''} ${take&&i===take-1?'cut':''} ${(!comp.international&&comp.div===1&&mode!=='points'&&s===finalSeason(DB.world,DB.regions[comp.region]||{},1)&&['relegation','mixed'].includes((DB.regions[comp.region]||{}).system)&&i>=rows.length-((DB.regions[comp.region]||{}).relegate||1)&&!(DB.teams[r.tid].franchised&&DB.regions[comp.region].system==='mixed'))?'danger':''}"><td class="num">${i+1}</td><td><b>${esc(tname(r.tid))}</b>${DB.teams[r.tid].franchised&&(DB.regions[comp.region]||{}).system==='mixed'?' <small class="hint">보호</small>':''}</td>${comp.international?`<td>${esc((DB.regions[DB.teams[r.tid].region]||{name:''}).name)}</td>`:''}<td class="num">${r.w}</td><td class="num">${r.l}</td><td class="num">${r.gw}-${r.gl}</td><td class="num">${r.gw-r.gl>0?'+':''}${r.gw-r.gl}</td><td class="form">${r.form.slice(-5).map(f=>`<i class="${f}">${f==='W'?'승':'패'}</i>`).join('')}</td></tr>`).join('')}
+      ${rows.map((r,i)=>`<tr class="${r.tid===me?'mine':''} ${take&&i===take-1?'cut':''} ${(!comp.international&&comp.div===1&&mode!=='points'&&s===finalSeason(read.world,read.regions[comp.region]||{},1)&&['relegation','mixed'].includes((read.regions[comp.region]||{}).system)&&i>=rows.length-((read.regions[comp.region]||{}).relegate||1)&&!(read.teams[r.tid].franchised&&read.regions[comp.region].system==='mixed'))?'danger':''}"><td class="num">${i+1}</td><td><b>${esc(tname(r.tid))}</b>${read.teams[r.tid].franchised&&(read.regions[comp.region]||{}).system==='mixed'?' <small class="hint">보호</small>':''}</td>${comp.international?`<td>${esc(past?(identity?.teams[r.tid]?.regionName||read.teams[r.tid]?.regionName||read.teams[r.tid]?.region||'—'):(DB.regions[DB.teams[r.tid]?.region]?.name||'—'))}</td>`:''}<td class="num">${r.w}</td><td class="num">${r.l}</td><td class="num">${r.gw}-${r.gl}</td><td class="num">${r.gw-r.gl>0?'+':''}${r.gw-r.gl}</td><td class="form">${r.form.slice(-5).map(f=>`<i class="${f}">${f==='W'?'승':'패'}</i>`).join('')}</td></tr>`).join('')}
       </tbody></table></div>${take?`<p class="hint">선 위 ${take}팀이 다음 스테이지에 진출합니다.</p>`:''}</section>`}).join('')||'<p class="empty">이 대회는 순위표 없이 토너먼트로만 진행됩니다.</p>';
   }
   if(SSET.tab==='sched'){
@@ -15714,6 +15785,7 @@ function seasonTab(){
     return el||'<p class="empty">이 대회에는 토너먼트 스테이지가 없습니다. 정규 시즌 1위가 우승합니다.</p>';
   }
   if(SSET.tab==='stats'){
+    const identity=recordedSeasonIdentity(DB,s);
     const rows=Object.entries(s.pstats).map(([pid,p])=>({pid,...p,kda:(p.k+p.a)/Math.max(1,p.d)}));
     if(!rows.length)return '<p class="empty">경기를 진행하면 선수 기록이 쌓입니다.</p>';
     const minG=comp.international?2:3;
@@ -15721,32 +15793,32 @@ function seasonTab(){
     const champs={};for(const r of rows)for(const [c,[n,w]] of Object.entries(r.champs)){champs[c]=champs[c]||[0,0];champs[c][0]+=n;champs[c][1]+=w}
     const ctop=Object.entries(champs).sort((a,b)=>b[1][0]-a[1][0]).slice(0,12);
     return `<section><h3>KDA 순위 (${minG}경기 이상)</h3><div class="scroll"><table><thead><tr><th>#</th><th>선수</th><th>팀</th><th>경기</th><th>KDA</th><th>평균 K/D/A</th><th>분당 CS</th><th>POG</th></tr></thead><tbody>
-      ${top.map((r,i)=>{const p=DB.players[r.pid];return `<tr class="${p&&p.team===me?'mine':''}"><td class="num">${i+1}</td><td><span class="role">${p?ROLE_KO[p.role]:''}</span> <b>${esc(pnm(r.pid))}</b></td><td>${esc(p?tshort(p.team):'')}</td><td class="num">${r.g}</td><td class="num"><b>${r.kda.toFixed(2)}</b></td><td class="num">${(r.k/r.g).toFixed(1)}/${(r.d/r.g).toFixed(1)}/${(r.a/r.g).toFixed(1)}</td><td class="num">${(r.cs/r.min).toFixed(1)}</td><td class="num">${r.mvp}</td></tr>`}).join('')}
+      ${top.map((r,i)=>{const p=identity.players[r.pid];return `<tr class="${p?.teams.some(t=>t.id===me)?'mine':''}"><td class="num">${i+1}</td><td><span class="role">${p?p.roles.map(role=>ROLE_KO[role]).join('·'):'—'}</span> <b>${esc(recordedPlayerLabel(identity,r.pid))}</b></td><td>${esc(p?p.teams.map(t=>t.name).join(' / '):'당시 소속 미보관')}</td><td class="num">${r.g}</td><td class="num"><b>${r.kda.toFixed(2)}</b></td><td class="num">${(r.k/r.g).toFixed(1)}/${(r.d/r.g).toFixed(1)}/${(r.a/r.g).toFixed(1)}</td><td class="num">${(r.cs/r.min).toFixed(1)}</td><td class="num">${r.mvp}</td></tr>`}).join('')}
     </tbody></table></div></section>
     <section><h3>챔피언 픽 순위</h3><div class="scroll"><table><thead><tr><th>챔피언</th><th>픽</th><th>승률</th></tr></thead><tbody>
-      ${ctop.map(([c,[n,w]])=>`<tr><td><b>${esc(c)}</b></td><td class="num">${n}</td><td class="num">${(w/n*100).toFixed(0)}%</td></tr>`).join('')}
+      ${ctop.map(([c,[n,w]])=>`<tr><td><b>${esc(identity.champions[c]||c)}</b></td><td class="num">${n}</td><td class="num">${(w/n*100).toFixed(0)}%</td></tr>`).join('')}
     </tbody></table></div></section>`;
   }
-  return `${seasonManagedTeam()?financePanel(DB.teams[me]):''}<section><h3>세계 현황</h3>${worldTable()}${DB.worldHype?`<p class="hint">세계 흥행 합계 ${DB.worldHype}. 지역 평균 흥행이 높을수록 새 지역 합류와 국제대회 신설 가능성이 올라갑니다.</p>`:''}</section>
-  ${seasonManagedRegion()?`<section><h3>구단 재정 · ${esc(DB.regions[seasonManagedRegion()].leagueName)}</h3>${financeTable(seasonManagedRegion())}</section>`:''}
+  return `${seasonManagedTeam()?financePanel(read.teams[me]):''}<section><h3>세계 현황</h3>${worldTable()}${read.worldHype?`<p class="hint">세계 흥행 합계 ${read.worldHype}. 지역 평균 흥행이 높을수록 새 지역 합류와 국제대회 신설 가능성이 올라갑니다.</p>`:''}</section>
+  ${seasonManagedRegion()?`<section><h3>구단 재정 · ${esc(read.regions[seasonManagedRegion()].leagueName)}</h3>${financeTable(seasonManagedRegion())}</section>`:''}
   <section><h3>국제 e스포츠 사무국</h3>${globalCard()}</section>
-  <section><h3>리그 사무국</h3><div class="cfgs">${Object.values(DB.regions).map(officeCard).join('')}</div></section>
-  ${DB.news.length?`<section><h3>뉴스</h3><ol class="news">${DB.news.slice(0,20).map(n=>`<li><time>${n.year}</time><span>${esc(n.text)}</span></li>`).join('')}</ol></section>`:''}
-  <section><h3>역대 기록</h3>${DB.history.length?histTable():'<p class="empty">시즌을 끝내면 우승 기록이 여기에 쌓입니다.</p>'}</section>
-  ${(DB.awards||[]).length?`<section><h3>최근 시상</h3><div class="scroll"><table><thead><tr><th>시즌</th><th>대회</th><th>부문</th><th>선수</th></tr></thead><tbody>${DB.awards.slice(-24).reverse().map(a=>`<tr><td class="num">${a.year}</td><td>${esc(a.comp)}</td><td>${esc(a.type)}</td><td><b>${esc(pnm(a.pid))}</b></td></tr>`).join('')}</tbody></table></div></section>`:''}
-  <section><h3>명예의 전당</h3>${(DB.hof||[]).length?`<div class="scroll"><table><thead><tr><th>선수</th><th>포지션</th><th>은퇴</th><th>우승</th><th>국제</th><th>MVP</th><th>전성기</th></tr></thead><tbody>${DB.hof.slice().reverse().map(h=>`<tr><td><b>${esc(h.name)}</b></td><td>${ROLE_KO[h.role]}</td><td class="num">${h.year}</td><td class="num">${h.titles}</td><td class="num">${h.intl}</td><td class="num">${h.mvps}</td><td class="num">${h.peak}</td></tr>`).join('')}</tbody></table></div>`:'<p class="hint">국제대회 2회 우승, 우승 5회, MVP 3회, 전성기 종합 90 중 하나를 달성하고 은퇴한 선수가 헌액됩니다.</p>'}</section>`;
+  <section><h3>리그 사무국</h3><div class="cfgs">${Object.values(read.regions).map(officeCard).join('')}</div></section>
+  ${read.news.length?`<section><h3>뉴스</h3><ol class="news">${read.news.slice(0,20).map(n=>`<li><time>${n.year}</time><span>${esc(n.text)}</span></li>`).join('')}</ol></section>`:''}
+  <section><h3>역대 기록</h3>${read.history.length?histTable():'<p class="empty">시즌을 끝내면 우승 기록이 여기에 쌓입니다.</p>'}</section>
+  ${(read.awards||[]).length?`<section><h3>최근 시상</h3><div class="scroll"><table><thead><tr><th>시즌</th><th>대회</th><th>부문</th><th>선수</th></tr></thead><tbody>${read.awards.slice(-24).reverse().map(a=>`<tr><td class="num">${a.year}</td><td>${esc(a.comp)}</td><td>${esc(a.type)}</td><td><b>${esc(a.playerName||a.pid)}</b></td></tr>`).join('')}</tbody></table></div></section>`:''}
+  <section><h3>명예의 전당</h3>${(read.hof||[]).length?`<div class="scroll"><table><thead><tr><th>선수</th><th>포지션</th><th>은퇴</th><th>우승</th><th>국제</th><th>MVP</th><th>전성기</th></tr></thead><tbody>${read.hof.slice().reverse().map(h=>`<tr><td><b>${esc(h.name)}</b></td><td>${ROLE_KO[h.role]}</td><td class="num">${h.year}</td><td class="num">${h.titles}</td><td class="num">${h.intl}</td><td class="num">${h.mvps}</td><td class="num">${h.peak}</td></tr>`).join('')}</tbody></table></div>`:'<p class="hint">국제대회 2회 우승, 우승 5회, MVP 3회, 전성기 종합 90 중 하나를 달성하고 은퇴한 선수가 헌액됩니다.</p>'}</section>`;
 }
 function histTable(){
   const groups={};DB.history.forEach(h=>{const k=h.compName||h.comp;(groups[k]=groups[k]||[]).push(h)});
   const keys=Object.keys(groups).sort((a,b)=>(groups[b][0].intl-groups[a][0].intl));
   const titles={};DB.history.forEach(h=>{const k=h.champion;titles[k]=titles[k]||{n:0,w:0};titles[k].n++;if(h.intl)titles[k].w++});
   return keys.map(k=>{const H=groups[k].slice().reverse();return `<h4>${esc(k)}</h4><div class="scroll"><table><thead><tr><th>시즌</th><th>우승</th><th>준우승</th><th>결승</th><th>MVP</th></tr></thead><tbody>
-  ${H.map(h=>`<tr><td class="num">${h.year}</td><td><b>${esc(tname(h.champion))}</b></td><td>${esc(tname(h.runnerUp))}</td><td class="num">${h.final?h.final.join(':'):'—'}</td><td>${h.mvp?esc(pnm(h.mvp)):'—'}</td></tr>`).join('')}
-  </tbody></table></div>`}).join('')+`<p class="hint">통산 우승: ${Object.entries(titles).sort((a,b)=>b[1].w-a[1].w||b[1].n-a[1].n).slice(0,12).map(([t,v])=>`${esc(tshort(t))} ${v.n}회${v.w?` (국제 ${v.w})`:''}`).join(', ')}</p>`;
+  ${H.map(h=>`<tr><td class="num">${h.year}</td><td><b>${esc(h.championName||h.champion)}</b></td><td>${esc(h.runnerUpName||h.runnerUp)}</td><td class="num">${h.final?h.final.join(':'):'—'}</td><td>${h.mvp?esc(h.mvpName||h.mvp):'—'}</td></tr>`).join('')}
+  </tbody></table></div>`}).join('')+`<p class="hint">당시 명칭 미보관 기록은 식별자를 표시합니다. 현재 구단명 기준 통산 우승: ${Object.entries(titles).sort((a,b)=>b[1].w-a[1].w||b[1].n-a[1].n).slice(0,12).map(([t,v])=>`${esc(tshort(t))} ${v.n}회${v.w?` (국제 ${v.w})`:''}`).join(', ')}</p>`;
 }
 function findMatch(id){const s=curS();if(!s)return null;for(const d of s.days)for(const m of d.matches)if(m.id===id)return m}
 function openSeries(m){
-  const title=`${tname(m.a)} vs ${tname(m.b)}`;
+  const title=recordedSeriesLabel(DB,m.res);
   const markup=`<div class="ovin"><div class="ovhead"><b>${esc(title)}</b><button class="ghost" id="ovclose">닫기</button></div><div id="ovbody">${renderSeries(m.res)}</div></div>`;
   openUiOverlay({kind:'series',label:title,html:markup,dismissible:true,onDismiss:closeOv,focusSelector:'#ovclose'});
   $('#ovclose').onclick=closeOv;bindSeries($('#ovbody'),m.res);
@@ -16419,7 +16491,7 @@ const TAC_KO={aggression:'공격성',risk_tolerance:'위험 감수',objective_pr
 // ---------- 시즌 (월드) ----------
 function mySeasonKey(){const w=DB.world,rid=seasonManagedRegion();if(!rid)return null;const ks=Object.values(w.seasons).filter(s=>s.region===rid).sort((a,b)=>(b.split||0)-(a.split||0));return ks.length?ks[0].key:null}
 function curS(){const w=DB.world;if(!SSET.view||!w.seasons[SSET.view])SSET.view=mySeasonKey()||Object.keys(w.seasons)[0];return w.seasons[SSET.view]}
-function sName(s){return DB.competitions[s.comp].name+(s.label?' '+s.label:'')}
+function sName(s){return seasonDisplayCompetition(DB,s).name+(s.label?' '+s.label:'')}
 function nextMine(){
   const w=DB.world,me=managedTeamId(DB);let best=null;
   for(const s of Object.values(w.seasons)){if(s.done)continue;for(const d of s.days.slice(s.cur)){const m=d.matches.find(m=>m.a===me||m.b===me);if(m){if(!best||d.date<best.d.date)best={s,d,m};break}}}
@@ -16441,7 +16513,7 @@ function viewSeason(){
   const nx=nextMine(), nd=nextDate(DB);
   let right='';
   if(w.phase==='season') right=`<div class="nextm"><span>현재 ${esc(DB.worldDate||'날짜 미정')} · 다음 경기 ${nd?esc(nd):'일정 없음'}</span><b>${T&&nx?`다음 경기 ${esc(nx.d.date)} — vs ${esc(tname(nx.m.a===me?nx.m.b:nx.m.a))} (${esc(sName(nx.s))} · Bo${nx.m.bo})`:T?'내 구단의 예정 경기가 없습니다':nd?`다음 공개 경기 ${esc(nd)}`:'공개 예정 경기가 없습니다'}</b></div>`;
-  else{const last=DB.history.filter(h=>h.year===w.year&&h.intl).slice(-1)[0];right=`<div class="champ"><span>${w.year} ${last?esc(last.compName):''} 우승</span><b>${last?esc(tname(last.champion)):'—'}</b></div>`}
+  else{const last=DB.history.filter(h=>h.year===w.year&&h.intl).slice(-1)[0];right=`<div class="champ"><span>${w.year} ${last?esc(last.compName):''} 우승</span><b>${last?esc(last.championName||last.champion):'—'}</b></div>`}
   return `<section class="seasonhead">
     <div><h2>${w.year} 시즌</h2><p>${T?esc(T.name):managedTeamId(DB)?'관리 구단 확인 필요':'무소속 감독'} · ${seasonManagedRegion()?esc(DB.regions[T.region].leagueName):'지역 정보 없음'}${lgS?' '+esc(lgS.label):''} ${mine&&(mine.w+mine.l)?`${rank}위 (${mine.w}승 ${mine.l}패)`:''} · ${esc(phaseText(w))}</p></div>${right}
   </section>
@@ -16457,12 +16529,12 @@ function viewSeason(){
 function chapters(w){
   const cur=curS(), myR=seasonManagedRegion(), open=SSET.chap??w.step;
   return `<div class="chapters">${w.steps.map((st,i)=>{
-    const ss=Object.values(w.seasons).filter(s=>stepOf(DB,s)===i).sort((a,b)=>(b.region===myR)-(a.region===myR)||(a.div||1)-(b.div||1)||(DB.competitions[a.comp].tier==='low')-(DB.competitions[b.comp].tier==='low'));
+    const ss=Object.values(w.seasons).filter(s=>stepOf(DB,s)===i).sort((a,b)=>(b.region===myR)-(a.region===myR)||(a.div||1)-(b.div||1)||(seasonDisplayCompetition(DB,a).tier==='low')-(seasonDisplayCompetition(DB,b).tier==='low'));
     const state=i<w.step||w.phase!=='season'?'done':i===w.step?'now':'next';
     const title=st.kind==='intl'?(DB.worldConfig.internationals.find(x=>x.id===(st.ids||[st.id])[0])||{name:st.label}).name+((st.ids||[]).length>1?' 기간':''):st.label+' 리그';
     const isOpen=i===open;
     return `<section class="chap ${state} ${isOpen?'open':''}"><button class="chaphead" data-chap="${i}" aria-expanded="${isOpen}"><span class="cn">${i+1}장</span><b>${esc(title)}</b><small>${state==='done'?'완료':state==='now'?'진행 중':'예정'}${ss.length?` · 대회 ${ss.length}개`:''}</small></button>
-      ${isOpen&&ss.length?`<div class="chips">${ss.map(s=>{const c=DB.competitions[s.comp];return `<button data-view="${s.key}" aria-pressed="${cur===s}">${esc(c.short)}${c.tier==='low'?' <small>중하위</small>':''}${s.done?' ✓':''}</button>`}).join('')}</div>`:''}
+      ${isOpen&&ss.length?`<div class="chips">${ss.map(s=>{const c=seasonDisplayCompetition(DB,s);return `<button data-view="${s.key}" aria-pressed="${cur===s}">${esc(c.short||c.name||s.comp)}${c.tier==='low'?' <small>중하위</small>':''}${s.done?' ✓':''}</button>`}).join('')}</div>`:''}
       ${isOpen&&!ss.length?'<p class="hint">아직 시작 전입니다.</p>':''}</section>`}).join('')}</div>`;
 }
 function controlsFor(w){

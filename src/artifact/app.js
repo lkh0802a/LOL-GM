@@ -177,7 +177,7 @@ const TAC_KO={aggression:'공격성',risk_tolerance:'위험 감수',objective_pr
 // ---------- 시즌 (월드) ----------
 function mySeasonKey(){const w=DB.world,rid=seasonManagedRegion();if(!rid)return null;const ks=Object.values(w.seasons).filter(s=>s.region===rid).sort((a,b)=>(b.split||0)-(a.split||0));return ks.length?ks[0].key:null}
 function curS(){const w=DB.world;if(!SSET.view||!w.seasons[SSET.view])SSET.view=mySeasonKey()||Object.keys(w.seasons)[0];return w.seasons[SSET.view]}
-function sName(s){return DB.competitions[s.comp].name+(s.label?' '+s.label:'')}
+function sName(s){return seasonDisplayCompetition(DB,s).name+(s.label?' '+s.label:'')}
 function nextMine(){
   const w=DB.world,me=managedTeamId(DB);let best=null;
   for(const s of Object.values(w.seasons)){if(s.done)continue;for(const d of s.days.slice(s.cur)){const m=d.matches.find(m=>m.a===me||m.b===me);if(m){if(!best||d.date<best.d.date)best={s,d,m};break}}}
@@ -199,7 +199,7 @@ function viewSeason(){
   const nx=nextMine(), nd=nextDate(DB);
   let right='';
   if(w.phase==='season') right=`<div class="nextm"><span>현재 ${esc(DB.worldDate||'날짜 미정')} · 다음 경기 ${nd?esc(nd):'일정 없음'}</span><b>${T&&nx?`다음 경기 ${esc(nx.d.date)} — vs ${esc(tname(nx.m.a===me?nx.m.b:nx.m.a))} (${esc(sName(nx.s))} · Bo${nx.m.bo})`:T?'내 구단의 예정 경기가 없습니다':nd?`다음 공개 경기 ${esc(nd)}`:'공개 예정 경기가 없습니다'}</b></div>`;
-  else{const last=DB.history.filter(h=>h.year===w.year&&h.intl).slice(-1)[0];right=`<div class="champ"><span>${w.year} ${last?esc(last.compName):''} 우승</span><b>${last?esc(tname(last.champion)):'—'}</b></div>`}
+  else{const last=DB.history.filter(h=>h.year===w.year&&h.intl).slice(-1)[0];right=`<div class="champ"><span>${w.year} ${last?esc(last.compName):''} 우승</span><b>${last?esc(last.championName||last.champion):'—'}</b></div>`}
   return `<section class="seasonhead">
     <div><h2>${w.year} 시즌</h2><p>${T?esc(T.name):managedTeamId(DB)?'관리 구단 확인 필요':'무소속 감독'} · ${seasonManagedRegion()?esc(DB.regions[T.region].leagueName):'지역 정보 없음'}${lgS?' '+esc(lgS.label):''} ${mine&&(mine.w+mine.l)?`${rank}위 (${mine.w}승 ${mine.l}패)`:''} · ${esc(phaseText(w))}</p></div>${right}
   </section>
@@ -215,12 +215,12 @@ function viewSeason(){
 function chapters(w){
   const cur=curS(), myR=seasonManagedRegion(), open=SSET.chap??w.step;
   return `<div class="chapters">${w.steps.map((st,i)=>{
-    const ss=Object.values(w.seasons).filter(s=>stepOf(DB,s)===i).sort((a,b)=>(b.region===myR)-(a.region===myR)||(a.div||1)-(b.div||1)||(DB.competitions[a.comp].tier==='low')-(DB.competitions[b.comp].tier==='low'));
+    const ss=Object.values(w.seasons).filter(s=>stepOf(DB,s)===i).sort((a,b)=>(b.region===myR)-(a.region===myR)||(a.div||1)-(b.div||1)||(seasonDisplayCompetition(DB,a).tier==='low')-(seasonDisplayCompetition(DB,b).tier==='low'));
     const state=i<w.step||w.phase!=='season'?'done':i===w.step?'now':'next';
     const title=st.kind==='intl'?(DB.worldConfig.internationals.find(x=>x.id===(st.ids||[st.id])[0])||{name:st.label}).name+((st.ids||[]).length>1?' 기간':''):st.label+' 리그';
     const isOpen=i===open;
     return `<section class="chap ${state} ${isOpen?'open':''}"><button class="chaphead" data-chap="${i}" aria-expanded="${isOpen}"><span class="cn">${i+1}장</span><b>${esc(title)}</b><small>${state==='done'?'완료':state==='now'?'진행 중':'예정'}${ss.length?` · 대회 ${ss.length}개`:''}</small></button>
-      ${isOpen&&ss.length?`<div class="chips">${ss.map(s=>{const c=DB.competitions[s.comp];return `<button data-view="${s.key}" aria-pressed="${cur===s}">${esc(c.short)}${c.tier==='low'?' <small>중하위</small>':''}${s.done?' ✓':''}</button>`}).join('')}</div>`:''}
+      ${isOpen&&ss.length?`<div class="chips">${ss.map(s=>{const c=seasonDisplayCompetition(DB,s);return `<button data-view="${s.key}" aria-pressed="${cur===s}">${esc(c.short||c.name||s.comp)}${c.tier==='low'?' <small>중하위</small>':''}${s.done?' ✓':''}</button>`}).join('')}</div>`:''}
       ${isOpen&&!ss.length?'<p class="hint">아직 시작 전입니다.</p>':''}</section>`}).join('')}</div>`;
 }
 function controlsFor(w){
