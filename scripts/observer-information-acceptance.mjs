@@ -1,0 +1,47 @@
+import {runEngineFixture,artifactSources} from './test-harness.mjs';
+const ui=await artifactSources(['ui-player.js','ui-player-champions.js','ui-scouting-regions.js','ui-player-commitments.js','ui-player-loans.js','ui-local-service.js']);
+await runEngineFixture(String.raw`(()=>{
+ const check=(v,m)=>{if(!v)throw Error('OBSERVER_INFORMATION '+m)};
+ const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:6,div2:true,system:'franchise'})];cfg.internationals=[];cfg.changes='none';
+ const db=buildWorld(cfg),[a,b,c]=activeTeams(db,'NA',1);
+ for(const t of [a,b,c])for(const role of ROLES){const p=genPlayer(db,new RNG(t.id+role),{region:t.region,role,age:22,base:65});signContract(db,p,t,1,3);t.depthChart[role]=p.id}
+ startWorldSeason(db,a.id,'observer-information');DB=db;const p=db.players[b.depthChart.MID],own=db.players[a.depthChart.MID];
+ const view=()=>JSON.stringify({report:scoutReport(db,p),metrics:observedPlayerCoreMetrics(db,p),value:observedPlayerMarketValue(db,p),html:playerDetail(p)});
+ const mutate=()=>{p.pot=99;for(const k of Object.keys(p.attrs))p.attrs[k]=95;p.medical={kind:'injury',site:'wrist',severity:'severe',out:true,daysLeft:37};p.medicalResidual={daysLeft:19};p.developmentTrail=[{ovr:20},{ovr:99}]};
+ const original=JSON.parse(JSON.stringify(p)),before=view(),publicAi=JSON.stringify(aiMarketObservation(db,p,c));mutate();
+ check(view()===before,'unobserved current hidden state leaks to profile/report/value');
+ check(JSON.stringify(aiMarketObservation(db,p,c))===publicAi,'unobserved AI report reads hidden state');
+ Object.assign(p,JSON.parse(JSON.stringify(original)));
+ a.finance.cash=100;const cash=a.finance.cash,outcome=scoutPlayers(db,[p.id],24,1);
+ check(outcome.startsWith('스카우팅 보고서 갱신')&&a.finance.cash===cash-1,'paid observation/charge lost');
+ const report=ensureScoutReport(db,p),historical=JSON.stringify(report.snapshots),observed=view();
+ observeAiPlayer(db,c,p,24,{comp:'manual',games:0});const ai=JSON.stringify(aiMarketObservation(db,p,c));
+ mutate();check(view()===observed&&JSON.stringify(aiMarketObservation(db,p,c))===ai,'existing report silently resamples changed private state');
+ check(JSON.stringify(report.snapshots)===historical,'read rewrote historical observation');
+ const descriptors=new Map(['attrs','pot','medical','medicalResidual','developmentTrail'].map(k=>[k,Object.getOwnPropertyDescriptor(p,k)]));
+ for(const k of descriptors.keys())Object.defineProperty(p,k,{configurable:true,get(){throw Error('private getter '+k)}});
+ check(view()===observed,'guarded profile/report changed');
+ for(const [k,d]of descriptors){if(d)Object.defineProperty(p,k,d);else delete p[k]}
+ const updated=scoutPlayers(db,[p.id],24,1);check(updated.startsWith('스카우팅 보고서 갱신')&&view()!==observed,'actual new observation did not update estimate');
+ check(JSON.stringify(report.snapshots.slice(0,-1))===historical,'new observation rewrote previous snapshot');
+ const rollbackBefore=packDB(db),reportRef=report,attrsRef=report.observedAttributes,recordRegional=recordScoutRegionalObservation;let regionalCalls=0;
+ recordScoutRegionalObservation=(...args)=>{recordRegional(...args);if(++regionalCalls===2)throw Error('injected second observation failure')};
+ const failed=scoutPlayers(db,[p.id,b.depthChart.TOP],24,2);recordScoutRegionalObservation=recordRegional;
+ check(failed.startsWith('스카우팅 처리 실패')&&packDB(db)===rollbackBefore&&db.scout[p.id]===reportRef&&report.observedAttributes===attrsRef,'batch failure did not restore cost/report/attributes/staff and references');
+ const now=view(),packed=packDB(db),copy=unpackDB(packed);DB=copy;
+ check(JSON.stringify(scoutReport(copy,copy.players[p.id]))===JSON.stringify(scoutReport(db,p))&&observedPlayerMarketValue(copy,copy.players[p.id])===observedPlayerMarketValue(db,p),'save lost observation estimates');DB=db;check(view()===now,'save mutated original');
+ const past=JSON.stringify(report.snapshots),knowledgeBefore=knowledge(db,p);db.year++;ageScoutReports(db);check(knowledge(db,p)<knowledgeBefore&&JSON.stringify(report.snapshots)===past,'ageing changes stored observations');
+ const ownBefore=scoutPotentialRange(db,own);own.pot=99;own.medical={kind:'injury',site:'wrist',daysLeft:37,out:true};
+ check(JSON.stringify(scoutPotentialRange(db,own))!==JSON.stringify(ownBefore)&&observedMedicalSummary(db,own)===medicalSummary(own)&&playerDetail(own).includes('37일 예상'),'internal capability/clinical access lost');
+ const reserve=reserveTeamsOf(db,a)[0];own.team=reserve.id;check(observedMedicalSummary(db,own)===medicalSummary(own),'parent reserve medical access');setManagedTeam(db,reserve.id);own.team=a.id;check(!observedMedicalSummary(db,own).includes('37'),'reserve manager sees parent clinical record');setManagedTeam(db,a.id);
+ own.team=b.id;own.loan={ownerId:a.id,borrowerId:b.id};check(!observedMedicalSummary(db,own).includes('37'),'outgoing loan discloses borrower clinical record');delete own.loan;own.team=a.id;
+ p.team=a.id;check(observedMedicalSummary(db,p)===medicalSummary(p),'incoming squad clinical access');p.team=b.id;
+ db.world.fired=true;check(!observedMedicalSummary(db,own).includes('37'),'fired manager retains clinical access');
+ const clubArchive=JSON.stringify(db.scout),firedView=view();p.pot=40;for(const k of Object.keys(p.attrs))p.attrs[k]=45;
+ check(view()===firedView&&ensureScoutReport(db,p)!==report&&JSON.stringify(db.scout)===clubArchive,'fired manager reads or rewrites club dossier');
+ const inert=packDB(db);check(scoutPlayers(db,[p.id],24,1).includes('권한')&&packDB(db)===inert,'fired scouting command writes state');db.world.fired=false;
+ const risk=medicalContractRisk(db,p);check(risk>0&&medicalOut(p),'legitimate contract risk/official medical eligibility lost');
+ const legacy=ensureScoutReport(db,p);delete legacy.observedAttributes;delete legacy.observedPotential;const legacyView=view();mutate();check(view()===legacyView,'legacy report fallback reads hidden state');
+ const publicTarget=db.players[c.depthChart.MID];delete db.scout[publicTarget.id];const low=scoutAbilityRange(db,publicTarget);publicTarget.reputation=99;check(JSON.stringify(scoutAbilityRange(db,publicTarget))!==JSON.stringify(low),'public evidence no longer affects unobserved estimate');
+ console.log('OBSERVER_INFORMATION_ACCEPTANCE PASS unobserved/observed paired-state + private getters + real paid refresh + AI + historical/save/ageing + own/reserve/loan/fired + clinical risk/eligibility + legacy/public evidence');
+})();`,{timeout:60000,setupSources:["let DB;const tshort=id=>DB.teams[id]?.short||id;const ovrTag=x=>'<b>'+x+'</b>';const esc=x=>String(x).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');",...ui]});

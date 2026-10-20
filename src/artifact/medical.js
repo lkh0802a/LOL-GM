@@ -74,6 +74,9 @@ function medicalSummary(p){
   if(r?.daysLeft>0)return '복귀 후 관리 · '+Math.ceil(r.daysLeft)+'일';
   return '정상';
 }
+// Public roster/registration records remain available through their own views;
+// a private clinical record is not an announcement or a promised return date.
+function observedMedicalSummary(db,p){return playerChampionInternalAccess(db,p)?medicalSummary(p):'구단 내부 의료 정보 · 공개된 복귀 일정 없음'}
 function medicalCare(db,p){
   const t=p.team&&db.teams[p.team];
   if(!t)return 0.75;
