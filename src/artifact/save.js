@@ -64,12 +64,16 @@ function unpackMetaHistory(rows){
 const ALL_ATTRS=Object.values(ATTR_GROUPS).flat();
 function seriesResultForSave(r,lite){
   const q={...r};
+  if(lite&&!q.lite){q.games=(q.games||[]).map(g=>({n:g.n,blue:g.blue,red:g.red,...(g.seed!==undefined?{seed:g.seed}:{}),winner:g.winner,kills:g.kills,dur:g.dur,mvp:g.mvp,...(g.publicRecord?{date:g.date,patch:g.patch,publicRecord:g.publicRecord}:{}),...(g.draftEvidence?{date:g.date,patch:g.patch,draftEvidence:g.draftEvidence,draftSequence:g.draftSequence,picks:g.picks,bans:g.bans}:{})}));delete q.tac;q.lite=true}
+  return q;
+}
+function encodeSeriesIdentity(r){
+  const q={...r};
   // Preserve the established packed shape without discarding replay identity.
   // Original key positions also preserve deterministic full-object round trips.
   const identity=Object.entries(r).filter(([,value])=>value!==undefined).flatMap(([key,value],index)=>['seed','firstChoice'].includes(key)?[[key,value,index]]:[]);
   delete q.seed;delete q.firstChoice;
   if(identity.length)q.seriesIdentityPacked=identity;
-  if(lite&&!q.lite){q.games=(q.games||[]).map(g=>({n:g.n,blue:g.blue,red:g.red,...(g.seed!==undefined?{seed:g.seed}:{}),winner:g.winner,kills:g.kills,dur:g.dur,mvp:g.mvp,...(g.publicRecord?{date:g.date,patch:g.patch,publicRecord:g.publicRecord}:{}),...(g.draftEvidence?{date:g.date,patch:g.patch,draftEvidence:g.draftEvidence,draftSequence:g.draftSequence,picks:g.picks,bans:g.bans}:{})}));delete q.tac;q.lite=true}
   return q;
 }
 function restoreSeriesIdentity(r){
@@ -84,7 +88,7 @@ function worldForSave(db){
   for(const [id,s] of Object.entries(w.seasons||{})){
     if(!s.done){seasons[id]=s;continue}
     const lite=!!(my&&s.region&&s.region!==my&&!db.competitions?.[s.comp]?.international);
-    const days=(s.days||[]).map(d=>({...d,matches:(d.matches||[]).map(m=>m.res?{...m,res:seriesResultForSave(m.res,lite)}:m)}));
+    const days=(s.days||[]).map(d=>({...d,matches:(d.matches||[]).map(m=>m.res?{...m,res:encodeSeriesIdentity(seriesResultForSave(m.res,lite))}:m)}));
     seasons[id]={...s,days};if(lite)seasons[id].compact=true;
   }
   return {...w,seasons};

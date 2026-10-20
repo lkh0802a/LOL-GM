@@ -59,11 +59,11 @@ await runEngineFixture(String.raw`(()=>{
    }
  }
  DB=db;
- const encoded=seriesResultForSave(rec,false),rawBefore=JSON.stringify(rec);
+ const encoded=encodeSeriesIdentity(seriesResultForSave(rec,false)),rawBefore=JSON.stringify(rec);
  check(encoded.seed===undefined&&encoded.firstChoice===undefined&&JSON.stringify(restoreSeriesIdentity(encoded))===rawBefore,'packed identity contract/complete restore');
  check(JSON.stringify(rec)===rawBefore,'identity encoding mutated runtime');
- const numeric={seed:42,firstChoice:'coin',games:[]};check(JSON.stringify(restoreSeriesIdentity(seriesResultForSave(numeric,false)))===JSON.stringify(numeric),'numeric seed lost');
- const optional={label:undefined,seed:'optional',firstChoice:'coin',games:[]};check(JSON.stringify(restoreSeriesIdentity(JSON.parse(JSON.stringify(seriesResultForSave(optional,false)))))===JSON.stringify(optional),'optional field shifted identity positions');
+ const numeric={seed:42,firstChoice:'coin',games:[]};check(JSON.stringify(restoreSeriesIdentity(encodeSeriesIdentity(seriesResultForSave(numeric,false))))===JSON.stringify(numeric),'numeric seed lost');
+ const optional={label:undefined,seed:'optional',firstChoice:'coin',games:[]};check(JSON.stringify(restoreSeriesIdentity(JSON.parse(JSON.stringify(encodeSeriesIdentity(seriesResultForSave(optional,false))))))===JSON.stringify(optional),'optional field shifted identity positions');
  for(const rows of [[['seed','x',0],['seed','y',1]],[['seed','x',0],['firstChoice','coin',0]],[['seed',{},0]],[['seed','x',999]]]){
    const broken={...encoded,seriesIdentityPacked:rows},before=JSON.stringify(broken);let blocked=false;
    try{restoreSeriesIdentity(broken)}catch(e){blocked=e.message.includes('식별 정보')}
