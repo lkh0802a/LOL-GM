@@ -5,6 +5,7 @@ import { ARTIFACT_MODULES, ENGINE_MODULES } from './artifact-modules.mjs';
 import { assertMutationOwnership } from './mutation-ownership.mjs';
 await import('./codex-impact-map-acceptance.mjs');
 await import('./observer-information-acceptance.mjs');
+await import('./historical-identity-acceptance.mjs');
 
 const root = resolve(import.meta.dirname, '..');
 const artifact = resolve(root, 'src', 'artifact');

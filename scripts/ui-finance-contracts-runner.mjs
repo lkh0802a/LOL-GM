@@ -12,6 +12,7 @@ const acceptances=[
   'draft-preparation-acceptance.mjs',
   'draft-history-acceptance.mjs',
   'match-history-acceptance.mjs',
+  'historical-identity-acceptance.mjs',
   'match-adjudication-acceptance.mjs',
   'item-purchase-ledger-acceptance.mjs',
   'inventory-defense-acceptance.mjs',
@@ -111,8 +112,8 @@ assert.equal(stats.engineCompiles,1,
   'shared domain runner must compile the engine exactly once');
 assert(stats.cachedArtifacts>=ENGINE_MODULES.length,
   'shared domain runner did not cache the complete engine source');
-assert.equal(stats.contexts,92,
-  'all 92 engine fixtures, including observer information, inventory-defense and analysis/report coverage, must each receive a fresh VM context');
+assert.equal(stats.contexts,93,
+  'all 93 engine fixtures, including historical identity, observer information, inventory-defense and analysis/report coverage, must each receive a fresh VM context');
 
 console.log('UI_FINANCE_CONTRACTS_RUNNER '+JSON.stringify({
   acceptances:rows.length,
