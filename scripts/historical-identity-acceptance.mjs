@@ -59,6 +59,19 @@ await runEngineFixture(String.raw`(()=>{
    }
  }
  DB=db;
+ const encoded=seriesResultForSave(rec,false),rawBefore=JSON.stringify(rec);
+ check(encoded.seed===undefined&&encoded.firstChoice===undefined&&JSON.stringify(restoreSeriesIdentity(encoded))===rawBefore,'packed identity contract/complete restore');
+ check(JSON.stringify(rec)===rawBefore,'identity encoding mutated runtime');
+ const numeric={seed:42,firstChoice:'coin',games:[]};check(JSON.stringify(restoreSeriesIdentity(seriesResultForSave(numeric,false)))===JSON.stringify(numeric),'numeric seed lost');
+ const optional={label:undefined,seed:'optional',firstChoice:'coin',games:[]};check(JSON.stringify(restoreSeriesIdentity(JSON.parse(JSON.stringify(seriesResultForSave(optional,false)))))===JSON.stringify(optional),'optional field shifted identity positions');
+ for(const rows of [[['seed','x',0],['seed','y',1]],[['seed','x',0],['firstChoice','coin',0]],[['seed',{},0]],[['seed','x',999]]]){
+   const broken={...encoded,seriesIdentityPacked:rows},before=JSON.stringify(broken);let blocked=false;
+   try{restoreSeriesIdentity(broken)}catch(e){blocked=e.message.includes('식별 정보')}
+   check(blocked&&JSON.stringify(broken)===before,'malformed identity not rejected atomically');
+   const input=JSON.parse(base),stored=input.world.seasons.archive.days.flatMap(d=>d.matches).find(m=>m.id===source.id);stored.res.seriesIdentityPacked=rows;let rejected=false;
+   try{unpackDB(JSON.stringify(input))}catch(e){rejected=e.message.includes('식별 정보')}
+   check(rejected&&JSON.stringify(rec)===rawBefore,'actual load accepted corrupt identity or changed original runtime');
+ }
  const other=teams.filter(t=>t.id!==a.id).slice(0,2),secret={...g,blue:other[0].id,red:other[1].id};Object.defineProperty(secret,'publicRecord',{get(){throw Error('foreign private source read')}});Object.defineProperty(secret,'seed',{get(){throw Error('foreign seed read')}});
  check(replayGame(db,{...rec,practiceModel:'engine'},secret).reason==='no-authority','foreign practice authority bypass');
  for(const key of ['kills','picks'])Object.defineProperty(secret,key,{get(){throw Error('foreign practice detail read')}});
