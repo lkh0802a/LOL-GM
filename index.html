@@ -15799,14 +15799,14 @@ function seasonTab(){
       ${ctop.map(([c,[n,w]])=>`<tr><td><b>${esc(identity.champions[c]||c)}</b></td><td class="num">${n}</td><td class="num">${(w/n*100).toFixed(0)}%</td></tr>`).join('')}
     </tbody></table></div></section>`;
   }
-  return `${seasonManagedTeam()?financePanel(read.teams[me]):''}<section><h3>세계 현황</h3>${worldTable()}${read.worldHype?`<p class="hint">세계 흥행 합계 ${read.worldHype}. 지역 평균 흥행이 높을수록 새 지역 합류와 국제대회 신설 가능성이 올라갑니다.</p>`:''}</section>
-  ${seasonManagedRegion()?`<section><h3>구단 재정 · ${esc(read.regions[seasonManagedRegion()].leagueName)}</h3>${financeTable(seasonManagedRegion())}</section>`:''}
+  return `${seasonManagedTeam()?financePanel(DB.teams[me]):''}<section><h3>세계 현황</h3>${worldTable()}${DB.worldHype?`<p class="hint">세계 흥행 합계 ${DB.worldHype}. 지역 평균 흥행이 높을수록 새 지역 합류와 국제대회 신설 가능성이 올라갑니다.</p>`:''}</section>
+  ${seasonManagedRegion()?`<section><h3>구단 재정 · ${esc(DB.regions[seasonManagedRegion()].leagueName)}</h3>${financeTable(seasonManagedRegion())}</section>`:''}
   <section><h3>국제 e스포츠 사무국</h3>${globalCard()}</section>
-  <section><h3>리그 사무국</h3><div class="cfgs">${Object.values(read.regions).map(officeCard).join('')}</div></section>
-  ${read.news.length?`<section><h3>뉴스</h3><ol class="news">${read.news.slice(0,20).map(n=>`<li><time>${n.year}</time><span>${esc(n.text)}</span></li>`).join('')}</ol></section>`:''}
-  <section><h3>역대 기록</h3>${read.history.length?histTable():'<p class="empty">시즌을 끝내면 우승 기록이 여기에 쌓입니다.</p>'}</section>
-  ${(read.awards||[]).length?`<section><h3>최근 시상</h3><div class="scroll"><table><thead><tr><th>시즌</th><th>대회</th><th>부문</th><th>선수</th></tr></thead><tbody>${read.awards.slice(-24).reverse().map(a=>`<tr><td class="num">${a.year}</td><td>${esc(a.comp)}</td><td>${esc(a.type)}</td><td><b>${esc(a.playerName||a.pid)}</b></td></tr>`).join('')}</tbody></table></div></section>`:''}
-  <section><h3>명예의 전당</h3>${(read.hof||[]).length?`<div class="scroll"><table><thead><tr><th>선수</th><th>포지션</th><th>은퇴</th><th>우승</th><th>국제</th><th>MVP</th><th>전성기</th></tr></thead><tbody>${read.hof.slice().reverse().map(h=>`<tr><td><b>${esc(h.name)}</b></td><td>${ROLE_KO[h.role]}</td><td class="num">${h.year}</td><td class="num">${h.titles}</td><td class="num">${h.intl}</td><td class="num">${h.mvps}</td><td class="num">${h.peak}</td></tr>`).join('')}</tbody></table></div>`:'<p class="hint">국제대회 2회 우승, 우승 5회, MVP 3회, 전성기 종합 90 중 하나를 달성하고 은퇴한 선수가 헌액됩니다.</p>'}</section>`;
+  <section><h3>리그 사무국</h3><div class="cfgs">${Object.values(DB.regions).map(officeCard).join('')}</div></section>
+  ${DB.news.length?`<section><h3>뉴스</h3><ol class="news">${DB.news.slice(0,20).map(n=>`<li><time>${n.year}</time><span>${esc(n.text)}</span></li>`).join('')}</ol></section>`:''}
+  <section><h3>역대 기록</h3>${DB.history.length?histTable():'<p class="empty">시즌을 끝내면 우승 기록이 여기에 쌓입니다.</p>'}</section>
+  ${(DB.awards||[]).length?`<section><h3>최근 시상</h3><div class="scroll"><table><thead><tr><th>시즌</th><th>대회</th><th>부문</th><th>선수</th></tr></thead><tbody>${DB.awards.slice(-24).reverse().map(a=>`<tr><td class="num">${a.year}</td><td>${esc(a.comp)}</td><td>${esc(a.type)}</td><td><b>${esc(a.playerName||a.pid)}</b></td></tr>`).join('')}</tbody></table></div></section>`:''}
+  <section><h3>명예의 전당</h3>${(DB.hof||[]).length?`<div class="scroll"><table><thead><tr><th>선수</th><th>포지션</th><th>은퇴</th><th>우승</th><th>국제</th><th>MVP</th><th>전성기</th></tr></thead><tbody>${DB.hof.slice().reverse().map(h=>`<tr><td><b>${esc(h.name)}</b></td><td>${ROLE_KO[h.role]}</td><td class="num">${h.year}</td><td class="num">${h.titles}</td><td class="num">${h.intl}</td><td class="num">${h.mvps}</td><td class="num">${h.peak}</td></tr>`).join('')}</tbody></table></div>`:'<p class="hint">국제대회 2회 우승, 우승 5회, MVP 3회, 전성기 종합 90 중 하나를 달성하고 은퇴한 선수가 헌액됩니다.</p>'}</section>`;
 }
 function histTable(){
   const groups={};DB.history.forEach(h=>{const k=h.compName||h.comp;(groups[k]=groups[k]||[]).push(h)});
