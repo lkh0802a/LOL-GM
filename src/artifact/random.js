@@ -12,5 +12,8 @@ class RNG{
   pick(arr){return arr[Math.floor(this.next()*arr.length)]}
   int(a,b){return a+Math.floor(this.next()*(b-a+1))}
 }
+// Copy Fisher–Yates uses the existing next() protocol, including RNG test doubles.
+// Exactly n-1 draws; candidate order/references and other streams stay untouched.
+function shuffleWithRng(arr,rng){const out=arr.slice();for(let i=out.length-1;i>0;i--){const j=Math.floor(rng.next()*(i+1)),value=out[i];out[i]=out[j];out[j]=value}return out}
 // 원인별로 분리된 랜덤 스트림
 function makeStreams(seed){return {mech:new RNG(seed,'mechanical'),dec:new RNG(seed,'decision'),info:new RNG(seed,'information'),exec:new RNG(seed,'execution'),draft:new RNG(seed,'draft'),log:new RNG(seed,'log')}}
