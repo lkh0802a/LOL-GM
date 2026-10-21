@@ -18,9 +18,18 @@ function positionCoachRole(role){return {TOP:'topCoach',JGL:'jglCoach',MID:'midC
 function roleCoachRating(t,role){const key=positionCoachRole(role);return key?staffAggregate(staffByRole(t,key),key):0}
 // Fictional learning policy; appointment at practice time, not season-end staffing.
 function positionPracticeBonus(db,p){const t=db.teams[p.team];return t?clamp(roleCoachRating(t,p.role)/99*.3,0,.3):0}
-function staffProfile(t){
-  const strategic=staffAggregate(staffByRole(t,'strategicCoach'),'strategicCoach'),analysis=staffAggregate(staffByRole(t,'analyst'),'analyst'),development=staffAggregate(staffByRole(t,'developmentCoach'),'developmentCoach'),performance=staffAggregate(staffByRole(t,'performanceCoach'),'performanceCoach'),scouting=staffAggregate(staffByRole(t,'scout'),'scout');
-  return {draft:clamp(42+strategic*.52,35,96),analysis:clamp(42+analysis*.52,35,96),development:clamp(42+development*.52,35,96),recovery:clamp(45+performance*.5,40,93),scouting:clamp(40+scouting*.5,35,96)};
+function staffProfile(t,fields=null){
+  // A caller may request only the fields it consumes. Read current staff on
+  // every call; appointments, specialties and restoration need no cache reset.
+  const out={},requested=fields||['draft','analysis','development','recovery','scouting'];
+  for(const field of requested){
+    if(field==='draft')out.draft=clamp(42+staffAggregate(staffByRole(t,'strategicCoach'),'strategicCoach')*.52,35,96);
+    else if(field==='analysis')out.analysis=clamp(42+staffAggregate(staffByRole(t,'analyst'),'analyst')*.52,35,96);
+    else if(field==='development')out.development=clamp(42+staffAggregate(staffByRole(t,'developmentCoach'),'developmentCoach')*.52,35,96);
+    else if(field==='recovery')out.recovery=clamp(45+staffAggregate(staffByRole(t,'performanceCoach'),'performanceCoach')*.5,40,93);
+    else if(field==='scouting')out.scouting=clamp(40+staffAggregate(staffByRole(t,'scout'),'scout')*.5,35,96);
+  }
+  return out;
 }
 function staffDevelopmentFor(t,role){const p=staffProfile(t),pos=roleCoachRating(t,role);return clamp(p.development+(pos?Math.max(0,pos-45)*.16:0),35,99)}
 function trainingGrowthMul(t){const p=staffProfile(t);return clamp(.88+(p.development-45)/220,0.88,1.13)}

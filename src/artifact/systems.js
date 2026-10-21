@@ -56,15 +56,20 @@ function systemChoiceBase(patch,c,role){
   const runes={};for(const d of Object.values(patch.runeDefs||{}))if(d.active!==false)runes[d.id]=systemChoiceScore(c,d.effects||{},role);
   const out={items,starters,runes};cache.set(key,out);return out;
 }
+// Continue the same FNV-1a hash after an already hashed common prefix.
+// No RNG calls, cache, or changes to the option-specific string are introduced.
+function systemChoiceHash(prefixHash,suffix){let h=prefixHash;for(let i=0;i<suffix.length;i++){h^=suffix.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
 function selectItemBuild(patch,c,p,role){
   const base=systemChoiceBase(patch,c,role),quest=!!patch.roleQuests?.roles?.[role];
   const options=quest?[...base.items.filter(x=>!patch.itemDefs[x.id]?.tags?.includes('Boots')&&!patch.itemDefs[x.id]?.from?.includes('3867')),...Object.values(patch.itemDefs||{}).filter(d=>d.active!==false&&d.shopActive!==false&&d.tags?.includes('Boots')&&d.from?.includes('1001')&&c.name!=='Cassiopeia').map(d=>({id:d.id,tier:'boots',fit:systemChoiceScore(c,d.effects||{},role),cost:d.cost}))]:base.items;
-  const ranked=options.map(x=>{const noise=((hashStr((p&&p.id||'')+'|'+c.id+'|'+role+'|'+x.id)%1000)/1000-.5)*.012;return {id:x.id,tier:x.tier,s:x.fit+noise-x.cost/140000+(x.tier==='boots'?.006:0)}}).sort((x,y)=>y.s-x.s);
+  const prefixHash=hashStr((p&&p.id||'')+'|'+c.id+'|'+role+'|');
+  const ranked=options.map(x=>{const noise=((systemChoiceHash(prefixHash,String(x.id))%1000)/1000-.5)*.012;return {id:x.id,tier:x.tier,s:x.fit+noise-x.cost/140000+(x.tier==='boots'?.006:0)}}).sort((x,y)=>y.s-x.s);
   const bestBoot=quest?ranked.find(x=>x.tier==='boots'):null;const out=bestBoot?[bestBoot.id]:[];let boots=!!bestBoot;if(quest&&role==='SUP'&&patch.itemDefs['3865'])out.push('3865');for(const x of ranked){if(x.tier==='boots'&&boots)continue;out.push(x.id);if(x.tier==='boots')boots=true;if(out.length>=6)break}return out;
 }
 function selectStarterItem(patch,c,p,role){
   if(role==='SUP'&&patch.roleQuests?.roles?.SUP&&patch.itemDefs?.['3865']?.active!==false&&Number.isFinite(patch.itemDefs?.['3865']?.cost)&&patch.itemDefs['3865'].cost>=0&&patch.itemDefs['3865'].cost<=500)return '3865';
-  const rows=systemChoiceBase(patch,c,role).starters.filter(d=>Number.isFinite(patch.itemDefs[d.id].cost)&&patch.itemDefs[d.id].cost>=0&&patch.itemDefs[d.id].cost<=500).map(d=>({id:d.id,s:d.fit+d.roleFit+((hashStr((p&&p.id||'')+'|start|'+d.id)%1000)/1000-.5)*.008-d.cost/40000})).sort((a,b)=>b.s-a.s);
+  const prefixHash=hashStr((p&&p.id||'')+'|start|');
+  const rows=systemChoiceBase(patch,c,role).starters.filter(d=>Number.isFinite(patch.itemDefs[d.id].cost)&&patch.itemDefs[d.id].cost>=0&&patch.itemDefs[d.id].cost<=500).map(d=>({id:d.id,s:d.fit+d.roleFit+((systemChoiceHash(prefixHash,String(d.id))%1000)/1000-.5)*.008-d.cost/40000})).sort((a,b)=>b.s-a.s);
   return rows[0]?.id||null;
 }
 function itemCraftActions(patch,finalBuild){
@@ -78,15 +83,16 @@ function itemPurchasePlan(patch,finalBuild,starterId){
   for(const a of actions){spent+=a.cost;a.threshold=spent}
   return actions;
 }
-function runeChoiceScore(patch,c,p,role,id){
+function runeChoiceScore(patch,c,p,role,id,prefixHash){
   const d=patch.runeDefs&&patch.runeDefs[id];if(!d||d.active===false)return -Infinity;
-  const noise=((hashStr((p&&p.id||'')+'|'+c.id+'|'+role+'|rune|'+id)%1000)/1000-.5)*.01;
+  const noise=((systemChoiceHash(prefixHash??hashStr((p&&p.id||'')+'|'+c.id+'|'+role+'|rune|'),String(id))%1000)/1000-.5)*.01;
   return (systemChoiceBase(patch,c,role).runes[id]??systemChoiceScore(c,d.effects||{},role))+noise;
 }
 function selectRunePage(patch,c,p,role){
   const styles=Object.values(patch.runes||{}).filter(s=>s&&Array.isArray(s.slots)&&s.slots.length>=4);
   if(styles.length<2)return [];
-  const bestIn=(style,slot)=>((style.slots&&style.slots[slot])||[]).filter(id=>patch.runeDefs?.[id]?.active!==false).map(id=>({id,s:runeChoiceScore(patch,c,p,role,id),slot})).sort((x,y)=>y.s-x.s)[0]||null;
+  const prefixHash=hashStr((p&&p.id||'')+'|'+c.id+'|'+role+'|rune|');
+  const bestIn=(style,slot)=>((style.slots&&style.slots[slot])||[]).filter(id=>patch.runeDefs?.[id]?.active!==false).map(id=>({id,s:runeChoiceScore(patch,c,p,role,id,prefixHash),slot})).sort((x,y)=>y.s-x.s)[0]||null;
   const ranked=styles.map(style=>{const picks=[0,1,2,3].map(slot=>bestIn(style,slot));return {style,picks,score:picks.every(Boolean)?picks.reduce((z,x)=>z+x.s,0):-Infinity}}).filter(x=>Number.isFinite(x.score)).sort((x,y)=>y.score-x.score);
   const primary=ranked[0];if(!primary)return [];
   // Primary ranking already computed each style's best pick in all four slots.

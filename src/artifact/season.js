@@ -214,19 +214,19 @@ function pendingOfficialControl(db){
 // Preserve object identity as well as values if this one-set handoff fails.
 // Previously completed sets are outside the operation and remain recorded.
 function pendingOfficialUndo(db){
-  // Retain every reachable object and its original references. A flat record
-  // avoids a row object and a separate values array for every graph node.
-  // Layout: object, own keys, array length (or null), then the captured values.
-  const seen=new Set(),rows=[];
-  const visit=o=>{
-    if(!o||typeof o!=='object'||seen.has(o))return;
+  // Capture the full reachable graph in the same depth-first property order.
+  // Primitive values are retained in rows without recursive calls. The stack
+  // contains only objects; reverse push preserves getter/alias visit order.
+  const seen=new Set(),rows=[],pending=[db];
+  while(pending.length){
+    const o=pending.pop();if(!o||typeof o!=='object'||seen.has(o))continue;
     seen.add(o);const keys=Object.keys(o),base=rows.length;
     rows.push(o,keys,null);
     for(let i=0;i<keys.length;i++)rows.push(o[keys[i]]);
     rows[base+2]=Array.isArray(o)?o.length:null;
-    for(let i=0;i<keys.length;i++)visit(rows[base+3+i]);
-  };
-  visit(db);return ()=>{
+    for(let i=keys.length-1;i>=0;i--){const value=rows[base+3+i];if(value&&typeof value==='object')pending.push(value);}
+  }
+  return ()=>{
     for(let at=0;at<rows.length;){
       const o=rows[at],keys=rows[at+1],length=rows[at+2],kept=new Set(keys);
       for(const key of Object.keys(o))if(!kept.has(key))delete o[key];

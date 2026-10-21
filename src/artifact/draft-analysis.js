@@ -13,10 +13,10 @@ function draftMasteryObservation(state,observerSide,targetSide,p,cid){
     if(raw&&typeof raw==='object'&&(raw.gamesSeen||0)>0)sources.push('공식 경기 관찰 '+raw.gamesSeen+'G');
     if(raw&&typeof raw==='object'&&(raw.observations||0)>0)sources.push('스카우팅 관찰 '+raw.observations+'회');
     if(!sources.length)sources.push(p.region===observer.region?'동일 지역 기본 정보':sameScoutZone(p.region,observer.region)?'동일 권역 기본 정보':'해외 기본 정보');
-    sources.push('스카우팅팀 '+Math.round(staffProfile(observer).scouting));
+    sources.push('스카우팅팀 '+Math.round(staffProfile(observer,['scouting']).scouting));
     return {value:25,known:false,range:[20,99],confidence:knowledge,sources};
   }
-  const prof=staffProfile(observer),sameRegion=observer?.region===target?.region,sameZone=!sameRegion&&sameScoutZone(observer?.region,target?.region),hist=state.ctx.byTeam[state.teamIds[targetSide]]||{won:[],lost:[]},revealed=hist.won.includes(cid)||hist.lost.includes(cid);
+  const prof=staffProfile(observer,['scouting','analysis']),sameRegion=observer?.region===target?.region,sameZone=!sameRegion&&sameScoutZone(observer?.region,target?.region),hist=state.ctx.byTeam[state.teamIds[targetSide]]||{won:[],lost:[]},revealed=hist.won.includes(cid)||hist.lost.includes(cid);
   const confidence=Math.round(clamp(18+prof.scouting*.34+prof.analysis*.23+(sameRegion?15:sameZone?7:0)+(revealed?12:0),25,92));
   const sources=['숙련도 수치 미관측 · 공개 출전은 숙련도와 다름','스카우팅팀 '+Math.round(prof.scouting),'분석팀 '+Math.round(prof.analysis)];if(sameRegion)sources.push('동일 지역 관찰');else if(sameZone)sources.push('동일 권역 관찰');if(revealed)sources.push('이번 시리즈 공개 픽');
   return {value:25,known:false,range:[20,99],confidence,sources};
