@@ -53,6 +53,7 @@ export const ENGINE_MODULES = [
   'club-ownership.js',
   'club-license.js',
   'region-continuity.js',
+  'finance-closeout.js',
   'finance.js',
   'contract-market-pricing.js',
   'contracts.js',

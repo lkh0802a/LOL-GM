@@ -78,6 +78,9 @@ function normalizeRestoredSave(db){
   // Format 2 uses the same runtime object model, but strips derived caches.
   for(const k of SAVE_TRANSIENT_ROOT_FIELDS)delete db[k];
   db.worldConfig.changes='normal';
+  // Normalize future configuration only. Completed/active seasons, brackets,
+  // pending match keys, event-time snapshots and paid statements keep their IDs.
+  normalizeInternationalConfig(db.worldConfig);
   db.metaHistory=unpackMetaHistory(db.metaHistory||[]);
   for(const c of Object.values(db.competitions||{})){
     const r=db.regions?.[c.region];
