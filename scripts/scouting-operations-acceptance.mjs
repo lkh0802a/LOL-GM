@@ -35,6 +35,11 @@ const fixture=String.raw`(()=>{
   ensureFacilities(strong).scouting=5;
   ensureFacilities(weak).scouting=1;
   ensureFacilities(poor).scouting=1;
+  // Isolate the basic two-scout department. Generated coaches may also have a
+  // legitimate secondary scouting appointment; that is a larger department,
+  // even when its facility/rating is low. Keep the original coverage assertions.
+  for(const employee of ensureStaffRoster(weak))if(employee.role!=='scout'&&employee.specialties)delete employee.specialties.scout;
+  assert(staffByRole(weak,'scout').length===2,'basic fixture must have its two primary scouts only');
   for(const s of staffByRole(strong,'scout'))s.rating=94;
   for(const s of staffByRole(weak,'scout'))s.rating=42;
   for(let i=0;i<2;i++)ensureStaffRoster(strong).push({

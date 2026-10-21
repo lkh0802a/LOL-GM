@@ -54,6 +54,14 @@ function negotiationClockAt(db){
   }
   return officialGameClockFloor(db,date+'T00:00:00.000Z');
 }
+// 완료된 타 지역 경기의 압축 저장에도 실제 숫자 소요 시간을 유지한다.
+// 표시용 dur 문자열에서 시간을 복원하거나 누락 근거를 추정하지 않는다.
+const seriesResultForSaveBeforeActualTime=seriesResultForSave;
+seriesResultForSave=function(result,lite){
+  const saved=seriesResultForSaveBeforeActualTime(result,lite);
+  if(lite&&!result.lite)saved.games=saved.games.map((game,index)=>({...game,...(result.games[index].duration!=null?{duration:result.games[index].duration}:{})}));
+  return saved;
+};
 // 넥서스 종료까지 실제 엔진이 소비한 분 단위 시간만 기록한다.
 // 세트 사이 준비/휴식과 중계 종료 시간은 자료가 없어 만들어 넣지 않는다.
 function officialGameTimeRecord(m,games){
@@ -161,6 +169,7 @@ function officialQueuedGameError(db,s,m,event){
   const record=officialGameTimeRecord(m,session.games);
   if(!record||event.endAt!==record.gameTimeThrough||session.games.length!==(m.clockSession?.games.length||0)+1||event.observation?.date!==(officialGameTimeRecord(m,m.clockSession?.games||[])?.gameTimeThrough||officialActualStart(m)).slice(0,10))throw Error('진행 중인 다른 게임의 종료 기록을 확인할 수 없습니다');
   const game=session.games.at(-1),observation=event.observation;
+  if(s.patchLock&&[game.patch,game.publicRecord?.patch,observation.patch].some(id=>id!==internationalMatchPatch(db,s).id))throw Error('국제대회 개막 패치와 저장된 게임의 패치가 다릅니다');
   if(game.publicRecord?.ending?.kind!=='nexus'||game.publicRecord.ending.winner!==game.winner||game.publicRecord.winner!==game.winner||game.publicRecord.duration!==game.duration||game.publicRecord.ending.minute+game.publicRecord.ending.second/60!==game.duration)throw Error('실제 넥서스 종료 기록을 확인할 수 없습니다');
   if(![0,1].includes(observation.winner)||observation.sides?.length!==2||observation.sides[0].team?.id!==game.blue||observation.sides[1].team?.id!==game.red||[game.blue,game.red][observation.winner]!==game.winner||observation.comp!==s.comp||observation.metaContext?.season!==s.id)throw Error('진행 중인 게임과 관측 입력이 다릅니다');
   if(!Array.isArray(observation.draft?.bans)||observation.draft.bans.length!==2||observation.draft.bans.some(xs=>!Array.isArray(xs)||xs.some(id=>typeof id!=='string'))||observation.sides.some(side=>!Array.isArray(side.ps)||side.ps.length!==ROLES.length||side.ps.some(p=>typeof p?.champ?.id!=='string'||typeof p?.p?.id!=='string'||!Array.isArray(p.items)||!Array.isArray(p.runes))))throw Error('저장된 게임의 관측 입력을 확인할 수 없습니다');
@@ -199,8 +208,16 @@ function officialClockFixed(value){
   const copy=JSON.parse(raw),freeze=o=>{if(o&&typeof o==='object'){for(const v of Object.values(o))freeze(v);Object.freeze(o);}};
   freeze(copy);OFFICIAL_CLOCK_FIXED.set(value,{raw,copy});return copy;
 }
-function officialClockPreview(db){
-  const mutable=JSON.parse(JSON.stringify({players:db.players,teams:db.teams,metaStats:db.metaStats,regionMetaStats:db.regionMetaStats,regionMetaGames:db.regionMetaGames}));
+function officialClockPreview(db,teamIds=null){
+  // A prepared foreign game may write only its participating squads. Other
+  // players/teams remain guarded read-only inputs; the full path stays for
+  // general callers. No rollback graph or historical validation is omitted.
+  const participants=teamIds&&new Set(teamIds),pids=participants&&new Set(teamIds.flatMap(id=>db.teams[id]?.roster||[]));
+  const mutable=JSON.parse(JSON.stringify({players:participants?Object.fromEntries([...pids].filter(id=>db.players[id]).map(id=>[id,db.players[id]])):db.players,teams:participants?Object.fromEntries(teamIds.filter(id=>db.teams[id]).map(id=>[id,db.teams[id]])):db.teams,metaStats:db.metaStats,regionMetaStats:db.regionMetaStats,regionMetaGames:db.regionMetaGames}));
+  if(participants){
+    mutable.players=Object.fromEntries(Object.entries(db.players).map(([id,p])=>[id,mutable.players[id]||officialClockReadonly(p)]));
+    mutable.teams=Object.fromEntries(Object.entries(db.teams).map(([id,t])=>[id,mutable.teams[id]||officialClockReadonly(t)]));
+  }
   const copy=Object.fromEntries(Object.entries(db).map(([key,value])=>[key,Object.hasOwn(mutable,key)?mutable[key]:officialClockReadonly(value)]));
   copy.patch=officialClockFixed(db.patch);copy.metaHistory=(db.metaHistory||[]).map(officialClockFixed);return copy;
 }
@@ -209,7 +226,7 @@ function prepareOfficialClockGame(db,s,m){
   if(me&&(m.a===me||m.b===me))throw Error('현재 감독의 경기에는 다른 구단의 자동 입력을 적용할 수 없습니다');
   if(m.clockGame){officialQueuedGameError(db,s,m,m.clockGame);return;}
   officialClockSessionCheck(s,m);
-  const copy=officialClockPreview(db),session=JSON.parse(JSON.stringify(m.clockSession||scheduledSeriesSession(copy,officialClockReadonly(s),officialClockReadonly(m)).session));
+  const copy=officialClockPreview(db,[m.a,m.b]),session=JSON.parse(JSON.stringify(m.clockSession||scheduledSeriesSession(copy,officialClockReadonly(s),officialClockReadonly(m)).session));
   const played=playSeriesSessionGame(copy,session,null,true),record=officialGameTimeRecord(m,session.games);
   m.clockGame={endAt:record.gameTimeThrough,session,observation:officialGameObservation(played.game)};
   officialQueuedGameError(db,s,m,m.clockGame);
@@ -229,17 +246,16 @@ function playOfficialGamesThrough(db,s,m,boundary){
   if(typeof boundary!=='string'||!Number.isFinite(Date.parse(boundary))||new Date(boundary).toISOString()!==boundary)throw Error('공식 경기 진행 경계 시각을 확인할 수 없습니다');
   const me=db.world.manage==='manual'&&!db.world.fired?managedTeamId(db):null;
   if(me&&(m.a===me||m.b===me))throw Error('현재 감독의 경기에는 다른 구단의 자동 입력을 적용할 수 없습니다');
-  while(!m.res){
-    const undo=pendingOfficialUndo(db);
-    try{
+  // This boundary call is atomic on failure, including earlier sets consumed
+  // inside it. Sets committed before entry keep their original identities.
+  const undo=pendingOfficialUndo(db);
+  try{while(!m.res){
       prepareOfficialClockGame(db,s,m);
       if(m.clockGame.endAt>boundary)return false;
       const end=m.clockGame.endAt;consumeOfficialClockGame(db,s,m);
       if(m.res)return true;
       if(end>=boundary)return false;
-    }catch(error){undo();throw error;}
-  }
-  return true;
+  }return true;}catch(error){undo();throw error;}
 }
 function officialClockStartUndo(db,m){
   // 시작 준비는 격리된 자료만 변경한다. 실제 세계 작성은 이 두 필드뿐이다.
@@ -251,6 +267,7 @@ function playOfficialWorldEvents(db,date,manualEnd=null){
   const w=db.world,me=w.manage==='manual'&&!w.fired?managedTeamId(db):null;
   let days=Object.entries(w.seasons||{}).filter(([,s])=>!s.done&&s.days[s.cur]?.date===date)
     .map(([key,s])=>({key,s,day:s.days[s.cur]})).sort((a,b)=>a.key.localeCompare(b.key));
+  const requested=days.flatMap(({day})=>day.matches);
   const currentDays=()=>Object.entries(w.seasons||{}).filter(([,s])=>!s.done&&s.days[s.cur]?.date<=db.worldDate).map(([key,s])=>({key,s,day:s.days[s.cur]})).sort((a,b)=>a.key.localeCompare(b.key));
   const remaining=()=>days.flatMap(d=>d.day.matches.filter(m=>!m.res&&m!==manualEnd?.match).map(m=>({...d,m})));
   const matches=remaining();
@@ -260,17 +277,20 @@ function playOfficialWorldEvents(db,date,manualEnd=null){
   const n=(manualEnd?waitingNegotiationResponses(db).filter(n=>n.teamId===me):waitingNegotiationResponses(db,true))[0];
   if(n){const error=negotiationResponseError(n);if(error)throw Error(error);if(n.response.dueAt<date+'T00:00:00.000Z')return null;}
   const advanced=date>=db.worldDate?applyWorldDailyEffects(db,date):false,played=days.map(({s,day})=>({s,day}));
-  const finish=()=>{
+  const finish=(carryOnly=false)=>{
+    const complete=days.filter(({s,day})=>day.matches.every(m=>m.res)&&(!carryOnly||s.days[s.cur+1]?.date<=db.worldDate));if(!complete.length)return;
     const undo=pendingOfficialUndo(db);
     try{
-      for(const {s,day} of days){
-        if(day.matches.some(m=>!m.res))continue;
+      for(const {s,day} of complete){
         const comp=db.competitions[s.comp],idx=comp.stages.findIndex(x=>x.id===day.stage);
         if(finalizeCompetitionDay(db,s,day,idx,comp.stages[idx]))scoutFromDay(db,s,day);
       }
     }catch(error){undo();throw error;}
   };
   while(true){
+    // Finish the requested fixture day and its started games. A midnight
+    // carry must not eagerly consume every later fixture day in the season.
+    if(requested.every(m=>m.res)){finish();if(!activeSeasons(db).length)advanceStep(db);return {date,played,pending:w.pendingOfficial,advanced};}
     const entries=officialResourceEntries(db),events=remaining().flatMap(ref=>{
       const {m}=ref,owned=me&&(m.a===me||m.b===me);
       if(owned&&(m.clockGame||m.clockSession))throw Error('진행 중인 다른 구단의 경기입니다. 현재 감독 경기로 자동 전환하지 않습니다');
@@ -287,6 +307,7 @@ function playOfficialWorldEvents(db,date,manualEnd=null){
     let event=events[0];if(event&&event.at>=midnight)event={kind:'midnight',at:midnight};if(!event){if(remaining().length)throw Error('앞 공식 경기의 점유가 해소되지 않았습니다. 현재 경기와 저장을 확인하세요');finish();if(!activeSeasons(db).length)advanceStep(db);return {date,played,pending:w.pendingOfficial,advanced};}
     const forfeit=['start','manual'].includes(event.kind)&&!event.m.clockSession?scheduledRegistrationForfeit(officialClockReadonly(db),officialClockReadonly(event.s),officialClockReadonly(event.m)):null;
     const undo=event.kind==='start'&&!forfeit?officialClockStartUndo(db,event.m):pendingOfficialUndo(db);
+    let gameConsumed=false;
     try{
       // 이전 저장의 이미 소비된 하한은 되감지 않는다.
       const current=negotiationClockAt(db),at=event.at<current?current:event.at;
@@ -299,7 +320,7 @@ function playOfficialWorldEvents(db,date,manualEnd=null){
         return {date,played,pending:{kind:'negotiation',id:contact.id},advanced,...response};
       }
       if(event.kind==='manualEnd')return manualEnd.consume();
-      if(event.kind==='end'){consumeOfficialClockGame(db,event.s,event.m);continue;}
+      if(event.kind==='end'){consumeOfficialClockGame(db,event.s,event.m);gameConsumed=true;finish(true);days=currentDays();for(const {s,day} of days)if(!played.some(x=>x.day===day))played.push({s,day});continue;}
       if(forfeit){commitScheduledSeries(db,event.s,event.m,forfeit);continue;}
       if(event.plan)recordOfficialResourceStart(event.m,event.plan);
       if(event.kind==='manual'){
@@ -308,7 +329,7 @@ function playOfficialWorldEvents(db,date,manualEnd=null){
         return {date,played,pending:w.pendingOfficial,advanced};
       }
       prepareOfficialClockGame(db,event.s,event.m);
-    }catch(error){undo();throw error;}
+    }catch(error){if(!gameConsumed)undo();throw error;}
   }
 }
 playDay=function(db,s,opt={}){
@@ -411,7 +432,7 @@ function commitNegotiationTime(db,copy){
 function advanceNegotiationTime(db){
   const w=db.world,t=managedTeam(db);
   if(!w||!t||t.active===false||t.parent||w.manage!=='manual'||w.fired||w.pendingOfficial)return {ok:false,msg:'현재 감독 권한으로 시간을 진행할 수 없습니다'};
-  if(!['initial_roster','market','offseason'].includes(w.phase))return {ok:false,msg:'현재 화면에서 협상 시간을 직접 진행할 수 없습니다'};
+  if(!['initial_roster','market','preseason','offseason'].includes(w.phase))return {ok:false,msg:'현재 화면에서 협상 시간을 직접 진행할 수 없습니다'};
   const pending=waitingNegotiationResponses(db,true);if(!pending.length)return {ok:false,msg:'응답을 기다리는 현재 구단의 제안이 없습니다'};
   const responseError=negotiationResponseError(pending[0]);if(responseError)return {ok:false,msg:responseError};
   const now=negotiationClockAt(db),nextMidnight=addDays(db.worldDate,1)+'T00:00:00.000Z',due=pending[0].response.dueAt;
@@ -519,7 +540,10 @@ resolvePendingOfficialMatch=function(db,forcedDraft){
   if(control.error)throw Error(control.error);
   if(refs)officialResourcePendingCheck(db,refs,q);
   if(!control.manual&&forcedDraft!=null)throw Error('현재 감독의 수동 게임 입력이 아닙니다');
-  if((!control.manual&&!Object.hasOwn(q,'inflight'))||!refs?.m.utcAt)return officialManualResolveBeforeEvents(db,forcedDraft);
+  const currentManualOwner=w.manage==='manual'&&!w.fired&&managedTeamId(db),dated=Object.values(w.seasons||{}).filter(s=>!s.done&&s.days[s.cur]?.date===refs?.day.date).every(s=>s.days[s.cur].matches.every(m=>m.utcAt));
+  // 새 감독의 별도 준비와 시각 없는 이전 저장은 기존 인계 경계를 유지한다.
+  // 감독이 없는 자동 인계도 다른 리그의 시작·종료를 먼저 소비한다.
+  if(!refs?.m.utcAt||!control.manual&&!Object.hasOwn(q,'inflight')&&(currentManualOwner||!dated))return officialManualResolveBeforeEvents(db,forcedDraft);
   if(control.manual&&Object.hasOwn(q,'contact'))throw Error('선수 연락을 검토한 뒤 현재 경기 준비를 직접 다시 여세요');
   for(const n of waitingNegotiationResponses(db).filter(n=>n.teamId===managedTeamId(db))){const error=negotiationResponseError(n);if(error)throw Error(error);}
   const undo=pendingOfficialUndo(db);
@@ -534,7 +558,7 @@ resolvePendingOfficialMatch=function(db,forcedDraft){
       baseSession=JSON.parse(JSON.stringify(initial));played=playSeriesSessionGame(preview,baseSession,forcedDraft,false);at=officialGameTimeRecord(refs.m,baseSession.games)?.gameTimeThrough;
       if(at){
         if(!q.session)q.session=initial;
-        if(at.slice(0,10)>db.worldDate||waitingNegotiationResponses(db).some(n=>n.teamId===managedTeamId(db)&&n.response.dueAt<at))q.inflight={endAt:at,session:baseSession,observation:officialGameObservation(played.game),gameGraph:officialInflightPack(played),manager:db.manager.id,team:managedTeamId(db),basis:JSON.stringify(q.session)};
+        if(at.slice(0,10)>db.worldDate||control.manual&&waitingNegotiationResponses(db).some(n=>n.teamId===managedTeamId(db)&&n.response.dueAt<at))q.inflight={endAt:at,session:baseSession,observation:officialGameObservation(played.game),gameGraph:officialInflightPack(played),...(control.manual?{manager:db.manager.id,team:managedTeamId(db)}:{automatic:true,manager:null,team:null}),basis:JSON.stringify(q.session)};
       }
     }
     if(!at)return officialManualResolveBeforeEvents(db,forcedDraft);
@@ -576,7 +600,8 @@ function receiveManualEndedContact(db){
 // 시작 입력은 진행 저장에 고정하며 실제 종료 전에는 관측·결과를 소비하지 않는다.
 function manualInflightGame(db,automatic=false){
   const control=pendingOfficialControl(db),q=db.world?.pendingOfficial?.queue?.[0],event=q?.inflight,refs=control.refs;
-  if(control.error||!event||!refs||![refs.m.a,refs.m.b].includes(event.team)||(!automatic&&(!control.manual||event.manager!==db.manager?.id||event.team!==managedTeamId(db)))||event.basis!==JSON.stringify(q.session))throw Error('진행 중인 수동 게임의 시작 입력이나 현재 권한을 확인할 수 없습니다');
+  const origin=event?.automatic===true?event.manager===null&&event.team===null&&(automatic||control.manual):event&&!Object.hasOwn(event,'automatic')&&[refs?.m.a,refs?.m.b].includes(event.team)&&(automatic||control.manual&&event.manager===db.manager?.id&&event.team===managedTeamId(db));
+  if(control.error||!event||!refs||!origin||event.basis!==JSON.stringify(q.session))throw Error('진행 중인 수동 게임의 시작 입력이나 현재 권한을 확인할 수 없습니다');
   officialQueuedGameError(db,refs.s,{...refs.m,clockSession:q.session},event);
   const played=Object.hasOwn(event,'gameGraph')?officialInflightUnpack(event.gameGraph):event.played,last=event.session.games.at(-1);
   if(!played?.game||JSON.stringify(officialGameObservation(played.game))!==JSON.stringify(event.observation)||played.winner!==last.winner||played.loser!==[last.blue,last.red].find(id=>id!==last.winner)||played.done!==seriesSessionDone(event.session)||JSON.stringify(played.score)!==JSON.stringify([event.session.wins[event.session.a],event.session.wins[event.session.b]])||played.game.duration!==last.duration||negotiationClockAt(db)>event.endAt)throw Error('진행 중인 수동 게임의 실제 종료 입력을 확인할 수 없습니다');
@@ -641,4 +666,104 @@ officialBookedTeams=function(db,date=db.worldDate){
   const teams=officialBookedTeamsBeforeMidnight(db,date),add=(m,session,event)=>{if(!event)return;const start=officialGameTimeRecord(m,session?.games||[])?.gameTimeThrough||m.utcAt;if(start&&start.slice(0,10)<=date&&typeof event.endAt==='string'&&event.endAt.slice(0,10)>=date){teams.add(m.a);teams.add(m.b);}};
   for(const s of Object.values(db.world?.seasons||{}))for(const day of s.days||[])for(const m of day.matches){add(m,m.clockSession,m.clockGame);if(m.actualStart&&officialActualStart(m).slice(0,10)===date||m.gameTime&&typeof m.utcAt==='string'&&typeof m.gameTime.gameTimeThrough==='string'&&m.utcAt.slice(0,10)<=date&&m.gameTime.gameTimeThrough.slice(0,10)>=date){teams.add(m.a);teams.add(m.b);}}
   const q=db.world?.pendingOfficial?.queue?.[0],refs=q&&pendingOfficialRefs(db,q);if(refs)add(refs.m,q.session,q.inflight);return teams;
+};
+
+// 점유 조회도 실제 게임/세션 근거를 확인한다. 손상 시각으로 연습을 막거나 소비하지 않는다.
+function officialOccupationEvidenceCheck(db){
+  try{
+  const q=db.world?.pendingOfficial?.queue?.[0],refs=q&&pendingOfficialRefs(db,q);
+  for(const season of Object.values(db.world?.seasons||{}))for(const day of season.days||[])for(const match of day.matches||[]){
+    if(match.actualStart)officialResourceStartCheck(db,season,match);
+    const session=match.clockSession||(refs?.m===match?q.session:null);
+    if(session)officialClockSessionCheck(season,{...match,clockSession:session});
+    if(match.gameTime){
+      const record=officialGameTimeRecord(match,session?.games||match.res?.games||[]);
+      if(!record||!officialGameTimeSame(record,match.gameTime))throw Error('연습 일정 전에 공식 경기의 실제 소비 기록을 확인하세요');
+    }
+    if(match.clockGame)officialQueuedGameError(db,season,match,match.clockGame);
+  }
+  if(q?.inflight){
+    if(!refs||q.inflight.basis!==JSON.stringify(q.session))throw Error('연습 일정 전에 진행 게임의 시작 입력을 확인하세요');
+    officialQueuedGameError(db,refs.s,{...refs.m,clockSession:q.session},q.inflight);
+  }
+  }catch(error){error.code='official_occupation_evidence';throw error;}
+}
+const officialBookedTeamsBeforeResourceEvidence=officialBookedTeams;
+officialBookedTeams=function(db,date=db.worldDate){officialOccupationEvidenceCheck(db);return officialBookedTeamsBeforeResourceEvidence(db,date);};
+// 날짜/정산/의료 작성에 앞서 검증한다. 정상 입력은 원래 일일 작성자를 그대로 사용한다.
+const officialDailyBeforeResourceEvidence=applyWorldDailyEffects;
+applyWorldDailyEffects=function(db,date){
+  if(db.world.lastDailyTick===date)return officialDailyBeforeResourceEvidence(db,date);
+  officialOccupationEvidenceCheck(db);
+  // 일일 정산/회복/연습/등록은 함께 완료하거나 함께 되돌린다. 이전 완료 날짜는 보존한다.
+  const undo=pendingOfficialUndo(db);
+  try{return officialDailyBeforeResourceEvidence(db,date);}catch(error){undo();throw error;}
+};
+
+// 새 스크림 예약은 당시 계산한 공통 시간과 체류 근거를 보존한다. 참가 선수는 미리 예약하지 않는다.
+function officialScrimScheduleBasis(db,plan){
+  const first=db.teams[plan.teamId],second=db.teams[plan.opponentId];if(!first||!second)return null;
+  const overlap=scrimTimeOverlap(db,first,second,plan.date,plan.slot);if(!overlap)return null;
+  return {version:1,date:plan.date,slot:plan.slot,games:plan.games,startsAt:overlap.startsAt,endsAt:overlap.endsAt,
+    venues:[first,second].map(team=>({teamId:team.id,...teamPracticeVenue(db,team,plan.date)}))};
+}
+function officialScrimBasisSame(first,second){
+  if(!first||!second||first.version!==1||second.version!==1||!Array.isArray(first.venues)||first.venues.length!==2)return false;
+  return ['date','slot','games','startsAt','endsAt'].every(key=>first[key]===second[key])&&first.venues.every((venue,index)=>['teamId','region','timeZone'].every(key=>venue?.[key]===second.venues[index]?.[key]));
+}
+const officialScrimSnapshotBeforeBasis=WORLD_ACTION_HANDLERS['scrim.request'].snapshot;
+WORLD_ACTION_HANDLERS['scrim.request'].snapshot=function(db,command){return {...officialScrimSnapshotBeforeBasis(db,command),scheduleBasis:officialScrimScheduleBasis(db,command)};};
+const officialScrimApplyBeforeBasis=WORLD_ACTION_HANDLERS['scrim.request'].apply;
+WORLD_ACTION_HANDLERS['scrim.request'].apply=function(db,command){
+  const basis=officialScrimScheduleBasis(db,command),result=officialScrimApplyBeforeBasis(db,command);
+  if(result?.ok){const id=[command.teamId,command.opponentId].sort().join('|')+'|'+command.date+'|'+command.slot,plan=scrimPlans(db).find(p=>p.id===id);if(!plan||!basis)throw Error('스크림 예약 당시 시간을 확인할 수 없습니다');plan.scheduleBasis=basis;}
+  return result;
+};
+const officialScheduledScrimsBeforeBasis=runScheduledScrims;
+runScheduledScrims=function(db){
+  const due=scrimPlans(db).filter(p=>p.status==='accepted'&&p.date<=db.worldDate);if(!due.length)return officialScheduledScrimsBeforeBasis(db);
+  const undo=pendingOfficialUndo(db);
+  try{
+    for(const plan of due){
+      const current=plan.date===db.worldDate?officialScrimScheduleBasis(db,plan):null;
+      if(!officialScrimBasisSame(plan.scheduleBasis,current)){plan.status='blocked';plan.playedGames=0;plan.reason=plan.scheduleBasis?'예약 당시 시간·체류 조건이 달라져 진행하지 않았습니다':'예약 당시 시간 근거가 없어 진행하지 않았습니다';}
+    }
+    return officialScheduledScrimsBeforeBasis(db);
+  }catch(error){undo();throw error;}
+};
+
+// 같은 시기·위상의 동서 대회는 기간을 공유한다. 경기별 공통 중계는 실제 사건 작성자가 순차 소비한다.
+// 원래 시즌 작성자를 한 번 호출하며 이미 작성된 현재 단계/편성·이전 저장은 다시 배치하지 않는다.
+function officialPeerPeriodSteps(db,steps){
+  const config=new Map((db.worldConfig.internationals||[]).map(x=>[x.id,x])),out=[];
+  for(const step of steps){
+    const previous=out.at(-1),a=previous?.kind==='intl'&&previous.ids?.length===1&&config.get(previous.ids[0]),b=step.kind==='intl'&&step.ids?.length===1&&config.get(step.ids[0]);
+    if(a&&b&&['east','west'].includes(a.zone)&&['east','west'].includes(b.zone)&&a.zone!==b.zone&&a.timing===b.timing&&a.phase===b.phase&&a.tier===b.tier&&(a.prestige||1)===(b.prestige||1))out[out.length-1]={...previous,ids:[...previous.ids,...step.ids],label:previous.label+' · '+step.label};
+    else out.push(step);
+  }
+  return out;
+}
+const officialWorldSeasonBeforePeerPeriods=startWorldSeason;
+startWorldSeason=function(db,...args){
+  const result=officialWorldSeasonBeforePeerPeriods(db,...args),w=db.world;
+  const original=new Map(w.steps.map((step,index)=>[step,index])),prefix=w.steps.slice(0,w.step+1);
+  w.steps=[...prefix,...officialPeerPeriodSteps(db,w.steps.slice(w.step+1)).map((step,index)=>step.kind==='league'&&original.get(step)!==prefix.length+index?{...step,patchSeedStep:original.get(step)}:step)];
+  return result;
+};
+// 화면/진행의 단계 번호와 기존 패치 난수 입력을 분리한다. 기간 묶음만으로 패치 내용을 다시 뽑지 않는다.
+const officialAdvanceStepBeforePeerPeriods=advanceStep;
+advanceStep=function(db){
+  // 완료 경기의 실제 UTC 종료일 이후부터 기존 단계 간격을 센다.
+  // 원래 편성/결과는 유지하고 실제 기록이 없는 이전 저장에는 시간을 추정하지 않는다.
+  let through=db.world.lastDate;
+  for(const season of Object.values(db.world.seasons||{}))if(season.done)for(const day of season.days||[])for(const match of day.matches||[]){
+    if(!match.res||!match.gameTime)continue;
+    const record=officialGameTimeRecord(match,match.res.games||[]);
+    if(!record||!officialGameTimeSame(record,match.gameTime))throw Error('다음 단계 전에 완료 경기의 실제 종료 기록을 확인하세요');
+    if(record.gameTimeThrough.slice(0,10)>through)through=record.gameTimeThrough.slice(0,10);
+  }
+  db.world.lastDate=through;
+  const prior=new Set(db.world.majorPatchEvents||[]),result=officialAdvanceStepBeforePeerPeriods(db),w=db.world,step=w.steps[w.step];
+  if(step?.kind==='league'&&Number.isInteger(step.patchSeedStep))for(const event of w.majorPatchEvents||[])if(!prior.has(event)&&event.step===w.step)event.step=step.patchSeedStep;
+  return result;
 };

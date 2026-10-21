@@ -63,16 +63,32 @@ function unpackMetaHistory(rows){
 }
 const ALL_ATTRS=Object.values(ATTR_GROUPS).flat();
 function seriesResultForSave(r,lite){
-  const q={...r};delete q.seed;delete q.firstChoice;
-  if(lite&&!q.lite){q.games=(q.games||[]).map(g=>({n:g.n,blue:g.blue,red:g.red,winner:g.winner,kills:g.kills,dur:g.dur,mvp:g.mvp,...(g.publicRecord?{date:g.date,patch:g.patch,publicRecord:g.publicRecord}:{}),...(g.draftEvidence?{date:g.date,patch:g.patch,draftEvidence:g.draftEvidence,draftSequence:g.draftSequence,picks:g.picks,bans:g.bans}:{})}));delete q.tac;q.lite=true}
+  const q={...r};
+  if(lite&&!q.lite){q.games=(q.games||[]).map(g=>({n:g.n,blue:g.blue,red:g.red,...(g.seed!==undefined?{seed:g.seed}:{}),winner:g.winner,kills:g.kills,dur:g.dur,mvp:g.mvp,...(g.publicRecord?{date:g.date,patch:g.patch,publicRecord:g.publicRecord}:{}),...(g.draftEvidence?{date:g.date,patch:g.patch,draftEvidence:g.draftEvidence,draftSequence:g.draftSequence,picks:g.picks,bans:g.bans}:{})}));delete q.tac;q.lite=true}
   return q;
+}
+function encodeSeriesIdentity(r){
+  const q={...r};
+  // Preserve the established packed shape without discarding replay identity.
+  // Original key positions also preserve deterministic full-object round trips.
+  const identity=Object.entries(r).filter(([,value])=>value!==undefined).flatMap(([key,value],index)=>['seed','firstChoice'].includes(key)?[[key,value,index]]:[]);
+  delete q.seed;delete q.firstChoice;
+  if(identity.length)q.seriesIdentityPacked=identity;
+  return q;
+}
+function restoreSeriesIdentity(r){
+  if(!r||r.seriesIdentityPacked===undefined)return r;
+  const rows=r.seriesIdentityPacked,entries=Object.entries(r).filter(([k])=>k!=='seriesIdentityPacked');
+  if(!Array.isArray(rows)||rows.length>2||rows.some(x=>!Array.isArray(x)||x.length!==3||!['seed','firstChoice'].includes(x[0])||!(typeof x[1]==='string'||x[0]==='seed'&&Number.isFinite(x[1]))||!Number.isInteger(x[2])||x[2]<0||x[2]>=entries.length+rows.length)||new Set(rows.map(x=>x[0])).size!==rows.length||new Set(rows.map(x=>x[2])).size!==rows.length||rows.some(x=>Object.hasOwn(r,x[0])))throw new Error('경기 원본 식별 정보가 손상되었습니다');
+  for(const [key,value,index] of rows.slice().sort((a,b)=>a[2]-b[2]))entries.splice(index,0,[key,value]);
+  return Object.fromEntries(entries);
 }
 function worldForSave(db){
   const w=db.world;if(!w)return w;const managed=db.teams&&db.teams[managedTeamId(db)],my=managed&&managed.region,seasons={};
   for(const [id,s] of Object.entries(w.seasons||{})){
     if(!s.done){seasons[id]=s;continue}
     const lite=!!(my&&s.region&&s.region!==my&&!db.competitions?.[s.comp]?.international);
-    const days=(s.days||[]).map(d=>({...d,matches:(d.matches||[]).map(m=>m.res?{...m,res:seriesResultForSave(m.res,lite)}:m)}));
+    const days=(s.days||[]).map(d=>({...d,matches:(d.matches||[]).map(m=>m.res?{...m,res:encodeSeriesIdentity(seriesResultForSave(m.res,lite))}:m)}));
     seasons[id]={...s,days};if(lite)seasons[id].compact=true;
   }
   return {...w,seasons};

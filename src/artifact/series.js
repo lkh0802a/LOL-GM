@@ -86,7 +86,7 @@ function createSeriesSession(db,aId,bId,bestOf,seed,opt={}){
     sideRng:{a:srng.a,sp:srng.sp},selectionLead:null,selectionResolved:null,current:null};
 }
 function seriesSessionRng(sess){const r=new RNG(sess.seed,'side');r.a=sess.sideRng.a;r.sp=sess.sideRng.sp;return r}
-function seriesSessionDone(sess){return sess.wins[sess.a]>=sess.need||sess.wins[sess.b]>=sess.need}
+function seriesSessionDone(sess){return sess.opt.practice?sess.games.length>=sess.bestOf:sess.wins[sess.a]>=sess.need||sess.wins[sess.b]>=sess.need}
 function seriesSessionPrepareGame(db,sess){
   if(seriesSessionDone(sess))return null;if(sess.current)return sess.current;
   const recorded=sess.opt.replay&&sess.opt.selections?.[sess.g-1];
@@ -119,7 +119,7 @@ function playSeriesSessionGame(db,sess,forcedDraft=null,quiet=true){
   const mvp=gameMVP(r);
   sess.games.push({n:sess.g,blue:cur.blue,red:cur.red,seed:cur.gseed,mods:cur.snap.mods,winner:wId,bans:r.draft.bans,sideBy:cur.chooser,sideWhy:cur.sc.why,selectionEvidence:recordedSelectionEvidence(cur.sc.evidence),firstPick:cur.fpTeam,kills:[r.sides[0].kills,r.sides[1].kills],dur:r.durationStr,duration:r.duration,picks:pk,mvp});
   const recordedGame=sess.games[sess.games.length-1];recordedGame.date=r.date;recordedGame.patch=matchDb.patch.id;
-  if(!sess.opt.replay||sess.opt.practice)recordedGame.publicRecord=publicMatchRecord(r,matchDb.patch.id);
+  if(!sess.opt.replay||sess.opt.practice){recordedGame.publicRecord=publicMatchRecord(r,matchDb.patch.id,db);Object.defineProperty(r,'recordedPublicRecord',{value:recordedGame.publicRecord})}
   if(r.draft.sequence)recordedGame.draftSequence=copyDraftSequence(r.draft.sequence);
   const manualEvidence=(Array.isArray(forcedDraft?.manualEvidence)?forcedDraft.manualEvidence:[]).filter(e=>!db.world?.fired&&managerControlsSquad(db,db.teams[e?.team]));
   const evidence=recordedManualDraftEvidence({manualEvidence},recordedGame);
@@ -129,24 +129,27 @@ function playSeriesSessionGame(db,sess,forcedDraft=null,quiet=true){
 }
 function seriesSessionResult(db,sess){
   if(!seriesSessionDone(sess))return null;const tac={[sess.a]:{...db.teams[sess.a].tactics},[sess.b]:{...db.teams[sess.b].tactics}};
-  return {rec:{a:sess.a,b:sess.b,bestOf:sess.bestOf,seed:sess.seed,patch:db.patch.id,fearless:!!sess.opt.fearless,firstChoice:sess.opt.firstChoice,score:[sess.wins[sess.a],sess.wins[sess.b]],winner:sess.wins[sess.a]>sess.wins[sess.b]?sess.a:sess.b,games:sess.games,tac,...(sess.opt.practice?{practiceModel:'engine'}:{}),...(sess.staffService?{staffService:sess.staffService}:{})},lines:sess.lines};
+  return {rec:{a:sess.a,b:sess.b,bestOf:sess.bestOf,seed:sess.seed,patch:db.patch.id,fearless:!!sess.opt.fearless,firstChoice:sess.opt.firstChoice,score:[sess.wins[sess.a],sess.wins[sess.b]],winner:sess.wins[sess.a]>sess.wins[sess.b]?sess.a:sess.b,games:sess.games,tac,...(sess.opt.practice?{practiceModel:'engine',wins:{...sess.wins}}:{}),...(sess.staffService?{staffService:sess.staffService}:{})},lines:sess.lines};
 }
 function simulateSeries(db,aId,bId,bestOf,seed,opt={}){
   const sess=createSeriesSession(db,aId,bId,bestOf,seed,opt);
+  let detail=null;
   while(!seriesSessionDone(sess)){
     const cur=seriesSessionPrepareGame(db,sess),forced=opt.forced&&opt.forced[sess.g-1]||null;
     if(opt.capture===sess.g){const snap=seriesDraftSnapshot(sess.ctx);snap.firstPick=cur.fpTeam===cur.blue?0:1;if(forced)snap.forced=forced;const r=simulateMatch(seriesOfficialView(db,sess),cur.blue,cur.red,cur.gseed,snap,false);r.comp=opt.compId||null;r.date=db.worldDate;r.metaContext=opt.metaContext||null;return {captured:r}}
-    playSeriesSessionGame(db,sess,forced,true);
+    // Keep the requested detail from its owning run; never replay for display.
+    const detailed=opt.detailGame===sess.g;
+    const played=playSeriesSessionGame(db,sess,forced,!detailed);
+    if(detailed)detail=played.game;
   }
-  return seriesSessionResult(db,sess);
+  const result=seriesSessionResult(db,sess);
+  return detail?{...result,detail}:result;
 }
-// 저장된 세트를 당시 전술로 다시 재생
+// No complete historical engine snapshot is persisted. Return the original
+// observation instead of generating another match from current private state.
 function replayGame(db,rec,g){
-  const keep={};for(const t in rec.tac){keep[t]=db.teams[t].tactics;db.teams[t].tactics=rec.tac[t]}
-  const cur=db.patch; if(rec.patch&&rec.patch!==cur.id)db.patch=getPatch(db,rec.patch);
-  const forced=rec.games.map(x=>({picks:[0,1].map(i=>Object.fromEntries(ROLES.map((r,j)=>[r,x.picks[i][j]]))),bans:x.bans||[[],[]]}));
-  try{return simulateSeries(db,rec.a,rec.b,rec.bestOf,rec.seed,{fearless:rec.fearless,firstChoice:rec.firstChoice,capture:g.n,forced,selections:rec.games,replay:true}).captured}
-  finally{for(const t in keep)db.teams[t].tactics=keep[t];db.patch=cur}
+  const saved=recordedPublicMatch(db,rec,g);
+  return {...saved,exact:false,basis:'recorded-only',...(saved.record?{seed:g.seed??null}:{})};
 }
 
 // ===== LOL GM: Competition / Stage 엔진 =====

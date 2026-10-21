@@ -1,3 +1,62 @@
+## 2026-10-21 #234 공통 시간·기존 PR230 연결 (구현 중)
+
+최신 기준은 main `eb228b7`의 AGENTS.md/CODEX_AUTOMATION_5H.md, [#242 최신 실제 순서](https://github.com/lkh0802a/LOL-GM/issues/242)와 #241이다. #247은 [정확 PR/main 검증·기존 Pages 근거](https://github.com/lkh0802a/LOL-GM/issues/247#issuecomment-6309294470)로 종료했다. 기존 PR230의 시간 writer와 후속 PR231 공개 보강을 현재 엔진·수동 결정·저장에 재사용 연결하며 아직 새 최종 HEAD 수용 전이다. 아래 고정 번호·시간 목표·게시 상태는 해당 날짜의 원문이고 현재 예약/실행 상한/완료 상태를 뜻하지 않는다. 기존 예약 하나/같은 Codex/동시 개발 하나, 임의 실행 상한 없이 실제 플랫폼 한도를 지킨다.
+
+## 전체 게임 통합 마스터 명세 — Codex 읽기 시작점
+
+> 과거 안내 원문(현재 AGENTS/자동화 지침으로 대체): **코덱스 예약 운영 기준:** [CODEX_AUTOMATION_5H.md](CODEX_AUTOMATION_5H.md)에서 5시간 사용량 창 기준 예약 간격(가능하면 5h10m), 회당 작업 목표90분, 예약 설정을 수정할 때 사용할 명령, 차선 6시간 정각/주간 한도·중복 실행 방지 조건을 확인한다. 저장소 문서 작성만으로 기존 예약 실행 시각이 변경되지 않는다.
+
+**[CODEX_MASTER_BLUEPRINT.md — LOL-GM 통합 개발 마스터 명세](CODEX_MASTER_BLUEPRINT.md)**는 새 게임→계약/선수→훈련·경기→리그/이적·패치→장기 역사·저장→모바일/Android로 이어지는 핵심 사용자 여정, **22개 엔진 간 불변식**, 10개 확정 C안 엔진 목표, 16개 도메인 수직 개발/검증 계약, UI·소스 writer/consumer·경제/정보·시드·시간 제약, QA/CI/배포·코덱스 보고 템플릿을 제공한다.
+
+우선순위는 별도 [CODEX_EXECUTION.md](CODEX_EXECUTION.md)/[#242](https://github.com/lkh0802a/LOL-GM/issues/242)에 따라 **#243 → #244 → P1 → P2**, #241은 상시 통합 수용. 아래 33개 상세 문서는 이 마스터 명세의 영역별 심층 정의이며 기존 개발 계획/역사·승인 사항을 대체하지 않는다. 문서 작성 자체는 게임 코드 구현/검증 아님.
+
+---
+
+
+
+## 코덱스 전 분야 상세 계약 — 33개 세부 영역
+
+[**전체 분야 인덱스**](CODEX_DOMAIN_INDEX.md)에서 A1–A10, B1–B11, C1–C12의 개발 소유 코드/상세 기준/테스트·담당 이슈를 찾아갈 수 있다.
+
+- [A. 새 게임·선수·의료·스카우팅·계약/임대·2군/스태프·재정·훈련/스크림](CODEX_DOMAIN_A_CLUB.md)
+- [B. 챔피언/아이템·밴픽/전술·경기/패치·대회/일정·AI·역사/뉴스](CODEX_DOMAIN_B_MATCH_WORLD.md)
+- [C. 모바일 홈/선수/시장·공식 경기 UI·접근성/저장·메모리/권한/CI·Android](CODEX_DOMAIN_C_UI_QA.md)
+
+코덱스 기본 실행 계약은 [루트 AGENTS.md](../AGENTS.md), [우선순위 실행 지침](CODEX_EXECUTION.md), [#242 최우선 P0 작업표](https://github.com/lkh0802a/LOL-GM/issues/242). 세부 문서의 모든 계약은 **이미 승인된 1–13단계/10개 C안의 심화 구현·검증 기준**이며 33개 신규 이슈나 즉시 전체 구현을 뜻하지 않는다. 게임 코드/테스트/배포는 별도로 작업해야 한다.
+
+---
+
+## Codex implementation entrypoint
+
+Codex/구현 에이전트는 저장소 루트 [AGENTS.md](../AGENTS.md) → [단계별 작업 실행 지침 CODEX_EXECUTION.md](CODEX_EXECUTION.md) → [#242 우선순위 인덱스](https://github.com/lkh0802a/LOL-GM/issues/242) → 대상 이슈의 본문/댓글을 순서대로 확인한다. 실제 첫 수정은 **[#243 Bo1 스크림 단일 계산](https://github.com/lkh0802a/LOL-GM/issues/243)**, 다음은 **[#244 저장/복원 안정성](https://github.com/lkh0802a/LOL-GM/issues/244)**. #241은 모든 작업의 통합 수용 게이트다. 코드/테스트/PR·CI 증거 없이 이슈·문서 등록만으로 완료 처리하지 않는다.
+
+---
+
+## 2026-10-17 열린 이슈 21건 우선순위별 실행 큐
+
+**GitHub P0/P1/P2 라벨과 제목 순번 전부 적용.** 이슈 단순 번호순이 아니라 [#242 최우선 전체 작업표](https://github.com/lkh0802a/LOL-GM/issues/242)의 순번을 개발 착수 기준으로 사용한다. **P0:** #242 총괄 → #243 Bo1 중복 계산(첫 수정) → #244 저장/복원, #241 상시 통합 검증. **P1:** #245 → #246 → #248 → #249 → #247 → #234 → #224 → #225. **P2:** #250 → #233 → #232 → #235 → #236 → #237 → #238 → #239 → #240. 기존 상세 범위·완료 이력·C안 엔진 목표 유지.
+
+우선순위별 GitHub 필터: [P0 최우선](https://github.com/lkh0802a/LOL-GM/issues?q=is%3Aissue+is%3Aopen+label%3A%22priority%3AP0%22) · [P1 핵심 수정](https://github.com/lkh0802a/LOL-GM/issues?q=is%3Aissue+is%3Aopen+label%3A%22priority%3AP1%22) · [P2 후속 개발](https://github.com/lkh0802a/LOL-GM/issues?q=is%3Aissue+is%3Aopen+label%3A%22priority%3AP2%22). GitHub 기본 목록은 우선순위순 자동 정렬을 보장하지 않으므로 [DEVELOPMENT.md](DEVELOPMENT.md)의 순위표와 제목 접두사 참조. 이는 **이슈 정리**이며 게임 코드 수정·출시 완료가 아니다.
+
+---
+
+## 2026-10-17 최우선 — 게임 전체 전수조사 후속 개선
+
+게임 엔진 **102개 + UI 모듈 70개** 소스 감사를 기반으로 사용자가 **[#242 P0 최우선 전체 후속 개선](https://github.com/lkh0802a/LOL-GM/issues/242)**을 승인. 새 C안 깊이 개발 전에 실제 결함·저장/정보·권한·장기 역사/모바일 성능을 먼저 검증·교정한다. 세부 작업: [#243 Bo1 기록/화면](https://github.com/lkh0802a/LOL-GM/issues/243), [#244 저장·백그라운드](https://github.com/lkh0802a/LOL-GM/issues/244), [#245 AI 임대 날짜](https://github.com/lkh0802a/LOL-GM/issues/245), [#246 RNG 안정성](https://github.com/lkh0802a/LOL-GM/issues/246), [#248 정보 경계](https://github.com/lkh0802a/LOL-GM/issues/248), [#249 역사·리플레이](https://github.com/lkh0802a/LOL-GM/issues/249), [#247 UI 세계 복사](https://github.com/lkh0802a/LOL-GM/issues/247), [#250 닉네임](https://github.com/lkh0802a/LOL-GM/issues/250).
+
+[최신 우선순위/검증 계약](DEVELOPMENT.md) · [사용자 확정 결정](DECISIONS.md). 기존 C안 이슈 #224·#225·#232·#233–#241과 단계1–13 전체 계획은 **유지**한다. 이슈/문서 등록 자체는 수정·CI 통과·게시 완료가 아니다.
+
+---
+
+## 2026-10-17 C안 엔진 고도화 — 신규 추적 이슈 등록
+
+사용자는 **경기·이적시장 시간·대회 일정·전술 AI·선수 커리어·구단 경영·스카우팅·장기 세계/저장·모바일 고성능·전 엔진 실사용 검증**의 10개 방향에서 모두 C안을 확정했다. 등록한 신규 이슈는 **[#233 경기](https://github.com/lkh0802a/LOL-GM/issues/233) · [#234 시간·일정](https://github.com/lkh0802a/LOL-GM/issues/234) · [#235 전략 AI](https://github.com/lkh0802a/LOL-GM/issues/235) · [#236 선수](https://github.com/lkh0802a/LOL-GM/issues/236) · [#237 경영](https://github.com/lkh0802a/LOL-GM/issues/237) · [#238 스카우팅](https://github.com/lkh0802a/LOL-GM/issues/238) · [#239 역사·저장](https://github.com/lkh0802a/LOL-GM/issues/239) · [#240 성능](https://github.com/lkh0802a/LOL-GM/issues/240) · [#241 전체 검증](https://github.com/lkh0802a/LOL-GM/issues/241)**이다.
+
+기존 **[#224 시간형 협상](https://github.com/lkh0802a/LOL-GM/issues/224) · [#225 모바일 시장](https://github.com/lkh0802a/LOL-GM/issues/225) · [#232 패치 2.0](https://github.com/lkh0802a/LOL-GM/issues/232)**은 보강 코멘트로 연결했고 원래 세부 규칙은 유지한다. [개발 지침 C안 통합 등록표](DEVELOPMENT.md)와 [최신 확정 결정](DECISIONS.md)을 우선 읽는다. 기존 단계1–13/경기38+감사8·전체 승인 범위를 보존하며, **등록은 구현·검증·게시 완료가 아니다.**
+
+<details>
+<summary>2026-10-13~14 PR230 당시 원문·실패/미완료 기록 (보존)</summary>
+
 ## 최신 실제 중계 소비 연결 — 2026-10-14
 
 [개발 지침12.5.4.12.14](DEVELOPMENT.md)의 앞 시리즈 실제 종료→다음 시작 순연을 기존 사건 소비·원래 편성/실제 시작 저장·현재 수동 준비/연락·화면에 연결 중입니다. 국제 공통 중계의 격리된 기존 생성 사례에서12:00 준비가 실제 앞 경기 종료12:44:42를 기다리며, 전체 대회 기간/장소 작성자·자동 운영/판매 구단과 전체 승인은 남습니다. PR230은 초안·미병합이며 게시PR229/main과 아래 전체 원문·승인·실패·증거를 보존합니다. 정확한 새 최종 검증 전 출시로 표시하지 않습니다.
@@ -53,6 +112,8 @@ PR230에서 제출한 시작 입력과 진행 게임을 별도 저장하고, 게
 ## 최신 시간 응답 구현 — 2026-10-13
 
 PR229/maina4241b9의 합의·수동 최종 계약 출시는 기존 증거와 한계를 따른다. 승인된 응답2–8시간/고민·경쟁24–72시간과 실제 연락 중단·저장·마감 연결은 [단일 개발 지침12.5.4.12.4](DEVELOPMENT.md)의 별도 브랜치에서 구현·검증 중이며 출시 전이다. 전체 단계1–13/모든 승인·수용·실패·증거 및 약50분 연결 구현 기준을 유지한다. 아래 원래 기록은 당시 상태로 연속 보존한다.
+
+</details>
 
 ---
 

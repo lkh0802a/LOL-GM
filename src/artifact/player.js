@@ -127,9 +127,9 @@ function genPlayer(db,rng,o,identityIndex=null){
   if(role==='TOP')tend.split_preference=Math.min(95,tend.split_preference+15);
   const champs=Object.values(db.patch.champions).filter(c=>c.roles.includes(role)).map(c=>c.id);
   const sigIds=sig.map(x=>db.patch.champions[x]?x:(championByName(db,x)?.id)).filter(Boolean);
-  const mySig=sigIds.length?sigIds:champs.slice().sort(()=>rng.next()-0.5).slice(0,2);
+  const mySig=sigIds.length?sigIds:shuffleWithRng(champs,rng).slice(0,2);
   const pool={};
-  const n=clamp(Math.round(9+(age-17)*0.7+rng.normal(0,2)),7,18), picks=[...mySig,...champs.filter(c=>!mySig.includes(c)).sort(()=>rng.next()-0.5).slice(0,n)];
+  const n=clamp(Math.round(9+(age-17)*0.7+rng.normal(0,2)),7,18), picks=[...mySig,...shuffleWithRng(champs.filter(c=>!mySig.includes(c)),rng).slice(0,n)];
   for(const c of picks){const s=mySig.includes(c);
     pool[c]={mastery:Math.round(clamp(s?80+rng.normal(0,6)+(age-20):55+rng.normal(0,12),20,99)),experience:Math.round(clamp(s?70+rng.normal(0,10)+(age-20)*2:40+rng.normal(0,15),5,99)),
       matchup_knowledge:Math.round(clamp(base-10+rng.normal(0,10)+(age-20),20,99)),confidence:Math.round(clamp(s?72+rng.normal(0,8):50+rng.normal(0,10),10,99)),scrimExperience:0,trainingExperience:0,scrimSeason:0,trainingSeason:0};}

@@ -1,3 +1,15 @@
+// 손상 점유 근거의 오류 화면이다. 정상 화면/새 시안의 배치나 게임 상태를 바꾸지 않는다.
+const officialNavBeforeOccupationEvidence=typeof nav==='function'?nav:null;
+if(officialNavBeforeOccupationEvidence)nav=function(){
+  try{return officialNavBeforeOccupationEvidence();}catch(error){
+    if(error?.code!=='official_occupation_evidence')throw error;
+    const main=document.querySelector('#main');if(!main)throw error;
+    const world=DB,slot=SLOT,render=UI_RENDER_ID;
+    main.innerHTML='<section tabindex="-1" role="alert" aria-labelledby="occupation-error-title"><h2 id="occupation-error-title">공식 경기 기록 확인 필요</h2><p>'+esc(error.message)+'</p><p>경기 종료와 연습 점유를 확인할 수 없어 진행을 멈췄습니다. 원본을 보관한 뒤 정상 저장을 불러오세요.</p><button type="button" class="primary" style="min-height:44px" id="occupation-open-saves">저장·불러오기 열기</button></section>';
+    main.querySelector('#occupation-open-saves').onclick=()=>{if(DB===world&&SLOT===slot&&UI_RENDER_ID===render&&!SLOT_SWITCHING)navigateTo('data');};
+    main.querySelector('section').focus?.({preventScroll:true});
+  }
+};
 function negotiationTimeText(at){if(typeof at!=='string'||!Number.isFinite(Date.parse(at)))return '시각 확인 필요';const value=venueClockParts(at,'Asia/Seoul');return value.date+' '+value.time+' · 한국 시간';}
 const fixtureTimeInfoBeforeResource=fixtureTimeInfo;
 fixtureTimeInfo=function(match){
@@ -63,7 +75,7 @@ if(officialUiBindBeforeManualContact)officialUiBindPending=function(staleFrame=(
   const q=DB.world?.pendingOfficial?.queue?.[0];if(q&&officialPendingAcrossMidnight(DB))document.querySelector('.controls')?.insertAdjacentHTML('beforeend','<p role="status">자정을 넘겨 진행 중인 경기입니다 · 원래 편성 '+esc(q.date)+' · 현재 '+esc(DB.worldDate)+' · 오늘의 일일 처리 완료</p>');if(!q||!Object.hasOwn(q,'contact')&&!Object.hasOwn(q,'inflight'))return officialUiBindBeforeManualContact(staleFrame);
   if(!Object.hasOwn(q,'contact')){
     const context=officialUiContext(DB),receipt=q.inflight,ready=validManualInflightGame(DB);document.querySelectorAll('.controls button').forEach(b=>b.disabled=true);
-    const note=ready?'제출한 입력으로 게임이 진행 중입니다. 종료한 게임만 기록합니다.':pendingOfficialControl(DB).error||'진행 중 게임의 저장 정보나 현재 감독 권한을 확인할 수 없습니다. 현재 저장을 확인하세요.';
+    const note=ready?(receipt.automatic?'자동 운영이 시작한 게임입니다. 시작 당시 입력을 유지하며 종료한 게임만 기록합니다.':'제출한 입력으로 게임이 진행 중입니다. 종료한 게임만 기록합니다.'):pendingOfficialControl(DB).error||'진행 중 게임의 저장 정보나 현재 감독 권한을 확인할 수 없습니다. 현재 저장을 확인하세요.';
     document.querySelector('.controls')?.insertAdjacentHTML('beforeend','<p role="status">'+esc(note)+'</p><button class="primary" id="manual-game-continue">진행 중 게임 계속</button>');
     const button=$('#manual-game-continue');if(button){button.disabled=!ready;button.onclick=()=>{if(!officialUiCurrent(context)||q.inflight!==receipt||!validManualInflightGame(DB)||UI_OVERLAY||staleFrame())return;try{const result=resolvePendingOfficialMatch(DB,null);LAST=result.game||null;LASTSER=result.done?result.rec:null;saveDB();nav();}catch(error){MSG=error.message;nav();}};}return;
   }
@@ -92,4 +104,14 @@ if(officialUiAuthorityBeforeMidnight)officialUiAuthority=function(c){
   if(!c||c.db!==DB||c.world!==DB.world||c.manager!==DB.manager||c.slot!==SLOT||SLOT_SWITCHING||c.team!==managedTeamId(DB)||c.club!==DB.teams?.[c.team])return false;
   const w=c.world,t=c.club,q=w.pendingOfficial?.queue?.[0];
   return !!(t&&t.active!==false&&DB.regions?.[t.region]&&managerControlsSquad(DB,t)&&pendingOfficialControl(DB).manual&&c.pending===w.pendingOfficial&&c.q===q&&c.session===q?.session&&c.stamp===c.read());
+};
+// 예약 당시 공유한 시간만 표시한다. 상대의 비공개 연습 설정은 조회하지 않는다.
+const officialScrimPanelBeforeBasis=typeof scrimPlansPanel==='function'?scrimPlansPanel:null;
+if(officialScrimPanelBeforeBasis)scrimPlansPanel=function(t,db=DB,canAct=scrimUiAllowed(db,t)){
+  const panel=officialScrimPanelBeforeBasis(t,db,canAct);if(!panel)return panel;
+  const rows=scrimPlans(db).filter(p=>p.teamId===t.id||p.opponentId===t.id).slice(-12).reverse();
+  return panel+(rows.length?'<section data-scrim-time-receipts><h3>요청 당시 시간</h3><p class="hint">오후·저녁은 각 구단 현지 시각입니다. 수락한 시간·체류 조건이 바뀌면 자동으로 다른 시간에 실행하지 않습니다. 같은 상대·날짜·시간의 재요청 제한은 유지됩니다.</p>'+rows.map(p=>{
+    const basis=p.scheduleBasis,venue=Array.isArray(basis?.venues)?basis.venues.find(v=>v?.teamId===t.id):null,valid=basis?.version===1&&Number.isFinite(Date.parse(basis.startsAt))&&Number.isFinite(Date.parse(basis.endsAt));
+    return '<p>'+esc(p.date)+' · '+esc(db.teams[p.teamId===t.id?p.opponentId:p.teamId]?.short||'구단')+' · '+(valid?esc(negotiationTimeText(basis.startsAt))+' ~ '+esc(negotiationTimeText(basis.endsAt))+'<br><small>UTC '+esc(basis.startsAt)+' ~ '+esc(basis.endsAt)+' · 당시 우리 구단 체류 '+esc(venue?.region||'미확인')+' / '+esc(venue?.timeZone||'미확인')+'</small>':'예약 당시 시간 근거 없음')+'</p>';
+  }).join('')+'</section>':'');
 };

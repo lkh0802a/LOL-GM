@@ -21,6 +21,12 @@ function ensureEven(db,rng,ev){
 
 // ---------- 오프시즌 1단계: 기록·성장·은퇴·승강·흥행·재정·사무국 ----------
 function runOffseason(db){
+  // A stale UI/duplicate command must not grow players or settle the same year
+  // again after the manual annual closeout has already produced its report.
+  if(db.world?.report?.year===db.world.year&&db.world.phase!=='offseason')return db.world.report;
+  // Reject an incomplete ledger before contract dates, growth or retirement
+  // change. A paid legacy year without its report needs diagnosis, not replay.
+  if(assertFinanceCloseout(db,db.world)==='closed')throw Error('이미 연간 결산이 완료된 시즌입니다');
   const w=db.world,cw=initOffseasonContractWindow(db);
   // Headless/AI callers historically advanced offseason in one call. Preserve
   // that contract while the interactive UI exposes both real window stages.
