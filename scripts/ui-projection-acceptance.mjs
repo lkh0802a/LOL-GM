@@ -40,6 +40,10 @@ await runEngineFixture(String.raw`(()=>{
  const recruitShape=m=>({total:m.total,pages:m.pages,page:m.page,canAct:m.canAct,rows:m.rows.map(x=>({e:x.e,pid:x.p.id,report:x.report,html:recruitReportHtml(m,x.p,x.e)}))});
  const financeShape=m=>({team:m.team,forecast:m.forecast,prepaid:m.prepaid,releases:m.releases,transfer:m.transfer,committed:m.committed,payroll:m.payroll,offers:m.offers});
  reset();let before=JSON.stringify(DB);
+ DB.world.registrationVersion=1;initializeOfficialRegistrations(DB);
+ const registeredBefore=JSON.stringify(DB),officialQuery=officialMatchView(ownedQueryView(DB),null,teams[0].id,teams[1].id);
+ check(officialQuery.world===DB.world&&officialQuery.year===DB.year&&officialQuery.regions===DB.regions,'official consumer lost world/year/region context');
+ check(JSON.stringify(DB)===registeredBefore,'official query consumer wrote its source');reset();before=JSON.stringify(DB);
  check(JSON.stringify(recruitShape(clubRecruitModel()))===JSON.stringify(recruitShape(legacyClubRecruitModel())),'actual report HTML/model differs from original public source');
  const comparisonState={},comparison=shortlistComparisonState(comparisonState);comparison.ids=[pid,second];comparison.open=true;
  check(shortlistComparisonPanel(clubRecruitModel(),comparisonState)===shortlistComparisonPanel(legacyClubRecruitModel(),comparisonState),'actual comparison/radar/source HTML differs');

@@ -7,8 +7,15 @@ function queryViewFields(view,fields){
   for(const [key,value] of Object.entries(fields))Object.defineProperty(view,key,{value,writable:true,enumerable:true,configurable:true});
   return view;
 }
+function querySourceView(source){
+  // Existing consumers also spread a database/world into a further view. Preserve
+  // enumerable context lazily, without reading a revoked dossier getter.
+  const view=Object.create(source);
+  for(const key of Object.keys(source))Object.defineProperty(view,key,{enumerable:true,configurable:true,get(){return source[key]},set(value){queryViewFields(this,{[key]:value})}});
+  return view;
+}
 function ownedQueryView(db){
-  const read=queryViewFields(Object.create(db),{teams:{...db.teams},players:{...db.players},_marketDemandCache:{...(db._marketDemandCache||{})}}),owned=Object.values(db.teams).filter(t=>!db.world?.fired&&managerControlsSquad(db,t)),ids=new Set(owned.map(t=>t.id));
+  const read=queryViewFields(querySourceView(db),{teams:{...db.teams},players:{...db.players},_marketDemandCache:{...(db._marketDemandCache||{})}}),owned=Object.values(db.teams).filter(t=>!db.world?.fired&&managerControlsSquad(db,t)),ids=new Set(owned.map(t=>t.id));
   for(const t of owned)read.teams[t.id]=JSON.parse(JSON.stringify(t));
   // Registration/lineup readers may normalize an owned player's eligibility.
   for(const p of Object.values(db.players))if(ids.has(p.team))read.players[p.id]=JSON.parse(JSON.stringify(p));
@@ -19,7 +26,7 @@ function scoutingReadView(db){
   if(db.world?.fired){
     // Match ensureScoutReport's existing revocation without touching the
     // former employer's stored records, or even reading its dossier getters.
-    queryViewFields(read,{scout:{},world:queryViewFields(Object.create(db.world),{recruitment:{targets:{}},negotiations:{}})});
+    queryViewFields(read,{scout:{},world:queryViewFields(querySourceView(db.world),{recruitment:{targets:{}},negotiations:{}})});
   }else{
     queryViewFields(read,{scout:JSON.parse(JSON.stringify(db.scout||{})),world:{...db.world,recruitment:JSON.parse(JSON.stringify(db.world?.recruitment||{})),negotiations:JSON.parse(JSON.stringify(db.world?.negotiations||{}))}});
   }
