@@ -108,8 +108,11 @@ function scrimPartnerAssessment(db,t,other,intents=null,strengths=null,rivals=nu
     return {allowed:false,reason:'참가 불가 팀'};
   const current=schedule?.date===db.worldDate?schedule:null,
     firstVenue=current?.venues[t.id]||teamPracticeVenue(db,t),secondVenue=current?.venues[other.id]||teamPracticeVenue(db,other);
-  if(firstVenue.region!==secondVenue.region)
-    return {allowed:false,reason:'현지 훈련권역이 다릅니다'};
+  // Remote practice needs shared real hours, not a shared country or travel.
+  // Consent, official duties and recovery are still checked by their owners.
+  if(firstVenue.region!==secondVenue.region&&
+    !['afternoon','evening'].some(slot=>scrimTimeOverlap(db,t,other,db.worldDate,slot,current)))
+    return {allowed:false,reason:'양팀 연습 시간이 겹치지 않습니다'};
   const key=[t.id,other.id].sort().join('|'),rivalDays=rivals?
     (rivals.get(key)??null):scrimOfficialRivalWindow(db,t.id,other.id);
   if(rivalDays!==null&&rivalDays>=-3&&rivalDays<=7)
