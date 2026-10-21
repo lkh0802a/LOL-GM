@@ -60,6 +60,7 @@ export const ENGINE_MODULES = [
   'contract-market-behavior.js',
   'contract-transfer-market.js',
   'scouting.js',
+  'scouting-read.js',
   'scouting-observation.js',
   'scouting-ai.js',
   'scouting-champions.js',

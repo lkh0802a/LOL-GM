@@ -95,11 +95,11 @@ function scoutReturnState(){
 function scoutReturnRefresh(selector){const y=window.scrollY;nav();window.scrollTo(0,y);document.querySelector(selector)?.focus?.({preventScroll:true})}
 function runScoutReturn(ids,amount,cost,current,limit=10){
   if(!current())return;if(!ids.length){MSG='관찰할 선수를 선택하세요';navKeepScroll();return}if(ids.length>limit)return;
-  const read=JSON.parse(JSON.stringify(DB)),before=JSON.stringify(read);let message;
+  const read=scoutingReadView(DB),before=scoutingEffectStamp(read);let message;
   try{message=scoutPlayers(read,ids,amount,cost)}catch(e){MSG='처리하지 못했습니다 · '+e.message;return}
-  if(JSON.stringify(read)===before){MSG=message;navKeepScroll();return}
+  if(scoutingEffectStamp(read)===before){MSG=message;navKeepScroll();return}
   if(!confirm(`선수 ${ids.length}명 관찰 · 비용 ${money(cost)}\n보고서를 갱신할까요?`)||!current())return;
-  const old=JSON.stringify(DB);MSG=scoutPlayers(DB,ids,amount,cost);if(JSON.stringify(DB)!==old)saveDB();navKeepScroll();
+  const old=scoutingEffectStamp(DB);MSG=scoutPlayers(DB,ids,amount,cost);if(scoutingEffectStamp(DB)!==old)saveDB();navKeepScroll();
 }
 function bindScoutReturnControls(root=document){
   const nodes=root.querySelectorAll('[data-scout], [data-scout-select], [data-scout-detail]');if(!nodes.length&&!root.querySelector('#scq')&&!root.querySelector('#scback'))return;

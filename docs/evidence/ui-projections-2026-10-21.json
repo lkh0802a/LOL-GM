@@ -1,0 +1,373 @@
+{
+  "issue": 247,
+  "baselineCommit": "4fdb5268616b3bdc67645de4dfc204be6c0e62f6",
+  "method": "동일 저장/시드, 실제 4팀 대회 1/10/21시즌(6/60/126경기), Node 모델별 준비2회 후15회. CPU는15회 합계, median/p95는ms, RSS/heap은호출후관측최댓값(bytes), GC는관측이벤트. 강제GC/힙/CPU/시간정책변경없음. 독립순차실행. 전체세계커리어/실기기/절대최고메모리나모바일렌더링시간측정아님.",
+  "sources": {
+    "scouting-read.js": "f16284c29f791d4bb28988abd03ce8d0c049dda6ca01bf8fb34ecaafd4144840",
+    "ui-club-recruitment.js": "43164c091400da75019d7867ce1fb5988710c08be051d3b24feb110746db5efb",
+    "ui-club-finance.js": "133ec9ddea381bdf2452c81d2433913bd2abae7015b43e793de3f4852cc91841",
+    "ui-squad-status.js": "7192ab5ec9764862f138629cf761135567f789b7cea653077dbb0499108a5973",
+    "ui-player.js": "aa3109a78db2d893912d9a711aa9af09ae4b3c568e98280e2ba3eb8a973be6b4",
+    "ui-roster.js": "0d8f8fcdc5063773461c5bddbc8551c2fe7e86e77cc80cd488720e2704e9a4b2"
+  },
+  "measurements": [
+    {
+      "controlledSeasons": 1,
+      "actualGames": 6,
+      "inputSha256": "c4cbd64ebcdcb0264a4b0f5e8d74aee9642c8dc267f371902e67899dbe229cc4",
+      "teams": 4,
+      "players": 47,
+      "before": [
+        {
+          "name": "recruitModel",
+          "calls": 15,
+          "medianMs": 22.773462999999992,
+          "p95Ms": 29.380122999999998,
+          "cpuUserMs": 364.598,
+          "cpuSystemMs": 25.437,
+          "maxObservedRss": 118300672,
+          "maxObservedHeapUsed": 54435648,
+          "gcEvents": 3,
+          "gcMs": 3.852212004363537
+        },
+        {
+          "name": "financeModel",
+          "calls": 15,
+          "medianMs": 11.563527999999906,
+          "p95Ms": 12.854443999999944,
+          "cpuUserMs": 168.815,
+          "cpuSystemMs": 7.644,
+          "maxObservedRss": 128081920,
+          "maxObservedHeapUsed": 64067920,
+          "gcEvents": 0,
+          "gcMs": 0
+        },
+        {
+          "name": "recruitGuardStamp",
+          "calls": 15,
+          "medianMs": 5.334588999999937,
+          "p95Ms": 6.7399560000000065,
+          "cpuUserMs": 80.256,
+          "cpuSystemMs": 3.839,
+          "maxObservedRss": 128126976,
+          "maxObservedHeapUsed": 55280144,
+          "gcEvents": 0,
+          "gcMs": 0
+        },
+        {
+          "name": "squadModel",
+          "calls": 15,
+          "medianMs": 11.034108999999944,
+          "p95Ms": 12.006549999999947,
+          "cpuUserMs": 147.69,
+          "cpuSystemMs": 20.231,
+          "maxObservedRss": 128167936,
+          "maxObservedHeapUsed": 63801648,
+          "gcEvents": 1,
+          "gcMs": 1.0116190016269684
+        }
+      ],
+      "after": [
+        {
+          "name": "recruitModel",
+          "calls": 15,
+          "medianMs": 8.528039000000007,
+          "p95Ms": 11.101815999999985,
+          "cpuUserMs": 141.891,
+          "cpuSystemMs": 16.932,
+          "maxObservedRss": 89985024,
+          "maxObservedHeapUsed": 38584280,
+          "gcEvents": 1,
+          "gcMs": 1.2180259972810745
+        },
+        {
+          "name": "financeModel",
+          "calls": 15,
+          "medianMs": 0.345942999999977,
+          "p95Ms": 2.044311999999991,
+          "cpuUserMs": 20.349,
+          "cpuSystemMs": 0.34,
+          "maxObservedRss": 90378240,
+          "maxObservedHeapUsed": 26904664,
+          "gcEvents": 0,
+          "gcMs": 0
+        },
+        {
+          "name": "recruitGuardStamp",
+          "calls": 15,
+          "medianMs": 0.18990099999996346,
+          "p95Ms": 0.24072699999999259,
+          "cpuUserMs": 3.335,
+          "cpuSystemMs": 0.031,
+          "maxObservedRss": 88289280,
+          "maxObservedHeapUsed": 23208112,
+          "gcEvents": 0,
+          "gcMs": 0
+        },
+        {
+          "name": "squadModel",
+          "calls": 15,
+          "medianMs": 0.24258000000003221,
+          "p95Ms": 0.4414450000000443,
+          "cpuUserMs": 3.903,
+          "cpuSystemMs": 0.014,
+          "maxObservedRss": 88289280,
+          "maxObservedHeapUsed": 24540160,
+          "gcEvents": 0,
+          "gcMs": 0
+        }
+      ]
+    },
+    {
+      "controlledSeasons": 10,
+      "actualGames": 60,
+      "inputSha256": "d4d63d196aea5c9b63d5bad4ef8c5bc2f8107cbaac8a8f3b519260ffa23520ba",
+      "teams": 4,
+      "players": 47,
+      "before": [
+        {
+          "name": "recruitModel",
+          "calls": 15,
+          "medianMs": 42.831323999999995,
+          "p95Ms": 67.52741500000002,
+          "cpuUserMs": 627.675,
+          "cpuSystemMs": 111.836,
+          "maxObservedRss": 165531648,
+          "maxObservedHeapUsed": 85741112,
+          "gcEvents": 4,
+          "gcMs": 13.169123999774456
+        },
+        {
+          "name": "financeModel",
+          "calls": 15,
+          "medianMs": 30.886828999999807,
+          "p95Ms": 36.41303300000004,
+          "cpuUserMs": 418.9,
+          "cpuSystemMs": 66.909,
+          "maxObservedRss": 246235136,
+          "maxObservedHeapUsed": 170732240,
+          "gcEvents": 0,
+          "gcMs": 0
+        },
+        {
+          "name": "recruitGuardStamp",
+          "calls": 15,
+          "medianMs": 17.432903000000124,
+          "p95Ms": 29.259934000000158,
+          "cpuUserMs": 178.102,
+          "cpuSystemMs": 100.456,
+          "maxObservedRss": 261976064,
+          "maxObservedHeapUsed": 124815192,
+          "gcEvents": 0,
+          "gcMs": 0
+        },
+        {
+          "name": "squadModel",
+          "calls": 15,
+          "medianMs": 28.396451999999954,
+          "p95Ms": 35.19292200000018,
+          "cpuUserMs": 339.332,
+          "cpuSystemMs": 101.25,
+          "maxObservedRss": 262262784,
+          "maxObservedHeapUsed": 173918792,
+          "gcEvents": 0,
+          "gcMs": 0
+        }
+      ],
+      "after": [
+        {
+          "name": "recruitModel",
+          "calls": 15,
+          "medianMs": 9.075390999999996,
+          "p95Ms": 13.754751999999996,
+          "cpuUserMs": 175.161,
+          "cpuSystemMs": 12.149,
+          "maxObservedRss": 101376000,
+          "maxObservedHeapUsed": 46494664,
+          "gcEvents": 3,
+          "gcMs": 5.675477996468544
+        },
+        {
+          "name": "financeModel",
+          "calls": 15,
+          "medianMs": 0.42128399999995736,
+          "p95Ms": 0.5020049999999969,
+          "cpuUserMs": 7.398,
+          "cpuSystemMs": 0.381,
+          "maxObservedRss": 101769216,
+          "maxObservedHeapUsed": 32957432,
+          "gcEvents": 0,
+          "gcMs": 0
+        },
+        {
+          "name": "recruitGuardStamp",
+          "calls": 15,
+          "medianMs": 0.5614329999999654,
+          "p95Ms": 0.7045850000000087,
+          "cpuUserMs": 9.531,
+          "cpuSystemMs": 0,
+          "maxObservedRss": 106094592,
+          "maxObservedHeapUsed": 37527408,
+          "gcEvents": 0,
+          "gcMs": 0
+        },
+        {
+          "name": "squadModel",
+          "calls": 15,
+          "medianMs": 0.32851699999997663,
+          "p95Ms": 0.5855880000000298,
+          "cpuUserMs": 5.454,
+          "cpuSystemMs": 0,
+          "maxObservedRss": 106225664,
+          "maxObservedHeapUsed": 39355040,
+          "gcEvents": 0,
+          "gcMs": 0
+        }
+      ]
+    },
+    {
+      "controlledSeasons": 21,
+      "actualGames": 126,
+      "inputSha256": "2593f37f0c22acd398af914aa3f1064fdfed1030a6e363c3593995e7268b92d5",
+      "teams": 4,
+      "players": 47,
+      "before": [
+        {
+          "name": "recruitModel",
+          "calls": 15,
+          "medianMs": 53.73298,
+          "p95Ms": 63.759757000000036,
+          "cpuUserMs": 733.831,
+          "cpuSystemMs": 110.907,
+          "maxObservedRss": 270475264,
+          "maxObservedHeapUsed": 166026496,
+          "gcEvents": 5,
+          "gcMs": 17.90184000879526
+        },
+        {
+          "name": "financeModel",
+          "calls": 15,
+          "medianMs": 41.92879100000005,
+          "p95Ms": 47.9421769999999,
+          "cpuUserMs": 563.244,
+          "cpuSystemMs": 80.455,
+          "maxObservedRss": 294342656,
+          "maxObservedHeapUsed": 191625480,
+          "gcEvents": 0,
+          "gcMs": 0
+        },
+        {
+          "name": "recruitGuardStamp",
+          "calls": 15,
+          "medianMs": 24.291408000000047,
+          "p95Ms": 26.201499999999896,
+          "cpuUserMs": 296.429,
+          "cpuSystemMs": 68.44,
+          "maxObservedRss": 331415552,
+          "maxObservedHeapUsed": 180630112,
+          "gcEvents": 0,
+          "gcMs": 0
+        },
+        {
+          "name": "squadModel",
+          "calls": 15,
+          "medianMs": 40.90962899999977,
+          "p95Ms": 94.22162500000013,
+          "cpuUserMs": 589.409,
+          "cpuSystemMs": 110.165,
+          "maxObservedRss": 324038656,
+          "maxObservedHeapUsed": 206688288,
+          "gcEvents": 0,
+          "gcMs": 0
+        }
+      ],
+      "after": [
+        {
+          "name": "recruitModel",
+          "calls": 15,
+          "medianMs": 11.241453999999976,
+          "p95Ms": 16.043646999999993,
+          "cpuUserMs": 210.832,
+          "cpuSystemMs": 10.476,
+          "maxObservedRss": 113414144,
+          "maxObservedHeapUsed": 59617248,
+          "gcEvents": 2,
+          "gcMs": 7.253920003771782
+        },
+        {
+          "name": "financeModel",
+          "calls": 15,
+          "medianMs": 0.7463970000000018,
+          "p95Ms": 1.0322009999999864,
+          "cpuUserMs": 14.049,
+          "cpuSystemMs": 0,
+          "maxObservedRss": 117346304,
+          "maxObservedHeapUsed": 64100424,
+          "gcEvents": 0,
+          "gcMs": 0
+        },
+        {
+          "name": "recruitGuardStamp",
+          "calls": 15,
+          "medianMs": 1.1241380000000163,
+          "p95Ms": 1.4440510000000017,
+          "cpuUserMs": 18.248,
+          "cpuSystemMs": 0,
+          "maxObservedRss": 125603840,
+          "maxObservedHeapUsed": 72090336,
+          "gcEvents": 0,
+          "gcMs": 0
+        },
+        {
+          "name": "squadModel",
+          "calls": 15,
+          "medianMs": 0.4236980000000017,
+          "p95Ms": 0.6286519999999882,
+          "cpuUserMs": 7.061,
+          "cpuSystemMs": 0,
+          "maxObservedRss": 127832064,
+          "maxObservedHeapUsed": 74351816,
+          "gcEvents": 0,
+          "gcMs": 0
+        }
+      ]
+    }
+  ],
+  "native": {
+    "htmlSha256": "d1eacc371be0648b42e4844494d3d0bf214885688265ff1adf94594c529ed06f",
+    "rows": [
+      {
+        "theme": "light",
+        "width": 320,
+        "height": 560,
+        "actualPage2DetailBackFocus": true,
+        "scoutPaidOnce": true,
+        "financeSponsorNoImmediateCash": true,
+        "searchInputReturnFocus": true,
+        "readOnlyQueries": true,
+        "sourceUnchanged": true,
+        "nativeSaveReload": true,
+        "errors": []
+      },
+      {
+        "theme": "dark",
+        "width": 320,
+        "height": 260,
+        "actualPage2DetailBackFocus": true,
+        "scoutPaidOnce": true,
+        "financeSponsorNoImmediateCash": true,
+        "searchInputReturnFocus": true,
+        "readOnlyQueries": true,
+        "sourceUnchanged": true,
+        "nativeSaveReload": true,
+        "errors": []
+      }
+    ]
+  },
+  "limitations": [
+    "전체 npm check/정확 최종 HEAD CI/결과main 검증은 이슈와 PR 체크포인트 참조",
+    "초기 브라우저 시도는 드라이버 선택기/호출/기존 반올림 기대 오류; 원문 비공개 보존",
+    "해임·상속된 읽기전용 getter 반례에서 실제 실패를 수정하고 원본 보존; 이전 실패 비공개 보존"
+  ],
+  "privateInputsPublished": false
+}
