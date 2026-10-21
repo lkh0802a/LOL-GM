@@ -44,7 +44,7 @@ function scoutingReadStamp(db){
   const players=Object.values(db.players);
   return JSON.stringify([
     db.year,db.worldDate,db.manager,db.worldConfig,
-    w&&[w.year,w.phase,w.manage,w.fired,w.step,w.lastDate,w.lastDailyTick,
+    w&&[w.year,w.phase,w.manage,w.fired,w.step,w.lastDate,w.lastDailyTick,w.negotiationClock,w.officialGameTimeThrough,
       cw&&[cw.stage,cw.seasonYear,cw.startSeason,cw.seasonEndDate,cw.startDate,cw.exclusiveThrough,cw.contractExpiryDate,cw.outsideContactDate,cw.completed,owned.map(t=>cw.financePayroll?.[t.id])],
       w.pendingOfficial&&[w.pendingOfficial.date,(w.pendingOfficial.queue||[]).map(q=>[q.seasonKey,q.matchId,q.date])],
       fired?null:w.recruitment,fired?null:w.sponsorOffers,fired?[]:Object.values(w.negotiations||{}).filter(n=>ids.has(n.teamId)),

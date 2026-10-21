@@ -1,0 +1,12 @@
+{
+  "predecessorPublicCommit": "e99dc663642a7f902c68bfbff59983cdc45cd346",
+  "predecessorSha256": "0da7844547f70eabdb0494451368a295f518ca0ce2ae4d0d77bebad5c3a8b996",
+  "currentSha256": "12c4e059ddd8828e3420a62eb8787cb77acab7489914b1de9684cb12d3f50097",
+  "archive": {
+    "path": "docs/evidence/system-choice-hash-clock-2026-10-21.public-original.gz",
+    "sha256": "37cc4d969633948c4b9643f67f20763061af2d7c0b0f3fae770ac16e60c21d3b",
+    "bytes": 2798
+  },
+  "reusedImplementation": "1abd7e377f9f67df15f310004eee1ef02966511f",
+  "meaning": "이미 공개된 e99 소스만 보존. 원래 공식/선택/점수/RNG/관측·원래 단언을 실제 비교하며 전체 성능/330초 해결은 새 검증 전 미확인."
+}
