@@ -28,7 +28,7 @@ function scoutingReadView(db){
     // former employer's stored records, or even reading its dossier getters.
     queryViewFields(read,{scout:{},world:queryViewFields(querySourceView(db.world),{recruitment:{targets:{}},negotiations:{}})});
   }else{
-    queryViewFields(read,{scout:JSON.parse(JSON.stringify(db.scout||{})),world:{...db.world,recruitment:JSON.parse(JSON.stringify(db.world?.recruitment||{})),negotiations:JSON.parse(JSON.stringify(db.world?.negotiations||{}))}});
+    queryViewFields(read,{scout:JSON.parse(JSON.stringify(db.scout||{})),world:db.world?{...db.world,recruitment:JSON.parse(JSON.stringify(db.world.recruitment||{})),negotiations:JSON.parse(JSON.stringify(db.world.negotiations||{}))}:db.world});
   }
   return read;
 }

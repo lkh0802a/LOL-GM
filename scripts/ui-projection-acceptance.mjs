@@ -40,6 +40,8 @@ await runEngineFixture(String.raw`(()=>{
  const recruitShape=m=>({total:m.total,pages:m.pages,page:m.page,canAct:m.canAct,rows:m.rows.map(x=>({e:x.e,pid:x.p.id,report:x.report,html:recruitReportHtml(m,x.p,x.e)}))});
  const financeShape=m=>({team:m.team,forecast:m.forecast,prepaid:m.prepaid,releases:m.releases,transfer:m.transfer,committed:m.committed,payroll:m.payroll,offers:m.offers});
  reset();let before=JSON.stringify(DB);
+ for(const missing of [null,undefined]){DB.world=missing;const unstarted=JSON.stringify(DB);check(scoutingSearchBlock()===legacyScoutingSearchBlock()&&scoutingSearchBlock()==='','unstarted search must remain empty');check(JSON.stringify(DB)===unstarted,'unstarted search wrote source')}
+ reset();before=JSON.stringify(DB);
  DB.world.registrationVersion=1;initializeOfficialRegistrations(DB);
  const registeredBefore=JSON.stringify(DB),officialQuery=officialMatchView(ownedQueryView(DB),null,teams[0].id,teams[1].id);
  check(officialQuery.world===DB.world&&officialQuery.year===DB.year&&officialQuery.regions===DB.regions,'official consumer lost world/year/region context');
