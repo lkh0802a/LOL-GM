@@ -8517,15 +8517,18 @@ function aiScoutingLeagueKeys(db,region){
 function aiScoutingCoveragePlan(db,t,candidates,capacity){
   const f=ensureFacilities(t),
     slots=Math.min(Object.keys(db.regions).length,Math.max(1,Math.ceil(capacity/3))),
-    grouped={};
+    grouped={},regionScores=new Map();
   for(const p of candidates){
     const region=aiScoutingTargetRegion(db,p);if(!region||!db.regions[region])continue;
     (grouped[region]=grouped[region]||[]).push(p);
   }
+  // Fixed public inputs; reuse scores only within this coverage call.
   const regionScore=region=>{
+    if(regionScores.has(region))return regionScores.get(region);
     const rows=(grouped[region]||[]).map(p=>aiScoutingPublicFit(db,t,p))
       .sort((a,b)=>b-a).slice(0,3);
-    return rows.length?rows.reduce((a,b)=>a+b,0)/rows.length:-Infinity;
+    const score=rows.length?rows.reduce((a,b)=>a+b,0)/rows.length:-Infinity;
+    regionScores.set(region,score);return score;
   };
   const regions=[t.region,...Object.keys(db.regions)
     .filter(r=>r!==t.region)
