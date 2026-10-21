@@ -223,8 +223,34 @@ function addRegion(db,rng,cfg){
 // The canonical world is deterministic for normalized config and static patch
 // input. Keep one serialized template, never a mutable database or an unbounded map.
 const INITIAL_WORLD_TEMPLATE={key:null,json:null};
+// Only these historical IDs denote the standard event. Display names on a
+// custom competition never change its identity. Archived event IDs stay intact.
+function canonicalInternationalId(id){
+  return id==='WORLDS'||id==='World Championship'?'WORLD_CHAMPIONSHIP':id;
+}
+function isWorldChampionshipId(id){return canonicalInternationalId(id)==='WORLD_CHAMPIONSHIP'}
+function normalizeInternationalConfig(cfg){
+  if(Array.isArray(cfg.internationals)){
+    const canonical=cfg.internationals.find(i=>i.id==='WORLD_CHAMPIONSHIP');
+    let worlds=false;
+    cfg.internationals=cfg.internationals.filter(i=>{
+      if(!isWorldChampionshipId(i.id))return true;
+      if(worlds||canonical&&i!==canonical)return false;
+      worlds=true;i.id='WORLD_CHAMPIONSHIP';return true;
+    });
+  }
+  const weights=cfg.internationalPolicy?.weights;
+  if(weights){
+    for(const alias of ['WORLDS','World Championship']){
+      if(!Object.hasOwn(weights,alias))continue;
+      if(!Object.hasOwn(weights,'WORLD_CHAMPIONSHIP'))weights.WORLD_CHAMPIONSHIP=weights[alias];
+      delete weights[alias];
+    }
+  }
+}
 function buildWorld(cfg){
   cfg=JSON.parse(JSON.stringify(cfg||defaultWorldConfig()));
+  normalizeInternationalConfig(cfg);
   cfg.changes='normal';
   const patch=buildPatch(),templateKey=JSON.stringify([WORLD_GENERATION_SEED,cfg,patch]);
   if(INITIAL_WORLD_TEMPLATE.key===templateKey){

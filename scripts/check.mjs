@@ -6,6 +6,7 @@ import { assertMutationOwnership } from './mutation-ownership.mjs';
 await import('./codex-impact-map-acceptance.mjs');
 await import('./observer-information-acceptance.mjs');
 await import('./historical-identity-acceptance.mjs');
+await import('./worlds-identity-acceptance.mjs');
 
 const root = resolve(import.meta.dirname, '..');
 const artifact = resolve(root, 'src', 'artifact');

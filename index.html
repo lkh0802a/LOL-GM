@@ -4939,8 +4939,34 @@ function addRegion(db,rng,cfg){
 // The canonical world is deterministic for normalized config and static patch
 // input. Keep one serialized template, never a mutable database or an unbounded map.
 const INITIAL_WORLD_TEMPLATE={key:null,json:null};
+// Only these historical IDs denote the standard event. Display names on a
+// custom competition never change its identity. Archived event IDs stay intact.
+function canonicalInternationalId(id){
+  return id==='WORLDS'||id==='World Championship'?'WORLD_CHAMPIONSHIP':id;
+}
+function isWorldChampionshipId(id){return canonicalInternationalId(id)==='WORLD_CHAMPIONSHIP'}
+function normalizeInternationalConfig(cfg){
+  if(Array.isArray(cfg.internationals)){
+    const canonical=cfg.internationals.find(i=>i.id==='WORLD_CHAMPIONSHIP');
+    let worlds=false;
+    cfg.internationals=cfg.internationals.filter(i=>{
+      if(!isWorldChampionshipId(i.id))return true;
+      if(worlds||canonical&&i!==canonical)return false;
+      worlds=true;i.id='WORLD_CHAMPIONSHIP';return true;
+    });
+  }
+  const weights=cfg.internationalPolicy?.weights;
+  if(weights){
+    for(const alias of ['WORLDS','World Championship']){
+      if(!Object.hasOwn(weights,alias))continue;
+      if(!Object.hasOwn(weights,'WORLD_CHAMPIONSHIP'))weights.WORLD_CHAMPIONSHIP=weights[alias];
+      delete weights[alias];
+    }
+  }
+}
 function buildWorld(cfg){
   cfg=JSON.parse(JSON.stringify(cfg||defaultWorldConfig()));
+  normalizeInternationalConfig(cfg);
   cfg.changes='normal';
   const patch=buildPatch(),templateKey=JSON.stringify([WORLD_GENERATION_SEED,cfg,patch]);
   if(INITIAL_WORLD_TEMPLATE.key===templateKey){
@@ -5098,6 +5124,7 @@ function leagueComp(db,rid,div=1){
   return {id:div===2?R.short+'2':R.short,name:div===2?divName(R):R.leagueName,short:div===2?divName(R):R.short,region:rid,div,teams,rules:{fearless:true,staffRegistration:R.staffRegistration||null},stages:leagueStages(R,teams.length,div)};
 }
 function startWorldSeason(db,myTeam,seed){
+  normalizeInternationalConfig(db.worldConfig);
   const medicalRolloverDate=`${db.year}-01-06`;
   medicalOffseasonRecovery(db,medicalRolloverDate);
   if(!db.worldDate||db.worldDate<medicalRolloverDate)setWorldCalendarDate(db,medicalRolloverDate);
@@ -5175,7 +5202,12 @@ function placements(db,s){
 function regionPower(db,R){const h=(db.global&&db.global.power||{})[R.id];return h!==undefined?h:R.strength}
 function teamStrength(db,tid){const t=db.teams[tid];return avg(ROLES.map(r=>{const p=starterFor(db,t,r);return p?playerRoleRating(p,r):40}))}
 function startInternational(db,id,start,taken=new Set()){
+  normalizeInternationalConfig(db.worldConfig);
+  id=canonicalInternationalId(id);
   const w=db.world, it=db.worldConfig.internationals.find(x=>x.id===id); if(!it)return false;
+  // A resumed old bracket retains its original key/seed and must not be
+  // replaced by a second canonical bracket in the same season.
+  if(Object.values(w.seasons||{}).some(s=>s.year===w.year&&canonicalInternationalId(s.comp)===id))return false;
   const regs=Object.values(db.regions).filter(R=>!it.zone||(INTL_ZONES[it.zone]||[]).includes(R.id)).sort((a,b)=>regionPower(db,b)-regionPower(db,a));
   const topSlots=R=>{const top=db.worldConfig.internationals.find(x=>x.tier!=='low'&&x.timing===it.timing&&x.entry==='slots');return top?Math.max(1,Math.ceil(R.slots*(top.ratio||1))):R.slots};
   const lists=regs.map(R=>{
@@ -5209,6 +5241,7 @@ const INTERNATIONAL_POLICY_DEFAULTS={version:1,windowYears:3,weights:{
   WORLD_CHAMPIONSHIP:3,MASTERS:2,OPEN:1
 },placementPoints:{champion:8,runnerUp:6,topFour:4,topEight:2,participant:1}};
 function internationalPolicy(db){
+  normalizeInternationalConfig(db.worldConfig);
   const c=db.worldConfig.internationalPolicy||{};
   db.worldConfig.internationalPolicy={version:1,windowYears:3,
     weights:{...INTERNATIONAL_POLICY_DEFAULTS.weights,...(c.weights||{})},
@@ -5229,7 +5262,7 @@ function recordInternationalResults(db,w){
     const teams=ordered.map((teamId,i)=>({teamId,regionId:s.internationalRegionSnapshot[teamId],
       rank:i+1,points:i===0?policy.placementPoints.champion:i===1?policy.placementPoints.runnerUp:
         i<4?policy.placementPoints.topFour:i<8?policy.placementPoints.topEight:policy.placementPoints.participant}));
-    history.push({eventId,year:s.year,competitionId:s.comp,weight:Math.max(0,Number(policy.weights[s.comp]??1)),teams});known.add(eventId);
+    history.push({eventId,year:s.year,competitionId:s.comp,weight:Math.max(0,Number(policy.weights[canonicalInternationalId(s.comp)]??1)),teams});known.add(eventId);
   }
   db.global.internationalResults=history;
 }
@@ -5243,7 +5276,7 @@ function internationalRegionRatings(db,year){
 }
 function latestWorldsRank(db,id,year){
   const from=year-internationalPolicy(db).windowYears+1;
-  const rows=(db.global.internationalResults||[]).filter(e=>e.year>=from&&e.year<=year&&['WORLD_CHAMPIONSHIP','WORLDS','World Championship'].includes(e.competitionId));
+  const rows=(db.global.internationalResults||[]).filter(e=>e.year>=from&&e.year<=year&&isWorldChampionshipId(e.competitionId));
   if(!rows.length)return Infinity;const newestYear=Math.max(...rows.map(e=>e.year)),e=rows.filter(x=>x.year===newestYear).sort((a,b)=>a.eventId.localeCompare(b.eventId)).at(-1);
   return Math.min(...(e.teams||[]).filter(x=>x.regionId===id).map(x=>x.rank),Infinity);
 }
@@ -5353,7 +5386,7 @@ function news(db,text){db.news.unshift({year:db.world?db.world.year:db.year,text
 function stepOf(db,s){
   if(s.step!==undefined)return s.step;
   const w=db.world;
-  return w.steps.findIndex(st=>st.kind==='league'?st.split===s.split:(st.ids||[st.id]).includes(s.comp));
+  return w.steps.findIndex(st=>st.kind==='league'?st.split===s.split:(st.ids||[st.id]).some(id=>canonicalInternationalId(id)===canonicalInternationalId(s.comp)));
 }
 
 /* ==== FILE: offseason.js ==== */
@@ -5380,6 +5413,12 @@ function ensureEven(db,rng,ev){
 
 // ---------- 오프시즌 1단계: 기록·성장·은퇴·승강·흥행·재정·사무국 ----------
 function runOffseason(db){
+  // A stale UI/duplicate command must not grow players or settle the same year
+  // again after the manual annual closeout has already produced its report.
+  if(db.world?.report?.year===db.world.year&&db.world.phase!=='offseason')return db.world.report;
+  // Reject an incomplete ledger before contract dates, growth or retirement
+  // change. A paid legacy year without its report needs diagnosis, not replay.
+  if(assertFinanceCloseout(db,db.world)==='closed')throw Error('이미 연간 결산이 완료된 시즌입니다');
   const w=db.world,cw=initOffseasonContractWindow(db);
   // Headless/AI callers historically advanced offseason in one call. Preserve
   // that contract while the interactive UI exposes both real window stages.
@@ -5718,6 +5757,9 @@ function normalizeRestoredSave(db){
   // Format 2 uses the same runtime object model, but strips derived caches.
   for(const k of SAVE_TRANSIENT_ROOT_FIELDS)delete db[k];
   db.worldConfig.changes='normal';
+  // Normalize future configuration only. Completed/active seasons, brackets,
+  // pending match keys, event-time snapshots and paid statements keep their IDs.
+  normalizeInternationalConfig(db.worldConfig);
   db.metaHistory=unpackMetaHistory(db.metaHistory||[]);
   for(const c of Object.values(db.competitions||{})){
     const r=db.regions?.[c.region];
@@ -6825,6 +6867,7 @@ function futureLeagueCandidates(db){
 }
 function worldDecisions(db,rng,f,ev){
   if(f<=0)return;
+  normalizeInternationalConfig(db.worldConfig);
   const gev=(what,why)=>{db.global.decisions=[...(db.global.decisions||[]),{year:db.world.year,what,why}].slice(-15);ev(`국제 e스포츠 사무국: ${what} — ${why}`)};
   const nR=Object.keys(db.regions).length, avgH=db.worldHype/Math.max(1,nR);
   // 새 지역 합류: 모(母)리그가 있는 신흥 지역은 '분리 독립', 없으면 신규 출범
@@ -6908,7 +6951,7 @@ function worldDecisions(db,rng,f,ev){
   }
   const I=db.worldConfig.internationals, cand=INTL_PRESETS.filter(p=>!I.some(i=>i.id===p.id));
   if(cand.length&&I.length<5&&rng.chance(clamp((avgH-48)/50,0,0.3)*f)){const it={...rng.pick(cand)};I.push(it);gev(`새 국제대회 신설: ${it.name} (${({early:'스플릿 1 이후',mid:'스플릿 2 이후',end:'스플릿 3 이후'})[it.timing]})`,`세계 흥행 평균 ${Math.round(avgH)}`)}
-  const weakI=I.filter(i=>i.id!=='WORLDS'&&(i.prestige||1)<=1).sort((a,b)=>(a.prestige||1)-(b.prestige||1));
+  const weakI=I.filter(i=>!isWorldChampionshipId(i.id)&&(i.prestige||1)<=1).sort((a,b)=>(a.prestige||1)-(b.prestige||1));
   const avgPrev=Object.values(db.regions).map(R=>(R.metrics||[]).slice(-2)[0]).filter(Boolean).reduce((a,m,_,arr)=>a+m.hype/arr.length,0);
   if(weakI.length&&avgH<32&&avgPrev<32&&rng.chance(0.3*f)){const it=weakI[0];I.splice(I.indexOf(it),1);gev(`${it.name} 폐지`,`세계 흥행 부진 (평균 ${Math.round(avgH)}) — 일정 과밀 해소`)}
   // 구단 인수: 팬은 많은데 성적이 나쁜 구단, 또는 팬이 적은 구단이 매물로
@@ -6953,6 +6996,9 @@ function globalOffice(db,w,rng,f,ev){
   const nR=Object.keys(db.regions).length;
   for(const it of db.worldConfig.internationals){
     if(!rng.chance(.1*f))continue;
+    // Preserve the standard event's approved format, including all branches
+    // below, while keeping the original per-event RNG draw.
+    if(isWorldChampionshipId(it.id))continue;
     const zr=Object.values(db.regions).filter(R=>!it.zone||(INTL_ZONES[it.zone]||[]).includes(R.id));
     const n=it.entry==='champions'?zr.length:it.tier==='low'?zr.length*(it.per||2)*(zr.length<=2?2:1):zr.reduce((a,R)=>a+Math.max(1,Math.ceil(R.slots*(it.ratio||1))),0);
     if(it.tier==='low'){const want=n>=10?'groups_de':n>=6?'groups_ko':'ko';if(want!==it.format&&rng.chance(0.5)){const o=it.format;it.format=want;gev(`${it.name} 방식 변경: ${INTL_FORMATS[o]} → ${INTL_FORMATS[want]}`,`참가 ${n}팀 규모에 맞춤`)}continue}
@@ -6960,7 +7006,7 @@ function globalOffice(db,w,rng,f,ev){
     let want=it.format, why='';
     if(n>=12&&!it.format.startsWith('playin')){want=it.id==='MSI'?'playin_de':'playin_swiss_ko';why=`참가 ${n}팀 — 하위 시드는 플레이인부터`}
     else if(n<10&&it.format.startsWith('playin')){want=n>=8?'groups_ko':'ko';why=`참가 ${n}팀으로 축소 — 플레이인 폐지`}
-    else if(gap>1.5&&it.id!=='WORLDS'&&!it.format.endsWith('de')&&n>=8){want=it.format.startsWith('playin')?'playin_de':'groups_de';why=`지역 간 격차 큼 — 패자부활(더블 엘리) 도입`}
+    else if(gap>1.5&&!it.format.endsWith('de')&&n>=8){want=it.format.startsWith('playin')?'playin_de':'groups_de';why=`지역 간 격차 큼 — 패자부활(더블 엘리) 도입`}
     if(want!==it.format){const o=it.format;it.format=want;gev(`${it.name} 방식 변경: ${INTL_FORMATS[o]} → ${INTL_FORMATS[want]}`,why)}
   }
   // 패치 주기는 리그 사무국이 변경하지 않는다. 게임 개발사 패치 캘린더를 따른다.
@@ -7076,6 +7122,34 @@ function recordRegionSuccession(db,source,successors,reason,retired=false){
       expiresAfter:origin?9999:Math.max(season,earned?.expiresAfter??season+localServicePolicy(db,source).choiceYears)};
   }
   return record;
+}
+
+/* ==== FILE: finance-closeout.js ==== */
+// Read-only annual closeout preflight and prize plan. Cash/statements remain
+// owned by closeFinances; no separate settlement writer or retroactive payout.
+function financeCloseoutState(db,w){
+  const clubs=activeTeams(db),settled=clubs.filter(t=>(t.finance?.history||[]).some(row=>row.year===w.year));
+  if(w.financeClosedYear===w.year||clubs.length&&settled.length===clubs.length)return 'closed';
+  return settled.length?'partial':'open';
+}
+function assertFinanceCloseout(db,w){
+  const state=financeCloseoutState(db,w);
+  if(state==='partial')throw Error('연간 결산 일부가 이미 기록되어 있습니다: '+w.year);
+  return state;
+}
+function financeCloseoutPrizes(db,w){
+  const prize={};
+  for(const season of Object.values(w.seasons||{})){
+    if(!season.done)continue;
+    const c=db.competitions[season.comp];
+    if(!c)continue;
+    const pool=c.international?(isWorldChampionshipId(c.id)?45:c.tier==='low'?5:18):9*psOf(db,c.region);
+    const participants=(c.teams||[]).filter(id=>db.teams[id]);
+    const weights=participants.map(id=>[id,1+elimReach(db,season,id)*3]);
+    const total=weights.reduce((n,row)=>n+row[1],0);
+    if(total)for(const [id,weight] of weights)prize[id]=(prize[id]||0)+pool*weight/total;
+  }
+  return prize;
 }
 
 /* ==== FILE: finance.js ==== */
@@ -7323,17 +7397,8 @@ function financeForecast(db,t){
 
 // 한 해 결산: 중계권 분배, 스폰서, 굿즈, 상금, 구단주 지원 − 연봉, 스태프, 운영비, 사치세
 function closeFinances(db,w,rng,ev){
-  const prize={};
-  for(const season of Object.values(w.seasons||{})){
-    if(!season.done)continue;
-    const c=db.competitions[season.comp];
-    if(!c)continue;
-    const pool=c.international?(c.id==='WORLDS'?45:c.tier==='low'?5:18):9*psOf(db,c.region);
-    const participants=(c.teams||[]).filter(id=>db.teams[id]);
-    const weights=participants.map(id=>[id,1+elimReach(db,season,id)*3]);
-    const total=weights.reduce((n,row)=>n+row[1],0);
-    if(total)for(const [id,weight] of weights)prize[id]=(prize[id]||0)+pool*weight/total;
-  }
+  if(assertFinanceCloseout(db,w)==='closed')return;
+  const prize=financeCloseoutPrizes(db,w);
   const taxPool={};
   const recs=activeTeams(db).map(t=>{
     const R=db.regions[t.region],payrollBasis=financeSeasonPayroll(db,t,w);
@@ -7394,6 +7459,7 @@ function closeFinances(db,w,rng,ev){
       ev(`장기 재정난으로 구단 매각: ${old} → ${row.t.name} (연속 적자, 신규 구단주 자금 투입 ${money(f.cash-before)})`);
     }
   }
+  w.financeClosedYear=w.year;
 }
 
 // 계약 만료 · 재계약 · FA 시장
@@ -8811,8 +8877,7 @@ function contractWindowAnchorDate(db){
     endDate=s=>s.days[s.days.length-1].date,
     worlds=finished.filter(s=>{
       const comp=db.competitions[s.comp];
-      return s.comp==='WORLD_CHAMPIONSHIP'||comp?.id==='WORLD_CHAMPIONSHIP'||
-        comp?.short==='Worlds'||comp?.name==='World Championship';
+      return isWorldChampionshipId(s.comp)||isWorldChampionshipId(comp?.id);
     });
   if(worlds.length)return worlds.map(endDate).sort().at(-1);
   // Custom worlds may omit the standard Worlds preset. Fall back to the
@@ -15877,7 +15942,14 @@ function bindSeason(){
       bindStove(current);
     }else{
       bindStove(current);
-      $('#soff').onclick=()=>{if(!current())return;runOffseason(DB);saveDB();nav();window.scrollTo(0,0)};
+      $('#soff').onclick=()=>{
+        if(!current())return;
+        // This preflight is read-only. Explain a rejected ledger before the
+        // annual writer can alter contracts, growth, retirement or cash.
+        try{if(assertFinanceCloseout(DB,w)==='closed')throw Error('이미 연간 결산이 완료된 시즌입니다')}
+        catch(e){MSG='연간 결산을 시작하지 않았습니다 · '+e.message;nav();$('#soff')?.focus?.({preventScroll:true});return}
+        runOffseason(DB);saveDB();nav();window.scrollTo(0,0);
+      };
     }
     return;
   }

@@ -153,7 +153,14 @@ function bindSeason(){
       bindStove(current);
     }else{
       bindStove(current);
-      $('#soff').onclick=()=>{if(!current())return;runOffseason(DB);saveDB();nav();window.scrollTo(0,0)};
+      $('#soff').onclick=()=>{
+        if(!current())return;
+        // This preflight is read-only. Explain a rejected ledger before the
+        // annual writer can alter contracts, growth, retirement or cash.
+        try{if(assertFinanceCloseout(DB,w)==='closed')throw Error('이미 연간 결산이 완료된 시즌입니다')}
+        catch(e){MSG='연간 결산을 시작하지 않았습니다 · '+e.message;nav();$('#soff')?.focus?.({preventScroll:true});return}
+        runOffseason(DB);saveDB();nav();window.scrollTo(0,0);
+      };
     }
     return;
   }
