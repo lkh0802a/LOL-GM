@@ -9,6 +9,9 @@ const get=async p=>readFile(resolve(dir,p),'utf8');
 const [app,state,season,manager,data,briefing,homeSource,eligibility,clubFinance,clubStaff,staffControls,registration,clubMedical,clubContracts,clubPractice,clubScrim,clubRecruitment,themeSource,actionsSource,officialContextSource]=await Promise.all(
   ['app.js','ui-state.js','ui-season.js','ui-manager.js','ui-data.js','ui-club-briefing.js','ui-club-home.js','ui-club-eligibility.js','ui-club-finance.js','ui-club-staff.js','ui-staff-controls.js','ui-registration.js','ui-club-medical.js','ui-club-contracts.js','ui-club-practice.js','ui-club-scrim.js','ui-club-recruitment.js','ui-theme.js','ui-club-actions.js','ui-official-context.js'].map(get));
 const pendingEngineSource=await get('season.js');
+const scoutingReadSource=await get('scouting-read.js');
+const worldSource=await get('world.js'),rosterSource=await get('roster.js');
+const queryAuthoritySource=rosterSource.match(/^function teamRef\(.*$/m)[0]+'\n'+worldSource.slice(worldSource.indexOf('function managerControlsSquad('),worldSource.indexOf('function setManagedTeam('));
 const later=()=>new Promise(resolve=>setImmediate(resolve));
 
 {
@@ -93,7 +96,7 @@ const later=()=>new Promise(resolve=>setImmediate(resolve));
     querySelector:s=>s==='#main'?node('main'):s.startsWith('#')?node(s.slice(1)):null,
     querySelectorAll:s=>s==='nav button'?tabs:[],
   };
-  const db={world:{phase:'season',step:0,pendingOfficial:null,count:0},manager:{teamId:'T'},regions:{R:{id:'R'}},teams:{T:{id:'T',region:'R',short:'T',name:'Team'},U:{id:'U',region:'R',short:'U',name:'Other'}}};
+  const db={world:{phase:'season',step:0,pendingOfficial:null,count:0},manager:{teamId:'T'},regions:{R:{id:'R'}},players:{},competitions:{},teams:{T:{id:'T',region:'R',short:'T',name:'Team'},U:{id:'U',region:'R',short:'U',name:'Other'}}};
   const context=vm.createContext({
     DB:db,SLOT:'1',SLOT_SWITCHING:false,UI_OVERLAY:null,
     document,window:{scrollY:0,scrollTo(){}},
@@ -118,6 +121,7 @@ const later=()=>new Promise(resolve=>setImmediate(resolve));
   });
   context.$=selector=>node(selector.slice(1));
   vm.runInContext(clubFinance,context,{filename:'ui-club-finance.js'});
+  vm.runInContext(queryAuthoritySource+'\n'+scoutingReadSource,context,{filename:'scouting-read.js'});
   vm.runInContext(clubMedical,context);vm.runInContext(clubContracts,context);vm.runInContext(clubPractice,context);vm.runInContext(clubScrim,context);vm.runInContext(clubRecruitment,context);vm.runInContext(clubStaff,context);vm.runInContext(staffControls,context);vm.runInContext(registration,context);
   vm.runInContext(eligibility,context,{filename:'ui-club-eligibility.js'});
   vm.runInContext(briefing,context,{filename:'ui-club-briefing.js'});

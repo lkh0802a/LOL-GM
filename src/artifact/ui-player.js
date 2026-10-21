@@ -7,7 +7,7 @@ function playerCompetitionIds(p){const ids=new Set();if(DB.world)for(const s of 
 function undervaluedProspect(p){const a=scoutAbilityRange(DB,p),pot=scoutPotentialRange(DB,p),mv=observedPlayerMarketValue(DB,p)/Math.max(.2,psOf(DB,p.team&&DB.teams[p.team]?DB.teams[p.team].region:p.region));return p.age<=22&&pot[1]>=a[1]+6&&mv<Math.max(3,(a[1]-58)*1.25)}
 
 function scoutingSearchBlock(){
-  const state=scoutReturnState(),live=DB;try{DB=JSON.parse(JSON.stringify(DB));return renderScoutingSearch(state)}finally{DB=live}
+  const state=scoutReturnState(),live=DB;try{DB=scoutingReadView(DB);return renderScoutingSearch(state)}finally{DB=live}
 }
 function renderScoutingSearch(state){
   if(!DB.world)return '';const me=managedTeam(DB),compIds=[...new Set(Object.values(DB.competitions).map(c=>c.id))];let ps=Object.values(DB.players).filter(p=>!p.retired&&p.team!==me.id&&!(p.team&&DB.teams[p.team]&&DB.teams[p.team].parent===me.id));
