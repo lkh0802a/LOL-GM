@@ -99,7 +99,8 @@ const acceptances=[
   'club-closure-acceptance.mjs',
   'club-estate-acceptance.mjs',
   'rune-selection-acceptance.mjs',
-  'negotiation-final-acceptance.mjs'
+  'negotiation-final-acceptance.mjs',
+  'official-undo-clock-acceptance.mjs'
 ];
 
 const rows=[];
@@ -115,8 +116,8 @@ assert.equal(stats.engineCompiles,1,
   'shared domain runner must compile the engine exactly once');
 assert(stats.cachedArtifacts>=ENGINE_MODULES.length,
   'shared domain runner did not cache the complete engine source');
-assert.equal(stats.contexts,116,
-  'all 116 engine fixtures, including the original 95 plus 21 world-clock/manual-final fixtures, scoped UI projections, Worlds identity, historical identity, observer information, inventory-defense and analysis/report coverage, must each receive a fresh VM context');
+assert.equal(stats.contexts,117,
+  'all 117 engine fixtures, including the original 95 plus 21 world-clock/manual-final fixtures and the complete-graph undo counterexamples, scoped UI projections, Worlds identity, historical identity, observer information, inventory-defense and analysis/report coverage, must each receive a fresh VM context');
 
 console.log('UI_FINANCE_CONTRACTS_RUNNER '+JSON.stringify({
   acceptances:rows.length,

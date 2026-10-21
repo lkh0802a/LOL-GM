@@ -1,0 +1,13 @@
+{
+  "predecessorCommit": "7a1f90d60a59e9e31b83bcac8a577002d4355f79",
+  "predecessorSha256": "72f913bd94e9bcb77d9498a0f8598cb41f718ec25a9436fea48aa82fbf44c089",
+  "currentSha256": "bb857ab10da9f3e7f0fe8173b6aebed702fe12f3bc0c21e2a0f4ba4a8d24cde9",
+  "archive": {
+    "path": "docs/evidence/official-undo-clock-public-7a1f90d.js.gz",
+    "bytes": 7775,
+    "sha256": "886e931785fea5a19e4186901e00a3d151e2591cc55929c3159e848bae382b2e"
+  },
+  "reusedSource": "https://github.com/lkh0802a/LOL-GM/blob/55f78ed98c89ba0582be74dbf48c3407fd4e5936/src/artifact/season.js",
+  "originalAssertions": "https://github.com/lkh0802a/LOL-GM/blob/55f78ed98c89ba0582be74dbf48c3407fd4e5936/scripts/official-undo-acceptance.mjs",
+  "scope": "공개 원문만 포함. 전체 도달 그래프/참조/원래 18개 단언 유지. 성능 개선·전체 검사 통과 주장이 아님."
+}
