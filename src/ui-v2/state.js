@@ -71,5 +71,5 @@ async function v2LoadFile(file,current){
   }
   v2Tell(await v2Save()?'저장 파일을 불러왔습니다':'파일을 화면에 불러왔지만 기기에 저장하지 못했습니다 · 설정에서 파일로 보관하세요');
  }catch(error){if(active())v2Tell('불러오기 실패 · '+error.message);}
- finally{if(V2.loadRequest===request)V2.loadRequest=null;}
+ finally{if(V2.loadRequest===request)V2.loadRequest=null;if(!V2.loadRequest&&V2.nativeRenderPending){V2.nativeRenderPending=false;v2Render();}}
 }

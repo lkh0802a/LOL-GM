@@ -27,4 +27,4 @@ function v2Render(){
 try{const saved=localStorage.getItem(V2_STORE);if(saved){const restored=v2ReadSavedGame(saved);v2InstallSavedGame(restored);V2.saved=true}const theme=localStorage.getItem('lol-gm-ui-v2-theme');if(['dark','light'].includes(theme))V2.mode=theme}catch(error){V2.message='저장된 게임을 읽지 못했습니다. 원본 저장은 유지했습니다.'}
 window.addEventListener('popstate',()=>{if(v2TaskBack())return;v2CaptureDrafts();v2Route()});window.addEventListener('hashchange',()=>{v2CaptureDrafts();v2Route()});v2Render();if(location.hash)v2Route();
 
-if(typeof v2RefreshNativeSaves==='function')void v2RefreshNativeSaves().then(ok=>{if(ok&&!V2.busy)v2Render()}).catch(error=>v2Tell('저장 목록 확인 실패 · '+error.message));
+if(typeof v2RefreshNativeSaves==='function')void v2RefreshNativeSaves().then(ok=>{if(ok)v2RenderNativeSaves()}).catch(error=>v2Tell('저장 목록 확인 실패 · '+error.message));
