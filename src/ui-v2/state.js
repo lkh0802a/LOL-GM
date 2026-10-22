@@ -54,7 +54,7 @@ function v2ReadSavedGame(raw){
  return {db,read,target};
 }
 function v2InstallSavedGame(saved){
- Object.assign(V2,saved,{official:null,officialResult:null,searchViews:{},drafts:{},review:null,advice:null,nid:null,pid:null,preparation:null,managementReview:null,roleReview:null,staffDrafts:{},roleDrafts:{},medicalDrafts:{},squadListView:null,facilityListView:null,negotiationListView:null,taskReturn:null,taskHistory:null,taskBackPending:false,loadRequest:null,scrimDraft:null,careerChoiceReturn:null});
+ Object.assign(V2,saved,{official:null,officialResult:null,searchViews:{},drafts:{},review:null,advice:null,nid:null,pid:null,preparation:null,managementReview:null,roleReview:null,staffDrafts:{},roleDrafts:{},medicalDrafts:{},squadListView:null,facilityListView:null,negotiationListView:null,taskReturn:null,taskHistory:null,taskBackPending:false,loadRequest:null,recordPage:0,recordReturn:null,sellerDrafts:{},scrimDraft:null,careerChoiceReturn:null});
 }
 async function v2LoadFile(file,current){
  if(!file||!current())return;

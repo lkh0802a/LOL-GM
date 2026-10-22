@@ -12,6 +12,7 @@ function v2NegotiationList(){
 }
 function v2NegotiationDetail(nid){
  const n=v2OwnedNegotiation(nid);if(!n)return '<section class="panel"><p>현재 관리 구단의 협상을 확인할 수 없습니다.</p><button class="btn btn-outline" id="negotiation-back">협상 목록으로</button></section>';
+ if(n.stage==='club'&&n.status==='open')return v2SellerView(n);
  const p=V2.db.players[n.pid],open=n.status==='open',agreed=n.stage==='agreement',waiting=n.stage==='waiting',terms=waiting?n.response?.terms:open&&!agreed?v2Draft(n):n.agreedTerms||n.acceptedTerms||n.demand;
  return `<section class="panel"><button class="btn btn-outline btn-small" id="negotiation-back">← 협상 목록으로</button><div class="content-head"><div><h2>${v2Esc(p?.name||'선수 정보 없음')}</h2><p class="small subtle">대상 선수단 · ${v2Esc(V2.db.teams[n.teamId]?.name||'정보 없음')}</p></div><span class="state-tag">${v2Esc(v2NegotiationState(n))}</span></div><button class="btn btn-soft" id="contract-advice" data-advice="${v2Esc(n.id)}">비서에게 검토 요청</button>${open&&!agreed&&!waiting?`<form data-neg-form="${v2Esc(n.id)}" onsubmit="return false">${V2_TERM_FIELDS.map(([key,label])=>`<label class="field">${label}<input class="input" type="number" data-term="${key}" min="${key==='years'?1:0}" step="${key==='years'?1:.1}" value="${v2Esc(terms[key]||0)}" required></label>`).join('')}<details><summary>보너스·보장·옵션 조건</summary>${v2Terms(terms)}</details><button class="btn btn-primary" type="button" id="review-offer" data-offer-review="${v2Esc(n.id)}">제안 검토</button></form>`:v2Terms(terms)}${waiting?`<p>응답 예정 ${v2Esc(v2TimeText(n.response?.dueAt))}</p><p class="hint">현재 제안을 수정하려면 취소한 뒤 다시 제출하세요. 선수·자리·예산을 예약하지 않습니다.</p>${v2WaitingProgress()}`:''}${v2CurrentContact()?.id===n.id?'<button class="btn btn-primary" id="contract-match-resume">연락 검토를 마치고 현재 경기 재개</button>':''}${agreed&&open?`<p class="hint">아직 계약과 소속은 바뀌지 않았습니다. 최종 계약은 감독이 직접 결정합니다.</p><button class="btn btn-primary" id="review-final" data-final-review="${v2Esc(n.id)}">최종 계약 검토</button>`:''}${open?`<p><button class="btn btn-outline btn-small" data-end-neg="${v2Esc(n.id)}">협상 종료</button></p>`:''}<details><summary>주고받은 제안 · ${n.history?.length||0}건</summary>${(n.history||[]).map(h=>`<p class="small">${v2Esc(h.at?v2TimeText(h.at):h.date||n.createdDate||'날짜 정보 없음')} · ${v2Esc(v2NegotiationLabel(h))}${h.terms?' · 연봉 '+v2Money(h.terms.salary)+' / 년':''}${h.reason?' · '+v2Esc(h.reason):''}</p>`).join('')}</details></section>`;
 }
@@ -33,6 +34,11 @@ function v2Review(nid,mode){
  V2.review={db:V2.db,manager:V2.db.manager,owner:managedTeamId(V2.db),target:V2.target,nid,mode,stamp:v2NegotiationStamp(n),inputTerms,terms,adjusted};v2Render();
 }
 function v2BindContracts(){
+ v2Bind('#renew-player',()=>v2StartRenewal());
+ v2Bind('#release-player',()=>v2ReviewPlayerRelease());v2Bind('#contact-waiver',()=>v2ReviewOwnedDecision('contact-waiver'));v2Bind('#window-option',()=>v2ReviewOwnedDecision('window-option'));v2Bind('#team-option',()=>v2ReviewManagement({type:'player.option',actor:'manager',pid:V2.pid,teamId:V2.db.players[V2.pid].team},'기존 팀 옵션 행사 검토',['저장된 기존 옵션 조건과 현재 권한을 다시 검사합니다.']));
+ v2Bind('#seller-review',()=>v2ReviewSeller(V2.nid,Number(document.getElementById('seller-fee').value)));
+ const seller=document.getElementById('seller-fee'),sellerCurrent=v2Guard();if(seller)seller.oninput=()=>{if(!sellerCurrent())return;const n=v2OwnedNegotiation(V2.nid);if(!n)return;V2.sellerDrafts??={};V2.sellerDrafts[n.id]={stamp:v2NegotiationStamp(n),fee:Number(seller.value)}};
+
  v2Bind('#contracts-advance',()=>v2ContractAction(()=>advanceToNegotiationResponse(V2.db)));
  v2Bind('#contract-match-resume',()=>v2ResumeAfterContact());
  v2Bind('[data-offer-review]',el=>v2Review(el.dataset.offerReview,'offer'));
@@ -72,3 +78,41 @@ function v2CancelNegotiation(nid){const n=v2OwnedNegotiation(nid);if(!n||n.statu
 
 // 게임 작성이 성공한 뒤의 표시 실패는 저장한 결정을 되돌리지 않는다.
 function v2AfterCommittedAction(show){try{show();}catch(error){v2Tell('게임 처리는 유지했습니다. 화면을 다시 여세요 · '+error.message);}}
+
+// 기존 재계약·판매 구단 협상을 새 화면에서 접근한다. 계약 작성은 기존 엔진만 한다.
+function v2StartRenewal(pid=V2.pid){
+ const db=V2.db,p=db.players[pid],t=v2Team(),error=v2ManagementError();if(error)return v2Tell(error);
+ if(!p||p.retired||!t||t.parent||p.team!==t.id||!t.roster.includes(pid)||p.loan||p.contract?.medicalReplacement)return v2Tell('현재 관리 구단의 일반 소속 선수만 재계약을 검토하세요');
+ if(v2TaskSpec())return v2Tell('현재 작업 창을 먼저 닫으세요');
+ const undo=pendingOfficialUndo(db);try{const out=startNegotiation(db,pid,'renewal');if(!out.ok){undo();return v2Tell(out.msg)}v2Save();v2OpenNegotiation(out.neg.id)}catch(error){undo();v2Tell(error.message)}
+}
+function v2SellerView(n){
+ const p=V2.db.players[n.pid],draft=V2.sellerDrafts?.[n.id],fee=draft?.stamp===v2NegotiationStamp(n)?draft.fee:n.clubCounter??0;
+ return `<section class="panel"><button class="btn btn-outline" id="negotiation-back">← 협상 목록</button><h2>${v2Esc(p.name)} · 판매 구단 협상</h2><p>대상 선수단 ${v2Esc(V2.db.teams[n.teamId]?.name)} · 원소속 ${v2Esc(V2.db.teams[n.sellerId]?.name)}</p><p class="hint">받은 역제안이 있을 때만 상대 요구액을 표시합니다. 구단 간 합의 후에도 선수 동의와 별도 수동 최종 서명이 필요합니다.</p>${n.clubCounter?`<p>받은 역제안 ${v2Money(n.clubCounter)}</p>`:''}<label class="field">제안 이적료 · 억 원<input class="input" type="number" min="0" step="0.1" id="seller-fee" value="${v2Esc(fee)}"></label><button class="btn btn-primary" id="seller-review">이적료 제안 검토</button><button class="btn btn-outline" data-end-neg="${v2Esc(n.id)}">협상 종료</button></section>`;
+}
+function v2ReviewSeller(nid,fee){
+ const n=v2OwnedNegotiation(nid),error=manualNegotiationError(V2.db,n);if(error)return v2Tell(error);
+ if(n.stage!=='club'||n.status!=='open'||!Number.isFinite(fee)||fee<0)return v2Tell('현재 판매 구단 협상과 제안액을 확인하세요');
+ if(v2TaskSpec())return v2Tell('현재 작업 창을 먼저 닫으세요');
+ V2.managementReview={db:V2.db,world:V2.db.world,manager:V2.db.manager,stamp:v2ManagementStamp(),sellerOffer:{nid,fee,stamp:v2NegotiationStamp(n)},sellerTerms:JSON.stringify([nid,fee]),preview:{command:{type:'transfer.fee-review'}},title:'판매 구단 이적료 제안 검토',lines:[V2.db.players[n.pid].name+' · '+v2Money(fee),'판매 구단이 현재 상태에서 독립 판단합니다. 이적료 합의만으로 선수 계약·소속·지급을 확정하지 않습니다.']};v2Render();
+}
+function v2CommitSeller(r){
+ const c=r.sellerOffer,n=v2OwnedNegotiation(c.nid),error=manualNegotiationError(V2.db,n);if(error)return {ok:false,errors:[error]};
+ if(n.stage!=='club'||n.status!=='open'||c.stamp!==v2NegotiationStamp(n)||r.sellerTerms!==undefined&&r.sellerTerms!==JSON.stringify([c.nid,c.fee]))return {ok:false,errors:['현재 판매 구단 조건을 다시 확인하세요']};
+ const undo=pendingOfficialUndo(V2.db),before=JSON.stringify(n);try{const msg=mTransferBid(V2.db,n.pid,c.fee);if(JSON.stringify(n)===before){undo();return {ok:false,errors:[msg]}}return {ok:true,msg}}catch(error){undo();return {ok:false,errors:[error.message]}}
+}
+function v2ReviewPlayerRelease(pid=V2.pid){
+ const p=v2RolePlayer(pid);if(!p)return v2Tell('현재 관리 선수를 확인하세요');
+ const command={type:'player.release',actor:'manager',pid,teamId:p.team,mode:'manager'},plan=previewWorldAction(V2.db,command);if(!plan.ok)return v2Tell(plan.errors.join(' · '));
+ v2ReviewManagement(command,p.name+' · 계약 해지 검토',['계약 종료 보상 '+v2Money(plan.changes[0]?.cost||0),'현재 등록·로스터·계약·재정 조건을 다시 검사한 뒤 수동 확정합니다.']);
+}
+function v2OwnedDecisionStamp(pid){const db=V2.db,p=db.players[pid];return JSON.stringify([db.worldDate,db.year,db.world.contractWindow,db.world.contractAgreements,p,db.teams[p?.team]])}
+function v2ReviewOwnedDecision(kind,pid=V2.pid){
+ const p=v2RolePlayer(pid),error=v2ManagementError();if(error)return v2Tell(error);if(!p||v2Team()?.parent||v2TaskSpec())return v2Tell('현재 관리 선수와 작업 창을 확인하세요');
+ if(!['contact-waiver','window-option'].includes(kind))return;
+ V2.managementReview={db:V2.db,world:V2.db.world,manager:V2.db.manager,stamp:v2ManagementStamp(),ownedDecision:{kind,pid,stamp:v2OwnedDecisionStamp(pid)},ownedTerms:JSON.stringify([kind,pid]),preview:{command:{type:'contract.window-decision'}},title:kind==='contact-waiver'?'타 구단 조기 접촉 허용 검토':'기존 팀 옵션 행사 검토',lines:[p.name,kind==='contact-waiver'?'원소속 독점기간의 조기 접촉을 허용합니다. 선수의 계약 종료나 타 구단 서명을 자동으로 결정하지 않습니다.':'저장된 기존 옵션 조건을 행사합니다. 선수 옵션은 감독이 대신 행사하지 않습니다.']};v2Render();
+}
+function v2CommitOwnedDecision(r){
+ const c=r.ownedDecision,p=v2RolePlayer(c.pid),error=v2ManagementError();if(error)return {ok:false,errors:[error]};if(!p||!['contact-waiver','window-option'].includes(c.kind)||r.ownedTerms!==JSON.stringify([c.kind,c.pid])||c.stamp!==v2OwnedDecisionStamp(c.pid))return {ok:false,errors:['현재 계약 조건을 다시 확인하세요']};
+ const undo=pendingOfficialUndo(V2.db);try{const out=c.kind==='contact-waiver'?grantEarlyContact(V2.db,c.pid,'manager'):exerciseExclusiveTeamOption(V2.db,c.pid);if(!out?.ok){undo();return {ok:false,errors:[out?.msg||'현재 계약에서 행사할 수 없습니다']}}return out}catch(error){undo();return {ok:false,errors:[error.message]}}
+}
