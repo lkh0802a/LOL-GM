@@ -13,7 +13,7 @@ modules.splice(1,0,await uiV2BrowserStorageSource());
 const html=shell.replace('/*STYLE*/',style).replace('/*ENGINE*/',engine.join('\n')).replace('/*UI*/',modules.join('\n'));
 await mkdir(new URL('dist/',root),{recursive:true});
 for(const name of ['ui-v2.html','dist/ui-v2.html']){const target=new URL(name,root),temp=new URL(name+'.'+process.pid+'.'+randomUUID()+'.tmp',root);try{await writeFile(temp,html);await rename(temp,target);}finally{await unlink(temp).catch(error=>{if(error.code!=='ENOENT')throw error;});}}
-console.log(`새 화면 조립: 기존 엔진 ${ENGINE_MODULES.length}개 · 새 화면 ${ui.length}개 · 기존 UI 0개`);
+console.log(`새 화면 조립: 기존 엔진 ${ENGINE_MODULES.length}개 · 새 화면 ${modules.length}개 · 기존 UI 0개`);
 return html;
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url))await buildUiV2();

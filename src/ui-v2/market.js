@@ -1,6 +1,6 @@
-function v2Target(){if(!V2.db)return null;if(V2.db.world.phase!=='initial_roster')return managedTeam(V2.db);const teams=setupTeamsForManager(V2.db);return teams.find(t=>t.id===V2.target)||teams[0]||null;}
+function v2Target(){if(!V2.db||V2.db.world?.fired)return null;if(V2.db.world.phase!=='initial_roster')return v2Team();const teams=setupTeamsForManager(V2.db);return teams.find(t=>t.id===V2.target)||teams[0]||null;}
 function v2OrganizationContext(){
- const db=V2.db;if(db.world.phase!=='initial_roster')return '';const teams=setupTeamsForManager(db),current=v2Target();if(teams.length<2)return '';
+ const db=V2.db;if(db.world.fired||db.world.phase!=='initial_roster')return '';const teams=setupTeamsForManager(db),current=v2Target();if(teams.length<2)return '';
  return `<section class="panel"><div class="panel-heading"><strong>구성할 선수단</strong></div><p class="hint">구성할 선수단을 선택하고 선수를 검토하세요. 계약은 조건 합의 후 직접 확정합니다.</p><div class="stack">${teams.map(t=>{const lim=initialSquadLimits(db,t);return `<button class="btn ${current?.id===t.id?'btn-primary':'btn-outline'}" data-squad-context="${v2Esc(t.id)}" aria-pressed="${current?.id===t.id}">${v2Esc(t.name)} · ${t.roster.length}명 / 최소 ${lim.min}명</button>`}).join('')}</div></section>`;
 }
 function v2ChooseSquad(id){

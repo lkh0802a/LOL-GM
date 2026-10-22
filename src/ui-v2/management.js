@@ -33,6 +33,7 @@ function v2ReviewManagement(command,title,lines){
 }
 function v2CommitManagement(review){
  if(!review||review!==V2.managementReview||review.db!==V2.db||review.world!==V2.db.world||review.manager!==V2.db.manager||review.stamp!==v2ManagementStamp())return {ok:false,errors:['현재 검토가 아닙니다. 다시 확인하세요']};
+ if(review.careerAction)return v2CommitCareer(review);
  const error=v2ManagementError();if(error)return {ok:false,errors:[error]};
  if(review.contractDay)return v2CommitContractDay(review);
  if(review.freeAgencyDay||review.annualClose)return v2CommitOffseasonAction(review);
@@ -63,6 +64,7 @@ function v2CommitSeasonTransition(r){
  catch(error){undo();return {ok:false,errors:[error.message]};}
 }
 function v2Continue(){
+ if(v2CareerDetached())return v2ReviewCareer();
  if(manualContactPending(V2.db))return v2OpenNegotiation(v2CurrentContact().id);
  if(V2.db.world.pendingOfficial)return v2OfficialOpen();
  if(waitingNegotiationResponses(V2.db,true).length)return v2ContractAction(()=>advanceToNegotiationResponse(V2.db));
@@ -137,11 +139,13 @@ function v2StaffCard(read,t,s,own){
  return `<article class="panel"><div class="panel-heading"><strong>${v2Esc(s.name)}</strong><span class="state-tag">${v2Esc(STAFF_ROLES[s.role])}</span></div><p class="small subtle">${s.age}세 · ${v2Esc(found?.team?.name||'자유 계약')} · 관측 ${seen.min}~${seen.max}</p><p class="hint">${seen.interviewed?'현재 연도 면접 기록':'공개 평판 추정'} · 실제 개인 능력을 공개한 값이 아닙니다.</p>${own?`<p>현재 연봉 ${v2Money(s.contract?.salary)} / 년 · ${s.contract?.until||'정보 없음'}시즌까지</p>`:''}<details><summary>계약·검토</summary>${!own?`<button class="btn btn-outline" data-staff-interview="${v2Esc(s.id)}"${seen.interviewed||disabled?' disabled':''}>면접 기록 갱신</button>`:''}${!own||s.contract?.until<=read.year?`<label class="field">연봉 · 억 원 / 년<input class="input" type="number" min="0.1" max="10000" step="0.1" data-staff-input="salary" data-sid="${v2Esc(s.id)}" value="${v2Esc(salary)}"${disabled}></label><label class="field">계약 기간 · 년<input class="input" type="number" min="1" step="1" data-staff-input="years" data-sid="${v2Esc(s.id)}" value="${v2Esc(years)}"${disabled}></label>${!own&&!staffCanHire(t,s)?`<label class="field">같은 부서 교체 대상<select class="input" data-staff-input="replaceSid" data-sid="${v2Esc(s.id)}"${disabled}><option value="">직접 선택</option>${teamStaffMembers(t,staffDepartment(s.role)).map(p=>`<option value="${v2Esc(p.id)}"${draft.replaceSid===p.id?' selected':''}>${v2Esc(p.name)}</option>`).join('')}</select></label>`:''}<button class="btn btn-primary" data-staff-offer="${v2Esc(s.id)}"${disabled}>${own?'재계약':'계약'} 검토</button>`:''}${own?`<button class="btn btn-outline" data-staff-release="${v2Esc(s.id)}"${disabled}>계약 해지 검토 · ${v2Money(staffExitFee(read,s))}</button>`:''}<p class="hint">계약 기간의 연봉은 일시 선납이 아닙니다. 위약금·해지 보상과 현재 예산은 검토에서 별도로 확인합니다.</p>${(s.history||[]).slice(-3).map(h=>`<p class="small subtle">${h.year} · ${v2Esc(({signing:'계약',renewal:'재계약',release:'해지',expire:'만료',retire:'은퇴'})[h.type]||'직원 기록')}</p>`).join('')}</details></article>`;
 }
 function v2Staff(){
+ if(!v2Team())return '<section class="panel empty">현재 관리 구단의 직원 정보 권한이 없습니다.</section>';
  const read=ownedQueryView(V2.db),t=managedTeam(read),own=teamStaffMembers(t),rows=V2.tab==='직원 채용'?staffMarketCandidates(read,t).filter(s=>!V2.staffRole||V2.staffRole==='ALL'||s.role===V2.staffRole):own;
  V2.staffPage=Math.max(0,Math.min(V2.staffPage||0,Math.max(0,Math.ceil(rows.length/V2_LIST_PAGE_SIZE)-1)));
  return `<section class="panel"><div class="panel-heading"><strong>${V2.tab}</strong></div><p>${Object.entries(STAFF_DEPT_LIMITS).map(([d,max])=>v2Esc(STAFF_DEPT_LABEL[d])+' '+own.filter(s=>staffDepartment(s.role)===d).length+'/'+max+'명').join(' · ')}</p><p class="hint">부서 정원은 의무 채용 인원이 아닙니다. 실제 고용 직원과 관측 자료를 바탕으로 검토합니다.</p>${V2.tab==='직원 채용'?`<label class="field">직무<select class="input" id="staff-role"><option value="ALL">전체 직무</option>${Object.entries(STAFF_ROLES).map(([k,v])=>`<option value="${k}"${V2.staffRole===k?' selected':''}>${v2Esc(v)}</option>`).join('')}</select></label>`:''}<div class="tag-flex"><button class="btn btn-outline" data-staff-page="-1"${V2.staffPage===0?' disabled':''}>이전</button><span>${V2.staffPage+1} / ${Math.max(1,Math.ceil(rows.length/V2_LIST_PAGE_SIZE))}</span><button class="btn btn-outline" data-staff-page="1"${(V2.staffPage+1)*V2_LIST_PAGE_SIZE>=rows.length?' disabled':''}>다음</button></div></section><section class="stack">${rows.slice(V2.staffPage*V2_LIST_PAGE_SIZE,(V2.staffPage+1)*V2_LIST_PAGE_SIZE).map(s=>v2StaffCard(read,t,s,V2.tab!=='직원 채용')).join('')||'<div class="panel empty">해당 직원이 없습니다.</div>'}</section>`;
 }
 function v2BindManagement(){
+ v2BindCareer();
  const scrimCurrent=v2Guard();document.querySelectorAll('[data-scrim-field]').forEach(el=>el.onchange=()=>{if(!scrimCurrent())return;V2.scrimDraft??={date:addDays(V2.db.worldDate,1),opponentId:'',slot:'afternoon',games:1};V2.scrimDraft[el.dataset.scrimField]=el.dataset.scrimField==='games'?+el.value:el.value;});
  v2Bind('#scrim-review',()=>v2ReviewScrim({type:'scrim.request',actor:'manager',teamId:managedTeamId(V2.db),...V2.scrimDraft}));
  v2Bind('[data-scrim-cancel]',el=>v2ReviewScrim({type:'scrim.cancel',actor:'manager',id:el.dataset.scrimCancel}));
@@ -203,4 +207,48 @@ function v2ReviewMedical(pid,mode){
 function v2BindMedical(){
  const field=document.getElementById('medical-mode'),current=v2Guard();if(field)field.onchange=()=>{const p=v2RolePlayer();if(current()&&p&&!v2RoleError(p.id))v2MedicalDraft(p).mode=field.value;};
  v2Bind('#medical-review',()=>{const p=v2RolePlayer();if(p)v2ReviewMedical(p.id,v2MedicalDraft(p).mode)});
+}
+
+// 새 UI의 무직·해임 복귀. 구단 명령과 세계 진행 권한을 구분한다.
+function v2CareerDetached(){const t=v2Team();return !!V2.db?.world&&(V2.db.world.fired||!t||t.active===false);}
+function v2CareerPanel(){
+ if(!v2CareerDetached()&&V2.db?.world?.phase!=='pick')return '';
+ const db=V2.db,w=db.world,pick=w.phase==='pick',pre=w.phase==='preseason',fa=w.phase==='offseason'&&w.contractWindow?.stage==='fa';
+ return `<section class="panel"><h2>${w.fired?'해임 후 커리어':'관리 구단 선택'}</h2><p>기존 세계·선수·계약·기록은 그대로 이어집니다. 관리 권한이 없는 구단의 선발이나 계약을 결정하지 않습니다.</p>${pick?`<label class="field">맡을 구단<select class="input" id="career-team"><option value="">구단 선택</option>${managerSelectableTeams(db).filter(t=>db.regions[t.region]&&t.owner).map(t=>`<option value="${v2Esc(t.id)}">${v2Esc(t.name)}</option>`).join('')}</select></label><button class="btn btn-primary" id="career-team-review">이 구단 선택 검토</button>${V2.careerChoiceReturn?'<button class="btn btn-outline" id="career-choice-cancel">구단 선택 취소</button>':''}`:pre?'<button class="btn btn-primary" id="career-choice-open">다음 시즌 맡을 구단 선택</button>':'<p class="hint">계속 진행에서 현재 세계의 날짜·시즌 단계를 직접 검토합니다.</p>'}${fa?'<button class="btn btn-outline" id="career-annual-review">별도 연간 결산 검토</button>':''}</section>`;
+}
+function v2CareerKind(){const w=V2.db?.world;if(!w)return null;if(w.phase==='season')return 'day';if(w.phase==='market')return 'market';if(w.phase==='offseason')return !w.contractWindow?'open-window':w.contractWindow.stage==='exclusive'?'exclusive':'annual';return null;}
+function v2ReviewCareer(kind=v2CareerKind(),id=null){
+ const db=V2.db,w=db?.world;if(!w||V2.busy)return;
+ if(V2.review||V2.managementReview||V2.roleReview||V2.advice||V2.official?.open)return v2Tell('현재 작업 창을 먼저 닫으세요');
+ const allowed=kind==='choose'?w.phase==='pick':kind==='annual'?w.phase==='offseason'&&w.contractWindow?.stage==='fa':v2CareerDetached()&&kind===v2CareerKind();
+ if(!allowed)return v2Tell('현재 커리어 단계에서 결정할 수 없습니다');
+ const t=id&&db.teams[id];if(kind==='choose'&&(!isManagerSelectableTeam(db,t)||!db.regions[t.region]||!t.owner))return v2Tell('현재 관리할 수 없는 구단입니다');
+ const title=({day:'무직 상태 · 세계 하루 진행',market:'세계 이적시장 마감',exclusive:'무직 상태 · 독점 기간 하루', 'fa-day':'무직 상태 · FA 하루',annual:'별도 연간 결산', 'open-window':'계약 기간 시작',choose:'관리 구단 선택'})[kind];
+ V2.managementReview={db,world:w,manager:db.manager,stamp:v2ManagementStamp(),careerAction:kind,careerTeam:id,careerBasis:JSON.stringify(db),careerTerms:JSON.stringify([kind,id]),preview:{command:{type:'career.continue'}},title,lines:[kind==='choose'?t.name+'의 감독으로 이어갑니다.':'현재 '+db.worldDate+' · '+title,'기존 엔진의 현재 상태·계약·재정·기록을 이어 처리합니다. 다른 구단의 수동 결정 권한을 부여하지 않습니다.']};v2Render();
+}
+function v2CommitCareer(r){
+ const db=V2.db,w=db.world;if(r.db!==db||r.world!==w||r.manager!==db.manager||r.stamp!==v2ManagementStamp()||r.careerBasis!==JSON.stringify(db)||r.careerTerms!==JSON.stringify([r.careerAction,r.careerTeam]))return {ok:false,errors:['커리어 상태가 바뀌었습니다. 다시 검토하세요']};
+ const kind=r.careerAction;if(kind==='choose'?w.phase!=='pick':!v2CareerDetached()||!(kind===v2CareerKind()||kind==='annual'&&w.phase==='offseason'&&w.contractWindow?.stage==='fa'))return {ok:false,errors:['현재 커리어 권한이 아닙니다']};
+ const undo=pendingOfficialUndo(db);
+ try{
+  let out;if(kind==='choose')out=chooseSeasonManagedTeam(db,r.careerTeam);
+  else if(kind==='day'){out=playWorldDay(db);out={ok:true,result:out};}
+  else if(kind==='open-window'){initOffseasonContractWindow(db);out={ok:true};}
+  else if(kind==='exclusive')out=advanceOffseasonContractDay(db);
+  else if(kind==='annual'){runOffseason(db);out={ok:true};}
+  else if(kind==='market'){closeMarket(db);out={ok:true};}
+  if(!out?.ok)throw Error(out?.msg||out?.errors?.join(' · ')||'현재 커리어 상태를 다시 확인하세요');if(kind==='choose')V2.careerChoiceReturn=null;return out;
+ }catch(error){undo();return {ok:false,errors:[error.message]};}
+}
+function v2OpenCareerChoice(){
+ const db=V2.db,w=db.world;if(w.phase!=='preseason'||V2.busy||v2TaskSpec())return;
+ V2.careerChoiceReturn={db,w,manager:db.manager,team:managedTeamId(db),date:db.worldDate,year:db.year,manage:w.manage,fired:w.fired,pickingPresent:Object.hasOwn(w,'picking'),picking:w.picking};
+ w.picking=true;w.phase='pick';v2Save();v2Navigate('home');
+}
+function v2CancelCareerChoice(){
+ const r=V2.careerChoiceReturn,db=V2.db,w=db.world;if(!r||r.db!==db||r.w!==w||r.manager!==db.manager||r.team!==managedTeamId(db)||r.date!==db.worldDate||r.year!==db.year||r.manage!==w.manage||r.fired!==w.fired||w.phase!=='pick')return v2Tell('현재 선택 상태가 바뀌었습니다');
+ w.phase='preseason';if(r.pickingPresent)w.picking=r.picking;else delete w.picking;V2.careerChoiceReturn=null;v2Save();v2Navigate('home');
+}
+function v2BindCareer(){
+ v2Bind('#career-choice-open',()=>v2OpenCareerChoice());v2Bind('#career-choice-cancel',()=>v2CancelCareerChoice());v2Bind('#career-team-review',()=>v2ReviewCareer('choose',document.getElementById('career-team').value));v2Bind('#career-annual-review',()=>v2ReviewCareer('annual'));
 }

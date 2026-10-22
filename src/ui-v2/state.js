@@ -9,7 +9,7 @@ const v2Money=value=>{
  const pieces=[big?big.toLocaleString('ko-KR')+'억':'',man?man.toLocaleString('ko-KR')+'만':'',rest?rest.toLocaleString('ko-KR'):''].filter(Boolean);
  return (value<0?'-':'')+(pieces.join(' ')||'0')+' 원';
 };
-const v2Team=()=>V2.db&&managedTeam(V2.db);
+const v2Team=()=>V2.db&&!V2.db.world?.fired?managedTeam(V2.db):null;
 function v2ReadView(){return V2.db?scoutingReadView(V2.db):null;}
 function v2Guard(){const db=V2.db,w=db?.world,manager=db?.manager,owner=db&&managedTeamId(db),target=V2.target,date=db?.worldDate,phase=w?.phase,revision=V2.revision;return ()=>V2.db===db&&db?.world===w&&db?.manager===manager&&(!db||managedTeamId(db)===owner)&&V2.target===target&&db?.worldDate===date&&w?.phase===phase&&V2.revision===revision&&!V2.busy&&!V2.taskBackPending;}
 function v2ManualError(){const db=V2.db,t=v2Team();return !db?.world||!t||db.world.fired||db.world.manage!=='manual'?'현재 감독의 수동 권한이 없습니다':db.world.pendingOfficial?'진행 중인 공식 경기의 준비를 먼저 확인하세요':null;}
@@ -54,7 +54,7 @@ function v2ReadSavedGame(raw){
  return {db,read,target};
 }
 function v2InstallSavedGame(saved){
- Object.assign(V2,saved,{official:null,officialResult:null,searchViews:{},drafts:{},review:null,advice:null,nid:null,pid:null,preparation:null,managementReview:null,roleReview:null,staffDrafts:{},roleDrafts:{},medicalDrafts:{},squadListView:null,facilityListView:null,negotiationListView:null,taskReturn:null,taskHistory:null,taskBackPending:false,loadRequest:null,scrimDraft:null});
+ Object.assign(V2,saved,{official:null,officialResult:null,searchViews:{},drafts:{},review:null,advice:null,nid:null,pid:null,preparation:null,managementReview:null,roleReview:null,staffDrafts:{},roleDrafts:{},medicalDrafts:{},squadListView:null,facilityListView:null,negotiationListView:null,taskReturn:null,taskHistory:null,taskBackPending:false,loadRequest:null,scrimDraft:null,careerChoiceReturn:null});
 }
 async function v2LoadFile(file,current){
  if(!file||!current())return;
