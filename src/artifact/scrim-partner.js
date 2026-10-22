@@ -53,7 +53,7 @@ function scrimRecentResults(db,tid){
     games:games.length};
 }
 function scrimClubIntent(db,t){
-  const starters=ROLES.map(role=>starterFor(db,t,role)).filter(Boolean);
+  const starters=scrimOwnStarters(db,t).filter(Boolean);
   const morale=starters.length?avg(starters.map(p=>p.morale??65)):65,
     form=scrimRecentResults(db,t.id);
   const confidence=morale<56||form.losingStreak>=3||
@@ -64,8 +64,8 @@ function scrimClubIntent(db,t){
 }
 function scrimPartnerInterest(db,t,other,intent=null,strength=null,otherStrength=null){
   intent=intent||scrimClubIntent(db,t);
-  const gap=(otherStrength??teamStrength(db,other.id))-
-    (strength??teamStrength(db,t.id));
+  const gap=(otherStrength??scrimObservedTeamStrength(db,t,other))-
+    (strength??scrimObservedTeamStrength(db,t,t));
   let approval,desire,reason=intent.goal;
   if(gap<-7){
     // Skill-gap reluctance is a *soft* preference, not a near-total ban.
@@ -118,10 +118,11 @@ function scrimPartnerAssessment(db,t,other,intents=null,strengths=null,rivals=nu
   if(rivalDays!==null&&rivalDays>=-3&&rivalDays<=7)
     return {allowed:false,reason:'최근 또는 7일 내 공식전 맞대결 상대',
       rivalDays};
-  const left=scrimPartnerInterest(db,t,other,intents?.[t.id],
-    strengths?.[t.id],strengths?.[other.id]),
+  const strength=(observer,target)=>typeof strengths==='function'?strengths(observer,target):strengths?.[target.id],
+    left=scrimPartnerInterest(db,t,other,intents?.[t.id],
+    strength(t,t),strength(t,other)),
     right=scrimPartnerInterest(db,other,t,intents?.[other.id],
-      strengths?.[other.id],strengths?.[t.id]);
+      strength(other,other),strength(other,t));
   // Also avoid giving away strategies shortly before a scheduled showdown
   // outside the strict seven-day embargo.
   const secrecy=rivalDays!==null&&rivalDays>7&&rivalDays<=14?.68:1;

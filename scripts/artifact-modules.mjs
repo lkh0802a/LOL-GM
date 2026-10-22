@@ -86,6 +86,7 @@ export const ENGINE_MODULES = [
   'staff.js',
   'staff-contracts.js',
   'staff-registration.js',
+  'scrim-observation.js',
   'scrim-partner.js',
   'scrim.js',
   'scrim-plans.js',
