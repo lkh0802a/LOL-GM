@@ -395,11 +395,16 @@ jobs:
           retention-days: 3
           if-no-files-found: warn
 
+  ui-v2:
+    needs: static-fast
+    uses: ./.github/workflows/ui-v2.yml
+
   verify:
     needs:
       - changes
       - static-fast
       - ui-finance-contracts
+      - ui-v2
       - calendar-scouting
       - medical
       - regression-smoke-career
@@ -420,6 +425,7 @@ jobs:
           RUN_BUILD: ${{ needs.changes.outputs.run_build }}
           CHANGES_RESULT: ${{ needs.changes.result }}
           STATIC_RESULT: ${{ needs.static-fast.result }}
+          UI_V2_RESULT: ${{ needs.ui-v2.result }}
           UI_RESULT: ${{ needs.ui-finance-contracts.result }}
           CALENDAR_RESULT: ${{ needs.calendar-scouting.result }}
           MEDICAL_RESULT: ${{ needs.medical.result }}
@@ -432,6 +438,7 @@ jobs:
           set -euo pipefail
           [[ "$CHANGES_RESULT" == "success" ]]
           [[ "$STATIC_RESULT" == "success" ]]
+          [[ "$UI_V2_RESULT" == "success" ]]
 
           if [[ "$PARITY_REQUIRED" == "true" ]]; then
             [[ "$PARITY_RESULT" == "success" ]]

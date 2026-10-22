@@ -1,0 +1,11 @@
+{
+  "predecessorPublicCommit": "a5cc905cb23160e8505b9b479b9b098796df7a96",
+  "predecessorSha256": "0da7844547f70eabdb0494451368a295f518ca0ce2ae4d0d77bebad5c3a8b996",
+  "archive": {
+    "path": "docs/evidence/system-choice-hash-2026-10-17.original.js.gz",
+    "sha256": "37cc4d969633948c4b9643f67f20763061af2d7c0b0f3fae770ac16e60c21d3b",
+    "bytes": 2798
+  },
+  "currentSha256": "12c4e059ddd8828e3420a62eb8787cb77acab7489914b1de9684cb12d3f50097",
+  "meaning": "Exact FNV-1a prefix continuation only; all archived original choices and scores remain the comparison oracle. No RNG consumption, cache or tuning changes."
+}

@@ -1,0 +1,30 @@
+name: 새 화면 검증
+on:
+  workflow_call:
+permissions:
+  contents: read
+concurrency:
+  group: ui-v2-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  ui-v2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 새 화면 조립·금액·권한·직원·선수단 문맥 검증
+        run: node scripts/ci-run.mjs ui-v2 -- node scripts/check-ui-v2.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lol-gm-ui-v2
+          path: dist/ui-v2.html
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: validation-ui-v2
+          path: ci-results/
+          retention-days: 3

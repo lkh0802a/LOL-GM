@@ -1,0 +1,5 @@
+function writeMedicalUiPlan(p,mode){
+  if(!Object.hasOwn(MEDICAL_PLAN_LABELS,mode))return false;
+  // The existing roster writer: no medical tick, selection or history rewrite.
+  p.medicalPlan=mode;return true;
+}

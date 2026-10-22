@@ -11,11 +11,7 @@ function medicalUiGuard(t,allowed=()=>true){
   return ()=>DB===db&&DB.world===w&&SLOT===slot&&!SLOT_SWITCHING&&UI_RENDER_ID===render&&VIEW===view&&
     UI_OVERLAY===dialog&&managedTeamId(db)===manager&&db.manager===managerRef&&DB.teams[t.id]===t&&medicalUiAllowed(db,t)&&clubMedicalStamp(db,t)===stamp&&allowed();
 }
-function writeMedicalUiPlan(p,mode){
-  if(!Object.hasOwn(MEDICAL_PLAN_LABELS,mode))return false;
-  // The existing roster writer: no medical tick, selection or history rewrite.
-  p.medicalPlan=mode;return true;
-}
+function writeMedicalUiPlan(p,mode){return writeMedicalPlan(p,mode)}
 function bindMedicalPlanControls(root=document,allowed=()=>true,after=()=>{saveDB();navKeepScroll()}){
   root.querySelectorAll('[data-medical-plan]').forEach(el=>{
     const p=DB.players[el.dataset.medicalPlan],t=p&&DB.teams[p.team];
