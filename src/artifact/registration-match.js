@@ -62,7 +62,8 @@ function scheduledRegistrationForfeit(db,s,m){
   if(!officialRegistrationEnabled(db))return null;
   const view=officialMatchView(db,s,m.a,m.b),counts=[m.a,m.b].map(id=>medicalAvailable(view,view.teams[id]));
   if(counts.every(n=>n>=5))return null;
-  const winner=counts[0]>=5?m.a:counts[1]>=5?m.b:m.a,need=Math.ceil(m.bo/2);
+  if(counts.every(n=>n<5))throw Error('양팀 모두 출전 가능한 선수 5명이 없어 공식 승자를 결정할 수 없습니다');
+  const winner=counts[0]>=5?m.a:m.b,need=Math.ceil(m.bo/2);
   // No played games or appearance statistics are invented. A double shortage
   // retains the scheduled bracket order for administrative advancement.
   return {rec:{a:m.a,b:m.b,bestOf:m.bo,score:winner===m.a?[need,0]:[0,need],winner,

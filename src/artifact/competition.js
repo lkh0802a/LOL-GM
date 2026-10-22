@@ -9,7 +9,7 @@ function roundRobin(ids,legs){
     const m=[];for(let i=0;i<n/2;i++){const a=t[i],b=t[n-1-i];if(a&&b)m.push(r%2?[b,a]:[a,b])}
     rounds.push(m); t.splice(1,0,t.pop());
   }
-  const out=rounds.slice(); for(let l=1;l<legs;l++) out.push(...rounds.map(m=>m.map(([a,b])=>[b,a])));
+  const out=rounds.slice(); for(let l=1;l<legs;l++) out.push(...rounds.map(m=>m.map(([a,b])=>l%2?[b,a]:[a,b])));
   return out;
 }
 const STAGE_KO={round_robin:'풀리그',swiss:'스위스',single_elim:'싱글 엘리미네이션',double_elim:'더블 엘리미네이션'};
@@ -70,37 +70,112 @@ function addElimRound(db,s,idx,date){
   sd.rounds.push({name:elimName(alive.length),label,byes:alive.slice(0,byes),pairs});sd.round++;
 }
 // 더블 엘리미네이션: 승자조 → (패자조 교차) → 패자조 → … → 최종 결승
+
+function dePair(sd,entrants){
+  const teams=seedSort(sd,entrants);
+  if(new Set(teams).size!==teams.length)throw Error('Duplicate bracket entrants');
+  let size=1;while(size<teams.length)size*=2;
+  const byes=teams.slice(0,size-teams.length),pairs=hiLo(teams.slice(byes.length));
+  if(pairs.some(([a,b])=>!a||!b||a===b))throw Error('Invalid double-elimination pairing');
+  return {byes,pairs};
+}
 function deRound(db,s,idx,date){
-  const cfg=db.competitions[s.comp].stages[idx], sd=s.stageData[cfg.id]; let pairs,name,br;
-  if(sd.ub.length===1&&sd.lb.length===1&&!sd.drop.length){pairs=[[sd.ub[0],sd.lb[0]]];name='최종 결승';br='GF';sd.gf=true}
-  else if(sd.drop.length&&sd.lb.length){pairs=sd.lb.map((t,i)=>[t,sd.drop[i]]).filter(p=>p[1]);name=`패자조 ${sd.round+1}R`;br='LX'}
-  else if(sd.drop.length&&!sd.lb.length){sd.lb=seedSort(sd,sd.drop);sd.drop=[];if(sd.lb.length>=2){pairs=hiLo(sd.lb);name=`패자조 ${sd.round+1}R`;br='L'}else return deRound(db,s,idx,date)}
-  else if(sd.lb.length>=2&&(sd.ub.length<=1||sd.lb.length>sd.ub.length)){pairs=hiLo(seedSort(sd,sd.lb));name=`패자조 ${sd.round+1}R`;br='L'}
-  else {pairs=hiLo(seedSort(sd,sd.ub));name=sd.ub.length===2?'승자조 결승':`승자조 ${sd.round+1}R`;br='U'}
-  const label=`${cfg.name} ${name}`;
-  pairs.forEach((pr,i)=>pushDay(s,addDays(date,i),cfg.id,label,[pr],cfg.bestOf));
-  sd.rounds.push({name,label,br,byes:[],pairs});sd.round++;
+  const cfg=db.competitions[s.comp].stages[idx],sd=s.stageData[cfg.id];
+  let pair,name,br;
+  if(sd.gfReset){pair=dePair(sd,[sd.ub[0],sd.lb[0]]);name='결승 재경기';br='GFR';sd.gfReset=false;sd.gf=true}
+  else if(sd.ub.length===1&&sd.lb.length===1&&!sd.drop.length){
+    pair=dePair(sd,[sd.ub[0],sd.lb[0]]);name='최종 결승';br='GF';sd.gf=true;
+  }else if(sd.drop.length&&sd.lb.length){
+    pair=dePair(sd,[...sd.lb,...sd.drop]);name='패자조 교차 '+(sd.round+1)+'R';br='LX';
+  }else if(sd.drop.length){
+    sd.lb=seedSort(sd,sd.drop);sd.drop=[];
+    if(sd.lb.length===1)return deRound(db,s,idx,date);
+    pair=dePair(sd,sd.lb);name='패자조 '+(sd.round+1)+'R';br='L';
+  }else if(sd.lb.length>=2&&(sd.ub.length<=1||sd.lb.length>=sd.ub.length)){
+    pair=dePair(sd,sd.lb);name='패자조 '+(sd.round+1)+'R';br='L';
+  }else if(sd.ub.length>=2){
+    pair=dePair(sd,sd.ub);name=sd.ub.length===2?'승자조 결승':'승자조 '+(sd.round+1)+'R';br='U';
+  }else if(sd.lb.length>=2){
+    pair=dePair(sd,sd.lb);name='패자조 '+(sd.round+1)+'R';br='L';
+  }else throw Error('Inconsistent double-elimination bracket');
+  const label=cfg.name+' '+name;
+  pair.pairs.forEach((pr,i)=>pushDay(s,addDays(date,i),cfg.id,label,[pr],cfg.bestOf));
+  sd.rounds.push({name,label,br,byes:pair.byes,pairs:pair.pairs});sd.round++;
 }
 function deAfter(sd,rd,res){
-  const W=res.map(m=>m.res.winner), L=res.map(m=>m.a===m.res.winner?m.b:m.a);
-  if(rd.br==='U'){sd.ub=W;sd.drop=L}
-  else if(rd.br==='LX'){sd.lb=W;sd.drop=[];sd.elim.push(...L)}
-  else if(rd.br==='L'){sd.lb=W;sd.elim.push(...L)}
-  else if(rd.br==='GF'){sd.alive=[W[0]];sd.elim.push(L[0])}
+  if(res.length!==rd.pairs.length)throw Error('Double-elimination result count mismatch');
+  const W=res.map(m=>m.res.winner),L=res.map(m=>m.a===m.res.winner?m.b:m.a);
+  const alive=[...(rd.byes||[]),...W];
+  if(rd.br==='U'){sd.ub=alive;sd.drop=L}
+  else if(rd.br==='L'||rd.br==='LX'){sd.lb=alive;sd.drop=[];sd.elim.push(...L)}
+  else if(rd.br==='GF'){
+    if(W[0]===sd.ub[0]){sd.alive=[W[0]];sd.elim.push(L[0])}
+    else{sd.gfReset=true;sd.gf=false}
+  }else if(rd.br==='GFR'){sd.alive=[W[0]];sd.elim.push(L[0])}
 }
-// 스위스: 같은 전적끼리, 재대결 회피
+
+function swissPairings(sd,teams){
+  const rank=t=>sd.teams.indexOf(t),rec=t=>sd.rec[t];
+  const entrants=teams.slice().sort((a,b)=>(rec(b).w-rec(b).l)-(rec(a).w-rec(a).l)||rank(a)-rank(b));
+  if(entrants.length%2)throw Error('Swiss pairing requires an even number of teams');
+  const cost=(a,b)=>(rec(a).opp.includes(b)||rec(b).opp.includes(a)?10000:0)+
+    250*(Math.abs(rec(a).w-rec(b).w)+Math.abs(rec(a).l-rec(b).l))+
+    Math.abs(rank(a)-rank(b));
+  if(entrants.length<=14){
+    const memo=new Map();
+    const solve=mask=>{
+      if(!mask)return {cost:0,pairs:[]};
+      if(memo.has(mask))return memo.get(mask);
+      let i=0;while(!(mask&(1<<i)))i++;
+      let best=null;
+      for(let j=i+1;j<entrants.length;j++)if(mask&(1<<j)){
+        const sub=solve(mask^(1<<i)^(1<<j)),value=cost(entrants[i],entrants[j])+sub.cost;
+        if(!best||value<best.cost)best={cost:value,pairs:[[entrants[i],entrants[j]],...sub.pairs]};
+      }
+      memo.set(mask,best);return best;
+    };
+    return solve((1<<entrants.length)-1).pairs;
+  }
+  const pairs=[];
+  while(entrants.length){
+    const a=entrants.shift();entrants.sort((b,c)=>cost(a,b)-cost(a,c)||rank(b)-rank(c));
+    pairs.push([a,entrants.shift()]);
+  }
+  for(let k=0;k<3;k++){
+    let changed=false;
+    for(let i=0;i<pairs.length;i++)for(let j=i+1;j<pairs.length;j++){
+      const [a,b]=pairs[i],[c,d]=pairs[j],initial=cost(a,b)+cost(c,d);
+      for(const swap of [[[a,c],[b,d]],[[a,d],[b,c]]]){
+        if(cost(...swap[0])+cost(...swap[1])<initial){
+          pairs[i]=swap[0];pairs[j]=swap[1];changed=true;break;
+        }
+      }
+    }
+    if(!changed)break;
+  }
+  return pairs;
+}
 function swissRound(db,s,idx,date){
-  const cfg=db.competitions[s.comp].stages[idx], sd=s.stageData[cfg.id];
-  const act=sd.teams.filter(t=>!sd.advanced.includes(t)&&!sd.out.includes(t));
-  const bucket={};act.forEach(t=>{const r=sd.rec[t],k=r.w+'-'+r.l;(bucket[k]=bucket[k]||[]).push(t)});
-  const keys=Object.keys(bucket).sort((a,b)=>{const [aw,al]=a.split('-').map(Number),[bw,bl]=b.split('-').map(Number);return (bw-bl)-(aw-al)});
-  const pairs=[];let carry=[];
-  for(const k of keys){let pool=[...carry,...seedSort({seeds:sd.teams},bucket[k])];carry=[];
-    while(pool.length>=2){const a=pool.shift();let j=pool.findIndex(b=>!sd.rec[a].opp.includes(b));if(j<0)j=0;pairs.push([a,pool.splice(j,1)[0]])}
-    carry=pool;}
-  if(!pairs.length)return;
-  const bo=cfg.bestOf; const label=`${cfg.name} ${sd.round+1}라운드`;
-  pushVenueRound(s,date,cfg.id,label,pairs,bo);
+  const cfg=db.competitions[s.comp].stages[idx],sd=s.stageData[cfg.id];
+  const active=sd.teams.filter(t=>!sd.advanced.includes(t)&&!sd.out.includes(t));
+  let bye=null;
+  if(active.length%2){
+    const rank=t=>sd.teams.indexOf(t);
+    bye=active.slice().sort((a,b)=>(sd.rec[a].byes||0)-(sd.rec[b].byes||0)||
+      sd.rec[a].w-sd.rec[b].w||sd.rec[b].l-sd.rec[a].l||rank(b)-rank(a))[0];
+    sd.rec[bye].byes=(sd.rec[bye].byes||0)+1;
+    sd.rec[bye].w++;
+    (sd.byes||(sd.byes=[])).push({team:bye,round:sd.round+1,date});
+    if(sd.rec[bye].w>=sd.W)sd.advanced.push(bye);
+  }
+  const pairs=swissPairings(sd,active.filter(t=>t!==bye));
+  if(!pairs.length){
+    const want=(db.competitions[s.comp].stages[idx+1]||{}).take||Math.floor(sd.teams.length/2);
+    if(sd.advanced.length>=want){finishStage(db,s,idx,date);return}
+    throw Error('Swiss stage cannot schedule an unpaired participant');
+  }
+  const label=cfg.name+' '+(sd.round+1)+'라운드';
+  pushVenueRound(s,date,cfg.id,label,pairs,cfg.bestOf);
   sd.round++;sd.lastLabel=label;
 }
 function standings(db,s,stageId){
@@ -227,9 +302,9 @@ function intlStages(fmt,teams,bo){
     const size=n>=8?8:4, adv=n>8?Math.min(4,Math.max(2,n-size+2)):0;
     if(adv){const direct=teams.slice(0,size-adv), pin=teams.slice(size-adv);
       if(pin.length>adv)return [{id:'playin',name:'플레이인',type:'round_robin',legs:1,bestOf:3,groups:Math.max(1,Math.min(adv,Math.ceil(pin.length/6))),dayGap:[1,1]},{...de('playin',adv),direct}];}
-    return [{...de(undefined,size)}];
+    return [{...de(undefined,n)}];
   }
-  if(fmt==='ko'||n<6){let P=4;while(P*2<=n)P*=2;return [{...ko(undefined,P)}]}
+  if(fmt==='ko'||n<6)return [{...ko(undefined,n)}]
   if(fmt==='groups_de'&&n>=8)return [grp(n>=12?4:2),de('groups',8)];
   return [grp(n>=12?4:2),ko('groups',n>=12?8:4)];
 }

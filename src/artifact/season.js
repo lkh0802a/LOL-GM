@@ -120,7 +120,7 @@ function startInternational(db,id,start,taken=new Set()){
     // 'next' (또는 하부 리그 없는 지역): 상위 대회 진출권 바로 다음 순위부터, 같은 기간 다른 대회에 이미 나간 팀은 건너뜀
     return regionPlacements(db,R).slice(topSlots(R)).filter(t=>!taken.has(t)).slice(0,per);
   }).map(l=>l.filter(t=>!taken.has(t)));
-  const teams=[];for(let k=0;k<6;k++)for(const l of lists)if(l[k])teams.push(l[k]);
+  const teams=[];for(let k=0,limit=Math.max(0,...lists.map(l=>l.length));k<limit;k++)for(const l of lists)if(l[k])teams.push(l[k]);
   if(teams.length<4)return false;
   teams.forEach(t=>taken.add(t));
   db.competitions[id]={id,name:it.name,short:it.short||id,teams,rules:{fearless:true,staffRegistration:it.staffRegistration||null},international:true,tier:it.tier||'top',stages:intlStages(it.format,teams,it.bo)};
