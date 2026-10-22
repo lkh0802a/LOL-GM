@@ -21,6 +21,7 @@ function leagueComp(db,rid,div=1){
   return {id:div===2?R.short+'2':R.short,name:div===2?divName(R):R.leagueName,short:div===2?divName(R):R.short,region:rid,div,teams,rules:{fearless:true,staffRegistration:R.staffRegistration||null},stages:leagueStages(R,teams.length,div)};
 }
 function startWorldSeason(db,myTeam,seed){
+  normalizeInternationalConfig(db.worldConfig);
   const medicalRolloverDate=`${db.year}-01-06`;
   medicalOffseasonRecovery(db,medicalRolloverDate);
   if(!db.worldDate||db.worldDate<medicalRolloverDate)setWorldCalendarDate(db,medicalRolloverDate);
@@ -98,7 +99,12 @@ function placements(db,s){
 function regionPower(db,R){const h=(db.global&&db.global.power||{})[R.id];return h!==undefined?h:R.strength}
 function teamStrength(db,tid){const t=db.teams[tid];return avg(ROLES.map(r=>{const p=starterFor(db,t,r);return p?playerRoleRating(p,r):40}))}
 function startInternational(db,id,start,taken=new Set()){
+  normalizeInternationalConfig(db.worldConfig);
+  id=canonicalInternationalId(id);
   const w=db.world, it=db.worldConfig.internationals.find(x=>x.id===id); if(!it)return false;
+  // A resumed old bracket retains its original key/seed and must not be
+  // replaced by a second canonical bracket in the same season.
+  if(Object.values(w.seasons||{}).some(s=>s.year===w.year&&canonicalInternationalId(s.comp)===id))return false;
   const regs=Object.values(db.regions).filter(R=>!it.zone||(INTL_ZONES[it.zone]||[]).includes(R.id)).sort((a,b)=>regionPower(db,b)-regionPower(db,a));
   const topSlots=R=>{const top=db.worldConfig.internationals.find(x=>x.tier!=='low'&&x.timing===it.timing&&x.entry==='slots');return top?Math.max(1,Math.ceil(R.slots*(top.ratio||1))):R.slots};
   const lists=regs.map(R=>{
@@ -132,6 +138,7 @@ const INTERNATIONAL_POLICY_DEFAULTS={version:1,windowYears:3,weights:{
   WORLD_CHAMPIONSHIP:3,MASTERS:2,OPEN:1
 },placementPoints:{champion:8,runnerUp:6,topFour:4,topEight:2,participant:1}};
 function internationalPolicy(db){
+  normalizeInternationalConfig(db.worldConfig);
   const c=db.worldConfig.internationalPolicy||{};
   db.worldConfig.internationalPolicy={version:1,windowYears:3,
     weights:{...INTERNATIONAL_POLICY_DEFAULTS.weights,...(c.weights||{})},
@@ -152,7 +159,7 @@ function recordInternationalResults(db,w){
     const teams=ordered.map((teamId,i)=>({teamId,regionId:s.internationalRegionSnapshot[teamId],
       rank:i+1,points:i===0?policy.placementPoints.champion:i===1?policy.placementPoints.runnerUp:
         i<4?policy.placementPoints.topFour:i<8?policy.placementPoints.topEight:policy.placementPoints.participant}));
-    history.push({eventId,year:s.year,competitionId:s.comp,weight:Math.max(0,Number(policy.weights[s.comp]??1)),teams});known.add(eventId);
+    history.push({eventId,year:s.year,competitionId:s.comp,weight:Math.max(0,Number(policy.weights[canonicalInternationalId(s.comp)]??1)),teams});known.add(eventId);
   }
   db.global.internationalResults=history;
 }
@@ -166,7 +173,7 @@ function internationalRegionRatings(db,year){
 }
 function latestWorldsRank(db,id,year){
   const from=year-internationalPolicy(db).windowYears+1;
-  const rows=(db.global.internationalResults||[]).filter(e=>e.year>=from&&e.year<=year&&['WORLD_CHAMPIONSHIP','WORLDS','World Championship'].includes(e.competitionId));
+  const rows=(db.global.internationalResults||[]).filter(e=>e.year>=from&&e.year<=year&&isWorldChampionshipId(e.competitionId));
   if(!rows.length)return Infinity;const newestYear=Math.max(...rows.map(e=>e.year)),e=rows.filter(x=>x.year===newestYear).sort((a,b)=>a.eventId.localeCompare(b.eventId)).at(-1);
   return Math.min(...(e.teams||[]).filter(x=>x.regionId===id).map(x=>x.rank),Infinity);
 }
@@ -207,19 +214,19 @@ function pendingOfficialControl(db){
 // Preserve object identity as well as values if this one-set handoff fails.
 // Previously completed sets are outside the operation and remain recorded.
 function pendingOfficialUndo(db){
-  // Retain every reachable object and its original references. A flat record
-  // avoids a row object and a separate values array for every graph node.
-  // Layout: object, own keys, array length (or null), then the captured values.
-  const seen=new Set(),rows=[];
-  const visit=o=>{
-    if(!o||typeof o!=='object'||seen.has(o))return;
+  // Capture the full reachable graph in the same depth-first property order.
+  // Primitive values are retained in rows without recursive calls. The stack
+  // contains only objects; reverse push preserves getter/alias visit order.
+  const seen=new Set(),rows=[],pending=[db];
+  while(pending.length){
+    const o=pending.pop();if(!o||typeof o!=='object'||seen.has(o))continue;
     seen.add(o);const keys=Object.keys(o),base=rows.length;
     rows.push(o,keys,null);
     for(let i=0;i<keys.length;i++)rows.push(o[keys[i]]);
     rows[base+2]=Array.isArray(o)?o.length:null;
-    for(let i=0;i<keys.length;i++)visit(rows[base+3+i]);
-  };
-  visit(db);return ()=>{
+    for(let i=keys.length-1;i>=0;i--){const value=rows[base+3+i];if(value&&typeof value==='object')pending.push(value);}
+  }
+  return ()=>{
     for(let at=0;at<rows.length;){
       const o=rows[at],keys=rows[at+1],length=rows[at+2],kept=new Set(keys);
       for(const key of Object.keys(o))if(!kept.has(key))delete o[key];
@@ -229,6 +236,7 @@ function pendingOfficialUndo(db){
     }
   };
 }
+
 function pendingOfficialSession(db){
   const p=db.world&&db.world.pendingOfficial,q=p&&p.queue&&p.queue[0];if(!q)return null;
   const refs=pendingOfficialRefs(db,q);if(!refs)return null;
@@ -294,5 +302,5 @@ function news(db,text){db.news.unshift({year:db.world?db.world.year:db.year,text
 function stepOf(db,s){
   if(s.step!==undefined)return s.step;
   const w=db.world;
-  return w.steps.findIndex(st=>st.kind==='league'?st.split===s.split:(st.ids||[st.id]).includes(s.comp));
+  return w.steps.findIndex(st=>st.kind==='league'?st.split===s.split:(st.ids||[st.id]).some(id=>canonicalInternationalId(id)===canonicalInternationalId(s.comp)));
 }

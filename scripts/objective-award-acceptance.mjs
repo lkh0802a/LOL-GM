@@ -1,4 +1,5 @@
 import {runEngineFixture,artifactSource} from './test-harness.mjs';
+import {reviewedResourceFixtureSetup} from './reviewed-resource-fixture.mjs';
 const engine=await artifactSource('engine.js'),init=engine.slice(engine.indexOf('function simulateMatch(')).replace('  let t;','  return st;\n  let t;');
 await runEngineFixture(String.raw`(()=>{
  const check=(x,m)=>{if(!x)throw Error('OBJECTIVE_AWARD '+m)};
@@ -23,6 +24,12 @@ await runEngineFixture(String.raw`(()=>{
  const summary=r=>JSON.stringify({winner:r.winner,ending:r.ending,duration:r.duration,objectives:r.objectiveEvents,ps:r.sides.map(s=>s.ps.map(p=>({id:p.p.id,obj:p.objectives,quest:p.quest,gold:p.goldEarned,k:p.k,d:p.d,a:p.a})))});
  for(const team of [a,b]){team.tactics.objective_priority=0;team.tactics.aggression=100;}
  const world=packDB(db);let pairs=0,converted=0;for(const seed of ['record-official','objective-award-source-5'])for(const ids of [[a.id,b.id],[b.id,a.id]]){const r=simulateMatch(db,...ids,seed,null,false),q=simulateMatch(db,...ids,seed,null,true);check(summary(r)===summary(q),'actual logged/quiet side parity');converted+=r.log.filter(e=>e.text.includes('한타 승리 후 바론')).length;check(r.objectiveEvents.every(e=>e.participants.length>0)&&r.sides.flatMap(s=>s.ps).reduce((n,p)=>n+p.objectives,0)===r.objectiveEvents.reduce((n,e)=>n+e.participants.length,0),'actual acquisition/credit conservation');pairs++;}
+ // Preserve the reviewed natural-conversion input as well as all four current
+ // generation games above. Run current award/combat code, never a past result.
+ const reviewed=reviewedResourceFixture(cfg,false);for(const team of [reviewed.a,reviewed.b]){team.tactics.objective_priority=0;team.tactics.aggression=100;}
+ const reviewedWorld=packDB(reviewed.db);
+ for(const seed of ['record-official','objective-award-source-5'])for(const ids of [[reviewed.a.id,reviewed.b.id],[reviewed.b.id,reviewed.a.id]]){const r=simulateMatch(reviewed.db,...ids,seed,null,false),q=simulateMatch(reviewed.db,...ids,seed,null,true);check(summary(r)===summary(q),'reviewed actual logged/quiet parity');converted+=r.log.filter(e=>e.text.includes('한타 승리 후 바론')).length;check(r.objectiveEvents.every(e=>e.participants.length>0)&&r.sides.flatMap(s=>s.ps).reduce((n,p)=>n+p.objectives,0)===r.objectiveEvents.reduce((n,e)=>n+e.participants.length,0),'reviewed acquisition/credit conservation');pairs++;}
+ check(packDB(reviewed.db)===reviewedWorld,'reviewed simulation mutated world');
  check(converted>0,'real conversion scenario missing');check(packDB(db)===world,'simulation mutated world');
  db.world={year:db.year,manage:'manual',phase:'season',seasons:{}};const session=createSeriesSession(db,a.id,b.id,1,'objective-official',{compId:'objective'});db.world.pendingOfficial={queue:[{session}]};const resumed=unpackDB(packDB(db)),ss=resumed.world.pendingOfficial.queue[0].session;playSeriesSessionGame(resumed,ss,null,false);const rec=seriesSessionResult(resumed,ss).rec,g=rec.games[0];check(recordedPublicMatch(resumed,rec,g).record?.objectives,'official original source missing');
  resumed.world.seasons.objective={id:'objective',comp:'objective',region:'NA',done:true,days:[{date:g.date,matches:[{res:rec}]}]};for(const region of ['NA','EU']){resumed.world.seasons.objective.region=region;const copy=unpackDB(packDB(resumed));check(JSON.stringify(copy.world.seasons.objective.days[0].matches[0].res.games[0].publicRecord)===JSON.stringify(g.publicRecord),'full/lite source changed');}
@@ -30,4 +37,4 @@ await runEngineFixture(String.raw`(()=>{
  const legacy=JSON.parse(JSON.stringify(g));delete legacy.publicRecord.objectives;const original=JSON.stringify(legacy);check(recordedPublicMatch(resumed,rec,legacy).record&&renderPublicMatchReview(resumed,rec,legacy,{}).includes('참여 기록이 저장되지')&&JSON.stringify(legacy)===original,'legacy reconstruction');
  const bad=JSON.parse(JSON.stringify(g));bad.publicRecord.objectives.events=[{id:'baron:1',key:'baron',side:0,minute:1,second:0,participants:['foreign-hidden']}];check(!recordedPublicMatch(resumed,rec,bad).record,'foreign evidence accepted');
  console.log('OBJECTIVE_AWARD_ACCEPTANCE PASS '+JSON.stringify({pairs,converted,oneStackQuest:true,spawnReplay:true,terminal:true,officialFullLite:true,legacyPure:true,physicalParticipation:false}));
-})()`,{timeout:60000,setupSources:[init.replace('function simulateMatch(','function initialObjectiveState('),await artifactSource('ui-match-history.js'),await artifactSource('ui-takedown-history.js')]});
+})()`,{timeout:60000,setupSources:[await reviewedResourceFixtureSetup(),init.replace('function simulateMatch(','function initialObjectiveState('),await artifactSource('ui-match-history.js'),await artifactSource('ui-takedown-history.js')]});

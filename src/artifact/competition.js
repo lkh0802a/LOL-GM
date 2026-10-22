@@ -17,10 +17,10 @@ function newSeason(db,compId,year,seed,start,instanceKey=compId){
   const comp=db.competitions[compId], st0=comp.stages[0], id=`season_${year}_${instanceKey}`;
   const venue=competitionVenue(db,comp);
   comp.timeZone=venue.timeZone;comp.venueRegion=venue.region;
-  const s={id,comp:compId,year,seed,days:[],cur:0,stage:0,stageData:{},pstats:{},done:false,champion:null,runnerUp:null,standingsMode:comp.region?(db.regions[comp.region]?.standingsMode||'independent'):null,venueTimeZone:venue.timeZone,venueRegion:venue.region};
+  const s={id,comp:compId,year,seed,formatSnapshot:historicalCompetitionSnapshot(db,comp),days:[],cur:0,stage:0,stageData:{},pstats:{},done:false,champion:null,runnerUp:null,standingsMode:comp.region?(db.regions[comp.region]?.standingsMode||'independent'):null,venueTimeZone:venue.timeZone,venueRegion:venue.region};
   comp.championPool=Object.values(db.patch.champions).filter(c=>championProEligible(db,c,start||db.worldDate)).map(c=>c.id);comp.championPoolLockedAt=start||db.worldDate;
   const rng=new RNG(seed,'schedule');
-  let order=st0.type==='round_robin'&&!st0.groups?comp.teams.slice().sort(()=>rng.next()-0.5):comp.teams.slice();
+  let order=st0.type==='round_robin'&&!st0.groups?shuffleWithRng(comp.teams,rng):comp.teams.slice();
   if(st0.id==='playin'){const nx=comp.stages[1];order=comp.teams.filter(t=>!(nx.direct||[]).includes(t))}
   else if(st0.type!=='round_robin'&&st0.take)order=order.slice(0,st0.take);
   addStageDays(db,s,0,order,start||`${year}-01-14`);
@@ -120,23 +120,9 @@ function recordLines(s,lines){
     const c=p.champs[l.champ]||(p.champs[l.champ]=[0,0]);c[0]++;if(l.win)c[1]++;
   }
 }
-function lockInternationalPatch(db,s,date=db.worldDate){
-  if(!db.competitions[s?.comp]?.international||s.patchLock||!s.days.length||date<s.days[0].date)return;
-  if(date!==s.days[0].date)throw new Error('국제대회 개막 패치 기록이 없습니다: '+s.id);
-  s.patchLock={id:db.patch.id,date};
-  s.championPool=Object.values(db.patch.champions).filter(c=>championProEligible(db,c,date)).map(c=>c.id);
-}
-function internationalMatchPatch(db,s){
-  if(!db.competitions[s?.comp]?.international)return db.patch;
-  if(!s.patchLock){if(db.worldDate>=s.days[0]?.date)throw new Error('국제대회 개막 패치가 고정되지 않았습니다: '+s.id);return db.patch}
-  const patch=getPatch(db,s.patchLock.id);
-  if(patch.id!==s.patchLock.id)throw new Error('국제대회 고정 패치를 복원할 수 없습니다: '+s.patchLock.id);
-  return patch;
-}
 function scheduledSeriesOptions(db,s,day,cfg){
-  lockInternationalPatch(db,s);
   const comp=db.competitions[s.comp],neutralIntlBracket=!!comp.international&&['single_elim','double_elim'].includes(cfg.type),firstChoice=neutralIntlBracket?'coin':(cfg.firstChoice||(cfg.type==='round_robin'&&!comp.international?'home':(['round_robin','swiss','single_elim'].includes(cfg.type)?'coin':'seed')));
-  return {fearless:comp.rules&&comp.rules.fearless,firstChoice,compId:s.comp,championPool:s.championPool||comp.championPool,metaContext:{season:s.id,year:s.year,split:s.split||null,stage:day.stage,league:comp.region||s.comp,international:!!comp.international}};
+  return {fearless:comp.rules&&comp.rules.fearless,firstChoice,compId:s.comp,championPool:comp.championPool,metaContext:{season:s.id,year:s.year,split:s.split||null,stage:day.stage,league:comp.region||s.comp,international:!!comp.international}};
 }
 function simulateScheduledSeries(db,s,day,m,cfg,extra={}){
   return simulateSeries(db,m.a,m.b,m.bo,`${s.seed}/${s.year}/${m.id}`,{...scheduledSeriesOptions(db,s,day,cfg),...extra});
@@ -197,7 +183,7 @@ function finishStage(db,s,idx,date){
   } else { const st=standings(db,s,cfg.id); s.champion=st[0].tid; s.runnerUp=st[1].tid; }
   const first=comp.stages[0].type==='round_robin'?standings(db,s,comp.stages[0].id)[0].tid:null;
   const mvp=Object.entries(s.pstats).filter(([,p])=>p.g>=6).sort((x,y)=>y[1].mvp-x[1].mvp||((y[1].k+y[1].a)/(y[1].d||1))-((x[1].k+x[1].a)/(x[1].d||1)))[0];
-  db.history.push({year:s.year,comp:s.comp,compName:comp.name+(s.label?' '+s.label:''),region:comp.region||null,div:comp.div||1,intl:!!comp.international,champion:s.champion,runnerUp:s.runnerUp,regularFirst:first,mvp:mvp?mvp[0]:null,final:s.finalScore||null});
+  db.history.push({year:s.year,comp:s.comp,compName:comp.name+(s.label?' '+s.label:''),region:comp.region||null,div:comp.div||1,intl:!!comp.international,champion:s.champion,championName:db.teams[s.champion]?.name,runnerUp:s.runnerUp,runnerUpName:db.teams[s.runnerUp]?.name,regularFirst:first,mvp:mvp?mvp[0]:null,mvpName:mvp?db.players[mvp[0]]?.name:null,final:s.finalScore||null});
 }
 // 토너먼트 도달 점수: 우승 4, 준우승 3, 4강 2, 녹아웃 진출 1
 function elimReach(db,s,tid){

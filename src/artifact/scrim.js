@@ -5,9 +5,9 @@ function scrimAnalysisBonus(t){
   const p=staffProfile(t);
   return clamp((p.analysis-50)/500+facilityAnalysisBonus(t),0,.14);
 }
-function scrimValue(db,tid,oppId){
+function scrimValue(db,tid,oppId,observedGap=null){
   const t=db.teams[tid],opp=db.teams[oppId];if(!t||!opp)return .5;
-  const gap=teamStrength(db,oppId)-teamStrength(db,tid);
+  const gap=observedGap??scrimObservedTeamStrength(db,t,opp)-scrimObservedTeamStrength(db,t,t);
   const quality=clamp(1+gap/35,.65,1.3);
   const recent=(t.scrimLog||[]).filter(x=>x.opponent===oppId).slice(-3).length;
   const novelty=[1,.82,.68,.58][Math.min(3,recent)];
@@ -87,7 +87,7 @@ function aiRunScrims(db,rng){
     scrimReadiness(db,t,booked).ok);
   const schedule=scrimScheduleContext(db,eligible);
   const intents=Object.fromEntries(eligible.map(t=>[t.id,scrimClubIntent(db,t)])),
-    strengths=Object.fromEntries(eligible.map(t=>[t.id,teamStrength(db,t.id)]));
+    strengths=scrimStrengthReader(db);
   let blocks=0,sets=0;
   // Two scheduled daily blocks, with 2-3 sets each; matches and recovery
   // automatically narrow the daily allowance to 0-2 or 0-4 sets.
@@ -98,14 +98,13 @@ function aiRunScrims(db,rng){
       const first=scrimReadiness(db,t,booked);
       if(busy.has(t.id)||!first.ok||!first.availableSlots.includes(slot)||!rng.chance(.84))continue;
       const candidates=order.filter(o=>o.id!==t.id&&!busy.has(o.id)&&
-        schedule.venues[o.id].region===schedule.venues[t.id].region&&
         scrimReadiness(db,o,booked).availableSlots?.includes(slot)&&
         !!scrimTimeOverlap(db,t,o,db.worldDate,slot,schedule));
       if(!candidates.length)continue;
       const ranked=candidates.map(o=>({team:o,
         offer:scrimPartnerAssessment(db,t,o,intents,strengths,rivals,schedule)}))
         .filter(x=>x.offer.allowed).map(x=>({...x,
-          weight:x.offer.weight*Math.max(.2,scrimValue(db,t.id,x.team.id))}));
+          weight:x.offer.weight*Math.max(.2,scrimValue(db,t.id,x.team.id,x.offer.left.relativeStrength))}));
       let attempts=0;
       while(ranked.length&&attempts++<4){
         const total=ranked.reduce((sum,row)=>sum+row.weight,0);

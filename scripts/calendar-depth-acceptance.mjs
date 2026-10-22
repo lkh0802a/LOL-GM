@@ -118,8 +118,6 @@ const fixture=String.raw`(()=>{
   db.world.majorPatchEvents.push({date:majorDate,step:99,split:2});
   db.patches.nextDate=addDays(initial,5);
   const oldPatchCount=db.patches.list.length;
-  // Controlled public observations isolate the original scheduled-day assertion.
-  db.metaHistory=Array.from({length:24},()=>({date:initial,patch:db.patch.id,sides:[],bans:[]}));
   const day1=playWorldDay(db);
   assert(day1.advanced&&day1.date===addDays(initial,1)&&day1.played.length===0,
     'first press must advance one real calendar day');

@@ -22,23 +22,20 @@ WORLD_ACTION_HANDLERS['roster.official-lineup']={
   changes(db,c){return [{kind:'official_lineup',teamId:c.teamId,lineup:c.lineup}]},
   apply(db,c){db.teams[c.teamId].registration.depthChart={...c.lineup};return {lineup:c.lineup}}
 };
-function officialMatchView(db,s,a,b,requirePatch=false){
-  // Roster/registration inspection may precede opening metadata. Only actual
-  // series execution requires the opening patch; inspection never creates it.
-  const patch=requirePatch||s?.patchLock?internationalMatchPatch(db,s):db.patch;
-  if(!officialRegistrationEnabled(db))return patch===db.patch?db:{...db,patch};
+function officialMatchView(db,s,a,b){
+  if(!officialRegistrationEnabled(db))return db;
   const teams={...db.teams};
   for(const id of [a,b]){
     const t=db.teams[id],players=officialSeasonRoster(db,t,s).filter(pid=>officialPlayerCanRepresent(db,db.players[pid],t));
     teams[id]={...t,roster:players,staffRoster:competitionStaffMatchRoster(db,s,t),officialRosterView:true,depthChart:{...t.depthChart,
       ...Object.fromEntries(Object.entries(t.registration?.depthChart||{}).filter(([,pid])=>players.includes(pid)))}};
   }
-  const view={...db,teams,patch};for(const id of [a,b])initializeDepthChart(view,teams[id],false);
+  const view={...db,teams};for(const id of [a,b])initializeDepthChart(view,teams[id],false);
   return view;
 }
 function seriesOfficialView(db,sess){
   const s=Object.values(db.world?.seasons||{}).find(x=>x.id===sess.opt.metaContext?.season);
-  return s&&!sess.opt.practice&&!sess.opt.replay?officialMatchView(db,s,sess.a,sess.b,true):db;
+  return s&&!sess.opt.practice&&!sess.opt.replay?officialMatchView(db,s,sess.a,sess.b):db;
 }
 function officialMedicalReplacementAllowed(db,t,injured,p){
   if(!officialRegistrationEnabled(db))return true;

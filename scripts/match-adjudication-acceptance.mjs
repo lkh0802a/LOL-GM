@@ -1,4 +1,5 @@
 import {runEngineFixture} from './test-harness.mjs';
+import {reviewedResourceFixtureSetup} from './reviewed-resource-fixture.mjs';
 await runEngineFixture(String.raw`(()=>{
  const check=(x,m)=>{if(!x)throw Error('MATCH_ADJUDICATION '+m)};
  const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:4,div2:true,system:'franchise'})];cfg.internationals=[];
@@ -19,8 +20,11 @@ await runEngineFixture(String.raw`(()=>{
  // Reviewed behind-resource conversions after actual inventory offense correction.
  // Prior 13/21, 19/22 and 8/15 traces/failures remain tied to their original heads.
  // New macro-hunter bounded32-seed evidence (14/27), with prior0/20 failure retained; structure-selection bounded32-seed evidence is preserved in structure-selection-resource-scenarios.json; original fixtures/failures remain.
+ // Preserve the exact reviewed player inputs for the historical 14/27 traces.
+ // New-generation matches above and official/save matches below still use db.
+ const resource=reviewedResourceFixture(cfg),resourceSaved=packDB(resource.db);
  for(const seed of ['nexus-resource-scenario-14','nexus-resource-scenario-27']){
-  const r=simulateMatch(db,a.id,b.id,seed,null,false),gold=r.sides.map(s=>s.ps.reduce((v,p)=>v+p.goldEarned,0)),w=r.winner;
+  const r=simulateMatch(resource.db,resource.a.id,resource.b.id,seed,null,false),gold=r.sides.map(s=>s.ps.reduce((v,p)=>v+p.goldEarned,0)),w=r.winner;
   check(gold[w]<gold[1-w]&&!r.sides[1-w].nexus&&r.sides[w].nexus,'resource lead alone won or missing natural behind win');
   check(r.sides[w].ps.some(p=>p.deadUntil<=r.ending.minute)&&r.sides[1-w].nexusT===0&&LANES.some(l=>!r.sides[1-w].towers[l][3]),'no surviving conversion or open base');
   check(r.log.some(e=>e.side===w&&(e.kind==='fight'||e.kind==='obj'))&&r.log.at(-1).kind==='nexus','behind win lacks actual play/outcome evidence');
@@ -47,4 +51,4 @@ await runEngineFixture(String.raw`(()=>{
  const loaded=unpackDB(packDB(logged.copy)),lr=loaded.world.seasons.history.days[0].matches[0].res;
  check(lr.lite&&JSON.stringify(recordedPublicMatch(loaded,lr,lr.games[0]).record)===JSON.stringify(source),'lite ending history loss');
  console.log('MATCH_ADJUDICATION_ACCEPTANCE PASS '+pairs+' paired games, both winners, first-end/same-minute idempotence, all post-end phases/actions/RNG frozen, quiet/logged actual stats/XP/items/rates/meta equality, official source/lite/legacy/forged ending');
-})()`,{timeout:60000});
+})()`,{timeout:60000,setupSources:[await reviewedResourceFixtureSetup()]});

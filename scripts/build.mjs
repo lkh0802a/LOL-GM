@@ -1,26 +1,10 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
-import { ARTIFACT_MODULES } from './artifact-modules.mjs';
-
-const root = resolve(import.meta.dirname, '..');
-const artifact = resolve(root, 'src', 'artifact');
-const modules = ARTIFACT_MODULES;
-
-const shell = await readFile(resolve(artifact, 'shell.html'), 'utf8');
-if ((shell.match(/\/\*CODE\*\//g) || []).length !== 1) {
-  throw new Error('src/artifact/shell.html must contain exactly one /*CODE*/ placeholder');
+import {mkdir,writeFile,rename,unlink} from 'node:fs/promises';
+import {randomUUID} from 'node:crypto';
+import {buildUiV2} from './build-ui-v2.mjs';
+const root=new URL('../',import.meta.url),html=await buildUiV2();
+await mkdir(new URL('dist/',root),{recursive:true});
+for(const name of ['index.html','dist/index.html']){
+ const target=new URL(name,root),temp=new URL(name+'.'+process.pid+'.'+randomUUID()+'.tmp',root);
+ try{await writeFile(temp,html);await rename(temp,target)}finally{await unlink(temp).catch(error=>{if(error.code!=='ENOENT')throw error})}
 }
-
-const chunks = [];
-for (const file of modules) {
-  const source = await readFile(resolve(artifact, file), 'utf8');
-  chunks.push(`/* ==== FILE: ${file} ==== */\n${source.trim()}\n`);
-}
-
-const banner = `/* LOL GM generated bundle. Canonical source lives in src/artifact/*.js. */\n`;
-const html = shell.replace('/*CODE*/', banner + chunks.join('\n'));
-
-await writeFile(resolve(root, 'index.html'), html, 'utf8');
-await mkdir(resolve(root, 'dist'), { recursive: true });
-await writeFile(resolve(root, 'dist', 'index.html'), html, 'utf8');
-console.log(`Built ${modules.length} modules -> index.html and dist/index.html`);
+console.log('Built current engine + new UI -> index.html and dist/index.html');

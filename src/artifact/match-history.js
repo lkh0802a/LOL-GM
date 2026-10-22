@@ -1,9 +1,11 @@
 // Public event-time observations only. Never persist profiles/ratings/tactics.
-function publicMatchRecord(r,patch){
+function publicMatchRecord(r,patch,db=null){
+  if(r.recordedPublicRecord?.patch===patch)return JSON.parse(JSON.stringify(r.recordedPublicRecord));
   const events=(r.log||[]).filter(e=>['kill','fight','obj','tower','nexus'].includes(e.kind)),limit=24,
     selected=events.length>limit?[...events.slice(0,12),...events.slice(-12)]:events;
   return {version:1,...(r.laningHpBasis==='bounded-nonlethal-cost-v1'?{laningHpBasis:r.laningHpBasis}:{}),...(r.combatRoundBasis==='prepared-round-budget-v1'?{combatRoundBasis:r.combatRoundBasis}:{}),...publicMacroPicks(r),...(r.structureSelectionBasis==='progress-seeded-ties-v1'?{structureSelectionBasis:r.structureSelectionBasis}:{}),...(Array.isArray(r.takedownEvents)?{takedowns:{version:1,count:r.takedownEvents.length,events:(r.takedownEvents.length>24?[...r.takedownEvents.slice(0,12),...r.takedownEvents.slice(-12)]:r.takedownEvents).map(e=>({...e,payouts:e.payouts.map(x=>({...x}))}))}}:{}),...(Array.isArray(r.objectiveEvents)?{objectives:{version:1,events:r.objectiveEvents.map(e=>({...e,participants:e.participants.slice()}))}}:{}),...(r.damageBasis==='effective-aggregate-v1'?{damageBasis:r.damageBasis}:{}),...(r.ending?{ending:{...r.ending,winner:r.sides[r.ending.winner].team.id}}:{}),resources:{version:1,players:Object.fromEntries(r.sides.flatMap(s=>s.ps.map(p=>[p.p.id,matchGoldLedger(p)])))},date:r.date,patch,winner:r.sides[r.winner].team.id,duration:r.duration,
-    sides:r.sides.map(s=>({team:s.team.id,name:s.team.name,players:s.ps.map(p=>[p.p.id,p.p.name,p.role,p.champ.id,p.k,p.d,p.a,Math.round(p.cs),Math.round(p.goldEarned),Math.round(p.dmg),p.lvl,matchQuestItems(p).slice()])})),
+    ...(db&&r.comp?{competition:{id:r.comp,name:db.competitions[r.comp]?.name||r.comp}}:{}),
+    sides:r.sides.map(s=>({team:s.team.id,name:s.team.name,...(typeof s.team.short==='string'?{short:s.team.short}:{}),...(typeof s.team.region==='string'?{region:s.team.region,...(db?.regions[s.team.region]?.name?{regionName:db.regions[s.team.region].name}:{})}:{}),players:s.ps.map(p=>[p.p.id,p.p.name,p.role,p.champ.id,p.k,p.d,p.a,Math.round(p.cs),Math.round(p.goldEarned),Math.round(p.dmg),p.lvl,matchQuestItems(p).slice()])})),
     championNames:Object.fromEntries(r.sides.flatMap(s=>s.ps.map(p=>[p.champ.id,championDisplayName(p.champ)]))),
     itemNames:Object.fromEntries(r.sides.flatMap(s=>s.ps.flatMap(p=>matchQuestItems(p).map(id=>[id,p.patchRef?.itemDefs?.[id]?.name||id])))),
     eventCount:events.length,events:selected.map(e=>[e.t,e.sec,e.kind,e.side,e.text])};
@@ -18,6 +20,8 @@ function recordedPublicMatch(db,rec,game){
   if(rec.practiceModel&&(db.world?.fired||![game?.blue,game?.red].some(id=>managerControlsSquad(db,id))))return {reason:'no-authority',record:null};
   const p=game?.publicRecord;
   if(!p)return {reason:'not-recorded',record:null};
+  if(p.competition!==undefined&&(!p.competition||typeof p.competition.id!=='string'||typeof p.competition.name!=='string'))return {reason:'unverified-source',record:null};
+  if(Array.isArray(p.sides)&&p.sides.some(s=>['short','region','regionName'].some(k=>s?.[k]!==undefined&&typeof s[k]!=='string')))return {reason:'unverified-source',record:null};
   if(p.structureSelectionBasis!==undefined&&p.structureSelectionBasis!=='progress-seeded-ties-v1')return {reason:'unverified-source',record:null};
   if(p.laningHpBasis!==undefined&&p.laningHpBasis!=='bounded-nonlethal-cost-v1')return {reason:'unverified-source',record:null};
   if(p.combatRoundBasis!==undefined&&p.combatRoundBasis!=='prepared-round-budget-v1')return {reason:'unverified-source',record:null};

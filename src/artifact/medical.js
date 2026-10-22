@@ -4,6 +4,12 @@
 
 const MEDICAL_LABELS={wrist:'손목',back:'허리',neck:'목',illness:'질병',burnout:'번아웃'};
 const MEDICAL_PLAN_LABELS={auto:'자동',normal:'일반 훈련',light:'훈련 감량',rest:'완전 휴식',rehab:'재활'};
+// Existing per-player plan field writer, shared by both presentation layers.
+// A plan change does not heal, spend activity time or rewrite medical history.
+function writeMedicalPlan(p,mode){
+  if(!p||!Object.hasOwn(MEDICAL_PLAN_LABELS,mode))return false;
+  p.medicalPlan=mode;return true;
+}
 // Plans are per-player. The manager may override an owned player's plan;
 // rival clubs decide independently, even after a player is transferred.
 function medicalPlanFor(db,p){
@@ -74,6 +80,9 @@ function medicalSummary(p){
   if(r?.daysLeft>0)return '복귀 후 관리 · '+Math.ceil(r.daysLeft)+'일';
   return '정상';
 }
+// Public roster/registration records remain available through their own views;
+// a private clinical record is not an announcement or a promised return date.
+function observedMedicalSummary(db,p){return playerChampionInternalAccess(db,p)?medicalSummary(p):'구단 내부 의료 정보 · 공개된 복귀 일정 없음'}
 function medicalCare(db,p){
   const t=p.team&&db.teams[p.team];
   if(!t)return 0.75;

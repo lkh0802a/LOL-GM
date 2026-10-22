@@ -2,7 +2,7 @@
 const SQUAD_STATUS_LABELS={registered:'공식 등록',unregistered:'공식 미등록',out:'의료 출전 불가',notOut:'의료 출전 불가 아님',declared:'저장된 공식 선발',changed:'선발 초안 변경'};
 function squadStatusModel(t,e,db=DB){
   if(!db.world||db.world.fired||!managerControlsSquad(db,t))return null;
-  const read=JSON.parse(JSON.stringify(db)),team=read.teams[t.id],s=internationalRegistrationSeasons(read,team).find(x=>read.worldDate>=x.days[0]?.date)||null,
+  const read=ownedQueryView(db),team=read.teams[t.id],s=internationalRegistrationSeasons(read,team).find(x=>read.worldDate>=x.days[0]?.date)||null,
     ids=officialSeasonRoster(read,team,s),enabled=officialRegistrationEnabled(read),view=officialMatchView(read,s,t.id,t.id),stored=team.registration?.depthChart||{},effective=view.teams[t.id].depthChart||{};
   const rows={};for(const p of Object.values(read.players)){
     if(!team.roster.includes(p.id)&&!ids.includes(p.id)&&e?.rosterPlan?.assignments[p.id]!==t.id)continue;

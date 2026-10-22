@@ -1,3 +1,4 @@
+import {uiV2BrowserStorageSource} from './ui-v2-browser-storage.mjs';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {runEngineFixture} from './test-harness.mjs';
@@ -9,7 +10,7 @@ const build=await get('scripts/build-ui-v2.mjs');assert(build.includes('ENGINE_M
 
 for(const source of sources)assert(!/\b(?:renderInitialRosterMarket|bindInitialRosterMarket|viewSeason|navigateTo|renderNegotiations|bindNegotiationControls)\s*\(/.test(source),'기존 화면/바인딩 재사용 금지');
 const shell=await get('src/ui-v2/shell.html'),css=await get('src/ui-v2/style.css');
-const html=shell.replace('/*STYLE*/',css).replace('/*ENGINE*/',(await Promise.all(ENGINE_MODULES.map(p=>get('src/artifact/'+p)))).join('\n')).replace('/*UI*/',sources.join('\n'));
+const html=shell.replace('/*STYLE*/',css).replace('/*ENGINE*/',(await Promise.all(ENGINE_MODULES.map(p=>get('src/artifact/'+p)))).join('\n')).replace('/*UI*/',[sources[0],await uiV2BrowserStorageSource(),...sources.slice(1)].join('\n'));
 assert.equal(await get('ui-v2.html'),html,'현재 엔진·새 화면과 조립 HTML 동일');
 for(const file of UI_MODULES)assert(!html.includes(await get('src/artifact/'+file)),'기존 UI 소스 미포함: '+file);
 const result=await runEngineFixture(String.raw`(()=>{

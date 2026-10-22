@@ -1,4 +1,3 @@
-import {patchPolicySourceHash} from './patch-policy-source-successor.mjs';
 import {negotiationFinalSourceHash,negotiationFinalSourceText} from './negotiation-final-source-successor.mjs';
 import {initialNegotiationReviewSourceHash,initialNegotiationReviewSourceText} from './initial-negotiation-review-source-successor.mjs';
 import assert from 'node:assert/strict';
@@ -24,7 +23,7 @@ async function verify(){
  assert.equal(await negotiationFinalSourceText('scripts/artifact-modules.mjs'),original('scripts/artifact-modules.mjs').replace("  'ui-startup.js',","  'ui-startup-storage.js',\n  'ui-startup.js',"),'기존 순서 유지와 저장 전달 화면만 추가');
  assert.equal(await readFile(new URL('scripts/check.mjs',root),'utf8'),original('scripts/check.mjs').replace("  'ui-startup.js': 7000,","  'ui-startup.js': 7000,\n  'ui-startup-storage.js': 5500,"),'기존 크기 제한 유지와 새 파일 제한');
  assert.equal(await initialNegotiationReviewSourceText('.github/workflows/ci.yml'),original('.github/workflows/ci.yml').replace('      - name: Upload validation report\n','      - name: 시작 저장 복원과 빈 저장 선택\n        run: node scripts/ci-run.mjs startup-save -- node scripts/startup-save-acceptance.mjs\n\n      - name: Upload validation report\n'),'기존 작업·시간 제한 유지와 독립 저장 검사만 추가');
- for(const [p,h] of Object.entries(e.engine))assert.equal(await patchPolicySourceHash('src/artifact/'+p),h);assert.equal(Object.keys(e.engine).length,101);
+ for(const [p,h] of Object.entries(e.engine))assert.equal(sha(await readFile(new URL('src/artifact/'+p,root))),h);assert.equal(Object.keys(e.engine).length,101);
  for(const p of ['docs/README.md','docs/DEVELOPMENT.md'])assert((await readFile(new URL(p,root),'utf8')).includes(original(p)),'전체 승인 원문 연속 보존');
  verified={e,rows};return verified;
 }

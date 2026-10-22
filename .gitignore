@@ -4,5 +4,5 @@ dist/
 *.log
 ci-results/
 
-# 새 화면 조립 결과는 검증 산출물로 게시한다.
+# Local new-design assembly; publication replaces the one existing game.
 /ui-v2.html

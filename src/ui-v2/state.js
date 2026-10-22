@@ -10,10 +10,11 @@ const v2Money=value=>{
  return (value<0?'-':'')+(pieces.join(' ')||'0')+' 원';
 };
 const v2Team=()=>V2.db&&managedTeam(V2.db);
-function v2ReadView(){const db=V2.db;if(!db)return null;const view=Object.create(db);view.scout=JSON.parse(JSON.stringify(db.scout||{}));view.world={...db.world,recruitment:JSON.parse(JSON.stringify(db.world?.recruitment||{}))};return view;}
+function v2ReadView(){return V2.db?scoutingReadView(V2.db):null;}
 function v2Guard(){const db=V2.db,w=db?.world,manager=db?.manager,owner=db&&managedTeamId(db),target=V2.target,date=db?.worldDate,phase=w?.phase,revision=V2.revision;return ()=>V2.db===db&&db?.world===w&&db?.manager===manager&&(!db||managedTeamId(db)===owner)&&V2.target===target&&db?.worldDate===date&&w?.phase===phase&&V2.revision===revision&&!V2.busy&&!V2.taskBackPending;}
 function v2ManualError(){const db=V2.db,t=v2Team();return !db?.world||!t||db.world.fired||db.world.manage!=='manual'?'현재 감독의 수동 권한이 없습니다':db.world.pendingOfficial?'진행 중인 공식 경기의 준비를 먼저 확인하세요':null;}
 function v2Save(){
+ if(typeof v2PersistNative==='function')return v2PersistNative();
  try{localStorage.setItem(V2_STORE,JSON.stringify({game:packDB(V2.db),read:V2.read,view:{target:v2Target()?.id||null}}));V2.saved=true;document.getElementById('save-status').textContent='현재 게임 저장 완료';return true}
  catch(error){V2.saved=false;document.getElementById('save-status').textContent='저장하지 못했습니다 · 설정에서 파일로 저장하세요';return false}
 }
@@ -53,7 +54,7 @@ function v2ReadSavedGame(raw){
  return {db,read,target};
 }
 function v2InstallSavedGame(saved){
- Object.assign(V2,saved,{official:null,officialResult:null,searchViews:{},drafts:{},review:null,advice:null,nid:null,pid:null,preparation:null,managementReview:null,roleReview:null,staffDrafts:{},roleDrafts:{},medicalDrafts:{},squadListView:null,facilityListView:null,negotiationListView:null,taskReturn:null,taskHistory:null,taskBackPending:false,loadRequest:null});
+ Object.assign(V2,saved,{official:null,officialResult:null,searchViews:{},drafts:{},review:null,advice:null,nid:null,pid:null,preparation:null,managementReview:null,roleReview:null,staffDrafts:{},roleDrafts:{},medicalDrafts:{},squadListView:null,facilityListView:null,negotiationListView:null,taskReturn:null,taskHistory:null,taskBackPending:false,loadRequest:null,scrimDraft:null});
 }
 async function v2LoadFile(file,current){
  if(!file||!current())return;
@@ -68,7 +69,7 @@ async function v2LoadFile(file,current){
    for(const key of Object.keys(V2))delete V2[key];Object.assign(V2,before);
    history.replaceState(routeState,'',url);V2.loadRequest=null;v2Render();v2Tell('불러오기 실패 · '+error.message);return;
   }
-  v2Tell(v2Save()?'저장 파일을 불러왔습니다':'파일을 화면에 불러왔지만 기기에 저장하지 못했습니다 · 설정에서 파일로 보관하세요');
+  v2Tell(await v2Save()?'저장 파일을 불러왔습니다':'파일을 화면에 불러왔지만 기기에 저장하지 못했습니다 · 설정에서 파일로 보관하세요');
  }catch(error){if(active())v2Tell('불러오기 실패 · '+error.message);}
  finally{if(V2.loadRequest===request)V2.loadRequest=null;}
 }

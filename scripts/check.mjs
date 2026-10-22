@@ -3,6 +3,11 @@ import { resolve } from 'node:path';
 import vm from 'node:vm';
 import { ARTIFACT_MODULES, ENGINE_MODULES } from './artifact-modules.mjs';
 import { assertMutationOwnership } from './mutation-ownership.mjs';
+await import('./codex-impact-map-acceptance.mjs');
+await import('./observer-information-acceptance.mjs');
+await import('./historical-identity-acceptance.mjs');
+await import('./worlds-identity-acceptance.mjs');
+await import('./ui-projection-acceptance.mjs');
 
 const root = resolve(import.meta.dirname, '..');
 const artifact = resolve(root, 'src', 'artifact');
@@ -208,6 +213,9 @@ const maintainabilityBudgets = {
   'ui-match.js': 22000,
   'ui-manager.js': 16000,
   'ui-save-library.js': 6500,
+  'ui-save-recovery-store.js': 3500,
+  'ui-save-protection.js': 4000,
+  'ui-save-recovery.js': 6500,
   'ui-stove.js': 6500,
   'ui-stove-fa.js': 2500,
   'ui-data.js': 12000,

@@ -46,24 +46,6 @@ jobs:
           github-token: ${{ github.token }}
       - name: Build game launcher and offline download
         run: node scripts/build-play-site.mjs validated-standalone/index.html _site
-      - name: 같은 커밋의 새 화면 검사 확인
-        id: ui_v2
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VALIDATED_HEAD: ${{ github.event.workflow_run.head_sha }}
-        run: |
-          run_id=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/ui-v2.yml/runs?head_sha=${VALIDATED_HEAD}&event=push" --jq '[.workflow_runs[] | select(.conclusion == "success")] | first | .id // empty')
-          test -n "$run_id" || { echo "새 화면의 동일 커밋 검사 성공이 필요합니다"; exit 1; }
-          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
-      - name: 검증된 새 화면 내려받기
-        uses: actions/download-artifact@v4
-        with:
-          name: lol-gm-ui-v2
-          path: validated-ui-v2
-          run-id: ${{ steps.ui_v2.outputs.run_id }}
-          github-token: ${{ github.token }}
-      - name: 별도 새 화면 검토 경로 추가
-        run: test -s validated-ui-v2/ui-v2.html && cp validated-ui-v2/ui-v2.html _site/ui-v2.html
       - uses: actions/configure-pages@v5
         with:
           enablement: true

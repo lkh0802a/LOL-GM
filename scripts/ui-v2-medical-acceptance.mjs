@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import {readFile,writeFile} from 'node:fs/promises';
 import {runEngineFixture} from './test-harness.mjs';
 const sources=await Promise.all(['state','market','contracts','views','management','dialog'].map(p=>readFile(new URL('../src/ui-v2/'+p+'.js',import.meta.url),'utf8')));
-const old=await readFile(new URL('../src/artifact/ui-club-medical.js',import.meta.url),'utf8'),legacy=old.slice(old.indexOf('function writeMedicalUiPlan('),old.indexOf('function bindMedicalPlanControls('));
+const legacy=await readFile(new URL('../docs/evidence/originals/writeMedicalUiPlan-00554b1.js.txt',import.meta.url),'utf8');
+assert.equal(createHash('sha256').update(legacy).digest('hex'),'eaeb234fe90883bdd3c331e071813f7b9e7f79fee4fe673aeb47c81ca3d51f63','original public medical plan field writer');
 const result=await runEngineFixture(String.raw`(()=>{
  const check=(v,m)=>{if(!v)throw Error('UI_V2_MEDICAL '+m)},cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:4,div2:true})];cfg.internationals=[];
  const db=buildWorld(cfg),team=activeTeams(db,'NA',1)[0];startCareer(db,team.id,'ui-v2-existing-medical');for(const t of setupTeamsForManager(db))autoBuildInitialSquad(db,t,new RNG('v2-medical/'+t.id));finalizeInitialRosters(db);V2.db=unpackDB(packDB(db));V2.target=team.id;V2.pid=v2Team().roster[0];V2.section='squad';V2.tab='선수 목록';const p=v2RolePlayer(),pid=p.id,base=packDB(V2.db),before=JSON.stringify(V2.db);

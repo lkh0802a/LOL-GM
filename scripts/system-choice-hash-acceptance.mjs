@@ -6,7 +6,7 @@ import {gunzipSync} from 'node:zlib';
 import {createHash} from 'node:crypto';
 import {runEngineFixture} from './test-harness.mjs';
 const root=new URL('../',import.meta.url),sha=b=>createHash('sha256').update(b).digest('hex');
-const evidence=JSON.parse(await readFile(new URL('docs/evidence/system-choice-hash-2026-10-17.json',root)));
+const evidence=JSON.parse(await readFile(new URL('docs/evidence/system-choice-hash-clock-2026-10-21.json',root)));
 const archive=await readFile(new URL(evidence.archive.path,root));
 assert.equal(archive.length,evidence.archive.bytes);assert.equal(sha(archive),evidence.archive.sha256);
 const original=gunzipSync(archive).toString();assert.equal(sha(original),evidence.predecessorSha256);

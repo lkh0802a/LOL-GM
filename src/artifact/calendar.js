@@ -23,7 +23,7 @@ function applyCalendarPatchEvents(db,date){
     if(e.date>date){remaining.push(e);continue}
     const rng=new RNG(w.seed+w.year+'|'+e.step,'mid');
     const p=newPatch(db,e.date,true,rng);
-    db.patches.nextDate=addDays(e.date,Math.max(21,db.patches.cadence||14));
+    db.patches.nextDate=addDays(e.date,db.patches.cadence||14);
     const nc=p.notes.find(n=>n.type==='new');
     news(db,`${SPLIT_NAME[e.split]} 개막 패치 ${p.id}${nc?` — 신규 챔피언 ${nc.def.nameKo||nc.def.name} 출시`:''}`);
     officeMidSeason(db,rng,WORLD_CHANGE_FREQUENCY);
@@ -44,7 +44,6 @@ function applyWorldDailyEffects(db,date){
   // preceding break. Then every actual day runs exactly once.
   applyCalendarPatchEvents(db,date);
   patchTick(db,date,new RNG(w.seed+date,'patch'));
-  for(const s of Object.values(w.seasons||{}))lockInternationalPatch(db,s,date);
   advanceFacilityConstruction(db,date);
   for(const t of activeTeams(db))aiManageTraining(db,t);
   dailyRecovery(db);

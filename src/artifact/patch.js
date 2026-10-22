@@ -60,7 +60,7 @@ function newPatch(db,date,major,rng){
   notes.forEach(n=>applyNote(P,n));
   adaptPlayerPoolsToPatch(db,notes,!!major);
   P.id=id;
-  const rec={id,date,major:!!major,notes,analysis:{sampleGames:diag.sampleGames,reworkReview:{policy:'opportunity-and-role-v1',allChampionsRequired:false,candidates:diag.reviews.filter(x=>x.status==='candidate'),observations:diag.reviews.reduce((counts,x)=>{const key=x.status+' · '+x.reason;counts[key]=(counts[key]||0)+1;return counts},{})},championChanges:notes.filter(n=>n.c&&['skill','base','kit'].includes(n.type)).map(n=>n.c),reworks:notes.filter(n=>n.type==='rework').map(n=>({c:n.c,scope:n.scope})),itemChanges:notes.filter(n=>n.type.indexOf('item')===0).map(n=>n.id),runeChanges:notes.filter(n=>n.type.indexOf('rune')===0).map(n=>n.id)}};
+  const rec={id,date,major:!!major,notes,analysis:{sampleGames:diag.sampleGames,championChanges:notes.filter(n=>n.c&&['skill','base','kit'].includes(n.type)).map(n=>n.c),reworks:notes.filter(n=>n.type==='rework').map(n=>({c:n.c,scope:n.scope})),itemChanges:notes.filter(n=>n.type.indexOf('item')===0).map(n=>n.id),runeChanges:notes.filter(n=>n.type.indexOf('rune')===0).map(n=>n.id)}};
   db.patches.list.push(rec);db.patches.history=db.patches.history||[];db.patches.history.push(rec);
   clearPatchCache(db);
   for(const k in db.metaStats){const x=db.metaStats[k];x.p=Math.floor(x.p/3);x.w=Math.floor(x.w/3);x.b=Math.floor(x.b/3)}
@@ -71,8 +71,7 @@ function newPatch(db,date,major,rng){
 }
 function patchTick(db,date,rng){
   const pt=db.patches;if(!pt.nextDate)pt.nextDate=addDays(date,14);
-  if(date<pt.nextDate||patchEvidenceRows(db).length<24)return;
-  const p=newPatch(db,date,false,rng);news(db,'패치 '+p.id+' 적용 — 챔피언 '+new Set(p.notes.filter(n=>n.c).map(n=>n.c)).size+'명 · 아이템 '+p.notes.filter(n=>n.type.indexOf('item')===0).length+'건 · 룬 '+p.notes.filter(n=>n.type.indexOf('rune')===0).length+'건');const gap=rng.chance(.08)?21:(pt.cadence||14);pt.nextDate=addDays(date,gap);
+  while(date>=pt.nextDate){const p=newPatch(db,pt.nextDate,false,rng);news(db,'패치 '+p.id+' 적용 — 챔피언 '+new Set(p.notes.filter(n=>n.c).map(n=>n.c)).size+'명 · 아이템 '+p.notes.filter(n=>n.type.indexOf('item')===0).length+'건 · 룬 '+p.notes.filter(n=>n.type.indexOf('rune')===0).length+'건');const gap=rng.chance(.08)?21:(pt.cadence||14);pt.nextDate=addDays(pt.nextDate,gap)}
 }
 // 새 시즌: 지난 시즌 패치를 기준점으로 접고(재생은 이번 시즌 경기만 필요) 개막 대형 패치 적용
 function seasonPatch(db,date,rng){
@@ -80,7 +79,7 @@ function seasonPatch(db,date,rng){
   pt.prev=pt.list.map(p=>({id:p.id,date:p.date,major:p.major,notes:p.notes}));
   pt.list=[];
   clearPatchCache(db);
-  const p=newPatch(db,date,true,rng);pt.nextDate=addDays(date,Math.max(21,pt.cadence||14));
+  const p=newPatch(db,date,true,rng);pt.nextDate=addDays(date,pt.cadence||14);
   const nc=p.notes.find(n=>n.type==='new');
   news(db,`시즌 개막 패치 ${p.id} — 챔피언 ${p.notes.filter(n=>n.c).length}명 조정${nc?`, 신규 챔피언 ${nc.def.nameKo||nc.def.name} 출시`:''}`);
 }

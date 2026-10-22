@@ -10,7 +10,8 @@ await runEngineFixture(String.raw`(()=>{
   unknown=Object.keys(db.patch.champions).find(x=>x!==cid),ctx={used:[],byTeam:{[a.id]:{won:[],lost:[]},[b.id]:{won:[],lost:[]}}};
  const state=createDraftSession(db,[a.id,b.id],new RNG('champion-scout-draft'),ctx);
  check(!championScoutObservation(db,a,p,cid).known,'public count became mastery');
- p.pool[cid].mastery=70;p.pool[unknown]={mastery:99};
+ // An actual legal draft may use a champion outside the existing practice pool.
+ ensureChampionProfile(db,p,cid).mastery=70;p.pool[unknown]={mastery:99};
  const pub=JSON.stringify(publicPlayerChampions(db,p)),cost=.1*psOf(db,a.region);
  check(scoutPlayers(db,[p.id],40,cost).includes('갱신'),'actual paid human visit failed');
  const report=db.scout[p.id],snapshot=report.championObservations[cid],observed=championScoutObservation(db,a,p,cid);

@@ -15,9 +15,10 @@ const result=await runEngineFixture(String.raw`(()=>{
  check(!db.players[p.id].team&&db.world.negotiations[id].round===0,'no early signing or judgement');
  const queued=JSON.stringify(db);check(!stageNegotiationOffer(db,id,terms).ok&&JSON.stringify(db)===queued,'duplicate submission inert');
  const restored=unpackDB(packDB(db));check(restored.world.negotiations[id].response.dueAt===plan.dueAt,'pending actual save');
- const world=db.world,manager=db.manager,club=db.teams[team.id];
+ const world=db.world,manager=db.manager,club=db.teams[team.id],clockBefore=db.world.negotiationClock?JSON.parse(JSON.stringify(db.world.negotiationClock)):undefined;
  const a=advanceToNegotiationResponse(db),b=advanceToNegotiationResponse(restored);check(a.response&&b.response,'actual contact stop');
  check(db.world===world&&db.manager===manager&&db.teams[team.id]===club,'progress keeps active screen identity');
+ const priorClockView=JSON.parse(JSON.stringify(db));if(clockBefore===undefined)delete priorClockView.world.negotiationClock;else priorClockView.world.negotiationClock=clockBefore;check(scoutingReadStamp(priorClockView)!==scoutingReadStamp(db),'real same-day clock invalidates prior recruitment and finance review even with identical negotiation state');
  check(db.world.negotiations[id].stage==='agreement'&&!db.players[p.id].team,'agreement before manual final');
  check(db.world.negotiationClock.at===plan.dueAt&&db.world.negotiations[id].history.some(h=>h.at===plan.dueAt&&h.result==='agreed'),'response time and history');
  check(restored.world.negotiationClock.at===db.world.negotiationClock.at&&JSON.stringify(restored.world.negotiations[id])===JSON.stringify(db.world.negotiations[id]),'restore response identical');
@@ -80,7 +81,13 @@ const officialResult=await runEngineFixture(String.raw`(()=>{
  check(officialGameTimeRecord({},[{duration:30}])===null&&officialGameTimeRecord({utcAt:'2027-01-19T08:00:00.000Z'},[{dur:'30:00'}])===null&&officialGameTimeRecord({utcAt:'2027-01-19T08:00:00.000Z'},[])===null,'legacy missing units and forfeits do not invent game time');
  const legacy={worldDate:'2027-01-19',world:{}};check(negotiationClockAt(legacy)==='2027-01-19T00:00:00.000Z'&&JSON.stringify(legacy)==='{"worldDate":"2027-01-19","world":{}}','legacy read unchanged');
  const orderCfg=defaultWorldConfig();orderCfg.regions=[regionCfg('KR',{teams:10,div2:false,regularBo:1,playoffBo:1})];orderCfg.internationals=[];
- const order=buildWorld(orderCfg),orderTeam=activeTeams(order,'KR',1)[0];startCareer(order,orderTeam.id,'clock-official-reproduction');autoBuildInitialSquad(order,orderTeam,new RNG('clock-roster','fixture'),5);finalizeInitialRosters(order);
+ const order=buildWorld(orderCfg),preview=JSON.parse(JSON.stringify(order)),previewTeam=activeTeams(preview,'KR',1)[0];
+ startCareer(preview,previewTeam.id,'clock-official-reproduction');autoBuildInitialSquad(preview,previewTeam,new RNG('clock-roster','fixture'),5);finalizeInitialRosters(preview);
+ // Pick a real generated early slot with a later match. A generated club's
+ // first appearance is not guaranteed to share its date with another series.
+ const paired=Object.values(preview.world.seasons).flatMap(s=>s.days).find(d=>d.matches.length>1&&d.matches.every(m=>m.utcAt?.slice(0,10)===d.date)),firstPair=paired?.matches.slice().sort((a,b)=>a.utcAt.localeCompare(b.utcAt));
+ check(firstPair&&firstPair[0].utcAt<firstPair[1].utcAt,'actual generated later-fixture precondition');
+ const orderTeam=order.teams[firstPair[0].a];startCareer(order,orderTeam.id,'clock-official-reproduction');autoBuildInitialSquad(order,orderTeam,new RNG('clock-roster','fixture'),5);finalizeInitialRosters(order);
  let ready;
  count=0;while(!order.world.pendingOfficial?.queue?.length){check(++count<=30,'bounded manual order');const date=nextCalendarDate(order);const own=Object.values(order.world.seasons).flatMap(s=>s.days.flatMap(d=>d.matches)).some(m=>!m.res&&(m.a===orderTeam.id||m.b===orderTeam.id)&&m.utcAt?.slice(0,10)===date);if(own&&date===nextDate(order)){applyWorldDailyEffects(order,date);ready=JSON.parse(JSON.stringify(order));}playWorldDay(order);}
  check(ready&&JSON.stringify(order.players)===JSON.stringify(ready.players)&&JSON.stringify(order.teams)===JSON.stringify(ready.teams)&&JSON.stringify(order.metaHistory)===JSON.stringify(ready.metaHistory),'future matches write no player club or observation effects before manual preparation');
@@ -109,7 +116,14 @@ console.log('OFFICIAL_GAME_CLOCK_ACCEPTANCE '+officialResult);
 
 const orderedContact=await runEngineFixture(String.raw`(()=>{
  const cfg=defaultWorldConfig();cfg.regions=['KR','CN'].map(id=>regionCfg(id,{teams:10,div2:false}));cfg.internationals=[];
- const db=buildWorld(cfg),team=activeTeams(db,'KR',1).sort((a,b)=>salaryBudget(db,b)-salaryBudget(db,a))[0];startCareer(db,team.id,'clock-contact-order');autoBuildInitialSquad(db,team,new RNG('clock-roster','fixture'),5);finalizeInitialRosters(db);
+ const db=buildWorld(cfg),schedulePreview=JSON.parse(JSON.stringify(db)),previewTeam=activeTeams(schedulePreview,'KR',1)[0];
+ startCareer(schedulePreview,previewTeam.id,'clock-contact-order');autoBuildInitialSquad(schedulePreview,previewTeam,new RNG('clock-roster','fixture'),5);finalizeInitialRosters(schedulePreview);
+ // Existing league rules keep Bo3. Select an actual first-slot club rather
+ // than assuming the richest club finishes before this post-series contact.
+ const days=Object.values(schedulePreview.world.seasons).filter(s=>s.region==='KR'&&s.div===1).flatMap(s=>s.days),firsts=new Map();
+ for(const d of days)for(const m of d.matches.slice().sort((a,b)=>a.utcAt.localeCompare(b.utcAt)))for(const id of [m.a,m.b])if(!firsts.has(id))firsts.set(id,{d,m});
+ const early=activeTeams(db,'KR',1).filter(t=>{const f=firsts.get(t.id);return f&&f.d.matches.some(m=>m.utcAt>f.m.utcAt)&&f.m.utcAt===f.d.matches.map(m=>m.utcAt).sort()[0]}).sort((a,b)=>salaryBudget(db,b)-salaryBudget(db,a));
+ if(!early.length)throw Error('actual early-slot club fixture missing');const team=early[0];startCareer(db,team.id,'clock-contact-order');autoBuildInitialSquad(db,team,new RNG('clock-roster','fixture'),5);finalizeInitialRosters(db);
  let count=0;while(true){const date=nextCalendarDate(db);const own=Object.values(db.world.seasons).flatMap(s=>s.days.flatMap(d=>d.matches)).find(m=>!m.res&&(m.a===team.id||m.b===team.id)&&m.utcAt?.slice(0,10)===date);if(own&&date===nextDate(db)){applyWorldDailyEffects(db,date);break;}if(++count>30)throw Error('bounded official day');playWorldDay(db);}
  let offer;
  for(const p of Object.values(db.players).filter(p=>!p.team&&!p.retired&&p.region===team.region)){
@@ -131,6 +145,8 @@ const orderedContact=await runEngineFixture(String.raw`(()=>{
  const late=Object.values(db.world.seasons).flatMap(s=>s.days.flatMap(d=>d.matches)).find(m=>!m.res&&m.utcAt?.slice(0,10)===db.worldDate&&m.utcAt>=next.plan.dueAt);if(!late)throw Error('later real fixture missing');
  while(db.world.pendingOfficial?.queue?.length)resolvePendingOfficialMatch(db,null);
  while(queued.world.pendingOfficial?.queue?.length)resolvePendingOfficialMatch(queued,null);
+ const completedOwn=Object.values(db.world.seasons).flatMap(s=>s.days.flatMap(d=>d.matches)).find(m=>m.res&&(m.a===team.id||m.b===team.id)&&m.utcAt?.slice(0,10)===date);
+ if(!completedOwn?.gameTime||completedOwn.gameTime.gameTimeThrough>=next.plan.dueAt)throw Error('actual completed-series-before-contact fixture');
  let result=prepared,savedResult=savedPrepared;for(let i=0;!result?.response&&i<4;i++){result=playWorldDay(db);if(result?.response)break;if(result?.pending)throw Error('unexpected manual fixture before response');}
  for(let i=0;!savedResult?.response&&i<4;i++){savedResult=playWorldDay(queued);if(savedResult?.response)break;if(savedResult?.pending)throw Error('unexpected restored fixture');}
  if(!result?.response||!savedResult?.response||late.res||db.worldDate!==date||db.world.lastDailyTick!==tick)throw Error('late fixture or daily effects consumed before actual contact');
@@ -335,8 +351,8 @@ const inflightResult=await runEngineFixture(String.raw`(()=>{
  const laterLoaded=unpackDB(packDB(later));check(manualContactPending(laterLoaded)&&JSON.stringify(laterLoaded.world.pendingOfficial.queue[0].session.games[0])===firstSaved,'second game actual partial save');check(finalizeStagedNegotiation(laterLoaded,laterStart.neg.id).ok,'second game current manual final');
  const laterFault=unpackDB(packDB(laterLoaded)),laterBefore=JSON.stringify(laterFault),laterWorld=laterFault.world,laterClub=managedTeam(laterFault),laterMeta=recordMeta;let laterFailed=false;recordMeta=function(current,r){const value=laterMeta(current,r);if(current===laterFault)throw Error('controlled second game end failure');return value;};try{resumeManualAfterContact(laterFault);}catch{laterFailed=true;}finally{recordMeta=laterMeta;}check(laterFailed&&JSON.stringify(laterFault)===laterBefore&&laterFault.world===laterWorld&&managedTeam(laterFault)===laterClub,'second failure preserves first game and foreign receipt');
  const secondResult=resumeManualAfterContact(laterLoaded);check(secondResult.game&&negotiationClockAt(laterLoaded)===secondEnd,'second explicit game end');
- // A changed real patch can produce a deciding set. Consume its original seeded
- // game on both paths; keep the original full-series and daily-once assertions.
+ // Preserve the full-series assertion when the real seeded games require a
+ // deciding set, rather than assuming every Bo3 ends after its second game.
  while(!seriesSessionDone(secondSession)){if(secondSession.games.length>=secondSession.bestOf)throw Error('native deciding-set bound');const expectedThird=officialClockPreview(laterLoaded);playSeriesSessionGame(expectedThird,secondSession,null,false);resolvePendingOfficialMatch(laterLoaded,null);}
  const recorded=Object.values(laterLoaded.world.seasons).flatMap(s=>s.days.flatMap(d=>d.matches)).find(m=>m.id===match.id);check(recorded.res&&JSON.stringify(recorded.res.games)===JSON.stringify(secondSession.games)&&laterLoaded.world.lastDailyTick===laterTick,'second original seeded whole series and daily once');
  return JSON.stringify({due,end,secondDue,secondEnd,recordedGamesAtContact:0,actualSavedReceipt:true,earlierContact:true,manualFinal:true,explicitResume:true,originalStartSeedResult:true,damagedInputsInert:true,oldInputInert:true,currentAuthority:true,wholeRollback:true,wholeSavedStateEqual:true,dailyOnce:true,futureManualReofferPreserved:true,invalidReofferRoundInert:true,missingDateInflightInert:true,noContactEncodingSkipped:true,priorCompletedAndForeignReceiptPreserved:true,secondGameContactAndRollback:true,wholeGameValueRoundTrip:true,previousReceiptCompatible:true,malformedGraphInert:true,preparationInputInert:true,automaticHandoff:true,dismissedManualDecisionInert:true,midnightAndBroadcastRemain:true});
@@ -347,7 +363,7 @@ console.log('MANUAL_INFLIGHT_ACCEPTANCE '+inflightResult);
 const midnightResult=await runEngineFixture(String.raw`(()=>{
  const check=(v,m)=>{if(!v)throw Error('OFFICIAL_MIDNIGHT '+m)};
  const cfg=defaultWorldConfig();cfg.regions=[regionCfg('BR',{teams:10,div2:false,regularBo:5})];cfg.internationals=[];
- const base=buildWorld(cfg),team=activeTeams(base,'BR',1)[0];startCareer(base,team.id,'midnight-existing-br');autoBuildInitialSquad(base,team,new RNG('midnight-roster','fixture'),5);finalizeInitialRosters(base);
+ const base=buildWorld(cfg),team=activeTeams(base,'BR',1)[0];startCareer(base,team.id,'midnight-existing-br-3');autoBuildInitialSquad(base,team,new RNG('midnight-roster','fixture'),5);finalizeInitialRosters(base);
  const season=Object.values(base.world.seasons).find(s=>s.region==='BR'),day=season.days.find(d=>d.matches.some(m=>m.utcAt.includes('T23:00:00'))),match=day.matches.find(m=>m.utcAt.includes('T23:00:00'));setManagedTeam(base,match.a);
  let bound=0;while(nextCalendarDate(base)<day.date){check(++bound<=30,'bounded existing fixture');playWorldDay(base);}applyWorldDailyEffects(base,day.date);
  const plain=unpackDB(packDB(base));playWorldDay(plain);resolvePendingOfficialMatch(plain,null);const first=unpackDB(packDB(plain)),q=first.world.pendingOfficial.queue[0],refs=pendingOfficialRefs(first,q),preview=officialClockPreview(first),frozen=JSON.parse(JSON.stringify(q.session));playSeriesSessionGame(preview,frozen,null,false);
@@ -390,14 +406,9 @@ const nextFixtureResult=await runEngineFixture(String.raw`(()=>{const cfg=defaul
 const nextFixtureAccepted=JSON.parse(nextFixtureResult);
 for(const key of ['nextFixtureOwnDate','savedManualPreparation','firstNexusAndWholeRestoreSame','dailyOnce','oldWrongDateInert'])assert.equal(nextFixtureAccepted[key],true,key);
 console.log('OFFICIAL_NEXT_FIXTURE_ACCEPTANCE',nextFixtureResult);
-
 await import('./official-automatic-resume-acceptance.mjs');
 await import('./international-peer-period-acceptance.mjs');
-
 await import('./official-stage-end-acceptance.mjs');
-
 await import('./official-occupation-evidence-acceptance.mjs');
-
 await import('./scrim-schedule-basis-acceptance.mjs');
-
 await import('./daily-consumption-rollback-acceptance.mjs');
