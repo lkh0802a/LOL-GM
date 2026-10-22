@@ -98,7 +98,6 @@ function aiRunScrims(db,rng){
       const first=scrimReadiness(db,t,booked);
       if(busy.has(t.id)||!first.ok||!first.availableSlots.includes(slot)||!rng.chance(.84))continue;
       const candidates=order.filter(o=>o.id!==t.id&&!busy.has(o.id)&&
-        schedule.venues[o.id].region===schedule.venues[t.id].region&&
         scrimReadiness(db,o,booked).availableSlots?.includes(slot)&&
         !!scrimTimeOverlap(db,t,o,db.worldDate,slot,schedule));
       if(!candidates.length)continue;
