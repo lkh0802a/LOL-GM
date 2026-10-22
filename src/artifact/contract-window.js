@@ -9,8 +9,7 @@ function contractWindowAnchorDate(db){
     endDate=s=>s.days[s.days.length-1].date,
     worlds=finished.filter(s=>{
       const comp=db.competitions[s.comp];
-      return s.comp==='WORLD_CHAMPIONSHIP'||comp?.id==='WORLD_CHAMPIONSHIP'||
-        comp?.short==='Worlds'||comp?.name==='World Championship';
+      return isWorldChampionshipId(s.comp)||isWorldChampionshipId(comp?.id);
     });
   if(worlds.length)return worlds.map(endDate).sort().at(-1);
   // Custom worlds may omit the standard Worlds preset. Fall back to the

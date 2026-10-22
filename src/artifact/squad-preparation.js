@@ -34,6 +34,7 @@ function validateSquadPreparation(db,c){
       return worldActionError('unauthorized','관리하지 않는 스쿼드의 준비는 변경할 수 없습니다');
     if(!x||typeof x!=='object'||Array.isArray(x)||Object.values(x.starters||{}).some(pid=>db.players[pid]?.retired))
       return worldActionError('invalid_lineup','현재 활동 중인 선수로 선발을 구성하세요');
+    if(Object.hasOwn(x,'training'))return worldActionError('retired_training','훈련 배분·강도 설정은 사용하지 않습니다');
     const lineup=validateStartingLineup(db,t,x?.starters,Object.keys(assignments).filter(pid=>assignments[pid]===id));
     if(!lineup.ok)return {ok:false,reason:'invalid_lineup',errors:lineup.errors.map(e=>t.name+': '+e)};
     const keys=Object.keys(t.tactics||{}),tactics={};

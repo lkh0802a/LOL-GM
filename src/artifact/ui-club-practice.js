@@ -1,10 +1,7 @@
 // Owned practice presentation; existing preparation and daily writers own rules.
 function practiceUiAllowed(db,t){return !!db.world&&!db.world.fired&&db.world.manage==='manual'&&
   !['pick','initial_roster'].includes(db.world.phase)&&t?.active!==false&&managerControlsSquad(db,t)&&!db.world.pendingOfficial?.queue?.length}
-function practiceUiStamp(db,t){const parent=parentTeamOf(db,t);return JSON.stringify({date:db.worldDate,year:db.year,
-  phase:db.world?.phase,manage:db.world?.manage,pending:db.world?.pendingOfficial,
-  preparation:squadPreparationSnapshot(db,{parentId:parent.id}),teams:organizationTeams(db,parent),
-  players:organizationRoster(db,parent).map(id=>db.players[id]),seasons:db.world?.seasons});}
+function practiceUiStamp(db,t){return JSON.stringify([t.id,scoutingReadStamp(db)])}
 function practiceUiGuard(t,allowed=()=>true){
   const db=DB,w=db.world,slot=SLOT,manager=db.manager,render=UI_RENDER_ID,view=VIEW,dialog=UI_OVERLAY,stamp=practiceUiStamp(db,t);
   return ()=>DB===db&&db.world===w&&SLOT===slot&&!SLOT_SWITCHING&&db.manager===manager&&
@@ -23,7 +20,7 @@ function bindSquadPracticeControls(root=document){
 function clubPracticeModel(db=DB,tid=managedTeamId(db)){
   const ctx=clubBriefContext(db);
   if(!ctx||!ctx.teams.includes(tid)||!managerControlsSquad(db,db.teams[tid]))return null;
-  const read=JSON.parse(JSON.stringify(db)),t=read.teams[tid],day=practiceDay(read,t),
+  const read=ownedQueryView(db),t=read.teams[tid],day=practiceDay(read,t),
     booked=officialBookedTeams(read).has(tid),readiness=scrimReadiness(read,t);
   const rows=t.roster.map(id=>read.players[id]).filter(p=>p&&!p.retired&&p.team===tid)
     .map(p=>({id:p.id,name:p.name,out:medicalOut(p),plan:medicalPlanFor(read,p)}));
@@ -34,7 +31,7 @@ function clubPracticeModel(db=DB,tid=managedTeamId(db)){
 }
 function renderClubPracticeBriefing(){
   const ctx=clubBriefContext();if(!ctx)return '';
-  return `<h4>스크림 · 회복 현황</h4><p class="hint">실제 스크림 기록과 선수들의 회복 상태를 확인합니다. 수동 훈련 포인트와 강도 설정은 사용하지 않습니다.</p><div class="controls">${ctx.teams.map(tid=>`<button data-brief-practice="${esc(tid)}">${esc(DB.teams[tid].name)} · 스크림 현황</button>`).join('')}</div>`;
+  return `<h4>스크림 · 회복 현황</h4><p class="hint">예약한 스크림의 실제 참가 기록과 선수들의 회복 상태를 확인합니다.</p><div class="controls">${ctx.teams.map(tid=>`<button data-brief-practice="${esc(tid)}">${esc(DB.teams[tid].name)} · 스크림 현황</button>`).join('')}</div>`;
 }
 function openClubPractice(tid){
   const m=clubPracticeModel(DB,tid);if(!m||UI_OVERLAY)return false;
@@ -50,7 +47,7 @@ function openClubPractice(tid){
     <p>현재 스크림 가용 ${m.readiness.remaining??0}세트 · 최근 결과 및 상대에 따라 다음 상대를 선택할 수 있습니다.</p>
     <h4>최근 실제 스크림</h4>${recent}
     <h4>선수 회복 상태</h4><div class="cfgs">${m.rows.map(p=>`<div class="cfgcard compact"><b>${esc(p.name)}</b><p>${esc(MEDICAL_PLAN_LABELS[p.plan]||p.plan)}${p.out?' · 출전 불가':''}</p></div>`).join('')}</div>
-    <p class="hint">성장과 코칭 피드백은 실제 공식 경기·스크림·통합 랭크 활동을 근거로 계산합니다. 이 화면은 훈련 포인트를 생성하거나 소모하지 않습니다.</p></div>`});
+    <p class="hint">기록된 경기·스크림 참가와 코칭 피드백으로 육성 경과를 확인하세요.</p></div>`});
   dialog=UI_OVERLAY;
   root.querySelector('#brief-practice-close').onclick=close;
   return true;

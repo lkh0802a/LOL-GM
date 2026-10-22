@@ -35,7 +35,7 @@ await runEngineFixture(String.raw`(()=>{
   check(!!clubPracticeModel(DB,reserve.id)&&!clubPracticeModel(DB,other.id),
     'foreign or reserve model access error');
   const briefing=renderClubPracticeBriefing();
-  check(briefing.includes('스크림')&&briefing.includes('설정은 사용하지 않습니다'),
+  check(briefing.includes('스크림')&&briefing.includes('실제 참가 기록'),
     'briefing still advertises obsolete manual training');
   check(openClubPractice(t.id)&&JSON.stringify(DB)===before,
     'opening practice overlay changed simulation');
@@ -54,6 +54,9 @@ await runEngineFixture(String.raw`(()=>{
   UI_OVERLAY=shown;close();
   check(!UI_OVERLAY&&JSON.stringify(DB)===before&&saves===0,
     'closing read-only overlay changed world');
+  UI_OVERLAY=null;UI_RENDER_ID++;SLOT='1';
+let beforeDraft;
+for(const key of ['squadDst','lineupPlayer','srole','tac']){SQUAD_EDIT=null;const node={dataset:{[key]:key==='tac'?'aggression':t.roster[0]},value:key==='tac'?'17':key==='squadDst'?t.id:key==='lineupPlayer'?'TOP':'starter'},scope={querySelectorAll:sel=>sel==='[data-'+key.replace(/[A-Z]/g,c=>'-'+c.toLowerCase())+']'?[node]:[]};bindSquadDraftControls(scope);const cb=node.onchange;DB=unpackDB(packDB(DB));beforeDraft=JSON.stringify(DB);cb({stopPropagation(){}});check(JSON.stringify(DB)===beforeDraft&&SQUAD_EDIT===null,'retained '+key+' draft inert');t=DB.teams[t.id];bindSquadDraftControls(scope);node.onchange({stopPropagation(){}});check(SQUAD_EDIT?.dirty,'current '+key+' manual draft');}
   const p=DB.players[t.roster[0]];
   p.medicalPlan='rest';
   consumeScrimPractice(DB,t,2);
@@ -80,6 +83,8 @@ await runEngineFixture(String.raw`(()=>{
   check(clubPracticeModel(restored,t.id)===null||
     clubPracticeModel(restored,t.id)?.day.scrim===20,
     'restored model failed to read persisted scrim time');
+const played=DB.players[t.roster[1]],official=[];for(const region of ['NA','EU']){const teams=activeTeams(DB,region,1).slice(0,2),cid='practice-official-'+region;DB.competitions[cid]={id:cid,name:'훈련 공식 소비 '+region,region,teams:teams.map(t=>t.id),rules:{fearless:true},stages:[{id:'regular',name:'정규',type:'round_robin',legs:1,bestOf:1}]};const s=newSeason(DB,cid,DB.year,'practice-official-'+region,addDays(DB.worldDate,1));s.key=cid;s.region=region;s.div=1;DB.world.seasons[cid]=s;const day=s.days[0],match=day.matches[0];setWorldCalendarDate(DB,day.date);for(const team of teams)delete team.practiceDay;runDailyPractice(DB);check(teams.every(team=>team.practiceDay.drills===0)&&clubPracticeModel(DB,t.id).booked===officialBookedTeams(DB).has(t.id),'actual official booking excludes drills');const result=simulateScheduledSeries(DB,s,day,match,DB.competitions[cid].stages[0]);commitScheduledSeries(DB,s,match,result);finalizeCompetitionDay(DB,s,day,0,DB.competitions[cid].stages[0]);check(result.rec.games.every(g=>g.publicRecord.ending.kind==='nexus'),'actual nexus only');official.push(result.rec);}
+const packed=JSON.parse(packDB(DB)),raw=JSON.parse(JSON.stringify(DB));check(packed.world.seasons['practice-official-EU'].compact&&packed.world.seasons['practice-official-EU'].days[0].matches[0].res.lite&&!packed.world.seasons['practice-official-NA'].days[0].matches[0].res.lite,'actual full foreign lite');for(const restored of [unpackDB(JSON.stringify(raw)),unpackDB(JSON.stringify(packed))]){check(!Object.hasOwn(restored.teams[t.id],'training')&&JSON.stringify(restored.teams[t.id].practiceUsage)===JSON.stringify(t.practiceUsage)&&JSON.stringify(restored.players[played.id].practiceUsage)===JSON.stringify(played.practiceUsage),'actual full compact settings/resource continuity');check(restored.world.seasons['practice-official-EU'].days[0].matches[0].res.games.every(g=>g.publicRecord.ending.kind==='nexus'),'compact history retained');}
   UI_OVERLAY=null;UI_RENDER_ID++;setManagedTeam(DB,other.id);
   check(!clubPracticeModel(DB,t.id)&&!openClubPractice(t.id),
     'other club accessed owned private scrim status');

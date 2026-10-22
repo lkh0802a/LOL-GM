@@ -1,0 +1,18 @@
+{
+  "predecessorPublicCommit": "e99dc663642a7f902c68bfbff59983cdc45cd346",
+  "originals": {
+    "staff.js": "16484fd92f9a00db824a48196bb7a8a3c65f7f14a8767decfee12bd93f2c067a",
+    "draft-analysis.js": "f68f88b632819d268183f2714b672e7845d51d2b13905eda51bdcd8af249fb9b"
+  },
+  "sources": {
+    "src/artifact/staff.js": "3b1d0181e55b10d8596741b35c0e25508c5b772c5f4d258a1a2a9ddbb58cbacf",
+    "src/artifact/draft-analysis.js": "2d4455b73e19d6b8f08f078722e26d4a37ab4ec5c6ab8d9cea4193ce0511d9f5"
+  },
+  "archive": {
+    "path": "docs/evidence/draft-staff-profile-clock-2026-10-21.public-original.gz",
+    "sha256": "93a8b94a812ec60c66f4f30d0ea008ce93d41cf0f0ddb2e0fc2ee9a1cbabe105",
+    "bytes": 9159
+  },
+  "reusedImplementation": "1abd7e377f9f67df15f310004eee1ef02966511f",
+  "meaning": "이미 공개된 e99 소스만 보존. 원래 공식/선택/점수/RNG/관측·원래 단언을 실제 비교하며 전체 성능/330초 해결은 새 검증 전 미확인."
+}

@@ -1,9 +1,9 @@
 import {runEngineFixture,artifactSource} from './test-harness.mjs';
+import {reviewedResourceFixtureSetup} from './reviewed-resource-fixture.mjs';
 const engine=await artifactSource('engine.js'),init=engine.slice(engine.indexOf('function simulateMatch(')).replace('  let t;','  return st;\n  let t;').replace('function simulateMatch(','function initialStealState(');
 await runEngineFixture(String.raw`(()=>{
  const check=(v,m)=>{if(!v)throw Error('OBJECTIVE_STEAL '+m)};
- const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:4,div2:true,system:'franchise'})];cfg.internationals=[];const db=buildWorld(cfg),[a,b]=activeTeams(db,'NA',1);setManagedTeam(db,a.id);
- for(const t of [a,b])for(const role of ROLES){const p=genPlayer(db,new RNG('match-history|'+t.id+role),{region:t.region,role,age:22,base:65});signContract(db,p,t,1,3);t.depthChart[role]=p.id}
+ const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:4,div2:true,system:'franchise'})];cfg.internationals=[];const {db,a,b}=reviewedResourceFixture(cfg,false);
  const state=()=>{const s=initialStealState(db,a.id,b.id,'steal-preflight',null,false);s.t=5;s.obj.dragonAt=5;return s};
  for(const side of [0,1]){
   const st=state(),ps=st.sides[side].ps,j=ps.find(p=>p.role==='JGL'),others=ps.filter(p=>p!==j);j.quest.progress=j.quest.rules.threshold-1;
@@ -35,5 +35,12 @@ await runEngineFixture(String.raw`(()=>{
  for(const id of ['foreign',null,42,'']){const malformed=JSON.parse(JSON.stringify(publicSource));malformed.objectives.events[0].stealer=id;check(!recordedObjectivesValid(malformed),'malformed source accepted');}
  db.world={year:db.year,manage:'manual',phase:'season',seasons:{}};const session=createSeriesSession(db,a.id,b.id,1,'steal-official-8',{compId:'steal'});db.world.pendingOfficial={queue:[{session}]};const copy=unpackDB(packDB(db)),ss=copy.world.pendingOfficial.queue[0].session;playSeriesSessionGame(copy,ss,null,false);const rec=seriesSessionResult(copy,ss).rec,g=rec.games[0];check(recordedPublicMatch(copy,rec,g).record&&recordedObjectivesValid(g.publicRecord)&&g.publicRecord.objectives.events.some(e=>e.stealer),'actual official stealer source invalid');
  copy.world.seasons.steal={id:'steal',comp:'steal',region:'NA',done:true,days:[{date:g.date,matches:[{res:rec}]}]};for(const region of ['NA','EU']){copy.world.seasons.steal.region=region;const reloaded=unpackDB(packDB(copy));check(JSON.stringify(reloaded.world.seasons.steal.days[0].matches[0].res.games[0].publicRecord)===JSON.stringify(g.publicRecord),'actual full/lite history changed');}
- console.log('OBJECTIVE_STEAL_ACCEPTANCE PASS '+JSON.stringify({pairs:4,observedSteals:events.length,naturalOmission:missing,uniqueCredit:true,existingGold:true,invalidAtomic:true,officialPendingFullLite:true,officialStealers:g.publicRecord.objectives.events.filter(e=>e.stealer).length,legacyPure:true}));
-})()`,{timeout:60000,setupSources:[init,await artifactSource('ui-match-history.js'),await artifactSource('ui-takedown-history.js')]});
+ // Keep the original reviewed natural omission/official seeds above and also
+ // exercise current generation independently without requiring the same chance event.
+ const currentDb=buildWorld(cfg),[ca,cb]=activeTeams(currentDb,'NA',1);setManagedTeam(currentDb,ca.id);
+ for(const t of [ca,cb])for(const role of ROLES){const p=genPlayer(currentDb,new RNG('match-history|'+t.id+role),{region:t.region,role,age:22,base:65});signContract(currentDb,p,t,1,3);t.depthChart[role]=p.id}
+ const currentWorld=packDB(currentDb);let currentPairs=0;
+ for(const seed of ['objective-steal-source-35','record-official'])for(const ids of [[ca.id,cb.id],[cb.id,ca.id]]){const r=simulateMatch(currentDb,...ids,seed,null,false),q=simulateMatch(currentDb,...ids,seed,null,true);check(digest(r)===digest(q)&&r.ending.kind==='nexus','current generation real outcome parity');check(r.objectiveEvents.every(e=>e.participants.length>0&&(!e.stealer||e.participants.filter(id=>id===e.stealer).length===1)),'current actual stealer credit invalid');currentPairs++;}
+ check(packDB(currentDb)===currentWorld,'current generation world changed');
+ console.log('OBJECTIVE_STEAL_ACCEPTANCE PASS '+JSON.stringify({pairs:4,currentPairs,observedSteals:events.length,naturalOmission:missing,uniqueCredit:true,existingGold:true,invalidAtomic:true,officialPendingFullLite:true,officialStealers:g.publicRecord.objectives.events.filter(e=>e.stealer).length,legacyPure:true}));
+})()`,{timeout:60000,setupSources:[await reviewedResourceFixtureSetup(),init,await artifactSource('ui-match-history.js'),await artifactSource('ui-takedown-history.js')]});

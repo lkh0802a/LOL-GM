@@ -24,13 +24,30 @@ await runEngineFixture(String.raw`(()=>{
   check(championTierComparison(db,{team:a.id,filter:{patch:'past'}}).internal.reason==='historical-state-unavailable','past private reconstruction');
   // Exercise the established accrual writer -> seasonal mastery writer ->
   // actual draft consumer, without inventing a new immediate practice bonus.
-  const training=unpackDB(before),mid=training.players[a.depthChart.MID],eligible=Object.keys(mid.pool).find(c=>training.patch.champions[c]?.roles.includes('MID')&&mid.pool[c].mastery<90);
-  check(!!eligible,'fixture lacks trainable observed candidate');
-  const old=internalChampionTiers(training,{team:a.id,role:'MID'}).rows.find(r=>r.champ===eligible),publicOld=JSON.stringify(publicChampionTiers(training,filter));
-  practiceChampion(training,mid,eligible,'training',20,false);
+  const training=unpackDB(before),mid=training.players[a.depthChart.MID],
+    practice=simulateSeries(training,a.id,b.id,5,'comparison-real-practice',{practice:true});
+  const appearances=practice.lines.filter(line=>line.pid===mid.id),counts={};
+  for(const line of appearances)counts[line.champ]=(counts[line.champ]||0)+1;
+  const eligible=Object.keys(counts).sort((x,y)=>counts[y]-counts[x])[0];
+  check(!!eligible&&mid.pool[eligible]?.mastery<90&&practice.rec.games.length>=3,
+    'fixture lacks an actual trainable practice participant');
+  const old=internalChampionTiers(training,{team:a.id,role:'MID'}).rows.find(r=>r.champ===eligible),publicSource=JSON.stringify([training.metaStats,training.metaHistory,training.metaGames]);
+  recordScrimPractice(training,practice.rec,practice.lines);
+  // Accumulate enough real, bounded sessions to cross integer mastery
+  // rounding. One small private sample need not guarantee improvement.
+  for(let day=1;day<=2;day++){
+    setWorldCalendarDate(training,addDays(training.worldDate,1));dailyRecovery(training);
+    const next=simulateSeries(training,a.id,b.id,5,'comparison-real-practice-'+day,{practice:true});
+    check(next.rec.games.length<=scrimReadiness(training,training.teams[a.id]).remaining&&
+      next.rec.games.length<=scrimReadiness(training,training.teams[b.id]).remaining,
+      'actual comparison practice exceeded medical/daily limits');
+    recordScrimPractice(training,next.rec,next.lines);
+  }
+  check(JSON.stringify([training.metaStats,training.metaHistory,training.metaGames])===publicSource,'private sessions modified public source');
+  const publicOld=JSON.stringify(publicChampionTiers(training,filter));
   growPlayer(training,mid,new RNG('comparison-season-growth'),0,{});
   const learned=internalChampionTiers(training,{team:a.id,role:'MID'}).rows.find(r=>r.champ===eligible);
-  check(learned.best.mastery>old.best.mastery&&learned.best.score!==old.best.score,'real practice/growth writers not reflected in comparison');
+  check(learned.best.mastery>old.best.mastery&&learned.best.score!==old.best.score,'real practice/growth writers not reflected in comparison '+JSON.stringify({mid:mid.id,eligible,counts,old:old.best,learned:learned.best,pool:mid.pool[eligible]}));
   check(JSON.stringify(publicChampionTiers(training,filter))===publicOld,'private growth leaked to public output');
   const restores=[],trap=(o,k)=>{const d=Object.getOwnPropertyDescriptor(o,k);restores.push(()=>d?Object.defineProperty(o,k,d):delete o[k]);Object.defineProperty(o,k,{configurable:true,get(){throw Error('foreign private '+k)}})};
   for(const k of ['tactics','staff','practiceEvidence','metaKnowledge','metaCounter'])trap(b,k);

@@ -1,0 +1,726 @@
+{
+  "issue": 247,
+  "baselineCommit": "4fdb5268616b3bdc67645de4dfc204be6c0e62f6",
+  "method": "동일 저장/시드, 실제 4팀 대회 1/10/21시즌(6/60/126경기), Node 모델별 준비2회 후15회. CPU는15회 합계, median/p95는ms, RSS/heap은호출후관측최댓값(bytes), GC는관측이벤트. 강제GC/힙/CPU/시간정책변경없음. 독립순차실행. 전체세계커리어/실기기/절대최고메모리나모바일렌더링시간측정아님.",
+  "sources": {
+    "scouting-read.js": "a285032c72e252291aa8e92fff6ac199985bfd994623a55154e9b206584481bd",
+    "ui-club-recruitment.js": "43164c091400da75019d7867ce1fb5988710c08be051d3b24feb110746db5efb",
+    "ui-club-finance.js": "133ec9ddea381bdf2452c81d2433913bd2abae7015b43e793de3f4852cc91841",
+    "ui-squad-status.js": "7192ab5ec9764862f138629cf761135567f789b7cea653077dbb0499108a5973",
+    "ui-player.js": "aa3109a78db2d893912d9a711aa9af09ae4b3c568e98280e2ba3eb8a973be6b4",
+    "ui-roster.js": "0d8f8fcdc5063773461c5bddbc8551c2fe7e86e77cc80cd488720e2704e9a4b2"
+  },
+  "measurements": [
+    {
+      "controlledSeasons": 1,
+      "actualGames": 6,
+      "inputSha256": "c4cbd64ebcdcb0264a4b0f5e8d74aee9642c8dc267f371902e67899dbe229cc4",
+      "teams": 4,
+      "players": 47,
+      "before": [
+        {
+          "name": "recruitModel",
+          "calls": 15,
+          "medianMs": 21.69455300000004,
+          "p95Ms": 28.969218000000012,
+          "cpuUserMs": 333.344,
+          "cpuSystemMs": 37.779,
+          "maxObservedRss": 117510144,
+          "maxObservedHeapUsed": 56551384,
+          "gcEvents": 3,
+          "gcMs": 3.876606985926628
+        },
+        {
+          "name": "financeModel",
+          "calls": 15,
+          "medianMs": 13.839467000000013,
+          "p95Ms": 16.169281999999953,
+          "cpuUserMs": 167.871,
+          "cpuSystemMs": 43.565,
+          "maxObservedRss": 151875584,
+          "maxObservedHeapUsed": 96034680,
+          "gcEvents": 0,
+          "gcMs": 0
+        },
+        {
+          "name": "recruitGuardStamp",
+          "calls": 15,
+          "medianMs": 7.385219000000006,
+          "p95Ms": 8.654729999999972,
+          "cpuUserMs": 70.173,
+          "cpuSystemMs": 43.13,
+          "maxObservedRss": 160649216,
+          "maxObservedHeapUsed": 87303416,
+          "gcEvents": 0,
+          "gcMs": 0
+        },
+        {
+          "name": "squadModel",
+          "calls": 15,
+          "medianMs": 13.42892999999981,
+          "p95Ms": 14.721454999999992,
+          "cpuUserMs": 179.501,
+          "cpuSystemMs": 24.143,
+          "maxObservedRss": 168599552,
+          "maxObservedHeapUsed": 95341400,
+          "gcEvents": 0,
+          "gcMs": 0
+        }
+      ],
+      "after": [
+        {
+          "name": "recruitModel",
+          "calls": 15,
+          "medianMs": 10.421219999999977,
+          "p95Ms": 19.40508299999999,
+          "cpuUserMs": 181.852,
+          "cpuSystemMs": 11.742,
+          "maxObservedRss": 88698880,
+          "maxObservedHeapUsed": 39476008,
+          "gcEvents": 1,
+          "gcMs": 1.4569299966096878
+        },
+        {
+          "name": "financeModel",
+          "calls": 15,
+          "medianMs": 0.44515000000001237,
+          "p95Ms": 2.28820300000001,
+          "cpuUserMs": 15.668,
+          "cpuSystemMs": 0.866,
+          "maxObservedRss": 89092096,
+          "maxObservedHeapUsed": 28010176,
+          "gcEvents": 0,
+          "gcMs": 0
+        },
+        {
+          "name": "recruitGuardStamp",
+          "calls": 15,
+          "medianMs": 0.1847039999999538,
+          "p95Ms": 0.4289359999999647,
+          "cpuUserMs": 3.677,
+          "cpuSystemMs": 0,
+          "maxObservedRss": 87130112,
+          "maxObservedHeapUsed": 23566888,
+          "gcEvents": 0,
+          "gcMs": 0
+        },
+        {
+          "name": "squadModel",
+          "calls": 15,
+          "medianMs": 0.27624900000000707,
+          "p95Ms": 0.37816100000003416,
+          "cpuUserMs": 4.981,
+          "cpuSystemMs": 0,
+          "maxObservedRss": 87130112,
+          "maxObservedHeapUsed": 25106240,
+          "gcEvents": 0,
+          "gcMs": 0
+        }
+      ]
+    },
+    {
+      "controlledSeasons": 10,
+      "actualGames": 60,
+      "inputSha256": "d4d63d196aea5c9b63d5bad4ef8c5bc2f8107cbaac8a8f3b519260ffa23520ba",
+      "teams": 4,
+      "players": 47,
+      "before": [
+        {
+          "name": "recruitModel",
+          "calls": 15,
+          "medianMs": 40.07519300000001,
+          "p95Ms": 45.749346,
+          "cpuUserMs": 560.985,
+          "cpuSystemMs": 72.425,
+          "maxObservedRss": 164900864,
+          "maxObservedHeapUsed": 88343616,
+          "gcEvents": 5,
+          "gcMs": 14.74183501303196
+        },
+        {
+          "name": "financeModel",
+          "calls": 15,
+          "medianMs": 28.9232199999999,
+          "p95Ms": 33.61344399999996,
+          "cpuUserMs": 334.278,
+          "cpuSystemMs": 110.271,
+          "maxObservedRss": 245899264,
+          "maxObservedHeapUsed": 170528384,
+          "gcEvents": 0,
+          "gcMs": 0
+        },
+        {
+          "name": "recruitGuardStamp",
+          "calls": 15,
+          "medianMs": 16.32029599999987,
+          "p95Ms": 27.34288700000002,
+          "cpuUserMs": 210.257,
+          "cpuSystemMs": 56.103,
+          "maxObservedRss": 261619712,
+          "maxObservedHeapUsed": 124597400,
+          "gcEvents": 0,
+          "gcMs": 0
+        },
+        {
+          "name": "squadModel",
+          "calls": 15,
+          "medianMs": 26.503762999999935,
+          "p95Ms": 29.823936000000003,
+          "cpuUserMs": 352.784,
+          "cpuSystemMs": 52.069,
+          "maxObservedRss": 261890048,
+          "maxObservedHeapUsed": 173721776,
+          "gcEvents": 0,
+          "gcMs": 0
+        }
+      ],
+      "after": [
+        {
+          "name": "recruitModel",
+          "calls": 15,
+          "medianMs": 9.582807000000003,
+          "p95Ms": 14.818799000000013,
+          "cpuUserMs": 177.905,
+          "cpuSystemMs": 16.859,
+          "maxObservedRss": 101208064,
+          "maxObservedHeapUsed": 46199944,
+          "gcEvents": 3,
+          "gcMs": 3.6986630111932755
+        },
+        {
+          "name": "financeModel",
+          "calls": 15,
+          "medianMs": 0.46000200000003133,
+          "p95Ms": 0.6709050000000047,
+          "cpuUserMs": 8.228,
+          "cpuSystemMs": 0.151,
+          "maxObservedRss": 101470208,
+          "maxObservedHeapUsed": 33510184,
+          "gcEvents": 0,
+          "gcMs": 0
+        },
+        {
+          "name": "recruitGuardStamp",
+          "calls": 15,
+          "medianMs": 0.5304160000000024,
+          "p95Ms": 0.7519649999999842,
+          "cpuUserMs": 5.045,
+          "cpuSystemMs": 3.72,
+          "maxObservedRss": 105926656,
+          "maxObservedHeapUsed": 38079240,
+          "gcEvents": 0,
+          "gcMs": 0
+        },
+        {
+          "name": "squadModel",
+          "calls": 15,
+          "medianMs": 0.3217069999999467,
+          "p95Ms": 0.47161900000003243,
+          "cpuUserMs": 5.558,
+          "cpuSystemMs": 0.057,
+          "maxObservedRss": 105926656,
+          "maxObservedHeapUsed": 40079984,
+          "gcEvents": 0,
+          "gcMs": 0
+        }
+      ]
+    },
+    {
+      "controlledSeasons": 21,
+      "actualGames": 126,
+      "inputSha256": "2593f37f0c22acd398af914aa3f1064fdfed1030a6e363c3593995e7268b92d5",
+      "teams": 4,
+      "players": 47,
+      "before": [
+        {
+          "name": "recruitModel",
+          "calls": 15,
+          "medianMs": 57.50180899999998,
+          "p95Ms": 64.732167,
+          "cpuUserMs": 769.422,
+          "cpuSystemMs": 127.475,
+          "maxObservedRss": 269778944,
+          "maxObservedHeapUsed": 165651776,
+          "gcEvents": 5,
+          "gcMs": 18.530541017651558
+        },
+        {
+          "name": "financeModel",
+          "calls": 15,
+          "medianMs": 45.52927900000009,
+          "p95Ms": 61.36127099999999,
+          "cpuUserMs": 593.893,
+          "cpuSystemMs": 119.412,
+          "maxObservedRss": 293527552,
+          "maxObservedHeapUsed": 190528776,
+          "gcEvents": 0,
+          "gcMs": 0
+        },
+        {
+          "name": "recruitGuardStamp",
+          "calls": 15,
+          "medianMs": 25.57301299999972,
+          "p95Ms": 34.24618199999986,
+          "cpuUserMs": 281.764,
+          "cpuSystemMs": 112.666,
+          "maxObservedRss": 330579968,
+          "maxObservedHeapUsed": 179562664,
+          "gcEvents": 0,
+          "gcMs": 0
+        },
+        {
+          "name": "squadModel",
+          "calls": 15,
+          "medianMs": 42.521150000000034,
+          "p95Ms": 48.84887099999969,
+          "cpuUserMs": 547.895,
+          "cpuSystemMs": 116.516,
+          "maxObservedRss": 323211264,
+          "maxObservedHeapUsed": 205620464,
+          "gcEvents": 0,
+          "gcMs": 0
+        }
+      ],
+      "after": [
+        {
+          "name": "recruitModel",
+          "calls": 15,
+          "medianMs": 10.327961000000016,
+          "p95Ms": 20.096453000000025,
+          "cpuUserMs": 201.192,
+          "cpuSystemMs": 16.488,
+          "maxObservedRss": 115630080,
+          "maxObservedHeapUsed": 60104200,
+          "gcEvents": 2,
+          "gcMs": 6.93682399392128
+        },
+        {
+          "name": "financeModel",
+          "calls": 15,
+          "medianMs": 0.690825000000018,
+          "p95Ms": 1.010087999999996,
+          "cpuUserMs": 12.536,
+          "cpuSystemMs": 0,
+          "maxObservedRss": 120086528,
+          "maxObservedHeapUsed": 64693456,
+          "gcEvents": 0,
+          "gcMs": 0
+        },
+        {
+          "name": "recruitGuardStamp",
+          "calls": 15,
+          "medianMs": 1.034403999999995,
+          "p95Ms": 1.5758559999999875,
+          "cpuUserMs": 13.844,
+          "cpuSystemMs": 3.347,
+          "maxObservedRss": 128475136,
+          "maxObservedHeapUsed": 72682528,
+          "gcEvents": 0,
+          "gcMs": 0
+        },
+        {
+          "name": "squadModel",
+          "calls": 15,
+          "medianMs": 0.43682799999999133,
+          "p95Ms": 0.6247360000000413,
+          "cpuUserMs": 6.219,
+          "cpuSystemMs": 1.432,
+          "maxObservedRss": 130834432,
+          "maxObservedHeapUsed": 75225776,
+          "gcEvents": 0,
+          "gcMs": 0
+        }
+      ]
+    }
+  ],
+  "native": {
+    "htmlSha256": "69966310440d393483ef6a664df86677e70ef9bf779e18db760137acde9ba287",
+    "rows": [
+      {
+        "theme": "light",
+        "width": 320,
+        "height": 560,
+        "actualPage2DetailBackFocus": true,
+        "scoutPaidOnce": true,
+        "financeSponsorNoImmediateCash": true,
+        "searchInputReturnFocus": true,
+        "readOnlyQueries": true,
+        "sourceUnchanged": true,
+        "nativeSaveReload": true,
+        "errors": []
+      },
+      {
+        "theme": "dark",
+        "width": 320,
+        "height": 260,
+        "actualPage2DetailBackFocus": true,
+        "scoutPaidOnce": true,
+        "financeSponsorNoImmediateCash": true,
+        "searchInputReturnFocus": true,
+        "readOnlyQueries": true,
+        "sourceUnchanged": true,
+        "nativeSaveReload": true,
+        "errors": []
+      }
+    ]
+  },
+  "limitations": [
+    "전체 npm check/정확 최종 HEAD CI/결과main 검증은 이슈와 PR 체크포인트 참조",
+    "초기 브라우저 시도는 드라이버 선택기/호출/기존 반올림 기대 오류; 원문 비공개 보존",
+    "해임·상속된 읽기전용 getter 반례에서 실제 실패를 수정하고 원본 보존; 이전 실패 비공개 보존",
+    "32f44b2 전체npm은 ui-async 별도조립 의존누락으로 종료1; 종료뒤중단요청시 실제신호없음. 공식조회 spread의 세계/연도/지역 소실 반례 교정과 실제95context 통과. 이전실패비공개보존, 최종HEAD결과는체크포인트참조.",
+    "최초 브라우저 계측은 Node모델 시험자료의 UI steps 누락으로 실패; 양쪽 동일 empty steps/current step0을 설정해 실제 렌더링 비교. 과거 경기/실행 원본은 바꾸지 않음. 정적검사의 엔진 설명주석 DB 토큰 실패도 원문/규칙 유지 후 설명만 정정.",
+    "b48d0d3 전체npm/core/CI/의료7 정상종료 뒤 병합전 시작전 null/undefined 세계 검색 예외를 추가 재현. 없는 세계를 {}로 만들지 않도록 교정하고 원래빈화면/원본불변 반례 추가. 이전성공/실패를 새HEAD에 승계하지 않음. 최종 Node양쪽은 환경준비후 입력별 연속 측정; 이전원문보존."
+  ],
+  "privateInputsPublished": false,
+  "browserRendering": {
+    "method": "Actual HTTP Chromium mobile/touch320x560, sequential before/after same saved inputs with identical empty UI step list/current step0 setup; 2 warmups then15 rendered queries, wait a frame per call. Durations are page performance.now; renderer TaskDuration from CDP includes UI/render tasks, not total OS/device CPU. Heap is after-call sampled maximum, not absolute peak. No forced GC or heap/time policy change. GC not measured here; Node GC observations remain separate. Controlled 4-club seasons, not full-world careers or real devices.",
+    "startedOrObserved": "2026-10-21T05:28:55.424943+00:00",
+    "rows": [
+      {
+        "version": "before",
+        "controlledSeasons": 1,
+        "inputSha256": "c4cbd64ebcdcb0264a4b0f5e8d74aee9642c8dc267f371902e67899dbe229cc4",
+        "htmlSha256": "33d1a280ed38b7638d0160b30b16e4cbe46c038d067a377983a04f9909f809e2",
+        "viewport": {
+          "width": 320,
+          "height": 560
+        },
+        "rows": [
+          {
+            "name": "candidateModal",
+            "calls": 15,
+            "medianMs": 33.599999994039536,
+            "p95Ms": 40.8999999910593,
+            "rendererTaskDurationMs": 554.295,
+            "scriptDurationMs": 0.058,
+            "maxObservedJsHeapUsedBytes": 125720564
+          },
+          {
+            "name": "financeModal",
+            "calls": 15,
+            "medianMs": 16.599999994039536,
+            "p95Ms": 20.900000005960464,
+            "rendererTaskDurationMs": 277.86100000000005,
+            "scriptDurationMs": 0.062,
+            "maxObservedJsHeapUsedBytes": 119867524
+          },
+          {
+            "name": "searchRender",
+            "calls": 15,
+            "medianMs": 34,
+            "p95Ms": 46.1000000089407,
+            "rendererTaskDurationMs": 659.538,
+            "scriptDurationMs": 0.054,
+            "maxObservedJsHeapUsedBytes": 117496124
+          },
+          {
+            "name": "squadRender",
+            "calls": 15,
+            "medianMs": 83.79999999701977,
+            "p95Ms": 101.6000000089407,
+            "rendererTaskDurationMs": 1524.1299999999999,
+            "scriptDurationMs": 0.037000000000000005,
+            "maxObservedJsHeapUsedBytes": 162117124
+          }
+        ],
+        "sourceUnchanged": true,
+        "errors": []
+      },
+      {
+        "version": "before",
+        "controlledSeasons": 10,
+        "inputSha256": "d4d63d196aea5c9b63d5bad4ef8c5bc2f8107cbaac8a8f3b519260ffa23520ba",
+        "htmlSha256": "33d1a280ed38b7638d0160b30b16e4cbe46c038d067a377983a04f9909f809e2",
+        "viewport": {
+          "width": 320,
+          "height": 560
+        },
+        "rows": [
+          {
+            "name": "candidateModal",
+            "calls": 15,
+            "medianMs": 57.70000000298023,
+            "p95Ms": 64.29999999701977,
+            "rendererTaskDurationMs": 934.4689999999999,
+            "scriptDurationMs": 0.046,
+            "maxObservedJsHeapUsedBytes": 188600556
+          },
+          {
+            "name": "financeModal",
+            "calls": 15,
+            "medianMs": 26.5,
+            "p95Ms": 29.700000002980232,
+            "rendererTaskDurationMs": 426.731,
+            "scriptDurationMs": 0.045000000000000005,
+            "maxObservedJsHeapUsedBytes": 110274356
+          },
+          {
+            "name": "searchRender",
+            "calls": 15,
+            "medianMs": 47.70000000298023,
+            "p95Ms": 56.20000000298023,
+            "rendererTaskDurationMs": 865.0850000000002,
+            "scriptDurationMs": 0.06499999999999999,
+            "maxObservedJsHeapUsedBytes": 123501856
+          },
+          {
+            "name": "squadRender",
+            "calls": 15,
+            "medianMs": 133.29999999701977,
+            "p95Ms": 170.90000000596046,
+            "rendererTaskDurationMs": 2405.2279999999996,
+            "scriptDurationMs": 0.058,
+            "maxObservedJsHeapUsedBytes": 213339228
+          }
+        ],
+        "sourceUnchanged": true,
+        "errors": []
+      },
+      {
+        "version": "before",
+        "controlledSeasons": 21,
+        "inputSha256": "2593f37f0c22acd398af914aa3f1064fdfed1030a6e363c3593995e7268b92d5",
+        "htmlSha256": "33d1a280ed38b7638d0160b30b16e4cbe46c038d067a377983a04f9909f809e2",
+        "viewport": {
+          "width": 320,
+          "height": 560
+        },
+        "rows": [
+          {
+            "name": "candidateModal",
+            "calls": 15,
+            "medianMs": 87,
+            "p95Ms": 90.09999999403954,
+            "rendererTaskDurationMs": 1354.226,
+            "scriptDurationMs": 0.053,
+            "maxObservedJsHeapUsedBytes": 245051564
+          },
+          {
+            "name": "financeModal",
+            "calls": 15,
+            "medianMs": 38.400000005960464,
+            "p95Ms": 41.3999999910593,
+            "rendererTaskDurationMs": 598.3149999999999,
+            "scriptDurationMs": 0.043000000000000003,
+            "maxObservedJsHeapUsedBytes": 180423528
+          },
+          {
+            "name": "searchRender",
+            "calls": 15,
+            "medianMs": 54,
+            "p95Ms": 72,
+            "rendererTaskDurationMs": 1027.501,
+            "scriptDurationMs": 0.053999999999999986,
+            "maxObservedJsHeapUsedBytes": 171687316
+          },
+          {
+            "name": "squadRender",
+            "calls": 15,
+            "medianMs": 217.70000000298023,
+            "p95Ms": 275.79999999701977,
+            "rendererTaskDurationMs": 3530.565,
+            "scriptDurationMs": 0.037000000000000005,
+            "maxObservedJsHeapUsedBytes": 356008052
+          }
+        ],
+        "sourceUnchanged": true,
+        "errors": []
+      },
+      {
+        "version": "after",
+        "controlledSeasons": 1,
+        "inputSha256": "c4cbd64ebcdcb0264a4b0f5e8d74aee9642c8dc267f371902e67899dbe229cc4",
+        "htmlSha256": "69966310440d393483ef6a664df86677e70ef9bf779e18db760137acde9ba287",
+        "viewport": {
+          "width": 320,
+          "height": 560
+        },
+        "rows": [
+          {
+            "name": "candidateModal",
+            "calls": 15,
+            "medianMs": 8.400000005960464,
+            "p95Ms": 11.900000005960464,
+            "rendererTaskDurationMs": 155.075,
+            "scriptDurationMs": 0.043000000000000003,
+            "maxObservedJsHeapUsedBytes": 54616284
+          },
+          {
+            "name": "financeModal",
+            "calls": 15,
+            "medianMs": 4.700000002980232,
+            "p95Ms": 6.299999997019768,
+            "rendererTaskDurationMs": 96.09899999999999,
+            "scriptDurationMs": 0.052000000000000005,
+            "maxObservedJsHeapUsedBytes": 59165220
+          },
+          {
+            "name": "searchRender",
+            "calls": 15,
+            "medianMs": 29.600000008940697,
+            "p95Ms": 34,
+            "rendererTaskDurationMs": 581.173,
+            "scriptDurationMs": 0.049999999999999996,
+            "maxObservedJsHeapUsedBytes": 58530452
+          },
+          {
+            "name": "squadRender",
+            "calls": 15,
+            "medianMs": 68.70000000298023,
+            "p95Ms": 82.5,
+            "rendererTaskDurationMs": 1282.191,
+            "scriptDurationMs": 0.031999999999999994,
+            "maxObservedJsHeapUsedBytes": 112376976
+          }
+        ],
+        "sourceUnchanged": true,
+        "errors": []
+      },
+      {
+        "version": "after",
+        "controlledSeasons": 10,
+        "inputSha256": "d4d63d196aea5c9b63d5bad4ef8c5bc2f8107cbaac8a8f3b519260ffa23520ba",
+        "htmlSha256": "69966310440d393483ef6a664df86677e70ef9bf779e18db760137acde9ba287",
+        "viewport": {
+          "width": 320,
+          "height": 560
+        },
+        "rows": [
+          {
+            "name": "candidateModal",
+            "calls": 15,
+            "medianMs": 9.700000002980232,
+            "p95Ms": 11.400000005960464,
+            "rendererTaskDurationMs": 171.09299999999996,
+            "scriptDurationMs": 0.051,
+            "maxObservedJsHeapUsedBytes": 97022492
+          },
+          {
+            "name": "financeModal",
+            "calls": 15,
+            "medianMs": 4.9000000059604645,
+            "p95Ms": 5.5999999940395355,
+            "rendererTaskDurationMs": 94.499,
+            "scriptDurationMs": 0.052,
+            "maxObservedJsHeapUsedBytes": 72854812
+          },
+          {
+            "name": "searchRender",
+            "calls": 15,
+            "medianMs": 30.799999997019768,
+            "p95Ms": 34.70000000298023,
+            "rendererTaskDurationMs": 624.942,
+            "scriptDurationMs": 0.06000000000000001,
+            "maxObservedJsHeapUsedBytes": 88879536
+          },
+          {
+            "name": "squadRender",
+            "calls": 15,
+            "medianMs": 88,
+            "p95Ms": 95,
+            "rendererTaskDurationMs": 1557.168,
+            "scriptDurationMs": 0.06299999999999999,
+            "maxObservedJsHeapUsedBytes": 161017352
+          }
+        ],
+        "sourceUnchanged": true,
+        "errors": []
+      },
+      {
+        "version": "after",
+        "controlledSeasons": 21,
+        "inputSha256": "2593f37f0c22acd398af914aa3f1064fdfed1030a6e363c3593995e7268b92d5",
+        "htmlSha256": "69966310440d393483ef6a664df86677e70ef9bf779e18db760137acde9ba287",
+        "viewport": {
+          "width": 320,
+          "height": 560
+        },
+        "rows": [
+          {
+            "name": "candidateModal",
+            "calls": 15,
+            "medianMs": 9.5,
+            "p95Ms": 11,
+            "rendererTaskDurationMs": 162.779,
+            "scriptDurationMs": 0.037,
+            "maxObservedJsHeapUsedBytes": 105262068
+          },
+          {
+            "name": "financeModal",
+            "calls": 15,
+            "medianMs": 4.4000000059604645,
+            "p95Ms": 6.0999999940395355,
+            "rendererTaskDurationMs": 117.90100000000004,
+            "scriptDurationMs": 0.03900000000000001,
+            "maxObservedJsHeapUsedBytes": 109314144
+          },
+          {
+            "name": "searchRender",
+            "calls": 15,
+            "medianMs": 31.900000005960464,
+            "p95Ms": 32.900000005960464,
+            "rendererTaskDurationMs": 623.9299999999998,
+            "scriptDurationMs": 0.108,
+            "maxObservedJsHeapUsedBytes": 87039212
+          },
+          {
+            "name": "squadRender",
+            "calls": 15,
+            "medianMs": 125,
+            "p95Ms": 136,
+            "rendererTaskDurationMs": 2120.9210000000003,
+            "scriptDurationMs": 0.03,
+            "maxObservedJsHeapUsedBytes": 225884680
+          }
+        ],
+        "sourceUnchanged": true,
+        "errors": []
+      }
+    ]
+  },
+  "nodeMeasurementProcesses": [
+    {
+      "version": "before",
+      "seasons": 1,
+      "started": "2026-10-21T05:29:37.522567+00:00",
+      "ended": "2026-10-21T05:29:38.640275+00:00",
+      "exit": 0
+    },
+    {
+      "version": "after",
+      "seasons": 1,
+      "started": "2026-10-21T05:29:38.640573+00:00",
+      "ended": "2026-10-21T05:29:38.984943+00:00",
+      "exit": 0
+    },
+    {
+      "version": "before",
+      "seasons": 10,
+      "started": "2026-10-21T05:29:38.985260+00:00",
+      "ended": "2026-10-21T05:29:41.130340+00:00",
+      "exit": 0
+    },
+    {
+      "version": "after",
+      "seasons": 10,
+      "started": "2026-10-21T05:29:41.130630+00:00",
+      "ended": "2026-10-21T05:29:41.494430+00:00",
+      "exit": 0
+    },
+    {
+      "version": "before",
+      "seasons": 21,
+      "started": "2026-10-21T05:29:41.494708+00:00",
+      "ended": "2026-10-21T05:29:44.744976+00:00",
+      "exit": 0
+    },
+    {
+      "version": "after",
+      "seasons": 21,
+      "started": "2026-10-21T05:29:44.745335+00:00",
+      "ended": "2026-10-21T05:29:45.181845+00:00",
+      "exit": 0
+    }
+  ]
+}

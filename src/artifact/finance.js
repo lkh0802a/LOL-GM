@@ -242,17 +242,8 @@ function financeForecast(db,t){
 
 // 한 해 결산: 중계권 분배, 스폰서, 굿즈, 상금, 구단주 지원 − 연봉, 스태프, 운영비, 사치세
 function closeFinances(db,w,rng,ev){
-  const prize={};
-  for(const season of Object.values(w.seasons||{})){
-    if(!season.done)continue;
-    const c=db.competitions[season.comp];
-    if(!c)continue;
-    const pool=c.international?(c.id==='WORLDS'?45:c.tier==='low'?5:18):9*psOf(db,c.region);
-    const participants=(c.teams||[]).filter(id=>db.teams[id]);
-    const weights=participants.map(id=>[id,1+elimReach(db,season,id)*3]);
-    const total=weights.reduce((n,row)=>n+row[1],0);
-    if(total)for(const [id,weight] of weights)prize[id]=(prize[id]||0)+pool*weight/total;
-  }
+  if(assertFinanceCloseout(db,w)==='closed')return;
+  const prize=financeCloseoutPrizes(db,w);
   const taxPool={};
   const recs=activeTeams(db).map(t=>{
     const R=db.regions[t.region],payrollBasis=financeSeasonPayroll(db,t,w);
@@ -313,6 +304,7 @@ function closeFinances(db,w,rng,ev){
       ev(`장기 재정난으로 구단 매각: ${old} → ${row.t.name} (연속 적자, 신규 구단주 자금 투입 ${money(f.cash-before)})`);
     }
   }
+  w.financeClosedYear=w.year;
 }
 
 // 계약 만료 · 재계약 · FA 시장

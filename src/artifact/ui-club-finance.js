@@ -2,10 +2,10 @@
 function clubFinanceModel(db=DB,tid=managedTeamId(db)){
   const ctx=clubBriefContext(db),t=db?.teams?.[tid];
   if(!ctx||t?.active===false||!t?.finance||!managerControlsSquad(db,t))return null;
-  const read=JSON.parse(JSON.stringify(db)),team=read.teams[tid],forecast=financeForecast(read,team),prepaid=financePrepaidSettlement(team),releases=financeReleaseObligations(team),transfer=transferPaymentExposure(team);
+  const read=ownedQueryView(db),team=read.teams[tid],forecast=financeForecast(read,team),prepaid=financePrepaidSettlement(team),releases=financeReleaseObligations(team),transfer=transferPaymentExposure(team);
   return {read,team,forecast,prepaid,releases,transfer,committed:financeCommittedTransferCash(read,team),payroll:payroll(read,team),offers:tid===ctx.t.id&&!team.parent?(read.world.sponsorOffers||[]):[]};
 }
-function clubFinanceStamp(db){const t=managedTeam(db);return JSON.stringify([db.year,db.worldDate,db.world.phase,db.world.manage,db.world.sponsorOffers,t?.sponsor,t?.finance,t?.parent]);}
+function clubFinanceStamp(db){return scoutingReadStamp(db);}
 function sponsorUiCurrent(db,w,slot,render,tid,date,stamp){return DB===db&&db.world===w&&SLOT===slot&&UI_RENDER_ID===render&&managedTeamId(db)===tid&&!SLOT_SWITCHING&&!w.fired&&w.manage==='manual'&&!['pick','initial_roster'].includes(w.phase)&&managedTeam(db)?.active!==false&&!managedTeam(db)?.parent&&db.worldDate===date&&clubFinanceStamp(db)===stamp;}
 function bindSponsorControls(act,allowed=()=>true,root=document){
   const buttons=[...root.querySelectorAll('[data-spon]')];if(!buttons.length)return;
@@ -21,7 +21,7 @@ function bindSponsorControls(act,allowed=()=>true,root=document){
 }
 function clubSponsorProjection(m,id){
   if(m.team.parent||m.team.id!==managedTeamId(m.read)||m.team.sponsor?.until>=m.read.year||!m.offers.some(o=>o.id===id))return null;
-  const read=JSON.parse(JSON.stringify(m.read)),team=read.teams[m.team.id],before=team.sponsor;mSponsor(read,id);
+  const read=ownedQueryView(m.read),team=read.teams[m.team.id],before=team.sponsor;mSponsor(read,id);
   return team.sponsor!==before?{cash:team.finance.cash,forecast:financeForecast(read,team)}:null;
 }
 function clubSponsorTerms(m){
@@ -39,8 +39,10 @@ function renderClubFinanceBriefing(){
 }
 function openClubFinance(tid){
   const ctx=clubBriefContext(),m=clubFinanceModel(DB,tid);if(!m||UI_OVERLAY)return false;
-  const db=DB,w=db.world,slot=SLOT,render=UI_RENDER_ID,date=db.worldDate,stamp=clubFinanceStamp(db),root=document.querySelector('#overlay');let dialog=null;
-  const current=()=>clubBriefCurrent(db,w,slot,render,ctx.t.id)&&UI_OVERLAY===dialog&&db.worldDate===date&&clubFinanceStamp(db)===stamp&&managerControlsSquad(db,db.teams[tid]);
+  const db=DB,w=db.world,slot=SLOT,render=UI_RENDER_ID,date=db.worldDate,root=document.querySelector('#overlay');let dialog=null;
+  // bindSponsorControls owns the data stamp at the actual writer boundary;
+  // keep dialog/squad authority here without serializing the same inputs twice.
+  const current=()=>clubBriefCurrent(db,w,slot,render,ctx.t.id)&&UI_OVERLAY===dialog&&db.worldDate===date&&managerControlsSquad(db,db.teams[tid]);
   const close=()=>{if(UI_OVERLAY===dialog)closeUiOverlay();};
   openUiOverlay({kind:'club-finance',label:'구단 재정 근거·후원',dismissible:true,onDismiss:close,focusSelector:'#brief-finance-close',html:`<div class="ovin"><div class="ovhead"><b>${esc(m.team.name)} 재정 근거·후원</b><button id="brief-finance-close" class="ghost">브리핑으로 돌아가기</button></div>${clubFinanceSummary(m)}${financePanel(m.team,m.read)}${transferPaymentsPanel(m.team,m.read)}${tid===ctx.t.id&&!m.team.parent?clubSponsorTerms(m):'<p class="hint">소유 2군 재정은 확인할 수 있지만 이 화면에서 모구단 후원 계약을 대신 체결하지 않습니다.</p>'}</div>`});dialog=UI_OVERLAY;
   root.querySelector('#brief-finance-close').onclick=close;

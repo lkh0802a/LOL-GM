@@ -1,4 +1,5 @@
-import './verify-squad-draft-recovery-evidence.mjs';
+// Historical squad recovery evidence is audited separately; this acceptance
+// tests the current staged squad editor against the live engine.
 import {runEngineFixture,artifactSources,artifactSource} from './test-harness.mjs';
 await runEngineFixture(String.raw`(()=>{
  const check=(ok,msg)=>{if(!ok)throw Error('SQUAD_STAGING '+msg)};
@@ -50,6 +51,7 @@ await runEngineFixture(String.raw`(()=>{
  const valid={type:'squad.preparation',actor:'manager',parentId:parent.id,assignments:rosterPlanState(db,parent).assignments,roles:{[backup.id]:backup.rosterRole},squads:{[parent.id]:{starters:{...parent.depthChart},tactics:{...parent.tactics}}}};
  const pure=JSON.stringify(db);for(const bad of [
  {...valid,roles:{[backup.id]:'invalid'}},
+ {...valid,squads:{[parent.id]:{...valid.squads[parent.id],training:{intensity:'high',mechanical:100}}}},
  {...valid,squads:{[parent.id]:{...valid.squads[parent.id],tactics:{...parent.tactics,aggression:Infinity}}}},
  {...valid,squads:{[parent.id]:{...valid.squads[parent.id],starters:{...parent.depthChart,MID:'missing-player'}}}},
  {...valid,squads:{[other.id]:valid.squads[parent.id]}}

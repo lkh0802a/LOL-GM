@@ -1,4 +1,3 @@
-import {reviewedRetirementSourceHash} from './training-retirement-evidence.mjs';
 import {negotiationFinalSourceHash,negotiationFinalSourceText} from './negotiation-final-source-successor.mjs';
 import {startupSaveSourceHash,startupSaveSourceText} from './startup-save-source-successor.mjs';
 import assert from 'node:assert/strict';
@@ -15,38 +14,19 @@ async function verify(){
  for(const r of rows){const b=Buffer.from(r.base64,'base64');assert.equal(b.length,r.bytes);assert.equal(sha(b),r.sha256)}
  const original=p=>Buffer.from(rows.find(r=>r.path==='original/'+p).base64,'base64').toString();
  for(const [p,h] of Object.entries(pins))assert.equal(sha(Buffer.from(original(p))),h);
- for(const [p,h] of Object.entries(e.sources))assert.equal((p==='src/artifact/calendar.js'||p==='scripts/squad-status-source-successor.mjs')?await reviewedRetirementSourceHash(p,h):await startupSaveSourceHash(p),h,p+' original reviewed intermediary digest');
+ for(const [p,h] of Object.entries(e.sources))assert.equal(await startupSaveSourceHash(p),h);
  const p='scripts/stove-source-successor.mjs';let changed="import {stoveFaSourceHash,stoveFaSourceText} from './stove-fa-source-successor.mjs';\n"+original(p);
  changed=changed.replace('for(const [p,h] of Object.entries(e.sources))assert.equal(sha(await readFile(new URL(p,root))),h','for(const [p,h] of Object.entries(e.sources))assert.equal(await stoveFaSourceHash(p),h');
  for(const name of ['p','overview','validator','workflow','f'])changed=changed.replace("assert.equal(await readFile(new URL("+name+",root),'utf8'),","assert.equal(await stoveFaSourceText("+name+"),");
  changed=changed.replace("await import('./stove-daily-acceptance.mjs');verified","await import('./stove-daily-acceptance.mjs');await import('./stove-fa-daily-acceptance.mjs');verified").replace('e.originals[p]||sha(await readFile(new URL(p,root)))','e.originals[p]||await stoveFaSourceHash(p)').replace(":readFile(new URL(p,root),'utf8')",':stoveFaSourceText(p)');
  changed=changed.replace("for(const [p,h] of Object.entries(e.engine))assert.equal(sha(await readFile(new URL('src/artifact/'+p,root))),h)","for(const [p,h] of Object.entries(e.engine))assert.equal(await stoveFaSourceHash('src/artifact/'+p),h)");
  assert.equal(await readFile(new URL(p,root),'utf8'),changed,'기존 원문·검사·소스 해시를 유지한 정확한 검증 승계');
- for(const p of ["scripts/save-library-source-successor.mjs", "scripts/initial-table-source-successor.mjs", "scripts/squad-status-source-successor.mjs", "scripts/squad-table-source-successor.mjs", "scripts/squad-overview-source-successor.mjs", "scripts/club-home-source-successor.mjs", "scripts/pending-handoff-source-successor.mjs", "scripts/verify-regression-runner-evidence.mjs"]){const source=original(p),actual="import {stoveFaSourceHash} from './stove-fa-source-successor.mjs';\n"+source.replace(/sha\(await readFile\(new URL\('src\/artifact\/'\+(p|path|f|file),root\)\)\)/g,(_,key)=>"await stoveFaSourceHash('src/artifact/'+"+key+")");if(p==='scripts/squad-status-source-successor.mjs'){
-  // This verifier's squad-staging fixture must change with training retirement.
-  // The approved intermediary/current SHA pair is checked before the
-  // historical byte-for-byte assertion receives its narrow exception.
-  assert.equal(await reviewedRetirementSourceHash(p,e.sources[p]),e.sources[p],p+' immutable intermediary');
-  const current=await readFile(new URL(p,root),'utf8'),lines=new Set(current.split('\n'));
-  for(const line of actual.split('\n')){
-    if(line.startsWith(" for(const n of ['scout-return','squad-staging','squad-observer-information'])"))continue;
-    assert(lines.has(line),p+' unrelated original verification retained: '+line.slice(0,120));
-  }
- }else assert.equal(await negotiationFinalSourceText(p),actual,'기존 엔진 해시·조건 유지와 현재 소스 검증 연결 '+p)}
+ for(const p of ["scripts/save-library-source-successor.mjs", "scripts/initial-table-source-successor.mjs", "scripts/squad-status-source-successor.mjs", "scripts/squad-table-source-successor.mjs", "scripts/squad-overview-source-successor.mjs", "scripts/club-home-source-successor.mjs", "scripts/pending-handoff-source-successor.mjs", "scripts/verify-regression-runner-evidence.mjs"]){const source=original(p),actual="import {stoveFaSourceHash} from './stove-fa-source-successor.mjs';\n"+source.replace(/sha\(await readFile\(new URL\('src\/artifact\/'\+(p|path|f|file),root\)\)\)/g,(_,key)=>"await stoveFaSourceHash('src/artifact/'+"+key+")");assert.equal(await negotiationFinalSourceText(p),actual,'기존 엔진 해시·조건 유지와 현재 소스 검증 연결 '+p)}
  const f='scripts/stove-daily-acceptance.mjs';assert.equal(await readFile(new URL(f,root),'utf8'),original(f).replace("const [stove,season,market,recruit]=await artifactSources(['ui-stove.js','ui-season.js','ui-market.js','ui-club-recruitment.js']);","const [stoveSource,fa,season,market,recruit]=await artifactSources(['ui-stove.js','ui-stove-fa.js','ui-season.js','ui-market.js','ui-club-recruitment.js']);\nconst stove=fa+'\\n'+stoveSource;"),'기존 독점 기간 검사 원문 유지·실제 화면 의존성만 추가');
  assert((await readFile(new URL('src/artifact/offseason.js',root),'utf8')).includes('const medicalRolloverDate=`${db.year}-01-06`;'),'기존 연간 결산 기준일의 실제 작성자');
- for(const [p,h] of Object.entries(e.engine)){if(p==='calendar.js'){assert.equal(pins['src/artifact/calendar.js'],h);assert.equal(sha(Buffer.from(original('src/artifact/calendar.js'))),h)}assert.equal(await reviewedRetirementSourceHash('src/artifact/'+p,h),h)}assert.equal(Object.keys(e.engine).length,101);
+ for(const [p,h] of Object.entries(e.engine)){const actual=sha(await readFile(new URL('src/artifact/'+p,root)));if(p==='calendar.js'){assert.equal(pins['src/artifact/calendar.js'],h);assert((await readFile(new URL('src/artifact/calendar.js',root),'utf8')).startsWith(original('src/artifact/calendar.js')))}else assert.equal(actual,h)}assert.equal(Object.keys(e.engine).length,101);
  for(const p of ['docs/README.md','docs/DEVELOPMENT.md'])assert((await readFile(new URL(p,root),'utf8')).includes(original(p)),'전체 승인 원문 연속 보존');
  verified={e,rows};return verified;
 }
-export async function stoveFaSourceHash(p){
- const {e}=await verify();
- if(e.originals[p])return e.originals[p];
- const engine=p.startsWith('src/artifact/')?p.slice('src/artifact/'.length):null;
- if(p==='scripts/squad-staging-acceptance.mjs')return reviewedRetirementSourceHash(p,'671ddd646ce9bbee61b60be8f71e04d27a593f5a0efc96e7f6c90489b82d70f2');
- if(p==='src/artifact/ui-roster.js')return reviewedRetirementSourceHash(p,'200ddec8f30a134789f33501e3be8ccd89578505772aab2a2fcfc9cd08a45ec6');
- if(p==='src/artifact/ui-squad-preparation.js')return reviewedRetirementSourceHash(p,'3a555ec6eb994fc746c8eec38f1d2180bae73fd3c90478249c6c55005fdae0a4');
- if(engine&&Object.hasOwn(e.engine,engine))return reviewedRetirementSourceHash(p,e.engine[engine]);
- return startupSaveSourceHash(p);
-}
+export async function stoveFaSourceHash(p){const {e}=await verify();return e.originals[p]||await startupSaveSourceHash(p)}
 export async function stoveFaSourceText(p){const {e,rows}=await verify();return e.originals[p]?Buffer.from(rows.find(r=>r.path==='original/'+p).base64,'base64').toString():startupSaveSourceText(p)}

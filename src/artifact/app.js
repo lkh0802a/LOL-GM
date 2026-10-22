@@ -18,7 +18,7 @@ function idb(){return new Promise((res,rej)=>{
   try{
     const r=indexedDB.open(STORAGE_NS,1);
     r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('kv'))r.result.createObjectStore('kv')};
-    r.onsuccess=()=>finish(true,r.result);
+    r.onsuccess=()=>{if(done){try{r.result.close()}catch(e){}return}finish(true,r.result)};
     r.onerror=()=>finish(false,r.error||new Error('IndexedDB open failed'));
     r.onblocked=()=>finish(false,new Error('IndexedDB blocked'));
   }catch(e){finish(false,e)}
@@ -28,10 +28,22 @@ async function idbGet(k){const d=await idb();return new Promise((res,rej)=>{
   const timer=setTimeout(()=>finish(false,new Error('IndexedDB read timeout')),800);
   try{const q=d.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>finish(true,q.result);q.onerror=()=>finish(false,q.error||new Error('IndexedDB read failed'))}catch(e){finish(false,e)}
 })}
-async function idbSet(k,v){const d=await idb();return new Promise((res,rej)=>{
+async function idbSet(k,v,preferred=null){const d=await idb();return new Promise((res,rej)=>{
   let done=false;const finish=(ok,v)=>{if(done)return;done=true;clearTimeout(timer);try{d.close()}catch(e){}ok?res(v):rej(v)};
   const timer=setTimeout(()=>finish(false,new Error('IndexedDB write timeout')),800);
-  try{const tx=d.transaction('kv','readwrite');tx.objectStore('kv').put(v,k);tx.oncomplete=()=>finish(true);tx.onerror=()=>finish(false,tx.error||new Error('IndexedDB write failed'));tx.onabort=()=>finish(false,tx.error||new Error('IndexedDB write aborted'))}catch(e){finish(false,e)}
+  try{const tx=d.transaction('kv','readwrite'),store=tx.objectStore('kv'),read=store.get(k);
+    const fail=e=>{try{tx.abort()}catch(e2){}finish(false,e)};
+    read.onerror=()=>fail(read.error||new Error('IndexedDB checkpoint read failed'));
+    read.onsuccess=()=>{try{
+      const old=read.result,prior=normalSnapshot(k,preferred)?preferred:normalSnapshot(k,old)?old:null;
+      const write=()=>{try{if(prior!==null&&prior!==v)store.put(prior,k+'-checkpoint');store.put(v,k)}catch(e){fail(e)}};
+      if(old!==undefined&&old!==null&&old!==v&&!normalSnapshot(k,old)){
+        const kept=store.get(k+'-damaged');kept.onerror=()=>fail(kept.error||new Error('IndexedDB original read failed'));
+        kept.onsuccess=()=>{try{if(kept.result!==undefined&&kept.result!==null&&kept.result!==old)throw Error('An unreadable original is already preserved');store.put(old,k+'-damaged');write()}catch(e){fail(e)}};
+      }else write();
+    }catch(e){fail(e)}};
+    tx.oncomplete=()=>finish(true);tx.onerror=()=>finish(false,tx.error||new Error('IndexedDB write failed'));tx.onabort=()=>finish(false,tx.error||new Error('IndexedDB write aborted'));
+  }catch(e){finish(false,e)}
 })}
 async function loadDB(key=STORE){
   const invalid=[];
@@ -40,50 +52,78 @@ async function loadDB(key=STORE){
   let stored=null;
   try{stored=localStorage.getItem(key)}catch(e){invalid.push('로컬 저장소 읽기 실패: '+e.message)}
   if(stored!==null&&stored!==undefined){
-    try{return unpackDB(stored)}
+    try{const decoded=unpackDB(stored);SAVE_LAST_ACK={key,raw:stored};return decoded}
     catch(e){invalid.push('로컬 저장소: '+e.message)}
   }
   stored=null;
   try{stored=await idbGet(key)}catch(e){if(!(typeof DIRECT_FILE_PREVIEW!=='undefined'&&DIRECT_FILE_PREVIEW)&&typeof indexedDB!=='undefined')invalid.push('IndexedDB 읽기 실패: '+e.message)}
   if(stored!==null&&stored!==undefined){
-    try{return unpackDB(stored)}
+    try{const decoded=unpackDB(stored);SAVE_LAST_ACK={key,raw:stored};return decoded}
     catch(e){invalid.push('IndexedDB: '+e.message)}
   }
   if(invalid.length)
     throw new Error('저장 데이터를 복원할 수 없습니다. 원본은 삭제하거나 덮어쓰지 않았습니다. '+invalid.join(' / '));
   return buildWorld();
 }
-let saveTimer=null;
+let saveTimer=null,SAVE_PENDING=null,SAVE_STATUS=null,SAVE_LAST_ACK=null;
 // Per-slot write queues keep late IndexedDB completions from overwriting a
 // newer snapshot. All bytes and metadata are frozen before joining the queue.
 const SAVE_QUEUES=new Map();
-function persistWorldSnapshot(db,slot,key){
-  const str=packDB(db),teamId=managedTeamId(db);
+function normalSnapshot(key,raw){if(typeof raw!=='string')return false;if(SAVE_LAST_ACK?.key===key&&SAVE_LAST_ACK.raw===raw)return true;try{unpackDB(raw);return true}catch(e){return false}}
+function currentSaveStatus(){return SAVE_STATUS&&SAVE_STATUS.db===DB&&SAVE_STATUS.slot===SLOT&&SAVE_STATUS.key===STORE?SAVE_STATUS.phase:'idle'}
+function publishSaveStatus(){if(typeof updateSaveStatus==='function')updateSaveStatus()}
+function beginSaveStatus(db,slot,key,phase){const status={db,slot,key,phase};if(DB===db&&SLOT===slot&&STORE===key){SAVE_STATUS=status;publishSaveStatus()}return status}
+function finishSaveStatus(status,ok){if(SAVE_STATUS!==status||DB!==status.db||SLOT!==status.slot||STORE!==status.key)return;SAVEFAIL=!ok;status.phase=ok?'saved':'failed';publishSaveStatus()}
+function persistWorldSnapshot(db,slot,key,status=null){
+  status=status||beginSaveStatus(db,slot,key,'saving');
+  let str;try{str=packDB(db)}catch(e){finishSaveStatus(status,false);throw e}
+  status.date=db.worldDate||String(db.world?.year||db.year||'');status.phase='saving';if(SAVE_STATUS===status)publishSaveStatus();const teamId=managedTeamId(db);
   const meta=JSON.stringify({team:teamId&&db.teams[teamId]?db.teams[teamId].name:'',year:db.world?db.world.year:''});
   const prior=SAVE_QUEUES.get(key)||Promise.resolve(true);
   const next=prior.then(async()=>{
+    let fallback=null,readable=true;try{fallback=localStorage.getItem(key)}catch(e){readable=false}
     try{
-      await idbSet(key,str);
-      try{localStorage.removeItem(key)}catch(e){}
+      await idbSet(key,str,SAVE_LAST_ACK?.key===key?SAVE_LAST_ACK.raw:fallback);
+      if(!readable)return false;
+      const current=localStorage.getItem(key);
+      if(current!==fallback&&current!==str)return false;
+      // An unreadable original cannot override a valid IDB snapshot; retain it.
+      if(current===null||normalSnapshot(key,current)){
+        try{localStorage.removeItem(key)}catch(e){try{if(current!==null&&current!==str)localStorage.setItem(key,str)}catch(e2){return false}}
+      }
     }catch(e){
-      try{localStorage.setItem(key,str)}catch(e2){return false}
+      try{
+        if(!readable||fallback!==null&&!normalSnapshot(key,fallback)||localStorage.getItem(key)!==fallback)return false;
+        if(fallback!==null&&fallback!==str)localStorage.setItem(key+'-checkpoint',fallback);
+        localStorage.setItem(key,str);
+      }catch(e2){return false}
     }
     try{localStorage.setItem(STORAGE_NS+'-meta-'+slot,meta)}catch(e){}
     return true;
   });
   SAVE_QUEUES.set(key,next);
-  next.then(ok=>{if(DB===db&&SLOT===slot)SAVEFAIL=!ok});
+  next.then(ok=>{if(ok)SAVE_LAST_ACK={key,raw:str};finishSaveStatus(status,ok)});
   return next;
 }
 function saveDB(){
   const db=DB,slot=SLOT,key=STORE;
   clearTimeout(saveTimer);
-  saveTimer=setTimeout(()=>{
-    saveTimer=null;
-    try{void persistWorldSnapshot(db,slot,key)}
-    catch(e){if(DB===db&&SLOT===slot)SAVEFAIL=true;console.error('LOL GM save failed',e)}
-  },150);
+  const status=beginSaveStatus(db,slot,key,'pending');
+  SAVE_PENDING={db,slot,key,run:()=>{
+    saveTimer=null;SAVE_PENDING=null;
+    try{return persistWorldSnapshot(db,slot,key,status)}
+    catch(e){finishSaveStatus(status,false);console.error('LOL GM save failed',e);return Promise.resolve(false)}
+  }};
+  saveTimer=setTimeout(SAVE_PENDING.run,150);
 }
+function flushPendingSave(){const pending=SAVE_PENDING;if(!pending)return null;clearTimeout(saveTimer);saveTimer=null;return pending.run()}
+async function saveNow(){
+  if(!DB||SLOT_SWITCHING)return false;
+  const pending=SAVE_PENDING,db=DB,slot=SLOT,key=STORE;
+  if(pending){const result=await flushPendingSave();if(pending.db===db&&pending.slot===slot&&pending.key===key)return result;if(DB!==db||SLOT!==slot||STORE!==key)return false}
+  return persistWorldSnapshot(db,slot,key);
+}
+function saveBeforeBackground(){if(SAVE_PENDING)void saveNow().catch(e=>console.error('LOL GM background save failed',e))}
 async function switchSaveSlot(nextSlot,acceptLoaded=null){
   if(SLOT_SWITCHING||nextSlot===SLOT||!SAVE_SLOTS.includes(nextSlot))
     return {ok:false,error:'이미 슬롯을 전환 중이거나 올바르지 않은 슬롯입니다.'};
@@ -95,7 +135,7 @@ async function switchSaveSlot(nextSlot,acceptLoaded=null){
   if(navigation)navigation.inert=true;
   let switched=false,error='';
   try{
-    clearTimeout(saveTimer);saveTimer=null;
+    clearTimeout(saveTimer);saveTimer=null;SAVE_PENDING=null;
     const saved=await persistWorldSnapshot(DB,SLOT,STORE);
     if(!saved)throw new Error('현재 슬롯 저장에 실패했습니다. 슬롯 전환을 중단했습니다.');
     const key=STORE_BASE+nextSlot;
@@ -137,7 +177,7 @@ const TAC_KO={aggression:'공격성',risk_tolerance:'위험 감수',objective_pr
 // ---------- 시즌 (월드) ----------
 function mySeasonKey(){const w=DB.world,rid=seasonManagedRegion();if(!rid)return null;const ks=Object.values(w.seasons).filter(s=>s.region===rid).sort((a,b)=>(b.split||0)-(a.split||0));return ks.length?ks[0].key:null}
 function curS(){const w=DB.world;if(!SSET.view||!w.seasons[SSET.view])SSET.view=mySeasonKey()||Object.keys(w.seasons)[0];return w.seasons[SSET.view]}
-function sName(s){return DB.competitions[s.comp].name+(s.label?' '+s.label:'')}
+function sName(s){return seasonDisplayCompetition(DB,s).name+(s.label?' '+s.label:'')}
 function nextMine(){
   const w=DB.world,me=managedTeamId(DB);let best=null;
   for(const s of Object.values(w.seasons)){if(s.done)continue;for(const d of s.days.slice(s.cur)){const m=d.matches.find(m=>m.a===me||m.b===me);if(m){if(!best||d.date<best.d.date)best={s,d,m};break}}}
@@ -159,11 +199,10 @@ function viewSeason(){
   const nx=nextMine(), nd=nextDate(DB);
   let right='';
   if(w.phase==='season') right=`<div class="nextm"><span>현재 ${esc(DB.worldDate||'날짜 미정')} · 다음 경기 ${nd?esc(nd):'일정 없음'}</span><b>${T&&nx?`다음 경기 ${esc(nx.d.date)} — vs ${esc(tname(nx.m.a===me?nx.m.b:nx.m.a))} (${esc(sName(nx.s))} · Bo${nx.m.bo})`:T?'내 구단의 예정 경기가 없습니다':nd?`다음 공개 경기 ${esc(nd)}`:'공개 예정 경기가 없습니다'}</b></div>`;
-  else{const last=DB.history.filter(h=>h.year===w.year&&h.intl).slice(-1)[0];right=`<div class="champ"><span>${w.year} ${last?esc(last.compName):''} 우승</span><b>${last?esc(tname(last.champion)):'—'}</b></div>`}
+  else{const last=DB.history.filter(h=>h.year===w.year&&h.intl).slice(-1)[0];right=`<div class="champ"><span>${w.year} ${last?esc(last.compName):''} 우승</span><b>${last?esc(last.championName||last.champion):'—'}</b></div>`}
   return `<section class="seasonhead">
     <div><h2>${w.year} 시즌</h2><p>${T?esc(T.name):managedTeamId(DB)?'관리 구단 확인 필요':'무소속 감독'} · ${seasonManagedRegion()?esc(DB.regions[T.region].leagueName):'지역 정보 없음'}${lgS?' '+esc(lgS.label):''} ${mine&&(mine.w+mine.l)?`${rank}위 (${mine.w}승 ${mine.l}패)`:''} · ${esc(phaseText(w))}</p></div>${right}
   </section>
-  ${SAVEFAIL?'<p class="warn">브라우저 저장 공간이 부족해 진행 상황을 저장하지 못했습니다. 데이터 탭에서 JSON을 복사해 두세요.</p>':''}
   <section class="controls">${controlsFor(w)}<span id="sprog" class="hint" role="status">${esc(seasonProgressNotice())}</span></section>
   ${T?renderClubBriefing():''}
   ${renderTransferEntry()}
@@ -176,12 +215,12 @@ function viewSeason(){
 function chapters(w){
   const cur=curS(), myR=seasonManagedRegion(), open=SSET.chap??w.step;
   return `<div class="chapters">${w.steps.map((st,i)=>{
-    const ss=Object.values(w.seasons).filter(s=>stepOf(DB,s)===i).sort((a,b)=>(b.region===myR)-(a.region===myR)||(a.div||1)-(b.div||1)||(DB.competitions[a.comp].tier==='low')-(DB.competitions[b.comp].tier==='low'));
+    const ss=Object.values(w.seasons).filter(s=>stepOf(DB,s)===i).sort((a,b)=>(b.region===myR)-(a.region===myR)||(a.div||1)-(b.div||1)||(seasonDisplayCompetition(DB,a).tier==='low')-(seasonDisplayCompetition(DB,b).tier==='low'));
     const state=i<w.step||w.phase!=='season'?'done':i===w.step?'now':'next';
     const title=st.kind==='intl'?(DB.worldConfig.internationals.find(x=>x.id===(st.ids||[st.id])[0])||{name:st.label}).name+((st.ids||[]).length>1?' 기간':''):st.label+' 리그';
     const isOpen=i===open;
     return `<section class="chap ${state} ${isOpen?'open':''}"><button class="chaphead" data-chap="${i}" aria-expanded="${isOpen}"><span class="cn">${i+1}장</span><b>${esc(title)}</b><small>${state==='done'?'완료':state==='now'?'진행 중':'예정'}${ss.length?` · 대회 ${ss.length}개`:''}</small></button>
-      ${isOpen&&ss.length?`<div class="chips">${ss.map(s=>{const c=DB.competitions[s.comp];return `<button data-view="${s.key}" aria-pressed="${cur===s}">${esc(c.short)}${c.tier==='low'?' <small>중하위</small>':''}${s.done?' ✓':''}</button>`}).join('')}</div>`:''}
+      ${isOpen&&ss.length?`<div class="chips">${ss.map(s=>{const c=seasonDisplayCompetition(DB,s);return `<button data-view="${s.key}" aria-pressed="${cur===s}">${esc(c.short||c.name||s.comp)}${c.tier==='low'?' <small>중하위</small>':''}${s.done?' ✓':''}</button>`}).join('')}</div>`:''}
       ${isOpen&&!ss.length?'<p class="hint">아직 시작 전입니다.</p>':''}</section>`}).join('')}</div>`;
 }
 function controlsFor(w){
@@ -216,9 +255,11 @@ function renderReport(r){
    </div></section>`;
 }
 
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveBeforeBackground()});
+window.addEventListener('pagehide',saveBeforeBackground);
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>navigateTo(b.dataset.v));
 $('#main').innerHTML='<p class="empty">세계를 불러오는 중…</p>';
-loadDB().then(d=>{DB=d;nav()}).catch(e=>{
+loadDB().then(d=>{DB=d;nav();publishSaveStatus()}).catch(e=>{
   console.error('LOL GM initialization failed',e);
   if(typeof startupBootFailure==='function'){startupBootFailure(e);return}
   $('#main').innerHTML=`<section><h2>게임을 시작하지 못했습니다</h2><p class="warn">${esc(e&&e.message?e.message:'초기화 오류')}</p><p class="hint">저장 데이터 오류가 발생한 경우 원본은 보존됩니다. 브라우저 저장소를 지우지 말고 JSON 백업을 확인해 주세요. 파일 미리보기 접근 오류라면 최신 HTML을 다시 열어 보세요.</p><button class="primary" id="retryboot">다시 시도</button></section>`;

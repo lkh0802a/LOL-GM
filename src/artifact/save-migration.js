@@ -78,6 +78,9 @@ function normalizeRestoredSave(db){
   // Format 2 uses the same runtime object model, but strips derived caches.
   for(const k of SAVE_TRANSIENT_ROOT_FIELDS)delete db[k];
   db.worldConfig.changes='normal';
+  // Normalize future configuration only. Completed/active seasons, brackets,
+  // pending match keys, event-time snapshots and paid statements keep their IDs.
+  normalizeInternationalConfig(db.worldConfig);
   db.metaHistory=unpackMetaHistory(db.metaHistory||[]);
   for(const c of Object.values(db.competitions||{})){
     const r=db.regions?.[c.region];
@@ -103,18 +106,14 @@ function normalizeRestoredSave(db){
   }
   for(const t of Object.values(db.teams)){
     ensureFacilities(t);
-    // Retired manual training fields do not belong to the activity-based model.
+    // Retire the live control, preserving dated activity/usage history.
     delete t.training;
-    delete t.practiceUsage;
-    delete t.practiceDecision;
     ensureClubOwnership(t);
     ensureClubLicense(db,t);
     delete t._pre;
   }
   for(const p of Object.values(db.players)){
     unpackPlayerSaveFields(p);
-    delete p.practiceUsage;
-    delete p.practiceDay;
     ensurePlayerEligibility(p);
   }
   if(saveObject(db.patches)){
@@ -137,5 +136,6 @@ function normalizeRestoredSave(db){
 
 function migrateSaveState(db){
   validateSaveEnvelope(db);
+  for(const s of Object.values(db.world?.seasons||{}))for(const d of s.days||[])for(const m of d.matches||[])if(m.res)m.res=restoreSeriesIdentity(m.res);
   return normalizeRestoredSave(db);
 }

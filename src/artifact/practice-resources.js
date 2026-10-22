@@ -16,6 +16,9 @@ function consumeScrimPractice(db,t,games){
 // Close the unused daily scrim-time window; do not allocate leftover time to
 // fabricated drills or permanent player growth. Actual games own experience.
 function runDailyPractice(db){
+  // Preserve the existing complete occupation-evidence preflight before
+  // any club's daily resource write, even though unused drills are retired.
+  officialBookedTeams(db);
   for(const t of activeTeams(db)){
     const day=practiceDay(db,t);
     if(!day.completed)t.practiceDay={...day,drills:0,remaining:day.remaining,completed:true};

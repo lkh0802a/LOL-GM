@@ -80,7 +80,7 @@ source+=String.raw`(()=>{
     events:inc(),byRegion:{NA:inc(),EU:inc()},
     byCare:{supported:inc(),basic:inc()},
     byAge:{young:inc(),prime:inc(),veteran:inc()},
-    byIntensity:{light:inc(),normal:inc(),high:inc()},
+    byRecoveryPlan:{normal:inc(),light:inc(),rest:inc(),rehab:inc()},
     planDays:{normal:0,light:0,rest:0,rehab:0},
     burnoutExposure:exposure(),byOperator:{manager:exposure(),ai:exposure()},
     peakLoad:0,saves:0};
@@ -129,10 +129,9 @@ source+=String.raw`(()=>{
         }
       }
     }
-    // Only the owned club's explicitly selected training intensity can be
-    // pinned; rival clubs retain the live AI recommendation each day.
-    const managedIntensity=k===0?'high':'light';
-    db.teams[owner.id].training.intensity=managedIntensity;
+    // Owned healthy athletes use an explicit recovery plan; rivals retain
+    // their independent live auto-rest and medical decisions.
+    const managedPlan=k===0?'normal':'light';
     const started=db.worldDate;
     let lastDate=started,days=0,official=0,blocks=0,ints=0,saves=0,
       dailyRegions={NA:0,EU:0},maxLoad=0,seasonEvents=inc(),
@@ -146,6 +145,9 @@ source+=String.raw`(()=>{
         'calendar moved backwards within a multistage season');
       // One pre-tick snapshot, taken before recovery, AI rest decisions and
       // the medical lottery. A player is counted exactly once per roster-day.
+      for(const club of activeTeams(db).filter(t=>managerControlsSquad(db,t)))
+        for(const id of club.roster||[]){const p=db.players[id];if(p&&!p.retired)
+          p.medicalPlan=p.medical?.daysLeft>0||p.medicalResidual?.daysLeft>0?'auto':managedPlan}
       const before=new Map();
       for(const t of activeTeams(db))for(const id of t.roster){
         const p=db.players[id];
@@ -163,21 +165,20 @@ source+=String.raw`(()=>{
       lastDate=date;days++;
       const participants=activeTeams(db);
       for(const t of participants){
-        const eligibleCare=ensureFacilities(t).recovery>=4?'supported':'basic',
-          intensity=t.training?.intensity||'normal';
-        assert(['normal','high','light'].includes(intensity),'invalid actual training mode');
+        const eligibleCare=ensureFacilities(t).recovery>=4?'supported':'basic';
         dailyRegions[t.region]++;
         for(const id of t.roster){
           const p=db.players[id];
           if(!p||p.retired)continue;
           const event=(p.careerEvents||[]).at(-1);
           const evt=event?.type==='medical_start'&&event.date===date?event:null;
+          const plan=p.medicalPlanDate===date?p.medicalDayPlan:medicalPlanFor(db,p);
+          assert(['normal','light','rest','rehab'].includes(plan),'invalid actual recovery plan');
           const careRow=grand.byCare[eligibleCare],
             ageRow=grand.byAge[ageGroup(p)],
-            trainRow=grand.byIntensity[intensity];
+            planRow=grand.byRecoveryPlan[plan];
           for(const row of [grand.events,grand.byRegion[t.region],
-            careRow,ageRow,trainRow,seasonEvents])add(row,p,evt);
-          const plan=p.medicalPlanDate===date?p.medicalDayPlan:medicalPlanFor(db,p);
+            careRow,ageRow,planRow,seasonEvents])add(row,p,evt);
           if(grand.planDays[plan]!==undefined)grand.planDays[plan]++;
           // An emergency FA may be legally registered during this very tick.
           // Count the athlete-day, but never invent a preceding lottery draw.
@@ -285,7 +286,7 @@ source+=String.raw`(()=>{
       unavailablePlayerDays:seasonEvents.unavailableDays,
       maxMedicalLoad:Math.round(maxLoad*10)/10,
       medicalExpenses:Math.round(medicalExpenses*1000)/1000,
-      saves,yearAfterOffseason:db.year,managedIntensity,
+      saves,yearAfterOffseason:db.year,managedPlan,
       weightedFacilityBands:['basic','supported']});
   }
   const observed=grand.burnoutExposure;
@@ -298,9 +299,9 @@ source+=String.raw`(()=>{
     assert(grand.byAge.veteran.days>1500&&
       grand.byAge.young.days>2000&&grand.byAge.prime.days>2000,
       'veteran/prime/youth age cohorts not all represented');
-    assert(grand.byIntensity.light.days>0&&
-      grand.byIntensity.normal.days>0&&grand.byIntensity.high.days>0,
-      'training intensity distribution did not span all three modes');
+    assert(grand.byRecoveryPlan.light.days>0&&
+      grand.byRecoveryPlan.normal.days>0&&grand.byRecoveryPlan.rest.days>0,
+      'actual recovery plans did not cover normal/light/rest');
     assert(grand.events.injury+grand.events.illness+grand.events.burnout>=1,
       'no medical incidents in a substantial observed real-calendar sample');
     assert(observed.playerDays===grand.events.days&&
@@ -317,7 +318,7 @@ source+=String.raw`(()=>{
       grand.byOperator.ai.playerDays>0,
       'manager/AI medical workload exposure is not partitioned correctly');
     assert(['normal','light','rest','rehab'].every(plan=>
-      grand.planDays[plan]===observed[plan]),
+      grand.byRecoveryPlan[plan].days===grand.planDays[plan]&&grand.planDays[plan]===observed[plan]),
       'medical plan exposure counts contradict the previously measured plans');
   }
   const eventRate=row=>Math.round((row.injury+row.illness+row.burnout)/
@@ -340,7 +341,7 @@ source+=String.raw`(()=>{
       burnout:grand.events.burnout,unavailableDays:grand.events.unavailableDays
     },eventsPer100PlayerYears:combinedRate,
     byRegion:buckets(grand.byRegion),byFacility:buckets(grand.byCare),
-    byAge:buckets(grand.byAge),byIntensity:buckets(grand.byIntensity),
+    byAge:buckets(grand.byAge),byRecoveryPlan:buckets(grand.byRecoveryPlan),
     recoveryPlans:grand.planDays,maxMedicalLoad:grand.peakLoad,
     burnoutExposure:{athleteDays:observed.playerDays,
       healthyDays:observed.healthyDays,sameDayRegistrations:observed.sameDayRegistrations,

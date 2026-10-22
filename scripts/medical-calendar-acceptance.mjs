@@ -1,7 +1,7 @@
 // D02-B8 + post-B10.1: real calendar, scheduled scrim and official-match
 // multi-season audit. B10.1 already measures dense 2/3-split single-season
 // burnout exposure; this file verifies the same live odds across consecutive
-// seasons and deliberately different manager training policies.
+// seasons and deliberately different manager recovery plans.
 // Distinct from synthetic daily exposure in medical-balance-acceptance.mjs.
 // Full engine dates and matches are advanced without interactive coach draft UI.
 import {readFile,writeFile} from 'node:fs/promises';
@@ -51,7 +51,7 @@ source+=String.raw`(()=>{
     totalInjury=0,totalIllness=0,totalBurnout=0,totalAbsences=0,
     totalSaves=0,totalMedicalWages=0;
   for(const seed of seeds){
-    const managedIntensity=seed===allSeeds[0]?'high':'light';
+    const managedPlan=seed===allSeeds[0]?'normal':'light';
     const cfg=defaultWorldConfig();
     cfg.regions=[regionCfg('NA',{teams:10,splits:1,legs:1,regularBo:1,
       playoffBo:1,playoffTake:4,format:'rr_po',div2:false,system:'franchise'})];
@@ -61,7 +61,6 @@ source+=String.raw`(()=>{
     startCareer(db,teamId,seed);
     autoBuildInitialSquad(db,coach,new RNG(seed,'initial-squad'),6);
     finalizeInitialRosters(db);
-    db.teams[teamId].training.intensity=managedIntensity;
     const initialRoster=activeTeams(db).length;
     ok(db.world.phase==='season'&&initialRoster===10,
       'real season bootstrap failed for '+seed);
@@ -69,8 +68,7 @@ source+=String.raw`(()=>{
       const year=2027+cycle;
       ok(db.year===year&&db.world.year===year,
         'unexpected season year after offseason handoff');
-      db.teams[teamId].training.intensity=managedIntensity;
-      const seasonExposure=exposure();
+        const seasonExposure=exposure();
       const carryIn=Object.values(db.players).filter(p=>p.team&&!p.retired);
       const carryInLoad9=carryIn.filter(p=>(p.medicalLoad||0)>=9).length;
       const carryInOverload14=carryIn.filter(p=>(p.medicalOverloadDays||0)>=14).length;
@@ -83,6 +81,11 @@ source+=String.raw`(()=>{
         const date=nextCalendarDate(db);
         if(date===null){advanceStep(db);continue}
         ok(date.slice(0,4)===String(year),'calendar crossed seasons prematurely');
+        // Only the current manager's healthy roster receives this explicit
+        // normal/light plan. Injured athletes keep the real auto rehab path.
+        for(const club of activeTeams(db).filter(t=>managerControlsSquad(db,t)))
+          for(const id of club.roster||[]){const p=db.players[id];if(p&&!p.retired)
+            p.medicalPlan=p.medical?.daysLeft>0||p.medicalResidual?.daysLeft>0?'auto':managedPlan}
         const before=new Map();
         for(const t of activeTeams(db))for(const id of t.roster||[]){
           const p=db.players[id];if(!p||p.retired)continue;
@@ -186,7 +189,7 @@ source+=String.raw`(()=>{
       totalBurnout+=burnout;totalAbsences+=absences;
       runs.push({seed,year,days,official,aiScrims:realScrims,
         actualScrimBlocks:scrimBlocks,managedScrimBlocks,managedScrimSets,
-        managedIntensity,playerDays,injury,illness,burnout,absences,
+        managedPlan,playerDays,injury,illness,burnout,absences,
         maxLoad:Math.round(maximumLoad*10)/10,
         carryIn:{load9Players:carryInLoad9,overload14Players:carryInOverload14},
         burnoutExposure:{...seasonExposure,
@@ -220,17 +223,17 @@ source+=String.raw`(()=>{
   if(__MEDICAL_CALENDAR_SHARD===null)ok(totalIllness+totalInjury+totalBurnout>0,
     'medical engine generated no events during live full-calendar seasons');
   if(__MEDICAL_CALENDAR_SHARD===null)ok(
-    runs.filter(x=>x.managedIntensity==='high').length===seasonsPerSeed&&
-    runs.filter(x=>x.managedIntensity==='light').length===seasonsPerSeed,
-    'multi-season audit did not preserve both manager training policies');
+    runs.filter(x=>x.managedPlan==='normal').length===seasonsPerSeed&&
+    runs.filter(x=>x.managedPlan==='light').length===seasonsPerSeed,
+    'multi-season audit did not preserve both manager recovery plans');
   ok(runs.every(x=>exposureOk(x.burnoutExposure)&&
     x.actualScrimBlocks>0&&x.managedScrimSets>0),
     'multi-season burnout/scrim exposure did not survive every season');
   ok(totalAbsences<=totalInjury+totalIllness+totalBurnout,
     'absent athlete count exceeds recorded medical incidents');
   const rate=x=>Math.round(x/totalPlayerDays*365*1000)/10;
-  const byPolicy=Object.fromEntries(['high','light'].map(policy=>{
-    const rs=runs.filter(x=>x.managedIntensity===policy);
+  const byPolicy=Object.fromEntries(['normal','light'].map(policy=>{
+    const rs=runs.filter(x=>x.managedPlan===policy);
     return [policy,{seasons:rs.length,
       athleteDays:rs.reduce((n,x)=>n+x.burnoutExposure.playerDays,0),
       scrimBlocks:rs.reduce((n,x)=>n+x.actualScrimBlocks,0),

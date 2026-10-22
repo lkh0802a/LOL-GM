@@ -12,6 +12,9 @@ const acceptances=[
   'draft-preparation-acceptance.mjs',
   'draft-history-acceptance.mjs',
   'match-history-acceptance.mjs',
+  'historical-identity-acceptance.mjs',
+  'worlds-identity-acceptance.mjs',
+  'ui-projection-acceptance.mjs',
   'match-adjudication-acceptance.mjs',
   'item-purchase-ledger-acceptance.mjs',
   'inventory-defense-acceptance.mjs',
@@ -36,6 +39,8 @@ const acceptances=[
   'club-contract-acceptance.mjs',
   'club-practice-acceptance.mjs',
   'club-scrim-acceptance.mjs',
+  'save-recovery-acceptance.mjs',
+  'save-checkpoint-acceptance.mjs',
   'club-recruitment-acceptance.mjs',
   'shortlist-comparison-acceptance.mjs',
   'takedown-reward-acceptance.mjs',
@@ -82,6 +87,7 @@ const acceptances=[
   'opponent-draft-acceptance.mjs',
   'player-champion-information-acceptance.mjs',
   'observer-player-profile-acceptance.mjs',
+  'observer-information-acceptance.mjs',
   'training-allocation-acceptance.mjs',
   'cohesion-practice-acceptance.mjs',
   'relationship-decisions-acceptance.mjs',
@@ -92,7 +98,14 @@ const acceptances=[
   'region-continuity-acceptance.mjs',
   'club-closure-acceptance.mjs',
   'club-estate-acceptance.mjs',
-  'rune-selection-acceptance.mjs'
+  'rune-selection-acceptance.mjs',
+  'negotiation-final-acceptance.mjs',
+  'official-undo-clock-acceptance.mjs',
+  'system-choice-hash-acceptance.mjs',
+  'draft-staff-profile-acceptance.mjs',
+  'remote-scrim-acceptance.mjs',
+  'scouting-coverage-cost-acceptance.mjs',
+  'scrim-observer-acceptance.mjs'
 ];
 
 const rows=[];
@@ -108,8 +121,8 @@ assert.equal(stats.engineCompiles,1,
   'shared domain runner must compile the engine exactly once');
 assert(stats.cachedArtifacts>=ENGINE_MODULES.length,
   'shared domain runner did not cache the complete engine source');
-assert.equal(stats.contexts,89,
-  'all 89 engine fixtures, including independent inventory-defense and analysis/report coverage, must each receive a fresh VM context');
+assert.equal(stats.contexts,124,
+  'all original 123 engine fixtures plus the scrim-observer fixture (including the remote-scrim and scouting-coverage fixtures), including the original 95 plus 21 world-clock/manual-final fixtures and the complete-graph undo/traversal, exact hash/choice and staff-observation counterexamples, scoped UI projections, Worlds identity, historical identity, observer information, inventory-defense and analysis/report coverage, must each receive a fresh VM context');
 
 console.log('UI_FINANCE_CONTRACTS_RUNNER '+JSON.stringify({
   acceptances:rows.length,
