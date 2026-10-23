@@ -11,13 +11,16 @@ const archive=await readFile(new URL(evidence.archive.path,root));
 const sha=b=>createHash('sha256').update(b).digest('hex');
 assert.equal(sha(archive),evidence.archive.sha256);
 const prior=gunzipSync(archive).toString();assert.equal(sha(prior),evidence.predecessorSha256);
-// User-approved policy successor: only the retired recommendation is removed.
-// Reconstruct and verify the entire original source, retaining its immutable pin.
+// Reconstruct the reviewed retirement and format-options call changes only.
+// Verify the entire original source against its unchanged immutable pin.
 const liveSeason=await readFile(new URL('src/artifact/season.js',root),'utf8');
 const successor='  const scrim=days>=1&&fat<54&&cond>70;return {scrim,next,days,fat,cond};';
 const predecessor="  const intensity=fat>38||cond<84||days<=1?'light':days>=5&&fat<20&&cond>91?'high':'normal';\n  const scrim=days>=1&&fat<54&&cond>70;return {intensity,scrim,next,days,fat,cond};";
 assert.equal(liveSeason.split(successor).length,2,'one reviewed retirement replacement');
-assert.equal(sha(liveSeason.replace(successor,predecessor)),evidence.currentSha256);
+const formatSuccessor='stages:intlStages(it.format,teams,it.bo,it)';
+const formatPredecessor='stages:intlStages(it.format,teams,it.bo)';
+assert.equal(liveSeason.split(formatSuccessor).length,2,'one reviewed format-options call');
+assert.equal(sha(liveSeason.replace(successor,predecessor).replace(formatSuccessor,formatPredecessor)),evidence.currentSha256);
 const start=prior.indexOf('function pendingOfficialUndo(db){'),end=prior.indexOf('\nfunction pendingOfficialSession',start);
 assert(start>=0&&end>start);
 const original=prior.slice(start,end).replace('function pendingOfficialUndo','function priorOfficialUndo');
