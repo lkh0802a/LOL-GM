@@ -123,7 +123,7 @@ function startInternational(db,id,start,taken=new Set()){
   const teams=[];for(let k=0;k<6;k++)for(const l of lists)if(l[k])teams.push(l[k]);
   if(teams.length<4)return false;
   teams.forEach(t=>taken.add(t));
-  db.competitions[id]={id,name:it.name,short:it.short||id,teams,rules:{fearless:true,staffRegistration:it.staffRegistration||null},international:true,tier:it.tier||'top',stages:intlStages(it.format,teams,it.bo)};
+  db.competitions[id]={id,name:it.name,short:it.short||id,teams,rules:{fearless:true,staffRegistration:it.staffRegistration||null},international:true,tier:it.tier||'top',stages:intlStages(it.format,teams,it.bo,it)};
   const s=newSeason(db,id,w.year,`${w.seed}/${w.year}/${id}`,start,id);
   s.key=id;s.label='';s.step=w.step;w.seasons[id]=s;
   // A region can later move or merge. Preserve the participant's event-time
