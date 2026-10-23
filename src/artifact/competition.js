@@ -71,21 +71,32 @@ function addElimRound(db,s,idx,date){
 }
 // 더블 엘리미네이션: 승자조 → (패자조 교차) → 패자조 → … → 최종 결승
 function deRound(db,s,idx,date){
-  const cfg=db.competitions[s.comp].stages[idx], sd=s.stageData[cfg.id]; let pairs,name,br;
+  const cfg=db.competitions[s.comp].stages[idx], sd=s.stageData[cfg.id]; let pairs,name,br,byes=[];
+  const rankedPairs=(teams,initial=false)=>{
+    const order=seedSort(sd,teams);let count=order.length%2;
+    if(initial){let size=1;while(size<order.length)size*=2;count=size-order.length;}
+    byes=order.slice(0,count);return hiLo(order.slice(count));
+  };
   if(sd.ub.length===1&&sd.lb.length===1&&!sd.drop.length){pairs=[[sd.ub[0],sd.lb[0]]];name='최종 결승';br='GF';sd.gf=true}
-  else if(sd.drop.length&&sd.lb.length){pairs=sd.lb.map((t,i)=>[t,sd.drop[i]]).filter(p=>p[1]);name=`패자조 ${sd.round+1}R`;br='LX'}
-  else if(sd.drop.length&&!sd.lb.length){sd.lb=seedSort(sd,sd.drop);sd.drop=[];if(sd.lb.length>=2){pairs=hiLo(sd.lb);name=`패자조 ${sd.round+1}R`;br='L'}else return deRound(db,s,idx,date)}
-  else if(sd.lb.length>=2&&(sd.ub.length<=1||sd.lb.length>sd.ub.length)){pairs=hiLo(seedSort(sd,sd.lb));name=`패자조 ${sd.round+1}R`;br='L'}
-  else {pairs=hiLo(seedSort(sd,sd.ub));name=sd.ub.length===2?'승자조 결승':`승자조 ${sd.round+1}R`;br='U'}
+  else if(sd.drop.length&&sd.lb.length){
+    pairs=sd.lb.map((t,i)=>[t,sd.drop[i]]).filter(p=>p[1]);
+    byes=[...sd.lb.slice(sd.drop.length),...sd.drop.slice(sd.lb.length)];name=`패자조 ${sd.round+1}R`;br='LX';
+  }
+  else if(sd.drop.length&&!sd.lb.length){sd.lb=seedSort(sd,sd.drop);sd.drop=[];if(sd.lb.length>=2){pairs=rankedPairs(sd.lb);name=`패자조 ${sd.round+1}R`;br='L'}else return deRound(db,s,idx,date)}
+  else if(sd.lb.length>=2&&(sd.ub.length<=1||sd.lb.length>sd.ub.length)){pairs=rankedPairs(sd.lb);name=`패자조 ${sd.round+1}R`;br='L'}
+  else {pairs=rankedPairs(sd.ub,sd.round===0);name=sd.ub.length===2?'승자조 결승':`승자조 ${sd.round+1}R`;br='U'}
   const label=`${cfg.name} ${name}`;
   pairs.forEach((pr,i)=>pushDay(s,addDays(date,i),cfg.id,label,[pr],cfg.bestOf));
-  sd.rounds.push({name,label,br,byes:[],pairs});sd.round++;
+  sd.rounds.push({name,label,br,byes,pairs});sd.round++;
 }
 function deAfter(sd,rd,res){
-  const W=res.map(m=>m.res.winner), L=res.map(m=>m.a===m.res.winner?m.b:m.a);
-  if(rd.br==='U'){sd.ub=W;sd.drop=L}
-  else if(rd.br==='LX'){sd.lb=W;sd.drop=[];sd.elim.push(...L)}
-  else if(rd.br==='L'){sd.lb=W;sd.elim.push(...L)}
+  const W=res.map(m=>m.res.winner), L=res.map(m=>m.a===m.res.winner?m.b:m.a),played=new Set(res.flatMap(m=>[m.a,m.b]));
+  // Carry actual unmatched entrants, also for an older in-progress round whose
+  // serialized byes list was empty. Never create a result or a loss for a bye.
+  const carry=teams=>teams.filter(t=>!played.has(t));
+  if(rd.br==='U'){sd.ub=[...carry(sd.ub),...W];sd.drop=L}
+  else if(rd.br==='LX'){sd.lb=[...carry(sd.lb),...carry(sd.drop),...W];sd.drop=[];sd.elim.push(...L)}
+  else if(rd.br==='L'){sd.lb=[...carry(sd.lb),...W];sd.elim.push(...L)}
   else if(rd.br==='GF'){sd.alive=[W[0]];sd.elim.push(L[0])}
 }
 // 스위스: 같은 전적끼리, 재대결 회피
@@ -201,7 +212,7 @@ function leagueStages(R,n,div){
   const rr={id:'regular',name:'정규 시즌',type:'round_robin',legs:Math.max(2,R.legs||2),bestOf:bo,dayGap:[3,4],broadcastWeek:true};
   const po=t=>({id:'playoffs',name:'플레이오프',type:'single_elim',from:'regular',take:t,bestOf:pbo,dayGap:[6,6],firstChoice:'seed'});
   if(div===2)return [rr,po(take)];
-  if(fmt==='rr_de')return [rr,{id:'playoffs',name:'플레이오프',type:'double_elim',from:'regular',take:take>=8&&n>=8?8:take>=6&&n>=8?8:4,bestOf:pbo,dayGap:[4,4]}];
+  if(fmt==='rr_de')return [rr,{id:'playoffs',name:'플레이오프',type:'double_elim',from:'regular',take,bestOf:pbo,dayGap:[4,4]}];
   if(fmt==='groups_po'&&n>=10)return [{...rr,name:'그룹 스테이지',groups:2},po(take)];
   return [rr,po(take)];
 }
