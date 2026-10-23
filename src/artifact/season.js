@@ -29,7 +29,7 @@ function startWorldSeason(db,myTeam,seed){
   activateLocalChoices(db,db.year);
   const regs=Object.values(db.regions), I=db.worldConfig.internationals, maxK=Math.max(...regs.map(r=>r.splits||1));
   const steps=[];
-  const intlSteps=tm=>{const tops=I.filter(i=>i.timing===tm&&i.tier!=='low').sort((a,b)=>(a.prestige||1)-(b.prestige||1)),lows=I.filter(i=>i.timing===tm&&i.tier==='low');
+  const intlSteps=tm=>{const tops=I.filter(i=>i.timing===tm&&i.tier!=='low').sort(internationalEventPriority),lows=I.filter(i=>i.timing===tm&&i.tier==='low');
     const out=tops.map(i=>({kind:'intl',ids:[i.id],label:i.name}));
     if(lows.length){if(out.length){const L=out[out.length-1];L.ids.push(...lows.map(i=>i.id));L.label+=` · ${lows.map(i=>i.name).join(' · ')}`}else out.push({kind:'intl',ids:lows.map(i=>i.id),label:lows.map(i=>i.name).join(' · ')})}
     return out};
@@ -99,13 +99,17 @@ function placements(db,s){
 function regionPower(db,R){const h=(db.global&&db.global.power||{})[R.id];return h!==undefined?h:R.strength}
 function teamStrength(db,tid){const t=db.teams[tid];return avg(ROLES.map(r=>{const p=starterFor(db,t,r);return p?playerRoleRating(p,r):40}))}
 function startInternational(db,id,start,taken=new Set()){
+  const rollback=pendingOfficialUndo(db),previousTaken=[...taken];let committed=false;
+  try{
   normalizeInternationalConfig(db.worldConfig);
   id=canonicalInternationalId(id);
   const w=db.world, it=db.worldConfig.internationals.find(x=>x.id===id); if(!it)return false;
   // A resumed old bracket retains its original key/seed and must not be
   // replaced by a second canonical bracket in the same season.
   if(Object.values(w.seasons||{}).some(s=>s.year===w.year&&canonicalInternationalId(s.comp)===id))return false;
-  const regs=Object.values(db.regions).filter(R=>!it.zone||(INTL_ZONES[it.zone]||[]).includes(R.id)).sort((a,b)=>regionPower(db,b)-regionPower(db,a));
+  const presetEntries=presetInternationalEntries(db,it,taken);
+  const legacyExcluded=presetEntries?null:internationalEntryExclusions(db,it,taken);
+  const regs=presetEntries?[]:Object.values(db.regions).filter(R=>!it.zone||(INTL_ZONES[it.zone]||[]).includes(R.id)).sort((a,b)=>regionPower(db,b)-regionPower(db,a));
   const topSlots=R=>{const top=db.worldConfig.internationals.find(x=>x.tier!=='low'&&x.timing===it.timing&&x.entry==='slots');return top?Math.max(1,Math.ceil(R.slots*(top.ratio||1))):R.slots};
   const lists=regs.map(R=>{
     if(it.entry==='champions'){
@@ -116,11 +120,11 @@ function startInternational(db,id,start,taken=new Set()){
     }
     if(it.entry==='slots')return regionPlacements(db,R).slice(0,Math.max(1,Math.ceil(R.slots*(it.ratio||1))));
     const per=(it.per||2)*(regs.length<=2?2:1);
-    if(it.entry==='div2'&&R.div2){const s=[3,2,1].map(sp=>w.seasons[R.short+'2-'+sp]).find(s=>s&&s.done);if(s)return placements(db,s).filter(t=>!taken.has(t)).slice(0,per)}
+    if(it.entry==='div2'&&R.div2){const s=[3,2,1].map(sp=>w.seasons[R.short+'2-'+sp]).find(s=>s&&s.done);if(s)return placements(db,s).filter(t=>!legacyExcluded.has(t)).slice(0,per)}
     // 'next' (또는 하부 리그 없는 지역): 상위 대회 진출권 바로 다음 순위부터, 같은 기간 다른 대회에 이미 나간 팀은 건너뜀
-    return regionPlacements(db,R).slice(topSlots(R)).filter(t=>!taken.has(t)).slice(0,per);
-  }).map(l=>l.filter(t=>!taken.has(t)));
-  const teams=[];for(let k=0;k<6;k++)for(const l of lists)if(l[k])teams.push(l[k]);
+    return regionPlacements(db,R).slice(topSlots(R)).filter(t=>!legacyExcluded.has(t)).slice(0,per);
+  }).map(l=>l.filter(t=>!legacyExcluded.has(t)));
+  const teams=presetEntries||[];for(let k=0;k<6;k++)for(const l of lists)if(l[k])teams.push(l[k]);
   if(teams.length<4)return false;
   teams.forEach(t=>taken.add(t));
   db.competitions[id]={id,name:it.name,short:it.short||id,teams,rules:{fearless:true,staffRegistration:it.staffRegistration||null},international:true,tier:it.tier||'top',stages:intlStages(it.format,teams,it.bo,it)};
@@ -129,9 +133,11 @@ function startInternational(db,id,start,taken=new Set()){
   // A region can later move or merge. Preserve the participant's event-time
   // region on the season so archived coefficients never inherit a new region.
   s.internationalRegionSnapshot=Object.fromEntries(teams.map(t=>[t,db.teams[t]?.region||null]));
+  s.internationalPeriodSnapshot={phase:it.phase??null,timing:it.timing??null};
   s.stagesInfo=db.competitions[id].stages.map(x=>x.name).join(' → ');
   news(db,`${it.name} 개막 — ${teams.length}팀 참가 (${INTL_FORMATS[it.format]||it.format})`);
-  return true;
+  committed=true;return true;
+  }finally{if(!committed){rollback();taken.clear();for(const t of previousTaken)taken.add(t)}}
 }
 const INTERNATIONAL_POLICY_DEFAULTS={version:1,windowYears:3,weights:{
   FIRST_STAND:1,MID_SEASON_INVITATIONAL:2,EASTERN_CUP:1,WESTERN_CUP:1,
