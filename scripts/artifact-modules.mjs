@@ -30,6 +30,7 @@ export const ENGINE_MODULES = [
   'timezone-calendar.js',
   'broadcast-calendar.js',
   'competition.js',
+  'competition-international.js',
   'league-aggregation.js',
   'player.js',
   'development.js',
