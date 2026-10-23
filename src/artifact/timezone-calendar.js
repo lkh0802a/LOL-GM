@@ -132,7 +132,7 @@ function appendUtcFixtureDay(s,localDate,stage,label,pairs,bo,timeSlots){
       day={date:utcDay,stage,label,localDate,matches:[]};
       s.days.push(day);
     }
-    day.matches.push({id:`${s.id}_match_${nextId++}`,a,b,bo,res:null,
+    day.matches.push({id:`${s.id}_match_${nextId++}`,a,b,bo:typeof bo==='function'?bo(a,b):bo,res:null,
       time,localDate,timeZone:zone,utcAt,roundLabel:label,
       broadcastSlot:i+1});
     touched.add(day);
