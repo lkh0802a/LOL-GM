@@ -48,9 +48,9 @@ function regionCfg(id,over={}){
   const P=REGION_PRESETS[id]||{name:'새 지역',leagueName:'새 리그',short:'NEW',strength:63,d:{}},d=P.d||{};
   return {id,name:P.name,leagueName:P.leagueName,short:P.short,tier2Short:P.tier2Short||null,strength:P.strength,templates:!!P.templates,tier:P.tier||'emerging',parent:P.parent||null,
     format:'rr_po',div2:false,div2Teams:8,teams:10,splits:2,standingsMode:'independent',legs:2,regularBo:3,playoffTake:6,playoffBo:5,system:'franchise',relegate:1,slots:3,office:null,
-    fearless:true,payScale:null,spendingRule:null,sfrMode:null,sfrTeamShare:0,salaryCap:0,salaryFloor:0,luxuryTax:.5,importLimit:null,importRecruitMinGap:null,rosterRuleProfile:null,marketProfile:null,policyMode:'engine',policyLocks:{},...d,...over,
+    fearless:true,payScale:null,spendingRule:null,sfrMode:null,sfrTeamShare:0,salaryCap:0,salaryFloor:0,luxuryTax:.5,importRecruitMinGap:null,rosterRuleProfile:null,marketProfile:null,policyMode:'engine',policyLocks:{},...d,...over,
     tier2Required:over.tier2Required??true,
-    spendingRule:null,sfrMode:null,sfrTeamShare:0,salaryCap:0,salaryFloor:0,importLimit:null,importRecruitMinGap:null,rosterRuleProfile:null,marketProfile:null,office:null,payScale:null};
+    spendingRule:null,sfrMode:null,sfrTeamShare:0,salaryCap:0,salaryFloor:0,importRecruitMinGap:null,rosterRuleProfile:null,marketProfile:null,office:null,payScale:null};
 }
 function defaultWorldConfig(){return {
   regions:['KR','CN','EU','NA','AP','BR'].map(id=>regionCfg(id)),
@@ -186,7 +186,6 @@ function inferRegionPolicy(db,R){
   R.rosterRuleProfile=reserveOwned?'ENGINE_OWNED_RESERVE':'STANDARD_TIER1_2026';
   const importNeed=clamp((6-locals)/4+(R.strength<66?.25:0)+(fanAvg>50?.15:0),0,1.5),spendPower=clamp((ownerAvg-45)/35+(R.payScale-.55),0,2);
   R.marketProfile=spendPower>=1.15?'high_spend':importNeed>=.75?'open_market':locals>=7?'domestic_development':'balanced';
-  R.importLimit=FIRST_TEAM_NON_LOCAL_LIMIT; // legacy field: 1군 비로컬 상한은 글로벌 2명 고정
   R.reserveImportLimit=clamp(Math.round(1+importNeed+(R.marketProfile==='open_market'?.7:0)),1,4);
   R.importRecruitMinGap=clamp(Math.round(3-importNeed*2-spendPower*.45),0,4);
   const pressure=n>=8&&disp>=2.65&&ownerAvg>=52;

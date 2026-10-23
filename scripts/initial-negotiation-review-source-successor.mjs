@@ -1,3 +1,4 @@
+import {reviewedLegacyWorldHash} from './legacy-import-limit-evidence.mjs';
 import {negotiationFinalSourceHash,negotiationFinalSourceText} from './negotiation-final-source-successor.mjs';
 import {negotiationSummarySourceHash,negotiationSummarySourceText} from './negotiation-summary-source-successor.mjs';
 import assert from 'node:assert/strict';
@@ -21,7 +22,7 @@ async function verify(){
  assert.equal(await negotiationFinalSourceText(p),expected,'기존 원문·조건·자료 보존과 현재 소스 검사 승계');
  const workflow=original('.github/workflows/ci.yml').replace('      - name: Upload validation report\n','      - name: 첫 영입 계약 조건 검토\n        run: node scripts/ci-run.mjs initial-negotiation-review -- node scripts/initial-negotiation-review-acceptance.mjs\n\n      - name: Upload validation report\n');
  assert.equal(await negotiationSummarySourceText('.github/workflows/ci.yml'),workflow,'기존 작업·시간 제한 유지');
- assert.equal(Object.keys(e.engine).length,101);for(const [p,h] of Object.entries(e.engine))assert.equal(sha(await readFile(new URL('src/artifact/'+p,root))),h,p+' 기존 엔진 불변');
+ assert.equal(Object.keys(e.engine).length,101);for(const [p,h] of Object.entries(e.engine))assert.equal(await reviewedLegacyWorldHash('src/artifact/'+p,h),h,p+' 기존 엔진 불변');
  for(const p of ['docs/README.md','docs/DEVELOPMENT.md'])assert((await readFile(new URL(p,root),'utf8')).includes(original(p)),'전체 승인 원문 연속 보존');
  verified={e,rows};return verified;
 }

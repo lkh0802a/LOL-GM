@@ -51,7 +51,8 @@ source += `
     assert(Object.keys(db.patch.itemDefs||{}).length===254,'item snapshot count drift');
     assert(Object.keys(db.patch.runeDefs||{}).length===62,'rune snapshot count drift');
     assert(activeTeams(db).every(t=>(t.roster||[]).length===0),'first-season rosters must start blank');
-    assert(Object.values(db.regions).every(R=>R.importLimit===2),'first-team non-local cap drift');
+    assert(activeTeams(db,null,1).every(t=>nonLocalLimitForTeam(db,t)===FIRST_TEAM_NON_LOCAL_LIMIT),'first-team non-local cap drift');
+    assert(Object.values(db.regions).every(R=>!Object.hasOwn(R,'importLimit')),'obsolete region importLimit persisted');
     assert(STAFF_DEPT_LIMITS.coach===9&&STAFF_DEPT_LIMITS.analyst===4&&STAFF_DEPT_LIMITS.scout===6,'staff department caps drift');
   });
 
