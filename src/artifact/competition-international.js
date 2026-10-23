@@ -9,7 +9,10 @@ function intlStages(fmt,teams,bo,opt={}){
   // D-032: these event formats have their own group and advancement contract.
   // Participant qualification remains owned by startInternational.
   const eventGroup=(groups,legs)=>grp(groups,{legs:opt.groupLegs||legs,bestOf:Math.max(3,opt.groupBo||3)});
-  if(fmt==='msi_swiss_de'&&n===16)return [sw({bestOf:1,decidingBo:3}),de('groups',8)];
+  if(fmt==='msi_swiss_de'){
+    if(n!==16)throw new Error(`MSI 스위스는 승인된 16팀 구성이 필요합니다 (현재 ${n}팀).`);
+    return [sw({bestOf:1,decidingBo:3}),de('groups',8)];
+  }
   if(fmt==='first_stand'||fmt==='open_groups')return [eventGroup(2,1),ko('groups',Math.min(8,n))];
   if(fmt==='masters_groups')return [eventGroup(4,2),ko('groups',Math.min(8,n))];
   if(fmt==='regional_cup')return [eventGroup(2,2),ko('groups',Math.min(4,n))];
