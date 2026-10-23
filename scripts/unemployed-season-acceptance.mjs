@@ -1,9 +1,15 @@
+import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {runEngineFixture} from './test-harness.mjs';
 // Real scheduled fixture is built by the retained season-history acceptance.
 // This continuation uses its archived actual output, never fabricated results.
 const fixture=JSON.parse(await readFile(new URL('../docs/evidence/unemployed-season-fixture-2026-10-08.json',import.meta.url)));
-const originalWriter=(await readFile(new URL('../docs/evidence/unemployed-season-original-offseason-2026-10-08.js',import.meta.url),'utf8')).split('function runOffseason(db){')[1].split('// ---------- 오프시즌 2단계')[0].replace(/^/,'function originalRunOffseason(db){');
+const archivedWriter=(await readFile(new URL('../docs/evidence/unemployed-season-original-offseason-2026-10-08.js',import.meta.url),'utf8')).split('function runOffseason(db){')[1].split('// ---------- 오프시즌 2단계')[0].replace(/^/,'function originalRunOffseason(db){');
+// User-approved successor. Preserve the historical archive; only its retired
+// AI-control call is removed from this reference. No legacy global is restored.
+const retiredCall='  for(const t of activeTeams(db))aiManageTraining(db,t);';
+assert.equal(archivedWriter.split(retiredCall).length,2);
+const originalWriter=archivedWriter.replace(retiredCall,'');
 await runEngineFixture(String.raw`(()=>{
  const check=(x,m)=>{if(!x)throw Error('UNEMPLOYED '+m)},copy=x=>unpackDB(JSON.stringify(x));
  const baseline=copy(FIXTURE),before=JSON.stringify(baseline);

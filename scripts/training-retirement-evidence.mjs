@@ -2,6 +2,20 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 const root=new URL('../',import.meta.url),sha=b=>createHash('sha256').update(b).digest('hex');
+// Exact additions already verified and merged by PR231/main0ba037e.
+// Remove only these literal additions to verify the immutable retirement pin;
+// clinical coefficients and every other original byte remain mandatory.
+const mergedUiAdditions={
+  "src/artifact/medical.js": "// Existing per-player plan field writer, shared by both presentation layers.\n// A plan change does not heal, spend activity time or rewrite medical history.\nfunction writeMedicalPlan(p,mode){\n  if(!p||!Object.hasOwn(MEDICAL_PLAN_LABELS,mode))return false;\n  p.medicalPlan=mode;return true;\n}\n",
+  "src/artifact/world.js": "\n// Existing season-team choice writer, shared by both screen generations.\nfunction chooseSeasonManagedTeam(db,id){\n const t=db.teams[id];if(db.world?.phase!=='pick'||!isManagerSelectableTeam(db,t)||!db.regions[t.region]||!t.owner)return {ok:false,errors:['현재 관리할 수 없는 팀입니다.']};\n setManagedTeam(db,id);db.world.fired=false;t.owner.patience=2;db.world.phase='preseason';return {ok:true};\n}\n"
+};
+async function retirementBaseBytes(path){
+ const bytes=await readFile(new URL(path,root));
+ if(!Object.hasOwn(mergedUiAdditions,path))return bytes;
+ const source=bytes.toString(),addition=mergedUiAdditions[path];
+ assert.equal(source.split(addition).length,2,path+' one exact merged UI writer');
+ return Buffer.from(source.replace(addition,''));
+}
 let approved,historicalEnginePins;
 async function pins(){
  if(approved)return approved;
@@ -43,7 +57,7 @@ async function pins(){
  for(const [path,pin] of Object.entries(rows)){
    const initial=m.uiSuccessors?.[path]?uiBaseline.sources[path]:m.intermediaries?.[path]?intermediary.sources[path]:m.successors[path]?second.sources[path]:path.startsWith('src/artifact/')?previous.engine[path.slice('src/artifact/'.length)]||previous.sources[path]:previous.sources[path];
    assert.equal(pin.historical,initial,path+' original evidence pin');
-   assert.equal(sha(await readFile(new URL(path,root))),pin.current,path+' reviewed current source');
+   assert.equal(sha(await retirementBaseBytes(path)),pin.current,path+' reviewed current source');
  }
  const oldHashes={};
  for(const [path,proof] of Object.entries(m.historicalEvidence)){

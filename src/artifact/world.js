@@ -302,3 +302,9 @@ function validateConfig(cfg){
   for(const it of cfg.internationals) if(shorts.has(it.id)||shorts.has(it.short))errs.push(`${it.name}: 리그 약칭과 겹칩니다`);
   return errs;
 }
+
+// Existing season-team choice writer, shared by both screen generations.
+function chooseSeasonManagedTeam(db,id){
+ const t=db.teams[id];if(db.world?.phase!=='pick'||!isManagerSelectableTeam(db,t)||!db.regions[t.region]||!t.owner)return {ok:false,errors:['현재 관리할 수 없는 팀입니다.']};
+ setManagedTeam(db,id);db.world.fired=false;t.owner.patience=2;db.world.phase='preseason';return {ok:true};
+}

@@ -247,7 +247,7 @@ function bindSeasonTeamChoice(){
     if(!current())return;
     const id=$('#pickteam').value,t=DB.teams[id];
     if(!isManagerSelectableTeam(DB,t)||!DB.regions[t.region]||!t.owner){$('#pickmsg').textContent='현재 관리할 수 없는 팀입니다.';return}
-    setManagedTeam(DB,id);DB.world.fired=false;t.owner.patience=2;DB.world.phase='preseason';SSET.view=null;SEASON_CHOICE_RETURN=null;saveDB();nav();$('#snew')?.focus();
+    const result=chooseSeasonManagedTeam(DB,id);if(!result.ok){$('#pickmsg').textContent=result.errors.join(' · ');return}SSET.view=null;SEASON_CHOICE_RETURN=null;saveDB();nav();$('#snew')?.focus();
   };
   if($('#pickcancel'))$('#pickcancel').onclick=()=>{
     if(!current())return;const r=seasonChoiceReturnCurrent();if(!r)return;

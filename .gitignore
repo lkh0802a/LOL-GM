@@ -3,3 +3,6 @@ dist/
 .DS_Store
 *.log
 ci-results/
+
+# Local new-design assembly; publication replaces the one existing game.
+/ui-v2.html

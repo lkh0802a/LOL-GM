@@ -1,0 +1,17 @@
+{
+  "predecessorPublicCommit": "a5cc905cb23160e8505b9b479b9b098796df7a96",
+  "archive": {
+    "path": "docs/evidence/draft-staff-profile-2026-10-17.originals.json.gz",
+    "sha256": "81b9bfce77b225aab7590e1476793504838526a070d74ddb6121b96251307e80",
+    "bytes": 9161
+  },
+  "originals": {
+    "staff.js": "16484fd92f9a00db824a48196bb7a8a3c65f7f14a8767decfee12bd93f2c067a",
+    "draft-analysis.js": "f68f88b632819d268183f2714b672e7845d51d2b13905eda51bdcd8af249fb9b"
+  },
+  "sources": {
+    "src/artifact/staff.js": "3b1d0181e55b10d8596741b35c0e25508c5b772c5f4d258a1a2a9ddbb58cbacf",
+    "src/artifact/draft-analysis.js": "2d4455b73e19d6b8f08f078722e26d4a37ab4ec5c6ab8d9cea4193ce0511d9f5"
+  },
+  "meaning": "Request only consumed current staff fields; full original formulas and archived observation remain the independent oracle. No observation result or visibility changes."
+}

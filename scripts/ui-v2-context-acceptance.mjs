@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {runEngineFixture} from './test-harness.mjs';
+const sources=await Promise.all(['state','market','contracts','views'].map(p=>readFile(new URL('../src/ui-v2/'+p+'.js',import.meta.url),'utf8')));
+const result=await runEngineFixture(String.raw`(()=>{
+ const check=(x,m)=>{if(!x)throw Error('UI_V2_CONTEXT '+m)};
+ const cfg=defaultWorldConfig();cfg.regions=[regionCfg('KR',{teams:8,div2:true})];cfg.internationals=[];
+ const db=buildWorld(cfg),team=activeTeams(db,'KR',1)[0];startCareer(db,team.id,'ui-v2-context');V2.db=db;V2.target=team.id;V2.section='market';V2.tab='선수 검색';
+ const squads=setupTeamsForManager(db);check(squads.length>1,'실제 산하 선수단');const reserve=squads.find(t=>t.id!==team.id),before=JSON.stringify(db),guard=v2Guard();
+ v2ChooseSquad(reserve.id);check(v2Target().id===reserve.id&&!guard(),'수동 문맥 변경·옛 입력 거절');check(JSON.stringify(db)===before,'문맥 선택은 게임 작성 아님');
+ const saved=JSON.parse(savedView);check(saved.view.target===reserve.id,'현재 선수단 저장');
+ const valid=V2.target;v2ChooseSquad('missing');check(V2.target===valid&&JSON.stringify(db)===before,'외부 선수단 거절');
+ db.world.manage='ai';v2ChooseSquad(team.id);check(V2.target===valid,'자동 운영 수동 선택 거절');db.world.manage='manual';
+ V2.q=' a ';V2.role='ALL';V2.page=2;window.scrollY=741;v2RememberSearch();V2.pid='detail';V2.page=0;v2RestoreSearch();check(V2.page===2&&V2.q===' a ','상세 진입 문맥');V2.pid=null;v2RestoreSearch();check(V2.returnScroll===741&&V2.page===2,'목록 페이지·스크롤 복귀');
+ V2.tab='관심 선수';v2RestoreSearch();check(V2.page===0,'서로 다른 목록 문맥');V2.tab='선수 검색';v2RestoreSearch();check(V2.page===2,'원래 목록 복귀');
+ V2.target=team.id;v2RestoreSearch();check(V2.page===0,'선수단 변경 뒤 이전 목록 문맥 무효');V2.target=reserve.id;
+ const current=db;V2.db=unpackDB(packDB(db));v2RestoreSearch();check(V2.page===0,'불러오기 뒤 이전 목록 문맥 무효');V2.db=current;
+ // The selected reserve must reach the original evaluation and contract writers.
+ const read=v2ReadView(),pid=Object.values(db.players).find(p=>!p.team&&!p.retired&&initialSignCheck(db,p,reserve).ok)?.id;check(pid,'실제 계약 가능 후보');
+ mInterest(db,pid,'B');scoutPlayers(db,[pid],40,.1*psOf(db,team.region));mEvaluateTarget(db,pid,v2Target().id);check(db.world.recruitment.targets[pid].evaluation.teamId===reserve.id,'산하 선수단 실제 평가');
+ initialStartNegotiation(db,pid,v2Target().id);const n=Object.values(db.world.negotiations).find(n=>n.pid===pid&&n.teamId===reserve.id);check(n&&n.kind==='initial','산하 선수단 실제 협상 작성');
+ const snapshot=packDB(db);v2OrganizationContext();check(packDB(db)===snapshot,'문맥 표시 조회 불변');
+ return {squads:squads.length,contextOnly:true,staleContextRejected:true,invalidAndAutoRejected:true,searchReturn:true,separateLists:true,loadInvalidation:true,actualReserveEvaluation:true,actualReserveNegotiation:true,savedTarget:true,readPure:true};
+})()`,{setupSources:[...sources,`let savedView='';const window={scrollY:0,scrollTo(){}};const localStorage={setItem(k,v){savedView=v}};const document={getElementById(){return {textContent:''}},querySelectorAll(){return []}};function v2Icon(){return ''}function v2Render(){}`],timeout:120000});
+assert(result.actualReserveNegotiation&&result.searchReturn&&result.readPure);
+console.log('UI_V2_CONTEXT_ACCEPTANCE',JSON.stringify(result));

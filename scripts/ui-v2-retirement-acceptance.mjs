@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {runEngineFixture} from './test-harness.mjs';
+const sources=await Promise.all(['state','market','contracts','views','management'].map(p=>readFile(new URL('../src/ui-v2/'+p+'.js',import.meta.url),'utf8')));
+const result=await runEngineFixture(String.raw`(()=>{
+ const check=(x,m)=>{if(!x)throw Error('UI_V2_RETIREMENT '+m)};
+ const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:4,div2:false})];cfg.internationals=[];
+ const db=buildWorld(cfg),t=activeTeams(db,'NA',1)[0];startCareer(db,t.id,'v2-retirement');for(const team of setupTeamsForManager(db))autoBuildInitialSquad(db,team,new RNG('retirement/'+team.id));finalizeInitialRosters(db);V2.db=db;V2.target=t.id;
+ check(typeof normalizeTraining==='undefined'&&typeof advanceRoleConversionPlayer==='undefined','retired APIs exposed');
+ const before=JSON.stringify(db),d=v2Preparation();check(!Object.hasOwn(d.command.squads[t.id],'training')&&JSON.stringify(db)===before,'new UI minted retired state');
+ const forged=v2Copy(d.command);forged.squads[t.id].training={intensity:'normal'};v2ReviewManagement(forged,'검토',[]);check(!V2.managementReview&&JSON.stringify(db)===before,'forged retired input admitted');
+ d.command.squads[t.id].tactics.aggression=37;const expected=v2Copy(db);check(commitWorldAction(expected,v2Copy(d.command)).ok,'canonical preparation refused');v2ReviewManagement(d.command,'검토',[]);check(V2.managementReview&&JSON.stringify(db)===before,'review changed world');check(v2CommitManagement(V2.managementReview).ok&&JSON.stringify(db)===JSON.stringify(expected),'canonical whole-result mismatch');V2.managementReview=null;V2.preparation=null;
+ const p=db.players[t.roster[0]];p.medicalPlan='rest';const attrs=JSON.stringify(t.roster.map(id=>db.players[id]));consumeScrimPractice(db,t,2);runDailyPractice(db);check(t.practiceDay.drills===0&&t.practiceDay.scrim===20&&t.practiceDay.remaining===80&&JSON.stringify(t.roster.map(id=>db.players[id]))===attrs,'unused capacity created player growth');const once=JSON.stringify(db);runDailyPractice(db);check(JSON.stringify(db)===once,'daily duplicate changed state');
+ const live=t,plan=v2Preparation();plan.command.squads[t.id].tactics.aggression=41;v2ReviewManagement(plan.command,'검토',[]);const review=V2.managementReview,all=JSON.stringify(db),world=db.world,player=db.players[p.id],writer=WORLD_ACTION_HANDLERS['squad.preparation'].apply;WORLD_ACTION_HANDLERS['squad.preparation'].apply=(db,c)=>{writer(db,c);throw Error('controlled late failure')};const failed=v2CommitManagement(review);WORLD_ACTION_HANDLERS['squad.preparation'].apply=writer;check(!failed.ok&&JSON.stringify(db)===all&&db.world===world&&db.teams[t.id]===live&&db.players[p.id]===player,'late failure lost values/references');
+ const restored=unpackDB(packDB(db));check(!Object.hasOwn(restored.teams[t.id],'training')&&JSON.stringify(restored.teams[t.id].practiceDay)===JSON.stringify(t.practiceDay),'retired field restored or activity ledger lost');return {canonicalWholeState:true,retiredInputRefused:true,noFreeDrills:true,duplicateInert:true,lateRollbackValuesAndReferences:true,save:true};
+})()`,{setupSources:[...sources,"function v2Icon(){return ''} function v2Render(){};const document={getElementById(){return {textContent:''}}};"],timeout:120000});
+assert(result.canonicalWholeState&&result.save);console.log('UI_V2_RETIREMENT_ACCEPTANCE',JSON.stringify(result));

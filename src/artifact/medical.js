@@ -4,6 +4,12 @@
 
 const MEDICAL_LABELS={wrist:'손목',back:'허리',neck:'목',illness:'질병',burnout:'번아웃'};
 const MEDICAL_PLAN_LABELS={auto:'자동',normal:'정상 활동',light:'제한 활동',rest:'완전 휴식',rehab:'재활'};
+// Existing per-player plan field writer, shared by both presentation layers.
+// A plan change does not heal, spend activity time or rewrite medical history.
+function writeMedicalPlan(p,mode){
+  if(!p||!Object.hasOwn(MEDICAL_PLAN_LABELS,mode))return false;
+  p.medicalPlan=mode;return true;
+}
 // Plans are per-player. The manager may override an owned player's plan;
 // rival clubs decide independently, even after a player is transferred.
 function medicalPlanFor(db,p){
