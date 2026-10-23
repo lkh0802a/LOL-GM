@@ -26,7 +26,7 @@ await runEngineFixture(String.raw`(()=>{
  check(viewSquad()===html,'private preparation/lineup/condition changes public UI');b.tactics=oldTactics;b.training=oldTraining;b.depthChart=oldChart;target.condition=oldState;
  check(JSON.stringify(db.metaHistory)===history,'renderer changed public history');
  // Own organization retains real coaching controls; a reserve coach cannot edit the parent.
- for(const team of [a,reserve]){SQUAD=team.id;SQUAD_EDIT=null;const own=viewSquad();for(const token of ['data-tac=','data-tr=','data-lineup-player=','data-medical-plan=','scrimrequest','sqapply'])check(own.includes(token),'controlled squad missing '+token)}
+ for(const team of [a,reserve]){SQUAD=team.id;SQUAD_EDIT=null;const own=viewSquad();for(const token of ['data-tac=','data-lineup-player=','data-medical-plan=','scrimrequest','sqapply'])check(own.includes(token),'controlled squad missing '+token);check(!own.includes('data-tr=')&&!own.includes('id="trint"'),'retired control exposed')}
  db.manager.teamId=reserve.id;SQUAD=a.id;SQUAD_EDIT=null;const parent=viewSquad();check(parent.includes('공개 로스터')&&!parent.includes('data-tac=')&&!parent.includes('data-official-lineup='),'reserve coach sees parent preparation/control');
  SQUAD=reserve.id;SQUAD_EDIT=null;check(viewSquad().includes('data-tac='),'reserve coaching lost');
  db.world.fired=true;SQUAD_EDIT=null;const firedBefore=JSON.stringify(db),fired=viewSquad();check(!fired.includes('data-tac=')&&!fired.includes('data-tr=')&&!fired.includes('scrimrequest')&&!fired.includes('data-official-lineup=')&&!fired.includes('scoutT'),'fired manager retains controls');
@@ -38,11 +38,12 @@ await runEngineFixture(String.raw`(()=>{
   selectors={'[data-tac]':[tac],'[data-tr]':[train],'[data-lineup-player]':[lineup],'[data-srole]':[role],'[data-medical-plan]':[health]};
  $=q=>elements[q.slice(1)]||null;document={querySelector:$,querySelectorAll:q=>selectors[q]||[]};window={};bindSquad();
  const event={target:{value:'light'},stopPropagation(){}};const untouched=JSON.stringify(db);
- tac.oninput(event);train.oninput(event);lineup.onchange(event);role.onchange(event);health.onchange({target:health});elements.practicefocus.onchange(event);elements.trint.onchange(event);
+ check(!train.oninput&&!elements.practicefocus.onchange&&!elements.trint.onchange,'retired handlers rebound to forged controls');
+ tac.oninput(event);lineup.onchange(event);role.onchange(event);health.onchange({target:health});
  check(SQUAD_EDIT===null&&JSON.stringify(db)===untouched,'crafted foreign controls create editor or mutate world');
  SQUAD=a.id;SQUAD_EDIT=null;bindSquad();const editable=squadEditState(a),key='aggression',prior=a.tactics[key];tac.oninput(event);check(editable.tactics[key]===17&&editable.dirty&&a.tactics[key]===prior,'real tactic handler failed transient edit');
- elements.practicefocus.value='balanced';elements.practicefocus.onchange({target:elements.practicefocus});elements.trint.value='light';elements.trint.onchange({target:elements.trint});train.oninput(event);
- applySquadEdit();if(a.tactics[key]!==17)console.log('APPLY_REASON',MSG);check(a.tactics[key]===17&&a.training.intensity==='light','actual apply did not commit authorized preparation');
+ check(!train.oninput&&!elements.practicefocus.onchange&&!elements.trint.onchange,'retired owned handlers rebound');
+ applySquadEdit();if(a.tactics[key]!==17)console.log('APPLY_REASON',MSG);check(a.tactics[key]===17&&!Object.hasOwn(a,'training'),'actual apply did not commit authorized preparation');
  const pending=squadEditState(a);pending.rosterPlan.assignments[backup.id]=reserve.id;
  SQUAD=reserve.id;const destinationEdit=squadEditState(reserve),destinationHtml=viewSquad();
  check(destinationHtml.includes('data-lineup-player="'+backup.id+'"')&&backup.team===a.id,'incoming player absent from planned roster or moved before apply');
@@ -50,9 +51,9 @@ await runEngineFixture(String.raw`(()=>{
  check(destinationEdit.starters.MID===backup.id,'incoming starter selector rejected planned membership');
  SQUAD=a.id;check(!viewSquad().includes('data-lineup-player="'+backup.id+'"'),'outgoing player retained source lineup control');
  applySquadEdit();check(backup.team===reserve.id&&reserve.depthChart.MID===backup.id,'incoming starter and squad move did not commit together');
- db.world.fired=true;SQUAD_EDIT={teamId:a.id,tactics:{aggression:99}};const deny=JSON.stringify(db);tac.oninput(event);train.oninput(event);applySquadEdit();check(JSON.stringify(db)===deny,'fired crafted apply altered world');db.world.fired=false;SQUAD_EDIT=null;
+ db.world.fired=true;SQUAD_EDIT={teamId:a.id,tactics:{aggression:99}};const deny=JSON.stringify(db);tac.oninput(event);applySquadEdit();check(JSON.stringify(db)===deny,'fired crafted apply altered world');db.world.fired=false;SQUAD_EDIT=null;
  // Supported saves restore the same public boundary and private management controls.
  const packed=packDB(db),restored=unpackDB(packed);DB=restored;SQUAD=b.id;SQUAD_EDIT=null;const publicRestored=viewSquad();check(publicRestored.includes('공개 로스터')&&!publicRestored.includes('data-tac=')&&publicRestored.includes('시장가치 추정'),'restored public boundary lost');
- SQUAD=a.id;SQUAD_EDIT=null;check(viewSquad().includes('value="17"')&&viewSquad().includes('data-tr='),'restored own preparation lost');
+ SQUAD=a.id;SQUAD_EDIT=null;check(viewSquad().includes('value="17"')&&!viewSquad().includes('data-tr=')&&viewSquad().includes('data-lineup-player='),'restored own preparation lost');
  console.log('SQUAD_OBSERVER_INFORMATION_ACCEPTANCE PASS actual renderer/private getters/order/value/invariance/purity/registration/public schedule, own+owned reserve+reserve coach+fired, crafted events+authorized apply, modern save');
 })();`,{timeout:60000,setupSources:["var SLOT='1',SLOT_SWITCHING=false,UI_RENDER_ID=1,UI_OVERLAY=null,VIEW='squad';let DB,SQUAD,OPEN_P,SQUAD_EDIT,MSG,SCOUTSET={region:'ALL',role:'ALL',contract:'ALL',competition:'ALL',undervalued:false,q:''};let document,window,$;const esc=x=>String(x).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('\"','&quot;');const tshort=id=>DB.teams[id]?.short||id;function grpAvg(p,g,k=100){return Math.round(avg(ATTR_GROUPS[g].map(a=>obsAttr(DB,p,a,k))))};function nav(){}function navKeepScroll(){}function saveDB(){}",helpers,...(await artifactSources(['ui-club-medical.js','ui-club-practice.js','ui-club-scrim.js','ui-club-recruitment.js','ui-scrim-plans.js','ui-squad-controls.js','ui-squad-status.js','ui-squad-table.js','ui-roster.js','ui-club-briefing.js','ui-club-home.js','ui-squad-preparation.js','ui-manager.js','ui-official-edit.js','ui-registration.js','ui-player.js','ui-player-champions.js','ui-player-loans.js','ui-transfer-terms.js','ui-player-commitments.js','ui-local-service.js','ui-scouting-regions.js']))]});

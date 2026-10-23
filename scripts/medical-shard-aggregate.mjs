@@ -24,9 +24,9 @@ if(type==='regional'){
     raws=reports.map(r=>r.aggregateRaw);
   assert(rows.length===2&&sameSet(rows.map(x=>x.seed),expectedSeeds),
     'regional shard seed coverage changed');
-  assert(rows.find(x=>x.seed===expectedSeeds[0])?.managedIntensity==='high'&&
-    rows.find(x=>x.seed===expectedSeeds[1])?.managedIntensity==='light',
-    'regional shard changed original seed identity/training policy');
+  assert(rows.find(x=>x.seed===expectedSeeds[0])?.managedPlan==='normal'&&
+    rows.find(x=>x.seed===expectedSeeds[1])?.managedPlan==='light',
+    'regional shard changed original seed identity/recovery plan');
 
   const events=sumFields(raws.map(x=>x.events),
     ['days','injury','illness','burnout','unavailableDays']);
@@ -38,8 +38,8 @@ if(type==='regional'){
     key,sumFields(raws.map(x=>x.byAge[key]),
       ['days','injury','illness','burnout','unavailableDays'])
   ]));
-  const byIntensity=Object.fromEntries(['light','normal','high'].map(key=>[
-    key,sumFields(raws.map(x=>x.byIntensity[key]),
+  const byRecoveryPlan=Object.fromEntries(['normal','light','rest','rehab'].map(key=>[
+    key,sumFields(raws.map(x=>x.byRecoveryPlan[key]),
       ['days','injury','illness','burnout','unavailableDays'])
   ]));
   const planFields=['normal','light','rest','rehab'],
@@ -61,8 +61,8 @@ if(type==='regional'){
     'did not cover both medical support levels');
   assert(byAge.veteran.days>1500&&byAge.young.days>2000&&byAge.prime.days>2000,
     'veteran/prime/youth age cohorts not all represented');
-  assert(byIntensity.light.days>0&&byIntensity.normal.days>0&&byIntensity.high.days>0,
-    'training intensity distribution did not span all three modes');
+  assert(byRecoveryPlan.light.days>0&&byRecoveryPlan.normal.days>0&&byRecoveryPlan.rest.days>0,
+    'actual recovery plans did not cover normal/light/rest');
   assert(events.injury+events.illness+events.burnout>=1,
     'no medical incidents in a substantial observed real-calendar sample');
   assert(observed.playerDays===events.days&&
@@ -75,7 +75,7 @@ if(type==='regional'){
     'risk exposure totals or per-eligible-day upper bound are invalid');
   assert(managerDays+aiDays===observed.playerDays&&managerDays>0&&aiDays>0,
     'manager/AI medical workload exposure is not partitioned correctly');
-  assert(planFields.every(plan=>planDays[plan]===observed[plan]),
+  assert(planFields.every(plan=>byRecoveryPlan[plan].days===planDays[plan]&&planDays[plan]===observed[plan]),
     'medical plan exposure counts contradict measured plans');
 
   const eventRate=row=>Math.round((row.injury+row.illness+row.burnout)/
@@ -95,7 +95,7 @@ if(type==='regional'){
       modeledBurnoutEvents:+observed.modeledBurnoutEvents.toFixed(4),
       peakOverloadDays:observed.peakOverloadDays},
     runs:rows.map(x=>({seed:x.seed,officialMatches:x.officialMatches,
-      scrimBlocks:x.scrimBlocks,managedIntensity:x.managedIntensity}))
+      scrimBlocks:x.scrimBlocks,managedPlan:x.managedPlan}))
   }));
 }else{
   const expectedSeeds=['medical-real-calendar-A','medical-real-calendar-B'],
@@ -105,9 +105,9 @@ if(type==='regional'){
   assert(runs.length===expectedSeeds.length*seasonsPerSeed&&
     sameSet([...new Set(runs.map(x=>x.seed))],expectedSeeds),
     'calendar shard seed/season coverage changed');
-  assert(runs.filter(x=>x.seed===expectedSeeds[0]).every(x=>x.managedIntensity==='high')&&
-    runs.filter(x=>x.seed===expectedSeeds[1]).every(x=>x.managedIntensity==='light'),
-    'calendar shard changed original seed identity/training policy');
+  assert(runs.filter(x=>x.seed===expectedSeeds[0]).every(x=>x.managedPlan==='normal')&&
+    runs.filter(x=>x.seed===expectedSeeds[1]).every(x=>x.managedPlan==='light'),
+    'calendar shard changed original seed identity/recovery plan');
 
   const totalMatches=sum(raws,'totalMatches'),
     totalActiveDays=sum(raws,'totalActiveDays'),
@@ -133,9 +133,9 @@ if(type==='regional'){
     'real medical sampling coverage too small');
   assert(totalIllness+totalInjury+totalBurnout>0,
     'medical engine generated no events during live full-calendar seasons');
-  assert(runs.filter(x=>x.managedIntensity==='high').length===seasonsPerSeed&&
-    runs.filter(x=>x.managedIntensity==='light').length===seasonsPerSeed,
-    'multi-season audit did not preserve both manager training policies');
+  assert(runs.filter(x=>x.managedPlan==='normal').length===seasonsPerSeed&&
+    runs.filter(x=>x.managedPlan==='light').length===seasonsPerSeed,
+    'multi-season audit did not preserve both manager recovery plans');
   assert(runs.every(x=>exposureOk(x.burnoutExposure)&&
     x.actualScrimBlocks>0&&x.managedScrimSets>0),
     'multi-season burnout/scrim exposure did not survive every season');
@@ -153,6 +153,6 @@ if(type==='regional'){
     modernSaves:totalSaves,
     medicalWageExpense:Math.round(totalMedicalWages*1000)/1000,
     runs:runs.map(x=>({seed:x.seed,year:x.year,official:x.official,
-      managedIntensity:x.managedIntensity}))
+      managedPlan:x.managedPlan}))
   }));
 }

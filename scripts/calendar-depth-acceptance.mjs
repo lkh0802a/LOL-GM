@@ -125,29 +125,28 @@ const fixture=String.raw`(()=>{
     'processed date marker not retained');
   // Recovery is followed by actual private scrim practice. A club can
   // finish a productive day with higher NET fatigue, despite recuperating.
-  const recovery=4+(staffProfile(t).recovery-50)/45+facilityRecoveryBonus(t),
-    train=trainingIntensity(t);
-  assert(p.fatigue<=startFatigue-recovery+train.fatigue+6*1.2+.01&&
-    p.condition>=75+2.5+train.condition-6*.45-.01,
+  const recovery=4+(staffProfile(t).recovery-50)/45+facilityRecoveryBonus(t);
+  assert(p.fatigue<=startFatigue-recovery+.8+6*1.2+.01&&
+    p.condition>=75+2.5-6*.45-.01,
     'daily recovery was missing from the scrim-inclusive workload');
-  assert(p.roleConversion.trainingDays===1,'no daily role-practice tick');
+  assert((p.roleConversion.trainingDays||0)===0,'retired daily drill advanced role conversion without real activity');
   assert(t.facilities.training===level,'facility benefit activated too early');
   assert(db.patch.id===initialPatch&&db.patches.list.length===oldPatchCount,
     'patch applied before its effective date');
   const previousFatigue=p.fatigue;
   assert(!applyWorldDailyEffects(db,day1.date)&&p.fatigue===previousFatigue&&
-    p.roleConversion.trainingDays===1,'daily effects can be applied twice');
+    (p.roleConversion.trainingDays||0)===0,'daily effects can be applied twice');
   const checkpoint=unpackDB(packDB(db));
   assert(checkpoint.version===15&&checkpoint.saveFormat===2&&
     checkpoint.world.lastDailyTick===day1.date&&
     checkpoint.teams[user.id].facilityProjects.length===1&&
-    checkpoint.players[p.id].roleConversion.trainingDays===1,
+    (checkpoint.players[p.id].roleConversion.trainingDays||0)===0,
     'daily status, construction and role progress not saved');
   for(let i=2;i<=7;i++){
     const oldDate=db.worldDate,r=playWorldDay(db);
     assert(r.advanced&&r.date===addDays(oldDate,1)&&r.played.length===0,
       'skipped an intervening calendar date '+i);
-    assert(p.roleConversion.trainingDays===i,'role conversion trained an incorrect number of days');
+    assert((p.roleConversion.trainingDays||0)===0,'calendar minted role progress without an actual position appearance');
     assert(t.facilities.training===(i<3?level:level+1),
       'facility construction completed on wrong date '+i);
     if(i<5)assert(db.patches.list.length===oldPatchCount,'early ordinary patch');

@@ -13,10 +13,19 @@ async function v2RefreshNativeSaves(){
  const rows=[];for(const slot of SAVE_SLOTS)rows.push(await readSavedGame(slot));
  if(V2.nativeScan!==run)return false;V2.nativeRows=rows;return true;
 }
-function v2RenderNativeSaves(){if(V2.loadRequest){V2.nativeRenderPending=true;return}if(!V2.busy){V2.nativeRenderPending=false;v2Render()}}
+function v2RenderNativeSaves(){
+ if(V2.loadRequest){V2.nativeRenderPending=true;return}
+ if(!V2.busy){
+  V2.nativeRenderPending=false;
+  // Passive discovery must not detach a native file chooser or reset start inputs.
+  const library=!V2.db&&document.getElementById('native-library');
+  if(library?.isConnected){library.outerHTML=v2NativeLibrary();v2BindNativeStorage();return}
+  v2Render();
+ }
+}
 function v2NativeLibrary(){
  const rows=V2.nativeRows;
- return `<section class="panel"><h2>기기에 저장된 게임</h2><p>기존 게임의 구단과 날짜를 확인한 뒤 불러오세요. 새 게임은 빈 저장 위치를 사용합니다.</p><button class="btn btn-outline" id="native-refresh">저장 목록 다시 확인</button>${!rows?'<p>저장소 확인 중</p>':rows.filter(r=>r.state!=='empty').map(r=>`<article class="player-row"><div><strong>저장 ${r.slot} · ${r.state==='saved'?v2Esc(r.summary.name):'확인 필요'}</strong><p>${r.state==='saved'?v2Esc(r.summary.date):'원본을 읽지 못했습니다. 삭제하거나 덮어쓰지 않습니다.'}</p></div>${r.state==='saved'?`<button class="btn btn-outline" data-native-slot="${r.slot}">불러오기</button>`:''}</article>`).join('')||'<p>저장된 게임이 없습니다.</p>'}</section>`;
+ return `<section id="native-library" class="panel"><h2>기기에 저장된 게임</h2><p>기존 게임의 구단과 날짜를 확인한 뒤 불러오세요. 새 게임은 빈 저장 위치를 사용합니다.</p><button class="btn btn-outline" id="native-refresh">저장 목록 다시 확인</button>${!rows?'<p>저장소 확인 중</p>':rows.filter(r=>r.state!=='empty').map(r=>`<article class="player-row"><div><strong>저장 ${r.slot} · ${r.state==='saved'?v2Esc(r.summary.name):'확인 필요'}</strong><p>${r.state==='saved'?v2Esc(r.summary.date):'원본을 읽지 못했습니다. 삭제하거나 덮어쓰지 않습니다.'}</p></div>${r.state==='saved'?`<button class="btn btn-outline" data-native-slot="${r.slot}">불러오기</button>`:''}</article>`).join('')||'<p>저장된 게임이 없습니다.</p>'}</section>`;
 }
 async function v2ChooseEmptyNative(){
  if(!V2.nativeRows)await v2RefreshNativeSaves();

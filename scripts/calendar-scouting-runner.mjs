@@ -6,6 +6,7 @@ const acceptances=[
   'calendar-depth-acceptance.mjs',
   'league-identity-acceptance.mjs',
   'manual-owned-coaching-acceptance.mjs',
+  'training-allocation-acceptance.mjs',
   'office-consultation-acceptance.mjs',
   'international-coefficients-acceptance.mjs',
   'local-policy-acceptance.mjs',

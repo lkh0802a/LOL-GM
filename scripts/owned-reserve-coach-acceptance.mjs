@@ -49,19 +49,20 @@ await runEngineFixture(String.raw`(()=>{
   const parentBefore=JSON.stringify({training:parent.training,tactics:parent.tactics,
     depthChart:parent.depthChart,roles:parent.roster.map(id=>db.players[id].rosterRole)}),
     edit=squadEditState(reserve),key=Object.keys(reserve.tactics)[0];
-  edit.training.intensity='light';edit.tactics[key]=17;
+  check(!Object.hasOwn(edit,'training'),'retired control remains in staged editor');
+  const selected={...edit.starters};[selected.TOP,selected.MID]=[selected.MID,selected.TOP];edit.starters=selected;edit.tactics[key]=17;
   applySquadEdit();
-  check(reserve.training.intensity==='light'&&reserve.tactics[key]===17&&
+  check(!Object.hasOwn(reserve,'training')&&ROLES.every(role=>reserve.depthChart[role]===selected[role])&&reserve.tactics[key]===17&&
     JSON.stringify({training:parent.training,tactics:parent.tactics,depthChart:parent.depthChart,
       roles:parent.roster.map(id=>db.players[id].rosterRole)})===parentBefore,
-    'actual squad apply blocked coaching or altered parent');
+    'actual squad apply blocked coaching or altered parent '+JSON.stringify({MSG,selected,actual:reserve.depthChart,tactic:reserve.tactics[key],parentSame:JSON.stringify({training:parent.training,tactics:parent.tactics,depthChart:parent.depthChart,roles:parent.roster.map(id=>db.players[id].rosterRole)})===parentBefore}));
   SQUAD_EDIT={...squadEditState(reserve),teamId:parent.id};
   const beforeParentBypass=JSON.stringify(db);applySquadEdit();
   check(JSON.stringify(db)===beforeParentBypass,'crafted squad edit altered parent');
   SQUAD_EDIT=null;
   own.medicalPlan='rest';check(medicalPlanFor(db,own)==='rest','reserve recovery override ignored');
   const restored=unpackDB(packDB(db));
-  check(managedTeamId(restored)===reserve.id&&restored.teams[reserve.id].training.intensity==='light',
+  check(managedTeamId(restored)===reserve.id&&!Object.hasOwn(restored.teams[reserve.id],'training')&&ROLES.every(role=>restored.teams[reserve.id].depthChart[role]===selected[role]),
     'coach save restore failed');
   const marketHtml=renderMarket();
   check(marketHtml.includes('모구단')&&!marketHtml.includes('data-release')&&

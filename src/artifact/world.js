@@ -107,7 +107,7 @@ function isManagerSelectableTeam(db,t){
 function managerSelectableTeams(db,rid,div){return activeTeams(db,rid,div).filter(t=>isManagerSelectableTeam(db,t))}
 function genTeam(db,rng,regionId,strength,o={}){
   const on=o.name?{name:o.name,short:o.short}:orgName(db,rng), subs=db.worldConfig.subs||0;
-  const t={id:on.short,name:on.name,short:on.short,region:regionId,division:o.div||1,parent:o.parent||null,active:true,fans:baseFans(strength-4-(o.div===2?15:0),rng),tactics:genTactics(rng),training:defaultTraining(),philosophy:o.parent?'youth':rng.pick(PHILOSOPHIES),roster:[],founded:db.year};
+  const t={id:on.short,name:on.name,short:on.short,region:regionId,division:o.div||1,parent:o.parent||null,active:true,fans:baseFans(strength-4-(o.div===2?15:0),rng),tactics:genTactics(rng),philosophy:o.parent?'youth':rng.pick(PHILOSOPHIES),roster:[],founded:db.year};
   db.teams[t.id]=t;
   const tb=strength+rng.normal(0,3);
   for(const role of ROLES){const age=o.parent?rng.int(17,20):rng.int(18,27);genPlayer(db,rng,{role,age,base:tb+(age<20?-4:0),region:regionId,team:t.id})}
@@ -205,7 +205,7 @@ function addRegion(db,rng,cfg){
   db.regions[R.id]=R;
   let made=0;
   if(R.templates) for(const tt of TEAM_TEMPLATES.slice(0,R.teams)){
-    const t={id:tt.id,name:tt.name,short:tt.short,region:R.id,division:1,active:true,fans:baseFans(tt.base,rng),tactics:{...tt.tactics},training:defaultTraining(),philosophy:rng.pick(PHILOSOPHIES),roster:[],founded:db.year};
+    const t={id:tt.id,name:tt.name,short:tt.short,region:R.id,division:1,active:true,fans:baseFans(tt.base,rng),tactics:{...tt.tactics},philosophy:rng.pick(PHILOSOPHIES),roster:[],founded:db.year};
     db.teams[tt.id]=t;
     for(const [nick,role,age,style,sig] of tt.players)genPlayer(db,rng,{id:tt.id+'_'+role,name:nick,role,age,style,sig,base:tt.base,region:R.id,team:tt.id});
     for(let i=0;i<(db.worldConfig.subs||0);i++)genPlayer(db,rng,{role:rng.pick(ROLES),age:rng.int(17,20),base:tt.base-8,region:R.id,team:tt.id});

@@ -92,7 +92,6 @@ function runOffseason(db){
   for(const t of activeTeams(db)){if(t.id===managedTeamId(db))ensureStaffRoster(t);else ensureTeamStaff(db,t,rng)}ageStaff(db,rng);genStaffPool(db,rng);
   ageScoutReports(db);
   for(const t of activeTeams(db,null,1))aiManageStaff(db,t,rng);
-  for(const t of activeTeams(db))aiManageTraining(db,t);
   // Player-controlled and AI boards share the same facility investment model.
   // Need, maturity and economic opportunity cost—not a fixed regional upgrade—drive proposals.
   for(const t of activeTeams(db,null,1)){

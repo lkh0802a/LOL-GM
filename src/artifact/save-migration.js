@@ -106,7 +106,8 @@ function normalizeRestoredSave(db){
   }
   for(const t of Object.values(db.teams)){
     ensureFacilities(t);
-    t.training=normalizeTraining(t.training);
+    // Retire the live control, preserving dated activity/usage history.
+    delete t.training;
     ensureClubOwnership(t);
     ensureClubLicense(db,t);
     delete t._pre;

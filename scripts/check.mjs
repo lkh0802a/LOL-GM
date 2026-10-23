@@ -450,7 +450,7 @@ for (const marker of ['function genPlayer(','function generateRookieClass(','fun
     console.error('Player lifecycle responsibility leaked back into world.js: '+marker);
   }
 }
-for (const marker of ['function growPlayer(','function defaultTraining(','function ensureFacilities(']) {
+for (const marker of ['function growPlayer(','function growthCap(','function ensureFacilities(']) {
   if (!developmentSource.includes(marker)) {
     failed = true;
     console.error('Development helper is missing: '+marker);
@@ -458,6 +458,14 @@ for (const marker of ['function growPlayer(','function defaultTraining(','functi
   if (worldSource.includes(marker)) {
     failed = true;
     console.error('Development responsibility leaked back into world.js: '+marker);
+  }
+}
+
+// Retired manual attribute sliders and intensity cannot silently reappear.
+for(const marker of ['const TRAIN_POINTS=','function defaultTraining(','function normalizeTraining(',
+  'function setTrainingAllocation(','function trainingIntensity(','function aiManageTraining(']){
+  if(developmentSource.includes(marker)){
+    failed=true;console.error('Retired manual training helper reintroduced: '+marker);
   }
 }
 for (const marker of ['function startWorldSeason(','function playWorldDay(','function startInternational(']) {

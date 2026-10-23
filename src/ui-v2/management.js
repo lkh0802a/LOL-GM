@@ -7,7 +7,7 @@ function v2ManagementStamp(){const db=V2.db;return JSON.stringify([db.worldDate,
 function v2Preparation(){
  const db=V2.db,t=v2Team(),parent=parentTeamOf(db,t);if(!t||!parent)return null;
  if(!V2.preparation||V2.preparation.db!==db||V2.preparation.tid!==t.id){
-  V2.preparation={db,tid:t.id,stamp:v2ManagementStamp(),command:{type:'squad.preparation',actor:'manager',parentId:parent.id,expected:squadPreparationSnapshot(db,{parentId:parent.id}),assignments:{...rosterPlanState(db,parent).assignments},roles:{},squads:{[t.id]:{starters:{...t.depthChart},tactics:{...t.tactics},training:normalizeTraining(t.training)}}}};
+  V2.preparation={db,tid:t.id,stamp:v2ManagementStamp(),command:{type:'squad.preparation',actor:'manager',parentId:parent.id,expected:squadPreparationSnapshot(db,{parentId:parent.id}),assignments:{...rosterPlanState(db,parent).assignments},roles:{},squads:{[t.id]:{starters:{...t.depthChart},tactics:{...t.tactics}}}}};
  }return V2.preparation;
 }
 function v2PreparationCurrent(d=V2.preparation){return !!d&&d.db===V2.db&&d.tid===managedTeamId(V2.db)&&d.stamp===v2ManagementStamp()&&JSON.stringify(d.command.expected)===JSON.stringify(squadPreparationSnapshot(V2.db,d.command));}
@@ -24,8 +24,7 @@ function v2PreparationLines(command){
 function v2ReviewManagement(command,title,lines){
  const error=v2ManagementError();if(error)return v2Tell(error);
  if(command.type==='squad.preparation')for(const [id,x] of Object.entries(command.squads||{})){
-  const original=normalizeTraining(V2.db.teams[id]?.training);
-  if(x.training&&Object.keys(original).some(key=>x.training[key]!==original[key]))return v2Tell('퇴역한 훈련 배분·강도는 변경할 수 없습니다');
+  if(Object.hasOwn(x,'training'))return v2Tell('퇴역한 훈련 배분·강도는 변경할 수 없습니다');
  }
  const preview=previewWorldAction(V2.db,v2Copy(command));if(!preview.ok)return v2Tell(preview.errors.join(' · '));
  if(V2.review||V2.managementReview||V2.advice||V2.roleReview||V2.official?.open)return v2Tell('현재 작업 창을 먼저 닫으세요');

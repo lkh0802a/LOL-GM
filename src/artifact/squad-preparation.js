@@ -4,7 +4,7 @@
 function squadPreparationSnapshot(db,c){
   return {roster:rosterActionSnapshot(db,c.parentId),manager:managedTeamId(db),fired:!!db.world?.fired,
     teams:organizationTeams(db,c.parentId).map(t=>({id:t.id,active:t.active!==false,
-      starters:{...(t.depthChart||{})},tactics:{...t.tactics},training:{...t.training}})),
+      starters:{...(t.depthChart||{})},tactics:{...t.tactics}})),
     roles:organizationRoster(db,c.parentId).map(pid=>({pid,role:db.players[pid]?.rosterRole||null}))};
 }
 function validateSquadPreparation(db,c){
@@ -34,18 +34,13 @@ function validateSquadPreparation(db,c){
       return worldActionError('unauthorized','관리하지 않는 스쿼드의 준비는 변경할 수 없습니다');
     if(!x||typeof x!=='object'||Array.isArray(x)||Object.values(x.starters||{}).some(pid=>db.players[pid]?.retired))
       return worldActionError('invalid_lineup','현재 활동 중인 선수로 선발을 구성하세요');
+    if(Object.hasOwn(x,'training'))return worldActionError('retired_training','훈련 배분·강도 설정은 사용하지 않습니다');
     const lineup=validateStartingLineup(db,t,x?.starters,Object.keys(assignments).filter(pid=>assignments[pid]===id));
     if(!lineup.ok)return {ok:false,reason:'invalid_lineup',errors:lineup.errors.map(e=>t.name+': '+e)};
     const keys=Object.keys(t.tactics||{}),tactics={};
     for(const key of keys){const v=x?.tactics?.[key];if(!Number.isFinite(v)||v<0||v>100)
       return worldActionError('invalid_tactics','전술 값은 0~100이어야 합니다');tactics[key]=v}
-    if(!x.training||!['light','normal','high'].includes(x.training.intensity)||
-      x.training.focus!==undefined&&!Object.hasOwn(PRACTICE_FOCUS,x.training.focus))
-      return worldActionError('invalid_training','유효한 훈련 강도와 연습 중점이 필요합니다');
-    const groups=Object.keys(ATTR_GROUPS);
-    if(groups.some(k=>!Number.isInteger(x.training[k])||x.training[k]<0)||groups.reduce((n,k)=>n+x.training[k],0)>TRAIN_POINTS)
-      return worldActionError('invalid_training','훈련 배분은 총 100점 이내여야 합니다');
-    squads[id]={starters:lineup.assignment,tactics,training:normalizeTraining(x.training)};
+    squads[id]={starters:lineup.assignment,tactics};
   }
   return {ok:true,parentId:root.id,assignments,roles:{...c.roles},squads,moves:plan?.moves||[]};
 }
@@ -60,7 +55,7 @@ WORLD_ACTION_HANDLERS['squad.preparation']={
     for(const [id,x] of Object.entries(c.squads)){
       const t=db.teams[id];
       for(const role of ROLES){const result=setDepthStarter(db,t,role,x.starters[role],c.actor,false);if(!result.ok)throw Error(result.reason)}
-      t.tactics={...x.tactics};t.training=normalizeTraining(x.training);
+      t.tactics={...x.tactics};
     }
     for(const [pid,role] of Object.entries(c.roles))if(db.players[pid].rosterRole!==role){
       const result=setRosterRole(db,pid,role,c.actor,false);if(!result.ok)throw Error(result.reason);
@@ -74,7 +69,7 @@ function captureSquadPreparationJournal(db,c){
   const base=captureWorldActionJournal(db,{...c,type:'roster.plan'}),
     playerIds=new Set(organizationRoster(db,c.parentId)),
     players=Array.from(playerIds,pid=>({pid,ref:db.players[pid],value:actionJournalClone(db.players[pid])})),
-    teams=organizationTeams(db,c.parentId).map(team=>({team,fields:['tactics','training'].map(key=>({key,
+    teams=organizationTeams(db,c.parentId).map(team=>({team,fields:['tactics'].map(key=>({key,
       present:Object.hasOwn(team,key),ref:team[key],value:team[key]===undefined?null:actionJournalClone(team[key])}))}));
   return {playerIds,rollback(){
     base.rollback();

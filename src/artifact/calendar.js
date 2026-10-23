@@ -45,7 +45,6 @@ function applyWorldDailyEffects(db,date){
   applyCalendarPatchEvents(db,date);
   patchTick(db,date,new RNG(w.seed+date,'patch'));
   advanceFacilityConstruction(db,date);
-  for(const t of activeTeams(db))aiManageTraining(db,t);
   dailyRecovery(db);
   medicalDailyTick(db,date);
   for(const t of activeTeams(db))aiReviewRoleConversions(db,t);

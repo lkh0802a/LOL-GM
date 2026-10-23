@@ -41,7 +41,11 @@ function simulateBackgroundScrim(db,t,opp,games,rng,slot,booked=null,proposal=nu
   const participants=[t,opp],lines=[],results=[],wins={[t.id]:0,[opp.id]:0};
   for(let g=0;g<games;g++){
     const selections=participants.map(team=>{
-      const scrimMap=bestStartingLineup(db,team,{},true);
+      // Preserve the manager's legal practice lineup, including consented
+      // off-role starts. The existing selector still replaces unavailable
+      // players and keeps AI opponents responsible for their own selections.
+      const locked=managerControlsSquad(db,team)?team.depthChart||{}:{};
+      const scrimMap=bestStartingLineup(db,team,locked,true);
       return ROLES.map(role=>{
       const player=scrimMap[role]&&db.players[scrimMap[role]];
       if(!player||player.retired)return null;

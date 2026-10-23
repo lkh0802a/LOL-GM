@@ -70,8 +70,8 @@ source += `
     const r=setRosterRole(db,p,'core','regression',true);
     assert(r.ok&&p.rosterRole==='core','roster-role assignment failed');
     assert(SQUAD_ROLES.length===5&&SQUAD_ROLES.includes(old||recommendedRosterRole(db,p,t)),'roster-role model drift');
-    p.fatigue=60;p.condition=75;t.training=defaultTraining();const rec=trainingRecommendation(db,t);
-    assert(['light','normal','high'].includes(rec.intensity),'training recommendation invalid');
+    p.fatigue=60;p.condition=75;const beforeRecommendation=JSON.stringify(db),rec=trainingRecommendation(db,t);
+    assert(!Object.hasOwn(rec,'intensity')&&typeof rec.scrim==='boolean'&&rec.fat===avg(t.roster.map(id=>db.players[id]?.fatigue||0))&&JSON.stringify(db)===beforeRecommendation,'activity/recovery recommendation must remain pure without retired intensity');
   });
 
   test('04-rookie-supply',()=>{
