@@ -71,9 +71,13 @@ await runEngineFixture(String.raw`(()=>{
   const fixed=unpackDB(packDB(resumed));recordInternationalResults(fixed,fixed.world);
   check(JSON.stringify(fixed.global.internationalResults)===prior&&JSON.stringify(fixed.world.seasons[id].internationalRegionSnapshot)===originalSnapshot,'historical policy/snapshot rewritten');
   // A later annual event is a new canonical writer, never an alias duplicate.
-  fixed.world={year:fixed.year+1,seed:'next-worlds',seasons:{},step:0,steps:[]};
-  check(startInternational(fixed,id,'2028-08-01')&&Object.keys(fixed.world.seasons).join()==='WORLD_CHAMPIONSHIP','future event did not use canonical ID');
-  check(!startInternational(fixed,'WORLDS','2028-08-01'),'future event duplicated');
+  // Keep every four-team archived identity/prize check above. A new D-032
+  // Worlds uses a legal 24-team field; it cannot fall back to four-team KO.
+  const future=buildWorld(defaultWorldConfig());future.worldConfig.internationals.find(c=>isWorldChampionshipId(c.id)).id=id;
+  future.world={year:fixed.year+1,seed:'next-worlds',seasons:{},step:0,steps:[]};
+  check(startInternational(future,id,'2028-08-01')&&Object.keys(future.world.seasons).join()==='WORLD_CHAMPIONSHIP','future event did not use canonical ID');
+  check(future.competitions.WORLD_CHAMPIONSHIP.teams.length===24&&future.competitions.WORLD_CHAMPIONSHIP.stages[0].type==='league_phase','future event field/format contract');
+  check(!startInternational(future,'WORLDS','2028-08-01'),'future event duplicated');
   rows.push({id,pool,matches:season.days.reduce((n,d)=>n+d.matches.length,0),restore:true,paidOnce:true});
  }
  // The same actual results determine all four prize classes, not fabricated standings.

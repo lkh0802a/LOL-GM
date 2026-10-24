@@ -40,3 +40,6 @@ body{background:var(--bg);transition:background .15s,color .15s}svg.ico{width:20
 @media(pointer:coarse){.btn,.icon-button,.chip,.sub-item,input.input,select.input{min-height:44px}.icon-button{min-width:44px}}
 
 @media(max-width:620px){.header{flex-wrap:wrap}.actions{margin-left:auto}}
+
+/* Keep wide competition tables inside their own mobile scroll region. */
+.competition-detail{min-width:0;overflow-wrap:anywhere}.competition-detail .table-scroll{max-width:100%}

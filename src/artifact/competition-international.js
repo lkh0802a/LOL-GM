@@ -9,6 +9,10 @@ function intlStages(fmt,teams,bo,opt={}){
   // D-032: these event formats have their own group and advancement contract.
   // Participant qualification remains owned by startInternational.
   const eventGroup=(groups,legs)=>grp(groups,{legs:opt.groupLegs||legs,bestOf:Math.max(3,opt.groupBo||3)});
+  if(fmt==='worlds_league_phase'){
+    if(n!==24)throw new Error(`월즈 리그 페이즈는 승인된 24팀 구성이 필요합니다 (현재 ${n}팀).`);
+    return [{id:'league',name:'리그 페이즈',type:'league_phase',bestOf:3,firstChoice:'coin',dayGap:[1]}, {...ko('league',16),fixedBracket:true}];
+  }
   if(fmt==='msi_swiss_de'){
     if(n!==16)throw new Error(`MSI 스위스는 승인된 16팀 구성이 필요합니다 (현재 ${n}팀).`);
     return [sw({bestOf:1,decidingBo:3}),de('groups',8)];
