@@ -13,6 +13,8 @@ function v2OfficialAi(state,side){let turns=0;while(draftTurn(state)&&draftTurn(
 function v2OfficialShow(){V2.section='schedule';V2.tab='경기 일정';V2.pid=null;v2Render();}
 function v2OfficialPrepare(){
  if(validManualInflightGame(V2.db))return {mode:'running',open:true,context:v2OfficialContext()};
+ const current=V2.db.world.pendingOfficial.queue[0],currentRefs=pendingOfficialRefs(V2.db,current),succession=pendingQualificationSuccession(V2.db,currentRefs,current);
+ if(succession)return {mode:'succession',plan:succession,open:true,context:v2OfficialContext()};
  const q=V2.db.world.pendingOfficial.queue[0],refs=pendingOfficialRefs(V2.db,q),administrative=pendingDisqualifiedFinalSeries(V2.db,refs,q);
  if(administrative)return {mode:'administrative',reason:administrative.rec.reason,open:true,context:v2OfficialContext()};
  const selection=pendingOfficialSelectionSetup(V2.db);let o;
@@ -42,10 +44,11 @@ function v2OfficialFinish(){
 }
 function v2ResolveOfficialGame(draft){
  const o=V2.official;if(!v2OfficialCurrent(o))return v2Tell('현재 경기 준비를 다시 확인하세요');
- const previousResult=V2.officialResult,undo=pendingOfficialUndo(V2.db);let out;try{out=resolvePendingOfficialMatch(V2.db,draft);if(!out.game&&!out.response&&!isDoubleDisqualification(out.rec))throw Error('현재 경기 진행 결과를 확인할 수 없습니다');}catch(error){undo();V2.official=o;V2.officialResult=previousResult;return v2Tell('공식 경기 처리 실패 · '+error.message+' · 완료 기록과 준비 입력은 유지했습니다');}
+ const previousResult=V2.officialResult,undo=pendingOfficialUndo(V2.db);let out;try{out=resolvePendingOfficialMatch(V2.db,draft);if(!out.game&&!out.response&&!out.succession&&!isDoubleDisqualification(out.rec))throw Error('현재 경기 진행 결과를 확인할 수 없습니다');}catch(error){undo();V2.official=o;V2.officialResult=previousResult;return v2Tell('공식 경기 처리 실패 · '+error.message+' · 완료 기록과 준비 입력은 유지했습니다');}
  v2AfterCommittedAction(()=>v2AcceptOfficialOutput(out));
 }
 function v2AcceptOfficialOutput(out){
+ if(out.succession){V2.officialResult=null;V2.official=null;v2Save();v2Tell(out.succession.reason);v2Render();return;}
  if(out.game)V2.officialResult={game:publicMatchRecord(out.game,out.game.patch||V2.db.patch.id),score:out.score,done:out.done};
  if(isDoubleDisqualification(out.rec))V2.officialResult={administrative:out.rec,done:true};
  V2.official=null;v2Save();const contact=v2CurrentContact();v2Tell(contact||out.response?'선수 연락에서 진행을 멈췄습니다. 현재 계약을 직접 검토하세요.':isDoubleDisqualification(out.rec)?out.rec.reason:'실제 경기 결과를 기록했습니다. 다음 준비와 진행은 직접 선택하세요');
@@ -57,6 +60,7 @@ function v2OfficialNotice(){
 }
 function v2OfficialView(){
  const o=V2.official;if(!v2OfficialCurrent(o))return `<section class="panel"><h2>경기 준비 상태가 바뀌었습니다</h2><p>이전 준비 입력을 현재 경기에 자동 적용하지 않습니다.</p><button class="btn btn-outline" id="official-discard">미완료 준비 입력 취소</button></section>`;
+ if(o.mode==='succession')return `<section class="panel"><h2>양 팀 실격 · 차순위 경기 자리 승계</h2><p>완료된 정규시즌 순위와 공식 출전 자격에 따라 ${o.plan.to.map(id=>v2Esc(V2.db.teams[id].name)).join(' · ')} 구단이 자리를 승계합니다. 우승이나 점수는 부여하지 않으며 실제 경기를 치릅니다.</p><button class="btn btn-primary" id="official-succession">차순위 경기 자리 승계 확인</button></section>`;
  if(o.mode==='administrative')return `<section class="panel"><h2>결승 양 팀 실격</h2><p>공식 출전 가능 선수가 양 팀 모두 5명 미만입니다. 경기를 진행하지 않고 우승자 없이 대회를 종료합니다.</p><button class="btn btn-primary" id="official-administrative">우승자 없음으로 종료</button></section>`;
  if(o.mode==='running')return '<section class="panel"><h2>진행 중인 공식 게임</h2><p>경기 패치 '+v2Esc(seriesOfficialView(V2.db,o.context.session).patch.id)+'</p><p>시작할 때 확정한 입력을 유지합니다. 아직 끝나지 않은 경기의 결과는 표시하지 않습니다.</p><button class="btn btn-primary" id="official-resume">현재 게임 이어서 진행</button></section>';
  const x=o.setup,header=`<section class="panel"><div class="panel-heading"><strong>${v2Esc(x.comp.name)} · ${x.game}세트</strong><small>경기 패치 ${v2Esc(seriesOfficialView(V2.db,x.session).patch.id)}${x.comp.international?' · 대회 개막 패치 고정':''}</small><button class="btn btn-outline btn-small" id="official-pause">창 닫기</button></div><p>${v2Esc(V2.db.teams[x.m.a].name)} ${x.score.join(' : ')} ${v2Esc(V2.db.teams[x.m.b].name)}</p></section>`;
@@ -85,6 +89,7 @@ function v2DraftCentre(o){
 function v2OfficialResultView(){const r=V2.officialResult;if(!r)return '';if(isDoubleDisqualification(r.administrative))return '<section class="panel"><h2>대회 종료 · 우승자 없음</h2><p>결승 양 팀 실격 · 경기와 세트 점수는 기록하지 않았습니다.</p></section>';const g=r.game;return `<section class="panel"><h2>방금 끝난 공식 경기</h2><p>${v2Esc(V2.db.teams[g.winner]?.name||g.winner)} 승 · ${v2Esc(g.ending?.kind==='nexus'?'넥서스 파괴':g.ending?.kind||'종료 사유 확인')}</p><p>${r.score.join(' : ')} · ${r.done?'시리즈 종료':'다음 세트 준비 대기'}</p></section>`;}
 function v2BindOfficial(){
  v2Bind('#official-administrative',()=>{if(V2.official?.mode==='administrative')v2ResolveOfficialGame(null)});
+ v2Bind('#official-succession',()=>{if(V2.official?.mode==='succession')v2ResolveOfficialGame(null)});
  v2Bind('#official-contact',()=>{const c=v2CurrentContact();if(c)v2OpenNegotiation(c.id)});
  v2Bind('#official-resume',()=>{if(V2.official?.mode==='running')v2ResolveOfficialGame(null)});
  v2BindChampionArt();

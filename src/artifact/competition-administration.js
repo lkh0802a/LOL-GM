@@ -31,8 +31,8 @@ function finishDisqualifiedFinal(db,s,day,cfgIdx){
   finishStage(db,s,cfgIdx,day.matches.at(-1).localDate||day.date);return true;
 }
 function disqualifiedFinalResult(s){const m=s.days.at(-1)?.matches?.find(m=>isDoubleDisqualification(m.res));return m?.res||null;}
-function administrativeCompetitionHistory(s){const rec=disqualifiedFinalResult(s);return rec?{completionReason:'double_disqualification',reason:rec.reason}:{};}
-function seasonAdministrativeDisqualifications(s){const rec=disqualifiedFinalResult(s);return new Set(rec?[rec.a,rec.b]:[]);}
+function administrativeCompetitionHistory(s){const rec=disqualifiedFinalResult(s);return {...(rec?{completionReason:'double_disqualification',reason:rec.reason}:{}),...qualificationCompetitionHistory(s)};}
+function seasonAdministrativeDisqualifications(s){const rec=disqualifiedFinalResult(s);return new Set([...(rec?[rec.a,rec.b]:[]),...(s.qualificationSuccessions||[]).flatMap(e=>e.from)]);}
 function administrativeElimReach(s,tid){
   if(!seasonAdministrativeDisqualifications(s).has(tid))return null;
   const stage=s.formatSnapshot?.stages?.at(-1)?.id;
@@ -54,8 +54,8 @@ const officialPlayDayBeforeDisqualification=playDay;
 playDay=function(db,s,opt={}){
   const day=s&&!s.done&&s.days[s.cur];
   if(!day||day.matches.length!==1||day.matches[0].res||day.matches[0].clockGame||day.matches[0].clockSession)return officialPlayDayBeforeDisqualification(db,s,opt);
-  const outcome=scheduledRegistrationForfeit(db,s,day.matches[0]);
-  if(!isDoubleDisqualification(outcome?.rec))return officialPlayDayBeforeDisqualification(db,s,opt);
+  const succession=qualificationSuccessionPlan(db,s,day.matches[0]),outcome=succession?null:scheduledRegistrationForfeit(db,s,day.matches[0]);
+  if(!succession&&!isDoubleDisqualification(outcome?.rec))return officialPlayDayBeforeDisqualification(db,s,opt);
   const undo=pendingOfficialUndo(db);try{return officialPlayDayBeforeDisqualification(db,s,opt);}catch(error){undo();throw error;}
 };
 function pendingDisqualifiedFinalSeries(db,refs,q){

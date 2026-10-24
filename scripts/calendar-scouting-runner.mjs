@@ -12,6 +12,7 @@ const acceptances=[
   'worlds-tiebreak-acceptance.mjs',
   'double-disqualification-acceptance.mjs',
   'double-disqualification-world-close-acceptance.mjs',
+  'qualification-succession-acceptance.mjs',
   'league-identity-acceptance.mjs',
   'manual-owned-coaching-acceptance.mjs',
   'training-allocation-acceptance.mjs',

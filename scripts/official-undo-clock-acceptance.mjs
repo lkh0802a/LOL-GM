@@ -23,6 +23,8 @@ assert.equal(liveSeason.split(formatSuccessor).length,2,'one reviewed format-opt
 let referenceSeason=liveSeason;
 for(const [current,previous] of [
   ['  if(disqualifiedFinalResult(s))return administrativeTournamentPlacements(db,s);\n',''],
+  ['  if(s.qualificationSuccessions?.length)return qualificationTournamentPlacements(db,s);\n',''],
+  ['  const succession=resolvePendingQualificationSuccession(db,refs,q,forcedDraft);if(succession)return succession;\n',''],
   ['  const administrative=resolvePendingDisqualifiedFinal(db,refs,q);if(administrative)return administrative;\n',''],
   ['.sort(internationalEventPriority)','.sort((a,b)=>(a.prestige||1)-(b.prestige||1))'],
   ['  const rollback=pendingOfficialUndo(db),previousTaken=[...taken];let committed=false;\n  try{\n',''],

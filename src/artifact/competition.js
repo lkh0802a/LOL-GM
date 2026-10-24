@@ -189,6 +189,7 @@ function playDay(db,s,opt={}){
   if(!s||s.done)return null;
   const day=s.days[s.cur],comp=db.competitions[s.comp],cfgIdx=comp.stages.findIndex(x=>x.id===day.stage),cfg=comp.stages[cfgIdx],pending=[];
   for(const m of day.matches){if(m.res)continue;
+    const succession=qualificationSuccessionPlan(db,s,m);if(succession)commitQualificationSuccession(db,s,m,succession);
     const forfeit=scheduledRegistrationForfeit(db,s,m);
     if(forfeit){commitScheduledSeries(db,s,m,forfeit);continue}
     if(opt.deferTeam&&(m.a===opt.deferTeam||m.b===opt.deferTeam)){pending.push({matchId:m.id});continue}

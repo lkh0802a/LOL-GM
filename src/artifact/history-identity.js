@@ -35,6 +35,7 @@ function recordedPlayerLabel(identity,id){return identity.players[id]?.name||id|
 function recordedSeriesLabel(db,rec,game=null){const view=recordedSeriesIdentity(db,rec,game);return [game?.blue||rec.a,game?.red||rec.b].map(id=>recordedTeamLabel(view,id,true)).join(' / ')}
 function recordedCompetitionLabel(db,rec,id){const c=recordedSeriesIdentity(db,rec).competition;return c?.id===id?c.name:id}
 function recordedSeriesScore(rec,separator=' : '){return isDoubleDisqualification(rec)?'양 팀 실격 · 경기 미진행':rec.score.join(separator);}
+function recordedQualificationSuccessionText(e){const names=ids=>ids.map(id=>e.identity.teams[id].name).join(' · ');return e.date+' · '+names(e.from)+' 양 팀 실격 → '+names(e.to)+' 경기 자리 승계 · '+e.reason;}
 function historicalCompetitionSnapshot(db,c){
   const region=db.regions?.[c.region];
   return {id:c.id,name:c.name,short:c.short,tier:c.tier,region:c.region||null,div:c.div||1,international:!!c.international,teams:c.teams.slice(),stages:JSON.parse(JSON.stringify(c.stages)),teamInfo:c.teams.map(id=>{const t=db.teams[id];if(!t)return {id,active:false};return {id,name:t.name,short:t.short,region:t.region,regionName:db.regions?.[t.region]?.name,division:t.division||1,parent:t.parent||null,active:t.active!==false,franchised:!!t.franchised}}),...(region?{regionInfo:{id:region.id,short:region.short,splits:region.splits,name:region.name,leagueName:region.leagueName,splitNames:{...region.splitNames},standingsMode:region.standingsMode,system:region.system,relegate:region.relegate,div2:region.div2}}:{})};
