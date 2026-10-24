@@ -9692,6 +9692,15 @@ function validateLoanStart(db,a){
     return worldActionError('roster_minimum','원소속 선수단의 최소 인원을 유지해야 합니다');
   const error=contractedMoveError(db,p)||localRegistrationError(db,to,p)||loanRosterCapacityError(db,to,p);
   if(error)return worldActionError('registration_limit',error);
+  // A recallable/earlier-expiring arrival cannot cover the lender's outgoing
+  // contract: its owner retains the independent right to take that player back.
+  // An outgoing purchase clause can make that departure permanent.
+  // This is the AI club's consent, not a restriction on explicit owner consent.
+  const through=loanEndDate(db,a.duration),retained=from.roster.map(id=>db.players[id])
+    .filter(q=>q&&q.id!==p.id&&!q.retired&&(!q.loan||
+      q.loan.purchase?.type==='obligation'||a.purchase==null&&!q.loan.recall&&q.loan.endDate>through));
+  if(!managingSource&&(retained.length<minimum||retained.filter(q=>!medicalOut(q)).length<5))
+    return worldActionError('club_consent','임대 종료·리콜·의료 상태를 고려하면 원소속 구단의 출전 인원이 부족합니다');
   // The AI lender protects starters and requires wages in exchange for a free loan.
   const detached=JSON.parse(JSON.stringify(from)),view={...db,teams:{...db.teams,[from.id]:detached}},
     starter=starterFor(view,detached,p.role)?.id===p.id;
@@ -10611,16 +10620,17 @@ function aiReviewLoanMarket(db){
   const w=db.world;if(w?.phase!=='season')return 0;
   const date=db.worldDate,md=date.slice(5),regions=Object.values(db.regions)
     .filter(R=>(R.loanWindows||[{from:'01-07',through:'01-31'},{from:'07-01',through:'07-14'}])
-      .some(period=>md>=period.from&&md<=period.through));
+      .some(period=>md>=period.from&&md<=period.through))
+    .sort((a,b)=>a.id.localeCompare(b.id));
   let deals=0;
   for(const R of regions){
     const period=(R.loanWindows||[{from:'01-07',through:'01-31'},{from:'07-01',through:'07-14'}])
       .find(period=>md>=period.from&&md<=period.through),key=R.id+'/'+w.year+'/'+period.from;
     if(w.loanMarketReviews?.[key])continue;
     w.loanMarketReviews=w.loanMarketReviews||{};w.loanMarketReviews[key]=date;
-    const borrowers=activeTeams(db,R.id,1).filter(t=>!playerActionAuthority(db,'ai',t));
+    const borrowers=activeTeams(db,R.id,1).filter(t=>!playerActionAuthority(db,'ai',t))
+      .sort((a,b)=>a.id.localeCompare(b.id));
     for(const to of borrowers){
-      if(deals>=2)break;
       const role=ROLES.slice().sort((a,b)=>{
         const pa=starterFor(db,to,a),pb=starterFor(db,to,b);
         return (pa?aiMarketValue(db,pa,to):0)-(pb?aiMarketValue(db,pb,to):0);
