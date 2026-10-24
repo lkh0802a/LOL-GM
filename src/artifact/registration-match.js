@@ -62,9 +62,15 @@ function scheduledRegistrationForfeit(db,s,m){
   if(!officialRegistrationEnabled(db))return null;
   const view=officialMatchView(db,s,m.a,m.b),counts=[m.a,m.b].map(id=>medicalAvailable(view,view.teams[id]));
   if(counts.every(n=>n>=5))return null;
-  const winner=counts[0]>=5?m.a:counts[1]>=5?m.b:m.a,need=Math.ceil(m.bo/2);
-  // No played games or appearance statistics are invented. A double shortage
-  // retains the scheduled bracket order for administrative advancement.
+  if(counts.every(n=>n<5)){
+    if(!officialDisqualificationFinal(db,s,m))throw Error('양 팀 모두 공식 출전 가능 선수가 5명 미만입니다. 양측 실격 후 적격 차순위의 경기 자리 승계가 필요합니다.');
+    const identity=emptyRecordedIdentity(),comp=db.competitions[s.comp];
+    identity.competition={id:comp.id,name:comp.name};
+    for(const id of [m.a,m.b]){const t=db.teams[id];identity.teams[id]={name:t.name,short:t.short||t.name,region:t.region,regionName:db.regions[t.region]?.name||null};}
+    return {rec:{a:m.a,b:m.b,bestOf:m.bo,score:null,winner:null,games:[],forfeit:true,doubleForfeit:true,reason:'결승 양 팀 실격으로 우승자 없음',administrative:{kind:'double_disqualification',date:db.worldDate,identity}},lines:[]};
+  }
+  const winner=counts[0]>=5?m.a:m.b,need=Math.ceil(m.bo/2);
+  // The eligible opponent retains the established single-sided forfeit.
   return {rec:{a:m.a,b:m.b,bestOf:m.bo,score:winner===m.a?[need,0]:[0,need],winner,
     games:[],forfeit:true,doubleForfeit:counts.every(n=>n<5),reason:'공식 등록 출전 가능 선수 5명 미만'},lines:[]};
 }

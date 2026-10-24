@@ -77,6 +77,7 @@ function encodeSeriesIdentity(r){
   return q;
 }
 function restoreSeriesIdentity(r){
+  if(isDoubleDisqualification(r))assertDoubleDisqualification(r);
   if(!r||r.seriesIdentityPacked===undefined)return r;
   const rows=r.seriesIdentityPacked,entries=Object.entries(r).filter(([k])=>k!=='seriesIdentityPacked');
   if(!Array.isArray(rows)||rows.length>2||rows.some(x=>!Array.isArray(x)||x.length!==3||!['seed','firstChoice'].includes(x[0])||!(typeof x[1]==='string'||x[0]==='seed'&&Number.isFinite(x[1]))||!Number.isInteger(x[2])||x[2]<0||x[2]>=entries.length+rows.length)||new Set(rows.map(x=>x[0])).size!==rows.length||new Set(rows.map(x=>x[2])).size!==rows.length||rows.some(x=>Object.hasOwn(r,x[0])))throw new Error('경기 원본 식별 정보가 손상되었습니다');

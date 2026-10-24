@@ -3272,10 +3272,12 @@ function simulateScheduledSeries(db,s,day,m,cfg,extra={}){
 }
 function commitScheduledSeries(db,s,m,series){
   if(m.res)throw new Error('Scheduled match already resolved: '+m.id);
+  if(isDoubleDisqualification(series.rec)){assertScheduledDisqualification(db,s,m,series);m.res=series.rec;return m.res;}
   m.res=series.rec;recordLines(s,series.lines);afterSeries(db,series.lines,series.rec);updatePlayerUsage(db,s,series.rec,series.lines);recordStaffMatchService(db,s,series.rec);return m.res;
 }
 function finalizeCompetitionDay(db,s,day,cfgIdx,cfg){
   if(day.matches.some(m=>!m.res))return false;
+  if(finishDisqualifiedFinal(db,s,day,cfgIdx))return true;
   s.cur++;
   const comp=db.competitions[s.comp],sd=s.stageData[cfg.id],roundDays=s.days.filter(d=>d.stage===cfg.id&&d.label===day.label),roundDone=roundDays.every(d=>d.matches.every(m=>m.res));
   const localDate=day.matches.at(-1)?.localDate||day.date,nd=addDays(localDate,cfg.dayGap?cfg.dayGap[0]:5);
@@ -3321,17 +3323,19 @@ function finishStage(db,s,idx,date){
   }
   s.done=true;
   const sd=s.stageData[cfg.id];
-  if(cfg.type==='single_elim'||cfg.type==='double_elim'){
+  if(disqualifiedFinalResult(s)){s.champion=null;s.runnerUp=null;s.finalScore=null;}
+  else if(cfg.type==='single_elim'||cfg.type==='double_elim'){
     s.champion=sd.alive[0]; s.runnerUp=sd.elim[sd.elim.length-1];
     const fin=s.days[s.days.length-1].matches[0]; s.finalScore=fin.res.winner===fin.a?fin.res.score:fin.res.score.slice().reverse();
   } else { const st=standings(db,s,cfg.id); s.champion=st[0].tid; s.runnerUp=st[1].tid; }
   const first=comp.stages[0].type==='round_robin'?standings(db,s,comp.stages[0].id)[0].tid:null;
   const mvp=Object.entries(s.pstats).filter(([,p])=>p.g>=6).sort((x,y)=>y[1].mvp-x[1].mvp||((y[1].k+y[1].a)/(y[1].d||1))-((x[1].k+x[1].a)/(x[1].d||1)))[0];
-  db.history.push({year:s.year,comp:s.comp,compName:comp.name+(s.label?' '+s.label:''),region:comp.region||null,div:comp.div||1,intl:!!comp.international,champion:s.champion,championName:db.teams[s.champion]?.name,runnerUp:s.runnerUp,runnerUpName:db.teams[s.runnerUp]?.name,regularFirst:first,mvp:mvp?mvp[0]:null,mvpName:mvp?db.players[mvp[0]]?.name:null,final:s.finalScore||null});
+  db.history.push({year:s.year,comp:s.comp,compName:comp.name+(s.label?' '+s.label:''),region:comp.region||null,div:comp.div||1,intl:!!comp.international,champion:s.champion,championName:db.teams[s.champion]?.name,runnerUp:s.runnerUp,runnerUpName:db.teams[s.runnerUp]?.name,regularFirst:first,mvp:mvp?mvp[0]:null,mvpName:mvp?db.players[mvp[0]]?.name:null,final:s.finalScore||null,...administrativeCompetitionHistory(s)});
 }
 // 토너먼트 도달 점수: 우승 4, 준우승 3, 4강 2, 녹아웃 진출 1
 function elimReach(db,s,tid){
   if(s.champion===tid)return 4; if(s.runnerUp===tid)return 3;
+  const administrative=administrativeElimReach(s,tid);if(administrative!==null)return administrative;
   const ko=Object.values(s.stageData).find(x=>x.type==='single_elim'||x.type==='double_elim'); if(!ko)return 0;
   const i=ko.elim.lastIndexOf(tid); if(i<0)return 0;
   return ko.elim.length-i<=3?2:1;
@@ -3516,6 +3520,7 @@ function internationalQualifierOrder(db,R){
   }
   const view=historicalSeasonView(db,s);if(!view)return [];
   const comp=view.competitions[s.comp],cfg=comp.stages.at(-1),sd=s.stageData[cfg.id];
+  if(disqualifiedFinalResult(s))return administrativeTournamentPlacements(db,s).filter(t=>t&&db.teams[t]?.active!==false&&db.teams[t]?.region===R.id&&(db.teams[t]?.division||1)===1);
   if(!['single_elim','double_elim'].includes(cfg.type)||!sd?.seeds||!Array.isArray(sd.rounds)||!s.champion||!s.runnerUp||s.days.some(d=>d.matches.some(m=>!m.res)))return [];
   const order=['round_robin','swiss'].includes(comp.stages[0].type)?standings(view,s,comp.stages[0].id).map(r=>r.tid):sd.seeds,exits=new Map();
   for(const [round,rd] of (sd.rounds||[]).entries()){
@@ -3561,6 +3566,7 @@ function rrTable(db,s,stageId,teams){
   for(const season of [...previous,s])for(const d of season.days)
     if(d.stage===stageId)for(const m of d.matches){
       if(!m.res||!tb[m.a]&&!tb[m.b])continue;
+      if(isDoubleDisqualification(m.res))continue;
       const [sa,sb]=m.res.score,wa=m.res.winner===m.a;
       if(tb[m.a]){
         tb[m.a].gw+=sa;tb[m.a].gl+=sb;tb[m.a][wa?'w':'l']++;
@@ -3598,14 +3604,16 @@ function recentSplitChampion(db,R){
     .find(s=>s?.done)?.champion||null;
 }
 function regionPlacements(db,R,div=1){
-  const w=db.world,act=activeTeams(db,R.id,div).map(t=>t.id);
+  const w=db.world;
   const done=[3,2,1].map(sp=>w?.seasons[R.short+(div===2?'2':'')+'-'+sp])
     .find(s=>s?.done);
+  const disqualified=done?seasonAdministrativeDisqualifications(done):new Set(),act=activeTeams(db,R.id,div).map(t=>t.id).filter(t=>!disqualified.has(t));
   const mode=done?.standingsMode||R.standingsMode||'independent';
   let base=done?(mode==='points'?championshipStandings(db,R,div).map(x=>x.tid):
     mode==='cumulative'?standings(db,done,'regular').map(x=>x.tid):
     placements(db,done)):(div===1?R.lastPlacement||[]:[]);
   base=base.filter(t=>act.includes(t));
+  if(done&&disqualifiedFinalResult(done))return base;
   const rest=act.filter(t=>!base.includes(t)).sort((a,b)=>teamStrength(db,b)-teamStrength(db,a));
   return [...base,...rest];
 }
@@ -5022,6 +5030,7 @@ function advanceStep(db){
   }
 }
 function placements(db,s){
+  if(disqualifiedFinalResult(s))return administrativeTournamentPlacements(db,s);
   const comp=db.competitions[s.comp];const reg=standings(db,s,comp.stages[0].id).map(x=>x.tid);
   const out=[s.champion,s.runnerUp].filter(Boolean);for(const t of reg)if(!out.includes(t))out.push(t);return out;
 }
@@ -5196,6 +5205,7 @@ function pendingOfficialDraftSetup(db){
 function resolvePendingOfficialMatch(db,forcedDraft){
   const w=db.world,p=w&&w.pendingOfficial,q=p&&p.queue&&p.queue[0];if(!q)throw new Error('No pending official match');
   const refs=pendingOfficialRefs(db,q);if(!refs)throw new Error('Pending official match is stale');
+  const administrative=resolvePendingDisqualifiedFinal(db,refs,q);if(administrative)return administrative;
   if(!q.session)q.session=scheduledSeriesSession(db,refs.s,refs.m).session;
   const played=playSeriesSessionGame(db,q.session,forcedDraft,false);
   if(!played.done)return {game:played.game,done:false,score:played.score,pending:w.pendingOfficial};
@@ -5481,6 +5491,7 @@ function encodeSeriesIdentity(r){
   return q;
 }
 function restoreSeriesIdentity(r){
+  if(isDoubleDisqualification(r))assertDoubleDisqualification(r);
   if(!r||r.seriesIdentityPacked===undefined)return r;
   const rows=r.seriesIdentityPacked,entries=Object.entries(r).filter(([k])=>k!=='seriesIdentityPacked');
   if(!Array.isArray(rows)||rows.length>2||rows.some(x=>!Array.isArray(x)||x.length!==3||!['seed','firstChoice'].includes(x[0])||!(typeof x[1]==='string'||x[0]==='seed'&&Number.isFinite(x[1]))||!Number.isInteger(x[2])||x[2]<0||x[2]>=entries.length+rows.length)||new Set(rows.map(x=>x[0])).size!==rows.length||new Set(rows.map(x=>x[2])).size!==rows.length||rows.some(x=>Object.hasOwn(r,x[0])))throw new Error('경기 원본 식별 정보가 손상되었습니다');
@@ -5661,7 +5672,7 @@ function normalizeRestoredSave(db){
 
 function migrateSaveState(db){
   validateSaveEnvelope(db);
-  for(const s of Object.values(db.world?.seasons||{}))for(const d of s.days||[])for(const m of d.matches||[])if(m.res)m.res=restoreSeriesIdentity(m.res);
+  for(const s of Object.values(db.world?.seasons||{}))for(const d of s.days||[])for(const m of d.matches||[])if(m.res){m.res=restoreSeriesIdentity(m.res);if(isDoubleDisqualification(m.res))assertStoredDisqualification(s,d,m);}
   return normalizeRestoredSave(db);
 }
 
@@ -10439,15 +10450,96 @@ function scheduledRegistrationForfeit(db,s,m){
   if(!officialRegistrationEnabled(db))return null;
   const view=officialMatchView(db,s,m.a,m.b),counts=[m.a,m.b].map(id=>medicalAvailable(view,view.teams[id]));
   if(counts.every(n=>n>=5))return null;
-  const winner=counts[0]>=5?m.a:counts[1]>=5?m.b:m.a,need=Math.ceil(m.bo/2);
-  // No played games or appearance statistics are invented. A double shortage
-  // retains the scheduled bracket order for administrative advancement.
+  if(counts.every(n=>n<5)){
+    if(!officialDisqualificationFinal(db,s,m))throw Error('양 팀 모두 공식 출전 가능 선수가 5명 미만입니다. 양측 실격 후 적격 차순위의 경기 자리 승계가 필요합니다.');
+    const identity=emptyRecordedIdentity(),comp=db.competitions[s.comp];
+    identity.competition={id:comp.id,name:comp.name};
+    for(const id of [m.a,m.b]){const t=db.teams[id];identity.teams[id]={name:t.name,short:t.short||t.name,region:t.region,regionName:db.regions[t.region]?.name||null};}
+    return {rec:{a:m.a,b:m.b,bestOf:m.bo,score:null,winner:null,games:[],forfeit:true,doubleForfeit:true,reason:'결승 양 팀 실격으로 우승자 없음',administrative:{kind:'double_disqualification',date:db.worldDate,identity}},lines:[]};
+  }
+  const winner=counts[0]>=5?m.a:m.b,need=Math.ceil(m.bo/2);
+  // The eligible opponent retains the established single-sided forfeit.
   return {rec:{a:m.a,b:m.b,bestOf:m.bo,score:winner===m.a?[need,0]:[0,need],winner,
     games:[],forfeit:true,doubleForfeit:counts.every(n=>n<5),reason:'공식 등록 출전 가능 선수 5명 미만'},lines:[]};
 }
 function snapshotInternationalEntries(db,s){
   if(officialRegistrationEnabled(db)&&db.competitions[s.comp]?.international)
     s.entries=Object.fromEntries(db.competitions[s.comp].teams.map(id=>[id,(db.teams[id].registration?.players||[]).slice()]));
+}
+
+// Official administrative outcomes reuse the scheduled match/history writers.
+function isDoubleDisqualification(rec){return rec?.administrative?.kind==='double_disqualification';}
+function assertDoubleDisqualification(rec){
+  const identity=rec?.administrative?.identity;
+  if(!identity?.players||!identity.champions||Object.keys(identity.players).length||Object.keys(identity.champions).length||typeof rec.reason!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(rec.administrative.date))throw Error('양측 실격 공시 원본이 손상되었습니다.');
+  if(!isDoubleDisqualification(rec)||rec.winner!==null||rec.score!==null||!rec.forfeit||!rec.doubleForfeit||!Array.isArray(rec.games)||rec.games.length||rec.a===rec.b||![rec.a,rec.b].every(id=>typeof id==='string'&&rec.administrative.identity?.teams?.[id]?.name)||!rec.administrative.identity?.competition?.id)throw Error('양측 실격 경기 원본이 손상되었습니다.');
+}
+function assertScheduledDisqualification(db,s,m,series){
+  const rec=series.rec;assertDoubleDisqualification(rec);
+  const view=officialMatchView(db,s,m.a,m.b);
+  if(series.lines.length||rec.a!==m.a||rec.b!==m.b||rec.bestOf!==m.bo||rec.administrative.identity.competition.id!==s.comp||!officialDisqualificationFinal(db,s,m)||m.clockGame||m.clockSession||[m.a,m.b].some(id=>medicalAvailable(view,view.teams[id])>=5))throw Error('현재 공식 결승의 양측 실격 조건과 다릅니다.');
+}
+function assertStoredDisqualification(s,day,m){
+  const rec=m.res;assertDoubleDisqualification(rec);const cfg=s.formatSnapshot?.stages?.at(-1),rd=cfg&&s.stageData?.[cfg.id]?.rounds?.at(-1);
+  if(day!==s.days.at(-1)||day.stage!==cfg?.id||day.matches.length!==1||rec.a!==m.a||rec.b!==m.b||rec.bestOf!==m.bo||rec.administrative.identity.competition.id!==s.comp||rd?.pairs?.length!==1||!(cfg.type==='single_elim'&&rd.name==='결승'||cfg.type==='double_elim'&&rd.br==='GF'))throw Error('저장된 양측 실격 결과가 당시 공식 결승과 다릅니다.');
+}
+function officialDisqualificationFinal(db,s,m){
+  const comp=db.competitions[s.comp],day=s.days[s.cur],cfg=comp?.stages.find(c=>c.id===day?.stage),sd=cfg&&s.stageData[cfg.id];
+  return !!(cfg&&comp.stages.at(-1)===cfg&&day.matches.length===1&&day.matches[0].id===m.id&&
+    (cfg.type==='single_elim'&&sd.alive.length===2||cfg.type==='double_elim'&&sd.gf&&sd.rounds.at(-1)?.br==='GF'));
+}
+function finishDisqualifiedFinal(db,s,day,cfgIdx){
+  const m=day.matches.find(m=>isDoubleDisqualification(m.res));if(!m)return false;
+  assertDoubleDisqualification(m.res);
+  // Consume this day without adding an invented match loss to earlier rounds.
+  const cfg=db.competitions[s.comp].stages[cfgIdx],sd=s.stageData[cfg.id];
+  if(cfgIdx!==db.competitions[s.comp].stages.length-1||!['single_elim','double_elim'].includes(cfg.type)||day.matches.length!==1)throw Error('결승이 아닌 양측 실격 결과는 승계 절차가 필요합니다.');
+  s.cur++;
+  sd.alive=[];
+  if(cfg.type==='double_elim'){sd.ub=[];sd.lb=[];sd.drop=[];}
+  finishStage(db,s,cfgIdx,day.matches.at(-1).localDate||day.date);return true;
+}
+function disqualifiedFinalResult(s){const m=s.days.at(-1)?.matches?.find(m=>isDoubleDisqualification(m.res));return m?.res||null;}
+function administrativeCompetitionHistory(s){const rec=disqualifiedFinalResult(s);return rec?{completionReason:'double_disqualification',reason:rec.reason}:{};}
+function seasonAdministrativeDisqualifications(s){const rec=disqualifiedFinalResult(s);return new Set(rec?[rec.a,rec.b]:[]);}
+function administrativeElimReach(s,tid){
+  if(!seasonAdministrativeDisqualifications(s).has(tid))return null;
+  const stage=s.formatSnapshot?.stages?.at(-1)?.id;
+  return s.days.filter(d=>d.stage===stage).some(d=>d.matches.some(m=>m.res&&!isDoubleDisqualification(m.res)&&[m.a,m.b].includes(tid)))?2:0;
+}
+function administrativeTournamentPlacements(db,s){
+  const view=historicalSeasonView(db,s);if(!view||!disqualifiedFinalResult(s))return [];
+  const comp=view.competitions[s.comp],cfg=comp.stages.at(-1),sd=s.stageData[cfg.id],excluded=seasonAdministrativeDisqualifications(s),exits=new Map();
+  const order=['round_robin','swiss','league_phase'].includes(comp.stages[0].type)?standings(view,s,comp.stages[0].id).map(r=>r.tid):sd.seeds;
+  for(const [index,rd] of sd.rounds.entries()){
+    if(cfg.type==='double_elim'&&!['L','LX','GF'].includes(rd.br))continue;
+    for(const day of s.days.filter(d=>d.stage===cfg.id&&d.label===rd.label))for(const m of day.matches)if(m.res&&!isDoubleDisqualification(m.res))exits.set(m.res.winner===m.a?m.b:m.a,index);
+  }
+  return [...new Set([...sd.seeds,...order])].filter(t=>!excluded.has(t)).sort((a,b)=>(exits.get(b)??-1)-(exits.get(a)??-1)||order.indexOf(a)-order.indexOf(b));
+}
+// Only the new no-game final outcome needs this additional transactional path.
+// Keep normal games and established single-sided forfeits on their old writer.
+const officialPlayDayBeforeDisqualification=playDay;
+playDay=function(db,s,opt={}){
+  const day=s&&!s.done&&s.days[s.cur];
+  if(!day||day.matches.length!==1||day.matches[0].res||day.matches[0].clockGame||day.matches[0].clockSession)return officialPlayDayBeforeDisqualification(db,s,opt);
+  const outcome=scheduledRegistrationForfeit(db,s,day.matches[0]);
+  if(!isDoubleDisqualification(outcome?.rec))return officialPlayDayBeforeDisqualification(db,s,opt);
+  const undo=pendingOfficialUndo(db);try{return officialPlayDayBeforeDisqualification(db,s,opt);}catch(error){undo();throw error;}
+};
+function pendingDisqualifiedFinalSeries(db,refs,q){
+  if(q.inflight||q.contact||q.session?.games?.length||refs.m.clockGame||refs.m.clockSession)return null;
+  const series=scheduledRegistrationForfeit(db,refs.s,refs.m);if(!isDoubleDisqualification(series?.rec))return null;
+  return series;
+}
+function resolvePendingDisqualifiedFinal(db,refs,q){
+  const series=pendingDisqualifiedFinalSeries(db,refs,q);if(!series)return null;
+  const undo=pendingOfficialUndo(db);try{
+  const w=db.world,p=w.pendingOfficial;commitScheduledSeries(db,refs.s,refs.m,series);
+  const finalized=finalizeCompetitionDay(db,refs.s,refs.day,refs.cfgIdx,refs.cfg);if(finalized)scoutFromDay(db,refs.s,refs.day);
+  p.queue.shift();if(!p.queue.length){w.pendingOfficial=null;if(!activeSeasons(db).length)advanceStep(db);}
+  return {done:true,score:null,rec:series.rec,lines:[],finalized,pending:w.pendingOfficial,msg:series.rec.reason};
+  }catch(error){undo();throw error;}
 }
 
 // Review once per regional window, never on a background timer. AI uses its
@@ -12052,6 +12144,7 @@ function mergeRecordedIdentity(target,source){
 function emptyRecordedIdentity(){return {teams:Object.create(null),players:Object.create(null),champions:Object.create(null),competition:null}}
 function recordedSeriesIdentity(db,rec,game=null){
   const out=emptyRecordedIdentity();
+  if(!game&&isDoubleDisqualification(rec)){assertDoubleDisqualification(rec);mergeRecordedIdentity(out,rec.administrative.identity);}
   for(const g of game?[game]:rec?.games||[]){
     const p=recordedPublicMatch(db,rec,g).record;if(!p)continue;
     const one=emptyRecordedIdentity();one.competition=p.competition||null;one.champions=p.championNames;
@@ -12072,6 +12165,7 @@ function recordedTeamLabel(identity,id,short=false){return (short?identity.teams
 function recordedPlayerLabel(identity,id){return identity.players[id]?.name||id||'—'}
 function recordedSeriesLabel(db,rec,game=null){const view=recordedSeriesIdentity(db,rec,game);return [game?.blue||rec.a,game?.red||rec.b].map(id=>recordedTeamLabel(view,id,true)).join(' / ')}
 function recordedCompetitionLabel(db,rec,id){const c=recordedSeriesIdentity(db,rec).competition;return c?.id===id?c.name:id}
+function recordedSeriesScore(rec,separator=' : '){return isDoubleDisqualification(rec)?'양 팀 실격 · 경기 미진행':rec.score.join(separator);}
 function historicalCompetitionSnapshot(db,c){
   const region=db.regions?.[c.region];
   return {id:c.id,name:c.name,short:c.short,tier:c.tier,region:c.region||null,div:c.div||1,international:!!c.international,teams:c.teams.slice(),stages:JSON.parse(JSON.stringify(c.stages)),teamInfo:c.teams.map(id=>{const t=db.teams[id];if(!t)return {id,active:false};return {id,name:t.name,short:t.short,region:t.region,regionName:db.regions?.[t.region]?.name,division:t.division||1,parent:t.parent||null,active:t.active!==false,franchised:!!t.franchised}}),...(region?{regionInfo:{id:region.id,short:region.short,splits:region.splits,name:region.name,leagueName:region.leagueName,splitNames:{...region.splitNames},standingsMode:region.standingsMode,system:region.system,relegate:region.relegate,div2:region.div2}}:{})};
@@ -12973,6 +13067,7 @@ resolvePendingOfficialMatch=function(db,forcedDraft){
   const undo=pendingOfficialUndo(db);
   try{
     const current=negotiationClockAt(db);if(current.slice(0,10)>db.worldDate&&!Object.hasOwn(q,'inflight')){const record=officialGameTimeRecord(refs.m,q.session?.games||[]);officialClockSessionCheck(refs.s,{...refs.m,clockSession:q.session});if(!record||record.gameTimeThrough!==current)throw Error('자정을 넘긴 이전 경기의 실제 소비 근거를 확인할 수 없습니다');while(db.worldDate<current.slice(0,10)){w.officialCalendarThrough=addDays(db.worldDate,1);applyWorldDailyEffects(db,w.officialCalendarThrough);}}
+    const administrative=resolvePendingDisqualifiedFinal(db,refs,q);if(administrative)return administrative;
     let played,baseSession,at;
     if(Object.hasOwn(q,'inflight')){
       if(forcedDraft!=null)throw Error('이미 시작한 게임에 새 밴픽 입력을 적용할 수 없습니다');
@@ -13685,7 +13780,7 @@ function v2Facilities(){
  }
  return `<section class="panel"><h2>구단 시설</h2><p>${v2Esc(t.name)} · 전체 연간 유지비 ${v2Money(upkeep)} / 년</p><p>당해 선지급 투자 누적 ${v2Money(paid)}</p><p class="hint">현금과 연간 비용을 구분합니다. 시설 투자는 기존 구단 경영진의 자동 판단이며 감독의 계약·선발 권한과 별개입니다.</p></section><section class="stack">${FACILITY_TYPES.map(k=>`<article class="panel"><button class="btn btn-outline" data-facility="${k}">${v2Esc(FACILITY_LABELS[k])} 시설 · 상세</button><p>현재 ${levels[k]} / 5단계 · ${projects.some(p=>p.key===k)?'증설 중':'진행 중 공사 없음'}</p></article>`).join('')}</section>`;
 }
-function v2Schedule(){const db=V2.db,t=v2Team(),rows=Object.values(db.world.seasons||{}).flatMap(s=>s.days.flatMap(day=>day.matches.filter(m=>m.a===t?.id||m.b===t?.id).map(m=>({day,m,s})))).sort((a,b)=>String(a.m.utcAt||a.day.date).localeCompare(String(b.m.utcAt||b.day.date)));return `<section class="stack">${rows.map(({day,m,s})=>`<article class="panel"><div class="panel-heading"><strong>${v2Esc(m.res?recordedCompetitionLabel(db,m.res,s.comp):db.competitions[s.comp]?.name)}</strong><span class="small subtle">${v2Esc(m.localDate||day.date)} ${v2Esc(m.time||'')} ${v2Esc(m.timeZone||'UTC')}</span></div><p>${m.res?v2Esc(recordedSeriesLabel(db,m.res)):v2Esc(db.teams[m.a]?.name)+' vs '+v2Esc(db.teams[m.b]?.name)} <strong>${m.res?v2Esc(m.res.score.join(' : ')):''}</strong></p></article>`).join('')||'<div class="panel empty">현재 편성된 공식 경기가 없습니다.</div>'}</section>`;}
+function v2Schedule(){const db=V2.db,t=v2Team(),rows=Object.values(db.world.seasons||{}).flatMap(s=>s.days.flatMap(day=>day.matches.filter(m=>m.a===t?.id||m.b===t?.id).map(m=>({day,m,s})))).sort((a,b)=>String(a.m.utcAt||a.day.date).localeCompare(String(b.m.utcAt||b.day.date)));return `<section class="stack">${rows.map(({day,m,s})=>`<article class="panel"><div class="panel-heading"><strong>${v2Esc(m.res?recordedCompetitionLabel(db,m.res,s.comp):db.competitions[s.comp]?.name)}</strong><span class="small subtle">${v2Esc(m.localDate||day.date)} ${v2Esc(m.time||'')} ${v2Esc(m.timeZone||'UTC')}</span></div><p>${m.res?v2Esc(recordedSeriesLabel(db,m.res)):v2Esc(db.teams[m.a]?.name)+' vs '+v2Esc(db.teams[m.b]?.name)} <strong>${m.res?v2Esc(recordedSeriesScore(m.res)):''}</strong></p></article>`).join('')||'<div class="panel empty">현재 편성된 공식 경기가 없습니다.</div>'}</section>`;}
 function v2Competitions(){if(V2.tab==='역사·뉴스')return v2WorldHistoryView();if(V2.pid)return v2CompetitionDetail(V2.pid);return `<section class="stack">${Object.entries(V2.db.world.seasons||{}).map(([key,s])=>`<article class="panel"><button class="btn btn-outline" data-competition="${v2Esc(key)}">${s.year} · ${v2Esc(s.done?recordedCompetitionLabel(V2.db,(s.days||[]).flatMap(d=>d.matches||[]).find(m=>m.res)?.res||{games:[]},s.comp):V2.db.competitions[s.comp]?.name||s.comp)} · 순위와 결과</button></article>`).join('')||'<p>현재 생성된 대회가 없습니다.</p>'}</section>`;}
 function v2Analysis(){if(V2.tab==='경기 기록')return v2RecordedView();const t=v2Team();if(!t||V2.db.world.fired)return '<section class="panel empty">현재 관리 구단이 없습니다. 홈에서 커리어 진행을 확인하세요.</section>';const rows=t.roster.map(id=>V2.db.players[id]);return `<section class="panel"><h2>현재 선수단 구성</h2>${ROLES.map(r=>`<div class="statline"><span>${v2Esc(ROLE_KO[r])}</span><strong>${rows.filter(p=>p.role===r).length}명</strong></div>`).join('')}<p class="hint">등록된 주 포지션 기준입니다. 포지션별 인원은 기량·시너지나 경기 승리를 보장하지 않습니다.</p></section>`;}
 function v2Settings(){return (typeof v2NativeLibrary==='function'?v2NativeLibrary():'')+`<section class="panel"><h2>화면과 저장</h2><div class="tag-flex"><button class="btn btn-outline" data-mode="dark">어두운 화면</button><button class="btn btn-outline" data-mode="light">밝은 화면</button></div><hr class="divider"><div class="stack"><button class="btn btn-primary" id="save-file">현재 게임 파일로 저장</button><label class="field">게임 파일 불러오기<input class="input" type="file" id="load-file" accept=".json,application/json"></label><button class="btn btn-outline" id="save-now">현재 게임 저장</button></div><p class="hint">파일을 불러오면 현재 화면의 게임이 교체됩니다. 먼저 현재 게임을 파일로 보관하세요.</p></section>`;}
@@ -13709,18 +13804,18 @@ function v2RecordedView(){
  return `<section class="panel"><h2>내 구단 공개 경기 기록</h2><p>세트 ${rows.length}건 · 현재 저장된 원자료 범위</p><div class="tag-flex"><button class="btn btn-outline" data-record-page="-1"${!V2.recordPage?' disabled':''}>이전</button><span>${V2.recordPage+1} / ${Math.max(1,Math.ceil(rows.length/V2_LIST_PAGE_SIZE))}</span><button class="btn btn-outline" data-record-page="1"${(V2.recordPage+1)*V2_LIST_PAGE_SIZE>=rows.length?' disabled':''}>다음</button></div></section>${rows.slice(V2.recordPage*V2_LIST_PAGE_SIZE,(V2.recordPage+1)*V2_LIST_PAGE_SIZE).map(row=>`<article class="panel"><p>${v2Esc(row.date)} · 패치 ${v2Esc(row.patch)}</p><button class="btn btn-outline" data-record="${v2Esc(v2RecordedKey(row))}">${v2Esc(recordedSeriesLabel(db,row.rec,row.game))} · ${row.gi+1}세트 상세</button></article>`).join('')||'<section class="panel empty">저장된 공식 세트 기록이 없습니다.</section>'}`;
 }
 function v2WorldHistoryView(){
- const db=V2.db,rows=(db.history||[]).slice().reverse();return `<section class="panel"><h2>당시 대회 결과</h2>${rows.map(h=>`<article><h3>${h.year} · ${v2Esc(h.compName||h.comp)}</h3><p>우승 ${v2Esc(h.championName||h.champion||'미기록')} · 준우승 ${v2Esc(h.runnerUpName||h.runnerUp||'미기록')} · ${h.final?h.final.join(' : '):'결승 점수 미기록'}</p><p>MVP ${v2Esc(h.mvpName||h.mvp||'미기록')}</p></article>`).join('')||'<p>아직 완료된 대회 결과가 없습니다.</p>'}</section><section class="panel"><h2>최근 실제 소식</h2>${(db.news||[]).slice(0,20).map(n=>`<p>${v2Esc(n.year)} · ${v2Esc(n.text)}</p>`).join('')||'<p>저장된 소식이 없습니다.</p>'}</section>`;
+ const db=V2.db,rows=(db.history||[]).slice().reverse();return `<section class="panel"><h2>당시 대회 결과</h2>${rows.map(h=>`<article><h3>${h.year} · ${v2Esc(h.compName||h.comp)}</h3><p>우승 ${v2Esc(h.championName||h.champion||(h.completionReason==='double_disqualification'?'없음 (결승 양 팀 실격)':'미기록'))} · 준우승 ${v2Esc(h.runnerUpName||h.runnerUp||(h.completionReason==='double_disqualification'?'없음':'미기록'))} · ${h.final?h.final.join(' : '):(h.completionReason==='double_disqualification'?'경기 미진행':'결승 점수 미기록')}</p><p>MVP ${v2Esc(h.mvpName||h.mvp||'미기록')}</p></article>`).join('')||'<p>아직 완료된 대회 결과가 없습니다.</p>'}</section><section class="panel"><h2>최근 실제 소식</h2>${(db.news||[]).slice(0,20).map(n=>`<p>${v2Esc(n.year)} · ${v2Esc(n.text)}</p>`).join('')||'<p>저장된 소식이 없습니다.</p>'}</section>`;
 }
 function v2CompetitionDetail(key){
  const db=V2.db,s=db.world.seasons?.[key];if(!s)return '<section class="panel"><p>현재 저장된 대회를 확인할 수 없습니다.</p></section>';
  const past=s.done||s.year<db.year,read=past?historicalSeasonView(db,s):db,identity=past?recordedSeasonIdentity(db,s):null,comp=read?.competitions?.[s.comp];
  const name=id=>past?recordedTeamLabel(identity,id):db.teams[id]?.name||id;
- return `<section class="panel competition-detail"><button class="btn btn-outline" id="competition-back">← 대회 목록</button><h2>${s.year} · ${v2Esc(past?recordedCompetitionLabel(db,(s.days||[]).flatMap(d=>d.matches||[]).find(m=>m.res)?.res||{games:[]},s.comp):comp?.name||s.comp)}</h2>${!read||!comp?'<p>당시 규정이 보관되지 않았습니다. 현재 규정으로 과거 순위를 다시 계산하지 않습니다.</p>':comp.stages.filter(stage=>['round_robin','swiss','league_phase'].includes(stage.type)&&s.stageData[stage.id]).map(stage=>{const groups=stage.type==='round_robin'&&stage.groups>1?groupStandings(read,s,stage.id):[standings(read,s,stage.id)];return groups.map((rows,i)=>`<h3>${v2Esc(stage.name||stage.id)}${groups.length>1?' · '+(i+1)+'조':''}</h3><div class="table-scroll" tabindex="0" role="region" aria-label="대회 순위"><table><thead><tr>${stage.type==='league_phase'?'<th>순위</th>':''}<th>구단</th><th>승</th><th>패</th><th>세트</th>${stage.type==='league_phase'?'<th>SoS</th><th>상대 세트 득실</th>':''}</tr></thead><tbody>${rows.map(r=>`<tr>${stage.type==='league_phase'?`<td>${r.tied?'공동 ':''}${r.rank}</td>`:''}<td>${v2Esc(name(r.tid))}</td><td>${r.w}</td><td>${r.l}</td><td>${r.gw??0} / ${r.gl??0}</td>${stage.type==='league_phase'?`<td>${r.sos}</td><td>${r.opponentSetDiff}</td>`:''}</tr>`).join('')}</tbody></table></div>`).join('')}).join('')}${v2WorldsDrawDetails(s,name)}${s.champion?`<p>확정 우승 ${v2Esc(name(s.champion))}</p>`:''}</section>`;
+ return `<section class="panel competition-detail"><button class="btn btn-outline" id="competition-back">← 대회 목록</button><h2>${s.year} · ${v2Esc(past?recordedCompetitionLabel(db,(s.days||[]).flatMap(d=>d.matches||[]).find(m=>m.res)?.res||{games:[]},s.comp):comp?.name||s.comp)}</h2>${!read||!comp?'<p>당시 규정이 보관되지 않았습니다. 현재 규정으로 과거 순위를 다시 계산하지 않습니다.</p>':comp.stages.filter(stage=>['round_robin','swiss','league_phase'].includes(stage.type)&&s.stageData[stage.id]).map(stage=>{const groups=stage.type==='round_robin'&&stage.groups>1?groupStandings(read,s,stage.id):[standings(read,s,stage.id)];return groups.map((rows,i)=>`<h3>${v2Esc(stage.name||stage.id)}${groups.length>1?' · '+(i+1)+'조':''}</h3><div class="table-scroll" tabindex="0" role="region" aria-label="대회 순위"><table><thead><tr>${stage.type==='league_phase'?'<th>순위</th>':''}<th>구단</th><th>승</th><th>패</th><th>세트</th>${stage.type==='league_phase'?'<th>SoS</th><th>상대 세트 득실</th>':''}</tr></thead><tbody>${rows.map(r=>`<tr>${stage.type==='league_phase'?`<td>${r.tied?'공동 ':''}${r.rank}</td>`:''}<td>${v2Esc(name(r.tid))}</td><td>${r.w}</td><td>${r.l}</td><td>${r.gw??0} / ${r.gl??0}</td>${stage.type==='league_phase'?`<td>${r.sos}</td><td>${r.opponentSetDiff}</td>`:''}</tr>`).join('')}</tbody></table></div>`).join('')}).join('')}${v2WorldsDrawDetails(s,name)}${s.champion?`<p>확정 우승 ${v2Esc(name(s.champion))}</p>`:disqualifiedFinalResult(s)?'<p>우승자 없음 · 결승 양 팀 실격 · 경기 미진행</p>':''}</section>`;
 }
 function v2WorldsDrawDetails(s,name){
  const league=Object.values(s.stageData||{}).find(sd=>sd.type==='league_phase');if(!league)return '';
  const knockout=Object.values(s.stageData).find(sd=>sd.type==='single_elim'&&sd.rounds?.length),matches=s.days.flatMap(d=>d.matches);
- return `<section aria-label="월즈 추첨과 결정전"><h3>리그 페이즈 추첨</h3>${league.pots.map((pot,i)=>`<p>포트 ${i+1}: ${pot.map(t=>v2Esc(name(t))).join(' · ')}</p>`).join('')}<p>동률은 승수·SoS·세트 득실·상대 세트 득실·세트 승수 → 승자승 → 미해결 진출·시드 경계 BO1 결정전 순서로 처리합니다.</p>${league.tiebreaks.map((tb,i)=>`<p>결정전 ${i+1}: ${tb.teams.map(t=>v2Esc(name(t))).join(' · ')} · ${tb.matches.filter(id=>matches.find(m=>m.id===id)?.res).length}/${tb.matches.length}경기 완료</p>`).join('')}${knockout?`<h3>16강 추첨으로 고정된 대진</h3>${knockout.rounds.map(r=>`<h4>${v2Esc(r.name)}</h4><ul>${r.pairs.map(([a,b])=>{const m=matches.find(m=>m.a===a&&m.b===b&&m.roundLabel===r.label);return `<li>${v2Esc(name(a))} — ${v2Esc(name(b))}${m?.res?' · '+m.res.score.join(' : '):' · 경기 대기'}</li>`}).join('')}</ul>`).join('')}`:'<p>리그 페이즈 순위 확정 후 16강을 추첨합니다.</p>'}</section>`;
+ return `<section aria-label="월즈 추첨과 결정전"><h3>리그 페이즈 추첨</h3>${league.pots.map((pot,i)=>`<p>포트 ${i+1}: ${pot.map(t=>v2Esc(name(t))).join(' · ')}</p>`).join('')}<p>동률은 승수·SoS·세트 득실·상대 세트 득실·세트 승수 → 승자승 → 미해결 진출·시드 경계 BO1 결정전 순서로 처리합니다.</p>${league.tiebreaks.map((tb,i)=>`<p>결정전 ${i+1}: ${tb.teams.map(t=>v2Esc(name(t))).join(' · ')} · ${tb.matches.filter(id=>matches.find(m=>m.id===id)?.res).length}/${tb.matches.length}경기 완료</p>`).join('')}${knockout?`<h3>16강 추첨으로 고정된 대진</h3>${knockout.rounds.map(r=>`<h4>${v2Esc(r.name)}</h4><ul>${r.pairs.map(([a,b])=>{const m=matches.find(m=>m.a===a&&m.b===b&&m.roundLabel===r.label);return `<li>${v2Esc(name(a))} — ${v2Esc(name(b))}${m?.res?' · '+recordedSeriesScore(m.res):' · 경기 대기'}</li>`}).join('')}</ul>`).join('')}`:'<p>리그 페이즈 순위 확정 후 16강을 추첨합니다.</p>'}</section>`;
 }
 function v2BindRecordedViews(){
  v2Bind('[data-record]',el=>{V2.recordReturn={db:V2.db,owner:managedTeamId(V2.db),scroll:window.scrollY||0,key:el.dataset.record};v2Navigate('analysis','경기 기록',el.dataset.record)});
@@ -14023,6 +14118,8 @@ function v2OfficialAi(state,side){let turns=0;while(draftTurn(state)&&draftTurn(
 function v2OfficialShow(){V2.section='schedule';V2.tab='경기 일정';V2.pid=null;v2Render();}
 function v2OfficialPrepare(){
  if(validManualInflightGame(V2.db))return {mode:'running',open:true,context:v2OfficialContext()};
+ const q=V2.db.world.pendingOfficial.queue[0],refs=pendingOfficialRefs(V2.db,q),administrative=pendingDisqualifiedFinalSeries(V2.db,refs,q);
+ if(administrative)return {mode:'administrative',reason:administrative.rec.reason,open:true,context:v2OfficialContext()};
  const selection=pendingOfficialSelectionSetup(V2.db);let o;
  if(selection)o={mode:'selection',setup:selection};
  else {const setup=pendingOfficialDraftSetup(V2.db);if(!setup)throw Error('현재 경기의 준비 입력을 확인할 수 없습니다');const side=[setup.blue,setup.red].indexOf(managedTeamId(V2.db));if(side<0)throw Error('현재 구단의 공식 경기 준비가 아닙니다');const state=createDraftSession(seriesOfficialView(V2.db,setup.session),[setup.blue,setup.red],new RNG(setup.gseed,'draft'),setup.draftCtx);v2OfficialAi(state,side);o={mode:'draft',setup,state,side,query:'',role:'ALL',selected:null};}
@@ -14050,12 +14147,13 @@ function v2OfficialFinish(){
 }
 function v2ResolveOfficialGame(draft){
  const o=V2.official;if(!v2OfficialCurrent(o))return v2Tell('현재 경기 준비를 다시 확인하세요');
- const previousResult=V2.officialResult,undo=pendingOfficialUndo(V2.db);let out;try{out=resolvePendingOfficialMatch(V2.db,draft);if(!out.game&&!out.response)throw Error('현재 경기 진행 결과를 확인할 수 없습니다');}catch(error){undo();V2.official=o;V2.officialResult=previousResult;return v2Tell('공식 경기 처리 실패 · '+error.message+' · 완료 기록과 준비 입력은 유지했습니다');}
+ const previousResult=V2.officialResult,undo=pendingOfficialUndo(V2.db);let out;try{out=resolvePendingOfficialMatch(V2.db,draft);if(!out.game&&!out.response&&!isDoubleDisqualification(out.rec))throw Error('현재 경기 진행 결과를 확인할 수 없습니다');}catch(error){undo();V2.official=o;V2.officialResult=previousResult;return v2Tell('공식 경기 처리 실패 · '+error.message+' · 완료 기록과 준비 입력은 유지했습니다');}
  v2AfterCommittedAction(()=>v2AcceptOfficialOutput(out));
 }
 function v2AcceptOfficialOutput(out){
  if(out.game)V2.officialResult={game:publicMatchRecord(out.game,out.game.patch||V2.db.patch.id),score:out.score,done:out.done};
- V2.official=null;v2Save();const contact=v2CurrentContact();v2Tell(contact||out.response?'선수 연락에서 진행을 멈췄습니다. 현재 계약을 직접 검토하세요.':'실제 경기 결과를 기록했습니다. 다음 준비와 진행은 직접 선택하세요');
+ if(isDoubleDisqualification(out.rec))V2.officialResult={administrative:out.rec,done:true};
+ V2.official=null;v2Save();const contact=v2CurrentContact();v2Tell(contact||out.response?'선수 연락에서 진행을 멈췄습니다. 현재 계약을 직접 검토하세요.':isDoubleDisqualification(out.rec)?out.rec.reason:'실제 경기 결과를 기록했습니다. 다음 준비와 진행은 직접 선택하세요');
  if(contact)v2OpenNegotiation(contact.id);else if(!v2ShowContractResponse(out))v2Render();
 }
 function v2OfficialNotice(){
@@ -14064,6 +14162,7 @@ function v2OfficialNotice(){
 }
 function v2OfficialView(){
  const o=V2.official;if(!v2OfficialCurrent(o))return `<section class="panel"><h2>경기 준비 상태가 바뀌었습니다</h2><p>이전 준비 입력을 현재 경기에 자동 적용하지 않습니다.</p><button class="btn btn-outline" id="official-discard">미완료 준비 입력 취소</button></section>`;
+ if(o.mode==='administrative')return `<section class="panel"><h2>결승 양 팀 실격</h2><p>공식 출전 가능 선수가 양 팀 모두 5명 미만입니다. 경기를 진행하지 않고 우승자 없이 대회를 종료합니다.</p><button class="btn btn-primary" id="official-administrative">우승자 없음으로 종료</button></section>`;
  if(o.mode==='running')return '<section class="panel"><h2>진행 중인 공식 게임</h2><p>경기 패치 '+v2Esc(seriesOfficialView(V2.db,o.context.session).patch.id)+'</p><p>시작할 때 확정한 입력을 유지합니다. 아직 끝나지 않은 경기의 결과는 표시하지 않습니다.</p><button class="btn btn-primary" id="official-resume">현재 게임 이어서 진행</button></section>';
  const x=o.setup,header=`<section class="panel"><div class="panel-heading"><strong>${v2Esc(x.comp.name)} · ${x.game}세트</strong><small>경기 패치 ${v2Esc(seriesOfficialView(V2.db,x.session).patch.id)}${x.comp.international?' · 대회 개막 패치 고정':''}</small><button class="btn btn-outline btn-small" id="official-pause">창 닫기</button></div><p>${v2Esc(V2.db.teams[x.m.a].name)} ${x.score.join(' : ')} ${v2Esc(V2.db.teams[x.m.b].name)}</p></section>`;
  if(o.mode==='selection'){
@@ -14088,8 +14187,9 @@ function v2DraftCentre(o){
  return `<section class="draft-centre panel"><div class="draft-phase"><small>${turn?(turn.index+1)+'/20번째 순서 · 우리 팀 차례':'모든 선택 완료'}</small><h2>${turn?(turn.kind==='B'?'금지할 챔피언 선택':'우리 팀 챔피언 선택'):'밴픽 확정'}</h2><p class="hint">이전 세트 사용 제한 ${s.ctx.fearless?s.ctx.used.length:0}개 · 챔피언 초상을 눌러 검토하세요.</p></div>${preview}${turn?`<label class="field">챔피언 검색<input class="input" id="official-search" value="${v2Esc(o.query)}" autocomplete="off"></label><div class="filter-row">${['ALL',...ROLES].map(r=>`<button class="chip ${o.role===r?'selected':''}" data-official-role="${r}">${r==='ALL'?'전체':v2Esc(ROLE_KO[r])}</button>`).join('')}</div><div class="champion-grid" aria-label="챔피언 선택 목록">${rows.map(c=>`<button class="champion-card" data-official-champ="${c.id}" aria-label="${sv2Name(s,c.id)} 검토" aria-pressed="${o.selected===c.id}">${v2ChampionArt(c)}<span>${sv2Name(s,c.id)}</span></button>`).join('')||'<p>선택할 수 있는 챔피언이 없습니다.</p>'}</div><div class="draft-confirm"><span>${c?sv2Name(s,c.id):'챔피언을 고르세요'}</span><button class="btn btn-primary" id="official-lock"${!c?' disabled':''}>${turn.kind==='B'?'금지':'선택'} 확정</button></div>`:'<p>실제 경기 엔진으로 진행합니다. 승패는 넥서스 종료 결과로 기록합니다.</p><button class="btn btn-primary" id="official-finish">이 밴픽으로 경기 진행</button>'}</section>`;
 }
 
-function v2OfficialResultView(){const r=V2.officialResult;if(!r)return '';const g=r.game;return `<section class="panel"><h2>방금 끝난 공식 경기</h2><p>${v2Esc(V2.db.teams[g.winner]?.name||g.winner)} 승 · ${v2Esc(g.ending?.kind==='nexus'?'넥서스 파괴':g.ending?.kind||'종료 사유 확인')}</p><p>${r.score.join(' : ')} · ${r.done?'시리즈 종료':'다음 세트 준비 대기'}</p></section>`;}
+function v2OfficialResultView(){const r=V2.officialResult;if(!r)return '';if(isDoubleDisqualification(r.administrative))return '<section class="panel"><h2>대회 종료 · 우승자 없음</h2><p>결승 양 팀 실격 · 경기와 세트 점수는 기록하지 않았습니다.</p></section>';const g=r.game;return `<section class="panel"><h2>방금 끝난 공식 경기</h2><p>${v2Esc(V2.db.teams[g.winner]?.name||g.winner)} 승 · ${v2Esc(g.ending?.kind==='nexus'?'넥서스 파괴':g.ending?.kind||'종료 사유 확인')}</p><p>${r.score.join(' : ')} · ${r.done?'시리즈 종료':'다음 세트 준비 대기'}</p></section>`;}
 function v2BindOfficial(){
+ v2Bind('#official-administrative',()=>{if(V2.official?.mode==='administrative')v2ResolveOfficialGame(null)});
  v2Bind('#official-contact',()=>{const c=v2CurrentContact();if(c)v2OpenNegotiation(c.id)});
  v2Bind('#official-resume',()=>{if(V2.official?.mode==='running')v2ResolveOfficialGame(null)});
  v2BindChampionArt();
@@ -14137,7 +14237,7 @@ function v2Render(){
  nav.innerHTML=V2_MENUS.map(m=>`<button class="nav-item ${m.id===V2.section?'selected':''}" data-section="${m.id}" aria-current="${m.id===V2.section?'page':'false'}">${v2Icon(m.icon)}<span>${m.name}</span>${m.id==='inbox'&&V2.db&&v2Mail().some(m=>!V2.read[m.id])?`<span class="tiny-count">${v2Mail().filter(m=>!V2.read[m.id]).length}</span>`:''}</button>`).join('');nav.scrollLeft=left;
  document.getElementById('sub-nav').innerHTML=menu.tabs.map(tab=>`<button class="sub-item ${tab===V2.tab?'selected':''}" data-tab="${tab}" aria-current="${tab===V2.tab?'page':'false'}">${tab}</button>`).join('');
  if(V2.official?.open){const path='#schedule/'+encodeURIComponent('경기 일정');if(location.hash!==path)history.pushState(null,'',path);}document.getElementById('location').textContent=V2.official?.open?'일정 · 공식 경기':menu.name;document.getElementById('app-title').textContent=V2.official?.open?'수동 경기 준비':V2.nid?'협상 · '+(V2.db?.players[v2OwnedNegotiation(V2.nid)?.pid]?.name||'현재 대상 확인'):V2.pid&&V2.db?.players[V2.pid]?V2.db.players[V2.pid].name:V2.tab;
- const budget=document.getElementById('budget'),official=V2.official?.open?V2.official:null;budget.hidden=!official;budget.innerHTML=official?.mode==='running'?'<small>진행 중인 공식 게임</small><b>확정한 입력 유지</b>':official?`<small>${official.setup.game}세트 · ${official.mode==='selection'?'선택권':draftTurn(official.state)?draftTurn(official.state).kind==='B'?'금지 차례':'선택 차례':'밴픽 완료'}</small><b>${official.setup.score.join(' : ')}</b>`:'';
+ const budget=document.getElementById('budget'),official=V2.official?.open?V2.official:null;budget.hidden=!official;budget.innerHTML=official?.mode==='administrative'?'<small>결승 양 팀 실격</small><b>우승자 없음</b>':official?.mode==='running'?'<small>진행 중인 공식 게임</small><b>확정한 입력 유지</b>':official?`<small>${official.setup.game}세트 · ${official.mode==='selection'?'선택권':draftTurn(official.state)?draftTurn(official.state).kind==='B'?'금지 차례':'선택 차례':'밴픽 완료'}</small><b>${official.setup.score.join(' : ')}</b>`:'';
  const renderers={home:v2Home,squad:()=>['선발·전술','스크림·회복','훈련'].includes(V2.tab)?v2PreparationView():['현재 직원','직원 채용'].includes(V2.tab)?v2Staff():v2Squad(),market:v2Market,scout:v2Market,schedule:v2Schedule,competitions:v2Competitions,analysis:v2Analysis,finance:v2Finance,inbox:v2Inbox,settings:v2Settings};
  document.getElementById('content').innerHTML=V2.db?(V2.official?.open?'<section class="panel"><p>공식 경기 준비 창을 열었습니다.</p></section>':v2OfficialNotice()+(['home','schedule'].includes(V2.section)?v2OfficialResultView():'')+renderers[V2.section]()):v2Start();document.getElementById('status').textContent=V2.message;
  const continueButton=document.getElementById('continue');continueButton.disabled=!V2.db||!!(v2CareerDetached()?null:V2.db?.world.pendingOfficial?(manualContactPending(V2.db)?null:v2OfficialError()):v2ManualError())||!!V2.review||!!V2.managementReview||!!V2.roleReview;continueButton.textContent=V2.db&&manualContactPending(V2.db)?'선수 연락 확인 ›':V2.db?.world.pendingOfficial?'공식 경기 준비 ›':V2.db&&waitingNegotiationResponses(V2.db,true).length?'다음 선수 연락 ›':V2.db?.world.phase==='initial_roster'?'개막 준비 확인 ›':V2.db?.world.phase==='market'?'이적시장 마감 검토 ›':V2.db?.world.phase==='preseason'?'다음 시즌 시작 검토 ›':V2.db?.world.phase==='offseason'?'계약 기간 하루 검토 ›':'계속 진행 ›';

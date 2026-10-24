@@ -93,6 +93,7 @@ function advanceStep(db){
   }
 }
 function placements(db,s){
+  if(disqualifiedFinalResult(s))return administrativeTournamentPlacements(db,s);
   const comp=db.competitions[s.comp];const reg=standings(db,s,comp.stages[0].id).map(x=>x.tid);
   const out=[s.champion,s.runnerUp].filter(Boolean);for(const t of reg)if(!out.includes(t))out.push(t);return out;
 }
@@ -267,6 +268,7 @@ function pendingOfficialDraftSetup(db){
 function resolvePendingOfficialMatch(db,forcedDraft){
   const w=db.world,p=w&&w.pendingOfficial,q=p&&p.queue&&p.queue[0];if(!q)throw new Error('No pending official match');
   const refs=pendingOfficialRefs(db,q);if(!refs)throw new Error('Pending official match is stale');
+  const administrative=resolvePendingDisqualifiedFinal(db,refs,q);if(administrative)return administrative;
   if(!q.session)q.session=scheduledSeriesSession(db,refs.s,refs.m).session;
   const played=playSeriesSessionGame(db,q.session,forcedDraft,false);
   if(!played.done)return {game:played.game,done:false,score:played.score,pending:w.pendingOfficial};

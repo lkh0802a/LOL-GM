@@ -25,6 +25,7 @@ function internationalQualifierOrder(db,R){
   }
   const view=historicalSeasonView(db,s);if(!view)return [];
   const comp=view.competitions[s.comp],cfg=comp.stages.at(-1),sd=s.stageData[cfg.id];
+  if(disqualifiedFinalResult(s))return administrativeTournamentPlacements(db,s).filter(t=>t&&db.teams[t]?.active!==false&&db.teams[t]?.region===R.id&&(db.teams[t]?.division||1)===1);
   if(!['single_elim','double_elim'].includes(cfg.type)||!sd?.seeds||!Array.isArray(sd.rounds)||!s.champion||!s.runnerUp||s.days.some(d=>d.matches.some(m=>!m.res)))return [];
   const order=['round_robin','swiss'].includes(comp.stages[0].type)?standings(view,s,comp.stages[0].id).map(r=>r.tid):sd.seeds,exits=new Map();
   for(const [round,rd] of (sd.rounds||[]).entries()){

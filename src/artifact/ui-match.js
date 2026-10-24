@@ -90,6 +90,7 @@ const tname=id=>DB.teams[id]?DB.teams[id].name:id, tshort=id=>DB.teams[id]?DB.te
 const pnm=id=>DB.players[id]?DB.players[id].name:id;
 function renderSeries(rec,big){
   if(rec.practiceModel&&(DB.world?.fired||!rec.games?.length||rec.games.some(g=>![g.blue,g.red].some(id=>managerControlsSquad(DB,id)))))return '<section><p>비공개 스크림 조회 권한이 없습니다.</p></section>';
+  if(isDoubleDisqualification(rec))return `<section><h3>우승자 없음 · 결승 양 팀 실격</h3><p>${esc(recordedSeriesLabel(DB,rec))}</p><p>경기를 진행하지 않아 세트 점수와 선수 출전 기록이 없습니다.</p></section>`;
   const aw=rec.winner===rec.a,identity=recordedSeriesIdentity(DB,rec);
   return `<section class="board ser">
     <div class="side blue ${aw?'won':''}"><div class="tname">${esc(recordedTeamLabel(identity,rec.a))}</div><div class="res">${aw?'승리':'패배'}</div></div>

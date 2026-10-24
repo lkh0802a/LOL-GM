@@ -10,6 +10,8 @@ const acceptances=[
   'msi-swiss-format-acceptance.mjs',
   'worlds-league-phase-acceptance.mjs',
   'worlds-tiebreak-acceptance.mjs',
+  'double-disqualification-acceptance.mjs',
+  'double-disqualification-world-close-acceptance.mjs',
   'league-identity-acceptance.mjs',
   'manual-owned-coaching-acceptance.mjs',
   'training-allocation-acceptance.mjs',

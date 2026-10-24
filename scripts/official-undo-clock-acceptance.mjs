@@ -11,7 +11,7 @@ const archive=await readFile(new URL(evidence.archive.path,root));
 const sha=b=>createHash('sha256').update(b).digest('hex');
 assert.equal(sha(archive),evidence.archive.sha256);
 const prior=gunzipSync(archive).toString();assert.equal(sha(prior),evidence.predecessorSha256);
-// Reconstruct reviewed retirement, format-options and entry transaction wiring.
+// Reconstruct reviewed retirement, formats, entries and administrative wiring.
 // Verify the entire original source against its unchanged immutable pin.
 const liveSeason=await readFile(new URL('src/artifact/season.js',root),'utf8');
 const successor='  const scrim=days>=1&&fat<54&&cond>70;return {scrim,next,days,fat,cond};';
@@ -22,6 +22,8 @@ const formatPredecessor='stages:intlStages(it.format,teams,it.bo)';
 assert.equal(liveSeason.split(formatSuccessor).length,2,'one reviewed format-options call');
 let referenceSeason=liveSeason;
 for(const [current,previous] of [
+  ['  if(disqualifiedFinalResult(s))return administrativeTournamentPlacements(db,s);\n',''],
+  ['  const administrative=resolvePendingDisqualifiedFinal(db,refs,q);if(administrative)return administrative;\n',''],
   ['.sort(internationalEventPriority)','.sort((a,b)=>(a.prestige||1)-(b.prestige||1))'],
   ['  const rollback=pendingOfficialUndo(db),previousTaken=[...taken];let committed=false;\n  try{\n',''],
   ['  const presetEntries=presetInternationalEntries(db,it,taken);\n',''],
@@ -32,7 +34,7 @@ for(const [current,previous] of [
   ['  committed=true;return true;','  return true;'],
   ['  }finally{if(!committed){rollback();taken.clear();for(const t of previousTaken)taken.add(t)}}\n','']
 ]){
-  assert.equal(referenceSeason.split(current).length,2,'one reviewed entry wiring replacement');
+  assert.equal(referenceSeason.split(current).length,2,'one reviewed domain wiring replacement');
   referenceSeason=referenceSeason.replace(current,previous);
 }
 assert.equal(referenceSeason.split('!legacyExcluded.has(t)').length,4,'three reviewed legacy exclusion reads');
