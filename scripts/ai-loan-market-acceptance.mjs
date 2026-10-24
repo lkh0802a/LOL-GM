@@ -51,6 +51,39 @@ const result=await runEngineFixture(String.raw`(()=>{
  }
  // A removed cap is not a promise to transact: existing consent, window,
  // medical/registration and economic authority remain the only gateway.
+ const retainedCases=[];
+ for(const scenario of ['recall','expiresBefore','covering','obligation']){
+  const {db,pairs}=fixture(),[a,b,c]=pairs,A=db.teams[a.owner],original=starterFor(db,A,ROLES[0]);
+  for(const id of A.roster)db.players[id].contract.salary=2;
+  original.attrs=Object.fromEntries(Object.keys(original.attrs).map(k=>[k,50]));original.reputation=50;original.contract.salary=50;original.personality.ambition=10;original.careerGoal='stability';
+  const incoming={...command(db,b),teamId:A.id,duration:scenario==='covering'?'season':'half',recall:scenario==='recall'};
+  if(scenario==='obligation'){const quote=aiLoanPurchaseProposal(db,db.players[b.pid],A);check(quote.purchase,'existing lawful purchase proposal');incoming.purchase={...quote.purchase,type:'obligation'};}
+  check(commitWorldAction(db,incoming).ok,'real incoming loan '+scenario);setDepthStarter(db,A,ROLES[0],b.pid,'fixture',true);
+  const outgoingDuration=['expiresBefore','obligation'].includes(scenario)?'season':'half',first={...command(db,a),duration:outgoingDuration};
+  check(commitWorldAction(db,first).ok,'first outgoing loan leaves five durable players '+scenario);
+  const second={...command(db,c),pid:original.id,fromId:A.id,duration:outgoingDuration},before=packDB(db),plan=previewWorldAction(db,second);
+  check(packDB(db)===before,'retained squad preview changed state');
+  check(previewWorldAction(unpackDB(packDB(db)),second).ok===plan.ok,'retained consent changed after native save');
+  if(scenario==='covering'||scenario==='obligation'){
+   check(plan.ok,'non-recallable longer contract legitimately covers outgoing loan');
+   if(scenario==='covering'){db.players[b.pid].loan.recall=true;const changed=packDB(db);check(!applyWorldAction(db,plan).ok&&packDB(db)===changed,'stale incoming recall terms authorized outgoing loan');db.players[b.pid].loan.recall=false;}
+   check(commitWorldAction(db,second).ok,'valid longer cover failed existing writer');
+  }
+  else{
+   check(!plan.ok&&!commitWorldAction(db,second).ok&&packDB(db)===before,'AI lent below retained minimum '+scenario);
+   const manual=unpackDB(before);setManagedTeam(manual,A.id);check(previewWorldAction(manual,{...second,actor:'manager'}).ok,'explicit lender manager consent removed');
+  }
+  if(scenario==='recall'){
+   const p=db.players[b.pid],result=commitWorldAction(db,{type:'player.loan-return',actor:'ai',pid:p.id,fromId:A.id,teamId:b.owner});
+   check(result.ok&&!p.loan&&A.roster.length===5&&medicalAvailable(db,A)===5,'independent real recall leaves original club with five');
+  }
+  retainedCases.push(scenario);
+ }
+ {
+  const {db,pairs}=fixture(),a=pairs[0],A=db.teams[a.owner],patient=db.players[A.roster.find(id=>id!==a.pid)];
+  check(startMedicalEvent(db,patient,'injury','moderate',14)?.out&&medicalAvailable(db,A)===5,'actual medical five-player fixture');
+  const before=packDB(db),plan=previewWorldAction(db,command(db,a));check(!plan.ok&&!commitWorldAction(db,command(db,a)).ok&&packDB(db)===before,'AI lent the medically protected fifth player');retainedCases.push('medical');
+ }
  const blocked=[];
  for(const reason of ['managed','noSupply','budget','closed','offseason','reviewed']){
   const {db,pairs}=fixture();
@@ -66,7 +99,7 @@ const result=await runEngineFixture(String.raw`(()=>{
   if(['closed','offseason','reviewed'].includes(reason))check(packDB(db)===before,'historical receipt/window state changed '+reason);
   blocked.push(reason);
  }
- return {rows,blocked,actualConsentGateway:true,nativeSave:true,duplicate:true,ledgerConserved:true};
+ return {rows,blocked,retainedCases,actualConsentGateway:true,nativeSave:true,duplicate:true,ledgerConserved:true};
 })()`,{filename:'ai-loan-market.vm.js',timeout:180000});
 assert.equal(testHarnessStats().contexts,contexts+1,'one fresh acceptance VM');
 console.log('AI_LOAN_MARKET_ACCEPTANCE '+JSON.stringify(result));

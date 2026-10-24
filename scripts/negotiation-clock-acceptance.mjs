@@ -364,7 +364,7 @@ const midnightResult=await runEngineFixture(String.raw`(()=>{
  const check=(v,m)=>{if(!v)throw Error('OFFICIAL_MIDNIGHT '+m)};
  const cfg=defaultWorldConfig();cfg.regions=[regionCfg('BR',{teams:10,div2:false,regularBo:5})];cfg.internationals=[];
  // Canonical loan review changes the lawful roster before this real fixture.
- // Seed 3 now ends at 23:56:48; seed 5's actual second game ends at 00:14:05.
+ // Seed 3 ended before midnight after canonical review; seed 5 retains the crossing.
  // Keep every midnight/contact/rollback assertion and the real 23:00 venue slot.
  const base=buildWorld(cfg),team=activeTeams(base,'BR',1)[0];startCareer(base,team.id,'midnight-existing-br-5');autoBuildInitialSquad(base,team,new RNG('midnight-roster','fixture'),5);finalizeInitialRosters(base);
  const season=Object.values(base.world.seasons).find(s=>s.region==='BR'),day=season.days.find(d=>d.matches.some(m=>m.utcAt.includes('T23:00:00'))),match=day.matches.find(m=>m.utcAt.includes('T23:00:00'));setManagedTeam(base,match.a);
