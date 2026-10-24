@@ -1,20 +1,23 @@
 import assert from 'node:assert/strict';
-import {runEngineFixture} from './test-harness.mjs';
+import {runEngineFixture,testHarnessStats} from './test-harness.mjs';
 import {readFile,writeFile} from 'node:fs/promises';
 const ui=await Promise.all(['state','market','contracts','views','management','dialog','official'].map(p=>readFile(new URL('../src/ui-v2/'+p+'.js',import.meta.url),'utf8')));
 const app=await readFile(new URL('../src/ui-v2/app.js',import.meta.url),'utf8'),boot=app.indexOf('\ntry{const saved=');assert(boot>0);
-for(const scenario of [{type:'single_elim',teams:6,take:4},{type:'double_elim',teams:6,take:4},{type:'double_elim',teams:8,take:6}]){
-const {type:bracketType,teams:teamCount,take:playoffTake}=scenario;
-const out=await runEngineFixture(String.raw`(()=>{
- const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:${teamCount},div2:false})];cfg.internationals=[];
+const contextsBefore=testHarnessStats().contexts;
+const outputs=await runEngineFixture(String.raw`(()=>{
+ const scenarios=[{type:'single_elim',teams:6,take:4},{type:'double_elim',teams:6,take:4},{type:'double_elim',teams:8,take:6}];
+ return scenarios.map(scenario=>{
+ const {type:bracketType,teams:teamCount,take:playoffTake}=scenario;
+ return (()=>{
+ const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:teamCount,div2:false})];cfg.internationals=[];
  let db=buildWorld(cfg),teams=activeTeams(db,'NA',1);const year=db.year;db.world={phase:'season',year,manage:'ai',seasons:{},registrationVersion:1};setManagedTeam(db,teams[0].id);setWorldCalendarDate(db,year+'-01-10');
  for(const t of teams){for(const role of ROLES){const p=genPlayer(db,new RNG(t.id+role,'succession'),{region:t.region,role,age:22,base:65});signContract(db,p,t,1,2,{});}initializeDepthChart(db,t,true);}
- initializeOfficialRegistrations(db);db=unpackDB(packDB(db));teams=activeTeams(db,'NA',1);const ids=teams.map(t=>t.id),id='SUCCESSION_TEST';db.competitions[id]={id,name:'차순위 검증',region:'NA',teams:ids,rules:{fearless:true},stages:[{id:'regular',name:'정규',type:'round_robin',legs:1,bestOf:1},{id:'po',name:'PO',type:${JSON.stringify(bracketType)},from:'regular',take:${playoffTake},bestOf:1}]};
+ initializeOfficialRegistrations(db);db=unpackDB(packDB(db));teams=activeTeams(db,'NA',1);const ids=teams.map(t=>t.id),id='SUCCESSION_TEST';db.competitions[id]={id,name:'차순위 검증',region:'NA',teams:ids,rules:{fearless:true},stages:[{id:'regular',name:'정규',type:'round_robin',legs:1,bestOf:1},{id:'po',name:'PO',type:bracketType,from:'regular',take:playoffTake,bestOf:1}]};
  const s=newSeason(db,id,year,'succession-order',db.worldDate);db.world.seasons[id]=s;while(s.stage===0){setWorldCalendarDate(db,s.days[s.cur].date);playDay(db,s);}
  const day=s.days[s.cur],m=day.matches[0],prior=JSON.stringify(s.days.filter(d=>d.stage==='regular')),order=standings(db,s,'regular').map(r=>r.tid);
  for(const team of teams)for(const pid of team.registration.players){db.players[pid].injury=null;delete db.players[pid].medical;}
  for(const t of [m.a,m.b])db.players[db.teams[t].registration.players[0]].medical={out:true,daysLeft:20};
- setWorldCalendarDate(db,day.date);const before=packDB(db),plan=qualificationSuccessionPlan(db,s,m);if(!plan||plan.to.join()!==order.slice(${playoffTake}).join()||packDB(db)!==before)throw Error('actual order/read-only planner');
+ setWorldCalendarDate(db,day.date);const before=packDB(db),plan=qualificationSuccessionPlan(db,s,m);if(!plan||plan.to.join()!==order.slice(playoffTake).join()||packDB(db)!==before)throw Error('actual order/read-only planner');
  const privateAttrs=Object.values(db.players).map(p=>[p,Object.getOwnPropertyDescriptor(p,'attrs')]);for(const [p] of privateAttrs)Object.defineProperty(p,'attrs',{enumerable:true,configurable:true,get(){throw Error('succession read hidden ability');}});if(JSON.stringify(qualificationSuccessionPlan(db,s,m))!==JSON.stringify(plan))throw Error('hidden attribute independence');for(const [p,descriptor] of privateAttrs)Object.defineProperty(p,'attrs',descriptor);
  {const game=unpackDB(before),season=game.world.seasons[id],match=season.days[season.cur].matches[0],candidate=plan.to[0];game.players[game.teams[candidate].registration.players[0]].medical={out:true,daysLeft:20};const raw=packDB(game);let blocked=false;try{playDay(game,season);}catch(e){blocked=e.message.includes('차순위');}if(!blocked||qualificationSuccessionPlan(game,season,match)!==null||packDB(game)!==raw)throw Error('insufficient eligible successors must remain inert');}
  const automatic=unpackDB(before),as=automatic.world.seasons[id],am=as.days[as.cur].matches[0];playDay(automatic,as);if(am.a!==plan.to[0]||am.b!==plan.to[1]||am.res.games[0].publicRecord.ending.kind!=='nexus')throw Error('actual automatic entry');
@@ -41,8 +44,13 @@ const out=await runEngineFixture(String.raw`(()=>{
  const R=db.regions.NA;s.split=1;s.region='NA';s.key=R.short+'-1';db.world.seasons[s.key]=s;delete db.world.seasons[id];while(!s.done){setWorldCalendarDate(db,s.days[s.cur].date);playDay(db,s);}if(old.includes(s.champion)||!s.champion||s.days.flatMap(d=>d.matches).some(x=>!x.res||x.res.games.some(g=>g.publicRecord.ending.kind!=='nexus')))throw Error('successor final must finish actual tournament');
  if(placements(db,s).some(t=>old.includes(t))||regionPlacements(db,R).some(t=>old.includes(t))||internationalQualifierOrder(db,R).some(t=>old.includes(t))||old.some(t=>elimReach(db,s,t)!==0))throw Error('disqualified team returned through ranking/entry/points');
  const history=db.history.at(-1),cause=recordedQualificationSuccessionText(history.qualificationSuccessions[0]);for(const t of teams)t.name='FUTURE_NAME';if(recordedQualificationSuccessionText(history.qualificationSuccessions[0])!==cause||history.qualificationSuccessions===s.qualificationSuccessions||packDB(unpackDB(packDB(db)))!==packDB(db))throw Error('completed public history/native');
- return {actualRegularSeries:JSON.parse(prior).flatMap(d=>d.matches).filter(m=>m.res).length,actualPlayoffSeries:s.days.filter(d=>d.stage==='po').flatMap(d=>d.matches).filter(m=>m.res).length,firstRoundByes:s.stageData.po.rounds[0].byes.length,sourceOrder:true,readOnly:true,noInventedResult:true,previousResultsPreserved:true,staleInert:true,native:true,actualSuccessorNexus:true,productionEntryHooks:true,pendingNativeCases:8,successorManualAuthority:true,legacyDeferredEntry:true,oldForcedInputInert:true,lateReferenceRollback:true,actualUi:true,damagedSaveCases:4,actualCompletedTournament:true,qualificationAndPointsExcludeDisqualified:true,historicalNames:true,hiddenAbilityUnread:true,insufficientSuccessorsInert:true,browserPending,browserCommitted};
+ return {bracketType,configuredTeams:teamCount,playoffTake,actualRegularSeries:JSON.parse(prior).flatMap(d=>d.matches).filter(m=>m.res).length,actualPlayoffSeries:s.days.filter(d=>d.stage==='po').flatMap(d=>d.matches).filter(m=>m.res).length,firstRoundByes:s.stageData.po.rounds[0].byes.length,sourceOrder:true,readOnly:true,noInventedResult:true,previousResultsPreserved:true,staleInert:true,native:true,actualSuccessorNexus:true,productionEntryHooks:true,pendingNativeCases:8,successorManualAuthority:true,legacyDeferredEntry:true,oldForcedInputInert:true,lateReferenceRollback:true,actualUi:true,damagedSaveCases:4,actualCompletedTournament:true,qualificationAndPointsExcludeDisqualified:true,historicalNames:true,hiddenAbilityUnread:true,insufficientSuccessorsInert:true,browserPending,browserCommitted};
+})();
+ });
 })()`,{timeout:120000,setupSources:[...ui,app.slice(0,boot)]});
+assert.equal(testHarnessStats().contexts-contextsBefore,1,'one fresh VM for all qualification scenarios');
+for(const out of outputs){
+const {bracketType,configuredTeams:teamCount,playoffTake}=out;
 if(process.env.SUCCESSION_FIXTURE){await writeFile(process.env.SUCCESSION_FIXTURE+'-'+bracketType+'-'+teamCount+'-'+playoffTake+'-pending.private.json',JSON.stringify({game:out.browserPending}));await writeFile(process.env.SUCCESSION_FIXTURE+'-'+bracketType+'-'+teamCount+'-'+playoffTake+'-committed.private.json',JSON.stringify({game:out.browserCommitted}));}delete out.browserPending;delete out.browserCommitted;
-out.bracketType=bracketType;out.configuredTeams=teamCount;out.playoffTake=playoffTake;assert(out.productionEntryHooks);console.log('QUALIFICATION_SUCCESSION_CORE',JSON.stringify(out));
+assert(out.productionEntryHooks);console.log('QUALIFICATION_SUCCESSION_CORE',JSON.stringify(out));
 }
