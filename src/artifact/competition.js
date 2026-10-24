@@ -100,6 +100,16 @@ function deAfter(sd,rd,res){
   else if(rd.br==='GF'){sd.alive=[W[0]];sd.elim.push(L[0])}
 }
 // 스위스: 같은 전적끼리, 재대결 회피
+function swissUnplayedPairs(sd,pool){
+  if(!pool.length)return [];
+  const [a,...rest]=pool;
+  for(let i=0;i<rest.length;i++){
+    const b=rest[i];if(sd.rec[a].opp.includes(b))continue;
+    const tail=swissUnplayedPairs(sd,rest.filter((_,j)=>j!==i));
+    if(tail)return [[a,b],...tail];
+  }
+  return null;
+}
 function swissRound(db,s,idx,date){
   const cfg=db.competitions[s.comp].stages[idx], sd=s.stageData[cfg.id];
   const act=sd.teams.filter(t=>!sd.advanced.includes(t)&&!sd.out.includes(t));
@@ -107,10 +117,13 @@ function swissRound(db,s,idx,date){
   const keys=Object.keys(bucket).sort((a,b)=>{const [aw,al]=a.split('-').map(Number),[bw,bl]=b.split('-').map(Number);return (bw-bl)-(aw-al)});
   const pairs=[];let carry=[];
   for(const k of keys){let pool=[...carry,...seedSort({seeds:sd.teams},bucket[k])];carry=[];
+    const matched=cfg.decidingBo&&pool.length%2===0?swissUnplayedPairs(sd,pool):null;
+    if(matched){pairs.push(...matched);continue;}
     while(pool.length>=2){const a=pool.shift();let j=pool.findIndex(b=>!sd.rec[a].opp.includes(b));if(j<0)j=0;pairs.push([a,pool.splice(j,1)[0]])}
     carry=pool;}
   if(!pairs.length)return;
-  const bo=cfg.bestOf; const label=`${cfg.name} ${sd.round+1}라운드`;
+  const bo=cfg.decidingBo?((a,b)=>[a,b].some(t=>sd.rec[t].w===sd.W-1||sd.rec[t].l===sd.L-1)?cfg.decidingBo:cfg.bestOf):cfg.bestOf;
+  const label=`${cfg.name} ${sd.round+1}라운드`;
   pushVenueRound(s,date,cfg.id,label,pairs,bo);
   sd.round++;sd.lastLabel=label;
 }
@@ -118,7 +131,8 @@ function standings(db,s,stageId){
   const sd=s.stageData[stageId];
   if(sd&&sd.type==='swiss'){
     const ord=[...sd.advanced,...sd.teams.filter(t=>!sd.advanced.includes(t)&&!sd.out.includes(t)),...sd.out.slice().reverse()];
-    return ord.map(t=>({tid:t,w:sd.rec[t].w,l:sd.rec[t].l,gw:sd.rec[t].w,gl:sd.rec[t].l,h2h:{},form:[]}));
+    const actual=new Map(rrTable(db,s,stageId,sd.teams).map(row=>[row.tid,row]));
+    return ord.map(t=>actual.get(t));
   }
   if(sd&&sd.groups){const gs=groupStandings(db,s,stageId);const out=[];const mx=Math.max(...gs.map(g=>g.length));for(let i=0;i<mx;i++)gs.forEach(g=>g[i]&&out.push(g[i]));return out}
   return rrTable(db,s,stageId,sd?sd.teams:[]);
@@ -205,7 +219,7 @@ function elimReach(db,s,tid){
 }
 // ---- 진행 방식 프리셋 (리그: 항상 더블 라운드로빈 이상 · Bo3 이상) ----
 const LEAGUE_FORMATS={rr_po:'더블 라운드로빈 + 플레이오프',rr_de:'더블 라운드로빈 + 더블 엘리미네이션',groups_po:'그룹 더블 라운드로빈 + 플레이오프'};
-const INTL_FORMATS={playin_swiss_ko:'플레이인 + 스위스 + 녹아웃',swiss_ko:'스위스 + 녹아웃',playin_groups_ko:'플레이인 + 그룹 + 녹아웃',playin_de:'플레이인 + 더블 엘리미네이션',groups_ko:'그룹 + 녹아웃',groups_de:'그룹 + 더블 엘리미네이션',ko:'녹아웃'};
+const INTL_FORMATS={msi_swiss_de:'스위스 + 더블 엘리미네이션',playin_swiss_ko:'플레이인 + 스위스 + 녹아웃',swiss_ko:'스위스 + 녹아웃',playin_groups_ko:'플레이인 + 그룹 + 녹아웃',playin_de:'플레이인 + 더블 엘리미네이션',groups_ko:'그룹 + 녹아웃',groups_de:'그룹 + 더블 엘리미네이션',ko:'녹아웃'};
 function leagueStages(R,n,div){
   const fmt=R.format||'rr_po', bo=Math.max(3,R.regularBo||3), pbo=div===2?3:Math.max(3,R.playoffBo||5);
   const take=div===2?Math.min(4,n):Math.min(Math.max(4,R.playoffTake||4),n);
