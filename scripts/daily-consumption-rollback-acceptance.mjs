@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {runEngineFixture} from './test-harness.mjs';
 const result=await runEngineFixture(String.raw`(()=>{
- const check=(v,m)=>{if(!v)throw Error('DAILY_CONSUMPTION_ROLLBACK '+m)},cfg=defaultWorldConfig();cfg.regions=['NA','KR'].map(id=>regionCfg(id,{teams:10,div2:false}));
+ const check=(v,m)=>{if(!v)throw Error('DAILY_CONSUMPTION_ROLLBACK '+m)},cfg=defaultWorldConfig();cfg.regions=['NA','KR','CN','EU','AP','BR'].map(id=>regionCfg(id,{teams:['NA','KR'].includes(id)?10:4,div2:false}));
  const db=buildWorld(cfg),initial=activeTeams(db,'NA',1)[0];startCareer(db,initial.id,'scrim-plan-travel');for(const t of activeTeams(db,null,1))autoBuildInitialSquad(db,t,new RNG('schedule-basis/'+t.id),5);finalizeInitialRosters(db);db.world.seasons={};db.worldDate='2027-03-01';for(const p of Object.values(db.players)){p.fatigue=0;p.condition=96;p.medicalPlan='normal';p.injury=null;}
  let selected=null;for(let i=0;i<50&&!selected;i++){db.world.seed='scrim-trip-'+i;const future=unpackDB(packDB(db));check(startInternational(future,'WORLD_CHAMPIONSHIP','2027-03-06',new Set()),'실제 국제대회 작성자');future.worldDate='2027-03-03';const ids=future.competitions.WORLD_CHAMPIONSHIP.teams.filter(id=>future.teams[id].region==='NA');for(const a of ids){for(const b of ids){if(a===b||!scrimPartnerAssessment(future,future.teams[a],future.teams[b]).allowed)continue;setManagedTeam(db,a);const command={type:'scrim.request',teamId:a,opponentId:b,date:'2027-03-03',slot:'afternoon',games:2},preview=previewWorldAction(db,command);if(preview.ok&&preview.changes[0].status==='accepted'){selected={command,preview};break;}}if(selected)break;}}
  check(selected,'원래 독립 수락의 고정 시험 입력');const {command,preview}=selected,t=db.teams[command.teamId],o=db.teams[command.opponentId],before=JSON.stringify(db);check(previewWorldAction(db,command).ok&&JSON.stringify(db)===before,'미리보기 순수');check(applyWorldAction(db,preview).accepted,'기존 수락 작성자');
@@ -10,7 +10,9 @@ const result=await runEngineFixture(String.raw`(()=>{
  // 기존 정산 작성자의 통제된 분할금 입력이다. 실제 시장 가격이나 새 계약 정책이 아니다.
  t.finance.cash=100;o.finance.cash=100;
  settleTransferSigningFee(db,db.players[t.roster[0]],o,t,9,{upfront:3,installments:[{date:command.date,amount:6}],addOns:[]});
- check(startInternational(db,'FIRST_STAND','2027-03-06',new Set()),'실제 다음 공식 편성');
+ // The normal-consumption case keeps the booked home venue. The separate
+ // schedule-basis acceptance covers international relocation blocking.
+ const nextOfficial=Object.values(db.competitions).find(c=>c.region==='NA'&&(c.div||1)===1);check(nextOfficial,'실제 국내 공식 대회');db.world.seasons[nextOfficial.id]=newSeason(db,nextOfficial.id,db.year,'daily-home-fixture','2027-03-06');check(db.world.seasons[nextOfficial.id].days.length>0,'실제 다음 공식 편성');
  const base=packDB(db),date=command.date,old=unpackDB(base),normal=unpackDB(base);
  officialDailyBeforeResourceEvidence(old,date);applyWorldDailyEffects(normal,date);
  check(JSON.stringify(normal)===JSON.stringify(old)&&packDB(normal)===packDB(old),'정상 원래 일일 작성자의 전체 상태/시드/저장');
