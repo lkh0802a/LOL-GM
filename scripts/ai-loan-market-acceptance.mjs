@@ -61,7 +61,9 @@ const result=await runEngineFixture(String.raw`(()=>{
   check(commitWorldAction(db,incoming).ok,'real incoming loan '+scenario);setDepthStarter(db,A,ROLES[0],b.pid,'fixture',true);
   const outgoingDuration=['expiresBefore','obligation'].includes(scenario)?'season':'half',first={...command(db,a),duration:outgoingDuration};
   check(commitWorldAction(db,first).ok,'first outgoing loan leaves five durable players '+scenario);
-  const second={...command(db,c),pid:original.id,fromId:A.id,duration:outgoingDuration},before=packDB(db),plan=previewWorldAction(db,second);
+  const second={...command(db,c),pid:original.id,fromId:A.id,duration:outgoingDuration};
+  if(scenario==='obligation')second.purchase={type:'option',fee:sellerTransferAsk(db,original,A),salary:Math.max(original.contract.salary,asking(db,original,db.teams[c.borrower].region))*2,years:2,terms:{promisedRole:'starter',releaseGuaranteeRate:1}};
+  const before=packDB(db),plan=previewWorldAction(db,second);
   check(packDB(db)===before,'retained squad preview changed state');
   check(previewWorldAction(unpackDB(packDB(db)),second).ok===plan.ok,'retained consent changed after native save');
   if(scenario==='covering'||scenario==='obligation'){
@@ -83,6 +85,21 @@ const result=await runEngineFixture(String.raw`(()=>{
   const {db,pairs}=fixture(),a=pairs[0],A=db.teams[a.owner],patient=db.players[A.roster.find(id=>id!==a.pid)];
   check(startMedicalEvent(db,patient,'injury','moderate',14)?.out&&medicalAvailable(db,A)===5,'actual medical five-player fixture');
   const before=packDB(db),plan=previewWorldAction(db,command(db,a));check(!plan.ok&&!commitWorldAction(db,command(db,a)).ok&&packDB(db)===before,'AI lent the medically protected fifth player');retainedCases.push('medical');
+ }
+ {
+  const {db,pairs}=fixture(),[a,b,c]=pairs,A=db.teams[a.owner],p=starterFor(db,A,ROLES[0]);
+  for(const id of A.roster)db.players[id].contract.salary=2;
+  p.attrs=Object.fromEntries(Object.keys(p.attrs).map(k=>[k,50]));p.reputation=50;p.contract.salary=50;p.personality.ambition=10;p.careerGoal='stability';
+  const cmd=(pid,fromId,teamId,extra={})=>({type:'player.loan',actor:'ai',pid,fromId,teamId,duration:'half',salaryShare:1,fee:0,promisedRole:'starter',recall:true,...extra});
+  check(commitWorldAction(db,cmd(b.pid,b.owner,A.id,{duration:'season',recall:false})).ok,'longer non-recallable arrival');setDepthStarter(db,A,ROLES[0],b.pid,'fixture',true);
+  const purchase=(pid,toId)=>{const player=db.players[pid],to=db.teams[toId];return {purchase:{type:'option',fee:sellerTransferAsk(db,player,A),salary:Math.max(player.contract.salary,asking(db,player,to.region))*2,years:2,terms:{promisedRole:'starter',releaseGuaranteeRate:1}}};};
+  const first=cmd(a.pid,A.id,a.borrower,purchase(a.pid,a.borrower));check(commitWorldAction(db,first).ok,'first actual outgoing option');
+  const second=cmd(p.id,A.id,c.borrower,purchase(p.id,c.borrower)),before=packDB(db),plan=previewWorldAction(db,second);
+  check(!plan.ok&&!commitWorldAction(db,second).ok&&packDB(db)===before,'temporary longer arrival covered possible permanent second departure');
+  const manual=unpackDB(before);setManagedTeam(manual,A.id);check(previewWorldAction(manual,{...second,actor:'manager'}).ok,'explicit manager permanent-risk consent removed');
+  check(commitWorldAction(db,{type:'player.loan-purchase',actor:'ai',pid:a.pid,fromId:A.id,teamId:a.borrower}).ok,'already negotiated independent option blocked');
+  setWorldCalendarDate(db,db.year+'-12-31');processLoanDaily(db);check(db.players[b.pid].team===b.owner&&A.roster.length===5&&medicalAvailable(db,A)===5,'real option exercise and incoming expiry lost fifth owned player');
+  retainedCases.push('outgoingPurchaseRisk');
  }
  const blocked=[];
  for(const reason of ['managed','noSupply','budget','closed','offseason','reviewed']){

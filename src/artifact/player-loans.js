@@ -69,10 +69,11 @@ function validateLoanStart(db,a){
   if(error)return worldActionError('registration_limit',error);
   // A recallable/earlier-expiring arrival cannot cover the lender's outgoing
   // contract: its owner retains the independent right to take that player back.
+  // An outgoing purchase clause can make that departure permanent.
   // This is the AI club's consent, not a restriction on explicit owner consent.
   const through=loanEndDate(db,a.duration),retained=from.roster.map(id=>db.players[id])
     .filter(q=>q&&q.id!==p.id&&!q.retired&&(!q.loan||
-      q.loan.purchase?.type==='obligation'||!q.loan.recall&&q.loan.endDate>through));
+      q.loan.purchase?.type==='obligation'||a.purchase==null&&!q.loan.recall&&q.loan.endDate>through));
   if(!managingSource&&(retained.length<minimum||retained.filter(q=>!medicalOut(q)).length<5))
     return worldActionError('club_consent','임대 종료·리콜·의료 상태를 고려하면 원소속 구단의 출전 인원이 부족합니다');
   // The AI lender protects starters and requires wages in exchange for a free loan.
