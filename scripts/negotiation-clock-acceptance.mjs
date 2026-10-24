@@ -7,6 +7,9 @@ const result=await runEngineFixture(String.raw`(()=>{
  const p=Object.values(base.players).find(p=>!p.team&&!p.retired&&p.region===team.region&&initialSignCheck(base,p,team).ok);
  mInterest(base,p.id,'B');mEvaluateTarget(base,p.id,team.id);initialStartNegotiation(base,p.id,team.id);
  const id=negotiationId(base,p.id,'initial',team.id),n=base.world.negotiations[id];n.maxRounds=3;n.competitors=[];
+ // This fixture tests an uncontested 2–8h response. Real AI proposals now live
+ // independently of the old negotiation snapshot; remove their fixture ledger.
+ delete base.contractMarketOffers;
  const terms={...n.demand,salary:Math.floor((initialSalaryBudget(base,team)-payroll(base,team))*10)/10};
  const before=JSON.stringify(base),plan=negotiationResponsePlan(base,n,terms);
   const invalidStart=JSON.parse(before);delete invalidStart.world.negotiations;const invalidStartState=JSON.stringify(invalidStart);check(!startNegotiation(invalidStart,'missing','fa').ok&&JSON.stringify(invalidStart)===invalidStartState,'invalid start does not create negotiation storage');

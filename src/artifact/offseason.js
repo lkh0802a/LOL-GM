@@ -120,6 +120,7 @@ function runOffseason(db){
   const managed=managedTeam(db);
   w.sponsorOffers=managed&&managed.active!==false&&db.regions[managed.region]?sponsorOffers(db,managed):[];
   w.report=rep; w.phase='market'; w.offers=[]; w.negotiations={}; w.marketLog=[];
+  refreshAIMarketOffers(db);
   return rep;
 }
 // ---------- 오프시즌 2단계: 이적 시장 마감 ----------

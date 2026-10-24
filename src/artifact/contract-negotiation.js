@@ -72,16 +72,110 @@ function closePlayerNegotiationFailure(db,neg,p,hardBreak){
   const target=recruitmentTarget(db,neg.pid);
   if(target){target.stage='evaluated';target.result='negotiation_failed';target.negotiationId=null}
 }
+// Real club proposals live with the contract domain, independently of human
+// negotiations. They reserve neither money nor a roster slot. Every consumer
+// rechecks the current period, authority, need, registration and finite funds.
+function aiMarketOfferPeriod(db){
+  const w=db.world;if(!w)return null;
+  if(w.phase==='initial_roster')return {id:'initial/'+w.year,kind:'initial',year:w.year};
+  if(w.phase==='offseason'){
+    const day=freeAgencyDayState(db);
+    return day.stage==='fa'&&db.worldDate<=day.through
+      ?{id:'fa/'+w.contractWindow.startSeason,kind:'fa',year:w.contractWindow.startSeason}:null;
+  }
+  // Annual settlement advances db.year before the old world's year rolls over.
+  if(w.phase==='market')return {id:'market/'+db.year,kind:'fa',year:db.year};
+  return null;
+}
+function currentAIMarketOffers(db){
+  const period=aiMarketOfferPeriod(db);
+  return period?Object.values(db.contractMarketOffers?.periods?.[period.id]?.offers||{}):[];
+}
+function aiMarketOfferAvailable(db,o,market=null){
+  const period=aiMarketOfferPeriod(db),p=db.players[o?.pid],t=db.teams[o?.teamId];
+  if(!period||o.period!==period.id||o.kind!==period.kind||o.status!=='open'||
+    typeof o.issuedAt!=='string'||!Number.isFinite(Date.parse(o.issuedAt))||
+    new Date(o.issuedAt).toISOString()!==o.issuedAt||o.issuedAt>negotiationClockAt(db)||
+    !p||p.retired||p.team||!t||t.parent||
+    t.active===false||playerActionAuthority(db,'ai',t)||!o.terms||
+    !Number.isFinite(o.terms.salary)||o.terms.salary<=0||
+    !Number.isInteger(o.terms.years)||o.terms.years<=0||
+    !contractGuaranteeTermsValid(o.terms)||invalidContractNumericTerms(o.terms)||
+    !Number.isFinite(t.finance?.cash)||negotiationBudgetError(db,p,t,o.terms,o.kind))return false;
+  if(o.kind==='initial')return t.roster.length<(o.target??initialLegalMinimumTarget(db,t))&&
+    initialFutureFeasible(db,t,p,o.terms.salary,market);
+  const room=salaryBudget(db,t)-payroll(db,t);
+  return Number.isFinite(room)&&o.terms.salary<=room&&
+    aiMarketOfferCandidates(db,t,[p],p.role,room,period.year).length>0;
+}
+function closeAIMarketOffer(db,o,status,reason){
+  if(o.status!=='open')return;
+  o.status=status;o.reason=reason;o.closedAt=negotiationClockAt(db);
+}
+function issueAIMarketOffer(db,t,p,terms,event,target=null,choiceValue=null,market=null){
+  const period=aiMarketOfferPeriod(db);if(!period)return null;
+  const root=db.contractMarketOffers||(db.contractMarketOffers={version:1,periods:{}}),
+    store=root.periods[period.id]||(root.periods[period.id]={offers:{},events:{}}),
+    id=period.id+'/'+event+'/'+t.id+'/'+p.id;
+  if(store.offers[id])return store.offers[id];
+  const offer={id,period:period.id,kind:period.kind,pid:p.id,teamId:t.id,
+    terms:JSON.parse(JSON.stringify(terms)),issuedAt:negotiationClockAt(db),status:'open',
+    ...(period.kind==='initial'?{target:target??initialLegalMinimumTarget(db,t),choiceValue}: {})};
+  if(!aiMarketOfferAvailable(db,offer,market))return null;
+  // Superseding is an actual new club offer; retain the old terms and outcome.
+  for(const old of Object.values(store.offers))if(old.pid===p.id&&old.teamId===t.id)
+    closeAIMarketOffer(db,old,'withdrawn','superseded');
+  store.offers[id]=offer;return offer;
+}
+function settleAIMarketOffers(db,pid,teamId,terms){
+  for(const o of currentAIMarketOffers(db))if(o.pid===pid)
+    closeAIMarketOffer(db,o,o.teamId===teamId&&JSON.stringify(o.terms)===JSON.stringify(terms)
+      ?'accepted':'withdrawn',o.teamId===teamId?'contract_signed':'other_club_signed');
+}
+function refreshAIMarketOffers(db){
+  const period=aiMarketOfferPeriod(db);if(!period)return [];
+  const root=db.contractMarketOffers||(db.contractMarketOffers={version:1,periods:{}});
+  for(const [id,store] of Object.entries(root.periods)){
+    if(id!==period.id&&store.closedAt)continue;
+    for(const o of Object.values(store.offers))
+      if(o.status==='open'&&(id!==period.id||!aiMarketOfferAvailable(db,o)))
+        closeAIMarketOffer(db,o,id!==period.id?'expired':'withdrawn',id!==period.id?'period_closed':'conditions_changed');
+    if(id!==period.id)store.closedAt=negotiationClockAt(db);
+  }
+  const store=root.periods[period.id]||(root.periods[period.id]={offers:{},events:{}}),
+    event='day/'+db.worldDate;
+  if(store.events[event])return currentAIMarketOffers(db);
+  const teams=activeTeams(db,null,1).filter(t=>!t.parent&&!playerActionAuthority(db,'ai',t))
+    .sort((a,b)=>a.id.localeCompare(b.id)),
+    market=period.kind==='initial'?initialMarketSnapshot(db,teams):null,
+    fas=period.kind==='fa'?Object.values(db.players).filter(p=>!p.retired&&!p.team):[];
+  for(const t of teams){
+    if(period.kind==='initial'){
+      if(currentAIMarketOffers(db).some(o=>o.teamId===t.id&&o.status==='open'))continue;
+      const proposal=initialOfferForTeam(db,t,0,db.world.seed+'|minimum',market,initialLegalMinimumTarget(db,t));
+      if(proposal)issueAIMarketOffer(db,t,proposal.player,proposal.terms,event,
+        initialLegalMinimumTarget(db,t),proposal.value,market);
+    }else for(const role of ROLES){
+      if(currentAIMarketOffers(db).some(o=>o.teamId===t.id&&db.players[o.pid]?.role===role&&o.status==='open'))continue;
+      const room=salaryBudget(db,t)-payroll(db,t),
+        candidate=aiMarketOfferCandidates(db,t,fas,role,room,period.year)[0];
+      if(!candidate)continue;
+      const rng=new RNG(db.world.seed+'/'+period.id+'/'+event+'/'+t.id+'/'+role,'ai-market-offer'),
+        terms=aiMarketProposalTerms(db,candidate.p,t,candidate.ask,rng);
+      issueAIMarketOffer(db,t,candidate.p,terms,event);
+    }
+  }
+  store.events[event]=true;return currentAIMarketOffers(db);
+}
 function negotiationCompetition(db,p,t,rng,kind){
-  if(kind==='renewal')return [];
-  return activeTeams(db,null,1).filter(x=>x.id!==t.id&&!x.parent&&
-    (kind!=='early_fa'||earlyContactAllowed(db,p,x))).map(team=>{
-    if(localRegistrationError(db,team,p))return null;
-    const cur=starterFor(db,team,p.role),need=!cur?8:aiMarketObservation(db,p,team).ability-playerOvr(cur),baseBudget=(kind==='initial')?initialSalaryBudget(db,team):salaryBudget(db,team),room=baseBudget-payroll(db,team),ask=asking(db,p,team.region);
-    if(room<ask*.82||need<-4)return null;
-    const years=contractYearsForPlayer(db,p,rng,team),terms=normalizeContractTerms(db,p,team,ask*rng.range(.94,1.12)*(1-medicalContractRisk(db,p)*.4),years,{releaseGuaranteeRate:contractGuaranteePolicy(p).preferred,promisedRole:defaultPromisedRole(db,p,team),option:rng.chance(.14)?{type:'player'}:null});
-    return {teamId:team.id,terms,utility:offerUtility(db,p,team,terms),need};
-  }).filter(Boolean).sort((a,b)=>b.utility-a.utility).slice(0,2);
+  if(!['initial','fa'].includes(kind))return [];
+  // A manager's inquiry is a reader, never an AI planning event. Old saves'
+  // unbacked competitors cannot become bids or commit a rival contract.
+  return currentAIMarketOffers(db).filter(o=>o.pid===p.id&&o.teamId!==t.id&&
+    o.kind===kind&&aiMarketOfferAvailable(db,o)).map(o=>({offerId:o.id,
+      teamId:o.teamId,terms:JSON.parse(JSON.stringify(o.terms)),
+      utility:offerUtility(db,p,db.teams[o.teamId],o.terms)}))
+    .sort((a,b)=>b.utility-a.utility||a.teamId.localeCompare(b.teamId));
 }
 function negotiationDemand(db,p,t,kind,rng,competitors=[]){
   const ask=asking(db,p,t.region),best=competitors.length?Math.max(...competitors.map(x=>x.utility)):0,goal=playerCareerGoal(p),years=negotiationPreferredYears(db,p,t);
@@ -205,8 +299,9 @@ function submitNegotiationOffer(db,nid,terms){
     if(contactErr)return {ok:false,msg:contactErr};
   }
   const offer=normalizeContractTerms(db,p,t,terms.salary,terms.years,terms),err=negotiationBudgetError(db,p,t,offer,neg.kind);if(err)return {ok:false,msg:err};if(neg.kind==='transfer'&&(offer.signingBonus||0)>Math.max(0,t.finance.cash-(neg.feePlan?.upfront??neg.fee??0)))return {ok:false,msg:'이적료 지급 후 계약금을 지급할 현금이 부족합니다'};
-  const util=offerUtility(db,p,t,offer,{renewal:neg.kind==='renewal'}),
-    comp=neg.competitors.length?Math.max(...neg.competitors.map(x=>x.utility)):0,
+  const competitors=negotiationCompetition(db,p,t,null,neg.kind),
+    util=offerUtility(db,p,t,offer,{renewal:neg.kind==='renewal'}),
+    comp=competitors.length?Math.max(...competitors.map(x=>x.utility)):0,
     threshold=Math.max(offerAcceptanceThreshold(db,p,{kind:neg.kind}),comp-.035),
     reasonable=!['fa','early_fa','renewal','transfer'].includes(neg.kind)||
       contractOfferReasonable(db,p,t,offer,neg.kind);
@@ -218,10 +313,10 @@ function submitNegotiationOffer(db,nid,terms){
     return {ok:false,msg:hardBreak?p.name+' 측과 협상이 완전 결렬됐습니다':
       p.name+' 측이 이번 '+(neg.kind==='renewal'?'재계약 ':'')+'제안을 거절했습니다'}
   }
-  if((neg.kind==='fa'||neg.kind==='initial')&&neg.round>=2&&neg.competitors.length){
-    const rival=neg.competitors[0],rt=db.teams[rival.teamId],gap=rival.utility-util,rrng=new RNG(db.world.seed+'/'+neg.id+'/'+neg.round,'negotiation-rival');
-    if(rt&&!p.team&&!negotiationBudgetError(db,p,rt,rival.terms,'fa')&&rival.utility>=offerAcceptanceThreshold(db,p,{kind:'fa'})-.02&&(gap>.08||rrng.chance(clamp(.16+Math.max(0,gap)*1.8,.12,.72)))){
-      const signed=commitWorldAction(db,{type:'player.sign',pid:p.id,teamId:rt.id,kind:'fa',actor:'ai',
+  if((neg.kind==='fa'||neg.kind==='initial')&&neg.round>=2&&competitors.length){
+    const rival=competitors[0],rt=db.teams[rival.teamId],gap=rival.utility-util,rrng=new RNG(db.world.seed+'/'+neg.id+'/'+neg.round,'negotiation-rival');
+    if(rt&&!p.team&&(neg.kind==='initial'||contractOfferReasonable(db,p,rt,rival.terms,neg.kind))&&rival.utility>=offerAcceptanceThreshold(db,p,{kind:neg.kind})&&(gap>.08||rrng.chance(clamp(.16+Math.max(0,gap)*1.8,.12,.72)))){
+      const signed=commitWorldAction(db,{type:'player.sign',pid:p.id,teamId:rt.id,kind:neg.kind,actor:'ai',
         salary:rival.terms.salary,years:rival.terms.years,terms:rival.terms});
       if(signed.ok){
         neg.status='lost';neg.reason='경쟁 구단 선택';neg.closedDate=db.worldDate;

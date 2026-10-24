@@ -22,6 +22,7 @@ const acceptances=[
   'timezone-calendar-acceptance.mjs',
   'loan-calendar-acceptance.mjs',
   'ai-loan-market-acceptance.mjs',
+  'actual-ai-offers-acceptance.mjs',
   'seeded-shuffle-acceptance.mjs',
   'scrim-partner-acceptance.mjs',
   'scrim-plans-acceptance.mjs',

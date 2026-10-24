@@ -234,6 +234,7 @@ function applyPlayerSignAction(db,c){
   if(offseasonFaSeason)db.year=offseasonFaSeason;
   const contract=signContract(db,p,t,c.salary,c.years,c.terms);
   if(offseasonFaSeason)db.year=beforeYear;
+  settleAIMarketOffers(db,p.id,t.id,c.terms);
   if(c.kind==='medical_replacement'){
     contract.medicalReplacement={...c.replacement};
     payMedicalReplacementWage(t,c.replacement.paid);

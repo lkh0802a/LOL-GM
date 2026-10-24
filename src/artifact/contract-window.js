@@ -194,6 +194,7 @@ function closeExclusiveContractWindow(db){
   processLocalServiceDaily(db);aiChooseLocalEligibility(db);
   const settlement=finalizeExclusiveContractExpiry(db);
   cw.stage='fa';cw.completed=true;cw.settlement=settlement;
+  refreshAIMarketOffers(db);
   return {ok:true,stage:'fa',date:db.worldDate,renewals,earlyOffers,settlement,
     msg:'14일 원소속 독점기간 종료 · 기존 계약 만료 · FA 접촉 개방'};
 }

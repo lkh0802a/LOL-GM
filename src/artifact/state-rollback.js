@@ -90,6 +90,9 @@ function captureWorldActionJournal(db,command){
     return {pid,player,record:actionJournalClone(player)};
   });
   const teams=Array.from(teamIds,id=>actionJournalTeamSnapshot(db.teams[id]));
+  const marketOffers=command.type==='player.sign'?currentAIMarketOffers(db)
+    .filter(o=>o.pid===command.pid&&o.status==='open')
+    .map(ref=>({ref,record:actionJournalClone(ref)})):[];
   const newsRef=db.news,newsRows=Array.isArray(newsRef)?newsRef.slice():null;
   const hasDemand=Object.prototype.hasOwnProperty.call(db,'_marketDemandCache');
   const demandRef=db._marketDemandCache;
@@ -106,6 +109,7 @@ function captureWorldActionJournal(db,command){
     playerIds,
     rollback(){
       if(staffJournal)staffJournal.rollback();
+      for(const {ref,record} of marketOffers)actionJournalRestoreObject(ref,record);
       for(const row of entries){if(row.value)row.s.entries=row.value;else delete row.s.entries;if(row.staffValue)row.s.staffEntries=row.staffValue;else delete row.s.staffEntries;if(row.staffRecords)row.s.staffEntryRecords=row.staffRecords;else delete row.s.staffEntryRecords}
       if(closure){
         if(closure.firedPresent)w.fired=closure.fired;else delete w.fired;
