@@ -39,6 +39,7 @@ function seasonTab(){
   const identity=past?recordedSeasonIdentity(DB,s):null;
   const tname=id=>past?recordedTeamLabel(identity,id):DB.teams[id]?.name||id,tshort=id=>past?recordedTeamLabel(identity,id,true):DB.teams[id]?.short||id;
   const comp=read.competitions[s.comp], me=managedTeamId(DB);
+  const successionNotice=(s.qualificationSuccessions||[]).map(e=>'<p class="hint">'+esc(recordedQualificationSuccessionText(e))+'</p>').join('');
   if(SSET.tab==='table'){
     const region=comp.region&&read.regions[comp.region],mode=s.standingsMode||region?.standingsMode||'independent';
     const doneSplits=region?Object.values(read.world.seasons).filter(x=>
@@ -63,7 +64,7 @@ function seasonTab(){
       </tbody></table></div>${take?`<p class="hint">선 위 ${take}팀이 다음 스테이지에 진출합니다.</p>`:''}</section>`}).join('')||'<p class="empty">이 대회는 순위표 없이 토너먼트로만 진행됩니다.</p>';
   }
   if(SSET.tab==='sched'){
-    return `<section><ol class="sched">${s.days.map((d,i)=>`<li class="${i===s.cur?'today':''}"><div class="sd"><time>${esc(d.date)} UTC</time><span>${esc(d.label)} · 현지 ${esc([...new Set(d.matches.map(m=>m.localDate||d.date))].join(' / '))} · ${esc(d.matches[0]?.timeZone||'UTC')}</span></div>
+    return `${successionNotice}<section><ol class="sched">${s.days.map((d,i)=>`<li class="${i===s.cur?'today':''}"><div class="sd"><time>${esc(d.date)} UTC</time><span>${esc(d.label)} · 현지 ${esc([...new Set(d.matches.map(m=>m.localDate||d.date))].join(' / '))} · ${esc(d.matches[0]?.timeZone||'UTC')}</span></div>
       ${d.matches.map(m=>`<button class="sm ${m.a===me||m.b===me?'mine':''}" data-m="${m.id}"${m.res?'':' disabled'}>
         ${m.time?`<small>${esc(fixtureTimeInfo(m))}${m.broadcastSlot?' · '+m.broadcastSlot+'경기':''}</small>`:''}
         <span class="${m.res&&m.res.winner===m.a?'w':''}">${esc(tshort(m.a))}</span><b>${m.res?recordedSeriesScore(m.res):'vs'}</b><span class="${m.res&&m.res.winner===m.b?'w':''}">${esc(tshort(m.b))}</span></button>`).join('')}</li>`).join('')}</ol></section>`;
@@ -71,7 +72,7 @@ function seasonTab(){
   if(SSET.tab==='bracket'){
     const el=comp.stages.filter(x=>x.type==='single_elim').map(cfg=>{const sd=s.stageData[cfg.id]; if(!sd) return `<p class="empty">${esc(cfg.name)} 대진은 앞 스테이지가 끝나면 정해집니다.</p>`;
       const found=pr=>{for(const d of s.days)for(const m of d.matches)if(d.stage===cfg.id&&m.a===pr[0]&&m.b===pr[1])return m;return null};
-      return `<section><h3>${esc(sName(s))} · ${esc(cfg.name)}</h3><div class="scroll"><div class="bracket">${sd.rounds.map(r=>`<div class="bcol"><h4>${esc(r.name)}</h4>
+      return `${successionNotice}<section><h3>${esc(sName(s))} · ${esc(cfg.name)}</h3><div class="scroll"><div class="bracket">${sd.rounds.map(r=>`<div class="bcol"><h4>${esc(r.name)}</h4>
         ${r.byes.map(t=>`<div class="bm bye"><span>${esc(tshort(t))}</span><small>부전승</small></div>`).join('')}
         ${r.pairs.map(pr=>{const m=found(pr);return `<button class="bm" ${m&&m.res?`data-m="${m.id}"`:'disabled'}><span class="${m&&m.res&&m.res.winner===pr[0]?'w':''}">${esc(tshort(pr[0]))} <b>${m&&m.res?(isDoubleDisqualification(m.res)?'실격':m.res.score[0]):''}</b></span><span class="${m&&m.res&&m.res.winner===pr[1]?'w':''}">${esc(tshort(pr[1]))} <b>${m&&m.res?(isDoubleDisqualification(m.res)?'실격':m.res.score[1]):''}</b></span></button>`}).join('')}
       </div>`).join('')}${s.done&&s.champion?`<div class="bcol"><h4>우승</h4><div class="bm champ1"><span class="w">${esc(tname(s.champion))}</span></div></div>`:''}</div></div></section>`}).join('');

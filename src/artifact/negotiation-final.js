@@ -147,7 +147,7 @@ resolvePendingOfficialMatch=function(db,forcedDraft){
   const q=db.world?.pendingOfficial?.queue?.[0],refs=q&&pendingOfficialRefs(db,q);
   if(refs){officialGameClockFloor(db,refs.m.utcAt);officialGameTimeRecord(refs.m,q.session?.games||[]);}
   const result=officialResolveBeforeClock(db,forcedDraft);
-  if(refs&&!result.done)recordOfficialGameTime(db,refs.m,officialGameTimeRecord(refs.m,q.session.games));
+  if(refs&&!result.done&&!result.succession)recordOfficialGameTime(db,refs.m,officialGameTimeRecord(refs.m,q.session.games));
   return result;
 };
 const officialPlayDayBeforeClock=playDay;
@@ -305,8 +305,9 @@ function playOfficialWorldEvents(db,date,manualEnd=null){
     if(contact&&(contact.response.dueAt<midnight||contact.response.dueAt<=through))events.push({kind:'contact',priority:1,at:contact.response.dueAt,key:contact.id});
     events.sort((a,b)=>a.at.localeCompare(b.at)||a.priority-b.priority||a.key.localeCompare(b.key)||String(a.m?.id||'').localeCompare(String(b.m?.id||'')));
     let event=events[0];if(event&&event.at>=midnight)event={kind:'midnight',at:midnight};if(!event){if(remaining().length)throw Error('앞 공식 경기의 점유가 해소되지 않았습니다. 현재 경기와 저장을 확인하세요');finish();if(!activeSeasons(db).length)advanceStep(db);return {date,played,pending:w.pendingOfficial,advanced};}
-    const forfeit=['start','manual'].includes(event.kind)&&!event.m.clockSession?scheduledRegistrationForfeit(officialClockReadonly(db),officialClockReadonly(event.s),officialClockReadonly(event.m)):null;
-    const undo=event.kind==='start'&&!forfeit?officialClockStartUndo(db,event.m):pendingOfficialUndo(db);
+    const succession=['start','manual'].includes(event.kind)?qualificationSuccessionPlan(officialClockReadonly(db),officialClockReadonly(event.s),officialClockReadonly(event.m)):null;
+    const forfeit=!succession&&['start','manual'].includes(event.kind)&&!event.m.clockSession?scheduledRegistrationForfeit(officialClockReadonly(db),officialClockReadonly(event.s),officialClockReadonly(event.m)):null;
+    const undo=event.kind==='start'&&!forfeit&&!succession?officialClockStartUndo(db,event.m):pendingOfficialUndo(db);
     let gameConsumed=false;
     try{
       // 이전 저장의 이미 소비된 하한은 되감지 않는다.
@@ -321,6 +322,7 @@ function playOfficialWorldEvents(db,date,manualEnd=null){
       }
       if(event.kind==='manualEnd')return manualEnd.consume();
       if(event.kind==='end'){consumeOfficialClockGame(db,event.s,event.m);gameConsumed=true;finish(true);days=currentDays();for(const {s,day} of days)if(!played.some(x=>x.day===day))played.push({s,day});continue;}
+      if(succession){commitQualificationSuccession(db,event.s,event.m,succession);continue;}
       if(forfeit){commitScheduledSeries(db,event.s,event.m,forfeit);continue;}
       if(event.plan)recordOfficialResourceStart(event.m,event.plan);
       if(event.kind==='manual'){
@@ -346,6 +348,7 @@ playDay=function(db,s,opt={}){
   const boundary=[...pending.map(m=>m.utcAt),...(contact?[contact.response.dueAt]:[])].sort()[0]||'9999-12-31T23:59:59.999Z',comp=db.competitions[s.comp],cfgIdx=comp.stages.findIndex(x=>x.id===day.stage),cfg=comp.stages[cfgIdx],queue=[];
   for(const m of day.matches){
     if(m.res)continue;
+    const succession=qualificationSuccessionPlan(db,s,m);if(succession)commitQualificationSuccession(db,s,m,succession);
     if(m.a===opt.deferTeam||m.b===opt.deferTeam){
       if(m.clockGame||m.clockSession)throw Error('진행 중인 다른 구단의 경기입니다. 현재 감독 경기로 자동 전환하지 않습니다');
       if(contact&&m.utcAt>=contact.response.dueAt)continue;
@@ -549,6 +552,7 @@ resolvePendingOfficialMatch=function(db,forcedDraft){
   const undo=pendingOfficialUndo(db);
   try{
     const current=negotiationClockAt(db);if(current.slice(0,10)>db.worldDate&&!Object.hasOwn(q,'inflight')){const record=officialGameTimeRecord(refs.m,q.session?.games||[]);officialClockSessionCheck(refs.s,{...refs.m,clockSession:q.session});if(!record||record.gameTimeThrough!==current)throw Error('자정을 넘긴 이전 경기의 실제 소비 근거를 확인할 수 없습니다');while(db.worldDate<current.slice(0,10)){w.officialCalendarThrough=addDays(db.worldDate,1);applyWorldDailyEffects(db,w.officialCalendarThrough);}}
+    const succession=resolvePendingQualificationSuccession(db,refs,q,forcedDraft);if(succession)return succession;
     const administrative=resolvePendingDisqualifiedFinal(db,refs,q);if(administrative)return administrative;
     let played,baseSession,at;
     if(Object.hasOwn(q,'inflight')){
