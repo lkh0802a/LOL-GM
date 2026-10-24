@@ -5032,7 +5032,7 @@ function advanceStep(db){
 function placements(db,s){
   if(disqualifiedFinalResult(s))return administrativeTournamentPlacements(db,s);
   const comp=db.competitions[s.comp];const reg=standings(db,s,comp.stages[0].id).map(x=>x.tid);
-  const out=[s.champion,s.runnerUp].filter(Boolean);for(const t of reg)if(!out.includes(t))out.push(t);const disqualified=seasonAdministrativeDisqualifications(s);return out.filter(t=>!disqualified.has(t));
+  const out=[s.champion,s.runnerUp].filter(Boolean);for(const t of reg)if(!out.includes(t))out.push(t);return out;
 }
 function regionPower(db,R){const h=(db.global&&db.global.power||{})[R.id];return h!==undefined?h:R.strength}
 function teamStrength(db,tid){const t=db.teams[tid];return avg(ROLES.map(r=>{const p=starterFor(db,t,r);return p?playerRoleRating(p,r):40}))}
