@@ -85,6 +85,7 @@ export const ENGINE_MODULES = [
   'local-service.js',
   'registration.js',
   'registration-match.js',
+  'competition-administration.js',
   'player-loan-market.js',
   'club-closure.js',
   'staff.js',

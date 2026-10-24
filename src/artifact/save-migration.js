@@ -136,6 +136,6 @@ function normalizeRestoredSave(db){
 
 function migrateSaveState(db){
   validateSaveEnvelope(db);
-  for(const s of Object.values(db.world?.seasons||{}))for(const d of s.days||[])for(const m of d.matches||[])if(m.res)m.res=restoreSeriesIdentity(m.res);
+  for(const s of Object.values(db.world?.seasons||{}))for(const d of s.days||[])for(const m of d.matches||[])if(m.res){m.res=restoreSeriesIdentity(m.res);if(isDoubleDisqualification(m.res))assertStoredDisqualification(s,d,m);}
   return normalizeRestoredSave(db);
 }

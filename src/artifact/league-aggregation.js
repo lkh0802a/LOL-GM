@@ -14,6 +14,7 @@ function rrTable(db,s,stageId,teams){
   for(const season of [...previous,s])for(const d of season.days)
     if(d.stage===stageId)for(const m of d.matches){
       if(!m.res||!tb[m.a]&&!tb[m.b])continue;
+      if(isDoubleDisqualification(m.res))continue;
       const [sa,sb]=m.res.score,wa=m.res.winner===m.a;
       if(tb[m.a]){
         tb[m.a].gw+=sa;tb[m.a].gl+=sb;tb[m.a][wa?'w':'l']++;
@@ -51,14 +52,16 @@ function recentSplitChampion(db,R){
     .find(s=>s?.done)?.champion||null;
 }
 function regionPlacements(db,R,div=1){
-  const w=db.world,act=activeTeams(db,R.id,div).map(t=>t.id);
+  const w=db.world;
   const done=[3,2,1].map(sp=>w?.seasons[R.short+(div===2?'2':'')+'-'+sp])
     .find(s=>s?.done);
+  const disqualified=done?seasonAdministrativeDisqualifications(done):new Set(),act=activeTeams(db,R.id,div).map(t=>t.id).filter(t=>!disqualified.has(t));
   const mode=done?.standingsMode||R.standingsMode||'independent';
   let base=done?(mode==='points'?championshipStandings(db,R,div).map(x=>x.tid):
     mode==='cumulative'?standings(db,done,'regular').map(x=>x.tid):
     placements(db,done)):(div===1?R.lastPlacement||[]:[]);
   base=base.filter(t=>act.includes(t));
+  if(done&&disqualifiedFinalResult(done))return base;
   const rest=act.filter(t=>!base.includes(t)).sort((a,b)=>teamStrength(db,b)-teamStrength(db,a));
   return [...base,...rest];
 }

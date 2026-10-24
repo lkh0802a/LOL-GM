@@ -157,10 +157,12 @@ function simulateScheduledSeries(db,s,day,m,cfg,extra={}){
 }
 function commitScheduledSeries(db,s,m,series){
   if(m.res)throw new Error('Scheduled match already resolved: '+m.id);
+  if(isDoubleDisqualification(series.rec)){assertScheduledDisqualification(db,s,m,series);m.res=series.rec;return m.res;}
   m.res=series.rec;recordLines(s,series.lines);afterSeries(db,series.lines,series.rec);updatePlayerUsage(db,s,series.rec,series.lines);recordStaffMatchService(db,s,series.rec);return m.res;
 }
 function finalizeCompetitionDay(db,s,day,cfgIdx,cfg){
   if(day.matches.some(m=>!m.res))return false;
+  if(finishDisqualifiedFinal(db,s,day,cfgIdx))return true;
   s.cur++;
   const comp=db.competitions[s.comp],sd=s.stageData[cfg.id],roundDays=s.days.filter(d=>d.stage===cfg.id&&d.label===day.label),roundDone=roundDays.every(d=>d.matches.every(m=>m.res));
   const localDate=day.matches.at(-1)?.localDate||day.date,nd=addDays(localDate,cfg.dayGap?cfg.dayGap[0]:5);
@@ -206,17 +208,19 @@ function finishStage(db,s,idx,date){
   }
   s.done=true;
   const sd=s.stageData[cfg.id];
-  if(cfg.type==='single_elim'||cfg.type==='double_elim'){
+  if(disqualifiedFinalResult(s)){s.champion=null;s.runnerUp=null;s.finalScore=null;}
+  else if(cfg.type==='single_elim'||cfg.type==='double_elim'){
     s.champion=sd.alive[0]; s.runnerUp=sd.elim[sd.elim.length-1];
     const fin=s.days[s.days.length-1].matches[0]; s.finalScore=fin.res.winner===fin.a?fin.res.score:fin.res.score.slice().reverse();
   } else { const st=standings(db,s,cfg.id); s.champion=st[0].tid; s.runnerUp=st[1].tid; }
   const first=comp.stages[0].type==='round_robin'?standings(db,s,comp.stages[0].id)[0].tid:null;
   const mvp=Object.entries(s.pstats).filter(([,p])=>p.g>=6).sort((x,y)=>y[1].mvp-x[1].mvp||((y[1].k+y[1].a)/(y[1].d||1))-((x[1].k+x[1].a)/(x[1].d||1)))[0];
-  db.history.push({year:s.year,comp:s.comp,compName:comp.name+(s.label?' '+s.label:''),region:comp.region||null,div:comp.div||1,intl:!!comp.international,champion:s.champion,championName:db.teams[s.champion]?.name,runnerUp:s.runnerUp,runnerUpName:db.teams[s.runnerUp]?.name,regularFirst:first,mvp:mvp?mvp[0]:null,mvpName:mvp?db.players[mvp[0]]?.name:null,final:s.finalScore||null});
+  db.history.push({year:s.year,comp:s.comp,compName:comp.name+(s.label?' '+s.label:''),region:comp.region||null,div:comp.div||1,intl:!!comp.international,champion:s.champion,championName:db.teams[s.champion]?.name,runnerUp:s.runnerUp,runnerUpName:db.teams[s.runnerUp]?.name,regularFirst:first,mvp:mvp?mvp[0]:null,mvpName:mvp?db.players[mvp[0]]?.name:null,final:s.finalScore||null,...administrativeCompetitionHistory(s)});
 }
 // 토너먼트 도달 점수: 우승 4, 준우승 3, 4강 2, 녹아웃 진출 1
 function elimReach(db,s,tid){
   if(s.champion===tid)return 4; if(s.runnerUp===tid)return 3;
+  const administrative=administrativeElimReach(s,tid);if(administrative!==null)return administrative;
   const ko=Object.values(s.stageData).find(x=>x.type==='single_elim'||x.type==='double_elim'); if(!ko)return 0;
   const i=ko.elim.lastIndexOf(tid); if(i<0)return 0;
   return ko.elim.length-i<=3?2:1;

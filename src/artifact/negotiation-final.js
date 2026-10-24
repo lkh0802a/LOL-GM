@@ -549,6 +549,7 @@ resolvePendingOfficialMatch=function(db,forcedDraft){
   const undo=pendingOfficialUndo(db);
   try{
     const current=negotiationClockAt(db);if(current.slice(0,10)>db.worldDate&&!Object.hasOwn(q,'inflight')){const record=officialGameTimeRecord(refs.m,q.session?.games||[]);officialClockSessionCheck(refs.s,{...refs.m,clockSession:q.session});if(!record||record.gameTimeThrough!==current)throw Error('자정을 넘긴 이전 경기의 실제 소비 근거를 확인할 수 없습니다');while(db.worldDate<current.slice(0,10)){w.officialCalendarThrough=addDays(db.worldDate,1);applyWorldDailyEffects(db,w.officialCalendarThrough);}}
+    const administrative=resolvePendingDisqualifiedFinal(db,refs,q);if(administrative)return administrative;
     let played,baseSession,at;
     if(Object.hasOwn(q,'inflight')){
       if(forcedDraft!=null)throw Error('이미 시작한 게임에 새 밴픽 입력을 적용할 수 없습니다');

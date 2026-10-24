@@ -30,7 +30,7 @@ function worldTable(){
 }
 function renderHistoricalSeasonFallback(s){
   const matches=(s.days||[]).flatMap(d=>(d.matches||[]).filter(m=>m.res).map(m=>({d,m})));
-  return `<section><h3>보관된 대회 결과 · ${s.year}</h3><p class="hint">당시 대회 규정이 보관되지 않아 현재 규정으로 순위를 다시 계산하지 않습니다. 확정 경기와 원래 기록만 확인할 수 있습니다.</p><ol>${matches.map(({d,m})=>`<li><button data-m="${m.id}">${esc(d.date)} · ${esc(recordedSeriesLabel(DB,m.res))} · ${m.res.score.join(':')}</button></li>`).join('')}</ol></section>`;
+  return `<section><h3>보관된 대회 결과 · ${s.year}</h3><p class="hint">당시 대회 규정이 보관되지 않아 현재 규정으로 순위를 다시 계산하지 않습니다. 확정 경기와 원래 기록만 확인할 수 있습니다.</p><ol>${matches.map(({d,m})=>`<li><button data-m="${m.id}">${esc(d.date)} · ${esc(recordedSeriesLabel(DB,m.res))} · ${recordedSeriesScore(m.res,':')}</button></li>`).join('')}</ol></section>`;
 }
 function seasonTab(){
   const s=curS(); if(!s)return '<p class="empty">진행 중인 대회가 없습니다.</p>';
@@ -66,14 +66,14 @@ function seasonTab(){
     return `<section><ol class="sched">${s.days.map((d,i)=>`<li class="${i===s.cur?'today':''}"><div class="sd"><time>${esc(d.date)} UTC</time><span>${esc(d.label)} · 현지 ${esc([...new Set(d.matches.map(m=>m.localDate||d.date))].join(' / '))} · ${esc(d.matches[0]?.timeZone||'UTC')}</span></div>
       ${d.matches.map(m=>`<button class="sm ${m.a===me||m.b===me?'mine':''}" data-m="${m.id}"${m.res?'':' disabled'}>
         ${m.time?`<small>${esc(fixtureTimeInfo(m))}${m.broadcastSlot?' · '+m.broadcastSlot+'경기':''}</small>`:''}
-        <span class="${m.res&&m.res.winner===m.a?'w':''}">${esc(tshort(m.a))}</span><b>${m.res?m.res.score.join(' : '):'vs'}</b><span class="${m.res&&m.res.winner===m.b?'w':''}">${esc(tshort(m.b))}</span></button>`).join('')}</li>`).join('')}</ol></section>`;
+        <span class="${m.res&&m.res.winner===m.a?'w':''}">${esc(tshort(m.a))}</span><b>${m.res?recordedSeriesScore(m.res):'vs'}</b><span class="${m.res&&m.res.winner===m.b?'w':''}">${esc(tshort(m.b))}</span></button>`).join('')}</li>`).join('')}</ol></section>`;
   }
   if(SSET.tab==='bracket'){
     const el=comp.stages.filter(x=>x.type==='single_elim').map(cfg=>{const sd=s.stageData[cfg.id]; if(!sd) return `<p class="empty">${esc(cfg.name)} 대진은 앞 스테이지가 끝나면 정해집니다.</p>`;
       const found=pr=>{for(const d of s.days)for(const m of d.matches)if(d.stage===cfg.id&&m.a===pr[0]&&m.b===pr[1])return m;return null};
       return `<section><h3>${esc(sName(s))} · ${esc(cfg.name)}</h3><div class="scroll"><div class="bracket">${sd.rounds.map(r=>`<div class="bcol"><h4>${esc(r.name)}</h4>
         ${r.byes.map(t=>`<div class="bm bye"><span>${esc(tshort(t))}</span><small>부전승</small></div>`).join('')}
-        ${r.pairs.map(pr=>{const m=found(pr);return `<button class="bm" ${m&&m.res?`data-m="${m.id}"`:'disabled'}><span class="${m&&m.res&&m.res.winner===pr[0]?'w':''}">${esc(tshort(pr[0]))} <b>${m&&m.res?m.res.score[0]:''}</b></span><span class="${m&&m.res&&m.res.winner===pr[1]?'w':''}">${esc(tshort(pr[1]))} <b>${m&&m.res?m.res.score[1]:''}</b></span></button>`}).join('')}
+        ${r.pairs.map(pr=>{const m=found(pr);return `<button class="bm" ${m&&m.res?`data-m="${m.id}"`:'disabled'}><span class="${m&&m.res&&m.res.winner===pr[0]?'w':''}">${esc(tshort(pr[0]))} <b>${m&&m.res?(isDoubleDisqualification(m.res)?'실격':m.res.score[0]):''}</b></span><span class="${m&&m.res&&m.res.winner===pr[1]?'w':''}">${esc(tshort(pr[1]))} <b>${m&&m.res?(isDoubleDisqualification(m.res)?'실격':m.res.score[1]):''}</b></span></button>`}).join('')}
       </div>`).join('')}${s.done&&s.champion?`<div class="bcol"><h4>우승</h4><div class="bm champ1"><span class="w">${esc(tname(s.champion))}</span></div></div>`:''}</div></div></section>`}).join('');
     return el||'<p class="empty">이 대회에는 토너먼트 스테이지가 없습니다. 정규 시즌 1위가 우승합니다.</p>';
   }
@@ -106,7 +106,7 @@ function histTable(){
   const keys=Object.keys(groups).sort((a,b)=>(groups[b][0].intl-groups[a][0].intl));
   const titles={};DB.history.forEach(h=>{const k=h.champion;titles[k]=titles[k]||{n:0,w:0};titles[k].n++;if(h.intl)titles[k].w++});
   return keys.map(k=>{const H=groups[k].slice().reverse();return `<h4>${esc(k)}</h4><div class="scroll"><table><thead><tr><th>시즌</th><th>우승</th><th>준우승</th><th>결승</th><th>MVP</th></tr></thead><tbody>
-  ${H.map(h=>`<tr><td class="num">${h.year}</td><td><b>${esc(h.championName||h.champion)}</b></td><td>${esc(h.runnerUpName||h.runnerUp)}</td><td class="num">${h.final?h.final.join(':'):'—'}</td><td>${h.mvp?esc(h.mvpName||h.mvp):'—'}</td></tr>`).join('')}
+  ${H.map(h=>`<tr><td class="num">${h.year}</td><td><b>${esc(h.championName||h.champion||(h.completionReason==='double_disqualification'?'우승자 없음 · 결승 양 팀 실격':h.champion))}</b></td><td>${esc(h.runnerUpName||h.runnerUp||(h.completionReason==='double_disqualification'?'—':h.runnerUp))}</td><td class="num">${h.final?h.final.join(':'):'—'}</td><td>${h.mvp?esc(h.mvpName||h.mvp):'—'}</td></tr>`).join('')}
   </tbody></table></div>`}).join('')+`<p class="hint">당시 명칭 미보관 기록은 식별자를 표시합니다. 현재 구단명 기준 통산 우승: ${Object.entries(titles).sort((a,b)=>b[1].w-a[1].w||b[1].n-a[1].n).slice(0,12).map(([t,v])=>`${esc(tshort(t))} ${v.n}회${v.w?` (국제 ${v.w})`:''}`).join(', ')}</p>`;
 }
 function findMatch(id){const s=curS();if(!s)return null;for(const d of s.days)for(const m of d.matches)if(m.id===id)return m}
