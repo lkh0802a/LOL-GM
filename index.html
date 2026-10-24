@@ -3363,7 +3363,7 @@ function intlStages(fmt,teams,bo,opt={}){
   const eventGroup=(groups,legs)=>grp(groups,{legs:opt.groupLegs||legs,bestOf:Math.max(3,opt.groupBo||3)});
   if(fmt==='worlds_league_phase'){
     if(n!==24)throw new Error(`월즈 리그 페이즈는 승인된 24팀 구성이 필요합니다 (현재 ${n}팀).`);
-    return [{id:'league',name:'리그 페이즈',type:'league_phase',bestOf:3,firstChoice:'coin',dayGap:[1]}, {...ko('league',16),fixedBracket:true}];
+    return [{id:'league',name:'리그 페이즈',type:'league_phase',bestOf:3,firstChoice:'coin',dayGap:[1]}, {...ko('league',16),bestOf:5,fixedBracket:true}];
   }
   if(fmt==='msi_swiss_de'){
     if(n!==16)throw new Error(`MSI 스위스는 승인된 16팀 구성이 필요합니다 (현재 ${n}팀).`);
@@ -3431,7 +3431,7 @@ function worldsDrawSchedule(teams,regions,rng){
 function startWorldsLeague(db,s,idx,teams,date){
   const cfg=db.competitions[s.comp].stages[idx],regions=Object.fromEntries(teams.map(t=>[t,db.teams[t]?.region]));
   const draw=worldsDrawSchedule(teams,regions,new RNG(s.seed,'worlds-league-draw'));
-  s.stageData[cfg.id]={type:'league_phase',teams:teams.slice(),pots:draw.pots,regions,tiebreaks:[]};
+  s.stageData[cfg.id]={type:'league_phase',teams:teams.slice(),pots:draw.pots,tiebreaks:[]};
   draw.rounds.forEach((pairs,r)=>{pushVenueRound(s,date,cfg.id,`${cfg.name} ${r+1}라운드`,pairs,3);date=addDays(date,venueRoundGap(s,pairs.length,1));});
 }
 function worldsLeagueRows(db,s,stageId){
@@ -3479,7 +3479,7 @@ function continueWorldsLeague(db,s,idx,date){
 }
 function worldsElimRound(db,s,idx,date){
   const cfg=db.competitions[s.comp].stages[idx],sd=s.stageData[cfg.id];
-  if(sd.round===0){if(sd.alive.length!==16)throw Error('월즈 녹아웃은 확정된 16팀이 필요합니다.');const lower=shuffleWithRng(sd.alive.slice(8),new RNG(s.seed,'worlds-r16-draw'));sd.drawPairs=sd.alive.slice(0,8).map((t,i)=>[t,lower[i]]);sd.alive=sd.drawPairs.flat();}
+  if(sd.round===0){if(sd.alive.length!==16)throw Error('월즈 녹아웃은 확정된 16팀이 필요합니다.');const lower=shuffleWithRng(sd.alive.slice(8),new RNG(s.seed,'worlds-r16-draw'));sd.alive=sd.alive.slice(0,8).flatMap((t,i)=>[t,lower[i]]);}
   const pairs=[];for(let i=0;i<sd.alive.length;i+=2)pairs.push(sd.alive.slice(i,i+2));
   const name=elimName(sd.alive.length),label=`${cfg.name} ${name}`;
   pairs.slice().reverse().forEach((pr,i)=>pushDay(s,addDays(date,i),cfg.id,label,[pr],cfg.bestOf));
@@ -13719,7 +13719,7 @@ function v2CompetitionDetail(key){
 }
 function v2WorldsDrawDetails(s,name){
  const league=Object.values(s.stageData||{}).find(sd=>sd.type==='league_phase');if(!league)return '';
- const knockout=Object.values(s.stageData).find(sd=>sd.drawPairs),matches=s.days.flatMap(d=>d.matches);
+ const knockout=Object.values(s.stageData).find(sd=>sd.type==='single_elim'&&sd.rounds?.length),matches=s.days.flatMap(d=>d.matches);
  return `<section aria-label="월즈 추첨과 결정전"><h3>리그 페이즈 추첨</h3>${league.pots.map((pot,i)=>`<p>포트 ${i+1}: ${pot.map(t=>v2Esc(name(t))).join(' · ')}</p>`).join('')}<p>동률은 승수·SoS·세트 득실·상대 세트 득실·세트 승수 → 승자승 → 미해결 진출·시드 경계 BO1 결정전 순서로 처리합니다.</p>${league.tiebreaks.map((tb,i)=>`<p>결정전 ${i+1}: ${tb.teams.map(t=>v2Esc(name(t))).join(' · ')} · ${tb.matches.filter(id=>matches.find(m=>m.id===id)?.res).length}/${tb.matches.length}경기 완료</p>`).join('')}${knockout?`<h3>16강 추첨으로 고정된 대진</h3>${knockout.rounds.map(r=>`<h4>${v2Esc(r.name)}</h4><ul>${r.pairs.map(([a,b])=>{const m=matches.find(m=>m.a===a&&m.b===b&&m.roundLabel===r.label);return `<li>${v2Esc(name(a))} — ${v2Esc(name(b))}${m?.res?' · '+m.res.score.join(' : '):' · 경기 대기'}</li>`}).join('')}</ul>`).join('')}`:'<p>리그 페이즈 순위 확정 후 16강을 추첨합니다.</p>'}</section>`;
 }
 function v2BindRecordedViews(){

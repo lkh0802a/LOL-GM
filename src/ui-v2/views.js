@@ -71,7 +71,7 @@ function v2CompetitionDetail(key){
 }
 function v2WorldsDrawDetails(s,name){
  const league=Object.values(s.stageData||{}).find(sd=>sd.type==='league_phase');if(!league)return '';
- const knockout=Object.values(s.stageData).find(sd=>sd.drawPairs),matches=s.days.flatMap(d=>d.matches);
+ const knockout=Object.values(s.stageData).find(sd=>sd.type==='single_elim'&&sd.rounds?.length),matches=s.days.flatMap(d=>d.matches);
  return `<section aria-label="월즈 추첨과 결정전"><h3>리그 페이즈 추첨</h3>${league.pots.map((pot,i)=>`<p>포트 ${i+1}: ${pot.map(t=>v2Esc(name(t))).join(' · ')}</p>`).join('')}<p>동률은 승수·SoS·세트 득실·상대 세트 득실·세트 승수 → 승자승 → 미해결 진출·시드 경계 BO1 결정전 순서로 처리합니다.</p>${league.tiebreaks.map((tb,i)=>`<p>결정전 ${i+1}: ${tb.teams.map(t=>v2Esc(name(t))).join(' · ')} · ${tb.matches.filter(id=>matches.find(m=>m.id===id)?.res).length}/${tb.matches.length}경기 완료</p>`).join('')}${knockout?`<h3>16강 추첨으로 고정된 대진</h3>${knockout.rounds.map(r=>`<h4>${v2Esc(r.name)}</h4><ul>${r.pairs.map(([a,b])=>{const m=matches.find(m=>m.a===a&&m.b===b&&m.roundLabel===r.label);return `<li>${v2Esc(name(a))} — ${v2Esc(name(b))}${m?.res?' · '+m.res.score.join(' : '):' · 경기 대기'}</li>`}).join('')}</ul>`).join('')}`:'<p>리그 페이즈 순위 확정 후 16강을 추첨합니다.</p>'}</section>`;
 }
 function v2BindRecordedViews(){

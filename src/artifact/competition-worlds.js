@@ -35,7 +35,7 @@ function worldsDrawSchedule(teams,regions,rng){
 function startWorldsLeague(db,s,idx,teams,date){
   const cfg=db.competitions[s.comp].stages[idx],regions=Object.fromEntries(teams.map(t=>[t,db.teams[t]?.region]));
   const draw=worldsDrawSchedule(teams,regions,new RNG(s.seed,'worlds-league-draw'));
-  s.stageData[cfg.id]={type:'league_phase',teams:teams.slice(),pots:draw.pots,regions,tiebreaks:[]};
+  s.stageData[cfg.id]={type:'league_phase',teams:teams.slice(),pots:draw.pots,tiebreaks:[]};
   draw.rounds.forEach((pairs,r)=>{pushVenueRound(s,date,cfg.id,`${cfg.name} ${r+1}라운드`,pairs,3);date=addDays(date,venueRoundGap(s,pairs.length,1));});
 }
 function worldsLeagueRows(db,s,stageId){
@@ -83,7 +83,7 @@ function continueWorldsLeague(db,s,idx,date){
 }
 function worldsElimRound(db,s,idx,date){
   const cfg=db.competitions[s.comp].stages[idx],sd=s.stageData[cfg.id];
-  if(sd.round===0){if(sd.alive.length!==16)throw Error('월즈 녹아웃은 확정된 16팀이 필요합니다.');const lower=shuffleWithRng(sd.alive.slice(8),new RNG(s.seed,'worlds-r16-draw'));sd.drawPairs=sd.alive.slice(0,8).map((t,i)=>[t,lower[i]]);sd.alive=sd.drawPairs.flat();}
+  if(sd.round===0){if(sd.alive.length!==16)throw Error('월즈 녹아웃은 확정된 16팀이 필요합니다.');const lower=shuffleWithRng(sd.alive.slice(8),new RNG(s.seed,'worlds-r16-draw'));sd.alive=sd.alive.slice(0,8).flatMap((t,i)=>[t,lower[i]]);}
   const pairs=[];for(let i=0;i<sd.alive.length;i+=2)pairs.push(sd.alive.slice(i,i+2));
   const name=elimName(sd.alive.length),label=`${cfg.name} ${name}`;
   pairs.slice().reverse().forEach((pr,i)=>pushDay(s,addDays(date,i),cfg.id,label,[pr],cfg.bestOf));
