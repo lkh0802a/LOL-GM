@@ -147,7 +147,7 @@ resolvePendingOfficialMatch=function(db,forcedDraft){
   const q=db.world?.pendingOfficial?.queue?.[0],refs=q&&pendingOfficialRefs(db,q);
   if(refs){officialGameClockFloor(db,refs.m.utcAt);officialGameTimeRecord(refs.m,q.session?.games||[]);}
   const result=officialResolveBeforeClock(db,forcedDraft);
-  if(refs&&!result.done)recordOfficialGameTime(db,refs.m,officialGameTimeRecord(refs.m,q.session.games));
+  if(refs&&!result.done&&!result.succession)recordOfficialGameTime(db,refs.m,officialGameTimeRecord(refs.m,q.session.games));
   return result;
 };
 const officialPlayDayBeforeClock=playDay;
