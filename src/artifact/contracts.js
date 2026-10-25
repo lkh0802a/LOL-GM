@@ -177,12 +177,18 @@ function aiMarketOfferCandidates(db,t,fas,role,budgetRoom,year=db.year){
     cv=cur?playerValue(db,cur,t):-99,importGap=R.importRecruitMinGap??3,
     imports=teamNonLocalCount(db,t);
   return withMarketDemandReadIndex(db,()=>fas.filter(p=>p.role===role&&
-      (projectedPlayerIsLocal(db,p,t)||(playerOvr(p)>=R.strength+importGap&&
+      (projectedPlayerIsLocal(db,p,t)||(aiMarketObservation(db,p,t).ability>=R.strength+importGap&&
         imports<nonLocalLimitForTeam(db,t))))
     .map(p=>({p,v:aiMarketValue(db,p,t),ask:asking(db,p,t.region)}))
     .filter(x=>x.ask<=budgetRoom&&
       (!cur||cur.wantsOut||cur.contract.until<=year||x.v>cv+5))
     .sort((a,b)=>b.v-a.v||a.p.id.localeCompare(b.p.id)));
+}
+function aiMarketProposalTerms(db,p,t,ask,rng){
+  const salary=Math.round(ask*(['win-now','superstar'].includes(t.philosophy)
+    ?rng.range(1,1.15):rng.range(.95,1.05))*(1-medicalContractRisk(db,p)*.4)*10)/10;
+  return normalizeContractTerms(db,p,t,salary,contractYearsForPlayer(db,p,rng,t),{
+    releaseGuaranteeRate:contractGuaranteePolicy(p).preferred,promisedRole:'starter'});
 }
 
 function contractMarket(db,rng,rep,ev){
@@ -232,9 +238,14 @@ function contractMarket(db,rng,rep,ev){
         const cur=starterFor(db,t,role), cv=cur?playerValue(db,cur,t):-99;
         const importGap=R.importRecruitMinGap??3;
         const cand=aiMarketOfferCandidates(db,t,fas,role,budgetLeft[t.id],year);
-        const c=cand[0]; if(!c)continue;
-        const sal=Math.round(c.ask*(['win-now','superstar'].includes(t.philosophy)?rng.range(1,1.15):rng.range(0.95,1.05))*(1-medicalContractRisk(db,c.p)*.4)*10)/10;
-        (offers[c.p.id]=offers[c.p.id]||[]).push({t,sal,starter:true});
+        const pending=round===0?currentAIMarketOffers(db).find(o=>o.teamId===t.id&&
+          db.players[o.pid]?.role===role&&aiMarketOfferAvailable(db,o)):null,
+          c=pending?{p:db.players[pending.pid]}:cand[0];if(!c)continue;
+        const terms=pending?pending.terms:aiMarketProposalTerms(db,c.p,t,c.ask,rng),
+          issued=pending||issueAIMarketOffer(db,t,c.p,terms,'close/'+round);
+        if(!issued)continue;
+        (offers[issued.pid]=offers[issued.pid]||[]).push({t,sal:issued.terms.salary,years:issued.terms.years,
+          terms:issued.terms,offerId:issued.id,starter:true});
       }
     }
     for(const [pid,os] of Object.entries(offers)){
@@ -244,7 +255,7 @@ function contractMarket(db,rng,rep,ev){
         .find(x=>budgetLeft[x.o.t.id]>=x.o.sal&&!localRegistrationError(db,x.o.t,p));
       if(!best)continue;
       const t=best.o.t,yrs=best.o.years?best.o.years:contractYearsForPlayer(db,p,rng),
-        offer=normalizeContractTerms(db,p,t,best.o.sal,yrs,{
+        offer=best.o.terms||normalizeContractTerms(db,p,t,best.o.sal,yrs,{
           releaseGuaranteeRate:contractGuaranteePolicy(p).preferred,
           promisedRole:best.o.starter?'starter':defaultPromisedRole(db,p,t)});
       let finalOffer=offer,counterRounds=0;
@@ -254,8 +265,14 @@ function contractMarket(db,rng,rep,ev){
         ensurePlayerAgent(p);
         const counter=aiRepresentativeCounterTerms(db,p,t,'fa',offer,
           Math.min(budgetLeft[t.id],best.o.sal*1.15),t.finance.cash);
-        if(!counter.terms)continue;
-        finalOffer=counter.terms;counterRounds=1+counter.rounds;
+        if(!counter.terms){
+          const refused=currentAIMarketOffers(db).find(o=>o.id===best.o.offerId);
+          if(refused)closeAIMarketOffer(db,refused,'rejected','player_terms');
+          continue;
+        }
+        const counterOffer=issueAIMarketOffer(db,t,p,counter.terms,'counter/'+round);
+        if(!counterOffer)continue;
+        finalOffer=counterOffer.terms;counterRounds=1+counter.rounds;
       }
       const prev=starterFor(db,t,p.role);
       // Multiple market offers can be based on the same earlier import count.

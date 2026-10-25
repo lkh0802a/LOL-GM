@@ -9,7 +9,12 @@ const archivedWriter=(await readFile(new URL('../docs/evidence/unemployed-season
 // AI-control call is removed from this reference. No legacy global is restored.
 const retiredCall='  for(const t of activeTeams(db))aiManageTraining(db,t);';
 assert.equal(archivedWriter.split(retiredCall).length,2);
-const originalWriter=archivedWriter.replace(retiredCall,'');
+// Include the approved market-entry hook in both writers while retaining the
+// archived source and the strict whole-DB comparison of all old behavior.
+const marketTransition="  w.report=rep; w.phase='market'; w.offers=[]; w.negotiations={}; w.marketLog=[];";
+assert.equal(archivedWriter.split(marketTransition).length,2);
+const originalWriter=archivedWriter.replace(retiredCall,'').replace(marketTransition,
+  marketTransition+'\n  refreshAIMarketOffers(db);');
 await runEngineFixture(String.raw`(()=>{
  const check=(x,m)=>{if(!x)throw Error('UNEMPLOYED '+m)},copy=x=>unpackDB(JSON.stringify(x));
  const baseline=copy(FIXTURE),before=JSON.stringify(baseline);

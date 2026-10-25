@@ -70,6 +70,7 @@ export const ENGINE_MODULES = [
   'scouting-ai-ops.js',
   'scouting-ai-reassessment.js',
   'contract-negotiation.js',
+  'contract-market-offers.js',
   'transfer.js',
   'contract-window.js',
   'contract-contact-ai.js',

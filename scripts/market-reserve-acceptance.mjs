@@ -145,6 +145,12 @@ await runEngineFixture(String.raw`(()=>{
   assert(pricing._marketDemandCache.KR.key===[pricing.year,'KR',Object.keys(pricing.players).length,
     activeTeams(pricing,'KR',1).length].join('|'),'post-batch topology change remained stale');
   const roundPlain=buildWorld(),roundIndexed=buildWorld();let plainRound;
+  // Exercise the real initial-auction period. Before an offer ledger existed,
+  // this lower-level fixture could sign without entering any market at all.
+  for(const world of [roundPlain,roundIndexed]){
+    beginInitialRosterPhase(world,activeTeams(world,'NA',1)[0].id,'pricing-round-parity');
+    for(const offer of currentAIMarketOffers(world))closeAIMarketOffer(world,offer,'withdrawn','index fixture');
+  }
   const contenders=x=>activeTeams(x,'KR',1).slice(0,6);
   try{
     withMarketDemandReadIndex=(db,read)=>read();

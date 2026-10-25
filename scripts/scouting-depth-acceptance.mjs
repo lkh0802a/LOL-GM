@@ -33,8 +33,10 @@ const fixture=String.raw`(()=>{
     foundingClubs=activeTeams(founding,'NA',1).slice(0,2);
   assert(foundingManager&&foundingClubs.length===2,'founding dossier fixture missing clubs');
   startCareer(founding,foundingManager.id,'d03-b2-founding');
+  // Real AI market entry has already scouted its own candidates. Exercise
+  // lazy first observation with a genuinely unobserved player for both clubs.
   const foundingTarget=Object.values(founding.players)
-    .find(p=>!p.retired&&!p.team&&p.region==='NA');
+    .find(p=>!p.retired&&!p.team&&p.region==='NA'&&foundingClubs.every(t=>!t.scoutingState?.reports?.[p.id]));
   assert(foundingTarget,'founding dossier fixture missing target');
   const [foundingA,foundingB]=foundingClubs,
     expectedA=legacyInitial(founding,foundingTarget,foundingA),
