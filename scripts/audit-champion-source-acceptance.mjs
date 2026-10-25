@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {spawnSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
 import {auditChampionSource as audit,championSourceAuditExitCode as exitCode} from './audit-champion-source.mjs';
 
 // Synthetic schema-only fixtures. These are never production champion values.
@@ -47,7 +48,7 @@ assert.equal(exitCode(audit(sentinel),true),1);
 
 const sourceUrl=new URL('../src/artifact/champion-source.js',import.meta.url),sourceBefore=await readFile(sourceUrl);
 const cli=new URL('./audit-champion-source.mjs',import.meta.url);
-const run=args=>spawnSync(process.execPath,[cli.pathname,...args],{encoding:'utf8'});
+const run=args=>spawnSync(process.execPath,[fileURLToPath(cli),...args],{encoding:'utf8'});
 const normal=run([]),strict=run(['--strict']);
 assert.ifError(normal.error);assert.ifError(strict.error);
 assert.equal(normal.status,0,normal.stderr);assert.equal(strict.status,1,strict.stderr);
