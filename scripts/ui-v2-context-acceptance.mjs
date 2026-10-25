@@ -11,16 +11,20 @@ const result=await runEngineFixture(String.raw`(()=>{
  const saved=JSON.parse(savedView);check(saved.view.target===reserve.id,'현재 선수단 저장');
  const valid=V2.target;v2ChooseSquad('missing');check(V2.target===valid&&JSON.stringify(db)===before,'외부 선수단 거절');
  db.world.manage='ai';v2ChooseSquad(team.id);check(V2.target===valid,'자동 운영 수동 선택 거절');db.world.manage='manual';
- V2.q=' a ';V2.role='ALL';V2.page=2;window.scrollY=741;v2RememberSearch();V2.pid='detail';V2.page=0;v2RestoreSearch();check(V2.page===2&&V2.q===' a ','상세 진입 문맥');V2.pid=null;v2RestoreSearch();check(V2.returnScroll===741&&V2.page===2,'목록 페이지·스크롤 복귀');
- V2.tab='관심 선수';v2RestoreSearch();check(V2.page===0,'서로 다른 목록 문맥');V2.tab='선수 검색';v2RestoreSearch();check(V2.page===2,'원래 목록 복귀');
- V2.target=team.id;v2RestoreSearch();check(V2.page===0,'선수단 변경 뒤 이전 목록 문맥 무효');V2.target=reserve.id;
- const current=db;V2.db=unpackDB(packDB(db));v2RestoreSearch();check(V2.page===0,'불러오기 뒤 이전 목록 문맥 무효');V2.db=current;
+ V2.q=' a ';V2.role='ALL';V2.page=2;window.scrollY=741;document.activeElement=searchCard;v2RememberSearch();V2.pid='detail';V2.page=0;v2RestoreSearch();check(V2.page===2&&V2.q===' a ','상세 진입 문맥');V2.pid=null;v2RestoreSearch();check(V2.returnScroll===741&&V2.page===2,'목록 페이지·스크롤 복귀');
+ v2FocusLocation();check(restoredFocus===searchCard.dataset.player,'검색 목록의 원래 선수 포커스 복귀');
+ V2.pid='detail';v2FocusLocation();check(restoredFocus==='title','상세 화면에 목록 포커스 적용');V2.pid=null;
+ visibleCards=[];v2FocusLocation();check(restoredFocus==='title','사라진 후보 포커스 대체');visibleCards=[searchCard];
+ V2.tab='관심 선수';v2RestoreSearch();check(V2.page===0,'서로 다른 목록 문맥');v2FocusLocation();check(restoredFocus==='title','다른 목록에 이전 선수 포커스 복귀');V2.tab='선수 검색';v2RestoreSearch();check(V2.page===2,'원래 목록 복귀');
+ V2.target=team.id;v2RestoreSearch();check(V2.page===0,'선수단 변경 뒤 이전 목록 문맥 무효');v2FocusLocation();check(restoredFocus==='title','다른 선수단 포커스 문맥 재사용');V2.target=reserve.id;
+ const manager=db.manager;db.manager={...manager};v2FocusLocation();check(restoredFocus==='title','바뀐 감독 포커스 문맥 재사용');db.manager=manager;
+ const current=db;V2.db=unpackDB(packDB(db));v2RestoreSearch();check(V2.page===0,'불러오기 뒤 이전 목록 문맥 무효');v2FocusLocation();check(restoredFocus==='title','불러오기 뒤 이전 포커스 재사용');V2.db=current;
  // The selected reserve must reach the original evaluation and contract writers.
  const read=v2ReadView(),pid=Object.values(db.players).find(p=>!p.team&&!p.retired&&initialSignCheck(db,p,reserve).ok)?.id;check(pid,'실제 계약 가능 후보');
  mInterest(db,pid,'B');scoutPlayers(db,[pid],40,.1*psOf(db,team.region));mEvaluateTarget(db,pid,v2Target().id);check(db.world.recruitment.targets[pid].evaluation.teamId===reserve.id,'산하 선수단 실제 평가');
  initialStartNegotiation(db,pid,v2Target().id);const n=Object.values(db.world.negotiations).find(n=>n.pid===pid&&n.teamId===reserve.id);check(n&&n.kind==='initial','산하 선수단 실제 협상 작성');
  const snapshot=packDB(db);v2OrganizationContext();check(packDB(db)===snapshot,'문맥 표시 조회 불변');
- return {squads:squads.length,contextOnly:true,staleContextRejected:true,invalidAndAutoRejected:true,searchReturn:true,separateLists:true,loadInvalidation:true,actualReserveEvaluation:true,actualReserveNegotiation:true,savedTarget:true,readPure:true};
-})()`,{setupSources:[...sources,`let savedView='';const window={scrollY:0,scrollTo(){}};const localStorage={setItem(k,v){savedView=v}};const document={getElementById(){return {textContent:''}},querySelectorAll(){return []}};function v2Icon(){return ''}function v2Render(){}`],timeout:120000});
+ return {squads:squads.length,contextOnly:true,staleContextRejected:true,invalidAndAutoRejected:true,searchReturn:true,searchFocusReturn:true,missingFocusFallback:true,foreignFocusInert:true,separateLists:true,loadInvalidation:true,actualReserveEvaluation:true,actualReserveNegotiation:true,savedTarget:true,readPure:true};
+})()`,{setupSources:[...sources,`let savedView='';const window={scrollY:0,scrollTo(){}};const localStorage={setItem(k,v){savedView=v}};let restoredFocus=null;const searchCard={dataset:{player:'controlled-search-player'},getAttribute(k){return k==='data-player'?this.dataset.player:null},focus(){restoredFocus=this.dataset.player}};let visibleCards=[searchCard];const document={activeElement:null,getElementById(){return {textContent:'',focus(){restoredFocus='title'}}},querySelectorAll(selector){return selector==='[data-player]'?visibleCards:[]}};function v2Icon(){return ''}function v2Render(){}`],timeout:120000});
 assert(result.actualReserveNegotiation&&result.searchReturn&&result.readPure);
 console.log('UI_V2_CONTEXT_ACCEPTANCE',JSON.stringify(result));
