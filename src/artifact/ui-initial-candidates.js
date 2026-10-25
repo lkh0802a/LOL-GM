@@ -3,7 +3,6 @@
 const INITIAL_CANDIDATE_PAGE_SIZE=25;
 const INITIAL_CANDIDATE_SORTS={ability:'종합 기량 추정',name:'선수 이름',role:'포지션',region:'출신 지역',age:'나이',potential:'잠재력 추정',reputation:'명성',salary:'요구 연봉',...Object.fromEntries(Object.entries(INITIAL_COMPARE_METRICS).map(([k,v])=>[k,v+' 추정']))};
 function initialCandidateUiState(){return {impact:null,comparison:initialComparisonState(),role:'ALL',roles:[],metricFilters:{},metricDraft:{},multiSort:false,scope:'region',target:null,q:'',minimum:0,sort:'ability',direction:'desc',page:0,selected:[],columns:['age','ability','potential','salary'],secondary:[],detail:null,returnY:0}}
-function initialCandidateView(db){const view=Object.create(db);view.scout=JSON.parse(JSON.stringify(db.scout||{}));view.world={...db.world,recruitment:JSON.parse(JSON.stringify(db.world?.recruitment||{})),negotiations:JSON.parse(JSON.stringify(db.world?.negotiations||{}))};view._marketDemandCache={...(db._marketDemandCache||{})};return view}
 let INITIAL_CANDIDATE_CONTEXT=null;
 function initialCandidateContext(db){
   const slot=typeof SLOT==='undefined'?null:SLOT;
@@ -11,7 +10,6 @@ function initialCandidateContext(db){
     INITMK=initialCandidateUiState();INITIAL_CANDIDATE_CONTEXT={db,slot,world:db.world,owner:managedTeamId(db)};
   }
 }
-function initialCandidateAllowed(db,target,p=null){return db.world?.phase==='initial_roster'&&!db.world.fired&&!managedTeam(db)?.parent&&setupTeamsForManager(db).some(t=>t===target)&&(!p||db.players[p.id]===p&&!p.retired&&!p.team)}
 function initialCandidatePage(db,state,target){
   const allowed=initialCandidateAllowed(db,target);
   if(!allowed)return {allowed:false,rows:[],total:0,pages:0,page:0,view:null};
