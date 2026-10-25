@@ -33,6 +33,10 @@
 
 **S1 원본 획득:** 데이터 원본 URL·provider·게임 버전·locale·취득 시각·SHA-256·면허/재배포 조건·원본 schema 기록. `src/data/raw/{version}/{provider}/...`은 변경 불가능한 버전 자료. 승인되지 않은 무제한 최신 갱신·기존 플레이어 세이브의 원본 덮어쓰기 금지.
 
+**로컬 원본 번들 대조 CLI:** `node scripts/verify-champion-source-bundle.mjs --manifest manifest.json --root raw-directory --version 16.19.1`. 읽기 전용이며 다운로드/네트워크 요청이나 제품 데이터 덮어쓰기를 하지 않는다. manifest v1은 `provider: "Riot Data Dragon"`, 정확한 `version`, `locale: "en_US" | "ko_KR"`, 비어 있지 않은 `files`를 가진다. 파일마다 `championId`, `path: "<championId>.json"`, 해당 버전/locale의 정확한 Riot URL, UTC `retrievedAt`, 소문자 SHA256 `sha256`, `bytes`, `rights: {reference, redistribution: "UNVERIFIED" | "REVIEWED"}`를 기록한다. 이 메타데이터는 취득·권리 주장의 기록일 뿐이다.
+
+CLI는 호출자가 별도로 지정한 버전과 manifest/URL/실제 JSON 버전·챔피언 ID/Riot key를 대조하고 실제 파일 바이트 길이·SHA256을 검사한다. 중복/경로 이탈/루트 밖 심볼릭 링크·잘못된 UTF8/JSON·다른 버전/ID는 거절한다. 종료코드 0은 `INTEGRITY_CHECKED`, 개별 원본 읽기 실패/자료 거절은 1, 사용법/manifest·루트 접근 오류는 2다. **작성자가 해시와 URL을 함께 바꿀 수 있으므로 해시 일치는 원격 출처의 진위 증명이 아니다.** `remoteOriginVerified`, `rightsVerified`, `numericSemanticsVerified`, `executableMechanicsVerified`는 항상 false이며 별도 원본 취득/의미 검토가 필요하다. 이 도구는 스킬 수치를 채우거나 새 코어에 물리 데이터를 승인하는 경로가 아니다. 제어된 스키마/바이트 fixture의 PASS를 Riot 원본 취득 완료로 세지 않는다.
+
 **S2 항목 대조/정규화:** stable champion/spell/item ID로 provider 간 합치고, (health, AD, armor, MR, resource, move speed, attack speed, growth)를 명시적 단위로 정규화. 각 스킬 단계는 `spellId, slot, ranks, cooldown[], cost[], castTime, effectiveRange, hitGeometry, damagePackets, ratios, effectGraph, status/CC, targeting, tags, provenance`를 분리. `25000` 같은 Data Dragon 사거리 sentinel을 실제 무한 공격 범위로 취급하지 않음.
 
 **S3 의미 단위/출처 검수:** zero AD growth, 0/NaN/누락 계수, 스킬 레벨 배열 불일치, 피해량·스케일링 단위·평타/마법 피해 혼선, 잘못된 AP/AD 비율, 소모량/최대 자원 부조리, 2중 버프, 챔피언 예외 기제(무기 전환/탈것/빙의/다단 타격/소환체 등) 수동 검수 큐. 모르는 수치는 `UNVERIFIED`, 해당 effect는 개발 테스트에서 fail/quarantine — **조용히 generic을 Riot 원본 수치처럼 표시 금지**.

@@ -5,6 +5,7 @@ import { ARTIFACT_MODULES, ENGINE_MODULES } from './artifact-modules.mjs';
 import { assertMutationOwnership } from './mutation-ownership.mjs';
 await import('./ai-market-read-cost-acceptance.mjs');
 await import('./audit-champion-source-acceptance.mjs');
+await import('./verify-champion-source-bundle-acceptance.mjs');
 await import('./match-core-foundation-acceptance.mjs');
 await import('./codex-impact-map-acceptance.mjs');
 await import('./observer-information-acceptance.mjs');
