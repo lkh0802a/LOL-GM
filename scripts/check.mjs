@@ -105,6 +105,7 @@ const maintainabilityBudgets = {
   'match-core-restore.js': 11000,
   'match-core-kernel.js': 9000,
   'match-core-input.js': 5000,
+  'initial-offer-impact.js': 6000,
   'app.js': 22000,
   'ui-startup.js': 7000,
   'ui-startup-storage.js': 5500,
