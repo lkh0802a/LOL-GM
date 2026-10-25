@@ -6,6 +6,7 @@ export const ENGINE_MODULES = [
   'match-core-state.js',
   'match-core-restore.js',
   'match-core-kernel.js',
+  'match-core-input.js',
   'match-adjudication.js', 'combat-resources.js', 'objective-awards.js', 'takedown-rewards.js', 'macro-picks.js', 'engine.js',
   'draft.js',
   'systems.js',
