@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import {runEngineFixture} from './test-harness.mjs';
 const result=await runEngineFixture(String.raw`(()=>{
  const check=(v,m)=>{if(!v)throw Error('OCCUPATION_EVIDENCE '+m)},cfg=defaultWorldConfig();cfg.regions=[regionCfg('BR',{teams:10,div2:false})];cfg.internationals=[];
- const db=buildWorld(cfg),team=activeTeams(db,'BR',1)[0];startCareer(db,team.id,'midnight-existing-br');autoBuildInitialSquad(db,team,new RNG('midnight-roster','fixture'),5);finalizeInitialRosters(db);
+ // Independent initial offers change the old fixture to a 23:54:38 finish.
+ // Use the same real 00:05:32 midnight case as automatic resume; assertions stay unchanged.
+ const db=buildWorld(cfg),team=activeTeams(db,'BR',1)[0];startCareer(db,team.id,'midnight-existing-br-2');autoBuildInitialSquad(db,team,new RNG('midnight-roster','fixture'),5);finalizeInitialRosters(db);
  const s=Object.values(db.world.seasons)[0],day=s.days.find(d=>d.matches.some(m=>m.utcAt.endsWith('T23:00:00.000Z'))),target=day.matches.find(m=>m.utcAt.endsWith('T23:00:00.000Z'));setManagedTeam(db,target.a);let turns=0;
  while(db.world.pendingOfficial?.queue?.[0]?.matchId!==target.id){check(++turns<=30,'기존 수동 준비');playWorldDay(db);}db.world.manage='ai';playWorldDay(db);
  const daily=applyWorldDailyEffects;let packed=null;applyWorldDailyEffects=function(current,date){if(current===db&&date>day.date)packed=packDB(current);return daily(current,date);};try{playWorldDay(db);}finally{applyWorldDailyEffects=daily;}
