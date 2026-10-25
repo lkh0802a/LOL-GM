@@ -5,6 +5,7 @@ import { ARTIFACT_MODULES, ENGINE_MODULES } from './artifact-modules.mjs';
 import { assertMutationOwnership } from './mutation-ownership.mjs';
 await import('./ai-market-read-cost-acceptance.mjs');
 await import('./audit-champion-source-acceptance.mjs');
+await import('./match-core-foundation-acceptance.mjs');
 await import('./codex-impact-map-acceptance.mjs');
 await import('./observer-information-acceptance.mjs');
 await import('./historical-identity-acceptance.mjs');
@@ -97,6 +98,10 @@ for (const file of modules) {
 }
 
 const maintainabilityBudgets = {
+  'match-core-queue.js': 2500,
+  'match-core-state.js': 6000,
+  'match-core-restore.js': 11000,
+  'match-core-kernel.js': 9000,
   'app.js': 22000,
   'ui-startup.js': 7000,
   'ui-startup-storage.js': 5500,

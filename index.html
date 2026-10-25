@@ -71,6 +71,253 @@ function shuffleWithRng(arr,rng){const out=arr.slice();for(let i=out.length-1;i>
 // 원인별로 분리된 랜덤 스트림
 function makeStreams(seed){return {mech:new RNG(seed,'mechanical'),dec:new RNG(seed,'decision'),info:new RNG(seed,'information'),exec:new RNG(seed,'execution'),draft:new RNG(seed,'draft'),log:new RNG(seed,'log')}}
 
+// New causal core: match-local event heap. No world calendar or result writer.
+function matchCoreEventBefore(a,b){return a.atMs<b.atMs||(a.atMs===b.atMs&&a.seq<b.seq)}
+function matchCoreQueuePush(queue,event){
+  let i=queue.length;queue.push(event);
+  while(i){const p=(i-1)>>1;if(!matchCoreEventBefore(event,queue[p]))break;queue[i]=queue[p];i=p}
+  queue[i]=event;
+}
+function matchCoreQueuePop(queue){
+  const first=queue[0],last=queue.pop();if(!queue.length)return first;
+  let i=0;
+  while(i*2+1<queue.length){let c=i*2+1;
+    if(c+1<queue.length&&matchCoreEventBefore(queue[c+1],queue[c]))c++;
+    if(!matchCoreEventBefore(queue[c],last))break;queue[i]=queue[c];i=c;
+  }
+  queue[i]=last;return first;
+}
+
+// S0 foundation only: identity, pinned metadata and resumable match-local state.
+// Physical mechanics/source admission and actual nexus results are later slices.
+function matchCoreRecord(x){return x!==null&&typeof x==='object'&&!Array.isArray(x)}
+function matchCoreId(x){return typeof x==='string'&&x.length>0}
+function matchCoreTime(x){return Number.isSafeInteger(x)&&x>=0}
+function matchCoreAssert(ok,message){if(!ok)throw new Error('MATCH_CORE '+message)}
+function matchCoreClone(x){return JSON.parse(JSON.stringify(x,(_,v)=>v&&typeof v==='object'&&!Array.isArray(v)
+  ?Object.fromEntries(Object.keys(v).sort().map(k=>[k,v[k]])):v))}
+function matchCoreKeys(x,keys){return matchCoreRecord(x)&&Object.keys(x).every(k=>keys.includes(k))}
+function matchCoreCommandKey(teamId,id){return JSON.stringify([teamId,id])}
+function matchCoreRequestKey(r){return JSON.stringify([r.type,r.actorId,r.type==='wait'?r.durationMs:r.targetId])}
+function createMatchCoreState(spec){
+  matchCoreAssert(matchCoreRecord(spec),'invalid match identity');
+  const matchId=spec.matchId,seed=spec.seed,p=spec.patchSnapshot,inputTeams=spec.teams;
+  matchCoreAssert(matchCoreId(matchId)&&typeof seed==='string','invalid match identity');
+  matchCoreAssert(matchCoreRecord(p),'patch metadata required');
+  const patchId=p.id,revision=p.revision,sourceVersion=p.sourceVersion;
+  matchCoreAssert(matchCoreId(patchId)&&matchCoreTime(revision)&&matchCoreId(sourceVersion),'patch metadata required');
+  matchCoreAssert(Array.isArray(inputTeams)&&inputTeams.length===2,'two teams required');
+  const teams=[],participants=[],seen=new Set(),teamIds=new Set(),sides=new Set();
+  for(const team of inputTeams.slice()){
+    matchCoreAssert(matchCoreRecord(team),'invalid team/side');
+    const teamId=team.id,side=team.side,inputActors=team.actors;
+    matchCoreAssert(matchCoreId(teamId)&&!teamIds.has(teamId)&&
+      ['BLUE','RED'].includes(side)&&!sides.has(side),'invalid team/side');
+    teamIds.add(teamId);sides.add(side);teams.push(Object.freeze({id:teamId,side}));
+    matchCoreAssert(Array.isArray(inputActors)&&inputActors.length===5,'five actors per side required');
+    const roles=new Set();
+    for(const actor of inputActors.slice()){
+      matchCoreAssert(matchCoreRecord(actor),'invalid participant identity/role');
+      const id=actor.id,role=actor.role,championId=actor.championId;
+      matchCoreAssert(matchCoreId(id)&&!seen.has(id)&&ROLES.includes(role)&&!roles.has(role)&&matchCoreId(championId),'invalid participant identity/role');
+      seen.add(id);roles.add(role);participants.push(Object.freeze({id,teamId,role,championId}));
+    }
+  }
+  const compare=(a,b)=>a<b?-1:a>b?1:0;
+  teams.sort((a,b)=>compare(a.side,b.side));participants.sort((a,b)=>compare(a.id,b.id));
+  const actors=Object.create(null),rng=Object.create(null);
+  for(const actor of participants)actors[actor.id]={generation:0,waitingFor:null};
+  for(const channel of ['decision','execution'])rng[channel]=new RNG(seed,'match-core-v1/'+channel);
+  return {schema:1,engine:'causal-foundation-v1',matchId,seed,
+    patchSnapshot:Object.freeze({id:patchId,revision,sourceVersion}),
+    mechanicsStatus:'NOT_IMPLEMENTED',result:null,clockMs:0,
+    teams:Object.freeze(teams),participants:Object.freeze(participants),actors,
+    queue:[],nextEventSeq:0,commands:Object.create(null),receipts:[],rng};
+}
+
+// Validate a complete private kernel snapshot before installing any state.
+function restoreMatchCoreState(saved){
+  const s=typeof saved==='string'?JSON.parse(saved):matchCoreClone(saved);
+  matchCoreAssert(matchCoreKeys(s,['schema','engine','matchId','seed','patchSnapshot','mechanicsStatus','result',
+    'clockMs','teams','participants','actors','queue','nextEventSeq','commands','receipts','rng'])&&
+    s.schema===1&&s.engine==='causal-foundation-v1'&&
+    s.mechanicsStatus==='NOT_IMPLEMENTED'&&s.result===null,'unsupported state/result');
+  matchCoreAssert(Array.isArray(s.teams)&&Array.isArray(s.participants),'participant metadata missing');
+  const state=createMatchCoreState({matchId:s.matchId,seed:s.seed,patchSnapshot:s.patchSnapshot,
+    teams:s.teams.map(t=>({...t,actors:s.participants.filter(p=>p.teamId===t.id)}))});
+  matchCoreAssert(matchCoreKeys(s.patchSnapshot,['id','revision','sourceVersion'])&&
+    state.teams.length===s.teams.length&&state.teams.every((t,i)=>matchCoreKeys(s.teams[i],['id','side'])&&t.id===s.teams[i].id&&t.side===s.teams[i].side)&&
+    state.participants.length===s.participants.length&&state.participants.every((p,i)=>
+      matchCoreKeys(s.participants[i],['id','teamId','role','championId'])&&
+      ['id','teamId','role','championId'].every(k=>p[k]===s.participants[i][k])),'participant order/identity mismatch');
+  matchCoreAssert(matchCoreTime(s.clockMs)&&matchCoreTime(s.nextEventSeq)&&matchCoreRecord(s.actors)&&
+    matchCoreRecord(s.commands)&&Array.isArray(s.queue)&&Array.isArray(s.receipts)&&matchCoreRecord(s.rng),'invalid state shape');
+  state.clockMs=s.clockMs;state.nextEventSeq=s.nextEventSeq;
+  const people=new Map(state.participants.map(p=>[p.id,p]));
+  matchCoreAssert(Object.keys(s.actors).length===people.size,'actor count mismatch');
+  for(const [id,actor] of Object.entries(s.actors)){
+    matchCoreAssert(people.has(id)&&matchCoreKeys(actor,['generation','waitingFor'])&&matchCoreTime(actor.generation)&&
+      (actor.waitingFor===null||typeof actor.waitingFor==='string'),'invalid actor activity');
+    state.actors[id]={generation:actor.generation,waitingFor:actor.waitingFor};
+  }
+  let waits=0;const generations=new Map(),cancelTargets=new Set();
+  for(const [key,c] of Object.entries(s.commands)){
+    const r=c?.request,person=people.get(r?.actorId);
+    matchCoreAssert(matchCoreRecord(c)&&matchCoreRecord(r)&&person&&person.teamId===c.teamId&&matchCoreId(r.id)&&
+      key===matchCoreCommandKey(c.teamId,r.id)&&c.requestKey===matchCoreRequestKey(r)&&
+      ['wait','cancel'].includes(r.type)&&['pending','complete','cancelled'].includes(c.status)&&
+      matchCoreTime(c.acceptedAtMs)&&c.acceptedAtMs<=s.clockMs,'invalid command');
+    if(r.type==='wait'){
+      waits++;matchCoreAssert(matchCoreTime(r.durationMs)&&matchCoreTime(c.dueAtMs)&&
+        c.dueAtMs===c.acceptedAtMs+r.durationMs,'invalid wait time');
+      if(c.status==='pending')matchCoreAssert(c.dueAtMs>=s.clockMs&&state.actors[r.actorId].waitingFor===key,'missing active wait');
+    }else matchCoreAssert(matchCoreId(r.targetId)&&c.status==='complete'&&c.completedAtMs===c.acceptedAtMs,'invalid cancellation');
+    matchCoreAssert(matchCoreKeys(r,r.type==='wait'?['id','type','actorId','durationMs']:['id','type','actorId','targetId'])&&
+      matchCoreKeys(c,['teamId','request','requestKey','acceptedAtMs','status',
+        ...(r.type==='wait'?['dueAtMs']:[]),...(c.status!=='pending'?['completedAtMs']:[])]),'unknown command fields');
+    if(c.status!=='pending')matchCoreAssert(matchCoreTime(c.completedAtMs)&&c.completedAtMs<=s.clockMs&&
+        c.completedAtMs>=c.acceptedAtMs&&(r.type!=='wait'||c.completedAtMs<=c.dueAtMs)&&
+        !(r.type==='wait'&&c.status==='complete'&&c.completedAtMs!==c.dueAtMs),'invalid completion');
+    generations.set(r.actorId,(generations.get(r.actorId)||0)+1);
+    state.commands[key]=c;
+  }
+  matchCoreAssert(waits===s.nextEventSeq,'event sequence mismatch');
+  for(const c of Object.values(state.commands))if(c.request.type==='cancel'){
+    const targetKey=matchCoreCommandKey(c.teamId,c.request.targetId),target=state.commands[targetKey];
+    matchCoreAssert(target?.request.type==='wait'&&target.request.actorId===c.request.actorId&&
+      target.status==='cancelled'&&target.completedAtMs===c.acceptedAtMs&&!cancelTargets.has(targetKey),'invalid cancelled target');
+    cancelTargets.add(targetKey);
+  }
+  for(const [key,c] of Object.entries(state.commands))if(c.status==='cancelled')
+    matchCoreAssert(c.request.type==='wait'&&cancelTargets.has(key),'cancelled command lacks cause');
+  const sequences=new Set(),pending=new Set();
+  for(let i=0;i<s.queue.length;i++){
+    const e=s.queue[i],c=state.commands[e?.commandKey],actor=state.actors[e?.actorId];
+    matchCoreAssert(matchCoreKeys(e,['kind','atMs','seq','actorId','commandKey','generation'])&&e.kind==='wait-completed'&&c?.request.type==='wait'&&
+      actor&&e.actorId===c.request.actorId&&e.atMs===c.dueAtMs&&matchCoreTime(e.atMs)&&e.atMs>=s.clockMs&&
+      matchCoreTime(e.seq)&&e.seq<s.nextEventSeq&&!sequences.has(e.seq)&&matchCoreTime(e.generation)&&
+      e.generation<=actor.generation&&c.status!=='complete','invalid queued event');
+    sequences.add(e.seq);
+    if(c.status==='pending'){
+      matchCoreAssert(e.generation===actor.generation&&actor.waitingFor===e.commandKey&&!pending.has(e.commandKey),'invalid active event');pending.add(e.commandKey);
+    }else matchCoreAssert(c.status==='cancelled'&&e.generation<actor.generation,'invalid stale event');
+    if(i)matchCoreAssert(!matchCoreEventBefore(e,s.queue[(i-1)>>1]),'invalid heap order');
+  }
+  for(const [id,a] of Object.entries(state.actors)){
+    matchCoreAssert(a.generation===(generations.get(id)||0),'activity generation mismatch');
+    if(a.waitingFor!==null)matchCoreAssert(pending.has(a.waitingFor)&&state.commands[a.waitingFor]?.request.actorId===id,'missing queued activity');
+  }
+  let lastTime=0;const receiptKinds=new Map(),eventOrder=new Map();
+  for(const [seq,r] of s.receipts.entries()){
+    const person=people.get(r?.actorId),c=state.commands[matchCoreCommandKey(person?.teamId,r?.commandId)];
+    matchCoreAssert(matchCoreKeys(r,['seq','atMs','kind','actorId','commandId',...(r?.kind==='wait-cancelled'?['targetId']:[])])&&
+      r.seq===seq&&matchCoreTime(r.atMs)&&r.atMs>=lastTime&&r.atMs<=s.clockMs&&
+      person&&c&&r.actorId===c.request.actorId&&['wait-started','wait-completed','wait-cancelled'].includes(r.kind),'invalid receipt');lastTime=r.atMs;
+    const key=matchCoreCommandKey(person.teamId,r.commandId),kindKey=JSON.stringify([key,r.kind]);
+    matchCoreAssert(!receiptKinds.has(kindKey),'duplicate receipt');receiptKinds.set(kindKey,true);
+    if(r.kind==='wait-started'){
+      matchCoreAssert(c.request.type==='wait'&&r.atMs===c.acceptedAtMs,'invalid start receipt');eventOrder.set(key,eventOrder.size);
+    }else if(r.kind==='wait-completed')matchCoreAssert(c.request.type==='wait'&&c.status==='complete'&&r.atMs===c.completedAtMs,'invalid completion receipt');
+    else matchCoreAssert(c.request.type==='cancel'&&r.atMs===c.acceptedAtMs&&r.targetId===c.request.targetId,'invalid cancellation receipt');
+  }
+  for(const [key,c] of Object.entries(state.commands)){
+    const has=kind=>receiptKinds.has(JSON.stringify([key,kind]));
+    matchCoreAssert(c.request.type==='wait'?has('wait-started')&&(c.status!=='complete'||has('wait-completed')):has('wait-cancelled'),'command lacks receipt');
+  }
+  for(const e of s.queue)matchCoreAssert(e.seq===eventOrder.get(e.commandKey),'event order differs from its cause');
+  matchCoreAssert(matchCoreKeys(s.rng,['decision','execution']),'unknown random stream');
+  for(const channel of ['decision','execution']){
+    const r=s.rng[channel];matchCoreAssert(matchCoreKeys(r,['a','sp'])&&Number.isInteger(r.a)&&r.a>=-2147483648&&r.a<=2147483647&&r.sp===null,'invalid random stream');
+    state.rng[channel].a=r.a;
+  }
+  state.queue=s.queue;state.receipts=s.receipts;return state;
+}
+
+// Approved replacement core, S0 only. Wait/cancel and causal time are executable;
+// damage, movement, gold, victory and production game adapters are not yet supplied.
+class MatchCoreKernel{
+  #state;#people;
+  constructor(spec){this.#state=createMatchCoreState(spec);this.#index()}
+  #index(){this.#people=Object.create(null);for(const p of this.#state.participants)this.#people[p.id]=p}
+  static restore(saved){
+    const state=restoreMatchCoreState(saved),kernel=new MatchCoreKernel({matchId:state.matchId,seed:state.seed,
+      patchSnapshot:state.patchSnapshot,teams:state.teams.map(t=>({...t,actors:state.participants.filter(p=>p.teamId===t.id)}))});
+    kernel.#state=state;kernel.#index();return kernel;
+  }
+  snapshot(){return matchCoreClone(this.#state)}
+  get clockMs(){return this.#state.clockMs}
+  get result(){return null}
+  random(channel){
+    matchCoreAssert(['decision','execution'].includes(channel),'unknown random channel');
+    return this.#state.rng[channel].next();
+  }
+  #receipt(kind,actorId,commandId,targetId){
+    const s=this.#state,r={seq:s.receipts.length,atMs:s.clockMs,kind,actorId,commandId};
+    if(targetId!==undefined)r.targetId=targetId;s.receipts.push(r);
+  }
+  #reply(c){return {ok:true,id:c.request.id,status:c.status,acceptedAtMs:c.acceptedAtMs,
+    ...(c.status==='pending'?{dueAtMs:c.dueAtMs}:{completedAtMs:c.completedAtMs})}}
+  command(teamId,input){
+    const s=this.#state,fail=code=>({ok:false,code});
+    if(!matchCoreRecord(input))return fail('INVALID_COMMAND');
+    const id=input.id,type=input.type,actorId=input.actorId;
+    if(!matchCoreId(id)||!matchCoreId(actorId))return fail('INVALID_COMMAND');
+    const person=this.#people[actorId];
+    if(!person||person.teamId!==teamId)return fail('ACTOR_AUTHORITY');
+    let request;
+    if(type==='wait'){
+      const durationMs=input.durationMs;if(!matchCoreTime(durationMs))return fail('INVALID_TIME');
+      request={id,type,actorId,durationMs};
+    }else if(type==='cancel'){
+      const targetId=input.targetId;if(!matchCoreId(targetId))return fail('INVALID_TARGET');
+      request={id,type,actorId,targetId};
+    }else return fail('UNSUPPORTED_COMMAND');
+    const key=matchCoreCommandKey(teamId,request.id),requestKey=matchCoreRequestKey(request),old=s.commands[key];
+    if(old)return old.requestKey===requestKey?this.#reply(old):fail('COMMAND_CONFLICT');
+    if(type==='wait'&&!matchCoreTime(s.clockMs+request.durationMs))return fail('INVALID_TIME');
+    const actor=s.actors[request.actorId];
+    if(actor.generation===Number.MAX_SAFE_INTEGER||s.nextEventSeq===Number.MAX_SAFE_INTEGER)return fail('COUNTER_EXHAUSTED');
+    if(request.type==='wait'){
+      if(actor.waitingFor!==null)return fail('ACTOR_BUSY');
+      const c={teamId,request,requestKey,acceptedAtMs:s.clockMs,status:'pending',dueAtMs:s.clockMs+request.durationMs};
+      s.commands[key]=c;actor.generation++;actor.waitingFor=key;
+      matchCoreQueuePush(s.queue,{kind:'wait-completed',atMs:c.dueAtMs,seq:s.nextEventSeq++,
+        actorId:request.actorId,commandKey:key,generation:actor.generation});
+      this.#receipt('wait-started',request.actorId,request.id);return this.#reply(c);
+    }
+    const targetKey=matchCoreCommandKey(teamId,request.targetId),target=s.commands[targetKey];
+    if(!target||target.request.type!=='wait'||target.request.actorId!==request.actorId||
+      target.status!=='pending'||actor.waitingFor!==targetKey)return fail('STALE_COMMAND');
+    const c={teamId,request,requestKey,acceptedAtMs:s.clockMs,status:'complete',completedAtMs:s.clockMs};
+    s.commands[key]=c;actor.generation++;actor.waitingFor=null;
+    target.status='cancelled';target.completedAtMs=s.clockMs;
+    this.#receipt('wait-cancelled',request.actorId,request.id,request.targetId);return this.#reply(c);
+  }
+  advanceTo(atMs){
+    const s=this.#state;
+    matchCoreAssert(matchCoreTime(atMs)&&atMs>=s.clockMs,'clock cannot move backwards or use invalid time');
+    const first=s.receipts.length;
+    while(s.queue.length&&s.queue[0].atMs<=atMs){
+      const e=matchCoreQueuePop(s.queue),actor=s.actors[e.actorId],command=s.commands[e.commandKey];s.clockMs=e.atMs;
+      if(actor.generation!==e.generation||actor.waitingFor!==e.commandKey||command.status!=='pending')continue;
+      actor.waitingFor=null;command.status='complete';command.completedAtMs=s.clockMs;
+      this.#receipt('wait-completed',e.actorId,command.request.id);
+    }
+    s.clockMs=atMs;return matchCoreClone(s.receipts.slice(first));
+  }
+  observe(teamId){
+    const s=this.#state;
+    matchCoreAssert(s.teams.some(t=>t.id===teamId),'unknown observing team');
+    return {matchId:s.matchId,clockMs:s.clockMs,patchSnapshot:{...s.patchSnapshot},mechanicsStatus:s.mechanicsStatus,
+      teams:s.teams.map(t=>({...t,actors:s.participants.filter(p=>p.teamId===t.id).map(p=>{
+        const row={id:p.id,role:p.role,championId:p.championId};
+        if(t.id===teamId){const key=s.actors[p.id].waitingFor,c=key&&s.commands[key];
+          row.activity=c?{kind:'wait',commandId:c.request.id,untilMs:c.dueAtMs}:null}
+        return row;
+      })}))};
+  }
+}
+
 // Ordered aggregate events, not exact spell/geometry timings. Trace storage is optional.
 function matchEnded(st){return !!st.ending}
 function matchEventSecond(st,opt){
