@@ -18,6 +18,29 @@ await runEngineFixture(String.raw`(()=>{
     regionCfg('NA',{teams:6,div2:false})];cfg.internationals=[];
   const base=buildWorld(cfg),team=activeTeams(base,'NA',1)[0];
   startCareer(base,team.id,'ai-market-read-cost');
+  // Independent integer reference: preserve UTF-16 FNV arithmetic and every seed.
+  const keys=['','abc','한국어','😀','a\u0000b','\ud800',...Object.keys(base.players)];
+  for(const key of keys){
+    const expected=key.split('').reduce((h,c)=>((h^BigInt(c.charCodeAt(0)))*16777619n)&0xffffffffn,2166136261n);
+    check(hashStr(key)===Number(expected),'hash/seed changed for '+JSON.stringify(key));
+  }
+  const baselineSeed=db=>{db.initialPayrollFloorCache={};for(const t of activeTeams(db)){
+    const floor=minimumViableInitialPayroll(db,t);
+    t.initialPayrollBudget=Math.max(t.initialPayrollBudget||0,floor,salaryBudget(db,t));
+  }};
+  const oldBudgets=actionJournalClone(base),newBudgets=actionJournalClone(base);
+  baselineSeed(oldBudgets);seedInitialPayrollBudgets(newBudgets);
+  check(JSON.stringify(newBudgets)===JSON.stringify(oldBudgets),'initial wage envelopes/world changed');
+  check(!MARKET_DEMAND_READ_INDEX.has(newBudgets),'initial wage index survived batch');
+  const initialFloor=minimumViableInitialPayroll,failedOld=actionJournalClone(base),failedNew=actionJournalClone(base);
+  try{
+    minimumViableInitialPayroll=()=>{throw Error('controlled pricing failure')};
+    for(const [read,db] of [[baselineSeed,failedOld],[seedInitialPayrollBudgets,failedNew]]){
+      let failed=false;try{read(db)}catch(e){failed=e.message==='controlled pricing failure'}
+      check(failed&&!MARKET_DEMAND_READ_INDEX.has(db),'failed budget read leaked its index');
+    }
+    check(JSON.stringify(failedOld)===JSON.stringify(failedNew),'failed budget behavior changed');
+  }finally{minimumViableInitialPayroll=initialFloor}
   const original=aiMarketObservation,rows=[];
   const signature=xs=>JSON.stringify(xs.map(x=>({pid:x.p.id,v:x.v,ask:x.ask})));
   try{
@@ -41,5 +64,6 @@ await runEngineFixture(String.raw`(()=>{
     }
   }finally{aiMarketObservation=original}
   console.log('AI_MARKET_READ_COST_ACCEPTANCE '+JSON.stringify({rows,wholeWorldAndNativeEqual:true,
-    legalObservationOnly:true,temporaryIndexClosed:true}));
+    legalObservationOnly:true,temporaryIndexClosed:true,utf16HashKeys:keys.length,
+    initialBudgetsAndFailureSame:true}));
 })()`);
