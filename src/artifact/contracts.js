@@ -145,7 +145,7 @@ function aiMarketObservation(db,p,t){
   // scouting-domain reports. Initial dossiers are seeded once by scouting.js.
   return aiScoutReport(db,t,p);
 }
-function aiMarketValue(db,p,t){const est=aiMarketObservation(db,p,t),up=Math.max(0,est.potential-est.ability),w={'win-now':0.1,'youth':0.6,'balanced':0.3,'superstar':0.15,'cost':0.35}[t.philosophy]||0.3;return est.ability+up*w-(t.philosophy==='youth'&&p.age>26?2:0)-medicalContractRisk(db,p)*18+clamp((knownRecruitRelationship(db,t,p)-50)/25,-2,2)}
+function aiMarketValue(db,p,t,est=aiMarketObservation(db,p,t)){const up=Math.max(0,est.potential-est.ability),w={'win-now':0.1,'youth':0.6,'balanced':0.3,'superstar':0.15,'cost':0.35}[t.philosophy]||0.3;return est.ability+up*w-(t.philosophy==='youth'&&p.age>26?2:0)-medicalContractRisk(db,p)*18+clamp((knownRecruitRelationship(db,t,p)-50)/25,-2,2)}
 function pFillScore(db,p,t){const domestic=projectedPlayerIsLocal(db,p,t)?2:0,age=p.age<=21?1:0,cost=Math.min(4,asking(db,p,t.region)/Math.max(.2,psOf(db,t.region)));return aiMarketValue(db,p,t)+domestic+age-cost*.15}
 function optionDecision(db,p,t){
   const o=p.contract&&p.contract.option;if(!o||o.year!==db.year)return false;
@@ -175,11 +175,13 @@ function signMarketContract(db,p,t,salary,years,terms={},kind='fa',actor='ai'){
 function aiMarketOfferCandidates(db,t,fas,role,budgetRoom,year=db.year){
   const R=db.regions[t.region],cur=starterFor(db,t,role),
     cv=cur?playerValue(db,cur,t):-99,importGap=R.importRecruitMinGap??3,
-    imports=teamNonLocalCount(db,t);
-  return withMarketDemandReadIndex(db,()=>fas.filter(p=>p.role===role&&
-      (projectedPlayerIsLocal(db,p,t)||(aiMarketObservation(db,p,t).ability>=R.strength+importGap&&
-        imports<nonLocalLimitForTeam(db,t))))
-    .map(p=>({p,v:aiMarketValue(db,p,t),ask:asking(db,p,t.region)}))
+    imports=teamNonLocalCount(db,t),observed=new Map();
+  return withMarketDemandReadIndex(db,()=>fas.filter(p=>{
+      if(p.role!==role)return false;
+      if(projectedPlayerIsLocal(db,p,t))return true;
+      const report=aiMarketObservation(db,p,t);observed.set(p,report);
+      return report.ability>=R.strength+importGap&&imports<nonLocalLimitForTeam(db,t);
+    }).map(p=>({p,v:aiMarketValue(db,p,t,observed.get(p)),ask:asking(db,p,t.region)}))
     .filter(x=>x.ask<=budgetRoom&&
       (!cur||cur.wantsOut||cur.contract.until<=year||x.v>cv+5))
     .sort((a,b)=>b.v-a.v||a.p.id.localeCompare(b.p.id)));
@@ -232,7 +234,9 @@ function contractMarket(db,rng,rep,ev){
     const fas=Object.values(db.players).filter(p=>!p.retired&&!p.team);
     const offers={};
     if(round===0&&mine)for(const o of w.offers||[]){const p=db.players[o.pid];if(p&&!p.team)(offers[p.id]=offers[p.id]||[]).push({t:db.teams[mine],sal:o.salary,years:o.years,starter:starterFor(db,db.teams[mine],p.role)?playerOvr(p)>playerOvr(starterFor(db,db.teams[mine],p.role)):true,mine:true})}
-    for(const t of shuffleWithRng(activeTeams(db).filter(t=>t.id!==mine&&!t.parent),rng)){
+    // Proposals change no player/team topology. Share its existing read index
+    // only until this batch ends, before any actual signing or roster writer.
+    withMarketDemandReadIndex(db,()=>{for(const t of shuffleWithRng(activeTeams(db).filter(t=>t.id!==mine&&!t.parent),rng)){
       const R=db.regions[t.region];
       for(const role of ROLES){
         const cur=starterFor(db,t,role), cv=cur?playerValue(db,cur,t):-99;
@@ -248,11 +252,13 @@ function contractMarket(db,rng,rep,ev){
           terms:issued.terms,offerId:issued.id,starter:true});
       }
     }
+    });
     for(const [pid,os] of Object.entries(offers)){
-      const p=db.players[pid], ask=asking(db,p);
+      const p=db.players[pid];
+      const best=withMarketDemandReadIndex(db,()=>{const ask=asking(db,p);
       const u=o=>o.sal/ask*1.2+(teamStrength(db,o.t.id)-db.regions[o.t.region].strength)/10*p.personality.ambition/100+(o.t.fans||30)/100*0.4+(o.starter?0.5:0)+(db.worldConfig.universalLanguage?(o.t.region===p.region?0.08:0):(o.t.region===p.region?0.4:-0.2))+(db.regions[o.t.region].slots||1)*0.05+rng.normal(0,0.1);
-      const best=os.map(o=>({o,v:u(o)})).sort((a,b)=>b.v-a.v)
-        .find(x=>budgetLeft[x.o.t.id]>=x.o.sal&&!localRegistrationError(db,x.o.t,p));
+      return os.map(o=>({o,v:u(o)})).sort((a,b)=>b.v-a.v)
+        .find(x=>budgetLeft[x.o.t.id]>=x.o.sal&&!localRegistrationError(db,x.o.t,p));});
       if(!best)continue;
       const t=best.o.t,yrs=best.o.years?best.o.years:contractYearsForPlayer(db,p,rng),
         offer=best.o.terms||normalizeContractTerms(db,p,t,best.o.sal,yrs,{
