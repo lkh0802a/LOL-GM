@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import vm from 'node:vm';
 import { ARTIFACT_MODULES, ENGINE_MODULES } from './artifact-modules.mjs';
 import { assertMutationOwnership } from './mutation-ownership.mjs';
+await import('./audit-champion-source-acceptance.mjs');
 await import('./codex-impact-map-acceptance.mjs');
 await import('./observer-information-acceptance.mjs');
 await import('./historical-identity-acceptance.mjs');

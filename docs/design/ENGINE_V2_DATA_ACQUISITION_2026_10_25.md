@@ -27,6 +27,10 @@
 
 ## 3. 수집 파이프라인: 원본 → 검증된 규칙 → 실행 가능한 효과
 
+**감사 도구 실행/검증 경계:** `node scripts/audit-champion-source.mjs`는 내장 원본을 읽기만 하며 현재 173명 AD 성장0, 692개 스킬의 구조화 numeric 부재, 사거리 sentinel 39개를 경고한다. `--strict`는 전체 누락뿐 아니라 **하나의 미지원 스킬/성장0/sentinel도** 실패로 보고한다. 패시브·QWER identity/배열·Riot key·provider/version/sourceCommit 메타데이터의 구조 오류는 기본 모드에서도 실패한다. `node scripts/audit-champion-source-acceptance.mjs` 및 기존 정적 게이트에서 부분 누락·중복 ID·malformed·기본/strict CLI·원문 바이트 불변 반례를 검사한다.
+
+**numeric 객체 존재 ≠ 의미/실행 검증:** numeric coverage는 비어 있지 않은 객체의 존재만 센다. 도구는 `sourceBytesVerified:false`, `executableMechanicsVerified:false`를 명시하며 메타데이터 형식 통과만으로 외부 원본 취득/해시 일치·수치 단위/효과 provenance·스킬 실행 구현을 인증하지 않는다. 이 후속 검증은 아래 S1–S5가 소유한다. 합성 반례의 테스트 값은 제품 원본에 쓰지 않는다. 신규 코어 및 공식/스크림/랭크 adapter는 아직 미구현이다.
+
 **S1 원본 획득:** 데이터 원본 URL·provider·게임 버전·locale·취득 시각·SHA-256·면허/재배포 조건·원본 schema 기록. `src/data/raw/{version}/{provider}/...`은 변경 불가능한 버전 자료. 승인되지 않은 무제한 최신 갱신·기존 플레이어 세이브의 원본 덮어쓰기 금지.
 
 **S2 항목 대조/정규화:** stable champion/spell/item ID로 provider 간 합치고, (health, AD, armor, MR, resource, move speed, attack speed, growth)를 명시적 단위로 정규화. 각 스킬 단계는 `spellId, slot, ranks, cooldown[], cost[], castTime, effectiveRange, hitGeometry, damagePackets, ratios, effectGraph, status/CC, targeting, tags, provenance`를 분리. `25000` 같은 Data Dragon 사거리 sentinel을 실제 무한 공격 범위로 취급하지 않음.
