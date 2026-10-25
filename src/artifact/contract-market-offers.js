@@ -1,0 +1,99 @@
+// ===== LOL GM: Independent AI contract market proposals =====
+// Owns actual offer issuance/history; roster and finance commits stay with player.sign.
+
+// Real club proposals live with the contract domain, independently of human
+// negotiations. They reserve neither money nor a roster slot. Every consumer
+// rechecks the current period, authority, need, registration and finite funds.
+function aiMarketOfferPeriod(db){
+  const w=db.world;if(!w)return null;
+  if(w.phase==='initial_roster')return {id:'initial/'+w.year,kind:'initial',year:w.year};
+  if(w.phase==='offseason'){
+    const day=freeAgencyDayState(db);
+    return day.stage==='fa'&&db.worldDate<=day.through
+      ?{id:'fa/'+w.contractWindow.startSeason,kind:'fa',year:w.contractWindow.startSeason}:null;
+  }
+  // Annual settlement advances db.year before the old world's year rolls over.
+  if(w.phase==='market')return {id:'market/'+db.year,kind:'fa',year:db.year};
+  return null;
+}
+function currentAIMarketOffers(db){
+  const period=aiMarketOfferPeriod(db);
+  return period?Object.values(db.contractMarketOffers?.periods?.[period.id]?.offers||{}):[];
+}
+function aiMarketOfferAvailable(db,o,market=null){
+  const period=aiMarketOfferPeriod(db),p=db.players[o?.pid],t=db.teams[o?.teamId];
+  if(!period||o.period!==period.id||o.kind!==period.kind||o.status!=='open'||
+    typeof o.issuedAt!=='string'||!Number.isFinite(Date.parse(o.issuedAt))||
+    new Date(o.issuedAt).toISOString()!==o.issuedAt||o.issuedAt>negotiationClockAt(db)||
+    !p||p.retired||p.team||!t||(t.parent&&o.kind!=='initial')||
+    t.active===false||playerActionAuthority(db,'ai',t)||!o.terms||
+    !Number.isFinite(o.terms.salary)||o.terms.salary<=0||
+    !Number.isInteger(o.terms.years)||o.terms.years<=0||
+    !contractGuaranteeTermsValid(o.terms)||invalidContractNumericTerms(o.terms)||
+    !Number.isFinite(t.finance?.cash)||negotiationBudgetError(db,p,t,o.terms,o.kind))return false;
+  if(o.kind==='initial')return t.roster.length<(o.target??initialLegalMinimumTarget(db,t))&&
+    initialFutureFeasible(db,t,p,o.terms.salary,market);
+  const room=salaryBudget(db,t)-payroll(db,t);
+  return Number.isFinite(room)&&o.terms.salary<=room&&
+    aiMarketOfferCandidates(db,t,[p],p.role,room,period.year).length>0;
+}
+function closeAIMarketOffer(db,o,status,reason){
+  if(o.status!=='open')return;
+  o.status=status;o.reason=reason;o.closedAt=negotiationClockAt(db);
+}
+function issueAIMarketOffer(db,t,p,terms,event,target=null,choiceValue=null,market=null){
+  const period=aiMarketOfferPeriod(db);if(!period)return null;
+  const root=db.contractMarketOffers||(db.contractMarketOffers={version:1,periods:{}}),
+    store=root.periods[period.id]||(root.periods[period.id]={offers:{},events:{}}),
+    id=period.id+'/'+event+'/'+t.id+'/'+p.id;
+  if(store.offers[id])return aiMarketOfferAvailable(db,store.offers[id],market)
+    ?store.offers[id]:null;
+  const offer={id,period:period.id,kind:period.kind,pid:p.id,teamId:t.id,
+    terms:JSON.parse(JSON.stringify(terms)),issuedAt:negotiationClockAt(db),status:'open',
+    ...(period.kind==='initial'?{target:target??initialLegalMinimumTarget(db,t),choiceValue}: {})};
+  if(!aiMarketOfferAvailable(db,offer,market))return null;
+  // Superseding is an actual new club offer; retain the old terms and outcome.
+  for(const old of Object.values(store.offers))if(old.pid===p.id&&old.teamId===t.id)
+    closeAIMarketOffer(db,old,'withdrawn','superseded');
+  store.offers[id]=offer;return offer;
+}
+function settleAIMarketOffers(db,pid,teamId,terms){
+  for(const o of currentAIMarketOffers(db))if(o.pid===pid)
+    closeAIMarketOffer(db,o,o.teamId===teamId&&JSON.stringify(o.terms)===JSON.stringify(terms)
+      ?'accepted':'withdrawn',o.teamId===teamId?'contract_signed':'other_club_signed');
+}
+function refreshAIMarketOffers(db){
+  const period=aiMarketOfferPeriod(db);if(!period)return [];
+  const root=db.contractMarketOffers||(db.contractMarketOffers={version:1,periods:{}});
+  for(const [id,store] of Object.entries(root.periods)){
+    if(id!==period.id&&store.closedAt)continue;
+    for(const o of Object.values(store.offers))
+      if(o.status==='open'&&(id!==period.id||!aiMarketOfferAvailable(db,o)))
+        closeAIMarketOffer(db,o,id!==period.id?'expired':'withdrawn',id!==period.id?'period_closed':'conditions_changed');
+    if(id!==period.id)store.closedAt=negotiationClockAt(db);
+  }
+  const store=root.periods[period.id]||(root.periods[period.id]={offers:{},events:{}}),
+    event='day/'+db.worldDate;
+  if(store.events[event])return currentAIMarketOffers(db);
+  const teams=activeTeams(db,null,1).filter(t=>!t.parent&&!playerActionAuthority(db,'ai',t))
+    .sort((a,b)=>a.id.localeCompare(b.id)),
+    market=period.kind==='initial'?initialMarketSnapshot(db,teams):null,
+    fas=period.kind==='fa'?Object.values(db.players).filter(p=>!p.retired&&!p.team):[];
+  for(const t of teams){
+    if(period.kind==='initial'){
+      if(currentAIMarketOffers(db).some(o=>o.teamId===t.id&&o.status==='open'))continue;
+      const proposal=initialOfferForTeam(db,t,0,db.world.seed+'|minimum',market,initialLegalMinimumTarget(db,t));
+      if(proposal)issueAIMarketOffer(db,t,proposal.player,proposal.terms,event,
+        initialLegalMinimumTarget(db,t),proposal.value,market);
+    }else for(const role of ROLES){
+      if(currentAIMarketOffers(db).some(o=>o.teamId===t.id&&db.players[o.pid]?.role===role&&o.status==='open'))continue;
+      const room=salaryBudget(db,t)-payroll(db,t),
+        candidate=aiMarketOfferCandidates(db,t,fas,role,room,period.year)[0];
+      if(!candidate)continue;
+      const rng=new RNG(db.world.seed+'/'+period.id+'/'+event+'/'+t.id+'/'+role,'ai-market-offer'),
+        terms=aiMarketProposalTerms(db,candidate.p,t,candidate.ask,rng);
+      issueAIMarketOffer(db,t,candidate.p,terms,event);
+    }
+  }
+  store.events[event]=true;return currentAIMarketOffers(db);
+}

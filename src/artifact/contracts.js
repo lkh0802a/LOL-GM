@@ -244,8 +244,8 @@ function contractMarket(db,rng,rep,ev){
         const terms=pending?pending.terms:aiMarketProposalTerms(db,c.p,t,c.ask,rng),
           issued=pending||issueAIMarketOffer(db,t,c.p,terms,'close/'+round);
         if(!issued)continue;
-        (offers[c.p.id]=offers[c.p.id]||[]).push({t,sal:terms.salary,years:terms.years,
-          terms,offerId:issued.id,starter:true});
+        (offers[issued.pid]=offers[issued.pid]||[]).push({t,sal:issued.terms.salary,years:issued.terms.years,
+          terms:issued.terms,offerId:issued.id,starter:true});
       }
     }
     for(const [pid,os] of Object.entries(offers)){
@@ -270,8 +270,9 @@ function contractMarket(db,rng,rep,ev){
           if(refused)closeAIMarketOffer(db,refused,'rejected','player_terms');
           continue;
         }
-        finalOffer=counter.terms;counterRounds=1+counter.rounds;
-        if(!issueAIMarketOffer(db,t,p,finalOffer,'counter/'+round))continue;
+        const counterOffer=issueAIMarketOffer(db,t,p,counter.terms,'counter/'+round);
+        if(!counterOffer)continue;
+        finalOffer=counterOffer.terms;counterRounds=1+counter.rounds;
       }
       const prev=starterFor(db,t,p.role);
       // Multiple market offers can be based on the same earlier import count.

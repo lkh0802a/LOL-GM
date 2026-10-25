@@ -45,6 +45,33 @@ const result=await runEngineFixture(String.raw`(()=>{
  check(canonical(db)===beforeDuplicate,'same-day planning duplicated bids');
  const repeat=buildWorld(cfg);startCareer(repeat,team.id,'actual-independent-bid-probe');
  check(canonical(repeat.contractMarketOffers)===originalLedger,'same seed independent proposals');
+ for(const status of ['withdrawn','rejected','expired']){
+   const ended=clone(repeat),o=currentAIMarketOffers(ended)[0];
+   closeAIMarketOffer(ended,o,status,'lifecycle_fixture');
+   const before=packDB(ended),again=issueAIMarketOffer(ended,ended.teams[o.teamId],ended.players[o.pid],
+     o.terms,'day/'+ended.worldDate,o.target,o.choiceValue);
+   check(again===null&&packDB(ended)===before,'ended offer ID replay '+status);
+ }
+ const retry=clone(repeat);delete retry.contractMarketOffers;
+ const rt=activeTeams(retry,null,1).find(t=>t.id!==team.id),retrySeed='closed-auction',
+   rm=initialMarketSnapshot(retry,[rt]),rp=initialOfferForTeam(retry,rt,0,retrySeed,rm,initialLegalMinimumTarget(retry,rt)),
+   retryIssued=issueAIMarketOffer(retry,rt,rp.player,rp.terms,'auction/'+retrySeed+'/0',initialLegalMinimumTarget(retry,rt),rp.value,rm);
+ check(retryIssued,'real retry proposal');closeAIMarketOffer(retry,retryIssued,'withdrawn','lifecycle_fixture');
+ const retrySaved=unpackDB(packDB(retry)),beforeRetry=packDB(retrySaved),
+   retried=resolveInitialOfferRound(retrySaved,[retrySaved.teams[rt.id]],0,retrySeed,t=>initialLegalMinimumTarget(retrySaved,t));
+ check(retried.offers===0&&retried.signed===0&&packDB(retrySaved)===beforeRetry,'restored closed auction replay inert');
+ const denied=clone(repeat);delete denied.contractMarketOffers;
+ const beforeDenied=packDB(denied),issueWriter=issueAIMarketOffer;let refused;
+ issueAIMarketOffer=function(d,...args){return d===denied?null:issueWriter(d,...args)};
+ try{refused=resolveInitialOfferRound(denied,[denied.teams[rt.id]],0,'issuer-refused',t=>initialLegalMinimumTarget(denied,t))}
+ finally{issueAIMarketOffer=issueWriter}
+ check(refused.offers===0&&refused.signed===0&&packDB(denied)===beforeDenied,'issuer failure cannot sign unissued proposal');
+ const reserveCfg=defaultWorldConfig();reserveCfg.regions=[regionCfg('KR',{teams:3,div2:true})];reserveCfg.internationals=[];
+ const reserveWorld=buildWorld(reserveCfg);startCareer(reserveWorld,activeTeams(reserveWorld,'KR',1)[0].id,'review-offer-lifecycle');
+ const reserve=activeTeams(reserveWorld).find(t=>t.parent&&!playerActionAuthority(reserveWorld,'ai',t)),
+   reserveResult=resolveInitialOfferRound(reserveWorld,[reserve],0,'review-reserve-auction',t=>initialLegalMinimumTarget(reserveWorld,t));
+ check(reserveResult.signed===1&&currentAIMarketOffers(reserveWorld).some(o=>o.teamId===reserve.id&&
+   o.status==='accepted'&&reserveWorld.players[o.pid].team===reserve.id),'legal reserve auction has issued/accepted offer');
  const auction=clone(repeat),auctionTerms=clone(currentAIMarketOffers(auction)),
    auctionResult=resolveInitialOfferRound(auction,activeTeams(auction,null,1).filter(t=>t.id!==team.id),0,
      auction.world.seed+'|minimum',t=>initialLegalMinimumTarget(auction,t));
@@ -81,6 +108,9 @@ const result=await runEngineFixture(String.raw`(()=>{
  check(currentAIMarketOffers(loss).some(o=>o.id===best.offerId&&o.status==='accepted')&&
    currentAIMarketOffers(loss).filter(o=>o.pid===lp.id).every(o=>o.status!=='open'),'actual accepted/losing offer history');
  const afterLoss=canonical(loss);check(!submitNegotiationOffer(loss,ln.id,low).ok&&canonical(loss)===afterLoss,'duplicate response signed twice');
+ const accepted=currentAIMarketOffers(loss).find(o=>o.status==='accepted'&&o.pid===lp.id);
+ check(issueAIMarketOffer(loss,loss.teams[accepted.teamId],lp,accepted.terms,'day/'+loss.worldDate,
+   accepted.target,accepted.choiceValue)===null&&canonical(loss)===afterLoss,'actual accepted ID replay inert');
  const rollback=clone(db),ro=negotiationCompetition(rollback,rollback.players[n.pid],rollback.teams[team.id],null,'initial')[0],
    beforeRollback=canonical(rollback),offerRef=currentAIMarketOffers(rollback).find(o=>o.id===ro.offerId),
    scopeCheck=worldActionScopeErrors;
@@ -107,6 +137,28 @@ const result=await runEngineFixture(String.raw`(()=>{
  mInterest(fa,target.pid);mEvaluateTarget(fa,target.pid,mt.id);
  const opened=startNegotiation(fa,target.pid,'fa');check(opened.ok&&opened.neg.competitors.some(o=>o.offerId===target.id)&&canonical(fa.contractMarketOffers)===faBefore,'FA consumer invented bidder');
  const faRestored=unpackDB(packDB(fa));check(canonical(faRestored.contractMarketOffers)===faBefore,'FA native save');
+ const closedFa=clone(fa);closedFa.world.negotiations={};const closedRows=[];
+ for(const t of activeTeams(closedFa,null,1).filter(t=>!playerActionAuthority(closedFa,'ai',t)))for(const role of ROLES){
+   const candidate=aiMarketOfferCandidates(closedFa,t,Object.values(closedFa.players).filter(p=>!p.retired&&!p.team),role,
+     salaryBudget(closedFa,t)-payroll(closedFa,t),closedFa.year)[0];
+   if(!candidate)continue;
+   const old=currentAIMarketOffers(closedFa).find(o=>o.teamId===t.id&&o.pid===candidate.p.id),
+     row=old&&issueAIMarketOffer(closedFa,t,candidate.p,old.terms,'close/0');
+   check(row,'actual FA close proposal');closeAIMarketOffer(closedFa,row,'rejected','lifecycle_fixture');
+   closedRows.push(clone(row));
+ }
+ for(const o of currentAIMarketOffers(closedFa))closeAIMarketOffer(closedFa,o,'withdrawn','lifecycle_fixture');
+ const closedIds=new Set(closedRows.map(o=>o.id)),marketIssuer=issueAIMarketOffer;let retriedClosed=0,returnedClosed=0;
+ issueAIMarketOffer=function(d,t,p,terms,event,...args){
+   const result=marketIssuer(d,t,p,terms,event,...args),id=aiMarketOfferPeriod(d)?.id+'/'+event+'/'+t.id+'/'+p.id;
+   if(d===closedFa&&closedIds.has(id)){retriedClosed++;if(result)returnedClosed++}
+   return result;
+ };
+ try{contractMarket(closedFa,new RNG('closed-fa-retry'),{expired:[],resign:[],signings:[],transfers:[]},[])}
+ finally{issueAIMarketOffer=marketIssuer}
+ check(closedRows.length>0&&retriedClosed===closedRows.length&&returnedClosed===0,'actual bulk market rejected all ended ID retries');
+ const closedLoaded=unpackDB(packDB(closedFa));
+ for(const old of closedRows)check(canonical(currentAIMarketOffers(closedLoaded).find(o=>o.id===old.id))===canonical(old),'ended FA offer history retained after real market/save');
  const ended=clone(fa);ended.world.phase='offseason';ended.world.contractWindow={stage:'exclusive'};
  check(!currentAIMarketOffers(ended).length,'exclusive contact bypass');
  const daily=clone(fa);daily.world.phase='offseason';daily.worldDate=daily.year+'-12-01';
@@ -147,6 +199,8 @@ const result=await runEngineFixture(String.raw`(()=>{
    realRivalContract:true,finiteFunds:true,nativeSave:true,duplicateInert:true,
    legacyNoPhantoms:true,periodAuthority:true,faOffers:faOffers.length,
    independentAuction:true,dailyRollback:true,failedSignFullRollback:true,
+   closedIdsInert:true,restoredAuctionRetry:true,bulkClosedRetries:retriedClosed,
+   issuerFailureInert:true,reserveAuctionBacked:true,
    marketCycles:20,marketContracts,fullWorldSeasons:false};
 })()`,{timeout:60000});
 assert(result.realRivalContract&&result.faOffers>0);

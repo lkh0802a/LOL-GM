@@ -178,8 +178,11 @@ function resolveInitialOfferRound(db,teams,round,seed,targetFn){
     const pending=currentAIMarketOffers(db).find(o=>o.teamId===t.id&&aiMarketOfferAvailable(db,o,market));
     if(pending){const p=db.players[pending.pid];return {team:t,player:p,terms:pending.terms,value:pending.choiceValue??offerUtility(db,p,t,pending.terms)}}
     const proposal=initialOfferForTeam(db,t,round,seed,market,targetFn(t));
-    if(proposal)issueAIMarketOffer(db,t,proposal.player,proposal.terms,'auction/'+seed+'/'+round,targetFn(t),proposal.value,market);
-    return proposal;
+    if(!proposal)return null;
+    const issued=issueAIMarketOffer(db,t,proposal.player,proposal.terms,
+      'auction/'+seed+'/'+round,targetFn(t),proposal.value,market);
+    return issued?{team:t,player:db.players[issued.pid],terms:issued.terms,
+      value:issued.choiceValue??offerUtility(db,db.players[issued.pid],t,issued.terms)}:null;
   }).filter(Boolean),byPlayer={};for(const o of offers)(byPlayer[o.player.id]=byPlayer[o.player.id]||[]).push(o);
   let signed=0;for(const os of Object.values(byPlayer)){const best=os.sort((a,b)=>b.value-a.value||b.terms.salary-a.terms.salary)[0],p=best.player,t=best.team;if(p.team)continue;const chk=initialOfferCheck(db,p,t,best.terms);if(!chk.ok||!initialFutureFeasible(db,t,p,best.terms.salary,market))continue;const done=commitWorldAction(db,{type:'player.sign',pid:p.id,teamId:t.id,kind:'initial',actor:'ai',
       salary:best.terms.salary,years:best.terms.years,terms:best.terms});
