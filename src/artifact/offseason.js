@@ -137,6 +137,7 @@ function closeMarket(db){
     if(t.id!==managedTeamId(db)&&!t.parent&&(!t.sponsor||t.sponsor.until<db.year)){const chosen=aiSelectSponsor(db,t);if(chosen)ev(`${t.name} ${chosen.type} 스폰서 계약 · ${chosen.years}년`)}}
   for(const R of Object.values(db.regions)){const ts=activeTeams(db,R.id,1);R.teams=ts.length;if(ts.length)R.strength=Math.round(avg(ts.map(t=>teamStrength(db,t.id))))}
   rep.retired.slice(0,3).forEach(r=>news(db,`${db.players[r.pid].name} 은퇴 (${r.age}세)`));
+  expireCurrentAIMarketOffers(db);
   w.phase='preseason';
 }
 // 승강: 승강제는 1부 하위 ↔ 2부 상위 교체, 혼합은 프랜차이즈 보호 구단 제외

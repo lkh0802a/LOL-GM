@@ -19,7 +19,9 @@ await runEngineFixture(String.raw`(()=>{
  check(!rejected.ok&&n.status==='open'&&n.history.some(h=>h.result==='commit_rejected'),'actual failed commit fixture');
  check(renderNegotiations().includes('<b>선수 측 초기 요구</b>')&&!renderNegotiations().includes('<b>선수 측 역제안</b>'),'failed commit cannot invent a counter');DB=JSON.parse(base);
  let found;
- for(const fraction of [.6,.7,.8,.9,1]){const copy=JSON.parse(base),neg=copy.world.negotiations[n.id];submitNegotiationOffer(copy,n.id,{...neg.demand,salary:neg.demand.salary*fraction});if(neg.status==='open'&&neg.history.some(h=>h.result==='counter')){found=copy;break}}
+ // Without phantom competition the old bonus/starter package is accepted even
+ // at 60% salary. Submit a real less favorable package to exercise a counter.
+ for(const fraction of [.6,.7,.8,.9,1]){const copy=JSON.parse(base),neg=copy.world.negotiations[n.id];submitNegotiationOffer(copy,n.id,{...neg.demand,salary:neg.demand.salary*fraction,signingBonus:0,bonuses:{performance:0,title:0,international:0},promisedRole:'backup'});if(neg.status==='open'&&neg.history.some(h=>h.result==='counter')){found=copy;break}}
  check(found,'existing writer counter fixture');DB=found;const counter=DB.world.negotiations[n.id],before=JSON.stringify(DB);html=renderNegotiations();
  check(html.includes('<b>선수 측 역제안</b>')&&html.includes('역제안 조건 검토'),'actual counter after submitted round');
  check(html.includes('1차 · 구단 제안')&&html.includes('1차 · 역제안'),'actual both sides history');

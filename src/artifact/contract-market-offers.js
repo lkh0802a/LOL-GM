@@ -41,6 +41,12 @@ function closeAIMarketOffer(db,o,status,reason){
   if(o.status!=='open')return;
   o.status=status;o.reason=reason;o.closedAt=negotiationClockAt(db);
 }
+function expireCurrentAIMarketOffers(db){
+  const period=aiMarketOfferPeriod(db),store=period&&db.contractMarketOffers?.periods?.[period.id];
+  if(!store)return;
+  for(const o of Object.values(store.offers))closeAIMarketOffer(db,o,'expired','period_closed');
+  store.closedAt=negotiationClockAt(db);
+}
 function issueAIMarketOffer(db,t,p,terms,event,target=null,choiceValue=null,market=null){
   const period=aiMarketOfferPeriod(db);if(!period)return null;
   const root=db.contractMarketOffers||(db.contractMarketOffers={version:1,periods:{}}),
@@ -58,8 +64,12 @@ function issueAIMarketOffer(db,t,p,terms,event,target=null,choiceValue=null,mark
   store.offers[id]=offer;return offer;
 }
 function settleAIMarketOffers(db,pid,teamId,terms){
+  // JSON object order is not a contract term. Preserve the saved quote verbatim
+  // while comparing its values, including nested clauses, against the writer.
+  const key=value=>JSON.stringify(value,(_,row)=>row&&typeof row==='object'&&!Array.isArray(row)
+    ?Object.fromEntries(Object.keys(row).sort().map(k=>[k,row[k]])):row),signedKey=key(terms);
   for(const o of currentAIMarketOffers(db))if(o.pid===pid)
-    closeAIMarketOffer(db,o,o.teamId===teamId&&JSON.stringify(o.terms)===JSON.stringify(terms)
+    closeAIMarketOffer(db,o,o.teamId===teamId&&key(o.terms)===signedKey
       ?'accepted':'withdrawn',o.teamId===teamId?'contract_signed':'other_club_signed');
 }
 function refreshAIMarketOffers(db){

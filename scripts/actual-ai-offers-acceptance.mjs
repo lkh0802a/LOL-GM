@@ -80,6 +80,13 @@ const result=await runEngineFixture(String.raw`(()=>{
    check(auctionTerms.some(x=>x.id===o.id&&canonical(x.terms)===canonical(o.terms))&&
      auction.players[o.pid].team===o.teamId&&auction.players[o.pid].contract.salary===o.terms.salary,'auction offered terms preserved');
  }
+ // Valid JSON formatting cannot change whether the real issued quote won.
+ const ordered=unpackDB(canonical(JSON.parse(packDB(repeat)))),
+   orderedOffer=currentAIMarketOffers(ordered).find(o=>aiMarketOfferAvailable(ordered,o)),
+   orderedTeam=ordered.teams[orderedOffer.teamId],orderedQuote=canonical(orderedOffer.terms),
+   orderedResult=resolveInitialOfferRound(ordered,[orderedTeam],0,ordered.world.seed+'|minimum',t=>initialLegalMinimumTarget(ordered,t));
+ check(orderedResult.signed===1&&orderedOffer.status==='accepted'&&ordered.players[orderedOffer.pid].team===orderedOffer.teamId&&
+   canonical(orderedOffer.terms)===orderedQuote,'native JSON property order preserves accepted quote/history');
  const changed=clone(db);for(const o of currentAIMarketOffers(changed))if(o.pid===n.pid)changed.teams[o.teamId].finance.cash=-1;
  check(!negotiationCompetition(changed,changed.players[n.pid],changed.teams[team.id],null,'initial').length,'unfunded stale offers pressure');
  refreshAIMarketOffers(changed);
@@ -159,6 +166,19 @@ const result=await runEngineFixture(String.raw`(()=>{
  check(closedRows.length>0&&retriedClosed===closedRows.length&&returnedClosed===0,'actual bulk market rejected all ended ID retries');
  const closedLoaded=unpackDB(packDB(closedFa));
  for(const old of closedRows)check(canonical(currentAIMarketOffers(closedLoaded).find(o=>o.id===old.id))===canonical(old),'ended FA offer history retained after real market/save');
+ const closeCfg=defaultWorldConfig();closeCfg.regions=[regionCfg('KR',{teams:4,div2:false})];closeCfg.internationals=[];
+ const closedWorld=buildWorld(closeCfg),closeTeam=activeTeams(closedWorld,'KR',1)[0];startCareer(closedWorld,closeTeam.id,'real-fa-period-close');
+ autoBuildInitialSquad(closedWorld,closeTeam,new RNG('real-fa-period-close','fixture'),5);finalizeInitialRosters(closedWorld);
+ check(closedWorld.contractMarketOffers.periods['initial/'+closedWorld.year].closedAt,'initial period actual closure');
+ closedWorld.world.phase='market';closedWorld.world.report={year:closedWorld.year,growth:[],retired:[],signings:[],resign:[],expired:[],transfers:[],events:[]};
+ closedWorld.worldDate=closedWorld.year+'-06-01';
+ for(const t of activeTeams(closedWorld))for(const id of t.roster)closedWorld.players[id].contract.until=closedWorld.year;
+ refreshAIMarketOffers(closedWorld);const closingPeriod=aiMarketOfferPeriod(closedWorld).id;
+ closeMarket(closedWorld);const endedPeriod=closedWorld.contractMarketOffers.periods[closingPeriod];
+ check(closedWorld.world.phase==='preseason'&&endedPeriod.closedAt===negotiationClockAt(closedWorld)&&
+   Object.values(endedPeriod.offers).some(o=>o.status==='expired')&&
+   Object.values(endedPeriod.offers).every(o=>o.status!=='open'),'real market closure records expiry at actual time');
+ check(canonical(unpackDB(packDB(closedWorld)).contractMarketOffers)===canonical(closedWorld.contractMarketOffers),'closed offer history native save');
  const ended=clone(fa);ended.world.phase='offseason';ended.world.contractWindow={stage:'exclusive'};
  check(!currentAIMarketOffers(ended).length,'exclusive contact bypass');
  const daily=clone(fa);daily.world.phase='offseason';daily.worldDate=daily.year+'-12-01';
@@ -201,6 +221,7 @@ const result=await runEngineFixture(String.raw`(()=>{
    independentAuction:true,dailyRollback:true,failedSignFullRollback:true,
    closedIdsInert:true,restoredAuctionRetry:true,bulkClosedRetries:retriedClosed,
    issuerFailureInert:true,reserveAuctionBacked:true,
+   propertyOrderAccepted:true,actualPeriodExpiry:true,
    marketCycles:20,marketContracts,fullWorldSeasons:false};
 })()`,{timeout:60000});
 assert(result.realRivalContract&&result.faOffers>0);
