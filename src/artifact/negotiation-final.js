@@ -369,7 +369,7 @@ function negotiationResponsePlan(db,n,terms){
   const changed=JSON.stringify(next)!==JSON.stringify(n);
   if(!changed)return {ok:false,msg:result.msg};
   const immediate=next.stage==='agreement'&&n.maxRounds===2;
-  const slow=next.stage!=='agreement'||(n.competitors||[]).length>0;
+  const slow=next.stage!=='agreement'||negotiationCompetition(db,db.players[n.pid],db.teams[n.teamId],null,n.kind).length>0;
   const rng=new RNG(db.world.seed+'/'+n.id+'/'+(n.round+1),'response-time');
   const hours=immediate?0:slow?rng.int(24,72):rng.int(2,8);
   const submittedAt=negotiationClockAt(db),dueAt=new Date(Date.parse(submittedAt)+hours*3600000).toISOString();

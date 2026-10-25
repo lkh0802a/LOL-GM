@@ -4913,6 +4913,7 @@ function applyWorldDailyEffects(db,date){
   for(const t of activeTeams(db,null,1))aiManageOwnedReserve(db,t);
   aiReviewOfficialRegistrations(db);
   aiReviewCompetitionStaffRegistrations(db);
+  refreshAIMarketOffers(db);
   w.lastDailyTick=date;
   return true;
 }
@@ -4932,6 +4933,7 @@ function advanceOffseasonFreeAgencyDay(db,actor='manager'){
  // 처리 실패가 현재 세계를 부분 변경하지 않도록 완성된 결과만 반영한다.
  const prepared=JSON.parse(JSON.stringify(db));
  setWorldCalendarDate(prepared,state.next);processTransferPayments(prepared);processLocalServiceDaily(prepared);aiChooseLocalEligibility(prepared);
+ refreshAIMarketOffers(prepared);
  for(const key of Object.keys(db))delete db[key];Object.assign(db,prepared);
  return {ok:true,stage:'fa',date:db.worldDate,msg:'자유계약 기간 · '+db.worldDate};
 }
@@ -4959,6 +4961,7 @@ function leagueComp(db,rid,div=1){
   return {id:div===2?R.short+'2':R.short,name:div===2?divName(R):R.leagueName,short:div===2?divName(R):R.short,region:rid,div,teams,rules:{fearless:true,staffRegistration:R.staffRegistration||null},stages:leagueStages(R,teams.length,div)};
 }
 function startWorldSeason(db,myTeam,seed){
+  expireCurrentAIMarketOffers(db);
   normalizeInternationalConfig(db.worldConfig);
   const medicalRolloverDate=`${db.year}-01-06`;
   medicalOffseasonRecovery(db,medicalRolloverDate);
@@ -5374,6 +5377,7 @@ function runOffseason(db){
   const managed=managedTeam(db);
   w.sponsorOffers=managed&&managed.active!==false&&db.regions[managed.region]?sponsorOffers(db,managed):[];
   w.report=rep; w.phase='market'; w.offers=[]; w.negotiations={}; w.marketLog=[];
+  refreshAIMarketOffers(db);
   return rep;
 }
 // ---------- 오프시즌 2단계: 이적 시장 마감 ----------
@@ -5390,6 +5394,7 @@ function closeMarket(db){
     if(t.id!==managedTeamId(db)&&!t.parent&&(!t.sponsor||t.sponsor.until<db.year)){const chosen=aiSelectSponsor(db,t);if(chosen)ev(`${t.name} ${chosen.type} 스폰서 계약 · ${chosen.years}년`)}}
   for(const R of Object.values(db.regions)){const ts=activeTeams(db,R.id,1);R.teams=ts.length;if(ts.length)R.strength=Math.round(avg(ts.map(t=>teamStrength(db,t.id))))}
   rep.retired.slice(0,3).forEach(r=>news(db,`${db.players[r.pid].name} 은퇴 (${r.age}세)`));
+  expireCurrentAIMarketOffers(db);
   w.phase='preseason';
 }
 // 승강: 승강제는 1부 하위 ↔ 2부 상위 교체, 혼합은 프랜차이즈 보호 구단 제외
@@ -6256,6 +6261,9 @@ function captureWorldActionJournal(db,command){
     return {pid,player,record:actionJournalClone(player)};
   });
   const teams=Array.from(teamIds,id=>actionJournalTeamSnapshot(db.teams[id]));
+  const marketOffers=command.type==='player.sign'?currentAIMarketOffers(db)
+    .filter(o=>o.pid===command.pid&&o.status==='open')
+    .map(ref=>({ref,record:actionJournalClone(ref)})):[];
   const newsRef=db.news,newsRows=Array.isArray(newsRef)?newsRef.slice():null;
   const hasDemand=Object.prototype.hasOwnProperty.call(db,'_marketDemandCache');
   const demandRef=db._marketDemandCache;
@@ -6272,6 +6280,7 @@ function captureWorldActionJournal(db,command){
     playerIds,
     rollback(){
       if(staffJournal)staffJournal.rollback();
+      for(const {ref,record} of marketOffers)actionJournalRestoreObject(ref,record);
       for(const row of entries){if(row.value)row.s.entries=row.value;else delete row.s.entries;if(row.staffValue)row.s.staffEntries=row.staffValue;else delete row.s.staffEntries;if(row.staffRecords)row.s.staffEntryRecords=row.staffRecords;else delete row.s.staffEntryRecords}
       if(closure){
         if(closure.firedPresent)w.fired=closure.fired;else delete w.fired;
@@ -7538,12 +7547,18 @@ function aiMarketOfferCandidates(db,t,fas,role,budgetRoom,year=db.year){
     cv=cur?playerValue(db,cur,t):-99,importGap=R.importRecruitMinGap??3,
     imports=teamNonLocalCount(db,t);
   return withMarketDemandReadIndex(db,()=>fas.filter(p=>p.role===role&&
-      (projectedPlayerIsLocal(db,p,t)||(playerOvr(p)>=R.strength+importGap&&
+      (projectedPlayerIsLocal(db,p,t)||(aiMarketObservation(db,p,t).ability>=R.strength+importGap&&
         imports<nonLocalLimitForTeam(db,t))))
     .map(p=>({p,v:aiMarketValue(db,p,t),ask:asking(db,p,t.region)}))
     .filter(x=>x.ask<=budgetRoom&&
       (!cur||cur.wantsOut||cur.contract.until<=year||x.v>cv+5))
     .sort((a,b)=>b.v-a.v||a.p.id.localeCompare(b.p.id)));
+}
+function aiMarketProposalTerms(db,p,t,ask,rng){
+  const salary=Math.round(ask*(['win-now','superstar'].includes(t.philosophy)
+    ?rng.range(1,1.15):rng.range(.95,1.05))*(1-medicalContractRisk(db,p)*.4)*10)/10;
+  return normalizeContractTerms(db,p,t,salary,contractYearsForPlayer(db,p,rng,t),{
+    releaseGuaranteeRate:contractGuaranteePolicy(p).preferred,promisedRole:'starter'});
 }
 
 function contractMarket(db,rng,rep,ev){
@@ -7593,9 +7608,14 @@ function contractMarket(db,rng,rep,ev){
         const cur=starterFor(db,t,role), cv=cur?playerValue(db,cur,t):-99;
         const importGap=R.importRecruitMinGap??3;
         const cand=aiMarketOfferCandidates(db,t,fas,role,budgetLeft[t.id],year);
-        const c=cand[0]; if(!c)continue;
-        const sal=Math.round(c.ask*(['win-now','superstar'].includes(t.philosophy)?rng.range(1,1.15):rng.range(0.95,1.05))*(1-medicalContractRisk(db,c.p)*.4)*10)/10;
-        (offers[c.p.id]=offers[c.p.id]||[]).push({t,sal,starter:true});
+        const pending=round===0?currentAIMarketOffers(db).find(o=>o.teamId===t.id&&
+          db.players[o.pid]?.role===role&&aiMarketOfferAvailable(db,o)):null,
+          c=pending?{p:db.players[pending.pid]}:cand[0];if(!c)continue;
+        const terms=pending?pending.terms:aiMarketProposalTerms(db,c.p,t,c.ask,rng),
+          issued=pending||issueAIMarketOffer(db,t,c.p,terms,'close/'+round);
+        if(!issued)continue;
+        (offers[issued.pid]=offers[issued.pid]||[]).push({t,sal:issued.terms.salary,years:issued.terms.years,
+          terms:issued.terms,offerId:issued.id,starter:true});
       }
     }
     for(const [pid,os] of Object.entries(offers)){
@@ -7605,7 +7625,7 @@ function contractMarket(db,rng,rep,ev){
         .find(x=>budgetLeft[x.o.t.id]>=x.o.sal&&!localRegistrationError(db,x.o.t,p));
       if(!best)continue;
       const t=best.o.t,yrs=best.o.years?best.o.years:contractYearsForPlayer(db,p,rng),
-        offer=normalizeContractTerms(db,p,t,best.o.sal,yrs,{
+        offer=best.o.terms||normalizeContractTerms(db,p,t,best.o.sal,yrs,{
           releaseGuaranteeRate:contractGuaranteePolicy(p).preferred,
           promisedRole:best.o.starter?'starter':defaultPromisedRole(db,p,t)});
       let finalOffer=offer,counterRounds=0;
@@ -7615,8 +7635,14 @@ function contractMarket(db,rng,rep,ev){
         ensurePlayerAgent(p);
         const counter=aiRepresentativeCounterTerms(db,p,t,'fa',offer,
           Math.min(budgetLeft[t.id],best.o.sal*1.15),t.finance.cash);
-        if(!counter.terms)continue;
-        finalOffer=counter.terms;counterRounds=1+counter.rounds;
+        if(!counter.terms){
+          const refused=currentAIMarketOffers(db).find(o=>o.id===best.o.offerId);
+          if(refused)closeAIMarketOffer(db,refused,'rejected','player_terms');
+          continue;
+        }
+        const counterOffer=issueAIMarketOffer(db,t,p,counter.terms,'counter/'+round);
+        if(!counterOffer)continue;
+        finalOffer=counterOffer.terms;counterRounds=1+counter.rounds;
       }
       const prev=starterFor(db,t,p.role);
       // Multiple market offers can be based on the same earlier import count.
@@ -8516,15 +8542,14 @@ function closePlayerNegotiationFailure(db,neg,p,hardBreak){
   if(target){target.stage='evaluated';target.result='negotiation_failed';target.negotiationId=null}
 }
 function negotiationCompetition(db,p,t,rng,kind){
-  if(kind==='renewal')return [];
-  return activeTeams(db,null,1).filter(x=>x.id!==t.id&&!x.parent&&
-    (kind!=='early_fa'||earlyContactAllowed(db,p,x))).map(team=>{
-    if(localRegistrationError(db,team,p))return null;
-    const cur=starterFor(db,team,p.role),need=!cur?8:aiMarketObservation(db,p,team).ability-playerOvr(cur),baseBudget=(kind==='initial')?initialSalaryBudget(db,team):salaryBudget(db,team),room=baseBudget-payroll(db,team),ask=asking(db,p,team.region);
-    if(room<ask*.82||need<-4)return null;
-    const years=contractYearsForPlayer(db,p,rng,team),terms=normalizeContractTerms(db,p,team,ask*rng.range(.94,1.12)*(1-medicalContractRisk(db,p)*.4),years,{releaseGuaranteeRate:contractGuaranteePolicy(p).preferred,promisedRole:defaultPromisedRole(db,p,team),option:rng.chance(.14)?{type:'player'}:null});
-    return {teamId:team.id,terms,utility:offerUtility(db,p,team,terms),need};
-  }).filter(Boolean).sort((a,b)=>b.utility-a.utility).slice(0,2);
+  if(!['initial','fa'].includes(kind))return [];
+  // A manager's inquiry is a reader, never an AI planning event. Old saves'
+  // unbacked competitors cannot become bids or commit a rival contract.
+  return currentAIMarketOffers(db).filter(o=>o.pid===p.id&&o.teamId!==t.id&&!db.teams[o.teamId]?.parent&&
+    o.kind===kind&&aiMarketOfferAvailable(db,o)).map(o=>({offerId:o.id,
+      teamId:o.teamId,terms:JSON.parse(JSON.stringify(o.terms)),
+      utility:offerUtility(db,p,db.teams[o.teamId],o.terms)}))
+    .sort((a,b)=>b.utility-a.utility||a.teamId.localeCompare(b.teamId));
 }
 function negotiationDemand(db,p,t,kind,rng,competitors=[]){
   const ask=asking(db,p,t.region),best=competitors.length?Math.max(...competitors.map(x=>x.utility)):0,goal=playerCareerGoal(p),years=negotiationPreferredYears(db,p,t);
@@ -8648,8 +8673,9 @@ function submitNegotiationOffer(db,nid,terms){
     if(contactErr)return {ok:false,msg:contactErr};
   }
   const offer=normalizeContractTerms(db,p,t,terms.salary,terms.years,terms),err=negotiationBudgetError(db,p,t,offer,neg.kind);if(err)return {ok:false,msg:err};if(neg.kind==='transfer'&&(offer.signingBonus||0)>Math.max(0,t.finance.cash-(neg.feePlan?.upfront??neg.fee??0)))return {ok:false,msg:'이적료 지급 후 계약금을 지급할 현금이 부족합니다'};
-  const util=offerUtility(db,p,t,offer,{renewal:neg.kind==='renewal'}),
-    comp=neg.competitors.length?Math.max(...neg.competitors.map(x=>x.utility)):0,
+  const competitors=negotiationCompetition(db,p,t,null,neg.kind),
+    util=offerUtility(db,p,t,offer,{renewal:neg.kind==='renewal'}),
+    comp=competitors.length?Math.max(...competitors.map(x=>x.utility)):0,
     threshold=Math.max(offerAcceptanceThreshold(db,p,{kind:neg.kind}),comp-.035),
     reasonable=!['fa','early_fa','renewal','transfer'].includes(neg.kind)||
       contractOfferReasonable(db,p,t,offer,neg.kind);
@@ -8661,10 +8687,10 @@ function submitNegotiationOffer(db,nid,terms){
     return {ok:false,msg:hardBreak?p.name+' 측과 협상이 완전 결렬됐습니다':
       p.name+' 측이 이번 '+(neg.kind==='renewal'?'재계약 ':'')+'제안을 거절했습니다'}
   }
-  if((neg.kind==='fa'||neg.kind==='initial')&&neg.round>=2&&neg.competitors.length){
-    const rival=neg.competitors[0],rt=db.teams[rival.teamId],gap=rival.utility-util,rrng=new RNG(db.world.seed+'/'+neg.id+'/'+neg.round,'negotiation-rival');
-    if(rt&&!p.team&&!negotiationBudgetError(db,p,rt,rival.terms,'fa')&&rival.utility>=offerAcceptanceThreshold(db,p,{kind:'fa'})-.02&&(gap>.08||rrng.chance(clamp(.16+Math.max(0,gap)*1.8,.12,.72)))){
-      const signed=commitWorldAction(db,{type:'player.sign',pid:p.id,teamId:rt.id,kind:'fa',actor:'ai',
+  if((neg.kind==='fa'||neg.kind==='initial')&&neg.round>=2&&competitors.length){
+    const rival=competitors[0],rt=db.teams[rival.teamId],gap=rival.utility-util,rrng=new RNG(db.world.seed+'/'+neg.id+'/'+neg.round,'negotiation-rival');
+    if(rt&&!p.team&&(neg.kind==='initial'||contractOfferReasonable(db,p,rt,rival.terms,neg.kind))&&rival.utility>=offerAcceptanceThreshold(db,p,{kind:neg.kind})&&(gap>.08||rrng.chance(clamp(.16+Math.max(0,gap)*1.8,.12,.72)))){
+      const signed=commitWorldAction(db,{type:'player.sign',pid:p.id,teamId:rt.id,kind:neg.kind,actor:'ai',
         salary:rival.terms.salary,years:rival.terms.years,terms:rival.terms});
       if(signed.ok){
         neg.status='lost';neg.reason='경쟁 구단 선택';neg.closedDate=db.worldDate;
@@ -8679,6 +8705,116 @@ function submitNegotiationOffer(db,nid,terms){
 }
 function acceptNegotiationCounter(db,nid){const neg=negotiationStore(db)[nid];if(!neg||neg.status!=='open'||!neg.counter)return {ok:false,msg:'수락할 역제안이 없습니다'};return submitNegotiationOffer(db,nid,neg.counter)}
 function cancelNegotiation(db,nid){const neg=negotiationStore(db)[nid];if(!neg||neg.status!=='open')return '진행 중인 협상이 아닙니다';neg.status='cancelled';neg.closedDate=db.worldDate;const target=recruitmentTarget(db,neg.pid);if(target){target.stage='evaluated';target.result='cancelled';target.negotiationId=null}return db.players[neg.pid].name+' 협상을 종료했습니다'}
+
+// ===== LOL GM: Independent AI contract market proposals =====
+// Owns actual offer issuance/history; roster and finance commits stay with player.sign.
+
+// Real club proposals live with the contract domain, independently of human
+// negotiations. They reserve neither money nor a roster slot. Every consumer
+// rechecks the current period, authority, need, registration and finite funds.
+function aiMarketOfferPeriod(db){
+  const w=db.world;if(!w)return null;
+  if(w.phase==='initial_roster')return {id:'initial/'+w.year,kind:'initial',year:w.year};
+  if(w.phase==='offseason'){
+    const day=freeAgencyDayState(db);
+    return day.stage==='fa'&&db.worldDate<=day.through
+      ?{id:'fa/'+w.contractWindow.startSeason,kind:'fa',year:w.contractWindow.startSeason}:null;
+  }
+  // Annual settlement advances db.year before the old world's year rolls over.
+  if(w.phase==='market')return {id:'market/'+db.year,kind:'fa',year:db.year};
+  return null;
+}
+function currentAIMarketOffers(db){
+  const period=aiMarketOfferPeriod(db);
+  return period?Object.values(db.contractMarketOffers?.periods?.[period.id]?.offers||{}):[];
+}
+function aiMarketOfferAvailable(db,o,market=null){
+  const period=aiMarketOfferPeriod(db),p=db.players[o?.pid],t=db.teams[o?.teamId];
+  if(!period||o.period!==period.id||o.kind!==period.kind||o.status!=='open'||
+    typeof o.issuedAt!=='string'||!Number.isFinite(Date.parse(o.issuedAt))||
+    new Date(o.issuedAt).toISOString()!==o.issuedAt||o.issuedAt>negotiationClockAt(db)||
+    !p||p.retired||p.team||!t||(t.parent&&o.kind!=='initial')||
+    t.active===false||playerActionAuthority(db,'ai',t)||!o.terms||
+    !Number.isFinite(o.terms.salary)||o.terms.salary<=0||
+    !Number.isInteger(o.terms.years)||o.terms.years<=0||
+    !contractGuaranteeTermsValid(o.terms)||invalidContractNumericTerms(o.terms)||
+    !Number.isFinite(t.finance?.cash)||negotiationBudgetError(db,p,t,o.terms,o.kind))return false;
+  if(o.kind==='initial')return t.roster.length<(o.target??initialLegalMinimumTarget(db,t))&&
+    initialFutureFeasible(db,t,p,o.terms.salary,market);
+  const room=salaryBudget(db,t)-payroll(db,t);
+  return Number.isFinite(room)&&o.terms.salary<=room&&
+    aiMarketOfferCandidates(db,t,[p],p.role,room,period.year).length>0;
+}
+function closeAIMarketOffer(db,o,status,reason){
+  if(o.status!=='open')return;
+  o.status=status;o.reason=reason;o.closedAt=negotiationClockAt(db);
+}
+function expireCurrentAIMarketOffers(db){
+  const period=aiMarketOfferPeriod(db),store=period&&db.contractMarketOffers?.periods?.[period.id];
+  if(!store)return;
+  for(const o of Object.values(store.offers))closeAIMarketOffer(db,o,'expired','period_closed');
+  store.closedAt=negotiationClockAt(db);
+}
+function issueAIMarketOffer(db,t,p,terms,event,target=null,choiceValue=null,market=null){
+  const period=aiMarketOfferPeriod(db);if(!period)return null;
+  const root=db.contractMarketOffers||(db.contractMarketOffers={version:1,periods:{}}),
+    store=root.periods[period.id]||(root.periods[period.id]={offers:{},events:{}}),
+    id=period.id+'/'+event+'/'+t.id+'/'+p.id;
+  if(store.offers[id])return aiMarketOfferAvailable(db,store.offers[id],market)
+    ?store.offers[id]:null;
+  const offer={id,period:period.id,kind:period.kind,pid:p.id,teamId:t.id,
+    terms:JSON.parse(JSON.stringify(terms)),issuedAt:negotiationClockAt(db),status:'open',
+    ...(period.kind==='initial'?{target:target??initialLegalMinimumTarget(db,t),choiceValue}: {})};
+  if(!aiMarketOfferAvailable(db,offer,market))return null;
+  // Superseding is an actual new club offer; retain the old terms and outcome.
+  for(const old of Object.values(store.offers))if(old.pid===p.id&&old.teamId===t.id)
+    closeAIMarketOffer(db,old,'withdrawn','superseded');
+  store.offers[id]=offer;return offer;
+}
+function settleAIMarketOffers(db,pid,teamId,terms){
+  // JSON object order is not a contract term. Preserve the saved quote verbatim
+  // while comparing its values, including nested clauses, against the writer.
+  const key=value=>JSON.stringify(value,(_,row)=>row&&typeof row==='object'&&!Array.isArray(row)
+    ?Object.fromEntries(Object.keys(row).sort().map(k=>[k,row[k]])):row),signedKey=key(terms);
+  for(const o of currentAIMarketOffers(db))if(o.pid===pid)
+    closeAIMarketOffer(db,o,o.teamId===teamId&&key(o.terms)===signedKey
+      ?'accepted':'withdrawn',o.teamId===teamId?'contract_signed':'other_club_signed');
+}
+function refreshAIMarketOffers(db){
+  const period=aiMarketOfferPeriod(db);if(!period)return [];
+  const root=db.contractMarketOffers||(db.contractMarketOffers={version:1,periods:{}});
+  for(const [id,store] of Object.entries(root.periods)){
+    if(id!==period.id&&store.closedAt)continue;
+    for(const o of Object.values(store.offers))
+      if(o.status==='open'&&(id!==period.id||!aiMarketOfferAvailable(db,o)))
+        closeAIMarketOffer(db,o,id!==period.id?'expired':'withdrawn',id!==period.id?'period_closed':'conditions_changed');
+    if(id!==period.id)store.closedAt=negotiationClockAt(db);
+  }
+  const store=root.periods[period.id]||(root.periods[period.id]={offers:{},events:{}}),
+    event='day/'+db.worldDate;
+  if(store.events[event])return currentAIMarketOffers(db);
+  const teams=activeTeams(db,null,1).filter(t=>!t.parent&&!playerActionAuthority(db,'ai',t))
+    .sort((a,b)=>a.id.localeCompare(b.id)),
+    market=period.kind==='initial'?initialMarketSnapshot(db,teams):null,
+    fas=period.kind==='fa'?Object.values(db.players).filter(p=>!p.retired&&!p.team):[];
+  for(const t of teams){
+    if(period.kind==='initial'){
+      if(currentAIMarketOffers(db).some(o=>o.teamId===t.id&&o.status==='open'))continue;
+      const proposal=initialOfferForTeam(db,t,0,db.world.seed+'|minimum',market,initialLegalMinimumTarget(db,t));
+      if(proposal)issueAIMarketOffer(db,t,proposal.player,proposal.terms,event,
+        initialLegalMinimumTarget(db,t),proposal.value,market);
+    }else for(const role of ROLES){
+      if(currentAIMarketOffers(db).some(o=>o.teamId===t.id&&db.players[o.pid]?.role===role&&o.status==='open'))continue;
+      const room=salaryBudget(db,t)-payroll(db,t),
+        candidate=aiMarketOfferCandidates(db,t,fas,role,room,period.year)[0];
+      if(!candidate)continue;
+      const rng=new RNG(db.world.seed+'/'+period.id+'/'+event+'/'+t.id+'/'+role,'ai-market-offer'),
+        terms=aiMarketProposalTerms(db,candidate.p,t,candidate.ask,rng);
+      issueAIMarketOffer(db,t,candidate.p,terms,event);
+    }
+  }
+  store.events[event]=true;return currentAIMarketOffers(db);
+}
 
 // ===== LOL GM: Recruitment / negotiation / transfer domain =====
 // Owns recruitment board workflow, seller fee negotiations and permanent transfers.
@@ -8957,6 +9093,7 @@ function closeExclusiveContractWindow(db){
   processLocalServiceDaily(db);aiChooseLocalEligibility(db);
   const settlement=finalizeExclusiveContractExpiry(db);
   cw.stage='fa';cw.completed=true;cw.settlement=settlement;
+  refreshAIMarketOffers(db);
   return {ok:true,stage:'fa',date:db.worldDate,renewals,earlyOffers,settlement,
     msg:'14일 원소속 독점기간 종료 · 기존 계약 만료 · FA 접촉 개방'};
 }
@@ -9417,6 +9554,7 @@ function applyPlayerSignAction(db,c){
   if(offseasonFaSeason)db.year=offseasonFaSeason;
   const contract=signContract(db,p,t,c.salary,c.years,c.terms);
   if(offseasonFaSeason)db.year=beforeYear;
+  settleAIMarketOffers(db,p.id,t.id,c.terms);
   if(c.kind==='medical_replacement'){
     contract.medicalReplacement={...c.replacement};
     payMedicalReplacementWage(t,c.replacement.paid);
@@ -12511,7 +12649,16 @@ function initialOfferForTeam(db,t,round,seed,market,target){
   });
 }
 function resolveInitialOfferRound(db,teams,round,seed,targetFn){
-  const market=initialMarketSnapshot(db,teams),offers=teams.map(t=>initialOfferForTeam(db,t,round,seed,market,targetFn(t))).filter(Boolean),byPlayer={};for(const o of offers)(byPlayer[o.player.id]=byPlayer[o.player.id]||[]).push(o);
+  const market=initialMarketSnapshot(db,teams),offers=teams.map(t=>{
+    const pending=currentAIMarketOffers(db).find(o=>o.teamId===t.id&&aiMarketOfferAvailable(db,o,market));
+    if(pending){const p=db.players[pending.pid];return {team:t,player:p,terms:pending.terms,value:pending.choiceValue??offerUtility(db,p,t,pending.terms)}}
+    const proposal=initialOfferForTeam(db,t,round,seed,market,targetFn(t));
+    if(!proposal)return null;
+    const issued=issueAIMarketOffer(db,t,proposal.player,proposal.terms,
+      'auction/'+seed+'/'+round,targetFn(t),proposal.value,market);
+    return issued?{team:t,player:db.players[issued.pid],terms:issued.terms,
+      value:issued.choiceValue??offerUtility(db,db.players[issued.pid],t,issued.terms)}:null;
+  }).filter(Boolean),byPlayer={};for(const o of offers)(byPlayer[o.player.id]=byPlayer[o.player.id]||[]).push(o);
   let signed=0;for(const os of Object.values(byPlayer)){const best=os.sort((a,b)=>b.value-a.value||b.terms.salary-a.terms.salary)[0],p=best.player,t=best.team;if(p.team)continue;const chk=initialOfferCheck(db,p,t,best.terms);if(!chk.ok||!initialFutureFeasible(db,t,p,best.terms.salary,market))continue;const done=commitWorldAction(db,{type:'player.sign',pid:p.id,teamId:t.id,kind:'initial',actor:'ai',
       salary:best.terms.salary,years:best.terms.years,terms:best.terms});
     if(done.ok)signed++}
@@ -12548,6 +12695,7 @@ function beginInitialRosterPhase(db,teamId,seed){
     db.manager.startMode='academy_coach';
     autoBuildInitialWorld(db,[],seed);
   }
+  refreshAIMarketOffers(db);
   return db.world;
 }
 // The first-year blind auction can exhaust the unsigned player pool.
@@ -12961,7 +13109,7 @@ function negotiationResponsePlan(db,n,terms){
   const changed=JSON.stringify(next)!==JSON.stringify(n);
   if(!changed)return {ok:false,msg:result.msg};
   const immediate=next.stage==='agreement'&&n.maxRounds===2;
-  const slow=next.stage!=='agreement'||(n.competitors||[]).length>0;
+  const slow=next.stage!=='agreement'||negotiationCompetition(db,db.players[n.pid],db.teams[n.teamId],null,n.kind).length>0;
   const rng=new RNG(db.world.seed+'/'+n.id+'/'+(n.round+1),'response-time');
   const hours=immediate?0:slow?rng.int(24,72):rng.int(2,8);
   const submittedAt=negotiationClockAt(db),dueAt=new Date(Date.parse(submittedAt)+hours*3600000).toISOString();
@@ -13677,24 +13825,26 @@ function v2Draft(n){const stamp=JSON.stringify([V2.db.worldDate,n]);if(V2.drafts
 function v2CaptureDrafts(){if(!V2.db)return;document.querySelectorAll('[data-neg-form]').forEach(form=>{const n=V2.db.world?.negotiations?.[form.dataset.negForm];if(!n)return;const terms=v2Draft(n);for(const [key] of V2_TERM_FIELDS){const input=form.querySelector('[data-term="'+key+'"]');if(input)terms[key]=Number(input.value)}v2CaptureAdvancedTerms(form,terms)});v2CaptureTransactions();}
 function v2Terms(terms){if(!terms)return '';return `<div class="statline"><span>연봉 · 연간</span><strong>${v2Money(terms.salary)}</strong></div><div class="statline"><span>기간</span><strong>${v2Esc(terms.years)}년</strong></div><div class="statline"><span>계약금</span><strong>${v2Money(terms.signingBonus||0)}</strong></div><div class="statline"><span>방출 보장 비율</span><strong>${Math.round(contractGuaranteeRate(terms)*100)}%</strong></div>${Object.entries(terms.bonuses||{}).filter(([,v])=>v).map(([k,v])=>`<div class="statline"><span>${({performance:'성과 보너스',title:'우승 보너스',international:'국제전 보너스'})[k]||v2Esc(k)}</span><strong>${v2Money(v)}</strong></div>`).join('')}<p class="hint">${v2Esc(SQUAD_ROLE_KO[terms.promisedRole]||'역할 약속 없음')}${terms.option?' · '+v2Esc(terms.option.type==='player'?'선수 옵션':'구단 옵션'):''}${terms.buyout?' · '+(normalizeBuyoutClause(terms.buyout)?.type==='release'?'구단 거부 불가':'협상 개시권')+' 바이아웃 '+v2Money(terms.buyout.amount):''}</p>`;}
 function v2OwnedNegotiation(nid){return v2Negotiations().find(n=>n.id===nid)||null;}
-function v2NegotiationState(n){return n.status!=='open'?({accepted:'계약 완료',cancelled:'협상 종료',withdrawn:'철회',rejected:'거절'})[n.status]||n.status:n.stage==='waiting'?'응답 대기':n.stage==='agreement'?'조건 합의':n.counter?'역제안 검토':'조건 작성';}
+function v2NegotiationState(n){return n.status!=='open'?({accepted:'계약 완료',cancelled:'협상 종료',withdrawn:'철회',rejected:'거절',lost:'경쟁 구단 선택'})[n.status]||n.status:n.stage==='waiting'?'응답 대기':n.stage==='agreement'?'조건 합의':n.counter?'역제안 검토':'조건 작성';}
+function v2NegotiationCompetition(n){return n?.status==='open'&&['initial','fa'].includes(n.kind)?negotiationCompetition(V2.db,V2.db.players[n.pid],V2.db.teams[n.teamId],null,n.kind):null;}
 function v2NegotiationList(){
  if(V2.nid)return v2NegotiationDetail(V2.nid);
  const rows=v2Negotiations();if(!rows.length)return '<section class="panel empty">진행 중인 협상이 없습니다.<p><button class="btn btn-primary" data-tab="선수 검색">선수 찾아보기</button></p></section>';
- return v2WaitingProgress()+'<section class="stack">'+rows.map(n=>{const terms=n.agreedTerms||n.counter||n.demand;return `<article class="panel"><div class="panel-heading"><strong>${v2Esc(V2.db.players[n.pid]?.name||'선수 정보 없음')}</strong><span class="state-tag">${v2Esc(v2NegotiationState(n))}</span></div><p class="small subtle">${v2Esc(V2.db.teams[n.teamId]?.name||'정보 없음')} · 연봉 ${v2Money(terms?.salary)} / 년</p><button class="btn btn-outline" data-negotiation-open="${v2Esc(n.id)}">협상 상세 →</button></article>`}).join('')+'</section>';
+ return v2WaitingProgress()+'<section class="stack">'+rows.map(n=>{const terms=n.agreedTerms||n.counter||n.demand,rivals=v2NegotiationCompetition(n);return `<article class="panel"><div class="panel-heading"><strong>${v2Esc(V2.db.players[n.pid]?.name||'선수 정보 없음')}</strong><span class="state-tag">${v2Esc(v2NegotiationState(n))}</span></div><p class="small subtle">${v2Esc(V2.db.teams[n.teamId]?.name||'정보 없음')} · 연봉 ${v2Money(terms?.salary)} / 년</p>${rivals!==null?`<p class="hint" data-ai-offers>실제 경쟁 제안 ${rivals.length}곳</p>`:''}<button class="btn btn-outline" data-negotiation-open="${v2Esc(n.id)}">협상 상세 →</button></article>`}).join('')+'</section>';
 }
 function v2NegotiationDetail(nid){
  const n=v2OwnedNegotiation(nid);if(!n)return '<section class="panel"><p>현재 관리 구단의 협상을 확인할 수 없습니다.</p><button class="btn btn-outline" id="negotiation-back">협상 목록으로</button></section>';
  if(n.stage==='club'&&n.status==='open')return v2SellerView(n);
- const p=V2.db.players[n.pid],open=n.status==='open',agreed=n.stage==='agreement',waiting=n.stage==='waiting',terms=waiting?n.response?.terms:open&&!agreed?v2Draft(n):n.agreedTerms||n.acceptedTerms||n.demand;
- return `<section class="panel"><button class="btn btn-outline btn-small" id="negotiation-back">← 협상 목록으로</button><div class="content-head"><div><h2>${v2Esc(p?.name||'선수 정보 없음')}</h2><p class="small subtle">대상 선수단 · ${v2Esc(V2.db.teams[n.teamId]?.name||'정보 없음')}</p></div><span class="state-tag">${v2Esc(v2NegotiationState(n))}</span></div><button class="btn btn-soft" id="contract-advice" data-advice="${v2Esc(n.id)}">비서에게 검토 요청</button>${open&&!agreed&&!waiting?`<form data-neg-form="${v2Esc(n.id)}" onsubmit="return false">${V2_TERM_FIELDS.map(([key,label])=>`<label class="field">${label}<input class="input" type="number" data-term="${key}" min="${key==='years'?1:0}" step="${key==='years'?1:.1}" value="${v2Esc(terms[key]||0)}" required></label>`).join('')}${v2AdvancedTerms(terms)}<button class="btn btn-primary" type="button" id="review-offer" data-offer-review="${v2Esc(n.id)}">제안 검토</button></form>`:v2Terms(terms)}${waiting?`<p>응답 예정 ${v2Esc(v2TimeText(n.response?.dueAt))}</p><p class="hint">현재 제안을 수정하려면 취소한 뒤 다시 제출하세요. 선수·자리·예산을 예약하지 않습니다.</p>${v2WaitingProgress()}`:''}${v2CurrentContact()?.id===n.id?'<button class="btn btn-primary" id="contract-match-resume">연락 검토를 마치고 현재 경기 재개</button>':''}${agreed&&open?`<p class="hint">아직 계약과 소속은 바뀌지 않았습니다. 최종 계약은 감독이 직접 결정합니다.</p><button class="btn btn-primary" id="review-final" data-final-review="${v2Esc(n.id)}">최종 계약 검토</button>`:''}${open?`<p><button class="btn btn-outline btn-small" data-end-neg="${v2Esc(n.id)}">협상 종료</button></p>`:''}<details><summary>주고받은 제안 · ${n.history?.length||0}건</summary>${(n.history||[]).map(h=>`<p class="small">${v2Esc(h.at?v2TimeText(h.at):h.date||n.createdDate||'날짜 정보 없음')} · ${v2Esc(v2NegotiationLabel(h))}${h.terms?' · 연봉 '+v2Money(h.terms.salary)+' / 년':''}${h.reason?' · '+v2Esc(h.reason):''}</p>`).join('')}</details></section>`;
+ const p=V2.db.players[n.pid],open=n.status==='open',agreed=n.stage==='agreement',waiting=n.stage==='waiting',terms=waiting?n.response?.terms:open&&!agreed?v2Draft(n):n.agreedTerms||n.acceptedTerms||n.demand,
+   rivals=v2NegotiationCompetition(n);
+ return `<section class="panel"><button class="btn btn-outline btn-small" id="negotiation-back">← 협상 목록으로</button><div class="content-head"><div><h2>${v2Esc(p?.name||'선수 정보 없음')}</h2><p class="small subtle">대상 선수단 · ${v2Esc(V2.db.teams[n.teamId]?.name||'정보 없음')}</p></div><span class="state-tag">${v2Esc(v2NegotiationState(n))}</span></div>${rivals!==null?`<p class="hint" data-ai-offers>실제 경쟁 제안 ${rivals.length}곳</p>`:''}<button class="btn btn-soft" id="contract-advice" data-advice="${v2Esc(n.id)}">비서에게 검토 요청</button>${open&&!agreed&&!waiting?`<form data-neg-form="${v2Esc(n.id)}" onsubmit="return false">${V2_TERM_FIELDS.map(([key,label])=>`<label class="field">${label}<input class="input" type="number" data-term="${key}" min="${key==='years'?1:0}" step="${key==='years'?1:.1}" value="${v2Esc(terms[key]||0)}" required></label>`).join('')}${v2AdvancedTerms(terms)}<button class="btn btn-primary" type="button" id="review-offer" data-offer-review="${v2Esc(n.id)}">제안 검토</button></form>`:v2Terms(terms)}${waiting?`<p>응답 예정 ${v2Esc(v2TimeText(n.response?.dueAt))}</p><p class="hint">현재 제안을 수정하려면 취소한 뒤 다시 제출하세요. 선수·자리·예산을 예약하지 않습니다.</p>${v2WaitingProgress()}`:''}${v2CurrentContact()?.id===n.id?'<button class="btn btn-primary" id="contract-match-resume">연락 검토를 마치고 현재 경기 재개</button>':''}${agreed&&open?`<p class="hint">아직 계약과 소속은 바뀌지 않았습니다. 최종 계약은 감독이 직접 결정합니다.</p><button class="btn btn-primary" id="review-final" data-final-review="${v2Esc(n.id)}">최종 계약 검토</button>`:''}${open?`<p><button class="btn btn-outline btn-small" data-end-neg="${v2Esc(n.id)}">협상 종료</button></p>`:''}<details><summary>주고받은 제안 · ${n.history?.length||0}건</summary>${(n.history||[]).map(h=>`<p class="small">${v2Esc(h.at?v2TimeText(h.at):h.date||n.createdDate||'날짜 정보 없음')} · ${v2Esc(v2NegotiationLabel(h))}${h.terms?' · 연봉 '+v2Money(h.terms.salary)+' / 년':''}${h.reason?' · '+v2Esc(h.reason):''}</p>`).join('')}</details></section>`;
 }
 function v2ReviewCurrent(review=V2.review){const n=review&&v2OwnedNegotiation(review.nid);return !!n&&review.db===V2.db&&review.manager===V2.db.manager&&review.owner===managedTeamId(V2.db)&&review.target===V2.target&&!manualNegotiationError(V2.db,n)&&review.stamp===v2NegotiationStamp(n)&&(review.mode==='final'||JSON.stringify(review.inputTerms)===JSON.stringify(v2Draft(n)));}
-function v2ContractReviewView(){const r=V2.review,n=v2OwnedNegotiation(r?.nid),current=v2ReviewCurrent(r),plan=current&&r.mode!=='final'?negotiationResponsePlan(V2.db,n,r.terms):null;return `<section class="panel" id="contract-review"><p class="small">${v2Esc(V2.db.players[n?.pid]?.name||'선수 정보 없음')} · 대상 선수단 ${v2Esc(V2.db.teams[n?.teamId]?.name||'정보 없음')}</p>${r.adjusted?.length?'<p class="hint" role="status">기존 계약 규칙에 따라 '+r.adjusted.map(v2Esc).join(' · ')+'을 적용했습니다. 표시된 조건을 확인하거나 입력으로 돌아가 수정하세요.</p>':''}${v2Terms(r.terms)}${plan?.ok?`<p>${plan.immediate?'기존 최단 회차의 수락 조건에 따라 즉시 응답합니다.':'응답 예정 '+v2Esc(v2TimeText(plan.dueAt))}</p>`:''}<p class="hint">${r.mode==='final'?'직접 확정하면 현재 예산·자리·자격을 다시 확인하고 계약을 체결합니다.':'제안을 제출해도 선수단·예산·자리를 예약하지 않습니다.'}</p>${!current?'<p role="alert">조건이나 현재 권한이 바뀌었습니다. 닫고 다시 검토하세요.</p>':''}<div class="tag-flex"><button class="btn btn-primary" id="confirm-contract"${!current?' disabled':''}>${r.mode==='final'?'최종 계약 확정':'이 조건으로 제출'}</button><button class="btn btn-outline" id="cancel-review">${r.mode==='final'?'합의로 돌아가기':'조건 수정으로'}</button></div></section>`;}
+function v2ContractReviewView(){const r=V2.review,n=v2OwnedNegotiation(r?.nid),current=v2ReviewCurrent(r),plan=current&&r.mode!=='final'?negotiationResponsePlan(V2.db,n,r.terms):null,rivals=n?v2NegotiationCompetition(n):null;return `<section class="panel" id="contract-review"><p class="small">${v2Esc(V2.db.players[n?.pid]?.name||'선수 정보 없음')} · 대상 선수단 ${v2Esc(V2.db.teams[n?.teamId]?.name||'정보 없음')}</p>${r.adjusted?.length?'<p class="hint" role="status">기존 계약 규칙에 따라 '+r.adjusted.map(v2Esc).join(' · ')+'을 적용했습니다. 표시된 조건을 확인하거나 입력으로 돌아가 수정하세요.</p>':''}${v2Terms(r.terms)}${rivals!==null?`<p class="hint" data-ai-offers>실제 경쟁 제안 ${rivals.length}곳</p>`:''}${plan?.ok?`<p>${plan.immediate?'기존 최단 회차의 수락 조건에 따라 즉시 응답합니다.':'응답 예정 '+v2Esc(v2TimeText(plan.dueAt))}</p>`:''}<p class="hint">${r.mode==='final'?'직접 확정하면 현재 예산·자리·자격을 다시 확인하고 계약을 체결합니다.':'제안을 제출해도 선수단·예산·자리를 예약하지 않습니다.'}</p>${!current?'<p role="alert">조건이나 현재 권한이 바뀌었습니다. 닫고 다시 검토하세요.</p>':''}<div class="tag-flex"><button class="btn btn-primary" id="confirm-contract"${!current?' disabled':''}>${r.mode==='final'?'최종 계약 확정':'이 조건으로 제출'}</button><button class="btn btn-outline" id="cancel-review">${r.mode==='final'?'합의로 돌아가기':'조건 수정으로'}</button></div></section>`;}
 function v2OpenNegotiation(nid){if(!v2OwnedNegotiation(nid))return v2Tell('현재 관리 구단의 협상을 확인하세요');v2Navigate('market','진행 중인 협상',null,nid);}
 function v2SubmitReview(){const review=V2.review;if(!v2ReviewCurrent(review))return v2Tell('조건이나 게임 상태가 바뀌었습니다. 현재 조건을 다시 검토하세요.');const n=v2OwnedNegotiation(review.nid);V2.review=null;v2ContractAction(()=>review.mode==='final'?finalizeStagedNegotiation(V2.db,n.id):stageNegotiationOffer(V2.db,n.id,review.terms),n.id);}
 function v2NegotiationLabel(h){return ({agreed:'선수 조건 수락 · 최종 계약 전',finalized:'감독 최종 계약 확정',submitted:'제안 접수 · 응답 대기',cancelled:'대기 제안 취소',response_unavailable:'현재 조건으로 응답 처리 불가',accept:'조건 수락',counter:'역제안',commit_rejected:'계약 처리 거절',rival:'경쟁 구단 선택'})[h.result]||(h.side==='club'?'구단 제안':'선수 응답');}
-function v2NegotiationStamp(n){const db=V2.db;return JSON.stringify([db.manager,db.worldDate,db.world.phase,db.world.manage,db.world.fired,db.world.pendingOfficial,db.world.negotiationClock,db.world.officialGameTimeThrough,officialClockState(db),db.world.contractWindow,db.world.negotiations,db.players[n.pid],db.teams[n.teamId],db.regions[db.teams[n.teamId]?.region]]);}
+function v2NegotiationStamp(n){const db=V2.db;return JSON.stringify([db.manager,db.worldDate,db.world.phase,db.world.manage,db.world.fired,db.world.pendingOfficial,db.world.negotiationClock,db.world.officialGameTimeThrough,officialClockState(db),db.world.contractWindow,db.world.negotiations,db.players[n.pid],db.teams[n.teamId],db.regions[db.teams[n.teamId]?.region],n.stage==='player'?(v2NegotiationCompetition(n)?.map(o=>o.offerId).sort()||[]):[]]);}
 function v2Review(nid,mode){
  v2CaptureDrafts();const n=V2.db.world?.negotiations?.[nid],error=manualNegotiationError(V2.db,n);if(error)return v2Tell(error);
  if(n.status!=='open'||n.stage!==(mode==='final'?'agreement':'player'))return v2Tell('현재 협상 상태가 바뀌었습니다');

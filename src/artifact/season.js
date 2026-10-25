@@ -21,6 +21,7 @@ function leagueComp(db,rid,div=1){
   return {id:div===2?R.short+'2':R.short,name:div===2?divName(R):R.leagueName,short:div===2?divName(R):R.short,region:rid,div,teams,rules:{fearless:true,staffRegistration:R.staffRegistration||null},stages:leagueStages(R,teams.length,div)};
 }
 function startWorldSeason(db,myTeam,seed){
+  expireCurrentAIMarketOffers(db);
   normalizeInternationalConfig(db.worldConfig);
   const medicalRolloverDate=`${db.year}-01-06`;
   medicalOffseasonRecovery(db,medicalRolloverDate);

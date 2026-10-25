@@ -20,6 +20,29 @@ const result=await runEngineFixture(String.raw`(()=>{
  const preseason=unpackDB(queued);preseason.world.phase='preseason';const preBefore=packDB(preseason);V2.db=preseason;v2ContractAction(()=>advanceToNegotiationResponse(V2.db));check(v2OwnedNegotiation(n.id).stage==='agreement'&&packDB(V2.db)!==preBefore,'프리시즌 대기 응답 막힘 교정');
  V2.db=unpackDB(queued);let stored=null;localStorage.setItem=(key,value)=>{stored=JSON.parse(value).game};const render=v2Render;v2Render=()=>{throw Error('controlled post-save render failure')};v2ContractAction(()=>v2CancelNegotiation(n.id),n.id);v2Render=render;check(stored===packDB(V2.db)&&v2OwnedNegotiation(n.id).status==='cancelled','저장 뒤 화면 예외에도 메모리와 저장 동일');
  const damaged=unpackDB(queued);damaged.world.negotiations[n.id].response.dueAt='invalid';V2.db=damaged;const unchanged=packDB(damaged);v2ContractAction(()=>advanceToNegotiationResponse(V2.db));check(packDB(V2.db)===unchanged,'손상 대기 시각 무작성');
- return {faEntry:true,currentManagedTeam:true,originalStartWholeResult:true,waitingOriginalWholeResult:true,waitingReadPure:true,waitingNotEditable:true,pendingFullSave:true,actualContactStop:true,inboxActualContact:true,agreementNoReservation:true,sameDateClockStale:true,manualFinalWholeResult:true,finalFullSave:true,cancelWholeResult:true,invalidClockInert:true,preseasonResponse:true,postSaveRenderFailureConsistent:true,fixture:chosen};
+ // Actual independent bids are a shared list/detail/review projection. A saved
+ // negotiation's old competitors snapshot cannot keep a stale review valid.
+ const bidCfg=defaultWorldConfig();bidCfg.regions=[regionCfg('KR',{teams:18,div2:false})];bidCfg.internationals=[];
+ const bidWorld=buildWorld(bidCfg),bidTeam=activeTeams(bidWorld,'KR',1)[0];startCareer(bidWorld,bidTeam.id,'actual-independent-bid-probe');
+ const byPid={};for(const o of currentAIMarketOffers(bidWorld))(byPid[o.pid]??=[]).push(o);
+ const bidPid=Object.keys(byPid).find(id=>byPid[id].length>=3);check(bidPid,'real multi-bid UI fixture');
+ mInterest(bidWorld,bidPid);mEvaluateTarget(bidWorld,bidPid,bidTeam.id);initialStartNegotiation(bidWorld,bidPid,bidTeam.id);
+ V2.db=bidWorld;V2.target=bidTeam.id;V2.review=null;V2.official=null;V2.managementReview=null;V2.roleReview=null;V2.advice=null;
+ const bn=bidWorld.world.negotiations[negotiationId(bidWorld,bidPid,'initial',bidTeam.id)];V2.nid=null;
+ check(v2NegotiationList().includes('실제 경쟁 제안 3곳'),'actual list projection');V2.nid=bn.id;
+ check(v2NegotiationDetail(bn.id).includes('실제 경쟁 제안 3곳'),'actual detail projection');
+ Object.assign(v2Draft(bn),bn.demand,{salary:Math.floor(initialSalaryBudget(bidWorld,bidTeam)*10)/10});
+ v2Review(bn.id,'offer');check(v2ReviewCurrent()&&v2ContractReviewView().includes('실제 경쟁 제안 3곳'),'actual review projection');
+ const announced=negotiationResponsePlan(bidWorld,bn,V2.review.terms),rivalRows=currentAIMarketOffers(bidWorld).filter(o=>o.pid===bidPid);
+ for(const o of rivalRows.slice(1))closeAIMarketOffer(bidWorld,o,'withdrawn','controlled UI lifecycle');
+ check(!v2ReviewCurrent()&&v2NegotiationDetail(bn.id).includes('실제 경쟁 제안 1곳')&&v2ContractReviewView().includes('실제 경쟁 제안 1곳'),'competition-only stale review and one-bid projection');
+ closeAIMarketOffer(bidWorld,rivalRows[0],'withdrawn','controlled UI lifecycle');
+ const currentPlan=negotiationResponsePlan(bidWorld,bn,V2.review.terms),staleWorld=packDB(bidWorld);
+ check(announced.hours>=24&&currentPlan.hours<=8&&v2ContractReviewView().includes('실제 경쟁 제안 0곳'),'zero real bids and actual revised response time');
+ v2SubmitReview();check(packDB(bidWorld)===staleWorld&&bn.stage==='player','stale confirmation cannot submit changed response time');
+ v2Review(bn.id,'offer');check(v2ReviewCurrent()&&v2ContractReviewView().includes('실제 경쟁 제안 0곳'),'fresh zero-bid review');
+ V2.db=unpackDB(packDB(bidWorld));V2.review=null;
+ check(v2NegotiationDetail(bn.id).includes('실제 경쟁 제안 0곳')&&V2.db.world.negotiations[bn.id].competitors.length===3,'native restored live projection ignores old snapshot');
+ return {actualCompetitionProjection:true,competitionOnlyStale:true,faEntry:true,currentManagedTeam:true,originalStartWholeResult:true,waitingOriginalWholeResult:true,waitingReadPure:true,waitingNotEditable:true,pendingFullSave:true,actualContactStop:true,inboxActualContact:true,agreementNoReservation:true,sameDateClockStale:true,manualFinalWholeResult:true,finalFullSave:true,cancelWholeResult:true,invalidClockInert:true,preseasonResponse:true,postSaveRenderFailureConsistent:true,fixture:chosen};
 })()`,{setupSources:[...sources,`const window={scrollY:0};const history={state:null,back(){}};const CSS={escape:x=>x};const document={getElementById(){return {textContent:''}},querySelector(){return null},querySelectorAll(){return []}};const localStorage={setItem(){}};function v2Icon(){return ''}function v2Render(){};v2OpenNegotiation=id=>{V2.nid=id};`],timeout:120000});
 if(process.env.UI_V2_CLOCK_CONTRACT_FIXTURE)await writeFile(process.env.UI_V2_CLOCK_CONTRACT_FIXTURE,JSON.stringify(result.fixture));delete result.fixture;assert(result.manualFinalWholeResult&&result.pendingFullSave);console.log('UI_V2_CLOCK_CONTRACTS_ACCEPTANCE',JSON.stringify(result));

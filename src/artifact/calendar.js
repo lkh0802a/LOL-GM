@@ -54,6 +54,7 @@ function applyWorldDailyEffects(db,date){
   for(const t of activeTeams(db,null,1))aiManageOwnedReserve(db,t);
   aiReviewOfficialRegistrations(db);
   aiReviewCompetitionStaffRegistrations(db);
+  refreshAIMarketOffers(db);
   w.lastDailyTick=date;
   return true;
 }
@@ -73,6 +74,7 @@ function advanceOffseasonFreeAgencyDay(db,actor='manager'){
  // 처리 실패가 현재 세계를 부분 변경하지 않도록 완성된 결과만 반영한다.
  const prepared=JSON.parse(JSON.stringify(db));
  setWorldCalendarDate(prepared,state.next);processTransferPayments(prepared);processLocalServiceDaily(prepared);aiChooseLocalEligibility(prepared);
+ refreshAIMarketOffers(prepared);
  for(const key of Object.keys(db))delete db[key];Object.assign(db,prepared);
  return {ok:true,stage:'fa',date:db.worldDate,msg:'자유계약 기간 · '+db.worldDate};
 }

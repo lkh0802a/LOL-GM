@@ -73,15 +73,14 @@ function closePlayerNegotiationFailure(db,neg,p,hardBreak){
   if(target){target.stage='evaluated';target.result='negotiation_failed';target.negotiationId=null}
 }
 function negotiationCompetition(db,p,t,rng,kind){
-  if(kind==='renewal')return [];
-  return activeTeams(db,null,1).filter(x=>x.id!==t.id&&!x.parent&&
-    (kind!=='early_fa'||earlyContactAllowed(db,p,x))).map(team=>{
-    if(localRegistrationError(db,team,p))return null;
-    const cur=starterFor(db,team,p.role),need=!cur?8:aiMarketObservation(db,p,team).ability-playerOvr(cur),baseBudget=(kind==='initial')?initialSalaryBudget(db,team):salaryBudget(db,team),room=baseBudget-payroll(db,team),ask=asking(db,p,team.region);
-    if(room<ask*.82||need<-4)return null;
-    const years=contractYearsForPlayer(db,p,rng,team),terms=normalizeContractTerms(db,p,team,ask*rng.range(.94,1.12)*(1-medicalContractRisk(db,p)*.4),years,{releaseGuaranteeRate:contractGuaranteePolicy(p).preferred,promisedRole:defaultPromisedRole(db,p,team),option:rng.chance(.14)?{type:'player'}:null});
-    return {teamId:team.id,terms,utility:offerUtility(db,p,team,terms),need};
-  }).filter(Boolean).sort((a,b)=>b.utility-a.utility).slice(0,2);
+  if(!['initial','fa'].includes(kind))return [];
+  // A manager's inquiry is a reader, never an AI planning event. Old saves'
+  // unbacked competitors cannot become bids or commit a rival contract.
+  return currentAIMarketOffers(db).filter(o=>o.pid===p.id&&o.teamId!==t.id&&!db.teams[o.teamId]?.parent&&
+    o.kind===kind&&aiMarketOfferAvailable(db,o)).map(o=>({offerId:o.id,
+      teamId:o.teamId,terms:JSON.parse(JSON.stringify(o.terms)),
+      utility:offerUtility(db,p,db.teams[o.teamId],o.terms)}))
+    .sort((a,b)=>b.utility-a.utility||a.teamId.localeCompare(b.teamId));
 }
 function negotiationDemand(db,p,t,kind,rng,competitors=[]){
   const ask=asking(db,p,t.region),best=competitors.length?Math.max(...competitors.map(x=>x.utility)):0,goal=playerCareerGoal(p),years=negotiationPreferredYears(db,p,t);
@@ -205,8 +204,9 @@ function submitNegotiationOffer(db,nid,terms){
     if(contactErr)return {ok:false,msg:contactErr};
   }
   const offer=normalizeContractTerms(db,p,t,terms.salary,terms.years,terms),err=negotiationBudgetError(db,p,t,offer,neg.kind);if(err)return {ok:false,msg:err};if(neg.kind==='transfer'&&(offer.signingBonus||0)>Math.max(0,t.finance.cash-(neg.feePlan?.upfront??neg.fee??0)))return {ok:false,msg:'이적료 지급 후 계약금을 지급할 현금이 부족합니다'};
-  const util=offerUtility(db,p,t,offer,{renewal:neg.kind==='renewal'}),
-    comp=neg.competitors.length?Math.max(...neg.competitors.map(x=>x.utility)):0,
+  const competitors=negotiationCompetition(db,p,t,null,neg.kind),
+    util=offerUtility(db,p,t,offer,{renewal:neg.kind==='renewal'}),
+    comp=competitors.length?Math.max(...competitors.map(x=>x.utility)):0,
     threshold=Math.max(offerAcceptanceThreshold(db,p,{kind:neg.kind}),comp-.035),
     reasonable=!['fa','early_fa','renewal','transfer'].includes(neg.kind)||
       contractOfferReasonable(db,p,t,offer,neg.kind);
@@ -218,10 +218,10 @@ function submitNegotiationOffer(db,nid,terms){
     return {ok:false,msg:hardBreak?p.name+' 측과 협상이 완전 결렬됐습니다':
       p.name+' 측이 이번 '+(neg.kind==='renewal'?'재계약 ':'')+'제안을 거절했습니다'}
   }
-  if((neg.kind==='fa'||neg.kind==='initial')&&neg.round>=2&&neg.competitors.length){
-    const rival=neg.competitors[0],rt=db.teams[rival.teamId],gap=rival.utility-util,rrng=new RNG(db.world.seed+'/'+neg.id+'/'+neg.round,'negotiation-rival');
-    if(rt&&!p.team&&!negotiationBudgetError(db,p,rt,rival.terms,'fa')&&rival.utility>=offerAcceptanceThreshold(db,p,{kind:'fa'})-.02&&(gap>.08||rrng.chance(clamp(.16+Math.max(0,gap)*1.8,.12,.72)))){
-      const signed=commitWorldAction(db,{type:'player.sign',pid:p.id,teamId:rt.id,kind:'fa',actor:'ai',
+  if((neg.kind==='fa'||neg.kind==='initial')&&neg.round>=2&&competitors.length){
+    const rival=competitors[0],rt=db.teams[rival.teamId],gap=rival.utility-util,rrng=new RNG(db.world.seed+'/'+neg.id+'/'+neg.round,'negotiation-rival');
+    if(rt&&!p.team&&(neg.kind==='initial'||contractOfferReasonable(db,p,rt,rival.terms,neg.kind))&&rival.utility>=offerAcceptanceThreshold(db,p,{kind:neg.kind})&&(gap>.08||rrng.chance(clamp(.16+Math.max(0,gap)*1.8,.12,.72)))){
+      const signed=commitWorldAction(db,{type:'player.sign',pid:p.id,teamId:rt.id,kind:neg.kind,actor:'ai',
         salary:rival.terms.salary,years:rival.terms.years,terms:rival.terms});
       if(signed.ok){
         neg.status='lost';neg.reason='경쟁 구단 선택';neg.closedDate=db.worldDate;
