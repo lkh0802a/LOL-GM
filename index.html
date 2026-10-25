@@ -207,7 +207,7 @@ function restoreMatchCoreState(saved){
     matchCoreAssert(a.generation===(generations.get(id)||0),'activity generation mismatch');
     if(a.waitingFor!==null)matchCoreAssert(pending.has(a.waitingFor)&&state.commands[a.waitingFor]?.request.actorId===id,'missing queued activity');
   }
-  let lastTime=0;const receiptKinds=new Map(),eventOrder=new Map();
+  let lastTime=0,lastCompletion=null;const receiptKinds=new Map(),eventOrder=new Map(),activeHistory=new Map();
   for(const [seq,r] of s.receipts.entries()){
     const person=people.get(r?.actorId),c=state.commands[matchCoreCommandKey(person?.teamId,r?.commandId)];
     matchCoreAssert(matchCoreKeys(r,['seq','atMs','kind','actorId','commandId',...(r?.kind==='wait-cancelled'?['targetId']:[])])&&
@@ -216,14 +216,24 @@ function restoreMatchCoreState(saved){
     const key=matchCoreCommandKey(person.teamId,r.commandId),kindKey=JSON.stringify([key,r.kind]);
     matchCoreAssert(!receiptKinds.has(kindKey),'duplicate receipt');receiptKinds.set(kindKey,true);
     if(r.kind==='wait-started'){
-      matchCoreAssert(c.request.type==='wait'&&r.atMs===c.acceptedAtMs,'invalid start receipt');eventOrder.set(key,eventOrder.size);
-    }else if(r.kind==='wait-completed')matchCoreAssert(c.request.type==='wait'&&c.status==='complete'&&r.atMs===c.completedAtMs,'invalid completion receipt');
-    else matchCoreAssert(c.request.type==='cancel'&&r.atMs===c.acceptedAtMs&&r.targetId===c.request.targetId,'invalid cancellation receipt');
+      matchCoreAssert(c.request.type==='wait'&&r.atMs===c.acceptedAtMs&&!activeHistory.has(r.actorId),'invalid start receipt');
+      activeHistory.set(r.actorId,key);eventOrder.set(key,eventOrder.size);
+    }else if(r.kind==='wait-completed'){
+      const order=eventOrder.get(key);
+      matchCoreAssert(c.request.type==='wait'&&c.status==='complete'&&r.atMs===c.completedAtMs&&activeHistory.get(r.actorId)===key&&
+        (lastCompletion===null||lastCompletion.atMs!==r.atMs||lastCompletion.order<order),'invalid completion receipt');
+      activeHistory.delete(r.actorId);lastCompletion={atMs:r.atMs,order};
+    }else{
+      matchCoreAssert(c.request.type==='cancel'&&r.atMs===c.acceptedAtMs&&r.targetId===c.request.targetId&&
+        activeHistory.get(r.actorId)===matchCoreCommandKey(c.teamId,r.targetId),'invalid cancellation receipt');
+      activeHistory.delete(r.actorId);
+    }
   }
   for(const [key,c] of Object.entries(state.commands)){
     const has=kind=>receiptKinds.has(JSON.stringify([key,kind]));
     matchCoreAssert(c.request.type==='wait'?has('wait-started')&&(c.status!=='complete'||has('wait-completed')):has('wait-cancelled'),'command lacks receipt');
   }
+  for(const [id,a] of Object.entries(state.actors))matchCoreAssert((activeHistory.get(id)??null)===a.waitingFor,'receipt activity differs from actor');
   for(const e of s.queue)matchCoreAssert(e.seq===eventOrder.get(e.commandKey),'event order differs from its cause');
   matchCoreAssert(matchCoreKeys(s.rng,['decision','execution']),'unknown random stream');
   for(const channel of ['decision','execution']){

@@ -63,6 +63,24 @@ const result=await runEngineFixture(String.raw`(()=>{
   check(same(c.advanceTo(22),c2.advanceTo(22))&&same(c.snapshot(),c2.snapshot()),'cancel/replace native roundtrip diverged');
   const zero=new MatchCoreKernel(spec());zero.command('blue',{id:'zero',type:'wait',actorId:'b-MID',durationMs:0});
   check(zero.advanceTo(0).length===1&&zero.advanceTo(0).length===0,'zero-duration event ordering');
+  let causalRejected=0;
+  const rejectCausalOrder=(kernel,order,label)=>{
+    const original=kernel.snapshot();check(same(MatchCoreKernel.restore(original).snapshot(),original),'valid causal history rejected');
+    const bad=copy(original);bad.receipts=order.map(i=>bad.receipts[i]);bad.receipts.forEach((r,i)=>r.seq=i);
+    let failed=false;try{MatchCoreKernel.restore(bad)}catch{failed=true}
+    check(failed,label);causalRejected++;check(same(kernel.snapshot(),original),'corrupt receipt order changed producer');
+  };
+  rejectCausalOrder(zero,[1,0],'same-time completion before start accepted');
+  const cancelledAtZero=new MatchCoreKernel(spec());
+  cancelledAtZero.command('blue',{id:'wait',type:'wait',actorId:'b-MID',durationMs:10});
+  cancelledAtZero.command('blue',{id:'cancel',type:'cancel',actorId:'b-MID',targetId:'wait'});
+  rejectCausalOrder(cancelledAtZero,[1,0],'same-time cancellation before start accepted');
+  const serialAtZero=new MatchCoreKernel(spec());
+  for(const id of ['first','second']){serialAtZero.command('blue',{id,type:'wait',actorId:'b-MID',durationMs:0});serialAtZero.advanceTo(0)}
+  rejectCausalOrder(serialAtZero,[0,2,1,3],'overlapping activity history accepted');
+  const simultaneous=new MatchCoreKernel(spec());
+  for(const actorId of ['b-TOP','b-JGL'])simultaneous.command('blue',{id:actorId,type:'wait',actorId,durationMs:10});
+  simultaneous.advanceTo(10);rejectCausalOrder(simultaneous,[0,1,3,2],'same-time completion queue order changed');
   const accessor=new MatchCoreKernel(spec());let actorReads=0,durationReads=0;
   check(accessor.command('blue',{id:'captured',type:'wait',get actorId(){actorReads++;return actorReads===1?'b-TOP':'r-TOP'},
     get durationMs(){durationReads++;return durationReads===1?10:-1}}).ok&&actorReads===1&&durationReads===1,
@@ -114,7 +132,7 @@ const result=await runEngineFixture(String.raw`(()=>{
   check(batch.clockMs===1000&&batch.snapshot().receipts.length===2000,'bounded causal batch lost/duplicated actions');
   check(same(MatchCoreKernel.restore(batch.snapshot()).snapshot(),batch.snapshot()),'batch snapshot divergence');
   return {actors:10,completedTieOrder,cancelledStaleInert:true,propertyOrderResume:true,
-    privateObservation:true,randomChannels:true,malformedRejected:rejected,specialIds:true,heapEvents:1000,staleEvents:100,batchActions:1000,
+    privateObservation:true,randomChannels:true,malformedRejected:rejected,causalRejected,specialIds:true,heapEvents:1000,staleEvents:100,batchActions:1000,
     batchMs:Math.round(performance.now()-start),physicalMechanicsImplemented:false,officialAdapterImplemented:false};
 })()`);
 assert.equal(result.actors,10);
