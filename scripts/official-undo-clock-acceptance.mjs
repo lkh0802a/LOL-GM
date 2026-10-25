@@ -22,6 +22,7 @@ const formatPredecessor='stages:intlStages(it.format,teams,it.bo)';
 assert.equal(liveSeason.split(formatSuccessor).length,2,'one reviewed format-options call');
 let referenceSeason=liveSeason;
 for(const [current,previous] of [
+  ['  expireCurrentAIMarketOffers(db);\n',''],
   ['  if(disqualifiedFinalResult(s))return administrativeTournamentPlacements(db,s);\n',''],
   ['  if(s.qualificationSuccessions?.length)return qualificationTournamentPlacements(db,s);\n',''],
   ['  const succession=resolvePendingQualificationSuccession(db,refs,q,forcedDraft);if(succession)return succession;\n',''],
