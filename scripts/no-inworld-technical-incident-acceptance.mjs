@@ -29,5 +29,13 @@ for (const directory of playable) {
     }
   }
 }
+// Also check the shipped standalone HTML; its contents may lag behind source.
+const standalone = await readFile(resolve(root, '..', 'index.html'), 'utf8');
+for (const [index, line] of standalone.split(/\r?\n/).entries()) {
+  if (/\b(?:throw|console\.)\b/.test(line)) continue;
+  for (const [name, pattern] of banned) {
+    if (pattern.test(line)) violations.push(`index.html:${index + 1} [${name}]`);
+  }
+}
 assert.equal(violations.length, 0, 'Forbidden in-world technical incident content:\n' + violations.join('\n'));
 console.log('PASS: no fictional technical incident/bug event literals in playable sources');
