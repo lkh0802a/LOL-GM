@@ -27,3 +27,11 @@
 `node scripts/match-core-foundation-acceptance.mjs`: 제어된 10인 S0 입력에서 순서/키 순서 불변, 접수·취소·중복·오래된 사건, 접근 권한, 입력 getter 고정, 시간 경계, 관측 분리, 두 RNG 스트림의 재개, 손상/미래 snapshot 거절, 특수 ID 및 1,000개 활동을 검사한다. 이는 공식 경기·전체 시즌 또는 기존 세계 세이브 연동 검증이 아니다. 새 검사는 원래 정적 gate에도 추가하며 기존 모든 검사를 유지한다.
 
 최종 HEAD의 집중/인접·기존 full/check·build·CI·모바일 및 결과 main/Pages 수용은 각각 실제 결과로 기록한다. 저장 이력/과거 확정 경기는 재계산하지 않는다.
+
+## 기존 확정 입력의 S0 연결
+
+`matchCoreInputFromResolvedDraft(matchDb, prepared, draft, matchId)`는 기존 소유자가 확정한 입력만 투영한다. `prepared`는 이미 준비된 시리즈 세트의 `blue/red/gseed`, `draft`는 이미 끝난 밴픽의 역할별 `picks`이며, `matchId`는 호출자가 제공한 기존 경기 신원이다. 공식전은 기존 `officialMatchView`/`seriesOfficialView`에서 만든 출전 뷰를 전달해야 한다. adapter가 세계/등록/밴픽을 다시 생성하거나 `starterFor`로 잘못된 선발을 자동 교체하지 않는다. 기존 `validateStartingLineup`/`validLineupPlayer`의 자격·의료 경계를 재사용하고 중복 선수·챔피언, 알 수 없는 챔피언, 패치 pin 공백은 거절한다.
+
+반환값은 `MatchCoreKernel` 생성 입력이며 선수 신원·당시 경기 역할·챔피언 ID·패치 메타데이터만 복사한다. 원본/반환값 변경은 생성된 kernel을 바꾸지 않는다. 현재 `_revision` 부재는 기존 패치 revision 계약과 같은 0이며 명시된 음수/비정상 revision은 거절한다. 선수 능력·pool·비공개/미래 정보나 현재 패치의 미검증 물리 수치를 복사하지 않는다. **수치/효과 인증, 과거 결과 재계산, 공식 경기 writer 전환 또는 세계 세이브 adapter가 아니다.** 실제 운영의 `simulateMatch` 호출은 물리/결과 수용 전까지 유지한다.
+
+`node scripts/match-core-input-acceptance.mjs`는 실제 세계·시리즈 준비·밴픽 소유자의 결과→adapter→kernel→JSON 복원을 확인한다. 공식 등록과 훈련 소속이 다른 선수, 치료 중/손상 선발, 잘못된 picks/pin, foreign 명령, producer 불변·비공개 getter 및 소유자 재실행 금지를 검사한다. 물리 경기 수행 수는 0이다.

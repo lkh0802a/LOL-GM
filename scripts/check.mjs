@@ -7,6 +7,7 @@ await import('./ai-market-read-cost-acceptance.mjs');
 await import('./audit-champion-source-acceptance.mjs');
 await import('./verify-champion-source-bundle-acceptance.mjs');
 await import('./match-core-foundation-acceptance.mjs');
+await import('./match-core-input-acceptance.mjs');
 await import('./codex-impact-map-acceptance.mjs');
 await import('./observer-information-acceptance.mjs');
 await import('./historical-identity-acceptance.mjs');
@@ -103,6 +104,7 @@ const maintainabilityBudgets = {
   'match-core-state.js': 6000,
   'match-core-restore.js': 11000,
   'match-core-kernel.js': 9000,
+  'match-core-input.js': 5000,
   'app.js': 22000,
   'ui-startup.js': 7000,
   'ui-startup-storage.js': 5500,
