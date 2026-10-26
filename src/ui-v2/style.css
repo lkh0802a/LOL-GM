@@ -45,3 +45,6 @@ body{background:var(--bg);transition:background .15s,color .15s}svg.ico{width:20
 .competition-detail{min-width:0;overflow-wrap:anywhere}.competition-detail .table-scroll{max-width:100%}
 /* Keep the observed comparison table scrollable inside the mobile content grid. */
 .panel[data-initial-comparison]{min-width:0}
+
+.panel[data-player-detail]{min-width:0}
+.player-observation-report>summary{min-height:44px;display:flex;align-items:center}
