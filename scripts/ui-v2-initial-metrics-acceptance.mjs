@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {runEngineFixture} from './test-harness.mjs';
+const sources=await Promise.all(['state','market','contracts','views'].map(p=>readFile(new URL('../src/ui-v2/'+p+'.js',import.meta.url),'utf8')));
+const result=await runEngineFixture(String.raw`(()=>{
+ const check=(ok,m)=>{if(!ok)throw Error('V2_INITIAL_METRICS '+m)},cfg=defaultWorldConfig();cfg.regions=[regionCfg('KR',{teams:4,div2:true}),regionCfg('NA',{teams:4,div2:true})];cfg.internationals=[];
+ const db=buildWorld(cfg),t=activeTeams(db,'KR',1)[0];startCareer(db,t.id,'observed-metric-query');V2.db=db;V2.target=t.id;V2.section='market';V2.tab='선수 검색';V2.role='ALL';V2.q='';V2.page=0;
+ check(v2Market().includes('data-initial-metrics'),'actual metric controls assembled');const before=JSON.stringify(db),first=v2Candidates().rows[0],metrics=observedPlayerCoreMetrics(initialCandidateView(db),first),baseIds=v2Candidates().rows.map(p=>p.id);
+ const parity=()=>{const s=v2InitialQueryState(),actual=v2Candidates(),expected=initialCandidatePage(db,{...s,q:V2.q,role:V2.role,page:V2.page},t,{pageSize:10,interestsOnly:V2.tab==='관심 선수'});check(JSON.stringify(actual.rows.map(p=>p.id))===JSON.stringify(expected.rows.map(r=>r.p.id))&&actual.total===expected.total,'actual shared query rows and total');};
+ check(v2SetInitialMetricDraft('laning','min',metrics.laning)&&v2SetInitialMetricDraft('laning','max',metrics.laning),'actual draft commands');check(JSON.stringify(v2Candidates().rows.map(p=>p.id))===JSON.stringify(baseIds)&&!initialMetricConditions(v2InitialQueryState()).rows.length,'unsubmitted draft never filters');
+ check(!v2SetInitialMetricDraft('__proto__','min',1)&&!v2SetInitialMetricDraft('vision','bad',1),'unknown inputs rejected');
+ check(v2ApplyInitialMetrics(),'apply exact observed range');parity();check(v2Candidates().rows.some(p=>p.id===first.id),'observed inclusive range retains source');const applied=JSON.stringify(V2.initialQuery.metricFilters);
+ v2SetInitialMetricDraft('laning','min',90);v2SetInitialMetricDraft('laning','max',10);check(!v2ApplyInitialMetrics()&&JSON.stringify(V2.initialQuery.metricFilters)===applied,'inverted bounds cannot replace applied query');parity();
+ for(const bad of ['100','1.5','bad']){v2SetInitialMetricDraft('laning','min',bad);v2SetInitialMetricDraft('laning','max','');check(!v2ApplyInitialMetrics()&&JSON.stringify(V2.initialQuery.metricFilters)===applied,'invalid draft retains applied '+bad);}
+ V2.page=1;check(v2ResetInitialMetrics()&&V2.page===1&&JSON.stringify(V2.initialQuery.metricDraft)===applied,'cancel preserves applied query and page');
+ check(v2ResetInitialMetrics(true)&&V2.page===0&&!initialMetricConditions(V2.initialQuery).rows.length,'clear resets only metric query');
+ let axes=0;for(const key of Object.keys(INITIAL_COMPARE_METRICS)){v2ResetInitialMetrics(true);V2.q=first.name;v2SetInitialMetricDraft(key,'min',metrics[key]);v2SetInitialMetricDraft(key,'max',metrics[key]);check(v2ApplyInitialMetrics(),'apply observed axis '+key);parity();check(v2Candidates().rows.some(p=>p.id===first.id),'same axis as canonical detail '+key);axes++;}
+ v2ResetInitialMetrics(true);V2.q='';for(const key of ['laning','vision']){v2SetInitialMetricDraft(key,'min',metrics[key]);v2SetInitialMetricDraft(key,'max',metrics[key]);}check(v2ApplyInitialMetrics(),'multiple metric AND');parity();
+ check(!initialCandidateMetricMatch(initialCandidateView(db),{p:first,metrics:{}},initialMetricConditions(V2.initialQuery)),'missing observation excluded rather than zero');
+ v2SetInitialMetricDraft('vision','max','99');const remembered=JSON.stringify(V2.initialQuery);v2RememberSearch();V2.initialQuery.metricFilters.laning.min='99';V2.initialQuery.metricDraft.vision.max='1';v2RestoreSearch();check(JSON.stringify(V2.initialQuery)===remembered,'detail return restores nested applied/draft independently');V2.initialQuery.metricDraft.vision.max='2';v2RestoreSearch();check(JSON.stringify(V2.initialQuery)===remembered,'restored draft never aliases saved search');
+ db.world.phase='season';const old=JSON.stringify(V2.initialQuery);check(!v2SetInitialMetricDraft('vision','min','1')&&!v2ApplyInitialMetrics()&&!v2ResetInitialMetrics(true)&&JSON.stringify(V2.initialQuery)===old&&!v2Market().includes('data-initial-metrics'),'initial-only commands');db.world.phase='initial_roster';
+ check(JSON.stringify(db)===before,'all query/draft commands preserve whole canonical world');v2InstallSavedGame({db:unpackDB(packDB(db)),target:t.id});check(V2.initialQuery===null,'actual load discards nested query');
+ return {axes,draftInert:true,canonicalRows:true,inclusiveAnd:true,invalidRetainsApplied:true,cancelAndClear:true,missingExcluded:true,nestedReturnIndependent:true,phaseGuard:true,loadReset:true,wholeWorldPure:true};
+})()`,{setupSources:[...sources,`const window={scrollY:0,scrollTo(){}};const document={activeElement:null,querySelectorAll(){return []},getElementById(){return {textContent:'',focus(){}}}};function v2Icon(){return ''}function v2Render(){};function v2Save(){return true}`],timeout:60000});
+assert.equal(result.axes,10);assert(result.wholeWorldPure);
+console.log('UI_V2_INITIAL_METRICS_ACCEPTANCE '+JSON.stringify(result));

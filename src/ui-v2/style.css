@@ -52,3 +52,6 @@ body{background:var(--bg);transition:background .15s,color .15s}svg.ico{width:20
 [data-candidate-list],[data-initial-query]{min-width:0}
 [data-initial-query] .input{min-width:0;max-width:100%}
 [data-initial-query]>summary{min-height:44px;padding:12px 0;cursor:pointer}
+[data-initial-metrics]{min-width:0}
+[data-initial-metrics]>summary{min-height:44px;padding:12px 0;cursor:pointer}
+.initial-metric-row{min-width:0;margin:0;padding:12px;border:1px solid var(--line);border-radius:8px}
