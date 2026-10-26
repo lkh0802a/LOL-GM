@@ -64,3 +64,7 @@ body{background:var(--bg);transition:background .15s,color .15s}svg.ico{width:20
 .v2-initial-table thead .initial-candidate-name{z-index:2}
 .initial-column-sort,.initial-player-name{border:0;background:transparent;color:var(--fg);text-align:left;min-height:44px;padding:8px 2px}
 .initial-player-name{overflow-wrap:anywhere;white-space:normal}
+.initial-candidate-select{display:flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;flex-shrink:0}
+.initial-candidate-select input{width:18px;height:18px;accent-color:var(--accent)}
+
+[data-initial-selection]>summary{min-height:44px;padding:8px 0;cursor:pointer}
