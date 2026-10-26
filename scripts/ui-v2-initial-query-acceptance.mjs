@@ -1,0 +1,28 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {runEngineFixture} from './test-harness.mjs';
+const sources=await Promise.all(['state','market','contracts','views'].map(p=>readFile(new URL('../src/ui-v2/'+p+'.js',import.meta.url),'utf8')));
+const result=await runEngineFixture(String.raw`(()=>{
+ const check=(ok,m)=>{if(!ok)throw Error('V2_INITIAL_QUERY '+m)};
+ const cfg=defaultWorldConfig();cfg.regions=[regionCfg('KR',{teams:4,div2:true}),regionCfg('NA',{teams:4,div2:true})];cfg.internationals=[];
+ const db=buildWorld(cfg),t=activeTeams(db,'KR',1)[0];startCareer(db,t.id,'v2-initial-query');V2.db=db;V2.target=t.id;V2.section='market';V2.tab='선수 검색';V2.role='ALL';V2.q='';V2.page=0;
+ check(v2Market().includes('data-initial-query'),'existing initial query controls available');
+ const before=JSON.stringify(db),base={scope:'all',minimum:0,sort:'name',direction:'asc',role:'ALL',q:'',page:0},legacy=initialCandidatePage(db,base,t);check(legacy.total>25&&legacy.rows.length===25,'original default page25');
+ let cases=0;for(const scope of ['all','region','overseas'])for(const sort of ['name','ability','salary','laning'])for(const direction of ['asc','desc']){
+  V2.initialQuery={scope,minimum:0,sort,direction,open:true};V2.page=0;const actual=v2Candidates(),expected=initialCandidatePage(db,{...base,scope,sort,direction},t,{pageSize:V2_LIST_PAGE_SIZE});check(JSON.stringify(actual.rows.map(p=>p.id))===JSON.stringify(expected.rows.map(r=>r.p.id))&&actual.total===expected.total&&actual.pages===Math.max(1,expected.pages),'actual shared query '+scope+'/'+sort+'/'+direction);check(actual.rows.length<=10,'new UI page10');if(scope!=='all')check(actual.rows.every(p=>(p.region===t.region)===(scope==='region')),'origin scope');cases++;
+ }
+ V2.initialQuery={scope:'all',minimum:0,sort:'salary',direction:'desc',open:true};V2.page=0;const priced=v2Candidates(),price=v2Money(priced.sortValues.get(priced.rows[0].id).value);check(v2Market().includes('요구 연봉 추정 · '+price),'actual card receives canonical selected sort value');
+ check(JSON.stringify(db)===before,'all shared sort/scope queries are world-pure');
+ V2.initialQuery={scope:'all',minimum:0,sort:'name',direction:'asc',open:true};V2.page=1;const second=v2Candidates();check(second.rows.length===10&&V2.page===1,'actual second page');
+ const interests=second.rows.slice(0,3);for(const p of interests)mInterest(db,p.id,'B');const interestedBefore=JSON.stringify(db);V2.tab='관심 선수';V2.page=0;const watched=v2Candidates();check(watched.total===3&&watched.rows.length===3&&watched.rows.every(p=>interests.includes(p)),'interest selection before pagination');check(JSON.stringify(db)===interestedBefore,'watch query pure');for(const p of interests)mDropInterest(db,p.id);V2.tab='선수 검색';
+ V2.initialQuery.minimum=99;V2.page=0;const minimum=v2Candidates(),reference=initialCandidatePage(db,{...base,minimum:99},t,{pageSize:10});check(minimum.total===reference.total&&V2.initialQuery.minimum===99,'observed minimum including empty result');
+ const saved=JSON.stringify(V2.initialQuery);check(!v2SetInitialQuery('minimum','100')&&!v2SetInitialQuery('sort','__proto__')&&!v2SetInitialQuery('scope','missing')&&!v2SetInitialQuery('direction','sideways')&&JSON.stringify(V2.initialQuery)===saved,'invalid draft cannot replace applied query');
+ check(v2SetInitialQuery('scope','overseas')&&v2SetInitialQuery('minimum','0')&&v2SetInitialQuery('sort','salary')&&v2SetInitialQuery('direction','asc'),'valid actual control commands');V2.page=1;window.scrollY=320;v2RememberSearch();const expected=JSON.stringify(V2.initialQuery);V2.pid='detail';V2.initialQuery={scope:'region',minimum:1,sort:'age',direction:'desc'};v2RestoreSearch();check(JSON.stringify(V2.initialQuery)===expected&&V2.page===1,'detail return query restore');V2.pid=null;
+ v2ChooseSquad(setupTeamsForManager(db).find(x=>x.parent===t.id).id);v2RestoreSearch();check(v2InitialQueryState().scope==='all'&&v2InitialQueryState().minimum===0,'foreign squad snapshot reset');V2.target=t.id;
+ const sourceBefore=JSON.stringify(db);V2.db=unpackDB(packDB(db));v2RestoreSearch();check(v2InitialQueryState().scope==='all','new DB query reset');V2.db=db;
+ V2.section='scout';V2.tab='선수 탐색';V2.initialQuery={scope:'overseas',minimum:99,sort:'salary',direction:'desc'};check(v2Candidates().total===Object.values(db.players).filter(p=>!p.retired&&!p.team).length,'market query never hides scouting list');V2.section='market';V2.tab='선수 검색';
+ db.world.phase='season';const initialPolicy=initialCandidateAllowed;initialCandidateAllowed=()=>{throw Error('normal market touched initial FA policy')};V2.initialQuery={scope:'overseas',minimum:99,sort:'salary',direction:'desc'};V2.q='';V2.role='ALL';V2.page=0;const normal=v2Candidates();check(normal.total===Object.values(db.players).filter(p=>!p.retired).length&&!v2Market().includes('data-initial-query'),'initial-only query does not alter normal market');initialCandidateAllowed=initialPolicy;db.world.phase='initial_roster';check(JSON.stringify(db)===sourceBefore,'context tests restore canonical world');
+ return {originalPage25:true,newPage10:true,sharedCases:cases,watchedBeforePagination:true,sourcePure:true,observedMinimum:true,invalidRejected:true,searchReturn:true,squadLoadReset:true,normalMarketUnchanged:true};
+})()`,{setupSources:[...sources,`const window={scrollY:0,scrollTo(){}};const document={activeElement:null,querySelectorAll(){return []},getElementById(){return {textContent:'',focus(){}}}};function v2Icon(){return ''}function v2Render(){};function v2Save(){return true}`],timeout:60000});
+assert(result.originalPage25&&result.sourcePure);
+console.log('UI_V2_INITIAL_QUERY_ACCEPTANCE '+JSON.stringify(result));

@@ -1,17 +1,4 @@
 // Initial recruitment filters read the same observed metrics as candidate detail.
-function initialCandidateRoles(s){return (s.roles?.length?s.roles:s.role&&s.role!=='ALL'?[s.role]:[]).filter(r=>ROLES.includes(r))}
-function initialMetricConditions(s){
- const rows=[];let valid=true;
- for(const [key,bounds] of Object.entries(s.metricFilters||{})){
-  if(!Object.hasOwn(INITIAL_COMPARE_METRICS,key)||!bounds||typeof bounds!=='object'){valid=false;continue}
-  const min=bounds.min===''||bounds.min==null?null:Number(bounds.min),max=bounds.max===''||bounds.max==null?null:Number(bounds.max);
-  if([min,max].some(x=>x!==null&&(!Number.isInteger(x)||x<1||x>99))||min!==null&&max!==null&&min>max){valid=false;continue}
-  if(min!==null||max!==null)rows.push({key,min,max});
- }
- return {valid,rows};
-}
-function initialCandidateMetrics(view,row){return row.metrics||(row.metrics=observedPlayerCoreMetrics(view,row.p))}
-function initialCandidateMetricMatch(view,row,conditions){return conditions.valid&&conditions.rows.every(({key,min,max})=>{const value=initialCandidateMetrics(view,row)[key];return Number.isFinite(value)&&(min===null||value>=min)&&(max===null||value<=max)})}
 function initialPositionFilters(){const roles=initialCandidateRoles(INITMK);return `<fieldset class="initial-position-filter"><legend>포지션 · 여러 개 선택</legend>${ROLES.map(r=>`<label><input type="checkbox" id="init-role-${r}" data-init-role="${r}"${roles.includes(r)?' checked':''}>${ROLE_KO[r]}</label>`).join('')}<button class="linklike" id="init-role-all" type="button">전체</button></fieldset>`}
 function initialMetricFilterControls(){
  const draft=INITMK.metricDraft||INITMK.metricFilters||{};

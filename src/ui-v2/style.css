@@ -48,3 +48,7 @@ body{background:var(--bg);transition:background .15s,color .15s}svg.ico{width:20
 
 .panel[data-player-detail]{min-width:0}
 .player-observation-report>summary{min-height:44px;display:flex;align-items:center}
+
+[data-candidate-list],[data-initial-query]{min-width:0}
+[data-initial-query] .input{min-width:0;max-width:100%}
+[data-initial-query]>summary{min-height:44px;padding:12px 0;cursor:pointer}
