@@ -1,7 +1,7 @@
 // 새 화면 상태. 기존 UI 모듈/렌더러/이벤트 바인딩을 불러오지 않는다.
 const V2_LIST_PAGE_SIZE=10;
 const V2_STORE='lol-gm-ui-v2-world';
-const V2={db:null,worldDraft:null,section:'home',tab:'대시보드',pid:null,q:'',role:'ALL',scope:'region',page:0,target:null,revision:0,message:'',initialQuery:null,playerReport:null,review:null,drafts:{},read:{},mode:'dark',saved:false,busy:false};
+const V2={db:null,worldDraft:null,section:'home',tab:'대시보드',pid:null,q:'',role:'ALL',scope:'region',page:0,target:null,revision:0,message:'',initialSelection:null,initialQuery:null,playerReport:null,review:null,drafts:{},read:{},mode:'dark',saved:false,busy:false};
 const v2Esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const v2Money=value=>{
  if(!Number.isFinite(value))return '정보 없음';
@@ -56,7 +56,7 @@ function v2ReadSavedGame(raw){
  return {db,read,target};
 }
 function v2InstallSavedGame(saved){
- Object.assign(V2,saved,{official:null,officialResult:null,searchViews:{},initialComparison:null,initialQuery:null,playerReport:null,drafts:{},review:null,advice:null,nid:null,pid:null,preparation:null,managementReview:null,roleReview:null,staffDrafts:{},roleDrafts:{},medicalDrafts:{},squadListView:null,facilityListView:null,negotiationListView:null,taskReturn:null,taskHistory:null,taskBackPending:false,loadRequest:null,recordPage:0,recordReturn:null,sellerDrafts:{},transactionDrafts:{},scrimDraft:null,careerChoiceReturn:null});
+ Object.assign(V2,saved,{official:null,officialResult:null,searchViews:{},initialComparison:null,initialSelection:null,initialQuery:null,playerReport:null,drafts:{},review:null,advice:null,nid:null,pid:null,preparation:null,managementReview:null,roleReview:null,staffDrafts:{},roleDrafts:{},medicalDrafts:{},squadListView:null,facilityListView:null,negotiationListView:null,taskReturn:null,taskHistory:null,taskBackPending:false,loadRequest:null,recordPage:0,recordReturn:null,sellerDrafts:{},transactionDrafts:{},scrimDraft:null,careerChoiceReturn:null});
 }
 async function v2LoadFile(file,current){
  if(!file||!current())return;

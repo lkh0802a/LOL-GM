@@ -20,7 +20,7 @@ function v2Candidates(){
 }
 function v2PlayerCard(p,view,sortValue=null){
  const watched=!!view.world.recruitment?.targets?.[p.id],range=scoutAbilityRange(view,p);
- return `<article class="player-list-row"><button class="player-list-open" data-player="${v2Esc(p.id)}"><span class="player-avatar">${v2Esc(ROLE_KO[p.role])}</span><span class="grow"><strong>${v2Esc(p.name)}</strong><span class="player-meta">${p.age}세 · ${v2Esc(view.teams[p.team]?.name||'무소속')} · 기량 ${range.every(Number.isFinite)?range.join('–'):'정보 부족'}</span>${v2InitialSortSummary(p,view,sortValue)}</span><span aria-hidden="true">›</span></button><button class="icon-button favorite ${watched?'on':''}" data-watch="${v2Esc(p.id)}" aria-pressed="${watched}" aria-label="${v2Esc(p.name)} 관심 ${watched?'해제':'등록'}">${v2Icon('star')}</button></article>`;
+ return `<article class="player-list-row">${v2InitialSelectionCheckbox(p)}<button class="player-list-open" data-player="${v2Esc(p.id)}"><span class="player-avatar">${v2Esc(ROLE_KO[p.role])}</span><span class="grow"><strong>${v2Esc(p.name)}</strong><span class="player-meta">${p.age}세 · ${v2Esc(view.teams[p.team]?.name||'무소속')} · 기량 ${range.every(Number.isFinite)?range.join('–'):'정보 부족'}</span>${v2InitialSortSummary(p,view,sortValue)}</span><span aria-hidden="true">›</span></button><button class="icon-button favorite ${watched?'on':''}" data-watch="${v2Esc(p.id)}" aria-pressed="${watched}" aria-label="${v2Esc(p.name)} 관심 ${watched?'해제':'등록'}">${v2Icon('star')}</button></article>`;
 }
 function v2Market(){
  const db=V2.db,t=v2Target();if(!t)return '<section class="panel empty">관리 구단이 없습니다.</section>';
@@ -31,7 +31,7 @@ function v2Market(){
  if(V2.tab==='진행 중인 협상')return v2NegotiationList();
  if(V2.tab==='시장 현황')return `<section class="panel"><div class="panel-heading"><strong>${db.world.phase==='initial_roster'?'첫 시즌 선수단 구성':'선수 영입·계약'}</strong></div><p class="section-lead">선수를 직접 검토하고 조건을 제안하세요. 조건 합의 뒤에도 최종 계약은 감독이 직접 확정합니다.</p><div class="statline"><span>현재 선수단</span><strong>${t.roster.length}명</strong></div><div class="statline"><span>연간 연봉 예산</span><strong>${v2Money(v2DisplaySalaryBudget(db,t))}</strong></div><div class="statline"><span>현재 연봉 합계 · 연간</span><strong>${v2Money(payroll(db,t))}</strong></div><div class="tag-flex"><button class="btn btn-primary" data-tab="선수 검색">선수 찾아보기</button><button class="btn btn-outline" data-tab="진행 중인 협상">협상 확인</button></div></section>`;
  const m=v2Candidates();
- return comparisonBar+`<section class="stack" data-candidate-list><div class="search-wrap"><span class="search-icon">${v2Icon('search')}</span><input class="input" id="player-search" type="search" autocomplete="off" placeholder="선수 이름·닉네임 검색" aria-label="선수 검색" value="${v2Esc(V2.q)}"></div>${v2CandidateRoleControls()}${v2InitialListControls()}${v2InitialQueryControls()}<div class="between small subtle"><span role="status">${m.total}명 · ${V2.page+1}/${m.pages}페이지</span></div>${v2InitialQueryAllowed()&&v2InitialQueryState().table?v2InitialCandidateTable(m):m.rows.map(p=>v2PlayerCard(p,m.view,m.sortValues?.get(p.id))).join('')||'<div class="panel empty">조건에 맞는 선수가 없습니다.</div>'}<div class="between"><button class="btn btn-outline" data-page="-1"${!V2.page?' disabled':''}>이전</button><button class="btn btn-outline" data-page="1"${V2.page+1>=m.pages?' disabled':''}>다음</button></div></section>`;
+ return comparisonBar+`<section class="stack" data-candidate-list><div class="search-wrap"><span class="search-icon">${v2Icon('search')}</span><input class="input" id="player-search" type="search" autocomplete="off" placeholder="선수 이름·닉네임 검색" aria-label="선수 검색" value="${v2Esc(V2.q)}"></div>${v2CandidateRoleControls()}${v2InitialListControls()}${v2InitialSelectionControls(m)}${v2InitialQueryControls()}<div class="between small subtle"><span role="status">${m.total}명 · ${V2.page+1}/${m.pages}페이지</span></div>${v2InitialQueryAllowed()&&v2InitialQueryState().table?v2InitialCandidateTable(m):m.rows.map(p=>v2PlayerCard(p,m.view,m.sortValues?.get(p.id))).join('')||'<div class="panel empty">조건에 맞는 선수가 없습니다.</div>'}<div class="between"><button class="btn btn-outline" data-page="-1"${!V2.page?' disabled':''}>이전</button><button class="btn btn-outline" data-page="1"${V2.page+1>=m.pages?' disabled':''}>다음</button></div></section>`;
 }
 function v2PlayerDetail(){
  const db=V2.db,p=db.players[V2.pid],t=v2Target();if(!p||p.retired)return '<section class="panel empty">현재 선수 정보를 확인할 수 없습니다.</section>';
@@ -40,7 +40,7 @@ function v2PlayerDetail(){
 }
 function v2RecruitAction(action){if(v2Team()?.parent)return v2Tell('산하 선수단의 영입 계약은 모구단이 담당합니다');return v2Mutate(action);}
 function v2BindMarket(){
- v2BindInitialComparison();v2BindInitialQuery();
+ v2BindInitialComparison();v2BindInitialQuery();v2BindInitialSelection();
  const current=v2Guard(),search=document.getElementById('player-search');
  document.querySelectorAll('[data-player-observation]').forEach(el=>el.ontoggle=()=>{if(!current()||!el.isConnected)return;V2.playerReport={db:V2.db,manager:V2.db.manager,owner:managedTeamId(V2.db),target:v2Target()?.id,pid:V2.pid,open:el.open};});
  if(search)search.oninput=()=>{if(!current())return;V2.q=search.value;V2.page=0;const start=search.selectionStart;v2Render();const next=document.getElementById('player-search');next?.focus({preventScroll:true});if(start!==null)next?.setSelectionRange(start,start)};
@@ -227,7 +227,7 @@ function v2InitialTableCell(view,p,key){
  if(key==='ability')value=range(scoutAbilityRange(view,p));else if(key==='potential')value=range(scoutPotentialRange(view,p));else if(key==='salary')value='약 '+v2Money(asking(view,p,v2Target().region));else if(key==='value')value=v2Money(observedPlayerMarketValue(view,p));else if(key==='region')value=view.regions[p.region]?.name||p.region;else if(Object.hasOwn(INITIAL_COMPARE_METRICS,key)){const v=observedPlayerCoreMetrics(view,p)[key];value=Number.isFinite(v)?v:'정보 부족';}else value=p[key];return v2Esc(value);
 }
 function v2InitialCandidateTable(m){
- const cols=v2InitialColumns();return `<div class="table-scroll v2-initial-table" data-initial-candidate-table tabindex="0" role="region" aria-label="관측 기반 초기 후보 비교표"><table><caption>초기 후보 · 열 제목을 눌러 정렬 · 기량/금액은 기존 관측 추정</caption><thead><tr>${v2InitialTableHeader('role')}${v2InitialTableHeader('name')}${cols.map(v2InitialTableHeader).join('')}<th scope="col">관심</th></tr></thead><tbody>${m.rows.map(p=>`<tr data-initial-table-player="${v2Esc(p.id)}"><td>${v2Esc(ROLE_KO[p.role])}</td><td class="initial-candidate-name"><button class="initial-player-name" data-player="${v2Esc(p.id)}">${v2Esc(p.name)}</button></td>${cols.map(k=>`<td data-initial-cell="${k}">${v2InitialTableCell(m.view,p,k)}</td>`).join('')}<td><button class="icon-button favorite ${m.view.world.recruitment?.targets?.[p.id]?'on':''}" data-watch="${v2Esc(p.id)}" aria-pressed="${!!m.view.world.recruitment?.targets?.[p.id]}" aria-label="${v2Esc(p.name)} 관심 ${m.view.world.recruitment?.targets?.[p.id]?'해제':'등록'}">${v2Icon('star')}</button></td></tr>`).join('')||`<tr><td colspan="${cols.length+3}">조건에 맞는 선수가 없습니다.</td></tr>`}</tbody></table></div>`;
+ const cols=v2InitialColumns();return `<div class="table-scroll v2-initial-table" data-initial-candidate-table tabindex="0" role="region" aria-label="관측 기반 초기 후보 비교표"><table><caption>초기 후보 · 열 제목을 눌러 정렬 · 기량/금액은 기존 관측 추정</caption><thead><tr><th scope="col">선택</th>${v2InitialTableHeader('role')}${v2InitialTableHeader('name')}${cols.map(v2InitialTableHeader).join('')}<th scope="col">관심</th></tr></thead><tbody>${m.rows.map(p=>`<tr data-initial-table-player="${v2Esc(p.id)}"><td>${v2InitialSelectionCheckbox(p)}</td><td>${v2Esc(ROLE_KO[p.role])}</td><td class="initial-candidate-name"><button class="initial-player-name" data-player="${v2Esc(p.id)}">${v2Esc(p.name)}</button></td>${cols.map(k=>`<td data-initial-cell="${k}">${v2InitialTableCell(m.view,p,k)}</td>`).join('')}<td><button class="icon-button favorite ${m.view.world.recruitment?.targets?.[p.id]?'on':''}" data-watch="${v2Esc(p.id)}" aria-pressed="${!!m.view.world.recruitment?.targets?.[p.id]}" aria-label="${v2Esc(p.name)} 관심 ${m.view.world.recruitment?.targets?.[p.id]?'해제':'등록'}">${v2Icon('star')}</button></td></tr>`).join('')||`<tr><td colspan="${cols.length+4}">조건에 맞는 선수가 없습니다.</td></tr>`}</tbody></table></div>`;
 }
 function v2BindInitialTable(current){
  const table=document.querySelector('[data-initial-candidate-table]');if(table){table.scrollLeft=v2InitialQueryState().tableScroll||0;table.onscroll=()=>{if(current()&&table.isConnected)v2InitialQueryState().tableScroll=table.scrollLeft;};}
@@ -236,4 +236,50 @@ function v2BindInitialTable(current){
  const multi=document.getElementById('initial-multi-sort');if(multi)multi.onchange=()=>{if(!current()||!multi.isConnected)return;const s=v2InitialQueryState();s.multiSort=multi.checked;if(!s.multiSort)s.secondary=[];V2.page=0;v2Render();document.getElementById('initial-multi-sort')?.focus({preventScroll:true});};
  const panel=document.querySelector('[data-initial-columns]');if(panel)panel.ontoggle=()=>{if(current()&&panel.isConnected)v2InitialQueryState().columnOpen=panel.open;};
  document.querySelectorAll('[data-initial-column]').forEach(el=>el.onchange=()=>{if(!current()||!el.isConnected||!Object.hasOwn(INITIAL_CANDIDATE_COLUMNS,el.dataset.initialColumn))return;const cols=v2InitialColumns();v2InitialQueryState().columns=Object.keys(INITIAL_CANDIDATE_COLUMNS).filter(k=>k===el.dataset.initialColumn?el.checked:cols.includes(k));v2Render();document.getElementById(el.id)?.focus({preventScroll:true});});
+}
+
+// The original initial-roster selection cap; scouting remains an engine operation.
+const V2_INITIAL_SELECTION_LIMIT=10;
+function v2InitialSelectionContext(){
+ const db=V2.db,t=v2Target();if(!db||db.world?.phase!=='initial_roster'){V2.initialSelection=null;return null;}if(V2.section!=='market')return null;if(!initialCandidateAllowed(db,t)){V2.initialSelection=null;return null;}
+ let c=V2.initialSelection;if(!c||c.db!==db||c.world!==db.world||c.manager!==db.manager||c.owner!==managedTeamId(db)||c.target!==t.id)c=V2.initialSelection={db,world:db.world,manager:db.manager,owner:managedTeamId(db),target:t.id,ids:[],open:false};return c;
+}
+function v2InitialSelectedEligible(c){return c?c.ids.filter(id=>{const p=V2.db.players[id];return !!p&&initialCandidateAllowed(V2.db,V2.db.teams[c.target],p);}):[];}
+function v2InitialBatchScoutCost(ids){const me=v2Team();return me?.region? .1*psOf(V2.db,me.region)*ids.length:NaN;}
+function v2ToggleInitialSelection(pid,selected){
+ const c=v2InitialSelectionContext();if(!c||!V2.db.players[pid]||!initialCandidateAllowed(V2.db,V2.db.teams[c.target],V2.db.players[pid]))return false;
+ if(selected&&!c.ids.includes(pid)){if(c.ids.length>=V2_INITIAL_SELECTION_LIMIT){v2Tell('한 번에 최대 10명만 선택할 수 있습니다');return false;}c.ids.push(pid);}else if(!selected)c.ids=c.ids.filter(id=>id!==pid);
+ c.open=true;v2Render();document.querySelector('[data-initial-select="'+pid+'"]')?.focus({preventScroll:true});return true;
+}
+function v2SelectInitialPage(selected){
+ const c=v2InitialSelectionContext();if(!c)return;const page=v2Candidates().rows.map(p=>p.id),visible=new Set(page),outside=c.ids.filter(id=>!visible.has(id));c.ids=selected?[...outside,...page.slice(0,V2_INITIAL_SELECTION_LIMIT-outside.length)]:outside;c.open=true;v2Render();document.getElementById('initial-select-page')?.focus({preventScroll:true});
+}
+function v2InitialSelectionCheckbox(p){
+ const c=v2InitialSelectionContext();if(!c)return '';return `<label class="initial-candidate-select"><input type="checkbox" data-initial-select="${v2Esc(p.id)}" aria-label="${v2Esc(p.name)} 일괄 관찰 후보 선택"${c.ids.includes(p.id)?' checked':''}></label>`;
+}
+function v2InitialSelectionControls(m){
+ const c=v2InitialSelectionContext();if(!c)return '';const visible=new Set(m.rows.map(p=>p.id)),outside=c.ids.filter(id=>!visible.has(id)).length,ids=v2InitialSelectedEligible(c),cost=v2InitialBatchScoutCost(ids);
+ return `<details class="panel" data-initial-selection${c.open?' open':''}><summary>일괄 관찰 · ${c.ids.length}/10명 선택</summary><p class="hint" role="status">${c.ids.length}/10명 선택 · 현재 페이지 밖 ${outside}명 · 현재 유효한 FA ${ids.length}명. 필터 밖 선택도 유지됩니다.</p><div class="tag-flex"><label class="initial-table-toggle"><input type="checkbox" id="initial-select-page"${m.rows.length?'':' disabled'}>현재 페이지 선택/해제</label><button class="btn btn-outline" id="initial-selection-clear"${c.ids.length?'':' disabled'}>선택 모두 해제</button><button class="btn btn-outline" id="initial-batch-interest"${ids.length&&!v2ManualError()?'':' disabled'}>유효 후보 ${ids.length}명 관심 등록</button><button class="btn btn-outline" id="initial-batch-scout"${ids.length&&!v2ManualError()?'':' disabled'}>유효 후보 ${ids.length}명 일괄 관찰 · ${v2Money(cost)}</button></div><p class="hint">관찰 비용은 기존 수동 관찰 기준입니다. 대상 선수단 또는 불러온 게임이 바뀌면 선택을 초기화합니다.</p></details>`;
+}
+function v2InitialSelectionQuote(kind='scout'){
+ const c=v2InitialSelectionContext(),ids=v2InitialSelectedEligible(c);if(!['scout','interest'].includes(kind)||!c||!ids.length||ids.length>V2_INITIAL_SELECTION_LIMIT)return null;return {context:c,ids,kind,cost:kind==='scout'?v2InitialBatchScoutCost(ids):0,stamp:scoutingReadStamp(V2.db)};
+}
+function v2InitialSelectionQuoteCurrent(quote,kind){
+ const c=v2InitialSelectionContext();if(!quote||!c||quote.context!==c||quote.kind!==kind||!Array.isArray(quote.ids)||!quote.ids.length||quote.ids.length>V2_INITIAL_SELECTION_LIMIT||new Set(quote.ids).size!==quote.ids.length)return false;
+ return quote.cost===(kind==='scout'?v2InitialBatchScoutCost(quote.ids):0)&&JSON.stringify(v2InitialSelectedEligible(c))===JSON.stringify(quote.ids)&&scoutingReadStamp(V2.db)===quote.stamp;
+}
+function v2RunInitialBatchScout(quote){
+ if(!v2InitialSelectionQuoteCurrent(quote,'scout'))return v2Tell('선택·보고서·비용 문맥이 바뀌었습니다. 현재 후보를 다시 확인하세요.');
+ return v2RecruitAction(()=>scoutPlayers(V2.db,quote.ids,40,quote.cost));
+}
+function v2RunInitialBatchInterest(quote){
+ if(!v2InitialSelectionQuoteCurrent(quote,'interest'))return v2Tell('선택·보고서 문맥이 바뀌었습니다. 현재 후보를 다시 확인하세요.');
+ return v2RecruitAction(()=>{try{return scoutingOperationAtomically(V2.db,v2Team(),()=>{for(const id of quote.ids)mInterest(V2.db,id,'B');return quote.ids.length+'명 관심 등록';});}catch(error){return '관심 등록 처리 실패 · '+error.message;}});
+}
+function v2BindInitialSelection(){
+ const c=v2InitialSelectionContext();if(!c)return;const current=v2Guard(),panel=document.querySelector('[data-initial-selection]');if(panel)panel.ontoggle=()=>{if(current()&&panel.isConnected)c.open=panel.open;};
+ document.querySelectorAll('[data-initial-select]').forEach(el=>el.onchange=()=>{if(!current()||!el.isConnected)return;if(!v2ToggleInitialSelection(el.dataset.initialSelect,el.checked))el.checked=c.ids.includes(el.dataset.initialSelect);});
+ const page=document.getElementById('initial-select-page');if(page){const visible=v2Candidates().rows.map(p=>p.id),n=visible.filter(id=>c.ids.includes(id)).length;page.checked=n>0;page.indeterminate=n>0&&n<visible.length;page.onchange=()=>{if(current()&&page.isConnected)v2SelectInitialPage(page.checked);};}
+ v2Bind('#initial-selection-clear',()=>{c.ids=[];c.open=false;v2Render();document.querySelector('[data-initial-selection]>summary')?.focus({preventScroll:true});});
+ if(document.getElementById('initial-batch-scout')){const quote=v2InitialSelectionQuote(),interest=quote?{...quote,kind:'interest',cost:0}:null;v2Bind('#initial-batch-scout',()=>v2RunInitialBatchScout(quote));v2Bind('#initial-batch-interest',()=>v2RunInitialBatchInterest(interest));}
 }
