@@ -9,15 +9,6 @@ function shortlistComparisonToggle(db,state,pid){
   if(c.ids.length>=3)return '비교는 최대 3명입니다';
   c.ids.push(pid);return '비교 추가';
 }
-function shortlistComparisonModel(m,c){
-  const db=m.read,ids=[...new Set(c.ids)].slice(0,3),rows=ids.map(id=>{
-    const p=db.players[id],e=recruitmentTarget(db,id);
-    if(!p||p.retired||!e)return {id,name:p?.name||id,status:'현재 관심 후보가 아닙니다'};
-    return {id,name:p.name,p,e,report:scoutReport(db,p),metrics:observedPlayerCoreMetrics(db,p),attrs:observedPlayerAttributes(db,p),sources:initialComparisonSources(db,p,c)};
-  });
-  const sourceRows=rows.filter(r=>r.p).flatMap(r=>initialComparisonSources(db,r.p,{patch:'ALL',comp:'ALL',from:''}).rows);
-  return {rows,date:db.worldDate,patches:[...new Set(sourceRows.map(r=>r.patch).filter(Boolean))].sort(),comps:[...new Set(sourceRows.map(r=>r.comp).filter(Boolean))].sort()};
-}
 function shortlistComparisonButton(p,state){const c=shortlistComparisonState(state);return `<button data-shortlist-select="${esc(p.id)}" aria-pressed="${c.ids.includes(p.id)}">${c.ids.includes(p.id)?'비교 제외':'비교에 추가'}</button>`;}
 function shortlistComparisonPanel(m,state){
   const c=shortlistComparisonState(state),v=shortlistComparisonModel(m,c),rows=v.rows,num=x=>Number.isFinite(x)?x:'정보 없음',cells=fn=>rows.map(r=>`<td>${r.p?fn(r):esc(r.status)}</td>`).join('');

@@ -1,0 +1,40 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {runEngineFixture} from './test-harness.mjs';
+const sources=await Promise.all(['state','market','contracts','views'].map(p=>readFile(new URL('../src/ui-v2/'+p+'.js',import.meta.url),'utf8')));
+const result=await runEngineFixture(String.raw`(()=>{
+ const check=(ok,m)=>{if(!ok)throw Error('V2_SHORTLIST '+m)};
+ const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:3,div2:true}),regionCfg('EU',{teams:2,div2:false})];cfg.internationals=[];
+ const db=buildWorld(cfg),[team,other]=activeTeams(db,'NA',1);setManagedTeam(db,team.id);db.world={phase:'season',year:db.year,seed:'v2-shortlist',manage:'manual',seasons:{},offers:[],marketLog:[],steps:[],step:0};setWorldCalendarDate(db,db.year+'-01-10');
+ const people=ROLES.slice(0,4).map(role=>{const p=genPlayer(db,new RNG('v2-shortlist|'+role),{region:other.region,role,age:22,base:65});signContract(db,p,other,1,2);mInterest(db,p.id,'B');return p});
+ V2.db=db;V2.target=team.id;V2.section='market';V2.tab='관심 선수';V2.pid=people[0].id;
+ const initial=initialCandidateAllowed;initialCandidateAllowed=()=>{throw Error('regular comparison used FA-only policy')};
+ check(v2PlayerDetail().includes('data-initial-compare-toggle'),'ordinary contracted-interest entry');
+ const before=JSON.stringify(db);for(const p of people.slice(0,3))v2ToggleInitialComparison(p.id);
+ const c=v2CandidateComparisonContext();check(c.kind==='shortlist','ordinary model kind');v2ToggleInitialComparison(people[3].id);check(c.comparison.ids.length===3,'max3');
+ const html=v2InitialComparisonPanel(c),model=shortlistComparisonModel({read:scoutingReadView(db)},c.comparison);
+ check(html.includes(v2Esc(other.name)),'current club from existing comparison model');
+ check(model.rows.length===3&&html.includes('관심 후보 비교')&&html.includes('표본 필터와 별개')&&!html.includes('요구 연봉 추정'),'shared observed model and no invented price');
+ check(model.rows.every(r=>html.includes(v2Esc(r.name)))&&JSON.stringify(db)===before,'render/selection pure');
+ const core=playerCoreMetrics;playerCoreMetrics=p=>{check(!people.includes(p),'true foreign core');return core(p)};v2InitialComparisonPanel(c);playerCoreMetrics=core;
+ c.comparison.patch='saved-missing-patch';c.comparison.comp='saved-missing-comp';check(v2InitialComparisonPanel(c).includes('현재 표본 없음'),'missing saved filters never become ALL');c.comparison.patch='ALL';c.comparison.comp='ALL';
+ const complete=model.rows.map(r=>({...r,metrics:Object.fromEntries(Object.keys(INITIAL_COMPARE_METRICS).map(k=>[k,50]))}));delete complete[1].metrics.vision;
+ const radar=v2ObservedComparisonRadar(complete);check(radar.includes('<svg')&&radar.includes('축 누락으로 차트 제외')&&!v2ObservedComparisonRadar([{name:'empty',metrics:{}}]).includes('<svg'),'observed chart excludes missing axes');
+ const guard=v2ComparisonGuard(c);db.metaHistory=[{date:db.worldDate}];check(!guard(),'old source callback inert');delete db.metaHistory;
+ const guard2=v2ComparisonGuard(c);delete db.world.recruitment.targets[people[0].id];check(!guard2(),'removed interest callback inert');check(v2InitialComparisonPanel(c).includes('현재 관심 후보가 아닙니다'),'departed interest status');v2ToggleInitialComparison(people[0].id);check(!c.comparison.ids.includes(people[0].id),'departed removable');
+ const current=JSON.stringify(db),world=db.world;db.world={...world};check(v2CandidateComparisonContext().comparison.ids.length===0,'world replacement clears UI');db.world=world;
+ const manager=db.manager;db.manager={...manager};check(v2CandidateComparisonContext().comparison.ids.length===0,'manager replacement clears UI');db.manager=manager;
+ V2.db=unpackDB(packDB(db));check(v2CandidateComparisonContext().comparison.ids.length===0,'native load clears UI');V2.db=db;
+ db.world.fired=true;check(!v2CandidateComparisonContext(),'fired no comparison');delete db.world.fired;check(JSON.stringify(db)===current,'context checks wrote canonical state');
+ const baseline=packDB(db);let staleCases=0;
+ for(const kind of ['world','manager','owner','date','phase','patchObject','patchRevision','report','interest','source','render','fired']){
+  V2.db=unpackDB(baseline);V2.revision++;const copy=V2.db,ctx=v2CandidateComparisonContext();ctx.comparison.ids=[people[1].id,people[2].id];const old=v2ComparisonGuard(ctx),selection=JSON.stringify(ctx.comparison);
+  if(kind==='world')copy.world={...copy.world};if(kind==='manager')copy.manager={...copy.manager};if(kind==='owner')setManagedTeam(copy,other.id);if(kind==='date')copy.worldDate=addDays(copy.worldDate,1);if(kind==='phase')copy.world.phase='initial_roster';if(kind==='patchObject')copy.patch={...copy.patch};if(kind==='patchRevision')copy.patch._revision=(copy.patch._revision||0)+1;if(kind==='report')copy.scout[people[1].id]={...(copy.scout[people[1].id]||{}),observations:999};if(kind==='interest')delete copy.world.recruitment.targets[people[1].id];if(kind==='source')copy.metaHistory=[...(copy.metaHistory||[]),{date:copy.worldDate}];if(kind==='render')V2.revision++;if(kind==='fired')copy.world.fired=true;
+  const unchanged=JSON.stringify(copy);check(!old()&&JSON.stringify(copy)===unchanged&&JSON.stringify(ctx.comparison)===selection,kind+' retained comparison callback inert');staleCases++;
+ }
+ V2.db=db;
+ initialCandidateAllowed=initial;
+ return {contractedInterests:true,sharedModel:true,maxThree:true,pure:true,noTrueForeignCore:true,missingFilterRetained:true,missingRadarExcluded:true,sourceAndInterestGuard:true,staleCases,worldManagerLoadReset:true,firedInert:true};
+})()`,{setupSources:[...sources,`const window={scrollY:0,scrollTo(){}};const document={querySelectorAll(){return []},getElementById(){return {textContent:'',focus(){}}}};function v2Icon(){return ''}function v2Render(){}function v2Save(){return true}`],timeout:60000});
+assert(result.contractedInterests&&result.pure);
+console.log('UI_V2_SHORTLIST_COMPARISON_ACCEPTANCE '+JSON.stringify(result));
