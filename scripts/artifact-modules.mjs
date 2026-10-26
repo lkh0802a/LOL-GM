@@ -113,6 +113,7 @@ export const ENGINE_MODULES = [
   'analysis-tiers.js',
   'career.js',
   'initial-offer-impact.js',
+  'initial-comparison-model.js',
   'negotiation-final.js',
 ];
 

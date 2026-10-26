@@ -1,0 +1,38 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {runEngineFixture} from './test-harness.mjs';
+const sources=await Promise.all(['state','market','contracts','views'].map(p=>readFile(new URL('../src/ui-v2/'+p+'.js',import.meta.url),'utf8')));
+const result=await runEngineFixture(String.raw`(()=>{
+ const check=(x,m)=>{if(!x)throw Error('UI_V2_INITIAL_COMPARISON '+m)};
+ const cfg=defaultWorldConfig();cfg.regions=[regionCfg('KR',{teams:4,div2:true}),regionCfg('NA',{teams:4,div2:true})];cfg.internationals=[];
+ const db=buildWorld(cfg),team=activeTeams(db,'KR',1)[0];startCareer(db,team.id,'v2-compare-controlled');V2.db=db;V2.target=team.id;V2.section='market';V2.tab='선수 검색';
+ const people=Object.values(db.players).filter(p=>!p.team&&!p.retired&&p.region===team.region).slice(0,4);check(people.length===4,'actual FA candidates');
+ V2.pid=people[0].id;check(v2PlayerDetail().includes('data-initial-compare-toggle'),'detail comparison entry');
+ const before=JSON.stringify(db);for(const p of people.slice(0,3))v2ToggleInitialComparison(p.id);
+ const selected=v2InitialComparisonContext(),ids=selected.comparison.ids.slice();v2ToggleInitialComparison(people[3].id);
+ check(JSON.stringify(selected.comparison.ids)===JSON.stringify(ids)&&ids.length===3,'original max-three admission');
+ const model=initialComparisonModel(db,selected),html=v2InitialComparisonPanel(selected);
+ check(html.includes('data-initial-comparison')&&model.rows.every(r=>html.includes(v2Esc(r.name))),'actual shared model columns');
+ check(html.includes('서로 다른 역할')&&html.includes('표본 없음')&&html.includes('관찰 날짜'),'honest observation/source language');
+ check(JSON.stringify(db)===before,'comparison selection/render wrote world');
+ const privateCore=playerCoreMetrics;playerCoreMetrics=p=>{check(!people.includes(p),'consumer requested true candidate core');return privateCore(p)};
+ v2InitialComparisonPanel(selected);playerCoreMetrics=privateCore;
+ // Controlled public attribution rows exercise the new consumer, not generated player stats.
+ const hadHistory=Object.hasOwn(db,'metaHistory'),oldHistory=db.metaHistory,champ=Object.keys(db.patch.champions)[0],publicRow={date:db.worldDate,patch:db.patch.id,comp:'comparison-public',stage:'GROUP',sides:[{team:team.id,color:'BLUE',win:true,picks:[{player:people[0].id,role:people[0].role,champ}]}]};
+ db.metaHistory=[...(oldHistory||[]),publicRow,{...publicRow,date:'2099-01-01',patch:'future-patch-hidden',comp:'future-comp-hidden'}];
+ const sourceWorld=JSON.stringify(db),sourceHTML=v2InitialComparisonPanel(selected);
+ check(sourceHTML.includes(v2Esc(championLabel(db,champ)))&&sourceHTML.includes('comparison-public')&&!sourceHTML.includes('future-patch-hidden')&&!sourceHTML.includes('future-comp-hidden'),'source details and date-safe filter facets');
+ check(initialComparisonModel(db,selected).rows[0].sources.rows.length===1&&JSON.stringify(db)===sourceWorld,'source attribution and render pure');
+ selected.comparison.patch='absent';check(initialComparisonModel(db,selected).rows.every(r=>r.sources.rows.length===0),'same patch filter');selected.comparison.patch='ALL';if(hadHistory)db.metaHistory=oldHistory;else delete db.metaHistory;
+ selected.comparison.comp='missing';check(initialComparisonModel(db,selected).rows.every(r=>r.sources.rows.length===0),'same public source filter');selected.comparison.comp='ALL';
+ people[1].retired=true;const retired=JSON.stringify(db);check(v2InitialComparisonPanel(selected).includes('은퇴한 선수'),'departed candidate status');v2ToggleInitialComparison(people[1].id);check(!selected.comparison.ids.includes(people[1].id)&&JSON.stringify(db)===retired,'remove stale selection without world write');people[1].retired=false;
+ const manager=db.manager;db.manager={...manager};check(v2InitialComparisonContext().comparison.ids.length===0,'manager replacement invalidation');db.manager=manager;
+ v2ToggleInitialComparison(people[0].id);V2.target=setupTeamsForManager(db).find(t=>t.parent===team.id).id;check(v2InitialComparisonContext().comparison.ids.length===0,'target squad invalidation');V2.target=team.id;
+ v2ToggleInitialComparison(people[0].id);V2.db=unpackDB(packDB(db));check(v2InitialComparisonContext().comparison.ids.length===0,'save replacement invalidation');V2.db=db;
+ v2ToggleInitialComparison(people[0].id);const hadFired=Object.hasOwn(db.world,'fired'),oldFired=db.world.fired;db.world.fired=true;check(v2InitialComparisonContext()===null,'fired observer denied');if(hadFired)db.world.fired=oldFired;else delete db.world.fired;
+ db.world.phase='season';check(v2InitialComparisonContext()===null,'initial-only boundary');db.world.phase='initial_roster';
+ check(JSON.stringify(db)===before,'context changes altered canonical game');
+ return {sharedObservedModel:true,maxThree:true,selectionAndRenderPure:true,trueCoreInert:true,publicFilter:true,departedRemovable:true,managerTargetLoadFiredPhaseInert:true};
+})()`,{setupSources:[...sources,`const window={scrollY:0,scrollTo(){}};const document={querySelectorAll(){return []},getElementById(){return {textContent:'',focus(){}}}};function v2Icon(){return ''}function v2Render(){};function v2Save(){return true}`],timeout:60000});
+assert(result.sharedObservedModel&&result.selectionAndRenderPure);
+console.log('UI_V2_INITIAL_COMPARISON_ACCEPTANCE '+JSON.stringify(result));

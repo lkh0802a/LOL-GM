@@ -43,3 +43,5 @@ body{background:var(--bg);transition:background .15s,color .15s}svg.ico{width:20
 
 /* Keep wide competition tables inside their own mobile scroll region. */
 .competition-detail{min-width:0;overflow-wrap:anywhere}.competition-detail .table-scroll{max-width:100%}
+/* Keep the observed comparison table scrollable inside the mobile content grid. */
+.panel[data-initial-comparison]{min-width:0}
