@@ -15,12 +15,12 @@ function v2Candidates(){
   return {view:model.view,rows:model.rows.map(r=>r.p),total:model.total,pages:Math.max(1,model.pages),sortValues:new Map(model.rows.map(r=>[r.p.id,{key:filters.sort,value:r.value}]))};
  }
  const rows=Object.values(db.players).filter(p=>!p.retired&&(db.world.phase!=='initial_roster'||!p.team)&&(V2.role==='ALL'||p.role===V2.role)&&(!query||p.name.toLocaleLowerCase('ko').includes(query))&&(V2.tab!=='관심 선수'||targets[p.id]));
- rows.sort((a,b)=>a.name.localeCompare(b.name,'ko')||a.id.localeCompare(b.id));
+ if(V2.section==='market'&&V2.tab==='관심 선수'){const order=new Map(recruitmentBoard(view).map((e,i)=>[e.pid,i]));rows.sort((a,b)=>(order.get(a.id)??Infinity)-(order.get(b.id)??Infinity));}else rows.sort((a,b)=>a.name.localeCompare(b.name,'ko')||a.id.localeCompare(b.id));
  const pages=Math.max(1,Math.ceil(rows.length/V2_LIST_PAGE_SIZE));V2.page=Math.max(0,Math.min(V2.page,pages-1));return {view,rows:rows.slice(V2.page*V2_LIST_PAGE_SIZE,(V2.page+1)*V2_LIST_PAGE_SIZE),total:rows.length,pages};
 }
 function v2PlayerCard(p,view,sortValue=null){
- const watched=!!view.world.recruitment?.targets?.[p.id],range=scoutAbilityRange(view,p);
- return `<article class="player-list-row">${v2InitialSelectionCheckbox(p)}<button class="player-list-open" data-player="${v2Esc(p.id)}"><span class="player-avatar">${v2Esc(ROLE_KO[p.role])}</span><span class="grow"><strong>${v2Esc(p.name)}</strong><span class="player-meta">${p.age}세 · ${v2Esc(view.teams[p.team]?.name||'무소속')} · 기량 ${range.every(Number.isFinite)?range.join('–'):'정보 부족'}</span>${v2InitialSortSummary(p,view,sortValue)}</span><span aria-hidden="true">›</span></button><button class="icon-button favorite ${watched?'on':''}" data-watch="${v2Esc(p.id)}" aria-pressed="${watched}" aria-label="${v2Esc(p.name)} 관심 ${watched?'해제':'등록'}">${v2Icon('star')}</button></article>`;
+ const entry=view.world.recruitment?.targets?.[p.id],watched=!!entry,range=scoutAbilityRange(view,p);
+ return `<article class="player-list-row">${v2InitialSelectionCheckbox(p)}<button class="player-list-open" data-player="${v2Esc(p.id)}"><span class="player-avatar">${v2Esc(ROLE_KO[p.role])}</span><span class="grow"><strong>${v2Esc(p.name)}</strong><span class="player-meta">${p.age}세 · ${v2Esc(view.teams[p.team]?.name||'무소속')} · 기량 ${range.every(Number.isFinite)?range.join('–'):'정보 부족'}</span>${watched?`<span class="player-meta">관심 ${v2Esc(entry.priority)}순위</span>`:''}${v2InitialSortSummary(p,view,sortValue)}</span><span aria-hidden="true">›</span></button><button class="icon-button favorite ${watched?'on':''}" data-watch="${v2Esc(p.id)}" aria-pressed="${watched}" aria-label="${v2Esc(p.name)} 관심 ${watched?'해제':'등록'}">${v2Icon('star')}</button></article>`;
 }
 function v2Market(){
  const db=V2.db,t=v2Target();if(!t)return '<section class="panel empty">관리 구단이 없습니다.</section>';
