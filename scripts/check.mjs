@@ -107,6 +107,7 @@ const maintainabilityBudgets = {
   'match-core-input.js': 5000,
   'initial-offer-impact.js': 6000,
   'initial-comparison-model.js': 7000,
+  'shortlist-comparison-model.js': 4000,
   'app.js': 22000,
   'ui-startup.js': 7000,
   'ui-startup-storage.js': 5500,

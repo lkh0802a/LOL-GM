@@ -114,6 +114,7 @@ export const ENGINE_MODULES = [
   'career.js',
   'initial-offer-impact.js',
   'initial-comparison-model.js',
+  'shortlist-comparison-model.js',
   'negotiation-final.js',
 ];
 
