@@ -13,6 +13,7 @@ const result=await runEngineFixture(String.raw`(()=>{
  const before=JSON.stringify(db);for(const p of people.slice(0,3))v2ToggleInitialComparison(p.id);
  const c=v2CandidateComparisonContext();check(c.kind==='shortlist','ordinary model kind');v2ToggleInitialComparison(people[3].id);check(c.comparison.ids.length===3,'max3');
  const html=v2InitialComparisonPanel(c),model=shortlistComparisonModel({read:scoutingReadView(db)},c.comparison);
+ check(html.includes(v2Esc(other.name)),'current club from existing comparison model');
  check(model.rows.length===3&&html.includes('관심 후보 비교')&&html.includes('표본 필터와 별개')&&!html.includes('요구 연봉 추정'),'shared observed model and no invented price');
  check(model.rows.every(r=>html.includes(v2Esc(r.name)))&&JSON.stringify(db)===before,'render/selection pure');
  const core=playerCoreMetrics;playerCoreMetrics=p=>{check(!people.includes(p),'true foreign core');return core(p)};v2InitialComparisonPanel(c);playerCoreMetrics=core;
