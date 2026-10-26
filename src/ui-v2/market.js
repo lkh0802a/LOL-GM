@@ -6,17 +6,21 @@ function v2OrganizationContext(){
 }
 function v2ChooseSquad(id){
  const error=v2ManualError();if(error)return v2Tell(error);if(V2.db.world.phase!=='initial_roster'||!setupTeamsForManager(V2.db).some(t=>t.id===id))return v2Tell('현재 구성할 수 있는 선수단이 아닙니다');
- v2CaptureDrafts();V2.target=id;V2.review=null;V2.managementReview=null;V2.pid=null;V2.page=0;V2.returnScroll=0;v2Save();v2Tell('구성할 선수단 · '+v2Target().name);v2Render();
+ v2CaptureDrafts();if(v2Target()?.id!==id)V2.initialQuery=null;V2.target=id;V2.review=null;V2.managementReview=null;V2.pid=null;V2.page=0;V2.returnScroll=0;v2Save();v2Tell('구성할 선수단 · '+v2Target().name);v2Render();
 }
 function v2Candidates(){
  const db=V2.db,t=v2Target(),view=v2ReadView(),query=V2.q.trim().toLocaleLowerCase('ko'),targets=db.world?.recruitment?.targets||{};
+ if(db.world.phase==='initial_roster'&&V2.section==='market'){
+  const filters=v2InitialQueryState(),model=initialCandidatePage(db,{...filters,q:V2.q,role:V2.role,page:V2.page},t,{pageSize:V2_LIST_PAGE_SIZE,interestsOnly:V2.tab==='관심 선수'});V2.page=model.page;
+  return {view:model.view,rows:model.rows.map(r=>r.p),total:model.total,pages:Math.max(1,model.pages),sortValues:new Map(model.rows.map(r=>[r.p.id,{key:filters.sort,value:r.value}]))};
+ }
  const rows=Object.values(db.players).filter(p=>!p.retired&&(db.world.phase!=='initial_roster'||!p.team)&&(V2.role==='ALL'||p.role===V2.role)&&(!query||p.name.toLocaleLowerCase('ko').includes(query))&&(V2.tab!=='관심 선수'||targets[p.id]));
  rows.sort((a,b)=>a.name.localeCompare(b.name,'ko')||a.id.localeCompare(b.id));
  const pages=Math.max(1,Math.ceil(rows.length/V2_LIST_PAGE_SIZE));V2.page=Math.max(0,Math.min(V2.page,pages-1));return {view,rows:rows.slice(V2.page*V2_LIST_PAGE_SIZE,(V2.page+1)*V2_LIST_PAGE_SIZE),total:rows.length,pages};
 }
-function v2PlayerCard(p,view){
+function v2PlayerCard(p,view,sortValue=null){
  const watched=!!view.world.recruitment?.targets?.[p.id],range=scoutAbilityRange(view,p);
- return `<article class="player-list-row"><button class="player-list-open" data-player="${v2Esc(p.id)}"><span class="player-avatar">${v2Esc(ROLE_KO[p.role])}</span><span class="grow"><strong>${v2Esc(p.name)}</strong><span class="player-meta">${p.age}세 · ${v2Esc(view.teams[p.team]?.name||'무소속')} · 기량 ${range.every(Number.isFinite)?range.join('–'):'정보 부족'}</span></span><span aria-hidden="true">›</span></button><button class="icon-button favorite ${watched?'on':''}" data-watch="${v2Esc(p.id)}" aria-pressed="${watched}" aria-label="${v2Esc(p.name)} 관심 ${watched?'해제':'등록'}">${v2Icon('star')}</button></article>`;
+ return `<article class="player-list-row"><button class="player-list-open" data-player="${v2Esc(p.id)}"><span class="player-avatar">${v2Esc(ROLE_KO[p.role])}</span><span class="grow"><strong>${v2Esc(p.name)}</strong><span class="player-meta">${p.age}세 · ${v2Esc(view.teams[p.team]?.name||'무소속')} · 기량 ${range.every(Number.isFinite)?range.join('–'):'정보 부족'}</span>${v2InitialSortSummary(p,view,sortValue)}</span><span aria-hidden="true">›</span></button><button class="icon-button favorite ${watched?'on':''}" data-watch="${v2Esc(p.id)}" aria-pressed="${watched}" aria-label="${v2Esc(p.name)} 관심 ${watched?'해제':'등록'}">${v2Icon('star')}</button></article>`;
 }
 function v2Market(){
  const db=V2.db,t=v2Target();if(!t)return '<section class="panel empty">관리 구단이 없습니다.</section>';
@@ -27,7 +31,7 @@ function v2Market(){
  if(V2.tab==='진행 중인 협상')return v2NegotiationList();
  if(V2.tab==='시장 현황')return `<section class="panel"><div class="panel-heading"><strong>${db.world.phase==='initial_roster'?'첫 시즌 선수단 구성':'선수 영입·계약'}</strong></div><p class="section-lead">선수를 직접 검토하고 조건을 제안하세요. 조건 합의 뒤에도 최종 계약은 감독이 직접 확정합니다.</p><div class="statline"><span>현재 선수단</span><strong>${t.roster.length}명</strong></div><div class="statline"><span>연간 연봉 예산</span><strong>${v2Money(v2DisplaySalaryBudget(db,t))}</strong></div><div class="statline"><span>현재 연봉 합계 · 연간</span><strong>${v2Money(payroll(db,t))}</strong></div><div class="tag-flex"><button class="btn btn-primary" data-tab="선수 검색">선수 찾아보기</button><button class="btn btn-outline" data-tab="진행 중인 협상">협상 확인</button></div></section>`;
  const m=v2Candidates();
- return comparisonBar+`<section class="stack"><div class="search-wrap"><span class="search-icon">${v2Icon('search')}</span><input class="input" id="player-search" type="search" autocomplete="off" placeholder="선수 이름·닉네임 검색" aria-label="선수 검색" value="${v2Esc(V2.q)}"></div><div class="filter-row" aria-label="포지션 선택">${['ALL',...ROLES].map(r=>`<button class="chip ${V2.role===r?'selected':''}" aria-pressed="${V2.role===r}" data-role="${r}">${r==='ALL'?'전체':ROLE_KO[r]}</button>`).join('')}</div><div class="between small subtle"><span role="status">${m.total}명 · ${V2.page+1}/${m.pages}페이지</span></div>${m.rows.map(p=>v2PlayerCard(p,m.view)).join('')||'<div class="panel empty">조건에 맞는 선수가 없습니다.</div>'}<div class="between"><button class="btn btn-outline" data-page="-1"${!V2.page?' disabled':''}>이전</button><button class="btn btn-outline" data-page="1"${V2.page+1>=m.pages?' disabled':''}>다음</button></div></section>`;
+ return comparisonBar+`<section class="stack" data-candidate-list><div class="search-wrap"><span class="search-icon">${v2Icon('search')}</span><input class="input" id="player-search" type="search" autocomplete="off" placeholder="선수 이름·닉네임 검색" aria-label="선수 검색" value="${v2Esc(V2.q)}"></div><div class="filter-row" aria-label="포지션 선택">${['ALL',...ROLES].map(r=>`<button class="chip ${V2.role===r?'selected':''}" aria-pressed="${V2.role===r}" data-role="${r}">${r==='ALL'?'전체':ROLE_KO[r]}</button>`).join('')}</div>${v2InitialQueryControls()}<div class="between small subtle"><span role="status">${m.total}명 · ${V2.page+1}/${m.pages}페이지</span></div>${m.rows.map(p=>v2PlayerCard(p,m.view,m.sortValues?.get(p.id))).join('')||'<div class="panel empty">조건에 맞는 선수가 없습니다.</div>'}<div class="between"><button class="btn btn-outline" data-page="-1"${!V2.page?' disabled':''}>이전</button><button class="btn btn-outline" data-page="1"${V2.page+1>=m.pages?' disabled':''}>다음</button></div></section>`;
 }
 function v2PlayerDetail(){
  const db=V2.db,p=db.players[V2.pid],t=v2Target();if(!p||p.retired)return '<section class="panel empty">현재 선수 정보를 확인할 수 없습니다.</section>';
@@ -36,7 +40,7 @@ function v2PlayerDetail(){
 }
 function v2RecruitAction(action){if(v2Team()?.parent)return v2Tell('산하 선수단의 영입 계약은 모구단이 담당합니다');return v2Mutate(action);}
 function v2BindMarket(){
- v2BindInitialComparison();
+ v2BindInitialComparison();v2BindInitialQuery();
  const current=v2Guard(),search=document.getElementById('player-search');
  document.querySelectorAll('[data-player-observation]').forEach(el=>el.ontoggle=()=>{if(!current()||!el.isConnected)return;V2.playerReport={db:V2.db,manager:V2.db.manager,owner:managedTeamId(V2.db),target:v2Target()?.id,pid:V2.pid,open:el.open};});
  if(search)search.oninput=()=>{if(!current())return;V2.q=search.value;V2.page=0;const start=search.selectionStart;v2Render();const next=document.getElementById('player-search');next?.focus({preventScroll:true});if(start!==null)next?.setSelectionRange(start,start)};
@@ -137,4 +141,33 @@ function v2PlayerObservationReport(view,p,target){
  const remembered=V2.playerReport,opened=remembered?.db===V2.db&&remembered.manager===view.manager&&remembered.owner===managedTeamId(view)&&remembered.target===target.id&&remembered.pid===p.id&&remembered.open;
  const num=x=>Number.isFinite(x)?v2Esc(x):'정보 부족',range=x=>Array.isArray(x)&&x.length===2&&x.every(Number.isFinite)?x.join('–'):'범위 근거 없음',evaluation=e?.teamId===target.id?e:null;
  return `<details class="player-observation-report" data-player-observation${opened?' open':''}><summary>관측 보고서 · 공식 출전 근거</summary><div class="detail-grid"><div class="stat"><span class="label">관찰 횟수</span><strong data-observation-field="observations">${num(r.observations)}회</strong></div><div class="stat"><span class="label">최근 관찰 날짜</span><strong data-observation-field="last-date">${v2Esc(r.lastSeenDate||'관찰 날짜 없음')}</strong></div><div class="stat"><span class="label">관찰한 경기</span><strong data-observation-field="games-seen">${num(r.gamesSeen)}경기</strong></div><div class="stat"><span class="label">공식 집계 표본</span><strong data-observation-field="official-games">${num(sample.g)}경기</strong></div></div><p class="hint">${r.lastSeenDate?num(r.staleYears)+'시즌 경과한 관측입니다.':'관찰 날짜가 없어 최신성을 판단할 수 없습니다.'} 정보량은 정확도 보장이 아닙니다. 수동 관찰 횟수와 공식 경기 수는 별개이며, 관찰 요청으로 공식 경기 수를 추가하지 않습니다.</p><h3>현재 관측 지표</h3><div class="table-scroll" tabindex="0" role="region" aria-label="현재 관측 능력 추정치"><table><thead><tr><th scope="col">지표</th><th scope="col">추정값 (1–99)</th></tr></thead><tbody>${Object.entries(INITIAL_COMPARE_METRICS).map(([key,label])=>`<tr><th scope="row">${v2Esc(label)}</th><td data-observation-metric="${key}">${num(metrics[key])}</td></tr>`).join('')}</tbody></table></div><p class="hint">현재 관측 추정은 과거 경기 당시 능력이 아닙니다. 누락된 정보는 낮은 실력이나 0점으로 해석하지 않습니다.</p><h3>공식 집계</h3>${sample.g>0?`<p>평점 ${Number.isFinite(sample.rating)?sample.rating.toFixed(2):'정보 없음'} · 출전 시간 ${Number.isFinite(sample.min)?sample.min.toFixed(1)+'분':'정보 없음'} · ${sample.min>0&&Number.isFinite(sample.dpm)?'분당 피해 '+Math.round(sample.dpm):'분당 피해 정보 없음'}</p>`:'<p>공식 경기 기록 없음 · 관찰 횟수로 경기 통계를 만들지 않습니다.</p>'}<p class="hint">집계 대회: ${(sample.competitions||[]).map(id=>v2Esc(view.competitions[id]?.name||id)).join(' / ')||'대회 식별 기록 없음'}</p><h3>공개 출전 챔피언</h3><p class="hint">공식 집계와 공개 챔피언 원자료의 표본은 다를 수 있습니다. 비공개 숙련도는 표시하지 않습니다. 공개 근거 미확인 ${num(pool.unknown)}건.</p>${pool.champions.length?`<ul>${pool.champions.slice(0,5).map(c=>`<li data-observed-champion="${v2Esc(c.id)}">${v2Esc(championLabel(view,c.id))} · ${num(c.g)}경기 · ${v2Esc(c.from)}–${v2Esc(c.to)}</li>`).join('')}</ul>`:'<p>공개 출전 근거 없음 · 낮은 숙련도를 뜻하지 않습니다.</p>'}${evaluation?`<section data-observation-evaluation><h3>저장된 내부 평가</h3><p>${v2Esc(evaluation.date||'평가 날짜 미상')} · ${v2Esc(view.teams[target.id]?.name||target.id)} · 당시 정보 ${num(evaluation.knowledge)}% · 당시 기량 ${range(evaluation.ability)} · 잠재 ${range(evaluation.potential)} · 적합도 ${num(evaluation.fit)}/100</p><p class="hint">평가 당시 기록입니다. 현재 보고서·예산·등록 가능성이나 영입 성공을 보장하지 않습니다.</p></section>`:'<p class="hint">현재 선수단의 저장된 내부 평가가 없습니다.</p>'}</details>`;
+}
+
+function v2InitialQueryDefaults(){return {scope:'all',minimum:0,sort:'name',direction:'asc',open:false};}
+function v2InitialQueryState(){return V2.initialQuery||(V2.initialQuery=v2InitialQueryDefaults());}
+function v2InitialQueryAllowed(){return V2.section==='market'&&V2.db?.world?.phase==='initial_roster'&&initialCandidateAllowed(V2.db,v2Target());}
+function v2SetInitialQuery(key,value){
+ if(!v2InitialQueryAllowed())return false;
+ if(key==='minimum'){value=Number(value);if(!Number.isInteger(value)||value<0||value>99)return false;}
+ else if(key==='scope'){if(!['all','region','overseas'].includes(value))return false;}
+ else if(key==='sort'){if(!Object.hasOwn(INITIAL_CANDIDATE_SORTS,value))return false;}
+ else if(key==='direction'){if(!['asc','desc'].includes(value))return false;}else return false;
+ V2.initialQuery={...v2InitialQueryState(),[key]:value,open:true};V2.page=0;v2Render();document.getElementById('initial-query-'+key)?.focus({preventScroll:true});return true;
+}
+function v2InitialSortSummary(p,view,entry){
+ if(!entry||['name','role','age','ability'].includes(entry.key))return '';
+ let value=Number.isFinite(entry.value)||typeof entry.value==='string'?v2Esc(entry.value):'정보 부족',label=INITIAL_CANDIDATE_SORTS[entry.key];
+ if(entry.key==='salary'){label='요구 연봉 추정';value=v2Money(entry.value);}
+ if(entry.key==='potential'){const range=scoutPotentialRange(view,p);value=range.length===2&&range.every(Number.isFinite)?range.join('–'):'정보 부족';}
+ return `<span class="player-meta">${v2Esc(label)} · ${value}</span>`;
+}
+function v2InitialQueryControls(){
+ if(!v2InitialQueryAllowed())return '';const s=v2InitialQueryState(),count=Number(s.scope!=='all')+Number(s.minimum>0)+Number(s.sort!=='name'||s.direction!=='asc');
+ return `<details class="panel" id="initial-query-options" data-initial-query${s.open?' open':''}><summary>창단 후보 조회 조건${count?' · '+count+'개 적용':''}</summary><p class="hint">출신 지역은 국적·로컬 자격·언어 숙련과 별개입니다. 기량·잠재력·능력 지표는 기존 관측 추정치이며 확정 실력이 아닙니다. 정보가 없는 값은 정렬의 마지막에 표시합니다.</p><div class="stack"><label class="field">출신 지역 범위<select class="input" id="initial-query-scope" data-initial-query-field="scope">${[['all','전체 출신 지역'],['region','대상 구단과 같은 출신 지역'],['overseas','다른 출신 지역']].map(([key,label])=>`<option value="${key}"${s.scope===key?' selected':''}>${label}</option>`).join('')}</select></label><label class="field">관측 종합 기량 추정 최소값<input class="input" type="number" inputmode="numeric" min="0" max="99" step="1" id="initial-query-minimum" data-initial-query-field="minimum" value="${v2Esc(s.minimum)}"><span class="hint">0–99 정수만 적용합니다. 범위를 벗어난 값은 적용되지 않습니다. 0 또는 빈칸은 제한 없음이며, 최소값이 있으면 해당 관측 정보가 없는 후보는 제외합니다.</span></label><label class="field">정렬 기준<select class="input" id="initial-query-sort" data-initial-query-field="sort">${Object.entries(INITIAL_CANDIDATE_SORTS).map(([key,label])=>`<option value="${key}"${s.sort===key?' selected':''}>${v2Esc(key==='salary'?'요구 연봉 추정':label)}</option>`).join('')}</select></label><label class="field">정렬 방향<select class="input" id="initial-query-direction" data-initial-query-field="direction"><option value="asc"${s.direction==='asc'?' selected':''}>오름차순</option><option value="desc"${s.direction==='desc'?' selected':''}>내림차순</option></select></label></div><p class="hint">${v2Esc(initialCandidateDirection(s.sort,s.direction))}. 요구 연봉 추정은 협상 조건·예산·등록 가능성이나 영입 성공을 보장하지 않습니다.</p><button class="btn btn-outline" id="initial-query-reset">지역·기량·정렬 초기화</button></details>`;
+}
+function v2BindInitialQuery(){
+ if(!v2InitialQueryAllowed())return;const current=v2Guard(),panel=document.getElementById('initial-query-options');if(!panel)return;
+ panel.ontoggle=()=>{if(current()&&panel.isConnected)v2InitialQueryState().open=panel.open;};
+ document.querySelectorAll('[data-initial-query-field]').forEach(el=>el.onchange=()=>{if(!current()||!el.isConnected||el.checkValidity&&!el.checkValidity())return;v2SetInitialQuery(el.dataset.initialQueryField,el.value);});
+ v2Bind('#initial-query-reset',()=>{V2.initialQuery={...v2InitialQueryDefaults(),open:true};V2.page=0;v2Render();document.getElementById('initial-query-scope')?.focus({preventScroll:true});});
 }

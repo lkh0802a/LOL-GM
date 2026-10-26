@@ -1,7 +1,5 @@
 // Initial recruitment presentation: observed filtering, paging and source detail.
 // No recruitment, contracts or scouting mutation is owned here.
-const INITIAL_CANDIDATE_PAGE_SIZE=25;
-const INITIAL_CANDIDATE_SORTS={ability:'종합 기량 추정',name:'선수 이름',role:'포지션',region:'출신 지역',age:'나이',potential:'잠재력 추정',reputation:'명성',salary:'요구 연봉',...Object.fromEntries(Object.entries(INITIAL_COMPARE_METRICS).map(([k,v])=>[k,v+' 추정']))};
 function initialCandidateUiState(){return {impact:null,comparison:initialComparisonState(),role:'ALL',roles:[],metricFilters:{},metricDraft:{},multiSort:false,scope:'region',target:null,q:'',minimum:0,sort:'ability',direction:'desc',page:0,selected:[],columns:['age','ability','potential','salary'],secondary:[],detail:null,returnY:0}}
 let INITIAL_CANDIDATE_CONTEXT=null;
 function initialCandidateContext(db){
@@ -9,18 +7,6 @@ function initialCandidateContext(db){
   if(!INITIAL_CANDIDATE_CONTEXT||INITIAL_CANDIDATE_CONTEXT.db!==db||INITIAL_CANDIDATE_CONTEXT.slot!==slot||INITIAL_CANDIDATE_CONTEXT.world!==db.world||INITIAL_CANDIDATE_CONTEXT.owner!==managedTeamId(db)){
     INITMK=initialCandidateUiState();INITIAL_CANDIDATE_CONTEXT={db,slot,world:db.world,owner:managedTeamId(db)};
   }
-}
-function initialCandidatePage(db,state,target){
-  const allowed=initialCandidateAllowed(db,target);
-  if(!allowed)return {allowed:false,rows:[],total:0,pages:0,page:0,view:null};
-  const view=initialCandidateView(db),query=String(state.q||'').trim().toLocaleLowerCase('ko'),minimum=clamp(Number(state.minimum)||0,0,99),key=INITIAL_CANDIDATE_SORTS[state.sort]?state.sort:'ability',direction=state.direction==='asc'?1:-1;
-  const roles=initialCandidateRoles(state),conditions=initialMetricConditions(state);
-  const rows=Object.values(db.players).filter(p=>!p.retired&&!p.team&&(!roles.length||roles.includes(p.role))&&(state.scope==='all'||(state.scope==='overseas'?p.region!==target.region:p.region===target.region))&&(!query||p.name.toLocaleLowerCase('ko').includes(query))).map(p=>({p,ability:obsOvr(view,p)})).filter(x=>(minimum===0||Number.isFinite(x.ability)&&x.ability>=minimum)&&initialCandidateMetricMatch(view,x,conditions));
-  const orders=initialCandidateOrders(state),valued=rows.map(x=>({...x,value:initialCandidateSortValue(view,x,key,target)}));
-  const values=new WeakMap(valued.map(x=>[x,new Map([[key,x.value]])])),sortValue=(x,k)=>{const cache=values.get(x);if(!cache.has(k))cache.set(k,initialCandidateSortValue(view,x,k,target));return cache.get(k)};
-  valued.sort((a,b)=>{for(const order of orders){const av=sortValue(a,order.key),bv=sortValue(b,order.key),missing=x=>typeof x!=='string'&&!Number.isFinite(x);if(missing(av)||missing(bv)){const cmp=Number(missing(av))-Number(missing(bv));if(cmp)return cmp;continue}const cmp=typeof av==='string'?av.localeCompare(bv,'ko'):av-bv;if(cmp)return (order.direction==='asc'?1:-1)*cmp}return a.p.id.localeCompare(b.p.id)});
-  const pages=Math.ceil(valued.length/INITIAL_CANDIDATE_PAGE_SIZE),page=Math.max(0,Math.min(Math.floor(Number(state.page)||0),Math.max(0,pages-1)));
-  return {allowed:true,rows:valued.slice(page*INITIAL_CANDIDATE_PAGE_SIZE,(page+1)*INITIAL_CANDIDATE_PAGE_SIZE),total:valued.length,pages,page,view};
 }
 function initialObservedRange(range){return range.every(Number.isFinite)?range.join('–'):'정보 부족'}
 function initialCandidateControls(page){return initialCandidateTableControls(page)}
