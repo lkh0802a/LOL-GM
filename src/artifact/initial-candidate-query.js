@@ -1,6 +1,7 @@
 // Shared observed-only initial FA query; original callers retain page25.
 const INITIAL_CANDIDATE_PAGE_SIZE=25;
 const INITIAL_CANDIDATE_SORTS={ability:'종합 기량 추정',name:'선수 이름',role:'포지션',region:'출신 지역',age:'나이',potential:'잠재력 추정',reputation:'명성',salary:'요구 연봉',...Object.fromEntries(Object.entries(INITIAL_COMPARE_METRICS).map(([k,v])=>[k,v+' 추정']))};
+const INITIAL_CANDIDATE_COLUMNS={age:'나이',ability:'종합 기량 추정',potential:'잠재력 추정',salary:'요구 연봉',region:'출신 지역',reputation:'명성',value:'시장가치 추정',...Object.fromEntries(Object.entries(INITIAL_COMPARE_METRICS).map(([k,v])=>[k,v+' 추정']))};
 function initialCandidateRoles(s){return (s.roles?.length?s.roles:s.role&&s.role!=='ALL'?[s.role]:[]).filter(r=>ROLES.includes(r))}
 function initialMetricConditions(s){
  const rows=[];let valid=true;

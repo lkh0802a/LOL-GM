@@ -55,3 +55,12 @@ body{background:var(--bg);transition:background .15s,color .15s}svg.ico{width:20
 [data-initial-metrics]{min-width:0}
 [data-initial-metrics]>summary{min-height:44px;padding:12px 0;cursor:pointer}
 .initial-metric-row{min-width:0;margin:0;padding:12px;border:1px solid var(--line);border-radius:8px}
+.initial-column-options{display:flex;flex-wrap:wrap;gap:8px 16px}
+.initial-column-options label,.initial-table-toggle{display:flex;align-items:center;gap:8px;min-height:44px}
+[data-initial-columns]>summary{min-height:44px;padding:12px 0;cursor:pointer}
+.v2-initial-table{min-width:0;max-width:100%;overflow:auto}
+.v2-initial-table table{width:max-content;min-width:100%}
+.v2-initial-table .initial-candidate-name{position:sticky;left:0;z-index:1;min-width:115px;max-width:160px;background:var(--panel)}
+.v2-initial-table thead .initial-candidate-name{z-index:2}
+.initial-column-sort,.initial-player-name{border:0;background:transparent;color:var(--fg);text-align:left;min-height:44px;padding:8px 2px}
+.initial-player-name{overflow-wrap:anywhere;white-space:normal}
