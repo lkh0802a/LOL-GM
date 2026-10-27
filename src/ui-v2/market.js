@@ -14,13 +14,13 @@ function v2Candidates(){
   const filters=v2InitialQueryState(),model=initialCandidatePage(db,{...filters,q:V2.q,role:V2.role,page:V2.page},t,{pageSize:V2_LIST_PAGE_SIZE,interestsOnly:V2.tab==='관심 선수'});V2.page=model.page;
   return {view:model.view,rows:model.rows.map(r=>r.p),total:model.total,pages:Math.max(1,model.pages),sortValues:new Map(model.rows.map(r=>[r.p.id,{key:filters.sort,value:r.value}]))};
  }
- const scoutQuery=v2ScoutQueryAllowed()?v2ScoutQueryState():null,rows=Object.values(db.players).filter(p=>!p.retired&&(db.world.phase!=='initial_roster'||!p.team)&&(V2.role==='ALL'||p.role===V2.role)&&(!query||p.name.toLocaleLowerCase('ko').includes(query))&&(V2.tab!=='관심 선수'||targets[p.id])&&v2ScoutCandidateMatches(p,scoutQuery));
+ const scoutQuery=v2ScoutQueryAllowed()?v2ScoutQueryState():null,marketQuery=v2MarketQueryAllowed()?v2MarketQueryState():null,rows=Object.values(db.players).filter(p=>!p.retired&&(db.world.phase!=='initial_roster'||!p.team)&&(V2.role==='ALL'||p.role===V2.role)&&(!query||p.name.toLocaleLowerCase('ko').includes(query))&&(V2.tab!=='관심 선수'||targets[p.id])&&v2ScoutCandidateMatches(p,scoutQuery)&&v2MarketCandidateMatches(db,p,marketQuery,t));
  if(V2.section==='market'&&V2.tab==='관심 선수'){const order=new Map(recruitmentBoard(view).map((e,i)=>[e.pid,i]));rows.sort((a,b)=>(order.get(a.id)??Infinity)-(order.get(b.id)??Infinity));}else rows.sort((a,b)=>a.name.localeCompare(b.name,'ko')||a.id.localeCompare(b.id));
  const pages=Math.max(1,Math.ceil(rows.length/V2_LIST_PAGE_SIZE));V2.page=Math.max(0,Math.min(V2.page,pages-1));return {view,rows:rows.slice(V2.page*V2_LIST_PAGE_SIZE,(V2.page+1)*V2_LIST_PAGE_SIZE),total:rows.length,pages};
 }
 function v2PlayerCard(p,view,sortValue=null){
  const entry=view.world.recruitment?.targets?.[p.id],watched=!!entry,range=scoutAbilityRange(view,p);
- return `<article class="player-list-row">${v2InitialSelectionCheckbox(p)}<button class="player-list-open" data-player="${v2Esc(p.id)}"><span class="player-avatar">${v2Esc(ROLE_KO[p.role])}</span><span class="grow"><strong>${v2Esc(p.name)}</strong><span class="player-meta">${p.age}세 · ${v2Esc(view.teams[p.team]?.name||'무소속')} · 기량 ${range.every(Number.isFinite)?range.join('–'):'정보 부족'}</span>${watched?`<span class="player-meta">관심 ${v2Esc(entry.priority)}순위</span>`:''}${v2InitialSortSummary(p,view,sortValue)}${v2CandidateNegotiationSummary(p)}</span><span aria-hidden="true">›</span></button><button class="icon-button favorite ${watched?'on':''}" data-watch="${v2Esc(p.id)}" aria-pressed="${watched}" aria-label="${v2Esc(p.name)} 관심 ${watched?'해제':'등록'}">${v2Icon('star')}</button></article>`;
+ return `<article class="player-list-row">${v2InitialSelectionCheckbox(p)}<button class="player-list-open" data-player="${v2Esc(p.id)}"><span class="player-avatar">${v2Esc(ROLE_KO[p.role])}</span><span class="grow"><strong>${v2Esc(p.name)}</strong><span class="player-meta">${p.age}세 · ${v2Esc(view.teams[p.team]?.name||'무소속')} · 기량 ${range.every(Number.isFinite)?range.join('–'):'정보 부족'}</span>${watched?`<span class="player-meta">관심 ${v2Esc(entry.priority)}순위</span>`:''}${v2InitialSortSummary(p,view,sortValue)}${v2MarketValueSummary(view,p)}${v2CandidateNegotiationSummary(p)}</span><span aria-hidden="true">›</span></button><button class="icon-button favorite ${watched?'on':''}" data-watch="${v2Esc(p.id)}" aria-pressed="${watched}" aria-label="${v2Esc(p.name)} 관심 ${watched?'해제':'등록'}">${v2Icon('star')}</button></article>`;
 }
 function v2Market(){
  const db=V2.db,t=v2Target();if(!t)return '<section class="panel empty">관리 구단이 없습니다.</section>';
@@ -31,7 +31,7 @@ function v2Market(){
  if(V2.tab==='진행 중인 협상')return v2NegotiationList();
  if(V2.tab==='시장 현황')return `<section class="panel"><div class="panel-heading"><strong>${db.world.phase==='initial_roster'?'첫 시즌 선수단 구성':'선수 영입·계약'}</strong></div><p class="section-lead">선수를 직접 검토하고 조건을 제안하세요. 조건 합의 뒤에도 최종 계약은 감독이 직접 확정합니다.</p><div class="statline"><span>현재 선수단</span><strong>${t.roster.length}명</strong></div><div class="statline"><span>연간 연봉 예산</span><strong>${v2Money(v2DisplaySalaryBudget(db,t))}</strong></div><div class="statline"><span>현재 연봉 합계 · 연간</span><strong>${v2Money(payroll(db,t))}</strong></div><div class="tag-flex"><button class="btn btn-primary" data-tab="선수 검색">선수 찾아보기</button><button class="btn btn-outline" data-tab="진행 중인 협상">협상 확인</button></div></section>`;
  const m=v2Candidates();
- return comparisonBar+`<section class="stack" data-candidate-list><div class="search-wrap"><span class="search-icon">${v2Icon('search')}</span><input class="input" id="player-search" type="search" autocomplete="off" placeholder="선수 이름·닉네임 검색" aria-label="선수 검색" value="${v2Esc(V2.q)}"></div>${v2CandidateRoleControls()}${v2ScoutQueryControls()}${v2InitialListControls()}${v2InitialSelectionControls(m)}${v2InitialQueryControls()}<div class="between small subtle"><span role="status">${m.total}명 · ${V2.page+1}/${m.pages}페이지</span></div>${v2InitialQueryAllowed()&&v2InitialQueryState().table?v2InitialCandidateTable(m):m.rows.map(p=>v2PlayerCard(p,m.view,m.sortValues?.get(p.id))).join('')||'<div class="panel empty">조건에 맞는 선수가 없습니다.</div>'}<div class="between"><button class="btn btn-outline" data-page="-1"${!V2.page?' disabled':''}>이전</button><button class="btn btn-outline" data-page="1"${V2.page+1>=m.pages?' disabled':''}>다음</button></div></section>`;
+ return comparisonBar+`<section class="stack" data-candidate-list><div class="search-wrap"><span class="search-icon">${v2Icon('search')}</span><input class="input" id="player-search" type="search" autocomplete="off" placeholder="선수 이름·닉네임 검색" aria-label="선수 검색" value="${v2Esc(V2.q)}"></div>${v2CandidateRoleControls()}${v2ScoutQueryControls()}${v2MarketQueryControls()}${v2InitialListControls()}${v2InitialSelectionControls(m)}${v2InitialQueryControls()}<div class="between small subtle"><span role="status">${m.total}명 · ${V2.page+1}/${m.pages}페이지</span></div>${v2InitialQueryAllowed()&&v2InitialQueryState().table?v2InitialCandidateTable(m):m.rows.map(p=>v2PlayerCard(p,m.view,m.sortValues?.get(p.id))).join('')||'<div class="panel empty">조건에 맞는 선수가 없습니다.</div>'}<div class="between"><button class="btn btn-outline" data-page="-1"${!V2.page?' disabled':''}>이전</button><button class="btn btn-outline" data-page="1"${V2.page+1>=m.pages?' disabled':''}>다음</button></div></section>`;
 }
 function v2PlayerDetail(){
  const db=V2.db,p=db.players[V2.pid],t=v2Target();if(!p||p.retired)return '<section class="panel empty">현재 선수 정보를 확인할 수 없습니다.</section>';
@@ -40,7 +40,7 @@ function v2PlayerDetail(){
 }
 function v2RecruitAction(action){if(v2Team()?.parent)return v2Tell('산하 선수단의 영입 계약은 모구단이 담당합니다');return v2Mutate(action);}
 function v2BindMarket(){
- v2BindInitialComparison();v2BindInitialQuery();v2BindInitialSelection();v2BindRecruitmentPriority();v2BindInitialCandidateImpact();v2BindScoutQuery();
+ v2BindInitialComparison();v2BindInitialQuery();v2BindInitialSelection();v2BindRecruitmentPriority();v2BindInitialCandidateImpact();v2BindScoutQuery();v2BindMarketQuery();
  const current=v2Guard(),search=document.getElementById('player-search');
  document.querySelectorAll('[data-player-observation]').forEach(el=>el.ontoggle=()=>{if(!current()||!el.isConnected)return;V2.playerReport={db:V2.db,manager:V2.db.manager,owner:managedTeamId(V2.db),target:v2Target()?.id,pid:V2.pid,open:el.open};});
  if(search)search.oninput=()=>{if(!current())return;V2.q=search.value;V2.page=0;const start=search.selectionStart;v2Render();const next=document.getElementById('player-search');next?.focus({preventScroll:true});if(start!==null)next?.setSelectionRange(start,start)};
@@ -318,7 +318,8 @@ function v2BindInitialCandidateImpact(){
 
 // Restore the existing scouting region/contract predicates without reading true ability.
 function v2ScoutQueryAllowed(){return V2.section==='scout'&&!!V2.db?.world&&!!v2Team()&&!V2.db.world.fired;}
-function v2ScoutQueryContext(query={region:'ALL',contract:'all',open:false}){const db=V2.db;return {db,world:db.world,manager:db.manager,owner:managedTeamId(db),target:v2Target()?.id,query:{...query}};}
+function v2CandidateQueryContext(query){const db=V2.db;return {db,world:db.world,manager:db.manager,owner:managedTeamId(db),target:v2Target()?.id,query:{...query}};}
+function v2ScoutQueryContext(query={region:'ALL',contract:'all',open:false}){return v2CandidateQueryContext(query);}
 function v2ScoutQueryState(){
  if(!v2ScoutQueryAllowed())return {region:'ALL',contract:'all',open:false};const db=V2.db,c=V2.scoutQuery;
  if(!c||c.db!==db||c.world!==db.world||c.manager!==db.manager||c.owner!==managedTeamId(db)||c.target!==v2Target()?.id)V2.scoutQuery=v2ScoutQueryContext();
@@ -339,4 +340,26 @@ function v2BindScoutQuery(){
  panel.ontoggle=()=>{if(current()&&panel.isConnected&&v2ScoutQueryAllowed()&&V2.scoutQuery===context)v2ScoutQueryState().open=panel.open;};
  document.querySelectorAll('[data-scout-query-field]').forEach(el=>el.onchange=()=>{if(current()&&el.isConnected&&V2.scoutQuery===context)v2SetScoutQuery(el.dataset.scoutQueryField,el.value);});
  v2Bind('#scout-query-reset',()=>{if(!v2ScoutQueryAllowed()||V2.scoutQuery!==context)return;V2.scoutQuery=v2ScoutQueryContext();V2.scoutQuery.query.open=true;V2.page=0;v2Render();document.getElementById('scout-query-region')?.focus({preventScroll:true});});
+}
+
+function v2MarketQueryAllowed(){return V2.section==='market'&&!!V2.db?.world&&!['initial_roster','pick'].includes(V2.db.world.phase)&&['선수 검색','관심 선수'].includes(V2.tab)&&!!v2Target();}
+function v2MarketQueryState(){
+ if(!v2MarketQueryAllowed())return {kind:'all',open:false};const db=V2.db,c=V2.marketQuery;
+ if(!c||c.db!==db||c.world!==db.world||c.manager!==db.manager||c.owner!==managedTeamId(db)||c.target!==v2Target()?.id)V2.marketQuery=v2CandidateQueryContext({kind:'all',open:false});
+ return V2.marketQuery.query;
+}
+function v2RestoreMarketQuery(query){V2.marketQuery=v2MarketQueryAllowed()&&query?v2CandidateQueryContext(query):null;}
+function v2MarketCandidateMatches(db,p,q,target){if(!q||q.kind==='all')return true;if(q.kind==='fa')return !p.team;if(q.kind!=='external')return true;const team=p.team&&db.teams[p.team],mine=parentTeamOf(db,target);return !!team&&!!mine&&parentTeamOf(db,team)?.id!==mine.id;}
+function v2MarketValueSummary(view,p){
+ if(!v2MarketQueryAllowed()||!view.players[p.id])return '';const value=observedPlayerMarketValue(view,view.players[p.id]);return `<span class="player-meta" data-market-value="${v2Esc(p.id)}">관측 시장가치 추정 · ${Number.isFinite(value)?'약 '+v2Money(value):'정보 부족'}</span>`;
+}
+function v2MarketQueryControls(){
+ if(!v2MarketQueryAllowed())return '';const q=v2MarketQueryState();return `<details class="panel" id="market-query-options" data-market-query${q.open?' open':''}><summary>영입 후보 유형${q.kind!=='all'?' · 조건 적용':''}</summary><label class="field">현재 소속 유형<select class="input" id="market-query-kind" data-market-query-kind>${[['all','전체 선수'],['fa','무소속 · FA'],['external','현재 다른 구단 소속']].map(([key,label])=>`<option value="${key}"${q.kind===key?' selected':''}>${label}</option>`).join('')}</select></label><p class="hint">현재 소속 기준이며 모구단·산하 선수단은 같은 조직으로 구분합니다. 관측 가치는 보유 정보에 따른 추정이며 연봉·이적료와 영입 가능성은 기존 공식 협상에서 확인합니다.</p><button class="btn btn-outline" id="market-query-reset">유형 조건 초기화</button></details>`;
+}
+function v2SetMarketQuery(kind){if(!v2MarketQueryAllowed()||!['all','fa','external'].includes(kind))return false;Object.assign(v2MarketQueryState(),{kind,open:true});V2.page=0;v2Render();document.getElementById('market-query-kind')?.focus({preventScroll:true});return true;}
+function v2BindMarketQuery(){
+ if(!v2MarketQueryAllowed())return;const panel=document.getElementById('market-query-options'),field=document.getElementById('market-query-kind');if(!panel||!field)return;const current=v2Guard(),context=V2.marketQuery;
+ panel.ontoggle=()=>{if(current()&&panel.isConnected&&v2MarketQueryAllowed()&&V2.marketQuery===context)v2MarketQueryState().open=panel.open;};
+ field.onchange=()=>{if(current()&&field.isConnected&&V2.marketQuery===context)v2SetMarketQuery(field.value);};
+ v2Bind('#market-query-reset',()=>{if(v2MarketQueryAllowed()&&V2.marketQuery===context)v2SetMarketQuery('all');});
 }
