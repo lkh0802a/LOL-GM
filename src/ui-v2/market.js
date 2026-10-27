@@ -14,7 +14,7 @@ function v2Candidates(){
   const filters=v2InitialQueryState(),model=initialCandidatePage(db,{...filters,q:V2.q,role:V2.role,page:V2.page},t,{pageSize:V2_LIST_PAGE_SIZE,interestsOnly:V2.tab==='관심 선수'});V2.page=model.page;
   return {view:model.view,rows:model.rows.map(r=>r.p),total:model.total,pages:Math.max(1,model.pages),sortValues:new Map(model.rows.map(r=>[r.p.id,{key:filters.sort,value:r.value}]))};
  }
- const rows=Object.values(db.players).filter(p=>!p.retired&&(db.world.phase!=='initial_roster'||!p.team)&&(V2.role==='ALL'||p.role===V2.role)&&(!query||p.name.toLocaleLowerCase('ko').includes(query))&&(V2.tab!=='관심 선수'||targets[p.id]));
+ const scoutQuery=v2ScoutQueryAllowed()?v2ScoutQueryState():null,rows=Object.values(db.players).filter(p=>!p.retired&&(db.world.phase!=='initial_roster'||!p.team)&&(V2.role==='ALL'||p.role===V2.role)&&(!query||p.name.toLocaleLowerCase('ko').includes(query))&&(V2.tab!=='관심 선수'||targets[p.id])&&v2ScoutCandidateMatches(p,scoutQuery));
  if(V2.section==='market'&&V2.tab==='관심 선수'){const order=new Map(recruitmentBoard(view).map((e,i)=>[e.pid,i]));rows.sort((a,b)=>(order.get(a.id)??Infinity)-(order.get(b.id)??Infinity));}else rows.sort((a,b)=>a.name.localeCompare(b.name,'ko')||a.id.localeCompare(b.id));
  const pages=Math.max(1,Math.ceil(rows.length/V2_LIST_PAGE_SIZE));V2.page=Math.max(0,Math.min(V2.page,pages-1));return {view,rows:rows.slice(V2.page*V2_LIST_PAGE_SIZE,(V2.page+1)*V2_LIST_PAGE_SIZE),total:rows.length,pages};
 }
@@ -31,7 +31,7 @@ function v2Market(){
  if(V2.tab==='진행 중인 협상')return v2NegotiationList();
  if(V2.tab==='시장 현황')return `<section class="panel"><div class="panel-heading"><strong>${db.world.phase==='initial_roster'?'첫 시즌 선수단 구성':'선수 영입·계약'}</strong></div><p class="section-lead">선수를 직접 검토하고 조건을 제안하세요. 조건 합의 뒤에도 최종 계약은 감독이 직접 확정합니다.</p><div class="statline"><span>현재 선수단</span><strong>${t.roster.length}명</strong></div><div class="statline"><span>연간 연봉 예산</span><strong>${v2Money(v2DisplaySalaryBudget(db,t))}</strong></div><div class="statline"><span>현재 연봉 합계 · 연간</span><strong>${v2Money(payroll(db,t))}</strong></div><div class="tag-flex"><button class="btn btn-primary" data-tab="선수 검색">선수 찾아보기</button><button class="btn btn-outline" data-tab="진행 중인 협상">협상 확인</button></div></section>`;
  const m=v2Candidates();
- return comparisonBar+`<section class="stack" data-candidate-list><div class="search-wrap"><span class="search-icon">${v2Icon('search')}</span><input class="input" id="player-search" type="search" autocomplete="off" placeholder="선수 이름·닉네임 검색" aria-label="선수 검색" value="${v2Esc(V2.q)}"></div>${v2CandidateRoleControls()}${v2InitialListControls()}${v2InitialSelectionControls(m)}${v2InitialQueryControls()}<div class="between small subtle"><span role="status">${m.total}명 · ${V2.page+1}/${m.pages}페이지</span></div>${v2InitialQueryAllowed()&&v2InitialQueryState().table?v2InitialCandidateTable(m):m.rows.map(p=>v2PlayerCard(p,m.view,m.sortValues?.get(p.id))).join('')||'<div class="panel empty">조건에 맞는 선수가 없습니다.</div>'}<div class="between"><button class="btn btn-outline" data-page="-1"${!V2.page?' disabled':''}>이전</button><button class="btn btn-outline" data-page="1"${V2.page+1>=m.pages?' disabled':''}>다음</button></div></section>`;
+ return comparisonBar+`<section class="stack" data-candidate-list><div class="search-wrap"><span class="search-icon">${v2Icon('search')}</span><input class="input" id="player-search" type="search" autocomplete="off" placeholder="선수 이름·닉네임 검색" aria-label="선수 검색" value="${v2Esc(V2.q)}"></div>${v2CandidateRoleControls()}${v2ScoutQueryControls()}${v2InitialListControls()}${v2InitialSelectionControls(m)}${v2InitialQueryControls()}<div class="between small subtle"><span role="status">${m.total}명 · ${V2.page+1}/${m.pages}페이지</span></div>${v2InitialQueryAllowed()&&v2InitialQueryState().table?v2InitialCandidateTable(m):m.rows.map(p=>v2PlayerCard(p,m.view,m.sortValues?.get(p.id))).join('')||'<div class="panel empty">조건에 맞는 선수가 없습니다.</div>'}<div class="between"><button class="btn btn-outline" data-page="-1"${!V2.page?' disabled':''}>이전</button><button class="btn btn-outline" data-page="1"${V2.page+1>=m.pages?' disabled':''}>다음</button></div></section>`;
 }
 function v2PlayerDetail(){
  const db=V2.db,p=db.players[V2.pid],t=v2Target();if(!p||p.retired)return '<section class="panel empty">현재 선수 정보를 확인할 수 없습니다.</section>';
@@ -40,7 +40,7 @@ function v2PlayerDetail(){
 }
 function v2RecruitAction(action){if(v2Team()?.parent)return v2Tell('산하 선수단의 영입 계약은 모구단이 담당합니다');return v2Mutate(action);}
 function v2BindMarket(){
- v2BindInitialComparison();v2BindInitialQuery();v2BindInitialSelection();v2BindRecruitmentPriority();v2BindInitialCandidateImpact();
+ v2BindInitialComparison();v2BindInitialQuery();v2BindInitialSelection();v2BindRecruitmentPriority();v2BindInitialCandidateImpact();v2BindScoutQuery();
  const current=v2Guard(),search=document.getElementById('player-search');
  document.querySelectorAll('[data-player-observation]').forEach(el=>el.ontoggle=()=>{if(!current()||!el.isConnected)return;V2.playerReport={db:V2.db,manager:V2.db.manager,owner:managedTeamId(V2.db),target:v2Target()?.id,pid:V2.pid,open:el.open};});
  if(search)search.oninput=()=>{if(!current())return;V2.q=search.value;V2.page=0;const start=search.selectionStart;v2Render();const next=document.getElementById('player-search');next?.focus({preventScroll:true});if(start!==null)next?.setSelectionRange(start,start)};
@@ -314,4 +314,29 @@ function v2InitialCandidateImpact(p,t){const c=v2InitialCandidateImpactContext(p
 function v2BindInitialCandidateImpact(){
  const el=document.querySelector('[data-candidate-impact]');if(!el)return;const current=v2Guard(),c=V2.candidateImpact;
  el.ontoggle=()=>{if(!current()||!el.isConnected||V2.candidateImpact!==c||V2.pid!==c.pid||!initialCandidateAllowed(V2.db,v2Target(),V2.db.players[c.pid])||v2Target().id!==c.target)return;if(c.open===el.open)return;c.open=el.open;const body=el.querySelector('[data-candidate-impact-content]');if(body)body.innerHTML=c.open?v2InitialImpactProjection(c.db,c.pid,c.target,null,true):'';};
+}
+
+// Restore the existing scouting region/contract predicates without reading true ability.
+function v2ScoutQueryAllowed(){return V2.section==='scout'&&!!V2.db?.world&&!!v2Team()&&!V2.db.world.fired;}
+function v2ScoutQueryContext(query={region:'ALL',contract:'all',open:false}){const db=V2.db;return {db,world:db.world,manager:db.manager,owner:managedTeamId(db),target:v2Target()?.id,query:{...query}};}
+function v2ScoutQueryState(){
+ if(!v2ScoutQueryAllowed())return {region:'ALL',contract:'all',open:false};const db=V2.db,c=V2.scoutQuery;
+ if(!c||c.db!==db||c.world!==db.world||c.manager!==db.manager||c.owner!==managedTeamId(db)||c.target!==v2Target()?.id)V2.scoutQuery=v2ScoutQueryContext();
+ return V2.scoutQuery.query;
+}
+function v2RestoreScoutQuery(query){V2.scoutQuery=v2ScoutQueryAllowed()&&query?v2ScoutQueryContext(query):null;}
+function v2ScoutCandidateMatches(p,q){if(!q)return true;if(q.region!=='ALL'&&p.region!==q.region)return false;return q.contract==='fa'?!p.contract:q.contract==='contracted'?!!p.contract:q.contract==='rookie'?p.age<=20&&(p.proSeasons||0)<=1:true;}
+function v2ScoutQueryControls(){
+ if(!v2ScoutQueryAllowed())return '';const q=v2ScoutQueryState(),count=Number(q.region!=='ALL')+Number(q.contract!=='all');
+ return `<details class="panel" id="scout-query-options" data-scout-query${q.open?' open':''}><summary>선수 검색 조건${count?' · '+count+'개 적용':''}</summary><div class="stack"><label class="field">선수 지역<select class="input" id="scout-query-region" data-scout-query-field="region"><option value="ALL"${q.region==='ALL'?' selected':''}>전체 지역</option>${Object.values(V2.db.regions).map(r=>`<option value="${v2Esc(r.id)}"${q.region===r.id?' selected':''}>${v2Esc(r.name)}</option>`).join('')}</select></label><label class="field">계약 상태<select class="input" id="scout-query-contract" data-scout-query-field="contract">${[['all','전체'],['fa','FA'],['contracted','계약 중'],['rookie','신인/유망주']].map(([key,label])=>`<option value="${key}"${q.contract===key?' selected':''}>${label}</option>`).join('')}</select></label></div><p class="hint">선수 지역은 국적·로컬 자격과 별개입니다. 신인/유망주는 기존 검색 기준인 20세 이하·프로 경력 1시즌 이하이며 잠재력 확정값이 아닙니다.</p><button class="btn btn-outline" id="scout-query-reset">지역·계약 조건 초기화</button></details>`;
+}
+function v2SetScoutQuery(key,value){
+ if(!v2ScoutQueryAllowed()||!(key==='region'?(value==='ALL'||Object.hasOwn(V2.db.regions,value)):key==='contract'&&['all','fa','contracted','rookie'].includes(value)))return false;
+ Object.assign(v2ScoutQueryState(),{[key]:value,open:true});V2.page=0;v2Render();document.getElementById('scout-query-'+key)?.focus({preventScroll:true});return true;
+}
+function v2BindScoutQuery(){
+ if(!v2ScoutQueryAllowed())return;const panel=document.getElementById('scout-query-options');if(!panel)return;const current=v2Guard(),context=V2.scoutQuery;
+ panel.ontoggle=()=>{if(current()&&panel.isConnected&&v2ScoutQueryAllowed()&&V2.scoutQuery===context)v2ScoutQueryState().open=panel.open;};
+ document.querySelectorAll('[data-scout-query-field]').forEach(el=>el.onchange=()=>{if(current()&&el.isConnected&&V2.scoutQuery===context)v2SetScoutQuery(el.dataset.scoutQueryField,el.value);});
+ v2Bind('#scout-query-reset',()=>{if(!v2ScoutQueryAllowed()||V2.scoutQuery!==context)return;V2.scoutQuery=v2ScoutQueryContext();V2.scoutQuery.query.open=true;V2.page=0;v2Render();document.getElementById('scout-query-region')?.focus({preventScroll:true});});
 }
