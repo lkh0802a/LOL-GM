@@ -1,5 +1,5 @@
 import {execFileSync} from 'node:child_process';
-import {writeFile} from 'node:fs/promises';
+import {writeFile,realpath} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
@@ -24,7 +24,7 @@ export function parseNameStatus(text){
 export async function main(args){
  const options={};for(let i=0;i<args.length;i++){const flag=args[i];if(!['--root','--base','--head','--out'].includes(flag)||!args[i+1]||args[i+1].startsWith('--'))throw Error('Usage: --base REF [--head REF] [--root PATH] [--out FILE]');options[flag]=args[++i];}if(!options['--base'])throw Error('--base is required');
  const root=options['--root']||process.cwd(),git=(...xs)=>execFileSync('git',['-C',root,...xs],{encoding:'utf8',stdio:['ignore','pipe','pipe']}),base=git('rev-parse','--verify',options['--base']+'^{commit}').trim(),head=git('rev-parse','--verify',(options['--head']||'HEAD')+'^{commit}').trim(),changes=parseNameStatus(git('diff','--no-renames','--name-status','-z',base,head,'--'));
- if(options['--out']){const top=git('rev-parse','--show-toplevel').trim(),relative=path.relative(top,path.resolve(options['--out']));if(!relative.startsWith('..'+path.sep)&&!path.isAbsolute(relative)&&git('ls-files','-z','--',':(literal)'+relative))throw Error('Risk output must not overwrite a tracked file');}
- const report={...classifyChanges(changes),base,head,observedAt:new Date().toISOString()},json=JSON.stringify(report,null,2)+'\n';if(options['--out'])await writeFile(options['--out'],json,{mode:0o600});else process.stdout.write(json);
+ if(options['--out']){options['--out']=path.join(await realpath(path.dirname(path.resolve(options['--out']))),path.basename(options['--out']));const top=await realpath(git('rev-parse','--show-toplevel').trim()),relative=path.relative(top,options['--out']);if(!relative.startsWith('..'+path.sep)&&!path.isAbsolute(relative)&&git('ls-files','-z','--',':(literal)'+relative))throw Error('Risk output must not overwrite a tracked file');}
+ const report={...classifyChanges(changes),base,head,observedAt:new Date().toISOString()},json=JSON.stringify(report,null,2)+'\n';if(options['--out'])await writeFile(options['--out'],json,{mode:0o600,flag:'wx'});else process.stdout.write(json);
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))main(process.argv.slice(2)).catch(error=>{console.error('CODEX_CHANGE_RISK',error.message);process.exitCode=1;});

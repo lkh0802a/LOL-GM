@@ -46,12 +46,18 @@ export const releaseLease=(directory,owner)=>withLeaseGuard(directory,()=>releas
 export async function main(args){
  const values={};for(let i=0;i<args.length;i++){const flag=args[i];if(['--require-idle','--release'].includes(flag)){values[flag]=true;continue;}if(!['--root','--out','--lease-dir','--run-id'].includes(flag)||!args[i+1]||args[i+1].startsWith('--'))throw Error('Usage: --root PATH [--out FILE] [--require-idle] [--lease-dir DIR --run-id ID [--release]]');values[flag]=args[++i];}
  const report=await inspectRepository(values['--root']||process.cwd());let code=0;
- for(const flag of ['--out','--lease-dir'])if(values[flag]&&report.worktrees.some(w=>inside(path.resolve(values[flag]),w.root)))throw Error(flag+' must be outside every worktree; existing source and dirty files are preserved');
+ for(const flag of ['--out','--lease-dir'])if(values[flag]){
+  // Resolve parent aliases before applying worktree boundaries. Keep the final
+  // component un-followed: leases validate it and report creation uses wx.
+  values[flag]=path.join(await realpath(path.dirname(path.resolve(values[flag]))),path.basename(values[flag]));
+  for(const w of report.worktrees)if(inside(values[flag],await realpath(w.root)))throw Error(flag+' must be outside every worktree; existing source and dirty files are preserved');
+ }
+ if(values['--out']){try{await lstat(values['--out']);throw Error('Report output already exists; use a new evidence path');}catch(error){if(error.code!=='ENOENT')throw error;}}
  if(values['--require-idle']&&report.gates.localTestQueue!=='READY')code=2;
  if(values['--lease-dir']){if(!values['--run-id'])throw Error('--lease-dir requires --run-id');const owner={runId:values['--run-id'],commonGitDir:report.commonGitDir,head:report.head,claimedAt:report.observedAt};
   if(code||report.gates.editTarget!=='READY'||report.processes.unknown.length){report.lease={status:'BLOCKED_PROCESS_STATE'};code=2;}
   else{report.lease=values['--release']?await releaseLease(values['--lease-dir'],owner):await claimLease(values['--lease-dir'],owner);if(report.lease.status.startsWith('BLOCKED_'))code=2;}
  }else if(values['--release']||values['--run-id'])throw Error('--release/--run-id requires --lease-dir');
- const text=JSON.stringify(report,null,2)+'\n';if(values['--out'])await writeFile(values['--out'],text,{mode:0o600});else process.stdout.write(text);return code;
+ const text=JSON.stringify(report,null,2)+'\n';if(values['--out'])await writeFile(values['--out'],text,{mode:0o600,flag:'wx'});else process.stdout.write(text);return code;
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))main(process.argv.slice(2)).then(code=>{process.exitCode=code;}).catch(error=>{console.error('CODEX_DEVELOPMENT_PREFLIGHT',error.message);process.exitCode=1;});

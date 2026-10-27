@@ -132,6 +132,8 @@ node scripts/codex-development-preflight.mjs --root "$PWD" --lease-dir /workspac
 node scripts/codex-development-preflight.mjs --root "$PWD" --lease-dir /workspace/LOL-GM-release-evidence/development-lease --run-id ACTUAL_RUN_ID --release --out /tmp/lol-gm-release.json
 ```
 
+출력과 lease의 부모 경로는 실제 경로로 해석한 뒤 worktree 경계를 검사한다. `--out`은 기존 파일·심볼릭 링크·하드 링크·이전 증거를 교체하지 않고 새 파일만 배타적으로 생성한다. 매 관측마다 새 증거 파일명을 사용한다. 존재하는 출력 경로는 lease 변경 전에 거절하며, 중단된 출력도 자동 삭제하지 않는다.
+
 lease claim/release는 동일 파일시스템에서 atomic mkdir guard로 직렬화한다. 기존/불완전 lease 또는 guard는 자동 만료·삭제하지 않는다. 중단 후 실제 worker/PID·Git·CI/checkpoint를 대조한 뒤 확인된 소유 run-id로만 해제/재claim한다. CLI PID는 짧게 종료되므로 생존 증거로 쓰지 않는다. 공유 파일시스템 없는 별도 환경 간 강제 잠금은 지원하지 않는다. 스케줄러의 단일 실행 보장이 미확인인 상태에서 강제 보장이 있다고 보고하지 않는다. 새 워커를 병렬로 시험하는 run-now도 현재 실행 중에는 호출하지 않는다.
 
 ### 주간·월간·분기 판단

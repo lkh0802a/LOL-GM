@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp,mkdir,writeFile,readFile,symlink,rm} from 'node:fs/promises';
+import {mkdtemp,mkdir,writeFile,readFile,symlink,link,rm} from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import {execFileSync,spawn} from 'node:child_process';
@@ -40,5 +40,15 @@ test('atomic cross-worktree lease permits one claimant; age and wrong owner neve
 });
 test('incomplete claim/guard remains blocked and a symlink is never removed',async()=>{
  const base=await fixture(),lease=path.join(base,'lease'),owner={runId:'x',commonGitDir:'/game/.git'};try{await mkdir(lease);assert.deepEqual(await claimLease(lease,owner),{status:'BLOCKED_EXISTING_LEASE',owner:null});await mkdir(lease+'.guard');assert.equal((await claimLease(lease,owner)).status,'BLOCKED_LEASE_MUTATION');await rm(lease+'.guard',{recursive:true});await rm(lease,{recursive:true});const target=path.join(base,'target');await mkdir(target);await writeFile(path.join(target,'owner.json'),JSON.stringify(owner));await symlink(target,lease);await assert.rejects(claimLease(lease,owner),/regular directory/);await assert.rejects(releaseLease(lease,owner),/Unsafe lease path/);assert.deepEqual(JSON.parse(await readFile(path.join(target,'owner.json'),'utf8')),owner);
+ }finally{await rm(base,{recursive:true,force:true});}
+});
+
+test('CLI output and lease boundaries resolve parent aliases and never replace source or evidence links',async()=>{
+ const base=await fixture(),root=path.join(base,'repo');await mkdir(root);const git=(...args)=>execFileSync('git',['-C',root,...args],{encoding:'utf8',stdio:'pipe'});
+ try{git('init');await writeFile(path.join(root,'source.txt'),'preserve source');git('add','.');git('-c','user.name=Fixture','-c','user.email=fixture@example.invalid','commit','-m','base');const head=git('rev-parse','HEAD').trim();await symlink(root,path.join(base,'alias'));
+  await assert.rejects(main(['--root',root,'--out',path.join(base,'alias','source.txt')]),/outside every worktree/);
+  await assert.rejects(main(['--root',root,'--lease-dir',path.join(base,'alias','lease'),'--run-id','fixture']),/outside every worktree/);
+  for(const kind of ['symlink','hardlink','dangling']){const out=path.join(base,kind+'.json');if(kind==='hardlink')await link(path.join(root,'source.txt'),out);else await symlink(path.join(root,kind==='dangling'?'not-created':'source.txt'),out);await assert.rejects(main(['--root',root,'--out',out]),/already exists/);assert.equal(await readFile(path.join(root,'source.txt'),'utf8'),'preserve source');}
+  const out=path.join(base,'previous.json'),lease=path.join(base,'lease');await writeFile(out,'previous evidence');await assert.rejects(main(['--root',root,'--out',out,'--lease-dir',lease,'--run-id','fixture']),/already exists/);await assert.rejects(readFile(path.join(lease,'owner.json')),{code:'ENOENT'});assert.equal(await readFile(out,'utf8'),'previous evidence');assert.equal(git('rev-parse','HEAD').trim(),head);assert.equal(git('status','--porcelain').trim(),'');
  }finally{await rm(base,{recursive:true,force:true});}
 });
