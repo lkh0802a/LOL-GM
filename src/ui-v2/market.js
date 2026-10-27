@@ -306,7 +306,7 @@ function v2CandidateNegotiationSummary(p){const n=V2.section==='market'&&v2Curre
 
 // Reuse the existing conditional writer projection only when the reader opens it.
 function v2InitialCandidateImpactContext(p,t=v2Target()){
- const db=V2.db;if(V2.section!=='market'||V2.pid!==p?.id||!initialCandidateAllowed(db,t,p)){V2.candidateImpact=null;return null;}
+ const db=V2.db;if(!db||db.world?.phase!=='initial_roster'||V2.section!=='market'||V2.pid!==p?.id||!initialCandidateAllowed(db,t,p)){V2.candidateImpact=null;return null;}
  const c=V2.candidateImpact;if(!c||c.db!==db||c.world!==db.world||c.manager!==db.manager||c.owner!==managedTeamId(db)||c.target!==t.id||c.pid!==p.id)V2.candidateImpact={db,world:db.world,manager:db.manager,owner:managedTeamId(db),target:t.id,pid:p.id,open:false};
  return V2.candidateImpact;
 }
