@@ -95,6 +95,7 @@ jobs:
         run: node --test scripts/ci-scope.test.mjs
 
       - name: Record change risk with the trusted base policy
+        if: always()
         env:
           RISK_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
           RISK_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
