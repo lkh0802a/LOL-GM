@@ -3,6 +3,19 @@
 // intentionally does not run training, patches or medical daily ticks: the
 // contract window and offseason recovery have their own accepted semantics.
 // Recovery may temporarily position the clock at the last competition date.
+// Global LoL player FA is the third Tuesday of November at 00:00 UTC.
+// Standard contracts expiring this year end the prior Monday at 23:59 UTC.
+// Keep the date rule in the shared calendar, not in a season-end calculation.
+function globalPlayerFAOpenDate(year){
+  if(!Number.isInteger(year)||year<2000||year>9999)
+    throw new Error('유효하지 않은 글로벌 FA 시즌 연도');
+  const firstDay=new Date(Date.UTC(year,10,1)).getUTCDay();
+  const firstTuesday=1+(2-firstDay+7)%7;
+  return new Date(Date.UTC(year,10,firstTuesday+14)).toISOString().slice(0,10);
+}
+function globalPlayerContractExpiryDate(year){
+  return addDays(globalPlayerFAOpenDate(year),-1);
+}
 function setWorldCalendarDate(db,date){db.worldDate=date}
 
 // Match dates are fixtures; the authoritative world clock moves through every
