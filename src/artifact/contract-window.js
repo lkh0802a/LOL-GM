@@ -11,23 +11,7 @@ function contractWindowAnchorDate(db){
       const comp=db.competitions[s.comp];
       return isWorldChampionshipId(s.comp)||isWorldChampionshipId(comp?.id);
     });
-  if(worlds.length){
-    // The Worlds final must be the final official fixture.  A same-date
-    // fixture in another competition has no proven UTC ordering and cannot
-    // silently be treated as ending before Worlds.
-    const worldsFinal=worlds.map(endDate).sort().at(-1);
-    const otherOfficial=Object.values(w.seasons||{}).filter(s=>
-      s?.days?.length&&!worlds.includes(s));
-    const unfinished=otherOfficial.filter(s=>!s.done);
-    if(unfinished.length)
-      throw new Error('월즈 결승 뒤에 미완료 공식 대회가 남았습니다: '+
-        unfinished.map(s=>s.comp).join(', '));
-    const notBefore=otherOfficial.filter(s=>endDate(s)>=worldsFinal);
-    if(notBefore.length)
-      throw new Error('월즈 결승 이후 또는 같은 날에 다른 공식 경기가 있습니다: '+
-        notBefore.map(s=>s.comp+':'+endDate(s)).join(', '));
-    return worldsFinal;
-  }
+  if(worlds.length)return validatedWorldsClosingDate(db,finished,worlds);
   // Custom worlds may omit the standard Worlds preset. Fall back to the
   // latest completed international, then the world's final scheduled date.
   const internationals=finished.filter(s=>db.competitions[s.comp]?.international);
