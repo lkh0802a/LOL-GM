@@ -226,7 +226,7 @@ function chapters(w){
 function controlsFor(w){
   if(w.phase==='offseason'){
     const cw=w.contractWindow;
-    if(!cw)return `<button class="primary" id="soff">계약 협상 기간 열기</button><span class="hint">시즌 종료 후 원소속 구단 14일 독점 재계약 기간을 시작합니다.</span>`;
+    if(!cw)return `<button class="primary" id="soff">계약 협상 기간 열기</button><span class="hint">월즈 종료 이후 글로벌 FA 개방일까지 원소속 재계약 기간을 진행합니다.</span>`;
     if(cw.stage==='exclusive')return renderStove();
     return renderStove()+`<button class="primary" id="soff">오프시즌 진행</button><span class="hint">${cw.contractExpiryDate}에 기존 계약이 끝났고 ${cw.outsideContactDate}부터 FA 시장이 열렸습니다. 영입을 마친 뒤 다음 시즌 시장 단계로 진행합니다.</span>`;
   }
