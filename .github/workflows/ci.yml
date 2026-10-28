@@ -374,6 +374,9 @@ jobs:
       - name: Production build
         run: node scripts/ci-run.mjs build -- npm run build
 
+      - name: Independent merge gate acceptance
+        run: node --test scripts/codex-merge-gate.test.mjs
+
       - name: Verify production artifact
         run: test -s dist/index.html && cmp -s index.html dist/index.html
 
