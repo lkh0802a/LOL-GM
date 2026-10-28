@@ -1,9 +1,15 @@
-// D04-B3: post-Worlds 14-day incumbent exclusivity, optional waiver,
-// exact expiry on day 14, and day-15 FA / next-contract activation.
+// Global November FA: existing-contract expiry on the third Monday, player FA
+// from the third Tuesday, and a variable-length incumbent renewal window.
 import {artifactSources,runEngineFixture} from './test-harness.mjs';
 
 const fixture=String.raw`(()=>{
   const assert=(x,m)=>{if(!x)throw new Error('D04_CONTRACT_WINDOW '+m)};
+  assert(globalPlayerFAOpenDate(2026)==='2026-11-17'&&
+    globalPlayerFAOpenDate(2027)==='2027-11-16'&&
+    globalPlayerFAOpenDate(2028)==='2028-11-21'&&
+    globalPlayerContractExpiryDate(2027)==='2027-11-15'&&
+    globalPlayerContractExpiryDate(2028)==='2028-11-20',
+    'UTC November Tuesday/previous Monday rule incorrect');
   let db=buildWorld(),mine=activeTeams(db,null,1)[0],
     peers=activeTeams(db,mine.region,1).filter(t=>t.id!==mine.id),
     pool=Object.values(db.players).filter(p=>!p.retired&&!p.team).slice(0,4);
@@ -32,15 +38,15 @@ const fixture=String.raw`(()=>{
 
   db.world={year:2027,seed:'d04-b3',manage:'manual',phase:'offseason',
     seasons:{},steps:[],step:0,report:null,offers:[],marketLog:[],
-    negotiations:{},recruitment:{},lastDate:'2027-11-16'};
-  db.year=2027;db.worldDate='2027-11-16';
+    negotiations:{},recruitment:{},lastDate:'2027-11-07'};
+  db.year=2027;db.worldDate='2027-11-07';
 
   let cw=initOffseasonContractWindow(db);
-  assert(cw.seasonEndDate==='2027-11-16'&&cw.startDate==='2027-11-17'&&
-    cw.exclusiveThrough==='2027-11-30'&&cw.contractExpiryDate==='2027-11-30'&&
-    cw.outsideContactDate==='2027-12-01'&&cw.effectiveDate==='2027-12-01',
-    'post-Worlds dates are not end+14 expiry / day-15 FA');
-  assert(db.worldDate==='2027-11-17','exclusive window did not start next day');
+  assert(cw.seasonEndDate==='2027-11-07'&&cw.startDate==='2027-11-08'&&
+    cw.exclusiveThrough==='2027-11-15'&&cw.contractExpiryDate==='2027-11-15'&&
+    cw.outsideContactDate==='2027-11-16'&&cw.effectiveDate==='2027-11-16',
+    'dates do not match the 2027 global November contract expiry / FA opening');
+  assert(db.worldDate==='2027-11-08','exclusive window did not start next day');
 
   // No outside approach is legal during exclusivity without the incumbent's waiver.
   let blocked=startNegotiation(db,ownWaive.id,'early_fa',{teamId:other.id});
@@ -92,7 +98,7 @@ const fixture=String.raw`(()=>{
   assert(r.ok&&n.neg.status==='accepted','permitted early agreement did not accept');
   let early=contractAgreementFor(db,target.id);
   assert(early?.kind==='early_fa'&&early.teamId===mine.id&&
-    early.effectiveDate==='2027-12-01'&&target.team===other.id&&
+    early.effectiveDate==='2027-11-16'&&target.team===other.id&&
     target.contract.until===2027,
     'early agreement moved player before old contract expiry');
 
@@ -115,26 +121,26 @@ const fixture=String.raw`(()=>{
     contractAgreementFor(db,ownRenew.id)?.status==='agreed',
     'contract-window state failed save/restore');
 
-  // B2 cooldown clock can consume real days inside the 14-day window.
+  // B2 cooldown clock can consume real days inside the pre-FA window.
   const day=advanceOffseasonContractDay(db);
-  assert(day.ok&&db.worldDate==='2027-11-18'&&cw.stage==='exclusive',
+  assert(day.ok&&db.worldDate==='2027-11-09'&&cw.stage==='exclusive',
     'exclusive window did not advance one real day');
 
-  // Expiry happens exactly at Worlds+14 and the market opens the next day.
+  // Standard expiry is November's third Monday; FA opens the next UTC day.
   const settled=advanceOffseasonContractWindow(db);
   cw=db.world.contractWindow;
   ownRenew=db.players[ownRenew.id];ownWaive=db.players[ownWaive.id];
   target=db.players[target.id];
-  assert(settled.ok&&cw.stage==='fa'&&db.worldDate==='2027-12-01'&&
-    settled.settlement.expiryDate==='2027-11-30',
-    'exclusive close did not use day-14 expiry / day-15 opening');
+  assert(settled.ok&&cw.stage==='fa'&&db.worldDate==='2027-11-16'&&
+    settled.settlement.expiryDate==='2027-11-15',
+    'exclusive close did not use global November expiry / FA opening');
   assert(ownRenew.team===mine.id&&ownRenew.contract.signed===2028&&
     ownRenew.contract.releaseGuaranteeRate===.5,
     'accepted incumbent renewal did not activate for next season');
   assert(target.team===mine.id&&target.contract.signed===2028&&
     target.contract.releaseGuaranteeRate===.5&&
     contractAgreementFor(db,target.id).status==='effective'&&
-    contractAgreementFor(db,target.id).appliedDate==='2027-12-01',
+    contractAgreementFor(db,target.id).appliedDate==='2027-11-16',
     'early agreement did not activate immediately after old contract expired');
   assert(!db.teams[other.id].roster.includes(target.id),
     'old club retained player after early agreement activation');
@@ -166,8 +172,8 @@ const fixture=String.raw`(()=>{
     'effective contract window state failed final save/restore');
 
   console.log('D04_CONTRACT_WINDOW_ACCEPTANCE '+JSON.stringify({
-    dates:{worldsEnd:'2027-11-16',exclusiveStart:'2027-11-17',
-      expiry:'2027-11-30',outside:'2027-12-01'},
+    dates:{worldsEnd:'2027-11-07',exclusiveStart:'2027-11-08',
+      expiry:'2027-11-15',outside:'2027-11-16'},
     waiver:{manager:ownWaive.id,external:target.id},
     agreements:{renewal:ownRenew.id,early:target.id},
     settlement:{applied:settled.settlement.applied.length,
@@ -189,5 +195,5 @@ if(!app.includes('scontractday')||!app.includes('scontractopen')||
   !market.includes('bindContractWindow'))
   throw new Error('D04_CONTRACT_WINDOW UI does not expose waiver/early-contact/date controls');
 console.log('D04_CONTRACT_WINDOW_UI_ACCEPTANCE '+JSON.stringify({
-  dailyClock:true,incumbentWaiver:true,earlyContact:true,faDay15:true
+  dailyClock:true,incumbentWaiver:true,earlyContact:true,faOnGlobalDate:true
 }));
