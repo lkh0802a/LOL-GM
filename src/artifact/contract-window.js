@@ -1,6 +1,6 @@
 // ===== LOL GM: Global player FA and contract expiry window =====
-// Player contracts expire on the third Monday of November (23:59 UTC).
-// Global player FA opens the following Tuesday at 00:00 UTC. The incumbent's
+// Standard contracts expire on the Monday before December's first Tuesday
+// (23:59 UTC). Global player FA opens Tuesday at 00:00 UTC. The incumbent's
 // pre-FA renewal window runs from the official season end to that fixed date.
 
 function contractWindowYear(db){return db.world?.year??db.year}
@@ -130,7 +130,7 @@ function recordContractAgreement(db,p,t,terms,kind='renewal',actor='manager'){
   if(kind==='early_fa'&&actor==='manager'&&!recruitmentReady(db,p.id,t.id))
     return {ok:false,msg:'조기 접촉 허용 뒤에도 스카우팅과 내부 평가가 필요합니다'};
   // Next-season option dates must also be next-season dates. The playing
-  // contract remains untouched until the standard November expiry boundary.
+  // contract remains untouched until the standard annual expiry boundary.
   const cw=db.world.contractWindow,
     normalized=withContractStartSeason(db,cw.startSeason,()=>
     normalizeContractTerms(db,p,t,terms.salary,terms.years,terms)),
