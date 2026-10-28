@@ -18,19 +18,7 @@ function contractWindowAnchorDate(db){
   if(internationals.length)return internationals.map(endDate).sort().at(-1);
   return w?.lastDate||db.worldDate||contractWindowYear(db)+'-11-01';
 }
-// UTC global FA starts on the third Tuesday in November, independent of
-// the date Worlds happened to finish. The previous UTC date is the standard
-// contract-expiry date for contracts whose 'until' year matches this year.
-function globalPlayerFAOpenDate(year){
-  if(!Number.isInteger(year)||year<2000||year>9999)
-    throw new Error('유효하지 않은 글로벌 FA 시즌 연도');
-  const novemberFirst=new Date(Date.UTC(year,10,1));
-  const firstTuesday=1+(2-novemberFirst.getUTCDay()+7)%7;
-  return new Date(Date.UTC(year,10,firstTuesday+14)).toISOString().slice(0,10);
-}
-function globalPlayerContractExpiryDate(year){
-  return addDays(globalPlayerFAOpenDate(year),-1);
-}
+// Shared UTC FA date helpers are owned by calendar.js.
 function contractWindowDates(db){
   const year=contractWindowYear(db),
     seasonEnd=contractWindowAnchorDate(db),
