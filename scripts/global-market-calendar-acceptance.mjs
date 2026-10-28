@@ -32,8 +32,28 @@ const result=await runEngineFixture(String.raw`(()=>{
  const restored=unpackDB(before),saved=packDB(restored);refused=false;
  try{playWorldDay(restored)}catch(error){refused=/28일.*이적시장/.test(error.message)}
  check(refused&&packDB(restored)===saved,'native save resumed forbidden fixture or mutated state');
+ const opponent=activeTeams(db,'NA',1).find(t=>t.id!==team.id),compId=season.comp;
+ db.worldDate='2027-12-06';
+ const session=createSeriesSession(db,team.id,opponent.id,1,'market-session',{compId});
+ db.worldDate='2027-12-07';
+ const sessionBefore=JSON.stringify(session),dbBefore=packDB(db);
+ for(const invoke of [
+  ()=>createSeriesSession(db,team.id,opponent.id,1,'market-new',{compId}),
+  ()=>seriesSessionPrepareGame(db,session),
+  ()=>playSeriesSessionGame(db,session)
+ ]){
+  refused=false;try{invoke()}catch(error){refused=/28일.*이적시장/.test(error.message)}
+  check(refused&&JSON.stringify(session)===sessionBefore&&packDB(db)===dbBefore,'direct/resumed competition session must reject before any write');
+ }
+ const restoredSession=JSON.parse(sessionBefore),restoredWorld=unpackDB(dbBefore);
+ refused=false;try{playSeriesSessionGame(restoredWorld,restoredSession)}catch(error){refused=/28일.*이적시장/.test(error.message)}
+ check(refused&&packDB(restoredWorld)===packDB(unpackDB(dbBefore))&&JSON.stringify(restoredSession)===sessionBefore,'persisted session bypass');
+ for(const opt of [{compId,replay:true},{compId,practice:true}]){
+  const allowed=createSeriesSession(db,team.id,opponent.id,1,'market-exempt',opt);
+  check(!!seriesSessionPrepareGame(db,allowed),'historical replay/private practice blocked');
+ }
  day.date='2028-01-04';db.worldDate='2028-01-03';check(nextCalendarDate(db)==='2028-01-04','first closed-market day must be available');
  day.date=originalDay;
- return {windows:cases.length,elapsedDays:28,inclusiveOpen:true,exclusiveClose:true,malformedRejected:5,actualDailyWriterBlocked:true,wholeStateUnchanged:true,nativeRestore:true,fullWorldMarketImplemented:false};
+ return {windows:cases.length,elapsedDays:28,inclusiveOpen:true,exclusiveClose:true,malformedRejected:5,actualDailyWriterBlocked:true,directAndRestoredSessionBlocked:true,replayAndPracticeAllowed:true,wholeStateUnchanged:true,nativeRestore:true,fullWorldMarketImplemented:false};
 })()`,{timeout:30000,filename:'global-market-calendar-acceptance.js'});
 console.log('GLOBAL_MARKET_CALENDAR_ACCEPTANCE '+JSON.stringify(result));

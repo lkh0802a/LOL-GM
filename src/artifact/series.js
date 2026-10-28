@@ -77,6 +77,7 @@ function seriesGameSetup(db,aId,bId,bestOf,seed,ctx,g,chooser,srng,resolved=null
   return {other,sc,blue,red,gseed,fpTeam,snap};
 }
 function createSeriesSession(db,aId,bId,bestOf,seed,opt={}){
+  assertCompetitionOutsideMarket(db,opt);
   const srng=new RNG(seed,'side'),firstChoice=opt.firstChoice||'seed';
   const chooser=firstChoice==='coin'?(srng.chance(.5)?aId:bId):aId;
   return {a:aId,b:bId,bestOf,seed,need:Math.ceil(bestOf/2),g:1,chooser,wins:{[aId]:0,[bId]:0},games:[],lines:[],
@@ -88,6 +89,7 @@ function createSeriesSession(db,aId,bId,bestOf,seed,opt={}){
 function seriesSessionRng(sess){const r=new RNG(sess.seed,'side');r.a=sess.sideRng.a;r.sp=sess.sideRng.sp;return r}
 function seriesSessionDone(sess){return sess.opt.practice?sess.games.length>=sess.bestOf:sess.wins[sess.a]>=sess.need||sess.wins[sess.b]>=sess.need}
 function seriesSessionPrepareGame(db,sess){
+  assertCompetitionOutsideMarket(db,sess.opt);
   if(seriesSessionDone(sess))return null;if(sess.current)return sess.current;
   const recorded=sess.opt.replay&&sess.opt.selections?.[sess.g-1];
   if(recorded&&[sess.a,sess.b].includes(recorded.blue)&&[sess.a,sess.b].includes(recorded.firstPick)){

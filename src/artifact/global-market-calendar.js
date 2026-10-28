@@ -24,3 +24,11 @@ function globalTransferMarketState(date){
     window=date<current.opensOn&&year>2000?globalTransferMarketWindow(year-1):current;
   return {...window,date,open:date>=window.opensOn&&date<window.closesOn};
 }
+// A competition session may be resumed directly after native restoration,
+// without visiting nextCalendarDate. Check before preparing or playing it.
+// Historical replays and private practice do not create competition fixtures.
+function assertCompetitionOutsideMarket(db,opt={}){
+  if(!opt.compId||opt.replay||opt.practice)return;
+  const market=globalTransferMarketState(db.worldDate);
+  if(market.open)throw new Error('28일 통합 이적시장 중에는 대회 경기를 진행할 수 없습니다: '+db.worldDate);
+}
