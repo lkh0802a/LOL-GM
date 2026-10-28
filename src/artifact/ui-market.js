@@ -81,7 +81,7 @@ function renderContractWindow(){
   return `<section class="market contractwindow"><h3>월즈 종료 후 계약 협상 — ${esc(t.name)}</h3>
     ${MSG?`<p class="msg" role="status">${esc(MSG)}</p>`:''}
     <p class="hint">최종 경기 ${cw.seasonEndDate} · 원소속 독점 ${cw.startDate}~${cw.exclusiveThrough} · 기존 계약 만료 ${cw.contractExpiryDate} · FA 접촉 ${cw.outsideContactDate}부터</p>
-    <p class="${exclusive?'warn':'hi'}">${exclusive?'기존 계약은 14일 유지됩니다. 원소속은 독점 재계약권을 갖지만 재계약 의사가 없으면 해당 선수의 타 구단 조기 접촉을 허용할 수 있습니다.':'독점기간과 기존 계약이 끝났습니다. 미재계약 선수는 FA이며 모든 구단이 협상할 수 있습니다.'}</p>
+    <p class="${exclusive?'warn':'hi'}">${exclusive?'기존 계약은 글로벌 FA 개방 전까지 유지됩니다. 원소속은 재계약 우선 협상권을 갖지만 재계약 의사가 없으면 해당 선수의 타 구단 조기 접촉을 허용할 수 있습니다.':'독점기간과 기존 계약이 끝났습니다. 미재계약 선수는 FA이며 모든 구단이 협상할 수 있습니다.'}</p>
     ${renderMutualTermination(t)}
   <h4>진행 중인 협상</h4>${renderNegotiations()}
     ${exclusive?`<h4>우리 팀 만료 예정 계약</h4>${ownRows||'<p class="hint">이번 독점기간 만료 예정 선수가 없습니다.</p>'}<h4>타 구단이 조기 접촉을 허용한 선수</h4>${earlyRows||'<p class="hint">현재 조기 접촉 허용 선수가 없습니다.</p>'}`:
