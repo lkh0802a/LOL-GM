@@ -188,6 +188,66 @@ const fixture=String.raw`(()=>{
 })();`;
 await runEngineFixture(fixture,{timeout:30000,filename:'contract-window-acceptance.fixture.js'});
 
+
+// Strict closure gate: synthetic fixture metadata only, never fabricated wins
+// or a stand-in for an actually played full season.
+const closureFixture=String.raw`(()=>{
+  const assert=(ok,reason)=>{if(!ok)throw new Error('GLOBAL_FA_FINAL_GATE '+reason)};
+  const db=buildWorld();
+  db.year=2027;
+  const worlds={comp:'WORLD_CHAMPIONSHIP',done:true,days:[{date:'2027-11-10'}]},
+    masters={comp:'MASTERS',done:true,days:[{date:'2027-11-09'}]},
+    open={comp:'OPEN',done:true,days:[{date:'2027-11-08'}]};
+  db.world={year:2027,phase:'offseason',
+    seasons:{worlds,masters,open},lastDate:'2027-11-10'};
+  const beforeHistory=JSON.stringify(db.history);
+  assert(contractWindowDates(db).seasonEndDate==='2027-11-10',
+    'valid Worlds-final ordering refused');
+  const rejects=(message,reason)=>{
+    let got='';
+    try{contractWindowDates(db)}catch(error){got=String(error.message)}
+    assert(got.includes(message),reason+' not rejected: '+got);
+    assert(JSON.stringify(db.history)===beforeHistory,
+      'closure guard changed historical results');
+  };
+  masters.days[0].date='2027-11-11';
+  rejects('월즈 결승 이후 또는 같은 날','later Masters');
+  masters.days[0].date='2027-11-10';
+  rejects('월즈 결승 이후 또는 같은 날','same-day UTC ordering unknown');
+  masters.days[0].date='2027-11-09';
+  masters.done=false;
+  rejects('미완료 공식 대회','unfinished Masters');
+  masters.done=true;
+  db.world.year=db.year=2028;
+  worlds.days[0].date='2028-11-19';
+  masters.days[0].date='2028-11-17';
+  open.days[0].date='2028-11-15';
+  db.world.lastDate='2028-11-19';
+  assert(contractWindowDates(db).outsideContactDate==='2028-11-21',
+    '2028 November FA window drift');
+  worlds.days[0].date='2028-11-21';
+  rejects('선수 글로벌 FA 개방일 이후','Worlds reached 2028 FA open');
+  // Read the real initial world schedule writer rather than naming the
+  // priority as a documentation-only policy.
+  const scheduled=buildWorld(),managed=activeTeams(scheduled,null,1)[0];
+  startWorldSeason(scheduled,managed.id,'global-final-priority-test');
+  const last=scheduled.world.steps.at(-1);
+  assert(last?.kind==='intl'&&
+    ['WORLD_CHAMPIONSHIP','MASTERS','OPEN'].every(id=>last.ids.includes(id))&&
+    last.ids.indexOf('WORLD_CHAMPIONSHIP')<last.ids.indexOf('MASTERS')&&
+    last.ids.indexOf('MASTERS')<last.ids.indexOf('OPEN'),
+    'final-phase participants not reserved in Worlds/Masters/Open order');
+  assert(scheduled.world.steps.filter(s=>s.kind==='intl'&&
+    s.ids.some(id=>['WORLD_CHAMPIONSHIP','MASTERS','OPEN'].includes(id))).length===1,
+    'end-phase international events split into post-Worlds steps');
+  console.log('GLOBAL_FA_FINAL_GATE_ACCEPTANCE '+JSON.stringify({
+    worldsLast:true,sameDayConservative:true,unfinishedBlocked:true,
+    years:[2027,2028],historyUnchanged:true,lateEntrantsReserved:true,fullSeasonSimulated:false
+  }));
+})();`;
+await runEngineFixture(closureFixture,{timeout:30000,
+  filename:'contract-worlds-final-gate.fixture.js'});
+
 const [appSource,market,stove]=await artifactSources(['app.js','ui-market.js','ui-stove.js']);
 const app=appSource+'\n'+stove;
 if(!app.includes('scontractday')||!app.includes('scontractopen')||

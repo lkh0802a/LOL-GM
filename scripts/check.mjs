@@ -12,6 +12,7 @@ await import('./codex-impact-map-acceptance.mjs');
 await import('./observer-information-acceptance.mjs');
 await import('./historical-identity-acceptance.mjs');
 await import('./worlds-identity-acceptance.mjs');
+await import('./contract-window-acceptance.mjs');
 await import('./ui-projection-acceptance.mjs');
 
 const root = resolve(import.meta.dirname, '..');

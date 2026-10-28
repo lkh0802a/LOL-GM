@@ -11,7 +11,7 @@ function contractWindowAnchorDate(db){
       const comp=db.competitions[s.comp];
       return isWorldChampionshipId(s.comp)||isWorldChampionshipId(comp?.id);
     });
-  if(worlds.length)return worlds.map(endDate).sort().at(-1);
+  if(worlds.length)return validatedWorldsClosingDate(db,finished,worlds);
   // Custom worlds may omit the standard Worlds preset. Fall back to the
   // latest completed international, then the world's final scheduled date.
   const internationals=finished.filter(s=>db.competitions[s.comp]?.international);

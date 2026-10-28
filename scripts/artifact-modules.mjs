@@ -45,6 +45,7 @@ export const ENGINE_MODULES = [
   'medical.js',
   'world.js',
   'calendar.js',
+  'season-boundary.js',
   'season.js',
   'offseason.js',
   'save.js',
