@@ -140,7 +140,8 @@ function closeMarket(db){
   expireCurrentAIMarketOffers(db);
   w.phase='preseason';
 }
-// 승강: 승강제는 1부 하위 ↔ 2부 상위 교체, 혼합은 프랜차이즈 보호 구단 제외
+// Legacy 1↔2 promotion: never dissolve a club merely because no eligible replacement exists.
+// Additional adjacent tiers require the future division graph rather than fictitious clubs.
 function promotionRelegation(db,w,rng,ev){
   for(const R of Object.values(db.regions)){
     if(R.system!=='relegation'&&R.system!=='mixed')continue;
@@ -148,16 +149,22 @@ function promotionRelegation(db,w,rng,ev){
     const k=Math.max(1,R.relegate||1);
     const down=(R.standingsMode==='points'?regionPlacements(db,R):
       standings(db,s,'regular').map(x=>x.tid))
-      .filter(t=>!(R.system==='mixed'&&db.teams[t].franchised)).slice(-k);
+      .filter(t=>!(R.system==='mixed'&&db.teams[t].franchised)).slice(-k).reverse();
     const s2=finalSeason(w,R,2);
     const up=R.div2&&s2&&s2.done?
       (R.standingsMode==='points'?regionPlacements(db,R,2):placements(db,s2))
         .filter(t=>promotionEligible(db,t)).slice(0,k):[];
-    down.forEach((tid,i)=>{
-      const t=db.teams[tid];
-      if(up[i]){const u=db.teams[up[i]];ensureClubLicense(db,t);ensureClubLicense(db,u);t.division=2;u.division=1;u.franchised=false;u.license='open';syncClubLicense(db,t,'relegation');syncClubLicense(db,u,'promotion');t.fans=Math.round((t.fans||20)*0.8);u.fans=Math.round((u.fans||10)+8);ev(`${R.leagueName} 승강: ${u.name} 승격 ↔ ${t.name} 강등`)}
-      else{foldTeam(db,t);const nt=genTeam(db,rng,R.id,R.strength-3);if(R.system==='mixed'){nt.franchised=false;nt.license='open'}ev(`${R.leagueName} 강등: ${t.name} → 신생팀 ${nt.name} 합류`)}
+    // A relegation needs an actual licensed club to replace the incumbent.
+    // Missing candidates are a retention case, not a club-closure licence.
+    down.slice(0,up.length).forEach((tid,i)=>{
+      const t=db.teams[tid],u=db.teams[up[i]];
+      ensureClubLicense(db,t);ensureClubLicense(db,u);
+      t.division=2;u.division=1;u.franchised=false;u.license='open';
+      syncClubLicense(db,t,'relegation');syncClubLicense(db,u,'promotion');
+      t.fans=Math.round((t.fans||20)*0.8);u.fans=Math.round((u.fans||10)+8);
+      ev(`${R.leagueName} 승강: ${u.name} 승격 ↔ ${t.name} 강등`);
     });
+    if(down.length>up.length)ev(`${R.leagueName} 승강 보류: 승격 적격 구단이 없어 ${down.length-up.length}개 구단 잔류`);
     reconcileTier2Structure(db,rng,R,ev);
     inferRegionPolicy(db,R);
   }
