@@ -110,7 +110,7 @@ jobs:
             git show "$base:scripts/codex-change-risk.mjs" > "$RUNNER_TEMP/lol-gm-trusted-risk.mjs"
             node "$RUNNER_TEMP/lol-gm-trusted-risk.mjs" --base "$base" --head "$RISK_HEAD_SHA" --out reports/change-risk.json
           else
-            node --input-type=module -e 'import {writeFileSync} from "node:fs"; writeFileSync("reports/change-risk.json",JSON.stringify({schemaVersion:1,level:3,automaticMergeAllowed:false,approval:"HUMAN_REVIEW_REQUIRED",reason:"Risk policy bootstrap: trusted base policy is absent",base:process.env.RISK_BASE_SHA,head:process.env.RISK_HEAD_SHA},null,2));'
+            node --input-type=module -e 'import {writeFileSync} from "node:fs"; writeFileSync("reports/change-risk.json",JSON.stringify({schemaVersion:1,level:3,automaticMergeAllowed:false,approval:"TRUSTED_POLICY_INSTALLATION_REQUIRED",reason:"Risk policy bootstrap: trusted base policy is absent",base:process.env.RISK_BASE_SHA,head:process.env.RISK_HEAD_SHA},null,2));'
           fi
 
       - name: Preserve risk report for human review
@@ -375,7 +375,7 @@ jobs:
         run: node scripts/ci-run.mjs build -- npm run build
 
       - name: Independent merge gate acceptance
-        run: node --test scripts/codex-merge-gate.test.mjs
+        run: node --test scripts/codex-merge-gate.test.mjs scripts/codex-merge-broker.test.mjs scripts/codex-merge-connector-bridge.test.mjs scripts/causal-state-fingerprint.test.mjs
 
       - name: Verify production artifact
         run: test -s dist/index.html && cmp -s index.html dist/index.html
