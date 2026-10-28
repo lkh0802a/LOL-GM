@@ -27,6 +27,13 @@ for(const [current,previous] of [
   ['  if(s.qualificationSuccessions?.length)return qualificationTournamentPlacements(db,s);\n',''],
   ['  const succession=resolvePendingQualificationSuccession(db,refs,q,forcedDraft);if(succession)return succession;\n',''],
   ['  const administrative=resolvePendingDisqualifiedFinal(db,refs,q);if(administrative)return administrative;\n',''],
+  [String.raw`    // Reserve slots for the end-phase competitions in descending priority
+    // before their results exist.  Starting them together avoids placing
+    // Masters/Open *after* the Worlds final; taken keeps entrants disjoint.
+    // The actual last-fixture/FA boundary is checked at season close.
+    if(tm==='end'&&out.length>1&&out.some(s=>s.ids.some(isWorldChampionshipId)))
+      return [{kind:'intl',ids:out.flatMap(s=>s.ids),label:out.map(s=>s.label).join(' · ')}];
+`,''],
   ['.sort(internationalEventPriority)','.sort((a,b)=>(a.prestige||1)-(b.prestige||1))'],
   ['  const rollback=pendingOfficialUndo(db),previousTaken=[...taken];let committed=false;\n  try{\n',''],
   ['  const presetEntries=presetInternationalEntries(db,it,taken);\n',''],

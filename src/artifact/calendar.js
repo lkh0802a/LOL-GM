@@ -3,18 +3,7 @@
 // intentionally does not run training, patches or medical daily ticks: the
 // contract window and offseason recovery have their own accepted semantics.
 // Recovery may temporarily position the clock at the last competition date.
-// Global player FA opens the first Tuesday of December at 00:00 UTC.
-// Standard contracts expiring this year end the prior Monday at 23:59 UTC.
-function globalPlayerFAOpenDate(year){
-  if(!Number.isInteger(year)||year<2000||year>9999)
-    throw new Error('유효하지 않은 글로벌 FA 시즌 연도');
-  const firstDay=new Date(Date.UTC(year,11,1)).getUTCDay();
-  const firstTuesday=1+(2-firstDay+7)%7;
-  return new Date(Date.UTC(year,11,firstTuesday)).toISOString().slice(0,10);
-}
-function globalPlayerContractExpiryDate(year){
-  return addDays(globalPlayerFAOpenDate(year),-1);
-}
+// Global UTC market boundaries are owned by global-market-calendar.js.
 function setWorldCalendarDate(db,date){db.worldDate=date}
 
 // Match dates are fixtures; the authoritative world clock moves through every
@@ -22,6 +11,8 @@ function setWorldCalendarDate(db,date){db.worldDate=date}
 function nextCalendarDate(db){
   const fixture=nextDate(db);
   if(fixture===null)return null;
+  const market=globalTransferMarketState(fixture);
+  if(market.open)throw new Error('28일 통합 이적시장 중에는 대회 경기를 진행할 수 없습니다: '+fixture+' ('+market.opensOn+'~'+market.closesOn+' 미만)');
   const previous=db.worldDate||`${db.year}-01-01`;
   if(previous>fixture)throw new Error('월드 날짜가 미진행 공식 경기일보다 늦습니다: '+previous+' > '+fixture);
   if(previous===fixture)return fixture; // legacy saves may be parked on an unplayed match date

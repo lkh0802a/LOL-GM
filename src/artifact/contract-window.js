@@ -18,7 +18,7 @@ function contractWindowAnchorDate(db){
   if(internationals.length)return internationals.map(endDate).sort().at(-1);
   return w?.lastDate||db.worldDate||contractWindowYear(db)+'-11-01';
 }
-// Shared UTC FA date helpers are owned by calendar.js.
+// Shared UTC FA date helpers are owned by global-market-calendar.js.
 function contractWindowDates(db){
   const year=contractWindowYear(db),
     seasonEnd=contractWindowAnchorDate(db),
