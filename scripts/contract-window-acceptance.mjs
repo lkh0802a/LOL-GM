@@ -227,9 +227,22 @@ const closureFixture=String.raw`(()=>{
     '2028 November FA window drift');
   worlds.days[0].date='2028-11-21';
   rejects('선수 글로벌 FA 개방일 이후','Worlds reached 2028 FA open');
+  // Read the real initial world schedule writer rather than naming the
+  // priority as a documentation-only policy.
+  const scheduled=buildWorld(),managed=activeTeams(scheduled,null,1)[0];
+  startWorldSeason(scheduled,managed.id,'global-final-priority-test');
+  const last=scheduled.world.steps.at(-1);
+  assert(last?.kind==='intl'&&
+    ['WORLD_CHAMPIONSHIP','MASTERS','OPEN'].every(id=>last.ids.includes(id))&&
+    last.ids.indexOf('WORLD_CHAMPIONSHIP')<last.ids.indexOf('MASTERS')&&
+    last.ids.indexOf('MASTERS')<last.ids.indexOf('OPEN'),
+    'final-phase participants not reserved in Worlds/Masters/Open order');
+  assert(scheduled.world.steps.filter(s=>s.kind==='intl'&&
+    s.ids.some(id=>['WORLD_CHAMPIONSHIP','MASTERS','OPEN'].includes(id))).length===1,
+    'end-phase international events split into post-Worlds steps');
   console.log('GLOBAL_FA_FINAL_GATE_ACCEPTANCE '+JSON.stringify({
     worldsLast:true,sameDayConservative:true,unfinishedBlocked:true,
-    years:[2027,2028],historyUnchanged:true,fullSeasonSimulated:false
+    years:[2027,2028],historyUnchanged:true,lateEntrantsReserved:true,fullSeasonSimulated:false
   }));
 })();`;
 await runEngineFixture(closureFixture,{timeout:30000,
