@@ -173,7 +173,9 @@ function abolishDiv2(db,R){
     R.rosterRuleProfile=occupants.length?'ENGINE_OWNED_RESERVE':'STANDARD_TIER1_2026';
 }
 function reconcileTier2Structure(db,rng,R,ev=()=>{}){
-  if(!R)return;
+  // Explicit legacy major-region fixtures may disable tier 2 for testing;
+  // do not change their historically configured organization mid-season.
+  if(!R||(!R.div2&&R.tier2Required))return;
   const first=activeTeams(db,R.id,1);
   if(R.system==='franchise'){
     first.forEach(t=>{t.franchised=true;t.license='franchise';if(!reserveTeamsOf(db,t).length){const a=makeAcademy(db,rng,t);ev(`${t.name} 산하 2군 창단: ${a.name}`)}});
@@ -235,8 +237,8 @@ function addRegion(db,rng,cfg){
   for(let i=made;i<R.teams;i++) genTeam(db,rng,R.id,R.strength+rng.normal(0,3.5));
   if(R.system==='mixed')markFranchised(db,R);
   if(R.div2){R.div2=false;createDiv2(db,rng,R)}
-  else if(R.system==='franchise'||R.system==='mixed'){
-    // Keep the licensing obligation even if no formal second division exists.
+  else if(!R.tier2Required&&(R.system==='franchise'||R.system==='mixed')){
+    // New optional-tier regions keep the Academy obligation without a formal division.
     for(const t of activeTeams(db,R.id,1))if((R.system==='franchise'||t.franchised)&&!reserveTeamsOf(db,t).length)makeAcademy(db,rng,t);
   }
   R.baseSlots=R.slots;
