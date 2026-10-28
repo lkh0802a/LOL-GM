@@ -33,6 +33,12 @@ function startWorldSeason(db,myTeam,seed){
   const intlSteps=tm=>{const tops=I.filter(i=>i.timing===tm&&i.tier!=='low').sort(internationalEventPriority),lows=I.filter(i=>i.timing===tm&&i.tier==='low');
     const out=tops.map(i=>({kind:'intl',ids:[i.id],label:i.name}));
     if(lows.length){if(out.length){const L=out[out.length-1];L.ids.push(...lows.map(i=>i.id));L.label+=` · ${lows.map(i=>i.name).join(' · ')}`}else out.push({kind:'intl',ids:lows.map(i=>i.id),label:lows.map(i=>i.name).join(' · ')})}
+    // Reserve slots for the end-phase competitions in descending priority
+    // before their results exist.  Starting them together avoids placing
+    // Masters/Open *after* the Worlds final; taken keeps entrants disjoint.
+    // The actual last-fixture/FA boundary is checked at season close.
+    if(tm==='end'&&out.length>1&&out.some(s=>s.ids.some(isWorldChampionshipId)))
+      return [{kind:'intl',ids:out.flatMap(s=>s.ids),label:out.map(s=>s.label).join(' · ')}];
     return out};
   // 3스플릿제: 스플릿1(윈터) → 퍼스트 스탠드 → 스플릿2(스프링) → MSI → 스플릿3(서머) → 월즈. 스플릿이 적은 리그는 뒤쪽 스플릿만 치른다
   const tim={1:'early',2:'mid',3:'end'};
