@@ -2,7 +2,8 @@ function clubLicenseState(db,t){
   const R=db.regions[t.region],parent=t.parent&&db.teams[t.parent];
   const owner=ensureClubOwnership(parent||t);
   const division=t.division||1,status=t.active===false?'returned':'approved';
-  const kind=t.parent?'reserve':division===2?'open':R?.system==='franchise'?'franchise':
+  // Franchise certification belongs to the first division, never to tier 3+.
+  const kind=t.parent?'reserve':division>1?'open':R?.system==='franchise'?'franchise':
     R?.system==='mixed'&&t.franchised?'certified':'open';
   return {region:t.region,division,parent:t.parent||null,kind,status,holder:owner.id};
 }

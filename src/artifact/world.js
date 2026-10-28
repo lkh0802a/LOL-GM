@@ -49,7 +49,9 @@ function regionCfg(id,over={}){
   return {id,name:P.name,leagueName:P.leagueName,short:P.short,tier2Short:P.tier2Short||null,strength:P.strength,templates:!!P.templates,tier:P.tier||'emerging',parent:P.parent||null,
     format:'rr_po',div2:false,div2Teams:8,teams:10,splits:2,standingsMode:'independent',legs:2,regularBo:3,playoffTake:6,playoffBo:5,system:'franchise',relegate:1,slots:3,office:null,
     fearless:true,payScale:null,spendingRule:null,sfrMode:null,sfrTeamShare:0,salaryCap:0,salaryFloor:0,luxuryTax:.5,importLimit:null,importRecruitMinGap:null,rosterRuleProfile:null,marketProfile:null,policyMode:'engine',policyLocks:{},...d,...over,
-    tier2Required:over.tier2Required??true,
+    // The six established major regions retain their initial tier-two commitment.
+    // Newly admitted regions can legally start with only a first division.
+    tier2Required:over.tier2Required??(P.tier==='major'),
     spendingRule:null,sfrMode:null,sfrTeamShare:0,salaryCap:0,salaryFloor:0,importLimit:null,importRecruitMinGap:null,rosterRuleProfile:null,marketProfile:null,office:null,payScale:null};
 }
 function defaultWorldConfig(){return {
@@ -107,7 +109,7 @@ function isManagerSelectableTeam(db,t){
 function managerSelectableTeams(db,rid,div){return activeTeams(db,rid,div).filter(t=>isManagerSelectableTeam(db,t))}
 function genTeam(db,rng,regionId,strength,o={}){
   const on=o.name?{name:o.name,short:o.short}:orgName(db,rng), subs=db.worldConfig.subs||0;
-  const t={id:on.short,name:on.name,short:on.short,region:regionId,division:o.div||1,parent:o.parent||null,active:true,fans:baseFans(strength-4-(o.div===2?15:0),rng),tactics:genTactics(rng),philosophy:o.parent?'youth':rng.pick(PHILOSOPHIES),roster:[],founded:db.year};
+  const t={id:on.short,name:on.name,short:on.short,region:regionId,division:o.div||1,parent:o.parent||null,academyOnly:!!o.academyOnly,active:true,fans:baseFans(strength-4-(o.div===2?15:0),rng),tactics:genTactics(rng),philosophy:o.parent?'youth':rng.pick(PHILOSOPHIES),roster:[],founded:db.year};
   db.teams[t.id]=t;
   const tb=strength+rng.normal(0,3);
   for(const role of ROLES){const age=o.parent?rng.int(17,20):rng.int(18,27);genPlayer(db,rng,{role,age,base:tb+(age<20?-4:0),region:regionId,team:t.id})}
@@ -118,11 +120,13 @@ function genTeam(db,rng,regionId,strength,o={}){
 }
 function makeAcademy(db,rng,parent){
   const R=db.regions[parent.region];let short=parent.short+'C';while(db.teams[short])short=parent.short+String.fromCharCode(65+rng.int(0,25));
-  return genTeam(db,rng,R.id,R.strength-9,{div:2,parent:parent.id,name:parent.name+' Challengers',short});
+  // An owned Academy may exist without a licensed second-tier competition.
+  return genTeam(db,rng,R.id,R.strength-9,{div:2,parent:parent.id,academyOnly:!R.div2,name:parent.name+' Challengers',short});
 }
 function reserveRequirement(db,t){
   const team=teamRef(db,t);if(!team||team.parent||(team.division||1)!==1)return 'none';
-  const R=db.regions[team.region];if(!R||!R.div2)return 'none';
+  // An organization's Academy obligation is independent of the region hosting an official tier 2.
+  const R=db.regions[team.region];if(!R)return 'none';
   if(R.system==='franchise')return 'required';
   if(R.system==='mixed')return team.franchised?'required':'optional';
   return 'optional';
@@ -134,6 +138,8 @@ function promotionEligible(db,t){
 }
 function createDiv2(db,rng,R){
   R.div2=true;
+  // Convert already owned non-competitive Academy squads to legal tier-2 entrants.
+  for(const t of activeTeams(db,R.id,2))if(t.parent&&t.academyOnly)t.academyOnly=false;
   const first=activeTeams(db,R.id,1);
   if(R.system==='franchise'){
     first.forEach(t=>{t.franchised=true;t.license='franchise';if(!reserveTeamsOf(db,t).length)makeAcademy(db,rng,t)});
@@ -151,9 +157,25 @@ function createDiv2(db,rng,R){
   if(R.policyMode==='engine'&&!R.policyLocks?.rosterRuleProfile)R.rosterRuleProfile=activeTeams(db,R.id,2).some(t=>t.parent)?'ENGINE_OWNED_RESERVE':'STANDARD_TIER1_2026';
   for(const t of activeTeams(db,R.id))syncClubLicense(db,t,'tier2-structure-review');
 }
-function abolishDiv2(db,R){if(R.tier2Required)throw new Error('이 지역은 2부 운영이 필수입니다');R.div2=false;for(const t of activeTeams(db,R.id,2))foldTeam(db,t);if(R.policyMode==='engine'&&!R.policyLocks?.rosterRuleProfile)R.rosterRuleProfile='STANDARD_TIER1_2026'}
+function abolishDiv2(db,R){
+  if(R.tier2Required)throw new Error('이 지역은 2부 운영이 필수입니다');
+  const occupants=activeTeams(db,R.id,2);
+  // A league cannot erase independent clubs, their contracts or licenses
+  // merely to retire its competition. A legal succession plan is required.
+  if(occupants.some(t=>!t.parent))
+    throw new Error('독립 2부 구단의 참가권·계약 승계가 확정되지 않아 폐지할 수 없습니다');
+  R.div2=false;
+  for(const t of occupants){
+    t.academyOnly=true; // The owned Academy stays even without a tier-2 league.
+    syncClubLicense(db,t,'academy-only-after-tier2-close');
+  }
+  if(R.policyMode==='engine'&&!R.policyLocks?.rosterRuleProfile)
+    R.rosterRuleProfile=occupants.length?'ENGINE_OWNED_RESERVE':'STANDARD_TIER1_2026';
+}
 function reconcileTier2Structure(db,rng,R,ev=()=>{}){
-  if(!R||!R.div2)return;
+  // Explicit legacy major-region fixtures may disable tier 2 for testing;
+  // do not change their historically configured organization mid-season.
+  if(!R||(!R.div2&&R.tier2Required))return;
   const first=activeTeams(db,R.id,1);
   if(R.system==='franchise'){
     first.forEach(t=>{t.franchised=true;t.license='franchise';if(!reserveTeamsOf(db,t).length){const a=makeAcademy(db,rng,t);ev(`${t.name} 산하 2군 창단: ${a.name}`)}});
@@ -182,7 +204,7 @@ function inferRegionPolicy(db,R){
   const teams=activeTeams(db,R.id,1),n=Math.max(1,teams.length);
   const owners=teams.map(t=>t.owner&&t.owner.wealth||50),ownerAvg=avg(owners),fans=teams.map(t=>t.fans||30),fanAvg=avg(fans);
   const pays=teams.map(t=>topFivePayroll(db,t)).filter(x=>x>0).sort((a,b)=>a-b),med=pays.length?pays[Math.floor(pays.length/2)]:Math.max(1,8*psOf(db,R.id)),disp=pays.length>1?pays[pays.length-1]/Math.max(.1,pays[0]):1;
-  const locals=Object.values(db.players).filter(p=>!p.retired&&isLocalPlayer(p,R.id)&&playerOvr(p)>=R.strength-10).length/n,reserveOwned=R.div2&&activeTeams(db,R.id,2).some(t=>t.parent);
+  const locals=Object.values(db.players).filter(p=>!p.retired&&isLocalPlayer(p,R.id)&&playerOvr(p)>=R.strength-10).length/n,reserveOwned=activeTeams(db,R.id,2).some(t=>t.parent);
   R.rosterRuleProfile=reserveOwned?'ENGINE_OWNED_RESERVE':'STANDARD_TIER1_2026';
   const importNeed=clamp((6-locals)/4+(R.strength<66?.25:0)+(fanAvg>50?.15:0),0,1.5),spendPower=clamp((ownerAvg-45)/35+(R.payScale-.55),0,2);
   R.marketProfile=spendPower>=1.15?'high_spend':importNeed>=.75?'open_market':locals>=7?'domestic_development':'balanced';
@@ -215,6 +237,10 @@ function addRegion(db,rng,cfg){
   for(let i=made;i<R.teams;i++) genTeam(db,rng,R.id,R.strength+rng.normal(0,3.5));
   if(R.system==='mixed')markFranchised(db,R);
   if(R.div2){R.div2=false;createDiv2(db,rng,R)}
+  else if(!R.tier2Required&&(R.system==='franchise'||R.system==='mixed')){
+    // New optional-tier regions keep the Academy obligation without a formal division.
+    for(const t of activeTeams(db,R.id,1))if((R.system==='franchise'||t.franchised)&&!reserveTeamsOf(db,t).length)makeAcademy(db,rng,t);
+  }
   R.baseSlots=R.slots;
   for(let i=0;i<Math.ceil(R.teams*0.6);i++) genPlayer(db,rng,{role:rng.pick(ROLES),age:rng.int(17,19),base:R.strength-11+rng.normal(0,5),region:R.id});
   inferRegionPolicy(db,R);
