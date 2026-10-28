@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import {fingerprint} from './causal-state-fingerprint.mjs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { ENGINE_MODULES } from './artifact-modules.mjs';
@@ -12,12 +12,7 @@ if(!['full','core','patch-system'].includes(smokeMode))
   throw new Error('SMOKE_MODE must be full, core, or patch-system');
 const resultPath=process.env.SMOKE_RESULT_FILE;
 let result;
-const canonical=value=>JSON.stringify(value, (key,item)=>{
-  if(key==='saveId')return undefined;
-  return item&&typeof item==='object'&&!Array.isArray(item)
-    ?Object.fromEntries(Object.keys(item).sort().map(k=>[k,item[k]])):item;
-});
-const fingerprint=value=>createHash('sha256').update(canonical(value)).digest('hex');
+
 
 let source = '';
 for (const file of modules) source += `${await readFile(resolve(artifact, file), 'utf8')}\n`;

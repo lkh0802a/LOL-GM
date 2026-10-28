@@ -1,0 +1,7 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {createHash} from 'node:crypto';import {canonical,fingerprint} from './causal-state-fingerprint.mjs';
+test('same legacy canonical projection preserves storage-only identity while retaining all causal values',()=>{
+ const a={saveId:'one',worldDate:'2027-01-01',players:{p1:{salary:2,team:'A'}},matches:[{winner:'A'}]},b={matches:[{winner:'A'}],players:{p1:{team:'A',salary:2}},worldDate:'2027-01-01',saveId:'two'};assert.equal(fingerprint(a),fingerprint(b));for(const change of [x=>x.worldDate='2027-01-02',x=>x.players.p1.salary=3,x=>x.matches[0].winner='B',x=>x.players.p2=x.players.p1]){const x=structuredClone(a);change(x);assert.notEqual(fingerprint(a),fingerprint(x));}assert.equal(a.saveId,'one');
+});
+test('bounded hash matches the existing canonical JSON contract on nested JSON, Unicode, omissions and arrays',()=>{
+ for(const value of [{'10':'ten','2':'two','01':'leading','4294967295':'not-index'},{z:[1,undefined,null,'한글',-0,Infinity],a:{saveId:'storage',x:'line\nquote"'}},new Date('2027-01-01T00:00:00Z'),{a:{toJSON(){return undefined}},b:2},[{toJSON(){return undefined}}],{toJSON(){return {z:2,a:1}}},[{},[],false,0,''],null])assert.equal(fingerprint(value),createHash('sha256').update(canonical(value)).digest('hex'));assert.throws(()=>fingerprint(undefined));const cycle={};cycle.self=cycle;assert.throws(()=>fingerprint(cycle),/Circular/);
+});

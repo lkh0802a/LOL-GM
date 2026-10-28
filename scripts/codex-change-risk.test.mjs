@@ -8,7 +8,7 @@ import {classifyChanges,parseNameStatus,main} from './codex-change-risk.mjs';
 
 test('path/status risk is conservative and cannot authorize merge from labels or passed tests',()=>{
  for(const [file,expected] of [['docs/guide.md',1],['scripts/new-acceptance.mjs',2],['src/ui-v2/contracts.js',2],['src/artifact/finance.js',2],['src/artifact/engine.js',3],['src/artifact/match-core-state.js',3],['src/artifact/save.js',3],['src/artifact/competition-worlds.js',3],['.github/workflows/ci.yml',3],['AGENTS.md',3],['docs/DECISIONS.md',3],['package.json',3],['scripts/codex-change-risk.mjs',3],['unknown.js',2],['../outside',3]]){
-  const result=classifyChanges([{status:'M',path:file,label:'low-risk',tests:'PASS'}]);assert.equal(result.level,expected,file);assert.equal(result.automaticMergeAllowed,false);assert.equal(result.approval,'HUMAN_REVIEW_REQUIRED');
+  const result=classifyChanges([{status:'M',path:file,label:'low-risk',tests:'PASS'}]);assert.equal(result.level,expected,file);assert.equal(result.automaticMergeAllowed,false);assert.equal(result.approval,'INDEPENDENT_MERGE_GATE_REQUIRED');
  }
  assert.equal(classifyChanges([{status:'A',path:'scripts/new-acceptance.mjs'}]).level,1);
  for(const status of ['D','T','R100','?'])assert.equal(classifyChanges([{status,path:'scripts/old.test.mjs'}]).level,3);

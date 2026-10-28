@@ -1,3 +1,4 @@
+import {fingerprint} from './causal-state-fingerprint.mjs';
 import {readFile} from 'node:fs/promises';
 import {mkdirSync,writeFileSync} from 'node:fs';
 import vm from 'node:vm';
@@ -81,14 +82,14 @@ try{vm.runInNewContext(source+String.raw`
   for(const p of Object.values(db.players))if(!p.retired)check(Object.values(p.attrs).every(Number.isFinite),'invalid player attribute '+p.id);
   for(const t of activeTeams(db)){check(Number.isFinite(t.finance.cash),'invalid cash '+t.id);check(ROLES.every(r=>starterFor(db,t,r)),'missing starter '+t.id);}
   const players=Object.values(db.players).filter(p=>!p.retired),cash=activeTeams(db).map(t=>t.finance.cash);
-  __row({year,ticks,pendingGames,fixtures:fixtureCount,champions,patches:patchCount,players:players.length,allPlayers:Object.keys(db.players).length,teams:activeTeams(db).length,ability:quantiles(players.map(playerOvr)),cash:quantiles(cash),salary:quantiles(players.filter(p=>p.contract).map(p=>p.contract.salary)),marketValue:quantiles(players.map(p=>playerMarketValue(db,p))),meta:{pickedChampions:metaPicks.filter(x=>x>0).length,topShare:metaTotal?Math.max(0,...metaPicks)/metaTotal:0},metaHistoryRows:(db.metaHistory||[]).length,saveBytes:marketSaveBytes(),heapBytes:__heap(),ms:performance.now()-begin});
+  __row({causalStateHash:__causalStateHash(db,packDB(db)),year,ticks,pendingGames,fixtures:fixtureCount,champions,patches:patchCount,players:players.length,allPlayers:Object.keys(db.players).length,teams:activeTeams(db).length,ability:quantiles(players.map(playerOvr)),cash:quantiles(cash),salary:quantiles(players.filter(p=>p.contract).map(p=>p.contract.salary)),marketValue:quantiles(players.map(p=>playerMarketValue(db,p))),meta:{pickedChampions:metaPicks.filter(x=>x>0).length,topShare:metaTotal?Math.max(0,...metaPicks)/metaTotal:0},metaHistoryRows:(db.metaHistory||[]).length,saveBytes:marketSaveBytes(),heapBytes:__heap(),ms:performance.now()-begin});
   check(__heap()<__memory,'heap memory budget exceeded');
   check(__memoryUsage().rss<__rssLimit,'resident memory budget exceeded');checkpoint();
   if(cycle+1<__seasons){if(!isManagerSelectableTeam(db,db.teams[teamId])){const next=managerSelectableTeams(db)[0];check(next,'no available coaching job');__event({year,jobChange:{from:teamId,to:next.id}});teamId=next.id;}
    startWorldSeason(db,teamId,__seed);db.world.manage='ai';}
  }
 })();`,{console,Date,Math,JSON,Set,Map,WeakMap,Object,Array,String,Number,Boolean,RegExp,Error,Intl,performance,crypto,TextEncoder,
- __seed:seed,__seasons:seasons,__checkpoint:r=>{lastCheckpoint=r;persist('running');},__row:r=>{r.memory=process.memoryUsage();observeYear(r);persist('running');console.log('DAILY_CAREER_YEAR '+JSON.stringify(r));},__event:r=>events.push(r),__heap:()=>process.memoryUsage().heapUsed,__memoryUsage:()=>process.memoryUsage(),__rssLimit:rssMB*1024*1024,__memory:memoryMB*1024*1024},{timeout:7_200_000});}
+ __seed:seed,__seasons:seasons,__causalStateHash:(runtime,packed)=>fingerprint({runtime,persisted:JSON.parse(packed)}),__checkpoint:r=>{lastCheckpoint=r;persist('running');},__row:r=>{r.memory=process.memoryUsage();observeYear(r);persist('running');console.log('DAILY_CAREER_YEAR '+JSON.stringify(r));},__event:r=>events.push(r),__heap:()=>process.memoryUsage().heapUsed,__memoryUsage:()=>process.memoryUsage(),__rssLimit:rssMB*1024*1024,__memory:memoryMB*1024*1024},{timeout:7_200_000});}
 catch(e){error=e.stack;}
 persist(error?'failed':'passed',error);
 if(error)throw Error(error);
