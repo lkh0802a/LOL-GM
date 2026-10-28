@@ -1,7 +1,7 @@
-// ===== LOL GM: D04-B3 post-Worlds incumbent exclusivity window =====
-// The final competition date is the legal anchor. Existing contracts expire
-// 14 days after that date; only the incumbent club may negotiate during those
-// 14 days. Other clubs may contact the player from day 15, after expiry.
+// ===== LOL GM: Global player FA and contract expiry window =====
+// Player contracts expire on the third Monday of November (23:59 UTC).
+// Global player FA opens the following Tuesday at 00:00 UTC. The incumbent's
+// pre-FA renewal window runs from the official season end to that fixed date.
 
 function contractWindowYear(db){return db.world?.year??db.year}
 function contractWindowAnchorDate(db){
@@ -18,16 +18,30 @@ function contractWindowAnchorDate(db){
   if(internationals.length)return internationals.map(endDate).sort().at(-1);
   return w?.lastDate||db.worldDate||contractWindowYear(db)+'-11-01';
 }
+// UTC global FA starts on the third Tuesday in November, independent of
+// the date Worlds happened to finish. The previous UTC date is the standard
+// contract-expiry date for contracts whose 'until' year matches this year.
+function globalPlayerFAOpenDate(year){
+  if(!Number.isInteger(year)||year<2000||year>9999)
+    throw new Error('유효하지 않은 글로벌 FA 시즌 연도');
+  const novemberFirst=new Date(Date.UTC(year,10,1));
+  const firstTuesday=1+(2-novemberFirst.getUTCDay()+7)%7;
+  return new Date(Date.UTC(year,10,firstTuesday+14)).toISOString().slice(0,10);
+}
+function globalPlayerContractExpiryDate(year){
+  return addDays(globalPlayerFAOpenDate(year),-1);
+}
 function contractWindowDates(db){
   const year=contractWindowYear(db),
     seasonEnd=contractWindowAnchorDate(db),
-    exclusiveThrough=addDays(seasonEnd,14),
-    outsideContactDate=addDays(seasonEnd,15);
+    outsideContactDate=globalPlayerFAOpenDate(year),
+    contractExpiryDate=globalPlayerContractExpiryDate(year);
+  if(seasonEnd>=outsideContactDate)
+    throw new Error('공식 시즌이 선수 글로벌 FA 개방일 이후까지 이어집니다: '+seasonEnd);
   return {
     seasonYear:year,startSeason:year+1,seasonEndDate:seasonEnd,
-    startDate:addDays(seasonEnd,1),exclusiveThrough,
-    contractExpiryDate:exclusiveThrough,outsideContactDate,
-    effectiveDate:outsideContactDate
+    startDate:addDays(seasonEnd,1),exclusiveThrough:contractExpiryDate,
+    contractExpiryDate,outsideContactDate,effectiveDate:outsideContactDate
   };
 }
 function contractExpiresThisSeason(db,p){
@@ -63,8 +77,8 @@ function initOffseasonContractWindow(db){
   aiGrantEarlyContact(db);
   return w.contractWindow;
 }
-// A club can relinquish its *exclusive contact* right without terminating the
-// still-binding playing contract. Early agreements only take effect on day 15.
+// A club can relinquish its pre-FA contact exclusivity without terminating the
+// still-binding playing contract. Early agreements take effect at global FA.
 function grantEarlyContact(db,pid,actor='manager'){
   const cw=db.world?.contractWindow,p=db.players[pid],
     t=p?.team&&db.teams[p.team];
@@ -128,7 +142,7 @@ function recordContractAgreement(db,p,t,terms,kind='renewal',actor='manager'){
   if(kind==='early_fa'&&actor==='manager'&&!recruitmentReady(db,p.id,t.id))
     return {ok:false,msg:'조기 접촉 허용 뒤에도 스카우팅과 내부 평가가 필요합니다'};
   // Next-season option dates must also be next-season dates. The playing
-  // contract remains untouched until the exact post-Worlds expiry boundary.
+  // contract remains untouched until the standard November expiry boundary.
   const cw=db.world.contractWindow,
     normalized=withContractStartSeason(db,cw.startSeason,()=>
     normalizeContractTerms(db,p,t,terms.salary,terms.years,terms)),
@@ -196,7 +210,7 @@ function closeExclusiveContractWindow(db){
   cw.stage='fa';cw.completed=true;cw.settlement=settlement;
   refreshAIMarketOffers(db);
   return {ok:true,stage:'fa',date:db.worldDate,renewals,earlyOffers,settlement,
-    msg:'14일 원소속 독점기간 종료 · 기존 계약 만료 · FA 접촉 개방'};
+    msg:'글로벌 선수 FA 개방 · 기존 계약 만료 · 신규 협상 가능'};
 }
 function advanceOffseasonContractDay(db){
   const cw=initOffseasonContractWindow(db);
