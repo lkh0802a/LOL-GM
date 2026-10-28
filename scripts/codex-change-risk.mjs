@@ -16,7 +16,7 @@ export function classifyFile(status,file){
  return {level:2,reason:'outside the narrow low-risk candidates; review required'};
 }
 export function classifyChanges(changes){
- const files=changes.map(({status,path:file})=>({status,path:file,...classifyFile(status,file)}));return {schemaVersion:1,level:Math.max(1,...files.map(x=>x.level)),files,automaticMergeAllowed:false,approval:'HUMAN_REVIEW_REQUIRED',policy:'Initial operation is PR creation only. File heuristics cannot prove semantic safety or replace branch protection, security checks or user approval.'};
+ const files=changes.map(({status,path:file})=>({status,path:file,...classifyFile(status,file)}));return {schemaVersion:1,level:Math.max(1,...files.map(x=>x.level)),files,automaticMergeAllowed:false,approval:'INDEPENDENT_MERGE_GATE_REQUIRED',policy:'Risk triage cannot grant a merge. User #311 preauthorizes normal development after independent acceptance. File heuristics cannot prove semantic safety or replace branch protection, security checks or user approval.'};
 }
 export function parseNameStatus(text){
  const fields=text.split('\0');if(fields.at(-1)==='')fields.pop();if(fields.length%2)throw Error('Incomplete Git name-status output');const out=[];for(let i=0;i<fields.length;i+=2)out.push({status:fields[i],path:fields[i+1]});return out;
