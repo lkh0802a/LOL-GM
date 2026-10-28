@@ -191,7 +191,7 @@ await runEngineFixture(fixture,{timeout:30000,filename:'contract-window-acceptan
 
 // Strict closure gate: synthetic fixture metadata only, never fabricated wins
 // or a stand-in for an actually played full season.
-const closureFixture=String.raw\`(()=>{
+const closureFixture=String.raw`(()=>{
   const assert=(ok,reason)=>{if(!ok)throw new Error('GLOBAL_FA_FINAL_GATE '+reason)};
   const db=buildWorld();
   db.year=2027;
@@ -231,7 +231,7 @@ const closureFixture=String.raw\`(()=>{
     worldsLast:true,sameDayConservative:true,unfinishedBlocked:true,
     years:[2027,2028],historyUnchanged:true,fullSeasonSimulated:false
   }));
-})();\`;
+})();`;
 await runEngineFixture(closureFixture,{timeout:30000,
   filename:'contract-worlds-final-gate.fixture.js'});
 
