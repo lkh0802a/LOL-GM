@@ -129,8 +129,7 @@ function recordContractAgreement(db,p,t,terms,kind='renewal',actor='manager'){
   const err=contractWindowContactError(db,p,t,kind);if(err)return {ok:false,msg:err};
   if(kind==='early_fa'&&actor==='manager'&&!recruitmentReady(db,p.id,t.id))
     return {ok:false,msg:'조기 접촉 허용 뒤에도 스카우팅과 내부 평가가 필요합니다'};
-  // Next-season option dates must also be next-season dates. The playing
-  // contract remains untouched until the standard annual expiry boundary.
+  // Next-season terms leave the current contract intact until expiry.
   const cw=db.world.contractWindow,
     normalized=withContractStartSeason(db,cw.startSeason,()=>
     normalizeContractTerms(db,p,t,terms.salary,terms.years,terms)),
@@ -186,6 +185,7 @@ function exerciseExclusiveTeamOption(db,pid){
     {ok:false,msg:(result.errors||['팀 옵션 행사 실패']).join(' · ')};
 }
 function closeExclusiveContractWindow(db){
+  const rollback=pendingOfficialUndo(db);try{
   const cw=initOffseasonContractWindow(db);
   if(!cw)return {ok:false,msg:'계약 협상 기간을 종료할 수 없습니다'};
   if(cw.stage!=='exclusive')return {ok:true,stage:cw.stage,date:db.worldDate,
@@ -199,8 +199,10 @@ function closeExclusiveContractWindow(db){
   refreshAIMarketOffers(db);
   return {ok:true,stage:'fa',date:db.worldDate,renewals,earlyOffers,settlement,
     msg:'글로벌 선수 FA 개방 · 기존 계약 만료 · 신규 협상 가능'};
+  }catch(error){rollback();throw error}
 }
 function advanceOffseasonContractDay(db){
+  const rollback=pendingOfficialUndo(db);try{
   const cw=initOffseasonContractWindow(db);
   if(!cw)return {ok:false,msg:'계약 협상 기간을 진행할 수 없습니다'};
   if(cw.stage!=='exclusive')return {ok:true,stage:cw.stage,date:db.worldDate,
@@ -210,5 +212,6 @@ function advanceOffseasonContractDay(db){
   setWorldCalendarDate(db,next);processTransferPayments(db);processLocalServiceDaily(db);aiChooseLocalEligibility(db);aiRunEarlyContactOffers(db);
   return {ok:true,stage:'exclusive',date:db.worldDate,
     msg:'원소속 독점 재계약 기간 · '+db.worldDate};
+  }catch(error){rollback();throw error}
 }
 function advanceOffseasonContractWindow(db){return closeExclusiveContractWindow(db)}
