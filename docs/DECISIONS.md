@@ -294,6 +294,8 @@ This supersedes any interpretation of item 3 that would cause frequent routine s
 
 ## D-022 — Cross-system realism baseline
 
+**Status for 2026-10-28 season contract:** The former three-split baseline is historic only; the new default is opening cup → First Stand → unified annual domestic league with midseason MSI and one final playoff → all domestic leagues finish → Worlds last. See latest section at file top and `LOL_GM_SPEC.md` §27. Other system realism constraints remain applicable unless expressly superseded.
+
 **Decision:** Before major item 4, existing simulation systems use a conservative LoL-esports realism baseline rather than FM-style high churn.
 
 - normal live-game patches target a roughly 14-day cadence with occasional longer gaps; league offices cannot dynamically speed up or slow down the developer patch calendar
@@ -475,6 +477,8 @@ This applies retroactively to completed major items during later UI touches and 
 
 
 ## D-032 — International ecosystem and qualification contract
+
+**Status for 2026-10-28 season contract:** The following detailed international format/three-phase/global-pause text records the **former initial baseline**, not mandatory current new-game season architecture. Domestic annual leagues now have a unified full-season championship (first/second halves cumulative, single final PO); midseason international events may conditionally overlap eligible domestic fixtures; every domestic league ends before Worlds starts and Worlds Final is the irrevocable last official game. Competition formats and slots are configurable initial presets, subject to immutable Fearless/First Selection. See latest top-level decision and `LOL_GM_SPEC.md` §27. Do not remove historical records or conflate documents with implemented code.
 
 **Decision:** LOL GM uses three seasonal international phases for first-division professional teams. Competition prestige tiers never mean domestic Tier 2/Academy participation.
 
