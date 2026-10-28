@@ -157,7 +157,21 @@ function createDiv2(db,rng,R){
   if(R.policyMode==='engine'&&!R.policyLocks?.rosterRuleProfile)R.rosterRuleProfile=activeTeams(db,R.id,2).some(t=>t.parent)?'ENGINE_OWNED_RESERVE':'STANDARD_TIER1_2026';
   for(const t of activeTeams(db,R.id))syncClubLicense(db,t,'tier2-structure-review');
 }
-function abolishDiv2(db,R){if(R.tier2Required)throw new Error('이 지역은 2부 운영이 필수입니다');R.div2=false;for(const t of activeTeams(db,R.id,2))foldTeam(db,t);if(R.policyMode==='engine'&&!R.policyLocks?.rosterRuleProfile)R.rosterRuleProfile='STANDARD_TIER1_2026'}
+function abolishDiv2(db,R){
+  if(R.tier2Required)throw new Error('이 지역은 2부 운영이 필수입니다');
+  const occupants=activeTeams(db,R.id,2);
+  // A league cannot erase independent clubs, their contracts or licenses
+  // merely to retire its competition. A legal succession plan is required.
+  if(occupants.some(t=>!t.parent))
+    throw new Error('독립 2부 구단의 참가권·계약 승계가 확정되지 않아 폐지할 수 없습니다');
+  R.div2=false;
+  for(const t of occupants){
+    t.academyOnly=true; // The owned Academy stays even without a tier-2 league.
+    syncClubLicense(db,t,'academy-only-after-tier2-close');
+  }
+  if(R.policyMode==='engine'&&!R.policyLocks?.rosterRuleProfile)
+    R.rosterRuleProfile=occupants.length?'ENGINE_OWNED_RESERVE':'STANDARD_TIER1_2026';
+}
 function reconcileTier2Structure(db,rng,R,ev=()=>{}){
   if(!R)return;
   const first=activeTeams(db,R.id,1);
