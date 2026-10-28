@@ -1,15 +1,15 @@
-## 2026-10-28 사용자 최종 승인 — 기존 스플릿·서킷제 폐기, 연간 통합 국내 리그 모델로 교체
+## 2026-10-28 최신 사용자 정정 — 전 세계 Split/Circuit 강제 폐기, 최초 시즌부터 지역별 다른 형식 허용
 
-**사용자:** “스플릿 서킷제를 저걸로 바꿀까 생각중인 거라고” → **“교체하자”**. 기존 3 Split/3 Circuit, 2027/2028 구간표, Split 2·3 독립 대회/플레이오프는 **기존 설계(SUPERSEDED)**. 신규 기본 월드와 시즌 엔진은 이를 필수 템플릿으로 간주하지 않는다. 구형 시드·진행 완료 게임·명칭/ID 이력은 파괴하지 말 것.
+**결정 흐름:** “스플릿 서킷제를 저걸로 바꿀까 생각중인 거라고” → “교체하자” → **“모든 지역이 똑같은 통합 리그를 운영할 필요 없댔잖아?”**. 사용자가 승인한 교체는 **전 세계 공통 3 Split/3 Circuit/14기간 강제 체계의 폐기와 지역별 자율 시즌 생성 엔진 채택**이며, 처음부터 **모든 지역에 통합 리그 포맷을 강제하는 교체가 아니다**. 앞선 '새 초기 모델 = 전 지역 연간 단일 통합 리그' 해석은 **SUPERSEDED**.
 
-**새 초기 모델:** 독립 개막 컵(First Stand 출전 선발) → First Stand → 연간 하나의 국내 챔피언십 [전반기 누적 정규리그 → 중간 경쟁 기반 MSI 선발 및 국제대회 → 후반기 누적 정규리그 → 연간 최종 PO/우승 1회] → **모든 지역 국내 1·2부 및 선발전 종료** → World Championship(결승은 시즌 마지막 공식 경기) → 오프시즌.
-
-- 전반기/후반기는 **같은 대회·시즌/누적 순위**의 단계이지 별도 Split/서킷·독립 리그 우승 기록이 아니다.
-- 중간 국제대회는 참가기관·일정 형평성·이동/회복·중계 충돌·월즈 전 시즌 완료 가능성에 따라 국내 리그와 조건부 병행할 수 있다. 국제대회마다 전 세계 국내 경기를 의무 중단하던 D-032 기존 규정은 해당 최초 모델의 과거 제약으로 **SUPERSEDED**. Worlds 개막 전 모든 국내 공식 리그 종료는 필수.
-- 해당 새 초기 모델조차 영구 시즌 형식은 아니다. 사무국은 향후 적법한 공표/차기 시즌 효력/자격/일정/기록 보호와 검증을 충족하면서 리그/컵/대회/구간/PO를 변화시킬 수 있다. 다만 **매 시즌 월즈 결승 = 시즌 최종 공식 경기**, **Fearless Draft/First Selection 현행 규칙 = 영구 불변**이다.
-- **신설 지역 2부 필수 여부는 아직 사용자와 논의 중**이므로 이 결정으로 변경하거나 삭제하지 않는다.
-- 구형 D-022, D-032와 해당 기존 일정표·문서의 Split/Circuit/국제 전면 휴지 규칙은 **역사 기록/초기 과거 설계 설명**으로 보존할 뿐 현재 기본 모델의 구현 기준이 아니다. 최신 상세 [LOL_GM_SPEC.md §27](LOL_GM_SPEC.md#27-시즌국제대회--2026-10-28-승인-통합-국내-리그-기본-모델), 담당 [#234](https://github.com/lkh0802a/LOL-GM/issues/234), 정책 [#311](https://github.com/lkh0802a/LOL-GM/issues/311).
-- Codex는 실제 경기 writer/standings/qualifier/캘린더/저장/UI·테스트를 **별도의 안전한 PR**로 수용한다. 본 문서 변경만으로 코드 구현·CI/출시 완료 아님.
+- **초기 시즌부터 다양성:** 국내 리그 사무국이 각 지역의 초기 규정/실제 구조·참가팀·선수 공급·경제·운영 실현성을 기반으로 단일 연간 리그, 전·후반기 누적형 통합 리그, 복수 스플릿, 독립 컵+리그, 다양한 PO·선발전 중 서로 다른 조합을 채택할 수 있다. 특정 지역(LCK·LPL·LEC 등)에 새 포맷을 임의로 고정 확정하지 않는다.
+- **통합 리그는 지원하는 한 형식:** 해당 지역이 택한 경우에만 전반기 누적→중간 국제대회 및 적법 선발→후반기 누적→연간 단일 PO/우승을 적용한다. 다른 지역은 같은 순서·PO 1회·리그 성적 누적·개막 컵 의무를 따르지 않는다.
+- **국제대회는 공통 시간, 국내 포맷은 지역별 별도:** First Stand/MSI의 참가 등록 마감 시점 전까지 각 지역이 현재 유효한 국내 성적·컵·선발전·포인트·정규 직행 등 허용된 규정으로 진출팀을 결정한다. 국제대회 개최가 전 지역의 동일 '전반기 완료'를 뜻하지 않는다. 적법한 미참가팀 국내 경기는 참가팀 점유·회복/이동·중계·공정성 검증 후 중간 국제대회와 병행할 수 있다.
+- **월즈 강제 마감/피날레:** 모든 활성 지역 1·2부 국내 공식 리그·PO·선발전은 Worlds **개막 전** 각자 일정 완료. Worlds **결승이 시즌 마지막 공식 경기**(영구 불변). Fearless·First Selection도 영구 불변.
+- **사무국은 매 시즌 다른 구조로 진화 가능:** 근거·관할/구단 의견·공표/시행 시즌·자원·참가권 합법성과 과거 기록/저장 무결성을 보존. '처음에는 다 통합, 이후에만 다르게 변경 가능'은 금지.
+- **보류 유지:** 신규 지역에 2부 리그를 반드시 창설할지(#10)는 아직 사용자가 결정하지 않았다.
+- 구형 D-022/D-032의 '모든 지역 3스플릿/3국제 페이즈/글로벌 정지' 등은 역사적 기준으로 보존하되 새 국내 시즌의 강제 정책 아님. 상세 [LOL_GM_SPEC.md §27](LOL_GM_SPEC.md), 구현 [#234](https://github.com/lkh0802a/LOL-GM/issues/234), 사용자 정책 [#311](https://github.com/lkh0802a/LOL-GM/issues/311).
+- Codex는 실제 세계 생성/국내 writer/regionPolicy/국제 slot/QA를 후속 안전 PR로 개발. 문서 PR #313 자체로 코드 구현·CI 통과·배포 완료 아님.
 
 ---
 
@@ -294,7 +294,7 @@ This supersedes any interpretation of item 3 that would cause frequent routine s
 
 ## D-022 — Cross-system realism baseline
 
-**Status for 2026-10-28 season contract:** The former three-split baseline is historic only; the new default is opening cup → First Stand → unified annual domestic league with midseason MSI and one final playoff → all domestic leagues finish → Worlds last. See latest section at file top and `LOL_GM_SPEC.md` §27. Other system realism constraints remain applicable unless expressly superseded.
+**Status for 2026-10-28 season contract:** The former three-split baseline is historic only; the new default is region-specific domestic formats selected independently from the first season (a unified annual league is only one permitted format), with international entry deadlines, all domestic leagues finishing before Worlds, and Worlds Final last. See latest section at file top and `LOL_GM_SPEC.md` §27. Other system realism constraints remain applicable unless expressly superseded.
 
 **Decision:** Before major item 4, existing simulation systems use a conservative LoL-esports realism baseline rather than FM-style high churn.
 
@@ -478,7 +478,7 @@ This applies retroactively to completed major items during later UI touches and 
 
 ## D-032 — International ecosystem and qualification contract
 
-**Status for 2026-10-28 season contract:** The following detailed international format/three-phase/global-pause text records the **former initial baseline**, not mandatory current new-game season architecture. Domestic annual leagues now have a unified full-season championship (first/second halves cumulative, single final PO); midseason international events may conditionally overlap eligible domestic fixtures; every domestic league ends before Worlds starts and Worlds Final is the irrevocable last official game. Competition formats and slots are configurable initial presets, subject to immutable Fearless/First Selection. See latest top-level decision and `LOL_GM_SPEC.md` §27. Do not remove historical records or conflate documents with implemented code.
+**Status for 2026-10-28 season contract:** The following detailed international format/three-phase/global-pause text records the **former initial baseline**, not mandatory current new-game season architecture. Domestic leagues may adopt different formats from the first season. A unified full-season championship (cumulative halves, single final PO) is ONE permitted regional format, not globally mandatory. Midseason international events may conditionally overlap eligible domestic fixtures; every domestic league ends before Worlds starts and Worlds Final is the irrevocable last official game. Competition formats and slots are configurable initial presets, subject to immutable Fearless/First Selection. See latest top-level decision and `LOL_GM_SPEC.md` §27. Do not remove historical records or conflate documents with implemented code.
 
 **Decision:** LOL GM uses three seasonal international phases for first-division professional teams. Competition prestige tiers never mean domestic Tier 2/Academy participation.
 
