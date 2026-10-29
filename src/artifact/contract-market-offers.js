@@ -22,7 +22,7 @@ function currentAIMarketOffers(db){
 }
 function aiMarketOfferAvailable(db,o,market=null){
   const period=aiMarketOfferPeriod(db),p=db.players[o?.pid],t=db.teams[o?.teamId];
-  if(!period||o.period!==period.id||o.kind!==period.kind||o.status!=='open'||
+  if(!period||db.contractMarketOffers?.periods?.[period.id]?.closedAt||o.period!==period.id||o.kind!==period.kind||o.status!=='open'||
     typeof o.issuedAt!=='string'||!Number.isFinite(Date.parse(o.issuedAt))||
     new Date(o.issuedAt).toISOString()!==o.issuedAt||o.issuedAt>negotiationClockAt(db)||
     !p||p.retired||p.team||!t||(t.parent&&o.kind!=='initial')||
@@ -49,6 +49,7 @@ function expireCurrentAIMarketOffers(db){
 }
 function issueAIMarketOffer(db,t,p,terms,event,target=null,choiceValue=null,market=null){
   const period=aiMarketOfferPeriod(db);if(!period)return null;
+  if(db.contractMarketOffers?.periods?.[period.id]?.closedAt)return null;
   const root=db.contractMarketOffers||(db.contractMarketOffers={version:1,periods:{}}),
     store=root.periods[period.id]||(root.periods[period.id]={offers:{},events:{}}),
     id=period.id+'/'+event+'/'+t.id+'/'+p.id;
@@ -74,6 +75,7 @@ function settleAIMarketOffers(db,pid,teamId,terms){
 }
 function refreshAIMarketOffers(db){
   const period=aiMarketOfferPeriod(db);if(!period)return [];
+  if(db.contractMarketOffers?.periods?.[period.id]?.closedAt)return currentAIMarketOffers(db);
   const root=db.contractMarketOffers||(db.contractMarketOffers={version:1,periods:{}});
   for(const [id,store] of Object.entries(root.periods)){
     if(id!==period.id&&store.closedAt)continue;
