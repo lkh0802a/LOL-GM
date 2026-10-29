@@ -66,12 +66,10 @@ function runOffseason(db){
   }
   db.year=w.year+1;
   aiChooseLocalEligibility(db);
-  // B3 exposes the 14-day contract window as real world dates, but no training
-  // or matches occur there. Preserve B10's full passive recovery from the last
-  // competitive date instead of shortening recovery by the displayed window.
+  // Consume the existing passive recovery interval without rewinding the live
+  // world clock after contract dates have already advanced.
   const medicalRolloverDate=`${db.year}-01-06`;
-  if(cw?.seasonEndDate)setWorldCalendarDate(db,cw.seasonEndDate);
-  medicalOffseasonRecovery(db,medicalRolloverDate);
+  medicalOffseasonRecovery(db,medicalRolloverDate,cw?.seasonEndDate||undefined);
   setWorldCalendarDate(db,medicalRolloverDate);
   promotionRelegation(db,w,rng,ev);
   updateHype(db,w);

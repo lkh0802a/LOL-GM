@@ -15,6 +15,7 @@ await import('./historical-identity-acceptance.mjs');
 await import('./worlds-identity-acceptance.mjs');
 await import('./contract-window-acceptance.mjs');
 await import('./contract-window-rollback-acceptance.mjs');
+await import('./offseason-clock-recovery-acceptance.mjs');
 await import('./global-market-calendar-acceptance.mjs');
 await import('./market-deadline-expiry-acceptance.mjs');
 await import('./market-deadline-consumer-acceptance.mjs');
