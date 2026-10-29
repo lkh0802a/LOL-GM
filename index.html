@@ -5206,6 +5206,23 @@ function assertCompetitionOutsideMarket(db,opt={}){
   const market=globalTransferMarketState(db.worldDate);
   if(market.open)throw new Error('28일 통합 이적시장 중에는 대회 경기를 진행할 수 없습니다: '+db.worldDate);
 }
+// Pending proposals expire at the first market closing after creation, just
+// as the daily expiry writer does. New year-round FA proposals after a closing
+// belong to the next boundary; initial recruitment keeps its existing gate.
+function negotiationMarketDeadline(n){
+  if(n.kind==='initial')return null;
+  if(!freeAgencyDateValid(n.createdDate))throw new Error('협상 개시 날짜를 확인할 수 없습니다');
+  let market=globalTransferMarketState(n.createdDate);
+  if(n.createdDate>=market.closesOn)market=globalTransferMarketWindow(market.year+1);
+  return market.closesOn+'T00:00:00.000Z';
+}
+function negotiationMarketDeadlineError(db,n){
+  try{
+    const deadline=negotiationMarketDeadline(n);
+    if(n.kind!=='initial'&&n.createdDate>db.worldDate)return '협상 개시 날짜가 현재 날짜보다 늦습니다';
+    return deadline&&negotiationClockAt(db)>=deadline?'이적시장 마감이 지나 이 제안을 확정할 수 없습니다':null;
+  }catch(error){return error.message}
+}
 
 // ===== LOL GM: World calendar domain =====
 // Owns raw clock positioning and in-season daily effects. Positioning alone
@@ -9017,6 +9034,8 @@ function aiRepresentativeCounterTerms(db,p,t,kind,offer,maxSalary,cashRoom=Infin
   return {terms:null,rounds,demand,representative:representative?.id||null};
 }
 function finalizeNegotiation(db,neg,terms){
+  const deadlineError=negotiationMarketDeadlineError(db,neg);
+  if(deadlineError)return {ok:false,msg:deadlineError};
   const p=db.players[neg.pid],t=db.teams[neg.teamId];
   if(!p||!t)return {ok:false,msg:'협상 선수 또는 구단이 존재하지 않습니다'};
   const future=(neg.kind==='renewal'||neg.kind==='early_fa')&&
@@ -9051,6 +9070,8 @@ function submitNegotiationOffer(db,nid,terms){
   if(!contractGuaranteeTermsValid(terms))
     return {ok:false,msg:'유효하지 않은 방출 보장률입니다'};
   const neg=negotiationStore(db)[nid];if(!neg||neg.status!=='open'||neg.stage!=='player')return {ok:false,msg:'진행 중인 선수 협상이 아닙니다'};
+  const deadlineError=negotiationMarketDeadlineError(db,neg);
+  if(deadlineError)return {ok:false,msg:deadlineError};
   const p=db.players[neg.pid],t=db.teams[neg.teamId];
   if(['renewal','early_fa'].includes(neg.kind)&&db.world?.phase==='offseason'&&db.world?.contractWindow){
     const contactErr=contractWindowContactError(db,p,t,neg.kind);
@@ -9242,6 +9263,7 @@ function mTransferBid(db,pid,fee,feePlan=null){
   if(payment.upfront>t.finance.cash)return '선지급할 보유 자금이 부족합니다';
   const moveErr=contractedMoveError(db,p);if(moveErr)return moveErr;const localErr=localRegistrationError(db,t,p);if(localErr)return localErr;
   const id=negotiationId(db,pid,'transfer'),store=negotiationStore(db),ask=sellerTransferAsk(db,p,from);let neg=store[id];
+  if(neg?.status==='open'){const deadline=negotiationMarketDeadlineError(db,neg);if(deadline)return deadline;}
   if(!neg||neg.status!=='open'){const st=startNegotiation(db,pid,'transfer',{sellerId:from.id});if(!st.ok)return st.msg;neg=st.neg;neg.stage='club';neg.clubRounds=0}
   neg.clubRounds=(neg.clubRounds||0)+1;neg.history.push({round:neg.clubRounds,stage:'club',side:'buyer',fee});
   const clause=normalizeBuyoutClause(p.contract?.buyout),releasePrice=clause?.type==='release'&&fee+1e-8>=clause.amount,
@@ -13248,6 +13270,8 @@ function finalizeStagedNegotiation(db,nid){
   const n=db.world?.negotiations?.[nid],error=manualNegotiationError(db,n);
   if(error)return {ok:false,msg:error};
   if(n.status!=='open'||n.stage!=='agreement'||!n.agreedTerms)return {ok:false,msg:'최종 확정할 합의가 없습니다'};
+  const marketError=negotiationMarketDeadlineError(db,n);
+  if(marketError)return {ok:false,msg:marketError};
   const deadline=negotiationContactDeadline(db,n);
   if(deadline&&negotiationClockAt(db)>=deadline)return {ok:false,msg:'기존 협상 마감이 지나 최종 계약을 확정할 수 없습니다'};
   const p=db.players[n.pid],t=db.teams[n.teamId],terms=n.agreedTerms;
@@ -13615,9 +13639,9 @@ function waitingNegotiationResponses(db,ownedOnly=false){
     .sort((a,b)=>String(a.response.dueAt).localeCompare(String(b.response.dueAt))||String(a.id).localeCompare(String(b.id)));
 }
 function negotiationContactDeadline(db,n){
-  const w=db.world,cw=w?.contractWindow;
-  if(w?.phase==='offseason'&&['renewal','early_fa'].includes(n.kind)&&cw?.stage==='exclusive')return cw.outsideContactDate+'T00:00:00.000Z';
-  if(!['initial_roster','market','preseason'].includes(w?.phase))return null;
+  const w=db.world,cw=w?.contractWindow,market=negotiationMarketDeadline(n),earlier=date=>market&&market<date?market:date;
+  if(w?.phase==='offseason'&&['renewal','early_fa'].includes(n.kind)&&cw?.stage==='exclusive')return earlier(cw.outsideContactDate+'T00:00:00.000Z');
+  if(!['initial_roster','market','preseason'].includes(w?.phase))return market;
   // 기존 시즌 작성자를 격리된 상태에서 실행해 실제 편성의 개최일을 읽는다.
   const copy=JSON.parse(JSON.stringify(db));startWorldSeason(copy,managedTeamId(copy),w.seed);
   const starts=Object.values(copy.world.seasons).flatMap(s=>s.days.flatMap(d=>d.matches.map(m=>{
@@ -13625,7 +13649,7 @@ function negotiationContactDeadline(db,n){
     return venueToUtc(m.localDate,'00:00',m.timeZone);
   })));
   if(!starts.length)throw Error('기존 개막 편성에서 협상 마감을 확인할 수 없습니다');
-  return starts.sort()[0];
+  return earlier(starts.sort()[0]);
 }
 function negotiationResponseError(n){
   const r=n.response;
@@ -13639,6 +13663,8 @@ function resolveDueNegotiationResponse(db){
   const response=n.response,error=manualNegotiationError(db,n);
   if(error)return {ok:false,blocked:true,msg:error};
   const responseError=negotiationResponseError(n);if(responseError)return {ok:false,blocked:true,msg:responseError};
+  const marketError=negotiationMarketDeadlineError(db,n);
+  if(marketError)return {ok:false,blocked:true,msg:marketError};
   // 제출 시점의 판정을 적용하지 않고 실제 응답 시점의 상태를 재검사한다.
   n.stage='player';delete n.response;
   const before=n.history.length,result=resolveNegotiationOffer(db,n.id,response.terms),current=db.world.negotiations[n.id];

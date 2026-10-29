@@ -27,6 +27,8 @@ function finalizeStagedNegotiation(db,nid){
   const n=db.world?.negotiations?.[nid],error=manualNegotiationError(db,n);
   if(error)return {ok:false,msg:error};
   if(n.status!=='open'||n.stage!=='agreement'||!n.agreedTerms)return {ok:false,msg:'최종 확정할 합의가 없습니다'};
+  const marketError=negotiationMarketDeadlineError(db,n);
+  if(marketError)return {ok:false,msg:marketError};
   const deadline=negotiationContactDeadline(db,n);
   if(deadline&&negotiationClockAt(db)>=deadline)return {ok:false,msg:'기존 협상 마감이 지나 최종 계약을 확정할 수 없습니다'};
   const p=db.players[n.pid],t=db.teams[n.teamId],terms=n.agreedTerms;
@@ -394,9 +396,9 @@ function waitingNegotiationResponses(db,ownedOnly=false){
     .sort((a,b)=>String(a.response.dueAt).localeCompare(String(b.response.dueAt))||String(a.id).localeCompare(String(b.id)));
 }
 function negotiationContactDeadline(db,n){
-  const w=db.world,cw=w?.contractWindow;
-  if(w?.phase==='offseason'&&['renewal','early_fa'].includes(n.kind)&&cw?.stage==='exclusive')return cw.outsideContactDate+'T00:00:00.000Z';
-  if(!['initial_roster','market','preseason'].includes(w?.phase))return null;
+  const w=db.world,cw=w?.contractWindow,market=negotiationMarketDeadline(n),earlier=date=>market&&market<date?market:date;
+  if(w?.phase==='offseason'&&['renewal','early_fa'].includes(n.kind)&&cw?.stage==='exclusive')return earlier(cw.outsideContactDate+'T00:00:00.000Z');
+  if(!['initial_roster','market','preseason'].includes(w?.phase))return market;
   // 기존 시즌 작성자를 격리된 상태에서 실행해 실제 편성의 개최일을 읽는다.
   const copy=JSON.parse(JSON.stringify(db));startWorldSeason(copy,managedTeamId(copy),w.seed);
   const starts=Object.values(copy.world.seasons).flatMap(s=>s.days.flatMap(d=>d.matches.map(m=>{
@@ -404,7 +406,7 @@ function negotiationContactDeadline(db,n){
     return venueToUtc(m.localDate,'00:00',m.timeZone);
   })));
   if(!starts.length)throw Error('기존 개막 편성에서 협상 마감을 확인할 수 없습니다');
-  return starts.sort()[0];
+  return earlier(starts.sort()[0]);
 }
 function negotiationResponseError(n){
   const r=n.response;
@@ -418,6 +420,8 @@ function resolveDueNegotiationResponse(db){
   const response=n.response,error=manualNegotiationError(db,n);
   if(error)return {ok:false,blocked:true,msg:error};
   const responseError=negotiationResponseError(n);if(responseError)return {ok:false,blocked:true,msg:responseError};
+  const marketError=negotiationMarketDeadlineError(db,n);
+  if(marketError)return {ok:false,blocked:true,msg:marketError};
   // 제출 시점의 판정을 적용하지 않고 실제 응답 시점의 상태를 재검사한다.
   n.stage='player';delete n.response;
   const before=n.history.length,result=resolveNegotiationOffer(db,n.id,response.terms),current=db.world.negotiations[n.id];

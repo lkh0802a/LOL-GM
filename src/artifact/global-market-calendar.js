@@ -32,3 +32,20 @@ function assertCompetitionOutsideMarket(db,opt={}){
   const market=globalTransferMarketState(db.worldDate);
   if(market.open)throw new Error('28일 통합 이적시장 중에는 대회 경기를 진행할 수 없습니다: '+db.worldDate);
 }
+// Pending proposals expire at the first market closing after creation, just
+// as the daily expiry writer does. New year-round FA proposals after a closing
+// belong to the next boundary; initial recruitment keeps its existing gate.
+function negotiationMarketDeadline(n){
+  if(n.kind==='initial')return null;
+  if(!freeAgencyDateValid(n.createdDate))throw new Error('협상 개시 날짜를 확인할 수 없습니다');
+  let market=globalTransferMarketState(n.createdDate);
+  if(n.createdDate>=market.closesOn)market=globalTransferMarketWindow(market.year+1);
+  return market.closesOn+'T00:00:00.000Z';
+}
+function negotiationMarketDeadlineError(db,n){
+  try{
+    const deadline=negotiationMarketDeadline(n);
+    if(n.kind!=='initial'&&n.createdDate>db.worldDate)return '협상 개시 날짜가 현재 날짜보다 늦습니다';
+    return deadline&&negotiationClockAt(db)>=deadline?'이적시장 마감이 지나 이 제안을 확정할 수 없습니다':null;
+  }catch(error){return error.message}
+}

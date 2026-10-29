@@ -164,6 +164,8 @@ function aiRepresentativeCounterTerms(db,p,t,kind,offer,maxSalary,cashRoom=Infin
   return {terms:null,rounds,demand,representative:representative?.id||null};
 }
 function finalizeNegotiation(db,neg,terms){
+  const deadlineError=negotiationMarketDeadlineError(db,neg);
+  if(deadlineError)return {ok:false,msg:deadlineError};
   const p=db.players[neg.pid],t=db.teams[neg.teamId];
   if(!p||!t)return {ok:false,msg:'협상 선수 또는 구단이 존재하지 않습니다'};
   const future=(neg.kind==='renewal'||neg.kind==='early_fa')&&
@@ -198,6 +200,8 @@ function submitNegotiationOffer(db,nid,terms){
   if(!contractGuaranteeTermsValid(terms))
     return {ok:false,msg:'유효하지 않은 방출 보장률입니다'};
   const neg=negotiationStore(db)[nid];if(!neg||neg.status!=='open'||neg.stage!=='player')return {ok:false,msg:'진행 중인 선수 협상이 아닙니다'};
+  const deadlineError=negotiationMarketDeadlineError(db,neg);
+  if(deadlineError)return {ok:false,msg:deadlineError};
   const p=db.players[neg.pid],t=db.teams[neg.teamId];
   if(['renewal','early_fa'].includes(neg.kind)&&db.world?.phase==='offseason'&&db.world?.contractWindow){
     const contactErr=contractWindowContactError(db,p,t,neg.kind);
