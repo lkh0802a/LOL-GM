@@ -1,7 +1,6 @@
 // ===== LOL GM: Global player FA and contract expiry window =====
-// Standard contracts expire on the Monday before December's first Tuesday
-// (23:59 UTC). Global player FA opens Tuesday at 00:00 UTC. The incumbent's
-// pre-FA renewal window runs from the official season end to that fixed date.
+// Contracts expire Monday 23:59 UTC before December's first Tuesday FA opening.
+// No extra renewal-priority days; existing contracts and contact consent remain.
 
 function contractWindowYear(db){return db.world?.year??db.year}
 function contractWindowAnchorDate(db){
@@ -72,7 +71,7 @@ function grantEarlyContact(db,pid,actor='manager'){
     t=p?.team&&db.teams[p.team];
   if(!cw||cw.stage!=='exclusive'||db.worldDate>cw.contractExpiryDate||
     !contractExpiresThisSeason(db,p)||!t)
-    return {ok:false,msg:'현재 독점 협상 중인 만료 예정 선수가 아닙니다'};
+    return {ok:false,msg:'현재 계약 만료 전 협상 중인 선수가 아닙니다'};
   const auth=playerActionAuthority(db,actor,t);
   if(auth)return {ok:false,msg:auth.errors?.join(' · ')||'구단 결정 권한이 없습니다'};
   if(contractHasPendingOption(db,p))
@@ -107,9 +106,9 @@ function contractWindowContactError(db,p,t,kind){
   const w=db.world,cw=w?.contractWindow;
   if(!w||w.phase!=='offseason'||!cw)return '오프시즌 계약 협상 기간이 아닙니다';
   if(cw.stage!=='exclusive'||db.worldDate>cw.contractExpiryDate)
-    return '원소속 독점 협상 기간이 끝났습니다';
+    return '기존 계약 만료 전 협상 단계가 끝났습니다';
   if(!p||!t||!contractExpiresThisSeason(db,p))
-    return '이번 독점기간에 만료되는 계약이 아닙니다';
+    return '이번 시즌 만료 예정인 계약이 아닙니다';
   if(contractAgreementFor(db,p.id)?.status==='agreed')
     return '이미 다음 시즌 계약에 합의한 선수입니다';
   if(kind==='early_fa')
@@ -189,7 +188,7 @@ function closeExclusiveContractWindow(db){
   const cw=initOffseasonContractWindow(db);
   if(!cw)return {ok:false,msg:'계약 협상 기간을 종료할 수 없습니다'};
   if(cw.stage!=='exclusive')return {ok:true,stage:cw.stage,date:db.worldDate,
-    settlement:cw.settlement||null,msg:'원소속 독점기간이 이미 끝났습니다'};
+    settlement:cw.settlement||null,msg:'기존 계약 만료 전 단계가 이미 끝났습니다'};
   const renewals=aiRunExclusiveRenewals(db),earlyOffers=aiRunEarlyContactOffers(db);
   setWorldCalendarDate(db,cw.outsideContactDate);
   processTransferPayments(db);
@@ -206,12 +205,12 @@ function advanceOffseasonContractDay(db){
   const cw=initOffseasonContractWindow(db);
   if(!cw)return {ok:false,msg:'계약 협상 기간을 진행할 수 없습니다'};
   if(cw.stage!=='exclusive')return {ok:true,stage:cw.stage,date:db.worldDate,
-    msg:'원소속 독점기간이 이미 끝났습니다'};
+    msg:'기존 계약 만료 전 단계가 이미 끝났습니다'};
   const next=addDays(db.worldDate,1);
   if(next>=cw.outsideContactDate)return closeExclusiveContractWindow(db);
   setWorldCalendarDate(db,next);processTransferPayments(db);processLocalServiceDaily(db);aiChooseLocalEligibility(db);aiRunEarlyContactOffers(db);
   return {ok:true,stage:'exclusive',date:db.worldDate,
-    msg:'원소속 독점 재계약 기간 · '+db.worldDate};
+    msg:'기존 계약 만료 전 · '+db.worldDate};
   }catch(error){rollback();throw error}
 }
 function advanceOffseasonContractWindow(db){return closeExclusiveContractWindow(db)}

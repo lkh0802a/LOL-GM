@@ -83,7 +83,7 @@ function v2ContractCalendar(){
 }
 function v2ContractCalendarView(){
  const m=v2ContractCalendar();if(!m)return '';const fa=m.stage==='fa'?freeAgencyDayState(V2.db):null,blocked=v2OffseasonActionError();
- return `<section class="panel"><h3>${m.stage==='exclusive'?'원소속 독점 재계약 기간':'자유계약 기간'}</h3><p>기존 계약 만료 ${v2Esc(m.expiry||'확인 필요')} · 외부 접촉 ${v2Esc(m.outside||'확인 필요')}부터</p><p class="hint">${m.ready?'계속 진행에서 다음 하루를 검토합니다. 작성 중인 제안은 자동 제출하지 않습니다.':v2Esc(fa?.reason||'현재 계약 날짜·단계의 진행 조건을 확인하세요.')}</p>${fa?`<p>연간 결산 기준 ${v2Esc(fa.through||'확인 필요')}</p><div class="tag-flex"><button class="btn btn-outline" id="fa-day-review"${blocked||!fa.ready?' disabled':''}>FA 하루 진행 검토${fa.ready?' · '+v2Esc(fa.next):''}</button><button class="btn btn-primary" id="annual-close-review"${blocked?' disabled':''}>연간 결산 검토</button></div><p class="hint">하루 진행은 합의된 지급·등록 자격의 날짜만 소비합니다. 제안 제출과 연간 결산은 각각 직접 결정합니다.</p>`:''}<button class="btn btn-outline" data-go="market" data-to="진행 중인 협상">계약 협상 확인</button></section>`;
+ return `<section class="panel"><h3>${m.stage==='exclusive'?'기존 계약 만료 전 협상':'자유계약 기간'}</h3><p>기존 계약 만료 ${v2Esc(m.expiry||'확인 필요')} · FA 개방 ${v2Esc(m.outside||'확인 필요')}부터</p><p class="hint">${m.ready?'별도 재계약 독점 기간은 없습니다. 계약 중 타 구단 조기 접촉에는 원소속 구단 동의가 필요합니다. 계속 진행에서 다음 하루를 검토하며, 작성 중인 제안은 자동 제출하지 않습니다.':v2Esc(fa?.reason||'현재 계약 날짜·단계의 진행 조건을 확인하세요.')}</p>${fa?`<p>연간 결산 기준 ${v2Esc(fa.through||'확인 필요')}</p><div class="tag-flex"><button class="btn btn-outline" id="fa-day-review"${blocked||!fa.ready?' disabled':''}>FA 하루 진행 검토${fa.ready?' · '+v2Esc(fa.next):''}</button><button class="btn btn-primary" id="annual-close-review"${blocked?' disabled':''}>연간 결산 검토</button></div><p class="hint">하루 진행은 합의된 지급·등록 자격의 날짜만 소비합니다. 제안 제출과 연간 결산은 각각 직접 결정합니다.</p>`:''}<button class="btn btn-outline" data-go="market" data-to="진행 중인 협상">계약 협상 확인</button></section>`;
 }
 function v2OffseasonActionError(){
  const error=v2ManagementError();if(error)return error;const t=v2Team(),s=freeAgencyDayState(V2.db);
@@ -225,7 +225,7 @@ function v2ReviewCareer(kind=v2CareerKind(),id=null){
  const allowed=kind==='choose'?w.phase==='pick':kind==='annual'?w.phase==='offseason'&&w.contractWindow?.stage==='fa':v2CareerDetached()&&kind===v2CareerKind();
  if(!allowed)return v2Tell('현재 커리어 단계에서 결정할 수 없습니다');
  const t=id&&db.teams[id];if(kind==='choose'&&(!isManagerSelectableTeam(db,t)||!db.regions[t.region]||!t.owner))return v2Tell('현재 관리할 수 없는 구단입니다');
- const title=({day:'무직 상태 · 세계 하루 진행',market:'세계 이적시장 마감',exclusive:'무직 상태 · 독점 기간 하루', 'fa-day':'무직 상태 · FA 하루',annual:'별도 연간 결산', 'open-window':'계약 기간 시작',choose:'관리 구단 선택'})[kind];
+ const title=({day:'무직 상태 · 세계 하루 진행',market:'세계 이적시장 마감',exclusive:'무직 상태 · 계약 만료 전 하루', 'fa-day':'무직 상태 · FA 하루',annual:'별도 연간 결산', 'open-window':'계약 기간 시작',choose:'관리 구단 선택'})[kind];
  V2.managementReview={db,world:w,manager:db.manager,stamp:v2ManagementStamp(),careerAction:kind,careerTeam:id,careerBasis:JSON.stringify(db),careerTerms:JSON.stringify([kind,id]),preview:{command:{type:'career.continue'}},title,lines:[kind==='choose'?t.name+'의 감독으로 이어갑니다.':'현재 '+db.worldDate+' · '+title,'기존 엔진의 현재 상태·계약·재정·기록을 이어 처리합니다. 다른 구단의 수동 결정 권한을 부여하지 않습니다.']};v2Render();
 }
 function v2CommitCareer(r){
