@@ -8,6 +8,7 @@ await import('./audit-champion-source-acceptance.mjs');
 await import('./verify-champion-source-bundle-acceptance.mjs');
 await import('./match-core-foundation-acceptance.mjs');
 await import('./match-core-input-acceptance.mjs');
+await import('./codex-space-preflight-acceptance.mjs');
 await import('./codex-impact-map-acceptance.mjs');
 await import('./observer-information-acceptance.mjs');
 await import('./historical-identity-acceptance.mjs');
