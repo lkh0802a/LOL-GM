@@ -60,6 +60,25 @@ const result=await runEngineFixture(String.raw`(()=>{
   const before=packDB(f.db),r=staged?stageNegotiationOffer(f.db,f.nid,f.terms):submitNegotiationOffer(f.db,f.nid,f.terms);
   check(!r.ok&&packDB(f.db)===before,'missing/malformed/future creation date was inferred or mutated');corruptCases++;
  }
- return {years:3,blocked,corruptCases,lastLegalMillisecond:true,restoredAgreementAndResponse:true,legacyFinalAndSubmit:true,sellerCounterAndBid:true,wholeStateAndReferences:true,yearRoundTrueFA:true};
+ let aiCases=0;
+ for(const year of [2026,2027,2028]){
+  const f=fixture(year),db=f.db,o=currentAIMarketOffers(db).find(o=>o.status==='open'),held=JSON.parse(JSON.stringify(o)),deadline=globalTransferMarketWindow(year).closesOn+'T00:00:00.000Z';
+  db.worldDate=addDays(deadline.slice(0,10),-1);db.world.negotiationClock={at:new Date(Date.parse(deadline)-1).toISOString()};
+  check(aiMarketOfferAvailable(db,o),'AI quote before closing');
+  db.worldDate=deadline.slice(0,10);db.world.negotiationClock={at:deadline};
+  check(!db.contractMarketOffers.periods[o.period].closedAt,'expiry callback intentionally not consumed');
+  const before=packDB(db),world=db.world;
+  check(!aiMarketOfferAvailable(db,held)&&!negotiationCompetition(db,db.players[o.pid],managedTeam(db),null,'fa').some(x=>x.offerId===o.id),'clock-only restored AI quote still available/competing');
+  check(packDB(db)===before&&db.world===world,'AI deadline reader mutated state');
+  const contracts=JSON.stringify(Object.values(db.players).map(p=>[p.id,p.team,p.contract]));
+  refreshAIMarketOffers(db);
+  check(db.contractMarketOffers.periods[o.period].offers[o.id].status==='expired','refresh did not expire actual overdue quote');
+  check(JSON.stringify(Object.values(db.players).map(p=>[p.id,p.team,p.contract]))===contracts,'expiry refresh signed or moved players');
+  const fresh=issueAIMarketOffer(db,db.teams[o.teamId],db.players[o.pid],o.terms,'new-year-round');
+  check(fresh&&aiMarketOfferAvailable(db,fresh)&&fresh.issuedAt>=deadline,'new year-round AI FA quote blocked');
+  check(!aiMarketOfferAvailable(db,held),'fresh quote revived stale held terms');
+  const saved=unpackDB(packDB(db));check(saved.contractMarketOffers.periods[o.period].offers[o.id].status==='expired'&&aiMarketOfferAvailable(saved,saved.contractMarketOffers.periods[fresh.period].offers[fresh.id]),'AI quote expiry/fresh availability lost on native restore');aiCases++;
+ }
+ return {years:3,blocked,corruptCases,aiCases,lastLegalMillisecond:true,restoredAgreementAndResponse:true,legacyFinalAndSubmit:true,sellerCounterAndBid:true,wholeStateAndReferences:true,yearRoundTrueFA:true};
 })()`,{timeout:60000});
 console.log('MARKET_DEADLINE_CONSUMER_ACCEPTANCE '+JSON.stringify(result));

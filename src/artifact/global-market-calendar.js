@@ -42,10 +42,14 @@ function negotiationMarketDeadline(n){
   if(n.createdDate>=market.closesOn)market=globalTransferMarketWindow(market.year+1);
   return market.closesOn+'T00:00:00.000Z';
 }
-function negotiationMarketDeadlineError(db,n){
+function negotiationMarketDeadlineState(db,n){
   try{
     const deadline=negotiationMarketDeadline(n);
-    if(n.kind!=='initial'&&n.createdDate>db.worldDate)return '협상 개시 날짜가 현재 날짜보다 늦습니다';
-    return deadline&&negotiationClockAt(db)>=deadline?'이적시장 마감이 지나 이 제안을 확정할 수 없습니다':null;
-  }catch(error){return error.message}
+    if(n.kind!=='initial'&&n.createdDate>db.worldDate)return {deadline,passed:false,error:'협상 개시 날짜가 현재 날짜보다 늦습니다'};
+    return {deadline,passed:!!(deadline&&negotiationClockAt(db)>=deadline),error:null};
+  }catch(error){return {deadline:null,passed:false,error:error.message}}
+}
+function negotiationMarketDeadlineError(db,n){
+  const state=negotiationMarketDeadlineState(db,n);
+  return state.error||(state.passed?'이적시장 마감이 지나 이 제안을 확정할 수 없습니다':null);
 }

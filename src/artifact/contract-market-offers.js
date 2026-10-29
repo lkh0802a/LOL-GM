@@ -20,7 +20,15 @@ function currentAIMarketOffers(db){
   const period=aiMarketOfferPeriod(db);
   return period?Object.values(db.contractMarketOffers?.periods?.[period.id]?.offers||{}):[];
 }
+function aiMarketOfferDeadlineState(db,o){
+  if(typeof o?.issuedAt!=='string'||!Number.isFinite(Date.parse(o.issuedAt))||
+    new Date(o.issuedAt).toISOString()!==o.issuedAt)
+    return {deadline:null,passed:false,error:'AI 제안 발행 시각을 확인할 수 없습니다'};
+  return negotiationMarketDeadlineState(db,{kind:o.kind,createdDate:o.issuedAt.slice(0,10)});
+}
 function aiMarketOfferAvailable(db,o,market=null){
+  const deadline=aiMarketOfferDeadlineState(db,o);
+  if(deadline.error||deadline.passed)return false;
   const period=aiMarketOfferPeriod(db),p=db.players[o?.pid],t=db.teams[o?.teamId];
   if(!period||db.contractMarketOffers?.periods?.[period.id]?.closedAt||o.period!==period.id||o.kind!==period.kind||o.status!=='open'||
     typeof o.issuedAt!=='string'||!Number.isFinite(Date.parse(o.issuedAt))||
@@ -79,9 +87,12 @@ function refreshAIMarketOffers(db){
   const root=db.contractMarketOffers||(db.contractMarketOffers={version:1,periods:{}});
   for(const [id,store] of Object.entries(root.periods)){
     if(id!==period.id&&store.closedAt)continue;
-    for(const o of Object.values(store.offers))
-      if(o.status==='open'&&(id!==period.id||!aiMarketOfferAvailable(db,o)))
-        closeAIMarketOffer(db,o,id!==period.id?'expired':'withdrawn',id!==period.id?'period_closed':'conditions_changed');
+    for(const o of Object.values(store.offers)){
+      if(o.status!=='open')continue;
+      const expired=id!==period.id||aiMarketOfferDeadlineState(db,o).passed;
+      if(expired||!aiMarketOfferAvailable(db,o))
+        closeAIMarketOffer(db,o,expired?'expired':'withdrawn',expired?'period_closed':'conditions_changed');
+    }
     if(id!==period.id)store.closedAt=negotiationClockAt(db);
   }
   const store=root.periods[period.id]||(root.periods[period.id]={offers:{},events:{}}),

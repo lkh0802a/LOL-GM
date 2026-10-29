@@ -5216,12 +5216,16 @@ function negotiationMarketDeadline(n){
   if(n.createdDate>=market.closesOn)market=globalTransferMarketWindow(market.year+1);
   return market.closesOn+'T00:00:00.000Z';
 }
-function negotiationMarketDeadlineError(db,n){
+function negotiationMarketDeadlineState(db,n){
   try{
     const deadline=negotiationMarketDeadline(n);
-    if(n.kind!=='initial'&&n.createdDate>db.worldDate)return '협상 개시 날짜가 현재 날짜보다 늦습니다';
-    return deadline&&negotiationClockAt(db)>=deadline?'이적시장 마감이 지나 이 제안을 확정할 수 없습니다':null;
-  }catch(error){return error.message}
+    if(n.kind!=='initial'&&n.createdDate>db.worldDate)return {deadline,passed:false,error:'협상 개시 날짜가 현재 날짜보다 늦습니다'};
+    return {deadline,passed:!!(deadline&&negotiationClockAt(db)>=deadline),error:null};
+  }catch(error){return {deadline:null,passed:false,error:error.message}}
+}
+function negotiationMarketDeadlineError(db,n){
+  const state=negotiationMarketDeadlineState(db,n);
+  return state.error||(state.passed?'이적시장 마감이 지나 이 제안을 확정할 수 없습니다':null);
 }
 
 // ===== LOL GM: World calendar domain =====
@@ -9133,7 +9137,15 @@ function currentAIMarketOffers(db){
   const period=aiMarketOfferPeriod(db);
   return period?Object.values(db.contractMarketOffers?.periods?.[period.id]?.offers||{}):[];
 }
+function aiMarketOfferDeadlineState(db,o){
+  if(typeof o?.issuedAt!=='string'||!Number.isFinite(Date.parse(o.issuedAt))||
+    new Date(o.issuedAt).toISOString()!==o.issuedAt)
+    return {deadline:null,passed:false,error:'AI 제안 발행 시각을 확인할 수 없습니다'};
+  return negotiationMarketDeadlineState(db,{kind:o.kind,createdDate:o.issuedAt.slice(0,10)});
+}
 function aiMarketOfferAvailable(db,o,market=null){
+  const deadline=aiMarketOfferDeadlineState(db,o);
+  if(deadline.error||deadline.passed)return false;
   const period=aiMarketOfferPeriod(db),p=db.players[o?.pid],t=db.teams[o?.teamId];
   if(!period||db.contractMarketOffers?.periods?.[period.id]?.closedAt||o.period!==period.id||o.kind!==period.kind||o.status!=='open'||
     typeof o.issuedAt!=='string'||!Number.isFinite(Date.parse(o.issuedAt))||
@@ -9192,9 +9204,12 @@ function refreshAIMarketOffers(db){
   const root=db.contractMarketOffers||(db.contractMarketOffers={version:1,periods:{}});
   for(const [id,store] of Object.entries(root.periods)){
     if(id!==period.id&&store.closedAt)continue;
-    for(const o of Object.values(store.offers))
-      if(o.status==='open'&&(id!==period.id||!aiMarketOfferAvailable(db,o)))
-        closeAIMarketOffer(db,o,id!==period.id?'expired':'withdrawn',id!==period.id?'period_closed':'conditions_changed');
+    for(const o of Object.values(store.offers)){
+      if(o.status!=='open')continue;
+      const expired=id!==period.id||aiMarketOfferDeadlineState(db,o).passed;
+      if(expired||!aiMarketOfferAvailable(db,o))
+        closeAIMarketOffer(db,o,expired?'expired':'withdrawn',expired?'period_closed':'conditions_changed');
+    }
     if(id!==period.id)store.closedAt=negotiationClockAt(db);
   }
   const store=root.periods[period.id]||(root.periods[period.id]={offers:{},events:{}}),
