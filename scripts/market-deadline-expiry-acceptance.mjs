@@ -41,7 +41,27 @@ const result=await runEngineFixture(String.raw`(()=>{
   check(advanceOffseasonFreeAgencyDay(db).ok&&JSON.stringify(db.world.negotiations[nid])===closed,'year-round FA day changed closed proposal');
   check(JSON.stringify(db.contractMarketOffers.periods[period])===quotes,'later refresh reopened the closed quote period');
  }
+ {
+  let {db,nid}=fixture(2027);const window=globalTransferMarketWindow(2027);
+  db.worldDate=addDays(window.closesOn,1);
+  const player=Object.values(db.players).find(p=>!p.retired&&!p.team&&p.id!==db.world.negotiations[nid].pid);
+  mInterest(db,player.id);mEvaluateTarget(db,player.id);const fresh=startNegotiation(db,player.id,'fa');
+  check(fresh.ok,'post-deadline FA negotiation');
+  const freshId=fresh.neg.id;db=unpackDB(packDB(db));
+  check(advanceOffseasonFreeAgencyDay(db).ok,'restored late FA day');
+  check(db.world.negotiations[nid].status==='expired','missed deadline left old negotiation open');
+  check(db.world.negotiations[freshId].status==='open','catch-up expired a new year-round FA negotiation');
+ }
  let rollbackCases=0;
+ {
+  const {db,nid}=fixture(2027);db.worldDate=addDays(globalTransferMarketWindow(2027).closesOn,1);
+  const before=packDB(db),world=db.world,original=closeOpenNegotiationsForDeadline;
+  closeOpenNegotiationsForDeadline=(...args)=>{original(...args);throw Error('controlled late catch-up')};
+  let threw=false;try{advanceOffseasonFreeAgencyDay(db)}catch(e){threw=e.message==='controlled late catch-up'}
+  finally{closeOpenNegotiationsForDeadline=original}
+  check(threw&&packDB(db)===before&&db.world===world&&db.world.negotiations[nid].status==='open','late catch-up partially committed');
+  check(advanceOffseasonFreeAgencyDay(db).ok&&db.world.negotiations[nid].status==='expired','late catch-up retry');rollbackCases++;
+ }
  for(const name of ['negotiations','ai']){
   const {db,nid}=fixture(2027);db.worldDate=globalTransferMarketWindow(2027).lastOpenDate;
   const before=packDB(db),world=db.world,club=managedTeam(db),fn=name==='negotiations'?closeOpenNegotiationsForDeadline:expireCurrentAIMarketOffers;
