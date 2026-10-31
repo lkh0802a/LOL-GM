@@ -56,6 +56,15 @@ const result=await runEngineFixture(String.raw`(()=>{
    db.worldDate=window.opensOn;db.regions.NA.transferWindows=[{from:'07-01',through:'07-14'}];
    check(transferMarketOpen(db,db.teams[f.buyerId]),'old regional window blocked global opening');
   }
+  // A direct or stale market-close command must not settle players, move the
+  // phase, or write finance/history before the exclusive closing boundary.
+  for(const date of [window.opensOn,window.lastOpenDate]){
+   const early=unpackDB(original);early.worldDate=date;
+   const before=packDB(early),world=early.world,players=early.players;
+   let rejected=false;try{closeMarket(early)}catch(error){rejected=/개방 중/.test(error.message)}
+   check(rejected&&packDB(early)===before&&early.world===world&&early.players===players,
+    'premature market close mutated or accepted '+date);
+  }
   for(const date of [null,'invalid',year+'-02-31']){
    db.worldDate=date;const saved=packDB(db);
    check(!transferMarketOpen(db,db.teams[f.buyerId])&&packDB(db)===saved,'bad date did not fail closed');

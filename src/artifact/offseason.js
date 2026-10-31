@@ -123,6 +123,10 @@ function runOffseason(db){
 }
 // ---------- 오프시즌 2단계: 이적 시장 마감 ----------
 function closeMarket(db){
+  // A stale or premature close command must not settle the market while the
+  // globally authoritative transfer window is still open.
+  if(globalTransferMarketState(db.worldDate).open)
+    throw new Error('28일 통합 이적시장 개방 중에는 시장을 마감할 수 없습니다');
   const w=db.world, rng=new RNG(w.seed+'/'+w.year,'market'), rep=w.report;
   const ev=t=>{rep.events.push(t);news(db,t)};
   closeOpenNegotiationsForDeadline(db);
