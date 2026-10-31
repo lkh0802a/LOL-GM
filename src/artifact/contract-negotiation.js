@@ -108,9 +108,10 @@ function startNegotiation(db,pid,kind='fa',extra={}){
   if((kind==='fa'||kind==='initial')&&p.team)return {ok:false,msg:'FA 선수가 아닙니다'};if(kind==='renewal'&&p.team!==t.id)return {ok:false,msg:'우리 팀 선수가 아닙니다'};
   if(kind==='initial'){const allowed=new Set(setupTeamsForManager(db).map(x=>x.id));if(!allowed.has(t.id))return {ok:false,msg:'내 구단 조직의 스쿼드만 계약 대상이 될 수 있습니다'}}
   if((kind==='fa'||kind==='early_fa'||kind==='transfer'||kind==='initial')&&!recruitmentReady(db,pid,t.id))return {ok:false,msg:'관심 등록 → 관찰 → 내부 평가를 완료한 뒤 공식 협상을 시작할 수 있습니다'};
+  const store=negotiationStore(db),existing=Object.values(store).find(n=>n.pid===pid&&n.kind===kind&&n.teamId===t.id&&n.status==='open');
+  if(existing){const error=negotiationMarketDeadlineError(db,existing);return error?{ok:false,msg:error}:{ok:true,neg:existing,msg:p.name+' 협상이 이미 진행 중입니다'}}
   const id=negotiationId(db,pid,kind,
       (kind==='initial'||kind==='early_fa')?t.id:null),
-    store=negotiationStore(db),
     current=store[id];
   if(current&&current.status==='open')return {ok:true,neg:current,msg:p.name+' 협상이 이미 진행 중입니다'};
   const previous=current||latestNegotiationAttempt(db,pid,kind,t.id),

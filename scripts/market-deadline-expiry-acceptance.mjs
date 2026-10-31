@@ -72,7 +72,9 @@ const result=await runEngineFixture(String.raw`(()=>{
  {
   let {db,nid}=fixture(2027);const previous=JSON.parse(JSON.stringify(db.world.negotiations[nid]));
   db.worldDate=addDays(globalTransferMarketWindow(2027).closesOn,1);
-  const player=Object.values(db.players).find(p=>!p.retired&&!p.team&&p.id!==previous.pid);
+  const probe=unpackDB(packDB(db));runOffseason(probe);closeMarket(probe);
+  const player=Object.values(db.players).find(p=>!p.retired&&!p.team&&p.id!==previous.pid&&probe.players[p.id]&&!probe.players[p.id].retired&&!probe.players[p.id].team);
+  check(player,'actual FA available after market settlement');
   mInterest(db,player.id);mEvaluateTarget(db,player.id);const fresh=startNegotiation(db,player.id,'fa');check(fresh.ok,'actual post-close FA');
   const freshId=fresh.neg.id;
   const before=packDB(db),world=db.world,club=managedTeam(db),original=closeOpenNegotiationsForDeadline;
@@ -87,6 +89,10 @@ const result=await runEngineFixture(String.raw`(()=>{
   check(closed&&closed.status==='expired'&&closed.createdDate===previous.createdDate,'annual close erased pending negotiation instead of expiring it');
   check(db.world.negotiations[freshId]?.status==='open','annual close erased newer FA negotiation');
   db=unpackDB(packDB(db));check(db.world.negotiations[nid]?.status==='expired'&&db.world.negotiations[freshId]?.status==='open','annual negotiation history did not survive restore');
+  const teamId=managedTeamId(db);closeMarket(db);startWorldSeason(db,teamId,'deadline-next-season');
+  check(db.world.negotiations?.[freshId]?.status==='open'&&recruitmentTarget(db,player.id)?.negotiationId===freshId,'season transition lost ongoing FA negotiation');
+  const duplicate=startNegotiation(db,player.id,'fa');check(duplicate.ok&&duplicate.neg.id===freshId,'season transition duplicated ongoing negotiation');
+  db=unpackDB(packDB(db));check(db.world.negotiations?.[freshId]?.status==='open','next season restore lost FA negotiation');
  }
  let rollbackCases=0;
  {
