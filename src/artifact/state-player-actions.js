@@ -14,18 +14,12 @@ function playerActionAuthority(db,actor,team,exception=null){
 function playerActionTeam(db,id){
   const t=id&&db.teams[id];return t&&t.active!==false?t:null;
 }
-function playerActionFinance(t){
-  return t?.finance&&Number.isFinite(t.finance.cash)?t.finance:null;
-}
 function playerActionSnapshot(db,action){
   const p=db.players[action.pid],source=p?.team||null;
   const ids=Array.from(new Set([action.teamId||null,action.fromId||null,source])).filter(Boolean).sort();
   return {
     saveId:db.saveId||null,date:db.worldDate||null,year:db.world?.year??db.year,
-    ...(action.type==='player.sign'?{
-      rivalNegotiations:Object.values(db.world?.negotiations||{}).filter(n=>n.pid===action.pid&&n.teamId!==action.teamId&&n.status==='open').map(n=>JSON.parse(JSON.stringify(n))).sort((a,b)=>a.id.localeCompare(b.id)),
-      recruitmentTarget:db.world?.recruitment?.targets?.[action.pid]?JSON.parse(JSON.stringify(db.world.recruitment.targets[action.pid])):null
-    }:{}),
+    ...(action.type==='player.sign'?rivalSignSnapshot(db,action):{}),
     player:p?{
       id:p.id,team:p.team||null,retired:!!p.retired,
       contract:p.contract?JSON.parse(JSON.stringify(p.contract)):null,

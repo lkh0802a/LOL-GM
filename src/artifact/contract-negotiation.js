@@ -4,6 +4,16 @@
 
 // ---- 선수 계약 협상 엔진 ----
 function negotiationStore(db){const w=db.world;if(!w)return {};w.negotiations=w.negotiations||{};return w.negotiations}
+function rivalSignSnapshot(db,action){return {
+  rivalNegotiations:Object.values(db.world?.negotiations||{}).filter(n=>n.pid===action.pid&&n.teamId!==action.teamId&&n.status==='open').map(n=>JSON.parse(JSON.stringify(n))).sort((a,b)=>a.id.localeCompare(b.id)),
+  recruitmentTarget:db.world?.recruitment?.targets?.[action.pid]?JSON.parse(JSON.stringify(db.world.recruitment.targets[action.pid])):null
+}}
+function captureRivalSignUndo(db,command){
+  if(command.type!=='player.sign')return ()=>{};
+  const rows=Object.values(db.world?.negotiations||{}).filter(n=>n.pid===command.pid&&n.teamId!==command.teamId&&n.status==='open').map(ref=>({ref,record:actionJournalClone(ref)}));
+  const target=db.world?.recruitment?.targets?.[command.pid],record=target?actionJournalClone(target):null;
+  return ()=>{for(const row of rows)actionJournalRestoreObject(row.ref,row.record);if(target)actionJournalRestoreObject(target,record)};
+}
 function closeRivalNegotiationsAfterSigning(db,pid,teamId){
   for(const neg of Object.values(db.world?.negotiations||{})){
     if(neg.pid!==pid||neg.teamId===teamId||neg.status!=='open')continue;
