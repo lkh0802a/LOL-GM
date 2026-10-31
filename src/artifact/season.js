@@ -21,7 +21,6 @@ function leagueComp(db,rid,div=1){
   return {id:div===2?R.short+'2':R.short,name:div===2?divName(R):R.leagueName,short:div===2?divName(R):R.short,region:rid,div,teams,rules:{fearless:true,staffRegistration:R.staffRegistration||null},stages:leagueStages(R,teams.length,div)};
 }
 function startWorldSeason(db,myTeam,seed){
-  const prior=db.world?.phase==='preseason'?db.world:null;
   expireCurrentAIMarketOffers(db);
   normalizeInternationalConfig(db.worldConfig);
   const medicalRolloverDate=`${db.year}-01-06`;
@@ -49,9 +48,6 @@ function startWorldSeason(db,myTeam,seed){
   }
   const manage=db.world?db.world.manage:(db.worldConfig.manage||'manual');
   db.world={year:db.year,seed,manage,phase:'season',seasons:{},steps,step:-1,report:null,pendingOfficial:null,lastDate:`${db.year}-01-07`,lastDailyTick:null,majorPatchEvents:[],offers:[],marketLog:[]};
-  if(prior?.negotiations)db.world.negotiations=prior.negotiations;
-  if(prior?.recruitment)db.world.recruitment=prior.recruitment;
-  if(prior?.negotiationClock)db.world.negotiationClock=prior.negotiationClock;
   db.world.registrationVersion=1;initializeOfficialRegistrations(db);
   seasonPatch(db,`${db.year}-01-02`,new RNG(seed+db.year,'patch'));
   setGoals(db);

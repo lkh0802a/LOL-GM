@@ -754,7 +754,11 @@ function officialPeerPeriodSteps(db,steps){
 }
 const officialWorldSeasonBeforePeerPeriods=startWorldSeason;
 startWorldSeason=function(db,...args){
+  const prior=db.world?.phase==='preseason'?db.world:null;
   const result=officialWorldSeasonBeforePeerPeriods(db,...args),w=db.world;
+  if(prior?.negotiations)w.negotiations=prior.negotiations;
+  if(prior?.recruitment)w.recruitment=prior.recruitment;
+  if(prior?.negotiationClock)w.negotiationClock=prior.negotiationClock;
   const original=new Map(w.steps.map((step,index)=>[step,index])),prefix=w.steps.slice(0,w.step+1);
   w.steps=[...prefix,...officialPeerPeriodSteps(db,w.steps.slice(w.step+1)).map((step,index)=>step.kind==='league'&&original.get(step)!==prefix.length+index?{...step,patchSeedStep:original.get(step)}:step)];
   return result;
