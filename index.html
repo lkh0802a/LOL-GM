@@ -5562,7 +5562,7 @@ function pendingOfficialControl(db){
 }
 // Preserve object identity as well as values if this one-set handoff fails.
 // Previously completed sets are outside the operation and remain recorded.
-function pendingOfficialUndo(db){
+function pendingOfficialUndo(db,{restoreOrder=false}={}){
   // Capture the full reachable graph in the same depth-first property order.
   // Primitive values are retained in rows without recursive calls. The stack
   // contains only objects; reverse push preserves getter/alias visit order.
@@ -5578,7 +5578,7 @@ function pendingOfficialUndo(db){
   return ()=>{
     for(let at=0;at<rows.length;){
       const o=rows[at],keys=rows[at+1],length=rows[at+2],kept=new Set(keys);
-      for(const key of Object.keys(o))if(!kept.has(key))delete o[key];
+      for(const key of Object.keys(o))if(restoreOrder||!kept.has(key))delete o[key];
       for(let i=0;i<keys.length;i++)o[keys[i]]=rows[at+3+i];
       if(length!==null)o.length=length;
       at+=keys.length+3;
@@ -5685,6 +5685,8 @@ function runOffseason(db){
   // Reject an incomplete ledger before contract dates, growth or retirement
   // change. A paid legacy year without its report needs diagnosis, not replay.
   if(assertFinanceCloseout(db,db.world)==='closed')throw Error('이미 연간 결산이 완료된 시즌입니다');
+  const undo=pendingOfficialUndo(db,{restoreOrder:true});
+  try{
   const w=db.world,cw=initOffseasonContractWindow(db);
   // Headless/AI callers historically advanced offseason in one call. Preserve
   // that contract while the interactive UI exposes both real window stages.
@@ -5775,9 +5777,11 @@ function runOffseason(db){
   offseasonPlayerSatisfaction(db,w,rep,ev);
   const managed=managedTeam(db);
   w.sponsorOffers=managed&&managed.active!==false&&db.regions[managed.region]?sponsorOffers(db,managed):[];
-  w.report=rep; w.phase='market'; w.offers=[]; w.negotiations={}; w.marketLog=[];
+  w.report=rep; w.phase='market'; w.offers=[]; w.marketLog=[];
+  closeOpenNegotiationsForDeadline(db);
   refreshAIMarketOffers(db);
   return rep;
+  }catch(error){undo();throw error}
 }
 // ---------- 오프시즌 2단계: 이적 시장 마감 ----------
 function closeMarket(db){

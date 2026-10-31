@@ -27,6 +27,8 @@ function runOffseason(db){
   // Reject an incomplete ledger before contract dates, growth or retirement
   // change. A paid legacy year without its report needs diagnosis, not replay.
   if(assertFinanceCloseout(db,db.world)==='closed')throw Error('이미 연간 결산이 완료된 시즌입니다');
+  const undo=pendingOfficialUndo(db,{restoreOrder:true});
+  try{
   const w=db.world,cw=initOffseasonContractWindow(db);
   // Headless/AI callers historically advanced offseason in one call. Preserve
   // that contract while the interactive UI exposes both real window stages.
@@ -117,9 +119,11 @@ function runOffseason(db){
   offseasonPlayerSatisfaction(db,w,rep,ev);
   const managed=managedTeam(db);
   w.sponsorOffers=managed&&managed.active!==false&&db.regions[managed.region]?sponsorOffers(db,managed):[];
-  w.report=rep; w.phase='market'; w.offers=[]; w.negotiations={}; w.marketLog=[];
+  w.report=rep; w.phase='market'; w.offers=[]; w.marketLog=[];
+  closeOpenNegotiationsForDeadline(db);
   refreshAIMarketOffers(db);
   return rep;
+  }catch(error){undo();throw error}
 }
 // ---------- 오프시즌 2단계: 이적 시장 마감 ----------
 function closeMarket(db){

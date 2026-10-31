@@ -69,6 +69,25 @@ const result=await runEngineFixture(String.raw`(()=>{
   check(db.world.negotiations[nid].status==='expired','old renewal not expired');
   check(db.world.negotiations[freshId].status==='open'&&target.stage==='negotiating'&&target.negotiationId===freshId,'stale renewal overwrote active FA board');
  }
+ {
+  let {db,nid}=fixture(2027);const previous=JSON.parse(JSON.stringify(db.world.negotiations[nid]));
+  db.worldDate=addDays(globalTransferMarketWindow(2027).closesOn,1);
+  const player=Object.values(db.players).find(p=>!p.retired&&!p.team&&p.id!==previous.pid);
+  mInterest(db,player.id);mEvaluateTarget(db,player.id);const fresh=startNegotiation(db,player.id,'fa');check(fresh.ok,'actual post-close FA');
+  const freshId=fresh.neg.id;
+  const before=packDB(db),world=db.world,club=managedTeam(db),original=closeOpenNegotiationsForDeadline;
+  closeOpenNegotiationsForDeadline=(...args)=>{original(...args);throw Error('controlled annual expiry')};
+  let threw=false;try{runOffseason(db)}catch(e){threw=e.message==='controlled annual expiry'}
+  finally{closeOpenNegotiationsForDeadline=original}
+  const after=packDB(db), pos=[...before].findIndex((v,i)=>v!==after[i]);
+  check(threw&&after===before&&db.world===world&&managedTeam(db)===club,'annual expiry failure partially committed '+JSON.stringify({threw,saved:after===before,world:db.world===world,club:managedTeam(db)===club,pos,before:before.slice(pos-100,pos+160),after:after.slice(pos-100,pos+160)}));
+  runOffseason(db);
+  check(db.world.phase==='market','actual annual transition');
+  const closed=db.world.negotiations[nid];
+  check(closed&&closed.status==='expired'&&closed.createdDate===previous.createdDate,'annual close erased pending negotiation instead of expiring it');
+  check(db.world.negotiations[freshId]?.status==='open','annual close erased newer FA negotiation');
+  db=unpackDB(packDB(db));check(db.world.negotiations[nid]?.status==='expired'&&db.world.negotiations[freshId]?.status==='open','annual negotiation history did not survive restore');
+ }
  let rollbackCases=0;
  {
   const {db,nid}=fixture(2027);db.worldDate=addDays(globalTransferMarketWindow(2027).closesOn,1);
