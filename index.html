@@ -6699,6 +6699,11 @@ function captureWorldActionJournal(db,command){
   const marketOffers=command.type==='player.sign'?currentAIMarketOffers(db)
     .filter(o=>o.pid===command.pid&&o.status==='open')
     .map(ref=>({ref,record:actionJournalClone(ref)})):[];
+  const rivalNegotiations=command.type==='player.sign'?Object.values(db.world?.negotiations||{})
+    .filter(n=>n.pid===command.pid&&n.teamId!==command.teamId&&n.status==='open')
+    .map(ref=>({ref,record:actionJournalClone(ref)})):[];
+  const target=command.type==='player.sign'?db.world?.recruitment?.targets?.[command.pid]:null,
+    targetRecord=target?actionJournalClone(target):null;
   const newsRef=db.news,newsRows=Array.isArray(newsRef)?newsRef.slice():null;
   const hasDemand=Object.prototype.hasOwnProperty.call(db,'_marketDemandCache');
   const demandRef=db._marketDemandCache;
@@ -6716,6 +6721,8 @@ function captureWorldActionJournal(db,command){
     rollback(){
       if(staffJournal)staffJournal.rollback();
       for(const {ref,record} of marketOffers)actionJournalRestoreObject(ref,record);
+      for(const {ref,record} of rivalNegotiations)actionJournalRestoreObject(ref,record);
+      if(target)actionJournalRestoreObject(target,targetRecord);
       for(const row of entries){if(row.value)row.s.entries=row.value;else delete row.s.entries;if(row.staffValue)row.s.staffEntries=row.staffValue;else delete row.s.staffEntries;if(row.staffRecords)row.s.staffEntryRecords=row.staffRecords;else delete row.s.staffEntryRecords}
       if(closure){
         if(closure.firedPresent)w.fired=closure.fired;else delete w.fired;
@@ -8914,6 +8921,15 @@ function aiMarketOfferRankSnapshot(db,t,p){
 
 // ---- 선수 계약 협상 엔진 ----
 function negotiationStore(db){const w=db.world;if(!w)return {};w.negotiations=w.negotiations||{};return w.negotiations}
+function closeRivalNegotiationsAfterSigning(db,pid,teamId){
+  for(const neg of Object.values(db.world?.negotiations||{})){
+    if(neg.pid!==pid||neg.teamId===teamId||neg.status!=='open')continue;
+    const deadline=negotiationMarketDeadlineState(db,neg);if(deadline.error)throw Error(deadline.error);
+    neg.status=deadline.passed?'expired':'lost';neg.reason=deadline.passed?'이적시장 마감':'경쟁 구단 선택';neg.closedDate=db.worldDate;
+    const target=recruitmentTarget(db,pid);
+    if(target?.negotiationId===neg.id){target.stage='closed';target.result=deadline.passed?'deadline':'lost_to_rival'}
+  }
+}
 function negotiationId(db,pid,kind,teamId=null){return 'NEG_'+db.year+'_'+pid+'_'+kind+
   ((teamId&&(kind==='initial'||kind==='early_fa'))?'_'+teamId:'')}
 function negotiationRoundLimit(p){const profile=negotiationRepresentativeProfile(p);return clamp(3+Math.round((profile.professionalism-50)/35)-(profile.ambition>=82?1:0),2,5)}
@@ -9812,6 +9828,10 @@ function playerActionSnapshot(db,action){
   const ids=Array.from(new Set([action.teamId||null,action.fromId||null,source])).filter(Boolean).sort();
   return {
     saveId:db.saveId||null,date:db.worldDate||null,year:db.world?.year??db.year,
+    ...(action.type==='player.sign'?{
+      rivalNegotiations:Object.values(db.world?.negotiations||{}).filter(n=>n.pid===action.pid&&n.teamId!==action.teamId&&n.status==='open').map(n=>JSON.parse(JSON.stringify(n))).sort((a,b)=>a.id.localeCompare(b.id)),
+      recruitmentTarget:db.world?.recruitment?.targets?.[action.pid]?JSON.parse(JSON.stringify(db.world.recruitment.targets[action.pid])):null
+    }:{}),
     player:p?{
       id:p.id,team:p.team||null,retired:!!p.retired,
       contract:p.contract?JSON.parse(JSON.stringify(p.contract)):null,
@@ -10025,6 +10045,7 @@ function applyPlayerSignAction(db,c){
   const contract=signContract(db,p,t,c.salary,c.years,c.terms);
   if(offseasonFaSeason)db.year=beforeYear;
   settleAIMarketOffers(db,p.id,t.id,c.terms);
+  closeRivalNegotiationsAfterSigning(db,p.id,t.id);
   if(c.kind==='medical_replacement'){
     contract.medicalReplacement={...c.replacement};
     payMedicalReplacementWage(t,c.replacement.paid);

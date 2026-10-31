@@ -4,6 +4,15 @@
 
 // ---- 선수 계약 협상 엔진 ----
 function negotiationStore(db){const w=db.world;if(!w)return {};w.negotiations=w.negotiations||{};return w.negotiations}
+function closeRivalNegotiationsAfterSigning(db,pid,teamId){
+  for(const neg of Object.values(db.world?.negotiations||{})){
+    if(neg.pid!==pid||neg.teamId===teamId||neg.status!=='open')continue;
+    const deadline=negotiationMarketDeadlineState(db,neg);if(deadline.error)throw Error(deadline.error);
+    neg.status=deadline.passed?'expired':'lost';neg.reason=deadline.passed?'이적시장 마감':'경쟁 구단 선택';neg.closedDate=db.worldDate;
+    const target=recruitmentTarget(db,pid);
+    if(target?.negotiationId===neg.id){target.stage='closed';target.result=deadline.passed?'deadline':'lost_to_rival'}
+  }
+}
 function negotiationId(db,pid,kind,teamId=null){return 'NEG_'+db.year+'_'+pid+'_'+kind+
   ((teamId&&(kind==='initial'||kind==='early_fa'))?'_'+teamId:'')}
 function negotiationRoundLimit(p){const profile=negotiationRepresentativeProfile(p);return clamp(3+Math.round((profile.professionalism-50)/35)-(profile.ambition>=82?1:0),2,5)}

@@ -143,6 +143,24 @@ const result=await runEngineFixture(String.raw`(()=>{
  const faBefore=canonical(fa.contractMarketOffers),target=faOffers[0];
  mInterest(fa,target.pid);mEvaluateTarget(fa,target.pid,mt.id);
  const opened=startNegotiation(fa,target.pid,'fa');check(opened.ok&&opened.neg.competitors.some(o=>o.offerId===target.id)&&canonical(fa.contractMarketOffers)===faBefore,'FA consumer invented bidder');
+ {
+  const taken=unpackDB(packDB(fa)),bid=currentAIMarketOffers(taken).find(o=>o.id===target.id),nid=opened.neg.id;
+  const signed=commitWorldAction(taken,{type:'player.sign',pid:bid.pid,teamId:bid.teamId,kind:'fa',actor:'ai',salary:bid.terms.salary,years:bid.terms.years,terms:bid.terms});
+  check(signed.ok&&taken.players[bid.pid].team===bid.teamId,'actual rival signed FA');
+  const pending=taken.world.negotiations[nid],board=recruitmentTarget(taken,bid.pid);
+  check(pending.status==='lost'&&board.stage==='closed'&&board.negotiationId===nid,'rival signing left human negotiation open');
+  const saved=unpackDB(packDB(taken));check(saved.world.negotiations[nid].status==='lost','rival result did not survive save');
+  const retry=unpackDB(packDB(fa)),retryBid=currentAIMarketOffers(retry).find(o=>o.id===target.id),
+    prior=packDB(retry),negRef=retry.world.negotiations[nid],targetRef=recruitmentTarget(retry,retryBid.pid),scope=worldActionScopeErrors;
+  worldActionScopeErrors=(d,...args)=>d===retry?['controlled rival failure']:scope(d,...args);
+  let failed;try{failed=commitWorldAction(retry,{type:'player.sign',pid:retryBid.pid,teamId:retryBid.teamId,kind:'fa',actor:'ai',salary:retryBid.terms.salary,years:retryBid.terms.years,terms:retryBid.terms})}finally{worldActionScopeErrors=scope}
+  check(!failed.ok&&packDB(retry)===prior&&retry.world.negotiations[nid]===negRef&&recruitmentTarget(retry,retryBid.pid)===targetRef,'rival sign failure changed negotiation or board');
+  const stale=unpackDB(packDB(fa)),quote=currentAIMarketOffers(stale).find(o=>o.id===target.id),
+    preview=previewWorldAction(stale,{type:'player.sign',pid:quote.pid,teamId:quote.teamId,kind:'fa',actor:'ai',salary:quote.terms.salary,years:quote.terms.years,terms:quote.terms});
+  check(preview.ok,'rival sign preview');stale.world.negotiations[nid].history.push({side:'manager',result:'new_information'});
+  const before=packDB(stale),rejected=applyWorldAction(stale,preview);
+  check(!rejected.ok&&rejected.reason==='stale_preview'&&packDB(stale)===before,'stale rival sign preview changed negotiations');
+ }
  // An actual year-round FA negotiation opened after a market close belongs to
  // the next boundary, even when a delayed close consumer runs in June.
  const lateClose=clone(fa),lateId=opened.neg.id,lateSnapshot=canonical(lateClose.world.negotiations[lateId]);

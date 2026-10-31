@@ -22,6 +22,10 @@ function playerActionSnapshot(db,action){
   const ids=Array.from(new Set([action.teamId||null,action.fromId||null,source])).filter(Boolean).sort();
   return {
     saveId:db.saveId||null,date:db.worldDate||null,year:db.world?.year??db.year,
+    ...(action.type==='player.sign'?{
+      rivalNegotiations:Object.values(db.world?.negotiations||{}).filter(n=>n.pid===action.pid&&n.teamId!==action.teamId&&n.status==='open').map(n=>JSON.parse(JSON.stringify(n))).sort((a,b)=>a.id.localeCompare(b.id)),
+      recruitmentTarget:db.world?.recruitment?.targets?.[action.pid]?JSON.parse(JSON.stringify(db.world.recruitment.targets[action.pid])):null
+    }:{}),
     player:p?{
       id:p.id,team:p.team||null,retired:!!p.retired,
       contract:p.contract?JSON.parse(JSON.stringify(p.contract)):null,
@@ -235,6 +239,7 @@ function applyPlayerSignAction(db,c){
   const contract=signContract(db,p,t,c.salary,c.years,c.terms);
   if(offseasonFaSeason)db.year=beforeYear;
   settleAIMarketOffers(db,p.id,t.id,c.terms);
+  closeRivalNegotiationsAfterSigning(db,p.id,t.id);
   if(c.kind==='medical_replacement'){
     contract.medicalReplacement={...c.replacement};
     payMedicalReplacementWage(t,c.replacement.paid);

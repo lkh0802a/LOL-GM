@@ -73,7 +73,7 @@ const result=await runEngineFixture(String.raw`(()=>{
   let {db,nid}=fixture(2027);const previous=JSON.parse(JSON.stringify(db.world.negotiations[nid]));
   db.worldDate=addDays(globalTransferMarketWindow(2027).closesOn,1);
   const probe=unpackDB(packDB(db));runOffseason(probe);closeMarket(probe);
-  const player=Object.values(db.players).find(p=>!p.retired&&!p.team&&p.id!==previous.pid&&probe.players[p.id]&&!probe.players[p.id].retired&&!probe.players[p.id].team);
+  const player=Object.values(db.players).find(p=>!p.retired&&!p.team&&p.id!==previous.pid&&probe.players[p.id]&&!probe.players[p.id].retired&&!probe.players[p.id].team&&!probe.world.report.signings.some(s=>s.pid===p.id));
   check(player,'actual FA available after market settlement');
   mInterest(db,player.id);mEvaluateTarget(db,player.id);const fresh=startNegotiation(db,player.id,'fa');check(fresh.ok,'actual post-close FA');
   const freshId=fresh.neg.id;
