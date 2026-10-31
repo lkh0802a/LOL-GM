@@ -11,6 +11,8 @@ const result=await runEngineFixture(String.raw`(()=>{
  const fa=packDB(V2.db),daily=V2.db.world.lastDailyTick,report=JSON.stringify(V2.db.world.report),ownedBefore=[...v2Team().roster];
  v2ReviewOffseasonAction('day');let r=V2.managementReview;v2OpenAdvice();check(!V2.advice&&V2.managementReview===r,'중첩 금지');v2ClearTask();check(!V2.managementReview&&packDB(V2.db)===fa,'취소 게임 무작성');
  let faDays=0;while(freeAgencyDayState(V2.db).ready&&faDays<400){commit('day',advanceOffseasonFreeAgencyDay);faDays++;}
+ check(faDays===28&&V2.db.worldDate===globalTransferMarketWindow(db.year).closesOn,
+  'FA daily progression must end at the actual 28-day market boundary');
  check(faDays>0&&V2.db.worldDate===freeAgencyDayState(V2.db).through&&V2.db.year===db.year,'매일 수동 확인과 기존 결산 날짜 경계');check(V2.db.world.phase==='offseason'&&V2.db.world.lastDailyTick===daily&&JSON.stringify(V2.db.world.report)===report&&JSON.stringify(v2Team().roster)===JSON.stringify(ownedBefore),'FA 하루는 경기/훈련/연간 결산/영입 무소비');
  const through=packDB(V2.db);v2ReviewOffseasonAction('day');check(!V2.managementReview&&packDB(V2.db)===through,'결산 기준 뒤 추가 날짜 금지');
  commit('annual',runOffseason);check(V2.db.world.phase==='market'&&V2.db.year===db.year+1,'별도 수동 연간 결산으로 시장 진입');const market=packDB(V2.db);v2Continue();r=V2.managementReview;let expected=JSON.parse(JSON.stringify(V2.db));closeMarket(expected);check(v2CommitManagement(r).ok&&JSON.stringify(V2.db)===JSON.stringify(expected),'기존 시장 마감 전체 결과');V2.managementReview=null;v2Continue();r=V2.managementReview;expected=JSON.parse(JSON.stringify(V2.db));startWorldSeason(expected,team.id,r.phaseSeed);check(v2CommitManagement(r).ok&&JSON.stringify(V2.db)===JSON.stringify(expected)&&V2.db.world.phase==='season','다음 시즌 시작 전체 결과');V2.managementReview=null;
