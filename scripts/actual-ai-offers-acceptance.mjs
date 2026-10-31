@@ -201,9 +201,16 @@ const result=await runEngineFixture(String.raw`(()=>{
    aiMarketOfferPeriod(rollover).year===rollover.year,'annual settlement uses new contract season');
  let marketContracts=0;
  const longMarket=clone(fa);longMarket.world.negotiations={};
+ const priorMarketPeriods=Object.keys(longMarket.contractMarketOffers.periods).filter(id=>id.startsWith('market/'));
  for(let cycle=0;cycle<20;cycle++){
-   longMarket.year=fa.year+cycle;longMarket.world.year=longMarket.year;
-   longMarket.worldDate=longMarket.year+'-06-01';longMarket.world.offers=[];
+   // As in annual rollover, next-season contract years coexist with the
+   // closing world's December market. June is no longer a transfer window.
+   longMarket.year=fa.year+cycle+1;longMarket.world.year=longMarket.year-1;
+   longMarket.worldDate=globalPlayerFAOpenDate(longMarket.world.year);longMarket.world.offers=[];
+   // runOffseason supplies a real cohort before each annual market. Reusing
+   // one frozen pool for twenty years can exhaust a role after legal transfers.
+   for(const region of Object.values(longMarket.regions))
+     generateRookieClass(longMarket,region,new RNG('real-market-cohort/'+cycle));
    refreshAIMarketOffers(longMarket);
    const report={expired:[],resign:[],signings:[],transfers:[]};
    contractMarket(longMarket,new RNG('real-market-cycle/'+cycle),report,[]);
@@ -214,7 +221,10 @@ const result=await runEngineFixture(String.raw`(()=>{
    const restored=unpackDB(packDB(longMarket));
    check(canonical(restored.contractMarketOffers)===canonical(longMarket.contractMarketOffers),'20 markets proposal history save');
  }
- check(marketContracts>0&&Object.keys(longMarket.contractMarketOffers.periods).filter(id=>id.startsWith('market/')).length===20,'20 real market cycles');
+ const newMarketPeriods=Object.keys(longMarket.contractMarketOffers.periods)
+   .filter(id=>id.startsWith('market/')&&!priorMarketPeriods.includes(id));
+ check(marketContracts>0&&newMarketPeriods.length===20&&
+   priorMarketPeriods.every(id=>longMarket.contractMarketOffers.periods[id]),'20 new real market cycles and retained prior history');
  return {initialOffers:issued.length,multi:live.length,single:1,zero:0,
    realRivalContract:true,finiteFunds:true,nativeSave:true,duplicateInert:true,
    legacyNoPhantoms:true,periodAuthority:true,faOffers:faOffers.length,
