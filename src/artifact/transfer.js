@@ -54,7 +54,7 @@ function closeOpenNegotiationsForDeadline(db){
     const deadline=negotiationMarketDeadlineState(db,neg);
     if(deadline.error)throw Error(deadline.error);
     if(!deadline.passed)continue;
-    neg.status='expired';neg.reason='이적시장 마감';neg.closedDate=db.worldDate;const target=recruitmentTarget(db,neg.pid);if(target){target.stage='closed';target.result='deadline';target.negotiationId=neg.id}
+    neg.status='expired';neg.reason='이적시장 마감';neg.closedDate=db.worldDate;const target=recruitmentTarget(db,neg.pid);if(target?.negotiationId===neg.id){target.stage='closed';target.result='deadline';target.negotiationId=neg.id}
   }
 }
 // ---- 이적료 / 직접 운영 ----

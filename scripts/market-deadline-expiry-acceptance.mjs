@@ -1,14 +1,21 @@
 import {runEngineFixture} from './test-harness.mjs';
 const result=await runEngineFixture(String.raw`(()=>{
  const check=(v,m)=>{if(!v)throw Error('MARKET_DEADLINE_EXPIRY '+m)};
- function fixture(year){
+ function fixture(year,renewalBeforeFA=false){
   const cfg=defaultWorldConfig();cfg.startYear=year;cfg.regions=[regionCfg('KR',{teams:4,div2:false})];cfg.internationals=[];
   let db=buildWorld(cfg);const team=activeTeams(db)[0];setManagedTeam(db,team.id);
   for(const t of activeTeams(db))t.finance.cash=1000;
   const p=Object.values(db.players).find(p=>!p.retired&&!p.team);
   signContract(db,p,team,asking(db,p,team.region),1,{promisedRole:'core'});p.contract.option=null;
   db.world={year,seed:'deadline-'+year,manage:'manual',phase:'offseason',seasons:{},steps:[],step:0,negotiations:{},offers:[],marketLog:[],lastDate:year+'-11-16'};
-  db.worldDate=db.world.lastDate;initOffseasonContractWindow(db);advanceOffseasonContractWindow(db);
+  db.worldDate=db.world.lastDate;
+  let previous=null;
+  if(renewalBeforeFA){
+   mInterest(db,p.id);mEvaluateTarget(db,p.id);previous=startNegotiation(db,p.id,'renewal');
+   check(previous.ok,'actual pre-FA renewal');
+  }
+  initOffseasonContractWindow(db);advanceOffseasonContractWindow(db);
+  if(renewalBeforeFA)return {db:unpackDB(packDB(db)),nid:previous.neg.id,pid:p.id};
   mInterest(db,p.id);mEvaluateTarget(db,p.id);const opened=startNegotiation(db,p.id,'fa');
   check(opened.ok,'actual observed FA negotiation');
   check(currentAIMarketOffers(db).some(o=>o.status==='open'),'actual independent AI offers');
@@ -51,6 +58,16 @@ const result=await runEngineFixture(String.raw`(()=>{
   check(advanceOffseasonFreeAgencyDay(db).ok,'restored late FA day');
   check(db.world.negotiations[nid].status==='expired','missed deadline left old negotiation open');
   check(db.world.negotiations[freshId].status==='open','catch-up expired a new year-round FA negotiation');
+ }
+ {
+  let {db,nid,pid}=fixture(2027,true);const window=globalTransferMarketWindow(2027);
+  db.worldDate=addDays(window.closesOn,1);
+  mEvaluateTarget(db,pid);const fresh=startNegotiation(db,pid,'fa');check(fresh.ok,'replacement FA negotiation');
+  const freshId=fresh.neg.id;db=unpackDB(packDB(db));
+  check(advanceOffseasonFreeAgencyDay(db).ok,'replacement FA day');
+  const target=recruitmentTarget(db,pid);
+  check(db.world.negotiations[nid].status==='expired','old renewal not expired');
+  check(db.world.negotiations[freshId].status==='open'&&target.stage==='negotiating'&&target.negotiationId===freshId,'stale renewal overwrote active FA board');
  }
  let rollbackCases=0;
  {
