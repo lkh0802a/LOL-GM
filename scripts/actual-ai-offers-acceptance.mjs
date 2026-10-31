@@ -143,6 +143,17 @@ const result=await runEngineFixture(String.raw`(()=>{
  const faBefore=canonical(fa.contractMarketOffers),target=faOffers[0];
  mInterest(fa,target.pid);mEvaluateTarget(fa,target.pid,mt.id);
  const opened=startNegotiation(fa,target.pid,'fa');check(opened.ok&&opened.neg.competitors.some(o=>o.offerId===target.id)&&canonical(fa.contractMarketOffers)===faBefore,'FA consumer invented bidder');
+ // An actual year-round FA negotiation opened after a market close belongs to
+ // the next boundary, even when a delayed close consumer runs in June.
+ const lateClose=clone(fa),lateId=opened.neg.id,lateSnapshot=canonical(lateClose.world.negotiations[lateId]);
+ closeOpenNegotiationsForDeadline(lateClose);
+ check(canonical(lateClose.world.negotiations[lateId])===lateSnapshot,'post-close FA negotiation survives late close');
+ const dueClose=clone(fa),deadline=negotiationMarketDeadline(dueClose.world.negotiations[lateId]);
+ dueClose.worldDate=deadline.slice(0,10);closeOpenNegotiationsForDeadline(dueClose);
+ check(dueClose.world.negotiations[lateId].status==='expired'&&
+  dueClose.world.negotiations[lateId].closedDate===dueClose.worldDate&&
+  unpackDB(packDB(dueClose)).world.negotiations[lateId].status==='expired',
+  'actual deadline expires original FA negotiation and persists');
  const faRestored=unpackDB(packDB(fa));check(canonical(faRestored.contractMarketOffers)===faBefore,'FA native save');
  const closedFa=clone(fa);closedFa.world.negotiations={};const closedRows=[];
  for(const t of activeTeams(closedFa,null,1).filter(t=>!playerActionAuthority(closedFa,'ai',t)))for(const role of ROLES){
