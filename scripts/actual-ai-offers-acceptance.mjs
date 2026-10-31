@@ -181,6 +181,11 @@ const result=await runEngineFixture(String.raw`(()=>{
    Object.values(endedPeriod.offers).some(o=>o.status==='expired')&&
    Object.values(endedPeriod.offers).every(o=>o.status!=='open'),'real market closure records expiry at actual time');
  check(canonical(unpackDB(packDB(closedWorld)).contractMarketOffers)===canonical(closedWorld.contractMarketOffers),'closed offer history native save');
+ const closedSnapshot=canonical(closedWorld),closedWorldRef=closedWorld.world,
+  closedOffersRef=closedWorld.contractMarketOffers;let repeatedCloseRejected=false;
+ try{closeMarket(closedWorld)}catch(error){repeatedCloseRejected=/진행 중일 때만/.test(error.message)}
+ check(repeatedCloseRejected&&canonical(closedWorld)===closedSnapshot&&closedWorld.world===closedWorldRef&&
+  closedWorld.contractMarketOffers===closedOffersRef,'duplicate market closure is inert');
  const ended=clone(fa);ended.world.phase='offseason';ended.world.contractWindow={stage:'exclusive'};
  check(!currentAIMarketOffers(ended).length,'exclusive contact bypass');
  const daily=clone(fa);daily.world.phase='offseason';daily.worldDate=daily.year+'-12-01';

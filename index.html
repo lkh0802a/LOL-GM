@@ -5779,6 +5779,9 @@ function runOffseason(db){
 }
 // ---------- 오프시즌 2단계: 이적 시장 마감 ----------
 function closeMarket(db){
+  // A stale repeated command must never rerun AI signings or settlement.
+  if(db.world?.phase!=='market')
+    throw new Error('이적시장이 진행 중일 때만 마감할 수 있습니다');
   // A stale or premature close command must not settle the market while the
   // globally authoritative transfer window is still open.
   if(globalTransferMarketState(db.worldDate).open)
