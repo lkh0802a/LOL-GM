@@ -38,6 +38,7 @@ function mTransferBid(db,pid,fee,feePlan=null){
   if(payment.upfront>t.finance.cash)return '선지급할 보유 자금이 부족합니다';
   const moveErr=contractedMoveError(db,p);if(moveErr)return moveErr;const localErr=localRegistrationError(db,t,p);if(localErr)return localErr;
   const id=negotiationId(db,pid,'transfer'),store=negotiationStore(db),ask=sellerTransferAsk(db,p,from);let neg=store[id];
+  if(neg?.status==='open'){const deadline=negotiationMarketDeadlineError(db,neg);if(deadline)return deadline;}
   if(!neg||neg.status!=='open'){const st=startNegotiation(db,pid,'transfer',{sellerId:from.id});if(!st.ok)return st.msg;neg=st.neg;neg.stage='club';neg.clubRounds=0}
   neg.clubRounds=(neg.clubRounds||0)+1;neg.history.push({round:neg.clubRounds,stage:'club',side:'buyer',fee});
   const clause=normalizeBuyoutClause(p.contract?.buyout),releasePrice=clause?.type==='release'&&fee+1e-8>=clause.amount,
@@ -48,7 +49,13 @@ function mTransferBid(db,pid,fee,feePlan=null){
 }
 function acceptSellerCounter(db,nid){const neg=negotiationStore(db)[nid];if(!neg||neg.status!=='open'||neg.stage!=='club'||!neg.clubCounter)return '수락할 구단 역제안이 없습니다';return mTransferBid(db,neg.pid,neg.clubCounter)}
 function closeOpenNegotiationsForDeadline(db){
-  for(const neg of Object.values(negotiationStore(db))){if(neg.status!=='open')continue;neg.status='expired';neg.reason='이적시장 마감';neg.closedDate=db.worldDate;const target=recruitmentTarget(db,neg.pid);if(target){target.stage='closed';target.result='deadline';target.negotiationId=neg.id}}
+  for(const neg of Object.values(negotiationStore(db))){
+    if(neg.status!=='open')continue;
+    const deadline=negotiationMarketDeadlineState(db,neg);
+    if(deadline.error)throw Error(deadline.error);
+    if(!deadline.passed)continue;
+    neg.status='expired';neg.reason='이적시장 마감';neg.closedDate=db.worldDate;const target=recruitmentTarget(db,neg.pid);if(target?.negotiationId===neg.id){target.stage='closed';target.result='deadline';target.negotiationId=neg.id}
+  }
 }
 // ---- 이적료 / 직접 운영 ----
 function transferFee(db,p){const left=p.contract?Math.max(1,p.contract.until-db.year+1):1;return Math.round(playerMarketValue(db,p)*(.62+.18*Math.min(3,left))*(p.wantsOut?.75:1)*10)/10}

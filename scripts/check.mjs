@@ -8,11 +8,18 @@ await import('./audit-champion-source-acceptance.mjs');
 await import('./verify-champion-source-bundle-acceptance.mjs');
 await import('./match-core-foundation-acceptance.mjs');
 await import('./match-core-input-acceptance.mjs');
+await import('./codex-space-preflight-acceptance.mjs');
 await import('./codex-impact-map-acceptance.mjs');
 await import('./observer-information-acceptance.mjs');
 await import('./historical-identity-acceptance.mjs');
 await import('./worlds-identity-acceptance.mjs');
 await import('./contract-window-acceptance.mjs');
+await import('./contract-window-rollback-acceptance.mjs');
+await import('./offseason-clock-recovery-acceptance.mjs');
+await import('./global-market-calendar-acceptance.mjs');
+await import('./global-transfer-window-acceptance.mjs');
+await import('./market-deadline-expiry-acceptance.mjs');
+await import('./market-deadline-consumer-acceptance.mjs');
 await import('./ui-projection-acceptance.mjs');
 
 const root = resolve(import.meta.dirname, '..');

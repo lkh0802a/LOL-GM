@@ -143,6 +143,35 @@ const result=await runEngineFixture(String.raw`(()=>{
  const faBefore=canonical(fa.contractMarketOffers),target=faOffers[0];
  mInterest(fa,target.pid);mEvaluateTarget(fa,target.pid,mt.id);
  const opened=startNegotiation(fa,target.pid,'fa');check(opened.ok&&opened.neg.competitors.some(o=>o.offerId===target.id)&&canonical(fa.contractMarketOffers)===faBefore,'FA consumer invented bidder');
+ {
+  const taken=unpackDB(packDB(fa)),bid=currentAIMarketOffers(taken).find(o=>o.id===target.id),nid=opened.neg.id;
+  const signed=commitWorldAction(taken,{type:'player.sign',pid:bid.pid,teamId:bid.teamId,kind:'fa',actor:'ai',salary:bid.terms.salary,years:bid.terms.years,terms:bid.terms});
+  check(signed.ok&&taken.players[bid.pid].team===bid.teamId,'actual rival signed FA');
+  const pending=taken.world.negotiations[nid],board=recruitmentTarget(taken,bid.pid);
+  check(pending.status==='lost'&&board.stage==='closed'&&board.negotiationId===nid,'rival signing left human negotiation open');
+  const saved=unpackDB(packDB(taken));check(saved.world.negotiations[nid].status==='lost','rival result did not survive save');
+  const retry=unpackDB(packDB(fa)),retryBid=currentAIMarketOffers(retry).find(o=>o.id===target.id),
+    prior=packDB(retry),negRef=retry.world.negotiations[nid],targetRef=recruitmentTarget(retry,retryBid.pid),scope=worldActionScopeErrors;
+  worldActionScopeErrors=(d,...args)=>d===retry?['controlled rival failure']:scope(d,...args);
+  let failed;try{failed=commitWorldAction(retry,{type:'player.sign',pid:retryBid.pid,teamId:retryBid.teamId,kind:'fa',actor:'ai',salary:retryBid.terms.salary,years:retryBid.terms.years,terms:retryBid.terms})}finally{worldActionScopeErrors=scope}
+  check(!failed.ok&&packDB(retry)===prior&&retry.world.negotiations[nid]===negRef&&recruitmentTarget(retry,retryBid.pid)===targetRef,'rival sign failure changed negotiation or board');
+  const stale=unpackDB(packDB(fa)),quote=currentAIMarketOffers(stale).find(o=>o.id===target.id),
+    preview=previewWorldAction(stale,{type:'player.sign',pid:quote.pid,teamId:quote.teamId,kind:'fa',actor:'ai',salary:quote.terms.salary,years:quote.terms.years,terms:quote.terms});
+  check(preview.ok,'rival sign preview');stale.world.negotiations[nid].history.push({side:'manager',result:'new_information'});
+  const before=packDB(stale),rejected=applyWorldAction(stale,preview);
+  check(!rejected.ok&&rejected.reason==='stale_preview'&&packDB(stale)===before,'stale rival sign preview changed negotiations');
+ }
+ // An actual year-round FA negotiation opened after a market close belongs to
+ // the next boundary, even when a delayed close consumer runs in June.
+ const lateClose=clone(fa),lateId=opened.neg.id,lateSnapshot=canonical(lateClose.world.negotiations[lateId]);
+ closeOpenNegotiationsForDeadline(lateClose);
+ check(canonical(lateClose.world.negotiations[lateId])===lateSnapshot,'post-close FA negotiation survives late close');
+ const dueClose=clone(fa),deadline=negotiationMarketDeadline(dueClose.world.negotiations[lateId]);
+ dueClose.worldDate=deadline.slice(0,10);closeOpenNegotiationsForDeadline(dueClose);
+ check(dueClose.world.negotiations[lateId].status==='expired'&&
+  dueClose.world.negotiations[lateId].closedDate===dueClose.worldDate&&
+  unpackDB(packDB(dueClose)).world.negotiations[lateId].status==='expired',
+  'actual deadline expires original FA negotiation and persists');
  const faRestored=unpackDB(packDB(fa));check(canonical(faRestored.contractMarketOffers)===faBefore,'FA native save');
  const closedFa=clone(fa);closedFa.world.negotiations={};const closedRows=[];
  for(const t of activeTeams(closedFa,null,1).filter(t=>!playerActionAuthority(closedFa,'ai',t)))for(const role of ROLES){
@@ -171,14 +200,30 @@ const result=await runEngineFixture(String.raw`(()=>{
  autoBuildInitialSquad(closedWorld,closeTeam,new RNG('real-fa-period-close','fixture'),5);finalizeInitialRosters(closedWorld);
  check(closedWorld.contractMarketOffers.periods['initial/'+closedWorld.year].closedAt,'initial period actual closure');
  closedWorld.world.phase='market';closedWorld.world.report={year:closedWorld.year,growth:[],retired:[],signings:[],resign:[],expired:[],transfers:[],events:[]};
- closedWorld.worldDate=closedWorld.year+'-06-01';
+ const closeWindow=globalTransferMarketWindow(closedWorld.world.year);
+ closedWorld.worldDate=closeWindow.lastOpenDate;
  for(const t of activeTeams(closedWorld))for(const id of t.roster)closedWorld.players[id].contract.until=closedWorld.year;
  refreshAIMarketOffers(closedWorld);const closingPeriod=aiMarketOfferPeriod(closedWorld).id;
+ closedWorld.worldDate=closeWindow.closesOn;
+ const beforeFailedClose=canonical(closedWorld),beforeWorld=closedWorld.world,
+  beforeTeam=closedWorld.teams[closeTeam.id],beforeFinance=beforeTeam.finance,
+  originalMarketWriter=contractMarket;let lateCloseFailed=false;
+ contractMarket=(state)=>{state.teams[closeTeam.id].finance.cash-=3;throw Error('controlled market settlement failure')};
+ try{closeMarket(closedWorld)}catch(error){lateCloseFailed=error.message==='controlled market settlement failure'}
+ finally{contractMarket=originalMarketWriter}
+ check(lateCloseFailed&&canonical(closedWorld)===beforeFailedClose&&closedWorld.world===beforeWorld&&
+  closedWorld.teams[closeTeam.id]===beforeTeam&&beforeTeam.finance===beforeFinance,
+  'failed market closure restores world and finance references');
  closeMarket(closedWorld);const endedPeriod=closedWorld.contractMarketOffers.periods[closingPeriod];
  check(closedWorld.world.phase==='preseason'&&endedPeriod.closedAt===negotiationClockAt(closedWorld)&&
    Object.values(endedPeriod.offers).some(o=>o.status==='expired')&&
    Object.values(endedPeriod.offers).every(o=>o.status!=='open'),'real market closure records expiry at actual time');
  check(canonical(unpackDB(packDB(closedWorld)).contractMarketOffers)===canonical(closedWorld.contractMarketOffers),'closed offer history native save');
+ const closedSnapshot=canonical(closedWorld),closedWorldRef=closedWorld.world,
+  closedOffersRef=closedWorld.contractMarketOffers;let repeatedCloseRejected=false;
+ try{closeMarket(closedWorld)}catch(error){repeatedCloseRejected=/진행 중일 때만/.test(error.message)}
+ check(repeatedCloseRejected&&canonical(closedWorld)===closedSnapshot&&closedWorld.world===closedWorldRef&&
+  closedWorld.contractMarketOffers===closedOffersRef,'duplicate market closure is inert');
  const ended=clone(fa);ended.world.phase='offseason';ended.world.contractWindow={stage:'exclusive'};
  check(!currentAIMarketOffers(ended).length,'exclusive contact bypass');
  const daily=clone(fa);daily.world.phase='offseason';daily.worldDate=daily.year+'-12-01';
@@ -201,9 +246,16 @@ const result=await runEngineFixture(String.raw`(()=>{
    aiMarketOfferPeriod(rollover).year===rollover.year,'annual settlement uses new contract season');
  let marketContracts=0;
  const longMarket=clone(fa);longMarket.world.negotiations={};
+ const priorMarketPeriods=Object.keys(longMarket.contractMarketOffers.periods).filter(id=>id.startsWith('market/'));
  for(let cycle=0;cycle<20;cycle++){
-   longMarket.year=fa.year+cycle;longMarket.world.year=longMarket.year;
-   longMarket.worldDate=longMarket.year+'-06-01';longMarket.world.offers=[];
+   // As in annual rollover, next-season contract years coexist with the
+   // closing world's December market. June is no longer a transfer window.
+   longMarket.year=fa.year+cycle+1;longMarket.world.year=longMarket.year-1;
+   longMarket.worldDate=globalPlayerFAOpenDate(longMarket.world.year);longMarket.world.offers=[];
+   // runOffseason supplies a real cohort before each annual market. Reusing
+   // one frozen pool for twenty years can exhaust a role after legal transfers.
+   for(const region of Object.values(longMarket.regions))
+     generateRookieClass(longMarket,region,new RNG('real-market-cohort/'+cycle));
    refreshAIMarketOffers(longMarket);
    const report={expired:[],resign:[],signings:[],transfers:[]};
    contractMarket(longMarket,new RNG('real-market-cycle/'+cycle),report,[]);
@@ -214,7 +266,10 @@ const result=await runEngineFixture(String.raw`(()=>{
    const restored=unpackDB(packDB(longMarket));
    check(canonical(restored.contractMarketOffers)===canonical(longMarket.contractMarketOffers),'20 markets proposal history save');
  }
- check(marketContracts>0&&Object.keys(longMarket.contractMarketOffers.periods).filter(id=>id.startsWith('market/')).length===20,'20 real market cycles');
+ const newMarketPeriods=Object.keys(longMarket.contractMarketOffers.periods)
+   .filter(id=>id.startsWith('market/')&&!priorMarketPeriods.includes(id));
+ check(marketContracts>0&&newMarketPeriods.length===20&&
+   priorMarketPeriods.every(id=>longMarket.contractMarketOffers.periods[id]),'20 new real market cycles and retained prior history');
  return {initialOffers:issued.length,multi:live.length,single:1,zero:0,
    realRivalContract:true,finiteFunds:true,nativeSave:true,duplicateInert:true,
    legacyNoPhantoms:true,periodAuthority:true,faOffers:faOffers.length,

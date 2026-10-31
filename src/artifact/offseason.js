@@ -20,6 +20,29 @@ function ensureEven(db,rng,ev){
 // promotion/relegation and next-season organizational reset.
 
 // ---------- 오프시즌 1단계: 기록·성장·은퇴·승강·흥행·재정·사무국 ----------
+// The shared undo restores graph values and identities. Annual growth also
+// deletes and reinserts properties, so restore their original order on failure.
+function pendingAnnualUndo(db){
+  const undo=pendingOfficialUndo(db),seen=new Set(),pending=[db],orders=[];
+  while(pending.length){
+    const object=pending.pop();if(!object||typeof object!=='object'||seen.has(object))continue;
+    seen.add(object);const keys=Object.keys(object);orders.push([object,keys]);
+    for(const key of keys){const value=object[key];if(value&&typeof value==='object')pending.push(value)}
+  }
+  return ()=>{
+    undo();
+    for(const [object,keys] of orders){
+      const current=Object.keys(object);if(current.length===keys.length&&current.every((key,i)=>key===keys[i]))continue;
+      const values=keys.map(key=>object[key]);for(const key of current)delete object[key];
+      keys.forEach((key,i)=>{object[key]=values[i]});
+    }
+  };
+}
+function pendingManagerMarketResponse(db){
+  const w=db.world;
+  return w?.manage==='manual'&&!w.fired&&!!managedTeamId(db)&&
+    Object.values(w.negotiations||{}).some(n=>n.teamId===managedTeamId(db)&&n.status==='open'&&n.stage==='waiting');
+}
 function runOffseason(db){
   // A stale UI/duplicate command must not grow players or settle the same year
   // again after the manual annual closeout has already produced its report.
@@ -27,6 +50,10 @@ function runOffseason(db){
   // Reject an incomplete ledger before contract dates, growth or retirement
   // change. A paid legacy year without its report needs diagnosis, not replay.
   if(assertFinanceCloseout(db,db.world)==='closed')throw Error('이미 연간 결산이 완료된 시즌입니다');
+  if(db.world?.phase==='offseason'&&pendingManagerMarketResponse(db))
+    throw Error('응답 대기 중인 제안을 직접 취소하거나 연락을 확인한 뒤 결산하세요');
+  const undo=pendingAnnualUndo(db);
+  try{
   const w=db.world,cw=initOffseasonContractWindow(db);
   // Headless/AI callers historically advanced offseason in one call. Preserve
   // that contract while the interactive UI exposes both real window stages.
@@ -66,12 +93,11 @@ function runOffseason(db){
   }
   db.year=w.year+1;
   aiChooseLocalEligibility(db);
-  // B3 exposes the 14-day contract window as real world dates, but no training
-  // or matches occur there. Preserve B10's full passive recovery from the last
-  // competitive date instead of shortening recovery by the displayed window.
-  const medicalRolloverDate=`${db.year}-01-06`;
-  if(cw?.seasonEndDate)setWorldCalendarDate(db,cw.seasonEndDate);
-  medicalOffseasonRecovery(db,medicalRolloverDate);
+  // Consume the existing passive recovery interval without rewinding the live
+  // world clock after contract dates have already advanced.
+  if(!freeAgencyDateValid(db.worldDate))throw Error('연간 결산의 현재 날짜를 확인할 수 없습니다');
+  const defaultRolloverDate=`${db.year}-01-06`,medicalRolloverDate=db.worldDate>defaultRolloverDate?db.worldDate:defaultRolloverDate;
+  medicalOffseasonRecovery(db,medicalRolloverDate,cw?.seasonEndDate||undefined);
   setWorldCalendarDate(db,medicalRolloverDate);
   promotionRelegation(db,w,rng,ev);
   updateHype(db,w);
@@ -119,12 +145,29 @@ function runOffseason(db){
   offseasonPlayerSatisfaction(db,w,rep,ev);
   const managed=managedTeam(db);
   w.sponsorOffers=managed&&managed.active!==false&&db.regions[managed.region]?sponsorOffers(db,managed):[];
-  w.report=rep; w.phase='market'; w.offers=[]; w.negotiations={}; w.marketLog=[];
+  w.report=rep; w.phase='market'; w.offers=[]; w.marketLog=[];
+  closeOpenNegotiationsForDeadline(db);
   refreshAIMarketOffers(db);
   return rep;
+  }catch(error){undo();throw error}
 }
 // ---------- 오프시즌 2단계: 이적 시장 마감 ----------
 function closeMarket(db){
+  // A stale repeated command must never rerun AI signings or settlement.
+  if(db.world?.phase!=='market')
+    throw new Error('이적시장이 진행 중일 때만 마감할 수 있습니다');
+  // A stale or premature close command must not settle the market while the
+  // globally authoritative transfer window is still open.
+  if(globalTransferMarketState(db.worldDate).open)
+    throw new Error('28일 통합 이적시장 개방 중에는 시장을 마감할 수 없습니다');
+  // The opening is not a closing: a stale market phase before this season's
+  // window must not settle the year before its own deadline either.
+  if(db.worldDate<globalTransferMarketWindow(db.world.year).closesOn)
+    throw new Error('이번 시즌 이적시장 마감일 전에 시장을 마감할 수 없습니다');
+  if(pendingManagerMarketResponse(db))
+    throw Error('응답 대기 중인 제안을 직접 취소하거나 연락을 확인한 뒤 마감하세요');
+  const undo=pendingOfficialUndo(db);
+  try{
   const w=db.world, rng=new RNG(w.seed+'/'+w.year,'market'), rep=w.report;
   const ev=t=>{rep.events.push(t);news(db,t)};
   closeOpenNegotiationsForDeadline(db);
@@ -139,6 +182,7 @@ function closeMarket(db){
   rep.retired.slice(0,3).forEach(r=>news(db,`${db.players[r.pid].name} 은퇴 (${r.age}세)`));
   expireCurrentAIMarketOffers(db);
   w.phase='preseason';
+  }catch(error){undo();throw error}
 }
 // 승강: 승강제는 1부 하위 ↔ 2부 상위 교체, 혼합은 프랜차이즈 보호 구단 제외
 function promotionRelegation(db,w,rng,ev){

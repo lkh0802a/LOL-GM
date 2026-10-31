@@ -3089,6 +3089,7 @@ function seriesGameSetup(db,aId,bId,bestOf,seed,ctx,g,chooser,srng,resolved=null
   return {other,sc,blue,red,gseed,fpTeam,snap};
 }
 function createSeriesSession(db,aId,bId,bestOf,seed,opt={}){
+  assertCompetitionOutsideMarket(db,opt);
   const srng=new RNG(seed,'side'),firstChoice=opt.firstChoice||'seed';
   const chooser=firstChoice==='coin'?(srng.chance(.5)?aId:bId):aId;
   return {a:aId,b:bId,bestOf,seed,need:Math.ceil(bestOf/2),g:1,chooser,wins:{[aId]:0,[bId]:0},games:[],lines:[],
@@ -3100,6 +3101,7 @@ function createSeriesSession(db,aId,bId,bestOf,seed,opt={}){
 function seriesSessionRng(sess){const r=new RNG(sess.seed,'side');r.a=sess.sideRng.a;r.sp=sess.sideRng.sp;return r}
 function seriesSessionDone(sess){return sess.opt.practice?sess.games.length>=sess.bestOf:sess.wins[sess.a]>=sess.need||sess.wins[sess.b]>=sess.need}
 function seriesSessionPrepareGame(db,sess){
+  assertCompetitionOutsideMarket(db,sess.opt);
   if(seriesSessionDone(sess))return null;if(sess.current)return sess.current;
   const recorded=sess.opt.replay&&sess.opt.selections?.[sess.g-1];
   if(recorded&&[sess.a,sess.b].includes(recorded.blue)&&[sess.a,sess.b].includes(recorded.firstPick)){
@@ -4824,7 +4826,7 @@ function medicalDailyTick(db,date){
   }
   medicalReplacementDailyTick(db,date);
 }
-function medicalOffseasonRecovery(db,date){
+function medicalOffseasonRecovery(db,date,fromDate=db.worldDate){
   // Season progression can jump across a real offseason. Existing absences
   // must not remain frozen until the next competitive fixture. The same gap
   // must also dissipate accumulated competition/practice load: otherwise a
@@ -4833,7 +4835,7 @@ function medicalOffseasonRecovery(db,date){
   // recovery only; it does not create offseason incident lotteries or alter
   // the live injury/illness/burnout probabilities.
   const gapFromWorld=Math.max(0,Math.floor((Date.parse(date+'T00:00:00Z')-
-    Date.parse((db.worldDate||date)+'T00:00:00Z'))/86400000));
+    Date.parse((fromDate||date)+'T00:00:00Z'))/86400000));
   if(gapFromWorld)for(const p of Object.values(db.players)){
     if(!p||p.retired)continue;
     // Daily normal-season decay is .86 before training exposure is added.
@@ -4846,12 +4848,12 @@ function medicalOffseasonRecovery(db,date){
   // is not charged for months after the player's expected return.
   const projectedReturns={};
   for(const p of Object.values(db.players))if(p.medical?.daysLeft>0){
-    const from=p.medical.lastTick||db.worldDate;
+    const from=p.medical.lastTick||fromDate;
     projectedReturns[p.id]=addDays(from,Math.ceil(p.medical.daysLeft/medicalCare(db,p)));
   }
   for(const p of Object.values(db.players)){
     if(!p.medical?.daysLeft&&!p.medicalResidual?.daysLeft)continue;
-    const from=p.medical?.lastTick||p.medicalResidual?.lastTick||db.worldDate;
+    const from=p.medical?.lastTick||p.medicalResidual?.lastTick||fromDate;
     const elapsed=Math.max(0,Math.floor((Date.parse(date+'T00:00:00Z')-
       Date.parse(from+'T00:00:00Z'))/86400000));
     if(elapsed)medicalHeal(db,p,elapsed,date);
@@ -5170,11 +5172,68 @@ function chooseSeasonManagedTeam(db,id){
  setManagedTeam(db,id);db.world.fired=false;t.owner.patience=2;db.world.phase='preseason';return {ok:true};
 }
 
+// Pure global market rules; no clock, contract, result or state writer.
+// Global player FA opens the first Tuesday of December at 00:00 UTC.
+// Standard contracts expiring this year end the prior Monday at 23:59 UTC.
+function globalPlayerFAOpenDate(year){
+  if(!Number.isInteger(year)||year<2000||year>9999)
+    throw new Error('유효하지 않은 글로벌 FA 시즌 연도');
+  const firstDay=new Date(Date.UTC(year,11,1)).getUTCDay();
+  const firstTuesday=1+(2-firstDay+7)%7;
+  return new Date(Date.UTC(year,11,firstTuesday)).toISOString().slice(0,10);
+}
+function globalPlayerContractExpiryDate(year){
+  return addDays(globalPlayerFAOpenDate(year),-1);
+}
+// One UTC boundary shared by market/competition consumers. Closing is
+// exclusive, including when the four weeks cross into the next calendar year.
+function globalTransferMarketWindow(year){
+  const opensOn=globalPlayerFAOpenDate(year),closesOn=addDays(opensOn,28);
+  if(!freeAgencyDateValid(closesOn))throw new Error('유효하지 않은 이적시장 종료 연도');
+  return {year,opensOn,closesOn,lastOpenDate:addDays(closesOn,-1)};
+}
+function globalTransferMarketState(date){
+  if(!freeAgencyDateValid(date))throw new Error('유효하지 않은 이적시장 UTC 날짜');
+  const year=Number(date.slice(0,4)),current=globalTransferMarketWindow(year),
+    window=date<current.opensOn&&year>2000?globalTransferMarketWindow(year-1):current;
+  return {...window,date,open:date>=window.opensOn&&date<window.closesOn};
+}
+// A competition session may be resumed directly after native restoration,
+// without visiting nextCalendarDate. Check before preparing or playing it.
+// Historical replays and private practice do not create competition fixtures.
+function assertCompetitionOutsideMarket(db,opt={}){
+  if(!opt.compId||opt.replay||opt.practice)return;
+  const market=globalTransferMarketState(db.worldDate);
+  if(market.open)throw new Error('28일 통합 이적시장 중에는 대회 경기를 진행할 수 없습니다: '+db.worldDate);
+}
+// Pending proposals expire at the first market closing after creation, just
+// as the daily expiry writer does. New year-round FA proposals after a closing
+// belong to the next boundary; initial recruitment keeps its existing gate.
+function negotiationMarketDeadline(n){
+  if(n.kind==='initial')return null;
+  if(!freeAgencyDateValid(n.createdDate))throw new Error('협상 개시 날짜를 확인할 수 없습니다');
+  let market=globalTransferMarketState(n.createdDate);
+  if(n.createdDate>=market.closesOn)market=globalTransferMarketWindow(market.year+1);
+  return market.closesOn+'T00:00:00.000Z';
+}
+function negotiationMarketDeadlineState(db,n){
+  try{
+    const deadline=negotiationMarketDeadline(n);
+    if(n.kind!=='initial'&&n.createdDate>db.worldDate)return {deadline,passed:false,error:'협상 개시 날짜가 현재 날짜보다 늦습니다'};
+    return {deadline,passed:!!(deadline&&negotiationClockAt(db)>=deadline),error:null};
+  }catch(error){return {deadline:null,passed:false,error:error.message}}
+}
+function negotiationMarketDeadlineError(db,n){
+  const state=negotiationMarketDeadlineState(db,n);
+  return state.error||(state.passed?'이적시장 마감이 지나 이 제안을 확정할 수 없습니다':null);
+}
+
 // ===== LOL GM: World calendar domain =====
 // Owns raw clock positioning and in-season daily effects. Positioning alone
 // intentionally does not run training, patches or medical daily ticks: the
 // contract window and offseason recovery have their own accepted semantics.
 // Recovery may temporarily position the clock at the last competition date.
+// Global UTC market boundaries are owned by global-market-calendar.js.
 function setWorldCalendarDate(db,date){db.worldDate=date}
 
 // Match dates are fixtures; the authoritative world clock moves through every
@@ -5182,6 +5241,8 @@ function setWorldCalendarDate(db,date){db.worldDate=date}
 function nextCalendarDate(db){
   const fixture=nextDate(db);
   if(fixture===null)return null;
+  const market=globalTransferMarketState(fixture);
+  if(market.open)throw new Error('28일 통합 이적시장 중에는 대회 경기를 진행할 수 없습니다: '+fixture+' ('+market.opensOn+'~'+market.closesOn+' 미만)');
   const previous=db.worldDate||`${db.year}-01-01`;
   if(previous>fixture)throw new Error('월드 날짜가 미진행 공식 경기일보다 늦습니다: '+previous+' > '+fixture);
   if(previous===fixture)return fixture; // legacy saves may be parked on an unplayed match date
@@ -5246,9 +5307,30 @@ function advanceOffseasonFreeAgencyDay(db,actor='manager'){
  // 처리 실패가 현재 세계를 부분 변경하지 않도록 완성된 결과만 반영한다.
  const prepared=JSON.parse(JSON.stringify(db));
  setWorldCalendarDate(prepared,state.next);processTransferPayments(prepared);processLocalServiceDaily(prepared);aiChooseLocalEligibility(prepared);
- refreshAIMarketOffers(prepared);
+ const marketClosesOn=globalTransferMarketWindow(w.year).closesOn;
+ if(state.next>=marketClosesOn)closeOpenNegotiationsForDeadline(prepared);
+ if(state.next===marketClosesOn){
+  expireCurrentAIMarketOffers(prepared);
+ }else refreshAIMarketOffers(prepared);
  for(const key of Object.keys(db))delete db[key];Object.assign(db,prepared);
  return {ok:true,stage:'fa',date:db.worldDate,msg:'자유계약 기간 · '+db.worldDate};
+}
+
+// Read-only official calendar closing gate for the global FA handoff.
+// Does not schedule matches, award wins, mutate contracts, or rewrite history.
+function validatedWorldsClosingDate(db,finished,worlds){
+  const endDate=s=>s.days[s.days.length-1].date,
+    worldsFinal=worlds.map(endDate).sort().at(-1),
+    others=Object.values(db.world.seasons||{}).filter(s=>s?.days?.length&&!worlds.includes(s)),
+    incomplete=others.filter(s=>!s.done);
+  if(incomplete.length)throw new Error('월즈 결승 뒤에 미완료 공식 대회가 남았습니다: '+
+    incomplete.map(s=>s.comp).join(', '));
+  // With a same-day different tournament, the true last match is not known
+  // from the date-only season snapshot; reject instead of assuming an order.
+  const conflict=others.filter(s=>endDate(s)>=worldsFinal);
+  if(conflict.length)throw new Error('월즈 결승 이후 또는 같은 날에 다른 공식 경기가 있습니다: '+
+    conflict.map(s=>s.comp+':'+endDate(s)).join(', '));
+  return worldsFinal;
 }
 
 // ===== LOL GM: Season / competition orchestration =====
@@ -5286,6 +5368,12 @@ function startWorldSeason(db,myTeam,seed){
   const intlSteps=tm=>{const tops=I.filter(i=>i.timing===tm&&i.tier!=='low').sort(internationalEventPriority),lows=I.filter(i=>i.timing===tm&&i.tier==='low');
     const out=tops.map(i=>({kind:'intl',ids:[i.id],label:i.name}));
     if(lows.length){if(out.length){const L=out[out.length-1];L.ids.push(...lows.map(i=>i.id));L.label+=` · ${lows.map(i=>i.name).join(' · ')}`}else out.push({kind:'intl',ids:lows.map(i=>i.id),label:lows.map(i=>i.name).join(' · ')})}
+    // Reserve slots for the end-phase competitions in descending priority
+    // before their results exist.  Starting them together avoids placing
+    // Masters/Open *after* the Worlds final; taken keeps entrants disjoint.
+    // The actual last-fixture/FA boundary is checked at season close.
+    if(tm==='end'&&out.length>1&&out.some(s=>s.ids.some(isWorldChampionshipId)))
+      return [{kind:'intl',ids:out.flatMap(s=>s.ids),label:out.map(s=>s.label).join(' · ')}];
     return out};
   // 3스플릿제: 스플릿1(윈터) → 퍼스트 스탠드 → 스플릿2(스프링) → MSI → 스플릿3(서머) → 월즈. 스플릿이 적은 리그는 뒤쪽 스플릿만 치른다
   const tim={1:'early',2:'mid',3:'end'};
@@ -5590,6 +5678,29 @@ function ensureEven(db,rng,ev){
 // promotion/relegation and next-season organizational reset.
 
 // ---------- 오프시즌 1단계: 기록·성장·은퇴·승강·흥행·재정·사무국 ----------
+// The shared undo restores graph values and identities. Annual growth also
+// deletes and reinserts properties, so restore their original order on failure.
+function pendingAnnualUndo(db){
+  const undo=pendingOfficialUndo(db),seen=new Set(),pending=[db],orders=[];
+  while(pending.length){
+    const object=pending.pop();if(!object||typeof object!=='object'||seen.has(object))continue;
+    seen.add(object);const keys=Object.keys(object);orders.push([object,keys]);
+    for(const key of keys){const value=object[key];if(value&&typeof value==='object')pending.push(value)}
+  }
+  return ()=>{
+    undo();
+    for(const [object,keys] of orders){
+      const current=Object.keys(object);if(current.length===keys.length&&current.every((key,i)=>key===keys[i]))continue;
+      const values=keys.map(key=>object[key]);for(const key of current)delete object[key];
+      keys.forEach((key,i)=>{object[key]=values[i]});
+    }
+  };
+}
+function pendingManagerMarketResponse(db){
+  const w=db.world;
+  return w?.manage==='manual'&&!w.fired&&!!managedTeamId(db)&&
+    Object.values(w.negotiations||{}).some(n=>n.teamId===managedTeamId(db)&&n.status==='open'&&n.stage==='waiting');
+}
 function runOffseason(db){
   // A stale UI/duplicate command must not grow players or settle the same year
   // again after the manual annual closeout has already produced its report.
@@ -5597,6 +5708,10 @@ function runOffseason(db){
   // Reject an incomplete ledger before contract dates, growth or retirement
   // change. A paid legacy year without its report needs diagnosis, not replay.
   if(assertFinanceCloseout(db,db.world)==='closed')throw Error('이미 연간 결산이 완료된 시즌입니다');
+  if(db.world?.phase==='offseason'&&pendingManagerMarketResponse(db))
+    throw Error('응답 대기 중인 제안을 직접 취소하거나 연락을 확인한 뒤 결산하세요');
+  const undo=pendingAnnualUndo(db);
+  try{
   const w=db.world,cw=initOffseasonContractWindow(db);
   // Headless/AI callers historically advanced offseason in one call. Preserve
   // that contract while the interactive UI exposes both real window stages.
@@ -5636,12 +5751,11 @@ function runOffseason(db){
   }
   db.year=w.year+1;
   aiChooseLocalEligibility(db);
-  // B3 exposes the 14-day contract window as real world dates, but no training
-  // or matches occur there. Preserve B10's full passive recovery from the last
-  // competitive date instead of shortening recovery by the displayed window.
-  const medicalRolloverDate=`${db.year}-01-06`;
-  if(cw?.seasonEndDate)setWorldCalendarDate(db,cw.seasonEndDate);
-  medicalOffseasonRecovery(db,medicalRolloverDate);
+  // Consume the existing passive recovery interval without rewinding the live
+  // world clock after contract dates have already advanced.
+  if(!freeAgencyDateValid(db.worldDate))throw Error('연간 결산의 현재 날짜를 확인할 수 없습니다');
+  const defaultRolloverDate=`${db.year}-01-06`,medicalRolloverDate=db.worldDate>defaultRolloverDate?db.worldDate:defaultRolloverDate;
+  medicalOffseasonRecovery(db,medicalRolloverDate,cw?.seasonEndDate||undefined);
   setWorldCalendarDate(db,medicalRolloverDate);
   promotionRelegation(db,w,rng,ev);
   updateHype(db,w);
@@ -5689,12 +5803,29 @@ function runOffseason(db){
   offseasonPlayerSatisfaction(db,w,rep,ev);
   const managed=managedTeam(db);
   w.sponsorOffers=managed&&managed.active!==false&&db.regions[managed.region]?sponsorOffers(db,managed):[];
-  w.report=rep; w.phase='market'; w.offers=[]; w.negotiations={}; w.marketLog=[];
+  w.report=rep; w.phase='market'; w.offers=[]; w.marketLog=[];
+  closeOpenNegotiationsForDeadline(db);
   refreshAIMarketOffers(db);
   return rep;
+  }catch(error){undo();throw error}
 }
 // ---------- 오프시즌 2단계: 이적 시장 마감 ----------
 function closeMarket(db){
+  // A stale repeated command must never rerun AI signings or settlement.
+  if(db.world?.phase!=='market')
+    throw new Error('이적시장이 진행 중일 때만 마감할 수 있습니다');
+  // A stale or premature close command must not settle the market while the
+  // globally authoritative transfer window is still open.
+  if(globalTransferMarketState(db.worldDate).open)
+    throw new Error('28일 통합 이적시장 개방 중에는 시장을 마감할 수 없습니다');
+  // The opening is not a closing: a stale market phase before this season's
+  // window must not settle the year before its own deadline either.
+  if(db.worldDate<globalTransferMarketWindow(db.world.year).closesOn)
+    throw new Error('이번 시즌 이적시장 마감일 전에 시장을 마감할 수 없습니다');
+  if(pendingManagerMarketResponse(db))
+    throw Error('응답 대기 중인 제안을 직접 취소하거나 연락을 확인한 뒤 마감하세요');
+  const undo=pendingOfficialUndo(db);
+  try{
   const w=db.world, rng=new RNG(w.seed+'/'+w.year,'market'), rep=w.report;
   const ev=t=>{rep.events.push(t);news(db,t)};
   closeOpenNegotiationsForDeadline(db);
@@ -5709,6 +5840,7 @@ function closeMarket(db){
   rep.retired.slice(0,3).forEach(r=>news(db,`${db.players[r.pid].name} 은퇴 (${r.age}세)`));
   expireCurrentAIMarketOffers(db);
   w.phase='preseason';
+  }catch(error){undo();throw error}
 }
 // 승강: 승강제는 1부 하위 ↔ 2부 상위 교체, 혼합은 프랜차이즈 보호 구단 제외
 function promotionRelegation(db,w,rng,ev){
@@ -6489,6 +6621,9 @@ function commitWorldAction(db,command){
 // Capture only affected players, rosters and finances rather than cloning the
 // entire world, champion database and competition schedules on every signing.
 
+function playerActionFinance(t){
+  return t?.finance&&Number.isFinite(t.finance.cash)?t.finance:null;
+}
 function actionJournalClone(value){return JSON.parse(JSON.stringify(value))}
 
 function actionJournalRestoreObject(target,record){
@@ -6577,6 +6712,7 @@ function captureWorldActionJournal(db,command){
   const marketOffers=command.type==='player.sign'?currentAIMarketOffers(db)
     .filter(o=>o.pid===command.pid&&o.status==='open')
     .map(ref=>({ref,record:actionJournalClone(ref)})):[];
+  const rivalSignUndo=captureRivalSignUndo(db,command);
   const newsRef=db.news,newsRows=Array.isArray(newsRef)?newsRef.slice():null;
   const hasDemand=Object.prototype.hasOwnProperty.call(db,'_marketDemandCache');
   const demandRef=db._marketDemandCache;
@@ -6594,6 +6730,7 @@ function captureWorldActionJournal(db,command){
     rollback(){
       if(staffJournal)staffJournal.rollback();
       for(const {ref,record} of marketOffers)actionJournalRestoreObject(ref,record);
+      rivalSignUndo();
       for(const row of entries){if(row.value)row.s.entries=row.value;else delete row.s.entries;if(row.staffValue)row.s.staffEntries=row.staffValue;else delete row.s.staffEntries;if(row.staffRecords)row.s.staffEntryRecords=row.staffRecords;else delete row.s.staffEntryRecords}
       if(closure){
         if(closure.firedPresent)w.fired=closure.fired;else delete w.fired;
@@ -8792,6 +8929,25 @@ function aiMarketOfferRankSnapshot(db,t,p){
 
 // ---- 선수 계약 협상 엔진 ----
 function negotiationStore(db){const w=db.world;if(!w)return {};w.negotiations=w.negotiations||{};return w.negotiations}
+function rivalSignSnapshot(db,action){return {
+  rivalNegotiations:Object.values(db.world?.negotiations||{}).filter(n=>n.pid===action.pid&&n.teamId!==action.teamId&&n.status==='open').map(n=>JSON.parse(JSON.stringify(n))).sort((a,b)=>a.id.localeCompare(b.id)),
+  recruitmentTarget:db.world?.recruitment?.targets?.[action.pid]?JSON.parse(JSON.stringify(db.world.recruitment.targets[action.pid])):null
+}}
+function captureRivalSignUndo(db,command){
+  if(command.type!=='player.sign')return ()=>{};
+  const rows=Object.values(db.world?.negotiations||{}).filter(n=>n.pid===command.pid&&n.teamId!==command.teamId&&n.status==='open').map(ref=>({ref,record:actionJournalClone(ref)}));
+  const target=db.world?.recruitment?.targets?.[command.pid],record=target?actionJournalClone(target):null;
+  return ()=>{for(const row of rows)actionJournalRestoreObject(row.ref,row.record);if(target)actionJournalRestoreObject(target,record)};
+}
+function closeRivalNegotiationsAfterSigning(db,pid,teamId){
+  for(const neg of Object.values(db.world?.negotiations||{})){
+    if(neg.pid!==pid||neg.teamId===teamId||neg.status!=='open')continue;
+    const deadline=negotiationMarketDeadlineState(db,neg);if(deadline.error)throw Error(deadline.error);
+    neg.status=deadline.passed?'expired':'lost';neg.reason=deadline.passed?'이적시장 마감':'경쟁 구단 선택';neg.closedDate=db.worldDate;
+    const target=recruitmentTarget(db,pid);
+    if(target?.negotiationId===neg.id){target.stage='closed';target.result=deadline.passed?'deadline':'lost_to_rival'}
+  }
+}
 function negotiationId(db,pid,kind,teamId=null){return 'NEG_'+db.year+'_'+pid+'_'+kind+
   ((teamId&&(kind==='initial'||kind==='early_fa'))?'_'+teamId:'')}
 function negotiationRoundLimit(p){const profile=negotiationRepresentativeProfile(p);return clamp(3+Math.round((profile.professionalism-50)/35)-(profile.ambition>=82?1:0),2,5)}
@@ -8896,9 +9052,10 @@ function startNegotiation(db,pid,kind='fa',extra={}){
   if((kind==='fa'||kind==='initial')&&p.team)return {ok:false,msg:'FA 선수가 아닙니다'};if(kind==='renewal'&&p.team!==t.id)return {ok:false,msg:'우리 팀 선수가 아닙니다'};
   if(kind==='initial'){const allowed=new Set(setupTeamsForManager(db).map(x=>x.id));if(!allowed.has(t.id))return {ok:false,msg:'내 구단 조직의 스쿼드만 계약 대상이 될 수 있습니다'}}
   if((kind==='fa'||kind==='early_fa'||kind==='transfer'||kind==='initial')&&!recruitmentReady(db,pid,t.id))return {ok:false,msg:'관심 등록 → 관찰 → 내부 평가를 완료한 뒤 공식 협상을 시작할 수 있습니다'};
+  const store=negotiationStore(db),existing=Object.values(store).find(n=>n.pid===pid&&n.kind===kind&&n.teamId===t.id&&n.status==='open');
+  if(existing){const error=negotiationMarketDeadlineError(db,existing);return error?{ok:false,msg:error}:{ok:true,neg:existing,msg:p.name+' 협상이 이미 진행 중입니다'}}
   const id=negotiationId(db,pid,kind,
       (kind==='initial'||kind==='early_fa')?t.id:null),
-    store=negotiationStore(db),
     current=store[id];
   if(current&&current.status==='open')return {ok:true,neg:current,msg:p.name+' 협상이 이미 진행 중입니다'};
   const previous=current||latestNegotiationAttempt(db,pid,kind,t.id),
@@ -8952,6 +9109,8 @@ function aiRepresentativeCounterTerms(db,p,t,kind,offer,maxSalary,cashRoom=Infin
   return {terms:null,rounds,demand,representative:representative?.id||null};
 }
 function finalizeNegotiation(db,neg,terms){
+  const deadlineError=negotiationMarketDeadlineError(db,neg);
+  if(deadlineError)return {ok:false,msg:deadlineError};
   const p=db.players[neg.pid],t=db.teams[neg.teamId];
   if(!p||!t)return {ok:false,msg:'협상 선수 또는 구단이 존재하지 않습니다'};
   const future=(neg.kind==='renewal'||neg.kind==='early_fa')&&
@@ -8986,6 +9145,8 @@ function submitNegotiationOffer(db,nid,terms){
   if(!contractGuaranteeTermsValid(terms))
     return {ok:false,msg:'유효하지 않은 방출 보장률입니다'};
   const neg=negotiationStore(db)[nid];if(!neg||neg.status!=='open'||neg.stage!=='player')return {ok:false,msg:'진행 중인 선수 협상이 아닙니다'};
+  const deadlineError=negotiationMarketDeadlineError(db,neg);
+  if(deadlineError)return {ok:false,msg:deadlineError};
   const p=db.players[neg.pid],t=db.teams[neg.teamId];
   if(['renewal','early_fa'].includes(neg.kind)&&db.world?.phase==='offseason'&&db.world?.contractWindow){
     const contactErr=contractWindowContactError(db,p,t,neg.kind);
@@ -9047,9 +9208,17 @@ function currentAIMarketOffers(db){
   const period=aiMarketOfferPeriod(db);
   return period?Object.values(db.contractMarketOffers?.periods?.[period.id]?.offers||{}):[];
 }
+function aiMarketOfferDeadlineState(db,o){
+  if(typeof o?.issuedAt!=='string'||!Number.isFinite(Date.parse(o.issuedAt))||
+    new Date(o.issuedAt).toISOString()!==o.issuedAt)
+    return {deadline:null,passed:false,error:'AI 제안 발행 시각을 확인할 수 없습니다'};
+  return negotiationMarketDeadlineState(db,{kind:o.kind,createdDate:o.issuedAt.slice(0,10)});
+}
 function aiMarketOfferAvailable(db,o,market=null){
+  const deadline=aiMarketOfferDeadlineState(db,o);
+  if(deadline.error||deadline.passed)return false;
   const period=aiMarketOfferPeriod(db),p=db.players[o?.pid],t=db.teams[o?.teamId];
-  if(!period||o.period!==period.id||o.kind!==period.kind||o.status!=='open'||
+  if(!period||db.contractMarketOffers?.periods?.[period.id]?.closedAt||o.period!==period.id||o.kind!==period.kind||o.status!=='open'||
     typeof o.issuedAt!=='string'||!Number.isFinite(Date.parse(o.issuedAt))||
     new Date(o.issuedAt).toISOString()!==o.issuedAt||o.issuedAt>negotiationClockAt(db)||
     !p||p.retired||p.team||!t||(t.parent&&o.kind!=='initial')||
@@ -9076,6 +9245,7 @@ function expireCurrentAIMarketOffers(db){
 }
 function issueAIMarketOffer(db,t,p,terms,event,target=null,choiceValue=null,market=null){
   const period=aiMarketOfferPeriod(db);if(!period)return null;
+  if(db.contractMarketOffers?.periods?.[period.id]?.closedAt)return null;
   const root=db.contractMarketOffers||(db.contractMarketOffers={version:1,periods:{}}),
     store=root.periods[period.id]||(root.periods[period.id]={offers:{},events:{}}),
     id=period.id+'/'+event+'/'+t.id+'/'+p.id;
@@ -9101,12 +9271,16 @@ function settleAIMarketOffers(db,pid,teamId,terms){
 }
 function refreshAIMarketOffers(db){
   const period=aiMarketOfferPeriod(db);if(!period)return [];
+  if(db.contractMarketOffers?.periods?.[period.id]?.closedAt)return currentAIMarketOffers(db);
   const root=db.contractMarketOffers||(db.contractMarketOffers={version:1,periods:{}});
   for(const [id,store] of Object.entries(root.periods)){
     if(id!==period.id&&store.closedAt)continue;
-    for(const o of Object.values(store.offers))
-      if(o.status==='open'&&(id!==period.id||!aiMarketOfferAvailable(db,o)))
-        closeAIMarketOffer(db,o,id!==period.id?'expired':'withdrawn',id!==period.id?'period_closed':'conditions_changed');
+    for(const o of Object.values(store.offers)){
+      if(o.status!=='open')continue;
+      const expired=id!==period.id||aiMarketOfferDeadlineState(db,o).passed;
+      if(expired||!aiMarketOfferAvailable(db,o))
+        closeAIMarketOffer(db,o,expired?'expired':'withdrawn',expired?'period_closed':'conditions_changed');
+    }
     if(id!==period.id)store.closedAt=negotiationClockAt(db);
   }
   const store=root.periods[period.id]||(root.periods[period.id]={offers:{},events:{}}),
@@ -9175,6 +9349,7 @@ function mTransferBid(db,pid,fee,feePlan=null){
   if(payment.upfront>t.finance.cash)return '선지급할 보유 자금이 부족합니다';
   const moveErr=contractedMoveError(db,p);if(moveErr)return moveErr;const localErr=localRegistrationError(db,t,p);if(localErr)return localErr;
   const id=negotiationId(db,pid,'transfer'),store=negotiationStore(db),ask=sellerTransferAsk(db,p,from);let neg=store[id];
+  if(neg?.status==='open'){const deadline=negotiationMarketDeadlineError(db,neg);if(deadline)return deadline;}
   if(!neg||neg.status!=='open'){const st=startNegotiation(db,pid,'transfer',{sellerId:from.id});if(!st.ok)return st.msg;neg=st.neg;neg.stage='club';neg.clubRounds=0}
   neg.clubRounds=(neg.clubRounds||0)+1;neg.history.push({round:neg.clubRounds,stage:'club',side:'buyer',fee});
   const clause=normalizeBuyoutClause(p.contract?.buyout),releasePrice=clause?.type==='release'&&fee+1e-8>=clause.amount,
@@ -9185,7 +9360,13 @@ function mTransferBid(db,pid,fee,feePlan=null){
 }
 function acceptSellerCounter(db,nid){const neg=negotiationStore(db)[nid];if(!neg||neg.status!=='open'||neg.stage!=='club'||!neg.clubCounter)return '수락할 구단 역제안이 없습니다';return mTransferBid(db,neg.pid,neg.clubCounter)}
 function closeOpenNegotiationsForDeadline(db){
-  for(const neg of Object.values(negotiationStore(db))){if(neg.status!=='open')continue;neg.status='expired';neg.reason='이적시장 마감';neg.closedDate=db.worldDate;const target=recruitmentTarget(db,neg.pid);if(target){target.stage='closed';target.result='deadline';target.negotiationId=neg.id}}
+  for(const neg of Object.values(negotiationStore(db))){
+    if(neg.status!=='open')continue;
+    const deadline=negotiationMarketDeadlineState(db,neg);
+    if(deadline.error)throw Error(deadline.error);
+    if(!deadline.passed)continue;
+    neg.status='expired';neg.reason='이적시장 마감';neg.closedDate=db.worldDate;const target=recruitmentTarget(db,neg.pid);if(target?.negotiationId===neg.id){target.stage='closed';target.result='deadline';target.negotiationId=neg.id}
+  }
 }
 // ---- 이적료 / 직접 운영 ----
 function transferFee(db,p){const left=p.contract?Math.max(1,p.contract.until-db.year+1):1;return Math.round(playerMarketValue(db,p)*(.62+.18*Math.min(3,left))*(p.wantsOut?.75:1)*10)/10}
@@ -9216,10 +9397,9 @@ function mRelease(db,pid){
 function mTransfer(db,pid,fee){return mTransferBid(db,pid,fee)}
 // ---- 스카우팅: 관찰·경기 표본·보고서 노후화를 함께 추적한다 ----
 
-// ===== LOL GM: D04-B3 post-Worlds incumbent exclusivity window =====
-// The final competition date is the legal anchor. Existing contracts expire
-// 14 days after that date; only the incumbent club may negotiate during those
-// 14 days. Other clubs may contact the player from day 15, after expiry.
+// ===== LOL GM: Global player FA and contract expiry window =====
+// Contracts expire Monday 23:59 UTC before December's first Tuesday FA opening.
+// No extra renewal-priority days; existing contracts and contact consent remain.
 
 function contractWindowYear(db){return db.world?.year??db.year}
 function contractWindowAnchorDate(db){
@@ -9229,23 +9409,25 @@ function contractWindowAnchorDate(db){
       const comp=db.competitions[s.comp];
       return isWorldChampionshipId(s.comp)||isWorldChampionshipId(comp?.id);
     });
-  if(worlds.length)return worlds.map(endDate).sort().at(-1);
+  if(worlds.length)return validatedWorldsClosingDate(db,finished,worlds);
   // Custom worlds may omit the standard Worlds preset. Fall back to the
   // latest completed international, then the world's final scheduled date.
   const internationals=finished.filter(s=>db.competitions[s.comp]?.international);
   if(internationals.length)return internationals.map(endDate).sort().at(-1);
   return w?.lastDate||db.worldDate||contractWindowYear(db)+'-11-01';
 }
+// Shared UTC FA date helpers are owned by global-market-calendar.js.
 function contractWindowDates(db){
   const year=contractWindowYear(db),
     seasonEnd=contractWindowAnchorDate(db),
-    exclusiveThrough=addDays(seasonEnd,14),
-    outsideContactDate=addDays(seasonEnd,15);
+    outsideContactDate=globalPlayerFAOpenDate(year),
+    contractExpiryDate=globalPlayerContractExpiryDate(year);
+  if(seasonEnd>=outsideContactDate)
+    throw new Error('공식 시즌이 선수 글로벌 FA 개방일 이후까지 이어집니다: '+seasonEnd);
   return {
     seasonYear:year,startSeason:year+1,seasonEndDate:seasonEnd,
-    startDate:addDays(seasonEnd,1),exclusiveThrough,
-    contractExpiryDate:exclusiveThrough,outsideContactDate,
-    effectiveDate:outsideContactDate
+    startDate:addDays(seasonEnd,1),exclusiveThrough:contractExpiryDate,
+    contractExpiryDate,outsideContactDate,effectiveDate:outsideContactDate
   };
 }
 function contractExpiresThisSeason(db,p){
@@ -9281,14 +9463,14 @@ function initOffseasonContractWindow(db){
   aiGrantEarlyContact(db);
   return w.contractWindow;
 }
-// A club can relinquish its *exclusive contact* right without terminating the
-// still-binding playing contract. Early agreements only take effect on day 15.
+// A club can relinquish its pre-FA contact exclusivity without terminating the
+// still-binding playing contract. Early agreements take effect at global FA.
 function grantEarlyContact(db,pid,actor='manager'){
   const cw=db.world?.contractWindow,p=db.players[pid],
     t=p?.team&&db.teams[p.team];
   if(!cw||cw.stage!=='exclusive'||db.worldDate>cw.contractExpiryDate||
     !contractExpiresThisSeason(db,p)||!t)
-    return {ok:false,msg:'현재 독점 협상 중인 만료 예정 선수가 아닙니다'};
+    return {ok:false,msg:'현재 계약 만료 전 협상 중인 선수가 아닙니다'};
   const auth=playerActionAuthority(db,actor,t);
   if(auth)return {ok:false,msg:auth.errors?.join(' · ')||'구단 결정 권한이 없습니다'};
   if(contractHasPendingOption(db,p))
@@ -9323,9 +9505,9 @@ function contractWindowContactError(db,p,t,kind){
   const w=db.world,cw=w?.contractWindow;
   if(!w||w.phase!=='offseason'||!cw)return '오프시즌 계약 협상 기간이 아닙니다';
   if(cw.stage!=='exclusive'||db.worldDate>cw.contractExpiryDate)
-    return '원소속 독점 협상 기간이 끝났습니다';
+    return '기존 계약 만료 전 협상 단계가 끝났습니다';
   if(!p||!t||!contractExpiresThisSeason(db,p))
-    return '이번 독점기간에 만료되는 계약이 아닙니다';
+    return '이번 시즌 만료 예정인 계약이 아닙니다';
   if(contractAgreementFor(db,p.id)?.status==='agreed')
     return '이미 다음 시즌 계약에 합의한 선수입니다';
   if(kind==='early_fa')
@@ -9345,8 +9527,7 @@ function recordContractAgreement(db,p,t,terms,kind='renewal',actor='manager'){
   const err=contractWindowContactError(db,p,t,kind);if(err)return {ok:false,msg:err};
   if(kind==='early_fa'&&actor==='manager'&&!recruitmentReady(db,p.id,t.id))
     return {ok:false,msg:'조기 접촉 허용 뒤에도 스카우팅과 내부 평가가 필요합니다'};
-  // Next-season option dates must also be next-season dates. The playing
-  // contract remains untouched until the exact post-Worlds expiry boundary.
+  // Next-season terms leave the current contract intact until expiry.
   const cw=db.world.contractWindow,
     normalized=withContractStartSeason(db,cw.startSeason,()=>
     normalizeContractTerms(db,p,t,terms.salary,terms.years,terms)),
@@ -9402,10 +9583,11 @@ function exerciseExclusiveTeamOption(db,pid){
     {ok:false,msg:(result.errors||['팀 옵션 행사 실패']).join(' · ')};
 }
 function closeExclusiveContractWindow(db){
+  const rollback=pendingOfficialUndo(db);try{
   const cw=initOffseasonContractWindow(db);
   if(!cw)return {ok:false,msg:'계약 협상 기간을 종료할 수 없습니다'};
   if(cw.stage!=='exclusive')return {ok:true,stage:cw.stage,date:db.worldDate,
-    settlement:cw.settlement||null,msg:'원소속 독점기간이 이미 끝났습니다'};
+    settlement:cw.settlement||null,msg:'기존 계약 만료 전 단계가 이미 끝났습니다'};
   const renewals=aiRunExclusiveRenewals(db),earlyOffers=aiRunEarlyContactOffers(db);
   setWorldCalendarDate(db,cw.outsideContactDate);
   processTransferPayments(db);
@@ -9414,18 +9596,21 @@ function closeExclusiveContractWindow(db){
   cw.stage='fa';cw.completed=true;cw.settlement=settlement;
   refreshAIMarketOffers(db);
   return {ok:true,stage:'fa',date:db.worldDate,renewals,earlyOffers,settlement,
-    msg:'14일 원소속 독점기간 종료 · 기존 계약 만료 · FA 접촉 개방'};
+    msg:'글로벌 선수 FA 개방 · 기존 계약 만료 · 신규 협상 가능'};
+  }catch(error){rollback();throw error}
 }
 function advanceOffseasonContractDay(db){
+  const rollback=pendingOfficialUndo(db);try{
   const cw=initOffseasonContractWindow(db);
   if(!cw)return {ok:false,msg:'계약 협상 기간을 진행할 수 없습니다'};
   if(cw.stage!=='exclusive')return {ok:true,stage:cw.stage,date:db.worldDate,
-    msg:'원소속 독점기간이 이미 끝났습니다'};
+    msg:'기존 계약 만료 전 단계가 이미 끝났습니다'};
   const next=addDays(db.worldDate,1);
   if(next>=cw.outsideContactDate)return closeExclusiveContractWindow(db);
   setWorldCalendarDate(db,next);processTransferPayments(db);processLocalServiceDaily(db);aiChooseLocalEligibility(db);aiRunEarlyContactOffers(db);
   return {ok:true,stage:'exclusive',date:db.worldDate,
-    msg:'원소속 독점 재계약 기간 · '+db.worldDate};
+    msg:'기존 계약 만료 전 · '+db.worldDate};
+  }catch(error){rollback();throw error}
 }
 function advanceOffseasonContractWindow(db){return closeExclusiveContractWindow(db)}
 
@@ -9653,14 +9838,12 @@ function playerActionAuthority(db,actor,team,exception=null){
 function playerActionTeam(db,id){
   const t=id&&db.teams[id];return t&&t.active!==false?t:null;
 }
-function playerActionFinance(t){
-  return t?.finance&&Number.isFinite(t.finance.cash)?t.finance:null;
-}
 function playerActionSnapshot(db,action){
   const p=db.players[action.pid],source=p?.team||null;
   const ids=Array.from(new Set([action.teamId||null,action.fromId||null,source])).filter(Boolean).sort();
   return {
     saveId:db.saveId||null,date:db.worldDate||null,year:db.world?.year??db.year,
+    ...(action.type==='player.sign'?rivalSignSnapshot(db,action):{}),
     player:p?{
       id:p.id,team:p.team||null,retired:!!p.retired,
       contract:p.contract?JSON.parse(JSON.stringify(p.contract)):null,
@@ -9874,6 +10057,7 @@ function applyPlayerSignAction(db,c){
   const contract=signContract(db,p,t,c.salary,c.years,c.terms);
   if(offseasonFaSeason)db.year=beforeYear;
   settleAIMarketOffers(db,p.id,t.id,c.terms);
+  closeRivalNegotiationsAfterSigning(db,p.id,t.id);
   if(c.kind==='medical_replacement'){
     contract.medicalReplacement={...c.replacement};
     payMedicalReplacementWage(t,c.replacement.paid);
@@ -10469,15 +10653,13 @@ function processClubEstateRecoveries(db){
 }
 
 function transferMarketOpen(db,t){
-  const phase=db.world?.phase,policy=db.regions[t.region]?.transferWindows,md=(db.worldDate||'').slice(5),
-    activePhase=phase==='market'?'offseason':phase;
-  if(!policy&&phase!=='season')return true;
-  const windows=policy||db.regions[t.region]?.loanWindows||
-    [{from:'01-07',through:'01-31'},{from:'07-01',through:'07-14'}];
-  return windows.some(w=>(!w.phase||w.phase===activePhase)&&md>=w.from&&md<=w.through);
+  // Ordinary contracted-player transfers share the world's exact 28-day UTC
+  // window. Phase labels and old regional/loan windows cannot reopen it.
+  // True FA signing and pre-agreed loan ownership conversion have other gates.
+  try{return globalTransferMarketState(db.worldDate).open}catch{return false}
 }
 function permanentTransferWindowError(db,p,to){
-  if(!transferMarketOpen(db,to))return '도착 지역의 계약 선수 이적시장이 닫혔습니다';
+  if(!transferMarketOpen(db,to))return '계약 선수 이적은 28일 통합 이적시장 개장부터 마감 전까지만 가능합니다';
   if(db.world?.phase==='offseason'&&db.world?.contractWindow?.stage==='exclusive'&&contractExpiresThisSeason(db,p))
     return '만료 예정 선수는 독점 협상 후 미래 계약 절차로 합의해야 합니다';
   return null;
@@ -13176,6 +13358,8 @@ function finalizeStagedNegotiation(db,nid){
   const n=db.world?.negotiations?.[nid],error=manualNegotiationError(db,n);
   if(error)return {ok:false,msg:error};
   if(n.status!=='open'||n.stage!=='agreement'||!n.agreedTerms)return {ok:false,msg:'최종 확정할 합의가 없습니다'};
+  const marketError=negotiationMarketDeadlineError(db,n);
+  if(marketError)return {ok:false,msg:marketError};
   const deadline=negotiationContactDeadline(db,n);
   if(deadline&&negotiationClockAt(db)>=deadline)return {ok:false,msg:'기존 협상 마감이 지나 최종 계약을 확정할 수 없습니다'};
   const p=db.players[n.pid],t=db.teams[n.teamId],terms=n.agreedTerms;
@@ -13543,9 +13727,9 @@ function waitingNegotiationResponses(db,ownedOnly=false){
     .sort((a,b)=>String(a.response.dueAt).localeCompare(String(b.response.dueAt))||String(a.id).localeCompare(String(b.id)));
 }
 function negotiationContactDeadline(db,n){
-  const w=db.world,cw=w?.contractWindow;
-  if(w?.phase==='offseason'&&['renewal','early_fa'].includes(n.kind)&&cw?.stage==='exclusive')return cw.outsideContactDate+'T00:00:00.000Z';
-  if(!['initial_roster','market','preseason'].includes(w?.phase))return null;
+  const w=db.world,cw=w?.contractWindow,market=negotiationMarketDeadline(n),earlier=date=>market&&market<date?market:date;
+  if(w?.phase==='offseason'&&['renewal','early_fa'].includes(n.kind)&&cw?.stage==='exclusive')return earlier(cw.outsideContactDate+'T00:00:00.000Z');
+  if(!['initial_roster','market','preseason'].includes(w?.phase))return market;
   // 기존 시즌 작성자를 격리된 상태에서 실행해 실제 편성의 개최일을 읽는다.
   const copy=JSON.parse(JSON.stringify(db));startWorldSeason(copy,managedTeamId(copy),w.seed);
   const starts=Object.values(copy.world.seasons).flatMap(s=>s.days.flatMap(d=>d.matches.map(m=>{
@@ -13553,7 +13737,7 @@ function negotiationContactDeadline(db,n){
     return venueToUtc(m.localDate,'00:00',m.timeZone);
   })));
   if(!starts.length)throw Error('기존 개막 편성에서 협상 마감을 확인할 수 없습니다');
-  return starts.sort()[0];
+  return earlier(starts.sort()[0]);
 }
 function negotiationResponseError(n){
   const r=n.response;
@@ -13567,6 +13751,8 @@ function resolveDueNegotiationResponse(db){
   const response=n.response,error=manualNegotiationError(db,n);
   if(error)return {ok:false,blocked:true,msg:error};
   const responseError=negotiationResponseError(n);if(responseError)return {ok:false,blocked:true,msg:responseError};
+  const marketError=negotiationMarketDeadlineError(db,n);
+  if(marketError)return {ok:false,blocked:true,msg:marketError};
   // 제출 시점의 판정을 적용하지 않고 실제 응답 시점의 상태를 재검사한다.
   n.stage='player';delete n.response;
   const before=n.history.length,result=resolveNegotiationOffer(db,n.id,response.terms),current=db.world.negotiations[n.id];
@@ -13899,7 +14085,11 @@ function officialPeerPeriodSteps(db,steps){
 }
 const officialWorldSeasonBeforePeerPeriods=startWorldSeason;
 startWorldSeason=function(db,...args){
+  const prior=db.world?.phase==='preseason'?db.world:null;
   const result=officialWorldSeasonBeforePeerPeriods(db,...args),w=db.world;
+  if(prior?.negotiations)w.negotiations=prior.negotiations;
+  if(prior?.recruitment)w.recruitment=prior.recruitment;
+  if(prior?.negotiationClock)w.negotiationClock=prior.negotiationClock;
   const original=new Map(w.steps.map((step,index)=>[step,index])),prefix=w.steps.slice(0,w.step+1);
   w.steps=[...prefix,...officialPeerPeriodSteps(db,w.steps.slice(w.step+1)).map((step,index)=>step.kind==='league'&&original.get(step)!==prefix.length+index?{...step,patchSeedStep:original.get(step)}:step)];
   return result;
@@ -14659,7 +14849,7 @@ function v2OwnedDecisionStamp(pid){const db=V2.db,p=db.players[pid];return JSON.
 function v2ReviewOwnedDecision(kind,pid=V2.pid){
  const p=v2RolePlayer(pid),error=v2ManagementError();if(error)return v2Tell(error);if(!p||v2Team()?.parent||v2TaskSpec())return v2Tell('현재 관리 선수와 작업 창을 확인하세요');
  if(!['contact-waiver','window-option'].includes(kind))return;
- V2.managementReview={db:V2.db,world:V2.db.world,manager:V2.db.manager,stamp:v2ManagementStamp(),ownedDecision:{kind,pid,stamp:v2OwnedDecisionStamp(pid)},ownedTerms:JSON.stringify([kind,pid]),preview:{command:{type:'contract.window-decision'}},title:kind==='contact-waiver'?'타 구단 조기 접촉 허용 검토':'기존 팀 옵션 행사 검토',lines:[p.name,kind==='contact-waiver'?'원소속 독점기간의 조기 접촉을 허용합니다. 선수의 계약 종료나 타 구단 서명을 자동으로 결정하지 않습니다.':'저장된 기존 옵션 조건을 행사합니다. 선수 옵션은 감독이 대신 행사하지 않습니다.']};v2Render();
+ V2.managementReview={db:V2.db,world:V2.db.world,manager:V2.db.manager,stamp:v2ManagementStamp(),ownedDecision:{kind,pid,stamp:v2OwnedDecisionStamp(pid)},ownedTerms:JSON.stringify([kind,pid]),preview:{command:{type:'contract.window-decision'}},title:kind==='contact-waiver'?'타 구단 조기 접촉 허용 검토':'기존 팀 옵션 행사 검토',lines:[p.name,kind==='contact-waiver'?'기존 계약이 유지되는 동안 타 구단 조기 접촉을 허용합니다. 선수의 계약 종료나 타 구단 서명을 자동으로 결정하지 않습니다.':'저장된 기존 옵션 조건을 행사합니다. 선수 옵션은 감독이 대신 행사하지 않습니다.']};v2Render();
 }
 function v2CommitOwnedDecision(r){
  const c=r.ownedDecision,p=v2RolePlayer(c.pid),error=v2ManagementError();if(error)return {ok:false,errors:[error]};if(!p||!['contact-waiver','window-option'].includes(c.kind)||r.ownedTerms!==JSON.stringify([c.kind,c.pid])||c.stamp!==v2OwnedDecisionStamp(c.pid))return {ok:false,errors:['현재 계약 조건을 다시 확인하세요']};
@@ -14879,7 +15069,8 @@ function v2ContractCalendar(){
 }
 function v2ContractCalendarView(){
  const m=v2ContractCalendar();if(!m)return '';const fa=m.stage==='fa'?freeAgencyDayState(V2.db):null,blocked=v2OffseasonActionError();
- return `<section class="panel"><h3>${m.stage==='exclusive'?'원소속 독점 재계약 기간':'자유계약 기간'}</h3><p>기존 계약 만료 ${v2Esc(m.expiry||'확인 필요')} · 외부 접촉 ${v2Esc(m.outside||'확인 필요')}부터</p><p class="hint">${m.ready?'계속 진행에서 다음 하루를 검토합니다. 작성 중인 제안은 자동 제출하지 않습니다.':v2Esc(fa?.reason||'현재 계약 날짜·단계의 진행 조건을 확인하세요.')}</p>${fa?`<p>연간 결산 기준 ${v2Esc(fa.through||'확인 필요')}</p><div class="tag-flex"><button class="btn btn-outline" id="fa-day-review"${blocked||!fa.ready?' disabled':''}>FA 하루 진행 검토${fa.ready?' · '+v2Esc(fa.next):''}</button><button class="btn btn-primary" id="annual-close-review"${blocked?' disabled':''}>연간 결산 검토</button></div><p class="hint">하루 진행은 합의된 지급·등록 자격의 날짜만 소비합니다. 제안 제출과 연간 결산은 각각 직접 결정합니다.</p>`:''}<button class="btn btn-outline" data-go="market" data-to="진행 중인 협상">계약 협상 확인</button></section>`;
+ const market=fa?.stage==='fa'?globalTransferMarketState(V2.db.worldDate):null;
+ return `<section class="panel"><h3>${m.stage==='exclusive'?'기존 계약 만료 전 협상':'자유계약 기간'}</h3><p>기존 계약 만료 ${v2Esc(m.expiry||'확인 필요')} · FA 개방 ${v2Esc(m.outside||'확인 필요')}부터</p><p class="hint">${m.ready?'별도 재계약 독점 기간은 없습니다. 계약 중 타 구단 조기 접촉에는 원소속 구단 동의가 필요합니다. 계속 진행에서 다음 하루를 검토하며, 작성 중인 제안은 자동 제출하지 않습니다.':v2Esc(fa?.reason||'현재 계약 날짜·단계의 진행 조건을 확인하세요.')}</p>${fa?`${market?`<p>이적시장 ${market.open?'개방':'마감'} · ${v2Esc(market.closesOn)} 00:00 UTC 마감 · 무소속 FA는 연중 계약 가능</p>`:''}<p>연간 결산 기준 ${v2Esc(fa.through||'확인 필요')}</p><div class="tag-flex"><button class="btn btn-outline" id="fa-day-review"${blocked||!fa.ready?' disabled':''}>FA 하루 진행 검토${fa.ready?' · '+v2Esc(fa.next):''}</button><button class="btn btn-primary" id="annual-close-review"${blocked?' disabled':''}>연간 결산 검토</button></div><p class="hint">하루 진행은 합의된 지급·등록 자격의 날짜만 소비합니다. 제안 제출과 연간 결산은 각각 직접 결정합니다.</p>`:''}<button class="btn btn-outline" data-go="market" data-to="진행 중인 협상">계약 협상 확인</button></section>`;
 }
 function v2OffseasonActionError(){
  const error=v2ManagementError();if(error)return error;const t=v2Team(),s=freeAgencyDayState(V2.db);
@@ -15021,7 +15212,7 @@ function v2ReviewCareer(kind=v2CareerKind(),id=null){
  const allowed=kind==='choose'?w.phase==='pick':kind==='annual'?w.phase==='offseason'&&w.contractWindow?.stage==='fa':v2CareerDetached()&&kind===v2CareerKind();
  if(!allowed)return v2Tell('현재 커리어 단계에서 결정할 수 없습니다');
  const t=id&&db.teams[id];if(kind==='choose'&&(!isManagerSelectableTeam(db,t)||!db.regions[t.region]||!t.owner))return v2Tell('현재 관리할 수 없는 구단입니다');
- const title=({day:'무직 상태 · 세계 하루 진행',market:'세계 이적시장 마감',exclusive:'무직 상태 · 독점 기간 하루', 'fa-day':'무직 상태 · FA 하루',annual:'별도 연간 결산', 'open-window':'계약 기간 시작',choose:'관리 구단 선택'})[kind];
+ const title=({day:'무직 상태 · 세계 하루 진행',market:'세계 이적시장 마감',exclusive:'무직 상태 · 계약 만료 전 하루', 'fa-day':'무직 상태 · FA 하루',annual:'별도 연간 결산', 'open-window':'계약 기간 시작',choose:'관리 구단 선택'})[kind];
  V2.managementReview={db,world:w,manager:db.manager,stamp:v2ManagementStamp(),careerAction:kind,careerTeam:id,careerBasis:JSON.stringify(db),careerTerms:JSON.stringify([kind,id]),preview:{command:{type:'career.continue'}},title,lines:[kind==='choose'?t.name+'의 감독으로 이어갑니다.':'현재 '+db.worldDate+' · '+title,'기존 엔진의 현재 상태·계약·재정·기록을 이어 처리합니다. 다른 구단의 수동 결정 권한을 부여하지 않습니다.']};v2Render();
 }
 function v2CommitCareer(r){
