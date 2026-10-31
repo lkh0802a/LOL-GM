@@ -45,6 +45,9 @@ function runOffseason(db){
   // Reject an incomplete ledger before contract dates, growth or retirement
   // change. A paid legacy year without its report needs diagnosis, not replay.
   if(assertFinanceCloseout(db,db.world)==='closed')throw Error('이미 연간 결산이 완료된 시즌입니다');
+  if(db.world?.phase==='offseason'&&db.world.manage==='manual'&&!db.world.fired&&
+    Object.values(db.world.negotiations||{}).some(n=>n.teamId===managedTeamId(db)&&n.status==='open'&&n.stage==='waiting'))
+    throw Error('응답 대기 중인 제안을 직접 취소하거나 연락을 확인한 뒤 결산하세요');
   const undo=pendingAnnualUndo(db);
   try{
   const w=db.world,cw=initOffseasonContractWindow(db);

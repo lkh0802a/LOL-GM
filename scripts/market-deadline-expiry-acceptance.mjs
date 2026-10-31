@@ -94,6 +94,18 @@ const result=await runEngineFixture(String.raw`(()=>{
   const duplicate=startNegotiation(db,player.id,'fa');check(duplicate.ok&&duplicate.neg.id===freshId,'season transition duplicated ongoing negotiation');
   db=unpackDB(packDB(db));check(db.world.negotiations?.[freshId]?.status==='open','next season restore lost FA negotiation');
  }
+ {
+  const {db,nid}=fixture(2027),n=db.world.negotiations[nid];n.maxRounds=3;
+  const queued=stageNegotiationOffer(db,nid,n.demand);check(queued.ok&&queued.waiting,'actual pending manager response');
+  const before=packDB(db),world=db.world,club=managedTeam(db);let blocked=false;
+  try{runOffseason(db)}catch(e){blocked=e.message.includes('응답 대기')}
+  check(blocked&&packDB(db)===before&&db.world===world&&managedTeam(db)===club,'annual writer skipped pending manager response');
+  const saved=unpackDB(before);check(saved.world.negotiations[nid].response.dueAt===queued.dueAt,'pending response save');
+  delete saved.world.negotiations[nid].response;const damaged=packDB(saved);let damagedBlocked=false;
+  try{runOffseason(saved)}catch(e){damagedBlocked=e.message.includes('응답 대기')}
+  check(damagedBlocked&&packDB(saved)===damaged,'damaged pending response skipped at annual close');
+  cancelNegotiation(db,nid);check(runOffseason(db)===db.world.report,'explicit cancellation permits annual close');
+ }
  let rollbackCases=0;
  {
   const {db,nid}=fixture(2027);db.worldDate=addDays(globalTransferMarketWindow(2027).closesOn,1);
