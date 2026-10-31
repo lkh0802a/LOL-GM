@@ -38,6 +38,11 @@ function pendingAnnualUndo(db){
     }
   };
 }
+function pendingManagerMarketResponse(db){
+  const w=db.world;
+  return w?.manage==='manual'&&!w.fired&&!!managedTeamId(db)&&
+    Object.values(w.negotiations||{}).some(n=>n.teamId===managedTeamId(db)&&n.status==='open'&&n.stage==='waiting');
+}
 function runOffseason(db){
   // A stale UI/duplicate command must not grow players or settle the same year
   // again after the manual annual closeout has already produced its report.
@@ -45,8 +50,7 @@ function runOffseason(db){
   // Reject an incomplete ledger before contract dates, growth or retirement
   // change. A paid legacy year without its report needs diagnosis, not replay.
   if(assertFinanceCloseout(db,db.world)==='closed')throw Error('이미 연간 결산이 완료된 시즌입니다');
-  if(db.world?.phase==='offseason'&&db.world.manage==='manual'&&!db.world.fired&&
-    Object.values(db.world.negotiations||{}).some(n=>n.teamId===managedTeamId(db)&&n.status==='open'&&n.stage==='waiting'))
+  if(db.world?.phase==='offseason'&&pendingManagerMarketResponse(db))
     throw Error('응답 대기 중인 제안을 직접 취소하거나 연락을 확인한 뒤 결산하세요');
   const undo=pendingAnnualUndo(db);
   try{
@@ -159,6 +163,8 @@ function closeMarket(db){
   // window must not settle the year before its own deadline either.
   if(db.worldDate<globalTransferMarketWindow(db.world.year).closesOn)
     throw new Error('이번 시즌 이적시장 마감일 전에 시장을 마감할 수 없습니다');
+  if(pendingManagerMarketResponse(db))
+    throw Error('응답 대기 중인 제안을 직접 취소하거나 연락을 확인한 뒤 마감하세요');
   const undo=pendingOfficialUndo(db);
   try{
   const w=db.world, rng=new RNG(w.seed+'/'+w.year,'market'), rep=w.report;

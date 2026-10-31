@@ -106,6 +106,20 @@ const result=await runEngineFixture(String.raw`(()=>{
   check(damagedBlocked&&packDB(saved)===damaged,'damaged pending response skipped at annual close');
   cancelNegotiation(db,nid);check(runOffseason(db)===db.world.report,'explicit cancellation permits annual close');
  }
+ {
+  let {db}=fixture(2027);runOffseason(db);
+  const player=Object.values(db.players).find(p=>!p.retired&&!p.team);check(player,'market FA for response');
+  mInterest(db,player.id);mEvaluateTarget(db,player.id);const opened=startNegotiation(db,player.id,'fa');check(opened.ok,'market negotiation');
+  const nid=opened.neg.id;opened.neg.maxRounds=3;const queued=stageNegotiationOffer(db,nid,opened.neg.demand);
+  check(queued.ok&&queued.waiting,'actual market pending response');
+  const before=packDB(db),world=db.world,club=managedTeam(db);let blocked=false;
+  try{closeMarket(db)}catch(e){blocked=e.message.includes('응답 대기')}
+  check(blocked&&packDB(db)===before&&db.world===world&&managedTeam(db)===club,'market close skipped pending manager response');
+  const saved=unpackDB(before);delete saved.world.negotiations[nid].response;const damaged=packDB(saved);let damagedBlocked=false;
+  try{closeMarket(saved)}catch(e){damagedBlocked=e.message.includes('응답 대기')}
+  check(damagedBlocked&&packDB(saved)===damaged,'market close skipped damaged pending response');
+  cancelNegotiation(db,nid);closeMarket(db);check(db.world.phase==='preseason','cancel permits market close');
+ }
  let rollbackCases=0;
  {
   const {db,nid}=fixture(2027);db.worldDate=addDays(globalTransferMarketWindow(2027).closesOn,1);
