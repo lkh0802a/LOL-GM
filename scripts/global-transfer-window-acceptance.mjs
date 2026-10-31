@@ -58,10 +58,12 @@ const result=await runEngineFixture(String.raw`(()=>{
   }
   // A direct or stale market-close command must not settle players, move the
   // phase, or write finance/history before the exclusive closing boundary.
-  for(const date of [window.opensOn,window.lastOpenDate]){
+  for(const date of [addDays(window.opensOn,-1),window.opensOn,window.lastOpenDate]){
    const early=unpackDB(original);early.worldDate=date;
    const before=packDB(early),world=early.world,players=early.players;
-   let rejected=false;try{closeMarket(early)}catch(error){rejected=/개방 중/.test(error.message)}
+   let rejected=false;try{closeMarket(early)}catch(error){
+    rejected=(date<window.opensOn?/마감일 전에/:/개방 중/).test(error.message);
+   }
    check(rejected&&packDB(early)===before&&early.world===world&&early.players===players,
     'premature market close mutated or accepted '+date);
   }
