@@ -95,7 +95,8 @@ function runOffseason(db){
   aiChooseLocalEligibility(db);
   // Consume the existing passive recovery interval without rewinding the live
   // world clock after contract dates have already advanced.
-  const medicalRolloverDate=`${db.year}-01-06`;
+  if(!freeAgencyDateValid(db.worldDate))throw Error('연간 결산의 현재 날짜를 확인할 수 없습니다');
+  const defaultRolloverDate=`${db.year}-01-06`,medicalRolloverDate=db.worldDate>defaultRolloverDate?db.worldDate:defaultRolloverDate;
   medicalOffseasonRecovery(db,medicalRolloverDate,cw?.seasonEndDate||undefined);
   setWorldCalendarDate(db,medicalRolloverDate);
   promotionRelegation(db,w,rng,ev);

@@ -120,6 +120,12 @@ const result=await runEngineFixture(String.raw`(()=>{
   check(damagedBlocked&&packDB(saved)===damaged,'market close skipped damaged pending response');
   cancelNegotiation(db,nid);closeMarket(db);check(db.world.phase==='preseason','cancel permits market close');
  }
+ for(const year of [2026,2027,2028]){
+  const {db}=fixture(year),date=(year+1)+'-01-09';db.worldDate=date;
+  runOffseason(db);
+  check(db.worldDate===date&&db.world.phase==='market','annual close rewound restored world clock');
+  const restored=unpackDB(packDB(db));check(restored.worldDate===date,'monotonic annual clock did not survive restore');
+ }
  let rollbackCases=0;
  {
   const {db,nid}=fixture(2027);db.worldDate=addDays(globalTransferMarketWindow(2027).closesOn,1);
