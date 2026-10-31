@@ -171,9 +171,11 @@ const result=await runEngineFixture(String.raw`(()=>{
  autoBuildInitialSquad(closedWorld,closeTeam,new RNG('real-fa-period-close','fixture'),5);finalizeInitialRosters(closedWorld);
  check(closedWorld.contractMarketOffers.periods['initial/'+closedWorld.year].closedAt,'initial period actual closure');
  closedWorld.world.phase='market';closedWorld.world.report={year:closedWorld.year,growth:[],retired:[],signings:[],resign:[],expired:[],transfers:[],events:[]};
- closedWorld.worldDate=closedWorld.year+'-06-01';
+ const closeWindow=globalTransferMarketWindow(closedWorld.world.year);
+ closedWorld.worldDate=closeWindow.lastOpenDate;
  for(const t of activeTeams(closedWorld))for(const id of t.roster)closedWorld.players[id].contract.until=closedWorld.year;
  refreshAIMarketOffers(closedWorld);const closingPeriod=aiMarketOfferPeriod(closedWorld).id;
+ closedWorld.worldDate=closeWindow.closesOn;
  closeMarket(closedWorld);const endedPeriod=closedWorld.contractMarketOffers.periods[closingPeriod];
  check(closedWorld.world.phase==='preseason'&&endedPeriod.closedAt===negotiationClockAt(closedWorld)&&
    Object.values(endedPeriod.offers).some(o=>o.status==='expired')&&
