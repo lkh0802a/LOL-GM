@@ -5790,6 +5790,8 @@ function closeMarket(db){
   // window must not settle the year before its own deadline either.
   if(db.worldDate<globalTransferMarketWindow(db.world.year).closesOn)
     throw new Error('이번 시즌 이적시장 마감일 전에 시장을 마감할 수 없습니다');
+  const undo=pendingOfficialUndo(db);
+  try{
   const w=db.world, rng=new RNG(w.seed+'/'+w.year,'market'), rep=w.report;
   const ev=t=>{rep.events.push(t);news(db,t)};
   closeOpenNegotiationsForDeadline(db);
@@ -5804,6 +5806,7 @@ function closeMarket(db){
   rep.retired.slice(0,3).forEach(r=>news(db,`${db.players[r.pid].name} 은퇴 (${r.age}세)`));
   expireCurrentAIMarketOffers(db);
   w.phase='preseason';
+  }catch(error){undo();throw error}
 }
 // 승강: 승강제는 1부 하위 ↔ 2부 상위 교체, 혼합은 프랜차이즈 보호 구단 제외
 function promotionRelegation(db,w,rng,ev){

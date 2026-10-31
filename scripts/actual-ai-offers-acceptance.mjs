@@ -176,6 +176,15 @@ const result=await runEngineFixture(String.raw`(()=>{
  for(const t of activeTeams(closedWorld))for(const id of t.roster)closedWorld.players[id].contract.until=closedWorld.year;
  refreshAIMarketOffers(closedWorld);const closingPeriod=aiMarketOfferPeriod(closedWorld).id;
  closedWorld.worldDate=closeWindow.closesOn;
+ const beforeFailedClose=canonical(closedWorld),beforeWorld=closedWorld.world,
+  beforeTeam=closedWorld.teams[closeTeam.id],beforeFinance=beforeTeam.finance,
+  originalMarketWriter=contractMarket;let lateCloseFailed=false;
+ contractMarket=(state)=>{state.teams[closeTeam.id].finance.cash-=3;throw Error('controlled market settlement failure')};
+ try{closeMarket(closedWorld)}catch(error){lateCloseFailed=error.message==='controlled market settlement failure'}
+ finally{contractMarket=originalMarketWriter}
+ check(lateCloseFailed&&canonical(closedWorld)===beforeFailedClose&&closedWorld.world===beforeWorld&&
+  closedWorld.teams[closeTeam.id]===beforeTeam&&beforeTeam.finance===beforeFinance,
+  'failed market closure restores world and finance references');
  closeMarket(closedWorld);const endedPeriod=closedWorld.contractMarketOffers.periods[closingPeriod];
  check(closedWorld.world.phase==='preseason'&&endedPeriod.closedAt===negotiationClockAt(closedWorld)&&
    Object.values(endedPeriod.offers).some(o=>o.status==='expired')&&
