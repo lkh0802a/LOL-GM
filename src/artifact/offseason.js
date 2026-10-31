@@ -20,6 +20,24 @@ function ensureEven(db,rng,ev){
 // promotion/relegation and next-season organizational reset.
 
 // ---------- 오프시즌 1단계: 기록·성장·은퇴·승강·흥행·재정·사무국 ----------
+// The shared undo restores graph values and identities. Annual growth also
+// deletes and reinserts properties, so restore their original order on failure.
+function pendingAnnualUndo(db){
+  const undo=pendingOfficialUndo(db),seen=new Set(),pending=[db],orders=[];
+  while(pending.length){
+    const object=pending.pop();if(!object||typeof object!=='object'||seen.has(object))continue;
+    seen.add(object);const keys=Object.keys(object);orders.push([object,keys]);
+    for(const key of keys){const value=object[key];if(value&&typeof value==='object')pending.push(value)}
+  }
+  return ()=>{
+    undo();
+    for(const [object,keys] of orders){
+      const current=Object.keys(object);if(current.length===keys.length&&current.every((key,i)=>key===keys[i]))continue;
+      const values=keys.map(key=>object[key]);for(const key of current)delete object[key];
+      keys.forEach((key,i)=>{object[key]=values[i]});
+    }
+  };
+}
 function runOffseason(db){
   // A stale UI/duplicate command must not grow players or settle the same year
   // again after the manual annual closeout has already produced its report.
@@ -27,7 +45,7 @@ function runOffseason(db){
   // Reject an incomplete ledger before contract dates, growth or retirement
   // change. A paid legacy year without its report needs diagnosis, not replay.
   if(assertFinanceCloseout(db,db.world)==='closed')throw Error('이미 연간 결산이 완료된 시즌입니다');
-  const undo=pendingOfficialUndo(db,{restoreOrder:true});
+  const undo=pendingAnnualUndo(db);
   try{
   const w=db.world,cw=initOffseasonContractWindow(db);
   // Headless/AI callers historically advanced offseason in one call. Preserve

@@ -227,7 +227,7 @@ function pendingOfficialControl(db){
 }
 // Preserve object identity as well as values if this one-set handoff fails.
 // Previously completed sets are outside the operation and remain recorded.
-function pendingOfficialUndo(db,{restoreOrder=false}={}){
+function pendingOfficialUndo(db){
   // Capture the full reachable graph in the same depth-first property order.
   // Primitive values are retained in rows without recursive calls. The stack
   // contains only objects; reverse push preserves getter/alias visit order.
@@ -243,7 +243,7 @@ function pendingOfficialUndo(db,{restoreOrder=false}={}){
   return ()=>{
     for(let at=0;at<rows.length;){
       const o=rows[at],keys=rows[at+1],length=rows[at+2],kept=new Set(keys);
-      for(const key of Object.keys(o))if(restoreOrder||!kept.has(key))delete o[key];
+      for(const key of Object.keys(o))if(!kept.has(key))delete o[key];
       for(let i=0;i<keys.length;i++)o[keys[i]]=rows[at+3+i];
       if(length!==null)o.length=length;
       at+=keys.length+3;
