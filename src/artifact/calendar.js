@@ -3,6 +3,7 @@
 // intentionally does not run training, patches or medical daily ticks: the
 // contract window and offseason recovery have their own accepted semantics.
 // Recovery may temporarily position the clock at the last competition date.
+// Global UTC market boundaries are owned by global-market-calendar.js.
 function setWorldCalendarDate(db,date){db.worldDate=date}
 
 // Match dates are fixtures; the authoritative world clock moves through every
@@ -12,8 +13,10 @@ function nextCalendarDate(db){
   if(fixture===null)return null;
   const previous=db.worldDate||`${db.year}-01-01`;
   if(previous>fixture)throw new Error('월드 날짜가 미진행 공식 경기일보다 늦습니다: '+previous+' > '+fixture);
-  if(previous===fixture)return fixture; // legacy saves may be parked on an unplayed match date
-  return addDays(previous,1);
+  const next=previous===fixture?fixture:addDays(previous,1); // legacy saves may be parked on an unplayed match date
+  const market=globalTransferMarketState(next);
+  if(market.open)throw new Error('28일 통합 이적시장 중에는 대회 경기를 진행할 수 없습니다: '+next+' ('+market.opensOn+'~'+market.closesOn+' 미만)');
+  return next;
 }
 function applyCalendarPatchEvents(db,date){
   const w=db.world;
@@ -73,7 +76,13 @@ function advanceOffseasonFreeAgencyDay(db,actor='manager'){
  if(!['manager','system'].includes(actor)||actor==='manager'&&(!t||t.active===false||t.parent||w.manage!=='manual'||w.fired||w.pendingOfficial?.queue?.length))return {ok:false,msg:'현재 구단에서 날짜를 직접 진행할 권한이 없습니다'};
  // 처리 실패가 현재 세계를 부분 변경하지 않도록 완성된 결과만 반영한다.
  const prepared=JSON.parse(JSON.stringify(db));
+ const previousOfferPeriod=aiMarketOfferPeriod(prepared)?.id;
  setWorldCalendarDate(prepared,state.next);processTransferPayments(prepared);processLocalServiceDaily(prepared);aiChooseLocalEligibility(prepared);
+ const marketClosesOn=globalTransferMarketWindow(w.year).closesOn;
+ if(state.next>=marketClosesOn)closeOpenNegotiationsForDeadline(prepared);
+ if(state.next===marketClosesOn){
+  expireCurrentAIMarketOffers(prepared,previousOfferPeriod);
+ }
  refreshAIMarketOffers(prepared);
  for(const key of Object.keys(db))delete db[key];Object.assign(db,prepared);
  return {ok:true,stage:'fa',date:db.worldDate,msg:'자유계약 기간 · '+db.worldDate};

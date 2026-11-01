@@ -44,7 +44,11 @@ await runEngineFixture(String.raw`(()=>{
  }
  const career=unpackDB(base),sizes=[];let extraMatches=0;
  for(let year=1;year<=20;year++){
-   career.year=db.year+year;career.world.year=career.year;career.worldDate=career.year+'-01-01';
+   career.year=db.year+year;career.world.year=career.year;
+   // These are newly played later competitions, not archive replays. Start
+   // after the previous December's actual market closes, including January.
+   career.worldDate=globalTransferMarketWindow(career.year-1).closesOn;
+   check(!globalTransferMarketState(career.worldDate).open,'follow-up competition starts outside market');
    career.competitions[comp.id].name='후속 리그 '+year;career.competitions[comp.id].stages[0].legs=1;
    for(const t of Object.values(career.teams)){t.name='후속 구단 '+year+' '+t.id;t.short=t.id}
    for(const p of Object.values(career.players))p.name='후속 선수 '+year+' '+p.id;

@@ -1,7 +1,6 @@
-// ===== LOL GM: D04-B3 post-Worlds incumbent exclusivity window =====
-// The final competition date is the legal anchor. Existing contracts expire
-// 14 days after that date; only the incumbent club may negotiate during those
-// 14 days. Other clubs may contact the player from day 15, after expiry.
+// ===== LOL GM: Global player FA and contract expiry window =====
+// Contracts expire Monday 23:59 UTC before December's first Tuesday FA opening.
+// No extra renewal-priority days; existing contracts and contact consent remain.
 
 function contractWindowYear(db){return db.world?.year??db.year}
 function contractWindowAnchorDate(db){
@@ -11,23 +10,25 @@ function contractWindowAnchorDate(db){
       const comp=db.competitions[s.comp];
       return isWorldChampionshipId(s.comp)||isWorldChampionshipId(comp?.id);
     });
-  if(worlds.length)return worlds.map(endDate).sort().at(-1);
+  if(worlds.length)return validatedWorldsClosingDate(db,finished,worlds);
   // Custom worlds may omit the standard Worlds preset. Fall back to the
   // latest completed international, then the world's final scheduled date.
   const internationals=finished.filter(s=>db.competitions[s.comp]?.international);
   if(internationals.length)return internationals.map(endDate).sort().at(-1);
   return w?.lastDate||db.worldDate||contractWindowYear(db)+'-11-01';
 }
+// Shared UTC FA date helpers are owned by global-market-calendar.js.
 function contractWindowDates(db){
   const year=contractWindowYear(db),
     seasonEnd=contractWindowAnchorDate(db),
-    exclusiveThrough=addDays(seasonEnd,14),
-    outsideContactDate=addDays(seasonEnd,15);
+    outsideContactDate=globalPlayerFAOpenDate(year),
+    contractExpiryDate=globalPlayerContractExpiryDate(year);
+  if(seasonEnd>=outsideContactDate)
+    throw new Error('공식 시즌이 선수 글로벌 FA 개방일 이후까지 이어집니다: '+seasonEnd);
   return {
     seasonYear:year,startSeason:year+1,seasonEndDate:seasonEnd,
-    startDate:addDays(seasonEnd,1),exclusiveThrough,
-    contractExpiryDate:exclusiveThrough,outsideContactDate,
-    effectiveDate:outsideContactDate
+    startDate:addDays(seasonEnd,1),exclusiveThrough:contractExpiryDate,
+    contractExpiryDate,outsideContactDate,effectiveDate:outsideContactDate
   };
 }
 function contractExpiresThisSeason(db,p){
@@ -63,14 +64,14 @@ function initOffseasonContractWindow(db){
   aiGrantEarlyContact(db);
   return w.contractWindow;
 }
-// A club can relinquish its *exclusive contact* right without terminating the
-// still-binding playing contract. Early agreements only take effect on day 15.
+// A club can relinquish its pre-FA contact exclusivity without terminating the
+// still-binding playing contract. Early agreements take effect at global FA.
 function grantEarlyContact(db,pid,actor='manager'){
   const cw=db.world?.contractWindow,p=db.players[pid],
     t=p?.team&&db.teams[p.team];
   if(!cw||cw.stage!=='exclusive'||db.worldDate>cw.contractExpiryDate||
     !contractExpiresThisSeason(db,p)||!t)
-    return {ok:false,msg:'현재 독점 협상 중인 만료 예정 선수가 아닙니다'};
+    return {ok:false,msg:'현재 계약 만료 전 협상 중인 선수가 아닙니다'};
   const auth=playerActionAuthority(db,actor,t);
   if(auth)return {ok:false,msg:auth.errors?.join(' · ')||'구단 결정 권한이 없습니다'};
   if(contractHasPendingOption(db,p))
@@ -105,9 +106,9 @@ function contractWindowContactError(db,p,t,kind){
   const w=db.world,cw=w?.contractWindow;
   if(!w||w.phase!=='offseason'||!cw)return '오프시즌 계약 협상 기간이 아닙니다';
   if(cw.stage!=='exclusive'||db.worldDate>cw.contractExpiryDate)
-    return '원소속 독점 협상 기간이 끝났습니다';
+    return '기존 계약 만료 전 협상 단계가 끝났습니다';
   if(!p||!t||!contractExpiresThisSeason(db,p))
-    return '이번 독점기간에 만료되는 계약이 아닙니다';
+    return '이번 시즌 만료 예정인 계약이 아닙니다';
   if(contractAgreementFor(db,p.id)?.status==='agreed')
     return '이미 다음 시즌 계약에 합의한 선수입니다';
   if(kind==='early_fa')
@@ -127,8 +128,7 @@ function recordContractAgreement(db,p,t,terms,kind='renewal',actor='manager'){
   const err=contractWindowContactError(db,p,t,kind);if(err)return {ok:false,msg:err};
   if(kind==='early_fa'&&actor==='manager'&&!recruitmentReady(db,p.id,t.id))
     return {ok:false,msg:'조기 접촉 허용 뒤에도 스카우팅과 내부 평가가 필요합니다'};
-  // Next-season option dates must also be next-season dates. The playing
-  // contract remains untouched until the exact post-Worlds expiry boundary.
+  // Next-season terms leave the current contract intact until expiry.
   const cw=db.world.contractWindow,
     normalized=withContractStartSeason(db,cw.startSeason,()=>
     normalizeContractTerms(db,p,t,terms.salary,terms.years,terms)),
@@ -184,29 +184,34 @@ function exerciseExclusiveTeamOption(db,pid){
     {ok:false,msg:(result.errors||['팀 옵션 행사 실패']).join(' · ')};
 }
 function closeExclusiveContractWindow(db){
+  const rollback=pendingOfficialUndo(db);try{
   const cw=initOffseasonContractWindow(db);
   if(!cw)return {ok:false,msg:'계약 협상 기간을 종료할 수 없습니다'};
   if(cw.stage!=='exclusive')return {ok:true,stage:cw.stage,date:db.worldDate,
-    settlement:cw.settlement||null,msg:'원소속 독점기간이 이미 끝났습니다'};
+    settlement:cw.settlement||null,msg:'기존 계약 만료 전 단계가 이미 끝났습니다'};
   const renewals=aiRunExclusiveRenewals(db),earlyOffers=aiRunEarlyContactOffers(db);
-  setWorldCalendarDate(db,cw.outsideContactDate);
+  if(!freeAgencyDateValid(db.worldDate))throw Error('날짜 오류');
+  setWorldCalendarDate(db,db.worldDate>cw.outsideContactDate?db.worldDate:cw.outsideContactDate);
   processTransferPayments(db);
   processLocalServiceDaily(db);aiChooseLocalEligibility(db);
   const settlement=finalizeExclusiveContractExpiry(db);
   cw.stage='fa';cw.completed=true;cw.settlement=settlement;
   refreshAIMarketOffers(db);
   return {ok:true,stage:'fa',date:db.worldDate,renewals,earlyOffers,settlement,
-    msg:'14일 원소속 독점기간 종료 · 기존 계약 만료 · FA 접촉 개방'};
+    msg:'글로벌 선수 FA 개방 · 기존 계약 만료 · 신규 협상 가능'};
+  }catch(error){rollback();throw error}
 }
 function advanceOffseasonContractDay(db){
+  const rollback=pendingOfficialUndo(db);try{
   const cw=initOffseasonContractWindow(db);
   if(!cw)return {ok:false,msg:'계약 협상 기간을 진행할 수 없습니다'};
   if(cw.stage!=='exclusive')return {ok:true,stage:cw.stage,date:db.worldDate,
-    msg:'원소속 독점기간이 이미 끝났습니다'};
+    msg:'기존 계약 만료 전 단계가 이미 끝났습니다'};
   const next=addDays(db.worldDate,1);
   if(next>=cw.outsideContactDate)return closeExclusiveContractWindow(db);
   setWorldCalendarDate(db,next);processTransferPayments(db);processLocalServiceDaily(db);aiChooseLocalEligibility(db);aiRunEarlyContactOffers(db);
   return {ok:true,stage:'exclusive',date:db.worldDate,
-    msg:'원소속 독점 재계약 기간 · '+db.worldDate};
+    msg:'기존 계약 만료 전 · '+db.worldDate};
+  }catch(error){rollback();throw error}
 }
 function advanceOffseasonContractWindow(db){return closeExclusiveContractWindow(db)}

@@ -27,6 +27,8 @@ function finalizeStagedNegotiation(db,nid){
   const n=db.world?.negotiations?.[nid],error=manualNegotiationError(db,n);
   if(error)return {ok:false,msg:error};
   if(n.status!=='open'||n.stage!=='agreement'||!n.agreedTerms)return {ok:false,msg:'최종 확정할 합의가 없습니다'};
+  const marketError=negotiationMarketDeadlineError(db,n);
+  if(marketError)return {ok:false,msg:marketError};
   const deadline=negotiationContactDeadline(db,n);
   if(deadline&&negotiationClockAt(db)>=deadline)return {ok:false,msg:'기존 협상 마감이 지나 최종 계약을 확정할 수 없습니다'};
   const p=db.players[n.pid],t=db.teams[n.teamId],terms=n.agreedTerms;
@@ -393,18 +395,20 @@ function waitingNegotiationResponses(db,ownedOnly=false){
     .filter(n=>!ownedOnly||!manualNegotiationError(db,n))
     .sort((a,b)=>String(a.response.dueAt).localeCompare(String(b.response.dueAt))||String(a.id).localeCompare(String(b.id)));
 }
+const seasonProjectionRequests=new WeakSet(),seasonStartFloors=new WeakMap();
 function negotiationContactDeadline(db,n){
-  const w=db.world,cw=w?.contractWindow;
-  if(w?.phase==='offseason'&&['renewal','early_fa'].includes(n.kind)&&cw?.stage==='exclusive')return cw.outsideContactDate+'T00:00:00.000Z';
-  if(!['initial_roster','market','preseason'].includes(w?.phase))return null;
+  const w=db.world,cw=w?.contractWindow,market=negotiationMarketDeadline(n),earlier=date=>market&&market<date?market:date;
+  if(w?.phase==='offseason'&&['renewal','early_fa'].includes(n.kind)&&cw?.stage==='exclusive')return earlier(cw.outsideContactDate+'T00:00:00.000Z');
+  if(!['initial_roster','market','preseason'].includes(w?.phase))return market;
   // 기존 시즌 작성자를 격리된 상태에서 실행해 실제 편성의 개최일을 읽는다.
-  const copy=JSON.parse(JSON.stringify(db));startWorldSeason(copy,managedTeamId(copy),w.seed);
+  const copy=JSON.parse(JSON.stringify(db));seasonProjectionRequests.add(copy);
+  try{startWorldSeason(copy,managedTeamId(copy),w.seed)}finally{seasonProjectionRequests.delete(copy)}
   const starts=Object.values(copy.world.seasons).flatMap(s=>s.days.flatMap(d=>d.matches.map(m=>{
     if(!m.localDate||!m.timeZone)throw Error('공식 경기의 개최일과 시간대를 확인할 수 없습니다');
     return venueToUtc(m.localDate,'00:00',m.timeZone);
   })));
   if(!starts.length)throw Error('기존 개막 편성에서 협상 마감을 확인할 수 없습니다');
-  return starts.sort()[0];
+  return earlier(starts.sort()[0]);
 }
 function negotiationResponseError(n){
   const r=n.response;
@@ -418,6 +422,8 @@ function resolveDueNegotiationResponse(db){
   const response=n.response,error=manualNegotiationError(db,n);
   if(error)return {ok:false,blocked:true,msg:error};
   const responseError=negotiationResponseError(n);if(responseError)return {ok:false,blocked:true,msg:responseError};
+  const marketError=negotiationMarketDeadlineError(db,n);
+  if(marketError)return {ok:false,blocked:true,msg:marketError};
   // 제출 시점의 판정을 적용하지 않고 실제 응답 시점의 상태를 재검사한다.
   n.stage='player';delete n.response;
   const before=n.history.length,result=resolveNegotiationOffer(db,n.id,response.terms),current=db.world.negotiations[n.id];
@@ -750,10 +756,24 @@ function officialPeerPeriodSteps(db,steps){
 }
 const officialWorldSeasonBeforePeerPeriods=startWorldSeason;
 startWorldSeason=function(db,...args){
-  const result=officialWorldSeasonBeforePeerPeriods(db,...args),w=db.world;
+  const prior=db.world?.phase==='preseason'?db.world:null;
+  const floor=prior?(seasonProjectionRequests.has(db)?prior.preseasonStartedOn:db.worldDate):null;
+  const late=freeAgencyDateValid(floor)&&floor>`${db.year}-01-07`,undo=late?pendingAnnualUndo(db):null;
+  try{
+  if(freeAgencyDateValid(floor))seasonStartFloors.set(db,floor);
+  let result;try{result=officialWorldSeasonBeforePeerPeriods(db,...args)}finally{seasonStartFloors.delete(db)}
+  const w=db.world;
+  if(prior?.negotiations)w.negotiations=prior.negotiations;
+  if(prior?.recruitment)w.recruitment=prior.recruitment;
+  if(prior?.negotiationClock)w.negotiationClock=prior.negotiationClock;
   const original=new Map(w.steps.map((step,index)=>[step,index])),prefix=w.steps.slice(0,w.step+1);
   w.steps=[...prefix,...officialPeerPeriodSteps(db,w.steps.slice(w.step+1)).map((step,index)=>step.kind==='league'&&original.get(step)!==prefix.length+index?{...step,patchSeedStep:original.get(step)}:step)];
+  if(late)for(const s of Object.values(w.seasons||{}))for(const day of s.days||[])for(const match of day.matches||[]){
+    if(!match.utcAt||globalTransferMarketState(match.utcAt.slice(0,10)).open)
+      throw Error('늦은 시즌 시작 일정이 이적시장과 겹치거나 경기 시각이 유효하지 않습니다');
+  }
   return result;
+  }catch(error){if(undo)undo();throw error}
 };
 // 화면/진행의 단계 번호와 기존 패치 난수 입력을 분리한다. 기간 묶음만으로 패치 내용을 다시 뽑지 않는다.
 const officialAdvanceStepBeforePeerPeriods=advanceStep;
@@ -761,6 +781,8 @@ advanceStep=function(db){
   // 완료 경기의 실제 UTC 종료일 이후부터 기존 단계 간격을 센다.
   // 원래 편성/결과는 유지하고 실제 기록이 없는 이전 저장에는 시간을 추정하지 않는다.
   let through=db.world.lastDate;
+  const floor=seasonStartFloors.get(db);
+  if(db.world.step===-1&&floor&&floor>through)through=floor;
   for(const season of Object.values(db.world.seasons||{}))if(season.done)for(const day of season.days||[])for(const match of day.matches||[]){
     if(!match.res||!match.gameTime)continue;
     const record=officialGameTimeRecord(match,match.res.games||[]);

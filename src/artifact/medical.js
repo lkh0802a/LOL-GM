@@ -340,7 +340,7 @@ function medicalDailyTick(db,date){
   }
   medicalReplacementDailyTick(db,date);
 }
-function medicalOffseasonRecovery(db,date){
+function medicalOffseasonRecovery(db,date,fromDate=db.worldDate){
   // Season progression can jump across a real offseason. Existing absences
   // must not remain frozen until the next competitive fixture. The same gap
   // must also dissipate accumulated competition/practice load: otherwise a
@@ -349,7 +349,7 @@ function medicalOffseasonRecovery(db,date){
   // recovery only; it does not create offseason incident lotteries or alter
   // the live injury/illness/burnout probabilities.
   const gapFromWorld=Math.max(0,Math.floor((Date.parse(date+'T00:00:00Z')-
-    Date.parse((db.worldDate||date)+'T00:00:00Z'))/86400000));
+    Date.parse((fromDate||date)+'T00:00:00Z'))/86400000));
   if(gapFromWorld)for(const p of Object.values(db.players)){
     if(!p||p.retired)continue;
     // Daily normal-season decay is .86 before training exposure is added.
@@ -362,12 +362,12 @@ function medicalOffseasonRecovery(db,date){
   // is not charged for months after the player's expected return.
   const projectedReturns={};
   for(const p of Object.values(db.players))if(p.medical?.daysLeft>0){
-    const from=p.medical.lastTick||db.worldDate;
+    const from=p.medical.lastTick||fromDate;
     projectedReturns[p.id]=addDays(from,Math.ceil(p.medical.daysLeft/medicalCare(db,p)));
   }
   for(const p of Object.values(db.players)){
     if(!p.medical?.daysLeft&&!p.medicalResidual?.daysLeft)continue;
-    const from=p.medical?.lastTick||p.medicalResidual?.lastTick||db.worldDate;
+    const from=p.medical?.lastTick||p.medicalResidual?.lastTick||fromDate;
     const elapsed=Math.max(0,Math.floor((Date.parse(date+'T00:00:00Z')-
       Date.parse(from+'T00:00:00Z'))/86400000));
     if(elapsed)medicalHeal(db,p,elapsed,date);

@@ -610,7 +610,13 @@ source += `\n(()=>{
   const matchIds=seasons.flatMap(s=>s.days.flatMap(d=>d.matches.map(m=>m.id)));
   if(!matchIds.length||new Set(matchIds).size!==matchIds.length) throw new Error('Match IDs are not unique');
 
-  const marketDb=unpackDB(packDB(db));runOffseason(marketDb);
+  // Drive an actual compact season to completion before annual settlement.
+  const marketCfg=defaultWorldConfig();marketCfg.regions=[regionCfg('NA',{teams:4,splits:1,legs:1,regularBo:1,playoffBo:1,playoffTake:2,format:'rr_po',div2:false,system:'franchise'})];marketCfg.internationals=[];
+  const marketDb=buildWorld(marketCfg),marketOwner=activeTeams(marketDb)[0];
+  startCareer(marketDb,marketOwner.id,'smoke-market-season');autoBuildInitialSquad(marketDb,marketOwner,new RNG('smoke-market-roster'));finalizeInitialRosters(marketDb);marketDb.world.manage='ai';
+  let marketDays=0;while(marketDb.world.phase==='season'&&marketDays++<500)playWorldDay(marketDb);
+  if(marketDb.world.phase!=='offseason')throw new Error('Market smoke season did not finish');
+  marketDb.world.manage='manual';runOffseason(marketDb);
   if(marketDb.world.phase!=='market')throw new Error('Offseason did not open transfer market');
   const preMarketSupply=talentSupplyErrors(marketDb);if(preMarketSupply.length)throw new Error('Pre-market labor supply failed: '+preMarketSupply.slice(0,5).join(' | '));
   if(!marketDb.world.report.rookieGlobal||!marketDb.world.report.rookies.every(x=>x.label&&x.tiers))throw new Error('Offseason rookie cohort report missing');
@@ -630,8 +636,24 @@ source += `\n(()=>{
   const clauseProbe=normalizeContractTerms(marketDb,faTarget,marketTeam,asking(marketDb,faTarget,marketTeam.region),2,{signingBonus:.5,bonuses:{performance:.2,title:.3,international:.1},buyout:5,option:{type:'player'},promisedRole:'competition'});
   if(clauseProbe.signingBonus!==.5||clauseProbe.bonuses.title!==.3||clauseProbe.buyout?.amount!==5||clauseProbe.buyout?.type!=='negotiation'||clauseProbe.option?.type!=='player'||clauseProbe.promisedRole!=='competition')throw new Error('Contract clause normalization failed');
   const marketRoundTrip=unpackDB(packDB(marketDb));if(!marketRoundTrip.world.recruitment?.targets?.[faTarget.id]||!marketRoundTrip.world.negotiations?.[started.neg.id])throw new Error('Recruitment/negotiation save round-trip failed');
-  const transferTarget=Object.values(marketDb.players).find(p=>p.team&&p.team!==marketTeam.id&&p.contract&&sellerTransferAsk(marketDb,p,marketDb.teams[p.team])<=marketTeam.finance.cash*.7);
-  if(transferTarget){setRecruitmentPriority(marketDb,transferTarget.id,'B');observePlayer(marketDb,transferTarget,80,{comp:'transfer-smoke',games:4});syncRecruitmentObservation(marketDb,transferTarget.id);if(!recruitmentEvaluation(marketDb,transferTarget.id).ok)throw new Error('Transfer target evaluation failed');const ask=sellerTransferAsk(marketDb,transferTarget,marketDb.teams[transferTarget.team]);mTransferBid(marketDb,transferTarget.id,ask*1.2);const tn=negotiationStore(marketDb)[negotiationId(marketDb,transferTarget.id,'transfer')];if(!tn||tn.status!=='open'||tn.stage!=='player'||!(tn.fee>0))throw new Error('Club transfer-fee negotiation failed');cancelNegotiation(marketDb,tn.id)}
+  const transferTarget=Object.values(marketDb.players).find(p=>p.team&&p.team!==marketTeam.id&&p.contract?.until>marketDb.year&&sellerTransferAsk(marketDb,p,marketDb.teams[p.team])<=marketTeam.finance.cash*.7);
+  if(!transferTarget)throw new Error('Missing affordable multi-year transfer fixture');
+  if(!globalTransferMarketState(marketDb.worldDate).open){
+    const before=packDB(marketDb),message=mTransferBid(marketDb,transferTarget.id,1);
+    if(!message.includes('마감')||packDB(marketDb)!==before)throw new Error('Settlement phase reopened closed global market');
+  }
+  // Annual settlement still reaches January 6, after the real market closes.
+  // Exercise the positive transfer path on an isolated future opening with a
+  // still-valid multi-year contract, preserving the real closing world's time.
+  const transferDb=unpackDB(packDB(marketDb)),tp=transferDb.players[transferTarget.id];
+  transferDb.worldDate=globalPlayerFAOpenDate(transferDb.year);
+  setRecruitmentPriority(transferDb,tp.id,'B');observePlayer(transferDb,tp,80,{comp:'transfer-smoke',games:4});
+  syncRecruitmentObservation(transferDb,tp.id);
+  if(!recruitmentEvaluation(transferDb,tp.id).ok)throw new Error('Transfer target evaluation failed');
+  const ask=sellerTransferAsk(transferDb,tp,transferDb.teams[tp.team]);mTransferBid(transferDb,tp.id,ask*1.2);
+  const tn=negotiationStore(transferDb)[negotiationId(transferDb,tp.id,'transfer')];
+  if(!tn||tn.status!=='open'||tn.stage!=='player'||!(tn.fee>0))throw new Error('Club transfer-fee negotiation failed');
+  cancelNegotiation(transferDb,tn.id);
   closeMarket(marketDb);
   const targetSize=5+(marketDb.worldConfig.subs||0);
   for(const t of activeTeams(marketDb)){

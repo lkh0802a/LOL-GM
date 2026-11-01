@@ -178,6 +178,7 @@ source += `
     const db=buildWorld(),teams=activeTeams(db,null,1),buyer=teams[0],seller=teams[1];
     const p=Object.values(db.players).find(x=>!x.retired&&!x.team&&isLocalPlayer(x,buyer.region));
     assert(p,'transfer fixture missing');setManagedTeam(db,buyer.id);db.world={year:db.year,manage:'manual'};
+    db.worldDate=globalPlayerFAOpenDate(db.year);
     assignPlayerToTeam(db,p,seller);
     p.contract={salary:2,until:db.year+1,years:2,signingBonus:0,promisedRole:'starter'};
     buyer.finance.cash=25;seller.finance.cash=10;
@@ -210,6 +211,7 @@ source += `
     const db=buildWorld(),teams=activeTeams(db,null,1),seller=teams[0],buyer=teams[1],owner=teams[2];
     const p=Object.values(db.players).find(x=>!x.retired&&!x.team&&isLocalPlayer(x,buyer.region));
     assert(p,'AI transfer fixture missing');setManagedTeam(db,owner.id);db.world={year:db.year,manage:'manual'};
+    db.worldDate=globalPlayerFAOpenDate(db.year);
     assignPlayerToTeam(db,p,seller);
     const retainedSalary=Math.ceil(Math.max(asking(db,p,buyer.region),asking(db,p,seller.region))*2*10)/10;
     p.contract={salary:retainedSalary,until:db.year+1,years:2,promisedRole:'starter'};
@@ -367,6 +369,7 @@ source += `
         p=Object.values(db.players).find(x=>!x.retired&&!x.team&&isLocalPlayer(x,buyer.region));
       assert(p,'rollback transfer test lacks local FA fixture');
       setManagedTeam(db,buyer.id);db.world={year:db.year,phase:'market',manage:'manual'};
+      db.worldDate=globalPlayerFAOpenDate(db.year);
       assignPlayerToTeam(db,p,seller);
       const agreedSalary=Math.ceil(asking(db,p,buyer.region)*2*10)/10;
       p.contract={salary:agreedSalary,until:db.year+1,years:2,option:null,promisedRole:'starter'};
@@ -703,6 +706,7 @@ source += `
     assignPlayerToTeam(db,local,seller);
     local.contract={salary:2,until:db.year+1,years:2};
     local.contractedMoves=[{season:db.year,counts:true},{season:db.year,counts:true}];
+    db.worldDate=globalPlayerFAOpenDate(db.year);
     const moveBefore=JSON.stringify(db),domainError=contractedMoveError(db,local),
       blocked=previewWorldAction(db,{type:'player.sign',pid:local.id,teamId:t.id,
         fromId:seller.id,kind:'transfer',actor:'manager',fee:1,salary:2,years:2,

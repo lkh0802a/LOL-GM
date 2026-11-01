@@ -1,5 +1,6 @@
 """기존 설치된 Playwright/Chromium으로 새 화면의 수동 시즌 전환을 검증한다."""
 import argparse,json
+from datetime import date,timedelta
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 parser=argparse.ArgumentParser();parser.add_argument('--html',type=Path,required=True);parser.add_argument('--fixture',type=Path,required=True);parser.add_argument('--output',type=Path,required=True);args=parser.parse_args();args.output.mkdir(parents=True,exist_ok=True)
@@ -15,7 +16,11 @@ with sync_playwright() as p:
   # 실제 검색 입력 중 viewport 축소/복원: 실제 OS 키보드를 열었다는 주장은 하지 않는다.
   page.evaluate("()=>v2Navigate('market','선수 검색')");search=page.locator('#player-search');search.fill('a');search.focus();page.set_viewport_size({'width':width,'height':180});assert search.input_value()=='a';assert page.locator('#player-search').evaluate('e=>e===document.activeElement');page.set_viewport_size({'width':width,'height':height});assert search.input_value()=='a';page.evaluate("()=>v2Navigate('home')");assert page.evaluate('packDB(V2.db)===original')
   # 매일 검토/수동 확정. 원래 작성자와 전체 저장 값 비교.
-  for day in range(14):
+  year=page.evaluate('V2.db.world.year');first=date(year,12,1);fa_open=first+timedelta(days=(1-first.weekday())%7)
+  assert page.evaluate('V2.db.world.contractWindow.outsideContactDate')==fa_open.isoformat()
+  contract_days=(fa_open-date.fromisoformat(page.evaluate('V2.db.worldDate'))).days
+  assert 0<contract_days<366
+  for day in range(contract_days):
    page.locator('#continue').click();assert page.locator('dialog[open]').count()==1
    page.evaluate('()=>{window.expected=JSON.parse(JSON.stringify(V2.db));advanceOffseasonContractDay(expected)}');page.locator('#management-confirm').click();page.wait_for_function('!document.querySelector("#work-dialog").open&&!V2.taskBackPending');assert page.evaluate('packDB(V2.db)===packDB(expected)&&JSON.parse(localStorage.getItem(V2_STORE)).game===packDB(V2.db)')
   assert page.locator('#fa-day-review').is_enabled();before=page.evaluate('packDB(V2.db)');page.locator('#fa-day-review').click();page.go_back();page.wait_for_function('!document.querySelector("#work-dialog").open&&!V2.taskBackPending');assert page.evaluate('document.activeElement.id==="fa-day-review"');assert page.evaluate('packDB(V2.db)')==before
@@ -30,6 +35,6 @@ with sync_playwright() as p:
    page.locator('#continue').click();page.evaluate("p=>{window.expected=JSON.parse(JSON.stringify(V2.db));if(p==='market')closeMarket(expected);else startWorldSeason(expected,managedTeamId(expected),V2.managementReview.phaseSeed)}",phase);page.locator('#management-confirm').click();page.wait_for_function('!document.querySelector("#work-dialog").open&&!V2.taskBackPending');assert page.evaluate('packDB(V2.db)===packDB(expected)')
   assert page.evaluate('V2.db.world.phase==="season"');saved=page.evaluate('packDB(V2.db)');page.reload();page.wait_for_function('V2.db?.world.phase==="season"');assert page.evaluate('packDB(V2.db)===packDB(unpackDB(JSON.parse(localStorage.getItem(V2_STORE)).game))');assert page.evaluate('JSON.parse(localStorage.getItem(V2_STORE)).game')==saved
   assert page.evaluate('document.documentElement.scrollWidth<=document.documentElement.clientWidth+2');assert not errors,errors
-  rows.append({'width':width,'height':height,'touchEmulated':True,'insetsSimulated':insets,'keyboardViewportResizeOnly':True,'exclusiveDays':14,'faDayWholeResult':True,'annualMarketSeasonWholeResult':True,'manualEveryAction':True,'cancelBackFocus':True,'actualLocalStorageReload':True,'noExternalResources':True,'errors':errors});page.close()
+  rows.append({'width':width,'height':height,'touchEmulated':True,'insetsSimulated':insets,'keyboardViewportResizeOnly':True,'contractDays':contract_days,'faDayWholeResult':True,'annualMarketSeasonWholeResult':True,'manualEveryAction':True,'cancelBackFocus':True,'actualLocalStorageReload':True,'noExternalResources':True,'errors':errors});page.close()
  browser.close()
 (args.output/'browser-results.json').write_text(json.dumps(rows,ensure_ascii=False,indent=2));print('UI_V2_OFFSEASON_BROWSER',json.dumps(rows,ensure_ascii=False))

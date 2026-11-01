@@ -4,6 +4,7 @@ await runEngineFixture(String.raw`(()=>{
   const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:3,div2:false})];cfg.internationals=[];
   const db=buildWorld(cfg),[seller,buyer]=activeTeams(db),p=Object.values(db.players).find(x=>!x.team&&!x.retired);
   setManagedTeam(db,buyer.id);db.world={phase:'market',year:db.year,manage:'manual',marketLog:[]};
+  db.worldDate=globalPlayerFAOpenDate(db.year);
   for(const t of [seller,buyer])t.finance.cash=100;
   p.attrs=Object.fromEntries(Object.keys(p.attrs).map(k=>[k,90]));p.reputation=90;p.careerGoal='starter';
   const normalized=normalizeContractTerms(db,p,seller,20,2,{buyout:12});
