@@ -1,7 +1,17 @@
 // ===== LOL GM: Club finance / economy domain (unit: 100M KRW) =====
 const money=v=>(Math.round(v*10)/10).toFixed(1)+'억';
 function psOf(db,rid){const R=db.regions[rid];return R?(R.payScale??.5):.5}
-function psTeam(db,t){return psOf(db,t.region)*((t.division||1)===2?0.35:1)}
+function psTeam(db,t){
+  const division=t.division||1,base=psOf(db,t.region);
+  if(division===1)return base;
+  if(division===2)return base*0.35; // Preserve existing approved second-tier economics.
+  // A new official tier must have an approved, region-specific market profile.
+  // Falling back to tier-one income or guessing a poverty multiplier is unsafe.
+  const rate=db.regions[t.region]?.divisionEconomy?.[division]?.payScaleRatio;
+  if(!Number.isFinite(rate)||rate<=0||rate>1)
+    throw new Error(`정식 ${division}부 구단의 승인된 재정 배율이 없습니다`);
+  return base*rate;
+}
 
 function initFinance(db,t,rng){
   const ps=psTeam(db,t);

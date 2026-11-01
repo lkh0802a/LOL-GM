@@ -72,8 +72,8 @@ function worldDecisions(db,rng,f,ev){
     const fictional=c.fictional?newLeagueIdentity(db,rng,P):null;
     const cfg=regionCfg(id,c.fictional?{id,name:P.name,leagueName:fictional.leagueName,
       short:fictional.short,tier2Short:fictional.tier2Short,fullLeagueName:fictional.fullName,strength:P.strength,tier:'emerging',teams:10,
-      system:P.system,div2:true,tier2Required:true,office:off,slots:nSlots}
-      :{div2:true,tier2Required:true,office:off,slots:nSlots});
+      system:P.system,div2:false,tier2Required:false,office:off,slots:nSlots}
+      :{div2:false,tier2Required:false,office:off,slots:nSlots});
     const R=addRegion(db,rng,cfg);
     if(c.fictional){
       (db.global.foundedLeagueNames=db.global.foundedLeagueNames||[]).push(R.leagueName);

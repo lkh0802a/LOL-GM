@@ -82,7 +82,8 @@ const ROSTER_RULE_PROFILES={
 function rosterRuleProfile(id='STANDARD_TIER1_2026'){return ROSTER_RULE_PROFILES[id]||ROSTER_RULE_PROFILES.STANDARD_TIER1_2026}
 
 function engineRosterRuleProfile(region){
-  if(region&&region.div2&&region.system==='franchise')return ROSTER_RULE_PROFILES.ENGINE_OWNED_RESERVE;
+  // The owned Academy remains a club licensing obligation even without a tier-2 competition.
+  if(region&&region.system==='franchise')return ROSTER_RULE_PROFILES.ENGINE_OWNED_RESERVE;
   return ROSTER_RULE_PROFILES.STANDARD_TIER1_2026;
 }
 function rosterRulesForTeam(db,t){
