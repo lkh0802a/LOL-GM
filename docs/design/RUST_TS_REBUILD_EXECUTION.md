@@ -43,7 +43,7 @@ Gate: 기준 코드/테스트가 실제로 재실행 가능하고, 정본과 레
 - `Cargo.toml` workspace, `crates/lolgm-core`, `crates/lolgm-wasm`, `apps/web` 및 `packages/protocol`의 최소 패키지 skeleton.
 - Rust native test, `wasm32-unknown-unknown` 빌드, `wasm-bindgen` glue, React/TypeScript 타입검사, 신규 번들 build, 별도 CI job.
 - 모듈 경계 검사: core에서 browser/DOM/React 의존 금지. 새로운 정적 출력은 `dist/next`로 분리.
-- 상수 스텁이 아닌 최소 `newGame → query → dispatch(no-op/query read) → export/import` 상태 왕복. 구현 전엔 게임 시뮬레이션 기능 완료로 표시 금지.
+- 상수 스텁이 아닌 최소 `newGame → query → dispatch(최소 테스트용 상태 전이) → export/import` 상태 왕복. 구현 전엔 게임 시뮬레이션 기능 완료로 표시 금지.
 
 Gate: 레거시 빌드/CI 무변경 PASS; Rust native + wasm + TS 빌드/계약 왕복 실제 PASS; 워커에서 응답 취소/오류를 안전하게 처리.
 
