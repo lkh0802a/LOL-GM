@@ -50,6 +50,10 @@ test('accommodation cannot impose daily manual assignment',()=>{
   const docs=changed('docs/rulebook/40-PLAYERS.md',text=>text.replace('매일 숙소를 수동 배치하도록 강제하거나 방송·기술 장비 관리 업무를 다시 도입하지 않는다','매일 숙소를 수동 배치한다'));
   assert.match(check(docs),/BROKEN_PIN: PLAYER-007/);
 });
+test('approved seasonal RP reset cannot silently become optional',()=>{
+  const docs=changed('docs/rulebook/40-PLAYERS.md',text=>text.replace('시즌 시작 때 공개 RP는 소프트 리셋하고','시즌 시작 때 공개 RP는 소프트 리셋할 수 있고'));
+  assert.match(check(docs),/BROKEN_PIN: PLAYER-004/);
+});
 test('shared facilities cannot erase first-team priority on a real clash',()=>{
   const docs=changed('docs/rulebook/40-PLAYERS.md',text=>text.replace('실제 이용 시간이 충돌하면 1군이 우선','항상 2군이 우선'));
   assert.match(check(docs),/BROKEN_PIN: PLAYER-007/);
