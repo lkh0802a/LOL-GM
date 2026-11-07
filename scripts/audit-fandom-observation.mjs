@@ -15,11 +15,25 @@ const result=await runEngineFixture(String.raw`(()=>{
   const low=JSON.parse(JSON.stringify(base)),high=JSON.parse(JSON.stringify(base));
   for(const p of Object.values(low.players))for(const k of Object.keys(p.attrs||{}))p.attrs[k]=20;
   for(const p of Object.values(high.players))for(const k of Object.keys(p.attrs||{}))p.attrs[k]=99;
+  const withoutHiddenAttrs=db=>JSON.stringify(db,(key,value)=>key==='attrs'?undefined:value);
+  if(withoutHiddenAttrs(low)!==withoutHiddenAttrs(high))throw Error('diagnostic worlds differ outside hidden attributes');
+  const controlLow=JSON.parse(JSON.stringify(low)),controlHigh=JSON.parse(JSON.stringify(high));
+  const originalOvr=playerOvr;
+  let controlA,controlB;
+  try{
+    // Experimental control only: hold this known direct input constant.
+    playerOvr=()=>50;
+    controlA=updateHype(controlLow,{year:base.year,seasons:{}}).NA;
+    controlB=updateHype(controlHigh,{year:base.year,seasons:{}}).NA;
+  }finally{playerOvr=originalOvr;}
   const w={year:base.year,seasons:{}},a=updateHype(low,w).NA,b=updateHype(high,w).NA;
   const teams=activeTeams(base,'NA',1).map(t=>t.id);
-  return {publicSeasons:0,teams:teams.length,rostered:rostered.length,low:{stars:a.stars,hype:a.hype,fans:teams.map(t=>low.teams[t].fans)},high:{stars:b.stars,hype:b.hype,fans:teams.map(t=>high.teams[t].fans)}};
+  const summary=(metric,db)=>({stars:metric.stars,hype:metric.hype,fans:teams.map(t=>db.teams[t].fans)});
+  return {publicSeasons:0,teams:teams.length,rostered:rostered.length,controlLow:summary(controlA,controlLow),controlHigh:summary(controlB,controlHigh),low:summary(a,low),high:summary(b,high)};
 })()`,{timeout:30000});
 
 const equal=JSON.stringify(result.low)===JSON.stringify(result.high);
-console.log('FANDOM_OBSERVATION_AUDIT '+JSON.stringify({...result,hiddenAttributesOnly:true,equal}));
+const controlEqual=JSON.stringify(result.controlLow)===JSON.stringify(result.controlHigh);
+if(!controlEqual)throw Error('diagnostic direct-input control did not match');
+console.log('FANDOM_OBSERVATION_AUDIT '+JSON.stringify({...result,hiddenAttributesOnly:true,controlEqual,equal}));
 if(!equal)process.exitCode=1;
