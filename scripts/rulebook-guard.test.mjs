@@ -136,6 +136,13 @@ test('sponsor benefits and attendance cannot invent cash or ticket sales',()=>{
   docs=changed(file,text=>text.replace('팬덤 크기만으로 발생하지 않은 입장권 판매를 기록하지 않는다','팬덤 크기만으로 입장권 판매를 기록한다'));
   assert.match(check(docs),/BROKEN_PIN: BIZ-007/);
 });
+test('relocation and development reputation preserve history and do not invent cash',()=>{
+  const file='docs/rulebook/60-BUSINESS.md';
+  let docs=changed(file,text=>text.replace('기존 구단 역사와 계약 원본을 보존한다','기존 역사와 계약을 삭제한다'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-007/);
+  docs=changed(file,text=>text.replace('유명해졌다는 사실만으로 자동 현금 보상을 만들지 않는다','유명해지면 자동으로 현금을 지급한다'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
+});
 test('double disqualification distinguishes prior rounds from the final',()=>{
   const file='docs/rulebook/10-COMPETITIONS.md';
   let docs=changed(file,text=>text.replace('경기 자리를 승계하여 실제 경기로 진행한다','임의의 팀을 결승으로 진출시킨다'));
