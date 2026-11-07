@@ -144,6 +144,12 @@ export function validateRulebook(docs){
     if(!rule){add('MISSING_PIN',id);continue;}
     for(const re of checks)if(!re.test(rule.body))add('BROKEN_PIN',id+' missing '+re.source);
   }
+  // A list of tournament names and the word 금지 alone can coexist with an
+  // explicit exception that contradicts the market-wide suspension.
+  const marketRule=ids.get('CAL-003');
+  if(marketRule && /독립 대회[^.\n]*(?:실제 경기|실경기)[^.\n]*(?:허용|가능)/.test(marketRule.body)){
+    add('CONFLICTING_MARKET_EXCEPTION','CAL-003 permits independent matches during the market');
+  }
   // The non-normative adjudication matrix must reflect current clauses and
   // evidence depth. This verifies indexing, NOT whether a linked source
   // actually contains the user's final approval.

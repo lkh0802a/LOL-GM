@@ -27,6 +27,11 @@ test('an obsolete global FA date cannot silently replace the approved date',()=>
   const docs=changed(file,text=>text.replace('12월 첫째 화요일 00:00 UTC','11월 셋째 화요일 00:00 UTC'));
   assert.match(check(docs),/BROKEN_PIN: CAL-001/);
 });
+test('an independent match exception cannot override the market suspension',()=>{
+  const file='docs/rulebook/20-CALENDAR.md';
+  const docs=changed(file,text=>text.replace('의 실제 경기는 모두 금지한다','의 실제 경기는 모두 금지한다. 단, 독립 대회의 실제 경기는 허용한다'));
+  assert.match(check(docs),/CONFLICTING_MARKET_EXCEPTION: CAL-003/);
+});
 test('rulebook links to nonexistent files cannot silently pass',()=>{
   const file='docs/rulebook/README.md';
   const docs=changed(file,text=>text.replace('(00-CORE.md)','(missing-CORE.md)'));
