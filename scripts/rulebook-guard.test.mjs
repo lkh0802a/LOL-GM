@@ -93,6 +93,14 @@ test('empty-roster help and important alerts preserve manager choice',()=>{
   docs=changed(file,text=>text.replace('모든 미세 이벤트의 알림을 강제하지 않는다','모든 미세 이벤트를 강제로 알린다'));
   assert.match(check(docs),/BROKEN_PIN: UI-001/);
 });
+test('scrim recommendations and optional match detail retain authority and one result',()=>{
+  let docs=changed('docs/rulebook/00-CORE.md',text=>text.replace('관리 구단의 감독이 이를 결정한다','직원이 자동 확정한다'));
+  assert.match(check(docs),/BROKEN_PIN: CORE-010/);
+  docs=changed('docs/rulebook/00-CORE.md',text=>text.replace('매 경기 또는 매일 회의를 강제하지 않는다','매일 회의를 강제한다'));
+  assert.match(check(docs),/BROKEN_PIN: CORE-010/);
+  docs=changed('docs/rulebook/80-EXPERIENCE.md',text=>text.replace('두 번째 경기를 생성하지 않는다','두 번째 경기를 생성한다'));
+  assert.match(check(docs),/BROKEN_PIN: UI-007/);
+});
 test('double disqualification distinguishes prior rounds from the final',()=>{
   const file='docs/rulebook/10-COMPETITIONS.md';
   let docs=changed(file,text=>text.replace('경기 자리를 승계하여 실제 경기로 진행한다','임의의 팀을 결승으로 진출시킨다'));
