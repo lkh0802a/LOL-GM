@@ -4,11 +4,13 @@
 > 범위: 기존 JavaScript 게임을 보존하면서 새 구현을 만드는 주요 아키텍처 결정.
 > 연결: [재구축 실행·검증 계획](RUST_TS_REBUILD_EXECUTION.md), [현재 아키텍처](../ARCHITECTURE.md), [실제 실행 지도 #242](https://github.com/lkh0802a/LOL-GM/issues/242), [정본 작업 #331](https://github.com/lkh0802a/LOL-GM/issues/331).
 
+> **현재 구현 경계:** 사용자가 Svelte를 선택했으며 React 선택 문구는 대체되었다. [기반 PR #354](https://github.com/lkh0802a/LOL-GM/pull/354)는 `rebuild/`의 규칙 없는 Rust/WASM·Svelte 전송 및 단일 HTML 검증이다. 아래 Worker·게임 명령·저장 이관은 목표 설계이며 그 PR에 구현됐다는 뜻이 아니다. 바인딩 방식과 Worker 경계는 실제 검증 후 확정하고 `file://` 오프라인 최초 실행은 별도로 검증한다.
+
 ## 0. 결정 및 비목표
 
 1. **병행 재구축(Parallel Rewrite)**. 기존 기능을 고쳐 쓰면서 한 번에 언어를 치환하지 않는다. 새 코드는 독립 경로에만 만든다. 기존 배포·개발 진입점과 레거시 테스트는 전환 승인 때까지 유지한다.
 2. **Rust가 게임 사실의 유일한 소유자**다. 월드 시간, 공식 경기/스크림 결과, 밴픽 적법성, 계약·재정·이적 실행, AI 결정, 성장/의료, 대회·기록 및 시뮬레이션 난수 상태를 소유한다.
-3. **TypeScript는 사용자 경험을 소유**한다. React + TypeScript + Vite를 신규 앱 기본 선택으로 정한다. UI는 출력용 view model을 받아 렌더링하고, 요청은 버전 있는 command protocol로 전달한다. UI store에는 게임 진실의 복제본을 두지 않는다.
+3. **TypeScript는 사용자 경험을 소유**한다. Svelte + TypeScript + Vite를 신규 앱 기본 선택으로 정한다. UI는 출력용 view model을 받아 렌더링하고, 요청은 버전 있는 command protocol로 전달한다. UI store에는 게임 진실의 복제본을 두지 않는다.
 4. **브라우저 로컬 실행**을 기본으로 한다. Rust 코어는 UI/DOM/브라우저 API에 의존하지 않는 native-testable 라이브러리이고, 브라우저에서는 WebAssembly로 구동한다. 서버 런타임·외부 API는 필수가 아니다.
 5. **기존 save는 비파괴적으로 읽고 별도 공간에 신규 save로 변환**한다. 새 앱은 기존 `lol-gm-v15` 네임스페이스를 쓰거나 지우지 않는다.
 6. **규정 정본 우선**. 레거시 JS 동작은 비교 기준이되 승인된 룰북을 대체하지 않는다. 과거의 부정확한 동작까지 강제적으로 복제하지 않는다.
@@ -29,7 +31,7 @@
 ## 2. 목표 의존성 및 디렉터리
 
 ~~~text
-apps/web (React + TypeScript + Vite, responsive mobile-first)
+apps/web (Svelte + TypeScript + Vite, responsive mobile-first)
   ├─ routes / features / presentation / accessibility
   ├─ application (command client + query cache + app-only state)
   ├─ workers/engine.worker.ts (ordered request queue)
@@ -58,7 +60,7 @@ tests/parity (legacy fixtures, invariants, divergence register)
 - `tests/parity`: 기존 JS와 새 Rust의 명시적 fixture/cross-engine 비교.
 - 기존 `src/artifact`, `src/ui-v2`, `scripts`, `index.html`, `dist/index.html`: 레거시 기존 구현을 유지한다. 최종 패키지 경로는 우선 `dist/next` 등으로 **분리**한다.
 
-의존성 방향: UI → protocol → application command/query → Rust core → immutable rules/config. Rust core는 화면, React, 라우터, 브라우저 저장 API를 import하지 않는다.
+의존성 방향: UI → protocol → application command/query → Rust core → immutable rules/config. Rust core는 화면, Svelte, 라우터, 브라우저 저장 API를 import하지 않는다.
 
 ## 3. 엔진 내부 책임 경계
 
@@ -88,7 +90,7 @@ tests/parity (legacy fixtures, invariants, divergence register)
 
 ## 5. TypeScript ↔ Rust 프로토콜 v1
 
-게임 상태의 전체 mutable 객체를 React store에 복제하지 않는다. Worker 안에서 단일 Rust `EngineSession`을 소유하고, TS는 명령·조회·save export만 수행한다. 최초에는 JSON 메시지 + `Uint8Array` 저장 스냅샷을 사용하며, 직렬화 병목이 실측될 때만 바이너리 프로토콜로 바꾼다.
+게임 상태의 전체 mutable 객체를 Svelte store에 복제하지 않는다. Worker 안에서 단일 Rust `EngineSession`을 소유하고, TS는 명령·조회·save export만 수행한다. 최초에는 JSON 메시지 + `Uint8Array` 저장 스냅샷을 사용하며, 직렬화 병목이 실측될 때만 바이너리 프로토콜로 바꾼다.
 
 ~~~ts
 type EngineRequest =
@@ -131,7 +133,7 @@ type EngineError = {
 
 ## 7. 실행·오프라인·Android 배포
 
-- Browser: Rust → `wasm32-unknown-unknown` + `wasm-bindgen`; Web Worker에서 WASM 초기화 및 시뮬레이션. React 렌더 스레드는 경기·시즌 장기 실행으로 막지 않는다.
+- Browser: Rust → `wasm32-unknown-unknown` + `wasm-bindgen`; Web Worker에서 WASM 초기화 및 시뮬레이션. Svelte 렌더 스레드는 경기·시즌 장기 실행으로 막지 않는다.
 - Build: `cargo test`, wasm target build, TS type generation/typecheck, Vite build를 독립 실행. 빌드 버전과 content hash를 핀하고 외부 네트워크가 없는 환경에서 핵심 플레이를 지원한다.
 - Offline: 초기 `dist/next` 번들에서 자산 캐시/앱 셸 오프라인 콜드 스타트를 검증한다. **현행 단일 `index.html`을 파일로 열어도 동작한다는 요구를 자동으로 포기하지 않는다.** WASM+Worker의 `file://` 제한을 먼저 실험하고, 필요 시 WASM 자산 내장형 단일 HTML을 별도 build target로 검증한다. 어려우면 승인 없이 다중 파일 패키지만을 동등 출시물로 선언하지 않는다.
 - Android: 기존 `docs/ANDROID_TARGET.md`의 오프라인, 생명주기 중단/복원, 접근성/터치, 설치 및 실제 장치 수용 조건을 따른다. 서버 의존을 추가하지 않는다.

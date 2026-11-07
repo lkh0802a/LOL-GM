@@ -3,6 +3,8 @@
 > 2026-11-06 설계. [아키텍처 결정](RUST_TS_REBUILD_ARCHITECTURE.md)의 실행 계획.
 > 기존 코드/세이브/CI 보존이 선행 조건. 이 문서는 작업 지시 초안이지 이미 검증된 구현 기록이 아니다.
 
+> **구현 상태:** [기반 PR #354](https://github.com/lkh0802a/LOL-GM/pull/354)는 별도 `rebuild/`에서 Svelte와 규칙 없는 Rust/WASM 호출·단일 HTML을 검증한다. 게임 명령·Worker·저장 이관과 실기기·`file://` 최초 실행을 완성한 것은 아니며, 아래 R1 전체 완료로 간주하지 않는다.
+
 ## 0. 실행 원칙 및 현재 업무와의 관계
 
 이 계획은 언어 변경을 위한 **대체 구현 레인**을 명확히 한다. 현재 작업 지도 [#242](https://github.com/lkh0802a/LOL-GM/issues/242), 단일 규정 정본 [#331](https://github.com/lkh0802a/LOL-GM/issues/331) / [PR #328](https://github.com/lkh0802a/LOL-GM/pull/328), 기존 개발 코드/검증을 무시한 새 시작을 허용하지 않는다.
@@ -41,8 +43,8 @@ Gate: 기준 코드/테스트가 실제로 재실행 가능하고, 정본과 레
 
 작은 독립 PR:
 - `Cargo.toml` workspace, `crates/lolgm-core`, `crates/lolgm-wasm`, `apps/web` 및 `packages/protocol`의 최소 패키지 skeleton.
-- Rust native test, `wasm32-unknown-unknown` 빌드, `wasm-bindgen` glue, React/TypeScript 타입검사, 신규 번들 build, 별도 CI job.
-- 모듈 경계 검사: core에서 browser/DOM/React 의존 금지. 새로운 정적 출력은 `dist/next`로 분리.
+- Rust native test, `wasm32-unknown-unknown` 빌드, `wasm-bindgen` glue, Svelte/TypeScript 타입검사, 신규 번들 build, 별도 CI job.
+- 모듈 경계 검사: core에서 browser/DOM/Svelte 의존 금지. 새로운 정적 출력은 `dist/next`로 분리.
 - 상수 스텁이 아닌 최소 `newGame → query → dispatch(최소 테스트용 상태 전이) → export/import` 상태 왕복. 구현 전엔 게임 시뮬레이션 기능 완료로 표시 금지.
 
 Gate: 레거시 빌드/CI 무변경 PASS; Rust native + wasm + TS 빌드/계약 왕복 실제 PASS; 워커에서 응답 취소/오류를 안전하게 처리.
