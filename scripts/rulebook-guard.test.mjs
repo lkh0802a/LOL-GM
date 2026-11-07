@@ -76,6 +76,13 @@ test('approved youth compensation and club taxonomy cannot silently regress',()=
   docs=changed(file,text=>text.replace('프로/세미프로/아마추어','프로/아마추어 고정'));
   assert.match(check(docs),/BROKEN_PIN: BIZ-012/);
 });
+test('development records do not create or erase acquired claims automatically',()=>{
+  const file='docs/rulebook/60-BUSINESS.md';
+  let docs=changed(file,text=>text.replace('실제 계약상 채권자와 적법한 권리 승계에 따르며','새 구단에 무조건 지급하며'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
+  docs=changed(file,text=>text.replace('모든 권리의 자동 소멸이나 이전·새 구단에 대한 자동 승계를 가정하지 않는다','매각하면 모든 권리가 자동 소멸한다'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
+});
 test('source-depth coverage is inspectable and not mislabeled as approval verification',()=>{
   const result=validateRulebook(original);
   assert.equal(result.sourceDepth.directCommentLinked+result.sourceDepth.issueOnlyOrOther,result.ruleCount);
