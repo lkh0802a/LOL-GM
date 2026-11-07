@@ -152,6 +152,15 @@ test('preseason solvency review does not invent aid or prohibit legitimate finan
   docs=changed(file,text=>text.replace('실제 재원·승인 권한이 있는 지원이나 차입까지 일률적으로 금지하는 뜻은 아니다','모든 지원과 차입을 금지한다'));
   assert.match(check(docs),/BROKEN_PIN: BIZ-008/);
 });
+test('training claims do not pay twice or erase distinct real rights',()=>{
+  const file='docs/rulebook/60-BUSINESS.md';
+  let docs=changed(file,text=>text.replace('같은 실질 소유자에게 같은 사유로 보상을 이중 지급하지 않는다','같은 사유를 모구단과 2군에 각각 지급한다'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
+  docs=changed(file,text=>text.replace('의미 없는 보유 기간만으로 자동 육성 보상을 만들지 않는다','보유 기간만으로 자동 육성 보상을 만든다'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
+  docs=changed(file,text=>text.replace('서로 다른 실제 기여와 유효한 별도 권리까지 일률적으로 삭제하지 않는다','별도 권리도 모두 삭제한다'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
+});
 test('future scouting demand stays evidence-based and withdrawn alerts stay excluded',()=>{
   const file='docs/rulebook/80-EXPERIENCE.md';
   let docs=changed(file,text=>text.replace('합리적으로 입증된 미래 수요도 고려할 수 있으나','현재 공백만 고려해야 하나'));
