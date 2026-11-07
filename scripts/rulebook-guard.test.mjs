@@ -122,6 +122,12 @@ test('leadership changes and counterfactual analysis preserve records and author
   assert.match(check(docs),/BROKEN_PIN: CORE-010/);
   docs=changed('docs/rulebook/80-EXPERIENCE.md',text=>text.replace('가상의 대안에 대한 승패를 이미 확정된 공식 결과나 역사에 혼입하지 않는다','가상 승패를 공식 역사에 반영한다'));
   assert.match(check(docs),/BROKEN_PIN: UI-007/);
+  docs=changed('docs/rulebook/00-CORE.md',text=>text.replace('별도 직원·감독 인수인계 기능이나 화면, 강제 회의 및 자동 계약을 만들지 않는다','선택형 인수인계 기능을 새로 만든다'));
+  assert.match(check(docs),/BROKEN_PIN: CORE-010/);
+});
+test('dividends cannot treat accounting profit as unlimited available cash',()=>{
+  const docs=changed('docs/rulebook/60-BUSINESS.md',text=>text.replace('구단주가 무제한 인출할 수 있다고 가정하지 않는다','구단주는 무제한 인출할 수 있다'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-014/);
 });
 test('double disqualification distinguishes prior rounds from the final',()=>{
   const file='docs/rulebook/10-COMPETITIONS.md';
