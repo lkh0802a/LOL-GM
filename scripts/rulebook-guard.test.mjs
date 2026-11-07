@@ -129,6 +129,13 @@ test('dividends cannot treat accounting profit as unlimited available cash',()=>
   const docs=changed('docs/rulebook/60-BUSINESS.md',text=>text.replace('구단주가 무제한 인출할 수 있다고 가정하지 않는다','구단주는 무제한 인출할 수 있다'));
   assert.match(check(docs),/BROKEN_PIN: BIZ-014/);
 });
+test('sponsor benefits and attendance cannot invent cash or ticket sales',()=>{
+  const file='docs/rulebook/60-BUSINESS.md';
+  let docs=changed(file,text=>text.replace('현물 지원만으로 실재하지 않는 현금을 생성하지 않으며','현물 지원은 동일한 현금을 생성하며'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-005/);
+  docs=changed(file,text=>text.replace('팬덤 크기만으로 발생하지 않은 입장권 판매를 기록하지 않는다','팬덤 크기만으로 입장권 판매를 기록한다'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-007/);
+});
 test('double disqualification distinguishes prior rounds from the final',()=>{
   const file='docs/rulebook/10-COMPETITIONS.md';
   let docs=changed(file,text=>text.replace('경기 자리를 승계하여 실제 경기로 진행한다','임의의 팀을 결승으로 진출시킨다'));
