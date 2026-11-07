@@ -125,6 +125,15 @@ test('batch scouting cannot fabricate completed observations or ignore staff con
   docs=changed(file,text=>text.replace('수집 배지는 복원하지 않는다','수집 배지를 복원한다'));
   assert.match(check(docs),/BROKEN_PIN: PLAYER-007/);
 });
+test('scouting decisions retain contemporary evidence and distinguish later revisions',()=>{
+  const file='docs/rulebook/40-PLAYERS.md';
+  let docs=changed(file,text=>text.replace('자료의 시점·출처와 소유·관측 범위를 근거로 연결','자료의 출처를 생략'));
+  assert.match(check(docs),/BROKEN_PIN: PLAYER-007/);
+  docs=changed(file,text=>text.replace('후속 실제 평가와 판단 수정 이력을 구분','후속 평가로 과거 판단을 덮어쓴다'));
+  assert.match(check(docs),/BROKEN_PIN: PLAYER-007/);
+  docs=changed(file,text=>text.replace('다른 구단의 비공개 자료를 당시 판단 근거로 소급해 제시하지 않는다','다른 구단의 비공개 자료를 과거 근거로 공개한다'));
+  assert.match(check(docs),/BROKEN_PIN: PLAYER-007/);
+});
 test('scrim recommendations and optional match detail retain authority and one result',()=>{
   let docs=changed('docs/rulebook/00-CORE.md',text=>text.replace('관리 구단의 감독이 이를 결정한다','직원이 자동 확정한다'));
   assert.match(check(docs),/BROKEN_PIN: CORE-010/);
