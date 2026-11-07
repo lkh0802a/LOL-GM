@@ -93,6 +93,13 @@ test('double disqualification distinguishes prior rounds from the final',()=>{
   docs=changed(file,text=>text.replace('우승자 없이 종료한다','차순위 팀에 우승을 자동 승계한다'));
   assert.match(check(docs),/BROKEN_PIN: COMP-010/);
 });
+test('approved Worlds boundary ties use head-to-head before deciding matches',()=>{
+  const file='docs/rulebook/10-COMPETITIONS.md';
+  let docs=changed(file,text=>text.replace('두 팀이면 실제 승자승을 우선하고 맞대결이 없으면 BO1','두 팀이면 무조건 BO1'));
+  assert.match(check(docs),/BROKEN_PIN: COMP-019/);
+  docs=changed(file,text=>text.replace('경계와 무관한 동률에 확대하지 않고','모든 동률로 확대하고'));
+  assert.match(check(docs),/BROKEN_PIN: COMP-019/);
+});
 test('relegated parent and academy second-division collision cannot disappear',()=>{
   const file='docs/rulebook/10-COMPETITIONS.md';
   const docs=changed(file,text=>text.replace('적격한 실제 하위 부로 행정적으로 이동하거나, 적법하게 매각 또는 해체','다른 2부로 자동 재배치'));
