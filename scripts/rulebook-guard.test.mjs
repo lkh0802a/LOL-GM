@@ -115,6 +115,14 @@ test('scrim recommendations and optional match detail retain authority and one r
   docs=changed('docs/rulebook/80-EXPERIENCE.md',text=>text.replace('두 번째 경기를 생성하지 않는다','두 번째 경기를 생성한다'));
   assert.match(check(docs),/BROKEN_PIN: UI-007/);
 });
+test('leadership changes and counterfactual analysis preserve records and authority',()=>{
+  let docs=changed('docs/rulebook/00-CORE.md',text=>text.replace('선수의 실제 전술 숙련과 합법적으로 소유한 자료를 전면 초기화하지 않으며','모든 전술 숙련과 자료를 초기화하며'));
+  assert.match(check(docs),/BROKEN_PIN: CORE-010/);
+  docs=changed('docs/rulebook/00-CORE.md',text=>text.replace('현 감독의 기존 수동 권한을 무단으로 무력화하지 않는다','현 감독의 수동 권한을 자동으로 제거한다'));
+  assert.match(check(docs),/BROKEN_PIN: CORE-010/);
+  docs=changed('docs/rulebook/80-EXPERIENCE.md',text=>text.replace('가상의 대안에 대한 승패를 이미 확정된 공식 결과나 역사에 혼입하지 않는다','가상 승패를 공식 역사에 반영한다'));
+  assert.match(check(docs),/BROKEN_PIN: UI-007/);
+});
 test('double disqualification distinguishes prior rounds from the final',()=>{
   const file='docs/rulebook/10-COMPETITIONS.md';
   let docs=changed(file,text=>text.replace('경기 자리를 승계하여 실제 경기로 진행한다','임의의 팀을 결승으로 진출시킨다'));

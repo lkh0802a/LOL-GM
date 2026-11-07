@@ -4,6 +4,8 @@
 
 2026-11-07 부분 대조: [M164B·M176B 직접 원문](https://github.com/lkh0802a/LOL-GM/issues/251#issuecomment-6312524720)의 미관측·적은 표본과 AI의 비공개 능력 접근 금지를 [PLAYER-007](../rulebook/40-PLAYERS.md)에 명시했다. 기존 `scripts/scouting-coverage-cost-acceptance.mjs`의 비공개 getter 반례는 특정 경로의 인접 검사이며 스카우팅 전체 효력·실제 UI 수용 완료가 아니다.
 
+같은 원문의 M182B·M183C·M186C·M187B는 [UI-007](../rulebook/80-EXPERIENCE.md)의 대안/확정 역사 구분과 [CORE-010](../rulebook/00-CORE.md)의 감독 교체·수동 권한·선택형 직원 계약 경계에 연결했다. 해당 경로의 엔진·UI 및 다른 후속 원문 전체 검증은 별도다.
+
 | 번호 | 제출안 | 승인 세부 내용(원문 요약) | 실제 원문 | 효력/예외 |
 |---|---|---|---|---|
 | M001 | C | 사람마다 타고난 기질과 후천 경험의 상대적 영향력 자체가 다르게 구성된다. 기질 또는 경험 어느 하나를 모든 인물에 획일 가중치로 적용하지 않음. - | [#251 6289688904](https://github.com/lkh0802a/LOL-GM/issues/251#issuecomment-6289688904) | 기존 승인된 분야별 실행·표현 원칙 세부화; 후속 승인/철회가 있으면 별도 적용 |
