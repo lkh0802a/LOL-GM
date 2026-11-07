@@ -1,6 +1,6 @@
 # Codex 실행 지침 — LOL-GM 전체 게임 수정 우선순위
 
-**현행 예약(2026-11-07 실제 설정 조회):** 기존 단일 자동화 **「롤FM 자율 개발」**은 Asia/Seoul, `RRULE:FREQ=HOURLY`로 **매시간 1회** 예약되어 있다. 실행 성공이나 매시간 코드 커밋을 보장하지 않으며, `last_run_time`만으로 작업 완료를 판정하지 않는다. 과거 5시간·매일 08:00 설정과 이름이 유지된 [CODEX_AUTOMATION_5H.md](CODEX_AUTOMATION_5H.md)의 관련 문구는 **이전 운영 기록**이다. GitHub 문서 편집으로 예약의 실제 간격·프롬프트가 변경되지는 않는다.
+**현행 예약(2026-11-07 실제 설정 조회):** 기존 단일 자동화 **기존 단일 게임 개발 예약**은 Asia/Seoul, `RRULE:FREQ=HOURLY`로 **매시간 1회** 예약되어 있다. 실행 성공이나 매시간 코드 커밋을 보장하지 않으며, `last_run_time`만으로 작업 완료를 판정하지 않는다. 과거 5시간·매일 08:00 설정과 이름이 유지된 [CODEX_AUTOMATION_5H.md](CODEX_AUTOMATION_5H.md)의 관련 문구는 **이전 운영 기록**이다. GitHub 문서 편집으로 예약의 실제 간격·프롬프트가 변경되지는 않는다.
 
 **현재 작업 기준:** [#242 현재 실행 지도](https://github.com/lkh0802a/LOL-GM/issues/242)와 최신 이슈·PR·CI·체크포인트를 실조회한다. #331 룰북의 규정/소유권 게이트, #332 경량화, #233 실제 5v5 경기 코어 및 후속 수용을 확인하되 이미 완료된 작업을 반복하지 않는다. Rust 게임 엔진 + **TypeScript/Svelte UI** 병행 재구축은 아직 Draft [#353 설계](https://github.com/lkh0802a/LOL-GM/pull/353)·[#354 격리 기반](https://github.com/lkh0802a/LOL-GM/pull/354) 단계다. #353의 React 문구는 사용자가 선택한 Svelte 및 #354와 정합성을 맞춰야 하며, 해당 Draft를 병합·게임 완성 증거로 간주하지 않는다.
 
