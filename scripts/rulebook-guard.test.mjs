@@ -134,6 +134,15 @@ test('scouting decisions retain contemporary evidence and distinguish later revi
   docs=changed(file,text=>text.replace('다른 구단의 비공개 자료를 당시 판단 근거로 소급해 제시하지 않는다','다른 구단의 비공개 자료를 과거 근거로 공개한다'));
   assert.match(check(docs),/BROKEN_PIN: PLAYER-007/);
 });
+test('development compensation reports distinguish actual obligations from projections',()=>{
+  const file='docs/rulebook/60-BUSINESS.md';
+  let docs=changed(file,text=>text.replace('확정 지급과 미확정 추정, 미수 및 지급 시점을 구분','추정액을 확정 지급으로 취급'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
+  docs=changed(file,text=>text.replace('같은 사건의 중복 지급 위험을 표시','중복 지급 위험을 숨긴다'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
+  docs=changed(file,text=>text.replace('실제 없는 재원·금액·비율을 만들어 표시하지 않는다','존재하지 않는 재원을 표시한다'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
+});
 test('scrim recommendations and optional match detail retain authority and one result',()=>{
   let docs=changed('docs/rulebook/00-CORE.md',text=>text.replace('관리 구단의 감독이 이를 결정한다','직원이 자동 확정한다'));
   assert.match(check(docs),/BROKEN_PIN: CORE-010/);
