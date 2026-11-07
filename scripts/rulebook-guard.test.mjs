@@ -107,6 +107,15 @@ test('empty-roster help and important alerts preserve manager choice',()=>{
   docs=changed(file,text=>text.replace('모든 미세 이벤트의 알림을 강제하지 않는다','모든 미세 이벤트를 강제로 알린다'));
   assert.match(check(docs),/BROKEN_PIN: UI-001/);
 });
+test('automatic advance and inbox preserve required decisions and deadlines',()=>{
+  const file='docs/rulebook/80-EXPERIENCE.md';
+  let docs=changed(file,text=>text.replace('실제 권한 담당자의 필수 결정을 건너뛰는 권한을 부여하지 않는다','필수 결정을 자동으로 건너뛴다'));
+  assert.match(check(docs),/BROKEN_PIN: UI-008/);
+  docs=changed(file,text=>text.replace('중요한 의무를 분류 과정에서 누락하지 않고','중요한 의무를 분류 과정에서 숨기고'));
+  assert.match(check(docs),/BROKEN_PIN: UI-001/);
+  docs=changed(file,text=>text.replace('법적·계약상 응답 기한과 감독의 필수 의사결정 여부','임의의 알림 빈도'));
+  assert.match(check(docs),/BROKEN_PIN: UI-001/);
+});
 test('scrim recommendations and optional match detail retain authority and one result',()=>{
   let docs=changed('docs/rulebook/00-CORE.md',text=>text.replace('관리 구단의 감독이 이를 결정한다','직원이 자동 확정한다'));
   assert.match(check(docs),/BROKEN_PIN: CORE-010/);
