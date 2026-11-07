@@ -40,6 +40,8 @@
 ### BIZ-008 · AI와 사용자 구단의 재정 제약
 AI 구단·개최사도 유효한 현금, 채무·급여·이적료, 선수 계약/선수단 구성과 대회·지역 제약 아래 결정을 내린다. AI 구단·개최사에만 무제한 보조금, 외부 선수의 무제한 공급 또는 허위 일회성 수익을 허용하지 않는다. [근거 #237](https://github.com/lkh0802a/LOL-GM/issues/237), [#280](https://github.com/lkh0802a/LOL-GM/issues/280), [#241](https://github.com/lkh0802a/LOL-GM/issues/241)
 
+시즌 시작 전 운영 가능성은 실제 선수단 유지, 가용 현금과 확정 채무·만기를 함께 살핀다. 약팀이라는 이유만으로 자동 현금 지원을 만들거나 AI의 무제한 차입을 허용하지 않는다. 적법한 계약과 실제 재원·승인 권한이 있는 지원이나 차입까지 일률적으로 금지하는 뜻은 아니다. [#251 M207C 사용자 선택](https://github.com/lkh0802a/LOL-GM/issues/251#issuecomment-6312524720), [후속 공정 경쟁·실제 투자 경로](https://github.com/lkh0802a/LOL-GM/issues/251#issuecomment-6314588797)
+
 ### BIZ-009 · 독립대회 성적의 실질적 평판 가치
 독립 대회라도 실제 승패·상대 수준·대회 위상·팬 관심은 선수·구단 **명성·브랜드·시장 가치**에 영향을 줄 수 있다. 그러나 독립 대회 우승을 공식 Worlds 우승·공식 국제 시드/계수로 자동 환산하지 않으며, 기존 경기·경제 원장을 중복 보상하지 않는다. [근거 #251 독립 대회 명성 확정](https://github.com/lkh0802a/LOL-GM/issues/251), [#323](https://github.com/lkh0802a/LOL-GM/issues/323) [독립 대회와 구단 평판·후원 기회 연계](https://github.com/lkh0802a/LOL-GM/issues/251#issuecomment-6461143491)
 

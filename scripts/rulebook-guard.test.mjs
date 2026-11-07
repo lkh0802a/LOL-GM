@@ -143,6 +143,15 @@ test('development compensation reports distinguish actual obligations from proje
   docs=changed(file,text=>text.replace('실제 없는 재원·금액·비율을 만들어 표시하지 않는다','존재하지 않는 재원을 표시한다'));
   assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
 });
+test('preseason solvency review does not invent aid or prohibit legitimate financing',()=>{
+  const file='docs/rulebook/60-BUSINESS.md';
+  let docs=changed(file,text=>text.replace('실제 선수단 유지, 가용 현금과 확정 채무·만기를 함께 살핀다','현금만 확인한다'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-008/);
+  docs=changed(file,text=>text.replace('약팀이라는 이유만으로 자동 현금 지원을 만들거나 AI의 무제한 차입을 허용하지 않는다','약팀에 자동 현금을 지원한다'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-008/);
+  docs=changed(file,text=>text.replace('실제 재원·승인 권한이 있는 지원이나 차입까지 일률적으로 금지하는 뜻은 아니다','모든 지원과 차입을 금지한다'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-008/);
+});
 test('future scouting demand stays evidence-based and withdrawn alerts stay excluded',()=>{
   const file='docs/rulebook/80-EXPERIENCE.md';
   let docs=changed(file,text=>text.replace('합리적으로 입증된 미래 수요도 고려할 수 있으나','현재 공백만 고려해야 하나'));
