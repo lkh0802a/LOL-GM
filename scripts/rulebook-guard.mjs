@@ -147,7 +147,7 @@ export function validateRulebook(docs){
   // A list of tournament names and the word 금지 alone can coexist with an
   // explicit exception that contradicts the market-wide suspension.
   const marketRule=ids.get('CAL-003');
-  if(marketRule && /독립 대회[^.\n]*(?:실제 경기|실경기)[^.\n]*(?:허용|가능)/.test(marketRule.body)){
+  if(marketRule && /독립 대회[^.\n]*(?:실제 경기|실경기)[^.\n]*(?:허용한다|허용할 수 있다|가능하다)/.test(marketRule.body)){
     add('CONFLICTING_MARKET_EXCEPTION','CAL-003 permits independent matches during the market');
   }
   // The non-normative adjudication matrix must reflect current clauses and

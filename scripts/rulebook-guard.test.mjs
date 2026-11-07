@@ -31,6 +31,8 @@ test('an independent match exception cannot override the market suspension',()=>
   const file='docs/rulebook/20-CALENDAR.md';
   const docs=changed(file,text=>text.replace('의 실제 경기는 모두 금지한다','의 실제 경기는 모두 금지한다. 단, 독립 대회의 실제 경기는 허용한다'));
   assert.match(check(docs),/CONFLICTING_MARKET_EXCEPTION: CAL-003/);
+  const denial=changed(file,text=>text.replace('의 실제 경기는 모두 금지한다','의 실제 경기는 모두 금지한다. 독립 대회의 실제 경기는 허용하지 않는다'));
+  assert.doesNotMatch(check(denial),/CONFLICTING_MARKET_EXCEPTION/);
 });
 test('rulebook links to nonexistent files cannot silently pass',()=>{
   const file='docs/rulebook/README.md';
