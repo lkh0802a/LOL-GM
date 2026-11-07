@@ -116,6 +116,15 @@ test('automatic advance and inbox preserve required decisions and deadlines',()=
   docs=changed(file,text=>text.replace('법적·계약상 응답 기한과 감독의 필수 의사결정 여부','임의의 알림 빈도'));
   assert.match(check(docs),/BROKEN_PIN: UI-001/);
 });
+test('batch scouting cannot fabricate completed observations or ignore staff constraints',()=>{
+  const file='docs/rulebook/40-PLAYERS.md';
+  let docs=changed(file,text=>text.replace('스카우팅 담당자의 가용 업무·시간·예산과 관측 권한 범위','직원의 시간과 권한을 무시한 범위'));
+  assert.match(check(docs),/BROKEN_PIN: PLAYER-007/);
+  docs=changed(file,text=>text.replace('실제로 수행하지 않은 즉시 조사 결과를 만들지 않는다','즉시 조사 결과를 생성한다'));
+  assert.match(check(docs),/BROKEN_PIN: PLAYER-007/);
+  docs=changed(file,text=>text.replace('수집 배지는 복원하지 않는다','수집 배지를 복원한다'));
+  assert.match(check(docs),/BROKEN_PIN: PLAYER-007/);
+});
 test('scrim recommendations and optional match detail retain authority and one result',()=>{
   let docs=changed('docs/rulebook/00-CORE.md',text=>text.replace('관리 구단의 감독이 이를 결정한다','직원이 자동 확정한다'));
   assert.match(check(docs),/BROKEN_PIN: CORE-010/);
