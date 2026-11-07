@@ -161,6 +161,15 @@ test('training claims do not pay twice or erase distinct real rights',()=>{
   docs=changed(file,text=>text.replace('서로 다른 실제 기여와 유효한 별도 권리까지 일률적으로 삭제하지 않는다','별도 권리도 모두 삭제한다'));
   assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
 });
+test('player distribution investigations do not force ability reductions or claim long-season coverage',()=>{
+  const file='docs/rulebook/40-PLAYERS.md';
+  let docs=changed(file,text=>text.replace('선수 능력 일괄 강등이나 억지 난이도 보정을 적용하지 않는다','선수 능력을 일괄 강등한다'));
+  assert.match(check(docs),/BROKEN_PIN: PLAYER-012/);
+  docs=changed(file,text=>text.replace('제한된 시즌 검사를 다지역 장기 시즌 검증으로 간주하지 않으며','두 시즌만으로 장기 검증을 완료한다'));
+  assert.match(check(docs),/BROKEN_PIN: PLAYER-012/);
+  docs=changed(file,text=>text.replace('권한 없는 화면에 공개하는 근거로 사용하지 않는다','모든 화면에 공개한다'));
+  assert.match(check(docs),/BROKEN_PIN: PLAYER-012/);
+});
 test('future scouting demand stays evidence-based and withdrawn alerts stay excluded',()=>{
   const file='docs/rulebook/80-EXPERIENCE.md';
   let docs=changed(file,text=>text.replace('합리적으로 입증된 미래 수요도 고려할 수 있으나','현재 공백만 고려해야 하나'));
