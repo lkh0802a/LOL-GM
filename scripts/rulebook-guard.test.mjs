@@ -86,6 +86,13 @@ test('a tournament-wide two-loss cap cannot replace per-bracket elimination poli
   const docs=changed(file,text=>text.replace('대회 전체에서 2패를 초과할 수 없다는 뜻이 아니다','대회 전체 2패 제한이 적용된다'));
   assert.match(check(docs),/BROKEN_PIN: COMP-006/);
 });
+test('double disqualification distinguishes prior rounds from the final',()=>{
+  const file='docs/rulebook/10-COMPETITIONS.md';
+  let docs=changed(file,text=>text.replace('경기 자리를 승계하여 실제 경기로 진행한다','임의의 팀을 결승으로 진출시킨다'));
+  assert.match(check(docs),/BROKEN_PIN: COMP-010/);
+  docs=changed(file,text=>text.replace('우승자 없이 종료한다','차순위 팀에 우승을 자동 승계한다'));
+  assert.match(check(docs),/BROKEN_PIN: COMP-010/);
+});
 test('relegated parent and academy second-division collision cannot disappear',()=>{
   const file='docs/rulebook/10-COMPETITIONS.md';
   const docs=changed(file,text=>text.replace('적격한 실제 하위 부로 행정적으로 이동하거나, 적법하게 매각 또는 해체','다른 2부로 자동 재배치'));
