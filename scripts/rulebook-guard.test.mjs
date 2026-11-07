@@ -143,6 +143,15 @@ test('development compensation reports distinguish actual obligations from proje
   docs=changed(file,text=>text.replace('실제 없는 재원·금액·비율을 만들어 표시하지 않는다','존재하지 않는 재원을 표시한다'));
   assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
 });
+test('future scouting demand stays evidence-based and withdrawn alerts stay excluded',()=>{
+  const file='docs/rulebook/80-EXPERIENCE.md';
+  let docs=changed(file,text=>text.replace('합리적으로 입증된 미래 수요도 고려할 수 있으나','현재 공백만 고려해야 하나'));
+  assert.match(check(docs),/BROKEN_PIN: UI-005/);
+  docs=changed(file,text=>text.replace('인위적인 수요를 만들지 않는다','인위적인 수요를 만든다'));
+  assert.match(check(docs),/BROKEN_PIN: UI-005/);
+  docs=changed(file,text=>text.replace('의 도입 결정은 철회되었다','를 강제로 제공한다'));
+  assert.match(check(docs),/BROKEN_PIN: UI-005/);
+});
 test('scrim recommendations and optional match detail retain authority and one result',()=>{
   let docs=changed('docs/rulebook/00-CORE.md',text=>text.replace('관리 구단의 감독이 이를 결정한다','직원이 자동 확정한다'));
   assert.match(check(docs),/BROKEN_PIN: CORE-010/);
