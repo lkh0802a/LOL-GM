@@ -6,16 +6,23 @@ export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const CHAPTERS = Object.freeze([
   ['docs/rulebook/00-CORE.md','CORE'],
   ['docs/rulebook/10-COMPETITIONS.md','COMP'],
+  ['docs/rulebook/15-NATIONAL-TEAMS.md','NAT'],
   ['docs/rulebook/20-CALENDAR.md','CAL'],
   ['docs/rulebook/30-TRANSFERS.md','TRANS'],
   ['docs/rulebook/40-PLAYERS.md','PLAYER'],
   ['docs/rulebook/50-MATCH.md','MATCH'],
   ['docs/rulebook/60-BUSINESS.md','BIZ'],
   ['docs/rulebook/70-GOVERNANCE.md','GOV'],
-  ['docs/rulebook/80-EXPERIENCE.md','UI'],
 ]);
+export const EXTERNAL_REQUIREMENTS = Object.freeze([
+  ['docs/interface-spec/USER_EXPERIENCE_REQUIREMENTS.md','UI'],
+]);
+
 export const DOCUMENTS = Object.freeze([
   ...CHAPTERS.map(([path])=>path),
+  ...EXTERNAL_REQUIREMENTS.map(([path])=>path),
+  'docs/rulebook/80-EXPERIENCE.md',
+  'docs/rulebook-audit/CANON_2026_11_08_ADDENDUM.md',
   'docs/rulebook/README.md',
   'docs/rulebook/CHANGELOG.md',
   'docs/AI_RULEBOOK_GUIDE.md',
@@ -126,7 +133,7 @@ export function validateRulebook(docs){
     if(typeof docs[file]!=='string'||!docs[file].trim())add('FILE_MISSING',file);
   }
   if(errors.length)return {errors,ruleCount:0,chapterCount:0};
-  for(const [file,prefix] of CHAPTERS){
+  for(const [file,prefix] of [...CHAPTERS,...EXTERNAL_REQUIREMENTS]){
     const content=docs[file];
     const matches=[...content.matchAll(/^### ([A-Z]+)-([0-9]{3}) · ([^\n]+)$/gm)];
     if(!matches.length)add('NO_RULES',file);
@@ -184,9 +191,88 @@ export function validateRulebook(docs){
     matrixStatusCounts.set(status,(matrixStatusCounts.get(status)||0)+1);
   }
   // Chapter headings are human-facing totals and must match the indexed rules.
-  for(const [,prefix] of CHAPTERS){
-    const m=matrix.match(new RegExp('^### '+prefix+' — (\\d+)개 조항$', 'm'));
-    const actual=[...ids.keys()].filter(id=>id.startsWith(prefix+'-')).length;
+  // The 2026-11-01 matrix is an immutable 113-item historical audit, not the
+  // final canon count after 2026-11-08 amendments.
+  for(const prefix of ['CORE','COMP','CAL','TRANS','PLAYER','MATCH','BIZ','GOV','UI']){
+    const m=matrix.match(new RegExp('^### '+prefix+' — (\\d+)개 조항
+    if(!m||Number(m[1])!==actual)add('MATRIX_CHAPTER_COUNT',prefix+' '+(m?.[1]??'missing')+' / '+actual);
+  }
+  const addendum=docs['docs/rulebook-audit/CANON_2026_11_08_ADDENDUM.md'];
+  const newRuleIds=new Set();
+  for(const line of addendum.split('\n')){
+    const m=line.match(/^\| ([A-Z]+-\d{3}) \|/);
+    if(!m)continue;
+    if(newRuleIds.has(m[1]))add('ADDENDUM_DUPLICATE',m[1]);
+    newRuleIds.add(m[1]);
+  }
+  for(const id of ids.keys())if(!matrixIds.has(id)&&!newRuleIds.has(id))add('SOURCE_AUDIT_MISSING',id);
+  for(const id of newRuleIds){
+    if(!ids.has(id))add('ADDENDUM_ORPHAN',id);
+    if(matrixIds.has(id))add('ADDENDUM_LEGACY_COLLISION',id);
+  }
+  if(matrixIds.size+newRuleIds.size!==ids.size)add('SOURCE_AUDIT_COUNT','legacy '+matrixIds.size+' + approved addendum '+newRuleIds.size+' / rules '+ids.size);
+  const summaries=[
+    ['관련 원문 부분대조','관련 원문 부분대조'],
+    ['세부 판정 대기','세부 판정 대기'],
+    ['후속 대체 확인·교정 필요','**후속 대체 확인·교정 필요**'],
+  ];
+  for(const [label,status] of summaries){
+    const line=matrix.split('\n').find(l=>l.startsWith('| '+label+' |'));
+    const declared=line?Number(line.split('|')[2].trim()):NaN;
+    if(!Number.isInteger(declared)||declared!==(matrixStatusCounts.get(status)||0)){
+      add('MATRIX_SUMMARY',label+' '+declared+' / '+(matrixStatusCounts.get(status)||0));
+    }
+  }
+  const depthLine=matrix.split('\n').find(l=>l.startsWith('| 직접 댓글 링크 포함 |'));
+  const declaredDirect=depthLine?Number(depthLine.split('|')[2].trim()):NaN;
+  if(declaredDirect!==matrixDirect)add('MATRIX_DEPTH_SUMMARY',declaredDirect+' / '+matrixDirect);
+
+  // Existing AGENTS.md intentionally links many legacy documents outside
+  // this limited rulebook fixture; only validate relative links authored here.
+  for(const file of [...CHAPTERS.map(([path])=>path),...EXTERNAL_REQUIREMENTS.map(([path])=>path),'docs/rulebook/80-EXPERIENCE.md','docs/rulebook/README.md','docs/rulebook/CHANGELOG.md','docs/AI_RULEBOOK_GUIDE.md']){
+    const content=docs[file];
+    for(const match of content.matchAll(/\[[^\]\n]+\]\(([^)\s]+)(?:\s+[^)]*)?\)/g)){
+      const target=match[1].split('#')[0];
+      if(!target||/^(?:https?:\/\/|mailto:)/i.test(target))continue;
+      if(target.startsWith('/')||target.startsWith('..'+posix.sep+'..'+posix.sep)){
+        // One parent level (e.g. ../AI_RULEBOOK_GUIDE.md) is legitimate;
+        // the normalized destination must remain in the repository.
+      }
+      const joined=posix.normalize(posix.join(posix.dirname(file),target));
+      if(joined==='..'||joined.startsWith('../')||joined.startsWith('/'))add('LINK_ESCAPE',file+' -> '+target);
+      else if(!(joined in docs))add('BROKEN_LOCAL_LINK',file+' -> '+joined);
+    }
+  }
+
+  // Provenance depth is reported as a metric, not a proxy for approval validity:
+  // issue-level citations can still be valid but require more precise adjudication.
+  const sourceDepth = {
+    directCommentLinked: [...ids.values()].filter(({body}) => /issues\/\d+#issuecomment-\d+/.test(body)).length,
+    issueOnlyOrOther: [...ids.values()].filter(({body}) => !/issues\/\d+#issuecomment-\d+/.test(body)).length,
+  };
+  const agent=docs['AGENTS.md'];
+  for(const required of ['## 규정집 필수 참조','docs/rulebook/README.md','docs/AI_RULEBOOK_GUIDE.md','npm run check:rulebook']){
+    if(!agent.includes(required))add('CODEX_ENTRY',required);
+  }
+  if(!docs['docs/AI_RULEBOOK_GUIDE.md'].includes('비규범'))add('GUIDE_SCOPE','AI guide must not define new policy');
+  // Version is a living publication marker, not a hard-coded initial release.
+  const version=docs['docs/rulebook/README.md'].match(/\*\*규정집 발행본:\*\*\s*(v\d+\.\d+\.\d+)/)?.[1];
+  if(!version)add('VERSION','rulebook README lacks a semantic publication version');
+  else if(!docs['docs/rulebook/CHANGELOG.md'].includes(' '+version))add('CHANGELOG','no entry for the current rulebook version '+version);
+  return {errors,ruleCount:ids.size,worldRuleCount:ids.size-[...ids.keys()].filter(id=>id.startsWith('UI-')).length,chapterCount:CHAPTERS.length,sourceDepth};
+}
+
+if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
+  const result=validateRulebook(readDocuments());
+  if(result.errors.length){
+    for(const error of result.errors)console.error('rulebook: '+error);
+    process.exitCode=1;
+  }else{
+    console.log('rulebook: PASS '+result.worldRuleCount+' world-canon clauses / '+result.ruleCount+' total approved rule and UI requirement IDs across '+result.chapterCount+' world chapters; '+result.sourceDepth.directCommentLinked+' direct-comment-linked; '+result.sourceDepth.issueOnlyOrOther+' issue-level/other-linked. IDs, links, Codex entrypoint and policy pins verified (DOCUMENT CHECK ONLY; SOURCE LINKS DO NOT VERIFY APPROVAL)');
+  }
+}
+, 'm'));
+    const actual=[...matrixIds].filter(id=>id.startsWith(prefix+'-')).length;
     if(!m||Number(m[1])!==actual)add('MATRIX_CHAPTER_COUNT',prefix+' '+(m?.[1]??'missing')+' / '+actual);
   }
   for(const id of ids.keys())if(!matrixIds.has(id))add('MATRIX_MISSING',id);
