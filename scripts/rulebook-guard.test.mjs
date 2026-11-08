@@ -40,7 +40,7 @@ test('rulebook links to nonexistent files cannot silently pass',()=>{
   assert.match(check(docs),/BROKEN_LOCAL_LINK/);
 });
 test('Codex startup cannot silently drop the rulebook lookup',()=>{
-  const docs=changed('AGENTS.md',text=>text.replace('## 규정집 필수 참조','## optional old note'));
+  const docs=changed('AGENTS.md',text=>text.replace('## 게임 제작 단일 진입점','## optional old note'));
   assert.match(check(docs),/CODEX_ENTRY/);
 });
 test('immutable First Selection and draft policies cannot silently disappear',()=>{
@@ -73,7 +73,7 @@ test('shared facilities cannot erase first-team priority on a real clash',()=>{
   assert.match(check(docs),/BROKEN_PIN: PLAYER-007/);
 });
 test('publication version and changelog cannot silently diverge',()=>{
-  const docs=changed('docs/rulebook/README.md',text=>text.replace('v0.11.0','v9.9.9'));
+  const docs=changed('docs/rulebook/README.md',text=>text.replace('v0.12.0','v9.9.9'));
   assert.match(check(docs),/CHANGELOG: no entry/);
 });
 test('approved youth compensation and club taxonomy cannot silently regress',()=>{
