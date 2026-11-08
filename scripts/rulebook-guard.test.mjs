@@ -6,7 +6,7 @@ const original=readDocuments();
 const check=docs=>validateRulebook(docs).errors.join('\n');
 const changed=(file,fn)=>({...original,[file]:fn(original[file])});
 
-test('published rulebook has unique, sourced rules and working local links',()=>{
+test('standalone world rulebook has unique rule identifiers and working local links',()=>{
   const result=validateRulebook(original);
   assert.deepEqual(result.errors,[]);
   assert.equal(result.chapterCount,9);
@@ -17,10 +17,10 @@ test('duplicate ID cannot pass as a new approved clause',()=>{
   const docs=changed(file,text=>text+'\n### CAL-001 · duplicate\ntext [근거](https://github.com/lkh0802a/LOL-GM/issues/234)\n');
   assert.match(check(docs),/DUPLICATE_ID: CAL-001/);
 });
-test('missing approval evidence is rejected',()=>{
-  const file='docs/rulebook/50-MATCH.md';
-  const docs=changed(file,text=>text.replace(/(### MATCH-003[\s\S]*?)(?=### MATCH-004)/,segment=>segment.replaceAll(/https:\/\/github\.com\/lkh0802a\/LOL-GM\/issues\/[0-9]+/g,'no-source')));
-  assert.match(check(docs),/NO_SOURCE: MATCH-003/);
+test('missing external audit evidence is rejected without citing approvals inside the law',()=>{
+  const file='docs/rulebook-audit/CLAUSE_DECISION_MATRIX_2026_11_01.md';
+  const docs=changed(file,text=>text.replace(/(\| MATCH-003 \|[^\n]*?\| )#[0-9]+/,'$1evidence-missing'));
+  assert.match(check(docs),/MATRIX_EVIDENCE_MISSING: MATCH-003/);
 });
 test('an obsolete global FA date cannot silently replace the approved date',()=>{
   const file='docs/rulebook/20-CALENDAR.md';
@@ -90,7 +90,7 @@ test('development records do not create or erase acquired claims automatically',
   docs=changed(file,text=>text.replace('모든 권리의 자동 소멸이나 이전·새 구단에 대한 자동 승계를 가정하지 않는다','매각하면 모든 권리가 자동 소멸한다'));
   assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
 });
-test('source-depth coverage is inspectable and not mislabeled as approval verification',()=>{
+test('historical evidence depth is tracked only in external audit metadata',()=>{
   const result=validateRulebook(original);
   assert.equal(result.sourceDepth.directCommentLinked+result.sourceDepth.issueOnlyOrOther,result.ruleCount);
   assert(result.sourceDepth.directCommentLinked>0);
