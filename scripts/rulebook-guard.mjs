@@ -22,6 +22,7 @@ export const DOCUMENTS = Object.freeze([
   ...CHAPTERS.map(([path])=>path),
   ...EXTERNAL_REQUIREMENTS.map(([path])=>path),
   'docs/rulebook/80-EXPERIENCE.md',
+  'docs/GAME_IMPLEMENTATION_ENTRYPOINT.md',
   'docs/rulebook-audit/CANON_2026_11_08_ADDENDUM.md',
   'docs/implementation-spec/WORLD_ENGINE_AND_PRODUCT_ACCEPTANCE.md',
   'docs/rulebook/README.md',
@@ -231,7 +232,7 @@ export function validateRulebook(docs){
 
   // Existing AGENTS.md intentionally links many legacy documents outside
   // this limited rulebook fixture; only validate relative links authored here.
-  for(const file of [...CHAPTERS.map(([path])=>path),...EXTERNAL_REQUIREMENTS.map(([path])=>path),'docs/rulebook/80-EXPERIENCE.md','docs/rulebook/README.md','docs/rulebook/CHANGELOG.md','docs/AI_RULEBOOK_GUIDE.md']){
+  for(const file of [...CHAPTERS.map(([path])=>path),...EXTERNAL_REQUIREMENTS.map(([path])=>path),'docs/rulebook/80-EXPERIENCE.md','docs/rulebook/README.md','docs/rulebook/CHANGELOG.md','docs/AI_RULEBOOK_GUIDE.md','docs/GAME_IMPLEMENTATION_ENTRYPOINT.md']){
     const content=docs[file];
     for(const match of content.matchAll(/\[[^\]\n]+\]\(([^)\s]+)(?:\s+[^)]*)?\)/g)){
       const target=match[1].split('#')[0];
@@ -257,7 +258,7 @@ export function validateRulebook(docs){
     issueOnlyOrOther: ids.size-matrixDirect,
   };
   const agent=docs['AGENTS.md'];
-  for(const required of ['## 규정집 필수 참조','docs/rulebook/README.md','docs/AI_RULEBOOK_GUIDE.md','npm run check:rulebook']){
+  for(const required of ['## 게임 제작 단일 진입점','docs/GAME_IMPLEMENTATION_ENTRYPOINT.md','docs/rulebook/README.md','docs/AI_RULEBOOK_GUIDE.md','npm run check:rulebook']){
     if(!agent.includes(required))add('CODEX_ENTRY',required);
   }
   if(!docs['docs/AI_RULEBOOK_GUIDE.md'].includes('비규범'))add('GUIDE_SCOPE','AI guide must not define new policy');
