@@ -12,7 +12,7 @@
 | 4. 승인된 세부 누락 편입 | 과거 선택 중 살아 있는 실제 권리·등록·돈·시간·경기 판정 누락 확인 | **주요 누락 편찬 / 계속 점검** | [작은 규정 감사](SMALL_RULE_GAP_SWEEP_2026_11_08.md)와 [추가 경계 감사](INITIAL_WORLD_BASELINE_AND_REMAINING_REVIEW_2026_11_08.md)의 범위는 현재 확인한 근거의 교차 대조임. 새 수치·권한·임의 정책으로 공백을 채우지 않음 |
 | 5. 구형 명세·열린 PR 정합화 인계 | 구형 '확정' 문서와 코드 PR이 현행 정본을 거꾸로 덮지 않는지 추적 | **구체 인계 완료 / 각 PR 교정·검증 대기** | 현재 PR 브랜치 내용을 재조회해 [#313 교정 인계](https://github.com/lkh0802a/LOL-GM/pull/313#issuecomment-6719813020), [#320 정본 경기금지 충돌 인계](https://github.com/lkh0802a/LOL-GM/pull/320#issuecomment-6719813402), [#327 최신 효력 인계](https://github.com/lkh0802a/LOL-GM/pull/327#issuecomment-6719813708)를 남김. 이 PR들은 아직 Draft·미병합이며 실제 소유 작성자의 정정·리베이스·정확 HEAD 검증이 남았음 |
 | 6. 규범 문체·중복·UI 분리 최종 정리 | 세계 헌장에 사용자 승인/개발 메타/구형 UI 규범 혼입이 없고 같은 효과가 무단 중복되지 않음 | **주요 분리 완료 / 최종 문장 감사 필요** | 실제 9개 세계 장과 별도 UI/구현 수용 문서 분리, 중복 키 검사 수행. 문장별 100% 최종 규범 감사와 최신 변경 후 교차참조 검수는 별도 |
-| 7. 정확 HEAD 검사·리뷰·병합 | 정확한 PR HEAD의 필수 CI 통과, 리뷰·승인·단일 정본 main 병합 및 최종 SHA | **PENDING** | v0.17.1 문서·검증 보강을 PR #328에 커밋했으나, 이 대장 작성 시점 정확 HEAD CI 최종 결과·리뷰/병합 확인 전. Draft/미병합 상태를 완료로 표시하지 않음 |
+| 7. 정확 HEAD 검사·리뷰·병합 | 정확한 PR HEAD의 필수 CI 통과, 리뷰·승인·단일 정본 main 병합 및 최종 SHA | **PENDING** | v0.17.2 문서·검증 보강을 PR #328에 커밋했으나, 이 대장 작성 시점 정확 HEAD CI 최종 결과·리뷰/병합 확인 전. Draft/미병합 상태를 완료로 표시하지 않음 |
 
 ## 이번 실질 검토에서 해소한 오해
 
@@ -37,4 +37,4 @@
 - **실제 엔진 기능**은 정본과 별도. Rust 세계·경기 엔진/TypeScript UI 전환, 초기 세계별 시행 규정·첫 시즌 프리셋, 구형 저장 마이그레이션, 장기 시즌/재정·경기력 검증은 실기능 수용 검증 후 완료로 표기한다.
 - **종료 선언 금지:** 1~7의 필수 근거·리뷰·정확 SHA·main 병합이 확인되기 전에는 “정본화 완료”, “전체 승인 100% 대조”, “전 엔진 규정 준수”로 기록하지 않는다.
 
-관련 원본: [정본 작업 이슈 #331](https://github.com/lkh0802a/LOL-GM/issues/331), [단일 정본 PR #328](https://github.com/lkh0802a/LOL-GM/pull/328), [401 선택 색인·전수 인증 경계](STEP1_SOURCE_COMPLETENESS_AND_DECISION_GATE_2026_11_01.md), [정본 v0.17.1](../rulebook/README.md), [검증 진입 계약](../GAME_IMPLEMENTATION_ENTRYPOINT.md).
+관련 원본: [정본 작업 이슈 #331](https://github.com/lkh0802a/LOL-GM/issues/331), [단일 정본 PR #328](https://github.com/lkh0802a/LOL-GM/pull/328), [401 선택 색인·전수 인증 경계](STEP1_SOURCE_COMPLETENESS_AND_DECISION_GATE_2026_11_01.md), [정본 v0.17.2](../rulebook/README.md), [검증 진입 계약](../GAME_IMPLEMENTATION_ENTRYPOINT.md).
