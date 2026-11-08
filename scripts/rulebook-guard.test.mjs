@@ -597,3 +597,10 @@ test('UI requirements are separately preserved outside the world rule chapters',
   assert.match(original['docs/rulebook/80-EXPERIENCE.md'],/세계관 정본 제외/);
   assert.match(original['docs/interface-spec/USER_EXPERIENCE_REQUIREMENTS.md'],/### UI-001/);
 });
+
+test('nation-team statutes cannot contain duplicate or out-of-order numbered paragraphs',()=>{
+  const file='docs/rulebook/15-NATIONAL-TEAMS.md';
+  const docs=changed(file,text=>text.replace('③ 선수의 국가대표 자격은','② 선수의 국가대표 자격은'));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/ARTICLE_PARAGRAPH_ORDER: NAT-004/);
+});
