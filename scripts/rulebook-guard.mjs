@@ -57,6 +57,7 @@ export const DOCUMENTS = Object.freeze([
 // These are regression sentinels for the APPROVED DOCUMENTED policy, not a
 // substitute for running the game's contract/calendar/match/finance tests.
 export const POLICY_PINS = Object.freeze({
+  'TRANS-001':[/세계 공통 거래 창/,/12월 첫째 화요일 개장·28일/,/TRANS-004·005/,/시즌 중 지역별 이적창/,/TRANS-011/,/원소속 계약·국제대회 등록 잠금/,/CAL-003/],
   'TRANS-002':[/약정 유효기간은 최대 3년/,/1~3년의 유효 기간/,/기존 계약의 실제 만료 시각이나 보장급여/],
   'TRANS-007':[/구단 거부 불가형\*\*은 명시된 금액/,/원소속 구단의 별도 이전 수락 없이 효력/,/협상 개시권형/,/구단 간 최종 합의/],
   'TRANS-012':[/최초 세계 시즌에 적용되는/,/최대 2회/,/그 절차로 변경되지 않은 시즌에는 2회 상한을 그대로 적용한다/,/반 시즌 또는 한 시즌/,/0~100% 분담/,/추가 이적 1회를 만들지 아니한다/],
