@@ -50,6 +50,8 @@ export const DOCUMENTS = Object.freeze([
   'docs/rulebook-audit/STEP1_DIRECT_ISSUE_SOURCE_16_CLAUSES_2026_11_01.md',
   'docs/rulebook-audit/STEP1_PR_BODY_POLICY_SCREEN_2026_11_01.md',
   'docs/rulebook-audit/CROSS_DOCUMENT_CONFLICT_AUDIT_2026_11_01.md',
+  'docs/rulebook-audit/STEP1_I02_OWNERSHIP_PENDING_2026_11_01.md',
+  'docs/rulebook-audit/RULEBOOK_FINALIZATION_GATE_2026_11_08.md',
   'docs/RULEBOOK_SEMANTIC_AUDIT_2026_11_01.md',
   'AGENTS.md',
 ]);
