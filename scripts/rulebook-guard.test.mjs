@@ -743,6 +743,13 @@ test('partial-season tenure cannot be credited multiple times in one season',()=
   assert.match(check(docs),/DEPTH_TENURE_SCHEDULE_ACCEPTANCE/);
 });
 
+test('cross-chapter reference to a nonexistent article is rejected',()=>{
+  const file='docs/rulebook/30-TRANSFERS.md';
+  const docs=changed(file,text=>text.replace('CORE-002·GOV-008','CORE-999·GOV-008'));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/UNKNOWN_CLAUSE_REFERENCE: .*CORE-999/);
+});
+
 test('the policy-pin source cannot shadow a clause with duplicate JS object keys',()=>{
   const script=readFileSync(new URL('./rulebook-guard.mjs',import.meta.url),'utf8');
   const ids=[...script.matchAll(/^  '([A-Z]+-\d{3})':\[/gm)].map(x=>x[1]);
