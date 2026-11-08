@@ -219,6 +219,17 @@ test('international travel costs preserve real movement and contracted support',
   docs=changed(file,text=>text.replace('승인되지 않은 거리 요금·지원 비율을 만들지 않는다','임의 요금을 확정한다'));
   assert.match(check(docs),/BROKEN_PIN: BIZ-004/);
 });
+test('development support and sell-on rights require real evidence and valid terms',()=>{
+  const file='docs/rulebook/60-BUSINESS.md';
+  let docs=changed(file,text=>text.replace('무상 이적이나 첫 프로 계약에 존재하지 않는 이적료를 만들지 않으며','첫 프로 계약에 임의 이적료를 부과하며'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
+  docs=changed(file,text=>text.replace('재이적 셀온은 실제 유효 계약의 기간·권리 범위·발효 및 종료 조건을 따르며 계약 없는 영구권을 만들지 않는다','모든 구단에 계약 없는 영구권을 준다'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
+  docs=changed(file,text=>text.replace('검증 가능한 기여에 근거한 공개된 합법 규정으로 평가한다','임의의 비공개 기준으로 평가한다'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
+  docs=changed(file,text=>text.replace('미승인 금액·자격이나 배분식을 임의로 확정하지 않는다','임의의 지원 비율을 확정한다'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
+});
 test('future scouting demand stays evidence-based and withdrawn alerts stay excluded',()=>{
   const file='docs/rulebook/80-EXPERIENCE.md';
   let docs=changed(file,text=>text.replace('합리적으로 입증된 미래 수요도 고려할 수 있으나','현재 공백만 고려해야 하나'));
