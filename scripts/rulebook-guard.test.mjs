@@ -824,6 +824,25 @@ test('source addendum must match current article counts and superseding limits',
 });
 
 
+
+test('global trading market does not erase valid seasonal regional windows',()=>{
+  const file='docs/rulebook/30-TRANSFERS.md';
+  let docs=changed(file,text=>text.replace(
+    '별도로 적법하게 개장한 시즌 중 지역별 이적창',
+    '시즌 중에는 전 세계 계약 선수 이적이 언제나 금지'
+  ));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/BROKEN_PIN: TRANS-001/);
+
+  docs=changed(file,text=>text.replace(
+    '원소속 계약·국제대회 등록 잠금·CAL-003',
+    '영입 지역 창 개장만으로 원소속 계약을 무효화하여 CAL-003'
+  ));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/BROKEN_PIN: TRANS-001/);
+});
+
+test('the policy-pin source cannot shadow a clause with duplicate JS object keys',()=>{
   const script=readFileSync(new URL('./rulebook-guard.mjs',import.meta.url),'utf8');
   const ids=[...script.matchAll(/^  '([A-Z]+-\d{3})':\[/gm)].map(x=>x[1]);
   const dupe=ids.filter((id,index)=>ids.indexOf(id)!==index);
