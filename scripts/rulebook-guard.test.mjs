@@ -842,6 +842,31 @@ test('global trading market does not erase valid seasonal regional windows',()=>
   assert.match(check(docs),/BROKEN_PIN: TRANS-001/);
 });
 
+test('canonical world law cannot be reduced to UI display text or internal IDs',()=>{
+  const file='docs/rulebook/10-COMPETITIONS.md';
+  let docs=changed(file,text=>text.replace(
+    '과거 회차의 당시 명칭과 대회 정체성·역사는 보존',
+    '과거 대회의 이름과 정체성은 소급 삭제'
+  ));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/BROKEN_PIN: COMP-015/);
+
+  docs=changed(file,text=>text.replace(
+    '현재 유효하지 않은 과거 지역 구분',
+    '구형 내부 ID'
+  ));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/CANON_TECHNICAL_LEAK/);
+
+  const guide='docs/GAME_IMPLEMENTATION_ENTRYPOINT.md';
+  docs=changed(guide,text=>text.replace(
+    '구형 표시명을 현재 공표문·일정·뉴스 제목에 혼입하지 않는다',
+    '구형 표시명도 최신 대회명과 동등하게 혼용한다'
+  ));
+  assert.notEqual(docs[guide],original[guide]);
+  assert.match(check(docs),/TOURNAMENT_ID_PRESENTATION_ACCEPTANCE/);
+});
+
 test('the policy-pin source cannot shadow a clause with duplicate JS object keys',()=>{
   const script=readFileSync(new URL('./rulebook-guard.mjs',import.meta.url),'utf8');
   const ids=[...script.matchAll(/^  '([A-Z]+-\d{3})':\[/gm)].map(x=>x[1]);
