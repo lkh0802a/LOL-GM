@@ -13,6 +13,8 @@ const mapText = read('LEGACY_MAP.md');
 const tech = readFileSync(path.resolve(root, '..', 'interface-spec', 'USER_EXPERIENCE_REQUIREMENTS.md'), 'utf8');
 const hierarchy = read('RULE_LEVELS.md');
 const delegationAudit = read('DELEGATION_AUDIT.md');
+const lifecycle = read('IN_WORLD_RULES_LIFECYCLE.md');
+const cases = read('NORMATIVE_CASES.md');
 const originalNames = ['00-CORE','10-COMPETITIONS','20-CALENDAR','30-TRANSFERS','40-PLAYERS','50-MATCH','60-BUSINESS','70-GOVERNANCE','80-EXPERIENCE'];
 const old = originalNames.flatMap(x => [...readFileSync(path.join(source, x + '.md'),'utf8')
   .matchAll(/^###\s+([A-Z]+-\d{3})\s+·/gm)].map(m => m[1]));
@@ -46,4 +48,9 @@ const delegated = [...delegationAudit.matchAll(/^\| 제(\d+)조 \|/gm)].map(m =>
 fail('108 world-layer classifications',delegated.length===108 && delegated.every((n,i)=>n===i+1));
 fail('external vs internal authority',hierarchy.includes('세계 외부 규칙') && hierarchy.includes('세계 내부 규칙') && text.includes('## 규범의 두 층위'));
 fail('UI outside both world rule levels',hierarchy.includes('UI') && hierarchy.includes('세계 내부 규칙'));
-console.log(JSON.stringify({status:'STRUCTURAL_PASS',chapters:7,legacy:old.length,statutory:articles.length,technical:techIds.length,national:national.length,notes:'This does not certify user approval finality, semantics, npm check, game tests, CI or merge.'},null,2));
+fail('constitution is externally enacted',text.startsWith('# LOL-GM 세계 외부 헌장') && text.includes('내부 기관의 개별 행정처분'));
+fail('in-world enactment lifecycle',lifecycle.includes('제정권') && lifecycle.includes('사전 공표') && lifecycle.includes('APPROVED_NOT_EFFECTIVE') && lifecycle.includes('SUPERSEDED') && lifecycle.includes('세계 내부'));
+const hierarchyCases=[...cases.matchAll(/^\| (H-\d{2}) \|/gm)].map(m=>m[1]);
+fail('18 acceptance cases indexed',hierarchyCases.length===18 && hierarchyCases.every((id,i)=>id==='H-'+String(i+1).padStart(2,'0')));
+fail('protected boundary cases',cases.includes('H-02') && cases.includes('H-03') && cases.includes('H-04') && cases.includes('H-05') && cases.includes('H-13') && cases.includes('H-16'));
+console.log(JSON.stringify({status:'STRUCTURAL_PASS',chapters:7,legacy:old.length,statutory:articles.length,technical:techIds.length,national:national.length,hierarchyScenarios:hierarchyCases.length,notes:'Structural check only: does not certify final approval effect, gameplay behavior, CI or merge.'},null,2));
