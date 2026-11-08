@@ -64,6 +64,6 @@ fail('UI outside both world rule levels',hierarchy.includes('UI') && hierarchy.i
 fail('constitution is externally enacted',text.startsWith('# LOL-GM 세계 외부 헌장') && text.includes('내부 기관의 개별 행정처분'));
 fail('in-world enactment lifecycle',lifecycle.includes('제정권') && lifecycle.includes('사전 공표') && lifecycle.includes('APPROVED_NOT_EFFECTIVE') && lifecycle.includes('SUPERSEDED') && lifecycle.includes('세계 내부'));
 const hierarchyCases=[...cases.matchAll(/^\| (H-\d{2}) \|/gm)].map(m=>m[1]);
-fail('18 acceptance cases indexed',hierarchyCases.length===18 && hierarchyCases.every((id,i)=>id==='H-'+String(i+1).padStart(2,'0')));
-fail('protected boundary cases',cases.includes('H-02') && cases.includes('H-03') && cases.includes('H-04') && cases.includes('H-05') && cases.includes('H-13') && cases.includes('H-16'));
+fail('22 acceptance cases indexed',hierarchyCases.length===22 && hierarchyCases.every((id,i)=>id==='H-'+String(i+1).padStart(2,'0')));
+fail('protected boundary cases',cases.includes('H-02') && cases.includes('H-03') && cases.includes('H-04') && cases.includes('H-05') && cases.includes('H-13') && cases.includes('H-16') && cases.includes('H-19') && cases.includes('H-20') && cases.includes('H-21') && cases.includes('H-22'));
 console.log(JSON.stringify({status:'STRUCTURAL_PASS',chapters:7,legacy:old.length,statutory:articles.length,legacyUI:legacyTechIds.length,migratedUI:migratedTechIds.length,developmentQA:acceptanceIds.length,national:national.length,hierarchyScenarios:hierarchyCases.length,notes:'Structural check only: does not certify final approval effect, gameplay behavior, CI or merge.'},null,2));
