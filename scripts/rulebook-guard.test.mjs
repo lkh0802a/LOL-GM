@@ -101,14 +101,14 @@ test('a tournament-wide two-loss cap cannot replace per-bracket elimination poli
   assert.match(check(docs),/BROKEN_PIN: COMP-006/);
 });
 test('empty-roster help and important alerts preserve manager choice',()=>{
-  const file='docs/rulebook/80-EXPERIENCE.md';
+  const file='docs/interface-spec/USER_EXPERIENCE_REQUIREMENTS.md';
   let docs=changed(file,text=>text.replace('안내 이행이나 영입을 강제하지 않고','안내 이행과 영입을 강제하고'));
   assert.match(check(docs),/BROKEN_PIN: UI-001/);
   docs=changed(file,text=>text.replace('모든 미세 이벤트의 알림을 강제하지 않는다','모든 미세 이벤트를 강제로 알린다'));
   assert.match(check(docs),/BROKEN_PIN: UI-001/);
 });
 test('automatic advance and inbox preserve required decisions and deadlines',()=>{
-  const file='docs/rulebook/80-EXPERIENCE.md';
+  const file='docs/interface-spec/USER_EXPERIENCE_REQUIREMENTS.md';
   let docs=changed(file,text=>text.replace('실제 권한 담당자의 필수 결정을 건너뛰는 권한을 부여하지 않는다','필수 결정을 자동으로 건너뛴다'));
   assert.match(check(docs),/BROKEN_PIN: UI-008/);
   docs=changed(file,text=>text.replace('중요한 의무를 분류 과정에서 누락하지 않고','중요한 의무를 분류 과정에서 숨기고'));
@@ -231,7 +231,7 @@ test('development support and sell-on rights require real evidence and valid ter
   assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
 });
 test('future scouting demand stays evidence-based and withdrawn alerts stay excluded',()=>{
-  const file='docs/rulebook/80-EXPERIENCE.md';
+  const file='docs/interface-spec/USER_EXPERIENCE_REQUIREMENTS.md';
   let docs=changed(file,text=>text.replace('합리적으로 입증된 미래 수요도 고려할 수 있으나','현재 공백만 고려해야 하나'));
   assert.match(check(docs),/BROKEN_PIN: UI-005/);
   docs=changed(file,text=>text.replace('인위적인 수요를 만들지 않는다','인위적인 수요를 만든다'));
@@ -244,7 +244,7 @@ test('scrim recommendations and optional match detail retain authority and one r
   assert.match(check(docs),/BROKEN_PIN: CORE-010/);
   docs=changed('docs/rulebook/00-CORE.md',text=>text.replace('매 경기 또는 매일 회의를 강제하지 않는다','매일 회의를 강제한다'));
   assert.match(check(docs),/BROKEN_PIN: CORE-010/);
-  docs=changed('docs/rulebook/80-EXPERIENCE.md',text=>text.replace('두 번째 경기를 생성하지 않는다','두 번째 경기를 생성한다'));
+  docs=changed('docs/interface-spec/USER_EXPERIENCE_REQUIREMENTS.md',text=>text.replace('두 번째 경기를 생성하지 않는다','두 번째 경기를 생성한다'));
   assert.match(check(docs),/BROKEN_PIN: UI-007/);
 });
 test('leadership changes and counterfactual analysis preserve records and authority',()=>{
@@ -252,7 +252,7 @@ test('leadership changes and counterfactual analysis preserve records and author
   assert.match(check(docs),/BROKEN_PIN: CORE-010/);
   docs=changed('docs/rulebook/00-CORE.md',text=>text.replace('현 감독의 기존 수동 권한을 무단으로 무력화하지 않는다','현 감독의 수동 권한을 자동으로 제거한다'));
   assert.match(check(docs),/BROKEN_PIN: CORE-010/);
-  docs=changed('docs/rulebook/80-EXPERIENCE.md',text=>text.replace('가상의 대안에 대한 승패를 이미 확정된 공식 결과나 역사에 혼입하지 않는다','가상 승패를 공식 역사에 반영한다'));
+  docs=changed('docs/interface-spec/USER_EXPERIENCE_REQUIREMENTS.md',text=>text.replace('가상의 대안에 대한 승패를 이미 확정된 공식 결과나 역사에 혼입하지 않는다','가상 승패를 공식 역사에 반영한다'));
   assert.match(check(docs),/BROKEN_PIN: UI-007/);
   docs=changed('docs/rulebook/00-CORE.md',text=>text.replace('별도 직원·감독 인수인계 기능이나 화면, 강제 회의 및 자동 계약을 만들지 않는다','선택형 인수인계 기능을 새로 만든다'));
   assert.match(check(docs),/BROKEN_PIN: CORE-010/);
@@ -311,12 +311,12 @@ test('colloquial vocabulary is rejected in normative chapter prose',()=>{
 });
 
 test('in-game copy cannot be replaced by development-meta text',()=>{
-  const file='docs/rulebook/80-EXPERIENCE.md';
+  const file='docs/interface-spec/USER_EXPERIENCE_REQUIREMENTS.md';
   const docs=changed(file,text=>text.replace('게임 세계 밖의 개발·설계 메타 설명','게임 안에 개발·설계 메타 설명'));
   assert.match(check(docs),/BROKEN_PIN: UI-009/);
 });
 test('reopening an unsent draft cannot revoke signed contracts or committed payments',()=>{
-  const file='docs/rulebook/80-EXPERIENCE.md';
+  const file='docs/interface-spec/USER_EXPERIENCE_REQUIREMENTS.md';
   const docs=changed(file,text=>text.replace('이미 제출된 유효 제안, 실제 당사자 합의, 최종 서명, 확정된 지급 및 경과한 세계 시간','미제출 협상 내용'));
   assert.match(check(docs),/BROKEN_PIN: UI-010/);
 });
@@ -379,7 +379,7 @@ test('balance hotfix cannot take effect before every worldwide official series e
   assert.match(check(docs),/BROKEN_PIN: MATCH-008/);
 });
 test('unverifiable historical replay cannot be advertised as a perfect reproduction',()=>{
-  const file='docs/rulebook/80-EXPERIENCE.md';
+  const file='docs/interface-spec/USER_EXPERIENCE_REQUIREMENTS.md';
   const docs=changed(file,text=>text.replace('완전한 재현에 필요한 근거가 부족한 경우에는 재현의 한계를 명시','근거가 부족해도 전체 사건을 완벽하게 재현했다고 표시'));
   assert.match(check(docs),/BROKEN_PIN: UI-007/);
 });
@@ -568,4 +568,32 @@ test('Worlds final disqualification cannot invent a match, winner, or time',()=>
     assert.notEqual(docs[file],original[file]);
     assert.match(check(docs),/BROKEN_PIN: CAL-004/);
   }
+});
+
+
+test('world canon separates national-team competitions from the four club competitions',()=>{
+  const result=validateRulebook(original);
+  assert.deepEqual(result.errors,[]);
+  assert.equal(result.chapterCount,9);
+  assert(result.worldRuleCount>=116);
+  const club='docs/rulebook/10-COMPETITIONS.md';
+  const nation='docs/rulebook/15-NATIONAL-TEAMS.md';
+  let docs=changed(nation,text=>text.replace('### NAT-002 ·','### NAT-001 ·'));
+  assert.match(check(docs),/DUPLICATE_ID/);
+  docs=changed(club,text=>text.replace('**구단 대회**는','**모든 세계 대회**는'));
+  assert.notEqual(docs[club],original[club]);
+});
+
+test('world-layer addendum is required for every new canonical clause',()=>{
+  const audit='docs/rulebook-audit/CANON_2026_11_08_ADDENDUM.md';
+  const docs=changed(audit,text=>text.replace(/^\| NAT-010 \|.*\n/m,''));
+  assert.match(check(docs),/SOURCE_AUDIT_MISSING|SOURCE_AUDIT_COUNT/);
+});
+
+test('UI requirements are separately preserved outside the world rule chapters',()=>{
+  const result=validateRulebook(original);
+  assert.equal(result.chapterCount,9);
+  assert(result.ruleCount>result.worldRuleCount);
+  assert.match(original['docs/rulebook/80-EXPERIENCE.md'],/세계관 정본 제외/);
+  assert.match(original['docs/interface-spec/USER_EXPERIENCE_REQUIREMENTS.md'],/### UI-001/);
 });
