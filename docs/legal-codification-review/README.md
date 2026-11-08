@@ -10,7 +10,7 @@
 - [RULE_LEVELS.md](RULE_LEVELS.md) — **세계 외부 상위 규칙 vs 세계 내부에서 적법하게 제정된 실제 규칙**의 제정권·효력·상충 기준
 - [DELEGATION_AUDIT.md](DELEGATION_AUDIT.md) — 108조 전수 **외부 보호/위임·초기 설정·개별 처분/계약·미정** 분류
 - [IN_WORLD_RULES_LIFECYCLE.md](IN_WORLD_RULES_LIFECYCLE.md) — 세계 내부에서 실제 규정이 성립·발효·개정·실효하는 절차, 개별 행정처분 및 계약과 구별
-- [NORMATIVE_CASES.md](NORMATIVE_CASES.md) — 세계 외부와 내부의 충돌·권한·시행 전후·국가대표 관련 **18개 수용 반례** (실제 코드 테스트 아님)
+- [NORMATIVE_CASES.md](NORMATIVE_CASES.md) — 세계 외부와 내부의 충돌·권한·시행 전후·국가대표 관련 **22개 수용 반례** (실제 코드 테스트 아님)
 - [LEGACY_MAP.md](LEGACY_MAP.md) — 기존 조항 ID **113/113 전수 대응**, 기존 원문과 승인 근거 포인터; 신규 `NAT-001~005` 별도 기록
 - [UI·UX 구현 요구사항](../interface-spec/USER_EXPERIENCE_REQUIREMENTS.md) — 세계관 정본 바깥의 별도 제품·인터페이스 명세 (옛 UI 10개 + 이관된 수동 밴픽 조작)
 - [개발·검증 수용 조건](../implementation-spec/NON_NORMATIVE_ACCEPTANCE.md) — 세계 규정이 아닌 장기 검증·보고서·구버전 저장 지원 요구사항 보존
