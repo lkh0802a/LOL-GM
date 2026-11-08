@@ -1,3 +1,56 @@
+## 2026-10-28 최종 하부 피라미드 구현 기준 추가 — 항목 16~22 / 구조 충돌 해결
+
+**사용자 확정 “추가해”**: 아래는 단순 아이디어가 아니라 정식 1~N부 운영을 위해 구현·통합 검증해야 할 필수 계약이다. 기존 2부 권고/정식 3부 이상 자율 확장(상세 아래 절)과 병합 적용한다. 새 대회/팀 승패나 경제 효과를 실제 계산한 것처럼 간주하거나, 코드 수정 없이 완료 처리하지 않는다.
+
+| 번호 | 분류 | 확정 구현 기준 |
+|---|---|---|
+| 16. 다단계 승강 | REQUIRED_ENGINE_CORRECTION | 유효 시즌/리그별 승강 연결을 1↔2·2↔3·3↔4·N부로 일반화. 적격 승격팀 0명/하부 없음에서 **기존 구단 강제 퇴출+가짜 신규 구단 대체 금지**. 승강 보류·잔류·대체 자격은 당시 공표 규정으로 처리. 정당한 재정/라이선스 사유의 별개 퇴출은 유지. |
+| 17. 소유 2군·Academy | REQUIRED_ENGINE_CORRECTION | 조직 귀속·모구단 소유권과 실제 디비전/대회 참가를 분리. 2부가 없어도 프랜차이즈 등 구단의 별도 2군/Academy 육성 의무가 소멸하지 않도록 합법 대체 육성 경로. 2군은 2부·3부 등 규정이 허용한 리그에 참가 가능. 모구단과 같은 1부 진입 금지 불변. |
+| 18. 클럽 라이선스 | REQUIRED_ENGINE_CORRECTION | `division!==2`를 1부 프랜차이즈로 취급하지 않는다. 1~N부 공식 참가권/재무·시설·선수 등록/모구단·소유 통제/다음 시즌·기존 기록을 실제 규정으로 검증. |
+| 19. 하부 경제 | REQUIRED_ENGINE_CORRECTION | 3부+에 1부와 동일 배율이 적용되는 1/2부 이분법 제거. 구단 시장·리그 수익/비용·선수 급여·중계/스폰서·정산으로 인과 산출, 억지 고정 빈곤 계수/무조건 무상 지원 금지. |
+| 20. 지역 재편·해체 | REQUIRED_ENGINE_CORRECTION | 지역 합병/분리/해체 시 2부만 처리하지 말고 모든 활성 공식 디비전·부속 Academy/구단·참가권·계약·부채/기록 승계. 합법 사유 없는 삭제/결과 소급 변경 금지. |
+| 21. 신규 지역 2부 강제 제거 | REQUIRED_ENGINE_CORRECTION | 미래 새 지역 `tier2Required:true`, `div2:true` 강제와 '2부 미운영=일괄 결격/페널티' 제거. 2부 설립 **권고**·1부만으로 출범 허용. 기존 초기 주요 6개 지역의 2부/당시 의무 소급 폐기 금지. |
+| 22. 확장 타당성 | REQUIRED_ENGINE_CORRECTION | 3부·4부+ 신설/축소 전 구단 재정·실제 선수 공급/출전 수요·시설/라이선스·운영/중계/이동·국제 마감/월즈 전 종료 가능성 검증. 숫자·확장주기 강제 및 비용없는 팀 복제 금지. 불가능하면 보류하고 사유 기록. |
+
+**발견된 직접 충돌 ①** `src/artifact/offseason.js`의 적격 승격팀 없음→기존 1부 구단 퇴출·새 구단 생성 로직은 승강/퇴출의 원인 분리 원칙과 충돌하며 위 16으로 교정. **②** `world.js` `makeAcademy`의 2부 고정·`promotionEligible` 2부만 검사·`club-license.js`의 `division===2?'open':...`는 17~18과 충돌. **③** `finance.js` `division===2?0.35:1`는 3부+에 1부 경제를 줄 수 있어 19 수정. **④** `office-international.js` 지역 재편에서 2부만 fold하거나 출범에 `div2:true,tier2Required:true`를 강제하는 경로는 20~21과 충돌. **⑤** 일정/출전권/선수 성장·계약/저장/AI의 1~2부 전제도 전 엔진 검사·연동 필요.
+
+**기존 확정 규칙과 양립 조건:** (a) '신규 지역 공식 2부 권고'는 '프랜차이즈 구단이 의무 소유 2군/Academy 육성 체계를 둠'과 서로 다른 주체/요건이며, 2부가 없다는 이유만으로 2군 의무를 없애거나 공식 2부를 강제 생성해서도 안 됨. (b) 동일 소유 2군의 모구단과 같은 1부 참가 금지는 영구 유지하되, 기타 디비전의 참가 자격은 당시 사무국 승인·이해충돌 검증을 따른다. (c) 같은 시즌의 모든 활성 1~N부 국내 공식 경기와 선발전은 Worlds 개막 전 끝나고 결승은 시즌 마지막 공식 경기. (d) 분리된 아마추어 배경은 여전히 **아마추어 경기 미시뮬레이션**, 실제 신설 정식 3부 이상의 경기는 실경기 시뮬레이션. (e) 국제 대표 자격과 First Selection/Fearless, 감독 권한/저장/결과 보존은 고정.
+
+**상태:** 16~22는 코드 교정·실제 테스트가 필요한 신규 수용 기준. GitHub 이슈/문서 기록이나 PR #313 작성만으로 해결·검증 완료가 아니다. [LOL_GM_SPEC.md §8](LOL_GM_SPEC.md), [#311](https://github.com/lkh0802a/LOL-GM/issues/311), [#234](https://github.com/lkh0802a/LOL-GM/issues/234), [#241](https://github.com/lkh0802a/LOL-GM/issues/241), [#242](https://github.com/lkh0802a/LOL-GM/issues/242).
+
+---
+
+## 2026-10-28 최신 사용자 확정 — 2부 창설은 권고, 3부 이상 정식 리그 자율 확장
+
+**사용자 결정:** “10번은 음 권고로 하자” → “오히려 육성 환경이 양호하면 2부를 넘어 3부 이런걸 만들지 않을까?” → **“변경 ㄱㄱ”**. 이는 이전 `2부 필수`, `3부는 정식 리그가 아닌 아마추어 배경만`, `신설 지역 2부 의무는 미결정` 지침을 아래 범위에서 **SUPERSEDED**한다.
+
+1. **현재 여섯 주요 지역:** 새 게임 초기 세계의 실제 1·2부 운영은 보존. 활성 2부/선수/구단·완료 경기와 시즌 계약/국제 기록은 소급 삭제하지 않는다.
+2. **신규 지역:** 2부 창설은 **권고이며 강제 조건이 아니다**. 실제 1부만 창설해도 지역 설립 가능. 충분한 육성 경로 없이 1부만 운영하면 공식 실전 기회가 부족한 데에서 선수 성장·발굴·공급의 현실적 기회비용이 발생할 수 있으나, **2부 미운영 자체에 고정 능력치/성장률/재정 페널티를 가하지 않는다**. 다른 실제 공식 육성 기회로 수요를 충족하면 불이익을 줄일 수 있다.
+3. **장기 다단계 리그:** 1부→2부→**3부→4부 및 추가 정식 하부 프로 리그**는 게임 세계에서 실제 선수층·참가 구단의 재무·라이선스·시설/이동·팬덤/중계·출전 기회에 근거해 사무국이 자율 신설·증설·지역 분할·통합·축소할 수 있다. 정확한 최대 단계 수나 생성 빈도를 하드코딩하지 않는다. 여건이 좋을수록 3부 이상 확대 기회가 생기지만 **확장을 결과로 강제하지 않는다**.
+4. **실제 시뮬레이션:** 승인·발효된 정식 3부 이상은 **공식 경기 일정·실제 5v5 코어·밴픽·순위/PO·승강 자격·선수 출전/성장·스카우팅/이적/계약·구단 재정·기록·감독 선택/AI·저장/복원·UI**를 정상 운영하는 디비전. `division===1/2` 가정, `tier2Required=true` 전역 고정과 2부 전용 자격/승강·포맷을 지역별/디비전별 정책으로 개선해야 함.
+5. **아마추어와 공식 3부 구분:** 옛 '아마추어 생태계를 별도 정식 3부 대신 추가' 정책에서 **정식 3부를 금지하는 부분만 폐기**. 별도 아마추어 배경·스카우팅/영입 기회는 존속하며 **미계산 아마추어 경기를 공식 결과로 날조하지 않는다**. 실제 정식 3부 이상은 경기를 시뮬레이션하며 기록한다.
+6. **불변 및 계약:** 같은 소유 2군이 모구단과 **같은 1부에 진입 불가**, 감독 최종 권한, Fearless/First Selection, AI/인간 공정성, 과거 기록·정상 세이브, **전 지역의 활성 국내 디비전 모든 공식 경기 Worlds 개막 전 완료/Worlds 결승 시즌 마지막 공식 경기**. 단계 신설/폐지 시 당시 라이선스·상하 관계·승강/잔류·구단·선수 권리/부채 정산과 개정 발효 시즌을 보존.
+7. **출시/구현 경계:** 2부 권고 및 3부 이상 신설 허용은 정책 확정. 초기 세계부터 모든 지역에 3부를 자동 생성하지 않고, 실제 신설·선수 이동·재정 계산은 Codex 개발·수용 후 게임에 적용. 수치 없는 정량 페널티·가상 경기 생성 금지.
+
+정본 상세: [LOL_GM_SPEC.md §8](LOL_GM_SPEC.md), 국제 사무국 [INTERNATIONAL_OFFICE_RULES.md](INTERNATIONAL_OFFICE_RULES.md), 일정 [#234](https://github.com/lkh0802a/LOL-GM/issues/234), 사무국/경제 [#237](https://github.com/lkh0802a/LOL-GM/issues/237), 통합 검증 [#241](https://github.com/lkh0802a/LOL-GM/issues/241), 개발 실행표 [#242](https://github.com/lkh0802a/LOL-GM/issues/242), 문서 PR [#313](https://github.com/lkh0802a/LOL-GM/pull/313).
+
+---
+
+## 2026-10-28 최신 사용자 정정 — 전 세계 Split/Circuit 강제 폐기, 최초 시즌부터 지역별 다른 형식 허용
+
+**결정 흐름:** “스플릿 서킷제를 저걸로 바꿀까 생각중인 거라고” → “교체하자” → **“모든 지역이 똑같은 통합 리그를 운영할 필요 없댔잖아?”**. 사용자가 승인한 교체는 **전 세계 공통 3 Split/3 Circuit/14기간 강제 체계의 폐기와 지역별 자율 시즌 생성 엔진 채택**이며, 처음부터 **모든 지역에 통합 리그 포맷을 강제하는 교체가 아니다**. 앞선 '새 초기 모델 = 전 지역 연간 단일 통합 리그' 해석은 **SUPERSEDED**.
+
+- **초기 시즌부터 다양성:** 국내 리그 사무국이 각 지역의 초기 규정/실제 구조·참가팀·선수 공급·경제·운영 실현성을 기반으로 단일 연간 리그, 전·후반기 누적형 통합 리그, 복수 스플릿, 독립 컵+리그, 다양한 PO·선발전 중 서로 다른 조합을 채택할 수 있다. 특정 지역(LCK·LPL·LEC 등)에 새 포맷을 임의로 고정 확정하지 않는다.
+- **통합 리그는 지원하는 한 형식:** 해당 지역이 택한 경우에만 전반기 누적→중간 국제대회 및 적법 선발→후반기 누적→연간 단일 PO/우승을 적용한다. 다른 지역은 같은 순서·PO 1회·리그 성적 누적·개막 컵 의무를 따르지 않는다.
+- **국제대회는 공통 시간, 국내 포맷은 지역별 별도:** First Stand/MSI의 참가 등록 마감 시점 전까지 각 지역이 현재 유효한 국내 성적·컵·선발전·포인트·정규 직행 등 허용된 규정으로 진출팀을 결정한다. 국제대회 개최가 전 지역의 동일 '전반기 완료'를 뜻하지 않는다. 적법한 미참가팀 국내 경기는 참가팀 점유·회복/이동·중계·공정성 검증 후 중간 국제대회와 병행할 수 있다.
+- **월즈 강제 마감/피날레:** 모든 활성 지역 **정식 1~N부** 국내 공식 리그·PO·선발전은 Worlds **개막 전** 각자 일정 완료. Worlds **결승이 시즌 마지막 공식 경기**(영구 불변). Fearless·First Selection도 영구 불변.
+- **사무국은 매 시즌 다른 구조로 진화 가능:** 근거·관할/구단 의견·공표/시행 시즌·자원·참가권 합법성과 과거 기록/저장 무결성을 보존. '처음에는 다 통합, 이후에만 다르게 변경 가능'은 금지.
+- **최신 상단 정책이 이 과거 보류를 대체:** 신규 지역 2부는 권고(필수 아님), 정식 3부 이상 자율 확장 허용으로 결정됐다.
+- 구형 D-022/D-032의 '모든 지역 3스플릿/3국제 페이즈/글로벌 정지' 등은 역사적 기준으로 보존하되 새 국내 시즌의 강제 정책 아님. 상세 [LOL_GM_SPEC.md §27](LOL_GM_SPEC.md), 구현 [#234](https://github.com/lkh0802a/LOL-GM/issues/234), 사용자 정책 [#311](https://github.com/lkh0802a/LOL-GM/issues/311).
+- Codex는 실제 세계 생성/국내 writer/regionPolicy/국제 slot/QA를 후속 안전 PR로 개발. 문서 PR #313 자체로 코드 구현·CI 통과·배포 완료 아님.
+
+---
+
 ## 2026-10-22 PR253 통합 범위
 - 2026-10-17 퇴역 결정의 실제 연결: 포인트/독립 강도·가상 잔여 시간 드릴 제거, 기존 수동 선발·전술·선수 역할·시설·의료·실제 경기/스크림 참가 유지. 실제 참가 없이 잠재력만으로 새 양의 성장을 생성하지 않는다. 기존 성장·의료 계수는 퇴역 제어의 배율 제거 외에 임의 조정하지 않는다.
 - 자동 스크림도 감독의 합법 선발표를 기존 검증기로 소비하고, 수락한 전향은 실제 목표 포지션 참가 기록으로만 누적한다. 손상된 공식 경기 점유 근거는 일일 자원 작성 전에 계속 거절한다.
@@ -279,6 +332,8 @@ This supersedes any interpretation of item 3 that would cause frequent routine s
 
 ## D-022 — Cross-system realism baseline
 
+**Status for 2026-10-28 season contract:** The former three-split baseline is historic only; the new default is region-specific domestic formats selected independently from the first season (a unified annual league is only one permitted format), with international entry deadlines, all domestic leagues finishing before Worlds, and Worlds Final last. See latest section at file top and `LOL_GM_SPEC.md` §27. Other system realism constraints remain applicable unless expressly superseded.
+
 **Decision:** Before major item 4, existing simulation systems use a conservative LoL-esports realism baseline rather than FM-style high churn.
 
 - normal live-game patches target a roughly 14-day cadence with occasional longer gaps; league offices cannot dynamically speed up or slow down the developer patch calendar
@@ -460,6 +515,8 @@ This applies retroactively to completed major items during later UI touches and 
 
 
 ## D-032 — International ecosystem and qualification contract
+
+**Status for 2026-10-28 season contract:** The following detailed international format/three-phase/global-pause text records the **former initial baseline**, not mandatory current new-game season architecture. Domestic leagues may adopt different formats from the first season. A unified full-season championship (cumulative halves, single final PO) is ONE permitted regional format, not globally mandatory. Midseason international events may conditionally overlap eligible domestic fixtures; every domestic league ends before Worlds starts and Worlds Final is the irrevocable last official game. Competition formats and slots are configurable initial presets, subject to immutable Fearless/First Selection. See latest top-level decision and `LOL_GM_SPEC.md` §27. Do not remove historical records or conflate documents with implemented code.
 
 **Decision:** LOL GM uses three seasonal international phases for first-division professional teams. Competition prestige tiers never mean domestic Tier 2/Academy participation.
 
@@ -904,7 +961,7 @@ UI 재설계의 추가 확정 기준은 수정 용이성이다. 공통 표현/�
 
 ## 아마추어 생태계의 이야기 활용 — 2026-10-04 (Asia/Seoul)
 
-사용자는 정식 3부 리그가 아닌 아마추어 생태계를 선수 배경과 사건의 기반으로 추가하도록 승인했다. 아마추어 경기 시뮬레이션은 수행하지 않는다. 가상 생성 배경/보존된 실제 게임 이력을 스카우팅 제보·테스트·영입 기회와 선택적 프로필 이야기에 연결한다. 긴 필수 이야기나 반복 입력/알림을 추가하지 않고, 미계산 경기의 상세 결과를 계산한 것처럼 제시하지 않는다. 능력·관계·성공·2부 참가권을 이야기만으로 부여하지 않는다. [작업 3.1과 전체 승인 디테일](DEVELOPMENT.md#31-아마추어-배경과-선수-이야기--승인된-구현-예정-범위)를 따른다. 현재는 구현 예정이다.
+**2026-10-28 최신 결정에 따라 '정식 3부 리그를 두지 않음' 부분은 SUPERSEDED. 정식 3부 이상은 승인된 프로 디비전일 경우 실제 경기·성적을 시뮬레이션한다.** 과거에는 사용자가 정식 3부 리그가 아닌 아마추어 생태계를 선수 배경과 사건의 기반으로 추가하도록 승인했다. 아마추어 경기 시뮬레이션은 수행하지 않는다. 가상 생성 배경/보존된 실제 게임 이력을 스카우팅 제보·테스트·영입 기회와 선택적 프로필 이야기에 연결한다. 긴 필수 이야기나 반복 입력/알림을 추가하지 않고, 미계산 경기의 상세 결과를 계산한 것처럼 제시하지 않는다. 능력·관계·성공·2부 참가권을 이야기만으로 부여하지 않는다. [작업 3.1과 전체 승인 디테일](DEVELOPMENT.md#31-아마추어-배경과-선수-이야기--승인된-구현-예정-범위)를 따른다. 현재는 구현 예정이다.
 
 ## 뉴스 보강 승인 — 2026-10-04 (Asia/Seoul)
 
