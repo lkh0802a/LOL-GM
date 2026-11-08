@@ -253,6 +253,23 @@ export function validateRulebook(docs){
     if(matrixIds.has(id))add('ADDENDUM_LEGACY_COLLISION',id);
   }
   if(matrixIds.size+newRuleIds.size!==ids.size)add('SOURCE_AUDIT_COUNT','legacy '+matrixIds.size+' + approved addendum '+newRuleIds.size+' / rules '+ids.size);
+  // Historical selection rows plus later additions form an ID index, not
+  // a 100% certificate of final user approval. Its public numeric header
+  // and latest policy rows must not advertise superseded values.
+  const worldClauseCount=[...ids.keys()].filter(id=>!id.startsWith('UI-')).length;
+  const uiRequirementCount=[...ids.keys()].filter(id=>id.startsWith('UI-')).length;
+  const currentSummary='9개 세계 장 '+worldClauseCount+'조 + 별도 UI '+uiRequirementCount+'개 = '+ids.size+'개 ID';
+  if(!addendum.includes(currentSummary))add('SOURCE_CURRENT_COUNT',currentSummary);
+  for(const [id,needle] of [
+    ['TRANS-012','최초 세계 시즌'],
+    ['TRANS-013','최초 세계 시즌'],
+    ['NAT-011','적격 5~6인 단축 등록 허용'],
+    ['BIZ-016','코치 7명·분석가 4명·스카우트 6명'],
+  ]){
+    const row=addendum.split('\n').find(line=>line.startsWith('| '+id+' |'));
+    if(!row||!row.includes(needle))add('ADDENDUM_CURRENT_POLICY',id+' needs '+needle);
+  }
+
   const summaries=[
     ['관련 원문 부분대조','관련 원문 부분대조'],
     ['세부 판정 대기','세부 판정 대기'],
