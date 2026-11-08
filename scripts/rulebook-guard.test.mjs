@@ -188,6 +188,15 @@ test('long-term economics use real evidence without forced equalization or overs
   docs=changed(file,text=>text.replace('실제 표본과 원장을 근거로 검토','임의 수치를 근거로 검토'));
   assert.match(check(docs),/BROKEN_PIN: BIZ-008/);
 });
+test('scouting discovery alone creates no exclusive signing right',()=>{
+  const file='docs/rulebook/30-TRANSFERS.md';
+  let docs=changed(file,text=>text.replace('먼저 발견했다는 사실만으로 독점 계약 우선권을 자동 부여하지 않는다','먼저 발견하면 독점 계약권을 준다'));
+  assert.match(check(docs),/BROKEN_PIN: TRANS-009/);
+  docs=changed(file,text=>text.replace('관측 순서만을 이유로 다른 구단의 적법한 제안을 차단하지 않는다','첫 관측 구단 외 제안을 차단한다'));
+  assert.match(check(docs),/BROKEN_PIN: TRANS-009/);
+  docs=changed(file,text=>text.replace('이미 유효하게 성립한 별도 계약상의 권리는 실제 계약과 적용 규정에 따라 판단한다','별도 계약상의 권리를 모두 없앤다'));
+  assert.match(check(docs),/BROKEN_PIN: TRANS-009/);
+});
 test('future scouting demand stays evidence-based and withdrawn alerts stay excluded',()=>{
   const file='docs/rulebook/80-EXPERIENCE.md';
   let docs=changed(file,text=>text.replace('합리적으로 입증된 미래 수요도 고려할 수 있으나','현재 공백만 고려해야 하나'));
