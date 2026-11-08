@@ -74,7 +74,7 @@ test('shared facilities cannot erase first-team priority on a real clash',()=>{
   assert.match(check(docs),/BROKEN_PIN: PLAYER-007/);
 });
 test('publication version and changelog cannot silently diverge',()=>{
-  const docs=changed('docs/rulebook/README.md',text=>text.replace('v0.13.0','v9.9.9'));
+  const docs=changed('docs/rulebook/README.md',text=>text.replace('v0.14.0','v9.9.9'));
   assert.match(check(docs),/CHANGELOG: no entry/);
 });
 test('approved youth compensation and club taxonomy cannot silently regress',()=>{
