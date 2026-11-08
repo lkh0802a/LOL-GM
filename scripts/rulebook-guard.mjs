@@ -73,7 +73,7 @@ export const POLICY_PINS = Object.freeze({
   'NAT-006':[/국가대표 소집에 동의하고/,/공식 소집 기간/,/정당한 의료상 출전 제한 또는 유효한 계약상 사유 없이/],
   'NAT-011':[/매년 세계 통합 선수 이적시장 기간 중/,/적어도 하나의 주요 국가대표 국제대회/,/주전 5명과 교체 선수 2명, 합계 7명/,/유효한 출전 선수 5명을 확보하지 못하면/,/기권·부전승/],
   'CORE-011':[/세계 외부의 상위 헌장 규칙/,/세계 외부의 정식 게임 규정판 개정/],
-  'CORE-012':[/최초 세계 시즌의 개막 전/,/초기 시행 규정을 제정하고 공표한다/,/사람|AI/],
+  'CORE-012':[/사전에 설계되고 상호 정합성을 검증한 초기 세계 상태/,/최초 시즌 개막 전/,/적법하게 제정·공표·발효/,/임의의 수치·권한·구단·선수/,/장래 시행 규정을 적법하게 개정할 수 있다/],
   'COMP-016':[/승강제/,/BO5/,/차기|다음 시즌부터/,/승강 결정전/,/자동 승격·강등시키지 않는다/,/다음 시즌부터/],
   'COMP-021':[/조건부 임시 참가권/,/적격한 1군 충원 후보가 없는 경우/,/1군의 유효한 기준 보호 라이선스를 필요조건/,/모든 보호 라이선스 상실의 효력은 연간 경쟁 시즌 종료 이후에만 발생/,/2군 보호권이 자동 복원되지는 않으며/,/자동 강등·퇴출·경기 결과 소급 취소가 아니며/],
   'BIZ-003':[/설립 자체는 공통 계약·재정 조건 안에서 자유롭다/,/개최 등록·승인/],
@@ -278,6 +278,22 @@ export function validateRulebook(docs){
   const product=docs['docs/implementation-spec/WORLD_ENGINE_AND_PRODUCT_ACCEPTANCE.md'];
   for(const required of ['구버전','마이그레이션','마지막 성공 스냅샷','슬롯 간 격리','현실 시간 카운트다운','스크림 예약·회의·보고 버튼을 강제하지 않는다','인수인계 기능','1·3·6·12개월','다지역·다시즌 표본','육성 구단 보상 보고','입력 차이가 있다는 사실만으로 다른 결과를 강제하거나 임의 현금을 생성하지 않는다','실제 재정 원장과 계약에 근거해']){
     if(!product.includes(required))add('PRODUCT_REQUIREMENT',required);
+  }
+  // Startup must be coherent and repeatable, without inventing local statutes
+  // or replacing the legal rule-making acts of in-world authorities.
+  const initialGuide=docs['docs/GAME_IMPLEMENTATION_ENTRYPOINT.md'];
+  for(const required of [
+    '## 13. 초기 세계 프리셋의 설계·발효·장기 변화 검증',
+    '사전에 설계·교차 검증한 초기 세계 프리셋',
+    'AI가 새 세계마다 규정·숫자·권한을 임의로 뽑지 않는다',
+    '재현성',
+    '제정·공표·시행 확인',
+    '`NEEDS_RULE`',
+    '`NEEDS_FACTS`',
+    '`NOT_EFFECTIVE`',
+    '기존 저장 보존',
+  ]){
+    if(!initialGuide.includes(required))add('INITIAL_PRESET_CONTRACT',required);
   }
   // Evidence is kept outside the standalone normative text.
   const sourceDepth = {
