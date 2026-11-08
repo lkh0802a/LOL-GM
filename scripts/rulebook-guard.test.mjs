@@ -867,6 +867,62 @@ test('canonical world law cannot be reduced to UI display text or internal IDs',
   assert.match(check(docs),/TOURNAMENT_ID_PRESENTATION_ACCEPTANCE/);
 });
 
+test('an amateur independent club cannot take a second direct-management slot',()=>{
+  const file='docs/rulebook/60-BUSINESS.md';
+  let docs=changed(file,text=>text.replace(
+    '프로 라이선스 보유 여부와 관계없이 독립된 구단 조직 모두에 적용',
+    '프로 라이선스 보유 구단에만 적용'
+  ));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/BROKEN_PIN: BIZ-010/);
+
+  docs=changed(file,text=>text.replace(
+    '동일 그룹이 동시에 직접 경영할 수 있는 독립 구단은 한 곳뿐',
+    '동일 그룹이 여러 독립 구단을 동시에 직접 경영할 수 있다'
+  ));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/BROKEN_PIN: BIZ-010/);
+
+  docs=changed(file,text=>text.replace(
+    '공식 하부 대회에 출전하더라도 별도 독립 구단이 아니므로',
+    '공식 하부 대회에 출전하면 무조건 별도 독립 구단이 되어'
+  ));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/BROKEN_PIN: BIZ-010/);
+
+  docs=changed(file,text=>text.replace(
+    '이름만 Academy인 실질적 독립 구단',
+    '모든 Academy 명칭을 붙인 독립 구단'
+  ));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/BROKEN_PIN: BIZ-010/);
+});
+
+test('same group management transfer must be atomic and independent of pro labels',()=>{
+  const file='docs/rulebook/60-BUSINESS.md';
+  let docs=changed(file,text=>text.replace(
+    '시즌 종료 절차와 차기 시즌 효력',
+    '시즌 언제든 즉시 두 구단 경영 허용'
+  ));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/BROKEN_PIN: BIZ-010/);
+
+  docs=changed(file,text=>text.replace(
+    '다구단 지배·직접 경영 제한은 이 같은 고정 종류가 아니라 BIZ-010의 실제 독립 구단 조직 여부에 따른다',
+    '아마추어 구단에는 다구단 직접 경영 제한이 미적용'
+  ));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/BROKEN_PIN: BIZ-012/);
+
+  const guide='docs/GAME_IMPLEMENTATION_ENTRYPOINT.md';
+  docs=changed(guide,text=>text.replace(
+    '아마추어라는 이유로 두 번째 직접 경영 자동 허용 금지',
+    '아마추어 운영이면 별도 직접 경영 허용'
+  ));
+  assert.notEqual(docs[guide],original[guide]);
+  assert.match(check(docs),/INDEPENDENT_CLUB_OWNERSHIP_ACCEPTANCE/);
+});
+
 test('the policy-pin source cannot shadow a clause with duplicate JS object keys',()=>{
   const script=readFileSync(new URL('./rulebook-guard.mjs',import.meta.url),'utf8');
   const ids=[...script.matchAll(/^  '([A-Z]+-\d{3})':\[/gm)].map(x=>x[1]);
