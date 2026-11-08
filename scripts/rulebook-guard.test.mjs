@@ -683,6 +683,40 @@ test('repeating Worlds tiebreaks are not capped without authorization',()=>{
   assert.match(check(docs),/OPEN_OUTCOME_ACCEPTANCE/);
 });
 
+test('user-approved short national roster and conflict-free substitute cannot silently regress',()=>{
+  const nat='docs/rulebook/15-NATIONAL-TEAMS.md';
+  let docs=changed(nat,text=>text.replace(
+    '5명 또는 6명만 확보한 경우에도 등록을 허용',
+    '7명을 모두 확보해야만 등록을 허용'
+  ));
+  assert.match(check(docs),/BROKEN_PIN: NAT-011/);
+
+  docs=changed(nat,text=>text.replace(
+    '마감 시점의 적격 등록 선수가 5명 미만이면',
+    '마감 시점의 적격 등록 선수가 4명 미만이면'
+  ));
+  assert.match(check(docs),/BROKEN_PIN: NAT-011/);
+
+  const gov='docs/rulebook/70-GOVERNANCE.md';
+  docs=changed(gov,text=>text.replace(
+    '같은 의석군의 이해충돌 없는 적격한 임시 대체 이사',
+    '다른 의석군의 임시 대체 이사'
+  ));
+  assert.match(check(docs),/BROKEN_PIN: GOV-012/);
+
+  docs=changed(gov,text=>text.replace(
+    '한 의석에 한 표만 행사',
+    '한 의석에 두 표씩 행사'
+  ));
+  assert.match(check(docs),/BROKEN_PIN: GOV-012/);
+
+  docs=changed(gov,text=>text.replace(
+    '대체 선임으로 재적 의석·의결권 수를 늘리거나',
+    '대체 선임으로 재적 의석·의결권 수를 늘릴 수 있고'
+  ));
+  assert.match(check(docs),/BROKEN_PIN: GOV-004/);
+});
+
 test('the policy-pin source cannot shadow a clause with duplicate JS object keys',()=>{
   const script=readFileSync(new URL('./rulebook-guard.mjs',import.meta.url),'utf8');
   const ids=[...script.matchAll(/^  '([A-Z]+-\d{3})':\[/gm)].map(x=>x[1]);
