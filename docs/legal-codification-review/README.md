@@ -7,12 +7,18 @@
 ## 문서 구성
 
 - [LAW_DRAFT.md](LAW_DRAFT.md) — 법령형 **7장 108조**: 기존 세계규칙 103조 + 사용자 최신 승인 국가대표 5조. 분야별 책임·대회 적용 범위·시장과 국가대표의 동시 운영, 조문 상호 참조
+- [RULE_LEVELS.md](RULE_LEVELS.md) — **세계 외부 상위 규칙 vs 세계 내부에서 적법하게 제정된 실제 규칙**의 제정권·효력·상충 기준
+- [DELEGATION_AUDIT.md](DELEGATION_AUDIT.md) — 108조 전수 위임/행정/계약/상위 제약 판정
 - [LEGACY_MAP.md](LEGACY_MAP.md) — 기존 조항 ID **113/113 전수 대응**, 기존 원문과 승인 근거 포인터; 신규 `NAT-001~005` 별도 기록
 - [UI·UX 구현 요구사항](../interface-spec/USER_EXPERIENCE_REQUIREMENTS.md) — 세계관 정본과 무관한 별도 제품·인터페이스 명세 (옛 UI 10개 항목 보존)
 - [STRUCTURAL_REVIEW.md](STRUCTURAL_REVIEW.md) — **113개 조항별 구조 판정**과 확인된 정책·소유권·기술 구현 위험
 - [validate.mjs](validate.mjs) — 조문 중복/누락·대응표·기본 참조·국가대표 핵심 조건을 검사하는 정적 명세
 
 검사 명령: `node docs/legal-codification-review/validate.mjs`. **검사 PASS는 구조만** 의미하며, 승인/철회 전수 최종 효력, 모든 수치·의무의 의미적 완전성, Rust/TypeScript 구현/게임 테스트 및 GitHub CI 합격을 뜻하지 않는다.
+
+## 세계 외부와 내부의 규범 구분
+
+이 법전은 **세계 외부에서 제정되는 상위 헌장**의 검토안이다. 그 헌장에서 국제·지역사무국·독립 개최사 등이 규정을 변경할 수 있다고 **허가하는 조문**도 외부 규칙이다. 실제로 해당 주체가 제정·공표한 지역리그/대회 규정이 **세계 내부 규칙**이고, 그 효력은 유효한 관할·시점·시즌에 따른다. 제정권의 부여와 실제 규정 제정을 혼동하지 않으며, UI는 어느 쪽에도 속하지 않는다.
 
 ## 편찬 기준
 
