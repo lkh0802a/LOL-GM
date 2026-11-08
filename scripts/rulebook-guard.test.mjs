@@ -656,6 +656,20 @@ test('approved three-year contract term is not confused with negotiation duratio
   assert.match(check(docs),/BROKEN_PIN: TRANS-002/);
 });
 
+test('buyout discussion is not an automatic transfer without the appropriate club consent',()=>{
+  const file='docs/rulebook/30-TRANSFERS.md';
+  let docs=changed(file,text=>text.replace(
+    '협상 개시권형**은 자유 접촉·협상 근거일 뿐 원소속 구단의 최종 이적 합의를 대체하지 못하며',
+    '협상 개시권형**도 원소속 구단의 최종 이적 합의가 필요 없으며'
+  ));
+  assert.match(check(docs),/BROKEN_PIN: TRANS-005/);
+  docs=changed(file,text=>text.replace(
+    '구단 거부 불가형**은 명시된 금액',
+    '구단 협상 개시형**은 명시된 금액'
+  ));
+  assert.match(check(docs),/BROKEN_PIN: TRANS-007/);
+});
+
 test('the policy-pin source cannot shadow a clause with duplicate JS object keys',()=>{
   const script=readFileSync(new URL('./rulebook-guard.mjs',import.meta.url),'utf8');
   const ids=[...script.matchAll(/^  '([A-Z]+-\d{3})':\[/gm)].map(x=>x[1]);
