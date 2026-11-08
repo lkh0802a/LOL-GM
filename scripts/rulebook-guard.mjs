@@ -248,7 +248,7 @@ export function validateRulebook(docs){
 
   // Product and technical acceptance requirements are separate from world law.
   const product=docs['docs/implementation-spec/WORLD_ENGINE_AND_PRODUCT_ACCEPTANCE.md'];
-  for(const required of ['구버전','마이그레이션','마지막 성공 스냅샷','슬롯 간 격리','현실 시간 카운트다운','스크림 예약·회의·보고 버튼을 강제하지 않는다','인수인계 기능','1·3·6·12개월']){
+  for(const required of ['구버전','마이그레이션','마지막 성공 스냅샷','슬롯 간 격리','현실 시간 카운트다운','스크림 예약·회의·보고 버튼을 강제하지 않는다','인수인계 기능','1·3·6·12개월','다지역·다시즌 표본','육성 구단 보상 보고','입력 차이가 있다는 사실만으로 다른 결과를 강제하거나 임의 현금을 생성하지 않는다','실제 재정 원장과 계약에 근거해']){
     if(!product.includes(required))add('PRODUCT_REQUIREMENT',required);
   }
   // Evidence is kept outside the standalone normative text.
