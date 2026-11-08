@@ -307,6 +307,7 @@ export function validateRulebook(docs){
     '기본 등록 7명(주전 5·후보 2)',
     '적격 선수 5명 또는 6명 등록도 허용',
     '같은 의석군의 임시 대체 이사를 적법하게 선임한 경우',
+    '최초 세계 개막 전 관할 기관이 제정·공표·발효시킨 세부 선임 절차',
     '없는 선수를 채우거나 미등록 선수를 자동 출전시켜서는 안 된다',
   ]){
     if(!initialGuide.includes(required))add('OPEN_OUTCOME_ACCEPTANCE',required);
