@@ -923,6 +923,18 @@ test('same group management transfer must be atomic and independent of pro label
   assert.match(check(docs),/INDEPENDENT_CLUB_OWNERSHIP_ACCEPTANCE/);
 });
 
+test('linked approval audits are part of the rulebook local-link fixture',()=>{
+  for(const path of [
+    'docs/rulebook-audit/STEP1_I02_OWNERSHIP_PENDING_2026_11_01.md',
+    'docs/rulebook-audit/RULEBOOK_FINALIZATION_GATE_2026_11_08.md',
+  ]){
+    assert.equal(typeof original[path],'string',path);
+  }
+  const docs=changed('docs/rulebook/CHANGELOG.md',text=>
+    text.replace('../rulebook-audit/STEP1_I02_OWNERSHIP_PENDING_2026_11_01.md','../rulebook-audit/FAKE_I02_APPROVAL.md'));
+  assert.match(check(docs),/BROKEN_LOCAL_LINK/);
+});
+
 test('the policy-pin source cannot shadow a clause with duplicate JS object keys',()=>{
   const script=readFileSync(new URL('./rulebook-guard.mjs',import.meta.url),'utf8');
   const ids=[...script.matchAll(/^  '([A-Z]+-\d{3})':\[/gm)].map(x=>x[1]);
