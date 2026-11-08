@@ -61,7 +61,7 @@ export const POLICY_PINS = Object.freeze({
   'TRANS-007':[/구단 거부 불가형\*\*은 명시된 금액/,/원소속 구단의 별도 이전 수락 없이 효력/,/협상 개시권형/,/구단 간 최종 합의/],
   'TRANS-012':[/최대 2회/,/반 시즌 또는 한 시즌/,/0~100% 분담/,/추가 이적 1회를 만들지 아니한다/],
   'TRANS-013':[/5명 이상 10명 이하/,/비로컬 선수는 최대 2명/,/최소 11명/,/미성년 선수/,/국제대회는 개막 전 최종 등록 명단/],
-  'TRANS-014':[/출신지역 로컬/,/활성 로컬/,/타지역 임대/,/다음 시즌/,/부분 시즌/],
+  'TRANS-014':[/출신지역 로컬/,/활성 로컬/,/타지역 임대/,/다음 시즌/,/부분 시즌/,/한 시즌을 둘 이상의 근속 시즌으로 중복 계산하지 않는다/],
   'PLAYER-014':[/신뢰·존중·친밀도/,/한쪽이 상대를 평가하는 방향/,/코치 직함이나 다수결/],
   'BIZ-016':[/코치 최대 7명/,/합산한 고용 상한/,/감독은 이 코치 상한에서 제외/,/코치 상한 변경 이전의 세계에서 이미 적법하게 성립한 고용 계약/,/분석가 최대 4명/,/스카우트 최대 6명/,/현장 등록 상한/],
   'BIZ-017':[/유료 팬클럽·멤버십/,/공식 경기 무료 다시보기/,/이미 성립한 입장권 판매/,/중복 시청/],
@@ -311,6 +311,18 @@ export function validateRulebook(docs){
     '없는 선수를 채우거나 미등록 선수를 자동 출전시켜서는 안 된다',
   ]){
     if(!initialGuide.includes(required))add('OPEN_OUTCOME_ACCEPTANCE',required);
+  }
+  // These are existing approved depth and calendar constraints, with
+  // distinct-season counting as a clarification, not a new minimum duration.
+  for(const required of [
+    '## 15. 선수단·근속·방송 수용 반례',
+    '통합 선수단 11명 하한에 미달',
+    '해당 시즌 최대 한 번',
+    '총 `12×11 = 132`시리즈',
+    '132→240시리즈',
+    '서로 다른 부의 실제 운영·방송 자원',
+  ]){
+    if(!initialGuide.includes(required))add('DEPTH_TENURE_SCHEDULE_ACCEPTANCE',required);
   }
   // Evidence is kept outside the standalone normative text.
   const sourceDepth = {
