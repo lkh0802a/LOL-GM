@@ -242,8 +242,8 @@ test('future scouting demand stays evidence-based and withdrawn alerts stay excl
 test('scrim recommendations and optional match detail retain authority and one result',()=>{
   let docs=changed('docs/rulebook/00-CORE.md',text=>text.replace('관리 구단의 감독이 이를 결정한다','직원이 자동 확정한다'));
   assert.match(check(docs),/BROKEN_PIN: CORE-010/);
-  docs=changed('docs/rulebook/00-CORE.md',text=>text.replace('매 경기 또는 매일 회의를 강제하지 않는다','매일 회의를 강제한다'));
-  assert.match(check(docs),/BROKEN_PIN: CORE-010/);
+  docs=changed('docs/implementation-spec/WORLD_ENGINE_AND_PRODUCT_ACCEPTANCE.md',text=>text.replace('스크림 예약·회의·보고 버튼을 강제하지 않는다','스크림 예약·회의·보고 버튼을 강제한다'));
+  assert.match(check(docs),/PRODUCT_REQUIREMENT/);
   docs=changed('docs/interface-spec/USER_EXPERIENCE_REQUIREMENTS.md',text=>text.replace('두 번째 경기를 생성하지 않는다','두 번째 경기를 생성한다'));
   assert.match(check(docs),/BROKEN_PIN: UI-007/);
 });
@@ -254,8 +254,8 @@ test('leadership changes and counterfactual analysis preserve records and author
   assert.match(check(docs),/BROKEN_PIN: CORE-010/);
   docs=changed('docs/interface-spec/USER_EXPERIENCE_REQUIREMENTS.md',text=>text.replace('가상의 대안에 대한 승패를 이미 확정된 공식 결과나 역사에 혼입하지 않는다','가상 승패를 공식 역사에 반영한다'));
   assert.match(check(docs),/BROKEN_PIN: UI-007/);
-  docs=changed('docs/rulebook/00-CORE.md',text=>text.replace('별도 직원·감독 인수인계 기능이나 화면, 강제 회의 및 자동 계약을 만들지 않는다','선택형 인수인계 기능을 새로 만든다'));
-  assert.match(check(docs),/BROKEN_PIN: CORE-010/);
+  docs=changed('docs/implementation-spec/WORLD_ENGINE_AND_PRODUCT_ACCEPTANCE.md',text=>text.replace('별도 감독/직원 인수인계 기능','선택형 인수인계 기능'));
+  assert.match(check(docs),/PRODUCT_REQUIREMENT/);
 });
 test('dividends cannot treat accounting profit as unlimited available cash',()=>{
   const docs=changed('docs/rulebook/60-BUSINESS.md',text=>text.replace('구단주가 무제한 인출할 수 있다고 가정하지 않는다','구단주는 무제한 인출할 수 있다'));
@@ -477,7 +477,7 @@ test('subsequent nonpayment cannot automatically revoke executed transfers',()=>
 
 test('routine delegation must never override legally reserved final decisions',()=>{
   const file='docs/rulebook/00-CORE.md';
-  const docs=changed(file,text=>text.replace('자동 집행이 법적 최종 서명권·의료 불가 판정·공식 참가 자격 검증·선수 동의를 대체해서도 안 된다','시스템이 선수 동의와 계약 최종 서명권을 무시하고 즉시 확정한다'));
+  const docs=changed(file,text=>text.replace('법적 최종 서명·의료상 출전 부적격 판정·참가 자격 검증·선수 동의를 임의로 대체할 수 없다','시스템이 선수 동의와 계약 최종 서명권을 무시하고 즉시 확정한다'));
   assert.match(check(docs),/BROKEN_PIN: CORE-010/);
 });
 test('normal routine operations cannot erase real costs or world outcomes',()=>{
@@ -542,18 +542,19 @@ test('protected international events cannot disappear under a growth or low-audi
   }
 });
 
-test('save migration obligations distinguish development from the supported stable phase',()=>{
-  const file='docs/rulebook/00-CORE.md';
+test('save and UI migration requirements remain outside world law',()=>{
+  const file='docs/implementation-spec/WORLD_ENGINE_AND_PRODUCT_ACCEPTANCE.md';
   for(const [before,after] of [
-    ['안정화 단계에 진입하면 지원 대상 구버전의 호환 또는 명시적 마이그레이션을 필수 정책으로 강화','구버전 호환은 영원히 불필요하다'],
-    ['안정화 진입 시점과 지원 포맷은 명시','안정화 진입은 임의로 판정'],
-    ['슬롯 격리','슬롯 통합'],
-    ['비호환 전환·내보내기/고지를 명확히 기록','비호환 변경을 고지하지 않는다'],
-    ['원자적 마지막 성공 스냅샷·실패 복구','이전 저장을 무조건 삭제'],
+    ['마이그레이션','호환 삭제'],
+    ['마지막 성공 스냅샷','모든 저장 제거'],
+    ['슬롯 간 격리','슬롯 병합'],
+    ['현실 시간 카운트다운','강제 실시간 타이머'],
+    ['인수인계 기능','자동 인수인계 기능'],
+    ['1·3·6·12개월','단일 월간 보고서'],
   ]){
     const docs=changed(file,text=>text.replace(before,after));
     assert.notEqual(docs[file],original[file]);
-    assert.match(check(docs),/BROKEN_PIN: CORE-009/);
+    assert.match(check(docs),/PRODUCT_REQUIREMENT/);
   }
 });
 
