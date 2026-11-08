@@ -144,6 +144,12 @@ export function validateRulebook(docs){
       if(m[1]!==prefix)add('WRONG_CHAPTER',file+' '+id+' belongs in '+prefix);
       if(ids.has(id))add('DUPLICATE_ID',id+' '+ids.get(id).file+' '+file);
       if(!body.trim())add('EMPTY_RULE',id);
+      // Articles with enumerated paragraphs must have ①,②,③... once each.
+      const paragraphMarkers=[...body.matchAll(/^[①②③④⑤⑥⑦⑧⑨⑩](?=\s)/gm)].map(x=>x[0]);
+      const ordinal='①②③④⑤⑥⑦⑧⑨⑩';
+      if(paragraphMarkers.length && paragraphMarkers.some((marker,index)=>marker!==ordinal[index])){
+        add('ARTICLE_PARAGRAPH_ORDER',id+' '+paragraphMarkers.join(''));
+      }
       ids.set(id,{file,body});
     }
   }
