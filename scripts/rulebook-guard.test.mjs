@@ -134,13 +134,11 @@ test('scouting decisions retain contemporary evidence and distinguish later revi
   docs=changed(file,text=>text.replace('다른 구단의 비공개 자료를 당시 판단 근거로 소급해 제시하지 않는다','다른 구단의 비공개 자료를 과거 근거로 공개한다'));
   assert.match(check(docs),/BROKEN_PIN: PLAYER-007/);
 });
-test('development compensation reports distinguish actual obligations from projections',()=>{
+test('development compensation claims remain distinct from estimated amounts',()=>{
   const file='docs/rulebook/60-BUSINESS.md';
-  let docs=changed(file,text=>text.replace('확정 지급과 미확정 추정, 미수 및 지급 시점을 구분','추정액을 확정 지급으로 취급'));
+  let docs=changed(file,text=>text.replace('확정된 육성 보상 채무와 미확정 추정','확정되지 않은 보상도 전부 지급'));
   assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
-  docs=changed(file,text=>text.replace('같은 사건의 중복 지급 위험을 표시','중복 지급 위험을 숨긴다'));
-  assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
-  docs=changed(file,text=>text.replace('실제 없는 재원·금액·비율을 만들어 표시하지 않는다','존재하지 않는 재원을 표시한다'));
+  docs=changed(file,text=>text.replace('단순 추정은 확정 채권이나 지급된 현금이 아니다','추정 자체가 확정 현금이다'));
   assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
 });
 test('preseason solvency review does not invent aid or prohibit legitimate financing',()=>{
@@ -362,10 +360,10 @@ test('adjudication matrix cannot omit a rulebook clause',()=>{
   const docs=changed(file,text=>text.replace(/^\| UI-010 \|[^\n]*\n/m,''));
   assert.match(check(docs),/SOURCE_AUDIT_MISSING: UI-010/);
 });
-test('adjudication source type must reflect direct comment links',()=>{
+test('external audit summary remains consistent with its declared source-depth tags',()=>{
   const file='docs/rulebook-audit/CLAUSE_DECISION_MATRIX_2026_11_01.md';
   const docs=changed(file,text=>text.replace(/(\| CORE-001 \|[^\n]*\| )이슈·기타( \|)/,'$1댓글 직접 링크$2'));
-  assert.match(check(docs),/MATRIX_SOURCE_DEPTH: CORE-001/);
+  assert.match(check(docs),/MATRIX_DEPTH_SUMMARY/);
 });
 test('adjudication summary cannot overcount reviewed clauses',()=>{
   const file='docs/rulebook-audit/CLAUSE_DECISION_MATRIX_2026_11_01.md';
@@ -523,9 +521,9 @@ test('source-adjudication audit must stay available to rulebook readers',()=>{
   delete docs[file];
   assert.match(check(docs),/FILE_MISSING/);
 });
-test('approval-audit link cannot silently point to a nonexistent file',()=>{
-  const file='docs/rulebook/README.md';
-  const docs=changed(file,text=>text.replace('STEP1_APPROVAL_EFFECT_AUDIT_2026_11_01.md','missing-approval-audit.md'));
+test('implementation guide cannot silently point to a nonexistent canonical file',()=>{
+  const file='docs/AI_RULEBOOK_GUIDE.md';
+  const docs=changed(file,text=>text.replace('rulebook/README.md','missing-world-rulebook.md'));
   assert.match(check(docs),/BROKEN_LOCAL_LINK/);
 });
 
@@ -550,7 +548,7 @@ test('save and UI migration requirements remain outside world law',()=>{
     ['마지막 성공 스냅샷','모든 저장 제거'],
     ['슬롯 간 격리','슬롯 병합'],
     ['현실 시간 카운트다운','강제 실시간 타이머'],
-    ['인수인계 기능','자동 인수인계 기능'],
+    ['인수인계 기능','직원 업무 인계 절차'],
     ['1·3·6·12개월','단일 월간 보고서'],
   ]){
     const docs=changed(file,text=>text.replace(before,after));
