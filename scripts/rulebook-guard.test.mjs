@@ -799,7 +799,31 @@ test('initial ceilings acceptance prevents premature and retroactive changes',()
   assert.match(check(docs),/INITIAL_CEILING_ACCEPTANCE/);
 });
 
-test('the policy-pin source cannot shadow a clause with duplicate JS object keys',()=>{
+test('source addendum must match current article counts and superseding limits',()=>{
+  const file='docs/rulebook-audit/CANON_2026_11_08_ADDENDUM.md';
+  let docs=changed(file,text=>text.replace(
+    '9개 세계 장 124조 + 별도 UI 10개 = 134개 ID',
+    '9개 세계 장 125조 + 별도 UI 10개 = 135개 ID'
+  ));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/SOURCE_CURRENT_COUNT/);
+
+  docs=changed(file,text=>text.replace(
+    '현재 최초 세계 코치 7명·분석가 4명·스카우트 6명',
+    '현재 최초 세계 코치 9명·분석가 4명·스카우트 6명'
+  ));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/ADDENDUM_CURRENT_POLICY: BIZ-016/);
+
+  docs=changed(file,text=>text.replace(
+    '적격 5~6인 단축 등록 허용',
+    '적격 7인만 의무 등록'
+  ));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/ADDENDUM_CURRENT_POLICY: NAT-011/);
+});
+
+
   const script=readFileSync(new URL('./rulebook-guard.mjs',import.meta.url),'utf8');
   const ids=[...script.matchAll(/^  '([A-Z]+-\d{3})':\[/gm)].map(x=>x[1]);
   const dupe=ids.filter((id,index)=>ids.indexOf(id)!==index);
