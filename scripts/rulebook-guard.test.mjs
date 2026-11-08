@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readDocuments,validateRulebook} from './rulebook-guard.mjs';
+import {readFileSync} from 'node:fs';
 
 const original=readDocuments();
 const check=docs=>validateRulebook(docs).errors.join('\n');
@@ -551,7 +552,7 @@ test('save and UI migration requirements remain outside world law',()=>{
     ['인수인계 기능','직원 업무 인계 절차'],
     ['1·3·6·12개월','단일 월간 보고서'],
   ]){
-    const docs=changed(file,text=>text.replace(before,after));
+    const docs=changed(file,text=>text.replaceAll(before,after));
     assert.notEqual(docs[file],original[file]);
     assert.match(check(docs),/PRODUCT_REQUIREMENT/);
   }
@@ -632,4 +633,11 @@ test('first promotion playoff, initial bylaws and temporary license vacancies ar
   assert.match(check(docs),/BROKEN_PIN: COMP-021/);
   docs=changed('docs/rulebook/00-CORE.md',text=>text.replace('초기 시행 규정을 제정하고 공표한다','초기 시행 규정은 없어도 된다'));
   assert.match(check(docs),/BROKEN_PIN: CORE-012/);
+});
+
+test('the policy-pin source cannot shadow a clause with duplicate JS object keys',()=>{
+  const script=readFileSync(new URL('./rulebook-guard.mjs',import.meta.url),'utf8');
+  const ids=[...script.matchAll(/^  '([A-Z]+-\\d{3})':\\[/gm)].map(x=>x[1]);
+  const dupe=ids.filter((id,index)=>ids.indexOf(id)!==index);
+  assert.deepEqual(dupe,[],'duplicate object keys shadow earlier policy regression checks');
 });
