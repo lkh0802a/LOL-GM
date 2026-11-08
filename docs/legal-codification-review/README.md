@@ -8,7 +8,8 @@
 
 - [LAW_DRAFT.md](LAW_DRAFT.md) — 법령형 **7장 108조**: 기존 세계규칙 103조 + 사용자 최신 승인 국가대표 5조. 분야별 책임·대회 적용 범위·시장과 국가대표의 동시 운영, 조문 상호 참조
 - [RULE_LEVELS.md](RULE_LEVELS.md) — **세계 외부 상위 규칙 vs 세계 내부에서 적법하게 제정된 실제 규칙**의 제정권·효력·상충 기준
-- [DELEGATION_AUDIT.md](DELEGATION_AUDIT.md) — 108조 전수 **외부 보호/위임·초기 설정·개별 처분/계약·미정** 분류
+- [DELEGATION_AUDIT.md](DELEGATION_AUDIT.md) — 현행 108조 전수 **외부 보호/위임·초기 설정·개별 처분/계약·미정** 분류
+- [COVERAGE_GAP_AUDIT.md](COVERAGE_GAP_AUDIT.md) — **108조는 충분성이 증명된 숫자가 아님**. 국가대표·권한·훈련/육성·규정 위반/재심 등 12개 범위 누락·미확정, 중복/통합 대상 심사
 - [IN_WORLD_RULES_LIFECYCLE.md](IN_WORLD_RULES_LIFECYCLE.md) — 세계 내부에서 실제 규정이 성립·발효·개정·실효하는 절차, 개별 행정처분 및 계약과 구별
 - [NORMATIVE_CASES.md](NORMATIVE_CASES.md) — 세계 외부와 내부의 충돌·권한·시행 전후·국가대표 관련 **22개 수용 반례** (실제 코드 테스트 아님)
 - [LEGACY_MAP.md](LEGACY_MAP.md) — 기존 조항 ID **113/113 전수 대응**, 기존 원문과 승인 근거 포인터; 신규 `NAT-001~005` 별도 기록
@@ -17,7 +18,11 @@
 - [STRUCTURAL_REVIEW.md](STRUCTURAL_REVIEW.md) — **113개 조항별 구조 판정**과 확인된 정책·소유권·기술 구현 위험
 - [validate.mjs](validate.mjs) — 조문 중복/누락·대응표·기본 참조·국가대표 핵심 조건을 검사하는 정적 명세
 
-검사 명령: `node docs/legal-codification-review/validate.mjs`. **검사 PASS는 구조만** 의미하며, 승인/철회 전수 최종 효력, 모든 수치·의무의 의미적 완전성, Rust/TypeScript 구현/게임 테스트 및 GitHub CI 합격을 뜻하지 않는다.
+검사 명령: `node docs/legal-codification-review/validate.mjs`. **검사 PASS는 구조만** 의미하며, 승인/철회 전수 최종 효력, 모든 수치·의무의 의미적 완전성, Rust/TypeScript 구현/게임 테스트 및 GitHub CI 합격을 뜻하지 않는다. **이제 검사기는 7장 108조를 정답·상한으로 고정하지 않는다.** 세계 규범의 필요에 따라 조항을 합치거나 신설하는 편집을 허용하되, 원본 113개 ID의 대응과 현행 각 조문의 위임/효력 분류가 누락되지 않도록 확인한다.
+
+## 충분성 판정: 미완료
+
+**현재 108조는 기존 조항을 옮긴 편집 결과이지 완성 목표 숫자가 아니다.** 국가대표 제정·선발·차출 권한, 내부 규정의 실제 효력, 훈련·육성, 제재·구제, 세계 시간·의료·계약 충돌 등에서 출처 확인과 권한/세부규정 분리가 남아 있다. 미확정 규칙을 제정한 것처럼 꾸미지 않으며 [12개 누락 범위 감사](COVERAGE_GAP_AUDIT.md)를 따라 검토한 뒤 **필요한 조항은 추가하고 중복된 조항은 통합**한다. `STRUCTURAL_PASS`와 `SUBSTANTIVE_COMPLETENESS`를 동일한 성공으로 취급하지 않는다.
 
 ## 세계 외부와 내부의 규범 구분
 
