@@ -1,7 +1,7 @@
 # 50. 경기·밴픽·스크림·패치
 
 ### MATCH-001 · 실제 5:5 게임과 단일 경기 결과
-공식 경기·독립 대회·스크림·랭크의 실제 결과는 유효한 게임/경기 원본과 규정에서 확정한다. 경기 승패를 고정된 OVR 기반 확률이나 임의로 생성한 경기 결과로 대체하거나 복수의 경기 엔진이 동일한 결과를 독립적으로 확정하도록 해서는 안 된다. 선수 행동·전술·자원·전투·건물/승리조건의 실제 효과를 반영한다. [근거 #233](https://github.com/lkh0802a/LOL-GM/issues/233), [#241](https://github.com/lkh0802a/LOL-GM/issues/241)
+구단 공식·독립 경기, 국가대표 경기, 스크림·랭크의 실제 결과는 유효한 게임/경기 원본과 규정에서 확정한다. 경기 승패를 고정된 OVR 기반 확률이나 임의로 생성한 경기 결과로 대체하거나 복수의 경기 엔진이 동일한 결과를 독립적으로 확정하도록 해서는 안 된다. 선수 행동·전술·자원·전투·건물/승리조건의 실제 효과를 반영한다. [근거 #233](https://github.com/lkh0802a/LOL-GM/issues/233), [#241](https://github.com/lkh0802a/LOL-GM/issues/241)
 
 ### MATCH-002 · Fearless Draft 불변
 시리즈에 적용되는 **Fearless Draft의 유효 규칙과 이전 세트 챔피언 사용 이력**은 영구 보존한다. 사무국·대회 포맷 AI·패치가 임의 해제하거나 우회할 수 없다. [근거 #311](https://github.com/lkh0802a/LOL-GM/issues/311), [#234](https://github.com/lkh0802a/LOL-GM/issues/234) [Fearless 고정 범위 사용자 정정](https://github.com/lkh0802a/LOL-GM/issues/232#issuecomment-6456922011)
