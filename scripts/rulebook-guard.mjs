@@ -194,7 +194,8 @@ export function validateRulebook(docs){
   // The 2026-11-01 matrix is an immutable 113-item historical audit, not the
   // final canon count after 2026-11-08 amendments.
   for(const prefix of ['CORE','COMP','CAL','TRANS','PLAYER','MATCH','BIZ','GOV','UI']){
-    const m=matrix.match(new RegExp('^### '+prefix+' — (\\d+)개 조항
+    const m=matrix.match(new RegExp('^### '+prefix+' — (\\d+)개 조항$', 'm'));
+    const actual=[...matrixIds].filter(id=>id.startsWith(prefix+'-')).length;
     if(!m||Number(m[1])!==actual)add('MATRIX_CHAPTER_COUNT',prefix+' '+(m?.[1]??'missing')+' / '+actual);
   }
   const addendum=docs['docs/rulebook-audit/CANON_2026_11_08_ADDENDUM.md'];
