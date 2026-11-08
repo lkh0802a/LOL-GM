@@ -670,6 +670,19 @@ test('buyout discussion is not an automatic transfer without the appropriate clu
   assert.match(check(docs),/BROKEN_PIN: TRANS-007/);
 });
 
+test('repeating Worlds tiebreaks are not capped without authorization',()=>{
+  let docs=changed('docs/rulebook/10-COMPETITIONS.md',text=>text.replace(
+    '미해결 팀만 다시 같은 방식으로 경기한다',
+    '두 번만 진행하고 이후에는 임의 추첨으로 결론을 낸다'
+  ));
+  assert.match(check(docs),/BROKEN_PIN: COMP-019/);
+  docs=changed('docs/GAME_IMPLEMENTATION_ENTRYPOINT.md',text=>text.replace(
+    '유한한 절대 상한을 보장하지 않는다',
+    '항상 유한한 최대 경기 수를 보장한다'
+  ));
+  assert.match(check(docs),/OPEN_OUTCOME_ACCEPTANCE/);
+});
+
 test('the policy-pin source cannot shadow a clause with duplicate JS object keys',()=>{
   const script=readFileSync(new URL('./rulebook-guard.mjs',import.meta.url),'utf8');
   const ids=[...script.matchAll(/^  '([A-Z]+-\d{3})':\[/gm)].map(x=>x[1]);
