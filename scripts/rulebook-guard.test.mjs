@@ -224,7 +224,7 @@ test('development support and sell-on rights require real evidence and valid ter
   assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
   docs=changed(file,text=>text.replace('재이적 셀온은 실제 유효 계약의 기간·권리 범위·발효 및 종료 조건을 따르며 계약 없는 영구권을 만들지 않는다','모든 구단에 계약 없는 영구권을 준다'));
   assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
-  docs=changed(file,text=>text.replace('검증 가능한 기여에 근거한 공개된 합법 규정으로 평가한다','임의의 비공개 기준으로 평가한다'));
+  docs=changed(file,text=>text.replace('실제 선수 성장·지도·선수 공급·지속 투자·입증된 육성 활동','임의의 비공개 기준'));
   assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
   docs=changed(file,text=>text.replace('유효한 규정에 없는 금액·자격이나 배분식을 임의로 확정하지 않는다','임의의 지원 비율을 확정한다'));
   assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
