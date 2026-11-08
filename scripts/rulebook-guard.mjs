@@ -24,6 +24,7 @@ export const DOCUMENTS = Object.freeze([
   'docs/rulebook/80-EXPERIENCE.md',
   'docs/GAME_IMPLEMENTATION_ENTRYPOINT.md',
   'docs/rulebook-audit/CANON_2026_11_08_ADDENDUM.md',
+  'docs/rulebook-audit/SMALL_RULE_GAP_SWEEP_2026_11_08.md',
   'docs/implementation-spec/WORLD_ENGINE_AND_PRODUCT_ACCEPTANCE.md',
   'docs/rulebook/README.md',
   'docs/rulebook/CHANGELOG.md',
@@ -56,6 +57,18 @@ export const DOCUMENTS = Object.freeze([
 // These are regression sentinels for the APPROVED DOCUMENTED policy, not a
 // substitute for running the game's contract/calendar/match/finance tests.
 export const POLICY_PINS = Object.freeze({
+  'TRANS-012':[/최대 2회/,/반 시즌 또는 한 시즌/,/0~100% 분담/,/추가 이적 1회를 만들지 아니한다/],
+  'TRANS-013':[/5명 이상 10명 이하/,/비로컬 선수는 최대 2명/,/최소 11명/,/미성년 선수/,/국제대회는 개막 전 최종 등록 명단/],
+  'TRANS-014':[/출신지역 로컬/,/활성 로컬/,/타지역 임대/,/다음 시즌/,/부분 시즌/],
+  'PLAYER-014':[/신뢰·존중·친밀도/,/한쪽이 상대를 평가하는 방향/,/코치 직함이나 다수결/],
+  'BIZ-016':[/코치 최대 9명/,/분석가 최대 4명/,/스카우트 최대 6명/,/현장 등록 상한/],
+  'BIZ-017':[/유료 팬클럽·멤버십/,/공식 경기 무료 다시보기/,/이미 성립한 입장권 판매/,/중복 시청/],
+  'COMP-022':[/공식 경기의 수행/,/미래의 경기 성적/,/공표된 대회/],
+  'MATCH-001':[/공식 Bo3는 실제 2승/,/공식 Bo5는 실제 3승/],
+  'MATCH-005':[/합의한 모든 세트/,/실제로 합의한 모든 세트/,/중단 또는 미완료/],
+  'MATCH-007':[/프로 공식 경기 출전 허용일/,/적법한 연구가 가능하다/],
+  'CAL-006':[/주말의 방송·운영 여유를 우선 고려/,/평일 증편도 허용/],
+  'CAL-009':[/잠정 경기·송출 구간 예약/,/확정된 공식 일정/]
   'NAT-004':[/첫 국가대표 공식 경기 출전 전/,/실제로 처음 출전한 때/,/마지막 국가대표 공식 출전 이후 2년 이상 경과/,/경력 중 한 번/,/국제사무국의 적법한 개별 승인/,/해외 이적·체류 기간의 경과만으로 국적이 자동 부여되거나/],
   'NAT-006':[/국가대표 소집에 동의하고/,/공식 소집 기간/,/정당한 의료상 출전 제한 또는 유효한 계약상 사유 없이/],
   'NAT-011':[/매년 세계 통합 선수 이적시장 기간 중/,/적어도 하나의 주요 국가대표 국제대회/,/주전 5명과 교체 선수 2명, 합계 7명/,/유효한 출전 선수 5명을 확보하지 못하면/,/기권·부전승/],
