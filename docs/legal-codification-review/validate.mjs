@@ -42,7 +42,7 @@ fail('new national rules',national.length===5 && distinct(national.map(x=>x.id))
   national.every((x,i)=>x.id==='NAT-'+String(i+1).padStart(3,'0') && x.n>0 && x.n<=108));
 fail('ten original UI contracts',legacyTechIds.length===10 && distinct(techIds) &&
   legacyTechIds.every(id=>matches.some(x=>x.id===id&&x.group==='기술요건')));
-fail('migrated UI requirement retained',migratedTechIds.length===1 && migratedTechIds[0]==='UI-011' && tech.includes('현실 시간 카운트다운'));
+fail('migrated UI requirement retained',migratedTechIds.length===2 && migratedTechIds[0]==='UI-011' && migratedTechIds[1]==='UI-012' && tech.includes('현실 시간 카운트다운') && tech.includes('주장 전용 임면 UI'));
 fail('non-world acceptance requirements',acceptanceIds.length===5 && acceptanceIds.every((id,i)=>id==='QA-'+String(i+1).padStart(3,'0')));
 fail('no orphan original IDs in law',!/(?:CORE|COMP|CAL|TRANS|PLAYER|MATCH|BIZ|GOV|UI)-\d{3}/.test(text));
 fail('no mangled article IDs',!/제\d+조[·\/-]\d{2,3}/.test(text));
