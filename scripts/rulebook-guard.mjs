@@ -57,6 +57,7 @@ export const DOCUMENTS = Object.freeze([
 // These are regression sentinels for the APPROVED DOCUMENTED policy, not a
 // substitute for running the game's contract/calendar/match/finance tests.
 export const POLICY_PINS = Object.freeze({
+  'TRANS-002':[/약정 유효기간은 최대 3년/,/1~3년의 유효 기간/,/기존 계약의 실제 만료 시각이나 보장급여/],
   'TRANS-012':[/최대 2회/,/반 시즌 또는 한 시즌/,/0~100% 분담/,/추가 이적 1회를 만들지 아니한다/],
   'TRANS-013':[/5명 이상 10명 이하/,/비로컬 선수는 최대 2명/,/최소 11명/,/미성년 선수/,/국제대회는 개막 전 최종 등록 명단/],
   'TRANS-014':[/출신지역 로컬/,/활성 로컬/,/타지역 임대/,/다음 시즌/,/부분 시즌/],
