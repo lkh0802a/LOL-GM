@@ -254,7 +254,7 @@ test('leadership changes and counterfactual analysis preserve records and author
   assert.match(check(docs),/BROKEN_PIN: CORE-010/);
   docs=changed('docs/interface-spec/USER_EXPERIENCE_REQUIREMENTS.md',text=>text.replace('가상의 대안에 대한 승패를 이미 확정된 공식 결과나 역사에 혼입하지 않는다','가상 승패를 공식 역사에 반영한다'));
   assert.match(check(docs),/BROKEN_PIN: UI-007/);
-  docs=changed('docs/implementation-spec/WORLD_ENGINE_AND_PRODUCT_ACCEPTANCE.md',text=>text.replace('별도 감독/직원 인수인계 기능','선택형 인수인계 기능'));
+  docs=changed('docs/implementation-spec/WORLD_ENGINE_AND_PRODUCT_ACCEPTANCE.md',text=>text.replace('별도 감독/직원 인수인계 기능','별도 감독/직원 이전 절차'));
   assert.match(check(docs),/PRODUCT_REQUIREMENT/);
 });
 test('dividends cannot treat accounting profit as unlimited available cash',()=>{
