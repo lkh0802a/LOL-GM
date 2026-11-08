@@ -128,6 +128,21 @@
 | `NAT-004` | 제52조 스토브리그의 국가대표 경기 | [2026-11-08 최신 사용자 결정의 GitHub 인수 기록](https://github.com/lkh0802a/LOL-GM/issues/331#issuecomment-6716738291) |
 | `NAT-005` | 제53조 선수의 소속·국가대표 등록 및 경기 기록 | [2026-11-08 최신 사용자 결정의 GitHub 인수 기록](https://github.com/lkh0802a/LOL-GM/issues/331#issuecomment-6716738291) |
 
+## 하나의 구형 조항을 세계 규칙과 제품 명세로 분리한 이력
+
+아래 항목은 **옛 ID를 폐기하거나 승인 내용을 삭제하지 않고** 하나의 혼합 조항을 적법한 효력·제품 요구·테스트 검증으로 분해한 기록이다. 법전의 새 조문과 제품 명세에 각각 적용할 권한/테스트가 다르므로 두 문서에 동일한 효력을 부여하지 않는다.
+
+| 구형 ID | 외부 세계 헌장에서 유지 | 세계관 정본 범위 밖에 보존 | 편집 판정 |
+|---|---|---|---|
+| `CORE-009` | 제2조·제9조: 사건 무소급, 규정 시행시점 | [QA-005 저장 포맷·마이그레이션](../implementation-spec/NON_NORMATIVE_ACCEPTANCE.md) | 원문 다중 대상의 분리 |
+| `PLAYER-012` | 제65조: 국가별 공급·성장과 고정 난이도 보정 금지 | [QA-001 다지역 장기 시즌 검증](../implementation-spec/NON_NORMATIVE_ACCEPTANCE.md) | 세계 변화와 사후 검증 분리 |
+| `MATCH-003` | 제91조: First Selection 권리·밴픽 상태 보호 | [UI-011 수동 밴픽 카운트다운 금지](../interface-spec/USER_EXPERIENCE_REQUIREMENTS.md) | 세계 시각과 입력 인터페이스 분리 |
+| `MATCH-011` | 제99조: 주장 직책·가산·사건 금지 | [UI-012 주장 임면 화면 제외](../interface-spec/USER_EXPERIENCE_REQUIREMENTS.md) | 세계 제도 금지와 UI 명세 분리 |
+| `BIZ-004` | 제101조: 지급·채무·실제 원장 | [재정 대시보드·현금흐름 예측](../interface-spec/USER_EXPERIENCE_REQUIREMENTS.md) | 경제적 사실과 표시 방식 분리 |
+| `BIZ-011` | 제105조: 육성 기여·유효 지급권·기록 | [QA-002/003 보상 보고·장기 검증](../implementation-spec/NON_NORMATIVE_ACCEPTANCE.md) | 재정 규정과 검증 방법 분리 |
+
+이는 **편집상 이관 관계**의 기록이며, 모든 원문 선택과 후속 철회·효력을 최종 인증한 것은 아니다. 검토본의 108개 세계 조문·기존 113개 ID 감사 수량은 이 표로 변경되지 않는다.
+
 ## 추적 및 최종 검증 기준
 
 - 기존 113개 ID는 세계관 본칙 103개와 **정본 범위 외** UI·UX 제품 명세 10개로 추적한다. 국가대표 5개 신규 조문은 별도 식별한다.
