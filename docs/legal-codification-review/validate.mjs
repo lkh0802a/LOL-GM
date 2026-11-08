@@ -11,6 +11,8 @@ const read = x => readFileSync(path.join(root, x), 'utf8');
 const text = read('LAW_DRAFT.md');
 const mapText = read('LEGACY_MAP.md');
 const tech = readFileSync(path.resolve(root, '..', 'interface-spec', 'USER_EXPERIENCE_REQUIREMENTS.md'), 'utf8');
+const hierarchy = read('RULE_LEVELS.md');
+const delegationAudit = read('DELEGATION_AUDIT.md');
 const originalNames = ['00-CORE','10-COMPETITIONS','20-CALENDAR','30-TRANSFERS','40-PLAYERS','50-MATCH','60-BUSINESS','70-GOVERNANCE','80-EXPERIENCE'];
 const old = originalNames.flatMap(x => [...readFileSync(path.join(source, x + '.md'),'utf8')
   .matchAll(/^###\s+([A-Z]+-\d{3})\s+·/gm)].map(m => m[1]));
@@ -40,4 +42,8 @@ fail('cross references',crossRefs.every(n=>n>=1&&n<=108));
 fail('national team multiple teams',text.includes('둘 이상의 국가대표팀'));
 fail('market dates and scope',text.includes('구단 대회의 공식 지역·공식 국제·독립 지역·독립 국제 실제 경기') && text.includes('국가대표 대회는 세계 통합 선수 이적시장이 열리는'));
 fail('original source trace',mapText.includes('https://github.com/lkh0802a/LOL-GM/blob/'));
+const delegated = [...delegationAudit.matchAll(/^\| 제(\d+)조 \|/gm)].map(m => Number(m[1]));
+fail('108 world-layer classifications',delegated.length===108 && delegated.every((n,i)=>n===i+1));
+fail('external vs internal authority',hierarchy.includes('세계 외부 규칙') && hierarchy.includes('세계 내부 규칙') && text.includes('## 규범의 두 층위'));
+fail('UI outside both world rule levels',hierarchy.includes('UI') && hierarchy.includes('세계 내부 규칙'));
 console.log(JSON.stringify({status:'STRUCTURAL_PASS',chapters:7,legacy:old.length,statutory:articles.length,technical:techIds.length,national:national.length,notes:'This does not certify user approval finality, semantics, npm check, game tests, CI or merge.'},null,2));
