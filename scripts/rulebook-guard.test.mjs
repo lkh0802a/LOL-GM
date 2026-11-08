@@ -637,7 +637,7 @@ test('first promotion playoff, initial bylaws and temporary license vacancies ar
 
 test('the policy-pin source cannot shadow a clause with duplicate JS object keys',()=>{
   const script=readFileSync(new URL('./rulebook-guard.mjs',import.meta.url),'utf8');
-  const ids=[...script.matchAll(/^  '([A-Z]+-\\d{3})':\\[/gm)].map(x=>x[1]);
+  const ids=[...script.matchAll(/^  '([A-Z]+-\d{3})':\[/gm)].map(x=>x[1]);
   const dupe=ids.filter((id,index)=>ids.indexOf(id)!==index);
   assert.deepEqual(dupe,[],'duplicate object keys shadow earlier policy regression checks');
 });
