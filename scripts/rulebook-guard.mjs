@@ -121,7 +121,7 @@ export const POLICY_PINS = Object.freeze({
   'COMP-004':[/동일한 부/,/적격한 실제 하위 부/,/행정적으로 이동/,/매각 또는 해체/,/일반 자동 강등이 아니며/,/하위 부의 실재 여부·등록 자격·수용 정원/,/다른.*2부로의 임의 재배치/,/COMP-017/],
   'COMP-006':[/엘리미네이션 단계\/브래킷/,/대회 전체에서 2패를 초과할 수 없다는 뜻이 아니다/,/Grand Final Reset/,/양 팀 적법 실격/],
   'COMP-010':[/결승 이전 단계에서 양 팀이 적법하게 실격/,/실제 대진과 적격 차순위 근거/,/경기 자리를 승계하여 실제 경기/,/임의의 팀이나 동률 순서를 만들어 채우지 않는다/,/결승에서 양 팀이 실격하면/,/우승자 없이 종료한다/,/선수 출전 기록을 소급 변경하지 않으며/,/단측의 적법한 행정승/],
-  'COMP-015':[/MSI 미진출팀/,/Masters/,/Open/,/중복 출전/],
+  'COMP-015':[/현재 공식 명칭/,/과거 회차의 당시 명칭과 대회 정체성·역사는 보존/,/MSI 미진출팀/,/Masters/,/Open/,/중복 출전/,/현재 유효하지 않은 과거 지역 구분/],
   'BIZ-013':[/상위 5명/,/전체 선수단/,/지역사무국은 지역의 실제 재정·경쟁 구조/,/시행된 범위에서만 적용한다/],
   'BIZ-014':[/유한/,/복제/,/인수/,/확정 채무·실제 현금흐름·투자 수요·법적 배당 가능액/,/해당 결정권자의 권한/,/회계상 흑자만으로 사용할 현금을 만들어 내거나/,/구단주가 무제한 인출할 수 있다고 가정하지 않는다/,/독립 구단의 예산·원장과 BIZ-010의 독립 경영/],
   'MATCH-008':[/순수 밸런스 핫픽스/,/전 세계의 해당 일자 공식 대회 경기와 세트가 모두 종료된 이후/,/한 번만/,/패치 잠금/],
@@ -184,6 +184,14 @@ export function validateRulebook(docs){
       for(const ref of lines[lineIndex].matchAll(/\b(?:CORE|COMP|NAT|CAL|TRANS|PLAYER|MATCH|BIZ|GOV)-\d{3}\b/g)){
         if(!ids.has(ref[0]))add('UNKNOWN_CLAUSE_REFERENCE',file+':'+(lineIndex+1)+' -> '+ref[0]);
       }
+    }
+  }
+  // The external world constitution is not a GUI or implementation manual.
+  // Its normative tournament names and participation rights stay inside the
+  // chapters; output, internal IDs and historical display transformations do not.
+  for(const [file] of CHAPTERS){
+    if(/(?:내부 ID|뉴스를 출력하지|UI 버튼|화면 컴포넌트|Codex|GitHub PR)/.test(docs[file])){
+      add('CANON_TECHNICAL_LEAK',file+' contains product/implementation metadata');
     }
   }
   // Editorial diagnostics only: obvious conversational expressions do not
@@ -362,6 +370,13 @@ export function validateRulebook(docs){
     '그 전의 적법 계약은 소급 파기하지 않음',
   ]){
     if(!initialGuide.includes(required))add('INITIAL_CEILING_ACCEPTANCE',required);
+  }
+  for(const required of [
+    '## 16. 공식 대회 명칭과 이력 표현',
+    '구형 표시명을 현재 공표문·일정·뉴스 제목에 혼입하지 않는다',
+    '내부 안정 ID는 명칭 표시와 분리',
+  ]){
+    if(!initialGuide.includes(required))add('TOURNAMENT_ID_PRESENTATION_ACCEPTANCE',required);
   }
   // Evidence is kept outside the standalone normative text.
   const sourceDepth = {
