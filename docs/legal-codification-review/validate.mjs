@@ -10,7 +10,7 @@ const source = path.resolve(root, '..', 'rulebook');
 const read = x => readFileSync(path.join(root, x), 'utf8');
 const text = read('LAW_DRAFT.md');
 const mapText = read('LEGACY_MAP.md');
-const tech = read('TECHNICAL_REQUIREMENTS.md');
+const tech = readFileSync(path.resolve(root, '..', 'interface-spec', 'USER_EXPERIENCE_REQUIREMENTS.md'), 'utf8');
 const originalNames = ['00-CORE','10-COMPETITIONS','20-CALENDAR','30-TRANSFERS','40-PLAYERS','50-MATCH','60-BUSINESS','70-GOVERNANCE','80-EXPERIENCE'];
 const old = originalNames.flatMap(x => [...readFileSync(path.join(source, x + '.md'),'utf8')
   .matchAll(/^###\s+([A-Z]+-\d{3})\s+·/gm)].map(m => m[1]));
