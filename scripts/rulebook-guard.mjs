@@ -334,6 +334,17 @@ export function validateRulebook(docs){
   ]){
     if(!initialGuide.includes(required))add('DEPTH_TENURE_SCHEDULE_ACCEPTANCE',required);
   }
+  // Initial ceilings may evolve only through a valid in-world amendment;
+  // the prototype/preset must not silently change them or retroactively rewrite.
+  for(const required of [
+    '최초 로스터 5~10명·비로컬 2명·시즌 이적 최대 2회·직원 7/4/6명',
+    '초기 최대 2회',
+    '비로컬 최대 2명·1군 최대 10명',
+    '그 시즌에 실제 발효한 비로컬·명단 상한',
+    '그 전의 적법 계약은 소급 파기하지 않음',
+  ]){
+    if(!initialGuide.includes(required))add('INITIAL_CEILING_ACCEPTANCE',required);
+  }
   // Evidence is kept outside the standalone normative text.
   const sourceDepth = {
     directCommentLinked: matrixDirect,
