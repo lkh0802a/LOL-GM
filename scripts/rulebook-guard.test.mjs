@@ -73,12 +73,12 @@ test('shared facilities cannot erase first-team priority on a real clash',()=>{
   assert.match(check(docs),/BROKEN_PIN: PLAYER-007/);
 });
 test('publication version and changelog cannot silently diverge',()=>{
-  const docs=changed('docs/rulebook/README.md',text=>text.replace('v0.12.0','v9.9.9'));
+  const docs=changed('docs/rulebook/README.md',text=>text.replace('v0.13.0','v9.9.9'));
   assert.match(check(docs),/CHANGELOG: no entry/);
 });
 test('approved youth compensation and club taxonomy cannot silently regress',()=>{
   const file='docs/rulebook/60-BUSINESS.md';
-  let docs=changed(file,text=>text.replace('지급 비율·금액·분할식·자격·발효 시점·기금 조성은 미확정','지급 비율은 확정'));
+  let docs=changed(file,text=>text.replace('지급 비율·금액·분할식·자격·발효 시점·재원 및 기금 조성','지급 비율은 확정'));
   assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
   docs=changed(file,text=>text.replace('프로/세미프로/아마추어','프로/아마추어 고정'));
   assert.match(check(docs),/BROKEN_PIN: BIZ-012/);
@@ -600,7 +600,36 @@ test('UI requirements are separately preserved outside the world rule chapters',
 
 test('nation-team statutes cannot contain duplicate or out-of-order numbered paragraphs',()=>{
   const file='docs/rulebook/15-NATIONAL-TEAMS.md';
-  const docs=changed(file,text=>text.replace('③ 선수의 국가대표 자격은','② 선수의 국가대표 자격은'));
+  const docs=changed(file,text=>text.replace('③ 선수가 적법한 국가대표 공식 경기에','② 선수가 적법한 국가대표 공식 경기에'));
   assert.notEqual(docs[file],original[file]);
   assert.match(check(docs),/ARTICLE_PARAGRAPH_ORDER: NAT-004/);
+});
+
+test('first-nationality lock, one-time switch and official tournament roster cannot silently change',()=>{
+  const file='docs/rulebook/15-NATIONAL-TEAMS.md';
+  let docs=changed(file,text=>text.replace('마지막 국가대표 공식 출전 이후 2년 이상 경과','마지막 공식 출전 직후'));
+  assert.match(check(docs),/BROKEN_PIN: NAT-004/);
+  docs=changed(file,text=>text.replace('경력 중 한 번','무제한 변경'));
+  assert.match(check(docs),/BROKEN_PIN: NAT-004/);
+  docs=changed(file,text=>text.replace('주전 5명과 교체 선수 2명, 합계 7명','주전 4명과 교체 3명'));
+  assert.match(check(docs),/BROKEN_PIN: NAT-011/);
+});
+
+test('initial board voting, manager tenure and emergency rules are protected',()=>{
+  const file='docs/rulebook/70-GOVERNANCE.md';
+  let docs=changed(file,text=>text.replace('중앙 측 7석·최초 주요 지역 대표 각 1석씩 6석','중앙 측 6석·지역 7석'));
+  assert.match(check(docs),/BROKEN_PIN: GOV-004/);
+  docs=changed(file,text=>text.replace('최초 표준 임기는 **3년**','최초 표준 임기는 **1년**'));
+  assert.match(check(docs),/BROKEN_PIN: GOV-007/);
+  docs=changed(file,text=>text.replace('최소 범위와 기간의 임시 조치','무기한 제한 없는 개편'));
+  assert.match(check(docs),/BROKEN_PIN: GOV-008/);
+});
+
+test('first promotion playoff, initial bylaws and temporary license vacancies are protected',()=>{
+  let docs=changed('docs/rulebook/10-COMPETITIONS.md',text=>text.replace('기본 승강 결정전은 **상위 부의 적격 강등 대상 팀과 하위 부의 적격 승격 대상 팀 간 BO5**','기본 승강 결정전은 순위 자동 승강'));
+  assert.match(check(docs),/BROKEN_PIN: COMP-016/);
+  docs=changed('docs/rulebook/10-COMPETITIONS.md',text=>text.replace('조건부 임시 참가권','영구 자동 참가권'));
+  assert.match(check(docs),/BROKEN_PIN: COMP-021/);
+  docs=changed('docs/rulebook/00-CORE.md',text=>text.replace('초기 시행 규정을 제정하고 공표한다','초기 시행 규정은 없어도 된다'));
+  assert.match(check(docs),/BROKEN_PIN: CORE-012/);
 });
