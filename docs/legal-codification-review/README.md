@@ -12,7 +12,7 @@
 - [IN_WORLD_RULES_LIFECYCLE.md](IN_WORLD_RULES_LIFECYCLE.md) — 세계 내부에서 실제 규정이 성립·발효·개정·실효하는 절차, 개별 행정처분 및 계약과 구별
 - [NORMATIVE_CASES.md](NORMATIVE_CASES.md) — 세계 외부와 내부의 충돌·권한·시행 전후·국가대표 관련 **22개 수용 반례** (실제 코드 테스트 아님)
 - [LEGACY_MAP.md](LEGACY_MAP.md) — 기존 조항 ID **113/113 전수 대응**, 기존 원문과 승인 근거 포인터; 신규 `NAT-001~005` 별도 기록
-- [UI·UX 구현 요구사항](../interface-spec/USER_EXPERIENCE_REQUIREMENTS.md) — 세계관 정본 바깥의 별도 제품·인터페이스 명세 (옛 UI 10개 + 이관된 수동 밴픽 조작)
+- [UI·UX 구현 요구사항](../interface-spec/USER_EXPERIENCE_REQUIREMENTS.md) — 세계관 정본 바깥의 별도 제품·인터페이스 명세 (옛 UI 10개 + 이관된 수동 밴픽·주장 임면 UI 제외)
 - [개발·검증 수용 조건](../implementation-spec/NON_NORMATIVE_ACCEPTANCE.md) — 세계 규정이 아닌 장기 검증·보고서·구버전 저장 지원 요구사항 보존
 - [STRUCTURAL_REVIEW.md](STRUCTURAL_REVIEW.md) — **113개 조항별 구조 판정**과 확인된 정책·소유권·기술 구현 위험
 - [validate.mjs](validate.mjs) — 조문 중복/누락·대응표·기본 참조·국가대표 핵심 조건을 검사하는 정적 명세
