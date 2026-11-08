@@ -97,23 +97,25 @@ await runEngineFixture(String.raw`(()=>{
   // A permanent transfer offers guaranteed installments plus independent
   // appearance, international and club-title conditions.
   const fees=unpackDB(raw),fp=fees.players[pid],seller=fees.teams[owner.id],club=fees.teams[buyer.id];
-  const plan={upfront:3,installments:[{date:year+'-01-31',amount:6}],addOns:[
-    {kind:'appearances',threshold:2,amount:2,through:year+'-12-31'},
-    {kind:'international',threshold:1,amount:1,through:year+'-01-11'},
-    {kind:'titles',threshold:1,amount:1,through:year+'-12-31'}]};
+  setWorldCalendarDate(fees,globalPlayerFAOpenDate(year));
+  const billingYear=year+1;
+  const plan={upfront:3,installments:[{date:billingYear+'-01-31',amount:6}],addOns:[
+    {kind:'appearances',threshold:2,amount:2,through:billingYear+'-12-31'},
+    {kind:'international',threshold:1,amount:1,through:billingYear+'-01-11'},
+    {kind:'titles',threshold:1,amount:1,through:billingYear+'-12-31'}]};
   const transfer={type:'player.transfer',actor:'manager',pid,fromId:owner.id,teamId:buyer.id,fee:9,feePlan:plan},
     transferBefore=JSON.stringify(fees),tp=previewWorldAction(fees,transfer);
   check(tp.ok&&JSON.stringify(fees)===transferBefore,'fee preview mutated world');
   check(!previewWorldAction(fees,{...transfer,feePlan:{...plan,upfront:4}}).ok,'unbalanced guaranteed fee accepted');
   check(applyWorldAction(fees,tp).ok&&seller.finance.cash===103&&club.finance.cash===97,'full fee was prepaid instead of first installment');
   const dealId=transferDealRows(club)[0].id;
-  fees.competitions.FEE_TEST={id:'FEE_TEST',international:false};setWorldCalendarDate(fees,year+'-01-12');
+  fees.competitions.FEE_TEST={id:'FEE_TEST',international:false};setWorldCalendarDate(fees,billingYear+'-01-12');
   updatePlayerUsage(fees,{comp:'FEE_TEST',year},{a:buyer.id,b:other.id,games:[{winner:buyer.id},{winner:buyer.id}]},
     [{pid,role:ROLES[0],win:true},{pid,role:ROLES[0],win:true}]);
   check(club.finance.cash===95&&transferDealRows(club)[0].rows[1].status==='paid'&&
     transferDealRows(club)[0].rows[2].status==='expired','official conditions were fabricated, missed or paid after expiry');
   const repeated=JSON.stringify(fees);processTransferPayments(fees);check(JSON.stringify(fees)===repeated,'condition paid twice');
-  setWorldCalendarDate(fees,year+'-01-31');club.finance.cash=1.5;processTransferPayments(fees);
+  setWorldCalendarDate(fees,billingYear+'-01-31');club.finance.cash=1.5;processTransferPayments(fees);
   check(club.finance.cash===0&&transferDealRows(club)[0].rows[0].paid===1.5&&
     transferPaymentExposure(club).guaranteed===4.5,'cash shortage erased remaining invoice or overdrew club');
   const restored=unpackDB(packDB(fees));check(transferPaymentExposure(restored.teams[buyer.id]).guaranteed===4.5,'partial invoice save lost debt');
@@ -127,20 +129,23 @@ await runEngineFixture(String.raw`(()=>{
   receiveFinancePrepaidTransfer=(...args)=>{cashWriter(...args);throw Error('late payment failure')};
   check(!applyWorldAction(fees,payPlan).ok&&JSON.stringify(fees)===payBefore,'payment rollback lost ledger/counterparty cash');
   receiveFinancePrepaidTransfer=cashWriter;check(applyWorldAction(fees,payPlan).ok&&club.finance.cash===5.5,'remaining invoice not settled');
-  fees.world.seasons.TITLE={id:'TITLE',year,done:true,champion:buyer.id,days:[{date:year+'-02-01'}]};
-  setWorldCalendarDate(fees,year+'-02-01');processTransferPayments(fees);
+  fees.world.seasons.TITLE={id:'TITLE',year,done:true,champion:buyer.id,days:[{date:billingYear+'-02-01'}]};
+  setWorldCalendarDate(fees,billingYear+'-02-01');processTransferPayments(fees);
   check(transferDealRows(club)[0].rows[3].status==='paid'&&club.finance.cash===4.5,'actual completed club title did not trigger invoice');
-  const pastTitle=unpackDB(raw);pastTitle.world.seasons.PAST={id:'PAST',year,done:true,champion:buyer.id,days:[{date:year+'-01-10'}]};
+  const pastTitle=unpackDB(raw);setWorldCalendarDate(pastTitle,globalPlayerFAOpenDate(year));
+  pastTitle.world.seasons.PAST={id:'PAST',year,done:true,champion:buyer.id,days:[{date:addDays(pastTitle.worldDate,-1)}]};
   check(commitWorldAction(pastTitle,transfer).ok,'title baseline preparation failed');processTransferPayments(pastTitle);
   check(transferDealRows(pastTitle.teams[buyer.id])[0].rows[3].status==='pending','already completed title paid retroactively');
   const damaged=JSON.parse(packDB(fees));damaged.teams[buyer.id].finance.transferDeals[dealId].rows[0].paid=100;
   let denied=false;try{unpackDB(JSON.stringify(damaged))}catch{denied=true}check(denied,'corrupt invoice save accepted');
-  // Ordinary moves use the destination window; pre-agreed ownership conversion
+  // Ordinary moves use the global window; pre-agreed ownership conversion
   // has no new squad move. An existing future-contract mechanism remains intact.
   const closed=unpackDB(raw);setWorldCalendarDate(closed,year+'-02-01');
   check(!previewWorldAction(closed,{...transfer,feePlan:null}).ok,'closed destination permanent market ignored');
   closed.regions.NA.transferWindows=[{from:'02-01',through:'02-01'}];
-  check(previewWorldAction(closed,{...transfer,feePlan:null}).ok,'custom destination opening ignored');
+  check(!previewWorldAction(closed,{...transfer,feePlan:null}).ok,'custom region reopened closed global market');
+  setWorldCalendarDate(closed,globalPlayerFAOpenDate(year));
+  check(previewWorldAction(closed,{...transfer,feePlan:null}).ok,'custom region blocked open global market');
   // Real purchase confirmation cancel/save flow, not just markup checks.
   const ui=unpackDB(raw);check(commitWorldAction(ui,loan).ok,'UI preparation failed');
   globalThis.DB=ui;globalThis.esc=x=>String(x);globalThis.MSG='';let saves=0;

@@ -32,9 +32,10 @@ await runEngineFixture(String.raw`(()=>{
  const results=[];
  for(const kind of ['fa','renewal','transfer','early_fa']){
   const cfg=defaultWorldConfig();cfg.regions=[regionCfg('KR',{teams:3,div2:false})];cfg.internationals=[];
+  if(kind==='transfer')cfg.startYear=2028;
   const db=buildWorld(cfg),[buyer,seller]=activeTeams(db,'KR',1);
   buyer.finance.cash=seller.finance.cash=100000;setManagedTeam(db,buyer.id);
-  db.world={year:db.year,seed:'manual-final-'+kind,manage:'manual',phase:'market',seasons:{},steps:[],step:0,report:null,offers:[],marketLog:[],negotiations:{},recruitment:{targets:{}}};db.worldDate=db.year+'-01-10';
+  db.world={year:db.year,seed:'manual-final-'+kind,manage:'manual',phase:'market',seasons:{},steps:[],step:0,report:null,offers:[],marketLog:[],negotiations:{},recruitment:{targets:{}}};db.worldDate=kind==='transfer'?globalTransferMarketWindow(db.year-1).lastOpenDate:db.year+'-01-10';
   const p=genPlayer(db,new RNG('manual-final-'+kind,'fixture'),{region:buyer.region,role:ROLES[0],age:24,base:45});p.careerGoal='stability';p.personality.ambition=10;p.wantsOut=true;
   if(kind!=='fa')signContract(db,p,kind==='renewal'?buyer:seller,2,kind==='transfer'?2:1,{promisedRole:'starter'});
   if(kind==='early_fa'){

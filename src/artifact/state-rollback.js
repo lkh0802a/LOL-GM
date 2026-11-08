@@ -5,6 +5,9 @@
 // Capture only affected players, rosters and finances rather than cloning the
 // entire world, champion database and competition schedules on every signing.
 
+function playerActionFinance(t){
+  return t?.finance&&Number.isFinite(t.finance.cash)?t.finance:null;
+}
 function actionJournalClone(value){return JSON.parse(JSON.stringify(value))}
 
 function actionJournalRestoreObject(target,record){
@@ -93,6 +96,7 @@ function captureWorldActionJournal(db,command){
   const marketOffers=command.type==='player.sign'?currentAIMarketOffers(db)
     .filter(o=>o.pid===command.pid&&o.status==='open')
     .map(ref=>({ref,record:actionJournalClone(ref)})):[];
+  const rivalSignUndo=captureRivalSignUndo(db,command);
   const newsRef=db.news,newsRows=Array.isArray(newsRef)?newsRef.slice():null;
   const hasDemand=Object.prototype.hasOwnProperty.call(db,'_marketDemandCache');
   const demandRef=db._marketDemandCache;
@@ -110,6 +114,7 @@ function captureWorldActionJournal(db,command){
     rollback(){
       if(staffJournal)staffJournal.rollback();
       for(const {ref,record} of marketOffers)actionJournalRestoreObject(ref,record);
+      rivalSignUndo();
       for(const row of entries){if(row.value)row.s.entries=row.value;else delete row.s.entries;if(row.staffValue)row.s.staffEntries=row.staffValue;else delete row.s.staffEntries;if(row.staffRecords)row.s.staffEntryRecords=row.staffRecords;else delete row.s.staffEntryRecords}
       if(closure){
         if(closure.firedPresent)w.fired=closure.fired;else delete w.fired;

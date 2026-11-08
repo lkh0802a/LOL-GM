@@ -6,6 +6,7 @@ await runEngineFixture(String.raw`(()=>{
   const db=buildWorld(cfg),[seller,buyer,owner]=activeTeams(db),
     p=Object.values(db.players).find(p=>!p.team&&!p.retired);
   setManagedTeam(db,buyer.id);db.world={phase:'market',year:db.year,manage:'ai'};
+  db.worldDate=globalPlayerFAOpenDate(db.year);
   p.attrs=Object.fromEntries(Object.keys(p.attrs).map(k=>[k,90]));
   p.reputation=90;p.careerGoal='international';
   signContract(db,p,seller,.1,2,{signingBonus:10,promisedRole:'starter'});
@@ -67,6 +68,7 @@ await runEngineFixture(String.raw`(()=>{
   const market=buildWorld(cfg),[vendor,rich,managed]=activeTeams(market),rng=new RNG('consent-supply');
   setManagedTeam(market,managed.id);
   market.world={phase:'market',manage:'manual',year:market.year,marketLog:[]};
+  market.worldDate=globalPlayerFAOpenDate(market.year);
   const stars=[];
   for(const role of ROLES){
     const star=genPlayer(market,rng,{role,age:24,base:90,region:'NA'}),

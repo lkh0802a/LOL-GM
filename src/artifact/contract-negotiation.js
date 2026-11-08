@@ -4,6 +4,25 @@
 
 // ---- 선수 계약 협상 엔진 ----
 function negotiationStore(db){const w=db.world;if(!w)return {};w.negotiations=w.negotiations||{};return w.negotiations}
+function rivalSignSnapshot(db,action){return {
+  rivalNegotiations:Object.values(db.world?.negotiations||{}).filter(n=>n.pid===action.pid&&n.teamId!==action.teamId&&n.status==='open').map(n=>JSON.parse(JSON.stringify(n))).sort((a,b)=>a.id.localeCompare(b.id)),
+  recruitmentTarget:db.world?.recruitment?.targets?.[action.pid]?JSON.parse(JSON.stringify(db.world.recruitment.targets[action.pid])):null
+}}
+function captureRivalSignUndo(db,command){
+  if(command.type!=='player.sign')return ()=>{};
+  const rows=Object.values(db.world?.negotiations||{}).filter(n=>n.pid===command.pid&&n.teamId!==command.teamId&&n.status==='open').map(ref=>({ref,record:actionJournalClone(ref)}));
+  const target=db.world?.recruitment?.targets?.[command.pid],record=target?actionJournalClone(target):null;
+  return ()=>{for(const row of rows)actionJournalRestoreObject(row.ref,row.record);if(target)actionJournalRestoreObject(target,record)};
+}
+function closeRivalNegotiationsAfterSigning(db,pid,teamId){
+  for(const neg of Object.values(db.world?.negotiations||{})){
+    if(neg.pid!==pid||neg.teamId===teamId||neg.status!=='open')continue;
+    const deadline=negotiationMarketDeadlineState(db,neg);if(deadline.error)throw Error(deadline.error);
+    neg.status=deadline.passed?'expired':'lost';neg.reason=deadline.passed?'이적시장 마감':'경쟁 구단 선택';neg.closedDate=db.worldDate;
+    const target=recruitmentTarget(db,pid);
+    if(target?.negotiationId===neg.id){target.stage='closed';target.result=deadline.passed?'deadline':'lost_to_rival'}
+  }
+}
 function negotiationId(db,pid,kind,teamId=null){return 'NEG_'+db.year+'_'+pid+'_'+kind+
   ((teamId&&(kind==='initial'||kind==='early_fa'))?'_'+teamId:'')}
 function negotiationRoundLimit(p){const profile=negotiationRepresentativeProfile(p);return clamp(3+Math.round((profile.professionalism-50)/35)-(profile.ambition>=82?1:0),2,5)}
@@ -108,9 +127,10 @@ function startNegotiation(db,pid,kind='fa',extra={}){
   if((kind==='fa'||kind==='initial')&&p.team)return {ok:false,msg:'FA 선수가 아닙니다'};if(kind==='renewal'&&p.team!==t.id)return {ok:false,msg:'우리 팀 선수가 아닙니다'};
   if(kind==='initial'){const allowed=new Set(setupTeamsForManager(db).map(x=>x.id));if(!allowed.has(t.id))return {ok:false,msg:'내 구단 조직의 스쿼드만 계약 대상이 될 수 있습니다'}}
   if((kind==='fa'||kind==='early_fa'||kind==='transfer'||kind==='initial')&&!recruitmentReady(db,pid,t.id))return {ok:false,msg:'관심 등록 → 관찰 → 내부 평가를 완료한 뒤 공식 협상을 시작할 수 있습니다'};
+  const store=negotiationStore(db),existing=Object.values(store).find(n=>n.pid===pid&&n.kind===kind&&n.teamId===t.id&&n.status==='open');
+  if(existing){const error=negotiationMarketDeadlineError(db,existing);return error?{ok:false,msg:error}:{ok:true,neg:existing,msg:p.name+' 협상이 이미 진행 중입니다'}}
   const id=negotiationId(db,pid,kind,
       (kind==='initial'||kind==='early_fa')?t.id:null),
-    store=negotiationStore(db),
     current=store[id];
   if(current&&current.status==='open')return {ok:true,neg:current,msg:p.name+' 협상이 이미 진행 중입니다'};
   const previous=current||latestNegotiationAttempt(db,pid,kind,t.id),
@@ -164,6 +184,8 @@ function aiRepresentativeCounterTerms(db,p,t,kind,offer,maxSalary,cashRoom=Infin
   return {terms:null,rounds,demand,representative:representative?.id||null};
 }
 function finalizeNegotiation(db,neg,terms){
+  const deadlineError=negotiationMarketDeadlineError(db,neg);
+  if(deadlineError)return {ok:false,msg:deadlineError};
   const p=db.players[neg.pid],t=db.teams[neg.teamId];
   if(!p||!t)return {ok:false,msg:'협상 선수 또는 구단이 존재하지 않습니다'};
   const future=(neg.kind==='renewal'||neg.kind==='early_fa')&&
@@ -198,6 +220,8 @@ function submitNegotiationOffer(db,nid,terms){
   if(!contractGuaranteeTermsValid(terms))
     return {ok:false,msg:'유효하지 않은 방출 보장률입니다'};
   const neg=negotiationStore(db)[nid];if(!neg||neg.status!=='open'||neg.stage!=='player')return {ok:false,msg:'진행 중인 선수 협상이 아닙니다'};
+  const deadlineError=negotiationMarketDeadlineError(db,neg);
+  if(deadlineError)return {ok:false,msg:deadlineError};
   const p=db.players[neg.pid],t=db.teams[neg.teamId];
   if(['renewal','early_fa'].includes(neg.kind)&&db.world?.phase==='offseason'&&db.world?.contractWindow){
     const contactErr=contractWindowContactError(db,p,t,neg.kind);

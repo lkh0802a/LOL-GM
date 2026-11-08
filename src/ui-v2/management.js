@@ -70,7 +70,7 @@ function v2Continue(){
  if(V2.db.world.pendingOfficial)return v2OfficialOpen();
  if(waitingNegotiationResponses(V2.db,true).length)return v2ContractAction(()=>advanceToNegotiationResponse(V2.db));
  if(['market','preseason'].includes(V2.db.world.phase))return v2ReviewSeasonTransition();
- if(V2.db.world.phase==='offseason')return v2ReviewContractDay();
+ if(V2.db.world.phase==='offseason')return V2.db.world.contractWindow?.stage==='fa'?v2ReviewOffseasonAction('day'):v2ReviewContractDay();
  if(V2.db.world.phase==='initial_roster'){const errors=initialOrganizationErrors(V2.db,v2Team());if(errors.length)return v2Tell(errors.join(' · '));return v2Mutate(()=>{finalizeInitialRosters(V2.db);return '선수단을 확정했습니다'});}
  if(V2.db.world.phase!=='season')return v2Tell('현재 단계의 계약 기간·결산 절차를 먼저 확인하세요');
  return v2ContractAction(()=>{const out=playWorldDay(V2.db);return {...out,ok:!!out,msg:out?.msg||(V2.db.world.pendingOfficial?'공식 경기 준비가 필요합니다. 진행을 멈췄습니다.':'현재 날짜까지 진행했습니다')}});
@@ -83,7 +83,8 @@ function v2ContractCalendar(){
 }
 function v2ContractCalendarView(){
  const m=v2ContractCalendar();if(!m)return '';const fa=m.stage==='fa'?freeAgencyDayState(V2.db):null,blocked=v2OffseasonActionError();
- return `<section class="panel"><h3>${m.stage==='exclusive'?'원소속 독점 재계약 기간':'자유계약 기간'}</h3><p>기존 계약 만료 ${v2Esc(m.expiry||'확인 필요')} · 외부 접촉 ${v2Esc(m.outside||'확인 필요')}부터</p><p class="hint">${m.ready?'계속 진행에서 다음 하루를 검토합니다. 작성 중인 제안은 자동 제출하지 않습니다.':v2Esc(fa?.reason||'현재 계약 날짜·단계의 진행 조건을 확인하세요.')}</p>${fa?`<p>연간 결산 기준 ${v2Esc(fa.through||'확인 필요')}</p><div class="tag-flex"><button class="btn btn-outline" id="fa-day-review"${blocked||!fa.ready?' disabled':''}>FA 하루 진행 검토${fa.ready?' · '+v2Esc(fa.next):''}</button><button class="btn btn-primary" id="annual-close-review"${blocked?' disabled':''}>연간 결산 검토</button></div><p class="hint">하루 진행은 합의된 지급·등록 자격의 날짜만 소비합니다. 제안 제출과 연간 결산은 각각 직접 결정합니다.</p>`:''}<button class="btn btn-outline" data-go="market" data-to="진행 중인 협상">계약 협상 확인</button></section>`;
+ const market=fa?.stage==='fa'?globalTransferMarketState(V2.db.worldDate):null;
+ return `<section class="panel"><h3>${m.stage==='exclusive'?'기존 계약 만료 전 협상':'자유계약 기간'}</h3><p>기존 계약 만료 ${v2Esc(m.expiry||'확인 필요')} · FA 개방 ${v2Esc(m.outside||'확인 필요')}부터</p><p class="hint">${m.ready?'별도 재계약 독점 기간은 없습니다. 계약 중 타 구단 조기 접촉에는 원소속 구단 동의가 필요합니다. 계속 진행에서 다음 하루를 검토하며, 작성 중인 제안은 자동 제출하지 않습니다.':v2Esc(fa?.reason||'현재 계약 날짜·단계의 진행 조건을 확인하세요.')}</p>${fa?`${market?`<p>이적시장 ${market.open?'개방':'마감'} · ${v2Esc(market.closesOn)} 00:00 UTC 마감 · 무소속 FA는 연중 계약 가능</p>`:''}<p>FA 하루 진행 상한 ${v2Esc(fa.through||'확인 필요')}</p><div class="tag-flex"><button class="btn btn-outline" id="fa-day-review"${blocked||!fa.ready?' disabled':''}>FA 하루 진행 검토${fa.ready?' · '+v2Esc(fa.next):''}</button><button class="btn btn-primary" id="annual-close-review"${blocked?' disabled':''}>연간 결산 검토</button></div><p class="hint">하루 진행은 합의된 지급·등록 자격의 날짜만 소비합니다. 제안 제출과 연간 결산은 각각 직접 결정합니다.</p>`:''}<button class="btn btn-outline" data-go="market" data-to="진행 중인 협상">계약 협상 확인</button></section>`;
 }
 function v2OffseasonActionError(){
  const error=v2ManagementError();if(error)return error;const t=v2Team(),s=freeAgencyDayState(V2.db);
@@ -95,7 +96,8 @@ function v2ReviewOffseasonAction(kind){
  const error=v2OffseasonActionError();if(error)return v2Tell(error);const s=freeAgencyDayState(V2.db),annual=kind==='annual';if(annual&&waitingNegotiationResponses(V2.db,true).length)return v2Tell('응답 대기 중인 제안을 직접 취소하거나 연락을 확인한 뒤 결산하세요');
  if(!annual&&(!s.ready||kind!=='day'))return v2Tell(s.reason||'현재 자유계약 날짜를 확인하세요');
  if(V2.review||V2.managementReview||V2.roleReview||V2.advice||V2.official?.open)return v2Tell('현재 작업 창을 먼저 닫으세요');
- V2.managementReview={db:V2.db,world:V2.db.world,manager:V2.db.manager,stamp:v2ManagementStamp(),freeAgencyDay:!annual,annualClose:annual,offseasonTerms:JSON.stringify([!annual,annual]),offseasonBasis:JSON.stringify(V2.db),preview:{command:{type:annual?'season.close':'fa.day'}},title:annual?'연간 결산 검토':'자유계약 기간 · 하루 진행 검토',lines:annual?['현재 '+V2.db.worldDate+' → 기존 결산 기준 '+s.through,'기존 시즌 기록·성장·은퇴·승강·연간 재정과 계약 처리를 결산하고 이적시장으로 이동합니다.','남은 FA 날짜를 하루씩 검토하려면 취소하세요. 결산은 날짜를 기준일까지 이동합니다.','기존 최소 가용 인원 보정 계약과 다른 구단·경영진의 독립 결정을 포함한 연간 처리를 실행합니다. 현재 감독이 작성 중인 제안은 제출하지 않으며 합의를 최종 계약으로 대신 확정하지 않습니다.']:['현재 '+s.date+' → '+s.next+' · 그 전에 판단 연락이 오면 해당 시각에 멈춥니다.','기존 합의된 이적료 정산과 지역 등록 자격의 날짜 소비를 처리합니다.','경기·훈련·의료의 일일 처리를 추가하지 않습니다. 협상 제안과 연간 결산은 자동으로 실행하지 않습니다.']};v2Render();
+ const w=V2.db.world,cw=w.contractWindow,closes=cw.outsideContactDate===globalPlayerFAOpenDate(w.year)?globalTransferMarketWindow(w.year).closesOn:`${cw.startSeason}-01-06`,annualDate=V2.db.worldDate<closes?closes:V2.db.worldDate;
+ V2.managementReview={db:V2.db,world:V2.db.world,manager:V2.db.manager,stamp:v2ManagementStamp(),freeAgencyDay:!annual,annualClose:annual,offseasonTerms:JSON.stringify([!annual,annual]),offseasonBasis:JSON.stringify(V2.db),preview:{command:{type:annual?'season.close':'fa.day'}},title:annual?'연간 결산 검토':'자유계약 기간 · 하루 진행 검토',lines:annual?['현재 '+V2.db.worldDate+' → 결산 날짜 '+annualDate,'남은 이적시장 날짜를 순서대로 처리한 뒤 기존 시즌 기록·성장·은퇴·승강·연간 재정과 계약을 결산합니다.','남은 FA 날짜를 하루씩 검토하려면 취소하세요. 현재 감독이 작성 중인 제안은 제출하거나 자동 확정하지 않습니다.','기존 최소 가용 인원 보정 계약과 다른 구단·경영진의 독립 결정을 포함한 연간 처리를 실행합니다.']:['현재 '+s.date+' → '+s.next+' · 그 전에 판단 연락이 오면 해당 시각에 멈춥니다.','기존 합의된 이적료 정산과 지역 등록 자격의 날짜 소비를 처리합니다.','경기·훈련·의료의 일일 처리를 추가하지 않습니다. 협상 제안과 연간 결산은 자동으로 실행하지 않습니다.']};v2Render();
 }
 function v2CommitOffseasonAction(r){
  const error=v2OffseasonActionError();if(error)return {ok:false,errors:[error]};
@@ -218,14 +220,14 @@ function v2CareerPanel(){
  const db=V2.db,w=db.world,pick=w.phase==='pick',pre=w.phase==='preseason',fa=w.phase==='offseason'&&w.contractWindow?.stage==='fa';
  return `<section class="panel"><h2>${w.fired?'해임 후 커리어':'관리 구단 선택'}</h2><p>기존 세계·선수·계약·기록은 그대로 이어집니다. 관리 권한이 없는 구단의 선발이나 계약을 결정하지 않습니다.</p>${pick?`<label class="field">맡을 구단<select class="input" id="career-team"><option value="">구단 선택</option>${managerSelectableTeams(db).filter(t=>db.regions[t.region]&&t.owner).map(t=>`<option value="${v2Esc(t.id)}">${v2Esc(t.name)}</option>`).join('')}</select></label><button class="btn btn-primary" id="career-team-review">이 구단 선택 검토</button>${V2.careerChoiceReturn?'<button class="btn btn-outline" id="career-choice-cancel">구단 선택 취소</button>':''}`:pre?'<button class="btn btn-primary" id="career-choice-open">다음 시즌 맡을 구단 선택</button>':'<p class="hint">계속 진행에서 현재 세계의 날짜·시즌 단계를 직접 검토합니다.</p>'}${fa?'<button class="btn btn-outline" id="career-annual-review">별도 연간 결산 검토</button>':''}</section>`;
 }
-function v2CareerKind(){const w=V2.db?.world;if(!w)return null;if(w.phase==='season')return 'day';if(w.phase==='market')return 'market';if(w.phase==='offseason')return !w.contractWindow?'open-window':w.contractWindow.stage==='exclusive'?'exclusive':'annual';return null;}
+function v2CareerKind(){const w=V2.db?.world;if(!w)return null;if(w.phase==='season')return 'day';if(w.phase==='market')return 'market';if(w.phase==='offseason'){if(!w.contractWindow)return 'open-window';if(w.contractWindow.stage==='exclusive')return 'exclusive';const s=freeAgencyDayState(V2.db);return s.ready?'fa-day':s.stage==='fa'&&s.date===s.through?'annual':null;}return null;}
 function v2ReviewCareer(kind=v2CareerKind(),id=null){
  const db=V2.db,w=db?.world;if(!w||V2.busy)return;
  if(V2.review||V2.managementReview||V2.roleReview||V2.advice||V2.official?.open)return v2Tell('현재 작업 창을 먼저 닫으세요');
  const allowed=kind==='choose'?w.phase==='pick':kind==='annual'?w.phase==='offseason'&&w.contractWindow?.stage==='fa':v2CareerDetached()&&kind===v2CareerKind();
  if(!allowed)return v2Tell('현재 커리어 단계에서 결정할 수 없습니다');
  const t=id&&db.teams[id];if(kind==='choose'&&(!isManagerSelectableTeam(db,t)||!db.regions[t.region]||!t.owner))return v2Tell('현재 관리할 수 없는 구단입니다');
- const title=({day:'무직 상태 · 세계 하루 진행',market:'세계 이적시장 마감',exclusive:'무직 상태 · 독점 기간 하루', 'fa-day':'무직 상태 · FA 하루',annual:'별도 연간 결산', 'open-window':'계약 기간 시작',choose:'관리 구단 선택'})[kind];
+ const title=({day:'무직 상태 · 세계 하루 진행',market:'세계 이적시장 마감',exclusive:'무직 상태 · 계약 만료 전 하루', 'fa-day':'무직 상태 · FA 하루',annual:'별도 연간 결산', 'open-window':'계약 기간 시작',choose:'관리 구단 선택'})[kind];
  V2.managementReview={db,world:w,manager:db.manager,stamp:v2ManagementStamp(),careerAction:kind,careerTeam:id,careerBasis:JSON.stringify(db),careerTerms:JSON.stringify([kind,id]),preview:{command:{type:'career.continue'}},title,lines:[kind==='choose'?t.name+'의 감독으로 이어갑니다.':'현재 '+db.worldDate+' · '+title,'기존 엔진의 현재 상태·계약·재정·기록을 이어 처리합니다. 다른 구단의 수동 결정 권한을 부여하지 않습니다.']};v2Render();
 }
 function v2CommitCareer(r){
@@ -237,6 +239,7 @@ function v2CommitCareer(r){
   else if(kind==='day'){out=playWorldDay(db);out={ok:true,result:out};}
   else if(kind==='open-window'){initOffseasonContractWindow(db);out={ok:true};}
   else if(kind==='exclusive')out=advanceOffseasonContractDay(db);
+  else if(kind==='fa-day')out=advanceOffseasonFreeAgencyDay(db,'system');
   else if(kind==='annual'){runOffseason(db);out={ok:true};}
   else if(kind==='market'){closeMarket(db);out={ok:true};}
   if(!out?.ok)throw Error(out?.msg||out?.errors?.join(' · ')||'현재 커리어 상태를 다시 확인하세요');if(kind==='choose')V2.careerChoiceReturn=null;return out;

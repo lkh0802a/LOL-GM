@@ -10,7 +10,7 @@ function aiMarketOfferPeriod(db){
   if(w.phase==='offseason'){
     const day=freeAgencyDayState(db);
     return day.stage==='fa'&&db.worldDate<=day.through
-      ?{id:'fa/'+w.contractWindow.startSeason,kind:'fa',year:w.contractWindow.startSeason}:null;
+      ?{id:'fa/'+w.contractWindow.startSeason+(db.worldDate>=globalTransferMarketWindow(w.year).closesOn?'/post':''),kind:'fa',year:w.contractWindow.startSeason}:null;
   }
   // Annual settlement advances db.year before the old world's year rolls over.
   if(w.phase==='market')return {id:'market/'+db.year,kind:'fa',year:db.year};
@@ -20,9 +20,17 @@ function currentAIMarketOffers(db){
   const period=aiMarketOfferPeriod(db);
   return period?Object.values(db.contractMarketOffers?.periods?.[period.id]?.offers||{}):[];
 }
+function aiMarketOfferDeadlineState(db,o){
+  if(typeof o?.issuedAt!=='string'||!Number.isFinite(Date.parse(o.issuedAt))||
+    new Date(o.issuedAt).toISOString()!==o.issuedAt)
+    return {deadline:null,passed:false,error:'AI 제안 발행 시각을 확인할 수 없습니다'};
+  return negotiationMarketDeadlineState(db,{kind:o.kind,createdDate:o.issuedAt.slice(0,10)});
+}
 function aiMarketOfferAvailable(db,o,market=null){
+  const deadline=aiMarketOfferDeadlineState(db,o);
+  if(deadline.error||deadline.passed)return false;
   const period=aiMarketOfferPeriod(db),p=db.players[o?.pid],t=db.teams[o?.teamId];
-  if(!period||o.period!==period.id||o.kind!==period.kind||o.status!=='open'||
+  if(!period||db.contractMarketOffers?.periods?.[period.id]?.closedAt||o.period!==period.id||o.kind!==period.kind||o.status!=='open'||
     typeof o.issuedAt!=='string'||!Number.isFinite(Date.parse(o.issuedAt))||
     new Date(o.issuedAt).toISOString()!==o.issuedAt||o.issuedAt>negotiationClockAt(db)||
     !p||p.retired||p.team||!t||(t.parent&&o.kind!=='initial')||
@@ -41,14 +49,16 @@ function closeAIMarketOffer(db,o,status,reason){
   if(o.status!=='open')return;
   o.status=status;o.reason=reason;o.closedAt=negotiationClockAt(db);
 }
-function expireCurrentAIMarketOffers(db){
-  const period=aiMarketOfferPeriod(db),store=period&&db.contractMarketOffers?.periods?.[period.id];
+function expireCurrentAIMarketOffers(db,periodId=aiMarketOfferPeriod(db)?.id){
+  const store=periodId&&db.contractMarketOffers?.periods?.[periodId];
   if(!store)return;
   for(const o of Object.values(store.offers))closeAIMarketOffer(db,o,'expired','period_closed');
   store.closedAt=negotiationClockAt(db);
 }
-function issueAIMarketOffer(db,t,p,terms,event,target=null,choiceValue=null,market=null){
+function issueAIMarketOffer(db,t,p,terms,event,target=null,choiceValue=null,market=null,expectedPeriod=null){
   const period=aiMarketOfferPeriod(db);if(!period)return null;
+  if(expectedPeriod&&period.id!==expectedPeriod)return null;
+  if(db.contractMarketOffers?.periods?.[period.id]?.closedAt)return null;
   const root=db.contractMarketOffers||(db.contractMarketOffers={version:1,periods:{}}),
     store=root.periods[period.id]||(root.periods[period.id]={offers:{},events:{}}),
     id=period.id+'/'+event+'/'+t.id+'/'+p.id;
@@ -74,12 +84,16 @@ function settleAIMarketOffers(db,pid,teamId,terms){
 }
 function refreshAIMarketOffers(db){
   const period=aiMarketOfferPeriod(db);if(!period)return [];
+  if(db.contractMarketOffers?.periods?.[period.id]?.closedAt)return currentAIMarketOffers(db);
   const root=db.contractMarketOffers||(db.contractMarketOffers={version:1,periods:{}});
   for(const [id,store] of Object.entries(root.periods)){
     if(id!==period.id&&store.closedAt)continue;
-    for(const o of Object.values(store.offers))
-      if(o.status==='open'&&(id!==period.id||!aiMarketOfferAvailable(db,o)))
-        closeAIMarketOffer(db,o,id!==period.id?'expired':'withdrawn',id!==period.id?'period_closed':'conditions_changed');
+    for(const o of Object.values(store.offers)){
+      if(o.status!=='open')continue;
+      const expired=id!==period.id||aiMarketOfferDeadlineState(db,o).passed;
+      if(expired||!aiMarketOfferAvailable(db,o))
+        closeAIMarketOffer(db,o,expired?'expired':'withdrawn',expired?'period_closed':'conditions_changed');
+    }
     if(id!==period.id)store.closedAt=negotiationClockAt(db);
   }
   const store=root.periods[period.id]||(root.periods[period.id]={offers:{},events:{}}),
@@ -102,7 +116,7 @@ function refreshAIMarketOffers(db){
       if(!candidate)continue;
       const rng=new RNG(db.world.seed+'/'+period.id+'/'+event+'/'+t.id+'/'+role,'ai-market-offer'),
         terms=aiMarketProposalTerms(db,candidate.p,t,candidate.ask,rng);
-      issueAIMarketOffer(db,t,candidate.p,terms,event);
+      issueAIMarketOffer(db,t,candidate.p,terms,event,null,null,null,period.id);
     }
   }
   store.events[event]=true;return currentAIMarketOffers(db);
