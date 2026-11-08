@@ -142,7 +142,6 @@ export function validateRulebook(docs){
       if(m[1]!==prefix)add('WRONG_CHAPTER',file+' '+id+' belongs in '+prefix);
       if(ids.has(id))add('DUPLICATE_ID',id+' '+ids.get(id).file+' '+file);
       if(!body.trim())add('EMPTY_RULE',id);
-      if(!/https:\/\/github\.com\/lkh0802a\/LOL-GM\/issues\/[0-9]+/.test(body))add('NO_SOURCE',id);
       ids.set(id,{file,body});
     }
   }
@@ -180,10 +179,11 @@ export function validateRulebook(docs){
     matrixIds.add(id);
     const rule=ids.get(id);
     if(!rule){add('MATRIX_ORPHAN',id);continue;}
+    const evidence=cells[3];
+    if(!/#\d+/.test(evidence||''))add('MATRIX_EVIDENCE_MISSING',id);
     const declared=cells[4];
-    const actual=/issues\/\d+#issuecomment-\d+/.test(rule.body)?'댓글 직접 링크':'이슈·기타';
-    if(declared!==actual)add('MATRIX_SOURCE_DEPTH',id+' expected '+actual+' found '+declared);
-    if(actual==='댓글 직접 링크')matrixDirect++;
+    if(!['이슈·기타','댓글 직접 링크'].includes(declared))add('MATRIX_SOURCE_DEPTH',id+' invalid '+declared);
+    if(declared==='댓글 직접 링크')matrixDirect++;
     const status=cells[5];
     if(!['관련 원문 부분대조','세부 판정 대기','**후속 대체 확인·교정 필요**'].includes(status)){
       add('MATRIX_STATUS',id+' '+status);
@@ -245,11 +245,10 @@ export function validateRulebook(docs){
     }
   }
 
-  // Provenance depth is reported as a metric, not a proxy for approval validity:
-  // issue-level citations can still be valid but require more precise adjudication.
+  // Evidence is kept outside the standalone normative text.
   const sourceDepth = {
-    directCommentLinked: [...ids.values()].filter(({body}) => /issues\/\d+#issuecomment-\d+/.test(body)).length,
-    issueOnlyOrOther: [...ids.values()].filter(({body}) => !/issues\/\d+#issuecomment-\d+/.test(body)).length,
+    directCommentLinked: matrixDirect,
+    issueOnlyOrOther: ids.size-matrixDirect,
   };
   const agent=docs['AGENTS.md'];
   for(const required of ['## 규정집 필수 참조','docs/rulebook/README.md','docs/AI_RULEBOOK_GUIDE.md','npm run check:rulebook']){
@@ -269,6 +268,6 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
     for(const error of result.errors)console.error('rulebook: '+error);
     process.exitCode=1;
   }else{
-    console.log('rulebook: PASS '+result.worldRuleCount+' world-canon clauses / '+result.ruleCount+' total approved rule and UI requirement IDs across '+result.chapterCount+' world chapters; '+result.sourceDepth.directCommentLinked+' direct-comment-linked; '+result.sourceDepth.issueOnlyOrOther+' issue-level/other-linked. IDs, links, Codex entrypoint and policy pins verified (DOCUMENT CHECK ONLY; SOURCE LINKS DO NOT VERIFY APPROVAL)');
+    console.log('rulebook: PASS '+result.worldRuleCount+' world-law clauses / '+result.ruleCount+' world and UI contract IDs in '+result.chapterCount+' world chapters. Canon text is source-free; evidence indexed separately. Structural and policy pins verified (DOCUMENT CHECK ONLY).');
   }
 }
