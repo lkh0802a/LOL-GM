@@ -718,6 +718,31 @@ test('user-approved short national roster and conflict-free substitute cannot si
   assert.match(check(docs),/BROKEN_PIN: GOV-004/);
 });
 
+test('partial-season tenure cannot be credited multiple times in one season',()=>{
+  const file='docs/rulebook/30-TRANSFERS.md';
+  let docs=changed(file,text=>text.replace(
+    '한 시즌을 둘 이상의 근속 시즌으로 중복 계산하지 않는다',
+    '한 시즌에 같은 지역의 세 구단에 근속하면 세 시즌으로 계산한다'
+  ));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/BROKEN_PIN: TRANS-014/);
+
+  const guide='docs/GAME_IMPLEMENTATION_ENTRYPOINT.md';
+  docs=changed(guide,text=>text.replace(
+    '해당 시즌 최대 한 번',
+    '해당 시즌 여러 번'
+  ));
+  assert.notEqual(docs[guide],original[guide]);
+  assert.match(check(docs),/DEPTH_TENURE_SCHEDULE_ACCEPTANCE/);
+
+  docs=changed(guide,text=>text.replace(
+    '132→240시리즈',
+    '132→132시리즈'
+  ));
+  assert.notEqual(docs[guide],original[guide]);
+  assert.match(check(docs),/DEPTH_TENURE_SCHEDULE_ACCEPTANCE/);
+});
+
 test('the policy-pin source cannot shadow a clause with duplicate JS object keys',()=>{
   const script=readFileSync(new URL('./rulebook-guard.mjs',import.meta.url),'utf8');
   const ids=[...script.matchAll(/^  '([A-Z]+-\d{3})':\[/gm)].map(x=>x[1]);
