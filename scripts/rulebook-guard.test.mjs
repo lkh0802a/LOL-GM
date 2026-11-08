@@ -73,7 +73,7 @@ test('shared facilities cannot erase first-team priority on a real clash',()=>{
   assert.match(check(docs),/BROKEN_PIN: PLAYER-007/);
 });
 test('publication version and changelog cannot silently diverge',()=>{
-  const docs=changed('docs/rulebook/README.md',text=>text.replace('v0.10.0','v9.9.9'));
+  const docs=changed('docs/rulebook/README.md',text=>text.replace('v0.11.0','v9.9.9'));
   assert.match(check(docs),/CHANGELOG: no entry/);
 });
 test('approved youth compensation and club taxonomy cannot silently regress',()=>{
@@ -359,7 +359,7 @@ test('adjudication matrix cannot duplicate an existing clause id',()=>{
 test('adjudication matrix cannot omit a rulebook clause',()=>{
   const file='docs/rulebook-audit/CLAUSE_DECISION_MATRIX_2026_11_01.md';
   const docs=changed(file,text=>text.replace(/^\| UI-010 \|[^\n]*\n/m,''));
-  assert.match(check(docs),/MATRIX_MISSING: UI-010/);
+  assert.match(check(docs),/SOURCE_AUDIT_MISSING: UI-010/);
 });
 test('adjudication source type must reflect direct comment links',()=>{
   const file='docs/rulebook-audit/CLAUSE_DECISION_MATRIX_2026_11_01.md';
