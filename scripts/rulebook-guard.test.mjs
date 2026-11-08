@@ -782,6 +782,23 @@ test('initial-only registration transfer and staff limits cannot become immutabl
   assert.match(check(docs),/BROKEN_PIN: BIZ-016/);
 });
 
+test('initial ceilings acceptance prevents premature and retroactive changes',()=>{
+  const file='docs/GAME_IMPLEMENTATION_ENTRYPOINT.md';
+  let docs=changed(file,text=>text.replace(
+    '그 시즌에 실제 발효한 비로컬·명단 상한',
+    '새로운 제안 단계에서 현재 시즌에도 즉시 바뀐 비로컬·명단 상한'
+  ));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/INITIAL_CEILING_ACCEPTANCE/);
+
+  docs=changed(file,text=>text.replace(
+    '초기 최대 2회',
+    '초기 무제한 이적'
+  ));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/INITIAL_CEILING_ACCEPTANCE/);
+});
+
 test('the policy-pin source cannot shadow a clause with duplicate JS object keys',()=>{
   const script=readFileSync(new URL('./rulebook-guard.mjs',import.meta.url),'utf8');
   const ids=[...script.matchAll(/^  '([A-Z]+-\d{3})':\[/gm)].map(x=>x[1]);
