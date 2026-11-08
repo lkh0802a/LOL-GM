@@ -226,7 +226,7 @@ test('development support and sell-on rights require real evidence and valid ter
   assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
   docs=changed(file,text=>text.replace('검증 가능한 기여에 근거한 공개된 합법 규정으로 평가한다','임의의 비공개 기준으로 평가한다'));
   assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
-  docs=changed(file,text=>text.replace('미승인 금액·자격이나 배분식을 임의로 확정하지 않는다','임의의 지원 비율을 확정한다'));
+  docs=changed(file,text=>text.replace('유효한 규정에 없는 금액·자격이나 배분식을 임의로 확정하지 않는다','임의의 지원 비율을 확정한다'));
   assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
 });
 test('future scouting demand stays evidence-based and withdrawn alerts stay excluded',()=>{
@@ -443,7 +443,7 @@ test('elected player representatives cannot be replaced by appointed club agents
 });
 test('legitimate office review cannot restore withdrawn random violation and sanction events',()=>{
   const file='docs/rulebook/70-GOVERNANCE.md';
-  const docs=changed(file,text=>text.replace('불법 출전·무작위 규정 위반을 일부러 발생시키는 사후 징계·이의신청 게임 엔진 승인으로 확대하지 않는다','위반을 무작위로 발생시켜 사후 징계·이의신청 게임 엔진을 운영한다'));
+  const docs=changed(file,text=>text.replace('실제 위반 사실이 확인되지 않은 출전 부적격·징계·이의신청 사건을 임의로 생성하지 아니한다','위반을 무작위로 발생시켜 사후 징계·이의신청 게임 엔진을 운영한다'));
   assert.match(check(docs),/BROKEN_PIN: GOV-011/);
 });
 test('office leaders cannot ignore disclosure and recusal for conflicts',()=>{
