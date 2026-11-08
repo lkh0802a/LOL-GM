@@ -208,6 +208,17 @@ test('cross-league development records do not invent payments or erase valid obl
   docs=changed(file,text=>text.replace('확정되지 않은 지원에 없는 돈을 지급하지 않는다','확정되지 않은 지원을 무조건 지급한다'));
   assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
 });
+test('international travel costs preserve real movement and contracted support',()=>{
+  const file='docs/rulebook/60-BUSINESS.md';
+  let docs=changed(file,text=>text.replace('국제대회 이동비는 실제 이동 거리와 비용','국제대회 이동비는 대회 수만으로 계산'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-004/);
+  docs=changed(file,text=>text.replace('주최자·사무국의 계약상 합법 지원을 구분한다','지원의 계약 여부를 무시한다'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-004/);
+  docs=changed(file,text=>text.replace('같은 비용이나 지원을 중복 지급하지 않는다','같은 지원을 중복 지급한다'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-004/);
+  docs=changed(file,text=>text.replace('승인되지 않은 거리 요금·지원 비율을 만들지 않는다','임의 요금을 확정한다'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-004/);
+});
 test('future scouting demand stays evidence-based and withdrawn alerts stay excluded',()=>{
   const file='docs/rulebook/80-EXPERIENCE.md';
   let docs=changed(file,text=>text.replace('합리적으로 입증된 미래 수요도 고려할 수 있으나','현재 공백만 고려해야 하나'));
