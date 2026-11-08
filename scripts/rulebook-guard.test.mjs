@@ -170,6 +170,15 @@ test('player distribution investigations do not force ability reductions or clai
   docs=changed(file,text=>text.replace('권한 없는 화면에 공개하는 근거로 사용하지 않는다','모든 화면에 공개한다'));
   assert.match(check(docs),/BROKEN_PIN: PLAYER-012/);
 });
+test('training compensation comparisons control actual evidence without fabricating effects',()=>{
+  const file='docs/rulebook/60-BUSINESS.md';
+  let docs=changed(file,text=>text.replace('구단 소유·임대, 기간과 당시 근거를 통제한 비교','서로 다른 조건을 그대로 섞은 비교'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
+  docs=changed(file,text=>text.replace('다른 입력이 언제나 다른 결과를 내도록 강제하지 않으며','모든 입력에 다른 결과를 강제하며'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
+  docs=changed(file,text=>text.replace('실제 원장이나 계약이 없는 지급을 검증 결과로 만들어내지 않는다','기록 없는 지급을 만들어낸다'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
+});
 test('future scouting demand stays evidence-based and withdrawn alerts stay excluded',()=>{
   const file='docs/rulebook/80-EXPERIENCE.md';
   let docs=changed(file,text=>text.replace('합리적으로 입증된 미래 수요도 고려할 수 있으나','현재 공백만 고려해야 하나'));
