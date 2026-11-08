@@ -750,6 +750,38 @@ test('cross-chapter reference to a nonexistent article is rejected',()=>{
   assert.match(check(docs),/UNKNOWN_CLAUSE_REFERENCE: .*CORE-999/);
 });
 
+test('initial-only registration transfer and staff limits cannot become immutable',()=>{
+  const transfer='docs/rulebook/30-TRANSFERS.md';
+  let docs=changed(transfer,text=>text.replace(
+    '당시 유효한 등록 정원 및 비로컬 상한',
+    '최초 세계의 정원과 비로컬 상한은 모든 미래 시즌에도 절대 불변'
+  ));
+  assert.notEqual(docs[transfer],original[transfer]);
+  assert.match(check(docs),/BROKEN_PIN: TRANS-013/);
+
+  docs=changed(transfer,text=>text.replace(
+    '그 절차로 변경되지 않은 시즌에는 2회 상한을 그대로 적용한다',
+    '사무국의 허가가 없더라도 모든 시즌에 이적횟수를 제한 없이 변경할 수 있다'
+  ));
+  assert.notEqual(docs[transfer],original[transfer]);
+  assert.match(check(docs),/BROKEN_PIN: TRANS-012/);
+
+  const staff='docs/rulebook/60-BUSINESS.md';
+  docs=changed(staff,text=>text.replace(
+    '영구 불변이라는 이유로 정당한 개정을 차단하거나 미발효된 정원 확대를 미리 적용하지 않는다',
+    '모든 시즌에 같은 고용 상한이 영구 고정된다'
+  ));
+  assert.notEqual(docs[staff],original[staff]);
+  assert.match(check(docs),/BROKEN_PIN: BIZ-016/);
+
+  docs=changed(staff,text=>text.replace(
+    '당시 유효한 코치 상한이 7명인 동안',
+    '모든 미래 시즌에 영구히'
+  ));
+  assert.notEqual(docs[staff],original[staff]);
+  assert.match(check(docs),/BROKEN_PIN: BIZ-016/);
+});
+
 test('the policy-pin source cannot shadow a clause with duplicate JS object keys',()=>{
   const script=readFileSync(new URL('./rulebook-guard.mjs',import.meta.url),'utf8');
   const ids=[...script.matchAll(/^  '([A-Z]+-\d{3})':\[/gm)].map(x=>x[1]);
