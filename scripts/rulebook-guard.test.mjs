@@ -179,6 +179,15 @@ test('training compensation comparisons control actual evidence without fabricat
   docs=changed(file,text=>text.replace('실제 원장이나 계약이 없는 지급을 검증 결과로 만들어내지 않는다','기록 없는 지급을 만들어낸다'));
   assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
 });
+test('long-term economics use real evidence without forced equalization or overstated coverage',()=>{
+  const file='docs/rulebook/60-BUSINESS.md';
+  let docs=changed(file,text=>text.replace('경제력을 강제로 평준화하거나 경기 결과를 보정하지 않는다','경제력과 경기 결과를 강제로 평준화한다'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-008/);
+  docs=changed(file,text=>text.replace('제한된 기간의 실행만으로 장기 경제 검증이 완료되었다고 간주하지 않는다','한 시즌으로 장기 경제 검증을 완료한다'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-008/);
+  docs=changed(file,text=>text.replace('실제 표본과 원장을 근거로 검토','임의 수치를 근거로 검토'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-008/);
+});
 test('future scouting demand stays evidence-based and withdrawn alerts stay excluded',()=>{
   const file='docs/rulebook/80-EXPERIENCE.md';
   let docs=changed(file,text=>text.replace('합리적으로 입증된 미래 수요도 고려할 수 있으나','현재 공백만 고려해야 하나'));
