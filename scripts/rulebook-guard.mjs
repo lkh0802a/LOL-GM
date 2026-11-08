@@ -175,6 +175,16 @@ export function validateRulebook(docs){
       ids.set(id,{file,body});
     }
   }
+  // Cross-chapter references must resolve to an actual world-law clause.
+  // Index other documents separately; historical evidence may cite deleted IDs.
+  for(const [file] of CHAPTERS){
+    const lines=docs[file].split('\n');
+    for(let lineIndex=0;lineIndex<lines.length;lineIndex++){
+      for(const ref of lines[lineIndex].matchAll(/\b(?:CORE|COMP|NAT|CAL|TRANS|PLAYER|MATCH|BIZ|GOV)-\d{3}\b/g)){
+        if(!ids.has(ref[0]))add('UNKNOWN_CLAUSE_REFERENCE',file+':'+(lineIndex+1)+' -> '+ref[0]);
+      }
+    }
+  }
   // Editorial diagnostics only: obvious conversational expressions do not
   // belong in the current normative chapters. Historical evidence remains intact.
   const colloquial=/가짜|딱지|원팀|그해|그때|꾸며내|하드코딩|버프/;
