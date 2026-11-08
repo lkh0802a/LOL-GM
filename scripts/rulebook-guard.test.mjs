@@ -197,6 +197,17 @@ test('scouting discovery alone creates no exclusive signing right',()=>{
   docs=changed(file,text=>text.replace('이미 유효하게 성립한 별도 계약상의 권리는 실제 계약과 적용 규정에 따라 판단한다','별도 계약상의 권리를 모두 없앤다'));
   assert.match(check(docs),/BROKEN_PIN: TRANS-009/);
 });
+test('cross-league development records do not invent payments or erase valid obligations',()=>{
+  const file='docs/rulebook/60-BUSINESS.md';
+  let docs=changed(file,text=>text.replace('다른 리그의 실제 육성 기여도 공통 기준에 따른 이력으로 인정','다른 리그의 육성 이력을 무조건 무시'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
+  docs=changed(file,text=>text.replace('리그 간 금전 이전은 승인된 관할·지급 의무·재원을 충족할 때만','리그 간 금전은 무조건 지급하며'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
+  docs=changed(file,text=>text.replace('이미 적법하게 발생한 육성 지원 채무를 임의로 소멸시키지 않는다','이미 발생한 채무를 없앤다'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
+  docs=changed(file,text=>text.replace('확정되지 않은 지원에 없는 돈을 지급하지 않는다','확정되지 않은 지원을 무조건 지급한다'));
+  assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
+});
 test('future scouting demand stays evidence-based and withdrawn alerts stay excluded',()=>{
   const file='docs/rulebook/80-EXPERIENCE.md';
   let docs=changed(file,text=>text.replace('합리적으로 입증된 미래 수요도 고려할 수 있으나','현재 공백만 고려해야 하나'));
