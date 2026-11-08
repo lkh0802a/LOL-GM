@@ -648,6 +648,14 @@ test('initial world preset contract cannot be silently replaced with random regu
   assert.match(check(docs),/BROKEN_PIN: CORE-012/);
 });
 
+test('approved three-year contract term is not confused with negotiation duration',()=>{
+  const docs=changed('docs/rulebook/30-TRANSFERS.md',text=>text.replace(
+    '약정 유효기간은 최대 3년',
+    '협상 기간은 최대 3년'
+  ));
+  assert.match(check(docs),/BROKEN_PIN: TRANS-002/);
+});
+
 test('the policy-pin source cannot shadow a clause with duplicate JS object keys',()=>{
   const script=readFileSync(new URL('./rulebook-guard.mjs',import.meta.url),'utf8');
   const ids=[...script.matchAll(/^  '([A-Z]+-\d{3})':\[/gm)].map(x=>x[1]);
