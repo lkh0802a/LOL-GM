@@ -161,23 +161,24 @@ test('training claims do not pay twice or erase distinct real rights',()=>{
   docs=changed(file,text=>text.replace('서로 다른 실제 기여와 유효한 별도 권리까지 일률적으로 삭제하지 않는다','별도 권리도 모두 삭제한다'));
   assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
 });
-test('player distribution investigations do not force ability reductions or claim long-season coverage',()=>{
+test('population law forbids false equalization and QA coverage remains external',()=>{
   const file='docs/rulebook/40-PLAYERS.md';
-  let docs=changed(file,text=>text.replace('선수 능력 일괄 강등이나 억지 난이도 보정을 적용하지 않는다','선수 능력을 일괄 강등한다'));
+  let docs=changed(file,text=>text.replace('선수 능력 분포를 맞추기 위한 일괄 강등이나 근거 없는 난이도 보정을 적용하지 않는다','선수 능력을 일괄 강등한다'));
   assert.match(check(docs),/BROKEN_PIN: PLAYER-012/);
-  docs=changed(file,text=>text.replace('제한된 시즌 검사를 다지역 장기 시즌 검증으로 간주하지 않으며','두 시즌만으로 장기 검증을 완료한다'));
+  docs=changed(file,text=>text.replace('비공개 실제 능력·잠재력은 해당 정보를 적법하게 관측할 권한이 없는 주체에게 공개하지','모든 주체에게 공개한다'));
   assert.match(check(docs),/BROKEN_PIN: PLAYER-012/);
-  docs=changed(file,text=>text.replace('권한 없는 화면에 공개하는 근거로 사용하지 않는다','모든 화면에 공개한다'));
-  assert.match(check(docs),/BROKEN_PIN: PLAYER-012/);
+  const product='docs/implementation-spec/WORLD_ENGINE_AND_PRODUCT_ACCEPTANCE.md';
+  docs=changed(product,text=>text.replace('다지역·다시즌 표본','한 시즌만'));
+  assert.match(check(docs),/PRODUCT_REQUIREMENT/);
 });
-test('training compensation comparisons control actual evidence without fabricating effects',()=>{
-  const file='docs/rulebook/60-BUSINESS.md';
-  let docs=changed(file,text=>text.replace('구단 소유·임대, 기간과 당시 근거를 통제한 비교','서로 다른 조건을 그대로 섞은 비교'));
-  assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
-  docs=changed(file,text=>text.replace('다른 입력이 언제나 다른 결과를 내도록 강제하지 않으며','모든 입력에 다른 결과를 강제하며'));
-  assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
-  docs=changed(file,text=>text.replace('실제 원장이나 계약이 없는 지급을 검증 결과로 만들어내지 않는다','기록 없는 지급을 만들어낸다'));
-  assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
+test('training compensation comparisons are implementation QA, not game-world laws',()=>{
+  const file='docs/implementation-spec/WORLD_ENGINE_AND_PRODUCT_ACCEPTANCE.md';
+  let docs=changed(file,text=>text.replace('육성 구단 보상 보고','육성 보상 미표시'));
+  assert.match(check(docs),/PRODUCT_REQUIREMENT/);
+  docs=changed(file,text=>text.replace('실제 재정 원장과 계약에 근거해','임의의 재정 정보로'));
+  assert.match(check(docs),/PRODUCT_REQUIREMENT/);
+  docs=changed(file,text=>text.replace('입력 차이가 있다는 사실만으로 다른 결과를 강제하거나 임의 현금을 생성하지 않는다','입력 차이만으로 무작위 현금 생성'));
+  assert.match(check(docs),/PRODUCT_REQUIREMENT/);
 });
 test('long-term economics use real evidence without forced equalization or overstated coverage',()=>{
   const file='docs/rulebook/60-BUSINESS.md';
