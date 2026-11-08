@@ -631,7 +631,20 @@ test('first promotion playoff, initial bylaws and temporary license vacancies ar
   assert.match(check(docs),/BROKEN_PIN: COMP-016/);
   docs=changed('docs/rulebook/10-COMPETITIONS.md',text=>text.replace('조건부 임시 참가권','영구 자동 참가권'));
   assert.match(check(docs),/BROKEN_PIN: COMP-021/);
-  docs=changed('docs/rulebook/00-CORE.md',text=>text.replace('초기 시행 규정을 제정하고 공표한다','초기 시행 규정은 없어도 된다'));
+  docs=changed('docs/rulebook/00-CORE.md',text=>text.replace('사전에 설계되고 상호 정합성을 검증한 초기 세계 상태','AI가 임의로 추첨한 불안정한 초기 세계 상태'));
+  assert.match(check(docs),/BROKEN_PIN: CORE-012/);
+});
+
+test('initial world preset contract cannot be silently replaced with random regulations',()=>{
+  let docs=changed('docs/GAME_IMPLEMENTATION_ENTRYPOINT.md',text=>text.replace(
+    'AI가 새 세계마다 규정·숫자·권한을 임의로 뽑지 않는다',
+    'AI가 새 세계마다 규정·숫자·권한을 무작위로 만든다'
+  ));
+  assert.match(check(docs),/INITIAL_PRESET_CONTRACT/);
+  docs=changed('docs/rulebook/00-CORE.md',text=>text.replace(
+    '적법하게 제정·공표·발효시켜야 한다',
+    '후보만 있어도 자동으로 시행한다'
+  ));
   assert.match(check(docs),/BROKEN_PIN: CORE-012/);
 });
 
