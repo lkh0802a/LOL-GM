@@ -977,6 +977,55 @@ test('historically approved spectator and reorderable-tab settings preserve worl
   assert.match(check(docs),/HISTORIC_CHOICE_ACCEPTANCE/);
 });
 
+test('historic venue, media and facility approvals stay in actual world law',()=>{
+  const venue='docs/rulebook/10-COMPETITIONS.md';
+  let docs=changed(venue,text=>text.replace(
+    '일률적인 중립 개최 의무를 만들지 않는다',
+    '모든 공식 대회를 반드시 중립 장소에서 개최한다'
+  ));
+  assert.notEqual(docs[venue],original[venue]);
+  assert.match(check(docs),/BROKEN_PIN: COMP-018/);
+
+  const biz='docs/rulebook/60-BUSINESS.md';
+  docs=changed(biz,text=>text.replace(
+    '그 리그에 적법하게 공표된 분배 규정',
+    '소유 구단의 자동 중계 수익 지급 보장'
+  ));
+  assert.notEqual(docs[biz],original[biz]);
+  assert.match(check(docs),/BROKEN_PIN: BIZ-015/);
+
+  docs=changed(biz,text=>text.replace(
+    '실제 사용·용량·노후화·보수 및 유지비',
+    '사용하지 않은 가상 시설의 일률적 자동 투자'
+  ));
+  assert.notEqual(docs[biz],original[biz]);
+  assert.match(check(docs),/BROKEN_PIN: BIZ-008/);
+
+  docs=changed(biz,text=>text.replace(
+    '구단 프런트가 선수 개인 방송 일정을 일상적으로 조율·예약',
+    '구단은 선수의 동의 없이 모든 개인 방송 계약을 자동 체결'
+  ));
+  assert.notEqual(docs[biz],original[biz]);
+  assert.match(check(docs),/BROKEN_PIN: BIZ-006/);
+});
+
+test('approved weekly timeline and season report are not lost in compact UI spec',()=>{
+  const ui='docs/interface-spec/USER_EXPERIENCE_REQUIREMENTS.md';
+  let docs=changed(ui,text=>text.replace(
+    '주간 타임라인은 실제 공식 경기·스크림·이동·휴식·시차',
+    '주간 타임라인은 가상 경기 시각만 표시'
+  ));
+  assert.notEqual(docs[ui],original[ui]);
+  assert.match(check(docs),/BROKEN_PIN: UI-001/);
+
+  docs=changed(ui,text=>text.replace(
+    '시즌 종료 보고서',
+    '시즌 종료 기록은 불필요하다'
+  ));
+  assert.notEqual(docs[ui],original[ui]);
+  assert.match(check(docs),/BROKEN_PIN: UI-007/);
+});
+
 test('the policy-pin source cannot shadow a clause with duplicate JS object keys',()=>{
   const script=readFileSync(new URL('./rulebook-guard.mjs',import.meta.url),'utf8');
   const ids=[...script.matchAll(/^  '([A-Z]+-\d{3})':\[/gm)].map(x=>x[1]);
