@@ -935,6 +935,48 @@ test('linked approval audits are part of the rulebook local-link fixture',()=>{
   assert.match(check(docs),/BROKEN_LOCAL_LINK/);
 });
 
+test('medical insurance is contractual, not unconditional injury reimbursement',()=>{
+  const file='docs/rulebook/60-BUSINESS.md';
+  let docs=changed(file,text=>text.replace(
+    '유효한 보험 계약을 선택적으로 체결할 수 있다',
+    '모든 구단은 의무보험에 자동 가입한다'
+  ));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/BROKEN_PIN: BIZ-004/);
+
+  docs=changed(file,text=>text.replace(
+    '의료비 전액 자동 보전·보험금 즉시 지급 또는 보편적인 의무보험 가입',
+    '의료비와 부상 치료비는 모두 보험으로 자동 전액 보전'
+  ));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/BROKEN_PIN: BIZ-004/);
+});
+
+test('historically approved spectator and reorderable-tab settings preserve world state',()=>{
+  const ui='docs/interface-spec/USER_EXPERIENCE_REQUIREMENTS.md';
+  let docs=changed(ui,text=>text.replace(
+    '같은 실제 경기의 단일 확정 결과와 난수·세트 기록',
+    '다른 속도에서 새 경기 난수와 결과를 다시 시뮬레이션'
+  ));
+  assert.notEqual(docs[ui],original[ui]);
+  assert.match(check(docs),/BROKEN_PIN: UI-007/);
+
+  docs=changed(ui,text=>text.replace(
+    '상단 탭의 전체 순서',
+    '고정된 변경 불가능한 탭 순서'
+  ));
+  assert.notEqual(docs[ui],original[ui]);
+  assert.match(check(docs),/BROKEN_PIN: UI-001/);
+
+  const contract='docs/implementation-spec/WORLD_ENGINE_AND_PRODUCT_ACCEPTANCE.md';
+  docs=changed(contract,text=>text.replace(
+    '표시 속도/시각효과',
+    '표시 속도/랜덤 결과 변경'
+  ));
+  assert.notEqual(docs[contract],original[contract]);
+  assert.match(check(docs),/HISTORIC_CHOICE_ACCEPTANCE/);
+});
+
 test('the policy-pin source cannot shadow a clause with duplicate JS object keys',()=>{
   const script=readFileSync(new URL('./rulebook-guard.mjs',import.meta.url),'utf8');
   const ids=[...script.matchAll(/^  '([A-Z]+-\d{3})':\[/gm)].map(x=>x[1]);
