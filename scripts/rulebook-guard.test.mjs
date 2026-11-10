@@ -1079,6 +1079,16 @@ test('M30C/M31C historical team culture and observer-specific reputation survive
   assert.match(check(docs),/BROKEN_PIN: UI-007/);
 });
 
+test('M18C people cannot know their own hidden future ability omnisciently',()=>{
+  const file='docs/rulebook/40-PLAYERS.md';
+  const docs=changed(file,text=>text.replace(
+    '인물 자신도 스스로의 숨은 실제 능력·미래 성장치를 자동으로 정확히 알지 못하며',
+    '인물은 스스로의 미래 성장치를 항상 정확히 안다'
+  ));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/BROKEN_PIN: PLAYER-014/);
+});
+
 test('the policy-pin source cannot shadow a clause with duplicate JS object keys',()=>{
   const script=readFileSync(new URL('./rulebook-guard.mjs',import.meta.url),'utf8');
   const ids=[...script.matchAll(/^  '([A-Z]+-\d{3})':\[/gm)].map(x=>x[1]);
