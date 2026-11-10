@@ -1089,6 +1089,23 @@ test('M18C people cannot know their own hidden future ability omnisciently',()=>
   assert.match(check(docs),/BROKEN_PIN: PLAYER-014/);
 });
 
+test('M33-M36 cannot impose automatic champion transfer or instant position conversion',()=>{
+  const file='docs/rulebook/40-PLAYERS.md';
+  let docs=changed(file,text=>text.replace(
+    '유사 챔피언 숙련의 전이는 실제 기술 구조·교전 방식·역할',
+    '모든 챔피언 숙련은 동일한 비율로 자동 전이'
+  ));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/BROKEN_PIN: PLAYER-001/);
+
+  docs=changed(file,text=>text.replace(
+    '전향 선언만으로 새 역할의 완전한 숙련을 즉시 부여하지 않는다',
+    '포지션 전향 선언 즉시 새 역할의 완전한 숙련을 자동 부여한다'
+  ));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/BROKEN_PIN: PLAYER-001/);
+});
+
 test('the policy-pin source cannot shadow a clause with duplicate JS object keys',()=>{
   const script=readFileSync(new URL('./rulebook-guard.mjs',import.meta.url),'utf8');
   const ids=[...script.matchAll(/^  '([A-Z]+-\d{3})':\[/gm)].map(x=>x[1]);
