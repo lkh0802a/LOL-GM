@@ -1044,6 +1044,41 @@ test('M16C personality and relationship narratives must show observed uncertaint
   assert.match(check(docs),/PRIVATE_INFO_EXPOSURE_UI: UI-006/);
 });
 
+test('M26C cannot become omniscient infinite counter-strategy',()=>{
+  const file='docs/rulebook/50-MATCH.md';
+  const docs=changed(file,text=>text.replace(
+    '상대의 비공개 의도나 미래 선택을 정답으로 열람하는 무한 역예측',
+    '상대의 비공개 의도와 미래 선택을 정답으로 상시 열람'
+  ));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/BROKEN_PIN: MATCH-009/);
+});
+
+test('M30C/M31C historical team culture and observer-specific reputation survive',()=>{
+  const file='docs/rulebook/60-BUSINESS.md';
+  let docs=changed(file,text=>text.replace(
+    '감독 교체만으로 구단 문화를 일괄 초기화하거나 육성형·우승형 고정 유형 보너스를 부여하지 않는다',
+    '감독 교체 즉시 모든 구단 문화를 리셋한다'
+  ));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/BROKEN_PIN: BIZ-012/);
+
+  docs=changed(file,text=>text.replace(
+    '팬·구단·시장·언론의 평판',
+    '구단 모두에게 똑같이 공개되는 숨은 능력 지표'
+  ));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/BROKEN_PIN: BIZ-007/);
+
+  const ui='docs/interface-spec/USER_EXPERIENCE_REQUIREMENTS.md';
+  docs=changed(ui,text=>text.replace(
+    '모든 원인을 한 감독이나 전술에 확정 귀속하거나',
+    '모든 승패 원인을 하나의 감독에게 확정 귀속하고'
+  ));
+  assert.notEqual(docs[ui],original[ui]);
+  assert.match(check(docs),/BROKEN_PIN: UI-007/);
+});
+
 test('the policy-pin source cannot shadow a clause with duplicate JS object keys',()=>{
   const script=readFileSync(new URL('./rulebook-guard.mjs',import.meta.url),'utf8');
   const ids=[...script.matchAll(/^  '([A-Z]+-\d{3})':\[/gm)].map(x=>x[1]);
