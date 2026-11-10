@@ -1112,3 +1112,13 @@ test('the policy-pin source cannot shadow a clause with duplicate JS object keys
   const dupe=ids.filter((id,index)=>ids.indexOf(id)!==index);
   assert.deepEqual(dupe,[],'duplicate object keys shadow earlier policy regression checks');
 });
+
+test('R01D 2nd-division academy collision cannot be bypassed through relocation',()=>{
+  const file='docs/rulebook/10-COMPETITIONS.md';
+  const docs=changed(file,text=>text.replace(
+    '다른 2부 또는 3부·N부로 행정적으로 옮기는 것으로 대신 해결하지 않는다',
+    '충돌 시 2군을 다른 하부 리그에 자동 배정하여 해결한다'
+  ));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/BROKEN_PIN: COMP-004/);
+});
