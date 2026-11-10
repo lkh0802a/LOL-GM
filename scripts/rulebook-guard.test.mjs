@@ -1113,11 +1113,18 @@ test('the policy-pin source cannot shadow a clause with duplicate JS object keys
   assert.deepEqual(dupe,[],'duplicate object keys shadow earlier policy regression checks');
 });
 
-test('R01D 2nd-division academy collision cannot be bypassed through relocation',()=>{
+test('R01D after later #234 approval permits eligible lower-division move, not same-tier bypass',()=>{
   const file='docs/rulebook/10-COMPETITIONS.md';
-  const docs=changed(file,text=>text.replace(
-    '다른 2부 또는 3부·N부로 행정적으로 옮기는 것으로 대신 해결하지 않는다',
-    '충돌 시 2군을 다른 하부 리그에 자동 배정하여 해결한다'
+  let docs=changed(file,text=>text.replace(
+    '적격한 실제 하위 부로 행정적으로 이동하거나',
+    '다른 동급 2부로 임의 이동하거나'
+  ));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/BROKEN_PIN: COMP-004/);
+
+  docs=changed(file,text=>text.replace(
+    '해당 하위 부의 실재 여부·등록 자격·수용 정원',
+    '가상 하부리그에 선수·구단을 자동 편성'
   ));
   assert.notEqual(docs[file],original[file]);
   assert.match(check(docs),/BROKEN_PIN: COMP-004/);
