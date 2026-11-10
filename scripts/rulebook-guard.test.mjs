@@ -1026,6 +1026,24 @@ test('approved weekly timeline and season report are not lost in compact UI spec
   assert.match(check(docs),/BROKEN_PIN: UI-007/);
 });
 
+test('M16C personality and relationship narratives must show observed uncertainty',()=>{
+  const file='docs/interface-spec/USER_EXPERIENCE_REQUIREMENTS.md';
+  let docs=changed(file,text=>text.replace(
+    '당시 근거·표본·관측 시점과 이후 확인된 변화',
+    '현재까지 알려진 사실과 과거 미관측 사실을 무조건 동일하게 보이게 한다'
+  ));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/BROKEN_PIN: UI-006/);
+
+  docs=changed(file,text=>text.replace(
+    '숨은 정확 성향·능력·잠재력',
+    '숨은 정확 성향·능력·잠재력을 누구에게나 공개'
+  ));
+  assert.notEqual(docs[file],original[file]);
+  // The extra rule must not be inferred from a coarse substring pin alone.
+  assert.match(check(docs),/PRIVATE_INFO_EXPOSURE_UI: UI-006/);
+});
+
 test('the policy-pin source cannot shadow a clause with duplicate JS object keys',()=>{
   const script=readFileSync(new URL('./rulebook-guard.mjs',import.meta.url),'utf8');
   const ids=[...script.matchAll(/^  '([A-Z]+-\d{3})':\[/gm)].map(x=>x[1]);
