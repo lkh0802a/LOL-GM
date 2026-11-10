@@ -56,6 +56,7 @@ export const DOCUMENTS = Object.freeze([
   'docs/rulebook-audit/CANON_COMPLETION_STAGE_EXECUTION_2026_11_10.md',
   'docs/rulebook-audit/STEP1_M01_M16_EFFECT_RECONSTRUCTION_2026_11_10.md',
   'docs/rulebook-audit/STEP1_M17_M32_EFFECT_RECONSTRUCTION_2026_11_10.md',
+  'docs/rulebook-audit/STEP1_M33_M48_EFFECT_RECONSTRUCTION_2026_11_10.md',
   'docs/RULEBOOK_SEMANTIC_AUDIT_2026_11_01.md',
   'AGENTS.md',
 ]);
