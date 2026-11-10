@@ -210,6 +210,12 @@ export function validateRulebook(docs){
     if(!rule){add('MISSING_PIN',id);continue;}
     for(const re of checks)if(!re.test(rule.body))add('BROKEN_PIN',id+' missing '+re.source);
   }
+  // M16C prohibits revealing omniscient character traits to the reader.
+  // A mere presence of the words in a policy pin does not validate negation.
+  const personalityUI=ids.get('UI-006')?.body||'';
+  if(/숨은 정확 성향·능력·잠재력을 누구에게나 공개/.test(personalityUI)){
+    add('PRIVATE_INFO_EXPOSURE_UI','UI-006 exposes private omniscient personality facts');
+  }
   // A list of tournament names and the word 금지 alone can coexist with an
   // explicit exception that contradicts the market-wide suspension.
   const marketRule=ids.get('CAL-003');
