@@ -1217,7 +1217,10 @@ test('all-appearance bounded bracket constructive simulation enumerates n and q 
             appearances.add(b);
             matchCount++;
             const winner=useSecondWinner?b:a,loser=useSecondWinner?a:b;
-            if(isWinnerAdvances) following.push(winner);
+            if(isWinnerAdvances){
+              excluded.add(loser);
+              following.push(winner);
+            }
             else {
               qualified.add(winner);
               following.push(loser);
