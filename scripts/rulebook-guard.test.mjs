@@ -1187,7 +1187,7 @@ test('Worlds cutline tiebreak stays a bounded BO1 knockout, not endlessly repeat
   assert.notEqual(docs[file],original[file]);
   assert.match(check(docs),/BROKEN_PIN: COMP-019/);
 
-  docs=changed(file,text=>text.replace('그 지표를 재사용하여 가짜 순위 차이를 만들지 않는다','동률인 동일 지표를 다시 적용해 시드를 강제로 차등 배정한다'));
+  docs=changed(file,text=>text.replace('그 지표를 재사용하여 근거 없는 순위 차이를 만들지 않는다','동률인 동일 지표를 다시 적용해 시드를 강제로 차등 배정한다'));
   assert.notEqual(docs[file],original[file]);
   assert.match(check(docs),/BROKEN_PIN: COMP-019/);
 
