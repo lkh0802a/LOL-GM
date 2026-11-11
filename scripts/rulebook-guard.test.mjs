@@ -1173,3 +1173,22 @@ test('coach FA opens alongside the 28-day player market and protects live employ
   assert.notEqual(docs[file],original[file]);
   assert.match(check(docs),/BROKEN_PIN: CAL-008/);
 });
+
+test('Worlds cutline tiebreak stays a bounded BO1 knockout, not endlessly repeated round robin',()=>{
+  const file='docs/rulebook/10-COMPETITIONS.md';
+  let docs=changed(file,text=>text.replace('정확히 `n-q`개의 실제 BO1 결정전','무제한 BO1 라운드로빈 반복'));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/BROKEN_PIN: COMP-019/);
+
+  docs=changed(file,text=>text.replace('BO1 한 경기의 실제 패배 팀을 그 경계의 잔여 후보에서 한 팀씩 제외','모든 팀이 매번 다음 한 바퀴에 재참가'));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/BROKEN_PIN: COMP-019/);
+
+  docs=changed(file,text=>text.replace('그 지표를 재사용하여 가짜 순위 차이를 만들지 않는다','동률인 동일 지표를 다시 적용해 시드를 강제로 차등 배정한다'));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/BROKEN_PIN: COMP-019/);
+
+  docs=changed(file,text=>text.replace('대진·부전승의 배정에만','추첨에 의한 경기 승자·진출팀 확정에'));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/BROKEN_PIN: COMP-019/);
+});
