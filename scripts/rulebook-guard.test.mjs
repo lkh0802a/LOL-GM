@@ -1137,7 +1137,8 @@ test('cross-domain counterexample specification and paired execution ledger rema
   const ids=text=>[...text.matchAll(/^\| (C\d{2}) \|/gm)].map(match=>match[1]);
   const a=ids(spec);
   const b=ids(register);
-  const expected=Array.from({length:38},(_,i)=>'C'+String(i+1).padStart(2,'0'));
+  assert(a.length>=38,'approved baseline of 38 scenario families must not silently disappear');
+  const expected=Array.from({length:a.length},(_,i)=>'C'+String(i+1).padStart(2,'0'));
   assert.deepEqual(a,expected,'specification IDs must remain distinct and consecutive');
   assert.deepEqual(b,expected,'paired acceptance ledger IDs must exactly match the specification');
   const cases=register.split('\n').filter(line=>/^\| C\d{2} \|/.test(line));
