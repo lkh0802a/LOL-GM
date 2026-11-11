@@ -65,3 +65,11 @@
 - [실행 대장](STEP3_COUNTEREXAMPLE_EXECUTION_REGISTER_2026_11_11.md)은 각 반례에 합법 정상/위반 쌍, 검증할 실제 세계 기록, 실패/보류/정적 검사 등급을 부여한다. 정적 출처 대조에서는 38개 연속·중복 0·대장 매칭 38·초기 `NOT_RUN` 38을 확인했다.
 - `scripts/rulebook-guard.test.mjs`에 최소 38개 과거 반례를 보호하면서 **향후 신규 반례는 허용**하는 구조 검사 코드를 추가. 구조 검사 성공을 실제 엔진 인과/저장/100시즌 게임 실행의 PASS로 오인하지 않는다.
 - **현재 조문 모순 판정:** 이번 15건은 정본의 확정 법률과 다른 경계를 추가 *검증해야 한다는 발견*이며, 문서 검토만으로 `RULE_CONFLICT` 15건으로 판정하지 않는다. CORE-007·TRANS-011 원대화 전문 제한 및 규정 최초 실효·실시 엔진 검사 필요.
+
+
+## 2026-11-11 — 코치 FA 동시 개장 확정 및 월즈 동률 결정전 유한 구도 대안
+
+- **사용자 직접 확정·규범 반영:** 코치 FA를 선수 FA와 함께 **12월 첫째 화요일 00:00 UTC 개장·정확 28일**로 동기화했다(CAL-008 개정). 이전 'World Championship 결승 다음 날 별도 개장'은 최신 결정으로 철회. 기존 선수/코치 계약 만료·합법 재계약·직원 고용 정원·현장 등록·재정은 별도이며 계약 자동 해지·선수 이적횟수 코치 자동 적용은 금지한다.
+- **정합화:** [CHANGELOG v0.17.6](../rulebook/CHANGELOG.md)·[정본 README](../rulebook/README.md)·[제품/엔진 수용](../implementation-spec/WORLD_ENGINE_AND_PRODUCT_ACCEPTANCE.md)·[레거시 통합 명세](../LOL_GM_SPEC.md)·[C36 정상/위반 실행 대장](STEP3_COUNTEREXAMPLE_EXECUTION_REGISTER_2026_11_11.md)와 [반례 명세](STEP3_CROSS_DOMAIN_COUNTEREXAMPLES_2026_11_10.md)·[첫 실행 경계](STEP3_FIRST_WAVE_ASSERTIONS_2026_11_11.md)에서 같은 개장/종료·기존 계약 보호를 가리키도록 수정했다. `scripts/rulebook-guard.mjs`에 CAL-008 최신 핀, `scripts/rulebook-guard.test.mjs`에 조기 개장/7일 시장/계약 자동 무효 회귀 변형을 추가했다. 실제 코치 FA 엔진·UI·세이브 실행과 정확 HEAD CI는 별도.
+- **월즈 D-032 유한화는 제안만:** [탈락형 진출 경계의 수학적 `n-q` 상한 검토](STEP3_FINITE_TIEBREAKER_OPTION_2026_11_11.md)를 `PROPOSAL_NOT_ADOPTED`로 남겼다. 세계법 COMP-019는 **기존 승인된 반복 BO1 라운드로빈을 그대로 유지**한다. 사용자가 탈락형 채택·시드/대진 선정 규칙 등을 확정해야 실제 규범 개정 가능하며, **유효 경기 수가 유한한 것과 12월 시장 개장 전 실제 종료가 보장되는 것은 별개**다.
+- **게이트:** 위 수정은 38개 반례의 법률상 예상 결과/시험 명세 일부를 갱신했을 뿐 실제 전체 엔진 반례 `NOT_RUN` 판정을 바꾸지 않는다. 과거 401건 최신 후속 효력 전수·직접 원대화 `BLOCKED_SOURCE` 및 main 미병합 그대로.
