@@ -1177,21 +1177,34 @@ test('coach FA opens alongside the 28-day player market and protects live employ
   assert.match(check(docs),/BROKEN_PIN: CAL-008/);
 });
 
-test('Worlds cutline tiebreak stays a bounded BO1 knockout, not endlessly repeated round robin',()=>{
+test('Worlds cutline guarantees every entrant a real BO1 and isolates scoring',()=>{
   const file='docs/rulebook/10-COMPETITIONS.md';
-  let docs=changed(file,text=>text.replace('정확히 `n-q`개의 실제 BO1 결정전','무제한 BO1 라운드로빈 반복'));
-  assert.notEqual(docs[file],original[file]);
-  assert.match(check(docs),/BROKEN_PIN: COMP-019/);
-
-  docs=changed(file,text=>text.replace('BO1 한 경기의 실제 패배 팀을 그 경계의 잔여 후보에서 한 팀씩 제외','모든 팀이 매번 다음 한 바퀴에 재참가'));
-  assert.notEqual(docs[file],original[file]);
-  assert.match(check(docs),/BROKEN_PIN: COMP-019/);
-
-  docs=changed(file,text=>text.replace('그 지표를 재사용하여 근거 없는 순위 차이를 만들지 않는다','동률인 동일 지표를 다시 적용해 시드를 강제로 차등 배정한다'));
-  assert.notEqual(docs[file],original[file]);
-  assert.match(check(docs),/BROKEN_PIN: COMP-019/);
-
-  docs=changed(file,text=>text.replace('대진·부전승의 배정에만','추첨에 의한 경기 승자·진출팀 확정에'));
-  assert.notEqual(docs[file],original[file]);
-  assert.match(check(docs),/BROKEN_PIN: COMP-019/);
+  for(const [from,to] of [
+    ['모든 팀에 최소 한 번의 실제 BO1 출전 기회를 보장','상위 포트 팀은 출전 없이 바로 진출 가능'],
+    ['부전승만으로 진출·상위 시드 그룹 자격이 확정되는 대진은 금지','부전승도 곧바로 진출 확정'],
+    ['정확히 `q`개의','모든 n<2q 동률은 한 경기만 수행'],
+    ['`max(n-q,q) ≤ n-1`','결정전을 무제한 반복한다'],
+    ['리그 페이즈의 승수·상대 일정 강도·세트 득실·상대 세트 득실·세트 승수·상대전적·정규 순위 산정 원장에 합산하거나 재계산하지 않는다','리그 페이즈의 승수와 득실에 누적한다'],
+    ['그 지표를 재사용하여 근거 없는 순위 차이를 만들지 않는다','동일한 지표를 다시 사용해 가상 시드를 만든다'],
+    ['대진·부전승의 배정에만','추첨으로 경기 승자와 진출팀 확정에']
+  ]){
+    const docs=changed(file,text=>text.replace(from,to));
+    assert.notEqual(docs[file],original[file], 'mutation target must exist: '+from);
+    assert.match(check(docs),/BROKEN_PIN: COMP-019/);
+  }
+});
+test('all-appearance bounded bracket math enumerates n and q up to 24 teams',()=>{
+  // Pure QA proof of the approved bracket shape, NOT an engine simulation.
+  for(let n=2;n<=24;n++){
+    for(let q=1;q<n;q++){
+      const groups=n>=2*q?q:n-q;
+      const sizes=Array(groups).fill(2);
+      for(let remaining=n-2*groups,i=0;remaining>0;remaining--,i++)sizes[i%groups]++;
+      assert.equal(sizes.reduce((a,b)=>a+b,0),n);
+      const count=sizes.reduce((a,b)=>a+b-1,0);
+      assert.equal(count,Math.max(n-q,q));
+      assert(count<=n-1);
+      assert(sizes.every(k=>k>=2));
+    }
+  }
 });
