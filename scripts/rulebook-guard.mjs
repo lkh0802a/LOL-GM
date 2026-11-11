@@ -349,11 +349,11 @@ export function validateRulebook(docs){
   ]){
     if(!initialGuide.includes(required))add('INITIAL_PRESET_CONTRACT',required);
   }
-  // Previously approved repeat-until-resolved Worlds tiebreaks cannot be
-  // silently replaced with invented finite bounds or administrative winners.
+  // The newer user-approved finite Worlds cutline bracket must not regress
+  // into infinite RR or fabricated victories, without erasing office/roster safeguards.
   for(const required of [
     '## 14. 열린 결과 경로와 의결 불능에 대한 안전성 검증',
-    '유한한 절대 상한을 보장하지 않는다',
+    '실제 경기 수의 수학적 유한 상한과 일정 마감은 별개',
     '가상의 결승·시드·결과를 기록하거나',
     '원 이사와 대체 이사가 동시에 표를 행사하거나 총 재적·찬성 기준을 변경하지 않는다',
     '기본 등록 7명(주전 5·후보 2)',
