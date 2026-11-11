@@ -1151,3 +1151,25 @@ test('cross-domain counterexample specification and paired execution ledger rema
     assert.equal(['NOT_RUN','BLOCKED_FIXTURE','FAILED','PASS','PARTIAL_PASS'].includes(cells[6].replaceAll('`','')),true);
   }
 });
+
+
+test('coach FA opens alongside the 28-day player market and protects live employment',()=>{
+  const file='docs/rulebook/20-CALENDAR.md';
+  let docs=changed(file,text=>text.replace(
+    '같은 매년 12월 첫째 화요일 00:00 UTC',
+    'World Championship 결승 다음 날 00:00 UTC'
+  ));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/BROKEN_PIN: CAL-008/);
+
+  docs=changed(file,text=>text.replace('동일한 정확히 28일 기간','별도의 7일 코치 FA 기간'));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/BROKEN_PIN: CAL-008/);
+
+  docs=changed(file,text=>text.replace(
+    '유효한 기존 코치 고용 계약의 만료·해지·무소속화나 자동 재계약',
+    '기존 모든 코치의 고용 계약 자동 종료'
+  ));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/BROKEN_PIN: CAL-008/);
+});
