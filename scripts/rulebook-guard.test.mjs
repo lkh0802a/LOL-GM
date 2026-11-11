@@ -1193,18 +1193,47 @@ test('Worlds cutline guarantees every entrant a real BO1 and isolates scoring',(
     assert.match(check(docs),/BROKEN_PIN: COMP-019/);
   }
 });
-test('all-appearance bounded bracket math enumerates n and q up to 24 teams',()=>{
-  // Pure QA proof of the approved bracket shape, NOT an engine simulation.
-  for(let n=2;n<=24;n++){
-    for(let q=1;q<n;q++){
-      const groups=n>=2*q?q:n-q;
-      const sizes=Array(groups).fill(2);
-      for(let remaining=n-2*groups,i=0;remaining>0;remaining--,i++)sizes[i%groups]++;
-      assert.equal(sizes.reduce((a,b)=>a+b,0),n);
-      const count=sizes.reduce((a,b)=>a+b-1,0);
-      assert.equal(count,Math.max(n-q,q));
-      assert(count<=n-1);
-      assert(sizes.every(k=>k>=2));
+test('all-appearance bounded bracket constructive simulation enumerates n and q up to 24 teams',()=>{
+  // Pure bracket QA model, not the Rust/legacy match engine.
+  for(let n=2;n<=24;n++) for(let q=1;q<n;q++){
+    const isWinnerAdvances=n>=2*q;
+    const groups=isWinnerAdvances?q:n-q;
+    const sizes=Array(groups).fill(2);
+    for(let extra=n-2*groups,i=0;extra>0;extra--,i++)sizes[i%groups]++;
+    assert.equal(sizes.reduce((a,b)=>a+b,0),n);
+    for(const useSecondWinner of [false,true]){
+      let nextId=0;
+      let matchCount=0;
+      const appearances=new Set();
+      const qualified=new Set();
+      const excluded=new Set();
+      for(const size of sizes){
+        let active=Array.from({length:size},()=>nextId++);
+        while(active.length>1){
+          const following=[];
+          for(let i=0;i+1<active.length;i+=2){
+            const a=active[i],b=active[i+1];
+            appearances.add(a);
+            appearances.add(b);
+            matchCount++;
+            const winner=useSecondWinner?b:a,loser=useSecondWinner?a:b;
+            if(isWinnerAdvances) following.push(winner);
+            else {
+              qualified.add(winner);
+              following.push(loser);
+            }
+          }
+          if(active.length%2) following.push(active[active.length-1]); // bye is not a played match
+          active=following;
+        }
+        if(isWinnerAdvances) qualified.add(active[0]);
+        else excluded.add(active[0]);
+      }
+      assert.equal(appearances.size,n,'every tied club must actually play');
+      assert.equal(qualified.size,q,'only the cutline q slots are settled');
+      assert.equal(excluded.size,n-q);
+      assert.equal(matchCount,Math.max(n-q,q));
+      assert(matchCount<=n-1);
     }
   }
 });
