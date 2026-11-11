@@ -282,11 +282,13 @@ test('double disqualification distinguishes prior rounds from the final',()=>{
   docs=changed(file,text=>text.replace('우승자 없이 종료한다','차순위 팀에 우승을 자동 승계한다'));
   assert.match(check(docs),/BROKEN_PIN: COMP-010/);
 });
-test('approved Worlds boundary ties use head-to-head before deciding matches',()=>{
+test('approved Worlds boundary ties use real head-to-head, not matches for every tie',()=>{
   const file='docs/rulebook/10-COMPETITIONS.md';
-  let docs=changed(file,text=>text.replace('두 팀이면 실제 승자승을 우선하고 맞대결이 없으면 BO1','두 팀이면 무조건 BO1'));
+  let docs=changed(file,text=>text.replace('두 팀의 실제 맞대결이 유효하게 승자승을 가를 수 있으면 그 결과를 우선한다','두 팀이면 무조건 BO1을 다시 치른다'));
+  assert.notEqual(docs[file],original[file]);
   assert.match(check(docs),/BROKEN_PIN: COMP-019/);
-  docs=changed(file,text=>text.replace('경계와 무관한 동률에 확대하지 않고','모든 동률로 확대하고'));
+  docs=changed(file,text=>text.replace('모든 동률에 별도 결정전을 일률적으로 강제하지 않으며','모든 동률에 별도 결정전을 일률적으로 강제하며'));
+  assert.notEqual(docs[file],original[file]);
   assert.match(check(docs),/BROKEN_PIN: COMP-019/);
 });
 test('relegated parent and academy second-division collision cannot disappear',()=>{
@@ -671,19 +673,20 @@ test('buyout discussion is not an automatic transfer without the appropriate clu
   assert.match(check(docs),/BROKEN_PIN: TRANS-007/);
 });
 
-test('repeating Worlds tiebreaks are not capped without authorization',()=>{
-  let docs=changed('docs/rulebook/10-COMPETITIONS.md',text=>text.replace(
-    '미해결 팀만 다시 같은 방식으로 경기한다',
-    '두 번만 진행하고 이후에는 임의 추첨으로 결론을 낸다'
+test('Worlds cutline finite-match guarantee does not falsely guarantee calendar feasibility',()=>{
+  let docs=changed('docs/GAME_IMPLEMENTATION_ENTRYPOINT.md',text=>text.replace(
+    '실제 경기 수의 수학적 유한 상한과 일정 마감은 별개',
+    '세계시장 개장 전 언제나 모든 월즈 경기와 결승이 자동 완료된다'
   ));
-  assert.match(check(docs),/BROKEN_PIN: COMP-019/);
-  docs=changed('docs/GAME_IMPLEMENTATION_ENTRYPOINT.md',text=>text.replace(
-    '유한한 절대 상한을 보장하지 않는다',
-    '항상 유한한 최대 경기 수를 보장한다'
-  ));
+  assert.notEqual(docs['docs/GAME_IMPLEMENTATION_ENTRYPOINT.md'],original['docs/GAME_IMPLEMENTATION_ENTRYPOINT.md']);
   assert.match(check(docs),/OPEN_OUTCOME_ACCEPTANCE/);
+  docs=changed('docs/rulebook/10-COMPETITIONS.md',text=>text.replace(
+    '언제나 세계시장 개장 전에 종료할 수 있다는 시간 보장은 아니다',
+    '시장 개장 전 종료를 무조건 보장한다'
+  ));
+  assert.notEqual(docs['docs/rulebook/10-COMPETITIONS.md'],original['docs/rulebook/10-COMPETITIONS.md']);
+  assert.match(check(docs),/BROKEN_PIN: COMP-019/);
 });
-
 test('user-approved short national roster and conflict-free substitute cannot silently regress',()=>{
   const nat='docs/rulebook/15-NATIONAL-TEAMS.md';
   let docs=changed(nat,text=>text.replace(
