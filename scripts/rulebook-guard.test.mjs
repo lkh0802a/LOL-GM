@@ -1129,3 +1129,24 @@ test('R01D after later #234 approval permits eligible lower-division move, not s
   assert.notEqual(docs[file],original[file]);
   assert.match(check(docs),/BROKEN_PIN: COMP-004/);
 });
+
+
+test('cross-domain counterexample specification and paired execution ledger remain aligned',()=>{
+  const spec=readFileSync(new URL('../docs/rulebook-audit/STEP3_CROSS_DOMAIN_COUNTEREXAMPLES_2026_11_10.md',import.meta.url),'utf8');
+  const register=readFileSync(new URL('../docs/rulebook-audit/STEP3_COUNTEREXAMPLE_EXECUTION_REGISTER_2026_11_11.md',import.meta.url),'utf8');
+  const ids=text=>[...text.matchAll(/^\\| (C\\d{2}) \\|/gm)].map(match=>match[1]);
+  const a=ids(spec);
+  const b=ids(register);
+  const expected=Array.from({length:38},(_,i)=>'C'+String(i+1).padStart(2,'0'));
+  assert.deepEqual(a,expected,'specification IDs must remain distinct and consecutive');
+  assert.deepEqual(b,expected,'paired acceptance ledger IDs must exactly match the specification');
+  const cases=register.split('\\n').filter(line=>/^\\| C\\d{2} \\|/.test(line));
+  assert.equal(cases.length,expected.length);
+  for(const row of cases){
+    const cells=row.split('\\|').slice(1,-1).map(s=>s.trim());
+    assert.equal(cells.length,7,'each row should have ID, priority, domain, positive, negative, oracle, status');
+    assert.match(cells[1],/^P[01]$/);
+    for(const index of [2,3,4,5]) assert(cells[index].length>4,'test cases need domain, normal/negative conditions and evidence oracle');
+    assert.match(cells[6],/^\\`(?:NOT_RUN|BLOCKED_FIXTURE|FAILED|PASS|PARTIAL_PASS)\\`$/);
+  }
+});
