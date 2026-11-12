@@ -376,10 +376,19 @@ test('adjudication summary cannot overcount reviewed clauses',()=>{
 });
 
 
-test('balance hotfix cannot take effect before every worldwide official series ends',()=>{
+test('separate balance hotfix system remains abolished, with scheduled patches and match history protected',()=>{
   const file='docs/rulebook/50-MATCH.md';
-  const docs=changed(file,text=>text.replace('전 세계의 해당 일자 공식 대회 경기와 세트가 모두 종료된 이후','해당 지역의 첫 공식 경기 종료 직후'));
-  assert.match(check(docs),/BROKEN_PIN: MATCH-008/);
+  for(const [from,to] of [
+    ['정기 패치 사이에 별도로 시행하는 밸런스 핫픽스 제도를 두지 않는다','정기 패치 사이에도 밸런스 핫픽스를 발동한다'],
+    ['별도의 즉시 밸런스 변경, 긴급 패치 판정, 당일 경기 종료를 조건으로 한 핫픽스 예약·시행 사건을 생성하지 아니한다','세계 공식 경기 종료 후 임시 핫픽스를 자동 시행한다'],
+    ['다음 적법하게 예정·확정·적용되는 정기 글로벌 패치','발견 당일 새 임시 글로벌 패치'],
+    ['진행 중 공식 대회의 지정 패치를 변경하지 않는다','진행 중 대회의 지정 패치를 중간 변경한다'],
+    ['이미 진행한 경기·세트·밴픽·통계·선수 성장 기록은 새 패치로 소급 재계산하지 않는다','기존 경기와 성장 수치를 새 패치로 다시 계산한다']
+  ]){
+    const docs=changed(file,text=>text.replace(from,to));
+    assert.notEqual(docs[file],original[file], 'mutation source must exist: '+from);
+    assert.match(check(docs),/BROKEN_PIN: MATCH-008/);
+  }
 });
 test('unverifiable historical replay cannot be advertised as a perfect reproduction',()=>{
   const file='docs/interface-spec/USER_EXPERIENCE_REQUIREMENTS.md';
