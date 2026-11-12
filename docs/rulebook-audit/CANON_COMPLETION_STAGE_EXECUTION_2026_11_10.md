@@ -86,3 +86,9 @@
 - 최신 COMP-019: `n≥2q`이면 q개 최소 2팀 진출조 단판 패자 탈락으로 `n-q`경기, `n<2q`이면 `n-q`개 최소 2팀 탈락조 승자 자격 확정/패자 잔류로 `q`경기. **전원 최소 한 번 BO1 출전**, 부전승의 출전 없는 자격 확정 금지, 실제 유효 경기 상한 `max(n-q,q)≤n-1`.
 - 타이브레이크 실제 승패/세트는 해당 **16/17위 진출 또는 8/9위 상위 시드 경계** 판정에만 반영한다. 이미 완료된 리그 페이즈 **승수·SoS·세트/상대 세트 차·세트 승수·맞대결·정규 순위의 원본은 불변**이다. 실제 경기의 선수 가용성·피로·의료·세계시각·계약 효과는 정당하게 기록한다.
 - [검증 설계 증명](STEP3_FINITE_TIEBREAKER_OPTION_2026_11_11.md), [정본 README](../rulebook/README.md), [엔진 인수](../GAME_IMPLEMENTATION_ENTRYPOINT.md), [제품 수용](../implementation-spec/WORLD_ENGINE_AND_PRODUCT_ACCEPTANCE.md), [C24 실행 대장](STEP3_COUNTEREXAMPLE_EXECUTION_REGISTER_2026_11_11.md), CHANGELOG v0.17.8 및 회귀 핀·수학 구조 검사에 반영. **실제 엔진 실행 0/38**, 시뮬레이션 통과 전에는 정적 문구 검사·수학적 구성 증명만으로 제품 구현 완료 주장하지 않음.
+
+## 2026-11-12 — 별도 핫픽스 제도 폐지 및 잔여 쟁점 해결안 분리
+
+- **이번 사용자 직접 확정:** 중간 밸런스 핫픽스 폐지. [MATCH-008](../rulebook/50-MATCH.md)은 **별도 핫픽스 시행·예약·당일 세계 공식전 종료 후 발효 절차 자체가 없음**을 명시하고, 정기 패치·랭크 발효·공식 대회 지정 패치는 MATCH-007을 유지한다. 기존 경기가 새 패치로 재계산되거나 무작위 기술 사고/퍼즈가 부활하지 않는다.
+- [S2-13](STEP2_AUTHORITY_EFFECTIVE_DATE_MATRIX_2026_11_10.md), [C30](STEP3_COUNTEREXAMPLE_EXECUTION_REGISTER_2026_11_11.md), [C30 첫 묶음](STEP3_FIRST_WAVE_ASSERTIONS_2026_11_11.md), MATCH-008 정책 핀/회귀 변형 및 [엔진·제품 수용](../implementation-spec/WORLD_ENGINE_AND_PRODUCT_ACCEPTANCE.md)을 일치시켰다. **실제 엔진의 핫픽스 AI·타이머/UI 코드 제거는 아직 완료 검증하지 않았다.**
+- 사용자 요청 “쟁점 다 해결방안 찾아와”에 대해 [현재 확인된 잔여 충돌/모호성 해결안](REMAINING_POLICY_AND_CONFLICT_RESOLUTIONS_2026_11_12.md)을 분리해 기록했다. **P01~P10은 권고/선택 전이고 이번 핫픽스 승인으로 자동 확정한 것이 아님.** E01~E10은 승인된 법의 실제 데이터/엔진/PR 실증 게이트다. 기존 401건 최신 효력 전수 감사·38쌍 엔진 실행·미접근 원대화·정본 main 병합은 별도 남는다.
