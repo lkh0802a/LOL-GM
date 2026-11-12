@@ -1249,3 +1249,25 @@ test('all-appearance bounded bracket constructive simulation enumerates n and q 
     }
   }
 });
+
+test('Nov 12 approved conflict resolutions P01-P10 stay enforceable across world laws',()=>{
+  for(const [file,from,to,pin] of [
+    ['docs/rulebook/10-COMPETITIONS.md','참가 보류 후 다음 시즌 처리','보류된 2군을 자동 해체한다','COMP-004'],
+    ['docs/rulebook/10-COMPETITIONS.md','보호된 대회와 해당 연도 회차의 구분','기본 일곱 대회 취소 시 그 정체성을 폐지한다','COMP-012'],
+    ['docs/rulebook/10-COMPETITIONS.md','승인된 원시 시드 보호·대진 균형','높은 원시 시드는 실제 경기 없이 진출한다','COMP-019'],
+    ['docs/rulebook/10-COMPETITIONS.md','리그 페이즈 세부 순위는 기존 공동순위로 남기고','결정전 패배 순서로 정규 순위를 확정한다','COMP-019'],
+    ['docs/rulebook/10-COMPETITIONS.md','지급 판정 보류','계약상 확정된 상금도 임의로 지급을 유예한다','COMP-019'],
+    ['docs/rulebook/10-COMPETITIONS.md','사전 편성 가능성 심사','시장 시작 후에도 결정전을 무제한 생성한다','COMP-019'],
+    ['docs/rulebook/10-COMPETITIONS.md','정규 누적 통계로 산정하지 않는다','결정전 세트도 정규 MVP 누적 통계로 자동 합산한다','COMP-022'],
+    ['docs/rulebook/15-NATIONAL-TEAMS.md','개최 의무 미충족 사실','국대 대회 불능이어도 자동 개최 완료 표시','NAT-011'],
+    ['docs/rulebook/20-CALENDAR.md','월즈 이후에 다른 공식 대회 실경기를 개최하거나','월즈 이후 다른 공식전 개최로 일정 충돌 해결','CAL-004'],
+    ['docs/rulebook/30-TRANSFERS.md','화요일 00:00:00 UTC를 계약 종료의 배타적 시각','월요일 23:59:00에 계약 종료한다','TRANS-002'],
+    ['docs/rulebook/30-TRANSFERS.md','새 구단으로의 완전이전은 자동 성립하지 않는다','임대 의무매입이면 이적창과 무관하게 자동 이적','TRANS-008'],
+    ['docs/rulebook/30-TRANSFERS.md','임대를 무기한 자동 연장하지 않는다','임대는 영구 자동 연장된다','TRANS-012'],
+    ['docs/rulebook/60-BUSINESS.md','공통 소유자의 이해충돌 회피 기준','같은 대회에서는 공통 소유자의 이해충돌 검사를 생략한다','BIZ-010']
+  ]){
+    const docs=changed(file,body=>body.replace(from,to));
+    assert.notEqual(docs[file],original[file], 'missing mutation source: '+pin+' '+from);
+    assert.match(check(docs),new RegExp('BROKEN_PIN: '+pin));
+  }
+});
