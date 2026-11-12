@@ -92,3 +92,9 @@
 - **이번 사용자 직접 확정:** 중간 밸런스 핫픽스 폐지. [MATCH-008](../rulebook/50-MATCH.md)은 **별도 핫픽스 시행·예약·당일 세계 공식전 종료 후 발효 절차 자체가 없음**을 명시하고, 정기 패치·랭크 발효·공식 대회 지정 패치는 MATCH-007을 유지한다. 기존 경기가 새 패치로 재계산되거나 무작위 기술 사고/퍼즈가 부활하지 않는다.
 - [S2-13](STEP2_AUTHORITY_EFFECTIVE_DATE_MATRIX_2026_11_10.md), [C30](STEP3_COUNTEREXAMPLE_EXECUTION_REGISTER_2026_11_11.md), [C30 첫 묶음](STEP3_FIRST_WAVE_ASSERTIONS_2026_11_11.md), MATCH-008 정책 핀/회귀 변형 및 [엔진·제품 수용](../implementation-spec/WORLD_ENGINE_AND_PRODUCT_ACCEPTANCE.md)을 일치시켰다. **실제 엔진의 핫픽스 AI·타이머/UI 코드 제거는 아직 완료 검증하지 않았다.**
 - 사용자 요청 “쟁점 다 해결방안 찾아와”에 대해 [현재 확인된 잔여 충돌/모호성 해결안](REMAINING_POLICY_AND_CONFLICT_RESOLUTIONS_2026_11_12.md)을 분리해 기록했다. **P01~P10은 권고/선택 전이고 이번 핫픽스 승인으로 자동 확정한 것이 아님.** E01~E10은 승인된 법의 실제 데이터/엔진/PR 실증 게이트다. 기존 401건 최신 효력 전수 감사·38쌍 엔진 실행·미접근 원대화·정본 main 병합은 별도 남는다.
+
+## 2026-11-12 — P01~P10 승인 효력의 정본 편입
+
+- 사용자가 앞서 제시한 “추천안대로 ㄱㄱ”에 따라 [정책 해결안 P01~P10](REMAINING_POLICY_AND_CONFLICT_RESOLUTIONS_2026_11_12.md)의 전 항목을 직접 채택했다. 이전 단순 **PROPOSAL_ONLY**는 현재 효력이 아니며, 관련 COMP-004·012·019·022, NAT-011, CAL-004, TRANS-002·008·012, BIZ-010을 **정본 v0.18.0**에서 개정했다. 별도 대회·지역 시행 규정/계약을 사용자 동의 없이 실제 게임에 만들어 낸 것은 아니다.
+- **P01~03·09:** 원시 시드·포트는 대진 배정까지만, 전원 경기/공동 정규 순위·MVP 통계 비합산/확정 상금 채무 보존과 결정전 사전 편성 검증. **P04·08:** 선수 임대 의무매입·자금 지급/소속/등록별 시각과 표준 계약 배타 만료 시각. **P05·06:** 국대 개최 불능·7개 공식 국제대회 회차 취소와 대회 정체성 보존/월즈 피날레. **P07·10:** 2군 보류의 계약 유지/차기 등록·다구단 동일 대회 개막 전 독립성 검증.
+- [세계법 정책 핀](../../scripts/rulebook-guard.mjs)과 [회귀 변형](../../scripts/rulebook-guard.test.mjs), [제품 수용 인수](../implementation-spec/WORLD_ENGINE_AND_PRODUCT_ACCEPTANCE.md)·[게임 인수](../GAME_IMPLEMENTATION_ENTRYPOINT.md)를 맞추었다. 신규 사실의 실제 코드 PASS/최신 HEAD CI·원대화 효력 100% 감사는 별도 미완료다. 이미 확정된 과거 계약·상금·경기는 소급 재작성하지 않는다.
