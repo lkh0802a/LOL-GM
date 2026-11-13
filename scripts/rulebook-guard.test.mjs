@@ -1271,3 +1271,12 @@ test('Nov 12 approved conflict resolutions P01-P10 stay enforceable across world
     assert.match(check(docs),new RegExp('BROKEN_PIN: '+pin));
   }
 });
+
+test('Worlds alias remains English and never reverts to Korean transliteration in current world law',()=>{
+  const path='docs/rulebook/10-COMPETITIONS.md';
+  const originalForm='World Championship(Worlds)';
+  const docs=changed(path,body=>body.replace(originalForm,'World Championship(월즈)'));
+  assert.notEqual(docs[path],original[path], 'Worlds official shorthand must exist');
+  const report=check(docs);
+  assert.match(report,/WORLDS_DISPLAY_NAME|BROKEN_PIN: COMP-005/);
+});
