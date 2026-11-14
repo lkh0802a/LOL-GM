@@ -1,0 +1,450 @@
+import {readFileSync} from 'node:fs';
+import {dirname, resolve, posix} from 'node:path';
+import {fileURLToPath} from 'node:url';
+
+export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+export const CHAPTERS = Object.freeze([
+  ['docs/rulebook/00-CORE.md','CORE'],
+  ['docs/rulebook/10-COMPETITIONS.md','COMP'],
+  ['docs/rulebook/15-NATIONAL-TEAMS.md','NAT'],
+  ['docs/rulebook/20-CALENDAR.md','CAL'],
+  ['docs/rulebook/30-TRANSFERS.md','TRANS'],
+  ['docs/rulebook/40-PLAYERS.md','PLAYER'],
+  ['docs/rulebook/50-MATCH.md','MATCH'],
+  ['docs/rulebook/60-BUSINESS.md','BIZ'],
+  ['docs/rulebook/70-GOVERNANCE.md','GOV'],
+]);
+export const EXTERNAL_REQUIREMENTS = Object.freeze([
+  ['docs/interface-spec/USER_EXPERIENCE_REQUIREMENTS.md','UI'],
+]);
+
+export const DOCUMENTS = Object.freeze([
+  ...CHAPTERS.map(([path])=>path),
+  ...EXTERNAL_REQUIREMENTS.map(([path])=>path),
+  'docs/rulebook/80-EXPERIENCE.md',
+  'docs/GAME_IMPLEMENTATION_ENTRYPOINT.md',
+  'docs/rulebook-audit/CANON_2026_11_08_ADDENDUM.md',
+  'docs/rulebook-audit/SMALL_RULE_GAP_SWEEP_2026_11_08.md',
+  'docs/implementation-spec/WORLD_ENGINE_AND_PRODUCT_ACCEPTANCE.md',
+  'docs/rulebook/README.md',
+  'docs/rulebook/CHANGELOG.md',
+  'docs/AI_RULEBOOK_GUIDE.md',
+  'docs/RULEBOOK_MIGRATION_AUDIT.md',
+  'docs/RULEBOOK_APPROVAL_ADJUDICATION_2026_11_01.md',
+  'docs/rulebook-audit/CLAUSE_DECISION_MATRIX_2026_11_01.md',
+  'docs/rulebook-audit/STEP1_APPROVAL_EFFECT_AUDIT_2026_11_01.md',
+  'docs/rulebook-audit/STEP1_CHOICE_SOURCE_INVENTORY_2026_11_01.md',
+  'docs/rulebook-audit/STEP1_CHOICE_SOURCE_INVENTORY_B_2026_11_01.md',
+  'docs/rulebook-audit/STEP1_SUPERSESSION_CHAINS_2026_11_01.md',
+  'docs/rulebook-audit/STEP1_CROSS_ISSUE_EFFECT_AUDIT_2026_11_01.md',
+  'docs/rulebook-audit/STEP1_R01_R21_SOURCE_ADJUDICATION_2026_11_01.md',
+  'docs/rulebook-audit/STEP1_CALENDAR_LICENSE_SUPERSESSION_2026_11_01.md',
+  'docs/rulebook-audit/STEP1_QA72_NORMATIVE_BOUNDARY_2026_11_01.md',
+  'docs/rulebook-audit/STEP1_SOURCE_COMPLETENESS_AND_DECISION_GATE_2026_11_01.md',
+  'docs/rulebook-audit/STEP1_M01_M212_SOURCE_DETAIL_2026_11_01.md',
+  'docs/rulebook-audit/STEP1_R_CHOICES_SOURCE_DETAIL_2026_11_01.md',
+  'docs/rulebook-audit/STEP1_INITIAL_30_DECISION_DETAILS_2026_11_01.md',
+  'docs/rulebook-audit/STEP1_ALL_ISSUE_POLICY_CLASSIFICATION_2026_11_01.md',
+  'docs/rulebook-audit/STEP1_LEGACY_PR_NORMATIVE_BOUNDARY_2026_11_01.md',
+  'docs/rulebook-audit/STEP1_42_CLAUSES_SOURCE_PRECISION_QUEUE_2026_11_01.md',
+  'docs/rulebook-audit/STEP1_DIRECT_ISSUE_SOURCE_16_CLAUSES_2026_11_01.md',
+  'docs/rulebook-audit/STEP1_PR_BODY_POLICY_SCREEN_2026_11_01.md',
+  'docs/rulebook-audit/CROSS_DOCUMENT_CONFLICT_AUDIT_2026_11_01.md',
+  'docs/rulebook-audit/STEP1_I02_OWNERSHIP_PENDING_2026_11_01.md',
+  'docs/rulebook-audit/STEP1_DIRECT_CHAT_ACCESS_BOUNDARY_2026_11_01.md',
+  'docs/rulebook-audit/RULEBOOK_FINALIZATION_GATE_2026_11_08.md',
+  'docs/rulebook-audit/CANON_COMPLETION_STAGE_EXECUTION_2026_11_10.md',
+  'docs/rulebook-audit/STEP3_FINITE_TIEBREAKER_OPTION_2026_11_11.md',
+  'docs/rulebook-audit/REMAINING_POLICY_AND_CONFLICT_RESOLUTIONS_2026_11_12.md',
+  'docs/rulebook-audit/FOLLOWON_EDGES_AFTER_P01_P10_2026_11_12.md',
+  'docs/rulebook-audit/SINGLE_PENDING_ISSUE_REGISTER_2026_11_13.md',
+  'docs/rulebook-audit/STEP1_M01_M16_EFFECT_RECONSTRUCTION_2026_11_10.md',
+  'docs/rulebook-audit/STEP1_M17_M32_EFFECT_RECONSTRUCTION_2026_11_10.md',
+  'docs/rulebook-audit/STEP1_M33_M48_EFFECT_RECONSTRUCTION_2026_11_10.md',
+  'docs/RULEBOOK_SEMANTIC_AUDIT_2026_11_01.md',
+  'AGENTS.md',
+]);
+
+// These are regression sentinels for the APPROVED DOCUMENTED policy, not a
+// substitute for running the game's contract/calendar/match/finance tests.
+export const POLICY_PINS = Object.freeze({
+  'TRANS-001':[/세계 공통 거래 창/,/12월 첫째 화요일 개장·28일/,/TRANS-004·005/,/시즌 중 지역별 이적창/,/TRANS-011/,/원소속 계약·국제대회 등록 잠금/,/CAL-003/],
+  'TRANS-002':[/약정 유효기간은 최대 3년/,/1~3년의 유효 기간/,/기존 계약의 실제 만료 시각이나 보장급여/,/월요일 23:59:00~23:59:59의 전체 구간을 포함/,/화요일 00:00:00 UTC를 계약 종료의 배타적 시각/,/이중 계약·이중 소속/],
+  'TRANS-007':[/구단 거부 불가형\*\*은 명시된 금액/,/원소속 구단의 별도 이전 수락 없이 효력/,/협상 개시권형/,/구단 간 최종 합의/],
+  'TRANS-012':[/최초 세계 시즌에 적용되는/,/최대 2회/,/그 절차로 변경되지 않은 시즌에는 2회 상한을 그대로 적용한다/,/반 시즌 또는 한 시즌/,/0~100% 분담/,/추가 이적 1회를 만들지 아니한다/,/계약상 의무 발생 시각·실제 완전이적 효력 시각·대회 등록 시각/,/임대를 무기한 자동 연장하지 않는다/],
+  'TRANS-013':[/최초 세계 시즌에 적용되는/,/5명 이상 10명 이하/,/비로컬 선수는 최대 2명/,/당시 유효한 등록 정원 및 비로컬 상한/,/변경되지 않은 시즌의 초기 상한을 임의로 초과하거나/,/최소 11명/,/장래에 적법하게 정원·통합 보유 기준이 변경되더라도/,/미성년 선수/,/국제대회는 개막 전 최종 등록 명단/],
+  'TRANS-014':[/출신지역 로컬/,/활성 로컬/,/타지역 임대/,/다음 시즌/,/부분 시즌/,/한 시즌을 둘 이상의 근속 시즌으로 중복 계산하지 않는다/],
+  'PLAYER-014':[/신뢰·존중·친밀도/,/한쪽이 상대를 평가하는 방향/,/코치 직함이나 다수결/,/인물 자신도 스스로의 숨은 실제 능력·미래 성장치를 자동으로 정확히 알지 못하며/],
+  'BIZ-016':[/최초 세계 시즌에 적용되는/,/코치 최대 7명/,/분석가 최대 4명/,/스카우트 최대 6명/,/영구 불변이라는 이유로 정당한 개정을 차단하거나 미발효된 정원 확대를 미리 적용하지 않는다/,/합산한 고용 상한/,/감독은 이 코치 상한에서 제외/,/코치 상한 변경 이전의 세계에서 이미 적법하게 성립한 고용 계약/,/당시 유효한 코치 상한이 7명인 동안/,/현장 등록 상한/],
+  'BIZ-017':[/유료 팬클럽·멤버십/,/공식 경기 무료 다시보기/,/이미 성립한 입장권 판매/,/중복 시청/],
+  'COMP-022':[/공식 경기의 수행/,/미래의 경기 성적/,/공표된 대회/,/타이브레이크 시상의 평가 범위/,/정규 누적 통계로 산정하지 않는다/,/대회 시작 전에 공표된 평가 범위/],
+  'MATCH-009':[/상대가 공개·적법하게 관측할 수 있는 우리 전술을 읽고 대응할 가능성/,/유한한 판단/,/상대의 비공개 의도나 미래 선택을 정답으로 열람하는 무한 역예측/],
+  'MATCH-001':[/공식 Bo3는 실제 2승/,/공식 Bo5는 실제 3승/],
+  'MATCH-005':[/합의한 모든 세트/,/실제로 합의한 모든 세트/,/중단 또는 미완료/],
+  'MATCH-007':[/프로 공식 경기 출전 허용일/,/적법한 연구가 가능하다/],
+  'CAL-006':[/주말의 방송·운영 여유를 우선 고려/,/평일 증편도 허용/],
+  'CAL-009':[/잠정 경기·송출 구간 예약/,/확정된 공식 일정/,/같은 공식 지역리그/,/겹치지 않도록/,/서로 다른 공식 리그/],
+  'NAT-004':[/첫 국가대표 공식 경기 출전 전/,/실제로 처음 출전한 때/,/마지막 국가대표 공식 출전 이후 2년 이상 경과/,/경력 중 한 번/,/국제사무국의 적법한 개별 승인/,/해외 이적·체류 기간의 경과만으로 국적이 자동 부여되거나/],
+  'NAT-006':[/국가대표 소집에 동의하고/,/공식 소집 기간/,/정당한 의료상 출전 제한 또는 유효한 계약상 사유 없이/],
+  'NAT-011':[/매년 세계 통합 선수 이적시장 기간에/,/실제 개최되는 주요 국가대표 국제대회를 적어도 하나 확보한다/,/취소하거나 무기한 연기하지 않는다/,/시장 개장 전에 실제 참가 국가협회/,/구성 불변조건 위반/,/확정된 회차를 단순 운영 재량으로 취소하지 않는다/,/주전 5명과 교체 선수 2명, 합계 7명/,/5명 또는 6명만 확보한 경우에도 등록을 허용/,/마감 시점의 적격 등록 선수가 5명 미만이면/,/유효한 출전 선수 5명을 확보하지 못하면/,/기권·부전승/,/두 팀이 모두 적법하게 출전하지 못하는 상태는 개최 전에 명단/],
+  'CORE-011':[/세계 외부의 상위 헌장 규칙/,/세계 외부의 정식 게임 규정판 개정/],
+  'CORE-012':[/사전에 설계되고 상호 정합성을 검증한 초기 세계 상태/,/최초 시즌 개막 전/,/적법하게 제정·공표·발효/,/임의의 수치·권한·구단·선수/,/장래 시행 규정을 적법하게 개정할 수 있다/],
+  'COMP-016':[/승강제/,/BO5/,/차기|다음 시즌부터/,/승강 결정전/,/자동 승격·강등시키지 않는다/,/다음 시즌부터/],
+  'COMP-021':[/조건부 임시 참가권/,/적격한 1군 충원 후보가 없는 경우/,/1군의 유효한 기준 보호 라이선스를 필요조건/,/모든 보호 라이선스 상실의 효력은 연간 경쟁 시즌 종료 이후에만 발생/,/2군 보호권이 자동 복원되지는 않으며/,/자동 강등·퇴출·경기 결과 소급 취소가 아니며/],
+  'BIZ-003':[/설립 자체는 공통 계약·재정 조건 안에서 자유롭다/,/개최 등록·승인/],
+  'GOV-004':[/재적 13석/,/중앙 측 7석/,/6석/,/7표 이상/,/9표 이상/,/과반/,/지역 대표/,/임시 대체 이사 선임 절차/,/대체 선임으로 재적 의석·의결권 수를 늘리거나/],
+  'GOV-007':[/최초 표준 임기는/,/3년/,/연임/],
+  'GOV-008':[/긴급 의료·안전·실제 운영 위기/,/최소 범위와 기간의 임시 조치/,/기존 구단도 새 리그의 참가 자격·라이선스 심사를 다시 거쳐야/,/기존 참가권의 정당한 전환 책임/,/완료 경기·우승 역사를 자동 삭제하거나 소급 무효화하는 권한이 아니다/],
+  'BIZ-005':[/복수 메인 스폰서를 일률적으로 한 개로 제한하지 않는다/,/실제 계약상 수령 가치와 이행을 현금 지급과 구분/,/현물 지원만으로 실재하지 않는 현금을 생성하지 않으며/,/유효한 독점 권리를 중복 판매하지 않는다/],
+  'BIZ-008':[/실제 선수단 유지, 가용 현금과 확정 채무·만기를 함께 살핀다/,/약팀이라는 이유만으로 자동 현금 지원을 만들거나 AI의 무제한 차입을 허용하지 않는다/,/실제 재원·승인 권한이 있는 지원이나 차입까지 일률적으로 금지하는 뜻은 아니다/,/실제 경제 격차와 육성·분배·후원·시설 시장에 미치는 장기 결과는 실제 표본과 원장을 근거로 검토/,/경제력을 강제로 평준화하거나 경기 결과를 보정하지 않는다/,/제한된 기간의 실행만으로 장기 경제 검증이 완료되었다고 간주하지 않는다/,/훈련·숙소·재활 시설/,/실제 사용·용량·노후화·보수 및 유지비/,/같은 시설을 사용할 수 있으나 시간·용량·우선순위/,/방송·대회 기술 장비의 고장·운영 미니게임을 부활/],
+  'UI-001':[/첫 영입 안내는 \*\*선택형\*\*/,/실제 자유계약 선수와 직원이 합법적으로 관측한 근거/,/직접 검색과 선수 비교/,/안내 이행이나 영입을 강제하지 않고/,/실재하지 않는 선수단이나 임의 계약을 만들지 않는다/,/중요한 사건과 오류를 중심/,/모든 미세 이벤트의 알림을 강제하지 않는다/,/최종 서명권은 감독에게 남는다/,/법적·계약상 응답 기한과 감독의 필수 의사결정 여부/,/중요한 의무를 분류 과정에서 누락하지 않고/,/상단 탭의 전체 순서/,/사용자가 직접 재정렬/,/저장·복원 후에도/,/기존 모든 필수 메뉴·권한/,/주간 타임라인은 실제 공식 경기·스크림·이동·휴식·시차/,/개인 랭크를 팀 전체의 강제 일정/],
+  'UI-008':[/합법적으로 선택 가능한 자동 진행 정지 조건을 조정/,/실제 권한 담당자의 필수 결정을 건너뛰는 권한을 부여하지 않는다/],
+  'UI-005':[/실제 계약 만료 전망·장기 선수단 계획·노화/,/합리적으로 입증된 미래 수요도 고려할 수 있으나/,/인위적인 수요를 만들지 않는다/,/매주 유망주 보고·특별 발견 알림·반복 수집 배지\*\*의 도입 결정은 철회되었다/,/후보 열람·무시 자체에는 비용이나 벌칙이 없으며/],
+  'PLAYER-012':[/선수 능력 분포를 맞추기 위한 일괄 강등이나 근거 없는 난이도 보정을 적용하지 않는다/,/비공개 실제 능력·잠재력은 해당 정보를 적법하게 관측할 권한이 없는 주체에게 공개하지/],
+  'CORE-009':[/새로운 세계 사건에는 그 사건의 발생 시점에 효력을 가진/,/개정 이전에 확정된 사건의 적법성은 당시 유효한 규범/,/과거 경기 결과·등록·계약·실제 현금·확정 채무를 소급 수정하지/,/당시 확정된 계약·대회·기록의 적용 규범을 후속 세계 상태로 대체하지 않는다/],
+  'CORE-010':[/중대한 선택은 당시의 적법한 결정권자/,/반복되는 운영·정산·일상 업무는 권한 있는 담당자가 적법하게 위임·이행/,/법적 최종 서명·의료상 출전 부적격 판정·참가 자격 검증·선수 동의를 임의로 대체할 수 없다/,/실제로 발생한 활동·지급·비용·일정·계약 결과/,/사용자와 AI에 동일한 권한·제약·비용 원칙/,/BIZ-004/,/업무 시간·담당량과 휴식에 따른 과부하/,/기존 적성·경험의 일부와 실제 경력을 보존/,/스크림 일정을 추천할 수 있으나 관리 구단의 감독이 이를 결정한다/,/선수의 실제 전술 숙련과 합법적으로 소유한 자료를 전면 초기화하지 않으며/,/현 감독의 기존 수동 권한을 무단으로 무력화하지 않는다/],
+  'BIZ-004':[/세계 공통 정산 통화 하나를 사용/,/국가별 환율·외환 변동 엔진을 신설하지 않는다/,/불확실한 예상 수입은 확정된 현금·지급·채무와 구분/,/에이전트 수수료는 실제 계약에 명시된 지급자·수령자·조건과 시각에 한하여 지급/,/원장에 한 번 기록/,/국제대회 이동비는 실제 이동 거리와 비용/,/주최자·사무국의 계약상 합법 지원을 구분한다/,/공식 캘린더 우선과 실제 재정 원장을 지키며/,/같은 비용이나 지원을 중복 지급하지 않는다/,/승인되지 않은 거리 요금·지원 비율을 만들지 않는다/,/실제 가용자금이 충분하고 유효한 지급 조건을 충족한 채무는 별도의 반복 조작 없이 기한 내 지급/,/AI의 임의 지연이나 시스템상의 지급 누락으로 연체를 생성하지 않는다/,/자금이 부족하여 이행할 수 없는 확정 의무는 미지급 채무로 기록/,/기존 유효 계약과 적용 규정에 명시된 경우에만/,/새 임의 연체료·강제 추심·반복 납부 조작을 신설하지 않는다/,/바이아웃 요건을 미지급 장부로 우회해서는 안 되며/,/자동 소급 취소하지 않는다/,/선수 의료·부상에 대한/,/유효한 보험 계약을 선택적으로 체결할 수 있다/,/보험료·보험금 수령·미지급 보험채권/,/의료비 전액 자동 보전·보험금 즉시 지급 또는 보편적인 의무보험 가입/],
+  'COMP-018':[/공식 지역·국제대회는 적법한 공식 사무국/,/직접 주관·운영한다/,/공식 대회로 편입·전환할 수 없다/,/공인 여부와 공식 개최 주체/,/공식 국제대회 출전권과 계수는 자동 발생하지 않는다/,/대표 공식 사무국 하나가 모든 최종 결정을 책임지고/,/공동 개최만으로 민간 개최사를 공식 주관자로 바꾸거나 독립 대회를 공식 캘린더에 편입할 수 없다/,/공식 국제대회의 개최 국가·도시·장소/,/권한 있는 공식 주최 기관/,/중립 장소에서 개최할지/,/일률적인 중립 개최 의무를 만들지 않는다/],
+  'COMP-019':[/동률은 해당 대회의 경기 시작 전에 공표된 타이브레이크 규정/,/모든 동률에 별도 결정전을 일률적으로 강제하지 않으며/,/D-032 형식을 해당 시즌에 적용하는 경우/,/두 팀의 실제 맞대결이 유효하게 승자승을 가를 수 있으면 그 결과를 우선한다/,/8\/9위 상위 시드 그룹 경계 또는 16\/17위 본선 진출 경계/,/모든 팀에 최소 한 번의 실제 BO1 출전 기회를 보장/,/부전승만으로 진출·상위 시드 그룹 자격이 확정되는 대진은 금지/,/`n ≥ 2q`/,/각 조에 적어도 두 팀/,/정확히 `n-q`개/,/`n < 2q`/,/패자는 다음 대결로 이동/,/정확히 `q`개의/,/`max\(n-q,q\) ≤ n-1`/,/해당 동률 경계에서 참가 자격과 상위\/하위 시드 그룹 배정에만/,/리그 페이즈의 승수·상대 일정 강도·세트 득실·상대 세트 득실·세트 승수·상대전적·정규 순위 산정 원장에 합산하거나 재계산하지 않는다/,/실제로 진행한 경기의 선수 출전/,/16강 참가 집단을 먼저 결정한 뒤/,/그 지표를 재사용하여 근거 없는 순위 차이를 만들지 않는다/,/공개·감사 가능한 대진 추첨/,/대진·부전승의 배정에만/,/언제나 세계시장 개장 전에 종료할 수 있다는 시간 보장은 아니다/,/승인된 원시 시드 보호·대진 균형/,/전원 최소 한 번 실제 BO1 출전 원칙이 항상 우선한다/,/경계 판정과 정규 순위·상금의 분리/,/리그 페이즈 세부 순위는 기존 공동순위로 남기고/,/지급 판정 보류/,/사전 편성 가능성 심사/,/실제 일방 기권의 좁은 예외/,/실제로 적법하게 기권하거나 단독 실격/,/실제 BO1 출전 횟수·세트\/선수 스탯은 0건/,/상대의 실제 기권까지 강제로 실경기 개최했다는 가상 기록/,/양측 기권·동시 실격·가상 행정승을 생성하여 이 예외를 우회하지 않는다/],
+  'COMP-020':[/일부 2군만 선택해 신규 발급할 수 없다/,/독립 구단 집단 역시 신규 보호권 발급에서/,/독립 구단 전원 보호 시 2군 전원도 보호되어야 하며/,/잔여 구단의 보호권을 일괄 박탈하는 규칙이 아니다/],
+  'BIZ-015':[/공식 경기의 같이보기·동시 중계\(코스트리밍\)는 모든 시청자와 스트리머에게 자유롭게 허용/,/모든 실제 경기의 다시보기\(VOD\)는 영구 무료 공개/,/기존 유효한 광고·계약상 책임/,/영상 파일을 별도로 영구 보존하거나 실제 발생하지 않은 영상을 자동 생성해야 한다는 뜻이 아니며/,/공식 주최자·참가 구단 간 분배/,/그 리그에 적법하게 공표된 분배 규정/,/자유 코스트리밍·무료 VOD 접근권을 제한하는 독점 권리료/,/언어·지역·채널별 시청 수요/],
+  'GOV-010':[/구단별 현역 선수 대표 선출/,/에이전트 대리권/,/이적·은퇴·구단 해체/],
+  'GOV-011':[/독립적인 행정 재심/,/사무국장 1인의 자의적 즉시 번복/,/실제 위반 사실이 확인되지 않은 출전 부적격·징계·이의신청 사건을 임의로 생성하지 아니한다/,/적법성은 원칙적으로 사전에 검증하고/],
+  'GOV-012':[/이해충돌이 있는 안건/,/공개하고 관련 심의·결정에서 회피/,/같은 의석군의 이해충돌 없는 적격한 임시 대체 이사/,/해당 지역을 대표할 자격이 있는/,/한 의석에 한 표만 행사/,/7표\/9표 의결 기준 변경은 허용하지 아니한다/,/입증되지 않은 비리·담합·범죄 또는 징계를 실제 위반 사건으로 임의 확정하지 아니한다/],
+  'CORE-007':[/공식 대회 체계의 구조적 개편은 원칙적으로 차기 시즌부터/,/기존 독립 대회의 구조적 개편은 원칙적으로 차기 회차부터/,/신규 독립 대회는 당해 시즌에도 신설할 수 있으나/,/공식 일정 우선권/,/세계 공통 경기 금지 기간/,/소급 변경할 수 없으며/],
+  'COMP-011':[/공식 대회 체계의 구조적 개편을 원칙적으로 차기 시즌부터/,/기존 독립 대회의 구조를 개편하는 경우에는 원칙적으로 차기 회차부터/,/새로운 독립 대회는 당해 시즌에도 적법하게 신설할 수 있다/,/공식 대회 우선권/,/세계 공통 경기 금지 기간의 검증을 통과해야 한다/,/소급 변경되지 않으며/],
+  'COMP-003':[/신규 지역/,/2부/,/권고/],
+  'CAL-008':[/코치의 글로벌 FA는 선수 FA 및 일반 계약 선수의 세계 통합 이적시장과/,/같은 매년 12월 첫째 화요일 00:00 UTC/,/동일한 정확히 28일 기간/,/World Championship 결승 다음 날 별도의 코치 FA 시장을 미리 열지 않는다/,/유효한 기존 코치 고용 계약의 만료·해지·무소속화나 자동 재계약/,/선수의 시즌별 이적 횟수·선수 등록 정원·선수 바이아웃 요건을 코치에게 자동 부과하지 않는다/,/구단 실경기 금지 기간을 추가로 늘리거나/],
+  'CAL-001':[/12월 첫째 화요일 00:00 UTC/],
+  'CAL-002':[/28일/,/종료 시각/],
+  'CAL-003':[/공식 지역/,/공식 국제/,/독립 지역/,/독립 국제/,/금지/],
+  'CAL-004':[/World Championship/,/마지막 공식 경기/,/실제 5:5 경기 승패 또는 한쪽의 적법한 기권·실격/,/결승 양 팀 동시 실격이나 무우승을 예정된 시즌 종료 사건으로 생성하지 않으며/,/실시되지 않은 행정승 경기를 실제로 플레이한 경기로 기록하지 않는다/,/시즌 개막 전에/,/필수 공식 대회 회차를 취소하거나 무기한 연기하는 방식으로 일정 충돌을 해결하지 않는다/,/Worlds 이후의 다른 공식 대회 실경기 개최/,/실제 단측 기권·실격에 따른 행정승/],
+  'TRANS-003':[/7일/,/14일/,/동의/,/TRANS-005/,/미보유/,/구단 거부 불가형/,/협상 개시권형/,/TRANS-007/],
+  'TRANS-005':[/라이선스 미보유/,/바이아웃/,/원소속|원팀/,/구단 거부 불가형/,/협상 개시권형/,/최종 이적 합의를 대체하지 못하며/],
+  'TRANS-011':[/공식 국제대회가 진행되는 기간을 우선적인 개장 시점으로 활용/,/국제대회마다 의무적으로 개설하거나/,/개장 여부, 횟수 및 시작·종료 시각을 사전에 공표/,/계약 선수 완전이적·임대 영입/,/원소속 구단의 동의 또는 합법적인 바이아웃/,/영입 지역의 개장만으로 원소속 구단의 계약상 권리/,/국제대회 참가 중인 선수도 적법한 이적 협상·체결/,/확정 명단을 소급 변경/,/CAL-001~003/,/TRANS-004/,/TRANS-005/],
+  'PLAYER-002':[/5대5/,/1~5인/,/파티/],
+  'PLAYER-003':[/직전 일반 매칭의 같은 팀원을 다시 만나는 것을 별도로 우대하거나 회피하지 않으며/,/직접 구성한 파티의 구성원은 유지/,/챔피언 선택 단계에서 매칭으로 배정된 역할은 별도로 교환하지 않지만/,/경기 중 적법한 라인 이동·전술은 금지하지 않는다/],
+  'PLAYER-004':[/RP/,/세계 순위/,/같은 불균형을 이중 보정하지 않는다/,/같은 RP의 선수는 공동 세계 순위/,/솔로·부분 파티·5인 파티 비중과 역할·실제 경기 표본/,/비공개 MMR이나 미관측 개인 기량은 노출하지 않는다/,/시즌 시작 때 공개 RP는 소프트 리셋하고/,/내부 비공개 MMR은 일부 연속성을 가진다/],
+  'PLAYER-005':[/닷지 기능을 도입하지 않는다/,/항복 선택이나 투표를 두지 않고/,/중단·탈주·불완전 경기 등은 기존 별도 처리 대상/],
+  'PLAYER-006':[/1인 1계정|인물 한 명당 고유 랭크 계정 하나/,/닉네임 변경/,/실명/,/요구하지 않는다/],
+  'BIZ-010':[/지분 100%까지 소유/,/직접 경영할 수 있는 독립 구단은 한 곳뿐/,/프로·세미프로·아마추어의 고정 분류/,/프로 라이선스 보유 여부와 관계없이/,/독립된 구단 조직 모두에 적용/,/사실상 직접 경영하는 것도 허용하지 않는다/,/시즌 종료 절차와 차기 시즌 효력/,/단일 구단 조직의 재정 원장/,/공식 하부 대회에 출전하더라도 별도 독립 구단이 아니므로/,/이름만 Academy인 실질적 독립 구단/,/동일 소유 그룹의 복수 독립 구단이 같은 대회에 참가하려면/,/사전 심사/,/공통 소유자의 이해충돌 회피 기준/,/이미 적법하게 완료된 경기 승패/],
+  'COMP-005':[/World Championship\(Worlds\)/,/Worlds→Masters→Open은 출전권 배정 우선순위/],
+  'COMP-012':[/기본 공식 국제대회 일곱 개/,/매년 해당 회차의 실제 운영은 보장/,/회차를 취소하거나 무기한 연기하지 않는다/,/영구 최대 개수가 아니다/,/차기 회차의 참가 방식·규모·세부 형식/,/기본 일곱 대회, 공식 지역리그\/예선/,/Worlds 결정전 최악 경기 수/,/이미 확정된 필수 대회를 취소\/연기로 제거하지 않는다/,/CAL-001~004/],
+  'BIZ-011':[/육성/,/실제 예산/,/지급 비율·금액·분할식·자격·발효 시점·재원 및 기금 조성/,/중복 계산/,/무상 이적이나 첫 프로 계약에 존재하지 않는 이적료를 만들지 않으며/,/재이적 셀온은 실제 유효 계약의 기간·권리 범위·발효 및 종료 조건을 따르며 계약 없는 영구권을 만들지 않는다/,/실제 선수 성장·지도·선수 공급·지속 투자·입증된 육성 활동/,/유효한 규정에 없는 금액·자격이나 배분식을 임의로 확정하지 않는다/,/임대 중 실제 육성은 당시 소유 구단과 임대 구단을 구별/,/실제 기여 이력과 이미 발생했거나 발생하지 않은 채권을 구분/,/실제 계약상 채권자와 적법한 권리 승계/,/모든 권리의 자동 소멸이나 이전·새 구단에 대한 자동 승계를 가정하지 않는다/,/같은 실질 소유자에게 같은 사유로 보상을 이중 지급하지 않는다/,/의미 없는 보유 기간만으로 자동 육성 보상을 만들지 않는다/,/서로 다른 실제 기여와 유효한 별도 권리까지 일률적으로 삭제하지 않는다/,/다른 리그의 실제 육성 기여도 공통 기준에 따른 이력으로 인정/,/리그 간 금전 이전은 승인된 관할·지급 의무·재원을 충족할 때만/,/확정된 채무와 대회 운영 의무를 우선 보호하며/,/이미 적법하게 발생한 육성 지원 채무를 임의로 소멸시키지 않는다/,/확정되지 않은 지원에 없는 돈을 지급하지 않는다/,/단순 추정은 확정 채권이나 지급된 현금이 아니다/,/선수·후원사의 구단 선택이나 브랜드 평가에 영향을 줄 수 있으나/,/유명해졌다는 사실만으로 자동 현금 보상을 만들지 않는다/,/유효한 계약상 채권이나 육성 지원 채무는 그 조건에 따라 유지한다/,/확정된 육성 보상 채무와 미확정 추정/],
+  'BIZ-012':[/프로\/세미프로\/아마추어/,/배타적/,/프로 라이선스/,/다구단 지배·직접 경영 제한은 이 같은 고정 종류가 아니라 BIZ-010의 실제 독립 구단 조직 여부에 따른다/,/감독 교체만으로 구단 문화를 일괄 초기화하거나 육성형·우승형 고정 유형 보너스를 부여하지 않는다/],
+  'COMP-004':[/동일한 부/,/적격한 실제 하위 부/,/행정적으로 이동/,/매각 또는 해체/,/일반 자동 강등이 아니며/,/하위 부의 실재 여부·등록 자격·수용 정원/,/다른.*2부로의 임의 재배치/,/COMP-017/,/참가 보류 후 다음 시즌 처리/,/다음 시즌 참가 등록 마감 전/,/공식 참가의 보류만으로 구단 조직/],
+  'COMP-006':[/엘리미네이션 단계\/브래킷/,/대회 전체에서 2패를 초과할 수 없다는 뜻이 아니다/,/Grand Final Reset/,/공식 캘린더의 결승은 사전에 공표된 단일 결승 시리즈/,/한쪽의 적법한 기권·실격/,/양 팀 동시 실격·무우승 결승은 게임이 생성하는 사건이나 대회 종료 경로로 두지 않는다/],
+  'COMP-010':[/이미 공식 개최가 확정된 대회/,/회차 자체를 취소하거나 무기한 연기하지 않는다/,/확정된 독립 대회에도 같은 원칙/,/구성 불변조건 위반/,/실제 구단의 명시적 기권/,/행정승/,/양 팀 동시 실격·동시 기권·결승 무우승을 독립적인 무작위 사건/,/세계 상태\/대진 불변조건 위반/,/정상적으로 완료되는 모든 공식 토너먼트 결승/,/일상적인 대회 개최 불능·연쇄 연기·대회 취소 이벤트 또는 그 확률을 생성하지 않는다/,/법적 환급·손실·채무/],
+  'COMP-015':[/현재 공식 명칭/,/과거 회차의 당시 명칭과 대회 정체성·역사는 보존/,/MSI 미진출팀/,/Masters/,/Open/,/중복 출전/,/현재 유효하지 않은 과거 지역 구분/],
+  'BIZ-013':[/상위 5명/,/전체 선수단/,/지역사무국은 지역의 실제 재정·경쟁 구조/,/시행된 범위에서만 적용한다/],
+  'BIZ-014':[/유한/,/복제/,/인수/,/확정 채무·실제 현금흐름·투자 수요·법적 배당 가능액/,/해당 결정권자의 권한/,/회계상 흑자만으로 사용할 현금을 만들어 내거나/,/구단주가 무제한 인출할 수 있다고 가정하지 않는다/,/독립 구단의 예산·원장과 BIZ-010의 독립 경영/],
+  'MATCH-008':[/정기 패치 사이에 별도로 시행하는 밸런스 핫픽스 제도를 두지 않는다/,/별도의 즉시 밸런스 변경, 긴급 패치 판정, 당일 경기 종료를 조건으로 한 핫픽스 예약·시행 사건을 생성하지 아니한다/,/다음 적법하게 예정·확정·적용되는 정기 글로벌 패치/,/진행 중 공식 대회의 지정 패치를 변경하지 않는다/,/이미 진행한 경기·세트·밴픽·통계·선수 성장 기록은 새 패치로 소급 재계산하지 않는다/],
+  'MATCH-011':[/주장/,/도입하지 않는다/],
+  'COMP-014':[/공식 지역대회/,/독립 지역대회/,/참가/],
+  'MATCH-002':[/Fearless Draft/,/해제/],
+  'MATCH-003':[/First Selection/,/변경 대상이 아니다/,/실제 밴픽은 해당 시리즈·세트의 세계 시간/,/적법한 감독의 선택 전에 이를 자동 확정하거나 입력 지연만으로 실제 존재하지 않은 기권·기술 사고/],
+  'MATCH-004':[/세트 사이/,/진행 중인 한 세트에서 선수 교체는 불허/,/각 공식 경기에서 최종 출전·등록의 적법성은 감독이 확인/,/대회가 해당 예외를 명시적으로 허용한 경우에만 의료 확인과 등록 심사/,/타 구단의 비공개 진단을 공개하거나 선수를 자동 생성해 무조건 등록하지 않는다/],
+  'UI-002':[/삭제/,/다른 슬롯/],
+  'UI-006':[/그 시점에 존재한 실제 세계 사건\/관측 근거/,/인물 성향·행동·관계의 설명/,/당시 근거·표본·관측 시점과 이후 확인된 변화/,/추정과 불확실성/,/숨은 정확 성향·능력·잠재력/,/모든 심리 지표의 숫자 공개·매일 필수 확인/],
+  'UI-007':[/완전한 재현에 필요한 근거가 부족한 경우/,/감독·코치의 기여 또는 승패의 원인을 설명할 때도/,/추정의 불확실성/,/모든 원인을 한 감독이나 전술에 확정 귀속하거나/,/재현의 한계를 명시/,/저장된 공식 판정과 역사를 우선/,/기본적으로 간결한 요약을 제공하고 상세 보기는 선택/,/같은 실제 경기와 기록을 표시/,/두 번째 경기를 생성하지 않는다/,/다른 선택을 검토할 때는 당시 관측 가능한 장단점과 불확실성을 별도로 설명/,/가상의 대안에 대한 승패를 이미 확정된 공식 결과나 역사에 혼입하지 않는다/,/텍스트 중계·관전의 재생 속도와 시각효과 표시/,/같은 실제 경기의 단일 확정 결과와 난수·세트 기록/,/경기 시뮬레이션·선수 컨디션·승패·세계 일정이 다시 생성되거나 변하지 않는다/,/다른 구단과 AI 구단의 실제 공개 공식 경기/,/시즌 종료 보고서/,/최근 시즌의 핵심 요약/,/가벼운 기념 카드/],
+  'UI-009':[/게임 세계 밖의 개발·설계 메타 설명/,/오류/,/GitHub/],
+  'UI-010':[/제출하지 않은/,/다시 검증/,/이미 제출된/,/확정된 지급/],
+
+  'CAL-010':[/하루에 한 공식 시리즈만/,/타이브레이크/,/예외의 발생 근거·해당 팀·단계·시리즈를 기록/],
+  'CAL-011':[/다른 국제대회의 확정된 경기까지 연쇄적으로 순연하지 않는다/,/같은 대회 안/],
+  'TRANS-008':[/맞교환에는 추가 이적료·분할금·조건부 옵션/,/복합 거래 전체를 원자적으로 체결/,/일부 선수만 이적하거나 같은 지급을 중복 처리하지 않는다/,/선택적 매입권 또는 조건부 의무 매입/,/임대 시작만으로 자동 완전 이적시키지 않는다/,/실제 공식 세트 출전 수·비중과 계약상 정당한 부상·등록 제한 예외/,/명단 등록이나 랭크·스크림을 공식 세트 출전으로 간주하지 않는다/,/메디컬 조건이 있는 경우 선수 동의와 적법한 의료 접근권/,/다른 구단의 상세 의료 정보를 공개하지 않는다/,/실제 모구단과 산하 2군 사이의 선수 이동·출전/,/대회의 등록·마감, 이동 자격과 동시간 출전 제한/,/매입의 조건 충족과 대회별 소속·등록 효력은 별도 판정/,/새 구단으로의 완전이전은 자동 성립하지 않는다/,/임대기간을 자동으로 연장하거나/],
+  'TRANS-009':[/대리권 변경이 발효되면 아직 합의·서명되지 않은 진행 중 제안은 만료/,/계약·확정 채무·소속과 역사는 대리인 변경으로 소급 파기하지 않는다/,/실제 존재하고 해당 당사자에게 적법하게 전달되었거나 공표된 범위/,/미공개 입찰이나 AI 구단 내부 계획을 공개하거나 허구의 경쟁 제안을 만들지 않는다/,/먼저 발견했다는 사실만으로 독점 계약 우선권을 자동 부여하지 않는다/,/선수 본인의 독립적인 목표·동의를 따르며/,/관측 순서만을 이유로 다른 구단의 적법한 제안을 차단하지 않는다/,/이미 유효하게 성립한 별도 계약상의 권리는 실제 계약과 적용 규정에 따라 판단한다/],
+  'PLAYER-001':[/멘토링은 실제 활동·관계와 배움의 기회에 근거/,/멘토로 지정했다는 사실만으로 선수 능력을 즉시 높이지 않는다/,/유사 챔피언 숙련의 전이는 실제 기술 구조·교전 방식·역할/,/전향 선언만으로 새 역할의 완전한 숙련을 즉시 부여하지 않는다/,/모든 능력을 한꺼번에 일률 강등시키거나 근거 없는 폭발 성장·쇠퇴 사건을 생성하지 않는다/],
+  'PLAYER-007':[/스카우트는 서로 다른 독립 프로구단에 동시에 고용될 수 없다/,/모구단과 적법한 산하 2군·Academy의 조직 내부 공유는 허용/,/합법적인 이직이나 공개 자료 분석까지 금지하지 않는다/,/구단 소유 비공개 자료의 권한을 보존/,/표본이 적은 유망주의 능력·성장 평가는 \*\*미관측 또는 불확실\*\*/,/AI도 권한 없이 비공개 실제 능력·잠재력에 직접 접근하지 않으며/,/관측 부족은 능력 부족이나 자동 계약을 뜻하지 않는다/,/스카우팅 담당자의 가용 업무·시간·예산과 관측 권한 범위/,/실제로 수행하지 않은 즉시 조사 결과를 만들지 않는다/,/수집 배지는 복원하지 않는다/,/자료의 시점·출처와 소유·관측 범위를 근거로 연결/,/후속 실제 평가와 판단 수정 이력을 구분/,/다른 구단의 비공개 자료를 당시 판단 근거로 소급해 제시하지 않는다/,/실제 개인 사정에 따른 정당한 휴가/,/등록·대체 자격·일정을 함께 확인/,/실제 활동 지역·상황과 시설 용량/,/매일 숙소를 수동 배치하도록 강제하거나 방송·기술 장비 관리 업무를 다시 도입하지 않는다/,/코칭스태프 일부 공유는 실제 계약·업무시간·겸직 자격과 업무량/,/같은 활동의 선수 성장 효과를 이중으로 부여하지 않는다/,/실제 이용 시간이 충돌하면 1군이 우선/,/공식 경기 일정을 임의 변경하지 않고/],
+  'BIZ-001':[/구단 인수만으로 구단명·브랜드를 변경하거나 팬덤을 일률적으로 감소시키지 않는다/,/리브랜딩은 권리와 독립 경영을 존중하는 별도의 적법한 선택/],
+  'BIZ-006':[/이전 구단의 초상·광고 이용은 유효한 기존 계약의 기간·매체·자료·권리 범위에서만 유지/,/새로운 광고 사용은 현재 적법한 권리자의 동의/,/무료 다시보기·동시 중계와 구분/,/구단 프런트가 선수 개인 방송 일정을 일상적으로 조율·예약/,/무단 개인 계약 체결이나 실제 방송 활동 기록의 가상 생성/],
+  'BIZ-007':[/숨은 능력·잠재력이나 비공개 진료·보고서를 직접 읽지 않는다/,/팬·구단·시장·언론의 평판/,/서로 다르게 형성될 수 있다/,/단일한 숨은 실제 능력의 정답이나 근거 없는 스캔들로 환원하지 않는다/,/실제 경기와 이후 공개 평판에 간접적으로 반영/,/실제 판매 권리, 장소·좌석·입장 규모와 운영 원가/,/팬덤 크기만으로 발생하지 않은 입장권 판매를 기록하지 않는다/,/기존·새 팬의 실제 접근성, 상업 노출 권리와 팬 반응을 구분/,/기존 구단 역사와 계약 원본을 보존/,/모든 개별 팬의 전수 시뮬레이션을 강제하지 않는다/,/실제 발언·행사와 당시 이력에 근거/,/근거 없는 무작위 스캔들이나 불필요한 수동 관리 패널을 만들지 않는다/],
+  'COMP-017':[/2군은 공식 지역리그에서 승격하거나 승격 결정전에 참가할 수 없다/,/승격권/],
+});
+
+export function readDocuments(root=ROOT){
+  return Object.fromEntries(DOCUMENTS.map(file=>[file,readFileSync(resolve(root,file),'utf8')]));
+}
+
+export function validateRulebook(docs){
+  const errors=[],ids=new Map();
+  const add=(code,message)=>errors.push(code+': '+message);
+  for(const file of DOCUMENTS){
+    if(typeof docs[file]!=='string'||!docs[file].trim())add('FILE_MISSING',file);
+  }
+  if(errors.length)return {errors,ruleCount:0,chapterCount:0};
+  for(const [file,prefix] of [...CHAPTERS,...EXTERNAL_REQUIREMENTS]){
+    const content=docs[file];
+    const matches=[...content.matchAll(/^### ([A-Z]+)-([0-9]{3}) · ([^\n]+)$/gm)];
+    if(!matches.length)add('NO_RULES',file);
+    for(let i=0;i<matches.length;i++){
+      const m=matches[i],id=m[1]+'-'+m[2],body=content.slice(m.index+m[0].length,matches[i+1]?.index??content.length);
+      if(m[1]!==prefix)add('WRONG_CHAPTER',file+' '+id+' belongs in '+prefix);
+      if(ids.has(id))add('DUPLICATE_ID',id+' '+ids.get(id).file+' '+file);
+      if(!body.trim())add('EMPTY_RULE',id);
+      // Articles with enumerated paragraphs must have ①,②,③... once each.
+      const paragraphMarkers=[...body.matchAll(/^[①②③④⑤⑥⑦⑧⑨⑩](?=\s)/gm)].map(x=>x[0]);
+      const ordinal='①②③④⑤⑥⑦⑧⑨⑩';
+      if(paragraphMarkers.length && paragraphMarkers.some((marker,index)=>marker!==ordinal[index])){
+        add('ARTICLE_PARAGRAPH_ORDER',id+' '+paragraphMarkers.join(''));
+      }
+      ids.set(id,{file,body});
+    }
+  }
+  // Cross-chapter references must resolve to an actual world-law clause.
+  // Index other documents separately; historical evidence may cite deleted IDs.
+  for(const [file] of CHAPTERS){
+    const lines=docs[file].split('\n');
+    for(let lineIndex=0;lineIndex<lines.length;lineIndex++){
+      for(const ref of lines[lineIndex].matchAll(/\b(?:CORE|COMP|NAT|CAL|TRANS|PLAYER|MATCH|BIZ|GOV)-\d{3}\b/g)){
+        if(!ids.has(ref[0]))add('UNKNOWN_CLAUSE_REFERENCE',file+':'+(lineIndex+1)+' -> '+ref[0]);
+      }
+    }
+  }
+  // The external world constitution is not a GUI or implementation manual.
+  // Its normative tournament names and participation rights stay inside the
+  // chapters; output, internal IDs and historical display transformations do not.
+  for(const [file] of CHAPTERS){
+    if(/(?:내부 ID|뉴스를 출력하지|UI 버튼|화면 컴포넌트|Codex|GitHub PR)/.test(docs[file])){
+      add('CANON_TECHNICAL_LEAK',file+' contains product/implementation metadata');
+    }
+  }
+  // Editorial diagnostics only: obvious conversational expressions do not
+  // belong in the current normative chapters. Historical evidence remains intact.
+  const colloquial=/가짜|딱지|원팀|그해|그때|꾸며내|하드코딩|버프/;
+  for(const [file] of CHAPTERS){
+    if(/https:\/\/github\.com|2026-\d\d-\d\d 사용자 대화/.test(docs[file]))add('CANON_PROVENANCE',file+' contains editorial source text');
+    const match=colloquial.exec(docs[file]);
+    if(match)add('COLLOQUIAL_STYLE',file+' contains informal wording: '+match[0]);
+    if(docs[file].includes('월즈'))add('WORLDS_DISPLAY_NAME',file+' uses Korean transliteration instead of Worlds');
+  }
+  for(const [id,checks] of Object.entries(POLICY_PINS)){
+    const rule=ids.get(id);
+    if(!rule){add('MISSING_PIN',id);continue;}
+    for(const re of checks)if(!re.test(rule.body))add('BROKEN_PIN',id+' missing '+re.source);
+  }
+  // M16C prohibits revealing omniscient character traits to the reader.
+  // A mere presence of the words in a policy pin does not validate negation.
+  const personalityUI=ids.get('UI-006')?.body||'';
+  if(/숨은 정확 성향·능력·잠재력을 누구에게나 공개/.test(personalityUI)){
+    add('PRIVATE_INFO_EXPOSURE_UI','UI-006 exposes private omniscient personality facts');
+  }
+  // A list of tournament names and the word 금지 alone can coexist with an
+  // explicit exception that contradicts the market-wide suspension.
+  const marketRule=ids.get('CAL-003');
+  if(marketRule && /독립 대회[^.\n]*(?:실제 경기|실경기)[^.\n]*(?:허용한다|허용할 수 있다|가능하다)/.test(marketRule.body)){
+    add('CONFLICTING_MARKET_EXCEPTION','CAL-003 permits independent matches during the market');
+  }
+  // The non-normative adjudication matrix must reflect current clauses and
+  // evidence depth. This verifies indexing, NOT whether a linked source
+  // actually contains the user's final approval.
+  const matrix=docs['docs/rulebook-audit/CLAUSE_DECISION_MATRIX_2026_11_01.md'];
+  const matrixIds=new Set();
+  const matrixStatusCounts=new Map();
+  let matrixDirect=0;
+  for(const line of matrix.split('\n')){
+    const m=line.match(/^\| ([A-Z]+-\d{3}) \|/);
+    if(!m)continue;
+    const id=m[1];
+    const cells=line.split('|').map(part=>part.trim());
+    if(matrixIds.has(id))add('MATRIX_DUPLICATE',id);
+    matrixIds.add(id);
+    const rule=ids.get(id);
+    if(!rule){add('MATRIX_ORPHAN',id);continue;}
+    const evidence=cells[3];
+    if(!/#\d+/.test(evidence||''))add('MATRIX_EVIDENCE_MISSING',id);
+    const declared=cells[4];
+    if(!['이슈·기타','댓글 직접 링크'].includes(declared))add('MATRIX_SOURCE_DEPTH',id+' invalid '+declared);
+    if(declared==='댓글 직접 링크')matrixDirect++;
+    const status=cells[5];
+    if(!['관련 원문 부분대조','세부 판정 대기','**후속 대체 확인·교정 필요**'].includes(status)){
+      add('MATRIX_STATUS',id+' '+status);
+    }
+    matrixStatusCounts.set(status,(matrixStatusCounts.get(status)||0)+1);
+  }
+  // Chapter headings are human-facing totals and must match the indexed rules.
+  // The 2026-11-01 matrix is an immutable 113-item historical audit, not the
+  // final canon count after 2026-11-08 amendments.
+  for(const prefix of ['CORE','COMP','CAL','TRANS','PLAYER','MATCH','BIZ','GOV','UI']){
+    const m=matrix.match(new RegExp('^### '+prefix+' — (\\d+)개 조항$', 'm'));
+    const actual=[...matrixIds].filter(id=>id.startsWith(prefix+'-')).length;
+    if(!m||Number(m[1])!==actual)add('MATRIX_CHAPTER_COUNT',prefix+' '+(m?.[1]??'missing')+' / '+actual);
+  }
+  const addendum=docs['docs/rulebook-audit/CANON_2026_11_08_ADDENDUM.md'];
+  const newRuleIds=new Set();
+  for(const line of addendum.split('\n')){
+    const m=line.match(/^\| ([A-Z]+-\d{3}) \|/);
+    if(!m)continue;
+    if(newRuleIds.has(m[1]))add('ADDENDUM_DUPLICATE',m[1]);
+    newRuleIds.add(m[1]);
+  }
+  for(const id of ids.keys())if(!matrixIds.has(id)&&!newRuleIds.has(id))add('SOURCE_AUDIT_MISSING',id);
+  for(const id of newRuleIds){
+    if(!ids.has(id))add('ADDENDUM_ORPHAN',id);
+    if(matrixIds.has(id))add('ADDENDUM_LEGACY_COLLISION',id);
+  }
+  if(matrixIds.size+newRuleIds.size!==ids.size)add('SOURCE_AUDIT_COUNT','legacy '+matrixIds.size+' + approved addendum '+newRuleIds.size+' / rules '+ids.size);
+  // Historical selection rows plus later additions form an ID index, not
+  // a 100% certificate of final user approval. Its public numeric header
+  // and latest policy rows must not advertise superseded values.
+  const worldClauseCount=[...ids.keys()].filter(id=>!id.startsWith('UI-')).length;
+  const uiRequirementCount=[...ids.keys()].filter(id=>id.startsWith('UI-')).length;
+  const currentSummary='9개 세계 장 '+worldClauseCount+'조 + 별도 UI '+uiRequirementCount+'개 = '+ids.size+'개 ID';
+  if(!addendum.includes(currentSummary))add('SOURCE_CURRENT_COUNT',currentSummary);
+  for(const [id,needle] of [
+    ['TRANS-012','최초 세계 시즌'],
+    ['TRANS-013','최초 세계 시즌'],
+    ['NAT-011','적격 5~6인 단축 등록 허용'],
+    ['BIZ-016','코치 7명·분석가 4명·스카우트 6명'],
+  ]){
+    const row=addendum.split('\n').find(line=>line.startsWith('| '+id+' |'));
+    if(!row||!row.includes(needle))add('ADDENDUM_CURRENT_POLICY',id+' needs '+needle);
+  }
+
+  const summaries=[
+    ['관련 원문 부분대조','관련 원문 부분대조'],
+    ['세부 판정 대기','세부 판정 대기'],
+    ['후속 대체 확인·교정 필요','**후속 대체 확인·교정 필요**'],
+  ];
+  for(const [label,status] of summaries){
+    const line=matrix.split('\n').find(l=>l.startsWith('| '+label+' |'));
+    const declared=line?Number(line.split('|')[2].trim()):NaN;
+    if(!Number.isInteger(declared)||declared!==(matrixStatusCounts.get(status)||0)){
+      add('MATRIX_SUMMARY',label+' '+declared+' / '+(matrixStatusCounts.get(status)||0));
+    }
+  }
+  const depthLine=matrix.split('\n').find(l=>l.startsWith('| 직접 댓글 링크 포함 |'));
+  const declaredDirect=depthLine?Number(depthLine.split('|')[2].trim()):NaN;
+  if(declaredDirect!==matrixDirect)add('MATRIX_DEPTH_SUMMARY',declaredDirect+' / '+matrixDirect);
+
+  // Existing AGENTS.md intentionally links many legacy documents outside
+  // this limited rulebook fixture; only validate relative links authored here.
+  for(const file of [...CHAPTERS.map(([path])=>path),...EXTERNAL_REQUIREMENTS.map(([path])=>path),'docs/rulebook/80-EXPERIENCE.md','docs/rulebook/README.md','docs/rulebook/CHANGELOG.md','docs/AI_RULEBOOK_GUIDE.md','docs/GAME_IMPLEMENTATION_ENTRYPOINT.md']){
+    const content=docs[file];
+    for(const match of content.matchAll(/\[[^\]\n]+\]\(([^)\s]+)(?:\s+[^)]*)?\)/g)){
+      const target=match[1].split('#')[0];
+      if(!target||/^(?:https?:\/\/|mailto:)/i.test(target))continue;
+      if(target.startsWith('/')||target.startsWith('..'+posix.sep+'..'+posix.sep)){
+        // One parent level (e.g. ../AI_RULEBOOK_GUIDE.md) is legitimate;
+        // the normalized destination must remain in the repository.
+      }
+      const joined=posix.normalize(posix.join(posix.dirname(file),target));
+      if(joined==='..'||joined.startsWith('../')||joined.startsWith('/'))add('LINK_ESCAPE',file+' -> '+target);
+      else if(!(joined in docs))add('BROKEN_LOCAL_LINK',file+' -> '+joined);
+    }
+  }
+
+  // Product and technical acceptance requirements are separate from world law.
+  const product=docs['docs/implementation-spec/WORLD_ENGINE_AND_PRODUCT_ACCEPTANCE.md'];
+  for(const required of ['구버전','마이그레이션','마지막 성공 스냅샷','슬롯 간 격리','현실 시간 카운트다운','스크림 예약·회의·보고 버튼을 강제하지 않는다','인수인계 기능','1·3·6·12개월','다지역·다시즌 표본','육성 구단 보상 보고','입력 차이가 있다는 사실만으로 다른 결과를 강제하거나 임의 현금을 생성하지 않는다','실제 재정 원장과 계약에 근거해']){
+    if(!product.includes(required))add('PRODUCT_REQUIREMENT',required);
+  }
+  // Startup must be coherent and repeatable, without inventing local statutes
+  // or replacing the legal rule-making acts of in-world authorities.
+  const initialGuide=docs['docs/GAME_IMPLEMENTATION_ENTRYPOINT.md'];
+  for(const required of [
+    '## 13. 초기 세계 프리셋의 설계·발효·장기 변화 검증',
+    '사전에 설계·교차 검증한 초기 세계 프리셋',
+    'AI가 새 세계마다 규정·숫자·권한을 임의로 뽑지 않는다',
+    '재현성',
+    '제정·공표·시행 확인',
+    '`NEEDS_RULE`',
+    '`NEEDS_FACTS`',
+    '`NOT_EFFECTIVE`',
+    '기존 저장 보존',
+  ]){
+    if(!initialGuide.includes(required))add('INITIAL_PRESET_CONTRACT',required);
+  }
+  // The newer user-approved finite Worlds cutline bracket must not regress
+  // into infinite RR or fabricated victories, without erasing office/roster safeguards.
+  for(const required of [
+    '## 14. 열린 결과 경로와 의결 불능에 대한 안전성 검증',
+    '실제 경기 수의 수학적 유한 상한과 일정 마감은 별개',
+    '가상의 결승·시드·결과를 기록하거나',
+    '원 이사와 대체 이사가 동시에 표를 행사하거나 총 재적·찬성 기준을 변경하지 않는다',
+    '기본 등록 7명(주전 5·후보 2)',
+    '적격 선수 5명 또는 6명 등록도 허용',
+    '같은 의석군의 임시 대체 이사를 적법하게 선임한 경우',
+    '최초 세계 개막 전 관할 기관이 제정·공표·발효시킨 세부 선임 절차',
+    '없는 선수를 채우거나 미등록 선수를 자동 출전시켜서는 안 된다',
+  ]){
+    if(!initialGuide.includes(required))add('OPEN_OUTCOME_ACCEPTANCE',required);
+  }
+  // These are existing approved depth and calendar constraints, with
+  // distinct-season counting as a clarification, not a new minimum duration.
+  for(const required of [
+    '## 15. 선수단·근속·방송 수용 반례',
+    '통합 선수단 11명 하한에 미달',
+    '해당 시즌 최대 한 번',
+    '총 `12×11 = 132`시리즈',
+    '132→240시리즈',
+    '서로 다른 부의 실제 운영·방송 자원',
+  ]){
+    if(!initialGuide.includes(required))add('DEPTH_TENURE_SCHEDULE_ACCEPTANCE',required);
+  }
+  // Initial ceilings may evolve only through a valid in-world amendment;
+  // the prototype/preset must not silently change them or retroactively rewrite.
+  for(const required of [
+    '최초 로스터 5~10명·비로컬 2명·시즌 이적 최대 2회·직원 7/4/6명',
+    '초기 최대 2회',
+    '비로컬 최대 2명·1군 최대 10명',
+    '그 시즌에 실제 발효한 비로컬·명단 상한',
+    '그 전의 적법 계약은 소급 파기하지 않음',
+  ]){
+    if(!initialGuide.includes(required))add('INITIAL_CEILING_ACCEPTANCE',required);
+  }
+  for(const required of [
+    '## 16. 공식 대회 명칭과 이력 표현',
+    '구형 표시명을 현재 공표문·일정·뉴스 제목에 혼입하지 않는다',
+    '내부 안정 ID는 명칭 표시와 분리',
+  ]){
+    if(!initialGuide.includes(required))add('TOURNAMENT_ID_PRESENTATION_ACCEPTANCE',required);
+  }
+  // Business ownership/management domain acceptance follows the direct
+  // I-02 A approval: real independent organization, not fixed pro-class tags.
+  for(const required of [
+    '## 17. 다구단 동일 소유 그룹과 독립 경영 슬롯 수용',
+    '아마추어라는 이유로 두 번째 직접 경영 자동 허용 금지',
+    '산하 2군은 **추가 독립 경영 슬롯 아님**',
+    'A 해제+B 지정 원자적 전이',
+    '단순 명칭 변경은 조직적 독립성을 바꾸지 않음',
+  ]){
+    if(!initialGuide.includes(required))add('INDEPENDENT_CLUB_OWNERSHIP_ACCEPTANCE',required);
+  }
+  // Previously approved #251 79B, 85B and 195C are actionable terms,
+  // not new legal systems; preserve insurance and presentation boundaries.
+  for(const required of [
+    '실제 가입한 선수 의료·부상 **보험 계약**',
+    '표시 속도/시각효과',
+    '동일 확정 경기·세트·난수·세계시계·저장 이력',
+    '모든 상단 탭의 순서를 직접 재배치·보존',
+    '7명 상한이 유효한 동안',
+  ]){
+    if(!product.includes(required))add('HISTORIC_CHOICE_ACCEPTANCE',required);
+  }
+  // Evidence is kept outside the standalone normative text.
+  const sourceDepth = {
+    directCommentLinked: matrixDirect,
+    issueOnlyOrOther: ids.size-matrixDirect,
+  };
+  const agent=docs['AGENTS.md'];
+  for(const required of ['## 게임 제작 단일 진입점','docs/GAME_IMPLEMENTATION_ENTRYPOINT.md','docs/rulebook/README.md','docs/AI_RULEBOOK_GUIDE.md','npm run check:rulebook']){
+    if(!agent.includes(required))add('CODEX_ENTRY',required);
+  }
+  if(!docs['docs/AI_RULEBOOK_GUIDE.md'].includes('비규범'))add('GUIDE_SCOPE','AI guide must not define new policy');
+  // Version is a living publication marker, not a hard-coded initial release.
+  const version=docs['docs/rulebook/README.md'].match(/\*\*규정집 발행본:\*\*\s*(v\d+\.\d+\.\d+)/)?.[1];
+  if(!version)add('VERSION','rulebook README lacks a semantic publication version');
+  else if(!docs['docs/rulebook/CHANGELOG.md'].includes(' '+version))add('CHANGELOG','no entry for the current rulebook version '+version);
+  return {errors,ruleCount:ids.size,worldRuleCount:ids.size-[...ids.keys()].filter(id=>id.startsWith('UI-')).length,chapterCount:CHAPTERS.length,sourceDepth};
+}
+
+if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
+  const result=validateRulebook(readDocuments());
+  if(result.errors.length){
+    for(const error of result.errors)console.error('rulebook: '+error);
+    process.exitCode=1;
+  }else{
+    console.log('rulebook: PASS '+result.worldRuleCount+' world-law clauses / '+result.ruleCount+' world and UI contract IDs in '+result.chapterCount+' world chapters. Canon text is source-free; evidence indexed separately. Structural and policy pins verified (DOCUMENT CHECK ONLY).');
+  }
+}
