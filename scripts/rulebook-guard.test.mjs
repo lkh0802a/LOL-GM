@@ -275,13 +275,21 @@ test('relocation and development reputation preserve history and do not invent c
   docs=changed(file,text=>text.replace('유명해졌다는 사실만으로 자동 현금 보상을 만들지 않는다','유명해지면 자동으로 현금을 지급한다'));
   assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
 });
-test('double disqualification distinguishes prior rounds from the final',()=>{
+test('competition never creates mutual disqualification or championless finals',()=>{
   const file='docs/rulebook/10-COMPETITIONS.md';
-  let docs=changed(file,text=>text.replace('경기 자리를 승계하여 실제 경기로 진행한다','임의의 팀을 결승으로 진출시킨다'));
-  assert.match(check(docs),/BROKEN_PIN: COMP-010/);
-  docs=changed(file,text=>text.replace('우승자 없이 종료한다','차순위 팀에 우승을 자동 승계한다'));
-  assert.match(check(docs),/BROKEN_PIN: COMP-010/);
+  for(const [from,to,id] of [
+    ['양 팀 동시 실격·무우승 결승은 게임이 생성하는 사건이나 대회 종료 경로로 두지 않는다','양 팀 동시 실격으로 공식 결승을 무우승 종료한다','COMP-006'],
+    ['양 팀 동시 실격·동시 기권·결승 무우승을 독립적인 무작위 사건','동시 실격과 동시 기권을 무작위로 생성','COMP-010'],
+    ['정상적으로 완료되는 모든 공식 토너먼트 결승','무우승 결승을 매년 개최하는 공식 토너먼트','COMP-010'],
+    ['회차 자체를 취소하거나 무기한 연기하지 않는다','정기적으로 대회를 취소한다','COMP-010'],
+    ['매년 해당 회차의 실제 운영은 보장','일곱 공식 국제대회는 매년 운영을 보장하지 않는다','COMP-012']
+  ]){
+    const docs=changed(file,body=>body.replace(from,to));
+    assert.notEqual(docs[file],original[file], 'must find source: '+from);
+    assert.match(check(docs),new RegExp('BROKEN_PIN: '+id));
+  }
 });
+
 test('approved Worlds boundary ties use real head-to-head, not matches for every tie',()=>{
   const file='docs/rulebook/10-COMPETITIONS.md';
   let docs=changed(file,text=>text.replace('두 팀의 실제 맞대결이 유효하게 승자승을 가를 수 있으면 그 결과를 우선한다','두 팀이면 무조건 BO1을 다시 치른다'));
@@ -329,7 +337,7 @@ test('a same-league broadcast overlap cannot silently replace sequential play',(
   assert.match(check(docs),/BROKEN_PIN: CAL-009/);
 });
 test('independent international events cannot be chained into automatic delay',()=>{
-  const docs=changed('docs/rulebook/20-CALENDAR.md',text=>text.replace('연쇄적으로 순연하거나 취소하지 않는다','연쇄적으로 순연한다'));
+  const docs=changed('docs/rulebook/20-CALENDAR.md',text=>text.replace('다른 국제대회의 확정된 경기까지 연쇄적으로 순연하지 않는다','다른 국제대회의 확정된 경기까지 자동으로 순연한다'));
   assert.match(check(docs),/BROKEN_PIN: CAL-011/);
 });
 test('automatic promotion and academy promotion cannot return silently',()=>{
@@ -543,10 +551,10 @@ test('implementation guide cannot silently point to a nonexistent canonical file
 test('protected international events cannot disappear under a growth or low-audience policy',()=>{
   const file='docs/rulebook/10-COMPETITIONS.md';
   for(const [before,after] of [
-    ['정체성과 행사 연속성은 영구 보장','정체성과 행사 연속성은 보장하지 않는다'],
-    ['저흥행만을 이유로 자동 폐지할 수 없다','저흥행이면 자동 폐지한다'],
+    ['매년 해당 회차의 실제 운영은 보장','회차 개최는 매년 임의로 취소 가능'],
+    ['회차를 취소하거나 무기한 연기하지 않는다','재정 부족이면 대회를 취소한다'],
     ['영구 최대 개수가 아니다','영구 최대 개수다'],
-    ['참가 방식·규모·세부 형식을 재편','참가 방식·규모·세부 형식은 고정'],
+    ['차기 회차의 참가 방식·규모·세부 형식','당시 확정된 모든 회차를 소급 변경한다'],
   ]){
     const docs=changed(file,text=>text.replace(before,after));
     assert.notEqual(docs[file],original[file]);
@@ -570,19 +578,19 @@ test('save and UI migration requirements remain outside world law',()=>{
   }
 });
 
-test('Worlds final disqualification cannot invent a match, winner, or time',()=>{
+test('Worlds final has a legitimate winner without bilateral disqualification events',()=>{
   const file='docs/rulebook/20-CALENDAR.md';
-  for(const [before,after] of [
-    ['양 팀의 적법한 실격','양 팀의 자동 승계'],
-    ['우승자·경기·경기 시각을 만들어내지 않고 결승 단계의 종료/판정 이력으로 피날레를 확인','가짜 경기와 우승자를 생성'],
-    ['COMP-006의 무우승 판정','임의의 재결승'],
+  for(const [from,to] of [
+    ['실제 5:5 경기 승패 또는 한쪽의 적법한 기권·실격','양측 자동 실격이면 무우승 처리'],
+    ['결승 양 팀 동시 실격이나 무우승을 예정된 시즌 종료 사건으로 생성하지 않으며','결승 양 팀 동시 실격을 매년 생성하며'],
+    ['실시되지 않은 행정승 경기를 실제로 플레이한 경기로 기록하지 않는다','행정승 경기를 실제 플레이한 5:5 경기로 기록한다'],
+    ['필수 공식 대회 회차를 취소하거나 무기한 연기하는 방식으로 일정 충돌을 해결하지 않는다','일정 충돌 때 기본 대회를 무기한 연기한다']
   ]){
-    const docs=changed(file,text=>text.replace(before,after));
-    assert.notEqual(docs[file],original[file]);
+    const docs=changed(file,body=>body.replace(from,to));
+    assert.notEqual(docs[file],original[file], 'must find source: '+from);
     assert.match(check(docs),/BROKEN_PIN: CAL-004/);
   }
 });
-
 
 test('world canon separates national-team competitions from the four club competitions',()=>{
   const result=validateRulebook(original);
@@ -1253,14 +1261,14 @@ test('all-appearance bounded bracket constructive simulation enumerates n and q 
 test('Nov 12 approved conflict resolutions P01-P10 stay enforceable across world laws',()=>{
   for(const [file,from,to,pin] of [
     ['docs/rulebook/10-COMPETITIONS.md','참가 보류 후 다음 시즌 처리','보류된 2군을 자동 해체한다','COMP-004'],
-    ['docs/rulebook/10-COMPETITIONS.md','보호된 대회와 해당 연도 회차의 구분','기본 일곱 대회 취소 시 그 정체성을 폐지한다','COMP-012'],
+    ['docs/rulebook/10-COMPETITIONS.md','매년 해당 회차의 실제 운영은 보장','기본 일곱 대회를 편의상 취소한다','COMP-012'],
     ['docs/rulebook/10-COMPETITIONS.md','승인된 원시 시드 보호·대진 균형','높은 원시 시드는 실제 경기 없이 진출한다','COMP-019'],
     ['docs/rulebook/10-COMPETITIONS.md','리그 페이즈 세부 순위는 기존 공동순위로 남기고','결정전 패배 순서로 정규 순위를 확정한다','COMP-019'],
     ['docs/rulebook/10-COMPETITIONS.md','지급 판정 보류','계약상 확정된 상금도 임의로 지급을 유예한다','COMP-019'],
     ['docs/rulebook/10-COMPETITIONS.md','사전 편성 가능성 심사','시장 시작 후에도 결정전을 무제한 생성한다','COMP-019'],
     ['docs/rulebook/10-COMPETITIONS.md','정규 누적 통계로 산정하지 않는다','결정전 세트도 정규 MVP 누적 통계로 자동 합산한다','COMP-022'],
-    ['docs/rulebook/15-NATIONAL-TEAMS.md','개최 의무 미충족 사실','국대 대회 불능이어도 자동 개최 완료 표시','NAT-011'],
-    ['docs/rulebook/20-CALENDAR.md','Worlds 이후에 다른 공식 대회 실경기를 개최하거나','Worlds 이후 다른 공식전 개최로 일정 충돌 해결','CAL-004'],
+    ['docs/rulebook/15-NATIONAL-TEAMS.md','실제 개최되는 주요 국가대표 국제대회를 적어도 하나 확보한다','국대 대회 일년 내내 개최하지 않아도 된다','NAT-011'],
+    ['docs/rulebook/20-CALENDAR.md','Worlds 이후의 다른 공식 대회 실경기 개최','Worlds 이후 다른 공식전 개최로 일정 충돌 해결','CAL-004'],
     ['docs/rulebook/30-TRANSFERS.md','화요일 00:00:00 UTC를 계약 종료의 배타적 시각','월요일 23:59:00에 계약 종료한다','TRANS-002'],
     ['docs/rulebook/30-TRANSFERS.md','새 구단으로의 완전이전은 자동 성립하지 않는다','임대 의무매입이면 이적창과 무관하게 자동 이적','TRANS-008'],
     ['docs/rulebook/30-TRANSFERS.md','임대를 무기한 자동 연장하지 않는다','임대는 영구 자동 연장된다','TRANS-012'],
