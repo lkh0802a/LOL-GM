@@ -1288,3 +1288,17 @@ test('Worlds alias remains English and never reverts to Korean transliteration i
   const report=check(docs);
   assert.match(report,/WORLDS_DISPLAY_NAME|BROKEN_PIN: COMP-005/);
 });
+
+test('Worlds cutline actual unilateral forfeit is not a synthetic BO1 or bilateral disqualification',()=>{
+  const file='docs/rulebook/10-COMPETITIONS.md';
+  for(const [from,to] of [
+    ['실제 일방 기권의 좁은 예외','다자 동시 기권 허용'],
+    ['실제로 적법하게 기권하거나 단독 실격','무작위로 생성한 양팀 실격'],
+    ['실제 BO1 출전 횟수·세트/선수 스탯은 0건','가상 선수 성적은 실경기로 기록'],
+    ['양측 기권·동시 실격·가상 행정승을 생성하여 이 예외를 우회하지 않는다','양측 실격을 가상 행정승으로 처리한다']
+  ]){
+    const docs=changed(file,body=>body.replace(from,to));
+    assert.notEqual(docs[file],original[file],'missing mutation phrase: '+from);
+    assert.match(check(docs),/BROKEN_PIN: COMP-019/);
+  }
+});
