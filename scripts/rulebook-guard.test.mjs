@@ -275,17 +275,18 @@ test('relocation and development reputation preserve history and do not invent c
   docs=changed(file,text=>text.replace('유명해졌다는 사실만으로 자동 현금 보상을 만들지 않는다','유명해지면 자동으로 현금을 지급한다'));
   assert.match(check(docs),/BROKEN_PIN: BIZ-011/);
 });
-test('competition never creates mutual disqualification or championless finals',()=>{
+test('active world law protects completed tournament editions and one-sided administrative results',()=>{
   const file='docs/rulebook/10-COMPETITIONS.md';
   for(const [from,to,id] of [
-    ['양 팀 동시 실격·무우승 결승은 게임이 생성하는 사건이나 대회 종료 경로로 두지 않는다','양 팀 동시 실격으로 공식 결승을 무우승 종료한다','COMP-006'],
-    ['양 팀 동시 실격·동시 기권·결승 무우승을 독립적인 무작위 사건','동시 실격과 동시 기권을 무작위로 생성','COMP-010'],
-    ['정상적으로 완료되는 모든 공식 토너먼트 결승','무우승 결승을 매년 개최하는 공식 토너먼트','COMP-010'],
-    ['회차 자체를 취소하거나 무기한 연기하지 않는다','정기적으로 대회를 취소한다','COMP-010'],
-    ['매년 해당 회차의 실제 운영은 보장','일곱 공식 국제대회는 매년 운영을 보장하지 않는다','COMP-012']
+    ['행정승으로 우승을 판정','행정 판정 없이 가상 우승을 부여','COMP-006'],
+    ['사전에 확정한 회차를 실제 운영','확정된 대회를 운영하지 않아도 된다','COMP-010'],
+    ['실제 적격 참가팀·선수단·대진·예비 경기 슬롯','적격 선수 없이 대진 확정','COMP-010'],
+    ['토너먼트 결승에서도 그 행정승이 우승팀을 확정','결승의 적법한 행정승은 인정하지 않는다','COMP-010'],
+    ['행정승은 실제 경기를 실시한 기록이 아니며','행정승을 실제 경기 기록으로 만든다','COMP-010'],
+    ['정체성·역사·매년 해당 회차의 실제 운영은 보장','공식 국제대회는 개최하지 않아도 된다','COMP-012']
   ]){
     const docs=changed(file,body=>body.replace(from,to));
-    assert.notEqual(docs[file],original[file], 'must find source: '+from);
+    assert.notEqual(docs[file],original[file], 'source phrase required: '+from);
     assert.match(check(docs),new RegExp('BROKEN_PIN: '+id));
   }
 });
@@ -552,7 +553,7 @@ test('protected international events cannot disappear under a growth or low-audi
   const file='docs/rulebook/10-COMPETITIONS.md';
   for(const [before,after] of [
     ['매년 해당 회차의 실제 운영은 보장','회차 개최는 매년 임의로 취소 가능'],
-    ['회차를 취소하거나 무기한 연기하지 않는다','재정 부족이면 대회를 취소한다'],
+    ['정체성·역사·매년 해당 회차의 실제 운영은 보장','공식 국제대회는 매년 반드시 개최할 필요가 없다'],
     ['영구 최대 개수가 아니다','영구 최대 개수다'],
     ['차기 회차의 참가 방식·규모·세부 형식','당시 확정된 모든 회차를 소급 변경한다'],
   ]){
@@ -578,16 +579,17 @@ test('save and UI migration requirements remain outside world law',()=>{
   }
 });
 
-test('Worlds final has a legitimate winner without bilateral disqualification events',()=>{
+test('Worlds finals retain actual winner or one-sided administrative champion and dated season finale',()=>{
   const file='docs/rulebook/20-CALENDAR.md';
   for(const [from,to] of [
-    ['실제 5:5 경기 승패 또는 한쪽의 적법한 기권·실격','양측 자동 실격이면 무우승 처리'],
-    ['결승 양 팀 동시 실격이나 무우승을 예정된 시즌 종료 사건으로 생성하지 않으며','결승 양 팀 동시 실격을 매년 생성하며'],
-    ['실시되지 않은 행정승 경기를 실제로 플레이한 경기로 기록하지 않는다','행정승 경기를 실제 플레이한 5:5 경기로 기록한다'],
-    ['필수 공식 대회 회차를 취소하거나 무기한 연기하는 방식으로 일정 충돌을 해결하지 않는다','일정 충돌 때 기본 대회를 무기한 연기한다']
+    ['결승 단계는 구단 공식 대회 시즌의 피날레','Worlds 결승 단계를 시즌 밖으로 이동한다'],
+    ['실제 경기 승자 또는 한쪽의 적법한 기권·실격','근거 없이 우승을 추첨으로 결정한다'],
+    ['행정승을 얻은 상대 팀을 우승팀으로 확정','행정승을 얻어도 우승팀이 없다'],
+    ['실시하지 않은 경기·세트·선수 출전 기록은 기록하지 않는다','실시하지 않은 경기를 선수 출전으로 합산한다'],
+    ['기본 공식 국제대회 전체·Worlds 경계 결정전의 최악 경기 수','국제대회 일정 사전 검증을 생략한다']
   ]){
     const docs=changed(file,body=>body.replace(from,to));
-    assert.notEqual(docs[file],original[file], 'must find source: '+from);
+    assert.notEqual(docs[file],original[file], 'source phrase required: '+from);
     assert.match(check(docs),/BROKEN_PIN: CAL-004/);
   }
 });
@@ -1295,7 +1297,7 @@ test('Worlds cutline actual unilateral forfeit is not a synthetic BO1 or bilater
     ['실제 일방 기권의 좁은 예외','다자 동시 기권 허용'],
     ['실제로 적법하게 기권하거나 단독 실격','무작위로 생성한 양팀 실격'],
     ['실제 BO1 출전 횟수·세트/선수 스탯은 0건','가상 선수 성적은 실경기로 기록'],
-    ['양측 기권·동시 실격·가상 행정승을 생성하여 이 예외를 우회하지 않는다','양측 실격을 가상 행정승으로 처리한다']
+    ['상대의 실제 기권까지 강제로 실경기 개최했다는 가상 기록','실제 기권한 팀이 있어도 가상의 경기 통계를 만든다']
   ]){
     const docs=changed(file,body=>body.replace(from,to));
     assert.notEqual(docs[file],original[file],'missing mutation phrase: '+from);
