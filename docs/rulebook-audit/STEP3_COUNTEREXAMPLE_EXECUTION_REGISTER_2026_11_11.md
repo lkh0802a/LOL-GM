@@ -62,8 +62,16 @@
 
 - **정본:** CAL-008은 코치 FA와 선수 시장을 12월 첫째 화요일 00:00 UTC부터 동일한 28일로 규정한다. `scripts/rulebook-guard.mjs`의 CAL-008 핀과 `scripts/rulebook-guard.test.mjs`는 문서 변경을 검출하지만 실제 시장 시계를 실행하지 않는다.
 - **기존 코드:** `src/artifact/staff-contracts.js`의 `staffMarketCandidates`는 은퇴하지 않은 자유 직원과 다른 구단 직원을 나열하고, `validateStaffAction`은 계약·권한·동의·재정을 검증한다. 이 두 함수 자체에는 CAL-008 UTC 경계 검사가 보이지 않는다. 다른 호출자·행동 writer가 이를 적용하는지는 별도 확인해야 하며, 이 관찰만으로 실제 위반을 확정하지 않는다.
+- **호출 경로 추가 확인:** `src/artifact/ui-staff-controls.js`는 사용자 입력을 `previewWorldAction`과 `commitWorldAction`에 전달하며, `src/artifact/staff.js`의 `aiManageStaff`도 같은 두 진입점을 사용한다. `src/artifact/state-transaction.js`의 `validateWorldAction`은 등록된 핸들러의 `validate`를 호출하고, `staff-contracts.js`는 `staff.sign`에 `validateStaffAction`을 등록한다. 이 경로의 정적 독해에서는 코치 시장 UTC 개장·종료 판정이 보이지 않지만, 세계 시각의 생성·표시 및 다른 경로 전체는 미확인이다. **시장 운영 시각과 개별 코치 계약의 적법성은 별개**이므로 시장 외 계약을 일률적으로 금지하는 테스트 기대값을 임의로 만들지 않는다.
+- **선수 시장과의 연결 미확인:** `src/artifact/transfer-market-rules.js`의 `transferMarketOpen`은 지역·단계·월일 창을 조회하고 `permanentTransferWindowError`는 선수 계약용으로 호출한다. 확인한 코치 `staff.sign` 경로에는 이 함수가 직접 연결돼 있지 않다. 선수 전용 함수를 코치에게 그대로 적용하면 CAL-008의 별도 계약·등록 판단을 위반할 수 있으므로 재사용을 정답으로 가정하지 않는다. 12월 첫째 화요일 계산과 개장 상태를 실제로 소유하는 기존 세계 시계 및 UI 호출 경로는 추가 추적이 필요하다.
 - **기존 테스트와 반례:** `scripts/staff-contracts-acceptance.mjs`의 첫 FA 계약은 `analyst`를 선택하므로 코치 시장 개장·종료를 입증하지 않는다. 예를 들어 12월 첫째 화요일 00:00 UTC 직전·직후와 28일 배타 종료 직전·직후에 동일한 무소속 코치에 대해 사용자/AI의 접근과 적법한 계약 효력을 실제 세계 시각으로 각각 관찰해야 한다. Worlds 결승 다음 날 선개장과 기존 계약 자동 소멸이 없다는 증거도 따로 필요하다.
 - **상태:** 위는 소스 정적 검토이며 C36 엔진 실행은 `NOT_RUN`. 실제 코치 계약의 연중 가능 여부나 특정 행위 금지를 이 관찰만으로 새로 제정하지 않는다. 기존 저장의 계약·급여·소속·이력은 검증 실패 시 원본 보존을 포함해 시험한다.
+
+### TRANS-003 구형 선수시장 동작 추적 (정적 검토)
+
+- **정본:** TRANS-003은 Worlds 종료 후 14일 독점 및 15일차 외부 접촉을 폐지하되, 프로 라이선스 보유 팀의 유효 계약 선수에 대한 통상 시장 전 조기 접촉 동의와 TRANS-005의 예외를 구분한다.
+- **구현·기존 테스트:** `src/artifact/transfer-market-rules.js`의 `permanentTransferWindowError`는 오프시즌 `contractWindow.stage === 'exclusive'`인 만료 예정 선수에게 독점 협상 종료를 요구한다. `scripts/contract-window-acceptance.mjs`는 2027-11-16 Worlds 종료 후 11-17 독점 개시와 14일 종료·15일 개시를 기존 동작으로 검증한다. 해당 테스트의 과거 통과는 최신 TRANS-003 정합성 증거가 아니다.
+- **반례와 미확인:** 동일 선수·계약·구단 동의·세계 시각에서 옛 독점 단계만 존재한다는 이유로 합법적 외부 접촉을 일률 거부하면 최신 정본과 충돌한다. 구체적인 접촉과 이적 확정 권한은 별도로 검증해야 한다. 현재 실행 경로 전체와 실제 저장·재정 영향은 미확인이며, 새 엔진 적용 전 같은 초기 상태·시드로 접촉/거부·계약/원장·저장 복원을 시험한다. 기존 게임과 세이브는 그대로 보존한다. 실제 비교 실행 `NOT_RUN`.
 
 ## 3. 필요한 실행 단계와 결함 분류
 
