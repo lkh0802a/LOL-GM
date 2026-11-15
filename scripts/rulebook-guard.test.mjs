@@ -1270,7 +1270,7 @@ test('Nov 12 approved conflict resolutions P01-P10 stay enforceable across world
     ['docs/rulebook/10-COMPETITIONS.md','사전 편성 가능성 심사','시장 시작 후에도 결정전을 무제한 생성한다','COMP-019'],
     ['docs/rulebook/10-COMPETITIONS.md','정규 누적 통계로 산정하지 않는다','결정전 세트도 정규 MVP 누적 통계로 자동 합산한다','COMP-022'],
     ['docs/rulebook/15-NATIONAL-TEAMS.md','실제 개최되는 주요 국가대표 국제대회를 적어도 하나 확보한다','국대 대회 일년 내내 개최하지 않아도 된다','NAT-011'],
-    ['docs/rulebook/20-CALENDAR.md','Worlds 이후의 다른 공식 대회 실경기 개최','Worlds 이후 다른 공식전 개최로 일정 충돌 해결','CAL-004'],
+    ['docs/rulebook/20-CALENDAR.md','World Championship 결승 단계 종료 이전','World Championship 결승 단계 종료 이후','CAL-004'],
     ['docs/rulebook/30-TRANSFERS.md','화요일 00:00:00 UTC를 계약 종료의 배타적 시각','월요일 23:59:00에 계약 종료한다','TRANS-002'],
     ['docs/rulebook/30-TRANSFERS.md','새 구단으로의 완전이전은 자동 성립하지 않는다','임대 의무매입이면 이적창과 무관하게 자동 이적','TRANS-008'],
     ['docs/rulebook/30-TRANSFERS.md','임대를 무기한 자동 연장하지 않는다','임대는 영구 자동 연장된다','TRANS-012'],
