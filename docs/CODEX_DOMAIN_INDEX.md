@@ -36,7 +36,7 @@
 | B2 | 밴픽·Fearless/First Selection·AI 선택 | [B](CODEX_DOMAIN_B_MATCH_WORLD.md#b2-밴픽fearless--first-selection--조합카운터) | #235 |
 | B3 | 실제 경기/스킬·웨이브·전투/경제/종료 | [B](CODEX_DOMAIN_B_MATCH_WORLD.md#b3-경기-초정밀-전장스킬웨이브캠프전투-인과) | #233 |
 | B4 | 경기 전술 AI/시야/가능 행동·Bo 적응 | [B](CODEX_DOMAIN_B_MATCH_WORLD.md#b4-경기-전술-ai--라인-운영--오브젝트변형-전략) | #235·#238 |
-| B5 | 패치 2.0/사전 예고·당일 종료 핫픽스 | [B](CODEX_DOMAIN_B_MATCH_WORLD.md#b5-패치-20--메타진단--글로벌-밴--팀별-적응) | #232 |
+| B5 | 정기 패치/사전 예고·대회 지정판·핫픽스 폐지 | [B](CODEX_DOMAIN_B_MATCH_WORLD.md#b5-패치-20--메타진단--글로벌-밴--팀별-적응) | #232 및 MATCH-007·008 후속 결정 |
 | B6 | 공식/스크림 Bo·당시 기록/리플레이 | [B](CODEX_DOMAIN_B_MATCH_WORLD.md#b6-bo-시리즈--스크림공식-대회--경기-기록--리플레이) | #243·#249 |
 | B7 | 하나의 세계 시계·중계/이적/훈련 시간 | [B](CODEX_DOMAIN_B_MATCH_WORLD.md#b7-세계-시계--달력--훈련이적중계-점유) | #234·#245 |
 | B8 | 지역/국가 2부·라이선스/승강/국제전 | [B](CODEX_DOMAIN_B_MATCH_WORLD.md#b8-리그-규정--지역국가별-12부--라이선스--승강--국제대회) | #234·#239 |
