@@ -317,6 +317,14 @@ test('general early-contact consent cannot erase the non-license buyout exceptio
   assert.notEqual(docs[file],original[file]);
   assert.match(check(docs),/BROKEN_PIN: TRANS-003/);
 });
+test('non-license buyout exception cannot be denied while retaining keywords',()=>{
+  const file='docs/rulebook/30-TRANSFERS.md';
+  const target='TRANS-005에 해당하는 프로 라이선스 미보유 팀 계약 선수는 적법한 바이아웃 조항을 전제로 한 자유 접촉·협상 예외';
+  assert.ok(original[file].includes(target));
+  const docs=changed(file,text=>text.replace(target,'TRANS-005에 해당하는 프로 라이선스 미보유 팀 계약 선수도 반드시 원소속 구단의 동의를 받아야 한다'));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/BROKEN_PIN: TRANS-003/);
+});
 test('colloquial vocabulary is rejected in normative chapter prose',()=>{
   const docs=changed('docs/rulebook/60-BUSINESS.md',text=>text.replace("고정된 '프로 구단' 분류","고정된 '프로 구단' 딱지"));
   assert.match(check(docs),/COLLOQUIAL_STYLE/);
