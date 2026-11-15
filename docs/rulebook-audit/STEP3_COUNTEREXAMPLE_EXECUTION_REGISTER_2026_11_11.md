@@ -71,6 +71,8 @@
 
 - **정본:** TRANS-003은 Worlds 종료 후 14일 독점 및 15일차 외부 접촉을 폐지하되, 프로 라이선스 보유 팀의 유효 계약 선수에 대한 통상 시장 전 조기 접촉 동의와 TRANS-005의 예외를 구분한다.
 - **구현·기존 테스트:** `src/artifact/transfer-market-rules.js`의 `permanentTransferWindowError`는 오프시즌 `contractWindow.stage === 'exclusive'`인 만료 예정 선수에게 독점 협상 종료를 요구한다. `scripts/contract-window-acceptance.mjs`는 2027-11-16 Worlds 종료 후 11-17 독점 개시와 14일 종료·15일 개시를 기존 동작으로 검증한다. 해당 테스트의 과거 통과는 최신 TRANS-003 정합성 증거가 아니다.
+- **시계·접촉·원장 경로:** `src/artifact/offseason.js`는 `initOffseasonContractWindow`를 호출한다. `contract-window.js`의 `contractWindowDates`는 실제 연도별 계약 시각 대신 Worlds 종료일+14일을 계약 만료, +15일을 외부 접촉·새 계약 효력일로 계산하고, `contractWindowContactError`는 `early_fa`에 원구단 waiver를 요구한다. `contract-negotiation.js`는 해당 오류를 협상 진입·재검증에 사용하고, `ui-market.js`는 동일 구형 날짜를 사용자에게 표시한다. `contract-agreement.js`의 `finalizeExclusiveContractExpiry`는 해당 시즌 계약·옵션·미래 합의를 정산하므로 이 분기를 단순히 날짜 하나만 바꾸거나 기존 세이브에서 삭제하는 것은 안전하지 않다.
+- **구체 비교 입력:** 2027-11-16 Worlds 종료, 11-17에 프로 라이선스 **미보유** 구단의 유효 계약 선수가 적법한 바이아웃 조항을 가진 상황에서 별도 waiver 없이 외부 구단이 접촉을 요청한다. TRANS-003·005의 접촉 예외와 기존 `early_fa` waiver 요구를 구분해 실제 호출·결과를 비교한다. 기존 코드의 일반 조기 FA 경로가 이 선수 유형에 실제 선택되는지, 개별 계약 조항 및 양 구단 최종 이적 합의는 아직 미확인이다. 현재 정본만으로 선수 계약의 자동 만료일이나 이적 체결 성공을 가정하지 않는다.
 - **반례와 미확인:** 동일 선수·계약·구단 동의·세계 시각에서 옛 독점 단계만 존재한다는 이유로 합법적 외부 접촉을 일률 거부하면 최신 정본과 충돌한다. 구체적인 접촉과 이적 확정 권한은 별도로 검증해야 한다. 현재 실행 경로 전체와 실제 저장·재정 영향은 미확인이며, 새 엔진 적용 전 같은 초기 상태·시드로 접촉/거부·계약/원장·저장 복원을 시험한다. 기존 게임과 세이브는 그대로 보존한다. 실제 비교 실행 `NOT_RUN`.
 
 ## 3. 필요한 실행 단계와 결함 분류
