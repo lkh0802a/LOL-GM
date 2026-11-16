@@ -3,9 +3,9 @@
 import {runEngineFixture} from './test-harness.mjs';
 
 await runEngineFixture(String.raw`(()=>{
-  const db=buildWorld(),team=activeTeams(db,null,1)[0],
+  const db=buildWorld(),team=activeTeams(db,null,1)[0],other=activeTeams(db,null,1)[1],
     player=Object.values(db.players).find(p=>!p.retired&&!p.team);
-  if(!team||!player)throw Error('missing synthetic club or player');
+  if(!team||!other||!player)throw Error('missing synthetic clubs or player');
   signContract(db,player,team,asking(db,player,team.region),1,{promisedRole:'core'});
   const raw=packDB(db);
   const cases=[
@@ -13,6 +13,8 @@ await runEngineFixture(String.raw`(()=>{
     ['unsupported-world-version',d=>{d.version=999}],
     ['unsupported-save-format',d=>{d.saveFormat=999}],
     ['missing-roster-player',d=>{d.teams[team.id].roster.push('missing-player-id')}],
+    ['duplicate-roster-player',d=>{d.teams[team.id].roster.push(player.id)}],
+    ['player-in-two-rosters',d=>{d.teams[other.id].roster.push(player.id)}],
     ['invalid-club-cash',d=>{d.teams[team.id].finance.cash='not-a-number'}],
     ['invalid-contract-salary',d=>{d.players[player.id].contract.salary='not-a-number'}],
     ['missing-player-team',d=>{d.players[player.id].team='missing-team-id'}]
@@ -24,7 +26,9 @@ await runEngineFixture(String.raw`(()=>{
       const restored=unpackDB(JSON.stringify(candidate));result='accepted';
       details={cash:restored.teams[team.id].finance.cash,
         salary:restored.players[player.id].contract?.salary,
-        team:restored.players[player.id].team};
+        team:restored.players[player.id].team,
+        rosterCount:restored.teams[team.id].roster.filter(id=>id===player.id).length,
+        otherRosterCount:restored.teams[other.id].roster.filter(id=>id===player.id).length};
     }catch(e){result='rejected';details={error:e.message}}
     if(name==='baseline'&&result!=='accepted')throw Error('synthetic baseline cannot be restored');
     const originalUnchanged=packDB(db)===raw;
