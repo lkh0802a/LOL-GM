@@ -24,6 +24,7 @@ await runEngineFixture(String.raw`(()=>{
     ['player-in-two-rosters',d=>{d.teams[other.id].roster.push(player.id)}],
     ['duplicate-official-registration',d=>{d.teams[team.id].registration.players.push(player.id)}],
     ['player-in-two-official-registrations',d=>{d.teams[other.id].registration.players.push(player.id)}],
+    ['foreign-official-replaces-valid-player',d=>{d.teams[other.id].registration.players[0]=player.id}],
     ['invalid-club-cash',d=>{d.teams[team.id].finance.cash='not-a-number'}],
     ['invalid-contract-salary',d=>{d.players[player.id].contract.salary='not-a-number'}],
     ['missing-player-team',d=>{d.players[player.id].team='missing-team-id'}]
@@ -35,6 +36,7 @@ await runEngineFixture(String.raw`(()=>{
       const restored=unpackDB(JSON.stringify(candidate));result='accepted';
       const savedRegistrations=JSON.stringify([restored.teams[team.id].registration,restored.teams[other.id].registration]);
       const matchView=officialMatchView(restored,null,team.id,other.id);
+      const forfeit=scheduledRegistrationForfeit(restored,{comp:'synthetic'}, {a:team.id,b:other.id,bo:1});
       details={cash:restored.teams[team.id].finance.cash,
         salary:restored.players[player.id].contract?.salary,
         team:restored.players[player.id].team,
@@ -45,6 +47,8 @@ await runEngineFixture(String.raw`(()=>{
         officialErrors:officialRegistrationErrors(restored,restored.teams[team.id],restored.teams[team.id].registration.players),
         otherOfficialErrors:officialRegistrationErrors(restored,restored.teams[other.id],restored.teams[other.id].registration.players),
         otherMatchViewContainsPlayer:matchView.teams[other.id].roster.includes(player.id),
+        matchViewCounts:[matchView.teams[team.id].roster.length,matchView.teams[other.id].roster.length],
+        scheduledForfeitWinner:forfeit?.rec?.winner??null,
         officialRegistrationsUnchanged:JSON.stringify([restored.teams[team.id].registration,restored.teams[other.id].registration])===savedRegistrations};
     }catch(e){result='rejected';details={error:e.message}}
     if(name==='baseline'&&result!=='accepted')throw Error('synthetic baseline cannot be restored');
