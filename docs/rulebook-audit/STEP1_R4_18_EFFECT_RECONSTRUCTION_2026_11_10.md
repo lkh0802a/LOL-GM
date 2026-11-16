@@ -35,8 +35,9 @@
 ## R4-155 구현·검증 추적
 
 - [승인 원문 155A](https://github.com/lkh0802a/LOL-GM/issues/251#issuecomment-6246141985)과 `docs/rulebook/70-GOVERNANCE.md`의 GOV-008은 재심사와 기존 권리·역사 보존을 함께 요구한다. 예를 들어 통합 대상 구단이 기존 구단이라는 이유만으로 새 자격을 자동 취득하거나, 재심사 실패를 이유로 과거 우승·유효 계약을 소급 삭제하는 결과는 각각 이 요구에 어긋난다. 기존 승강·산하 2군 처리는 리그 통합 자체와 구별한다.
-- 기존 `src/artifact/office-international.js`의 `regional-merger` 분기는 대상 구단을 이동시키고 지역 승계·삭제를 기록한다. 해당 분기에서 새 리그 라이선스 심사는 확인되지 않는다. 이것만으로 다른 호출 경로나 실제 저장 상태의 보호 여부를 단정하지 않으며, 기존 구현 전체의 정합성은 `UNKNOWN`이다.
-- `scripts/rulebook-guard.mjs`는 GOV-008 문구를 정적으로 보호한다. `scripts/rulebook-guard.test.mjs`의 변형 반례는 재심사와 완료 경기·우승 역사 보호 문구의 삭제를 검출한다. 이는 문서 검사이며 재편 엔진의 심사·권리 전환·저장 원자성에 대한 실행 증거는 `NOT_RUN`이다. 리빌드 구현 전 실제 재편 입력·계약·기록·세이브 원본을 이용한 별도 검증이 필요하다.
+- 기존 `src/artifact/office-international.js`의 `regional-merger` 분기는 대상 구단을 이동시키고 지역 승계·삭제를 기록한다. `src/artifact/region-continuity.js`의 이동 함수는 기존 구단·산하팀의 지역과 이력을 바꾸고 `syncClubLicense`를 호출한다. `src/artifact/club-license.js`의 `clubLicenseState`는 활성 구단의 상태를 `approved`로 산출하며 목적지 유형을 기록한다. 이 경로에서 심사 결과나 불승인 분기는 확인되지 않는다. 예를 들어 목적지 자격 미충족인 활성 구단을 입력하더라도, 별도 호출 경로가 차단하지 않으면 유형 동기화만으로 승인 상태가 될 수 있다. 미충족 구단 실실행 반례와 전체 호출 경로 검증은 `NOT_RUN`이므로 전체 정합성 판정은 `UNKNOWN`이다.
+- `scripts/region-continuity-acceptance.mjs`는 합성 세계에서 실제 재편 함수를 호출하여 산하팀·계약·재정·역사 스냅샷, 승계 이력 및 합성 저장 재로드를 확인한다. `scripts/club-license-acceptance.mjs`는 이동 후 목적지 유형과 라이선스 이력을 확인한다. 두 스크립트를 직렬 실행해 각각 PASS했지만, 자격 미충족 구단의 심사·불승인 여부나 실제 사용자 저장은 검증하지 않는다.
+- `scripts/rulebook-guard.mjs`는 GOV-008 문구를 정적으로 보호한다. `scripts/rulebook-guard.test.mjs`의 변형 반례는 재심사와 완료 경기·우승 역사 보호 문구의 삭제를 검출한다. 이는 문서 검사이며 재편 엔진의 심사·실제 저장 원자성에 대한 실행 증거가 아니다. 리빌드 구현 전 부적격 구단·실제 계약·기록을 포함한 검증과 사용자 저장 원본 보존이 필요하다.
 
 ## 범위·다음 게이트
 
