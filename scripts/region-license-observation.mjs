@@ -11,9 +11,12 @@ await runEngineFixture(String.raw`(()=>{
   const club=activeTeams(db,'NA',1)[0];
   club.competitionLicense.current.status='rejected'; // Hypothetical, not a real decision.
   const before=club.competitionLicense.current.status;
-  moveClubForRegionReorganization(db,club,'EU','regional-merger');
+  const encoded=packDB(db),restored=unpackDB(encoded);
+  const restoredClub=restored.teams[club.id];
+  const afterLoad=restoredClub.competitionLicense.current.status;
+  moveClubForRegionReorganization(restored,restoredClub,'EU','regional-merger');
   console.log('REGION_LICENSE_OBSERVATION '+JSON.stringify({
-    synthetic:true,before,after:club.competitionLicense.current.status,
-    destination:club.region,reason:club.competitionLicense.history.at(-1)?.reason
+    synthetic:true,before,afterLoad,afterMove:restoredClub.competitionLicense.current.status,
+    destination:restoredClub.region,reason:restoredClub.competitionLicense.history.at(-1)?.reason
   }));
 })();`);
