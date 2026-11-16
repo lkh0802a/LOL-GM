@@ -59,6 +59,33 @@ await runEngineFixture(String.raw`(()=>{
 })()`,{timeout:60000});
 
 await runEngineFixture(String.raw`(()=>{
+  const cfg=defaultWorldConfig();cfg.regions=[regionCfg('NA',{teams:4,div2:false})];cfg.internationals=[];
+  const db=buildWorld(cfg),[a,b]=activeTeams(db,'NA',1);
+  db.world={year:db.year,phase:'season',manage:'manual',registrationVersion:1,seasons:{}};
+  for(const t of [a,b])for(const role of ROLES){
+    const p=genPlayer(db,new RNG('save-scheduled|'+t.id+role),{region:t.region,role,age:22,base:65});
+    signContract(db,p,t,1,3);t.depthChart[role]=p.id;
+  }
+  initializeOfficialRegistrations(db);
+  const cid='save-scheduled-audit';db.competitions[cid]={id:cid,name:'Synthetic audit',region:'NA',teams:[a.id,b.id],
+    rules:{fearless:true},stages:[{id:'regular',name:'Regular',type:'round_robin',legs:1,bestOf:1}]};
+  const season=newSeason(db,cid,db.year,'save-scheduled-audit',db.worldDate);
+  season.key=cid;season.region='NA';season.div=1;db.world.seasons[cid]=season;
+  const raw=packDB(db),baseline=unpackDB(raw),baseSeason=baseline.world.seasons[cid],baseMatch=baseSeason.days[baseSeason.cur].matches[0];
+  playDay(baseline,baseSeason);
+  const candidate=JSON.parse(raw);
+  candidate.teams[b.id].registration.players[0]=a.registration.players[0];
+  const restored=unpackDB(JSON.stringify(candidate)),s=restored.world.seasons[cid],m=s.days[s.cur].matches[0];
+  const beforeResult=m.res??null,beforeOriginal=packDB(db)===raw;
+  playDay(restored,s);
+  const observed={name:'scheduled-corrupt-registration',baselineForfeit:baseMatch.res?.forfeit??false,
+    baselineGames:baseMatch.res?.games?.length??null,beforeResult,afterWinner:m.res?.winner??null,
+    forfeit:m.res?.forfeit??false,games:m.res?.games?.length??null,originalUnchanged:beforeOriginal&&packDB(db)===raw};
+  console.log('SAVE_INTEGRITY_AUDIT '+JSON.stringify(observed));
+  if(!observed.originalUnchanged)throw Error('synthetic scheduled original mutated');
+})()`,{timeout:60000});
+
+await runEngineFixture(String.raw`(()=>{
   const cfg=defaultWorldConfig();
   cfg.regions=[regionCfg('NA',{teams:4,div2:true,system:'franchise'})];cfg.internationals=[];
   const db=buildWorld(cfg),[a,b]=activeTeams(db,'NA',1);setManagedTeam(db,a.id);
