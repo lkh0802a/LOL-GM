@@ -12,6 +12,8 @@ await runEngineFixture(String.raw`(()=>{
     if(!free)throw Error('missing synthetic players for valid registration');
     signContract(db,free,club,asking(db,free,club.region),1,{promisedRole:'core'});
   }
+  db.world={year:db.year,phase:'offseason',registrationVersion:1,seasons:{}};
+  for(const club of [team,other])club.registration={year:db.year,players:club.roster.slice(),date:db.worldDate,depthChart:{},history:[]};
   const raw=packDB(db);
   const cases=[
     ['baseline',()=>{}],
@@ -20,6 +22,8 @@ await runEngineFixture(String.raw`(()=>{
     ['missing-roster-player',d=>{d.teams[team.id].roster.push('missing-player-id')}],
     ['duplicate-roster-player',d=>{d.teams[team.id].roster.push(player.id)}],
     ['player-in-two-rosters',d=>{d.teams[other.id].roster.push(player.id)}],
+    ['duplicate-official-registration',d=>{d.teams[team.id].registration.players.push(player.id)}],
+    ['player-in-two-official-registrations',d=>{d.teams[other.id].registration.players.push(player.id)}],
     ['invalid-club-cash',d=>{d.teams[team.id].finance.cash='not-a-number'}],
     ['invalid-contract-salary',d=>{d.players[player.id].contract.salary='not-a-number'}],
     ['missing-player-team',d=>{d.players[player.id].team='missing-team-id'}]
@@ -35,7 +39,9 @@ await runEngineFixture(String.raw`(()=>{
         rosterCount:restored.teams[team.id].roster.filter(id=>id===player.id).length,
         otherRosterCount:restored.teams[other.id].roster.filter(id=>id===player.id).length,
         registrationErrors:officialRegistrationErrors(restored,restored.teams[team.id],restored.teams[team.id].roster),
-        otherRegistrationErrors:officialRegistrationErrors(restored,restored.teams[other.id],restored.teams[other.id].roster)};
+        otherRegistrationErrors:officialRegistrationErrors(restored,restored.teams[other.id],restored.teams[other.id].roster),
+        officialErrors:officialRegistrationErrors(restored,restored.teams[team.id],restored.teams[team.id].registration.players),
+        otherOfficialErrors:officialRegistrationErrors(restored,restored.teams[other.id],restored.teams[other.id].registration.players)};
     }catch(e){result='rejected';details={error:e.message}}
     if(name==='baseline'&&result!=='accepted')throw Error('synthetic baseline cannot be restored');
     const originalUnchanged=packDB(db)===raw;
