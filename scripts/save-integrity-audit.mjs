@@ -7,6 +7,11 @@ await runEngineFixture(String.raw`(()=>{
     player=Object.values(db.players).find(p=>!p.retired&&!p.team);
   if(!team||!other||!player)throw Error('missing synthetic clubs or player');
   signContract(db,player,team,asking(db,player,team.region),1,{promisedRole:'core'});
+  for(const club of [team,other])while(club.roster.length<5){
+    const free=Object.values(db.players).find(p=>!p.retired&&!p.team);
+    if(!free)throw Error('missing synthetic players for valid registration');
+    signContract(db,free,club,asking(db,free,club.region),1,{promisedRole:'core'});
+  }
   const raw=packDB(db);
   const cases=[
     ['baseline',()=>{}],
@@ -28,7 +33,9 @@ await runEngineFixture(String.raw`(()=>{
         salary:restored.players[player.id].contract?.salary,
         team:restored.players[player.id].team,
         rosterCount:restored.teams[team.id].roster.filter(id=>id===player.id).length,
-        otherRosterCount:restored.teams[other.id].roster.filter(id=>id===player.id).length};
+        otherRosterCount:restored.teams[other.id].roster.filter(id=>id===player.id).length,
+        registrationErrors:officialRegistrationErrors(restored,restored.teams[team.id],restored.teams[team.id].roster),
+        otherRegistrationErrors:officialRegistrationErrors(restored,restored.teams[other.id],restored.teams[other.id].roster)};
     }catch(e){result='rejected';details={error:e.message}}
     if(name==='baseline'&&result!=='accepted')throw Error('synthetic baseline cannot be restored');
     const originalUnchanged=packDB(db)===raw;
