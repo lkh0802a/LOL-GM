@@ -654,6 +654,10 @@ test('initial board voting, manager tenure and emergency rules are protected',()
   assert.match(check(docs),/BROKEN_PIN: GOV-007/);
   docs=changed(file,text=>text.replace('최소 범위와 기간의 임시 조치','무기한 제한 없는 개편'));
   assert.match(check(docs),/BROKEN_PIN: GOV-008/);
+  docs=changed(file,text=>text.replace('기존 구단도 새 리그의 참가 자격·라이선스 심사를 다시 거쳐야','기존 구단은 자동 참가한다'));
+  assert.match(check(docs),/BROKEN_PIN: GOV-008/);
+  docs=changed(file,text=>text.replace('완료 경기·우승 역사를 자동 삭제하거나 소급 무효화하는 권한이 아니다','완료 경기·우승 역사를 자동 삭제할 수 있다'));
+  assert.match(check(docs),/BROKEN_PIN: GOV-008/);
 });
 
 test('first promotion playoff, initial bylaws and temporary license vacancies are protected',()=>{
