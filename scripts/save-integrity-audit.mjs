@@ -26,6 +26,7 @@ await runEngineFixture(String.raw`(()=>{
         salary:restored.players[player.id].contract?.salary,
         team:restored.players[player.id].team};
     }catch(e){result='rejected';details={error:e.message}}
+    if(name==='baseline'&&result!=='accepted')throw Error('synthetic baseline cannot be restored');
     const originalUnchanged=packDB(db)===raw;
     if(!originalUnchanged)throw Error('synthetic original mutated: '+name);
     console.log('SAVE_INTEGRITY_AUDIT '+JSON.stringify({name,result,details,originalUnchanged}));
@@ -49,6 +50,7 @@ await runEngineFixture(String.raw`(()=>{
   db.competitions.history={name:'기록 대회'};
   const raw=packDB(db),baseline=unpackDB(raw),baseRec=baseline.world.seasons.history.days[0].matches[0].res;
   const baselineReview=recordedPublicMatch(baseline,baseRec,baseRec.games[0]).reason??'no-error';
+  if(baselineReview!=='no-error')throw Error('synthetic baseline match cannot be reviewed: '+baselineReview);
   const candidate=JSON.parse(raw);
   candidate.world.seasons.history.days[0].matches[0].res.games[0].publicRecord.sides[0].players[0][0]='missing-player-id';
   let result,review;
