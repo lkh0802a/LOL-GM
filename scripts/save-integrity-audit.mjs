@@ -33,6 +33,8 @@ await runEngineFixture(String.raw`(()=>{
     let result,details;
     try{
       const restored=unpackDB(JSON.stringify(candidate));result='accepted';
+      const savedRegistrations=JSON.stringify([restored.teams[team.id].registration,restored.teams[other.id].registration]);
+      const matchView=officialMatchView(restored,null,team.id,other.id);
       details={cash:restored.teams[team.id].finance.cash,
         salary:restored.players[player.id].contract?.salary,
         team:restored.players[player.id].team,
@@ -41,7 +43,9 @@ await runEngineFixture(String.raw`(()=>{
         registrationErrors:officialRegistrationErrors(restored,restored.teams[team.id],restored.teams[team.id].roster),
         otherRegistrationErrors:officialRegistrationErrors(restored,restored.teams[other.id],restored.teams[other.id].roster),
         officialErrors:officialRegistrationErrors(restored,restored.teams[team.id],restored.teams[team.id].registration.players),
-        otherOfficialErrors:officialRegistrationErrors(restored,restored.teams[other.id],restored.teams[other.id].registration.players)};
+        otherOfficialErrors:officialRegistrationErrors(restored,restored.teams[other.id],restored.teams[other.id].registration.players),
+        otherMatchViewContainsPlayer:matchView.teams[other.id].roster.includes(player.id),
+        officialRegistrationsUnchanged:JSON.stringify([restored.teams[team.id].registration,restored.teams[other.id].registration])===savedRegistrations};
     }catch(e){result='rejected';details={error:e.message}}
     if(name==='baseline'&&result!=='accepted')throw Error('synthetic baseline cannot be restored');
     const originalUnchanged=packDB(db)===raw;
