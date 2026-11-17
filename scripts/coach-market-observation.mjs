@@ -1,4 +1,4 @@
-// Synthetic, read-only preview diagnostic; it does not impose a new rule.
+// Synthetic preview and isolated contract diagnostic; it does not impose a new rule.
 import {runEngineFixture} from './test-harness.mjs';
 
 await runEngineFixture(String.raw`(()=>{
@@ -15,6 +15,11 @@ await runEngineFixture(String.raw`(()=>{
       salary:staffAskingSalary(db,club,coach),...(same?{replaceSid:same.id}:{})};
     const before=JSON.stringify(db),result=previewWorldAction(db,intent);
     if(JSON.stringify(db)!==before)throw Error('preview mutated synthetic state');
-    console.log('COACH_MARKET_OBSERVATION '+JSON.stringify({date,ok:result.ok,reason:result.reason??null}));
+    const copy=unpackDB(packDB(db)),preview=previewWorldAction(copy,intent);
+    const applied=preview.ok?applyWorldAction(copy,preview):null;
+    const employed=!!locateStaff(copy,coach.id)?.team;
+    if(JSON.stringify(db)!==before)throw Error('isolated contract mutated original');
+    console.log('COACH_MARKET_OBSERVATION '+JSON.stringify({date,ok:result.ok,reason:result.reason??null,
+      applied:applied?.ok??null,employed,originalUnchanged:true}));
   }
 })();`);
