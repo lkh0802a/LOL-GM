@@ -24,6 +24,12 @@
 - 기존 `src/artifact/loan-purchase.js`의 `validateLoanPurchase`는 만료·당사자·재정 등을 검사하지만 `permanentTransferWindowError`를 호출하지 않는다. `scripts/loan-closed-window-observation.mjs`는 합성 지역의 공표 창을 1월 7~31일로 설정하고 2027-07-01 만료 의무매입을 관찰한다. 같은 합성 상태에서 이적창 함수는 닫힘을 반환했지만 시스템 매입 명령과 `processLoanDaily`는 각각 임대를 종료하고 이적료 2를 정산했다. 명령 경로의 새 급여 30·매입 이력과 합성 원본 불변을 확인했다.
 - 인접 `scripts/loan-calendar-acceptance.mjs`는 기존 임대 만료·매입 처리의 회귀를 검증하지만 이 반례가 정본에 적합하다는 뜻은 아니다. 사용자 저장·실제 계약·실제 예외의 존재, 계약의 브리지 책임 및 Rust 이관은 `NOT_RUN`/`NEEDS_FACTS`다. 해당 합성 결과를 정상 규칙으로 고정하거나 사용자 저장을 수정하지 않는다.
 
+### R05 기존 상금 계획의 근거 경계
+
+- [COMP-019](../rulebook/10-COMPETITIONS.md)은 Worlds 공동 정규순위의 미확정 차등 상금에 사전 공표 기준이 없으면 해당 차등분을 보류하면서 이미 확정된 채무는 보호한다. 어떤 분배 비율이나 실제 채무가 존재하는지는 대회별 규정·계약의 사실 확인이 필요하다.
+- 기존 `src/artifact/finance-closeout.js`의 `financeCloseoutPrizes`는 완료 대회마다 대회 종류/지역에 따른 재원과 `elimReach` 가중치로 계획을 계산한다. `node scripts/prize-plan-observation.mjs`에서 상금 조건을 별도로 넣지 않은 합성 지역 2팀 대회를 실제 한 경기로 완료한 뒤 계획을 조회하면 두 구단에 양수 금액이 계산됐고 조회 전후 합성 세계는 동일했다. 이 진단은 `closeFinances`를 호출하거나 현금을 지급하지 않는다.
+- 이 합성 대회는 Worlds 공동순위나 실제 확정 채무를 재현하지 않으므로 R05 위반을 단정하지 않는다. 실제 공동순위·공표 규정 부재·확정/미확정 채권을 가진 합성 fixture에서 계획과 실제 결산·원장·저장 복원을 각각 비교해야 한다. 실제 사용자 재정·세이브 및 정본 준수 전체는 `UNKNOWN`/`NOT_RUN`이다.
+
 ## B. 추가 사용자 정책이 아니라 실제 초기 설정·관할별 시행 규정이 필요한 13개 작업 묶음
 
 | ID | 관할/항목 | 실제 확보·공표·효력 증거 필요 | 관련 기존 법 |
