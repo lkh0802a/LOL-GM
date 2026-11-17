@@ -4,8 +4,10 @@
   let status = '준비 중';
   let value = 0;
   let advance: ((n: number) => number) | undefined;
-  const bytes = Uint8Array.from(atob(wasmBase64.trim()), c => c.charCodeAt(0));
-  WebAssembly.instantiate(bytes, {}).then(({ instance }) => {
+  Promise.resolve().then(() => {
+    const bytes = Uint8Array.from(atob(wasmBase64.trim()), c => c.charCodeAt(0));
+    return WebAssembly.instantiate(bytes, {});
+  }).then(({ instance }) => {
     advance = instance.exports.advance_demo as (n: number) => number;
     status = '준비 완료';
   }).catch(() => { status = '시작하지 못했습니다'; });

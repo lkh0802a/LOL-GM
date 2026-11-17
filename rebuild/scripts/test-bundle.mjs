@@ -19,4 +19,14 @@ try {
   await new Promise(resolve => setTimeout(resolve, 0));
   assert.equal(win.document.querySelector('#value')?.textContent, '1');
 } finally { win.close(); }
+const broken = new Window({ url: 'file:///offline/index.html', settings: { disableJavaScriptFileLoading: true, disableCSSFileLoading: true } });
+try {
+  broken.document.body.innerHTML = '<div id="app"></div>';
+  broken.atob = () => { throw new Error('invalid encoded WASM'); };
+  broken.eval(script);
+  await broken.happyDOM.whenAsyncComplete();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(broken.document.querySelector('[role="status"]')?.textContent, '시작하지 못했습니다');
+  assert.equal(broken.document.querySelector('button')?.disabled, true);
+} finally { broken.close(); }
 console.log('single HTML / WASM / UI DOM simulation: PASS');
