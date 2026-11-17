@@ -8,7 +8,9 @@
     const bytes = Uint8Array.from(atob(wasmBase64.trim()), c => c.charCodeAt(0));
     return WebAssembly.instantiate(bytes, {});
   }).then(({ instance }) => {
-    advance = instance.exports.advance_demo as (n: number) => number;
+    const exported = instance.exports.advance_demo;
+    if (typeof exported !== 'function') throw new Error('missing WASM export');
+    advance = exported as (n: number) => number;
     status = '준비 완료';
   }).catch(() => { status = '시작하지 못했습니다'; });
 

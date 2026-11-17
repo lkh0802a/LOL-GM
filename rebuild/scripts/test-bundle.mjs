@@ -29,4 +29,15 @@ try {
   assert.equal(broken.document.querySelector('[role="status"]')?.textContent, '시작하지 못했습니다');
   assert.equal(broken.document.querySelector('button')?.disabled, true);
 } finally { broken.close(); }
+const missingExport = new Window({ url: 'file:///offline/index.html', settings: { disableJavaScriptFileLoading: true, disableCSSFileLoading: true } });
+try {
+  missingExport.document.body.innerHTML = '<div id="app"></div>';
+  // A valid, empty WASM module has no advance_demo export.
+  missingExport.atob = () => '\0asm\x01\0\0\0';
+  missingExport.eval(script);
+  await missingExport.happyDOM.whenAsyncComplete();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(missingExport.document.querySelector('[role="status"]')?.textContent, '시작하지 못했습니다');
+  assert.equal(missingExport.document.querySelector('button')?.disabled, true);
+} finally { missingExport.close(); }
 console.log('single HTML / WASM / UI DOM simulation: PASS');
