@@ -19,7 +19,13 @@ await runEngineFixture(String.raw`(()=>{
   const initialErrors=initialOrganizationErrors(db,parent),profile=rosterRulesForTeam(db,parent);
   const copy=unpackDB(before),copyBefore=packDB(copy);let finalizationError=null;
   try{finalizeInitialRosters(copy)}catch(error){finalizationError=error.message}
+  const compliant=unpackDB(before),compliantReserve=compliant.teams[reserve.id];
+  const extra=genPlayer(compliant,new RNG('organization-roster-extra'),{region:compliantReserve.region,role:ROLES[0],age:22,base:60});
+  signContract(compliant,extra,compliantReserve,.1,3);
+  const compliantErrors=initialOrganizationErrors(compliant,compliant.teams[parent.id]);
   console.log('ORGANIZATION_ROSTER_OBSERVATION '+JSON.stringify({synthetic:true,individual,preview:plan.ok,
     previewErrors:plan.errors??[],contractPlayers:unique.size,profile:profile.id,integratedMin:profile.integratedMin,
-    initialErrors,finalizationError,copyUnchanged:packDB(copy)===copyBefore,originalUnchanged:packDB(db)===before}));
+    initialErrors,finalizationError,copyUnchanged:packDB(copy)===copyBefore,
+    compliantPlayers:organizationRoster(compliant,compliant.teams[parent.id]).length,compliantErrors,
+    originalUnchanged:packDB(db)===before}));
 })();`);
