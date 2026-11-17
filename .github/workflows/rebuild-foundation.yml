@@ -1,0 +1,33 @@
+name: Rebuild foundation
+on:
+  pull_request:
+    paths:
+      - 'rebuild/**'
+      - '.github/workflows/rebuild-foundation.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'rebuild/**'
+      - '.github/workflows/rebuild-foundation.yml'
+permissions:
+  contents: read
+jobs:
+  foundation:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rebuild
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.1'
+          targets: wasm32-unknown-unknown
+      - run: npm ci
+      - run: cargo test --locked
+      - run: npm run build
+      - run: npm run check
+      - run: npm run test:bundle

@@ -1,0 +1,4 @@
+/node_modules/
+/target/
+/web/core.b64
+/web/dist/
