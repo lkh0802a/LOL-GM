@@ -16,6 +16,10 @@ await runEngineFixture(String.raw`(()=>{
   const before=packDB(db),individual=[parent,reserve].map(t=>officialRegistrationErrors(db,t,registrations[t.id],registrations));
   const plan=previewWorldAction(db,{type:'roster.register',actor:'manager',teamId:parent.id,registrations});
   const unique=new Set([...parent.roster,...reserve.roster]);
+  const initialErrors=initialOrganizationErrors(db,parent),profile=rosterRulesForTeam(db,parent);
+  const copy=unpackDB(before),copyBefore=packDB(copy);let finalizationError=null;
+  try{finalizeInitialRosters(copy)}catch(error){finalizationError=error.message}
   console.log('ORGANIZATION_ROSTER_OBSERVATION '+JSON.stringify({synthetic:true,individual,preview:plan.ok,
-    previewErrors:plan.errors??[],contractPlayers:unique.size,originalUnchanged:packDB(db)===before}));
+    previewErrors:plan.errors??[],contractPlayers:unique.size,profile:profile.id,integratedMin:profile.integratedMin,
+    initialErrors,finalizationError,copyUnchanged:packDB(copy)===copyBefore,originalUnchanged:packDB(db)===before}));
 })();`);
