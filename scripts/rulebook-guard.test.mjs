@@ -934,6 +934,21 @@ test('an amateur independent club cannot take a second direct-management slot',(
 
 test('same group management transfer must be atomic and independent of pro labels',()=>{
   const file='docs/rulebook/60-BUSINESS.md';
+  for(const [from,to] of [
+    ['같은 유효 시점에 일체로 처리','두 구단의 직접 경영을 겹치는 시기에 순차 처리'],
+    ['선수·계약·재정·경기 결과·비공개 정보·기금이 자동 공유되지 않는다',
+      '선수·계약·재정·경기 결과·비공개 정보·기금이 소유 그룹에 자동 공유된다']
+  ]){
+    const altered=changed(file,text=>text.replace(from,to));
+    assert.notEqual(altered[file],original[file]);
+    assert.match(check(altered),/BROKEN_PIN: BIZ-010/);
+  }
+  const duplicated=changed(file,text=>text.replace(
+    '그룹의 재산을 각 구단에 중복 복제하는 것',
+    '그룹의 재산을 각 구단에 모두 별도로 제공하는 것'
+  ));
+  assert.notEqual(duplicated[file],original[file]);
+  assert.match(check(duplicated),/BROKEN_PIN: BIZ-014/);
   let docs=changed(file,text=>text.replace(
     '시즌 종료 절차와 차기 시즌 효력',
     '시즌 언제든 즉시 두 구단 경영 허용'
