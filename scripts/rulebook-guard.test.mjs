@@ -261,6 +261,20 @@ test('dividends cannot treat accounting profit as unlimited available cash',()=>
   const docs=changed('docs/rulebook/60-BUSINESS.md',text=>text.replace('구단주가 무제한 인출할 수 있다고 가정하지 않는다','구단주는 무제한 인출할 수 있다'));
   assert.match(check(docs),/BROKEN_PIN: BIZ-014/);
 });
+test('closed-window obligations and insufficient funds stay separate from transfer and credit',()=>{
+  for(const [file,from,to,pin] of [
+    ['docs/rulebook/30-TRANSFERS.md',
+      '이미 성립한 금전·이행 책임을 기록하면서 완전이전·공식 등록은 법적으로 가능한 시점까지 별도로 보류',
+      '닫힌 창의 금전·이행 책임을 삭제하고 완전이전과 공식 등록을 자동 확정','TRANS-008'],
+    ['docs/rulebook/60-BUSINESS.md',
+      '지급 가능 범위를 넘어서는 무근거 자동 당좌대월·제3자 대납을 허용하지 않으며',
+      '지급 가능 범위를 넘어서는 무근거 자동 당좌대월과 제3자 대납을 허용하며','BIZ-004']
+  ]){
+    const docs=changed(file,text=>text.replace(from,to));
+    assert.notEqual(docs[file],original[file]);
+    assert.match(check(docs),new RegExp('BROKEN_PIN: '+pin));
+  }
+});
 test('sponsor benefits and attendance cannot invent cash or ticket sales',()=>{
   const file='docs/rulebook/60-BUSINESS.md';
   let docs=changed(file,text=>text.replace('현물 지원만으로 실재하지 않는 현금을 생성하지 않으며','현물 지원은 동일한 현금을 생성하며'));
