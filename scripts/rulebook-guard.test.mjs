@@ -73,9 +73,19 @@ test('shared facilities cannot erase first-team priority on a real clash',()=>{
   const docs=changed('docs/rulebook/40-PLAYERS.md',text=>text.replace('실제 이용 시간이 충돌하면 1군이 우선','항상 2군이 우선'));
   assert.match(check(docs),/BROKEN_PIN: PLAYER-007/);
 });
-test('publication version and changelog cannot silently diverge',()=>{
-  const docs=changed('docs/rulebook/README.md',text=>text.replace(/\*\*규정집 발행본:\*\* v\d+\.\d+\.\d+/, '**규정집 발행본:** v9.9.9'));
+test('candidate version and changelog cannot silently diverge',()=>{
+  const docs=changed('docs/rulebook/README.md',text=>text.replace(/\*\*규정집 후보 버전:\*\* v\d+\.\d+\.\d+/, '**규정집 후보 버전:** v9.9.9'));
+  assert.notEqual(docs['docs/rulebook/README.md'],original['docs/rulebook/README.md']);
   assert.match(check(docs),/CHANGELOG: no entry/);
+});
+test('README does not restore the superseded event cancellation path',()=>{
+  const file='docs/rulebook/README.md';
+  const docs=changed(file,text=>text.replace(
+    '2026-11-14 후속 결정에 따라 시즌 확정 전에 개최 가능성을 검증하고 매년 실제 개최',
+    '2026-11-12의 개최 불능 시 회차 취소를 현행 규칙으로 적용'
+  ));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/README_EVENT_FINALITY/);
 });
 test('approved youth compensation and club taxonomy cannot silently regress',()=>{
   const file='docs/rulebook/60-BUSINESS.md';

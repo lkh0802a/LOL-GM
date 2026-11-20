@@ -434,10 +434,12 @@ export function validateRulebook(docs){
     if(!agent.includes(required))add('CODEX_ENTRY',required);
   }
   if(!docs['docs/AI_RULEBOOK_GUIDE.md'].includes('비규범'))add('GUIDE_SCOPE','AI guide must not define new policy');
-  // Version is a living publication marker, not a hard-coded initial release.
-  const version=docs['docs/rulebook/README.md'].match(/\*\*규정집 발행본:\*\*\s*(v\d+\.\d+\.\d+)/)?.[1];
-  if(!version)add('VERSION','rulebook README lacks a semantic publication version');
+  // This branch is a candidate until the final review and main integration.
+  const version=docs['docs/rulebook/README.md'].match(/\*\*규정집 후보 버전:\*\*\s*(v\d+\.\d+\.\d+)/)?.[1];
+  if(!version)add('VERSION','rulebook README lacks a semantic candidate version');
   else if(!docs['docs/rulebook/CHANGELOG.md'].includes(' '+version))add('CHANGELOG','no entry for the current rulebook version '+version);
+  if(!docs['docs/rulebook/README.md'].includes('2026-11-14 후속 결정에 따라 시즌 확정 전에 개최 가능성을 검증하고 매년 실제 개최'))
+    add('README_EVENT_FINALITY','latest annual event decision is missing');
   return {errors,ruleCount:ids.size,worldRuleCount:ids.size-[...ids.keys()].filter(id=>id.startsWith('UI-')).length,chapterCount:CHAPTERS.length,sourceDepth};
 }
 
