@@ -666,6 +666,16 @@ test('first-nationality lock, one-time switch and official tournament roster can
   assert.match(check(docs),/BROKEN_PIN: NAT-004/);
   docs=changed(file,text=>text.replace('경력 중 한 번','무제한 변경'));
   assert.match(check(docs),/BROKEN_PIN: NAT-004/);
+  for(const [from,to] of [
+    ['이 조의 귀속은 개별 대표팀이 아니라','귀속은 각 대표팀 단위로 정한다'],
+    ['등록, 후보 명단 포함, 벤치 대기 또는 연습 경기만으로는 국가 귀속이 확정되지 아니한다','등록만으로 국가 귀속이 확정된다'],
+    ['한 선수는 동일한 시각에 둘 이상의 대표팀의 실제 경기에 출전할 수 없다','한 선수는 동일 시각 두 대표팀 경기에 출전할 수 있다'],
+    ['이동·등록이나 대회별 명단 변경도 당시 유효한 참가 규정·마감·선수 상태에 따른다','이동과 등록은 유효 규정과 무관하게 언제나 허용된다']
+  ]){
+    docs=changed(file,text=>text.replace(from,to));
+    assert.notEqual(docs[file],original[file]);
+    assert.match(check(docs),/BROKEN_PIN: NAT-004/);
+  }
   docs=changed(file,text=>text.replace('주전 5명과 교체 선수 2명, 합계 7명','주전 4명과 교체 3명'));
   assert.match(check(docs),/BROKEN_PIN: NAT-011/);
 });
