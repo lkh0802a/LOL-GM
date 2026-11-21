@@ -31,6 +31,9 @@ await runEngineFixture(String.raw`(()=>{
   const restoredPoor=unpackDB(packDB(insufficient));
   const poorAfter={buyerCash:restoredPoor.teams[buyer.id].finance.cash,ownerCash:restoredPoor.teams[owner.id].finance.cash,
     loan:!!restoredPoor.players[p.id].loan,salary:restoredPoor.players[p.id].contract.salary};
+  const poorSaved=packDB(restoredPoor);
+  const poorRepeated=commitWorldAction(restoredPoor,{type:'player.loan-purchase',actor:'system',pid:p.id,fromId:owner.id,teamId:buyer.id});
+  const poorRepeatUnchanged=packDB(restoredPoor)===poorSaved;
   const openPoor=unpackDB(packDB(copy));
   openPoor.teams[buyer.id].finance.cash=0.5;
   openPoor.regions.NA.transferWindows=[{from:'07-01',through:'07-14'}];
@@ -38,11 +41,19 @@ await runEngineFixture(String.raw`(()=>{
   const openResult=commitWorldAction(openPoor,{type:'player.loan-purchase',actor:'system',pid:p.id,fromId:owner.id,teamId:buyer.id});
   const applied=commitWorldAction(copy,{type:'player.loan-purchase',actor:'system',pid:p.id,fromId:owner.id,teamId:buyer.id});
   const after={team:p.team,loan:!!p.loan,salary:p.contract.salary,lastEvent:p.careerEvents.at(-1)?.type,ownerCash:copy.teams[owner.id].finance.cash,buyerCash:copy.teams[buyer.id].finance.cash};
+  const afterFirst=packDB(copy);
+  const repeated=commitWorldAction(copy,{type:'player.loan-purchase',actor:'system',pid:p.id,fromId:owner.id,teamId:buyer.id});
+  const repeatUnchanged=packDB(copy)===afterFirst;
+  const restored=unpackDB(afterFirst),beforeRestoredRepeat=packDB(restored);
+  const restoredRepeated=commitWorldAction(restored,{type:'player.loan-purchase',actor:'system',pid:p.id,fromId:owner.id,teamId:buyer.id});
+  const restoredRepeatUnchanged=packDB(restored)===beforeRestoredRepeat;
   processLoanDaily(daily);
   const dailyPlayer=daily.players[player.id];
   const afterDaily={team:dailyPlayer.team,loan:!!dailyPlayer.loan,ownerCash:daily.teams[owner.id].finance.cash,buyerCash:daily.teams[buyer.id].finance.cash};
+  const dailyAfterFirst=packDB(daily);processLoanDaily(daily);const dailyRepeatUnchanged=packDB(daily)===dailyAfterFirst;
+  if(repeated.ok||restoredRepeated.ok||!repeatUnchanged||!restoredRepeatUnchanged||!dailyRepeatUnchanged||poorRepeated.ok||!poorRepeatUnchanged)throw Error('synthetic repeat processing changed the completed loan');
   console.log('LOAN_CLOSED_WINDOW_OBSERVATION '+JSON.stringify({date:copy.worldDate,windowError,before,applied:applied.ok,after,afterDaily,
     insufficientFunds:{before:poorBefore,applied:poorResult.ok,afterRestore:poorAfter,
-      openWindowControl:{windowError:openWindowError,applied:openResult.ok,buyerCash:openPoor.teams[buyer.id].finance.cash}},
-    originalUnchanged:packDB(db)===original}));
+      repeatAfterRestore:{applied:poorRepeated.ok,unchanged:poorRepeatUnchanged},openWindowControl:{windowError:openWindowError,applied:openResult.ok,buyerCash:openPoor.teams[buyer.id].finance.cash}},
+    repeat:{applied:repeated.ok,errors:repeated.errors,unchanged:repeatUnchanged,restoredApplied:restoredRepeated.ok,restoredErrors:restoredRepeated.errors,restoredUnchanged:restoredRepeatUnchanged,dailyRepeatUnchanged},originalUnchanged:packDB(db)===original}));
 })();`);
