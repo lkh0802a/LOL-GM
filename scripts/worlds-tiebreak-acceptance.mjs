@@ -23,7 +23,12 @@ const result=await runEngineFixture(String.raw`(()=>{
   }
   check(saved&&season.stage===1&&actual>=3,'actual tiebreak resolved boundary');const referenceSeason=reference.world.seasons[id];let referenceDays=0;while(referenceSeason.stage===0&&referenceDays++<100){setWorldCalendarDate(reference,referenceSeason.days[referenceSeason.cur].date);playDay(reference,referenceSeason);}check(referenceSeason.stage===1&&canonical(reference)===canonical(game)&&packDB(reference)===packDB(game),'uninterrupted vs native tiebreak complete graph/fixture/history/save');check(JSON.stringify(season.days.filter(d=>d.stage==='league').flatMap(d=>d.matches).filter(m=>!m.worldsTiebreak))===original,'original league results rewritten');
   const raw=JSON.stringify(game);check(!startInternational(game,id,'2027-09-01',new Set())&&JSON.stringify(game)===raw,'duplicate tournament replaced tiebreak progress');
-  check(standings(game,season,'league').every(r=>r.w===3&&r.gw===9&&r.sos===18),'tiebreak contaminated league metrics');reports.push({boundary,controlledInitialTiebreakSeries:276,actualDecidingBO1:actual,rounds:data.tiebreaks.length,nativeResume:true,pairedWholeResume:true,originalLeagueUnchanged:true});
+  check(standings(game,season,'league').every(r=>r.w===3&&r.gw===9&&r.sos===18),'tiebreak contaminated league metrics');
+  // Controlled preloaded games contain no player lines; only the subsequent
+  // actual deciding games contribute to this synthetic season's pstats.
+  const tiebreakPlayerGames=Object.values(season.pstats).reduce((n,p)=>n+p.g,0);
+  check(tiebreakPlayerGames===actual*10,'actual tiebreak player lines not retained');
+  reports.push({boundary,controlledInitialTiebreakSeries:276,actualDecidingBO1:actual,rounds:data.tiebreaks.length,nativeResume:true,pairedWholeResume:true,originalLeagueUnchanged:true,tiebreakPlayerGames,playerStatsScope:'season-aggregate-not-regular-award'});
  }
  return {reports,controlledLeagueFixture:true,fullWorldSeasonNotRun:true};
 })()`,{timeout:180000});
