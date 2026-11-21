@@ -1216,6 +1216,16 @@ test('cross-domain counterexample specification and paired execution ledger rema
   assert.deepEqual(b,expected,'paired acceptance ledger IDs must exactly match the specification');
   const cases=register.split('\n').filter(line=>/^\| C\d{2} \|/.test(line));
   assert.equal(cases.length,expected.length);
+  const stage=readFileSync(new URL('../docs/rulebook-audit/CANON_COMPLETION_STAGE_EXECUTION_2026_11_10.md',import.meta.url),'utf8');
+  const stageRow=stage.split('\n').find(line=>line.startsWith('| **3** |'));
+  const checkSummary=row=>{
+    const counts=row?.match(/대장 (\d+)쌍 \(P0 (\d+)·P1 (\d+)\)/);
+    assert(counts,'current stage 3 must expose the total and priority counts');
+    const priorities=cases.map(line=>line.split('|')[2].trim());
+    assert.deepEqual(counts.slice(1).map(Number),[cases.length,priorities.filter(p=>p==='P0').length,priorities.filter(p=>p==='P1').length]);
+  };
+  checkSummary(stageRow);
+  assert.throws(()=>checkSummary(stageRow.replace(/대장 \d+쌍/,'대장 0쌍')),'stale totals must fail');
   for(const row of cases){
     const cells=row.split('|').slice(1,-1).map(s=>s.trim());
     assert.equal(cells.length,7,'each row should have ID, priority, domain, positive, negative, oracle, status');
