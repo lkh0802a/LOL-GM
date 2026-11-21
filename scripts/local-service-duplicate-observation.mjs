@@ -14,6 +14,14 @@ await runEngineFixture(String.raw`(()=>{
  try{loaded=unpackDB(suspect);const candidate=loaded.players[p.id];processLocalServiceDaily(loaded);
    result={accepted:true,seasonEntries:candidate.localEligibility.service.seasons,qualification:!!candidate.localEligibility.qualifications.NA};
  }catch(e){result={accepted:false,error:e.message};}
+ const probe=extra=>{
+   const candidate=JSON.parse(original);candidate.players[p.id].localEligibility.service.seasons.push(extra);
+   const raw=JSON.stringify(candidate);let observed;
+   try{const restored=unpackDB(raw);processLocalServiceDaily(restored);observed={accepted:true,seasons:restored.players[p.id].localEligibility.service.seasons,qualification:restored.players[p.id].localEligibility.qualifications.NA||null};}
+   catch(e){observed={accepted:false,error:e.message}}
+   return {...observed,inputUnchanged:JSON.stringify(candidate)===raw};
+ };
+ const future=probe(year+10),fractional=probe(year+0.5);
  processLocalServiceDaily(control);
- console.log('LOCAL_SERVICE_DUPLICATE_OBSERVATION '+JSON.stringify({controlSeasonCount:control.players[p.id].localEligibility.service.seasons.length,controlQualification:!!control.players[p.id].localEligibility.qualifications.NA,result,inputUnchanged:JSON.stringify(input)===suspect,originalUnchanged:packDB(db)===original}));
+ console.log('LOCAL_SERVICE_DUPLICATE_OBSERVATION '+JSON.stringify({controlSeasonCount:control.players[p.id].localEligibility.service.seasons.length,controlQualification:!!control.players[p.id].localEligibility.qualifications.NA,result,future,fractional,inputUnchanged:JSON.stringify(input)===suspect,originalUnchanged:packDB(db)===original}));
 })();`);
