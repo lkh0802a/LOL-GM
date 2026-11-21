@@ -50,31 +50,49 @@ await runEngineFixture(String.raw`(()=>{
   // In a separate fixture, repair the managed organization and populate every AI role.
   // These synthetic signings are not a replay of real contracts or economic provenance.
   const repaired=unpackDB(before);
-  const repairedExtra=genPlayer(repaired,new RNG('repair-managed-extra'),{region:'NA',role:ROLES[0],age:22,base:60});
-  signContract(repaired,repairedExtra,repaired.teams[reserve.id],.1,3);
-  for(const team of activeTeams(repaired).filter(t=>![parent.id,reserve.id].includes(t.id))){
+  function repairSynthetic(target,addManaged=true){
+  if(addManaged){const targetExtra=genPlayer(target,new RNG('repair-managed-extra'),{region:'NA',role:ROLES[0],age:22,base:60});
+  signContract(target,targetExtra,target.teams[reserve.id],.1,3);}
+  for(const team of activeTeams(target).filter(t=>![parent.id,reserve.id].includes(t.id))){
     for(const role of ROLES){
-      const player=genPlayer(repaired,new RNG('repair-ai|'+team.id+'|'+role),{region:team.region,role,age:22,base:60});
-      signContract(repaired,player,team,.1,3);team.depthChart[role]=player.id;
+      const player=genPlayer(target,new RNG('repair-ai|'+team.id+'|'+role),{region:team.region,role,age:22,base:60});
+      signContract(target,player,team,.1,3);team.depthChart[role]=player.id;
     }
   }
-  for(const team of activeTeams(repaired).filter(t=>t.parent&&t.id!==reserve.id)){
-    while(team.roster.length<initialLegalMinimumTarget(repaired,team)){
-      const player=genPlayer(repaired,new RNG('repair-extra|'+team.id+'|'+team.roster.length),{region:team.region,role:ROLES[0],age:22,base:60});
-      signContract(repaired,player,team,.1,3);
+  for(const team of activeTeams(target).filter(t=>t.parent&&t.id!==reserve.id)){
+    while(team.roster.length<initialLegalMinimumTarget(target,team)){
+      const player=genPlayer(target,new RNG('repair-extra|'+team.id+'|'+team.roster.length),{region:team.region,role:ROLES[0],age:22,base:60});
+      signContract(target,player,team,.1,3);
     }
   }
+  }
+  repairSynthetic(repaired);
   const repairedBefore=packDB(repaired);let repairedError=null;
   try{finalizeInitialRosters(repaired)}catch(error){repairedError=error.message}
   const repairedResult={error:repairedError,completed:!!repaired.firstSeasonSetup?.completed,
     phase:repaired.world?.phase,changed:packDB(repaired)!==repairedBefore,managedPlayers:organizationRoster(repaired,repaired.teams[parent.id]).length};
+  // Compare repair after a failure that has already changed depth charts with a fresh same-profile repair.
+  const retry=unpackDB(before),fresh=unpackDB(before);
+  retry.regions.NA.rosterRuleProfile='LCS_2026';fresh.regions.NA.rosterRuleProfile='LCS_2026';
+  const retryBefore=packDB(retry);let firstError=null,retryError=null,freshError=null,reloadedError=null;
+  try{finalizeInitialRosters(retry)}catch(error){firstError=error.message}
+  const afterFirst=packDB(retry),reloaded=unpackDB(afterFirst);repairSynthetic(retry,false);repairSynthetic(fresh,false);repairSynthetic(reloaded,false);
+  try{finalizeInitialRosters(retry)}catch(error){retryError=error.message}
+  try{finalizeInitialRosters(fresh)}catch(error){freshError=error.message}
+  try{finalizeInitialRosters(reloaded)}catch(error){reloadedError=error.message}
+  const retryAfterRepair={firstError,failedChanged:afterFirst!==retryBefore,retryError,freshError,reloadedError,
+    retryCompleted:!!retry.firstSeasonSetup?.completed,freshCompleted:!!fresh.firstSeasonSetup?.completed,
+    retryPhase:retry.world?.phase,freshPhase:fresh.world?.phase,
+    retryManaged:organizationRoster(retry,retry.teams[parent.id]).length,
+    freshManaged:organizationRoster(fresh,fresh.teams[parent.id]).length,
+    packedEqual:packDB(retry)===packDB(fresh),reloadedEqual:packDB(reloaded)===packDB(fresh)};
   const compliant=unpackDB(before),compliantReserve=compliant.teams[reserve.id];
   const extra=genPlayer(compliant,new RNG('organization-roster-extra'),{region:compliantReserve.region,role:ROLES[0],age:22,base:60});
   signContract(compliant,extra,compliantReserve,.1,3);
   const compliantErrors=initialOrganizationErrors(compliant,compliant.teams[parent.id]);
   console.log('ORGANIZATION_ROSTER_OBSERVATION '+JSON.stringify({synthetic:true,individual,preview:plan.ok,
     previewErrors:plan.errors??[],contractPlayers:unique.size,profile:profile.id,integratedMin:profile.integratedMin,
-    initialErrors,finalizationError,profiles,repairedResult,copyUnchanged:packDB(copy)===copyBefore,
+    initialErrors,finalizationError,profiles,repairedResult,retryAfterRepair,copyUnchanged:packDB(copy)===copyBefore,
     compliantPlayers:organizationRoster(compliant,compliant.teams[parent.id]).length,compliantErrors,
     originalUnchanged:packDB(db)===before}));
 })();`);
