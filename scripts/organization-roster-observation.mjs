@@ -19,13 +19,32 @@ await runEngineFixture(String.raw`(()=>{
   const initialErrors=initialOrganizationErrors(db,parent),profile=rosterRulesForTeam(db,parent);
   const copy=unpackDB(before),copyBefore=packDB(copy);let finalizationError=null;
   try{finalizeInitialRosters(copy)}catch(error){finalizationError=error.message}
+  // Explicit synthetic profiles isolate profile selection from actual region policy provenance.
+  const profiles=['ENGINE_OWNED_RESERVE','LCS_2026','STANDARD_TIER1_2026'].map(id=>{
+    const variant=unpackDB(before),root=variant.teams[parent.id];
+    variant.regions[root.region].rosterRuleProfile=id;
+    const snapshot=packDB(variant),rule=rosterRulesForTeam(variant,root);
+    const rosterSizes=()=>activeTeams(variant).map(t=>({id:t.id,players:t.roster.length}));
+    const sizesBefore=rosterSizes();
+    const errors=initialOrganizationErrors(variant,root);
+    let finalizeError=null;
+    try{finalizeInitialRosters(variant)}catch(error){finalizeError=error.message}
+    const after=packDB(variant),pre=JSON.parse(snapshot),post=JSON.parse(after);
+    const changedRootKeys=Array.from(new Set([...Object.keys(pre),...Object.keys(post)])).filter(key=>JSON.stringify(pre[key])!==JSON.stringify(post[key]));
+    const changedTeamFields=Object.keys(post.teams).flatMap(id=>Object.keys(post.teams[id]).filter(key=>JSON.stringify(pre.teams[id]?.[key])!==JSON.stringify(post.teams[id][key])).map(key=>({id,key})));
+    let restoredPlayers=null,restoreError=null;
+    try{const restored=unpackDB(after);restoredPlayers=organizationRoster(restored,restored.teams[parent.id]).length}catch(error){restoreError=error.message}
+    return {id,integratedMin:rule.integratedMin,players:organizationRoster(variant,root).length,
+      errors,finalizeError,unchangedAfterFailure:finalizeError?after===snapshot:null,restoredPlayers,restoreError,changedRootKeys,changedTeamFields,
+      sizeChanges:rosterSizes().filter((v,i)=>v.players!==sizesBefore[i].players).map(v=>({id:v.id,before:sizesBefore.find(x=>x.id===v.id).players,after:v.players}))};
+  });
   const compliant=unpackDB(before),compliantReserve=compliant.teams[reserve.id];
   const extra=genPlayer(compliant,new RNG('organization-roster-extra'),{region:compliantReserve.region,role:ROLES[0],age:22,base:60});
   signContract(compliant,extra,compliantReserve,.1,3);
   const compliantErrors=initialOrganizationErrors(compliant,compliant.teams[parent.id]);
   console.log('ORGANIZATION_ROSTER_OBSERVATION '+JSON.stringify({synthetic:true,individual,preview:plan.ok,
     previewErrors:plan.errors??[],contractPlayers:unique.size,profile:profile.id,integratedMin:profile.integratedMin,
-    initialErrors,finalizationError,copyUnchanged:packDB(copy)===copyBefore,
+    initialErrors,finalizationError,profiles,copyUnchanged:packDB(copy)===copyBefore,
     compliantPlayers:organizationRoster(compliant,compliant.teams[parent.id]).length,compliantErrors,
     originalUnchanged:packDB(db)===before}));
 })();`);
