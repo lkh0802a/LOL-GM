@@ -30,6 +30,23 @@ await runEngineFixture(String.raw`(()=>{
  const mismatch={previewOk:mismatchPreview.ok,commitOk:mismatchCommit.ok,reason:mismatchCommit.reason||null,
    restoreError:mismatchRestoreError,unchanged:packDB(mismatched)===mismatchBefore,partialOriginalUnchanged:packDB(settlement)===partialSaved};
 
+ // Closed invoices are compacted per team; test absence separately for active and paid rows.
+ const mirrorAbsence=[['earned',partialSaved],['paid',paidSaved]].map(([status,saved])=>{
+   const probe=unpackDB(saved);delete probe.teams[seller.id].finance.transferDeals[dealId];
+   const input=packDB(probe);let restored=null,error=null;
+   try{restored=unpackDB(input)}catch(e){error=e.message}
+   return {status,error,restored:!!restored,inputUnchanged:packDB(probe)===input,
+     buyerRecordPresent:restored?!!restored.teams[buyer.id].finance.transferDeals?.[dealId]:null,
+     sellerRecordPresent:restored?!!restored.teams[seller.id].finance.transferDeals?.[dealId]:null};
+ });
+ // Isolate retention behavior using fabricated closed journal entries; no payments are executed.
+ const retention=unpackDB(paidSaved),third=activeTeams(retention).find(t=>t.id!==buyer.id&&t.id!==seller.id),template=retention.teams[seller.id].finance.transferDeals[dealId];
+ for(let i=0;i<10;i++)writeTransferDeal(retention,{...JSON.parse(JSON.stringify(template)),id:seller.id+'/retention-probe-'+i,teamId:third.id});
+ const retentionSaved=packDB(retention);let retentionRestored=null,retentionError=null;
+ try{retentionRestored=unpackDB(retentionSaved)}catch(e){retentionError=e.message}
+ const retentionProbe={syntheticJournalEntries:10,noPaymentsExecuted:true,error:retentionError,
+   sellerOldPresent:!!retention.teams[seller.id].finance.transferDeals[dealId],buyerOldPresent:!!retention.teams[buyer.id].finance.transferDeals[dealId],
+   restored:!!retentionRestored,sourceUnchanged:packDB(restoredFinal)===paidSaved};
  const upfront=unpackDB(original),control=commitWorldAction(upfront,{...command,feePlan:{upfront:2,installments:[],addOns:[]}});
- console.log('BUYOUT_PLAN_OBSERVATION '+JSON.stringify({date:db.worldDate,preview:preview.ok,result:result.ok,reason:result.reason||null,errors:result.errors||[],buyerCash:clone.teams[buyer.id].finance.cash,sellerCash:clone.teams[seller.id].finance.cash,team:clone.players[p.id].team,deals,restoredStatus:restoredDeals[0]?.rows[0]?.status,upfrontControl:{accepted:control.ok,buyerCash:upfront.teams[buyer.id].finance.cash,sellerCash:upfront.teams[seller.id].finance.cash},mismatch,settlement:{beforeDue,partial,partialRestore:view(unpackDB(partialSaved)),repeated,paid,repeatPaidUnchanged,finalRestore:view(restoredFinal)},originalUnchanged:packDB(db)===original}));
+ console.log('BUYOUT_PLAN_OBSERVATION '+JSON.stringify({date:db.worldDate,preview:preview.ok,result:result.ok,reason:result.reason||null,errors:result.errors||[],buyerCash:clone.teams[buyer.id].finance.cash,sellerCash:clone.teams[seller.id].finance.cash,team:clone.players[p.id].team,deals,restoredStatus:restoredDeals[0]?.rows[0]?.status,upfrontControl:{accepted:control.ok,buyerCash:upfront.teams[buyer.id].finance.cash,sellerCash:upfront.teams[seller.id].finance.cash},retentionProbe,mirrorAbsence,mismatch,settlement:{beforeDue,partial,partialRestore:view(unpackDB(partialSaved)),repeated,paid,repeatPaidUnchanged,finalRestore:view(restoredFinal)},originalUnchanged:packDB(db)===original}));
 })();`);
