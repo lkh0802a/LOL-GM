@@ -47,6 +47,29 @@ await runEngineFixture(String.raw`(()=>{
  const retentionProbe={syntheticJournalEntries:10,noPaymentsExecuted:true,error:retentionError,
    sellerOldPresent:!!retention.teams[seller.id].finance.transferDeals[dealId],buyerOldPresent:!!retention.teams[buyer.id].finance.transferDeals[dealId],
    restored:!!retentionRestored,sourceUnchanged:packDB(restoredFinal)===paidSaved};
+ // Separate fabricated completed journals force both sides' per-team retention limits.
+ const bilateral=unpackDB(paidSaved),baselineEvents=JSON.stringify(bilateral.players[p.id].careerEvents||[]);
+ const baselinePrepaid=JSON.stringify([bilateral.teams[buyer.id].finance.prepaid,bilateral.teams[seller.id].finance.prepaid]);
+ for(let i=0;i<10;i++)writeTransferDeal(bilateral,{...JSON.parse(JSON.stringify(template)),id:seller.id+'/seller-probe-'+i,teamId:third.id});
+ for(let i=0;i<10;i++)writeTransferDeal(bilateral,{...JSON.parse(JSON.stringify(template)),id:third.id+'/buyer-probe-'+i,fromId:third.id,teamId:buyer.id});
+ const bilateralSaved=packDB(bilateral);let bilateralRestored=null,bilateralError=null;
+ try{bilateralRestored=unpackDB(bilateralSaved)}catch(e){bilateralError=e.message}
+ const evidence=x=>({sellerOriginalPresent:!!x.teams[seller.id].finance.transferDeals?.[dealId],buyerOriginalPresent:!!x.teams[buyer.id].finance.transferDeals?.[dealId],
+   transfers:(x.players[p.id].careerEvents||[]).filter(e=>e.type==='transfer'&&e.from===seller.id&&e.to===buyer.id),
+   buyerPrepaid:x.teams[buyer.id].finance.prepaid,sellerPrepaid:x.teams[seller.id].finance.prepaid});
+ const bilateralProbe={syntheticJournalEntries:20,noPaymentsExecuted:true,error:bilateralError,observed:evidence(bilateral),
+   restored:bilateralRestored?evidence(bilateralRestored):null,eventsUnchanged:JSON.stringify(bilateral.players[p.id].careerEvents||[])===baselineEvents,
+   prepaidUnchanged:JSON.stringify([bilateral.teams[buyer.id].finance.prepaid,bilateral.teams[seller.id].finance.prepaid])===baselinePrepaid,
+   sourceUnchanged:packDB(restoredFinal)===paidSaved};
+ const annual=unpackDB(bilateralSaved);let annualError=null;
+ try{closeFinances(annual,annual.world,new RNG('buyout-audit-close','finance'),()=>{})}catch(e){annualError=e.message}
+ const annualSaved=packDB(annual);let annualRestored=null,annualRestoreError=null;
+ try{annualRestored=unpackDB(annualSaved)}catch(e){annualRestoreError=e.message}
+ const annualView=x=>({buyerPrepaid:x.teams[buyer.id].finance.prepaid,sellerPrepaid:x.teams[seller.id].finance.prepaid,
+   buyerAnnual:x.teams[buyer.id].finance.history.at(-1),sellerAnnual:x.teams[seller.id].finance.history.at(-1),
+   playerTransferCount:(x.players[p.id].careerEvents||[]).filter(e=>e.type==='transfer'&&e.from===seller.id&&e.to===buyer.id).length});
+ const annualProbe={error:annualError,restoreError:annualRestoreError,observed:annualView(annual),restored:annualRestored?annualView(annualRestored):null,
+   sourceUnchanged:packDB(bilateral)===bilateralSaved};
  const upfront=unpackDB(original),control=commitWorldAction(upfront,{...command,feePlan:{upfront:2,installments:[],addOns:[]}});
- console.log('BUYOUT_PLAN_OBSERVATION '+JSON.stringify({date:db.worldDate,preview:preview.ok,result:result.ok,reason:result.reason||null,errors:result.errors||[],buyerCash:clone.teams[buyer.id].finance.cash,sellerCash:clone.teams[seller.id].finance.cash,team:clone.players[p.id].team,deals,restoredStatus:restoredDeals[0]?.rows[0]?.status,upfrontControl:{accepted:control.ok,buyerCash:upfront.teams[buyer.id].finance.cash,sellerCash:upfront.teams[seller.id].finance.cash},retentionProbe,mirrorAbsence,mismatch,settlement:{beforeDue,partial,partialRestore:view(unpackDB(partialSaved)),repeated,paid,repeatPaidUnchanged,finalRestore:view(restoredFinal)},originalUnchanged:packDB(db)===original}));
+ console.log('BUYOUT_PLAN_OBSERVATION '+JSON.stringify({date:db.worldDate,preview:preview.ok,result:result.ok,reason:result.reason||null,errors:result.errors||[],buyerCash:clone.teams[buyer.id].finance.cash,sellerCash:clone.teams[seller.id].finance.cash,team:clone.players[p.id].team,deals,restoredStatus:restoredDeals[0]?.rows[0]?.status,upfrontControl:{accepted:control.ok,buyerCash:upfront.teams[buyer.id].finance.cash,sellerCash:upfront.teams[seller.id].finance.cash},annualProbe,bilateralProbe,retentionProbe,mirrorAbsence,mismatch,settlement:{beforeDue,partial,partialRestore:view(unpackDB(partialSaved)),repeated,paid,repeatPaidUnchanged,finalRestore:view(restoredFinal)},originalUnchanged:packDB(db)===original}));
 })();`);
