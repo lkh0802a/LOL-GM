@@ -95,9 +95,17 @@ test('accommodation cannot impose daily manual assignment',()=>{
   const docs=changed('docs/rulebook/40-PLAYERS.md',text=>text.replace('매일 숙소를 수동 배치하도록 강제하거나 방송·기술 장비 관리 업무를 다시 도입하지 않는다','매일 숙소를 수동 배치한다'));
   assert.match(check(docs),/BROKEN_PIN: PLAYER-007/);
 });
-test('approved seasonal RP reset cannot silently become optional',()=>{
-  const docs=changed('docs/rulebook/40-PLAYERS.md',text=>text.replace('시즌 시작 때 공개 RP는 소프트 리셋하고','시즌 시작 때 공개 RP는 소프트 리셋할 수 있고'));
-  assert.match(check(docs),/BROKEN_PIN: PLAYER-004/);
+test('rank correction removes tiers while preserving the approved RP and MMR transitions',()=>{
+  const file='docs/rulebook/40-PLAYERS.md';
+  for(const [before,after] of [
+    ['별도의 티어 승급·강등 체계는 두지 않는다','별도의 티어 승급·강등 체계를 둔다'],
+    ['시즌 시작 때 공개 RP는 소프트 리셋하고','시즌 시작 때 공개 RP는 소프트 리셋할 수 있고'],
+    ['내부 비공개 MMR은 일부 연속성을 가진다','내부 비공개 MMR은 매 시즌 전부 삭제한다']
+  ]){
+    const docs=changed(file,text=>text.replace(before,after));
+    assert.notEqual(docs[file],original[file]);
+    assert.match(check(docs),/BROKEN_PIN: PLAYER-004/);
+  }
 });
 test('unobserved prospects remain uncertain for both user and AI',()=>{
   const file='docs/rulebook/40-PLAYERS.md';
