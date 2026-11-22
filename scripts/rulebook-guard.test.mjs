@@ -786,6 +786,34 @@ test('user-approved short national roster and conflict-free substitute cannot si
   assert.match(check(docs),/BROKEN_PIN: GOV-004/);
 });
 
+test('tiebreak award inclusion requires a published explicit scope',()=>{
+  const file='docs/rulebook/10-COMPETITIONS.md';
+  for(const [before,after] of [
+    ['그 결정전을 포함한다고 명시한 경우에만','결정전 포함 여부와 관계없이'],
+    ['범위가 없는 상태에서 소급 가산하거나 정규 단계의 수상자·통계를 변경하지 않는다','범위가 없어도 소급 가산한다']
+  ]){
+    const docs=changed(file,text=>text.replace(before,after));
+    assert.notEqual(docs[file],original[file]);
+    assert.match(check(docs),/BROKEN_PIN: COMP-022/);
+  }
+});
+
+test('local eligibility preserves service boundaries and player choice',()=>{
+  const file='docs/rulebook/30-TRANSFERS.md';
+  const cases=[
+    ['FA 무소속 기간은 기존 근속을 보존하되 추가 누적하지 않는다','FA 무소속 기간에도 근속을 누적한다'],
+    ['타지역 임대는 원래 지역의 누적을 정지·보존하되 임대 지역에 새로운 근속을 부여하지 않으며','타지역 임대는 임대 지역에 새 근속을 부여하며'],
+    ['타지역의 일반 계약 등록은 구지역 취득 근속을 초기화한다','타지역 일반 계약 등록도 구지역 취득 근속을 이어간다'],
+    ['비출신지역 로컬 전환은 **자동 발생하지 않는다**','비출신지역 로컬 전환은 자동 발생한다'],
+    ['시즌 중 자격을 취득해도 그 시즌의 활성 로컬을 즉시 바꿀 수 없다','시즌 중 자격을 취득하면 활성 로컬을 즉시 바꾼다']
+  ];
+  for(const [before,after] of cases){
+    const docs=changed(file,text=>text.replace(before,after));
+    assert.notEqual(docs[file],original[file]);
+    assert.match(check(docs),/BROKEN_PIN: TRANS-014/);
+  }
+});
+
 test('partial-season tenure cannot be credited multiple times in one season',()=>{
   const file='docs/rulebook/30-TRANSFERS.md';
   let docs=changed(file,text=>text.replace(
