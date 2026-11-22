@@ -17,11 +17,17 @@ await runEngineFixture(String.raw`(()=>{
   const a=baseline.global.internationalResults[0],b=changed.global.internationalResults[0];
   if(!a||!b||a.eventId!==b.eventId||a.teams[0].teamId!==b.teams[0].teamId)
     throw Error('paired synthetic event changed');
+  const ranking=x=>{const ratings=internationalRegionRatings(x,2030);return Object.keys(ratings).map(id=>x.regions[id]).filter(Boolean).sort((l,r)=>compareInternationalRegions(x,ratings,l,r,2030)).map(r=>r.id)};
+  const baselineOrder=ranking(baseline),changedOrder=ranking(changed);
+  const winnerRegion=a.teams[0].regionId;
+  const baselineRating=internationalRegionRatings(baseline,2030)[winnerRegion];
+  const changedRating=internationalRegionRatings(changed,2030)[winnerRegion];
   changed.worldConfig.internationalPolicy.weights.WORLD_CHAMPIONSHIP=2;
   recordInternationalResults(changed,changed.world);
   const restored=unpackDB(packDB(changed)),saved=restored.global.internationalResults[0];
   console.log('INTERNATIONAL_POLICY_TIMING_OBSERVATION '+JSON.stringify({
     sameEvent:a.eventId===b.eventId,sameChampion:a.teams[0].teamId===b.teams[0].teamId,
+    winnerRegion,baselineRating,changedRating,baselineOrder,changedOrder,restoredOrder:ranking(restored),restoredRating:internationalRegionRatings(restored,2030)[winnerRegion],
     baseline:{weight:a.weight,points:a.teams[0].points},changed:{weight:b.weight,points:b.teams[0].points},
     afterLaterPolicyChange:{weight:saved.weight,points:saved.teams[0].points,records:restored.global.internationalResults.length},
     originalUnchanged:packDB(db)===original
