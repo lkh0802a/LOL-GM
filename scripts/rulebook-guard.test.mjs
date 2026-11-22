@@ -798,6 +798,21 @@ test('tiebreak award inclusion requires a published explicit scope',()=>{
   }
 });
 
+test('independent clubs retain authority and rostered national teams use actual people',()=>{
+  const cases=[
+    ['docs/rulebook/60-BUSINESS.md','각자 독립 경영진·감독과 실제 독자적 인사·전술·계약·예산 결정권을 유지해야 한다','그룹이 인사와 전술을 직접 결정한다','BIZ-010'],
+    ['docs/rulebook/60-BUSINESS.md','같은 현금과 채무를 독립 구단과 모구단의 원장에 동시에 생성하거나 중복 지급하지 않는다','같은 현금과 채무를 각 원장에 중복 생성한다','BIZ-010'],
+    ['docs/rulebook/60-BUSINESS.md','명목상 별도 경영진이나 동일 명칭 변경만으로 통과시키지 않는다','명목상 경영진만 별도이면 통과시킨다','BIZ-010'],
+    ['docs/rulebook/15-NATIONAL-TEAMS.md','부족한 교체 선수를 가상으로 생성하거나 미등록 선수를 출전 가능한 것으로 간주하지 아니한다','부족한 교체 선수를 가상으로 생성한다','NAT-011'],
+    ['docs/rulebook/15-NATIONAL-TEAMS.md','참가 불능 사유나 행정 결과를 실제로 진행된 경기의 기록으로 대체하지 않는다','행정 결과를 실제 경기 기록으로 대체한다','NAT-011']
+  ];
+  for(const [file,before,after,id] of cases){
+    const docs=changed(file,text=>text.replace(before,after));
+    assert.notEqual(docs[file],original[file]);
+    assert.match(check(docs),new RegExp('BROKEN_PIN: '+id));
+  }
+});
+
 test('local eligibility preserves service boundaries and player choice',()=>{
   const file='docs/rulebook/30-TRANSFERS.md';
   const cases=[
