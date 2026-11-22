@@ -20,6 +20,14 @@ await runEngineFixture(String.raw`(()=>{
  const view=x=>({parentDivision:x.teams[parent.id].division,academyDivision:x.teams[academy.id].division,active:x.teams[academy.id].active,academyOnly:x.teams[academy.id].academyOnly,
   team:x.players[p.id].team,contract:x.players[p.id].contract,closureHistory:x.players[p.id].careerEvents.filter(e=>e.type==='club_closure'),
   closure:x.teams[academy.id].finance.closureSettlement??null});
+ // Separate controlled probe of the existing registration initializer.
+ const registrationDb=unpackDB(packDB(copy));registrationDb.world.registrationVersion=1;
+ const regBefore=registrationDb.teams[academy.id].registration??null;
+ initializeOfficialRegistrations(registrationDb);
+ const regAfter=registrationDb.teams[academy.id].registration??null;
+ const registrationProbe={before:regBefore,after:regAfter,
+  containsInjectedPlayer:!!regAfter?.players?.includes(p.id),active:registrationDb.teams[academy.id].active,
+  academyOnly:registrationDb.teams[academy.id].academyOnly};
  const lowerCompetition=leagueComp(copy,'VN',2);
  const calendarDb=unpackDB(packDB(copy)),calendarComp=leagueComp(calendarDb,'VN',2);calendarDb.competitions[calendarComp.id]=calendarComp;
  const schedule=newSeason(calendarDb,calendarComp.id,calendarDb.year,'synthetic-next-season','2028-01-14');
@@ -27,5 +35,5 @@ await runEngineFixture(String.raw`(()=>{
  const scheduled={total:academyFixtures.length,againstParent:academyFixtures.filter(m=>[m.a,m.b].includes(parent.id)).length};
  const listedInLower={parent:lowerCompetition.teams.includes(parent.id),academy:lowerCompetition.teams.includes(academy.id)};
  let restored=null,restoreError=null;try{restored=view(unpackDB(packDB(copy)))}catch(e){restoreError=e.message}
- console.log('PR315_RELEGATION_ACADEMY_OBSERVATION '+JSON.stringify({synthetic:true,controlledResults:true,before,after:view(copy),listedInLower,scheduled,events,error,restored,restoreError,originalUnchanged:packDB(db)===original}));
+ console.log('PR315_RELEGATION_ACADEMY_OBSERVATION '+JSON.stringify({synthetic:true,controlledResults:true,before,after:view(copy),registrationProbe,listedInLower,scheduled,events,error,restored,restoreError,originalUnchanged:packDB(db)===original}));
 })();`);
