@@ -87,6 +87,18 @@ test('captain withdrawal preserves actual tactical communication',()=>{
     assert.match(check(docs),/BROKEN_PIN: MATCH-011/);
   }
 });
+test('remote scrims retain real scheduling without inventing latency or travel penalties',()=>{
+  for(const [file,before,after,id] of [
+    ['docs/rulebook/50-MATCH.md','지역 간 네트워크 핑/지연 차이를 게임 내 경기 페널티로 적용하지 않는다','지역 간 네트워크 핑/지연 차이를 경기 페널티로 적용한다','MATCH-006'],
+    ['docs/rulebook/50-MATCH.md','원격 스크림 자체를 이유로 국가 간 실제 이동을 강제하지 않는다','원격 스크림 전에 반드시 해외 이동한다','MATCH-006'],
+    ['docs/rulebook/50-MATCH.md','시차·팀 수락·선수 일정·회복·실제 이동 점유는 유지한다','시간대와 선수 일정을 무시한다','MATCH-006'],
+    ['docs/rulebook/40-PLAYERS.md','국가별 핑 차이 보정은 없다','국가별 핑 차이를 경기 결과에 보정한다','PLAYER-003']
+  ]){
+    const docs=changed(file,text=>text.replace(before,after));
+    assert.notEqual(docs[file],original[file]);
+    assert.match(check(docs),new RegExp('BROKEN_PIN: '+id));
+  }
+});
 test('emergency replacement requires explicit tournament permission',()=>{
   const docs=changed('docs/rulebook/50-MATCH.md',text=>text.replace('대회가 해당 예외를 명시적으로 허용한 경우에만 의료 확인과 등록 심사','대회의 명시적 허용 없이 등록'));
   assert.match(check(docs),/BROKEN_PIN: MATCH-004/);
