@@ -34,6 +34,16 @@ test('an independent match exception cannot override the market suspension',()=>
   assert.match(check(docs),/CONFLICTING_MARKET_EXCEPTION: CAL-003/);
   const denial=changed(file,text=>text.replace('의 실제 경기는 모두 금지한다','의 실제 경기는 모두 금지한다. 독립 대회의 실제 경기는 허용하지 않는다'));
   assert.doesNotMatch(check(denial),/CONFLICTING_MARKET_EXCEPTION/);
+  for(const expression of ['허용할 수 있다고 보지 않는다','허용한다고 보지 않는다','불허용한다','불가능하다','가능하다고 보지 않는다']){
+    const denied=changed(file,text=>text.replace('의 실제 경기는 모두 금지한다','의 실제 경기는 모두 금지한다. 독립 대회의 실제 경기는 '+expression));
+    assert.notEqual(denied[file],original[file]);
+    assert.doesNotMatch(check(denied),/CONFLICTING_MARKET_EXCEPTION/);
+  }
+  for(const expression of ['허용할 수 있다','가능하다']){
+    const allowed=changed(file,text=>text.replace('의 실제 경기는 모두 금지한다','의 실제 경기는 모두 금지한다. 독립 대회의 실제 경기는 '+expression));
+    assert.notEqual(allowed[file],original[file]);
+    assert.match(check(allowed),/CONFLICTING_MARKET_EXCEPTION/);
+  }
 });
 test('rulebook links to nonexistent files cannot silently pass',()=>{
   const file='docs/rulebook/README.md';
