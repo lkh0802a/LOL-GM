@@ -23,11 +23,19 @@ await runEngineFixture(String.raw`(()=>{
  // Separate controlled probe of the existing registration initializer.
  const registrationDb=unpackDB(packDB(copy));registrationDb.world.registrationVersion=1;
  const regBefore=registrationDb.teams[academy.id].registration??null;
+ // Control isolates service credit caused by this initializer, not historical service.
+ registrationDb.players[p.id].localEligibility.service=null;
+ const serviceBefore=registrationDb.players[p.id].localEligibility.service;
  initializeOfficialRegistrations(registrationDb);
  const regAfter=registrationDb.teams[academy.id].registration??null;
  const registrationProbe={before:regBefore,after:regAfter,
   containsInjectedPlayer:!!regAfter?.players?.includes(p.id),active:registrationDb.teams[academy.id].active,
-  academyOnly:registrationDb.teams[academy.id].academyOnly};
+  academyOnly:registrationDb.teams[academy.id].academyOnly,
+  serviceBefore,serviceAfter:registrationDb.players[p.id].localEligibility.service??null};
+ // A global activeTeams filter would also hide a still-existing club from
+ // consumers such as financeCloseoutState and runDailyPractice.
+ const activeConsumers={clubPresent:activeTeams(copy).some(t=>t.id===academy.id),
+  hypotheticalGlobalFilterPresent:activeTeams(copy).filter(t=>!t.academyOnly).some(t=>t.id===academy.id)};
  const lowerCompetition=leagueComp(copy,'VN',2);
  const calendarDb=unpackDB(packDB(copy)),calendarComp=leagueComp(calendarDb,'VN',2);calendarDb.competitions[calendarComp.id]=calendarComp;
  const schedule=newSeason(calendarDb,calendarComp.id,calendarDb.year,'synthetic-next-season','2028-01-14');
@@ -35,5 +43,5 @@ await runEngineFixture(String.raw`(()=>{
  const scheduled={total:academyFixtures.length,againstParent:academyFixtures.filter(m=>[m.a,m.b].includes(parent.id)).length};
  const listedInLower={parent:lowerCompetition.teams.includes(parent.id),academy:lowerCompetition.teams.includes(academy.id)};
  let restored=null,restoreError=null;try{restored=view(unpackDB(packDB(copy)))}catch(e){restoreError=e.message}
- console.log('PR315_RELEGATION_ACADEMY_OBSERVATION '+JSON.stringify({synthetic:true,controlledResults:true,before,after:view(copy),registrationProbe,listedInLower,scheduled,events,error,restored,restoreError,originalUnchanged:packDB(db)===original}));
+ console.log('PR315_RELEGATION_ACADEMY_OBSERVATION '+JSON.stringify({synthetic:true,controlledResults:true,before,after:view(copy),registrationProbe,activeConsumers,listedInLower,scheduled,events,error,restored,restoreError,originalUnchanged:packDB(db)===original}));
 })();`);
