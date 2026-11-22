@@ -75,6 +75,18 @@ test('First Selection allocation and two-axis choices cannot be silently inverte
     assert.match(check(docs),/BROKEN_PIN: MATCH-003/);
   }
 });
+test('captain withdrawal preserves actual tactical communication',()=>{
+  const file='docs/rulebook/50-MATCH.md';
+  for(const [before,after] of [
+    ['독립 주장(captain) 직책·임면 제도·주장 전용 사기/관계/팀워크 보너스·주장 이벤트 시스템은 도입하지 않는다','독립 주장(captain) 직책과 보너스는 도입한다'],
+    ['전술 지시, 경기의 실제 커뮤니케이션·주요 오더, 선수 성향·코칭·팀워크의 효과는 기존 시스템의 유효한 사건·상태 정보를 통하여 처리하며 주장 전용 보너스로 중복 계산하지 않는다','전술 지시와 실제 소통을 모두 없앤다'],
+    ['전술 지시, 경기의 실제 커뮤니케이션·주요 오더, 선수 성향·코칭·팀워크의 효과는 기존 시스템의 유효한 사건·상태 정보를 통하여 처리하며 주장 전용 보너스로 중복 계산하지 않는다','전술과 소통에 주장 전용 보너스를 중복 계산한다']
+  ]){
+    const docs=changed(file,text=>text.replace(before,after));
+    assert.notEqual(docs[file],original[file]);
+    assert.match(check(docs),/BROKEN_PIN: MATCH-011/);
+  }
+});
 test('emergency replacement requires explicit tournament permission',()=>{
   const docs=changed('docs/rulebook/50-MATCH.md',text=>text.replace('대회가 해당 예외를 명시적으로 허용한 경우에만 의료 확인과 등록 심사','대회의 명시적 허용 없이 등록'));
   assert.match(check(docs),/BROKEN_PIN: MATCH-004/);
