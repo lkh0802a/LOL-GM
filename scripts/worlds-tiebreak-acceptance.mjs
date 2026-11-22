@@ -18,6 +18,7 @@ const result=await runEngineFixture(String.raw`(()=>{
  commitScheduledSeries(db,s,realMatch,realSeries);
  const regularPlayerGames=Object.values(s.pstats).reduce((n,p)=>n+p.g,0);
  check(regularPlayerGames===30,'actual regular player lines missing');
+ const regularStats=JSON.parse(JSON.stringify(s.pstats));
  const regularGamesByPlayer=Object.fromEntries(Object.entries(s.pstats).map(([pid,row])=>[pid,row.g]));
  // Orient the graph from the actual winner, taking its real edge first.
  const edges=adj[realWinner],first=edges.findIndex(([i])=>i===realIndex);check(first>=0,'actual edge missing from draw');edges.unshift(edges.splice(first,1)[0]);
@@ -47,7 +48,21 @@ const result=await runEngineFixture(String.raw`(()=>{
   const tiebreakPlayerGames=Object.values(season.pstats).reduce((n,p)=>n+p.g,0);
   check(tiebreakPlayerGames===regularPlayerGames+actual*10,'actual tiebreak player lines not retained');
   check(Object.entries(regularGamesByPlayer).every(([pid,g])=>(season.pstats[pid]?.g||0)>=g),'regular player appearances lost');
-  reports.push({boundary,controlledInitialTiebreakSeries:276,actualDecidingBO1:actual,rounds:data.tiebreaks.length,nativeResume:true,pairedWholeResume:true,originalLeagueUnchanged:true,regularPlayerGames,tiebreakPlayerGames:tiebreakPlayerGames-regularPlayerGames,playerStatsScope:'season-aggregate-not-regular-award'});
+  // Isolate the aggregate MVP consumer: fabricate a terminal bracket around the
+  // observed league state. This is not a simulated final or a published award.
+  const awardDb=unpackDB(packDB(game)),awardSeason=awardDb.world.seasons[id],awardComp=awardDb.competitions[id],last=awardComp.stages.length-1;
+  const lastId=awardComp.stages[last].id,sourceDay=awardSeason.days.findLast(d=>d.matches.some(m=>m.worldsTiebreak&&m.res)),finalMatch=sourceDay.matches.find(m=>m.worldsTiebreak&&m.res);
+  awardSeason.days.push({date:sourceDay.date,matches:[{...finalMatch}]});
+  awardSeason.stageData[lastId]={alive:[finalMatch.res.winner],elim:[finalMatch.res.winner===finalMatch.a?finalMatch.b:finalMatch.a]};
+  const awardControl=unpackDB(packDB(awardDb)),controlSeason=awardControl.world.seasons[id];
+  controlSeason.pstats=JSON.parse(JSON.stringify(regularStats));
+  finishStage(awardControl,controlSeason,last,controlSeason.days.at(-1).date);
+  finishStage(awardDb,awardSeason,last,awardSeason.days.at(-1).date);
+  const award=awardDb.history.at(-1),awardPlayer=award?.mvp,awardGames=awardPlayer?season.pstats[awardPlayer].g:0;
+  const forcedFinalAward={syntheticFinal:true,mvp:awardPlayer,regularOnlyMvp:awardControl.history.at(-1)?.mvp||null,seasonGames:awardGames,
+    actualRegularGames:awardPlayer?(regularGamesByPlayer[awardPlayer]||0):0,
+    actualTiebreakGames:awardPlayer?awardGames-(regularGamesByPlayer[awardPlayer]||0):0};
+  reports.push({boundary,controlledInitialTiebreakSeries:276,actualDecidingBO1:actual,rounds:data.tiebreaks.length,nativeResume:true,pairedWholeResume:true,originalLeagueUnchanged:true,forcedFinalAward,regularPlayerGames,tiebreakPlayerGames:tiebreakPlayerGames-regularPlayerGames,playerStatsScope:'season-aggregate-not-regular-award'});
  }
  return {reports,controlledLeagueFixture:true,fullWorldSeasonNotRun:true};
 })()`,{timeout:180000});
