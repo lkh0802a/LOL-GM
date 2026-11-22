@@ -60,6 +60,20 @@ test('immutable First Selection and draft policies cannot silently disappear',()
   docs=changed('docs/rulebook/50-MATCH.md',text=>text.replaceAll('Fearless Draft','Optional Draft'));
   assert.match(check(docs),/BROKEN_PIN: MATCH-002/);
 });
+test('First Selection allocation and two-axis choices cannot be silently inverted',()=>{
+  const file='docs/rulebook/50-MATCH.md';
+  for(const [before,after] of [
+    ['국내 더블 라운드로빈 경기에서는 홈팀','국내 더블 라운드로빈 경기에서는 원정팀'],
+    ['국내 플레이오프에서는 상위 시드팀','국내 플레이오프에서는 하위 시드팀'],
+    ['국제 녹아웃·브래킷에서는 적법하게 기록된 코인 토스 결과','국제 녹아웃·브래킷에서는 사전 무작위 추정'],
+    ['둘째 세트 이후에는 직전 세트 패자','둘째 세트 이후에는 직전 세트 승자'],
+    ['진영(블루/레드) 또는 픽 순서(선픽/후픽) 중 한 축을 먼저 선택하고 상대가 남은 축을 선택','권리자가 두 축을 모두 선택']
+  ]){
+    const docs=changed(file,text=>text.replace(before,after));
+    assert.notEqual(docs[file],original[file]);
+    assert.match(check(docs),/BROKEN_PIN: MATCH-003/);
+  }
+});
 test('emergency replacement requires explicit tournament permission',()=>{
   const docs=changed('docs/rulebook/50-MATCH.md',text=>text.replace('대회가 해당 예외를 명시적으로 허용한 경우에만 의료 확인과 등록 심사','대회의 명시적 허용 없이 등록'));
   assert.match(check(docs),/BROKEN_PIN: MATCH-004/);
