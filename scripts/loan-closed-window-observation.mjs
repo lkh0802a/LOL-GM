@@ -34,10 +34,21 @@ await runEngineFixture(String.raw`(()=>{
   const splitAfterPayment=Object.values(split.teams[buyer.id].finance.transferDeals||{}).find(d=>d.pid===player.id);
   const splitSaved=packDB(split),splitRestored=unpackDB(splitSaved);
   processTransferPayments(splitRestored);
-  if(!splitConversion.ok||!splitDeal||!splitAfterPayment)throw Error('synthetic split purchase or invoice missing');
+  // Advance only a restored synthetic copy and inject funds, not income.
+  const resumed=unpackDB(splitSaved);setWorldCalendarDate(resumed,'2027-09-01');
+  resumed.teams[buyer.id].finance.cash=.6;
+  const cashBeforeRecovery={buyer:resumed.teams[buyer.id].finance.cash,owner:resumed.teams[owner.id].finance.cash};
+  processTransferPayments(resumed);
+  const recovered=Object.values(resumed.teams[buyer.id].finance.transferDeals||{}).find(d=>d.pid===player.id);
+  const mirrored=recovered&&resumed.teams[owner.id].finance.transferDeals?.[recovered.id];
+  const afterRecovery=packDB(resumed),roundTrip=unpackDB(afterRecovery);processTransferPayments(roundTrip);
+  const recovery={cashBefore:cashBeforeRecovery,cashAfter:{buyer:resumed.teams[buyer.id].finance.cash,owner:resumed.teams[owner.id].finance.cash},
+    invoice:recovered?.rows??null,mirrored:JSON.stringify(recovered)===JSON.stringify(mirrored),
+    restoredRepeatUnchanged:packDB(roundTrip)===afterRecovery};
+  if(!splitConversion.ok||!splitDeal||!splitAfterPayment||!recovered||!recovery.mirrored||!recovery.restoredRepeatUnchanged)throw Error('synthetic split purchase, mirrored invoice or replay failed');
   const splitProbe={agreed:splitLoan.ok,converted:splitConversion.ok,cashAfterConversion:splitAfterConversion,
     invoiceBefore:splitDeal?.rows??null,cashAfterDue:split.teams[buyer.id].finance.cash,
-    invoiceAfter:splitAfterPayment?.rows??null,restoredRepeatUnchanged:packDB(splitRestored)===splitSaved};
+    invoiceAfter:splitAfterPayment?.rows??null,restoredRepeatUnchanged:packDB(splitRestored)===splitSaved,recovery};
   const original=packDB(db),copy=unpackDB(original),p=copy.players[player.id];
   setWorldCalendarDate(copy,p.loan.endDate);
   const windowError=permanentTransferWindowError(copy,p,copy.teams[buyer.id]);
