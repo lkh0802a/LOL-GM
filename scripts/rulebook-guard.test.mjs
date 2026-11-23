@@ -182,6 +182,17 @@ test('club ownership changes cannot automatically erase contracts, licenses or h
     assert.match(check(docs),/BROKEN_PIN: BIZ-001/);
   }
 });
+test('rivalries require actual history and cannot force events or results',()=>{
+  const file='docs/rulebook/60-BUSINESS.md';
+  for(const [before,after] of [
+    ['구단 간 라이벌 구도는 실제 상대 전적·결승·이적과 팬 역사 등에 근거하여 형성한다','실제 역사 없이 라이벌 관계를 자동 지정한다'],
+    ['라이벌 관계를 이유로 실제 존재하지 않은 사건이나 경기 승패를 강제하지 않는다','라이벌 관계를 이유로 가상 사건과 경기 승패를 강제한다']
+  ]){
+    const docs=changed(file,text=>text.replace(before,after));
+    assert.notEqual(docs[file],original[file]);
+    assert.match(check(docs),/BROKEN_PIN: BIZ-007/);
+  }
+});
 test('emergency replacement requires explicit tournament permission',()=>{
   const docs=changed('docs/rulebook/50-MATCH.md',text=>text.replace('대회가 해당 예외를 명시적으로 허용한 경우에만 의료 확인과 등록 심사','대회의 명시적 허용 없이 등록'));
   assert.match(check(docs),/BROKEN_PIN: MATCH-004/);
