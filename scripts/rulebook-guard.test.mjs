@@ -227,6 +227,18 @@ test('amateur open-cup evidence is usable without fabricating matches or officia
     assert.match(check(docs),/BROKEN_PIN: PLAYER-009/);
   }
 });
+test('long-term league comparison cannot ignore real seasons, sample and talent flows',()=>{
+  const file='docs/rulebook/40-PLAYERS.md';
+  const before='국가·리그 간 장기 비교는 여러 실제 시즌의 상대 수준과 관측 표본 차이, 인재 교류 및 경제·육성 흐름을 함께 고려한다';
+  for(const after of [
+    '국가·리그 간 비교는 한 경기 결과만으로 확정한다',
+    '상대 수준·표본 차이와 인재 교류를 무시하고 고정 국가 능력으로 비교한다'
+  ]){
+    const docs=changed(file,text=>text.replace(before,after));
+    assert.notEqual(docs[file],original[file]);
+    assert.match(check(docs),/BROKEN_PIN: PLAYER-012/);
+  }
+});
 test('emergency replacement requires explicit tournament permission',()=>{
   const docs=changed('docs/rulebook/50-MATCH.md',text=>text.replace('대회가 해당 예외를 명시적으로 허용한 경우에만 의료 확인과 등록 심사','대회의 명시적 허용 없이 등록'));
   assert.match(check(docs),/BROKEN_PIN: MATCH-004/);
