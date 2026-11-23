@@ -146,6 +146,19 @@ test('ranked applied patch and tournament pinned patch remain distinct',()=>{
     assert.match(check(docs),/BROKEN_PIN: MATCH-007/);
   }
 });
+test('facility investment cannot discard construction time, actual use or opportunity cost',()=>{
+  const file='docs/rulebook/60-BUSINESS.md';
+  const before='시설 투자의 판단과 효과는 실제 사용·공사 기간·운영 및 유지비와 대안 비용을 함께 고려한다';
+  for(const after of [
+    '시설 투자의 효과는 실제 사용과 공사 기간을 무시한다',
+    '시설 투자는 운영 및 유지비와 대안 비용을 고려하지 않는다',
+    '시설 구매 즉시 무조건 경기 승률을 올린다'
+  ]){
+    const docs=changed(file,text=>text.replace(before,after));
+    assert.notEqual(docs[file],original[file]);
+    assert.match(check(docs),/BROKEN_PIN: BIZ-008/);
+  }
+});
 test('emergency replacement requires explicit tournament permission',()=>{
   const docs=changed('docs/rulebook/50-MATCH.md',text=>text.replace('대회가 해당 예외를 명시적으로 허용한 경우에만 의료 확인과 등록 심사','대회의 명시적 허용 없이 등록'));
   assert.match(check(docs),/BROKEN_PIN: MATCH-004/);
