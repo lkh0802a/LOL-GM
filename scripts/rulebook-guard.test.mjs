@@ -204,6 +204,17 @@ test('fan transfer reactions and sponsor trust retain their factual basis',()=>{
     assert.match(check(docs),new RegExp('BROKEN_PIN: '+id));
   }
 });
+test('new regional leagues require actual capacity and cannot derive advantages from country ID',()=>{
+  const file='docs/rulebook/10-COMPETITIONS.md';
+  for(const [before,after] of [
+    ['새로운 공식 지역리그의 창설·운영은 실제 선수 공급, 구단과 투자 재정, 시설·운영 여건 및 관할 사무국의 적법한 라이선스 심사에 근거한다','새 지역리그는 선수·구단·시설이나 라이선스 심사 없이 창설한다'],
+    ['특정 국가나 식별자만으로 리그 창설·참가권 또는 선수의 능력상 이점을 자동 보장하지 않는다','특정 국가의 식별자만으로 리그와 능력상 이점을 자동 보장한다']
+  ]){
+    const docs=changed(file,text=>text.replace(before,after));
+    assert.notEqual(docs[file],original[file]);
+    assert.match(check(docs),/BROKEN_PIN: COMP-002/);
+  }
+});
 test('emergency replacement requires explicit tournament permission',()=>{
   const docs=changed('docs/rulebook/50-MATCH.md',text=>text.replace('대회가 해당 예외를 명시적으로 허용한 경우에만 의료 확인과 등록 심사','대회의 명시적 허용 없이 등록'));
   assert.match(check(docs),/BROKEN_PIN: MATCH-004/);
