@@ -215,6 +215,18 @@ test('new regional leagues require actual capacity and cannot derive advantages 
     assert.match(check(docs),/BROKEN_PIN: COMP-002/);
   }
 });
+test('amateur open-cup evidence is usable without fabricating matches or official status',()=>{
+  const file='docs/rulebook/40-PLAYERS.md';
+  for(const [before,after] of [
+    ['실제 개최된 오픈컵·독립 대회의 관측 가능한 경기 기록은 당시 대회 지위와 합법적 접근 범위·표본·시점에 따라 스카우팅과 장기 경쟁 평가에 활용할 수 있다','실제로 열린 오픈컵 기록은 스카우팅과 무관하다'],
+    ['배경 설정이나 치르지 않은 경기는 실제 관측 표본으로 바꾸지 않는다','배경 설정과 미실시 경기는 실제 관측 표본으로 바꾼다'],
+    ['공식 지역사무국·정식 3부·공식 국제대회 시드가 자동 창설되지 않는다','공식 지역사무국·정식 3부·공식 국제대회 시드가 자동 창설된다']
+  ]){
+    const docs=changed(file,text=>text.replace(before,after));
+    assert.notEqual(docs[file],original[file]);
+    assert.match(check(docs),/BROKEN_PIN: PLAYER-009/);
+  }
+});
 test('emergency replacement requires explicit tournament permission',()=>{
   const docs=changed('docs/rulebook/50-MATCH.md',text=>text.replace('대회가 해당 예외를 명시적으로 허용한 경우에만 의료 확인과 등록 심사','대회의 명시적 허용 없이 등록'));
   assert.match(check(docs),/BROKEN_PIN: MATCH-004/);
