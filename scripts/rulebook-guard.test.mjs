@@ -171,6 +171,17 @@ test('personal activity settlement respects performance, claimant and payment st
     assert.match(check(docs),/BROKEN_PIN: BIZ-006/);
   }
 });
+test('club ownership changes cannot automatically erase contracts, licenses or history',()=>{
+  const file='docs/rulebook/60-BUSINESS.md';
+  for(const [before,after] of [
+    ['구단 인수·매각 시 기존 선수·스태프 계약, 참가권·라이선스와 조직·역사의 연속성은 각각 당시 유효한 조건·권한·효력 시각을 확인한다','구단 인수 시 기존 계약과 라이선스를 확인하지 않는다'],
+    ['소유권 변경 사실만으로 이를 임의로 소멸하거나 새로 생성하지 않는다','소유권이 바뀌면 기존 계약과 역사를 자동으로 소멸시킨다']
+  ]){
+    const docs=changed(file,text=>text.replace(before,after));
+    assert.notEqual(docs[file],original[file]);
+    assert.match(check(docs),/BROKEN_PIN: BIZ-001/);
+  }
+});
 test('emergency replacement requires explicit tournament permission',()=>{
   const docs=changed('docs/rulebook/50-MATCH.md',text=>text.replace('대회가 해당 예외를 명시적으로 허용한 경우에만 의료 확인과 등록 심사','대회의 명시적 허용 없이 등록'));
   assert.match(check(docs),/BROKEN_PIN: MATCH-004/);
