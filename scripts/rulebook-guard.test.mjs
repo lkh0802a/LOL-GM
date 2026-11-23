@@ -239,6 +239,17 @@ test('long-term league comparison cannot ignore real seasons, sample and talent 
     assert.match(check(docs),/BROKEN_PIN: PLAYER-012/);
   }
 });
+test('multinational leagues require actual consent, eligibility and continuity',()=>{
+  const file='docs/rulebook/10-COMPETITIONS.md';
+  for(const [before,after] of [
+    ['다국가 연합 리그는 관련 국가와 관할 사무국의 적법한 동의·라이선스 및 실제 이동·일정 조건을 확인한다','다국가 연합 리그는 동의와 라이선스 및 이동·일정을 확인하지 않는다'],
+    ['리그 통합·분리가 수반되면 기존 대회의 실제 계보와 과거 기록을 보존한다','리그 통합·분리 시 기존 대회의 실제 계보와 과거 기록을 삭제한다']
+  ]){
+    const docs=changed(file,text=>text.replace(before,after));
+    assert.notEqual(docs[file],original[file]);
+    assert.match(check(docs),/BROKEN_PIN: COMP-002/);
+  }
+});
 test('emergency replacement requires explicit tournament permission',()=>{
   const docs=changed('docs/rulebook/50-MATCH.md',text=>text.replace('대회가 해당 예외를 명시적으로 허용한 경우에만 의료 확인과 등록 심사','대회의 명시적 허용 없이 등록'));
   assert.match(check(docs),/BROKEN_PIN: MATCH-004/);
