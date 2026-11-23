@@ -193,6 +193,17 @@ test('rivalries require actual history and cannot force events or results',()=>{
     assert.match(check(docs),/BROKEN_PIN: BIZ-007/);
   }
 });
+test('fan transfer reactions and sponsor trust retain their factual basis',()=>{
+  const file='docs/rulebook/60-BUSINESS.md';
+  for(const [before,after,id] of [
+    ['선수 이적에 대한 팬 집단의 반응은 과거 공헌, 당시 실제 관계·사건과 새 선수단 선택 등 다양한 근거와 관점에 따라 달라질 수 있으며 이적만으로 단일한 고정 반응을 일률적으로 확정하지 않는다','선수 이적은 모든 팬에게 무조건 같은 반응을 만든다','BIZ-007'],
+    ['후원 효과와 신뢰는 실제 계약 이행·브랜드 적합성 및 확인된 정당한 권리 침해 사례와 연관하여 판단한다','실제 계약 이행과 무관하게 후원 신뢰를 무조건 부여한다','BIZ-005']
+  ]){
+    const docs=changed(file,text=>text.replace(before,after));
+    assert.notEqual(docs[file],original[file]);
+    assert.match(check(docs),new RegExp('BROKEN_PIN: '+id));
+  }
+});
 test('emergency replacement requires explicit tournament permission',()=>{
   const docs=changed('docs/rulebook/50-MATCH.md',text=>text.replace('대회가 해당 예외를 명시적으로 허용한 경우에만 의료 확인과 등록 심사','대회의 명시적 허용 없이 등록'));
   assert.match(check(docs),/BROKEN_PIN: MATCH-004/);
