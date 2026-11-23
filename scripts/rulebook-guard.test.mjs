@@ -132,6 +132,20 @@ test('remote scrims retain real scheduling without inventing latency or travel p
     assert.match(check(docs),new RegExp('BROKEN_PIN: '+id));
   }
 });
+test('ranked applied patch and tournament pinned patch remain distinct',()=>{
+  const file='docs/rulebook/50-MATCH.md';
+  for(const [before,after] of [
+    ['패치의 예정안·확정·실제 적용은 구별한다','패치 발표와 실제 적용을 동일하게 취급한다'],
+    ['통합 랭크도 즉시 해당 패치','통합 랭크는 별도의 지연된 패치'],
+    ['해당 대회에 사전 지정된 패치 버전(pinned patch)','대회별 고정 없이 현재 글로벌 패치'],
+    ['과거 경기·스크림 기록을 나중 패치로 소급 재계산하지 않는다','과거 경기·스크림 기록을 최신 패치로 재계산한다'],
+    ['출전 허용일 도래만으로 진행 중인 공식 대회의 고정 패치·사전 확정 챔피언 풀을 변경하지 아니한다','출전 허용일이 오면 진행 중인 대회의 고정 풀을 자동 변경한다']
+  ]){
+    const docs=changed(file,text=>text.replace(before,after));
+    assert.notEqual(docs[file],original[file]);
+    assert.match(check(docs),/BROKEN_PIN: MATCH-007/);
+  }
+});
 test('emergency replacement requires explicit tournament permission',()=>{
   const docs=changed('docs/rulebook/50-MATCH.md',text=>text.replace('대회가 해당 예외를 명시적으로 허용한 경우에만 의료 확인과 등록 심사','대회의 명시적 허용 없이 등록'));
   assert.match(check(docs),/BROKEN_PIN: MATCH-004/);
