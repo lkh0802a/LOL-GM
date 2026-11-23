@@ -159,6 +159,18 @@ test('facility investment cannot discard construction time, actual use or opport
     assert.match(check(docs),/BROKEN_PIN: BIZ-008/);
   }
 });
+test('personal activity settlement respects performance, claimant and payment state',()=>{
+  const file='docs/rulebook/60-BUSINESS.md';
+  for(const [before,after] of [
+    ['개인 방송·행사·광고의 실제 이행에 따른 수익은 유효한 계약의 권리자에 귀속하고','개인 활동을 이행하지 않아도 구단에 전액 귀속하고'],
+    ['현금 수령·미수 및 운영비를 구분하여 원장에 기록하며','미수 수익을 받은 현금으로 기록하며'],
+    ['같은 거래를 선수와 구단에 중복 지급하지 않는다','같은 거래를 선수와 구단에 전액 중복 지급한다']
+  ]){
+    const docs=changed(file,text=>text.replace(before,after));
+    assert.notEqual(docs[file],original[file]);
+    assert.match(check(docs),/BROKEN_PIN: BIZ-006/);
+  }
+});
 test('emergency replacement requires explicit tournament permission',()=>{
   const docs=changed('docs/rulebook/50-MATCH.md',text=>text.replace('대회가 해당 예외를 명시적으로 허용한 경우에만 의료 확인과 등록 심사','대회의 명시적 허용 없이 등록'));
   assert.match(check(docs),/BROKEN_PIN: MATCH-004/);
