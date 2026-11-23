@@ -87,6 +87,27 @@ test('captain withdrawal preserves actual tactical communication',()=>{
     assert.match(check(docs),/BROKEN_PIN: MATCH-011/);
   }
 });
+test('scrim consent, confidentiality and real interruption history survive revision',()=>{
+  const file='docs/rulebook/50-MATCH.md';
+  for(const [before,after] of [
+    ['실제 두 팀의 수락·유효 시간·선수 점유·연습 목적과 경기 로그','한 팀의 일방적 예약'],
+    ['두 구단의 상호 동의 없는 전략/비공개 스크림 자료 공개는 불가하다','상대 동의 없이 스크림 전략을 공개한다'],
+    ['정당한 중단이 발생한 경우에만 완료된 세트의 경기·시간·피로·성장·관측 이력을 보존하고','중단 시 완료된 세트 이력을 지우고'],
+    ['미실시 세트를 임의 결과로 채우지 않으며 시리즈 상태를 중단 또는 미완료로 기록한다','미실시 세트를 가상 결과로 채운다'],
+    ['합법적인 취소에는 실제 통보 시각과 계약·관계상의 유효한 취소 조건을 적용한다','합법적인 취소의 통보와 계약을 무시한다']
+  ]){
+    const docs=changed(file,text=>text.replace(before,after));
+    assert.notEqual(docs[file],original[file]);
+    assert.match(check(docs),/BROKEN_PIN: MATCH-005/);
+  }
+});
+test('broadcast transition retains valid pre-existing contractual obligations',()=>{
+  const file='docs/rulebook/60-BUSINESS.md';
+  const before='기존 유효한 광고·계약상 책임은 사전 공표와 합법적인 전환 절차 없이 소급 소멸시키지 않는다';
+  const docs=changed(file,text=>text.replace(before,'기존 유효한 광고·계약상 책임은 즉시 소급 소멸시킨다'));
+  assert.notEqual(docs[file],original[file]);
+  assert.match(check(docs),/BROKEN_PIN: BIZ-015/);
+});
 test('remote scrims retain real scheduling without inventing latency or travel penalties',()=>{
   for(const [file,before,after,id] of [
     ['docs/rulebook/50-MATCH.md','지역 간 네트워크 핑/지연 차이를 게임 내 경기 페널티로 적용하지 않는다','지역 간 네트워크 핑/지연 차이를 경기 페널티로 적용한다','MATCH-006'],
