@@ -28,6 +28,18 @@ test('an obsolete global FA date cannot silently replace the approved date',()=>
   const docs=changed(file,text=>text.replace('12월 첫째 화요일 00:00 UTC','11월 셋째 화요일 00:00 UTC'));
   assert.match(check(docs),/BROKEN_PIN: CAL-001/);
 });
+test('travel incident withdrawal keeps real duration, adaptation and collision checks',()=>{
+  const file='docs/rulebook/20-CALENDAR.md';
+  for(const [before,after] of [
+    ['실제 도시·국가 간 이동은 개최지와 경로·거리에 따른 정상 소요시간을 세계 시간에 반영한다','이동은 세계 시간을 소모하지 않는다'],
+    ['이동에 따른 여독·피로와 시차 적응을 실제 선수 상태·현지 체류·회복과 함께 판단하고','이동과 시차는 선수 상태에 영향을 주지 않고'],
+    ['경기·이동·휴식의 시간 충돌은 사전에 검증한다','일정의 시간 충돌을 확인하지 않는다']
+  ]){
+    const docs=changed(file,text=>text.replace(before,after));
+    assert.notEqual(docs[file],original[file]);
+    assert.match(check(docs),/BROKEN_PIN: CAL-006/);
+  }
+});
 test('an independent match exception cannot override the market suspension',()=>{
   const file='docs/rulebook/20-CALENDAR.md';
   const docs=changed(file,text=>text.replace('의 실제 경기는 모두 금지한다','의 실제 경기는 모두 금지한다. 단, 독립 대회의 실제 경기는 허용한다'));
