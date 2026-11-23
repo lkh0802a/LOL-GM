@@ -152,6 +152,31 @@ test('rank correction removes tiers while preserving the approved RP and MMR tra
     assert.match(check(docs),/BROKEN_PIN: PLAYER-004/);
   }
 });
+test('rank dodge withdrawal preserves truthful interruption handling',()=>{
+  const file='docs/rulebook/40-PLAYERS.md';
+  for(const [before,after] of [
+    ['이를 항복으로 오인하거나 미실시 경기를 정상 완료로 날조하지 않는다','미실시 경기를 정상 완료로 기록한다'],
+    ['실제 중단은 닷지 벌점 시스템을 신설하는 근거가 아니다','실제 중단에 닷지 벌점 시스템을 신설한다'],
+    ['실제 중단을 이유로 발생하지 않은 패배나 근거 없는 별도 강제 징벌을 만들어 부과하지 않는다','실제 중단에 가상의 패배와 별도 강제 징벌을 부과한다']
+  ]){
+    const docs=changed(file,text=>text.replace(before,after));
+    assert.notEqual(docs[file],original[file]);
+    assert.match(check(docs),/BROKEN_PIN: PLAYER-005/);
+  }
+});
+test('rank identity correction preserves owner identification without mandating real-name publication',()=>{
+  const file='docs/rulebook/40-PLAYERS.md';
+  for(const [before,after] of [
+    ['닉네임 변경·부계정 생성은 허용하지 않는다','닉네임 변경·부계정 생성을 허용한다'],
+    ['공개 계정의 소유자를 식별할 수 있으며','공개 계정은 익명으로만 제공하며'],
+    ['별도의 실명 필드 생성·실명과 닉네임 병행 공개는 요구하지 않는다','별도의 실명 필드 생성·실명과 닉네임 병행 공개를 요구한다'],
+    ['비공개 MMR·실제 능력·잠재력·의료·다른 구단 조사 자료는 그대로 보호한다','비공개 MMR과 의료 정보는 모두 공개한다']
+  ]){
+    const docs=changed(file,text=>text.replace(before,after));
+    assert.notEqual(docs[file],original[file]);
+    assert.match(check(docs),/BROKEN_PIN: PLAYER-006/);
+  }
+});
 test('unobserved prospects remain uncertain for both user and AI',()=>{
   const file='docs/rulebook/40-PLAYERS.md';
   let docs=changed(file,text=>text.replace('**미관측 또는 불확실**','확정된 평가'));
