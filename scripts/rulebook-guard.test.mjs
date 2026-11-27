@@ -733,6 +733,11 @@ test('legitimate office review cannot restore withdrawn random violation and san
   const docs=changed(file,text=>text.replace('실제 위반 사실이 확인되지 않은 출전 부적격·징계·이의신청 사건을 임의로 생성하지 아니한다','위반을 무작위로 발생시켜 사후 징계·이의신청 게임 엔진을 운영한다'));
   assert.match(check(docs),/BROKEN_PIN: GOV-011/);
 });
+test('licence refusal must explain actual conditions and competent authority',()=>{
+  const file='docs/rulebook/70-GOVERNANCE.md';
+  const docs=changed(file,text=>text.replace('참가 자격이나 라이선스를 거부하는 결정은 권한 있는 주체가 당시 실제 소유권·재정·선수 등록 및 참가 요건과 그 결정 근거를 설명한다','참가 거부는 사실 확인이나 근거 설명 없이 가능하다'));
+  assert.match(check(docs),/BROKEN_PIN: GOV-011/);
+});
 test('office leaders cannot ignore disclosure and recusal for conflicts',()=>{
   const file='docs/rulebook/70-GOVERNANCE.md';
   const docs=changed(file,text=>text.replace('공개하고 관련 심의·결정에서 회피','비밀로 하고 스스로 심의·결정'));
