@@ -21,6 +21,14 @@ test('strategy research requires actual evidence and cannot grant automatic mast
     ['연구를 선택했다는 사실만으로 실험 결과나 선수단 숙련이 자동으로 발생하지 않는다','연구를 선택하면 선수단 숙련이 자동으로 발생한다']
   ]) assert.match(check(changed(file,text=>text.replace(before,after))),/BROKEN_PIN: MATCH-009/);
 });
+test('rank and professional evidence remain distinct and lawfully comparable',()=>{
+  const file='docs/rulebook/40-PLAYERS.md';
+  for(const [before,after] of [
+    ['세계 랭크와 프로 공식전·스크림은 참가 모집단·목적·관측 자료를 구분한다','모든 경기는 같은 모집단으로 취급한다'],
+    ['관측할 권한이 있는 자료에 한하여 서로 다른 환경과 표본의 차이를 밝히고 교차 분석','상대의 비공개 자료까지 제한 없이 분석'],
+    ['랭크 성적만으로 프로 경기 기량을 확정하지 않는다','랭크 성적만으로 프로 경기 기량을 확정한다']
+  ]) assert.match(check(changed(file,text=>text.replace(before,after))),/BROKEN_PIN: PLAYER-002/);
+});
 test('standalone world rulebook has unique rule identifiers and working local links',()=>{
   const result=validateRulebook(original);
   assert.deepEqual(result.errors,[]);
