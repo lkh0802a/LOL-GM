@@ -14,6 +14,13 @@ test('patch impact is an uncertain observation, not an invented win rate',()=>{
     ['미래 경기 결과나 확정 승률을 만들어 표시하지 않는다','미래 경기 결과와 확정 승률을 만들어 표시한다']
   ]) assert.match(check(changed(file,text=>text.replace(before,after))),/BROKEN_PIN: UI-006/);
 });
+test('strategy research requires actual evidence and cannot grant automatic mastery',()=>{
+  const file='docs/rulebook/50-MATCH.md';
+  for(const [before,after] of [
+    ['연구·실험의 실제 기록과 비용 및 그 해석에 따른다','연구 버튼만 누르면 채택된다'],
+    ['연구를 선택했다는 사실만으로 실험 결과나 선수단 숙련이 자동으로 발생하지 않는다','연구를 선택하면 선수단 숙련이 자동으로 발생한다']
+  ]) assert.match(check(changed(file,text=>text.replace(before,after))),/BROKEN_PIN: MATCH-009/);
+});
 test('standalone world rulebook has unique rule identifiers and working local links',()=>{
   const result=validateRulebook(original);
   assert.deepEqual(result.errors,[]);
