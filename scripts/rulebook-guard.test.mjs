@@ -29,6 +29,13 @@ test('rank and professional evidence remain distinct and lawfully comparable',()
     ['랭크 성적만으로 프로 경기 기량을 확정하지 않는다','랭크 성적만으로 프로 경기 기량을 확정한다']
   ]) assert.match(check(changed(file,text=>text.replace(before,after))),/BROKEN_PIN: PLAYER-002/);
 });
+test('historical season comparisons preserve contemporaneous context and unknowns',()=>{
+ const file='docs/interface-spec/USER_EXPERIENCE_REQUIREMENTS.md';
+ for(const [before,after] of [
+  ['당시 선수단·성적과 패치·전술·계약·지역 리그 및 대회 형식의 맥락','현재 선수단과 형식만'],
+  ['당시 근거가 없으면 미확인으로 남기며 현재 선수단·규정이나 가상의 기록으로 공백을 채우지 않는다','누락된 과거 근거는 현재 규정과 가상의 기록으로 채운다']
+ ]) assert.match(check(changed(file,text=>text.replace(before,after))),/BROKEN_PIN: UI-007/);
+});
 test('standalone world rulebook has unique rule identifiers and working local links',()=>{
   const result=validateRulebook(original);
   assert.deepEqual(result.errors,[]);
