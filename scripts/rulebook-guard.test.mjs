@@ -7,6 +7,13 @@ const original=readDocuments();
 const check=docs=>validateRulebook(docs).errors.join('\n');
 const changed=(file,fn)=>({...original,[file]:fn(original[file])});
 
+test('patch impact is an uncertain observation, not an invented win rate',()=>{
+  const file='docs/interface-spec/USER_EXPERIENCE_REQUIREMENTS.md';
+  for(const [before,after] of [
+    ['근거의 관측 시점·표본과 불확실성을 함께 제시한다','불확실성을 숨긴다'],
+    ['미래 경기 결과나 확정 승률을 만들어 표시하지 않는다','미래 경기 결과와 확정 승률을 만들어 표시한다']
+  ]) assert.match(check(changed(file,text=>text.replace(before,after))),/BROKEN_PIN: UI-006/);
+});
 test('standalone world rulebook has unique rule identifiers and working local links',()=>{
   const result=validateRulebook(original);
   assert.deepEqual(result.errors,[]);
